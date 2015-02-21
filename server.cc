@@ -24,6 +24,28 @@ void print_string(const std::string &string) {
 }
 
 
+class XapianWorker : public Task {
+private:
+	ev::async *async;
+	message_type required_type;
+	std::string message;
+
+public:
+	XapianWorker(ev::async *async_, message_type required_type_, const std::string &message_)
+		: Task(),
+		  async(async_),
+		  required_type(required_type_),
+		  message(message_) {}
+
+	~XapianWorker() {
+		printf("and deleted!\n");
+	}
+
+	virtual void run() {
+		printf("tid(0x%lx) - Running 0x%02x... ", (unsigned long)pthread_self(), required_type);
+	}
+};
+
 //
 //   Buffer class - allow for output buffering such that it can be written out
 //                                 into async pieces
@@ -93,7 +115,8 @@ Xapian::WritableDatabase * custom_get_writable_database(void * obj, const std::v
 
 
 
-void XapiandClient::callback(ev::io &watcher, int revents) {
+void XapiandClient::callback(ev::io &watcher, int revents)
+{
 	if (EV_ERROR & revents) {
 		perror("got invalid event");
 		return;
@@ -112,13 +135,15 @@ void XapiandClient::callback(ev::io &watcher, int revents) {
 	}
 }
 
-void XapiandClient::async_cb(ev::async &watcher, int revents) {
+void XapiandClient::async_cb(ev::async &watcher, int revents)
+{
 	if (!write_queue.empty()) {
 		io.set(ev::READ|ev::WRITE);
 	}
 }
 
-void XapiandClient::write_cb(ev::io &watcher) {
+void XapiandClient::write_cb(ev::io &watcher)
+{
 	if (write_queue.empty()) {
 		io.set(ev::READ);
 		return;
@@ -142,7 +167,8 @@ void XapiandClient::write_cb(ev::io &watcher) {
 	}
 }
 
-void XapiandClient::read_cb(ev::io &watcher) {
+void XapiandClient::read_cb(ev::io &watcher)
+{
 	char buffer[1024];
 
 	ssize_t nread = recv(watcher.fd, buffer, sizeof(buffer), 0);
@@ -159,38 +185,39 @@ void XapiandClient::read_cb(ev::io &watcher) {
 		// Send message bach to the client
 		printf("received:");
 		print_string(std::string(buffer, nread));
-		write_queue.push_back(new Buffer(buffer, nread));
+		thread_pool->addTask(new XapianWorker(&async, MSG_UPDATE, std::string()));
+		// write_queue.push_back(new Buffer(buffer, nread));
 	}
 }
 
-XapiandClient::~XapiandClient() {
-	if (sock) shutdown(sock, SHUT_RDWR);
 
-	// Stop and free watcher if client socket is closing
-	io.stop();
-	async.stop();
-
-	delete server;
-
-	if (sock) close(sock);
-
-	printf("%d client(s) connected.\n", --total_clients);
+void XapiandClient::signal_cb(ev::sig &signal, int revents)
+{
+	delete this;
 }
 
-void XapiandClient::send(std::string buffer) {
+void XapiandClient::send(std::string buffer)
+{
 	write_queue.push_back(new Buffer(buffer.c_str(), buffer.size()));
 	async.send();
 }
 
-XapiandClient::XapiandClient(int s) : sock(s), server(NULL) {
-	fcntl(s, F_SETFL, fcntl(s, F_GETFL, 0) | O_NONBLOCK);
+
+XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_)
+	: sock(sock_),
+	  server(NULL),
+	  thread_pool(thread_pool_)
+{
+	fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
 
 	printf("Got connection\n");
 	total_clients++;
 
 	io.set<XapiandClient, &XapiandClient::callback>(this);
+	io.start(sock, ev::READ);
 
-	io.start(s, ev::READ);
+	sig.set<XapiandClient, &XapiandClient::signal_cb>(this);
+	sig.start(SIGINT);
 
 	async.set<XapiandClient, &XapiandClient::async_cb>(this);
 	async.start();
@@ -207,9 +234,25 @@ XapiandClient::XapiandClient(int s) : sock(s), server(NULL) {
 	server->msg_update(std::string());
 }
 
+XapiandClient::~XapiandClient()
+{
+	shutdown(sock, SHUT_RDWR);
+
+	// Stop and free watcher if client socket is closing
+	io.stop();
+	sig.stop();
+	async.stop();
+
+	close(sock);
+
+	printf("%d client(s) connected.\n", --total_clients);
+
+	delete server;
+}
 
 
-void XapiandServer::io_accept(ev::io &watcher, int revents) {
+void XapiandServer::io_accept(ev::io &watcher, int revents)
+{
 	if (EV_ERROR & revents) {
 		perror("got invalid event");
 		return;
@@ -218,26 +261,29 @@ void XapiandServer::io_accept(ev::io &watcher, int revents) {
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
 
-	int client_sd = accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
+	int client_sock = accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
 
-	if (client_sd < 0) {
+	if (client_sock < 0) {
 		perror("accept error");
 		return;
 	}
 
-	XapiandClient *client = new XapiandClient(client_sd);
+	XapiandClient *client = new XapiandClient(client_sock, this->thread_pool);
 }
 
-void XapiandServer::signal_cb(ev::sig &signal, int revents) {
+void XapiandServer::signal_cb(ev::sig &signal, int revents)
+{
 	signal.loop.break_loop();
 }
 
 XapiandServer::XapiandServer(int port, ThreadPool *thread_pool_)
 	: thread_pool(thread_pool_)
 {
+	int optval = 1;
 	struct sockaddr_in addr;
 
 	sock = socket(PF_INET, SOCK_STREAM, 0);
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
 
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
@@ -261,13 +307,14 @@ XapiandServer::XapiandServer(int port, ThreadPool *thread_pool_)
 	}
 }
 
-XapiandServer::~XapiandServer() {
-	if (sock) shutdown(sock, SHUT_RDWR);
+XapiandServer::~XapiandServer()
+{
+	shutdown(sock, SHUT_RDWR);
 
 	io.stop();
 	sig.stop();
 
-	if (sock) close(sock);
+	close(sock);
 
 	printf("Done with all work!\n");
 }
