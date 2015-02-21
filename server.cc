@@ -17,32 +17,23 @@ void print_string(const std::string &string) {
     	if (*p >= ' ' && *p <= '~') {
 			printf("%c", *p++);
     	} else {
-			printf("\\x%02x", *p++);
+			printf("\\x%02x", *p++ & 0xff);
     	}
     }
     printf("'\n");
 }
 
-
 class XapianWorker : public Task {
 private:
-	ev::async *async;
-	message_type required_type;
-	std::string message;
+	XapiandClient *client;
 
 public:
-	XapianWorker(ev::async *async_, message_type required_type_, const std::string &message_)
-		: Task(),
-		  async(async_),
-		  required_type(required_type_),
-		  message(message_) {}
+	XapianWorker(XapiandClient *client_) : Task(), client(client_) {}
 
-	~XapianWorker() {
-		printf("and deleted!\n");
-	}
+	~XapianWorker() {}
 
 	virtual void run() {
-		printf("tid(0x%lx) - Running 0x%02x... ", (unsigned long)pthread_self(), required_type);
+		client->server->run_one();
 	}
 };
 
@@ -51,13 +42,15 @@ public:
 //                                 into async pieces
 //
 struct Buffer {
+	char type;
 	char *data;
 	ssize_t len;
 	ssize_t pos;
 
-	Buffer(const char *bytes, ssize_t nbytes) {
+	Buffer(char type_, const char *bytes, ssize_t nbytes) {
 		pos = 0;
 		len = nbytes;
+		type = type_;
 		data = new char[nbytes];
 		memcpy(data, bytes, nbytes);
 	}
@@ -80,23 +73,15 @@ message_type
 custom_get_message(void * obj, double timeout, std::string & result,
 			message_type required_type)
 {
-	printf("get_message");
-	return static_cast<message_type>('\00');
+	XapiandClient * client = static_cast<XapiandClient *>(obj);
+	return client->get_message(result);
 }
 
 void
 custom_send_message(void * obj, reply_type type, const std::string &message)
 {
-	char type_as_char = static_cast<char>(type);
-    std::string buf(&type_as_char, 1);
-    buf += encode_length(message.size());
-    buf += message;
-
-	printf("send_message:");
-	print_string(buf);
-
-	XapiandClient * instance = static_cast<XapiandClient *>(obj);
-	instance->send(buf);
+	XapiandClient * client = static_cast<XapiandClient *>(obj);
+	client->send_message(type, message);
 }
 
 Xapian::Database * custom_get_database(void * obj, const std::vector<std::string> &dbpaths)
@@ -128,65 +113,93 @@ void XapiandClient::callback(ev::io &watcher, int revents)
 	if (revents & EV_WRITE)
 		write_cb(watcher);
 
+	pthread_mutex_lock(&qmtx);
 	if (write_queue.empty()) {
 		io.set(ev::READ);
 	} else {
 		io.set(ev::READ|ev::WRITE);
 	}
+	pthread_mutex_unlock(&qmtx);
 }
 
 void XapiandClient::async_cb(ev::async &watcher, int revents)
 {
+	pthread_mutex_lock(&qmtx);
 	if (!write_queue.empty()) {
 		io.set(ev::READ|ev::WRITE);
 	}
+	pthread_mutex_unlock(&qmtx);
 }
 
 void XapiandClient::write_cb(ev::io &watcher)
 {
+	pthread_mutex_lock(&qmtx);
+
 	if (write_queue.empty()) {
 		io.set(ev::READ);
-		return;
+	} else {
+		Buffer* buffer = write_queue.front();
+
+		// printf("sent:");
+		// print_string(std::string(buffer->dpos(), buffer->nbytes()));
+
+		ssize_t written = write(watcher.fd, buffer->dpos(), buffer->nbytes());
+		if (written < 0) {
+			perror("read error");
+		} else {
+			buffer->pos += written;
+			if (buffer->nbytes() == 0) {
+				write_queue.pop_front();
+				delete buffer;
+			}
+		}
 	}
 
-	Buffer* buffer = write_queue.front();
-
-	printf("sent:");
-	print_string(std::string(buffer->dpos(), buffer->nbytes()));
-
-	ssize_t written = write(watcher.fd, buffer->dpos(), buffer->nbytes());
-	if (written < 0) {
-		perror("read error");
-		return;
-	}
-
-	buffer->pos += written;
-	if (buffer->nbytes() == 0) {
-		write_queue.pop_front();
-		delete buffer;
-	}
+	pthread_mutex_unlock(&qmtx);
 }
 
 void XapiandClient::read_cb(ev::io &watcher)
 {
-	char buffer[1024];
+	char buf[1024];
 
-	ssize_t nread = recv(watcher.fd, buffer, sizeof(buffer), 0);
+	ssize_t received = recv(watcher.fd, buf, sizeof(buf), 0);
 
-	if (nread < 0) {
+	if (received < 0) {
 		perror("read error");
 		return;
 	}
 
-	if (nread == 0) {
+	if (received == 0) {
 		// Gack - we're deleting ourself inside of ourself!
 		delete this;
 	} else {
-		// Send message bach to the client
-		printf("received:");
-		print_string(std::string(buffer, nread));
-		thread_pool->addTask(new XapianWorker(&async, MSG_UPDATE, std::string()));
-		// write_queue.push_back(new Buffer(buffer, nread));
+		buffer.append(buf, received);
+		if (buffer.length() >= 2) {
+			const char *o = buffer.data();
+			const char *p = o;
+			const char *p_end = p + buffer.size();
+
+			try {
+				size_t len = decode_length(&p, p_end, true);
+				message_type required_type = static_cast<message_type>(buffer[0]);
+				std::string data = std::string(p, len);
+				buffer.erase(0, p - o + len);
+
+				// printf("received:");
+				// print_string(data);
+
+				Buffer *message = new Buffer(required_type, data.c_str(), data.size());
+
+				pthread_mutex_lock(&qmtx);
+				messages_queue.push_back(message);
+				pthread_mutex_unlock(&qmtx);
+
+				thread_pool->addTask(new XapianWorker(this));
+
+			} catch (Xapian::NetworkError) {
+				return;
+			}
+		}
 	}
 }
 
@@ -196,22 +209,45 @@ void XapiandClient::signal_cb(ev::sig &signal, int revents)
 	delete this;
 }
 
-void XapiandClient::send(std::string buffer)
+message_type XapiandClient::get_message(std::string & result)
 {
-	write_queue.push_back(new Buffer(buffer.c_str(), buffer.size()));
+	pthread_mutex_lock(&qmtx);
+	Buffer* message = messages_queue.front();
+	messages_queue.pop_front();
+	pthread_mutex_unlock(&qmtx);
+
+	message_type required_type = static_cast<message_type>(message->type);
+	result.assign(message->dpos(), message->nbytes());
+
+	delete message;
+	return required_type;
+}
+
+void XapiandClient::send_message(reply_type type, const std::string &message)
+{
+	char type_as_char = static_cast<char>(type);
+    std::string buf(&type_as_char, 1);
+    buf += encode_length(message.size());
+    buf += message;
+
+	pthread_mutex_lock(&qmtx);
+	write_queue.push_back(new Buffer(type, buf.c_str(), buf.size()));
+	pthread_mutex_unlock(&qmtx);
+
 	async.send();
 }
 
 
 XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_)
 	: sock(sock_),
-	  server(NULL),
-	  thread_pool(thread_pool_)
+	  thread_pool(thread_pool_),
+	  server(NULL)
 {
+	pthread_mutex_init(&qmtx, 0);
+
 	fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
 
-	printf("Got connection\n");
-	total_clients++;
+	printf("Got connection, %d client(s) connected.\n", ++total_clients);
 
 	io.set<XapiandClient, &XapiandClient::callback>(this);
 	io.start(sock, ev::READ);
@@ -245,7 +281,9 @@ XapiandClient::~XapiandClient()
 
 	close(sock);
 
-	printf("%d client(s) connected.\n", --total_clients);
+	printf("Lost connection, %d client(s) connected.\n", --total_clients);
+
+	pthread_mutex_destroy(&qmtx);
 
 	delete server;
 }
@@ -268,7 +306,7 @@ void XapiandServer::io_accept(ev::io &watcher, int revents)
 		return;
 	}
 
-	XapiandClient *client = new XapiandClient(client_sock, this->thread_pool);
+	new XapiandClient(client_sock, this->thread_pool);
 }
 
 void XapiandServer::signal_cb(ev::sig &signal, int revents)
