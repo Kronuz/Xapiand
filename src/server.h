@@ -12,13 +12,15 @@
 struct Buffer;
 
 
+class XapianWorker;
+
+
 class XapiandServer {
 private:
 	ev::io io;
 	ev::sig sig;
 
 	int sock;
-
 	ThreadPool *thread_pool;
 
 public:
@@ -36,20 +38,26 @@ public:
 //   A single instance of a non-blocking Xapiand handler
 //
 class XapiandClient {
+	class XapianWorker friend;
+
 private:
 	ev::io io;
 	ev::async async;
 	ev::sig sig;
 
 	int sock;
-
-	static int total_clients;
-	RemoteServer *server;
 	ThreadPool *thread_pool;
+
 	std::vector<std::string> dbpaths;
 
+	static int total_clients;
+
+	pthread_mutex_t qmtx;
+
 	// Buffers that are pending write
+	std::list<Buffer*> messages_queue;
 	std::list<Buffer*> write_queue;
+	std::string buffer;
 
 	void async_cb(ev::async &watcher, int revents);
 
@@ -67,8 +75,12 @@ private:
 	// effictivly a close and a destroy
 	virtual ~XapiandClient();
 
+protected:
+	RemoteServer *server;
+
 public:
-	void send(std::string buffer);
+	message_type get_message(std::string & result);
+	void send_message(reply_type type, const std::string & message);
 
 	XapiandClient(int s, ThreadPool *thread_pool);
 };
