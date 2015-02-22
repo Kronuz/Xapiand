@@ -77,8 +77,9 @@ private:
 	// effictivly a close and a destroy
 	virtual ~XapiandClient();
 
-protected:
 	RemoteServer *server;
+protected:
+	void run_one();
 
 public:
 	message_type get_message(double timeout, std::string & result);
