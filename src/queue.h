@@ -18,7 +18,7 @@ private:
 	// A variable condition to make threads wait on specified condition values
 	pthread_cond_t wcond;
 
-	bool finished;
+	bool finished = false;
 
 public:
 	Queue();
@@ -97,7 +97,7 @@ template<class T>
 bool Queue<T>::pop(T& element, double timeout)
 {
 	struct timespec ts;
-	if (timeout > 00.0) {
+	if (timeout > 0.0) {
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
 		ts.tv_sec = tv.tv_sec + int(timeout);

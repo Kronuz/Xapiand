@@ -14,9 +14,6 @@
 struct Buffer;
 
 
-class XapianWorker;
-
-
 class XapiandServer {
 private:
 	ev::io io;
@@ -40,8 +37,6 @@ public:
 //   A single instance of a non-blocking Xapiand handler
 //
 class XapiandClient {
-	class XapianWorker friend;
-
 private:
 	ev::io io;
 	ev::async async;
@@ -78,12 +73,11 @@ private:
 	virtual ~XapiandClient();
 
 	RemoteServer *server;
-protected:
-	void run_one();
 
 public:
 	message_type get_message(double timeout, std::string & result);
 	void send_message(reply_type type, const std::string & message);
+    void run_one();
 
 	XapiandClient(int s, ThreadPool *thread_pool);
 };
