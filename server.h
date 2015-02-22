@@ -81,7 +81,7 @@ public:
 	
 	Xapian::Database * get_db(bool);
 	void release_db(Xapian::Database *);
-	Xapian::Database * select_db(const std::vector<std::string> &, bool);
+	void select_db(const std::vector<std::string> &, bool);
 	
 	XapiandClient(int s, ThreadPool *thread_pool, double active_timeout_, double idle_timeout_);
 };

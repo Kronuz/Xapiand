@@ -261,10 +261,9 @@ void XapiandClient::release_db(Xapian::Database *db_)
 }
 
 
-Xapian::Database * XapiandClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_)
+void XapiandClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_)
 {
 	dbpaths = dbpaths_;
-	return get_db(writable_);
 }
 
 
