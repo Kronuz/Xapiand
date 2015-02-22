@@ -1,10 +1,12 @@
 #ifndef XAPIAND_INCLUDED_SERVER_H
 #define XAPIAND_INCLUDED_SERVER_H
 
-#include <unistd.h>
-#include <ev++.h>
 #include <list>
 
+#include <unistd.h>
+#include <ev++.h>
+
+#include "queue.h"
 #include "threadpool.h"
 
 #include "net/remoteserver.h"
@@ -55,8 +57,8 @@ private:
 	pthread_mutex_t qmtx;
 
 	// Buffers that are pending write
-	std::list<Buffer*> messages_queue;
-	std::list<Buffer*> write_queue;
+	Queue<Buffer *> messages_queue;
+	std::list<Buffer *> write_queue;
 	std::string buffer;
 
 	void async_cb(ev::async &watcher, int revents);
@@ -79,7 +81,7 @@ protected:
 	RemoteServer *server;
 
 public:
-	message_type get_message(std::string & result);
+	message_type get_message(double timeout, std::string & result);
 	void send_message(reply_type type, const std::string & message);
 
 	XapiandClient(int s, ThreadPool *thread_pool);
