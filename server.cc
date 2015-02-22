@@ -234,16 +234,29 @@ Xapian::Database * XapiandClient::get_db(bool writable_)
 	if (dbpaths.empty()) {
 		return NULL;
 	}
+	Xapian::Database *db_;
 	if (writable_) {
-		return new Xapian::WritableDatabase(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
+		db_ = new Xapian::WritableDatabase(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
 	} else {
-		return new Xapian::Database(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
+		db_ = new Xapian::Database(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
+		if (!writable) {
+			std::vector<std::string>::const_iterator i(dbpaths.begin());
+			for (++i; i != dbpaths.end(); ++i) {
+				db_->add_database(Xapian::Database(*i));
+			}
+		} else if (dbpaths.size() != 1) {
+			printf("ERROR: Expecting exactly one database.");
+		}
+
 	}
+	printf("NEW DB!\n");
+	return db_;
 }
 
 
 void XapiandClient::release_db(Xapian::Database *db_)
 {
+	printf("RELEASED DB!\n");
 	delete db_;
 }
 
