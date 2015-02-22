@@ -26,7 +26,7 @@ public:
 
 	void finish();
 	void push(T& element);
-	bool pop(T& element, time_t timeout=0);
+	bool pop(T& element, double timeout=-1.0);
 
 	unsigned int sizeOfQueue();
 	bool empty();
@@ -94,22 +94,28 @@ bool Queue<T>::empty()
 
 
 template<class T>
-bool Queue<T>::pop(T& element, time_t timeout)
+bool Queue<T>::pop(T& element, double timeout)
 {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
 	struct timespec ts;
-	ts.tv_sec = tv.tv_sec + timeout;
-	ts.tv_nsec = 0;
+	if (timeout > 00.0) {
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		ts.tv_sec = tv.tv_sec + int(timeout);
+		ts.tv_nsec = int((timeout - int(timeout)) * 1e9);
+	}
 
 	pthread_mutex_lock(&qmtx);
 
 	// While the queue is empty, make the thread that runs this wait
 	while(queue.empty()) {
-		if (!finished && timeout) {
-			if (pthread_cond_timedwait(&wcond, &qmtx, &ts) == ETIMEDOUT) {
-				pthread_mutex_unlock(&qmtx);
-				return false;
+		if (!finished && timeout != 0.0) {
+			if (timeout > 0.0) {
+				if (pthread_cond_timedwait(&wcond, &qmtx, &ts) == ETIMEDOUT) {
+					pthread_mutex_unlock(&qmtx);
+					return false;
+				}
+			} else {
+				pthread_cond_wait(&wcond, &qmtx);
 			}
 		} else {
 			pthread_mutex_unlock(&qmtx);
