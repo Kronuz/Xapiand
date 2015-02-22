@@ -153,7 +153,7 @@ void XapiandClient::read_cb(ev::io &watcher)
 			const char *p = o;
 			const char *p_end = p + buffer.size();
 
-			message_type required_type = static_cast<message_type>(*p++);
+			message_type type = static_cast<message_type>(*p++);
 			size_t len;
 			try {
 				len = decode_length(&p, p_end, true);
@@ -166,11 +166,11 @@ void XapiandClient::read_cb(ev::io &watcher)
 			// printf("received:");
 			// print_string(data);
 
-			Buffer *msg = new Buffer(required_type, data.c_str(), data.size());
+			Buffer *msg = new Buffer(type, data.c_str(), data.size());
 
 			messages_queue.push(msg);
 
-			if (required_type == MSG_QUERY) {
+			if (type != MSG_GETMSET && type != MSG_SHUTDOWN) {
 				thread_pool->addTask(new XapianWorker(this));
 			}
 
