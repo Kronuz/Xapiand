@@ -33,7 +33,7 @@ public:
 	~XapianWorker() {}
 
 	virtual void run() {
-		client->server->run_one();
+		client->run_one();
 	}
 };
 
@@ -179,24 +179,27 @@ void XapiandClient::read_cb(ev::io &watcher)
 			const char *p = o;
 			const char *p_end = p + buffer.size();
 
+			message_type required_type = static_cast<message_type>(*p++);
+			size_t len;
 			try {
-				size_t len = decode_length(&p, p_end, true);
-				message_type required_type = static_cast<message_type>(buffer[0]);
-				std::string data = std::string(p, len);
-				buffer.erase(0, p - o + len);
-
-				// printf("received:");
-				// print_string(data);
-
-				Buffer *msg = new Buffer(required_type, data.c_str(), data.size());
-
-				messages_queue.push(msg);
-
-				thread_pool->addTask(new XapianWorker(this));
-
-			} catch (Xapian::NetworkError) {
+				len = decode_length(&p, p_end, true);
+			} catch (const Xapian::NetworkError & e) {
 				return;
 			}
+			std::string data = std::string(p, len);
+			buffer.erase(0, p - o + len);
+
+			// printf("received:");
+			// print_string(data);
+
+			Buffer *msg = new Buffer(required_type, data.c_str(), data.size());
+
+			messages_queue.push(msg);
+
+			if (required_type == '\x08') {
+				thread_pool->addTask(new XapianWorker(this));
+			}
+
 		}
 	}
 }
@@ -210,7 +213,9 @@ void XapiandClient::signal_cb(ev::sig &signal, int revents)
 message_type XapiandClient::get_message(double timeout, std::string & result)
 {
 	Buffer* msg;
-	messages_queue.pop(msg);
+	if (!messages_queue.pop(msg)) {
+		throw Xapian::NetworkError("No message available");
+	}
 
 	std::string buf(&msg->type, 1);
 	buf += encode_length(msg->nbytes());
@@ -232,8 +237,8 @@ void XapiandClient::send_message(reply_type type, const std::string &message)
 	buf += encode_length(message.size());
 	buf += message;
 
-	// printf("send_message:");
-	// print_string(buf);
+	printf("send_message:");
+	print_string(buf);
 
 	pthread_mutex_lock(&qmtx);
 	write_queue.push_back(new Buffer(type, buf.c_str(), buf.size()));
@@ -272,7 +277,14 @@ XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_)
 		custom_get_database,
 		custom_get_writable_database
 	);
-	server->msg_update(std::string());
+
+	try {
+		server->msg_update(std::string());
+	} catch (const Xapian::NetworkError &e) {
+		printf("ERROR: %s\n", e.get_msg().c_str());
+	} catch (...) {
+		printf("ERROR!\n");
+	}
 }
 
 XapiandClient::~XapiandClient()
@@ -291,6 +303,18 @@ XapiandClient::~XapiandClient()
 	pthread_mutex_destroy(&qmtx);
 
 	delete server;
+}
+
+
+void XapiandClient::run_one()
+{
+	try {
+		server->run_one();
+	} catch (const Xapian::NetworkError &e) {
+		printf("ERROR: %s\n", e.get_msg().c_str());
+	} catch (...) {
+		printf("ERROR!\n");
+	}
 }
 
 
