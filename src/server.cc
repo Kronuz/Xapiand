@@ -10,17 +10,17 @@
 
 
 void print_string(const std::string &string) {
-    const char *p = string.c_str();
-    const char *p_end = p + string.size();
-    printf("'");
-    while (p != p_end) {
-    	if (*p >= ' ' && *p <= '~') {
+	const char *p = string.c_str();
+	const char *p_end = p + string.size();
+	printf("'");
+	while (p != p_end) {
+		if (*p >= ' ' && *p <= '~') {
 			printf("%c", *p++);
-    	} else {
+		} else {
 			printf("\\x%02x", *p++ & 0xff);
-    	}
-    }
-    printf("'\n");
+		}
+	}
+	printf("'\n");
 }
 
 class XapianWorker : public Task {
@@ -74,7 +74,7 @@ custom_get_message(void * obj, double timeout, std::string & result,
 			message_type required_type)
 {
 	XapiandClient * client = static_cast<XapiandClient *>(obj);
-	return client->get_message(result);
+	return client->get_message(timeout, result);
 }
 
 void
@@ -188,11 +188,9 @@ void XapiandClient::read_cb(ev::io &watcher)
 				// printf("received:");
 				// print_string(data);
 
-				Buffer *message = new Buffer(required_type, data.c_str(), data.size());
+				Buffer *msg = new Buffer(required_type, data.c_str(), data.size());
 
-				pthread_mutex_lock(&qmtx);
-				messages_queue.push_back(message);
-				pthread_mutex_unlock(&qmtx);
+				messages_queue.push(msg);
 
 				thread_pool->addTask(new XapianWorker(this));
 
@@ -209,26 +207,33 @@ void XapiandClient::signal_cb(ev::sig &signal, int revents)
 	delete this;
 }
 
-message_type XapiandClient::get_message(std::string & result)
+message_type XapiandClient::get_message(double timeout, std::string & result)
 {
-	pthread_mutex_lock(&qmtx);
-	Buffer* message = messages_queue.front();
-	messages_queue.pop_front();
-	pthread_mutex_unlock(&qmtx);
+	Buffer* msg;
+	messages_queue.pop(msg);
 
-	message_type required_type = static_cast<message_type>(message->type);
-	result.assign(message->dpos(), message->nbytes());
+	std::string buf(&msg->type, 1);
+	buf += encode_length(msg->nbytes());
+	buf += std::string(msg->dpos(), msg->nbytes());
+	printf("get_message:");
+	print_string(buf);
 
-	delete message;
+	message_type required_type = static_cast<message_type>(msg->type);
+	result.assign(msg->dpos(), msg->nbytes());
+
+	delete msg;
 	return required_type;
 }
 
 void XapiandClient::send_message(reply_type type, const std::string &message)
 {
 	char type_as_char = static_cast<char>(type);
-    std::string buf(&type_as_char, 1);
-    buf += encode_length(message.size());
-    buf += message;
+	std::string buf(&type_as_char, 1);
+	buf += encode_length(message.size());
+	buf += message;
+
+	// printf("send_message:");
+	// print_string(buf);
 
 	pthread_mutex_lock(&qmtx);
 	write_queue.push_back(new Buffer(type, buf.c_str(), buf.size()));
@@ -260,8 +265,8 @@ XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_)
 
 	dbpaths.push_back("test");
 	server = new RemoteServer(
-	  	this,
-	  	dbpaths, true,
+		this,
+		dbpaths, true,
 		custom_get_message,
 		custom_send_message,
 		custom_get_database,
@@ -321,7 +326,7 @@ XapiandServer::XapiandServer(int port, ThreadPool *thread_pool_)
 	struct sockaddr_in addr;
 
 	sock = socket(PF_INET, SOCK_STREAM, 0);
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
 
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
