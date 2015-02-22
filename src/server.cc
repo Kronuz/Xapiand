@@ -9,6 +9,10 @@
 #include "xapian.h"
 
 
+const int MSECS_IDLE_TIMEOUT_DEFAULT = 60000;
+const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
+
+
 void print_string(const std::string &string) {
 	const char *p = string.c_str();
 	const char *p_end = p + string.size();
@@ -33,7 +37,7 @@ public:
 	~XapianWorker() {}
 
 	virtual void run() {
-		client->run_one();
+		client->run();
 	}
 };
 
@@ -67,36 +71,6 @@ struct Buffer {
 		return len - pos;
 	}
 };
-
-
-message_type
-custom_get_message(void * obj, double timeout, std::string & result,
-			message_type required_type)
-{
-	XapiandClient * client = static_cast<XapiandClient *>(obj);
-	return client->get_message(timeout, result);
-}
-
-void
-custom_send_message(void * obj, reply_type type, const std::string &message)
-{
-	XapiandClient * client = static_cast<XapiandClient *>(obj);
-	client->send_message(type, message);
-}
-
-Xapian::Database * custom_get_database(void * obj, const std::vector<std::string> &dbpaths)
-{
-	if (dbpaths.empty()) return NULL;
-	Xapian::Database *db = new Xapian::Database(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
-	return db;
-}
-
-Xapian::WritableDatabase * custom_get_writable_database(void * obj, const std::vector<std::string> &dbpaths)
-{
-	if (dbpaths.empty()) return NULL;
-	Xapian::WritableDatabase *db = new Xapian::WritableDatabase(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
-	return db;
-}
 
 
 
@@ -211,49 +185,77 @@ void XapiandClient::signal_cb(ev::sig &signal, int revents)
 }
 
 
-message_type XapiandClient::get_message(double timeout, std::string & result)
+message_type XapiandClient::get_message(double timeout, std::string & result, message_type required_type)
 {
 	Buffer* msg;
 	if (!messages_queue.pop(msg)) {
 		throw Xapian::NetworkError("No message available");
 	}
-
+	
 	std::string buf(&msg->type, 1);
 	buf += encode_length(msg->nbytes());
 	buf += std::string(msg->dpos(), msg->nbytes());
 	printf("get_message:");
 	print_string(buf);
-
-	message_type required_type = static_cast<message_type>(msg->type);
+	
+	message_type type = static_cast<message_type>(msg->type);
 	result.assign(msg->dpos(), msg->nbytes());
-
+	
 	delete msg;
-	return required_type;
+	return type;
 }
 
 
-void XapiandClient::send_message(reply_type type, const std::string &message)
-{
+void XapiandClient::send_message(reply_type type, const std::string &message) {
 	char type_as_char = static_cast<char>(type);
 	std::string buf(&type_as_char, 1);
 	buf += encode_length(message.size());
 	buf += message;
-
+	
 	printf("send_message:");
 	print_string(buf);
-
+	
 	pthread_mutex_lock(&qmtx);
 	write_queue.push_back(new Buffer(type, buf.c_str(), buf.size()));
 	pthread_mutex_unlock(&qmtx);
-
+	
 	async.send();
 }
 
 
-void XapiandClient::run_one()
+void XapiandClient::send_message(reply_type type, const std::string &message, double end_time)
+{
+	send_message(type, message);
+}
+
+
+Xapian::Database * XapiandClient::get_db(bool writable_)
+{
+	if (writable_) {
+		return new Xapian::WritableDatabase(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
+	} else {
+		return new Xapian::Database(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
+	}
+}
+
+
+void XapiandClient::release_db(Xapian::Database *db_)
+{
+	delete db_;
+}
+
+
+Xapian::Database * XapiandClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_)
+{
+	dbpaths = dbpaths_;
+	return get_db(writable_);
+}
+
+
+void XapiandClient::run()
 {
 	try {
-		server->run_one();
+		run_one();
 	} catch (const Xapian::NetworkError &e) {
 		printf("ERROR: %s\n", e.get_msg().c_str());
 	} catch (...) {
@@ -262,10 +264,10 @@ void XapiandClient::run_one()
 }
 
 
-XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_)
-	: sock(sock_),
-	  thread_pool(thread_pool_),
-	  server(NULL)
+XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
+	: RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
+	  sock(sock_),
+	  thread_pool(thread_pool_)
 {
 	pthread_mutex_init(&qmtx, 0);
 
@@ -283,17 +285,9 @@ XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_)
 	async.start();
 
 	dbpaths.push_back("/Users/kronuz/Development/Dubalu/Xapian/xapian-core-1.3.2/bin/Xapiand/test");
-	server = new RemoteServer(
-		this,
-		dbpaths, true,
-		custom_get_message,
-		custom_send_message,
-		custom_get_database,
-		custom_get_writable_database
-	);
 
 	try {
-		server->msg_update(std::string());
+		msg_update(std::string());
 	} catch (const Xapian::NetworkError &e) {
 		printf("ERROR: %s\n", e.get_msg().c_str());
 	} catch (...) {
@@ -315,8 +309,6 @@ XapiandClient::~XapiandClient()
 	printf("Lost connection, %d client(s) connected.\n", --total_clients);
 
 	pthread_mutex_destroy(&qmtx);
-
-	delete server;
 }
 
 
@@ -337,7 +329,9 @@ void XapiandServer::io_accept(ev::io &watcher, int revents)
 		return;
 	}
 
-	new XapiandClient(client_sock, this->thread_pool);
+	double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
+	double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
+	new XapiandClient(client_sock, this->thread_pool, active_timeout, idle_timeout);
 }
 
 
