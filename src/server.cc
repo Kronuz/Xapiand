@@ -196,7 +196,7 @@ void XapiandClient::read_cb(ev::io &watcher)
 
 			messages_queue.push(msg);
 
-			if (required_type == '\x08') {
+			if (required_type == MSG_QUERY) {
 				thread_pool->addTask(new XapianWorker(this));
 			}
 
@@ -209,6 +209,7 @@ void XapiandClient::signal_cb(ev::sig &signal, int revents)
 {
 	delete this;
 }
+
 
 message_type XapiandClient::get_message(double timeout, std::string & result)
 {
@@ -230,6 +231,7 @@ message_type XapiandClient::get_message(double timeout, std::string & result)
 	return required_type;
 }
 
+
 void XapiandClient::send_message(reply_type type, const std::string &message)
 {
 	char type_as_char = static_cast<char>(type);
@@ -245,6 +247,18 @@ void XapiandClient::send_message(reply_type type, const std::string &message)
 	pthread_mutex_unlock(&qmtx);
 
 	async.send();
+}
+
+
+void XapiandClient::run_one()
+{
+	try {
+		server->run_one();
+	} catch (const Xapian::NetworkError &e) {
+		printf("ERROR: %s\n", e.get_msg().c_str());
+	} catch (...) {
+		printf("ERROR!\n");
+	}
 }
 
 
@@ -268,7 +282,7 @@ XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_)
 	async.set<XapiandClient, &XapiandClient::async_cb>(this);
 	async.start();
 
-	dbpaths.push_back("test");
+	dbpaths.push_back("/Users/kronuz/Development/Dubalu/Xapian/xapian-core-1.3.2/bin/Xapiand/test");
 	server = new RemoteServer(
 		this,
 		dbpaths, true,
@@ -306,18 +320,6 @@ XapiandClient::~XapiandClient()
 }
 
 
-void XapiandClient::run_one()
-{
-	try {
-		server->run_one();
-	} catch (const Xapian::NetworkError &e) {
-		printf("ERROR: %s\n", e.get_msg().c_str());
-	} catch (...) {
-		printf("ERROR!\n");
-	}
-}
-
-
 void XapiandServer::io_accept(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
@@ -338,10 +340,12 @@ void XapiandServer::io_accept(ev::io &watcher, int revents)
 	new XapiandClient(client_sock, this->thread_pool);
 }
 
+
 void XapiandServer::signal_cb(ev::sig &signal, int revents)
 {
 	signal.loop.break_loop();
 }
+
 
 XapiandServer::XapiandServer(int port, ThreadPool *thread_pool_)
 	: thread_pool(thread_pool_)
@@ -374,6 +378,7 @@ XapiandServer::XapiandServer(int port, ThreadPool *thread_pool_)
 	}
 }
 
+
 XapiandServer::~XapiandServer()
 {
 	shutdown(sock, SHUT_RDWR);
@@ -385,5 +390,6 @@ XapiandServer::~XapiandServer()
 
 	printf("Done with all work!\n");
 }
+
 
 int XapiandClient::total_clients = 0;
