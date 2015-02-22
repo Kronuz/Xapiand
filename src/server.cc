@@ -231,6 +231,9 @@ void XapiandClient::send_message(reply_type type, const std::string &message, do
 
 Xapian::Database * XapiandClient::get_db(bool writable_)
 {
+	if (dbpaths.empty()) {
+		return NULL;
+	}
 	if (writable_) {
 		return new Xapian::WritableDatabase(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
 	} else {
@@ -283,8 +286,6 @@ XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_, double active_
 
 	async.set<XapiandClient, &XapiandClient::async_cb>(this);
 	async.start();
-
-	dbpaths.push_back("/Users/kronuz/Development/Dubalu/Xapian/xapian-core-1.3.2/bin/Xapiand/test");
 
 	try {
 		msg_update(std::string());
