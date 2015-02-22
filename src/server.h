@@ -36,7 +36,7 @@ public:
 //
 //   A single instance of a non-blocking Xapiand handler
 //
-class XapiandClient {
+class XapiandClient : public RemoteProtocol {
 private:
 	ev::io io;
 	ev::async async;
@@ -72,14 +72,18 @@ private:
 	// effictivly a close and a destroy
 	virtual ~XapiandClient();
 
-	RemoteServer *server;
-
 public:
-	message_type get_message(double timeout, std::string & result);
-	void send_message(reply_type type, const std::string & message);
-    void run_one();
+    void run();
 
-	XapiandClient(int s, ThreadPool *thread_pool);
+	message_type get_message(double timeout, std::string & result, message_type required_type = MSG_MAX);
+	void send_message(reply_type type, const std::string &message);
+	void send_message(reply_type type, const std::string &message, double end_time);
+	
+	Xapian::Database * get_db(bool);
+	void release_db(Xapian::Database *);
+	Xapian::Database * select_db(const std::vector<std::string> &, bool);
+	
+	XapiandClient(int s, ThreadPool *thread_pool, double active_timeout_, double idle_timeout_);
 };
 
 #endif /* XAPIAND_INCLUDED_SERVER_H */
