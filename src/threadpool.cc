@@ -3,13 +3,13 @@
 
 // Function that retrieves a task from a queue, runs it and deletes it
 static void *getWork(void * param) {
-	Task *mw = 0;
 	Queue<Task *> *wq = (Queue<Task *> *)param;
+	Task *mw = NULL;
 	while (wq->pop(mw)) {
 		mw->run();
 		delete mw;
 	}
-	return 0;
+	return NULL;
 }
 
 
