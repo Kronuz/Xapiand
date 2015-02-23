@@ -139,4 +139,21 @@ public:
 	}
 };
 
+class Endpoints : public std::vector<Endpoint> {
+public:
+	size_t hash(bool writable) const {
+		std::vector<Endpoint> copy;
+		copy.assign(begin(), end());
+		std::sort(copy.begin(), copy.end());
+		std::string es = std::string(writable ? "1" : "0");
+		std::vector<Endpoint>::const_iterator j(copy.begin());
+		for (; j != copy.end(); j++) {
+			es += ":";
+			es += (*j).as_string().c_str();
+		}
+		std::hash<std::string> hash_fn;
+		return hash_fn(es);
+	}
+};
+
 #endif /* XAPIAND_INCLUDED_URI_H */
