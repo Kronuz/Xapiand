@@ -11,6 +11,7 @@
 		E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */; };
 		E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */; };
 		E5CEBCE31A99CA1B00CD151F /* length.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCE21A99CA1B00CD151F /* length.cc */; };
+		E5CEBCEA1A9B22E600CD151F /* database.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCE91A9B22E600CD151F /* database.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -35,6 +36,8 @@
 		E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = xapiand.cc; sourceTree = "<group>"; };
 		E5CEBCE21A99CA1B00CD151F /* length.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = length.cc; path = ../../net/length.cc; sourceTree = "<group>"; };
 		E5CEBCE51A9AE80200CD151F /* endpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = endpoint.h; sourceTree = "<group>"; };
+		E5CEBCE61A9B228C00CD151F /* database.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = database.h; sourceTree = "<group>"; };
+		E5CEBCE91A9B22E600CD151F /* database.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = database.cc; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,11 +56,13 @@
 			children = (
 				E5CEBCC71A99C89000CD151F /* Products */,
 				E5CEBCD91A99C9BB00CD151F /* queue.h */,
+				E5CEBCDB1A99C9BB00CD151F /* server.h */,
 				E5CEBCDA1A99C9BB00CD151F /* server.cc */,
 				E5CEBCE51A9AE80200CD151F /* endpoint.h */,
-				E5CEBCDB1A99C9BB00CD151F /* server.h */,
-				E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */,
+				E5CEBCE61A9B228C00CD151F /* database.h */,
+				E5CEBCE91A9B22E600CD151F /* database.cc */,
 				E5CEBCDD1A99C9BB00CD151F /* threadpool.h */,
+				E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */,
 				E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */,
 				E5CEBCE21A99CA1B00CD151F /* length.cc */,
 			);
@@ -128,6 +133,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */,
+				E5CEBCEA1A9B22E600CD151F /* database.cc in Sources */,
 				E5CEBCDF1A99C9BB00CD151F /* server.cc in Sources */,
 				E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */,
 				E5CEBCE31A99CA1B00CD151F /* length.cc in Sources */,
