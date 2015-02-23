@@ -47,6 +47,7 @@ public:
 	
 	bool checkout(Database **database, Endpoints &endpoints, bool writable);
 	void checkin(Database **database);
+	void finish();
 };
 
 #endif /**/
