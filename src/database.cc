@@ -43,6 +43,10 @@ Database::~Database()
 	delete db;
 }
 
+DatabaseQueue::DatabaseQueue()
+	: count(0)
+{
+}
 
 DatabaseQueue::~DatabaseQueue()
 {
@@ -54,6 +58,7 @@ DatabaseQueue::~DatabaseQueue()
 
 
 DatabasePool::DatabasePool()
+	: finished(false)
 {
 	pthread_mutex_init(&qmtx, 0);
 }
@@ -87,9 +92,9 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 		DatabaseQueue &queue = databases[hash];
 		
 		if (!queue.pop(database_, 0)) {
-			if (!writable || queue.instances_count == 0) {
+			if (!writable || queue.count == 0) {
 				database_ = new Database(endpoints, writable);
-				queue.instances_count++;
+				queue.count++;
 			}
 			// FIXME: lock until a database is available if it can't get one
 		}
