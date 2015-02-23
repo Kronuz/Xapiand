@@ -9,6 +9,35 @@
 #include "database.h"
 
 
+Database::Database(Endpoints &endpoints_, bool writable_)
+	: endpoints(endpoints_),
+	  writable(writable_)
+{
+	hash = endpoints.hash(writable);
+	reopen();
+}
+
+
+void
+Database::reopen()
+{
+	// FIXME: Handle remote endpoints and figure out if the endpoint is a local database
+	if (writable) {
+		db = new Xapian::WritableDatabase(endpoints[0].path, Xapian::DB_CREATE_OR_OPEN);
+	} else {
+		db = new Xapian::Database(endpoints[0].path, Xapian::DB_CREATE_OR_OPEN);
+		if (!writable) {
+			std::vector<Endpoint>::const_iterator i(endpoints.begin());
+			for (++i; i != endpoints.end(); ++i) {
+				db->add_database(Xapian::Database((*i).path));
+			}
+		} else if (endpoints.size() != 1) {
+			printf("ERROR: Expecting exactly one database.");
+		}
+	}
+}
+
+
 Database::~Database()
 {
 	delete db;
@@ -58,22 +87,11 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 		DatabaseQueue &queue = databases[hash];
 		
 		if (!queue.pop(database_, 0)) {
-			database_ = new Database();
-			database_->endpoints = endpoints;
-			database_->hash = hash;
-			if (writable) {
-				database_->db = new Xapian::WritableDatabase(endpoints[0].path, Xapian::DB_CREATE_OR_OPEN);
-			} else {
-				database_->db = new Xapian::Database(endpoints[0].path, Xapian::DB_CREATE_OR_OPEN);
-				if (!writable) {
-					std::vector<Endpoint>::const_iterator i(endpoints.begin());
-					for (++i; i != endpoints.end(); ++i) {
-						database_->db->add_database(Xapian::Database((*i).path));
-					}
-				} else if (endpoints.size() != 1) {
-					printf("ERROR: Expecting exactly one database.");
-				}
+			if (!writable || queue.instances_count == 0) {
+				database_ = new Database(endpoints, writable);
+				queue.instances_count++;
 			}
+			// FIXME: lock until a database is available if it can't get one
 		}
 		*database = database_;
 	}
