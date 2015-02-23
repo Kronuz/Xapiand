@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([Xapiand Server], [3.0], [german.mb@gmail.com])
+AC_INIT([Xapiand], [3.0.0-alpha], [german.mb@gmail.com])
 AC_CONFIG_SRCDIR([xapiand.cc])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIRS([m4])
