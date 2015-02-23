@@ -5,12 +5,11 @@ xapiand_SOURCES = xapiand.cc \
 	database.cc \
 	server.cc \
 	threadpool.cc \
-	../../net/length.cc
+	$(XAPIAN_SRCDIR)/net/length.cc
 
-AM_LDFLAGS = -lev
-AM_LDFLAGS += $(XAPIAN_LIBS)
+AM_LDFLAGS = $(XAPIAN_LIBS)
 
 AM_CXXFLAGS = -DXAPIAN_LIB_BUILD \
-	-I../../ \
-	-I../../common
+	-I$(XAPIAN_SRCDIR)/ \
+	-I$(XAPIAN_SRCDIR)/common
 AM_CXXFLAGS += $(XAPIAN_CXXFLAGS)
