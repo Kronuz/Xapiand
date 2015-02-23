@@ -231,33 +231,21 @@ void XapiandClient::send_message(reply_type type, const std::string &message, do
 
 Xapian::Database * XapiandClient::get_db(bool writable_)
 {
-	if (dbpaths.empty()) {
+	if (endpoints.empty()) {
 		return NULL;
 	}
-	Xapian::Database *db_;
-	if (writable_) {
-		db_ = new Xapian::WritableDatabase(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
-	} else {
-		db_ = new Xapian::Database(dbpaths[0], Xapian::DB_CREATE_OR_OPEN);
-		if (!writable) {
-			std::vector<std::string>::const_iterator i(dbpaths.begin());
-			for (++i; i != dbpaths.end(); ++i) {
-				db_->add_database(Xapian::Database(*i));
-			}
-		} else if (dbpaths.size() != 1) {
-			printf("ERROR: Expecting exactly one database.");
-		}
-
+	if (!database_pool->checkout(&database, endpoints, writable_)) {
+		return NULL;
 	}
-	printf("NEW DB!\n");
-	return db_;
+	return database->db;
 }
 
 
 void XapiandClient::release_db(Xapian::Database *db_)
 {
-	printf("RELEASED DB!\n");
-	delete db_;
+	if (database) {
+		database_pool->checkin(&database);
+	}
 }
 
 
@@ -265,23 +253,9 @@ void XapiandClient::select_db(const std::vector<std::string> &dbpaths_, bool wri
 {
 	std::vector<std::string>::const_iterator i(dbpaths_.begin());
 	for (; i != dbpaths_.end(); i++) {
-		std::string dbpath(*i);
-		Endpoint endpoint = Endpoint(dbpath, std::string(), 8890);
+		Endpoint endpoint = Endpoint(*i, std::string(), 8890);
 		endpoints.push_back(endpoint);
 	}
-	std::sort(endpoints.begin(), endpoints.end());
-
-	std::string es = std::string();
-	std::vector<Endpoint>::const_iterator j(endpoints.begin());
-	for (; j != endpoints.end(); j++) {
-		es += ":";
-		es += (*j).as_string().c_str();
-	}
-
-	std::hash<std::string> hash_fn;
-	size_t hash = hash_fn(es);
-	printf("> %s -> %lx\n", es.c_str(), hash);
-
 	dbpaths = dbpaths_;
 }
 
@@ -298,10 +272,12 @@ void XapiandClient::run()
 }
 
 
-XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
+XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
 	: RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  sock(sock_),
-	  thread_pool(thread_pool_)
+	  thread_pool(thread_pool_),
+	  database_pool(database_pool_),
+	  database(NULL)
 {
 	pthread_mutex_init(&qmtx, 0);
 
@@ -363,7 +339,7 @@ void XapiandServer::io_accept(ev::io &watcher, int revents)
 
 	double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 	double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-	new XapiandClient(client_sock, this->thread_pool, active_timeout, idle_timeout);
+	new XapiandClient(client_sock, &thread_pool, &database_pool, active_timeout, idle_timeout);
 }
 
 
@@ -373,8 +349,8 @@ void XapiandServer::signal_cb(ev::sig &signal, int revents)
 }
 
 
-XapiandServer::XapiandServer(int port, ThreadPool *thread_pool_)
-	: thread_pool(thread_pool_)
+XapiandServer::XapiandServer(int port, int thread_pool_size)
+	: thread_pool(thread_pool_size)
 {
 	int optval = 1;
 	struct sockaddr_in addr;
