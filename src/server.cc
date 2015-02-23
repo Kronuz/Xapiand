@@ -123,7 +123,7 @@ void XapiandClient::write_cb(ev::io &watcher)
 		} else {
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
-				write_queue.pop_front();
+				write_queue.pop();
 				delete buffer;
 			}
 		}
@@ -216,7 +216,7 @@ void XapiandClient::send_message(reply_type type, const std::string &message) {
 	print_string(buf);
 	
 	pthread_mutex_lock(&qmtx);
-	write_queue.push_back(new Buffer(type, buf.c_str(), buf.size()));
+	write_queue.push(new Buffer(type, buf.c_str(), buf.size()));
 	pthread_mutex_unlock(&qmtx);
 	
 	async.send();
