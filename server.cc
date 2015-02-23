@@ -115,7 +115,7 @@ void XapiandClient::write_cb(ev::io &watcher)
 	} else {
 		Buffer* buffer = write_queue.front();
 
-		// printf("sent:");
+		// printf(">>> ");
 		// print_string(std::string(buffer->dpos(), buffer->nbytes()));
 
 		ssize_t written = write(watcher.fd, buffer->dpos(), buffer->nbytes());
@@ -164,7 +164,7 @@ void XapiandClient::read_cb(ev::io &watcher)
 			std::string data = std::string(p, len);
 			buffer.erase(0, p - o + len);
 
-			// printf("received:");
+			// printf("<<< ");
 			// print_string(data);
 
 			Buffer *msg = new Buffer(type, data.c_str(), data.size());
@@ -174,7 +174,6 @@ void XapiandClient::read_cb(ev::io &watcher)
 			if (type != MSG_GETMSET && type != MSG_SHUTDOWN) {
 				thread_pool->addTask(new XapianWorker(this));
 			}
-
 		}
 	}
 }
