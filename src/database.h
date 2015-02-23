@@ -15,7 +15,7 @@
 #include "endpoint.h"
 #include "queue.h"
 
-#include "xapian.h"
+#include <xapian.h>
 #include <pthread.h>
 
 
