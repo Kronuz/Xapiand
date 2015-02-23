@@ -41,9 +41,10 @@ class DatabaseQueue : public Queue<Database *> {
 	friend class DatabasePool;
 protected:
 	// FIXME: Add queue creation time and delete databases when deleted queue
-	size_t instances_count = 0;
+	size_t count;
 
 public:
+	DatabaseQueue();
 	~DatabaseQueue();
 };
 
@@ -51,10 +52,9 @@ public:
 class DatabasePool {
 protected:
 	// FIXME: Add maximum number of databases available for the queue
-	size_t databases_count = 0;
 
 private:
-	bool finished = false;
+	bool finished;
 	std::unordered_map<size_t, DatabaseQueue> databases;
 	pthread_mutex_t qmtx;
 	
