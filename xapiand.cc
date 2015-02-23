@@ -4,6 +4,7 @@ c++ xapiand.cc server.cc threadpool.cc ../../net/length.cc -lev `xapian-config-1
 
 #include <stdlib.h>
 
+#include "config.h"
 #include "server.h"
 
 

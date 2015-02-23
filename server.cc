@@ -4,9 +4,9 @@
 #include <sys/socket.h>
 
 #include "server.h"
-#include "net/length.h"
 
-#include "xapian.h"
+#include <xapian.h>
+#include "net/length.h"
 
 const int WRITE_QUEUE_SIZE = 30;
 
