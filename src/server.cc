@@ -263,6 +263,25 @@ void XapiandClient::release_db(Xapian::Database *db_)
 
 void XapiandClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_)
 {
+	std::vector<std::string>::const_iterator i(dbpaths_.begin());
+	for (; i != dbpaths_.end(); i++) {
+		std::string dbpath(*i);
+		Endpoint endpoint = Endpoint(dbpath, std::string(), 8890);
+		endpoints.push_back(endpoint);
+	}
+	std::sort(endpoints.begin(), endpoints.end());
+
+	std::string es = std::string();
+	std::vector<Endpoint>::const_iterator j(endpoints.begin());
+	for (; j != endpoints.end(); j++) {
+		es += ":";
+		es += (*j).as_string().c_str();
+	}
+
+	std::hash<std::string> hash_fn;
+	size_t hash = hash_fn(es);
+	printf("> %s -> %lx\n", es.c_str(), hash);
+
 	dbpaths = dbpaths_;
 }
 
