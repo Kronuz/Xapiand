@@ -32,13 +32,17 @@ DatabasePool::DatabasePool()
 
 DatabasePool::~DatabasePool()
 {
+	finish();
+	pthread_mutex_destroy(&qmtx);
+}
+
+
+void DatabasePool::finish() {
 	pthread_mutex_lock(&qmtx);
 	
 	finished = true;
 	
-	pthread_mutex_lock(&qmtx);
-	
-	pthread_mutex_destroy(&qmtx);
+	pthread_mutex_unlock(&qmtx);
 }
 
 
