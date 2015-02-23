@@ -1,3 +1,25 @@
+/.libs
+/.deps
+
+# Automake stuff
+/Makefile
+/Makefile.in
+/aclocal.m4
+/configure
+/config.h
+/config.h.in
+/config.h.in~
+/config.log
+/config.status
+/autom4te*.cache
+/stamp-h1
+/stamp-h.in
+/libtool
+
+# Xcode workspace
+/Xapiand.xcodeproj/xcuserdata
+/Xapiand.xcodeproj/project.xcworkspace
+
 # Compiled Object files
 *.slo
 *.lo
@@ -16,6 +38,9 @@
 # Fortran module files
 *.mod
 
+# OS X
+.DS_Store
+
 # Compiled Static libraries
 *.lai
 *.la
@@ -26,3 +51,4 @@
 *.exe
 *.out
 *.app
+/xapiand
