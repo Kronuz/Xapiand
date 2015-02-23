@@ -19,27 +19,46 @@
 #include <pthread.h>
 
 
-struct Database {
+class DatabasePool;
+
+
+class Database {
+public:
 	size_t hash;
+	bool writable;
 	Endpoints endpoints;
 	
 	Xapian::Database *db;
 	
+	Database(Endpoints &endpoints, bool writable);
 	~Database();
+	
+	void reopen();
 };
 
 
 class DatabaseQueue : public Queue<Database *> {
+	friend class DatabasePool;
+protected:
+	// FIXME: Add queue creation time and delete databases when deleted queue
+	size_t instances_count = 0;
+
 public:
 	~DatabaseQueue();
 };
 
 
 class DatabasePool {
+protected:
+	// FIXME: Add maximum number of databases available for the queue
+	size_t databases_count = 0;
+
 private:
 	bool finished = false;
 	std::unordered_map<size_t, DatabaseQueue> databases;
 	pthread_mutex_t qmtx;
+	
+	// FIXME: Add cleanup for removing old dtabase queues
 	
 public:
 	DatabasePool();
