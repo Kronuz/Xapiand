@@ -43,8 +43,8 @@ class Endpoint {
 		std::string output = "";
 		if (delimiter_location < std::string::npos) {
 			size_t start = delimiter_location + delimiter_length;
-			subject = subject.substr(0, delimiter_location);
 			output = subject.substr(start, subject.length() - start);
+			subject = subject.substr(0, delimiter_location);
 		}
 		return output;
 	}
