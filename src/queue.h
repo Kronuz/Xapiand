@@ -16,7 +16,7 @@ private:
 	// A variable condition to make threads wait on specified condition values
 	pthread_cond_t wcond;
 
-	bool finished = false;
+	bool finished;
 
 public:
 	Queue();
@@ -33,6 +33,7 @@ public:
 
 template<class T>
 Queue<T>::Queue()
+	: finished(false)
 {
 	pthread_cond_init(&wcond, 0);
 	pthread_mutex_init(&qmtx, 0);
