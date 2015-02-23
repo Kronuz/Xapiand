@@ -9,10 +9,8 @@
 
 
 template<class T>
-class Queue {
+class Queue : public std::queue<T> {
 private:
-	// The queue itself
-	std::queue<T> queue;
 	// A mutex object to control access to the std::queue
 	pthread_mutex_t qmtx;
 	// A variable condition to make threads wait on specified condition values
@@ -28,7 +26,7 @@ public:
 	void push(T& element);
 	bool pop(T& element, double timeout=-1.0);
 
-	unsigned int sizeOfQueue();
+	size_t size();
 	bool empty();
 };
 
@@ -71,7 +69,7 @@ void Queue<T>::push(T& element)
 
 	if (!finished) {
 		// Insert the element in the FIFO queue
-		queue.push(element);
+		std::queue<T>::push(element);
 	}
 
 	// Now we need to unlock the mutex otherwise waiting threads will not be able
@@ -87,7 +85,7 @@ template<class T>
 bool Queue<T>::empty()
 {
 	pthread_mutex_lock(&qmtx);
-	bool empty = queue.empty();
+	bool empty = std::queue<T>::empty();
 	pthread_mutex_unlock(&qmtx);
 	return empty;
 }
@@ -107,7 +105,7 @@ bool Queue<T>::pop(T& element, double timeout)
 	pthread_mutex_lock(&qmtx);
 
 	// While the queue is empty, make the thread that runs this wait
-	while(queue.empty()) {
+	while(std::queue<T>::empty()) {
 		if (!finished && timeout != 0.0) {
 			if (timeout > 0.0) {
 				if (pthread_cond_timedwait(&wcond, &qmtx, &ts) == ETIMEDOUT) {
@@ -124,10 +122,10 @@ bool Queue<T>::pop(T& element, double timeout)
 	}
 
 	//when the condition variable is unlocked, popped the element
-	element = queue.front();
+	element = std::queue<T>::front();
 
 	//pop the element
-	queue.pop();
+	std::queue<T>::pop();
 
 	pthread_mutex_unlock(&qmtx);
 	return true;
@@ -135,10 +133,10 @@ bool Queue<T>::pop(T& element, double timeout)
 
 
 template<class T>
-unsigned int Queue<T>::sizeOfQueue()
+size_t Queue<T>::size()
 {
 	pthread_mutex_lock(&qmtx);
-	unsigned int size = queue.size();
+	size_t size = std::queue<T>::size();
 	pthread_mutex_unlock(&qmtx);
 	return size;
 };
