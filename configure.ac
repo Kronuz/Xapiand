@@ -9,7 +9,7 @@ AC_CONFIG_MACRO_DIRS([m4])
 
 LT_INIT
 
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects no-dependencies])
 
 AC_ARG_VAR(XAPIAN_SRCDIR, Location of the xapian-core source code directory)
 
