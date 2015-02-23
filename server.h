@@ -8,6 +8,7 @@
 
 #include "queue.h"
 #include "threadpool.h"
+#include "endpoint.h"
 
 #include "net/remoteserver.h"
 
@@ -46,6 +47,7 @@ private:
 	ThreadPool *thread_pool;
 
 	std::vector<std::string> dbpaths;
+	std::vector<Endpoint> endpoints;
 
 	static int total_clients;
 

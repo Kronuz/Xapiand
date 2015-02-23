@@ -34,6 +34,7 @@
 		E5CEBCDD1A99C9BB00CD151F /* threadpool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = threadpool.h; sourceTree = "<group>"; };
 		E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = xapiand.cc; sourceTree = "<group>"; };
 		E5CEBCE21A99CA1B00CD151F /* length.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = length.cc; path = ../../net/length.cc; sourceTree = "<group>"; };
+		E5CEBCE51A9AE80200CD151F /* endpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = endpoint.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +54,7 @@
 				E5CEBCC71A99C89000CD151F /* Products */,
 				E5CEBCD91A99C9BB00CD151F /* queue.h */,
 				E5CEBCDA1A99C9BB00CD151F /* server.cc */,
+				E5CEBCE51A9AE80200CD151F /* endpoint.h */,
 				E5CEBCDB1A99C9BB00CD151F /* server.h */,
 				E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */,
 				E5CEBCDD1A99C9BB00CD151F /* threadpool.h */,
