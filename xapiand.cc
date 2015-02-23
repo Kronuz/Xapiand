@@ -14,11 +14,9 @@ int main(int argc, char **argv)
 	if (argc > 1)
 		port = atoi(argv[1]);
 
-	ThreadPool tp = ThreadPool(12);
-
 	ev::default_loop loop;
 
-	XapiandServer xapiand(port, &tp);
+	XapiandServer xapiand(port, 12);
 
 	loop.run(0);
 
