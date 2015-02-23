@@ -8,6 +8,7 @@
 
 #include "xapian.h"
 
+const int WRITE_QUEUE_SIZE = 30;
 
 const int MSECS_IDLE_TIMEOUT_DEFAULT = 60000;
 const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
@@ -123,7 +124,7 @@ void XapiandClient::write_cb(ev::io &watcher)
 		} else {
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
-				write_queue.pop();
+				write_queue.pop(buffer);
 				delete buffer;
 			}
 		}
@@ -216,7 +217,8 @@ void XapiandClient::send_message(reply_type type, const std::string &message) {
 	print_string(buf);
 	
 	pthread_mutex_lock(&qmtx);
-	write_queue.push(new Buffer(type, buf.c_str(), buf.size()));
+	Buffer *buffer = new Buffer(type, buf.c_str(), buf.size());
+	write_queue.push(buffer);
 	pthread_mutex_unlock(&qmtx);
 	
 	async.send();
@@ -277,6 +279,7 @@ XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_, DatabasePool *
 	  sock(sock_),
 	  thread_pool(thread_pool_),
 	  database_pool(database_pool_),
+	  write_queue(WRITE_QUEUE_SIZE),
 	  database(NULL)
 {
 	pthread_mutex_init(&qmtx, 0);
