@@ -1,7 +1,7 @@
 #ifndef XAPIAND_INCLUDED_SERVER_H
 #define XAPIAND_INCLUDED_SERVER_H
 
-#include <list>
+#include <queue>
 
 #include <unistd.h>
 #include <ev++.h>
@@ -59,7 +59,7 @@ private:
 
 	// Buffers that are pending write
 	Queue<Buffer *> messages_queue;
-	std::list<Buffer *> write_queue;
+	std::queue<Buffer *> write_queue;
 	std::string buffer;
 
 	void async_cb(ev::async &watcher, int revents);
