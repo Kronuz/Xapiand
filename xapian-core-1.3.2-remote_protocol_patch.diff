@@ -53,7 +53,7 @@ index a46af11..3b39fdf 100644
  
  }
 diff --git a/backends/remote/remote-database.cc b/backends/remote/remote-database.cc
-index 337865a..f056b9c 100644
+index 337865a..f1f2fbb 100644
 --- a/backends/remote/remote-database.cc
 +++ b/backends/remote/remote-database.cc
 @@ -59,8 +59,9 @@ throw_bad_message(const string & context)
@@ -77,7 +77,7 @@ index 337865a..f056b9c 100644
  	if (type == REPLY_DONE) {
  	    // The database was already open at the latest revision.
  	    return false;
-@@ -348,6 +349,19 @@ RemoteDatabase::update_stats(message_type msg_code) const
+@@ -348,6 +349,22 @@ RemoteDatabase::update_stats(message_type msg_code) const
  	throw Xapian::NetworkError(errmsg, context);
      }
  
@@ -86,6 +86,9 @@ index 337865a..f056b9c 100644
 +        message += db_dir;
 +	send_message(MSG_SELECT, message);
 +	get_message(message, REPLY_UPDATE);
++        if (message.size() < 3) {
++            throw Xapian::NetworkError("Database was not selected", context);
++        }
 +
 +	p = message.c_str();
 +	p_end = p + message.size();
