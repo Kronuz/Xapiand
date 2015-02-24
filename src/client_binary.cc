@@ -17,9 +17,6 @@ BinaryClient::BinaryClient(int sock_, ThreadPool *thread_pool_, DatabasePool *da
 {
 	printf("Got connection, %d binary client(s) connected.\n", ++total_clients);
 
-	async.set<BinaryClient, &BinaryClient::async_cb>(this);
-	async.start();
-
 	try {
 		msg_update(std::string());
 	} catch (const Xapian::NetworkError &e) {
@@ -32,36 +29,7 @@ BinaryClient::BinaryClient(int sock_, ThreadPool *thread_pool_, DatabasePool *da
 
 BinaryClient::~BinaryClient()
 {
-	async.stop();
 	printf("Lost connection, %d binary client(s) connected.\n", --total_clients);
-}
-
-
-void BinaryClient::write_cb(ev::io &watcher)
-{
-	pthread_mutex_lock(&qmtx);
-
-	if (write_queue.empty()) {
-		io.set(ev::READ);
-	} else {
-		Buffer* buffer = write_queue.front();
-
-		// printf(">>> ");
-		// print_string(std::string(buffer->dpos(), buffer->nbytes()));
-
-		ssize_t written = write(watcher.fd, buffer->dpos(), buffer->nbytes());
-		if (written < 0) {
-			perror("read error");
-		} else {
-			buffer->pos += written;
-			if (buffer->nbytes() == 0) {
-				write_queue.pop(buffer);
-				delete buffer;
-			}
-		}
-	}
-
-	pthread_mutex_unlock(&qmtx);
 }
 
 
@@ -110,15 +78,6 @@ void BinaryClient::read_cb(ev::io &watcher)
 	}
 }
 
-void BinaryClient::async_cb(ev::async &watcher, int revents)
-{
-	pthread_mutex_lock(&qmtx);
-	if (!write_queue.empty()) {
-		io.set(ev::READ|ev::WRITE);
-	}
-	pthread_mutex_unlock(&qmtx);
-}
-
 
 message_type BinaryClient::get_message(double timeout, std::string & result, message_type required_type)
 {
@@ -150,12 +109,7 @@ void BinaryClient::send_message(reply_type type, const std::string &message) {
 	printf("send_message:");
 	print_string(buf);
 
-	pthread_mutex_lock(&qmtx);
-	Buffer *buffer = new Buffer(type, buf.c_str(), buf.size());
-	write_queue.push(buffer);
-	pthread_mutex_unlock(&qmtx);
-
-	async.send();
+	send(buf.c_str(), buf.size());
 }
 
 
