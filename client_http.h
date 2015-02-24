@@ -14,7 +14,7 @@ class HttpClient : public BaseClient {
 	void read_cb(ev::io &watcher);
 
 	static const http_parser_settings settings;
-	
+
 	std::string path;
 	std::string body;
 
