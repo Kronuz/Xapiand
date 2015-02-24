@@ -43,6 +43,7 @@ class BaseClient {
 protected:
 	ev::io io;
 	ev::sig sig;
+	ev::async async;
 
 	int sock;
 	static int total_clients;
@@ -57,15 +58,20 @@ protected:
 	Queue<Buffer *> write_queue;
 
 	void signal_cb(ev::sig &signal, int revents);
+	void async_cb(ev::async &watcher, int revents);
 
 	// Generic callback
 	void callback(ev::io &watcher, int revents);
 
 	// Socket is writable
-	virtual void write_cb(ev::io &watcher) = 0;
+	virtual void write_cb(ev::io &watcher);
 
 	// Receive message from client socket
 	virtual void read_cb(ev::io &watcher) = 0;
+
+	void send(const std::string &buf);
+	void send(const char *buf);
+	void send(const char *buf, size_t buf_size);
 
 public:
 	virtual void run() = 0;

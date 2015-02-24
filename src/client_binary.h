@@ -14,8 +14,6 @@
 //
 class BinaryClient : public BaseClient, public RemoteProtocol {
 private:
-	ev::async async;
-
 	Database *database;
 	std::vector<std::string> dbpaths;
 
@@ -23,10 +21,7 @@ private:
 	std::string buffer;
 	Queue<Buffer *> messages_queue;
 
-	void write_cb(ev::io &watcher);
 	void read_cb(ev::io &watcher);
-
-	void async_cb(ev::async &watcher, int revents);
 
 public:
     void run();
