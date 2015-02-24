@@ -30,10 +30,10 @@ void print_string(const std::string &string) {
 
 class XapianWorker : public Task {
 private:
-	XapiandClient *client;
+	BinaryClient *client;
 
 public:
-	XapianWorker(XapiandClient *client_) : Task(), client(client_) {}
+	XapianWorker(BinaryClient *client_) : Task(), client(client_) {}
 
 	~XapianWorker() {}
 
@@ -143,7 +143,7 @@ void XapiandServer::io_accept(ev::io &watcher, int revents)
 
 	double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 	double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-	new XapiandClient(client_sock, &thread_pool, &database_pool, active_timeout, idle_timeout);
+	new BinaryClient(client_sock, &thread_pool, &database_pool, active_timeout, idle_timeout);
 }
 
 
@@ -153,14 +153,14 @@ void XapiandServer::signal_cb(ev::sig &signal, int revents)
 }
 
 
-int XapiandClient::total_clients = 0;
+int BinaryClient::total_clients = 0;
 
 
 //
 // Xapian binary client
 //
 
-XapiandClient::XapiandClient(int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
+BinaryClient::BinaryClient(int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
 : RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 sock(sock_),
 thread_pool(thread_pool_),
@@ -174,13 +174,13 @@ database(NULL)
 
 	printf("Got connection, %d client(s) connected.\n", ++total_clients);
 
-	io.set<XapiandClient, &XapiandClient::callback>(this);
+	io.set<BinaryClient, &BinaryClient::callback>(this);
 	io.start(sock, ev::READ);
 
-	sig.set<XapiandClient, &XapiandClient::signal_cb>(this);
+	sig.set<BinaryClient, &BinaryClient::signal_cb>(this);
 	sig.start(SIGINT);
 
-	async.set<XapiandClient, &XapiandClient::async_cb>(this);
+	async.set<BinaryClient, &BinaryClient::async_cb>(this);
 	async.start();
 
 	try {
@@ -192,7 +192,7 @@ database(NULL)
 	}
 }
 
-XapiandClient::~XapiandClient()
+BinaryClient::~BinaryClient()
 {
 	shutdown(sock, SHUT_RDWR);
 
@@ -209,7 +209,7 @@ XapiandClient::~XapiandClient()
 }
 
 
-void XapiandClient::callback(ev::io &watcher, int revents)
+void BinaryClient::callback(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
 		perror("got invalid event");
@@ -232,7 +232,7 @@ void XapiandClient::callback(ev::io &watcher, int revents)
 }
 
 
-void XapiandClient::async_cb(ev::async &watcher, int revents)
+void BinaryClient::async_cb(ev::async &watcher, int revents)
 {
 	pthread_mutex_lock(&qmtx);
 	if (!write_queue.empty()) {
@@ -242,7 +242,7 @@ void XapiandClient::async_cb(ev::async &watcher, int revents)
 }
 
 
-void XapiandClient::write_cb(ev::io &watcher)
+void BinaryClient::write_cb(ev::io &watcher)
 {
 	pthread_mutex_lock(&qmtx);
 
@@ -270,7 +270,7 @@ void XapiandClient::write_cb(ev::io &watcher)
 }
 
 
-void XapiandClient::read_cb(ev::io &watcher)
+void BinaryClient::read_cb(ev::io &watcher)
 {
 	char buf[1024];
 
@@ -316,13 +316,13 @@ void XapiandClient::read_cb(ev::io &watcher)
 }
 
 
-void XapiandClient::signal_cb(ev::sig &signal, int revents)
+void BinaryClient::signal_cb(ev::sig &signal, int revents)
 {
 	delete this;
 }
 
 
-message_type XapiandClient::get_message(double timeout, std::string & result, message_type required_type)
+message_type BinaryClient::get_message(double timeout, std::string & result, message_type required_type)
 {
 	Buffer* msg;
 	if (!messages_queue.pop(msg)) {
@@ -343,7 +343,7 @@ message_type XapiandClient::get_message(double timeout, std::string & result, me
 }
 
 
-void XapiandClient::send_message(reply_type type, const std::string &message) {
+void BinaryClient::send_message(reply_type type, const std::string &message) {
 	char type_as_char = static_cast<char>(type);
 	std::string buf(&type_as_char, 1);
 	buf += encode_length(message.size());
@@ -361,13 +361,13 @@ void XapiandClient::send_message(reply_type type, const std::string &message) {
 }
 
 
-void XapiandClient::send_message(reply_type type, const std::string &message, double end_time)
+void BinaryClient::send_message(reply_type type, const std::string &message, double end_time)
 {
 	send_message(type, message);
 }
 
 
-Xapian::Database * XapiandClient::get_db(bool writable_)
+Xapian::Database * BinaryClient::get_db(bool writable_)
 {
 	if (endpoints.empty()) {
 		return NULL;
@@ -379,7 +379,7 @@ Xapian::Database * XapiandClient::get_db(bool writable_)
 }
 
 
-void XapiandClient::release_db(Xapian::Database *db_)
+void BinaryClient::release_db(Xapian::Database *db_)
 {
 	if (database) {
 		database_pool->checkin(&database);
@@ -387,7 +387,7 @@ void XapiandClient::release_db(Xapian::Database *db_)
 }
 
 
-void XapiandClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_)
+void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_)
 {
 	std::vector<std::string>::const_iterator i(dbpaths_.begin());
 	for (; i != dbpaths_.end(); i++) {
@@ -398,7 +398,7 @@ void XapiandClient::select_db(const std::vector<std::string> &dbpaths_, bool wri
 }
 
 
-void XapiandClient::run()
+void BinaryClient::run()
 {
 	try {
 		run_one();

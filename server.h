@@ -35,9 +35,9 @@ public:
 
 
 //
-//   A single instance of a non-blocking Xapiand handler
+//   A single instance of a non-blocking Xapiand binary protocol handler
 //
-class XapiandClient : public RemoteProtocol {
+class BinaryClient : public RemoteProtocol {
 private:
 	ev::io io;
 	ev::async async;
@@ -74,7 +74,7 @@ private:
 	void signal_cb(ev::sig &signal, int revents);
 
 	// effictivly a close and a destroy
-	virtual ~XapiandClient();
+	virtual ~BinaryClient();
 
 public:
     void run();
@@ -87,7 +87,7 @@ public:
 	void release_db(Xapian::Database *);
 	void select_db(const std::vector<std::string> &, bool);
 
-	XapiandClient(int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
+	BinaryClient(int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
 };
 
 #endif /* XAPIAND_INCLUDED_SERVER_H */
