@@ -14,10 +14,10 @@
 struct Buffer {
 	char type;
 	char *data;
-	ssize_t len;
-	ssize_t pos;
+	size_t len;
+	size_t pos;
 
-	Buffer(char type_, const char *bytes, ssize_t nbytes) {
+	Buffer(char type_, const char *bytes, size_t nbytes) {
 		pos = 0;
 		len = nbytes;
 		type = type_;
@@ -33,7 +33,7 @@ struct Buffer {
 		return data + pos;
 	}
 
-	ssize_t nbytes() {
+	size_t nbytes() {
 		return len - pos;
 	}
 };
