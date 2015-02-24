@@ -45,6 +45,7 @@ protected:
 	ev::sig sig;
 	ev::async async;
 
+	bool finished;
 	int sock;
 	static int total_clients;
 
@@ -72,6 +73,8 @@ protected:
 	void send(const std::string &buf);
 	void send(const char *buf);
 	void send(const char *buf, size_t buf_size);
+	
+	void finish();
 
 public:
 	virtual void run() = 0;
