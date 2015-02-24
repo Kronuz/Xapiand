@@ -37,11 +37,11 @@ void HttpClient::read_cb(ev::io &watcher)
 		http_parser_init(&parser, HTTP_REQUEST);
 		parser.data = this;
 		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
-		if (parser.upgrade) {
-			/* handle new protocol */
-		} else if (parsed != received) {
+		if (parsed == received) {
+			thread_pool->addTask(new ClientWorker(this));
+		} else {
 			// Handle error. Just close the connection.
-			delete this;
+			finish(); // was delete this
 		}
 	}
 }
@@ -52,6 +52,7 @@ void HttpClient::run()
 		printf("PATH: %s\n", path.c_str());
 		printf("BODY: %s\n", body.c_str());
 		send("HTTP/1.1 200 OK\r\n\r\nOK!\r\n");
+		finish();
 	} catch (...) {
 		printf("ERROR!\n");
 	}
@@ -83,13 +84,14 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	std::string data;
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
+	// printf("%3d. %s\n", p->state, std::string(at, length).c_str());
+
 	switch (p->state) {
 		case 32: // path
 			self->path = std::string(at, length);
 			break;
 		case 62: // data
 			self->body = std::string(at, length);
-			self->thread_pool->addTask(new ClientWorker(self));
 			break;
 	}
 

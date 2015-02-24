@@ -13,7 +13,8 @@ int BaseClient::total_clients = 0;
 
 
 BaseClient::BaseClient(int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
-	: sock(sock_),
+	: finished(false),
+	  sock(sock_),
 	  thread_pool(thread_pool_),
 	  database_pool(database_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
@@ -47,11 +48,22 @@ BaseClient::~BaseClient()
 	pthread_mutex_destroy(&qmtx);
 }
 
+void BaseClient::finish() {
+	finished = true;
+}
+
 
 void BaseClient::async_cb(ev::async &watcher, int revents)
 {
+
 	pthread_mutex_lock(&qmtx);
-	if (!write_queue.empty()) {
+	if (write_queue.empty()) {
+		if (finished) {
+			pthread_mutex_unlock(&qmtx);
+			delete this;
+			return;
+		}
+	} else {
 		io.set(ev::READ|ev::WRITE);
 	}
 	pthread_mutex_unlock(&qmtx);
@@ -73,6 +85,11 @@ void BaseClient::callback(ev::io &watcher, int revents)
 
 	pthread_mutex_lock(&qmtx);
 	if (write_queue.empty()) {
+		if (finished) {
+			pthread_mutex_unlock(&qmtx);
+			delete this;
+			return;
+		}
 		io.set(ev::READ);
 	} else {
 		io.set(ev::READ|ev::WRITE);
