@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		E59725B71A9CFCAD0060069C /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = E59725B51A9CFCAD0060069C /* http_parser.c */; };
+		E59725CC1A9D25EB0060069C /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725C61A9D25EB0060069C /* client_base.cc */; };
+		E59725CD1A9D25EB0060069C /* client_binary.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725C81A9D25EB0060069C /* client_binary.cc */; };
+		E59725CE1A9D25EB0060069C /* client_http.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725CA1A9D25EB0060069C /* client_http.cc */; };
+		E59725D11A9D25F60060069C /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725CF1A9D25F60060069C /* utils.cc */; };
 		E5CEBCDF1A99C9BB00CD151F /* server.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDA1A99C9BB00CD151F /* server.cc */; };
 		E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */; };
 		E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */; };
@@ -30,6 +34,14 @@
 /* Begin PBXFileReference section */
 		E59725B51A9CFCAD0060069C /* http_parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = http_parser.c; sourceTree = "<group>"; };
 		E59725B61A9CFCAD0060069C /* http_parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = http_parser.h; sourceTree = "<group>"; };
+		E59725C61A9D25EB0060069C /* client_base.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = client_base.cc; sourceTree = "<group>"; };
+		E59725C71A9D25EB0060069C /* client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = client_base.h; sourceTree = "<group>"; };
+		E59725C81A9D25EB0060069C /* client_binary.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = client_binary.cc; sourceTree = "<group>"; };
+		E59725C91A9D25EB0060069C /* client_binary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = client_binary.h; sourceTree = "<group>"; };
+		E59725CA1A9D25EB0060069C /* client_http.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = client_http.cc; sourceTree = "<group>"; };
+		E59725CB1A9D25EB0060069C /* client_http.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = client_http.h; sourceTree = "<group>"; };
+		E59725CF1A9D25F60060069C /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utils.cc; sourceTree = "<group>"; };
+		E59725D01A9D25F60060069C /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
 		E5CEBCD91A99C9BB00CD151F /* queue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = queue.h; sourceTree = "<group>"; };
 		E5CEBCDA1A99C9BB00CD151F /* server.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = server.cc; sourceTree = "<group>"; };
@@ -58,9 +70,17 @@
 			isa = PBXGroup;
 			children = (
 				E5CEBCC71A99C89000CD151F /* Products */,
+				E59725CF1A9D25F60060069C /* utils.cc */,
+				E59725D01A9D25F60060069C /* utils.h */,
 				E5CEBCD91A99C9BB00CD151F /* queue.h */,
 				E5CEBCDB1A99C9BB00CD151F /* server.h */,
 				E5CEBCDA1A99C9BB00CD151F /* server.cc */,
+				E59725C61A9D25EB0060069C /* client_base.cc */,
+				E59725C71A9D25EB0060069C /* client_base.h */,
+				E59725C81A9D25EB0060069C /* client_binary.cc */,
+				E59725C91A9D25EB0060069C /* client_binary.h */,
+				E59725CA1A9D25EB0060069C /* client_http.cc */,
+				E59725CB1A9D25EB0060069C /* client_http.h */,
 				E5CEBCE51A9AE80200CD151F /* endpoint.h */,
 				E5CEBCE61A9B228C00CD151F /* database.h */,
 				E5CEBCE91A9B22E600CD151F /* database.cc */,
@@ -140,9 +160,13 @@
 				E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */,
 				E5CEBCEA1A9B22E600CD151F /* database.cc in Sources */,
 				E5CEBCEC1A9BB98A00CD151F /* length.cc in Sources */,
+				E59725CE1A9D25EB0060069C /* client_http.cc in Sources */,
+				E59725CC1A9D25EB0060069C /* client_base.cc in Sources */,
+				E59725D11A9D25F60060069C /* utils.cc in Sources */,
 				E5CEBCDF1A99C9BB00CD151F /* server.cc in Sources */,
 				E59725B71A9CFCAD0060069C /* http_parser.c in Sources */,
 				E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */,
+				E59725CD1A9D25EB0060069C /* client_binary.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -5,13 +5,23 @@ xapiand_SOURCES = xapiand.cc \
 	database.cc \
 	server.cc \
 	threadpool.cc \
+	client_base.cc \
+	client_binary.cc \
+	client_http.cc \
+	http_parser.c \
+	utils.cc \
 	$(XAPIAN_SRCDIR)/net/length.cc
 
 noinst_HEADERS = database.h \
 	endpoint.h \
 	queue.h \
 	server.h \
-	threadpool.h
+	threadpool.h \
+	client_base.h \
+	client_binary.h \
+	client_http.h \
+	http_parser.h \
+	utils.h
 
 EXTRA_DIST = Xapiand.xcodeproj/project.pbxproj
 
