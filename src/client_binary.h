@@ -1,10 +1,6 @@
 #ifndef XAPIAND_INCLUDED_CLIENT_BINARY_H
 #define XAPIAND_INCLUDED_CLIENT_BINARY_H
 
-// #include <unistd.h>
-// #include "queue.h"
-// #include "endpoint.h"
-// #include "http_parser.h"
 #include "net/remoteserver.h"
 
 #include "client_base.h"
