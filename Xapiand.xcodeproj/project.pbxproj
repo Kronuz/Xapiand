@@ -223,15 +223,15 @@
 				OTHER_CPLUSPLUSFLAGS = (
 					"-DXAPIAN_LIB_BUILD",
 					"-I/usr/local/include",
-					"-I/usr/local/Cellar/xapian/1.3.2/include/xapian-1.3",
+					"-I/usr/local/include/xapian-1.3",
 					"-I../xapian-core-1.3.2",
 					"-I../xapian-core-1.3.2/common",
 				);
 				OTHER_LDFLAGS = (
-					"-L/usr/local/Cellar/xapian/1.3.2/lib",
 					"-L/usr/local/lib",
 					"-lz",
 					"-lev",
+					"-lpthread",
 					"-lxapian-1.3",
 				);
 				OTHER_LIBTOOLFLAGS = "";
@@ -245,15 +245,15 @@
 				OTHER_CPLUSPLUSFLAGS = (
 					"-DXAPIAN_LIB_BUILD",
 					"-I/usr/local/include",
-					"-I/usr/local/Cellar/xapian/1.3.2/include/xapian-1.3",
+					"-I/usr/local/include/xapian-1.3",
 					"-I../xapian-core-1.3.2",
 					"-I../xapian-core-1.3.2/common",
 				);
 				OTHER_LDFLAGS = (
-					"-L/usr/local/Cellar/xapian/1.3.2/lib",
 					"-L/usr/local/lib",
 					"-lz",
 					"-lev",
+					"-lpthread",
 					"-lxapian-1.3",
 				);
 				OTHER_LIBTOOLFLAGS = "";
