@@ -87,7 +87,11 @@ public:
 		std::string portstring = slice_after(in, ":");
 		port = atoi(portstring.c_str());
 		if (protocol.empty() || protocol == "file") {
-			path = in + "/" + path;
+			if (path.empty()) {
+				path = in;
+			} else {
+				path = in + "/" + path;
+			}
 			port = 0;
 			search = "";
 			password = "";
