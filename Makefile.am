@@ -13,6 +13,8 @@ noinst_HEADERS = database.h \
 	server.h \
 	threadpool.h
 
+EXTRA_DIST = Xapiand.xcodeproj/project.pbxproj
+
 AM_LDFLAGS = $(XAPIAN_LIBS)
 
 AM_CXXFLAGS = -DXAPIAN_LIB_BUILD \
