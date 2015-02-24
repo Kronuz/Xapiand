@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E59725B71A9CFCAD0060069C /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = E59725B51A9CFCAD0060069C /* http_parser.c */; };
 		E5CEBCDF1A99C9BB00CD151F /* server.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDA1A99C9BB00CD151F /* server.cc */; };
 		E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */; };
 		E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */; };
@@ -27,6 +28,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		E59725B51A9CFCAD0060069C /* http_parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = http_parser.c; sourceTree = "<group>"; };
+		E59725B61A9CFCAD0060069C /* http_parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = http_parser.h; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
 		E5CEBCD91A99C9BB00CD151F /* queue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = queue.h; sourceTree = "<group>"; };
 		E5CEBCDA1A99C9BB00CD151F /* server.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = server.cc; sourceTree = "<group>"; };
@@ -65,6 +68,8 @@
 				E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */,
 				E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */,
 				E5CEBCEB1A9BB98A00CD151F /* length.cc */,
+				E59725B51A9CFCAD0060069C /* http_parser.c */,
+				E59725B61A9CFCAD0060069C /* http_parser.h */,
 			);
 			sourceTree = "<group>";
 		};
@@ -136,6 +141,7 @@
 				E5CEBCEA1A9B22E600CD151F /* database.cc in Sources */,
 				E5CEBCEC1A9BB98A00CD151F /* length.cc in Sources */,
 				E5CEBCDF1A99C9BB00CD151F /* server.cc in Sources */,
+				E59725B71A9CFCAD0060069C /* http_parser.c in Sources */,
 				E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
