@@ -19,34 +19,6 @@ HttpClient::~HttpClient()
 }
 
 
-void HttpClient::write_cb(ev::io &watcher)
-{
-	pthread_mutex_lock(&qmtx);
-
-	if (write_queue.empty()) {
-		io.set(ev::READ);
-	} else {
-		Buffer* buffer = write_queue.front();
-
-		// printf(">>> ");
-		// print_string(std::string(buffer->dpos(), buffer->nbytes()));
-
-		ssize_t written = write(watcher.fd, buffer->dpos(), buffer->nbytes());
-		if (written < 0) {
-			perror("read error");
-		} else {
-			buffer->pos += written;
-			if (buffer->nbytes() == 0) {
-				write_queue.pop(buffer);
-				delete buffer;
-			}
-		}
-	}
-
-	pthread_mutex_unlock(&qmtx);
-}
-
-
 void HttpClient::read_cb(ev::io &watcher)
 {
 	char buf[1024];
@@ -63,6 +35,7 @@ void HttpClient::read_cb(ev::io &watcher)
 		delete this;
 	} else {
 		http_parser_init(&parser, HTTP_REQUEST);
+		parser.data = this;
 		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 		if (parser.upgrade) {
 			/* handle new protocol */
@@ -72,6 +45,22 @@ void HttpClient::read_cb(ev::io &watcher)
 		}
 	}
 }
+
+void HttpClient::run()
+{
+	try {
+		printf("PATH: %s\n", path.c_str());
+		printf("BODY: %s\n", body.c_str());
+		send("HTTP/1.1 200 OK\r\n\r\nOK!\r\n");
+	} catch (...) {
+		printf("ERROR!\n");
+	}
+}
+
+
+//
+// HTTP parser callbacks.
+//
 
 const http_parser_settings HttpClient::settings = {
 	.on_message_begin = on_info,
@@ -84,26 +73,24 @@ const http_parser_settings HttpClient::settings = {
 	.on_body = on_data
 };
 
+
 int HttpClient::on_info(http_parser* p) {
 	return 0;
 }
 
+
 int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	std::string data;
+	HttpClient *self = static_cast<HttpClient *>(p->data);
 
 	switch (p->state) {
 		case 32: // path
-			data = std::string(at, length);
-			printf("%2d. %s\n", p->state, data.c_str());
+			self->path = std::string(at, length);
 			break;
 		case 62: // data
-			data = std::string(at, length);
-			printf("%2d. %s\n", p->state, data.c_str());
+			self->body = std::string(at, length);
+			self->thread_pool->addTask(new ClientWorker(self));
 			break;
-//		default:
-//			data = std::string(at, length);
-//			printf("%2d. %s\n", p->state, data.c_str());
-//			break;
 	}
 
 	return 0;

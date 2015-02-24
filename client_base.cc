@@ -2,7 +2,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-
+#include "utils.h"
 #include "client_base.h"
 
 
@@ -27,6 +27,9 @@ BaseClient::BaseClient(int sock_, ThreadPool *thread_pool_, DatabasePool *databa
 
 	sig.set<BaseClient, &BaseClient::signal_cb>(this);
 	sig.start(SIGINT);
+
+	async.set<BaseClient, &BaseClient::async_cb>(this);
+	async.start();
 }
 
 
@@ -37,10 +40,21 @@ BaseClient::~BaseClient()
 	// Stop and free watcher if client socket is closing
 	io.stop();
 	sig.stop();
+	async.stop();
 
 	close(sock);
 
 	pthread_mutex_destroy(&qmtx);
+}
+
+
+void BaseClient::async_cb(ev::async &watcher, int revents)
+{
+	pthread_mutex_lock(&qmtx);
+	if (!write_queue.empty()) {
+		io.set(ev::READ|ev::WRITE);
+	}
+	pthread_mutex_unlock(&qmtx);
 }
 
 
@@ -67,7 +81,55 @@ void BaseClient::callback(ev::io &watcher, int revents)
 }
 
 
+void BaseClient::write_cb(ev::io &watcher)
+{
+	pthread_mutex_lock(&qmtx);
+	
+	if (write_queue.empty()) {
+		io.set(ev::READ);
+	} else {
+		Buffer* buffer = write_queue.front();
+		
+		printf(">>> ");
+		print_string(std::string(buffer->dpos(), buffer->nbytes()));
+		
+		ssize_t written = write(watcher.fd, buffer->dpos(), buffer->nbytes());
+		if (written < 0) {
+			perror("read error");
+		} else {
+			buffer->pos += written;
+			if (buffer->nbytes() == 0) {
+				write_queue.pop(buffer);
+				delete buffer;
+			}
+		}
+	}
+	
+	pthread_mutex_unlock(&qmtx);
+}
+
+
 void BaseClient::signal_cb(ev::sig &signal, int revents)
 {
 	delete this;
+}
+
+void BaseClient::send(const char *buf)
+{
+	send(buf, strlen(buf));
+}
+
+void BaseClient::send(const std::string &buf)
+{
+	send(buf.c_str(), buf.size());
+}
+
+void BaseClient::send(const char *buf, size_t buf_size)
+{
+	pthread_mutex_lock(&qmtx);
+	Buffer *buffer = new Buffer('\0', buf, buf_size);
+	write_queue.push(buffer);
+	pthread_mutex_unlock(&qmtx);
+
+	async.send();
 }
