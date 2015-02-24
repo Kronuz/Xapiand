@@ -9,72 +9,119 @@
 #include "endpoint.h"
 #include "database.h"
 
+#include "http_parser.h"
 #include "net/remoteserver.h"
+
+
+const int XAPIAND_HTTP_PORT_DEFAULT = 8880;
+const int XAPIAND_BINARY_PORT_DEFAULT = 8890;
+
 
 struct Buffer;
 
 
 class XapiandServer {
 private:
+	ev::sig sig;
+
+	ev::io http_io;
+	int http_sock;
+	int http_port;
+
+	ev::io binary_io;
+	int binary_sock;
+	int binary_port;
+
+	ThreadPool thread_pool;
+	DatabasePool database_pool;
+
+	void bind_http();
+	void bind_binary();
+
+public:
+	void io_accept_http(ev::io &watcher, int revents);
+	void io_accept_binary(ev::io &watcher, int revents);
+
+	static void signal_cb(ev::sig &signal, int revents);
+
+	XapiandServer(int http_port_, int binary_port_, int thread_pool_size);
+	~XapiandServer();
+};
+
+class BaseClient {
+protected:
 	ev::io io;
 	ev::sig sig;
 
 	int sock;
-	ThreadPool thread_pool;
-	DatabasePool database_pool;
+	static int total_clients;
+
+	ThreadPool *thread_pool;
+	DatabasePool *database_pool;
+
+	pthread_mutex_t qmtx;
+
+	Endpoints endpoints;
+
+	Queue<Buffer *> write_queue;
+
+	void signal_cb(ev::sig &signal, int revents);
+
+	// Generic callback
+	void callback(ev::io &watcher, int revents);
+
+	// Socket is writable
+	virtual void write_cb(ev::io &watcher) = 0;
+
+	// Receive message from client socket
+	virtual void read_cb(ev::io &watcher) = 0;
 
 public:
-	void io_accept(ev::io &watcher, int revents);
+	virtual void run() = 0;
 
-	static void signal_cb(ev::sig &signal, int revents);
+	BaseClient(int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
+	virtual ~BaseClient();
+};
 
-	XapiandServer(int port, int thread_pool_size);
+//
+//   A single instance of a non-blocking Xapiand HTTP protocol handler
+//
+class HttpClient : public BaseClient {
+	struct http_parser parser;
 
-	virtual ~XapiandServer();
+	void write_cb(ev::io &watcher);
+	void read_cb(ev::io &watcher);
+
+	static const http_parser_settings settings;
+	static int on_info(http_parser* p);
+	static int on_data(http_parser* p, const char *at, size_t length);
+
+public:
+	void run() {}
+
+	HttpClient(int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
+	~HttpClient();
 };
 
 
 //
 //   A single instance of a non-blocking Xapiand binary protocol handler
 //
-class BinaryClient : public RemoteProtocol {
+class BinaryClient : public BaseClient, public RemoteProtocol {
 private:
-	ev::io io;
 	ev::async async;
-	ev::sig sig;
 
-	int sock;
-	ThreadPool *thread_pool;
-	DatabasePool *database_pool;
 	Database *database;
-
 	std::vector<std::string> dbpaths;
-	Endpoints endpoints;
-
-	static int total_clients;
-
-	pthread_mutex_t qmtx;
 
 	// Buffers that are pending write
-	Queue<Buffer *> messages_queue;
-	Queue<Buffer *> write_queue;
 	std::string buffer;
+	Queue<Buffer *> messages_queue;
 
-	void async_cb(ev::async &watcher, int revents);
-
-	// Generic callback
-	void callback(ev::io &watcher, int revents);
-
-	// Socket is writable
 	void write_cb(ev::io &watcher);
-
-	// Receive message from client socket
 	void read_cb(ev::io &watcher);
 
-	void signal_cb(ev::sig &signal, int revents);
-
-	// effictivly a close and a destroy
-	virtual ~BinaryClient();
+	void async_cb(ev::async &watcher, int revents);
 
 public:
     void run();
@@ -88,6 +135,7 @@ public:
 	void select_db(const std::vector<std::string> &, bool);
 
 	BinaryClient(int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
+	~BinaryClient();
 };
 
 #endif /* XAPIAND_INCLUDED_SERVER_H */

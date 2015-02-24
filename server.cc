@@ -79,52 +79,115 @@ struct Buffer {
 // Xapian Server
 //
 
-XapiandServer::XapiandServer(int port, int thread_pool_size)
-	: thread_pool(thread_pool_size)
+XapiandServer::XapiandServer(int http_port_, int binary_port_, int thread_pool_size)
+	: http_port(http_port_),
+	  binary_port(binary_port_),
+	  thread_pool(thread_pool_size)
 {
+	bind_http();
+	bind_binary();
+
+	sig.set<&XapiandServer::signal_cb>();
+	sig.start(SIGINT);
+}
+
+
+void
+XapiandServer::bind_http() {
 	int optval = 1;
 	struct sockaddr_in addr;
 
-	sock = socket(PF_INET, SOCK_STREAM, 0);
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
+	http_sock = socket(PF_INET, SOCK_STREAM, 0);
+	setsockopt(http_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
+	addr.sin_port = htons(http_port);
 	addr.sin_addr.s_addr = INADDR_ANY;
 
-	if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+	if (bind(http_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		perror("bind");
-		close(sock);
-		sock = 0;
+		close(http_sock);
+		http_sock = 0;
 	} else {
-		printf("Listening on port %d\n", port);
-		fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
+		printf("Listening http protocol on port %d\n", http_port);
+		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
 
-		listen(sock, 5);
+		listen(http_sock, 5);
 
-		io.set<XapiandServer, &XapiandServer::io_accept>(this);
-		io.start(sock, ev::READ);
+		http_io.set<XapiandServer, &XapiandServer::io_accept_http>(this);
+		http_io.start(http_sock, ev::READ);
+	}
+}
 
-		sig.set<&XapiandServer::signal_cb>();
-		sig.start(SIGINT);
+
+void
+XapiandServer::bind_binary() {
+	int optval = 1;
+	struct sockaddr_in addr;
+
+	binary_sock = socket(PF_INET, SOCK_STREAM, 0);
+	setsockopt(binary_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
+
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(binary_port);
+	addr.sin_addr.s_addr = INADDR_ANY;
+
+	if (bind(binary_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+		perror("bind");
+		close(binary_sock);
+		binary_sock = 0;
+	} else {
+		printf("Listening binary protocol on port %d\n", binary_port);
+		fcntl(binary_sock, F_SETFL, fcntl(binary_sock, F_GETFL, 0) | O_NONBLOCK);
+
+		listen(binary_sock, 5);
+
+		binary_io.set<XapiandServer, &XapiandServer::io_accept_binary>(this);
+		binary_io.start(binary_sock, ev::READ);
 	}
 }
 
 
 XapiandServer::~XapiandServer()
 {
-	shutdown(sock, SHUT_RDWR);
+	shutdown(http_sock, SHUT_RDWR);
+	shutdown(binary_sock, SHUT_RDWR);
 
-	io.stop();
 	sig.stop();
+	http_io.stop();
+	binary_io.stop();
 
-	close(sock);
+	close(http_sock);
+	close(binary_sock);
 
 	printf("Done with all work!\n");
 }
 
 
-void XapiandServer::io_accept(ev::io &watcher, int revents)
+void XapiandServer::io_accept_http(ev::io &watcher, int revents)
+{
+	if (EV_ERROR & revents) {
+		perror("got invalid event");
+		return;
+	}
+
+	struct sockaddr_in client_addr;
+	socklen_t client_len = sizeof(client_addr);
+
+	int client_sock = accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
+
+	if (client_sock < 0) {
+		perror("accept error");
+		return;
+	}
+
+	double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
+	double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
+	new HttpClient(client_sock, &thread_pool, &database_pool, active_timeout, idle_timeout);
+}
+
+
+void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
 		perror("got invalid event");
@@ -153,63 +216,46 @@ void XapiandServer::signal_cb(ev::sig &signal, int revents)
 }
 
 
-int BinaryClient::total_clients = 0;
-
-
 //
-// Xapian binary client
 //
+//
+int BaseClient::total_clients = 0;
 
-BinaryClient::BinaryClient(int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
-: RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
-sock(sock_),
-thread_pool(thread_pool_),
-database_pool(database_pool_),
-write_queue(WRITE_QUEUE_SIZE),
-database(NULL)
+
+BaseClient::BaseClient(int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
+	: sock(sock_),
+	  thread_pool(thread_pool_),
+	  database_pool(database_pool_),
+	  write_queue(WRITE_QUEUE_SIZE)
 {
 	pthread_mutex_init(&qmtx, 0);
 
 	fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
 
-	printf("Got connection, %d client(s) connected.\n", ++total_clients);
-
-	io.set<BinaryClient, &BinaryClient::callback>(this);
+	io.set<BaseClient, &BaseClient::callback>(this);
 	io.start(sock, ev::READ);
 
-	sig.set<BinaryClient, &BinaryClient::signal_cb>(this);
+	sig.set<BaseClient, &BaseClient::signal_cb>(this);
 	sig.start(SIGINT);
-
-	async.set<BinaryClient, &BinaryClient::async_cb>(this);
-	async.start();
-
-	try {
-		msg_update(std::string());
-	} catch (const Xapian::NetworkError &e) {
-		printf("ERROR: %s\n", e.get_msg().c_str());
-	} catch (...) {
-		printf("ERROR!\n");
-	}
 }
 
-BinaryClient::~BinaryClient()
+
+BaseClient::~BaseClient()
 {
 	shutdown(sock, SHUT_RDWR);
 
 	// Stop and free watcher if client socket is closing
 	io.stop();
 	sig.stop();
-	async.stop();
 
 	close(sock);
-
-	printf("Lost connection, %d client(s) connected.\n", --total_clients);
 
 	pthread_mutex_destroy(&qmtx);
 }
 
 
-void BinaryClient::callback(ev::io &watcher, int revents)
+
+void BaseClient::callback(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
 		perror("got invalid event");
@@ -232,13 +278,133 @@ void BinaryClient::callback(ev::io &watcher, int revents)
 }
 
 
-void BinaryClient::async_cb(ev::async &watcher, int revents)
+void BaseClient::signal_cb(ev::sig &signal, int revents)
+{
+	delete this;
+}
+
+
+//
+// Xapian http client
+//
+
+HttpClient::HttpClient(int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
+	: BaseClient(sock_, thread_pool_, database_pool_, active_timeout_, idle_timeout_)
+{
+	printf("Got connection, %d http client(s) connected.\n", ++total_clients);
+}
+
+
+HttpClient::~HttpClient()
+{
+	printf("Lost connection, %d http client(s) connected.\n", --total_clients);
+}
+
+
+void HttpClient::write_cb(ev::io &watcher)
 {
 	pthread_mutex_lock(&qmtx);
-	if (!write_queue.empty()) {
-		io.set(ev::READ|ev::WRITE);
+
+	if (write_queue.empty()) {
+		io.set(ev::READ);
+	} else {
+		Buffer* buffer = write_queue.front();
+
+		// printf(">>> ");
+		// print_string(std::string(buffer->dpos(), buffer->nbytes()));
+
+		ssize_t written = write(watcher.fd, buffer->dpos(), buffer->nbytes());
+		if (written < 0) {
+			perror("read error");
+		} else {
+			buffer->pos += written;
+			if (buffer->nbytes() == 0) {
+				write_queue.pop(buffer);
+				delete buffer;
+			}
+		}
 	}
+
 	pthread_mutex_unlock(&qmtx);
+}
+
+
+void HttpClient::read_cb(ev::io &watcher)
+{
+	char buf[1024];
+
+	ssize_t received = recv(watcher.fd, buf, sizeof(buf), 0);
+
+	if (received < 0) {
+		perror("read error");
+		return;
+	}
+
+	if (received == 0) {
+		// Gack - we're deleting ourself inside of ourself!
+		delete this;
+	} else {
+		http_parser_init(&parser, HTTP_REQUEST);
+		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
+		if (parser.upgrade) {
+			/* handle new protocol */
+		} else if (parsed != received) {
+			// Handle error. Just close the connection.
+			delete this;
+		}
+	}
+}
+
+const http_parser_settings HttpClient::settings = {
+	.on_message_begin = on_info,
+	.on_headers_complete = on_info,
+	.on_message_complete = on_info,
+	.on_header_field = on_data,
+	.on_header_value = on_data,
+	.on_url = on_data,
+	.on_status = on_data,
+	.on_body = on_data
+};
+
+int HttpClient::on_info(http_parser* p) {
+	return 0;
+}
+
+int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
+	std::string data = std::string(at, length);
+	printf(">> %s\n", data.c_str());
+	return 0;
+}
+
+
+//
+// Xapian binary client
+//
+
+BinaryClient::BinaryClient(int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
+	: BaseClient(sock_, thread_pool_, database_pool_, active_timeout_, idle_timeout_),
+	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
+	  database(NULL)
+{
+	printf("Got connection, %d binary client(s) connected.\n", ++total_clients);
+
+	async.set<BinaryClient, &BinaryClient::async_cb>(this);
+	async.start();
+
+	try {
+		msg_update(std::string());
+	} catch (const Xapian::NetworkError &e) {
+		printf("ERROR: %s\n", e.get_msg().c_str());
+	} catch (...) {
+		printf("ERROR!\n");
+	}
+}
+
+
+BinaryClient::~BinaryClient()
+{
+	async.stop();
+	printf("Lost connection, %d binary client(s) connected.\n", --total_clients);
 }
 
 
@@ -315,10 +481,13 @@ void BinaryClient::read_cb(ev::io &watcher)
 	}
 }
 
-
-void BinaryClient::signal_cb(ev::sig &signal, int revents)
+void BinaryClient::async_cb(ev::async &watcher, int revents)
 {
-	delete this;
+	pthread_mutex_lock(&qmtx);
+	if (!write_queue.empty()) {
+		io.set(ev::READ|ev::WRITE);
+	}
+	pthread_mutex_unlock(&qmtx);
 }
 
 
@@ -391,7 +560,7 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 {
 	std::vector<std::string>::const_iterator i(dbpaths_.begin());
 	for (; i != dbpaths_.end(); i++) {
-		Endpoint endpoint = Endpoint(*i, std::string(), 8890);
+		Endpoint endpoint = Endpoint(*i, std::string(), XAPIAND_BINARY_PORT_DEFAULT);
 		endpoints.push_back(endpoint);
 	}
 	dbpaths = dbpaths_;

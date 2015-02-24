@@ -10,14 +10,17 @@ c++ xapiand.cc server.cc threadpool.cc ../../net/length.cc -lev `xapian-config-1
 
 int main(int argc, char **argv)
 {
-	int port = 8890;
+	int http_port = XAPIAND_HTTP_PORT_DEFAULT;
+	int binary_port = XAPIAND_BINARY_PORT_DEFAULT;
 
-	if (argc > 1)
-		port = atoi(argv[1]);
+	if (argc > 2) {
+		http_port = atoi(argv[1]);
+		binary_port = atoi(argv[2]);
+	}
 
 	ev::default_loop loop;
 
-	XapiandServer xapiand(port, 12);
+	XapiandServer xapiand(http_port, binary_port, 12);
 
 	loop.run(0);
 
