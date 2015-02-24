@@ -84,15 +84,15 @@ void BaseClient::callback(ev::io &watcher, int revents)
 void BaseClient::write_cb(ev::io &watcher)
 {
 	pthread_mutex_lock(&qmtx);
-	
+
 	if (write_queue.empty()) {
 		io.set(ev::READ);
 	} else {
 		Buffer* buffer = write_queue.front();
-		
-		printf(">>> ");
-		print_string(std::string(buffer->dpos(), buffer->nbytes()));
-		
+
+		// printf(">>> ");
+		// print_string(std::string(buffer->dpos(), buffer->nbytes()));
+
 		ssize_t written = write(watcher.fd, buffer->dpos(), buffer->nbytes());
 		if (written < 0) {
 			perror("read error");
@@ -104,7 +104,7 @@ void BaseClient::write_cb(ev::io &watcher)
 			}
 		}
 	}
-	
+
 	pthread_mutex_unlock(&qmtx);
 }
 
