@@ -39,6 +39,7 @@ std::string repr_string(const std::string &string)
 			ret += buff;
 		}
 	}
+	ret += "'";
 	return ret;
 }
 
