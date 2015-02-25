@@ -46,7 +46,7 @@ void BinaryClient::read_cb(ev::io &watcher)
 
 	if (received == 0) {
 		// Gack - we're deleting ourself inside of ourself!
-		delete this;
+		destroy();
 	} else {
 		buffer.append(buf, received);
 		if (buffer.length() >= 2) {
