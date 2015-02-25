@@ -33,6 +33,9 @@ public:
 
 	// Tell the tasks to finish and return
 	void finish();
+
+	// Wait for all threads to end
+	void join();
 };
 
 #endif /* XAPIAND_INCLUDED_THREADPOOL_H */

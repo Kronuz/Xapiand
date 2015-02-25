@@ -12,14 +12,13 @@ const int WRITE_QUEUE_SIZE = 30;
 int BaseClient::total_clients = 0;
 
 
-BaseClient::BaseClient(ev::loop_ref &loop, int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
+BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
 	: io(loop),
 	  sig(loop),
 	  async(loop),
 	  destroyed(false),
 	  closed(false),
 	  sock(sock_),
-	  thread_pool(thread_pool_),
 	  database_pool(database_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
 {

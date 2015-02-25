@@ -18,13 +18,10 @@ private:
 
 	ev::io http_io;
 	int http_sock;
-	int http_port;
 
 	ev::io binary_io;
 	int binary_sock;
-	int binary_port;
 
-	ThreadPool thread_pool;
 	DatabasePool database_pool;
 
 	void bind_http();
@@ -36,7 +33,7 @@ public:
 
 	void signal_cb(ev::sig &signal, int revents);
 
-	XapiandServer(int http_port_, int binary_port_, int thread_pool_size);
+	XapiandServer(int http_sock_, int binary_sock_);
 	~XapiandServer();
 	
 	void run();

@@ -8,8 +8,8 @@
 // Xapian http client
 //
 
-HttpClient::HttpClient(ev::loop_ref &loop, int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
-	: BaseClient(loop, sock_, thread_pool_, database_pool_, active_timeout_, idle_timeout_)
+HttpClient::HttpClient(ev::loop_ref &loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
+	: BaseClient(loop, sock_, database_pool_, active_timeout_, idle_timeout_)
 {
 	log("Got connection, %d http client(s) connected.\n", ++total_clients);
 }
