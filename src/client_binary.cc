@@ -68,7 +68,7 @@ void BinaryClient::read_cb(ev::io &watcher)
 			std::string data = std::string(p, len);
 			buffer.erase(0, p - o + len);
 
-			std::string buf = std::string(0, len + (p - o));
+			std::string buf = std::string(o, len + (p - o));
 			log(this, "<<< '%s'\n", repr_string(buf).c_str());
 
 			Buffer *msg = new Buffer(type, data.c_str(), data.size());
