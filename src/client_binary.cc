@@ -29,6 +29,9 @@ BinaryClient::BinaryClient(ev::loop_ref &loop, int sock_, ThreadPool *thread_poo
 
 BinaryClient::~BinaryClient()
 {
+	if (database) {
+		database_pool->checkin(&database);
+	}
 	log("Lost connection, %d binary client(s) connected.\n", --total_clients);
 }
 
