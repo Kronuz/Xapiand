@@ -24,7 +24,6 @@ std::string repr_string(const std::string &string)
 	std::string ret;
 	char buff[4];
 
-	ret += "\"";
 	while (p != p_end) {
 		char c = *p++;
 		if (c == 9) {
@@ -33,8 +32,8 @@ std::string repr_string(const std::string &string)
 			ret += "\\n";
 		} else if (c == 13) {
 			ret += "\\r";
-		} else if (c == '"') {
-			ret += "\\\"";
+//		} else if (c == '"') {
+//			ret += "\\\"";
 		} else if (c == '\'') {
 			ret += "\\\'";
 		} else if (c >= ' ' && c <= '~') {
@@ -45,7 +44,6 @@ std::string repr_string(const std::string &string)
 			ret += buff;
 		}
 	}
-	ret += "\"";
 	return ret;
 }
 
