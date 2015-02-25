@@ -16,14 +16,13 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, ThreadPool *thread_pool_, 
 	: io(loop),
 	  sig(loop),
 	  async(loop),
+	  destroyed(false),
 	  closed(false),
 	  sock(sock_),
 	  thread_pool(thread_pool_),
 	  database_pool(database_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
 {
-	pthread_mutex_init(&qmtx, 0);
-
 	fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
 
 	io.set<BaseClient, &BaseClient::callback>(this);
@@ -39,17 +38,29 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, ThreadPool *thread_pool_, 
 
 BaseClient::~BaseClient()
 {
-	shutdown(sock, SHUT_RDWR);
+	destroy();
+}
 
+void BaseClient::destroy()
+{
+	if (destroyed) {
+		return;
+	}
+
+	close();
+
+	shutdown(sock, SHUT_RDWR);
+	
 	// Stop and free watcher if client socket is closing
 	io.stop();
 	sig.stop();
 	async.stop();
-
+	
 	::close(sock);
 
-	pthread_mutex_destroy(&qmtx);
+	destroyed = true;
 }
+
 
 void BaseClient::close() {
 	closed = true;
@@ -58,25 +69,33 @@ void BaseClient::close() {
 
 void BaseClient::async_cb(ev::async &watcher, int revents)
 {
+	if (destroyed) {
+		return;
+	}
 
-	pthread_mutex_lock(&qmtx);
 	if (write_queue.empty()) {
 		if (closed) {
-			pthread_mutex_unlock(&qmtx);
-			delete this;
-			return;
+			destroy();
 		}
 	} else {
 		io.set(ev::READ|ev::WRITE);
 	}
-	pthread_mutex_unlock(&qmtx);
+	
+	if (destroyed) {
+		delete this;
+	}
 }
 
 
 void BaseClient::callback(ev::io &watcher, int revents)
 {
-	if (EV_ERROR & revents) {
+	if (destroyed) {
+		return;
+	}
+
+	if (revents & EV_ERROR) {
 		perror("got invalid event");
+		destroy();
 		return;
 	}
 
@@ -86,36 +105,37 @@ void BaseClient::callback(ev::io &watcher, int revents)
 	if (revents & EV_WRITE)
 		write_cb(watcher);
 
-	pthread_mutex_lock(&qmtx);
 	if (write_queue.empty()) {
 		if (closed) {
-			pthread_mutex_unlock(&qmtx);
-			delete this;
-			return;
+			destroy();
+		} else {
+			io.set(ev::READ);
 		}
-		io.set(ev::READ);
 	} else {
 		io.set(ev::READ|ev::WRITE);
 	}
-	pthread_mutex_unlock(&qmtx);
+
+	if (destroyed) {
+		delete this;
+	}
 }
 
 
 void BaseClient::write_cb(ev::io &watcher)
 {
-	pthread_mutex_lock(&qmtx);
-
 	if (write_queue.empty()) {
 		io.set(ev::READ);
 	} else {
 		Buffer* buffer = write_queue.front();
 
-		// printf(">>> ");
-		// print_string(std::string(buffer->dpos(), buffer->nbytes()));
+		printf(">>> ");
+		print_string(std::string(buffer->dpos(), buffer->nbytes()));
 
 		ssize_t written = ::write(watcher.fd, buffer->dpos(), buffer->nbytes());
+
 		if (written < 0) {
 			perror("read error");
+			destroy();
 		} else {
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
@@ -124,22 +144,20 @@ void BaseClient::write_cb(ev::io &watcher)
 			}
 		}
 	}
-
-	pthread_mutex_unlock(&qmtx);
 }
 
 
 void BaseClient::signal_cb(ev::sig &signal, int revents)
 {
+	destroy();
 	delete this;
 }
 
+
 void BaseClient::write(const char *buf, size_t buf_size)
 {
-	pthread_mutex_lock(&qmtx);
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
 	write_queue.push(buffer);
-	pthread_mutex_unlock(&qmtx);
 
 	async.send();
 }

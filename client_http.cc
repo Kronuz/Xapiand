@@ -32,7 +32,7 @@ void HttpClient::read_cb(ev::io &watcher)
 
 	if (received == 0) {
 		// Gack - we're deleting ourself inside of ourself!
-		delete this;
+		destroy();
 	} else {
 		http_parser_init(&parser, HTTP_REQUEST);
 		parser.data = this;
@@ -41,14 +41,17 @@ void HttpClient::read_cb(ev::io &watcher)
 			try {
 				printf("PATH: %s\n", path.c_str());
 				printf("BODY: %s\n", body.c_str());
-				write("HTTP/1.1 200 OK\r\n\r\nOK!\r\n");
+				write("HTTP/1.1 200 OK\r\n"
+					  "Connection: close\r\n"
+					  "\r\n"
+					  "OK!");
 				close();
 			} catch (...) {
 				printf("ERROR!\n");
 			}
 		} else {
 			// Handle error. Just close the connection.
-			delete this;
+			destroy();
 		}
 	}
 }
