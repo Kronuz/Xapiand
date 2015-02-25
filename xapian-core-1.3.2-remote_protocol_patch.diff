@@ -210,10 +210,10 @@ index e64bc51..6e49657 100644
  
      /** Destructor. */
 diff --git a/net/remoteserver.cc b/net/remoteserver.cc
-index a96619d..b6bd477 100644
+index a96619d..14c70f0 100644
 --- a/net/remoteserver.cc
 +++ b/net/remoteserver.cc
-@@ -53,101 +53,59 @@ throw_read_only()
+@@ -53,101 +53,73 @@ throw_read_only()
      throw Xapian::InvalidOperationError("Server is read-only");
  }
  
@@ -263,9 +263,11 @@ index a96619d..b6bd477 100644
 + *  deleted after use.
 + */
 +struct MatchState {
++    Xapian::Database *db;
 +    MultiMatch *match;
 +    vector<Xapian::MatchSpy *> spies;
-+    MatchState() :match(NULL) {}
++    Xapian::Weight *wt;
++    MatchState() : match(NULL), wt(NULL) {}
 +    ~MatchState() {
 +	vector<Xapian::MatchSpy *>::const_iterator i;
 +	for (i = spies.begin(); i != spies.end(); ++i) {
@@ -273,6 +275,9 @@ index a96619d..b6bd477 100644
 +	}
 +	if (match) {
 +		delete match;
++	}
++	if (wt) {
++		delete wt;
  	}
 -    } catch (const Xapian::Error &err) {
 -	// Propagate the exception to the client.
@@ -288,21 +293,17 @@ index a96619d..b6bd477 100644
 -    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
 -	throw Xapian::NetworkError("Couldn't set SIGPIPE to SIG_IGN", errno);
 -#endif
--
+ 
 -    // Send greeting message.
 -    msg_update(string());
 -}
++typedef void (RemoteProtocol::* dispatch_func)(const string &);
  
 -RemoteServer::~RemoteServer()
 -{
 -    delete db;
 -    // wdb is either NULL or equal to db, so we shouldn't delete it too!
 -}
-+typedef void (RemoteProtocol::* dispatch_func)(const string &);
- 
--message_type
--RemoteServer::get_message(double timeout, string & result,
--			  message_type required_type)
 +RemoteProtocol::RemoteProtocol(const std::vector<std::string> &dbpaths_,
 +			       double active_timeout_,
 +			       double idle_timeout_,
@@ -311,6 +312,10 @@ index a96619d..b6bd477 100644
 +      dbpaths(dbpaths_), writable(writable_),
 +      active_timeout(active_timeout_), idle_timeout(idle_timeout_)
 +{}
+ 
+-message_type
+-RemoteServer::get_message(double timeout, string & result,
+-			  message_type required_type)
 +RemoteProtocol::~RemoteProtocol()
  {
 -    double end_time = RealTime::end_time(timeout);
@@ -329,18 +334,23 @@ index a96619d..b6bd477 100644
 -	errmsg += ", got ";
 -	errmsg += str(int(type));
 -	throw Xapian::NetworkError(errmsg);
-+    if (matchstate != NULL) {
-+    	delete static_cast<MatchState *>(matchstate);
-     }
+-    }
 -    return static_cast<message_type>(type);
--}
--
--void
++	cleanup();
+ }
+ 
+ void
 -RemoteServer::send_message(reply_type type, const string &message)
--{
++RemoteProtocol::cleanup()
+ {
 -    double end_time = RealTime::end_time(active_timeout);
 -    unsigned char type_as_char = static_cast<unsigned char>(type);
 -    RemoteConnection::send_message(type_as_char, message, end_time);
++    if (matchstate != NULL) {
++	MatchState *matchstate_ = static_cast<MatchState *>(matchstate);
++	release_db(matchstate_->db);
++	delete matchstate_;
++    }
  }
  
 -typedef void (RemoteServer::* dispatch_func)(const string &);
@@ -353,7 +363,7 @@ index a96619d..b6bd477 100644
  	try {
  	    /* This list needs to be kept in the same order as the list of
  	     * message types in "remoteprotocol.h". Note that messages at the
-@@ -155,40 +113,42 @@ RemoteServer::run()
+@@ -155,40 +127,42 @@ RemoteServer::run()
  	     * don't correspond to dispatch actions.
  	     */
  	    static const dispatch_func dispatch[] = {
@@ -427,7 +437,7 @@ index a96619d..b6bd477 100644
  	    if (type >= sizeof(dispatch)/sizeof(dispatch[0]) || !dispatch[type]) {
  		string errmsg("Unexpected message type ");
  		errmsg += str(type);
-@@ -226,18 +186,22 @@ RemoteServer::run()
+@@ -226,18 +200,22 @@ RemoteServer::run()
  	    // connection.
  	    throw;
  	}
@@ -454,7 +464,7 @@ index a96619d..b6bd477 100644
  	if (rare(prev.size() > 255))
  	    prev.resize(255);
  	const string & v = *t;
-@@ -250,19 +214,25 @@ RemoteServer::msg_allterms(const string &message)
+@@ -250,19 +228,25 @@ RemoteServer::msg_allterms(const string &message)
      }
  
      send_message(REPLY_DONE, string());
@@ -484,7 +494,7 @@ index a96619d..b6bd477 100644
  	if (rare(prev.size() > 255))
  	    prev.resize(255);
  	const string & v = *t;
-@@ -276,19 +246,25 @@ RemoteServer::msg_termlist(const string &message)
+@@ -276,19 +260,25 @@ RemoteServer::msg_termlist(const string &message)
      }
  
      send_message(REPLY_DONE, string());
@@ -513,14 +523,14 @@ index a96619d..b6bd477 100644
  	 i != end; ++i) {
  	Xapian::termpos pos = *i;
  	send_message(REPLY_POSITIONLIST, encode_length(pos - lastpos - 1));
-@@ -296,20 +272,60 @@ RemoteServer::msg_positionlist(const string &message)
+@@ -296,20 +286,60 @@ RemoteServer::msg_positionlist(const string &message)
      }
  
      send_message(REPLY_DONE, string());
 +
 +    release_db(db_);
-+}
-+
+ }
+ 
 +
 +void
 +RemoteProtocol::msg_writeaccess(const string & msg)
@@ -534,9 +544,10 @@ index a96619d..b6bd477 100644
 +}
 +
 +
-+void
+ void
+-RemoteServer::msg_postlist(const string &message)
 +RemoteProtocol::msg_select(const string &message)
-+{
+ {
 +    const char *p = message.c_str();
 +    const char *p_end = p + message.size();
 +
@@ -552,13 +563,12 @@ index a96619d..b6bd477 100644
 +    select_db(dbpaths_, false);
 +
 +    msg_update(message);
- }
- 
++}
 +
- void
--RemoteServer::msg_postlist(const string &message)
++
++void
 +RemoteProtocol::msg_postlist(const string &message)
- {
++{
 +    Xapian::Database * db_ = get_db(false);
 +    if (!db_)
 +	throw_no_db();
@@ -579,18 +589,18 @@ index a96619d..b6bd477 100644
  	 i != end; ++i) {
  
  	Xapian::docid newdocid = *i;
-@@ -321,72 +337,62 @@ RemoteServer::msg_postlist(const string &message)
+@@ -321,72 +351,62 @@ RemoteServer::msg_postlist(const string &message)
      }
  
      send_message(REPLY_DONE, string());
 -}
- 
+-
 -void
 -RemoteServer::msg_writeaccess(const string & msg)
 -{
 -    if (!writable) 
 -	throw_read_only();
--
+ 
 -    wdb = new Xapian::WritableDatabase(context, Xapian::DB_OPEN);
 -    delete db;
 -    db = wdb;
@@ -686,17 +696,34 @@ index a96619d..b6bd477 100644
  {
      const char *p = message_in.c_str();
      const char *p_end = p + message_in.size();
-@@ -460,7 +466,8 @@ RemoteServer::msg_query(const string &message_in)
+@@ -450,8 +470,17 @@ RemoteServer::msg_query(const string &message_in)
+ 					   wtname + " not registered");
+     }
+ 
++    MatchState * matchstate_;
++    if (matchstate != NULL) {
++    	matchstate_ = static_cast<MatchState *>(matchstate);
++    	delete matchstate_;
++    }
++
++    matchstate_ = new MatchState();
++    matchstate = matchstate_;
++
+     len = decode_length(&p, p_end, true);
+-    AutoPtr<Xapian::Weight> wt(wttype->unserialise(string(p, len)));
++    matchstate_->wt = wttype->unserialise(string(p, len));
+     p += len;
+ 
+     // Unserialise the RSet object.
+@@ -460,7 +489,6 @@ RemoteServer::msg_query(const string &message_in)
      p += len;
  
      // Unserialise any MatchSpy objects.
 -    MatchSpyList matchspies;
-+    MatchState * matchstate_ = new MatchState();
-+    matchstate = matchstate_;
      while (p != p_end) {
  	len = decode_length(&p, p_end, true);
  	string spytype(p, len);
-@@ -472,22 +479,43 @@ RemoteServer::msg_query(const string &message_in)
+@@ -472,22 +500,38 @@ RemoteServer::msg_query(const string &message_in)
  	p += len;
  
  	len = decode_length(&p, p_end, true);
@@ -716,7 +743,8 @@ index a96619d..b6bd477 100644
  		     percent_cutoff, weight_cutoff, order,
  		     sort_key, sort_by, sort_value_forward, time_limit, NULL,
 -		     local_stats, wt.get(), matchspies.spies, false, false);
-+		     local_stats, wt.get(), matchstate_->spies, false, false);
++		     local_stats, matchstate_->wt, matchstate_->spies, false, false);
++    matchstate_->db = db_;
  
      send_message(REPLY_STATS, serialise_stats(local_stats));
  
@@ -725,8 +753,6 @@ index a96619d..b6bd477 100644
 -    p = message.c_str();
 -    p_end = p + message.size();
 +    required_type = MSG_GETMSET;
-+
-+    release_db(db_);
 +}
 +
 +void
@@ -738,16 +764,12 @@ index a96619d..b6bd477 100644
 +
 +    MatchState *matchstate_ = static_cast<MatchState *>(matchstate);
 +
-+    Xapian::Database * db_ = get_db(false);
-+    if (!db_)
-+	throw_no_db();
-+
 +    const char *p = msg.c_str();
 +    const char *p_end = p + msg.size();
  
      Xapian::termcount first = decode_length(&p, p_end, false);
      Xapian::termcount maxitems = decode_length(&p, p_end, false);
-@@ -495,34 +523,45 @@ RemoteServer::msg_query(const string &message_in)
+@@ -495,34 +539,45 @@ RemoteServer::msg_query(const string &message_in)
      Xapian::termcount check_at_least = 0;
      check_at_least = decode_length(&p, p_end, false);
  
@@ -756,7 +778,7 @@ index a96619d..b6bd477 100644
      AutoPtr<Xapian::Weight::Internal> total_stats(new Xapian::Weight::Internal);
      unserialise_stats(message, *(total_stats.get()));
 -    total_stats->set_bounds_from_db(*db);
-+    total_stats->set_bounds_from_db(*db_);
++    total_stats->set_bounds_from_db(*matchstate_->db);
  
      Xapian::MSet mset;
 -    match.get_mset(first, maxitems, check_at_least, mset, *(total_stats.get()), 0, 0);
@@ -774,12 +796,12 @@ index a96619d..b6bd477 100644
      message += serialise_mset(mset);
      send_message(REPLY_RESULTS, message);
 +
-+    delete matchstate_;
 +    matchstate = NULL;
 +
 +    required_type = MSG_MAX;
 +
-+    release_db(db_);
++    release_db(matchstate_->db);
++    delete matchstate_;
  }
  
  void
@@ -799,7 +821,7 @@ index a96619d..b6bd477 100644
  
      send_message(REPLY_DOCDATA, doc.get_data());
  
-@@ -533,155 +572,224 @@ RemoteServer::msg_document(const string &message)
+@@ -533,155 +588,224 @@ RemoteServer::msg_document(const string &message)
  	send_message(REPLY_VALUE, item);
      }
      send_message(REPLY_DONE, string());
@@ -1064,7 +1086,7 @@ index a96619d..b6bd477 100644
  	throw_read_only();
  
      const char *p = message.data();
-@@ -690,26 +798,38 @@ RemoteServer::msg_replacedocumentterm(const string & message)
+@@ -690,26 +814,38 @@ RemoteServer::msg_replacedocumentterm(const string & message)
      string unique_term(p, len);
      p += len;
  
@@ -1109,7 +1131,7 @@ index a96619d..b6bd477 100644
      for (; t != end; ++t) {
  	if (rare(prev.size() > 255))
  	    prev.resize(255);
-@@ -721,12 +841,15 @@ RemoteServer::msg_openmetadatakeylist(const string & message)
+@@ -721,12 +857,15 @@ RemoteServer::msg_openmetadatakeylist(const string & message)
  	prev = v;
      }
      send_message(REPLY_DONE, string());
@@ -1127,7 +1149,7 @@ index a96619d..b6bd477 100644
  	throw_read_only();
      const char *p = message.data();
      const char *p_end = p + message.size();
-@@ -734,27 +857,162 @@ RemoteServer::msg_setmetadata(const string & message)
+@@ -734,27 +873,162 @@ RemoteServer::msg_setmetadata(const string & message)
      string key(p, keylen);
      p += keylen;
      string val(p, p_end - p);
@@ -1298,10 +1320,10 @@ index a96619d..b6bd477 100644
 +    }
  }
 diff --git a/net/remoteserver.h b/net/remoteserver.h
-index 857d791..2e1fe02 100644
+index 857d791..94ec8c9 100644
 --- a/net/remoteserver.h
 +++ b/net/remoteserver.h
-@@ -32,56 +32,34 @@
+@@ -32,56 +32,36 @@
  
  #include <string>
  
@@ -1374,10 +1396,12 @@ index 857d791..2e1fe02 100644
 +    virtual void release_db(Xapian::Database *) = 0;
 +    virtual void select_db(const std::vector<std::string> &, bool) = 0;
 +    virtual void shutdown() {};
++
++    void cleanup();
  
      // all terms
      void msg_allterms(const std::string & message);
-@@ -170,6 +148,79 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
+@@ -170,6 +150,79 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
      // get number of unique terms
      void msg_uniqueterms(const std::string & message);
  
@@ -1418,7 +1442,7 @@ index 857d791..2e1fe02 100644
 +                 double idle_timeout_,
 +                 bool writable = false);
 +
-+    ~RemoteProtocol();
++    virtual ~RemoteProtocol();
 +};
 +
 +
@@ -1457,7 +1481,7 @@ index 857d791..2e1fe02 100644
    public:
      /** Construct a RemoteServer.
       *
-@@ -192,18 +243,19 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
+@@ -192,18 +245,19 @@ class XAPIAN_VISIBILITY_DEFAULT RemoteServer : private RemoteConnection {
      /// Destructor.
      ~RemoteServer();
  
