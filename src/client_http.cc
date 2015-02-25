@@ -48,7 +48,7 @@ void HttpClient::read_cb(ev::io &watcher)
 			}
 		} else {
 			// Handle error. Just close the connection.
-			finish(); // was delete this
+			delete this;
 		}
 	}
 }
