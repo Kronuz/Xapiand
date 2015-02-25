@@ -15,14 +15,14 @@ BinaryClient::BinaryClient(ev::loop_ref &loop, int sock_, DatabasePool *database
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  database(NULL)
 {
-	log("Got connection, %d binary client(s) connected.\n", ++total_clients);
+	log(this, "Got connection, %d binary client(s) connected.\n", ++total_clients);
 
 	try {
 		msg_update(std::string());
 	} catch (const Xapian::NetworkError &e) {
-		log("ERROR: %s\n", e.get_msg().c_str());
+		log(this, "ERROR: %s\n", e.get_msg().c_str());
 	} catch (...) {
-		log("ERROR!\n");
+		log(this, "ERROR!\n");
 	}
 }
 
@@ -32,7 +32,7 @@ BinaryClient::~BinaryClient()
 	if (database) {
 		database_pool->checkin(&database);
 	}
-	log("Lost connection, %d binary client(s) connected.\n", --total_clients);
+	log(this, "Lost connection, %d binary client(s) connected.\n", --total_clients);
 }
 
 
@@ -49,7 +49,7 @@ void BinaryClient::read_cb(ev::io &watcher)
 
 	if (received == 0) {
 		// The peer has closed its half side of the connection.
-		log("BROKEN PIPE!\n");
+		log(this, "BROKEN PIPE!\n");
 		destroy();
 	} else {
 		buffer.append(buf, received);
@@ -68,7 +68,7 @@ void BinaryClient::read_cb(ev::io &watcher)
 			std::string data = std::string(p, len);
 			buffer.erase(0, p - o + len);
 
-			// log("<<< ");
+			// log(this, "<<< ");
 			// fprint_string(stderr, data);
 
 			Buffer *msg = new Buffer(type, data.c_str(), data.size());
@@ -78,9 +78,9 @@ void BinaryClient::read_cb(ev::io &watcher)
 			try {
 				run_one();
 			} catch (const Xapian::NetworkError &e) {
-				log("ERROR: %s\n", e.get_msg().c_str());
+				log(this, "ERROR: %s\n", e.get_msg().c_str());
 			} catch (...) {
-				log("ERROR!\n");
+				log(this, "ERROR!\n");
 			}
 		}
 	}
@@ -97,7 +97,7 @@ message_type BinaryClient::get_message(double timeout, std::string & result, mes
 	std::string buf(&msg->type, 1);
 	buf += encode_length(msg->nbytes());
 	buf += std::string(msg->dpos(), msg->nbytes());
-	log("get_message: ");
+	log(this, "get_message: ");
 	fprint_string(stderr, buf);
 
 	message_type type = static_cast<message_type>(msg->type);
@@ -114,7 +114,7 @@ void BinaryClient::send_message(reply_type type, const std::string &message) {
 	buf += encode_length(message.size());
 	buf += message;
 
-	log("send_message: ");
+	log(this, "send_message: ");
 	fprint_string(stderr, buf);
 
 	write(buf);
