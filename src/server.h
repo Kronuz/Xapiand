@@ -13,6 +13,7 @@ const int XAPIAND_BINARY_PORT_DEFAULT = 8890;
 
 class XapiandServer {
 private:
+	ev::dynamic_loop loop;
 	ev::sig sig;
 
 	ev::io http_io;
@@ -33,10 +34,12 @@ public:
 	void io_accept_http(ev::io &watcher, int revents);
 	void io_accept_binary(ev::io &watcher, int revents);
 
-	static void signal_cb(ev::sig &signal, int revents);
+	void signal_cb(ev::sig &signal, int revents);
 
 	XapiandServer(int http_port_, int binary_port_, int thread_pool_size);
 	~XapiandServer();
+	
+	void run();
 };
 
 #endif /* XAPIAND_INCLUDED_SERVER_H */
