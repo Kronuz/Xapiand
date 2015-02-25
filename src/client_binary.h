@@ -20,8 +20,6 @@ private:
 	void read_cb(ev::io &watcher);
 
 public:
-    void run();
-
 	message_type get_message(double timeout, std::string & result, message_type required_type = MSG_MAX);
 	void send_message(reply_type type, const std::string &message);
 	void send_message(reply_type type, const std::string &message, double end_time);

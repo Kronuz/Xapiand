@@ -22,8 +22,6 @@ class HttpClient : public BaseClient {
 	static int on_data(http_parser* p, const char *at, size_t length);
 
 public:
-	void run();
-
 	HttpClient(ev::loop_ref &loop, int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
 	~HttpClient();
 };

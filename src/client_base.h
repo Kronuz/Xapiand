@@ -77,26 +77,9 @@ protected:
 	void finish();
 
 public:
-	virtual void run() = 0;
-
 	BaseClient(ev::loop_ref &loop, int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
 	virtual ~BaseClient();
 };
 
-
-
-class ClientWorker : public Task {
-private:
-	BaseClient *client;
-
-public:
-	ClientWorker(BaseClient *client_) : Task(), client(client_) {}
-
-	~ClientWorker() {}
-
-	virtual void run() {
-		client->run();
-	}
-};
 
 #endif  /* XAPIAND_INCLUDED_CLIENT_BASE_H */
