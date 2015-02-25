@@ -24,13 +24,19 @@ std::string repr_string(const std::string &string)
 	std::string ret;
 	char buff[4];
 
-	ret += "'";
+	ret += "\"";
 	while (p != p_end) {
 		char c = *p++;
-		if (c == 10) {
+		if (c == 9) {
+			ret += "\\t";
+		} else if (c == 10) {
 			ret += "\\n";
 		} else if (c == 13) {
-			ret += "\\n";
+			ret += "\\r";
+		} else if (c == '"') {
+			ret += "\\\"";
+		} else if (c == '\'') {
+			ret += "\\\'";
 		} else if (c >= ' ' && c <= '~') {
 			sprintf(buff, "%c", c);
 			ret += buff;
@@ -39,7 +45,7 @@ std::string repr_string(const std::string &string)
 			ret += buff;
 		}
 	}
-	ret += "'";
+	ret += "\"";
 	return ret;
 }
 
