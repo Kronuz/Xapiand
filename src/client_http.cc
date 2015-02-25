@@ -25,7 +25,7 @@ void HttpClient::read_cb(ev::io &watcher)
 {
 	char buf[1024];
 
-	ssize_t received = recv(watcher.fd, buf, sizeof(buf), 0);
+	ssize_t received = ::recv(watcher.fd, buf, sizeof(buf), 0);
 
 	if (received < 0) {
 		perror("read error");
