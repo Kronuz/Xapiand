@@ -113,7 +113,7 @@ void BinaryClient::send_message(reply_type type, const std::string &message) {
 	printf("send_message:");
 	print_string(buf);
 
-	send(buf.c_str(), buf.size());
+	write(buf);
 }
 
 

@@ -16,7 +16,7 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, ThreadPool *thread_pool_, 
 	: io(loop),
 	  sig(loop),
 	  async(loop),
-	  finished(false),
+	  closed(false),
 	  sock(sock_),
 	  thread_pool(thread_pool_),
 	  database_pool(database_pool_),
@@ -46,13 +46,13 @@ BaseClient::~BaseClient()
 	sig.stop();
 	async.stop();
 
-	close(sock);
+	::close(sock);
 
 	pthread_mutex_destroy(&qmtx);
 }
 
-void BaseClient::finish() {
-	finished = true;
+void BaseClient::close() {
+	closed = true;
 }
 
 
@@ -61,7 +61,7 @@ void BaseClient::async_cb(ev::async &watcher, int revents)
 
 	pthread_mutex_lock(&qmtx);
 	if (write_queue.empty()) {
-		if (finished) {
+		if (closed) {
 			pthread_mutex_unlock(&qmtx);
 			delete this;
 			return;
@@ -88,7 +88,7 @@ void BaseClient::callback(ev::io &watcher, int revents)
 
 	pthread_mutex_lock(&qmtx);
 	if (write_queue.empty()) {
-		if (finished) {
+		if (closed) {
 			pthread_mutex_unlock(&qmtx);
 			delete this;
 			return;
@@ -113,7 +113,7 @@ void BaseClient::write_cb(ev::io &watcher)
 		// printf(">>> ");
 		// print_string(std::string(buffer->dpos(), buffer->nbytes()));
 
-		ssize_t written = write(watcher.fd, buffer->dpos(), buffer->nbytes());
+		ssize_t written = ::write(watcher.fd, buffer->dpos(), buffer->nbytes());
 		if (written < 0) {
 			perror("read error");
 		} else {
@@ -134,17 +134,17 @@ void BaseClient::signal_cb(ev::sig &signal, int revents)
 	delete this;
 }
 
-void BaseClient::send(const char *buf)
+void BaseClient::write(const char *buf)
 {
-	send(buf, strlen(buf));
+	write(buf, strlen(buf));
 }
 
-void BaseClient::send(const std::string &buf)
+void BaseClient::write(const std::string &buf)
 {
-	send(buf.c_str(), buf.size());
+	write(buf.c_str(), buf.size());
 }
 
-void BaseClient::send(const char *buf, size_t buf_size)
+void BaseClient::write(const char *buf, size_t buf_size)
 {
 	pthread_mutex_lock(&qmtx);
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
