@@ -146,7 +146,7 @@ void BaseClient::write_cb(ev::io &watcher)
 
 		log(this, ">>> '%s'\n", repr_string(std::string(buffer->dpos(), buffer->nbytes())).c_str());
 
-		ssize_t written = ::write(watcher.fd, buffer->dpos(), buffer->nbytes());
+		ssize_t written = ::send(watcher.fd, buffer->dpos(), buffer->nbytes(), 0);
 
 		if (written < 0) {
 			perror("write error");
