@@ -45,7 +45,7 @@ protected:
 	ev::sig sig;
 	ev::async async;
 
-	bool finished;
+	bool closed;
 	int sock;
 	static int total_clients;
 
@@ -70,11 +70,11 @@ protected:
 	// Receive message from client socket
 	virtual void read_cb(ev::io &watcher) = 0;
 
-	void send(const std::string &buf);
-	void send(const char *buf);
-	void send(const char *buf, size_t buf_size);
+	void write(const std::string &buf);
+	void write(const char *buf);
+	void write(const char *buf, size_t buf_size);
 	
-	void finish();
+	void close();
 
 public:
 	BaseClient(ev::loop_ref &loop, int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
