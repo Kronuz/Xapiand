@@ -23,19 +23,27 @@ ThreadPool::ThreadPool(int n) : numThreads(n) {
 	}
 }
 
+
 // Wait for the threads to finish, then delete them
 ThreadPool::~ThreadPool() {
 	finish();
+	join();
+	delete [] threads;
+}
+
+
+void ThreadPool::join() {
 	for (int i = 0; i < numThreads; ++i) {
 		pthread_join(threads[i], 0);
 	}
-	delete [] threads;
 }
+
 
 // Add a task
 void ThreadPool::addTask(Task *nt) {
 	workQueue.push(nt);
 }
+
 
 // Tell the tasks to finish and return
 void ThreadPool::finish() {
