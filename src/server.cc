@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -70,17 +71,14 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
 
-	int client_sock = accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
+	int client_sock = ::accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
 
 	if (client_sock < 0) {
 		perror("accept error");
-		http_io.stop();
-		http_sock = 0;
-		if (!http_sock && !binary_sock) {
-			loop.break_loop();
-		}
 		return;
 	}
+
+	fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK);
 
 	double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 	double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
@@ -98,17 +96,14 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
 
-	int client_sock = accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
+	int client_sock = ::accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
 
 	if (client_sock < 0) {
 		perror("accept error");
-		binary_io.stop();
-		binary_sock = 0;
-		if (!http_sock && !binary_sock) {
-			loop.break_loop();
-		}
 		return;
 	}
+
+	fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK);
 
 	double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 	double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
