@@ -11,13 +11,13 @@
 HttpClient::HttpClient(ev::loop_ref &loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(loop, sock_, database_pool_, active_timeout_, idle_timeout_)
 {
-	log(this, "Got connection, %d http client(s) connected.\n", ++total_clients);
+	log(this, "Got connection (%d), %d http client(s) connected.\n", sock, ++total_clients);
 }
 
 
 HttpClient::~HttpClient()
 {
-	log(this, "Lost connection, %d http client(s) connected.\n", --total_clients);
+	log(this, "Lost connection (%d), %d http client(s) connected.\n", sock, --total_clients);
 }
 
 
