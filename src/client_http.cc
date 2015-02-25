@@ -41,8 +41,8 @@ void HttpClient::read_cb(ev::io &watcher)
 			try {
 				printf("PATH: %s\n", path.c_str());
 				printf("BODY: %s\n", body.c_str());
-				send("HTTP/1.1 200 OK\r\n\r\nOK!\r\n");
-				finish();
+				write("HTTP/1.1 200 OK\r\n\r\nOK!\r\n");
+				close();
 			} catch (...) {
 				printf("ERROR!\n");
 			}
