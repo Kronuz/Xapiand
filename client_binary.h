@@ -30,7 +30,7 @@ public:
 	void release_db(Xapian::Database *);
 	void select_db(const std::vector<std::string> &, bool);
 
-	BinaryClient(int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
+	BinaryClient(ev::loop_ref &loop, int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
 	~BinaryClient();
 };
 

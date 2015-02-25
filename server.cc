@@ -18,20 +18,45 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 //
 
 XapiandServer::XapiandServer(int http_port_, int binary_port_, int thread_pool_size)
-	: http_port(http_port_),
+	: http_io(loop),
+	  binary_io(loop),
+	  sig(loop),
+	  http_port(http_port_),
 	  binary_port(binary_port_),
 	  thread_pool(thread_pool_size)
 {
 	bind_http();
 	bind_binary();
 
-	sig.set<&XapiandServer::signal_cb>();
+	sig.set<XapiandServer, &XapiandServer::signal_cb>(this);
 	sig.start(SIGINT);
 }
 
 
-void
-XapiandServer::bind_http() {
+XapiandServer::~XapiandServer()
+{
+	shutdown(http_sock, SHUT_RDWR);
+	shutdown(binary_sock, SHUT_RDWR);
+	
+	sig.stop();
+	http_io.stop();
+	binary_io.stop();
+	
+	close(http_sock);
+	close(binary_sock);
+	
+	printf("Done with all work!\n");
+}
+
+
+void XapiandServer::run()
+{
+	loop.run(0);
+}
+
+
+void XapiandServer::bind_http()
+{
 	int optval = 1;
 	struct sockaddr_in addr;
 
@@ -58,8 +83,8 @@ XapiandServer::bind_http() {
 }
 
 
-void
-XapiandServer::bind_binary() {
+void XapiandServer::bind_binary()
+{
 	int optval = 1;
 	struct sockaddr_in addr;
 
@@ -86,22 +111,6 @@ XapiandServer::bind_binary() {
 }
 
 
-XapiandServer::~XapiandServer()
-{
-	shutdown(http_sock, SHUT_RDWR);
-	shutdown(binary_sock, SHUT_RDWR);
-
-	sig.stop();
-	http_io.stop();
-	binary_io.stop();
-
-	close(http_sock);
-	close(binary_sock);
-
-	printf("Done with all work!\n");
-}
-
-
 void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
@@ -121,7 +130,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 
 	double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 	double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-	new HttpClient(client_sock, &thread_pool, &database_pool, active_timeout, idle_timeout);
+	new HttpClient(loop, client_sock, &thread_pool, &database_pool, active_timeout, idle_timeout);
 }
 
 
@@ -144,11 +153,11 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 	double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 	double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-	new BinaryClient(client_sock, &thread_pool, &database_pool, active_timeout, idle_timeout);
+	new BinaryClient(loop, client_sock, &thread_pool, &database_pool, active_timeout, idle_timeout);
 }
 
 
 void XapiandServer::signal_cb(ev::sig &signal, int revents)
 {
-	signal.loop.break_loop();
+	loop.break_loop();
 }

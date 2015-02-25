@@ -18,11 +18,8 @@ int main(int argc, char **argv)
 		binary_port = atoi(argv[2]);
 	}
 
-	ev::default_loop loop;
-
 	XapiandServer xapiand(http_port, binary_port, 12);
-
-	loop.run(0);
+	xapiand.run();
 
 	return 0;
 }

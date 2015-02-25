@@ -79,7 +79,7 @@ protected:
 public:
 	virtual void run() = 0;
 
-	BaseClient(int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
+	BaseClient(ev::loop_ref &loop, int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
 	virtual ~BaseClient();
 };
 
