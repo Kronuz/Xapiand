@@ -11,7 +11,7 @@ const int XAPIAND_HTTP_PORT_DEFAULT = 8880;
 const int XAPIAND_BINARY_PORT_DEFAULT = 8890;
 
 
-class XapiandServer {
+class XapiandServer : public Task {
 private:
 	ev::dynamic_loop loop;
 	ev::sig sig;

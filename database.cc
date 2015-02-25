@@ -84,7 +84,7 @@ bool
 DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 {
 	Database *database_ = NULL;
-	
+
 	pthread_mutex_lock(&qmtx);
 	
 	if (!finished && *database == NULL) {
@@ -102,7 +102,9 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 	}
 	
 	pthread_mutex_unlock(&qmtx);
-	
+
+//	printf("+ CHECKOUT DB %lx\n", (unsigned long)*database);
+
 	return database_ != NULL;
 }
 
@@ -110,6 +112,8 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 void
 DatabasePool::checkin(Database **database)
 {
+//	printf("- CHECKIN DB %lx\n", (unsigned long)*database);
+
 	pthread_mutex_lock(&qmtx);
 	
 	DatabaseQueue &queue = databases[(*database)->hash];

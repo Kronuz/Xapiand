@@ -38,23 +38,18 @@ void HttpClient::read_cb(ev::io &watcher)
 		parser.data = this;
 		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 		if (parsed == received) {
-			thread_pool->addTask(new ClientWorker(this));
+			try {
+				printf("PATH: %s\n", path.c_str());
+				printf("BODY: %s\n", body.c_str());
+				send("HTTP/1.1 200 OK\r\n\r\nOK!\r\n");
+				finish();
+			} catch (...) {
+				printf("ERROR!\n");
+			}
 		} else {
 			// Handle error. Just close the connection.
 			finish(); // was delete this
 		}
-	}
-}
-
-void HttpClient::run()
-{
-	try {
-		printf("PATH: %s\n", path.c_str());
-		printf("BODY: %s\n", body.c_str());
-		send("HTTP/1.1 200 OK\r\n\r\nOK!\r\n");
-		finish();
-	} catch (...) {
-		printf("ERROR!\n");
 	}
 }
 
