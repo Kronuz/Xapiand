@@ -1,5 +1,3 @@
-#include <fcntl.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
 
 #include "utils.h"
@@ -21,8 +19,6 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_poo
 	  database_pool(database_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
 {
-	fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
-
 	io.set<BaseClient, &BaseClient::callback>(this);
 	io.start(sock, ev::READ);
 
@@ -58,11 +54,7 @@ void BaseClient::destroy()
 
 	destroyed = true;
 
-	async.send();
-
 	close();
-
-	shutdown(sock, SHUT_RDWR);
 	
 	// Stop and free watcher if client socket is closing
 	io.stop();

@@ -100,12 +100,10 @@ int main(int argc, char **argv)
 	}
 
 	if (http_sock) {
-		shutdown(http_sock, SHUT_RDWR);
 		close(http_sock);
 	}
 
 	if (binary_sock) {
-		shutdown(binary_sock, SHUT_RDWR);
 		close(binary_sock);
 	}
 	
