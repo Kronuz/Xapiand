@@ -11,11 +11,13 @@
 //                                 into async pieces
 //
 
-struct Buffer {
-	char type;
+class Buffer {
 	char *data;
 	size_t len;
 	size_t pos;
+
+public:
+	char type;
 
 	Buffer(char type_, const char *bytes, size_t nbytes) {
 		pos = 0;
@@ -29,7 +31,7 @@ struct Buffer {
 		delete [] data;
 	}
 
-	char *dpos() {
+	const char *dpos() {
 		return data + pos;
 	}
 
