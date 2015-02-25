@@ -42,10 +42,8 @@ void HttpClient::read_cb(ev::io &watcher)
 		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 		if (parsed == received) {
 			try {
-				log(this, "PATH: ");
-				fprint_string(stderr, path);
-				log(this, "BODY: ");
-				fprint_string(stderr, body);
+				log(this, "PATH: %s\n", repr_string(path).c_str());
+				log(this, "BODY: %s\n", repr_string(body).c_str());
 				write("HTTP/1.1 200 OK\r\n"
 					  "Connection: close\r\n"
 					  "\r\n"

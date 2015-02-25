@@ -17,30 +17,29 @@ bool qmtx_inited = false;
 pthread_mutex_t qmtx;
 
 
-void print_string(const std::string &string)
-{
-	fprint_string(stdout, string);
-}
-
-
-void fprint_string(FILE * file, const std::string &string)
+std::string repr_string(const std::string &string)
 {
 	const char *p = string.c_str();
 	const char *p_end = p + string.size();
-	fprintf(file, "'");
+	std::string ret;
+	char buff[4];
+
+	ret += "'";
 	while (p != p_end) {
 		char c = *p++;
 		if (c == 10) {
-			fprintf(file, "\\n");
+			ret += "\\n";
 		} else if (c == 13) {
-			fprintf(file, "\\r");
+			ret += "\\n";
 		} else if (c >= ' ' && c <= '~') {
-			fprintf(file, "%c", c);
+			sprintf(buff, "%c", c);
+			ret += buff;
 		} else {
-			fprintf(file, "\\x%02x", c & 0xff);
+			sprintf(buff, "\\x%02x", c & 0xff);
+			ret += buff;
 		}
 	}
-	fprintf(file, "'\n");
+	return ret;
 }
 
 

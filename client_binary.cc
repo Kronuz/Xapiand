@@ -68,8 +68,7 @@ void BinaryClient::read_cb(ev::io &watcher)
 			std::string data = std::string(p, len);
 			buffer.erase(0, p - o + len);
 
-			// log(this, "<<< ");
-			// fprint_string(stderr, data);
+			// log(this, "<<< %s\n", repr_string(data).c_str());
 
 			Buffer *msg = new Buffer(type, data.c_str(), data.size());
 
@@ -97,8 +96,7 @@ message_type BinaryClient::get_message(double timeout, std::string & result, mes
 	std::string buf(&msg->type, 1);
 	buf += encode_length(msg->nbytes());
 	buf += std::string(msg->dpos(), msg->nbytes());
-	log(this, "get_message: ");
-	fprint_string(stderr, buf);
+	log(this, "get_message: %s\n", repr_string(buf).c_str());
 
 	message_type type = static_cast<message_type>(msg->type);
 	result.assign(msg->dpos(), msg->nbytes());
@@ -114,8 +112,7 @@ void BinaryClient::send_message(reply_type type, const std::string &message) {
 	buf += encode_length(message.size());
 	buf += message;
 
-	log(this, "send_message: ");
-	fprint_string(stderr, buf);
+	log(this, "send_message: %s\n", repr_string(buf).c_str());
 
 	write(buf);
 }
