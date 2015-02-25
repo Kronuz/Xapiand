@@ -1,5 +1,7 @@
 #include <sys/socket.h>
 
+#include "utils.h"
+
 #include "client_http.h"
 
 //
@@ -9,13 +11,13 @@
 HttpClient::HttpClient(ev::loop_ref &loop, int sock_, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(loop, sock_, thread_pool_, database_pool_, active_timeout_, idle_timeout_)
 {
-	printf("Got connection, %d http client(s) connected.\n", ++total_clients);
+	log("Got connection, %d http client(s) connected.\n", ++total_clients);
 }
 
 
 HttpClient::~HttpClient()
 {
-	printf("Lost connection, %d http client(s) connected.\n", --total_clients);
+	log("Lost connection, %d http client(s) connected.\n", --total_clients);
 }
 
 
@@ -31,7 +33,8 @@ void HttpClient::read_cb(ev::io &watcher)
 	}
 
 	if (received == 0) {
-		// Gack - we're deleting ourself inside of ourself!
+		// The peer has closed its half side of the connection.
+		log("BROKEN PIPE!\n");
 		destroy();
 	} else {
 		http_parser_init(&parser, HTTP_REQUEST);
@@ -39,15 +42,17 @@ void HttpClient::read_cb(ev::io &watcher)
 		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 		if (parsed == received) {
 			try {
-				printf("PATH: %s\n", path.c_str());
-				printf("BODY: %s\n", body.c_str());
+				log("PATH: ");
+				fprint_string(stderr, path);
+				log("BODY: ");
+				fprint_string(stderr, body);
 				write("HTTP/1.1 200 OK\r\n"
 					  "Connection: close\r\n"
 					  "\r\n"
 					  "OK!");
 				close();
 			} catch (...) {
-				printf("ERROR!\n");
+				log("ERROR!\n");
 			}
 		} else {
 			// Handle error. Just close the connection.
@@ -82,7 +87,7 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	std::string data;
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
-	// printf("%3d. %s\n", p->state, std::string(at, length).c_str());
+	// log("%3d. %s\n", p->state, std::string(at, length).c_str());
 
 	switch (p->state) {
 		case 32: // path

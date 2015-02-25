@@ -39,6 +39,7 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, ThreadPool *thread_pool_, 
 BaseClient::~BaseClient()
 {
 	destroy();
+	log("DELETED!\n");
 }
 
 void BaseClient::destroy()
@@ -46,6 +47,10 @@ void BaseClient::destroy()
 	if (destroyed) {
 		return;
 	}
+
+	destroyed = true;
+
+	async.send();
 
 	close();
 
@@ -57,13 +62,17 @@ void BaseClient::destroy()
 	async.stop();
 	
 	::close(sock);
-
-	destroyed = true;
+	log("DESTROYED!\n");
 }
 
 
 void BaseClient::close() {
+	if (closed) {
+		return;
+	}
+
 	closed = true;
+	log("CLOSED!\n");
 }
 
 
@@ -128,13 +137,13 @@ void BaseClient::write_cb(ev::io &watcher)
 	} else {
 		Buffer* buffer = write_queue.front();
 
-		printf(">>> ");
-		print_string(std::string(buffer->dpos(), buffer->nbytes()));
+		log(">>> ");
+		fprint_string(stderr, std::string(buffer->dpos(), buffer->nbytes()));
 
 		ssize_t written = ::write(watcher.fd, buffer->dpos(), buffer->nbytes());
 
 		if (written < 0) {
-			perror("read error");
+			perror("write error");
 			destroy();
 		} else {
 			buffer->pos += written;
