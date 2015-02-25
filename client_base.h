@@ -70,8 +70,16 @@ protected:
 	// Receive message from client socket
 	virtual void read_cb(ev::io &watcher) = 0;
 
-	void write(const std::string &buf);
-	void write(const char *buf);
+	inline void write(const char *buf)
+	{
+		write(buf, strlen(buf));
+	}
+	
+	inline void write(const std::string &buf)
+	{
+		write(buf.c_str(), buf.size());
+	}
+
 	void write(const char *buf, size_t buf_size);
 	
 	void close();
