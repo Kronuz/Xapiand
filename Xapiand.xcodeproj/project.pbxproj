@@ -70,26 +70,26 @@
 			isa = PBXGroup;
 			children = (
 				E5CEBCC71A99C89000CD151F /* Products */,
-				E59725CF1A9D25F60060069C /* utils.cc */,
 				E59725D01A9D25F60060069C /* utils.h */,
-				E5CEBCD91A99C9BB00CD151F /* queue.h */,
+				E59725CF1A9D25F60060069C /* utils.cc */,
+				E5CEBCE51A9AE80200CD151F /* endpoint.h */,
 				E5CEBCDB1A99C9BB00CD151F /* server.h */,
 				E5CEBCDA1A99C9BB00CD151F /* server.cc */,
-				E59725C61A9D25EB0060069C /* client_base.cc */,
 				E59725C71A9D25EB0060069C /* client_base.h */,
-				E59725C81A9D25EB0060069C /* client_binary.cc */,
+				E59725C61A9D25EB0060069C /* client_base.cc */,
 				E59725C91A9D25EB0060069C /* client_binary.h */,
-				E59725CA1A9D25EB0060069C /* client_http.cc */,
+				E59725C81A9D25EB0060069C /* client_binary.cc */,
 				E59725CB1A9D25EB0060069C /* client_http.h */,
-				E5CEBCE51A9AE80200CD151F /* endpoint.h */,
+				E59725CA1A9D25EB0060069C /* client_http.cc */,
 				E5CEBCE61A9B228C00CD151F /* database.h */,
 				E5CEBCE91A9B22E600CD151F /* database.cc */,
+				E5CEBCD91A99C9BB00CD151F /* queue.h */,
 				E5CEBCDD1A99C9BB00CD151F /* threadpool.h */,
 				E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */,
 				E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */,
 				E5CEBCEB1A9BB98A00CD151F /* length.cc */,
-				E59725B51A9CFCAD0060069C /* http_parser.c */,
 				E59725B61A9CFCAD0060069C /* http_parser.h */,
+				E59725B51A9CFCAD0060069C /* http_parser.c */,
 			);
 			sourceTree = "<group>";
 		};
