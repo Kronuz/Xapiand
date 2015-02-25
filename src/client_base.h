@@ -45,14 +45,13 @@ protected:
 	ev::sig sig;
 	ev::async async;
 
+	bool destroyed;
 	bool closed;
 	int sock;
 	static int total_clients;
 
 	ThreadPool *thread_pool;
 	DatabasePool *database_pool;
-
-	pthread_mutex_t qmtx;
 
 	Endpoints endpoints;
 
@@ -83,6 +82,7 @@ protected:
 	void write(const char *buf, size_t buf_size);
 	
 	void close();
+	void destroy();
 
 public:
 	BaseClient(ev::loop_ref &loop, int s, ThreadPool *thread_pool_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
