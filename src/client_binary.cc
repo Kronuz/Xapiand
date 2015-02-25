@@ -94,16 +94,19 @@ message_type BinaryClient::get_message(double timeout, std::string & result, mes
 		throw Xapian::NetworkError("No message available");
 	}
 
+	const char *msg_str = msg->dpos();
+	size_t msg_size = msg->nbytes();
+
 	std::string buf(&msg->type, 1);
-	buf += encode_length(msg->nbytes());
-	buf += std::string(msg->dpos(), msg->nbytes());
+	buf += encode_length(msg_size);
+	buf += std::string(msg_str, msg_size);
 	log(this, "get_message: '%s'\n", repr_string(buf).c_str());
 
-	message_type type = static_cast<message_type>(msg->type);
-	result.assign(msg->dpos(), msg->nbytes());
+	result.assign(msg_str, msg_size);
 
 	delete msg;
-	return type;
+
+	return static_cast<message_type>(msg->type);
 }
 
 
