@@ -71,8 +71,12 @@ void BinaryClient::read_cb(ev::io &watcher)
 
 			messages_queue.push(msg);
 
-			if (type != MSG_GETMSET && type != MSG_SHUTDOWN) {
-				thread_pool->addTask(new ClientWorker(this));
+			try {
+				run_one();
+			} catch (const Xapian::NetworkError &e) {
+				printf("ERROR: %s\n", e.get_msg().c_str());
+			} catch (...) {
+				printf("ERROR!\n");
 			}
 		}
 	}
@@ -147,16 +151,4 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 		endpoints.push_back(endpoint);
 	}
 	dbpaths = dbpaths_;
-}
-
-
-void BinaryClient::run()
-{
-	try {
-		run_one();
-	} catch (const Xapian::NetworkError &e) {
-		printf("ERROR: %s\n", e.get_msg().c_str());
-	} catch (...) {
-		printf("ERROR!\n");
-	}
 }
