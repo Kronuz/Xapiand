@@ -79,15 +79,35 @@ int main(int argc, char **argv)
 	int http_sock = bind_http(http_port);
 	int binary_sock = bind_binary(binary_port);
 
-	ThreadPool thread_pool(12);
-	thread_pool.addTask(new XapiandServer(http_sock, binary_sock));
-	thread_pool.join();
+	int tasks = 8;
 
-	shutdown(http_sock, SHUT_RDWR);
-	shutdown(binary_sock, SHUT_RDWR);
+	if (http_sock && binary_sock) {
+		ThreadPool thread_pool(tasks);
+		for (int i = 0; i < tasks; i++) {
+			thread_pool.addTask(new XapiandServer(http_sock, binary_sock));
+		}
 
-	close(http_sock);
-	close(binary_sock);
+		printf("Starting...\n");
+		ev::default_loop loop;
+		loop.run();
+
+		printf("Joining...\n");
+
+		thread_pool.finish();
+		thread_pool.join();
+		
+		printf("Done!\n");
+	}
+
+	if (http_sock) {
+		shutdown(http_sock, SHUT_RDWR);
+		close(http_sock);
+	}
+
+	if (binary_sock) {
+		shutdown(binary_sock, SHUT_RDWR);
+		close(binary_sock);
+	}
 	
 	printf("Done with all work!\n");
 

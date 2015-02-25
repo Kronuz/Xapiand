@@ -14,7 +14,6 @@ int BaseClient::total_clients = 0;
 
 BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
 	: io(loop),
-	  sig(loop),
 	  async(loop),
 	  destroyed(false),
 	  closed(false),
@@ -27,19 +26,29 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_poo
 	io.set<BaseClient, &BaseClient::callback>(this);
 	io.start(sock, ev::READ);
 
-	sig.set<BaseClient, &BaseClient::signal_cb>(this);
-	sig.start(SIGINT);
-
 	async.set<BaseClient, &BaseClient::async_cb>(this);
 	async.start();
+
+	sig.set<BaseClient, &BaseClient::signal_cb>(this);
+	sig.start(SIGINT);
 }
 
 
 BaseClient::~BaseClient()
 {
 	destroy();
-	log("DELETED!\n");
+	sig.stop();
+	log(this, "DELETED!\n");
 }
+
+
+void BaseClient::signal_cb(ev::sig &signal, int revents)
+{
+	log(this, "Signaled destroy!!\n");
+	destroy();
+	delete this;
+}
+
 
 void BaseClient::destroy()
 {
@@ -57,11 +66,10 @@ void BaseClient::destroy()
 	
 	// Stop and free watcher if client socket is closing
 	io.stop();
-	sig.stop();
 	async.stop();
 	
 	::close(sock);
-	log("DESTROYED!\n");
+	log(this, "DESTROYED!\n");
 }
 
 
@@ -71,7 +79,7 @@ void BaseClient::close() {
 	}
 
 	closed = true;
-	log("CLOSED!\n");
+	log(this, "CLOSED!\n");
 }
 
 
@@ -136,7 +144,7 @@ void BaseClient::write_cb(ev::io &watcher)
 	} else {
 		Buffer* buffer = write_queue.front();
 
-		log(">>> ");
+		log(this, ">>> ");
 		fprint_string(stderr, std::string(buffer->dpos(), buffer->nbytes()));
 
 		ssize_t written = ::write(watcher.fd, buffer->dpos(), buffer->nbytes());
@@ -152,13 +160,6 @@ void BaseClient::write_cb(ev::io &watcher)
 			}
 		}
 	}
-}
-
-
-void BaseClient::signal_cb(ev::sig &signal, int revents)
-{
-	destroy();
-	delete this;
 }
 
 

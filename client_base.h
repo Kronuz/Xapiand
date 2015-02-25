@@ -82,14 +82,6 @@ protected:
 	
 	void close();
 	void destroy();
-	
-	void log(const char *format, ...) {
-		fprintf(stderr, "0x%lx - ", (unsigned long)this);
-		va_list argptr;
-		va_start(argptr, format);
-		vfprintf(stderr, format, argptr);
-		va_end(argptr);
-	}
 
 public:
 	BaseClient(ev::loop_ref &loop, int s, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);

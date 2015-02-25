@@ -3,6 +3,8 @@
 
 #include <xapian.h>
 
+#include "utils.h"
+
 #include "server.h"
 #include "client_http.h"
 #include "client_binary.h"
@@ -19,7 +21,7 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 XapiandServer::XapiandServer(int http_sock_, int binary_sock_)
 	: http_io(loop),
 	  binary_io(loop),
-	  sig(loop),
+	  quit(loop),
 	  http_sock(http_sock_),
 	  binary_sock(binary_sock_)
 {
@@ -29,6 +31,9 @@ XapiandServer::XapiandServer(int http_sock_, int binary_sock_)
 	binary_io.set<XapiandServer, &XapiandServer::io_accept_binary>(this);
 	binary_io.start(binary_sock, ev::READ);
 
+	quit.set<XapiandServer, &XapiandServer::quit_cb>(this);
+	quit.start();
+
 	sig.set<XapiandServer, &XapiandServer::signal_cb>(this);
 	sig.start(SIGINT);
 }
@@ -36,18 +41,24 @@ XapiandServer::XapiandServer(int http_sock_, int binary_sock_)
 
 XapiandServer::~XapiandServer()
 {
-	sig.stop();
 	http_io.stop();
 	binary_io.stop();
+	quit.stop();
+	sig.stop();
 }
 
 
 void XapiandServer::run()
 {
+	log(this, "Starting loop...\n");
 	loop.run(0);
 }
 
-
+void XapiandServer::quit_cb(ev::async &watcher, int revents)
+{
+	log(this, "Breaking loop!\n");
+	loop.break_loop();
+}
 
 void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 {
@@ -63,6 +74,11 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 
 	if (client_sock < 0) {
 		perror("accept error");
+		http_io.stop();
+		http_sock = 0;
+		if (!http_sock && !binary_sock) {
+			loop.break_loop();
+		}
 		return;
 	}
 
@@ -86,6 +102,11 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 	if (client_sock < 0) {
 		perror("accept error");
+		binary_io.stop();
+		binary_sock = 0;
+		if (!http_sock && !binary_sock) {
+			loop.break_loop();
+		}
 		return;
 	}
 
@@ -97,5 +118,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 void XapiandServer::signal_cb(ev::sig &signal, int revents)
 {
-	loop.break_loop();
+	log(this, "Breaking default loop!\n");
+	quit.send();
+	signal.loop.break_loop();
 }
