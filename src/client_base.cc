@@ -134,16 +134,6 @@ void BaseClient::signal_cb(ev::sig &signal, int revents)
 	delete this;
 }
 
-void BaseClient::write(const char *buf)
-{
-	write(buf, strlen(buf));
-}
-
-void BaseClient::write(const std::string &buf)
-{
-	write(buf.c_str(), buf.size());
-}
-
 void BaseClient::write(const char *buf, size_t buf_size)
 {
 	pthread_mutex_lock(&qmtx);
