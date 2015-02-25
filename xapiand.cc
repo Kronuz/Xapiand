@@ -26,7 +26,7 @@ int bind_http(int http_port)
 	if (bind(http_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		perror("bind");
 		close(http_sock);
-		http_sock = 0;
+		http_sock = -1;
 	} else {
 		printf("Listening http protocol on port %d\n", http_port);
 		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
@@ -53,7 +53,7 @@ int bind_binary(int binary_port)
 	if (bind(binary_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		perror("bind");
 		close(binary_sock);
-		binary_sock = 0;
+		binary_sock = -1;
 	} else {
 		printf("Listening binary protocol on port %d\n", binary_port);
 		fcntl(binary_sock, F_SETFL, fcntl(binary_sock, F_GETFL, 0) | O_NONBLOCK);
