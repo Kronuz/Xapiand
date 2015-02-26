@@ -173,7 +173,7 @@ void BaseClient::write_cb(ev::io &watcher)
 void BaseClient::read_cb(ev::io &watcher)
 {
 	char buf[1024];
-	
+
 	ssize_t received = ::read(sock, buf, sizeof(buf));
 	
 	if (received < 0) {
