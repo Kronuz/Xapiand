@@ -62,6 +62,9 @@ protected:
 	void signal_cb(ev::sig &signal, int revents);
 	void async_cb(ev::async &watcher, int revents);
 
+	int io_events;
+	void io_update();
+
 	// Generic callback
 	void io_cb(ev::io &watcher, int revents);
 
