@@ -66,10 +66,12 @@ protected:
 	void io_cb(ev::io &watcher, int revents);
 
 	// Socket is writable
-	virtual void write_cb(ev::io &watcher);
+	void write_cb(ev::io &watcher);
 
 	// Receive message from client socket
-	virtual void read_cb(ev::io &watcher) = 0;
+	void read_cb(ev::io &watcher);
+	
+	virtual void on_read(const char *buf, ssize_t received) = 0;
 
 	inline void write(const char *buf)
 	{
