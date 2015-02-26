@@ -148,8 +148,12 @@ void BaseClient::write_cb(ev::io &watcher)
 		ssize_t written = ::write(watcher.fd, buf, buf_size);
 
 		if (written < 0) {
-			LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
-			destroy();
+			if (errno != EAGAIN) {
+				LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
+				destroy();
+			}
+		} else if (written == 0) {
+			// nothing written?
 		} else {
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
@@ -167,11 +171,11 @@ void BaseClient::read_cb(ev::io &watcher)
 	ssize_t received = ::read(watcher.fd, buf, sizeof(buf));
 	
 	if (received < 0) {
-		if (errno != EAGAIN) LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
-		return;
-	}
-	
-	if (received == 0) {
+		if (errno != EAGAIN) {
+			LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
+			destroy();
+		}
+	} else if (received == 0) {
 		// The peer has closed its half side of the connection.
 		LOG_CONN(this, "Received EOF (sock=%d)!\n", sock);
 		destroy();
