@@ -14,16 +14,17 @@
 class Buffer {
 	char *data;
 	size_t len;
-	size_t pos;
 
 public:
+	size_t pos;
 	char type;
 
-	Buffer(char type_, const char *bytes, size_t nbytes) {
-		pos = 0;
-		len = nbytes;
-		type = type_;
-		data = new char[nbytes];
+	Buffer(char type_, const char *bytes, size_t nbytes)
+		: pos(0),
+		  len(nbytes),
+		  type(type_),
+		  data(new char [nbytes])
+	{
 		memcpy(data, bytes, nbytes);
 	}
 
