@@ -76,7 +76,9 @@ int main(int argc, char **argv)
 		http_port = atoi(argv[1]);
 		binary_port = atoi(argv[2]);
 	}
-	
+
+	LOG((void *)NULL, "Starting Xapiand.\n");
+
 	int http_sock = bind_http(http_port);
 	int binary_sock = bind_binary(binary_port);
 
@@ -105,7 +107,7 @@ int main(int argc, char **argv)
 		close(binary_sock);
 	}
 	
-	LOG_OBJ((void *)NULL, "Done with all work!\n");
+	LOG((void *)NULL, "Done with all work!\n");
 
 	return 0;
 }

@@ -194,6 +194,8 @@ void BaseClient::read_cb(ev::io &watcher)
 
 void BaseClient::write(const char *buf, size_t buf_size)
 {
+	LOG_CONN(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
+
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
 	write_queue.push(buffer);
 
