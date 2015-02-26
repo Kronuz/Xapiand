@@ -63,7 +63,7 @@ protected:
 	void async_cb(ev::async &watcher, int revents);
 
 	int io_events;
-	void io_update();
+	void io_update(bool force=false);
 
 	// Generic callback
 	void io_cb(ev::io &watcher, int revents);
