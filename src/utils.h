@@ -11,7 +11,7 @@ std::string repr(const std::string &string);
 #define LOG(...) log(__VA_ARGS__)
 #define LOG_EV(...) log(__VA_ARGS__)
 #define LOG_CONN(...) log(__VA_ARGS__)
-#define LOG_OBJ(...) log(__VA_ARGS__)
+#define LOG_OBJ(...)
 #define LOG_ERR(...) log(__VA_ARGS__)
 #define LOG_HTTP_PROTO(...) log(__VA_ARGS__)
 #define LOG_HTTP_PROTO_PARSER(...)
