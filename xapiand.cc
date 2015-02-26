@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 
 	int tasks = 8;
 
-	if (http_sock > 0 && binary_sock > 0) {
+	if (http_sock != 0 && binary_sock != 0) {
 		ThreadPool thread_pool(tasks);
 		for (int i = 0; i < tasks; i++) {
 			thread_pool.addTask(new XapiandServer(http_sock, binary_sock));
@@ -97,11 +97,11 @@ int main(int argc, char **argv)
 		thread_pool.join();
 	}
 
-	if (http_sock > 0) {
+	if (http_sock != 0) {
 		close(http_sock);
 	}
 
-	if (binary_sock > 0) {
+	if (binary_sock != 0) {
 		close(binary_sock);
 	}
 	
