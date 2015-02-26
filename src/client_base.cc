@@ -4,7 +4,7 @@
 #include "client_base.h"
 
 
-const int WRITE_QUEUE_SIZE = 30;
+const int WRITE_QUEUE_SIZE = -1;
 
 
 int BaseClient::total_clients = 0;
