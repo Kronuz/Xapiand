@@ -17,7 +17,7 @@ private:
 	std::string buffer;
 	Queue<Buffer *> messages_queue;
 
-	void read_cb(ev::io &watcher);
+	void on_read(const char *buf, ssize_t received);
 
 public:
 	message_type get_message(double timeout, std::string & result, message_type required_type = MSG_MAX);

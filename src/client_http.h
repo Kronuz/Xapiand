@@ -11,7 +11,7 @@
 class HttpClient : public BaseClient {
 	struct http_parser parser;
 
-	void read_cb(ev::io &watcher);
+	void on_read(const char *buf, ssize_t received);
 
 	static const http_parser_settings settings;
 
