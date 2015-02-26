@@ -26,17 +26,17 @@ XapiandServer::XapiandServer(int http_sock_, int binary_sock_)
 	  http_sock(http_sock_),
 	  binary_sock(binary_sock_)
 {
+	sig.set<XapiandServer, &XapiandServer::signal_cb>(this);
+	sig.start(SIGINT);
+	
+	quit.set<XapiandServer, &XapiandServer::quit_cb>(this);
+	quit.start();
+
 	http_io.set<XapiandServer, &XapiandServer::io_accept_http>(this);
 	http_io.start(http_sock, ev::READ);
 
 	binary_io.set<XapiandServer, &XapiandServer::io_accept_binary>(this);
 	binary_io.start(binary_sock, ev::READ);
-
-	quit.set<XapiandServer, &XapiandServer::quit_cb>(this);
-	quit.start();
-
-	sig.set<XapiandServer, &XapiandServer::signal_cb>(this);
-	sig.start(SIGINT);
 }
 
 
