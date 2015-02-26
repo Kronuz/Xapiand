@@ -17,7 +17,7 @@ static void *getWork(void * param) {
 
 // Allocate a thread pool and set them to work trying to get tasks
 ThreadPool::ThreadPool(int n) : numThreads(n) {
-	log(this, "Creating a thread pool with %d threads\n", n);
+	LOG_OBJ(this, "Creating a thread pool with %d threads\n", n);
 
 	threads = new pthread_t[numThreads];
 	for (int i = 0; i < numThreads; ++i) {

@@ -34,13 +34,13 @@ BaseClient::~BaseClient()
 {
 	destroy();
 	sig.stop();
-	// log(this, "DELETED!\n");
+	LOG_OBJ(this, "DELETED!\n");
 }
 
 
 void BaseClient::signal_cb(ev::sig &signal, int revents)
 {
-	log(this, "Signaled destroy!!\n");
+	LOG_EV(this, "Signaled destroy!!\n");
 	destroy();
 	delete this;
 }
@@ -61,7 +61,7 @@ void BaseClient::destroy()
 	async.stop();
 	
 	::close(sock);
-	// log(this, "DESTROYED!\n");
+	LOG_OBJ(this, "DESTROYED!\n");
 }
 
 
@@ -71,7 +71,7 @@ void BaseClient::close() {
 	}
 
 	closed = true;
-	// log(this, "CLOSED!\n");
+	LOG_OBJ(this, "CLOSED!\n");
 }
 
 
@@ -81,7 +81,7 @@ void BaseClient::async_cb(ev::async &watcher, int revents)
 		return;
 	}
 
-	// log(this, "ASYNC_CB (sock=%d) %x\n", sock, revents);
+	LOG_EV(this, "ASYNC_CB (sock=%d) %x\n", sock, revents);
 
 	if (write_queue.empty()) {
 		if (closed) {
@@ -103,10 +103,10 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 		return;
 	}
 
-	// log(this, "IO_CB (sock=%d) %x\n", sock, revents);
+	LOG_EV(this, "IO_CB (sock=%d) %x\n", sock, revents);
 
 	if (revents & EV_ERROR) {
-		log(this, "ERROR: got invalid event (sock=%d): %s\n", sock, strerror(errno));
+		LOG_ERR(this, "ERROR: got invalid event (sock=%d): %s\n", sock, strerror(errno));
 		destroy();
 		return;
 	}
@@ -143,12 +143,12 @@ void BaseClient::write_cb(ev::io &watcher)
 		size_t buff_size = buffer->nbytes();
 		const char * buff = buffer->dpos();
 
-		// log(this, ">>> '%s'\n", repr(buff, buff_size).c_str());
+		LOG_CONN(this, ">>> '%s'\n", repr(buff, buff_size).c_str());
 
 		ssize_t written = ::write(watcher.fd, buff, buff_size);
 
 		if (written < 0) {
-			log(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
+			LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
 			destroy();
 		} else {
 			buffer->pos += written;

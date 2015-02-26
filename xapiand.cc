@@ -25,11 +25,11 @@ int bind_http(int http_port)
 	addr.sin_addr.s_addr = INADDR_ANY;
 	
 	if (bind(http_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-		if (errno != EAGAIN) log((void *)NULL, "ERROR: http bind error (sock=%d): %s\n", http_sock, strerror(errno));
+		if (errno != EAGAIN) LOG_CONN((void *)NULL, "ERROR: http bind error (sock=%d): %s\n", http_sock, strerror(errno));
 		close(http_sock);
 		http_sock = -1;
 	} else {
-		log((void *)NULL, "Listening http protocol on port %d\n", http_port);
+		LOG_CONN((void *)NULL, "Listening http protocol on port %d\n", http_port);
 		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
 		
 		listen(http_sock, 5);
@@ -52,11 +52,11 @@ int bind_binary(int binary_port)
 	addr.sin_addr.s_addr = INADDR_ANY;
 	
 	if (bind(binary_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-		if (errno != EAGAIN) log((void *)NULL, "ERROR: binary bind error (sock=%d): %s\n", binary_sock, strerror(errno));
+		if (errno != EAGAIN) LOG_CONN((void *)NULL, "ERROR: binary bind error (sock=%d): %s\n", binary_sock, strerror(errno));
 		close(binary_sock);
 		binary_sock = -1;
 	} else {
-		log((void *)NULL, "Listening binary protocol on port %d\n", binary_port);
+		LOG_CONN((void *)NULL, "Listening binary protocol on port %d\n", binary_port);
 		fcntl(binary_sock, F_SETFL, fcntl(binary_sock, F_GETFL, 0) | O_NONBLOCK);
 		
 		listen(binary_sock, 5);
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
 		ev::default_loop loop;
 		loop.run();
 
-		log((void *)NULL, "Waiting for threads...\n");
+		LOG_OBJ((void *)NULL, "Waiting for threads...\n");
 
 		thread_pool.finish();
 		thread_pool.join();
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 		close(binary_sock);
 	}
 	
-	log((void *)NULL, "Done with all work!\n");
+	LOG_OBJ((void *)NULL, "Done with all work!\n");
 
 	return 0;
 }
