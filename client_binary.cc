@@ -97,16 +97,20 @@ message_type BinaryClient::get_message(double timeout, std::string & result, mes
 	const char *msg_str = msg->dpos();
 	size_t msg_size = msg->nbytes();
 
+	std::string message = std::string(msg_str, msg_size);
+
 	std::string buf(&msg->type, 1);
 	buf += encode_length(msg_size);
-	buf += std::string(msg_str, msg_size);
+	buf += message;
 	log(this, "get_message: '%s'\n", repr_string(buf).c_str());
 
-	result.assign(msg_str, msg_size);
+	result = message;
+
+	message_type type = static_cast<message_type>(msg->type);
 
 	delete msg;
 
-	return static_cast<message_type>(msg->type);
+	return type;
 }
 
 
