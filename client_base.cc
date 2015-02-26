@@ -136,7 +136,7 @@ void BaseClient::write_cb(ev::io &watcher)
 	} else {
 		Buffer* buffer = write_queue.front();
 
-		log(this, ">>> '%s'\n", repr_string(std::string(buffer->dpos(), buffer->nbytes())).c_str());
+		log(this, ">>> '%s'\n", repr(std::string(buffer->dpos(), buffer->nbytes())).c_str());
 
 		ssize_t written = ::send(watcher.fd, buffer->dpos(), buffer->nbytes(), 0);
 
