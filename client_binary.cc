@@ -15,7 +15,7 @@ BinaryClient::BinaryClient(ev::loop_ref &loop, int sock_, DatabasePool *database
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  database(NULL)
 {
-	log(this, "Got connection (%d), %d binary client(s) connected.\n", sock, ++total_clients);
+	log(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, ++total_clients);
 
 	try {
 		msg_update(std::string());
@@ -32,7 +32,7 @@ BinaryClient::~BinaryClient()
 	if (database) {
 		database_pool->checkin(&database);
 	}
-	log(this, "Lost connection (%d), %d binary client(s) connected.\n", sock, --total_clients);
+	log(this, "Lost connection (sock=%d), %d binary client(s) connected.\n", sock, --total_clients);
 }
 
 
@@ -49,7 +49,7 @@ void BinaryClient::read_cb(ev::io &watcher)
 
 	if (received == 0) {
 		// The peer has closed its half side of the connection.
-		log(this, "BROKEN PIPE!\n");
+		log(this, "BROKEN PIPE (sock=%d)!\n", sock);
 		destroy();
 	} else {
 		buffer.append(buf, received);

@@ -13,13 +13,13 @@ HttpClient::HttpClient(ev::loop_ref &loop, int sock_, DatabasePool *database_poo
 {
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
-	log(this, "Got connection (%d), %d http client(s) connected.\n", sock, ++total_clients);
+	log(this, "Got connection (sock=%d), %d http client(s) connected.\n", sock, ++total_clients);
 }
 
 
 HttpClient::~HttpClient()
 {
-	log(this, "Lost connection (%d), %d http client(s) connected.\n", sock, --total_clients);
+	log(this, "Lost connection (sock=%d), %d http client(s) connected.\n", sock, --total_clients);
 }
 
 
@@ -36,7 +36,7 @@ void HttpClient::read_cb(ev::io &watcher)
 
 	if (received == 0) {
 		// The peer has closed its half side of the connection.
-		log(this, "BROKEN PIPE!\n");
+		log(this, "BROKEN PIPE (sock=%d)!\n", sock);
 		destroy();
 	} else {
 		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
