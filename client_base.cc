@@ -25,7 +25,7 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_poo
 	async.set<BaseClient, &BaseClient::async_cb>(this);
 	async.start();
 
-	io.set<BaseClient, &BaseClient::callback>(this);
+	io.set<BaseClient, &BaseClient::io_cb>(this);
 	io.start(sock, ev::READ);
 }
 
@@ -95,7 +95,7 @@ void BaseClient::async_cb(ev::async &watcher, int revents)
 }
 
 
-void BaseClient::callback(ev::io &watcher, int revents)
+void BaseClient::io_cb(ev::io &watcher, int revents)
 {
 	if (destroyed) {
 		return;

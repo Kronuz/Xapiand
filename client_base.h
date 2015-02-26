@@ -63,7 +63,7 @@ protected:
 	void async_cb(ev::async &watcher, int revents);
 
 	// Generic callback
-	void callback(ev::io &watcher, int revents);
+	void io_cb(ev::io &watcher, int revents);
 
 	// Socket is writable
 	virtual void write_cb(ev::io &watcher);
