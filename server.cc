@@ -80,7 +80,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 	pthread_mutex_unlock(&qmtx);
 
 	if (client_sock < 0) {
-		perror("accept http error");
+		if (errno != EAGAIN) perror("accept http error");
 		return;
 	}
 
@@ -107,7 +107,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 	pthread_mutex_unlock(&qmtx);
 
 	if (client_sock < 0) {
-		perror("accept binary error");
+		if (errno != EAGAIN) perror("accept binary error");
 		return;
 	}
 
