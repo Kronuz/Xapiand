@@ -22,32 +22,39 @@ std::string repr(const std::string &string)
 	return repr(string.c_str(), string.size());
 }
 
+
 std::string repr(const char * p, size_t size)
 {
+	char *buff = new char[size * 4 + 1];
+	char *d = buff;
 	const char *p_end = p + size;
-	std::string ret;
-	char buff[4];
-
 	while (p != p_end) {
 		char c = *p++;
 		if (c == 9) {
-			ret += "\\t";
+			*d++ = '\\';
+			*d++ = 't';
 		} else if (c == 10) {
-			ret += "\\n";
+			*d++ = '\\';
+			*d++ = 'n';
 		} else if (c == 13) {
-			ret += "\\r";
-//		} else if (c == '"') {
-//			ret += "\\\"";
+			*d++ = '\\';
+			*d++ = 'r';
 		} else if (c == '\'') {
-			ret += "\\\'";
+			*d++ = '\\';
+			*d++ = '\'';
 		} else if (c >= ' ' && c <= '~') {
-			sprintf(buff, "%c", c);
-			ret += buff;
+			*d++ = c;
 		} else {
-			sprintf(buff, "\\x%02x", c & 0xff);
-			ret += buff;
+			*d++ = '\\';
+			*d++ = 'x';
+			sprintf(d, "%02x", (unsigned char)c);
+			d += 2;
 		}
+		// printf("%02x: %ld < %ld\n", (unsigned char)c, d - buff, size * 4 + 1);
 	}
+	*d = '\0';
+	std::string ret(buff);
+	delete [] buff;
 	return ret;
 }
 
