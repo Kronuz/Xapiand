@@ -30,7 +30,7 @@ void HttpClient::read_cb(ev::io &watcher)
 	ssize_t received = ::read(watcher.fd, buf, sizeof(buf));
 
 	if (received < 0) {
-		if (errno != EAGAIN) perror("read error");
+		if (errno != EAGAIN) log(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
 		return;
 	}
 

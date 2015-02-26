@@ -64,7 +64,7 @@ void XapiandServer::quit_cb(ev::async &watcher, int revents)
 void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
-		perror("got invalid http event");
+		log(this, "ERROR: got invalid http event (sock=%d): %s\n", http_sock, strerror(errno));
 		return;
 	}
 
@@ -74,7 +74,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 	int client_sock = ::accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
 
 	if (client_sock < 0) {
-		if (errno != EAGAIN) perror("accept http error");
+		if (errno != EAGAIN) log(this, "ERROR: accept http error (sock=%d): %s\n", http_sock, strerror(errno));
 		return;
 	}
 
@@ -89,7 +89,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
-		perror("got invalid binary event");
+		log(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary_sock, strerror(errno));
 		return;
 	}
 
@@ -99,7 +99,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 	int client_sock = ::accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
 
 	if (client_sock < 0) {
-		if (errno != EAGAIN) perror("accept binary error");
+		if (errno != EAGAIN) log(this, "ERROR: accept binary error (sock=%d): %s\n", binary_sock, strerror(errno));
 		return;
 	}
 

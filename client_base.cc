@@ -106,7 +106,7 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 	// log(this, "IO_CB (sock=%d) %x\n", sock, revents);
 
 	if (revents & EV_ERROR) {
-		perror("got invalid event");
+		log(this, "ERROR: got invalid event (sock=%d): %s\n", sock, strerror(errno));
 		destroy();
 		return;
 	}
@@ -148,7 +148,7 @@ void BaseClient::write_cb(ev::io &watcher)
 		ssize_t written = ::write(watcher.fd, buff, buff_size);
 
 		if (written < 0) {
-			perror("write error");
+			log(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
 			destroy();
 		} else {
 			buffer->pos += written;
