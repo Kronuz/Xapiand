@@ -39,9 +39,11 @@ void HttpClient::read_cb(ev::io &watcher)
 		log(this, "Received EOF (sock=%d)!\n", sock);
 		destroy();
 	} else {
+		// log(this, "<<< '%s'\n", repr(buf, received).c_str());
+
 		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 		if (parsed == received) {
-			if (parser.state == 18) { // message_complete
+			if (parser.state == 1 || parser.state == 18) { // dead or message_complete
 				try {
 					log(this, "METHOD: %d\n", parser.method);
 					log(this, "PATH: '%s'\n", repr(path).c_str());
