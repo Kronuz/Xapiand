@@ -13,7 +13,8 @@ const int XAPIAND_BINARY_PORT_DEFAULT = 8890;
 
 class XapiandServer : public Task {
 private:
-	ev::dynamic_loop loop;
+	ev::dynamic_loop dynamic_loop;
+	ev::loop_ref *loop;
 	ev::sig sig;
 	ev::async quit;
 
@@ -35,7 +36,7 @@ private:
 	void quit_cb(ev::async &watcher, int revents);
 
 public:
-	XapiandServer(int http_sock_, int binary_sock_);
+	XapiandServer(int http_sock_, int binary_sock_, ev::loop_ref *loop_=NULL);
 	~XapiandServer();
 	
 	void run();
