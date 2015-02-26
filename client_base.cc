@@ -114,20 +114,22 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 		return;
 	}
 
-	if (revents & EV_READ)
+	if (!destroyed && revents & EV_READ)
 		read_cb(watcher);
 
-	if (revents & EV_WRITE)
+	if (!destroyed && revents & EV_WRITE)
 		write_cb(watcher);
 
-	if (write_queue.empty()) {
-		if (closed) {
-			destroy();
+	if (!destroyed) {
+		if (write_queue.empty()) {
+			if (closed) {
+				destroy();
+			} else {
+				io.set(ev::READ);
+			}
 		} else {
-			io.set(ev::READ);
+			io.set(ev::READ|ev::WRITE);
 		}
-	} else {
-		io.set(ev::READ|ev::WRITE);
 	}
 
 	if (destroyed) {
