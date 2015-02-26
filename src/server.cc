@@ -68,7 +68,7 @@ void XapiandServer::quit_cb(ev::async &watcher, int revents)
 void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
-		perror("got invalid event");
+		perror("got invalid http event");
 		return;
 	}
 
@@ -80,7 +80,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 	pthread_mutex_unlock(&qmtx);
 
 	if (client_sock < 0) {
-		perror("accept error");
+		perror("accept http error");
 		return;
 	}
 
@@ -95,7 +95,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
-		perror("got invalid event");
+		perror("got invalid binary event");
 		return;
 	}
 
@@ -107,7 +107,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 	pthread_mutex_unlock(&qmtx);
 
 	if (client_sock < 0) {
-		perror("accept error");
+		perror("accept binary error");
 		return;
 	}
 
