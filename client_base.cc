@@ -77,7 +77,7 @@ void BaseClient::close() {
 }
 
 
-void BaseClient::io_update() {
+void BaseClient::io_update(bool force) {
 	if (!destroyed) {
 		int io_events_ = io_events;
 		if (write_queue.empty()) {
@@ -89,7 +89,7 @@ void BaseClient::io_update() {
 		} else {
 			io_events_ = ev::READ|ev::WRITE;
 		}
-		if (io_events != io_events_) {
+		if (force || io_events != io_events_) {
 			io_events = io_events_;
 			io.set(io_events);
 		}
@@ -110,7 +110,7 @@ void BaseClient::async_cb(ev::async &watcher, int revents)
 
 	LOG_EV(this, "ASYNC_CB (sock=%d) %x\n", sock, revents);
 	
-	io_update();
+	io_update(true);
 }
 
 
