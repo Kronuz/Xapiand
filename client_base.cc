@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <sys/socket.h>
 
 #include "utils.h"
@@ -103,6 +104,8 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 		return;
 	}
 
+	assert(sock == watcher.fd);
+
 	LOG_EV(this, "IO_CB (sock=%d) %x\n", sock, revents);
 
 	if (revents & EV_ERROR) {
@@ -143,7 +146,7 @@ void BaseClient::write_cb(ev::io &watcher)
 
 		LOG_CONN(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf, buf_size).c_str());
 
-		ssize_t written = ::write(watcher.fd, buf, buf_size);
+		ssize_t written = ::write(sock, buf, buf_size);
 
 		if (written < 0) {
 			if (errno != EAGAIN) {
@@ -166,7 +169,7 @@ void BaseClient::read_cb(ev::io &watcher)
 {
 	char buf[1024];
 	
-	ssize_t received = ::read(watcher.fd, buf, sizeof(buf));
+	ssize_t received = ::read(sock, buf, sizeof(buf));
 	
 	if (received < 0) {
 		if (errno != EAGAIN) {
