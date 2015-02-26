@@ -9,8 +9,7 @@
 //
 
 HttpClient::HttpClient(ev::loop_ref &loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
-	: BaseClient(loop, sock_, database_pool_, active_timeout_, idle_timeout_),
-	  message_complete(false)
+	: BaseClient(loop, sock_, database_pool_, active_timeout_, idle_timeout_)
 {
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -42,8 +41,9 @@ void HttpClient::read_cb(ev::io &watcher)
 	} else {
 		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 		if (parsed == received) {
-			if (message_complete) {
+			if (parser.state == 18) { // message_complete
 				try {
+					log(this, "METHOD: %d\n", parser.method);
 					log(this, "PATH: '%s'\n", repr(path).c_str());
 					log(this, "BODY: '%s'\n", repr(body).c_str());
 					write("HTTP/1.1 200 OK\r\n"
@@ -86,11 +86,9 @@ int HttpClient::on_info(http_parser* p) {
 	// log(self, "%3d. (INFO)\n", p->state);
 
 	switch (p->state) {
-		case 18:
-			self->message_complete = true;
+		case 18:  // message_complete
 			break;
-		case 19:
-			self->message_complete = false;
+		case 19:  // message_begin
 			self->path.clear();
 			self->body.clear();
 			break;
