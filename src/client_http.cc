@@ -30,13 +30,13 @@ void HttpClient::read_cb(ev::io &watcher)
 	ssize_t received = ::read(watcher.fd, buf, sizeof(buf));
 
 	if (received < 0) {
-		if (errno != EAGAIN) LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
+		if (errno != EAGAIN) LOG_ERR(this, "ERROR: http read error (sock=%d): %s\n", sock, strerror(errno));
 		return;
 	}
 
 	if (received == 0) {
 		// The peer has closed its half side of the connection.
-		LOG_CONN(this, "Received EOF (sock=%d)!\n", sock);
+		LOG_CONN(this, "Received http EOF (sock=%d)!\n", sock);
 		destroy();
 	} else {
 		LOG_CONN(this, "(sock=%d) -->> '%s'\n", sock, repr(buf, received).c_str());
