@@ -9,8 +9,11 @@
 //
 
 HttpClient::HttpClient(ev::loop_ref &loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
-	: BaseClient(loop, sock_, database_pool_, active_timeout_, idle_timeout_)
+	: BaseClient(loop, sock_, database_pool_, active_timeout_, idle_timeout_),
+	  message_complete(false)
 {
+	parser.data = this;
+	http_parser_init(&parser, HTTP_REQUEST);
 	log(this, "Got connection (%d), %d http client(s) connected.\n", sock, ++total_clients);
 }
 
@@ -37,20 +40,21 @@ void HttpClient::read_cb(ev::io &watcher)
 		log(this, "BROKEN PIPE!\n");
 		destroy();
 	} else {
-		http_parser_init(&parser, HTTP_REQUEST);
-		parser.data = this;
 		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 		if (parsed == received) {
-			try {
-				log(this, "PATH: '%s'\n", repr(path).c_str());
-				log(this, "BODY: '%s'\n", repr(body).c_str());
-				write("HTTP/1.1 200 OK\r\n"
-					  "Connection: close\r\n"
-					  "\r\n"
-					  "OK!");
-				close();
-			} catch (...) {
-				log(this, "ERROR!\n");
+			if (message_complete) {
+				try {
+					log(this, "PATH: '%s'\n", repr(path).c_str());
+					log(this, "BODY: '%s'\n", repr(body).c_str());
+					write("HTTP/1.1 200 OK\r\n"
+						  "Content-Length: 3\r\n"
+						  "Connection: close\r\n"
+						  "\r\n"
+						  "OK!");
+					close();
+				} catch (...) {
+					log(this, "ERROR!\n");
+				}
 			}
 		} else {
 			// Handle error. Just close the connection.
@@ -77,15 +81,29 @@ const http_parser_settings HttpClient::settings = {
 
 
 int HttpClient::on_info(http_parser* p) {
+	HttpClient *self = static_cast<HttpClient *>(p->data);
+
+	// log(self, "%3d. (INFO)\n", p->state);
+
+	switch (p->state) {
+		case 18:
+			self->message_complete = true;
+			break;
+		case 19:
+			self->message_complete = false;
+			self->path.clear();
+			self->body.clear();
+			break;
+	}
+
 	return 0;
 }
 
 
 int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
-	std::string data;
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
-	// log(this, "%3d. %s\n", p->state, std::string(at, length).c_str());
+	// log(self, "%3d. %s\n", p->state, repr(at, length).c_str());
 
 	switch (p->state) {
 		case 32: // path

@@ -15,6 +15,7 @@ class HttpClient : public BaseClient {
 
 	static const http_parser_settings settings;
 
+	bool message_complete;
 	std::string path;
 	std::string body;
 
