@@ -13,8 +13,6 @@ const int XAPIAND_BINARY_PORT_DEFAULT = 8890;
 
 class XapiandServer : public Task {
 private:
-	pthread_mutex_t qmtx;
-
 	ev::dynamic_loop loop;
 	ev::sig sig;
 	ev::async quit;
