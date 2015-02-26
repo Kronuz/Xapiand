@@ -81,6 +81,8 @@ void BaseClient::async_cb(ev::async &watcher, int revents)
 		return;
 	}
 
+	// log(this, "ASYNC_CB (sock=%d) %x\n", sock, revents);
+
 	if (write_queue.empty()) {
 		if (closed) {
 			destroy();
@@ -100,6 +102,8 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 	if (destroyed) {
 		return;
 	}
+
+	// log(this, "IO_CB (sock=%d) %x\n", sock, revents);
 
 	if (revents & EV_ERROR) {
 		perror("got invalid event");
