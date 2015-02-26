@@ -3,7 +3,8 @@
 
 #include <string>
 
-std::string repr_string(const std::string &string);
+std::string repr(const char *p, size_t size);
+std::string repr(const std::string &string);
 
 void log(void *obj, const char *format, ...);
 
