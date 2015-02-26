@@ -25,7 +25,7 @@ int bind_http(int http_port)
 	addr.sin_addr.s_addr = INADDR_ANY;
 	
 	if (bind(http_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-		perror("bind");
+		if (errno != EAGAIN) log((void *)NULL, "ERROR: http bind error (sock=%d): %s\n", http_sock, strerror(errno));
 		close(http_sock);
 		http_sock = -1;
 	} else {
@@ -52,7 +52,7 @@ int bind_binary(int binary_port)
 	addr.sin_addr.s_addr = INADDR_ANY;
 	
 	if (bind(binary_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-		perror("bind");
+		if (errno != EAGAIN) log((void *)NULL, "ERROR: binary bind error (sock=%d): %s\n", binary_sock, strerror(errno));
 		close(binary_sock);
 		binary_sock = -1;
 	} else {
