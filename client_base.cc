@@ -141,7 +141,7 @@ void BaseClient::write_cb(ev::io &watcher)
 
 		// log(this, ">>> '%s'\n", repr(buff, buff_size).c_str());
 
-		ssize_t written = ::send(watcher.fd, buff, buff_size, 0);
+		ssize_t written = ::write(watcher.fd, buff, buff_size);
 
 		if (written < 0) {
 			perror("write error");
