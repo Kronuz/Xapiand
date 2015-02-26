@@ -6,6 +6,8 @@
 //  Copyright (c) 2015 Germán M. Bravo. All rights reserved.
 //
 
+#include "utils.h"
+
 #include "database.h"
 
 
@@ -32,7 +34,7 @@ Database::reopen()
 				db->add_database(Xapian::Database((*i).path));
 			}
 		} else if (endpoints.size() != 1) {
-			printf("ERROR: Expecting exactly one database.");
+			log(this, "ERROR: Expecting exactly one database.");
 		}
 	}
 }
@@ -103,7 +105,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 	
 	pthread_mutex_unlock(&qmtx);
 
-//	printf("+ CHECKOUT DB %lx\n", (unsigned long)*database);
+//	log(this, "+ CHECKOUT DB %lx\n", (unsigned long)*database);
 
 	return database_ != NULL;
 }
@@ -112,7 +114,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 void
 DatabasePool::checkin(Database **database)
 {
-//	printf("- CHECKIN DB %lx\n", (unsigned long)*database);
+//	log(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
 
 	pthread_mutex_lock(&qmtx);
 	

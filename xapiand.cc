@@ -7,6 +7,7 @@ c++ xapiand.cc server.cc threadpool.cc ../../net/length.cc -lev `xapian-config-1
 #include <netinet/in.h>
 #include <sys/socket.h>
 
+#include "utils.h"
 #include "config.h"
 #include "server.h"
 
@@ -28,7 +29,7 @@ int bind_http(int http_port)
 		close(http_sock);
 		http_sock = -1;
 	} else {
-		printf("Listening http protocol on port %d\n", http_port);
+		log((void *)NULL, "Listening http protocol on port %d\n", http_port);
 		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
 		
 		listen(http_sock, 5);
@@ -55,7 +56,7 @@ int bind_binary(int binary_port)
 		close(binary_sock);
 		binary_sock = -1;
 	} else {
-		printf("Listening binary protocol on port %d\n", binary_port);
+		log((void *)NULL, "Listening binary protocol on port %d\n", binary_port);
 		fcntl(binary_sock, F_SETFL, fcntl(binary_sock, F_GETFL, 0) | O_NONBLOCK);
 		
 		listen(binary_sock, 5);
@@ -87,11 +88,10 @@ int main(int argc, char **argv)
 			thread_pool.addTask(new XapiandServer(http_sock, binary_sock));
 		}
 
-		printf("Starting...\n");
 		ev::default_loop loop;
 		loop.run();
 
-		printf("Joining...\n");
+		log((void *)NULL, "Waiting for threads...\n");
 
 		thread_pool.finish();
 		thread_pool.join();
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 		close(binary_sock);
 	}
 	
-	printf("Done with all work!\n");
+	log((void *)NULL, "Done with all work!\n");
 
 	return 0;
 }
