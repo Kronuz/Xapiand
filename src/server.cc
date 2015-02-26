@@ -26,8 +26,6 @@ XapiandServer::XapiandServer(int http_sock_, int binary_sock_)
 	  http_sock(http_sock_),
 	  binary_sock(binary_sock_)
 {
-	pthread_mutex_init(&qmtx, 0);
-
 	sig.set<XapiandServer, &XapiandServer::signal_cb>(this);
 	sig.start(SIGINT);
 	
@@ -48,8 +46,6 @@ XapiandServer::~XapiandServer()
 	binary_io.stop();
 	quit.stop();
 	sig.stop();
-
-	pthread_mutex_destroy(&qmtx);
 }
 
 
@@ -75,9 +71,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
 
-	pthread_mutex_lock(&qmtx);
 	int client_sock = ::accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
-	pthread_mutex_unlock(&qmtx);
 
 	if (client_sock < 0) {
 		if (errno != EAGAIN) perror("accept http error");
@@ -102,9 +96,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
 
-	pthread_mutex_lock(&qmtx);
 	int client_sock = ::accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
-	pthread_mutex_unlock(&qmtx);
 
 	if (client_sock < 0) {
 		if (errno != EAGAIN) perror("accept binary error");

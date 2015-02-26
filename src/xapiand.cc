@@ -95,8 +95,6 @@ int main(int argc, char **argv)
 
 		thread_pool.finish();
 		thread_pool.join();
-		
-		printf("Done!\n");
 	}
 
 	if (http_sock > 0) {
