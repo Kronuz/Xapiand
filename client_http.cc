@@ -45,9 +45,9 @@ void HttpClient::read_cb(ev::io &watcher)
 		if (parsed == received) {
 			if (parser.state == 1 || parser.state == 18) { // dead or message_complete
 				try {
-					log(this, "METHOD: %d\n", parser.method);
-					log(this, "PATH: '%s'\n", repr(path).c_str());
-					log(this, "BODY: '%s'\n", repr(body).c_str());
+					// log(this, "METHOD: %d\n", parser.method);
+					// log(this, "PATH: '%s'\n", repr(path).c_str());
+					// log(this, "BODY: '%s'\n", repr(body).c_str());
 					write("HTTP/1.1 200 OK\r\n"
 						  "Content-Length: 3\r\n"
 						  "Connection: close\r\n"
