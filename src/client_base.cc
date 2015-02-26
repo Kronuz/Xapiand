@@ -135,9 +135,7 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 
 void BaseClient::write_cb(ev::io &watcher)
 {
-	if (write_queue.empty()) {
-		io.set(ev::READ);
-	} else {
+	if (!write_queue.empty()) {
 		Buffer* buffer = write_queue.front();
 
 		size_t buf_size = buffer->nbytes();
