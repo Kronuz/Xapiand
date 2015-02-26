@@ -19,14 +19,14 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_poo
 	  database_pool(database_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
 {
-	io.set<BaseClient, &BaseClient::callback>(this);
-	io.start(sock, ev::READ);
+	sig.set<BaseClient, &BaseClient::signal_cb>(this);
+	sig.start(SIGINT);
 
 	async.set<BaseClient, &BaseClient::async_cb>(this);
 	async.start();
 
-	sig.set<BaseClient, &BaseClient::signal_cb>(this);
-	sig.start(SIGINT);
+	io.set<BaseClient, &BaseClient::callback>(this);
+	io.start(sock, ev::READ);
 }
 
 
