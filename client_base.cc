@@ -34,7 +34,7 @@ BaseClient::~BaseClient()
 {
 	destroy();
 	sig.stop();
-	log(this, "DELETED!\n");
+	// log(this, "DELETED!\n");
 }
 
 
@@ -61,7 +61,7 @@ void BaseClient::destroy()
 	async.stop();
 	
 	::close(sock);
-	log(this, "DESTROYED!\n");
+	// log(this, "DESTROYED!\n");
 }
 
 
@@ -71,7 +71,7 @@ void BaseClient::close() {
 	}
 
 	closed = true;
-	log(this, "CLOSED!\n");
+	// log(this, "CLOSED!\n");
 }
 
 
