@@ -15,14 +15,14 @@ BinaryClient::BinaryClient(ev::loop_ref &loop, int sock_, DatabasePool *database
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  database(NULL)
 {
-	// log(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, ++total_clients);
+	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, ++total_clients);
 
 	try {
 		msg_update(std::string());
 	} catch (const Xapian::NetworkError &e) {
-		log(this, "ERROR: %s\n", e.get_msg().c_str());
+		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 	} catch (...) {
-		log(this, "ERROR!\n");
+		LOG_ERR(this, "ERROR!\n");
 	}
 }
 
@@ -32,7 +32,7 @@ BinaryClient::~BinaryClient()
 	if (database) {
 		database_pool->checkin(&database);
 	}
-	// log(this, "Lost connection (sock=%d), %d binary client(s) connected.\n", sock, --total_clients);
+	LOG_CONN(this, "Lost connection (sock=%d), %d binary client(s) connected.\n", sock, --total_clients);
 }
 
 
@@ -43,13 +43,13 @@ void BinaryClient::read_cb(ev::io &watcher)
 	ssize_t received = ::read(watcher.fd, buf, sizeof(buf));
 
 	if (received < 0) {
-		if (errno != EAGAIN) log(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
+		if (errno != EAGAIN) LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
 		return;
 	}
 
 	if (received == 0) {
 		// The peer has closed its half side of the connection.
-		log(this, "Received EOF (sock=%d)!\n", sock);
+		LOG_CONN(this, "Received EOF (sock=%d)!\n", sock);
 		destroy();
 	} else {
 		buffer.append(buf, received);
@@ -68,7 +68,7 @@ void BinaryClient::read_cb(ev::io &watcher)
 			std::string data = std::string(p, len);
 			buffer.erase(0, p - o + len);
 
-			// log(this, "<<< '%s'\n", repr(o, len + (p - o)).c_str());
+			LOG_CONN(this, "<<< '%s'\n", repr(o, len + (p - o)).c_str());
 
 			Buffer *msg = new Buffer(type, data.c_str(), data.size());
 
@@ -77,9 +77,9 @@ void BinaryClient::read_cb(ev::io &watcher)
 			try {
 				run_one();
 			} catch (const Xapian::NetworkError &e) {
-				log(this, "ERROR: %s\n", e.get_msg().c_str());
-			} catch (...) {
-				log(this, "ERROR!\n");
+				LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+//			} catch (...) {
+//				LOG_ERR(this, "ERROR!\n");
 			}
 		}
 	}
@@ -101,7 +101,7 @@ message_type BinaryClient::get_message(double timeout, std::string & result, mes
 	std::string buf(&msg->type, 1);
 	buf += encode_length(msg_size);
 	buf += message;
-	// log(this, "get_message: '%s'\n", repr(buf).c_str());
+	LOG_BINARY_PROTO(this, "get_message: '%s'\n", repr(buf).c_str());
 
 	result = message;
 
@@ -119,7 +119,7 @@ void BinaryClient::send_message(reply_type type, const std::string &message) {
 	buf += encode_length(message.size());
 	buf += message;
 
-	// log(this, "send_message: '%s'\n", repr(buf).c_str());
+	LOG_BINARY_PROTO(this, "send_message: '%s'\n", repr(buf).c_str());
 
 	write(buf);
 }

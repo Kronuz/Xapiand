@@ -34,7 +34,7 @@ Database::reopen()
 				db->add_database(Xapian::Database((*i).path));
 			}
 		} else if (endpoints.size() != 1) {
-			log(this, "ERROR: Expecting exactly one database.");
+			LOG_ERR(this, "ERROR: Expecting exactly one database.");
 		}
 	}
 }
@@ -105,7 +105,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 	
 	pthread_mutex_unlock(&qmtx);
 
-//	log(this, "+ CHECKOUT DB %lx\n", (unsigned long)*database);
+	LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)*database);
 
 	return database_ != NULL;
 }
@@ -114,7 +114,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 void
 DatabasePool::checkin(Database **database)
 {
-//	log(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
+	LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
 
 	pthread_mutex_lock(&qmtx);
 	

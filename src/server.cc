@@ -51,20 +51,20 @@ XapiandServer::~XapiandServer()
 
 void XapiandServer::run()
 {
-	log(this, "Starting loop...\n");
+	LOG_OBJ(this, "Starting loop...\n");
 	loop.run(0);
 }
 
 void XapiandServer::quit_cb(ev::async &watcher, int revents)
 {
-	log(this, "Breaking loop!\n");
+	LOG_OBJ(this, "Breaking loop!\n");
 	loop.break_loop();
 }
 
 void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
-		log(this, "ERROR: got invalid http event (sock=%d): %s\n", http_sock, strerror(errno));
+		LOG_EV(this, "ERROR: got invalid http event (sock=%d): %s\n", http_sock, strerror(errno));
 		return;
 	}
 
@@ -74,7 +74,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 	int client_sock = ::accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
 
 	if (client_sock < 0) {
-		if (errno != EAGAIN) log(this, "ERROR: accept http error (sock=%d): %s\n", http_sock, strerror(errno));
+		if (errno != EAGAIN) LOG_CONN(this, "ERROR: accept http error (sock=%d): %s\n", http_sock, strerror(errno));
 		return;
 	}
 
@@ -89,7 +89,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
-		log(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary_sock, strerror(errno));
+		LOG_EV(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary_sock, strerror(errno));
 		return;
 	}
 
@@ -99,7 +99,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 	int client_sock = ::accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
 
 	if (client_sock < 0) {
-		if (errno != EAGAIN) log(this, "ERROR: accept binary error (sock=%d): %s\n", binary_sock, strerror(errno));
+		if (errno != EAGAIN) LOG_CONN(this, "ERROR: accept binary error (sock=%d): %s\n", binary_sock, strerror(errno));
 		return;
 	}
 
@@ -113,7 +113,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 void XapiandServer::signal_cb(ev::sig &signal, int revents)
 {
-	log(this, "Breaking default loop!\n");
+	LOG_OBJ(this, "Breaking default loop!\n");
 	quit.send();
 	signal.loop.break_loop();
 }
