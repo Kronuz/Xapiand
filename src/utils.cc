@@ -17,10 +17,14 @@ bool qmtx_inited = false;
 pthread_mutex_t qmtx;
 
 
-std::string repr_string(const std::string &string)
+std::string repr(const std::string &string)
 {
-	const char *p = string.c_str();
-	const char *p_end = p + string.size();
+	return repr(string.c_str(), string.size());
+}
+
+std::string repr(const char * p, size_t size)
+{
+	const char *p_end = p + size;
 	std::string ret;
 	char buff[4];
 
