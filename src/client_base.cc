@@ -140,12 +140,12 @@ void BaseClient::write_cb(ev::io &watcher)
 	} else {
 		Buffer* buffer = write_queue.front();
 
-		size_t buff_size = buffer->nbytes();
-		const char * buff = buffer->dpos();
+		size_t buf_size = buffer->nbytes();
+		const char * buf = buffer->dpos();
 
-		LOG_CONN(this, "(sock=%d) <<-- '%s'\n", sock, repr(buff, buff_size).c_str());
+		LOG_CONN(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf, buf_size).c_str());
 
-		ssize_t written = ::write(watcher.fd, buff, buff_size);
+		ssize_t written = ::write(watcher.fd, buf, buf_size);
 
 		if (written < 0) {
 			LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
@@ -157,6 +157,27 @@ void BaseClient::write_cb(ev::io &watcher)
 				delete buffer;
 			}
 		}
+	}
+}
+
+void BaseClient::read_cb(ev::io &watcher)
+{
+	char buf[1024];
+	
+	ssize_t received = ::read(watcher.fd, buf, sizeof(buf));
+	
+	if (received < 0) {
+		if (errno != EAGAIN) LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
+		return;
+	}
+	
+	if (received == 0) {
+		// The peer has closed its half side of the connection.
+		LOG_CONN(this, "Received EOF (sock=%d)!\n", sock);
+		destroy();
+	} else {
+		LOG_CONN(this, "(sock=%d) -->> '%s'\n", sock, repr(buf, received).c_str());
+		on_read(buf, received);
 	}
 }
 

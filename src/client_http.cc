@@ -23,49 +23,32 @@ HttpClient::~HttpClient()
 }
 
 
-void HttpClient::read_cb(ev::io &watcher)
-{
-	char buf[1024];
-
-	ssize_t received = ::read(watcher.fd, buf, sizeof(buf));
-
-	if (received < 0) {
-		if (errno != EAGAIN) LOG_ERR(this, "ERROR: http read error (sock=%d): %s\n", sock, strerror(errno));
-		return;
-	}
-
-	if (received == 0) {
-		// The peer has closed its half side of the connection.
-		LOG_CONN(this, "Received http EOF (sock=%d)!\n", sock);
-		destroy();
-	} else {
-		LOG_CONN(this, "(sock=%d) -->> '%s'\n", sock, repr(buf, received).c_str());
-
-		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
-		if (parsed == received) {
-			if (parser.state == 1 || parser.state == 18) { // dead or message_complete
-				try {
-//					LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
-//					LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
-//					LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
-					write("HTTP/1.1 200 OK\r\n"
-						  "Content-Length: 3\r\n"
-						  "Connection: close\r\n"
-						  "\r\n"
-						  "OK!");
-					close();
-				} catch (...) {
-					LOG_ERR(this, "ERROR!\n");
-				}
+void HttpClient::on_read(const char *buf, ssize_t received)
+{	
+	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
+	if (parsed == received) {
+		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
+			try {
+				//					LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
+				//					LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
+				//					LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
+				write("HTTP/1.1 200 OK\r\n"
+					  "Content-Length: 3\r\n"
+					  "Connection: close\r\n"
+					  "\r\n"
+					  "OK!");
+				close();
+			} catch (...) {
+				LOG_ERR(this, "ERROR!\n");
 			}
-		} else {
-			enum http_errno err = HTTP_PARSER_ERRNO(&parser);
-			const char *desc = http_errno_description(err);
-			const char *msg = err != HPE_OK ? desc : "incomplete request";
-			LOG_HTTP_PROTO(this, msg);
-			// Handle error. Just close the connection.
-			destroy();
 		}
+	} else {
+		enum http_errno err = HTTP_PARSER_ERRNO(&parser);
+		const char *desc = http_errno_description(err);
+		const char *msg = err != HPE_OK ? desc : "incomplete request";
+		LOG_HTTP_PROTO(this, msg);
+		// Handle error. Just close the connection.
+		destroy();
 	}
 }
 

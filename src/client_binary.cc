@@ -36,51 +36,34 @@ BinaryClient::~BinaryClient()
 }
 
 
-void BinaryClient::read_cb(ev::io &watcher)
+void BinaryClient::on_read(const char *buf, ssize_t received)
 {
-	char buf[1024];
-
-	ssize_t received = ::read(watcher.fd, buf, sizeof(buf));
-
-	if (received < 0) {
-		if (errno != EAGAIN) LOG_ERR(this, "ERROR: binary read error (sock=%d): %s\n", sock, strerror(errno));
-		return;
-	}
-
-	if (received == 0) {
-		// The peer has closed its half side of the connection.
-		LOG_CONN(this, "Received binary EOF (sock=%d)!\n", sock);
-		destroy();
-	} else {
-		buffer.append(buf, received);
-		if (buffer.length() >= 2) {
-			const char *o = buffer.data();
-			const char *p = o;
-			const char *p_end = p + buffer.size();
-
-			message_type type = static_cast<message_type>(*p++);
-			size_t len;
-			try {
-				len = decode_length(&p, p_end, true);
-			} catch (const Xapian::NetworkError & e) {
-				return;
-			}
-			std::string data = std::string(p, len);
-			buffer.erase(0, p - o + len);
-
-			LOG_CONN(this, "(sock=%d) -->> '%s'\n", sock, repr(o, len + (p - o)).c_str());
-
-			Buffer *msg = new Buffer(type, data.c_str(), data.size());
-
-			messages_queue.push(msg);
-
-			try {
-				run_one();
-			} catch (const Xapian::NetworkError &e) {
-				LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
-//			} catch (...) {
-//				LOG_ERR(this, "ERROR!\n");
-			}
+	buffer.append(buf, received);
+	if (buffer.length() >= 2) {
+		const char *o = buffer.data();
+		const char *p = o;
+		const char *p_end = p + buffer.size();
+		
+		message_type type = static_cast<message_type>(*p++);
+		size_t len;
+		try {
+			len = decode_length(&p, p_end, true);
+		} catch (const Xapian::NetworkError & e) {
+			return;
+		}
+		std::string data = std::string(p, len);
+		buffer.erase(0, p - o + len);
+		
+		Buffer *msg = new Buffer(type, data.c_str(), data.size());
+		
+		messages_queue.push(msg);
+		
+		try {
+			run_one();
+		} catch (const Xapian::NetworkError &e) {
+			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+		} catch (...) {
+			LOG_ERR(this, "ERROR!\n");
 		}
 	}
 }
