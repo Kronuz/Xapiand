@@ -43,13 +43,13 @@ void BinaryClient::read_cb(ev::io &watcher)
 	ssize_t received = ::recv(watcher.fd, buf, sizeof(buf), 0);
 
 	if (received < 0) {
-		perror("read error");
+		if (errno != EAGAIN) perror("read error");
 		return;
 	}
 
 	if (received == 0) {
 		// The peer has closed its half side of the connection.
-		log(this, "BROKEN PIPE (sock=%d)!\n", sock);
+		log(this, "Received EOF (sock=%d)!\n", sock);
 		destroy();
 	} else {
 		buffer.append(buf, received);
