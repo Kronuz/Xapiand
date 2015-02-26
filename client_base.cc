@@ -18,7 +18,8 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_poo
 	  closed(false),
 	  sock(sock_),
 	  database_pool(database_pool_),
-	  write_queue(WRITE_QUEUE_SIZE)
+	  write_queue(WRITE_QUEUE_SIZE),
+	  io_events(ev::READ)
 {
 	sig.set<BaseClient, &BaseClient::signal_cb>(this);
 	sig.start(SIGINT);
@@ -27,7 +28,7 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_poo
 	async.start();
 
 	io.set<BaseClient, &BaseClient::io_cb>(this);
-	io.start(sock, ev::READ);
+	io.start(sock, io_events);
 }
 
 
@@ -76,6 +77,31 @@ void BaseClient::close() {
 }
 
 
+void BaseClient::io_update() {
+	if (!destroyed) {
+		int io_events_ = io_events;
+		if (write_queue.empty()) {
+			if (closed) {
+				destroy();
+			} else {
+				io_events_ = ev::READ;
+			}
+		} else {
+			io_events_ = ev::READ|ev::WRITE;
+		}
+		if (io_events != io_events_) {
+			io_events = io_events_;
+			io.set(io_events);
+		}
+	}
+	
+	if (destroyed) {
+		delete this;
+	}
+
+}
+
+
 void BaseClient::async_cb(ev::async &watcher, int revents)
 {
 	if (destroyed) {
@@ -83,18 +109,8 @@ void BaseClient::async_cb(ev::async &watcher, int revents)
 	}
 
 	LOG_EV(this, "ASYNC_CB (sock=%d) %x\n", sock, revents);
-
-	if (write_queue.empty()) {
-		if (closed) {
-			destroy();
-		}
-	} else {
-		io.set(ev::READ|ev::WRITE);
-	}
 	
-	if (destroyed) {
-		delete this;
-	}
+	io_update();
 }
 
 
@@ -119,22 +135,9 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 
 	if (!destroyed && revents & EV_WRITE)
 		write_cb(watcher);
+	
+	io_update();
 
-	if (!destroyed) {
-		if (write_queue.empty()) {
-			if (closed) {
-				destroy();
-			} else {
-				io.set(ev::READ);
-			}
-		} else {
-			io.set(ev::READ|ev::WRITE);
-		}
-	}
-
-	if (destroyed) {
-		delete this;
-	}
 }
 
 
