@@ -1,3 +1,5 @@
+#include "utils.h"
+
 #include "threadpool.h"
 
 
@@ -15,7 +17,7 @@ static void *getWork(void * param) {
 
 // Allocate a thread pool and set them to work trying to get tasks
 ThreadPool::ThreadPool(int n) : numThreads(n) {
-	printf("Creating a thread pool with %d threads\n", n);
+	log(this, "Creating a thread pool with %d threads\n", n);
 
 	threads = new pthread_t[numThreads];
 	for (int i = 0; i < numThreads; ++i) {
