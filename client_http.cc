@@ -13,13 +13,13 @@ HttpClient::HttpClient(ev::loop_ref &loop, int sock_, DatabasePool *database_poo
 {
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
-	log(this, "Got connection (sock=%d), %d http client(s) connected.\n", sock, ++total_clients);
+	// log(this, "Got connection (sock=%d), %d http client(s) connected.\n", sock, ++total_clients);
 }
 
 
 HttpClient::~HttpClient()
 {
-	log(this, "Lost connection (sock=%d), %d http client(s) connected.\n", sock, --total_clients);
+	// log(this, "Lost connection (sock=%d), %d http client(s) connected.\n", sock, --total_clients);
 }
 
 
