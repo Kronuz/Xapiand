@@ -39,7 +39,7 @@ void HttpClient::read_cb(ev::io &watcher)
 		LOG_CONN(this, "Received EOF (sock=%d)!\n", sock);
 		destroy();
 	} else {
-		LOG_CONN(this, "<<< '%s'\n", repr(buf, received).c_str());
+		LOG_CONN(this, "(sock=%d) -->> '%s'\n", sock, repr(buf, received).c_str());
 
 		size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 		if (parsed == received) {

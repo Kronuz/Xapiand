@@ -143,7 +143,7 @@ void BaseClient::write_cb(ev::io &watcher)
 		size_t buff_size = buffer->nbytes();
 		const char * buff = buffer->dpos();
 
-		LOG_CONN(this, ">>> '%s'\n", repr(buff, buff_size).c_str());
+		LOG_CONN(this, "(sock=%d) <<-- '%s'\n", sock, repr(buff, buff_size).c_str());
 
 		ssize_t written = ::write(watcher.fd, buff, buff_size);
 
