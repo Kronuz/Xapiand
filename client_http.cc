@@ -59,6 +59,10 @@ void HttpClient::read_cb(ev::io &watcher)
 				}
 			}
 		} else {
+			enum http_errno err = HTTP_PARSER_ERRNO(&parser);
+			const char *desc = http_errno_description(err);
+			const char *msg = err != HPE_OK ? desc : "incomplete request";
+			log(this, msg);
 			// Handle error. Just close the connection.
 			destroy();
 		}
