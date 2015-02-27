@@ -47,7 +47,7 @@ protected:
 	ev::sig sig;
 	ev::io io_read;
 	ev::io io_write;
-	ev::async async;
+	ev::async start_write;
 
 	bool closed;
 	int sock;
@@ -60,7 +60,7 @@ protected:
 	Queue<Buffer *> write_queue;
 
 	void signal_cb(ev::sig &signal, int revents);
-	void async_cb(ev::async &watcher, int revents);
+	void start_write_cb(ev::async &watcher, int revents);
 
 	void io_update();
 
