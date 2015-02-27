@@ -116,17 +116,21 @@ int main(int argc, char **argv)
 	if (http_sock != -1 && binary_sock != -1) {
 		ev::default_loop loop;
 		if (tasks) {
-			ThreadPool thread_pool(tasks);
+			ThreadPool *thread_pool = new ThreadPool(tasks);
+
 			for (int i = 0; i < tasks; i++) {
-				thread_pool.addTask(new XapiandServer(NULL, http_sock, binary_sock));
+				XapiandServer * server = new XapiandServer(NULL, http_sock, binary_sock);
+				thread_pool->addTask(server);
 			}
 			
 			loop.run();
 			
 			LOG_OBJ((void *)NULL, "Waiting for threads...\n");
 			
-			thread_pool.finish();
-			thread_pool.join();
+			thread_pool->finish();
+			thread_pool->join();
+
+			delete thread_pool;
 		} else {
 			XapiandServer * server = new XapiandServer(&loop, http_sock, binary_sock);
 			server->run();
