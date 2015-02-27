@@ -103,7 +103,7 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 		return;
 	}
 
-	LOG_EV(this, "IO_CB (sock=%d) %x\n", sock, revents);
+	LOG_EV(this, "%s (sock=%d) %x\n", (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
 
 	if (sock == -1) {
 		return;
