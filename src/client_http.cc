@@ -34,10 +34,9 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				//					LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
 				write("HTTP/1.1 200 OK\r\n"
 					  "Content-Length: 3\r\n"
-					  "Connection: close\r\n"
 					  "\r\n"
 					  "OK!");
-				close();
+				if (parser.state == 1) close();
 			} catch (...) {
 				LOG_ERR(this, "ERROR!\n");
 			}
