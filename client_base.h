@@ -91,7 +91,7 @@ protected:
 	void destroy();
 
 public:
-	BaseClient(ev::loop_ref &loop, int s, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
+	BaseClient(ev::loop_ref *loop, int s, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
 	virtual ~BaseClient();
 };
 

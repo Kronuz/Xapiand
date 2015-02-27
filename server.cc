@@ -19,7 +19,7 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 // Xapian Server
 //
 
-XapiandServer::XapiandServer(int http_sock_, int binary_sock_, ev::loop_ref *loop_)
+XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  binary_io(*loop),
 	  quit(*loop),
@@ -82,7 +82,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		new HttpClient(*loop, client_sock, &database_pool, active_timeout, idle_timeout);
+		new HttpClient(loop, client_sock, &database_pool, active_timeout, idle_timeout);
 	}
 }
 
@@ -108,7 +108,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		new BinaryClient(*loop, client_sock, &database_pool, active_timeout, idle_timeout);
+		new BinaryClient(loop, client_sock, &database_pool, active_timeout, idle_timeout);
 	}
 }
 

@@ -11,10 +11,10 @@ const int WRITE_QUEUE_SIZE = -1;
 int BaseClient::total_clients = 0;
 
 
-BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
-	: io_read(loop),
-	  io_write(loop),
-	  async(loop),
+BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
+	: io_read(*loop),
+	  io_write(*loop),
+	  async(*loop),
 	  closed(false),
 	  sock(sock_),
 	  database_pool(database_pool_),
