@@ -26,7 +26,7 @@ BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_poo
 	io_read.start(sock, ev::READ);
 
 	io_write.set<BaseClient, &BaseClient::io_cb>(this);
-	io_write.start(sock, ev::WRITE);
+	io_write.set(sock, ev::WRITE);
 }
 
 
