@@ -36,7 +36,7 @@ private:
 	void quit_cb(ev::async &watcher, int revents);
 
 public:
-	XapiandServer(int http_sock_, int binary_sock_, ev::loop_ref *loop_=NULL);
+	XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_);
 	~XapiandServer();
 	
 	void run();
