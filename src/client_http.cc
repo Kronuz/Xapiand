@@ -65,14 +65,14 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 //
 
 const http_parser_settings HttpClient::settings = {
-	.on_message_begin = on_info,
-	.on_headers_complete = on_info,
-	.on_message_complete = on_info,
-	.on_header_field = on_data,
-	.on_header_value = on_data,
-	.on_url = on_data,
-	.on_status = on_data,
-	.on_body = on_data
+	.on_message_begin = HttpClient::on_info,
+	.on_url = HttpClient::on_data,
+	.on_status = HttpClient::on_data,
+	.on_header_field = HttpClient::on_data,
+	.on_header_value = HttpClient::on_data,
+	.on_headers_complete = HttpClient::on_info,
+	.on_body = HttpClient::on_data,
+	.on_message_complete = HttpClient::on_info
 };
 
 
