@@ -1,2 +1,2 @@
 #!/bin/sh
-autoreconf --force --install
+autoreconf --force --install -I/usr/local/share/aclocal
