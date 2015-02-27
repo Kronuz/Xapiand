@@ -21,6 +21,7 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 
 XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_)
 	: loop(loop_ ? loop_: &dynamic_loop),
+	  http_io(*loop),
 	  binary_io(*loop),
 	  quit(*loop),
 	  http_sock(http_sock_),
