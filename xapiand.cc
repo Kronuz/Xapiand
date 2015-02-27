@@ -5,6 +5,7 @@ c++ xapiand.cc server.cc threadpool.cc ../../net/length.cc -lev `xapian-config-1
 #include <stdlib.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h> /* for TCP_NODELAY */
 #include <sys/socket.h>
 
 #include "utils.h"
@@ -14,11 +15,25 @@ c++ xapiand.cc server.cc threadpool.cc ../../net/length.cc -lev `xapian-config-1
 
 int bind_http(int http_port)
 {
+	int error;
 	int optval = 1;
 	struct sockaddr_in addr;
+	struct linger ling = {0, 0};
 	
 	int http_sock = socket(PF_INET, SOCK_STREAM, 0);
+
 	setsockopt(http_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
+	error = setsockopt(http_sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
+	if (error != 0)
+		LOG_CONN((void *)NULL, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
+	
+	error = setsockopt(http_sock, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(ling));
+	if (error != 0)
+		LOG_CONN((void *)NULL, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
+
+	error = setsockopt(http_sock, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval));
+	if (error != 0)
+		LOG_CONN((void *)NULL, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
 	
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(http_port);
@@ -41,11 +56,25 @@ int bind_http(int http_port)
 
 int bind_binary(int binary_port)
 {
+	int error;
 	int optval = 1;
 	struct sockaddr_in addr;
-	
+	struct linger ling = {0, 0};
+
 	int binary_sock = socket(PF_INET, SOCK_STREAM, 0);
+
 	setsockopt(binary_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
+	error = setsockopt(binary_sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
+	if (error != 0)
+		LOG_CONN((void *)NULL, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
+	
+	error = setsockopt(binary_sock, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(ling));
+	if (error != 0)
+		LOG_CONN((void *)NULL, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
+	
+	error = setsockopt(binary_sock, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval));
+	if (error != 0)
+		LOG_CONN((void *)NULL, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
 	
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(binary_port);
