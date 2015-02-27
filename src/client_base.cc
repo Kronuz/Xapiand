@@ -12,14 +12,13 @@ int BaseClient::total_clients = 0;
 
 
 BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
-	: io(loop),
+	: io_read(loop),
+	  io_write(loop),
 	  async(loop),
-	  destroyed(false),
 	  closed(false),
 	  sock(sock_),
 	  database_pool(database_pool_),
-	  write_queue(WRITE_QUEUE_SIZE),
-	  io_events(ev::READ)
+	  write_queue(WRITE_QUEUE_SIZE)
 {
 	sig.set<BaseClient, &BaseClient::signal_cb>(this);
 	sig.start(SIGINT);
@@ -27,8 +26,11 @@ BaseClient::BaseClient(ev::loop_ref &loop, int sock_, DatabasePool *database_poo
 	async.set<BaseClient, &BaseClient::async_cb>(this);
 	async.start();
 
-	io.set<BaseClient, &BaseClient::io_cb>(this);
-	io.start(sock, io_events);
+	io_read.set<BaseClient, &BaseClient::io_cb>(this);
+	io_read.start(sock, ev::READ);
+
+	io_write.set<BaseClient, &BaseClient::io_cb>(this);
+	io_write.start(sock, ev::WRITE);
 }
 
 
@@ -50,19 +52,20 @@ void BaseClient::signal_cb(ev::sig &signal, int revents)
 
 void BaseClient::destroy()
 {
-	if (destroyed) {
+	if (sock == -1) {
 		return;
 	}
-
-	destroyed = true;
 
 	close();
 	
 	// Stop and free watcher if client socket is closing
-	io.stop();
+	io_read.stop();
+	io_write.stop();
 	async.stop();
 	
 	::close(sock);
+	sock = -1;
+
 	LOG_OBJ(this, "DESTROYED!\n");
 }
 
@@ -77,25 +80,20 @@ void BaseClient::close() {
 }
 
 
-void BaseClient::io_update(bool force) {
-	if (!destroyed) {
-		int io_events_ = io_events;
+void BaseClient::io_update() {
+	if (sock != -1) {
 		if (write_queue.empty()) {
 			if (closed) {
 				destroy();
 			} else {
-				io_events_ = ev::READ;
+				io_write.stop();
 			}
 		} else {
-			io_events_ = ev::READ|ev::WRITE;
-		}
-		if (force || io_events != io_events_) {
-			io_events = io_events_;
-			io.set(io_events);
+			io_write.start();
 		}
 	}
 	
-	if (destroyed) {
+	if (sock == -1) {
 		delete this;
 	}
 
@@ -104,55 +102,56 @@ void BaseClient::io_update(bool force) {
 
 void BaseClient::async_cb(ev::async &watcher, int revents)
 {
-	if (destroyed) {
+	if (sock == -1) {
 		return;
 	}
 
 	LOG_EV(this, "ASYNC_CB (sock=%d) %x\n", sock, revents);
 	
-	io_update(true);
+	io_update();
 }
 
 
 void BaseClient::io_cb(ev::io &watcher, int revents)
 {
-	if (destroyed) {
-		return;
-	}
-
-	assert(sock == watcher.fd);
-
-	LOG_EV(this, "IO_CB (sock=%d) %x\n", sock, revents);
-
 	if (revents & EV_ERROR) {
 		LOG_ERR(this, "ERROR: got invalid event (sock=%d): %s\n", sock, strerror(errno));
 		destroy();
 		return;
 	}
 
-	if (!destroyed && revents & EV_READ)
-		read_cb(watcher);
+	LOG_EV(this, "IO_CB (sock=%d) %x\n", sock, revents);
 
-	if (!destroyed && revents & EV_WRITE)
-		write_cb(watcher);
+	if (sock == -1) {
+		return;
+	}
+	
+	assert(sock == watcher.fd);
+
+	if (sock != -1 && revents & EV_WRITE) {
+		write_cb();
+	}
+
+	if (sock != -1 && revents & EV_READ) {
+		read_cb();
+	}
 	
 	io_update();
-
 }
 
 
-void BaseClient::write_cb(ev::io &watcher)
+void BaseClient::write_cb()
 {
 	if (!write_queue.empty()) {
 		Buffer* buffer = write_queue.front();
-
+		
 		size_t buf_size = buffer->nbytes();
 		const char * buf = buffer->dpos();
 
 		LOG_CONN(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf, buf_size).c_str());
 
 		ssize_t written = ::write(sock, buf, buf_size);
-
+		
 		if (written < 0) {
 			if (errno != EAGAIN) {
 				LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
@@ -170,7 +169,7 @@ void BaseClient::write_cb(ev::io &watcher)
 	}
 }
 
-void BaseClient::read_cb(ev::io &watcher)
+void BaseClient::read_cb()
 {
 	char buf[1024];
 
