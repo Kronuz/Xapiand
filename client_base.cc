@@ -34,6 +34,14 @@ BaseClient::~BaseClient()
 {
 	destroy();
 	sig.stop();
+
+	while(!write_queue.empty()) {
+		Buffer *buffer;
+		if (write_queue.pop(buffer)) {
+			delete buffer;
+		}
+	}
+
 	LOG_OBJ(this, "DELETED!\n");
 }
 
@@ -145,8 +153,9 @@ void BaseClient::write_cb()
 		} else {
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
-				write_queue.pop(buffer);
-				delete buffer;
+				if(write_queue.pop(buffer)) {
+					delete buffer;
+				}
 			}
 		}
 	}
