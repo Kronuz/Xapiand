@@ -14,7 +14,6 @@ int BaseClient::total_clients = 0;
 BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
 	: io_read(*loop),
 	  io_write(*loop),
-	  start_write(*loop),
 	  closed(false),
 	  sock(sock_),
 	  database_pool(database_pool_),
@@ -22,9 +21,6 @@ BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_poo
 {
 	sig.set<BaseClient, &BaseClient::signal_cb>(this);
 	sig.start(SIGINT);
-
-	start_write.set<BaseClient, &BaseClient::start_write_cb>(this);
-	start_write.start();
 
 	io_read.set<BaseClient, &BaseClient::io_cb>(this);
 	io_read.start(sock, ev::READ);
@@ -61,7 +57,6 @@ void BaseClient::destroy()
 	// Stop and free watcher if client socket is closing
 	io_read.stop();
 	io_write.stop();
-	start_write.stop();
 	
 	::close(sock);
 	sock = -1;
@@ -97,18 +92,6 @@ void BaseClient::io_update() {
 		delete this;
 	}
 
-}
-
-
-void BaseClient::start_write_cb(ev::async &watcher, int revents)
-{
-	if (sock == -1) {
-		return;
-	}
-
-	LOG_EV(this, "START_WRITE_CB (sock=%d) %x\n", sock, revents);
-	
-	io_update();
 }
 
 
@@ -195,10 +178,8 @@ void BaseClient::write(const char *buf, size_t buf_size)
 {
 	LOG_CONN(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
 
-	bool was_empty = write_queue.empty();
-
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
 	write_queue.push(buffer);
 
-	if (was_empty) start_write.send();
+	io_update();
 }
