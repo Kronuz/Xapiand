@@ -6,6 +6,7 @@
 //  Copyright (c) 2015 Germán M. Bravo. All rights reserved.
 //
 
+#include <stdarg.h>
 #include <stdio.h>
 
 #include "pthread.h"
