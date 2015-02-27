@@ -32,10 +32,18 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				//					LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
 				//					LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
 				//					LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
-				write("HTTP/1.1 200 OK\r\n"
-					  "Content-Length: 3\r\n"
-					  "\r\n"
-					  "OK!");
+				char tmp[20];
+				std::string body("OK!");
+				std::string response;
+				response += "HTTP/";
+				sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
+				response += tmp;
+				response += " 200 OK\r\n";
+				response += "Content-Length: ";
+				sprintf(tmp, "%ld", body.size());
+				response += tmp;
+				response += "\r\n";
+				write(response + "\r\n" + body);
 				if (parser.state == 1) close();
 			} catch (...) {
 				LOG_ERR(this, "ERROR!\n");
