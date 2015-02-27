@@ -134,6 +134,7 @@ int main(int argc, char **argv)
 		} else {
 			XapiandServer * server = new XapiandServer(&loop, http_sock, binary_sock);
 			server->run();
+			delete server;
 		}
 	}
 
