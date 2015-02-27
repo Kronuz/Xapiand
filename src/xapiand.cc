@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 		if (tasks) {
 			ThreadPool thread_pool(tasks);
 			for (int i = 0; i < tasks; i++) {
-				thread_pool.addTask(new XapiandServer(http_sock, binary_sock));
+				thread_pool.addTask(new XapiandServer(NULL, http_sock, binary_sock));
 			}
 			
 			loop.run();
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 			thread_pool.finish();
 			thread_pool.join();
 		} else {
-			XapiandServer * server = new XapiandServer(http_sock, binary_sock, &loop);
+			XapiandServer * server = new XapiandServer(&loop, http_sock, binary_sock);
 			server->run();
 		}
 	}
