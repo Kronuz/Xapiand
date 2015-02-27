@@ -32,7 +32,7 @@ BinaryClient::~BinaryClient()
 	if (database) {
 		database_pool->checkin(&database);
 	}
-	LOG_CONN(this, "Lost connection (sock=%d), %d binary client(s) connected.\n", sock, --total_clients);
+	total_clients--;
 }
 
 

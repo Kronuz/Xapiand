@@ -19,7 +19,7 @@ HttpClient::HttpClient(ev::loop_ref *loop, int sock_, DatabasePool *database_poo
 
 HttpClient::~HttpClient()
 {
-	LOG_CONN(this, "Lost connection (sock=%d), %d http client(s) connected.\n", sock, --total_clients);
+	total_clients--;
 }
 
 
