@@ -44,11 +44,11 @@ public:
 
 class BaseClient {
 protected:
-	ev::io io;
 	ev::sig sig;
+	ev::io io_read;
+	ev::io io_write;
 	ev::async async;
 
-	bool destroyed;
 	bool closed;
 	int sock;
 	static int total_clients;
@@ -62,18 +62,17 @@ protected:
 	void signal_cb(ev::sig &signal, int revents);
 	void async_cb(ev::async &watcher, int revents);
 
-	int io_events;
-	void io_update(bool force=false);
+	void io_update();
 
 	// Generic callback
 	void io_cb(ev::io &watcher, int revents);
 
-	// Socket is writable
-	void write_cb(ev::io &watcher);
-
 	// Receive message from client socket
-	void read_cb(ev::io &watcher);
+	void read_cb();
 	
+	// Socket is writable
+	void write_cb();
+
 	virtual void on_read(const char *buf, ssize_t received) = 0;
 
 	inline void write(const char *buf)
