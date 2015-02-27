@@ -4,8 +4,10 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <functional>
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
