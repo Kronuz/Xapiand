@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 
 #include "utils.h"
+#include "cJSON.h"
 
 #include "client_http.h"
 
@@ -32,18 +33,32 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				//					LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
 				//					LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
 				//					LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
+
+				std::string content;
+				cJSON *json = cJSON_Parse(body.c_str());
+				cJSON *query = json ? cJSON_GetObjectItem(json, "query") : NULL;
+				cJSON *term = query ? cJSON_GetObjectItem(query, "term") : NULL;
+				cJSON *text = term ? cJSON_GetObjectItem(term, "text") : NULL;
+				if (text) {
+					content = "OK: ";
+					content += text->valuestring;
+				} else {
+					content = "ERROR!"
+					LOG_HTTP_PROTO("Error before: [%s]\n", cJSON_GetErrorPtr());
+				}
+				cJSON_Delete(json);
+
 				char tmp[20];
-				std::string body("OK!");
 				std::string response;
 				response += "HTTP/";
 				sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
 				response += tmp;
 				response += " 200 OK\r\n";
 				response += "Content-Length: ";
-				sprintf(tmp, "%ld", body.size());
+				sprintf(tmp, "%ld", content.size());
 				response += tmp;
 				response += "\r\n";
-				write(response + "\r\n" + body);
+				write(response + "\r\n" + content);
 				if (parser.state == 1) close();
 			} catch (...) {
 				LOG_ERR(this, "ERROR!\n");
