@@ -5,6 +5,7 @@
 #include "server.h"
 #include "utils.h"
 #include "client_binary.h"
+#include "xapiand.h"
 
 //
 // Xapian binary client
@@ -138,7 +139,7 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 {
 	std::vector<std::string>::const_iterator i(dbpaths_.begin());
 	for (; i != dbpaths_.end(); i++) {
-		Endpoint endpoint = Endpoint(*i, std::string(), XAPIAND_BINARY_PORT_DEFAULT);
+		Endpoint endpoint = Endpoint(*i, std::string(), XAPIAND_BINARY_SERVERPORT);
 		endpoints.push_back(endpoint);
 	}
 	dbpaths = dbpaths_;

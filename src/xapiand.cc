@@ -12,6 +12,8 @@ c++ xapiand.cc server.cc threadpool.cc ../../net/length.cc -lev `xapian-config-1
 #include "config.h"
 #include "server.h"
 
+#include "xapiand.h"
+
 
 int bind_http(int http_port)
 {
@@ -98,8 +100,8 @@ int bind_binary(int binary_port)
 
 int main(int argc, char **argv)
 {
-	int http_port = XAPIAND_HTTP_PORT_DEFAULT;
-	int binary_port = XAPIAND_BINARY_PORT_DEFAULT;
+	int http_port = XAPIAND_HTTP_SERVERPORT;
+	int binary_port = XAPIAND_BINARY_SERVERPORT;
 
 	if (argc > 2) {
 		http_port = atoi(argv[1]);
