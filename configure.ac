@@ -21,12 +21,16 @@ if test -z "$XAPIAN_SRCDIR"; then
 	fi
 fi
 
+if test -e "/proc/sys/net/core/somaxconn"; then
+	AC_DEFINE(HAVE_PROC_SOMAXCONN, [], ["Has /proc/sys/net/core/somaxconn"])
+fi
+
 # Checks for programs.
 AC_PROG_CXX
 
 # Checks for libraries.
-AC_CHECK_LIB(pthread, pthread_create,,[AC_MSG_ERROR([pthread not found, Xapiand requires pthread])],[-lpthread])
-AC_CHECK_LIB(ev, ev_run,,[AC_MSG_ERROR([libev not found, Xapiand requires libev])],[-lev])
+AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
+AC_CHECK_LIB(ev, ev_run, [], [AC_MSG_ERROR([libev not found, Xapiand requires libev-devel])], [-lev])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
