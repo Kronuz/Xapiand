@@ -13,9 +13,10 @@ xapiand_SOURCES = xapiand.cc \
 	utils.cc \
 	$(XAPIAN_SRCDIR)/net/length.cc
 
-noinst_HEADERS = database.h \
-	endpoint.h \
+noinst_HEADERS = xapiand.h \
 	queue.h \
+	endpoint.h \
+	database.h \
 	server.h \
 	threadpool.h \
 	client_base.h \

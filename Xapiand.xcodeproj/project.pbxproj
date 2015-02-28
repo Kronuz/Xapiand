@@ -76,6 +76,8 @@
 			children = (
 				E5CEBCC71A99C89000CD151F /* Products */,
 				E59725D51AA20D7B0060069C /* config.h */,
+				E59725D61AA2141F0060069C /* xapiand.h */,
+				E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */,
 				E59725D01A9D25F60060069C /* utils.h */,
 				E59725CF1A9D25F60060069C /* utils.cc */,
 				E5CEBCE51A9AE80200CD151F /* endpoint.h */,
@@ -92,8 +94,6 @@
 				E5CEBCD91A99C9BB00CD151F /* queue.h */,
 				E5CEBCDD1A99C9BB00CD151F /* threadpool.h */,
 				E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */,
-				E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */,
-				E59725D61AA2141F0060069C /* xapiand.h */,
 				E5CEBCEB1A9BB98A00CD151F /* length.cc */,
 				E59725B61A9CFCAD0060069C /* http_parser.h */,
 				E59725B51A9CFCAD0060069C /* http_parser.c */,
