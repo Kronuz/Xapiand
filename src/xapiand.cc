@@ -15,6 +15,7 @@ c++ xapiand.cc server.cc threadpool.cc ../../net/length.cc -lev `xapian-config-1
 
 int bind_http(int http_port)
 {
+	int backlog = -1;
 	int error;
 	int optval = 1;
 	struct sockaddr_in addr;
@@ -47,7 +48,7 @@ int bind_http(int http_port)
 		LOG_CONN((void *)NULL, "Listening http protocol on port %d\n", http_port);
 		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
 		
-		listen(http_sock, 5);
+		listen(http_sock, backlog);
 	}
 
 	return http_sock;
@@ -56,6 +57,7 @@ int bind_http(int http_port)
 
 int bind_binary(int binary_port)
 {
+	int backlog = -1;
 	int error;
 	int optval = 1;
 	struct sockaddr_in addr;
@@ -88,7 +90,7 @@ int bind_binary(int binary_port)
 		LOG_CONN((void *)NULL, "Listening binary protocol on port %d\n", binary_port);
 		fcntl(binary_sock, F_SETFL, fcntl(binary_sock, F_GETFL, 0) | O_NONBLOCK);
 		
-		listen(binary_sock, 5);
+		listen(binary_sock, backlog);
 	}
 
 	return binary_sock;
