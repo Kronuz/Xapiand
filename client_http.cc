@@ -64,7 +64,13 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				}
 				cJSON_Delete(json);
 
-				char *out = cJSON_Print(root);
+				bool pretty = false;
+				char *out;
+				if (pretty) {
+					out = cJSON_Print(root);
+				} else {
+					out = cJSON_PrintUnformatted(root);
+				}
 				content = out;
 				cJSON_Delete(root);
 				free(out);
