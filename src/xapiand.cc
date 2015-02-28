@@ -35,7 +35,7 @@
 
 int bind_http(int http_port)
 {
-	int backlog = -1;
+	int tcp_backlog = XAPIAND_TCP_BACKLOG;
 	int error;
 	int optval = 1;
 	struct sockaddr_in addr;
@@ -67,7 +67,7 @@ int bind_http(int http_port)
 	} else {
 		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
 		
-		listen(http_sock, backlog);
+		listen(http_sock, tcp_backlog);
 	}
 
 	return http_sock;
@@ -76,7 +76,7 @@ int bind_http(int http_port)
 
 int bind_binary(int binary_port)
 {
-	int backlog = -1;
+	int tcp_backlog = XAPIAND_TCP_BACKLOG;
 	int error;
 	int optval = 1;
 	struct sockaddr_in addr;
@@ -108,7 +108,7 @@ int bind_binary(int binary_port)
 	} else {
 		fcntl(binary_sock, F_SETFL, fcntl(binary_sock, F_GETFL, 0) | O_NONBLOCK);
 		
-		listen(binary_sock, backlog);
+		listen(binary_sock, tcp_backlog);
 	}
 
 	return binary_sock;
