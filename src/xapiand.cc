@@ -41,11 +41,10 @@ int bind_http(int http_port)
 	addr.sin_addr.s_addr = INADDR_ANY;
 	
 	if (bind(http_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-		LOG_CONN((void *)NULL, "ERROR: http bind error (sock=%d): %s\n", http_sock, strerror(errno));
+		LOG_ERR((void *)NULL, "ERROR: http bind error (sock=%d): %s\n", http_sock, strerror(errno));
 		close(http_sock);
 		http_sock = -1;
 	} else {
-		LOG_CONN((void *)NULL, "Listening http protocol on port %d\n", http_port);
 		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
 		
 		listen(http_sock, backlog);
@@ -83,11 +82,10 @@ int bind_binary(int binary_port)
 	addr.sin_addr.s_addr = INADDR_ANY;
 	
 	if (bind(binary_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-		LOG_CONN((void *)NULL, "ERROR: binary bind error (sock=%d): %s\n", binary_sock, strerror(errno));
+		LOG_ERR((void *)NULL, "ERROR: binary bind error (sock=%d): %s\n", binary_sock, strerror(errno));
 		close(binary_sock);
 		binary_sock = -1;
 	} else {
-		LOG_CONN((void *)NULL, "Listening binary protocol on port %d\n", binary_port);
 		fcntl(binary_sock, F_SETFL, fcntl(binary_sock, F_GETFL, 0) | O_NONBLOCK);
 		
 		listen(binary_sock, backlog);
@@ -108,7 +106,7 @@ int main(int argc, char **argv)
 		binary_port = atoi(argv[2]);
 	}
 
-	LOG((void *)NULL, "Starting Xapiand.\n");
+	LOG((void *)NULL, "Starting %s (%s).\n", PACKAGE_STRING, PACKAGE_BUGREPORT);
 
 	int http_sock = bind_http(http_port);
 	int binary_sock = bind_binary(binary_port);
@@ -116,6 +114,8 @@ int main(int argc, char **argv)
 	int tasks = 0;
 
 	if (http_sock != -1 && binary_sock != -1) {
+		LOG((void *)NULL, "Listening on %d (http), %d (xapian)...\n", http_port, binary_port);
+
 		ev::default_loop loop;
 		if (tasks) {
 			ThreadPool *thread_pool = new ThreadPool(tasks);
