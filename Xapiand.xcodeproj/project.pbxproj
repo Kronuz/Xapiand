@@ -46,6 +46,7 @@
 		E59725D21AA1A38B0060069C /* cJSON.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cJSON.c; sourceTree = "<group>"; };
 		E59725D31AA1A38B0060069C /* cJSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON.h; sourceTree = "<group>"; };
 		E59725D51AA20D7B0060069C /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		E59725D61AA2141F0060069C /* xapiand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xapiand.h; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
 		E5CEBCD91A99C9BB00CD151F /* queue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = queue.h; sourceTree = "<group>"; };
 		E5CEBCDA1A99C9BB00CD151F /* server.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = server.cc; sourceTree = "<group>"; };
@@ -92,6 +93,7 @@
 				E5CEBCDD1A99C9BB00CD151F /* threadpool.h */,
 				E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */,
 				E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */,
+				E59725D61AA2141F0060069C /* xapiand.h */,
 				E5CEBCEB1A9BB98A00CD151F /* length.cc */,
 				E59725B61A9CFCAD0060069C /* http_parser.h */,
 				E59725B51A9CFCAD0060069C /* http_parser.c */,

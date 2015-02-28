@@ -7,10 +7,6 @@
 #include "database.h"
 
 
-const int XAPIAND_HTTP_PORT_DEFAULT = 8880;
-const int XAPIAND_BINARY_PORT_DEFAULT = 8890;
-
-
 class XapiandServer : public Task {
 private:
 	ev::dynamic_loop dynamic_loop;
