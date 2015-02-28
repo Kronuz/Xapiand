@@ -32,6 +32,22 @@
 
 #include "xapiand.h"
 
+/* Check that tcp_backlog can be actually enforced in Linux according
+ * to the value of /proc/sys/net/core/somaxconn, or warn about it. */
+void check_tcp_backlog(int tcp_backlog) {
+#ifdef HAVE_PROC_SOMAXCONN
+	FILE *fp = fopen("/proc/sys/net/core/somaxconn", "r");
+	char buf[1024];
+	if (!fp) return;
+	if (fgets(buf,sizeof(buf),fp) != NULL) {
+		int somaxconn = atoi(buf);
+		if (somaxconn > 0 && somaxconn < tcp_backlog) {
+			redisLog(REDIS_WARNING,"WARNING: The TCP backlog setting of %d cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of %d.", server.tcp_backlog, somaxconn);
+		}
+	}
+	fclose(fp);
+#endif
+}
 
 int bind_http(int http_port)
 {
@@ -67,6 +83,7 @@ int bind_http(int http_port)
 	} else {
 		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
 		
+		check_tcp_backlog(tcp_backlog);
 		listen(http_sock, tcp_backlog);
 	}
 
@@ -108,6 +125,7 @@ int bind_binary(int binary_port)
 	} else {
 		fcntl(binary_sock, F_SETFL, fcntl(binary_sock, F_GETFL, 0) | O_NONBLOCK);
 		
+		check_tcp_backlog(tcp_backlog);
 		listen(binary_sock, tcp_backlog);
 	}
 
