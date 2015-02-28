@@ -9,6 +9,7 @@ xapiand_SOURCES = xapiand.cc \
 	client_binary.cc \
 	client_http.cc \
 	http_parser.c \
+	cJSON.cc \
 	utils.cc \
 	$(XAPIAN_SRCDIR)/net/length.cc
 
@@ -21,6 +22,7 @@ noinst_HEADERS = database.h \
 	client_binary.h \
 	client_http.h \
 	http_parser.h \
+	cJSON.h \
 	utils.h
 
 EXTRA_DIST = Xapiand.xcodeproj/project.pbxproj
