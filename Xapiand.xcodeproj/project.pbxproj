@@ -45,6 +45,7 @@
 		E59725D01A9D25F60060069C /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		E59725D21AA1A38B0060069C /* cJSON.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cJSON.c; sourceTree = "<group>"; };
 		E59725D31AA1A38B0060069C /* cJSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON.h; sourceTree = "<group>"; };
+		E59725D51AA20D7B0060069C /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
 		E5CEBCD91A99C9BB00CD151F /* queue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = queue.h; sourceTree = "<group>"; };
 		E5CEBCDA1A99C9BB00CD151F /* server.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = server.cc; sourceTree = "<group>"; };
@@ -73,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				E5CEBCC71A99C89000CD151F /* Products */,
+				E59725D51AA20D7B0060069C /* config.h */,
 				E59725D01A9D25F60060069C /* utils.h */,
 				E59725CF1A9D25F60060069C /* utils.cc */,
 				E5CEBCE51A9AE80200CD151F /* endpoint.h */,
