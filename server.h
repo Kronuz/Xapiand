@@ -58,6 +58,10 @@ public:
 	~XapiandServer();
 	
 	void run();
+
+	static bool shutdown;
+	static bool shutdown_asap;
+	static void sig_shutdown_handler(int sig);
 };
 
 #endif /* XAPIAND_INCLUDED_SERVER_H */

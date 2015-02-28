@@ -41,6 +41,36 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 // Xapian Server
 //
 
+bool XapiandServer::shutdown = false;
+bool XapiandServer::shutdown_asap = false;
+
+void XapiandServer::sig_shutdown_handler(int sig) {
+	/* SIGINT is often delivered via Ctrl+C in an interactive session.
+	 * If we receive the signal the second time, we interpret this as
+	 * the user really wanting to quit ASAP without waiting to persist
+	 * on disk. */
+	if (XapiandServer::shutdown_asap && sig == SIGINT) {
+		LOG((void *)NULL, "You insist... exiting now.\n");
+		// remove pid file here, use: getpid();
+		exit(1); /* Exit with an error since this was not a clean shutdown. */
+	} else if (XapiandServer::shutdown && sig == SIGINT) {
+		XapiandServer::shutdown_asap = true;
+		LOG((void *)NULL, "Trying immediate shutdown.\n");
+	} else {
+		XapiandServer::shutdown = true;
+		switch (sig) {
+			case SIGINT:
+				LOG((void *)NULL, "Received SIGINT scheduling shutdown...\n");
+				break;
+			case SIGTERM:
+				LOG((void *)NULL, "Received SIGTERM scheduling shutdown...\n");
+				break;
+			default:
+				LOG((void *)NULL, "Received shutdown signal, scheduling shutdown...\n");
+		};
+	}
+}
+
 XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
@@ -50,7 +80,7 @@ XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_soc
 	  binary_sock(binary_sock_)
 {
 	sig.set<XapiandServer, &XapiandServer::signal_cb>(this);
-	sig.start(SIGINT);
+	sig.start(SIGINT|SIGTERM);
 	
 	quit.set<XapiandServer, &XapiandServer::quit_cb>(this);
 	quit.start();
@@ -139,6 +169,9 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 void XapiandServer::signal_cb(ev::sig &signal, int revents)
 {
 	LOG_OBJ(this, "Breaking default loop!\n");
-	quit.send();
-	signal.loop.break_loop();
+	sig_shutdown_handler(revents);
+	if (XapiandServer::shutdown_asap) {
+		quit.send();
+		signal.loop.break_loop();
+	}
 }
