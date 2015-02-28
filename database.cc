@@ -52,10 +52,12 @@ DatabaseQueue::DatabaseQueue()
 
 DatabaseQueue::~DatabaseQueue()
 {
-	//		std::queue<Database *>::const_iterator i(queue.begin());
-	//		for (; i != databases.end(); ++i) {
-	//			(*i).second.finish();
-	//		}
+	while (!empty()) {
+		Database *database;
+		if (pop(database)) {
+			delete database;
+		}
+	}
 }
 
 
