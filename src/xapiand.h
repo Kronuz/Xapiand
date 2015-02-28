@@ -25,6 +25,14 @@
 
 #define XAPIAND_HTTP_SERVERPORT   8880    /* HTTP TCP port */
 #define XAPIAND_BINARY_SERVERPORT 8890    /* Binary TCP port */
+
+#if !defined(_WIN32) && \
+	!defined(__linux__) && \
+	(defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)))
+#define XAPIAND_TCP_BACKLOG       -1      /* TCP listen backlog */
+#else
 #define XAPIAND_TCP_BACKLOG       511     /* TCP listen backlog */
+#endif
+
 
 #endif /* XAPIAND_INCLUDED_XAPIAND_H */
