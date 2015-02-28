@@ -39,26 +39,48 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				cJSON *query = json ? cJSON_GetObjectItem(json, "query") : NULL;
 				cJSON *term = query ? cJSON_GetObjectItem(query, "term") : NULL;
 				cJSON *text = term ? cJSON_GetObjectItem(term, "text") : NULL;
+
+				cJSON *root = cJSON_CreateObject();
+				cJSON *response = cJSON_CreateObject();
+				cJSON_AddItemToObject(root, "response", response);
 				if (text) {
-					content = "OK: ";
-					content += text->valuestring;
+					cJSON_AddStringToObject(response, "status", "OK");
+					cJSON_AddStringToObject(response, "query", text->valuestring);
+					cJSON_AddStringToObject(response, "title", "The title");
+					cJSON_AddNumberToObject(response, "items", 7);
+					const char *strings[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+					cJSON *results = cJSON_CreateArray();
+					cJSON_AddItemToObject(response, "results", results);
+					for (int i = 0; i < 7; i++) {
+						cJSON *result = cJSON_CreateObject();
+						cJSON_AddNumberToObject(result, "id", i);
+						cJSON_AddStringToObject(result, "name", strings[i]);
+						cJSON_AddItemToArray(results, result);
+					}
 				} else {
-					content = "ERROR!"
 					LOG_HTTP_PROTO("Error before: [%s]\n", cJSON_GetErrorPtr());
+					cJSON_AddStringToObject(response, "status", "ERROR");
+					cJSON_AddStringToObject(response, "message", cJSON_GetErrorPtr());
 				}
 				cJSON_Delete(json);
 
+				char *out = cJSON_Print(root);
+				content = out;
+				cJSON_Delete(root);
+				free(out);
+				
 				char tmp[20];
-				std::string response;
-				response += "HTTP/";
+				std::string http_response;
+				http_response += "HTTP/";
 				sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
-				response += tmp;
-				response += " 200 OK\r\n";
-				response += "Content-Length: ";
+				http_response += tmp;
+				http_response += " 200 OK\r\n";
+				http_response += "Content-Type: application/json\r\n";
+				http_response += "Content-Length: ";
 				sprintf(tmp, "%ld", content.size());
-				response += tmp;
-				response += "\r\n";
-				write(response + "\r\n" + content);
+				http_response += tmp;
+				http_response += "\r\n";
+				write(http_response + "\r\n" + content);
 				if (parser.state == 1) close();
 			} catch (...) {
 				LOG_ERR(this, "ERROR!\n");
