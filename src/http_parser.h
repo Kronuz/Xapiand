@@ -1,4 +1,5 @@
-/* Copyright Joyent, Inc. and other Node contributors. All rights reserved.
+/*
+ * Copyright Joyent, Inc. and other Node contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -18,6 +19,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
+
 #ifndef http_parser_h
 #define http_parser_h
 #ifdef __cplusplus
