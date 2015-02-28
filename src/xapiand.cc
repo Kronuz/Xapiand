@@ -115,9 +115,25 @@ int bind_binary(int binary_port)
 }
 
 
+void setup_signal_handlers() {
+	signal(SIGHUP, SIG_IGN);
+	signal(SIGPIPE, SIG_IGN);
+
+	struct sigaction act;
+
+	/* When the SA_SIGINFO flag is set in sa_flags then sa_sigaction is used.
+	 * Otherwise, sa_handler is used. */
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	act.sa_handler = XapiandServer::sig_shutdown_handler;
+	sigaction(SIGTERM, &act, NULL);
+	sigaction(SIGINT, &act, NULL);
+}
+
 
 int main(int argc, char **argv)
 {
+
 	int http_port = XAPIAND_HTTP_SERVERPORT;
 	int binary_port = XAPIAND_BINARY_SERVERPORT;
 
@@ -134,6 +150,8 @@ int main(int argc, char **argv)
 	int tasks = 0;
 
 	if (http_sock != -1 && binary_sock != -1) {
+		setup_signal_handlers();
+
 		LOG((void *)NULL, "Listening on %d (http), %d (xapian)...\n", http_port, binary_port);
 
 		ev::default_loop loop;

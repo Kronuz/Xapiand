@@ -24,6 +24,7 @@
 #include <sys/socket.h>
 
 #include "utils.h"
+#include "server.h"
 #include "client_base.h"
 
 
@@ -42,7 +43,7 @@ BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_poo
 	  write_queue(WRITE_QUEUE_SIZE)
 {
 	sig.set<BaseClient, &BaseClient::signal_cb>(this);
-	sig.start(SIGINT);
+	sig.start(SIGINT|SIGTERM);
 
 	io_read.set<BaseClient, &BaseClient::io_cb>(this);
 	io_read.start(sock, ev::READ);
@@ -70,9 +71,11 @@ BaseClient::~BaseClient()
 
 void BaseClient::signal_cb(ev::sig &signal, int revents)
 {
-	LOG_EV(this, "Signaled destroy!!\n");
-	destroy();
-	delete this;
+	if (XapiandServer::shutdown_asap) {
+		LOG_EV(this, "Signaled destroy!!\n");
+		destroy();
+		delete this;
+	}
 }
 
 
