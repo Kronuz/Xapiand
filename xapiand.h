@@ -34,5 +34,9 @@
 #define XAPIAND_TCP_BACKLOG       511     /* TCP listen backlog */
 #endif
 
+namespace xapiand {
+	extern time_t shutdown;
+	extern time_t shutdown_asap;
+}
 
 #endif /* XAPIAND_INCLUDED_XAPIAND_H */

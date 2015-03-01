@@ -28,6 +28,7 @@
 
 #include "utils.h"
 
+#include "xapiand.h"
 #include "server.h"
 #include "client_http.h"
 #include "client_binary.h"
@@ -41,60 +42,22 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 // Xapian Server
 //
 
-time_t XapiandServer::shutdown = (time_t)0;
-time_t XapiandServer::shutdown_asap = (time_t)0;
 int XapiandServer::total_clients = 0;
 
 
-void XapiandServer::sig_shutdown_handler(int sig) {
-	/* SIGINT is often delivered via Ctrl+C in an interactive session.
-	 * If we receive the signal the second time, we interpret this as
-	 * the user really wanting to quit ASAP without waiting to persist
-	 * on disk. */
-	time_t now = time(NULL);
-	if (shutdown_asap && sig == SIGINT) {
-		if (shutdown_asap + 1 < now) {
-			LOG((void *)NULL, "You insist... exiting now.\n");
-			// remove pid file here, use: getpid();
-			exit(1); /* Exit with an error since this was not a clean shutdown. */
-		}
-	} else if (shutdown && sig == SIGINT) {
-		if (shutdown + 1 < now) {
-			shutdown_asap = now;
-			LOG((void *)NULL, "Trying immediate shutdown.\n");
-		}
-	} else {
-		shutdown = now;
-		switch (sig) {
-			case SIGINT:
-				LOG((void *)NULL, "Received SIGINT scheduling shutdown...\n");
-				break;
-			case SIGTERM:
-				LOG((void *)NULL, "Received SIGTERM scheduling shutdown...\n");
-				break;
-			default:
-				LOG((void *)NULL, "Received shutdown signal, scheduling shutdown...\n");
-		};
-	}
-}
-
-XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
+XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, ev::async *main_async_shutdown_)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
 	  binary_io(*loop),
-	  quit(*loop),
+	  async_shutdown(*loop),
+	  main_async_shutdown(main_async_shutdown_),
 	  http_sock(http_sock_),
 	  binary_sock(binary_sock_),
 	  database_pool(database_pool_),
 	  thread_pool(thread_pool_)
 {
-	sigint.set<XapiandServer, &XapiandServer::signal_cb>(this);
-	sigint.start(SIGINT);
-	sigterm.set<XapiandServer, &XapiandServer::signal_cb>(this);
-	sigterm.start(SIGTERM);
-	
-	quit.set<XapiandServer, &XapiandServer::quit_cb>(this);
-	quit.start();
+	async_shutdown.set<XapiandServer, &XapiandServer::shutdown_cb>(this);
+	async_shutdown.start();
 
 	http_io.set<XapiandServer, &XapiandServer::io_accept_http>(this);
 	http_io.start(http_sock, ev::READ);
@@ -108,9 +71,7 @@ XapiandServer::~XapiandServer()
 {
 	http_io.stop();
 	binary_io.stop();
-	quit.stop();
-	sigint.stop();
-	sigterm.stop();
+	async_shutdown.stop();
 }
 
 
@@ -120,7 +81,7 @@ void XapiandServer::run(void *)
 	loop->run(0);
 }
 
-void XapiandServer::quit_cb(ev::async &watcher, int revents)
+void XapiandServer::shutdown_cb(ev::async &watcher, int revents)
 {
 	LOG_OBJ(this, "Breaking loop!\n");
 	loop->break_loop();
@@ -147,7 +108,8 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		new HttpClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
+		BaseClient *client = new HttpClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
+		clients.insert(client);
 	}
 }
 
@@ -173,7 +135,8 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		new BinaryClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
+		BaseClient *client = new BinaryClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
+		clients.insert(client);
 	}
 }
 
@@ -199,18 +162,23 @@ void XapiandServer::destroy()
 }
 
 
-void XapiandServer::signal_cb(ev::sig &signal, int revents)
+void XapiandServer::shutdown(int signum)
 {
-	sig_shutdown_handler(signal.signum);
-	if (shutdown) {
+	if (!signum) {
+		main_async_shutdown->send();
+		return;
+	}
+	if (xapiand::shutdown) {
 		destroy();
 		if (total_clients == 0) {
-			shutdown_asap = shutdown;
+			xapiand::shutdown_asap = xapiand::shutdown;
 		}
 	}
-	if (shutdown_asap) {
-		LOG_OBJ(this, "Breaking default loop!\n");
-		signal.loop.break_loop();
-		quit.send();
+	if (xapiand::shutdown_asap) {
+		async_shutdown.send();
+	}
+	std::unordered_set<BaseClient *>::const_iterator it(clients.begin());
+	for (; it != clients.end(); it++) {
+		(*it)->shutdown();
 	}
 }

@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <sys/socket.h>
 
+#include "xapiand.h"
 #include "utils.h"
 #include "client_base.h"
 
@@ -48,11 +49,6 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	pthread_mutex_lock(&qmtx);
 	XapiandServer::total_clients++;
 	pthread_mutex_unlock(&qmtx);
-
-	sigint.set<BaseClient, &BaseClient::signal_cb>(this);
-	sigint.start(SIGINT);
-	sigterm.set<BaseClient, &BaseClient::signal_cb>(this);
-	sigterm.start(SIGTERM);
 	
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
 	async_write.start();
@@ -68,8 +64,6 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 BaseClient::~BaseClient()
 {
 	destroy();
-	sigint.stop();
-	sigterm.stop();
 
 	while(!write_queue.empty()) {
 		Buffer *buffer;
@@ -82,8 +76,8 @@ BaseClient::~BaseClient()
 	XapiandServer::total_clients--;
 	pthread_mutex_unlock(&qmtx);
 
-	if (XapiandServer::total_clients == 0 && XapiandServer::shutdown) {
-		raise(SIGINT);
+	if (XapiandServer::total_clients == 0 && xapiand::shutdown == 0) {
+		server->shutdown();
 	}
 
 	pthread_mutex_destroy(&qmtx);
@@ -239,10 +233,9 @@ void BaseClient::write(const char *buf, size_t buf_size)
 	async_write.send();
 }
 
-
-void BaseClient::signal_cb(ev::sig &signal, int revents)
+void BaseClient::shutdown(int signum)
 {
-	if (XapiandServer::shutdown_asap) {
+	if (xapiand::shutdown_asap) {
 		LOG_EV(this, "Signaled destroy!!\n");
 		destroy();
 		rel_ref();
