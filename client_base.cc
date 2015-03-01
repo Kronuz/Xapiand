@@ -42,8 +42,10 @@ BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_poo
 	  database_pool(database_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
 {
-	sig.set<BaseClient, &BaseClient::signal_cb>(this);
-	sig.start(SIGINT|SIGTERM);
+	sigint.set<BaseClient, &BaseClient::signal_cb>(this);
+	sigint.start(SIGINT);
+	sigterm.set<BaseClient, &BaseClient::signal_cb>(this);
+	sigterm.start(SIGTERM);
 
 	io_read.set<BaseClient, &BaseClient::io_cb>(this);
 	io_read.start(sock, ev::READ);
@@ -56,7 +58,8 @@ BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_poo
 BaseClient::~BaseClient()
 {
 	destroy();
-	sig.stop();
+	sigint.stop();
+	sigterm.stop();
 
 	while(!write_queue.empty()) {
 		Buffer *buffer;
@@ -66,16 +69,6 @@ BaseClient::~BaseClient()
 	}
 
 	LOG_OBJ(this, "DELETED!\n");
-}
-
-
-void BaseClient::signal_cb(ev::sig &signal, int revents)
-{
-	if (XapiandServer::shutdown_asap) {
-		LOG_EV(this, "Signaled destroy!!\n");
-		destroy();
-		delete this;
-	}
 }
 
 
@@ -216,4 +209,14 @@ void BaseClient::write(const char *buf, size_t buf_size)
 	write_queue.push(buffer);
 
 	io_update();
+}
+
+
+void BaseClient::signal_cb(ev::sig &signal, int revents)
+{
+	if (XapiandServer::shutdown_asap) {
+		LOG_EV(this, "Signaled destroy!!\n");
+		destroy();
+		delete this;
+	}
 }

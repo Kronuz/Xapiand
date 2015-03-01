@@ -79,8 +79,10 @@ XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_soc
 	  http_sock(http_sock_),
 	  binary_sock(binary_sock_)
 {
-	sig.set<XapiandServer, &XapiandServer::signal_cb>(this);
-	sig.start(SIGINT|SIGTERM);
+	sigint.set<XapiandServer, &XapiandServer::signal_cb>(this);
+	sigint.start(SIGINT);
+	sigterm.set<XapiandServer, &XapiandServer::signal_cb>(this);
+	sigterm.start(SIGTERM);
 	
 	quit.set<XapiandServer, &XapiandServer::quit_cb>(this);
 	quit.start();
@@ -98,7 +100,8 @@ XapiandServer::~XapiandServer()
 	http_io.stop();
 	binary_io.stop();
 	quit.stop();
-	sig.stop();
+	sigint.stop();
+	sigterm.stop();
 }
 
 
@@ -169,7 +172,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 void XapiandServer::signal_cb(ev::sig &signal, int revents)
 {
 	LOG_OBJ(this, "Breaking default loop!\n");
-	sig_shutdown_handler(revents);
+	sig_shutdown_handler(signal.signum);
 	if (XapiandServer::shutdown_asap) {
 		quit.send();
 		signal.loop.break_loop();
