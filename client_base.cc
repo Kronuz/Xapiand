@@ -40,6 +40,8 @@ BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_poo
 	  thread_pool(thread_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
 {
+	inc_ref();
+
 	pthread_mutex_init(&qmtx, 0);
 
 	pthread_mutex_lock(&qmtx);

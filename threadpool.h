@@ -36,6 +36,7 @@ class Task {
 private:
 	pthread_mutex_t task_mutex;
 	int refs;
+protected:
 	void inc_ref();
 	void rel_ref();
 public:
