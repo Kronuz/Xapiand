@@ -79,10 +79,10 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 						cJSON_AddItemToArray(results, result);
 					}
 				} else {
-					LOG_HTTP_PROTO(this, "Error before: [%s]\n", cJSON_GetErrorPtr());
 					cJSON_AddStringToObject(response, "status", "ERROR");
 					const char *message = cJSON_GetErrorPtr();
 					if (message) {
+						LOG_HTTP_PROTO(this, "JSON error before: [%s]\n", message);
 						cJSON_AddStringToObject(response, "message", message);
 					}
 				}
