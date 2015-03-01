@@ -43,7 +43,8 @@ private:
 	ev::io binary_io;
 	int binary_sock;
 
-	DatabasePool database_pool;
+	DatabasePool *database_pool;
+	ThreadPool *thread_pool;
 
 	void destroy();
 	void bind_http();
@@ -56,7 +57,7 @@ private:
 	void quit_cb(ev::async &watcher, int revents);
 
 public:
-	XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_);
+	XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
 	~XapiandServer();
 	
 	void run();
