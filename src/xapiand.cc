@@ -32,6 +32,15 @@
 #include <netinet/tcp.h> /* for TCP_NODELAY */
 #include <sys/socket.h>
 #include <sys/sysctl.h>
+#include <unordered_set>
+
+
+time_t xapiand::shutdown = (time_t)0;
+time_t xapiand::shutdown_asap = (time_t)0;
+
+
+static ev::default_loop default_loop;
+static std::unordered_set<XapiandServer *> servers;
 
 
 void check_tcp_backlog(int tcp_backlog) {
@@ -144,6 +153,76 @@ int bind_binary(int binary_port)
 }
 
 
+static void shutdown(int signum)
+{
+	if (xapiand::shutdown_asap) {
+		LOG_OBJ((void *)NULL, "Breaking default loop!\n");
+		default_loop.break_loop();
+	}
+	std::unordered_set<XapiandServer *>::const_iterator it(servers.begin());
+	for (; it != servers.end(); it++) {
+		(*it)->shutdown(signum);
+	}
+}
+
+
+void sig_shutdown_handler(int sig) {
+	/* SIGINT is often delivered via Ctrl+C in an interactive session.
+	 * If we receive the signal the second time, we interpret this as
+	 * the user really wanting to quit ASAP without waiting to persist
+	 * on disk. */
+	if (!sig) sig = SIGINT;
+	time_t now = time(NULL);
+	if (xapiand::shutdown_asap && sig == SIGINT) {
+		if (xapiand::shutdown_asap + 1 < now) {
+			LOG((void *)NULL, "You insist... exiting now.\n");
+			// remove pid file here, use: getpid();
+			exit(1); /* Exit with an error since this was not a clean shutdown. */
+		}
+	} else if (xapiand::shutdown && sig == SIGINT) {
+		if (xapiand::shutdown + 1 < now) {
+			xapiand::shutdown_asap = now;
+			LOG((void *)NULL, "Trying immediate shutdown.\n");
+		}
+	} else {
+		xapiand::shutdown = now;
+		switch (sig) {
+			case SIGINT:
+				LOG((void *)NULL, "Received SIGINT scheduling shutdown...\n");
+				break;
+			case SIGTERM:
+				LOG((void *)NULL, "Received SIGTERM scheduling shutdown...\n");
+				break;
+			default:
+				LOG((void *)NULL, "Received shutdown signal, scheduling shutdown...\n");
+		};
+	}
+	shutdown(sig);
+}
+
+
+static void shutdown_cb(ev::async &watcher, int revents)
+{
+	sig_shutdown_handler(0);
+}
+
+
+void setup_signal_handlers(void) {
+	signal(SIGHUP, SIG_IGN);
+	signal(SIGPIPE, SIG_IGN);
+
+	struct sigaction act;
+	
+	/* When the SA_SIGINFO flag is set in sa_flags then sa_sigaction is used.
+	 * Otherwise, sa_handler is used. */
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	act.sa_handler = sig_shutdown_handler;
+	sigaction(SIGTERM, &act, NULL);
+	sigaction(SIGINT, &act, NULL);
+}
+
+
 int main(int argc, char **argv)
 {
 
@@ -163,31 +242,35 @@ int main(int argc, char **argv)
 	int tasks = 8;
 
 	if (http_sock != -1 && binary_sock != -1) {
-		signal(SIGHUP, SIG_IGN);
-		signal(SIGPIPE, SIG_IGN);
+		setup_signal_handlers();
 
 		LOG((void *)NULL, "Listening on %d (http), %d (xapian)...\n", http_port, binary_port);
 
 		DatabasePool database_pool;
 		ThreadPool thread_pool(10);
 
-		ev::default_loop loop;
+		ev::async main_quit;
+		main_quit.set<shutdown_cb>();
+		main_quit.start();
+
 		if (tasks) {
 			ThreadPool server_pool(tasks);
 
 			for (int i = 0; i < tasks; i++) {
-				XapiandServer * server = new XapiandServer(NULL, http_sock, binary_sock, &database_pool, &thread_pool);
+				XapiandServer *server = new XapiandServer(NULL, http_sock, binary_sock, &database_pool, &thread_pool, &main_quit);
+				servers.insert(server);
 				server_pool.addTask(server, (void *)0);
 			}
 			
-			loop.run();
+			default_loop.run();
 			
 			LOG_OBJ((void *)NULL, "Waiting for threads...\n");
 			
 			server_pool.finish();
 			server_pool.join();
 		} else {
-			XapiandServer * server = new XapiandServer(&loop, http_sock, binary_sock, &database_pool, &thread_pool);
+			XapiandServer * server = new XapiandServer(&default_loop, http_sock, binary_sock, &database_pool, &thread_pool, &main_quit);
+			servers.insert(server);
 			server->run(NULL);
 			delete server;
 		}

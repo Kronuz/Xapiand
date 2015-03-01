@@ -54,6 +54,10 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				//					LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
 				//					LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
 				//					LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
+				if (path == "/quit") {
+					server->shutdown();
+					return;
+				}
 
 				std::string content;
 				cJSON *json = cJSON_Parse(body.c_str());
