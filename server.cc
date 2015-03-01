@@ -78,13 +78,15 @@ void XapiandServer::sig_shutdown_handler(int sig) {
 	}
 }
 
-XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_)
+XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
 	  binary_io(*loop),
 	  quit(*loop),
 	  http_sock(http_sock_),
-	  binary_sock(binary_sock_)
+	  binary_sock(binary_sock_),
+	  database_pool(database_pool_),
+	  thread_pool(thread_pool_)
 {
 	sigint.set<XapiandServer, &XapiandServer::signal_cb>(this);
 	sigint.start(SIGINT);
@@ -145,7 +147,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		new HttpClient(loop, client_sock, &database_pool, active_timeout, idle_timeout);
+		new HttpClient(loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
 	}
 }
 
@@ -171,7 +173,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		new BinaryClient(loop, client_sock, &database_pool, active_timeout, idle_timeout);
+		new BinaryClient(loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
 	}
 }
 

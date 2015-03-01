@@ -31,12 +31,13 @@
 const int WRITE_QUEUE_SIZE = -1;
 
 
-BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
+BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: io_read(*loop),
 	  io_write(*loop),
 	  closed(false),
 	  sock(sock_),
 	  database_pool(database_pool_),
+	  thread_pool(thread_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
 {
 	XapiandServer::total_clients++;

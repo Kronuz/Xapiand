@@ -44,7 +44,7 @@ class HttpClient : public BaseClient {
 	static int on_data(http_parser* p, const char *at, size_t length);
 
 public:
-	HttpClient(ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_);
+	HttpClient(ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	~HttpClient();
 };
 
