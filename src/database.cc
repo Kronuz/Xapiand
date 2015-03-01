@@ -41,11 +41,11 @@ Database::reopen()
 	if (writable) {
 		db = new Xapian::WritableDatabase(endpoints[0].path, Xapian::DB_CREATE_OR_OPEN);
 	} else {
-		db = new Xapian::Database(endpoints[0].path, Xapian::DB_CREATE_OR_OPEN);
+		db = new Xapian::Database();
 		if (!writable) {
 			std::vector<Endpoint>::const_iterator i(endpoints.begin());
-			for (++i; i != endpoints.end(); ++i) {
-				db->add_database(Xapian::Database((*i).path));
+			for (; i != endpoints.end(); ++i) {
+				db->add_database(Xapian::Database((*i).path, Xapian::DB_CREATE_OR_OPEN));
 			}
 		} else if (endpoints.size() != 1) {
 			LOG_ERR(this, "ERROR: Expecting exactly one database.");
