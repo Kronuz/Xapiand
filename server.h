@@ -60,8 +60,8 @@ public:
 	
 	void run();
 
-	static bool shutdown;
-	static bool shutdown_asap;
+	static time_t shutdown;
+	static time_t shutdown_asap;
 	static void sig_shutdown_handler(int sig);
 };
 

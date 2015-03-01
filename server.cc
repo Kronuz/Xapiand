@@ -41,23 +41,29 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 // Xapian Server
 //
 
-bool XapiandServer::shutdown = false;
-bool XapiandServer::shutdown_asap = false;
+time_t XapiandServer::shutdown = (time_t)0;
+time_t XapiandServer::shutdown_asap = (time_t)0;
+
 
 void XapiandServer::sig_shutdown_handler(int sig) {
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
 	 * the user really wanting to quit ASAP without waiting to persist
 	 * on disk. */
-	if (XapiandServer::shutdown_asap && sig == SIGINT) {
-		LOG((void *)NULL, "You insist... exiting now.\n");
-		// remove pid file here, use: getpid();
-		exit(1); /* Exit with an error since this was not a clean shutdown. */
-	} else if (XapiandServer::shutdown && sig == SIGINT) {
-		XapiandServer::shutdown_asap = true;
-		LOG((void *)NULL, "Trying immediate shutdown.\n");
+	time_t now = time(NULL);
+	if (shutdown_asap && sig == SIGINT) {
+		if (shutdown_asap + 1 < now) {
+			LOG((void *)NULL, "You insist... exiting now.\n");
+			// remove pid file here, use: getpid();
+			exit(1); /* Exit with an error since this was not a clean shutdown. */
+		}
+	} else if (shutdown && sig == SIGINT) {
+		if (shutdown + 1 < now) {
+			shutdown_asap = now;
+			LOG((void *)NULL, "Trying immediate shutdown.\n");
+		}
 	} else {
-		XapiandServer::shutdown = true;
+		shutdown = now;
 		switch (sig) {
 			case SIGINT:
 				LOG((void *)NULL, "Received SIGINT scheduling shutdown...\n");
@@ -171,10 +177,10 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 void XapiandServer::signal_cb(ev::sig &signal, int revents)
 {
-	LOG_OBJ(this, "Breaking default loop!\n");
 	sig_shutdown_handler(signal.signum);
-	if (XapiandServer::shutdown_asap) {
-		quit.send();
+	if (shutdown_asap) {
+		LOG_OBJ(this, "Breaking default loop!\n");
 		signal.loop.break_loop();
+		quit.send();
 	}
 }
