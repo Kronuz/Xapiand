@@ -23,19 +23,23 @@
 #ifndef XAPIAND_INCLUDED_SERVER_H
 #define XAPIAND_INCLUDED_SERVER_H
 
+#include <unordered_set>
 #include <ev++.h>
 
 #include "threadpool.h"
 #include "database.h"
 
 
+class BaseClient;
+
+
 class XapiandServer : public Task {
 private:
+	std::unordered_set<BaseClient *>clients;
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
-	ev::sig sigint;
-	ev::sig sigterm;
-	ev::async quit;
+	ev::async async_shutdown;
+	ev::async *main_async_shutdown;
 
 	ev::io http_io;
 	int http_sock;
@@ -53,19 +57,16 @@ private:
 	void io_accept_http(ev::io &watcher, int revents);
 	void io_accept_binary(ev::io &watcher, int revents);
 
-	void signal_cb(ev::sig &signal, int revents);
-	void quit_cb(ev::async &watcher, int revents);
+	void shutdown_cb(ev::async &watcher, int revents);
 
 public:
-	XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
+	XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, ev::async *main_quit_);
 	~XapiandServer();
 	
 	void run(void *);
+	void shutdown(int signum=0);
 
-	static time_t shutdown;
-	static time_t shutdown_asap;
 	static int total_clients;
-	static void sig_shutdown_handler(int sig);
 };
 
 #endif /* XAPIAND_INCLUDED_SERVER_H */

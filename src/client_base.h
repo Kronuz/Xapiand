@@ -66,12 +66,12 @@ public:
 
 
 class BaseClient : public Task {
+	friend XapiandServer;
+
 protected:
 	XapiandServer *server;
 	pthread_mutex_t qmtx;
 
-	ev::sig sigint;
-	ev::sig sigterm;
 	ev::io io_read;
 	ev::io io_write;
 	ev::async async_write;
@@ -86,7 +86,6 @@ protected:
 
 	Queue<Buffer *> write_queue;
 
-	void signal_cb(ev::sig &signal, int revents);
 	void async_write_cb(ev::async &watcher, int revents);
 
 	void io_update();
@@ -116,6 +115,7 @@ protected:
 	
 	void close();
 	void destroy();
+	void shutdown(int signum=0);
 
 public:
 	BaseClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
