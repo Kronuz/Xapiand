@@ -25,6 +25,7 @@
 
 #include <ev++.h>
 
+#include "server.h"
 #include "threadpool.h"
 #include "database.h"
 
@@ -64,12 +65,15 @@ public:
 };
 
 
-class BaseClient {
+class BaseClient : public Task {
 protected:
+	pthread_mutex_t qmtx;
+
 	ev::sig sigint;
 	ev::sig sigterm;
 	ev::io io_read;
 	ev::io io_write;
+	ev::async async_write;
 
 	bool closed;
 	int sock;
@@ -82,6 +86,7 @@ protected:
 	Queue<Buffer *> write_queue;
 
 	void signal_cb(ev::sig &signal, int revents);
+	void async_write_cb(ev::async &watcher, int revents);
 
 	void io_update();
 
