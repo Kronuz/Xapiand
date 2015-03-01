@@ -67,6 +67,7 @@ public:
 
 class BaseClient : public Task {
 protected:
+	XapiandServer *server;
 	pthread_mutex_t qmtx;
 
 	ev::sig sigint;
@@ -117,7 +118,7 @@ protected:
 	void destroy();
 
 public:
-	BaseClient(ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
+	BaseClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	virtual ~BaseClient();
 };
 

@@ -147,7 +147,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		new HttpClient(loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
+		new HttpClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
 	}
 }
 
@@ -173,7 +173,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		new BinaryClient(loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
+		new BinaryClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
 	}
 }
 

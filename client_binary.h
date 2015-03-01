@@ -53,7 +53,7 @@ public:
 	void release_db(Xapian::Database *);
 	void select_db(const std::vector<std::string> &, bool);
 
-	BinaryClient(ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
+	BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	~BinaryClient();
 
 	void run(void *);
