@@ -73,7 +73,6 @@ protected:
 
 	bool closed;
 	int sock;
-	static int total_clients;
 
 	DatabasePool *database_pool;
 
