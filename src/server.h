@@ -45,6 +45,7 @@ private:
 
 	DatabasePool database_pool;
 
+	void destroy();
 	void bind_http();
 	void bind_binary();
 
@@ -62,6 +63,7 @@ public:
 
 	static time_t shutdown;
 	static time_t shutdown_asap;
+	static int total_clients;
 	static void sig_shutdown_handler(int sig);
 };
 
