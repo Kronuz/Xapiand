@@ -35,24 +35,19 @@
 
 BinaryClient::BinaryClient(ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
-	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
-	  database(NULL)
+	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true)
 {
-	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, total_clients);
+	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, XapiandServer::total_clients);
 
-	try {
-		msg_update(std::string());
-	} catch (const Xapian::NetworkError &e) {
-		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
-	} catch (...) {
-		LOG_ERR(this, "ERROR!\n");
-	}
+	thread_pool->addTask(this, (void *)0);
 }
 
 
 BinaryClient::~BinaryClient()
 {
-	if (database) {
+	std::unordered_map<Xapian::Database *, Database *>::const_iterator it(databases.begin());
+	for (; it != databases.end(); it++) {
+		Database *database = it->second;
 		database_pool->checkin(&database);
 	}
 }
@@ -79,14 +74,7 @@ void BinaryClient::on_read(const char *buf, ssize_t received)
 		Buffer *msg = new Buffer(type, data.c_str(), data.size());
 		
 		messages_queue.push(msg);
-		
-		try {
-			run_one();
-		} catch (const Xapian::NetworkError &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
-		} catch (...) {
-			LOG_ERR(this, "ERROR!\n");
-		}
+		thread_pool->addTask(this, (void *)1);
 	}
 }
 
@@ -138,19 +126,35 @@ void BinaryClient::send_message(reply_type type, const std::string &message, dou
 
 Xapian::Database * BinaryClient::get_db(bool writable_)
 {
+	pthread_mutex_lock(&qmtx);
 	if (endpoints.empty()) {
+		pthread_mutex_unlock(&qmtx);
 		return NULL;
 	}
-	if (!database_pool->checkout(&database, endpoints, writable_)) {
+	Endpoints endpoints_ = endpoints;
+	pthread_mutex_unlock(&qmtx);
+
+	Database *database = NULL;
+	if (!database_pool->checkout(&database, endpoints_, writable_)) {
 		return NULL;
 	}
+
+	pthread_mutex_lock(&qmtx);
+	databases[database->db] = database;
+	pthread_mutex_unlock(&qmtx);
+
 	return database->db;
 }
 
 
 void BinaryClient::release_db(Xapian::Database *db_)
 {
-	if (database) {
+	if (db_) {
+		pthread_mutex_lock(&qmtx);
+		Database *database = databases[db_];
+		databases.erase(db_);
+		pthread_mutex_unlock(&qmtx);
+		
 		database_pool->checkin(&database);
 	}
 }
@@ -158,10 +162,29 @@ void BinaryClient::release_db(Xapian::Database *db_)
 
 void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_)
 {
+	pthread_mutex_lock(&qmtx);
 	std::vector<std::string>::const_iterator i(dbpaths_.begin());
 	for (; i != dbpaths_.end(); i++) {
 		Endpoint endpoint = Endpoint(*i, std::string(), XAPIAND_BINARY_SERVERPORT);
 		endpoints.push_back(endpoint);
 	}
 	dbpaths = dbpaths_;
+	pthread_mutex_unlock(&qmtx);
 }
+
+
+void BinaryClient::run(void *param)
+{
+	try {
+		if (param) {
+			run_one();
+		} else {
+			msg_update(std::string());
+		}
+	} catch (const Xapian::NetworkError &e) {
+		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+	} catch (...) {
+		LOG_ERR(this, "ERROR!\n");
+	}
+}
+

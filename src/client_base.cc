@@ -24,7 +24,6 @@
 #include <sys/socket.h>
 
 #include "utils.h"
-#include "server.h"
 #include "client_base.h"
 
 
@@ -34,18 +33,26 @@ const int WRITE_QUEUE_SIZE = -1;
 BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: io_read(*loop),
 	  io_write(*loop),
+	  async_write(*loop),
 	  closed(false),
 	  sock(sock_),
 	  database_pool(database_pool_),
 	  thread_pool(thread_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
 {
+	pthread_mutex_init(&qmtx, 0);
+
+	pthread_mutex_lock(&qmtx);
 	XapiandServer::total_clients++;
+	pthread_mutex_unlock(&qmtx);
 
 	sigint.set<BaseClient, &BaseClient::signal_cb>(this);
 	sigint.start(SIGINT);
 	sigterm.set<BaseClient, &BaseClient::signal_cb>(this);
 	sigterm.start(SIGTERM);
+	
+	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
+	async_write.start();
 
 	io_read.set<BaseClient, &BaseClient::io_cb>(this);
 	io_read.start(sock, ev::READ);
@@ -63,16 +70,20 @@ BaseClient::~BaseClient()
 
 	while(!write_queue.empty()) {
 		Buffer *buffer;
-		if (write_queue.pop(buffer)) {
+		if (write_queue.pop(buffer, 0)) {
 			delete buffer;
 		}
 	}
 
+	pthread_mutex_lock(&qmtx);
 	XapiandServer::total_clients--;
+	pthread_mutex_unlock(&qmtx);
 
 	if (XapiandServer::total_clients == 0 && XapiandServer::shutdown) {
 		raise(SIGINT);
 	}
+
+	pthread_mutex_destroy(&qmtx);
 
 	LOG_OBJ(this, "DELETED!\n");
 }
@@ -90,8 +101,10 @@ void BaseClient::destroy()
 	io_read.stop();
 	io_write.stop();
 	
+	pthread_mutex_lock(&qmtx);
 	::close(sock);
 	sock = -1;
+	pthread_mutex_unlock(&qmtx);
 
 	LOG_OBJ(this, "DESTROYED!\n");
 }
@@ -207,6 +220,12 @@ void BaseClient::read_cb()
 }
 
 
+void BaseClient::async_write_cb(ev::async &watcher, int revents)
+{
+	io_update();
+}
+
+					
 void BaseClient::write(const char *buf, size_t buf_size)
 {
 	LOG_CONN(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
@@ -214,7 +233,7 @@ void BaseClient::write(const char *buf, size_t buf_size)
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
 	write_queue.push(buffer);
 
-	io_update();
+	async_write.send();
 }
 
 

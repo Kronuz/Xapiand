@@ -36,7 +36,7 @@ HttpClient::HttpClient(ev::loop_ref *loop, int sock_, DatabasePool *database_poo
 {
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
-	LOG_CONN(this, "Got connection (sock=%d), %d http client(s) connected.\n", sock, total_clients);
+	LOG_CONN(this, "Got connection (sock=%d), %d http client(s) connected.\n", sock, XapiandServer::total_clients);
 }
 
 
@@ -79,7 +79,7 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 						cJSON_AddItemToArray(results, result);
 					}
 				} else {
-					LOG_HTTP_PROTO("Error before: [%s]\n", cJSON_GetErrorPtr());
+					LOG_HTTP_PROTO(this, "Error before: [%s]\n", cJSON_GetErrorPtr());
 					cJSON_AddStringToObject(response, "status", "ERROR");
 					cJSON_AddStringToObject(response, "message", cJSON_GetErrorPtr());
 				}
@@ -173,4 +173,9 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	}
 
 	return 0;
+}
+
+
+void HttpClient::run(void *)
+{
 }

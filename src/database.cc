@@ -124,8 +124,10 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 		
 		if (!queue.pop(database_, 0)) {
 			if (!writable || queue.count == 0) {
-				database_ = new Database(endpoints, writable);
 				queue.count++;
+				pthread_mutex_unlock(&qmtx);
+				database_ = new Database(endpoints, writable);
+				pthread_mutex_lock(&qmtx);
 			}
 			// FIXME: lock until a database is available if it can't get one
 		}
