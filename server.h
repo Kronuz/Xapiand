@@ -60,7 +60,7 @@ public:
 	XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
 	~XapiandServer();
 	
-	void run();
+	void run(void *);
 
 	static time_t shutdown;
 	static time_t shutdown_asap;

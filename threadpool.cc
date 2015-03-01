@@ -25,13 +25,43 @@
 #include "threadpool.h"
 
 
+void Task::inc_ref()
+{
+	pthread_mutex_lock(&task_mutex);
+	refs++;
+	pthread_mutex_unlock(&task_mutex);
+}
+
+void Task::rel_ref()
+{
+	pthread_mutex_lock(&task_mutex);
+	refs--;
+	if (refs == 0) {
+		pthread_mutex_unlock(&task_mutex);
+		delete this;
+	} else {
+		pthread_mutex_unlock(&task_mutex);
+	}
+};
+
+Task::Task() : refs(1)
+{
+	pthread_mutex_init(&task_mutex, 0);
+}
+
+Task::~Task()
+{
+	pthread_mutex_destroy(&task_mutex);
+}
+
+
 // Function that retrieves a task from a queue, runs it and deletes it
-static void *getWork(void * param) {
-	Queue<Task *> *wq = (Queue<Task *> *)param;
-	Task *mw = NULL;
+void *ThreadPool::getWork(void * wq_=NULL) {
+	Queue<std::pair<Task *, void *>> *wq = (Queue<std::pair<Task *, void *>> *)wq_;
+	std::pair<Task *, void *>mw;
 	while (wq->pop(mw)) {
-		mw->run();
-		delete mw;
+		mw.first->run(mw.second);
+		mw.first->rel_ref();
 	}
 	return NULL;
 }
@@ -64,8 +94,9 @@ void ThreadPool::join() {
 
 
 // Add a task
-void ThreadPool::addTask(Task *nt) {
-	workQueue.push(nt);
+void ThreadPool::addTask(Task *nt, void *param) {
+	nt->inc_ref();
+	workQueue.push(std::make_pair(nt, param));
 }
 
 

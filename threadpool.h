@@ -25,15 +25,23 @@
 
 #include "queue.h"
 
+class ThreadPool;
+
 //
 //   Base task for Tasks
 //   run() should be overloaded and expensive calculations done there
 //
 class Task {
+	friend ThreadPool;
+private:
+	pthread_mutex_t task_mutex;
+	int refs;
+	void inc_ref();
+	void rel_ref();
 public:
-	Task() {}
-	virtual ~Task() {}
-	virtual void run() = 0;
+	Task();
+	virtual ~Task();
+	virtual void run(void *) = 0;
 };
 
 
@@ -41,7 +49,8 @@ class ThreadPool {
 private:
 	pthread_t *threads;
 	int numThreads;
-	Queue<Task *> workQueue;
+	Queue<const std::pair<Task *, void *>> workQueue;
+	static void *getWork(void * wq_);
 
 public:
 	// Allocate a thread pool and set them to work trying to get tasks
@@ -51,7 +60,7 @@ public:
 	~ThreadPool();
 
 	// Add a task
-	void addTask(Task *nt);
+	void addTask(Task *nt, void *param=NULL);
 
 	// Tell the tasks to finish and return
 	void finish();

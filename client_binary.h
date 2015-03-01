@@ -27,13 +27,16 @@
 
 #include "client_base.h"
 
+#include <unordered_map>
+
 //
 //   A single instance of a non-blocking Xapiand binary protocol handler
 //
 class BinaryClient : public BaseClient, public RemoteProtocol {
 private:
-	Database *database;
-	std::vector<std::string> dbpaths;
+	std::unordered_map<Xapian::Database *, Database *> databases;
+
+//	std::vector<std::string> dbpaths;
 
 	// Buffers that are pending write
 	std::string buffer;
@@ -52,6 +55,8 @@ public:
 
 	BinaryClient(ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	~BinaryClient();
+
+	void run(void *);
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_BINARY_H */

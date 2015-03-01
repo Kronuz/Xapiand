@@ -46,6 +46,8 @@ class HttpClient : public BaseClient {
 public:
 	HttpClient(ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	~HttpClient();
+
+	void run(void *);
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_HTTP_H */

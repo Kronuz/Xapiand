@@ -177,7 +177,7 @@ int main(int argc, char **argv)
 
 			for (int i = 0; i < tasks; i++) {
 				XapiandServer * server = new XapiandServer(NULL, http_sock, binary_sock, &database_pool, &thread_pool);
-				server_pool.addTask(server);
+				server_pool.addTask(server, (void *)0);
 			}
 			
 			loop.run();
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 			server_pool.join();
 		} else {
 			XapiandServer * server = new XapiandServer(&loop, http_sock, binary_sock, &database_pool, &thread_pool);
-			server->run();
+			server->run(NULL);
 			delete server;
 		}
 	}
