@@ -20,6 +20,8 @@
  * IN THE SOFTWARE.
  */
 
+#include <assert.h>
+
 #include "utils.h"
 
 #include "threadpool.h"
@@ -36,6 +38,7 @@ void Task::rel_ref()
 {
 	pthread_mutex_lock(&task_mutex);
 	refs--;
+	assert(refs >= 0);
 	if (refs == 0) {
 		pthread_mutex_unlock(&task_mutex);
 		delete this;
@@ -44,7 +47,7 @@ void Task::rel_ref()
 	}
 };
 
-Task::Task() : refs(1)
+Task::Task() : refs(0)
 {
 	pthread_mutex_init(&task_mutex, 0);
 }
