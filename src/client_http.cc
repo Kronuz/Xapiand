@@ -81,7 +81,10 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				} else {
 					LOG_HTTP_PROTO(this, "Error before: [%s]\n", cJSON_GetErrorPtr());
 					cJSON_AddStringToObject(response, "status", "ERROR");
-					cJSON_AddStringToObject(response, "message", cJSON_GetErrorPtr());
+					const char *message = cJSON_GetErrorPtr();
+					if (message) {
+						cJSON_AddStringToObject(response, "message", message);
+					}
 				}
 				cJSON_Delete(json);
 
