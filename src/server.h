@@ -33,7 +33,8 @@ class XapiandServer : public Task {
 private:
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
-	ev::sig sig;
+	ev::sig sigint;
+	ev::sig sigterm;
 	ev::async quit;
 
 	ev::io http_io;

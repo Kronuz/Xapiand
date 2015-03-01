@@ -66,7 +66,8 @@ public:
 
 class BaseClient {
 protected:
-	ev::sig sig;
+	ev::sig sigint;
+	ev::sig sigterm;
 	ev::io io_read;
 	ev::io io_write;
 
