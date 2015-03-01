@@ -160,7 +160,7 @@ int main(int argc, char **argv)
 	int http_sock = bind_http(http_port);
 	int binary_sock = bind_binary(binary_port);
 
-	int tasks = 0;
+	int tasks = 8;
 
 	if (http_sock != -1 && binary_sock != -1) {
 		signal(SIGHUP, SIG_IGN);
