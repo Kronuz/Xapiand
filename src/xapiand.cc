@@ -168,25 +168,26 @@ int main(int argc, char **argv)
 
 		LOG((void *)NULL, "Listening on %d (http), %d (xapian)...\n", http_port, binary_port);
 
+		DatabasePool database_pool;
+		ThreadPool thread_pool(10);
+
 		ev::default_loop loop;
 		if (tasks) {
-			ThreadPool *thread_pool = new ThreadPool(tasks);
+			ThreadPool server_pool(tasks);
 
 			for (int i = 0; i < tasks; i++) {
-				XapiandServer * server = new XapiandServer(NULL, http_sock, binary_sock);
-				thread_pool->addTask(server);
+				XapiandServer * server = new XapiandServer(NULL, http_sock, binary_sock, &database_pool, &thread_pool);
+				server_pool.addTask(server);
 			}
 			
 			loop.run();
 			
 			LOG_OBJ((void *)NULL, "Waiting for threads...\n");
 			
-			thread_pool->finish();
-			thread_pool->join();
-
-			delete thread_pool;
+			server_pool.finish();
+			server_pool.join();
 		} else {
-			XapiandServer * server = new XapiandServer(&loop, http_sock, binary_sock);
+			XapiandServer * server = new XapiandServer(&loop, http_sock, binary_sock, &database_pool, &thread_pool);
 			server->run();
 			delete server;
 		}
