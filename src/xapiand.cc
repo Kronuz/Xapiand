@@ -20,34 +20,33 @@
  * IN THE SOFTWARE.
  */
 
-#include <stdlib.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h> /* for TCP_NODELAY */
-#include <sys/socket.h>
-
 #include "utils.h"
 #include "config.h"
 #include "server.h"
 
 #include "xapiand.h"
 
-/* Check that tcp_backlog can be actually enforced in Linux according
- * to the value of /proc/sys/net/core/somaxconn, or warn about it. */
+#include <stdlib.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h> /* for TCP_NODELAY */
+#include <sys/socket.h>
+#include <sys/sysctl.h>
+
+
 void check_tcp_backlog(int tcp_backlog) {
-#ifdef HAVE_PROC_SOMAXCONN
-	FILE *fp = fopen("/proc/sys/net/core/somaxconn", "r");
-	char buf[1024];
-	if (!fp) return;
-	if (fgets(buf,sizeof(buf),fp) != NULL) {
-		int somaxconn = atoi(buf);
-		if (somaxconn > 0 && somaxconn < tcp_backlog) {
-			redisLog(REDIS_WARNING,"WARNING: The TCP backlog setting of %d cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of %d.", server.tcp_backlog, somaxconn);
-		}
+	int name[3] = {CTL_KERN, KERN_IPC, KIPC_SOMAXCONN};
+	int somaxconn = 0;
+	size_t somaxconn_len = sizeof(somaxconn);
+	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
+		LOG_CONN((void *)NULL, "ERROR: sysctl: %s\n", strerror(errno));
+		return;
 	}
-	fclose(fp);
-#endif
+	if (somaxconn > 0 && somaxconn < tcp_backlog) {
+		LOG_ERR((void *)NULL, "WARNING: The TCP backlog setting of %d cannot be enforced because kern.ipc.somaxconn is set to the lower value of %d.\n", tcp_backlog, somaxconn);
+	}
 }
+
 
 int bind_http(int http_port)
 {
