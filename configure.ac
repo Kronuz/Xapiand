@@ -21,10 +21,6 @@ if test -z "$XAPIAN_SRCDIR"; then
 	fi
 fi
 
-if test -e "/proc/sys/net/core/somaxconn"; then
-	AC_DEFINE(HAVE_PROC_SOMAXCONN, [], ["Has /proc/sys/net/core/somaxconn"])
-fi
-
 # Checks for programs.
 AC_PROG_CXX
 
