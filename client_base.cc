@@ -136,7 +136,7 @@ void BaseClient::io_update() {
 	}
 	
 	if (sock == -1) {
-		delete this;
+		rel_ref();
 	}
 
 }
@@ -244,6 +244,6 @@ void BaseClient::signal_cb(ev::sig &signal, int revents)
 	if (XapiandServer::shutdown_asap) {
 		LOG_EV(this, "Signaled destroy!!\n");
 		destroy();
-		delete this;
+		rel_ref();
 	}
 }
