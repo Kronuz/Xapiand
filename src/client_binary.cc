@@ -38,7 +38,7 @@ BinaryClient::BinaryClient(ev::loop_ref *loop, int sock_, DatabasePool *database
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  database(NULL)
 {
-	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, ++total_clients);
+	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, total_clients);
 
 	try {
 		msg_update(std::string());
@@ -55,7 +55,6 @@ BinaryClient::~BinaryClient()
 	if (database) {
 		database_pool->checkin(&database);
 	}
-	total_clients--;
 }
 
 

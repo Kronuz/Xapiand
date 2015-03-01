@@ -43,6 +43,7 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 
 time_t XapiandServer::shutdown = (time_t)0;
 time_t XapiandServer::shutdown_asap = (time_t)0;
+int XapiandServer::total_clients = 0;
 
 
 void XapiandServer::sig_shutdown_handler(int sig) {
@@ -174,10 +175,37 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 	}
 }
 
+void XapiandServer::destroy()
+{
+	if (http_sock == -1 && binary_sock == -1) {
+		return;
+	}
+
+	if (http_sock != -1) {
+		http_io.stop();
+		::close(http_sock);
+		http_sock = -1;
+	}
+
+	if (binary_sock != -1) {
+		binary_io.stop();
+		::close(binary_sock);
+		binary_sock = -1;
+	}
+
+	LOG_OBJ(this, "DESTROYED!\n");
+}
+
 
 void XapiandServer::signal_cb(ev::sig &signal, int revents)
 {
 	sig_shutdown_handler(signal.signum);
+	if (shutdown) {
+		destroy();
+		if (total_clients == 0) {
+			shutdown_asap = shutdown;
+		}
+	}
 	if (shutdown_asap) {
 		LOG_OBJ(this, "Breaking default loop!\n");
 		signal.loop.break_loop();

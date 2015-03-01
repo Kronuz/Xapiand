@@ -31,9 +31,6 @@
 const int WRITE_QUEUE_SIZE = -1;
 
 
-int BaseClient::total_clients = 0;
-
-
 BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, double active_timeout_, double idle_timeout_)
 	: io_read(*loop),
 	  io_write(*loop),
@@ -42,6 +39,8 @@ BaseClient::BaseClient(ev::loop_ref *loop, int sock_, DatabasePool *database_poo
 	  database_pool(database_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
 {
+	XapiandServer::total_clients++;
+
 	sigint.set<BaseClient, &BaseClient::signal_cb>(this);
 	sigint.start(SIGINT);
 	sigterm.set<BaseClient, &BaseClient::signal_cb>(this);
@@ -66,6 +65,12 @@ BaseClient::~BaseClient()
 		if (write_queue.pop(buffer)) {
 			delete buffer;
 		}
+	}
+
+	XapiandServer::total_clients--;
+
+	if (XapiandServer::total_clients == 0 && XapiandServer::shutdown) {
+		raise(SIGINT);
 	}
 
 	LOG_OBJ(this, "DELETED!\n");
