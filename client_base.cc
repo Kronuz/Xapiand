@@ -33,7 +33,7 @@ const int WRITE_QUEUE_SIZE = -1;
 
 BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: server(server_),
-	  iterator(server_->clients.end()),
+	  iterator(server_->attach_client(this)),
 	  io_read(*loop),
 	  io_write(*loop),
 	  async_write(*loop),
@@ -59,8 +59,6 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 
 	io_write.set<BaseClient, &BaseClient::io_cb>(this);
 	io_write.set(sock, ev::WRITE);
-
-	server->attach_client(this);
 }
 
 

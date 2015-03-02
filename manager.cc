@@ -240,12 +240,12 @@ void XapiandManager::shutdown_cb(ev::async &watcher, int revents)
 }
 
 
-void XapiandManager::attach_server(XapiandServer *server)
+std::list<XapiandServer *>::const_iterator XapiandManager::attach_server(XapiandServer *server)
 {
 	pthread_mutex_lock(&servers_mutex);
-	assert(server->iterator == servers.end());
-	server->iterator = servers.insert(servers.end(), server);
+	std::list<XapiandServer *>::const_iterator iterator = servers.insert(servers.end(), server);
 	pthread_mutex_unlock(&servers_mutex);
+	return iterator;
 }
 
 
