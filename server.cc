@@ -81,8 +81,8 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 
 XapiandServer::~XapiandServer()
 {
-	http_io.stop();
-	binary_io.stop();
+	destroy();
+
 	break_loop.stop();
 
 	pthread_mutex_destroy(&qmtx);
