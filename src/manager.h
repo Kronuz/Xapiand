@@ -36,6 +36,9 @@ class BaseClient;
 
 
 class XapiandManager {
+	ev::dynamic_loop dynamic_loop;
+	ev::loop_ref *loop;
+
 	int http_port, http_sock;
 	int binary_port, binary_sock;
 
@@ -61,12 +64,11 @@ protected:
 	std::list<XapiandServer *>servers;
 
 public:
-	static ev::default_loop default_loop;
 	time_t shutdown_asap = (time_t)0;
 	time_t shutdown_now = (time_t)0;
 	ev::async async_shutdown;
 
-	XapiandManager(int http_port_, int binary_port_);
+	XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_port_);
 	~XapiandManager();
 
 	void run(int num_servers);
