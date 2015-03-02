@@ -46,6 +46,9 @@ XapiandManager::XapiandManager(int http_port_, int binary_port_)
 {
 	pthread_mutex_init(&servers_mutex, 0);
 
+	break_loop.set<XapiandManager, &XapiandManager::break_loop_cb>(this);
+	break_loop.start();
+
 	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
 	async_shutdown.start();
 	
@@ -260,6 +263,12 @@ void XapiandManager::detach_server(XapiandServer *server)
 }
 
 
+void XapiandManager::break_loop_cb(ev::async &watcher, int revents)
+{
+	LOG_OBJ(this, "Breaking default loop!\n");
+	default_loop.break_loop();
+}
+
 void XapiandManager::shutdown()
 {
 	std::list<XapiandServer *>::const_iterator it(servers.begin());
@@ -274,7 +283,7 @@ void XapiandManager::shutdown()
 	}
 	if (shutdown_now) {
 		LOG_OBJ(this, "Breaking default loop!\n");
-		default_loop.break_loop();
+		break_loop.send();
 	}
 }
 
