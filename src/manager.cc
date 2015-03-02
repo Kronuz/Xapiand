@@ -237,17 +237,18 @@ void XapiandManager::shutdown_cb(ev::async &watcher, int revents)
 
 void XapiandManager::shutdown()
 {
+	std::list<XapiandServer *>::const_iterator it(servers.begin());
+	for (; it != servers.end(); it++) {
+		(*it)->shutdown();
+	}
 	if (shutdown_asap) {
+		destroy();
 		LOG_OBJ(this, "Finishing thread pool!\n");
 		thread_pool.finish();
 	}
 	if (shutdown_now) {
 		LOG_OBJ(this, "Breaking default loop!\n");
 		default_loop.break_loop();
-	}
-	std::list<XapiandServer *>::const_iterator it(servers.begin());
-	for (; it != servers.end(); it++) {
-		(*it)->shutdown();
 	}
 }
 
