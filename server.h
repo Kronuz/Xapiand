@@ -37,6 +37,9 @@ private:
 	ev::loop_ref *loop;
 	ev::async break_loop;
 
+	pthread_mutex_t qmtx;
+	pthread_mutexattr_t qmtx_attr;
+
 	ev::io http_io;
 	int http_sock;
 

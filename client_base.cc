@@ -92,17 +92,18 @@ BaseClient::~BaseClient()
 
 void BaseClient::destroy()
 {
+	close();
+	
+	pthread_mutex_lock(&qmtx);
 	if (sock == -1) {
+		pthread_mutex_unlock(&qmtx);
 		return;
 	}
 
-	close();
-	
 	// Stop and free watcher if client socket is closing
 	io_read.stop();
 	io_write.stop();
 	
-	pthread_mutex_lock(&qmtx);
 	::close(sock);
 	sock = -1;
 	pthread_mutex_unlock(&qmtx);

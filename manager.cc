@@ -44,10 +44,14 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_p
 	  http_port(http_port_),
 	  binary_port(binary_port_)
 {	
+	pthread_mutexattr_init(&qmtx_attr);
+	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&qmtx, &qmtx_attr);
+	
 	pthread_mutexattr_init(&servers_mutex_attr);
 	pthread_mutexattr_settype(&servers_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&servers_mutex, &servers_mutex_attr);
-
+	
 	break_loop.set<XapiandManager, &XapiandManager::break_loop_cb>(this);
 	break_loop.start();
 
@@ -66,6 +70,9 @@ XapiandManager::~XapiandManager()
 {
 	::close(http_sock);
 	::close(binary_sock);
+
+	pthread_mutex_destroy(&qmtx);
+	pthread_mutexattr_destroy(&qmtx_attr);
 
 	pthread_mutex_destroy(&servers_mutex);
 	pthread_mutexattr_destroy(&servers_mutex_attr);
@@ -135,7 +142,7 @@ void XapiandManager::bind_http()
 	
 	if (bind(http_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		LOG_ERR(this, "ERROR: http bind error (sock=%d): %s\n", http_sock, strerror(errno));
-		close(http_sock);
+		::close(http_sock);
 		http_sock = -1;
 	} else {
 		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
@@ -175,7 +182,7 @@ void XapiandManager::bind_binary()
 	
 	if (bind(binary_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		LOG_ERR(this, "ERROR: binary bind error (sock=%d): %s\n", binary_sock, strerror(errno));
-		close(binary_sock);
+		::close(binary_sock);
 		binary_sock = -1;
 	} else {
 		fcntl(binary_sock, F_SETFL, fcntl(binary_sock, F_GETFL, 0) | O_NONBLOCK);
@@ -223,7 +230,9 @@ void XapiandManager::sig_shutdown_handler(int sig)
 
 void XapiandManager::destroy()
 {
+	pthread_mutex_lock(&qmtx);
 	if (http_sock == -1 && binary_sock == -1) {
+		pthread_mutex_unlock(&qmtx);
 		return;
 	}
 	
@@ -236,7 +245,9 @@ void XapiandManager::destroy()
 		::close(binary_sock);
 		binary_sock = -1;
 	}
-	
+
+	pthread_mutex_unlock(&qmtx);
+
 	LOG_OBJ(this, "DESTROYED MANAGER!\n");
 }
 
@@ -276,6 +287,15 @@ void XapiandManager::break_loop_cb(ev::async &watcher, int revents)
 
 void XapiandManager::shutdown()
 {
+	if (shutdown_asap) {
+		destroy();
+		LOG_OBJ(this, "Finishing thread pool!\n");
+		thread_pool.finish();
+	}
+	if (shutdown_now) {
+		break_loop.send();
+	}
+
 	pthread_mutex_lock(&servers_mutex);
 	std::list<XapiandServer *>::const_iterator it(servers.begin());
 	while (it != servers.end()) {
@@ -286,15 +306,6 @@ void XapiandManager::shutdown()
 		it = servers.begin();
 	}
 	pthread_mutex_unlock(&servers_mutex);
-
-	if (shutdown_asap) {
-		destroy();
-		LOG_OBJ(this, "Finishing thread pool!\n");
-		thread_pool.finish();
-	}
-	if (shutdown_now) {
-		break_loop.send();
-	}
 }
 
 

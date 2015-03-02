@@ -39,6 +39,9 @@ class XapiandManager {
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
 
+	pthread_mutex_t qmtx;
+	pthread_mutexattr_t qmtx_attr;
+
 	int http_port, http_sock;
 	int binary_port, binary_sock;
 
