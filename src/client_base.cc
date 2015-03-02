@@ -80,14 +80,12 @@ BaseClient::~BaseClient()
 	pthread_mutex_unlock(&qmtx);
 
 	if (XapiandServer::total_clients == 0 && server->manager->shutdown_asap == 0) {
-		server->shutdown();
+		server->manager->async_shutdown.send();
 	}
 
 	pthread_mutex_destroy(&qmtx);
 
 	detach_client();
-
-	LOG_OBJ(this, "DELETED!\n");
 }
 
 
@@ -238,7 +236,7 @@ void BaseClient::write(const char *buf, size_t buf_size)
 	async_write.send();
 }
 
-void BaseClient::shutdown(int signum)
+void BaseClient::shutdown()
 {
 	if (server->manager->shutdown_now) {
 		LOG_EV(this, "Signaled destroy!!\n");

@@ -52,7 +52,7 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	  loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
 	  binary_io(*loop),
-	  async_shutdown(*loop),
+	  break_loop(*loop),
 	  http_sock(http_sock_),
 	  binary_sock(binary_sock_),
 	  database_pool(database_pool_),
@@ -60,8 +60,8 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 {
 	pthread_mutex_init(&clients_mutex, 0);
 
-	async_shutdown.set<XapiandServer, &XapiandServer::shutdown_cb>(this);
-	async_shutdown.start();
+	break_loop.set<XapiandServer, &XapiandServer::break_loop_cb>(this);
+	break_loop.start();
 
 	http_io.set<XapiandServer, &XapiandServer::io_accept_http>(this);
 	http_io.start(http_sock, ev::READ);
@@ -70,6 +70,7 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	binary_io.start(binary_sock, ev::READ);
 
 	attach_server();
+	LOG_OBJ(this, "CREATED SERVER!\n");
 }
 
 
@@ -77,11 +78,12 @@ XapiandServer::~XapiandServer()
 {
 	http_io.stop();
 	binary_io.stop();
-	async_shutdown.stop();
+	break_loop.stop();
 
 	pthread_mutex_destroy(&clients_mutex);
 
 	detach_server();
+	LOG_OBJ(this, "DELETED SERVER!\n");
 }
 
 
@@ -89,12 +91,6 @@ void XapiandServer::run(void *)
 {
 	LOG_OBJ(this, "Starting loop...\n");
 	loop->run(0);
-}
-
-void XapiandServer::shutdown_cb(ev::async &watcher, int revents)
-{
-	LOG_OBJ(this, "Breaking loop!\n");
-	loop->break_loop();
 }
 
 void XapiandServer::io_accept_http(ev::io &watcher, int revents)
@@ -170,7 +166,14 @@ void XapiandServer::destroy()
 }
 
 
-void XapiandServer::shutdown(int signum)
+void XapiandServer::break_loop_cb(ev::async &watcher, int revents)
+{
+	LOG_OBJ(this, "Breaking loop!\n");
+	loop->break_loop();
+}
+
+
+void XapiandServer::shutdown()
 {
 	if (manager->shutdown_asap) {
 		destroy();
@@ -179,7 +182,7 @@ void XapiandServer::shutdown(int signum)
 		}
 	}
 	if (manager->shutdown_now) {
-		async_shutdown.send();
+		break_loop.send();
 	}
 	std::list<BaseClient *>::const_iterator it(clients.begin());
 	for (; it != clients.end(); it++) {

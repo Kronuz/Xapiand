@@ -53,6 +53,7 @@ XapiandManager::XapiandManager(int http_port_, int binary_port_)
 	bind_binary();
 
 	assert(http_sock != -1 && binary_sock != -1);
+	LOG_OBJ(this, "CREATED MANAGER!\n");
 }
 
 
@@ -62,6 +63,7 @@ XapiandManager::~XapiandManager()
 	::close(binary_sock);
 
 	pthread_mutex_destroy(&servers_mutex);
+	LOG_OBJ(this, "DELETED MANAGER!\n");
 }
 
 
@@ -180,7 +182,7 @@ void XapiandManager::sig_shutdown_handler(int sig)
 	 * on disk. */
 	time_t now = time(NULL);
 	if (shutdown_now && sig != SIGTERM) {
-		if (shutdown_now + 1 < now) {
+		if (sig && shutdown_now + 1 < now) {
 			LOG(this, "You insist... exiting now.\n");
 			// remove pid file here, use: getpid();
 			exit(1); /* Exit with an error since this was not a clean shutdown. */
@@ -203,7 +205,7 @@ void XapiandManager::sig_shutdown_handler(int sig)
 				LOG(this, "Received shutdown signal, scheduling shutdown...\n");
 		};
 	}
-	shutdown(sig);
+	shutdown();
 }
 
 
@@ -213,40 +215,47 @@ void XapiandManager::shutdown_cb(ev::async &watcher, int revents)
 }
 
 
-void XapiandManager::shutdown(int signum)
+void XapiandManager::shutdown()
 {
+	if (shutdown_asap) {
+		LOG_OBJ(this, "Finishing thread pool!\n");
+		thread_pool.finish();
+	}
 	if (shutdown_now) {
 		LOG_OBJ(this, "Breaking default loop!\n");
 		default_loop.break_loop();
 	}
 	std::list<XapiandServer *>::const_iterator it(servers.begin());
 	for (; it != servers.end(); it++) {
-		(*it)->shutdown(signum);
+		(*it)->shutdown();
 	}
 }
+
+//
+//void XapiandManager::run()
+//{
+//	XapiandServer * server = new XapiandServer(this, &default_loop, http_sock, binary_sock, &database_pool, &thread_pool);
+//	server->run(NULL);
+//	delete server;
+//}
 
 
 void XapiandManager::run(int num_servers)
 {
 	LOG(this, "Listening on %d (http), %d (xapian)...\n", http_port, binary_port);
-	
-	if (num_servers) {
-		ThreadPool server_pool(num_servers);
-		
-		for (int i = 0; i < num_servers; i++) {
-			XapiandServer *server = new XapiandServer(this, NULL, http_sock, binary_sock, &database_pool, &thread_pool);
-			server_pool.addTask(server, (void *)0);
-		}
-		
-		default_loop.run();
-		
-		LOG_OBJ(this, "Waiting for threads...\n");
-		
-		server_pool.finish();
-		server_pool.join();
-	} else {
-		XapiandServer * server = new XapiandServer(this, &default_loop, http_sock, binary_sock, &database_pool, &thread_pool);
-		server->run(NULL);
-		delete server;
+
+	ThreadPool server_pool(num_servers);
+	for (int i = 0; i < num_servers; i++) {
+		XapiandServer *server = new XapiandServer(this, NULL, http_sock, binary_sock, &database_pool, &thread_pool);
+		server_pool.addTask(server, (void *)0);
 	}
+	
+	default_loop.run();
+	
+	LOG_OBJ(this, "Waiting for threads...\n");
+	
+	server_pool.finish();
+	server_pool.join();
+
+	LOG_OBJ(this, "Server ended!\n");
 }
