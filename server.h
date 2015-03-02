@@ -39,7 +39,7 @@ private:
 
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
-	ev::async async_shutdown;
+	ev::async break_loop;
 
 	ev::io http_io;
 	int http_sock;
@@ -57,7 +57,7 @@ private:
 	void io_accept_http(ev::io &watcher, int revents);
 	void io_accept_binary(ev::io &watcher, int revents);
 
-	void shutdown_cb(ev::async &watcher, int revents);
+	void break_loop_cb(ev::async &watcher, int revents);
 
 public:
 	XapiandManager *manager;
@@ -68,7 +68,7 @@ public:
 	~XapiandServer();
 	
 	void run(void *);
-	void shutdown(int signum=0);
+	void shutdown();
 
 	static int total_clients;
 };

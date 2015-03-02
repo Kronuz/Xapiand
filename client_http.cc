@@ -38,11 +38,13 @@ HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
 	LOG_CONN(this, "Got connection (sock=%d), %d http client(s) connected.\n", sock, XapiandServer::total_clients);
+	LOG_OBJ(this, "CREATED HTTP CLIENT!\n");
 }
 
 
 HttpClient::~HttpClient()
 {
+	LOG_OBJ(this, "DELETED HTTP CLIENT!\n");
 }
 
 
