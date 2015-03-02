@@ -146,8 +146,17 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 void XapiandServer::destroy()
 {
+	if (http_sock == -1 && binary_sock == -1) {
+		return;
+	}
+
+	http_sock = -1;
+	binary_sock = -1;
+
 	http_io.stop();
 	binary_io.stop();
+	
+	// http and binary sockets are closed in the manager.
 
 	LOG_OBJ(this, "DESTROYED SERVER!\n");
 }
