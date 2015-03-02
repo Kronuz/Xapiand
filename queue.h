@@ -35,6 +35,7 @@ class Queue : public std::queue<T> {
 private:
 	// A mutex object to control access to the std::queue
 	pthread_mutex_t qmtx;
+	pthread_mutexattr_t qmtx_attr;
 
 	// A variable condition to make threads wait on specified condition values
 	pthread_cond_t push_cond;
@@ -63,7 +64,10 @@ Queue<T>::Queue(size_t limit_)
 {
 	pthread_cond_init(&push_cond, 0);
 	pthread_cond_init(&pop_cond, 0);
-	pthread_mutex_init(&qmtx, 0);
+
+	pthread_mutexattr_init(&qmtx_attr);
+	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&qmtx, &qmtx_attr);
 }
 
 
@@ -72,6 +76,8 @@ Queue<T>::~Queue()
 {
 	finish();
 	pthread_mutex_destroy(&qmtx);
+	pthread_mutexattr_destroy(&qmtx_attr);
+
 	pthread_cond_destroy(&push_cond);
 	pthread_cond_destroy(&pop_cond);
 }

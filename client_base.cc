@@ -45,7 +45,9 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 {
 	inc_ref();
 
-	pthread_mutex_init(&qmtx, 0);
+	pthread_mutexattr_init(&qmtx_attr);
+	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&qmtx, &qmtx_attr);
 
 	pthread_mutex_lock(&qmtx);
 	XapiandServer::total_clients++;
@@ -82,6 +84,7 @@ BaseClient::~BaseClient()
 	}
 
 	pthread_mutex_destroy(&qmtx);
+	pthread_mutexattr_destroy(&qmtx_attr);
 
 	server->detach_client(this);
 }

@@ -43,8 +43,10 @@ XapiandManager::XapiandManager(int http_port_, int binary_port_)
 	: thread_pool(10),
 	  http_port(http_port_),
 	  binary_port(binary_port_)
-{
-	pthread_mutex_init(&servers_mutex, 0);
+{	
+	pthread_mutexattr_init(&servers_mutex_attr);
+	pthread_mutexattr_settype(&servers_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&servers_mutex, &servers_mutex_attr);
 
 	break_loop.set<XapiandManager, &XapiandManager::break_loop_cb>(this);
 	break_loop.start();
@@ -66,6 +68,8 @@ XapiandManager::~XapiandManager()
 	::close(binary_sock);
 
 	pthread_mutex_destroy(&servers_mutex);
+	pthread_mutexattr_destroy(&servers_mutex_attr);
+
 	LOG_OBJ(this, "DELETED MANAGER!\n");
 }
 

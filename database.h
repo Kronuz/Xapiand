@@ -71,6 +71,7 @@ private:
 	bool finished;
 	std::unordered_map<size_t, DatabaseQueue> databases;
 	pthread_mutex_t qmtx;
+	pthread_mutexattr_t qmtx_attr;
 	
 	// FIXME: Add cleanup for removing old dtabase queues
 	

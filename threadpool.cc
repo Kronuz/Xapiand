@@ -49,12 +49,15 @@ void Task::rel_ref()
 
 Task::Task() : refs(0)
 {
-	pthread_mutex_init(&task_mutex, 0);
+	pthread_mutexattr_init(&task_mutex_attr);
+	pthread_mutexattr_settype(&task_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&task_mutex, &task_mutex_attr);
 }
 
 Task::~Task()
 {
 	pthread_mutex_destroy(&task_mutex);
+	pthread_mutexattr_destroy(&task_mutex_attr);
 }
 
 

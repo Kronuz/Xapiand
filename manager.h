@@ -57,6 +57,7 @@ class XapiandManager {
 protected:
 	friend XapiandServer;
 	pthread_mutex_t servers_mutex;
+	pthread_mutexattr_t servers_mutex_attr;
 	std::list<XapiandServer *>servers;
 
 public:

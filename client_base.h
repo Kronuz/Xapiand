@@ -74,6 +74,7 @@ protected:
 	XapiandServer *server;
 
 	pthread_mutex_t qmtx;
+	pthread_mutexattr_t qmtx_attr;
 
 	ev::io io_read;
 	ev::io io_write;
