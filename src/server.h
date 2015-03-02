@@ -59,7 +59,7 @@ protected:
 	friend class BaseClient;
 	friend class XapiandManager;
 	std::list<XapiandServer *>::const_iterator iterator;
-	void attach_client(BaseClient *client);
+	std::list<BaseClient *>::const_iterator attach_client(BaseClient *client);
 	void detach_client(BaseClient *client);
 
 public:
