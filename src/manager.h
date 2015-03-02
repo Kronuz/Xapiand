@@ -46,6 +46,7 @@ class XapiandManager {
 	void shutdown_cb(ev::async &watcher, int revents);
 	void bind_http();
 	void bind_binary();
+	void destroy();
 
 protected:
 	friend XapiandServer;
