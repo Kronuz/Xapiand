@@ -33,6 +33,7 @@ const int WRITE_QUEUE_SIZE = -1;
 
 BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: server(server_),
+	  iterator(server_->clients.end()),
 	  io_read(*loop),
 	  io_write(*loop),
 	  async_write(*loop),
@@ -58,6 +59,8 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 
 	io_write.set<BaseClient, &BaseClient::io_cb>(this);
 	io_write.set(sock, ev::WRITE);
+
+	attach_client();
 }
 
 
@@ -76,11 +79,13 @@ BaseClient::~BaseClient()
 	XapiandServer::total_clients--;
 	pthread_mutex_unlock(&qmtx);
 
-	if (XapiandServer::total_clients == 0 && xapiand::shutdown == 0) {
+	if (XapiandServer::total_clients == 0 && server->manager->shutdown_asap == 0) {
 		server->shutdown();
 	}
 
 	pthread_mutex_destroy(&qmtx);
+
+	detach_client();
 
 	LOG_OBJ(this, "DELETED!\n");
 }
@@ -235,9 +240,28 @@ void BaseClient::write(const char *buf, size_t buf_size)
 
 void BaseClient::shutdown(int signum)
 {
-	if (xapiand::shutdown_asap) {
+	if (server->manager->shutdown_now) {
 		LOG_EV(this, "Signaled destroy!!\n");
 		destroy();
 		rel_ref();
 	}
+}
+
+void BaseClient::attach_client()
+{
+	pthread_mutex_lock(&server->clients_mutex);
+	assert(iterator == server->clients.end());
+	iterator = server->clients.insert(server->clients.end(), this);
+	pthread_mutex_unlock(&server->clients_mutex);
+}
+
+
+void BaseClient::detach_client()
+{
+	pthread_mutex_lock(&server->clients_mutex);
+	if (iterator != server->clients.end()) {
+		server->clients.erase(iterator);
+		iterator = server->clients.end();
+	}
+	pthread_mutex_unlock(&server->clients_mutex);
 }
