@@ -70,6 +70,7 @@ int main(int argc, char **argv)
 	LOG((void *)NULL, "Starting %s (%s).\n", PACKAGE_STRING, PACKAGE_BUGREPORT);
 
 	manager = new XapiandManager(http_port, binary_port);
+
 	manager->run(num_servers);
 
 	delete manager;
