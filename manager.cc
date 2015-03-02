@@ -68,9 +68,6 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_p
 
 XapiandManager::~XapiandManager()
 {
-	::close(http_sock);
-	::close(binary_sock);
-
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
 
