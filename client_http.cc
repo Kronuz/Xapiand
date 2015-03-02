@@ -115,7 +115,7 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				http_response += " 200 OK\r\n";
 				http_response += "Content-Type: application/json; charset=UTF-8\r\n";
 				http_response += "Content-Length: ";
-				sprintf(tmp, "%ld", content.size());
+				sprintf(tmp, "%ld", (unsigned long)content.size());
 				http_response += tmp;
 				http_response += "\r\n";
 				write(http_response + "\r\n" + content);

@@ -65,7 +65,7 @@ std::string repr(const char * p, size_t size)
 			sprintf(d, "%02x", (unsigned char)c);
 			d += 2;
 		}
-		// printf("%02x: %ld < %ld\n", (unsigned char)c, d - buff, size * 4 + 1);
+//		 printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 1));
 	}
 	*d = '\0';
 	std::string ret(buff);
