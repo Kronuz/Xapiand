@@ -77,7 +77,7 @@ BaseClient::~BaseClient()
 	XapiandServer::total_clients--;
 	pthread_mutex_unlock(&qmtx);
 
-	if (XapiandServer::total_clients == 0 && server->manager->shutdown_asap == 0) {
+	if (XapiandServer::total_clients == 0 && server->manager->shutdown_asap) {
 		server->manager->async_shutdown.send();
 	}
 
