@@ -71,11 +71,6 @@ void XapiandManager::check_tcp_backlog(int tcp_backlog)
 {
 #if defined(NET_CORE_SOMAXCONN)
 	int name[3] = {CTL_NET, NET_CORE, NET_CORE_SOMAXCONN};
-#elif defined(KIPC_SOMAXCONN)
-	int name[3] = {CTL_KERN, KERN_IPC, KIPC_SOMAXCONN};
-#else
-	return;
-#endif
 	int somaxconn;
 	size_t somaxconn_len = sizeof(somaxconn);
 	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
@@ -84,13 +79,23 @@ void XapiandManager::check_tcp_backlog(int tcp_backlog)
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
 		LOG_ERR(this, "WARNING: The TCP backlog setting of %d cannot be enforced because "
-#if defined(NET_CORE_SOMAXCONN)
 				"net.core.somaxconn"
-#elif defined(KIPC_SOMAXCONN)
-				"kern.ipc.somaxconn"
-#endif
 				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
 	}
+#elif defined(KIPC_SOMAXCONN)
+	int name[3] = {CTL_KERN, KERN_IPC, KIPC_SOMAXCONN};
+	int somaxconn;
+	size_t somaxconn_len = sizeof(somaxconn);
+	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
+		LOG_CONN(this, "ERROR: sysctl: %s\n", strerror(errno));
+		return;
+	}
+	if (somaxconn > 0 && somaxconn < tcp_backlog) {
+		LOG_ERR(this, "WARNING: The TCP backlog setting of %d cannot be enforced because "
+				"kern.ipc.somaxconn"
+				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
+	}
+#endif
 }
 
 
