@@ -209,6 +209,26 @@ void XapiandManager::sig_shutdown_handler(int sig)
 }
 
 
+void XapiandManager::destroy()
+{
+	if (http_sock == -1 && binary_sock == -1) {
+		return;
+	}
+	
+	if (http_sock != -1) {
+		::close(http_sock);
+		http_sock = -1;
+	}
+	
+	if (binary_sock != -1) {
+		::close(binary_sock);
+		binary_sock = -1;
+	}
+	
+	LOG_OBJ(this, "DESTROYED!\n");
+}
+
+
 void XapiandManager::shutdown_cb(ev::async &watcher, int revents)
 {
 	sig_shutdown_handler(0);

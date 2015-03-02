@@ -146,21 +146,8 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 void XapiandServer::destroy()
 {
-	if (http_sock == -1 && binary_sock == -1) {
-		return;
-	}
-
-	if (http_sock != -1) {
-		http_io.stop();
-		::close(http_sock);
-		http_sock = -1;
-	}
-
-	if (binary_sock != -1) {
-		binary_io.stop();
-		::close(binary_sock);
-		binary_sock = -1;
-	}
+	http_io.stop();
+	binary_io.stop();
 
 	LOG_OBJ(this, "DESTROYED!\n");
 }
