@@ -149,13 +149,13 @@ void XapiandServer::destroy()
 	http_io.stop();
 	binary_io.stop();
 
-	LOG_OBJ(this, "DESTROYED!\n");
+	LOG_OBJ(this, "DESTROYED SERVER!\n");
 }
 
 
 void XapiandServer::break_loop_cb(ev::async &watcher, int revents)
 {
-	LOG_OBJ(this, "Breaking loop!\n");
+	LOG_OBJ(this, "Breaking server loop!\n");
 	loop->break_loop();
 }
 

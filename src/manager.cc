@@ -225,7 +225,7 @@ void XapiandManager::destroy()
 		binary_sock = -1;
 	}
 	
-	LOG_OBJ(this, "DESTROYED!\n");
+	LOG_OBJ(this, "DESTROYED MANAGER!\n");
 }
 
 

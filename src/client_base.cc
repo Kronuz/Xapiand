@@ -106,7 +106,7 @@ void BaseClient::destroy()
 	sock = -1;
 	pthread_mutex_unlock(&qmtx);
 
-	LOG_OBJ(this, "DESTROYED!\n");
+	LOG_OBJ(this, "DESTROYED CLIENT!\n");
 }
 
 
@@ -116,7 +116,7 @@ void BaseClient::close() {
 	}
 
 	closed = true;
-	LOG_OBJ(this, "CLOSED!\n");
+	LOG_OBJ(this, "CLOSED CLIENT!\n");
 }
 
 
