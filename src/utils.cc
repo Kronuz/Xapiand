@@ -28,8 +28,7 @@
 #include "utils.h"
 
 
-bool qmtx_inited = false;
-pthread_mutex_t qmtx;
+pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 
 
 std::string repr(const std::string &string)
@@ -76,11 +75,6 @@ std::string repr(const char * p, size_t size)
 
 void log(void *obj, const char *format, ...)
 {
-	if (!qmtx_inited) {
-		pthread_mutex_init(&qmtx, 0);
-		qmtx_inited = true;
-	}
-
 	pthread_mutex_lock(&qmtx);
 
 	FILE * file = stderr;
