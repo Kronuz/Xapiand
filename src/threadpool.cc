@@ -97,7 +97,7 @@ void ThreadPool::join() {
 
 
 // Add a task
-void ThreadPool::addTask(Task *nt, void *param) {
+void ThreadPool::addTask(Task *nt) {
 	nt->inc_ref();
 	workQueue.push(nt);
 }
