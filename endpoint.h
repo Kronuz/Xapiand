@@ -94,12 +94,13 @@ public:
 		std::string in(uri);
 		std::string base;
 		char actualpath[PATH_MAX + 1];
-		if (base.empty()) {
-			getcwd(actualpath, PATH_MAX);
-			base.assign(actualpath);
+		if (base_.empty()) {
+			base = getcwd(actualpath, PATH_MAX);
 		} else {
 			base = base_;
 		}
+		normalize_path(base.c_str(), actualpath);
+		base = actualpath;
 		protocol = slice_before(in, "://");
 		if (protocol.empty()) {
 			protocol = "file";
