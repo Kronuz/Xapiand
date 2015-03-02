@@ -48,7 +48,7 @@ int XapiandServer::total_clients = 0;
 
 XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
 	: manager(manager_),
-	  iterator(manager_->attach_server(this)),
+	  iterator(manager->attach_server(this)),
 	  loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
 	  binary_io(*loop),

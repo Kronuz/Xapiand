@@ -66,12 +66,16 @@ public:
 
 
 class BaseClient : public Task {
+public:
+	XapiandServer *server;
+
+	BaseClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
+	virtual ~BaseClient();
 
 protected:
 	friend XapiandServer;
 	std::list<BaseClient *>::const_iterator iterator;
 
-	XapiandServer *server;
 
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
@@ -120,10 +124,6 @@ protected:
 	void close();
 	void destroy();
 	void shutdown();
-
-public:
-	BaseClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
-	virtual ~BaseClient();
 };
 
 

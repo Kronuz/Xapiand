@@ -55,26 +55,26 @@ private:
 
 	void break_loop_cb(ev::async &watcher, int revents);
 
+public:
+	XapiandManager *manager;
+	pthread_mutex_t clients_mutex;
+	pthread_mutexattr_t clients_mutex_attr;
+	std::list<BaseClient *>clients;
+	
+	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
+	~XapiandServer();
+	
+	void run();
+	void shutdown();
+	
+	static int total_clients;
+
 protected:
 	friend class BaseClient;
 	friend class XapiandManager;
 	std::list<XapiandServer *>::const_iterator iterator;
 	std::list<BaseClient *>::const_iterator attach_client(BaseClient *client);
 	void detach_client(BaseClient *client);
-
-public:
-	XapiandManager *manager;
-	pthread_mutex_t clients_mutex;
-	pthread_mutexattr_t clients_mutex_attr;
-	std::list<BaseClient *>clients;
-
-	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
-	~XapiandServer();
-	
-	void run();
-	void shutdown();
-
-	static int total_clients;
 };
 
 #endif /* XAPIAND_INCLUDED_SERVER_H */
