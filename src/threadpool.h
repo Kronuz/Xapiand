@@ -35,6 +35,7 @@ class Task {
 	friend ThreadPool;
 private:
 	pthread_mutex_t task_mutex;
+	pthread_mutexattr_t task_mutex_attr;
 	int refs;
 protected:
 	void inc_ref();
