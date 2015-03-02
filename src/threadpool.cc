@@ -60,11 +60,11 @@ Task::~Task()
 
 // Function that retrieves a task from a queue, runs it and deletes it
 void *ThreadPool::getWork(void * wq_=NULL) {
-	Queue<std::pair<Task *, void *>> *wq = (Queue<std::pair<Task *, void *>> *)wq_;
-	std::pair<Task *, void *>mw;
+	Queue<Task *> *wq = static_cast<Queue<Task *> *>(wq_);
+	Task *mw;
 	while (wq->pop(mw)) {
-		mw.first->run(mw.second);
-		mw.first->rel_ref();
+		mw->run();
+		mw->rel_ref();
 	}
 	return NULL;
 }
@@ -99,7 +99,7 @@ void ThreadPool::join() {
 // Add a task
 void ThreadPool::addTask(Task *nt, void *param) {
 	nt->inc_ref();
-	workQueue.push(std::make_pair(nt, param));
+	workQueue.push(nt);
 }
 
 
