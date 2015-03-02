@@ -60,7 +60,7 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	io_write.set<BaseClient, &BaseClient::io_cb>(this);
 	io_write.set(sock, ev::WRITE);
 
-	attach_client();
+	server->attach_client(this);
 }
 
 
@@ -85,7 +85,7 @@ BaseClient::~BaseClient()
 
 	pthread_mutex_destroy(&qmtx);
 
-	detach_client();
+	server->detach_client(this);
 }
 
 
@@ -243,23 +243,4 @@ void BaseClient::shutdown()
 		destroy();
 		rel_ref();
 	}
-}
-
-void BaseClient::attach_client()
-{
-	pthread_mutex_lock(&server->clients_mutex);
-	assert(iterator == server->clients.end());
-	iterator = server->clients.insert(server->clients.end(), this);
-	pthread_mutex_unlock(&server->clients_mutex);
-}
-
-
-void BaseClient::detach_client()
-{
-	pthread_mutex_lock(&server->clients_mutex);
-	if (iterator != server->clients.end()) {
-		server->clients.erase(iterator);
-		iterator = server->clients.end();
-	}
-	pthread_mutex_unlock(&server->clients_mutex);
 }

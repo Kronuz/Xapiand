@@ -240,11 +240,32 @@ void XapiandManager::shutdown_cb(ev::async &watcher, int revents)
 }
 
 
+void XapiandManager::attach_server(XapiandServer *server)
+{
+	pthread_mutex_lock(&servers_mutex);
+	assert(server->iterator == servers.end());
+	server->iterator = servers.insert(servers.end(), server);
+	pthread_mutex_unlock(&servers_mutex);
+}
+
+
+void XapiandManager::detach_server(XapiandServer *server)
+{
+	pthread_mutex_lock(&servers_mutex);
+	if (server->iterator != servers.end()) {
+		servers.erase(server->iterator);
+		server->iterator = servers.end();
+	}
+	pthread_mutex_unlock(&servers_mutex);
+}
+
+
 void XapiandManager::shutdown()
 {
 	std::list<XapiandServer *>::const_iterator it(servers.begin());
-	for (; it != servers.end(); it++) {
+	while (it != servers.end()) {
 		(*it)->shutdown();
+		it = servers.begin();
 	}
 	if (shutdown_asap) {
 		destroy();
@@ -256,6 +277,7 @@ void XapiandManager::shutdown()
 		default_loop.break_loop();
 	}
 }
+
 
 //
 //void XapiandManager::run()
