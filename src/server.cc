@@ -198,10 +198,10 @@ void XapiandServer::shutdown()
 	}
 
 	if (manager->shutdown_asap) {
-		destroy();
 		if (total_clients == 0) {
 			manager->shutdown_now = manager->shutdown_asap;
 		}
+		destroy();
 	}
 	if (manager->shutdown_now) {
 		break_loop.send();
