@@ -69,7 +69,7 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	binary_io.set<XapiandServer, &XapiandServer::io_accept_binary>(this);
 	binary_io.start(binary_sock, ev::READ);
 
-	attach_server();
+	manager->attach_server(this);
 	LOG_OBJ(this, "CREATED SERVER!\n");
 }
 
@@ -82,7 +82,7 @@ XapiandServer::~XapiandServer()
 
 	pthread_mutex_destroy(&clients_mutex);
 
-	detach_server();
+	manager->detach_server(this);
 	LOG_OBJ(this, "DELETED SERVER!\n");
 }
 
@@ -160,12 +160,34 @@ void XapiandServer::break_loop_cb(ev::async &watcher, int revents)
 }
 
 
+void XapiandServer::attach_client(BaseClient *client)
+{
+	pthread_mutex_lock(&clients_mutex);
+	assert(client->iterator == clients.end());
+	client->iterator = clients.insert(clients.end(), client);
+	pthread_mutex_unlock(&clients_mutex);
+}
+
+
+void XapiandServer::detach_client(BaseClient *client)
+{
+	pthread_mutex_lock(&clients_mutex);
+	if (client->iterator != clients.end()) {
+		clients.erase(client->iterator);
+		client->iterator = clients.end();
+	}
+	pthread_mutex_unlock(&clients_mutex);
+}
+
+
 void XapiandServer::shutdown()
 {
 	std::list<BaseClient *>::const_iterator it(clients.begin());
-	for (; it != clients.end(); it++) {
+	while (it != clients.end()) {
 		(*it)->shutdown();
+		it = clients.begin();
 	}
+
 	if (manager->shutdown_asap) {
 		destroy();
 		if (total_clients == 0) {
@@ -175,24 +197,4 @@ void XapiandServer::shutdown()
 	if (manager->shutdown_now) {
 		break_loop.send();
 	}
-}
-
-
-void XapiandServer::attach_server()
-{
-	pthread_mutex_lock(&manager->servers_mutex);
-	assert(iterator == manager->servers.end());
-	iterator = manager->servers.insert(manager->servers.end(), this);
-	pthread_mutex_unlock(&manager->servers_mutex);
-}
-
-
-void XapiandServer::detach_server()
-{
-	pthread_mutex_lock(&manager->servers_mutex);
-	if (iterator != manager->servers.end()) {
-		manager->servers.erase(iterator);
-		iterator = manager->servers.end();
-	}
-	pthread_mutex_unlock(&manager->servers_mutex);
 }
