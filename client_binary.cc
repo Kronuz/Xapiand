@@ -35,7 +35,8 @@
 
 BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
-	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true)
+	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
+	  started(false)
 {
 	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, XapiandServer::total_clients);
 
@@ -181,12 +182,13 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 }
 
 
-void BinaryClient::run(void *param)
+void BinaryClient::run()
 {
 	try {
-		if (param) {
+		if (started) {
 			run_one();
 		} else {
+			started = true;
 			msg_update(std::string());
 		}
 	} catch (const Xapian::NetworkError &e) {

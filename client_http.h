@@ -47,7 +47,7 @@ public:
 	HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	~HttpClient();
 
-	void run(void *);
+	void run();
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_HTTP_H */

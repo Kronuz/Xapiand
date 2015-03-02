@@ -67,7 +67,7 @@ public:
 	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
 	~XapiandServer();
 	
-	void run(void *);
+	void run();
 	void shutdown();
 
 	static int total_clients;

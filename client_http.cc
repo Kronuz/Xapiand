@@ -187,6 +187,6 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 }
 
 
-void HttpClient::run(void *)
+void HttpClient::run()
 {
 }

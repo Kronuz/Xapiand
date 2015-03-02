@@ -87,7 +87,7 @@ XapiandServer::~XapiandServer()
 }
 
 
-void XapiandServer::run(void *)
+void XapiandServer::run()
 {
 	LOG_OBJ(this, "Starting loop...\n");
 	loop->run(0);
