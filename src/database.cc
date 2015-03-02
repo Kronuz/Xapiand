@@ -91,14 +91,18 @@ DatabaseQueue::~DatabaseQueue()
 DatabasePool::DatabasePool()
 	: finished(false)
 {
-	pthread_mutex_init(&qmtx, 0);
+	pthread_mutexattr_init(&qmtx_attr);
+	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&qmtx, &qmtx_attr);
 }
 
 
 DatabasePool::~DatabasePool()
 {
 	finish();
+
 	pthread_mutex_destroy(&qmtx);
+	pthread_mutexattr_destroy(&qmtx_attr);
 }
 
 

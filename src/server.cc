@@ -58,7 +58,9 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	  database_pool(database_pool_),
 	  thread_pool(thread_pool_)
 {
-	pthread_mutex_init(&clients_mutex, 0);
+	pthread_mutexattr_init(&clients_mutex_attr);
+	pthread_mutexattr_settype(&clients_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&clients_mutex, &clients_mutex_attr);
 
 	break_loop.set<XapiandServer, &XapiandServer::break_loop_cb>(this);
 	break_loop.start();
@@ -80,6 +82,7 @@ XapiandServer::~XapiandServer()
 	break_loop.stop();
 
 	pthread_mutex_destroy(&clients_mutex);
+	pthread_mutexattr_destroy(&clients_mutex_attr);
 
 	manager->detach_server(this);
 	LOG_OBJ(this, "DELETED SERVER!\n");
