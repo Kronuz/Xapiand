@@ -20,57 +20,51 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_SERVER_H
-#define XAPIAND_INCLUDED_SERVER_H
+#ifndef XAPIAND_INCLUDED_MANAGER_H
+#define XAPIAND_INCLUDED_MANAGER_H
 
-#include <ev++.h>
-#include <list>
-
-#include "threadpool.h"
 #include "database.h"
-#include "manager.h"
+#include "threadpool.h"
+
+#include <list>
+#include <ev++.h>
+#include <pthread.h>
 
 
-class XapiandServer : public Task {
-private:
-	std::list<XapiandServer *>::const_iterator iterator;
-	void attach_server();
-	void detach_server();
+class XapiandServer;
+class BaseClient;
 
-	ev::dynamic_loop dynamic_loop;
-	ev::loop_ref *loop;
-	ev::async async_shutdown;
 
-	ev::io http_io;
-	int http_sock;
+class XapiandManager {
+	int http_port, http_sock;
+	int binary_port, binary_sock;
 
-	ev::io binary_io;
-	int binary_sock;
+	DatabasePool database_pool;
+	ThreadPool thread_pool;
 
-	DatabasePool *database_pool;
-	ThreadPool *thread_pool;
-
-	void destroy();
+	void check_tcp_backlog(int tcp_backlog);
+	void shutdown_cb(ev::async &watcher, int revents);
 	void bind_http();
 	void bind_binary();
 
-	void io_accept_http(ev::io &watcher, int revents);
-	void io_accept_binary(ev::io &watcher, int revents);
-
-	void shutdown_cb(ev::async &watcher, int revents);
+protected:
+	friend XapiandServer;
+	pthread_mutex_t servers_mutex;
+	std::list<XapiandServer *>servers;
 
 public:
-	XapiandManager *manager;
-	pthread_mutex_t clients_mutex;
-	std::list<BaseClient *>clients;
+	static ev::default_loop default_loop;
+	time_t shutdown_asap = (time_t)0;
+	time_t shutdown_now = (time_t)0;
+	ev::async async_shutdown;
 
-	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
-	~XapiandServer();
-	
-	void run(void *);
-	void shutdown(int signum=0);
+	XapiandManager(int http_port_, int binary_port_);
+	~XapiandManager();
 
-	static int total_clients;
+	void run(int num_servers);
+	void sig_shutdown_handler(int sig);
+	void shutdown(int signum);
 };
 
-#endif /* XAPIAND_INCLUDED_SERVER_H */
+
+#endif /* XAPIAND_INCLUDED_MANAGER_H */

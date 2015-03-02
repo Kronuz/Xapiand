@@ -19,7 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#include <ev++.h>
+
+#include "config.h"
 
 #ifndef XAPIAND_INCLUDED_XAPIAND_H
 #define XAPIAND_INCLUDED_XAPIAND_H
@@ -34,11 +35,5 @@
 #else
 #define XAPIAND_TCP_BACKLOG       511     /* TCP listen backlog */
 #endif
-
-namespace xapiand {
-	extern time_t shutdown;
-	extern time_t shutdown_asap;
-	extern ev::async async_shutdown;
-}
 
 #endif /* XAPIAND_INCLUDED_XAPIAND_H */

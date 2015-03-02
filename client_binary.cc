@@ -126,7 +126,7 @@ void BinaryClient::send_message(reply_type type, const std::string &message, dou
 
 void BinaryClient::shutdown()
 {
-	xapiand::async_shutdown.send();
+	server->manager->async_shutdown.send();
 }
 
 

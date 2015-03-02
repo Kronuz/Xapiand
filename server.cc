@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <assert.h>
 
 #include <xapian.h>
 
@@ -45,8 +46,10 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 int XapiandServer::total_clients = 0;
 
 
-XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
-	: loop(loop_ ? loop_: &dynamic_loop),
+XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
+	: manager(manager_),
+	  iterator(manager_->servers.end()),
+	  loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
 	  binary_io(*loop),
 	  async_shutdown(*loop),
@@ -55,6 +58,8 @@ XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_soc
 	  database_pool(database_pool_),
 	  thread_pool(thread_pool_)
 {
+	pthread_mutex_init(&clients_mutex, 0);
+
 	async_shutdown.set<XapiandServer, &XapiandServer::shutdown_cb>(this);
 	async_shutdown.start();
 
@@ -63,6 +68,8 @@ XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_soc
 
 	binary_io.set<XapiandServer, &XapiandServer::io_accept_binary>(this);
 	binary_io.start(binary_sock, ev::READ);
+
+	attach_server();
 }
 
 
@@ -71,6 +78,10 @@ XapiandServer::~XapiandServer()
 	http_io.stop();
 	binary_io.stop();
 	async_shutdown.stop();
+
+	pthread_mutex_destroy(&clients_mutex);
+
+	detach_server();
 }
 
 
@@ -107,8 +118,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		BaseClient *client = new HttpClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
-		clients.insert(client);
+		new HttpClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
 	}
 }
 
@@ -134,8 +144,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		BaseClient *client = new BinaryClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
-		clients.insert(client);
+		new BinaryClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
 	}
 }
 
@@ -163,17 +172,37 @@ void XapiandServer::destroy()
 
 void XapiandServer::shutdown(int signum)
 {
-	if (xapiand::shutdown) {
+	if (manager->shutdown_asap) {
 		destroy();
 		if (total_clients == 0) {
-			xapiand::shutdown_asap = xapiand::shutdown;
+			manager->shutdown_now = manager->shutdown_asap;
 		}
 	}
-	if (xapiand::shutdown_asap) {
+	if (manager->shutdown_now) {
 		async_shutdown.send();
 	}
-	std::unordered_set<BaseClient *>::const_iterator it(clients.begin());
+	std::list<BaseClient *>::const_iterator it(clients.begin());
 	for (; it != clients.end(); it++) {
 		(*it)->shutdown();
 	}
+}
+
+
+void XapiandServer::attach_server()
+{
+	pthread_mutex_lock(&manager->servers_mutex);
+	assert(iterator == manager->servers.end());
+	iterator = manager->servers.insert(manager->servers.end(), this);
+	pthread_mutex_unlock(&manager->servers_mutex);
+}
+
+
+void XapiandServer::detach_server()
+{
+	pthread_mutex_lock(&manager->servers_mutex);
+	if (iterator != manager->servers.end()) {
+		manager->servers.erase(iterator);
+		iterator = manager->servers.end();
+	}
+	pthread_mutex_unlock(&manager->servers_mutex);
 }

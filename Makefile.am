@@ -3,6 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 bin_PROGRAMS = xapiand
 xapiand_SOURCES = xapiand.cc \
 	database.cc \
+	manager.cc \
 	server.cc \
 	threadpool.cc \
 	client_base.cc \
@@ -17,6 +18,7 @@ noinst_HEADERS = xapiand.h \
 	queue.h \
 	endpoint.h \
 	database.h \
+	manager.h \
 	server.h \
 	threadpool.h \
 	client_base.h \

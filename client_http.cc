@@ -56,7 +56,7 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				//					LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
 				//					LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
 				if (path == "/quit") {
-					xapiand::async_shutdown.send();
+					server->manager->async_shutdown.send();
 					return;
 				}
 
@@ -105,6 +105,7 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				free(out);
 				
 				char tmp[20];
+				content += "\r\n";
 				std::string http_response;
 				http_response += "HTTP/";
 				sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
