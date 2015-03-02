@@ -117,7 +117,7 @@ protected:
 	
 	void close();
 	void destroy();
-	void shutdown(int signum=0);
+	void shutdown();
 
 public:
 	XapiandServer *server;
