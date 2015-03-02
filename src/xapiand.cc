@@ -54,6 +54,18 @@ void setup_signal_handlers(void) {
 }
 
 
+void run(int num_servers, int http_port, int binary_port)
+{
+	ev::default_loop default_loop;
+	
+	setup_signal_handlers();
+	
+	XapiandManager manager(&default_loop, http_port, binary_port);
+	
+	manager.run(num_servers);
+	
+}
+
 int main(int argc, char **argv)
 {
 	int num_servers = 8;
@@ -65,15 +77,8 @@ int main(int argc, char **argv)
 		binary_port = atoi(argv[2]);
 	}
 
-	setup_signal_handlers();
-
 	LOG((void *)NULL, "Starting %s (%s).\n", PACKAGE_STRING, PACKAGE_BUGREPORT);
-
-	manager = new XapiandManager(http_port, binary_port);
-
-	manager->run(num_servers);
-
-	delete manager;
+	run(num_servers, http_port, binary_port);
 	LOG((void *)NULL, "Done with all work!\n");
 
 	return 0;

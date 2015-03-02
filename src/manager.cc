@@ -36,11 +36,11 @@
 #include <sys/socket.h>
 
 
-ev::default_loop XapiandManager::default_loop;
-
-
-XapiandManager::XapiandManager(int http_port_, int binary_port_)
-	: thread_pool(10),
+XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_port_)
+	: loop(loop_ ? loop_: &dynamic_loop),
+	  break_loop(*loop),
+	  async_shutdown(*loop),
+	  thread_pool(10),
 	  http_port(http_port_),
 	  binary_port(binary_port_)
 {	
@@ -269,8 +269,8 @@ void XapiandManager::detach_server(XapiandServer *server)
 
 void XapiandManager::break_loop_cb(ev::async &watcher, int revents)
 {
-	LOG_OBJ(this, "Breaking default loop!\n");
-	default_loop.break_loop();
+	LOG_OBJ(this, "Breaking manager loop!\n");
+	loop->break_loop();
 }
 
 
@@ -293,7 +293,6 @@ void XapiandManager::shutdown()
 		thread_pool.finish();
 	}
 	if (shutdown_now) {
-		LOG_OBJ(this, "Breaking default loop!\n");
 		break_loop.send();
 	}
 }
@@ -302,7 +301,7 @@ void XapiandManager::shutdown()
 //
 //void XapiandManager::run()
 //{
-//	XapiandServer * server = new XapiandServer(this, &default_loop, http_sock, binary_sock, &database_pool, &thread_pool);
+//	XapiandServer * server = new XapiandServer(this, loop, http_sock, binary_sock, &database_pool, &thread_pool);
 //	server->run(NULL);
 //	delete server;
 //}
@@ -319,7 +318,7 @@ void XapiandManager::run(int num_servers)
 	}
 	
 	LOG_OBJ(this, "Starting manager loop...\n");
-	default_loop.run();
+	loop->run();
 	LOG_OBJ(this, "Manager loop ended!\n");
 	
 	LOG_OBJ(this, "Waiting for threads...\n");
