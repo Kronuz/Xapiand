@@ -61,7 +61,7 @@ public:
 	~ThreadPool();
 
 	// Add a task
-	void addTask(Task *nt, void *param=NULL);
+	void addTask(Task *nt);
 
 	// Tell the tasks to finish and return
 	void finish();
