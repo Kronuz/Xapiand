@@ -162,6 +162,10 @@ void XapiandServer::break_loop_cb(ev::async &watcher, int revents)
 
 void XapiandServer::shutdown()
 {
+	std::list<BaseClient *>::const_iterator it(clients.begin());
+	for (; it != clients.end(); it++) {
+		(*it)->shutdown();
+	}
 	if (manager->shutdown_asap) {
 		destroy();
 		if (total_clients == 0) {
@@ -170,10 +174,6 @@ void XapiandServer::shutdown()
 	}
 	if (manager->shutdown_now) {
 		break_loop.send();
-	}
-	std::list<BaseClient *>::const_iterator it(clients.begin());
-	for (; it != clients.end(); it++) {
-		(*it)->shutdown();
 	}
 }
 
