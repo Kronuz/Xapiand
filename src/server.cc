@@ -48,7 +48,7 @@ int XapiandServer::total_clients = 0;
 
 XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
 	: manager(manager_),
-	  iterator(manager_->servers.end()),
+	  iterator(manager_->attach_server(this)),
 	  loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
 	  binary_io(*loop),
@@ -69,7 +69,6 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	binary_io.set<XapiandServer, &XapiandServer::io_accept_binary>(this);
 	binary_io.start(binary_sock, ev::READ);
 
-	manager->attach_server(this);
 	LOG_OBJ(this, "CREATED SERVER!\n");
 }
 
@@ -160,12 +159,12 @@ void XapiandServer::break_loop_cb(ev::async &watcher, int revents)
 }
 
 
-void XapiandServer::attach_client(BaseClient *client)
+std::list<BaseClient *>::const_iterator XapiandServer::attach_client(BaseClient *client)
 {
 	pthread_mutex_lock(&clients_mutex);
-	assert(client->iterator == clients.end());
-	client->iterator = clients.insert(clients.end(), client);
+	std::list<BaseClient *>::const_iterator iterator = clients.insert(clients.end(), client);
 	pthread_mutex_unlock(&clients_mutex);
+	return iterator;
 }
 
 
