@@ -307,7 +307,9 @@ void XapiandManager::run(int num_servers)
 		server_pool.addTask(server);
 	}
 	
+	LOG_OBJ(this, "Starting manager loop...\n");
 	default_loop.run();
+	LOG_OBJ(this, "Manager loop ended!\n");
 	
 	LOG_OBJ(this, "Waiting for threads...\n");
 	

@@ -88,8 +88,9 @@ XapiandServer::~XapiandServer()
 
 void XapiandServer::run()
 {
-	LOG_OBJ(this, "Starting loop...\n");
+	LOG_OBJ(this, "Starting server loop...\n");
 	loop->run(0);
+	LOG_OBJ(this, "Server loop ended!\n");
 }
 
 void XapiandServer::io_accept_http(ev::io &watcher, int revents)
