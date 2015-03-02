@@ -42,6 +42,9 @@ class XapiandManager {
 	DatabasePool database_pool;
 	ThreadPool thread_pool;
 
+	ev::async break_loop;
+	void break_loop_cb(ev::async &watcher, int revents);
+
 	void check_tcp_backlog(int tcp_backlog);
 	void shutdown_cb(ev::async &watcher, int revents);
 	void bind_http();
