@@ -34,9 +34,9 @@
 //
 class BinaryClient : public BaseClient, public RemoteProtocol {
 private:
-	std::unordered_map<Xapian::Database *, Database *> databases;
+	bool started;
 
-//	std::vector<std::string> dbpaths;
+	std::unordered_map<Xapian::Database *, Database *> databases;
 
 	// Buffers that are pending write
 	std::string buffer;
@@ -57,7 +57,7 @@ public:
 	BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	~BinaryClient();
 
-	void run(void *);
+	void run();
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_BINARY_H */

@@ -42,7 +42,7 @@ protected:
 public:
 	Task();
 	virtual ~Task();
-	virtual void run(void *) = 0;
+	virtual void run() = 0;
 };
 
 
@@ -50,7 +50,7 @@ class ThreadPool {
 private:
 	pthread_t *threads;
 	int numThreads;
-	Queue<const std::pair<Task *, void *>> workQueue;
+	Queue<Task *> workQueue;
 	static void *getWork(void * wq_);
 
 public:
