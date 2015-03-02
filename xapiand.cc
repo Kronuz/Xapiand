@@ -27,13 +27,13 @@
 #include <stdlib.h>
 
 
-XapiandManager *manager = NULL;
+XapiandManager *manager_ptr = NULL;
 
 
 static void sig_shutdown_handler(int sig)
 {
-	if (manager) {
-		manager->sig_shutdown_handler(sig);
+	if (manager_ptr) {
+		manager_ptr->sig_shutdown_handler(sig);
 	}
 }
 
@@ -61,9 +61,12 @@ void run(int num_servers, int http_port, int binary_port)
 	setup_signal_handlers();
 	
 	XapiandManager manager(&default_loop, http_port, binary_port);
+
+	manager_ptr = &manager;
 	
 	manager.run(num_servers);
 	
+	manager_ptr = NULL;
 }
 
 int main(int argc, char **argv)
