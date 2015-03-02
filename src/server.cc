@@ -58,6 +58,10 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	  database_pool(database_pool_),
 	  thread_pool(thread_pool_)
 {
+	pthread_mutexattr_init(&qmtx_attr);
+	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&qmtx, &qmtx_attr);
+
 	pthread_mutexattr_init(&clients_mutex_attr);
 	pthread_mutexattr_settype(&clients_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&clients_mutex, &clients_mutex_attr);
@@ -81,9 +85,12 @@ XapiandServer::~XapiandServer()
 	binary_io.stop();
 	break_loop.stop();
 
+	pthread_mutex_destroy(&qmtx);
+	pthread_mutexattr_destroy(&qmtx_attr);
+	
 	pthread_mutex_destroy(&clients_mutex);
 	pthread_mutexattr_destroy(&clients_mutex_attr);
-
+	
 	manager->detach_server(this);
 	LOG_OBJ(this, "DELETED SERVER!\n");
 }
@@ -148,8 +155,10 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 }
 
 void XapiandServer::destroy()
-{
+{	
+	pthread_mutex_lock(&qmtx);
 	if (http_sock == -1 && binary_sock == -1) {
+		pthread_mutex_unlock(&qmtx);
 		return;
 	}
 
@@ -158,7 +167,9 @@ void XapiandServer::destroy()
 
 	http_io.stop();
 	binary_io.stop();
-	
+
+	pthread_mutex_unlock(&qmtx);
+
 	// http and binary sockets are closed in the manager.
 
 	LOG_OBJ(this, "DESTROYED SERVER!\n");
@@ -194,6 +205,16 @@ void XapiandServer::detach_client(BaseClient *client)
 
 void XapiandServer::shutdown()
 {
+	if (manager->shutdown_asap) {
+		if (total_clients == 0) {
+			manager->shutdown_now = manager->shutdown_asap;
+		}
+		destroy();
+	}
+	if (manager->shutdown_now) {
+		break_loop.send();
+	}
+
 	pthread_mutex_lock(&clients_mutex);
 	std::list<BaseClient *>::const_iterator it(clients.begin());
 	while (it != clients.end()) {
@@ -204,14 +225,4 @@ void XapiandServer::shutdown()
 		it = clients.begin();
 	}
 	pthread_mutex_unlock(&clients_mutex);
-
-	if (manager->shutdown_asap) {
-		if (total_clients == 0) {
-			manager->shutdown_now = manager->shutdown_asap;
-		}
-		destroy();
-	}
-	if (manager->shutdown_now) {
-		break_loop.send();
-	}
 }
