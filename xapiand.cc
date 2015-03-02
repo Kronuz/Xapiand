@@ -172,15 +172,14 @@ void sig_shutdown_handler(int sig) {
 	 * If we receive the signal the second time, we interpret this as
 	 * the user really wanting to quit ASAP without waiting to persist
 	 * on disk. */
-	if (!sig) sig = SIGINT;
 	time_t now = time(NULL);
-	if (xapiand::shutdown_asap && sig == SIGINT) {
+	if (xapiand::shutdown_asap && sig != SIGTERM) {
 		if (xapiand::shutdown_asap + 1 < now) {
 			LOG((void *)NULL, "You insist... exiting now.\n");
 			// remove pid file here, use: getpid();
 			exit(1); /* Exit with an error since this was not a clean shutdown. */
 		}
-	} else if (xapiand::shutdown && sig == SIGINT) {
+	} else if (xapiand::shutdown && sig != SIGTERM) {
 		if (xapiand::shutdown + 1 < now) {
 			xapiand::shutdown_asap = now;
 			LOG((void *)NULL, "Trying immediate shutdown.\n");
