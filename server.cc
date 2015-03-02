@@ -45,12 +45,11 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 int XapiandServer::total_clients = 0;
 
 
-XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, ev::async *main_async_shutdown_)
+XapiandServer::XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
 	  binary_io(*loop),
 	  async_shutdown(*loop),
-	  main_async_shutdown(main_async_shutdown_),
 	  http_sock(http_sock_),
 	  binary_sock(binary_sock_),
 	  database_pool(database_pool_),
@@ -164,10 +163,6 @@ void XapiandServer::destroy()
 
 void XapiandServer::shutdown(int signum)
 {
-	if (!signum) {
-		main_async_shutdown->send();
-		return;
-	}
 	if (xapiand::shutdown) {
 		destroy();
 		if (total_clients == 0) {

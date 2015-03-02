@@ -19,6 +19,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
+#include <ev++.h>
 
 #ifndef XAPIAND_INCLUDED_XAPIAND_H
 #define XAPIAND_INCLUDED_XAPIAND_H
@@ -37,6 +38,7 @@
 namespace xapiand {
 	extern time_t shutdown;
 	extern time_t shutdown_asap;
+	extern ev::async async_shutdown;
 }
 
 #endif /* XAPIAND_INCLUDED_XAPIAND_H */

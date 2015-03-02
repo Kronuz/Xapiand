@@ -22,6 +22,7 @@
 
 #include <sys/socket.h>
 
+#include "xapiand.h"
 #include "utils.h"
 #include "cJSON.h"
 
@@ -55,7 +56,7 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 				//					LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
 				//					LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
 				if (path == "/quit") {
-					server->shutdown();
+					xapiand::async_shutdown.send();
 					return;
 				}
 

@@ -39,7 +39,6 @@ private:
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
 	ev::async async_shutdown;
-	ev::async *main_async_shutdown;
 
 	ev::io http_io;
 	int http_sock;
@@ -60,7 +59,7 @@ private:
 	void shutdown_cb(ev::async &watcher, int revents);
 
 public:
-	XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, ev::async *main_quit_);
+	XapiandServer(ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
 	~XapiandServer();
 	
 	void run(void *);

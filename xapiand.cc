@@ -37,6 +37,7 @@
 
 time_t xapiand::shutdown = (time_t)0;
 time_t xapiand::shutdown_asap = (time_t)0;
+ev::async xapiand::async_shutdown;
 
 
 static ev::default_loop default_loop;
@@ -249,15 +250,14 @@ int main(int argc, char **argv)
 		DatabasePool database_pool;
 		ThreadPool thread_pool(10);
 
-		ev::async main_quit;
-		main_quit.set<shutdown_cb>();
-		main_quit.start();
+		xapiand::async_shutdown.set<shutdown_cb>();
+		xapiand::async_shutdown.start();
 
 		if (tasks) {
 			ThreadPool server_pool(tasks);
 
 			for (int i = 0; i < tasks; i++) {
-				XapiandServer *server = new XapiandServer(NULL, http_sock, binary_sock, &database_pool, &thread_pool, &main_quit);
+				XapiandServer *server = new XapiandServer(NULL, http_sock, binary_sock, &database_pool, &thread_pool);
 				servers.insert(server);
 				server_pool.addTask(server, (void *)0);
 			}
@@ -269,7 +269,7 @@ int main(int argc, char **argv)
 			server_pool.finish();
 			server_pool.join();
 		} else {
-			XapiandServer * server = new XapiandServer(&default_loop, http_sock, binary_sock, &database_pool, &thread_pool, &main_quit);
+			XapiandServer * server = new XapiandServer(&default_loop, http_sock, binary_sock, &database_pool, &thread_pool);
 			servers.insert(server);
 			server->run(NULL);
 			delete server;
