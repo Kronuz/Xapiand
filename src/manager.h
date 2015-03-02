@@ -48,6 +48,9 @@ class XapiandManager {
 	void bind_binary();
 	void destroy();
 
+	void attach_server(XapiandServer *server);
+	void detach_server(XapiandServer *server);
+
 protected:
 	friend XapiandServer;
 	pthread_mutex_t servers_mutex;

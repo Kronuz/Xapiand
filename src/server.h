@@ -33,10 +33,6 @@
 
 class XapiandServer : public Task {
 private:
-	std::list<XapiandServer *>::const_iterator iterator;
-	void attach_server();
-	void detach_server();
-
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
 	ev::async break_loop;
@@ -58,6 +54,13 @@ private:
 	void io_accept_binary(ev::io &watcher, int revents);
 
 	void break_loop_cb(ev::async &watcher, int revents);
+
+protected:
+	friend class BaseClient;
+	friend class XapiandManager;
+	std::list<XapiandServer *>::const_iterator iterator;
+	void attach_client(BaseClient *client);
+	void detach_client(BaseClient *client);
 
 public:
 	XapiandManager *manager;
