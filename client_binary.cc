@@ -40,7 +40,7 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 {
 	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, XapiandServer::total_clients);
 
-	thread_pool->addTask(this, (void *)0);
+	thread_pool->addTask(this);
 	LOG_OBJ(this, "CREATED BINARY CLIENT!\n");
 }
 
@@ -77,7 +77,7 @@ void BinaryClient::on_read(const char *buf, ssize_t received)
 		Buffer *msg = new Buffer(type, data.c_str(), data.size());
 		
 		messages_queue.push(msg);
-		thread_pool->addTask(this, (void *)1);
+		thread_pool->addTask(this);
 	}
 }
 

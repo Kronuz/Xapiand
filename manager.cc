@@ -273,7 +273,7 @@ void XapiandManager::run(int num_servers)
 	ThreadPool server_pool(num_servers);
 	for (int i = 0; i < num_servers; i++) {
 		XapiandServer *server = new XapiandServer(this, NULL, http_sock, binary_sock, &database_pool, &thread_pool);
-		server_pool.addTask(server, (void *)0);
+		server_pool.addTask(server);
 	}
 	
 	default_loop.run();
