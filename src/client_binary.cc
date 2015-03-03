@@ -39,10 +39,10 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  started(false)
 {
-	pthread_mutex_lock(&qmtx);
+	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = XapiandServer::total_clients;
 	int binary_clients = ++XapiandServer::binary_clients;
-	pthread_mutex_unlock(&qmtx);
+	pthread_mutex_unlock(&XapiandServer::static_mutex);
 	
 	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) of a total of %d connected.\n", sock, binary_clients, XapiandServer::total_clients);
 
@@ -61,9 +61,9 @@ BinaryClient::~BinaryClient()
 		database_pool->checkin(&database);
 	}
 
-	pthread_mutex_lock(&qmtx);
+	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int binary_clients = --XapiandServer::binary_clients;
-	pthread_mutex_unlock(&qmtx);
+	pthread_mutex_unlock(&XapiandServer::static_mutex);
 
 	LOG_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)\n", binary_clients);
 	assert(binary_clients >= 0);

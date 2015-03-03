@@ -43,6 +43,7 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 // Xapian Server
 //
 
+pthread_mutex_t XapiandServer::static_mutex = PTHREAD_MUTEX_INITIALIZER;
 int XapiandServer::total_clients = 0;
 int XapiandServer::http_clients = 0;
 int XapiandServer::binary_clients = 0;
