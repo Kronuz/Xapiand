@@ -81,6 +81,7 @@ BaseClient::~BaseClient()
 
 	pthread_mutex_lock(&qmtx);
 	int total_clients = --XapiandServer::total_clients;
+	assert(XapiandServer::total_clients >= 0);
 	pthread_mutex_unlock(&qmtx);
 
 	pthread_mutex_destroy(&qmtx);

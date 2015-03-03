@@ -20,6 +20,7 @@
  * IN THE SOFTWARE.
  */
 
+#include <assert.h>
 #include <sys/socket.h>
 
 #include "xapiand.h"
@@ -51,6 +52,7 @@ HttpClient::~HttpClient()
 {
 	pthread_mutex_lock(&qmtx);
 	int http_clients = --XapiandServer::http_clients;
+	assert(http_clients >= 0);
 	pthread_mutex_unlock(&qmtx);
 
 	if (http_clients == 0 && server->manager->shutdown_asap) {
