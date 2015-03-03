@@ -50,7 +50,7 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	pthread_mutex_init(&qmtx, &qmtx_attr);
 
 	pthread_mutex_lock(&qmtx);
-	XapiandServer::total_clients++;
+	int total_clients = ++XapiandServer::total_clients;
 	pthread_mutex_unlock(&qmtx);
 	
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
@@ -61,6 +61,8 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 
 	io_write.set<BaseClient, &BaseClient::io_cb>(this);
 	io_write.set(sock, ev::WRITE);
+
+	LOG_OBJ(this, "CREATED CLIENT (%d clients)\n", total_clients);
 }
 
 
@@ -75,8 +77,10 @@ BaseClient::~BaseClient()
 		}
 	}
 
+	server->detach_client(this);
+
 	pthread_mutex_lock(&qmtx);
-	XapiandServer::total_clients--;
+	int total_clients = --XapiandServer::total_clients;
 	pthread_mutex_unlock(&qmtx);
 
 	if (XapiandServer::total_clients == 0 && server->manager->shutdown_asap) {
@@ -86,7 +90,7 @@ BaseClient::~BaseClient()
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
 
-	server->detach_client(this);
+	LOG_OBJ(this, "DELETED CLIENT (%d clients left)\n", total_clients);
 }
 
 

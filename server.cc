@@ -85,13 +85,14 @@ XapiandServer::~XapiandServer()
 
 	break_loop.stop();
 
+	manager->detach_server(this);
+
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
 	
 	pthread_mutex_destroy(&clients_mutex);
 	pthread_mutexattr_destroy(&clients_mutex_attr);
 	
-	manager->detach_server(this);
 	LOG_OBJ(this, "DELETED SERVER!\n");
 }
 
@@ -198,6 +199,7 @@ void XapiandServer::detach_client(BaseClient *client)
 	if (client->iterator != clients.end()) {
 		clients.erase(client->iterator);
 		client->iterator = clients.end();
+		LOG_OBJ(this, "DETACHED CLIENT!\n");
 	}
 	pthread_mutex_unlock(&clients_mutex);
 }

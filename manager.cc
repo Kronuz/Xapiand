@@ -272,6 +272,7 @@ void XapiandManager::detach_server(XapiandServer *server)
 	if (server->iterator != servers.end()) {
 		servers.erase(server->iterator);
 		server->iterator = servers.end();
+		LOG_OBJ(this, "DETACHED SERVER!\n");
 	}
 	pthread_mutex_unlock(&servers_mutex);
 }
