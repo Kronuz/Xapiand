@@ -179,7 +179,7 @@ void BaseClient::write_cb()
 		size_t buf_size = buffer->nbytes();
 		const char * buf = buffer->dpos();
 
-		LOG_CONN(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf, buf_size).c_str());
+		LOG_CONN_WIRE(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf, buf_size).c_str());
 
 		ssize_t written = ::write(sock, buf, buf_size);
 		
@@ -217,7 +217,7 @@ void BaseClient::read_cb()
 		LOG_CONN(this, "Received EOF (sock=%d)!\n", sock);
 		destroy();
 	} else {
-		LOG_CONN(this, "(sock=%d) -->> '%s'\n", sock, repr(buf, received).c_str());
+		LOG_CONN_WIRE(this, "(sock=%d) -->> '%s'\n", sock, repr(buf, received).c_str());
 		on_read(buf, received);
 	}
 }
@@ -231,7 +231,7 @@ void BaseClient::async_write_cb(ev::async &watcher, int revents)
 					
 void BaseClient::write(const char *buf, size_t buf_size)
 {
-	LOG_CONN(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
+	LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
 
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
 	write_queue.push(buffer);
