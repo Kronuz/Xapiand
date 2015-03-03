@@ -44,6 +44,8 @@ const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
 //
 
 int XapiandServer::total_clients = 0;
+int XapiandServer::http_clients = 0;
+int XapiandServer::binary_clients = 0;
 
 
 XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)

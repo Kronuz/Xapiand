@@ -71,6 +71,8 @@ public:
 	void shutdown();
 	
 	static int total_clients;
+	static int http_clients;
+	static int binary_clients;
 
 protected:
 	friend class BaseClient;

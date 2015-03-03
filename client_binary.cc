@@ -40,8 +40,13 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 {
 	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, XapiandServer::total_clients);
 
+	pthread_mutex_lock(&qmtx);
+	int binary_clients = ++XapiandServer::binary_clients;
+	pthread_mutex_unlock(&qmtx);
+
 	thread_pool->addTask(this);
-	LOG_OBJ(this, "CREATED BINARY CLIENT!\n");
+
+	LOG_OBJ(this, "CREATED BINARY CLIENT! (%d clients)\n", binary_clients);
 }
 
 
@@ -52,7 +57,12 @@ BinaryClient::~BinaryClient()
 		Database *database = it->second;
 		database_pool->checkin(&database);
 	}
-	LOG_OBJ(this, "DELETED BINARY CLIENT!\n");
+
+	pthread_mutex_lock(&qmtx);
+	int binary_clients = --XapiandServer::binary_clients;
+	pthread_mutex_unlock(&qmtx);
+
+	LOG_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)\n", binary_clients);
 }
 
 

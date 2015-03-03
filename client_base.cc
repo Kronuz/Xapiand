@@ -62,7 +62,7 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	io_write.set<BaseClient, &BaseClient::io_cb>(this);
 	io_write.set(sock, ev::WRITE);
 
-	LOG_OBJ(this, "CREATED CLIENT (%d clients)\n", total_clients);
+	LOG_OBJ(this, "CREATED CLIENT! (%d clients)\n", total_clients);
 }
 
 
@@ -83,14 +83,10 @@ BaseClient::~BaseClient()
 	int total_clients = --XapiandServer::total_clients;
 	pthread_mutex_unlock(&qmtx);
 
-	if (XapiandServer::total_clients == 0 && server->manager->shutdown_asap) {
-		server->manager->async_shutdown.send();
-	}
-
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
 
-	LOG_OBJ(this, "DELETED CLIENT (%d clients left)\n", total_clients);
+	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", total_clients);
 }
 
 
