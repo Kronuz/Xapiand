@@ -38,13 +38,26 @@ HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
 	LOG_CONN(this, "Got connection (sock=%d), %d http client(s) connected.\n", sock, XapiandServer::total_clients);
-	LOG_OBJ(this, "CREATED HTTP CLIENT!\n");
+
+	pthread_mutex_lock(&qmtx);
+	int http_clients = ++XapiandServer::http_clients;
+	pthread_mutex_unlock(&qmtx);
+
+	LOG_OBJ(this, "CREATED HTTP CLIENT! (%d clients)\n", http_clients);
 }
 
 
 HttpClient::~HttpClient()
 {
-	LOG_OBJ(this, "DELETED HTTP CLIENT!\n");
+	pthread_mutex_lock(&qmtx);
+	int http_clients = --XapiandServer::http_clients;
+	pthread_mutex_unlock(&qmtx);
+
+	if (http_clients == 0 && server->manager->shutdown_asap) {
+		server->manager->async_shutdown.send();
+	}
+
+	LOG_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)\n", http_clients);
 }
 
 
