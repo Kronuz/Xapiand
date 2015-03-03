@@ -32,13 +32,14 @@ std::string repr(const std::string &string);
 
 #define LOG(...) log(__VA_ARGS__)
 #define LOG_ERR(...) log(__VA_ARGS__)
+#define LOG_CONN(...) log(__VA_ARGS__)
 
 #define LOG_OBJ(...)
 #define LOG_DATABASE(...)
 #define LOG_HTTP_PROTO_PARSER(...)
 
 #define LOG_EV(...)
-#define LOG_CONN(...)
+#define LOG_CONN_WIRE(...)
 #define LOG_HTTP_PROTO(...)
 #define LOG_BINARY_PROTO(...)
 
