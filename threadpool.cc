@@ -80,7 +80,7 @@ ThreadPool::ThreadPool(int n) : numThreads(n) {
 	threads = new pthread_t[numThreads];
 	for (int i = 0; i < numThreads; ++i) {
 		if (pthread_create(&(threads[i]), 0, getWork, &workQueue) != 0) {
-			LOG_CONN(this, "ERROR: thread: %s\n", strerror(errno));
+			LOG_ERR(this, "ERROR: thread: %s\n", strerror(errno));
 			threads[i] = 0;
 		}
 	}
@@ -99,7 +99,7 @@ void ThreadPool::join() {
 	for (int i = 0; i < numThreads; ++i) {
 		if (threads[i]) {
 			if (pthread_join(threads[i], 0) != 0) {
-				LOG_CONN(this, "ERROR: thread: %s\n", strerror(errno));
+				LOG_ERR(this, "ERROR: thread: %s\n", strerror(errno));
 			} else {
 				threads[i] = 0;
 			}
