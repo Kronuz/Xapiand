@@ -120,7 +120,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 
 	if (client_sock < 0) {
 		if (errno != EAGAIN) {
-			LOG_CONN(this, "ERROR: accept http error (sock=%d): %s\n", http_sock, strerror(errno));
+			LOG_ERR(this, "ERROR: accept http error (sock=%d): %s\n", http_sock, strerror(errno));
 		}
 	} else {
 		fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK);
@@ -146,7 +146,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 	if (client_sock < 0) {
 		if (errno != EAGAIN) {
-			LOG_CONN(this, "ERROR: accept binary error (sock=%d): %s\n", binary_sock, strerror(errno));
+			LOG_ERR(this, "ERROR: accept binary error (sock=%d): %s\n", binary_sock, strerror(errno));
 		}
 	} else {
 		fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK);

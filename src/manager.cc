@@ -87,7 +87,7 @@ void XapiandManager::check_tcp_backlog(int tcp_backlog)
 	int somaxconn;
 	size_t somaxconn_len = sizeof(somaxconn);
 	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
-		LOG_CONN(this, "ERROR: sysctl: %s\n", strerror(errno));
+		LOG_ERR(this, "ERROR: sysctl: %s\n", strerror(errno));
 		return;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
@@ -100,7 +100,7 @@ void XapiandManager::check_tcp_backlog(int tcp_backlog)
 	int somaxconn;
 	size_t somaxconn_len = sizeof(somaxconn);
 	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
-		LOG_CONN(this, "ERROR: sysctl: %s\n", strerror(errno));
+		LOG_ERR(this, "ERROR: sysctl: %s\n", strerror(errno));
 		return;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
@@ -125,15 +125,15 @@ void XapiandManager::bind_http()
 	setsockopt(http_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
 	error = setsockopt(http_sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
 	if (error != 0)
-		LOG_CONN(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
+		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
 	
 	error = setsockopt(http_sock, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(ling));
 	if (error != 0)
-		LOG_CONN(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
+		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
 	
 	error = setsockopt(http_sock, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval));
 	if (error != 0)
-		LOG_CONN(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
+		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
 	
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(http_port);
@@ -165,15 +165,15 @@ void XapiandManager::bind_binary()
 	setsockopt(binary_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
 	error = setsockopt(binary_sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
 	if (error != 0)
-		LOG_CONN(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
+		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
 	
 	error = setsockopt(binary_sock, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(ling));
 	if (error != 0)
-		LOG_CONN(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
+		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
 	
 	error = setsockopt(binary_sock, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval));
 	if (error != 0)
-		LOG_CONN(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
+		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
 	
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(binary_port);
