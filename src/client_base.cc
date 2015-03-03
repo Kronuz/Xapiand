@@ -86,8 +86,8 @@ BaseClient::~BaseClient()
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
 
-	assert(total_clients >= 0);
 	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", total_clients);
+	assert(total_clients >= 0);
 }
 
 

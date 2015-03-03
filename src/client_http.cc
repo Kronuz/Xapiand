@@ -53,7 +53,6 @@ HttpClient::~HttpClient()
 {
 	pthread_mutex_lock(&qmtx);
 	int http_clients = --XapiandServer::http_clients;
-	assert(http_clients >= 0);
 	pthread_mutex_unlock(&qmtx);
 
 	if (server->manager->shutdown_asap) {
@@ -63,6 +62,7 @@ HttpClient::~HttpClient()
 	}
 
 	LOG_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)\n", http_clients);
+	assert(http_clients >= 0);
 }
 
 
