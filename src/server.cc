@@ -205,6 +205,13 @@ void XapiandServer::detach_client(BaseClient *client)
 
 void XapiandServer::shutdown()
 {
+	pthread_mutex_lock(&clients_mutex);
+	std::list<BaseClient *>::const_iterator it(clients.begin());
+	for (; it != clients.end(); it++) {
+		(*it)->shutdown();
+	}
+	pthread_mutex_unlock(&clients_mutex);
+
 	if (manager->shutdown_asap) {
 		if (total_clients == 0) {
 			manager->shutdown_now = manager->shutdown_asap;
@@ -214,15 +221,4 @@ void XapiandServer::shutdown()
 	if (manager->shutdown_now) {
 		break_loop.send();
 	}
-
-	pthread_mutex_lock(&clients_mutex);
-	std::list<BaseClient *>::const_iterator it(clients.begin());
-	while (it != clients.end()) {
-		BaseClient *client = (*it);
-		pthread_mutex_unlock(&clients_mutex);
-		client->shutdown();
-		pthread_mutex_lock(&clients_mutex);
-		it = clients.begin();
-	}
-	pthread_mutex_unlock(&clients_mutex);
 }
