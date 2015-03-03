@@ -81,12 +81,12 @@ BaseClient::~BaseClient()
 
 	pthread_mutex_lock(&qmtx);
 	int total_clients = --XapiandServer::total_clients;
-	assert(XapiandServer::total_clients >= 0);
 	pthread_mutex_unlock(&qmtx);
 
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
 
+	assert(total_clients >= 0);
 	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", total_clients);
 }
 

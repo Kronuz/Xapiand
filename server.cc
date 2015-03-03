@@ -218,7 +218,7 @@ void XapiandServer::shutdown()
 	pthread_mutex_unlock(&clients_mutex);
 
 	if (manager->shutdown_asap) {
-		if (total_clients == 0) {
+		if (http_clients <= 0) {
 			manager->shutdown_now = manager->shutdown_asap;
 		}
 		destroy();
