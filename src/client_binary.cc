@@ -39,11 +39,11 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  started(false)
 {
-	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) connected.\n", sock, XapiandServer::total_clients);
-
 	pthread_mutex_lock(&qmtx);
 	int binary_clients = ++XapiandServer::binary_clients;
 	pthread_mutex_unlock(&qmtx);
+	
+	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) of a total of %d connected.\n", sock, binary_clients, XapiandServer::total_clients);
 
 	thread_pool->addTask(this);
 
