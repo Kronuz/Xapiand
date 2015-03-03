@@ -39,10 +39,10 @@ HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
 
-	pthread_mutex_lock(&qmtx);
+	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = XapiandServer::total_clients;
 	int http_clients = ++XapiandServer::http_clients;
-	pthread_mutex_unlock(&qmtx);
+	pthread_mutex_unlock(&XapiandServer::static_mutex);
 
 	LOG_CONN(this, "Got connection (sock=%d), %d http client(s) of a total of %d connected.\n", sock, http_clients, XapiandServer::total_clients);
 
@@ -53,9 +53,9 @@ HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 
 HttpClient::~HttpClient()
 {
-	pthread_mutex_lock(&qmtx);
+	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int http_clients = --XapiandServer::http_clients;
-	pthread_mutex_unlock(&qmtx);
+	pthread_mutex_unlock(&XapiandServer::static_mutex);
 
 	if (server->manager->shutdown_asap) {
 		if (http_clients <= 0) {

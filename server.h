@@ -70,6 +70,7 @@ public:
 	void run();
 	void shutdown();
 	
+	static pthread_mutex_t static_mutex;
 	static int total_clients;
 	static int http_clients;
 	static int binary_clients;

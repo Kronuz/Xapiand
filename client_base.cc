@@ -49,9 +49,9 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
 
-	pthread_mutex_lock(&qmtx);
+	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = ++XapiandServer::total_clients;
-	pthread_mutex_unlock(&qmtx);
+	pthread_mutex_unlock(&XapiandServer::static_mutex);
 	
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
 	async_write.start();
@@ -79,9 +79,9 @@ BaseClient::~BaseClient()
 
 	server->detach_client(this);
 
-	pthread_mutex_lock(&qmtx);
+	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = --XapiandServer::total_clients;
-	pthread_mutex_unlock(&qmtx);
+	pthread_mutex_unlock(&XapiandServer::static_mutex);
 
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
