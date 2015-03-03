@@ -61,10 +61,10 @@ BinaryClient::~BinaryClient()
 
 	pthread_mutex_lock(&qmtx);
 	int binary_clients = --XapiandServer::binary_clients;
-	assert(XapiandServer::binary_clients >= 0);
 	pthread_mutex_unlock(&qmtx);
 
 	LOG_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)\n", binary_clients);
+	assert(binary_clients >= 0);
 }
 
 
