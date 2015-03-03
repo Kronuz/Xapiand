@@ -287,12 +287,15 @@ void XapiandManager::break_loop_cb(ev::async &watcher, int revents)
 
 void XapiandManager::shutdown()
 {
+	LOG_OBJ(this, "++ Shutting down servers...\n");
 	pthread_mutex_lock(&servers_mutex);
 	std::list<XapiandServer *>::const_iterator it(servers.begin());
-	for (; it != servers.end(); it++) {
-		(*it)->shutdown();
+	while (it != servers.end()) {
+		XapiandServer *server = *(it++);
+		server->shutdown();
 	}
 	pthread_mutex_unlock(&servers_mutex);
+	LOG_OBJ(this, "++ Servers shut down.\n");
 
 	if (shutdown_asap) {
 		destroy();
