@@ -40,6 +40,7 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 	  started(false)
 {
 	pthread_mutex_lock(&qmtx);
+	int total_clients = XapiandServer::total_clients;
 	int binary_clients = ++XapiandServer::binary_clients;
 	pthread_mutex_unlock(&qmtx);
 	
@@ -48,6 +49,7 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 	thread_pool->addTask(this);
 
 	LOG_OBJ(this, "CREATED BINARY CLIENT! (%d clients)\n", binary_clients);
+	assert(binary_clients <= total_clients);
 }
 
 
