@@ -156,6 +156,9 @@ public:
 			ret += ":";
 			ret += port_;
 		}
+		if (!host.empty() || port > 0) {
+			ret += "/";
+		}
 		ret += path;
 		if (!search.empty()) {
 			ret += "?" + search;
