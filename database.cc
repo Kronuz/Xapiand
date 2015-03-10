@@ -43,7 +43,7 @@ Database::reopen()
 	if (writable) {
 		db = new Xapian::WritableDatabase();
 		if (endpoints.size() != 1) {
-			LOG_ERR(this, "ERROR: Expecting exactly one database.");
+			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), endpoints.as_string().c_str());
 		} else {
 			e = &endpoints[0];
 			if (e->protocol == "file") {
