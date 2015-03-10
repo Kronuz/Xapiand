@@ -177,12 +177,21 @@ public:
 		std::sort(copy.begin(), copy.end());
 		std::string es = std::string(writable ? "1" : "0");
 		std::vector<Endpoint>::const_iterator j(copy.begin());
-		for (; j != copy.end(); j++) {
-			es += ":";
+		for (int i=0; j != copy.end(); j++, i++) {
+			es += ";";
 			es += (*j).as_string().c_str();
 		}
 		std::hash<std::string> hash_fn;
 		return hash_fn(es);
+	}
+	std::string as_string() const {
+		std::string ret;
+		std::vector<Endpoint>::const_iterator j(begin());
+		for (int i=0; j != end(); j++, i++) {
+			if (i) ret += ";";
+			ret += (*j).as_string();
+		}
+		return ret;
 	}
 };
 
