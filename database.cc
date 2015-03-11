@@ -134,8 +134,15 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 				pthread_mutex_unlock(&qmtx);
 				database_ = new Database(endpoints, writable);
 				pthread_mutex_lock(&qmtx);
+			} else {
+				// Lock until a database is available if it can't get one.
+				pthread_mutex_unlock(&qmtx);
+				int s = queue.pop(database_);
+				pthread_mutex_lock(&qmtx);
+				if (!s) {
+					LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
+				}
 			}
-			// FIXME: lock until a database is available if it can't get one
 		}
 		*database = database_;
 	}
