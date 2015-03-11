@@ -120,6 +120,8 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 {
 	Database *database_ = NULL;
 
+	LOG_DATABASE(this, "+ CHECKING OUT DB %lx %s(%s)...\n", (unsigned long)*database, writable ? "w" : "r", endpoints.as_string().c_str());
+
 	pthread_mutex_lock(&qmtx);
 	
 	if (!finished && *database == NULL) {
@@ -149,7 +151,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 void
 DatabasePool::checkin(Database **database)
 {
-	LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
+	LOG_DATABASE(this, "- CHECKING IN DB %lx %s(%s)...\n", (unsigned long)*database, (*database)->writable ? "w" : "r", (*database)->endpoints.as_string().c_str());
 
 	pthread_mutex_lock(&qmtx);
 	
@@ -160,4 +162,6 @@ DatabasePool::checkin(Database **database)
 	*database = NULL;
 	
 	pthread_mutex_unlock(&qmtx);
+
+	LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
 }
