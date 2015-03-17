@@ -28,7 +28,7 @@
 #include "cJSON.h"
 
 #include "client_http.h"
-
+#include "http_parser.h"
 //
 // Xapian http client
 //
@@ -69,7 +69,7 @@ HttpClient::~HttpClient()
 
 
 void HttpClient::on_read(const char *buf, ssize_t received)
-{	
+{
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
@@ -129,7 +129,7 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	switch (p->state) {
         case 32: // path
 			self->path = std::string(at, length);
-			break;
+               break;
 		case 62: // data
 			self->body = std::string(at, length);
 			break;
