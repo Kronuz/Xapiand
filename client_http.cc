@@ -178,7 +178,6 @@ void HttpClient::run()
 		LOG(this, "Doing the checkin.\n");
 		database_pool->checkin(&database);
 		LOG(this, "FINISH\n");
-		**/
 
 		
 
