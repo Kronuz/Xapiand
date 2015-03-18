@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "pthread.h"
-
+#include <algorithm>
 #include "utils.h"
 
 
