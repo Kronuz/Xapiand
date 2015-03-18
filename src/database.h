@@ -30,6 +30,7 @@
 #include "queue.h"
 
 #include <xapian.h>
+#include "cJSON.h"
 #include <pthread.h>
 
 
@@ -48,6 +49,13 @@ public:
 	~Database();
 	
 	void reopen();
+	void drop(const char *document_id, bool commit);
+	char* prefixed(const char *term, const char prefix);
+	char* prefixed_string(const char *term, const char *prefix);
+	void index(const char *document, bool commit);
+
+private:
+	void _commit();
 };
 
 
