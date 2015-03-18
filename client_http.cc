@@ -73,8 +73,8 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
-            io_read.stop();
-            thread_pool->addTask(this);
+			io_read.stop();
+			thread_pool->addTask(this);
 		}
 	} else {
 		enum http_errno err = HTTP_PARSER_ERRNO(&parser);
@@ -127,15 +127,15 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	LOG_HTTP_PROTO_PARSER(self, "%3d. %s\n", p->state, repr(at, length).c_str());
 
 	switch (p->state) {
-        case 32: // path
+		case 32: // path
 			self->path = std::string(at, length);
-               break;
+       			break;
 		case 62: // data
 			self->body = std::string(at, length);
 			break;
-        case 50:
-            self->host = std::string(at, length);
-            break;
+		case 50:
+    			self->host = std::string(at, length);
+    			break;
         
 	}
 
@@ -145,16 +145,54 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 
 void HttpClient::run()
 {
-    try {
-        LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
-        LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
-        LOG_HTTP_PROTO(this, "HOST: '%s'\n", repr(host).c_str());
-        LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
-        if (path == "/quit") {
-            server->manager->async_shutdown.send();
-            return;
-        }
-        
+	try {
+		LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
+		LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
+		LOG_HTTP_PROTO(this, "HOST: '%s'\n", repr(host).c_str());
+		LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
+		if (path == "/quit") {
+		    server->manager->async_shutdown.send();
+		    return;
+		}
+
+
+		 
+		//PRUEBA DELETE
+		//LOG(this, "Original string: %s\n", buf);
+		//char cad2[32];
+		//strcpy(cad2, buf);
+		//char *ptr = strtok(cad2, "/");
+		//ptr = strtok(NULL, "/");
+		
+		
+		const char *ptr = "13";
+		LOG(this, "Delete Document: %s\n", ptr);
+		Endpoints endpoints;
+		Database *database = NULL;
+		LOG(this, "Doing the endpoints.\n");
+		endpoints.push_back(Endpoint("xapian://127.0.0.1/db_titles", "", 8890));
+		LOG(this, "Doing the checkout\n");
+		database_pool->checkout(&database, endpoints, true);
+		LOG(this, "CALLING method drop.\n");
+		database->drop(ptr, true);
+		LOG(this, "Doing the checkin.\n");
+		database_pool->checkin(&database);
+		LOG(this, "FINISH\n");
+		**/
+
+		
+
+		/**
+		//PRUEBA INDEX
+		Endpoints endpoints;
+		Database *database = NULL;
+		endpoints.push_back(Endpoint("xapian://127.0.0.1/db_titles", "", 8890));
+		database_pool->checkout(&database, endpoints, true);
+		database->index(body.c_str(), true);
+		database_pool->checkin(&database);
+		**/
+
+		/*
         struct http_parser_url u;
         const char *b = repr(path).c_str();
         LOG_CONN_WIRE(this,"URL: %s\n",repr(path).c_str());
@@ -197,11 +235,12 @@ void HttpClient::run()
                      } else {
                      LOG_CONN_WIRE(this,"No son iguales: %s\n",command.c_str());
                      }*/
-                    
+        /**         
                 }
             }
             
         } else LOG_CONN_WIRE(this,"Parsing not done\n");
+        **/
         
         std::string content;
         cJSON *json = cJSON_Parse(body.c_str());

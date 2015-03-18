@@ -25,10 +25,13 @@
 #include "database.h"
 #include <xapian/dbfactory.h>
 
+#define DOCUMENT_ID_TERM_PREFIX 'Q'
+
 
 Database::Database(Endpoints &endpoints_, bool writable_)
 	: endpoints(endpoints_),
-	  writable(writable_)
+	  writable(writable_),
+	  db(NULL)
 {
 	hash = endpoints.hash(writable);
 	reopen();
@@ -38,6 +41,19 @@ Database::Database(Endpoints &endpoints_, bool writable_)
 void
 Database::reopen()
 {
+	if (db) {
+		// Try to reopen
+		try {
+			db->reopen();
+			return;
+		} catch (const Xapian::Error &e) {
+			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			db->close();
+			delete db;
+			db = NULL;
+		}
+	}
+
 	// FIXME: Handle remote endpoints and figure out if the endpoint is a local database
 	const Endpoint *e;
 	if (writable) {
@@ -171,4 +187,156 @@ DatabasePool::checkin(Database **database)
 	pthread_mutex_unlock(&qmtx);
 
 	LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
+}
+
+
+void
+Database::drop(const char *document_id, bool commit)
+{
+	if (!writable) {
+		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+		return;
+	}
+
+    document_id  = prefixed(document_id, DOCUMENT_ID_TERM_PREFIX);
+
+	for (int t = 3; t >= 0; --t) {
+		LOG(this, "Deleting: -%s- t:%d\n", document_id, t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+	    try {
+	    	wdb->delete_document(document_id);
+	    } catch (const Xapian::Error &e) {
+			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			if (t) reopen();
+			continue;
+		}
+    	LOG(this, "Document deleted\n");
+		if (commit) _commit();
+		return;
+	}
+
+	LOG_ERR(this, "ERROR: Cannot delete document: %s!\n", document_id);
+}
+
+char*
+Database::prefixed(const char *term, const char prefix)
+{ 
+    char *prefix_term = new char[strlen(term) + 2];
+    int i = 0;
+
+    prefix_term[0] = toupper(prefix);
+    prefix_term[1] = ':';
+
+    while (term[i] != '\0') { 
+        prefix_term[i+2] = term[i];
+        i++;
+    }
+    return prefix_term;
+}
+
+char*
+Database::prefixed_string(const char *term, const char *prefix)
+{ 
+    char *prefix_term = new char[strlen(term) + strlen(prefix)];
+    int i = 0, j = 0;
+    
+    while (prefix[i] != '\0') {
+  	  	prefix_term[i] = toupper(prefix[i]);
+  	  	i++;
+    }
+    while (term[j] != '\0') { 
+        prefix_term[i] = term[j];
+        i++;
+        j++;
+    }
+    return prefix_term;
+}
+
+void
+Database::_commit()
+{
+	for (int t = 3; t >= 0; --t) {
+		LOG(this, "Commit: t%d\n", t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+		try {
+			wdb->commit();
+		} catch (const Xapian::Error &e) {
+			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			if (t) reopen();
+			continue;
+		}
+
+		LOG(this, "Commit made\n");
+		return;
+	}
+
+	LOG_ERR(this, "ERROR: Cannot do commit!\n");
+}
+
+void
+Database::index(const char *document, bool commit)
+{
+	if (!writable) {
+		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+		return;
+	}
+
+	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+
+	cJSON *root = cJSON_Parse(document);
+	if (!root) {
+		printf("Error before: [%s]\n",cJSON_GetErrorPtr());
+	}
+	cJSON *doc_id = root ? cJSON_GetObjectItem(root, "id") : NULL;
+    cJSON *document_data = root ? cJSON_GetObjectItem(root, "data") : NULL;
+    cJSON *document_values = root ? cJSON_GetObjectItem(root, "values") : NULL;
+    cJSON *document_terms = root ? cJSON_GetObjectItem(root, "terms") : NULL;
+  	LOG(this, "Document_terms: %s\n", cJSON_Print(document_terms));
+
+    Xapian::Document doc;
+    
+    LOG(this, "Start DATA");
+    if (document_data) {
+    	const char *doc_data = cJSON_Print(document_data);
+    	LOG(this, "Document data: %s\n", doc_data);
+		doc.set_data(doc_data); 	
+    } 
+    LOG(this, "End DATA");
+
+    //Document Values
+    
+    LOG(this, "Start values");
+    if (document_values) {
+    	for (int i = 0; i < cJSON_GetArraySize(document_values); i++) {
+    		cJSON *value = cJSON_GetArrayItem(document_values, i);
+            if (value->type == 3) {
+            	doc.add_value((i+1), Xapian::sortable_serialise(value->valuedouble));
+            	LOG(this, "%s: %f\n", value->string, value->valuedouble);
+            } else {
+            	LOG_ERR(this, "ERROR: %s must be a double (%s)\n", value->string, cJSON_Print(value));
+            }
+  		}
+    }
+    LOG(this, "End values");
+
+    //Make sure document_id is also a term (otherwise it doesn't replace an existing document)
+    const char *document_id  = prefixed(doc_id->valuestring, DOCUMENT_ID_TERM_PREFIX);
+    doc.add_value(0, doc_id->valuestring);
+    doc.add_boolean_term(document_id);
+    
+    //Document Terms
+    LOG(this, "Document terms: %s\n", cJSON_Print(document_terms));
+    if (document_terms) {
+    	LOG(this, "Terms..\n");
+    	for (int i = 0; i < cJSON_GetArraySize(document_terms); i++) {
+            cJSON *term = cJSON_GetArrayItem(document_terms, i);
+            LOG(this, "Prefix: %s   Term: %s\n",term->string, term->valuestring);
+            doc.add_term(prefixed_string(term->valuestring, term->string), 1);
+            LOG(this, "Term: %s was added\n", prefixed_string(term->valuestring, term->string));
+  		}
+    }
+   
+
+
+    cJSON_Delete(root);
 }
