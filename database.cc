@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -231,6 +231,7 @@ Database::prefixed(const char *term, const char prefix)
         prefix_term[i+2] = term[i];
         i++;
     }
+    prefix_term[i+2] = '\0';
     return prefix_term;
 }
 

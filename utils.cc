@@ -24,8 +24,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pthread.h"
 #include <algorithm>
+
+#include "pthread.h"
 #include "utils.h"
 
 
@@ -208,6 +209,7 @@ int url_path(const char** n1, parser_url_path *par)
     int state = 0;
     n0 = *n1;
     
+    bool other_slash = false;
     par->off_host = NULL;
     par->len_host = 0;
     par->off_command = NULL;
@@ -216,96 +218,101 @@ int url_path(const char** n1, parser_url_path *par)
     while (1) {
         switch(**n1) {
             case '\0':
-            if (n0 == *n1) return -1;
-            if (p) {
-                r = p;
-                while(*r) {
-                    switch (*r) {
-                        case '/':
-                        r++;
-                        continue;
-                        break;
-                        
-                        default:
-                        cmd_size++;
-                        r++;
-                        break;
+                if (n0 == *n1) return -1;
+                if (p) {
+                    r = p + 1;
+                    while(*r) {
+                        switch (*r) {
+                            case '/':
+                                r++;
+                                continue;
+                                break;
+                                
+                            default:
+                                cmd_size++;
+                                r++;
+                                break;
+                        }
                     }
+                    par->off_command = p + 1;
+                    par->len_command = cmd_size;
                 }
-                par->off_command = p + 1;
-                par->len_command = cmd_size;
-            }
             case ',':
-            if (!p) p = *n1;
-            switch (state) {
-                case 0:
-                case 1:
-                par->off_path = n0;
-                par->len_path = p - n0;
-                if (**n1) (*n1)++;
-                return 0;
-                case 2:
-                par->off_host = n0;
-                par->len_host = p - n0;
-                if (**n1) (*n1)++;
-                return 0;
-            }
-            p = NULL;
-            break;
-            
-            case ':':
-            switch (state) {
-                case 0:
-                par->off_namespace = n0;
-                par->len_namespace = *n1 - n0;
-                state = 1;
-                n0 = *n1 + 1;
-                break;
-                default:
-                state = -1;
-            }
-            p = NULL;
-            break;
-            
-            case '@':
-            switch (state) {
-                case 0:
-                par->off_path = n0;
-                par->len_path = *n1 - n0;
-                state = 2;
-                n0 = *n1 + 1;
-                break;
-                case 1:
-                par->off_path = n0;
-                par->len_path = *n1 - n0;
-                state = 2;
-                n0 = *n1 + 1;
-                break;
-                default:
-                state = -1;
-            }
-            p = NULL;
-            break;
-            
-            
-            case '/':
-            if(*(*n1 + 1) && *(*n1 + 1) != '/') {
-                p = *n1;
-            } else {
-                r = *n1;
-                r++;
-                while(*r){
-                    switch (*r) {
-                        case '/':
-                        r++;
-                        break;
-                        default: return -1;
-                    }
+                if (!p) p = *n1;
+                switch (state) {
+                    case 0:
+                    case 1:
+                        par->off_path = n0;
+                        par->len_path = p - n0;
+                        if (**n1) (*n1)++;
+                        return 0;
+                    case 2:
+                        par->off_host = n0;
+                        par->len_host = p - n0;
+                        if (**n1) (*n1)++;
+                        return 0;
                 }
-            }
-            break;
+                p = NULL;
+                other_slash = false;
+                break;
+                
+            case ':':
+                switch (state) {
+                    case 0:
+                        par->off_namespace = n0;
+                        par->len_namespace = *n1 - n0;
+                        state = 1;
+                        n0 = *n1 + 1;
+                        break;
+                    default:
+                        state = -1;
+                }
+                p = NULL;
+                other_slash = false;
+                break;
+                
+            case '@':
+                switch (state) {
+                    case 0:
+                        par->off_path = n0;
+                        par->len_path = *n1 - n0;
+                        state = 2;
+                        n0 = *n1 + 1;
+                        break;
+                    case 1:
+                        par->off_path = n0;
+                        par->len_path = *n1 - n0;
+                        state = 2;
+                        n0 = *n1 + 1;
+                        break;
+                    default:
+                        state = -1;
+                }
+                p = NULL;
+                other_slash = false;
+                break;
+                
+                
+            case '/':
+                if(*(*n1 + 1) && !p && !other_slash) {
+                    p = *n1;
+                    other_slash = true;
+                }else if(*(*n1 + 1) && *(*n1 + 1) != '/') {
+                    p = *n1;
+                    other_slash = true;
+                }
+                
         }
         (*n1)++;
     }
     return -1;
+}
+
+int look_cmd(const char *cmd)
+{
+    if (strcasecmp(cmd,"_search")==0){ return(command_search);}
+    if (strcasecmp(cmd,"_count")==0){ return(command_count);}
+    if (strcasecmp(cmd,"_facets")==0){ return(command_facets);}
+    if (strcasecmp(cmd,"_similar")==0){ return(command_similar);}
+    return(identifier);
 }
