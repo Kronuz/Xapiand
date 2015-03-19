@@ -129,13 +129,22 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	switch (p->state) {
 		case 32: // path
 			self->path = std::string(at, length);
-       			break;
+            self->body = std::string();
+            break;
+        case 44:
+            if(strcasecmp(std::string(at, length).c_str(),"host")==0)
+                self->ishost = true;
+            break;
+        case 60:
 		case 62: // data
-			self->body = std::string(at, length);
+			self->body += std::string(at, length);
 			break;
 		case 50:
-    			self->host = std::string(at, length);
-    			break;
+            if(self->ishost) {
+                self->host = std::string(at, length);
+                self->ishost = false;
+            }
+            break;
         
 	}
 
@@ -154,44 +163,7 @@ void HttpClient::run()
 		    server->manager->async_shutdown.send();
 		    return;
 		}
-
-
-		 
-		//PRUEBA DELETE
-		//LOG(this, "Original string: %s\n", buf);
-		//char cad2[32];
-		//strcpy(cad2, buf);
-		//char *ptr = strtok(cad2, "/");
-		//ptr = strtok(NULL, "/");
 		
-		
-		const char *ptr = "13";
-		LOG(this, "Delete Document: %s\n", ptr);
-		Endpoints endpoints;
-		Database *database = NULL;
-		LOG(this, "Doing the endpoints.\n");
-		endpoints.push_back(Endpoint("xapian://127.0.0.1/db_titles", "", 8890));
-		LOG(this, "Doing the checkout\n");
-		database_pool->checkout(&database, endpoints, true);
-		LOG(this, "CALLING method drop.\n");
-		database->drop(ptr, true);
-		LOG(this, "Doing the checkin.\n");
-		database_pool->checkin(&database);
-		LOG(this, "FINISH\n");
-
-		
-
-		/**
-		//PRUEBA INDEX
-		Endpoints endpoints;
-		Database *database = NULL;
-		endpoints.push_back(Endpoint("xapian://127.0.0.1/db_titles", "", 8890));
-		database_pool->checkout(&database, endpoints, true);
-		database->index(body.c_str(), true);
-		database_pool->checkin(&database);
-		**/
-
-		/*
         struct http_parser_url u;
         const char *b = repr(path).c_str();
         LOG_CONN_WIRE(this,"URL: %s\n",repr(path).c_str());
@@ -203,43 +175,66 @@ void HttpClient::run()
                 memcpy(path_, b + u.field_data[3].off, u.field_data[3].len);
                 path_[u.field_data[3].len] = '\0';
                 
-                LOG_CONN_WIRE(this,"PATH: -> %s END\n", path_);
-                
                 struct parser_url_path_t p;
                 memset(&p, 0, sizeof(p));
-                
                 const char *n0 = path_;
+                std::string endp;
+                std::string nsp_;
+                std::string pat_;
+                std::string hos_;
+                
                 while (url_path(&n0, &p) == 0) {
-                    std::string endp;
+     
+                    command  = urldecode(p.off_command,p.len_command);
                     
-                    if(!p.len_host){
-                        endp = ("xapian://"+ host + urldecode(p.off_namespace, p.len_namespace)+ "/" + urldecode(p.off_path, p.len_path));
-                        
-                    } else {
-                        endp = ("xapian://"+ urldecode(p.off_host, p.len_host)  + urldecode(p.off_namespace, p.len_namespace)+ "/" + urldecode(p.off_path, p.len_path));
-                    }
+                    if(p.len_namespace)
+                        nsp_ = urldecode(p.off_namespace, p.len_namespace);
+                    else nsp_ = "";
+                    if(p.len_path)
+                        pat_ = urldecode(p.off_path, p.len_path);
+                    else pat_ = "";
+                    if(p.len_host)
+                        hos_ = urldecode(p.off_host, p.len_host);
+                    else hos_ = host;
                     
-                    if(p.len_command){
-                        command = urldecode(p.off_command, p.len_command);
-                        LOG_CONN_WIRE(this,"command: -> %s\n", command.c_str());
-                    }
+                    endp = "xapian://" + hos_ + nsp_ + pat_;
+                    //endp = "file://" + nsp_ + pat_;
                     
-                    Endpoint endpoint = Endpoint(endp, std::string(), XAPIAND_HTTP_SERVERPORT);
+                    Endpoint endpoint = Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT);
                     endpoints.push_back(endpoint);
                     
                     LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
                     
-                    /*if(strcasecmp("SEARCH",command.c_str())==0){
-                     LOG_CONN_WIRE(this,"Es igual: %s\n",command.c_str());
-                     } else {
-                     LOG_CONN_WIRE(this,"No son iguales: %s\n",command.c_str());
-                     }*/
-        /**         
+                    
                 }
             }
             
+            switch (parser.method) {
+                    //DELETE
+                case 0:
+                    delete_();
+                    break;
+                
+                    //GET command.c_str()
+                case 1:
+                    switch(look_cmd(command.c_str())){
+                        case command_search: break;
+                        case command_count: break;
+                        case command_facets: break;
+                        case command_similar: break;
+                        case identifier: break;
+                    }
+                    break;
+                    //PUT
+                case 4:
+                    break;
+                    
+                default:
+                    break;
+            }
+        
+            
         } else LOG_CONN_WIRE(this,"Parsing not done\n");
-        **/
         
         std::string content;
         cJSON *json = cJSON_Parse(body.c_str());
@@ -304,3 +299,19 @@ void HttpClient::run()
     }
     io_read.start();
 }
+
+void HttpClient::delete_()
+{
+    Database *database = NULL;
+    LOG(this, "Delete Document: %s\n", command.c_str());
+    LOG(this, "Doing the checkout\n");
+    database_pool->checkout(&database, endpoints, true);
+    database->drop(command.c_str(), true);
+    LOG(this, "Doing the checkin.\n");
+    database_pool->checkin(&database);
+    LOG(this, "FINISH\n");
+}
+
+void HttpClient::index_(){}
+
+void HttpClient::search_(){}
