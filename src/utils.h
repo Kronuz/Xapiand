@@ -72,7 +72,7 @@ int look_cmd(const char *);
 #define LOG_HTTP_PROTO_PARSER(...)
 
 #define LOG_EV(...)
-#define LOG_CONN_WIRE(...)
+#define LOG_CONN_WIRE(...) log(__VA_ARGS__)
 #define LOG_HTTP_PROTO(...) log(__VA_ARGS__)
 #define LOG_BINARY_PROTO(...)
 

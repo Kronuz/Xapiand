@@ -42,7 +42,8 @@ class HttpClient : public BaseClient {
     std::string host;
     std::string command; //command or ID
     
-
+    bool ishost = false;
+    
 	static int on_info(http_parser* p);
 	static int on_data(http_parser* p, const char *at, size_t length);
 
@@ -51,6 +52,9 @@ public:
 	~HttpClient();
 
 	void run();
+    void delete_();
+    void index_();
+    void search_();
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_HTTP_H */
