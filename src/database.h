@@ -33,6 +33,9 @@
 #include "cJSON.h"
 #include <pthread.h>
 
+#include "md5.h"
+#include <sstream>
+
 
 class DatabasePool;
 
@@ -53,6 +56,8 @@ public:
 	char* prefixed(const char *term, const char prefix);
 	char* prefixed_string(const char *term, const char *prefix);
 	void index(const char *document, bool commit);
+	long long int get_slot(const char *name);
+	long long int hex2long(const char *input); 
 
 private:
 	void _commit();
