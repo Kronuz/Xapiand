@@ -186,37 +186,39 @@ void HttpClient::run()
      
                     command  = urldecode(p.off_command,p.len_command);
                     
-                    if(p.len_namespace)
+                    if (p.len_namespace) {
                         nsp_ = urldecode(p.off_namespace, p.len_namespace);
-                    else nsp_ = "";
-                    if(p.len_path)
+                    } else {
+                        nsp_ = "";
+                    }
+                    if (p.len_path) {
                         pat_ = urldecode(p.off_path, p.len_path);
-                    else pat_ = "";
-                    if(p.len_host)
+                    } else {
+                        pat_ = "";
+                    }
+                    if (p.len_host) {
                         hos_ = urldecode(p.off_host, p.len_host);
-                    else hos_ = host;
-                    
+                    } else {
+                        hos_ = host;
+                    }
                     endp = "xapian://" + hos_ + nsp_ + pat_;
                     //endp = "file://" + nsp_ + pat_;
-                    
+                
                     Endpoint endpoint = Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT);
                     endpoints.push_back(endpoint);
                     
-                    LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
-                    
-                    
+                    LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());    
                 }
             }
             
             switch (parser.method) {
-                    //DELETE
+                //DELETE
                 case 0:
                     delete_();
                     break;
-                
                     //GET command.c_str()
                 case 1:
-                    switch(look_cmd(command.c_str())){
+                    switch (look_cmd(command.c_str())) {
                         case command_search: break;
                         case command_count: break;
                         case command_facets: break;
@@ -227,13 +229,13 @@ void HttpClient::run()
                     //PUT
                 case 4:
                     break;
-                    
                 default:
                     break;
             }
-        
-            
-        } else LOG_CONN_WIRE(this,"Parsing not done\n");
+
+        } else {
+            LOG_CONN_WIRE(this,"Parsing not done\n");
+        }
         
         std::string content;
         cJSON *json = cJSON_Parse(body.c_str());
