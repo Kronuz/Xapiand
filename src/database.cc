@@ -287,59 +287,129 @@ Database::index(const char *document, bool commit)
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 
 	cJSON *root = cJSON_Parse(document);
+	
 	if (!root) {
 		printf("Error before: [%s]\n",cJSON_GetErrorPtr());
+		return;
 	}
+	
 	cJSON *doc_id = root ? cJSON_GetObjectItem(root, "id") : NULL;
     cJSON *document_data = root ? cJSON_GetObjectItem(root, "data") : NULL;
     cJSON *document_values = root ? cJSON_GetObjectItem(root, "values") : NULL;
     cJSON *document_terms = root ? cJSON_GetObjectItem(root, "terms") : NULL;
-  	LOG(this, "Document_terms: %s\n", cJSON_Print(document_terms));
 
     Xapian::Document doc;
+
+    if (doc_id) {
+	    //Make sure document_id is also a term (otherwise it doesn't replace an existing document)
+	    doc.add_value(get_slot("ID"), doc_id->valuestring);
+	    const char *document_id  = prefixed(doc_id->valuestring, DOCUMENT_ID_TERM_PREFIX);
+	    doc.add_boolean_term(document_id);	
+    } else {
+    	LOG_ERR(this, "ERROR: Document must have an 'id'\n");
+    	return;
+    }
     
-    LOG(this, "Start DATA");
     if (document_data) {
     	const char *doc_data = cJSON_Print(document_data);
     	LOG(this, "Document data: %s\n", doc_data);
 		doc.set_data(doc_data); 	
-    } 
-    LOG(this, "End DATA");
+    } else {
+    	LOG_ERR(this, "ERROR: You must provide 'data' to index\n");
+    	return;
+    }
 
-    //Document Values
-    
-    LOG(this, "Start values");
     if (document_values) {
     	for (int i = 0; i < cJSON_GetArraySize(document_values); i++) {
-    		cJSON *value = cJSON_GetArrayItem(document_values, i);
-            if (value->type == 3) {
-            	doc.add_value((i+1), Xapian::sortable_serialise(value->valuedouble));
-            	LOG(this, "%s: %f\n", value->string, value->valuedouble);
-            } else {
-            	LOG_ERR(this, "ERROR: %s must be a double (%s)\n", value->string, cJSON_Print(value));
+    		LOG(this, "%d\n", i);
+    		cJSON *name = cJSON_GetArrayItem(document_values, i);
+    		cJSON *value = cJSON_GetObjectItem(name, "value");
+ 			cJSON *type = cJSON_GetObjectItem(name, "type");
+            if (strcmp(type->valuestring, "int") == 1 && value->type == 3) {
+            	doc.add_value(get_slot(name->string), Xapian::sortable_serialise(value->valueint));
+            	LOG(this, "%s: (%s) %i\n", name->string, type->valuestring, value->valueint);
+            } else if (strcmp(type->valuestring, "float") == 1 && value->type == 3) {
+            	doc.add_value(get_slot(name->string), Xapian::sortable_serialise(value->valuedouble));
+            	LOG(this, "%s: (%s) %f\n", name->string, type->valuestring, value->valuedouble);
+            } else if (strcmp(type->valuestring, "str") == 1 && value->type == 4) {
+            	doc.add_value(get_slot(name->string), value->valuestring);
+            	LOG(this, "%s: (%s) %s\n", name->string, type->valuestring, value->valuestring);
+            } else if (strcmp(type->valuestring, "geo") == 1 && value->type == 5) {
+            	cJSON *latitude = cJSON_GetArrayItem(value, 0);
+            	cJSON *longitude = cJSON_GetArrayItem(value, 1);
+            	if (latitude && longitude){
+            		LOG(this, "%s: (%s) %s\n", name->string, type->valuestring, value->valuestring);	
+            	} else {
+            		LOG_ERR(this, "ERROR: %s must be an array [latitude, longitude] (%s)\n", value->string, cJSON_Print(value));		
+            	}
             }
   		}
     }
-    LOG(this, "End values");
+    LOG(this, "End values\n");
 
-    //Make sure document_id is also a term (otherwise it doesn't replace an existing document)
-    const char *document_id  = prefixed(doc_id->valuestring, DOCUMENT_ID_TERM_PREFIX);
-    doc.add_value(0, doc_id->valuestring);
-    doc.add_boolean_term(document_id);
-    
-    //Document Terms
-    LOG(this, "Document terms: %s\n", cJSON_Print(document_terms));
+    /*Document Terms
     if (document_terms) {
     	LOG(this, "Terms..\n");
     	for (int i = 0; i < cJSON_GetArraySize(document_terms); i++) {
-            cJSON *term = cJSON_GetArrayItem(document_terms, i);
-            LOG(this, "Prefix: %s   Term: %s\n",term->string, term->valuestring);
-            doc.add_term(prefixed_string(term->valuestring, term->string), 1);
-            LOG(this, "Term: %s was added\n", prefixed_string(term->valuestring, term->string));
+            cJSON *term_data = cJSON_GetArrayItem(document_terms, i);
+            cJSON *term = cJSON_GetObjectItem(term_data, "term");
+            cJSON *weight = cJSON_GetObjectItem(term_data, "weight");
+            cJSON *prefix = cJSON_GetObjectItem(term_data, "prefix");
+            cJSON *position = cJSON_GetObjectItem(term_data, "position");
+            if (term) {
+            	const char *term_v = term->valuestring;
+            	Xapian::termcount w;
+            	if (weight && weight->type == 3) {
+            		w = weight->valueint;
+            	} else {
+            		w = 1;
+            	}
+            	LOG(this, "Weight: %d\n", w);
+            	const char *prefix_v;
+            	if (prefix) {
+            		prefix_v = prefix->valuestring;
+            	} else {
+            		prefix_v = "\0";
+            	}
+            	LOG(this, "Prefix: %s\n", prefix_v);
+            	const char *prefixed = prefixed_string(term_v, prefix_v);
+            	LOG(this, "Prefix_full: %s\n", prefixed);
+            } else {
+            	LOG_ERR(this, "ERROR: Term must be defined\n");
+            }
+            //doc.add_term(prefixed_string(term->valuestring, term->string), 1);
+            //LOG(this, "Term: %s was added\n", prefixed_string(term->valuestring, term->string));
   		}
-    }
-   
-
-
+    }*/
+  
     cJSON_Delete(root);
+}
+
+long long int
+Database::get_slot(const char *name)
+{
+	char *cad = new char[strlen(name) + 1];
+    int i = 0;
+    for(;name[i] != '\0'; i++) {
+    	cad[i] = tolower(name[i]);
+    }
+    cad[i] = '\0';
+    std::string _md5(md5(cad), 24, 32);
+    const char *md5_cad = _md5.c_str();
+    long long int slot = hex2long(md5_cad);
+    if (slot == 0xffffffff) {
+    	slot = 0xfffffffe;
+    }
+    return slot;
+}
+
+
+long long int
+Database::hex2long(const char *input) 
+{
+    long long int n;
+    std::stringstream ss;
+    ss << std::hex << input;
+    ss >> n;
+    return n;
 }
