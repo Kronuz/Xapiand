@@ -1,4 +1,4 @@
- /*
+/*
  * Copyright deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -18,7 +18,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- */
+ */ 
 
 #include "utils.h"
 
@@ -26,6 +26,7 @@
 #include <xapian/dbfactory.h>
 
 #define DOCUMENT_ID_TERM_PREFIX 'Q'
+#define DOCUMENT_CUSTOM_TERM_PREFIX = 'X'
 
 
 Database::Database(Endpoints &endpoints_, bool writable_)
@@ -221,24 +222,24 @@ Database::drop(const char *document_id, bool commit)
 char*
 Database::prefixed(const char *term, const char prefix)
 { 
-    char *prefix_term = new char[strlen(term) + 2];
+    char *prefix_term = new char[strlen(term) + 3];
     int i = 0;
 
     prefix_term[0] = toupper(prefix);
     prefix_term[1] = ':';
 
     while (term[i] != '\0') { 
-        prefix_term[i+2] = term[i];
+        prefix_term[i + 2] = term[i];
         i++;
     }
-    prefix_term[i+2] = '\0';
+    prefix_term[i + 2] = '\0';
     return prefix_term;
 }
 
 char*
 Database::prefixed_string(const char *term, const char *prefix)
 { 
-    char *prefix_term = new char[strlen(term) + strlen(prefix)];
+    char *prefix_term = new char[strlen(term) + strlen(prefix) + 1];
     int i = 0, j = 0;
     
     while (prefix[i] != '\0') {
@@ -250,6 +251,7 @@ Database::prefixed_string(const char *term, const char *prefix)
         i++;
         j++;
     }
+    prefix_term[i] = '\0';
     return prefix_term;
 }
 
