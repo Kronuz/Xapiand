@@ -52,9 +52,9 @@ public:
 	~HttpClient();
 
 	void run();
-    void delete_();
-    void index_();
-    void search_();
+    void _delete();
+    void _index();
+    void _search();
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_HTTP_H */

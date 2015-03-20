@@ -214,9 +214,9 @@ void HttpClient::run()
             switch (parser.method) {
                 //DELETE
                 case 0:
-                    delete_();
+                    _delete();
                     break;
-                    //GET command.c_str()
+                //GET command.c_str()
                 case 1:
                     switch (look_cmd(command.c_str())) {
                         case command_search: break;
@@ -226,13 +226,13 @@ void HttpClient::run()
                         case identifier: break;
                     }
                     break;
-                    //PUT
+                //PUT
                 case 4:
+                    _index();
                     break;
                 default:
                     break;
             }
-
         } else {
             LOG_CONN_WIRE(this,"Parsing not done\n");
         }
@@ -294,14 +294,16 @@ void HttpClient::run()
         http_response += tmp;
         http_response += "\r\n";
         write(http_response + "\r\n" + content);
-        if (parser.state == 1) close();
+        if (parser.state == 1) {
+            close();
+        }
     } catch (...) {
         LOG_ERR(this, "ERROR!\n");
     }
     io_read.start();
 }
 
-void HttpClient::delete_()
+void HttpClient::_delete()
 {
     Database *database = NULL;
     LOG(this, "Delete Document: %s\n", command.c_str());
@@ -313,6 +315,15 @@ void HttpClient::delete_()
     LOG(this, "FINISH\n");
 }
 
-void HttpClient::index_(){}
+void HttpClient::_index(){
+    Database *database = NULL;
+    LOG(this, "Doing the checkout for index\n");
+    database_pool->checkout(&database, endpoints, true);
+    LOG(this, "Index %s\n", body.c_str());
+    database->index(body.c_str(), true);
+    LOG(this, "Doing the checkin for index.\n");
+    database_pool->checkin(&database);
+    LOG(this, "FINISH INDEX\n");   
+}
 
-void HttpClient::search_(){}
+void HttpClient::_search(){}
