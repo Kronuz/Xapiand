@@ -132,22 +132,21 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
             self->body = std::string();
             break;
         case 44:
-            if(strcasecmp(std::string(at, length).c_str(),"host")==0)
+            if (strcasecmp(std::string(at, length).c_str(),"host") == 0) {
                 self->ishost = true;
+            }
             break;
-        case 60:
-		case 62: // data
+       	case 60: // receiving data from the buffer (1024 bytes)
+		case 62: // finished receiving data (last data)
 			self->body += std::string(at, length);
-			break;
+       		break;
 		case 50:
-            if(self->ishost) {
+            if (self->ishost) {
                 self->host = std::string(at, length);
                 self->ishost = false;
             }
             break;
-        
-	}
-
+    }
 	return 0;
 }
 
@@ -155,15 +154,15 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 void HttpClient::run()
 {
 	try {
-		LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
-		LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
-		LOG_HTTP_PROTO(this, "HOST: '%s'\n", repr(host).c_str());
-		LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
+		//LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
+		//LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
+		//LOG_HTTP_PROTO(this, "HOST: '%s'\n", repr(host).c_str());
+		//LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
 		if (path == "/quit") {
 		    server->manager->async_shutdown.send();
 		    return;
 		}
-		
+
         struct http_parser_url u;
         const char *b = repr(path).c_str();
         LOG_CONN_WIRE(this,"URL: %s\n",repr(path).c_str());
