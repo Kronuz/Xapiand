@@ -52,15 +52,21 @@ public:
 	~Database();
 	
 	void reopen();
-	void drop(const char *document_id, bool commit);
-	char* prefixed(const char *term, const char prefix);
-	char* prefixed_string(const char *term, const char *prefix);
-	void index(const char *document, bool commit);
+	bool drop(const char *document_id, bool commit);
+	char* prefixed(const char *term, const char *prefix);
+	bool index(const char *document, bool commit);
 	long long int get_slot(const char *name);
-	long long int hex2long(const char *input); 
+	long long int hex2long(const char *input);
+	char* _date(const char *iso_date);
+	char* _time(const char *iso_date);
+	char* _sTZD(const char *iso_date);
+	char* get_prefix(const char *name, const char *prefix);
+	char* get_slot_hex(const char *name);
+	const char* print_type(int type);
+	bool replace(const char *document_id, const Xapian::Document doc, bool commit);
 
 private:
-	void _commit();
+	bool _commit();
 };
 
 
