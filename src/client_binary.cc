@@ -37,7 +37,8 @@
 BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
-	  started(false)
+	  running(false),
+      started(false)
 {
 	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = XapiandServer::total_clients;
@@ -91,9 +92,15 @@ void BinaryClient::on_read(const char *buf, ssize_t received)
 		Buffer *msg = new Buffer(type, data.c_str(), data.size());
 		
 		messages_queue.push(msg);
-		thread_pool->addTask(this);
 	}
-    
+    pthread_mutex_lock(&qmtx);
+    if (!messages_queue.empty()) {
+        if (!running) {
+            running = true;
+            thread_pool->addTask(this);
+        }
+    }
+    pthread_mutex_unlock(&qmtx);
 }
 
 
@@ -200,17 +207,27 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 
 void BinaryClient::run()
 {
-	try {
-		if (started) {
-			run_one();
-		} else {
-			started = true;
-			msg_update(std::string());
-		}
-	} catch (const Xapian::NetworkError &e) {
-		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
-	} catch (...) {
-		LOG_ERR(this, "ERROR!\n");
-	}
+    while (true) {
+        pthread_mutex_lock(&qmtx);
+        if (started && messages_queue.empty()) {
+            running = false;
+            pthread_mutex_unlock(&qmtx);
+            break;
+        }
+        pthread_mutex_unlock(&qmtx);
+
+        try {
+            if (started) {
+                run_one();
+            } else {
+                started = true;
+                msg_update(std::string());
+            }
+        } catch (const Xapian::NetworkError &e) {
+            LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+        } catch (...) {
+            LOG_ERR(this, "ERROR!\n");
+        }
+    }
 }
 
