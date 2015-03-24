@@ -80,7 +80,10 @@ void log(void *obj, const char *format, ...)
 	pthread_mutex_lock(&qmtx);
 
 	FILE * file = stderr;
-	fprintf(file, "tid(0x%lx): 0x%lx - ", (unsigned long)pthread_self(), (unsigned long)obj);
+    pthread_t thread = pthread_self();
+    char name[100];
+    pthread_getname_np(thread, name, sizeof(name));
+	fprintf(file, "tid(0x%lx:%s): 0x%lx - ", (unsigned long)thread, name, (unsigned long)obj);
 	va_list argptr;
 	va_start(argptr, format);
 	vfprintf(file, format, argptr);
