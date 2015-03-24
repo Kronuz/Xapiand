@@ -34,6 +34,7 @@
 //
 class BinaryClient : public BaseClient, public RemoteProtocol {
 private:
+    bool running;
 	bool started;
 
 	std::unordered_map<Xapian::Database *, Database *> databases;
