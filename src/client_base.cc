@@ -220,7 +220,6 @@ void BaseClient::read_cb()
 		LOG_CONN_WIRE(this, "(sock=%d) -->> '%s'\n", sock, repr(buf, received).c_str());
 		on_read(buf, received);
 	}
-	memset(&buf, 0, sizeof(buf));
 }
 
 
