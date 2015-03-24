@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C3AF50161AC1E79A007071BF /* md5.cc in Sources */ = {isa = PBXBuildFile; fileRef = C3AF50141AC1E79A007071BF /* md5.cc */; };
 		E59725B71A9CFCAD0060069C /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = E59725B51A9CFCAD0060069C /* http_parser.c */; };
 		E59725CC1A9D25EB0060069C /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725C61A9D25EB0060069C /* client_base.cc */; };
 		E59725CD1A9D25EB0060069C /* client_binary.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725C81A9D25EB0060069C /* client_binary.cc */; };
@@ -34,6 +35,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C3AF50141AC1E79A007071BF /* md5.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = md5.cc; sourceTree = "<group>"; };
+		C3AF50151AC1E79A007071BF /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
 		E59725B51A9CFCAD0060069C /* http_parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = http_parser.c; sourceTree = "<group>"; };
 		E59725B61A9CFCAD0060069C /* http_parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = http_parser.h; sourceTree = "<group>"; };
 		E59725C61A9D25EB0060069C /* client_base.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = client_base.cc; sourceTree = "<group>"; };
@@ -104,6 +107,8 @@
 				E59725B51A9CFCAD0060069C /* http_parser.c */,
 				E59725D21AA1A38B0060069C /* cJSON.c */,
 				E59725D31AA1A38B0060069C /* cJSON.h */,
+				C3AF50151AC1E79A007071BF /* md5.h */,
+				C3AF50141AC1E79A007071BF /* md5.cc */,
 			);
 			sourceTree = "<group>";
 		};
@@ -171,6 +176,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C3AF50161AC1E79A007071BF /* md5.cc in Sources */,
 				E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */,
 				E5CEBCEA1A9B22E600CD151F /* database.cc in Sources */,
 				E5CEBCEC1A9BB98A00CD151F /* length.cc in Sources */,
