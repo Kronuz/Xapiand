@@ -73,7 +73,7 @@ BinaryClient::~BinaryClient()
 void BinaryClient::on_read(const char *buf, ssize_t received)
 {
 	buffer.append(buf, received);
-	if (buffer.length() >= 2) {
+	while (buffer.length() >= 2) {
 		const char *o = buffer.data();
 		const char *p = o;
 		const char *p_end = p + buffer.size();
