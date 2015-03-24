@@ -140,7 +140,7 @@ static int update(printbuffer *p)
 	char *str;
 	if (!p || !p->buffer) return 0;
 	str=p->buffer+p->offset;
-	return p->offset+strlen(str);
+	return p->offset+ (int) strlen(str);
 }
 
 /* Render the number nicely from the given item into a string. */
@@ -256,7 +256,7 @@ static char *print_string_ptr(const char *str,printbuffer *p)
 	for (ptr=str;*ptr;ptr++) flag|=((*ptr>0 && *ptr<32)||(*ptr=='\"')||(*ptr=='\\'))?1:0;
 	if (!flag)
 	{
-		len=ptr-str;
+		len=(int) (ptr-str);
 		if (p) out=ensure(p,len+3);
 		else		out=(char*)cJSON_malloc(len+3);
 		if (!out) return 0;
