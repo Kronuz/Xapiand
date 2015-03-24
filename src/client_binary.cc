@@ -111,7 +111,6 @@ message_type BinaryClient::get_message(double timeout, std::string & result, mes
 	std::string buf(&msg->type, 1);
 	buf += encode_length(msg_size);
 	buf += message;
-
 	LOG_BINARY_PROTO(this, "get_message: '%s'\n", repr(buf).c_str());
 
 	result = message;
