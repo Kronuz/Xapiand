@@ -321,7 +321,6 @@ Database::index(const char *document, bool commit)
 	            	doc.add_value(get_slot(name->string), value->valuestring);
 	            	LOG_DATABASE_WRAP(this, "%s: (str) %s\n", name->string, value->valuestring);
 	            } else if (strcmp(type->valuestring, "date") == 0 && value->type == 4) {
-	            	int size_date = strlen(value->valuestring);
 	            	const char *date;
 					const char *time;
 					const char *sTZD;
@@ -381,8 +380,7 @@ Database::index(const char *document, bool commit)
             cJSON *weight = cJSON_GetObjectItem(term_data, "weight");
             cJSON *position = cJSON_GetObjectItem(term_data, "position");
             if (term) {
-            	const char *term_v = term->valuestring;
-            	Xapian::termcount w;
+                Xapian::termcount w;
             	(weight && weight->type == 3) ? w = weight->valueint : w = 1;
             	LOG_DATABASE_WRAP(this, "Weight: %d\n", w);
             	const char *name_v;
@@ -422,7 +420,6 @@ Database::index(const char *document, bool commit)
 		            		LOG_DATABASE_WRAP(this, "Term str: %s %d\n", nameterm.c_str(), w);
 		            	}
 		            } else if (strcmp(type->valuestring, "date") == 0 && term->type == 4) {
-		            	int size_date = strlen(term->valuestring);
 		            	const char *date;
 						const char *time;
 						const char *sTZD;
@@ -517,8 +514,7 @@ Database::index(const char *document, bool commit)
             cJSON *spelling = cJSON_GetObjectItem(row_text, "spelling");
             cJSON *positions = cJSON_GetObjectItem(row_text, "positions");
             if (text) {
-            	const char *text_v = text->valuestring;
-            	Xapian::termcount w;
+                Xapian::termcount w;
             	const char *lan;
             	bool spelling_v;
             	bool positions_v;
@@ -547,7 +543,7 @@ Database::index(const char *document, bool commit)
     return replace(document_id, doc, commit);
 }
 
-long long int
+unsigned int
 Database::get_slot(const char *name)
 {
 	char *cad = new char[strlen(name) + 1];
@@ -558,7 +554,7 @@ Database::get_slot(const char *name)
     cad[i] = '\0';
     std::string _md5(md5(cad), 24, 32);
     const char *md5_cad = _md5.c_str();
-    long long int slot = hex2long(md5_cad);
+    unsigned int slot = hex2long(md5_cad);
     if (slot == 0xffffffff) {
     	slot = 0xfffffffe;
     }
@@ -566,10 +562,10 @@ Database::get_slot(const char *name)
 }
 
 
-long long int
+unsigned int
 Database::hex2long(const char *input) 
 {
-    long long int n;
+    unsigned n;
     std::stringstream ss;
     ss << std::hex << input;
     ss >> n;
@@ -619,9 +615,9 @@ Database::_time(const char *iso_date)
 char*
 Database::_sTZD(const char *iso_date)
 {
-	int size_iso = strlen(iso_date);
+	size_t size_iso = strlen(iso_date);
 	char *sTZD = new char[9];
-	int j = 0, pos1 = size_iso - 6, pos2 = size_iso - 3;
+	size_t j = 0, pos1 = size_iso - 6, pos2 = size_iso - 3;
 	if (iso_date[19] != '.') {
 		return NULL;
 	}
