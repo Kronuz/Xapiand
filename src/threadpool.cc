@@ -27,6 +27,10 @@
 
 #include "threadpool.h"
 
+struct ThreadInfo {
+    int threadNumber;
+    Queue<Task *> *workQueue;
+};
 
 void Task::inc_ref()
 {
@@ -64,12 +68,16 @@ Task::~Task()
 
 // Function that retrieves a task from a queue, runs it and deletes it
 void *ThreadPool::getWork(void * wq_=NULL) {
-	Queue<Task *> *wq = static_cast<Queue<Task *> *>(wq_);
+    ThreadInfo *threadInfo = static_cast<ThreadInfo *>(wq_);
+    char name[200];
+    sprintf(name, "W%d", threadInfo->threadNumber);
+    pthread_setname_np(name);
 	Task *mw;
-	while (wq->pop(mw)) {
+	while (threadInfo->workQueue->pop(mw)) {
 		mw->run();
 		mw->rel_ref();
 	}
+    delete threadInfo;
 	return NULL;
 }
 
@@ -80,7 +88,10 @@ ThreadPool::ThreadPool(int n) : numThreads(n) {
 
 	threads = new pthread_t[numThreads];
 	for (int i = 0; i < numThreads; ++i) {
-		if (pthread_create(&(threads[i]), 0, getWork, &workQueue) != 0) {
+        ThreadInfo *threadInfo = new ThreadInfo();
+        threadInfo->threadNumber = i;
+        threadInfo->workQueue = &workQueue;
+		if (pthread_create(&(threads[i]), 0, getWork, threadInfo) != 0) {
 			LOG_ERR(this, "ERROR: thread: %s\n", strerror(errno));
 			threads[i] = 0;
 		}
