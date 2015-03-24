@@ -36,4 +36,10 @@
 #define XAPIAND_TCP_BACKLOG       511     /* TCP listen backlog */
 #endif
 
+#if defined(__APPLE__)
+#define HAVE_PTHREAD_SETNAME_NP_1 1
+#else
+#define HAVE_PTHREAD_SETNAME_NP_2 1
+#endif
+
 #endif /* XAPIAND_INCLUDED_XAPIAND_H */
