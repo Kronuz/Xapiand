@@ -56,7 +56,7 @@ private:
 
 public:
 	// Allocate a thread pool and set them to work trying to get tasks
-	ThreadPool(int n);
+	ThreadPool(const char *format, int n);
 
 	// Wait for the threads to finish, then delete them
 	~ThreadPool();
