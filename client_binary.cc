@@ -93,6 +93,7 @@ void BinaryClient::on_read(const char *buf, ssize_t received)
 		messages_queue.push(msg);
 		thread_pool->addTask(this);
 	}
+    
 }
 
 

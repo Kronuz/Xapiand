@@ -154,10 +154,10 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 void HttpClient::run()
 {
 	try {
-		LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
-		LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
-		LOG_HTTP_PROTO(this, "HOST: '%s'\n", repr(host).c_str());
-		LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
+		//LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
+		//LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
+		//LOG_HTTP_PROTO(this, "HOST: '%s'\n", repr(host).c_str());
+		//LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
 		if (path == "/quit") {
 		    server->manager->async_shutdown.send();
 		    return;
@@ -187,7 +187,7 @@ void HttpClient::run()
                     command  = urldecode(p.off_command,p.len_command);
                     
                     if (p.len_namespace) {
-                        nsp_ = urldecode(p.off_namespace, p.len_namespace);
+                        nsp_ = urldecode(p.off_namespace, p.len_namespace) + "/";
                     } else {
                         nsp_ = "";
                     }
@@ -216,7 +216,7 @@ void HttpClient::run()
                 case 0:
                     _delete();
                     break;
-                //GET
+                //GET command.c_str()
                 case 1:
                     switch (look_cmd(command.c_str())) {
                         case command_search: break;
@@ -306,31 +306,36 @@ void HttpClient::run()
 void HttpClient::_delete()
 {
     Database *database = NULL;
-    //Endpoints endpointsP;
-    //endpointsP.push_back(Endpoint("file://db_titles", "", 8890)); //LOCAL
-    //endpointsP.push_back(Endpoint("xapian://127.0.0.1/db_titles", "", 8890)); //REMOTE
-    
-    LOG(this, "Doing the checkout.\n");
+    LOG(this, "Delete Document: %s\n", command.c_str());
+    LOG(this, "Doing the checkout\n");
     database_pool->checkout(&database, endpoints, true);
-    LOG(this, "%s\n", (database->drop(command.c_str(), true)) ? "FINISH CORRECTLY" : "ERROR");
+    database->drop(command.c_str(), true);
     LOG(this, "Doing the checkin.\n");
-    database_pool->checkin(&database);    
+    database_pool->checkin(&database);
     LOG(this, "FINISH\n");
 }
 
-void HttpClient::_index(){
-    Endpoints endpoints;
+void HttpClient::_index()
+{
     Database *database = NULL;
-    LOG(this, "Doing the endpoints.\n");
-    //endpoints.push_back(Endpoint("xapian://127.0.0.1/db_titles", "", 8890));
-    endpoints.push_back(Endpoint("file://db_titles/", "", 8890));
     LOG(this, "Doing the checkout for index\n");
     database_pool->checkout(&database, endpoints, true);
     LOG(this, "Index %s\n", body.c_str());
     database->index(body.c_str(), true);
     LOG(this, "Doing the checkin for index.\n");
     database_pool->checkin(&database);
-    LOG(this, "FINISH INDEX\n");
+    LOG(this, "FINISH INDEX\n");   
 }
 
-void HttpClient::_search(){}
+void HttpClient::_search(query_t e,bool get_matches, bool get_data, bool get_terms, bool get_size, bool dead)
+{
+    
+    
+    Database *database = NULL;
+    LOG(this, "Doing the checkout for search\n");
+    database_pool->checkout(&database, endpoints, true);
+    //database->search("Action");
+    LOG(this, "Doing the checkin for search.\n");
+    database_pool->checkin(&database);
+    LOG(this, "FINISH search\n");
+}
