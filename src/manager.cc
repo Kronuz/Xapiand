@@ -40,7 +40,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_p
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  break_loop(*loop),
 	  async_shutdown(*loop),
-	  thread_pool(10),
+	  thread_pool("W%d", 10),
 	  http_port(http_port_),
 	  binary_port(binary_port_)
 {	
@@ -319,7 +319,7 @@ void XapiandManager::run(int num_servers)
 {
 	LOG(this, "Listening on %d (http), %d (xapian)...\n", http_port, binary_port);
 
-	ThreadPool server_pool(num_servers);
+	ThreadPool server_pool("S%d", num_servers);
 	for (int i = 0; i < num_servers; i++) {
 		XapiandServer *server = new XapiandServer(this, NULL, http_sock, binary_sock, &database_pool, &thread_pool);
 		server_pool.addTask(server);

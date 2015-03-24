@@ -29,6 +29,7 @@
 
 struct ThreadInfo {
     int threadNumber;
+    const char *format;
     Queue<Task *> *workQueue;
 };
 
@@ -70,7 +71,7 @@ Task::~Task()
 void *ThreadPool::getWork(void * wq_=NULL) {
     ThreadInfo *threadInfo = static_cast<ThreadInfo *>(wq_);
     char name[200];
-    sprintf(name, "W%d", threadInfo->threadNumber);
+    sprintf(name, threadInfo->format, threadInfo->threadNumber);
     pthread_setname_np(name);
 	Task *mw;
 	while (threadInfo->workQueue->pop(mw)) {
@@ -83,13 +84,14 @@ void *ThreadPool::getWork(void * wq_=NULL) {
 
 
 // Allocate a thread pool and set them to work trying to get tasks
-ThreadPool::ThreadPool(int n) : numThreads(n) {
+ThreadPool::ThreadPool(const char *format, int n) : numThreads(n) {
 	LOG_OBJ(this, "Creating a thread pool with %d threads\n", n);
 
 	threads = new pthread_t[numThreads];
 	for (int i = 0; i < numThreads; ++i) {
         ThreadInfo *threadInfo = new ThreadInfo();
         threadInfo->threadNumber = i;
+        threadInfo->format = format;
         threadInfo->workQueue = &workQueue;
 		if (pthread_create(&(threads[i]), 0, getWork, threadInfo) != 0) {
 			LOG_ERR(this, "ERROR: thread: %s\n", strerror(errno));
