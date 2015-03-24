@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "xapiand.h"
 #include "utils.h"
 
 #include "threadpool.h"
@@ -72,7 +73,11 @@ void *ThreadPool::getWork(void * wq_=NULL) {
     ThreadInfo *threadInfo = static_cast<ThreadInfo *>(wq_);
     char name[200];
     sprintf(name, threadInfo->format, threadInfo->threadNumber);
+#ifdef HAVE_PTHREAD_SETNAME_NP_2
+    pthread_setname_np(pthread_self(), name);
+#else
     pthread_setname_np(name);
+#endif
 	Task *mw;
 	while (threadInfo->workQueue->pop(mw)) {
 		mw->run();
