@@ -63,7 +63,7 @@ public:
 	void reopen();
 	bool drop(const char *document_id, bool commit);
 	char* prefixed(const char *term, const char *prefix);
-	bool index(const char *document, bool commit);
+	bool index(const char *document, const char *document_id, bool commit);
 	unsigned int get_slot(const char *name);
 	unsigned int hex2long(const char *input);
 	char* _date(const char *iso_date);
