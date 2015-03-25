@@ -277,19 +277,17 @@ Database::index(const char *document, const char *document_id, bool commit)
 		return false;
 	}
 	
-	cJSON *doc_id = root ? cJSON_GetObjectItem(root, "id") : NULL;
-    cJSON *document_data = root ? cJSON_GetObjectItem(root, "data") : NULL;
+	cJSON *document_data = root ? cJSON_GetObjectItem(root, "data") : NULL;
     cJSON *document_values = root ? cJSON_GetObjectItem(root, "values") : NULL;
     cJSON *document_terms = root ? cJSON_GetObjectItem(root, "terms") : NULL;
     cJSON *document_texts = root ? cJSON_GetObjectItem(root, "texts") : NULL;
 
     Xapian::Document doc;
 
-    const char *document_id;
-    if (doc_id) {
+    if (document_id) {
 	    //Make sure document_id is also a term (otherwise it doesn't replace an existing document)
-	    doc.add_value(get_slot("ID"), doc_id->valuestring);
-	    document_id  = prefixed(doc_id->valuestring, DOCUMENT_ID_TERM_PREFIX);
+	    doc.add_value(get_slot("ID"), document_id);
+	    document_id  = prefixed(document_id, DOCUMENT_ID_TERM_PREFIX);
 	    doc.add_boolean_term(document_id);	
     } else {
     	LOG_ERR(this, "ERROR: Document must have an 'id'\n");
