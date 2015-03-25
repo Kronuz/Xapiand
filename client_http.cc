@@ -321,20 +321,23 @@ void HttpClient::_index()
     LOG(this, "Doing the checkout for index\n");
     database_pool->checkout(&database, endpoints, true);
     LOG(this, "Index %s\n", body.c_str());
-    database->index(body.c_str(), true);
+    database->index(body.c_str(), command.c_str(), true);
     LOG(this, "Doing the checkin for index.\n");
     database_pool->checkin(&database);
     LOG(this, "FINISH INDEX\n");   
 }
 
-void HttpClient::_search(query_t e,bool get_matches, bool get_data, bool get_terms, bool get_size, bool dead)
+void HttpClient::_search()
 {
-    
-    
     Database *database = NULL;
     LOG(this, "Doing the checkout for search\n");
     database_pool->checkout(&database, endpoints, true);
-    //database->search("Action");
+    Database::query_t query;
+    std::string search("Bajo focus");
+    query.search = search;
+
+                    //query, get_matches, get_data, get_terms, get_size, dead, counting=False
+    database->search(query, true, true, true, true, false, false);
     LOG(this, "Doing the checkin for search.\n");
     database_pool->checkin(&database);
     LOG(this, "FINISH search\n");

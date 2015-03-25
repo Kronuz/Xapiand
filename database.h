@@ -47,6 +47,15 @@ public:
 	Endpoints endpoints;
 	
 	Xapian::Database *db;
+
+	typedef struct query_t {
+	    int first;  //Get first item (OFFSET)
+	    int maxitems; //Get maximum number of items (LIMIT)
+
+	    std::string sort_by; //Get wanted order by
+	    std::string facets; //Get wanted facets
+	    std::string search;    //Get searchs
+	} query_t;
 	
 	Database(Endpoints &endpoints, bool writable);
 	~Database();
@@ -64,6 +73,7 @@ public:
 	char* get_slot_hex(const char *name);
 	const char* print_type(int type);
 	bool replace(const char *document_id, const Xapian::Document doc, bool commit);
+	void search(query_t query, bool get_matches, bool get_data, bool get_terms, bool get_size, bool dead, bool counting);
 
 private:
 	bool _commit();

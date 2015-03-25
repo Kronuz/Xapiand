@@ -261,7 +261,7 @@ Database::_commit()
 }
 
 bool
-Database::index(const char *document, bool commit)
+Database::index(const char *document, const char *document_id, bool commit)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
@@ -702,4 +702,10 @@ Database::replace(const char *document_id, const Xapian::Document doc, bool comm
 		if (commit) return _commit();
 	}
 	return false;
+}
+
+void
+Database::search(query_t query, bool get_matches, bool get_data, bool get_terms, bool get_size, bool dead, bool counting)
+{
+	
 }
