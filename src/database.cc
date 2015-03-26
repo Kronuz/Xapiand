@@ -28,6 +28,9 @@
 #define DOCUMENT_ID_TERM_PREFIX "Q:"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
+#define PREFIX_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
+#define TERM_SPLIT_RE "[^-\\w.]"
+
 
 Database::Database(Endpoints &endpoints_, bool writable_)
 	: endpoints(endpoints_),
@@ -86,6 +89,8 @@ Database::reopen()
 
 Database::~Database()
 {
+	if (compiled_date)  pcre_free(compiled_date); 
+	if (compiled_terms) pcre_free(compiled_terms);
 	delete db;
 }
 
@@ -702,8 +707,53 @@ Database::replace(const char *document_id, const Xapian::Document doc, bool comm
 	return false;
 }
 
-void
+bool
 Database::search(query_t query, bool get_matches, bool get_data, bool get_terms, bool get_size, bool dead, bool counting)
 {
+	if (writable) {
+		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+		return false;
+	}
+
+	Xapian::QueryParser queryparser;
+	const Xapian::Database *wdb = static_cast<Xapian::Database *>(db);
 	
+    queryparser.set_database(*wdb);
+
+    return find_terms(query.search.c_str());
+}
+
+bool
+Database::find_terms(const char *str)
+{
+	const char *errptr;
+    int i, j, offset = 0, erroffset;
+    size_t len = strlen(str);
+    group gr[3];
+
+    // First, the regex string must be compiled.
+    if (!compiled_terms) {
+    	LOG(this, "Compiled terms is NULL, we will compile\n");
+    	compiled_terms = pcre_compile(PREFIX_RE, 0, &errptr, &erroffset, 0);
+    	// pcre_compile returns NULL on error, and sets erroffset & errptr
+    	if (compiled_terms == NULL) {
+	        LOG_ERR(this, "ERROR: Could not compile '%s': %s\n", PREFIX_RE, errptr);
+	        return false;
+	    }
+	    // Optimize the regex
+	    if (errptr != NULL) {
+	        printf("ERROR: Could not study '%s': %s\n", PREFIX_RE, errptr);
+	        return  false;
+    	}
+    }
+
+    while (pcre_exec(compiled_terms, 0, str, len, offset, 0,  (int*) gr, sizeof(gr)) >= 0){ 
+        LOG(this, "Field name: %s  term: %s\n", std::string(str + gr[1].start, gr[1].end - gr[1].start).c_str(), std::string(str + gr[2].start, gr[2].end - gr[2].start).c_str());
+        offset = gr[0].end;
+        LOG(this, "%d\n", offset);
+    }
+
+    LOG(this, "FINISH FIND\n");
+
+    return true;
 }

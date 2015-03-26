@@ -185,7 +185,8 @@ void HttpClient::run()
                 while (url_path(&n0, &p) == 0) {
      
                     command  = urldecode(p.off_command,p.len_command);
-                    
+                    _search();
+
                     if (p.len_namespace) {
                         nsp_ = urldecode(p.off_namespace, p.len_namespace) + "/";
                     } else {
@@ -216,7 +217,7 @@ void HttpClient::run()
                 case 0:
                     _delete();
                     break;
-                //GET command.c_str()
+                //GET (search)
                 case 1:
                     switch (look_cmd(command.c_str())) {
                         case command_search: break;
@@ -312,7 +313,7 @@ void HttpClient::_delete()
     database->drop(command.c_str(), true);
     LOG(this, "Doing the checkin.\n");
     database_pool->checkin(&database);
-    LOG(this, "FINISH\n");
+    LOG(this, "FINISH DELETE\n");
 }
 
 void HttpClient::_index()
@@ -320,25 +321,41 @@ void HttpClient::_index()
     Database *database = NULL;
     LOG(this, "Doing the checkout for index\n");
     database_pool->checkout(&database, endpoints, true);
+    Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db);
+    LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
     LOG(this, "Index %s\n", body.c_str());
     database->index(body.c_str(), command.c_str(), true);
+    LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
     LOG(this, "Doing the checkin for index.\n");
     database_pool->checkin(&database);
-    LOG(this, "FINISH INDEX\n");   
+    LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
+    LOG(this, "FINISH INDEX\n");
 }
 
 void HttpClient::_search()
 {
     Database *database = NULL;
     LOG(this, "Doing the checkout for search\n");
-    database_pool->checkout(&database, endpoints, true);
+    database_pool->checkout(&database, endpoints, false);
     Database::query_t query;
-    std::string search("Bajo focus");
-    query.search = search;
+    std::string search_q("title:Hola como estas description:\"mexican movie\" kind:\"action\" range:12..20");
+    query.search = search_q;
+    std::string sort_by("year");
+    query.sort_by = sort_by;
+    std::string sort_type("ASC");
+    query.sort_type = sort_type;
+    std::string facets("precio");
+    query.facets = facets;
 
                     //query, get_matches, get_data, get_terms, get_size, dead, counting=False
     database->search(query, true, true, true, true, false, false);
+
+    LOG(this, "Second search.\n");
+    search_q = "title:\"mexican life\" description:\"mexican movie\" kind:thriller range:1.2..2.87";
+    query.search = search_q;
+    database->search(query, true, true, true, true, false, false);
+
     LOG(this, "Doing the checkin for search.\n");
     database_pool->checkin(&database);
-    LOG(this, "FINISH search\n");
+    LOG(this, "FINISH SEARCH\n");
 }
