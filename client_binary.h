@@ -23,7 +23,7 @@
 #ifndef XAPIAND_INCLUDED_CLIENT_BINARY_H
 #define XAPIAND_INCLUDED_CLIENT_BINARY_H
 
-#include "net/remoteserver.h"
+#include "xapian.h"
 
 #include "client_base.h"
 
@@ -53,7 +53,6 @@ public:
 	Xapian::Database * get_db(bool);
 	void release_db(Xapian::Database *);
 	void select_db(const std::vector<std::string> &, bool, int);
-	void select_db(const std::vector<std::string> &, bool);  // FIXME: This is legacy select_db for old 1.3.2
 	void shutdown();
 
 	BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);

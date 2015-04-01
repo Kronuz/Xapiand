@@ -35,8 +35,5 @@ EXTRA_DIST = Xapiand.xcodeproj/project.pbxproj
 
 AM_LDFLAGS = $(XAPIAN_LIBS) -lpcre
 
-AM_CXXFLAGS = -std=c++11 \
-	-DXAPIAN_LIB_BUILD \
-	-I$(XAPIAN_SRCDIR)/ \
-	-I$(XAPIAN_SRCDIR)/common
+AM_CXXFLAGS = -std=c++11
 AM_CXXFLAGS += $(XAPIAN_CXXFLAGS)

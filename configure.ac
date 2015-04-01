@@ -11,20 +11,6 @@ LT_INIT
 
 AM_INIT_AUTOMAKE([subdir-objects no-dependencies])
 
-AC_ARG_VAR(XAPIAN_SRCDIR, Location of the xapian-core source code directory)
-
-# Check for Xapian source code
-if test -z "$XAPIAN_SRCDIR"; then
-	XAPIAN_SRCDIR="$(dirname -- $(find .. -type d -name queryparser -maxdepth 3 | grep xapian-core | head -n1))"
-	if test -z "$XAPIAN_SRCDIR"; then
-		if [ -d "../xapian-core/queryparser" ]; then
-			XAPIAN_SRCDIR="../xapian-core"
-		else
-			AC_MSG_ERROR([xapian-core source code directory not found, define XAPIAN_SRCDIR environment variable])
-		fi
-	fi
-fi
-
 # Checks for programs.
 AC_PROG_CXX
 
