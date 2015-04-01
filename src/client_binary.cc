@@ -201,12 +201,6 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 	pthread_mutex_unlock(&qmtx);
 }
 
-// FIXME: The following is a legacy method for old 1.3.2, remove it!
-void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_)
-{
-	select_db(dbpaths_, writable_, Xapian::DB_OPEN);
-}
-
 
 void BinaryClient::run()
 {
