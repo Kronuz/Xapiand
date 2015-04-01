@@ -1,0 +1,92 @@
+# Compile from Git
+# Needs: swig automake
+
+VERSION="HEAD"
+
+if [ -d "/usr/local/Cellar" ]; then
+	# Homebre in OS X has Cellar
+	PREFIX="/usr/local/Cellar/xapian/$VERSION"
+else
+	PREFIX="/usr/local"
+fi
+
+if [ ! -d xapian ]; then
+	git clone git@github.com:xapian/xapian.git
+fi
+
+ln -s xapian/xapian-core
+ln -s xapian/xapian-bindings
+
+# Build xapian-core
+#####################
+cd xapian-core
+
+# Generate xapian/errors.h
+perl generate-exceptions
+
+# Compile lemon (for queryparser)
+gcc -o queryparser/lemon queryparser/lemon.c
+
+# Compile queryparser
+queryparser/lemon -q -oqueryparser/queryparser_internal.cc -hqueryparser/queryparser_token.h queryparser/queryparser.lemony
+
+# Compile languages compiler (snowball based)
+gcc -o languages/snowball -DDISABLE_JAVA languages/compiler/space.c languages/compiler/tokeniser.c languages/compiler/analyser.c languages/compiler/generator.c languages/compiler/driver.c
+
+# Compile languages
+sbc() { languages/snowball "$1" -o `echo "$1"|sed 's#\.sbl$##'` -c++ -u -n InternalStem$(echo "$1"|sed 's#.*/\(.\).*#\1#'|tr a-z A-Z)$(echo "$1"|sed 's#.*/.##;s#\.sbl##') -p SnowballStemImplementation }; for f in $(find languages -type f -name '*.sbl'); do sbc "$f"; done
+
+# Build sbl-dispatch.h
+perl -I common languages/collate-sbl . $(find languages -type f -name '*.sbl')
+
+# Compile unicode-data
+tclsh unicode/uniParse.tcl unicode/UnicodeData.txt 6.3.0 unicode/unicode-data.cc
+
+# Make fake man pages:
+touch xapian-config.1
+touch bin/xapian-check.1
+touch bin/xapian-compact.1
+touch bin/xapian-delve.1
+touch bin/xapian-inspect.1
+touch bin/xapian-replicate.1
+touch bin/xapian-replicate-server.1
+touch bin/xapian-progsrv.1
+touch bin/xapian-tcpsrv.1
+touch examples/copydatabase.1
+touch examples/quest.1
+touch examples/xapian-metadata.1
+
+# Autoconf, configure (disabled docs) and make:
+./preautoreconf
+autoreconf --force --install -I/usr/local/share/aclocal
+./configure --disable-dependency-tracking --prefix="$PREFIX" && echo 'all:\ninstall:\n' > docs/Makefile
+make
+make install
+cd ..
+
+# Build Python xapian-bindings
+################################
+cd xapian-bindings
+cd python
+
+# Generate except.i
+perl -w -I../../xapian-core generate-python-exceptions
+
+# Generate version.i
+sed "s/@VERSION@/HEAD/" version.i.in > version.i
+
+# Create empty doccomments.i (no documentation was ever built to properly generate it)
+touch doccomments.i
+
+# Build bindings
+mkdir -p modern
+swig -I../../xapian-core/include -c++ -python -threads -shadow -modern -O -outdir modern -o modern/xapian_wrap.cc python.i
+
+cd ..
+
+# Autoconf, configure and make:
+autoreconf --force --install -I/usr/local/share/aclocal
+./configure --disable-dependency-tracking --prefix="$PREFIX" PYTHON_LIB="$PREFIX/lib/python2.7/site-packages" XAPIAN_CONFIG=$PREFIX/bin/xapian-config-1.3 --without-csharp --without-tcl --without-java --without-ruby --with-python --without-php
+make
+make install
+cd ..
