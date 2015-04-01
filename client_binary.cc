@@ -191,7 +191,7 @@ void BinaryClient::release_db(Xapian::Database *db_)
 }
 
 
-void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_)
+void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags)
 {
 	pthread_mutex_lock(&qmtx);
 	std::vector<std::string>::const_iterator i(dbpaths_.begin());
@@ -202,6 +202,12 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 	}
 	dbpaths = dbpaths_;
 	pthread_mutex_unlock(&qmtx);
+}
+
+// FIXME: The following is a legacy method for old 1.3.2, remove it!
+void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_)
+{
+	select_db(dbpaths_, writable_, Xapian::DB_OPEN);
 }
 
 
