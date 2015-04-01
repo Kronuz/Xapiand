@@ -14,12 +14,12 @@
 		E59725CE1A9D25EB0060069C /* client_http.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725CA1A9D25EB0060069C /* client_http.cc */; };
 		E59725D11A9D25F60060069C /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725CF1A9D25F60060069C /* utils.cc */; };
 		E59725D41AA1A38B0060069C /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = E59725D21AA1A38B0060069C /* cJSON.c */; };
+		E597730C1ACC75EB00E3DA76 /* length.cc in Sources */ = {isa = PBXBuildFile; fileRef = E597730A1ACC75EB00E3DA76 /* length.cc */; };
 		E5C170471AA4B9CC00C21A86 /* manager.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5C170451AA4B9CC00C21A86 /* manager.cc */; };
 		E5CEBCDF1A99C9BB00CD151F /* server.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDA1A99C9BB00CD151F /* server.cc */; };
 		E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */; };
 		E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */; };
 		E5CEBCEA1A9B22E600CD151F /* database.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCE91A9B22E600CD151F /* database.cc */; };
-		E5CEBCEC1A9BB98A00CD151F /* length.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCEB1A9BB98A00CD151F /* length.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -51,6 +51,8 @@
 		E59725D31AA1A38B0060069C /* cJSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON.h; sourceTree = "<group>"; };
 		E59725D51AA20D7B0060069C /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		E59725D61AA2141F0060069C /* xapiand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xapiand.h; sourceTree = "<group>"; };
+		E597730A1ACC75EB00E3DA76 /* length.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = length.cc; sourceTree = "<group>"; };
+		E597730B1ACC75EB00E3DA76 /* length.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = length.h; sourceTree = "<group>"; };
 		E5C170451AA4B9CC00C21A86 /* manager.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = manager.cc; sourceTree = "<group>"; };
 		E5C170461AA4B9CC00C21A86 /* manager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = manager.h; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -63,7 +65,6 @@
 		E5CEBCE51A9AE80200CD151F /* endpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = endpoint.h; sourceTree = "<group>"; };
 		E5CEBCE61A9B228C00CD151F /* database.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = database.h; sourceTree = "<group>"; };
 		E5CEBCE91A9B22E600CD151F /* database.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = database.cc; sourceTree = "<group>"; };
-		E5CEBCEB1A9BB98A00CD151F /* length.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = length.cc; path = "../xapian-core-1.3.2/net/length.cc"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,6 +85,8 @@
 				E59725D51AA20D7B0060069C /* config.h */,
 				E59725D61AA2141F0060069C /* xapiand.h */,
 				E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */,
+				E597730B1ACC75EB00E3DA76 /* length.h */,
+				E597730A1ACC75EB00E3DA76 /* length.cc */,
 				E59725D01A9D25F60060069C /* utils.h */,
 				E59725CF1A9D25F60060069C /* utils.cc */,
 				E5CEBCE51A9AE80200CD151F /* endpoint.h */,
@@ -102,7 +105,6 @@
 				E5CEBCD91A99C9BB00CD151F /* queue.h */,
 				E5CEBCDD1A99C9BB00CD151F /* threadpool.h */,
 				E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */,
-				E5CEBCEB1A9BB98A00CD151F /* length.cc */,
 				E59725B61A9CFCAD0060069C /* http_parser.h */,
 				E59725B51A9CFCAD0060069C /* http_parser.c */,
 				E59725D21AA1A38B0060069C /* cJSON.c */,
@@ -176,10 +178,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E597730C1ACC75EB00E3DA76 /* length.cc in Sources */,
 				C3AF50161AC1E79A007071BF /* md5.cc in Sources */,
 				E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */,
 				E5CEBCEA1A9B22E600CD151F /* database.cc in Sources */,
-				E5CEBCEC1A9BB98A00CD151F /* length.cc in Sources */,
 				E59725CE1A9D25EB0060069C /* client_http.cc in Sources */,
 				E59725CC1A9D25EB0060069C /* client_base.cc in Sources */,
 				E59725D11A9D25F60060069C /* utils.cc in Sources */,
@@ -273,16 +275,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				OTHER_CPLUSPLUSFLAGS = (
-					"-DXAPIAN_LIB_BUILD",
 					"-I/usr/local/include",
 					"-I/usr/local/include/xapian-1.3",
-					"-I../xapian-core-1.3.2",
-					"-I../xapian-core-1.3.2/common",
 				);
 				OTHER_LDFLAGS = (
 					"-L/usr/local/lib",
 					"-lz",
 					"-lev",
+					"-lpcre",
 					"-lpthread",
 					"-lxapian-1.3",
 				);
@@ -295,16 +295,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				OTHER_CPLUSPLUSFLAGS = (
-					"-DXAPIAN_LIB_BUILD",
 					"-I/usr/local/include",
 					"-I/usr/local/include/xapian-1.3",
-					"-I../xapian-core-1.3.2",
-					"-I../xapian-core-1.3.2/common",
 				);
 				OTHER_LDFLAGS = (
 					"-L/usr/local/lib",
 					"-lz",
 					"-lev",
+					"-lpcre",
 					"-lpthread",
 					"-lxapian-1.3",
 				);
