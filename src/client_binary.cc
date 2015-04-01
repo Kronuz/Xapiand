@@ -23,12 +23,11 @@
 #include <assert.h>
 #include <sys/socket.h>
 
-#include "net/length.h"
-
 #include "server.h"
 #include "utils.h"
 #include "client_binary.h"
 #include "xapiand.h"
+#include "length.h"
 
 //
 // Xapian binary client
@@ -80,10 +79,8 @@ void BinaryClient::on_read(const char *buf, ssize_t received)
 		const char *p_end = p + buffer.size();
 		
 		message_type type = static_cast<message_type>(*p++);
-		size_t len;
-		try {
-			len = decode_length(&p, p_end, true);
-		} catch (const Xapian::NetworkError & e) {
+		size_t len = decode_length(&p, p_end, true);
+		if (len == -1) {
 			return;
 		}
 		std::string data = std::string(p, len);
