@@ -84,7 +84,7 @@ public:
 	int strtoint(const std::string &str);
 	double strtodouble(const std::string &str);
 	double timestamp_date(const std::string &str);
-    std::string get_prefix(const std::string &name, const std::string &prefix);
+	std::string get_prefix(const std::string &name, const std::string &prefix);
 	std::string get_slot_hex(const std::string &name);
 	std::string print_type(int type);
 	bool replace(const std::string &document_id, const Xapian::Document doc, bool commit);
