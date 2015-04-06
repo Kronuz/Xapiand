@@ -51,13 +51,13 @@ public:
 	Xapian::Database *db;
 
 	typedef struct query_t {
-	    int first;  //Get first item (OFFSET)
-	    int max_items; //Get maximum number of items (LIMIT)
+		int first;  //Get first item (OFFSET)
+		int max_items; //Get maximum number of items (LIMIT)
 
-	    std::string search;    	//Get searchs
-	    std::string sort_by; //Get wanted order by
-	    std::string sort_type; 	//DESC or ASC
-	    std::string facets;  	//Get wanted facets
+		std::string search;    	//Get searchs
+		std::string sort_by; //Get wanted order by
+		std::string sort_type; 	//DESC or ASC
+		std::string facets;  	//Get wanted facets
 	} query_t;
 
 	typedef struct group{

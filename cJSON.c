@@ -48,22 +48,22 @@ static void (*cJSON_free)(void *ptr) = free;
 
 static char* cJSON_strdup(const char* str)
 {
-      size_t len;
-      char* copy;
+	size_t len;
+	char* copy;
 
-      len = strlen(str) + 1;
-      if (!(copy = (char*)cJSON_malloc(len))) return 0;
-      memcpy(copy,str,len);
-      return copy;
+	len = strlen(str) + 1;
+	if (!(copy = (char*)cJSON_malloc(len))) return 0;
+	memcpy(copy,str,len);
+	return copy;
 }
 
 void cJSON_InitHooks(cJSON_Hooks* hooks)
 {
-    if (!hooks) { /* Reset hooks */
-        cJSON_malloc = malloc;
-        cJSON_free = free;
-        return;
-    }
+	if (!hooks) { /* Reset hooks */
+		cJSON_malloc = malloc;
+		cJSON_free = free;
+		return;
+	}
 
 	cJSON_malloc = (hooks->malloc_fn)?hooks->malloc_fn:malloc;
 	cJSON_free	 = (hooks->free_fn)?hooks->free_fn:free;
