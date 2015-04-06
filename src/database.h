@@ -36,6 +36,7 @@
 #include "md5.h"
 #include <sstream>
 #include <pcre.h>
+#include <sys/time.h>
 
 
 class DatabasePool;
@@ -64,27 +65,34 @@ public:
 		int end;
 	} group;
 
-	pcre *compiled_terms;
-	pcre *compiled_date;
+	static pcre *compiled_terms;
+	static pcre *compiled_date_re;
+	static pcre *compiled_coords_re;
 	
 	Database(Endpoints &endpoints, bool writable);
 	~Database();
 	
 	void reopen();
-	bool drop(const char *document_id, bool commit);
-	char* prefixed(const char *term, const char *prefix);
-	bool index(const char *document, const char *document_id, bool commit);
-	unsigned int get_slot(const char *name);
-	unsigned int hex2long(const char *input);
-	char* _date(const char *iso_date);
-	char* _time(const char *iso_date);
-	char* _sTZD(const char *iso_date);
-	char* get_prefix(const char *name, const char *prefix);
-	char* get_slot_hex(const char *name);
-	const char* print_type(int type);
-	bool replace(const char *document_id, const Xapian::Document doc, bool commit);
+	bool drop(const std::string &document_id, bool commit);
+	std::string stringtolower(const std::string &str);
+	std::string stringtoupper(const std::string &str); 
+	std::string upper_stringtoupper(const std::string &str);  
+	bool index(const std::string &document, const std::string &document_id, bool commit);
+	unsigned int get_slot(const std::string &name);
+	std::string prefixed(const std::string &term, const std::string &prefixO);
+	unsigned int hex2int(const std::string &input);
+	int strtoint(const std::string &str);
+	double strtodouble(const std::string &str);
+	double timestamp_date(const std::string &str);
+    std::string get_prefix(const std::string &name, const std::string &prefix);
+	std::string get_slot_hex(const std::string &name);
+	std::string print_type(int type);
+	bool replace(const std::string &document_id, const Xapian::Document doc, bool commit);
 	bool search(query_t query, bool get_matches, bool get_data, bool get_terms, bool get_size, bool dead, bool counting);
-	bool find_terms(const char *str);
+	bool find_terms(const std::string &str);
+	std::string serialise(const std::string &name, const std::string &value);
+	std::string parser_bool(const std::string &value);
+	bool lat_lon(const std::string &str, int *grv, int size, int offset);
 	
 private:
 	bool _commit();
