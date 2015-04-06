@@ -201,29 +201,29 @@ pcre *Database::compiled_coords_re = NULL;
 bool
 Database::drop(const std::string &doc_id, bool commit)
 {
-	if (!writable) {
-		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
-		return false;
-	}
+    if (!writable) {
+        LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+        return false;
+    }
 
     std::string document_id  = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
 
 	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Deleting: -%s- t:%d\n", document_id.c_str(), t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
-	    try {
-	    	wdb->delete_document(document_id);
-	    } catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
-			if (t) reopen();
-			continue;
-		}
-    	LOG_DATABASE_WRAP(this, "Document deleted\n");
-		if (commit) return _commit();
-	}
+        LOG_DATABASE_WRAP(this, "Deleting: -%s- t:%d\n", document_id.c_str(), t);
+        Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+        try {
+            wdb->delete_document(document_id);
+        } catch (const Xapian::Error &e) {
+            LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+            if (t) reopen();
+            continue;
+        }
+        LOG_DATABASE_WRAP(this, "Document deleted\n");
+        if (commit) return _commit();
+    }
 
-	LOG_ERR(this, "ERROR: Cannot delete document: %s!\n", document_id.c_str());
-	return false;
+    LOG_ERR(this, "ERROR: Cannot delete document: %s!\n", document_id.c_str());
+    return false;
 }
 
 std::string
