@@ -185,7 +185,7 @@ void HttpClient::run()
                 while (url_path(&n0, &p) == 0) {
      
                     command  = urldecode(p.off_command,p.len_command);
-                    _search();
+                    //_search();
 
                     if (p.len_namespace) {
                         nsp_ = urldecode(p.off_namespace, p.len_namespace) + "/";
@@ -324,7 +324,7 @@ void HttpClient::_index()
     Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db);
     LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
     LOG(this, "Index %s\n", body.c_str());
-    database->index(body.c_str(), command.c_str(), true);
+    database->index(body, command, true);
     LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
     LOG(this, "Doing the checkin for index.\n");
     database_pool->checkin(&database);
