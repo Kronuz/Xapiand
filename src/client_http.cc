@@ -129,24 +129,24 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	switch (p->state) {
 		case 32: // path
 			self->path = std::string(at, length);
-            self->body = std::string();
-            break;
-        case 44:
-            if (strcasecmp(std::string(at, length).c_str(),"host") == 0) {
-                self->ishost = true;
-            }
-            break;
-       	case 60: // receiving data from the buffer (1024 bytes)
+			self->body = std::string();
+			break;
+		case 44:
+			if (strcasecmp(std::string(at, length).c_str(),"host") == 0) {
+				self->ishost = true;
+			}
+			break;
+		case 60: // receiving data from the buffer (1024 bytes)
 		case 62: // finished receiving data (last data)
 			self->body += std::string(at, length);
-       		break;
+			break;
 		case 50:
-            if (self->ishost) {
-                self->host = std::string(at, length);
-                self->ishost = false;
-            }
-            break;
-    }
+			if (self->ishost) {
+				self->host = std::string(at, length);
+				self->ishost = false;
+			}
+			break;
+	}
 	return 0;
 }
 
@@ -159,203 +159,203 @@ void HttpClient::run()
 		//LOG_HTTP_PROTO(this, "HOST: '%s'\n", repr(host).c_str());
 		//LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
 		if (path == "/quit") {
-		    server->manager->async_shutdown.send();
-		    return;
+			server->manager->async_shutdown.send();
+			return;
 		}
 
-        struct http_parser_url u;
-        const char *b = repr(path).c_str();
-        LOG_CONN_WIRE(this,"URL: %s\n",repr(path).c_str());
-        if(http_parser_parse_url(b, strlen(b), 0, &u) == 0){
-            LOG_CONN_WIRE(this,"Parsing done\n");
-            
-            if (u.field_set & (1 <<  UF_PATH )){
-                char path_[u.field_data[3].len];
-                memcpy(path_, b + u.field_data[3].off, u.field_data[3].len);
-                path_[u.field_data[3].len] = '\0';
-                
-                struct parser_url_path_t p;
-                memset(&p, 0, sizeof(p));
-                const char *n0 = path_;
-                std::string endp;
-                std::string nsp_;
-                std::string pat_;
-                std::string hos_;
-                
-                while (url_path(&n0, &p) == 0) {
-     
-                    command  = urldecode(p.off_command,p.len_command);
-                    //_search();
+		struct http_parser_url u;
+		const char *b = repr(path).c_str();
+		LOG_CONN_WIRE(this,"URL: %s\n",repr(path).c_str());
+		if(http_parser_parse_url(b, strlen(b), 0, &u) == 0){
+			LOG_CONN_WIRE(this,"Parsing done\n");
+			
+			if (u.field_set & (1 <<  UF_PATH )){
+				char path_[u.field_data[3].len];
+				memcpy(path_, b + u.field_data[3].off, u.field_data[3].len);
+				path_[u.field_data[3].len] = '\0';
+				
+				struct parser_url_path_t p;
+				memset(&p, 0, sizeof(p));
+				const char *n0 = path_;
+				std::string endp;
+				std::string nsp_;
+				std::string pat_;
+				std::string hos_;
+				
+				while (url_path(&n0, &p) == 0) {
+	 
+					command  = urldecode(p.off_command,p.len_command);
+					//_search();
 
-                    if (p.len_namespace) {
-                        nsp_ = urldecode(p.off_namespace, p.len_namespace) + "/";
-                    } else {
-                        nsp_ = "";
-                    }
-                    if (p.len_path) {
-                        pat_ = urldecode(p.off_path, p.len_path);
-                    } else {
-                        pat_ = "";
-                    }
-                    if (p.len_host) {
-                        hos_ = urldecode(p.off_host, p.len_host);
-                    } else {
-                        hos_ = host;
-                    }
-                    endp = "xapian://" + hos_ + nsp_ + pat_;
-                    //endp = "file://" + nsp_ + pat_;
-                
-                    Endpoint endpoint = Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT);
-                    endpoints.push_back(endpoint);
-                    
-                    LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());    
-                }
-            }
-            
-            switch (parser.method) {
-                //DELETE
-                case 0:
-                    _delete();
-                    break;
-                //GET (search)
-                case 1:
-                    switch (look_cmd(command.c_str())) {
-                        case command_search: break;
-                        case command_count: break;
-                        case command_facets: break;
-                        case command_similar: break;
-                        case identifier: break;
-                    }
-                    break;
-                //PUT
-                case 4:
-                    _index();
-                    break;
-                default:
-                    break;
-            }
-        } else {
-            LOG_CONN_WIRE(this,"Parsing not done\n");
-        }
-        
-        std::string content;
-        cJSON *json = cJSON_Parse(body.c_str());
-        cJSON *query = json ? cJSON_GetObjectItem(json, "query") : NULL;
-        cJSON *term = query ? cJSON_GetObjectItem(query, "term") : NULL;
-        cJSON *text = term ? cJSON_GetObjectItem(term, "text") : NULL;
-        
-        cJSON *root = cJSON_CreateObject();
-        cJSON *response = cJSON_CreateObject();
-        cJSON_AddItemToObject(root, "response", response);
-        if (text) {
-            cJSON_AddStringToObject(response, "status", "OK");
-            cJSON_AddStringToObject(response, "query", text->valuestring);
-            cJSON_AddStringToObject(response, "title", "The title");
-            cJSON_AddNumberToObject(response, "items", 7);
-            const char *strings[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-            cJSON *results = cJSON_CreateArray();
-            cJSON_AddItemToObject(response, "results", results);
-            for (int i = 0; i < 7; i++) {
-                cJSON *result = cJSON_CreateObject();
-                cJSON_AddNumberToObject(result, "id", i);
-                cJSON_AddStringToObject(result, "name", strings[i]);
-                cJSON_AddItemToArray(results, result);
-            }
-        } else {
-            cJSON_AddStringToObject(response, "status", "ERROR");
-            const char *message = cJSON_GetErrorPtr();
-            if (message) {
-                LOG_HTTP_PROTO(this, "JSON error before: [%s]\n", message);
-                cJSON_AddStringToObject(response, "message", message);
-            }
-        }
-        cJSON_Delete(json);
-        
-        bool pretty = false;
-        char *out;
-        if (pretty) {
-            out = cJSON_Print(root);
-        } else {
-            out = cJSON_PrintUnformatted(root);
-        }
-        content = out;
-        cJSON_Delete(root);
-        free(out);
-        
-        char tmp[20];
-        content += "\r\n";
-        std::string http_response;
-        http_response += "HTTP/";
-        sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
-        http_response += tmp;
-        http_response += " 200 OK\r\n";
-        http_response += "Content-Type: application/json; charset=UTF-8\r\n";
-        http_response += "Content-Length: ";
-        sprintf(tmp, "%ld", (unsigned long)content.size());
-        http_response += tmp;
-        http_response += "\r\n";
-        write(http_response + "\r\n" + content);
-        if (parser.state == 1) {
-            close();
-        }
-    } catch (...) {
-        LOG_ERR(this, "ERROR!\n");
-    }
-    io_read.start();
+					if (p.len_namespace) {
+						nsp_ = urldecode(p.off_namespace, p.len_namespace) + "/";
+					} else {
+						nsp_ = "";
+					}
+					if (p.len_path) {
+						pat_ = urldecode(p.off_path, p.len_path);
+					} else {
+						pat_ = "";
+					}
+					if (p.len_host) {
+						hos_ = urldecode(p.off_host, p.len_host);
+					} else {
+						hos_ = host;
+					}
+					endp = "xapian://" + hos_ + nsp_ + pat_;
+					//endp = "file://" + nsp_ + pat_;
+				
+					Endpoint endpoint = Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT);
+					endpoints.push_back(endpoint);
+					
+					LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());    
+				}
+			}
+			
+			switch (parser.method) {
+				//DELETE
+				case 0:
+					_delete();
+					break;
+				//GET (search)
+				case 1:
+					switch (look_cmd(command.c_str())) {
+						case command_search: break;
+						case command_count: break;
+						case command_facets: break;
+						case command_similar: break;
+						case identifier: break;
+					}
+					break;
+				//PUT
+				case 4:
+					_index();
+					break;
+				default:
+					break;
+			}
+		} else {
+			LOG_CONN_WIRE(this,"Parsing not done\n");
+		}
+		
+		std::string content;
+		cJSON *json = cJSON_Parse(body.c_str());
+		cJSON *query = json ? cJSON_GetObjectItem(json, "query") : NULL;
+		cJSON *term = query ? cJSON_GetObjectItem(query, "term") : NULL;
+		cJSON *text = term ? cJSON_GetObjectItem(term, "text") : NULL;
+		
+		cJSON *root = cJSON_CreateObject();
+		cJSON *response = cJSON_CreateObject();
+		cJSON_AddItemToObject(root, "response", response);
+		if (text) {
+			cJSON_AddStringToObject(response, "status", "OK");
+			cJSON_AddStringToObject(response, "query", text->valuestring);
+			cJSON_AddStringToObject(response, "title", "The title");
+			cJSON_AddNumberToObject(response, "items", 7);
+			const char *strings[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+			cJSON *results = cJSON_CreateArray();
+			cJSON_AddItemToObject(response, "results", results);
+			for (int i = 0; i < 7; i++) {
+				cJSON *result = cJSON_CreateObject();
+				cJSON_AddNumberToObject(result, "id", i);
+				cJSON_AddStringToObject(result, "name", strings[i]);
+				cJSON_AddItemToArray(results, result);
+			}
+		} else {
+			cJSON_AddStringToObject(response, "status", "ERROR");
+			const char *message = cJSON_GetErrorPtr();
+			if (message) {
+				LOG_HTTP_PROTO(this, "JSON error before: [%s]\n", message);
+				cJSON_AddStringToObject(response, "message", message);
+			}
+		}
+		cJSON_Delete(json);
+		
+		bool pretty = false;
+		char *out;
+		if (pretty) {
+			out = cJSON_Print(root);
+		} else {
+			out = cJSON_PrintUnformatted(root);
+		}
+		content = out;
+		cJSON_Delete(root);
+		free(out);
+		
+		char tmp[20];
+		content += "\r\n";
+		std::string http_response;
+		http_response += "HTTP/";
+		sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
+		http_response += tmp;
+		http_response += " 200 OK\r\n";
+		http_response += "Content-Type: application/json; charset=UTF-8\r\n";
+		http_response += "Content-Length: ";
+		sprintf(tmp, "%ld", (unsigned long)content.size());
+		http_response += tmp;
+		http_response += "\r\n";
+		write(http_response + "\r\n" + content);
+		if (parser.state == 1) {
+			close();
+		}
+	} catch (...) {
+		LOG_ERR(this, "ERROR!\n");
+	}
+	io_read.start();
 }
 
 void HttpClient::_delete()
 {
-    Database *database = NULL;
-    LOG(this, "Delete Document: %s\n", command.c_str());
-    LOG(this, "Doing the checkout\n");
-    database_pool->checkout(&database, endpoints, true);
-    database->drop(command.c_str(), true);
-    LOG(this, "Doing the checkin.\n");
-    database_pool->checkin(&database);
-    LOG(this, "FINISH DELETE\n");
+	Database *database = NULL;
+	LOG(this, "Delete Document: %s\n", command.c_str());
+	LOG(this, "Doing the checkout\n");
+	database_pool->checkout(&database, endpoints, true);
+	database->drop(command.c_str(), true);
+	LOG(this, "Doing the checkin.\n");
+	database_pool->checkin(&database);
+	LOG(this, "FINISH DELETE\n");
 }
 
 void HttpClient::_index()
 {
-    Database *database = NULL;
-    LOG(this, "Doing the checkout for index\n");
-    database_pool->checkout(&database, endpoints, true);
-    Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db);
-    LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
-    LOG(this, "Index %s\n", body.c_str());
-    database->index(body, command, true);
-    LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
-    LOG(this, "Doing the checkin for index.\n");
-    database_pool->checkin(&database);
-    LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
-    LOG(this, "FINISH INDEX\n");
+	Database *database = NULL;
+	LOG(this, "Doing the checkout for index\n");
+	database_pool->checkout(&database, endpoints, true);
+	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db);
+	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
+	LOG(this, "Index %s\n", body.c_str());
+	database->index(body, command, true);
+	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
+	LOG(this, "Doing the checkin for index.\n");
+	database_pool->checkin(&database);
+	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
+	LOG(this, "FINISH INDEX\n");
 }
 
 void HttpClient::_search()
 {
-    Database *database = NULL;
-    LOG(this, "Doing the checkout for search\n");
-    database_pool->checkout(&database, endpoints, false);
-    Database::query_t query;
-    std::string search_q("title:Hola como estas description:\"mexican movie\" kind:\"action\" range:12..20");
-    query.search = search_q;
-    std::string sort_by("year");
-    query.sort_by = sort_by;
-    std::string sort_type("ASC");
-    query.sort_type = sort_type;
-    std::string facets("precio");
-    query.facets = facets;
+	Database *database = NULL;
+	LOG(this, "Doing the checkout for search\n");
+	database_pool->checkout(&database, endpoints, false);
+	Database::query_t query;
+	std::string search_q("title:Hola como estas description:\"mexican movie\" kind:\"action\" range:12..20");
+	query.search = search_q;
+	std::string sort_by("year");
+	query.sort_by = sort_by;
+	std::string sort_type("ASC");
+	query.sort_type = sort_type;
+	std::string facets("precio");
+	query.facets = facets;
 
-                    //query, get_matches, get_data, get_terms, get_size, dead, counting=False
-    database->search(query, true, true, true, true, false, false);
+					//query, get_matches, get_data, get_terms, get_size, dead, counting=False
+	database->search(query, true, true, true, true, false, false);
 
-    LOG(this, "Second search.\n");
-    search_q = "title:\"mexican life\" description:\"mexican movie\" kind:thriller range:1.2..2.87";
-    query.search = search_q;
-    database->search(query, true, true, true, true, false, false);
+	LOG(this, "Second search.\n");
+	search_q = "title:\"mexican life\" description:\"mexican movie\" kind:thriller range:1.2..2.87";
+	query.search = search_q;
+	database->search(query, true, true, true, true, false, false);
 
-    LOG(this, "Doing the checkin for search.\n");
-    database_pool->checkin(&database);
-    LOG(this, "FINISH SEARCH\n");
+	LOG(this, "Doing the checkin for search.\n");
+	database_pool->checkin(&database);
+	LOG(this, "FINISH SEARCH\n");
 }
