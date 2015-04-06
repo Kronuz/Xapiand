@@ -278,43 +278,41 @@ Database::prefixed(const std::string &term, const std::string &prefixO) {
 bool
 Database::_commit()
 {
-	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Commit: t%d\n", t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
-		try {
-			wdb->commit();
-		} catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
-			if (t) reopen();
-			continue;
-		}
+    for (int t = 3; t >= 0; --t) {
+        LOG_DATABASE_WRAP(this, "Commit: t%d\n", t);
+        Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+        try {
+            wdb->commit();
+        } catch (const Xapian::Error &e) {
+            LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+            if (t) reopen();
+            continue;
+        }
 
-		LOG_DATABASE_WRAP(this, "Commit made\n");
-		return true;
-	}
+        LOG_DATABASE_WRAP(this, "Commit made\n");
+        return true;
+    }
 
-	LOG_ERR(this, "ERROR: Cannot do commit!\n");
-	return false;
+    LOG_ERR(this, "ERROR: Cannot do commit!\n");
+    return false;
 }
 
 bool
 Database::index(const std::string &document, const std::string &document_id, bool commit)
 {
-	if (!writable) {
-		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
-		return false;
-	}
+    if (!writable) {
+        LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+        return false;
+    }
 
-	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+    const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+    cJSON *root = cJSON_Parse(document.c_str());
 
-	cJSON *root = cJSON_Parse(document.c_str());
-	
-	if (!root) {
-		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
-		return false;
-	}
-	
-	cJSON *document_data = root ? cJSON_GetObjectItem(root, "data") : NULL;
+    if (!root) {
+        LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+        return false;
+    }
+    cJSON *document_data = root ? cJSON_GetObjectItem(root, "data") : NULL;
     cJSON *document_values = root ? cJSON_GetObjectItem(root, "values") : NULL;
     cJSON *document_terms = root ? cJSON_GetObjectItem(root, "terms") : NULL;
     cJSON *document_texts = root ? cJSON_GetObjectItem(root, "texts") : NULL;
@@ -322,42 +320,42 @@ Database::index(const std::string &document, const std::string &document_id, boo
     Xapian::Document doc;
 
     if (document_id.c_str()) {
-	    //Make sure document_id is also a term (otherwise it doesn't replace an existing document)
-	    doc.add_value(get_slot(std::string("ID")), document_id);
-	    doc.add_boolean_term(prefixed(document_id, DOCUMENT_ID_TERM_PREFIX));	
+        //Make sure document_id is also a term (otherwise it doesn't replace an existing document)
+        doc.add_value(get_slot(std::string("ID")), document_id);
+        doc.add_boolean_term(prefixed(document_id, DOCUMENT_ID_TERM_PREFIX));
     } else {
-    	LOG_ERR(this, "ERROR: Document must have an 'id'\n");
-    	return false;
+        LOG_ERR(this, "ERROR: Document must have an 'id'\n");
+        return false;
     }
-    
+
     if (document_data) {
-    	std::string doc_data = std::string(cJSON_Print(document_data));
-    	LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
-		doc.set_data(doc_data);
+        std::string doc_data = std::string(cJSON_Print(document_data));
+        LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
+        doc.set_data(doc_data);
     } else {
-    	LOG_ERR(this, "ERROR: You must provide 'data' to index\n");
-    	return false;
+        LOG_ERR(this, "ERROR: You must provide 'data' to index\n");
+        return false;
     }
 
     if (document_values) {
-    	LOG_DATABASE_WRAP(this, "Values..\n");
-    	for (int i = 0; i < cJSON_GetArraySize(document_values); i++) {
-    		cJSON *name = cJSON_GetArrayItem(document_values, i);
+        LOG_DATABASE_WRAP(this, "Values..\n");
+        for (int i = 0; i < cJSON_GetArraySize(document_values); i++) {
+            cJSON *name = cJSON_GetArrayItem(document_values, i);
             std::string value = std::string(cJSON_Print(name));
             if (name->type == 4 || name->type == 5) {
-            	value = std::string(value, 1, (int) value.size() - 2);
+                value = std::string(value, 1, (int) value.size() - 2);
             }
             LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name->string, value.c_str());
             std::string val_serialized = serialise(std::string(name->string), value);
             if (val_serialized.c_str()) {
-            	doc.add_value(get_slot(std::string(name->string)), val_serialized);
-            	if (name->string[0] == 'g' && name->string[1] == '_') {
+                doc.add_value(get_slot(std::string(name->string)), val_serialized);
+                if (name->string[0] == 'g' && name->string[1] == '_') {
                     LOG_DATABASE_WRAP(this, "GEO: %X serialized: %s %d\n", val_serialized.c_str(), val_serialized.c_str(), val_serialized.size());
                 }
                 LOG_DATABASE_WRAP(this, "Slot: %X serialized: %s\n", get_slot(std::string(name->string)), val_serialized.c_str());
             } else {
-            	LOG_ERR(this, "%s: %s not serialized", name->string, cJSON_Print(name));
-            	return false;
+                LOG_ERR(this, "%s: %s not serialized", name->string, cJSON_Print(name));
+                return false;
             }
         }
     }
@@ -593,15 +591,15 @@ Database::timestamp_date(const std::string &str)
 std::string
 Database::get_prefix(const std::string &name, const std::string &prefix)
 {
-	std::string slot = get_slot_hex(name);
-	return prefix + slot + std::string(":");
+    std::string slot = get_slot_hex(name);
+    return prefix + slot + std::string(":");
 }
 
 
 std::string
 Database::get_slot_hex(const std::string &name)
 {
-	std::string standard_name = upper_stringtoupper(name);
+    std::string standard_name = upper_stringtoupper(name);
     std::string _md5 = std::string(md5(standard_name), 24, 8);
     return stringtoupper(_md5);
 }
@@ -609,146 +607,99 @@ Database::get_slot_hex(const std::string &name)
 std::string
 Database::print_type(int type)
 {
-	switch (type) {
-		case 3:
-			return std::string("Numeric");
-		case 4:
-			return std::string("String");
-		case 5:
-			return std::string("Array");
-		case 6:
-			return std::string("Object");
-		default:
-		 	return std::string("Undefined");
-	}
+    switch (type) {
+        case 3:
+            return std::string("Numeric");
+        case 4:
+            return std::string("String");
+        case 5:
+            return std::string("Array");
+        case 6:
+            return std::string("Object");
+        default:
+            return std::string("Undefined");
+    }
 }
 
 bool
 Database::replace(const std::string &document_id, const Xapian::Document doc, bool commit)
 {
-	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Inserting: -%s- t:%d\n", document_id.c_str(), t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
-	    try {
-	    	LOG_DATABASE_WRAP(this, "Doing replace_document.\n");
-	    	wdb->replace_document (document_id, doc);
-	    	LOG_DATABASE_WRAP(this, "Replace_document was done.\n");
-	    } catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
-			if (t) reopen();
-			continue;
-		}
-    	LOG_DATABASE_WRAP(this, "Document inserted\n");
-		if (commit) return _commit();
-	}
-	return false;
-}
-
-bool
-Database::search(query_t query, bool get_matches, bool get_data, bool get_terms, bool get_size, bool dead, bool counting)
-{
-	if (writable) {
-		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
-		return false;
-	}
-
-	Xapian::QueryParser queryparser;
-	const Xapian::Database *wdb = static_cast<Xapian::Database *>(db);
-	
-    queryparser.set_database(*wdb);
-
-    return find_terms(query.search);
-}
-
-bool
-Database::find_terms(const std::string &str)
-{
-	const char *errptr;
-    int i, j, offset = 0, erroffset;
-    int len = (int) str.size();
-    int grv[3 * 3];
-
-    // First, the regex string should be compiled.
-    if (!Database::compiled_terms) {
-    	LOG(this, "Compiled terms is NULL, we will compile\n");
-    	compiled_terms = pcre_compile(PREFIX_RE, 0, &errptr, &erroffset, 0);
-    	// pcre_compile returns NULL on error, and sets erroffset & errptr
-    	if (compiled_terms == NULL) {
-	        LOG_ERR(this, "ERROR: Could not compile '%s': %s\n", PREFIX_RE, errptr);
-	        return false;
-	    }
+    for (int t = 3; t >= 0; --t) {
+        LOG_DATABASE_WRAP(this, "Inserting: -%s- t:%d\n", document_id.c_str(), t);
+        Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+        try {
+            LOG_DATABASE_WRAP(this, "Doing replace_document.\n");
+            wdb->replace_document (document_id, doc);
+            LOG_DATABASE_WRAP(this, "Replace_document was done.\n");
+        } catch (const Xapian::Error &e) {
+            LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+            if (t) reopen();
+            continue;
+        }
+        LOG_DATABASE_WRAP(this, "Document inserted\n");
+        if (commit) return _commit();
     }
-
-    while (pcre_exec(compiled_terms, 0, str.c_str(), len, offset, 0,  grv, sizeof(grv) / sizeof(int)) >= 0) { 
-        group *gr = (group *) grv;
-        LOG(this, "Field name: %s  term: %s\n", std::string(str, gr[1].start, gr[1].end - gr[1].start).c_str(), std::string(str, gr[2].start, gr[2].end - gr[2].start).c_str());
-        offset = gr[0].end;
-        LOG(this, "%d\n", offset);
-    }
-
-    LOG(this, "FINISH FIND\n");
-
-    return true;
+ 
+    return false;
 }
+
 
 std::string
 Database::serialise(const std::string &name, const std::string &value)
 {
-	if (name.at(0) == 'n' && name.at(1) == '_') {
-		std::stringstream ss;
-		ss << std::dec << value;
-		double val;
-		ss >> val;
-		return Xapian::sortable_serialise(val);
-	} else if (name.at(0) == 's' && name.at(1) == '_') {
-		return std::string(value);
-	} else if (name.at(0) == 'd' && name.at(1) == '_') {
-		double timestamp = timestamp_date(value);
-    	if (timestamp > 0) {
-    		return Xapian::sortable_serialise(timestamp);
-    	} else {
-    		LOG_ERR(this, "ERROR: Format date (%s) must be ISO 8601: YYYY-MM-DDThh:mm:ss.sss[+-]hh:mm (eg 1997-07-16T19:20:30.451+05:00)\n", value.c_str());
-    		return std::string("");
-		}
-	} else if (name.at(0) == 'g' && name.at(1) == '_') {
-		Xapian::LatLongCoords coords;
-		double latitude, longitude;
-		int len = (int) value.size(), Ncoord = 0, offset = 0, size = 9; // 3 * 3
-		bool end = false;
+    if (name.at(0) == 'n' && name.at(1) == '_') {
+        double val;
+        val = strtodouble(value);
+        return Xapian::sortable_serialise(val);
+    } else if (name.at(0) == 's' && name.at(1) == '_') {
+        return std::string(value);
+    } else if (name.at(0) == 'd' && name.at(1) == '_') {
+        double timestamp = timestamp_date(value);
+        if (timestamp > 0) {
+            return Xapian::sortable_serialise(timestamp);
+        } else {
+            LOG_ERR(this, "ERROR: Format date (%s) must be ISO 8601: YYYY-MM-DDThh:mm:ss.sss[+-]hh:mm (eg 1997-07-16T19:20:30.451+05:00)\n", value.c_str());
+            return std::string("");
+        }
+    } else if (name.at(0) == 'g' && name.at(1) == '_') {
+        Xapian::LatLongCoords coords;
+        double latitude, longitude;
+        int len = (int) value.size(), Ncoord = 0, offset = 0, size = 9; // 3 * 3
+        bool end = false;
         int grv[size];
         while (lat_lon(value, grv, size, offset)) {
             group *g = (group *) grv;
             std::string parse(value, g[1].start, g[1].end - g[1].start);
             latitude = strtodouble(parse);
-	        parse = std::string(value, g[2].start, g[2].end - g[2].start);
-	        longitude = strtodouble(parse);
-	        Ncoord++;
-	        try {
-	    		coords.append(Xapian::LatLongCoord(latitude, longitude));
-	    	} catch (Xapian::Error &e) {
-	    		LOG_ERR(this, "latitude or longitude out-of-range\n");
-	    		return std::string("");
-	    	}
-	    	LOG(this, "Coord %d: %f, %f\n", Ncoord, latitude, longitude);
-	    	if (g[2].end == len) {
-	    		end = true;
-	    		break;
-	    	}
-	    	offset = g[2].end;
-	    }
+            parse = std::string(value, g[2].start, g[2].end - g[2].start);
+            longitude = strtodouble(parse);
+            Ncoord++;
+            try {
+                coords.append(Xapian::LatLongCoord(latitude, longitude));
+            } catch (Xapian::Error &e) {
+                LOG_ERR(this, "latitude or longitude out-of-range\n");
+                return std::string("");
+            }
+            LOG(this, "Coord %d: %f, %f\n", Ncoord, latitude, longitude);
+            if (g[2].end == len) {
+                end = true;
+                break;
+            }
+            offset = g[2].end;
+        }
         if (Ncoord == 0 || !end) {
-	    	LOG_ERR(this, "ERROR: %s must be an array of doubles [lat, lon, lat, lon, ...]\n", value.c_str());
-	    	return std::string("");
-	    }
-	    return coords.serialise();
-	} else if (name.at(0) == 'b' && name.at(1) == '_') {
-		return parser_bool(value);
-	} else if (name.at(1) == '_') {
-		LOG_ERR(this, "ERROR: type %c%c no defined, you can only use [n_, g_, s_, b_, d_]\n", name.at(0), name.at(1));
-	    return std::string("");
-	} else {
-		return value;
-	}
+            LOG_ERR(this, "ERROR: %s must be an array of doubles [lat, lon, lat, lon, ...]\n", value.c_str());
+            return std::string("");
+        }
+        return coords.serialise();
+    } else if (name.at(0) == 'b' && name.at(1) == '_') {
+        return parser_bool(value);
+    } else if (name.at(1) == '_') {
+        LOG_ERR(this, "ERROR: type %c%c no defined, you can only use [n_, g_, s_, b_, d_]\n", name.at(0), name.at(1));
+        return std::string("");
+    } else {
+        return value;
+    }
 }
 
 std::string 
