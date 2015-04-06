@@ -25,12 +25,13 @@
 #include "database.h"
 #include <xapian/dbfactory.h>
 
-#define DOCUMENT_ID_TERM_PREFIX "Q:"
+#define DOCUMENT_ID_TERM_PREFIX "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
 #define PREFIX_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
 #define TERM_SPLIT_RE "[^-\\w.]"
-
+#define DATE_RE "(([1-9][0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])(T([01][0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])(\\.([0-9]{3}))?)?(([+-])([01][0-9]|2[0-3])(:([0-5][0-9]))?)?)?)"
+#define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
 
 Database::Database(Endpoints &endpoints_, bool writable_)
 	: endpoints(endpoints_),
@@ -89,8 +90,6 @@ Database::reopen()
 
 Database::~Database()
 {
-	if (compiled_date)  pcre_free(compiled_date); 
-	if (compiled_terms) pcre_free(compiled_terms);
 	delete db;
 }
 
@@ -195,19 +194,22 @@ DatabasePool::checkin(Database **database)
 	LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
 }
 
+pcre *Database::compiled_terms = NULL;
+pcre *Database::compiled_date_re = NULL;
+pcre *Database::compiled_coords_re = NULL;
 
 bool
-Database::drop(const char *document_id, bool commit)
+Database::drop(const std::string &doc_id, bool commit)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
 		return false;
 	}
 
-    document_id  = prefixed(document_id, DOCUMENT_ID_TERM_PREFIX);
+    std::string document_id  = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
 
 	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Deleting: -%s- t:%d\n", document_id, t);
+		LOG_DATABASE_WRAP(this, "Deleting: -%s- t:%d\n", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 	    try {
 	    	wdb->delete_document(document_id);
@@ -220,27 +222,57 @@ Database::drop(const char *document_id, bool commit)
 		if (commit) return _commit();
 	}
 
-	LOG_ERR(this, "ERROR: Cannot delete document: %s!\n", document_id);
+	LOG_ERR(this, "ERROR: Cannot delete document: %s!\n", document_id.c_str());
 	return false;
 }
 
-char*
-Database::prefixed(const char *term, const char *prefix)
+std::string
+Database::stringtoupper(const std::string &str) 
+{
+    std::string tmp = str; 
+    for (unsigned int i = 0; i < tmp.size(); i++)  {
+        tmp.at(i) = toupper(tmp.at(i));
+    }
+    return tmp; 
+}
+
+std::string
+Database::upper_stringtoupper(const std::string &str) 
 { 
-    char *prefix_term = new char[strlen(term) + strlen(prefix) + 1];
-    int i = 0, j = 0;
-    
-    while (prefix[i] != '\0') {
-  	  	prefix_term[i] = toupper(prefix[i]);
-  	  	i++;
+    bool h_upper = false;
+    std::string tmp = str; 
+    for (unsigned int i = 0; i < tmp.size(); i++) {
+        tmp.at(i) = toupper(tmp.at(i)); 
+        if (tmp.at(i) == str.at(i)) {
+            h_upper = true;
+        }
+    } 
+    if (h_upper) {
+        return tmp;
+    } 
+    return str;
+} 
+
+std::string
+Database::stringtolower(const std::string &str) 
+{ 
+    std::string tmp = str; 
+    for (unsigned int i = 0; i < tmp.size(); i++) {
+        tmp.at(i) = tolower(tmp.at(i));
     }
-    while (term[j] != '\0') { 
-        prefix_term[i] = term[j];
-        i++;
-        j++;
+    return tmp; 
+}
+
+std::string
+Database::prefixed(const std::string &term, const std::string &prefixO) {
+    std::string prefix = stringtoupper(prefixO);
+    char last_prefix = (prefix.size() > 0) ? prefix.at(prefix.size() - 1) : '\0';
+    bool first_upper = (term.at(0) >= 'A' && term.at(0) <= 'Z') ? true : false;
+    if (last_prefix == '\0' ||  last_prefix == ':' || !first_upper) {
+        return prefix + term;
+    } else {
+        return prefix + std::string(":") + term;
     }
-    prefix_term[i] = '\0';
-    return prefix_term;
 }
 
 bool
@@ -266,7 +298,7 @@ Database::_commit()
 }
 
 bool
-Database::index(const char *document, const char *document_id, bool commit)
+Database::index(const std::string &document, const std::string &document_id, bool commit)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
@@ -275,10 +307,10 @@ Database::index(const char *document, const char *document_id, bool commit)
 
 	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 
-	cJSON *root = cJSON_Parse(document);
+	cJSON *root = cJSON_Parse(document.c_str());
 	
 	if (!root) {
-		LOG_ERR(this, "ERROR: JSON Before: [%s]\n",cJSON_GetErrorPtr());
+		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 		return false;
 	}
 	
@@ -289,216 +321,82 @@ Database::index(const char *document, const char *document_id, bool commit)
 
     Xapian::Document doc;
 
-    if (document_id) {
+    if (document_id.c_str()) {
 	    //Make sure document_id is also a term (otherwise it doesn't replace an existing document)
-	    doc.add_value(get_slot("ID"), document_id);
-	    document_id  = prefixed(document_id, DOCUMENT_ID_TERM_PREFIX);
-	    doc.add_boolean_term(document_id);	
+	    doc.add_value(get_slot(std::string("ID")), document_id);
+	    doc.add_boolean_term(prefixed(document_id, DOCUMENT_ID_TERM_PREFIX));	
     } else {
     	LOG_ERR(this, "ERROR: Document must have an 'id'\n");
     	return false;
     }
     
     if (document_data) {
-    	const char *doc_data = cJSON_Print(document_data);
-    	LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data);
-		doc.set_data(doc_data); 	
+    	std::string doc_data = std::string(cJSON_Print(document_data));
+    	LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
+		doc.set_data(doc_data);
     } else {
     	LOG_ERR(this, "ERROR: You must provide 'data' to index\n");
     	return false;
     }
 
     if (document_values) {
+    	LOG_DATABASE_WRAP(this, "Values..\n");
     	for (int i = 0; i < cJSON_GetArraySize(document_values); i++) {
     		cJSON *name = cJSON_GetArrayItem(document_values, i);
-    		cJSON *value = cJSON_GetObjectItem(name, "value");
- 			cJSON *type = cJSON_GetObjectItem(name, "type");
-            if (type) {
-	            if (strcmp(type->valuestring, "int") == 0 && value->type == 3) {
-	            	doc.add_value(get_slot(name->string), Xapian::sortable_serialise(value->valueint));
-	            	LOG_DATABASE_WRAP(this, "%s: (int) %i\n", name->string, value->valueint);
-	            } else if (strcmp(type->valuestring, "float") == 0 && value->type == 3) {
-	            	doc.add_value(get_slot(name->string), Xapian::sortable_serialise(value->valuedouble));
-	            	LOG_DATABASE_WRAP(this, "%s: (float) %f\n", name->string, value->valuedouble);
-	            } else if (strcmp(type->valuestring, "str") == 0 && value->type == 4) {
-	            	doc.add_value(get_slot(name->string), value->valuestring);
-	            	LOG_DATABASE_WRAP(this, "%s: (str) %s\n", name->string, value->valuestring);
-	            } else if (strcmp(type->valuestring, "date") == 0 && value->type == 4) {
-	            	const char *date;
-					const char *time;
-					const char *sTZD;
-					if ((date = _date(value->valuestring)) == NULL || 
-						(time = _time(value->valuestring)) == NULL ||
-						(sTZD = _sTZD(value->valuestring)) == NULL) {
-						LOG_ERR(this, "ERROR: Format date (%s) must be ISO 8601: YYYY-MM-DDThh:mm:ss.sTZD (eg 1997-07-16T19:20:30.45+01:00)\n", cJSON_Print(value));
-	            		return false;
-	            	} else {
-	            		doc.add_value(get_slot(name->string), date);
-	            		LOG_DATABASE_WRAP(this, "%s: (date) %s\n", name->string, date);
-	            		doc.add_value(get_slot("time"), time);
-	            		LOG_DATABASE_WRAP(this, "%s: (time) %s\n", name->string, time);
-					}
-	            } else if (strcmp(type->valuestring, "geo") == 0 && value->type == 5) {
-	            	cJSON *latitude = cJSON_GetArrayItem(value, 0);
-	            	cJSON *longitude = cJSON_GetArrayItem(value, 1);
-
-	            	if (latitude && longitude && latitude->type == 3 && longitude->type == 3){
-	            		double lat = latitude->valuedouble;
-	            		double lon = longitude->valuedouble; 
-	            		std::stringstream geo;
-						geo << lat << "," << lon;
-						std::string s = geo.str();
-	            		doc.add_value(get_slot(name->string), s.c_str());
-	            		LOG_DATABASE_WRAP(this, "%s: (geo) - [%s]\n", name->string, s.c_str());	
-	            	} else {
-	            		LOG_ERR(this, "ERROR: %s must be an array of doubles [latitude, longitude] (%s)\n", value->string, cJSON_Print(value));
-	            		return false;
-	            	}
-	            } else {
-		            LOG_ERR(this, "ERROR: Types inconsistency, %s %s was defined as a (%s) but is (%s)\n", name->string, cJSON_Print(value), type->valuestring, print_type(value->type));
-		        	return false;
-		        }
-            } else {
-            	if (value->type == 3) {
-            		doc.add_value(get_slot(name->string), Xapian::sortable_serialise(value->valuedouble));
-	            	LOG_DATABASE_WRAP(this, "%s: (double default) %f\n", name->string, value->valuedouble);
-            	} else if (value->type == 4) {
-            		doc.add_value(get_slot(name->string), value->valuestring);
-	            	LOG_DATABASE_WRAP(this, "%s: (str default) %s\n", name->string, value->valuestring);
-            	} else {
-            		LOG_ERR(this, "ERROR: You should define type, or use a string o double value\n", value->string, cJSON_Print(value));
-            		return false;
-            	}
+            std::string value = std::string(cJSON_Print(name));
+            if (name->type == 4 || name->type == 5) {
+            	value = std::string(value, 1, (int) value.size() - 2);
             }
-  		}
+            LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name->string, value.c_str());
+            std::string val_serialized = serialise(std::string(name->string), value);
+            if (val_serialized.c_str()) {
+            	doc.add_value(get_slot(std::string(name->string)), val_serialized);
+            	if (name->string[0] == 'g' && name->string[1] == '_') {
+                    LOG_DATABASE_WRAP(this, "GEO: %X serialized: %s %d\n", val_serialized.c_str(), val_serialized.c_str(), val_serialized.size());
+                }
+                LOG_DATABASE_WRAP(this, "Slot: %X serialized: %s\n", get_slot(std::string(name->string)), val_serialized.c_str());
+            } else {
+            	LOG_ERR(this, "%s: %s not serialized", name->string, cJSON_Print(name));
+            	return false;
+            }
+        }
     }
-
+    /*
     if (document_terms) {
     	LOG_DATABASE_WRAP(this, "Terms..\n");
     	for (int i = 0; i < cJSON_GetArraySize(document_terms); i++) {
             cJSON *term_data = cJSON_GetArrayItem(document_terms, i);
             cJSON *name = cJSON_GetObjectItem(term_data, "name");
             cJSON *term = cJSON_GetObjectItem(term_data, "term");
-            cJSON *type = cJSON_GetObjectItem(term_data, "type");
             cJSON *weight = cJSON_GetObjectItem(term_data, "weight");
             cJSON *position = cJSON_GetObjectItem(term_data, "position");
+            const char *term_v = cJSON_Print(term);
+            const char *term_v2;
+            if (term->type == 4 || term->type == 5) {
+            	term_v = std::string(term_v, 1, (int) strlen(term_v) - 2).c_str();
+            }
+            if (name) {
+            	term_v = serialise(name->valuestring, term_v).c_str();
+            } 
             if (term) {
                 Xapian::termcount w;
             	(weight && weight->type == 3) ? w = weight->valueint : w = 1;
             	LOG_DATABASE_WRAP(this, "Weight: %d\n", w);
             	const char *name_v;
-            	(name) ? name_v = get_prefix(name->valuestring, DOCUMENT_CUSTOM_TERM_PREFIX) : name_v = "";
-	            if (type) {
-		            if (strcmp(type->valuestring, "int") == 0 && term->type == 3) {
-		            	std::stringstream int2str;
-						int2str << term->valueint;
-						std::string s = int2str.str();
-						const std::string nameterm(prefixed(s.c_str(), name_v));
-            			if (position) {
-            				doc.add_posting(nameterm, position->valueint, w);
-            				LOG_DATABASE_WRAP(this, "Posting int: %s %d %d\n", nameterm.c_str(), position->valueint, w);
-		            	} else {
-		            		doc.add_term(nameterm, w);
-		            		LOG_DATABASE_WRAP(this, "Term int: %s %d\n", nameterm.c_str(), w);
-		            	}
-		            } else if (strcmp(type->valuestring, "float") == 0 && term->type == 3) {
-		            	std::stringstream dou2str;
-						dou2str << term->valuedouble;
-						std::string s = dou2str.str();
-						const std::string nameterm(prefixed(s.c_str(), name_v));
-            			if (position) {
-	            			doc.add_posting(nameterm, position->valueint, w);
-	            			LOG_DATABASE_WRAP(this, "Posting float: %s %d %d\n", nameterm.c_str(), position->valueint, w);
-	            		} else {
-		            		doc.add_term(nameterm, w);
-		            		LOG_DATABASE_WRAP(this, "Term float: %s %d\n", nameterm.c_str(), w);
-		            	}
-		            } else if (strcmp(type->valuestring, "str") == 0 && term->type == 4) {
-		            	const std::string nameterm(prefixed(term->valuestring, name_v));
-		            	if (position) {
-	            			doc.add_posting(nameterm, position->valueint, w);
-	            			LOG_DATABASE_WRAP(this, "Posting str: %s %d %d\n", nameterm.c_str(), position->valueint, w);
-		            	} else {
-		            		doc.add_term(nameterm, w);
-		            		LOG_DATABASE_WRAP(this, "Term str: %s %d\n", nameterm.c_str(), w);
-		            	}
-		            } else if (strcmp(type->valuestring, "date") == 0 && term->type == 4) {
-		            	const char *date;
-						const char *time;
-						const char *sTZD;
-						if ((date = _date(term->valuestring)) == NULL || 
-							(time = _time(term->valuestring)) == NULL ||
-							(sTZD = _sTZD(term->valuestring)) == NULL) {
-							LOG_ERR(this, "ERROR: Format date (%s) must be ISO 8601: YYYY-MM-DDThh:mm:ss.sTZD (eg 1997-07-16T19:20:30.45+01:00)\n", cJSON_Print(term));
-		            		return false;
-		            	} else {
-		            		const std::string nameterm(prefixed(date, name_v));
-	            			const std::string nameterm_t(prefixed(time, name_v));
-	            			if (position) {
-		            			doc.add_posting(nameterm, position->valueint, w);
-		            			LOG_DATABASE_WRAP(this, "Posting date (date): %s %d %d\n", nameterm.c_str(), position->valueint, w);		            		
-			            		doc.add_posting(nameterm_t, position->valueint, w);
-		            			LOG_DATABASE_WRAP(this, "Posting date (time): %s %d %d\n", nameterm_t.c_str(), position->valueint, w);
-		            		} else {
-			            		doc.add_term(nameterm, w);
-			            		LOG_DATABASE_WRAP(this, "Term date (date): %s %d\n", nameterm.c_str(), w);
-			            		doc.add_term(nameterm_t, w);
-			            		LOG_DATABASE_WRAP(this, "Term date (time): %s %d\n", nameterm_t.c_str(), w);
-		            		}
-						}
-		            } else if (strcmp(type->valuestring, "geo") == 0 && term->type == 5) {
-		            	cJSON *latitude = cJSON_GetArrayItem(term, 0);
-		            	cJSON *longitude = cJSON_GetArrayItem(term, 1);
-		            	if (latitude && longitude && latitude->type == 3 && longitude->type == 3){
-		            		double lat = latitude->valuedouble;
-		            		double lon = longitude->valuedouble; 
-		            		std::stringstream geo;
-							geo << lat << "," << lon;
-							std::string s = geo.str();
-							const std::string nameterm(prefixed(s.c_str(), name_v));
-		            		if (position) {
-		            			doc.add_posting(nameterm, position->valueint, w);
-		            			LOG_DATABASE_WRAP(this, "Posting geo: %s %d %d\n", nameterm.c_str(), position->valueint, w);
-		            		} else {
-			            		doc.add_term(nameterm, w);
-			            		LOG_DATABASE_WRAP(this, "Term geo: %s %d\n", nameterm.c_str(), w);
-			            	}
-		            	} else {
-		            		LOG_ERR(this, "ERROR: %s must be an array of doubles [latitude, longitude] (%s)\n", term->string, cJSON_Print(term));
-		            		return false;
-		            	}
-		            } else {
-		            	LOG_ERR(this, "ERROR: Types inconsistency, %s %s was defined as a (%s) but is (%s)\n", term->string, cJSON_Print(term), type->valuestring, print_type(term->type));
-		            	return false;
-		            }
+
+            	LOG(this, "TB %s\n", term_v);
+            	(name) ? name_v = get_prefix(name->valuestring, DOCUMENT_CUSTOM_TERM_PREFIX) : name_v = DOCUMENT_CUSTOM_TERM_PREFIX;
+	            LOG(this, "TA %s %s\n", name_v, term_v);
+
+	            const std::string nameterm(prefixed(term_v, name_v));
+
+        		if (position) {
+        			doc.add_posting(nameterm, position->valueint, w);
+        			LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", nameterm.c_str(), position->valueint, w);
 	            } else {
-	            	LOG_DATABASE_WRAP(this, "Type: %d\n", term->type);
-	            	if (term->type == 3) {
-	            		std::stringstream dou2str;
-						dou2str << term->valuedouble;
-						std::string s = dou2str.str();
-						const std::string nameterm(prefixed(s.c_str(), name_v));
-            			if (position) {
-	            			doc.add_posting(nameterm, position->valueint, w);
-	            			LOG_DATABASE_WRAP(this, "Posting int (default): %s %d %d\n", nameterm.c_str(), position->valueint, w);
-	            		} else {
-		            		doc.add_term(nameterm, w);
-		            		LOG_DATABASE_WRAP(this, "Term int (default): %s %d\n", nameterm.c_str(), w);
-		            	}
-	            	} else if (term->type == 4) {
-	            		const std::string nameterm(prefixed(term->valuestring, name_v));
-            			if (position) {
-	            			doc.add_posting(nameterm, position->valueint, w);
-	            			LOG_DATABASE_WRAP(this, "Posting str (default): %s %d %d\n", nameterm.c_str(), position->valueint, w);
-	            		} else {
-		            		doc.add_term(nameterm, w);
-		            		LOG_DATABASE_WRAP(this, "Term str (default): %s %d\n", nameterm.c_str(), w);
-		            	}
-	            	} else {
-	            		LOG_ERR(this, "ERROR: You should define type, or use a string o double term\n", term->string, cJSON_Print(term));
-	            		return false;
-	            	}
-	            }
+            		doc.add_term(nameterm, w);
+            		LOG_DATABASE_WRAP(this, "Term: %s %d\n", nameterm.c_str(), w);
+            	}
             } else {
             	LOG_ERR(this, "ERROR: Term must be defined\n");
             	return false;
@@ -541,156 +439,195 @@ Database::index(const char *document, const char *document_id, bool commit)
             	return false;
             }
     	}
-    }
+    }*/
     cJSON_Delete(root);
     return replace(document_id, doc, commit);
 }
 
 unsigned int
-Database::get_slot(const char *name)
+Database::get_slot(const std::string &name)
 {
-	char *cad = new char[strlen(name) + 1];
-    int i = 0;
-    for(;name[i] != '\0'; i++) {
-    	cad[i] = tolower(name[i]);
-    }
-    cad[i] = '\0';
-    std::string _md5(md5(cad), 24, 32);
-    const char *md5_cad = _md5.c_str();
-    unsigned int slot = hex2long(md5_cad);
+    std::string standard_name = upper_stringtoupper(name);
+    std::string _md5 = std::string(md5(standard_name), 24, 8);
+    unsigned int slot = hex2int(_md5);
     if (slot == 0xffffffff) {
-    	slot = 0xfffffffe;
+        slot = 0xfffffffe;
     }
     return slot;
 }
 
-
 unsigned int
-Database::hex2long(const char *input) 
+Database::hex2int(const std::string &input) 
 {
-    unsigned n;
+    unsigned int n;
     std::stringstream ss;
     ss << std::hex << input;
     ss >> n;
+    ss.flush();
     return n;
 }
 
-char*
-Database::_date(const char *iso_date)
+int
+Database::strtoint(const std::string &str)
 {
-	char *date = new char[9];
-	int j = 0;
-	for (int i = 0; i < 10; i++) {
-		if (iso_date[i] >= '0' && iso_date[i] <= '9' && i != 7 && i != 4) {
-			date[j] = iso_date[i];
-			j++;
-		} else if (iso_date[i] != '-' || (i != 4 && i != 7)) {
-			return NULL;
-		}
-	}
-	date[j] = '\0';
-	return date;
-}
-
-char*
-Database::_time(const char *iso_date)
-{
-	char *time = new char[9];
-	int j = 0;
-	if (iso_date[10] != 'T') {
-		return NULL;
-	}
-	for (int i = 11; i < 19; i++) {
-		if (iso_date[i] >= '0' && iso_date[i] <= '9' && i != 13 && i != 16) {
-			time[j] = iso_date[i];
-			j++;
-		} else if (iso_date[i] == ':' && (i == 13 || i == 16)) {
-			time[j] = iso_date[i];
-			j++;
-		} else {
-			return NULL;
-		}
-	}
-	time[j] = '\0';
-	return time;
-} 
-
-char*
-Database::_sTZD(const char *iso_date)
-{
-	size_t size_iso = strlen(iso_date);
-	char *sTZD = new char[9];
-	size_t j = 0, pos1 = size_iso - 6, pos2 = size_iso - 3;
-	if (iso_date[19] != '.') {
-		return NULL;
-	}
-	for (int i = 20; i < size_iso; i++) {
-		if (iso_date[i] >= '0' && iso_date[i] <= '9') {
-			sTZD[j] = iso_date[i];
-			j++;
-		} else if (iso_date[i] == '-' && i == pos1) {
-			sTZD[j] = iso_date[i];
-			j++;
-		} else if(iso_date[i] == ':'  && i == pos2) {
-			sTZD[j] = iso_date[i];
-			j++;
-		} else {
-			return NULL;
-		}
-	}
-	sTZD[j] = '\0';
-	return sTZD;
-}
-
-char *
-Database::get_prefix(const char *name, const char *prefix)
-{
-	const char *slot = get_slot_hex(name);
-	return prefixed(slot, prefix);
+    int number;
+    std::stringstream ss;
+    ss << std::dec << str;
+    ss >> number;
+    ss.flush();
+    return number;
 }
 
 
-char*
-Database::get_slot_hex(const char *name)
+double
+Database::strtodouble(const std::string &str)
 {
-	char *cad = new char[strlen(name) + 1];
-    int i = 0;
-    for(;name[i] != '\0'; i++) {
-    	cad[i] = tolower(name[i]);
+    double number;
+    std::stringstream ss;
+    ss << std::dec << str;
+    ss >> number;
+    ss.flush();
+    return number;
+}
+
+double
+Database::timestamp_date(const std::string &str)
+{
+    int len = (int) str.size();
+    char sign;
+    const char *errptr;
+    int erroffset, ret, n[9]; 
+    int grv[51]; // 17 * 3
+    double  timestamp;
+    
+    if (compiled_date_re == NULL) {
+        LOG(this, "Compiled date is NULL, we will compile\n");
+        compiled_date_re = pcre_compile(DATE_RE, 0, &errptr, &erroffset, 0);
+        if (compiled_date_re == NULL) {
+            LOG_ERR(this, "ERROR: Could not compile '%s': %s\n", DATE_RE, errptr);
+            return -1;
+        }
     }
-    cad[i] = '\0';
-    std::string _md5(md5(cad), 24, 32);
-    const char *md5_cad = _md5.c_str();
-    char *md5_upper = new char[strlen(md5_cad) + 1];
-    for(i = 0; md5_cad[i] != '\0'; i++) {
-    	md5_upper[i] = toupper(md5_cad[i]);
+
+    ret = pcre_exec(compiled_date_re, 0, str.c_str(), len, 0, 0,  grv, sizeof(grv) / sizeof(int));
+    group *gr = (group *) grv;
+        
+    if (ret && len == (gr[0].end - gr[0].start)) {
+        std::string parse = std::string(str, gr[2].start, gr[2].end - gr[2].start);
+        n[0] = strtoint(parse);
+        parse = std::string(str, gr[3].start, gr[3].end - gr[3].start);
+        n[1] = strtoint(parse);
+        parse = std::string(str, gr[4].start, gr[4].end - gr[4].start);
+        n[2] = strtoint(parse);
+
+        if (gr[5].end - gr[5].start > 0) {
+            parse = std::string(str, gr[6].start, gr[6].end - gr[6].start);
+            n[3] = strtoint(parse);
+            parse = std::string(str, gr[7].start, gr[7].end - gr[7].start);
+            n[4] = strtoint(parse);
+            if (gr[8].end - gr[8].start > 0) {
+                parse = std::string(str, gr[9].start, gr[9].end - gr[9].start);
+                n[5] = strtoint(parse);
+                if (gr[10].end - gr[10].start > 0) {
+                    parse = std::string(str, gr[11].start, gr[11].end - gr[11].start);
+                    n[6] = strtoint(parse);
+                } else {
+                    n[6] = 0;
+                }
+            } else {
+                n[5] =  n[6] = 0;
+            }
+            if (gr[12].end - gr[12].start > 0) {
+                sign = std::string(str, gr[13].start, gr[13].end - gr[13].start).at(0);
+                parse = std::string(str, gr[14].start, gr[14].end - gr[14].start);
+                n[7] = strtoint(parse);
+                if (gr[15].end - gr[15].start > 0) {   
+                    parse = std::string(str, gr[16].start, gr[16].end - gr[16].start);
+                    n[8] = strtoint(parse); 
+                } else {
+                    n[8] = 0;
+                }
+            } else {
+                n[7] = 0;
+                n[8] = 0;
+                sign = '+';
+            }
+        } else {
+            n[3] = n[4] = n[5] = n[6] = n[7] = n[8] = 0;
+        }
+        LOG(this, "Fecha Reconstruida: %04d-%02d-%02dT%02d:%02d:%02d.%03d%c%02d:%02d\n", n[0], n[1], n[2], n[3], n[4], n[5], n[6], sign, n[7], n[8]);
+        if (n[1] == 2 && !((n[0] % 4 == 0 && n[0] % 100 != 0) || n[0] % 400 == 0) && n[2] > 28) {
+            LOG_ERR(this, "ERROR: Incorrect Date, This month only has 28 days\n");
+            return -1;
+        } else if(n[1] == 2 && ((n[0] % 4 == 0 && n[0] % 100 != 0) || n[0] % 400 == 0) && n[2] > 29) {
+           LOG_ERR(this, "ERROR: Incorrect Date, This month only has 29 days\n");
+           return -1;
+        } else if((n[1] == 4 || n[1] == 6 || n[1] == 9 || n[1] == 11) && n[2] > 30) {
+            LOG_ERR(this, "ERROR: Incorrect Date, This month only has 30 days\n");
+            return -1;
+        }
+    } else {
+        return -1;
     }
-    md5_upper[i] = '\0';
-    return md5_upper;
+
+    time_t tt = 0;
+    struct tm *timeinfo = gmtime(&tt);
+    timeinfo->tm_year   = n[0] - 1900;
+    timeinfo->tm_mon    = n[1] - 1;
+    timeinfo->tm_mday   = n[2]; 
+    if (sign == '-') {
+        timeinfo->tm_hour  = n[3] + n[7];
+        timeinfo->tm_min   = n[4] + n[8];   
+    } else {
+        timeinfo->tm_hour  = n[3] - n[7];
+        timeinfo->tm_min   = n[4] - n[8];
+    }
+    timeinfo->tm_sec    = n[5];
+    const time_t dateGMT = timegm(timeinfo);
+    timestamp = (double) dateGMT;
+    timestamp += n[6]/1000.0;
+    return timestamp;
 }
 
-const char*
+
+std::string
+Database::get_prefix(const std::string &name, const std::string &prefix)
+{
+	std::string slot = get_slot_hex(name);
+	return prefix + slot + std::string(":");
+}
+
+
+std::string
+Database::get_slot_hex(const std::string &name)
+{
+	std::string standard_name = upper_stringtoupper(name);
+    std::string _md5 = std::string(md5(standard_name), 24, 8);
+    return stringtoupper(_md5);
+}
+
+std::string
 Database::print_type(int type)
 {
 	switch (type) {
 		case 3:
-			return "Numeric";
+			return std::string("Numeric");
 		case 4:
-			return "String";
+			return std::string("String");
 		case 5:
-			return "Array";
+			return std::string("Array");
 		case 6:
-			return "Object";
+			return std::string("Object");
 		default:
-		 	return "Undefined";
+		 	return std::string("Undefined");
 	}
 }
 
 bool
-Database::replace(const char *document_id, const Xapian::Document doc, bool commit)
+Database::replace(const std::string &document_id, const Xapian::Document doc, bool commit)
 {
 	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Inserting: -%s- t:%d\n", document_id, t);
+		LOG_DATABASE_WRAP(this, "Inserting: -%s- t:%d\n", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 	    try {
 	    	LOG_DATABASE_WRAP(this, "Doing replace_document.\n");
@@ -720,19 +657,19 @@ Database::search(query_t query, bool get_matches, bool get_data, bool get_terms,
 	
     queryparser.set_database(*wdb);
 
-    return find_terms(query.search.c_str());
+    return find_terms(query.search);
 }
 
 bool
-Database::find_terms(const char *str)
+Database::find_terms(const std::string &str)
 {
 	const char *errptr;
     int i, j, offset = 0, erroffset;
-    size_t len = strlen(str);
-    group gr[3];
+    int len = (int) str.size();
+    int grv[3 * 3];
 
-    // First, the regex string must be compiled.
-    if (!compiled_terms) {
+    // First, the regex string should be compiled.
+    if (!Database::compiled_terms) {
     	LOG(this, "Compiled terms is NULL, we will compile\n");
     	compiled_terms = pcre_compile(PREFIX_RE, 0, &errptr, &erroffset, 0);
     	// pcre_compile returns NULL on error, and sets erroffset & errptr
@@ -740,15 +677,11 @@ Database::find_terms(const char *str)
 	        LOG_ERR(this, "ERROR: Could not compile '%s': %s\n", PREFIX_RE, errptr);
 	        return false;
 	    }
-	    // Optimize the regex
-	    if (errptr != NULL) {
-	        printf("ERROR: Could not study '%s': %s\n", PREFIX_RE, errptr);
-	        return  false;
-    	}
     }
 
-    while (pcre_exec(compiled_terms, 0, str, len, offset, 0,  (int*) gr, sizeof(gr)) >= 0){ 
-        LOG(this, "Field name: %s  term: %s\n", std::string(str + gr[1].start, gr[1].end - gr[1].start).c_str(), std::string(str + gr[2].start, gr[2].end - gr[2].start).c_str());
+    while (pcre_exec(compiled_terms, 0, str.c_str(), len, offset, 0,  grv, sizeof(grv) / sizeof(int)) >= 0) { 
+        group *gr = (group *) grv;
+        LOG(this, "Field name: %s  term: %s\n", std::string(str, gr[1].start, gr[1].end - gr[1].start).c_str(), std::string(str, gr[2].start, gr[2].end - gr[2].start).c_str());
         offset = gr[0].end;
         LOG(this, "%d\n", offset);
     }
@@ -756,4 +689,114 @@ Database::find_terms(const char *str)
     LOG(this, "FINISH FIND\n");
 
     return true;
+}
+
+std::string
+Database::serialise(const std::string &name, const std::string &value)
+{
+	if (name.at(0) == 'n' && name.at(1) == '_') {
+		std::stringstream ss;
+		ss << std::dec << value;
+		double val;
+		ss >> val;
+		return Xapian::sortable_serialise(val);
+	} else if (name.at(0) == 's' && name.at(1) == '_') {
+		return std::string(value);
+	} else if (name.at(0) == 'd' && name.at(1) == '_') {
+		double timestamp = timestamp_date(value);
+    	if (timestamp > 0) {
+    		return Xapian::sortable_serialise(timestamp);
+    	} else {
+    		LOG_ERR(this, "ERROR: Format date (%s) must be ISO 8601: YYYY-MM-DDThh:mm:ss.sss[+-]hh:mm (eg 1997-07-16T19:20:30.451+05:00)\n", value.c_str());
+    		return std::string("");
+		}
+	} else if (name.at(0) == 'g' && name.at(1) == '_') {
+		Xapian::LatLongCoords coords;
+		double latitude, longitude;
+		int len = (int) value.size(), Ncoord = 0, offset = 0, size = 9; // 3 * 3
+		bool end = false;
+        int grv[size];
+        while (lat_lon(value, grv, size, offset)) {
+            group *g = (group *) grv;
+            std::string parse(value, g[1].start, g[1].end - g[1].start);
+            latitude = strtodouble(parse);
+	        parse = std::string(value, g[2].start, g[2].end - g[2].start);
+	        longitude = strtodouble(parse);
+	        Ncoord++;
+	        try {
+	    		coords.append(Xapian::LatLongCoord(latitude, longitude));
+	    	} catch (Xapian::Error &e) {
+	    		LOG_ERR(this, "latitude or longitude out-of-range\n");
+	    		return std::string("");
+	    	}
+	    	LOG(this, "Coord %d: %f, %f\n", Ncoord, latitude, longitude);
+	    	if (g[2].end == len) {
+	    		end = true;
+	    		break;
+	    	}
+	    	offset = g[2].end;
+	    }
+        if (Ncoord == 0 || !end) {
+	    	LOG_ERR(this, "ERROR: %s must be an array of doubles [lat, lon, lat, lon, ...]\n", value.c_str());
+	    	return std::string("");
+	    }
+	    return coords.serialise();
+	} else if (name.at(0) == 'b' && name.at(1) == '_') {
+		return parser_bool(value);
+	} else if (name.at(1) == '_') {
+		LOG_ERR(this, "ERROR: type %c%c no defined, you can only use [n_, g_, s_, b_, d_]\n", name.at(0), name.at(1));
+	    return std::string("");
+	} else {
+		return value;
+	}
+}
+
+std::string 
+Database::parser_bool(const std::string &value) {
+    if (!value.c_str()) {
+    	return std::string("f");
+    } else if(value.size() > 1) {
+        if (strcasecmp(value.c_str(), "TRUE") == 0) {
+            return std::string("t");
+        } else if (strcasecmp(value.c_str(), "FALSE") == 0) {
+            return std::string("f");
+        } else {
+        	return std::string("t");	
+        }
+    } else {
+        switch (tolower(value.at(0))) {
+            case '1':
+                return std::string("t");
+            case '0':
+                return std::string("f");
+            case 't':
+                return std::string("t");
+            case 'f':
+                return std::string("f");
+            default:
+                return std::string("t");
+        }
+    }
+}
+
+bool
+Database::lat_lon(const std::string &str, int *grv, int size, int offset)
+{
+    int erroffset, ret;
+    const char *errptr;
+    int len = (int) str.size();
+
+    if (!compiled_coords_re) {
+        compiled_coords_re = pcre_compile(COORDS_RE, 0, &errptr, &erroffset, 0);
+        if (compiled_coords_re == NULL) {
+            LOG_ERR(this, "ERROR: Could not compile '%s': %s\n", COORDS_RE, errptr);
+            return NULL;
+        }
+    }
+    ret = pcre_exec(compiled_coords_re, 0, str.c_str(), len, offset, 0,  grv, size);
+    if (ret == 3) {
+        return true;
+    }
+
+    return false;
 }
