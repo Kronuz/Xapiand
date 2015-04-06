@@ -68,13 +68,13 @@ int look_cmd(const char *);
 
 #define LOG_CONN(...)
 #define LOG_OBJ(...)
-#define LOG_DATABASE(...) log(__VA_ARGS__)
+#define LOG_DATABASE(...)
 #define LOG_HTTP_PROTO_PARSER(...)
 
 #define LOG_EV(...)
-#define LOG_CONN_WIRE(...) log(__VA_ARGS__)
-#define LOG_HTTP_PROTO(...) log(__VA_ARGS__)
-#define LOG_BINARY_PROTO(...) log(__VA_ARGS__)
+#define LOG_CONN_WIRE(...)
+#define LOG_HTTP_PROTO(...) 
+#define LOG_BINARY_PROTO(...)
 
 #define LOG_DATABASE_WRAP(...) log(__VA_ARGS__)
 
