@@ -38,59 +38,59 @@ Database::Database(Endpoints &endpoints_, bool writable_)
 	  writable(writable_),
 	  db(NULL)
 {
-	hash = endpoints.hash(writable);
-	reopen();
+    hash = endpoints.hash(writable);
+    reopen();
 }
 
 
 void
 Database::reopen()
 {
-	if (db) {
-		// Try to reopen
-		try {
-			db->reopen();
-			return;
-		} catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
-			db->close();
-			delete db;
-			db = NULL;
-		}
-	}
+    if (db) {
+        // Try to reopen
+        try {
+            db->reopen();
+            return;
+        } catch (const Xapian::Error &e) {
+            LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+            db->close();
+            delete db;
+            db = NULL;
+        }
+    }
 
 	// FIXME: Handle remote endpoints and figure out if the endpoint is a local database
-	const Endpoint *e;
-	if (writable) {
-		db = new Xapian::WritableDatabase();
-		if (endpoints.size() != 1) {
-			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), endpoints.as_string().c_str());
-		} else {
-			e = &endpoints[0];
-			if (e->protocol == "file") {
-				db->add_database(Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN));
-			} else {
-				db->add_database(Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path));
-			}
-		}
-	} else {
-		db = new Xapian::Database();
-		std::vector<Endpoint>::const_iterator i(endpoints.begin());
-		for (; i != endpoints.end(); ++i) {
-			e = &(*i);
-			if (e->protocol == "file") {
-				db->add_database(Xapian::Database(e->path, Xapian::DB_CREATE_OR_OPEN));
-			} else {
-				db->add_database(Xapian::Remote::open(e->host, e->port, 0, 10000, e->path));
-			}
-		}
-	}
+    const Endpoint *e;
+    if (writable) {
+        db = new Xapian::WritableDatabase();
+        if (endpoints.size() != 1) {
+        	LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), endpoints.as_string().c_str());
+        } else {
+        	e = &endpoints[0];
+        	if (e->protocol == "file") {
+        		db->add_database(Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN));
+        	} else {
+        		db->add_database(Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path));
+        	}
+        }
+    } else {
+        db = new Xapian::Database();
+        std::vector<Endpoint>::const_iterator i(endpoints.begin());
+        for (; i != endpoints.end(); ++i) {
+        	e = &(*i);
+        	if (e->protocol == "file") {
+        		db->add_database(Xapian::Database(e->path, Xapian::DB_CREATE_OR_OPEN));
+        	} else {
+        		db->add_database(Xapian::Remote::open(e->host, e->port, 0, 10000, e->path));
+        	}
+        }
+    }
 }
 
 
 Database::~Database()
 {
-	delete db;
+    delete db;
 }
 
 DatabaseQueue::DatabaseQueue()
@@ -100,98 +100,98 @@ DatabaseQueue::DatabaseQueue()
 
 DatabaseQueue::~DatabaseQueue()
 {
-	while (!empty()) {
-		Database *database;
-		if (pop(database)) {
-			delete database;
-		}
-	}
+    while (!empty()) {
+        Database *database;
+        if (pop(database)) {
+        	delete database;
+        }
+    }
 }
 
 
 DatabasePool::DatabasePool()
 	: finished(false)
 {
-	pthread_mutexattr_init(&qmtx_attr);
-	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&qmtx, &qmtx_attr);
+    pthread_mutexattr_init(&qmtx_attr);
+    pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&qmtx, &qmtx_attr);
 }
 
 
 DatabasePool::~DatabasePool()
 {
-	finish();
+    finish();
 
-	pthread_mutex_destroy(&qmtx);
-	pthread_mutexattr_destroy(&qmtx_attr);
+    pthread_mutex_destroy(&qmtx);
+    pthread_mutexattr_destroy(&qmtx_attr);
 }
 
 
 void DatabasePool::finish() {
-	pthread_mutex_lock(&qmtx);
-	
-	finished = true;
-	
-	pthread_mutex_unlock(&qmtx);
+    pthread_mutex_lock(&qmtx);
+
+    finished = true;
+
+    pthread_mutex_unlock(&qmtx);
 }
 
 
 bool
 DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 {
-	Database *database_ = NULL;
+    Database *database_ = NULL;
 
-	LOG_DATABASE(this, "+ CHECKING OUT DB %lx %s(%s)...\n", (unsigned long)*database, writable ? "w" : "r", endpoints.as_string().c_str());
+    LOG_DATABASE(this, "+ CHECKING OUT DB %lx %s(%s)...\n", (unsigned long)*database, writable ? "w" : "r", endpoints.as_string().c_str());
 
-	pthread_mutex_lock(&qmtx);
-	
-	if (!finished && *database == NULL) {
-		size_t hash = endpoints.hash(writable);
-		DatabaseQueue &queue = databases[hash];
-		
-		if (!queue.pop(database_, 0)) {
-			if (!writable || queue.count == 0) {
-				queue.count++;
-				pthread_mutex_unlock(&qmtx);
-				database_ = new Database(endpoints, writable);
-				pthread_mutex_lock(&qmtx);
-			} else {
-				// Lock until a database is available if it can't get one.
-				pthread_mutex_unlock(&qmtx);
-				int s = queue.pop(database_);
-				pthread_mutex_lock(&qmtx);
-				if (!s) {
-					LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
-				}
-			}
-		}
-		*database = database_;
-	}
-	
-	pthread_mutex_unlock(&qmtx);
+    pthread_mutex_lock(&qmtx);
 
-	LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)*database);
+    if (!finished && *database == NULL) {
+        size_t hash = endpoints.hash(writable);
+        DatabaseQueue &queue = databases[hash];
 
-	return database_ != NULL;
+        if (!queue.pop(database_, 0)) {
+            if (!writable || queue.count == 0) {
+                queue.count++;
+                pthread_mutex_unlock(&qmtx);
+                database_ = new Database(endpoints, writable);
+                pthread_mutex_lock(&qmtx);
+            } else {
+                // Lock until a database is available if it can't get one.
+                pthread_mutex_unlock(&qmtx);
+                int s = queue.pop(database_);
+                pthread_mutex_lock(&qmtx);
+                if (!s) {
+                    LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
+                }
+            }
+        }
+        *database = database_;
+    }
+
+    pthread_mutex_unlock(&qmtx);
+
+    LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)*database);
+
+    return database_ != NULL;
 }
 
 
 void
 DatabasePool::checkin(Database **database)
 {
-	LOG_DATABASE(this, "- CHECKING IN DB %lx %s(%s)...\n", (unsigned long)*database, (*database)->writable ? "w" : "r", (*database)->endpoints.as_string().c_str());
+    LOG_DATABASE(this, "- CHECKING IN DB %lx %s(%s)...\n", (unsigned long)*database, (*database)->writable ? "w" : "r", (*database)->endpoints.as_string().c_str());
 
-	pthread_mutex_lock(&qmtx);
-	
-	DatabaseQueue &queue = databases[(*database)->hash];
-	
-	queue.push(*database);
-	
-	*database = NULL;
-	
-	pthread_mutex_unlock(&qmtx);
+    pthread_mutex_lock(&qmtx);
 
-	LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
+    DatabaseQueue &queue = databases[(*database)->hash];
+
+    queue.push(*database);
+
+    *database = NULL;
+
+    pthread_mutex_unlock(&qmtx);
+
+    LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
 }
 
 pcre *Database::compiled_terms = NULL;
