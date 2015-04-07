@@ -370,11 +370,12 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 				LOG_DATABASE_WRAP(this, "Name: %s\n", name->valuestring);
 				term_v = serialise(std::string(name->valuestring), term_v);
 			}
+			LOG(this,"Ok\n");
 			if (term) {
 				Xapian::termcount w;
 				(weight && weight->type == 3) ? w = weight->valueint : w = 1;
 				if (position) {
-					if (name->valuestring[0] == 'g' && name->valuestring[1] == '_') {
+					if (name && name->valuestring[0] == 'g' && name->valuestring[1] == '_') {
 						insert_terms_geo(term_v, &doc, std::string(name->valuestring), w, position->valueint);
 					} else {
 						std::string name_v;
@@ -384,7 +385,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 						LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", nameterm.c_str(), position->valueint, w);
 					}
 				} else {
-					if (name->valuestring[0] == 'g' && name->valuestring[1] == '_') {
+					if (name && name->valuestring[0] == 'g' && name->valuestring[1] == '_') {
 						insert_terms_geo(term_v, &doc, std::string(name->valuestring), w, -1);
 					} else {
 						std::string name_v;
@@ -768,14 +769,14 @@ void
 Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, 
 	int w, int position)
 {
-	int max_size = g_serialise.size() * 5 / 6, term = 0;
+	int max_size = (int) g_serialise.size() * 5 / 6;
 	bool found;
-	std::string terms[max_size];
+	std::vector<std::string> terms;
 	for (int i = 6; i > 1; i--) {
 		for (int j = 0; j < g_serialise.size(); j += 6) {
 			found = false;
 			std::string s_coord = std::string(g_serialise, j, i);
-			for (int k = 0;k < term; k++) {
+			for (int k = 0; k < terms.size(); k++) {
 				if (s_coord.compare(terms[k]) == 0) {
 					found = true;
 					break;
@@ -795,9 +796,7 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 					doc->add_term(nameterm, w);
 					LOG_DATABASE_WRAP(this, "Term: %s %d\n", nameterm.c_str(), w);
 				}
-
-				terms[term] = s_coord;
-				term++;
+				terms.push_back(s_coord);
 			}
 		}
 	}
