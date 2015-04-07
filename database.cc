@@ -772,7 +772,6 @@ void
 Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, 
 	int w, int position)
 {
-	int max_size = (int) g_serialise.size() * 5 / 6;
 	bool found;
 	std::vector<std::string> terms;
 	for (int i = 6; i > 1; i--) {
