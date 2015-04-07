@@ -32,6 +32,7 @@
 #include <xapian.h>
 #include "cJSON.h"
 #include <pthread.h>
+#include <algorithm>
 
 #include "md5.h"
 #include <sstream>
@@ -50,16 +51,6 @@ public:
 	
 	Xapian::Database *db;
 
-	typedef struct query_t {
-		int first;  //Get first item (OFFSET)
-		int max_items; //Get maximum number of items (LIMIT)
-
-		std::string search;    	//Get searchs
-		std::string sort_by; //Get wanted order by
-		std::string sort_type; 	//DESC or ASC
-		std::string facets;  	//Get wanted facets
-	} query_t;
-
 	typedef struct group{
 		int start;
 		int end;
@@ -68,10 +59,11 @@ public:
 	static pcre *compiled_terms;
 	static pcre *compiled_date_re;
 	static pcre *compiled_coords_re;
-	
+    static pcre *compiled_find_field_re;
+    
 	Database(Endpoints &endpoints, bool writable);
 	~Database();
-	
+
 	void reopen();
 	bool drop(const std::string &document_id, bool commit);
 	std::string stringtolower(const std::string &str);
@@ -88,14 +80,21 @@ public:
 	std::string get_slot_hex(const std::string &name);
 	std::string print_type(int type);
 	bool replace(const std::string &document_id, const Xapian::Document doc, bool commit);
-	bool search(query_t query, bool get_matches, bool get_data, bool get_terms, bool get_size, bool dead, bool counting);
-	bool find_terms(const std::string &str);
+	//bool search(query_t query, bool get_matches, bool get_data, bool get_terms, bool get_size, bool dead, bool counting);
 	std::string serialise(const std::string &name, const std::string &value);
 	std::string parser_bool(const std::string &value);
 	bool lat_lon(const std::string &str, int *grv, int size, int offset);
 	void print_hexstr(const std::string &str);
 	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, int w, int position);
 	
+    int find_field(const char *str, group *gr, int size_gr);
+    bool isbooleanprefix(std::string);
+    Xapian::Enquire get_enquire(Xapian::Query query, struct query_t e);
+    std::string get_results(Xapian::Query query, struct query_t e);
+    std::string search1(struct query_t e);
+    bool search(struct query_t e);
+    
+    
 private:
 	bool _commit();
 };
