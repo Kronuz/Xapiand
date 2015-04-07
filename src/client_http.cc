@@ -348,12 +348,12 @@ void HttpClient::_search()
 	query.facets = facets;
 
 					//query, get_matches, get_data, get_terms, get_size, dead, counting=False
-	database->search(query, true, true, true, true, false, false);
+	//database->search(query, true, true, true, true, false, false);
 
 	LOG(this, "Second search.\n");
 	search_q = "title:\"mexican life\" description:\"mexican movie\" kind:thriller range:1.2..2.87";
 	query.search = search_q;
-	database->search(query, true, true, true, true, false, false);
+	//database->search(query, true, true, true, true, false, false);
 
 	LOG(this, "Doing the checkin for search.\n");
 	database_pool->checkin(&database);

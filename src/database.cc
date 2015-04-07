@@ -206,7 +206,7 @@ Database::drop(const std::string &doc_id, bool commit)
 		return false;
 	}
 
-	std::string document_id  = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
+	std::string document_id  = prefixed(doc_id, std::string(DOCUMENT_ID_TERM_PREFIX));
 
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Deleting: -%s- t:%d\n", document_id.c_str(), t);
@@ -243,7 +243,7 @@ Database::upper_stringtoupper(const std::string &str)
 	std::string tmp = str; 
 	for (unsigned int i = 0; i < tmp.size(); i++) {
 		tmp.at(i) = toupper(tmp.at(i)); 
-		if (tmp.at(i) == str.at(i)) {
+		if (tmp.at(i) == str.at(i) && tmp.at(i) != '_') {
 			h_upper = true;
 		}
 	} 
@@ -264,15 +264,8 @@ Database::stringtolower(const std::string &str)
 }
 
 std::string
-Database::prefixed(const std::string &term, const std::string &prefixO) {
-	std::string prefix = stringtoupper(prefixO);
-	char last_prefix = (prefix.size() > 0) ? prefix.at(prefix.size() - 1) : '\0';
-	bool first_upper = (term.at(0) >= 'A' && term.at(0) <= 'Z') ? true : false;
-	if (last_prefix == '\0' ||  last_prefix == ':' || !first_upper) {
-		return prefix + term;
-	} else {
-		return prefix + std::string(":") + term;
-	}
+Database::prefixed(const std::string &term, const std::string &prefix) {
+	return stringtoupper(prefix) + stringtolower(term);
 }
 
 bool
@@ -298,7 +291,7 @@ Database::_commit()
 }
 
 bool
-Database::index(const std::string &document, const std::string &document_id, bool commit)
+Database::index(const std::string &document, const std::string &_document_id, bool commit)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
@@ -319,10 +312,12 @@ Database::index(const std::string &document, const std::string &document_id, boo
 
 	Xapian::Document doc;
 
-	if (document_id.c_str()) {
+	std::string document_id;
+	if (_document_id.c_str()) {
 		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
 		doc.add_value(get_slot(std::string("ID")), document_id);
-		doc.add_boolean_term(prefixed(document_id, DOCUMENT_ID_TERM_PREFIX));
+		document_id = prefixed(_document_id, std::string(DOCUMENT_ID_TERM_PREFIX));
+		doc.add_boolean_term(document_id);
 	} else {
 		LOG_ERR(this, "ERROR: Document must have an 'id'\n");
 		return false;
@@ -348,18 +343,16 @@ Database::index(const std::string &document, const std::string &document_id, boo
 			LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name->string, value.c_str());
 			std::string val_serialized = serialise(std::string(name->string), value);
 			if (val_serialized.c_str()) {
-				doc.add_value(get_slot(std::string(name->string)), val_serialized);
-				if (name->string[0] == 'g' && name->string[1] == '_') {
-					LOG_DATABASE_WRAP(this, "GEO: %X serialized: %s %d\n", val_serialized.c_str(), val_serialized.c_str(), val_serialized.size());
-				}
-				LOG_DATABASE_WRAP(this, "Slot: %X serialized: %s\n", get_slot(std::string(name->string)), val_serialized.c_str());
+				unsigned int slot = get_slot(std::string(name->string));
+				doc.add_value(slot, val_serialized);
+				LOG_DATABASE_WRAP(this, "Slot: %X serialized: %s\n", slot, val_serialized.c_str());
 			} else {
 				LOG_ERR(this, "%s: %s not serialized", name->string, cJSON_Print(name));
 				return false;
 			}
 		}
 	}
-	/*
+	
 	if (document_terms) {
 		LOG_DATABASE_WRAP(this, "Terms..\n");
 		for (int i = 0; i < cJSON_GetArraySize(document_terms); i++) {
@@ -368,32 +361,38 @@ Database::index(const std::string &document, const std::string &document_id, boo
 			cJSON *term = cJSON_GetObjectItem(term_data, "term");
 			cJSON *weight = cJSON_GetObjectItem(term_data, "weight");
 			cJSON *position = cJSON_GetObjectItem(term_data, "position");
-			const char *term_v = cJSON_Print(term);
-			const char *term_v2;
+			std::string term_v = std::string(cJSON_Print(term));
 			if (term->type == 4 || term->type == 5) {
-				term_v = std::string(term_v, 1, (int) strlen(term_v) - 2).c_str();
+				term_v = std::string(term_v, 1, term_v.size() - 2);
 			}
+			LOG_DATABASE_WRAP(this, "Term value: %s\n", term_v.c_str());
 			if (name) {
-				term_v = serialise(name->valuestring, term_v).c_str();
-			} 
+				LOG_DATABASE_WRAP(this, "Name: %s\n", name->valuestring);
+				term_v = serialise(std::string(name->valuestring), term_v);
+			}
 			if (term) {
 				Xapian::termcount w;
 				(weight && weight->type == 3) ? w = weight->valueint : w = 1;
-				LOG_DATABASE_WRAP(this, "Weight: %d\n", w);
-				const char *name_v;
-
-				LOG(this, "TB %s\n", term_v);
-				(name) ? name_v = get_prefix(name->valuestring, DOCUMENT_CUSTOM_TERM_PREFIX) : name_v = DOCUMENT_CUSTOM_TERM_PREFIX;
-				LOG(this, "TA %s %s\n", name_v, term_v);
-
-				const std::string nameterm(prefixed(term_v, name_v));
-
 				if (position) {
-					doc.add_posting(nameterm, position->valueint, w);
-					LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", nameterm.c_str(), position->valueint, w);
+					if (name->valuestring[0] == 'g' && name->valuestring[1] == '_') {
+						insert_terms_geo(term_v, &doc, std::string(name->valuestring), w, position->valueint);
+					} else {
+						std::string name_v;
+						(name) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string(DOCUMENT_CUSTOM_TERM_PREFIX);
+						std::string nameterm(prefixed(term_v, name_v));
+						doc.add_posting(nameterm, position->valueint, w);
+						LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", nameterm.c_str(), position->valueint, w);
+					}
 				} else {
-					doc.add_term(nameterm, w);
-					LOG_DATABASE_WRAP(this, "Term: %s %d\n", nameterm.c_str(), w);
+					if (name->valuestring[0] == 'g' && name->valuestring[1] == '_') {
+						insert_terms_geo(term_v, &doc, std::string(name->valuestring), w, -1);
+					} else {
+						std::string name_v;
+						(name) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string(DOCUMENT_CUSTOM_TERM_PREFIX);
+						std::string nameterm(prefixed(term_v, name_v));
+						doc.add_term(nameterm, w);
+						LOG_DATABASE_WRAP(this, "Term: %s %d\n", nameterm.c_str(), w);
+					}
 				}
 			} else {
 				LOG_ERR(this, "ERROR: Term must be defined\n");
@@ -414,16 +413,16 @@ Database::index(const std::string &document, const std::string &document_id, boo
 			cJSON *positions = cJSON_GetObjectItem(row_text, "positions");
 			if (text) {
 				Xapian::termcount w;
-				const char *lan;
+				std::string lan;
 				bool spelling_v;
 				bool positions_v;
-				const char *name_v;
+				std::string name_v;
 				(weight && weight->type == 3) ? w = weight->valueint : w = 1;
-				(language && language->type == 4) ? lan = language->valuestring : lan = "en";
+				(language && language->type == 4) ? lan = std::string(language->valuestring) : lan = std::string("en");
 				(spelling && (strcmp(cJSON_Print(spelling), "true") == 0)) ? spelling_v = true : spelling_v = false;
 				(positions && (strcmp(cJSON_Print(positions), "true") == 0)) ? positions_v = true : positions_v = false;
-				(name && name->type == 4) ? name_v = get_prefix(name->valuestring, DOCUMENT_CUSTOM_TERM_PREFIX) : name_v = "";
-				LOG_DATABASE_WRAP(this, "Language: %s  Weight: %d  Spelling: %s Positions: %s Name: %s\n", lan, w, spelling_v ? "true" : "false", positions_v ? "true" : "false", name_v);
+				(name && name->type == 4) ? name_v = stringtoupper(get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX))) : name_v = "";
+				LOG_DATABASE_WRAP(this, "Language: %s  Weight: %d  Spelling: %s Positions: %s Name: %s\n", lan.c_str(), w, spelling_v ? "true" : "false", positions_v ? "true" : "false", name_v.c_str());
 				Xapian::TermGenerator term_generator;
 				term_generator.set_document(doc);
 				term_generator.set_stemmer(Xapian::Stem(lan));
@@ -437,7 +436,8 @@ Database::index(const std::string &document, const std::string &document_id, boo
 				return false;
 			}
 		}
-	}*/
+	}
+
 	cJSON_Delete(root);
 	return replace(document_id, doc, commit);
 }
@@ -592,7 +592,7 @@ std::string
 Database::get_prefix(const std::string &name, const std::string &prefix)
 {
 	std::string slot = get_slot_hex(name);
-	return prefix + slot + std::string(":");
+	return prefix + slot;
 }
 
 
@@ -601,7 +601,7 @@ Database::get_slot_hex(const std::string &name)
 {
 	std::string standard_name = upper_stringtoupper(name);
 	std::string _md5 = std::string(md5(standard_name), 24, 8);
-	return stringtoupper(_md5);
+	return _md5;
 }
 
 std::string
@@ -741,7 +741,7 @@ Database::lat_lon(const std::string &str, int *grv, int size, int offset)
 		compiled_coords_re = pcre_compile(COORDS_RE, 0, &errptr, &erroffset, 0);
 		if (compiled_coords_re == NULL) {
 			LOG_ERR(this, "ERROR: Could not compile '%s': %s\n", COORDS_RE, errptr);
-			return NULL;
+			return false;
 		}
 	}
 	ret = pcre_exec(compiled_coords_re, 0, str.c_str(), len, offset, 0,  grv, size);
@@ -750,4 +750,55 @@ Database::lat_lon(const std::string &str, int *grv, int size, int offset)
 	}
 
 	return false;
+}
+
+
+void
+Database::print_hexstr(const std::string &str)
+{
+	unsigned char c;
+	for (unsigned int i = 0; i < str.size(); i++) {
+		c = str.at(i);
+		printf("%.2x", c);
+	}
+	printf("\n");
+}
+
+void
+Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, 
+	int w, int position)
+{
+	int max_size = g_serialise.size() * 5 / 6, term = 0;
+	bool found;
+	std::string terms[max_size];
+	for (int i = 6; i > 1; i--) {
+		for (int j = 0; j < g_serialise.size(); j += 6) {
+			found = false;
+			std::string s_coord = std::string(g_serialise, j, i);
+			for (int k = 0;k < term; k++) {
+				if (s_coord.compare(terms[k]) == 0) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				std::string name_v;
+				(name.c_str()) ? name_v = get_prefix(name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string(DOCUMENT_CUSTOM_TERM_PREFIX);
+				std::string nameterm(prefixed(s_coord, name_v));
+				LOG(this, "Nameterm: %s   Prefix: %s   Term: ", nameterm.c_str(), name_v.c_str());
+				print_hexstr(s_coord);
+
+				if (position > 0) {
+					doc->add_posting(nameterm, position, w);
+					LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", nameterm.c_str(), position, w);
+				} else {
+					doc->add_term(nameterm, w);
+					LOG_DATABASE_WRAP(this, "Term: %s %d\n", nameterm.c_str(), w);
+				}
+
+				terms[term] = s_coord;
+				term++;
+			}
+		}
+	}
 }
