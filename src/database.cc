@@ -373,7 +373,6 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 				LOG_DATABASE_WRAP(this, "Name: %s\n", name->valuestring);
 				term_v = serialise(std::string(name->valuestring), term_v);
 			}
-			LOG(this,"Ok\n");
 			if (term) {
 				Xapian::termcount w;
 				(weight && weight->type == 3) ? w = weight->valueint : w = 1;

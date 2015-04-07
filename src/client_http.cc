@@ -263,6 +263,9 @@ void HttpClient::_delete()
 
 void HttpClient::_index()
 {
+    
+    struct query_t e;
+    _endpointgen(e);
 	Database *database = NULL;
 	LOG(this, "Doing the checkout for index\n");
 	database_pool->checkout(&database, endpoints, true);
