@@ -93,6 +93,8 @@ public:
 	std::string serialise(const std::string &name, const std::string &value);
 	std::string parser_bool(const std::string &value);
 	bool lat_lon(const std::string &str, int *grv, int size, int offset);
+	void print_hexstr(const std::string &str);
+	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, int w, int position);
 	
 private:
 	bool _commit();
