@@ -24,42 +24,44 @@
 #define XAPIAND_INCLUDED_UTILS_H
 
 #include <string>
+#include <vector>
 
 void log(void *obj, const char *fmt, ...);
 
 std::string repr(const char *p, size_t size);
 std::string repr(const std::string &string);
 
-enum commands_value
-{
-	command_search = 1
-	,command_count
-	,command_facets
-	,command_similar
-	,identifier
-};
-
+typedef struct query_t {
+    int offset;
+    int limit;
+    const char *order;
+    std::string query;
+    //std::vector <std::string> query;
+    std::vector <std::string> partial;
+    std::vector <std::string> terms;
+} query_t;
 
 typedef struct parser_query_t {
-	const char *offset;
-	size_t length;
+    size_t length;
+    const char *offset;
 } parser_query;
 
 
-
 typedef struct parser_url_path_t {
-	const char *off_path;
-	const char *off_host;
-	const char *off_namespace;
-	const char *off_command;
-	size_t len_path;
-	size_t len_host;
-	size_t len_namespace;
-	size_t len_command;
+    size_t length;
+    const char *offset;
+    size_t len_path;
+    const char *off_path;
+    size_t len_host;
+    const char *off_host;
+    size_t len_namespace;
+    const char *off_namespace;
+    size_t len_command;
+    const char *off_command;
 } parser_url_path;
 
-int url_path(const char**, parser_url_path *);
-int url_qs(const char *, const char *, parser_query *);
+int url_path(const char*, size_t, parser_url_path *);
+int url_qs(const char *, const char *, size_t, parser_query *);
 std::string urldecode(const char *, size_t);
 int look_cmd(const char *);
 
