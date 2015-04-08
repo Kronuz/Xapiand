@@ -20,6 +20,11 @@
 /Xapiand.xcodeproj/xcuserdata
 /Xapiand.xcodeproj/project.xcworkspace
 
+# Xapian Databases
+*.baseA
+*.baseB
+*.DB
+
 # Compiled Object files
 *.slo
 *.lo
