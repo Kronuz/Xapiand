@@ -912,34 +912,80 @@ Database::search(struct query_t e, std::string &results)
     }
     
     if (e.query.size() != 0) {
-        while ((re = find_field(e.query.c_str(), g, size_g)) != -1) {
+        while ((find_field(e.query.c_str(), g, size_g)) != -1) {
             //group *g = (group *) gr;
-            LOG(this,"group[1] %s\n" , std::string(e.query, g[1].start, g[1].end - g[1].start).c_str());
+            /*LOG(this,"group[1] %s\n" , std::string(e.query, g[1].start, g[1].end - g[1].start).c_str());
             LOG(this,"group[2] %s\n" , std::string(e.query, g[2].start, g[2].end - g[2].start).c_str());
-            LOG(this,"group[3] %s\n" , std::string(e.query, g[3].start, g[3].end - g[3].start).c_str());
-            
-            std::string prefix (e.query, g[1].start, g[1].end - g[1].start);
-            std::string field (e.query, g[2].start, g[2].end - g[2].start);
-            
+            LOG(this,"group[3] %s\n" , std::string(e.query, g[3].start, g[3].end - g[3].start).c_str());*/
+			
+			LOG(this,"group[1] %s\n" , std::string(e.query.c_str() + g[1].start, g[1].end - g[1].start).c_str());
+			LOG(this,"group[2] %s\n" , std::string(e.query.c_str() + g[2].start, g[2].end - g[2].start).c_str());
+			LOG(this,"group[3] %s\n" , std::string(e.query.c_str() + g[3].start, g[3].end - g[3].start).c_str());
+			
+            std::string type (e.query.c_str()+ g[1].start, g[1].end - g[1].start);
+            std::string field_ (e.query.c_str()+ g[2].start, g[2].end - g[2].start);
+			std::string field = type + field_;
+			
             //case add_boolean_prefix
-            if (isbooleanprefix(field)) {
+            /*if (isbooleanprefix(field)) {
                 field = stringtoupper(field);
                 LOG(this,"boolean Field: %s\n",field.c_str());
             }
             //case add_prefix
             else {
                 LOG(this,"not boolean Field: %s\n",field.c_str());
-                /*if ((g[3].end - g[3].start) == 0) {
-                 
+				//case Range
+				if ((g_[3].end - g_[3].start) == 0) {
+					//Do something....
                  }else {
-                 if ((g[2].end - g[2].start) == 0) {
-                 //Chema fix this.
-                 //queryparser.add_prefix(field.c_str(), get_prefix(field.c_str(),"s_" + field));
-                 } else queryparser.add_prefix(field.c_str(), prefix);
-                 
-                 }*/
-            }
-        }
+					 switch (field_type(type.c_str())) {
+							 
+						 LOG(this,"Do something....\n");
+						 case 0: {
+							 NumericFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
+							 queryparser.add_prefix(field, &f);
+							 break; }
+							 
+						 case 1:{
+							 queryparser.add_prefix(field, get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)));
+							 break; }
+							 
+						 case 2:{
+							 LatLongFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
+							 queryparser.add_prefix(field, &f);
+							 break; }
+							 
+						 case 3:{
+							 BooleanFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
+							 queryparser.add_prefix(field, &f);
+							 break; }
+					 }
+				}
+            }*/
+		}
+		std::string querystring;
+		bool first_time = true;
+		while (find_terms(e.query.c_str(), gt, size_gt) != -1) {
+			if (!first_time) {
+				querystring += " AND " + std::string(e.query.c_str() + gt[0].start, gt[0].end - gt[0].start);
+			} else {
+				querystring =  std::string(e.query.c_str() + gt[0].start, gt[0].end - gt[0].start);
+				first_time = false;
+			}
+		}
+		
+		int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
+		try {
+			Xapian::Query query = queryparser.parse_query(querystring, flags);
+			results = get_results(query, e);
+		}
+		catch ( Xapian::Error &er) {
+			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+			reopen();
+			queryparser.set_database(*db);
+			Xapian::Query query = queryparser.parse_query(querystring, flags);
+			results = get_results(query, e);
+		}
     }
     return true;
 }
