@@ -80,7 +80,6 @@ public:
 	std::string get_slot_hex(const std::string &name);
 	std::string print_type(int type);
 	bool replace(const std::string &document_id, const Xapian::Document doc, bool commit);
-	//bool search(query_t query, bool get_matches, bool get_data, bool get_terms, bool get_size, bool dead, bool counting);
 	std::string serialise(const std::string &name, const std::string &value);
 	std::string parser_bool(const std::string &value);
 	bool lat_lon(const std::string &str, int *grv, int size, int offset);
@@ -88,11 +87,14 @@ public:
 	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, int w, int position);
 	
     int find_field(const char *str, group *gr, int size_gr);
+	int find_terms(std::string str, group *gr, int size_gr);
+
     bool isbooleanprefix(std::string);
     Xapian::Enquire get_enquire(Xapian::Query query, struct query_t e);
     std::string get_results(Xapian::Query query, struct query_t e);
     std::string search1(struct query_t e);
-    bool search(struct query_t e);
+	bool search(struct query_t e, std::string &results);
+	int field_type(const char *c);
     
     
 private:
