@@ -129,24 +129,24 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	switch (p->state) {
 		case 32: // path
 			self->path = std::string(at, length);
-			self->body = std::string();
-			break;
-		case 44:
-			if (strcasecmp(std::string(at, length).c_str(),"host") == 0) {
-				self->ishost = true;
-			}
-			break;
-		case 60: // receiving data from the buffer (1024 bytes)
+            self->body = std::string();
+            break;
+        case 44:
+            if (strcasecmp(std::string(at, length).c_str(),"host") == 0) {
+                self->ishost = true;
+            }
+            break;
+       	case 60: // receiving data from the buffer (1024 bytes)
 		case 62: // finished receiving data (last data)
 			self->body += std::string(at, length);
-			break;
+       		break;
 		case 50:
-			if (self->ishost) {
-				self->host = std::string(at, length);
-				self->ishost = false;
-			}
-			break;
-	}
+            if (self->ishost) {
+                self->host = std::string(at, length);
+                self->ishost = false;
+            }
+            break;
+    }
 	return 0;
 }
 
