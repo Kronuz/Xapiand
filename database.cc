@@ -26,11 +26,11 @@
 #include <xapian/dbfactory.h>
 
 //change prefix to Q only
-#define DOCUMENT_ID_TERM_PREFIX "Q:"
+#define DOCUMENT_ID_TERM_PREFIX "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
 #define FIND_FIELD_RE "\\b([ngsbd]_)?([_a-zA-Z][_a-zA-Z0-9]*):([^ ]*\\.\\.)?"
-#define PREFIX_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
+#define PREFIX_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w,.]+)"
 #define TERM_SPLIT_RE "[^-\\w.]"
 #define DATE_RE "(([1-9][0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])(T([01][0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])(\\.([0-9]{3}))?)?(([+-])([01][0-9]|2[0-3])(:([0-5][0-9]))?)?)?)"
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
@@ -837,6 +837,33 @@ Database::find_field(const char *str, group g[], int size_g) {
     } return -1;
 }
 
+int
+Database::find_terms(std::string str, group g[], int size_g)
+{
+	const char *error;
+	int   erroffset;
+	
+	// First, the regex string must be compiled.
+	if (!compiled_terms) {
+		//pcre_free is not use because we use a struct pcre static and gets free at the end of the program
+		compiled_terms = pcre_compile (PREFIX_RE, 0, &error, &erroffset, 0);
+		if (!compiled_terms) {
+			LOG_ERR(this,"pcre_compile PREFIX_RE failed (offset: %d), %s\n", erroffset, error);
+			return -1;
+		}
+	}
+
+	if (compiled_terms != NULL) {
+		unsigned int offset = g[0].end;
+		size_t len = strlen(str.c_str());
+		if(pcre_exec(compiled_terms, 0, str.c_str(), (int)len, offset, 0, (int *)g, size_g) >= 0){
+			return 0;
+		}
+		else return -1;
+	} return -1;
+}
+
+
 
 bool
 Database::isbooleanprefix(std::string field) {
@@ -848,17 +875,36 @@ Database::isbooleanprefix(std::string field) {
     return false;
 }
 
+int
+Database::field_type(const char *s) {
+	
+	if(*(s+1) == '_') {
+		switch(*(s)) {
+			case 'n': return 0;
+			case 's': return 1;
+			case 'g': return 2;
+			case 'b': return 3;
+			case 'd': return 4;
+			default: return 1;
+		}
+	} else return 1;
+	
+}
+
 
 bool
-Database::search(struct query_t e)
+Database::search(struct query_t e, std::string &results)
 {
     Xapian::QueryParser queryparser;
     group g[4]; //pcre_exec needs a multiple of 3
     int size_g = sizeof(g)*3;
     memset(&g, 0, sizeof(g));
-    int re;
-    
-    LOG(this,"sizeof de g: %d\n",size_g);
+	
+	group gt[3]; //pcre_exec needs a multiple of 3
+	int size_gt = sizeof(gt)*3;
+	memset(&gt, 0, sizeof(gt));
+	
+    //LOG(this,"sizeof de g: %d\n",size_g);
     
     if (writable) {
         LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
