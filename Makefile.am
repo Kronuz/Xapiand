@@ -13,7 +13,8 @@ xapiand_SOURCES = xapiand.cc \
 	cJSON.cc \
 	md5.cc \
 	utils.cc \
-	length.cc
+	length.cc \
+	TypesFieldProcessor.cc
 
 noinst_HEADERS = xapiand.h \
 	queue.h \
@@ -29,7 +30,8 @@ noinst_HEADERS = xapiand.h \
 	cJSON.h \
 	md5.h \
 	utils.h \
-	length.h
+	length.h \
+	TypesFieldProcessor.h
 
 EXTRA_DIST = Xapiand.xcodeproj/project.pbxproj
 
