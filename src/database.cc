@@ -424,16 +424,24 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 				(language && language->type == 4) ? lan = std::string(language->valuestring) : lan = std::string("en");
 				(spelling && (strcmp(cJSON_Print(spelling), "true") == 0)) ? spelling_v = true : spelling_v = false;
 				(positions && (strcmp(cJSON_Print(positions), "true") == 0)) ? positions_v = true : positions_v = false;
-				(name && name->type == 4) ? name_v = stringtoupper(get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX))) : name_v = "";
+                (name && name->type == 4) ? name_v = stringtoupper(get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX))) : name_v = std::string("");
 				LOG_DATABASE_WRAP(this, "Language: %s  Weight: %d  Spelling: %s Positions: %s Name: %s\n", lan.c_str(), w, spelling_v ? "true" : "false", positions_v ? "true" : "false", name_v.c_str());
 				Xapian::TermGenerator term_generator;
 				term_generator.set_document(doc);
 				term_generator.set_stemmer(Xapian::Stem(lan));
+                
 				if (spelling_v) {
 					term_generator.set_database(*wdb);
 					term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
 				}
-				(positions_v) ? term_generator.index_text(text->valuestring, w, name_v) : term_generator.index_text_without_positions(text->valuestring, w, name_v);
+				
+                try { (positions_v) ? term_generator.index_text(text->valuestring, w, name_v) : term_generator.index_text_without_positions     (text->valuestring, w, name_v);
+                }
+                catch ( Xapian::Error &e) {
+                    LOG(this,"ERROR: %s\n",e.get_msg().c_str());
+                }
+                
+                //LOG(this,"Aqui!!!!!!\n");
 			} else {
 				LOG_ERR(this, "ERROR: Text must be defined\n");
 				return false;
@@ -860,12 +868,12 @@ Database::search(struct query_t e)
     if (e.query.size() != 0) {
         while ((re = find_field(e.query.c_str(), g, size_g)) != -1) {
             //group *g = (group *) gr;
-            LOG(this,"group[1] %s\n" , std::string(e.query.c_str() + g[1].start, g[1].end - g[1].start).c_str());
-            LOG(this,"group[2] %s\n" , std::string(e.query.c_str() + g[2].start, g[2].end - g[2].start).c_str());
-            LOG(this,"group[3] %s\n" , std::string(e.query.c_str() + g[3].start, g[3].end - g[3].start).c_str());
+            LOG(this,"group[1] %s\n" , std::string(e.query, g[1].start, g[1].end - g[1].start).c_str());
+            LOG(this,"group[2] %s\n" , std::string(e.query, g[2].start, g[2].end - g[2].start).c_str());
+            LOG(this,"group[3] %s\n" , std::string(e.query, g[3].start, g[3].end - g[3].start).c_str());
             
-            std::string prefix (e.query.c_str() + g[1].start, g[1].end - g[1].start);
-            std::string field (e.query.c_str() + g[2].start, g[2].end - g[2].start);
+            std::string prefix (e.query, g[1].start, g[1].end - g[1].start);
+            std::string field (e.query, g[2].start, g[2].end - g[2].start);
             
             //case add_boolean_prefix
             if (isbooleanprefix(field)) {

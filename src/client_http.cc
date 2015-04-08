@@ -282,16 +282,18 @@ void HttpClient::_index()
 
 void HttpClient::_search()
 {
+	std::string content;
     struct query_t e;
     _endpointgen(e);
-    /*Database *database = NULL;
+    Database *database = NULL;
     LOG(this, "Doing the checkout for search\n");
     database_pool->checkout(&database, endpoints, false);
-    std::string content = database->search1(e);
+	database->search(e, content);
     LOG(this, "Doing the checkin for search.\n");
     database_pool->checkin(&database);
     LOG(this, "FINISH SEARCH\n");
-    
+	
+	/*
     char tmp[20];
     content += "\r\n";
     std::string http_response;
