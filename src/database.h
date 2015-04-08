@@ -38,7 +38,7 @@
 #include <sstream>
 #include <pcre.h>
 #include <sys/time.h>
-
+#include "TypesFieldProcessor.h"
 
 class DatabasePool;
 
