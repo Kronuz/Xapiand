@@ -20,25 +20,19 @@
  * IN THE SOFTWARE.
  */ 
 
-#include "utils.h"
-
 #include "database.h"
-#include <xapian/dbfactory.h>
 
 //change prefix to Q only
 #define DOCUMENT_ID_TERM_PREFIX "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
-#define FIND_FIELD_RE "\\b([ngsbd]_)?([_a-zA-Z][_a-zA-Z0-9]*):([^ ]*\\.\\.)?"
-#define PREFIX_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w,.]+)"
-#define TERM_SPLIT_RE "[^-\\w.]"
-#define DATE_RE "(([1-9][0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])(T([01][0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])(\\.([0-9]{3}))?)?(([+-])([01][0-9]|2[0-3])(:([0-5][0-9]))?)?)?)"
-#define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
+#define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
+#define FIND_TERMS_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
 
 Database::Database(Endpoints &endpoints_, bool writable_)
-	: endpoints(endpoints_),
-	  writable(writable_),
-	  db(NULL)
+: endpoints(endpoints_),
+writable(writable_),
+db(NULL)
 {
 	hash = endpoints.hash(writable);
 	reopen();
@@ -196,10 +190,9 @@ DatabasePool::checkin(Database **database)
 	LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
 }
 
-pcre *Database::compiled_terms = NULL;
-pcre *Database::compiled_date_re = NULL;
-pcre *Database::compiled_coords_re = NULL;
+
 pcre *Database::compiled_find_field_re = NULL;
+pcre *Database::compiled_find_terms_re = NULL;
 
 bool
 Database::drop(const std::string &doc_id, bool commit)
@@ -229,47 +222,6 @@ Database::drop(const std::string &doc_id, bool commit)
 	return false;
 }
 
-std::string
-Database::stringtoupper(const std::string &str) 
-{
-	std::string tmp = str; 
-	for (unsigned int i = 0; i < tmp.size(); i++)  {
-		tmp.at(i) = toupper(tmp.at(i));
-	}
-	return tmp; 
-}
-
-std::string
-Database::upper_stringtoupper(const std::string &str) 
-{ 
-	bool h_upper = false;
-	std::string tmp = str; 
-	for (unsigned int i = 0; i < tmp.size(); i++) {
-		tmp.at(i) = toupper(tmp.at(i)); 
-		if (tmp.at(i) == str.at(i) && tmp.at(i) != '_') {
-			h_upper = true;
-		}
-	} 
-	if (h_upper) {
-		return tmp;
-	} 
-	return str;
-} 
-
-std::string
-Database::stringtolower(const std::string &str) 
-{ 
-	std::string tmp = str; 
-	for (unsigned int i = 0; i < tmp.size(); i++) {
-		tmp.at(i) = tolower(tmp.at(i));
-	}
-	return tmp; 
-}
-
-std::string
-Database::prefixed(const std::string &term, const std::string &prefix) {
-	return stringtoupper(prefix) + stringtolower(term);
-}
 
 bool
 Database::_commit()
@@ -284,11 +236,10 @@ Database::_commit()
 			if (t) reopen();
 			continue;
 		}
-
 		LOG_DATABASE_WRAP(this, "Commit made\n");
 		return true;
 	}
-
+	
 	LOG_ERR(this, "ERROR: Cannot do commit!\n");
 	return false;
 }
@@ -453,184 +404,6 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 	return replace(document_id, doc, commit);
 }
 
-unsigned int
-Database::get_slot(const std::string &name)
-{
-	std::string standard_name = upper_stringtoupper(name);
-	std::string _md5 = std::string(md5(standard_name), 24, 8);
-	unsigned int slot = hex2int(_md5);
-	if (slot == 0xffffffff) {
-		slot = 0xfffffffe;
-	}
-	return slot;
-}
-
-unsigned int
-Database::hex2int(const std::string &input) 
-{
-	unsigned int n;
-	std::stringstream ss;
-	ss << std::hex << input;
-	ss >> n;
-	ss.flush();
-	return n;
-}
-
-int
-Database::strtoint(const std::string &str)
-{
-	int number;
-	std::stringstream ss;
-	ss << std::dec << str;
-	ss >> number;
-	ss.flush();
-	return number;
-}
-
-
-double
-Database::strtodouble(const std::string &str)
-{
-	double number;
-	std::stringstream ss;
-	ss << std::dec << str;
-	ss >> number;
-	ss.flush();
-	return number;
-}
-
-double
-Database::timestamp_date(const std::string &str)
-{
-	int len = (int) str.size();
-	char sign;
-	const char *errptr;
-	int erroffset, ret, n[9]; 
-	int grv[51]; // 17 * 3
-	double  timestamp;
-	
-	if (compiled_date_re == NULL) {
-		LOG(this, "Compiled date is NULL, we will compile\n");
-		compiled_date_re = pcre_compile(DATE_RE, 0, &errptr, &erroffset, 0);
-		if (compiled_date_re == NULL) {
-			LOG_ERR(this, "ERROR: Could not compile '%s': %s\n", DATE_RE, errptr);
-			return -1;
-		}
-	}
-
-	ret = pcre_exec(compiled_date_re, 0, str.c_str(), len, 0, 0,  grv, sizeof(grv) / sizeof(int));
-	group *gr = (group *) grv;
-		
-	if (ret && len == (gr[0].end - gr[0].start)) {
-		std::string parse = std::string(str, gr[2].start, gr[2].end - gr[2].start);
-		n[0] = strtoint(parse);
-		parse = std::string(str, gr[3].start, gr[3].end - gr[3].start);
-		n[1] = strtoint(parse);
-		parse = std::string(str, gr[4].start, gr[4].end - gr[4].start);
-		n[2] = strtoint(parse);
-
-		if (gr[5].end - gr[5].start > 0) {
-			parse = std::string(str, gr[6].start, gr[6].end - gr[6].start);
-			n[3] = strtoint(parse);
-			parse = std::string(str, gr[7].start, gr[7].end - gr[7].start);
-			n[4] = strtoint(parse);
-			if (gr[8].end - gr[8].start > 0) {
-				parse = std::string(str, gr[9].start, gr[9].end - gr[9].start);
-				n[5] = strtoint(parse);
-				if (gr[10].end - gr[10].start > 0) {
-					parse = std::string(str, gr[11].start, gr[11].end - gr[11].start);
-					n[6] = strtoint(parse);
-				} else {
-					n[6] = 0;
-				}
-			} else {
-				n[5] =  n[6] = 0;
-			}
-			if (gr[12].end - gr[12].start > 0) {
-				sign = std::string(str, gr[13].start, gr[13].end - gr[13].start).at(0);
-				parse = std::string(str, gr[14].start, gr[14].end - gr[14].start);
-				n[7] = strtoint(parse);
-				if (gr[15].end - gr[15].start > 0) {   
-					parse = std::string(str, gr[16].start, gr[16].end - gr[16].start);
-					n[8] = strtoint(parse); 
-				} else {
-					n[8] = 0;
-				}
-			} else {
-				n[7] = 0;
-				n[8] = 0;
-				sign = '+';
-			}
-		} else {
-			n[3] = n[4] = n[5] = n[6] = n[7] = n[8] = 0;
-		}
-		LOG(this, "Fecha Reconstruida: %04d-%02d-%02dT%02d:%02d:%02d.%03d%c%02d:%02d\n", n[0], n[1], n[2], n[3], n[4], n[5], n[6], sign, n[7], n[8]);
-		if (n[1] == 2 && !((n[0] % 4 == 0 && n[0] % 100 != 0) || n[0] % 400 == 0) && n[2] > 28) {
-			LOG_ERR(this, "ERROR: Incorrect Date, This month only has 28 days\n");
-			return -1;
-		} else if(n[1] == 2 && ((n[0] % 4 == 0 && n[0] % 100 != 0) || n[0] % 400 == 0) && n[2] > 29) {
-		   LOG_ERR(this, "ERROR: Incorrect Date, This month only has 29 days\n");
-		   return -1;
-		} else if((n[1] == 4 || n[1] == 6 || n[1] == 9 || n[1] == 11) && n[2] > 30) {
-			LOG_ERR(this, "ERROR: Incorrect Date, This month only has 30 days\n");
-			return -1;
-		}
-	} else {
-		return -1;
-	}
-
-	time_t tt = 0;
-	struct tm *timeinfo = gmtime(&tt);
-	timeinfo->tm_year   = n[0] - 1900;
-	timeinfo->tm_mon    = n[1] - 1;
-	timeinfo->tm_mday   = n[2]; 
-	if (sign == '-') {
-		timeinfo->tm_hour  = n[3] + n[7];
-		timeinfo->tm_min   = n[4] + n[8];   
-	} else {
-		timeinfo->tm_hour  = n[3] - n[7];
-		timeinfo->tm_min   = n[4] - n[8];
-	}
-	timeinfo->tm_sec    = n[5];
-	const time_t dateGMT = timegm(timeinfo);
-	timestamp = (double) dateGMT;
-	timestamp += n[6]/1000.0;
-	return timestamp;
-}
-
-
-std::string
-Database::get_prefix(const std::string &name, const std::string &prefix)
-{
-	std::string slot = get_slot_hex(name);
-	return prefix + slot;
-}
-
-
-std::string
-Database::get_slot_hex(const std::string &name)
-{
-	std::string standard_name = upper_stringtoupper(name);
-	std::string _md5 = std::string(md5(standard_name), 24, 8);
-	return _md5;
-}
-
-std::string
-Database::print_type(int type)
-{
-	switch (type) {
-		case 3:
-			return std::string("Numeric");
-		case 4:
-			return std::string("String");
-		case 5:
-			return std::string("Array");
-		case 6:
-			return std::string("Object");
-		default:
-			return std::string("Undefined");
-	}
-}
 
 bool
 Database::replace(const std::string &document_id, const Xapian::Document doc, bool commit)
@@ -656,124 +429,22 @@ Database::replace(const std::string &document_id, const Xapian::Document doc, bo
 
 
 std::string
-Database::serialise(const std::string &name, const std::string &value)
+Database::serialise(const std::string &field_name, const std::string &field_value)
 {
-	if (name.at(0) == 'n' && name.at(1) == '_') {
-		double val;
-		val = strtodouble(value);
-		return Xapian::sortable_serialise(val);
-	} else if (name.at(0) == 's' && name.at(1) == '_') {
-		return std::string(value);
-	} else if (name.at(0) == 'd' && name.at(1) == '_') {
-		double timestamp = timestamp_date(value);
-		if (timestamp > 0) {
-			return Xapian::sortable_serialise(timestamp);
-		} else {
-			LOG_ERR(this, "ERROR: Format date (%s) must be ISO 8601: YYYY-MM-DDThh:mm:ss.sss[+-]hh:mm (eg 1997-07-16T19:20:30.451+05:00)\n", value.c_str());
-			return std::string("");
-		}
-	} else if (name.at(0) == 'g' && name.at(1) == '_') {
-		Xapian::LatLongCoords coords;
-		double latitude, longitude;
-		int len = (int) value.size(), Ncoord = 0, offset = 0, size = 9; // 3 * 3
-		bool end = false;
-		int grv[size];
-		while (lat_lon(value, grv, size, offset)) {
-			group *g = (group *) grv;
-			std::string parse(value, g[1].start, g[1].end - g[1].start);
-			latitude = strtodouble(parse);
-			parse = std::string(value, g[2].start, g[2].end - g[2].start);
-			longitude = strtodouble(parse);
-			Ncoord++;
-			try {
-				coords.append(Xapian::LatLongCoord(latitude, longitude));
-			} catch (Xapian::Error &e) {
-				LOG_ERR(this, "latitude or longitude out-of-range\n");
-				return std::string("");
-			}
-			LOG(this, "Coord %d: %f, %f\n", Ncoord, latitude, longitude);
-			if (g[2].end == len) {
-				end = true;
-				break;
-			}
-			offset = g[2].end;
-		}
-		if (Ncoord == 0 || !end) {
-			LOG_ERR(this, "ERROR: %s must be an array of doubles [lat, lon, lat, lon, ...]\n", value.c_str());
-			return std::string("");
-		}
-		return coords.serialise();
-	} else if (name.at(0) == 'b' && name.at(1) == '_') {
-		return parser_bool(value);
-	} else if (name.at(1) == '_') {
-		LOG_ERR(this, "ERROR: type %c%c no defined, you can only use [n_, g_, s_, b_, d_]\n", name.at(0), name.at(1));
-		return std::string("");
-	} else {
-		return value;
+	if (field_type(field_name) == 0) {
+		return serialise_numeric(field_value);
+	} else if (field_type(field_name) == 1) {
+		return field_value;
+	} else if (field_type(field_name) == 2) {
+		return serialise_date(field_value);
+	} else if (field_type(field_name) == 3) {
+		return serialise_geo(field_value);
+	} else if (field_type(field_name) == 4) {
+		return serialise_bool(field_value);
 	}
+	return std::string("");
 }
 
-std::string 
-Database::parser_bool(const std::string &value) {
-	if (!value.c_str()) {
-		return std::string("f");
-	} else if(value.size() > 1) {
-		if (strcasecmp(value.c_str(), "TRUE") == 0) {
-			return std::string("t");
-		} else if (strcasecmp(value.c_str(), "FALSE") == 0) {
-			return std::string("f");
-		} else {
-			return std::string("t");	
-		}
-	} else {
-		switch (tolower(value.at(0))) {
-			case '1':
-				return std::string("t");
-			case '0':
-				return std::string("f");
-			case 't':
-				return std::string("t");
-			case 'f':
-				return std::string("f");
-			default:
-				return std::string("t");
-		}
-	}
-}
-
-bool
-Database::lat_lon(const std::string &str, int *grv, int size, int offset)
-{
-	int erroffset, ret;
-	const char *errptr;
-	int len = (int) str.size();
-
-	if (!compiled_coords_re) {
-		compiled_coords_re = pcre_compile(COORDS_RE, 0, &errptr, &erroffset, 0);
-		if (compiled_coords_re == NULL) {
-			LOG_ERR(this, "ERROR: Could not compile '%s': %s\n", COORDS_RE, errptr);
-			return false;
-		}
-	}
-	ret = pcre_exec(compiled_coords_re, 0, str.c_str(), len, offset, 0,  grv, size);
-	if (ret == 3) {
-		return true;
-	}
-
-	return false;
-}
-
-
-void
-Database::print_hexstr(const std::string &str)
-{
-	unsigned char c;
-	for (unsigned int i = 0; i < str.size(); i++) {
-		c = str.at(i);
-		printf("%.2x", c);
-	}
-	printf("\n");
-}
 
 void
 Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, 
@@ -812,59 +483,6 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 }
 
 
-int
-Database::find_field(const char *str, group g[], int size_g) {
-    const char *error;
-    int   erroffset;
-    
-    // First, the regex string must be compiled.
-    if (!compiled_find_field_re) {
-        //pcre_free is not use because we use a struct pcre static and gets free at the end of the program
-        compiled_find_field_re = pcre_compile (FIND_FIELD_RE, 0, &error, &erroffset, 0);
-        if (!compiled_find_field_re) {
-            LOG_ERR(this,"pcre_compile failed (offset: %d), %s\n", erroffset, error);
-            return -1;
-        }
-    }
-    if (compiled_find_field_re != NULL) {
-        unsigned int offset = g[0].end;
-        size_t len = strlen(str);
-        //LOG(this,"sizeof*3 %lu sizeof/sizeof: %lu\n",sizeof(group)*3, sizeof(gr)/sizeof(int));
-        if(pcre_exec(compiled_find_field_re, 0, str, (int)len, offset, 0, (int *)g, size_g) >= 0){
-            return 0;
-        }
-        else return -1;
-    } return -1;
-}
-
-int
-Database::find_terms(std::string str, group g[], int size_g)
-{
-	const char *error;
-	int   erroffset;
-	
-	// First, the regex string must be compiled.
-	if (!compiled_terms) {
-		//pcre_free is not use because we use a struct pcre static and gets free at the end of the program
-		compiled_terms = pcre_compile (PREFIX_RE, 0, &error, &erroffset, 0);
-		if (!compiled_terms) {
-			LOG_ERR(this,"pcre_compile PREFIX_RE failed (offset: %d), %s\n", erroffset, error);
-			return -1;
-		}
-	}
-
-	if (compiled_terms != NULL) {
-		unsigned int offset = g[0].end;
-		size_t len = strlen(str.c_str());
-		if(pcre_exec(compiled_terms, 0, str.c_str(), (int)len, offset, 0, (int *)g, size_g) >= 0){
-			return 0;
-		}
-		else return -1;
-	} return -1;
-}
-
-
-
 bool
 Database::isbooleanprefix(std::string field) {
     const char *c = field.c_str();
@@ -875,49 +493,22 @@ Database::isbooleanprefix(std::string field) {
     return false;
 }
 
-int
-Database::field_type(const char *s) {
-	
-	if(*(s+1) == '_') {
-		switch(*(s)) {
-			case 'n': return 0;
-			case 's': return 1;
-			case 'g': return 2;
-			case 'b': return 3;
-			case 'd': return 4;
-			default: return 1;
-		}
-	} else return 1;
-	
-}
-
-
 bool
 Database::search(struct query_t e, std::string &results)
 {
     Xapian::QueryParser queryparser;
-    group g[4]; //pcre_exec needs a multiple of 3
-    int size_g = sizeof(g)*3;
-    memset(&g, 0, sizeof(g));
-	
-	group gt[3]; //pcre_exec needs a multiple of 3
-	int size_gt = sizeof(gt)*3;
-	memset(&gt, 0, sizeof(gt));
-	
-    //LOG(this,"sizeof de g: %d\n",size_g);
-    
+
     if (writable) {
         LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
         return false;
     }
-    
+
+	group *g = NULL;
+
+	int offset = 0;
     if (e.query.size() != 0) {
-        while ((find_field(e.query.c_str(), g, size_g)) != -1) {
-            //group *g = (group *) gr;
-            /*LOG(this,"group[1] %s\n" , std::string(e.query, g[1].start, g[1].end - g[1].start).c_str());
-            LOG(this,"group[2] %s\n" , std::string(e.query, g[2].start, g[2].end - g[2].start).c_str());
-            LOG(this,"group[3] %s\n" , std::string(e.query, g[3].start, g[3].end - g[3].start).c_str());*/
-			
+        while ((pcre_search(e.query.c_str(), (int)e.query.size(), offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
+			offset = g[0].end;
 			LOG(this,"group[1] %s\n" , std::string(e.query.c_str() + g[1].start, g[1].end - g[1].start).c_str());
 			LOG(this,"group[2] %s\n" , std::string(e.query.c_str() + g[2].start, g[2].end - g[2].start).c_str());
 			LOG(this,"group[3] %s\n" , std::string(e.query.c_str() + g[3].start, g[3].end - g[3].start).c_str());
@@ -927,7 +518,7 @@ Database::search(struct query_t e, std::string &results)
 			std::string field = type + field_;
 			
             //case add_boolean_prefix
-            /*if (isbooleanprefix(field)) {
+            if (isbooleanprefix(field)) {
                 field = stringtoupper(field);
                 LOG(this,"boolean Field: %s\n",field.c_str());
             }
@@ -935,13 +526,40 @@ Database::search(struct query_t e, std::string &results)
             else {
                 LOG(this,"not boolean Field: %s\n",field.c_str());
 				//case Range
-				if ((g_[3].end - g_[3].start) == 0) {
-					//Do something....
+				if ((g[3].end - g[3].start) != 0) {
+				//if (1) {
+					switch (4) {
+						case 0:{
+							Xapian::NumberValueRangeProcessor vrp(get_slot(field), "");
+							queryparser.add_valuerangeprocessor(&vrp);
+							break; }
+							
+						case 1: {
+							Xapian::StringValueRangeProcessor vrp(get_slot(field));
+							queryparser.add_valuerangeprocessor(&vrp);
+							break; }
+							
+						case 2: {
+							//This is not a range search
+
+							//LatLongDistanceFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
+							//queryparser.add_prefix(field, &f);
+							break; }
+							
+						case 4: {
+							LOG(this,"DateValueRangeProcessor\n");
+							DateTimeValueRangeProcessor vrp(get_slot("d_date"), "d_date", get_prefix("d_date", std::string(DOCUMENT_CUSTOM_TERM_PREFIX)));
+							queryparser.add_valuerangeprocessor(&vrp);
+							break; }
+							
+						default: LOG_ERR(this, "This type of Data has no support for range search\n");
+							return false;
+					}
+					
+					
                  }else {
-					 switch (field_type(type.c_str())) {
-							 
-						 LOG(this,"Do something....\n");
-						 case 0: {
+					switch (field_type(type)) {
+						  case 0: {
 							 NumericFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
 							 queryparser.add_prefix(field, &f);
 							 break; }
@@ -959,21 +577,48 @@ Database::search(struct query_t e, std::string &results)
 							 BooleanFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
 							 queryparser.add_prefix(field, &f);
 							 break; }
+							 
+						 case 4:{
+							 //Not working...
+							 LOG(this,"Before DateFieldProcessor\n");
+							 DateFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
+							 queryparser.add_prefix(field, &f);
+							 break; }
 					 }
 				}
-            }*/
+            }
 		}
+
+		if (g) {
+			free(g);
+			g = NULL;
+		}
+
+		
 		std::string querystring;
 		bool first_time = true;
-		while (find_terms(e.query.c_str(), gt, size_gt) != -1) {
+
+		offset = 0;
+		while ((pcre_search(e.query.c_str(), (int)e.query.size(), offset, 0, FIND_TERMS_RE, &compiled_find_terms_re, &g)) != -1) {
+			offset = g[0].end;
 			if (!first_time) {
-				querystring += " AND " + std::string(e.query.c_str() + gt[0].start, gt[0].end - gt[0].start);
+				querystring += " AND " + std::string(e.query.c_str() + g[0].start, g[0].end - g[0].start);
 			} else {
-				querystring =  std::string(e.query.c_str() + gt[0].start, gt[0].end - gt[0].start);
+				querystring =  std::string(e.query.c_str() + g[0].start, g[0].end - g[0].start);
 				first_time = false;
 			}
 		}
+
+		if (g) {
+			free(g);
+			g = NULL;
+		}
+
+		LOG(this,"querystring %s\n",querystring.c_str());
+		Xapian::Query query = queryparser.parse_query(querystring);
+		//Xapian::Query query = queryparser.parse_query("1997-07-16T19:20:30.451+05:00..");
 		
+		/*
 		int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
 		try {
 			Xapian::Query query = queryparser.parse_query(querystring, flags);

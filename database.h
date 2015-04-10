@@ -30,14 +30,11 @@
 #include "queue.h"
 
 #include <xapian.h>
+#include <xapian/query.h>
 #include "cJSON.h"
 #include <pthread.h>
 #include <algorithm>
-
-#include "md5.h"
-#include <sstream>
-#include <pcre.h>
-#include <sys/time.h>
+#include "utils.h"
 #include "TypesFieldProcessor.h"
 
 class DatabasePool;
@@ -50,53 +47,26 @@ public:
 	Endpoints endpoints;
 	
 	Xapian::Database *db;
-
-	typedef struct group{
-		int start;
-		int end;
-	} group;
-
-	static pcre *compiled_terms;
-	static pcre *compiled_date_re;
-	static pcre *compiled_coords_re;
-    static pcre *compiled_find_field_re;
-    
+	
+	static pcre *compiled_find_field_re;
+	static pcre *compiled_find_terms_re;
+	
 	Database(Endpoints &endpoints, bool writable);
 	~Database();
-
+	
 	void reopen();
 	bool drop(const std::string &document_id, bool commit);
-	std::string stringtolower(const std::string &str);
-	std::string stringtoupper(const std::string &str); 
-	std::string upper_stringtoupper(const std::string &str);  
 	bool index(const std::string &document, const std::string &document_id, bool commit);
-	unsigned int get_slot(const std::string &name);
-	std::string prefixed(const std::string &term, const std::string &prefixO);
-	unsigned int hex2int(const std::string &input);
-	int strtoint(const std::string &str);
-	double strtodouble(const std::string &str);
-	double timestamp_date(const std::string &str);
-	std::string get_prefix(const std::string &name, const std::string &prefix);
-	std::string get_slot_hex(const std::string &name);
-	std::string print_type(int type);
 	bool replace(const std::string &document_id, const Xapian::Document doc, bool commit);
 	std::string serialise(const std::string &name, const std::string &value);
-	std::string parser_bool(const std::string &value);
-	bool lat_lon(const std::string &str, int *grv, int size, int offset);
-	void print_hexstr(const std::string &str);
 	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, int w, int position);
-	
-    int find_field(const char *str, group *gr, int size_gr);
-	int find_terms(std::string str, group *gr, int size_gr);
-
-    bool isbooleanprefix(std::string);
-    Xapian::Enquire get_enquire(Xapian::Query query, struct query_t e);
-    std::string get_results(Xapian::Query query, struct query_t e);
-    std::string search1(struct query_t e);
+	Xapian::Enquire get_enquire(Xapian::Query query, struct query_t e);
+	std::string get_results(Xapian::Query query, struct query_t e);
+	std::string search1(struct query_t e);
 	bool search(struct query_t e, std::string &results);
-	int field_type(const char *c);
-    
-    
+	bool isbooleanprefix(std::string field);
+	
+	
 private:
 	bool _commit();
 };
