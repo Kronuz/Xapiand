@@ -440,6 +440,7 @@ Database::serialise(const std::string &field_name, const std::string &field_valu
 	} else if (field_type(field_name) == 4) {
 		return serialise_bool(field_value);
 	}
+	return std::string("");
 }
 
 
