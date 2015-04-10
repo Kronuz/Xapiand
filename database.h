@@ -30,7 +30,7 @@
 #include "queue.h"
 
 #include <xapian.h>
-#include <xapian/query.h>
+
 #include "cJSON.h"
 #include <pthread.h>
 #include <algorithm>
@@ -47,24 +47,23 @@ public:
 	Endpoints endpoints;
 	
 	Xapian::Database *db;
-	
+
 	static pcre *compiled_find_field_re;
-	static pcre *compiled_find_terms_re;
 	
 	Database(Endpoints &endpoints, bool writable);
 	~Database();
-	
+
 	void reopen();
 	bool drop(const std::string &document_id, bool commit);
 	bool index(const std::string &document, const std::string &document_id, bool commit);
 	bool replace(const std::string &document_id, const Xapian::Document doc, bool commit);
 	std::string serialise(const std::string &name, const std::string &value);
 	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, int w, int position);
+	int find_field(const std::string &str, int *g, int size_g, int len, int offset);
 	Xapian::Enquire get_enquire(Xapian::Query query, struct query_t e);
 	std::string get_results(Xapian::Query query, struct query_t e);
 	std::string search1(struct query_t e);
-	bool search(struct query_t e, std::string &results);
-	bool isbooleanprefix(std::string field);
+	bool search(struct query_t e);
 	
 	
 private:
