@@ -56,13 +56,22 @@ LatLongFieldProcessor::operator()(const std::string &str)
 }
 
 
-LatLongDistanceFieldProcessor::LatLongDistanceFieldProcessor(const std::string &prefix_): prefix(prefix_) {}
-
-
+LatLongDistanceFieldProcessor::LatLongDistanceFieldProcessor(std::string prefix_, std::string field_): prefix(prefix_), field(field_) {}
 Xapian::Query
 LatLongDistanceFieldProcessor::operator()(const std::string &str)
 {
-	return Xapian::Query("Procesing");
+	LOG(this,"Inside of LatLongDistanceFieldProcessor %s\n", str.c_str());
+	Xapian::LatLongCoords coords;
+	if (get_coords(str, coords_) == 0) {
+		LOG(this,"longitud %f latitud %f max_range %f\n", coords_[0],coords_[1], coords_[2]);
+		Xapian::LatLongCoord centre(coords_[0], coords_[1]);
+		coords_[2] = Xapian::miles_to_metres(coords_[2]);
+		Xapian::GreatCircleMetric metric;
+		//Use get_slot in 0
+		Xapian::LatLongDistancePostingSource ps(get_slot(field), centre, metric, coords_[2]);
+		return Xapian::Query(&ps);
+	}
+	throw Xapian::QueryParserError("LatLongDistanceFieldProcessor Didn't understand %s",str.c_str());
 }
 
 
@@ -94,9 +103,7 @@ Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 }
 
 
-DateTimeValueRangeProcessor::DateTimeValueRangeProcessor(Xapian::valueno slot_, const std::string prefix_): valno(slot_), prefix(prefix_) {}
-
-
+DateTimeValueRangeProcessor::DateTimeValueRangeProcessor(Xapian::valueno slot_, std::string prefix_): valno(slot_), prefix(prefix_) {}
 Xapian::valueno
 DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 {
@@ -107,7 +114,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 		buf = prefix + serialise_date(begin);
 		if(buf != "") {
 			begin.assign(buf.c_str(), buf.size());
-			LOG(this,"Serialise of begin %s\n",buf.c_str());
+			LOG(this,"serialise of begin %s\n",buf.c_str());
 		}
 		else return Xapian::BAD_VALUENO;
 	}
@@ -117,7 +124,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 		buf = prefix + serialise_date(end);
 		if(buf != "") {
 			end.assign(buf.c_str(), buf.size());
-			LOG(this,"Serialise of end %s\n",std::string(prefix + buf).c_str());
+			LOG(this,"serialise of end %s\n",std::string(prefix + buf).c_str());
 		}
 		else return Xapian::BAD_VALUENO;
 	}

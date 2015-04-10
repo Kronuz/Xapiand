@@ -93,6 +93,7 @@ std::string get_slot_hex(const std::string &name);
 void print_hexstr(const std::string &str);
 bool strhasupper(const std::string &str);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups);
+int get_coords(std::string str, double *coords);
 
 #define LOG(...) log(__VA_ARGS__)
 #define LOG_ERR(...) log(__VA_ARGS__)

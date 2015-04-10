@@ -31,11 +31,14 @@
 
 #define DATE_RE "(([1-9][0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])(T([01][0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])(\\.([0-9]{3}))?)?(([+-])([01][0-9]|2[0-3])(:([0-5][0-9]))?)?)?)"
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
+#define COORDS_DISTANCE_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d*|\\d+)\\s?..\\s?(\\d*\\.\\d*|\\d+)"
+
 
 
 pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 pcre *compiled_date_re = NULL;
 pcre *compiled_coords_re = NULL;
+pcre *compiled_coords_dist_re = NULL;
 
 
 std::string repr(const std::string &string)
@@ -691,4 +694,29 @@ bool strhasupper(const std::string &str) {
 		if (isupper(str.at(i))) return true;
 	}
 	return false;
+}
+
+int get_coords(std::string str, double *coords)
+{
+	std::stringstream ss;
+	group *g = NULL;
+	int offset = 0;
+	
+	while ((pcre_search(str.c_str(), (int)str.size(), offset, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &g)) != -1) {
+		offset = g[0].end;
+		/*LOG(NULL,"group[1] %s\n" , std::string(str.c_str() + g[1].start, g[1].end - g[1].start).c_str());
+		 LOG(NULL,"group[2] %s\n" , std::string(str.c_str() + g[2].start, g[2].end - g[2].start).c_str());
+		 LOG(NULL,"group[3] %s\n" , std::string(str.c_str() + g[3].start, g[3].end - g[3].start).c_str());*/
+		ss.clear();
+		ss << std::string(str.c_str() + g[1].start, g[1].end - g[1].start);
+		ss >> coords[0];
+		ss.clear();
+		ss << std::string(str.c_str() + g[2].start, g[2].end - g[2].start);
+		ss >> coords[1];
+		ss.clear();
+		ss << std::string(str.c_str() + g[3].start, g[3].end - g[3].start);
+		ss >> coords[2];
+		return 0;
+	}
+	return -1;
 }
