@@ -413,12 +413,14 @@ void HttpClient::_endpointgen(struct query_t &e)
                 LOG(this, "limit parser not done!!\n");
             }
             
+			memset(&q, 0, sizeof(q));
             if (url_qs("order", query_buf.c_str(), query_size, &q) != -1) {
                 e.order = urldecode(q.offset, q.length).c_str();
             } else {
                 e.order = "";
             }
             
+			memset(&q, 0, sizeof(q));
             while(url_qs("terms", query_buf.c_str(), query_size, &q) != -1) {
                 e.terms.push_back(urldecode(q.offset, q.length));
             }
