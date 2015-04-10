@@ -343,37 +343,37 @@ void HttpClient::_endpointgen(struct query_t &e)
 		}
 		
 		/*LOG(this,"FIRST QUERY PARSER SIZE %d\n",u.field_data[4].len);
-		LOG(this,"FIRST QUERY PARSER OFFSET %d\n",u.field_data[4].off);
-		LOG(this,"BUFFER %s\n",b.c_str());*/
+		 LOG(this,"FIRST QUERY PARSER OFFSET %d\n",u.field_data[4].off);
+		 LOG(this,"BUFFER %s\n",b.c_str());*/
 		if (u.field_set & (1 <<  UF_QUERY )) {
 			size_t query_size = u.field_data[4].len;
 			std::string query_buf(b.c_str() + u.field_data[4].off, u.field_data[4].len);
-
+			
 			struct parser_query_t q;
+			
 			memset(&q, 0, sizeof(q));
-			
-			
-			//LOG(this, "FIRST QUERY PARSER %s\n", query_buf.c_str());
 			if (url_qs("query", query_buf.c_str(), query_size, &q) != -1) {
 				e.query = urldecode(q.offset, q.length).c_str();
-				//LOG(this, "Query---->> %s\n",e.query.c_str());
+				LOG(this, "Query---->> %s\n",e.query.c_str());
 			} else {
 				e.query = "";
-				LOG(this, "query parser not done!!\n");    
+				LOG(this, "query parser not done!!\n");
 			}
 			
-			if (url_qs("offset", query_buf.c_str(), query_size, &q)!= -1) {
+			memset(&q, 0, sizeof(q));
+			if (url_qs("offset", query_buf.c_str(), query_size, &q) != -1) {
 				e.offset = atoi(urldecode(q.offset, q.length).c_str());
 			} else {
 				e.offset = 0;
-				LOG(this, "offset parser not done!!\n");
+				//LOG(this, "offset parser not done!!\n");
 			}
-
+			
+			memset(&q, 0, sizeof(q));
 			if (url_qs("limit", query_buf.c_str(), query_size, &q) != -1) {
 				e.limit = atoi(urldecode(q.offset, q.length).c_str());
 			} else {
 				e.limit = 1;
-				LOG(this, "limit parser not done!!\n");
+				//LOG(this, "limit parser not done!!\n");
 			}
 			
 			memset(&q, 0, sizeof(q));
