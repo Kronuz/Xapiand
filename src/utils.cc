@@ -71,7 +71,7 @@ std::string repr(const char * p, size_t size)
 			sprintf(d, "%02x", (unsigned char)c);
 			d += 2;
 		}
-		//		 printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 1));
+		//printf("%02x: %ld < %ld\n", (unsigned char)c, (unsigned long)(d - buff), (unsigned long)(size * 4 + 1));
 	}
 	*d = '\0';
 	std::string ret(buff);
@@ -83,7 +83,7 @@ std::string repr(const char * p, size_t size)
 void log(void *obj, const char *format, ...)
 {
 	pthread_mutex_lock(&qmtx);
-	
+
 	FILE * file = stderr;
 	pthread_t thread = pthread_self();
 	char name[100];
@@ -93,7 +93,7 @@ void log(void *obj, const char *format, ...)
 	va_start(argptr, format);
 	vfprintf(file, format, argptr);
 	va_end(argptr);
-	
+
 	pthread_mutex_unlock(&qmtx);
 }
 
@@ -152,14 +152,13 @@ std::string urldecode(const char *src, size_t size)
 	
 	// the last 2- chars
 	while (src < SRC_END)
-		*pEnd++ = *src++;
+	*pEnd++ = *src++;
 	
 	std::string sResult(pStart, pEnd);
 	delete [] pStart;
 	//std::replace( sResult.begin(), sResult.end(), '+', ' ');
 	return sResult;
 }
-
 
 int url_qs(const char *name, const char *qs, size_t size, parser_query *par)
 {
@@ -396,7 +395,7 @@ int field_type(const std::string &field_name) {
 	if (field_name.size() < 2 || field_name.at(1) != '_') {
 		return 1; //default: str.
 	}
-	
+
 	switch (field_name.at(0)) {
 		case 'n': return 0;
 		case 's': return 1;
@@ -416,24 +415,23 @@ std::string serialise_numeric(const std::string &field_value) {
 
 
 std::string serialise_date(const std::string &field_value) {
-	double timestamp = timestamp_date(field_value);
-	if (timestamp > 0) {
-		return Xapian::sortable_serialise(timestamp);
-	} else {
-		LOG_ERR(NULL, "ERROR: Format date (%s) must be ISO 8601: YYYY-MM-DDThh:mm:ss.sss[+-]hh:mm (eg 1997-07-16T19:20:30.451+05:00)\n", field_value.c_str());
+	std::string str_timestamp = timestamp_date(field_value);
+	if (str_timestamp.size() == 0) {
+		LOG_ERR(NULL, "ERROR: Format date (%s) must be ISO 8601: (eg 1997-07-16T19:20:30.451+05:00) or a epoch (double)\n", field_value.c_str());
 		return std::string("");
 	}
+	double timestamp = strtodouble(str_timestamp);
+	return Xapian::sortable_serialise(timestamp);
 }
 
 
 std::string serialise_geo(const std::string &field_value) {
 	Xapian::LatLongCoords coords;
 	double latitude, longitude;
-	int len = (int) field_value.size(), Ncoord = 0, offset = 0, size = 9; // 3 * 3
+	int len = (int) field_value.size(), Ncoord = 0, offset = 0;
 	bool end = false;
-	int grv[size];
-	while (lat_lon(field_value, grv, size, offset)) {
-		group *g = (group *) grv;
+	group *g = NULL;
+	while (pcre_search(field_value.c_str(), len, offset, 0, COORDS_RE, &compiled_coords_re, &g) != -1) {
 		std::string parse(field_value, g[1].start, g[1].end - g[1].start);
 		latitude = strtodouble(parse);
 		parse = std::string(field_value, g[2].start, g[2].end - g[2].start);
@@ -452,6 +450,12 @@ std::string serialise_geo(const std::string &field_value) {
 		}
 		offset = g[2].end;
 	}
+	
+	if (g) {
+		free(g);
+		g = NULL;
+	}
+
 	if (Ncoord == 0 || !end) {
 		LOG_ERR(NULL, "ERROR: %s must be an array of doubles [lat, lon, lat, lon, ...]\n", field_value.c_str());
 		return std::string("");
@@ -488,30 +492,7 @@ std::string serialise_bool(const std::string &field_value) {
 }
 
 
-bool lat_lon(const std::string &str, int *grv, int size, int offset) {
-	int erroffset, ret;
-	const char *errptr;
-	int len = (int) str.size();
-	
-	if (!compiled_coords_re) {
-		LOG(NULL, "Compiled coords is NULL, we will compile.\n");
-		compiled_coords_re = pcre_compile(COORDS_RE, 0, &errptr, &erroffset, 0);
-		if (compiled_coords_re == NULL) {
-			LOG_ERR(NULL, "ERROR: Could not compile '%s': %s\n", COORDS_RE, errptr);
-			return false;
-		}
-	}
-	
-	ret = pcre_exec(compiled_coords_re, 0, str.c_str(), len, offset, 0,  grv, size);
-	if (ret == 3) {
-		return true;
-	}
-	return false;
-}
-
-
-std::string stringtoupper(const std::string &str)
-{
+std::string stringtoupper(const std::string &str) {
 	std::string tmp = str;
 	for (unsigned int i = 0; i < tmp.size(); i++)  {
 		tmp.at(i) = toupper(tmp.at(i));
@@ -520,8 +501,7 @@ std::string stringtoupper(const std::string &str)
 }
 
 
-std::string stringtolower(const std::string &str)
-{
+std::string stringtolower(const std::string &str) {
 	std::string tmp = str;
 	for (unsigned int i = 0; i < tmp.size(); i++) {
 		tmp.at(i) = tolower(tmp.at(i));
@@ -581,44 +561,34 @@ double strtodouble(const std::string &str) {
 }
 
 
-double timestamp_date(const std::string &str) {
+std::string timestamp_date(const std::string &str) {
 	int len = (int) str.size();
 	char sign;
 	const char *errptr;
 	int erroffset, ret, n[9];
-	int grv[51]; // 17 * 3
 	double  timestamp;
+	group *g = NULL;
 	
-	if (compiled_date_re == NULL) {
-		LOG(NULL, "Compiled date is NULL, we will compile.\n");
-		compiled_date_re = pcre_compile(DATE_RE, 0, &errptr, &erroffset, 0);
-		if (compiled_date_re == NULL) {
-			LOG_ERR(NULL, "ERROR: Could not compile '%s': %s\n", DATE_RE, errptr);
-			return -1;
-		}
-	}
-	
-	ret = pcre_exec(compiled_date_re, 0, str.c_str(), len, 0, 0,  grv, sizeof(grv) / sizeof(int));
-	group *gr = (group *) grv;
-	
-	if (ret && len == (gr[0].end - gr[0].start)) {
-		std::string parse = std::string(str, gr[2].start, gr[2].end - gr[2].start);
+	ret = pcre_search(str.c_str(), len, 0, 0, DATE_RE, &compiled_date_re, &g);
+
+	if (ret != -1 && len == (g[0].end - g[0].start)) {
+		std::string parse = std::string(str, g[2].start, g[2].end - g[2].start);
 		n[0] = strtoint(parse);
-		parse = std::string(str, gr[3].start, gr[3].end - gr[3].start);
+		parse = std::string(str, g[3].start, g[3].end - g[3].start);
 		n[1] = strtoint(parse);
-		parse = std::string(str, gr[4].start, gr[4].end - gr[4].start);
+		parse = std::string(str, g[4].start, g[4].end - g[4].start);
 		n[2] = strtoint(parse);
-		
-		if (gr[5].end - gr[5].start > 0) {
-			parse = std::string(str, gr[6].start, gr[6].end - gr[6].start);
+
+		if (g[5].end - g[5].start > 0) {
+			parse = std::string(str, g[6].start, g[6].end - g[6].start);
 			n[3] = strtoint(parse);
-			parse = std::string(str, gr[7].start, gr[7].end - gr[7].start);
+			parse = std::string(str, g[7].start, g[7].end - g[7].start);
 			n[4] = strtoint(parse);
-			if (gr[8].end - gr[8].start > 0) {
-				parse = std::string(str, gr[9].start, gr[9].end - gr[9].start);
+			if (g[8].end - g[8].start > 0) {
+				parse = std::string(str, g[9].start, g[9].end - g[9].start);
 				n[5] = strtoint(parse);
-				if (gr[10].end - gr[10].start > 0) {
-					parse = std::string(str, gr[11].start, gr[11].end - gr[11].start);
+				if (g[10].end - g[10].start > 0) {
+					parse = std::string(str, g[11].start, g[11].end - g[11].start);
 					n[6] = strtoint(parse);
 				} else {
 					n[6] = 0;
@@ -626,13 +596,13 @@ double timestamp_date(const std::string &str) {
 			} else {
 				n[5] =  n[6] = 0;
 			}
-			if (gr[12].end - gr[12].start > 0) {
-				sign = std::string(str, gr[13].start, gr[13].end - gr[13].start).at(0);
-				parse = std::string(str, gr[14].start, gr[14].end - gr[14].start);
+			if (g[12].end - g[12].start > 0) {
+				sign = std::string(str, g[13].start, g[13].end - g[13].start).at(0);
+				parse = std::string(str, g[14].start, g[14].end - g[14].start);
 				n[7] = strtoint(parse);
-				if (gr[15].end - gr[15].start > 0) {
-					parse = std::string(str, gr[16].start, gr[16].end - gr[16].start);
-					n[8] = strtoint(parse);
+				if (g[15].end - g[15].start > 0) {   
+					parse = std::string(str, g[16].start, g[16].end - g[16].start);
+					n[8] = strtoint(parse); 
 				} else {
 					n[8] = 0;
 				}
@@ -647,41 +617,50 @@ double timestamp_date(const std::string &str) {
 		LOG(NULL, "Fecha Reconstruida: %04d-%02d-%02dT%02d:%02d:%02d.%03d%c%02d:%02d\n", n[0], n[1], n[2], n[3], n[4], n[5], n[6], sign, n[7], n[8]);
 		if (n[1] == 2 && !((n[0] % 4 == 0 && n[0] % 100 != 0) || n[0] % 400 == 0) && n[2] > 28) {
 			LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 28 days\n");
-			return -1;
+			return std::string("");
 		} else if(n[1] == 2 && ((n[0] % 4 == 0 && n[0] % 100 != 0) || n[0] % 400 == 0) && n[2] > 29) {
 			LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 29 days\n");
-			return -1;
+			return std::string("");
 		} else if((n[1] == 4 || n[1] == 6 || n[1] == 9 || n[1] == 11) && n[2] > 30) {
 			LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 30 days\n");
-			return -1;
+			return std::string("");
 		}
-	} else {
-		return -1;
+		time_t tt = 0;
+		struct tm *timeinfo = gmtime(&tt);
+		timeinfo->tm_year   = n[0] - 1900;
+		timeinfo->tm_mon    = n[1] - 1;
+		timeinfo->tm_mday   = n[2]; 
+		if (sign == '-') {
+			timeinfo->tm_hour  = n[3] + n[7];
+			timeinfo->tm_min   = n[4] + n[8];   
+		} else {
+			timeinfo->tm_hour  = n[3] - n[7];
+			timeinfo->tm_min   = n[4] - n[8];
+		}
+		timeinfo->tm_sec    = n[5];
+		const time_t dateGMT = timegm(timeinfo);
+		timestamp = (double) dateGMT;
+		timestamp += n[6]/1000.0;
+		
+		if (g) {
+			free(g);
+			g = NULL;
+		}
+		return std::to_string(timestamp);
 	}
-	
-	time_t tt = 0;
-	struct tm *timeinfo = gmtime(&tt);
-	timeinfo->tm_year   = n[0] - 1900;
-	timeinfo->tm_mon    = n[1] - 1;
-	timeinfo->tm_mday   = n[2];
-	if (sign == '-') {
-		timeinfo->tm_hour  = n[3] + n[7];
-		timeinfo->tm_min   = n[4] + n[8];
-	} else {
-		timeinfo->tm_hour  = n[3] - n[7];
-		timeinfo->tm_min   = n[4] - n[8];
+
+	if (g) {
+		free(g);
+		g = NULL;
 	}
-	timeinfo->tm_sec    = n[5];
-	const time_t dateGMT = timegm(timeinfo);
-	timestamp = (double) dateGMT;
-	timestamp += n[6]/1000.0;
-	return timestamp;
+
+	return str;
 }
 
 
 std::string get_prefix(const std::string &name, const std::string &prefix) {
 	std::string slot = get_slot_hex(name);
-	return prefix + slot;
+	return stringtoupper(prefix + slot);
 }
 
 
@@ -712,39 +691,4 @@ bool strhasupper(const std::string &str) {
 		if (isupper(str.at(i))) return true;
 	}
 	return false;
-}
-
-int get_coords(std::string &str, int *coords)
-{
-	double latitude, longitude, max_range;
-	std::stringstream ss;
-	const char *errorpcre;
-	int erroffset;
-	int gr[COORDS_DISTANCE_GROUPS * 3]; //pcre_exec groups by 3
-	
-	if(!compiled_coords_dist_re) {
-		compiled_coords_dist_re = pcre_compile (COORDS_DISTANCE_RE, 0, &errorpcre, &erroffset, 0);
-		if (compiled_coords_dist_re == NULL) {
-			printf("pcre_compile COORDS_DISTANCE_RE failed (offset: %d), %s\n", erroffset, errorpcre);
-			return -1;
-		}
-	}
-	
-	if(compiled_coords_dist_re != NULL) {
-		unsigned int offset = 0;
-		int len = (int)strlen(str.c_str());
-		if (pcre_exec(compiled_coords_dist_re, 0, str.c_str(), len, offset, 0, gr, sizeof(gr)/sizeof(int)) >= 0) {
-			group *g = (group *) gr;
-			ss.clear();
-			ss << std::string(str.c_str() + g[1].start, g[1].end - g[1].start);
-			ss >> latitude;
-			ss.clear();
-			ss << std::string(str.c_str() + g[2].start, g[2].end - g[2].start);
-			ss >> longitude;
-			ss.clear();
-			ss << std::string(str.c_str() + g[3].start, g[3].end - g[3].start);
-			ss >> max_range;
-		} else return 0;
-	}
-	return -1;
 }
