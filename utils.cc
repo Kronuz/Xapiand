@@ -567,8 +567,6 @@ double strtodouble(const std::string &str) {
 std::string timestamp_date(const std::string &str) {
 	int len = (int) str.size();
 	char sign;
-	const char *errptr;
-	int erroffset, ret, n[9];
 	double  timestamp;
 	group *g = NULL;
 	
