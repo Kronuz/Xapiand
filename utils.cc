@@ -185,39 +185,39 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query *par)
 		}
 		switch (cn) {
 			case '=' :
-				v0 = n1;
+			v0 = n1;
 			case '\0':
 			case '&' :
 			case ';' :
-				if(strlen(name) == n1 - n0 && strncmp(n0, name, n1 - n0) == 0) {
-					if (v0) {
-						const char *v1 = v0 + 1;
-						while (1) {
-							char cv = *v1;
-							if (v1 == nf) {
-								cv = '\0';
-							}
-							switch(cv) {
-								case '\0':
-								case '&' :
-								case ';' :
-									par->offset = v0 + 1;
-									par->length = v1 - v0 - 1;
-									return 0;
-							}
-							v1++;
+			if(strlen(name) == n1 - n0 && strncmp(n0, name, n1 - n0) == 0) {
+				if (v0) {
+					const char *v1 = v0 + 1;
+					while (1) {
+						char cv = *v1;
+						if (v1 == nf) {
+							cv = '\0';
 						}
-					} else {
-						par->offset = n1 + 1;
-						par->length = 0;
-						return 0;
+						switch(cv) {
+							case '\0':
+							case '&' :
+							case ';' :
+							par->offset = v0 + 1;
+							par->length = v1 - v0 - 1;
+							return 0;
+						}
+						v1++;
 					}
-				} else if (!cn) {
-					return -1;
-				} else if (cn != '=') {
-					n0 = n1 + 1;
-					v0 = NULL;
+				} else {
+					par->offset = n1 + 1;
+					par->length = 0;
+					return 0;
 				}
+			} else if (!cn) {
+				return -1;
+			} else if (cn != '=') {
+				n0 = n1 + 1;
+				v0 = NULL;
+			}
 		}
 		n1++;
 	}
@@ -362,35 +362,38 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 }
 
 
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups)
-{
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups) {
 	int erroffset;
 	const char *error;
-	
+
 	// First, the regex string must be compiled.
 	if (*code == NULL) {
 		//pcre_free is not use because we use a struct pcre static and gets free at the end of the program
+		LOG(NULL, "pcre compiled is NULL.\n");
 		*code = pcre_compile(pattern, 0, &error, &erroffset, 0);
 		if (*code == NULL) {
 			LOG_ERR(NULL, "pcre_compile of %s failed (offset: %d), %s\n", pattern, erroffset, error);
 			return -1;
 		}
 	}
-	
+
 	if (*code != NULL) {
 		int n;
 		if (pcre_fullinfo(*code, NULL, PCRE_INFO_CAPTURECOUNT, &n) != 0) {
 			return -1;
 		}
+
 		if (*groups == NULL) {
 			*groups = (group *)malloc((n + 1) * 3 * sizeof(int));
 		}
+
 		int *ocvector = (int *)*groups;
 		if (pcre_exec(*code, 0, subject, length, startoffset, options, ocvector, (n + 1) * 3) >= 0) {
 			return 0;
-		}
-		else return -1;
-	} return -1;
+		} else return -1;
+	}
+
+	return -1;
 }
 
 
