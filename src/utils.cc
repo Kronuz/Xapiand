@@ -23,24 +23,19 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-
 #include <algorithm>
-
 #include "pthread.h"
 #include "utils.h"
-
 #include <xapian.h>
+
 
 #define DATE_RE "(([1-9][0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])(T([01][0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])(\\.([0-9]{3}))?)?(([+-])([01][0-9]|2[0-3])(:([0-5][0-9]))?)?)?)"
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
-#define COORDS_DISTANCE_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d*|\\d+)\\s?..\\s?(\\d*\\.\\d*|\\d+)"
-#define COORDS_DISTANCE_GROUPS 4
 
 
 pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 pcre *compiled_date_re = NULL;
-pcre *compiled_coords_re;
-pcre *compiled_coords_dist_re = NULL;
+pcre *compiled_coords_re = NULL;
 
 
 std::string repr(const std::string &string)

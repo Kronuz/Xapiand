@@ -193,7 +193,7 @@ DatabasePool::checkin(Database **database)
 
 
 pcre *Database::compiled_find_field_re = NULL;
-pcre *Database::compiled_find_terms_re = NULL;
+
 
 bool
 Database::drop(const std::string &doc_id, bool commit)
@@ -240,10 +240,11 @@ Database::_commit()
 		LOG_DATABASE_WRAP(this, "Commit made\n");
 		return true;
 	}
-	
+
 	LOG_ERR(this, "ERROR: Cannot do commit!\n");
 	return false;
 }
+
 
 bool
 Database::index(const std::string &document, const std::string &_document_id, bool commit)
@@ -291,9 +292,11 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 		LOG_DATABASE_WRAP(this, "Values..\n");
 		for (int i = 0; i < cJSON_GetArraySize(document_values); i++) {
 			cJSON *name = cJSON_GetArrayItem(document_values, i);
-			std::string value = std::string(cJSON_Print(name));
+			std::string value = cJSON_Print(name);
 			if (name->type == 4 || name->type == 5) {
 				value = std::string(value, 1, (int) value.size() - 2);
+			} else if (name->type == 3){
+				value = std::to_string(name->valuedouble);
 			}
 			LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name->string, value.c_str());
 			std::string val_serialized = serialise(std::string(name->string), value);
@@ -319,6 +322,8 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			std::string term_v = std::string(cJSON_Print(term));
 			if (term->type == 4 || term->type == 5) {
 				term_v = std::string(term_v, 1, term_v.size() - 2);
+			} else if (term->type == 3){
+				term_v = std::to_string(term->valuedouble);
 			}
 			LOG_DATABASE_WRAP(this, "Term value: %s\n", term_v.c_str());
 			if (name) {
@@ -333,7 +338,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 						insert_terms_geo(term_v, &doc, std::string(name->valuestring), w, position->valueint);
 					} else {
 						std::string name_v;
-						(name) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string(DOCUMENT_CUSTOM_TERM_PREFIX);
+						(name) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string("");
 						std::string nameterm(prefixed(term_v, name_v));
 						doc.add_posting(nameterm, position->valueint, w);
 						LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", nameterm.c_str(), position->valueint, w);
@@ -343,7 +348,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 						insert_terms_geo(term_v, &doc, std::string(name->valuestring), w, -1);
 					} else {
 						std::string name_v;
-						(name) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string(DOCUMENT_CUSTOM_TERM_PREFIX);
+						(name) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string("");
 						std::string nameterm(prefixed(term_v, name_v));
 						doc.add_term(nameterm, w);
 						LOG_DATABASE_WRAP(this, "Term: %s %d\n", nameterm.c_str(), w);
@@ -376,24 +381,16 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 				(language && language->type == 4) ? lan = std::string(language->valuestring) : lan = std::string("en");
 				(spelling && (strcmp(cJSON_Print(spelling), "true") == 0)) ? spelling_v = true : spelling_v = false;
 				(positions && (strcmp(cJSON_Print(positions), "true") == 0)) ? positions_v = true : positions_v = false;
-                (name && name->type == 4) ? name_v = stringtoupper(get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX))) : name_v = std::string("");
+				(name && name->type == 4) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string("");
 				LOG_DATABASE_WRAP(this, "Language: %s  Weight: %d  Spelling: %s Positions: %s Name: %s\n", lan.c_str(), w, spelling_v ? "true" : "false", positions_v ? "true" : "false", name_v.c_str());
 				Xapian::TermGenerator term_generator;
 				term_generator.set_document(doc);
 				term_generator.set_stemmer(Xapian::Stem(lan));
-                
 				if (spelling_v) {
 					term_generator.set_database(*wdb);
 					term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
 				}
-				
-                try { (positions_v) ? term_generator.index_text(text->valuestring, w, name_v) : term_generator.index_text_without_positions     (text->valuestring, w, name_v);
-                }
-                catch ( Xapian::Error &e) {
-                    LOG(this,"ERROR: %s\n",e.get_msg().c_str());
-                }
-                
-                //LOG(this,"Aqui!!!!!!\n");
+				(positions_v) ? term_generator.index_text(text->valuestring, w, name_v) : term_generator.index_text_without_positions(text->valuestring, w, name_v);
 			} else {
 				LOG_ERR(this, "ERROR: Text must be defined\n");
 				return false;
@@ -424,7 +421,7 @@ Database::replace(const std::string &document_id, const Xapian::Document doc, bo
 		LOG_DATABASE_WRAP(this, "Document inserted\n");
 		if (commit) return _commit();
 	}
- 
+
 	return false;
 }
 
@@ -443,7 +440,6 @@ Database::serialise(const std::string &field_name, const std::string &field_valu
 	} else if (field_type(field_name) == 4) {
 		return serialise_bool(field_value);
 	}
-	return std::string("");
 }
 
 
