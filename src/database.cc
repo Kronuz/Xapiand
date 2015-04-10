@@ -29,10 +29,11 @@
 #define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
 #define FIND_TERMS_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
 
+
 Database::Database(Endpoints &endpoints_, bool writable_)
-: endpoints(endpoints_),
-writable(writable_),
-db(NULL)
+	: endpoints(endpoints_),
+	  writable(writable_),
+	  db(NULL)
 {
 	hash = endpoints.hash(writable);
 	reopen();
@@ -484,212 +485,150 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 
 
 bool
-Database::isbooleanprefix(std::string field) {
-    const char *c = field.c_str();
-    while(*c) {
-        if (isupper(*c)) return true;
-        c++;
-    }
-    return false;
-}
-
-bool
-Database::search(struct query_t e, std::string &results)
+Database::search(struct query_t e)
 {
-    Xapian::QueryParser queryparser;
-
-    if (writable) {
-        LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
-        return false;
-    }
-
+	if (writable) {
+		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+		return false;
+	}
+ 
+	int len = (int) e.query.size(), offset = 0;
 	group *g = NULL;
+	bool first_time = true;
+	std::string querystring, results = std::string("");
+	Xapian::QueryParser queryparser;
+	queryparser.set_database(*db);
+	Xapian::Query query;
 
-	int offset = 0;
-    if (e.query.size() != 0) {
-        while ((pcre_search(e.query.c_str(), (int)e.query.size(), offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
-			offset = g[0].end;
-			LOG(this,"group[1] %s\n" , std::string(e.query.c_str() + g[1].start, g[1].end - g[1].start).c_str());
-			LOG(this,"group[2] %s\n" , std::string(e.query.c_str() + g[2].start, g[2].end - g[2].start).c_str());
-			LOG(this,"group[3] %s\n" , std::string(e.query.c_str() + g[3].start, g[3].end - g[3].start).c_str());
-			
-            std::string type (e.query.c_str()+ g[1].start, g[1].end - g[1].start);
-            std::string field_ (e.query.c_str()+ g[2].start, g[2].end - g[2].start);
-			std::string field = type + field_;
-			
-            //case add_boolean_prefix
-            if (isbooleanprefix(field)) {
-                field = stringtoupper(field);
-                LOG(this,"boolean Field: %s\n",field.c_str());
-            }
-            //case add_prefix
-            else {
-                LOG(this,"not boolean Field: %s\n",field.c_str());
-				//case Range
-				if ((g[3].end - g[3].start) != 0) {
-				//if (1) {
-					switch (4) {
-						case 0:{
-							Xapian::NumberValueRangeProcessor vrp(get_slot(field), "");
-							queryparser.add_valuerangeprocessor(&vrp);
-							break; }
-							
-						case 1: {
-							Xapian::StringValueRangeProcessor vrp(get_slot(field));
-							queryparser.add_valuerangeprocessor(&vrp);
-							break; }
-							
-						case 2: {
-							//This is not a range search
-
-							//LatLongDistanceFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
-							//queryparser.add_prefix(field, &f);
-							break; }
-							
-						case 4: {
-							LOG(this,"DateValueRangeProcessor\n");
-							DateTimeValueRangeProcessor vrp(get_slot("d_date"), "d_date", get_prefix("d_date", std::string(DOCUMENT_CUSTOM_TERM_PREFIX)));
-							queryparser.add_valuerangeprocessor(&vrp);
-							break; }
-							
-						default: LOG_ERR(this, "This type of Data has no support for range search\n");
-							return false;
-					}
-					
-					
-                 }else {
-					switch (field_type(type)) {
-						  case 0: {
-							 NumericFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
-							 queryparser.add_prefix(field, &f);
-							 break; }
-							 
-						 case 1:{
-							 queryparser.add_prefix(field, get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)));
-							 break; }
-							 
-						 case 2:{
-							 LatLongFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
-							 queryparser.add_prefix(field, &f);
-							 break; }
-							 
-						 case 3:{
-							 BooleanFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
-							 queryparser.add_prefix(field, &f);
-							 break; }
-							 
-						 case 4:{
-							 //Not working...
-							 LOG(this,"Before DateFieldProcessor\n");
-							 DateFieldProcessor f(get_prefix(field, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)), field);
-							 queryparser.add_prefix(field, &f);
-							 break; }
-					 }
-				}
-            }
-		}
-
-		if (g) {
-			free(g);
-			g = NULL;
-		}
-
+	while ((pcre_search(e.query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
+		offset = g[0].end;
+		std::string field_name_dot, field_name, field_value;
+		field_name_dot = std::string(e.query.c_str() + g[1].start, g[1].end - g[1].start);
+		field_name = std::string(e.query.c_str() + g[2].start, g[2].end - g[2].start);
+		field_value = std::string(e.query.c_str() + g[3].start, g[3].end - g[3].start);
 		
-		std::string querystring;
-		bool first_time = true;
-
-		offset = 0;
-		while ((pcre_search(e.query.c_str(), (int)e.query.size(), offset, 0, FIND_TERMS_RE, &compiled_find_terms_re, &g)) != -1) {
-			offset = g[0].end;
-			if (!first_time) {
-				querystring += " AND " + std::string(e.query.c_str() + g[0].start, g[0].end - g[0].start);
-			} else {
-				querystring =  std::string(e.query.c_str() + g[0].start, g[0].end - g[0].start);
-				first_time = false;
+		std::string prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+		LOG(this, "Prefix: %s Field_name: %s\n", prefix.c_str(), field_name.c_str());
+		switch (field_type(field_name)) {
+			case 0: {
+				NumericFieldProcessor f(prefix);
+				queryparser.add_prefix(field_name, &f);
+				break;
+			}
+			case 1: {
+				queryparser.add_prefix(field_name, prefix);
+				break;
+			}
+			case 2: {
+				DateFieldProcessor f(prefix);
+				field_value = timestamp_date(field_value);
+				queryparser.add_prefix(field_name, &f);
+				break;
+			}
+			case 3: {
+				LatLongFieldProcessor f(prefix);
+				queryparser.add_prefix(field_name, &f);
+				break;
+			}
+			case 4: {
+				BooleanFieldProcessor f(prefix);
+				queryparser.add_prefix(field_name, &f);
+				break;
 			}
 		}
+		if (first_time) {
+			querystring =  std::string(field_name_dot + field_value);
+			first_time = false;
+		} else {
+			querystring += " AND " + std::string(field_name_dot + field_value);
+		}
+	}
 
-		if (g) {
-			free(g);
-			g = NULL;
-		}
+	if (g) {
+		free(g);
+		g = NULL;
+	}
 
-		LOG(this,"querystring %s\n",querystring.c_str());
-		Xapian::Query query = queryparser.parse_query(querystring);
-		//Xapian::Query query = queryparser.parse_query("1997-07-16T19:20:30.451+05:00..");
-		
-		/*
-		int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
-		try {
-			Xapian::Query query = queryparser.parse_query(querystring, flags);
-			results = get_results(query, e);
-		}
-		catch ( Xapian::Error &er) {
-			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
-			reopen();
-			queryparser.set_database(*db);
-			Xapian::Query query = queryparser.parse_query(querystring, flags);
-			results = get_results(query, e);
-		}
-    }
-    return true;
+	if (offset != len) {
+		LOG_ERR(this, "Query %s contains errors.\n", e.query.c_str());
+		return false;
+	}
+	
+	LOG_DATABASE_WRAP(this, "Query preprocessed: -%s-\n", querystring.c_str());	
+	
+	try {
+		LOG_DATABASE_WRAP(this, "Start\n");
+		query = queryparser.parse_query(querystring);
+		LOG_DATABASE_WRAP(this, "End\n");
+		LOG(this, "Query Finally: %s\n", query.serialise().c_str());
+	} catch (Xapian::Error &er) {
+		LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+		reopen();
+		queryparser.set_database(*db);
+		query = queryparser.parse_query(querystring);
+		LOG(this, "Query Finally: %s\n", query.serialise().c_str());
+	}
+
+	return true;
 }
+
 
 std::string
 Database::search1(struct query_t e)
 {
-    Xapian::QueryParser queryparser;
-    Xapian::Query query;
-    queryparser.add_prefix("Kind", "XK");
-    queryparser.add_prefix("Title", "S");
-    
-    query = queryparser.parse_query("Action");
-    std::string content = get_results(query, e);
-    //LOG(this, "RESPONSE------->%s\n",res.c_str());
-    
-    return content;
+	Xapian::QueryParser queryparser;
+	Xapian::Query query;
+	queryparser.add_prefix("Kind", "XK");
+	queryparser.add_prefix("Title", "S");
+	
+	query = queryparser.parse_query("Action");
+	std::string content = get_results(query, e);
+	//LOG(this, "RESPONSE------->%s\n",res.c_str());
+	
+	return content;
 }
+
 
 Xapian::Enquire
 Database::get_enquire(Xapian::Query query, struct query_t e) {
-    Xapian::Enquire enquire(*db);
-    enquire.set_query(query);
-    /*
-     complement enquire ....
-     */
-    return enquire;
+	Xapian::Enquire enquire(*db);
+	enquire.set_query(query);
+	/*
+	 complement enquire ....
+	 */
+	return enquire;
 }
+
 
 std::string
 Database::get_results(Xapian::Query query, struct query_t e) {
-    
-    cJSON *root = cJSON_CreateObject();
-    
-    int rc = 0;
-    int maxitems = db->get_doccount() - e.offset;
-    maxitems = std::max(std::min(maxitems, e.limit), 0);
-    
-    Xapian::Enquire enquire(*db);
-    enquire.set_query(query);
-    
-    Xapian::MSet mset = enquire.get_mset(e.offset, e.limit);
-    LOG(this, "mset size:%d!!!!\n",mset.size());
-    for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); ++m) {
-        Xapian::docid did = *m;
-        cJSON *response = cJSON_CreateObject();
-        LOG(this, "loop %d docid:%d rank:%d data:%s\n",rc,did,m.get_rank(),std::string(m.get_document().get_data()).c_str());
-        std::string name_resp = "response" + std::to_string(rc);
-        cJSON_AddItemToObject(root, name_resp.c_str(), response);
-        cJSON_AddNumberToObject(response, "docid", did);
-        cJSON_AddNumberToObject(response, "rank", m.get_rank());
-        const std::string data (m.get_document().get_data());
-        cJSON_AddStringToObject(response, "data", data.c_str());
-        rc ++;
-    }
-    
-    std::string res =cJSON_PrintUnformatted(root);
-    LOG(this, "RESPONSE------->%s\n",res.c_str());
-    cJSON_Delete(root);
-    return (res);
+	
+	cJSON *root = cJSON_CreateObject();
+	
+	int rc = 0;
+	int maxitems = db->get_doccount() - e.offset;
+	maxitems = std::max(std::min(maxitems, e.limit), 0);
+	
+	Xapian::Enquire enquire(*db);
+	enquire.set_query(query);
+	
+	Xapian::MSet mset = enquire.get_mset(e.offset, e.limit);
+	LOG(this, "mset size:%d!!!!\n",mset.size());
+	for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); ++m) {
+		Xapian::docid did = *m;
+		cJSON *response = cJSON_CreateObject();
+		LOG(this, "loop %d docid:%d rank:%d data:%s\n",rc,did,m.get_rank(),std::string(m.get_document().get_data()).c_str());
+		std::string name_resp = "response" + std::to_string(rc);
+		cJSON_AddItemToObject(root, name_resp.c_str(), response);
+		cJSON_AddNumberToObject(response, "docid", did);
+		cJSON_AddNumberToObject(response, "rank", m.get_rank());
+		const std::string data (m.get_document().get_data());
+		cJSON_AddStringToObject(response, "data", data.c_str());
+		rc ++;
+	}
+	
+	std::string res =cJSON_PrintUnformatted(root);
+	LOG(this, "RESPONSE------->%s\n",res.c_str());
+	cJSON_Delete(root);
+	return (res);
 }
-
