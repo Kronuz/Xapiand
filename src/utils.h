@@ -31,7 +31,6 @@
 #include <pcre.h>
 #include <sys/time.h>
 
-
 void log(void *obj, const char *fmt, ...);
 
 std::string repr(const char *p, size_t size);
@@ -65,17 +64,15 @@ typedef struct parser_url_path_t {
 	const char *off_command;
 } parser_url_path;
 
-int url_path(const char*, size_t, parser_url_path *);
+int url_path(const char* n1, size_t size, parser_url_path *par);
 int url_qs(const char *, const char *, size_t, parser_query *);
 std::string urldecode(const char *, size_t);
 int look_cmd(const char *);
 
-typedef struct group {
-	int start;
-	int end;
+typedef struct group{
+		int start;
+		int end;
 } group;
-
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups);
 
 int field_type(const std::string &field_name);
 std::string serialise_numeric(const std::string &field_value);
@@ -84,17 +81,18 @@ std::string serialise_geo(const std::string &field_value);
 std::string serialise_bool(const std::string &field_value);
 bool lat_lon(const std::string &str, int *grv, int size, int offset);
 std::string stringtolower(const std::string &str);
-std::string stringtoupper(const std::string &str);
+std::string stringtoupper(const std::string &str); 
 unsigned int get_slot(const std::string &name);
 std::string prefixed(const std::string &term, const std::string &prefixO);
 unsigned int hex2int(const std::string &input);
 int strtoint(const std::string &str);
 double strtodouble(const std::string &str);
-double timestamp_date(const std::string &str);
+std::string timestamp_date(const std::string &str);
 std::string get_prefix(const std::string &name, const std::string &prefix);
 std::string get_slot_hex(const std::string &name);
 void print_hexstr(const std::string &str);
 bool strhasupper(const std::string &str);
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups);
 
 #define LOG(...) log(__VA_ARGS__)
 #define LOG_ERR(...) log(__VA_ARGS__)
