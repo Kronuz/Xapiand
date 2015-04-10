@@ -24,11 +24,7 @@
 #include <xapian/query.h>
 
 
-NumericFieldProcessor::NumericFieldProcessor(const std::string &prefix_): prefix(prefix_) {
-	LOG(this, "PREFIX NUMERIC %s\n", prefix.c_str());
-}
-
-
+NumericFieldProcessor::NumericFieldProcessor(const std::string &prefix_): prefix(prefix_) {}
 Xapian::Query
 NumericFieldProcessor::operator()(const std::string &str)
 {
@@ -47,7 +43,7 @@ LatLongFieldProcessor::LatLongFieldProcessor(const std::string &prefix_): prefix
 Xapian::Query
 LatLongFieldProcessor::operator()(const std::string &str)
 {
-	LOG(NULL, "LatLong FP!!\n");
+	LOG(this,"Inside of LatLongFieldProcessor %s\n", str.c_str());
 	std::string serialise = serialise_geo(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand LatLongs specification '" + str + "'");
@@ -71,7 +67,7 @@ LatLongDistanceFieldProcessor::operator()(const std::string &str)
 		Xapian::LatLongDistancePostingSource ps(get_slot(field), centre, metric, coords_[2]);
 		return Xapian::Query(&ps);
 	}
-	throw Xapian::QueryParserError("LatLongDistanceFieldProcessor Didn't understand %s",str.c_str());
+	throw Xapian::QueryParserError("Didn't understand LatLongDistanceFieldProcessor specification '" + str + "'");
 }
 
 
@@ -101,7 +97,6 @@ Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 	}
 	return Xapian::Query(prefix + serialise);
 }
-
 
 DateTimeValueRangeProcessor::DateTimeValueRangeProcessor(Xapian::valueno slot_, std::string prefix_): valno(slot_), prefix(prefix_) {}
 Xapian::valueno
