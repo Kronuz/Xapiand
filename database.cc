@@ -519,7 +519,30 @@ Database::search(struct query_t e)
 		
 		std::string prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 		LOG(this, "Prefix: %s Field_name: %s\n", prefix.c_str(), field_name.c_str());
-		switch (field_type(field_name)) {
+		
+		if(isRange(field_value)){
+			switch (field_type(field_name)) {
+				case 0:{
+					Xapian::NumberValueRangeProcessor vrp(get_slot(field_name), "");
+					queryparser.add_valuerangeprocessor(&vrp);
+					break; }
+					
+				case 1: {
+					Xapian::StringValueRangeProcessor vrp(get_slot(field_name));
+					queryparser.add_valuerangeprocessor(&vrp);
+					break; }
+					
+				case 2: {
+					DateTimeValueRangeProcessor vrp(get_slot(field_name), get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)));
+					queryparser.add_valuerangeprocessor(&vrp);
+					break; }
+					
+				default: LOG_ERR(this, "This type of Data has no support for range search\n");
+					return false;
+			}
+			
+		} else {
+			switch (field_type(field_name)) {
 			case NUMERIC_TYPE:
 				nfp = new NumericFieldProcessor(prefix);
 				nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));

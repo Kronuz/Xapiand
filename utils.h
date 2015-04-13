@@ -107,6 +107,9 @@ void print_hexstr(const std::string &str);
 bool strhasupper(const std::string &str);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups);
 int get_coords(std::string str, double *coords);
+bool isRange(std::string str);
+bool isLatLongDistance(std::string str);
+void get_order(std::string str, struct query_t &e);
 
 #define LOG(...) log(__VA_ARGS__)
 #define LOG_ERR(...) log(__VA_ARGS__)
