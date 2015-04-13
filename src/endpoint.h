@@ -173,15 +173,15 @@ public:
 	}
 };
 
-class Endpoints : public std::set<Endpoint> {
+class Endpoints : public std::vector<Endpoint> {
 public:
 	size_t hash(bool writable) const {
-		//std::vector<Endpoint> copy;
-		//copy.assign(begin(), end());
-		//std::sort(copy.begin(), copy.end());
+		std::vector<Endpoint> copy;
+		copy.assign(begin(), end());
+		std::sort(copy.begin(), copy.end());
 		std::string es = std::string(writable ? "1" : "0");
-		std::set<Endpoint>::const_iterator j(begin());
-		for (int i=0; j != end(); j++, i++) {
+		std::vector<Endpoint>::const_iterator j(copy.begin());
+		for (int i=0; j != copy.end(); j++, i++) {
 			es += ";";
 			es += (*j).as_string().c_str();
 		}
@@ -190,7 +190,7 @@ public:
 	}
 	std::string as_string() const {
 		std::string ret;
-		std::set<Endpoint>::const_iterator j(begin());
+		std::vector<Endpoint>::const_iterator j(begin());
 		for (int i=0; j != end(); j++, i++) {
 			if (i) ret += ";";
 			ret += (*j).as_string();
