@@ -191,11 +191,10 @@ void BinaryClient::release_db(Xapian::Database *db_)
 void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags)
 {
 	pthread_mutex_lock(&qmtx);
-	std::vector<std::string>::const_iterator i(dbpaths_.begin());
 	endpoints.clear();
+	std::vector<std::string>::const_iterator i(dbpaths_.begin());
 	for (; i != dbpaths_.end(); i++) {
-		Endpoint endpoint = Endpoint(*i, std::string(), XAPIAND_BINARY_SERVERPORT);
-		endpoints.push_back(endpoint);
+		endpoints.insert(Endpoint(*i, std::string(), XAPIAND_BINARY_SERVERPORT));
 	}
 	dbpaths = dbpaths_;
 	pthread_mutex_unlock(&qmtx);
