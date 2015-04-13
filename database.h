@@ -62,8 +62,8 @@ public:
 	int find_field(const std::string &str, int *g, int size_g, int len, int offset);
 	Xapian::Enquire get_enquire(Xapian::Query query, struct query_t e);
 	std::string get_results(Xapian::Query query, struct query_t e);
-	std::string search1(struct query_t e);
 	bool search(struct query_t e);
+	Xapian::Query _search(const std::string &query, unsigned int flags);
 	
 	
 private:
