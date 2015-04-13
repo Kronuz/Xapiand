@@ -493,14 +493,52 @@ Database::search(struct query_t e)
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
 		return false;
 	}
- 
-	int len = (int) e.query.size(), offset = 0;
+ 	
+ 	Xapian::Query query;
+ 	bool first = true;
+
+ 	LOG(this, "e.query size: %d\n", e.query.size());
+ 	
+ 	std::vector<std::string>::const_iterator qit(e.query.begin());
+	for (; qit != e.query.end(); qit++) {
+		unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
+		if (first) {
+			query = _search(*qit, flags);
+			first= false;
+		} else {
+			query =  Xapian::Query(Xapian::Query::OP_AND, query, _search(*qit, flags));
+		}
+	}
+	LOG(this, "e.query: ");
+	print_hexstr(query.serialise());
+
+
+	std::vector<std::string>::const_iterator pit(e.partial.begin());
+	for (; pit != e.partial.end(); pit++) {
+		unsigned int flags = Xapian::QueryParser::FLAG_PARTIAL;
+		_search(*pit, flags);
+	}
+
+	std::vector<std::string>::const_iterator tit(e.terms.begin());
+	for (; tit != e.terms.end(); tit++) {
+		unsigned int flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
+		_search(*tit, flags);
+	}
+
+	return true;
+}
+
+
+Xapian::Query
+Database::_search(const std::string &query, unsigned int flags)
+{
+	int len = (int) query.size(), offset = 0;
 	group *g = NULL;
 	bool first_time = true;
 	std::string querystring, results = std::string("");
 	Xapian::QueryParser queryparser;
 	queryparser.set_database(*db);
-	Xapian::Query query;
+	Xapian::Query x_query;
 
 	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
 	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
@@ -516,16 +554,15 @@ Database::search(struct query_t e)
 	Xapian::NumberValueRangeProcessor *nvrp;
 	Xapian::StringValueRangeProcessor *svrp;
 	DateTimeValueRangeProcessor *dvrp;
-	while ((pcre_search(e.query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
+	while ((pcre_search(query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
 		offset = g[0].end;
 		std::string field_name_dot, field_name, field_value;
-		field_name_dot = std::string(e.query.c_str() + g[1].start, g[1].end - g[1].start);
-		field_name = std::string(e.query.c_str() + g[2].start, g[2].end - g[2].start);
-		field_value = std::string(e.query.c_str() + g[3].start, g[3].end - g[3].start);
+		field_name_dot = std::string(query.c_str() + g[1].start, g[1].end - g[1].start);
+		field_name = std::string(query.c_str() + g[2].start, g[2].end - g[2].start);
+		field_value = std::string(query.c_str() + g[3].start, g[3].end - g[3].start);
 		
 		std::string prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 		LOG(this, "Prefix: %s Field_name: %s\n", prefix.c_str(), field_name.c_str());
-		
 		if(isRange(field_value)){
 			switch (field_type(field_name)) {
 				case NUMERIC_TYPE:
@@ -588,22 +625,22 @@ Database::search(struct query_t e)
 	}
 
 	if (offset != len) {
-		LOG_ERR(this, "Query %s contains errors.\n", e.query.c_str());
-		return false;
+		LOG_ERR(this, "Query %s contains errors.\n", query.c_str());
+		return queryparser.parse_query("");
 	}
 	
 	LOG_DATABASE_WRAP(this, "Query processed: %s\n", querystring.c_str());	
 	
 	try {
-		query = queryparser.parse_query(querystring);
+		x_query = queryparser.parse_query(querystring, flags);
 		LOG_DATABASE_WRAP(this, "Query parser done\n");
-		LOG(this, "Query Finally: %s\n", query.serialise().c_str());
+		LOG(this, "Query Finally: %s\n", x_query.serialise().c_str());
 	} catch (Xapian::Error &er) {
 		LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 		reopen();
 		queryparser.set_database(*db);
-		query = queryparser.parse_query(querystring);
-		LOG(this, "Query Finally: %s\n", query.serialise().c_str());
+		x_query = queryparser.parse_query(querystring, flags);
+		LOG(this, "Query Finally: %s\n", x_query.serialise().c_str());
 	}
 
 	if (g) {
@@ -611,23 +648,7 @@ Database::search(struct query_t e)
 		g = NULL;
 	}
 
-	return true;
-}
-
-
-std::string
-Database::search1(struct query_t e)
-{
-	Xapian::QueryParser queryparser;
-	Xapian::Query query;
-	queryparser.add_prefix("Kind", "XK");
-	queryparser.add_prefix("Title", "S");
-	
-	query = queryparser.parse_query("Action");
-	std::string content = get_results(query, e);
-	//LOG(this, "RESPONSE------->%s\n",res.c_str());
-	
-	return content;
+	return x_query;
 }
 
 
