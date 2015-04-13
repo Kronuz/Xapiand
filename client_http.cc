@@ -364,7 +364,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 				e.offset = 0;
 				//LOG(this, "offset parser not done!!\n");
 			}
-			
+
 			memset(&q, 0, sizeof(q));
 			if (url_qs("limit", query_buf.c_str(), query_size, &q) != -1) {
 				e.limit = atoi(urldecode(q.offset, q.length).c_str());
@@ -379,7 +379,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 			}
 			
 			memset(&q, 0, sizeof(q));
-			while(url_qs("terms", query_buf.c_str(), query_size, &q) != -1) {
+			while (url_qs("terms", query_buf.c_str(), query_size, &q) != -1) {
 				e.terms.push_back(urldecode(q.offset, q.length));
 			}
 		}
