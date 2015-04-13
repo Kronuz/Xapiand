@@ -31,6 +31,18 @@
 #include <pcre.h>
 #include <sys/time.h>
 
+#define NUMERIC_PREFIX 'n'
+#define STRING_PREFIX 's'
+#define DATE_PREFIX 'd'
+#define GEO_PREFIX 'g'
+#define BOOLEAN_PREFIX 'b'
+
+#define NUMERIC_TYPE 0
+#define STRING_TYPE 1
+#define DATE_TYPE 2
+#define GEO_TYPE 3
+#define BOOLEAN_TYPE 4
+
 void log(void *obj, const char *fmt, ...);
 
 std::string repr(const char *p, size_t size);
