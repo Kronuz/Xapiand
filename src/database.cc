@@ -586,38 +586,38 @@ Database::_search(const std::string &query, unsigned int flags)
 					break;					
 				default:
 					LOG_ERR(this, "This type of Data has no support for range search\n");
-					return queryparser.parse_query("");;
+					return queryparser.parse_query("");
 			}	
 		} else {
 			switch (field_type(field_name)) {
-			case NUMERIC_TYPE:
-				nfp = new NumericFieldProcessor(prefix);
-				nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
-				queryparser.add_prefix(field_name, nfp);
-				break;
-			case STRING_TYPE: 
-				queryparser.add_prefix(field_name, prefix);
-				break;
-			case DATE_TYPE:
-				field_value = timestamp_date(field_value);
-				if (field_value.size() == 0) {
-					LOG_DATABASE_WRAP(this, "ERROR: Didn't understand date specification.\n");
-					return queryparser.parse_query("");;
-				}
-				dfp = new DateFieldProcessor(prefix);
-				dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
-				queryparser.add_prefix(field_name, dfp);
-				break;
-			case GEO_TYPE:  
-				gfp = new LatLongFieldProcessor(prefix);
-				gfps.push_back(std::unique_ptr<LatLongFieldProcessor>(gfp));
-				queryparser.add_prefix(field_name, gfp);
-				break;
-			case BOOLEAN_TYPE:
-				bfp = new BooleanFieldProcessor(prefix);
-				bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
-				queryparser.add_prefix(field_name, bfp);
-				break;
+				case NUMERIC_TYPE:
+					nfp = new NumericFieldProcessor(prefix);
+					nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
+					queryparser.add_prefix(field_name, nfp);
+					break;
+				case STRING_TYPE: 
+					queryparser.add_prefix(field_name, prefix);
+					break;
+				case DATE_TYPE:
+					field_value = timestamp_date(field_value);
+					if (field_value.size() == 0) {
+						LOG_DATABASE_WRAP(this, "ERROR: Didn't understand date specification.\n");
+						return queryparser.parse_query("");;
+					}
+					dfp = new DateFieldProcessor(prefix);
+					dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
+					queryparser.add_prefix(field_name, dfp);
+					break;
+				case GEO_TYPE:  
+					gfp = new LatLongFieldProcessor(prefix);
+					gfps.push_back(std::unique_ptr<LatLongFieldProcessor>(gfp));
+					queryparser.add_prefix(field_name, gfp);
+					break;
+				case BOOLEAN_TYPE:
+					bfp = new BooleanFieldProcessor(prefix);
+					bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
+					queryparser.add_prefix(field_name, bfp);
+					break;
 			}
 		}
 		if (first_time) {
