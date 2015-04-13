@@ -45,7 +45,12 @@ LatLongFieldProcessor::LatLongFieldProcessor(const std::string &prefix_): prefix
 Xapian::Query
 LatLongFieldProcessor::operator()(const std::string &str)
 {
-	LOG(NULL, "LatLong FP!!\n");
+	/*
+	 Note: parser_query do not accepts .2,.1 needs start with a numer before the dot
+	 eg. this works!! (0.2,0.1)
+	 */
+	
+	LOG(this,"Inside of LatLongFieldProcessor %s\n", str.c_str());
 	std::string serialise = serialise_geo(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand LatLongs specification '" + str + "'");
