@@ -34,17 +34,20 @@ class Endpoint;
 class Endpoints;
 
 
-template<>
-struct std::hash<Endpoint> {
-	size_t operator()(const Endpoint &e);
-};
+namespace std {
+	template<>
+	struct hash<Endpoint> {
+		size_t operator()(const Endpoint &e) const;
+	};
+
+
+	template<>
+	struct hash<Endpoints> {
+		size_t operator()(const Endpoints &e) const;
+	};
+}
+
 bool operator == (Endpoint const& le, Endpoint const& re);
-
-
-template<>
-struct std::hash<Endpoints> {
-	size_t operator()(const Endpoints &e);
-};
 bool operator == (Endpoints const& le, Endpoints const& re);
 
 
@@ -69,3 +72,4 @@ public:
 };
 
 #endif /* XAPIAND_INCLUDED_ENDPOINT_H */
+
