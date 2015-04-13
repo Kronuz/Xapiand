@@ -70,11 +70,10 @@ LatLongDistanceFieldProcessor::operator()(const std::string &str)
 		Xapian::LatLongCoord centre(coords_[0], coords_[1]);
 		coords_[2] = Xapian::miles_to_metres(coords_[2]);
 		Xapian::GreatCircleMetric metric;
-		//Use get_slot in 0
 		Xapian::LatLongDistancePostingSource ps(get_slot(field), centre, metric, coords_[2]);
 		return Xapian::Query(&ps);
 	}
-	throw Xapian::QueryParserError("LatLongDistanceFieldProcessor Didn't understand %s",str.c_str());
+	throw Xapian::QueryParserError("Didn't understand LatLongDistance specification '" + str + "'");
 }
 
 
@@ -83,7 +82,7 @@ BooleanFieldProcessor::BooleanFieldProcessor(const std::string &prefix_): prefix
 
 Xapian::Query BooleanFieldProcessor::operator()(const std::string &str)
 {
-	LOG(NULL, "Boolean FP!!\n");
+	LOG(this,"Inside of BooleanProcessor %s\n", str.c_str());
 	std::string serialise = serialise_bool(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand bool specification '" + str + "'");
@@ -97,7 +96,7 @@ DateFieldProcessor::DateFieldProcessor(const std::string &prefix_): prefix(prefi
 
 Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 {
-	LOG(NULL, "Date FP!!\n");
+	LOG(this,"Inside of DateFieldProcessor %s\n", str.c_str());
 	std::string serialise = serialise_date(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand date specification '" + str + "'");
