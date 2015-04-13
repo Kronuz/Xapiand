@@ -286,7 +286,7 @@ void HttpClient::_search()
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
-	LOG(this, "Doing the checkout for search: %s\n", endpoints.as_string().c_str());
+	LOG(this, "Doing the checkout for search\n");
 	database_pool->checkout(&database, endpoints, false);
 	database->search(e);
 	LOG(this, "Doing the checkin for search.\n");
