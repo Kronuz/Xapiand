@@ -349,38 +349,44 @@ void HttpClient::_endpointgen(struct query_t &e)
 			struct parser_query_t q;
 			
 			memset(&q, 0, sizeof(q));
-			if (url_qs("query", query_buf.c_str(), query_size, &q) != -1) {
-				e.query = urldecode(q.offset, q.length).c_str();
-				LOG(this, "Query---->> %s\n",e.query.c_str());
-			} else {
-				e.query = "";
-				LOG(this, "query parser not done!!\n");
-			}
-			
-			memset(&q, 0, sizeof(q));
 			if (url_qs("offset", query_buf.c_str(), query_size, &q) != -1) {
 				e.offset = atoi(urldecode(q.offset, q.length).c_str());
 			} else {
 				e.offset = 0;
-				//LOG(this, "offset parser not done!!\n");
 			}
-
+			
 			memset(&q, 0, sizeof(q));
 			if (url_qs("limit", query_buf.c_str(), query_size, &q) != -1) {
 				e.limit = atoi(urldecode(q.offset, q.length).c_str());
 			} else {
-				e.limit = 1;
-				//LOG(this, "limit parser not done!!\n");
+				e.limit = 10;
 			}
-			
+
 			memset(&q, 0, sizeof(q));
-			while(url_qs("order", query_buf.c_str(), query_size, &q) != -1) {
-				e.order.push_back(urldecode(q.offset, q.length));
+			LOG(this, "Buffer: %s\n", query_buf.c_str());
+			while (url_qs("query", query_buf.c_str(), query_size, &q) != -1) {
+				LOG(this, "%s\n", urldecode(q.offset, q.length).c_str());
+				e.query.push_back(urldecode(q.offset, q.length));
+			}
+
+			memset(&q, 0, sizeof(q));
+			while (url_qs("partial", query_buf.c_str(), query_size, &q) != -1) {
+				e.partial.push_back(urldecode(q.offset, q.length));
 			}
 			
 			memset(&q, 0, sizeof(q));
 			while (url_qs("terms", query_buf.c_str(), query_size, &q) != -1) {
 				e.terms.push_back(urldecode(q.offset, q.length));
+			}			
+			
+			memset(&q, 0, sizeof(q));
+			while (url_qs("order", query_buf.c_str(), query_size, &q) != -1) {
+				e.order.push_back(urldecode(q.offset, q.length));
+			}
+
+			memset(&q, 0, sizeof(q));
+			while (url_qs("facets", query_buf.c_str(), query_size, &q) != -1) {
+				e.facets.push_back(urldecode(q.offset, q.length));
 			}
 		}
 		
