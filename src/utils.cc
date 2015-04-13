@@ -28,17 +28,17 @@
 #include "utils.h"
 #include <xapian.h>
 
-
 #define DATE_RE "(([1-9][0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])(T([01][0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])(\\.([0-9]{3}))?)?(([+-])([01][0-9]|2[0-3])(:([0-5][0-9]))?)?)?)"
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
 #define COORDS_DISTANCE_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d*|\\d+)\\s?..\\s?(\\d*\\.\\d*|\\d+)"
-
+#define NUMERIC_RE "(\\d*\\.\\d+|\\d+)"
 
 
 pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 pcre *compiled_date_re = NULL;
 pcre *compiled_coords_re = NULL;
 pcre *compiled_coords_dist_re = NULL;
+pcre *compiled_numeric_re = NULL;
 
 
 std::string repr(const std::string &string)
@@ -243,7 +243,7 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 		n0 = n2 = n1 = par->offset + par -> length + 1;
 	}
 	
-	par -> length = 0;
+	par->length = 0;
 	par->offset = 0;
 	
 	while (1) {
@@ -400,12 +400,12 @@ int field_type(const std::string &field_name) {
 	}
 
 	switch (field_name.at(0)) {
-		case 'n': return 0;
-		case 's': return 1;
-		case 'd': return 2;
-		case 'g': return 3;
-		case 'b': return 4;
-		default: return 1;
+		case NUMERIC_PREFIX: return NUMERIC_TYPE;
+		case STRING_PREFIX: return STRING_TYPE;
+		case DATE_PREFIX: return DATE_TYPE;
+		case GEO_PREFIX: return GEO_TYPE;
+		case BOOLEAN_PREFIX: return BOOLEAN_TYPE;
+		default: return STRING_TYPE;
 	}
 }
 
@@ -423,7 +423,9 @@ std::string serialise_date(const std::string &field_value) {
 		LOG_ERR(NULL, "ERROR: Format date (%s) must be ISO 8601: (eg 1997-07-16T19:20:30.451+05:00) or a epoch (double)\n", field_value.c_str());
 		return std::string("");
 	}
+
 	double timestamp = strtodouble(str_timestamp);
+	LOG(NULL, "timestamp %s %f\n", str_timestamp.c_str(), timestamp);
 	return Xapian::sortable_serialise(timestamp);
 }
 
@@ -654,6 +656,11 @@ std::string timestamp_date(const std::string &str) {
 	if (g) {
 		free(g);
 		g = NULL;
+	}
+
+	ret = pcre_search(str.c_str(), len, 0, 0, NUMERIC_RE, &compiled_numeric_re, &g);
+	if (ret == -1 || (g[0].end - g[0].start) != len) {
+		return std::string("");
 	}
 
 	return str;
