@@ -2,6 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 bin_PROGRAMS = xapiand
 xapiand_SOURCES = xapiand.cc \
+	endpoint.cc \
 	database.cc \
 	manager.cc \
 	server.cc \

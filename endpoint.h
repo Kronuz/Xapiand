@@ -20,183 +20,52 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_URI_H
-#define XAPIAND_INCLUDED_URI_H
+#ifndef XAPIAND_INCLUDED_ENDPOINT_H
+#define XAPIAND_INCLUDED_ENDPOINT_H
 
-#include <iostream>
 #include <string>
-#include <algorithm>
-#include <functional>
-#include <set>
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <limits.h>
+#include <unordered_set>
 
 
-static inline char * normalize_path(const char * src, char * dst)
-{
-	int levels = 0;
-	char * ret = dst;
-	for (int i = 0; *src && i < PATH_MAX; i++) {
-		char ch = *src++;
-		if (ch == '.' && (levels || dst == ret || *(dst - 1) == '/' )) {
-			*dst++ = ch;
-			levels++;
-		} else if (ch == '/') {
-			while (levels && dst > ret) {
-				if (*--dst == '/') levels -= 1;
-			}
-			if (dst == ret || *(dst - 1) != '/') {
-				*dst++ = ch;
-			}
-		} else {
-			*dst++ = ch;
-			levels = 0;
-		}
-	}
-	*dst++ = '\0';
-	return ret;
-}
+inline char *normalize_path(const char * src, char * dst);
+
+
+class Endpoint;
+class Endpoints;
+
+
+template<>
+struct std::hash<Endpoint> {
+	size_t operator()(const Endpoint &e);
+};
+bool operator == (Endpoint const& le, Endpoint const& re);
+
+
+template<>
+struct std::hash<Endpoints> {
+	size_t operator()(const Endpoints &e);
+};
+bool operator == (Endpoints const& le, Endpoints const& re);
 
 
 class Endpoint {
-	static inline std::string slice_after(std::string &subject, std::string delimiter) {
-		size_t delimiter_location = subject.find(delimiter);
-		size_t delimiter_length = delimiter.length();
-		std::string output = "";
-		if (delimiter_location < std::string::npos) {
-			size_t start = delimiter_location + delimiter_length;
-			output = subject.substr(start, subject.length() - start);
-			subject = subject.substr(0, delimiter_location);
-		}
-		return output;
-	}
-
-	static inline std::string slice_before(std::string &subject, std::string delimiter) {
-		size_t delimiter_location = subject.find(delimiter);
-		size_t delimiter_length = delimiter.length();
-		std::string output = "";
-		if (delimiter_location < std::string::npos) {
-			size_t start = delimiter_location + delimiter_length;
-			output = subject.substr(0, delimiter_location);
-			subject = subject.substr(start, subject.length() - start);
-		}
-		return output;
-	}
+	inline std::string slice_after(std::string &subject, std::string delimiter);
+	inline std::string slice_before(std::string &subject, std::string delimiter);
 
 public:
 	int port;
 	std::string protocol, user, password, host, path, search;
 
-	Endpoint(const std::string &uri, const std::string &base_, int port_) {
-		std::string in(uri);
-		std::string base;
-		char actualpath[PATH_MAX + 1];
-		if (base_.empty()) {
-			base = getcwd(actualpath, PATH_MAX);
-		} else {
-			base = base_;
-		}
-		normalize_path(base.c_str(), actualpath);
-		base = actualpath;
-		protocol = slice_before(in, "://");
-		if (protocol.empty()) {
-			protocol = "file";
-		}
-		search = slice_after(in, "?");
-		path = slice_after(in, "/");
-		std::string userpass = slice_before(in, "@");
-		password = slice_after(userpass, ":");
-		user = userpass;
-		std::string portstring = slice_after(in, ":");
-		port = atoi(portstring.c_str());
-		if (protocol.empty() || protocol == "file") {
-			if (path.empty()) {
-				path = in;
-			} else {
-				path = in + "/" + path;
-			}
-			port = 0;
-			search = "";
-			password = "";
-			user = "";
-		} else {
-			host = in;
-			if (!port) port = port_;
-		}
-		path = actualpath + path;
-		normalize_path(path.c_str(), actualpath);
-		path = actualpath;
-		if (path.substr(0, base.size()) == base) {
-			path.erase(0, base.size());
-		} else {
-			path = "";
-		}
-	}
-
-	std::string as_string() const {
-		std::string ret;
-		if (path.empty()) {
-			return ret;
-		}
-		ret += protocol + "://";
-		if (!user.empty() || !password.empty()) {
-			ret += user;
-			if (!password.empty()) {
-				ret += ":" + password;
-			}
-			ret += "@";
-		}
-		ret += host;
-		if (port > 0) {
-			char port_[100];
-			sprintf(port_, "%d", port);
-			ret += ":";
-			ret += port_;
-		}
-		if (!host.empty() || port > 0) {
-			ret += "/";
-		}
-		ret += path;
-		if (!search.empty()) {
-			ret += "?" + search;
-		}
-		return ret;
-	}
-
-	bool operator< (const Endpoint & other) const
-	{
-		return as_string() < other.as_string();
-	}
+	Endpoint(const std::string &uri, const std::string &base_, int port_);
+	std::string as_string() const;
+	bool operator< (const Endpoint & other) const;
 };
 
-class Endpoints : public std::vector<Endpoint> {
+
+class Endpoints : public std::unordered_set<Endpoint> {
 public:
-	size_t hash(bool writable) const {
-		std::vector<Endpoint> copy;
-		copy.assign(begin(), end());
-		std::sort(copy.begin(), copy.end());
-		std::string es = std::string(writable ? "1" : "0");
-		std::vector<Endpoint>::const_iterator j(copy.begin());
-		for (int i=0; j != copy.end(); j++, i++) {
-			es += ";";
-			es += (*j).as_string().c_str();
-		}
-		std::hash<std::string> hash_fn;
-		return hash_fn(es);
-	}
-	std::string as_string() const {
-		std::string ret;
-		std::vector<Endpoint>::const_iterator j(begin());
-		for (int i=0; j != end(); j++, i++) {
-			if (i) ret += ";";
-			ret += (*j).as_string();
-		}
-		return ret;
-	}
+	size_t hash(bool writable) const;
+	std::string as_string() const;
 };
 
-#endif /* XAPIAND_INCLUDED_URI_H */
+#endif /* XAPIAND_INCLUDED_ENDPOINT_H */

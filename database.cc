@@ -60,14 +60,13 @@ Database::reopen()
 
 	// FIXME: Handle remote endpoints and figure out if the endpoint is a local database
 	const Endpoint *e;
-	//std::vector<Endpoint>::const_iterator i(endpoints.begin());
+	std::unordered_set<Endpoint>::const_iterator i(endpoints.begin());
 	if (writable) {
 		db = new Xapian::WritableDatabase();
 		if (endpoints.size() != 1) {
 			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), endpoints.as_string().c_str());
 		} else {
-			//e = &*i;
-			e = &endpoints[0];
+			e = &*i;
 			if (e->protocol == "file") {
 				db->add_database(Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN));
 			} else {
@@ -76,7 +75,6 @@ Database::reopen()
 		}
 	} else {
 		db = new Xapian::Database();
-		std::vector<Endpoint>::const_iterator i(endpoints.begin());
 		for (; i != endpoints.end(); ++i) {
 			e = &*i;
 			if (e->protocol == "file") {

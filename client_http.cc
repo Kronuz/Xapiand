@@ -286,7 +286,7 @@ void HttpClient::_search()
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
-	LOG(this, "Doing the checkout for search\n");
+	LOG(this, "Doing the checkout for search: %s\n", endpoints.as_string().c_str());
 	database_pool->checkout(&database, endpoints, false);
 	database->search(e);
 	LOG(this, "Doing the checkin for search.\n");
@@ -314,7 +314,6 @@ void HttpClient::_endpointgen(struct query_t &e)
 			std::string hos_;
 			
 			while (url_path(path_buf.c_str(), path_size, &p) == 0) {
-				
 				command  = urldecode(p.off_command, p.len_command);
 				
 				if (p.len_namespace) {
@@ -334,7 +333,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 				}
 				endp = "xapian://" + hos_ + nsp_ + pat_;
 				//endp = "file://" + nsp_ + pat_;
-				endpoints.push_back(Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT));
+				endpoints.insert(Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT));
 				
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
 			}

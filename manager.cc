@@ -29,11 +29,11 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/sysctl.h>
-#include <stdlib.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h> /* for TCP_NODELAY */
 #include <sys/socket.h>
+#include <unistd.h>
 
 
 XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_port_)
