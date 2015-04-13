@@ -51,10 +51,10 @@ std::string repr(const std::string &string);
 typedef struct query_t {
 	int offset;
 	int limit;
-	std::vector <std::string> order;
-	std::string query;
+	std::vector <std::string> query;
 	std::vector <std::string> partial;
 	std::vector <std::string> terms;
+	std::vector <std::string> order;
 	std::vector <std::string> facets;
 } query_t;
 
