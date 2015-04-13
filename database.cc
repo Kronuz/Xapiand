@@ -582,7 +582,7 @@ Database::_search(const std::string &query, unsigned int flags)
 					break;					
 				default:
 					LOG_ERR(this, "This type of Data has no support for range search\n");
-					return false;
+					return queryparser.parse_query("");;
 			}	
 		} else {
 			switch (field_type(field_name)) {
@@ -598,7 +598,7 @@ Database::_search(const std::string &query, unsigned int flags)
 				field_value = timestamp_date(field_value);
 				if (field_value.size() == 0) {
 					LOG_DATABASE_WRAP(this, "ERROR: Didn't understand date specification.\n");
-					return false;
+					return queryparser.parse_query("");;
 				}
 				dfp = new DateFieldProcessor(prefix);
 				dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
