@@ -336,7 +336,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 				//endp = "file://" + nsp_ + pat_;
 				
 				Endpoint endpoint = Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT);
-				endpoints.push_back(endpoint);
+				endpoints.insert(endpoint);
 				
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
 			}
