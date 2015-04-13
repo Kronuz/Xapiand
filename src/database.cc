@@ -533,22 +533,20 @@ Database::search(struct query_t e)
 					nvrps.push_back(std::unique_ptr<Xapian::NumberValueRangeProcessor>(nvrp));
 					queryparser.add_valuerangeprocessor(nvrp);
 					break;
-				case STRING_TYPE: {
+				case STRING_TYPE:
 					svrp = new Xapian::StringValueRangeProcessor(get_slot(field_name));
 					svrps.push_back(std::unique_ptr<Xapian::StringValueRangeProcessor>(svrp));
 					queryparser.add_valuerangeprocessor(svrp);
-					break; }
-					
-				case DATE_TYPE: {
+					break;
+				case DATE_TYPE:
 					dvrp = new DateTimeValueRangeProcessor(get_slot(field_name), get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)));
 					dvrps.push_back(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp));
 					queryparser.add_valuerangeprocessor(dvrp);
-					break; }
-					
-				default: LOG_ERR(this, "This type of Data has no support for range search\n");
+					break;					
+				default:
+					LOG_ERR(this, "This type of Data has no support for range search\n");
 					return false;
-			}
-			
+			}	
 		} else {
 			switch (field_type(field_name)) {
 			case NUMERIC_TYPE:
@@ -581,8 +579,6 @@ Database::search(struct query_t e)
 				break;
 			}
 		}
-		
-		
 		if (first_time) {
 			querystring =  std::string(field_name_dot + field_value);
 			first_time = false;

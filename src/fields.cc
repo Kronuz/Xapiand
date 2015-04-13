@@ -60,6 +60,8 @@ LatLongFieldProcessor::operator()(const std::string &str)
 
 
 LatLongDistanceFieldProcessor::LatLongDistanceFieldProcessor(std::string prefix_, std::string field_): prefix(prefix_), field(field_) {}
+
+
 Xapian::Query
 LatLongDistanceFieldProcessor::operator()(const std::string &str)
 {
@@ -70,10 +72,11 @@ LatLongDistanceFieldProcessor::operator()(const std::string &str)
 		Xapian::LatLongCoord centre(coords_[0], coords_[1]);
 		coords_[2] = Xapian::miles_to_metres(coords_[2]);
 		Xapian::GreatCircleMetric metric;
+		
 		Xapian::LatLongDistancePostingSource ps(get_slot(field), centre, metric, coords_[2]);
 		return Xapian::Query(&ps);
 	}
-	throw Xapian::QueryParserError("LatLongDistanceFieldProcessor Didn't understand %s",str.c_str());
+	throw Xapian::QueryParserError("LatLongDistanceFieldProcessor Didn't understand %s", str.c_str());
 }
 
 
@@ -106,29 +109,34 @@ Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 
 
 DateTimeValueRangeProcessor::DateTimeValueRangeProcessor(Xapian::valueno slot_, std::string prefix_): valno(slot_), prefix(prefix_) {}
+
+
 Xapian::valueno
 DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 {
 	std::string buf;
-	LOG(this,"Inside of DateTimeValueRangeProcessor\n");
+	LOG(this, "Inside of DateTimeValueRangeProcessor\n");
 	
-	if(begin.size() != 0) {
+	if (begin.size() != 0) {
 		buf = prefix + serialise_date(begin);
-		if(buf != "") {
+		if (buf != "") {
 			begin.assign(buf.c_str(), buf.size());
-			LOG(this,"serialise of begin %s\n",buf.c_str());
+			LOG(this, "Serialise of begin %s\n", buf.c_str());
+		} else {
+			return Xapian::BAD_VALUENO;
 		}
-		else return Xapian::BAD_VALUENO;
 	}
 	buf = "";
 	
-	if(end.size() != 0) {
+	if (end.size() != 0) {
 		buf = prefix + serialise_date(end);
-		if(buf != "") {
+		if (buf != "") {
 			end.assign(buf.c_str(), buf.size());
-			LOG(this,"serialise of end %s\n",std::string(prefix + buf).c_str());
+			LOG(this, "Serialise of end %s\n", std::string(prefix + buf).c_str());
+		} else {
+			return Xapian::BAD_VALUENO;
 		}
-		else return Xapian::BAD_VALUENO;
 	}
+
 	return valno;
 }
