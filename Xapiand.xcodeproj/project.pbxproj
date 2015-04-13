@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C35DB9DF1AD4538100054358 /* TypesFieldProcessor.cc in Sources */ = {isa = PBXBuildFile; fileRef = C35DB9DD1AD4538100054358 /* TypesFieldProcessor.cc */; };
+		C35DB9DF1AD4538100054358 /* fields.cc in Sources */ = {isa = PBXBuildFile; fileRef = C35DB9DD1AD4538100054358 /* fields.cc */; };
 		C3AF50161AC1E79A007071BF /* md5.cc in Sources */ = {isa = PBXBuildFile; fileRef = C3AF50141AC1E79A007071BF /* md5.cc */; };
 		E59725B71A9CFCAD0060069C /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = E59725B51A9CFCAD0060069C /* http_parser.c */; };
 		E59725CC1A9D25EB0060069C /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725C61A9D25EB0060069C /* client_base.cc */; };
@@ -36,8 +36,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		C35DB9DD1AD4538100054358 /* TypesFieldProcessor.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TypesFieldProcessor.cc; sourceTree = "<group>"; };
-		C35DB9DE1AD4538100054358 /* TypesFieldProcessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TypesFieldProcessor.h; sourceTree = "<group>"; };
+		C35DB9DD1AD4538100054358 /* fields.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fields.cc; sourceTree = "<group>"; };
+		C35DB9DE1AD4538100054358 /* fields.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fields.h; sourceTree = "<group>"; };
 		C3AF50141AC1E79A007071BF /* md5.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = md5.cc; sourceTree = "<group>"; };
 		C3AF50151AC1E79A007071BF /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
 		E59725B51A9CFCAD0060069C /* http_parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = http_parser.c; sourceTree = "<group>"; };
@@ -84,8 +84,8 @@
 		E5CEBCBD1A99C89000CD151F = {
 			isa = PBXGroup;
 			children = (
-				C35DB9DD1AD4538100054358 /* TypesFieldProcessor.cc */,
-				C35DB9DE1AD4538100054358 /* TypesFieldProcessor.h */,
+				C35DB9DD1AD4538100054358 /* fields.cc */,
+				C35DB9DE1AD4538100054358 /* fields.h */,
 				E5CEBCC71A99C89000CD151F /* Products */,
 				E59725D51AA20D7B0060069C /* config.h */,
 				E59725D61AA2141F0060069C /* xapiand.h */,
@@ -186,7 +186,7 @@
 				E597730C1ACC75EB00E3DA76 /* length.cc in Sources */,
 				C3AF50161AC1E79A007071BF /* md5.cc in Sources */,
 				E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */,
-				C35DB9DF1AD4538100054358 /* TypesFieldProcessor.cc in Sources */,
+				C35DB9DF1AD4538100054358 /* fields.cc in Sources */,
 				E5CEBCEA1A9B22E600CD151F /* database.cc in Sources */,
 				E59725CE1A9D25EB0060069C /* client_http.cc in Sources */,
 				E59725CC1A9D25EB0060069C /* client_base.cc in Sources */,

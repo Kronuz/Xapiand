@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "TypesFieldProcessor.h"
+#include "fields.h"
 #include <xapian/query.h>
 
 
@@ -49,7 +49,7 @@ LatLongFieldProcessor::operator()(const std::string &str)
 	 Note: parser_query do not accepts .2,.1 needs start with a numer before the dot
 	 eg. this works!! (0.2,0.1)
 	 */
-	
+
 	LOG(this,"Inside of LatLongFieldProcessor %s\n", str.c_str());
 	std::string serialise = serialise_geo(str);
 	if (serialise.size() == 0) {
@@ -111,7 +111,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 {
 	std::string buf;
 	LOG(this,"Inside of DateTimeValueRangeProcessor\n");
-	
+
 	if(begin.size() != 0) {
 		buf = prefix + serialise_date(begin);
 		if(buf != "") {
@@ -121,7 +121,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 		else return Xapian::BAD_VALUENO;
 	}
 	buf = "";
-	
+
 	if(end.size() != 0) {
 		buf = prefix + serialise_date(end);
 		if(buf != "") {

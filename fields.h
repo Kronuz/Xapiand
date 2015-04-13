@@ -20,12 +20,13 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __Xapiand__TypesFieldProcessor__
-#define __Xapiand__TypesFieldProcessor__
+#ifndef XAPIAND_INCLUDED_FIELDS_H
+#define XAPIAND_INCLUDED_FIELDS_H
 
 #include <string.h>
 #include <sstream>
 #include <xapian.h>
+
 #include "utils.h"
 
 
@@ -40,7 +41,7 @@ class NumericFieldProcessor : public Xapian::FieldProcessor {
 
 class LatLongFieldProcessor : public Xapian::FieldProcessor {
 	std::string prefix;
-	
+
 	public:
 		LatLongFieldProcessor(const std::string &prefix);
 		Xapian::Query operator()(const std::string &str);
@@ -49,7 +50,7 @@ class LatLongFieldProcessor : public Xapian::FieldProcessor {
 
 class BooleanFieldProcessor : public Xapian::FieldProcessor {
 	std::string prefix;
-	
+
 	public:
 		BooleanFieldProcessor(const std::string &prefix);
 		Xapian::Query operator()(const std::string &str);
@@ -58,7 +59,7 @@ class BooleanFieldProcessor : public Xapian::FieldProcessor {
 
 class DateFieldProcessor : public Xapian::FieldProcessor {
 	std::string prefix;
-	
+
 	public:
 		DateFieldProcessor(const std::string &prefix);
 		Xapian::Query operator()(const std::string &str);
@@ -68,7 +69,7 @@ class LatLongDistanceFieldProcessor: public Xapian::FieldProcessor {
 	std::string prefix;
 	std::string field;
 	double coords_[3];
-	
+
 public:
 	Xapian::Query operator()(const std::string &str);
 	LatLongDistanceFieldProcessor(std::string prefix, std::string field);
@@ -85,4 +86,4 @@ class DateTimeValueRangeProcessor: public Xapian::ValueRangeProcessor {
 };
 
 
-#endif /* defined(__Xapiand__TypesFieldProcessor__) */
+#endif /* XAPIAND_INCLUDED_FIELDS_H */
