@@ -23,19 +23,19 @@
 #ifndef XAPIAND_INCLUDED_DATABASE_H
 #define XAPIAND_INCLUDED_DATABASE_H
 
-#include <queue>
-#include <unordered_map>
-
 #include "endpoint.h"
 #include "queue.h"
 
 #include <xapian.h>
 
 #include "cJSON.h"
+#include "utils.h"
+#include "fields.h"
+
 #include <pthread.h>
 #include <algorithm>
-#include "utils.h"
-#include "TypesFieldProcessor.h"
+#include <queue>
+#include <unordered_map>
 
 class DatabasePool;
 
