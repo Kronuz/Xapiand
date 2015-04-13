@@ -195,14 +195,14 @@ bool operator == (Endpoints const& le, Endpoints const& re)
 }
 
 
-size_t std::hash<Endpoint>::operator()(const Endpoint &e)
+size_t std::hash<Endpoint>::operator()(const Endpoint &e) const
 {
 	std::hash<std::string> hash_fn;
 	return hash_fn(e.as_string());
 }
 
 
-size_t std::hash<Endpoints>::operator()(const Endpoints &e)
+size_t std::hash<Endpoints>::operator()(const Endpoints &e) const
 {
 	size_t hash = 0;
 	std::hash<Endpoint> hash_fn;

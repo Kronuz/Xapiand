@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "fields.h"
+#include "TypesFieldProcessor.h"
 #include <xapian/query.h>
 
 
@@ -45,12 +45,7 @@ LatLongFieldProcessor::LatLongFieldProcessor(const std::string &prefix_): prefix
 Xapian::Query
 LatLongFieldProcessor::operator()(const std::string &str)
 {
-	/*
-	 Note: parser_query do not accepts .2,.1 needs start with a numer before the dot
-	 eg. this works!! (0.2,0.1)
-	 */
-
-	LOG(this,"Inside of LatLongFieldProcessor %s\n", str.c_str());
+	LOG(NULL, "LatLong FP!!\n");
 	std::string serialise = serialise_geo(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand LatLongs specification '" + str + "'");
@@ -70,10 +65,11 @@ LatLongDistanceFieldProcessor::operator()(const std::string &str)
 		Xapian::LatLongCoord centre(coords_[0], coords_[1]);
 		coords_[2] = Xapian::miles_to_metres(coords_[2]);
 		Xapian::GreatCircleMetric metric;
+		//Use get_slot in 0
 		Xapian::LatLongDistancePostingSource ps(get_slot(field), centre, metric, coords_[2]);
 		return Xapian::Query(&ps);
 	}
-	throw Xapian::QueryParserError("Didn't understand LatLongDistance specification '" + str + "'");
+	throw Xapian::QueryParserError("LatLongDistanceFieldProcessor Didn't understand %s",str.c_str());
 }
 
 
@@ -82,7 +78,7 @@ BooleanFieldProcessor::BooleanFieldProcessor(const std::string &prefix_): prefix
 
 Xapian::Query BooleanFieldProcessor::operator()(const std::string &str)
 {
-	LOG(this,"Inside of BooleanProcessor %s\n", str.c_str());
+	LOG(NULL, "Boolean FP!!\n");
 	std::string serialise = serialise_bool(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand bool specification '" + str + "'");
@@ -96,7 +92,7 @@ DateFieldProcessor::DateFieldProcessor(const std::string &prefix_): prefix(prefi
 
 Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 {
-	LOG(this,"Inside of DateFieldProcessor %s\n", str.c_str());
+	LOG(NULL, "Date FP!!\n");
 	std::string serialise = serialise_date(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand date specification '" + str + "'");
@@ -111,7 +107,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 {
 	std::string buf;
 	LOG(this,"Inside of DateTimeValueRangeProcessor\n");
-
+	
 	if(begin.size() != 0) {
 		buf = prefix + serialise_date(begin);
 		if(buf != "") {
@@ -121,7 +117,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 		else return Xapian::BAD_VALUENO;
 	}
 	buf = "";
-
+	
 	if(end.size() != 0) {
 		buf = prefix + serialise_date(end);
 		if(buf != "") {
