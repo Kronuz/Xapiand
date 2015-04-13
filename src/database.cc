@@ -554,6 +554,8 @@ Database::_search(const std::string &query, unsigned int flags)
 	Xapian::NumberValueRangeProcessor *nvrp;
 	Xapian::StringValueRangeProcessor *svrp;
 	DateTimeValueRangeProcessor *dvrp;
+	unsigned int slot;
+
 	while ((pcre_search(query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
 		offset = g[0].end;
 		std::string field_name_dot, field_name, field_value;
@@ -566,7 +568,9 @@ Database::_search(const std::string &query, unsigned int flags)
 		if(isRange(field_value)){
 			switch (field_type(field_name)) {
 				case NUMERIC_TYPE:
-					nvrp = new Xapian::NumberValueRangeProcessor(get_slot(field_name), "");
+					slot = get_slot(field_name);
+					nvrp = new Xapian::NumberValueRangeProcessor(slot, field_name_dot, true);
+					LOG(this, "Prefix: %s Field_name_dot: %s\n", prefix.c_str(), field_name_dot.c_str());
 					nvrps.push_back(std::unique_ptr<Xapian::NumberValueRangeProcessor>(nvrp));
 					queryparser.add_valuerangeprocessor(nvrp);
 					break;
