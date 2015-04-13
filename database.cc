@@ -544,6 +544,7 @@ Database::_search(const std::string &query, unsigned int flags)
 	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
 	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
 	std::vector<std::unique_ptr<LatLongFieldProcessor>> gfps;
+	std::vector<std::unique_ptr<LatLongDistanceFieldProcessor>> gdfps;
 	std::vector<std::unique_ptr<Xapian::NumberValueRangeProcessor>> nvrps;
 	std::vector<std::unique_ptr<Xapian::StringValueRangeProcessor>> svrps;
 	std::vector<std::unique_ptr<DateTimeValueRangeProcessor>> dvrps;
@@ -551,6 +552,7 @@ Database::_search(const std::string &query, unsigned int flags)
 	DateFieldProcessor *dfp;
 	BooleanFieldProcessor *bfp;
 	LatLongFieldProcessor *gfp;
+	LatLongDistanceFieldProcessor *gdfp;
 	Xapian::NumberValueRangeProcessor *nvrp;
 	Xapian::StringValueRangeProcessor *svrp;
 	DateTimeValueRangeProcessor *dvrp;
@@ -590,34 +592,40 @@ Database::_search(const std::string &query, unsigned int flags)
 			}	
 		} else {
 			switch (field_type(field_name)) {
-				case NUMERIC_TYPE:
-					nfp = new NumericFieldProcessor(prefix);
-					nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
-					queryparser.add_prefix(field_name, nfp);
-					break;
-				case STRING_TYPE: 
-					queryparser.add_prefix(field_name, prefix);
-					break;
-				case DATE_TYPE:
-					field_value = timestamp_date(field_value);
-					if (field_value.size() == 0) {
-						LOG_DATABASE_WRAP(this, "ERROR: Didn't understand date specification.\n");
-						return queryparser.parse_query("");;
+			case NUMERIC_TYPE:
+				nfp = new NumericFieldProcessor(prefix);
+				nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
+				queryparser.add_prefix(field_name, nfp);
+				break;
+			case STRING_TYPE: 
+				queryparser.add_prefix(field_name, prefix);
+				break;
+			case DATE_TYPE:
+				field_value = timestamp_date(field_value);
+				if (field_value.size() == 0) {
+					LOG_DATABASE_WRAP(this, "ERROR: Didn't understand date specification.\n");
+					return queryparser.parse_query("");;
+				}
+				dfp = new DateFieldProcessor(prefix);
+				dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
+				queryparser.add_prefix(field_name, dfp);
+				break;
+			case GEO_TYPE:
+					if(isLatLongDistance(field_value)) {
+						gdfp = new LatLongDistanceFieldProcessor(prefix, field_name);
+						gdfps.push_back(std::unique_ptr<LatLongDistanceFieldProcessor>(gdfp));
+					} else {
+						gfp = new LatLongFieldProcessor(prefix);
+						gfps.push_back(std::unique_ptr<LatLongFieldProcessor>(gfp));
+						queryparser.add_prefix(field_name, gfp);
 					}
-					dfp = new DateFieldProcessor(prefix);
-					dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
-					queryparser.add_prefix(field_name, dfp);
-					break;
-				case GEO_TYPE:  
-					gfp = new LatLongFieldProcessor(prefix);
-					gfps.push_back(std::unique_ptr<LatLongFieldProcessor>(gfp));
-					queryparser.add_prefix(field_name, gfp);
-					break;
-				case BOOLEAN_TYPE:
-					bfp = new BooleanFieldProcessor(prefix);
-					bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
-					queryparser.add_prefix(field_name, bfp);
-					break;
+				
+				break;
+			case BOOLEAN_TYPE:
+				bfp = new BooleanFieldProcessor(prefix);
+				bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
+				queryparser.add_prefix(field_name, bfp);
+				break;
 			}
 		}
 		if (first_time) {
