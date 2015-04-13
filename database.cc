@@ -18,9 +18,11 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- */ 
+ */
 
 #include "database.h"
+#include <memory>
+
 
 //change prefix to Q only
 #define DOCUMENT_ID_TERM_PREFIX "Q"
@@ -429,15 +431,15 @@ Database::replace(const std::string &document_id, const Xapian::Document doc, bo
 std::string
 Database::serialise(const std::string &field_name, const std::string &field_value)
 {
-	if (field_type(field_name) == 0) {
+	if (field_type(field_name) == NUMERIC_TYPE) {
 		return serialise_numeric(field_value);
-	} else if (field_type(field_name) == 1) {
+	} else if (field_type(field_name) == STRING_TYPE) {
 		return field_value;
-	} else if (field_type(field_name) == 2) {
+	} else if (field_type(field_name) == DATE_TYPE) {
 		return serialise_date(field_value);
-	} else if (field_type(field_name) == 3) {
+	} else if (field_type(field_name) == GEO_TYPE) {
 		return serialise_geo(field_value);
-	} else if (field_type(field_name) == 4) {
+	} else if (field_type(field_name) == BOOLEAN_TYPE) {
 		return serialise_bool(field_value);
 	}
 	return std::string("");
@@ -454,12 +456,15 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 		for (int j = 0; j < g_serialise.size(); j += 6) {
 			found = false;
 			std::string s_coord = std::string(g_serialise, j, i);
-			for (int k = 0; k < terms.size(); k++) {
-				if (s_coord.compare(terms[k]) == 0) {
+			
+			std::vector<std::string>::const_iterator it(terms.begin());
+			for (; it != terms.end(); it++) {
+				if (s_coord.compare(*it) == 0) {
 					found = true;
 					break;
 				}
 			}
+
 			if (!found) {
 				std::string name_v;
 				(name.c_str()) ? name_v = get_prefix(name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string(DOCUMENT_CUSTOM_TERM_PREFIX);
@@ -497,6 +502,14 @@ Database::search(struct query_t e)
 	queryparser.set_database(*db);
 	Xapian::Query query;
 
+	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
+	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
+	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
+	std::vector<std::unique_ptr<LatLongFieldProcessor>> gfps;
+	NumericFieldProcessor *nfp;
+	DateFieldProcessor *dfp;
+	BooleanFieldProcessor *bfp;
+	LatLongFieldProcessor *gfp;
 	while ((pcre_search(e.query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
 		offset = g[0].end;
 		std::string field_name_dot, field_name, field_value;
@@ -507,31 +520,34 @@ Database::search(struct query_t e)
 		std::string prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 		LOG(this, "Prefix: %s Field_name: %s\n", prefix.c_str(), field_name.c_str());
 		switch (field_type(field_name)) {
-			case 0: {
-				NumericFieldProcessor f(prefix);
-				queryparser.add_prefix(field_name, &f);
+			case NUMERIC_TYPE:
+				nfp = new NumericFieldProcessor(prefix);
+				nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
+				queryparser.add_prefix(field_name, nfp);
 				break;
-			}
-			case 1: {
+			case STRING_TYPE: 
 				queryparser.add_prefix(field_name, prefix);
 				break;
-			}
-			case 2: {
-				DateFieldProcessor f(prefix);
+			case DATE_TYPE:
 				field_value = timestamp_date(field_value);
-				queryparser.add_prefix(field_name, &f);
+				if (field_value.size() == 0) {
+					LOG_DATABASE_WRAP(this, "ERROR: Didn't understand date specification.\n");
+					return false;
+				}
+				dfp = new DateFieldProcessor(prefix);
+				dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
+				queryparser.add_prefix(field_name, dfp);
 				break;
-			}
-			case 3: {
-				LatLongFieldProcessor f(prefix);
-				queryparser.add_prefix(field_name, &f);
+			case GEO_TYPE:  
+				gfp = new LatLongFieldProcessor(prefix);
+				gfps.push_back(std::unique_ptr<LatLongFieldProcessor>(gfp));
+				queryparser.add_prefix(field_name, gfp);
 				break;
-			}
-			case 4: {
-				BooleanFieldProcessor f(prefix);
-				queryparser.add_prefix(field_name, &f);
+			case BOOLEAN_TYPE:
+				bfp = new BooleanFieldProcessor(prefix);
+				bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
+				queryparser.add_prefix(field_name, bfp);
 				break;
-			}
 		}
 		if (first_time) {
 			querystring =  std::string(field_name_dot + field_value);
@@ -541,22 +557,16 @@ Database::search(struct query_t e)
 		}
 	}
 
-	if (g) {
-		free(g);
-		g = NULL;
-	}
-
 	if (offset != len) {
 		LOG_ERR(this, "Query %s contains errors.\n", e.query.c_str());
 		return false;
 	}
 	
-	LOG_DATABASE_WRAP(this, "Query preprocessed: -%s-\n", querystring.c_str());	
+	LOG_DATABASE_WRAP(this, "Query processed: %s\n", querystring.c_str());	
 	
 	try {
-		LOG_DATABASE_WRAP(this, "Start\n");
 		query = queryparser.parse_query(querystring);
-		LOG_DATABASE_WRAP(this, "End\n");
+		LOG_DATABASE_WRAP(this, "Query parser done\n");
 		LOG(this, "Query Finally: %s\n", query.serialise().c_str());
 	} catch (Xapian::Error &er) {
 		LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
@@ -564,6 +574,11 @@ Database::search(struct query_t e)
 		queryparser.set_database(*db);
 		query = queryparser.parse_query(querystring);
 		LOG(this, "Query Finally: %s\n", query.serialise().c_str());
+	}
+
+	if (g) {
+		free(g);
+		g = NULL;
 	}
 
 	return true;
