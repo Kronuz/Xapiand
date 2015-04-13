@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "TypesFieldProcessor.h"
+#include "fields.h"
 #include <xapian/query.h>
 
 
