@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C35DB9DF1AD4538100054358 /* fields.cc in Sources */ = {isa = PBXBuildFile; fileRef = C35DB9DD1AD4538100054358 /* fields.cc */; };
+		C35DB9E11ADC6E2100054358 /* endpoint.cc in Sources */ = {isa = PBXBuildFile; fileRef = C35DB9E01ADC6E2100054358 /* endpoint.cc */; };
 		C3AF50161AC1E79A007071BF /* md5.cc in Sources */ = {isa = PBXBuildFile; fileRef = C3AF50141AC1E79A007071BF /* md5.cc */; };
 		E59725B71A9CFCAD0060069C /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = E59725B51A9CFCAD0060069C /* http_parser.c */; };
 		E59725CC1A9D25EB0060069C /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725C61A9D25EB0060069C /* client_base.cc */; };
@@ -38,6 +39,7 @@
 /* Begin PBXFileReference section */
 		C35DB9DD1AD4538100054358 /* fields.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fields.cc; sourceTree = "<group>"; };
 		C35DB9DE1AD4538100054358 /* fields.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fields.h; sourceTree = "<group>"; };
+		C35DB9E01ADC6E2100054358 /* endpoint.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = endpoint.cc; sourceTree = "<group>"; };
 		C3AF50141AC1E79A007071BF /* md5.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = md5.cc; sourceTree = "<group>"; };
 		C3AF50151AC1E79A007071BF /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
 		E59725B51A9CFCAD0060069C /* http_parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = http_parser.c; sourceTree = "<group>"; };
@@ -95,6 +97,7 @@
 				E59725D01A9D25F60060069C /* utils.h */,
 				E59725CF1A9D25F60060069C /* utils.cc */,
 				E5CEBCE51A9AE80200CD151F /* endpoint.h */,
+				C35DB9E01ADC6E2100054358 /* endpoint.cc */,
 				E5C170461AA4B9CC00C21A86 /* manager.h */,
 				E5C170451AA4B9CC00C21A86 /* manager.cc */,
 				E5CEBCDB1A99C9BB00CD151F /* server.h */,
@@ -191,6 +194,7 @@
 				E59725CE1A9D25EB0060069C /* client_http.cc in Sources */,
 				E59725CC1A9D25EB0060069C /* client_base.cc in Sources */,
 				E59725D11A9D25F60060069C /* utils.cc in Sources */,
+				C35DB9E11ADC6E2100054358 /* endpoint.cc in Sources */,
 				E5CEBCDF1A99C9BB00CD151F /* server.cc in Sources */,
 				E5C170471AA4B9CC00C21A86 /* manager.cc in Sources */,
 				E59725D41AA1A38B0060069C /* cJSON.c in Sources */,
