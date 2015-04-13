@@ -506,10 +506,16 @@ Database::search(struct query_t e)
 	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
 	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
 	std::vector<std::unique_ptr<LatLongFieldProcessor>> gfps;
+	std::vector<std::unique_ptr<Xapian::NumberValueRangeProcessor>> nvrps;
+	std::vector<std::unique_ptr<Xapian::StringValueRangeProcessor>> svrps;
+	std::vector<std::unique_ptr<DateTimeValueRangeProcessor>> dvrps;
 	NumericFieldProcessor *nfp;
 	DateFieldProcessor *dfp;
 	BooleanFieldProcessor *bfp;
 	LatLongFieldProcessor *gfp;
+	Xapian::NumberValueRangeProcessor *nvrp;
+	Xapian::StringValueRangeProcessor *svrp;
+	DateTimeValueRangeProcessor *dvrp;
 	while ((pcre_search(e.query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
 		offset = g[0].end;
 		std::string field_name_dot, field_name, field_value;
@@ -522,19 +528,21 @@ Database::search(struct query_t e)
 		
 		if(isRange(field_value)){
 			switch (field_type(field_name)) {
-				case 0:{
-					Xapian::NumberValueRangeProcessor vrp(get_slot(field_name), "");
-					queryparser.add_valuerangeprocessor(&vrp);
+				case NUMERIC_TYPE:
+					nvrp = new Xapian::NumberValueRangeProcessor(get_slot(field_name), "");
+					nvrps.push_back(std::unique_ptr<Xapian::NumberValueRangeProcessor>(nvrp));
+					queryparser.add_valuerangeprocessor(nvrp);
+					break;
+				case STRING_TYPE: {
+					svrp = new Xapian::StringValueRangeProcessor(get_slot(field_name));
+					svrps.push_back(std::unique_ptr<Xapian::StringValueRangeProcessor>(svrp));
+					queryparser.add_valuerangeprocessor(svrp);
 					break; }
 					
-				case 1: {
-					Xapian::StringValueRangeProcessor vrp(get_slot(field_name));
-					queryparser.add_valuerangeprocessor(&vrp);
-					break; }
-					
-				case 2: {
-					DateTimeValueRangeProcessor vrp(get_slot(field_name), get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)));
-					queryparser.add_valuerangeprocessor(&vrp);
+				case DATE_TYPE: {
+					dvrp = new DateTimeValueRangeProcessor(get_slot(field_name), get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)));
+					dvrps.push_back(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp));
+					queryparser.add_valuerangeprocessor(dvrp);
 					break; }
 					
 				default: LOG_ERR(this, "This type of Data has no support for range search\n");
