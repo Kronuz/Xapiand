@@ -195,7 +195,7 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 	endpoints.clear();
 	for (; i != dbpaths_.end(); i++) {
 		Endpoint endpoint = Endpoint(*i, std::string(), XAPIAND_BINARY_SERVERPORT);
-		endpoints.push_back(endpoint);
+		endpoints.insert(endpoint);
 	}
 	dbpaths = dbpaths_;
 	pthread_mutex_unlock(&qmtx);
