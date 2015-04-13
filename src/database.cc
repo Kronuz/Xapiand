@@ -579,7 +579,10 @@ Database::search(struct query_t e)
 				bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
 				queryparser.add_prefix(field_name, bfp);
 				break;
+			}
 		}
+		
+		
 		if (first_time) {
 			querystring =  std::string(field_name_dot + field_value);
 			first_time = false;

@@ -377,10 +377,8 @@ void HttpClient::_endpointgen(struct query_t &e)
 			}
 			
 			memset(&q, 0, sizeof(q));
-			if (url_qs("order", query_buf.c_str(), query_size, &q) != -1) {
-				e.order = urldecode(q.offset, q.length).c_str();
-			} else {
-				e.order = "";
+			while(url_qs("order", query_buf.c_str(), query_size, &q) != -1) {
+				e.order.push_back(urldecode(q.offset, q.length));
 			}
 			
 			memset(&q, 0, sizeof(q));
