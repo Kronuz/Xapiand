@@ -728,18 +728,42 @@ Database::_search(const std::string &query, unsigned int flags)
 
 
 Xapian::Enquire
-Database::get_enquire(Xapian::Query query, struct query_t e) {
+Database::get_enquire(Xapian::Query query, struct query_t e)
+{
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
+	bool decreasing;
+	Xapian::MultiValueKeyMaker sorter;
+	std::string field;
 	/*
 	 complement enquire ....
 	 */
+	if (!e.order.empty()) {
+		std::vector<std::string>::const_iterator oit(e.order.begin());
+		for (; oit != e.order.end(); oit++) {
+			if(StartsWith(*oit, "-")) {
+				decreasing = true;
+				field.assign(*oit,1,(*oit).size()-1);
+				sorter.add_value(get_slot(field), decreasing);
+			}
+			else if(StartsWith(*oit, "+")) {
+				decreasing = false;
+				field.assign(*oit,1,(*oit).size()-1);
+				sorter.add_value(get_slot(field), decreasing);
+			} else {
+				decreasing = false;
+				sorter.add_value(get_slot(*oit), decreasing);
+			}
+		}
+		enquire.set_sort_by_key(&sorter, false);
+	}
 	return enquire;
 }
 
 
 std::string
-Database::get_results(Xapian::Query query, struct query_t e) {
+Database::get_results(Xapian::Query query, struct query_t e)
+{
 	
 	cJSON *root = cJSON_CreateObject();
 	
