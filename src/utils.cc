@@ -362,7 +362,8 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 }
 
 
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups) {
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups)
+{
 	int erroffset;
 	const char *error;
 
@@ -397,7 +398,8 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 }
 
 
-int field_type(const std::string &field_name) {
+int field_type(const std::string &field_name)
+{
 	if (field_name.size() < 2 || field_name.at(1) != '_') {
 		return 1; //default: str.
 	}
@@ -413,14 +415,19 @@ int field_type(const std::string &field_name) {
 }
 
 
-std::string serialise_numeric(const std::string &field_value) {
+std::string serialise_numeric(const std::string &field_value)
+{
 	double val;
-	val = strtodouble(field_value);
-	return Xapian::sortable_serialise(val);
+	if (isNumeric(field_value)) {
+		val = strtodouble(field_value);
+		return Xapian::sortable_serialise(val);
+	}
+	return std::string("");
 }
 
 
-std::string serialise_date(const std::string &field_value) {
+std::string serialise_date(const std::string &field_value)
+{
 	std::string str_timestamp = timestamp_date(field_value);
 	if (str_timestamp.size() == 0) {
 		LOG_ERR(NULL, "ERROR: Format date (%s) must be ISO 8601: (eg 1997-07-16T19:20:30.451+05:00) or a epoch (double)\n", field_value.c_str());
@@ -433,7 +440,8 @@ std::string serialise_date(const std::string &field_value) {
 }
 
 
-std::string serialise_geo(const std::string &field_value) {
+std::string serialise_geo(const std::string &field_value)
+{
 	Xapian::LatLongCoords coords;
 	double latitude, longitude;
 	int len = (int) field_value.size(), Ncoord = 0, offset = 0;
@@ -472,7 +480,8 @@ std::string serialise_geo(const std::string &field_value) {
 }
 
 
-std::string serialise_bool(const std::string &field_value) {
+std::string serialise_bool(const std::string &field_value)
+{
 	if (!field_value.c_str()) {
 		return std::string("f");
 	} else if(field_value.size() > 1) {
@@ -500,7 +509,8 @@ std::string serialise_bool(const std::string &field_value) {
 }
 
 
-std::string stringtoupper(const std::string &str) {
+std::string stringtoupper(const std::string &str)
+{
 	std::string tmp = str;
 	for (unsigned int i = 0; i < tmp.size(); i++)  {
 		tmp.at(i) = toupper(tmp.at(i));
@@ -509,7 +519,8 @@ std::string stringtoupper(const std::string &str) {
 }
 
 
-std::string stringtolower(const std::string &str) {
+std::string stringtolower(const std::string &str)
+{
 	std::string tmp = str;
 	for (unsigned int i = 0; i < tmp.size(); i++) {
 		tmp.at(i) = tolower(tmp.at(i));
@@ -518,12 +529,14 @@ std::string stringtolower(const std::string &str) {
 }
 
 
-std::string prefixed(const std::string &term, const std::string &prefix) {
+std::string prefixed(const std::string &term, const std::string &prefix)
+{
 	return stringtoupper(prefix) + stringtolower(term);
 }
 
 
-unsigned int get_slot(const std::string &name) {
+unsigned int get_slot(const std::string &name)
+{
 	std::string standard_name;
 	if (strhasupper(name)) {
 		standard_name = stringtoupper(name);
@@ -539,7 +552,8 @@ unsigned int get_slot(const std::string &name) {
 }
 
 
-unsigned int hex2int(const std::string &input) {
+unsigned int hex2int(const std::string &input)
+{
 	unsigned int n;
 	std::stringstream ss;
 	ss << std::hex << input;
@@ -549,7 +563,8 @@ unsigned int hex2int(const std::string &input) {
 }
 
 
-int strtoint(const std::string &str) {
+int strtoint(const std::string &str)
+{
 	int number;
 	std::stringstream ss;
 	ss << std::dec << str;
@@ -559,7 +574,8 @@ int strtoint(const std::string &str) {
 }
 
 
-double strtodouble(const std::string &str) {
+double strtodouble(const std::string &str)
+{
 	double number;
 	std::stringstream ss;
 	ss << std::dec << str;
@@ -569,7 +585,8 @@ double strtodouble(const std::string &str) {
 }
 
 
-std::string timestamp_date(const std::string &str) {
+std::string timestamp_date(const std::string &str)
+{
 	int len = (int) str.size();
 	char sign;
 	int ret, n[9];
@@ -661,22 +678,23 @@ std::string timestamp_date(const std::string &str) {
 		g = NULL;
 	}
 
-	ret = pcre_search(str.c_str(), len, 0, 0, NUMERIC_RE, &compiled_numeric_re, &g);
-	if (ret == -1 || (g[0].end - g[0].start) != len) {
-		return std::string("");
+	if (isNumeric(str)) {
+		return str;
 	}
 
-	return str;
+	return std::string("");
 }
 
 
-std::string get_prefix(const std::string &name, const std::string &prefix) {
+std::string get_prefix(const std::string &name, const std::string &prefix)
+{
 	std::string slot = get_slot_hex(name);
 	return stringtoupper(prefix + slot);
 }
 
 
-std::string get_slot_hex(const std::string &name) {
+std::string get_slot_hex(const std::string &name)
+{
 	std::string standard_name;
 	if (strhasupper(name)) {
 		standard_name = stringtoupper(name);
@@ -688,7 +706,8 @@ std::string get_slot_hex(const std::string &name) {
 }
 
 
-void print_hexstr(const std::string &str) {
+void print_hexstr(const std::string &str)
+{
 	unsigned char c;
 	for (unsigned int i = 0; i < str.size(); i++) {
 		c = str.at(i);
@@ -698,14 +717,16 @@ void print_hexstr(const std::string &str) {
 }
 
 
-bool strhasupper(const std::string &str) {
+bool strhasupper(const std::string &str)
+{
 	for (int i = 0; i < str.size(); i++) {
 		if (isupper(str.at(i))) return true;
 	}
 	return false;
 }
 
-int get_coords(std::string str, double *coords)
+
+int get_coords(const std::string &str, double *coords)
 {
 	std::stringstream ss;
 	group *g = NULL;
@@ -730,30 +751,55 @@ int get_coords(std::string str, double *coords)
 	return -1;
 }
 
-bool isRange(std::string str)
+
+bool isRange(const std::string &str)
 {
 	group *gr = NULL;
-	if ((pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re , &gr)) != -1) {
+	int len = (int)str.size();
+	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re , &gr);
+	if (ret != -1 && (gr[0].end - gr[0].start) == len) {
 		if (gr) {
 			free(gr);
 			gr = NULL;
 		}
 		return true;
-	} else return false;
+	}
+	return false;
 }
 
-bool isLatLongDistance(std::string str)
+
+bool isLatLongDistance(const std::string &str)
 {
 	group *gr = NULL;
-	if ((pcre_search(str.c_str(), (int)str.size(), 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re , &gr)) != -1) {
+	int len = (int)str.size();
+	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &gr);
+	if (ret != -1 && (gr[0].end - gr[0].start) == len) {
 		if (gr) {
 			free(gr);
 			gr = NULL;
-		}return true;
-	} else return false;
+		}
+		return true;
+	}
+	return false;
 }
 
-bool StartsWith(const std::string& text,const std::string& token)
+
+bool isNumeric(const std::string &str)
+{
+	group *g = NULL;
+	int len = (int)str.size();
+	int ret = pcre_search(str.c_str(), len, 0, 0, NUMERIC_RE, &compiled_numeric_re, &g);
+	if (ret != -1 && (g[0].end - g[0].start) == len) {
+		if (g) {
+			free(g);
+			g = NULL;
+		}
+		return true;
+	}
+	return false;
+}
+
+bool StartsWith(const std::string &text, const std::string &token)
 {
 	if (text.length() < token.length())
 		return false;
