@@ -690,8 +690,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 					field_value = timestamp_date(field_value);
 					if (field_value.size() == 0) {
-						LOG_DATABASE_WRAP(this, "ERROR: Didn't understand date specification.\n");
-						return queryparser.parse_query("");;
+						throw Xapian::QueryParserError("Didn't understand date field name's specification: '" + field_name + "'");
 					}
 					dfp = new DateFieldProcessor(prefix);
 					dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
@@ -745,16 +744,15 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 			querystring =  std::string(field_name_dot + field_value);
 			first_time = false;
 		} else {
-			querystring += " AND " + std::string(field_name_dot + field_value);
+			querystring += " " + std::string(field_name_dot + field_value);
 		}
 	}
 
 	if (offset != len) {
-		LOG_ERR(this, "Query %s contains errors.\n", query.c_str());
-		return queryparser.parse_query("");
+		throw Xapian::QueryParserError("Query '" + query + "' contains errors.\n" );
 	}
 	
-	LOG_DATABASE_WRAP(this, "Query processed: %s\n", querystring.c_str());	
+	LOG_DATABASE_WRAP(this, "Query processed: (%s)\n", querystring.c_str());	
 	
 	try {
 		x_query = queryparser.parse_query(querystring, flags);
