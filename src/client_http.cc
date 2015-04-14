@@ -388,6 +388,11 @@ void HttpClient::_endpointgen(struct query_t &e)
 			while (url_qs("facets", query_buf.c_str(), query_size, &q) != -1) {
 				e.facets.push_back(urldecode(q.offset, q.length));
 			}
+
+			memset(&q, 0, sizeof(q));
+			while (url_qs("language", query_buf.c_str(), query_size, &q) != -1) {
+				e.language.push_back(urldecode(q.offset, q.length));
+			}
 		}
 		
 	} else {
