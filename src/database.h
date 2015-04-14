@@ -45,11 +45,11 @@ public:
 	size_t hash;
 	bool writable;
 	Endpoints endpoints;
-	
+
 	Xapian::Database *db;
 
 	static pcre *compiled_find_field_re;
-	
+
 	Database(Endpoints &endpoints, bool writable);
 	~Database();
 
@@ -64,8 +64,8 @@ public:
 	std::string get_results(Xapian::Query query, struct query_t e);
 	bool search(struct query_t e);
 	Xapian::Query _search(const std::string &query, unsigned int flags, bool text, const std::string &lan);
-	
-	
+
+
 private:
 	bool _commit();
 };
