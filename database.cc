@@ -568,6 +568,7 @@ Database::_search(const std::string &query, unsigned int flags)
 	Xapian::StringValueRangeProcessor *svrp;
 	DateTimeValueRangeProcessor *dvrp;
 	unsigned int slot;
+	std::string prefix;
 
 	while ((pcre_search(query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
 		offset = g[0].end;
@@ -576,25 +577,28 @@ Database::_search(const std::string &query, unsigned int flags)
 		field_name = std::string(query.c_str() + g[2].start, g[2].end - g[2].start);
 		field_value = std::string(query.c_str() + g[3].start, g[3].end - g[3].start);
 		
-		std::string prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
-		LOG(this, "Prefix: %s Field_name: %s\n", prefix.c_str(), field_name.c_str());
 		if(isRange(field_value)){
 			switch (field_type(field_name)) {
 				case NUMERIC_TYPE:
 					slot = get_slot(field_name);
 					nvrp = new Xapian::NumberValueRangeProcessor(slot, field_name_dot, true);
-					LOG(this, "Prefix: %s Field_name_dot: %s\n", prefix.c_str(), field_name_dot.c_str());
+					LOG(this, "Numeric Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
 					nvrps.push_back(std::unique_ptr<Xapian::NumberValueRangeProcessor>(nvrp));
 					queryparser.add_valuerangeprocessor(nvrp);
 					break;
 				case STRING_TYPE:
-					svrp = new Xapian::StringValueRangeProcessor(get_slot(field_name));
+					slot = get_slot(field_name);
+					svrp = new Xapian::StringValueRangeProcessor(slot, field_name_dot, true);
 					svrps.push_back(std::unique_ptr<Xapian::StringValueRangeProcessor>(svrp));
+					LOG(this, "String Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
 					queryparser.add_valuerangeprocessor(svrp);
 					break;
 				case DATE_TYPE:
-					dvrp = new DateTimeValueRangeProcessor(get_slot(field_name), get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)));
+					slot = get_slot(field_name);
+					field_name_dot = std::string("");
+					dvrp = new DateTimeValueRangeProcessor(slot, "");
 					dvrps.push_back(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp));
+					LOG(this, "Date Slot: %u Field_name: %s\n", slot, field_name.c_str());
 					queryparser.add_valuerangeprocessor(dvrp);
 					break;					
 				default:
@@ -604,6 +608,7 @@ Database::_search(const std::string &query, unsigned int flags)
 		} else {
 			switch (field_type(field_name)) {
 			case NUMERIC_TYPE:
+				prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 				nfp = new NumericFieldProcessor(prefix);
 				nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
 				queryparser.add_prefix(field_name, nfp);
@@ -612,6 +617,7 @@ Database::_search(const std::string &query, unsigned int flags)
 				queryparser.add_prefix(field_name, prefix);
 				break;
 			case DATE_TYPE:
+				prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 				field_value = timestamp_date(field_value);
 				if (field_value.size() == 0) {
 					LOG_DATABASE_WRAP(this, "ERROR: Didn't understand date specification.\n");
@@ -622,6 +628,7 @@ Database::_search(const std::string &query, unsigned int flags)
 				queryparser.add_prefix(field_name, dfp);
 				break;
 			case GEO_TYPE:
+					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 					if(isLatLongDistance(field_value)) {
 						gdfp = new LatLongDistanceFieldProcessor(prefix, field_name);
 						gdfps.push_back(std::unique_ptr<LatLongDistanceFieldProcessor>(gdfp));
@@ -633,6 +640,7 @@ Database::_search(const std::string &query, unsigned int flags)
 				
 				break;
 			case BOOLEAN_TYPE:
+				prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 				bfp = new BooleanFieldProcessor(prefix);
 				bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
 				queryparser.add_prefix(field_name, bfp);
