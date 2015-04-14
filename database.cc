@@ -499,40 +499,48 @@ Database::search(struct query_t e)
 	bool first_partial = true;
 	
  	LOG(this, "e.query size: %d\n", e.query.size());
- 	
  	std::vector<std::string>::const_iterator qit(e.query.begin());
+ 	unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
 	for (; qit != e.query.end(); qit++) {
-		unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
 		if (first) {
 			query = _search(*qit, flags);
-			first= false;
+			first = false;
 		} else {
 			query =  Xapian::Query(Xapian::Query::OP_AND, query, _search(*qit, flags));
 		}
 	}
-	LOG(this, "e.query: %s\n", query.serialise().c_str());
+	LOG(this, "e.query: %s\n", repr(query.serialise()).c_str());
 
 
+ 	LOG(this, "e.partial size: %d\n", e.partial.size());
 	std::vector<std::string>::const_iterator pit(e.partial.begin());
+	flags = Xapian::QueryParser::FLAG_PARTIAL;
 	for (; pit != e.partial.end(); pit++) {
-		unsigned int flags = Xapian::QueryParser::FLAG_PARTIAL;
 		if (first) {
 			query = _search(*pit, flags);
-			first= false;
+			first = false;
+		} else if(first_partial) {
+			query =  Xapian::Query(Xapian::Query::OP_AND, query, _search(*pit, flags));
+			first_partial = false;
 		} else {
-			if(first_partial) {
-				query =  Xapian::Query(Xapian::Query::OP_AND, query, _search(*pit, flags));
-				first_partial = false;
-			} else query = Xapian::Query(Xapian::Query::OP_AND_MAYBE , query, _search(*pit, flags));
+			query = Xapian::Query(Xapian::Query::OP_AND_MAYBE , query, _search(*pit, flags));
 		}
 	}
-	LOG(this, "e.partial: %s\n", query.serialise().c_str());
+	LOG(this, "e.partial: %s\n", repr(query.serialise()).c_str());
 	
+
+ 	LOG(this, "e.terms size: %d\n", e.terms.size());
 	std::vector<std::string>::const_iterator tit(e.terms.begin());
+	flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
 	for (; tit != e.terms.end(); tit++) {
-		unsigned int flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
-		_search(*tit, flags);
+		if (first) {
+			query = _search(*tit, flags);
+			first = false;
+		} else {
+			query = Xapian::Query(Xapian::Query::OP_AND, query, _search(*tit, flags));
+		}
 	}
+	LOG(this, "e.terms: %s\n", repr(query.serialise()).c_str());
 
 	return true;
 }
