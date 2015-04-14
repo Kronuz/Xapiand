@@ -646,13 +646,13 @@ Database::_search(const std::string &query, unsigned int flags)
 	try {
 		x_query = queryparser.parse_query(querystring, flags);
 		LOG_DATABASE_WRAP(this, "Query parser done\n");
-		LOG(this, "Query Finally: %s\n", x_query.serialise().c_str());
+		LOG(this, "Query Finally: '%s'\n", repr(x_query.serialise()).c_str());
 	} catch (Xapian::Error &er) {
 		LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 		reopen();
 		queryparser.set_database(*db);
 		x_query = queryparser.parse_query(querystring, flags);
-		LOG(this, "Query Finally: %s\n", x_query.serialise().c_str());
+		LOG(this, "Query Finally: '%s'\n", repr(x_query.serialise()).c_str());
 	}
 
 	if (g) {
