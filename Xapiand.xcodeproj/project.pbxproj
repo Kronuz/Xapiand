@@ -86,8 +86,6 @@
 		E5CEBCBD1A99C89000CD151F = {
 			isa = PBXGroup;
 			children = (
-				C35DB9DD1AD4538100054358 /* fields.cc */,
-				C35DB9DE1AD4538100054358 /* fields.h */,
 				E5CEBCC71A99C89000CD151F /* Products */,
 				E59725D51AA20D7B0060069C /* config.h */,
 				E59725D61AA2141F0060069C /* xapiand.h */,
@@ -108,6 +106,8 @@
 				E59725C81A9D25EB0060069C /* client_binary.cc */,
 				E59725CB1A9D25EB0060069C /* client_http.h */,
 				E59725CA1A9D25EB0060069C /* client_http.cc */,
+				C35DB9DE1AD4538100054358 /* fields.h */,
+				C35DB9DD1AD4538100054358 /* fields.cc */,
 				E5CEBCE61A9B228C00CD151F /* database.h */,
 				E5CEBCE91A9B22E600CD151F /* database.cc */,
 				E5CEBCD91A99C9BB00CD151F /* queue.h */,
