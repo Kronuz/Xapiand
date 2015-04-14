@@ -302,12 +302,12 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			}
 			LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name->string, value.c_str());
 			std::string val_serialized = serialise(std::string(name->string), value);
-			if (val_serialized.c_str()) {
+			if (val_serialized.size() != 0) {
 				unsigned int slot = get_slot(std::string(name->string));
 				doc.add_value(slot, val_serialized);
 				LOG_DATABASE_WRAP(this, "Slot: %X serialized: %s\n", slot, val_serialized.c_str());
 			} else {
-				LOG_ERR(this, "%s: %s not serialized", name->string, cJSON_Print(name));
+				LOG_ERR(this, "ERROR: %s: %s not serialized\n", name->string, cJSON_Print(name));
 				return false;
 			}
 		}
@@ -331,6 +331,10 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			if (name) {
 				LOG_DATABASE_WRAP(this, "Name: %s\n", name->valuestring);
 				term_v = serialise(std::string(name->valuestring), term_v);
+				if (term_v.size() != 0) {
+					LOG_ERR(this, "ERROR: %s: %s not serialized\n", name->string, term_v.c_str());
+					return false;
+				}
 			}
 			if (term) {
 				Xapian::termcount w;
