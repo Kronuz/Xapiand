@@ -607,27 +607,27 @@ Database::_search(const std::string &query, unsigned int flags)
 			}	
 		} else {
 			switch (field_type(field_name)) {
-			case NUMERIC_TYPE:
-				prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
-				nfp = new NumericFieldProcessor(prefix);
-				nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
-				queryparser.add_prefix(field_name, nfp);
-				break;
-			case STRING_TYPE: 
-				queryparser.add_prefix(field_name, prefix);
-				break;
-			case DATE_TYPE:
-				prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
-				field_value = timestamp_date(field_value);
-				if (field_value.size() == 0) {
-					LOG_DATABASE_WRAP(this, "ERROR: Didn't understand date specification.\n");
-					return queryparser.parse_query("");;
-				}
-				dfp = new DateFieldProcessor(prefix);
-				dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
-				queryparser.add_prefix(field_name, dfp);
-				break;
-			case GEO_TYPE:
+				case NUMERIC_TYPE:
+					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+					nfp = new NumericFieldProcessor(prefix);
+					nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
+					queryparser.add_prefix(field_name, nfp);
+					break;
+				case STRING_TYPE: 
+					queryparser.add_prefix(field_name, prefix);
+					break;
+				case DATE_TYPE:
+					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+					field_value = timestamp_date(field_value);
+					if (field_value.size() == 0) {
+						LOG_DATABASE_WRAP(this, "ERROR: Didn't understand date specification.\n");
+						return queryparser.parse_query("");;
+					}
+					dfp = new DateFieldProcessor(prefix);
+					dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
+					queryparser.add_prefix(field_name, dfp);
+					break;
+				case GEO_TYPE:
 					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 					if(isLatLongDistance(field_value)) {
 						gdfp = new LatLongDistanceFieldProcessor(prefix, field_name);
@@ -637,14 +637,13 @@ Database::_search(const std::string &query, unsigned int flags)
 						gfps.push_back(std::unique_ptr<LatLongFieldProcessor>(gfp));
 						queryparser.add_prefix(field_name, gfp);
 					}
-				
-				break;
-			case BOOLEAN_TYPE:
-				prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
-				bfp = new BooleanFieldProcessor(prefix);
-				bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
-				queryparser.add_prefix(field_name, bfp);
-				break;
+					break;
+				case BOOLEAN_TYPE:
+					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+					bfp = new BooleanFieldProcessor(prefix);
+					bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
+					queryparser.add_prefix(field_name, bfp);
+					break;
 			}
 		}
 		if (first_time) {
