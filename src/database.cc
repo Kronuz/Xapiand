@@ -496,7 +496,8 @@ Database::search(struct query_t e)
  	
  	Xapian::Query query;
  	bool first = true;
-
+	bool first_partial = true;
+	
  	LOG(this, "e.query size: %d\n", e.query.size());
  	
  	std::vector<std::string>::const_iterator qit(e.query.begin());
@@ -516,9 +517,19 @@ Database::search(struct query_t e)
 	std::vector<std::string>::const_iterator pit(e.partial.begin());
 	for (; pit != e.partial.end(); pit++) {
 		unsigned int flags = Xapian::QueryParser::FLAG_PARTIAL;
-		_search(*pit, flags);
+		if (first) {
+			query = _search(*pit, flags);
+			first= false;
+		} else {
+			if(first_partial) {
+				query =  Xapian::Query(Xapian::Query::OP_AND, query, _search(*pit, flags));
+				first_partial = false;
+			} else query = Xapian::Query(Xapian::Query::OP_AND_MAYBE , query, _search(*pit, flags));
+		}
 	}
-
+	LOG(this, "e.partial: ");
+	print_hexstr(query.serialise());
+	
 	std::vector<std::string>::const_iterator tit(e.terms.begin());
 	for (; tit != e.terms.end(); tit++) {
 		unsigned int flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
