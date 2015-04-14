@@ -611,10 +611,23 @@ Database::_search(const std::string &query, unsigned int flags)
 					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 					nfp = new NumericFieldProcessor(prefix);
 					nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
-					queryparser.add_prefix(field_name, nfp);
+					if (strhasupper(field_name)) {
+						LOG(this, "Boolean Prefix\n");
+						queryparser.add_boolean_prefix(field_name, nfp);
+					} else {
+						LOG(this, "Prefix\n");
+						queryparser.add_prefix(field_name, nfp);
+					}
 					break;
 				case STRING_TYPE: 
-					queryparser.add_prefix(field_name, prefix);
+					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+					if (strhasupper(field_name)) {
+						LOG(this, "Boolean Prefix\n");
+						queryparser.add_boolean_prefix(field_name, prefix);
+					} else {
+						LOG(this, "Prefix\n");
+						queryparser.add_prefix(field_name, prefix);
+					}
 					break;
 				case DATE_TYPE:
 					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
@@ -625,7 +638,13 @@ Database::_search(const std::string &query, unsigned int flags)
 					}
 					dfp = new DateFieldProcessor(prefix);
 					dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
-					queryparser.add_prefix(field_name, dfp);
+					if (strhasupper(field_name)) {
+						LOG(this, "Boolean Prefix\n");
+						queryparser.add_boolean_prefix(field_name, dfp);
+					} else {
+						LOG(this, "Prefix\n");
+						queryparser.add_prefix(field_name, dfp);
+					}
 					break;
 				case GEO_TYPE:
 					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
@@ -635,14 +654,26 @@ Database::_search(const std::string &query, unsigned int flags)
 					} else {
 						gfp = new LatLongFieldProcessor(prefix);
 						gfps.push_back(std::unique_ptr<LatLongFieldProcessor>(gfp));
-						queryparser.add_prefix(field_name, gfp);
+						if (strhasupper(field_name)) {
+							LOG(this, "Boolean Prefix\n");
+							queryparser.add_boolean_prefix(field_name, gfp);
+						} else {
+							LOG(this, "Prefix\n");
+							queryparser.add_prefix(field_name, gfp);
+						}
 					}
 					break;
 				case BOOLEAN_TYPE:
 					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 					bfp = new BooleanFieldProcessor(prefix);
 					bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
-					queryparser.add_prefix(field_name, bfp);
+					if (strhasupper(field_name)) {
+						LOG(this, "Boolean Prefix\n");
+						queryparser.add_boolean_prefix(field_name, bfp);
+					} else {
+						LOG(this, "Prefix\n");
+						queryparser.add_prefix(field_name, bfp);
+					}
 					break;
 			}
 		}
