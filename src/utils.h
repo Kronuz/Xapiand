@@ -110,6 +110,7 @@ int get_coords(std::string str, double *coords);
 bool isRange(std::string str);
 bool isLatLongDistance(std::string str);
 void get_order(std::string str, struct query_t &e);
+bool StartsWith(const std::string& text,const std::string& token);
 
 #define LOG(...) log(__VA_ARGS__)
 #define LOG_ERR(...) log(__VA_ARGS__)
