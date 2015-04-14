@@ -752,3 +752,10 @@ bool isLatLongDistance(std::string str)
 		}return true;
 	} else return false;
 }
+
+bool StartsWith(const std::string& text,const std::string& token)
+{
+	if (text.length() < token.length())
+		return false;
+	return (text.compare(0, token.length(), token) == 0);
+}
