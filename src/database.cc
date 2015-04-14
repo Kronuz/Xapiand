@@ -497,61 +497,95 @@ Database::search(struct query_t e)
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
 		return false;
 	}
- 	
- 	Xapian::Query query;
- 	bool first = true;
-	bool first_partial = true;
 	
- 	LOG(this, "e.query size: %d\n", e.query.size());
- 	std::vector<std::string>::const_iterator qit(e.query.begin());
- 	unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
-	for (; qit != e.query.end(); qit++) {
-		if (first) {
-			query = _search(*qit, flags);
-			first = false;
-		} else {
-			query =  Xapian::Query(Xapian::Query::OP_AND, query, _search(*qit, flags));
+	Xapian::Query queryQ;
+	Xapian::Query queryP;
+	Xapian::Query queryT;
+	Xapian::Query queryF;
+	bool first = true;
+	try {
+		LOG(this, "e.query size: %d\n", e.query.size());
+		std::vector<std::string>::const_iterator qit(e.query.begin());
+		std::vector<std::string>::const_iterator lit(e.language.begin());
+		std::string lan;
+		unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
+		for (; qit != e.query.end(); qit++) {
+			if (lit != e.language.end()) {
+				lan = *lit;
+				lit++;
+			}
+			if (first) {
+				queryQ = _search(*qit, flags, true, lan);
+				first = false;
+			} else {
+				queryQ =  Xapian::Query(Xapian::Query::OP_AND, queryQ, _search(*qit, flags, true, lan));
+			}
 		}
-	}
-	LOG(this, "e.query: %s\n", repr(query.serialise()).c_str());
+		LOG(this, "e.query: %s\n", repr(queryQ.serialise()).c_str());
 
 
- 	LOG(this, "e.partial size: %d\n", e.partial.size());
-	std::vector<std::string>::const_iterator pit(e.partial.begin());
-	flags = Xapian::QueryParser::FLAG_PARTIAL;
-	for (; pit != e.partial.end(); pit++) {
-		if (first) {
-			query = _search(*pit, flags);
-			first = false;
-		} else if(first_partial) {
-			query =  Xapian::Query(Xapian::Query::OP_AND, query, _search(*pit, flags));
-			first_partial = false;
-		} else {
-			query = Xapian::Query(Xapian::Query::OP_AND_MAYBE , query, _search(*pit, flags));
+		LOG(this, "e.partial size: %d\n", e.partial.size());
+		std::vector<std::string>::const_iterator pit(e.partial.begin());
+		flags = Xapian::QueryParser::FLAG_PARTIAL;
+		first = true;
+		for (; pit != e.partial.end(); pit++) {
+			if (first) {
+				queryP = _search(*pit, flags, false, "");
+				first = false;
+			} else {
+				queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, _search(*pit, flags, false, ""));
+			}
 		}
-	}
-	LOG(this, "e.partial: %s\n", repr(query.serialise()).c_str());
-	
+		LOG(this, "e.partial: %s\n", repr(queryP.serialise()).c_str());
 
- 	LOG(this, "e.terms size: %d\n", e.terms.size());
-	std::vector<std::string>::const_iterator tit(e.terms.begin());
-	flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
-	for (; tit != e.terms.end(); tit++) {
-		if (first) {
-			query = _search(*tit, flags);
-			first = false;
-		} else {
-			query = Xapian::Query(Xapian::Query::OP_AND, query, _search(*tit, flags));
+
+		LOG(this, "e.terms size: %d\n", e.terms.size());
+		std::vector<std::string>::const_iterator tit(e.terms.begin());
+		flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
+		first = true;
+		for (; tit != e.terms.end(); tit++) {
+			if (first) {
+				queryT = _search(*tit, flags, false, "");
+				first = false;
+			} else {
+				queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, _search(*tit, flags, false, ""));
+			}
 		}
+		LOG(this, "e.terms: %s\n", repr(queryT.serialise()).c_str());
+
+		first = true;
+		if (e.query.size() != 0) {
+			queryF = queryQ;
+			first = false;
+		}
+		if (e.partial.size() != 0) {
+			if (first) {
+				queryF = queryP;
+				first = false;	
+			} else {
+				queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryP);
+			}
+		}
+		if (e.terms.size() != 0) {
+			if (first) {
+				queryF = queryT;
+				first = false;
+			} else {
+				queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryT);
+			}
+		}
+		LOG(this, "Query Final: %s\n", repr(queryF.serialise()).c_str());
+	} catch (const Xapian::Error &error){
+		LOG_ERR(this, "ERROR: In search: %s\n", error.get_msg().c_str());
+		return false;
 	}
-	LOG(this, "e.terms: %s\n", repr(query.serialise()).c_str());
 
 	return true;
 }
 
 
 Xapian::Query
-Database::_search(const std::string &query, unsigned int flags)
+Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan)
 {
 	int len = (int) query.size(), offset = 0;
 	group *g = NULL;
@@ -560,6 +594,17 @@ Database::_search(const std::string &query, unsigned int flags)
 	Xapian::QueryParser queryparser;
 	queryparser.set_database(*db);
 	Xapian::Query x_query;
+
+	if (text) {
+		if (lan.size() != 0) {
+			LOG(this, "User-defined language: %s\n", lan.c_str());
+			queryparser.set_stemmer(Xapian::Stem(lan));
+		} else {
+			LOG(this, "Default language: en\n");
+			queryparser.set_stemmer(Xapian::Stem("en"));
+		}
+		queryparser.set_stemming_strategy(queryparser.STEM_SOME);
+	}
 
 	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
 	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
@@ -612,8 +657,7 @@ Database::_search(const std::string &query, unsigned int flags)
 					queryparser.add_valuerangeprocessor(dvrp);
 					break;					
 				default:
-					LOG_ERR(this, "This type of Data has no support for range search\n");
-					return queryparser.parse_query("");
+					throw Xapian::QueryParserError("This type of Data has no support for range search.\n");
 			}	
 		} else {
 			switch (field_type(field_name)) {
