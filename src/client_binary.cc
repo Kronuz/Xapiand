@@ -77,7 +77,7 @@ void BinaryClient::on_read(const char *buf, ssize_t received)
 		const char *o = buffer.data();
 		const char *p = o;
 		const char *p_end = p + buffer.size();
-		
+
 		message_type type = static_cast<message_type>(*p++);
 		size_t len = decode_length(&p, p_end, true);
 		if (len == -1) {
@@ -85,9 +85,9 @@ void BinaryClient::on_read(const char *buf, ssize_t received)
 		}
 		std::string data = std::string(p, len);
 		buffer.erase(0, p - o + len);
-		
+
 		Buffer *msg = new Buffer(type, data.c_str(), data.size());
-		
+
 		messages_queue.push(msg);
 	}
 	pthread_mutex_lock(&qmtx);
@@ -182,7 +182,7 @@ void BinaryClient::release_db(Xapian::Database *db_)
 		Database *database = databases[db_];
 		databases.erase(db_);
 		pthread_mutex_unlock(&qmtx);
-		
+
 		database_pool->checkin(&database);
 	}
 }
@@ -226,4 +226,3 @@ void BinaryClient::run()
 		}
 	}
 }
-
