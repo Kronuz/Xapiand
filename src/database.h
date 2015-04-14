@@ -63,7 +63,7 @@ public:
 	Xapian::Enquire get_enquire(Xapian::Query query, struct query_t e);
 	std::string get_results(Xapian::Query query, struct query_t e);
 	bool search(struct query_t e);
-	Xapian::Query _search(const std::string &query, unsigned int flags);
+	Xapian::Query _search(const std::string &query, unsigned int flags, bool text, const std::string &lan);
 	
 	
 private:
