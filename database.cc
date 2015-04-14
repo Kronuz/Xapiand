@@ -626,7 +626,8 @@ Database::_search(const std::string &query, unsigned int flags)
 					}
 					break;
 				case STRING_TYPE: 
-					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+					(field_name.size() != 0) ? prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : prefix = std::string("");
+					LOG(this, "Prefix: %s\n", prefix.c_str());
 					if (strhasupper(field_name)) {
 						LOG(this, "Boolean Prefix\n");
 						queryparser.add_boolean_prefix(field_name, prefix);
