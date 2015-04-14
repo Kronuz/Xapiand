@@ -675,13 +675,15 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					break;
 				case STRING_TYPE: 
 					(field_name.size() != 0) ? prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : prefix = std::string("");
-					LOG(this, "Prefix: %s\n", prefix.c_str());
-					if (strhasupper(field_name)) {
-						LOG(this, "Boolean Prefix\n");
-						queryparser.add_boolean_prefix(field_name, prefix);
-					} else {
-						LOG(this, "Prefix\n");
-						queryparser.add_prefix(field_name, prefix);
+					if (prefix.size() != 0) {
+						LOG(this, "Prefix: %s\n", prefix.c_str());
+						if (strhasupper(field_name)) {
+							LOG(this, "Boolean Prefix\n");
+							queryparser.add_boolean_prefix(field_name, prefix);
+						} else {
+							LOG(this, "Prefix\n");
+							queryparser.add_prefix(field_name, prefix);
+						}
 					}
 					break;
 				case DATE_TYPE:
