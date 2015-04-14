@@ -649,6 +649,13 @@ Database::_search(const std::string &query, unsigned int flags)
 					if(isLatLongDistance(field_value)) {
 						gdfp = new LatLongDistanceFieldProcessor(prefix, field_name);
 						gdfps.push_back(std::unique_ptr<LatLongDistanceFieldProcessor>(gdfp));
+						if (strhasupper(field_name)) {
+							LOG(this, "Boolean Prefix\n");
+							queryparser.add_boolean_prefix(field_name, gdfp);
+						} else {
+							LOG(this, "Prefix\n");
+							queryparser.add_prefix(field_name, gdfp);
+						}
 					} else {
 						gfp = new LatLongFieldProcessor(prefix);
 						gfps.push_back(std::unique_ptr<LatLongFieldProcessor>(gfp));
