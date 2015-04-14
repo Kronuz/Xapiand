@@ -107,11 +107,12 @@ std::string get_slot_hex(const std::string &name);
 void print_hexstr(const std::string &str);
 bool strhasupper(const std::string &str);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups);
-int get_coords(std::string str, double *coords);
-bool isRange(std::string str);
-bool isLatLongDistance(std::string str);
-void get_order(std::string str, struct query_t &e);
-bool StartsWith(const std::string& text,const std::string& token);
+int get_coords(const std::string &str, double *coords);
+bool isRange(const std::string &str);
+bool isLatLongDistance(const std::string &str);
+void get_order(const std::string &str, struct query_t &e);
+bool isNumeric(const std::string &str);
+bool StartsWith(const std::string &text, const std::string &token);
 
 #define LOG(...) log(__VA_ARGS__)
 #define LOG_ERR(...) log(__VA_ARGS__)
