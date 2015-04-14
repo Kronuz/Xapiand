@@ -162,7 +162,7 @@ void HttpClient::run()
 			server->manager->async_shutdown.send();
 			return;
 		}
-		
+
 		switch (parser.method) {
 			//DELETE
 			case 0:
@@ -179,14 +179,14 @@ void HttpClient::run()
 			default:
 				break;
 		}
-		
+
 		//*-------------
 		std::string content;
 		cJSON *json = cJSON_Parse(body.c_str());
 		cJSON *query = json ? cJSON_GetObjectItem(json, "query") : NULL;
 		cJSON *term = query ? cJSON_GetObjectItem(query, "term") : NULL;
 		cJSON *text = term ? cJSON_GetObjectItem(term, "text") : NULL;
-		
+
 		cJSON *root = cJSON_CreateObject();
 		cJSON *response = cJSON_CreateObject();
 		cJSON_AddItemToObject(root, "response", response);
@@ -213,7 +213,7 @@ void HttpClient::run()
 			}
 		}
 		cJSON_Delete(json);
-		
+
 		bool pretty = false;
 		char *out;
 		if (pretty) {
@@ -224,7 +224,7 @@ void HttpClient::run()
 		content = out;
 		cJSON_Delete(root);
 		free(out);
-		
+
 		char tmp[20];
 		content += "\r\n";
 		std::string http_response;
@@ -263,7 +263,6 @@ void HttpClient::_delete()
 
 void HttpClient::_index()
 {
-	
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
@@ -301,7 +300,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 	LOG_CONN_WIRE(this,"URL: %s\n", b.c_str());
 	if(http_parser_parse_url(b.c_str(), b.size(), 0, &u) == 0){
 		LOG_CONN_WIRE(this,"Parsing done\n");
-		
+
 		if (u.field_set & (1 <<  UF_PATH )){
 			size_t path_size = u.field_data[3].len;
 			std::string path_buf(b.c_str() + u.field_data[3].off, u.field_data[3].len);
@@ -312,10 +311,10 @@ void HttpClient::_endpointgen(struct query_t &e)
 			std::string nsp_;
 			std::string pat_;
 			std::string hos_;
-			
+
 			while (url_path(path_buf.c_str(), path_size, &p) == 0) {
 				command  = urldecode(p.off_command, p.len_command);
-				
+
 				if (p.len_namespace) {
 					nsp_ = urldecode(p.off_namespace, p.len_namespace) + "/";
 				} else {
@@ -334,27 +333,27 @@ void HttpClient::_endpointgen(struct query_t &e)
 				endp = "xapian://" + hos_ + nsp_ + pat_;
 				//endp = "file://" + nsp_ + pat_;
 				endpoints.insert(Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT));
-				
+
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
 			}
 		}
-		
+
 		/*LOG(this,"FIRST QUERY PARSER SIZE %d\n",u.field_data[4].len);
 		 LOG(this,"FIRST QUERY PARSER OFFSET %d\n",u.field_data[4].off);
 		 LOG(this,"BUFFER %s\n",b.c_str());*/
 		if (u.field_set & (1 <<  UF_QUERY )) {
 			size_t query_size = u.field_data[4].len;
 			std::string query_buf(b.c_str() + u.field_data[4].off, u.field_data[4].len);
-			
+
 			struct parser_query_t q;
-			
+
 			memset(&q, 0, sizeof(q));
 			if (url_qs("offset", query_buf.c_str(), query_size, &q) != -1) {
 				e.offset = atoi(urldecode(q.offset, q.length).c_str());
 			} else {
 				e.offset = 0;
 			}
-			
+
 			memset(&q, 0, sizeof(q));
 			if (url_qs("limit", query_buf.c_str(), query_size, &q) != -1) {
 				e.limit = atoi(urldecode(q.offset, q.length).c_str());
@@ -373,12 +372,12 @@ void HttpClient::_endpointgen(struct query_t &e)
 			while (url_qs("partial", query_buf.c_str(), query_size, &q) != -1) {
 				e.partial.push_back(urldecode(q.offset, q.length));
 			}
-			
+
 			memset(&q, 0, sizeof(q));
 			while (url_qs("terms", query_buf.c_str(), query_size, &q) != -1) {
 				e.terms.push_back(urldecode(q.offset, q.length));
-			}			
-			
+			}
+
 			memset(&q, 0, sizeof(q));
 			while (url_qs("order", query_buf.c_str(), query_size, &q) != -1) {
 				e.order.push_back(urldecode(q.offset, q.length));
@@ -394,8 +393,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 				e.language.push_back(urldecode(q.offset, q.length));
 			}
 		}
-		
 	} else {
 		LOG_CONN_WIRE(this,"Parsing not done\n");
-		}
+	}
 }

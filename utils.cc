@@ -127,6 +127,7 @@ const char HEX2DEC[256] =
 	/* F */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1
 };
 
+
 std::string urldecode(const char *src, size_t size)
 {
 	// Note from RFC1630:  "Sequences which start with a percent sign
@@ -165,6 +166,7 @@ std::string urldecode(const char *src, size_t size)
 	//std::replace( sResult.begin(), sResult.end(), '+', ' ');
 	return sResult;
 }
+
 
 int url_qs(const char *name, const char *qs, size_t size, parser_query *par)
 {
@@ -656,7 +658,7 @@ std::string timestamp_date(const std::string &str)
 		timeinfo->tm_mday   = n[2]; 
 		if (sign == '-') {
 			timeinfo->tm_hour  = n[3] + n[7];
-			timeinfo->tm_min   = n[4] + n[8];   
+			timeinfo->tm_min   = n[4] + n[8];
 		} else {
 			timeinfo->tm_hour  = n[3] - n[7];
 			timeinfo->tm_min   = n[4] - n[8];

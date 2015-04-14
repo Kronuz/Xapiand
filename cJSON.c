@@ -107,7 +107,7 @@ static const char *parse_number(cJSON *item,const char *num)
 	}
 
 	n=sign*n*pow(10.0,(scale+subscale*signsubscale));	/* number = +/- number.fraction * 10^+/- exponent */
-	
+
 	item->valuedouble=n;
 	item->valueint=(int)n;
 	item->type=cJSON_Number;
@@ -481,7 +481,7 @@ static char *print_array(cJSON *item,int depth,int fmt,printbuffer *p)
 			if (ret) len+=strlen(ret)+2+(fmt?1:0); else fail=1;
 			child=child->next;
 		}
-		
+
 		/* If we didn't fail, try to malloc the output string */
 		if (!fail)	out=(char*)cJSON_malloc(len);
 		/* If that fails, we fail. */
@@ -494,7 +494,7 @@ static char *print_array(cJSON *item,int depth,int fmt,printbuffer *p)
 			cJSON_free(entries);
 			return 0;
 		}
-		
+
 		/* Compose the output array. */
 		*out='[';
 		ptr=out+1;*ptr=0;
@@ -515,11 +515,11 @@ static const char *parse_object(cJSON *item,const char *value)
 {
 	cJSON *child;
 	if (*value!='{')	{ep=value;return 0;}	/* not an object! */
-	
+
 	item->type=cJSON_Object;
 	value=skip(value+1);
 	if (*value=='}') return value+1;	/* empty array. */
-	
+
 	item->child=child=cJSON_New_Item();
 	if (!item->child) return 0;
 	value=skip(parse_string(child,skip(value)));
@@ -528,7 +528,7 @@ static const char *parse_object(cJSON *item,const char *value)
 	if (*value!=':') {ep=value;return 0;}	/* fail! */
 	value=skip(parse_value(child,skip(value+1)));	/* skip any spacing, get the value. */
 	if (!value) return 0;
-	
+
 	while (*value==',')
 	{
 		cJSON *new_item;
@@ -541,7 +541,7 @@ static const char *parse_object(cJSON *item,const char *value)
 		value=skip(parse_value(child,skip(value+1)));	/* skip any spacing, get the value. */
 		if (!value) return 0;
 	}
-	
+
 	if (*value=='}') return value+1;	/* end of array */
 	ep=value;return 0;	/* malformed. */
 }
@@ -604,9 +604,7 @@ static char *print_object(cJSON *item,int depth,int fmt,printbuffer *p)
 		if (fmt)	for (i=0;i<depth-1;i++) *ptr++='\t';
 		*ptr++='}';*ptr=0;
 		out=(p->buffer)+i;
-	}
-	else
-	{
+	} else {
 		/* Allocate space for the names and the objects */
 		entries=(char**)cJSON_malloc(numentries*sizeof(char*));
 		if (!entries) return 0;
@@ -624,7 +622,7 @@ static char *print_object(cJSON *item,int depth,int fmt,printbuffer *p)
 			if (str && ret) len+=strlen(ret)+strlen(str)+2+(fmt?2+depth:0); else fail=1;
 			child=child->next;
 		}
-		
+
 		/* Try to allocate the output string */
 		if (!fail)	out=(char*)cJSON_malloc(len);
 		if (!out) fail=1;
@@ -636,7 +634,7 @@ static char *print_object(cJSON *item,int depth,int fmt,printbuffer *p)
 			cJSON_free(names);cJSON_free(entries);
 			return 0;
 		}
-		
+
 		/* Compose the output: */
 		*out='{';ptr=out+1;if (fmt)*ptr++='\n';*ptr=0;
 		for (i=0;i<numentries;i++)
@@ -649,7 +647,7 @@ static char *print_object(cJSON *item,int depth,int fmt,printbuffer *p)
 			if (fmt) *ptr++='\n';*ptr=0;
 			cJSON_free(names[i]);cJSON_free(entries[i]);
 		}
-		
+
 		cJSON_free(names);cJSON_free(entries);
 		if (fmt) for (i=0;i<depth-1;i++) *ptr++='\t';
 		*ptr++='}';*ptr++=0;

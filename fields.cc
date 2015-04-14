@@ -72,7 +72,7 @@ LatLongDistanceFieldProcessor::operator()(const std::string &str)
 		Xapian::LatLongCoord centre(coords_[0], coords_[1]);
 		coords_[2] = Xapian::miles_to_metres(coords_[2]);
 		Xapian::GreatCircleMetric metric;
-		
+
 		Xapian::LatLongDistancePostingSource ps(get_slot(field), centre, metric, coords_[2]);
 		return Xapian::Query(&ps);
 	}
@@ -116,7 +116,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 {
 	std::string buf;
 	LOG(this, "Inside of DateTimeValueRangeProcessor\n");
-	
+
 	if (begin.size() != 0) {
 		buf = prefix + serialise_date(begin);
 		if (buf != "") {
@@ -127,7 +127,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 		}
 	}
 	buf = "";
-	
+
 	if (end.size() != 0) {
 		buf = prefix + serialise_date(end);
 		if (buf != "") {

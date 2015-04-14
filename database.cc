@@ -312,7 +312,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			}
 		}
 	}
-	
+
 	if (document_terms) {
 		LOG_DATABASE_WRAP(this, "Terms..\n");
 		for (int i = 0; i < cJSON_GetArraySize(document_terms); i++) {
@@ -366,7 +366,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			}
 		}
 	}
-	
+
 	if (document_texts) {
 		LOG_DATABASE_WRAP(this, "Texts..\n");
 		for (int i = 0; i < cJSON_GetArraySize(document_texts); i++) {
@@ -460,7 +460,7 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 		for (int j = 0; j < g_serialise.size(); j += 6) {
 			found = false;
 			std::string s_coord = std::string(g_serialise, j, i);
-			
+
 			std::vector<std::string>::const_iterator it(terms.begin());
 			for (; it != terms.end(); it++) {
 				if (s_coord.compare(*it) == 0) {
@@ -497,7 +497,7 @@ Database::search(struct query_t e)
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
 		return false;
 	}
-	
+
 	Xapian::Query queryQ;
 	Xapian::Query queryP;
 	Xapian::Query queryT;
@@ -631,7 +631,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		field_name_dot = std::string(query.c_str() + g[1].start, g[1].end - g[1].start);
 		field_name = std::string(query.c_str() + g[2].start, g[2].end - g[2].start);
 		field_value = std::string(query.c_str() + g[3].start, g[3].end - g[3].start);
-		
+
 		if(isRange(field_value)){
 			switch (field_type(field_name)) {
 				case NUMERIC_TYPE:
@@ -655,10 +655,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					dvrps.push_back(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp));
 					LOG(this, "Date Slot: %u Field_name: %s\n", slot, field_name.c_str());
 					queryparser.add_valuerangeprocessor(dvrp);
-					break;					
+					break;
 				default:
 					throw Xapian::QueryParserError("This type of Data has no support for range search.\n");
-			}	
+			}
 		} else {
 			switch (field_type(field_name)) {
 				case NUMERIC_TYPE:
@@ -751,9 +751,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	if (offset != len) {
 		throw Xapian::QueryParserError("Query '" + query + "' contains errors.\n" );
 	}
-	
+
 	LOG_DATABASE_WRAP(this, "Query processed: (%s)\n", querystring.c_str());	
-	
+
 	try {
 		x_query = queryparser.parse_query(querystring, flags);
 		LOG_DATABASE_WRAP(this, "Query parser done\n");
@@ -812,16 +812,15 @@ Database::get_enquire(Xapian::Query query, struct query_t e)
 std::string
 Database::get_results(Xapian::Query query, struct query_t e)
 {
-	
 	cJSON *root = cJSON_CreateObject();
-	
+
 	int rc = 0;
 	int maxitems = db->get_doccount() - e.offset;
 	maxitems = std::max(std::min(maxitems, e.limit), 0);
-	
+
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
-	
+
 	Xapian::MSet mset = enquire.get_mset(e.offset, e.limit);
 	LOG(this, "mset size:%d!!!!\n",mset.size());
 	for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); ++m) {
@@ -836,7 +835,7 @@ Database::get_results(Xapian::Query query, struct query_t e)
 		cJSON_AddStringToObject(response, "data", data.c_str());
 		rc ++;
 	}
-	
+
 	std::string res =cJSON_PrintUnformatted(root);
 	LOG(this, "RESPONSE------->%s\n",res.c_str());
 	cJSON_Delete(root);
