@@ -745,13 +745,10 @@ bool isRange(std::string str)
 bool isLatLongDistance(std::string str)
 {
 	group *gr = NULL;
-	LOG(NULL,"Here1!!!\n");
 	if ((pcre_search(str.c_str(), (int)str.size(), 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re , &gr)) != -1) {
 		if (gr) {
 			free(gr);
 			gr = NULL;
-		}
-		LOG(NULL,"Here2!!!\n");
-		return true;
+		}return true;
 	} else return false;
 }
