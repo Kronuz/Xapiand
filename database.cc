@@ -510,8 +510,7 @@ Database::search(struct query_t e)
 			query =  Xapian::Query(Xapian::Query::OP_AND, query, _search(*qit, flags));
 		}
 	}
-	LOG(this, "e.query: ");
-	print_hexstr(query.serialise());
+	LOG(this, "e.query: %s\n", query.serialise().c_str());
 
 
 	std::vector<std::string>::const_iterator pit(e.partial.begin());
@@ -527,8 +526,7 @@ Database::search(struct query_t e)
 			} else query = Xapian::Query(Xapian::Query::OP_AND_MAYBE , query, _search(*pit, flags));
 		}
 	}
-	LOG(this, "e.partial: ");
-	print_hexstr(query.serialise());
+	LOG(this, "e.partial: %s\n", query.serialise().c_str());
 	
 	std::vector<std::string>::const_iterator tit(e.terms.begin());
 	for (; tit != e.terms.end(); tit++) {
