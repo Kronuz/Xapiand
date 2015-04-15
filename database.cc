@@ -78,7 +78,12 @@ Database::reopen()
 		for (; i != endpoints.end(); ++i) {
 			e = &*i;
 			if (e->protocol == "file") {
-				db->add_database(Xapian::Database(e->path, Xapian::DB_CREATE_OR_OPEN));
+				try {
+					db->add_database(Xapian::Database(e->path, Xapian::DB_OPEN));
+				} catch (Xapian::DatabaseOpeningError) {
+					Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
+					db->add_database(Xapian::Database(e->path, Xapian::DB_OPEN));
+				}
 			} else {
 				db->add_database(Xapian::Remote::open(e->host, e->port, 0, 10000, e->path));
 			}
