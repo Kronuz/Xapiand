@@ -305,7 +305,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			if (val_serialized.size() != 0) {
 				unsigned int slot = get_slot(std::string(name->string));
 				doc.add_value(slot, val_serialized);
-				LOG_DATABASE_WRAP(this, "Slot: %X serialized: %s\n", slot, val_serialized.c_str());
+				LOG_DATABASE_WRAP(this, "Slot: %X serialized: %s\n", slot, repr(val_serialized).c_str());
 			} else {
 				LOG_ERR(this, "ERROR: %s: %s not serialized\n", name->string, cJSON_Print(name));
 				return false;
@@ -347,7 +347,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 						(name) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string("");
 						std::string nameterm(prefixed(term_v, name_v));
 						doc.add_posting(nameterm, position->valueint, w);
-						LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", nameterm.c_str(), position->valueint, w);
+						LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", repr(nameterm).c_str(), position->valueint, w);
 					}
 				} else {
 					if (name && name->valuestring[0] == 'g' && name->valuestring[1] == '_') {
@@ -357,7 +357,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 						(name) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string("");
 						std::string nameterm(prefixed(term_v, name_v));
 						doc.add_term(nameterm, w);
-						LOG_DATABASE_WRAP(this, "Term: %s %d\n", nameterm.c_str(), w);
+						LOG_DATABASE_WRAP(this, "Term: %s %d\n", repr(nameterm).c_str(), w);
 					}
 				}
 			} else {
@@ -474,15 +474,14 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 				std::string name_v;
 				(name.c_str()) ? name_v = get_prefix(name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string(DOCUMENT_CUSTOM_TERM_PREFIX);
 				std::string nameterm(prefixed(s_coord, name_v));
-				LOG(this, "Nameterm: %s   Prefix: %s   Term: ", nameterm.c_str(), name_v.c_str());
-				print_hexstr(s_coord);
+				LOG(this, "Nameterm: %s   Prefix: %s   Term: %s\n",  repr(nameterm).c_str(), name_v.c_str(), repr(s_coord).c_str());
 
 				if (position > 0) {
 					doc->add_posting(nameterm, position, w);
-					LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", nameterm.c_str(), position, w);
+					LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", repr(nameterm).c_str(), position, w);
 				} else {
 					doc->add_term(nameterm, w);
-					LOG_DATABASE_WRAP(this, "Term: %s %d\n", nameterm.c_str(), w);
+					LOG_DATABASE_WRAP(this, "Term: %s %d\n", repr(nameterm).c_str(), w);
 				}
 				terms.push_back(s_coord);
 			}
