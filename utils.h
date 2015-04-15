@@ -105,7 +105,6 @@ double strtodouble(const std::string &str);
 std::string timestamp_date(const std::string &str);
 std::string get_prefix(const std::string &name, const std::string &prefix);
 std::string get_slot_hex(const std::string &name);
-void print_hexstr(const std::string &str);
 bool strhasupper(const std::string &str);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups);
 int get_coords(const std::string &str, double *coords);
