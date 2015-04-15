@@ -551,6 +551,8 @@ std::string prefixed(const std::string &term, const std::string &prefix)
 
 unsigned int get_slot(const std::string &name)
 {
+	if (stringtolower(name).compare("id") == 0) return 0;
+
 	std::string standard_name;
 	if (strhasupper(name)) {
 		standard_name = stringtoupper(name);
@@ -559,7 +561,9 @@ unsigned int get_slot(const std::string &name)
 	}
 	std::string _md5 = std::string(md5(standard_name), 24, 8);
 	unsigned int slot = hex2int(_md5);
-	if (slot == 0xffffffff) {
+	if (slot == 0x00000000) {
+		slot = 0x00000001;
+	} else if (slot == 0xffffffff) {
 		slot = 0xfffffffe;
 	}
 	return slot;

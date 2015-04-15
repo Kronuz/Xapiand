@@ -273,7 +273,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 	std::string document_id;
 	if (_document_id.c_str()) {
 		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
-		doc.add_value(get_slot(std::string("ID")), document_id);
+		doc.add_value(0, document_id);
 		document_id = prefixed(_document_id, std::string(DOCUMENT_ID_TERM_PREFIX));
 		doc.add_boolean_term(document_id);
 	} else {
