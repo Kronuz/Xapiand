@@ -362,6 +362,14 @@ void HttpClient::_endpointgen(struct query_t &e)
 			}
 
 			memset(&q, 0, sizeof(q));
+			if (url_qs("spelling", query_buf.c_str(), query_size, &q) != -1) {
+				std::string spelling = serialise_bool(urldecode(q.offset, q.length));
+				(spelling.compare("f") == 0) ? e.spelling = false : e.spelling = true;
+			} else {
+				e.spelling = true;
+			}
+
+			memset(&q, 0, sizeof(q));
 			LOG(this, "Buffer: %s\n", query_buf.c_str());
 			while (url_qs("query", query_buf.c_str(), query_size, &q) != -1) {
 				LOG(this, "%s\n", urldecode(q.offset, q.length).c_str());
