@@ -514,9 +514,13 @@ std::string serialise_bool(const std::string &field_value)
 std::string stringtoupper(const std::string &str)
 {
 	std::string tmp = str;
-	for (unsigned int i = 0; i < tmp.size(); i++)  {
-		tmp.at(i) = toupper(tmp.at(i));
-	}
+
+	struct TRANSFORM {
+		char operator() (char c) { return  toupper(c);}
+	};
+
+	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM());
+
 	return tmp;
 }
 
@@ -691,7 +695,14 @@ std::string timestamp_date(const std::string &str)
 std::string get_prefix(const std::string &name, const std::string &prefix)
 {
 	std::string slot = get_slot_hex(name);
-	return stringtoupper(prefix + slot);
+
+	struct TRANSFORM {
+		char operator() (char c) { return  c + 17;}
+	};
+
+	std::transform(slot.begin(), slot.end(), slot.begin(), TRANSFORM());
+
+	return prefix + slot;
 }
 
 
