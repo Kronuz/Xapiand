@@ -51,6 +51,7 @@ std::string repr(const std::string &string);
 typedef struct query_t {
 	int offset;
 	int limit;
+	bool spelling;
 	std::vector <std::string> language;
 	std::vector <std::string> query;
 	std::vector <std::string> partial;
