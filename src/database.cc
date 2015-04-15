@@ -655,7 +655,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case DATE_TYPE:
 					slot = get_slot(field_name);
 					field_name_dot = std::string("");
-					dvrp = new DateTimeValueRangeProcessor(slot, "");
+					dvrp = new DateTimeValueRangeProcessor(slot, field_name_dot);
 					dvrps.push_back(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp));
 					LOG(this, "Date Slot: %u Field_name: %s\n", slot, field_name.c_str());
 					queryparser.add_valuerangeprocessor(dvrp);
