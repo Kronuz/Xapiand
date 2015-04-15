@@ -281,16 +281,111 @@ void HttpClient::_index()
 
 void HttpClient::_search()
 {
-	std::string content;
+	
+	std::string result;
+	std::string http_header;
+	std::string http_error_header;
+	std::string name_result;
+	std::string chunk_size;
+
+	int rc = 0;
+
+	char tmp[20];
+	http_header += "HTTP/";
+	sprintf(tmp, "%d.%d", 1, 1);
+	http_header += tmp;
+	http_header += " 200 OK\r\n";
+	http_header += "Content-Type: application/json; charset=UTF-8\r\n";
+	http_header += "Transfer-Encoding: chunked\r\n";
+	http_error_header = http_header;
+	
 	struct query_t e;
 	_endpointgen(e);
+
 	Database *database = NULL;
 	LOG(this, "Doing the checkout for search\n");
 	database_pool->checkout(&database, endpoints, false);
-	database->search(e);
+
+	/*
+	 NOTE:	Missing spies
+			Ask if add get_termlist
+	 */
+	Xapian::MSet mset;
+	if (!database->get_mset(e, mset)) {
+		write(http_error_header);
+		return;
+	}
+
+	for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++) {
+		Xapian::docid did = 0;
+		int rank = 0;
+		double weight = 0, percent = 0;
+		std::string data;
+
+		int t = 3;
+		for (; t >= 0; --t) {
+			try {
+				did = *m;
+				rank = m.get_rank();
+				weight = m.get_weight();
+				percent = m.get_percent();
+				data = m.get_document().get_data();
+				m++;
+				break;
+			} catch (Xapian::Error &er) {
+				database->reopen();
+				if (database->get_mset(e, mset, rc)) {
+					m = mset.begin();
+				} else {
+					t = -1;
+				}
+			}
+		}
+		if (t < 0) {
+			if (rc == 0) {
+				write(http_error_header);
+			} else {
+				// err obj
+				write("0\r\n\r\n");
+			}
+			return;
+		}
+
+		if (rc == 0) {
+			write(http_header);
+		}
+
+		cJSON *root = cJSON_CreateObject();
+		cJSON *response = cJSON_CreateObject();
+		//LOG(this, "loop %d docid:%d rank:%d data:%s\n",rc,did,m.get_rank(),std::string(m.get_document().get_data()).c_str());
+		name_result = "result-" + std::to_string(rc);
+		cJSON_AddItemToObject(root, name_result.c_str(), response);
+		cJSON_AddNumberToObject(response, "docid", did);
+		cJSON_AddNumberToObject(response, "rank", rank);
+		cJSON_AddNumberToObject(response, "weight", weight);
+		cJSON_AddNumberToObject(response, "percent", percent);
+		cJSON_AddStringToObject(response, "data", data.c_str());
+		result =cJSON_PrintUnformatted(root);
+		std::ostringstream os;
+		os << std::hex << result.size();
+		std::string s = os.str();
+		sprintf(tmp, "%s",s.c_str());
+		os.str("");
+		chunk_size += tmp;
+		result = chunk_size + "\r\n" + result + "\r\n";
+		
+		LOG(this,"%d - Before the write\n", rc);
+		write(result);
+		
+		chunk_size="";
+		cJSON_Delete(root);
+	}
+	write("0\r\n\r\n");
+	
 	LOG(this, "Doing the checkin for search.\n");
 	database_pool->checkin(&database);
 	LOG(this, "FINISH SEARCH\n");
+	
 }
 
 void HttpClient::_endpointgen(struct query_t &e)

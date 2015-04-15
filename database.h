@@ -61,15 +61,16 @@ public:
 	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, int w, int position);
 	int find_field(const std::string &str, int *g, int size_g, int len, int offset);
 	Xapian::Enquire get_enquire(Xapian::Query query, struct query_t e);
-	std::string get_results(Xapian::Query query, struct query_t e);
 	bool search(struct query_t e);
 	Xapian::Query _search(const std::string &query, unsigned int flags, bool text, const std::string &lan);
+	bool get_mset(struct query_t &e, Xapian::MSet &mset, int offset=0);
 
-
+	Xapian::Query search1(Xapian::Query query, struct query_t e);
+	
+	
 private:
 	bool _commit();
 };
-
 
 class DatabaseQueue : public Queue<Database *> {
 	friend class DatabasePool;

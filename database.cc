@@ -814,39 +814,37 @@ Database::get_enquire(Xapian::Query query, struct query_t e)
 		}
 		enquire.set_sort_by_key(&sorter, false);
 	}
+	//enquire.set_collapse_key(0);
 	return enquire;
 }
 
 
-std::string
-Database::get_results(Xapian::Query query, struct query_t e)
-{
-	cJSON *root = cJSON_CreateObject();
-
-	int rc = 0;
-	int maxitems = db->get_doccount() - e.offset;
-	maxitems = std::max(std::min(maxitems, e.limit), 0);
-
-	Xapian::Enquire enquire(*db);
-	enquire.set_query(query);
-
-	Xapian::MSet mset = enquire.get_mset(e.offset, e.limit);
-	LOG(this, "mset size:%d!!!!\n",mset.size());
-	for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); ++m) {
-		Xapian::docid did = *m;
-		cJSON *response = cJSON_CreateObject();
-		LOG(this, "loop %d docid:%d rank:%d data:%s\n",rc,did,m.get_rank(),std::string(m.get_document().get_data()).c_str());
-		std::string name_resp = "response" + std::to_string(rc);
-		cJSON_AddItemToObject(root, name_resp.c_str(), response);
-		cJSON_AddNumberToObject(response, "docid", did);
-		cJSON_AddNumberToObject(response, "rank", m.get_rank());
-		const std::string data (m.get_document().get_data());
-		cJSON_AddStringToObject(response, "data", data.c_str());
-		rc ++;
+bool
+Database::get_mset(struct query_t &e, Xapian::MSet &mset, int offset) {
+	Xapian::Query query;
+	for (int t = 3; t >= 0; --t) {
+		try {
+			query = search1(query, e);
+			Xapian::Enquire enquire = get_enquire(query, e);
+			mset = enquire.get_mset(e.offset + offset, e.limit - offset);
+		} catch (Xapian::Error &er) {
+			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+			if (t) reopen();
+			continue;
+		}
+		return true;
 	}
+	LOG_ERR(this, "ERROR: Cannot search!\n");
+	return false;
+}
 
-	std::string res =cJSON_PrintUnformatted(root);
-	LOG(this, "RESPONSE------->%s\n",res.c_str());
-	cJSON_Delete(root);
-	return (res);
+Xapian::Query
+Database::search1(Xapian::Query query, struct query_t e)
+{
+	std::string content;
+	Xapian::QueryParser queryparser;
+	queryparser.add_prefix("Kind", "XK");
+	queryparser.add_prefix("Title", "S");
+	query = queryparser.parse_query("Action");
+	return query;
 }
