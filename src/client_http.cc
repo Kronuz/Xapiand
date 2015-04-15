@@ -179,14 +179,14 @@ void HttpClient::run()
 			default:
 				break;
 		}
-
-		//*-------------
+		
+		/*-------------
 		std::string content;
 		cJSON *json = cJSON_Parse(body.c_str());
 		cJSON *query = json ? cJSON_GetObjectItem(json, "query") : NULL;
 		cJSON *term = query ? cJSON_GetObjectItem(query, "term") : NULL;
 		cJSON *text = term ? cJSON_GetObjectItem(term, "text") : NULL;
-
+		
 		cJSON *root = cJSON_CreateObject();
 		cJSON *response = cJSON_CreateObject();
 		cJSON_AddItemToObject(root, "response", response);
@@ -213,7 +213,7 @@ void HttpClient::run()
 			}
 		}
 		cJSON_Delete(json);
-
+		
 		bool pretty = false;
 		char *out;
 		if (pretty) {
@@ -224,7 +224,7 @@ void HttpClient::run()
 		content = out;
 		cJSON_Delete(root);
 		free(out);
-
+		
 		char tmp[20];
 		content += "\r\n";
 		std::string http_response;
@@ -240,7 +240,7 @@ void HttpClient::run()
 		write(http_response + "\r\n" + content);
 		if (parser.state == 1) {
 			close();
-		}//------------*/
+		}------------*/
 	} catch (...) {
 		LOG_ERR(this, "ERROR!\n");
 	}
