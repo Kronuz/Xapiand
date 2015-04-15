@@ -794,6 +794,8 @@ Database::get_enquire(Xapian::Query query, struct query_t e)
 	std::string field;
 	/*
 	 complement enquire ....
+	 possible to add "check_at_least"
+	 possible to add "enquire.set_collapse_key(0)"
 	 */
 	if (!e.order.empty()) {
 		std::vector<std::string>::const_iterator oit(e.order.begin());
