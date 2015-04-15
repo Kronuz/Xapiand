@@ -784,7 +784,7 @@ bool isRange(const std::string &str)
 	group *gr = NULL;
 	int len = (int)str.size();
 	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re , &gr);
-	if (ret != -1 && (gr[0].end - gr[0].start) == len) {
+	if (ret != -1) {
 		if (gr) {
 			free(gr);
 			gr = NULL;
