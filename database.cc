@@ -759,6 +759,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 	try {
 		x_query = queryparser.parse_query(querystring, flags);
+		LOG(this, "Corrected String: %s\n", queryparser.get_corrected_query_string().c_str());
 		LOG_DATABASE_WRAP(this, "Query parser done\n");
 		LOG(this, "Query Finally: '%s'\n", repr(x_query.serialise()).c_str());
 	} catch (Xapian::Error &er) {
