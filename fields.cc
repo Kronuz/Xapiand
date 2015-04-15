@@ -137,6 +137,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 			return Xapian::BAD_VALUENO;
 		}
 	}
+	LOG(this, "DateTimeValueRangeProcessor process\n");
 
 	return valno;
 }
