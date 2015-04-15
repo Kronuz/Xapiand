@@ -118,24 +118,20 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 	LOG(this, "Inside of DateTimeValueRangeProcessor\n");
 
 	if (begin.size() != 0) {
-		buf = prefix + serialise_date(begin);
-		if (buf != "") {
-			begin.assign(buf.c_str(), buf.size());
-			LOG(this, "Serialise of begin %s\n", buf.c_str());
-		} else {
-			return Xapian::BAD_VALUENO;
-		}
+		std::string serialise = serialise_date(begin);
+		if (serialise.size() == 0) return Xapian::BAD_VALUENO; 
+		buf = prefix + serialise;
+		begin.assign(buf.c_str(), buf.size());
+		LOG(this, "Serialise of begin %s\n", buf.c_str());
 	}
 	buf = "";
 
 	if (end.size() != 0) {
-		buf = prefix + serialise_date(end);
-		if (buf != "") {
-			end.assign(buf.c_str(), buf.size());
-			LOG(this, "Serialise of end %s\n", std::string(prefix + buf).c_str());
-		} else {
-			return Xapian::BAD_VALUENO;
-		}
+		std::string serialise = serialise_date(end);
+		if (serialise.size() == 0) return Xapian::BAD_VALUENO;
+		buf = prefix + serialise;
+		end.assign(buf.c_str(), buf.size());
+		LOG(this, "Serialise of end %s\n", std::string(prefix + buf).c_str());
 	}
 	LOG(this, "DateTimeValueRangeProcessor process\n");
 
