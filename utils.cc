@@ -715,16 +715,16 @@ std::string get_slot_hex(const std::string &name)
 		standard_name = name;
 	}
 	std::string _md5 = std::string(md5(standard_name), 24, 8);
-	return _md5;
+	return stringtoupper(_md5);
 }
 
 
 void print_hexstr(const std::string &str)
 {
-	unsigned char c;
-	for (unsigned int i = 0; i < str.size(); i++) {
-		c = str.at(i);
-		printf("%.2x", c);
+	std::string::const_iterator it(str.begin());
+	printf("0x");
+	for ( ; it != str.end(); it++) {
+		printf("%.2x", (unsigned char)*it);
 	}
 	printf("\n");
 }
@@ -732,9 +732,11 @@ void print_hexstr(const std::string &str)
 
 bool strhasupper(const std::string &str)
 {
-	for (int i = 0; i < str.size(); i++) {
-		if (isupper(str.at(i))) return true;
+	std::string::const_iterator it(str.begin());
+	for ( ; it != str.end(); it++) {
+		if (isupper(*it)) return true;
 	}
+
 	return false;
 }
 
