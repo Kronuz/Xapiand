@@ -510,6 +510,7 @@ Database::search(struct query_t e)
 		std::vector<std::string>::const_iterator lit(e.language.begin());
 		std::string lan;
 		unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
+		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 		for (; qit != e.query.end(); qit++) {
 			if (lit != e.language.end()) {
 				lan = *lit;
@@ -528,6 +529,7 @@ Database::search(struct query_t e)
 		LOG(this, "e.partial size: %d\n", e.partial.size());
 		std::vector<std::string>::const_iterator pit(e.partial.begin());
 		flags = Xapian::QueryParser::FLAG_PARTIAL;
+		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 		first = true;
 		for (; pit != e.partial.end(); pit++) {
 			if (first) {
@@ -543,6 +545,7 @@ Database::search(struct query_t e)
 		LOG(this, "e.terms size: %d\n", e.terms.size());
 		std::vector<std::string>::const_iterator tit(e.terms.begin());
 		flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
+		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 		first = true;
 		for (; tit != e.terms.end(); tit++) {
 			if (first) {
