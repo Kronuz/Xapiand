@@ -731,17 +731,6 @@ std::string get_slot_hex(const std::string &name)
 }
 
 
-void print_hexstr(const std::string &str)
-{
-	std::string::const_iterator it(str.begin());
-	printf("0x");
-	for ( ; it != str.end(); it++) {
-		printf("%.2x", (unsigned char)*it);
-	}
-	printf("\n");
-}
-
-
 bool strhasupper(const std::string &str)
 {
 	std::string::const_iterator it(str.begin());
