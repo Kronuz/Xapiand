@@ -458,7 +458,7 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 	int size = (int)g_serialise.size();
 	std::vector<std::string> terms;
 	for (int i = 6; i > 1; i--) {
-		for (int j=0; j < size; j += 6) {
+		for (int j = 0; j < size; j += 6) {
 			found = false;
 			std::string s_coord = std::string(g_serialise, j, i);
 
