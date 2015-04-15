@@ -528,9 +528,13 @@ std::string stringtoupper(const std::string &str)
 std::string stringtolower(const std::string &str)
 {
 	std::string tmp = str;
-	for (unsigned int i = 0; i < tmp.size(); i++) {
-		tmp.at(i) = tolower(tmp.at(i));
-	}
+
+	struct TRANSFORM {
+		char operator() (char c) { return  tolower(c);}
+	};
+
+	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM());
+
 	return tmp;
 }
 
