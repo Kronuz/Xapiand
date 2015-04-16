@@ -184,14 +184,14 @@ void HttpClient::run()
 			default:
 				break;
 		}
-		
-		/*-------------
+
+		//*-------------
 		std::string content;
 		cJSON *json = cJSON_Parse(body.c_str());
 		cJSON *query = json ? cJSON_GetObjectItem(json, "query") : NULL;
 		cJSON *term = query ? cJSON_GetObjectItem(query, "term") : NULL;
 		cJSON *text = term ? cJSON_GetObjectItem(term, "text") : NULL;
-		
+
 		cJSON *root = cJSON_CreateObject();
 		cJSON *response = cJSON_CreateObject();
 		cJSON_AddItemToObject(root, "response", response);
@@ -218,7 +218,7 @@ void HttpClient::run()
 			}
 		}
 		cJSON_Delete(json);
-		
+
 		bool pretty = false;
 		char *out;
 		if (pretty) {
@@ -229,7 +229,7 @@ void HttpClient::run()
 		content = out;
 		cJSON_Delete(root);
 		free(out);
-		
+
 		char tmp[20];
 		content += "\r\n";
 		std::string http_response;
@@ -245,7 +245,7 @@ void HttpClient::run()
 		write(http_response + "\r\n" + content);
 		if (parser.state == 1) {
 			close();
-		}------------*/
+		}//------------*/
 	} catch (...) {
 		LOG_ERR(this, "ERROR!\n");
 	}
@@ -286,7 +286,7 @@ void HttpClient::_index()
 
 void HttpClient::_search()
 {
-	
+
 	std::string result;
 	std::string http_header;
 	std::string http_error_header;
@@ -303,7 +303,7 @@ void HttpClient::_search()
 	http_header += "Content-Type: application/json; charset=UTF-8\r\n";
 	http_header += "Transfer-Encoding: chunked\r\n";
 	http_error_header = http_header;
-	
+
 	struct query_t e;
 	_endpointgen(e);
 
@@ -378,19 +378,18 @@ void HttpClient::_search()
 		os.str("");
 		chunk_size += tmp;
 		result = chunk_size + "\r\n" + result + "\r\n";
-		
+
 		LOG(this,"%d - Before the write\n", rc);
 		write(result);
-		
+
 		chunk_size="";
 		cJSON_Delete(root);
 	}
 	write("0\r\n\r\n");
-	
+
 	LOG(this, "Doing the checkin for search.\n");
 	database_pool->checkin(&database);
-	LOG(this, "FINISH SEARCH\n");
-	
+	LOG(this, "FINISH SEARCH\n");	
 }
 
 void HttpClient::_endpointgen(struct query_t &e)
