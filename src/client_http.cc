@@ -38,6 +38,29 @@
 // Xapian http client
 //
 
+
+const char* status_code[6][5] = {
+	{},
+	{},
+	{
+		"OK",
+		"Created"
+	},
+	{},
+	{
+		"Bad Request",
+		NULL,
+		NULL,
+		NULL,
+		"Not Found"
+		
+	},
+	{
+		"Internal Server Error"
+	}
+};
+
+
 HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_)
 {
@@ -520,4 +543,30 @@ void HttpClient::_endpointgen(struct query_t &e)
 	} else {
 		LOG_CONN_WIRE(this,"Parsing not done\n");
 	}
+}
+
+std::string HttpClient::http_header_responde(int status, bool Content_json, bool Content_length, bool chunked, std::string size, std::string content)
+{
+	std::string header;
+	char tmp[20];
+	header += "\r\n";
+	header += "HTTP/";
+	sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
+	header += tmp;
+	header +=  " " + std::to_string(status) + " " + status_code[status / 100][status % 100]+ "\r\n";
+
+	if(Content_json)
+		header += "Content-Type: application/json; charset=UTF-8\r\n";
+	
+	if(Content_length) {
+		header += "Content-Length: ";
+		header += size + "\r\n";
+	}
+	
+	if(chunked) {
+		header += "Transfer-Encoding: chunked\r\n";
+		header += size + "\r\n";
+	}
+	
+	return header += content + "\r\n";
 }
