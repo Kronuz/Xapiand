@@ -689,6 +689,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 			switch (field_type(field_name)) {
 				case NUMERIC_TYPE:
 					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+					if (isupper(field_value.at(0))) {
+						prefix = prefix + ":";
+					}
 					nfp = new NumericFieldProcessor(prefix);
 					nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
 					if (strhasupper(field_name)) {
@@ -700,9 +703,12 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case STRING_TYPE: 
-					(field_name.size() != 0) ? prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : prefix = std::string("");
-					if (prefix.size() != 0) {
-						LOG(this, "Prefix: %s\n", prefix.c_str());
+					if (field_name.size() != 0) {
+						prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+						if (isupper(field_value.at(0))) {
+							prefix = prefix + ":";
+						}
+						LOG(this, "prefix calculated: %s\n", prefix.c_str());
 						if (strhasupper(field_name)) {
 							LOG(this, "Boolean Prefix\n");
 							queryparser.add_boolean_prefix(field_name, prefix);
