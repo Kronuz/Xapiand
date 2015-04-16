@@ -23,6 +23,7 @@
 #ifndef XAPIAND_INCLUDED_UTILS_H
 #define XAPIAND_INCLUDED_UTILS_H
 
+#include <xapian.h>
 #include <string>
 #include <vector>
 
@@ -59,6 +60,11 @@ typedef struct query_t {
 	std::vector <std::string> order;
 	std::vector <std::string> facets;
 } query_t;
+
+typedef struct search_t {
+	Xapian::Query query;
+	std::vector <std::string> suggested_query;
+} search_t;
 
 typedef struct parser_query_t {
 	size_t length;
