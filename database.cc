@@ -392,16 +392,23 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 				(language && language->type == 4) ? lan = std::string(language->valuestring) : lan = std::string("en");
 				(spelling && (strcmp(cJSON_Print(spelling), "true") == 0)) ? spelling_v = true : spelling_v = false;
 				(positions && (strcmp(cJSON_Print(positions), "true") == 0)) ? positions_v = true : positions_v = false;
-				(name && name->type == 4) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string("");
-				LOG_DATABASE_WRAP(this, "Language: %s  Weight: %d  Spelling: %s Positions: %s Name: %s\n", lan.c_str(), w, spelling_v ? "true" : "false", positions_v ? "true" : "false", name_v.c_str());
+				(name && name->type == 4) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string();
+				LOG_DATABASE_WRAP(this, "Language: %s  Weight: %d  Spelling: %s Positions: %s Name: %s (%d)\n", lan.c_str(), w, spelling_v ? "true" : "false", positions_v ? "true" : "false", name_v.c_str(), name_v.size());
 				Xapian::TermGenerator term_generator;
 				term_generator.set_document(doc);
 				term_generator.set_stemmer(Xapian::Stem(lan));
 				if (spelling_v) {
 					term_generator.set_database(*wdb);
 					term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
+					term_generator.set_stemming_strategy(term_generator.STEM_SOME);
 				}
-				(positions_v) ? term_generator.index_text(text->valuestring, w, name_v) : term_generator.index_text_without_positions(text->valuestring, w, name_v);
+				if (positions_v) {
+					(name_v.size() == 0) ? term_generator.index_text_without_positions(text->valuestring, w) : term_generator.index_text_without_positions(text->valuestring, w, name_v);
+					LOG_DATABASE_WRAP(this, "Text to Index: (%s) %s %d\n", lan.c_str(), text->valuestring, spelling_v);
+				} else {
+					(name_v.size() == 0) ? term_generator.index_text(text->valuestring, w) : term_generator.index_text(text->valuestring, w, name_v);
+					LOG_DATABASE_WRAP(this, "Text to Index: (%s) %s %d\n", lan.c_str(), text->valuestring, spelling_v);
+				}
 			} else {
 				LOG_ERR(this, "ERROR: Text must be defined\n");
 				return false;
