@@ -383,9 +383,8 @@ void HttpClient::_search()
 		std::ostringstream os;
 		os << std::hex << result.size();
 		std::string s = os.str();
-		sprintf(tmp, "%s",s.c_str());
 		os.str("");
-		chunk_size += tmp;
+		chunk_size += s;
 		result = chunk_size + "\r\n" + result + "\r\n";
 
 		LOG(this,"%d - Before the write\n", rc);
