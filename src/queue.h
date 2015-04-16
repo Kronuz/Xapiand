@@ -114,7 +114,7 @@ bool Queue<T>::push(T& element, double timeout)
 
 	if (!finished) {
 		size_t size = std::queue<T>::size();
-		while (limit > 0 && limit < size && false) {
+		while (limit > 0 && limit < size) {
 			if (!finished && timeout != 0.0) {
 				if (timeout > 0.0) {
 					if (pthread_cond_timedwait(&pop_cond, &qmtx, &ts) == ETIMEDOUT) {
