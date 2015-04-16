@@ -863,14 +863,3 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::strin
 	LOG_ERR(this, "ERROR: Cannot search!\n");
 	return false;
 }
-
-Xapian::Query
-Database::search1(Xapian::Query query, struct query_t e)
-{
-	std::string content;
-	Xapian::QueryParser queryparser;
-	queryparser.add_prefix("Kind", "XK");
-	queryparser.add_prefix("Title", "S");
-	query = queryparser.parse_query("Action");
-	return query;
-}
