@@ -502,19 +502,23 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 }
 
 
-bool
+search_t
 Database::search(struct query_t e)
 {
+	search_t srch_resul;
 	if (writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
-		return false;
+		return srch_resul;
 	}
 
 	Xapian::Query queryQ;
 	Xapian::Query queryP;
 	Xapian::Query queryT;
 	Xapian::Query queryF;
+	std::vector<std::string> sug_query;
+	search_t srch;
 	bool first = true;
+
 	try {
 		LOG(this, "e.query size: %d\n", e.query.size());
 		std::vector<std::string>::const_iterator qit(e.query.begin());
@@ -522,17 +526,20 @@ Database::search(struct query_t e)
 		std::string lan;
 		unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
 		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
+
 		for (; qit != e.query.end(); qit++) {
 			if (lit != e.language.end()) {
 				lan = *lit;
 				lit++;
 			}
+			srch = _search(*qit, flags, true, lan);
 			if (first) {
-				queryQ = _search(*qit, flags, true, lan);
+				queryQ = srch.query;
 				first = false;
 			} else {
-				queryQ =  Xapian::Query(Xapian::Query::OP_AND, queryQ, _search(*qit, flags, true, lan));
+				queryQ =  Xapian::Query(Xapian::Query::OP_AND, queryQ, srch.query);
 			}
+			sug_query.push_back(srch.suggested_query.back());
 		}
 		LOG(this, "e.query: %s\n", repr(queryQ.serialise()).c_str());
 
@@ -543,12 +550,14 @@ Database::search(struct query_t e)
 		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 		first = true;
 		for (; pit != e.partial.end(); pit++) {
+			srch = _search(*pit, flags, false, "");
 			if (first) {
-				queryP = _search(*pit, flags, false, "");
+				queryP = srch.query;
 				first = false;
 			} else {
-				queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, _search(*pit, flags, false, ""));
+				queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, srch.query);
 			}
+			sug_query.push_back(srch.suggested_query.back());
 		}
 		LOG(this, "e.partial: %s\n", repr(queryP.serialise()).c_str());
 
@@ -559,12 +568,13 @@ Database::search(struct query_t e)
 		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 		first = true;
 		for (; tit != e.terms.end(); tit++) {
+			srch =  _search(*tit, flags, false, "");
 			if (first) {
-				queryT = _search(*tit, flags, false, "");
-				first = false;
+				queryT = srch.query;
 			} else {
-				queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, _search(*tit, flags, false, ""));
+				queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, srch.query);
 			}
+			sug_query.push_back(srch.suggested_query.back());
 		}
 		LOG(this, "e.terms: %s\n", repr(queryT.serialise()).c_str());
 
@@ -589,28 +599,30 @@ Database::search(struct query_t e)
 				queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryT);
 			}
 		}
-		LOG(this, "Query Final: %s\n", repr(queryF.serialise()).c_str());
+		srch_resul.query = queryF;
+		srch_resul.suggested_query = sug_query;
+		return srch_resul;
 	} catch (const Xapian::Error &error){
 		LOG_ERR(this, "ERROR: In search: %s\n", error.get_msg().c_str());
-		return false;
 	}
 
-	return true;
+	return srch_resul;
 }
 
 
-Xapian::Query
+search_t
 Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan)
 {
 	int len = (int) query.size(), offset = 0;
 	group *g = NULL;
 	bool first_time = true;
-	std::string querystring, results = std::string("");
+	std::string querystring;
 	Xapian::QueryParser queryparser;
 	queryparser.set_database(*db);
-	Xapian::Query x_query;
+	search_t srch;
 
 	if (text) {
+		queryparser.set_stemming_strategy(queryparser.STEM_SOME);
 		if (lan.size() != 0) {
 			LOG(this, "User-defined language: %s\n", lan.c_str());
 			queryparser.set_stemmer(Xapian::Stem(lan));
@@ -618,7 +630,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 			LOG(this, "Default language: en\n");
 			queryparser.set_stemmer(Xapian::Stem("en"));
 		}
-		queryparser.set_stemming_strategy(queryparser.STEM_SOME);
 	}
 
 	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
@@ -770,16 +781,14 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	LOG_DATABASE_WRAP(this, "Query processed: (%s)\n", querystring.c_str());	
 
 	try {
-		x_query = queryparser.parse_query(querystring, flags);
-		LOG(this, "Corrected String: %s\n", queryparser.get_corrected_query_string().c_str());
-		LOG_DATABASE_WRAP(this, "Query parser done\n");
-		LOG(this, "Query Finally: '%s'\n", repr(x_query.serialise()).c_str());
+		srch.query = queryparser.parse_query(querystring, flags);
+		srch.suggested_query.push_back(queryparser.get_corrected_query_string());
 	} catch (Xapian::Error &er) {
 		LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 		reopen();
 		queryparser.set_database(*db);
-		x_query = queryparser.parse_query(querystring, flags);
-		LOG(this, "Query Finally: '%s'\n", repr(x_query.serialise()).c_str());
+		srch.query = queryparser.parse_query(querystring, flags);
+		srch.suggested_query.push_back(queryparser.get_corrected_query_string());
 	}
 
 	if (g) {
@@ -787,7 +796,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		g = NULL;
 	}
 
-	return x_query;
+	return srch;
 }
 
 
