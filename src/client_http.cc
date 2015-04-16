@@ -277,6 +277,7 @@ void HttpClient::run()
 
 void HttpClient::_delete()
 {
+	std::string result="";
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
@@ -287,10 +288,14 @@ void HttpClient::_delete()
 	LOG(this, "Doing the checkin.\n");
 	database_pool->checkin(&database);
 	LOG(this, "FINISH DELETE\n");
+	result = http_header_responde(200, false, false, false, "0", result);
+	write(result);
 }
 
 void HttpClient::_index()
 {
+	int aux;
+	std::string result = "";
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
@@ -300,11 +305,20 @@ void HttpClient::_index()
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "Index %s\n", body.c_str());
 	database->index(body, command, true);
+	
+	/*if(database->index(body, command, true)){
+			database->index_counter++;
+	} else LOG(this, "This document was not indexed <<<<<%s>>>>>\n",body.c_str());
+	aux = database->index_counter;*/
+	
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "Doing the checkin for index.\n");
 	database_pool->checkin(&database);
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "FINISH INDEX\n");
+	//LOG(this, "Numero de indexados al momento %d\n", aux);
+	result = http_header_responde(201, false, false, false,"0", result);
+	write(result);
 }
 
 void HttpClient::_search()
@@ -314,7 +328,6 @@ void HttpClient::_search()
 	std::string http_header;
 	std::string http_error_header;
 	std::string name_result;
-	std::string chunk_size;
 
 	int rc = 0;
 
@@ -405,15 +418,13 @@ void HttpClient::_search()
 		result =cJSON_PrintUnformatted(root);
 		std::ostringstream os;
 		os << std::hex << result.size();
-		std::string s = os.str();
+		std::string chunk_size = os.str();
 		os.str("");
-		chunk_size += s;
-		result = chunk_size + "\r\n" + result + "\r\n";
+		result = http_header_responde(200, false, false, true, chunk_size, result);
 
 		LOG(this,"%d - Before the write\n", rc);
 		write(result);
 
-		chunk_size="";
 		cJSON_Delete(root);
 	}
 	write("0\r\n\r\n");
