@@ -542,7 +542,11 @@ std::string stringtolower(const std::string &str)
 std::string prefixed(const std::string &term, const std::string &prefix)
 {
 	if (isupper(term.at(0))) {
-		return prefix + ":" + term;
+		if (prefix.size() == 0) {
+			return term;
+		} else {
+			return prefix + ":" + term;
+		}
 	}
 
 	return prefix + term;
