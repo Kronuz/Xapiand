@@ -316,10 +316,19 @@ void HttpClient::_search()
 			Ask if add get_termlist
 	 */
 	Xapian::MSet mset;
-	if (!database->get_mset(e, mset)) {
+	std::vector<std::string> suggestions;
+	if (!database->get_mset(e, mset, suggestions)) {
 		write(http_error_header);
 		return;
 	}
+
+
+	LOG(this, "Suggered querys\n");
+	std::vector<std::string>::const_iterator it_s(suggestions.begin());
+	for ( ; it_s != suggestions.end(); it_s++) {
+		LOG(this, "\t%s\n", (*it_s).c_str());
+	}
+
 
 	for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++) {
 		Xapian::docid did = 0;
@@ -339,7 +348,7 @@ void HttpClient::_search()
 				break;
 			} catch (Xapian::Error &er) {
 				database->reopen();
-				if (database->get_mset(e, mset, rc)) {
+				if (database->get_mset(e, mset, suggestions, rc)) {
 					m = mset.begin();
 				} else {
 					t = -1;
