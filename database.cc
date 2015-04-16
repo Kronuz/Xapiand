@@ -844,12 +844,14 @@ Database::get_enquire(Xapian::Query query, struct query_t e)
 
 
 bool
-Database::get_mset(struct query_t &e, Xapian::MSet &mset, int offset) {
-	Xapian::Query query;
+Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::string> &suggestions, int offset)
+{
 	for (int t = 3; t >= 0; --t) {
 		try {
-			query = search1(query, e);
-			Xapian::Enquire enquire = get_enquire(query, e);
+			search_t srch = search(e);
+			if (srch.query.serialise().size() == 0) return false;
+			Xapian::Enquire enquire = get_enquire(srch.query, e);
+			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset);
 		} catch (Xapian::Error &er) {
 			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
