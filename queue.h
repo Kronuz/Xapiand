@@ -49,6 +49,7 @@ public:
 	~Queue();
 
 	void finish();
+	void clear();
 	bool push(T& element, double timeout=-1.0);
 	bool pop(T& element, double timeout=-1.0);
 
@@ -189,6 +190,20 @@ bool Queue<T>::pop(T& element, double timeout)
 
 	return true;
 };
+
+
+template<class T>
+void Queue<T>::clear()
+{
+	pthread_mutex_lock(&qmtx);
+	while (!std::queue<T>::empty()) {
+		std::queue<T>::pop();
+	}
+	pthread_mutex_unlock(&qmtx);
+	
+	// Notifiy waiting thread they can push/push now
+	pthread_cond_signal(&pop_cond);
+}
 
 
 template<class T>
