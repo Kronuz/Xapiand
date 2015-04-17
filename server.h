@@ -23,12 +23,14 @@
 #ifndef XAPIAND_INCLUDED_SERVER_H
 #define XAPIAND_INCLUDED_SERVER_H
 
-#include <ev++.h>
-#include <list>
+#include "xapiand.h"
 
 #include "threadpool.h"
 #include "database.h"
 #include "manager.h"
+
+#include <ev++.h>
+#include <list>
 
 
 class XapiandServer : public Task {

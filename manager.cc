@@ -20,9 +20,9 @@
  * IN THE SOFTWARE.
  */
 
-#include "xapiand.h"
-#include "utils.h"
 #include "manager.h"
+
+#include "utils.h"
 #include "server.h"
 
 #include <list>

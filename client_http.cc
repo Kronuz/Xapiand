@@ -20,15 +20,16 @@
  * IN THE SOFTWARE.
  */
 
-#include <assert.h>
-#include <sys/socket.h>
+#include "client_http.h"
 
-#include "xapiand.h"
+#include "http_parser.h"
+
 #include "utils.h"
 #include "cJSON.h"
 
-#include "client_http.h"
-#include "http_parser.h"
+#include <assert.h>
+#include <sys/socket.h>
+
 
 #ifndef LOCAL_PROTOCOL
 #  ifdef HAVE_REMOTE_PROTOCOL

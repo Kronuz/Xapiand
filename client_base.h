@@ -23,11 +23,13 @@
 #ifndef XAPIAND_INCLUDED_CLIENT_BASE_H
 #define XAPIAND_INCLUDED_CLIENT_BASE_H
 
-#include <ev++.h>
+#include "xapiand.h"
 
 #include "server.h"
 #include "threadpool.h"
 #include "database.h"
+
+#include <ev++.h>
 
 //
 //   Buffer class - allow for output buffering such that it can be written out

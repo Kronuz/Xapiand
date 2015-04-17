@@ -23,10 +23,11 @@
 #ifndef XAPIAND_INCLUDED_CLIENT_BINARY_H
 #define XAPIAND_INCLUDED_CLIENT_BINARY_H
 
-#include "xapian.h"
+#include "xapiand.h"
 
 #include "client_base.h"
 
+#include <xapian.h>
 #include <unordered_map>
 
 #ifdef HAVE_REMOTE_PROTOCOL

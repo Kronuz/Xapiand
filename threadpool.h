@@ -23,7 +23,10 @@
 #ifndef XAPIAND_INCLUDED_THREADPOOL_H
 #define XAPIAND_INCLUDED_THREADPOOL_H
 
+#include "xapiand.h"
+
 #include "queue.h"
+
 
 class ThreadPool;
 
