@@ -56,7 +56,7 @@ public:
 	void _index();
 	void _search();
 	void _endpointgen(struct query_t &e);
-	std::string http_header_responde(int status, bool Content_json, bool Content_length, bool chunked, bool header,std::string size, std::string content);
+	//std::string http_header_responde(int status, bool Content_json, bool Content_length, bool chunked, bool header,std::string size, std::string content);
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_HTTP_H */
