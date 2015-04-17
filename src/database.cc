@@ -640,13 +640,20 @@ Database::search(struct query_t e)
 search_t
 Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan)
 {
+	search_t srch;
+
+	if (query == "*") {
+		srch.query = Xapian::Query("");
+		srch.suggested_query.push_back("");
+		return srch;
+	}
+
 	int len = (int) query.size(), offset = 0;
 	group *g = NULL;
 	bool first_time = true;
 	std::string querystring;
 	Xapian::QueryParser queryparser;
 	queryparser.set_database(*db);
-	search_t srch;
 
 	if (text) {
 		queryparser.set_stemming_strategy(queryparser.STEM_SOME);
