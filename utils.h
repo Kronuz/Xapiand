@@ -121,6 +121,8 @@ void get_order(const std::string &str, struct query_t &e);
 bool isNumeric(const std::string &str);
 bool StartsWith(const std::string &text, const std::string &token);
 
+#define INFO(...) log(__VA_ARGS__)
+
 #define LOG(...) log(__VA_ARGS__)
 #define LOG_ERR(...) log(__VA_ARGS__)
 

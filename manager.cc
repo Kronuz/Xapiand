@@ -207,26 +207,26 @@ void XapiandManager::sig_shutdown_handler(int sig)
 	time_t now = time(NULL);
 	if (shutdown_now && sig != SIGTERM) {
 		if (sig && shutdown_now + 1 < now) {
-			LOG(this, "You insist... exiting now.\n");
+			INFO(this, "You insist... exiting now.\n");
 			// remove pid file here, use: getpid();
 			exit(1); /* Exit with an error since this was not a clean shutdown. */
 		}
 	} else if (shutdown_asap && sig != SIGTERM) {
 		if (shutdown_asap + 1 < now) {
 			shutdown_now = now;
-			LOG(this, "Trying immediate shutdown.\n");
+			INFO(this, "Trying immediate shutdown.\n");
 		}
 	} else {
 		shutdown_asap = now;
 		switch (sig) {
 			case SIGINT:
-				LOG(this, "Received SIGINT scheduling shutdown...\n");
+				INFO(this, "Received SIGINT scheduling shutdown...\n");
 				break;
 			case SIGTERM:
-				LOG(this, "Received SIGTERM scheduling shutdown...\n");
+				INFO(this, "Received SIGTERM scheduling shutdown...\n");
 				break;
 			default:
-				LOG(this, "Received shutdown signal, scheduling shutdown...\n");
+				INFO(this, "Received shutdown signal, scheduling shutdown...\n");
 		};
 	}
 	shutdown();
@@ -324,9 +324,9 @@ void XapiandManager::shutdown()
 void XapiandManager::run(int num_servers)
 {
 #ifdef HAVE_REMOTE_PROTOCOL
-	LOG(this, "Listening on %d (http), %d (xapian)...\n", http_port, binary_port);
+	INFO(this, "Listening on %d (http), %d (xapian)...\n", http_port, binary_port);
 #else
-	LOG(this, "Listening on %d (http)...\n", http_port);
+	INFO(this, "Listening on %d (http)...\n", http_port);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 	ThreadPool server_pool("S%d", num_servers);

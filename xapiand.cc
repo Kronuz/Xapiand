@@ -81,9 +81,9 @@ int main(int argc, char **argv)
 		binary_port = atoi(argv[2]);
 	}
 
-	LOG((void *)NULL, "Starting %s (%s).\n", PACKAGE_STRING, PACKAGE_BUGREPORT);
+	INFO((void *)NULL, "Starting %s (%s).\n", PACKAGE_STRING, PACKAGE_BUGREPORT);
 	run(num_servers, http_port, binary_port);
-	LOG((void *)NULL, "Done with all work!\n");
+	INFO((void *)NULL, "Done with all work!\n");
 
 	return 0;
 }
