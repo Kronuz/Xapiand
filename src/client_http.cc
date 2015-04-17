@@ -332,8 +332,15 @@ void HttpClient::_search()
 	 */
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
-	if (database->get_mset(e, mset, suggestions) == 1) {
-		write(http_error_header);
+	rmset = database->get_mset(e, mset, suggestions);
+	if (rmset == 1) {
+		LOG(this, "get_mset return 1\n");
+		write(http_response(400, true, false, false, false, false, "0", ""));
+		return;
+	}
+	if (rmset == 2) {
+		LOG(this, "get_mset return 2\n");
+		write(http_response(500, true, false, false, false, false, "0", ""));
 		return;
 	}
 
