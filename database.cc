@@ -58,7 +58,10 @@ Database::reopen()
 		}
 	}
 
-	// FIXME: Handle remote endpoints and figure out if the endpoint is a local database
+	Xapian::Database rdb;
+	Xapian::WritableDatabase wdb;
+	Xapian::Database ldb;
+
 	const Endpoint *e;
 	std::unordered_set<Endpoint>::const_iterator i(endpoints.begin());
 	if (writable) {
@@ -67,26 +70,48 @@ Database::reopen()
 			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), endpoints.as_string().c_str());
 		} else {
 			e = &*i;
-			if (e->protocol == "file") {
-				db->add_database(Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN));
+			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
+				wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
 			} else {
-				db->add_database(Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path));
+				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
+				try {
+					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
+					if (ldb.get_uuid() == rdb.get_uuid()) {
+						// Handle remote endpoints and figure out if the endpoint is a local database
+						LOG(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
+						wdb = Xapian::WritableDatabase(e->path, Xapian::DB_OPEN);
+					} else {
+						wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
+					}
+				} catch (Xapian::Error) {
+					wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
+				}
 			}
+			db->add_database(wdb);
 		}
 	} else {
 		db = new Xapian::Database();
 		for (; i != endpoints.end(); ++i) {
 			e = &*i;
-			if (e->protocol == "file") {
+			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
 				try {
-					db->add_database(Xapian::Database(e->path, Xapian::DB_OPEN));
+					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 				} catch (Xapian::DatabaseOpeningError) {
 					Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
-					db->add_database(Xapian::Database(e->path, Xapian::DB_OPEN));
+					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 				}
 			} else {
-				db->add_database(Xapian::Remote::open(e->host, e->port, 0, 10000, e->path));
+				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
+				try {
+					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
+					if (ldb.get_uuid() == rdb.get_uuid()) {
+						LOG(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
+						// Handle remote endpoints and figure out if the endpoint is a local database
+						rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
+					}
+				} catch (Xapian::Error) {}
 			}
+			db->add_database(rdb);
 		}
 	}
 }

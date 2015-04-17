@@ -31,14 +31,6 @@
 #include <sys/socket.h>
 
 
-#ifndef LOCAL_PROTOCOL
-#  ifdef HAVE_REMOTE_PROTOCOL
-#    define LOCAL_PROTOCOL(host) ((std::string)(host) == "localhost" || (std::string)(host) == "127.0.0.1")
-#  else
-#    define LOCAL_PROTOCOL(host) true
-#  endif  /* HAVE_REMOTE_PROTOCOL */
-#endif
-
 //
 // Xapian http client
 //
@@ -460,9 +452,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 				} else {
 					hos_ = "127.0.0.1";
 				}
-				LOG(this, "Host: %s LOCAL_PROTOCOL: %d\n", hos_.c_str(), LOCAL_PROTOCOL(hos_));
-				(LOCAL_PROTOCOL(hos_)) ? endp = "file://" : endp = "xapian://" + hos_;
-				endp = endp + nsp_ + pat_;
+				endp = "xapian://" + hos_ + nsp_ + pat_;
 				endpoints.insert(Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT));
 
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
