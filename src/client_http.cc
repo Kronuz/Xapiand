@@ -339,6 +339,7 @@ void HttpClient::_search()
 	http_header += " 200 OK\r\n";
 	http_header += "Content-Type: application/json; charset=UTF-8\r\n";
 	http_header += "Transfer-Encoding: chunked\r\n";
+	http_header += "\r\n";
 	http_error_header = http_header;
 
 	struct query_t e;
