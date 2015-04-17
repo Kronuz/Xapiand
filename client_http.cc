@@ -479,6 +479,14 @@ void HttpClient::_endpointgen(struct query_t &e)
 			}
 
 			memset(&q, 0, sizeof(q));
+			if (url_qs("synonyms", query_buf.c_str(), query_size, &q) != -1) {
+				std::string synonyms = serialise_bool(urldecode(q.offset, q.length));
+				(synonyms.compare("f") == 0) ? e.synonyms = false : e.synonyms = true;
+			} else {
+				e.synonyms = false;
+			}
+
+			memset(&q, 0, sizeof(q));
 			LOG(this, "Buffer: %s\n", query_buf.c_str());
 			while (url_qs("query", query_buf.c_str(), query_size, &q) != -1) {
 				LOG(this, "%s\n", urldecode(q.offset, q.length).c_str());

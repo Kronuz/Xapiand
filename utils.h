@@ -53,6 +53,7 @@ typedef struct query_t {
 	int offset;
 	int limit;
 	bool spelling;
+	bool synonyms;
 	std::vector <std::string> language;
 	std::vector <std::string> query;
 	std::vector <std::string> partial;
