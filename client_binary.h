@@ -29,6 +29,8 @@
 
 #include <unordered_map>
 
+#ifdef HAVE_REMOTE_PROTOCOL
+
 //
 //   A single instance of a non-blocking Xapiand binary protocol handler
 //
@@ -60,5 +62,7 @@ public:
 
 	void run();
 };
+
+#endif  /* HAVE_REMOTE_PROTOCOL */
 
 #endif /* XAPIAND_INCLUDED_CLIENT_BINARY_H */

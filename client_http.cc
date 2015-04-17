@@ -31,7 +31,11 @@
 #include "http_parser.h"
 
 #ifndef LOCAL_PROTOCOL
-# define LOCAL_PROTOCOL(host) ((std::string)(host) == "localhost" || (std::string)(host) == "127.0.0.1")
+#  ifdef HAVE_REMOTE_PROTOCOL
+#    define LOCAL_PROTOCOL(host) ((std::string)(host) == "localhost" || (std::string)(host) == "127.0.0.1")
+#  else
+#    define LOCAL_PROTOCOL(host) true
+#  endif  /* HAVE_REMOTE_PROTOCOL */
 #endif
 
 //

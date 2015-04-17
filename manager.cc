@@ -59,7 +59,9 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_p
 	async_shutdown.start();
 	
 	bind_http();
+#ifdef HAVE_REMOTE_PROTOCOL
 	bind_binary();
+#endif  /* HAVE_REMOTE_PROTOCOL */
 
 	assert(http_sock != -1 && binary_sock != -1);
 	LOG_OBJ(this, "CREATED MANAGER!\n");
@@ -153,6 +155,7 @@ void XapiandManager::bind_http()
 }
 
 
+#ifdef HAVE_REMOTE_PROTOCOL
 void XapiandManager::bind_binary()
 {
 	int tcp_backlog = XAPIAND_TCP_BACKLOG;
@@ -192,6 +195,7 @@ void XapiandManager::bind_binary()
 		listen(binary_sock, tcp_backlog);
 	}
 }
+#endif  /* HAVE_REMOTE_PROTOCOL */
 
 
 void XapiandManager::sig_shutdown_handler(int sig)
@@ -319,7 +323,11 @@ void XapiandManager::shutdown()
 
 void XapiandManager::run(int num_servers)
 {
+#ifdef HAVE_REMOTE_PROTOCOL
 	LOG(this, "Listening on %d (http), %d (xapian)...\n", http_port, binary_port);
+#else
+	LOG(this, "Listening on %d (http)...\n", http_port);
+#endif  /* HAVE_REMOTE_PROTOCOL */
 
 	ThreadPool server_pool("S%d", num_servers);
 	for (int i = 0; i < num_servers; i++) {

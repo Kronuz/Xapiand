@@ -54,7 +54,9 @@ class XapiandManager {
 	void check_tcp_backlog(int tcp_backlog);
 	void shutdown_cb(ev::async &watcher, int revents);
 	void bind_http();
+#ifdef HAVE_REMOTE_PROTOCOL
 	void bind_binary();
+#endif  /* HAVE_REMOTE_PROTOCOL */
 	void destroy();
 
 	std::list<XapiandServer *>::const_iterator attach_server(XapiandServer *server);
