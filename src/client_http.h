@@ -30,6 +30,12 @@
 #include "http_parser.h"
 
 
+#define HTTP_HEADER  0x01
+#define HTTP_CONTENT 0x02
+#define HTTP_JSON    0x04
+#define HTTP_CHUNKED 0x08
+
+
 //
 //   A single instance of a non-blocking Xapiand HTTP protocol handler
 //
@@ -59,7 +65,7 @@ public:
 	void _index();
 	void _search();
 	void _endpointgen(struct query_t &e);
-	std::string http_response(int status, bool Content_json, bool Content_length, bool Trasfer_chunk, bool chunked, bool header,std::string size, std::string conten);
+	std::string http_response(int status, int mode, std::string content=std::string(""));
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_HTTP_H */
