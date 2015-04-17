@@ -58,13 +58,11 @@ const char* status_code[6][5] = {
 		NULL,
 		NULL,
 		"Not Found"
-		
 	},
 	{
 		"Internal Server Error"
 	}
 };
-
 
 HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_)
