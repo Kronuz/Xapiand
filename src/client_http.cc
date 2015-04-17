@@ -279,8 +279,11 @@ void HttpClient::_delete()
 	Database *database = NULL;
 	LOG(this, "Delete Document: %s\n", command.c_str());
 	LOG(this, "Doing the checkout\n");
-	database_pool->checkout(&database, endpoints, true);
-	database->drop(command.c_str(), true);
+	if (!database_pool->checkout(&database, endpoints, false)) {
+		LOG(this, "Checkout for delete aborted.\n");
+		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+		return;
+	}	database->drop(command.c_str(), true);
 	LOG(this, "Doing the checkin.\n");
 	database_pool->checkin(&database);
 	LOG(this, "FINISH DELETE\n");
@@ -292,7 +295,11 @@ void HttpClient::_index()
 	_endpointgen(e);
 	Database *database = NULL;
 	LOG(this, "Doing the checkout for index\n");
-	database_pool->checkout(&database, endpoints, true);
+	if (!database_pool->checkout(&database, endpoints, false)) {
+		LOG(this, "Checkout for index aborted.\n");
+		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+		return;
+	}
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db);
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "Index %s\n", body.c_str());
@@ -319,9 +326,10 @@ void HttpClient::_search()
 	Database *database = NULL;
 	LOG(this, "Doing the checkout for search\n");
 	if (!database_pool->checkout(&database, endpoints, false)) {
+		LOG(this, "Checkout for search aborted.\n");
+		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
-	LOG(this, "Out of checkout\n");
 
 	/*
 	 NOTE:	Missing spies
