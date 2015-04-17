@@ -288,8 +288,8 @@ void HttpClient::_delete()
 	LOG(this, "Doing the checkin.\n");
 	database_pool->checkin(&database);
 	LOG(this, "FINISH DELETE\n");
-	result = http_header_responde(200, false, false, false, "0", result);
-	write(result);
+	/*result = http_header_responde(200, false, false, false, true,"0", result);
+	write(result);*/
 }
 
 void HttpClient::_index()
@@ -329,8 +329,9 @@ void HttpClient::_search()
 	std::string http_error_header;
 	std::string name_result;
 
+	bool first_time = true;
 	int rc = 0;
-
+	int rmset;
 	char tmp[20];
 	http_header += "HTTP/";
 	sprintf(tmp, "%d.%d", 1, 1);
@@ -353,12 +354,19 @@ void HttpClient::_search()
 	 */
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
-	if (!database->get_mset(e, mset, suggestions)) {
-		write(http_error_header);
+	rmset = database->get_mset(e, mset, suggestions);
+	
+	if ( rmset == 1 ) {
+		write(http_header_responde(400, false, false, true,true ,"0", result ));
+		return;
+	}
+	
+	if ( rmset == 2 ) {
+		write(http_header_responde(500, false, false, true, true,"0", result));
 		return;
 	}
 
-
+	LOG(this, "mset size:%d!!!!\n",mset.size());
 	LOG(this, "Suggered querys\n");
 	std::vector<std::string>::const_iterator it_s(suggestions.begin());
 	for ( ; it_s != suggestions.end(); it_s++) {
@@ -384,13 +392,15 @@ void HttpClient::_search()
 				break;
 			} catch (Xapian::Error &er) {
 				database->reopen();
-				if (database->get_mset(e, mset, suggestions, rc)) {
+				if (database->get_mset(e, mset, suggestions, rc) == 0) {
 					m = mset.begin();
+					first_time = true;
 				} else {
 					t = -1;
 				}
 			}
 		}
+		//FIXME Send the correct http_error_header
 		if (t < 0) {
 			if (rc == 0) {
 				write(http_error_header);

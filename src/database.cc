@@ -845,13 +845,13 @@ Database::get_enquire(Xapian::Query query, struct query_t e)
 }
 
 
-bool
+int
 Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::string> &suggestions, int offset)
 {
 	for (int t = 3; t >= 0; --t) {
 		try {
 			search_t srch = search(e);
-			if (srch.query.serialise().size() == 0) return false;
+			if (srch.query.serialise().size() == 0) return 1;
 			Xapian::Enquire enquire = get_enquire(srch.query, e);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset);
@@ -860,8 +860,8 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::strin
 			if (t) reopen();
 			continue;
 		}
-		return true;
+		return 0;
 	}
 	LOG_ERR(this, "ERROR: Cannot search!\n");
-	return false;
+	return 2;
 }
