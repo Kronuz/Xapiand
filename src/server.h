@@ -67,13 +67,13 @@ public:
 	pthread_mutex_t clients_mutex;
 	pthread_mutexattr_t clients_mutex_attr;
 	std::list<BaseClient *>clients;
-	
+
 	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
 	~XapiandServer();
-	
+
 	void run();
 	void shutdown();
-	
+
 	static pthread_mutex_t static_mutex;
 	static int total_clients;
 	static int http_clients;
