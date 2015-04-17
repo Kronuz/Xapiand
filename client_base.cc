@@ -109,6 +109,8 @@ void BaseClient::destroy()
 	::close(sock);
 	sock = -1;
 	pthread_mutex_unlock(&qmtx);
+	
+	write_queue.clear();
 
 	LOG_OBJ(this, "DESTROYED CLIENT!\n");
 }
@@ -230,14 +232,20 @@ void BaseClient::async_write_cb(ev::async &watcher, int revents)
 }
 
 					
-void BaseClient::write(const char *buf, size_t buf_size)
+bool BaseClient::write(const char *buf, size_t buf_size)
 {
 	LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
 
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
 	write_queue.push(buffer);
 
+	if (sock == -1) {
+		return false;
+	}
+
 	async_write.send();
+
+	return true;
 }
 
 void BaseClient::shutdown()

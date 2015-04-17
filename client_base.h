@@ -109,17 +109,17 @@ protected:
 
 	virtual void on_read(const char *buf, ssize_t received) = 0;
 
-	inline void write(const char *buf)
+	inline bool write(const char *buf)
 	{
-		write(buf, strlen(buf));
+		return write(buf, strlen(buf));
 	}
 	
-	inline void write(const std::string &buf)
+	inline bool write(const std::string &buf)
 	{
-		write(buf.c_str(), buf.size());
+		return write(buf.c_str(), buf.size());
 	}
 
-	void write(const char *buf, size_t buf_size);
+	bool write(const char *buf, size_t buf_size);
 	
 	void close();
 	void destroy();
