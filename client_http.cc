@@ -277,7 +277,6 @@ void HttpClient::run()
 
 void HttpClient::_delete()
 {
-	std::string result="";
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
@@ -288,14 +287,10 @@ void HttpClient::_delete()
 	LOG(this, "Doing the checkin.\n");
 	database_pool->checkin(&database);
 	LOG(this, "FINISH DELETE\n");
-	/*result = http_header_responde(200, false, false, false, true,"0", result);
-	write(result);*/
 }
 
 void HttpClient::_index()
 {
-	int aux;
-	std::string result = "";
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
@@ -305,20 +300,11 @@ void HttpClient::_index()
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "Index %s\n", body.c_str());
 	database->index(body, command, true);
-	
-	/*if(database->index(body, command, true)){
-			database->index_counter++;
-	} else LOG(this, "This document was not indexed <<<<<%s>>>>>\n",body.c_str());
-	aux = database->index_counter;*/
-	
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "Doing the checkin for index.\n");
 	database_pool->checkin(&database);
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "FINISH INDEX\n");
-	//LOG(this, "Numero de indexados al momento %d\n", aux);
-	result = http_header_responde(201, false, false, false,"0", result);
-	write(result);
 }
 
 void HttpClient::_search()
