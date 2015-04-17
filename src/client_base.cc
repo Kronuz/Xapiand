@@ -187,7 +187,7 @@ void BaseClient::write_cb()
 		ssize_t written = ::write(sock, buf, buf_size);
 		
 		if (written < 0) {
-			if (errno != EAGAIN) {
+			if (errno != EAGAIN && sock != -1) {
 				LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
 				destroy();
 			}
@@ -212,7 +212,7 @@ void BaseClient::read_cb()
 		ssize_t received = ::read(sock, buf, sizeof(buf));
 		
 		if (received < 0) {
-			if (errno != EAGAIN) {
+			if (errno != EAGAIN && sock != -1) {
 				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
 				destroy();
 			}
