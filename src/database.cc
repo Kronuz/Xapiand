@@ -520,13 +520,13 @@ Database::search(struct query_t e)
 	bool first = true;
 
 	try {
-		LOG(this, "e.query size: %d\n", e.query.size());
+		LOG(this, "e.query size: %d  Spelling: %d Synonyms: %d\n", e.query.size(), e.spelling, e.synonyms);
 		std::vector<std::string>::const_iterator qit(e.query.begin());
 		std::vector<std::string>::const_iterator lit(e.language.begin());
 		std::string lan;
 		unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
 		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
-
+		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 		for (; qit != e.query.end(); qit++) {
 			if (lit != e.language.end()) {
 				lan = *lit;
@@ -548,6 +548,7 @@ Database::search(struct query_t e)
 		std::vector<std::string>::const_iterator pit(e.partial.begin());
 		flags = Xapian::QueryParser::FLAG_PARTIAL;
 		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
+		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 		first = true;
 		for (; pit != e.partial.end(); pit++) {
 			srch = _search(*pit, flags, false, "");
@@ -566,6 +567,7 @@ Database::search(struct query_t e)
 		std::vector<std::string>::const_iterator tit(e.terms.begin());
 		flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
 		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
+		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 		first = true;
 		for (; tit != e.terms.end(); tit++) {
 			srch =  _search(*tit, flags, false, "");
