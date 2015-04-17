@@ -211,7 +211,7 @@ void HttpClient::run()
 				break;
 		}
 
-		//*-------------
+		/*-------------
 		std::string content;
 		cJSON *json = cJSON_Parse(body.c_str());
 		cJSON *query = json ? cJSON_GetObjectItem(json, "query") : NULL;
