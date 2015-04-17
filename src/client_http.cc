@@ -430,11 +430,15 @@ void HttpClient::_search()
 		os << std::hex << result.size();
 		std::string chunk_size = os.str();
 		os.str("");
-		result = http_header_responde(200, false, false, true, chunk_size, result);
-
+		result = chunk_size + "\r\n" + result + "\r\n";
+		/*result = http_header_responde(200, true, false, true, first_time ,chunk_size, result);
+		if (first_time)
+			first_time = false;*/
+		
 		LOG(this,"%d - Before the write\n", rc);
+		LOG(this,"result: %s\n", result.c_str());
 		write(result);
-
+		
 		cJSON_Delete(root);
 	}
 	write("0\r\n\r\n");
@@ -566,28 +570,34 @@ void HttpClient::_endpointgen(struct query_t &e)
 	}
 }
 
-std::string HttpClient::http_header_responde(int status, bool Content_json, bool Content_length, bool chunked, std::string size, std::string content)
+std::string HttpClient::http_header_responde(int status, bool Content_json, bool Content_length, bool chunked, bool header, std::string size, std::string content)
 {
-	std::string header;
-	char tmp[20];
-	header += "\r\n";
-	header += "HTTP/";
-	sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
-	header += tmp;
-	header +=  " " + std::to_string(status) + " " + status_code[status / 100][status % 100]+ "\r\n";
-
-	if(Content_json)
-		header += "Content-Type: application/json; charset=UTF-8\r\n";
-	
-	if(Content_length) {
-		header += "Content-Length: ";
-		header += size + "\r\n";
+	std::string response;
+	if(header){
+		char tmp[20];
+		response += "\r\n";
+		response += "HTTP/";
+		sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
+		response += tmp;
+		response +=  " " + std::to_string(status) + " " + status_code[status / 100][status % 100]+ "\r\n";
+		
+		if(Content_json)
+			response += "Content-Type: application/json; charset=UTF-8\r\n";
+		
+		if(Content_length) {
+			response += "Content-Length: ";
+			response += size + "\r\n";
+		}
+		
+		if(chunked) {
+			response += "Transfer-Encoding: chunked\r\n";
+		}
 	}
 	
-	if(chunked) {
-		header += "Transfer-Encoding: chunked\r\n";
-		header += size + "\r\n";
-	}
-	
-	return header += content + "\r\n";
+	if(chunked)
+		response += size + "\r\n";
+		
+	response += content + "\r\n";
+	LOG(this, "Header reconstructed: %s\n", response.c_str());
+	return (response);
 }
