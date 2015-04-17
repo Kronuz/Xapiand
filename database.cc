@@ -182,7 +182,10 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 			if (!writable || queue.count == 0) {
 				queue.count++;
 				pthread_mutex_unlock(&qmtx);
-				database_ = new Database(endpoints, writable);
+				try {
+					database_ = new Database(endpoints, writable);
+				} catch (Xapian::Error &err) {
+				}
 				pthread_mutex_lock(&qmtx);
 			} else {
 				// Lock until a database is available if it can't get one.
