@@ -24,9 +24,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "xapiand.h"
-#include "utils.h"
 #include "client_base.h"
+#include "utils.h"
 
 
 const int WRITE_QUEUE_SIZE = 10;

@@ -20,14 +20,15 @@
  * IN THE SOFTWARE.
  */
 
-#include <assert.h>
-#include <sys/socket.h>
+#include "client_binary.h"
 
 #include "server.h"
 #include "utils.h"
-#include "client_binary.h"
-#include "xapiand.h"
 #include "length.h"
+
+#include <assert.h>
+#include <sys/socket.h>
+
 
 #ifdef HAVE_REMOTE_PROTOCOL
 

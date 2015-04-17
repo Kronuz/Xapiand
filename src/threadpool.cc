@@ -20,13 +20,13 @@
  * IN THE SOFTWARE.
  */
 
+#include "threadpool.h"
+
+#include "utils.h"
+
 #include <assert.h>
 #include <string.h>
 
-#include "xapiand.h"
-#include "utils.h"
-
-#include "threadpool.h"
 
 struct ThreadInfo {
     int threadNumber;

@@ -20,19 +20,19 @@
  * IN THE SOFTWARE.
  */
 
+#include "server.h"
+
+#include "utils.h"
+
+#include "client_http.h"
+#include "client_binary.h"
+
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <assert.h>
 
 #include <xapian.h>
-
-#include "utils.h"
-
-#include "xapiand.h"
-#include "server.h"
-#include "client_http.h"
-#include "client_binary.h"
 
 
 const int MSECS_IDLE_TIMEOUT_DEFAULT = 60000;

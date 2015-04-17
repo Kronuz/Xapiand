@@ -21,6 +21,7 @@
  */
 
 #include "xapiand.h"
+
 #include "utils.h"
 #include "manager.h"
 
