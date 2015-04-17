@@ -548,34 +548,34 @@ void HttpClient::_endpointgen(struct query_t &e)
 	}
 }
 
-std::string HttpClient::http_header_responde(int status, bool Content_json, bool Content_length, bool chunked, bool header, std::string size, std::string content)
+/*std::string HttpClient::http_header_responde(int status, bool Content_json, bool Content_length, bool chunked, bool header,std::string size, std::string content);
 {
 	std::string response;
 	if(header){
-		char tmp[20];
-		response += "\r\n";
-		response += "HTTP/";
-		sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
-		response += tmp;
-		response +=  " " + std::to_string(status) + " " + status_code[status / 100][status % 100]+ "\r\n";
-		
-		if(Content_json)
-			response += "Content-Type: application/json; charset=UTF-8\r\n";
-		
-		if(Content_length) {
-			response += "Content-Length: ";
-			response += size + "\r\n";
-		}
-		
-		if(chunked) {
-			response += "Transfer-Encoding: chunked\r\n";
-		}
-	}
-	
-	if(chunked)
-		response += size + "\r\n";
-		
-	response += content + "\r\n";
-	LOG(this, "Header reconstructed: %s\n", response.c_str());
-	return (response);
+	char tmp[20];
+	response += "\r\n";
+	response += "HTTP/";
+	sprintf(tmp, "%d.%d", 1, 1);
+	response += tmp;
+	response +=  " " + std::to_string(status) + " " + status_code[status / 100][status % 100]+ "\r\n";
+	if(Content_json)
+	response += " 200 OK\r\n";
+				if (Content_json)
+					response += "Content-Type: application/json; charset=UTF-8\r\n";
+					if(Content_length) {
+							response += "Content-Length: ";
+						response += size + "\r\n";
+					}
+				
+				if(chunked) {
+				if (chunked)
+					response += "Transfer-Encoding: chunked\r\n";
+				}
 }
+
+if(chunked)
+response += size + "\r\n";
+response += content + "\r\n";
+LOG(this, "Header reconstructed: %s\n", response.c_str());
+return (response);
+}*/
