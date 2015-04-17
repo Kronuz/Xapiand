@@ -64,7 +64,7 @@ typedef struct query_t {
 
 typedef struct search_t {
 	Xapian::Query query;
-	std::vector <std::string> suggested_query;
+	std::vector<std::string> suggested_query;
 } search_t;
 
 typedef struct parser_query_t {
