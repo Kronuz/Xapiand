@@ -183,7 +183,11 @@ void BaseClient::write_cb()
 
 		LOG_CONN_WIRE(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf, buf_size).c_str());
 
+#ifdef MSG_NOSIGNAL
+		ssize_t written = ::send(sock, buf, buf_size, MSG_NOSIGNAL);
+#else
 		ssize_t written = ::write(sock, buf, buf_size);
+#endif
 
 		if (written < 0) {
 			if (errno != EAGAIN && sock != -1) {

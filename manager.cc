@@ -125,7 +125,9 @@ void XapiandManager::bind_http()
 	http_sock = socket(PF_INET, SOCK_STREAM, 0);
 
 	setsockopt(http_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
+#ifdef SO_NOSIGPIPE
 	setsockopt(http_sock, SOL_SOCKET, SO_NOSIGPIPE, (char *)&optval, sizeof(optval));
+#endif
 	error = setsockopt(http_sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
 	if (error != 0)
 		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
@@ -167,7 +169,9 @@ void XapiandManager::bind_binary()
 	binary_sock = socket(PF_INET, SOCK_STREAM, 0);
 
 	setsockopt(binary_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
+#ifdef SO_NOSIGPIPE
 	setsockopt(binary_sock, SOL_SOCKET, SO_NOSIGPIPE, (char *)&optval, sizeof(optval));
+#endif
 	error = setsockopt(binary_sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
 	if (error != 0)
 		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
