@@ -75,8 +75,10 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	http_io.set<XapiandServer, &XapiandServer::io_accept_http>(this);
 	http_io.start(http_sock, ev::READ);
 
+#ifdef HAVE_REMOTE_PROTOCOL
 	binary_io.set<XapiandServer, &XapiandServer::io_accept_binary>(this);
 	binary_io.start(binary_sock, ev::READ);
+#endif  /* HAVE_REMOTE_PROTOCOL */
 
 	LOG_OBJ(this, "CREATED SERVER!\n");
 }
@@ -133,6 +135,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 }
 
 
+#ifdef HAVE_REMOTE_PROTOCOL
 void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
@@ -157,6 +160,8 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 		new BinaryClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
 	}
 }
+#endif  /* HAVE_REMOTE_PROTOCOL */
+
 
 void XapiandServer::destroy()
 {	

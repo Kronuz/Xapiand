@@ -29,6 +29,8 @@
 #include "xapiand.h"
 #include "length.h"
 
+#ifdef HAVE_REMOTE_PROTOCOL
+
 //
 // Xapian binary client
 //
@@ -226,3 +228,5 @@ void BinaryClient::run()
 		}
 	}
 }
+
+#endif  /* HAVE_REMOTE_PROTOCOL */
