@@ -52,7 +52,9 @@ const char* status_code[6][5] = {
 		"Not Found"
 	},
 	{
-		"Internal Server Error"
+		"Internal Server Error",
+		NULL,
+		"Bad Gateway"
 	}
 };
 
