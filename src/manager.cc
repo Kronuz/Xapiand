@@ -43,21 +43,21 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_p
 	  thread_pool("W%d", 10),
 	  http_port(http_port_),
 	  binary_port(binary_port_)
-{	
+{
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
-	
+
 	pthread_mutexattr_init(&servers_mutex_attr);
 	pthread_mutexattr_settype(&servers_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&servers_mutex, &servers_mutex_attr);
-	
+
 	break_loop.set<XapiandManager, &XapiandManager::break_loop_cb>(this);
 	break_loop.start();
 
 	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
 	async_shutdown.start();
-	
+
 	bind_http();
 #ifdef HAVE_REMOTE_PROTOCOL
 	bind_binary();
@@ -121,34 +121,34 @@ void XapiandManager::bind_http()
 	int optval = 1;
 	struct sockaddr_in addr;
 	struct linger ling = {0, 0};
-	
+
 	http_sock = socket(PF_INET, SOCK_STREAM, 0);
-	
+
 	setsockopt(http_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
 	setsockopt(http_sock, SOL_SOCKET, SO_NOSIGPIPE, (char *)&optval, sizeof(optval));
 	error = setsockopt(http_sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
 	if (error != 0)
 		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
-	
+
 	error = setsockopt(http_sock, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(ling));
 	if (error != 0)
 		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
-	
+
 	error = setsockopt(http_sock, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval));
 	if (error != 0)
 		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
-	
+
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(http_port);
 	addr.sin_addr.s_addr = INADDR_ANY;
-	
+
 	if (bind(http_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		LOG_ERR(this, "ERROR: http bind error (sock=%d): %s\n", http_sock, strerror(errno));
 		::close(http_sock);
 		http_sock = -1;
 	} else {
 		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
-		
+
 		check_tcp_backlog(tcp_backlog);
 		listen(http_sock, tcp_backlog);
 	}
@@ -163,27 +163,27 @@ void XapiandManager::bind_binary()
 	int optval = 1;
 	struct sockaddr_in addr;
 	struct linger ling = {0, 0};
-	
+
 	binary_sock = socket(PF_INET, SOCK_STREAM, 0);
-	
+
 	setsockopt(binary_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
 	setsockopt(binary_sock, SOL_SOCKET, SO_NOSIGPIPE, (char *)&optval, sizeof(optval));
 	error = setsockopt(binary_sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
 	if (error != 0)
 		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
-	
+
 	error = setsockopt(binary_sock, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(ling));
 	if (error != 0)
 		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
-	
+
 	error = setsockopt(binary_sock, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval));
 	if (error != 0)
 		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
-	
+
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(binary_port);
 	addr.sin_addr.s_addr = INADDR_ANY;
-	
+
 	if (bind(binary_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		LOG_ERR(this, "ERROR: binary bind error (sock=%d): %s\n", binary_sock, strerror(errno));
 		::close(binary_sock);
@@ -240,12 +240,12 @@ void XapiandManager::destroy()
 		pthread_mutex_unlock(&qmtx);
 		return;
 	}
-	
+
 	if (http_sock != -1) {
 		::close(http_sock);
 		http_sock = -1;
 	}
-	
+
 	if (binary_sock != -1) {
 		::close(binary_sock);
 		binary_sock = -1;
@@ -334,13 +334,13 @@ void XapiandManager::run(int num_servers)
 		XapiandServer *server = new XapiandServer(this, NULL, http_sock, binary_sock, &database_pool, &thread_pool);
 		server_pool.addTask(server);
 	}
-	
+
 	LOG_OBJ(this, "Starting manager loop...\n");
 	loop->run();
 	LOG_OBJ(this, "Manager loop ended!\n");
-	
+
 	LOG_OBJ(this, "Waiting for threads...\n");
-	
+
 	server_pool.finish();
 	server_pool.join();
 

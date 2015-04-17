@@ -44,7 +44,7 @@ void setup_signal_handlers(void) {
 	signal(SIGPIPE, SIG_IGN);
 
 	struct sigaction act;
-	
+
 	/* When the SA_SIGINFO flag is set in sa_flags then sa_sigaction is used.
 	 * Otherwise, sa_handler is used. */
 	sigemptyset(&act.sa_mask);
@@ -58,15 +58,15 @@ void setup_signal_handlers(void) {
 void run(int num_servers, int http_port, int binary_port)
 {
 	ev::default_loop default_loop;
-	
+
 	setup_signal_handlers();
-	
+
 	XapiandManager manager(&default_loop, http_port, binary_port);
 
 	manager_ptr = &manager;
-	
+
 	manager.run(num_servers);
-	
+
 	manager_ptr = NULL;
 }
 

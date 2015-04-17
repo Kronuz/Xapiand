@@ -46,7 +46,7 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 	int total_clients = XapiandServer::total_clients;
 	int binary_clients = ++XapiandServer::binary_clients;
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
-	
+
 	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) of a total of %d connected.\n", sock, binary_clients, XapiandServer::total_clients);
 
 	thread_pool->addTask(this);

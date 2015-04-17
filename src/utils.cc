@@ -110,17 +110,17 @@ const char HEX2DEC[256] =
 	/* 1 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* 2 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* 3 */  0, 1, 2, 3,  4, 5, 6, 7,  8, 9,-1,-1, -1,-1,-1,-1,
-	
+
 	/* 4 */ -1,10,11,12, 13,14,15,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* 5 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* 6 */ -1,10,11,12, 13,14,15,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* 7 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	
+
 	/* 8 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* 9 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* A */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* B */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
-	
+
 	/* C */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* D */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* E */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
@@ -133,13 +133,13 @@ std::string urldecode(const char *src, size_t size)
 	// Note from RFC1630:  "Sequences which start with a percent sign
 	// but are not followed by two hexadecimal characters (0-9, A-F) are reserved
 	// for future extension"
-	
+
 	const char * SRC_END = src + size;
 	const char * SRC_LAST_DEC = SRC_END - 2;   // last decodable '%'
-	
+
 	char * const pStart = new char[size];
 	char * pEnd = pStart;
-	
+
 	while (src < SRC_LAST_DEC)
 	{
 		if (*src == '%')
@@ -153,14 +153,14 @@ std::string urldecode(const char *src, size_t size)
 				continue;
 			}
 		}
-		
+
 		*pEnd++ = *src++;
 	}
-	
+
 	// the last 2- chars
 	while (src < SRC_END)
 	*pEnd++ = *src++;
-	
+
 	std::string sResult(pStart, pEnd);
 	delete [] pStart;
 	//std::replace( sResult.begin(), sResult.end(), '+', ' ');
@@ -173,13 +173,13 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query *par)
 	const char *nf = qs + size;
 	const char *n1, *n0;
 	const char *v0 = NULL;
-	
+
 	if(par->offset == NULL) {
 		n0 = n1 = qs;
 	} else {
 		n0 = n1 = par->offset + par -> length + 1;
 	}
-	
+
 	while (1) {
 		char cn = *n1;
 		if (n1 == nf) {
@@ -234,23 +234,23 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 	size_t cmd_size = 0;
 	int state = 0;
 	n0 = n1;
-	
+
 	bool other_slash = false;
 	par->off_host = NULL;
 	par->len_host = 0;
 	par->off_command = NULL;
 	par->len_command = 0;
-	
-	
+
+
 	if(par->offset == NULL) {
 		n0 = n2 = n1;
 	} else {
 		n0 = n2 = n1 = par->offset + par -> length + 1;
 	}
-	
+
 	par->length = 0;
 	par->offset = 0;
-	
+
 	while (1) {
 		char cn = *n1;
 		if (n1 == nf) {
@@ -271,7 +271,7 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 							case '/':
 								r++;
 								continue;
-								
+
 							default:
 								cmd_size++;
 								r++;
@@ -295,7 +295,7 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 							par->offset = n2;
 							par->length = p - n2;
 						}
-						
+
 						return 0;
 					case 2:
 						par->off_host = n0;
@@ -310,7 +310,7 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 				p = NULL;
 				other_slash = false;
 				break;
-				
+
 			case ':':
 				switch (state) {
 					case 0:
@@ -325,7 +325,7 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 				p = NULL;
 				other_slash = false;
 				break;
-				
+
 			case '@':
 				switch (state) {
 					case 0:
@@ -346,8 +346,8 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 				p = NULL;
 				other_slash = false;
 				break;
-				
-				
+
+
 			case '/':
 				if (*(n1 + 1) && !p && !other_slash) {
 					p = n1;
@@ -356,7 +356,7 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 					p = n1;
 					other_slash = true;
 				}
-				
+
 		}
 		n1++;
 	}
@@ -468,7 +468,7 @@ std::string serialise_geo(const std::string &field_value)
 		}
 		offset = g[2].end;
 	}
-	
+
 	if (g) {
 		free(g);
 		g = NULL;
@@ -614,7 +614,7 @@ std::string timestamp_date(const std::string &str)
 	int ret, n[9];
 	double  timestamp;
 	group *g = NULL;
-	
+
 	ret = pcre_search(str.c_str(), len, 0, 0, DATE_RE, &compiled_date_re, &g);
 
 	if (ret != -1 && len == (g[0].end - g[0].start)) {
@@ -646,9 +646,9 @@ std::string timestamp_date(const std::string &str)
 				sign = std::string(str, g[13].start, g[13].end - g[13].start).at(0);
 				parse = std::string(str, g[14].start, g[14].end - g[14].start);
 				n[7] = strtoint(parse);
-				if (g[15].end - g[15].start > 0) {   
+				if (g[15].end - g[15].start > 0) {
 					parse = std::string(str, g[16].start, g[16].end - g[16].start);
-					n[8] = strtoint(parse); 
+					n[8] = strtoint(parse);
 				} else {
 					n[8] = 0;
 				}
@@ -675,7 +675,7 @@ std::string timestamp_date(const std::string &str)
 		struct tm *timeinfo = gmtime(&tt);
 		timeinfo->tm_year   = n[0] - 1900;
 		timeinfo->tm_mon    = n[1] - 1;
-		timeinfo->tm_mday   = n[2]; 
+		timeinfo->tm_mday   = n[2];
 		if (sign == '-') {
 			timeinfo->tm_hour  = n[3] + n[7];
 			timeinfo->tm_min   = n[4] + n[8];
@@ -687,7 +687,7 @@ std::string timestamp_date(const std::string &str)
 		const time_t dateGMT = timegm(timeinfo);
 		timestamp = (double) dateGMT;
 		timestamp += n[6]/1000.0;
-		
+
 		if (g) {
 			free(g);
 			g = NULL;
@@ -751,7 +751,7 @@ int get_coords(const std::string &str, double *coords)
 	std::stringstream ss;
 	group *g = NULL;
 	int offset = 0;
-	
+
 	while ((pcre_search(str.c_str(), (int)str.size(), offset, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &g)) != -1) {
 		offset = g[0].end;
 		/*LOG(NULL,"group[1] %s\n" , std::string(str.c_str() + g[1].start, g[1].end - g[1].start).c_str());
