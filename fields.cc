@@ -119,7 +119,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 
 	if (begin.size() != 0) {
 		std::string serialise = serialise_date(begin);
-		if (serialise.size() == 0) return Xapian::BAD_VALUENO; 
+		if (serialise.size() == 0) return Xapian::BAD_VALUENO;
 		buf = prefix + serialise;
 		begin.assign(buf.c_str(), buf.size());
 		LOG(this, "Serialise of begin %s\n", buf.c_str());

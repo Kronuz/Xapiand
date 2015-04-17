@@ -200,7 +200,7 @@ void Queue<T>::clear()
 		std::queue<T>::pop();
 	}
 	pthread_mutex_unlock(&qmtx);
-	
+
 	// Notifiy waiting thread they can push/push now
 	pthread_cond_signal(&pop_cond);
 }

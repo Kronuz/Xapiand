@@ -463,7 +463,7 @@ Database::serialise(const std::string &field_name, const std::string &field_valu
 
 
 void
-Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, 
+Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name,
 	int w, int position)
 {
 	bool found;
@@ -588,7 +588,7 @@ Database::search(struct query_t e)
 		if (e.partial.size() != 0) {
 			if (first) {
 				queryF = queryP;
-				first = false;	
+				first = false;
 			} else {
 				queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryP);
 			}
@@ -704,7 +704,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						queryparser.add_prefix(field_name, nfp);
 					}
 					break;
-				case STRING_TYPE: 
+				case STRING_TYPE:
 					if (field_name.size() != 0) {
 						prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
 						if (isupper(field_value.at(0))) {
@@ -786,7 +786,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		throw Xapian::QueryParserError("Query '" + query + "' contains errors.\n" );
 	}
 
-	LOG_DATABASE_WRAP(this, "Query processed: (%s)\n", querystring.c_str());	
+	LOG_DATABASE_WRAP(this, "Query processed: (%s)\n", querystring.c_str());
 
 	try {
 		srch.query = queryparser.parse_query(querystring, flags);

@@ -318,7 +318,7 @@ void HttpClient::_search()
 	std::string name_result;
 	int rc = 0;
 	int rmset;
-	
+
 	struct query_t e;
 	_endpointgen(e);
 
@@ -418,7 +418,7 @@ void HttpClient::_search()
 
 	LOG(this, "Doing the checkin for search.\n");
 	database_pool->checkin(&database);
-	LOG(this, "FINISH SEARCH\n");	
+	LOG(this, "FINISH SEARCH\n");
 }
 
 void HttpClient::_endpointgen(struct query_t &e)
@@ -548,7 +548,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 std::string HttpClient::http_response(int status, bool header, bool Content_json, bool Content_length, bool Trasfer_chunk, bool chunked,std::string size, std::string content)
 {
 	std::string response;
-	if(header){
+	if(header) {
 		char tmp[20];
 		response += "HTTP/";
 		sprintf(tmp, "%d.%d", 1, 1);

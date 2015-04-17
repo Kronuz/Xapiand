@@ -103,7 +103,7 @@ std::string serialise_geo(const std::string &field_value);
 std::string serialise_bool(const std::string &field_value);
 bool lat_lon(const std::string &str, int *grv, int size, int offset);
 std::string stringtolower(const std::string &str);
-std::string stringtoupper(const std::string &str); 
+std::string stringtoupper(const std::string &str);
 unsigned int get_slot(const std::string &name);
 std::string prefixed(const std::string &term, const std::string &prefixO);
 unsigned int hex2int(const std::string &input);

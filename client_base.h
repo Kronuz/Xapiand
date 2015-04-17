@@ -105,7 +105,7 @@ protected:
 
 	// Receive message from client socket
 	void read_cb();
-	
+
 	// Socket is writable
 	void write_cb();
 
@@ -115,14 +115,14 @@ protected:
 	{
 		return write(buf, strlen(buf));
 	}
-	
+
 	inline bool write(const std::string &buf)
 	{
 		return write(buf.c_str(), buf.size());
 	}
 
 	bool write(const char *buf, size_t buf_size);
-	
+
 	void close();
 	void destroy();
 	void shutdown();

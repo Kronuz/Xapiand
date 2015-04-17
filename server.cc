@@ -94,10 +94,10 @@ XapiandServer::~XapiandServer()
 
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
-	
+
 	pthread_mutex_destroy(&clients_mutex);
 	pthread_mutexattr_destroy(&clients_mutex_attr);
-	
+
 	LOG_OBJ(this, "DELETED SERVER!\n");
 }
 
@@ -164,7 +164,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 
 void XapiandServer::destroy()
-{	
+{
 	pthread_mutex_lock(&qmtx);
 	if (http_sock == -1 && binary_sock == -1) {
 		pthread_mutex_unlock(&qmtx);

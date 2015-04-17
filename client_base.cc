@@ -52,7 +52,7 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = ++XapiandServer::total_clients;
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
-	
+
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
 	async_write.start();
 
@@ -94,7 +94,7 @@ BaseClient::~BaseClient()
 void BaseClient::destroy()
 {
 	close();
-	
+
 	pthread_mutex_lock(&qmtx);
 	if (sock == -1) {
 		pthread_mutex_unlock(&qmtx);
@@ -104,11 +104,11 @@ void BaseClient::destroy()
 	// Stop and free watcher if client socket is closing
 	io_read.stop();
 	io_write.stop();
-	
+
 	::close(sock);
 	sock = -1;
 	pthread_mutex_unlock(&qmtx);
-	
+
 	write_queue.clear();
 
 	LOG_OBJ(this, "DESTROYED CLIENT!\n");
@@ -137,7 +137,7 @@ void BaseClient::io_update() {
 			io_write.start();
 		}
 	}
-	
+
 	if (sock == -1) {
 		rel_ref();
 	}
@@ -158,7 +158,7 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 	if (sock == -1) {
 		return;
 	}
-	
+
 	assert(sock == watcher.fd);
 
 	if (sock != -1 && revents & EV_WRITE) {
@@ -168,7 +168,7 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 	if (sock != -1 && revents & EV_READ) {
 		read_cb();
 	}
-	
+
 	io_update();
 }
 
@@ -177,14 +177,14 @@ void BaseClient::write_cb()
 {
 	if (sock != -1 && !write_queue.empty()) {
 		Buffer* buffer = write_queue.front();
-		
+
 		size_t buf_size = buffer->nbytes();
 		const char * buf = buffer->dpos();
 
 		LOG_CONN_WIRE(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf, buf_size).c_str());
 
 		ssize_t written = ::write(sock, buf, buf_size);
-		
+
 		if (written < 0) {
 			if (errno != EAGAIN && sock != -1) {
 				LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
@@ -207,9 +207,9 @@ void BaseClient::read_cb()
 {
 	if (sock != -1) {
 		char buf[1024];
-		
+
 		ssize_t received = ::read(sock, buf, sizeof(buf));
-		
+
 		if (received < 0) {
 			if (errno != EAGAIN && sock != -1) {
 				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
@@ -232,7 +232,7 @@ void BaseClient::async_write_cb(ev::async &watcher, int revents)
 	io_update();
 }
 
-					
+
 bool BaseClient::write(const char *buf, size_t buf_size)
 {
 	LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
