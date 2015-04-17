@@ -50,8 +50,8 @@ Database::reopen()
 		try {
 			db->reopen();
 			return;
-		} catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+		} catch (const Xapian::Error &err) {
+			LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
 			db->close();
 			delete db;
 			db = NULL;
@@ -83,7 +83,7 @@ Database::reopen()
 					} else {
 						wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
 					}
-				} catch (Xapian::Error) {
+				} catch (Xapian::DatabaseOpeningError &err) {
 					wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
 				}
 			}
@@ -96,7 +96,7 @@ Database::reopen()
 			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
 				try {
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
-				} catch (Xapian::DatabaseOpeningError) {
+				} catch (Xapian::DatabaseOpeningError &err) {
 					Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 				}
@@ -109,7 +109,7 @@ Database::reopen()
 						// Handle remote endpoints and figure out if the endpoint is a local database
 						rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					}
-				} catch (Xapian::Error) {}
+				} catch (Xapian::DatabaseOpeningError &err) {}
 			}
 			db->add_database(rdb);
 		}
