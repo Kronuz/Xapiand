@@ -23,6 +23,8 @@
 #ifndef XAPIAND_INCLUDED_MANAGER_H
 #define XAPIAND_INCLUDED_MANAGER_H
 
+#include "xapiand.h"
+
 #include "database.h"
 #include "threadpool.h"
 

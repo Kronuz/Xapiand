@@ -23,9 +23,12 @@
 #ifndef XAPIAND_INCLUDED_CLIENT_HTTP_H
 #define XAPIAND_INCLUDED_CLIENT_HTTP_H
 
-#include "http_parser.h"
+#include "xapiand.h"
 
 #include "client_base.h"
+
+#include "http_parser.h"
+
 
 //
 //   A single instance of a non-blocking Xapiand HTTP protocol handler
