@@ -4,7 +4,7 @@
 VERSION="HEAD"
 
 if [ -d "/usr/local/Cellar" ]; then
-	# Homebre in OS X has Cellar 
+	# Homebrew in OS X has a Cellar directory
 	PREFIX="/usr/local/Cellar/xapian/$VERSION"
 else
 	PREFIX="/usr/local"
