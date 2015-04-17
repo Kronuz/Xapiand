@@ -541,7 +541,7 @@ std::string HttpClient::http_response(int status, bool header, bool Content_json
 	if(header) {
 		char tmp[20];
 		response += "HTTP/";
-		sprintf(tmp, "%d.%d", 1, 1);
+		sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
 		response += tmp;
 		response +=  " " + std::to_string(status) + " " + status_code[status / 100][status % 100]+ "\r\n";
 
