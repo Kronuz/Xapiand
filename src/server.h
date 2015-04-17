@@ -54,7 +54,9 @@ private:
 	void bind_binary();
 
 	void io_accept_http(ev::io &watcher, int revents);
+#ifdef HAVE_REMOTE_PROTOCOL
 	void io_accept_binary(ev::io &watcher, int revents);
+#endif  /* HAVE_REMOTE_PROTOCOL */
 
 	void break_loop_cb(ev::async &watcher, int revents);
 
