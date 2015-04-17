@@ -14,6 +14,9 @@ AM_INIT_AUTOMAKE([subdir-objects no-dependencies])
 # Checks for programs.
 AC_PROG_CXX
 
+# Use the C++ compiler for the compile tests
+AC_LANG(C++)
+
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
 AC_CHECK_LIB(ev, ev_run, [], [AC_MSG_ERROR([libev not found, Xapiand requires libev-devel])], [-lev])
@@ -26,6 +29,17 @@ XO_LIB_XAPIAN([], [], [xapian-config-1.3])
 
 # Checks for library functions.
 AC_CHECK_FUNCS([getcwd gettimeofday socket])
+
+save_LIBS="$LIBS"
+LIBS="$LIBS $XAPIAN_LIBS"
+save_CXXFLAGS="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS $XAPIAN_CXXFLAGS"
+AC_LINK_IFELSE(
+  [AC_LANG_PROGRAM([#include "xapian.h"], [class RemoteClient : public RemoteProtocol {}])],
+  [AC_DEFINE([HAVE_REMOTE_PROTOCOL], 1, [Define to 1 if Xapian has RemoteProtocol available.])],
+  [AC_MSG_WARN([RemoteProtocol is not installed!])])
+CXXFLAGS="$save_CXXFLAGS"
+LIBS="$save_LIBS"
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
