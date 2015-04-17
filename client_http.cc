@@ -355,19 +355,12 @@ void HttpClient::_search()
 	 */
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
-	rmset = database->get_mset(e, mset, suggestions);
-	
-	if ( rmset == 1 ) {
-		write(http_header_responde(400, false, false, true,true ,"0", result ));
-		return;
-	}
-	
-	if ( rmset == 2 ) {
-		write(http_header_responde(500, false, false, true, true,"0", result));
+	if (database->get_mset(e, mset, suggestions) == 1) {
+		write(http_error_header);
 		return;
 	}
 
-	LOG(this, "mset size:%d!!!!\n",mset.size());
+
 	LOG(this, "Suggered querys\n");
 	std::vector<std::string>::const_iterator it_s(suggestions.begin());
 	for ( ; it_s != suggestions.end(); it_s++) {
@@ -393,15 +386,13 @@ void HttpClient::_search()
 				break;
 			} catch (Xapian::Error &er) {
 				database->reopen();
-				if (database->get_mset(e, mset, suggestions, rc) == 0) {
+				if (database->get_mset(e, mset, suggestions, rc)== 0) {
 					m = mset.begin();
-					first_time = true;
 				} else {
 					t = -1;
 				}
 			}
 		}
-		//FIXME Send the correct http_error_header
 		if (t < 0) {
 			if (rc == 0) {
 				write(http_error_header);
