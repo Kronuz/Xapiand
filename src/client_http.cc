@@ -316,7 +316,10 @@ void HttpClient::_search()
 
 	Database *database = NULL;
 	LOG(this, "Doing the checkout for search\n");
-	database_pool->checkout(&database, endpoints, false);
+	if (!database_pool->checkout(&database, endpoints, false)) {
+		return;
+	}
+	LOG(this, "Out of checkout\n");
 
 	/*
 	 NOTE:	Missing spies
