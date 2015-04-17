@@ -63,7 +63,7 @@ public:
 	Xapian::Enquire get_enquire(Xapian::Query query, struct query_t e);
 	search_t search(struct query_t e);
 	search_t _search(const std::string &query, unsigned int flags, bool text, const std::string &lan);
-	bool get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::string> &suggestions, int offset = 0);
+	int get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::string> &suggestions, int offset = 0);
 
 private:
 	bool _commit();
