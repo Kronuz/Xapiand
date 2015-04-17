@@ -29,7 +29,7 @@
 #include "client_base.h"
 
 
-const int WRITE_QUEUE_SIZE = -1;
+const int WRITE_QUEUE_SIZE = 10;
 
 
 BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
