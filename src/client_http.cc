@@ -464,8 +464,10 @@ void HttpClient::_endpointgen(struct query_t &e)
 				}
 				if (p.len_host) {
 					hos_ = urldecode(p.off_host, p.len_host);
-				} else {
+				} else if(!host.empty()) {
 					hos_ = host;
+				} else {
+					hos_ = "127.0.0.1";
 				}
 				LOG(this, "Host: %s LOCAL_PROTOCOL: %d\n", hos_.c_str(), LOCAL_PROTOCOL(hos_));
 				(LOCAL_PROTOCOL(hos_)) ? endp = "file://" : endp = "xapian://" + hos_;
