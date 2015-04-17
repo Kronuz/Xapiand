@@ -327,12 +327,12 @@ void HttpClient::_search()
 	rmset = database->get_mset(e, mset, suggestions);
 	if (rmset == 1) {
 		LOG(this, "get_mset return 1\n");
-		write(http_response(400, true, false, false, false, false, "0", ""));
+		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
 	if (rmset == 2) {
 		LOG(this, "get_mset return 2\n");
-		write(http_response(500, true, false, false, false, false, "0", ""));
+		write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
 
@@ -371,7 +371,7 @@ void HttpClient::_search()
 		}
 		if (t < 0) {
 			if (rc == 0) {
-				write(http_response(500, true, false, false, false, false, "0", ""));
+				write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
 			} else {
 				// err obj
 				write("0\r\n\r\n");
@@ -380,7 +380,7 @@ void HttpClient::_search()
 		}
 
 		if (rc == 0) {
-			write(http_response(200, true, true, false, true, false, "0", ""));
+			write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
 		}
 
 		cJSON *root = cJSON_CreateObject();
@@ -393,12 +393,9 @@ void HttpClient::_search()
 		cJSON_AddNumberToObject(response, "weight", weight);
 		cJSON_AddNumberToObject(response, "percent", percent);
 		cJSON_AddStringToObject(response, "data", data.c_str());
-		result =cJSON_PrintUnformatted(root);
-		std::ostringstream os;
-		os << std::hex << result.size();
-		std::string chunk_size = os.str();
-		os.str("");
-		result = http_response(200, false, false, false, false, true, chunk_size, result);
+		result = cJSON_PrintUnformatted(root);
+		result += "\n";
+		result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
 
 		if (!write(result)) {
 			break;
@@ -535,29 +532,40 @@ void HttpClient::_endpointgen(struct query_t &e)
 	}
 }
 
-std::string HttpClient::http_response(int status, bool header, bool Content_json, bool Content_length, bool Trasfer_chunk, bool chunked,std::string size, std::string content)
+std::string HttpClient::http_response(int status, int mode, std::string content)
 {
+	char buffer[20];
 	std::string response;
-	if(header) {
-		char tmp[20];
-		response += "HTTP/";
-		sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
-		response += tmp;
-		response +=  " " + std::to_string(status) + " " + status_code[status / 100][status % 100]+ "\r\n";
+	std::string eol("\r\n");
 
-		if (Content_json)
-			response += "Content-Type: application/json; charset=UTF-8\r\n";
-		if(Content_length) {
-			response += "Content-Length: ";
-			response += size + "\r\n";
+	if (mode & HTTP_HEADER) {
+		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", parser.http_major, parser.http_minor, status);
+		response += buffer;
+		response += status_code[status / 100][status % 100] + eol;
+
+		if (mode & HTTP_JSON) {
+			response += "Content-Type: application/json; charset=UTF-8" + eol;
 		}
-		if(Trasfer_chunk) {
-			response += "Transfer-Encoding: chunked\r\n";
-			response += "\r\n";
+
+		if (mode & HTTP_CHUNKED) {
+			response += "Transfer-Encoding: chunked" + eol;
+		} else {
+			response += "Content-Length: ";
+			snprintf(buffer, sizeof(buffer), "%lu", content.size());
+			response += buffer + eol;
+		}
+		response += eol;
+	}
+
+	if (mode & HTTP_CONTENT) {
+		if (mode & HTTP_CHUNKED) {
+			snprintf(buffer, sizeof(buffer), "%lx", content.size());
+			response += buffer + eol;
+			response += content + eol;
+		} else {
+			response += content;
 		}
 	}
 
-	if(chunked)
-		response += size + "\r\n" + content + "\r\n";
-	return (response);
+	return response;
 }
