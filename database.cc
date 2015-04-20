@@ -855,7 +855,7 @@ Database::get_enquire(Xapian::Query query, struct query_t e)
 	 complement enquire ....
 	 possible to add "check_at_least"
 	 */
-	if (!e.order.empty()) {
+	/*if (!e.order.empty()) {
 		std::vector<std::string>::const_iterator oit(e.order.begin());
 		for (; oit != e.order.end(); oit++) {
 			if(StartsWith(*oit, "-")) {
@@ -873,7 +873,7 @@ Database::get_enquire(Xapian::Query query, struct query_t e)
 			}
 		}
 		enquire.set_sort_by_key(&sorter, false);
-	}
+	}*/
 	enquire.set_collapse_key(0);
 	return enquire;
 }
