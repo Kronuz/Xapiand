@@ -844,36 +844,17 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 
 Xapian::Enquire
-Database::get_enquire(Xapian::Query query, struct query_t e)
+Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter)
 {
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
-	bool decreasing;
-	Xapian::MultiValueKeyMaker sorter;
-	std::string field;
 	/*
 	 complement enquire ....
 	 possible to add "check_at_least"
 	 */
-	/*if (!e.order.empty()) {
-		std::vector<std::string>::const_iterator oit(e.order.begin());
-		for (; oit != e.order.end(); oit++) {
-			if(StartsWith(*oit, "-")) {
-				decreasing = true;
-				field.assign(*oit,1,(*oit).size()-1);
-				sorter.add_value(get_slot(field), decreasing);
-			}
-			else if(StartsWith(*oit, "+")) {
-				decreasing = false;
-				field.assign(*oit,1,(*oit).size()-1);
-				sorter.add_value(get_slot(field), decreasing);
-			} else {
-				decreasing = false;
-				sorter.add_value(get_slot(*oit), decreasing);
-			}
-		}
-		enquire.set_sort_by_key(&sorter, false);
-	}*/
+	if (sorter) {
+		enquire.set_sort_by_key(sorter, false);
+	}
 	enquire.set_collapse_key(0);
 	return enquire;
 }
@@ -882,11 +863,37 @@ Database::get_enquire(Xapian::Query query, struct query_t e)
 int
 Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::string> &suggestions, int offset)
 {
+	Xapian::MultiValueKeyMaker *sorter = NULL;
+	bool decreasing;
+	std::string field;
+
+	if (!e.order.empty()) {
+		sorter = new Xapian::MultiValueKeyMaker();
+		std::vector<std::string>::const_iterator oit(e.order.begin());
+		for (; oit != e.order.end(); oit++) {
+			if(StartsWith(*oit, "-")) {
+				decreasing = true;
+				field.assign(*oit,1,(*oit).size() - 1);
+				sorter->add_value(get_slot(field), decreasing);
+			} else if(StartsWith(*oit, "+")) {
+				decreasing = false;
+				field.assign(*oit,1,(*oit).size()-1);
+				sorter->add_value(get_slot(field), decreasing);
+			} else {
+				decreasing = false;
+				sorter->add_value(get_slot(*oit), decreasing);
+			}
+		}
+	}
+
 	for (int t = 3; t >= 0; --t) {
 		try {
 			search_t srch = search(e);
-			if (srch.query.serialise().size() == 0) return 1;
-			Xapian::Enquire enquire = get_enquire(srch.query, e);
+			if (srch.query.serialise().size() == 0) {
+				delete sorter;
+				return 1;
+			}
+			Xapian::Enquire enquire = get_enquire(srch.query, sorter);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset);
 		} catch (Xapian::Error &er) {
@@ -894,8 +901,10 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::strin
 			if (t) reopen();
 			continue;
 		}
+		delete sorter;
 		return 0;
 	}
 	LOG_ERR(this, "ERROR: Cannot search!\n");
+	delete sorter;
 	return 2;
 }
