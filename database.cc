@@ -844,8 +844,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 
 Xapian::Enquire
-Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter)
+Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, struct query_t e)
 {
+	std::string field;
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
 	/*
@@ -855,6 +856,16 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter)
 	if (sorter) {
 		enquire.set_sort_by_key(sorter, false);
 	}
+	
+	if(!e.facets.empty()) {
+		std::vector<std::string>::const_iterator fit(e.facets.begin());
+		for(; fit != e.facets.end(); fit++) {
+			field.assign(*fit,1,(*fit).size() - 1);
+			Xapian::ValueCountMatchSpy spy(get_slot(field));
+			enquire.add_matchspy(&spy);
+		}
+	}
+
 	enquire.set_collapse_key(0);
 	return enquire;
 }
@@ -893,7 +904,7 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::strin
 				delete sorter;
 				return 1;
 			}
-			Xapian::Enquire enquire = get_enquire(srch.query, sorter);
+			Xapian::Enquire enquire = get_enquire(srch.query, sorter, e);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset);
 		} catch (Xapian::Error &er) {
