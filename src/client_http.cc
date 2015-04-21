@@ -287,6 +287,7 @@ void HttpClient::_delete()
 	LOG(this, "Doing the checkin.\n");
 	database_pool->checkin(&database);
 	LOG(this, "FINISH DELETE\n");
+	write(http_response(200, HTTP_HEADER | HTTP_CONTENT));
 }
 
 void HttpClient::_index()
@@ -309,6 +310,7 @@ void HttpClient::_index()
 	database_pool->checkin(&database);
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "FINISH INDEX\n");
+	write(http_response(200, HTTP_HEADER | HTTP_CONTENT));
 }
 
 void HttpClient::_search()
