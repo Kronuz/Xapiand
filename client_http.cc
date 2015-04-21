@@ -279,7 +279,7 @@ void HttpClient::_delete()
 	Database *database = NULL;
 	LOG(this, "Delete Document: %s\n", command.c_str());
 	LOG(this, "Doing the checkout\n");
-	if (!database_pool->checkout(&database, endpoints, false)) {
+	if (!database_pool->checkout(&database, endpoints, true)) {
 		LOG(this, "Checkout for delete aborted.\n");
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
@@ -295,7 +295,7 @@ void HttpClient::_index()
 	_endpointgen(e);
 	Database *database = NULL;
 	LOG(this, "Doing the checkout for index\n");
-	if (!database_pool->checkout(&database, endpoints, false)) {
+	if (!database_pool->checkout(&database, endpoints, true)) {
 		LOG(this, "Checkout for index aborted.\n");
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
