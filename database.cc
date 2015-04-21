@@ -860,8 +860,7 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 	if(!e.facets.empty()) {
 		std::vector<std::string>::const_iterator fit(e.facets.begin());
 		for(; fit != e.facets.end(); fit++) {
-			field.assign(*fit,1,(*fit).size() - 1);
-			Xapian::ValueCountMatchSpy spy(get_slot(field));
+			Xapian::ValueCountMatchSpy spy(get_slot(*fit));
 			enquire.add_matchspy(&spy);
 		}
 	}
