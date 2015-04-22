@@ -91,7 +91,7 @@ int url_qs(const char *, const char *, size_t, parser_query *);
 std::string urldecode(const char *, size_t);
 int look_cmd(const char *);
 
-typedef struct group{
+typedef struct group {
 		int start;
 		int end;
 } group;
