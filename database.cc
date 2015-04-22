@@ -28,7 +28,7 @@
 
 #define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
 #define FIND_TERMS_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
-
+#define MAX_DOCS 100
 
 Database::Database(Endpoints &endpoints_, bool writable_)
 	: endpoints(endpoints_),
@@ -848,10 +848,7 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 	Xapian::ValueCountMatchSpy *spy;
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
-	/*
-	 complement enquire ....
-	 possible to add "check_at_least"
-	 */
+	
 	if (sorter) {
 		enquire.set_sort_by_key(sorter, false);
 	}
@@ -877,7 +874,9 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<
 	Xapian::MultiValueKeyMaker *sorter = NULL;
 	bool decreasing;
 	std::string field;
-
+	int doccount = db->get_doccount();
+	int check_at_least = std::max(std::min(doccount, MAX_DOCS), 0);
+	
 	if (!e.order.empty()) {
 		sorter = new Xapian::MultiValueKeyMaker();
 		std::vector<std::string>::const_iterator oit(e.order.begin());
@@ -906,7 +905,7 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<
 			}
 			Xapian::Enquire enquire = get_enquire(srch.query, sorter, spies, e);
 			suggestions = srch.suggested_query;
-			mset = enquire.get_mset(e.offset + offset, e.limit - offset);
+			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
 		} catch (Xapian::Error &er) {
 			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 			if (t) reopen();
