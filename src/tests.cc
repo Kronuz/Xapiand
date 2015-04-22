@@ -80,7 +80,24 @@ const test test_timestamp_date[] = {
 };
 
 
-bool test_datetotimestamp() {
+const test_distance test_distanceLatLong_fields[] = {
+	{"23.56, 48.76 ; 40mi",  64373.76 },
+	{"23.56, 48.76 ; 40km",  40000.00 },
+	{"23.56, 48.76 ; 40m",   40       },
+	{"23.56, 48.76 ; 40",    40       },
+	{"23.56,48.76;40yd",     36.57600 },
+	{"23.56, 48.76; 40ft",   12.19200 },
+	{"23.56, 48.76 ;40in",   1.01600  },
+	{"23.56,48.76 ; 40cm",   0.4      },
+	{"23.56, 48.76 ; 40mm",  0.04     },
+	{"23.56, 48.76 ; 40mmi", -1.0     },
+	{"23.56, 48.76k ; 40mm", -1.0     },
+	{NULL,                   -1.0     },
+};
+
+
+bool test_datetotimestamp()
+{
 	int cont = 0;
 	for (const test *p = test_timestamp_date; p->str; ++p) {
 		std::string date = std::string(p->str);
@@ -88,7 +105,36 @@ bool test_datetotimestamp() {
 		std::string timestamp(timestamp_date(date));
 		if (timestamp.compare(p->expect) != 0) {
 			cont++;
-			LOG(NULL, "Resul: %s Expect: %s\n", timestamp.c_str(), p->expect);
+			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", timestamp.c_str(), p->expect);
+		}
+	}
+
+	if (cont == 0) {
+		LOG(NULL, "Test is correct.\n");
+		return true;
+	} else {
+		LOG_ERR(NULL, "ERROR: Test has mistakes.\n");
+		return false;
+	}
+}
+
+
+bool test_distanceLatLong()
+{
+	int cont = 0;
+	for (const test_distance *p = test_distanceLatLong_fields; p->str; ++p) {
+		double coords_[3];
+		LOG(NULL, "Distance LatLong: %s\n", p->str);
+		if (get_coords(p->str, coords_) == 0) {
+			if (coords_[2] != p->val) {
+				cont++;
+				LOG_ERR(NULL, "ERROR: Resul: %f Expect: %f\n", coords_[2], p->val);
+			}
+		} else {
+			if (p->val != -1.0) {
+				cont++;
+				LOG_ERR(NULL, "ERROR: Resul: Error en format(-1) Expect: %f\n", p->val);
+			}
 		}
 	}
 
