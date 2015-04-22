@@ -333,21 +333,7 @@ void HttpClient::_search()
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
-<<<<<<< HEAD
 
-	/*
-	 NOTE:	Missing spies
-			Ask if add get_termlist
-	 */
-||||||| merged common ancestors
-	
-	/*
-	 NOTE:	Missing spies
-			Ask if add get_termlist
-	 */
-=======
-	
->>>>>>> Using std::pair to save the facet and the Xapian::ValueCountMatchSpy
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
 	rmset = database->get_mset(e, mset, spies, suggestions);
