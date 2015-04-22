@@ -33,6 +33,12 @@ typedef struct test {
 	const char *expect;
 } test;
 
+typedef struct test_distance {
+	const char *str;
+	const double val;
+} test_distance;
+
 bool test_datetotimestamp();
+bool test_distanceLatLong();
 
 #endif /* XAPIAND_INCLUDED_TESTS_H */
