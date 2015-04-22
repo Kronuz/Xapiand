@@ -33,12 +33,13 @@ typedef struct test {
 	const char *expect;
 } test;
 
-typedef struct test_distance {
+typedef struct test_str_double {
 	const char *str;
 	const double val;
-} test_distance;
+} test_str_double;
 
 bool test_datetotimestamp();
 bool test_distanceLatLong();
+bool test_unserialise_date();
 
 #endif /* XAPIAND_INCLUDED_TESTS_H */
