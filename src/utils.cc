@@ -444,6 +444,19 @@ std::string serialise_date(const std::string &field_value)
 }
 
 
+std::string unserialise_date(const std::string &serialise_val)
+{
+	char date[25];
+	double epoch = Xapian::sortable_unserialise(serialise_val);
+	time_t timestamp = (time_t) epoch;
+	std::string milliseconds = std::to_string(epoch);
+	milliseconds = std::string(milliseconds.c_str() + milliseconds.find("."), 4);
+	struct tm *timeinfo = gmtime(&timestamp);
+	sprintf(date, "%.4d-%.2d-%.2dT%.2d:%.2d:%.2d%s", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, milliseconds.c_str());
+	return std::string(date);
+}
+
+
 std::string serialise_geo(const std::string &field_value)
 {
 	Xapian::LatLongCoords coords;
