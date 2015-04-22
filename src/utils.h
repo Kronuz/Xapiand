@@ -124,6 +124,7 @@ bool StartsWith(const std::string &text, const std::string &token);
 int number_days(int year, int month);
 bool validate_date(int n[]);
 void calculate_date(int n[], const std::string &op, const std::string &units);
+std::string unserialise(const std::string &field_name, const std::string &serialise_val);
 
 #define INFO(...) log(__VA_ARGS__)
 
