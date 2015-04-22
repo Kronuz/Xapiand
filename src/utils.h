@@ -99,6 +99,7 @@ typedef struct group {
 int field_type(const std::string &field_name);
 std::string serialise_numeric(const std::string &field_value);
 std::string serialise_date(const std::string &field_value);
+std::string unserialise_date(const std::string &field_value);
 std::string serialise_geo(const std::string &field_value);
 std::string serialise_bool(const std::string &field_value);
 bool lat_lon(const std::string &str, int *grv, int size, int offset);
