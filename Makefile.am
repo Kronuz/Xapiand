@@ -15,7 +15,8 @@ xapiand_SOURCES = xapiand.cc \
 	md5.cc \
 	utils.cc \
 	length.cc \
-	fields.cc
+	fields.cc \
+	tests.cc
 
 noinst_HEADERS = xapiand.h \
 	queue.h \
@@ -32,7 +33,8 @@ noinst_HEADERS = xapiand.h \
 	md5.h \
 	utils.h \
 	length.h \
-	fields.h
+	fields.h \
+	tests.h
 
 EXTRA_DIST = Xapiand.xcodeproj/project.pbxproj
 
