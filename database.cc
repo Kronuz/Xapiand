@@ -842,10 +842,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 
 Xapian::Enquire
-Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>>&spies, struct query_t e)
+Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>&spies, struct query_t e)
 {
 	std::string field;
-	Xapian::ValueCountMatchSpy *spy;
+	MultiValueCountMatchSpy *spy;
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
 	
@@ -856,8 +856,8 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 	if(!e.facets.empty()) {
 		std::vector<std::string>::const_iterator fit(e.facets.begin());
 		for(; fit != e.facets.end(); fit++) {
-			spy = new Xapian::ValueCountMatchSpy(get_slot(*fit));
-			spies.push_back(std::make_pair (*fit, std::unique_ptr<Xapian::ValueCountMatchSpy>(spy)));
+			spy = new MultiValueCountMatchSpy(get_slot(*fit));
+			spies.push_back(std::make_pair (*fit, std::unique_ptr<MultiValueCountMatchSpy>(spy)));
 			enquire.add_matchspy(spy);
 			LOG_ERR(this, "added spy de -%s-\n", (*fit).c_str());
 		}
@@ -869,7 +869,7 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 
 
 int
-Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
+Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
 {
 	Xapian::MultiValueKeyMaker *sorter = NULL;
 	bool decreasing;
