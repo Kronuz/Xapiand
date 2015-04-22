@@ -25,7 +25,6 @@
 #include "http_parser.h"
 
 #include "utils.h"
-#include "tests.h"
 #include "cJSON.h"
 
 #include <assert.h>
@@ -293,7 +292,6 @@ void HttpClient::_delete()
 
 void HttpClient::_index()
 {
-	test_datetotimestamp();
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
@@ -335,7 +333,7 @@ void HttpClient::_search()
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
-	
+
 	/*
 	 NOTE:	Missing spies
 			Ask if add get_termlist
