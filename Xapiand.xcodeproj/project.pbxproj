@@ -23,6 +23,7 @@
 		E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */; };
 		E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDE1A99C9BB00CD151F /* xapiand.cc */; };
 		E5CEBCEA1A9B22E600CD151F /* database.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCE91A9B22E600CD151F /* database.cc */; };
+		E5CF673B1AE824C4001C06BA /* multivalue.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CF67391AE824C4001C06BA /* multivalue.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -73,6 +74,8 @@
 		E5CEBCE51A9AE80200CD151F /* endpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = endpoint.h; sourceTree = "<group>"; };
 		E5CEBCE61A9B228C00CD151F /* database.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = database.h; sourceTree = "<group>"; };
 		E5CEBCE91A9B22E600CD151F /* database.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = database.cc; sourceTree = "<group>"; };
+		E5CF67391AE824C4001C06BA /* multivalue.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = multivalue.cc; sourceTree = "<group>"; };
+		E5CF673A1AE824C4001C06BA /* multivalue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = multivalue.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +116,8 @@
 				C35DBA7E1AE7FD4500054358 /* tests.cc */,
 				C35DB9DE1AD4538100054358 /* fields.h */,
 				C35DB9DD1AD4538100054358 /* fields.cc */,
+				E5CF673A1AE824C4001C06BA /* multivalue.h */,
+				E5CF67391AE824C4001C06BA /* multivalue.cc */,
 				E5CEBCE61A9B228C00CD151F /* database.h */,
 				E5CEBCE91A9B22E600CD151F /* database.cc */,
 				E5CEBCD91A99C9BB00CD151F /* queue.h */,
@@ -193,6 +198,7 @@
 			files = (
 				E597730C1ACC75EB00E3DA76 /* length.cc in Sources */,
 				C3AF50161AC1E79A007071BF /* md5.cc in Sources */,
+				E5CF673B1AE824C4001C06BA /* multivalue.cc in Sources */,
 				E5CEBCE11A99C9BB00CD151F /* xapiand.cc in Sources */,
 				C35DB9DF1AD4538100054358 /* fields.cc in Sources */,
 				E5CEBCEA1A9B22E600CD151F /* database.cc in Sources */,
