@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		C35DB9DF1AD4538100054358 /* fields.cc in Sources */ = {isa = PBXBuildFile; fileRef = C35DB9DD1AD4538100054358 /* fields.cc */; };
 		C35DB9E11ADC6E2100054358 /* endpoint.cc in Sources */ = {isa = PBXBuildFile; fileRef = C35DB9E01ADC6E2100054358 /* endpoint.cc */; };
+		C35DBA7F1AE7FD4500054358 /* tests.cc in Sources */ = {isa = PBXBuildFile; fileRef = C35DBA7E1AE7FD4500054358 /* tests.cc */; };
 		C3AF50161AC1E79A007071BF /* md5.cc in Sources */ = {isa = PBXBuildFile; fileRef = C3AF50141AC1E79A007071BF /* md5.cc */; };
 		E59725B71A9CFCAD0060069C /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = E59725B51A9CFCAD0060069C /* http_parser.c */; };
 		E59725CC1A9D25EB0060069C /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725C61A9D25EB0060069C /* client_base.cc */; };
@@ -40,6 +41,8 @@
 		C35DB9DD1AD4538100054358 /* fields.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fields.cc; sourceTree = "<group>"; };
 		C35DB9DE1AD4538100054358 /* fields.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fields.h; sourceTree = "<group>"; };
 		C35DB9E01ADC6E2100054358 /* endpoint.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = endpoint.cc; sourceTree = "<group>"; };
+		C35DB9E21AE7FD1800054358 /* tests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tests.h; sourceTree = "<group>"; };
+		C35DBA7E1AE7FD4500054358 /* tests.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = tests.cc; sourceTree = "<group>"; };
 		C3AF50141AC1E79A007071BF /* md5.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = md5.cc; sourceTree = "<group>"; };
 		C3AF50151AC1E79A007071BF /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
 		E59725B51A9CFCAD0060069C /* http_parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = http_parser.c; sourceTree = "<group>"; };
@@ -106,6 +109,8 @@
 				E59725C81A9D25EB0060069C /* client_binary.cc */,
 				E59725CB1A9D25EB0060069C /* client_http.h */,
 				E59725CA1A9D25EB0060069C /* client_http.cc */,
+				C35DB9E21AE7FD1800054358 /* tests.h */,
+				C35DBA7E1AE7FD4500054358 /* tests.cc */,
 				C35DB9DE1AD4538100054358 /* fields.h */,
 				C35DB9DD1AD4538100054358 /* fields.cc */,
 				E5CEBCE61A9B228C00CD151F /* database.h */,
@@ -201,6 +206,7 @@
 				E59725B71A9CFCAD0060069C /* http_parser.c in Sources */,
 				E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */,
 				E59725CD1A9D25EB0060069C /* client_binary.cc in Sources */,
+				C35DBA7F1AE7FD4500054358 /* tests.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
