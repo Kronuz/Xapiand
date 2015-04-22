@@ -321,6 +321,7 @@ void HttpClient::_search()
 	std::string http_header;
 	std::string http_error_header;
 	std::string name_result;
+	std::vector<std::unique_ptr<Xapian::ValueCountMatchSpy>> spys;
 	int rc = 0;
 	int rmset;
 
@@ -334,14 +335,14 @@ void HttpClient::_search()
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
-
+	
 	/*
 	 NOTE:	Missing spies
 			Ask if add get_termlist
 	 */
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
-	rmset = database->get_mset(e, mset, suggestions);
+	rmset = database->get_mset(e, mset, spys, suggestions);
 	if (rmset == 1) {
 		LOG(this, "get_mset return 1\n");
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
@@ -379,7 +380,7 @@ void HttpClient::_search()
 				break;
 			} catch (Xapian::Error &er) {
 				database->reopen();
-				if (database->get_mset(e, mset, suggestions, rc)== 0) {
+				if (database->get_mset(e, mset, spys, suggestions, rc)== 0) {
 					m = mset.begin();
 				} else {
 					t = -1;
