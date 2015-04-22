@@ -341,7 +341,7 @@ void HttpClient::_search()
 			return;
 		}
 	}
-	
+
 	Database *database = NULL;
 	LOG(this, "Doing the checkout for search\n");
 	if (!database_pool->checkout(&database, endpoints, false)) {
@@ -377,7 +377,7 @@ void HttpClient::_search()
 			int rank = 0;
 			double weight = 0, percent = 0;
 			std::string data;
-			
+
 			int t = 3;
 			for (; t >= 0; --t) {
 				try {
@@ -406,11 +406,11 @@ void HttpClient::_search()
 				}
 				return;
 			}
-			
+
 			if (rc == 0) {
 				write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
 			}
-			
+
 			cJSON *root = cJSON_CreateObject();
 			cJSON *response = cJSON_CreateObject();
 			//LOG(this, "loop %d docid:%d rank:%d data:%s\n",rc,did,m.get_rank(),std::string(m.get_document().get_data()).c_str());
@@ -424,11 +424,10 @@ void HttpClient::_search()
 			result = cJSON_PrintUnformatted(root);
 			result += "\n";
 			result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
-			
+
 			if (!write(result)) {
 				break;
 			}
-			
 			cJSON_Delete(root);
 		}
 		write("0\r\n\r\n");
@@ -437,11 +436,11 @@ void HttpClient::_search()
 	if (facets) {
 		std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>>::const_iterator spy(spies.begin());
 		for(; spy != spies.end(); spy++) {
-			
+
 			if(spy == spies.begin()) {
 				write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
 			}
-			
+
 			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
 				cJSON *root = cJSON_CreateObject();
 				cJSON *response = cJSON_CreateObject();
