@@ -39,6 +39,7 @@
 
 pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 pcre *compiled_date_re = NULL;
+pcre *compiled_date_math_re = NULL;
 pcre *compiled_coords_re = NULL;
 pcre *compiled_coords_dist_re = NULL;
 pcre *compiled_numeric_re = NULL;
@@ -612,30 +613,30 @@ std::string timestamp_date(const std::string &str)
 {
 	int len = (int) str.size();
 	char sign;
-	int ret, n[9];
+	int ret, n[7], offset = 0;
+	std::string oph, opm;
 	double  timestamp;
-	group *g = NULL;
+	group *gr = NULL;
 
-	ret = pcre_search(str.c_str(), len, 0, 0, DATE_RE, &compiled_date_re, &g);
+	ret = pcre_search(str.c_str(), len, offset, 0, DATE_RE, &compiled_date_re, &gr);
 
-	if (ret != -1 && len == (g[0].end - g[0].start)) {
-		std::string parse = std::string(str, g[2].start, g[2].end - g[2].start);
+	if (ret != -1 && len == (gr[0].end - gr[0].start)) {
+		std::string parse = std::string(str, gr[1].start, gr[1].end - gr[1].start);
 		n[0] = strtoint(parse);
-		parse = std::string(str, g[3].start, g[3].end - g[3].start);
+		parse = std::string(str, gr[3].start, gr[3].end - gr[3].start);
 		n[1] = strtoint(parse);
-		parse = std::string(str, g[4].start, g[4].end - g[4].start);
+		parse = std::string(str, gr[4].start, gr[4].end - gr[4].start);
 		n[2] = strtoint(parse);
-
-		if (g[5].end - g[5].start > 0) {
-			parse = std::string(str, g[6].start, g[6].end - g[6].start);
+		if (gr[5].end - gr[5].start > 0) {
+			parse = std::string(str, gr[6].start, gr[6].end - gr[6].start);
 			n[3] = strtoint(parse);
-			parse = std::string(str, g[7].start, g[7].end - g[7].start);
+			parse = std::string(str, gr[7].start, gr[7].end - gr[7].start);
 			n[4] = strtoint(parse);
-			if (g[8].end - g[8].start > 0) {
-				parse = std::string(str, g[9].start, g[9].end - g[9].start);
+			if (gr[8].end - gr[8].start > 0) {
+				parse = std::string(str, gr[9].start, gr[9].end - gr[9].start);
 				n[5] = strtoint(parse);
-				if (g[10].end - g[10].start > 0) {
-					parse = std::string(str, g[11].start, g[11].end - g[11].start);
+				if (gr[10].end - gr[10].start > 0) {
+					parse = std::string(str, gr[11].start, gr[11].end - gr[11].start);
 					n[6] = strtoint(parse);
 				} else {
 					n[6] = 0;
@@ -643,62 +644,64 @@ std::string timestamp_date(const std::string &str)
 			} else {
 				n[5] =  n[6] = 0;
 			}
-			if (g[12].end - g[12].start > 0) {
-				sign = std::string(str, g[13].start, g[13].end - g[13].start).at(0);
-				parse = std::string(str, g[14].start, g[14].end - g[14].start);
-				n[7] = strtoint(parse);
-				if (g[15].end - g[15].start > 0) {
-					parse = std::string(str, g[16].start, g[16].end - g[16].start);
-					n[8] = strtoint(parse);
+			if (gr[12].end - gr[12].start > 1) {
+				if (std::string(str, gr[13].start - 1, 1).compare("+") == 0) {
+					oph = "-" + std::string(str, gr[13].start, gr[13].end - gr[13].start);
+					opm = "-" + std::string(str, gr[14].start, gr[14].end - gr[14].start);
 				} else {
-					n[8] = 0;
+					oph = "+" + std::string(str, gr[13].start, gr[13].end - gr[13].start);
+					opm = "+" + std::string(str, gr[14].start, gr[14].end - gr[14].start);
 				}
-			} else {
-				n[7] = 0;
-				n[8] = 0;
-				sign = '+';
+				calculate_date(n, oph, "h");
+				calculate_date(n, opm, "m");
 			}
 		} else {
-			n[3] = n[4] = n[5] = n[6] = n[7] = n[8] = 0;
+			n[3] = n[4] = n[5] = n[6] = 0;
 		}
-		LOG(NULL, "Fecha Reconstruida: %04d-%02d-%02dT%02d:%02d:%02d.%03d%c%02d:%02d\n", n[0], n[1], n[2], n[3], n[4], n[5], n[6], sign, n[7], n[8]);
-		if (n[1] == 2 && !((n[0] % 4 == 0 && n[0] % 100 != 0) || n[0] % 400 == 0) && n[2] > 28) {
-			LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 28 days\n");
+
+		if (!validate_date(n)) {
 			return std::string("");
-		} else if(n[1] == 2 && ((n[0] % 4 == 0 && n[0] % 100 != 0) || n[0] % 400 == 0) && n[2] > 29) {
-			LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 29 days\n");
-			return std::string("");
-		} else if((n[1] == 4 || n[1] == 6 || n[1] == 9 || n[1] == 11) && n[2] > 30) {
-			LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 30 days\n");
-			return std::string("");
+		}
+
+		//Processing Date Math
+		std::string date_math("");
+		len = gr[16].end - gr[16].start;
+		if (len != 0) {
+			date_math = std::string(str, gr[16].start, len);
+			if (gr) {
+				free(gr);
+				gr = NULL;
+			}
+			while (pcre_search(date_math.c_str(), len, offset, 0, DATE_MATH_RE, &compiled_date_math_re, &gr) == 0) {
+				offset = gr[0].end;
+				calculate_date(n, std::string(date_math, gr[1].start, gr[1].end - gr[1].start), std::string(date_math, gr[2].start, gr[2].end - gr[2].start));
+			}
+			if (gr) {
+				free(gr);
+				gr = NULL;
+			}
+			if (offset != len) {
+				LOG(NULL, "ERROR: Date Math is used incorrectly.\n");
+				return std::string("");
+			}
 		}
 		time_t tt = 0;
 		struct tm *timeinfo = gmtime(&tt);
 		timeinfo->tm_year   = n[0] - 1900;
 		timeinfo->tm_mon    = n[1] - 1;
 		timeinfo->tm_mday   = n[2];
-		if (sign == '-') {
-			timeinfo->tm_hour  = n[3] + n[7];
-			timeinfo->tm_min   = n[4] + n[8];
-		} else {
-			timeinfo->tm_hour  = n[3] - n[7];
-			timeinfo->tm_min   = n[4] - n[8];
-		}
+		timeinfo->tm_hour   = n[3];
+		timeinfo->tm_min    = n[4];
 		timeinfo->tm_sec    = n[5];
 		const time_t dateGMT = timegm(timeinfo);
 		timestamp = (double) dateGMT;
 		timestamp += n[6]/1000.0;
-
-		if (g) {
-			free(g);
-			g = NULL;
-		}
 		return std::to_string(timestamp);
 	}
 
-	if (g) {
-		free(g);
-		g = NULL;
+	if (gr) {
+		free(gr);
+		gr = NULL;
 	}
 
 	if (isNumeric(str)) {
@@ -819,9 +822,196 @@ bool isNumeric(const std::string &str)
 	return false;
 }
 
+
 bool StartsWith(const std::string &text, const std::string &token)
 {
 	if (text.length() < token.length())
 		return false;
 	return (text.compare(0, token.length(), token) == 0);
+}
+
+
+void calculate_date(int n[], const std::string &op, const std::string &units)
+{
+	int num = strtoint(std::string(op.c_str() + 1, op.size())), max_days;
+	time_t tt, dateGMT;
+	struct tm *timeinfo;
+	if (op.at(0) == '+' || op.at(0) == '-') {
+		switch (units.at(0)) {
+			case 'y':
+				(op.at(0) == '+') ? n[0] += num : n[0] -= num; break;
+			case 'M':
+				if (op.at(0) == '+') {
+					n[1] += num;
+				} else {
+					n[1] -= num;
+				}
+				tt = 0;
+				timeinfo = gmtime(&tt);
+				timeinfo->tm_year   = n[0] - 1900;
+				timeinfo->tm_mon    = n[1] - 1;
+				dateGMT = timegm(timeinfo);
+				timeinfo = gmtime(&dateGMT);
+				max_days = number_days(timeinfo->tm_year, n[1]);
+				if (n[2] > max_days) n[2] = max_days;
+				break;
+			case 'w':
+				(op.at(0) == '+') ? n[2] += 7 * num : n[2] -= 7 * num; break;
+			case 'd':
+				(op.at(0) == '+') ? n[2] += num : n[2] -= num; break;
+			case 'h':
+				(op.at(0) == '+') ? n[3] += num : n[3] -= num; break;
+			case 'm':
+				(op.at(0) == '+') ? n[4] += num : n[4] -= num; break;
+			case 's':
+				(op.at(0) == '+') ? n[5] += num : n[5] -= num; break;
+		}
+	} else {
+		switch (units.at(0)) {
+			case 'y':
+				if (op.compare("/") == 0) {
+					n[1] = 12;
+					n[2] = number_days(n[0], 12);
+					n[3] = 23;
+					n[4] = n[5] = 59;
+					n[6] = 999;
+				} else {
+					n[1] = n[2] = 1;
+					n[3] = n[4] = n[5] = n[6] = 0;
+				}
+				break;
+			case 'M':
+				if (op.compare("/") == 0) {
+					n[2] = number_days(n[0], n[1]);
+					n[3] = 23;
+					n[4] = n[5] = 59;
+					n[6] = 999;
+				} else {
+					n[2] = 1;
+					n[3] = n[4] = n[5] = n[6] = 0;
+				}
+				break;
+			case 'w':
+				tt = 0;
+				timeinfo = gmtime(&tt);
+				timeinfo->tm_year   = n[0] - 1900;
+				timeinfo->tm_mon    = n[1] - 1;
+				timeinfo->tm_mday   = n[2];
+				dateGMT = timegm(timeinfo);
+				timeinfo = gmtime(&dateGMT);
+				if (op.compare("/") == 0) {
+					n[2] += 6 - timeinfo->tm_wday;
+					n[3] = 23;
+					n[4] = n[5] = 59;
+					n[6] = 999;
+				} else {
+					n[2] -= timeinfo->tm_wday;
+					n[3] = n[4] = n[5] = n[6] = 0;
+				}
+				break;
+			case 'd':
+				if (op.compare("/") == 0) {
+					n[3] = 23;
+					n[4] = n[5] = 59;
+					n[6] = 999;
+				} else {
+					n[3] = n[4] = n[5] = n[6] = 0;
+				}
+				break;
+			case 'h':
+				if (op.compare("/") == 0) {
+					n[4] = n[5] = 59;
+					n[6] = 999;
+				} else {
+					n[4] = n[5] = n[6] = 0;
+				}
+				break;
+			case 'm':
+				if (op.compare("/") == 0) {
+					n[5] = 59;
+					n[6] = 999;
+				} else {
+					n[5] = n[6] = 0;
+				}
+				break;
+			case 's':
+				if (op.compare("/") == 0) {
+					n[6] = 999;
+				} else {
+					n[6] = 0;
+				}
+			break;
+		}
+	}
+
+	// Calculate new date
+	tt = 0;
+	timeinfo = gmtime(&tt);
+	timeinfo->tm_year   = n[0] - 1900;
+	timeinfo->tm_mon    = n[1] - 1;
+	timeinfo->tm_mday   = n[2];
+	timeinfo->tm_hour   = n[3];
+	timeinfo->tm_min    = n[4];
+	timeinfo->tm_sec    = n[5];
+	dateGMT = timegm(timeinfo);
+	timeinfo = gmtime(&dateGMT);
+	n[0] = timeinfo->tm_year + 1900;
+	n[1] = timeinfo->tm_mon + 1;
+	n[2] = timeinfo->tm_mday;
+	n[3] = timeinfo->tm_hour;
+	n[4] = timeinfo->tm_min;
+	n[5] = timeinfo->tm_sec;
+}
+
+
+bool validate_date(int n[])
+{
+	if (n[0] >= 1582) { //Gregorian calendar
+		if (n[1] == 2 && !((n[0] % 4 == 0 && n[0] % 100 != 0) || n[0] % 400 == 0) && n[2] > 28) {
+			LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 28 days\n");
+			return false;
+		} else if(n[1] == 2 && ((n[0] % 4 == 0 && n[0] % 100 != 0) || n[0] % 400 == 0) && n[2] > 29) {
+			LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 29 days\n");
+			return false;
+		}
+	} else {
+		if (n[1] == 2 && n[0] % 4 != 0 && n[2] > 28) {
+			LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 28 days\n");
+			return false;
+		} else if(n[1] == 2 && n[0] % 4 == 0 && n[2] > 29) {
+			LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 29 days\n");
+			return false;
+		}
+	}
+
+	if((n[1] == 4 || n[1] == 6 || n[1] == 9 || n[1] == 11) && n[2] > 30) {
+		LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 30 days\n");
+		return false;
+	}
+
+	return true;
+}
+
+
+int number_days(int year, int month)
+{
+	if (year >= 1582) { //Gregorian calendar
+		if (month == 2 && !((year % 4 == 0 && year % 100 != 0) || year % 400 == 0)) {
+			return 28;
+		} else if(month == 2 && ((year % 4 == 0 && year % 100 != 0) || year % 400 == 0)) {
+			return 29;
+		}
+	} else {
+		if (month == 2 && year % 4 != 0) {
+			return 28;
+		} else if(month == 2 && year % 4 == 0) {
+			return 29;
+		}
+	}
+
+	if(month == 4 || month == 6 || month == 9 || month == 11) {
+		return 30;
+	}
+
+	return 31;
 }
