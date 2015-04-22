@@ -31,6 +31,7 @@
 #include "cJSON.h"
 #include "utils.h"
 #include "fields.h"
+#include "multivalue.h"
 
 #include <pthread.h>
 #include <algorithm>
@@ -61,10 +62,10 @@ public:
 	std::string serialise(const std::string &name, const std::string &value);
 	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, int w, int position);
 	int find_field(const std::string &str, int *g, int size_g, int len, int offset);
-	Xapian::Enquire get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter,std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>> &spies, struct query_t e);
+	Xapian::Enquire get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter,std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, struct query_t e);
 	search_t search(struct query_t e);
 	search_t _search(const std::string &query, unsigned int flags, bool text, const std::string &lan);
-	int get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
+	int get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
 
 private:
 	bool _commit();
