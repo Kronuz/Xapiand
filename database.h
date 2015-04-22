@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <queue>
 #include <unordered_map>
+#include <memory>
 
 class DatabasePool;
 

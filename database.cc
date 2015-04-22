@@ -21,8 +21,6 @@
  */
 
 #include "database.h"
-#include <memory>
-
 
 //change prefix to Q only
 #define DOCUMENT_ID_TERM_PREFIX "Q"
