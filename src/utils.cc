@@ -497,6 +497,21 @@ std::string serialise_geo(const std::string &field_value)
 }
 
 
+std::string unserialise_geo(const std::string &serialise_val)
+{
+	Xapian::LatLongCoords coords;
+	coords.unserialise(serialise_val);
+	Xapian::LatLongCoordsIterator it = coords.begin();
+	std::stringstream ss;
+	for (; it != coords.end(); it++) {
+		ss << (*it).latitude;
+		ss << "," << (*it).longitude << ",";
+	}
+	std::string _coords = ss.str();
+	return std::string(_coords, 0, _coords.size() - 1);
+}
+
+
 std::string serialise_bool(const std::string &field_value)
 {
 	if (!field_value.c_str()) {
