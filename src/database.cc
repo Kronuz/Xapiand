@@ -842,7 +842,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 
 Xapian::Enquire
-Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, std::vector<std::unique_ptr<Xapian::ValueCountMatchSpy>> &spys, struct query_t e)
+Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>>&spies, struct query_t e)
 {
 	std::string field;
 	Xapian::ValueCountMatchSpy *spy;
@@ -860,6 +860,7 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 		std::vector<std::string>::const_iterator fit(e.facets.begin());
 		for(; fit != e.facets.end(); fit++) {
 			spy = new Xapian::ValueCountMatchSpy(get_slot(*fit));
+			spies.push_back(std::make_pair (*fit, std::unique_ptr<Xapian::ValueCountMatchSpy>(spy)));
 			enquire.add_matchspy(spy);
 			LOG_ERR(this, "added spy de -%s-\n", (*fit).c_str());
 		}
@@ -871,7 +872,7 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 
 
 int
-Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::unique_ptr<Xapian::ValueCountMatchSpy>> &spys, std::vector<std::string> &suggestions, int offset)
+Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
 {
 	Xapian::MultiValueKeyMaker *sorter = NULL;
 	bool decreasing;
@@ -903,7 +904,7 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::uniqu
 				delete sorter;
 				return 1;
 			}
-			Xapian::Enquire enquire = get_enquire(srch.query, sorter, spys, e);
+			Xapian::Enquire enquire = get_enquire(srch.query, sorter, spies, e);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset);
 		} catch (Xapian::Error &er) {
