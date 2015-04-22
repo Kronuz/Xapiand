@@ -41,5 +41,6 @@ typedef struct test_str_double {
 bool test_datetotimestamp();
 bool test_distanceLatLong();
 bool test_unserialise_date();
+bool test_unserialise_geo();
 
 #endif /* XAPIAND_INCLUDED_TESTS_H */
