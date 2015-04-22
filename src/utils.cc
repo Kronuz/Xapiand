@@ -405,7 +405,7 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 int field_type(const std::string &field_name)
 {
 	if (field_name.size() < 2 || field_name.at(1) != '_') {
-		return 1; //default: str.
+		return STRING_TYPE;
 	}
 
 	switch (field_name.at(0)) {
