@@ -319,7 +319,7 @@ void HttpClient::_search()
 	std::string http_header;
 	std::string http_error_header;
 	std::string name_result;
-	std::vector<std::unique_ptr<Xapian::ValueCountMatchSpy>> spys;
+	std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>> spies;
 	int rc = 0;
 	int rmset;
 
@@ -333,14 +333,24 @@ void HttpClient::_search()
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
+<<<<<<< HEAD
 
 	/*
 	 NOTE:	Missing spies
 			Ask if add get_termlist
 	 */
+||||||| merged common ancestors
+	
+	/*
+	 NOTE:	Missing spies
+			Ask if add get_termlist
+	 */
+=======
+	
+>>>>>>> Using std::pair to save the facet and the Xapian::ValueCountMatchSpy
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
-	rmset = database->get_mset(e, mset, spys, suggestions);
+	rmset = database->get_mset(e, mset, spies, suggestions);
 	if (rmset == 1) {
 		LOG(this, "get_mset return 1\n");
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
@@ -378,7 +388,7 @@ void HttpClient::_search()
 				break;
 			} catch (Xapian::Error &er) {
 				database->reopen();
-				if (database->get_mset(e, mset, spys, suggestions, rc)== 0) {
+				if (database->get_mset(e, mset, spies, suggestions, rc)== 0) {
 					m = mset.begin();
 				} else {
 					t = -1;
@@ -419,6 +429,26 @@ void HttpClient::_search()
 
 		cJSON_Delete(root);
 	}
+	
+	std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>>::const_iterator spy(spies.begin());
+	for(; spy != spies.end(); spy++) {
+		for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
+			cJSON *root = cJSON_CreateObject();
+			cJSON *response = cJSON_CreateObject();
+			name_result = "facet:" + (*spy).first;
+			cJSON_AddItemToObject(root, name_result.c_str(), response);
+			cJSON_AddStringToObject(response, "term", (*facet).c_str());
+			cJSON_AddNumberToObject(response, "termfreq", facet.get_termfreq());
+			result = cJSON_PrintUnformatted(root);
+			result += "\n";
+			result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
+			if (!write(result)) {
+				break;
+			}
+			cJSON_Delete(root);
+		}
+	}
+	
 	write("0\r\n\r\n");
 
 	LOG(this, "Doing the checkin for search.\n");
