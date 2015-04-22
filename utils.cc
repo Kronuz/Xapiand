@@ -31,7 +31,7 @@
 #define DATE_RE "([1-9][0-9]{3})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]{1,3}))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?"
 #define DATE_MATH_RE "([+-]\\d+|\\/{1,2})([dyMwdhms])"
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
-#define COORDS_DISTANCE_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d*|\\d+)\\s?;\\s?(\\d*\\.\\d*|\\d+)"
+#define COORDS_DISTANCE_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d*|\\d+)\\s?;\\s?(\\d*\\.\\d*|\\d+)(ft|in|yd|mi|km|[m]{1,2}|cm)?"
 #define NUMERIC_RE "(\\d*\\.\\d+|\\d+)"
 #define FIND_RANGE_RE "([^ ]*\\.\\.)"
 #define FIND_ORDER_RE "([_a-zA-Z][_a-zA-Z0-9]+,[_a-zA-Z][_a-zA-Z0-9]*)"
@@ -753,9 +753,9 @@ int get_coords(const std::string &str, double *coords)
 {
 	std::stringstream ss;
 	group *g = NULL;
-	int offset = 0;
-
-	while ((pcre_search(str.c_str(), (int)str.size(), offset, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &g)) != -1) {
+	int offset = 0, len = (int)str.size();
+	int ret = pcre_search(str.c_str(), len, offset, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &g);
+	while (ret != -1 && (g[0].end - g[0].start) == len) {
 		offset = g[0].end;
 		/*LOG(NULL,"group[1] %s\n" , std::string(str.c_str() + g[1].start, g[1].end - g[1].start).c_str());
 		 LOG(NULL,"group[2] %s\n" , std::string(str.c_str() + g[2].start, g[2].end - g[2].start).c_str());
@@ -769,6 +769,24 @@ int get_coords(const std::string &str, double *coords)
 		ss.clear();
 		ss << std::string(str.c_str() + g[3].start, g[3].end - g[3].start);
 		ss >> coords[2];
+		if (g[4].end - g[4].start > 0) {
+			std::string units = std::string(str.c_str() + g[4].start, g[4].end - g[4].start);
+			if (units.compare("mi") == 0) {
+				coords[2] *= 1609.344;
+			} else if (units.compare("km") == 0) {
+				coords[2] *= 1000;
+			} else if (units.compare("yd") == 0) {
+				coords[2] *= 0.9144;
+			} else if (units.compare("ft") == 0) {
+				coords[2] *= 0.3048;
+			} else if (units.compare("in") == 0) {
+				coords[2] *= 0.0254;
+			} else if (units.compare("cm") == 0) {
+				coords[2] *= 0.01;
+			} else if (units.compare("mm") == 0) {
+				coords[2] *= 0.001;
+			}
+		}
 		return 0;
 	}
 	return -1;

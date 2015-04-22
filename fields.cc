@@ -66,11 +66,9 @@ Xapian::Query
 LatLongDistanceFieldProcessor::operator()(const std::string &str)
 {
 	LOG(this, "Inside of LatLongDistanceFieldProcessor %s\n", str.c_str());
-	Xapian::LatLongCoords coords;
 	if (get_coords(str, coords_) == 0) {
-		LOG(this,"Longitud: %f latitud: %f max_range: %f\n", coords_[0],coords_[1], coords_[2]);
 		Xapian::LatLongCoord centre(coords_[0], coords_[1]);
-		coords_[2] = Xapian::miles_to_metres(coords_[2]);
+		LOG(this, "Longitud: %f latitud: %f max_range: %f meters\n", coords_[0],coords_[1], coords_[2]);
 		Xapian::GreatCircleMetric metric;
 
 		Xapian::LatLongDistancePostingSource ps(get_slot(field), centre, metric, coords_[2]);
