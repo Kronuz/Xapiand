@@ -24,6 +24,7 @@
 
 #include "http_parser.h"
 
+#include "multivalue.h"
 #include "utils.h"
 #include "cJSON.h"
 
@@ -319,7 +320,7 @@ void HttpClient::_search()
 	std::string http_header;
 	std::string http_error_header;
 	std::string name_result;
-	std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>> spies;
+	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 	int rc = 0;
 	int rmset;
 	bool facets = false;
@@ -434,7 +435,7 @@ void HttpClient::_search()
 	}
 
 	if (facets) {
-		std::vector<std::pair<std::string, std::unique_ptr<Xapian::ValueCountMatchSpy>>>::const_iterator spy(spies.begin());
+		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
 		for(; spy != spies.end(); spy++) {
 
 			if(spy == spies.begin()) {
