@@ -80,19 +80,29 @@ const test test_timestamp_date[] = {
 };
 
 
-const test_distance test_distanceLatLong_fields[] = {
-	{"23.56, 48.76 ; 40mi",  64373.76 },
-	{"23.56, 48.76 ; 40km",  40000.00 },
-	{"23.56, 48.76 ; 40m",   40       },
-	{"23.56, 48.76 ; 40",    40       },
-	{"23.56,48.76;40yd",     36.57600 },
-	{"23.56, 48.76; 40ft",   12.19200 },
-	{"23.56, 48.76 ;40in",   1.01600  },
-	{"23.56,48.76 ; 40cm",   0.4      },
-	{"23.56, 48.76 ; 40mm",  0.04     },
-	{"23.56, 48.76 ; 40mmi", -1.0     },
-	{"23.56, 48.76k ; 40mm", -1.0     },
-	{NULL,                   -1.0     },
+const test_str_double test_distanceLatLong_fields[] = {
+	{ "23.56, 48.76 ; 40mi",  64373.76 },
+	{ "23.56, 48.76 ; 40km",  40000.00 },
+	{ "23.56, 48.76 ; 40m",   40       },
+	{ "23.56, 48.76 ; 40",    40       },
+	{ "23.56,48.76;40yd",     36.57600 },
+	{ "23.56, 48.76; 40ft",   12.19200 },
+	{ "23.56, 48.76 ;40in",   1.01600  },
+	{ "23.56,48.76 ; 40cm",   0.4      },
+	{ "23.56, 48.76 ; 40mm",  0.04     },
+	{ "23.56, 48.76 ; 40mmi", -1.0     },
+	{ "23.56, 48.76k ; 40mm", -1.0     },
+	{ NULL,                   -1.0     },
+};
+
+
+const test test_unserialisedate[] {
+	{ "2010-10-10T23:05:24.800",             "2010-10-10T23:05:24.800" },
+	{ "2010101023:05:24",                    "2010-10-10T23:05:24.000" },
+	{ "2010/10/10",                          "2010-10-10T00:00:00.000" },
+	{ "2015-10-10T23:55:58.765-6:40||+5y/M", "2020-10-31T23:59:59.999" },
+	{ "9115/01/0115:10:50.897-6:40",         "9115-01-01T21:50:50.897" },
+	{ NULL,                                   NULL                     },
 };
 
 
@@ -122,7 +132,7 @@ bool test_datetotimestamp()
 bool test_distanceLatLong()
 {
 	int cont = 0;
-	for (const test_distance *p = test_distanceLatLong_fields; p->str; ++p) {
+	for (const test_str_double *p = test_distanceLatLong_fields; p->str; ++p) {
 		double coords_[3];
 		LOG(NULL, "Distance LatLong: %s\n", p->str);
 		if (get_coords(p->str, coords_) == 0) {
@@ -135,6 +145,30 @@ bool test_distanceLatLong()
 				cont++;
 				LOG_ERR(NULL, "ERROR: Resul: Error en format(-1) Expect: %f\n", p->val);
 			}
+		}
+	}
+
+	if (cont == 0) {
+		LOG(NULL, "Test is correct.\n");
+		return true;
+	} else {
+		LOG_ERR(NULL, "ERROR: Test has mistakes.\n");
+		return false;
+	}
+}
+
+
+bool test_unserialise_date()
+{
+	int cont = 0;
+	for (const test *p = test_unserialisedate; p->str; ++p) {
+		std::string date_s = serialise_date(p->str);
+		LOG(NULL, "Date serialise: %s\n", repr(date_s).c_str());
+		std::string date = unserialise_date(date_s);
+		LOG(NULL, "Date unserialise: %s\n", date.c_str());
+		if (date.compare(p->expect) != 0) {
+			cont++;
+			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", date.c_str(), p->expect);
 		}
 	}
 
