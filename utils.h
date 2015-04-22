@@ -120,6 +120,9 @@ bool isLatLongDistance(const std::string &str);
 void get_order(const std::string &str, struct query_t &e);
 bool isNumeric(const std::string &str);
 bool StartsWith(const std::string &text, const std::string &token);
+int number_days(int year, int month);
+bool validate_date(int n[]);
+void calculate_date(int n[], const std::string &op, const std::string &units);
 
 #define INFO(...) log(__VA_ARGS__)
 
