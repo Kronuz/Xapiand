@@ -106,6 +106,15 @@ const test test_unserialisedate[] {
 };
 
 
+const test test_unserialiseLatLong[] {
+	{ "20.35,78.90,23.45,32.14",             "20.35,78.9,23.45,32.14" },
+	{ "20.35, 78.90",                        "20.35,78.9"             },
+	{ "20.35 , 78.90 , 23.45 , 32.14",       "20.35,78.9,23.45,32.14" },
+	{ "20, 78.90, 23.010, 32",               "20,78.9,23.01,32"       },
+	{ NULL,                                   NULL                    },
+};
+
+
 bool test_datetotimestamp()
 {
 	int cont = 0;
@@ -169,6 +178,30 @@ bool test_unserialise_date()
 		if (date.compare(p->expect) != 0) {
 			cont++;
 			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", date.c_str(), p->expect);
+		}
+	}
+
+	if (cont == 0) {
+		LOG(NULL, "Test is correct.\n");
+		return true;
+	} else {
+		LOG_ERR(NULL, "ERROR: Test has mistakes.\n");
+		return false;
+	}
+}
+
+
+bool test_unserialise_geo()
+{
+	int cont = 0;
+	for (const test *p = test_unserialiseLatLong; p->str; ++p) {
+		std::string geo_s = serialise_geo(p->str);
+		LOG(NULL, "Geo serialise: %s\n", repr(geo_s).c_str());
+		std::string geo = unserialise_geo(geo_s);
+		LOG(NULL, "Geo unserialise: %s\n", geo.c_str());
+		if (geo.compare(p->expect) != 0) {
+			cont++;
+			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", geo.c_str(), p->expect);
 		}
 	}
 
