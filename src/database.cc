@@ -473,15 +473,16 @@ Database::replace(const std::string &document_id, const Xapian::Document doc, bo
 std::string
 Database::serialise(const std::string &field_name, const std::string &field_value)
 {
-	if (field_type(field_name) == NUMERIC_TYPE) {
+	int type = field_type(field_name);
+	if (type == NUMERIC_TYPE) {
 		return serialise_numeric(field_value);
-	} else if (field_type(field_name) == STRING_TYPE) {
+	} else if (type == STRING_TYPE) {
 		return field_value;
-	} else if (field_type(field_name) == DATE_TYPE) {
+	} else if (type == DATE_TYPE) {
 		return serialise_date(field_value);
-	} else if (field_type(field_name) == GEO_TYPE) {
+	} else if (type == GEO_TYPE) {
 		return serialise_geo(field_value);
-	} else if (field_type(field_name) == BOOLEAN_TYPE) {
+	} else if (type == BOOLEAN_TYPE) {
 		return serialise_bool(field_value);
 	}
 	return std::string("");

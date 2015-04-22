@@ -1064,15 +1064,16 @@ int number_days(int year, int month)
 
 std::string unserialise(const std::string &field_name, const std::string &serialise_val)
 {
-	if (field_type(field_name) == NUMERIC_TYPE) {
+	int type = field_type(field_name);
+	if (type == NUMERIC_TYPE) {
 		return std::to_string(Xapian::sortable_unserialise(serialise_val));
-	} else if (field_type(field_name) == STRING_TYPE) {
+	} else if (type == STRING_TYPE) {
 		return serialise_val;
-	} else if (field_type(field_name) == DATE_TYPE) {
+	} else if (type == DATE_TYPE) {
 		return unserialise_date(serialise_val);
-	} else if (field_type(field_name) == GEO_TYPE) {
+	} else if (type == GEO_TYPE) {
 		return unserialise_geo(serialise_val);
-	} else if (field_type(field_name) == BOOLEAN_TYPE) {
+	} else if (type == BOOLEAN_TYPE) {
 		return (serialise_val.at(0) == 'f') ? std::string("false") : std::string("true");
 	}
 	return std::string("");
