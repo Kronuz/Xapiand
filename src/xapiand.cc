@@ -70,7 +70,7 @@ void run(int num_servers, int http_port, int binary_port)
 	manager_ptr = NULL;
 }
 
-#include "multivalue.h"
+
 int main(int argc, char **argv)
 {
 	int num_servers = 8;
