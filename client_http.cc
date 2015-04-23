@@ -331,8 +331,6 @@ void HttpClient::_search()
 	if(strcmp(command.c_str(), "_search") != 0) {
 		if (strcmp(command.c_str(), "_facets") == 0) {
 			facets = true;
-			//e. offset = 0;
-			//e.limit = 0;
 		} else {
 			cJSON *root = cJSON_CreateObject();
 			cJSON *response = cJSON_CreateObject();
@@ -417,15 +415,15 @@ void HttpClient::_search()
 			}
 
 			cJSON *root = cJSON_CreateObject();
-			cJSON *response = cJSON_CreateObject();
+			//cJSON *response = cJSON_CreateObject();
 			//LOG(this, "loop %d docid:%d rank:%d data:%s\n",rc,did,m.get_rank(),std::string(m.get_document().get_data()).c_str());
-			name_result = "result-" + std::to_string(rc);
-			cJSON_AddItemToObject(root, name_result.c_str(), response);
-			cJSON_AddNumberToObject(response, "docid", did);
-			cJSON_AddNumberToObject(response, "rank", rank);
-			cJSON_AddNumberToObject(response, "weight", weight);
-			cJSON_AddNumberToObject(response, "percent", percent);
-			cJSON_AddStringToObject(response, "data", data.c_str());
+			//name_result = std::to_string(rc);
+			cJSON_AddStringToObject(root, "id", did.c_str());
+			//cJSON_AddNumberToObject(response, "docid", did);
+			//cJSON_AddNumberToObject(response, "rank", rank);
+			//cJSON_AddNumberToObject(response, "weight", weight);
+			//cJSON_AddNumberToObject(response, "percent", percent);
+			cJSON_AddStringToObject(root, "data", data.c_str());
 			if(e.pretty) {
 				result = cJSON_Print(root);
 			} else {
