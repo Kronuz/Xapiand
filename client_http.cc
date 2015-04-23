@@ -516,9 +516,6 @@ void HttpClient::_endpointgen(struct query_t &e)
 			}
 		}
 
-		/*LOG(this,"FIRST QUERY PARSER SIZE %d\n",u.field_data[4].len);
-		 LOG(this,"FIRST QUERY PARSER OFFSET %d\n",u.field_data[4].off);
-		 LOG(this,"BUFFER %s\n",b.c_str());*/
 		if (u.field_set & (1 <<  UF_QUERY )) {
 			size_t query_size = u.field_data[4].len;
 			std::string query_buf(b.c_str() + u.field_data[4].off, u.field_data[4].len);
