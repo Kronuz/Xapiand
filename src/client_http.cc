@@ -284,7 +284,7 @@ void HttpClient::_delete()
 		LOG(this, "Checkout for delete aborted.\n");
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
-	}	database->drop(command.c_str(), true);
+	}	database->drop(command.c_str(), e.commit);
 	LOG(this, "Doing the checkin.\n");
 	database_pool->checkin(&database);
 	LOG(this, "FINISH DELETE\n");
@@ -305,7 +305,7 @@ void HttpClient::_index()
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db);
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "Index %s\n", body.c_str());
-	database->index(body, command, true);
+	database->index(body, command, e.commit);
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "Doing the checkin for index.\n");
 	database_pool->checkin(&database);
@@ -474,6 +474,10 @@ void HttpClient::_endpointgen(struct query_t &e)
 {
 	struct http_parser_url u;
 	std::string b = repr(path);
+	/*
+	 commit must be initialized in case there is not query
+	 */
+	e.commit = true;
 	LOG_CONN_WIRE(this,"URL: %s\n", b.c_str());
 	if(http_parser_parse_url(b.c_str(), b.size(), 0, &u) == 0){
 		LOG_CONN_WIRE(this,"Parsing done\n");
@@ -543,6 +547,15 @@ void HttpClient::_endpointgen(struct query_t &e)
 				e.limit = 10;
 			}
 
+			memset(&q, 0, sizeof(q));
+			if (url_qs("commit", query_buf.c_str(), query_size, &q) != -1) {
+				std::string pretty = serialise_bool(urldecode(q.offset, q.length));
+				(pretty.compare("f") == 0) ? e.commit = false : e.commit = true;
+				LOG(this, "Commit false\n");
+			} else {
+				e.commit = true;
+			}
+			
 			memset(&q, 0, sizeof(q));
 			if (url_qs("spelling", query_buf.c_str(), query_size, &q) != -1) {
 				std::string spelling = serialise_bool(urldecode(q.offset, q.length));
