@@ -436,29 +436,23 @@ void HttpClient::_search()
 
 	if (facets) {
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
+		cJSON *root = cJSON_CreateObject();
 		for(; spy != spies.end(); spy++) {
-
-			if(spy == spies.begin()) {
-				write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
-			}
-
+			name_result = "facet:" + (*spy).first;
+			cJSON *array_values = cJSON_CreateArray();
+			cJSON_AddItemToObject(root, name_result.c_str(), array_values);
 			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
-				cJSON *root = cJSON_CreateObject();
-				cJSON *response = cJSON_CreateObject();
-				name_result = "facet:" + (*spy).first;
-				cJSON_AddItemToObject(root, name_result.c_str(), response);
-				cJSON_AddStringToObject(response, "term", (*facet).c_str());
-				cJSON_AddNumberToObject(response, "termfreq", facet.get_termfreq());
-				result = cJSON_PrintUnformatted(root);
-				result += "\n";
-				result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
-				if (!write(result)) {
-					break;
-				}
-				cJSON_Delete(root);
+				cJSON *value = cJSON_CreateObject();
+				cJSON_AddStringToObject(value, "value", unserialise((*spy).first,(*facet)).c_str());
+				cJSON_AddNumberToObject(value, "termfreq", facet.get_termfreq());
+				cJSON_AddItemToArray(array_values, value);
 			}
 		}
-		write("0\r\n\r\n");
+		result = cJSON_PrintUnformatted(root);
+		result += "\n";
+		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+		write(result);
+		cJSON_Delete(root);
 	}
 
 	LOG(this, "Doing the checkin for search.\n");
