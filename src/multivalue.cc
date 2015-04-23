@@ -40,12 +40,10 @@ void
 StringList::unserialise(const char ** ptr, const char * end)
 {
 	clear();
-	if (strncmp(*ptr, MULTIVALUE_MAGIC, sizeof(MULTIVALUE_MAGIC) - 1) == 0) {
-		*ptr += sizeof(MULTIVALUE_MAGIC) - 1;
-		size_t length = decode_length(ptr, end, true);
-		if (length == -1 || length != end - *ptr) {
-			push_back(std::string(*ptr, end - *ptr));
-		}
+	size_t length = decode_length(ptr, end, true);
+	if (length == -1 || length != end - *ptr) {
+		push_back(std::string(*ptr, end - *ptr));
+	} else {
 		size_t currlen;
 		while (*ptr != end) {
 			currlen = decode_length(ptr, end, true);
@@ -55,9 +53,7 @@ StringList::unserialise(const char ** ptr, const char * end)
 			}
 			push_back(std::string(*ptr, currlen));
 			*ptr += currlen;
-		}
-	} else {
-		push_back(std::string(*ptr, end - *ptr));
+		}	
 	}
 }
 
