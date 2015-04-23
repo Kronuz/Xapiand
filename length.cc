@@ -46,11 +46,11 @@ std::string encode_length(size_t len)
 size_t
 decode_length(const char ** p, const char *end, bool check_remaining)
 {
-	if (*p == end) {
+	const char *pos = *p;
+	if (pos == end) {
 		return -1;
 	}
-
-	size_t len = static_cast<unsigned char>(*(*p)++);
+	size_t len = static_cast<unsigned char>(*pos++);
 	if (len == 0xff) {
 		len = 0;
 		unsigned char ch;
@@ -58,7 +58,7 @@ decode_length(const char ** p, const char *end, bool check_remaining)
 		do {
 			if (*p == end || shift > 28)
 				return -1;
-			ch = *(*p)++;
+			ch = *pos++;
 			len |= size_t(ch & 0x7f) << shift;
 			shift += 7;
 		} while ((ch & 0x80) == 0);
@@ -67,5 +67,6 @@ decode_length(const char ** p, const char *end, bool check_remaining)
 	if (check_remaining && len > size_t(end - *p)) {
 		return -1;
 	}
+	*p = pos;
 	return len;
 }
