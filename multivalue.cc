@@ -28,79 +28,57 @@
 
 
 void
-StringListSerialiser::append(const std::string & value)
+StringList::unserialise(const std::string & serialised)
 {
-	if (items == 0) {
-		values = value;
-	} else {
-		if (items == 1) {
-			std::string new_values;
-			new_values.append(encode_length(values.size()));
-			new_values.append(values);
-			values = new_values;
-		}
-		values.append(encode_length(value.size()));
-		values.append(value);
-	}
-	items++;
-}
-
-const std::string
-StringListSerialiser::get() const
-{
-	std::string serialised;
-	if (items > 1) {
-		serialised.append(MULTIVALUE_MAGIC);
-		serialised.append(encode_length(values.size()));
-	}
-	serialised.append(values);
-	return serialised;
-}
-
-
-StringListUnserialiser::StringListUnserialiser(const std::string & in)
-		: serialised(in),
-		  pos(serialised.data()),
-		  is_list(false)
-{
-	is_list = serialised.compare(0, sizeof(MULTIVALUE_MAGIC) - 1, MULTIVALUE_MAGIC) == 0;
-	if (is_list) {
-		const char * old_pos = pos;
-		pos += sizeof(MULTIVALUE_MAGIC) - 1;
-		size_t length = decode_length(&pos, serialised.data() + serialised.size(), true);
-		if (length == -1 || length != serialised.size() - (pos - serialised.data())) {
-			pos = old_pos;
-			is_list = false;
-		}
-	}
-	read_next();
+	const char * ptr = serialised.data();
+	const char * end = serialised.data() + serialised.size();
+	unserialise(&ptr, end);
 }
 
 
 void
-StringListUnserialiser::read_next()
+StringList::unserialise(const char ** ptr, const char * end)
 {
-	if (pos == NULL) {
-		return;
-	}
-	if (pos == serialised.data() + serialised.size()) {
-		pos = NULL;
-		curritem.resize(0);
-		return;
-	}
-	size_t currlen;
-	if (is_list) {
-		currlen = decode_length(&pos, serialised.data() + serialised.size(), true);
-		if (currlen == -1) {
-			// FIXME: throwing a NetworkError if the length is too long - should be a more appropriate error.
-			throw Xapian::NetworkError("Decoding error of serialised MultiValueCountMatchSpy");
+	clear();
+	if (strncmp(*ptr, MULTIVALUE_MAGIC, sizeof(MULTIVALUE_MAGIC) - 1) == 0) {
+		*ptr += sizeof(MULTIVALUE_MAGIC) - 1;
+		size_t length = decode_length(ptr, end, true);
+		if (length == -1 || length != end - *ptr) {
+			push_back(std::string(*ptr, end - *ptr));
+		}
+		size_t currlen;
+		while (*ptr != end) {
+			currlen = decode_length(ptr, end, true);
+			if (currlen == -1) {
+				// FIXME: throwing a NetworkError if the length is too long - should be a more appropriate error.
+				throw Xapian::NetworkError("Decoding error of serialised MultiValueCountMatchSpy");
+			}
+			push_back(std::string(*ptr, currlen));
+			*ptr += currlen;
 		}
 	} else {
-		pos = serialised.data();
-		currlen = serialised.size();
+		push_back(std::string(*ptr, end - *ptr));
 	}
-	curritem.assign(pos, currlen);
-	pos += currlen;
+}
+
+
+std::string
+StringList::serialise() const
+{
+	std::string serialised, values;
+	StringList::const_iterator i(begin());
+	if (size() > 1) {
+		for (; i != end(); i++) {
+			values.append(encode_length((*i).size()));
+			values.append(*i);
+		}
+		serialised.append(MULTIVALUE_MAGIC);
+		serialised.append(encode_length(values.size()));
+	} else if (i != end()) {
+		values.assign(*i);
+	}
+	serialised.append(values);
+	return serialised;
 }
 
 
@@ -108,9 +86,10 @@ void
 MultiValueCountMatchSpy::operator()(const Xapian::Document &doc, double) {
 	assert(internal.get());
 	++(internal->total);
-	StringListUnserialiser i(doc.get_value(internal->slot));
-	StringListUnserialiser end;
-	for (; i != end; ++i) {
+	StringList list;
+	list.unserialise(doc.get_value(internal->slot));
+	StringList::const_iterator i(list.begin());
+	for (; i != list.end(); i++) {
 		std::string val(*i);
 		if (!val.empty()) ++(internal->values[val]);
 	}
