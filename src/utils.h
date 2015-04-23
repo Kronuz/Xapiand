@@ -54,6 +54,7 @@ typedef struct query_t {
 	int limit;
 	bool spelling;
 	bool synonyms;
+	bool pretty;
 	std::vector <std::string> language;
 	std::vector <std::string> query;
 	std::vector <std::string> partial;
