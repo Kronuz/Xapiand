@@ -376,7 +376,7 @@ void HttpClient::_search()
 
 	if (!facets) {
 		for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++) {
-			Xapian::docid did = 0;
+			std::string did;
 			int rank = 0;
 			double weight = 0, percent = 0;
 			std::string data;
@@ -384,7 +384,7 @@ void HttpClient::_search()
 			int t = 3;
 			for (; t >= 0; --t) {
 				try {
-					did = *m;
+					did = "Q" + m.get_document().get_value(0);
 					rank = m.get_rank();
 					weight = m.get_weight();
 					percent = m.get_percent();
