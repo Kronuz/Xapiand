@@ -304,7 +304,8 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 	std::string document_id;
 	if (_document_id.c_str()) {
 		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
-		doc.add_value(0, document_id);
+		doc.add_value(0, _document_id);
+		LOG_DATABASE_WRAP(this, "Slot: 0  Document id: %s\n", _document_id.c_str());
 		document_id = prefixed(_document_id, std::string(DOCUMENT_ID_TERM_PREFIX));
 		doc.add_boolean_term(document_id);
 	} else {
@@ -367,7 +368,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			}
 			unsigned int slot = get_slot(std::string(nameA->string));
 			doc.add_value(slot, s.serialise());
-			LOG_DATABASE_WRAP(this, "Slot: %X serialized: %s\n", slot, repr(s.serialise()).c_str());
+			LOG_DATABASE_WRAP(this, "Slot: %u serialized: %s\n", slot, repr(s.serialise()).c_str());
 		}
 	}
 
