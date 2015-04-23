@@ -29,9 +29,6 @@
 #include <vector>
 
 
-#define MULTIVALUE_MAGIC "\xef\xcd"
-
-
 class StringList : public std::vector<std::string> {
 public:
 	void unserialise(const std::string & serialised);
