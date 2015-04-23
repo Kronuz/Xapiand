@@ -446,7 +446,7 @@ void HttpClient::_search()
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
 		cJSON *root = cJSON_CreateObject();
 		for(; spy != spies.end(); spy++) {
-			name_result = "facet:" + (*spy).first;
+			name_result = (*spy).first;
 			cJSON *array_values = cJSON_CreateArray();
 			cJSON_AddItemToObject(root, name_result.c_str(), array_values);
 			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
