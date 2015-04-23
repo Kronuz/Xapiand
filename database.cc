@@ -903,7 +903,7 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<
 	bool decreasing;
 	std::string field;
 	int doccount = db->get_doccount();
-	int check_at_least = std::max(std::min(doccount, MAX_DOCS), 0);
+	int check_at_least = std::max(std::min(doccount, e.check_at_least), 0);
 	
 	if (!e.order.empty()) {
 		sorter = new Xapian::MultiValueKeyMaker();

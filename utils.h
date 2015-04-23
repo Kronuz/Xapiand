@@ -52,6 +52,7 @@ std::string repr(const std::string &string);
 typedef struct query_t {
 	int offset;
 	int limit;
+	int check_at_least;
 	bool spelling;
 	bool synonyms;
 	bool pretty;

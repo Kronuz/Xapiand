@@ -331,6 +331,8 @@ void HttpClient::_search()
 	if(strcmp(command.c_str(), "_search") != 0) {
 		if (strcmp(command.c_str(), "_facets") == 0) {
 			facets = true;
+			//e. offset = 0;
+			//e.limit = 0;
 		} else {
 			cJSON *root = cJSON_CreateObject();
 			cJSON *response = cJSON_CreateObject();
@@ -341,6 +343,8 @@ void HttpClient::_search()
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
 			return;
 		}
+	} else {
+		e.check_at_least = 0;
 	}
 
 	Database *database = NULL;
@@ -530,6 +534,13 @@ void HttpClient::_endpointgen(struct query_t &e)
 				e.offset = 0;
 			}
 
+			memset(&q, 0, sizeof(q));
+			if (url_qs("check_at_least", query_buf.c_str(), query_size, &q) != -1) {
+				e.check_at_least = atoi(urldecode(q.offset, q.length).c_str());
+			} else {
+				e.check_at_least = 0;
+			}
+			
 			memset(&q, 0, sizeof(q));
 			if (url_qs("limit", query_buf.c_str(), query_size, &q) != -1) {
 				e.limit = atoi(urldecode(q.offset, q.length).c_str());
