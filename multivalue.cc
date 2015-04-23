@@ -68,7 +68,6 @@ StringList::serialise() const
 			values.append(encode_length((*i).size()));
 			values.append(*i);
 		}
-		serialised.append(MULTIVALUE_MAGIC);
 		serialised.append(encode_length(values.size()));
 	} else if (i != end()) {
 		values.assign(*i);
