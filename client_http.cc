@@ -422,8 +422,12 @@ void HttpClient::_search()
 			cJSON_AddNumberToObject(response, "weight", weight);
 			cJSON_AddNumberToObject(response, "percent", percent);
 			cJSON_AddStringToObject(response, "data", data.c_str());
-			result = cJSON_PrintUnformatted(root);
-			result += "\n";
+			if(e.pretty) {
+				result = cJSON_Print(root);
+			} else {
+				result = cJSON_PrintUnformatted(root);
+			}
+			result += "\n\n";
 			result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
 
 			if (!write(result)) {
@@ -448,8 +452,12 @@ void HttpClient::_search()
 				cJSON_AddItemToArray(array_values, value);
 			}
 		}
-		result = cJSON_PrintUnformatted(root);
-		result += "\n";
+		if(e.pretty) {
+			result = cJSON_Print(root);
+		} else {
+			result = cJSON_PrintUnformatted(root);
+		}
+		result += "\n\n";
 		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 		write(result);
 		cJSON_Delete(root);
@@ -537,6 +545,14 @@ void HttpClient::_endpointgen(struct query_t &e)
 				e.spelling = true;
 			}
 
+			memset(&q, 0, sizeof(q));
+			if (url_qs("pretty", query_buf.c_str(), query_size, &q) != -1) {
+				std::string pretty = serialise_bool(urldecode(q.offset, q.length));
+				(pretty.compare("f") == 0) ? e.pretty = false : e.pretty = true;
+			} else {
+				e.pretty = false;
+			}
+			
 			memset(&q, 0, sizeof(q));
 			if (url_qs("synonyms", query_buf.c_str(), query_size, &q) != -1) {
 				std::string synonyms = serialise_bool(urldecode(q.offset, q.length));
