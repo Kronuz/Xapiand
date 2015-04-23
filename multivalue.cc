@@ -53,7 +53,7 @@ StringList::unserialise(const char ** ptr, const char * end)
 			}
 			push_back(std::string(*ptr, currlen));
 			*ptr += currlen;
-		}	
+		}
 	}
 }
 
