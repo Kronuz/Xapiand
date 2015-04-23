@@ -47,6 +47,7 @@ public:
 	size_t hash;
 	bool writable;
 	Endpoints endpoints;
+	time_t access_time;
 
 	Xapian::Database *db;
 
