@@ -29,6 +29,8 @@
 #define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
 #define FIND_TERMS_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
 #define MAX_DOCS 100
+#define DATABASE_UPDATE_TIME 10
+
 
 Database::Database(Endpoints &endpoints_, bool writable_)
 	: endpoints(endpoints_),
@@ -43,6 +45,7 @@ Database::Database(Endpoints &endpoints_, bool writable_)
 void
 Database::reopen()
 {
+	access_time = time(0);
 	if (db) {
 		// Try to reopen
 		try {
@@ -182,6 +185,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 				pthread_mutex_unlock(&qmtx);
 				try {
 					database_ = new Database(endpoints, writable);
+					database_->access_time = time(0);
 				} catch (Xapian::Error &err) {
 				}
 				pthread_mutex_lock(&qmtx);
@@ -199,6 +203,11 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 	}
 
 	pthread_mutex_unlock(&qmtx);
+
+	if ((time(0) - (*database)->access_time) >= DATABASE_UPDATE_TIME && !writable) {
+		(*database)->reopen();
+		LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)*database);
+	}
 
 	LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)*database);
 
