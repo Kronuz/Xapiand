@@ -324,23 +324,50 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 	if (document_values) {
 		LOG_DATABASE_WRAP(this, "Values..\n");
 		for (int i = 0; i < cJSON_GetArraySize(document_values); i++) {
-			cJSON *name = cJSON_GetArrayItem(document_values, i);
-			std::string value = cJSON_Print(name);
-			if (name->type == 4 || name->type == 5) {
-				value = std::string(value, 1, (int) value.size() - 2);
-			} else if (name->type == 3){
-				value = std::to_string(name->valuedouble);
-			}
-			LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name->string, value.c_str());
-			std::string val_serialized = serialise(std::string(name->string), value);
-			if (val_serialized.size() != 0) {
-				unsigned int slot = get_slot(std::string(name->string));
-				doc.add_value(slot, val_serialized);
-				LOG_DATABASE_WRAP(this, "Slot: %X serialized: %s\n", slot, repr(val_serialized).c_str());
+			cJSON *nameA = cJSON_GetArrayItem(document_values, i);
+			int elements = (nameA->type == 5) ? cJSON_GetArraySize(nameA) : 0;
+			StringList s;
+			if (elements == 0) {
+				std::string value = cJSON_Print(nameA);
+				if (nameA->type == 4) {
+					value = std::string(value, 1, (int) value.size() - 2);
+				} else if (nameA->type == 3) {
+					value = std::to_string(nameA->valuedouble);
+				}
+				LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", nameA->string, value.c_str());
+				std::string val_serialized = serialise(std::string(nameA->string), value);
+				if (val_serialized.size() == 0) {
+					LOG_ERR(this, "ERROR: %s: %s not serialized\n", nameA->string, value.c_str());
+					return false;
+				}
+				s.push_back(val_serialized);
 			} else {
-				LOG_ERR(this, "ERROR: %s: %s not serialized\n", name->string, cJSON_Print(name));
-				return false;
+				for (int e = 0; e < elements; e++) {
+					cJSON *name = cJSON_GetArrayItem(nameA, e);
+					int type = field_type(nameA->string);
+					std::string value = cJSON_Print(name);
+					if (type == GEO_TYPE && name->type != 5) {
+						value = cJSON_Print(nameA);
+						value = std::string(value, 1, (int) value.size() - 2);
+						e = elements;
+					}
+					if (name->type == 4 || name->type == 5) {
+						value = std::string(value, 1, (int) value.size() - 2);
+					} else if (name->type == 3 && type != GEO_TYPE){
+						value = std::to_string(name->valuedouble);
+					}
+					LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", nameA->string, value.c_str());
+					std::string val_serialized = serialise(std::string(nameA->string), value);
+					if (val_serialized.size() == 0) {
+						LOG_ERR(this, "ERROR: %s: %s not serialized\n", nameA->string, value.c_str());
+						return false;
+					}
+					s.push_back(val_serialized);
+				}
 			}
+			unsigned int slot = get_slot(std::string(nameA->string));
+			doc.add_value(slot, s.serialise());
+			LOG_DATABASE_WRAP(this, "Slot: %X serialized: %s\n", slot, repr(s.serialise()).c_str());
 		}
 	}
 
