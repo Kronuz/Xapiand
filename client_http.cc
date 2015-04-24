@@ -100,6 +100,7 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 	if (parsed == received) {
 		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
 			io_read.stop();
+			written = 0;
 			thread_pool->addTask(this);
 		}
 	} else {

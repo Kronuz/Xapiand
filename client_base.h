@@ -88,6 +88,7 @@ protected:
 
 	bool closed;
 	int sock;
+	int written;
 
 	DatabasePool *database_pool;
 	ThreadPool *thread_pool;
