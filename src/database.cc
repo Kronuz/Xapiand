@@ -485,14 +485,14 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 
 
 bool
-Database::replace(const std::string &document_id, const Xapian::Document doc, bool commit)
+Database::replace(const std::string &document_id, const Xapian::Document &doc, bool commit)
 {
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Inserting: -%s- t:%d\n", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 		try {
 			LOG_DATABASE_WRAP(this, "Doing replace_document.\n");
-			wdb->replace_document (document_id, doc);
+			wdb->replace_document(document_id, doc);
 			LOG_DATABASE_WRAP(this, "Replace_document was done.\n");
 		} catch (const Xapian::Error &e) {
 			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
