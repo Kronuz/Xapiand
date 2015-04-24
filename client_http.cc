@@ -267,6 +267,10 @@ void HttpClient::run()
 		if (parser.state == 1) {
 			close();
 		}//------------*/
+	} catch (const Xapian::Error &err) {
+		LOG_ERR(this, "ERROR %s!\n", err.get_error_string());
+	} catch (const std::exception &err) {
+		LOG_ERR(this, "ERROR %s!\n", err.what());
 	} catch (...) {
 		LOG_ERR(this, "ERROR!\n");
 	}
