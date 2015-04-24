@@ -39,6 +39,7 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	  async_write(*loop),
 	  closed(false),
 	  sock(sock_),
+	  written(0),
 	  database_pool(database_pool_),
 	  thread_pool(thread_pool_),
 	  write_queue(WRITE_QUEUE_SIZE)
@@ -243,6 +244,7 @@ bool BaseClient::write(const char *buf, size_t buf_size)
 
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
 	write_queue.push(buffer);
+	written += 1;
 
 	if (sock == -1) {
 		return false;
