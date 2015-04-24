@@ -412,7 +412,7 @@ void HttpClient::_search()
 	} else {
 		int rc = 0;
 		for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++, m++) {
-			Xapian::docid docid;
+			Xapian::docid docid = 0;
 			std::string id;
 			int rank = 0;
 			double weight = 0, percent = 0;
