@@ -956,3 +956,20 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<
 	delete sorter;
 	return 2;
 }
+
+bool
+Database::get_document(Xapian::docid did, Xapian::Document &doc)
+{
+	for (int t = 3; t >= 0; --t) {
+		try {
+			doc = db->get_document(did);
+		} catch (const Xapian::Error &e) {
+			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			if (t) reopen();
+			continue;
+		}
+		return true;
+	}
+
+	return false;
+}
