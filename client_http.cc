@@ -450,7 +450,7 @@ void HttpClient::_search()
 			}
 
 			data = document.get_data();
-			id = "Q" + document.get_value(0);
+			//id = "Q" + document.get_value(0);
 
 			if (rc == 0) {
 				write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
