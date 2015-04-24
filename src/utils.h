@@ -46,6 +46,7 @@
 #define GEO_TYPE 3
 #define BOOLEAN_TYPE 4
 
+#define CMD_NUMBER 0
 #define CMD_SEARCH 1
 #define CMD_FACETS 2
 #define CMD_STATS 3
