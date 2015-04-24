@@ -84,7 +84,7 @@ Database::reopen()
 					} else {
 						wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
 					}
-				} catch (Xapian::DatabaseOpeningError &err) {
+				} catch (const Xapian::DatabaseOpeningError &err) {
 					wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
 				}
 			}
@@ -97,7 +97,7 @@ Database::reopen()
 			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
 				try {
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
-				} catch (Xapian::DatabaseOpeningError &err) {
+				} catch (const Xapian::DatabaseOpeningError &err) {
 					Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 				}
@@ -110,7 +110,7 @@ Database::reopen()
 						// Handle remote endpoints and figure out if the endpoint is a local database
 						rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					}
-				} catch (Xapian::DatabaseOpeningError &err) {}
+				} catch (const Xapian::DatabaseOpeningError &err) {}
 			}
 			db->add_database(rdb);
 		}
@@ -186,7 +186,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 				try {
 					database_ = new Database(endpoints, writable);
 					database_->access_time = time(0);
-				} catch (Xapian::Error &err) {
+				} catch (const Xapian::Error &err) {
 				}
 				pthread_mutex_lock(&qmtx);
 			} else {
@@ -862,7 +862,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	try {
 		srch.query = queryparser.parse_query(querystring, flags);
 		srch.suggested_query.push_back(queryparser.get_corrected_query_string());
-	} catch (Xapian::Error &er) {
+	} catch (const Xapian::Error &er) {
 		LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 		reopen();
 		queryparser.set_database(*db);
@@ -944,7 +944,7 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<
 			Xapian::Enquire enquire = get_enquire(srch.query, sorter, spies, e);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
-		} catch (Xapian::Error &er) {
+		} catch (const Xapian::Error &er) {
 			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 			if (t) reopen();
 			continue;
