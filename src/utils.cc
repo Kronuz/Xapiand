@@ -1078,3 +1078,15 @@ std::string unserialise(const std::string &field_name, const std::string &serial
 	}
 	return std::string("");
 }
+
+int identify_cmd(std::string commad)
+{
+	if(strcasecmp(commad.c_str(), "_search") == 0) {
+		return CMD_SEARCH;
+	} else if(strcasecmp(commad.c_str(), "_facets") == 0) {
+		return CMD_FACETS;
+	} else if(strcasecmp(commad.c_str(), "_facets") == 0) {
+		return CMD_STATS;
+	}
+	return -1;
+}
