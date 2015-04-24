@@ -886,11 +886,11 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 	MultiValueCountMatchSpy *spy;
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
-	
+
 	if (sorter) {
 		enquire.set_sort_by_key(sorter, false);
 	}
-	
+
 	if(!e.facets.empty()) {
 		std::vector<std::string>::const_iterator fit(e.facets.begin());
 		for(; fit != e.facets.end(); fit++) {
@@ -914,7 +914,7 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<
 	std::string field;
 	int doccount = db->get_doccount();
 	int check_at_least = std::max(std::min(doccount, e.check_at_least), 0);
-	
+
 	if (!e.order.empty()) {
 		sorter = new Xapian::MultiValueKeyMaker();
 		std::vector<std::string>::const_iterator oit(e.order.begin());
