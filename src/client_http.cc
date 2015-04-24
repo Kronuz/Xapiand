@@ -279,13 +279,10 @@ void HttpClient::_delete()
 	_endpointgen(e);
 	Database *database = NULL;
 	LOG(this, "Delete Document: %s\n", command.c_str());
-	LOG(this, "Doing the checkout\n");
 	if (!database_pool->checkout(&database, endpoints, true)) {
-		LOG(this, "Checkout for delete aborted.\n");
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}	database->drop(command.c_str(), e.commit);
-	LOG(this, "Doing the checkin.\n");
 	database_pool->checkin(&database);
 	LOG(this, "FINISH DELETE\n");
 	write(http_response(200, HTTP_HEADER | HTTP_CONTENT));
@@ -296,9 +293,7 @@ void HttpClient::_index()
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
-	LOG(this, "Doing the checkout for index\n");
 	if (!database_pool->checkout(&database, endpoints, true)) {
-		LOG(this, "Checkout for index aborted.\n");
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
@@ -307,7 +302,6 @@ void HttpClient::_index()
 	LOG(this, "Index %s\n", body.c_str());
 	database->index(body, command, e.commit);
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
-	LOG(this, "Doing the checkin for index.\n");
 	database_pool->checkin(&database);
 	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
 	LOG(this, "FINISH INDEX\n");
@@ -316,55 +310,48 @@ void HttpClient::_index()
 
 void HttpClient::_search()
 {
-	std::string result;
-	std::string http_header;
-	std::string http_error_header;
-	std::string name_result;
-	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
-	int rc = 0;
-	int rmset;
 	bool facets = false;
+	std::string result;
 
 	struct query_t e;
 	_endpointgen(e);
 
-	if(strcmp(command.c_str(), "_search") != 0) {
-		if (strcmp(command.c_str(), "_facets") == 0) {
-			facets = true;
-		} else {
-			cJSON *root = cJSON_CreateObject();
-			cJSON *response = cJSON_CreateObject();
-			cJSON_AddItemToObject(root, "Response", response);
-			cJSON_AddStringToObject(response, "Error message",std::string("Unknown task "+command).c_str());
-			result = cJSON_PrintUnformatted(root);
-			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-			return;
-		}
-	} else {
+	if(strcmp(command.c_str(), "_search") == 0) {
 		e.check_at_least = 0;
+	} else if (strcmp(command.c_str(), "_facets") == 0) {
+		facets = true;
+	} else {
+		cJSON *root = cJSON_CreateObject();
+		cJSON *response = cJSON_CreateObject();
+		cJSON_AddItemToObject(root, "Response", response);
+		cJSON_AddStringToObject(response, "Error message",std::string("Unknown task "+command).c_str());
+		result = cJSON_PrintUnformatted(root);
+		result += "\n";
+		write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+		return;
 	}
 
 	Database *database = NULL;
-	LOG(this, "Doing the checkout for search\n");
 	if (!database_pool->checkout(&database, endpoints, false)) {
-		LOG(this, "Checkout for search aborted.\n");
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
 
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
-	rmset = database->get_mset(e, mset, spies, suggestions);
+	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
+	int rmset = database->get_mset(e, mset, spies, suggestions);
 	if (rmset == 1) {
 		LOG(this, "get_mset return 1\n");
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
-		return;
+		database_pool->checkin(&database);
+		LOG(this, "ABORTED SEARCH\n");
 	}
 	if (rmset == 2) {
 		LOG(this, "get_mset return 2\n");
 		write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
-		return;
+		database_pool->checkin(&database);
+		LOG(this, "ABORTED SEARCH\n");
 	}
 
 
@@ -374,7 +361,31 @@ void HttpClient::_search()
 		LOG(this, "\t%s\n", (*it_s).c_str());
 	}
 
-	if (!facets) {
+	if (facets) {
+		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
+		cJSON *root = cJSON_CreateObject();
+		for(; spy != spies.end(); spy++) {
+			std::string name_result = (*spy).first;
+			cJSON *array_values = cJSON_CreateArray();
+			cJSON_AddItemToObject(root, name_result.c_str(), array_values);
+			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
+				cJSON *value = cJSON_CreateObject();
+				cJSON_AddStringToObject(value, "value", unserialise((*spy).first,(*facet)).c_str());
+				cJSON_AddNumberToObject(value, "termfreq", facet.get_termfreq());
+				cJSON_AddItemToArray(array_values, value);
+			}
+		}
+		if(e.pretty) {
+			result = cJSON_Print(root);
+		} else {
+			result = cJSON_PrintUnformatted(root);
+		}
+		result += "\n\n";
+		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+		write(result);
+		cJSON_Delete(root);
+	} else {
+		int rc = 0;
 		for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++) {
 			std::string did;
 			int rank = 0;
@@ -407,7 +418,8 @@ void HttpClient::_search()
 					// err obj
 					write("0\r\n\r\n");
 				}
-				return;
+				database_pool->checkin(&database);
+				LOG(this, "ABORTED SEARCH\n");
 			}
 
 			if (rc == 0) {
@@ -440,32 +452,6 @@ void HttpClient::_search()
 		write("0\r\n\r\n");
 	}
 
-	if (facets) {
-		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
-		cJSON *root = cJSON_CreateObject();
-		for(; spy != spies.end(); spy++) {
-			name_result = (*spy).first;
-			cJSON *array_values = cJSON_CreateArray();
-			cJSON_AddItemToObject(root, name_result.c_str(), array_values);
-			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
-				cJSON *value = cJSON_CreateObject();
-				cJSON_AddStringToObject(value, "value", unserialise((*spy).first,(*facet)).c_str());
-				cJSON_AddNumberToObject(value, "termfreq", facet.get_termfreq());
-				cJSON_AddItemToArray(array_values, value);
-			}
-		}
-		if(e.pretty) {
-			result = cJSON_Print(root);
-		} else {
-			result = cJSON_PrintUnformatted(root);
-		}
-		result += "\n\n";
-		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
-		write(result);
-		cJSON_Delete(root);
-	}
-
-	LOG(this, "Doing the checkin for search.\n");
 	database_pool->checkin(&database);
 	LOG(this, "FINISH SEARCH\n");
 }
@@ -539,7 +525,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 			} else {
 				e.check_at_least = 0;
 			}
-			
+
 			memset(&q, 0, sizeof(q));
 			if (url_qs("limit", query_buf.c_str(), query_size, &q) != -1) {
 				e.limit = atoi(urldecode(q.offset, q.length).c_str());
@@ -555,7 +541,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 			} else {
 				e.commit = true;
 			}
-			
+
 			memset(&q, 0, sizeof(q));
 			if (url_qs("spelling", query_buf.c_str(), query_size, &q) != -1) {
 				std::string spelling = serialise_bool(urldecode(q.offset, q.length));
@@ -571,7 +557,7 @@ void HttpClient::_endpointgen(struct query_t &e)
 			} else {
 				e.pretty = false;
 			}
-			
+
 			memset(&q, 0, sizeof(q));
 			if (url_qs("synonyms", query_buf.c_str(), query_size, &q) != -1) {
 				std::string synonyms = serialise_bool(urldecode(q.offset, q.length));
