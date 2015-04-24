@@ -458,21 +458,14 @@ void HttpClient::_search()
 			}
 
 			data = document.get_data();
-			//id = "Q" + document.get_value(0);
+			id = "Q" + document.get_value(0);
 
 			if (rc == 0) {
 				write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
 			}
 
 			cJSON *root = cJSON_CreateObject();
-			//cJSON *response = cJSON_CreateObject();
-			//LOG(this, "loop %d docid:%d rank:%d data:%s\n",rc,docid,m.get_rank(),std::string(m.get_document().get_data()).c_str());
-			//name_result = std::to_string(rc);
 			cJSON_AddStringToObject(root, "id", id.c_str());
-			//cJSON_AddNumberToObject(response, "docid", docid);
-			//cJSON_AddNumberToObject(response, "rank", rank);
-			//cJSON_AddNumberToObject(response, "weight", weight);
-			//cJSON_AddNumberToObject(response, "percent", percent);
 			cJSON_AddStringToObject(root, "data", data.c_str());
 
 			if(e.pretty) {
