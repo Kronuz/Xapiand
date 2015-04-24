@@ -350,12 +350,14 @@ void HttpClient::_search()
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		database_pool->checkin(&database);
 		LOG(this, "ABORTED SEARCH\n");
+		return;
 	}
 	if (rmset == 2) {
 		LOG(this, "get_mset return 2\n");
 		write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
 		database_pool->checkin(&database);
 		LOG(this, "ABORTED SEARCH\n");
+		return;
 	}
 
 
@@ -424,6 +426,7 @@ void HttpClient::_search()
 				}
 				database_pool->checkin(&database);
 				LOG(this, "ABORTED SEARCH\n");
+				return;
 			}
 
 			if (rc == 0) {
