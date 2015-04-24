@@ -44,6 +44,10 @@
 #define GEO_TYPE 3
 #define BOOLEAN_TYPE 4
 
+#define CMD_SEARCH 0
+#define CMD_FACETS 1
+#define CMD_STATS 2
+
 void log(void *obj, const char *fmt, ...);
 
 std::string repr(const char *p, size_t size);
@@ -129,6 +133,7 @@ int number_days(int year, int month);
 bool validate_date(int n[]);
 void calculate_date(int n[], const std::string &op, const std::string &units);
 std::string unserialise(const std::string &field_name, const std::string &serialise_val);
+int identify_cmd(std::string commad);
 
 #define INFO(...) log(__VA_ARGS__)
 
