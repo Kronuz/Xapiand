@@ -180,6 +180,8 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 
 void HttpClient::run()
 {
+	std::string error;
+
 	try {
 		//LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
 		//LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
@@ -269,11 +271,19 @@ void HttpClient::run()
 			close();
 		}//------------*/
 	} catch (const Xapian::Error &err) {
-		LOG_ERR(this, "ERROR %s!\n", err.get_error_string());
+		error.assign(err.get_error_string());
 	} catch (const std::exception &err) {
-		LOG_ERR(this, "ERROR %s!\n", err.what());
+		error.assign(err.what());
 	} catch (...) {
-		LOG_ERR(this, "ERROR!\n");
+		error.assign("Unkown error!");
+	}
+	if (!error.empty()) {
+		LOG_ERR(this, "ERROR: %s\n", error.c_str());
+		if (written) {
+			destroy();
+		} else {
+			write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
+		}
 	}
 	io_read.start();
 }
@@ -419,11 +429,10 @@ void HttpClient::_search()
 				}
 			}
 			if (t < 0) {
-				if (rc == 0) {
-					write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
-				} else {
-					// err obj
+				if (written) {
 					write("0\r\n\r\n");
+				} else {
+					write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
 				}
 				database_pool->checkin(&database);
 				LOG(this, "ABORTED SEARCH\n");
