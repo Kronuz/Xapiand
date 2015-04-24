@@ -406,7 +406,7 @@ void HttpClient::_search()
 					data = m.get_document().get_data();
 					m++;
 					break;
-				} catch (Xapian::Error &er) {
+				} catch (const Xapian::Error &err) {
 					database->reopen();
 					if (database->get_mset(e, mset, spies, suggestions, rc)== 0) {
 						m = mset.begin();
