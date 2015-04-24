@@ -26,6 +26,8 @@
 #include <xapian.h>
 #include <string>
 #include <vector>
+#include <locale>
+#include <algorithm>
 
 #include "md5.h"
 #include <sstream>
@@ -44,9 +46,9 @@
 #define GEO_TYPE 3
 #define BOOLEAN_TYPE 4
 
-#define CMD_SEARCH 0
-#define CMD_FACETS 1
-#define CMD_STATS 2
+#define CMD_SEARCH 1
+#define CMD_FACETS 2
+#define CMD_STATS 3
 
 void log(void *obj, const char *fmt, ...);
 
@@ -134,6 +136,7 @@ bool validate_date(int n[]);
 void calculate_date(int n[], const std::string &op, const std::string &units);
 std::string unserialise(const std::string &field_name, const std::string &serialise_val);
 int identify_cmd(std::string commad);
+bool is_digits(const std::string &str);
 
 #define INFO(...) log(__VA_ARGS__)
 
