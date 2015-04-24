@@ -403,8 +403,9 @@ void HttpClient::_search()
 		cJSON_Delete(root);
 	} else {
 		int rc = 0;
-		for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++) {
-			std::string did;
+		for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++, m++) {
+			Xapian::docid docid;
+			std::string id;
 			int rank = 0;
 			double weight = 0, percent = 0;
 			std::string data;
@@ -412,12 +413,10 @@ void HttpClient::_search()
 			int t = 3;
 			for (; t >= 0; --t) {
 				try {
-					did = "Q" + m.get_document().get_value(0);
+					docid = *m;
 					rank = m.get_rank();
 					weight = m.get_weight();
 					percent = m.get_percent();
-					data = m.get_document().get_data();
-					m++;
 					break;
 				} catch (const Xapian::Error &err) {
 					database->reopen();
@@ -428,7 +427,18 @@ void HttpClient::_search()
 					}
 				}
 			}
+
+			Xapian::Document document;
+
+			if (t >= 0) {
+				// No errors, now try opening the document
+				if (!database->get_document(docid, document)) {
+					t = -1;  // flag as error
+				}
+			}
+
 			if (t < 0) {
+				// On errors, abort
 				if (written) {
 					write("0\r\n\r\n");
 				} else {
@@ -439,20 +449,24 @@ void HttpClient::_search()
 				return;
 			}
 
+			data = document.get_data();
+			id = "Q" + document.get_value(0);
+
 			if (rc == 0) {
 				write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
 			}
 
 			cJSON *root = cJSON_CreateObject();
 			//cJSON *response = cJSON_CreateObject();
-			//LOG(this, "loop %d docid:%d rank:%d data:%s\n",rc,did,m.get_rank(),std::string(m.get_document().get_data()).c_str());
+			//LOG(this, "loop %d docid:%d rank:%d data:%s\n",rc,docid,m.get_rank(),std::string(m.get_document().get_data()).c_str());
 			//name_result = std::to_string(rc);
-			cJSON_AddStringToObject(root, "id", did.c_str());
-			//cJSON_AddNumberToObject(response, "docid", did);
+			cJSON_AddStringToObject(root, "id", id.c_str());
+			//cJSON_AddNumberToObject(response, "docid", docid);
 			//cJSON_AddNumberToObject(response, "rank", rank);
 			//cJSON_AddNumberToObject(response, "weight", weight);
 			//cJSON_AddNumberToObject(response, "percent", percent);
 			cJSON_AddStringToObject(root, "data", data.c_str());
+
 			if(e.pretty) {
 				result = cJSON_Print(root);
 			} else {
