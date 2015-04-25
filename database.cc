@@ -204,12 +204,14 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 
 	pthread_mutex_unlock(&qmtx);
 
-	if ((time(0) - (*database)->access_time) >= DATABASE_UPDATE_TIME && !writable) {
-		(*database)->reopen();
-		LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)*database);
+	if (database_ != NULL) {
+		if ((time(0) - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
+			database_->reopen();
+			LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)database_);
+		}
 	}
 
-	LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)*database);
+	LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)database_);
 
 	return database_ != NULL;
 }
