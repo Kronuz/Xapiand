@@ -151,7 +151,8 @@ void BinaryClient::send_message(reply_type type, const std::string &message, dou
 
 void BinaryClient::shutdown()
 {
-	server->manager->async_shutdown.send();
+	destroy();
+	// server->manager->async_shutdown.send();
 }
 
 
