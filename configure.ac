@@ -1,6 +1,9 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
+# On OS X, use brew:
+# brew install automake autoconf autoconf-archive
+
 AC_PREREQ([2.69])
 AC_INIT([Xapiand], [3.0.0-alpha], [https://github.com/Kronuz/Xapiand])
 AC_CONFIG_SRCDIR([xapiand.cc])
@@ -17,6 +20,8 @@ AC_PROG_CXX
 
 # Use the C++ compiler for the compile tests
 AC_LANG(C++)
+
+AX_CXX_COMPILE_STDCXX_11([noext], [optional])  # This needs autoconf-archive installed
 
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
