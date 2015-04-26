@@ -9,7 +9,7 @@ AC_CONFIG_MACRO_DIRS([m4])
 
 LT_INIT
 
-AM_INIT_AUTOMAKE([subdir-objects no-dependencies])
+AM_INIT_AUTOMAKE([subdir-objects])
 
 # Checks for programs.
 AC_PROG_CXX
