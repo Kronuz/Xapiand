@@ -24,15 +24,22 @@
 #define XAPIAND_INCLUDED_ENDPOINT_H
 
 #include <string>
-#include <unordered_set>
-
-
-inline char *normalize_path(const char * src, char * dst);
 
 
 class Endpoint;
 class Endpoints;
 
+
+#ifdef HAVE_CXX11
+#  include <unordered_set>
+   typedef std::unordered_set<Endpoint> endpoints_set_t;
+#else
+#  include <set>
+   typedef std::set<Endpoint> endpoints_set_t;
+#endif
+
+
+inline char *normalize_path(const char * src, char * dst);
 
 namespace std {
 	template<>
@@ -65,7 +72,7 @@ public:
 };
 
 
-class Endpoints : public std::unordered_set<Endpoint> {
+class Endpoints : public endpoints_set_t {
 public:
 	size_t hash(bool writable) const;
 	std::string as_string() const;

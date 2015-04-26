@@ -36,10 +36,18 @@
 #include <pthread.h>
 #include <algorithm>
 #include <queue>
-#include <unordered_map>
 #include <memory>
 
 class DatabasePool;
+class DatabaseQueue;
+
+#ifdef HAVE_CXX11
+#  include <unordered_map>
+   typedef std::unordered_map<size_t, DatabaseQueue> pool_databases_map_t;
+#else
+#  include <map>
+   typedef std::map<size_t, DatabaseQueue> pool_databases_map_t;
+#endif
 
 
 class Database {
@@ -92,7 +100,7 @@ protected:
 
 private:
 	bool finished;
-	std::unordered_map<size_t, DatabaseQueue> databases;
+	pool_databases_map_t databases;
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 

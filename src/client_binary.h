@@ -25,12 +25,19 @@
 
 #include "xapiand.h"
 
+#ifdef HAVE_REMOTE_PROTOCOL
+
 #include "client_base.h"
 
 #include <xapian.h>
-#include <unordered_map>
 
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef HAVE_CXX11
+#  include <unordered_map>
+	typedef std::unordered_map<Xapian::Database *, Database *> databases_map_t;
+#else
+#  include <map>
+	typedef std::map<Xapian::Database *, Database *> databases_map_t;
+#endif
 
 //
 //   A single instance of a non-blocking Xapiand binary protocol handler
@@ -40,7 +47,7 @@ private:
 	bool running;
 	bool started;
 
-	std::unordered_map<Xapian::Database *, Database *> databases;
+	databases_map_t databases;
 
 	// Buffers that are pending write
 	std::string buffer;
@@ -58,7 +65,7 @@ public:
 	void select_db(const std::vector<std::string> &, bool, int);
 	void shutdown();
 
-	BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
+	BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	~BinaryClient();
 
 	void run();
