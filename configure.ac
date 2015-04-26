@@ -12,6 +12,7 @@ LT_INIT
 AM_INIT_AUTOMAKE([subdir-objects])
 
 # Checks for programs.
+AC_PROG_CC
 AC_PROG_CXX
 
 # Use the C++ compiler for the compile tests
