@@ -35,7 +35,7 @@ class ThreadPool;
 //   run() should be overloaded and expensive calculations done there
 //
 class Task {
-	friend ThreadPool;
+	friend class ThreadPool;
 private:
 	pthread_mutex_t task_mutex;
 	pthread_mutexattr_t task_mutex_attr;

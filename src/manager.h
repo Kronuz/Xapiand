@@ -65,14 +65,14 @@ class XapiandManager {
 	void detach_server(XapiandServer *server);
 
 protected:
-	friend XapiandServer;
+	friend class XapiandServer;
 	pthread_mutex_t servers_mutex;
 	pthread_mutexattr_t servers_mutex_attr;
 	std::list<XapiandServer *>servers;
 
 public:
-	time_t shutdown_asap = (time_t)0;
-	time_t shutdown_now = (time_t)0;
+	time_t shutdown_asap;
+	time_t shutdown_now;
 	ev::async async_shutdown;
 
 	XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_port_);
