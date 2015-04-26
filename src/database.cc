@@ -64,7 +64,7 @@ Database::reopen()
 	Xapian::Database ldb;
 
 	const Endpoint *e;
-	std::unordered_set<Endpoint>::const_iterator i(endpoints.begin());
+	endpoints_set_t::const_iterator i(endpoints.begin());
 	if (writable) {
 		db = new Xapian::WritableDatabase();
 		if (endpoints.size() != 1) {

@@ -22,6 +22,8 @@
 
 #include "client_binary.h"
 
+#ifdef HAVE_REMOTE_PROTOCOL
+
 #include "server.h"
 #include "utils.h"
 #include "length.h"
@@ -29,8 +31,6 @@
 #include <assert.h>
 #include <sys/socket.h>
 
-
-#ifdef HAVE_REMOTE_PROTOCOL
 
 //
 // Xapian binary client
@@ -55,10 +55,9 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 	assert(binary_clients <= total_clients);
 }
 
-
 BinaryClient::~BinaryClient()
 {
-	std::unordered_map<Xapian::Database *, Database *>::const_iterator it(databases.begin());
+	databases_map_t::const_iterator it(databases.begin());
 	for (; it != databases.end(); it++) {
 		Database *database = it->second;
 		database_pool->checkin(&database);
