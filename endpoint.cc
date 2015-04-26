@@ -166,7 +166,7 @@ bool Endpoint::operator< (const Endpoint & other) const
 
 std::string Endpoints::as_string() const {
 	std::string ret;
-	std::unordered_set<Endpoint>::const_iterator j(begin());
+	endpoints_set_t::const_iterator j(begin());
 	for (int i=0; j != end(); j++, i++) {
 		if (i) ret += ";";
 		ret += (*j).as_string();
@@ -206,7 +206,7 @@ size_t std::hash<Endpoints>::operator()(const Endpoints &e) const
 {
 	size_t hash = 0;
 	std::hash<Endpoint> hash_fn;
-	std::unordered_set<Endpoint>::const_iterator j(e.begin());
+	endpoints_set_t::const_iterator j(e.begin());
 	for (int i=0; j != e.end(); j++, i++) {
 		hash ^= hash_fn(*j);
 	}
