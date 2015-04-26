@@ -2,6 +2,7 @@
 # Needs: swig automake
 
 VERSION="HEAD"
+CC="gcc"
 
 if [ -d "/usr/local/Cellar" ]; then
 	# Homebrew in OS X has a Cellar directory
@@ -25,13 +26,13 @@ cd xapian-core
 perl generate-exceptions
 
 # Compile lemon (for queryparser)
-gcc -o queryparser/lemon queryparser/lemon.c
+$CC -o queryparser/lemon queryparser/lemon.c
 
 # Compile queryparser
 queryparser/lemon -q -oqueryparser/queryparser_internal.cc -hqueryparser/queryparser_token.h queryparser/queryparser.lemony
 
 # Compile languages compiler (snowball based)
-gcc -o languages/snowball -DDISABLE_JAVA languages/compiler/space.c languages/compiler/tokeniser.c languages/compiler/analyser.c languages/compiler/generator.c languages/compiler/driver.c
+$CC -o languages/snowball -DDISABLE_JAVA languages/compiler/space.c languages/compiler/tokeniser.c languages/compiler/analyser.c languages/compiler/generator.c languages/compiler/driver.c
 
 # Compile languages
 sbc() { languages/snowball "$1" -o `echo "$1"|sed 's#\.sbl$##'` -c++ -u -n InternalStem$(echo "$1"|sed 's#.*/\(.\).*#\1#'|tr a-z A-Z)$(echo "$1"|sed 's#.*/.##;s#\.sbl##') -p SnowballStemImplementation }; for f in $(find languages -type f -name '*.sbl'); do sbc "$f"; done
@@ -59,6 +60,7 @@ touch examples/xapian-metadata.1
 # Autoconf, configure (disabled docs) and make:
 ./preautoreconf
 autoreconf --force --install -I/usr/local/share/aclocal
+# ./configure CFLAGS="-O1 -g -fsanitize=address -fno-omit-frame-pointer" --disable-dependency-tracking --prefix="$PREFIX"
 ./configure --disable-dependency-tracking --prefix="$PREFIX" && echo 'all:\ninstall:\n' > docs/Makefile
 make
 make install
