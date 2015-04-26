@@ -39,6 +39,8 @@
 XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_port_)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  break_loop(*loop),
+	  shutdown_asap(0),
+	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  thread_pool("W%d", 10),
 	  http_port(http_port_),
