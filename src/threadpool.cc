@@ -138,3 +138,7 @@ void ThreadPool::addTask(Task *nt) {
 void ThreadPool::finish() {
 	workQueue.finish();
 }
+
+size_t ThreadPool::length(){
+	return workQueue.size();
+}
