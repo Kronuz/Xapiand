@@ -290,17 +290,33 @@ void HttpClient::run()
 
 void HttpClient::_delete()
 {
+	cJSON *root = cJSON_CreateObject();
+	cJSON *data = cJSON_CreateObject();
+	std::string result;
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
-	LOG(this, "Delete Document: %s\n", command.c_str());
 	if (!database_pool->checkout(&database, endpoints, true)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
-	}	database->drop(command.c_str(), e.commit);
+	}
+	if (!database->drop(command, e.commit)) {
+		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
+		return;
+	}
 	database_pool->checkin(&database);
-	LOG(this, "FINISH DELETE\n");
-	write(http_response(200, HTTP_HEADER | HTTP_CONTENT));
+	cJSON_AddStringToObject(data, "id", command.c_str());
+	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
+	cJSON_AddItemToObject(root, "delete", data);
+	if(e.pretty) {
+		result = cJSON_Print(root);
+	} else {
+		result = cJSON_PrintUnformatted(root);
+	}
+	result += "\n\n";
+	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+	write(result);
+	cJSON_Delete(root);
 }
 
 void HttpClient::_index()
