@@ -502,7 +502,7 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 			continue;
 		}
 		LOG_DATABASE_WRAP(this, "Document inserted\n");
-		if (commit) return _commit();
+		return (commit) ? _commit() : true;
 	}
 
 	return false;
