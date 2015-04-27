@@ -260,7 +260,7 @@ Database::drop(const std::string &doc_id, bool commit)
 			continue;
 		}
 		LOG_DATABASE_WRAP(this, "Document deleted\n");
-		if (commit) return _commit();
+		return (commit) ? _commit() : true;
 	}
 
 	LOG_ERR(this, "ERROR: Cannot delete document: %s!\n", document_id.c_str());
