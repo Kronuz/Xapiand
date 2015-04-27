@@ -654,6 +654,14 @@ int HttpClient::_endpointgen(struct query_t &e)
 				} else {
 					e.database = false;
 				}
+
+				memset(&q, 0, sizeof(q));
+				if (url_qs("indexing", query_buf.c_str(), query_size, &q) != -1) {
+					std::string indexing = serialise_bool(urldecode(q.offset, q.length));
+					(indexing.compare("f") == 0) ? e.indexing = false : e.indexing = true;
+				} else {
+					e.indexing = false;
+				}
 			}
 		}
 	} else {
