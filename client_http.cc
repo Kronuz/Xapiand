@@ -321,6 +321,9 @@ void HttpClient::_delete()
 
 void HttpClient::_index()
 {
+	std::string result;
+	cJSON *root = cJSON_CreateObject();
+	cJSON *data = cJSON_CreateObject();
 	struct query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
@@ -329,14 +332,23 @@ void HttpClient::_index()
 		return;
 	}
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db);
-	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
-	LOG(this, "Index %s\n", body.c_str());
-	database->index(body, command, e.commit);
-	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
+	if (!database->index(body, command, e.commit)) {
+		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
+		return;
+	}
 	database_pool->checkin(&database);
-	LOG(this, "Documents in the database: %d\n", wdb->get_doccount());
-	LOG(this, "FINISH INDEX\n");
-	write(http_response(200, HTTP_HEADER | HTTP_CONTENT));
+	cJSON_AddStringToObject(data, "id", command.c_str());
+	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
+	cJSON_AddItemToObject(root, "index", data);
+	if(e.pretty) {
+		result = cJSON_Print(root);
+	} else {
+		result = cJSON_PrintUnformatted(root);
+	}
+	result += "\n\n";
+	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+	write(result);
+	cJSON_Delete(root);
 }
 
 void HttpClient::_stats(struct query_t &e)
