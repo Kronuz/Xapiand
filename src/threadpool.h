@@ -72,6 +72,9 @@ public:
 
 	// Wait for all threads to end
 	void join();
+
+	//Return size of the workQueue
+	size_t length();
 };
 
 #endif /* XAPIAND_INCLUDED_THREADPOOL_H */
