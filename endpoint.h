@@ -23,6 +23,8 @@
 #ifndef XAPIAND_INCLUDED_ENDPOINT_H
 #define XAPIAND_INCLUDED_ENDPOINT_H
 
+#include "xapiand.h"
+
 #include <string>
 
 
