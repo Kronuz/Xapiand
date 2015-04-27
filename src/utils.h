@@ -98,15 +98,15 @@ typedef struct parser_url_path_t {
 	const char *off_command;
 } parser_url_path;
 
+typedef struct group {
+	int start;
+	int end;
+} group;
+
 int url_path(const char* n1, size_t size, parser_url_path *par);
 int url_qs(const char *, const char *, size_t, parser_query *);
 std::string urldecode(const char *, size_t);
 int look_cmd(const char *);
-
-typedef struct group {
-		int start;
-		int end;
-} group;
 
 int field_type(const std::string &field_name);
 std::string serialise_numeric(const std::string &field_value);
