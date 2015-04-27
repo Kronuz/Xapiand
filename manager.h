@@ -81,6 +81,7 @@ public:
 	void run(int num_servers);
 	void sig_shutdown_handler(int sig);
 	void shutdown();
+	cJSON* server_status();
 };
 
 
