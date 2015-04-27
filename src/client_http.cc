@@ -358,15 +358,13 @@ void HttpClient::_search()
 	struct query_t e;
 	int cmd = _endpointgen(e);
 
-	if(cmd == CMD_STATS) {
-		_stats(e);
-		return;
-	}
-	
 	if(cmd == CMD_SEARCH) {
 		e.check_at_least = 0;
 	} else if (cmd == CMD_FACETS) {
 		facets = true;
+	} else if(cmd == CMD_STATS) {
+		_stats(e);
+		return;
 	} else {
 		cJSON *root = cJSON_CreateObject();
 		cJSON *err_response = cJSON_CreateObject();
@@ -573,8 +571,15 @@ int HttpClient::_endpointgen(struct query_t &e)
 
 			struct parser_query_t q;
 
-			if(cmd == CMD_SEARCH || cmd == CMD_FACETS) {
+			memset(&q, 0, sizeof(q));
+			if (url_qs("pretty", query_buf.c_str(), query_size, &q) != -1) {
+				std::string pretty = serialise_bool(urldecode(q.offset, q.length));
+				(pretty.compare("f") == 0) ? e.pretty = false : e.pretty = true;
+			} else {
+				e.pretty = false;
+			}
 
+			if(cmd == CMD_SEARCH || cmd == CMD_FACETS) {
 				memset(&q, 0, sizeof(q));
 				if (url_qs("offset", query_buf.c_str(), query_size, &q) != -1) {
 					e.offset = atoi(urldecode(q.offset, q.length).c_str());
@@ -602,14 +607,6 @@ int HttpClient::_endpointgen(struct query_t &e)
 					(spelling.compare("f") == 0) ? e.spelling = false : e.spelling = true;
 				} else {
 					e.spelling = true;
-				}
-
-				memset(&q, 0, sizeof(q));
-				if (url_qs("pretty", query_buf.c_str(), query_size, &q) != -1) {
-					std::string pretty = serialise_bool(urldecode(q.offset, q.length));
-					(pretty.compare("f") == 0) ? e.pretty = false : e.pretty = true;
-				} else {
-					e.pretty = false;
 				}
 
 				memset(&q, 0, sizeof(q));
@@ -652,8 +649,7 @@ int HttpClient::_endpointgen(struct query_t &e)
 					e.language.push_back(urldecode(q.offset, q.length));
 				}
 
-			}
-			if(cmd == CMD_NUMBER) {
+			} else if(cmd == CMD_NUMBER) {
 				memset(&q, 0, sizeof(q));
 				if (url_qs("commit", query_buf.c_str(), query_size, &q) != -1) {
 					std::string pretty = serialise_bool(urldecode(q.offset, q.length));
@@ -661,15 +657,21 @@ int HttpClient::_endpointgen(struct query_t &e)
 				} else {
 					e.commit = true;
 				}
-			}
-			
-			if(cmd == CMD_STATS) {
+			} else if(cmd == CMD_STATS) {
 				memset(&q, 0, sizeof(q));
 				if (url_qs("server", query_buf.c_str(), query_size, &q) != -1) {
 					std::string server = serialise_bool(urldecode(q.offset, q.length));
 					(server.compare("f") == 0) ? e.server = false : e.server = true;
 				} else {
 					e.server = false;
+				}
+
+				memset(&q, 0, sizeof(q));
+				if (url_qs("database", query_buf.c_str(), query_size, &q) != -1) {
+					std::string database = serialise_bool(urldecode(q.offset, q.length));
+					(database.compare("f") == 0) ? e.database = false : e.database = true;
+				} else {
+					e.database = false;
 				}
 			}
 		}
