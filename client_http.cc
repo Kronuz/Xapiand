@@ -269,7 +269,6 @@ void HttpClient::_index()
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
-	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db);
 	if (!database->index(body, command, e.commit)) {
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
