@@ -336,18 +336,23 @@ void HttpClient::_search()
 	struct query_t e;
 	int cmd = _endpointgen(e);
 
+	if(cmd == CMD_STATS) {
+		_stats();
+		return;
+	}
+	
 	if(cmd == CMD_SEARCH) {
 		e.check_at_least = 0;
 	} else if (cmd == CMD_FACETS) {
 		facets = true;
 	} else {
 		cJSON *root = cJSON_CreateObject();
-		cJSON *response = cJSON_CreateObject();
-		cJSON_AddItemToObject(root, "Response", response);
+		cJSON *err_response = cJSON_CreateObject();
+		cJSON_AddItemToObject(root, "Response", err_response);
 		if(cmd == -1)
-			cJSON_AddStringToObject(response, "Error message",std::string("Unknown task "+command).c_str());
+			cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
 		else
-			cJSON_AddStringToObject(response, "Error message","BAD QUERY");
+			cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
 		result = cJSON_PrintUnformatted(root);
 		result += "\n";
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
