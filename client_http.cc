@@ -292,6 +292,12 @@ void HttpClient::_stats(struct query_t &e)
 {
 	std::string result;
 	cJSON *root = cJSON_CreateObject();
+
+	if(e.server) {
+
+		cJSON_AddItemToObject(root, "Server status", server->manager->server_status());
+	}
+
 	if (e.database) {
 		_endpointgen(e);
 		Database *database = NULL;
