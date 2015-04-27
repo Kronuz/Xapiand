@@ -197,7 +197,7 @@ void HttpClient::run()
 			case 0:
 				_delete();
 				break;
-			//GET (search)
+			//GET
 			case 1:
 				_search();
 				break;
@@ -208,68 +208,6 @@ void HttpClient::run()
 			default:
 				break;
 		}
-
-		/*-------------
-		std::string content;
-		cJSON *json = cJSON_Parse(body.c_str());
-		cJSON *query = json ? cJSON_GetObjectItem(json, "query") : NULL;
-		cJSON *term = query ? cJSON_GetObjectItem(query, "term") : NULL;
-		cJSON *text = term ? cJSON_GetObjectItem(term, "text") : NULL;
-
-		cJSON *root = cJSON_CreateObject();
-		cJSON *response = cJSON_CreateObject();
-		cJSON_AddItemToObject(root, "response", response);
-		if (text) {
-			cJSON_AddStringToObject(response, "status", "OK");
-			cJSON_AddStringToObject(response, "query", text->valuestring);
-			cJSON_AddStringToObject(response, "title", "The title");
-			cJSON_AddNumberToObject(response, "items", 7);
-			const char *strings[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-			cJSON *results = cJSON_CreateArray();
-			cJSON_AddItemToObject(response, "results", results);
-			for (int i = 0; i < 7; i++) {
-				cJSON *result = cJSON_CreateObject();
-				cJSON_AddNumberToObject(result, "id", i);
-				cJSON_AddStringToObject(result, "name", strings[i]);
-				cJSON_AddItemToArray(results, result);
-			}
-		} else {
-			cJSON_AddStringToObject(response, "status", "ERROR");
-			const char *message = cJSON_GetErrorPtr();
-			if (message) {
-				LOG_HTTP_PROTO(this, "JSON error before: [%s]\n", message);
-				cJSON_AddStringToObject(response, "message", message);
-			}
-		}
-		cJSON_Delete(json);
-
-		bool pretty = false;
-		char *out;
-		if (pretty) {
-			out = cJSON_Print(root);
-		} else {
-			out = cJSON_PrintUnformatted(root);
-		}
-		content = out;
-		cJSON_Delete(root);
-		free(out);
-
-		char tmp[20];
-		content += "\r\n";
-		std::string http_response;
-		http_response += "HTTP/";
-		sprintf(tmp, "%d.%d", parser.http_major, parser.http_minor);
-		http_response += tmp;
-		http_response += " 200 OK\r\n";
-		http_response += "Content-Type: application/json; charset=UTF-8\r\n";
-		http_response += "Content-Length: ";
-		sprintf(tmp, "%ld", (unsigned long)content.size());
-		http_response += tmp;
-		http_response += "\r\n";
-		write(http_response + "\r\n" + content);
-		if (parser.state == 1) {
-			close();
-		}//------------*/
 	} catch (const Xapian::Error &err) {
 		error.assign(err.get_error_string());
 	} catch (const std::exception &err) {
