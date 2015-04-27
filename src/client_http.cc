@@ -337,7 +337,7 @@ void HttpClient::_search()
 	int cmd = _endpointgen(e);
 
 	if(cmd == CMD_STATS) {
-		_stats();
+		_stats(e);
 		return;
 	}
 	
