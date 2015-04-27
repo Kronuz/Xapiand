@@ -293,7 +293,6 @@ void HttpClient::_stats(struct query_t &e)
 {
 	std::string result;
 	cJSON *root = cJSON_CreateObject();
-	cJSON *JSON_database;
 	if (e.database) {
 		_endpointgen(e);
 		Database *database = NULL;
@@ -301,7 +300,7 @@ void HttpClient::_stats(struct query_t &e)
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 			return;
 		}
-		JSON_database = database->get_stats_database();
+		cJSON *JSON_database = database->get_stats_database();
 		cJSON_AddItemToObject(root, "database", JSON_database);
 		database_pool->checkin(&database);
 	}
