@@ -975,3 +975,26 @@ Database::get_document(Xapian::docid did, Xapian::Document &doc)
 
 	return false;
 }
+
+
+cJSON*
+Database::get_stats_database()
+{
+	cJSON *database = cJSON_CreateObject();
+	if (writable) {
+		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+		return database;
+	}
+
+	unsigned int doccount = db->get_doccount();
+	unsigned int lastdocid = db->get_lastdocid();
+	cJSON_AddStringToObject(database, "uuid", db->get_uuid().c_str());
+	cJSON_AddNumberToObject(database, "doc_count", doccount);
+	cJSON_AddNumberToObject(database, "last_id", lastdocid);
+	cJSON_AddNumberToObject(database, "doc_del", lastdocid - doccount);
+	cJSON_AddNumberToObject(database, "av_length", db->get_avlength());
+	cJSON_AddNumberToObject(database, "doc_len_lower", db->get_doclength_lower_bound());
+	cJSON_AddNumberToObject(database, "doc_len_upper", db->get_doclength_upper_bound());
+	(db->has_positions()) ? cJSON_AddTrueToObject(database, "has_positions") : cJSON_AddFalseToObject(database, "has_positions");
+	return database;
+}
