@@ -631,9 +631,18 @@ int HttpClient::_endpointgen(struct query_t &e)
 				if (url_qs("commit", query_buf.c_str(), query_size, &q) != -1) {
 					std::string pretty = serialise_bool(urldecode(q.offset, q.length));
 					(pretty.compare("f") == 0) ? e.commit = false : e.commit = true;
-					LOG(this, "Commit false\n");
 				} else {
 					e.commit = true;
+				}
+			}
+			
+			if(cmd == CMD_STATS) {
+				memset(&q, 0, sizeof(q));
+				if (url_qs("server", query_buf.c_str(), query_size, &q) != -1) {
+					std::string server = serialise_bool(urldecode(q.offset, q.length));
+					(server.compare("f") == 0) ? e.server = false : e.server = true;
+				} else {
+					e.server = false;
 				}
 			}
 		}

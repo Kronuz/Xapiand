@@ -64,6 +64,7 @@ typedef struct query_t {
 	bool synonyms;
 	bool pretty;
 	bool commit;
+	bool server;
 	std::vector <std::string> language;
 	std::vector <std::string> query;
 	std::vector <std::string> partial;
