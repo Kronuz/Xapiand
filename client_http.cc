@@ -309,6 +309,17 @@ void HttpClient::_stats(struct query_t &e)
 		cJSON_AddItemToObject(root, "database", JSON_database);
 		database_pool->checkin(&database);
 	}
+	if (e.indexing) {
+		_endpointgen(e);
+		Database *database = NULL;
+		if (!database_pool->checkout(&database, endpoints, false)) {
+			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+			return;
+		}
+		cJSON *JSON_indexing = database->get_stats_indexing();
+		cJSON_AddItemToObject(root, "indexing", JSON_indexing);
+		database_pool->checkin(&database);
+	}
 	if(e.pretty) {
 		result = cJSON_Print(root);
 	} else {
