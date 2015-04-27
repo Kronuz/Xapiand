@@ -352,3 +352,16 @@ void XapiandManager::run(int num_servers)
 
 	LOG_OBJ(this, "Server ended!\n");
 }
+
+cJSON* XapiandManager::server_status()
+{
+	cJSON *root_status = cJSON_CreateObject();
+	std::string contet_ser;
+	pthread_mutex_lock(&XapiandServer::static_mutex);
+	cJSON_AddNumberToObject(root_status, "Connections", XapiandServer::total_clients);
+	cJSON_AddNumberToObject(root_status, "Http connections", XapiandServer::http_clients);
+	cJSON_AddNumberToObject(root_status, "Xapian remote connections", XapiandServer::binary_clients);
+	pthread_mutex_unlock(&XapiandServer::static_mutex);
+	cJSON_AddNumberToObject(root_status, "Size thread pool", thread_pool.length());
+	return root_status;
+}
