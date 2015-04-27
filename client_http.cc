@@ -323,9 +323,31 @@ void HttpClient::_index()
 	write(http_response(200, HTTP_HEADER | HTTP_CONTENT));
 }
 
-void HttpClient::_stats()
+void HttpClient::_stats(struct query_t &e)
 {
-	//Do something ...
+	std::string result;
+	cJSON *root = cJSON_CreateObject();
+	cJSON *JSON_database;
+	if (e.database) {
+		_endpointgen(e);
+		Database *database = NULL;
+		if (!database_pool->checkout(&database, endpoints, false)) {
+			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+			return;
+		}
+		JSON_database = database->get_stats_database();
+		cJSON_AddItemToObject(root, "database", JSON_database);
+		database_pool->checkin(&database);
+	}
+	if(e.pretty) {
+		result = cJSON_Print(root);
+	} else {
+		result = cJSON_PrintUnformatted(root);
+	}
+	result += "\n\n";
+	result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+	write(result);
+	cJSON_Delete(root);
 }
 
 void HttpClient::_search()
