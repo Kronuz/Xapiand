@@ -516,6 +516,7 @@ int HttpClient::_endpointgen(struct query_t &e)
 			std::string pat_;
 			std::string hos_;
 
+			endpoints.clear();
 			while (url_path(path_buf.c_str(), path_size, &p) == 0) {
 				command  = urldecode(p.off_command, p.len_command);
 
