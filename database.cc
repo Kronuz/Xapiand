@@ -187,6 +187,8 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 					database_ = new Database(endpoints, writable);
 					database_->access_time = time(0);
 				} catch (const Xapian::Error &err) {
+					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
+					return false;
 				}
 				pthread_mutex_lock(&qmtx);
 			} else {
@@ -204,16 +206,14 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 
 	pthread_mutex_unlock(&qmtx);
 
-	if (database_ != NULL) {
-		if ((time(0) - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
+	if ((time(0) - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
 			database_->reopen();
 			LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)database_);
-		}
 	}
 
 	LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)database_);
 
-	return database_ != NULL;
+	return true;
 }
 
 
