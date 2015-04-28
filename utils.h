@@ -51,10 +51,21 @@
 #define CMD_FACETS 2
 #define CMD_STATS 3
 
+static time_t init_time;
+
 void log(void *obj, const char *fmt, ...);
 
 std::string repr(const char *p, size_t size);
 std::string repr(const std::string &string);
+
+typedef struct times_row_t {
+	short ind[1440];
+	short ind_sec[60];
+	short src[1440];
+	short src_sec[60];
+	short del[1440];
+	short del_sec[60];
+}times_row_t;
 
 typedef struct query_t {
 	int offset;
