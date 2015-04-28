@@ -307,15 +307,15 @@ void HttpClient::_stats(struct query_t &e)
 		cJSON_AddItemToObject(root, "Database status", JSON_database);
 		database_pool->checkin(&database);
 	}
-	if (e.indexing) {
+	if (e.document >= 0) {
 		_endpointgen(e);
 		Database *database = NULL;
 		if (!database_pool->checkout(&database, endpoints, false)) {
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 			return;
 		}
-		cJSON *JSON_indexing = database->get_stats_indexing();
-		cJSON_AddItemToObject(root, "indexing", JSON_indexing);
+		cJSON *JSON_document = database->get_stats_docs(e.document);
+		cJSON_AddItemToObject(root, "Document status", JSON_document);
 		database_pool->checkin(&database);
 	}
 	if(e.pretty) {
@@ -654,11 +654,10 @@ int HttpClient::_endpointgen(struct query_t &e)
 				}
 
 				memset(&q, 0, sizeof(q));
-				if (url_qs("indexing", query_buf.c_str(), query_size, &q) != -1) {
-					std::string indexing = serialise_bool(urldecode(q.offset, q.length));
-					(indexing.compare("f") == 0) ? e.indexing = false : e.indexing = true;
+				if (url_qs("document", query_buf.c_str(), query_size, &q) != -1) {
+					e.document = strtoint(urldecode(q.offset, q.length));
 				} else {
-					e.indexing = false;
+					e.document = -1;
 				}
 			}
 		}
