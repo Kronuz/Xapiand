@@ -59,12 +59,12 @@ std::string repr(const char *p, size_t size);
 std::string repr(const std::string &string);
 
 typedef struct times_row_t {
-	short ind[1440];
-	short ind_sec[60];
-	short src[1440];
-	short src_sec[60];
-	short del[1440];
-	short del_sec[60];
+	unsigned short ind[1440];
+	unsigned short ind_sec[60];
+	unsigned short src[1440];
+	unsigned short src_sec[60];
+	unsigned short del[1440];
+	unsigned short del_sec[60];
 }times_row_t;
 
 typedef struct query_t {
