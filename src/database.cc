@@ -998,3 +998,43 @@ Database::get_stats_database()
 	(db->has_positions()) ? cJSON_AddTrueToObject(database, "has_positions") : cJSON_AddFalseToObject(database, "has_positions");
 	return database;
 }
+
+
+cJSON*
+Database::get_stats_docs(int id_doc)
+{
+	cJSON *document = cJSON_CreateObject();
+	if (writable) {
+		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+		return document;
+	}
+	try {
+		if (id_doc == 0) {
+			cJSON_AddStringToObject(document, "id", "all");
+			cJSON_AddNumberToObject(document, "allterms", std::distance(db->allterms_begin(), db->allterms_end()));
+			cJSON_AddNumberToObject(document, "allspellings", std::distance(db->spellings_begin(), db->spellings_end()));
+		} else {
+			Xapian::Document doc = db->get_document(id_doc);
+			cJSON_AddStringToObject(document, "id", ("Q" + doc.get_value(0)).c_str());
+			cJSON_AddStringToObject(document, "data", doc.get_data().c_str());
+			cJSON_AddNumberToObject(document, "count_terms", doc.termlist_count());
+			Xapian::TermIterator it(doc.termlist_begin());
+			std::string terms = std::string("");
+			for ( ; it != doc.termlist_end(); it++) {
+				terms = terms + repr(*it) + " ";
+			}
+			cJSON_AddStringToObject(document, "terms", terms.c_str());
+			cJSON_AddNumberToObject(document, "count_values", doc.values_count());
+			Xapian::ValueIterator iv(doc.values_begin());
+			std::string values = std::string("");
+			for ( ; iv != doc.values_end(); iv++) {
+				values = values + std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
+			}
+			cJSON_AddStringToObject(document, "values", values.c_str());
+		}
+	} catch (const Xapian::Error &err) {
+		cJSON_AddNumberToObject(document, "id", id_doc);
+		cJSON_AddStringToObject(document, "error",  "Document not found");
+	}
+	return document;
+}
