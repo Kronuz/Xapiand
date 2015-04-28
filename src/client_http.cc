@@ -294,10 +294,8 @@ void HttpClient::_stats(struct query_t &e)
 	cJSON *root = cJSON_CreateObject();
 
 	if(e.server) {
-
 		cJSON_AddItemToObject(root, "Server status", server->manager->server_status());
 	}
-
 	if (e.database) {
 		_endpointgen(e);
 		Database *database = NULL;
@@ -306,7 +304,7 @@ void HttpClient::_stats(struct query_t &e)
 			return;
 		}
 		cJSON *JSON_database = database->get_stats_database();
-		cJSON_AddItemToObject(root, "database", JSON_database);
+		cJSON_AddItemToObject(root, "Database status", JSON_database);
 		database_pool->checkin(&database);
 	}
 	if (e.indexing) {
