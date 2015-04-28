@@ -22,7 +22,8 @@
 
 #include "length.h"
 
-std::string encode_length(size_t len)
+std::string
+encode_length(size_t len)
 {
 	std::string result;
 	if (len < 255) {
@@ -56,7 +57,7 @@ decode_length(const char ** p, const char *end, bool check_remaining)
 		unsigned char ch;
 		int shift = 0;
 		do {
-			if (*p == end || shift > 28)
+			if (pos == end || shift > 28)
 				return -1;
 			ch = *pos++;
 			len |= size_t(ch & 0x7f) << shift;
@@ -64,7 +65,7 @@ decode_length(const char ** p, const char *end, bool check_remaining)
 		} while ((ch & 0x80) == 0);
 		len += 255;
 	}
-	if (check_remaining && len > size_t(end - *p)) {
+	if (check_remaining && len > size_t(end - pos)) {
 		return -1;
 	}
 	*p = pos;
