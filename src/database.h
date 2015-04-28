@@ -77,6 +77,7 @@ public:
 	search_t _search(const std::string &query, unsigned int flags, bool text, const std::string &lan);
 	int get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
 	cJSON* get_stats_database();
+	cJSON* get_stats_docs(int id_doc);
 
 private:
 	bool _commit();
