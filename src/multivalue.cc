@@ -119,7 +119,7 @@ MultiValueCountMatchSpy::unserialise(const std::string & s,
 	const char * p = s.data();
 	const char * end = p + s.size();
 
-	Xapian::valueno new_slot = decode_length(&p, end, false);
+	Xapian::valueno new_slot = (Xapian::valueno)decode_length(&p, end, false);
 	if (new_slot == -1) {
 		throw Xapian::NetworkError("Decoding error of serialised MultiValueCountMatchSpy");
 	}
