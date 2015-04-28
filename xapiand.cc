@@ -76,6 +76,7 @@ int main(int argc, char **argv)
 	int num_servers = 8;
 	int http_port = XAPIAND_HTTP_SERVERPORT;
 	int binary_port = XAPIAND_BINARY_SERVERPORT;
+	init_time = time(0);
 
 	if (argc > 2) {
 		http_port = atoi(argv[1]);
