@@ -66,7 +66,7 @@ typedef struct query_t {
 	bool commit;
 	bool server;
 	bool database;
-	bool indexing;
+	int document;
 	std::vector <std::string> language;
 	std::vector <std::string> query;
 	std::vector <std::string> partial;
