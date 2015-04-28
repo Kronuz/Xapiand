@@ -143,7 +143,7 @@ std::string Endpoint::as_string() const {
 	ret += host;
 	if (port > 0) {
 		char port_[100];
-		sprintf(port_, "%d", port);
+		snprintf(port_, sizeof(port_), "%d", port);
 		ret += ":";
 		ret += port_;
 	}
