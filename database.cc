@@ -28,6 +28,7 @@
 
 #define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
 #define FIND_TERMS_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
+#define TIME_RE "(\\d+h)?\\s?(\\d*m)?\\s?(\\d*s)?\\s?..\\s?(\\d*h)?\\s?(\\d*m)?\\s?(\\d*s)?"
 #define MAX_DOCS 100
 #define DATABASE_UPDATE_TIME 10
 
@@ -248,7 +249,7 @@ DatabasePool::checkin(Database **database)
 
 
 pcre *Database::compiled_find_field_re = NULL;
-
+pcre *Database::compiled_time_re = NULL;
 
 bool
 Database::drop(const std::string &doc_id, bool commit)

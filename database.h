@@ -60,6 +60,7 @@ public:
 	Xapian::Database *db;
 
 	static pcre *compiled_find_field_re;
+	static pcre *compiled_time_re;
 
 	Database(Endpoints &endpoints, bool writable);
 	~Database();
