@@ -360,17 +360,28 @@ void HttpClient::_search()
 			_stats(e);
 			return;
 		default:
-			cJSON *root = cJSON_CreateObject();
-			cJSON *err_response = cJSON_CreateObject();
-			cJSON_AddItemToObject(root, "Response", err_response);
-			if (cmd == -1)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
-			else
-				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
-			result = cJSON_PrintUnformatted(root);
-			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-			return;
+			if(Is_id_range(command)){
+				e.query.push_back(std::string("id:" + command));
+				e.offset = 0;
+				e.limit = 1000;
+				e.check_at_least = 0;
+				e.spelling = true;
+				e.synonyms = false;
+				e.unique_doc = true;
+				e.pretty = false;
+			}else {
+				cJSON *root = cJSON_CreateObject();
+				cJSON *err_response = cJSON_CreateObject();
+				cJSON_AddItemToObject(root, "Response", err_response);
+				if (cmd == -1)
+					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
+				else
+					cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
+				result = cJSON_PrintUnformatted(root);
+				result += "\n";
+				write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+				return;
+			}
 	}
 	
 	Database *database = NULL;
