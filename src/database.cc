@@ -1073,3 +1073,43 @@ ExpandDeciderFilterPrefixes::operator()(const std::string &term) const
 	}
 	return prefixes.empty();
 }
+
+cJSON*
+Database::get_stats_time(std::string time_req)
+{
+	cJSON *root_stats = cJSON_CreateObject();
+	int m1, m2;
+	std::string first_hours;
+	std::string first_minutes;
+	std::string first_seconds;
+	std::string second_hours;
+	std::string second_minutes;
+	std::string second_seconds;
+	int len = (int) time_req.size(), offset = 0;
+	group_t *g = NULL;
+	while ((pcre_search(time_req.c_str(), len, offset, 0, TIME_RE, &compiled_time_re, &g)) != -1) {
+		offset = g[0].end;
+		first_hours = std::string(time_req.c_str() + g[1].start, g[1].end - g[1].start);
+		first_minutes = std::string(time_req.c_str() + g[2].start, g[2].end - g[2].start);
+		first_seconds = std::string(time_req.c_str() + g[3].start, g[3].end - g[3].start);
+		second_hours = std::string(time_req.c_str() + g[4].start, g[4].end - g[4].start);
+		second_minutes = std::string(time_req.c_str() + g[5].start, g[5].end - g[5].start);
+		second_seconds = std::string(time_req.c_str() + g[6].start, g[6].end - g[6].start);
+		m1 = get_minutes(first_hours,first_minutes);
+		m2 = get_minutes(second_hours,second_minutes);
+		
+		if(m1 <= m2) {
+			if(m1 != -1 && m2 != -1) {
+				
+			} else {
+				//Json response with out of range
+				cJSON_AddStringToObject(root_stats, "Error in time argument input", "Time out of range (Statistics 24 hour ago at the most)");
+			}
+		} else {
+			//Json response with range discorde
+			cJSON_AddStringToObject(root_stats, "Error in time argument input", "First argument must be less than the second");
+		}
+	}
+	
+	return root_stats;
+}
