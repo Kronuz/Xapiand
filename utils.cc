@@ -409,7 +409,7 @@ std::string serialise_numeric(const std::string &field_value)
 		val = strtodouble(field_value);
 		return Xapian::sortable_serialise(val);
 	}
-	return std::string("");
+	return "";
 }
 
 
@@ -418,7 +418,7 @@ std::string serialise_date(const std::string &field_value)
 	std::string str_timestamp = timestamp_date(field_value);
 	if (str_timestamp.size() == 0) {
 		LOG_ERR(NULL, "ERROR: Format date (%s) must be ISO 8601: (eg 1997-07-16T19:20:30.451+05:00) or a epoch (double)\n", field_value.c_str());
-		return std::string("");
+		return "";
 	}
 
 	double timestamp = strtodouble(str_timestamp);
@@ -433,10 +433,10 @@ std::string unserialise_date(const std::string &serialise_val)
 	double epoch = Xapian::sortable_unserialise(serialise_val);
 	time_t timestamp = (time_t) epoch;
 	std::string milliseconds = std::to_string(epoch);
-	milliseconds = std::string(milliseconds.c_str() + milliseconds.find("."), 4);
+	milliseconds.assign(milliseconds.c_str() + milliseconds.find("."), 4);
 	struct tm *timeinfo = gmtime(&timestamp);
 	sprintf(date, "%.4d-%.2d-%.2dT%.2d:%.2d:%.2d%s", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, milliseconds.c_str());
-	return std::string(date);
+	return date;
 }
 
 
@@ -450,14 +450,14 @@ std::string serialise_geo(const std::string &field_value)
 	while (pcre_search(field_value.c_str(), len, offset, 0, COORDS_RE, &compiled_coords_re, &g) != -1) {
 		std::string parse(field_value, g[1].start, g[1].end - g[1].start);
 		latitude = strtodouble(parse);
-		parse = std::string(field_value, g[2].start, g[2].end - g[2].start);
+		parse.assign(field_value, g[2].start, g[2].end - g[2].start);
 		longitude = strtodouble(parse);
 		Ncoord++;
 		try {
 			coords.append(Xapian::LatLongCoord(latitude, longitude));
 		} catch (Xapian::Error &e) {
 			LOG_ERR(NULL, "Latitude or longitude out-of-range\n");
-			return std::string("");
+			return "";
 		}
 		LOG(NULL, "Coord %d: %f, %f\n", Ncoord, latitude, longitude);
 		if (g[2].end == len) {
@@ -474,7 +474,7 @@ std::string serialise_geo(const std::string &field_value)
 
 	if (Ncoord == 0 || !end) {
 		LOG_ERR(NULL, "ERROR: %s must be an array of doubles [lat, lon, lat, lon, ...]\n", field_value.c_str());
-		return std::string("");
+		return "";
 	}
 	return coords.serialise();
 }
@@ -498,27 +498,27 @@ std::string unserialise_geo(const std::string &serialise_val)
 std::string serialise_bool(const std::string &field_value)
 {
 	if (!field_value.c_str()) {
-		return std::string("f");
+		return "f";
 	} else if(field_value.size() > 1) {
 		if (strcasecmp(field_value.c_str(), "TRUE") == 0) {
-			return std::string("t");
+			return "t";
 		} else if (strcasecmp(field_value.c_str(), "FALSE") == 0) {
-			return std::string("f");
+			return "f";
 		} else {
-			return std::string("t");
+			return "t";
 		}
 	} else {
 		switch (tolower(field_value.at(0))) {
 			case '1':
-				return std::string("t");
+				return "t";
 			case '0':
-				return std::string("f");
+				return "f";
 			case 't':
-				return std::string("t");
+				return "t";
 			case 'f':
-				return std::string("f");
+				return "f";
 			default:
-				return std::string("t");
+				return "t";
 		}
 	}
 }
@@ -576,7 +576,7 @@ unsigned int get_slot(const std::string &name)
 	} else {
 		standard_name = name;
 	}
-	std::string _md5 = std::string(md5(standard_name), 24, 8);
+	std::string _md5(md5(standard_name), 24, 8);
 	unsigned int slot = hex2int(_md5);
 	if (slot == 0x00000000) {
 		slot = 0x00000001;
@@ -631,22 +631,22 @@ std::string timestamp_date(const std::string &str)
 	ret = pcre_search(str.c_str(), len, offset, 0, DATE_RE, &compiled_date_re, &gr);
 
 	if (ret != -1 && len == (gr[0].end - gr[0].start)) {
-		std::string parse = std::string(str, gr[1].start, gr[1].end - gr[1].start);
+		std::string parse(str, gr[1].start, gr[1].end - gr[1].start);
 		n[0] = strtoint(parse);
-		parse = std::string(str, gr[3].start, gr[3].end - gr[3].start);
+		parse.assign(str, gr[3].start, gr[3].end - gr[3].start);
 		n[1] = strtoint(parse);
-		parse = std::string(str, gr[4].start, gr[4].end - gr[4].start);
+		parse.assign(str, gr[4].start, gr[4].end - gr[4].start);
 		n[2] = strtoint(parse);
 		if (gr[5].end - gr[5].start > 0) {
-			parse = std::string(str, gr[6].start, gr[6].end - gr[6].start);
+			parse.assign(str, gr[6].start, gr[6].end - gr[6].start);
 			n[3] = strtoint(parse);
-			parse = std::string(str, gr[7].start, gr[7].end - gr[7].start);
+			parse.assign(str, gr[7].start, gr[7].end - gr[7].start);
 			n[4] = strtoint(parse);
 			if (gr[8].end - gr[8].start > 0) {
-				parse = std::string(str, gr[9].start, gr[9].end - gr[9].start);
+				parse.assign(str, gr[9].start, gr[9].end - gr[9].start);
 				n[5] = strtoint(parse);
 				if (gr[10].end - gr[10].start > 0) {
-					parse = std::string(str, gr[11].start, gr[11].end - gr[11].start);
+					parse.assign(str, gr[11].start, gr[11].end - gr[11].start);
 					n[6] = strtoint(parse);
 				} else {
 					n[6] = 0;
@@ -670,14 +670,14 @@ std::string timestamp_date(const std::string &str)
 		}
 
 		if (!validate_date(n)) {
-			return std::string("");
+			return "";
 		}
 
 		//Processing Date Math
-		std::string date_math("");
+		std::string date_math;
 		len = gr[16].end - gr[16].start;
 		if (len != 0) {
-			date_math = std::string(str, gr[16].start, len);
+			date_math.assign(str, gr[16].start, len);
 			if (gr) {
 				free(gr);
 				gr = NULL;
@@ -692,7 +692,7 @@ std::string timestamp_date(const std::string &str)
 			}
 			if (offset != len) {
 				LOG(NULL, "ERROR: Date Math is used incorrectly.\n");
-				return std::string("");
+				return "";
 			}
 		}
 		time_t tt = 0;
@@ -718,7 +718,7 @@ std::string timestamp_date(const std::string &str)
 		return str;
 	}
 
-	return std::string("");
+	return "";
 }
 
 
@@ -744,7 +744,7 @@ std::string get_slot_hex(const std::string &name)
 	} else {
 		standard_name = name;
 	}
-	std::string _md5 = std::string(md5(standard_name), 24, 8);
+	std::string _md5(md5(standard_name), 24, 8);
 	return stringtoupper(_md5);
 }
 
@@ -781,7 +781,7 @@ int get_coords(const std::string &str, double *coords)
 		ss << std::string(str.c_str() + g[3].start, g[3].end - g[3].start);
 		ss >> coords[2];
 		if (g[4].end - g[4].start > 0) {
-			std::string units = std::string(str.c_str() + g[4].start, g[4].end - g[4].start);
+			std::string units(str.c_str() + g[4].start, g[4].end - g[4].start);
 			if (units.compare("mi") == 0) {
 				coords[2] *= 1609.344;
 			} else if (units.compare("km") == 0) {
@@ -1056,12 +1056,12 @@ unserialise(char field_type, const std::string &field_name, const std::string &s
 		case GEO_TYPE:
 			return unserialise_geo(serialise_val);
 		case BOOLEAN_TYPE:
-			return (serialise_val.at(0) == 'f') ? std::string("false") : std::string("true");
+			return (serialise_val.at(0) == 'f') ? "false" : "true";
 		case TEXT_TYPE:
 		case STRING_TYPE:
 			return serialise_val;
 	}
-	return std::string("");
+	return "";
 }
 
 
@@ -1081,7 +1081,7 @@ serialise(char field_type, const std::string &field_name, const std::string &fie
 		case STRING_TYPE:
 			return field_value;
 	}
-	return std::string("");
+	return "";
 }
 
 

@@ -258,7 +258,7 @@ Database::drop(const std::string &doc_id, bool commit)
 		return false;
 	}
 
-	std::string document_id  = prefixed(doc_id, std::string(DOCUMENT_ID_TERM_PREFIX));
+	std::string document_id  = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
 
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Deleting: -%s- t:%d\n", document_id.c_str(), t);
@@ -328,7 +328,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
 		doc.add_value(0, _document_id);
 		LOG_DATABASE_WRAP(this, "Slot: 0  Document id: %s\n", _document_id.c_str());
-		document_id = prefixed(_document_id, std::string(DOCUMENT_ID_TERM_PREFIX));
+		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
 		doc.add_boolean_term(document_id);
 	} else {
 		LOG_ERR(this, "ERROR: Document must have an 'id'\n");
@@ -336,7 +336,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 	}
 
 	if (document_data) {
-		std::string doc_data = std::string(cJSON_Print(document_data));
+		std::string doc_data(cJSON_Print(document_data));
 		LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
 		doc.set_data(doc_data);
 	} else {
@@ -353,7 +353,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			if (elements == 0) {
 				std::string value = cJSON_Print(nameA);
 				if (nameA->type == 4) {
-					value = std::string(value, 1, (int) value.size() - 2);
+					value.assign(value, 1, (int) value.size() - 2);
 				} else if (nameA->type == 3) {
 					value = std::to_string(nameA->valuedouble);
 				}
@@ -368,14 +368,16 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 				for (int e = 0; e < elements; e++) {
 					cJSON *name = cJSON_GetArrayItem(nameA, e);
 					char type = field_type(nameA->string);
-					std::string value = cJSON_Print(name);
+					std::string value;
 					if (type == GEO_TYPE && name->type != 5) {
 						value = cJSON_Print(nameA);
-						value = std::string(value, 1, (int) value.size() - 2);
+						value.assign(value, 1, value.size() - 2);
 						e = elements;
+					} else {
+						value = cJSON_Print(name);
 					}
 					if (name->type == 4 || name->type == 5) {
-						value = std::string(value, 1, (int) value.size() - 2);
+						value.assign(value, 1, value.size() - 2);
 					} else if (name->type == 3 && type != GEO_TYPE) {
 						value = std::to_string(name->valuedouble);
 					}
@@ -388,7 +390,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 					s.push_back(val_serialized);
 				}
 			}
-			unsigned int slot = get_slot(std::string(nameA->string));
+			unsigned int slot = get_slot(nameA->string);
 			doc.add_value(slot, s.serialise());
 			LOG_DATABASE_WRAP(this, "Slot: %u serialized: %s\n", slot, repr(s.serialise()).c_str());
 		}
@@ -402,9 +404,9 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			cJSON *term = cJSON_GetObjectItem(term_data, "term");
 			cJSON *weight = cJSON_GetObjectItem(term_data, "weight");
 			cJSON *position = cJSON_GetObjectItem(term_data, "position");
-			std::string term_v = std::string(cJSON_Print(term));
+			std::string term_v(cJSON_Print(term));
 			if (term->type == 4 || term->type == 5) {
-				term_v = std::string(term_v, 1, term_v.size() - 2);
+				term_v.assign(term_v, 1, term_v.size() - 2);
 			} else if (term->type == 3) {
 				term_v = std::to_string(term->valuedouble);
 			}
@@ -422,20 +424,24 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 				(weight && weight->type == 3) ? w = weight->valueint : w = 1;
 				if (position) {
 					if (name && field_type(name->valuestring) == GEO_TYPE) {
-						insert_terms_geo(term_v, &doc, std::string(name->valuestring), w, position->valueint);
+						insert_terms_geo(term_v, &doc, name->valuestring, w, position->valueint);
 					} else {
 						std::string name_v;
-						(name) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string("");
+						if (name) {
+							name_v = get_prefix(name->valuestring, DOCUMENT_CUSTOM_TERM_PREFIX);
+						}
 						std::string nameterm(prefixed(term_v, name_v));
 						doc.add_posting(nameterm, position->valueint, w);
 						LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", repr(nameterm).c_str(), position->valueint, w);
 					}
 				} else {
 					if (name && field_type(name->valuestring) == GEO_TYPE) {
-						insert_terms_geo(term_v, &doc, std::string(name->valuestring), w, -1);
+						insert_terms_geo(term_v, &doc, name->valuestring, w, -1);
 					} else {
 						std::string name_v;
-						(name) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string("");
+						if (name) {
+							name_v = get_prefix(name->valuestring, DOCUMENT_CUSTOM_TERM_PREFIX);
+						}
 						std::string nameterm(prefixed(term_v, name_v));
 						doc.add_term(nameterm, w);
 						LOG_DATABASE_WRAP(this, "Term: %s %d\n", repr(nameterm).c_str(), w);
@@ -465,10 +471,12 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 				bool positions_v;
 				std::string name_v;
 				(weight && weight->type == 3) ? w = weight->valueint : w = 1;
-				(language && language->type == 4) ? lan = std::string(language->valuestring) : lan = std::string("en");
+				(language && language->type == 4) ? lan = language->valuestring : lan = "en";
 				(spelling && (strcmp(cJSON_Print(spelling), "true") == 0)) ? spelling_v = true : spelling_v = false;
 				(positions && (strcmp(cJSON_Print(positions), "true") == 0)) ? positions_v = true : positions_v = false;
-				(name && name->type == 4) ? name_v = get_prefix(std::string(name->valuestring), std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string();
+				if (name && name->type == 4) {
+					name_v = get_prefix(name->valuestring, DOCUMENT_CUSTOM_TERM_PREFIX);
+				}
 				LOG_DATABASE_WRAP(this, "Language: %s  Weight: %d  Spelling: %s Positions: %s Name: %s (%d)\n", lan.c_str(), w, spelling_v ? "true" : "false", positions_v ? "true" : "false", name_v.c_str(), name_v.size());
 				Xapian::TermGenerator term_generator;
 				term_generator.set_document(doc);
@@ -551,7 +559,7 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 	for (int i = 6; i > 1; i--) {
 		for (int j = 0; j < size; j += 6) {
 			found = false;
-			std::string s_coord = std::string(g_serialise, j, i);
+			std::string s_coord(g_serialise, j, i);
 
 			std::vector<std::string>::const_iterator it(terms.begin());
 			for (; it != terms.end(); it++) {
@@ -563,7 +571,7 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 
 			if (!found) {
 				std::string name_v;
-				(name.c_str()) ? name_v = get_prefix(name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX)) : name_v = std::string(DOCUMENT_CUSTOM_TERM_PREFIX);
+				(name.c_str()) ? name_v = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX) : name_v = DOCUMENT_CUSTOM_TERM_PREFIX;
 				std::string nameterm(prefixed(s_coord, name_v));
 				LOG(this, "Nameterm: %s   Prefix: %s   Term: %s\n",  repr(nameterm).c_str(), name_v.c_str(), repr(s_coord).c_str());
 
@@ -741,10 +749,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 	while ((pcre_search(query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
 		offset = g[0].end;
-		std::string field_name_dot, field_name, field_value;
-		field_name_dot = std::string(query.c_str() + g[1].start, g[1].end - g[1].start);
-		field_name = std::string(query.c_str() + g[2].start, g[2].end - g[2].start);
-		field_value = std::string(query.c_str() + g[3].start, g[3].end - g[3].start);
+		std::string field_name_dot(query.c_str() + g[1].start, g[1].end - g[1].start);
+		std::string field_name(query.c_str() + g[2].start, g[2].end - g[2].start);
+		std::string field_value(query.c_str() + g[3].start, g[3].end - g[3].start);
 
 		if (isRange(field_value)) {
 			switch (field_type(field_name)) {
@@ -776,7 +783,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		} else {
 			switch (field_type(field_name)) {
 				case NUMERIC_TYPE:
-					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
 					if (isupper(field_value.at(0))) {
 						prefix = prefix + ":";
 					}
@@ -793,7 +800,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case TEXT_TYPE:
 				case STRING_TYPE:
 					if (field_name.size() != 0) {
-						prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+						prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
 						if (isupper(field_value.at(0))) {
 							prefix = prefix + ":";
 						}
@@ -808,7 +815,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case DATE_TYPE:
-					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
 					field_value = timestamp_date(field_value);
 					if (field_value.size() == 0) {
 						throw Xapian::QueryParserError("Didn't understand date field name's specification: '" + field_name + "'");
@@ -824,7 +831,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case GEO_TYPE:
-					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
 					if (isLatLongDistance(field_value)) {
 						gdfp = new LatLongDistanceFieldProcessor(prefix, field_name);
 						gdfps.push_back(std::unique_ptr<LatLongDistanceFieldProcessor>(gdfp));
@@ -848,7 +855,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case BOOLEAN_TYPE:
-					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
+					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
 					bfp = new BooleanFieldProcessor(prefix);
 					bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
 					if (strhasupper(field_name)) {
@@ -862,10 +869,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 			}
 		}
 		if (first_time) {
-			querystring =  std::string(field_name_dot + field_value);
+			querystring =  field_name_dot + field_value;
 			first_time = false;
 		} else {
-			querystring += " " + std::string(field_name_dot + field_value);
+			querystring += " " + field_name_dot + field_value;
 		}
 	}
 
@@ -1033,14 +1040,14 @@ Database::get_stats_docs(int id_doc)
 			cJSON_AddStringToObject(document, "data", doc.get_data().c_str());
 			cJSON_AddNumberToObject(document, "count_terms", doc.termlist_count());
 			Xapian::TermIterator it(doc.termlist_begin());
-			std::string terms = std::string("");
+			std::string terms;
 			for ( ; it != doc.termlist_end(); it++) {
 				terms = terms + repr(*it) + " ";
 			}
 			cJSON_AddStringToObject(document, "terms", terms.c_str());
 			cJSON_AddNumberToObject(document, "count_values", doc.values_count());
 			Xapian::ValueIterator iv(doc.values_begin());
-			std::string values = std::string("");
+			std::string values;
 			for ( ; iv != doc.values_end(); iv++) {
 				values = values + std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
 			}
