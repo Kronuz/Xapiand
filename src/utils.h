@@ -80,6 +80,7 @@ typedef struct query_s {
 	bool server;
 	bool database;
 	int document;
+	std::string stats;
 	std::vector <std::string> language;
 	std::vector <std::string> query;
 	std::vector <std::string> partial;
