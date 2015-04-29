@@ -764,7 +764,11 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					queryparser.add_valuerangeprocessor(nvrp);
 					break;
 				case STRING_TYPE:
-					slot = get_slot(field_name);
+					if(!unique_doc) {
+						slot = get_slot(field_name);
+					} else {
+						slot = 0;
+					}
 					svrp = new Xapian::StringValueRangeProcessor(slot, field_name_dot, true);
 					svrps.push_back(std::unique_ptr<Xapian::StringValueRangeProcessor>(svrp));
 					LOG(this, "String Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
