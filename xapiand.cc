@@ -76,7 +76,15 @@ int main(int argc, char **argv)
 	int num_servers = 8;
 	int http_port = XAPIAND_HTTP_SERVERPORT;
 	int binary_port = XAPIAND_BINARY_SERVERPORT;
-	init_time = time(0);
+
+	time(&init_time);
+	struct tm *timeinfo = localtime(&init_time);
+	timeinfo->tm_hour   = 0;
+	timeinfo->tm_min    = 0;
+	timeinfo->tm_sec    = 0;
+	int diff_t = init_time - mktime(timeinfo);
+	b_time.minute = diff_t / SLOT_TIME_SECOND;
+	b_time.second =  diff_t % SLOT_TIME_SECOND;
 
 	if (argc > 2) {
 		http_port = atoi(argv[1]);
