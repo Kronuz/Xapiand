@@ -170,12 +170,12 @@ std::string urldecode(const char *src, size_t size)
 }
 
 
-int url_qs(const char *name, const char *qs, size_t size, parser_query *par)
+int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par)
 {
 	const char *nf = qs + size;
 	const char *n1, *n0;
 	const char *v0 = NULL;
-	
+
 	if(par->offset == NULL) {
 		n0 = n1 = qs;
 	} else {
@@ -229,7 +229,7 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query *par)
 }
 
 
-int url_path(const char* n1, size_t size, parser_url_path *par)
+int url_path(const char* n1, size_t size, parser_url_path_t *par)
 {
 	const char *nf = n1 + size + 1;
 	const char *n0, *n2 ,*r, *p = NULL;
@@ -366,7 +366,7 @@ int url_path(const char* n1, size_t size, parser_url_path *par)
 }
 
 
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups)
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group_t **groups)
 {
 	int erroffset;
 	const char *error;
@@ -389,7 +389,7 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 		}
 
 		if (*groups == NULL) {
-			*groups = (group *)malloc((n + 1) * 3 * sizeof(int));
+			*groups = (group_t *)malloc((n + 1) * 3 * sizeof(int));
 		}
 
 		int *ocvector = (int *)*groups;
@@ -446,7 +446,7 @@ std::string serialise_geo(const std::string &field_value)
 	double latitude, longitude;
 	int len = (int) field_value.size(), Ncoord = 0, offset = 0;
 	bool end = false;
-	group *g = NULL;
+	group_t *g = NULL;
 	while (pcre_search(field_value.c_str(), len, offset, 0, COORDS_RE, &compiled_coords_re, &g) != -1) {
 		std::string parse(field_value, g[1].start, g[1].end - g[1].start);
 		latitude = strtodouble(parse);
@@ -626,7 +626,7 @@ std::string timestamp_date(const std::string &str)
 	int ret, n[7], offset = 0;
 	std::string oph, opm;
 	double  timestamp;
-	group *gr = NULL;
+	group_t *gr = NULL;
 
 	ret = pcre_search(str.c_str(), len, offset, 0, DATE_RE, &compiled_date_re, &gr);
 
@@ -763,7 +763,7 @@ bool strhasupper(const std::string &str)
 int get_coords(const std::string &str, double *coords)
 {
 	std::stringstream ss;
-	group *g = NULL;
+	group_t *g = NULL;
 	int offset = 0, len = (int)str.size();
 	int ret = pcre_search(str.c_str(), len, offset, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &g);
 	while (ret != -1 && (g[0].end - g[0].start) == len) {
@@ -806,7 +806,7 @@ int get_coords(const std::string &str, double *coords)
 
 bool isRange(const std::string &str)
 {
-	group *gr = NULL;
+	group_t *gr = NULL;
 	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re , &gr);
 	if (ret != -1) {
 		if (gr) {
@@ -821,7 +821,7 @@ bool isRange(const std::string &str)
 
 bool isLatLongDistance(const std::string &str)
 {
-	group *gr = NULL;
+	group_t *gr = NULL;
 	int len = (int)str.size();
 	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &gr);
 	if (ret != -1 && (gr[0].end - gr[0].start) == len) {
@@ -837,7 +837,7 @@ bool isLatLongDistance(const std::string &str)
 
 bool isNumeric(const std::string &str)
 {
-	group *g = NULL;
+	group_t *g = NULL;
 	int len = (int)str.size();
 	int ret = pcre_search(str.c_str(), len, 0, 0, NUMERIC_RE, &compiled_numeric_re, &g);
 	if (ret != -1 && (g[0].end - g[0].start) == len) {

@@ -231,7 +231,7 @@ void HttpClient::_delete()
 	cJSON *root = cJSON_CreateObject();
 	cJSON *data = cJSON_CreateObject();
 	std::string result;
-	struct query_t e;
+	query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
 	if (!database_pool->checkout(&database, endpoints, true)) {
@@ -262,7 +262,7 @@ void HttpClient::_index()
 	std::string result;
 	cJSON *root = cJSON_CreateObject();
 	cJSON *data = cJSON_CreateObject();
-	struct query_t e;
+	query_t e;
 	_endpointgen(e);
 	Database *database = NULL;
 	if (!database_pool->checkout(&database, endpoints, true)) {
@@ -288,7 +288,7 @@ void HttpClient::_index()
 	cJSON_Delete(root);
 }
 
-void HttpClient::_stats(struct query_t &e)
+void HttpClient::_stats(query_t &e)
 {
 	std::string result;
 	cJSON *root = cJSON_CreateObject();
@@ -334,7 +334,7 @@ void HttpClient::_search()
 	bool facets = false;
 	std::string result;
 
-	struct query_t e;
+	query_t e;
 	int cmd = _endpointgen(e);
 
 	if (cmd == CMD_SEARCH) {
@@ -492,7 +492,7 @@ void HttpClient::_search()
 	LOG(this, "FINISH SEARCH\n");
 }
 
-int HttpClient::_endpointgen(struct query_t &e)
+int HttpClient::_endpointgen(query_t &e)
 {
 	int cmd;
 	struct http_parser_url u;
@@ -509,7 +509,7 @@ int HttpClient::_endpointgen(struct query_t &e)
 			size_t path_size = u.field_data[3].len;
 			std::string path_buf(b.c_str() + u.field_data[3].off, u.field_data[3].len);
 
-			struct parser_url_path_t p;
+			parser_url_path_t p;
 			memset(&p, 0, sizeof(p));
 			std::string endp;
 			std::string nsp_;
@@ -549,7 +549,7 @@ int HttpClient::_endpointgen(struct query_t &e)
 			size_t query_size = u.field_data[4].len;
 			std::string query_buf(b.c_str() + u.field_data[4].off, u.field_data[4].len);
 
-			struct parser_query_t q;
+			parser_query_t q;
 
 			memset(&q, 0, sizeof(q));
 			if (url_qs("pretty", query_buf.c_str(), query_size, &q) != -1) {
