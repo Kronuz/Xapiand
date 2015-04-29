@@ -146,7 +146,7 @@ void calculate_date(int n[], const std::string &op, const std::string &units);
 std::string unserialise(char field_type, const std::string &field_name, const std::string &serialise_val);
 std::string serialise(char field_type, const std::string &field_name, const std::string &field_value);
 
-int identify_cmd(std::string commad);
+int identify_cmd(std::string &commad);
 bool is_digits(const std::string &str);
 
 #define INFO(...) log(__VA_ARGS__)
