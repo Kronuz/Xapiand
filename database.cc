@@ -347,7 +347,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 					value = std::to_string(nameA->valuedouble);
 				}
 				LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", nameA->string, value.c_str());
-				std::string val_serialized = serialise(std::string(nameA->string), value);
+				std::string val_serialized = serialise(field_type(nameA->string), nameA->string, value);
 				if (val_serialized.size() == 0) {
 					LOG_ERR(this, "ERROR: %s: %s not serialized\n", nameA->string, value.c_str());
 					return false;
@@ -356,7 +356,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			} else {
 				for (int e = 0; e < elements; e++) {
 					cJSON *name = cJSON_GetArrayItem(nameA, e);
-					int type = field_type(nameA->string);
+					char type = field_type(nameA->string);
 					std::string value = cJSON_Print(name);
 					if (type == GEO_TYPE && name->type != 5) {
 						value = cJSON_Print(nameA);
@@ -365,11 +365,11 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 					}
 					if (name->type == 4 || name->type == 5) {
 						value = std::string(value, 1, (int) value.size() - 2);
-					} else if (name->type == 3 && type != GEO_TYPE){
+					} else if (name->type == 3 && type != GEO_TYPE) {
 						value = std::to_string(name->valuedouble);
 					}
 					LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", nameA->string, value.c_str());
-					std::string val_serialized = serialise(std::string(nameA->string), value);
+					std::string val_serialized = serialise(field_type(nameA->string), nameA->string, value);
 					if (val_serialized.size() == 0) {
 						LOG_ERR(this, "ERROR: %s: %s not serialized\n", nameA->string, value.c_str());
 						return false;
@@ -400,7 +400,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			LOG_DATABASE_WRAP(this, "Term value: %s\n", term_v.c_str());
 			if (name) {
 				LOG_DATABASE_WRAP(this, "Name: %s\n", name->valuestring);
-				term_v = serialise(std::string(name->valuestring), term_v);
+				term_v = serialise(field_type(name->valuestring), name->valuestring, term_v);
 				if (term_v.size() == 0) {
 					LOG_ERR(this, "ERROR: %s: %s not serialized\n", name->string, term_v.c_str());
 					return false;
@@ -410,7 +410,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 				Xapian::termcount w;
 				(weight && weight->type == 3) ? w = weight->valueint : w = 1;
 				if (position) {
-					if (name && name->valuestring[0] == 'g' && name->valuestring[1] == '_') {
+					if (name && field_type(name->valuestring) == GEO_TYPE) {
 						insert_terms_geo(term_v, &doc, std::string(name->valuestring), w, position->valueint);
 					} else {
 						std::string name_v;
@@ -420,7 +420,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 						LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", repr(nameterm).c_str(), position->valueint, w);
 					}
 				} else {
-					if (name && name->valuestring[0] == 'g' && name->valuestring[1] == '_') {
+					if (name && field_type(name->valuestring) == GEO_TYPE) {
 						insert_terms_geo(term_v, &doc, std::string(name->valuestring), w, -1);
 					} else {
 						std::string name_v;
@@ -509,22 +509,23 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 }
 
 
-std::string
-Database::serialise(const std::string &field_name, const std::string &field_value)
+char
+Database::field_type(const std::string &field_name)
 {
-	int type = field_type(field_name);
-	if (type == NUMERIC_TYPE) {
-		return serialise_numeric(field_value);
-	} else if (type == STRING_TYPE) {
-		return field_value;
-	} else if (type == DATE_TYPE) {
-		return serialise_date(field_value);
-	} else if (type == GEO_TYPE) {
-		return serialise_geo(field_value);
-	} else if (type == BOOLEAN_TYPE) {
-		return serialise_bool(field_value);
+	if (field_name.size() < 2 || field_name.at(1) != '_') {
+		return STRING_TYPE;
 	}
-	return std::string("");
+	char type = field_name.at(0);
+	switch (type) {
+		case NUMERIC_TYPE:
+		case STRING_TYPE:
+		case DATE_TYPE:
+		case GEO_TYPE:
+		case BOOLEAN_TYPE:
+			return type;
+		default:
+			return STRING_TYPE;
+	}
 }
 
 

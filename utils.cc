@@ -402,23 +402,6 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 }
 
 
-int field_type(const std::string &field_name)
-{
-	if (field_name.size() < 2 || field_name.at(1) != '_') {
-		return STRING_TYPE;
-	}
-
-	switch (field_name.at(0)) {
-		case NUMERIC_PREFIX: return NUMERIC_TYPE;
-		case STRING_PREFIX: return STRING_TYPE;
-		case DATE_PREFIX: return DATE_TYPE;
-		case GEO_PREFIX: return GEO_TYPE;
-		case BOOLEAN_PREFIX: return BOOLEAN_TYPE;
-		default: return STRING_TYPE;
-	}
-}
-
-
 std::string serialise_numeric(const std::string &field_value)
 {
 	double val;
@@ -1062,24 +1045,46 @@ int number_days(int year, int month)
 }
 
 
-std::string unserialise(const std::string &field_name, const std::string &serialise_val)
+std::string
+unserialise(char field_type, const std::string &field_name, const std::string &serialise_val)
 {
-	int type = field_type(field_name);
-	if (type == NUMERIC_TYPE) {
-		return std::to_string(Xapian::sortable_unserialise(serialise_val));
-	} else if (type == STRING_TYPE) {
-		return serialise_val;
-	} else if (type == DATE_TYPE) {
-		return unserialise_date(serialise_val);
-	} else if (type == GEO_TYPE) {
-		return unserialise_geo(serialise_val);
-	} else if (type == BOOLEAN_TYPE) {
-		return (serialise_val.at(0) == 'f') ? std::string("false") : std::string("true");
+	switch (field_type) {
+		case NUMERIC_TYPE:
+			return std::to_string(Xapian::sortable_unserialise(serialise_val));
+		case STRING_TYPE:
+			return serialise_val;
+		case DATE_TYPE:
+			return unserialise_date(serialise_val);
+		case GEO_TYPE:
+			return unserialise_geo(serialise_val);
+		case BOOLEAN_TYPE:
+			return (serialise_val.at(0) == 'f') ? std::string("false") : std::string("true");
 	}
 	return std::string("");
 }
 
-int identify_cmd(std::string commad)
+
+std::string
+serialise(char field_type, const std::string &field_name, const std::string &field_value)
+{
+	switch (field_type) {
+		case NUMERIC_TYPE:
+			return serialise_numeric(field_value);
+		case STRING_TYPE:
+			return field_value;
+		case DATE_TYPE:
+			return serialise_date(field_value);
+		case GEO_TYPE:
+			return serialise_geo(field_value);
+		case BOOLEAN_TYPE:
+			return serialise_bool(field_value);
+	}
+	return std::string("");
+}
+
+
+int
+identify_cmd(std::string commad)
 {
 	if(!is_digits(commad)) {
 		if(strcasecmp(commad.c_str(), "_search") == 0) {
