@@ -79,6 +79,7 @@ public:
 	cJSON* get_stats_database();
 	cJSON* get_stats_docs(int id_doc);
 	char field_type(const std::string &field_name);
+	cJSON* get_stats_time(std::string time_req);
 
 private:
 	bool _commit();
