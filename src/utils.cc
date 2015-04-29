@@ -1113,10 +1113,8 @@ bool is_digits(const std::string &str)
 
 int get_minutes(std::string &hour, std::string &minute)
 {
-	int minutes = (strtoint(std::string(hour,0,hour.length()-1))*60) + strtoint(std::string(minute,0,minute.length()-1));
-	if (minutes < 1440)
-		return minutes;
-	else return -1;
+	int minutes = (strtoint(std::string(hour, 0, hour.length() - 1)) * 60) + strtoint(std::string(minute, 0, minute.length() - 1));
+	return (minutes > 1440) ? 1440 : minutes;
 }
 
 

@@ -34,13 +34,13 @@
 
 
 class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
-    std::vector<std::string> prefixes;
+	std::vector<std::string> prefixes;
 
-  public:
-    ExpandDeciderFilterPrefixes(const std::vector<std::string> &prefixes_)
-       : prefixes(prefixes_) { }
+	public:
+		ExpandDeciderFilterPrefixes(const std::vector<std::string> &prefixes_)
+			: prefixes(prefixes_) { }
 
-    virtual bool operator() (const std::string &term) const;
+		virtual bool operator() (const std::string &term) const;
 };
 
 
@@ -986,6 +986,7 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 	return 2;
 }
 
+
 bool
 Database::get_document(Xapian::docid did, Xapian::Document &doc)
 {
@@ -1072,9 +1073,9 @@ ExpandDeciderFilterPrefixes::operator()(const std::string &term) const
 {
 	std::vector<std::string>::const_iterator i(prefixes.cbegin());
 	for (; i != prefixes.cend(); i++) {
-    	if (StartsWith(term, *i)) {
-    		return true;
-    	}
+		if (StartsWith(term, *i)) {
+			return true;
+		}
 	}
 	return prefixes.empty();
 }
