@@ -179,6 +179,13 @@ std::string serialise(char field_type, const std::string &field_name, const std:
 
 int identify_cmd(std::string &commad);
 bool is_digits(const std::string &str);
+<<<<<<< HEAD
+||||||| merged common ancestors
+int get_minutes(std::string &hour, std::string &minute);
+=======
+int get_minutes(std::string &hour, std::string &minute);
+bool Is_id_range(std::string &ids);
+>>>>>>> Added function Is_id_range (used in case id term search for range)
 
 pos_time_t get_pos_time();
 void fill_zeros_stats_cnt(int start, int end);

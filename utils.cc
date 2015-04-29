@@ -1182,3 +1182,22 @@ void fill_zeros_stats_sec(int start, int end)
 		stats_cnt.del.tm_sec[i] = 0;
 	}
 }
+
+bool Is_id_range(std::string &ids)
+{
+	int len = (int) ids.size(), offset = 0;
+	group_t *g = NULL;
+	while ((pcre_search(ids.c_str(), len, offset, 0, RANGE_ID_RE, &compiled_range_id_re, &g)) != -1) {
+		offset = g[0].end;
+		if(g[1].end - g[1].start && g[2].end - g[2].start) {
+			return true;
+		} else {
+			if(g[1].end - g[1].start){
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+	return false;
+}
