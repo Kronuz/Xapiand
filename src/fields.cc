@@ -129,7 +129,7 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 		if (serialise.size() == 0) return Xapian::BAD_VALUENO;
 		buf = prefix + serialise;
 		end.assign(buf.c_str(), buf.size());
-		LOG(this, "Serialise of end %s\n", std::string(prefix + buf).c_str());
+		LOG(this, "Serialise of end %s\n", (prefix + buf).c_str());
 	}
 	LOG(this, "DateTimeValueRangeProcessor process\n");
 
