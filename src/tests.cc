@@ -213,3 +213,114 @@ bool test_unserialise_geo()
 		return false;
 	}
 }
+
+
+void test_position_time()
+{
+	std::cout << "Start Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
+	int start = b_time.minute, end = start + 10;
+	for (int i = start; i < end; i++) {
+		stats_cnt.index.cnt[i] = 1;
+		stats_cnt.index.tm_cnt[i] = 2;
+		stats_cnt.search.cnt[i] = 3;
+		stats_cnt.search.tm_cnt[i] = 4;
+		stats_cnt.del.cnt[i] = 5;
+		stats_cnt.del.tm_cnt[i] = 6;
+	}
+	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
+		stats_cnt.index.sec[i] = 1;
+		stats_cnt.index.tm_sec[i] = 1;
+		stats_cnt.search.sec[i] = 2;
+		stats_cnt.search.tm_sec[i] = 4;
+		stats_cnt.del.sec[i] = 4;
+		stats_cnt.del.tm_sec[i] = 6;
+	}
+	print_stats_sec();
+	print_stats_min(start, end);
+	pos_time_t pt = get_pos_time();
+	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	print_stats_sec();
+	sleep(5);
+	pt = get_pos_time();
+	std::cout << "Add 5 seconds" << std::endl;
+	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	print_stats_sec();
+	sleep(5);
+	pt = get_pos_time();
+	std::cout << "Add 5 seconds" << std::endl;
+	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	print_stats_sec();
+	sleep(5);
+	pt = get_pos_time();
+	std::cout << "Add 5 seconds" << std::endl;
+	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	print_stats_sec();
+	sleep(15);
+	pt = get_pos_time();
+	std::cout << "Add 15 seconds" << std::endl;
+	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	print_stats_sec();
+	sleep(15);
+	pt = get_pos_time();
+	std::cout << "Add 15 seconds" << std::endl;
+	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	print_stats_sec();
+	print_stats_min(start, end);
+}
+
+
+void print_stats_sec()
+{
+	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
+		std::cout << stats_cnt.index.sec[i] << " ";
+	}
+	std::cout << std::endl;
+	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
+		std::cout << stats_cnt.index.tm_sec[i] << " ";
+	}
+	std::cout << std::endl;
+	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
+		std::cout << stats_cnt.search.sec[i] << " ";
+	}
+	std::cout << std::endl;
+	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
+		std::cout << stats_cnt.search.tm_sec[i] << " ";
+	}
+	std::cout << std::endl;
+	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
+		std::cout << stats_cnt.del.sec[i] << " ";
+	}
+	std::cout << std::endl;
+	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
+		std::cout << stats_cnt.del.tm_sec[i] << " ";
+	}
+	std::cout << std::endl;
+}
+
+void print_stats_min(int start, int end)
+{
+	for (int i = start; i < end; i++) {
+		std::cout << stats_cnt.index.cnt[i] << " ";
+	}
+	std::cout << std::endl;
+	for (int i = start; i < end; i++) {
+		std::cout << stats_cnt.index.tm_cnt[i] << " ";
+	}
+	std::cout << std::endl;
+	for (int i = start; i < end; i++) {
+		std::cout << stats_cnt.search.cnt[i] << " ";
+	}
+	std::cout << std::endl;
+	for (int i = start; i < end; i++) {
+		std::cout << stats_cnt.search.tm_cnt[i] << " ";
+	}
+	std::cout << std::endl;
+	for (int i = start; i < end; i++) {
+		std::cout << stats_cnt.del.cnt[i] << " ";
+	}
+	std::cout << std::endl;
+	for (int i = start; i < end; i++) {
+		std::cout << stats_cnt.del.tm_cnt[i] << " ";
+	}
+	std::cout << std::endl;
+}
