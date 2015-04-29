@@ -332,6 +332,7 @@ void HttpClient::_stats(query_t &e)
 void HttpClient::_search()
 {
 	bool facets = false;
+	bool json_chunked = true;
 	std::string result;
 
 	query_t e;
@@ -347,6 +348,7 @@ void HttpClient::_search()
 			e.synonyms = false;
 			e.unique_doc = true;
 			e.pretty = false;
+			json_chunked = false;
 			break;
 		case CMD_SEARCH:
 			e.check_at_least = 0;
@@ -479,7 +481,7 @@ void HttpClient::_search()
 			data = document.get_data();
 			id = "Q" + document.get_value(0);
 
-			if (rc == 0 && !e.unique_doc) {
+			if (rc == 0 && json_chunked) {
 				write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
 			}
 
@@ -493,7 +495,7 @@ void HttpClient::_search()
 				result = cJSON_PrintUnformatted(root);
 			}
 			result += "\n\n";
-			if(!e.unique_doc) {
+			if(json_chunked) {
 				result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
 			} else {
 				result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
@@ -504,7 +506,7 @@ void HttpClient::_search()
 			}
 			cJSON_Delete(root);
 		}
-			if(!e.unique_doc) {
+			if(json_chunked) {
 				write("0\r\n\r\n");
 			}
 		} else {
