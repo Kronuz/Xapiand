@@ -46,7 +46,8 @@
 #define CMD_FACETS 2
 #define CMD_STATS 3
 
-static time_t init_time;
+#define SLOT_TIME_MINUTE 1440
+#define SLOT_TIME_SECOND 60
 
 void log(void *obj, const char *fmt, ...);
 
@@ -178,8 +179,11 @@ std::string serialise(char field_type, const std::string &field_name, const std:
 
 int identify_cmd(std::string &commad);
 bool is_digits(const std::string &str);
-int get_minutes(std::string &hour, std::string &minute);
 
+pos_time_t get_pos_time();
+void fill_zeros_stats_cnt(int start, int end);
+void fill_zeros_stats_sec(int start, int end);
+int get_minutes(std::string &hour, std::string &minute);
 
 #define INFO(...) log(__VA_ARGS__)
 
