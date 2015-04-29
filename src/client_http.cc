@@ -477,7 +477,7 @@ void HttpClient::_search()
 			data = document.get_data();
 			id = "Q" + document.get_value(0);
 
-			if (rc == 0) {
+			if (rc == 0 && !e.unique_doc) {
 				write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
 			}
 
@@ -491,14 +491,20 @@ void HttpClient::_search()
 				result = cJSON_PrintUnformatted(root);
 			}
 			result += "\n\n";
-			result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
+			if(!e.unique_doc) {
+				result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
+			} else {
+				result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+			}
 
 			if (!write(result)) {
 				break;
 			}
 			cJSON_Delete(root);
 		}
-		write("0\r\n\r\n");
+		if(!e.unique_doc) {
+			write("0\r\n\r\n");
+		}
 	}
 
 	database_pool->checkin(&database);
