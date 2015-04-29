@@ -39,22 +39,24 @@ StringList::unserialise(const std::string & serialised)
 void
 StringList::unserialise(const char ** ptr, const char * end)
 {
+	const char *pos = *ptr;
 	clear();
-	size_t length = decode_length(ptr, end, true);
-	if (length == -1 || length != end - *ptr) {
-		push_back(std::string(*ptr, end - *ptr));
+	size_t length = decode_length(&pos, end, true);
+	if (length == -1 || length != end - pos) {
+		push_back(std::string(pos, end - pos));
 	} else {
 		size_t currlen;
-		while (*ptr != end) {
-			currlen = decode_length(ptr, end, true);
+		while (pos != end) {
+			currlen = decode_length(&pos, end, true);
 			if (currlen == -1) {
 				// FIXME: throwing a NetworkError if the length is too long - should be a more appropriate error.
 				throw Xapian::NetworkError("Decoding error of serialised MultiValueCountMatchSpy");
 			}
-			push_back(std::string(*ptr, currlen));
-			*ptr += currlen;
+			push_back(std::string(pos, currlen));
+			pos += currlen;
 		}
 	}
+	*ptr = pos;
 }
 
 
