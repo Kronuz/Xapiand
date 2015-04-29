@@ -405,7 +405,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			std::string term_v = std::string(cJSON_Print(term));
 			if (term->type == 4 || term->type == 5) {
 				term_v = std::string(term_v, 1, term_v.size() - 2);
-			} else if (term->type == 3){
+			} else if (term->type == 3) {
 				term_v = std::to_string(term->valuedouble);
 			}
 			LOG_DATABASE_WRAP(this, "Term value: %s\n", term_v.c_str());
@@ -683,7 +683,7 @@ Database::search(struct query_t e)
 		srch_resul.query = queryF;
 		srch_resul.suggested_query = sug_query;
 		return srch_resul;
-	} catch (const Xapian::Error &error){
+	} catch (const Xapian::Error &error) {
 		LOG_ERR(this, "ERROR: In search: %s\n", error.get_msg().c_str());
 	}
 
@@ -746,7 +746,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		field_name = std::string(query.c_str() + g[2].start, g[2].end - g[2].start);
 		field_value = std::string(query.c_str() + g[3].start, g[3].end - g[3].start);
 
-		if(isRange(field_value)){
+		if (isRange(field_value)) {
 			switch (field_type(field_name)) {
 				case NUMERIC_TYPE:
 					slot = get_slot(field_name);
@@ -825,7 +825,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					break;
 				case GEO_TYPE:
 					prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));
-					if(isLatLongDistance(field_value)) {
+					if (isLatLongDistance(field_value)) {
 						gdfp = new LatLongDistanceFieldProcessor(prefix, field_name);
 						gdfps.push_back(std::unique_ptr<LatLongDistanceFieldProcessor>(gdfp));
 						if (strhasupper(field_name)) {
@@ -907,9 +907,9 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 		enquire.set_sort_by_key(sorter, false);
 	}
 
-	if(!e.facets.empty()) {
+	if (!e.facets.empty()) {
 		std::vector<std::string>::const_iterator fit(e.facets.begin());
-		for(; fit != e.facets.end(); fit++) {
+		for (; fit != e.facets.end(); fit++) {
 			spy = new MultiValueCountMatchSpy(get_slot(*fit));
 			spies.push_back(std::make_pair (*fit, std::unique_ptr<MultiValueCountMatchSpy>(spy)));
 			enquire.add_matchspy(spy);
@@ -935,11 +935,11 @@ Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<
 		sorter = new Xapian::MultiValueKeyMaker();
 		std::vector<std::string>::const_iterator oit(e.order.begin());
 		for (; oit != e.order.end(); oit++) {
-			if(StartsWith(*oit, "-")) {
+			if (StartsWith(*oit, "-")) {
 				decreasing = true;
 				field.assign(*oit,1,(*oit).size() - 1);
 				sorter->add_value(get_slot(field), decreasing);
-			} else if(StartsWith(*oit, "+")) {
+			} else if (StartsWith(*oit, "+")) {
 				decreasing = false;
 				field.assign(*oit,1,(*oit).size()-1);
 				sorter->add_value(get_slot(field), decreasing);
