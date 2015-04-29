@@ -53,13 +53,17 @@ void log(void *obj, const char *fmt, ...);
 std::string repr(const char *p, size_t size);
 std::string repr(const std::string &string);
 
+typedef struct cont_time_s {
+	unsigned short cnt[SLOT_TIME_MINUTE];
+	unsigned short sec[SLOT_TIME_SECOND];
+	double tm_cnt[SLOT_TIME_MINUTE];
+	double tm_sec[SLOT_TIME_SECOND];
+} cont_time_t;
+
 typedef struct times_row_s {
-	unsigned short ind[1440];
-	unsigned short ind_sec[60];
-	unsigned short src[1440];
-	unsigned short src_sec[60];
-	unsigned short del[1440];
-	unsigned short del_sec[60];
+	cont_time_t index;
+	cont_time_t search;
+	cont_time_t del;
 } times_row_t;
 
 typedef struct pos_time_s {
