@@ -53,16 +53,16 @@ void log(void *obj, const char *fmt, ...);
 std::string repr(const char *p, size_t size);
 std::string repr(const std::string &string);
 
-typedef struct times_row_t {
+typedef struct times_row_s {
 	unsigned short ind[1440];
 	unsigned short ind_sec[60];
 	unsigned short src[1440];
 	unsigned short src_sec[60];
 	unsigned short del[1440];
 	unsigned short del_sec[60];
-}times_row_t;
+} times_row_t;
 
-typedef struct query_t {
+typedef struct query_s {
 	int offset;
 	int limit;
 	int check_at_least;
@@ -81,18 +81,18 @@ typedef struct query_t {
 	std::vector <std::string> facets;
 } query_t;
 
-typedef struct search_t {
+typedef struct search_s {
 	Xapian::Query query;
 	std::vector<std::string> suggested_query;
 } search_t;
 
-typedef struct parser_query_t {
+typedef struct parser_query_s {
 	size_t length;
 	const char *offset;
-} parser_query;
+} parser_query_t;
 
 
-typedef struct parser_url_path_t {
+typedef struct parser_url_path_s {
 	size_t length;
 	const char *offset;
 	size_t len_path;
@@ -103,15 +103,15 @@ typedef struct parser_url_path_t {
 	const char *off_namespace;
 	size_t len_command;
 	const char *off_command;
-} parser_url_path;
+} parser_url_path_t;
 
-typedef struct group {
+typedef struct group_s {
 	int start;
 	int end;
-} group;
+} group_t;
 
-int url_path(const char* n1, size_t size, parser_url_path *par);
-int url_qs(const char *, const char *, size_t, parser_query *);
+int url_path(const char* n1, size_t size, parser_url_path_t *par);
+int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
 int look_cmd(const char *);
 
@@ -133,11 +133,11 @@ std::string timestamp_date(const std::string &str);
 std::string get_prefix(const std::string &name, const std::string &prefix);
 std::string get_slot_hex(const std::string &name);
 bool strhasupper(const std::string &str);
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group **groups);
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group_t **groups);
 int get_coords(const std::string &str, double *coords);
 bool isRange(const std::string &str);
 bool isLatLongDistance(const std::string &str);
-void get_order(const std::string &str, struct query_t &e);
+void get_order(const std::string &str, query_t &e);
 bool isNumeric(const std::string &str);
 bool StartsWith(const std::string &text, const std::string &token);
 int number_days(int year, int month);

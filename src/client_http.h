@@ -64,8 +64,8 @@ public:
 	void _delete();
 	void _index();
 	void _search();
-	void _stats(struct query_t &e);
-	int _endpointgen(struct query_t &e);
+	void _stats(query_t &e);
+	int _endpointgen(query_t &e);
 	std::string http_response(int status, int mode, std::string content=std::string(""));
 };
 
