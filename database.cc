@@ -590,7 +590,7 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 
 
 search_t
-Database::search(struct query_t e)
+Database::search(query_t e)
 {
 	search_t srch_resul;
 	if (writable) {
@@ -711,7 +711,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	}
 
 	int len = (int) query.size(), offset = 0;
-	group *g = NULL;
+	group_t *g = NULL;
 	bool first_time = true;
 	std::string querystring;
 	Xapian::QueryParser queryparser;
@@ -903,7 +903,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 
 Xapian::Enquire
-Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>&spies, struct query_t e)
+Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>&spies, query_t e)
 {
 	std::string field;
 	MultiValueCountMatchSpy *spy;
@@ -930,7 +930,7 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 
 
 int
-Database::get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
+Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
 {
 	Xapian::MultiValueKeyMaker *sorter = NULL;
 	bool decreasing;
