@@ -1,33 +1,33 @@
 /* MD5
  converted to C++ class by Frank Thilo (thilo@unix-ag.org)
  for bzflag (http://www.bzflag.org)
- 
+
    based on:
- 
+
    md5.h and md5.c
    reference implemantion of RFC 1321
- 
+
    Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
 rights reserved.
- 
+
 License to copy and use this software is granted provided that it
 is identified as the "RSA Data Security, Inc. MD5 Message-Digest
 Algorithm" in all material mentioning or referencing this software
 or this function.
- 
+
 License is also granted to make and use derivative works provided
 that such works are identified as "derived from the RSA Data
 Security, Inc. MD5 Message-Digest Algorithm" in all material
 mentioning or referencing the derived work.
- 
+
 RSA Data Security, Inc. makes no representations concerning either
 the merchantability of this software or the suitability of this
 software for any particular purpose. It is provided "as is"
 without express or implied warranty of any kind.
- 
+
 These notices must be retained in any copies of any part of this
 documentation and/or software.
- 
+
 */
 
 /* interface header */
@@ -105,7 +105,7 @@ MD5::MD5()
 	init();
 }
 
-////////////////////////////////////////////// 
+//////////////////////////////////////////////
 // nifty shortcut ctor, compute MD5 for string and finalize it right away
 MD5::MD5(const std::string &text)
 {
@@ -276,14 +276,14 @@ void MD5::update(const unsigned char input[], size_type length)
 	// buffer remaining input
 	memcpy(&buffer[index], &input[i], length-i);
 }
- 
+
 //////////////////////////////
 // for convenience provide a verson with signed char
 void MD5::update(const char input[], size_type length)
 {
 	update((const unsigned char*)input, length);
 }
- 
+
 //////////////////////////////
 // MD5 finalization. Ends an MD5 message-digest operation, writing the
 // the message digest and zeroizing the context.
