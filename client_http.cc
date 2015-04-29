@@ -660,6 +660,13 @@ int HttpClient::_endpointgen(query_t &e)
 				} else {
 					e.document = -1;
 				}
+				
+				memset(&q, 0, sizeof(q));
+				if (url_qs("stats", query_buf.c_str(), query_size, &q) != -1) {
+					e.stats = urldecode(q.offset, q.length);
+				} else {
+					e.stats = "";
+				}
 			}
 		}
 	} else {
