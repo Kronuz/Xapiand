@@ -522,6 +522,7 @@ Database::field_type(const std::string &field_name)
 		case DATE_TYPE:
 		case GEO_TYPE:
 		case BOOLEAN_TYPE:
+		case TEXT_TYPE:
 			return type;
 		default:
 			return STRING_TYPE;
@@ -778,6 +779,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						queryparser.add_prefix(field_name, nfp);
 					}
 					break;
+				case TEXT_TYPE:
 				case STRING_TYPE:
 					if (field_name.size() != 0) {
 						prefix = get_prefix(field_name, std::string(DOCUMENT_CUSTOM_TERM_PREFIX));

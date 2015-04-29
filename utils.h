@@ -39,6 +39,7 @@
 #define DATE_TYPE 'd'
 #define GEO_TYPE 'g'
 #define BOOLEAN_TYPE 'b'
+#define TEXT_TYPE 't'
 
 #define CMD_NUMBER 0
 #define CMD_SEARCH 1
