@@ -42,5 +42,8 @@ bool test_datetotimestamp();
 bool test_distanceLatLong();
 bool test_unserialise_date();
 bool test_unserialise_geo();
+void test_position_time();
+void print_stats_sec();
+void print_stats_min(int start = 0, int end = SLOT_TIME_MINUTE);
 
 #endif /* XAPIAND_INCLUDED_TESTS_H */
