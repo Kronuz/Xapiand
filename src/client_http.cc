@@ -564,6 +564,9 @@ int HttpClient::_endpointgen(query_t &e)
 			}
 
 			if (cmd == CMD_SEARCH || cmd == CMD_FACETS) {
+				
+				e.unique_doc = false;
+				
 				memset(&q, 0, sizeof(q));
 				if (url_qs("offset", query_buf.c_str(), query_size, &q) != -1) {
 					e.offset = atoi(urldecode(q.offset, q.length).c_str());
