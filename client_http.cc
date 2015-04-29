@@ -246,7 +246,7 @@ void HttpClient::_delete()
 	cJSON_AddStringToObject(data, "id", command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root, "delete", data);
-	if(e.pretty) {
+	if (e.pretty) {
 		result = cJSON_Print(root);
 	} else {
 		result = cJSON_PrintUnformatted(root);
@@ -277,7 +277,7 @@ void HttpClient::_index()
 	cJSON_AddStringToObject(data, "id", command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root, "index", data);
-	if(e.pretty) {
+	if (e.pretty) {
 		result = cJSON_Print(root);
 	} else {
 		result = cJSON_PrintUnformatted(root);
@@ -293,7 +293,7 @@ void HttpClient::_stats(struct query_t &e)
 	std::string result;
 	cJSON *root = cJSON_CreateObject();
 
-	if(e.server) {
+	if (e.server) {
 		cJSON_AddItemToObject(root, "Server status", server->manager->server_status());
 	}
 	if (e.database) {
@@ -318,7 +318,7 @@ void HttpClient::_stats(struct query_t &e)
 		cJSON_AddItemToObject(root, "Document status", JSON_document);
 		database_pool->checkin(&database);
 	}
-	if(e.pretty) {
+	if (e.pretty) {
 		result = cJSON_Print(root);
 	} else {
 		result = cJSON_PrintUnformatted(root);
@@ -337,18 +337,18 @@ void HttpClient::_search()
 	struct query_t e;
 	int cmd = _endpointgen(e);
 
-	if(cmd == CMD_SEARCH) {
+	if (cmd == CMD_SEARCH) {
 		e.check_at_least = 0;
 	} else if (cmd == CMD_FACETS) {
 		facets = true;
-	} else if(cmd == CMD_STATS) {
+	} else if (cmd == CMD_STATS) {
 		_stats(e);
 		return;
 	} else {
 		cJSON *root = cJSON_CreateObject();
 		cJSON *err_response = cJSON_CreateObject();
 		cJSON_AddItemToObject(root, "Response", err_response);
-		if(cmd == -1)
+		if (cmd == -1)
 			cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
 		else
 			cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
@@ -393,7 +393,7 @@ void HttpClient::_search()
 	if (facets) {
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
 		cJSON *root = cJSON_CreateObject();
-		for(; spy != spies.end(); spy++) {
+		for (; spy != spies.end(); spy++) {
 			std::string name_result = (*spy).first;
 			cJSON *array_values = cJSON_CreateArray();
 			cJSON_AddItemToObject(root, name_result.c_str(), array_values);
@@ -404,7 +404,7 @@ void HttpClient::_search()
 				cJSON_AddItemToArray(array_values, value);
 			}
 		}
-		if(e.pretty) {
+		if (e.pretty) {
 			result = cJSON_Print(root);
 		} else {
 			result = cJSON_PrintUnformatted(root);
@@ -472,7 +472,7 @@ void HttpClient::_search()
 			cJSON_AddStringToObject(root, "id", id.c_str());
 			cJSON_AddStringToObject(root, "data", data.c_str());
 
-			if(e.pretty) {
+			if (e.pretty) {
 				result = cJSON_Print(root);
 			} else {
 				result = cJSON_PrintUnformatted(root);
@@ -502,10 +502,10 @@ int HttpClient::_endpointgen(struct query_t &e)
 	 */
 	e.commit = true;
 	LOG_CONN_WIRE(this,"URL: %s\n", b.c_str());
-	if(http_parser_parse_url(b.c_str(), b.size(), 0, &u) == 0){
+	if (http_parser_parse_url(b.c_str(), b.size(), 0, &u) == 0) {
 		LOG_CONN_WIRE(this,"Parsing done\n");
 
-		if (u.field_set & (1 <<  UF_PATH )){
+		if (u.field_set & (1 <<  UF_PATH )) {
 			size_t path_size = u.field_data[3].len;
 			std::string path_buf(b.c_str() + u.field_data[3].off, u.field_data[3].len);
 
@@ -532,7 +532,7 @@ int HttpClient::_endpointgen(struct query_t &e)
 				}
 				if (p.len_host) {
 					hos_ = urldecode(p.off_host, p.len_host);
-				} else if(!host.empty()) {
+				} else if (!host.empty()) {
 					hos_ = host;
 				} else {
 					hos_ = "127.0.0.1";
@@ -559,7 +559,7 @@ int HttpClient::_endpointgen(struct query_t &e)
 				e.pretty = false;
 			}
 
-			if(cmd == CMD_SEARCH || cmd == CMD_FACETS) {
+			if (cmd == CMD_SEARCH || cmd == CMD_FACETS) {
 				memset(&q, 0, sizeof(q));
 				if (url_qs("offset", query_buf.c_str(), query_size, &q) != -1) {
 					e.offset = atoi(urldecode(q.offset, q.length).c_str());
@@ -629,7 +629,7 @@ int HttpClient::_endpointgen(struct query_t &e)
 					e.language.push_back(urldecode(q.offset, q.length));
 				}
 
-			} else if(cmd == CMD_NUMBER) {
+			} else if (cmd == CMD_NUMBER) {
 				memset(&q, 0, sizeof(q));
 				if (url_qs("commit", query_buf.c_str(), query_size, &q) != -1) {
 					std::string pretty = serialise_bool(urldecode(q.offset, q.length));
@@ -637,7 +637,7 @@ int HttpClient::_endpointgen(struct query_t &e)
 				} else {
 					e.commit = true;
 				}
-			} else if(cmd == CMD_STATS) {
+			} else if (cmd == CMD_STATS) {
 				memset(&q, 0, sizeof(q));
 				if (url_qs("server", query_buf.c_str(), query_size, &q) != -1) {
 					std::string server = serialise_bool(urldecode(q.offset, q.length));
