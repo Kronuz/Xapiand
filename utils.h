@@ -62,6 +62,13 @@ typedef struct times_row_s {
 	unsigned short del_sec[60];
 } times_row_t;
 
+typedef struct similar_s {
+	int n_rset;
+	int n_eset;
+	std::vector <std::string> field;
+	std::vector <std::string> type;
+} similar_t;
+
 typedef struct query_s {
 	int offset;
 	int limit;
@@ -79,6 +86,8 @@ typedef struct query_s {
 	std::vector <std::string> terms;
 	std::vector <std::string> order;
 	std::vector <std::string> facets;
+	similar_t fuzzy;
+	similar_t nearest;
 } query_t;
 
 typedef struct search_s {
