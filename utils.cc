@@ -1118,3 +1118,67 @@ int get_minutes(std::string &hour, std::string &minute)
 		return minutes;
 	else return -1;
 }
+
+
+pos_time_t get_pos_time()
+{
+	pos_time_t n_time;
+	time_t t_current;
+	time(&t_current);
+	unsigned short aux_second = b_time.second;
+	unsigned short aux_minute = b_time.minute;
+	unsigned int t_elapsed = t_current - init_time;
+	if (t_elapsed < SLOT_TIME_SECOND) {
+		b_time.second += t_elapsed;
+		if (b_time.second >= SLOT_TIME_SECOND) {
+			b_time.minute += b_time.second / SLOT_TIME_SECOND;
+			b_time.second = b_time.second % SLOT_TIME_SECOND;
+			fill_zeros_stats_sec(aux_second + 1, SLOT_TIME_SECOND -1);
+			fill_zeros_stats_sec(0, b_time.second);
+		} else {
+			fill_zeros_stats_sec(aux_second + 1, b_time.second);
+		}
+	} else {
+		b_time.second = t_elapsed % SLOT_TIME_SECOND;
+		fill_zeros_stats_sec(0, SLOT_TIME_SECOND - 1);
+		b_time.minute += t_elapsed / SLOT_TIME_SECOND;
+	}
+	init_time = t_current;
+	if (b_time.minute >= SLOT_TIME_MINUTE) {
+		b_time.minute = b_time.minute % SLOT_TIME_MINUTE;
+		fill_zeros_stats_cnt(aux_minute + 1, SLOT_TIME_MINUTE - 1);
+		fill_zeros_stats_cnt(0, b_time.minute);
+	} else {
+		fill_zeros_stats_cnt(aux_minute + 1, b_time.minute);
+	}
+
+	n_time.minute = b_time.minute;
+	n_time.second = b_time.second;
+	return n_time;
+}
+
+
+void fill_zeros_stats_cnt(int start, int end)
+{
+	for (int i = start; i <= end; ++i) {
+		stats_cnt.index.cnt[i] = 0;
+		stats_cnt.index.tm_cnt[i] = 0;
+		stats_cnt.search.cnt[i] = 0;
+		stats_cnt.search.tm_cnt[i] = 0;
+		stats_cnt.del.cnt[i] = 0;
+		stats_cnt.del.tm_cnt[i] = 0;
+	}
+}
+
+
+void fill_zeros_stats_sec(int start, int end)
+{
+	for (int i = start; i <= end; ++i) {
+		stats_cnt.index.sec[i] = 0;
+		stats_cnt.index.tm_sec[i] = 0;
+		stats_cnt.search.sec[i] = 0;
+		stats_cnt.search.tm_sec[i] = 0;
+		stats_cnt.del.sec[i] = 0;
+		stats_cnt.del.tm_sec[i] = 0;
+	}
+}
