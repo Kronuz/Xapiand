@@ -428,7 +428,9 @@ void HttpClient::_search()
 		cJSON_Delete(root);
 	} else {
 		int rc = 0;
-		for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++, m++) {
+		if(mset.size() != 0)
+		{
+			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++, m++) {
 			Xapian::docid docid = 0;
 			std::string id;
 			int rank = 0;
@@ -502,8 +504,21 @@ void HttpClient::_search()
 			}
 			cJSON_Delete(root);
 		}
-		if(!e.unique_doc) {
-			write("0\r\n\r\n");
+			if(!e.unique_doc) {
+				write("0\r\n\r\n");
+			}
+		} else {
+			cJSON *root = cJSON_CreateObject();
+			cJSON_AddStringToObject(root, "Response empty","No match found");
+			if (e.pretty) {
+				result = cJSON_Print(root);
+			} else {
+				result = cJSON_PrintUnformatted(root);
+			}
+			result += "\n\n";
+			result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+			write(result);
+			cJSON_Delete(root);
 		}
 	}
 
