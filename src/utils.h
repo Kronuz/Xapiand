@@ -62,6 +62,21 @@ typedef struct times_row_s {
 	unsigned short del_sec[60];
 } times_row_t;
 
+typedef struct pos_time_s {
+	unsigned short minute;
+	unsigned short second;
+} pos_time_t;
+
+extern pcre *compiled_date_re;
+extern pcre *compiled_date_math_re;
+extern pcre *compiled_coords_re;
+extern pcre *compiled_coords_dist_re;
+extern pcre *compiled_numeric_re;
+extern pcre *compiled_find_range_re;
+extern pos_time_t b_time;
+extern time_t init_time;
+extern times_row_t stats_cnt;
+
 typedef struct similar_s {
 	int n_rset;
 	int n_eset;
