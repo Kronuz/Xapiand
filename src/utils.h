@@ -34,17 +34,11 @@
 #include <pcre.h>
 #include <sys/time.h>
 
-#define NUMERIC_PREFIX 'n'
-#define STRING_PREFIX 's'
-#define DATE_PREFIX 'd'
-#define GEO_PREFIX 'g'
-#define BOOLEAN_PREFIX 'b'
-
-#define NUMERIC_TYPE 0
-#define STRING_TYPE 1
-#define DATE_TYPE 2
-#define GEO_TYPE 3
-#define BOOLEAN_TYPE 4
+#define NUMERIC_TYPE 'n'
+#define STRING_TYPE 's'
+#define DATE_TYPE 'd'
+#define GEO_TYPE 'g'
+#define BOOLEAN_TYPE 'b'
 
 #define CMD_NUMBER 0
 #define CMD_SEARCH 1
@@ -120,7 +114,6 @@ int url_qs(const char *, const char *, size_t, parser_query *);
 std::string urldecode(const char *, size_t);
 int look_cmd(const char *);
 
-int field_type(const std::string &field_name);
 std::string serialise_numeric(const std::string &field_value);
 std::string serialise_date(const std::string &field_value);
 std::string unserialise_date(const std::string &serialise_val);
@@ -149,7 +142,9 @@ bool StartsWith(const std::string &text, const std::string &token);
 int number_days(int year, int month);
 bool validate_date(int n[]);
 void calculate_date(int n[], const std::string &op, const std::string &units);
-std::string unserialise(const std::string &field_name, const std::string &serialise_val);
+std::string unserialise(char field_type, const std::string &field_name, const std::string &serialise_val);
+std::string serialise(char field_type, const std::string &field_name, const std::string &field_value);
+
 int identify_cmd(std::string commad);
 bool is_digits(const std::string &str);
 

@@ -69,7 +69,6 @@ public:
 	bool index(const std::string &document, const std::string &document_id, bool commit);
 	bool replace(const std::string &document_id, const Xapian::Document &doc, bool commit);
 	bool get_document(Xapian::docid did, Xapian::Document &doc);
-	std::string serialise(const std::string &name, const std::string &value);
 	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, int w, int position);
 	int find_field(const std::string &str, int *g, int size_g, int len, int offset);
 	Xapian::Enquire get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter,std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, struct query_t e);
@@ -78,6 +77,7 @@ public:
 	int get_mset(struct query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
 	cJSON* get_stats_database();
 	cJSON* get_stats_docs(int id_doc);
+	char field_type(const std::string &field_name);
 
 private:
 	bool _commit();
