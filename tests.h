@@ -27,6 +27,7 @@
 #include <string.h>
 #include <algorithm>
 #include "utils.h"
+#include <unistd.h>
 
 typedef struct test {
 	const char *str;
