@@ -1090,8 +1090,7 @@ serialise(char field_type, const std::string &field_name, const std::string &fie
 }
 
 
-int
-identify_cmd(std::string &commad)
+int identify_cmd(std::string &commad)
 {
 	if(!is_digits(commad)) {
 		if(strcasecmp(commad.c_str(), "_search") == 0) {
@@ -1105,10 +1104,12 @@ identify_cmd(std::string &commad)
 	} else return 0;
 }
 
+
 bool is_digits(const std::string &str)
 {
 	return std::all_of(str.begin(), str.end(), ::isdigit);
 }
+
 
 int get_minutes(std::string &hour, std::string &minute)
 {
