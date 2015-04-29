@@ -38,12 +38,17 @@
 
 
 pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
+
 pcre *compiled_date_re = NULL;
 pcre *compiled_date_math_re = NULL;
 pcre *compiled_coords_re = NULL;
 pcre *compiled_coords_dist_re = NULL;
 pcre *compiled_numeric_re = NULL;
 pcre *compiled_find_range_re = NULL;
+
+pos_time_t b_time;
+time_t init_time;
+times_row_t stats_cnt;
 
 
 std::string repr(const std::string &string)
