@@ -1051,14 +1051,15 @@ unserialise(char field_type, const std::string &field_name, const std::string &s
 	switch (field_type) {
 		case NUMERIC_TYPE:
 			return std::to_string(Xapian::sortable_unserialise(serialise_val));
-		case STRING_TYPE:
-			return serialise_val;
 		case DATE_TYPE:
 			return unserialise_date(serialise_val);
 		case GEO_TYPE:
 			return unserialise_geo(serialise_val);
 		case BOOLEAN_TYPE:
 			return (serialise_val.at(0) == 'f') ? std::string("false") : std::string("true");
+		case TEXT_TYPE:
+		case STRING_TYPE:
+			return serialise_val;
 	}
 	return std::string("");
 }
@@ -1070,14 +1071,15 @@ serialise(char field_type, const std::string &field_name, const std::string &fie
 	switch (field_type) {
 		case NUMERIC_TYPE:
 			return serialise_numeric(field_value);
-		case STRING_TYPE:
-			return field_value;
 		case DATE_TYPE:
 			return serialise_date(field_value);
 		case GEO_TYPE:
 			return serialise_geo(field_value);
 		case BOOLEAN_TYPE:
 			return serialise_bool(field_value);
+		case TEXT_TYPE:
+		case STRING_TYPE:
+			return field_value;
 	}
 	return std::string("");
 }
