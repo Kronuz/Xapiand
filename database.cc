@@ -620,7 +620,7 @@ Database::search(query_t e)
 				lan = *lit;
 				lit++;
 			}
-			srch = _search(*qit, flags, true, lan);
+			srch = _search(*qit, flags, true, lan, e.unique_doc);
 			if (first) {
 				queryQ = srch.query;
 				first = false;
@@ -639,7 +639,7 @@ Database::search(query_t e)
 		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 		first = true;
 		for (; pit != e.partial.end(); pit++) {
-			srch = _search(*pit, flags, false, "");
+			srch = _search(*pit, flags, false, "", e.unique_doc);
 			if (first) {
 				queryP = srch.query;
 				first = false;
@@ -658,7 +658,7 @@ Database::search(query_t e)
 		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 		first = true;
 		for (; tit != e.terms.end(); tit++) {
-			srch =  _search(*tit, flags, false, "");
+			srch =  _search(*tit, flags, false, "", e.unique_doc);
 			if (first) {
 				queryT = srch.query;
 			} else {
@@ -701,7 +701,7 @@ Database::search(query_t e)
 
 
 search_t
-Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan)
+Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan, bool unique_doc)
 {
 	search_t srch;
 
@@ -801,10 +801,15 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case TEXT_TYPE:
 				case STRING_TYPE:
 					if (field_name.size() != 0) {
-						prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
-						if (isupper(field_value.at(0))) {
-							prefix = prefix + ":";
+						if(!unique_doc) {
+							prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
+							if (isupper(field_value.at(0))) {
+								prefix = prefix + ":";
+							}
+						} else {
+							prefix = "Q";
 						}
+						
 						LOG(this, "prefix calculated: %s\n", prefix.c_str());
 						if (strhasupper(field_name)) {
 							LOG(this, "Boolean Prefix\n");

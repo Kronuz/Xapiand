@@ -338,7 +338,16 @@ void HttpClient::_search()
 	int cmd = _endpointgen(e);
 
 	switch(cmd) {
-		case CMD_NUMBER: break;
+		case CMD_NUMBER:
+			e.query.push_back(std::string("id:" + command));
+			e.offset = 0;
+			e.limit = 1;
+			e.check_at_least = 0;
+			e.spelling = true;
+			e.synonyms = false;
+			e.unique_doc = true;
+			e.pretty = false;
+			break;
 		case CMD_SEARCH:
 			e.check_at_least = 0;
 			break;
