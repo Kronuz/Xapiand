@@ -1086,7 +1086,7 @@ serialise(char field_type, const std::string &field_name, const std::string &fie
 
 
 int
-identify_cmd(std::string commad)
+identify_cmd(std::string &commad)
 {
 	if(!is_digits(commad)) {
 		if(strcasecmp(commad.c_str(), "_search") == 0) {
