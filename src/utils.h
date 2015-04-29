@@ -158,6 +158,8 @@ std::string serialise(char field_type, const std::string &field_name, const std:
 
 int identify_cmd(std::string &commad);
 bool is_digits(const std::string &str);
+int get_minutes(std::string &hour, std::string &minute);
+
 
 #define INFO(...) log(__VA_ARGS__)
 
