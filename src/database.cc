@@ -32,6 +32,17 @@
 #define DATABASE_UPDATE_TIME 10
 
 
+class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
+    std::vector<std::string> prefixes;
+
+  public:
+    ExpandDeciderFilterPrefixes(const std::vector<std::string> &prefixes_)
+       : prefixes(prefixes_) { }
+
+    virtual bool operator() (const std::string &term) const;
+};
+
+
 Database::Database(Endpoints &endpoints_, bool writable_)
 	: endpoints(endpoints_),
 	  writable(writable_),
@@ -1040,4 +1051,17 @@ Database::get_stats_docs(int id_doc)
 		cJSON_AddStringToObject(document, "error",  "Document not found");
 	}
 	return document;
+}
+
+
+bool
+ExpandDeciderFilterPrefixes::operator()(const std::string &term) const
+{
+	std::vector<std::string>::const_iterator i(prefixes.cbegin());
+	for (; i != prefixes.cend(); i++) {
+    	if (StartsWith(term, *i)) {
+    		return true;
+    	}
+	}
+	return prefixes.empty();
 }
