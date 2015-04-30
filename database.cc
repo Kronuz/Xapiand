@@ -944,24 +944,35 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 
 
 Xapian::Enquire
-Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>&spies, query_t e)
+Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> * spies, similar_t *nearest, similar_t *fuzzy, std::vector<std::string> * facets)
 {
 	std::string field;
 	MultiValueCountMatchSpy *spy;
 	Xapian::Enquire enquire(*db);
+
+	if(nearest) {
+		get_similar(false, enquire, query, nearest);
+	}
+
+	if(fuzzy) {
+		get_similar(true, enquire, query, fuzzy);
+	}
+
 	enquire.set_query(query);
 
 	if (sorter) {
 		enquire.set_sort_by_key(sorter, false);
 	}
 
-	if (!e.facets.empty()) {
-		std::vector<std::string>::const_iterator fit(e.facets.begin());
-		for (; fit != e.facets.end(); fit++) {
-			spy = new MultiValueCountMatchSpy(get_slot(*fit));
-			spies.push_back(std::make_pair (*fit, std::unique_ptr<MultiValueCountMatchSpy>(spy)));
-			enquire.add_matchspy(spy);
-			LOG_ERR(this, "added spy de -%s-\n", (*fit).c_str());
+	if (spies) {
+		if (!facets->empty()) {
+			std::vector<std::string>::const_iterator fit(facets->begin());
+			for (; fit != facets->end(); fit++) {
+				spy = new MultiValueCountMatchSpy(get_slot(*fit));
+				spies->push_back(std::make_pair (*fit, std::unique_ptr<MultiValueCountMatchSpy>(spy)));
+				enquire.add_matchspy(spy);
+				LOG_ERR(this, "added spy de -%s-\n", (*fit).c_str());
+			}
 		}
 	}
 
@@ -1005,7 +1016,7 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 				delete sorter;
 				return 1;
 			}
-			Xapian::Enquire enquire = get_enquire(srch.query, sorter, spies, e);
+			Xapian::Enquire enquire = get_enquire(srch.query, sorter, &spies, e.is_nearest ? &e.nearest : NULL, e.is_fuzzy ? &e.fuzzy : NULL, &e.facets);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
 		} catch (const Xapian::Error &er) {
