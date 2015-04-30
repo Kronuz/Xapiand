@@ -1115,7 +1115,6 @@ bool is_digits(const std::string &str)
 
 void update_pos_time()
 {
-	pos_time_t n_time;
 	time_t t_current;
 	time(&t_current);
 	unsigned short aux_second = b_time.second;
