@@ -1215,7 +1215,7 @@ cJSON* get_stats_json(pos_time_t first_time, pos_time_t second_time)
 		cJSON_AddStringToObject(root_stats, "Error in time argument input", "First argument must be less or equal than the second.");
 	} else {
 		int cnt[3] = {0, 0, 0};
-		double tm_cnt[3] = {0, 0, 0};
+		double tm_cnt[3] = {0.0, 0.0, 0.0};
 		struct tm *timeinfo = localtime(&now_time);
 		cJSON_AddStringToObject(time_period, "System time", asctime(timeinfo));
 		if (seconds) {
@@ -1255,9 +1255,9 @@ cJSON* get_stats_json(pos_time_t first_time, pos_time_t second_time)
 		cJSON_AddNumberToObject(root_stats, "Docs index", cnt[0]);
 		cJSON_AddNumberToObject(root_stats, "Number searches", cnt[1]);
 		cJSON_AddNumberToObject(root_stats, "Docs deleted", cnt[2]);
-		cJSON_AddNumberToObject(root_stats, "Average time indexing", tm_cnt[0]);
-		cJSON_AddNumberToObject(root_stats, "Average search time", tm_cnt[1]);
-		cJSON_AddNumberToObject(root_stats, "Average deletion time", tm_cnt[2]);
+		cJSON_AddNumberToObject(root_stats, "Average time indexing", tm_cnt[0] / ((cnt[0] == 0) ? 1 : cnt[0]));
+		cJSON_AddNumberToObject(root_stats, "Average search time", tm_cnt[1] / ((cnt[1] == 0) ? 1 : cnt[1]));
+		cJSON_AddNumberToObject(root_stats, "Average deletion time", tm_cnt[2] / ((cnt[2] == 0) ? 1 : cnt[2]));
 	}
 
 	return root_stats;
