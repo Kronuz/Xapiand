@@ -1113,14 +1113,7 @@ bool is_digits(const std::string &str)
 }
 
 
-int get_minutes(std::string &hour, std::string &minute)
-{
-	int minutes = (strtoint(std::string(hour, 0, hour.length() - 1)) * 60) + strtoint(std::string(minute, 0, minute.length() - 1));
-	return (minutes > 1440) ? 1440 : minutes;
-}
-
-
-pos_time_t get_pos_time()
+void update_pos_time()
 {
 	pos_time_t n_time;
 	time_t t_current;
@@ -1151,10 +1144,6 @@ pos_time_t get_pos_time()
 	} else {
 		fill_zeros_stats_cnt(aux_minute + 1, b_time.minute);
 	}
-
-	n_time.minute = b_time.minute;
-	n_time.second = b_time.second;
-	return n_time;
 }
 
 
