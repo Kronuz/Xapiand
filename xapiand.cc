@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 	timeinfo->tm_hour   = 0;
 	timeinfo->tm_min    = 0;
 	timeinfo->tm_sec    = 0;
-	int diff_t = init_time - mktime(timeinfo);
+	int diff_t = (int)(init_time - mktime(timeinfo));
 	b_time.minute = diff_t / SLOT_TIME_SECOND;
 	b_time.second =  diff_t % SLOT_TIME_SECOND;
 
