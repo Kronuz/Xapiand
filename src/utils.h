@@ -33,6 +33,7 @@
 #include <sstream>
 #include <pcre.h>
 #include <sys/time.h>
+#include "cJSON.h"
 
 #define NUMERIC_TYPE 'n'
 #define STRING_TYPE 's'
@@ -188,7 +189,7 @@ bool Is_id_range(std::string &ids);
 void update_pos_time();
 void fill_zeros_stats_cnt(int start, int end);
 void fill_zeros_stats_sec(int start, int end);
-int get_minutes(std::string &hour, std::string &minute);
+cJSON* get_stats_json(pos_time_t first_time, pos_time_t second_time);
 
 #define INFO(...) log(__VA_ARGS__)
 
