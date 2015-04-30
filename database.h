@@ -74,6 +74,7 @@ public:
 	Xapian::Enquire get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter,std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, query_t e);
 	search_t search(query_t e);
 	search_t _search(const std::string &query, unsigned int flags, bool text, const std::string &lan, bool unique_doc);
+	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, similar_t *similar);
 	int get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
 	cJSON* get_stats_database();
 	cJSON* get_stats_docs(int id_doc);
