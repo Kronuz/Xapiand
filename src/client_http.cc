@@ -238,11 +238,24 @@ void HttpClient::_delete()
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
+
+	clock_t t = clock();
 	if (!database->drop(command, e.commit)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
+	t = clock() - t;
+	pthread_mutex_lock(&qmtx);
+	get_pos_time();
+	stats_cnt.del.cnt[b_time.minute]++;
+	stats_cnt.del.sec[b_time.second]++;
+	double time = ((double)t/CLOCKS_PER_SEC);
+	LOG(this, "Time take for delete %f \n",time);
+	stats_cnt.del.tm_cnt[b_time.minute]+=time;
+	stats_cnt.del.tm_sec[b_time.second]+=time;
+	pthread_mutex_lock(&qmtx);
+
 	database_pool->checkin(&database);
 	cJSON_AddStringToObject(data, "id", command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
@@ -270,11 +283,25 @@ void HttpClient::_index()
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
+	
+	clock_t t = clock();
 	if (!database->index(body, command, e.commit)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
+
+	t = clock() - t;
+	pthread_mutex_lock(&qmtx);
+	get_pos_time();
+	stats_cnt.index.cnt[b_time.minute]++;
+	stats_cnt.index.sec[b_time.second]++;
+	double time = ((double)t/CLOCKS_PER_SEC);
+	LOG(this, "Time take for index %f \n",time);
+	stats_cnt.index.tm_cnt[b_time.minute]+=time;
+	stats_cnt.index.tm_sec[b_time.second]+=time;
+	pthread_mutex_lock(&qmtx);
+
 	database_pool->checkin(&database);
 	cJSON_AddStringToObject(data, "id", command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
@@ -395,6 +422,7 @@ void HttpClient::_search()
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
 	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
+	clock_t t = clock();
 	int rmset = database->get_mset(e, mset, spies, suggestions);
 	if (rmset == 1) {
 		LOG(this, "get_mset return 1\n");
@@ -536,6 +564,17 @@ void HttpClient::_search()
 			cJSON_Delete(root);
 		}
 	}
+	
+	t = clock() - t;
+	pthread_mutex_lock(&qmtx);
+	get_pos_time();
+	stats_cnt.del.cnt[b_time.minute]++;
+	stats_cnt.del.sec[b_time.second]++;
+	double time = ((double)t/CLOCKS_PER_SEC);
+	LOG(this, "Time take for search %f \n",time);
+	stats_cnt.search.tm_cnt[b_time.minute]+=time;
+	stats_cnt.search.tm_sec[b_time.second]+=time;
+	pthread_mutex_lock(&qmtx);
 
 	database_pool->checkin(&database);
 	LOG(this, "FINISH SEARCH\n");
