@@ -245,16 +245,17 @@ void HttpClient::_delete()
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
+
 	t = clock() - t;
+	double time = (double)(t / CLOCKS_PER_SEC);
+	LOG(this, "Time take for delete %f\n", time);
 	pthread_mutex_lock(&qmtx);
 	get_pos_time();
 	stats_cnt.del.cnt[b_time.minute]++;
 	stats_cnt.del.sec[b_time.second]++;
-	double time = ((double)t/CLOCKS_PER_SEC);
-	LOG(this, "Time take for delete %f \n",time);
-	stats_cnt.del.tm_cnt[b_time.minute]+=time;
-	stats_cnt.del.tm_sec[b_time.second]+=time;
-	pthread_mutex_lock(&qmtx);
+	stats_cnt.del.tm_cnt[b_time.minute] += time;
+	stats_cnt.del.tm_sec[b_time.second] += time;
+	pthread_mutex_unlock(&qmtx);
 
 	database_pool->checkin(&database);
 	cJSON_AddStringToObject(data, "id", command.c_str());
@@ -292,15 +293,15 @@ void HttpClient::_index()
 	}
 
 	t = clock() - t;
+	double time = (double)(t / CLOCKS_PER_SEC);
+	LOG(this, "Time take for index %f\n", time);
 	pthread_mutex_lock(&qmtx);
 	get_pos_time();
 	stats_cnt.index.cnt[b_time.minute]++;
 	stats_cnt.index.sec[b_time.second]++;
-	double time = ((double)t/CLOCKS_PER_SEC);
-	LOG(this, "Time take for index %f \n",time);
-	stats_cnt.index.tm_cnt[b_time.minute]+=time;
-	stats_cnt.index.tm_sec[b_time.second]+=time;
-	pthread_mutex_lock(&qmtx);
+	stats_cnt.index.tm_cnt[b_time.minute] += time;
+	stats_cnt.index.tm_sec[b_time.second] += time;
+	pthread_mutex_unlock(&qmtx);
 
 	database_pool->checkin(&database);
 	cJSON_AddStringToObject(data, "id", command.c_str());
@@ -564,17 +565,17 @@ void HttpClient::_search()
 			cJSON_Delete(root);
 		}
 	}
-	
+
 	t = clock() - t;
+	double time = (double)(t / CLOCKS_PER_SEC);
+	LOG(this, "Time take for search %f\n", time);
 	pthread_mutex_lock(&qmtx);
 	get_pos_time();
 	stats_cnt.del.cnt[b_time.minute]++;
 	stats_cnt.del.sec[b_time.second]++;
-	double time = ((double)t/CLOCKS_PER_SEC);
-	LOG(this, "Time take for search %f \n",time);
-	stats_cnt.search.tm_cnt[b_time.minute]+=time;
-	stats_cnt.search.tm_sec[b_time.second]+=time;
-	pthread_mutex_lock(&qmtx);
+	stats_cnt.search.tm_cnt[b_time.minute] += time;
+	stats_cnt.search.tm_sec[b_time.second] += time;
+	pthread_mutex_unlock(&qmtx);
 
 	database_pool->checkin(&database);
 	LOG(this, "FINISH SEARCH\n");
