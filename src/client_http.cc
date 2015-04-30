@@ -475,82 +475,81 @@ void HttpClient::_search()
 		cJSON_Delete(root);
 	} else {
 		int rc = 0;
-		if(mset.size() != 0)
-		{
+		if (mset.size() != 0) {
 			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++, m++) {
-			Xapian::docid docid = 0;
-			std::string id;
-			int rank = 0;
-			double weight = 0, percent = 0;
-			std::string data;
-
-			int t = 3;
-			for (; t >= 0; --t) {
-				try {
-					docid = *m;
-					rank = m.get_rank();
-					weight = m.get_weight();
-					percent = m.get_percent();
-					break;
-				} catch (const Xapian::Error &err) {
-					database->reopen();
-					if (database->get_mset(e, mset, spies, suggestions, rc)== 0) {
-						m = mset.begin();
-					} else {
-						t = -1;
+				Xapian::docid docid = 0;
+				std::string id;
+				int rank = 0;
+				double weight = 0, percent = 0;
+				std::string data;
+				
+				int t = 3;
+				for (; t >= 0; --t) {
+					try {
+						docid = *m;
+						rank = m.get_rank();
+						weight = m.get_weight();
+						percent = m.get_percent();
+						break;
+					} catch (const Xapian::Error &err) {
+						database->reopen();
+						if (database->get_mset(e, mset, spies, suggestions, rc)== 0) {
+							m = mset.begin();
+						} else {
+							t = -1;
+						}
 					}
 				}
-			}
-
-			Xapian::Document document;
-
-			if (t >= 0) {
-				// No errors, now try opening the document
-				if (!database->get_document(docid, document)) {
-					t = -1;  // flag as error
+				
+				Xapian::Document document;
+				
+				if (t >= 0) {
+					// No errors, now try opening the document
+					if (!database->get_document(docid, document)) {
+						t = -1;  // flag as error
+					}
 				}
-			}
-
-			if (t < 0) {
-				// On errors, abort
-				if (written) {
-					write("0\r\n\r\n");
+				
+				if (t < 0) {
+					// On errors, abort
+					if (written) {
+						write("0\r\n\r\n");
+					} else {
+						write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
+					}
+					database_pool->checkin(&database);
+					LOG(this, "ABORTED SEARCH\n");
+					return;
+				}
+				
+				data = document.get_data();
+				id = "Q" + document.get_value(0);
+				
+				if (rc == 0 && json_chunked) {
+					write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
+				}
+				
+				cJSON *root = cJSON_CreateObject();
+				cJSON_AddStringToObject(root, "id", id.c_str());
+				cJSON_AddStringToObject(root, "data", data.c_str());
+				
+				if (e.pretty) {
+					result = cJSON_Print(root);
 				} else {
-					write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
+					result = cJSON_PrintUnformatted(root);
 				}
-				database_pool->checkin(&database);
-				LOG(this, "ABORTED SEARCH\n");
-				return;
+				result += "\n\n";
+				if(json_chunked) {
+					result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
+				} else {
+					result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+				}
+				
+				if (!write(result)) {
+					break;
+				}
+				cJSON_Delete(root);
 			}
-
-			data = document.get_data();
-			id = "Q" + document.get_value(0);
-
-			if (rc == 0 && json_chunked) {
-				write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
-			}
-
-			cJSON *root = cJSON_CreateObject();
-			cJSON_AddStringToObject(root, "id", id.c_str());
-			cJSON_AddStringToObject(root, "data", data.c_str());
-
-			if (e.pretty) {
-				result = cJSON_Print(root);
-			} else {
-				result = cJSON_PrintUnformatted(root);
-			}
-			result += "\n\n";
-			if(json_chunked) {
-				result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
-			} else {
-				result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
-			}
-
-			if (!write(result)) {
-				break;
-			}
-			cJSON_Delete(root);
-		}
 			if(json_chunked) {
 				write("0\r\n\r\n");
 			}
@@ -568,7 +567,7 @@ void HttpClient::_search()
 			cJSON_Delete(root);
 		}
 	}
-
+	
 	t = clock() - t;
 	double time = (double)t / CLOCKS_PER_SEC;
 	LOG(this, "Time take for search %f\n", time);
