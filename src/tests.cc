@@ -229,41 +229,41 @@ void test_position_time()
 	}
 	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
 		stats_cnt.index.sec[i] = 1;
-		stats_cnt.index.tm_sec[i] = 1;
-		stats_cnt.search.sec[i] = 2;
+		stats_cnt.index.tm_sec[i] = 2;
+		stats_cnt.search.sec[i] = 3;
 		stats_cnt.search.tm_sec[i] = 4;
-		stats_cnt.del.sec[i] = 4;
+		stats_cnt.del.sec[i] = 5;
 		stats_cnt.del.tm_sec[i] = 6;
 	}
 	print_stats_sec();
 	print_stats_min(start, end);
-	pos_time_t pt = get_pos_time();
-	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	update_pos_time();
+	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
 	print_stats_sec();
 	sleep(5);
-	pt = get_pos_time();
+	update_pos_time();
 	std::cout << "Add 5 seconds" << std::endl;
-	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
 	print_stats_sec();
 	sleep(5);
-	pt = get_pos_time();
+	update_pos_time();
 	std::cout << "Add 5 seconds" << std::endl;
-	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
 	print_stats_sec();
 	sleep(5);
-	pt = get_pos_time();
+	update_pos_time();
 	std::cout << "Add 5 seconds" << std::endl;
-	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
 	print_stats_sec();
 	sleep(15);
-	pt = get_pos_time();
+	update_pos_time();
 	std::cout << "Add 15 seconds" << std::endl;
-	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
 	print_stats_sec();
 	sleep(15);
-	pt = get_pos_time();
+	update_pos_time();
 	std::cout << "Add 15 seconds" << std::endl;
-	std::cout << "Min: " << pt.minute << "  Sec: " << pt.second << std::endl;
+	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
 	print_stats_sec();
 	print_stats_min(start, end);
 }
