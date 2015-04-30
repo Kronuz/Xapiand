@@ -250,7 +250,7 @@ void HttpClient::_delete()
 	double time = (double)(t / CLOCKS_PER_SEC);
 	LOG(this, "Time take for delete %f\n", time);
 	pthread_mutex_lock(&qmtx);
-	get_pos_time();
+	update_pos_time();
 	stats_cnt.del.cnt[b_time.minute]++;
 	stats_cnt.del.sec[b_time.second]++;
 	stats_cnt.del.tm_cnt[b_time.minute] += time;
@@ -296,7 +296,7 @@ void HttpClient::_index()
 	double time = (double)(t / CLOCKS_PER_SEC);
 	LOG(this, "Time take for index %f\n", time);
 	pthread_mutex_lock(&qmtx);
-	get_pos_time();
+	update_pos_time();
 	stats_cnt.index.cnt[b_time.minute]++;
 	stats_cnt.index.sec[b_time.second]++;
 	stats_cnt.index.tm_cnt[b_time.minute] += time;
@@ -581,7 +581,7 @@ void HttpClient::_search()
 	double time = (double)(t / CLOCKS_PER_SEC);
 	LOG(this, "Time take for search %f\n", time);
 	pthread_mutex_lock(&qmtx);
-	get_pos_time();
+	update_pos_time();
 	stats_cnt.del.cnt[b_time.minute]++;
 	stats_cnt.del.sec[b_time.second]++;
 	stats_cnt.search.tm_cnt[b_time.minute] += time;
