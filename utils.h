@@ -101,6 +101,8 @@ typedef struct query_s {
 	bool database;
 	int document;
 	bool unique_doc;
+	bool is_fuzzy;
+	bool is_nearest;
 	std::string stats;
 	std::vector <std::string> language;
 	std::vector <std::string> query;
