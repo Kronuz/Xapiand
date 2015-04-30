@@ -349,15 +349,7 @@ void HttpClient::_stats(query_t &e)
 		database_pool->checkin(&database);
 	}
 	if (e.stats.size() != 0) {
-		_endpointgen(e);
-		Database *database = NULL;
-		if (!database_pool->checkout(&database, endpoints, false)) {
-			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
-			return;
-		}
-		cJSON *JSON_document = database->get_stats_time(e.stats);
-		cJSON_AddItemToObject(root, "Stats", JSON_document);
-		database_pool->checkin(&database);
+		cJSON_AddItemToObject(root, "Stats time", server->manager->get_stats_time(e.stats));
 	}
 	if (e.pretty) {
 		result = cJSON_Print(root);

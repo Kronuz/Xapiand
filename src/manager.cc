@@ -36,6 +36,11 @@
 #include <unistd.h>
 
 
+#define TIME_RE "((([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)?"
+
+pcre *XapiandManager::compiled_time_re = NULL;
+
+
 XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_port_)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  break_loop(*loop),
@@ -353,6 +358,7 @@ void XapiandManager::run(int num_servers)
 	LOG_OBJ(this, "Server ended!\n");
 }
 
+
 cJSON* XapiandManager::server_status()
 {
 	cJSON *root_status = cJSON_CreateObject();
@@ -364,4 +370,131 @@ cJSON* XapiandManager::server_status()
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
 	cJSON_AddNumberToObject(root_status, "Size thread pool", thread_pool.length());
 	return root_status;
+}
+
+
+cJSON* XapiandManager::get_stats_time(const std::string &time_req)
+{
+	cJSON *root_stats = cJSON_CreateObject();
+	pos_time_t first_time, second_time;
+	int len = (int) time_req.size();
+	group_t *g = NULL;
+	int ret = pcre_search(time_req.c_str(), len, 0, 0, TIME_RE, &compiled_time_re, &g);
+	if (ret == 0 && (g[0].end - g[0].start) == len) {
+		if ((g[1].end - g[1].start) > 0) {
+			first_time.minute = 60 * (((g[3].end - g[3].start) > 0) ? strtoint(std::string(time_req.c_str() + g[3].start, g[3].end - g[3].start)) : 0);
+			first_time.minute += ((g[4].end - g[4].start) > 0) ? strtoint(std::string(time_req.c_str() + g[4].start, g[4].end - g[4].start -1)) : 0;
+			first_time.second = ((g[5].end - g[5].start) > 0) ? strtoint(std::string(time_req.c_str() + g[5].start, g[5].end - g[5].start -1)) : 0;
+			if ((g[6].end - g[6].start) > 0) {
+				second_time.minute = 60 * (((g[8].end - g[8].start) > 0) ? strtoint(std::string(time_req.c_str() + g[8].start, g[8].end - g[8].start)) : 0);
+				second_time.minute += ((g[9].end - g[9].start) > 0) ? strtoint(std::string(time_req.c_str() + g[9].start, g[9].end - g[9].start -1)) : 0;
+				second_time.second = ((g[10].end - g[10].start) > 0) ? strtoint(std::string(time_req.c_str() + g[10].start, g[10].end - g[10].start -1)) : 0;
+			} else {
+				second_time.minute = 0;
+				second_time.second = 0;
+			}
+			if (g) {
+				free(g);
+				g = NULL;
+			}
+			return get_stats_json(first_time, second_time);
+		} else {
+			cJSON_AddStringToObject(root_stats, "Error in time argument input", "Incorrect input.");
+			return root_stats;
+		}
+	}
+
+	cJSON_AddStringToObject(root_stats, "Error in time argument input", "Incorrect input.");
+	return root_stats;
+}
+
+
+cJSON* XapiandManager::get_stats_json(pos_time_t first_time, pos_time_t second_time) 
+{
+	cJSON *root_stats = cJSON_CreateObject();
+	cJSON *time_period = cJSON_CreateObject();
+
+	pthread_mutex_lock(&XapiandServer::static_mutex);
+	update_pos_time();
+	time_t now_time = init_time;
+	pos_time_t b_time_cpy = b_time;
+	times_row_t stats_cnt_cpy = stats_cnt;
+	pthread_mutex_unlock(&XapiandServer::static_mutex);
+
+	int aux_second_sec;
+	int aux_first_sec;
+	int aux_second_min;
+	int aux_first_min;
+	bool seconds = (first_time.minute == 0) ? true : false;
+
+	if (second_time.minute == 0 && second_time.second == 0) {
+		aux_second_sec =  first_time.second;
+		aux_first_sec = 0;
+		aux_second_min =  first_time.minute;
+		aux_first_min = 0;
+		second_time.minute = b_time_cpy.minute - first_time.minute;
+		second_time.second = b_time_cpy.second - first_time.second;
+		first_time.minute = b_time_cpy.minute;
+		first_time.second = b_time_cpy.second;
+	} else {
+		aux_second_sec =  second_time.second;
+		aux_first_sec = first_time.second;
+		aux_second_min =  second_time.minute;
+		aux_first_min = first_time.minute;
+		first_time.minute = b_time_cpy.minute - first_time.minute;
+		first_time.second = b_time_cpy.second - first_time.second;
+		second_time.minute = b_time_cpy.minute - second_time.minute;
+		second_time.second = b_time_cpy.second - second_time.second;
+	}
+
+	if ((aux_first_min * SLOT_TIME_SECOND + aux_first_sec) > (aux_second_min * SLOT_TIME_SECOND + aux_second_sec)) {
+		cJSON_AddStringToObject(root_stats, "Error in time argument input", "First argument must be less or equal than the second.");
+	} else {
+		int cnt[3] = {0, 0, 0};
+		double tm_cnt[3] = {0.0, 0.0, 0.0};
+		struct tm *timeinfo = localtime(&now_time);
+		cJSON_AddStringToObject(time_period, "System time", asctime(timeinfo));
+		if (seconds) {
+			for (int i = second_time.second; i <= first_time.second; i++) {
+				int j = (i < 0) ? SLOT_TIME_SECOND + i : i;
+				cnt[0] += stats_cnt_cpy.index.sec[j];
+				cnt[1] += stats_cnt_cpy.search.sec[j];
+				cnt[2] += stats_cnt_cpy.del.sec[j];
+				tm_cnt[0] += stats_cnt_cpy.index.tm_sec[j];
+				tm_cnt[1] += stats_cnt_cpy.search.tm_sec[j];
+				tm_cnt[2] += stats_cnt_cpy.del.tm_sec[j];
+			}
+			time_t p_time = now_time - aux_second_sec;
+			timeinfo = localtime(&p_time);
+			cJSON_AddStringToObject(time_period, "Period start", asctime(timeinfo));
+			p_time = now_time - aux_first_sec;
+			timeinfo = localtime(&p_time);
+			cJSON_AddStringToObject(time_period, "Period end", asctime(timeinfo));
+		} else {
+			for (int i = second_time.minute; i <= first_time.minute; i++) {
+				int j = (i < 0) ? SLOT_TIME_MINUTE + i : i;
+				cnt[0] += stats_cnt_cpy.index.cnt[j];
+				cnt[1] += stats_cnt_cpy.search.cnt[j];
+				cnt[2] += stats_cnt_cpy.del.cnt[j];
+				tm_cnt[0] += stats_cnt_cpy.index.tm_cnt[j];
+				tm_cnt[1] += stats_cnt_cpy.search.tm_cnt[j];
+				tm_cnt[2] += stats_cnt_cpy.del.tm_cnt[j];
+			}
+			time_t p_time = now_time - aux_second_min * SLOT_TIME_SECOND;
+			timeinfo = localtime(&p_time);
+			cJSON_AddStringToObject(time_period, "Period start", asctime(timeinfo));
+			p_time = now_time - aux_first_min * SLOT_TIME_SECOND;
+			timeinfo = localtime(&p_time);
+			cJSON_AddStringToObject(time_period, "Period end", asctime(timeinfo));
+		}
+		cJSON_AddItemToObject(root_stats, "Time", time_period);
+		cJSON_AddNumberToObject(root_stats, "Docs index", cnt[0]);
+		cJSON_AddNumberToObject(root_stats, "Number searches", cnt[1]);
+		cJSON_AddNumberToObject(root_stats, "Docs deleted", cnt[2]);
+		cJSON_AddNumberToObject(root_stats, "Average time indexing", tm_cnt[0] / ((cnt[0] == 0) ? 1 : cnt[0]));
+		cJSON_AddNumberToObject(root_stats, "Average search time", tm_cnt[1] / ((cnt[1] == 0) ? 1 : cnt[1]));
+		cJSON_AddNumberToObject(root_stats, "Average deletion time", tm_cnt[2] / ((cnt[2] == 0) ? 1 : cnt[2]));
+	}
+
+	return root_stats;
 }
