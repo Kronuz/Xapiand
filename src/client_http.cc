@@ -719,6 +719,74 @@ int HttpClient::_endpointgen(query_t &e)
 				while (url_qs("language", query_buf.c_str(), query_size, &q) != -1) {
 					e.language.push_back(urldecode(q.offset, q.length));
 				}
+				
+				memset(&q, 0, sizeof(q));
+				if (url_qs("fuzzy", query_buf.c_str(), query_size, &q) != -1) {
+					std::string fuzzy = serialise_bool(urldecode(q.offset, q.length));
+					(fuzzy.compare("f") == 0) ? e.is_fuzzy = false : e.is_fuzzy = true;
+				} else {
+					e.is_fuzzy = true;
+				}
+				
+				if(e.is_fuzzy) {
+					memset(&q, 0, sizeof(q));
+					if (url_qs("fuzzy.n_rset", query_buf.c_str(), query_size, &q) != -1){
+						e.fuzzy.n_rset = atoi(urldecode(q.offset, q.length).c_str());
+					} else {
+						e.fuzzy.n_rset = 5;
+					}
+					
+					memset(&q, 0, sizeof(q));
+					if (url_qs("fuzzy.n_eset", query_buf.c_str(), query_size, &q) != -1){
+						e.fuzzy.n_eset = atoi(urldecode(q.offset, q.length).c_str());
+					} else {
+						e.fuzzy.n_eset = 32;
+					}
+					
+					memset(&q, 0, sizeof(q));
+					while (url_qs("fuzzy.field", query_buf.c_str(), query_size, &q) != -1){
+						e.fuzzy.field.push_back(urldecode(q.offset, q.length));
+					}
+					
+					memset(&q, 0, sizeof(q));
+					while (url_qs("fuzzy.type", query_buf.c_str(), query_size, &q) != -1){
+						e.fuzzy.type.push_back(urldecode(q.offset, q.length));
+					}
+				}
+				
+				memset(&q, 0, sizeof(q));
+				if (url_qs("nearest", query_buf.c_str(), query_size, &q) != -1) {
+					std::string nearest = serialise_bool(urldecode(q.offset, q.length));
+					(nearest.compare("f") == 0) ? e.is_nearest = false : e.is_nearest = true;
+				} else {
+					e.is_nearest = true;
+				}
+				
+				if(e.is_nearest) {
+					memset(&q, 0, sizeof(q));
+					if (url_qs("nearest.n_rset", query_buf.c_str(), query_size, &q) != -1){
+						e.nearest.n_rset = atoi(urldecode(q.offset, q.length).c_str());
+					} else {
+						e.nearest.n_rset = 5;
+					}
+					
+					memset(&q, 0, sizeof(q));
+					if (url_qs("nearest.n_eset", query_buf.c_str(), query_size, &q) != -1){
+						e.nearest.n_eset = atoi(urldecode(q.offset, q.length).c_str());
+					} else {
+						e.nearest.n_eset = 32;
+					}
+					
+					memset(&q, 0, sizeof(q));
+					while (url_qs("nearest.field", query_buf.c_str(), query_size, &q) != -1){
+						e.nearest.field.push_back(urldecode(q.offset, q.length));
+					}
+					
+					memset(&q, 0, sizeof(q));
+					while (url_qs("nearest.type", query_buf.c_str(), query_size, &q) != -1){
+						e.nearest.type.push_back(urldecode(q.offset, q.length));
+					}
+				}
 
 			} else if (cmd == CMD_NUMBER) {
 				memset(&q, 0, sizeof(q));
