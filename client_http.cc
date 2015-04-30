@@ -239,6 +239,7 @@ void HttpClient::_delete()
 		return;
 	}
 	if (!database->drop(command, e.commit)) {
+		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
@@ -270,6 +271,7 @@ void HttpClient::_index()
 		return;
 	}
 	if (!database->index(body, command, e.commit)) {
+		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
