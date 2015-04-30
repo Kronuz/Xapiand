@@ -1127,7 +1127,7 @@ pos_time_t get_pos_time()
 	time(&t_current);
 	unsigned short aux_second = b_time.second;
 	unsigned short aux_minute = b_time.minute;
-	unsigned int t_elapsed = t_current - init_time;
+	unsigned int t_elapsed = (unsigned int)(t_current - init_time);
 	if (t_elapsed < SLOT_TIME_SECOND) {
 		b_time.second += t_elapsed;
 		if (b_time.second >= SLOT_TIME_SECOND) {
