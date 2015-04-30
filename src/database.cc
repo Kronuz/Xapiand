@@ -28,7 +28,7 @@
 
 #define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
 #define FIND_TERMS_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
-#define TIME_RE "(\\d+h)?\\s?(\\d*m)?\\s?(\\d*s)?\\s?..\\s?(\\d*h)?\\s?(\\d*m)?\\s?(\\d*s)?"
+#define TIME_RE "((([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)?"
 #define MAX_DOCS 100
 #define DATABASE_UPDATE_TIME 10
 
