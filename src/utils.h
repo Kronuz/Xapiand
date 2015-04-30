@@ -185,7 +185,7 @@ int get_minutes(std::string &hour, std::string &minute);
 bool Is_id_range(std::string &ids);
 
 
-pos_time_t get_pos_time();
+void update_pos_time();
 void fill_zeros_stats_cnt(int start, int end);
 void fill_zeros_stats_sec(int start, int end);
 int get_minutes(std::string &hour, std::string &minute);
