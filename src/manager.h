@@ -47,6 +47,8 @@ class XapiandManager {
 	int http_port, http_sock;
 	int binary_port, binary_sock;
 
+	static pcre *compiled_time_re;
+
 	DatabasePool database_pool;
 	ThreadPool thread_pool;
 
@@ -82,6 +84,8 @@ public:
 	void sig_shutdown_handler(int sig);
 	void shutdown();
 	cJSON* server_status();
+	cJSON* get_stats_time(const std::string &time_req);
+	cJSON* get_stats_json(pos_time_t first_time, pos_time_t second_time);
 };
 
 
