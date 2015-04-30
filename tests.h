@@ -24,6 +24,7 @@
 #define XAPIAND_INCLUDED_TESTS_H
 
 #include <stdio.h>
+ 
 #include <string.h>
 #include <algorithm>
 #include "utils.h"
