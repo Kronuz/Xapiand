@@ -18,8 +18,21 @@ fi
 ln -s xapian/xapian-core
 ln -s xapian/xapian-bindings
 
-# Build xapian-core
-#####################
+
+# Build xapian-core (maintainer mode)
+######################################
+cd xapian-core
+
+# Autoconf, configure and make:
+autoreconf --force --install -I/usr/local/share/aclocal
+./configure --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="$PREFIX" PYTHON_LIB="$PREFIX/lib/python2.7/site-packages" XAPIAN_CONFIG=$PREFIX/bin/xapian-config-1.3 --without-csharp --without-tcl --without-java --without-ruby --with-python --without-php
+make
+make install
+cd ..
+
+
+# Build xapian-core (all manually)
+######################################
 cd xapian-core
 
 # Generate xapian/errors.h
@@ -67,7 +80,7 @@ make install
 cd ..
 
 # Build Python xapian-bindings
-################################
+######################################
 cd xapian-bindings
 cd python
 
@@ -95,7 +108,7 @@ cd ..
 
 
 # Running tests
-#####################
+######################################
 cd xapian-core
 cd tests
 
