@@ -812,7 +812,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						} else {
 							prefix = "Q";
 						}
-						
+
 						LOG(this, "prefix calculated: %s\n", prefix.c_str());
 						if (strhasupper(field_name)) {
 							LOG(this, "Boolean Prefix\n");
@@ -917,14 +917,14 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 {
 	Xapian::RSet rset;
 	std::vector<std::string>::const_iterator it;
-	
+
 	Xapian::Enquire renquire = get_enquire(query, NULL, NULL, NULL, NULL, NULL);
 	Xapian::MSet mset = renquire.get_mset(0, similar->n_rset);
-	
+
 	for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); m++) {
 		rset.add_document(*m);
 	}
-	
+
 	std::vector<std::string>prefixes;
 	for(it = similar->type.begin(); it != similar->type.end(); it++) {
 		prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + *it);
@@ -934,7 +934,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 	}
 	ExpandDeciderFilterPrefixes efp(prefixes);
 	Xapian::ESet eset = enquire.get_eset(similar->n_eset, rset, &efp);
-	
+
 	if (is_fuzzy) {
 		query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end()));
 	} else {
