@@ -28,7 +28,6 @@
 
 #define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
 #define FIND_TERMS_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
-#define TIME_RE "((([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)?"
 #define MAX_DOCS 100
 #define DATABASE_UPDATE_TIME 10
 
@@ -249,7 +248,6 @@ DatabasePool::checkin(Database **database)
 
 
 pcre *Database::compiled_find_field_re = NULL;
-pcre *Database::compiled_time_re = NULL;
 
 bool
 Database::drop(const std::string &doc_id, bool commit)
@@ -1082,40 +1080,4 @@ ExpandDeciderFilterPrefixes::operator()(const std::string &term) const
 		}
 	}
 	return prefixes.empty();
-}
-
-cJSON*
-Database::get_stats_time(const std::string &time_req)
-{
-	cJSON *root_stats = cJSON_CreateObject();
-	pos_time_t first_time, second_time;
-	int len = (int) time_req.size();
-	group_t *g = NULL;
-	int ret = pcre_search(time_req.c_str(), len, 0, 0, TIME_RE, &compiled_time_re, &g);
-	if (ret == 0 && (g[0].end - g[0].start) == len) {
-		if ((g[1].end - g[1].start) > 0) {
-			first_time.minute = 60 * (((g[3].end - g[3].start) > 0) ? strtoint(std::string(time_req.c_str() + g[3].start, g[3].end - g[3].start)) : 0);
-			first_time.minute += ((g[4].end - g[4].start) > 0) ? strtoint(std::string(time_req.c_str() + g[4].start, g[4].end - g[4].start -1)) : 0;
-			first_time.second = ((g[5].end - g[5].start) > 0) ? strtoint(std::string(time_req.c_str() + g[5].start, g[5].end - g[5].start -1)) : 0;
-			if ((g[6].end - g[6].start) > 0) {
-				second_time.minute = 60 * (((g[8].end - g[8].start) > 0) ? strtoint(std::string(time_req.c_str() + g[8].start, g[8].end - g[8].start)) : 0);
-				second_time.minute += ((g[9].end - g[9].start) > 0) ? strtoint(std::string(time_req.c_str() + g[9].start, g[9].end - g[9].start -1)) : 0;
-				second_time.second = ((g[10].end - g[10].start) > 0) ? strtoint(std::string(time_req.c_str() + g[10].start, g[10].end - g[10].start -1)) : 0;
-			} else {
-				second_time.minute = 0;
-				second_time.second = 0;
-			}
-			if (g) {
-				free(g);
-				g = NULL;
-			}
-			return get_stats_json(first_time, second_time);
-		} else {
-			cJSON_AddStringToObject(root_stats, "Error in time argument input", "Incorrect input.");
-			return root_stats;
-		}
-	}
-
-	cJSON_AddStringToObject(root_stats, "Error in time argument input", "Incorrect input.");
-	return root_stats;
 }
