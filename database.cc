@@ -249,6 +249,7 @@ DatabasePool::checkin(Database **database)
 
 pcre *Database::compiled_find_field_re = NULL;
 
+
 bool
 Database::drop(const std::string &doc_id, bool commit)
 {
