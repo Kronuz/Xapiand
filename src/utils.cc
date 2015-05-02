@@ -112,6 +112,19 @@ void log(void *obj, const char *format, ...)
 	pthread_mutex_unlock(&qmtx);
 }
 
+int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
+	/* It outputs a bucket number in the range [0, num_buckets).
+	   A Fast, Minimal Memory, Consistent Hash Algorithm
+	   [http://arxiv.org/pdf/1406.2294v1.pdf] */
+	int64_t b = 1, j = 0;
+	while (j < num_buckets) {
+		b = j;
+		key = key * 2862933555777941757ULL + 1;
+		j = (b + 1) * (double(1LL << 31) / double((key >> 33) + 1));
+	}
+	return b;
+}
+
 const char HEX2DEC[256] =
 {
 	/*       0  1  2  3   4  5  6  7   8  9  A  B   C  D  E  F */
