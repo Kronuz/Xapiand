@@ -548,7 +548,7 @@ cJSON* XapiandManager::get_stats_time(const std::string &time_req)
 }
 
 
-cJSON* XapiandManager::get_stats_json(pos_time_t first_time, pos_time_t second_time) 
+cJSON* XapiandManager::get_stats_json(pos_time_t first_time, pos_time_t second_time)
 {
 	cJSON *root_stats = cJSON_CreateObject();
 	cJSON *time_period = cJSON_CreateObject();
