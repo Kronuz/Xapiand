@@ -409,8 +409,10 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 
 	if (gossip_sock != -1 && revents & EV_READ) {
 		char buf[1024];
+		struct sockaddr_in addr;
+		socklen_t addrlen;
 
-		ssize_t received = ::recv(gossip_sock, buf, sizeof(buf), 0);
+		ssize_t received = ::recvfrom(gossip_sock, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
 
 		if (received < 0) {
 			if (errno != EAGAIN && gossip_sock != -1) {
