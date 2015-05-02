@@ -52,8 +52,6 @@ private:
 	ThreadPool *thread_pool;
 
 	void destroy();
-	void bind_http();
-	void bind_binary();
 
 	void io_accept_http(ev::io &watcher, int revents);
 #ifdef HAVE_REMOTE_PROTOCOL

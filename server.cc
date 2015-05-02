@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #include <assert.h>
 
 #include <xapian.h>
@@ -108,6 +109,8 @@ void XapiandServer::run()
 	loop->run(0);
 	LOG_OBJ(this, "Server loop ended!\n");
 }
+
+
 
 void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 {

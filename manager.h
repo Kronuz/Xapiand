@@ -31,6 +31,15 @@
 #include <list>
 #include <ev++.h>
 #include <pthread.h>
+#include <netinet/in.h>
+
+
+enum gossip_type {
+    GOSSIP_PING,		// Ping
+    GOSSIP_PONG,		// Pong
+    GOSSIP_DEATH,		// Announce death
+    GOSSIP_MAX
+};
 
 
 class XapiandServer;
@@ -41,9 +50,14 @@ class XapiandManager {
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
 
+	ev::io gossip_io;
+	ev::timer gossip_heartbeat;
+
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
+	struct sockaddr_in gossip_addr;
+	int gossip_port, gossip_sock;
 	int http_port, http_sock;
 	int binary_port, binary_sock;
 
@@ -55,12 +69,15 @@ class XapiandManager {
 	ev::async break_loop;
 	void break_loop_cb(ev::async &watcher, int revents);
 
+	void gossip_heartbeat_cb(ev::timer &watcher, int revents);
+	void gossip_io_cb(ev::io &watcher, int revents);
+	void gossip(const char *message, size_t size);
+	void gossip(gossip_type type);
+
 	void check_tcp_backlog(int tcp_backlog);
 	void shutdown_cb(ev::async &watcher, int revents);
-	void bind_http();
-#ifdef HAVE_REMOTE_PROTOCOL
-	void bind_binary();
-#endif  /* HAVE_REMOTE_PROTOCOL */
+	bool bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries);
+	bool bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries, const char *group);
 	void destroy();
 
 	std::list<XapiandServer *>::const_iterator attach_server(XapiandServer *server);
@@ -77,7 +94,7 @@ public:
 	time_t shutdown_now;
 	ev::async async_shutdown;
 
-	XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_port_);
+	XapiandManager(ev::loop_ref *loop_, const char *gossip_group_, int gossip_port_, int http_port_, int binary_port_);
 	~XapiandManager();
 
 	void run(int num_servers);

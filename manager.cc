@@ -24,14 +24,15 @@
 
 #include "utils.h"
 #include "server.h"
+#include "length.h"
 
 #include <list>
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/sysctl.h>
 #include <fcntl.h>
-#include <netinet/in.h>
 #include <netinet/tcp.h> /* for TCP_NODELAY */
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -41,16 +42,21 @@
 pcre *XapiandManager::compiled_time_re = NULL;
 
 
-XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_port_)
+XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *gossip_group_, int gossip_port_, int http_port_, int binary_port_)
 	: loop(loop_ ? loop_: &dynamic_loop),
+	  gossip_io(*loop),
+	  gossip_heartbeat(*loop),
 	  break_loop(*loop),
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  thread_pool("W%d", 10),
+	  gossip_port(gossip_port_),
 	  http_port(http_port_),
 	  binary_port(binary_port_)
 {
+	struct sockaddr_in addr;
+
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
@@ -65,12 +71,35 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, int http_port_, int binary_p
 	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
 	async_shutdown.start();
 
-	bind_http();
+	if (gossip_port == 0) {
+		gossip_port = XAPIAND_GOSSIP_SERVERPORT;
+	}
+	bind_udp("gossip", gossip_sock, gossip_port, gossip_addr, 1, gossip_group_ ? gossip_group_ : XAPIAND_GOSSIP_GROUP);
+
+	int http_tries = 1;
+	if (http_port == 0) {
+		http_port = XAPIAND_HTTP_SERVERPORT;
+		http_tries = 10;
+	}
+	bind_tcp("http", http_sock, http_port, addr, http_tries);
+
 #ifdef HAVE_REMOTE_PROTOCOL
-	bind_binary();
+	int binary_tries = 1;
+	if (binary_port == 0) {
+		binary_port = XAPIAND_BINARY_SERVERPORT;
+		binary_tries = 10;
+	}
+	bind_tcp("binary", binary_sock, binary_port, addr, binary_tries);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
-	assert(http_sock != -1 && binary_sock != -1);
+	assert(gossip_sock != -1 && http_sock != -1 && binary_sock != -1);
+
+	gossip_io.set<XapiandManager, &XapiandManager::gossip_io_cb>(this);
+	gossip_io.start(gossip_sock, ev::READ);
+
+	gossip_heartbeat.set<XapiandManager, &XapiandManager::gossip_heartbeat_cb>(this);
+	gossip_heartbeat.start(0, 5);
+
 	LOG_OBJ(this, "CREATED MANAGER!\n");
 }
 
@@ -121,92 +150,119 @@ void XapiandManager::check_tcp_backlog(int tcp_backlog)
 }
 
 
-void XapiandManager::bind_http()
+bool XapiandManager::bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries)
 {
 	int tcp_backlog = XAPIAND_TCP_BACKLOG;
-	int error;
 	int optval = 1;
-	struct sockaddr_in addr;
+	struct ip_mreq mreq;
 	struct linger ling = {0, 0};
 
-	http_sock = socket(PF_INET, SOCK_STREAM, 0);
-
-	setsockopt(http_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
-#ifdef SO_NOSIGPIPE
-	setsockopt(http_sock, SOL_SOCKET, SO_NOSIGPIPE, (char *)&optval, sizeof(optval));
-#endif
-	error = setsockopt(http_sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
-	if (error != 0)
-		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
-
-	error = setsockopt(http_sock, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(ling));
-	if (error != 0)
-		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
-
-	error = setsockopt(http_sock, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval));
-	if (error != 0)
-		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", http_sock, strerror(errno));
-
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(http_port);
-	addr.sin_addr.s_addr = INADDR_ANY;
-
-	if (bind(http_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-		LOG_ERR(this, "ERROR: http bind error (sock=%d): %s\n", http_sock, strerror(errno));
-		::close(http_sock);
-		http_sock = -1;
-	} else {
-		fcntl(http_sock, F_SETFL, fcntl(http_sock, F_GETFL, 0) | O_NONBLOCK);
-
-		check_tcp_backlog(tcp_backlog);
-		listen(http_sock, tcp_backlog);
+	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+		LOG_ERR(this, "ERROR: %s socket: %s\n", type, strerror(errno));
+		return false;
 	}
+
+	// use setsockopt() to allow multiple listeners connected to the same address
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+#ifdef SO_NOSIGPIPE
+	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+#endif
+	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
+		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	for (int i = 0; i < tries; i++, port++) {
+		addr.sin_port = htons(port);
+
+		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+			LOG_DEBUG(this, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+		} else {
+			fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
+			check_tcp_backlog(tcp_backlog);
+			listen(sock, tcp_backlog);
+			return true;
+		}
+	}
+
+	LOG_ERR(this, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+	::close(sock);
+	sock = -1;
+	return false;
 }
 
 
-#ifdef HAVE_REMOTE_PROTOCOL
-void XapiandManager::bind_binary()
+bool XapiandManager::bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries, const char *group)
 {
-	int tcp_backlog = XAPIAND_TCP_BACKLOG;
-	int error;
 	int optval = 1;
-	struct sockaddr_in addr;
-	struct linger ling = {0, 0};
+	unsigned char ttl = 3;
+	struct ip_mreq mreq;
 
-	binary_sock = socket(PF_INET, SOCK_STREAM, 0);
-
-	setsockopt(binary_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(optval));
-#ifdef SO_NOSIGPIPE
-	setsockopt(binary_sock, SOL_SOCKET, SO_NOSIGPIPE, (char *)&optval, sizeof(optval));
-#endif
-	error = setsockopt(binary_sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
-	if (error != 0)
-		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
-
-	error = setsockopt(binary_sock, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(ling));
-	if (error != 0)
-		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
-
-	error = setsockopt(binary_sock, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval));
-	if (error != 0)
-		LOG_ERR(this, "ERROR: setsockopt (sock=%d): %s\n", binary_sock, strerror(errno));
-
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(binary_port);
-	addr.sin_addr.s_addr = INADDR_ANY;
-
-	if (bind(binary_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-		LOG_ERR(this, "ERROR: binary bind error (sock=%d): %s\n", binary_sock, strerror(errno));
-		::close(binary_sock);
-		binary_sock = -1;
-	} else {
-		fcntl(binary_sock, F_SETFL, fcntl(binary_sock, F_GETFL, 0) | O_NONBLOCK);
-
-		check_tcp_backlog(tcp_backlog);
-		listen(binary_sock, tcp_backlog);
+	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
+		LOG_ERR(this, "ERROR: %s socket: %s\n", type, strerror(errno));
+		return false;
 	}
+
+	// use setsockopt() to allow multiple listeners connected to the same port
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) < 0) {
+		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	// use setsockopt() to request that the kernel join a multicast group
+	memset(&mreq, 0, sizeof(mreq));
+	mreq.imr_multiaddr.s_addr = inet_addr(group);
+	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
+		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+		::close(sock);
+		sock = -1;
+		return false;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);  // bind to all addresses (differs from sender)
+
+	for (int i = 0; i < tries; i++, port++) {
+		addr.sin_port = htons(port);
+
+		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+			LOG_DEBUG(this, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+		} else {
+			fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
+			addr.sin_addr.s_addr = inet_addr(group);  // setup s_addr for sender (send to group)
+			return true;
+		}
+	}
+
+	LOG_ERR(this, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+	::close(sock);
+	sock = -1;
+	return false;
 }
-#endif  /* HAVE_REMOTE_PROTOCOL */
 
 
 void XapiandManager::sig_shutdown_handler(int sig)
@@ -247,9 +303,16 @@ void XapiandManager::sig_shutdown_handler(int sig)
 void XapiandManager::destroy()
 {
 	pthread_mutex_lock(&qmtx);
-	if (http_sock == -1 && binary_sock == -1) {
+	if (gossip_sock == -1 && http_sock == -1 && binary_sock == -1) {
 		pthread_mutex_unlock(&qmtx);
 		return;
+	}
+
+	gossip(GOSSIP_DEATH);
+
+	if (gossip_sock != -1) {
+		::close(gossip_sock);
+		gossip_sock = -1;
 	}
 
 	if (http_sock != -1) {
@@ -261,6 +324,8 @@ void XapiandManager::destroy()
 		::close(binary_sock);
 		binary_sock = -1;
 	}
+
+	gossip_io.stop();
 
 	pthread_mutex_unlock(&qmtx);
 
@@ -323,21 +388,95 @@ void XapiandManager::shutdown()
 }
 
 
-//
-//void XapiandManager::run()
-//{
-//	XapiandServer * server = new XapiandServer(this, loop, http_sock, binary_sock, &database_pool, &thread_pool);
-//	server->run(NULL);
-//	delete server;
-//}
+void XapiandManager::gossip_heartbeat_cb(ev::timer &watcher, int revents)
+{
+	gossip(GOSSIP_PING);
+}
+
+
+void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
+{
+	if (EV_ERROR & revents) {
+		LOG_EV(this, "ERROR: got invalid gossip event (sock=%d): %s\n", gossip_sock, strerror(errno));
+		return;
+	}
+
+	if (gossip_sock == -1) {
+		return;
+	}
+
+	assert(gossip_sock == watcher.fd);
+
+	if (gossip_sock != -1 && revents & EV_READ) {
+		char buf[1024];
+
+		ssize_t received = ::recv(gossip_sock, buf, sizeof(buf), 0);
+
+		if (received < 0) {
+			if (errno != EAGAIN && gossip_sock != -1) {
+				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", gossip_sock, strerror(errno));
+				destroy();
+			}
+		} else if (received == 0) {
+			// The peer has closed its half side of the connection.
+			LOG_CONN(this, "Received EOF (sock=%d)!\n", gossip_sock);
+			destroy();
+		} else {
+			LOG_GOSSIP_WIRE(this, "(sock=%d) -->> '%s'\n", gossip_sock, repr(buf, received).c_str());
+
+			// LOG(this, "'%s'\n", repr(buf, received).c_str());
+
+			switch (*buf) {
+				case GOSSIP_PING:
+					// Received a ping, return pong
+					gossip(GOSSIP_PONG);
+					break;
+			}
+		}
+	}
+}
+
+
+void XapiandManager::gossip(const char *buf, size_t buf_size)
+{
+	if (gossip_sock != -1) {
+		LOG_GOSSIP_WIRE(this, "(sock=%d) <<-- '%s'\n", gossip_sock, repr(buf, buf_size).c_str());
+
+#ifdef MSG_NOSIGNAL
+		ssize_t written = ::sendto(gossip_sock, buf, buf_size, MSG_NOSIGNAL, (struct sockaddr *)&gossip_addr, sizeof(gossip_addr));
+#else
+		ssize_t written = ::sendto(gossip_sock, buf, buf_size, 0, (struct sockaddr *)&gossip_addr, sizeof(gossip_addr));
+#endif
+
+		if (written < 0) {
+			if (errno != EAGAIN && gossip_sock != -1) {
+				LOG_ERR(this, "ERROR: sendto error (sock=%d): %s\n", gossip_sock, strerror(errno));
+				destroy();
+			}
+		} else if (written == 0) {
+			// nothing written?
+		} else {
+
+		}
+	}
+}
+
+
+void XapiandManager::gossip(gossip_type type)
+{
+	std::string message((const char *)&type, 1);
+	message.append(encode_length(http_port));
+	message.append(encode_length(binary_port));
+	gossip(message.c_str(), message.size());
+}
 
 
 void XapiandManager::run(int num_servers)
 {
 #ifdef HAVE_REMOTE_PROTOCOL
-	INFO(this, "Listening on %d (http), %d (xapian)...\n", http_port, binary_port);
+	INFO(this, "Listening on tcp:%d (http), tcp:%d (xapian), udp:%d (gossip)...\n", http_port, binary_port, gossip_port);
 #else
-	INFO(this, "Listening on %d (http)...\n", http_port);
+	INFO(this, "Listening on tcp:%d (http), udp:%d (gossip)...\n", http_port, gossip_port);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 	ThreadPool server_pool("S%d", num_servers);

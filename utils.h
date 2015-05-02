@@ -194,13 +194,17 @@ void fill_zeros_stats_sec(int start, int end);
 #define LOG(...) log(__VA_ARGS__)
 #define LOG_ERR(...) log(__VA_ARGS__)
 
+#define LOG_DEBUG(...)
+
 #define LOG_CONN(...)
+#define LOG_GOSSIP(...)
 #define LOG_OBJ(...)
 #define LOG_DATABASE(...)
 #define LOG_HTTP_PROTO_PARSER(...)
 
 #define LOG_EV(...)
 #define LOG_CONN_WIRE(...)
+#define LOG_GOSSIP_WIRE(...)
 #define LOG_HTTP_PROTO(...)
 #define LOG_BINARY_PROTO(...)
 
