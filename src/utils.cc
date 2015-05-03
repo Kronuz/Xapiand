@@ -20,6 +20,8 @@
  * IN THE SOFTWARE.
  */
 
+#include <string>
+#include <cstdlib>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -112,7 +114,9 @@ void log(void *obj, const char *format, ...)
 	pthread_mutex_unlock(&qmtx);
 }
 
-int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
+
+int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets)
+{
 	/* It outputs a bucket number in the range [0, num_buckets).
 	   A Fast, Minimal Memory, Consistent Hash Algorithm
 	   [http://arxiv.org/pdf/1406.2294v1.pdf] */
@@ -124,6 +128,57 @@ int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 	}
 	return b;
 }
+
+
+const char * name_prefix[] = {
+	"",
+	"bil", "bal", "ban",
+	"hil", "ham", "hal", "hol", "hob",
+	"wil", "me", "or", "ol", "od",
+	"gor", "for", "fos", "tol",
+	"ar", "fin", "ere",
+	"leo", "vi", "bi", "bren", "thor",
+};
+
+const char * name_stem[] = {
+	"",
+	"go", "orbis", "apol", "adur", "mos", "ri", "i",
+	"na", "ole", "n",
+};
+
+const char * name_suffix[] = {
+	"",
+	"tur", "axia", "and", "bo", "gil", "bin",
+	"bras", "las", "mac", "grim", "wise", "l",
+	"lo", "fo", "co",
+	"ra", "via", "da", "ne",
+	"ta",
+	"y",
+	"wen", "thiel", "phin", "dir", "dor", "tor", "rod", "on",
+	"rdo", "dis",
+};
+
+std::string name_generator()
+{
+	std::string name;
+
+	while (name.size() < 4) {
+		// Add the prefix...
+		name.append(name_prefix[(rand() % (sizeof(name_prefix) / sizeof(const char *)))]);
+
+		// Add the stem...
+		name.append(name_stem[(rand() % (sizeof(name_stem) / sizeof(const char *)))]);
+
+		// Add the suffix...
+		name.append(name_suffix[(rand() % (sizeof(name_suffix) / sizeof(const char *)))]);
+	}
+
+	// Make the first letter capital...
+	name[0] = toupper(name[0]);
+
+	return name;
+}
+
 
 const char HEX2DEC[256] =
 {
