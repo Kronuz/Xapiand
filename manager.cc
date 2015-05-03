@@ -32,8 +32,10 @@
 #include <sys/sysctl.h>
 #include <fcntl.h>
 #include <netinet/tcp.h> /* for TCP_NODELAY */
+#include <net/if.h> /* for IFF_LOOPBACK */
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <ifaddrs.h>
 #include <unistd.h>
 
 
@@ -70,6 +72,8 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *gossip_group_, i
 
 	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
 	async_shutdown.start();
+
+	host_addr = host_address();
 
 	if (gossip_port == 0) {
 		gossip_port = XAPIAND_GOSSIP_SERVERPORT;
@@ -149,6 +153,26 @@ void XapiandManager::check_tcp_backlog(int tcp_backlog)
 #endif
 }
 
+struct sockaddr_in XapiandManager::host_address()
+{
+	struct sockaddr_in addr;
+	struct ifaddrs *if_addr_struct;
+	if (getifaddrs(&if_addr_struct) < 0) {
+		LOG_ERR(this, "ERROR: getifaddrs: %s\n", strerror(errno));
+	} else {
+		for (struct ifaddrs *ifa = if_addr_struct; ifa != NULL; ifa = ifa->ifa_next) {
+			if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET && !(ifa->ifa_flags & IFF_LOOPBACK)) { // check it is IP4
+				char ip[INET_ADDRSTRLEN];
+				addr = *(struct sockaddr_in *)ifa->ifa_addr;
+				inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
+				LOG_GOSSIP(this, "Using %s, IP address = %s\n", ifa->ifa_name, ip);
+				break;
+			}
+		}
+		freeifaddrs(if_addr_struct);
+	}
+	return addr;
+}
 
 bool XapiandManager::bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries)
 {
@@ -426,7 +450,14 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 		} else {
 			LOG_GOSSIP_WIRE(this, "(sock=%d) -->> '%s'\n", gossip_sock, repr(buf, received).c_str());
 
-			// LOG(this, "'%s'\n", repr(buf, received).c_str());
+			// LOG_GOSSIP(this, "%s says '%s'\n", inet_ntoa(addr.sin_addr), repr(buf, received).c_str());
+
+			const char *ptr = buf + 1;
+			struct sockaddr_in remote_addr;
+			remote_addr.sin_addr.s_addr = decode_length(&ptr, buf + received, false);
+			int remote_http_port = decode_length(&ptr, buf + received, false);
+			int remote_binary_port = decode_length(&ptr, buf + received, false);
+			LOG_GOSSIP(this, "Remote %s on http:%d, binary:%d\n", inet_ntoa(remote_addr.sin_addr), remote_http_port, remote_binary_port);
 
 			switch (*buf) {
 				case GOSSIP_PING:
@@ -467,6 +498,7 @@ void XapiandManager::gossip(const char *buf, size_t buf_size)
 void XapiandManager::gossip(gossip_type type)
 {
 	std::string message((const char *)&type, 1);
+	message.append(encode_length(host_addr.sin_addr.s_addr));
 	message.append(encode_length(http_port));
 	message.append(encode_length(binary_port));
 	gossip(message.c_str(), message.size());

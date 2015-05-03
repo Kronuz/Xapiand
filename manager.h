@@ -56,6 +56,8 @@ class XapiandManager {
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
+	struct sockaddr_in host_addr;
+
 	struct sockaddr_in gossip_addr;
 	int gossip_port, gossip_sock;
 	int http_port, http_sock;
@@ -76,6 +78,7 @@ class XapiandManager {
 
 	void check_tcp_backlog(int tcp_backlog);
 	void shutdown_cb(ev::async &watcher, int revents);
+	struct sockaddr_in host_address();
 	bool bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries);
 	bool bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries, const char *group);
 	void destroy();
