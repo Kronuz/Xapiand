@@ -54,6 +54,9 @@ void log(void *obj, const char *fmt, ...);
 std::string repr(const char *p, size_t size);
 std::string repr(const std::string &string);
 
+std::string name_generator();
+int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
+
 typedef struct cont_time_s {
 	unsigned short cnt[SLOT_TIME_MINUTE];
 	unsigned short sec[SLOT_TIME_SECOND];
