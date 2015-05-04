@@ -188,7 +188,7 @@ int identify_cmd(std::string &commad);
 bool is_digits(const std::string &str);
 int get_minutes(std::string &hour, std::string &minute);
 bool Is_id_range(std::string &ids);
-
+std::string to_type(std::string type);
 
 void update_pos_time();
 void fill_zeros_stats_cnt(int start, int end);
