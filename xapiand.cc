@@ -79,6 +79,36 @@ int main(int argc, char **argv)
 	int binary_port = 0;
 	const char *gossip_group = NULL;
 	const char *cluster_name = "xapiand";
+	const char *p;
+
+	INFO((void *)NULL,
+		"\n\n"
+		"  __  __           _                 _\n"
+		"  \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n"
+		"   \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n"
+		"   /  \\ (_| | |_) | | (_| | | | | (_| |\n"
+		"  /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n"
+		"            |_|  v%s\n"
+		"   [%s]\n"
+		"          Using Xapian v%s\n\n", PACKAGE_VERSION, PACKAGE_BUGREPORT, XAPIAN_VERSION);
+
+	// Prefer glass database
+	if (setenv("XAPIAN_PREFER_GLASS", "1", false) == 0) {
+		INFO((void *)NULL, "Enabled glass database.\n");
+	}
+
+	// Enable changesets
+	if (setenv("XAPIAN_MAX_CHANGESETS", "10", false) == 0) {
+		INFO((void *)NULL, "Database changesets set to 10.\n");
+	}
+
+	// Flush threshold increased
+	int flush_threshold = 10000;  // Default is 10000 (if no set)
+	p = getenv("XAPIAN_FLUSH_THRESHOLD");
+	if (p) flush_threshold = atoi(p);
+	if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", false) == 0) {
+		INFO((void *)NULL, "Increased flush threshold to 100000 (it was originally set to %d).\n", flush_threshold);
+	}
 
 	time(&init_time);
 	struct tm *timeinfo = localtime(&init_time);
@@ -94,7 +124,6 @@ int main(int argc, char **argv)
 		binary_port = atoi(argv[2]);
 	}
 
-	INFO((void *)NULL, "Starting %s (%s).\n", PACKAGE_STRING, PACKAGE_BUGREPORT);
 	run(num_servers, cluster_name, gossip_group, gossip_port, http_port, binary_port);
 	INFO((void *)NULL, "Done with all work!\n");
 
