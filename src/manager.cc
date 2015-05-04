@@ -549,7 +549,7 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 						node->addr.sin_addr.s_addr = remote_node.addr.sin_addr.s_addr;
 						node->http_port = remote_node.http_port;
 						node->binary_port = remote_node.binary_port;
-						INFO(this, "Node %s joined the party!\n", remote_node.name.c_str());
+						INFO(this, "Node %s joined the party on %s: http:%d, binary:%d at pid:%d!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
 					}
 					node->touched = now;
 					break;
