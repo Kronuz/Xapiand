@@ -39,7 +39,7 @@
 #include <unistd.h>
 
 
-const uint16_t XAPIAND_GOSSIP_PROTOCOL_VERSION = XAPIAND_GOSSIP_PROTOCOL_MAJOR_VERSION | XAPIAND_GOSSIP_PROTOCOL_MINOR_VERSION << 8;
+const uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION | XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION << 8;
 
 
 #define TIME_RE "((([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)?"
@@ -47,18 +47,18 @@ const uint16_t XAPIAND_GOSSIP_PROTOCOL_VERSION = XAPIAND_GOSSIP_PROTOCOL_MAJOR_V
 pcre *XapiandManager::compiled_time_re = NULL;
 
 
-XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *gossip_group_, int gossip_port_, int http_port_, int binary_port_)
+XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *discovery_group_, int discovery_port_, int http_port_, int binary_port_)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  state(STATE_RESET),
 	  cluster_name(cluster_name_),
-	  gossip_io(*loop),
-	  gossip_heartbeat(*loop),
+	  discovery_io(*loop),
+	  discovery_heartbeat(*loop),
 	  break_loop(*loop),
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  thread_pool("W%d", 10),
-	  gossip_port(gossip_port_)
+	  discovery_port(discovery_port_)
 {
 	sranddev();
 
@@ -83,10 +83,10 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, c
 
 	this_node.addr = host_address();
 
-	if (gossip_port == 0) {
-		gossip_port = XAPIAND_GOSSIP_SERVERPORT;
+	if (discovery_port == 0) {
+		discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
 	}
-	bind_udp("gossip", gossip_sock, gossip_port, gossip_addr, 1, gossip_group_ ? gossip_group_ : XAPIAND_GOSSIP_GROUP);
+	bind_udp("discovery", discovery_sock, discovery_port, discovery_addr, 1, discovery_group_ ? discovery_group_ : XAPIAND_DISCOVERY_GROUP);
 
 	int http_tries = 1;
 	if (this_node.http_port == 0) {
@@ -104,13 +104,13 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, c
 	bind_tcp("binary", binary_sock, this_node.binary_port, addr, binary_tries);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
-	assert(gossip_sock != -1 && http_sock != -1 && binary_sock != -1);
+	assert(discovery_sock != -1 && http_sock != -1 && binary_sock != -1);
 
-	gossip_io.set<XapiandManager, &XapiandManager::gossip_io_cb>(this);
-	gossip_io.start(gossip_sock, ev::READ);
+	discovery_io.set<XapiandManager, &XapiandManager::discovery_io_cb>(this);
+	discovery_io.start(discovery_sock, ev::READ);
 
-	gossip_heartbeat.set<XapiandManager, &XapiandManager::gossip_heartbeat_cb>(this);
-	gossip_heartbeat.start(0, 1);
+	discovery_heartbeat.set<XapiandManager, &XapiandManager::discovery_heartbeat_cb>(this);
+	discovery_heartbeat.start(0, 1);
 
 	LOG_OBJ(this, "CREATED MANAGER!\n");
 }
@@ -173,7 +173,7 @@ struct sockaddr_in XapiandManager::host_address()
 				char ip[INET_ADDRSTRLEN];
 				addr = *(struct sockaddr_in *)ifa->ifa_addr;
 				inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
-				LOG_GOSSIP(this, "Using %s, IP address = %s\n", ifa->ifa_name, ip);
+				LOG_DISCOVERY(this, "Using %s, IP address = %s\n", ifa->ifa_name, ip);
 				break;
 			}
 		}
@@ -335,16 +335,16 @@ void XapiandManager::sig_shutdown_handler(int sig)
 void XapiandManager::destroy()
 {
 	pthread_mutex_lock(&qmtx);
-	if (gossip_sock == -1 && http_sock == -1 && binary_sock == -1) {
+	if (discovery_sock == -1 && http_sock == -1 && binary_sock == -1) {
 		pthread_mutex_unlock(&qmtx);
 		return;
 	}
 
-	gossip(GOSSIP_BYE, this_node);
+	discovery(DISCOVERY_BYE, this_node);
 
-	if (gossip_sock != -1) {
-		::close(gossip_sock);
-		gossip_sock = -1;
+	if (discovery_sock != -1) {
+		::close(discovery_sock);
+		discovery_sock = -1;
 	}
 
 	if (http_sock != -1) {
@@ -357,7 +357,7 @@ void XapiandManager::destroy()
 		binary_sock = -1;
 	}
 
-	gossip_io.stop();
+	discovery_io.stop();
 
 	pthread_mutex_unlock(&qmtx);
 
@@ -420,7 +420,7 @@ void XapiandManager::shutdown()
 }
 
 
-void XapiandManager::gossip_heartbeat_cb(ev::timer &watcher, int revents)
+void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 {
 	if (state != STATE_READY) {
 		if (state == STATE_RESET) {
@@ -429,57 +429,57 @@ void XapiandManager::gossip_heartbeat_cb(ev::timer &watcher, int revents)
 			}
 			this_node.name = name_generator();
 		}
-		gossip(GOSSIP_HELLO, this_node);
+		discovery(DISCOVERY_HELLO, this_node);
 	} else {
-		gossip(GOSSIP_PING, this_node);
+		discovery(DISCOVERY_PING, this_node);
 	}
 	if (state && state-- == 1) {
-		gossip_heartbeat.set(0, 10);
+		discovery_heartbeat.set(0, 10);
 	}
 }
 
 
-void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
+void XapiandManager::discovery_io_cb(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
-		LOG_EV(this, "ERROR: got invalid gossip event (sock=%d): %s\n", gossip_sock, strerror(errno));
+		LOG_EV(this, "ERROR: got invalid discovery event (sock=%d): %s\n", discovery_sock, strerror(errno));
 		return;
 	}
 
-	if (gossip_sock == -1) {
+	if (discovery_sock == -1) {
 		return;
 	}
 
-	assert(gossip_sock == watcher.fd);
+	assert(discovery_sock == watcher.fd);
 
-	if (gossip_sock != -1 && revents & EV_READ) {
+	if (discovery_sock != -1 && revents & EV_READ) {
 		char buf[1024];
 		struct sockaddr_in addr;
 		socklen_t addrlen;
 
-		ssize_t received = ::recvfrom(gossip_sock, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
+		ssize_t received = ::recvfrom(discovery_sock, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
 
 		if (received < 0) {
-			if (errno != EAGAIN && gossip_sock != -1) {
-				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", gossip_sock, strerror(errno));
+			if (errno != EAGAIN && discovery_sock != -1) {
+				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", discovery_sock, strerror(errno));
 				destroy();
 			}
 		} else if (received == 0) {
 			// The peer has closed its half side of the connection.
-			LOG_CONN(this, "Received EOF (sock=%d)!\n", gossip_sock);
+			LOG_CONN(this, "Received EOF (sock=%d)!\n", discovery_sock);
 			destroy();
 		} else {
-			LOG_GOSSIP_WIRE(this, "(sock=%d) -->> '%s'\n", gossip_sock, repr(buf, received).c_str());
+			LOG_DISCOVERY_WIRE(this, "(sock=%d) -->> '%s'\n", discovery_sock, repr(buf, received).c_str());
 
 			if (received < 4) {
-				LOG_GOSSIP(this, "Badly formed message: Incomplete!\n");
+				LOG_DISCOVERY(this, "Badly formed message: Incomplete!\n");
 				return;
 			}
 
 			// LOG(this, "%s says '%s'\n", inet_ntoa(addr.sin_addr), repr(buf, received).c_str());
 			uint16_t remote_protocol_version = *(uint16_t *)(buf + 1);
-			if ((remote_protocol_version & 0xff) > XAPIAND_GOSSIP_PROTOCOL_MAJOR_VERSION) {
-				LOG_GOSSIP(this, "Badly formed message: Protocol version mismatch %x vs %x!\n", remote_protocol_version & 0xff, XAPIAND_GOSSIP_PROTOCOL_MAJOR_VERSION);
+			if ((remote_protocol_version & 0xff) > XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) {
+				LOG_DISCOVERY(this, "Badly formed message: Protocol version mismatch %x vs %x!\n", remote_protocol_version & 0xff, XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION);
 				return;
 			}
 
@@ -488,7 +488,7 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 			size_t decoded;
 
 			if ((decoded = decode_length(&ptr, buf + received, true)) == -1) {
-				LOG_GOSSIP(this, "Badly formed message: No cluster name!\n");
+				LOG_DISCOVERY(this, "Badly formed message: No cluster name!\n");
 				return;
 			}
 			std::string remote_cluster_name(ptr, decoded);
@@ -498,25 +498,25 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 			}
 
 			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
-				LOG_GOSSIP(this, "Badly formed message: No address!\n");
+				LOG_DISCOVERY(this, "Badly formed message: No address!\n");
 				return;
 			}
 			remote_node.addr.sin_addr.s_addr = decoded;
 
 			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
-				LOG_GOSSIP(this, "Badly formed message: No http port!\n");
+				LOG_DISCOVERY(this, "Badly formed message: No http port!\n");
 				return;
 			}
 			remote_node.http_port = decoded;
 
 			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
-				LOG_GOSSIP(this, "Badly formed message: No binary port!\n");
+				LOG_DISCOVERY(this, "Badly formed message: No binary port!\n");
 				return;
 			}
 			remote_node.binary_port = decoded;
 
 			if ((decoded = decode_length(&ptr, buf + received, true)) <= 0) {
-				LOG_GOSSIP(this, "Badly formed message: No name length!\n");
+				LOG_DISCOVERY(this, "Badly formed message: No name length!\n");
 				return;
 			}
 			remote_node.name = std::string(ptr, decoded);
@@ -524,34 +524,34 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 
 			int remote_pid = decode_length(&ptr, buf + received, false);
 
-			// LOG_GOSSIP(this, "%s on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
+			// LOG_DISCOVERY(this, "%s on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
 
 			Node *node;
 			time_t now = time(NULL);
 
 			switch (buf[0]) {
-				case GOSSIP_HELLO:
+				case DISCOVERY_HELLO:
 					if (remote_node.addr.sin_addr.s_addr == this_node.addr.sin_addr.s_addr &&
 						remote_node.http_port == this_node.http_port &&
 						remote_node.binary_port == this_node.binary_port) {
-						gossip(GOSSIP_WAVE, this_node);
+						discovery(DISCOVERY_WAVE, this_node);
 					} else {
 						try {
 							node = &nodes.at(stringtolower(remote_node.name));
 							if (remote_node.addr.sin_addr.s_addr == node->addr.sin_addr.s_addr &&
 								remote_node.http_port == node->http_port &&
 								remote_node.binary_port == node->binary_port) {
-								gossip(GOSSIP_WAVE, this_node);
+								discovery(DISCOVERY_WAVE, this_node);
 							} else {
-								gossip(GOSSIP_SNEER, remote_node);
+								discovery(DISCOVERY_SNEER, remote_node);
 							}
 						} catch (const std::out_of_range& err) {
-							gossip(GOSSIP_WAVE, this_node);
+							discovery(DISCOVERY_WAVE, this_node);
 						}
 					}
 					break;
 
-				case GOSSIP_WAVE:
+				case DISCOVERY_WAVE:
 					try {
 						node = &nodes.at(stringtolower(remote_node.name));
 					} catch (const std::out_of_range& err) {
@@ -569,39 +569,39 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 					}
 					break;
 
-				case GOSSIP_SNEER:
+				case DISCOVERY_SNEER:
 					if (state != STATE_READY &&
 						remote_node.name == this_node.name &&
 						remote_node.addr.sin_addr.s_addr == this_node.addr.sin_addr.s_addr &&
 						remote_node.http_port == this_node.http_port &&
 						remote_node.binary_port == this_node.binary_port) {
 						state = STATE_RESET;
-						gossip_heartbeat.set(0, 1);
-						LOG_GOSSIP(this, "Retrying other name");
+						discovery_heartbeat.set(0, 1);
+						LOG_DISCOVERY(this, "Retrying other name");
 					}
 					break;
 
-				case GOSSIP_PING:
+				case DISCOVERY_PING:
 					try {
 						node = &nodes.at(stringtolower(remote_node.name));
 						node->touched = now;
 						// Received a ping, return pong
-						gossip(GOSSIP_PONG, this_node);
+						discovery(DISCOVERY_PONG, this_node);
 					} catch (const std::out_of_range& err) {
-						LOG_GOSSIP(this, "Ignoring ping from unknown peer");
+						LOG_DISCOVERY(this, "Ignoring ping from unknown peer");
 					}
 					break;
 
-				case GOSSIP_PONG:
+				case DISCOVERY_PONG:
 					try {
 						node = &nodes.at(stringtolower(remote_node.name));
 						node->touched = now;
 					} catch (const std::out_of_range& err) {
-						LOG_GOSSIP(this, "Ignoring pong from unknown peer");
+						LOG_DISCOVERY(this, "Ignoring pong from unknown peer");
 					}
 					break;
 
-				case GOSSIP_BYE:
+				case DISCOVERY_BYE:
 					nodes.erase(stringtolower(remote_node.name));
 					INFO(this, "Node %s left the party!\n", remote_node.name.c_str());
 					break;
@@ -611,20 +611,20 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 }
 
 
-void XapiandManager::gossip(const char *buf, size_t buf_size)
+void XapiandManager::discovery(const char *buf, size_t buf_size)
 {
-	if (gossip_sock != -1) {
-		LOG_GOSSIP_WIRE(this, "(sock=%d) <<-- '%s'\n", gossip_sock, repr(buf, buf_size).c_str());
+	if (discovery_sock != -1) {
+		LOG_DISCOVERY_WIRE(this, "(sock=%d) <<-- '%s'\n", discovery_sock, repr(buf, buf_size).c_str());
 
 #ifdef MSG_NOSIGNAL
-		ssize_t written = ::sendto(gossip_sock, buf, buf_size, MSG_NOSIGNAL, (struct sockaddr *)&gossip_addr, sizeof(gossip_addr));
+		ssize_t written = ::sendto(discovery_sock, buf, buf_size, MSG_NOSIGNAL, (struct sockaddr *)&discovery_addr, sizeof(discovery_addr));
 #else
-		ssize_t written = ::sendto(gossip_sock, buf, buf_size, 0, (struct sockaddr *)&gossip_addr, sizeof(gossip_addr));
+		ssize_t written = ::sendto(discovery_sock, buf, buf_size, 0, (struct sockaddr *)&discovery_addr, sizeof(discovery_addr));
 #endif
 
 		if (written < 0) {
-			if (errno != EAGAIN && gossip_sock != -1) {
-				LOG_ERR(this, "ERROR: sendto error (sock=%d): %s\n", gossip_sock, strerror(errno));
+			if (errno != EAGAIN && discovery_sock != -1) {
+				LOG_ERR(this, "ERROR: sendto error (sock=%d): %s\n", discovery_sock, strerror(errno));
 				destroy();
 			}
 		} else if (written == 0) {
@@ -636,10 +636,10 @@ void XapiandManager::gossip(const char *buf, size_t buf_size)
 }
 
 
-void XapiandManager::gossip(gossip_type type, Node &node)
+void XapiandManager::discovery(discovery_type type, Node &node)
 {
 	std::string message((const char *)&type, 1);
-	message.append(std::string((const char *)&XAPIAND_GOSSIP_PROTOCOL_VERSION, sizeof(uint16_t)));
+	message.append(std::string((const char *)&XAPIAND_DISCOVERY_PROTOCOL_VERSION, sizeof(uint16_t)));
 	message.append(encode_length(cluster_name.size()));
 	message.append(cluster_name);
 	message.append(encode_length(node.addr.sin_addr.s_addr));
@@ -648,7 +648,7 @@ void XapiandManager::gossip(gossip_type type, Node &node)
 	message.append(encode_length(node.name.size()));
 	message.append(node.name);
 	message.append(encode_length(getpid()));
-	gossip(message.c_str(), message.size());
+	discovery(message.c_str(), message.size());
 }
 
 
@@ -661,8 +661,8 @@ void XapiandManager::run(int num_servers)
 	if (this_node.binary_port != -1) {
 		msg += "tcp:" + std::to_string(this_node.binary_port) + " (xapian v" + std::to_string(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION) + "), ";
 	}
-	if (gossip_port != -1) {
-		msg += "udp:" + std::to_string(gossip_port) + " (gossip v" + std::to_string(XAPIAND_GOSSIP_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_GOSSIP_PROTOCOL_MINOR_VERSION) + "), ";
+	if (discovery_port != -1) {
+		msg += "udp:" + std::to_string(discovery_port) + " (discovery v" + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION) + "), ";
 	}
 	msg += "at pid:" + std::to_string(getpid()) + "...\n";
 
