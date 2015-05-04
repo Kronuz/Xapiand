@@ -47,10 +47,10 @@ enum gossip_type {
 
 
 #define STATE_READY       0
-#define STATE_WAINTING___ 1
-#define STATE_WAINTING__  2
-#define STATE_WAINTING_   3
-#define STATE_WAINTING    4
+#define STATE_WAITING___  1
+#define STATE_WAITING__   2
+#define STATE_WAITING_    3
+#define STATE_WAITING     4
 #define STATE_RESET       5
 
 
