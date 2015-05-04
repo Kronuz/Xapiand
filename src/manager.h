@@ -72,7 +72,6 @@ class XapiandManager {
 	ev::loop_ref *loop;
 
 	unsigned char state;
-	std::unordered_map<std::string, Node> nodes;
 
 	ev::io gossip_io;
 	ev::timer gossip_heartbeat;
@@ -81,7 +80,6 @@ class XapiandManager {
 	pthread_mutexattr_t qmtx_attr;
 
 	std::string cluster_name;
-	Node this_node;
 
 	struct sockaddr_in gossip_addr;
 	int gossip_port, gossip_sock;
@@ -121,6 +119,9 @@ public:
 	time_t shutdown_asap;
 	time_t shutdown_now;
 	ev::async async_shutdown;
+
+	Node this_node;
+	std::unordered_map<std::string, Node> nodes;
 
 	XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *gossip_group_, int gossip_port_, int http_port_, int binary_port_);
 	~XapiandManager();
