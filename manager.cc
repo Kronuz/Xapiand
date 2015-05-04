@@ -44,8 +44,10 @@
 pcre *XapiandManager::compiled_time_re = NULL;
 
 
-XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *gossip_group_, int gossip_port_, int http_port_, int binary_port_)
+XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *gossip_group_, int gossip_port_, int http_port_, int binary_port_)
 	: loop(loop_ ? loop_: &dynamic_loop),
+	  state(STATE_RESET),
+	  cluster_name(cluster_name_),
 	  gossip_io(*loop),
 	  gossip_heartbeat(*loop),
 	  break_loop(*loop),
@@ -53,10 +55,13 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *gossip_group_, i
 	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  thread_pool("W%d", 10),
-	  gossip_port(gossip_port_),
-	  http_port(http_port_),
-	  binary_port(binary_port_)
+	  gossip_port(gossip_port_)
 {
+	sranddev();
+
+	this_node.http_port = http_port_;
+	this_node.binary_port = binary_port_;
+
 	struct sockaddr_in addr;
 
 	pthread_mutexattr_init(&qmtx_attr);
@@ -73,7 +78,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *gossip_group_, i
 	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
 	async_shutdown.start();
 
-	host_addr = host_address();
+	this_node.addr = host_address();
 
 	if (gossip_port == 0) {
 		gossip_port = XAPIAND_GOSSIP_SERVERPORT;
@@ -81,19 +86,19 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *gossip_group_, i
 	bind_udp("gossip", gossip_sock, gossip_port, gossip_addr, 1, gossip_group_ ? gossip_group_ : XAPIAND_GOSSIP_GROUP);
 
 	int http_tries = 1;
-	if (http_port == 0) {
-		http_port = XAPIAND_HTTP_SERVERPORT;
+	if (this_node.http_port == 0) {
+		this_node.http_port = XAPIAND_HTTP_SERVERPORT;
 		http_tries = 10;
 	}
-	bind_tcp("http", http_sock, http_port, addr, http_tries);
+	bind_tcp("http", http_sock, this_node.http_port, addr, http_tries);
 
 #ifdef HAVE_REMOTE_PROTOCOL
 	int binary_tries = 1;
-	if (binary_port == 0) {
-		binary_port = XAPIAND_BINARY_SERVERPORT;
+	if (this_node.binary_port == 0) {
+		this_node.binary_port = XAPIAND_BINARY_SERVERPORT;
 		binary_tries = 10;
 	}
-	bind_tcp("binary", binary_sock, binary_port, addr, binary_tries);
+	bind_tcp("binary", binary_sock, this_node.binary_port, addr, binary_tries);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 	assert(gossip_sock != -1 && http_sock != -1 && binary_sock != -1);
@@ -102,7 +107,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *gossip_group_, i
 	gossip_io.start(gossip_sock, ev::READ);
 
 	gossip_heartbeat.set<XapiandManager, &XapiandManager::gossip_heartbeat_cb>(this);
-	gossip_heartbeat.start(0, 5);
+	gossip_heartbeat.start(0, 1);
 
 	LOG_OBJ(this, "CREATED MANAGER!\n");
 }
@@ -332,7 +337,7 @@ void XapiandManager::destroy()
 		return;
 	}
 
-	gossip(GOSSIP_DEATH);
+	gossip(GOSSIP_DEATH, this_node);
 
 	if (gossip_sock != -1) {
 		::close(gossip_sock);
@@ -414,7 +419,17 @@ void XapiandManager::shutdown()
 
 void XapiandManager::gossip_heartbeat_cb(ev::timer &watcher, int revents)
 {
-	gossip(GOSSIP_PING);
+	if (state != STATE_READY) {
+		if (state == STATE_RESET) {
+			this_node.name = name_generator();
+		}
+		gossip(GOSSIP_HELLO, this_node);
+	} else {
+		gossip(GOSSIP_PING, this_node);
+	}
+	if (state && state-- == 1) {
+		gossip_heartbeat.set(0, 10);
+	}
 }
 
 
@@ -448,22 +463,127 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 			LOG_CONN(this, "Received EOF (sock=%d)!\n", gossip_sock);
 			destroy();
 		} else {
-			LOG_GOSSIP_WIRE(this, "(sock=%d) -->> '%s'\n", gossip_sock, repr(buf, received).c_str());
+			LOG_GOSSIP(this, "(sock=%d) -->> '%s'\n", gossip_sock, repr(buf, received).c_str());
+
+			if (received < 2) {
+				LOG_GOSSIP(this, "Badly formed message: Incomplete!\n");
+				return;
+			}
 
 			// LOG_GOSSIP(this, "%s says '%s'\n", inet_ntoa(addr.sin_addr), repr(buf, received).c_str());
 
 			const char *ptr = buf + 1;
-			struct sockaddr_in remote_addr;
-			remote_addr.sin_addr.s_addr = decode_length(&ptr, buf + received, false);
-			int remote_http_port = decode_length(&ptr, buf + received, false);
-			int remote_binary_port = decode_length(&ptr, buf + received, false);
-			LOG_GOSSIP(this, "Remote %s on http:%d, binary:%d\n", inet_ntoa(remote_addr.sin_addr), remote_http_port, remote_binary_port);
+			Node remote_node;
+			size_t decoded;
 
-			switch (*buf) {
-				case GOSSIP_PING:
-					// Received a ping, return pong
-					gossip(GOSSIP_PONG);
+			if ((decoded = decode_length(&ptr, buf + received, true)) == -1) {
+				LOG_GOSSIP(this, "Badly formed message: No cluster name!\n");
+				return;
+			}
+			std::string remote_cluster_name(ptr, decoded);
+			ptr += decoded;
+			if (remote_cluster_name != cluster_name) {
+				return;
+			}
+
+			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
+				LOG_GOSSIP(this, "Badly formed message: No address!\n");
+				return;
+			}
+			remote_node.addr.sin_addr.s_addr = decoded;
+
+			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
+				LOG_GOSSIP(this, "Badly formed message: No http port!\n");
+				return;
+			}
+			remote_node.http_port = decoded;
+
+			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
+				LOG_GOSSIP(this, "Badly formed message: No binary port!\n");
+				return;
+			}
+			remote_node.binary_port = decoded;
+
+			if ((decoded = decode_length(&ptr, buf + received, true)) <= 0) {
+				LOG_GOSSIP(this, "Badly formed message: No name length!\n");
+				return;
+			}
+			remote_node.name = std::string(ptr, decoded);
+			ptr += decoded;
+
+			int remote_pid = decode_length(&ptr, buf + received, false);
+
+			LOG_GOSSIP(this, "%s on %s: http:%d, binary:%d at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
+
+			Node *node;
+			time_t now = time(NULL);
+
+			switch (buf[0]) {
+				case GOSSIP_HELLO:
+					if (remote_node.addr.sin_addr.s_addr == this_node.addr.sin_addr.s_addr &&
+						remote_node.http_port == this_node.http_port &&
+						remote_node.binary_port == this_node.binary_port) {
+						gossip(GOSSIP_WAVE, this_node);
+					} else {
+						try {
+							node = &nodes.at(stringtolower(remote_node.name));
+							if (remote_node.addr.sin_addr.s_addr == node->addr.sin_addr.s_addr &&
+								remote_node.http_port == node->http_port &&
+								remote_node.binary_port == node->binary_port) {
+								gossip(GOSSIP_WAVE, this_node);
+							} else {
+								gossip(GOSSIP_SNEER, *node);
+							}
+						} catch (const std::out_of_range& err) {
+							gossip(GOSSIP_WAVE, this_node);
+						}
+					}
 					break;
+
+				case GOSSIP_WAVE:
+					try {
+						node = &nodes.at(stringtolower(remote_node.name));
+					} catch (const std::out_of_range& err) {
+						node = &nodes[stringtolower(remote_node.name)];
+						node->name = remote_node.name;
+						node->addr.sin_addr.s_addr = remote_node.addr.sin_addr.s_addr;
+						node->http_port = remote_node.http_port;
+						node->binary_port = remote_node.binary_port;
+						INFO(this, "Node %s joined the party!\n", remote_node.name.c_str());
+					}
+					node->touched = now;
+					break;
+
+				case GOSSIP_SNEER:
+					if (state != STATE_READY &&
+						remote_node.name == this_node.name &&
+						remote_node.addr.sin_addr.s_addr == this_node.addr.sin_addr.s_addr &&
+						remote_node.http_port == this_node.http_port &&
+						remote_node.binary_port == this_node.binary_port) {
+						state = STATE_RESET;
+						gossip_heartbeat.set(0, 1);
+						LOG_GOSSIP(this, "Retrying other name");
+					}
+					break;
+
+				case GOSSIP_PING:
+					try {
+						node = &nodes.at(stringtolower(remote_node.name));
+						node->touched = now;
+						// Received a ping, return pong
+						gossip(GOSSIP_PONG, this_node);
+					} catch (const std::out_of_range& err) {
+						LOG_GOSSIP(this, "Ignoring ping from unknown peer");
+					}
+					break;
+
+				case GOSSIP_PONG:
+					try {
+						node = &nodes.at(stringtolower(remote_node.name));
+						node->touched = now;
+					} catch (const std::out_of_range& err) {
+						LOG_GOSSIP(this, "Ignoring pong from unknown peer");
+					}
 			}
 		}
 	}
@@ -495,12 +615,17 @@ void XapiandManager::gossip(const char *buf, size_t buf_size)
 }
 
 
-void XapiandManager::gossip(gossip_type type)
+void XapiandManager::gossip(gossip_type type, Node &node)
 {
 	std::string message((const char *)&type, 1);
-	message.append(encode_length(host_addr.sin_addr.s_addr));
-	message.append(encode_length(http_port));
-	message.append(encode_length(binary_port));
+	message.append(encode_length(cluster_name.size()));
+	message.append(cluster_name);
+	message.append(encode_length(node.addr.sin_addr.s_addr));
+	message.append(encode_length(node.http_port));
+	message.append(encode_length(node.binary_port));
+	message.append(encode_length(node.name.size()));
+	message.append(node.name);
+	message.append(encode_length(getpid()));
 	gossip(message.c_str(), message.size());
 }
 
@@ -508,9 +633,9 @@ void XapiandManager::gossip(gossip_type type)
 void XapiandManager::run(int num_servers)
 {
 #ifdef HAVE_REMOTE_PROTOCOL
-	INFO(this, "Listening on tcp:%d (http), tcp:%d (xapian), udp:%d (gossip)...\n", http_port, binary_port, gossip_port);
+	INFO(this, "Listening on tcp:%d (http), tcp:%d (xapian), udp:%d (gossip)...\n", this_node.http_port, this_node.binary_port, gossip_port);
 #else
-	INFO(this, "Listening on tcp:%d (http), udp:%d (gossip)...\n", http_port, gossip_port);
+	INFO(this, "Listening on tcp:%d (http), udp:%d (gossip)...\n", this_node.http_port, this_node.gossip_port);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 	ThreadPool server_pool("S%d", num_servers);
