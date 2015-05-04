@@ -424,6 +424,9 @@ void XapiandManager::gossip_heartbeat_cb(ev::timer &watcher, int revents)
 {
 	if (state != STATE_READY) {
 		if (state == STATE_RESET) {
+			if (!this_node.name.empty()) {
+				nodes.erase(stringtolower(this_node.name));
+			}
 			this_node.name = name_generator();
 		}
 		gossip(GOSSIP_HELLO, this_node);
@@ -540,7 +543,7 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 								remote_node.binary_port == node->binary_port) {
 								gossip(GOSSIP_WAVE, this_node);
 							} else {
-								gossip(GOSSIP_SNEER, *node);
+								gossip(GOSSIP_SNEER, remote_node);
 							}
 						} catch (const std::out_of_range& err) {
 							gossip(GOSSIP_WAVE, this_node);
@@ -559,7 +562,11 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 						node->binary_port = remote_node.binary_port;
 						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
 					}
-					node->touched = now;
+					if (remote_node.addr.sin_addr.s_addr == node->addr.sin_addr.s_addr &&
+						remote_node.http_port == node->http_port &&
+						remote_node.binary_port == node->binary_port) {
+						node->touched = now;
+					}
 					break;
 
 				case GOSSIP_SNEER:
