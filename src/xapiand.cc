@@ -55,13 +55,13 @@ void setup_signal_handlers(void) {
 }
 
 
-void run(int num_servers, const char *gossip_group, int gossip_port, int http_port, int binary_port)
+void run(int num_servers, const char *cluster_name_, const char *gossip_group, int gossip_port, int http_port, int binary_port)
 {
 	ev::default_loop default_loop;
 
 	setup_signal_handlers();
 
-	XapiandManager manager(&default_loop, gossip_group, gossip_port, http_port, binary_port);
+	XapiandManager manager(&default_loop, cluster_name_, gossip_group, gossip_port, http_port, binary_port);
 
 	manager_ptr = &manager;
 
@@ -77,7 +77,8 @@ int main(int argc, char **argv)
 	int gossip_port = 0;
 	int http_port = 0;
 	int binary_port = 0;
-	char *gossip_group = NULL;
+	const char *gossip_group = NULL;
+	const char *cluster_name = "xapiand";
 
 	time(&init_time);
 	struct tm *timeinfo = localtime(&init_time);
@@ -94,7 +95,7 @@ int main(int argc, char **argv)
 	}
 
 	INFO((void *)NULL, "Starting %s (%s).\n", PACKAGE_STRING, PACKAGE_BUGREPORT);
-	run(num_servers, gossip_group, gossip_port, http_port, binary_port);
+	run(num_servers, cluster_name, gossip_group, gossip_port, http_port, binary_port);
 	INFO((void *)NULL, "Done with all work!\n");
 
 	return 0;
