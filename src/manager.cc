@@ -513,7 +513,7 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 
 			int remote_pid = decode_length(&ptr, buf + received, false);
 
-			LOG_GOSSIP(this, "%s on ip:%s, http:%d, binary:%d at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
+			LOG_GOSSIP(this, "%s on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
 
 			Node *node;
 			time_t now = time(NULL);
@@ -549,7 +549,7 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 						node->addr.sin_addr.s_addr = remote_node.addr.sin_addr.s_addr;
 						node->http_port = remote_node.http_port;
 						node->binary_port = remote_node.binary_port;
-						INFO(this, "Node %s joined the party on ip:%s, http:%d, binary:%d at pid:%d!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
+						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
 					}
 					node->touched = now;
 					break;
@@ -638,11 +638,19 @@ void XapiandManager::gossip(gossip_type type, Node &node)
 
 void XapiandManager::run(int num_servers)
 {
-#ifdef HAVE_REMOTE_PROTOCOL
-	INFO(this, "Listening on tcp:%d (http), tcp:%d (xapian), udp:%d (gossip)...\n", this_node.http_port, this_node.binary_port, gossip_port);
-#else
-	INFO(this, "Listening on tcp:%d (http), udp:%d (gossip)...\n", this_node.http_port, this_node.gossip_port);
-#endif  /* HAVE_REMOTE_PROTOCOL */
+	std::string msg("Listening on ");
+	if (this_node.http_port != -1) {
+		msg += "tcp:" + std::to_string(this_node.http_port) + " (http), ";
+	}
+	if (this_node.binary_port != -1) {
+		msg += "tcp:" + std::to_string(this_node.binary_port) + " (xapian), ";
+	}
+	if (gossip_port != -1) {
+		msg += "udp:" + std::to_string(gossip_port) + " (gossip), ";
+	}
+	msg += "at pid:" + std::to_string(getpid()) + "...\n";
+
+	INFO(this, msg.c_str());
 
 	ThreadPool server_pool("S%d", num_servers);
 	for (int i = 0; i < num_servers; i++) {
