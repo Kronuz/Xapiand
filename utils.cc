@@ -1170,7 +1170,7 @@ int identify_cmd(std::string &commad)
 		} else if(strcasecmp(commad.c_str(), "_stats") == 0) {
 			return CMD_STATS;
 		}
-		return -1;
+		return CMD_UNKNOWN;
 	} else return 0;
 }
 

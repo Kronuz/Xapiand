@@ -408,8 +408,12 @@ void HttpClient::_search()
 				cJSON *root = cJSON_CreateObject();
 				cJSON *err_response = cJSON_CreateObject();
 				cJSON_AddItemToObject(root, "Response", err_response);
-				if (cmd == -1)
+				if (cmd == CMD_UNKNOWN)
 					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
+
+				if (cmd == CMD_UNKNOWN_HOST)
+					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+
 				else
 					cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
 				result = cJSON_PrintUnformatted(root);
@@ -630,6 +634,8 @@ int HttpClient::_endpointgen(query_t &e)
 						node = &server->manager->nodes.at(stringtolower(hos_));
 					} catch (const std::out_of_range& err) {
 						LOG(this, "Node not found\n");
+						host = hos_;
+						return CMD_UNKNOWN_HOST;
 					}
 				} else if (!host.empty()) {
 					hos_ = host;
@@ -637,6 +643,7 @@ int HttpClient::_endpointgen(query_t &e)
 						node = &server->manager->nodes.at(stringtolower(hos_));
 					} catch (const std::out_of_range& err) {
 						LOG(this, "Node not found\n");
+						return CMD_UNKNOWN_HOST;
 					}
 				}
 				char ip[INET_ADDRSTRLEN];
