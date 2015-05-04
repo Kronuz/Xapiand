@@ -55,13 +55,13 @@ void setup_signal_handlers(void) {
 }
 
 
-void run(int num_servers, const char *cluster_name_, const char *gossip_group, int gossip_port, int http_port, int binary_port)
+void run(int num_servers, const char *cluster_name_, const char *discovery_group, int discovery_port, int http_port, int binary_port)
 {
 	ev::default_loop default_loop;
 
 	setup_signal_handlers();
 
-	XapiandManager manager(&default_loop, cluster_name_, gossip_group, gossip_port, http_port, binary_port);
+	XapiandManager manager(&default_loop, cluster_name_, discovery_group, discovery_port, http_port, binary_port);
 
 	manager_ptr = &manager;
 
@@ -74,10 +74,10 @@ void run(int num_servers, const char *cluster_name_, const char *gossip_group, i
 int main(int argc, char **argv)
 {
 	int num_servers = 8;
-	int gossip_port = 0;
+	int discovery_port = 0;
 	int http_port = 0;
 	int binary_port = 0;
-	const char *gossip_group = NULL;
+	const char *discovery_group = NULL;
 	const char *cluster_name = "xapiand";
 	const char *p;
 
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 		binary_port = atoi(argv[2]);
 	}
 
-	run(num_servers, cluster_name, gossip_group, gossip_port, http_port, binary_port);
+	run(num_servers, cluster_name, discovery_group, discovery_port, http_port, binary_port);
 	INFO((void *)NULL, "Done with all work!\n");
 
 	return 0;
