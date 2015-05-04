@@ -25,10 +25,10 @@
 #ifndef XAPIAND_INCLUDED_XAPIAND_H
 #define XAPIAND_INCLUDED_XAPIAND_H
 
-#define XAPIAND_GOSSIP_GROUP      "224.2.2.88"   /* Gossip group */
-#define XAPIAND_GOSSIP_SERVERPORT 58870          /* Gossip port */
-#define XAPIAND_HTTP_SERVERPORT   8880           /* HTTP TCP port */
-#define XAPIAND_BINARY_SERVERPORT 8890           /* Binary TCP port */
+#define XAPIAND_DISCOVERY_GROUP      "224.2.2.88"   /* Gossip group */
+#define XAPIAND_DISCOVERY_SERVERPORT 58870          /* Gossip port */
+#define XAPIAND_HTTP_SERVERPORT      8880           /* HTTP TCP port */
+#define XAPIAND_BINARY_SERVERPORT    8890           /* Binary TCP port */
 
 #if !defined(_WIN32) && \
 	!defined(__linux__) && \

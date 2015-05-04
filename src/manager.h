@@ -35,17 +35,17 @@
 #include <unordered_map>
 
 
-#define XAPIAND_GOSSIP_PROTOCOL_MAJOR_VERSION 1
-#define XAPIAND_GOSSIP_PROTOCOL_MINOR_VERSION 0
+#define XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION 1
+#define XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION 0
 
-enum gossip_type {
-	GOSSIP_HELLO,    // New node saying hello
-	GOSSIP_WAVE,     // Nodes waving hello to the new node
-	GOSSIP_SNEER,    // Nodes telling the client they don't agree on the new node's name
-    GOSSIP_PING,     // Ping
-    GOSSIP_PONG,     // Pong
-    GOSSIP_BYE,      // Node says goodbye
-    GOSSIP_MAX
+enum discovery_type {
+	DISCOVERY_HELLO,    // New node saying hello
+	DISCOVERY_WAVE,     // Nodes waving hello to the new node
+	DISCOVERY_SNEER,    // Nodes telling the client they don't agree on the new node's name
+    DISCOVERY_PING,     // Ping
+    DISCOVERY_PONG,     // Pong
+    DISCOVERY_BYE,      // Node says goodbye
+    DISCOVERY_MAX
 };
 
 
@@ -76,16 +76,16 @@ class XapiandManager {
 
 	unsigned char state;
 
-	ev::io gossip_io;
-	ev::timer gossip_heartbeat;
+	ev::io discovery_io;
+	ev::timer discovery_heartbeat;
 
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
 	std::string cluster_name;
 
-	struct sockaddr_in gossip_addr;
-	int gossip_port, gossip_sock;
+	struct sockaddr_in discovery_addr;
+	int discovery_port, discovery_sock;
 	int http_sock;
 	int binary_sock;
 
@@ -97,10 +97,10 @@ class XapiandManager {
 	ev::async break_loop;
 	void break_loop_cb(ev::async &watcher, int revents);
 
-	void gossip_heartbeat_cb(ev::timer &watcher, int revents);
-	void gossip_io_cb(ev::io &watcher, int revents);
-	void gossip(const char *message, size_t size);
-	void gossip(gossip_type type, Node &node);
+	void discovery_heartbeat_cb(ev::timer &watcher, int revents);
+	void discovery_io_cb(ev::io &watcher, int revents);
+	void discovery(const char *message, size_t size);
+	void discovery(discovery_type type, Node &node);
 
 	void check_tcp_backlog(int tcp_backlog);
 	void shutdown_cb(ev::async &watcher, int revents);
@@ -126,7 +126,7 @@ public:
 	Node this_node;
 	std::unordered_map<std::string, Node> nodes;
 
-	XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *gossip_group_, int gossip_port_, int http_port_, int binary_port_);
+	XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *discovery_group_, int discovery_port_, int http_port_, int binary_port_);
 	~XapiandManager();
 
 	void run(int num_servers);
