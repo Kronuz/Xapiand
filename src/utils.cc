@@ -1087,7 +1087,7 @@ bool validate_date(int n[])
 		}
 	}
 
-	if((n[1] == 4 || n[1] == 6 || n[1] == 9 || n[1] == 11) && n[2] > 30) {
+	if ((n[1] == 4 || n[1] == 6 || n[1] == 9 || n[1] == 11) && n[2] > 30) {
 		LOG_ERR(NULL, "ERROR: Incorrect Date, This month only has 30 days\n");
 		return false;
 	}
@@ -1162,12 +1162,12 @@ serialise(char field_type, const std::string &field_name, const std::string &fie
 
 int identify_cmd(std::string &commad)
 {
-	if(!is_digits(commad)) {
-		if(strcasecmp(commad.c_str(), "_search") == 0) {
+	if (!is_digits(commad)) {
+		if (strcasecmp(commad.c_str(), "_search") == 0) {
 			return CMD_SEARCH;
-		} else if(strcasecmp(commad.c_str(), "_facets") == 0) {
+		} else if (strcasecmp(commad.c_str(), "_facets") == 0) {
 			return CMD_FACETS;
-		} else if(strcasecmp(commad.c_str(), "_stats") == 0) {
+		} else if (strcasecmp(commad.c_str(), "_stats") == 0) {
 			return CMD_STATS;
 		}
 		return CMD_UNKNOWN;
@@ -1246,7 +1246,7 @@ bool Is_id_range(std::string &ids)
 	group_t *g = NULL;
 	while ((pcre_search(ids.c_str(), len, offset, 0, RANGE_ID_RE, &compiled_range_id_re, &g)) != -1) {
 		offset = g[0].end;
-		if(g[1].end - g[1].start && g[2].end - g[2].start) {
+		if (g[1].end - g[1].start && g[2].end - g[2].start) {
 			return true;
 		} else {
 			if(g[1].end - g[1].start){
