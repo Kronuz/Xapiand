@@ -931,7 +931,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 		}
 		std::vector<std::string>prefixes;
 		for(it = similar->type.begin(); it != similar->type.end(); it++) {
-			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + *it);
+			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + to_type(*it));
 		}
 		for(it = similar->field.begin(); it != similar->field.end(); it++) {
 			prefixes.push_back(get_prefix(*it, DOCUMENT_CUSTOM_TERM_PREFIX));

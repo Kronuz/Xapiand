@@ -1258,3 +1258,22 @@ bool Is_id_range(std::string &ids)
 	}
 	return false;
 }
+
+
+std::string to_type(std::string type)
+{
+	std::string low = stringtolower(type);
+	if (low.compare("numeric") == 0 || low.compare("n") == 0) {
+		return std::string("N");
+	}else if (low.compare("geospatial") == 0 || low.compare("g") == 0) {
+		return std::string("G");
+	}else if (low.compare("string") == 0 || low.compare("s") == 0) {
+		return std::string("S");
+	}else if (low.compare("boolean") == 0 || low.compare("b") == 0) {
+		return std::string("B");
+	}else if (low.compare("date") == 0 || low.compare("d") == 0) {
+		return std::string("D");
+	} else {
+		return std::string("S");
+	}
+}
