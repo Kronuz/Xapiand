@@ -39,6 +39,9 @@
 #include <unistd.h>
 
 
+const uint16_t XAPIAND_GOSSIP_PROTOCOL_VERSION = XAPIAND_GOSSIP_PROTOCOL_MAJOR_VERSION | XAPIAND_GOSSIP_PROTOCOL_MINOR_VERSION << 8;
+
+
 #define TIME_RE "((([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)?"
 
 pcre *XapiandManager::compiled_time_re = NULL;
@@ -463,16 +466,21 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 			LOG_CONN(this, "Received EOF (sock=%d)!\n", gossip_sock);
 			destroy();
 		} else {
-			LOG_GOSSIP(this, "(sock=%d) -->> '%s'\n", gossip_sock, repr(buf, received).c_str());
+			LOG_GOSSIP_WIRE(this, "(sock=%d) -->> '%s'\n", gossip_sock, repr(buf, received).c_str());
 
-			if (received < 2) {
+			if (received < 4) {
 				LOG_GOSSIP(this, "Badly formed message: Incomplete!\n");
 				return;
 			}
 
-			// LOG_GOSSIP(this, "%s says '%s'\n", inet_ntoa(addr.sin_addr), repr(buf, received).c_str());
+			// LOG(this, "%s says '%s'\n", inet_ntoa(addr.sin_addr), repr(buf, received).c_str());
+			uint16_t remote_protocol_version = *(uint16_t *)(buf + 1);
+			if ((remote_protocol_version & 0xff) > XAPIAND_GOSSIP_PROTOCOL_MAJOR_VERSION) {
+				LOG_GOSSIP(this, "Badly formed message: Protocol version mismatch %x vs %x!\n", remote_protocol_version & 0xff, XAPIAND_GOSSIP_PROTOCOL_MAJOR_VERSION);
+				return;
+			}
 
-			const char *ptr = buf + 1;
+			const char *ptr = buf + 3;
 			Node remote_node;
 			size_t decoded;
 
@@ -513,7 +521,7 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 
 			int remote_pid = decode_length(&ptr, buf + received, false);
 
-			LOG_GOSSIP(this, "%s on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
+			// LOG_GOSSIP(this, "%s on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
 
 			Node *node;
 			time_t now = time(NULL);
@@ -624,6 +632,7 @@ void XapiandManager::gossip(const char *buf, size_t buf_size)
 void XapiandManager::gossip(gossip_type type, Node &node)
 {
 	std::string message((const char *)&type, 1);
+	message.append(std::string((const char *)&XAPIAND_GOSSIP_PROTOCOL_VERSION, sizeof(uint16_t)));
 	message.append(encode_length(cluster_name.size()));
 	message.append(cluster_name);
 	message.append(encode_length(node.addr.sin_addr.s_addr));
@@ -643,10 +652,10 @@ void XapiandManager::run(int num_servers)
 		msg += "tcp:" + std::to_string(this_node.http_port) + " (http), ";
 	}
 	if (this_node.binary_port != -1) {
-		msg += "tcp:" + std::to_string(this_node.binary_port) + " (xapian), ";
+		msg += "tcp:" + std::to_string(this_node.binary_port) + " (xapian v" + std::to_string(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION) + "), ";
 	}
 	if (gossip_port != -1) {
-		msg += "udp:" + std::to_string(gossip_port) + " (gossip), ";
+		msg += "udp:" + std::to_string(gossip_port) + " (gossip v" + std::to_string(XAPIAND_GOSSIP_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_GOSSIP_PROTOCOL_MINOR_VERSION) + "), ";
 	}
 	msg += "at pid:" + std::to_string(getpid()) + "...\n";
 
