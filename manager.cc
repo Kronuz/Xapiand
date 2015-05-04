@@ -337,7 +337,7 @@ void XapiandManager::destroy()
 		return;
 	}
 
-	gossip(GOSSIP_DEATH, this_node);
+	gossip(GOSSIP_BYE, this_node);
 
 	if (gossip_sock != -1) {
 		::close(gossip_sock);
@@ -584,6 +584,12 @@ void XapiandManager::gossip_io_cb(ev::io &watcher, int revents)
 					} catch (const std::out_of_range& err) {
 						LOG_GOSSIP(this, "Ignoring pong from unknown peer");
 					}
+					break;
+
+				case GOSSIP_BYE:
+					nodes.erase(stringtolower(remote_node.name));
+					INFO(this, "Node %s left the party!\n", remote_node.name.c_str());
+					break;
 			}
 		}
 	}

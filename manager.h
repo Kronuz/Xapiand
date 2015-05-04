@@ -41,7 +41,7 @@ enum gossip_type {
 	GOSSIP_SNEER,    // Nodes telling the client they don't agree on the new node's name
     GOSSIP_PING,     // Ping
     GOSSIP_PONG,     // Pong
-    GOSSIP_DEATH,    // Announce death
+    GOSSIP_BYE,      // Node says goodbye
     GOSSIP_MAX
 };
 
