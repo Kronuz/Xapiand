@@ -911,34 +911,40 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 }
 
 
-//Add exception for get_mset
 void
 Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, similar_t *similar)
 {
 	Xapian::RSet rset;
 	std::vector<std::string>::const_iterator it;
 
-	Xapian::Enquire renquire = get_enquire(query, NULL, NULL, NULL, NULL, NULL);
-	Xapian::MSet mset = renquire.get_mset(0, similar->n_rset);
+	for (int t = 3; t >= 0; --t) {
+		try{
+			Xapian::Enquire renquire = get_enquire(query, NULL, NULL, NULL, NULL, NULL);
+			Xapian::MSet mset = renquire.get_mset(0, similar->n_rset);
+			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); m++) {
+				rset.add_document(*m);
+			}
+		}catch (const Xapian::Error &er) {
+			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+			if (t) reopen();
+			continue;
+		}
+		std::vector<std::string>prefixes;
+		for(it = similar->type.begin(); it != similar->type.end(); it++) {
+			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + *it);
+		}
+		for(it = similar->field.begin(); it != similar->field.end(); it++) {
+			prefixes.push_back(get_prefix(*it, DOCUMENT_CUSTOM_TERM_PREFIX));
+		}
+		ExpandDeciderFilterPrefixes efp(prefixes);
+		Xapian::ESet eset = enquire.get_eset(similar->n_eset, rset, &efp);
 
-	for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); m++) {
-		rset.add_document(*m);
-	}
-
-	std::vector<std::string>prefixes;
-	for(it = similar->type.begin(); it != similar->type.end(); it++) {
-		prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + *it);
-	}
-	for(it = similar->field.begin(); it != similar->field.end(); it++) {
-		prefixes.push_back(get_prefix(*it, DOCUMENT_CUSTOM_TERM_PREFIX));
-	}
-	ExpandDeciderFilterPrefixes efp(prefixes);
-	Xapian::ESet eset = enquire.get_eset(similar->n_eset, rset, &efp);
-
-	if (is_fuzzy) {
-		query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end()));
-	} else {
-		query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end());
+		if (is_fuzzy) {
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end()));
+		} else {
+			query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end());
+		}
+		return;
 	}
 }
 
