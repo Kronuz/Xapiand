@@ -92,6 +92,8 @@ int main(int argc, char **argv)
 		"   [%s]\n"
 		"          Using Xapian v%s\n\n", PACKAGE_VERSION, PACKAGE_BUGREPORT, XAPIAN_VERSION);
 
+	INFO((void *)NULL, "Joined cluster: %s\n", cluster_name);
+
 	// Prefer glass database
 	if (setenv("XAPIAN_PREFER_GLASS", "1", false) == 0) {
 		INFO((void *)NULL, "Enabled glass database.\n");
