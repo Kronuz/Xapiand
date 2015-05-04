@@ -27,9 +27,11 @@
 #include "multivalue.h"
 #include "utils.h"
 #include "cJSON.h"
+#include "manager.h"
 
 #include <assert.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 
 
 //
@@ -606,6 +608,7 @@ int HttpClient::_endpointgen(query_t &e)
 			std::string nsp_;
 			std::string pat_;
 			std::string hos_;
+			Node *node = &server->manager->this_node;
 
 			endpoints.clear();
 			while (url_path(path_buf.c_str(), path_size, &p) == 0) {
@@ -623,12 +626,23 @@ int HttpClient::_endpointgen(query_t &e)
 				}
 				if (p.len_host) {
 					hos_ = urldecode(p.off_host, p.len_host);
+					try {
+						node = &server->manager->nodes.at(stringtolower(hos_));
+					} catch (const std::out_of_range& err) {
+						LOG(this, "Node not found\n");
+					}
 				} else if (!host.empty()) {
 					hos_ = host;
-				} else {
-					hos_ = "127.0.0.1";
+					try {
+						node = &server->manager->nodes.at(stringtolower(hos_));
+					} catch (const std::out_of_range& err) {
+						LOG(this, "Node not found\n");
+					}
 				}
-				endp = "xapian://" + hos_ + nsp_ + pat_;
+				char ip[INET_ADDRSTRLEN];
+				inet_ntop(AF_INET, &(node->addr.sin_addr), ip, INET_ADDRSTRLEN);
+
+				endp = "xapian://" + std::string(ip) + ":" + std::to_string(node->binary_port) + nsp_ + pat_;
 				endpoints.insert(Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT));
 
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
