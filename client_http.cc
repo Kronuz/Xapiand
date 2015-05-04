@@ -395,7 +395,7 @@ void HttpClient::_search()
 			_stats(e);
 			return;
 		default:
-			if(Is_id_range(command)){
+			if (Is_id_range(command)){
 				e.query.push_back(std::string("id:" + command));
 				e.offset = 0;
 				e.limit = 1000;
