@@ -32,23 +32,47 @@
 #include <ev++.h>
 #include <pthread.h>
 #include <netinet/in.h>
+#include <unordered_map>
 
 
 enum gossip_type {
-    GOSSIP_PING,		// Ping
-    GOSSIP_PONG,		// Pong
-    GOSSIP_DEATH,		// Announce death
+	GOSSIP_HELLO,    // New node saying hello
+	GOSSIP_WAVE,     // Nodes waving hello to the new node
+	GOSSIP_SNEER,    // Nodes telling the client they don't agree on the new node's name
+    GOSSIP_PING,     // Ping
+    GOSSIP_PONG,     // Pong
+    GOSSIP_DEATH,    // Announce death
     GOSSIP_MAX
 };
+
+
+#define STATE_READY       0
+#define STATE_WAINTING___ 1
+#define STATE_WAINTING__  2
+#define STATE_WAINTING_   3
+#define STATE_WAINTING    4
+#define STATE_RESET       5
 
 
 class XapiandServer;
 class BaseClient;
 
 
+struct Node {
+	std::string name;
+	struct sockaddr_in addr;
+	int http_port;
+	int binary_port;
+	time_t touched;
+};
+
+
 class XapiandManager {
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
+
+	unsigned char state;
+	std::unordered_map<std::string, Node> nodes;
 
 	ev::io gossip_io;
 	ev::timer gossip_heartbeat;
@@ -56,12 +80,13 @@ class XapiandManager {
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
-	struct sockaddr_in host_addr;
+	std::string cluster_name;
+	Node this_node;
 
 	struct sockaddr_in gossip_addr;
 	int gossip_port, gossip_sock;
-	int http_port, http_sock;
-	int binary_port, binary_sock;
+	int http_sock;
+	int binary_sock;
 
 	static pcre *compiled_time_re;
 
@@ -74,7 +99,7 @@ class XapiandManager {
 	void gossip_heartbeat_cb(ev::timer &watcher, int revents);
 	void gossip_io_cb(ev::io &watcher, int revents);
 	void gossip(const char *message, size_t size);
-	void gossip(gossip_type type);
+	void gossip(gossip_type type, Node &node);
 
 	void check_tcp_backlog(int tcp_backlog);
 	void shutdown_cb(ev::async &watcher, int revents);
@@ -97,7 +122,7 @@ public:
 	time_t shutdown_now;
 	ev::async async_shutdown;
 
-	XapiandManager(ev::loop_ref *loop_, const char *gossip_group_, int gossip_port_, int http_port_, int binary_port_);
+	XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *gossip_group_, int gossip_port_, int http_port_, int binary_port_);
 	~XapiandManager();
 
 	void run(int num_servers);
