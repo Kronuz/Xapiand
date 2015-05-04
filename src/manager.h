@@ -35,6 +35,9 @@
 #include <unordered_map>
 
 
+#define XAPIAND_GOSSIP_PROTOCOL_MAJOR_VERSION 1
+#define XAPIAND_GOSSIP_PROTOCOL_MINOR_VERSION 0
+
 enum gossip_type {
 	GOSSIP_HELLO,    // New node saying hello
 	GOSSIP_WAVE,     // Nodes waving hello to the new node
