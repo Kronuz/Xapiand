@@ -797,7 +797,7 @@ int HttpClient::_endpointgen(query_t &e)
 					std::string fuzzy = serialise_bool(urldecode(q.offset, q.length));
 					(fuzzy.compare("f") == 0) ? e.is_fuzzy = false : e.is_fuzzy = true;
 				} else {
-					e.is_fuzzy = true;
+					e.is_fuzzy = false;
 				}
 
 				if(e.is_fuzzy) {
@@ -831,7 +831,7 @@ int HttpClient::_endpointgen(query_t &e)
 					std::string nearest = serialise_bool(urldecode(q.offset, q.length));
 					(nearest.compare("f") == 0) ? e.is_nearest = false : e.is_nearest = true;
 				} else {
-					e.is_nearest = true;
+					e.is_nearest = false;
 				}
 
 				if(e.is_nearest) {
