@@ -818,7 +818,7 @@ int HttpClient::_endpointgen(query_t &e)
 					std::string pretty = serialise_bool(urldecode(q.offset, q.length));
 					(pretty.compare("f") == 0) ? e.commit = false : e.commit = true;
 				} else {
-					e.commit = true;
+					e.commit = false;
 				}
 			} else if (cmd == CMD_STATS) {
 				memset(&q, 0, sizeof(q));
