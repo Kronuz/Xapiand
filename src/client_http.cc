@@ -234,7 +234,32 @@ void HttpClient::_delete()
 	cJSON *data = cJSON_CreateObject();
 	std::string result;
 	query_t e;
-	_endpointgen(e);
+	int cmd = _endpointgen(e);
+
+	switch (cmd) {
+		case CMD_NUMBER: break;
+		case CMD_SEARCH:
+		case CMD_FACETS:
+		case CMD_STATS:
+		default:
+			cJSON *err_response = cJSON_CreateObject();
+			cJSON_AddItemToObject(root, "Response", err_response);
+			if (cmd == CMD_UNKNOWN)
+				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
+
+			if (cmd == CMD_UNKNOWN_HOST)
+				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+
+			else
+				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
+			result = cJSON_PrintUnformatted(root);
+			result += "\n";
+			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+			cJSON_Delete(root);
+			cJSON_Delete(data);
+			return;
+	}
+
 	Database *database = NULL;
 	if (!database_pool->checkout(&database, endpoints, true)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
@@ -280,7 +305,32 @@ void HttpClient::_index()
 	cJSON *root = cJSON_CreateObject();
 	cJSON *data = cJSON_CreateObject();
 	query_t e;
-	_endpointgen(e);
+	int cmd = _endpointgen(e);
+
+	switch (cmd) {
+		case CMD_NUMBER: break;
+		case CMD_SEARCH:
+		case CMD_FACETS:
+		case CMD_STATS:
+		default:
+			cJSON *err_response = cJSON_CreateObject();
+			cJSON_AddItemToObject(root, "Response", err_response);
+			if (cmd == CMD_UNKNOWN)
+				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
+
+			if (cmd == CMD_UNKNOWN_HOST)
+				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+
+			else
+				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
+			result = cJSON_PrintUnformatted(root);
+			result += "\n";
+			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+			cJSON_Delete(root);
+			cJSON_Delete(data);
+			return;
+	}
+
 	Database *database = NULL;
 	if (!database_pool->checkout(&database, endpoints, true)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
