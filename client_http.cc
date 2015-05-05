@@ -419,6 +419,7 @@ void HttpClient::_search()
 				result = cJSON_PrintUnformatted(root);
 				result += "\n";
 				write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+				cJSON_Delete(root);
 				return;
 			}
 	}
