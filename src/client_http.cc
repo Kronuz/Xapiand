@@ -594,10 +594,7 @@ int HttpClient::_endpointgen(query_t &e)
 	int cmd;
 	struct http_parser_url u;
 	std::string b = repr(path);
-	/*
-	 commit must be initialized in case there is not query
-	 */
-	e.commit = true;
+
 	LOG_CONN_WIRE(this,"URL: %s\n", b.c_str());
 	if (http_parser_parse_url(b.c_str(), b.size(), 0, &u) == 0) {
 		LOG_CONN_WIRE(this,"Parsing done\n");
