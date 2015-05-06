@@ -587,29 +587,14 @@ std::string unserialise_geo(const std::string &serialise_val)
 
 std::string serialise_bool(const std::string &field_value)
 {
-	if (!field_value.c_str()) {
+	if (field_value.empty()) {
 		return "f";
-	} else if(field_value.size() > 1) {
-		if (strcasecmp(field_value.c_str(), "TRUE") == 0) {
-			return "t";
-		} else if (strcasecmp(field_value.c_str(), "FALSE") == 0) {
-			return "f";
-		} else {
-			return "t";
-		}
+	} else if (strcasecmp(field_value.c_str(), "true") == 0) {
+		return "t";
+	} else if (strcasecmp(field_value.c_str(), "false") == 0) {
+		return "f";
 	} else {
-		switch (tolower(field_value.at(0))) {
-			case '1':
-				return "t";
-			case '0':
-				return "f";
-			case 't':
-				return "t";
-			case 'f':
-				return "f";
-			default:
-				return "t";
-		}
+		return "";
 	}
 }
 
