@@ -80,6 +80,13 @@ public:
 	cJSON* get_stats_docs(int id_doc);
 	char field_type(const std::string &field_name);
 	cJSON* get_stats_time(const std::string &time_req);
+	void index_fields(cJSON *father, cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, bool empty_data);
+	void update_specifications(cJSON *item, specifications_t &spc_now);
+	bool is_language(const std::string &language);
+	void index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name);
+	void index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name);
+	void index_values(Xapian::Document &doc, cJSON *values, const std::string &name);
+
 
 private:
 	bool _commit();
