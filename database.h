@@ -69,7 +69,7 @@ public:
 	bool index(const std::string &document, const std::string &document_id, bool commit);
 	bool replace(const std::string &document_id, const Xapian::Document &doc, bool commit);
 	bool get_document(Xapian::docid did, Xapian::Document &doc);
-	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name, int w, int position);
+	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &prefix, int w, int position);
 	int find_field(const std::string &str, int *g, int size_g, int len, int offset);
 	Xapian::Enquire get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> * spies, similar_t *nearest, similar_t *fuzzy, std::vector<std::string> * facets);
 	search_t search(query_t e);
