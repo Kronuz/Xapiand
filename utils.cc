@@ -307,16 +307,19 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par)
 int url_path(const char* n1, size_t size, parser_url_path_t *par)
 {
 	const char *nf = n1 + size + 1;
-	const char *n0, *n2 ,*r, *p = NULL;
+	const char *n0, *n2 ,*r, *p2 = NULL, *p1 = NULL;
 	size_t cmd_size = 0;
 	int state = 0;
 	n0 = n1;
 
 	bool other_slash = false;
+	bool last_host = false;
 	par->off_host = NULL;
 	par->len_host = 0;
 	par->off_command = NULL;
 	par->len_command = 0;
+	par->off_type = NULL;
+	par->len_type= 0;
 
 
 	if(par->offset == NULL) {
@@ -336,8 +339,8 @@ int url_path(const char* n1, size_t size, parser_url_path_t *par)
 		switch(cn) {
 			case '\0':
 				if (n0 == n1) return -1;
-				if (p) {
-					r = p + 1;
+				if (p2) {
+					r = p2 + 1;
 					while(1) {
 						char cr = *r;
 						if (r == nf) {
@@ -355,36 +358,48 @@ int url_path(const char* n1, size_t size, parser_url_path_t *par)
 								break;
 						}
 					}
-					par->off_command = p + 1;
+					par->off_command = p2 + 1;
 					par->len_command = cmd_size;
 					par->offset = n2;
 					par->length = r - n2;
+					last_host = true;
 				}
+				if(p1) {
+					par->off_type = p1 + 1;
+					par->len_type = p2 -1 - p1;
+				}
+
 			case ',':
-				if (!p) p = n1;
+				if (!p2) p2 = n1;
 				switch (state) {
 					case 0:
 					case 1:
+						if(p1 && last_host) {
+							p2 = p1;
+						}
 						par->off_path = n0;
-						par->len_path = p - n0;
+						par->len_path = p2 - n0;
 						if (cn) n1++;
 						if(!par->length) {
 							par->offset = n2;
-							par->length = p - n2;
+							par->length = p2 - n2;
 						}
 
 						return 0;
 					case 2:
+						if(p1 && last_host) {
+							p2 = p1;
+						}
 						par->off_host = n0;
-						par->len_host = p - n0;
+						par->len_host = p2 - n0;
 						if (cn) n1++;
 						if(!par->length) {
 							par->offset = n2;
-							par->length = p - n2;
+							par->length = p2 - n2;
 						}
 						return 0;
 				}
-				p = NULL;
+				p2 = NULL;
 				other_slash = false;
 				break;
 
@@ -399,7 +414,7 @@ int url_path(const char* n1, size_t size, parser_url_path_t *par)
 					default:
 						state = -1;
 				}
-				p = NULL;
+				p2 = NULL;
 				other_slash = false;
 				break;
 
@@ -420,20 +435,20 @@ int url_path(const char* n1, size_t size, parser_url_path_t *par)
 					default:
 						state = -1;
 				}
-				p = NULL;
+				p2 = NULL;
 				other_slash = false;
 				break;
 
-
 			case '/':
-				if (*(n1 + 1) && !p && !other_slash) {
-					p = n1;
+				if (*(n1 + 1) && !p2 && !other_slash) {
+					p1 = p2;
+					p2 = n1;
 					other_slash = true;
 				} else if(*(n1 + 1) && *(n1 + 1) != '/') {
-					p = n1;
+					p1 = p2;
+					p2 = n1;
 					other_slash = true;
 				}
-
 		}
 		n1++;
 	}

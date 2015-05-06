@@ -664,6 +664,7 @@ int HttpClient::_endpointgen(query_t &e)
 
 			endpoints.clear();
 			while (url_path(path_buf.c_str(), path_size, &p) == 0) {
+				type  = urldecode(p.off_type, p.len_type);
 				command  = urldecode(p.off_command, p.len_command);
 
 				if (p.len_namespace) {
