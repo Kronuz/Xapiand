@@ -38,6 +38,18 @@
 #include <queue>
 #include <memory>
 
+#define RESERVED_WEIGHT "_weight"
+#define RESERVED_POSITION "_position"
+#define RESERVED_LANGUAGE "_language"
+#define RESERVED_SPELLING "_spelling"
+#define RESERVED_POSITIONS "_positions"
+#define RESERVED_TEXTS "_texts"
+#define RESERVED_VALUES "_values"
+#define RESERVED_TERMS "_terms"
+#define RESERVED_DATA "_data"
+#define OFFSPRING_UNION "__"
+#define LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
+
 class DatabasePool;
 class DatabaseQueue;
 
