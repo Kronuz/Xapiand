@@ -797,7 +797,7 @@ std::string timestamp_date(const std::string &str)
 }
 
 
-std::string get_prefix(const std::string &name, const std::string &prefix)
+std::string get_prefix(const std::string &name, const std::string &prefix, char type)
 {
 	std::string slot = get_slot_hex(name);
 
@@ -806,8 +806,9 @@ std::string get_prefix(const std::string &name, const std::string &prefix)
 	};
 
 	std::transform(slot.begin(), slot.end(), slot.begin(), TRANSFORM());
-
-	return prefix + slot;
+	std::string res(prefix);
+	res.append(1, toupper(type));
+	return res + slot;
 }
 
 
