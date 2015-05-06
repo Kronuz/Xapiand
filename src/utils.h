@@ -139,6 +139,8 @@ typedef struct parser_url_path_s {
 	const char *off_host;
 	size_t len_namespace;
 	const char *off_namespace;
+	size_t len_type;
+	const char *off_type;
 	size_t len_command;
 	const char *off_command;
 } parser_url_path_t;
