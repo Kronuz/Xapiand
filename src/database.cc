@@ -301,6 +301,223 @@ Database::_commit()
 }
 
 
+void
+Database::index_fields(cJSON *father, cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, bool empty_data)
+{
+	std::string subitem_name;
+	specifications_t spc_bef = spc_now;
+	if (item->string[0] != OFFSPRING_UNION[0] || std::string(item->string).find(RESERVED_VALUES) == 0) {
+		if (item->type == cJSON_Object) {
+			update_specifications(item, spc_now);
+			int elements = cJSON_GetArraySize(item);
+			for (int i = 0; i < elements; ) {
+				cJSON *subitem = cJSON_GetArrayItem(item, i);
+				subitem_name = (item_name.size() != 0) ? item_name + OFFSPRING_UNION + subitem->string : subitem->string;
+				if (subitem_name.at(subitem_name.size() - 3) == OFFSPRING_UNION[0]) {
+					std::string language(subitem_name, subitem_name.size() - 2, subitem_name.size());
+					spc_now.language = is_language(language) ? language : spc_now.language;
+				}
+				index_fields(item, subitem, subitem_name, spc_now, doc, empty_data);
+				if (empty_data && elements > cJSON_GetArraySize(item)) {
+					elements = cJSON_GetArraySize(item);
+				} else {
+					i++;
+				}
+			}
+		} else {
+			if (item_name.find(RESERVED_VALUES) == 0) {
+				subitem_name.assign(item_name, strlen(RESERVED_VALUES) + strlen(OFFSPRING_UNION), item_name.size());
+				printf("%s\n", subitem_name.c_str());
+				index_values(doc, item, subitem_name);
+			} else {
+				index_values(doc, item, item_name);
+				char type = get_type(item);
+				if (type == TEXT_TYPE) {
+					index_texts(doc, item, spc_now, item_name);
+				} else {
+					index_terms(doc, item, spc_now, item_name);
+				}
+			}
+		}
+	} else if(empty_data) {
+		cJSON_DeleteItemFromObject(father, item->string);
+	}
+	spc_now = spc_bef;
+}
+
+
+void
+Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name)
+{
+	LOG_DATABASE_WRAP(this, "Specifications = {%d %d %s %d %d}\n", spc.position, spc.weight, spc.language.c_str(), spc.spelling, spc.positions);
+	std::string prefix;
+	if (!name.empty()) prefix = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, TEXT_TYPE);
+	if (text->type != cJSON_String) throw "Data inconsistency should be string";
+	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+
+	Xapian::TermGenerator term_generator;
+	term_generator.set_document(doc);
+	term_generator.set_stemmer(Xapian::Stem(spc.language));
+	if (spc.spelling) {
+		term_generator.set_database(*wdb);
+		term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
+		term_generator.set_stemming_strategy(term_generator.STEM_SOME);
+	}
+
+	if (spc.positions) {
+		(prefix.empty()) ? term_generator.index_text_without_positions(text->valuestring, spc.weight) : term_generator.index_text_without_positions(text->valuestring, spc.weight, prefix);
+		LOG_DATABASE_WRAP(this, "Text to Index with positions = %s: %s\n", prefix.c_str(), text->valuestring);
+	} else {
+		(prefix.empty()) ? term_generator.index_text(text->valuestring, spc.weight) : term_generator.index_text(text->valuestring, spc.weight, prefix);
+		LOG_DATABASE_WRAP(this, "Text to Index = %s: %s\n", prefix.c_str(), text->valuestring);
+	}
+}
+
+
+void
+Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name)
+{
+	LOG_DATABASE_WRAP(this, "Specifications = {%d %d %s %d %d}\n", spc.position, spc.weight, spc.language.c_str(), spc.spelling, spc.positions);
+	char type = get_type(terms);
+	std::string prefix = (!name.empty()) ? get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, type) : DOCUMENT_CUSTOM_TERM_PREFIX;
+	int elements = (terms->type == cJSON_Array) ? cJSON_GetArraySize(terms) : 1;
+
+	for (int j = 0; j < elements; j++) {
+		cJSON *term = (terms->type == cJSON_Array) ? cJSON_GetArrayItem(terms, j) : terms;
+		if (type == GEO_TYPE && term->type != cJSON_Array) {
+			term = terms;
+			j += elements;
+		}
+
+		std::string term_v(cJSON_Print(term));
+		if (term->type == cJSON_String || term->type == cJSON_Array) {
+			term_v.assign(term_v, 1, term_v.size() - 2);
+		} else if (term->type == cJSON_Number) {
+			term_v = std::to_string(term->valuedouble);
+		}
+		LOG_DATABASE_WRAP(this, "Term -> %s: %s\n", prefix.c_str(), term_v.c_str());
+
+		term_v = serialise(type, term_v);
+		if (term_v.size() == 0) {
+			throw "ERROR: " + name + ": " + term_v + " can not serialized";
+		}
+
+		if (spc.position >= 0) {
+			if (!prefix.empty() && type == GEO_TYPE) {
+				insert_terms_geo(term_v, &doc, prefix, spc.weight, spc.position);
+			} else {
+				std::string nameterm(prefixed(term_v, prefix));
+				doc.add_posting(nameterm, spc.position, spc.weight);
+				LOG_DATABASE_WRAP(this, "Posting: %s\n", repr(nameterm).c_str());
+			}
+		} else {
+			if (!prefix.empty() && type == GEO_TYPE) {
+				insert_terms_geo(term_v, &doc, prefix, spc.weight, -1);
+			} else {
+				std::string nameterm(prefixed(term_v, prefix));
+				doc.add_term(nameterm, spc.weight);
+				LOG_DATABASE_WRAP(this, "Term: %s\n", repr(nameterm).c_str());
+			}
+		}
+	}
+}
+
+
+void
+Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &name)
+{
+	char type = get_type(values);
+	StringList s;
+	int elements = (values->type == cJSON_Array) ? cJSON_GetArraySize(values) : 1;
+	for (int j = 0; j < elements; j++) {
+		cJSON *value = (values->type == cJSON_Array) ? cJSON_GetArrayItem(values, j) : values;
+		if (type == GEO_TYPE && value->type != cJSON_Array) {
+			value = values;
+			j += elements;
+		}
+		std::string value_v = cJSON_Print(value);
+		if (value->type == cJSON_String || value->type == cJSON_Array) {
+			value_v.assign(value_v, 1, value_v.size() - 2);
+		} else if (value->type == cJSON_Number) {
+			value_v = std::to_string(value->valuedouble);
+		}
+		LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name.c_str(), value_v.c_str());
+		value_v = serialise(type, value_v);
+		if (value_v.empty()) {
+			throw "ERROR: " + name + ": " + value_v + " can not serialized";
+		}
+		s.push_back(value_v);
+	}
+	unsigned int slot = get_slot(name);
+	doc.add_value(slot, s.serialise());
+	LOG_DATABASE_WRAP(this, "Slot: %u serialized: %s\n", slot, repr(s.serialise()).c_str());
+}
+
+
+void
+Database::update_specifications(cJSON *item, specifications_t &spc_now)
+{
+	cJSON *spc = cJSON_GetObjectItem(item, RESERVED_POSITION);
+	if (spc) {
+		if (spc->type == cJSON_Number) {
+			spc_now.position = spc->valueint;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_POSITION) + " should be integer";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_WEIGHT);
+	if (spc) {
+		if (spc->type == cJSON_Number) {
+			spc_now.weight = spc->valueint;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_WEIGHT) + " should be integer";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_LANGUAGE);
+	if (spc) {
+		if (spc->type == cJSON_String) {
+			spc_now.language = is_language(spc->valuestring) ? spc->valuestring : spc_now.language;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_LANGUAGE) + " should be string";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_SPELLING);
+	if (spc) {
+		if (spc->type == cJSON_False) {
+			spc_now.spelling = false;
+		} else if (spc->type == cJSON_True) {
+			spc_now.spelling = true;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_SPELLING) + " should be boolean";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_POSITIONS);
+	if (spc) {
+		if (spc->type == cJSON_False) {
+			spc_now.positions = false;
+		} else if (spc->type == cJSON_True) {
+			spc_now.positions = true;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_POSITIONS) + " should be boolean";
+		}
+	}
+}
+
+
+bool
+Database::is_language(const std::string &language)
+{
+	if (language.find(" ") != -1) {
+		return false;
+	}
+	return (std::string(LANGUAGES).find(language) != -1) ? true : false;
+}
+
+
 bool
 Database::index(const std::string &document, const std::string &_document_id, bool commit)
 {
