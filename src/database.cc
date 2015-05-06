@@ -963,7 +963,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case STRING_TYPE:
 					if (field_name.size() != 0) {
 						if(!unique_doc) {
-							prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
+							prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, field_type(field_name));
 							if (isupper(field_value.at(0))) {
 								prefix = prefix + ":";
 							}
@@ -982,7 +982,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case DATE_TYPE:
-					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
+					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE);
 					field_value = timestamp_date(field_value);
 					if (field_value.size() == 0) {
 						throw Xapian::QueryParserError("Didn't understand date field name's specification: '" + field_name + "'");
@@ -998,7 +998,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case GEO_TYPE:
-					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
+					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE);
 					if (isLatLongDistance(field_value)) {
 						gdfp = new LatLongDistanceFieldProcessor(prefix, field_name);
 						gdfps.push_back(std::unique_ptr<LatLongDistanceFieldProcessor>(gdfp));
@@ -1022,7 +1022,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case BOOLEAN_TYPE:
-					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
+					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, BOOLEAN_TYPE);
 					bfp = new BooleanFieldProcessor(prefix);
 					bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
 					if (strhasupper(field_name)) {
