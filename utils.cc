@@ -1142,7 +1142,7 @@ unserialise(char field_type, const std::string &field_name, const std::string &s
 
 
 std::string
-serialise(char field_type, const std::string &field_name, const std::string &field_value)
+serialise(char field_type, const std::string &field_value)
 {
 	switch (field_type) {
 		case NUMERIC_TYPE:
