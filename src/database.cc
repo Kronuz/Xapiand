@@ -710,7 +710,7 @@ Database::get_type(cJSON *field)
 
 
 void
-Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &name,
+Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &prefix,
 	int w, int position)
 {
 	bool found;
@@ -730,10 +730,8 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 			}
 
 			if (!found) {
-				std::string name_v;
-				(name.c_str()) ? name_v = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX) : name_v = DOCUMENT_CUSTOM_TERM_PREFIX;
-				std::string nameterm(prefixed(s_coord, name_v));
-				LOG(this, "Nameterm: %s   Prefix: %s   Term: %s\n",  repr(nameterm).c_str(), name_v.c_str(), repr(s_coord).c_str());
+				std::string nameterm(prefixed(s_coord, prefix));
+				LOG(this, "Nameterm: %s   Prefix: %s   Term: %s\n",  repr(nameterm).c_str(), prefix.c_str(), repr(s_coord).c_str());
 
 				if (position > 0) {
 					doc->add_posting(nameterm, position, w);
@@ -947,7 +945,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		} else {
 			switch (field_type(field_name)) {
 				case NUMERIC_TYPE:
-					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX);
+					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, NUMERIC_TYPE);
 					if (isupper(field_value.at(0))) {
 						prefix = prefix + ":";
 					}
