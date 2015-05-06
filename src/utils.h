@@ -170,7 +170,7 @@ unsigned int hex2int(const std::string &input);
 int strtoint(const std::string &str);
 double strtodouble(const std::string &str);
 std::string timestamp_date(const std::string &str);
-std::string get_prefix(const std::string &name, const std::string &prefix);
+std::string get_prefix(const std::string &name, const std::string &prefix, char type);
 std::string get_slot_hex(const std::string &name);
 bool strhasupper(const std::string &str);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group_t **groups);
