@@ -526,17 +526,16 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 		return false;
 	}
 
-	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 	cJSON *root = cJSON_Parse(document.c_str());
 
 	if (!root) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 		return false;
 	}
-	cJSON *document_data = root ? cJSON_GetObjectItem(root, "data") : NULL;
-	cJSON *document_values = root ? cJSON_GetObjectItem(root, "values") : NULL;
-	cJSON *document_terms = root ? cJSON_GetObjectItem(root, "terms") : NULL;
-	cJSON *document_texts = root ? cJSON_GetObjectItem(root, "texts") : NULL;
+
+	cJSON *document_data = cJSON_GetObjectItem(root, "_data");
+	cJSON *document_terms = cJSON_GetObjectItem(root, "_terms");
+	cJSON *document_texts = cJSON_GetObjectItem(root, "_texts");
 
 	Xapian::Document doc;
 
@@ -552,169 +551,84 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 		return false;
 	}
 
-	if (document_data) {
-		std::string doc_data(cJSON_Print(document_data));
-		LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
-		doc.set_data(doc_data);
-	} else {
-		LOG_ERR(this, "ERROR: You must provide 'data' to index\n");
+	try {
+		//Default specifications
+		specifications_t spc_now = {-1, 1, "en", false, false};
+		update_specifications(root, spc_now);
+		specifications_t spc_bef = spc_now;
+
+		if (document_texts) {
+			for (int i = 0; i < cJSON_GetArraySize(document_texts); i++) {
+				cJSON *texts = cJSON_GetArrayItem(document_texts, i);
+				cJSON *name = cJSON_GetObjectItem(texts, "name");
+				cJSON *text = cJSON_GetObjectItem(texts, "text");
+				if (text) {
+					update_specifications(texts, spc_now);
+					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : "";
+					if (!name_s.empty() && name_s.at(name_s.size() - 3) == OFFSPRING_UNION[0]) {
+						std::string language(name_s, name_s.size() - 2, name_s.size());
+						spc_now.language = is_language(language) ? language : spc_now.language;
+					}
+					index_texts(doc, text, spc_now, name_s);
+					spc_now = spc_bef;
+				} else {
+					LOG_DATABASE_WRAP(this, "ERROR: Text must be defined\n");
+					return false;
+				}
+			}
+		}
+
+		if (document_terms) {
+			for (int i = 0; i < cJSON_GetArraySize(document_terms); i++) {
+				cJSON *data_terms = cJSON_GetArrayItem(document_terms, i);
+				cJSON *name = cJSON_GetObjectItem(data_terms, "name");
+				cJSON *terms = cJSON_GetObjectItem(data_terms, "term");
+				if (terms) {
+					update_specifications(data_terms, spc_now);
+					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : "";
+					index_terms(doc, terms, spc_now, name_s);
+					spc_now = spc_bef;
+				} else {
+					LOG_DATABASE_WRAP(this, "ERROR: Term must be defined\n");
+					return false;
+				}
+			}
+		}
+
+		int elements = cJSON_GetArraySize(root);
+		bool empty_data = (!document_data) ? true : false;
+		for (int i = 0; i < elements; ) {
+			cJSON *item = cJSON_GetArrayItem(root, i);
+			std::string name(item->string);
+			index_fields(root, item, item->string, spc_now, doc, empty_data);
+			if (empty_data) {
+				if (std::string(item->string).find(RESERVED_VALUES) == 0) cJSON_DeleteItemFromObject(root, item->string);
+				if (elements > cJSON_GetArraySize(root)) {
+					elements = cJSON_GetArraySize(root);
+				} else {
+					i++;
+				}
+			} else {
+				i++;
+			}
+		}
+
+		if (document_data) {
+			std::string doc_data(cJSON_Print(document_data));
+			LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
+			doc.set_data(doc_data);
+		} else {
+			std::string doc_data(cJSON_Print(root));
+			LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
+			doc.set_data(doc_data);
+		}
+
+	} catch (const std::string &err) {
+		LOG_DATABASE_WRAP(this, "ERROR: %s\n", err.c_str());
 		return false;
-	}
-
-	if (document_values) {
-		LOG_DATABASE_WRAP(this, "Values..\n");
-		for (int i = 0; i < cJSON_GetArraySize(document_values); i++) {
-			cJSON *nameA = cJSON_GetArrayItem(document_values, i);
-			int elements = (nameA->type == 5) ? cJSON_GetArraySize(nameA) : 0;
-			StringList s;
-			if (elements == 0) {
-				std::string value = cJSON_Print(nameA);
-				if (nameA->type == 4) {
-					value.assign(value, 1, (int) value.size() - 2);
-				} else if (nameA->type == 3) {
-					value = std::to_string(nameA->valuedouble);
-				}
-				LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", nameA->string, value.c_str());
-				std::string val_serialized = serialise(field_type(nameA->string), nameA->string, value);
-				if (val_serialized.size() == 0) {
-					LOG_ERR(this, "ERROR: %s: %s not serialized\n", nameA->string, value.c_str());
-					return false;
-				}
-				s.push_back(val_serialized);
-			} else {
-				for (int e = 0; e < elements; e++) {
-					cJSON *name = cJSON_GetArrayItem(nameA, e);
-					char type = field_type(nameA->string);
-					std::string value;
-					if (type == GEO_TYPE && name->type != 5) {
-						value = cJSON_Print(nameA);
-						value.assign(value, 1, value.size() - 2);
-						e = elements;
-					} else {
-						value = cJSON_Print(name);
-					}
-					if (name->type == 4 || name->type == 5) {
-						value.assign(value, 1, value.size() - 2);
-					} else if (name->type == 3 && type != GEO_TYPE) {
-						value = std::to_string(name->valuedouble);
-					}
-					LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", nameA->string, value.c_str());
-					std::string val_serialized = serialise(field_type(nameA->string), nameA->string, value);
-					if (val_serialized.size() == 0) {
-						LOG_ERR(this, "ERROR: %s: %s not serialized\n", nameA->string, value.c_str());
-						return false;
-					}
-					s.push_back(val_serialized);
-				}
-			}
-			unsigned int slot = get_slot(nameA->string);
-			doc.add_value(slot, s.serialise());
-			LOG_DATABASE_WRAP(this, "Slot: %u serialized: %s\n", slot, repr(s.serialise()).c_str());
-		}
-	}
-
-	if (document_terms) {
-		LOG_DATABASE_WRAP(this, "Terms..\n");
-		for (int i = 0; i < cJSON_GetArraySize(document_terms); i++) {
-			cJSON *term_data = cJSON_GetArrayItem(document_terms, i);
-			cJSON *name = cJSON_GetObjectItem(term_data, "name");
-			cJSON *term = cJSON_GetObjectItem(term_data, "term");
-			cJSON *weight = cJSON_GetObjectItem(term_data, "weight");
-			cJSON *position = cJSON_GetObjectItem(term_data, "position");
-			std::string term_v(cJSON_Print(term));
-			if (term->type == 4 || term->type == 5) {
-				term_v.assign(term_v, 1, term_v.size() - 2);
-			} else if (term->type == 3) {
-				term_v = std::to_string(term->valuedouble);
-			}
-			LOG_DATABASE_WRAP(this, "Term value: %s\n", term_v.c_str());
-			if (name) {
-				LOG_DATABASE_WRAP(this, "Name: %s\n", name->valuestring);
-				term_v = serialise(field_type(name->valuestring), name->valuestring, term_v);
-				if (term_v.size() == 0) {
-					LOG_ERR(this, "ERROR: %s: %s not serialized\n", name->string, term_v.c_str());
-					return false;
-				}
-			}
-			if (term) {
-				Xapian::termcount w;
-				(weight && weight->type == 3) ? w = weight->valueint : w = 1;
-				if (position) {
-					if (name && field_type(name->valuestring) == GEO_TYPE) {
-						insert_terms_geo(term_v, &doc, name->valuestring, w, position->valueint);
-					} else {
-						std::string name_v;
-						if (name) {
-							name_v = get_prefix(name->valuestring, DOCUMENT_CUSTOM_TERM_PREFIX);
-						}
-						std::string nameterm(prefixed(term_v, name_v));
-						doc.add_posting(nameterm, position->valueint, w);
-						LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", repr(nameterm).c_str(), position->valueint, w);
-					}
-				} else {
-					if (name && field_type(name->valuestring) == GEO_TYPE) {
-						insert_terms_geo(term_v, &doc, name->valuestring, w, -1);
-					} else {
-						std::string name_v;
-						if (name) {
-							name_v = get_prefix(name->valuestring, DOCUMENT_CUSTOM_TERM_PREFIX);
-						}
-						std::string nameterm(prefixed(term_v, name_v));
-						doc.add_term(nameterm, w);
-						LOG_DATABASE_WRAP(this, "Term: %s %d\n", repr(nameterm).c_str(), w);
-					}
-				}
-			} else {
-				LOG_ERR(this, "ERROR: Term must be defined\n");
-				return false;
-			}
-		}
-	}
-
-	if (document_texts) {
-		LOG_DATABASE_WRAP(this, "Texts..\n");
-		for (int i = 0; i < cJSON_GetArraySize(document_texts); i++) {
-			cJSON *row_text = cJSON_GetArrayItem(document_texts, i);
-			cJSON *name = cJSON_GetObjectItem(row_text, "name");
-			cJSON *text = cJSON_GetObjectItem(row_text, "text");
-			cJSON *language = cJSON_GetObjectItem(row_text, "language");
-			cJSON *weight = cJSON_GetObjectItem(row_text, "weight");
-			cJSON *spelling = cJSON_GetObjectItem(row_text, "spelling");
-			cJSON *positions = cJSON_GetObjectItem(row_text, "positions");
-			if (text) {
-				Xapian::termcount w;
-				std::string lan;
-				bool spelling_v;
-				bool positions_v;
-				std::string name_v;
-				(weight && weight->type == 3) ? w = weight->valueint : w = 1;
-				(language && language->type == 4) ? lan = language->valuestring : lan = "en";
-				(spelling && (strcmp(cJSON_Print(spelling), "true") == 0)) ? spelling_v = true : spelling_v = false;
-				(positions && (strcmp(cJSON_Print(positions), "true") == 0)) ? positions_v = true : positions_v = false;
-				if (name && name->type == 4) {
-					name_v = get_prefix(name->valuestring, DOCUMENT_CUSTOM_TERM_PREFIX);
-				}
-				LOG_DATABASE_WRAP(this, "Language: %s  Weight: %d  Spelling: %s Positions: %s Name: %s (%d)\n", lan.c_str(), w, spelling_v ? "true" : "false", positions_v ? "true" : "false", name_v.c_str(), name_v.size());
-				Xapian::TermGenerator term_generator;
-				term_generator.set_document(doc);
-				term_generator.set_stemmer(Xapian::Stem(lan));
-				if (spelling_v) {
-					term_generator.set_database(*wdb);
-					term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
-					term_generator.set_stemming_strategy(term_generator.STEM_SOME);
-				}
-				if (positions_v) {
-					(name_v.size() == 0) ? term_generator.index_text_without_positions(text->valuestring, w) : term_generator.index_text_without_positions(text->valuestring, w, name_v);
-					LOG_DATABASE_WRAP(this, "Text to Index: (%s) %s %d\n", lan.c_str(), text->valuestring, spelling_v);
-				} else {
-					(name_v.size() == 0) ? term_generator.index_text(text->valuestring, w) : term_generator.index_text(text->valuestring, w, name_v);
-					LOG_DATABASE_WRAP(this, "Text to Index: (%s) %s %d\n", lan.c_str(), text->valuestring, spelling_v);
-				}
-			} else {
-				LOG_ERR(this, "ERROR: Text must be defined\n");
-				return false;
-			}
-		}
+	} catch (const char *err) {
+		LOG_DATABASE_WRAP(this, "ERROR: %s\n", err);
+		return false;
 	}
 
 	cJSON_Delete(root);
