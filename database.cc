@@ -662,20 +662,49 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 char
 Database::field_type(const std::string &field_name)
 {
-	if (field_name.size() < 2 || field_name.at(1) != '_') {
-		return STRING_TYPE;
+	return STRING_TYPE;
+}
+
+char
+Database::get_type(cJSON *field)
+{
+	int type = field->type;
+	cJSON* aux = field;
+	if (type == cJSON_Array) {
+		int num_ele = cJSON_GetArraySize(field);
+		aux = cJSON_GetArrayItem(field, 0);
+		type = aux->type;
+		bool meet_range = true;
+		if (type == cJSON_Array) return GEO_TYPE;
+		for (int i = 0; i < num_ele; i++) {
+			aux = cJSON_GetArrayItem(field, i);
+			if (aux->type != type) {
+				throw "Different types of data";
+			}
+			if (i % 2 == 0 && (aux->type != cJSON_Number || aux->valuedouble < -90.0 || aux->valuedouble > 90.00)) {
+				meet_range = false;
+			} else if (i % 2 == 1 && (aux->type != cJSON_Number || aux->valuedouble < -360.0 || aux->valuedouble > 360.00)) {
+				meet_range = false;
+			}
+		}
+		if (num_ele % 2 == 0 && meet_range) {
+			return GEO_TYPE;
+		}
 	}
-	char type = field_name.at(0);
 	switch (type) {
-		case NUMERIC_TYPE:
-		case STRING_TYPE:
-		case DATE_TYPE:
-		case GEO_TYPE:
-		case BOOLEAN_TYPE:
-		case TEXT_TYPE:
-			return type;
-		default:
-			return STRING_TYPE;
+		case cJSON_Number: return NUMERIC_TYPE;
+		case cJSON_False: return BOOLEAN_TYPE;
+		case cJSON_True: return BOOLEAN_TYPE;
+		case cJSON_String:
+			if (serialise_bool(aux->valuestring).size() != 0) {
+				return BOOLEAN_TYPE;
+			} else if (timestamp_date(aux->valuestring).size() != 0) {
+				return DATE_TYPE;
+			} else if ((strlen(aux->valuestring) > 30 && std::string(aux->valuestring).find(" ") != -1) || std::string(aux->valuestring).find("\n") != -1) {
+				return TEXT_TYPE;
+			} else {
+				return STRING_TYPE;
+			}
 	}
 }
 

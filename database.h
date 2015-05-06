@@ -79,6 +79,7 @@ public:
 	cJSON* get_stats_database();
 	cJSON* get_stats_docs(int id_doc);
 	char field_type(const std::string &field_name);
+	char get_type(cJSON *field);
 	cJSON* get_stats_time(const std::string &time_req);
 	void index_fields(cJSON *father, cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, bool empty_data);
 	void update_specifications(cJSON *item, specifications_t &spc_now);
