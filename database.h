@@ -73,6 +73,14 @@ public:
 
 	static pcre *compiled_find_field_re;
 
+	typedef struct specifications_s {
+		int position;
+		int weight;
+		std::string language;
+		bool spelling;
+		bool positions;
+	} specifications_t;
+
 	Database(Endpoints &endpoints, bool writable);
 	~Database();
 
