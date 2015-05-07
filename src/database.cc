@@ -519,7 +519,7 @@ Database::is_language(const std::string &language)
 
 
 bool
-Database::index(const std::string &document, const std::string &_document_id, bool commit)
+Database::index(const std::string &document, const std::string &_document_id, bool commit, const std::string &object_type)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
