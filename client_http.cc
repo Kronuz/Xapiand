@@ -411,8 +411,9 @@ void HttpClient::_patch()
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
+
 	//change index
-	if (!database->index(body, command, e.commit)) {
+	if (!database->index(body, command, e.commit, type)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
