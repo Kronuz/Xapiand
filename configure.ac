@@ -34,7 +34,7 @@ AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h s
 XO_LIB_XAPIAN([], [], [xapian-config-1.3])
 
 # Checks for library functions.
-AC_CHECK_FUNCS([getcwd gettimeofday socket])
+AC_CHECK_FUNCS([getcwd gettimeofday socket sranddev])
 
 save_LIBS="$LIBS"
 LIBS="$LIBS $XAPIAN_LIBS"

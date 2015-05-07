@@ -60,7 +60,11 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, c
 	  thread_pool("W%d", 10),
 	  discovery_port(discovery_port_)
 {
+#ifdef HAVE_SRANDDEV
 	sranddev();
+#else
+	srand(time(NULL));
+#endif
 
 	this_node.http_port = http_port_;
 	this_node.binary_port = binary_port_;
