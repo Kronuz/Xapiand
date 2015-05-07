@@ -654,7 +654,7 @@ unsigned int get_slot(const std::string &name)
 	std::string _md5(md5(standard_name), 24, 8);
 	unsigned int slot = hex2int(_md5);
 	if (slot == 0x00000000) {
-		slot = 0x00000001;
+		slot = 0x00000002; // 0->id; 1->type
 	} else if (slot == 0xffffffff) {
 		slot = 0xfffffffe;
 	}
