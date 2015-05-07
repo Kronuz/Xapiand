@@ -1092,7 +1092,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + to_type(*it));
 		}
 		for(it = similar->field.begin(); it != similar->field.end(); it++) {
-			prefixes.push_back(get_prefix(*it, DOCUMENT_CUSTOM_TERM_PREFIX));
+			prefixes.push_back(get_prefix(*it, DOCUMENT_CUSTOM_TERM_PREFIX, field_type(*it)));
 		}
 		ExpandDeciderFilterPrefixes efp(prefixes);
 		Xapian::ESet eset = enquire.get_eset(similar->n_eset, rset, &efp);
