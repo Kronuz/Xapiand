@@ -706,6 +706,7 @@ Database::get_type(cJSON *field)
 				return STRING_TYPE;
 			}
 	}
+	return STRING_TYPE;
 }
 
 
