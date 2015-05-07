@@ -24,6 +24,7 @@
 
 //change prefix to Q only
 #define DOCUMENT_ID_TERM_PREFIX "Q"
+#define DOCUMENT_OBJECT_TYPE_PREFIX "T"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
 #define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
@@ -549,6 +550,16 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 	} else {
 		LOG_ERR(this, "ERROR: Document must have an 'id'\n");
 		return false;
+	}
+
+	if (object_type.empty()) {
+		LOG_ERR(this, "ERROR: Object type must be defined\n");
+		return false;
+	} else {
+		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
+		doc.add_value(1, object_type);
+		LOG_DATABASE_WRAP(this, "Slot: 1  Object type: %s\n", object_type.c_str());
+		doc.add_boolean_term(prefixed(object_type, DOCUMENT_OBJECT_TYPE_PREFIX));
 	}
 
 	try {
