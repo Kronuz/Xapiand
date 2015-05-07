@@ -65,6 +65,7 @@ public:
 	void _delete();
 	void _index();
 	void _search();
+	void _patch();
 	void _stats(query_t &e);
 	int _endpointgen(query_t &e);
 	std::string http_response(int status, int mode, std::string content=std::string(""));
