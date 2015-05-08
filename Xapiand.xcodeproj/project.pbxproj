@@ -10,6 +10,7 @@
 		C35DB9DF1AD4538100054358 /* fields.cc in Sources */ = {isa = PBXBuildFile; fileRef = C35DB9DD1AD4538100054358 /* fields.cc */; };
 		C35DB9E11ADC6E2100054358 /* endpoint.cc in Sources */ = {isa = PBXBuildFile; fileRef = C35DB9E01ADC6E2100054358 /* endpoint.cc */; };
 		C35DBA7F1AE7FD4500054358 /* tests.cc in Sources */ = {isa = PBXBuildFile; fileRef = C35DBA7E1AE7FD4500054358 /* tests.cc */; };
+		C3A57D381AFD1E10006ED03C /* cJSON_Utils.c in Sources */ = {isa = PBXBuildFile; fileRef = C3A57D361AFD1E10006ED03C /* cJSON_Utils.c */; };
 		C3AF50161AC1E79A007071BF /* md5.cc in Sources */ = {isa = PBXBuildFile; fileRef = C3AF50141AC1E79A007071BF /* md5.cc */; };
 		E59725B71A9CFCAD0060069C /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = E59725B51A9CFCAD0060069C /* http_parser.c */; };
 		E59725CC1A9D25EB0060069C /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725C61A9D25EB0060069C /* client_base.cc */; };
@@ -44,6 +45,8 @@
 		C35DB9E01ADC6E2100054358 /* endpoint.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = endpoint.cc; sourceTree = "<group>"; };
 		C35DB9E21AE7FD1800054358 /* tests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tests.h; sourceTree = "<group>"; };
 		C35DBA7E1AE7FD4500054358 /* tests.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = tests.cc; sourceTree = "<group>"; };
+		C3A57D361AFD1E10006ED03C /* cJSON_Utils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cJSON_Utils.c; sourceTree = "<group>"; };
+		C3A57D371AFD1E10006ED03C /* cJSON_Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON_Utils.h; sourceTree = "<group>"; };
 		C3AF50141AC1E79A007071BF /* md5.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = md5.cc; sourceTree = "<group>"; };
 		C3AF50151AC1E79A007071BF /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
 		E59725B51A9CFCAD0060069C /* http_parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = http_parser.c; sourceTree = "<group>"; };
@@ -123,6 +126,8 @@
 				E5CEBCD91A99C9BB00CD151F /* queue.h */,
 				E5CEBCDD1A99C9BB00CD151F /* threadpool.h */,
 				E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */,
+				C3A57D371AFD1E10006ED03C /* cJSON_Utils.h */,
+				C3A57D361AFD1E10006ED03C /* cJSON_Utils.c */,
 				E59725B61A9CFCAD0060069C /* http_parser.h */,
 				E59725B51A9CFCAD0060069C /* http_parser.c */,
 				E59725D21AA1A38B0060069C /* cJSON.c */,
@@ -207,6 +212,7 @@
 				E59725D11A9D25F60060069C /* utils.cc in Sources */,
 				C35DB9E11ADC6E2100054358 /* endpoint.cc in Sources */,
 				E5CEBCDF1A99C9BB00CD151F /* server.cc in Sources */,
+				C3A57D381AFD1E10006ED03C /* cJSON_Utils.c in Sources */,
 				E5C170471AA4B9CC00C21A86 /* manager.cc in Sources */,
 				E59725D41AA1A38B0060069C /* cJSON.c in Sources */,
 				E59725B71A9CFCAD0060069C /* http_parser.c in Sources */,
