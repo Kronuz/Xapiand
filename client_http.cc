@@ -732,6 +732,10 @@ int HttpClient::_endpointgen(query_t &e)
 				type  = urldecode(p.off_type, p.len_type);
 				command  = urldecode(p.off_command, p.len_command);
 
+				if(type.size() == 0) {
+					return CMD_BAD_QUERY;
+				}
+
 				if (p.len_namespace) {
 					nsp_ = urldecode(p.off_namespace, p.len_namespace) + "/";
 				} else {
@@ -969,7 +973,7 @@ int HttpClient::_endpointgen(query_t &e)
 	} else {
 		LOG_CONN_WIRE(this,"Parsing not done\n");
 		/* Bad query */
-		return -2;
+		return CMD_BAD_QUERY;
 	}
 	return cmd;
 }
