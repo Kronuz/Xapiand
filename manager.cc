@@ -190,7 +190,6 @@ bool XapiandManager::bind_tcp(const char *type, int &sock, int &port, struct soc
 {
 	int tcp_backlog = XAPIAND_TCP_BACKLOG;
 	int optval = 1;
-	struct ip_mreq mreq;
 	struct linger ling = {0, 0};
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
@@ -505,19 +504,19 @@ void XapiandManager::discovery_io_cb(ev::io &watcher, int revents)
 				LOG_DISCOVERY(this, "Badly formed message: No address!\n");
 				return;
 			}
-			remote_node.addr.sin_addr.s_addr = decoded;
+			remote_node.addr.sin_addr.s_addr = (int) decoded;
 
 			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
 				LOG_DISCOVERY(this, "Badly formed message: No http port!\n");
 				return;
 			}
-			remote_node.http_port = decoded;
+			remote_node.http_port = (int) decoded;
 
 			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
 				LOG_DISCOVERY(this, "Badly formed message: No binary port!\n");
 				return;
 			}
-			remote_node.binary_port = decoded;
+			remote_node.binary_port = (int) decoded;
 
 			if ((decoded = decode_length(&ptr, buf + received, true)) <= 0) {
 				LOG_DISCOVERY(this, "Badly formed message: No name length!\n");
@@ -526,7 +525,7 @@ void XapiandManager::discovery_io_cb(ev::io &watcher, int revents)
 			remote_node.name = std::string(ptr, decoded);
 			ptr += decoded;
 
-			int remote_pid = decode_length(&ptr, buf + received, false);
+			int remote_pid = (int) decode_length(&ptr, buf + received, false);
 
 			// LOG_DISCOVERY(this, "%s on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
 
