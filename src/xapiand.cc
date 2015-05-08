@@ -94,6 +94,7 @@ int main(int argc, char **argv)
 
 	INFO((void *)NULL, "Joined cluster: %s\n", cluster_name);
 
+/*
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	// Prefer glass database
 	if (setenv("XAPIAN_PREFER_GLASS", "1", false) == 0) {
@@ -105,6 +106,7 @@ int main(int argc, char **argv)
 		INFO((void *)NULL, "Enabled brass database.\n");
 	}
 #endif
+*/
 
 	// Enable changesets
 	if (setenv("XAPIAN_MAX_CHANGESETS", "10", false) == 0) {
