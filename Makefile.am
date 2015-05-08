@@ -12,6 +12,7 @@ xapiand_SOURCES = xapiand.cc \
 	client_http.cc \
 	http_parser.c \
 	cJSON.cc \
+	cJSON_Utils.c \
 	md5.cc \
 	utils.cc \
 	length.cc \
@@ -31,6 +32,7 @@ noinst_HEADERS = xapiand.h \
 	client_http.h \
 	http_parser.h \
 	cJSON.h \
+	cJSON_Utils.h \
 	md5.h \
 	utils.h \
 	length.h \
