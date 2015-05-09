@@ -19,10 +19,9 @@ ln -s xapian/xapian-core
 ln -s xapian/xapian-bindings
 
 
-# Build xapian-core (maintainer mode)
+# Build xapian-core
 ######################################
 cd xapian-core
-
 # Autoconf, configure and make:
 ./preautoreconf
 autoreconf --force --install -Im4 -I/usr/local/share/aclocal
@@ -32,59 +31,11 @@ make install
 cd ..
 
 
-# Build xapian-core (all manually)
-######################################
-cd xapian-core
-
-# Generate xapian/errors.h
-perl generate-exceptions
-
-# Compile lemon (for queryparser)
-$CC -o queryparser/lemon queryparser/lemon.c
-
-# Compile queryparser
-queryparser/lemon -q -oqueryparser/queryparser_internal.cc -hqueryparser/queryparser_token.h queryparser/queryparser.lemony
-
-# Compile languages compiler (snowball based)
-$CC -o languages/snowball -DDISABLE_JAVA languages/compiler/space.c languages/compiler/tokeniser.c languages/compiler/analyser.c languages/compiler/generator.c languages/compiler/driver.c
-
-# Compile languages
-sbc() { languages/snowball "$1" -o `echo "$1"|sed 's#\.sbl$##'` -c++ -u -n InternalStem$(echo "$1"|sed 's#.*/\(.\).*#\1#'|tr a-z A-Z)$(echo "$1"|sed 's#.*/.##;s#\.sbl##') -p SnowballStemImplementation }; for f in $(find languages -type f -name '*.sbl'); do sbc "$f"; done
-
-# Build sbl-dispatch.h
-perl -I common languages/collate-sbl . $(find languages -type f -name '*.sbl')
-
-# Compile unicode-data
-tclsh unicode/uniParse.tcl unicode/UnicodeData.txt 6.3.0 unicode/unicode-data.cc
-
-# Make fake man pages:
-touch xapian-config.1
-touch bin/xapian-check.1
-touch bin/xapian-compact.1
-touch bin/xapian-delve.1
-touch bin/xapian-inspect.1
-touch bin/xapian-replicate.1
-touch bin/xapian-replicate-server.1
-touch bin/xapian-progsrv.1
-touch bin/xapian-tcpsrv.1
-touch examples/copydatabase.1
-touch examples/quest.1
-touch examples/xapian-metadata.1
-
-# Autoconf, configure (disabled docs) and make:
-./preautoreconf
-autoreconf --force --install -Im4 -I/usr/local/share/aclocal
-# ./configure CFLAGS="-O1 -g -fsanitize=address -fno-omit-frame-pointer" --disable-dependency-tracking --prefix="$PREFIX"
-./configure --disable-dependency-tracking --prefix="$PREFIX" && echo 'all:\ninstall:\ncheck:\n' > docs/Makefile
-make
-make install
-cd ..
-
 # Build Python xapian-bindings
 ######################################
 cd xapian-bindings
-cd python
 
+cd python
 # Generate except.i
 perl -w -I../../xapian-core generate-python-exceptions
 
@@ -97,7 +48,6 @@ touch doccomments.i
 # Build bindings
 mkdir -p modern
 swig -I../../xapian-core/include -c++ -python -threads -shadow -modern -O -outdir modern -o modern/xapian_wrap.cc python.i
-
 cd ..
 
 # Autoconf, configure and make:
@@ -111,51 +61,5 @@ cd ..
 # Running tests
 ######################################
 cd xapian-core
-cd tests
-
-perl generate-api_generated > api_generated.cc
-
-perl collate-test . api_collated.h api_all.h \
-	api_anydb.cc \
-	api_backend.cc \
-	api_closedb.cc \
-	api_collapse.cc \
-	api_compact.cc \
-	api_db.cc \
-	api_generated.cc \
-	api_geospatial.cc \
-	api_matchspy.cc \
-	api_metadata.cc \
-	api_nodb.cc \
-	api_none.cc \
-	api_opsynonym.cc \
-	api_opvalue.cc \
-	api_percentages.cc \
-	api_posdb.cc \
-	api_postingsource.cc \
-	api_qpbackend.cc \
-	api_query.cc \
-	api_replacedoc.cc \
-	api_replicate.cc \
-	api_scalability.cc \
-	api_serialise.cc \
-	api_snipper.cc \
-	api_sorting.cc \
-	api_spelling.cc \
-	api_stem.cc \
-	api_transdb.cc \
-	api_unicode.cc \
-	api_valuestats.cc \
-	api_valuestream.cc \
-	api_weight.cc \
-	api_wrdb.cc
-
-perl collate-test . perftest/perftest_collated.h perftest/perftest_all.h \
-	perftest/perftest_matchdecider.cc \
-	perftest/perftest_randomidx.cc
-
-perl collate-test . soaktest/soaktest_collated.h soaktest/soaktest_all.h \
-	soaktest/soaktest_queries.cc
-
 make check
 cd ..
