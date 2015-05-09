@@ -22,6 +22,7 @@ AC_PROG_CXX
 AC_LANG(C++)
 
 AX_CXX_COMPILE_STDCXX_11([noext], [optional])  # This needs autoconf-archive installed
+AX_CXX_HAVE_SSTREAM
 
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
@@ -30,12 +31,13 @@ AC_CHECK_LIB(ev, ev_run, [], [AC_MSG_ERROR([libev not found, Xapiand requires li
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
 
-# Check for xapian.
-XO_LIB_XAPIAN([], [], [xapian-config-1.3])
-
 # Checks for library functions.
 AC_CHECK_FUNCS([getcwd gettimeofday socket sranddev])
 
+# Check for xapian.
+XO_LIB_XAPIAN([], [], [xapian-config-1.3])
+
+# Check for xapian's remote protocol
 save_LIBS="$LIBS"
 LIBS="$LIBS $XAPIAN_LIBS"
 save_CXXFLAGS="$CXXFLAGS"
