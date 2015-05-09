@@ -24,8 +24,9 @@ ln -s xapian/xapian-bindings
 cd xapian-core
 
 # Autoconf, configure and make:
-autoreconf --force --install -I/usr/local/share/aclocal
-./configure --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="$PREFIX" PYTHON_LIB="$PREFIX/lib/python2.7/site-packages" XAPIAN_CONFIG=$PREFIX/bin/xapian-config-1.3 --without-csharp --without-tcl --without-java --without-ruby --with-python --without-php
+./preautoreconf
+autoreconf --force --install -Im4 -I/usr/local/share/aclocal
+./configure --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="$PREFIX"
 make
 make install
 cd ..
@@ -72,7 +73,7 @@ touch examples/xapian-metadata.1
 
 # Autoconf, configure (disabled docs) and make:
 ./preautoreconf
-autoreconf --force --install -I/usr/local/share/aclocal
+autoreconf --force --install -Im4 -I/usr/local/share/aclocal
 # ./configure CFLAGS="-O1 -g -fsanitize=address -fno-omit-frame-pointer" --disable-dependency-tracking --prefix="$PREFIX"
 ./configure --disable-dependency-tracking --prefix="$PREFIX" && echo 'all:\ninstall:\ncheck:\n' > docs/Makefile
 make
@@ -100,7 +101,7 @@ swig -I../../xapian-core/include -c++ -python -threads -shadow -modern -O -outdi
 cd ..
 
 # Autoconf, configure and make:
-autoreconf --force --install -I/usr/local/share/aclocal
+autoreconf --force --install -Im4 -I/usr/local/share/aclocal
 ./configure --disable-dependency-tracking --prefix="$PREFIX" PYTHON_LIB="$PREFIX/lib/python2.7/site-packages" XAPIAN_CONFIG=$PREFIX/bin/xapian-config-1.3 --without-csharp --without-tcl --without-java --without-ruby --with-python --without-php
 make
 make install
