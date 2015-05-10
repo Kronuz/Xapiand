@@ -199,23 +199,23 @@ bool XapiandManager::bind_tcp(const char *type, int &sock, int &port, struct soc
 
 	// use setsockopt() to allow multiple listeners connected to the same address
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(this, "ERROR: %s setsockopt SO_REUSEADDR (sock=%d): %s\n", type, sock, strerror(errno));
 	}
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(this, "ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): %s\n", type, sock, strerror(errno));
 	}
 #endif
 	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(this, "ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): %s\n", type, sock, strerror(errno));
 	}
 
 	if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(this, "ERROR: %s setsockopt SO_LINGER (sock=%d): %s\n", type, sock, strerror(errno));
 	}
 
 	if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(this, "ERROR: %s setsockopt TCP_NODELAY (sock=%d): %s\n", type, sock, strerror(errno));
 	}
 
 	memset(&addr, 0, sizeof(addr));
@@ -255,15 +255,15 @@ bool XapiandManager::bind_udp(const char *type, int &sock, int &port, struct soc
 
 	// use setsockopt() to allow multiple listeners connected to the same port
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(this, "ERROR: %s setsockopt SO_REUSEPORT (sock=%d): %s\n", type, sock, strerror(errno));
 	}
 
 	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(this, "ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): %s\n", type, sock, strerror(errno));
 	}
 
 	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) < 0) {
-		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(this, "ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): %s\n", type, sock, strerror(errno));
 	}
 
 	// use setsockopt() to request that the kernel join a multicast group
@@ -271,7 +271,7 @@ bool XapiandManager::bind_udp(const char *type, int &sock, int &port, struct soc
 	mreq.imr_multiaddr.s_addr = inet_addr(group);
 	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
-		LOG_ERR(this, "ERROR: %s setsockopt (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(this, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): %s\n", type, sock, strerror(errno));
 		::close(sock);
 		sock = -1;
 		return false;
