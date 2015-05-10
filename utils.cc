@@ -20,15 +20,23 @@
  * IN THE SOFTWARE.
  */
 
+#include "utils.h"
+
 #include <string>
 #include <cstdlib>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <algorithm>
-#include "pthread.h"
-#include "utils.h"
+#include <pthread.h>
 #include <xapian.h>
+
+#include <fcntl.h>
+#include <netinet/tcp.h> /* for TCP_NODELAY */
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 
 #define DATE_RE "([1-9][0-9]{3})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]{1,3}))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?"
 #define DATE_MATH_RE "([+-]\\d+|\\/{1,2})([dyMwdhms])"
@@ -112,6 +120,151 @@ void log(void *obj, const char *format, ...)
 	va_end(argptr);
 
 	pthread_mutex_unlock(&qmtx);
+}
+
+
+void check_tcp_backlog(int tcp_backlog)
+{
+#if defined(NET_CORE_SOMAXCONN)
+	int name[3] = {CTL_NET, NET_CORE, NET_CORE_SOMAXCONN};
+	int somaxconn;
+	size_t somaxconn_len = sizeof(somaxconn);
+	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
+		LOG_ERR(NULL, "ERROR: sysctl: %s\n", strerror(errno));
+		return;
+	}
+	if (somaxconn > 0 && somaxconn < tcp_backlog) {
+		LOG_ERR(NULL, "WARNING: The TCP backlog setting of %d cannot be enforced because "
+				"net.core.somaxconn"
+				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
+	}
+#elif defined(KIPC_SOMAXCONN)
+	int name[3] = {CTL_KERN, KERN_IPC, KIPC_SOMAXCONN};
+	int somaxconn;
+	size_t somaxconn_len = sizeof(somaxconn);
+	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
+		LOG_ERR(NULL, "ERROR: sysctl: %s\n", strerror(errno));
+		return;
+	}
+	if (somaxconn > 0 && somaxconn < tcp_backlog) {
+		LOG_ERR(NULL, "WARNING: The TCP backlog setting of %d cannot be enforced because "
+				"kern.ipc.somaxconn"
+				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
+	}
+#endif
+}
+
+bool bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries)
+{
+	int tcp_backlog = XAPIAND_TCP_BACKLOG;
+	int optval = 1;
+	struct linger ling = {0, 0};
+
+	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s socket: %s\n", type, strerror(errno));
+		return false;
+	}
+
+	// use setsockopt() to allow multiple listeners connected to the same address
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s setsockopt SO_REUSEADDR (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+#ifdef SO_NOSIGPIPE
+	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+#endif
+	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s setsockopt SO_LINGER (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s setsockopt TCP_NODELAY (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	for (int i = 0; i < tries; i++, port++) {
+		addr.sin_port = htons(port);
+
+		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+			LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+		} else {
+			fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
+			check_tcp_backlog(tcp_backlog);
+			listen(sock, tcp_backlog);
+			return true;
+		}
+	}
+
+	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+	close(sock);
+	sock = -1;
+	return false;
+}
+
+
+bool bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries, const char *group)
+{
+	int optval = 1;
+	unsigned char ttl = 3;
+	struct ip_mreq mreq;
+
+	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s socket: %s\n", type, strerror(errno));
+		return false;
+	}
+
+	// use setsockopt() to allow multiple listeners connected to the same port
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s setsockopt SO_REUSEPORT (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): %s\n", type, sock, strerror(errno));
+	}
+
+	// use setsockopt() to request that the kernel join a multicast group
+	memset(&mreq, 0, sizeof(mreq));
+	mreq.imr_multiaddr.s_addr = inet_addr(group);
+	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
+		LOG_ERR(NULL, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): %s\n", type, sock, strerror(errno));
+		close(sock);
+		sock = -1;
+		return false;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);  // bind to all addresses (differs from sender)
+
+	for (int i = 0; i < tries; i++, port++) {
+		addr.sin_port = htons(port);
+
+		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+			LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+		} else {
+			fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
+			addr.sin_addr.s_addr = inet_addr(group);  // setup s_addr for sender (send to group)
+			return true;
+		}
+	}
+
+	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+	close(sock);
+	sock = -1;
+	return false;
 }
 
 

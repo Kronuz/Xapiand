@@ -27,28 +27,18 @@
 
 #include "database.h"
 #include "threadpool.h"
+#include "discovery.h"
 
 #include <list>
 #include <ev++.h>
 #include <pthread.h>
 #include <netinet/in.h>
-#include <unordered_map>
 
 
 #define XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION 1
 #define XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION 0
 
-enum discovery_type {
-	DISCOVERY_HELLO,    // New node saying hello
-	DISCOVERY_WAVE,     // Nodes waving hello to the new node
-	DISCOVERY_SNEER,    // Nodes telling the client they don't agree on the new node's name
-    DISCOVERY_PING,     // Ping
-    DISCOVERY_PONG,     // Pong
-    DISCOVERY_BYE,      // Node says goodbye
-    DISCOVERY_MAX
-};
-
-
+#define STATE_BAD        -1
 #define STATE_READY       0
 #define STATE_WAITING___  1
 #define STATE_WAITING__   2
@@ -61,32 +51,15 @@ class XapiandServer;
 class BaseClient;
 
 
-struct Node {
-	std::string name;
-	struct sockaddr_in addr;
-	int http_port;
-	int binary_port;
-	time_t touched;
-};
-
-
 class XapiandManager {
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
 
-	unsigned char state;
-
-	ev::io discovery_io;
-	ev::timer discovery_heartbeat;
-
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
-	std::string cluster_name;
-	std::string node_name;
+	unsigned char state;
 
-	struct sockaddr_in discovery_addr;
-	int discovery_port, discovery_sock;
 	int http_sock;
 	int binary_sock;
 
@@ -98,22 +71,16 @@ class XapiandManager {
 	ev::async break_loop;
 	void break_loop_cb(ev::async &watcher, int revents);
 
-	void discovery_heartbeat_cb(ev::timer &watcher, int revents);
-	void discovery_io_cb(ev::io &watcher, int revents);
-	void discovery(const char *message, size_t size);
-	void discovery(discovery_type type, Node &node);
-
 	void check_tcp_backlog(int tcp_backlog);
 	void shutdown_cb(ev::async &watcher, int revents);
 	struct sockaddr_in host_address();
-	bool bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries);
-	bool bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries, const char *group);
 	void destroy();
 
 	std::list<XapiandServer *>::const_iterator attach_server(XapiandServer *server);
 	void detach_server(XapiandServer *server);
 
 protected:
+	friend class Discovery;
 	friend class XapiandServer;
 	pthread_mutex_t servers_mutex;
 	pthread_mutexattr_t servers_mutex_attr;
@@ -124,8 +91,8 @@ public:
 	time_t shutdown_now;
 	ev::async async_shutdown;
 
+	Discovery discovery;
 	Node this_node;
-	std::unordered_map<std::string, Node> nodes;
 
 	XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *node_name_, const char *discovery_group_, int discovery_port_, int http_port_, int binary_port_);
 	~XapiandManager();
@@ -133,6 +100,7 @@ public:
 	void run(int num_servers);
 	void sig_shutdown_handler(int sig);
 	void shutdown();
+
 	cJSON* server_status();
 	cJSON* get_stats_time(const std::string &time_req);
 	cJSON* get_stats_json(pos_time_t first_time, pos_time_t second_time);
