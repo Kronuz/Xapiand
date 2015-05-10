@@ -28,8 +28,8 @@
 #include <string>
 #include <vector>
 
-#include "tclap/Arg.h"
-#include "tclap/Constraint.h"
+#include "Arg.h"
+#include "Constraint.h"
 
 namespace TCLAP {
 

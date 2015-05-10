@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-#include "tclap/Constraint.h"
+#include "Constraint.h"
 
 #if defined(HAVE_SSTREAM)
 #include <sstream>
