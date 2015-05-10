@@ -108,9 +108,8 @@ class CmdOutput : public StdOutput
 		}
 
 		virtual void usage(CmdLineInterface& _cmd) {
-			std::string message = _cmd.getMessage();
-
-			spacePrint(std::cout, message, 75, 0, 0);
+			spacePrint(std::cout, PACKAGE_STRING, 75, 0, 0);
+			spacePrint(std::cout, "[" PACKAGE_BUGREPORT "]", 75, 0, 0);
 
 			std::cout << std::endl;
 
@@ -150,7 +149,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 	unsigned int nthreads = std::thread::hardware_concurrency() * 2;
 
 	try {
-		CmdLine cmd("Start " PACKAGE_NAME ".", ' ', PACKAGE_STRING);
+		CmdLine cmd("", ' ', PACKAGE_STRING);
 
 		// ZshCompletionOutput zshoutput;
 		// cmd.setOutput(&zshoutput);
