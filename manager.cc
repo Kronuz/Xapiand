@@ -213,8 +213,8 @@ void XapiandManager::destroy()
 
 void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 {
-	if (state != STATE_READY) {
-		if (state == STATE_RESET) {
+	switch (state) {
+		case STATE_RESET:
 			if (!this_node.name.empty()) {
 				nodes.erase(stringtolower(this_node.name));
 			}
@@ -223,13 +223,16 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			} else {
 				this_node.name = node_name;
 			}
-		}
-		discovery(DISCOVERY_HELLO, this_node);
-	} else {
-		discovery(DISCOVERY_PING, this_node);
+		case STATE_WAITING:
+			discovery(DISCOVERY_HELLO, this_node);
+			break;
+
+		case STATE_READY:
+			discovery(DISCOVERY_PING, this_node);
+			break;
 	}
 	if (state && state-- == 1) {
-		discovery_heartbeat.set(0, 10);
+		discovery_heartbeat.set(0, 20);
 	}
 }
 
