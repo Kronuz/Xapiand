@@ -28,6 +28,7 @@
 #include "tclap/CmdLine.h"
 #include "tclap/ZshCompletionOutput.h"
 
+#include <thread>
 #include <stdlib.h>
 
 using namespace TCLAP;
@@ -141,11 +142,13 @@ typedef struct opts_s {
 	std::string uid;
 	std::string gid;
 	std::string discovery_group;
-	int num_servers;
+	unsigned int num_servers;
 } opts_t;
 
 void parseOptions(int argc, char** argv, opts_t &opts)
 {
+	unsigned int nthreads = std::thread::hardware_concurrency() * 2;
+
 	try {
 		CmdLine cmd("Start " PACKAGE_NAME ".", ' ', PACKAGE_STRING);
 
@@ -174,7 +177,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<std::string> uid("u", "uid", "User ID.", false, "xapiand", "uid", cmd);
 		ValueArg<std::string> gid("g", "gid", "Group ID.", false, "xapiand", "uid", cmd);
 
-		ValueArg<int> num_servers("", "workers", "Number of worker servers.", false, 8, "servers", cmd);
+		ValueArg<unsigned int> num_servers("", "workers", "Number of worker servers.", false, nthreads, "servers", cmd);
 
 		cmd.parse( argc, argv );
 
