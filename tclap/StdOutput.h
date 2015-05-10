@@ -117,8 +117,6 @@ inline void StdOutput::version(CmdLineInterface& _cmd)
 
 inline void StdOutput::usage(CmdLineInterface& _cmd )
 {
-	std::string message = _cmd.getMessage();
-
 	std::cout << std::endl << "USAGE: " << std::endl << std::endl;
 
 	_shortUsage( _cmd, std::cout );
@@ -126,8 +124,6 @@ inline void StdOutput::usage(CmdLineInterface& _cmd )
 	std::cout << std::endl << std::endl << "Where: " << std::endl << std::endl;
 
 	_longUsage( _cmd, std::cout );
-
-	spacePrint( std::cout, message, 75, 3, 0 );
 
 	std::cout << std::endl;
 
@@ -198,6 +194,7 @@ StdOutput::_longUsage( CmdLineInterface& _cmd,
 					   std::ostream& os ) const
 {
 	std::list<Arg*> argList = _cmd.getArgList();
+	std::string message = _cmd.getMessage();
 	XorHandler xorHandler = _cmd.getXorHandler();
 	std::vector< std::vector<Arg*> > xorList = xorHandler.getXorList();
 
@@ -227,6 +224,8 @@ StdOutput::_longUsage( CmdLineInterface& _cmd,
 			}
 
 	os << std::endl;
+
+	spacePrint( os, message, 75, 3, 0 );
 }
 
 inline void StdOutput::spacePrint( std::ostream& os,
