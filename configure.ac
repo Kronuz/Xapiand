@@ -38,6 +38,7 @@ AC_CHECK_FUNCS([getcwd gettimeofday socket sranddev])
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
 AC_CHECK_LIB(ev, ev_run, [], [AC_MSG_ERROR([libev not found, Xapiand requires libev-devel])], [-lev])
+AC_CHECK_LIB(pcre, pcre_compile, [], [AC_MSG_ERROR([libpcre not found, Xapiand requires libpcre-devel])], [-lpcre])
 
 # Check for xapian.
 XO_LIB_XAPIAN([], [], [xapian-config-1.3])

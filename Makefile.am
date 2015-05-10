@@ -42,6 +42,6 @@ noinst_HEADERS = xapiand.h \
 
 EXTRA_DIST = Xapiand.xcodeproj/project.pbxproj
 
-AM_LDFLAGS = $(XAPIAN_LIBS) -lpcre
+AM_LDFLAGS = $(XAPIAN_LIBS)
 
 AM_CXXFLAGS = $(XAPIAN_CXXFLAGS)
