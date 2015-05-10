@@ -19,6 +19,7 @@
 		E59725D11A9D25F60060069C /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = E59725CF1A9D25F60060069C /* utils.cc */; };
 		E59725D41AA1A38B0060069C /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = E59725D21AA1A38B0060069C /* cJSON.c */; };
 		E597730C1ACC75EB00E3DA76 /* length.cc in Sources */ = {isa = PBXBuildFile; fileRef = E597730A1ACC75EB00E3DA76 /* length.cc */; };
+		E5B4493A1AFFB6650076C456 /* discovery.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5B449381AFFB6650076C456 /* discovery.cc */; };
 		E5C170471AA4B9CC00C21A86 /* manager.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5C170451AA4B9CC00C21A86 /* manager.cc */; };
 		E5CEBCDF1A99C9BB00CD151F /* server.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDA1A99C9BB00CD151F /* server.cc */; };
 		E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5CEBCDC1A99C9BB00CD151F /* threadpool.cc */; };
@@ -65,6 +66,8 @@
 		E59725D61AA2141F0060069C /* xapiand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xapiand.h; sourceTree = "<group>"; };
 		E597730A1ACC75EB00E3DA76 /* length.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = length.cc; sourceTree = "<group>"; };
 		E597730B1ACC75EB00E3DA76 /* length.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = length.h; sourceTree = "<group>"; };
+		E5B449381AFFB6650076C456 /* discovery.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = discovery.cc; sourceTree = "<group>"; };
+		E5B449391AFFB6650076C456 /* discovery.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = discovery.h; sourceTree = "<group>"; };
 		E5C170451AA4B9CC00C21A86 /* manager.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = manager.cc; sourceTree = "<group>"; };
 		E5C170461AA4B9CC00C21A86 /* manager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = manager.h; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -107,6 +110,8 @@
 				C35DB9E01ADC6E2100054358 /* endpoint.cc */,
 				E5C170461AA4B9CC00C21A86 /* manager.h */,
 				E5C170451AA4B9CC00C21A86 /* manager.cc */,
+				E5B449391AFFB6650076C456 /* discovery.h */,
+				E5B449381AFFB6650076C456 /* discovery.cc */,
 				E5CEBCDB1A99C9BB00CD151F /* server.h */,
 				E5CEBCDA1A99C9BB00CD151F /* server.cc */,
 				E59725C71A9D25EB0060069C /* client_base.h */,
@@ -219,6 +224,7 @@
 				E5CEBCE01A99C9BB00CD151F /* threadpool.cc in Sources */,
 				E59725CD1A9D25EB0060069C /* client_binary.cc in Sources */,
 				C35DBA7F1AE7FD4500054358 /* tests.cc in Sources */,
+				E5B4493A1AFFB6650076C456 /* discovery.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
