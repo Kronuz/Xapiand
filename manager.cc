@@ -39,6 +39,9 @@
 
 #define TIME_RE "((([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)?"
 
+
+const uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION | XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION << 8;
+
 pcre *XapiandManager::compiled_time_re = NULL;
 
 
@@ -50,7 +53,9 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, c
 	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  thread_pool("W%d", 10),
-	  discovery(this, NULL, cluster_name_, node_name_, discovery_group_, discovery_port_)
+	  cluster_name(cluster_name_),
+	  node_name(node_name_),
+	  discovery_port(discovery_port_)
 {
 
 	this_node.http_port = http_port_;
@@ -74,6 +79,11 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, c
 
 	this_node.addr = host_address();
 
+	if (discovery_port == 0) {
+		discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
+	}
+	bind_udp("discovery", discovery_sock, discovery_port, discovery_addr, 1, discovery_group_ ? discovery_group_ : XAPIAND_DISCOVERY_GROUP);
+
 	int http_tries = 1;
 	if (this_node.http_port == 0) {
 		this_node.http_port = XAPIAND_HTTP_SERVERPORT;
@@ -90,7 +100,10 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, c
 	bind_tcp("binary", binary_sock, this_node.binary_port, addr, binary_tries);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
-	assert(http_sock != -1 && binary_sock != -1);
+	assert(discovery_sock != -1 && http_sock != -1 && binary_sock != -1);
+
+	discovery_heartbeat.set<XapiandManager, &XapiandManager::discovery_heartbeat_cb>(this);
+	discovery_heartbeat.start(0, 1);
 
 	LOG_OBJ(this, "CREATED MANAGER!\n");
 }
@@ -170,9 +183,16 @@ void XapiandManager::sig_shutdown_handler(int sig)
 void XapiandManager::destroy()
 {
 	pthread_mutex_lock(&qmtx);
-	if (http_sock == -1 && binary_sock == -1) {
+	if (discovery_sock == -1 && http_sock == -1 && binary_sock == -1) {
 		pthread_mutex_unlock(&qmtx);
 		return;
+	}
+
+	discovery(DISCOVERY_BYE, this_node);
+
+	if (discovery_sock != -1) {
+		::close(discovery_sock);
+		discovery_sock = -1;
 	}
 
 	if (http_sock != -1) {
@@ -188,6 +208,73 @@ void XapiandManager::destroy()
 	pthread_mutex_unlock(&qmtx);
 
 	LOG_OBJ(this, "DESTROYED MANAGER!\n");
+}
+
+
+void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
+{
+	if (state != STATE_READY) {
+		if (state == STATE_RESET) {
+			if (!this_node.name.empty()) {
+				nodes.erase(stringtolower(this_node.name));
+			}
+			if (node_name.empty()) {
+				this_node.name = name_generator();
+			} else {
+				this_node.name = node_name;
+			}
+		}
+		discovery(DISCOVERY_HELLO, this_node);
+	} else {
+		discovery(DISCOVERY_PING, this_node);
+	}
+	if (state && state-- == 1) {
+		discovery_heartbeat.set(0, 10);
+	}
+}
+
+
+void XapiandManager::discovery(const char *buf, size_t buf_size)
+{
+	if (discovery_sock != -1) {
+		LOG_DISCOVERY_WIRE(this, "(sock=%d) <<-- '%s'\n", discovery_sock, repr(buf, buf_size).c_str());
+
+#ifdef MSG_NOSIGNAL
+		ssize_t written = ::sendto(discovery_sock, buf, buf_size, MSG_NOSIGNAL, (struct sockaddr *)&discovery_addr, sizeof(discovery_addr));
+#else
+		ssize_t written = ::sendto(discovery_sock, buf, buf_size, 0, (struct sockaddr *)&discovery_addr, sizeof(discovery_addr));
+#endif
+
+		if (written < 0) {
+			if (errno != EAGAIN && discovery_sock != -1) {
+				LOG_ERR(this, "ERROR: sendto error (sock=%d): %s\n", discovery_sock, strerror(errno));
+				destroy();
+			}
+		} else if (written == 0) {
+			// nothing written?
+		} else {
+
+		}
+	}
+}
+
+
+void XapiandManager::discovery(discovery_type type, Node &node)
+{
+	if (node.name.empty()) {
+		return;
+	}
+	std::string message((const char *)&type, 1);
+	message.append(std::string((const char *)&XAPIAND_DISCOVERY_PROTOCOL_VERSION, sizeof(uint16_t)));
+	message.append(encode_length(cluster_name.size()));
+	message.append(cluster_name);
+	message.append(encode_length(node.addr.sin_addr.s_addr));
+	message.append(encode_length(node.http_port));
+	message.append(encode_length(node.binary_port));
+	message.append(encode_length(node.name.size()));
+	message.append(node.name);
+	message.append(encode_length(getpid()));
+	discovery(message.c_str(), message.size());
 }
 
 
@@ -255,8 +342,8 @@ void XapiandManager::run(int num_servers)
 	if (this_node.binary_port != -1) {
 		msg += "tcp:" + std::to_string(this_node.binary_port) + " (xapian v" + std::to_string(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION) + "), ";
 	}
-	if (discovery.discovery_port != -1) {
-		msg += "udp:" + std::to_string(discovery.discovery_port) + " (discovery v" + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION) + "), ";
+	if (discovery_port != -1) {
+		msg += "udp:" + std::to_string(discovery_port) + " (discovery v" + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION) + "), ";
 	}
 	msg += "at pid:" + std::to_string(getpid()) + "...\n";
 
@@ -264,7 +351,7 @@ void XapiandManager::run(int num_servers)
 
 	ThreadPool server_pool("S%d", num_servers);
 	for (int i = 0; i < num_servers; i++) {
-		XapiandServer *server = new XapiandServer(this, NULL, http_sock, binary_sock, &database_pool, &thread_pool);
+		XapiandServer *server = new XapiandServer(this, NULL, discovery_sock, http_sock, binary_sock, &database_pool, &thread_pool);
 		server_pool.addTask(server);
 	}
 

@@ -5,7 +5,6 @@ xapiand_SOURCES = xapiand.cc \
 	endpoint.cc \
 	database.cc \
 	manager.cc \
-	discovery.cc \
 	server.cc \
 	threadpool.cc \
 	client_base.cc \
@@ -26,7 +25,6 @@ noinst_HEADERS = xapiand.h \
 	endpoint.h \
 	database.h \
 	manager.h \
-	discovery.h \
 	server.h \
 	threadpool.h \
 	client_base.h \

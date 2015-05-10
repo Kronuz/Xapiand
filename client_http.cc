@@ -749,7 +749,7 @@ int HttpClient::_endpointgen(query_t &e)
 				if (p.len_host) {
 					hos_ = urldecode(p.off_host, p.len_host);
 					try {
-						node = &server->manager->discovery.nodes.at(stringtolower(hos_));
+						node = &server->manager->nodes.at(stringtolower(hos_));
 					} catch (const std::out_of_range& err) {
 						LOG(this, "Node not found\n");
 						host = hos_;
@@ -758,7 +758,7 @@ int HttpClient::_endpointgen(query_t &e)
 				} else if (!host.empty()) {
 					hos_ = host;
 					try {
-						node = &server->manager->discovery.nodes.at(stringtolower(hos_));
+						node = &server->manager->nodes.at(stringtolower(hos_));
 					} catch (const std::out_of_range& err) {
 						LOG(this, "Node not found\n");
 						return CMD_UNKNOWN_HOST;
