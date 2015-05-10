@@ -22,7 +22,7 @@ AC_PROG_CXX
 AC_LANG(C++)
 
 # Checks for typedefs, structures, and compiler characteristics.
-AX_CXX_COMPILE_STDCXX_11([noext], [optional])  # This needs autoconf-archive installed
+AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])  # This needs autoconf-archive installed
 AX_CXX_HAVE_SSTREAM
 AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
