@@ -21,18 +21,23 @@ AC_PROG_CXX
 # Use the C++ compiler for the compile tests
 AC_LANG(C++)
 
+# Checks for typedefs, structures, and compiler characteristics.
 AX_CXX_COMPILE_STDCXX_11([noext], [optional])  # This needs autoconf-archive installed
 AX_CXX_HAVE_SSTREAM
-
-# Checks for libraries.
-AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
-AC_CHECK_LIB(ev, ev_run, [], [AC_MSG_ERROR([libev not found, Xapiand requires libev-devel])], [-lev])
+AC_CHECK_HEADER_STDBOOL
+AC_C_INLINE
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
 
 # Checks for library functions.
 AC_CHECK_FUNCS([getcwd gettimeofday socket sranddev])
+
+# Checks for libraries.
+AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
+AC_CHECK_LIB(ev, ev_run, [], [AC_MSG_ERROR([libev not found, Xapiand requires libev-devel])], [-lev])
 
 # Check for xapian.
 XO_LIB_XAPIAN([], [], [xapian-config-1.3])
@@ -45,14 +50,8 @@ CXXFLAGS="$CXXFLAGS $XAPIAN_CXXFLAGS"
 AC_LINK_IFELSE(
   [AC_LANG_PROGRAM([#include "xapian.h"], [class RemoteClient : public RemoteProtocol {}])],
   [AC_DEFINE([HAVE_REMOTE_PROTOCOL], 1, [Define to 1 if Xapian has RemoteProtocol available.])],
-  [AC_MSG_WARN([RemoteProtocol is not installed!])])
+  [AC_MSG_WARN([Xapian's RemoteProtocol is not available!])])
 CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
-
-# Checks for typedefs, structures, and compiler characteristics.
-AC_CHECK_HEADER_STDBOOL
-AC_C_INLINE
-AC_TYPE_SIZE_T
-AC_TYPE_SSIZE_T
 
 AC_OUTPUT(Makefile)
