@@ -47,10 +47,11 @@ const uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_M
 pcre *XapiandManager::compiled_time_re = NULL;
 
 
-XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *discovery_group_, int discovery_port_, int http_port_, int binary_port_)
+XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *node_name_, const char *discovery_group_, int discovery_port_, int http_port_, int binary_port_)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  state(STATE_RESET),
 	  cluster_name(cluster_name_),
+	  node_name(node_name_),
 	  discovery_io(*loop),
 	  discovery_heartbeat(*loop),
 	  break_loop(*loop),
@@ -430,7 +431,11 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			if (!this_node.name.empty()) {
 				nodes.erase(stringtolower(this_node.name));
 			}
-			this_node.name = name_generator();
+			if (node_name.empty()) {
+				this_node.name = name_generator();
+			} else {
+				this_node.name = node_name;
+			}
 		}
 		discovery(DISCOVERY_HELLO, this_node);
 	} else {
@@ -578,9 +583,16 @@ void XapiandManager::discovery_io_cb(ev::io &watcher, int revents)
 						remote_node.addr.sin_addr.s_addr == this_node.addr.sin_addr.s_addr &&
 						remote_node.http_port == this_node.http_port &&
 						remote_node.binary_port == this_node.binary_port) {
-						state = STATE_RESET;
-						discovery_heartbeat.set(0, 1);
-						LOG_DISCOVERY(this, "Retrying other name");
+						if (node_name.empty()) {
+							state = STATE_RESET;
+							discovery_heartbeat.set(0, 1);
+							LOG_DISCOVERY(this, "Retrying other name");
+						} else {
+							LOG_ERR(this, "Cannot join the party. Node name %s already taken!\n", this_node.name.c_str());
+							this_node.name.clear();
+							shutdown_asap = time(NULL);
+							shutdown();
+						}
 					}
 					break;
 
@@ -641,6 +653,9 @@ void XapiandManager::discovery(const char *buf, size_t buf_size)
 
 void XapiandManager::discovery(discovery_type type, Node &node)
 {
+	if (node.name.empty()) {
+		return;
+	}
 	std::string message((const char *)&type, 1);
 	message.append(std::string((const char *)&XAPIAND_DISCOVERY_PROTOCOL_VERSION, sizeof(uint16_t)));
 	message.append(encode_length(cluster_name.size()));
