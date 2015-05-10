@@ -135,9 +135,9 @@ typedef struct opts_s {
 	bool glass;
 	std::string cluster_name;
 	std::string node_name;
-	int http_port;
-	int binary_port;
-	int discovery_port;
+	unsigned int http_port;
+	unsigned int binary_port;
+	unsigned int discovery_port;
 	std::string pidfile;
 	std::string uid;
 	std::string gid;
@@ -168,9 +168,9 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
 		ValueArg<std::string> node_name("n", "name", "Node name.", false, "", "node", cmd);
 
-		ValueArg<int> http_port("", "http", "HTTP REST API port", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
-		ValueArg<int> binary_port("", "xapian", "Xapian binary protocol port", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
-		ValueArg<int> discovery_port("", "discovery", "Discovery UDP port", false, XAPIAND_DISCOVERY_SERVERPORT, "port", cmd);
+		ValueArg<unsigned int> http_port("", "http", "HTTP REST API port", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
+		ValueArg<unsigned int> binary_port("", "xapian", "Xapian binary protocol port", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
+		ValueArg<unsigned int> discovery_port("", "discovery", "Discovery UDP port", false, XAPIAND_DISCOVERY_SERVERPORT, "port", cmd);
 		ValueArg<std::string> discovery_group("", "group", "Discovery UDP group", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
 
 		ValueArg<std::string> pidfile("p", "pid", "Write PID to <pidfile>.", false, "xapiand.pid", "pidfile", cmd);
