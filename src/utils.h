@@ -23,13 +23,16 @@
 #ifndef XAPIAND_INCLUDED_UTILS_H
 #define XAPIAND_INCLUDED_UTILS_H
 
+#include "xapiand.h"
+#include "md5.h"
+
 #include <xapian.h>
+
 #include <string>
 #include <vector>
 #include <locale>
 #include <algorithm>
 
-#include "md5.h"
 #include <sstream>
 #include <pcre.h>
 #include <sys/time.h>
@@ -56,6 +59,9 @@ void log(void *obj, const char *fmt, ...);
 
 std::string repr(const char *p, size_t size);
 std::string repr(const std::string &string);
+
+bool bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries);
+bool bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries, const char *group);
 
 std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
