@@ -83,6 +83,7 @@ class XapiandManager {
 	pthread_mutexattr_t qmtx_attr;
 
 	std::string cluster_name;
+	std::string node_name;
 
 	struct sockaddr_in discovery_addr;
 	int discovery_port, discovery_sock;
@@ -126,7 +127,7 @@ public:
 	Node this_node;
 	std::unordered_map<std::string, Node> nodes;
 
-	XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *discovery_group_, int discovery_port_, int http_port_, int binary_port_);
+	XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *node_name_, const char *discovery_group_, int discovery_port_, int http_port_, int binary_port_);
 	~XapiandManager();
 
 	void run(int num_servers);
