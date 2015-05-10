@@ -352,6 +352,8 @@ void XapiandManager::run(int num_servers)
 
 	INFO(this, msg.c_str());
 
+	INFO(this, "Starting %d server worker thread%s.\n", num_servers, (num_servers == 1) ? "" : "s");
+
 	ThreadPool server_pool("S%d", num_servers);
 	for (int i = 0; i < num_servers; i++) {
 		XapiandServer *server = new XapiandServer(this, NULL, discovery_sock, http_sock, binary_sock, &database_pool, &thread_pool);
