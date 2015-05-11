@@ -82,11 +82,6 @@ class XapiandManager {
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
-	unsigned char state;
-
-	std::string cluster_name;
-	std::string node_name;
-
 	ev::timer discovery_heartbeat;
 	struct sockaddr_in discovery_addr;
 	int discovery_port;
@@ -111,12 +106,11 @@ class XapiandManager {
 	struct sockaddr_in host_address();
 	void destroy();
 
-	std::list<XapiandServer *>::const_iterator attach_server(XapiandServer *server);
-	void detach_server(XapiandServer *server);
-
 protected:
-	friend class Discovery;
-	friend class XapiandServer;
+	pthread_mutex_t nodes_mtx;
+	pthread_mutexattr_t nodes_mtx_attr;
+	std::unordered_map<std::string, Node> nodes;
+
 	pthread_mutex_t servers_mutex;
 	pthread_mutexattr_t servers_mutex_attr;
 	std::list<XapiandServer *>servers;
@@ -126,8 +120,10 @@ public:
 	time_t shutdown_now;
 	ev::async async_shutdown;
 
+	unsigned char state;
+	std::string cluster_name;
+	std::string node_name;
 	Node this_node;
-	std::unordered_map<std::string, Node> nodes;
 
 	XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *node_name_, const char *discovery_group_, int discovery_port_, int http_port_, int binary_port_);
 	~XapiandManager();
@@ -135,6 +131,14 @@ public:
 	void run(int num_servers);
 	void sig_shutdown_handler(int sig);
 	void shutdown();
+
+	void reset_state();
+	std::list<XapiandServer *>::const_iterator attach_server(XapiandServer *server);
+	void detach_server(XapiandServer *server);
+
+	bool put_node(Node &node);
+	bool touch_node(std::string &node_name, Node *node=NULL);
+	void drop_node(std::string &node_name);
 
 	void discovery(discovery_type type, const std::string &content);
 
