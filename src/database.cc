@@ -357,7 +357,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 }
 
 void
-Database::index_fields(cJSON *father, cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, bool empty_data)
+Database::index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc)
 {
 	std::string subitem_name;
 	specifications_t spc_bef = spc_now;
@@ -365,19 +365,14 @@ Database::index_fields(cJSON *father, cJSON *item, const std::string &item_name,
 		if (item->type == cJSON_Object) {
 			update_specifications(item, spc_now);
 			int elements = cJSON_GetArraySize(item);
-			for (int i = 0; i < elements; ) {
+			for (int i = 0; i < elements; i++) {
 				cJSON *subitem = cJSON_GetArrayItem(item, i);
 				subitem_name = (item_name.size() != 0) ? item_name + OFFSPRING_UNION + subitem->string : subitem->string;
 				if (subitem_name.at(subitem_name.size() - 3) == OFFSPRING_UNION[0]) {
 					std::string language(subitem_name, subitem_name.size() - 2, subitem_name.size());
 					spc_now.language = is_language(language) ? language : spc_now.language;
 				}
-				index_fields(item, subitem, subitem_name, spc_now, doc, empty_data);
-				if (empty_data && elements > cJSON_GetArraySize(item)) {
-					elements = cJSON_GetArraySize(item);
-				} else {
-					i++;
-				}
+				index_fields(subitem, subitem_name, spc_now, doc);
 			}
 		} else {
 			if (item_name.find(RESERVED_VALUES) == 0) {
@@ -394,8 +389,6 @@ Database::index_fields(cJSON *father, cJSON *item, const std::string &item_name,
 				}
 			}
 		}
-	} else if(empty_data) {
-		cJSON_DeleteItemFromObject(father, item->string);
 	}
 	spc_now = spc_bef;
 }
@@ -581,11 +574,14 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit, c
 		return false;
 	}
 
-	cJSON *document_data = cJSON_GetObjectItem(document, "_data");
+	Xapian::Document doc;
+
+	std::string doc_data(cJSON_Print(document));
+	LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
+	doc.set_data(doc_data);
+
 	cJSON *document_terms = cJSON_GetObjectItem(document, "_terms");
 	cJSON *document_texts = cJSON_GetObjectItem(document, "_texts");
-
-	Xapian::Document doc;
 
 	std::string document_id;
 	if (_document_id.c_str()) {
@@ -654,31 +650,9 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit, c
 		}
 
 		int elements = cJSON_GetArraySize(document);
-		bool empty_data = (!document_data) ? true : false;
-		for (int i = 0; i < elements; ) {
+		for (int i = 0; i < elements; i++) {
 			cJSON *item = cJSON_GetArrayItem(document, i);
-			std::string name(item->string);
-			index_fields(document, item, item->string, spc_now, doc, empty_data);
-			if (empty_data) {
-				if (std::string(item->string).find(RESERVED_VALUES) == 0) cJSON_DeleteItemFromObject(document, item->string);
-				if (elements > cJSON_GetArraySize(document)) {
-					elements = cJSON_GetArraySize(document);
-				} else {
-					i++;
-				}
-			} else {
-				i++;
-			}
-		}
-
-		if (document_data) {
-			std::string doc_data(cJSON_Print(document_data));
-			LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
-			doc.set_data(doc_data);
-		} else {
-			std::string doc_data(cJSON_Print(document));
-			LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
-			doc.set_data(doc_data);
+			index_fields(item, item->string, spc_now, doc);
 		}
 
 	} catch (const std::string &err) {
