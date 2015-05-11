@@ -224,6 +224,26 @@ void DatabasePool::finish() {
 }
 
 
+int
+DatabasePool::get_mastery_level(const std::string &index_path)
+{
+	Database *database_ = NULL;
+	int mastery_level = -1;
+
+	Endpoints endpoints;
+	endpoints.insert(Endpoint("file://" + index_path));
+
+	pthread_mutex_lock(&qmtx);
+	if (checkout(&database_, endpoints, false, false)) {
+		mastery_level = database_->mastery_level;
+		checkin(&database_);
+	}
+	pthread_mutex_unlock(&qmtx);
+
+	return mastery_level;
+}
+
+
 bool
 DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn)
 {
