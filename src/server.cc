@@ -201,13 +201,13 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 					} else {
 						if (manager->touch_node(remote_node.name, &node)) {
-							manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
-						} else {
 							if (remote_node == node) {
 								manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 							} else {
 								manager->discovery(DISCOVERY_SNEER, remote_node.serialise());
 							}
+						} else {
+							manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 						}
 					}
 					break;
