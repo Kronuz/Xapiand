@@ -719,11 +719,6 @@ int HttpClient::_endpointgen(query_t &e)
 			size_t path_size = u.field_data[3].len;
 			std::string path_buf(b.c_str() + u.field_data[3].off, u.field_data[3].len);
 
-			std::string namespace_;
-			std::string path_;
-			std::string node_;
-			Node *node = &server->manager->this_node;
-
 			endpoints.clear();
 
 			parser_url_path_t p;
@@ -732,47 +727,53 @@ int HttpClient::_endpointgen(query_t &e)
 				type  = urldecode(p.off_type, p.len_type);
 				command  = urldecode(p.off_command, p.len_command);
 
-				if(type.size() == 0) {
+				if (type.empty()) {
 					return CMD_BAD_QUERY;
 				}
 
+				std::string ns;
 				if (p.len_namespace) {
-					namespace_ = urldecode(p.off_namespace, p.len_namespace) + "/";
+					ns = urldecode(p.off_namespace, p.len_namespace) + "/";
 				} else {
-					namespace_ = "";
+					ns = "";
 				}
+
+				std::string path;
 				if (p.len_path) {
-					path_ = urldecode(p.off_path, p.len_path);
+					path = urldecode(p.off_path, p.len_path);
 				} else {
-					path_ = "";
+					path = "";
 				}
+
+				std::string node_name;
 				if (p.len_host) {
-					node_ = urldecode(p.off_host, p.len_host);
-					try {
-						node = &server->manager->nodes.at(stringtolower(node_));
-					} catch (const std::out_of_range& err) {
-						LOG(this, "Node not found\n");
-						host = node_;
-						return CMD_UNKNOWN_HOST;
-					}
+					node_name = urldecode(p.off_host, p.len_host);
 				} else if (!host.empty()) {
-					node_ = host;
-					try {
-						node = &server->manager->nodes.at(stringtolower(node_));
-					} catch (const std::out_of_range& err) {
-						LOG(this, "Node not found\n");
-						return CMD_UNKNOWN_HOST;
-					}
+					node_name = host;
 				}
+
+				std::string index_path = ns + path;
+
+				// Convert node to endpoint:
 				char ip[INET_ADDRSTRLEN];
+				Node *node = &server->manager->this_node;
+				try {
+					node = &server->manager->nodes.at(stringtolower(node_name));
+				} catch (const std::out_of_range& err) {
+					LOG(this, "Node %s not found\n", node_name.c_str());
+					host = node_name;
+					return CMD_UNKNOWN_HOST;
+				}
 				inet_ntop(AF_INET, &(node->addr.sin_addr), ip, INET_ADDRSTRLEN);
 
-				std::string endp = "xapian://" + std::string(ip) + ":" + std::to_string(node->binary_port) + namespace_ + path_;
-				endpoints.insert(Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT));
+				Endpoint endpoint("xapian://" + std::string(ip) + ":" + std::to_string(node->binary_port) + index_path);
+
+				endpoints.insert(endpoint);
 
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
 			}
 		}
+
 		cmd = identify_cmd(command);
 
 		if (u.field_set & (1 <<  UF_QUERY )) {
