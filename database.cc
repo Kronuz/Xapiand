@@ -671,6 +671,18 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 		doc.add_boolean_term(prefixed(object_type, DOCUMENT_OBJECT_TYPE_PREFIX));
 	}
 
+	std::string document_id;
+	if (_document_id.c_str()) {
+		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
+		doc.add_value(0, _document_id);
+		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX + object_type + OFFSPRING_UNION);
+		LOG_DATABASE_WRAP(this, "Slot: 0 id: %s  term: %s\n", _document_id.c_str(), document_id.c_str());
+		doc.add_boolean_term(document_id);
+	} else {
+		LOG_ERR(this, "ERROR: Document must have an 'id'\n");
+		return false;
+	}
+
 	try {
 		//Default specifications
 		specifications_t spc_now = {-1, 1, "en", false, false};
