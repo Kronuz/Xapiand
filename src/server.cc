@@ -257,7 +257,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							// Received a ping, return pong
 							manager->discovery(DISCOVERY_PONG, serialise_string(manager->this_node.name));
 						} catch (const std::out_of_range& err) {
-							LOG_DISCOVERY(this, "Ignoring ping from unknown peer");
+							LOG_DISCOVERY(this, "Ignoring ping from unknown peer %s\n", node_name.c_str());
 						}
 					}
 					break;
@@ -272,7 +272,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							node = &manager->nodes.at(stringtolower(node_name));
 							node->touched = now;
 						} catch (const std::out_of_range& err) {
-							LOG_DISCOVERY(this, "Ignoring pong from unknown peer");
+							LOG_DISCOVERY(this, "Ignoring pong from unknown peer %s\n", node_name.c_str());
 						}
 					}
 					break;
