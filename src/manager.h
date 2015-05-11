@@ -69,6 +69,8 @@ enum discovery_type {
 	DISCOVERY_PING,     // Ping
 	DISCOVERY_PONG,     // Pong
 	DISCOVERY_BYE,      // Node says goodbye
+	DISCOVERY_DB,
+	DISCOVERY_DB_OK,
 	DISCOVERY_MAX
 };
 
