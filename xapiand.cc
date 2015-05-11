@@ -63,6 +63,12 @@ void setup_signal_handlers(void) {
 
 void run(int num_servers, const char *cluster_name_, const char *node_name_, const char *discovery_group, int discovery_port, int http_port, int binary_port)
 {
+#ifdef HAVE_PTHREAD_SETNAME_NP_2
+    pthread_setname_np(pthread_self(), "==");
+#else
+    pthread_setname_np("==");
+#endif
+
 	ev::default_loop default_loop;
 
 	setup_signal_handlers();
