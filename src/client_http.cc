@@ -727,7 +727,7 @@ int HttpClient::_endpointgen(query_t &e)
 				type  = urldecode(p.off_type, p.len_type);
 				command  = urldecode(p.off_command, p.len_command);
 
-				if (type.empty()) {
+				if (type.empty() || command.empty()) {
 					return CMD_BAD_QUERY;
 				}
 
