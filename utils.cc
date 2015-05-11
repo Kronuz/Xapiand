@@ -960,6 +960,7 @@ std::string get_prefix(const std::string &name, const std::string &prefix, char 
 
 	std::transform(slot.begin(), slot.end(), slot.begin(), TRANSFORM());
 	std::string res(prefix);
+	if (type == TEXT_TYPE) type = STRING_TYPE;
 	res.append(1, toupper(type));
 	return res + slot;
 }
