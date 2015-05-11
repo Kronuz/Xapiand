@@ -410,7 +410,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 
 	if (cJSONUtils_ApplyPatches(data_json, patches) == 0) {
 		//Object patched
-		return index(data_json, _document_id, commit, object_type);
+		return index(data_json, _document_id, object_type, commit);
 	}
 
 	//Object no patched
@@ -418,36 +418,53 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 }
 
 
+bool
+Database::is_reserved(const std::string &word)
+{
+	if (word.find(RESERVED_WEIGHT)    == -1 &&
+		word.find(RESERVED_POSITION)  == -1 &&
+		word.find(RESERVED_LANGUAGE)  == -1 &&
+		word.find(RESERVED_SPELLING)  == -1 &&
+		word.find(RESERVED_POSITIONS) == -1 &&
+		word.find(RESERVED_TEXTS)     == -1 &&
+		word.find(RESERVED_VALUES)    == -1 &&
+		word.find(RESERVED_TERMS)     == -1 &&
+		word.find(RESERVED_DATA)      == -1) {
+		return false;
+	}
+	return true;
+}
+
+
 void
-Database::index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc)
+Database::index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, bool is_value)
 {
 	std::string subitem_name;
 	specifications_t spc_bef = spc_now;
-	if (item->string[0] != OFFSPRING_UNION[0] || std::string(item->string).find(RESERVED_VALUES) == 0) {
-		if (item->type == cJSON_Object) {
-			update_specifications(item, spc_now);
-			int elements = cJSON_GetArraySize(item);
-			for (int i = 0; i < elements; i++) {
-				cJSON *subitem = cJSON_GetArrayItem(item, i);
+	if (item->type == cJSON_Object) {
+		update_specifications(item, spc_now);
+		int elements = cJSON_GetArraySize(item);
+		for (int i = 0; i < elements; i++) {
+			cJSON *subitem = cJSON_GetArrayItem(item, i);
+			if (!is_reserved(subitem->string)) {
 				subitem_name = (item_name.size() != 0) ? item_name + OFFSPRING_UNION + subitem->string : subitem->string;
 				if (subitem_name.at(subitem_name.size() - 3) == OFFSPRING_UNION[0]) {
 					std::string language(subitem_name, subitem_name.size() - 2, subitem_name.size());
 					spc_now.language = is_language(language) ? language : spc_now.language;
 				}
-				index_fields(subitem, subitem_name, spc_now, doc);
+				index_fields(subitem, subitem_name, spc_now, doc, is_value);
 			}
+		}
+	} else {
+		if (is_value) {
+			index_values(doc, item, item_name);
 		} else {
-			if (item_name.find(RESERVED_VALUES) == 0) {
-				subitem_name.assign(item_name, strlen(RESERVED_VALUES) + strlen(OFFSPRING_UNION), item_name.size());
-				index_values(doc, item, subitem_name);
+			char type = get_type(item, item_name);
+			if (type == TEXT_TYPE) {
+				index_texts(doc, item, spc_now, item_name);
 			} else {
-				char type = get_type(item);
-				if (type == TEXT_TYPE) {
-					index_texts(doc, item, spc_now, item_name);
-				} else {
-					index_values(doc, item, item_name);
-					index_terms(doc, item, spc_now, item_name);
-				}
+				index_values(doc, item, item_name);
+				index_terms(doc, item, spc_now, item_name);
 			}
 		}
 	}
@@ -628,7 +645,7 @@ Database::is_language(const std::string &language)
 
 
 bool
-Database::index(cJSON *document, const std::string &_document_id, bool commit, const std::string &object_type)
+Database::index(cJSON *document, const std::string &_document_id, const std::string &object_type, bool commit)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
@@ -641,20 +658,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit, c
 	LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
 	doc.set_data(doc_data);
 
-	cJSON *document_terms = cJSON_GetObjectItem(document, "_terms");
-	cJSON *document_texts = cJSON_GetObjectItem(document, "_texts");
-
-	std::string document_id;
-	if (_document_id.c_str()) {
-		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
-		doc.add_value(0, _document_id);
-		LOG_DATABASE_WRAP(this, "Slot: 0  Document id: %s\n", _document_id.c_str());
-		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
-		doc.add_boolean_term(document_id);
-	} else {
-		LOG_ERR(this, "ERROR: Document must have an 'id'\n");
-		return false;
-	}
+	cJSON *document_terms = cJSON_GetObjectItem(document, RESERVED_TERMS);
+	cJSON *document_texts = cJSON_GetObjectItem(document, RESERVED_TEXTS);
 
 	if (object_type.empty()) {
 		LOG_ERR(this, "ERROR: Object type must be defined\n");
@@ -679,7 +684,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit, c
 				cJSON *text = cJSON_GetObjectItem(texts, "text");
 				if (text) {
 					update_specifications(texts, spc_now);
-					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : "";
+					std::string name_s = (name && name->type == cJSON_String) ? object_type + OFFSPRING_UNION + name->valuestring : "";
 					if (!name_s.empty() && name_s.at(name_s.size() - 3) == OFFSPRING_UNION[0]) {
 						std::string language(name_s, name_s.size() - 2, name_s.size());
 						spc_now.language = is_language(language) ? language : spc_now.language;
@@ -700,7 +705,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit, c
 				cJSON *terms = cJSON_GetObjectItem(data_terms, "term");
 				if (terms) {
 					update_specifications(data_terms, spc_now);
-					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : "";
+					std::string name_s = (name && name->type == cJSON_String) ? object_type + OFFSPRING_UNION + name->valuestring : "";
 					index_terms(doc, terms, spc_now, name_s);
 					spc_now = spc_bef;
 				} else {
@@ -713,7 +718,11 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit, c
 		int elements = cJSON_GetArraySize(document);
 		for (int i = 0; i < elements; i++) {
 			cJSON *item = cJSON_GetArrayItem(document, i);
-			index_fields(item, item->string, spc_now, doc);
+			if (!is_reserved(item->string)) {
+				index_fields(item, object_type + OFFSPRING_UNION + item->string, spc_now, doc, false);
+			} else if (strcmp(item->string, RESERVED_VALUES) == 0) {
+				index_fields(item, object_type, spc_now, doc, true);
+			}
 		}
 
 	} catch (const std::string &err) {
