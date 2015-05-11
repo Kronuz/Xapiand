@@ -504,7 +504,7 @@ void
 Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name)
 {
 	LOG_DATABASE_WRAP(this, "Specifications = {%d %d %s %d %d}\n", spc.position, spc.weight, spc.language.c_str(), spc.spelling, spc.positions);
-	char type = get_type(terms);
+	char type = get_type(terms, name);
 	std::string prefix = (!name.empty()) ? get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, type) : DOCUMENT_CUSTOM_TERM_PREFIX;
 	int elements = (terms->type == cJSON_Array) ? cJSON_GetArraySize(terms) : 1;
 
@@ -552,7 +552,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 void
 Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &name)
 {
-	char type = get_type(values);
+	char type = get_type(values, name);
 	StringList s;
 	int elements = (values->type == cJSON_Array) ? cJSON_GetArraySize(values) : 1;
 	for (int j = 0; j < elements; j++) {
@@ -764,12 +764,59 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 char
 Database::field_type(const std::string &field_name)
 {
-	return STRING_TYPE;
+	if (field_name.empty()) {
+		return ' ';
+	}
+
+	Xapian::Database *_db = new Xapian::Database();
+	Xapian::Database rdb;
+	Xapian::Database ldb;
+
+	const Endpoint *e;
+	endpoints_set_t::const_iterator i(endpoints.begin());
+
+	for (; i != endpoints.end(); ++i) {
+		e = &*i;
+		if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
+			try {
+				rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
+			} catch (const Xapian::DatabaseOpeningError &err) {
+				Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
+				rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
+			}
+		} else {
+			rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
+			try {
+				ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
+				if (ldb.get_uuid() == rdb.get_uuid()) {
+					LOG(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
+					// Handle remote endpoints and figure out if the endpoint is a local database
+					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
+				}
+			} catch (const Xapian::DatabaseOpeningError &err) {}
+		}
+		_db->add_database(rdb);
+	}
+	std::string type = _db->get_metadata(field_name);
+	delete _db;
+
+	LOG_DATABASE_WRAP(this, "set_database: %s\n", type.c_str());
+	if (type.empty()) {
+		return ' ';
+	}
+	return type.at(0);
 }
 
 char
-Database::get_type(cJSON *field)
+Database::get_type(cJSON *field, const std::string &field_name)
 {
+	char _type = field_type(field_name);
+	LOG(this, "\n*%c*\n", _type);
+	if (_type != ' ') {
+		return _type;
+	}
+
+	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 	int type = field->type;
 	cJSON* aux = field;
 	if (type == cJSON_Array) {
@@ -777,7 +824,16 @@ Database::get_type(cJSON *field)
 		aux = cJSON_GetArrayItem(field, 0);
 		type = aux->type;
 		bool meet_range = true;
-		if (type == cJSON_Array) return GEO_TYPE;
+		if (type == cJSON_Array) {
+			cJSON *description = cJSON_CreateObject();
+			cJSON_AddStringToObject(description, "type", "array, geospatial");
+			cJSON_AddTrueToObject(description, "store");
+			cJSON_AddStringToObject(description, "index", "not_analyzed");
+			cJSON_AddNumberToObject(description, "index_analyzer", (int)Xapian::TermGenerator::STEM_SOME);
+			wdb->set_metadata(field_name, cJSON_Print(description));
+			cJSON_Delete(description);
+			return GEO_TYPE;
+		}
 		for (int i = 0; i < num_ele; i++) {
 			aux = cJSON_GetArrayItem(field, i);
 			if (aux->type != type) {
