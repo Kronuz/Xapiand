@@ -50,9 +50,10 @@ class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 };
 
 
-Database::Database(Endpoints &endpoints_, bool writable_)
+Database::Database(Endpoints &endpoints_, bool writable_, bool spawn_)
 	: endpoints(endpoints_),
 	  writable(writable_),
+	  spawn(spawn_),
 	  mastery_level(-1),
 	  db(NULL)
 {
@@ -152,6 +153,7 @@ Database::reopen()
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
 				} catch (const Xapian::DatabaseOpeningError &err) {
+					if (!spawn) throw;
 					Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
@@ -223,7 +225,7 @@ void DatabasePool::finish() {
 
 
 bool
-DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
+DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn)
 {
 	Database *database_ = NULL;
 
@@ -240,8 +242,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 				queue.count++;
 				pthread_mutex_unlock(&qmtx);
 				try {
-					database_ = new Database(endpoints, writable);
-					database_->access_time = time(0);
+					database_ = new Database(endpoints, writable, spawn);
 				} catch (const Xapian::Error &err) {
 					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
 					return false;
@@ -255,6 +256,9 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable)
 				if (!s) {
 					LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
 				}
+			}
+			if (queue.empty() && !spawn) {
+				databases.erase(hash);
 			}
 		}
 		*database = database_;
