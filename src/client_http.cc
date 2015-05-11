@@ -57,7 +57,7 @@ const char* status_code[6][5] = {
 	},
 	{
 		"Internal Server Error",
-		NULL,
+		"Not Implemented",
 		"Bad Gateway"
 	}
 };
