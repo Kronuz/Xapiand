@@ -379,11 +379,11 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 				subitem_name.assign(item_name, strlen(RESERVED_VALUES) + strlen(OFFSPRING_UNION), item_name.size());
 				index_values(doc, item, subitem_name);
 			} else {
-				index_values(doc, item, item_name);
 				char type = get_type(item);
 				if (type == TEXT_TYPE) {
 					index_texts(doc, item, spc_now, item_name);
 				} else {
+					index_values(doc, item, item_name);
 					index_terms(doc, item, spc_now, item_name);
 				}
 			}
