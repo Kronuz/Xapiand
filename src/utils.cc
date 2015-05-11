@@ -105,18 +105,19 @@ std::string repr(const char * p, size_t size)
 }
 
 
-void log(void *obj, const char *format, ...)
+void log(const char *file, int line, void *obj, const char *format, ...)
 {
 	pthread_mutex_lock(&qmtx);
 
-	FILE * file = stderr;
+	FILE * file_ = stderr;
 	pthread_t thread = pthread_self();
 	char name[100];
 	pthread_getname_np(thread, name, sizeof(name));
-	fprintf(file, "tid(0x%lx:%s): 0x%.12lx - ", (unsigned long)thread, name, (unsigned long)obj);
+	// fprintf(file_, "tid(0x%012lx:%2s): 0x%012lx - %s:%d - ", (unsigned long)thread, name, (unsigned long)obj, file, line);
+	fprintf(file_, "tid(%2s): %s:%d - ", *name ? name : "--", file, line);
 	va_list argptr;
 	va_start(argptr, format);
-	vfprintf(file, format, argptr);
+	vfprintf(file_, format, argptr);
 	va_end(argptr);
 
 	pthread_mutex_unlock(&qmtx);
