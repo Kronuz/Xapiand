@@ -850,7 +850,8 @@ int HttpClient::_endpointgen(query_t &e)
 				}
 
 				std::string index_path = ns + path;
-				server->manager->discovery(DISCOVERY_DB, serialise_string(index_path));
+				Endpoint index("xapian://localhost" + index_path);
+				server->manager->discovery(DISCOVERY_DB, serialise_string(index.path));
 
 				// Convert node to endpoint:
 				char ip[INET_ADDRSTRLEN];
