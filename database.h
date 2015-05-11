@@ -68,6 +68,7 @@ public:
 	bool writable;
 	Endpoints endpoints;
 	time_t access_time;
+	int mastery_level;
 
 	Xapian::Database *db;
 
@@ -84,6 +85,7 @@ public:
 	Database(Endpoints &endpoints, bool writable);
 	~Database();
 
+	int read_mastery(const std::string &path);
 	void reopen();
 	bool drop(const std::string &document_id, bool commit);
 	bool index(cJSON *document, const std::string &document_id, bool commit, const std::string &object_type);

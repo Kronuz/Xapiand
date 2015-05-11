@@ -23,6 +23,11 @@
 #include "database.h"
 #include "cJSON_Utils.h"
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+
 //change prefix to Q only
 #define DOCUMENT_ID_TERM_PREFIX "Q"
 #define DOCUMENT_OBJECT_TYPE_PREFIX "T"
@@ -48,6 +53,7 @@ class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 Database::Database(Endpoints &endpoints_, bool writable_)
 	: endpoints(endpoints_),
 	  writable(writable_),
+	  mastery_level(-1),
 	  db(NULL)
 {
 	hash = endpoints.hash(writable);
@@ -55,10 +61,40 @@ Database::Database(Endpoints &endpoints_, bool writable_)
 }
 
 
+int
+Database::read_mastery(const std::string &index_path)
+{
+    std::string filename(index_path);
+    filename += '/';
+    filename += "mastery";
+
+	LOG(this, "+ READING MASTERY OF INDEX (%s)...\n", filename.c_str());
+
+	int mastery_level = 0;
+	unsigned char buf[512];
+
+	int fd = open(filename.c_str(), O_RDONLY | O_CLOEXEC);
+	if (fd >= 0) {
+		mastery_level = 1;
+		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
+		if (length > 0) {
+			buf[length] = '\0';
+			mastery_level = atoi((const char *)buf);
+		}
+		close(fd);
+	}
+
+	LOG(this, "- MASTERY OF INDEX (%s): %d\n", filename.c_str(), mastery_level);
+
+	return mastery_level;
+}
+
+
 void
 Database::reopen()
 {
 	access_time = time(0);
+
 	if (db) {
 		// Try to reopen
 		try {
@@ -76,16 +112,19 @@ Database::reopen()
 	Xapian::WritableDatabase wdb;
 	Xapian::Database ldb;
 
+	size_t endpoints_size = endpoints.size();
+
 	const Endpoint *e;
 	endpoints_set_t::const_iterator i(endpoints.begin());
 	if (writable) {
 		db = new Xapian::WritableDatabase();
-		if (endpoints.size() != 1) {
-			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), endpoints.as_string().c_str());
+		if (endpoints_size != 1) {
+			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints_size, endpoints.as_string().c_str());
 		} else {
 			e = &*i;
 			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
 				wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
+				if (endpoints_size == 1) read_mastery(e->path);
 			} else {
 				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
 				try {
@@ -94,6 +133,7 @@ Database::reopen()
 						// Handle remote endpoints and figure out if the endpoint is a local database
 						LOG(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
 						wdb = Xapian::WritableDatabase(e->path, Xapian::DB_OPEN);
+						if (endpoints_size == 1) read_mastery(e->path);
 					} else {
 						wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
 					}
@@ -110,9 +150,11 @@ Database::reopen()
 			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
 				try {
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
+					if (endpoints_size == 1) read_mastery(e->path);
 				} catch (const Xapian::DatabaseOpeningError &err) {
 					Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
+					if (endpoints_size == 1) read_mastery(e->path);
 				}
 			} else {
 				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
@@ -122,6 +164,7 @@ Database::reopen()
 						LOG(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
 						// Handle remote endpoints and figure out if the endpoint is a local database
 						rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
+						if (endpoints_size == 1) read_mastery(e->path);
 					}
 				} catch (const Xapian::DatabaseOpeningError &err) {}
 			}
