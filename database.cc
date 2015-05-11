@@ -65,16 +65,12 @@ Database::Database(Endpoints &endpoints_, bool writable_, bool spawn_)
 int
 Database::read_mastery(const std::string &index_path)
 {
-    std::string filename(index_path);
-    filename += '/';
-    filename += "mastery";
-
-	LOG(this, "+ READING MASTERY OF INDEX (%s)...\n", filename.c_str());
+	LOG_DATABASE(this, "+ READING MASTERY OF INDEX (%s)...\n", index_path.c_str());
 
 	int mastery_level = 0;
 	unsigned char buf[512];
 
-	int fd = open(filename.c_str(), O_RDONLY | O_CLOEXEC);
+	int fd = open((index_path + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
 		mastery_level = 1;
 		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
@@ -85,7 +81,7 @@ Database::read_mastery(const std::string &index_path)
 		close(fd);
 	}
 
-	LOG(this, "- MASTERY OF INDEX (%s): %d\n", filename.c_str(), mastery_level);
+	LOG_DATABASE(this, "- MASTERY OF INDEX (%s): %d\n", index_path.c_str(), mastery_level);
 
 	return mastery_level;
 }
