@@ -71,7 +71,7 @@ Task::~Task()
 // Function that retrieves a task from a queue, runs it and deletes it
 void *ThreadPool::getWork(void * wq_=NULL) {
     ThreadInfo *threadInfo = static_cast<ThreadInfo *>(wq_);
-    char name[200];
+    char name[100];
     sprintf(name, threadInfo->format, threadInfo->threadNumber);
 #ifdef HAVE_PTHREAD_SETNAME_NP_2
     pthread_setname_np(pthread_self(), name);

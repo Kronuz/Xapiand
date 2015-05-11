@@ -110,9 +110,8 @@ void log(const char *file, int line, void *obj, const char *format, ...)
 	pthread_mutex_lock(&qmtx);
 
 	FILE * file_ = stderr;
-	pthread_t thread = pthread_self();
 	char name[100];
-	pthread_getname_np(thread, name, sizeof(name));
+	pthread_getname_np(pthread_self(), name, sizeof(name));
 	// fprintf(file_, "tid(0x%012lx:%2s): 0x%012lx - %s:%d - ", (unsigned long)thread, name, (unsigned long)obj, file, line);
 	fprintf(file_, "tid(%2s): %s:%d - ", *name ? name : "--", file, line);
 	va_list argptr;
