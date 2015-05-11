@@ -288,6 +288,7 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 
 void XapiandManager::discovery(const char *buf, size_t buf_size)
 {
+	pthread_mutex_lock(&qmtx);
 	if (discovery_sock != -1) {
 		LOG_DISCOVERY_WIRE(this, "(sock=%d) <<-- '%s'\n", discovery_sock, repr(buf, buf_size).c_str());
 
@@ -308,6 +309,7 @@ void XapiandManager::discovery(const char *buf, size_t buf_size)
 
 		}
 	}
+	pthread_mutex_unlock(&qmtx);
 }
 
 
