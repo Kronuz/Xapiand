@@ -146,6 +146,7 @@ public:
 	DatabasePool();
 	~DatabasePool();
 
+	int get_mastery_level(const std::string &index_path);
 	bool checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn=true);
 	void checkin(Database **database);
 	void finish();
