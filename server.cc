@@ -182,15 +182,13 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 			// LOG_DISCOVERY(this, "%s on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 
-			Node *node;
+			Node node;
 			Node remote_node;
 			Database *database = NULL;
 			std::string index_path;
 			std::string node_name;
 			size_t mastery_level;
 			Endpoints endpoints;
-
-			time_t now = time(NULL);
 
 			switch (buf[0]) {
 				case DISCOVERY_HELLO:
@@ -204,22 +202,16 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						// It's me! ...wave hello!
 						manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 					} else {
-						try {
-							node_name = stringtolower(remote_node.name);
-							if (node_name == stringtolower(manager->this_node.name)) {
-								node = &manager->this_node;
-							} else {
-								node = &manager->nodes.at(node_name);
-							}
-							if (remote_node.addr.sin_addr.s_addr == node->addr.sin_addr.s_addr &&
-								remote_node.http_port == node->http_port &&
-								remote_node.binary_port == node->binary_port) {
+						if (manager->touch_node(remote_node.name, &node)) {
+							manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
+						} else {
+							if (remote_node.addr.sin_addr.s_addr == node.addr.sin_addr.s_addr &&
+								remote_node.http_port == node.http_port &&
+								remote_node.binary_port == node.binary_port) {
 								manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 							} else {
 								manager->discovery(DISCOVERY_SNEER, remote_node.serialise());
 							}
-						} catch (const std::out_of_range& err) {
-							manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 						}
 					}
 					break;
@@ -236,8 +228,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							remote_node.binary_port == manager->this_node.binary_port) {
 							if (manager->node_name.empty()) {
 								LOG_DISCOVERY(this, "Node name %s already taken. Retrying other name...\n", manager->this_node.name.c_str());
-								manager->state = STATE_RESET;
-								manager->discovery_heartbeat.set(0, 1);
+								manager->reset_state();
 							} else {
 								LOG_ERR(this, "Cannot join the party. Node name %s already taken!\n", manager->this_node.name.c_str());
 								manager->state = STATE_BAD;
@@ -255,17 +246,10 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						try {
-							node_name = stringtolower(node_name);
-							if (node_name == stringtolower(manager->this_node.name)) {
-								node = &manager->this_node;
-							} else {
-								node = &manager->nodes.at(node_name);
-							}
-							node->touched = now;
+						if (manager->touch_node(node_name)) {
 							// Received a ping, return pong
 							manager->discovery(DISCOVERY_PONG, serialise_string(manager->this_node.name));
-						} catch (const std::out_of_range& err) {
+						} else {
 							LOG_DISCOVERY(this, "Ignoring ping from unknown peer %s\n", node_name.c_str());
 						}
 					}
@@ -277,15 +261,9 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						try {
-							node_name = stringtolower(node_name);
-							if (node_name == stringtolower(manager->this_node.name)) {
-								node = &manager->this_node;
-							} else {
-								node = &manager->nodes.at(node_name);
-							}
-							node->touched = now;
-						} catch (const std::out_of_range& err) {
+						if (manager->touch_node(node_name)) {
+							// Do nothing (node was touched)
+						} else {
 							LOG_DISCOVERY(this, "Ignoring pong from unknown peer %s\n", node_name.c_str());
 						}
 					}
@@ -297,7 +275,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						manager->nodes.erase(stringtolower(remote_node.name));
+						manager->drop_node(remote_node.name);
 						INFO(this, "Node %s left the party!\n", remote_node.name.c_str());
 					}
 					break;
@@ -342,25 +320,8 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 						return;
 					}
-					try {
-						node_name = stringtolower(remote_node.name);
-						if (node_name == stringtolower(manager->this_node.name)) {
-							node = &manager->this_node;
-						} else {
-							node = &manager->nodes.at(node_name);
-						}
-					} catch (const std::out_of_range& err) {
-						node = &manager->nodes[stringtolower(remote_node.name)];
-						node->name = remote_node.name;
-						node->addr.sin_addr.s_addr = remote_node.addr.sin_addr.s_addr;
-						node->http_port = remote_node.http_port;
-						node->binary_port = remote_node.binary_port;
+					if (manager->put_node(remote_node)) {
 						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
-					}
-					if (remote_node.addr.sin_addr.s_addr == node->addr.sin_addr.s_addr &&
-						remote_node.http_port == node->http_port &&
-						remote_node.binary_port == node->binary_port) {
-						node->touched = now;
 					}
 					break;
 

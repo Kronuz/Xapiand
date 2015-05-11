@@ -116,6 +116,10 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, c
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
 
+	pthread_mutexattr_init(&nodes_mtx_attr);
+	pthread_mutexattr_settype(&nodes_mtx_attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&nodes_mtx, &qmtx_attr);
+
 	pthread_mutexattr_init(&servers_mutex_attr);
 	pthread_mutexattr_settype(&servers_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&servers_mutex, &servers_mutex_attr);
@@ -171,6 +175,81 @@ XapiandManager::~XapiandManager()
 	pthread_mutexattr_destroy(&servers_mutex_attr);
 
 	LOG_OBJ(this, "DELETED MANAGER!\n");
+}
+
+void XapiandManager::reset_state()
+{
+	if (state != STATE_RESET) {
+		state = STATE_RESET;
+		discovery_heartbeat.set(0, 1);
+	}
+}
+
+
+bool XapiandManager::put_node(Node &node)
+{
+	pthread_mutex_lock(&nodes_mtx);
+	std::string node_name_lower = stringtolower(node.name);
+	if (node_name_lower == stringtolower(this_node.name)) {
+		this_node.touched = time(NULL);
+		pthread_mutex_unlock(&nodes_mtx);
+		return false;
+	} else {
+		try {
+			Node &node_ref = nodes.at(node_name_lower);
+			if (node.addr.sin_addr.s_addr == node_ref.addr.sin_addr.s_addr &&
+				node.http_port == node_ref.http_port &&
+				node.binary_port == node_ref.binary_port) {
+				node_ref.touched = time(NULL);
+			}
+		} catch (const std::out_of_range& err) {
+			Node &node_ref = nodes[node_name_lower];
+			node_ref = node;
+			node_ref.touched = time(NULL);
+			pthread_mutex_unlock(&nodes_mtx);
+			return true;
+		} catch(...) {
+			pthread_mutex_unlock(&nodes_mtx);
+			throw;
+		}
+	}
+	pthread_mutex_unlock(&nodes_mtx);
+	return false;
+}
+
+
+bool XapiandManager::touch_node(std::string &node_name, Node *node)
+{
+	pthread_mutex_lock(&nodes_mtx);
+	std::string node_name_lower = stringtolower(node_name);
+	if (node_name_lower == stringtolower(this_node.name)) {
+		this_node.touched = time(NULL);
+		if (node) *node = this_node;
+		pthread_mutex_unlock(&nodes_mtx);
+		return true;
+	} else {
+		try {
+			Node &node_ref = nodes.at(node_name_lower);
+			node_ref.touched = time(NULL);
+			if (node) *node = node_ref;
+			pthread_mutex_unlock(&nodes_mtx);
+			return true;
+		} catch (const std::out_of_range& err) {
+		} catch(...) {
+			pthread_mutex_unlock(&nodes_mtx);
+			throw;
+		}
+	}
+	pthread_mutex_unlock(&nodes_mtx);
+	return false;
+}
+
+
+void XapiandManager::drop_node(std::string &node_name)
+{
+	pthread_mutex_lock(&nodes_mtx);
+	nodes.erase(stringtolower(node_name));
+	pthread_mutex_unlock(&nodes_mtx);
 }
 
 
@@ -265,7 +344,7 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 	switch (state) {
 		case STATE_RESET:
 			if (!this_node.name.empty()) {
-				nodes.erase(stringtolower(this_node.name));
+				drop_node(this_node.name);
 			}
 			if (node_name.empty()) {
 				this_node.name = name_generator();

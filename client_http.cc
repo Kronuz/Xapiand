@@ -26,6 +26,7 @@
 
 #include "multivalue.h"
 #include "utils.h"
+#include "length.h"
 #include "cJSON.h"
 #include "manager.h"
 
@@ -767,20 +768,18 @@ int HttpClient::_endpointgen(query_t &e)
 				}
 
 				std::string index_path = ns + path;
+				server->manager->discovery(DISCOVERY_DB, serialise_string(index_path));
 
 				// Convert node to endpoint:
 				char ip[INET_ADDRSTRLEN];
-				Node *node = &server->manager->this_node;
-				try {
-					node = &server->manager->nodes.at(stringtolower(node_name));
-				} catch (const std::out_of_range& err) {
+				Node node;
+				if (!server->manager->touch_node(node_name, &node)) {
 					LOG(this, "Node %s not found\n", node_name.c_str());
 					host = node_name;
 					return CMD_UNKNOWN_HOST;
 				}
-				inet_ntop(AF_INET, &(node->addr.sin_addr), ip, INET_ADDRSTRLEN);
-
-				Endpoint endpoint("xapian://" + std::string(ip) + ":" + std::to_string(node->binary_port) + index_path);
+				inet_ntop(AF_INET, &(node.addr.sin_addr), ip, INET_ADDRSTRLEN);
+				Endpoint endpoint("xapian://" + std::string(ip) + ":" + std::to_string(node.binary_port) + index_path);
 
 				endpoints.insert(endpoint);
 
