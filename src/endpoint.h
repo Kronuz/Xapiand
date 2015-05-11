@@ -68,7 +68,7 @@ public:
 	int port;
 	std::string protocol, user, password, host, path, search;
 
-	Endpoint(const std::string &uri, const std::string &base_, int port_);
+	Endpoint(const std::string &uri, const std::string &base_=std::string(), int port_=XAPIAND_BINARY_SERVERPORT);
 	std::string as_string() const;
 	bool operator< (const Endpoint & other) const;
 };
