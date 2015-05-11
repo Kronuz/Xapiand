@@ -297,6 +297,21 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					manager->nodes.erase(stringtolower(remote_node.name));
 					INFO(this, "Node %s left the party!\n", remote_node.name.c_str());
 					break;
+
+				// case DISCOVERY_DB:
+				// 	path = "fortune";
+				// 	endpoints.insert(Endpoint(path, "", 0));
+				// 	if (database_pool->checkout(&database, endpoints, true)) {
+				// 		database_pool->checkin(&database);
+				// 		LOG_DISCOVERY(this, "Found database!\n");
+				// 		manager->discovery(
+				// 			DISCOVERY_DB_OK,
+				// 			serialise_string(manager->cluster_name) +  // The node where the index is at
+				// 			serialise_string(path) +  // The path of the index
+				// 			serialise_length(0)  // The mastery coefficient of the database
+				// 		);
+				// 	}
+				// 	break;
 			}
 		}
 	}
