@@ -160,6 +160,8 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, c
 
 XapiandManager::~XapiandManager()
 {
+	discovery(DISCOVERY_BYE, this_node.serialise());
+
 	destroy();
 
 	pthread_mutex_destroy(&qmtx);
@@ -236,8 +238,6 @@ void XapiandManager::destroy()
 		pthread_mutex_unlock(&qmtx);
 		return;
 	}
-
-	discovery(DISCOVERY_BYE, this_node.serialise());
 
 	if (discovery_sock != -1) {
 		::close(discovery_sock);
@@ -370,6 +370,7 @@ void XapiandManager::shutdown()
 	pthread_mutex_unlock(&servers_mutex);
 
 	if (shutdown_asap) {
+		discovery(DISCOVERY_BYE, this_node.serialise());
 		destroy();
 		LOG_OBJ(this, "Finishing thread pool!\n");
 		thread_pool.finish();
