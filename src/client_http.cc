@@ -245,7 +245,7 @@ void HttpClient::_head()
 	cJSON *root = cJSON_CreateObject();
 	query_t e;
 	int cmd = _endpointgen(e);
-	
+
 	switch (cmd) {
 		case CMD_NUMBER: break;
 		case CMD_SEARCH:
@@ -256,10 +256,10 @@ void HttpClient::_head()
 			cJSON_AddItemToObject(root, "Response", err_response);
 			if (cmd == CMD_UNKNOWN)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
-			
+
 			if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
-			
+
 			else
 				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
 			result = cJSON_PrintUnformatted(root);
@@ -295,7 +295,7 @@ void HttpClient::_head()
 	} else {
 		found = false;
 	}
-	
+
 	if(found){
 		cJSON_AddNumberToObject(root,"id",docid);
 		result = cJSON_PrintUnformatted(root);
