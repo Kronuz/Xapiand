@@ -352,7 +352,7 @@ void HttpClient::_delete()
 	}
 
 	clock_t t = clock();
-	if (!database->drop(command, e.commit)) {
+	if (!database->drop(command, type, e.commit)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
