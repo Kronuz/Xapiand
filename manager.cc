@@ -235,7 +235,7 @@ void XapiandManager::destroy()
 		return;
 	}
 
-	discovery(DISCOVERY_BYE, this_node);
+	discovery(DISCOVERY_BYE, this_node.serialise());
 
 	if (discovery_sock != -1) {
 		::close(discovery_sock);
@@ -271,11 +271,11 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 				this_node.name = node_name;
 			}
 		case STATE_WAITING:
-			discovery(DISCOVERY_HELLO, this_node);
+			discovery(DISCOVERY_HELLO, this_node.serialise());
 			break;
 
 		case STATE_READY:
-			discovery(DISCOVERY_PING, this_node);
+			discovery(DISCOVERY_PING, this_node.serialise());
 			break;
 	}
 	if (state && state-- == 1) {
@@ -309,21 +309,12 @@ void XapiandManager::discovery(const char *buf, size_t buf_size)
 }
 
 
-void XapiandManager::discovery(discovery_type type, Node &node)
+void XapiandManager::discovery(discovery_type type, const std::string &content)
 {
-	if (node.name.empty()) {
-		return;
-	}
 	std::string message((const char *)&type, 1);
 	message.append(std::string((const char *)&XAPIAND_DISCOVERY_PROTOCOL_VERSION, sizeof(uint16_t)));
-	message.append(encode_length(cluster_name.size()));
-	message.append(cluster_name);
-	message.append(encode_length(node.addr.sin_addr.s_addr));
-	message.append(encode_length(node.http_port));
-	message.append(encode_length(node.binary_port));
-	message.append(encode_length(node.name.size()));
-	message.append(node.name);
-	message.append(encode_length(getpid()));
+	message.append(serialise_string(cluster_name));
+	message.append(content);
 	discovery(message.c_str(), message.size());
 }
 

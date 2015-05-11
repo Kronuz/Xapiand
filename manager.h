@@ -134,7 +134,7 @@ public:
 	void sig_shutdown_handler(int sig);
 	void shutdown();
 
-	void discovery(discovery_type type, Node &node);
+	void discovery(discovery_type type, const std::string &content);
 
 	cJSON* server_status();
 	cJSON* get_stats_time(const std::string &time_req);

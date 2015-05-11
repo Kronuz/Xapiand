@@ -168,74 +168,58 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 			}
 
 			const char *ptr = buf + 3;
-			Node remote_node;
+			const char *end = buf + received;
 			size_t decoded;
 
-			if ((decoded = decode_length(&ptr, buf + received, true)) == -1) {
+			std::string remote_cluster_name;
+			if (unserialise_string(remote_cluster_name, &ptr, end) == -1) {
 				LOG_DISCOVERY(this, "Badly formed message: No cluster name!\n");
 				return;
 			}
-			std::string remote_cluster_name(ptr, decoded);
-			ptr += decoded;
 			if (remote_cluster_name != manager->cluster_name) {
 				return;
 			}
 
-			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
-				LOG_DISCOVERY(this, "Badly formed message: No address!\n");
-				return;
-			}
-			remote_node.addr.sin_addr.s_addr = (int) decoded;
-
-			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
-				LOG_DISCOVERY(this, "Badly formed message: No http port!\n");
-				return;
-			}
-			remote_node.http_port = (int) decoded;
-
-			if ((decoded = decode_length(&ptr, buf + received, false)) == -1) {
-				LOG_DISCOVERY(this, "Badly formed message: No binary port!\n");
-				return;
-			}
-			remote_node.binary_port = (int) decoded;
-
-			if ((decoded = decode_length(&ptr, buf + received, true)) <= 0) {
-				LOG_DISCOVERY(this, "Badly formed message: No name length!\n");
-				return;
-			}
-			remote_node.name = std::string(ptr, decoded);
-			ptr += decoded;
-
-			int remote_pid = (int) decode_length(&ptr, buf + received, false);
-
-			// LOG_DISCOVERY(this, "%s on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
+			// LOG_DISCOVERY(this, "%s on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 
 			Node *node;
+			Node remote_node;
+			Database *database = NULL;
+			std::string path;
+			Endpoints endpoints;
 			time_t now = time(NULL);
 
 			switch (buf[0]) {
 				case DISCOVERY_HELLO:
+					if (remote_node.unserialise(&ptr, end) == -1) {
+						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						return;
+					}
 					if (remote_node.addr.sin_addr.s_addr == manager->this_node.addr.sin_addr.s_addr &&
 						remote_node.http_port == manager->this_node.http_port &&
 						remote_node.binary_port == manager->this_node.binary_port) {
-						manager->discovery(DISCOVERY_WAVE, manager->this_node);
+						manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 					} else {
 						try {
 							node = &manager->nodes.at(stringtolower(remote_node.name));
 							if (remote_node.addr.sin_addr.s_addr == node->addr.sin_addr.s_addr &&
 								remote_node.http_port == node->http_port &&
 								remote_node.binary_port == node->binary_port) {
-								manager->discovery(DISCOVERY_WAVE, manager->this_node);
+								manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 							} else {
-								manager->discovery(DISCOVERY_SNEER, remote_node);
+								manager->discovery(DISCOVERY_SNEER, remote_node.serialise());
 							}
 						} catch (const std::out_of_range& err) {
-							manager->discovery(DISCOVERY_WAVE, manager->this_node);
+							manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 						}
 					}
 					break;
 
 				case DISCOVERY_WAVE:
+					if (remote_node.unserialise(&ptr, end) == -1) {
+						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						return;
+					}
 					try {
 						node = &manager->nodes.at(stringtolower(remote_node.name));
 					} catch (const std::out_of_range& err) {
@@ -244,7 +228,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						node->addr.sin_addr.s_addr = remote_node.addr.sin_addr.s_addr;
 						node->http_port = remote_node.http_port;
 						node->binary_port = remote_node.binary_port;
-						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port, remote_pid);
+						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 					}
 					if (remote_node.addr.sin_addr.s_addr == node->addr.sin_addr.s_addr &&
 						remote_node.http_port == node->http_port &&
@@ -254,6 +238,10 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					break;
 
 				case DISCOVERY_SNEER:
+					if (remote_node.unserialise(&ptr, end) == -1) {
+						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						return;
+					}
 					if (manager->state != STATE_READY &&
 						remote_node.name == manager->this_node.name &&
 						remote_node.addr.sin_addr.s_addr == manager->this_node.addr.sin_addr.s_addr &&
@@ -274,17 +262,25 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					break;
 
 				case DISCOVERY_PING:
+					if (remote_node.unserialise(&ptr, end) == -1) {
+						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						return;
+					}
 					try {
 						node = &manager->nodes.at(stringtolower(remote_node.name));
 						node->touched = now;
 						// Received a ping, return pong
-						manager->discovery(DISCOVERY_PONG, manager->this_node);
+						manager->discovery(DISCOVERY_PONG, manager->this_node.serialise());
 					} catch (const std::out_of_range& err) {
 						LOG_DISCOVERY(this, "Ignoring ping from unknown peer");
 					}
 					break;
 
 				case DISCOVERY_PONG:
+					if (remote_node.unserialise(&ptr, end) == -1) {
+						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						return;
+					}
 					try {
 						node = &manager->nodes.at(stringtolower(remote_node.name));
 						node->touched = now;
@@ -294,6 +290,10 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					break;
 
 				case DISCOVERY_BYE:
+					if (remote_node.unserialise(&ptr, end) == -1) {
+						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						return;
+					}
 					manager->nodes.erase(stringtolower(remote_node.name));
 					INFO(this, "Node %s left the party!\n", remote_node.name.c_str());
 					break;
