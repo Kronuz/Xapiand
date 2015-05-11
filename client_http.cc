@@ -512,7 +512,6 @@ void HttpClient::_search()
 			e.spelling = true;
 			e.synonyms = false;
 			e.unique_doc = true;
-			e.pretty = false;
 			json_chunked = false;
 			break;
 		case CMD_SEARCH:
