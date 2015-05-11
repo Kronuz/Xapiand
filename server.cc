@@ -274,7 +274,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 				case DISCOVERY_DB:
 					if (manager->state == STATE_READY) {
-						if (unserialise_string(index_path, &ptr, end) == -1 || node_name.empty()) {
+						if (unserialise_string(index_path, &ptr, end) == -1 || index_path.empty()) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
 							return;
 						}
