@@ -25,7 +25,7 @@
 
 #include <string>
 
-/** Encode a length as a variable-length string.
+/** Serialise a length as a variable-length string.
  *
  *  The encoding specifies its own length.
  *
@@ -33,9 +33,9 @@
  *
  *  @return	The encoded length.
  */
-std::string encode_length(size_t len);
+std::string serialise_length(size_t len);
 
-/** Decode a length encoded by encode_length.
+/** Unserialise a length encoded by serialise_length.
  *
  *  @param p	Pointer to a pointer to the string, which will be advanced past
  *		the encoded length.
@@ -45,6 +45,15 @@ std::string encode_length(size_t len);
  *
  *  @return	The decoded length.
  */
-size_t decode_length(const char ** p, const char *end, bool check_remaining);
+size_t unserialise_length(const char **p, const char *end, bool check_remaining=false);
+
+
+std::string serialise_string(std::string &input);
+
+size_t unserialise_string(std::string &output, const char **p, const char *end);
+
+
+#define encode_length serialise_length
+#define decode_length unserialise_length
 
 #endif /* XAPIAND_INCLUDED_LENGTH_H */
