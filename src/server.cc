@@ -194,28 +194,32 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 			switch (buf[0]) {
 				case DISCOVERY_HELLO:
-					if (manager->state == STATE_READY) {
-						if (remote_node.unserialise(&ptr, end) == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
-							return;
-						}
-						if (remote_node.addr.sin_addr.s_addr == manager->this_node.addr.sin_addr.s_addr &&
-							remote_node.http_port == manager->this_node.http_port &&
-							remote_node.binary_port == manager->this_node.binary_port) {
-							manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
-						} else {
-							try {
-								node = &manager->nodes.at(stringtolower(remote_node.name));
-								if (remote_node.addr.sin_addr.s_addr == node->addr.sin_addr.s_addr &&
-									remote_node.http_port == node->http_port &&
-									remote_node.binary_port == node->binary_port) {
-									manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
-								} else {
-									manager->discovery(DISCOVERY_SNEER, remote_node.serialise());
-								}
-							} catch (const std::out_of_range& err) {
-								manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
+					if (remote_node.unserialise(&ptr, end) == -1) {
+						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						return;
+					}
+					if (remote_node.addr.sin_addr.s_addr == manager->this_node.addr.sin_addr.s_addr &&
+						remote_node.http_port == manager->this_node.http_port &&
+						remote_node.binary_port == manager->this_node.binary_port) {
+						// It's me! ...wave hello!
+						manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
+					} else {
+						try {
+							node_name = stringtolower(remote_node.name);
+							if (node_name == stringtolower(manager->this_node.name)) {
+								node = &manager->this_node;
+							} else {
+								node = &manager->nodes.at(node_name);
 							}
+							if (remote_node.addr.sin_addr.s_addr == node->addr.sin_addr.s_addr &&
+								remote_node.http_port == node->http_port &&
+								remote_node.binary_port == node->binary_port) {
+								manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
+							} else {
+								manager->discovery(DISCOVERY_SNEER, remote_node.serialise());
+							}
+						} catch (const std::out_of_range& err) {
+							manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 						}
 					}
 					break;
@@ -252,7 +256,12 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							return;
 						}
 						try {
-							node = &manager->nodes.at(stringtolower(node_name));
+							node_name = stringtolower(node_name);
+							if (node_name == stringtolower(manager->this_node.name)) {
+								node = &manager->this_node;
+							} else {
+								node = &manager->nodes.at(node_name);
+							}
 							node->touched = now;
 							// Received a ping, return pong
 							manager->discovery(DISCOVERY_PONG, serialise_string(manager->this_node.name));
@@ -269,7 +278,12 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							return;
 						}
 						try {
-							node = &manager->nodes.at(stringtolower(node_name));
+							node_name = stringtolower(node_name);
+							if (node_name == stringtolower(manager->this_node.name)) {
+								node = &manager->this_node;
+							} else {
+								node = &manager->nodes.at(node_name);
+							}
 							node->touched = now;
 						} catch (const std::out_of_range& err) {
 							LOG_DISCOVERY(this, "Ignoring pong from unknown peer %s\n", node_name.c_str());
@@ -329,7 +343,12 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						return;
 					}
 					try {
-						node = &manager->nodes.at(stringtolower(remote_node.name));
+						node_name = stringtolower(remote_node.name);
+						if (node_name == stringtolower(manager->this_node.name)) {
+							node = &manager->this_node;
+						} else {
+							node = &manager->nodes.at(node_name);
+						}
 					} catch (const std::out_of_range& err) {
 						node = &manager->nodes[stringtolower(remote_node.name)];
 						node->name = remote_node.name;
