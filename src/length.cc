@@ -23,7 +23,7 @@
 #include "length.h"
 
 std::string
-encode_length(size_t len)
+serialise_length(size_t len)
 {
 	std::string result;
 	if (len < 255) {
@@ -45,7 +45,7 @@ encode_length(size_t len)
 }
 
 size_t
-decode_length(const char ** p, const char *end, bool check_remaining)
+unserialise_length(const char **p, const char *end, bool check_remaining)
 {
 	const char *pos = *p;
 	if (pos == end) {
@@ -70,4 +70,24 @@ decode_length(const char ** p, const char *end, bool check_remaining)
 	}
 	*p = pos;
 	return len;
+}
+
+
+std::string
+serialise_string(std::string &input) {
+	std::string output;
+	output.append(encode_length(input.size()));
+	output.append(input);
+	return output;
+}
+
+
+size_t
+unserialise_string(std::string &output, const char **p, const char *end) {
+	size_t length = decode_length(p, end, true);
+	if (length != -1) {
+		output.append(std::string(*p, length));
+		*p += length;
+	}
+	return length;
 }
