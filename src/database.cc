@@ -21,6 +21,7 @@
  */
 
 #include "database.h"
+#include "cJSON_Utils.h"
 
 //change prefix to Q only
 #define DOCUMENT_ID_TERM_PREFIX "Q"
@@ -301,6 +302,59 @@ Database::_commit()
 	return false;
 }
 
+
+bool
+Database::patch(cJSON *patches, const std::string &_document_id, bool commit, const std::string &object_type)
+{
+	if (!writable) {
+		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+		return false;
+	}
+
+	Xapian::Document document;
+	Xapian::QueryParser queryparser;
+	queryparser.add_prefix("id", "Q");
+	Xapian::Query query = queryparser.parse_query(std::string("id:" + _document_id));
+	Xapian::Enquire enquire(*db);
+	enquire.set_query(query);
+	Xapian::MSet mset = enquire.get_mset(0, 1);
+	Xapian::MSetIterator m = mset.begin();
+	int t = 3;
+	for (; t >= 0; --t) {
+		try {
+			document = db->get_document(*m);
+			break;
+		}
+
+		catch (Xapian::InvalidArgumentError) {
+			return false;
+		}
+
+		catch (Xapian::DocNotFoundError &err) {
+			return false;
+		}
+		catch (const Xapian::Error &err) {
+			reopen();
+			m = mset.begin();
+		}
+	}
+
+	//LOG(this, "data <<%s>>\n",document.get_data().c_str() );
+
+	cJSON *data_json = cJSON_Parse(document.get_data().c_str());
+	if (!data_json) {
+		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+		return false;
+	}
+
+	if (cJSONUtils_ApplyPatches(data_json, patches) == 0) {
+		//Object patched
+		return index(data_json, _document_id, commit, object_type);
+	}
+
+	//Object no patched
+	return false;
+}
 
 void
 Database::index_fields(cJSON *father, cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, bool empty_data)

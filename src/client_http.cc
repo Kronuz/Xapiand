@@ -420,8 +420,14 @@ void HttpClient::_patch()
 		return;
 	}
 
-	//change index
-	if (!database->index(body, command, e.commit, type)) {
+	cJSON *patches = cJSON_Parse(body.c_str());
+	if (!patches) {
+		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
+		return;
+	}
+
+	if (!database->patch(patches, command, e.commit, type)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
