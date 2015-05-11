@@ -56,8 +56,11 @@ struct Node {
 	int http_port;
 	int binary_port;
 	time_t touched;
-};
 
+	std::string serialise();
+	size_t unserialise(const char **p, const char *end);
+	size_t unserialise(const std::string &s);
+};
 
 enum discovery_type {
 	DISCOVERY_HELLO,    // New node saying hello
