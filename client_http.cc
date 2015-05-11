@@ -719,15 +719,15 @@ int HttpClient::_endpointgen(query_t &e)
 			size_t path_size = u.field_data[3].len;
 			std::string path_buf(b.c_str() + u.field_data[3].off, u.field_data[3].len);
 
-			parser_url_path_t p;
-			memset(&p, 0, sizeof(p));
-			std::string endp;
-			std::string nsp_;
-			std::string pat_;
-			std::string hos_;
+			std::string namespace_;
+			std::string path_;
+			std::string node_;
 			Node *node = &server->manager->this_node;
 
 			endpoints.clear();
+
+			parser_url_path_t p;
+			memset(&p, 0, sizeof(p));
 			while (url_path(path_buf.c_str(), path_size, &p) == 0) {
 				type  = urldecode(p.off_type, p.len_type);
 				command  = urldecode(p.off_command, p.len_command);
@@ -737,28 +737,28 @@ int HttpClient::_endpointgen(query_t &e)
 				}
 
 				if (p.len_namespace) {
-					nsp_ = urldecode(p.off_namespace, p.len_namespace) + "/";
+					namespace_ = urldecode(p.off_namespace, p.len_namespace) + "/";
 				} else {
-					nsp_ = "";
+					namespace_ = "";
 				}
 				if (p.len_path) {
-					pat_ = urldecode(p.off_path, p.len_path);
+					path_ = urldecode(p.off_path, p.len_path);
 				} else {
-					pat_ = "";
+					path_ = "";
 				}
 				if (p.len_host) {
-					hos_ = urldecode(p.off_host, p.len_host);
+					node_ = urldecode(p.off_host, p.len_host);
 					try {
-						node = &server->manager->nodes.at(stringtolower(hos_));
+						node = &server->manager->nodes.at(stringtolower(node_));
 					} catch (const std::out_of_range& err) {
 						LOG(this, "Node not found\n");
-						host = hos_;
+						host = node_;
 						return CMD_UNKNOWN_HOST;
 					}
 				} else if (!host.empty()) {
-					hos_ = host;
+					node_ = host;
 					try {
-						node = &server->manager->nodes.at(stringtolower(hos_));
+						node = &server->manager->nodes.at(stringtolower(node_));
 					} catch (const std::out_of_range& err) {
 						LOG(this, "Node not found\n");
 						return CMD_UNKNOWN_HOST;
@@ -767,7 +767,7 @@ int HttpClient::_endpointgen(query_t &e)
 				char ip[INET_ADDRSTRLEN];
 				inet_ntop(AF_INET, &(node->addr.sin_addr), ip, INET_ADDRSTRLEN);
 
-				endp = "xapian://" + std::string(ip) + ":" + std::to_string(node->binary_port) + nsp_ + pat_;
+				std::string endp = "xapian://" + std::string(ip) + ":" + std::to_string(node->binary_port) + namespace_ + path_;
 				endpoints.insert(Endpoint(endp, std::string(), XAPIAND_BINARY_SERVERPORT));
 
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
