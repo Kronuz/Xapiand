@@ -228,6 +228,7 @@ bool
 DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn)
 {
 	Database *database_ = NULL;
+	time_t now = time(0);
 
 	LOG_DATABASE(this, "+ CHECKING OUT DB %lx %s(%s)...\n", (unsigned long)*database, writable ? "w" : "r", endpoints.as_string().c_str());
 
@@ -266,9 +267,11 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable,
 
 	pthread_mutex_unlock(&qmtx);
 
-	if ((time(0) - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
+	if (database_ != NULL) {
+		if ((now - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
 			database_->reopen();
 			LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)database_);
+		}
 	}
 
 	LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)database_);
