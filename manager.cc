@@ -45,6 +45,53 @@ const uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_M
 pcre *XapiandManager::compiled_time_re = NULL;
 
 
+std::string Node::serialise()
+{
+	std::string node_str;
+	node_str.append(encode_length(addr.sin_addr.s_addr));
+	node_str.append(encode_length(http_port));
+	node_str.append(encode_length(binary_port));
+	node_str.append(serialise_string(name));
+	return node_str;
+}
+
+
+size_t Node::unserialise(const char **p, const char *end)
+{
+	size_t length;
+	const char *ptr = *p;
+
+	if ((length = decode_length(&ptr, end, false)) == -1) {
+		return -1;
+	}
+	addr.sin_addr.s_addr = (int)length;
+
+	if ((length = decode_length(&ptr, end, false)) == -1) {
+		return -1;
+	}
+	http_port = (int)length;
+
+	if ((length = decode_length(&ptr, end, false)) == -1) {
+		return -1;
+	}
+	binary_port = (int)length;
+
+	name.clear();
+	if (unserialise_string(name, &ptr, end) == -1 || name.empty()) {
+		return -1;
+	}
+
+	*p = ptr;
+	return end - ptr;
+}
+
+size_t Node::unserialise(const std::string &s)
+{
+	const char *ptr = s.data();
+	return unserialise(&ptr, ptr + s.size());
+}
+
+
 XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *node_name_, const char *discovery_group_, int discovery_port_, int http_port_, int binary_port_)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  state(STATE_RESET),
