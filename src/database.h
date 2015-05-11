@@ -66,6 +66,7 @@ class Database {
 public:
 	size_t hash;
 	bool writable;
+	bool spawn;
 	Endpoints endpoints;
 	time_t access_time;
 	int mastery_level;
@@ -82,7 +83,7 @@ public:
 		bool positions;
 	} specifications_t;
 
-	Database(Endpoints &endpoints, bool writable);
+	Database(Endpoints &endpoints, bool writable, bool spawn=true);
 	~Database();
 
 	int read_mastery(const std::string &path);
@@ -145,7 +146,7 @@ public:
 	DatabasePool();
 	~DatabasePool();
 
-	bool checkout(Database **database, Endpoints &endpoints, bool writable);
+	bool checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn=true);
 	void checkin(Database **database);
 	void finish();
 };
