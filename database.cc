@@ -324,16 +324,11 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 		try {
 			document = db->get_document(*m);
 			break;
-		}
-
-		catch (Xapian::InvalidArgumentError) {
+		} catch (Xapian::InvalidArgumentError &err) {
 			return false;
-		}
-
-		catch (Xapian::DocNotFoundError &err) {
+		} catch (Xapian::DocNotFoundError &err) {
 			return false;
-		}
-		catch (const Xapian::Error &err) {
+		} catch (const Xapian::Error &err) {
 			reopen();
 			m = mset.begin();
 		}
@@ -355,6 +350,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 	//Object no patched
 	return false;
 }
+
 
 void
 Database::index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc)

@@ -344,7 +344,7 @@ void HttpClient::_index()
 	clock_t t = clock();
 
 	cJSON *document = cJSON_Parse(body.c_str());
-		if (!document) {
+	if (!document) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
@@ -400,13 +400,13 @@ void HttpClient::_patch()
 			cJSON *err_response = cJSON_CreateObject();
 			cJSON_AddItemToObject(root, "Response", err_response);
 			if (cmd == CMD_UNKNOWN)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
+				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown task " + command).c_str());
 
 			if (cmd == CMD_UNKNOWN_HOST)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
-
+				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown host " + host).c_str());
 			else
-				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
+				cJSON_AddStringToObject(err_response, "Error message", "BAD QUERY");
+
 			result = cJSON_PrintUnformatted(root);
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
