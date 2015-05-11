@@ -196,18 +196,14 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 						return;
 					}
-					if (remote_node.addr.sin_addr.s_addr == manager->this_node.addr.sin_addr.s_addr &&
-						remote_node.http_port == manager->this_node.http_port &&
-						remote_node.binary_port == manager->this_node.binary_port) {
+					if (remote_node == manager->this_node) {
 						// It's me! ...wave hello!
 						manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 					} else {
 						if (manager->touch_node(remote_node.name, &node)) {
 							manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 						} else {
-							if (remote_node.addr.sin_addr.s_addr == node.addr.sin_addr.s_addr &&
-								remote_node.http_port == node.http_port &&
-								remote_node.binary_port == node.binary_port) {
+							if (remote_node == node) {
 								manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
 							} else {
 								manager->discovery(DISCOVERY_SNEER, remote_node.serialise());
@@ -222,10 +218,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						if (remote_node.name == manager->this_node.name &&
-							remote_node.addr.sin_addr.s_addr == manager->this_node.addr.sin_addr.s_addr &&
-							remote_node.http_port == manager->this_node.http_port &&
-							remote_node.binary_port == manager->this_node.binary_port) {
+						if (remote_node == manager->this_node) {
 							if (manager->node_name.empty()) {
 								LOG_DISCOVERY(this, "Node name %s already taken. Retrying other name...\n", manager->this_node.name.c_str());
 								manager->reset_state();

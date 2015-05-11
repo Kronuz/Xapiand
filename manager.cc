@@ -197,9 +197,7 @@ bool XapiandManager::put_node(Node &node)
 	} else {
 		try {
 			Node &node_ref = nodes.at(node_name_lower);
-			if (node.addr.sin_addr.s_addr == node_ref.addr.sin_addr.s_addr &&
-				node.http_port == node_ref.http_port &&
-				node.binary_port == node_ref.binary_port) {
+			if (node == node_ref) {
 				node_ref.touched = time(NULL);
 			}
 		} catch (const std::out_of_range& err) {
