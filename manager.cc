@@ -48,10 +48,12 @@ pcre *XapiandManager::compiled_time_re = NULL;
 std::string Node::serialise()
 {
 	std::string node_str;
-	node_str.append(encode_length(addr.sin_addr.s_addr));
-	node_str.append(encode_length(http_port));
-	node_str.append(encode_length(binary_port));
-	node_str.append(serialise_string(name));
+	if (!name.empty()) {
+		node_str.append(encode_length(addr.sin_addr.s_addr));
+		node_str.append(encode_length(http_port));
+		node_str.append(encode_length(binary_port));
+		node_str.append(serialise_string(name));
+	}
 	return node_str;
 }
 
@@ -311,11 +313,13 @@ void XapiandManager::discovery(const char *buf, size_t buf_size)
 
 void XapiandManager::discovery(discovery_type type, const std::string &content)
 {
-	std::string message((const char *)&type, 1);
-	message.append(std::string((const char *)&XAPIAND_DISCOVERY_PROTOCOL_VERSION, sizeof(uint16_t)));
-	message.append(serialise_string(cluster_name));
-	message.append(content);
-	discovery(message.c_str(), message.size());
+	if (!content.empty()) {
+		std::string message((const char *)&type, 1);
+		message.append(std::string((const char *)&XAPIAND_DISCOVERY_PROTOCOL_VERSION, sizeof(uint16_t)));
+		message.append(serialise_string(cluster_name));
+		message.append(content);
+		discovery(message.c_str(), message.size());
+	}
 }
 
 
