@@ -377,7 +377,6 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 		} else {
 			if (item_name.find(RESERVED_VALUES) == 0) {
 				subitem_name.assign(item_name, strlen(RESERVED_VALUES) + strlen(OFFSPRING_UNION), item_name.size());
-				printf("%s\n", subitem_name.c_str());
 				index_values(doc, item, subitem_name);
 			} else {
 				index_values(doc, item, item_name);
@@ -599,8 +598,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit, c
 		LOG_ERR(this, "ERROR: Object type must be defined\n");
 		return false;
 	} else {
-		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
-		doc.add_value(1, object_type);
+		//Make sure object type  is also a term (otherwise it doesn't filter by object type)
+		doc.add_value(1, object_type); // For obtaining all types in the database.
 		LOG_DATABASE_WRAP(this, "Slot: 1  Object type: %s\n", object_type.c_str());
 		doc.add_boolean_term(prefixed(object_type, DOCUMENT_OBJECT_TYPE_PREFIX));
 	}
