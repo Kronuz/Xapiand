@@ -102,7 +102,7 @@ public:
 	char field_type(const std::string &field_name);
 	char get_type(cJSON *field);
 	cJSON* get_stats_time(const std::string &time_req);
-	void index_fields(cJSON *father, cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, bool empty_data);
+	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc);
 	void update_specifications(cJSON *item, specifications_t &spc_now);
 	bool is_language(const std::string &language);
 	void index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name);
