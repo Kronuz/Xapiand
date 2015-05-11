@@ -70,7 +70,7 @@ enum discovery_type {
 	DISCOVERY_PONG,     // Pong
 	DISCOVERY_BYE,      // Node says goodbye
 	DISCOVERY_DB,
-	DISCOVERY_DB_OK,
+	DISCOVERY_DB_WAVE,
 	DISCOVERY_MAX
 };
 
