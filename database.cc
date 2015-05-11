@@ -520,23 +520,16 @@ Database::is_language(const std::string &language)
 
 
 bool
-Database::index(const std::string &document, const std::string &_document_id, bool commit, const std::string &object_type)
+Database::index(cJSON *document, const std::string &_document_id, bool commit, const std::string &object_type)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
 		return false;
 	}
 
-	cJSON *root = cJSON_Parse(document.c_str());
-
-	if (!root) {
-		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
-		return false;
-	}
-
-	cJSON *document_data = cJSON_GetObjectItem(root, "_data");
-	cJSON *document_terms = cJSON_GetObjectItem(root, "_terms");
-	cJSON *document_texts = cJSON_GetObjectItem(root, "_texts");
+	cJSON *document_data = cJSON_GetObjectItem(document, "_data");
+	cJSON *document_terms = cJSON_GetObjectItem(document, "_terms");
+	cJSON *document_texts = cJSON_GetObjectItem(document, "_texts");
 
 	Xapian::Document doc;
 
@@ -565,7 +558,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 	try {
 		//Default specifications
 		specifications_t spc_now = {-1, 1, "en", false, false};
-		update_specifications(root, spc_now);
+		update_specifications(document, spc_now);
 		specifications_t spc_bef = spc_now;
 
 		if (document_texts) {
@@ -606,16 +599,16 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			}
 		}
 
-		int elements = cJSON_GetArraySize(root);
+		int elements = cJSON_GetArraySize(document);
 		bool empty_data = (!document_data) ? true : false;
 		for (int i = 0; i < elements; ) {
-			cJSON *item = cJSON_GetArrayItem(root, i);
+			cJSON *item = cJSON_GetArrayItem(document, i);
 			std::string name(item->string);
-			index_fields(root, item, item->string, spc_now, doc, empty_data);
+			index_fields(document, item, item->string, spc_now, doc, empty_data);
 			if (empty_data) {
-				if (std::string(item->string).find(RESERVED_VALUES) == 0) cJSON_DeleteItemFromObject(root, item->string);
-				if (elements > cJSON_GetArraySize(root)) {
-					elements = cJSON_GetArraySize(root);
+				if (std::string(item->string).find(RESERVED_VALUES) == 0) cJSON_DeleteItemFromObject(document, item->string);
+				if (elements > cJSON_GetArraySize(document)) {
+					elements = cJSON_GetArraySize(document);
 				} else {
 					i++;
 				}
@@ -629,7 +622,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 			LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
 			doc.set_data(doc_data);
 		} else {
-			std::string doc_data(cJSON_Print(root));
+			std::string doc_data(cJSON_Print(document));
 			LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
 			doc.set_data(doc_data);
 		}
@@ -642,7 +635,7 @@ Database::index(const std::string &document, const std::string &_document_id, bo
 		return false;
 	}
 
-	cJSON_Delete(root);
+	cJSON_Delete(document);
 	return replace(document_id, doc, commit);
 }
 

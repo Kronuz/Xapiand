@@ -341,7 +341,15 @@ void HttpClient::_index()
 	}
 
 	clock_t t = clock();
-	if (!database->index(body, command, e.commit, type)) {
+
+	cJSON *document = cJSON_Parse(body.c_str());
+		if (!document) {
+		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
+		return;
+	}
+
+	if (!database->index(document, command, e.commit, type)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
