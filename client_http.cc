@@ -204,6 +204,10 @@ void HttpClient::run()
 			case 1:
 				_search();
 				break;
+			//HEAD
+			case 2:
+				_head();
+				break;
 			//PUT
 			case 4:
 				_index();
@@ -230,6 +234,83 @@ void HttpClient::run()
 		}
 	}
 	io_read.start();
+}
+
+void HttpClient::_head()
+{
+	bool found = true;
+	std::string result;
+	Xapian::docid docid = 0;
+	Xapian::QueryParser queryparser;
+	cJSON *root = cJSON_CreateObject();
+	query_t e;
+	int cmd = _endpointgen(e);
+	
+	switch (cmd) {
+		case CMD_NUMBER: break;
+		case CMD_SEARCH:
+		case CMD_FACETS:
+		case CMD_STATS:
+		default:
+			cJSON *err_response = cJSON_CreateObject();
+			cJSON_AddItemToObject(root, "Response", err_response);
+			if (cmd == CMD_UNKNOWN)
+				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
+			
+			if (cmd == CMD_UNKNOWN_HOST)
+				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+			
+			else
+				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
+			result = cJSON_PrintUnformatted(root);
+			result += "\n";
+			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+			cJSON_Delete(root);
+			return;
+	}
+
+	Database *database = NULL;
+	if (!database_pool->checkout(&database, endpoints, false)) {
+		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+		return;
+	}
+
+	queryparser.add_prefix("id", "Q");
+	Xapian::Query query = queryparser.parse_query(std::string("id:" + command));
+	Xapian::Enquire enquire(*database->db);
+	enquire.set_query(query);
+	Xapian::MSet mset = enquire.get_mset(0, 1);
+	if(mset.size()) {
+			Xapian::MSetIterator m = mset.begin();
+		int t = 3;
+		for (; t >= 0; --t) {
+			try {
+				docid = *m;
+				break;
+			} catch (const Xapian::Error &err) {
+				database->reopen();
+				m = mset.begin();
+			}
+		}
+	} else {
+		found = false;
+	}
+	
+	if(found){
+		cJSON_AddNumberToObject(root,"id",docid);
+		result = cJSON_PrintUnformatted(root);
+		result += "\n";
+		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+		write(result);
+	} else {
+		cJSON_AddStringToObject(root,"Error", "Document not found");
+		result = cJSON_PrintUnformatted(root);
+		result += "\n";
+		write(http_response(404, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+	}
+
+	database_pool->checkin(&database);
+	cJSON_Delete(root);
 }
 
 void HttpClient::_delete()
