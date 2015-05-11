@@ -314,6 +314,9 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					if (manager->put_node(remote_node)) {
 						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 					}
+					if (buf[0] == DISCOVERY_DB_WAVE) {
+						LOG_DISCOVERY(this, "Node %s has %s with a mastery of %d!", remote_node.name.c_str(), index_path.c_str(), mastery_level);
+					}
 					break;
 
 			}
