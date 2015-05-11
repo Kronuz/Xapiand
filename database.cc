@@ -658,6 +658,9 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 	LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
 	doc.set_data(doc_data);
 
+	clean_reserved(document);
+	printf("%s\n", cJSON_Print(document));
+
 	cJSON *document_terms = cJSON_GetObjectItem(document, RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document, RESERVED_TEXTS);
 
@@ -877,6 +880,49 @@ Database::get_type(cJSON *field, const std::string &field_name)
 			}
 	}
 	return STRING_TYPE;
+}
+
+
+void
+Database::clean_reserved(cJSON *root)
+{
+	int elements = cJSON_GetArraySize(root);
+	for (int i = 0; i < elements; ) {
+		cJSON *item = cJSON_GetArrayItem(root, i);
+		if (is_reserved(item->string)) {
+			cJSON_DeleteItemFromObject(root, item->string);
+		} else {
+			clean_reserved(root, item);
+		}
+		if (elements > cJSON_GetArraySize(root)) {
+			elements = cJSON_GetArraySize(root);
+		} else {
+			i++;
+		}
+	}
+}
+
+
+void
+Database::clean_reserved(cJSON *root, cJSON *item)
+{
+	if (is_reserved(item->string)) {
+		cJSON_DeleteItemFromObject(root, item->string);
+		return;
+	}
+
+	if (item->type == cJSON_Object) {
+		int elements = cJSON_GetArraySize(item);
+		for (int i = 0; i < elements; ) {
+			cJSON *subitem = cJSON_GetArrayItem(item, i);
+			clean_reserved(item, subitem);
+			if (elements > cJSON_GetArraySize(item)) {
+				elements = cJSON_GetArraySize(item);
+			} else {
+				i++;
+			}
+		}
+	}
 }
 
 
