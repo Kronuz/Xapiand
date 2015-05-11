@@ -319,14 +319,14 @@ pcre *Database::compiled_find_field_re = NULL;
 
 
 bool
-Database::drop(const std::string &doc_id, bool commit)
+Database::drop(const std::string &doc_id, const std::string &object_type, bool commit)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
 		return false;
 	}
 
-	std::string document_id  = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
+	std::string document_id  = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX + object_type + OFFSPRING_UNION);
 
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Deleting: -%s- t:%d\n", document_id.c_str(), t);
