@@ -747,8 +747,10 @@ void HttpClient::_search()
 				}
 
 				cJSON *root = cJSON_CreateObject();
-				cJSON_AddStringToObject(root, "id", id.c_str());
-				cJSON_AddStringToObject(root, "data", data.c_str());
+				cJSON *object = cJSON_Parse(data.c_str());
+				//filter startswith _
+				cJSON_AddStringToObject(root, "_id", id.c_str());
+				cJSON_AddItemToObject(root,"data", object);
 
 				if (e.pretty) {
 					result = cJSON_Print(root);
