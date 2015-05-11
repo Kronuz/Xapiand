@@ -431,7 +431,7 @@ void HttpClient::_index()
 		return;
 	}
 
-	if (!database->index(document, command, e.commit, type)) {
+	if (!database->index(document, command, type, e.commit)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
