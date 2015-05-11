@@ -57,6 +57,7 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	  iterator(manager->attach_server(this)),
 	  loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
+	  discovery_io(*loop),
 	  binary_io(*loop),
 	  break_loop(*loop),
 	  discovery_sock(discovery_sock_),
