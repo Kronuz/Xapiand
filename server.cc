@@ -186,6 +186,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 			Node remote_node;
 			Database *database = NULL;
 			std::string path;
+			std::string remote_node_name;
 			Endpoints endpoints;
 			time_t now = time(NULL);
 
@@ -262,27 +263,27 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					break;
 
 				case DISCOVERY_PING:
-					if (remote_node.unserialise(&ptr, end) == -1) {
+					if (unserialise_string(remote_node_name, &ptr, end) == -1) {
 						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 						return;
 					}
 					try {
-						node = &manager->nodes.at(stringtolower(remote_node.name));
+						node = &manager->nodes.at(stringtolower(remote_node_name));
 						node->touched = now;
 						// Received a ping, return pong
-						manager->discovery(DISCOVERY_PONG, manager->this_node.serialise());
+						manager->discovery(DISCOVERY_PONG, serialise_string(manager->this_node.name));
 					} catch (const std::out_of_range& err) {
 						LOG_DISCOVERY(this, "Ignoring ping from unknown peer");
 					}
 					break;
 
 				case DISCOVERY_PONG:
-					if (remote_node.unserialise(&ptr, end) == -1) {
+					if (unserialise_string(remote_node_name, &ptr, end) == -1) {
 						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 						return;
 					}
 					try {
-						node = &manager->nodes.at(stringtolower(remote_node.name));
+						node = &manager->nodes.at(stringtolower(remote_node_name));
 						node->touched = now;
 					} catch (const std::out_of_range& err) {
 						LOG_DISCOVERY(this, "Ignoring pong from unknown peer");
