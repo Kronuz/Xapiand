@@ -55,7 +55,7 @@
 #define SLOT_TIME_MINUTE 1440
 #define SLOT_TIME_SECOND 60
 
-void log(void *obj, const char *fmt, ...);
+void log(const char *file, int line, void *obj, const char *fmt, ...);
 
 std::string repr(const char *p, size_t size);
 std::string repr(const std::string &string);
@@ -203,15 +203,15 @@ void update_pos_time();
 void fill_zeros_stats_cnt(int start, int end);
 void fill_zeros_stats_sec(int start, int end);
 
-#define INFO(...) log(__VA_ARGS__)
+#define INFO(...) log(__FILE__, __LINE__, __VA_ARGS__)
 
-#define LOG(...) log(__VA_ARGS__)
-#define LOG_ERR(...) log(__VA_ARGS__)
+#define LOG(...) log(__FILE__, __LINE__, __VA_ARGS__)
+#define LOG_ERR(...) log(__FILE__, __LINE__, __VA_ARGS__)
 
 #define LOG_DEBUG(...)
 
 #define LOG_CONN(...)
-#define LOG_DISCOVERY(...)
+#define LOG_DISCOVERY(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_OBJ(...)
 #define LOG_DATABASE(...)
 #define LOG_HTTP_PROTO_PARSER(...)
@@ -222,6 +222,6 @@ void fill_zeros_stats_sec(int start, int end);
 #define LOG_HTTP_PROTO(...)
 #define LOG_BINARY_PROTO(...)
 
-#define LOG_DATABASE_WRAP(...) log(__VA_ARGS__)
+#define LOG_DATABASE_WRAP(...) log(__FILE__, __LINE__, __VA_ARGS__)
 
 #endif /* XAPIAND_INCLUDED_UTILS_H */
