@@ -188,7 +188,6 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 			std::string index_path;
 			std::string node_name;
 			size_t mastery_level;
-			Endpoints endpoints;
 
 			switch (buf[0]) {
 				case DISCOVERY_HELLO:
@@ -279,13 +278,12 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
 							return;
 						}
-						endpoints.insert(Endpoint(index_path));
-						if (database_pool->checkout(&database, endpoints, true)) {
-							database_pool->checkin(&database);
+						mastery_level = database_pool->get_mastery_level(index_path);
+						if (mastery_level != -1) {
 							LOG_DISCOVERY(this, "Found database!\n");
 							manager->discovery(
 								DISCOVERY_DB_WAVE,
-								serialise_length(0) +  // The mastery level of the database
+								serialise_length(mastery_level) +  // The mastery level of the database
 								serialise_string(index_path) +  // The path of the index
 								manager->this_node.serialise()  // The node where the index is at
 							);
