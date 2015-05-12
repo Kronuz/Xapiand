@@ -327,6 +327,10 @@ DatabasePool::checkin(Database **database)
 	}
 
 	queue->push(*database);
+	size_t queue_size = queue->size();
+	if (queue->count < queue_size) {
+		queue->count = queue_size;
+	}
 
 	*database = NULL;
 
