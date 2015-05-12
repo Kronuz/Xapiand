@@ -52,9 +52,10 @@ class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 
 Database::Database(Endpoints &endpoints_, bool writable_, bool spawn_)
 	: endpoints(endpoints_),
-	  hash(endpoints.hash()),
 	  writable(writable_),
 	  spawn(spawn_),
+	  hash(endpoints.hash()),
+	  access_time(time(0)),
 	  mastery_level(-1),
 	  db(NULL)
 {
