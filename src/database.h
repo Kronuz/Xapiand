@@ -56,10 +56,10 @@ class DatabasePool;
 
 class Database {
 public:
-	size_t hash;
+	Endpoints endpoints;
 	bool writable;
 	bool spawn;
-	Endpoints endpoints;
+	size_t hash;
 	time_t access_time;
 	int mastery_level;
 
