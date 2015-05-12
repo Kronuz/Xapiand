@@ -135,6 +135,7 @@ class DatabasePool {
 private:
 	bool finished;
 	pool_databases_map_t databases;
+	pool_databases_map_t writable_databases;
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
