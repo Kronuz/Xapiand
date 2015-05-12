@@ -263,6 +263,12 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable,
 					database_ = new Database(endpoints, writable, spawn);
 				} catch (const Xapian::Error &err) {
 					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
+					pthread_mutex_lock(&qmtx);
+					if (queue.count == 1) {
+						// There was an error and the queue ended up being empty
+						databases.erase(hash);
+					}
+					pthread_mutex_unlock(&qmtx);
 					return false;
 				}
 				pthread_mutex_lock(&qmtx);
@@ -274,9 +280,6 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable,
 				if (!s) {
 					LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
 				}
-			}
-			if (queue.empty() && !spawn) {
-				databases.erase(hash);
 			}
 		}
 		*database = database_;
