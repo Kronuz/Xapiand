@@ -822,6 +822,7 @@ Database::field_type(const std::string &field_name)
 	return type.at(0);
 }
 
+
 char
 Database::get_type(cJSON *field, const std::string &field_name)
 {

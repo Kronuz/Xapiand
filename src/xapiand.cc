@@ -218,8 +218,8 @@ int main(int argc, char **argv)
 	int binary_port = (opts.binary_port == XAPIAND_BINARY_SERVERPORT) ? 0 : opts.binary_port;
 	int discovery_port = (opts.discovery_port == XAPIAND_DISCOVERY_SERVERPORT) ? 0 : opts.discovery_port;
 	const char *discovery_group = (opts.discovery_group.empty() || opts.discovery_group == XAPIAND_DISCOVERY_GROUP) ? NULL : opts.discovery_group.c_str();
-	const char *cluster_name = opts.cluster_name.c_str();;
-	const char *node_name = opts.node_name.c_str();;
+	const char *cluster_name = opts.cluster_name.c_str();
+	const char *node_name = opts.node_name.c_str();
 
 	INFO((void *)NULL,
 		"\n\n"
