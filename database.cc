@@ -246,17 +246,17 @@ DatabasePool::get_mastery_level(const std::string &index_path)
 bool
 DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn)
 {
-	Database *database_ = NULL;
-	time_t now = time(0);
-
 	LOG_DATABASE(this, "+ CHECKING OUT DB %lx %s(%s)...\n", (unsigned long)*database, writable ? "w" : "r", endpoints.as_string().c_str());
+
+	time_t now = time(0);
+	Database *database_ = NULL;
 
 	pthread_mutex_lock(&qmtx);
 
 	if (!finished && *database == NULL) {
+		DatabaseQueue *queue = NULL;
 		size_t hash = endpoints.hash();
 
-		DatabaseQueue *queue;
 		if (writable) {
 			queue = &writable_databases[hash];
 		} else {
@@ -265,21 +265,16 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable,
 
 		if (!queue->pop(database_, 0)) {
 			if (!writable || queue->count == 0) {
-				queue->count++;
+				queue->count++;  // Increment so other threads don't remove the queue
 				pthread_mutex_unlock(&qmtx);
 				try {
 					database_ = new Database(endpoints, writable, spawn);
+				} catch (const Xapian::DatabaseOpeningError &err) {
 				} catch (const Xapian::Error &err) {
 					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
-					pthread_mutex_lock(&qmtx);
-					if (queue->count == 1) {
-						// There was an error and the queue ended up being empty
-						databases.erase(hash);
-					}
-					pthread_mutex_unlock(&qmtx);
-					return false;
 				}
 				pthread_mutex_lock(&qmtx);
+				if (!database_) queue->count--;  // Decrement on error (no database_)
 			} else {
 				// Lock until a database is available if it can't get one.
 				pthread_mutex_unlock(&qmtx);
@@ -290,12 +285,19 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable,
 				}
 			}
 		}
-		*database = database_;
+		if (database_) {
+			*database = database_;
+		} else {
+			if (queue->count == 0) {
+				// There was an error and the queue ended up being empty
+				databases.erase(hash);
+			}
+		}
 	}
 
 	pthread_mutex_unlock(&qmtx);
 
-	if (database_ != NULL) {
+	if (database_) {
 		if ((now - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
 			database_->reopen();
 			LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)database_);
@@ -304,7 +306,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable,
 
 	LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)database_);
 
-	return true;
+	return database_;
 }
 
 
