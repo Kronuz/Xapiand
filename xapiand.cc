@@ -185,8 +185,8 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<std::string> uid("u", "uid", "User ID.", false, "xapiand", "uid", cmd);
 		ValueArg<std::string> gid("g", "gid", "Group ID.", false, "xapiand", "uid", cmd);
 
-		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "servers", cmd);
-		ValueArg<size_t> dbpool_size("", "dbpool_size", "Maximum number of database endpoints in database pool.", false, 1000, "max", cmd);
+		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
+		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of database endpoints in database pool.", false, 1000, "size", cmd);
 
 
 		cmd.parse( argc, argv );
