@@ -658,9 +658,6 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 	LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
 	doc.set_data(doc_data);
 
-	clean_reserved(document);
-	printf("%s\n", cJSON_Print(document));
-
 	cJSON *document_terms = cJSON_GetObjectItem(document, RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document, RESERVED_TEXTS);
 
