@@ -613,7 +613,6 @@ void HttpClient::_search()
 				e.spelling = true;
 				e.synonyms = false;
 				e.unique_doc = true;
-				e.pretty = false;
 			}else {
 				cJSON *root = cJSON_CreateObject();
 				cJSON *err_response = cJSON_CreateObject();
@@ -748,7 +747,7 @@ void HttpClient::_search()
 
 				cJSON *root = cJSON_CreateObject();
 				cJSON *object = cJSON_Parse(data.c_str());
-				//filter startswith _
+				database->clean_reserved(object);
 				cJSON_AddStringToObject(root, "_id", id.c_str());
 				cJSON_AddItemToObject(root,"data", object);
 
