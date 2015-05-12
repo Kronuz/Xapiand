@@ -51,8 +51,6 @@
 #define OFFSPRING_UNION "__"
 #define LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
 
-class DatabasePool;
-
 
 class Database {
 public:
@@ -113,11 +111,17 @@ private:
 };
 
 
+class DatabasePool;
+class DatabasesLRU;
+
 class DatabaseQueue : public Queue<Database *> {
 	// FIXME: Add queue creation time and delete databases when deleted queue
 
 	friend class DatabasePool;
-protected:
+	friend class DatabasesLRU;
+
+private:
+	bool persistent;
 	size_t count;
 
 public:
@@ -126,16 +130,27 @@ public:
 };
 
 
+class DatabasesLRU : public lru_map<size_t, DatabaseQueue> {
+private:
+	bool persistent(DatabaseQueue & val) {
+		return (val.persistent || val.size() < val.count);
+	}
+
+public:
+	DatabasesLRU(size_t max_size) :
+		lru_map(max_size) {
+	}
+};
+
+
 class DatabasePool {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old dtabase queues
 
-	typedef lru_map<size_t, DatabaseQueue> pool_databases_map_t;
-
 private:
 	bool finished;
-	pool_databases_map_t databases;
-	pool_databases_map_t writable_databases;
+	DatabasesLRU databases;
+	DatabasesLRU writable_databases;
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
@@ -144,7 +159,7 @@ public:
 	~DatabasePool();
 
 	int get_mastery_level(const std::string &index_path);
-	bool checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn=true);
+	bool checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn=true, bool persistent=false);
 	void checkin(Database **database);
 	void finish();
 };
