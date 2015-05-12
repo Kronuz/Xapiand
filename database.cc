@@ -179,7 +179,8 @@ Database::~Database()
 }
 
 DatabaseQueue::DatabaseQueue()
-	: count(0)
+	: persistent(false),
+	  count(0)
 {
 }
 
@@ -244,7 +245,7 @@ DatabasePool::get_mastery_level(const std::string &index_path)
 
 
 bool
-DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn)
+DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn, bool persistent)
 {
 	LOG_DATABASE(this, "+ CHECKING OUT DB %lx %s(%s)...\n", (unsigned long)*database, writable ? "w" : "r", endpoints.as_string().c_str());
 
@@ -262,6 +263,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable,
 		} else {
 			queue = &databases[hash];
 		}
+		queue->persistent = persistent;
 
 		if (!queue->pop(database_, 0)) {
 			if (!writable || queue->count == 0) {
