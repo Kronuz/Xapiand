@@ -76,7 +76,7 @@ public:
 
 class Endpoints : public endpoints_set_t {
 public:
-	size_t hash(bool writable) const;
+	size_t hash() const;
 	std::string as_string() const;
 };
 
