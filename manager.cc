@@ -99,6 +99,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, c
 	  state(STATE_RESET),
 	  break_loop(*loop),
 	  discovery_heartbeat(*loop),
+	  database_pool(-1),
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  async_shutdown(*loop),
