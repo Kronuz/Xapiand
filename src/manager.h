@@ -145,7 +145,7 @@ public:
 	std::string node_name;
 	Node this_node;
 
-	XapiandManager(ev::loop_ref *loop_, const char *cluster_name_, const char *node_name_, const char *discovery_group_, int discovery_port_, int http_port_, int binary_port_);
+	XapiandManager(ev::loop_ref *loop_, const std::string &cluster_name_, const std::string &node_name_, const std::string &discovery_group_, int discovery_port_, int http_port_, int binary_port_, size_t dbpool_size);
 	~XapiandManager();
 
 	void run(int num_servers);
