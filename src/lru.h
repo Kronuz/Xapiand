@@ -89,12 +89,12 @@ public:
 
 		if (_max_size != -1) {
 			list_reverse_iterator_t last = _items_list.rbegin();
-			for (size_t i = _items_map.size(); i != 0 && _items_map.size() > _max_size && last != _items_list.rend(); last++, i--) {
-				list_iterator_t it = ++(last.base());
-				if (persistent(last->second)) {
+			for (size_t i = _items_map.size(); i != 0 && _items_map.size() > _max_size && last != _items_list.rend(); i--) {
+				list_iterator_t it = --(last++).base();
+				if (persistent(it->second)) {
 					_items_list.splice(_items_list.begin(), _items_list, it);
 				} else {
-					_items_map.erase(last->first);
+					_items_map.erase(it->first);
 					_items_list.erase(it);
 				}
 			}
