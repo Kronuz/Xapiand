@@ -746,10 +746,15 @@ void HttpClient::_search()
 				}
 
 				cJSON *root = cJSON_CreateObject();
-				cJSON *object = cJSON_Parse(data.c_str());
-				database->clean_reserved(object);
 				cJSON_AddStringToObject(root, "_id", id.c_str());
-				cJSON_AddItemToObject(root,"data", object);
+				cJSON *object = cJSON_Parse(data.c_str());
+				cJSON *object_data = cJSON_GetObjectItem(object, RESERVED_DATA);
+				if (object_data) {
+					cJSON_AddItemToObject(root, "data", object_data);
+				} else {
+					database->clean_reserved(object);
+					cJSON_AddItemToObject(root, "data", object);
+				}
 
 				if (e.pretty) {
 					result = cJSON_Print(root);
