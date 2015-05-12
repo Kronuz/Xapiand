@@ -700,6 +700,7 @@ void HttpClient::_search()
 			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++, m++) {
 				Xapian::docid docid = 0;
 				std::string id;
+				std::string type;
 				int rank = 0;
 				double weight = 0, percent = 0;
 				std::string data;
@@ -745,6 +746,7 @@ void HttpClient::_search()
 
 				data = document.get_data();
 				id = document.get_value(0);
+				type = document.get_value(1);
 
 				if (rc == 0 && json_chunked) {
 					write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
@@ -752,6 +754,7 @@ void HttpClient::_search()
 
 				cJSON *root = cJSON_CreateObject();
 				cJSON_AddStringToObject(root, "_id", id.c_str());
+				cJSON_AddStringToObject(root, "_type", type.c_str());
 				cJSON *object = cJSON_Parse(data.c_str());
 				cJSON *object_data = cJSON_Duplicate(cJSON_GetObjectItem(object, RESERVED_DATA), 1);
 				if (object_data) {
