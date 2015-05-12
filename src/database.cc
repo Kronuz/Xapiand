@@ -421,15 +421,15 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 bool
 Database::is_reserved(const std::string &word)
 {
-	if (word.find(RESERVED_WEIGHT)    == -1 &&
-		word.find(RESERVED_POSITION)  == -1 &&
-		word.find(RESERVED_LANGUAGE)  == -1 &&
-		word.find(RESERVED_SPELLING)  == -1 &&
-		word.find(RESERVED_POSITIONS) == -1 &&
-		word.find(RESERVED_TEXTS)     == -1 &&
-		word.find(RESERVED_VALUES)    == -1 &&
-		word.find(RESERVED_TERMS)     == -1 &&
-		word.find(RESERVED_DATA)      == -1) {
+	if (word.compare(RESERVED_WEIGHT)    != 0 &&
+		word.compare(RESERVED_POSITION)  != 0 &&
+		word.compare(RESERVED_LANGUAGE)  != 0 &&
+		word.compare(RESERVED_SPELLING)  != 0 &&
+		word.compare(RESERVED_POSITIONS) != 0 &&
+		word.compare(RESERVED_TEXTS)     != 0 &&
+		word.compare(RESERVED_VALUES)    != 0 &&
+		word.compare(RESERVED_TERMS)     != 0 &&
+		word.compare(RESERVED_DATA)      != 0) {
 		return false;
 	}
 	return true;
