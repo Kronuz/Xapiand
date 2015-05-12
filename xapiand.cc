@@ -34,6 +34,24 @@
 using namespace TCLAP;
 
 
+typedef struct opts_s {
+	int verbosity;
+	bool daemonize;
+	bool glass;
+	std::string cluster_name;
+	std::string node_name;
+	unsigned int http_port;
+	unsigned int binary_port;
+	unsigned int discovery_port;
+	std::string pidfile;
+	std::string uid;
+	std::string gid;
+	std::string discovery_group;
+	size_t num_servers;
+	size_t dbpool_size;
+} opts_t;
+
+
 XapiandManager *manager_ptr = NULL;
 
 
@@ -60,8 +78,8 @@ void setup_signal_handlers(void) {
 	sigaction(SIGINT, &act, NULL);
 }
 
-
-void run(int num_servers, const char *cluster_name_, const char *node_name_, const char *discovery_group, int discovery_port, int http_port, int binary_port)
+// int num_servers, const char *cluster_name_, const char *node_name_, const char *discovery_group, int discovery_port, int http_port, int binary_port, size_t dbpool_size
+void run(const opts_t &o)
 {
 #ifdef HAVE_PTHREAD_SETNAME_NP_2
     pthread_setname_np(pthread_self(), "==");
@@ -73,11 +91,11 @@ void run(int num_servers, const char *cluster_name_, const char *node_name_, con
 
 	setup_signal_handlers();
 
-	XapiandManager manager(&default_loop, cluster_name_, node_name_, discovery_group, discovery_port, http_port, binary_port);
+	XapiandManager manager(&default_loop, o.cluster_name, o.node_name, o.discovery_group, o.discovery_port, o.http_port, o.binary_port, o.dbpool_size);
 
 	manager_ptr = &manager;
 
-	manager.run(num_servers);
+	manager.run(o.num_servers);
 
 	manager_ptr = NULL;
 }
@@ -134,21 +152,6 @@ class CmdOutput : public StdOutput
 		}
 };
 
-typedef struct opts_s {
-	int verbosity;
-	bool daemonize;
-	bool glass;
-	std::string cluster_name;
-	std::string node_name;
-	unsigned int http_port;
-	unsigned int binary_port;
-	unsigned int discovery_port;
-	std::string pidfile;
-	std::string uid;
-	std::string gid;
-	std::string discovery_group;
-	unsigned int num_servers;
-} opts_t;
 
 void parseOptions(int argc, char** argv, opts_t &opts)
 {
@@ -182,7 +185,9 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<std::string> uid("u", "uid", "User ID.", false, "xapiand", "uid", cmd);
 		ValueArg<std::string> gid("g", "gid", "Group ID.", false, "xapiand", "uid", cmd);
 
-		ValueArg<unsigned int> num_servers("", "workers", "Number of worker servers.", false, nthreads, "servers", cmd);
+		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "servers", cmd);
+		ValueArg<size_t> dbpool_size("", "dbpool_size", "Maximum number of database endpoints in database pool.", false, 1000, "max", cmd);
+
 
 		cmd.parse( argc, argv );
 
@@ -201,6 +206,13 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		opts.uid = uid.getValue();
 		opts.gid = gid.getValue();
 		opts.num_servers = num_servers.getValue();
+		opts.dbpool_size = dbpool_size.getValue();
+
+		// Use 0 for guessing with defaults
+		if (opts.http_port == XAPIAND_HTTP_SERVERPORT) opts.http_port = 0;
+		if (opts.binary_port == XAPIAND_BINARY_SERVERPORT) opts.binary_port = 0;
+		if (opts.discovery_port == XAPIAND_DISCOVERY_SERVERPORT) opts.discovery_port = 0;
+		if (opts.discovery_group.empty()) opts.discovery_group = XAPIAND_DISCOVERY_GROUP;
 
 	} catch (ArgException &e) { // catch any exceptions
 		std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
@@ -214,13 +226,6 @@ int main(int argc, char **argv)
 
 	parseOptions(argc, argv, opts);
 
-	int http_port = (opts.http_port == XAPIAND_HTTP_SERVERPORT) ? 0 : opts.http_port;
-	int binary_port = (opts.binary_port == XAPIAND_BINARY_SERVERPORT) ? 0 : opts.binary_port;
-	int discovery_port = (opts.discovery_port == XAPIAND_DISCOVERY_SERVERPORT) ? 0 : opts.discovery_port;
-	const char *discovery_group = (opts.discovery_group.empty() || opts.discovery_group == XAPIAND_DISCOVERY_GROUP) ? NULL : opts.discovery_group.c_str();
-	const char *cluster_name = opts.cluster_name.c_str();
-	const char *node_name = opts.node_name.c_str();
-
 	INFO((void *)NULL,
 		"\n\n"
 		"  __  __           _                 _\n"
@@ -232,7 +237,7 @@ int main(int argc, char **argv)
 		"   [%s]\n"
 		"          Using Xapian v%s\n\n", PACKAGE_VERSION, PACKAGE_BUGREPORT, XAPIAN_VERSION);
 
-	INFO((void *)NULL, "Joined cluster: %s\n", cluster_name);
+	INFO((void *)NULL, "Joined cluster: %s\n", opts.cluster_name.c_str());
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (opts.glass) {
@@ -265,7 +270,7 @@ int main(int argc, char **argv)
 	b_time.minute = diff_t / SLOT_TIME_SECOND;
 	b_time.second =  diff_t % SLOT_TIME_SECOND;
 
-	run(opts.num_servers, cluster_name, node_name, discovery_group, discovery_port, http_port, binary_port);
+	run(opts);
 
 	INFO((void *)NULL, "Done with all work!\n");
 	return 0;
