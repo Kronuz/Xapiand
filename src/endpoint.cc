@@ -175,9 +175,9 @@ std::string Endpoints::as_string() const {
 }
 
 
-size_t Endpoints::hash(bool writable) const {
+size_t Endpoints::hash() const {
 	std::hash<Endpoints> hash_fn;
-	return hash_fn(*this) ^ (size_t)writable;
+	return hash_fn(*this);
 }
 
 

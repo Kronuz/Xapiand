@@ -52,12 +52,12 @@ class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 
 Database::Database(Endpoints &endpoints_, bool writable_, bool spawn_)
 	: endpoints(endpoints_),
+	  hash(endpoints.hash()),
 	  writable(writable_),
 	  spawn(spawn_),
 	  mastery_level(-1),
 	  db(NULL)
 {
-	hash = endpoints.hash(writable);
 	reopen();
 }
 
@@ -195,7 +195,8 @@ DatabaseQueue::~DatabaseQueue()
 
 DatabasePool::DatabasePool(size_t max_size)
 	: finished(false),
-	  databases(max_size)
+	  databases(max_size),
+	  writable_databases(max_size)
 {
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
@@ -252,19 +253,25 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable,
 	pthread_mutex_lock(&qmtx);
 
 	if (!finished && *database == NULL) {
-		size_t hash = endpoints.hash(writable);
-		DatabaseQueue &queue = databases[hash];
+		size_t hash = endpoints.hash();
 
-		if (!queue.pop(database_, 0)) {
-			if (!writable || queue.count == 0) {
-				queue.count++;
+		DatabaseQueue *queue;
+		if (writable) {
+			queue = &writable_databases[hash];
+		} else {
+			queue = &databases[hash];
+		}
+
+		if (!queue->pop(database_, 0)) {
+			if (!writable || queue->count == 0) {
+				queue->count++;
 				pthread_mutex_unlock(&qmtx);
 				try {
 					database_ = new Database(endpoints, writable, spawn);
 				} catch (const Xapian::Error &err) {
 					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
 					pthread_mutex_lock(&qmtx);
-					if (queue.count == 1) {
+					if (queue->count == 1) {
 						// There was an error and the queue ended up being empty
 						databases.erase(hash);
 					}
@@ -275,7 +282,7 @@ DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable,
 			} else {
 				// Lock until a database is available if it can't get one.
 				pthread_mutex_unlock(&qmtx);
-				int s = queue.pop(database_);
+				int s = queue->pop(database_);
 				pthread_mutex_lock(&qmtx);
 				if (!s) {
 					LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
@@ -307,9 +314,14 @@ DatabasePool::checkin(Database **database)
 
 	pthread_mutex_lock(&qmtx);
 
-	DatabaseQueue &queue = databases[(*database)->hash];
+	DatabaseQueue *queue;
+	if ((*database)->writable) {
+		queue = &writable_databases[(*database)->hash];
+	} else {
+		queue = &databases[(*database)->hash];
+	}
 
-	queue.push(*database);
+	queue->push(*database);
 
 	*database = NULL;
 
