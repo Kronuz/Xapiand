@@ -212,6 +212,9 @@ void HttpClient::run()
 			case 4:
 				_index();
 				break;
+			//OPTIONS
+			case 6:
+				break;
 			//PATCH
 			case 24:
 				_patch();
