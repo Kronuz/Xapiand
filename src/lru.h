@@ -47,6 +47,7 @@ template<typename key_t, typename value_t>
 class lru_map {
 	typedef typename std::pair<const key_t, value_t> key_value_pair_t;
 	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
+	typedef typename std::list<key_value_pair_t>::reverse_iterator list_reverse_iterator_t;
 #ifdef HAVE_CXX11
 	typedef std::unordered_map<const key_t, list_iterator_t> lru_map_t;
 #else
@@ -59,6 +60,10 @@ protected:
 	lru_list_t _items_list;
 	lru_map_t _items_map;
 	size_t _max_size;
+
+	virtual bool persistent(value_t & val) {
+		return false;
+	}
 
 public:
 	lru_map(size_t max_size=-1) :
@@ -75,18 +80,24 @@ public:
 		return 0;
 	}
 
-	value_t & insert(const key_value_pair_t &p) {
+	value_t & insert(const key_value_pair_t & p) {
 		erase(p.first);
 
 		_items_list.push_front(p);
 		list_iterator_t first = _items_list.begin();
 		_items_map[p.first] = first;
 
-		if (_max_size != -1 && _items_map.size() > _max_size) {
-			list_iterator_t last = _items_list.end();
-			last--;
-			_items_map.erase(last->first);
-			_items_list.pop_back();
+		if (_max_size != -1) {
+			list_reverse_iterator_t last = _items_list.rbegin();
+			for (size_t i = _items_map.size(); i != 0 && _items_map.size() > _max_size && last != _items_list.rend(); last++, i--) {
+				list_iterator_t it = ++(last.base());
+				if (persistent(last->second)) {
+					_items_list.splice(_items_list.begin(), _items_list, it);
+				} else {
+					_items_map.erase(last->first);
+					_items_list.erase(it);
+				}
+			}
 		}
 		return first->second;
 	}
