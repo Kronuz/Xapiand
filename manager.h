@@ -32,8 +32,12 @@
 #include <ev++.h>
 #include <pthread.h>
 #include <netinet/in.h>
-#include <unordered_map>
 
+#ifdef HAVE_CXX11
+#include <unordered_map>
+#else
+#include <map>
+#endif
 
 #define XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION 1
 #define XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION 0
@@ -85,6 +89,13 @@ enum discovery_type {
 
 
 class XapiandManager {
+#ifdef HAVE_CXX11
+	typedef std::unordered_map<std::string, Node> nodes_map_t;
+#else
+	typedef std::map<std::string, Node> nodes_map_t;
+#endif
+
+private:
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
 
@@ -118,7 +129,7 @@ class XapiandManager {
 protected:
 	pthread_mutex_t nodes_mtx;
 	pthread_mutexattr_t nodes_mtx_attr;
-	std::unordered_map<std::string, Node> nodes;
+	nodes_map_t nodes;
 
 	pthread_mutex_t servers_mutex;
 	pthread_mutexattr_t servers_mutex_attr;

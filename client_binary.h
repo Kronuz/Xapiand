@@ -33,16 +33,20 @@
 
 #ifdef HAVE_CXX11
 #  include <unordered_map>
-	typedef std::unordered_map<Xapian::Database *, Database *> databases_map_t;
 #else
 #  include <map>
-	typedef std::map<Xapian::Database *, Database *> databases_map_t;
 #endif
 
 //
 //   A single instance of a non-blocking Xapiand binary protocol handler
 //
 class BinaryClient : public BaseClient, public RemoteProtocol {
+#ifdef HAVE_CXX11
+	typedef std::unordered_map<Xapian::Database *, Database *> databases_map_t;
+#else
+	typedef std::map<Xapian::Database *, Database *> databases_map_t;
+#endif
+
 private:
 	bool running;
 	bool started;
