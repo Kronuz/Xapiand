@@ -425,8 +425,6 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 		}
 	}
 
-	//LOG(this, "data <<%s>>\n",document.get_data().c_str() );
-
 	cJSON *data_json = cJSON_Parse(document.get_data().c_str());
 	if (!data_json) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());

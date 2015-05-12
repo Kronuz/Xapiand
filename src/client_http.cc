@@ -460,6 +460,7 @@ void HttpClient::_index()
 	result += "\n\n";
 	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 	write(result);
+	cJSON_Delete(document);
 	cJSON_Delete(root);
 }
 
@@ -527,6 +528,7 @@ void HttpClient::_patch()
 	result += "\n\n";
 	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 	write(result);
+	cJSON_Delete(patches);
 	cJSON_Delete(root);
 }
 
