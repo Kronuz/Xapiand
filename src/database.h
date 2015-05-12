@@ -25,6 +25,7 @@
 
 #include "endpoint.h"
 #include "queue.h"
+#include "lru.h"
 
 #include <xapian.h>
 
@@ -51,15 +52,6 @@
 #define LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
 
 class DatabasePool;
-class DatabaseQueue;
-
-#ifdef HAVE_CXX11
-#  include <unordered_map>
-   typedef std::unordered_map<size_t, DatabaseQueue> pool_databases_map_t;
-#else
-#  include <map>
-   typedef std::map<size_t, DatabaseQueue> pool_databases_map_t;
-#endif
 
 
 class Database {
@@ -122,9 +114,10 @@ private:
 
 
 class DatabaseQueue : public Queue<Database *> {
+	// FIXME: Add queue creation time and delete databases when deleted queue
+
 	friend class DatabasePool;
 protected:
-	// FIXME: Add queue creation time and delete databases when deleted queue
 	size_t count;
 
 public:
@@ -134,8 +127,10 @@ public:
 
 
 class DatabasePool {
-protected:
 	// FIXME: Add maximum number of databases available for the queue
+	// FIXME: Add cleanup for removing old dtabase queues
+
+	typedef lru_map<size_t, DatabaseQueue> pool_databases_map_t;
 
 private:
 	bool finished;
@@ -143,10 +138,8 @@ private:
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
-	// FIXME: Add cleanup for removing old dtabase queues
-
 public:
-	DatabasePool();
+	DatabasePool(size_t max_size);
 	~DatabasePool();
 
 	int get_mastery_level(const std::string &index_path);
