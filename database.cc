@@ -783,42 +783,14 @@ Database::field_type(const std::string &field_name)
 		return ' ';
 	}
 
-	Xapian::Database *_db = new Xapian::Database();
-	Xapian::Database rdb;
-	Xapian::Database ldb;
-
-	const Endpoint *e;
-	endpoints_set_t::const_iterator i(endpoints.begin());
-
-	for (; i != endpoints.end(); ++i) {
-		e = &*i;
-		if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
-			try {
-				rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
-			} catch (const Xapian::DatabaseOpeningError &err) {
-				Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
-				rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
-			}
-		} else {
-			rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
-			try {
-				ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
-				if (ldb.get_uuid() == rdb.get_uuid()) {
-					LOG(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
-					// Handle remote endpoints and figure out if the endpoint is a local database
-					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
-				}
-			} catch (const Xapian::DatabaseOpeningError &err) {}
-		}
-		_db->add_database(rdb);
-	}
-	std::string type = _db->get_metadata(field_name);
-	delete _db;
+	std::string type = db->get_metadata(field_name);
 
 	LOG_DATABASE_WRAP(this, "set_database: %s\n", type.c_str());
+
 	if (type.empty()) {
 		return ' ';
 	}
+
 	return type.at(0);
 }
 
