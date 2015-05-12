@@ -193,8 +193,9 @@ DatabaseQueue::~DatabaseQueue()
 }
 
 
-DatabasePool::DatabasePool()
-	: finished(false)
+DatabasePool::DatabasePool(size_t max_size)
+	: finished(false),
+	  databases(max_size)
 {
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
