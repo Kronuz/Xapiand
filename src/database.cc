@@ -1082,22 +1082,27 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 }
 
 
-char
+char*
 Database::field_type(const std::string &field_name)
 {
+    char *res = (char *)malloc(2);
+    res[0] = ATOMIC_TYPE;
+    res[1] = NO_TYPE;
 	if (field_name.empty()) {
-		return ' ';
+		return res;
 	}
 
-	std::string type = db->get_metadata(field_name);
+	std::string json = db->get_metadata(field_name);
+	if (json.empty()) return res;
 
-	LOG_DATABASE_WRAP(this, "set_database: %s\n", type.c_str());
+	cJSON *spcs = cJSON_Parse(json.c_str());
+	if (cJSON *type = cJSON_GetObjectItem(spcs, RESERVED_TYPE)) {
+		std::string _type(type->valuestring);
+		res[0] = _type.at(0);
+		res[1] = _type.at(2);
 
-	if (type.empty()) {
-		return ' ';
 	}
-
-	return type.at(0);
+    return res;
 }
 
 
