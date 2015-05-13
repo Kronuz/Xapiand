@@ -541,7 +541,18 @@ Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc,
 	if (spc.spelling) {
 		term_generator.set_database(*wdb);
 		term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
-		term_generator.set_stemming_strategy(term_generator.STEM_SOME);
+		LOG_DATABASE_WRAP(this, "analyzer: %s\n", spc.analyzer.c_str());
+		if (spc.analyzer.compare("STEM_SOME") == 0) {
+			term_generator.set_stemming_strategy(term_generator.STEM_SOME);
+		} else if (spc.analyzer.compare("STEM_NONE") == 0) {
+			term_generator.set_stemming_strategy(term_generator.STEM_NONE);
+		} else if (spc.analyzer.compare("STEM_ALL") == 0) {
+			term_generator.set_stemming_strategy(term_generator.STEM_ALL);
+		} else if (spc.analyzer.compare("STEM_ALL_Z") == 0) {
+			term_generator.set_stemming_strategy(term_generator.STEM_ALL_Z);
+		} else {
+			term_generator.set_stemming_strategy(term_generator.STEM_SOME);
+		}
 	}
 
 	if (spc.positions) {
@@ -935,23 +946,6 @@ Database::is_language(const std::string &language)
 		return false;
 	}
 	return (std::string(LANGUAGES).find(language) != -1) ? true : false;
-}
-
-
-int
-Database::analizertoint(std::string analizer)
-{
-	analizer = stringtoupper(analizer);
-	if (analizer.compare("STEM_SOME") == 0) {
-		return (int)Xapian::QueryParser::STEM_SOME;
-	} else if (analizer.compare("STEM_NONE") == 0) {
-		return (int)Xapian::QueryParser::STEM_NONE;
-	} else if (analizer.compare("STEM_ALL") == 0) {
-		return (int)Xapian::QueryParser::STEM_ALL;
-	} else if (analizer.compare("STEM_ALL_Z") == 0) {
-		return (int)Xapian::QueryParser::STEM_ALL_Z;
-	}
-	return (int)Xapian::QueryParser::STEM_SOME;
 }
 
 
