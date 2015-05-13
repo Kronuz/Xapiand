@@ -863,19 +863,22 @@ int HttpClient::_endpointgen(query_t &e)
 				}
 
 				std::string index_path = ns + path;
-				Endpoint index("xapian://localhost" + index_path);
+				Endpoint index("xapian://" + node_name + index_path);
 				server->manager->discovery(DISCOVERY_DB, serialise_string(index.path));
+				int node_port = (index.port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.port;
+				node_name = index.host.empty() ? node_name : index.host;
 
 				// Convert node to endpoint:
-				char ip[INET_ADDRSTRLEN];
+				char node_ip[INET_ADDRSTRLEN];
 				Node node;
 				if (!server->manager->touch_node(node_name, &node)) {
 					LOG(this, "Node %s not found\n", node_name.c_str());
 					host = node_name;
 					return CMD_UNKNOWN_HOST;
 				}
-				inet_ntop(AF_INET, &(node.addr.sin_addr), ip, INET_ADDRSTRLEN);
-				Endpoint endpoint("xapian://" + std::string(ip) + ":" + std::to_string(node.binary_port) + index_path);
+				if (!node_port) node_port = node.binary_port;
+				inet_ntop(AF_INET, &(node.addr.sin_addr), node_ip, INET_ADDRSTRLEN);
+				Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path);
 
 				endpoints.insert(endpoint);
 
