@@ -1,0 +1,276 @@
+#!/usr/bin/python
+from __future__ import print_function
+
+# This is a simple port-forward / proxy, written using only the default python
+# library. If you want to make a suggestion or fix something you can contact-me
+# at voorloop_at_gmail.com
+# Distributed over IDC(I Don't Care) license
+import socket
+import select
+import time
+import sys
+import os
+
+# Changing the buffer_size and delay, you can improve the speed and bandwidth.
+# But when buffer get to high or delay go too down, you can broke things
+buffer_size = 4096
+delay = 0.0001
+
+INCOMING = 0
+OUTGOING = 1
+
+
+def decode_length(buf, check=False):
+    size = 0
+    length = buf[0]
+    buf = buf[1:]
+    size += 1
+    if length == b'\xff':
+        length = 0
+        shift = 0
+        sz = 0
+        for ch in buf:
+            ch = ord(ch)
+            length |= (ch & 0x7f) << shift
+            shift += 7
+            sz += 1
+            if ch & 0x80:
+                break
+        else:
+            raise ValueError("Bad encoded length: insufficient data")
+        length += 255
+        buf = buf[sz:]
+        size += sz
+    else:
+        length = ord(length)
+    if check and len(buf) < length:
+        raise ValueError("Bad encoded length: insufficient data")
+    return length, size
+
+
+class Forward(object):
+    def __init__(self):
+        self.forward = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def start(self, host, port):
+        try:
+            self.forward.connect((host, port))
+            return self.forward
+        except Exception, e:
+            print(e)
+            return False
+
+
+class ProxyServer(object):
+    input_list = []
+    channel = {}
+    reads = {}
+
+    def __init__(self, forward_from, forward_to):
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server.bind(forward_from)
+        self.server.listen(200)
+        self.forward_to = forward_to
+        self.forward_from = forward_from
+
+    def main_loop(self):
+        self.input_list.append(self.server)
+        while 1:
+            time.sleep(delay)
+            ss = select.select
+            inputready, outputready, exceptready = ss(self.input_list, [], [])
+            for self.s in inputready:
+                if self.s == self.server:
+                    self._on_accept()
+                    break
+                self.data = self.s.recv(buffer_size)
+                if len(self.data) == 0:
+                    self._on_close()
+                    break
+                else:
+                    self._on_recv()
+
+    def get_args(self, s):
+        out, direction = self.channel[s]
+        forward_from, forward_to = (out, s) if direction else (s, out)
+        from_client, from_peer = forward_from.getpeername()[1], forward_from.getsockname()[1]
+        to_client, to_peer = forward_to.getsockname()[1], forward_to.getpeername()[1]
+        return out, from_client, from_peer, to_client, to_peer, direction
+
+    def _on_accept(self):
+        forward = Forward().start(self.forward_to[0], self.forward_to[1])
+        clientsock, clientaddr = self.server.accept()
+        if forward:
+            self.input_list.append(clientsock)
+            self.input_list.append(forward)
+            self.channel[clientsock] = (forward, INCOMING)
+            self.channel[forward] = (clientsock, OUTGOING)
+            out, from_client, from_peer, to_client, to_peer, direction = self.get_args(clientsock)
+            self.on_accept(from_client, from_peer, to_client, to_peer, direction)
+        else:
+            print("Can't establish connection with remote server.", end="")
+            print("Closing connection with client side", clientaddr)
+            clientsock.close()
+
+    def _on_close(self):
+        out, from_client, from_peer, to_client, to_peer, direction = self.get_args(self.s)
+        self.on_close(from_client, from_peer, to_client, to_peer, direction)
+        # remove objects from input_list
+        self.input_list.remove(self.s)
+        self.input_list.remove(self.channel[self.s][0])
+        out = self.channel[self.s][0]
+        # close the connection with client
+        self.channel[out][0].close()  # equivalent to do self.s.close()
+        # close the connection with remote server
+        self.channel[self.s][0].close()
+        # delete both objects from channel dict
+        del self.channel[out]
+        del self.channel[self.s]
+
+    def _on_recv(self):
+        # here we can parse and/or modify the data before send forward
+        out, from_client, from_peer, to_client, to_peer, direction = self.get_args(self.s)
+        data = self.on_recv(self.data, from_client, from_peer, to_client, to_peer, direction)
+        if data is None:
+            data = self.data
+        if data:
+            out.send(data)
+
+    def repr(self, from_client, from_peer, to_client, to_peer, direction):
+        return "%10s - %s" % (from_client, (" <-- " if direction else " --> ").join(str(p) for p in (from_peer, to_peer)))
+
+    def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
+        msg = "client has connected to %s" % from_peer
+        print("%10s - %s" % (from_client, msg))
+
+    def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
+        self.reads.setdefault(from_client, [0, 0])[direction] += len(data)
+        print("%s: %r" % (self.repr(from_client, from_peer, to_client, to_peer, direction), data))
+
+    def on_close(self, from_client, from_peer, to_client, to_peer, direction):
+        in_read = self.reads.setdefault(from_client, [0, 0])[INCOMING]
+        out_read = self.reads.setdefault(from_client, [0, 0])[OUTGOING]
+        msg = "%s %s closed the connection (client sent %s bytes and received %s)" % ("server listening on" if direction else "client connected to", to_peer if direction else from_peer, in_read, out_read)
+        print("%10s - %s" % (from_client, msg))
+        del self.reads[from_client]
+
+
+class XapianProxyServer(ProxyServer):
+    """
+    Xapian binary Protocol
+
+    """
+    buffers = {}
+
+    messages = [
+        'MSG_ALLTERMS',             # All Terms
+        'MSG_COLLFREQ',             # Get Collection Frequency
+        'MSG_DOCUMENT',             # Get Document
+        'MSG_TERMEXISTS',           # Term Exists?
+        'MSG_TERMFREQ',             # Get Term Frequency
+        'MSG_VALUESTATS',           # Get value statistics
+        'MSG_KEEPALIVE',            # Keep-alive
+        'MSG_DOCLENGTH',            # Get Doc Length
+        'MSG_QUERY',                # Run Query
+        'MSG_TERMLIST',             # Get TermList
+        'MSG_POSITIONLIST',         # Get PositionList
+        'MSG_POSTLIST',             # Get PostList
+        'MSG_REOPEN',               # Reopen
+        'MSG_UPDATE',               # Get Updated DocCount and AvLength
+        'MSG_ADDDOCUMENT',          # Add Document
+        'MSG_CANCEL',               # Cancel
+        'MSG_DELETEDOCUMENTTERM',   # Delete Document by term
+        'MSG_COMMIT',               # Commit
+        'MSG_REPLACEDOCUMENT',      # Replace Document
+        'MSG_REPLACEDOCUMENTTERM',  # Replace Document by term
+        'MSG_DELETEDOCUMENT',       # Delete Document
+        'MSG_WRITEACCESS',          # Upgrade to WritableDatabase
+        'MSG_GETMETADATA',          # Get metadata
+        'MSG_SETMETADATA',          # Set metadata
+        'MSG_ADDSPELLING',          # Add a spelling
+        'MSG_REMOVESPELLING',       # Remove a spelling
+        'MSG_GETMSET',              # Get MSet
+        'MSG_SHUTDOWN',             # Shutdown
+        'MSG_METADATAKEYLIST',      # Iterator for metadata keys
+        'MSG_FREQS',                # Get termfreq and collfreq
+        'MSG_UNIQUETERMS',          # Get number of unique terms in doc
+        'MSG_SELECT',               # Select current database
+    ]
+
+    replies = [
+        'REPLY_UPDATE',             # Updated database stats
+        'REPLY_EXCEPTION',          # Exception
+        'REPLY_DONE',               # Done sending list
+        'REPLY_ALLTERMS',           # All Terms
+        'REPLY_COLLFREQ',           # Get Collection Frequency
+        'REPLY_DOCDATA',            # Get Document
+        'REPLY_TERMDOESNTEXIST',    # Term Doesn't Exist
+        'REPLY_TERMEXISTS',         # Term Exists
+        'REPLY_TERMFREQ',           # Get Term Frequency
+        'REPLY_VALUESTATS',         # Value statistics
+        'REPLY_DOCLENGTH',          # Get Doc Length
+        'REPLY_STATS',              # Stats
+        'REPLY_TERMLIST',           # Get Termlist
+        'REPLY_POSITIONLIST',       # Get PositionList
+        'REPLY_POSTLISTSTART',      # Start of a postlist
+        'REPLY_POSTLISTITEM',       # Item in body of a postlist
+        'REPLY_VALUE',              # Document Value
+        'REPLY_ADDDOCUMENT',        # Add Document
+        'REPLY_RESULTS',            # Results (MSet)
+        'REPLY_METADATA',           # Metadata
+        'REPLY_METADATAKEYLIST',    # Iterator for metadata keys
+        'REPLY_FREQS',              # Get termfreq and collfreq
+        'REPLY_UNIQUETERMS',        # Get number of unique terms in doc
+    ]
+
+    def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
+        super(XapianProxyServer, self).on_accept(from_client, from_peer, to_client, to_peer, direction)
+
+    def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
+        super(XapianProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
+        buf = self.buffers.setdefault(from_client, ['', ''])[direction] + data
+        while buf:
+            try:
+                cmd = ord(buf[0])
+                length, size = decode_length(buf[1:], True)
+                msg_id, msg_len, msg_body, buf = buf[0], buf[1:1 + size], buf[1 + size:1 + size + length], buf[1 + size + length:]
+                assert length == len(msg_body)
+                msg = (self.replies if direction else self.messages)[cmd]
+                dir_repr = "<<<" if direction else ">>>"
+                print("%27s %r" % ("%s %s:" % (msg, dir_repr), msg_id))
+                print("%27s %r" % ("length(%s):" % length, msg_len))
+                print("%27s %r" % ("body:", msg_body))
+            except ValueError:
+                break
+        self.buffers[from_client][direction] = buf
+
+    def on_close(self, from_client, from_peer, to_client, to_peer, direction):
+        super(XapianProxyServer, self).on_close(from_client, from_peer, to_client, to_peer, direction)
+        buf = self.buffers.setdefault(from_client, ['', ''])[direction]
+        if buf:
+            print("%s bytes where left in the buffer" % len(buf))
+        del self.buffers[from_client]
+
+
+if __name__ == '__main__':
+    default_server_class = ProxyServer
+    opts = [a for a in sys.argv[1:] if a.startswith('-')]
+    args = [a for a in sys.argv[1:] if not a.startswith('-')]
+    if '--raw' in opts:
+        server_class = ProxyServer
+    elif '--xapian' in opts:
+        server_class = XapianProxyServer
+    else:
+        server_class = default_server_class
+    try:
+        server = server_class(('', int(args[0])), ('localhost', int(args[1])))
+    except IndexError:
+        print("Proxy listens to <in_port> and redirects traffic to a server listening on <out_port>")
+        print("usage: %s [--xapian|--raw] <in_port> <out_port>" % os.path.basename(sys.argv[0]))
+        sys.exit(1)
+    try:
+        server.main_loop()
+    except KeyboardInterrupt:
+        print("Ctrl C - Stopping server")
+        sys.exit(1)
