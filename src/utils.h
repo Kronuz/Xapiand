@@ -138,7 +138,6 @@ typedef struct parser_query_s {
 
 
 typedef struct parser_url_path_s {
-	size_t length;
 	const char *offset;
 	size_t len_path;
 	const char *off_path;
