@@ -919,6 +919,23 @@ Database::is_language(const std::string &language)
 }
 
 
+int
+Database::analizertoint(std::string analizer)
+{
+	analizer = stringtoupper(analizer);
+	if (analizer.compare("STEM_SOME") == 0) {
+		return (int)Xapian::QueryParser::STEM_SOME;
+	} else if (analizer.compare("STEM_NONE") == 0) {
+		return (int)Xapian::QueryParser::STEM_NONE;
+	} else if (analizer.compare("STEM_ALL") == 0) {
+		return (int)Xapian::QueryParser::STEM_ALL;
+	} else if (analizer.compare("STEM_ALL_Z") == 0) {
+		return (int)Xapian::QueryParser::STEM_ALL_Z;
+	}
+	return (int)Xapian::QueryParser::STEM_SOME;
+}
+
+
 bool
 Database::index(cJSON *document, const std::string &_document_id, const std::string &object_type, bool commit)
 {
