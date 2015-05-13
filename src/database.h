@@ -48,6 +48,18 @@
 #define RESERVED_VALUES "_values"
 #define RESERVED_TERMS "_terms"
 #define RESERVED_DATA "_data"
+#define RESERVED_ACCURACY "_accuracy"
+#define RESERVED_STORE "_store"
+#define RESERVED_TYPE "_type"
+#define RESERVED_ANALYZER "_analyzer"
+#define RESERVED_DYNAMIC "_dynamic"
+#define RESERVED_D_DETECTION "_date_detection"
+#define RESERVED_N_DETECTION "_numeric_detection"
+#define RESERVED_G_DETECTION "_geo_detection"
+#define RESERVED_B_DETECTION "_bool_detection"
+#define RESERVED_S_DETECTION "_string_detection"
+#define RESERVED_VALUE "_value"
+#define RESERVED_ID "_id"
 #define OFFSPRING_UNION "__"
 #define LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
 
@@ -71,6 +83,16 @@ public:
 		std::string language;
 		bool spelling;
 		bool positions;
+		std::vector<std::string> accuracy;
+		bool store;
+		std::string type;
+		std::string analyzer;
+		bool dynamic;
+		bool date_detection;
+		bool numeric_detection;
+		bool geo_detection;
+		bool bool_detection;
+		bool string_detection;
 	} specifications_t;
 
 	Database(Endpoints &endpoints, bool writable, bool spawn=true);
