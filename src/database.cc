@@ -1073,7 +1073,6 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 		return false;
 	}
 
-	cJSON_Delete(document);
 	return replace(document_id, doc, commit);
 }
 
