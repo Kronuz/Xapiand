@@ -977,9 +977,26 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 
 	try {
 		//Default specifications
-		specifications_t spc_now = {-1, 1, "en", false, false};
-		update_specifications(document, spc_now);
-		specifications_t spc_bef = spc_now;
+		int position = -1;
+		int weight = 1;
+		std::string language = "en";
+		bool spelling = false;
+		bool positions = false;
+		std::vector<std::string> accuracy;
+		bool store = true;
+        std::string type = " ";
+        std::string analyzer = "STEM_SOME";
+		bool dynamic = true;
+		bool date_detection = true;
+		bool numeric_detection = true;
+		bool geo_detection = true;
+		bool bool_detection = true;
+		bool string_detection = true;
+		specifications_t spc_now = {position, weight, language, spelling, positions, accuracy, store, type, analyzer, dynamic,
+									date_detection, numeric_detection, geo_detection, bool_detection, string_detection};
+
+		update_specifications(document, spc_now, object_type);
+		specifications_t spc_bef = spc_now;	
 
 		if (document_texts) {
 			for (int i = 0; i < cJSON_GetArraySize(document_texts); i++) {
