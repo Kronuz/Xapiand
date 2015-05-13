@@ -439,6 +439,7 @@ void HttpClient::_index()
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
+	cJSON_Delete(document);
 
 	t = clock() - t;
 	double time = (double)t / CLOCKS_PER_SEC;
@@ -463,7 +464,6 @@ void HttpClient::_index()
 	result += "\n\n";
 	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 	write(result);
-	cJSON_Delete(document);
 	cJSON_Delete(root);
 }
 
