@@ -633,8 +633,69 @@ Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &
 
 
 void
-Database::update_specifications(cJSON *item, specifications_t &spc_now)
+Database::get_specifications(specifications_t &spc, const std::string &field_name)
 {
+	if (field_name.empty()) {
+		return;
+	}
+
+	spc.type = " ";
+	spc.accuracy.clear();
+
+	std::string json = db->get_metadata(field_name);
+	if (json.empty()) return;
+
+	cJSON *spcs = cJSON_Parse(json.c_str());
+	if (cJSON *position = cJSON_GetObjectItem(spcs, RESERVED_POSITION)) spc.position = position->valueint;
+	if (cJSON *weight = cJSON_GetObjectItem(spcs, RESERVED_WEIGHT)) spc.weight = weight->valueint;
+	if (cJSON *language = cJSON_GetObjectItem(spcs, RESERVED_LANGUAGE)) spc.language = language->valuestring;
+	if (cJSON *spelling = cJSON_GetObjectItem(spcs, RESERVED_SPELLING)) spc.spelling = (spelling->type == cJSON_True) ? true : false;
+	if (cJSON *positions = cJSON_GetObjectItem(spcs, RESERVED_POSITIONS)) spc.positions = (positions->type == cJSON_True) ? true : false;
+	if (cJSON *accuracy = cJSON_GetObjectItem(spcs, RESERVED_ACCURACY)) {
+		if (accuracy->type == cJSON_Array) {
+			int elements = cJSON_GetArraySize(accuracy);
+			for (int i = 0; i < elements; i++) {
+				cJSON *acc = cJSON_GetArrayItem(accuracy, i);
+				if (acc->type == cJSON_String) {
+					spc.accuracy.push_back(acc->valuestring);
+				} else if (acc->type == cJSON_Number) {
+					spc.accuracy.push_back(std::to_string(acc->valuedouble));
+				}
+			}
+		} else if (accuracy->type == cJSON_String) {
+			spc.accuracy.push_back(accuracy->valuestring);
+		} else if (accuracy->type == cJSON_Number) {
+			spc.accuracy.push_back(std::to_string(accuracy->valuedouble));
+		}
+	}
+	if (cJSON *store = cJSON_GetObjectItem(spcs, RESERVED_STORE)) spc.store = (store->type == cJSON_True) ? true : false;
+	if (cJSON *type = cJSON_GetObjectItem(spcs, RESERVED_TYPE)) {
+		if (strcasecmp(type->valuestring, "date") == 0 || strcasecmp(type->valuestring, "d") == 0) {
+			spc.type = std::string(1, DATE_TYPE);
+		} else if (strcasecmp(type->valuestring, "numeric") == 0 || strcasecmp(type->valuestring, "integer") == 0 || strcasecmp(type->valuestring, "double") == 0 || strcasecmp(type->valuestring, "n") == 0) {
+			spc.type = std::string(1, NUMERIC_TYPE);
+		} else if (strcasecmp(type->valuestring, "geo") == 0 || strcasecmp(type->valuestring, "geospatial") == 0 || strcasecmp(type->valuestring, "g") == 0) {
+			spc.type = std::string(1, GEO_TYPE);
+		} else if (strcasecmp(type->valuestring, "bool") == 0 || strcasecmp(type->valuestring, "boolean") == 0 || strcasecmp(type->valuestring, "b") == 0) {
+			spc.type = std::string(1, BOOLEAN_TYPE);
+		} else if (strcasecmp(type->valuestring, "string") == 0 || strcasecmp(type->valuestring, "s") == 0) {
+			spc.type = std::string(1, STRING_TYPE);
+		}
+	}
+	if (cJSON *analyzer = cJSON_GetObjectItem(spcs, RESERVED_ANALYZER)) spc.analyzer = analyzer->valuestring;
+	if (cJSON *dynamic = cJSON_GetObjectItem(spcs, RESERVED_DYNAMIC)) spc.dynamic = (dynamic->type == cJSON_True) ? true : false ;
+	if (cJSON *date_detection = cJSON_GetObjectItem(spcs, RESERVED_D_DETECTION)) spc.date_detection = (date_detection->type == cJSON_True) ? true : false;
+	if (cJSON *numeric_detection = cJSON_GetObjectItem(spcs, RESERVED_N_DETECTION)) spc.numeric_detection = (numeric_detection->type == cJSON_True) ? true : false;
+	if (cJSON *geo_detection = cJSON_GetObjectItem(spcs, RESERVED_G_DETECTION)) spc.geo_detection = (geo_detection->type == cJSON_True) ? true : false;
+	if (cJSON *bool_detection = cJSON_GetObjectItem(spcs, RESERVED_B_DETECTION)) spc.bool_detection = (bool_detection->type == cJSON_True) ? true : false;
+	if (cJSON *string_detection = cJSON_GetObjectItem(spcs, RESERVED_S_DETECTION)) spc.string_detection = (string_detection->type == cJSON_True) ? true : false;
+}
+
+void
+Database::update_specifications(cJSON *item, specifications_t &spc_now, const std::string &item_name)
+{
+	get_specifications(spc_now, item_name);
+
 	cJSON *spc = cJSON_GetObjectItem(item, RESERVED_POSITION);
 	if (spc) {
 		if (spc->type == cJSON_Number) {
