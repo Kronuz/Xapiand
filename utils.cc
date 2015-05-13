@@ -965,7 +965,6 @@ std::string get_prefix(const std::string &name, const std::string &prefix, char 
 
 	std::transform(slot.begin(), slot.end(), slot.begin(), TRANSFORM());
 	std::string res(prefix);
-	if (type == TEXT_TYPE) type = STRING_TYPE;
 	res.append(1, toupper(type));
 	return res + slot;
 }
@@ -1292,7 +1291,6 @@ unserialise(char field_type, const std::string &field_name, const std::string &s
 			return unserialise_geo(serialise_val);
 		case BOOLEAN_TYPE:
 			return (serialise_val.at(0) == 'f') ? "false" : "true";
-		case TEXT_TYPE:
 		case STRING_TYPE:
 			return serialise_val;
 	}
@@ -1312,7 +1310,6 @@ serialise(char field_type, const std::string &field_value)
 			return serialise_geo(field_value);
 		case BOOLEAN_TYPE:
 			return serialise_bool(field_value);
-		case TEXT_TYPE:
 		case STRING_TYPE:
 			return field_value;
 	}
