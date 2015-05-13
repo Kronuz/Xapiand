@@ -95,7 +95,7 @@ void run(const opts_t &o)
 
 	manager_ptr = &manager;
 
-	manager.run(o.num_servers);
+	manager.run((int)o.num_servers);
 
 	manager_ptr = NULL;
 }
