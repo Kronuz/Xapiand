@@ -527,9 +527,11 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 void
 Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name)
 {
-	LOG_DATABASE_WRAP(this, "Specifications = {%d %d %s %d %d}\n", spc.position, spc.weight, spc.language.c_str(), spc.spelling, spc.positions);
+	LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	if (!spc.store) return;
+
 	std::string prefix;
-	if (!name.empty()) prefix = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, TEXT_TYPE);
+	if (!name.empty()) prefix = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
 	if (text->type != cJSON_String) throw "Data inconsistency should be string";
 	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 
@@ -555,8 +557,16 @@ Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc,
 void
 Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name)
 {
-	LOG_DATABASE_WRAP(this, "Specifications = {%d %d %s %d %d}\n", spc.position, spc.weight, spc.language.c_str(), spc.spelling, spc.positions);
-	char type = get_type(terms, name);
+	LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	if (!spc.store) return;
+
+	char type = spc.type.at(0);
+	char *_type = get_type(terms, name);
+    if (type == ' ') type = _type[2];
+    else if (_type[0] == '1' && _type[2] != type) throw "Type inconsistency";
+
+    if (!spc.dynamic && _type[0] == '0') throw "This object is not dynamic";
+
 	std::string prefix = (!name.empty()) ? get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, type) : DOCUMENT_CUSTOM_TERM_PREFIX;
 	int elements = (terms->type == cJSON_Array) ? cJSON_GetArraySize(terms) : 1;
 
@@ -602,9 +612,18 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 
 
 void
-Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &name)
+Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name)
 {
-	char type = get_type(values, name);
+	LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	if (!spc.store) return;
+
+	char type = spc.type.at(0);
+	char *_type = get_type(values, name);
+    if (type == ' ') type = _type[2];
+    else if (_type[0] == '1' && _type[2] != type) throw "Type inconsistency";
+
+    if (!spc.dynamic && _type[0] == '0') throw "This object is not dynamic";
+
 	StringList s;
 	int elements = (values->type == cJSON_Array) ? cJSON_GetArraySize(values) : 1;
 	for (int j = 0; j < elements; j++) {
