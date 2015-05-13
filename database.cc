@@ -477,7 +477,7 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 	std::string subitem_name;
 	specifications_t spc_bef = spc_now;
 	if (item->type == cJSON_Object) {
-		update_specifications(item, spc_now);
+		update_specifications(item, spc_now, item_name);
 		int elements = cJSON_GetArraySize(item);
 		for (int i = 0; i < elements; i++) {
 			cJSON *subitem = cJSON_GetArrayItem(item, i);
@@ -488,17 +488,34 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 					spc_now.language = is_language(language) ? language : spc_now.language;
 				}
 				index_fields(subitem, subitem_name, spc_now, doc, is_value);
+			} else if (strcmp(subitem->string, RESERVED_VALUE) == 0 && subitem->type != cJSON_Object) {
+				LOG_DATABASE_WRAP(this, "_value: %s name: %s\n", cJSON_Print(subitem), item_name.c_str());
+				specifications_t aux = spc_now;
+				update_specifications(item, spc_now, item_name);
+				if (is_value) {
+					index_values(doc, subitem, spc_now, item_name);
+				} else {
+					char *type = get_type(subitem, item_name);
+					if ((type[1] == ATOMIC_TYPE && type[2] == STRING_TYPE && strlen(subitem->valuestring) > 30 && std::string(subitem->valuestring).find(" ") != -1) || std::string(subitem->valuestring).find("\n") != -1) {
+						index_texts(doc, subitem, spc_now, item_name);
+					} else {
+						index_values(doc, subitem, spc_now, item_name);
+						index_terms(doc, subitem, spc_now, item_name);
+					}
+				}
+				spc_now = aux;
 			}
 		}
 	} else {
+		spc_now.type = " ";
 		if (is_value) {
-			index_values(doc, item, item_name);
+			index_values(doc, item, spc_now, item_name);
 		} else {
-			char type = get_type(item, item_name);
-			if (type == TEXT_TYPE) {
+			char *type = get_type(item, item_name);
+			if (type[1] == ATOMIC_TYPE && type[2] == STRING_TYPE && ((strlen(item->valuestring) > 30 && std::string(item->valuestring).find(" ") != -1) || std::string(item->valuestring).find("\n") != -1)) {
 				index_texts(doc, item, spc_now, item_name);
 			} else {
-				index_values(doc, item, item_name);
+				index_values(doc, item, spc_now, item_name);
 				index_terms(doc, item, spc_now, item_name);
 			}
 		}
@@ -633,8 +650,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now)
 			spc_now.weight = spc->valueint;
 		} else {
 			throw "Data inconsistency " + std::string(RESERVED_WEIGHT) + " should be integer";
-		}
-	}
+		}	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_LANGUAGE);
 	if (spc) {
@@ -666,6 +682,169 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now)
 			throw "Data inconsistency " + std::string(RESERVED_POSITIONS) + " should be boolean";
 		}
 	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_ACCURACY);
+	if (spc) {
+		if (spc->type == cJSON_Array) {
+			int elements = cJSON_GetArraySize(spc);
+			for (int i = 0; i < elements; i++) {
+				cJSON *acc = cJSON_GetArrayItem(spc, i);
+				if (acc->type == cJSON_String) {
+					spc_now.accuracy.push_back(acc->valuestring);
+				} else if (acc->type == cJSON_Number) {
+					spc_now.accuracy.push_back(std::to_string(acc->valuedouble));
+				} else {
+					throw "Data inconsistency " + std::string(RESERVED_ACCURACY) + " should be an array of strings or numerics";
+				}
+			}
+		} else if (spc->type == cJSON_String) {
+			spc_now.accuracy.push_back(spc->valuestring);
+		} else if (spc->type == cJSON_Number) {
+			spc_now.accuracy.push_back(std::to_string(spc->valuedouble));
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_ACCURACY) + " should be string or numeric";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_TYPE);
+	if (spc) {
+		if (spc->type == cJSON_String) {
+			if (strcasecmp(spc->valuestring, "date") == 0 || strcasecmp(spc->valuestring, "d") == 0) {
+				spc_now.type = std::string(1, DATE_TYPE);
+			} else if (strcasecmp(spc->valuestring, "numeric") == 0 || strcasecmp(spc->valuestring, "integer") == 0 || strcasecmp(spc->valuestring, "double") == 0 || strcasecmp(spc->valuestring, "n") == 0) {
+				spc_now.type = std::string(1, NUMERIC_TYPE);
+			} else if (strcasecmp(spc->valuestring, "geo") == 0 || strcasecmp(spc->valuestring, "geospatial") == 0 || strcasecmp(spc->valuestring, "g") == 0) {
+				spc_now.type = std::string(1, GEO_TYPE);
+			} else if (strcasecmp(spc->valuestring, "bool") == 0 || strcasecmp(spc->valuestring, "boolean") == 0 || strcasecmp(spc->valuestring, "b") == 0) {
+				spc_now.type = std::string(1, BOOLEAN_TYPE);
+			} else if (strcasecmp(spc->valuestring, "string") == 0 || strcasecmp(spc->valuestring, "s") == 0) {
+				spc_now.type = std::string(1, STRING_TYPE);
+			} else {
+				throw std::string(spc->valuestring) + " is invalid type";
+			}
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_TYPE) + " should be string";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_STORE);
+	if (spc) {
+		if (spc->type == cJSON_False) {
+			spc_now.store = false;
+		} else if (spc->type == cJSON_True) {
+			spc_now.store = true;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_STORE) + " should be boolean";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_ANALYZER);
+	if (spc) {
+		if (spc->type == cJSON_String) {
+			spc_now.analyzer = analizertoint(spc->valuestring);
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_ANALYZER) + " should be string";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_DYNAMIC);
+	if (spc) {
+		if (spc->type == cJSON_False) {
+			spc_now.dynamic = false;
+		} else if (spc->type == cJSON_True) {
+			spc_now.dynamic = true;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_DYNAMIC) + " should be boolean";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_D_DETECTION);
+	if (spc) {
+		if (spc->type == cJSON_False) {
+			spc_now.date_detection = false;
+		} else if (spc->type == cJSON_True) {
+			spc_now.date_detection = true;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_D_DETECTION) + " should be boolean";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_N_DETECTION);
+	if (spc) {
+		if (spc->type == cJSON_False) {
+			spc_now.numeric_detection = false;
+		} else if (spc->type == cJSON_True) {
+			spc_now.numeric_detection = true;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_N_DETECTION) + " should be boolean";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_G_DETECTION);
+	if (spc) {
+		if (spc->type == cJSON_False) {
+			spc_now.geo_detection = false;
+		} else if (spc->type == cJSON_True) {
+			spc_now.geo_detection = true;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_G_DETECTION) + " should be boolean";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_B_DETECTION);
+	if (spc) {
+		if (spc->type == cJSON_False) {
+			spc_now.bool_detection = false;
+		} else if (spc->type == cJSON_True) {
+			spc_now.bool_detection = true;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_B_DETECTION) + " should be boolean";
+		}
+	}
+
+	spc = cJSON_GetObjectItem(item, RESERVED_S_DETECTION);
+	if (spc) {
+		if (spc->type == cJSON_False) {
+			spc_now.string_detection = false;
+		} else if (spc->type == cJSON_True) {
+			spc_now.string_detection = true;
+		} else {
+			throw "Data inconsistency " + std::string(RESERVED_S_DETECTION) + " should be boolean";
+		}
+	}
+}
+
+
+std::string
+Database::specificationstostr(specifications_t &spc)
+{
+	std::stringstream str;
+	str << "\n{\n"; 
+	str << "\tposition: " << spc.position << "\n";
+	str << "\tweight: "   << spc.weight   << "\n";
+	str << "\tlanguage: " << spc.language << "\n";
+
+	str << "\taccuracy: [ ";
+	std::vector<std::string>::const_iterator it(spc.accuracy.begin());
+	for (; it != spc.accuracy.end(); it++) {
+		str << *it << " ";
+	}
+	str << "]\n";
+
+	str << "\ttype: " << spc.type << "\n";
+	str << "\tanalyzer: " << spc.analyzer << "\n";
+
+	str << "\tspelling: "          << ((spc.spelling)          ? "true" : "false") << "\n";
+	str << "\tpositions: "         << ((spc.positions)         ? "true" : "false") << "\n";
+	str << "\tstore: "             << ((spc.store)             ? "true" : "false") << "\n";
+	str << "\tdynamic: "           << ((spc.dynamic)           ? "true" : "false") << "\n";
+	str << "\tdate_detection: "    << ((spc.date_detection)    ? "true" : "false") << "\n";
+	str << "\tnumeric_detection: " << ((spc.numeric_detection) ? "true" : "false") << "\n";
+	str << "\tgeo_detection: "     << ((spc.geo_detection)     ? "true" : "false") << "\n";
+	str << "\tbool_detection: "    << ((spc.bool_detection)    ? "true" : "false") << "\n";
+	str << "\tstring_detection: "  << ((spc.string_detection)  ? "true" : "false") << "\n}\n";
+
+	return str.str();
 }
 
 
@@ -730,8 +909,8 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 				cJSON *name = cJSON_GetObjectItem(texts, "name");
 				cJSON *text = cJSON_GetObjectItem(texts, "text");
 				if (text) {
-					update_specifications(texts, spc_now);
 					std::string name_s = (name && name->type == cJSON_String) ? object_type + OFFSPRING_UNION + name->valuestring : "";
+					update_specifications(texts, spc_now, name_s);
 					if (!name_s.empty() && name_s.at(name_s.size() - 3) == OFFSPRING_UNION[0]) {
 						std::string language(name_s, name_s.size() - 2, name_s.size());
 						spc_now.language = is_language(language) ? language : spc_now.language;
@@ -751,8 +930,8 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 				cJSON *name = cJSON_GetObjectItem(data_terms, "name");
 				cJSON *terms = cJSON_GetObjectItem(data_terms, "term");
 				if (terms) {
-					update_specifications(data_terms, spc_now);
 					std::string name_s = (name && name->type == cJSON_String) ? object_type + OFFSPRING_UNION + name->valuestring : "";
+					update_specifications(data_terms, spc_now, name_s);
 					index_terms(doc, terms, spc_now, name_s);
 					spc_now = spc_bef;
 				} else {
