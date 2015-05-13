@@ -1106,36 +1106,37 @@ Database::field_type(const std::string &field_name)
 }
 
 
-char
+char*
 Database::get_type(cJSON *field, const std::string &field_name)
 {
-	char _type = field_type(field_name);
-	LOG(this, "\n*%c*\n", _type);
-	if (_type != ' ') {
-		return _type;
+	char *_type = field_type(field_name);
+	char element_type = _type[1];
+	char *type = (char *)malloc(3);
+	LOG(this, "\n%c/%c\n", _type[0], _type[1]);
+	if (element_type != NO_TYPE) {
+		type[0] = '1';
+		type[1] = _type[0];
+		type[2] = _type[1];
+		return type;
 	}
 
-	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
-	int type = field->type;
+	type[0] = '0';
+	type[1] = ATOMIC_TYPE;
+	int f_type = field->type;
 	cJSON* aux = field;
-	if (type == cJSON_Array) {
+	if (f_type == cJSON_Array) {
 		int num_ele = cJSON_GetArraySize(field);
 		aux = cJSON_GetArrayItem(field, 0);
-		type = aux->type;
+		f_type = aux->type;
 		bool meet_range = true;
-		if (type == cJSON_Array) {
-			cJSON *description = cJSON_CreateObject();
-			cJSON_AddStringToObject(description, "type", "array, geospatial");
-			cJSON_AddTrueToObject(description, "store");
-			cJSON_AddStringToObject(description, "index", "not_analyzed");
-			cJSON_AddNumberToObject(description, "index_analyzer", (int)Xapian::TermGenerator::STEM_SOME);
-			wdb->set_metadata(field_name, cJSON_Print(description));
-			cJSON_Delete(description);
-			return GEO_TYPE;
+		if (f_type == cJSON_Array) {
+			type[1] = ARRAY_TYPE;
+			type[2] = GEO_TYPE;
+			return type;
 		}
 		for (int i = 0; i < num_ele; i++) {
 			aux = cJSON_GetArrayItem(field, i);
-			if (aux->type != type) {
+			if (aux->type != f_type) {
 				throw "Different types of data";
 			}
 			if (i % 2 == 0 && (aux->type != cJSON_Number || aux->valuedouble < -90.0 || aux->valuedouble > 90.00)) {
@@ -1145,25 +1146,35 @@ Database::get_type(cJSON *field, const std::string &field_name)
 			}
 		}
 		if (num_ele % 2 == 0 && meet_range) {
-			return GEO_TYPE;
+			type[1] = ATOMIC_TYPE;
+			type[2] = GEO_TYPE;
+			return type;
 		}
+		type[1] = ARRAY_TYPE;
 	}
-	switch (type) {
-		case cJSON_Number: return NUMERIC_TYPE;
-		case cJSON_False: return BOOLEAN_TYPE;
-		case cJSON_True: return BOOLEAN_TYPE;
+	switch (f_type) {
+		case cJSON_Number:
+			type[2] = NUMERIC_TYPE;
+			return type;
+		case cJSON_False:
+			type[2] = BOOLEAN_TYPE;
+			return type;
+		case cJSON_True:
+			type[2] = BOOLEAN_TYPE;
+			return type;
 		case cJSON_String:
 			if (serialise_bool(aux->valuestring).size() != 0) {
-				return BOOLEAN_TYPE;
+				type[2] = BOOLEAN_TYPE;
 			} else if (timestamp_date(aux->valuestring).size() != 0) {
-				return DATE_TYPE;
-			} else if ((strlen(aux->valuestring) > 30 && std::string(aux->valuestring).find(" ") != -1) || std::string(aux->valuestring).find("\n") != -1) {
-				return TEXT_TYPE;
+				type[2] = DATE_TYPE;
 			} else {
-				return STRING_TYPE;
+				type[2] = STRING_TYPE;
 			}
+            return type;
 	}
-	return STRING_TYPE;
+
+	type[2] = STRING_TYPE;
+	return type;
 }
 
 
