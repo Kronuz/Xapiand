@@ -47,6 +47,14 @@
 #define FIND_ORDER_RE "([_a-zA-Z][_a-zA-Z0-9]+,[_a-zA-Z][_a-zA-Z0-9]*)"
 #define RANGE_ID_RE "(\\d+)\\s?..\\s?(\\d*)"
 
+#define STATE_ERR -1
+#define STATE_CM0 0
+#define STATE_CMD 1
+#define STATE_TY0 2
+#define STATE_TYP 3
+#define STATE_NSP 4
+#define STATE_PTH 5
+#define STATE_HST 6
 
 pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 
@@ -457,153 +465,150 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par)
 }
 
 
-int url_path(const char* n1, size_t size, parser_url_path_t *par)
+int url_path(const char* ni, size_t size, parser_url_path_t *par)
 {
-	const char *nf = n1 + size + 1;
-	const char *n0, *n2 ,*r, *p2 = NULL, *p1 = NULL;
-	size_t cmd_size = 0;
-	int state = 0;
-	n0 = n1;
+	const char *nf = ni + size;
+	const char *n0, *n1, *n2 = NULL;
+	int state, direction;
+	size_t length;
 
-	bool other_slash = false;
-	bool last_host = false;
-	par->off_host = NULL;
-	par->len_host = 0;
-	par->off_command = NULL;
-	par->len_command = 0;
-	par->off_type = NULL;
-	par->len_type= 0;
-
-
-	if(par->offset == NULL) {
-		n0 = n2 = n1;
+	if (par->offset == NULL) {
+		state = STATE_CM0;
+		n0 = n1 = n2 = nf - 1;
+		direction = -1;
 	} else {
-		n0 = n2 = n1 = par->offset + par -> length + 1;
+		state = STATE_NSP;
+		n0 = n1 = n2 = par->offset;
+		nf = par->off_type - 1;
+		direction = 1;
 	}
 
-	par->length = 0;
-	par->offset = 0;
-
-	while (1) {
-		char cn = *n1;
-		if (n1 == nf) {
-			cn = '\0';
+	while (state != STATE_ERR) {
+		if (!(n1 >= ni && n1 <= nf)) {
+			return -1;
 		}
+
+		char cn = (n1 >= nf) ? '\0' : *n1;
 		switch(cn) {
 			case '\0':
 				if (n0 == n1) return -1;
-				if (p2) {
-					r = p2 + 1;
-					while(1) {
-						char cr = *r;
-						if (r == nf) {
-							cr = '\0';
-						}
-						if (!cr) break;
-						switch (cr) {
-							case '/':
-								r++;
-								continue;
-
-							default:
-								cmd_size++;
-								r++;
-								break;
-						}
-					}
-					par->off_command = p2 + 1;
-					par->len_command = cmd_size;
-					par->offset = n2;
-					par->length = r - n2;
-					last_host = true;
-				}
-				if(p1) {
-					par->off_type = p1 + 1;
-					par->len_type = p2 -1 - p1;
-				}
 
 			case ',':
-				if (!p2) p2 = n1;
 				switch (state) {
-					case 0:
-					case 1:
-						if(p1 && last_host) {
-							p2 = p1;
-						}
+					case STATE_CM0:
+					case STATE_TY0:
+						state++;
+						n0 = n1;
+						break;
+					case STATE_CMD:
+					case STATE_TYP:
+						break;
+					case STATE_NSP:
+					case STATE_PTH:
+						length = n1 - n0;
 						par->off_path = n0;
-						par->len_path = p2 - n0;
+						par->len_path = length;
+						state = length ? 0 : STATE_ERR;
 						if (cn) n1++;
-						if(!par->length) {
-							par->offset = n2;
-							par->length = p2 - n2;
-						}
-
-						return 0;
-					case 2:
-						if(p1 && last_host) {
-							p2 = p1;
-						}
+						par->offset = n1;
+						return state;
+					case STATE_HST:
+						length = n1 - n0;
 						par->off_host = n0;
-						par->len_host = p2 - n0;
+						par->len_host = length;
+						state = length ? 0 : STATE_ERR;
 						if (cn) n1++;
-						if(!par->length) {
-							par->offset = n2;
-							par->length = p2 - n2;
-						}
-						return 0;
+						par->offset = n1;
+						return state;
 				}
-				p2 = NULL;
-				other_slash = false;
 				break;
 
 			case ':':
 				switch (state) {
-					case 0:
+					case STATE_CM0:
+					case STATE_TY0:
+						state++;
+						n0 = n1;
+						break;
+					case STATE_CMD:
+					case STATE_TYP:
+						break;
+					case STATE_NSP:
+						length = n1 - n0;
 						par->off_namespace = n0;
-						par->len_namespace = n1 - n0;
-						state = 1;
+						par->len_namespace = length;
+						state = length ? STATE_PTH : STATE_ERR;
 						n0 = n1 + 1;
 						break;
+					case STATE_HST:
+						break;
 					default:
-						state = -1;
+						state = STATE_ERR;
 				}
-				p2 = NULL;
-				other_slash = false;
 				break;
 
 			case '@':
 				switch (state) {
-					case 0:
+					case STATE_CM0:
+					case STATE_TY0:
+						state++;
+						n0 = n1;
+						break;
+					case STATE_CMD:
+					case STATE_TYP:
+						break;
+					case STATE_NSP:
+						length = n1 - n0;
 						par->off_path = n0;
-						par->len_path = n1 - n0;
-						state = 2;
+						par->len_path = length;
+						state = length ? STATE_HST : STATE_ERR;
 						n0 = n1 + 1;
 						break;
-					case 1:
+					case STATE_PTH:
 						par->off_path = n0;
 						par->len_path = n1 - n0;
-						state = 2;
+						state = STATE_HST;
 						n0 = n1 + 1;
 						break;
 					default:
-						state = -1;
+						state = STATE_ERR;
 				}
-				p2 = NULL;
-				other_slash = false;
 				break;
 
 			case '/':
-				if (*(n1 + 1) && !p2 && !other_slash) {
-					p1 = p2;
-					p2 = n1;
-					other_slash = true;
-				} else if(*(n1 + 1) && *(n1 + 1) != '/') {
-					p1 = p2;
-					p2 = n1;
-					other_slash = true;
+				switch (state) {
+					case STATE_CM0:
+					case STATE_TY0:
+						break;
+					case STATE_CMD:
+						length = n0 - n1;
+						par->off_command = n1 + 1;
+						par->len_command = length;
+						state = length ? STATE_TY0 : STATE_ERR;
+						break;
+					case STATE_TYP:
+						length = n0 - n1;
+						par->off_type = n1 + 1;
+						par->len_type = length;
+						state = length ? STATE_NSP : STATE_ERR;
+						nf = n1;
+						n0 = n1 = n2 = ni;
+						direction = 1;
+						par->offset = n0;
 				}
+				break;
+
+			default:
+				switch (state) {
+					case STATE_CM0:
+					case STATE_TY0:
+						state++;
+						n0 = n1;
+						break;
+				}
+				break;
 		}
-		n1++;
+		n1 += direction;
 	}
 	return -1;
 }
