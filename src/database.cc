@@ -832,7 +832,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, const st
 	spc = cJSON_GetObjectItem(item, RESERVED_ANALYZER);
 	if (spc) {
 		if (spc->type == cJSON_String) {
-			spc_now.analyzer = analizertoint(spc->valuestring);
+			spc_now.analyzer = stringtoupper(spc->valuestring);
 		} else {
 			throw "Data inconsistency " + std::string(RESERVED_ANALYZER) + " should be string";
 		}
