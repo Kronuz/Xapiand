@@ -40,7 +40,7 @@ cd python
 perl -w -I../../xapian-core generate-python-exceptions
 
 # Generate version.i
-sed "s/@VERSION@/HEAD/" version.i.in > version.i
+sed "s/@VERSION@/$VERSION/" version.i.in > version.i
 
 # Create empty doccomments.i (no documentation was ever built to properly generate it)
 touch doccomments.i
