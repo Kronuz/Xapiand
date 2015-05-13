@@ -114,8 +114,8 @@ public:
 	int get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
 	cJSON* get_stats_database();
 	cJSON* get_stats_docs(int id_doc);
-	char field_type(const std::string &field_name);
-	char get_type(cJSON *field, const std::string &field_name);
+	char* field_type(const std::string &field_name);
+	char* get_type(cJSON *field, const std::string &field_name);
 	cJSON* get_stats_time(const std::string &time_req);
 	bool is_reserved(const std::string &word);
 	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, bool is_value);
