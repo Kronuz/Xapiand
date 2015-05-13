@@ -1122,7 +1122,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		std::string field_value(query.c_str() + g[3].start, g[3].end - g[3].start);
 
 		if (isRange(field_value)) {
-			switch (field_type(field_name)) {
+			switch (field_type(field_name)[1]) {
 				case NUMERIC_TYPE:
 					slot = get_slot(field_name);
 					nvrp = new Xapian::NumberValueRangeProcessor(slot, field_name_dot, true);
@@ -1153,7 +1153,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					throw Xapian::QueryParserError("This type of Data has no support for range search.\n");
 			}
 		} else {
-			switch (field_type(field_name)) {
+			switch (field_type(field_name)[1]) {
 				case NUMERIC_TYPE:
 					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, NUMERIC_TYPE);
 					if (isupper(field_value.at(0))) {
@@ -1169,11 +1169,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						queryparser.add_prefix(field_name, nfp);
 					}
 					break;
-				case TEXT_TYPE:
 				case STRING_TYPE:
 					if (field_name.size() != 0) {
 						if(!unique_doc) {
-							prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, field_type(field_name));
+							prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
 							if (isupper(field_value.at(0))) {
 								prefix = prefix + ":";
 							}
@@ -1302,7 +1301,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + to_type(*it));
 		}
 		for(it = similar->field.begin(); it != similar->field.end(); it++) {
-			prefixes.push_back(get_prefix(*it, DOCUMENT_CUSTOM_TERM_PREFIX, field_type(*it)));
+			prefixes.push_back(get_prefix(*it, DOCUMENT_CUSTOM_TERM_PREFIX, field_type(*it)[1]));
 		}
 		ExpandDeciderFilterPrefixes efp(prefixes);
 		Xapian::ESet eset = enquire.get_eset(similar->n_eset, rset, &efp);
