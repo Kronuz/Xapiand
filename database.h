@@ -127,7 +127,6 @@ public:
 	void index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name);
 	void clean_reserved(cJSON *root);
 	void clean_reserved(cJSON *root, cJSON *item);
-	int analizertoint(std::string analizer);
 	std::string specificationstostr(specifications_t &spc);
 
 
