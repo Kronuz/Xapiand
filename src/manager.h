@@ -44,11 +44,9 @@
 
 #define STATE_BAD        -1
 #define STATE_READY       0
-#define STATE_WAITING___  1
-#define STATE_WAITING__   2
-#define STATE_WAITING_    3
-#define STATE_WAITING     4
-#define STATE_RESET       5
+#define STATE_WAITING_    1
+#define STATE_WAITING     2
+#define STATE_RESET       3
 
 
 typedef struct opts_s {
