@@ -126,7 +126,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	Endpoints endpoints;
 	endpoints.insert(Endpoint("."));
 	if(!database_pool.checkout(&cluster_database, endpoints, true, true)) {
-		LOG_ERR(this, "Cannot open custer database!");
+		LOG_ERR(this, "Cannot open custer database!\n");
 		assert(false);
 	}
 
@@ -134,7 +134,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	cluster_database->get_metadata("name", node_name_);
 	if (!node_name_.empty()) {
 		if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
-			LOG_ERR(this, "Cluster name doesn't match with the cluster database!");
+			LOG_ERR(this, "Node name doesn't match with the one in the cluster's database: %s!\n", node_name.c_str());
 			assert(false);
 		}
 		node_name = node_name_;
@@ -170,7 +170,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 	if (discovery_sock == -1 || http_sock == -1 || binary_sock == -1) {
-		LOG_ERR(this, "Cannot bind to sockets!");
+		LOG_ERR(this, "Cannot bind to sockets!\n");
 		assert(false);
 	}
 
