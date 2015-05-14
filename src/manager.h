@@ -115,6 +115,8 @@ private:
 	DatabasePool database_pool;
 	ThreadPool thread_pool;
 
+	Database *cluster_database;
+
 	ev::async break_loop;
 	void break_loop_cb(ev::async &watcher, int revents);
 
