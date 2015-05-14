@@ -50,7 +50,6 @@ class HttpClient : public BaseClient {
 	std::string body;
 	std::string host;
 	std::string command; //command or ID
-	std::vector<std::string> type;
 
 	bool ishost = false;
 
