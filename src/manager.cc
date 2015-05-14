@@ -25,6 +25,7 @@
 #include "utils.h"
 #include "server.h"
 #include "length.h"
+#include "endpoint.h"
 
 #include <list>
 #include <stdlib.h>
@@ -105,6 +106,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const std::string &cluster_n
 	  async_shutdown(*loop),
 	  thread_pool("W%d", 10),
 	  cluster_name(cluster_name_),
+	  cluster_database(NULL),
 	  node_name(node_name_),
 	  discovery_port(discovery_port_)
 {
@@ -160,6 +162,10 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const std::string &cluster_n
 	discovery_heartbeat.set<XapiandManager, &XapiandManager::discovery_heartbeat_cb>(this);
 	discovery_heartbeat.start(0, 1);
 
+	Endpoints endpoints;
+	endpoints.insert(Endpoint("."));
+	assert(database_pool.checkout(&cluster_database, endpoints, true, true));
+
 	LOG_OBJ(this, "CREATED MANAGER!\n");
 }
 
@@ -169,6 +175,8 @@ XapiandManager::~XapiandManager()
 	discovery(DISCOVERY_BYE, this_node.serialise());
 
 	destroy();
+
+	database_pool.checkin(&cluster_database);
 
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
