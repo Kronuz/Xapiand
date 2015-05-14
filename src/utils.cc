@@ -162,6 +162,7 @@ void check_tcp_backlog(int tcp_backlog)
 #endif
 }
 
+
 bool bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries)
 {
 	int tcp_backlog = XAPIAND_TCP_BACKLOG;
