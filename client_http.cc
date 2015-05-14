@@ -752,23 +752,22 @@ void HttpClient::_search()
 					write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
 				}
 
-				cJSON *root = cJSON_CreateObject();
-				cJSON_AddStringToObject(root, "_id", id.c_str());
-				cJSON_AddStringToObject(root, "_type", type.c_str());
 				cJSON *object = cJSON_Parse(data.c_str());
-				cJSON *object_data = cJSON_Duplicate(cJSON_GetObjectItem(object, RESERVED_DATA), 1);
+				cJSON *object_data = cJSON_GetObjectItem(object, RESERVED_DATA);
 				if (object_data) {
-					cJSON_AddItemToObject(root, "_data", object_data);
+					object_data = cJSON_Duplicate(object_data, 1);
 					cJSON_Delete(object);
+					object = object_data;
 				} else {
 					database->clean_reserved(object);
-					cJSON_AddItemToObject(root, "_data", object);
+					cJSON_AddStringToObject(object, "_id", id.c_str());
+					cJSON_AddStringToObject(object, "_type", type.c_str());
 				}
 
 				if (e.pretty) {
-					result = cJSON_Print(root);
+					result = cJSON_Print(object);
 				} else {
-					result = cJSON_PrintUnformatted(root);
+					result = cJSON_PrintUnformatted(object);
 				}
 				result += "\n\n";
 				if(json_chunked) {
@@ -780,7 +779,7 @@ void HttpClient::_search()
 				if (!write(result)) {
 					break;
 				}
-				cJSON_Delete(root);
+				cJSON_Delete(object);
 			}
 			if(json_chunked) {
 				write("0\r\n\r\n");
