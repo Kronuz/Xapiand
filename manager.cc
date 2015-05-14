@@ -196,13 +196,21 @@ XapiandManager::set_node_name(const std::string &node_name_)
 		pthread_mutex_unlock(&qmtx);
 		return false;
 	}
-	if (node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
+
+	cluster_database->get_metadata("name", node_name);
+	if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
 		pthread_mutex_unlock(&qmtx);
 		return false;
 	}
 
-	node_name = node_name_;
-	cluster_database->set_metadata("name", node_name, true);
+	if (stringtolower(node_name) != stringtolower(node_name_)) {
+		node_name = node_name_;
+		if (!cluster_database->set_metadata("name", node_name, true)) {
+			assert(false);
+		}
+	}
+
+	INFO(this, "Node accepted as %s!\n", node_name.c_str());
 
 	pthread_mutex_unlock(&qmtx);
 	return true;
@@ -398,6 +406,7 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			} else {
 				this_node.name = node_name;
 			}
+			INFO(this, "Advertising as %s...\n", this_node.name.c_str());
 		case STATE_WAITING:
 			discovery(DISCOVERY_HELLO, this_node.serialise());
 			break;
