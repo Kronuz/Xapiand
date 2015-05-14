@@ -63,9 +63,15 @@ void log(const char *file, int line, void *obj, const char *fmt, ...);
 std::string repr(const char *p, size_t size);
 std::string repr(const std::string &string);
 
-inline bool ignored_errorno(int e) {
+inline bool ignored_errorno(int e, bool udp) {
 	switch(e) {
 		case EAGAIN:
+#if EAGAIN != EWOULDBLOCK
+		case EWOULDBLOCK:
+#endif
+		case EPIPE:
+			return true;  //  Ignore error
+
 		case ENETDOWN:
 		case EPROTO:
 		case ENOPROTOOPT:
@@ -76,15 +82,12 @@ inline bool ignored_errorno(int e) {
 		case EHOSTUNREACH:
 		case EOPNOTSUPP:
 		case ENETUNREACH:
-#if EAGAIN != EWOULDBLOCK
-		case EWOULDBLOCK:
-#endif
 		case EINTR:
-		case EPIPE:
 		case ECONNRESET:
-			return true;  //  Ignore error and try again
+			return udp;  //  Ignore error on UDP sockets
+
 		default:
-			return false;
+			return false;  // Do not ignore error
     }
 }
 
