@@ -63,6 +63,31 @@ void log(const char *file, int line, void *obj, const char *fmt, ...);
 std::string repr(const char *p, size_t size);
 std::string repr(const std::string &string);
 
+inline bool ignored_errorno(int e) {
+	switch(e) {
+		case EAGAIN:
+		case ENETDOWN:
+		case EPROTO:
+		case ENOPROTOOPT:
+		case EHOSTDOWN:
+#ifdef ENONET  // Linux-specific
+		case ENONET:
+#endif
+		case EHOSTUNREACH:
+		case EOPNOTSUPP:
+		case ENETUNREACH:
+#if EAGAIN != EWOULDBLOCK
+		case EWOULDBLOCK:
+#endif
+		case EINTR:
+		case EPIPE:
+		case ECONNRESET:
+			return true;  //  Ignore error and try again
+		default:
+			return false;
+    }
+}
+
 bool bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries);
 bool bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries, const char *group);
 

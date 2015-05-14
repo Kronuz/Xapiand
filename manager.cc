@@ -378,7 +378,7 @@ void XapiandManager::discovery(const char *buf, size_t buf_size)
 #endif
 
 		if (written < 0) {
-			if (errno != EAGAIN && discovery_sock != -1) {
+			if (discovery_sock != -1 && !ignored_errorno(errno)) {
 				LOG_ERR(this, "ERROR: sendto error (sock=%d): %s\n", discovery_sock, strerror(errno));
 				destroy();
 			}
