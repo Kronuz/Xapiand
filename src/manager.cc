@@ -110,12 +110,6 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	  node_name(o.node_name),
 	  discovery_port(o.discovery_port)
 {
-
-	this_node.http_port = o.http_port;
-	this_node.binary_port = o.binary_port;
-
-	struct sockaddr_in addr;
-
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
@@ -128,11 +122,29 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	pthread_mutexattr_settype(&servers_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&servers_mutex, &servers_mutex_attr);
 
-	break_loop.set<XapiandManager, &XapiandManager::break_loop_cb>(this);
-	break_loop.start();
+	// Open cluster database
+	Endpoints endpoints;
+	endpoints.insert(Endpoint("."));
+	if(!database_pool.checkout(&cluster_database, endpoints, true, true)) {
+		LOG_ERR(this, "Cannot open custer database!");
+		assert(false);
+	}
 
-	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
-	async_shutdown.start();
+	std::string node_name_;
+	cluster_database->get_metadata("name", node_name_);
+	if (!node_name_.empty()) {
+		if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
+			LOG_ERR(this, "Cluster name doesn't match with the cluster database!");
+			assert(false);
+		}
+		node_name = node_name_;
+	}
+
+	// Bind tcp:HTTP, tcp:xapian-binary and udp:discovery ports
+	this_node.http_port = o.http_port;
+	this_node.binary_port = o.binary_port;
+
+	struct sockaddr_in addr;
 
 	this_node.addr = host_address();
 
@@ -157,16 +169,43 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	bind_tcp("binary", binary_sock, this_node.binary_port, addr, binary_tries);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
-	assert(discovery_sock != -1 && http_sock != -1 && binary_sock != -1);
+	if (discovery_sock == -1 || http_sock == -1 || binary_sock == -1) {
+		LOG_ERR(this, "Cannot bind to sockets!");
+		assert(false);
+	}
+
+	break_loop.set<XapiandManager, &XapiandManager::break_loop_cb>(this);
+	break_loop.start();
+
+	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
+	async_shutdown.start();
 
 	discovery_heartbeat.set<XapiandManager, &XapiandManager::discovery_heartbeat_cb>(this);
 	discovery_heartbeat.start(0, 1);
 
-	Endpoints endpoints;
-	endpoints.insert(Endpoint("."));
-	assert(database_pool.checkout(&cluster_database, endpoints, true, true));
-
 	LOG_OBJ(this, "CREATED MANAGER!\n");
+}
+
+
+bool
+XapiandManager::set_node_name(const std::string &node_name_)
+{
+	pthread_mutex_lock(&qmtx);
+
+	if (node_name_.empty()) {
+		pthread_mutex_unlock(&qmtx);
+		return false;
+	}
+	if (node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
+		pthread_mutex_unlock(&qmtx);
+		return false;
+	}
+
+	node_name = node_name_;
+	cluster_database->set_metadata("name", node_name, true);
+
+	pthread_mutex_unlock(&qmtx);
+	return true;
 }
 
 
@@ -368,6 +407,7 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			break;
 	}
 	if (state && state-- == 1) {
+		set_node_name(this_node.name);
 		discovery_heartbeat.set(0, 20);
 	}
 }
