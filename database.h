@@ -104,6 +104,8 @@ public:
 	bool index(cJSON *document, const std::string &document_id, bool commit);
 	bool patch(cJSON *patches, const std::string &_document_id, bool commit);
 	bool replace(const std::string &document_id, const Xapian::Document &doc, bool commit);
+	bool get_metadata(const std::string &key, std::string &value);
+	bool set_metadata(const std::string &key, const std::string &value, bool commit);
 	bool get_document(Xapian::docid did, Xapian::Document &doc);
 	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &prefix, int w, int position);
 	int find_field(const std::string &str, int *g, int size_g, int len, int offset);

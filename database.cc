@@ -1727,6 +1727,45 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 
 
 bool
+Database::get_metadata(const std::string &key, std::string &value)
+{
+	for (int t = 3; t >= 0; --t) {
+		try {
+			value = db->get_metadata(key);
+		} catch (const Xapian::Error &e) {
+			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			if (t) reopen();
+			continue;
+		}
+		return true;
+	}
+	return false;
+}
+
+
+bool
+Database::set_metadata(const std::string &key, const std::string &value, bool commit)
+{
+	for (int t = 3; t >= 0; --t) {
+		LOG_DATABASE_WRAP(this, "Set metadata: t%d\n", t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+		try {
+			wdb->set_metadata(key, value);
+		} catch (const Xapian::Error &e) {
+			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			if (t) reopen();
+			continue;
+		}
+		LOG_DATABASE_WRAP(this, "Metadata set\n");
+		return (commit) ? _commit() : true;
+	}
+
+	LOG_ERR(this, "ERROR: Cannot do set_metadata!\n");
+	return false;
+}
+
+
+bool
 Database::get_document(Xapian::docid did, Xapian::Document &doc)
 {
 	for (int t = 3; t >= 0; --t) {
