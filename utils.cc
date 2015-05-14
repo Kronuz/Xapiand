@@ -51,11 +51,9 @@
 #define STATE_ERR -1
 #define STATE_CM0 0
 #define STATE_CMD 1
-#define STATE_TY0 2
-#define STATE_TYP 3
-#define STATE_NSP 4
-#define STATE_PTH 5
-#define STATE_HST 6
+#define STATE_NSP 2
+#define STATE_PTH 3
+#define STATE_HST 4
 
 pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 
@@ -482,7 +480,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 	} else {
 		state = STATE_NSP;
 		n0 = n1 = n2 = par->offset;
-		nf = par->off_type - 1;
+		nf = par->off_command - 1;
 		direction = 1;
 	}
 
@@ -499,12 +497,10 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 			case ',':
 				switch (state) {
 					case STATE_CM0:
-					case STATE_TY0:
 						state++;
 						n0 = n1;
 						break;
 					case STATE_CMD:
-					case STATE_TYP:
 						break;
 					case STATE_NSP:
 					case STATE_PTH:
@@ -529,12 +525,10 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 			case ':':
 				switch (state) {
 					case STATE_CM0:
-					case STATE_TY0:
 						state++;
 						n0 = n1;
 						break;
 					case STATE_CMD:
-					case STATE_TYP:
 						break;
 					case STATE_NSP:
 						length = n1 - n0;
@@ -553,12 +547,10 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 			case '@':
 				switch (state) {
 					case STATE_CM0:
-					case STATE_TY0:
 						state++;
 						n0 = n1;
 						break;
 					case STATE_CMD:
-					case STATE_TYP:
 						break;
 					case STATE_NSP:
 						length = n1 - n0;
@@ -581,30 +573,23 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 			case '/':
 				switch (state) {
 					case STATE_CM0:
-					case STATE_TY0:
 						break;
 					case STATE_CMD:
 						length = n0 - n1;
 						par->off_command = n1 + 1;
 						par->len_command = length;
-						state = length ? STATE_TY0 : STATE_ERR;
-						break;
-					case STATE_TYP:
-						length = n0 - n1;
-						par->off_type = n1 + 1;
-						par->len_type = length;
 						state = length ? STATE_NSP : STATE_ERR;
 						nf = n1;
 						n0 = n1 = n2 = ni;
 						direction = 1;
 						par->offset = n0;
+						break;
 				}
 				break;
 
 			default:
 				switch (state) {
 					case STATE_CM0:
-					case STATE_TY0:
 						state++;
 						n0 = n1;
 						break;
@@ -1436,17 +1421,4 @@ std::string to_type(std::string type)
 	} else {
 		return std::string("S");
 	}
-}
-
-
-std::vector<std::string> split_types(std::string type)
-{
-	std::vector<std::string> types;
-	int len = (int) type.size(), offset = 0;
-	group_t *g = NULL;
-	while ((pcre_search(type.c_str(), len, offset, 0, TYPE_RE, &compiled_type_re, &g)) != -1) {
-		offset = g[0].end;
-		types.push_back(std::string(type.c_str() + g[1].start, g[1].end - g[1].start));
-	}
-	return types;
 }

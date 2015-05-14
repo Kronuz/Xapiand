@@ -100,9 +100,9 @@ public:
 
 	int read_mastery(const std::string &path);
 	void reopen();
-	bool drop(const std::string &document_id, const std::string &object_type, bool commit);
-	bool index(cJSON *document, const std::string &document_id, const std::string &object_type, bool commit);
-	bool patch(cJSON *patches, const std::string &_document_id, bool commit, const std::string &object_type);
+	bool drop(const std::string &document_id, bool commit);
+	bool index(cJSON *document, const std::string &document_id, bool commit);
+	bool patch(cJSON *patches, const std::string &_document_id, bool commit);
 	bool replace(const std::string &document_id, const Xapian::Document &doc, bool commit);
 	bool get_document(Xapian::docid did, Xapian::Document &doc);
 	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &prefix, int w, int position);
