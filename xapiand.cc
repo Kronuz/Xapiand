@@ -34,24 +34,6 @@
 using namespace TCLAP;
 
 
-typedef struct opts_s {
-	int verbosity;
-	bool daemonize;
-	bool glass;
-	std::string cluster_name;
-	std::string node_name;
-	unsigned int http_port;
-	unsigned int binary_port;
-	unsigned int discovery_port;
-	std::string pidfile;
-	std::string uid;
-	std::string gid;
-	std::string discovery_group;
-	size_t num_servers;
-	size_t dbpool_size;
-} opts_t;
-
-
 XapiandManager *manager_ptr = NULL;
 
 
@@ -79,7 +61,7 @@ void setup_signal_handlers(void) {
 }
 
 // int num_servers, const char *cluster_name_, const char *node_name_, const char *discovery_group, int discovery_port, int http_port, int binary_port, size_t dbpool_size
-void run(const opts_t &o)
+void run(const opts_t &opts)
 {
 #ifdef HAVE_PTHREAD_SETNAME_NP_2
     pthread_setname_np(pthread_self(), "==");
@@ -91,11 +73,11 @@ void run(const opts_t &o)
 
 	setup_signal_handlers();
 
-	XapiandManager manager(&default_loop, o.cluster_name, o.node_name, o.discovery_group, o.discovery_port, o.http_port, o.binary_port, o.dbpool_size);
+	XapiandManager manager(&default_loop, opts);
 
 	manager_ptr = &manager;
 
-	manager.run((int)o.num_servers);
+	manager.run((int)opts.num_servers);
 
 	manager_ptr = NULL;
 }

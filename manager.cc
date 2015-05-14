@@ -95,24 +95,24 @@ size_t Node::unserialise(const std::string &s)
 }
 
 
-XapiandManager::XapiandManager(ev::loop_ref *loop_, const std::string &cluster_name_, const std::string &node_name_, const std::string &discovery_group_, int discovery_port_, int http_port_, int binary_port_, size_t dbpool_size)
+XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	: loop(loop_ ? loop_: &dynamic_loop),
 	  state(STATE_RESET),
 	  break_loop(*loop),
 	  discovery_heartbeat(*loop),
-	  database_pool(dbpool_size),
+	  database_pool(o.dbpool_size),
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  thread_pool("W%d", 10),
-	  cluster_name(cluster_name_),
+	  cluster_name(o.cluster_name),
 	  cluster_database(NULL),
-	  node_name(node_name_),
-	  discovery_port(discovery_port_)
+	  node_name(o.node_name),
+	  discovery_port(o.discovery_port)
 {
 
-	this_node.http_port = http_port_;
-	this_node.binary_port = binary_port_;
+	this_node.http_port = o.http_port;
+	this_node.binary_port = o.binary_port;
 
 	struct sockaddr_in addr;
 
@@ -139,7 +139,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const std::string &cluster_n
 	if (discovery_port == 0) {
 		discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
 	}
-	bind_udp("discovery", discovery_sock, discovery_port, discovery_addr, 1, discovery_group_.c_str());
+	bind_udp("discovery", discovery_sock, discovery_port, discovery_addr, 1, o.discovery_group.c_str());
 
 	int http_tries = 1;
 	if (this_node.http_port == 0) {
