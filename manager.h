@@ -156,6 +156,8 @@ protected:
 	pthread_mutexattr_t servers_mutex_attr;
 	std::list<XapiandServer *>servers;
 
+	bool set_node_name(const std::string &node_name_);
+
 public:
 	time_t shutdown_asap;
 	time_t shutdown_now;
