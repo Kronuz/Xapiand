@@ -145,7 +145,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 		ssize_t received = ::recvfrom(discovery_sock, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
 
 		if (received < 0) {
-			if (discovery_sock != -1 && !ignored_errorno(errno)) {
+			if (discovery_sock != -1 && !ignored_errorno(errno, true)) {
 				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", discovery_sock, strerror(errno));
 				destroy();
 			}
@@ -339,7 +339,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 	int client_sock = ::accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
 
 	if (client_sock < 0) {
-		if (!ignored_errorno(errno)) {
+		if (!ignored_errorno(errno, false)) {
 			LOG_ERR(this, "ERROR: accept http error (sock=%d): %s\n", http_sock, strerror(errno));
 		}
 	} else {
@@ -366,7 +366,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 	int client_sock = ::accept(watcher.fd, (struct sockaddr *)&client_addr, &client_len);
 
 	if (client_sock < 0) {
-		if (!ignored_errorno(errno)) {
+		if (!ignored_errorno(errno, false)) {
 			LOG_ERR(this, "ERROR: accept binary error (sock=%d): %s\n", binary_sock, strerror(errno));
 	    }
 	} else {
