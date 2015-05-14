@@ -134,7 +134,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	cluster_database->get_metadata("name", node_name_);
 	if (!node_name_.empty()) {
 		if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
-			LOG_ERR(this, "Node name doesn't match with the one in the cluster's database: %s!\n", node_name.c_str());
+			LOG_ERR(this, "Node name %s doesn't match with the one in the cluster's database: %s!\n", node_name.c_str(), node_name_.c_str());
 			assert(false);
 		}
 		node_name = node_name_;
@@ -210,7 +210,7 @@ XapiandManager::set_node_name(const std::string &node_name_)
 		}
 	}
 
-	INFO(this, "Node accepted as %s!\n", node_name.c_str());
+	INFO(this, "Node %s accepted to the party!\n", node_name.c_str());
 
 	pthread_mutex_unlock(&qmtx);
 	return true;
