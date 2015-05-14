@@ -214,6 +214,7 @@ void HttpClient::run()
 				break;
 			//OPTIONS
 			case 6:
+				write(http_response(200, HTTP_HEADER | HTTP_OPTIONS));
 				break;
 			//PATCH
 			case 24:
@@ -1103,6 +1104,10 @@ std::string HttpClient::http_response(int status, int mode, std::string content)
 
 		if (mode & HTTP_JSON) {
 			response += "Content-Type: application/json; charset=UTF-8" + eol;
+		}
+		
+		if (mode & HTTP_OPTIONS) {
+			response += "Allow: GET,HEAD,POST,PUT,PATCH,OPTIONS" + eol;
 		}
 
 		if (mode & HTTP_CHUNKED) {

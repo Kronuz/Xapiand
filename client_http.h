@@ -34,6 +34,7 @@
 #define HTTP_CONTENT 0x02
 #define HTTP_JSON    0x04
 #define HTTP_CHUNKED 0x08
+#define HTTP_OPTIONS 0x10
 
 
 //
