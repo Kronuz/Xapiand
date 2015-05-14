@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#define XAPIAN_LOCAL_DB_FALLBACK 1
 
 //change prefix to Q only
 #define DOCUMENT_ID_TERM_PREFIX "Q"
@@ -120,10 +121,11 @@ Database::reopen()
 			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints_size, endpoints.as_string().c_str());
 		} else {
 			e = &*i;
-			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
+			if (e->protocol == "file") {
 				wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
 			} else {
+#ifdef XAPIAN_LOCAL_DB_FALLBACK
 				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
 				try {
 					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
@@ -138,6 +140,9 @@ Database::reopen()
 				} catch (const Xapian::DatabaseOpeningError &err) {
 					wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
 				}
+#else
+				wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
+#endif
 			}
 			db->add_database(wdb);
 		}
@@ -156,6 +161,7 @@ Database::reopen()
 					if (endpoints_size == 1) read_mastery(e->path);
 				}
 			} else {
+#ifdef XAPIAN_LOCAL_DB_FALLBACK
 				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
 				try {
 					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
@@ -166,6 +172,9 @@ Database::reopen()
 						if (endpoints_size == 1) read_mastery(e->path);
 					}
 				} catch (const Xapian::DatabaseOpeningError &err) {}
+#else
+				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
+#endif
 			}
 			db->add_database(rdb);
 		}
