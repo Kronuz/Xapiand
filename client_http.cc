@@ -355,7 +355,7 @@ void HttpClient::_delete()
 	}
 
 	clock_t t = clock();
-	if (!database->drop(command, type, e.commit)) {
+	if (!database->drop(command, *type.begin(), e.commit)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
@@ -434,7 +434,7 @@ void HttpClient::_index()
 		return;
 	}
 
-	if (!database->index(document, command, type, e.commit)) {
+	if (!database->index(document, command, *type.begin(), e.commit)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
@@ -513,7 +513,7 @@ void HttpClient::_patch()
 		return;
 	}
 
-	if (!database->patch(patches, command, e.commit, type)) {
+	if (!database->patch(patches, command, e.commit, *type.begin())) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
@@ -833,7 +833,13 @@ int HttpClient::_endpointgen(query_t &e)
 			parser_url_path_t p;
 			memset(&p, 0, sizeof(p));
 			while (url_path(path_buf.c_str(), path_size, &p) == 0) {
-				type  = urldecode(p.off_type, p.len_type);
+				std::string type_  = urldecode(p.off_type, p.len_type);
+				type = split_types(type_);
+				
+				if (type.size() > 1 && parser.method != 1) {
+					return CMD_BAD_QUERY;
+				}
+				
 				command  = urldecode(p.off_command, p.len_command);
 
 				if (type.empty() || command.empty()) {

@@ -46,6 +46,7 @@
 #define FIND_RANGE_RE "([^ ]*\\.\\.)"
 #define FIND_ORDER_RE "([_a-zA-Z][_a-zA-Z0-9]+,[_a-zA-Z][_a-zA-Z0-9]*)"
 #define RANGE_ID_RE "(\\d+)\\s?..\\s?(\\d*)"
+#define TYPE_RE "(\\w+),?"
 
 #define STATE_ERR -1
 #define STATE_CM0 0
@@ -65,6 +66,7 @@ pcre *compiled_coords_dist_re = NULL;
 pcre *compiled_numeric_re = NULL;
 pcre *compiled_find_range_re = NULL;
 pcre *compiled_range_id_re = NULL;
+pcre *compiled_type_re = NULL;
 
 pos_time_t b_time;
 time_t init_time;
@@ -1434,4 +1436,17 @@ std::string to_type(std::string type)
 	} else {
 		return std::string("S");
 	}
+}
+
+
+std::vector<std::string> split_types(std::string type)
+{
+	std::vector<std::string> types;
+	int len = (int) type.size(), offset = 0;
+	group_t *g = NULL;
+	while ((pcre_search(type.c_str(), len, offset, 0, TYPE_RE, &compiled_type_re, &g)) != -1) {
+		offset = g[0].end;
+		types.push_back(std::string(type.c_str() + g[1].start, g[1].end - g[1].start));
+	}
+	return types;
 }
