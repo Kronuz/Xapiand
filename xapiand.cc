@@ -155,6 +155,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		SwitchArg glass("", "glass", "Try using glass databases.", cmd, false);
 #endif
 
+		ValueArg<std::string> database("D", "database", "Cluster database.", false, ".", "path", cmd);
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
 		ValueArg<std::string> node_name("n", "name", "Node name.", false, "", "node", cmd);
 
@@ -167,6 +168,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<std::string> uid("u", "uid", "User ID.", false, "xapiand", "uid", cmd);
 		ValueArg<std::string> gid("g", "gid", "Group ID.", false, "xapiand", "uid", cmd);
 
+
 		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
 		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of database endpoints in database pool.", false, 1000, "size", cmd);
 
@@ -178,6 +180,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 		opts.glass = glass.getValue();
 #endif
+		opts.database = database.getValue();
 		opts.cluster_name = cluster_name.getValue();
 		opts.node_name = node_name.getValue();
 		opts.http_port = http_port.getValue();
