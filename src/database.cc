@@ -919,7 +919,7 @@ std::string
 Database::specificationstostr(specifications_t &spc)
 {
 	std::stringstream str;
-	str << "\n{\n"; 
+	str << "\n{\n";
 	str << "\tposition: " << spc.position << "\n";
 	str << "\tweight: "   << spc.weight   << "\n";
 	str << "\tlanguage: " << spc.language << "\n";
