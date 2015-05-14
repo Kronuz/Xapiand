@@ -202,6 +202,7 @@ void HttpClient::run()
 				break;
 			//GET
 			case 1:
+			case 3:
 				_search();
 				break;
 			//HEAD
@@ -220,6 +221,7 @@ void HttpClient::run()
 			case 24:
 				_patch();
 			default:
+				write(http_response(501, HTTP_HEADER | HTTP_CONTENT));
 				break;
 		}
 	} catch (const Xapian::Error &err) {
