@@ -71,12 +71,6 @@ time_t init_time;
 times_row_t stats_cnt;
 
 
-std::string repr(const std::string &string)
-{
-	return repr(string.c_str(), string.size());
-}
-
-
 std::string repr(const char * p, size_t size)
 {
 	char *buff = new char[size * 4 + 1];
@@ -110,6 +104,12 @@ std::string repr(const char * p, size_t size)
 	std::string ret(buff);
 	delete [] buff;
 	return ret;
+}
+
+
+std::string repr(const std::string &string)
+{
+	return repr(string.c_str(), string.size());
 }
 
 
