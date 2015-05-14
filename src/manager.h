@@ -51,6 +51,25 @@
 #define STATE_RESET       5
 
 
+typedef struct opts_s {
+	int verbosity;
+	bool daemonize;
+	bool glass;
+	std::string database;
+	std::string cluster_name;
+	std::string node_name;
+	unsigned int http_port;
+	unsigned int binary_port;
+	unsigned int discovery_port;
+	std::string pidfile;
+	std::string uid;
+	std::string gid;
+	std::string discovery_group;
+	size_t num_servers;
+	size_t dbpool_size;
+} opts_t;
+
+
 class XapiandServer;
 class BaseClient;
 
@@ -147,7 +166,7 @@ public:
 	std::string node_name;
 	Node this_node;
 
-	XapiandManager(ev::loop_ref *loop_, const std::string &cluster_name_, const std::string &node_name_, const std::string &discovery_group_, int discovery_port_, int http_port_, int binary_port_, size_t dbpool_size);
+	XapiandManager(ev::loop_ref *loop_, const opts_t &o);
 	~XapiandManager();
 
 	void run(int num_servers);
