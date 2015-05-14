@@ -353,14 +353,14 @@ pcre *Database::compiled_find_field_re = NULL;
 
 
 bool
-Database::drop(const std::string &doc_id, const std::string &object_type, bool commit)
+Database::drop(const std::string &doc_id, bool commit)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
 		return false;
 	}
 
-	std::string document_id  = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX + object_type + OFFSPRING_UNION);
+	std::string document_id  = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
 
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Deleting: -%s- t:%d\n", document_id.c_str(), t);
@@ -404,7 +404,7 @@ Database::_commit()
 
 
 bool
-Database::patch(cJSON *patches, const std::string &_document_id, bool commit, const std::string &object_type)
+Database::patch(cJSON *patches, const std::string &_document_id, bool commit)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
@@ -442,7 +442,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 
 	if (cJSONUtils_ApplyPatches(data_json, patches) == 0) {
 		//Object patched
-		return index(data_json, _document_id, object_type, commit);
+		return index(data_json, _document_id, commit);
 	}
 
 	//Object no patched
@@ -959,7 +959,7 @@ Database::is_language(const std::string &language)
 
 
 bool
-Database::index(cJSON *document, const std::string &_document_id, const std::string &object_type, bool commit)
+Database::index(cJSON *document, const std::string &_document_id, bool commit)
 {
 	if (!writable) {
 		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
@@ -975,21 +975,11 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 	cJSON *document_terms = cJSON_GetObjectItem(document, RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document, RESERVED_TEXTS);
 
-	if (object_type.empty()) {
-		LOG_ERR(this, "ERROR: Object type must be defined\n");
-		return false;
-	} else {
-		//Make sure object type  is also a term (otherwise it doesn't filter by object type)
-		doc.add_value(1, object_type); // For obtaining all types in the database.
-		LOG_DATABASE_WRAP(this, "Slot: 1  Object type: %s\n", object_type.c_str());
-		doc.add_boolean_term(prefixed(object_type, DOCUMENT_OBJECT_TYPE_PREFIX));
-	}
-
 	std::string document_id;
 	if (_document_id.c_str()) {
 		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
 		doc.add_value(0, _document_id);
-		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX + object_type + OFFSPRING_UNION);
+		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
 		LOG_DATABASE_WRAP(this, "Slot: 0 id: %s  term: %s\n", _document_id.c_str(), document_id.c_str());
 		doc.add_boolean_term(document_id);
 	} else {
@@ -1017,7 +1007,7 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 		specifications_t spc_now = {position, weight, language, spelling, positions, accuracy, store, type, analyzer, dynamic,
 									date_detection, numeric_detection, geo_detection, bool_detection, string_detection};
 
-		update_specifications(document, spc_now, object_type);
+		update_specifications(document, spc_now, "");
 		specifications_t spc_bef = spc_now;	
 
 		if (document_texts) {
@@ -1026,7 +1016,7 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 				cJSON *name = cJSON_GetObjectItem(texts, "name");
 				cJSON *text = cJSON_GetObjectItem(texts, "text");
 				if (text) {
-					std::string name_s = (name && name->type == cJSON_String) ? object_type + OFFSPRING_UNION + name->valuestring : "";
+					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : "";
 					update_specifications(texts, spc_now, name_s);
 					if (!name_s.empty() && name_s.at(name_s.size() - 3) == OFFSPRING_UNION[0]) {
 						std::string language(name_s, name_s.size() - 2, name_s.size());
@@ -1047,7 +1037,7 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 				cJSON *name = cJSON_GetObjectItem(data_terms, "name");
 				cJSON *terms = cJSON_GetObjectItem(data_terms, "term");
 				if (terms) {
-					std::string name_s = (name && name->type == cJSON_String) ? object_type + OFFSPRING_UNION + name->valuestring : "";
+					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : "";
 					update_specifications(data_terms, spc_now, name_s);
 					index_terms(doc, terms, spc_now, name_s);
 					spc_now = spc_bef;
@@ -1062,9 +1052,9 @@ Database::index(cJSON *document, const std::string &_document_id, const std::str
 		for (int i = 0; i < elements; i++) {
 			cJSON *item = cJSON_GetArrayItem(document, i);
 			if (!is_reserved(item->string)) {
-				index_fields(item, object_type + OFFSPRING_UNION + item->string, spc_now, doc, false);
+				index_fields(item, item->string, spc_now, doc, false);
 			} else if (strcmp(item->string, RESERVED_VALUES) == 0) {
-				index_fields(item, object_type, spc_now, doc, true);
+				index_fields(item,"", spc_now, doc, true);
 			}
 		}
 
