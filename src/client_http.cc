@@ -39,6 +39,13 @@
 // Xapian http client
 //
 
+#define METHOD_DELETE 0
+#define METHOD_HEAD 2
+#define METHOD_GET 1
+#define METHOD_POST 3
+#define METHOD_PUT 4
+#define METHOD_OPTIONS 6
+#define METHOD_PATCH 24
 
 const char* status_code[6][5] = {
 	{},
@@ -196,29 +203,23 @@ void HttpClient::run()
 		}
 
 		switch (parser.method) {
-			//DELETE
-			case 0:
+			case METHOD_DELETE:
 				_delete();
 				break;
-			//GET
-			case 1:
-			case 3:
+			case METHOD_GET:
+			case METHOD_POST:
 				_search();
 				break;
-			//HEAD
-			case 2:
+			case METHOD_HEAD:
 				_head();
 				break;
-			//PUT
-			case 4:
+			case METHOD_PUT:
 				_index();
 				break;
-			//OPTIONS
-			case 6:
+			case METHOD_OPTIONS:
 				write(http_response(200, HTTP_HEADER | HTTP_OPTIONS));
 				break;
-			//PATCH
-			case 24:
+			case METHOD_PATCH:
 				_patch();
 			default:
 				write(http_response(501, HTTP_HEADER | HTTP_CONTENT));
