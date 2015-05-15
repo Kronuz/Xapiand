@@ -37,6 +37,12 @@
 #  include <map>
 #endif
 
+enum binary_state {
+	initializing,
+	remoteprotocol,
+	replicationprotocol,
+};
+
 //
 //   A single instance of a non-blocking Xapiand binary protocol handler
 //
@@ -49,7 +55,7 @@ class BinaryClient : public BaseClient, public RemoteProtocol {
 
 private:
 	bool running;
-	bool started;
+	enum binary_state state;
 
 	databases_map_t databases;
 
@@ -57,7 +63,20 @@ private:
 	std::string buffer;
 	Queue<Buffer *> messages_queue;
 
+	std::string repl_db_filename;
+	std::string repl_db_uuid;
+	size_t repl_db_revision;
+
 	void on_read(const char *buf, ssize_t received);
+
+	void repl_run_one();
+	void repl_end_of_changes(const std::string & message);
+	void repl_fail(const std::string & message);
+	void repl_set_db_header(const std::string & message);
+	void repl_set_db_filename(const std::string & message);
+	void repl_set_db_filedata(const std::string & message);
+	void repl_set_db_footer(const std::string & message);
+	void repl_changeset(const std::string & message);
 
 public:
 	message_type get_message(double timeout, std::string & result, message_type required_type = MSG_MAX);
