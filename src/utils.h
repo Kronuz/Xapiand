@@ -54,7 +54,7 @@
 #define CMD_UNKNOWN_HOST 4
 #define CMD_UNKNOWN -1
 #define CMD_BAD_QUERY -2
-#define CMD_BAD_INDEX -3
+#define CMD_BAD_ENDPS -3
 
 #define SLOT_TIME_MINUTE 1440
 #define SLOT_TIME_SECOND 60
