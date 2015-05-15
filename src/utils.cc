@@ -1316,7 +1316,7 @@ int identify_cmd(std::string &commad)
 			return CMD_STATS;
 		}
 		return CMD_UNKNOWN;
-	} else return 0;
+	} else return CMD_NUMBER;
 }
 
 
