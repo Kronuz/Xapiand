@@ -155,7 +155,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		SwitchArg glass("", "glass", "Try using glass databases.", cmd, false);
 #endif
 
-		ValueArg<std::string> database("D", "database", "Cluster database.", false, ".", "path", cmd);
+		ValueArg<std::string> database("D", "database", "Node database.", false, ".", "path", cmd);
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
 		ValueArg<std::string> node_name("n", "name", "Node name.", false, "", "node", cmd);
 
