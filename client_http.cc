@@ -403,7 +403,7 @@ void HttpClient::_index()
 		default:
 			cJSON *err_response = cJSON_CreateObject();
 			cJSON_AddItemToObject(root, "Response", err_response);
-			if (cmd == CMD_BAD_INDEX)
+			if (cmd == CMD_BAD_ENDPS)
 				cJSON_AddStringToObject(err_response, "Error message","Expecting exactly one database");
 			else if (cmd == CMD_UNKNOWN)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
@@ -484,7 +484,9 @@ void HttpClient::_patch()
 		default:
 			cJSON *err_response = cJSON_CreateObject();
 			cJSON_AddItemToObject(root, "Response", err_response);
-			if (cmd == CMD_UNKNOWN)
+			if (cmd == CMD_BAD_ENDPS)
+				cJSON_AddStringToObject(err_response, "Error message","Expecting exactly one database");
+			else if (cmd == CMD_UNKNOWN)
 				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown task " + command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown host " + host).c_str());
@@ -881,8 +883,8 @@ int HttpClient::_endpointgen(query_t &e)
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
 			}
 		}
-		if (parser.method == 4 && endpoints.size()>1) {
-			return CMD_BAD_INDEX;
+		if ((parser.method == 4 || parser.method ==24) && endpoints.size()>1) {
+			return CMD_BAD_ENDPS;
 		}
 
 		cmd = identify_cmd(command);
