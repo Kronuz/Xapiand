@@ -367,7 +367,15 @@ Database::drop(const std::string &doc_id, bool commit)
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 		try {
 			wdb->delete_document(document_id);
+		}catch (const Xapian::DatabaseError &e) {
+			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			return false;
+		}
+		catch (const Xapian::DatabaseCorruptError &e) {
+			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			return false;
 		} catch (const Xapian::Error &e) {
+			LOG(this, "Inside catch drop\n");
 			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
