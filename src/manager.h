@@ -31,7 +31,6 @@
 #include <list>
 #include <ev++.h>
 #include <pthread.h>
-#include <netinet/in.h>
 
 #ifdef HAVE_CXX11
 #include <unordered_map>
@@ -44,9 +43,10 @@
 
 #define STATE_BAD        -1
 #define STATE_READY       0
-#define STATE_WAITING_    1
-#define STATE_WAITING     2
-#define STATE_RESET       3
+#define STATE_SETUP       1
+#define STATE_WAITING_    2
+#define STATE_WAITING     3
+#define STATE_RESET       4
 
 
 typedef struct opts_s {
@@ -71,26 +71,6 @@ typedef struct opts_s {
 class XapiandServer;
 class BaseClient;
 
-struct Node {
-	std::string name;
-	struct sockaddr_in addr;
-	int http_port;
-	int binary_port;
-	time_t touched;
-
-	std::string serialise();
-	size_t unserialise(const char **p, const char *end);
-	size_t unserialise(const std::string &s);
-
-	inline bool operator==(const Node& other) const {
-		return (
-			stringtolower(name) == stringtolower(other.name) &&
-			addr.sin_addr.s_addr == other.addr.sin_addr.s_addr &&
-			http_port == other.http_port &&
-			binary_port == other.binary_port
-		);
-	}
-};
 
 enum discovery_type {
 	DISCOVERY_HELLO,    // New node saying hello
@@ -156,6 +136,7 @@ protected:
 
 	std::string get_node_name();
 	bool set_node_name(const std::string &node_name_);
+	void setup_node();
 
 public:
 	time_t shutdown_asap;
