@@ -100,7 +100,7 @@ public:
 		bool string_detection;
 	} specifications_t;
 
-	Database(Endpoints &endpoints, bool writable, bool spawn=true);
+	Database(const Endpoints &endpoints, bool writable, bool spawn=true);
 	~Database();
 
 	int read_mastery(const std::string &path);
