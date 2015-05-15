@@ -51,7 +51,7 @@ class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 };
 
 
-Database::Database(Endpoints &endpoints_, bool writable_, bool spawn_)
+Database::Database(const Endpoints &endpoints_, bool writable_, bool spawn_)
 	: endpoints(endpoints_),
 	  writable(writable_),
 	  spawn(spawn_),
