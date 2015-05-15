@@ -189,10 +189,20 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 std::string
 XapiandManager::get_node_name()
 {
-	std::string name;
-	cluster_database->get_metadata("name", name);
-	return name;
+	size_t length = 0;
+	unsigned char buf[512];
+	int fd = open("nodename", O_RDONLY);
+	if (fd >= 0) {
+		length = read(fd, (char *)buf, sizeof(buf) - 1);
+		if (length > 0) {
+			buf[length] = '\0';
+			for (size_t i=0, j=0; (buf[j] = buf[i]); j+=!isspace(buf[i++]));
+		}
+		close(fd);
+	}
+	return std::string((const char *)buf, length);
 }
+
 
 bool
 XapiandManager::set_node_name(const std::string &node_name_)
@@ -212,7 +222,13 @@ XapiandManager::set_node_name(const std::string &node_name_)
 
 	if (stringtolower(node_name) != stringtolower(node_name_)) {
 		node_name = node_name_;
-		if (!cluster_database->set_metadata("name", node_name, true)) {
+		int fd = open("nodename", O_WRONLY|O_CREAT, 0644);
+		if (fd >= 0) {
+			if (write(fd, node_name.c_str(), node_name.size()) != node_name.size()) {
+				assert(false);
+			}
+			close(fd);
+		} else {
 			assert(false);
 		}
 	}
