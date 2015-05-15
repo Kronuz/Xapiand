@@ -64,6 +64,11 @@
 #define LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
 
 
+#define DB_WRITABLE 1    // Opens as writable
+#define DB_SPAWN 2       // Automatically creates the database if it doesn't exist
+#define DB_PERSISTENT 4  // Always try keeping the database in the database pool
+
+
 class Database {
 public:
 	Endpoints endpoints;
@@ -186,6 +191,8 @@ public:
 
 	int get_mastery_level(const std::string &index_path);
 	bool checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn=true, bool persistent=false);
+
+	bool checkout(Database **database, const Endpoints &endpoints, int flags);
 	void checkin(Database **database);
 	void finish();
 };
