@@ -122,14 +122,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	pthread_mutexattr_settype(&servers_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&servers_mutex, &servers_mutex_attr);
 
-	// Open cluster database
-	Endpoints endpoints;
-	endpoints.insert(Endpoint("."));
-	if(!database_pool.checkout(&cluster_database, endpoints, true, true)) {
-		LOG_ERR(this, "Cannot open custer database!\n");
-		assert(false);
-	}
-
+	// Setup node from node database directory
 	std::string node_name_ = get_node_name();
 	if (!node_name_.empty()) {
 		if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {

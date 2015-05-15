@@ -243,7 +243,7 @@ DatabasePool::get_mastery_level(const std::string &index_path)
 	endpoints.insert(Endpoint("file://" + index_path));
 
 	pthread_mutex_lock(&qmtx);
-	if (checkout(&database_, endpoints, false, false)) {
+	if (checkout(&database_, endpoints, 0)) {
 		mastery_level = database_->mastery_level;
 		checkin(&database_);
 	}
@@ -254,8 +254,12 @@ DatabasePool::get_mastery_level(const std::string &index_path)
 
 
 bool
-DatabasePool::checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn, bool persistent)
+DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flags)
 {
+	bool writable = flags & DB_WRITABLE;
+	bool spawn = flags & DB_SPAWN;
+	bool persistent = flags & DB_PERSISTENT;
+
 	LOG_DATABASE(this, "+ CHECKING OUT DB %lx %s(%s)...\n", (unsigned long)*database, writable ? "w" : "r", endpoints.as_string().c_str());
 
 	time_t now = time(0);

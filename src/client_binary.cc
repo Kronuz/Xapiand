@@ -166,7 +166,7 @@ Xapian::Database * BinaryClient::get_db(bool writable_)
 	pthread_mutex_unlock(&qmtx);
 
 	Database *database = NULL;
-	if (!database_pool->checkout(&database, endpoints_, writable_)) {
+	if (!database_pool->checkout(&database, endpoints_, (writable_ ? DB_WRITABLE : 0)|DB_SPAWN)) {
 		return NULL;
 	}
 

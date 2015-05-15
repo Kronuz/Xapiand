@@ -274,7 +274,7 @@ void HttpClient::_head()
 	}
 
 	Database *database = NULL;
-	if (!database_pool->checkout(&database, endpoints, false)) {
+	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
@@ -349,7 +349,7 @@ void HttpClient::_delete()
 	}
 
 	Database *database = NULL;
-	if (!database_pool->checkout(&database, endpoints, true)) {
+	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
@@ -420,7 +420,7 @@ void HttpClient::_index()
 	}
 
 	Database *database = NULL;
-	if (!database_pool->checkout(&database, endpoints, true)) {
+	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
@@ -502,7 +502,7 @@ void HttpClient::_patch()
 	}
 
 	Database *database = NULL;
-	if (!database_pool->checkout(&database, endpoints, true)) {
+	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
@@ -548,7 +548,7 @@ void HttpClient::_stats(query_t &e)
 	if (e.database) {
 		_endpointgen(e);
 		Database *database = NULL;
-		if (!database_pool->checkout(&database, endpoints, false)) {
+		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 			return;
 		}
@@ -559,7 +559,7 @@ void HttpClient::_stats(query_t &e)
 	if (e.document >= 0) {
 		_endpointgen(e);
 		Database *database = NULL;
-		if (!database_pool->checkout(&database, endpoints, false)) {
+		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 			return;
 		}
@@ -638,7 +638,7 @@ void HttpClient::_search()
 	}
 
 	Database *database = NULL;
-	if (!database_pool->checkout(&database, endpoints, false)) {
+	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
