@@ -40,7 +40,7 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  running(false),
-	  started(false)
+	  state(initializing)
 {
 	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = XapiandServer::total_clients;
@@ -80,7 +80,8 @@ void BinaryClient::on_read(const char *buf, ssize_t received)
 		const char *p = o;
 		const char *p_end = p + buffer.size();
 
-		message_type type = static_cast<message_type>(*p++);
+		unsigned char c = *p++;
+		message_type type = static_cast<message_type>(c);
 		size_t len = decode_length(&p, p_end, true);
 		if (len == -1) {
 			return;
@@ -88,9 +89,13 @@ void BinaryClient::on_read(const char *buf, ssize_t received)
 		std::string data = std::string(p, len);
 		buffer.erase(0, p - o + len);
 
-		Buffer *msg = new Buffer(type, data.c_str(), data.size());
-
-		messages_queue.push(msg);
+		if (c == (unsigned char)'\xff') {
+			state = replicationprotocol;  // Switch to replication protocol
+			LOG_BINARY_PROTO(this, "Switched to replication protocol");
+		} else {
+			Buffer *msg = new Buffer(type, data.c_str(), data.size());
+			messages_queue.push(msg);
+		}
 	}
 	pthread_mutex_lock(&qmtx);
 	if (!messages_queue.empty()) {
@@ -208,7 +213,7 @@ void BinaryClient::run()
 {
 	while (true) {
 		pthread_mutex_lock(&qmtx);
-		if (started && messages_queue.empty()) {
+		if (state != initializing && messages_queue.empty()) {
 			running = false;
 			pthread_mutex_unlock(&qmtx);
 			break;
@@ -216,11 +221,18 @@ void BinaryClient::run()
 		pthread_mutex_unlock(&qmtx);
 
 		try {
-			if (started) {
-				run_one();
-			} else {
-				started = true;
-				msg_update(std::string());
+			switch (state) {
+				case initializing:
+					state = remoteprotocol;
+					msg_update(std::string());
+					break;
+				case remoteprotocol:
+					run_one();
+					break;
+				case replicationprotocol:
+					repl_run_one();
+					break;
+
 			}
 		} catch (const Xapian::NetworkError &e) {
 			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
@@ -229,5 +241,100 @@ void BinaryClient::run()
 		}
 	}
 }
+
+
+typedef void (BinaryClient::* dispatch_repl_func)(const std::string &);
+
+void BinaryClient::repl_run_one()
+{
+	try {
+		static const dispatch_repl_func dispatch[] = {
+			&BinaryClient::repl_end_of_changes,
+			&BinaryClient::repl_fail,
+			&BinaryClient::repl_set_db_header,
+			&BinaryClient::repl_set_db_filename,
+			&BinaryClient::repl_set_db_filedata,
+			&BinaryClient::repl_set_db_footer,
+			&BinaryClient::repl_changeset,
+		};
+		std::string message;
+		size_t type = get_message(idle_timeout, message);
+		if (type >= sizeof(dispatch) / sizeof(dispatch[0]) || !dispatch[type]) {
+			std::string errmsg("Unexpected message type ");
+			errmsg += std::to_string(type);
+			throw Xapian::InvalidArgumentError(errmsg);
+		}
+		(this->*(dispatch[type]))(message);
+	} catch (ConnectionClosed &) {
+	    return;
+	} catch (...) {
+		// Propagate an unknown exception to the client.
+		send_message(REPLY_EXCEPTION, std::string());
+		// And rethrow it so our caller can log it and close the
+		// connection.
+		throw;
+	}
+
+}
+
+void BinaryClient::repl_end_of_changes(const std::string & message)
+{
+	state = remoteprotocol;
+	LOG_BINARY_PROTO(this, "Switched back to remote protocol");
+}
+
+
+void BinaryClient::repl_fail(const std::string & message)
+{
+	LOG_ERR(this, "Replication failure!\n");
+	state = remoteprotocol;
+	LOG_BINARY_PROTO(this, "Switched back to remote protocol");
+}
+
+
+void BinaryClient::repl_set_db_header(const std::string & message)
+{
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	size_t length = decode_length(&p, p_end, true);
+	repl_db_uuid.assign(p, length);
+	p += length;
+	repl_db_revision = decode_length(&p, p_end);
+	repl_db_filename.clear();
+}
+
+
+void BinaryClient::repl_set_db_filename(const std::string & message)
+{
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	size_t length = decode_length(&p, p_end, true);
+	repl_db_filename.assign(p, length);
+}
+
+
+void BinaryClient::repl_set_db_filedata(const std::string & message)
+{
+	LOG(this, "Writing changeset file\n");
+}
+
+
+void BinaryClient::repl_set_db_footer(const std::string & message)
+{
+	// Indicates the end of a DB copy operation, signal switch
+}
+
+
+void BinaryClient::repl_changeset(const std::string & message)
+{
+	Xapian::WritableDatabase * wdb_ = static_cast<Xapian::WritableDatabase *>(get_db(true));
+	if (!wdb_)
+		throw Xapian::InvalidOperationError("Server is read-only");
+
+	// wdb_->apply_changesets_from_fd()
+
+	release_db(wdb_);
+}
+
 
 #endif  /* HAVE_REMOTE_PROTOCOL */
