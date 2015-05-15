@@ -103,7 +103,8 @@ public:
 	Database(const Endpoints &endpoints, bool writable, bool spawn=true);
 	~Database();
 
-	int read_mastery(const std::string &path);
+	bool sync_with(Database &origin);
+	int read_mastery(const std::string &dir);
 	void reopen();
 	bool drop(const std::string &document_id, bool commit);
 	bool index(cJSON *document, const std::string &document_id, bool commit);
@@ -189,8 +190,8 @@ public:
 	DatabasePool(size_t max_size);
 	~DatabasePool();
 
-	int get_mastery_level(const std::string &index_path);
-	bool checkout(Database **database, Endpoints &endpoints, bool writable, bool spawn=true, bool persistent=false);
+	int get_mastery_level(const std::string &dir);
+	bool replicate(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
 	bool checkout(Database **database, const Endpoints &endpoints, int flags);
 	void checkin(Database **database);

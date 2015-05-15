@@ -24,8 +24,32 @@
 #define XAPIAND_INCLUDED_ENDPOINT_H
 
 #include "xapiand.h"
+#include "utils.h"
 
 #include <string>
+#include <netinet/in.h>
+
+
+struct Node {
+	std::string name;
+	struct sockaddr_in addr;
+	int http_port;
+	int binary_port;
+	time_t touched;
+
+	std::string serialise();
+	size_t unserialise(const char **p, const char *end);
+	size_t unserialise(const std::string &s);
+
+	inline bool operator==(const Node& other) const {
+		return (
+			stringtolower(name) == stringtolower(other.name) &&
+			addr.sin_addr.s_addr == other.addr.sin_addr.s_addr &&
+			http_port == other.http_port &&
+			binary_port == other.binary_port
+		);
+	}
+};
 
 
 class Endpoint;
@@ -68,6 +92,7 @@ public:
 	int port;
 	std::string protocol, user, password, host, path, search;
 
+	Endpoint(const std::string &path_, const Node &node_);
 	Endpoint(const std::string &uri, const std::string &base_=std::string(), int port_=XAPIAND_BINARY_SERVERPORT);
 	std::string as_string() const;
 	bool operator< (const Endpoint & other) const;

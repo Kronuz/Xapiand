@@ -64,15 +64,22 @@ Database::Database(const Endpoints &endpoints_, bool writable_, bool spawn_)
 }
 
 
-int
-Database::read_mastery(const std::string &index_path)
+bool
+Database::sync_with(Database &origin)
 {
-	LOG_DATABASE(this, "+ READING MASTERY OF INDEX (%s)...\n", index_path.c_str());
+	return true;
+}
+
+
+int
+Database::read_mastery(const std::string &dir)
+{
+	LOG_DATABASE(this, "+ READING MASTERY OF INDEX (%s)...\n", dir.c_str());
 
 	int mastery_level = 0;
 	unsigned char buf[512];
 
-	int fd = open((index_path + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
+	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
 		mastery_level = 1;
 		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
@@ -83,7 +90,7 @@ Database::read_mastery(const std::string &index_path)
 		close(fd);
 	}
 
-	LOG_DATABASE(this, "- MASTERY OF INDEX (%s): %d\n", index_path.c_str(), mastery_level);
+	LOG_DATABASE(this, "- MASTERY OF INDEX (%s): %d\n", dir.c_str(), mastery_level);
 
 	return mastery_level;
 }
@@ -224,6 +231,34 @@ DatabasePool::~DatabasePool()
 }
 
 
+bool
+DatabasePool::replicate(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+{
+	Database *src;
+	Database *dst;
+
+	Endpoints src_endpoints;
+	src_endpoints.insert(src_endpoint);
+	if (!checkout(&src, src_endpoints, 0)) {
+		return false;
+	}
+
+	Endpoints dst_endpoints;
+	dst_endpoints.insert(dst_endpoint);
+	if (!checkout(&dst, dst_endpoints, DB_WRITABLE|DB_SPAWN)) {
+		checkin(&dst);
+		return false;
+	}
+
+	bool ret = dst->sync_with(*src);
+
+	checkin(&src);
+	checkin(&dst);
+
+	return ret;
+}
+
+
 void DatabasePool::finish() {
 	pthread_mutex_lock(&qmtx);
 
@@ -234,13 +269,13 @@ void DatabasePool::finish() {
 
 
 int
-DatabasePool::get_mastery_level(const std::string &index_path)
+DatabasePool::get_mastery_level(const std::string &dir)
 {
 	Database *database_ = NULL;
 	int mastery_level = -1;
 
 	Endpoints endpoints;
-	endpoints.insert(Endpoint("file://" + index_path));
+	endpoints.insert(Endpoint("file://" + dir));
 
 	pthread_mutex_lock(&qmtx);
 	if (checkout(&database_, endpoints, 0)) {
