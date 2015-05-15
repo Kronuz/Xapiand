@@ -179,6 +179,26 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 }
 
 
+XapiandManager::~XapiandManager()
+{
+	discovery(DISCOVERY_BYE, this_node.serialise());
+
+	destroy();
+
+	if (cluster_database != NULL) {
+		database_pool.checkin(&cluster_database);
+	}
+
+	pthread_mutex_destroy(&qmtx);
+	pthread_mutexattr_destroy(&qmtx_attr);
+
+	pthread_mutex_destroy(&servers_mutex);
+	pthread_mutexattr_destroy(&servers_mutex_attr);
+
+	LOG_OBJ(this, "DELETED MANAGER!\n");
+}
+
+
 std::string
 XapiandManager::get_node_name()
 {
@@ -200,8 +220,6 @@ XapiandManager::get_node_name()
 bool
 XapiandManager::set_node_name(const std::string &node_name_)
 {
-	pthread_mutex_lock(&qmtx);
-
 	if (node_name_.empty()) {
 		pthread_mutex_unlock(&qmtx);
 		return false;
@@ -227,28 +245,67 @@ XapiandManager::set_node_name(const std::string &node_name_)
 	}
 
 	INFO(this, "Node %s accepted to the party!\n", node_name.c_str());
-
-	pthread_mutex_unlock(&qmtx);
 	return true;
 }
 
 
-XapiandManager::~XapiandManager()
+void
+XapiandManager::setup_node()
 {
-	discovery(DISCOVERY_BYE, this_node.serialise());
+	bool new_cluster = false;
 
-	destroy();
+	discovery_heartbeat.set(0, 20);
 
-	database_pool.checkin(&cluster_database);
+	pthread_mutex_lock(&qmtx);
 
-	pthread_mutex_destroy(&qmtx);
-	pthread_mutexattr_destroy(&qmtx_attr);
+	// Open cluster database
+	Endpoint cluster_endpoint("file://.");
+	Endpoints cluster_endpoints;
+	cluster_endpoints.insert(cluster_endpoint);
+	if(!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE|DB_PERSISTENT)) {
+		new_cluster = true;
+		INFO(this, "Cluster database doesn't exist. Requesting database...\n");
+		Endpoints remote_endpoints;
 
-	pthread_mutex_destroy(&servers_mutex);
-	pthread_mutexattr_destroy(&servers_mutex_attr);
 
-	LOG_OBJ(this, "DELETED MANAGER!\n");
+		// Get a node (any node)
+		pthread_mutex_lock(&nodes_mtx);
+		nodes_map_t::const_iterator it = nodes.cbegin();
+		for (; it != nodes.cend(); it++) {
+			const Node &node = it->second;
+			Endpoint remote_endpoint(".", node);
+			// Replicate database from the other node
+			INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
+			if (database_pool.replicate(remote_endpoint, cluster_endpoint)) {
+				INFO(this, "Done! Cluster data synced from %s.\n", node.name.c_str());
+				new_cluster = false;
+				break;
+			}
+			if (!new_cluster) {
+				INFO(this, "Cannot sync cluster data.\n");
+			}
+		}
+		pthread_mutex_unlock(&nodes_mtx);
+
+		// Finally open the database as writable
+		if(!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE|DB_SPAWN|DB_PERSISTENT)) {
+			assert(false);
+		}
+	}
+
+	if (new_cluster) {
+		INFO(this, "New cluster is online!\n");
+	} else {
+		INFO(this, "Cluster is online!\n");
+	}
+
+	set_node_name(this_node.name);
+
+	state = STATE_READY;
+
+	pthread_mutex_unlock(&qmtx);
 }
+
 
 void XapiandManager::reset_state()
 {
@@ -431,9 +488,8 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			discovery(DISCOVERY_PING, serialise_string(this_node.name));
 			break;
 	}
-	if (state && state-- == 1) {
-		set_node_name(this_node.name);
-		discovery_heartbeat.set(0, 20);
+	if (state != STATE_READY && --state == STATE_SETUP) {
+		setup_node();
 	}
 }
 
