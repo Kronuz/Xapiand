@@ -262,10 +262,8 @@ void HttpClient::_head()
 			cJSON_AddItemToObject(root, "Response", err_response);
 			if (cmd == CMD_UNKNOWN)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
-
-			if (cmd == CMD_UNKNOWN_HOST)
+			else if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
-
 			else
 				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
 			result = cJSON_PrintUnformatted(root);
@@ -337,8 +335,7 @@ void HttpClient::_delete()
 			cJSON_AddItemToObject(root, "Response", err_response);
 			if (cmd == CMD_UNKNOWN)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
-
-			if (cmd == CMD_UNKNOWN_HOST)
+			else if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
 
 			else
@@ -406,12 +403,12 @@ void HttpClient::_index()
 		default:
 			cJSON *err_response = cJSON_CreateObject();
 			cJSON_AddItemToObject(root, "Response", err_response);
-			if (cmd == CMD_UNKNOWN)
+			if (cmd == CMD_BAD_INDEX)
+				cJSON_AddStringToObject(err_response, "Error message","Expecting exactly one database");
+			else if (cmd == CMD_UNKNOWN)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
-
-			if (cmd == CMD_UNKNOWN_HOST)
+			else if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
-
 			else
 				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
 			result = cJSON_PrintUnformatted(root);
@@ -489,8 +486,7 @@ void HttpClient::_patch()
 			cJSON_AddItemToObject(root, "Response", err_response);
 			if (cmd == CMD_UNKNOWN)
 				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown task " + command).c_str());
-
-			if (cmd == CMD_UNKNOWN_HOST)
+			else if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown host " + host).c_str());
 			else
 				cJSON_AddStringToObject(err_response, "Error message", "BAD QUERY");
@@ -627,10 +623,8 @@ void HttpClient::_search()
 				cJSON_AddItemToObject(root, "Response", err_response);
 				if (cmd == CMD_UNKNOWN)
 					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
-
-				if (cmd == CMD_UNKNOWN_HOST)
+				else if (cmd == CMD_UNKNOWN_HOST)
 					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
-
 				else
 					cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
 				result = cJSON_PrintUnformatted(root);
@@ -887,6 +881,9 @@ int HttpClient::_endpointgen(query_t &e)
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
 			}
 		}
+		if (parser.method == 4 && endpoints.size()>1) {
+			return CMD_BAD_INDEX;
+		}
 
 		cmd = identify_cmd(command);
 
@@ -1107,7 +1104,7 @@ std::string HttpClient::http_response(int status, int mode, std::string content)
 		if (mode & HTTP_JSON) {
 			response += "Content-Type: application/json; charset=UTF-8" + eol;
 		}
-		
+
 		if (mode & HTTP_OPTIONS) {
 			response += "Allow: GET,HEAD,POST,PUT,PATCH,OPTIONS" + eol;
 		}
