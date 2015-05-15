@@ -130,8 +130,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 		assert(false);
 	}
 
-	std::string node_name_;
-	cluster_database->get_metadata("name", node_name_);
+	std::string node_name_ = get_node_name();
 	if (!node_name_.empty()) {
 		if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
 			LOG_ERR(this, "Node name %s doesn't match with the one in the cluster's database: %s!\n", node_name.c_str(), node_name_.c_str());
@@ -187,6 +186,14 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 }
 
 
+std::string
+XapiandManager::get_node_name()
+{
+	std::string name;
+	cluster_database->get_metadata("name", name);
+	return name;
+}
+
 bool
 XapiandManager::set_node_name(const std::string &node_name_)
 {
@@ -197,7 +204,7 @@ XapiandManager::set_node_name(const std::string &node_name_)
 		return false;
 	}
 
-	cluster_database->get_metadata("name", node_name);
+	node_name = get_node_name();
 	if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
 		pthread_mutex_unlock(&qmtx);
 		return false;

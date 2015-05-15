@@ -154,6 +154,7 @@ protected:
 	pthread_mutexattr_t servers_mutex_attr;
 	std::list<XapiandServer *>servers;
 
+	std::string get_node_name();
 	bool set_node_name(const std::string &node_name_);
 
 public:
