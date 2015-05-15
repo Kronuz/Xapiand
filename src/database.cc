@@ -122,7 +122,7 @@ Database::reopen()
 		} else {
 			e = &*i;
 			if (e->protocol == "file") {
-				wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
+				wdb = Xapian::WritableDatabase(e->path, spawn ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
 			} else {
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
