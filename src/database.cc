@@ -1820,7 +1820,33 @@ Database::get_stats_docs(int id_doc)
 			cJSON_AddNumberToObject(document, "allterms", std::distance(db->allterms_begin(), db->allterms_end()));
 			cJSON_AddNumberToObject(document, "allspellings", std::distance(db->spellings_begin(), db->spellings_end()));
 		} else {
-			Xapian::Document doc = db->get_document(id_doc);
+			Xapian::Document doc;
+			Xapian::QueryParser queryparser;
+			queryparser.add_prefix("id", "Q");
+			Xapian::Query query = queryparser.parse_query(std::string("id:" + std::to_string(id_doc)));
+			Xapian::Enquire enquire(*db);
+			enquire.set_query(query);
+			Xapian::MSet mset = enquire.get_mset(0, 1);
+			Xapian::MSetIterator m = mset.begin();
+			int t = 3;
+			for (; t >= 0; --t) {
+				try {
+					doc = db->get_document(*m);
+					break;
+				} catch (Xapian::InvalidArgumentError &err) {
+					cJSON_AddNumberToObject(document, "id", id_doc);
+					cJSON_AddStringToObject(document, "error",  "Document not found");
+					return document;
+				} catch (Xapian::DocNotFoundError &err) {
+					cJSON_AddNumberToObject(document, "id", id_doc);
+					cJSON_AddStringToObject(document, "error",  "Document not found");
+					return document;
+				} catch (const Xapian::Error &err) {
+					reopen();
+					m = mset.begin();
+				}
+			}
+
 			cJSON_AddStringToObject(document, "id", ("Q" + doc.get_value(0)).c_str());
 			cJSON_AddStringToObject(document, "data", doc.get_data().c_str());
 			cJSON_AddNumberToObject(document, "count_terms", doc.termlist_count());
