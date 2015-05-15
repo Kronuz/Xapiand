@@ -78,6 +78,7 @@ public:
 	Endpoints endpoints;
 	bool writable;
 	bool spawn;
+	bool local;
 	size_t hash;
 	time_t access_time;
 	int mastery_level;

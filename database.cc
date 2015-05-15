@@ -127,10 +127,12 @@ Database::reopen()
 			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints_size, endpoints.as_string().c_str());
 		} else {
 			e = &*i;
-			if (e->protocol == "file") {
+			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
+				local = true;
 				wdb = Xapian::WritableDatabase(e->path, spawn ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
 			} else {
+				local = false;
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
 				try {
@@ -140,6 +142,7 @@ Database::reopen()
 						LOG(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
 						wdb = Xapian::WritableDatabase(e->path, Xapian::DB_OPEN);
 						if (endpoints_size == 1) read_mastery(e->path);
+						local = true;
 					} else {
 						wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
 					}
@@ -157,6 +160,7 @@ Database::reopen()
 		for (; i != endpoints.end(); ++i) {
 			e = &*i;
 			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
+				local = true;
 				try {
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
@@ -167,6 +171,7 @@ Database::reopen()
 					if (endpoints_size == 1) read_mastery(e->path);
 				}
 			} else {
+				local = false;
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
 				try {
@@ -176,6 +181,7 @@ Database::reopen()
 						// Handle remote endpoints and figure out if the endpoint is a local database
 						rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 						if (endpoints_size == 1) read_mastery(e->path);
+						local = true;
 					}
 				} catch (const Xapian::DatabaseOpeningError &err) {}
 #else
