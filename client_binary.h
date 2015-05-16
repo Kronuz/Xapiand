@@ -37,9 +37,22 @@
 #  include <map>
 #endif
 
+enum replicate_reply_type {
+    REPL_REPLY_END_OF_CHANGES,  // No more changes to transfer.
+    REPL_REPLY_FAIL,            // Couldn't generate full set of changes.
+    REPL_REPLY_DB_HEADER,       // The start of a whole DB copy.
+    REPL_REPLY_DB_FILENAME,     // The name of a file in a DB copy.
+    REPL_REPLY_DB_FILEDATA,     // Contents of a file in a DB copy.
+    REPL_REPLY_DB_FOOTER,       // End of a whole DB copy.
+    REPL_REPLY_CHANGESET,       // A changeset file is being sent.
+    REPL_MSG_GET_CHANGESETS,
+    REPL_MAX,
+};
+
 enum binary_state {
-	initializing,
+	init_remoteprotocol,
 	remoteprotocol,
+	init_replicationprotocol,
 	replicationprotocol,
 };
 
@@ -63,6 +76,8 @@ private:
 	std::string buffer;
 	Queue<Buffer *> messages_queue;
 
+	std::string repl_uuid;
+	Endpoints repl_endpoints;
 	std::string repl_db_filename;
 	std::string repl_db_uuid;
 	size_t repl_db_revision;
@@ -77,11 +92,33 @@ private:
 	void repl_set_db_filedata(const std::string & message);
 	void repl_set_db_footer(const std::string & message);
 	void repl_changeset(const std::string & message);
+	void repl_get_changesets(const std::string & message);
 
 public:
-	message_type get_message(double timeout, std::string & result, message_type required_type = MSG_MAX);
-	void send_message(reply_type type, const std::string &message);
-	void send_message(reply_type type, const std::string &message, double end_time);
+	inline replicate_reply_type get_message(double timeout, std::string & result, replicate_reply_type required_type) {
+		char required_type_as_char = static_cast<char>(required_type);
+		return static_cast<replicate_reply_type>(get_message(timeout, result, required_type_as_char));
+	}
+
+	inline message_type get_message(double timeout, std::string & result, message_type required_type) {
+		char required_type_as_char = static_cast<char>(required_type);
+		return static_cast<message_type>(get_message(timeout, result, required_type_as_char));
+	}
+
+	char get_message(double timeout, std::string & result, char required_type);
+
+	inline void send_message(reply_type type, const std::string &message) {
+		char type_as_char = static_cast<char>(type);
+		send_message(type_as_char, message, 0.0);
+	}
+
+	inline void send_message(reply_type type, const std::string &message, double end_time) {
+		char type_as_char = static_cast<char>(type);
+		send_message(type_as_char, message, end_time);
+	}
+
+	void send_message(char type_as_char, const std::string &message, double end_time=0.0);
+
 
 	Xapian::Database * get_db(bool);
 	void release_db(Xapian::Database *);
@@ -90,6 +127,9 @@ public:
 
 	BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	~BinaryClient();
+
+	bool init_remote();
+	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
 	void run();
 };
