@@ -249,6 +249,13 @@ XapiandManager::set_node_name(const std::string &node_name_)
 }
 
 
+bool XapiandManager::start_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+{
+	XapiandServer *server = *servers.begin();
+	return server->start_replication(src_endpoint, dst_endpoint);
+}
+
+
 void
 XapiandManager::setup_node()
 {
@@ -264,34 +271,31 @@ XapiandManager::setup_node()
 	cluster_endpoints.insert(cluster_endpoint);
 	if(!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE|DB_PERSISTENT)) {
 		new_cluster = true;
-		INFO(this, "Cluster database doesn't exist. Requesting database...\n");
-		Endpoints remote_endpoints;
-
-
-		// Get a node (any node)
-		pthread_mutex_lock(&nodes_mtx);
-		nodes_map_t::const_iterator it = nodes.cbegin();
-		for (; it != nodes.cend(); it++) {
-			const Node &node = it->second;
-			Endpoint remote_endpoint(".", node);
-			// Replicate database from the other node
-			INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
-			if (database_pool.replicate(remote_endpoint, cluster_endpoint)) {
-				INFO(this, "Done! Cluster data synced from %s.\n", node.name.c_str());
-				new_cluster = false;
-				break;
-			}
-			if (!new_cluster) {
-				INFO(this, "Cannot sync cluster data.\n");
-			}
-		}
-		pthread_mutex_unlock(&nodes_mtx);
-
-		// Finally open the database as writable
-		if(!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE|DB_SPAWN|DB_PERSISTENT)) {
+		INFO(this, "Cluster database doesn't exist. Generating database...\n");
+		if (!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE|DB_SPAWN|DB_PERSISTENT)) {
 			assert(false);
 		}
 	}
+	database_pool.checkin(&cluster_database);
+
+	// Get a node (any node)
+	pthread_mutex_lock(&nodes_mtx);
+	nodes_map_t::const_iterator it = nodes.cbegin();
+	for (; it != nodes.cend(); it++) {
+		const Node &node = it->second;
+		Endpoint remote_endpoint(".", node);
+		// Replicate database from the other node
+		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
+		if (start_replication(remote_endpoint, cluster_endpoint)) {
+			INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
+			new_cluster = false;
+			break;
+		}
+		if (!new_cluster) {
+			INFO(this, "Cannot sync cluster data.\n");
+		}
+	}
+	pthread_mutex_unlock(&nodes_mtx);
 
 	if (new_cluster) {
 		INFO(this, "New cluster is online!\n");
