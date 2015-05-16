@@ -192,7 +192,8 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 			std::string node_name;
 			size_t mastery_level;
 
-			switch (buf[0]) {
+			char cmd = buf[0];
+			switch (cmd) {
 				case DISCOVERY_HELLO:
 					if (remote_node.unserialise(&ptr, end) == -1) {
 						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
@@ -277,13 +278,13 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 				case DISCOVERY_DB:
 					if (manager->state == STATE_READY) {
-						if (unserialise_string(index_path, &ptr, end) == -1 || index_path.empty()) {
+						if (unserialise_string(index_path, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
 							return;
 						}
 						mastery_level = database_pool->get_mastery_level(index_path);
 						if (mastery_level != -1) {
-							LOG_DISCOVERY(this, "Found database!\n");
+							LOG_DISCOVERY(this, "Found local database '%s' with m:%d!\n", index_path.c_str(), mastery_level);
 							manager->discovery(
 								DISCOVERY_DB_WAVE,
 								serialise_length(mastery_level) +  // The mastery level of the database
@@ -301,7 +302,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						if (unserialise_string(index_path, &ptr, end) == -1 || index_path.empty()) {
+						if (unserialise_string(index_path, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
 							return;
 						}
@@ -317,8 +318,8 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					if (manager->put_node(remote_node)) {
 						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 					}
-					if (buf[0] == DISCOVERY_DB_WAVE) {
-						LOG_DISCOVERY(this, "Node %s has %s with a mastery of %d!", remote_node.name.c_str(), index_path.c_str(), mastery_level);
+					if (cmd == DISCOVERY_DB_WAVE) {
+						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %d!\n", remote_node.name.c_str(), index_path.c_str(), mastery_level);
 					}
 					break;
 
