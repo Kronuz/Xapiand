@@ -73,9 +73,12 @@ Database::sync_with(Database &origin)
 int
 Database::read_mastery(const std::string &dir)
 {
-	LOG_DATABASE(this, "+ READING MASTERY OF INDEX (%s)...\n", dir.c_str());
+	if (!local) return -1;
+	if (mastery_level != -1) return mastery_level;
 
-	int mastery_level = 0;
+	LOG_DATABASE(this, "+ READING MASTERY OF INDEX '%s' (0x%08x)...\n", dir.c_str(), hash);
+
+	mastery_level = 0;
 	unsigned char buf[512];
 
 	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
@@ -89,7 +92,7 @@ Database::read_mastery(const std::string &dir)
 		close(fd);
 	}
 
-	LOG_DATABASE(this, "- MASTERY OF INDEX (%s): %d\n", dir.c_str(), mastery_level);
+	LOG_DATABASE(this, "- MASTERY OF INDEX '%s' (0x%08x): %d\n", dir.c_str(), hash, mastery_level);
 
 	return mastery_level;
 }
@@ -139,10 +142,10 @@ Database::reopen()
 					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (ldb.get_uuid() == rdb.get_uuid()) {
 						// Handle remote endpoints and figure out if the endpoint is a local database
-						LOG(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
+						LOG_DATABASE(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
 						wdb = Xapian::WritableDatabase(e->path, Xapian::DB_OPEN);
-						if (endpoints_size == 1) read_mastery(e->path);
 						local = true;
+						if (endpoints_size == 1) read_mastery(e->path);
 					} else {
 						wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
 					}
@@ -177,11 +180,11 @@ Database::reopen()
 				try {
 					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (ldb.get_uuid() == rdb.get_uuid()) {
-						LOG(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
+						LOG_DATABASE(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
 						// Handle remote endpoints and figure out if the endpoint is a local database
 						rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
-						if (endpoints_size == 1) read_mastery(e->path);
 						local = true;
+						if (endpoints_size == 1) read_mastery(e->path);
 					}
 				} catch (const Xapian::DatabaseOpeningError &err) {}
 #else
