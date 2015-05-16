@@ -151,6 +151,8 @@ public:
 	XapiandManager(ev::loop_ref *loop_, const opts_t &o);
 	~XapiandManager();
 
+	bool start_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
+
 	void run(int num_servers);
 	void sig_shutdown_handler(int sig);
 	void shutdown();

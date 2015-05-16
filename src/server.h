@@ -89,6 +89,8 @@ protected:
 	std::list<XapiandServer *>::const_iterator iterator;
 	std::list<BaseClient *>::const_iterator attach_client(BaseClient *client);
 	void detach_client(BaseClient *client);
+
+	bool start_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 };
 
 #endif /* XAPIAND_INCLUDED_SERVER_H */
