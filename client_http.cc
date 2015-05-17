@@ -868,9 +868,9 @@ int HttpClient::_endpointgen(query_t &e)
 	struct http_parser_url u;
 	std::string b = repr(path);
 
-	LOG_CONN_WIRE(this,"URL: %s\n", b.c_str());
+	LOG(this,"URL: %s\n", b.c_str());
 	if (http_parser_parse_url(b.c_str(), b.size(), 0, &u) == 0) {
-		LOG_CONN_WIRE(this,"Parsing done\n");
+		LOG(this,"Parsing done\n");
 
 		if (u.field_set & (1 <<  UF_PATH )) {
 			size_t path_size = u.field_data[3].len;
@@ -929,7 +929,7 @@ int HttpClient::_endpointgen(query_t &e)
 
 				endpoints.insert(endpoint);
 
-				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endp.c_str());
+				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endpoint.as_string().c_str());
 			}
 		}
 		if ((parser.method == 4 || parser.method ==24) && endpoints.size()>1) {
