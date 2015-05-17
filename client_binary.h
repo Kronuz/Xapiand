@@ -76,6 +76,7 @@ private:
 	std::string buffer;
 	Queue<Buffer *> messages_queue;
 
+	Database *repl_database;
 	std::string repl_uuid;
 	Endpoints repl_endpoints;
 	std::string repl_db_filename;

@@ -85,11 +85,10 @@ bool BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint
 	endpoints.insert(dst_endpoint);
 	repl_endpoints.insert(src_endpoint);
 
-	Database *database;
-	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
+	if (!database_pool->checkout(&repl_database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		return false;
 	}
-	databases[database->db] = database;
+	databases[repl_database->db] = repl_database;
 
 	state = init_replicationprotocol;
 	thread_pool->addTask(this);
@@ -309,7 +308,7 @@ void BinaryClient::repl_end_of_changes(const std::string & message)
 	LOG(this, "BinaryClient::repl_end_of_changes (init)\n");
 	state = replicationprotocol;
 
-	Xapian::Database *db_ = get_db(false);
+	Xapian::Database *db_ = repl_database->db;
 
 	std::string msg;
 
@@ -397,18 +396,31 @@ void BinaryClient::repl_set_db_footer(const std::string & message)
 void BinaryClient::repl_changeset(const std::string & message)
 {
 	LOG(this, "BinaryClient::repl_changeset\n");
-	Xapian::WritableDatabase * wdb_ = static_cast<Xapian::WritableDatabase *>(get_db(true));
-	if (!wdb_)
-		throw Xapian::InvalidOperationError("Server is read-only");
+	Xapian::WritableDatabase * wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database->db);
 
-	// wdb_->apply_changesets_from_fd()
+	const char *p = message.c_str();
+	const char *p_end = p + message.size();
 
-	release_db(wdb_);
+	std::string filename = "changes.tmp";
+	const Endpoint &endpoint = *endpoints.begin();
+	std::string path = endpoint.path + "/" + filename;
+	int fd = ::open(path.c_str(), O_WRONLY|O_CREAT, 0644);
+	if (fd >= 0) {
+		if (::write(fd, p, p_end - p) != p_end - p) {
+			LOG_ERR(this, "Cannot write to %s\n", filename.c_str());
+			return;
+		}
+		::close(fd);
+	}
+
+	fd = ::open(path.c_str(), O_RDONLY|O_CREAT);
+	wdb_->apply_changesets_from_fd(fd);
+
+	::unlink(path.c_str());
 }
 
 void BinaryClient::repl_get_changesets(const std::string & message)
 {
-
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
 
