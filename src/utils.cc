@@ -32,9 +32,11 @@
 #include <xapian.h>
 
 #include <fcntl.h>
-#include <netinet/tcp.h> /* for TCP_NODELAY */
-#include <arpa/inet.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/tcp.h> /* for TCP_NODELAY */
+#include <netdb.h> /* for getaddrinfo */
 #include <unistd.h>
 
 
@@ -272,6 +274,59 @@ bool bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, 
 	close(sock);
 	sock = -1;
 	return false;
+}
+
+
+int connect_tcp(const char *hostname, const char *servname)
+{
+	int sock;
+
+	int optval = 1;
+	struct linger ling = {0, 0};
+
+	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+		LOG_ERR(NULL, "ERROR: cannot create binary connection: %s\n", strerror(errno));
+		return -1;
+	}
+
+#ifdef SO_NOSIGPIPE
+	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): %s\n", sock, strerror(errno));
+	}
+#endif
+
+	if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
+		LOG_ERR(NULL, "ERROR: setsockopt SO_LINGER (sock=%d): %s\n", sock, strerror(errno));
+	}
+
+	if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
+	}
+
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
+    hints.ai_protocol = 0;
+
+    struct addrinfo *result;
+    if (getaddrinfo(hostname, servname, &hints, &result) < 0) {
+		LOG_ERR(NULL, "Couldn't resolve host %s:%s\n", hostname, servname);
+		close(sock);
+		return -1;
+    }
+
+	if (connect(sock, result->ai_addr, result->ai_addrlen) < 0) {
+		LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
+		freeaddrinfo(result);
+		close(sock);
+		return -1;
+	}
+
+	freeaddrinfo(result);
+
+	return sock;
 }
 
 
