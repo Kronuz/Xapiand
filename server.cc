@@ -33,7 +33,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h>
 #include <unistd.h>
 #include <assert.h>
 
@@ -388,32 +387,14 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 
 bool XapiandServer::start_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-	int client_sock = socket(PF_INET, SOCK_STREAM, 0);
-	if (client_sock < 0) {
-		LOG_ERR(this, "ERROR: cannot create binary connection: %s\n", strerror(errno));
+	int sock;
+	if ((sock = connect_tcp(src_endpoint.host.c_str(), std::to_string(src_endpoint.port).c_str())) < 0) {
 		return false;
 	}
 
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
-    hints.ai_protocol = 0;
-
-    struct addrinfo *result;
-    if (getaddrinfo(src_endpoint.host.c_str(), std::to_string(src_endpoint.port).c_str(), &hints, &result) < 0) {
-		LOG_ERR(this, "Couldn't resolve host %s:%d\n", src_endpoint.host.c_str(), src_endpoint.port);
-		return false;
-    }
-
-	int retval = connect(client_sock, result->ai_addr, result->ai_addrlen);
-
-	freeaddrinfo(result);
-
 	double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 	double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-	BinaryClient *bc = new BinaryClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
+	BinaryClient *bc = new BinaryClient(this, loop, sock, database_pool, thread_pool, active_timeout, idle_timeout);
 
 	if (!bc->init_replication(src_endpoint, dst_endpoint)) {
 		delete bc;
