@@ -319,7 +319,7 @@ int connect_tcp(const char *hostname, const char *servname)
     }
 
 	if (connect(sock, result->ai_addr, result->ai_addrlen) < 0) {
-		LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
+		LOG_ERR(NULL, "Cannot connect to %s:%d (sock=%d): %s\n", hostname, servname, sock, strerror(errno));
 		freeaddrinfo(result);
 		close(sock);
 		return -1;
