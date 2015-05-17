@@ -331,6 +331,35 @@ int connect_tcp(const char *hostname, const char *servname)
 }
 
 
+int accept_tcp(int listener_sock)
+{
+	int sock;
+
+	int optval = 1;
+
+	struct sockaddr_in addr;
+	socklen_t addrlen = sizeof(addr);
+
+	if ((sock = accept(listener_sock, (struct sockaddr *)&addr, &addrlen)) < 0) {
+		return -1;
+	}
+
+	fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
+
+#ifdef SO_NOSIGPIPE
+	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): %s\n", sock, strerror(errno));
+	}
+#endif
+
+	if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
+	}
+
+	return sock;
+}
+
+
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets)
 {
 	/* It outputs a bucket number in the range [0, num_buckets).
