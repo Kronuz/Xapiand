@@ -143,14 +143,14 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	if (discovery_port == 0) {
 		discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
 	}
-	bind_udp("discovery", discovery_sock, discovery_port, discovery_addr, 1, o.discovery_group.c_str());
+	discovery_sock = bind_udp("discovery", discovery_port, discovery_addr, 1, o.discovery_group.c_str());
 
 	int http_tries = 1;
 	if (this_node.http_port == 0) {
 		this_node.http_port = XAPIAND_HTTP_SERVERPORT;
 		http_tries = 10;
 	}
-	bind_tcp("http", http_sock, this_node.http_port, addr, http_tries);
+	http_sock = bind_tcp("http", this_node.http_port, addr, http_tries);
 
 #ifdef HAVE_REMOTE_PROTOCOL
 	int binary_tries = 1;
@@ -158,7 +158,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 		this_node.binary_port = XAPIAND_BINARY_SERVERPORT;
 		binary_tries = 10;
 	}
-	bind_tcp("binary", binary_sock, this_node.binary_port, addr, binary_tries);
+	binary_sock = bind_tcp("binary", this_node.binary_port, addr, binary_tries);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 	if (discovery_sock == -1 || http_sock == -1 || binary_sock == -1) {
