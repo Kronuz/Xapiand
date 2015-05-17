@@ -364,10 +364,10 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 	} else {
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-		BinaryClient *bc = new BinaryClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
+		BinaryClient *client = new BinaryClient(this, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
 
-		if (!bc->init_remote()) {
-			delete bc;
+		if (!client->init_remote()) {
+			delete client;
 		}
 	}
 }
@@ -382,10 +382,10 @@ bool XapiandServer::start_replication(const Endpoint &src_endpoint, const Endpoi
 
 	double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 	double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-	BinaryClient *bc = new BinaryClient(this, loop, sock, database_pool, thread_pool, active_timeout, idle_timeout);
+	BinaryClient *client = new BinaryClient(this, loop, sock, database_pool, thread_pool, active_timeout, idle_timeout);
 
-	if (!bc->init_replication(src_endpoint, dst_endpoint)) {
-		delete bc;
+	if (!client->init_replication(src_endpoint, dst_endpoint)) {
+		delete client;
 		return false;
 	}
 
