@@ -96,6 +96,7 @@ inline bool ignored_errorno(int e, bool udp) {
 int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries);
 int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, const char *group);
 int connect_tcp(const char *hostname, const char *servname);
+int accept_tcp(int listener_sock);
 
 std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
