@@ -163,15 +163,17 @@ void check_tcp_backlog(int tcp_backlog)
 }
 
 
-bool bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries)
+int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries)
 {
+	int sock;
+
 	int tcp_backlog = XAPIAND_TCP_BACKLOG;
 	int optval = 1;
 	struct linger ling = {0, 0};
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		LOG_ERR(NULL, "ERROR: %s socket: %s\n", type, strerror(errno));
-		return false;
+		return -1;
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same address
@@ -208,26 +210,27 @@ bool bind_tcp(const char *type, int &sock, int &port, struct sockaddr_in &addr, 
 			fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
 			check_tcp_backlog(tcp_backlog);
 			listen(sock, tcp_backlog);
-			return true;
+			return sock;
 		}
 	}
 
 	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
 	close(sock);
-	sock = -1;
-	return false;
+	return -1;
 }
 
 
-bool bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, int tries, const char *group)
+int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, const char *group)
 {
+	int sock;
+
 	int optval = 1;
 	unsigned char ttl = 3;
 	struct ip_mreq mreq;
 
 	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
 		LOG_ERR(NULL, "ERROR: %s socket: %s\n", type, strerror(errno));
-		return false;
+		return -1;
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same port
@@ -250,8 +253,7 @@ bool bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, 
 	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
 		LOG_ERR(NULL, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): %s\n", type, sock, strerror(errno));
 		close(sock);
-		sock = -1;
-		return false;
+		return -1;
 	}
 
 	memset(&addr, 0, sizeof(addr));
@@ -266,14 +268,13 @@ bool bind_udp(const char *type, int &sock, int &port, struct sockaddr_in &addr, 
 		} else {
 			fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
 			addr.sin_addr.s_addr = inet_addr(group);  // setup s_addr for sender (send to group)
-			return true;
+			return sock;
 		}
 	}
 
 	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
 	close(sock);
-	sock = -1;
-	return false;
+	return -1;
 }
 
 
