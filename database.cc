@@ -1306,6 +1306,23 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	cJSON *document_terms = cJSON_GetObjectItem(document, RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document, RESERVED_TEXTS);
 
+	std::string s_scheme = db->get_metadata("scheme");
+	cJSON *scheme;
+	cJSON *properties;
+	const char *uuid = db->get_uuid().c_str();
+	if (s_scheme.empty()) {
+		scheme = cJSON_CreateObject();
+		properties = cJSON_CreateObject();
+		cJSON_AddItemToObject(scheme, uuid, properties);
+	} else {
+		scheme = cJSON_Parse(s_scheme.c_str());
+		if (!scheme) {
+			LOG_ERR(this, "ERROR: Scheme is corrupt, you need provide a new one. JSON Before: [%s]\n", cJSON_GetErrorPtr());
+			return false;
+		}
+		properties = cJSON_GetObjectItem(scheme, uuid);
+	}
+
 	std::string document_id;
 	if (_document_id.c_str()) {
 		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
@@ -1327,36 +1344,53 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 		bool positions = false;
 		std::vector<std::string> accuracy;
 		bool store = true;
-        std::string type = " ";
-        std::string analyzer = "STEM_SOME";
+		std::string type = "";
+		std::string analyzer = "STEM_SOME";
 		bool dynamic = true;
 		bool date_detection = true;
 		bool numeric_detection = true;
 		bool geo_detection = true;
 		bool bool_detection = true;
 		bool string_detection = true;
-		specifications_t spc_now = {position, weight, language, spelling, positions, accuracy, store, type, analyzer, dynamic,
+		specifications_t spc_now = {position, weight, language, spelling, positions, accuracy, store, type, {NO_TYPE, NO_TYPE, NO_TYPE}, analyzer, dynamic,
 									date_detection, numeric_detection, geo_detection, bool_detection, string_detection};
 
-		update_specifications(document, spc_now, "");
-		specifications_t spc_bef = spc_now;	
+		update_specifications(document, spc_now, properties);
+		specifications_t spc_bef = spc_now;
 
+		cJSON *subproperties = NULL;
 		if (document_texts) {
 			for (int i = 0; i < cJSON_GetArraySize(document_texts); i++) {
 				cJSON *texts = cJSON_GetArrayItem(document_texts, i);
-				cJSON *name = cJSON_GetObjectItem(texts, "name");
-				cJSON *text = cJSON_GetObjectItem(texts, "text");
+				cJSON *name = cJSON_GetObjectItem(texts, RESERVED_NAME);
+				cJSON *text = cJSON_GetObjectItem(texts, RESERVED_VALUE);
 				if (text) {
-					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : "";
-					update_specifications(texts, spc_now, name_s);
-					if (!name_s.empty() && name_s.at(name_s.size() - 3) == OFFSPRING_UNION[0]) {
-						std::string language(name_s, name_s.size() - 2, name_s.size());
-						spc_now.language = is_language(language) ? language : spc_now.language;
+					bool find = true;
+					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : std::string();
+					if (!name_s.empty()) {
+						subproperties = cJSON_GetObjectItem(properties, name_s.c_str());
+						if (!subproperties) {
+							find = false;
+							subproperties = cJSON_CreateObject();
+							cJSON_AddItemToObject(properties, name_s.c_str(), subproperties);
+						}
+						update_specifications(texts, spc_now, subproperties);
+						if (name_s.at(name_s.size() - 3) == OFFSPRING_UNION[0]) {
+							std::string language(name_s, name_s.size() - 2, name_s.size());
+							spc_now.language = is_language(language) ? language : spc_now.language;
+							if (cJSON* lan = cJSON_GetObjectItem(subproperties, RESERVED_LANGUAGE)) {
+								lan = cJSON_CreateString(language.c_str());
+							}
+						}
+					} else {
+						cJSON *t = cJSON_CreateObject();
+						update_specifications(texts, spc_now, t);
+						cJSON_Delete(t);
 					}
-					index_texts(doc, text, spc_now, name_s);
+					index_texts(doc, text, spc_now, name_s, subproperties, find);
 					spc_now = spc_bef;
 				} else {
-					LOG_DATABASE_WRAP(this, "ERROR: Text must be defined\n");
+					LOG_DATABASE_WRAP(this, "ERROR: Text's value must be defined\n");
 					return false;
 				}
 			}
@@ -1365,12 +1399,25 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 		if (document_terms) {
 			for (int i = 0; i < cJSON_GetArraySize(document_terms); i++) {
 				cJSON *data_terms = cJSON_GetArrayItem(document_terms, i);
-				cJSON *name = cJSON_GetObjectItem(data_terms, "name");
-				cJSON *terms = cJSON_GetObjectItem(data_terms, "term");
+				cJSON *name = cJSON_GetObjectItem(data_terms, RESERVED_NAME);
+				cJSON *terms = cJSON_GetObjectItem(data_terms, RESERVED_VALUE);
 				if (terms) {
+					bool find = true;
 					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : "";
-					update_specifications(data_terms, spc_now, name_s);
-					index_terms(doc, terms, spc_now, name_s);
+					if (!name_s.empty()) {
+						subproperties = cJSON_GetObjectItem(properties, name_s.c_str());
+						if (!subproperties) {
+							find = false;
+							subproperties = cJSON_CreateObject();
+							cJSON_AddItemToObject(properties, name_s.c_str(), subproperties);
+						}
+						update_specifications(data_terms, spc_now, subproperties);
+					} else {
+						cJSON *t = cJSON_CreateObject();
+						update_specifications(data_terms, spc_now, t);
+						cJSON_Delete(t);
+					}
+					index_terms(doc, terms, spc_now, name_s, subproperties, find);
 					spc_now = spc_bef;
 				} else {
 					LOG_DATABASE_WRAP(this, "ERROR: Term must be defined\n");
@@ -1382,10 +1429,17 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 		int elements = cJSON_GetArraySize(document);
 		for (int i = 0; i < elements; i++) {
 			cJSON *item = cJSON_GetArrayItem(document, i);
+			bool find = true;
 			if (!is_reserved(item->string)) {
-				index_fields(item, item->string, spc_now, doc, false);
+				subproperties = cJSON_GetObjectItem(properties, item->string);
+				if (!subproperties) {
+					find = false;
+					subproperties = cJSON_CreateObject();
+					cJSON_AddItemToObject(properties, item->string, subproperties);
+				}
+				index_fields(item, item->string, spc_now, doc, subproperties, false, find);
 			} else if (strcmp(item->string, RESERVED_VALUES) == 0) {
-				index_fields(item,"", spc_now, doc, true);
+				index_fields(item, "", spc_now, doc, properties, true, find);
 			}
 		}
 
@@ -1397,6 +1451,9 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 		return false;
 	}
 
+	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+	LOG_DATABASE_WRAP(this, "Scheme: %s\n", cJSON_Print(scheme));
+	wdb->set_metadata("scheme", cJSON_Print(scheme));
 	return replace(document_id, doc, commit);
 }
 
