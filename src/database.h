@@ -81,6 +81,7 @@ public:
 	Xapian::Database *db;
 
 	static pcre *compiled_find_field_re;
+	static pcre *compiled_find_types_re;
 
 	typedef struct specifications_s {
 		int position;
@@ -91,6 +92,7 @@ public:
 		std::vector<std::string> accuracy;
 		bool store;
 		std::string type;
+		char sep_types[3];
 		std::string analyzer;
 		bool dynamic;
 		bool date_detection;
