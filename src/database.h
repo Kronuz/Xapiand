@@ -126,9 +126,8 @@ public:
 	char* get_type(cJSON *field, const std::string &field_name);
 	cJSON* get_stats_time(const std::string &time_req);
 	bool is_reserved(const std::string &word);
-	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, bool is_value);
-	void update_specifications(cJSON *item, specifications_t &spc_now, const std::string &field_name);
-	void get_specifications(specifications_t &spc, const std::string &field_name);
+	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, cJSON *scheme, bool is_value, bool find);
+	void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *scheme);
 	bool is_language(const std::string &language);
 	void index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name);
 	void index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name);
