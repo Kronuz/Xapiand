@@ -74,7 +74,7 @@ unserialise_length(const char **p, const char *end, bool check_remaining)
 
 
 std::string
-serialise_string(std::string &input) {
+serialise_string(const std::string &input) {
 	std::string output;
 	output.append(encode_length(input.size()));
 	output.append(input);
