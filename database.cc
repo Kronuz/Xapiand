@@ -332,6 +332,7 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 			database_->reopen();
 			LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)database_);
 		}
+		database_->checkout_revision = (*database)->db->get_revision_info();
 	}
 
 	LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)database_);
@@ -347,14 +348,23 @@ DatabasePool::checkin(Database **database)
 
 	pthread_mutex_lock(&qmtx);
 
+	Database *database_ = *database;
+
 	DatabaseQueue *queue;
-	if ((*database)->writable) {
-		queue = &writable_databases[(*database)->hash];
+
+	if (database_->writable) {
+		queue = &writable_databases[database_->hash];
+		if (database_->local && database_->mastery_level != -1) {
+			std::string new_revision = database_->db->get_revision_info();
+			if (new_revision != database_->checkout_revision) {
+				LOG(this, "TRIGGER ON COMMIT HERE!\n");
+			}
+		}
 	} else {
-		queue = &databases[(*database)->hash];
+		queue = &databases[database_->hash];
 	}
 
-	queue->push(*database);
+	queue->push(database_);
 	size_t queue_size = queue->size();
 	if (queue->count < queue_size) {
 		queue->count = queue_size;
@@ -364,7 +374,7 @@ DatabasePool::checkin(Database **database)
 
 	pthread_mutex_unlock(&qmtx);
 
-	LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)*database);
+	LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)database_);
 }
 
 
