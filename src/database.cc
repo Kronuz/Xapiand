@@ -570,7 +570,19 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 						index_terms(doc, subitem, spc_now, item_name, properties, true);
 					}
 				}
-				spc_now = aux;
+			}
+		}
+		if (offspring != 0) {
+			cJSON *_type = cJSON_GetObjectItem(properties, RESERVED_TYPE);
+			if (_type) {
+				if (std::string(_type->valuestring).find("object") == -1) {
+					spc_now.sep_types[0] = OBJECT_TYPE;
+					std::string s_type("object/" + std::string(_type->valuestring));
+					cJSON_ReplaceItemInObject(properties, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
+				}
+			} else {
+				spc_now.sep_types[0] = OBJECT_TYPE;
+				cJSON_AddStringToObject(properties, RESERVED_TYPE, "object");
 			}
 		}
 	} else {
