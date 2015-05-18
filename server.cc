@@ -320,12 +320,24 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					break;
 
 				case DISCOVERY_DB_UPDATED:
-					// manager->discovery(
-					// 	DISCOVERY_DB_UPDATED,
-					// 	serialise_length(mastery_level) +  // The mastery level of the database
-					// 	serialise_string(index_path) +  // The path of the index
-					// 	manager->this_node.serialise()  // The node where the index is at
-					// );
+
+					// void on_commit() {
+					// 	Database *database = NULL;
+					// 	if (database_pool->checkout(&database, endpoints_, 0)) {
+					// 		int mastery_level = database->mastery_level;
+					// 		database_pool->checkin(&database);
+
+					// 		if (mastery_level != -1) {
+					// 			const Endpoint &endpoint = *endpoints.begin();
+					// 			server->manager->discovery(
+					// 				DISCOVERY_DB_UPDATED,
+					// 				serialise_length(mastery_level) +  // The mastery level of the database
+					// 				serialise_string(endpoint.path) +  // The path of the index
+					// 				manager->this_node.serialise()  // The node where the index is at
+					// 			);
+					// 		}
+					// 	}
+					// }
 
 					if (manager->state == STATE_READY) {
 						remote_mastery_level = unserialise_length(&ptr, end);
