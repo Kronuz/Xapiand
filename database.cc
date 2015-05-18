@@ -71,11 +71,18 @@ Database::read_mastery(const std::string &dir)
 
 	LOG_DATABASE(this, "+ READING MASTERY OF INDEX '%s' (0x%08x)...\n", dir.c_str(), hash);
 
-	mastery_level = 0;
+	mastery_level = time(0);
 	unsigned char buf[512];
 
 	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
-	if (fd >= 0) {
+	if (fd < 0) {
+		fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+		if (fd >= 0) {
+			snprintf((char *)buf, sizeof(buf), "%d", mastery_level);
+			write(fd, buf, strlen((char *)buf));
+			close(fd);
+		}
+	} else {
 		mastery_level = 1;
 		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
 		if (length > 0) {
