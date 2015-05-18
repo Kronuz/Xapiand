@@ -520,6 +520,10 @@ Database::is_reserved(const std::string &word)
 		word.compare(RESERVED_B_DETECTION) != 0 &&
 		word.compare(RESERVED_S_DETECTION) != 0 &&
 		word.compare(RESERVED_VALUE)       != 0 &&
+		word.compare(RESERVED_NAME)        != 0 &&
+		word.compare(RESERVED_SLOT)        != 0 &&
+		word.compare(RESERVED_INDEX)       != 0 &&
+		word.compare(RESERVED_PREFIX)      != 0 &&
 		word.compare(RESERVED_ID)          != 0) {
 		return false;
 	}
