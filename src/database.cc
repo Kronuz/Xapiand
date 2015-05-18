@@ -660,24 +660,60 @@ Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc,
 
 
 void
-Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name)
+Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *scheme, bool find)
 {
 	LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!spc.store) return;
+	if (!spc.dynamic && !find) throw "This object is not dynamic";
 
-	char type = spc.type.at(0);
-	char *_type = get_type(terms, name);
-    if (type == ' ') type = _type[2];
-    else if (_type[0] == '1' && _type[2] != type) throw "Type inconsistency";
+	char type = (spc.sep_types[2] == NO_TYPE) ? get_type(terms, spc): spc.sep_types[2];
+	if (type == NO_TYPE) throw "The field's value " + name + " is ambiguous";
 
-    if (!spc.dynamic && _type[0] == '0') throw "This object is not dynamic";
+	std::string prefix;
+	if (!name.empty()) {
+		if (!find) {
+			if (spc.sep_types[2] == NO_TYPE) cJSON_AddStringToObject(scheme, RESERVED_TYPE, str_type(type).c_str());
+			cJSON_AddStringToObject(scheme, RESERVED_INDEX, "not analyzed");
+		}
+		cJSON *_prefix = cJSON_GetObjectItem(scheme, RESERVED_PREFIX);
+		if (!_prefix) {
+			prefix = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, type);
+			cJSON_AddStringToObject(scheme, RESERVED_PREFIX , prefix.c_str());
+		} else {
+			prefix = _prefix->valuestring;
+		}
+	} else {
+		prefix = DOCUMENT_CUSTOM_TERM_PREFIX;
+	}
 
-	std::string prefix = (!name.empty()) ? get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, type) : DOCUMENT_CUSTOM_TERM_PREFIX;
-	int elements = (terms->type == cJSON_Array) ? cJSON_GetArraySize(terms) : 1;
+	bool array_geo = true;
+	int elements = 1;
+	if (terms->type == cJSON_Array) {
+		elements = cJSON_GetArraySize(terms);
+		cJSON *term = cJSON_GetArrayItem(terms, 0);
+		if (type == GEO_TYPE && term->type != cJSON_Array) {
+			array_geo = false;
+		} else {
+			cJSON *_type = cJSON_GetObjectItem(scheme, RESERVED_TYPE);
+			if (_type) {
+				if (std::string(_type->valuestring).find("array") == -1) {
+					std::string s_type;
+					if (spc.sep_types[0] == OBJECT_TYPE) {
+						s_type = "object/array/" + str_type(type);
+					} else {
+						s_type = "array/" + str_type(type);
+					}
+					cJSON_ReplaceItemInObject(scheme, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
+				}
+			} else {
+				cJSON_AddStringToObject(scheme, RESERVED_TYPE, std::string("array/" + str_type(type)).c_str());
+			}
+		}
+	}
 
 	for (int j = 0; j < elements; j++) {
 		cJSON *term = (terms->type == cJSON_Array) ? cJSON_GetArrayItem(terms, j) : terms;
-		if (type == GEO_TYPE && term->type != cJSON_Array) {
+		if (!array_geo) {
 			term = terms;
 			j += elements;
 		}
@@ -717,23 +753,60 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 
 
 void
-Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name)
+Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *scheme, bool find)
 {
 	LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!spc.store) return;
+	if (!spc.dynamic && !find) throw "This object is not dynamic";
 
-	char type = spc.type.at(0);
-	char *_type = get_type(values, name);
-    if (type == ' ') type = _type[2];
-    else if (_type[0] == '1' && _type[2] != type) throw "Type inconsistency";
+	char type = (spc.sep_types[2] == NO_TYPE) ? get_type(values, spc): spc.sep_types[2];
+	if (type == NO_TYPE) throw "The field's value " + name + " is ambiguous";
 
-    if (!spc.dynamic && _type[0] == '0') throw "This object is not dynamic";
+	if (!find) {
+		if (spc.sep_types[2] == NO_TYPE) {
+
+			cJSON_AddStringToObject(scheme, RESERVED_TYPE, str_type(type).c_str());
+		}
+		cJSON_AddStringToObject(scheme, RESERVED_INDEX, "not analyzed");
+	}
+
+	unsigned int slot;
+	cJSON *_slot = cJSON_GetObjectItem(scheme, RESERVED_SLOT);
+	if (!_slot) {
+		slot = get_slot(name);
+		cJSON_AddNumberToObject(scheme, RESERVED_SLOT, slot);
+	} else {
+		slot = _slot->valueint;
+	}
 
 	StringList s;
-	int elements = (values->type == cJSON_Array) ? cJSON_GetArraySize(values) : 1;
+	bool array_geo = true;
+	int elements = 1;
+	if (values->type == cJSON_Array) {
+		elements = cJSON_GetArraySize(values);
+		cJSON *term = cJSON_GetArrayItem(values, 0);
+		if (type == GEO_TYPE && term->type != cJSON_Array) {
+			array_geo = false;
+		} else {
+			cJSON *_type = cJSON_GetObjectItem(scheme, RESERVED_TYPE);
+			if (_type) {
+				if (std::string(_type->valuestring).find("array") == -1) {
+					std::string s_type;
+					if (spc.sep_types[0] == OBJECT_TYPE) {
+						s_type = "object/array/" + str_type(type);
+					} else {
+						s_type = "array/" + str_type(type);
+					}
+					cJSON_ReplaceItemInObject(scheme, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
+				}
+			} else {
+				cJSON_AddStringToObject(scheme, RESERVED_TYPE, std::string("array/" + str_type(type)).c_str());
+			}
+		}
+	}
 	for (int j = 0; j < elements; j++) {
 		cJSON *value = (values->type == cJSON_Array) ? cJSON_GetArrayItem(values, j) : values;
-		if (type == GEO_TYPE && value->type != cJSON_Array) {
+		if (!array_geo) {
 			value = values;
 			j += elements;
 		}
@@ -746,11 +819,10 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 		LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name.c_str(), value_v.c_str());
 		value_v = serialise(type, value_v);
 		if (value_v.empty()) {
-			throw "ERROR: " + name + ": " + value_v + " can not serialized";
+			throw name + ": " + value_v + " can not serialized";
 		}
 		s.push_back(value_v);
 	}
-	unsigned int slot = get_slot(name);
 	doc.add_value(slot, s.serialise());
 	LOG_DATABASE_WRAP(this, "Slot: %u serialized: %s\n", slot, repr(s.serialise()).c_str());
 }
