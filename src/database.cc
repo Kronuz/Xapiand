@@ -1140,27 +1140,63 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 }
 
 
-char*
-Database::field_type(const std::string &field_name)
+std::vector<std::string>
+Database::split_fields(const std::string &field_name)
 {
-    char *res = (char *)malloc(2);
-    res[0] = ATOMIC_TYPE;
-    res[1] = NO_TYPE;
+	std::vector<std::string> fields;
+	std::string aux(field_name.c_str());
+	std::string::size_type pos = 0;
+	while (aux.at(pos) == OFFSPRING_UNION[0]) {
+		pos++;
+	}
+	std::string::size_type start = pos;
+	while ((pos = aux.substr(start, aux.size()).find(OFFSPRING_UNION)) != -1) {
+		std::string token = aux.substr(0, start + pos);
+		fields.push_back(token);
+		aux.assign(aux, start + pos + strlen(OFFSPRING_UNION), aux.size());
+		pos = 0;
+		while (aux.at(pos) == OFFSPRING_UNION[0]) {
+			pos++;
+		}
+		start = pos;
+	}
+	fields.push_back(aux);
+	return fields;
+}
+
+
+data_field_t
+Database::get_data_field(const std::string &field_name)
+{
+	data_field_t res = {0, "", NO_TYPE};
+
 	if (field_name.empty()) {
 		return res;
 	}
 
-	std::string json = db->get_metadata(field_name);
+	std::string json = db->get_metadata("scheme");
 	if (json.empty()) return res;
 
-	cJSON *spcs = cJSON_Parse(json.c_str());
-	if (cJSON *type = cJSON_GetObjectItem(spcs, RESERVED_TYPE)) {
-		std::string _type(type->valuestring);
-		res[0] = _type.at(0);
-		res[1] = _type.at(2);
+	const char *uuid = db->get_uuid().c_str();
+	cJSON *scheme = cJSON_Parse(json.c_str());
+	cJSON *properties = cJSON_GetObjectItem(scheme, uuid);
 
+	std::vector<std::string> fields = split_fields(field_name);
+	std::vector<std::string>::const_iterator it= fields.begin();
+	for ( ; it != fields.end(); it++) {
+		properties = cJSON_GetObjectItem(properties, (*it).c_str());
+		if (!properties) break;
 	}
-    return res;
+
+	if (properties) {
+		res.slot = cJSON_GetObjectItem(properties, RESERVED_SLOT)->valueint;
+		res.prefix = cJSON_GetObjectItem(properties, RESERVED_PREFIX)->valuestring;
+		char sep_types[3];
+		set_types(cJSON_GetObjectItem(properties, RESERVED_TYPE)->valuestring, sep_types);
+		res.type = sep_types[2];
+	}
+
+	return res;
 }
 
 
@@ -1492,7 +1528,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					break;
 				case STRING_TYPE:
 					if(!unique_doc) {
-						slot = get_slot(field_name);
+						slot = field_t.slot;
 					} else {
 						slot = 0;
 					}
@@ -1502,7 +1538,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					queryparser.add_valuerangeprocessor(svrp);
 					break;
 				case DATE_TYPE:
-					slot = get_slot(field_name);
+					slot = field_t.slot;
 					field_name_dot = std::string("");
 					dvrp = new DateTimeValueRangeProcessor(slot, field_name_dot);
 					dvrps.push_back(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp));
@@ -1513,9 +1549,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					throw Xapian::QueryParserError("This type of Data has no support for range search.\n");
 			}
 		} else {
-			switch (field_type(field_name)[1]) {
+			switch (field_t.type) {
 				case NUMERIC_TYPE:
-					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, NUMERIC_TYPE);
+					prefix = field_t.prefix;
 					if (isupper(field_value.at(0))) {
 						prefix = prefix + ":";
 					}
@@ -1532,7 +1568,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case STRING_TYPE:
 					if (field_name.size() != 0) {
 						if(!unique_doc) {
-							prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
+							prefix = field_t.prefix;
 							if (isupper(field_value.at(0))) {
 								prefix = prefix + ":";
 							}
@@ -1551,7 +1587,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case DATE_TYPE:
-					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE);
+					prefix = field_t.prefix;
 					field_value = timestamp_date(field_value);
 					if (field_value.size() == 0) {
 						throw Xapian::QueryParserError("Didn't understand date field name's specification: '" + field_name + "'");
@@ -1567,7 +1603,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case GEO_TYPE:
-					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE);
+					prefix = field_t.prefix;
 					if (isLatLongDistance(field_value)) {
 						gdfp = new LatLongDistanceFieldProcessor(prefix, field_name);
 						gdfps.push_back(std::unique_ptr<LatLongDistanceFieldProcessor>(gdfp));
@@ -1591,7 +1627,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case BOOLEAN_TYPE:
-					prefix = get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, BOOLEAN_TYPE);
+					prefix = field_t.prefix;
 					bfp = new BooleanFieldProcessor(prefix);
 					bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
 					if (strhasupper(field_name)) {
@@ -1661,7 +1697,8 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + to_type(*it));
 		}
 		for(it = similar->field.begin(); it != similar->field.end(); it++) {
-			prefixes.push_back(get_prefix(*it, DOCUMENT_CUSTOM_TERM_PREFIX, field_type(*it)[1]));
+			data_field_t field_t = get_data_field(*it);
+			prefixes.push_back(field_t.prefix);
 		}
 		ExpandDeciderFilterPrefixes efp(prefixes);
 		Xapian::ESet eset = enquire.get_eset(similar->n_eset, rset, &efp);
