@@ -604,14 +604,30 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 
 
 void
-Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name)
+Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name, cJSON *scheme, bool find)
 {
 	LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!spc.store) return;
+	if (!spc.dynamic && !find) throw "This object is not dynamic";
+
+	if (text->type != cJSON_String || (spc.sep_types[2] != STRING_TYPE && spc.sep_types[2] != NO_TYPE)) throw "Data inconsistency should be string";
 
 	std::string prefix;
-	if (!name.empty()) prefix = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
-	if (text->type != cJSON_String) throw "Data inconsistency should be string";
+	if (!name.empty()) {
+		if (!find) {
+			if (spc.sep_types[2] == NO_TYPE) cJSON_AddStringToObject(scheme, RESERVED_TYPE, "string");
+			cJSON_AddStringToObject(scheme, "_analyzer", spc.analyzer.c_str());
+			cJSON_AddStringToObject(scheme, "_index" , "analyzed");
+		}
+		cJSON *_prefix = cJSON_GetObjectItem(scheme, RESERVED_PREFIX);
+		if (!_prefix) {
+			prefix = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
+			cJSON_AddStringToObject(scheme, RESERVED_PREFIX , prefix.c_str());
+		} else {
+			prefix = _prefix->valuestring;
+		}
+	}
+
 	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 
 	Xapian::TermGenerator term_generator;
