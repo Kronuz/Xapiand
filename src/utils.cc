@@ -121,7 +121,7 @@ void log(const char *file, int line, void *obj, const char *format, ...)
 	char name[100];
 	pthread_getname_np(pthread_self(), name, sizeof(name));
 	// fprintf(file_, "tid(0x%012lx:%2s): 0x%012lx - %s:%d - ", (unsigned long)thread, name, (unsigned long)obj, file, line);
-	fprintf(file_, "tid(%2s): %s:%d - ", *name ? name : "--", file, line);
+	fprintf(file_, "tid(%2s): ../%s:%d: ", *name ? name : "--", file, line);
 	va_list argptr;
 	va_start(argptr, format);
 	vfprintf(file_, format, argptr);
