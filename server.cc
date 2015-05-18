@@ -190,6 +190,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 			std::string index_path;
 			std::string node_name;
 			size_t mastery_level;
+			size_t remote_mastery_level;
 
 			char cmd = buf[0];
 			switch (cmd) {
@@ -296,8 +297,8 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 				case DISCOVERY_DB_WAVE:
 					if (manager->state == STATE_READY) {
-						mastery_level = unserialise_length(&ptr, end);
-						if (mastery_level == -1) {
+						remote_mastery_level = unserialise_length(&ptr, end);
+						if (remote_mastery_level == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
@@ -305,23 +306,70 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
 							return;
 						}
-					} else {
-						break;
+
+						if (remote_node.unserialise(&ptr, end) == -1) {
+							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+							return;
+						}
+						if (manager->put_node(remote_node)) {
+							INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+						}
+
+						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %d!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
 					}
-					// continues as if it's a DISCOVERY_WAVE (adding the node):
+					break;
+
+				case DISCOVERY_DB_UPDATED:
+					// manager->discovery(
+					// 	DISCOVERY_DB_UPDATED,
+					// 	serialise_length(mastery_level) +  // The mastery level of the database
+					// 	serialise_string(index_path) +  // The path of the index
+					// 	manager->this_node.serialise()  // The node where the index is at
+					// );
+
+					if (manager->state == STATE_READY) {
+						remote_mastery_level = unserialise_length(&ptr, end);
+						if (remote_mastery_level == -1) {
+							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+							return;
+						}
+						if (unserialise_string(index_path, &ptr, end) == -1) {
+							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
+							return;
+						}
+
+						mastery_level = database_pool->get_mastery_level(index_path);
+						if (mastery_level > remote_mastery_level) {
+							if (remote_node.unserialise(&ptr, end) == -1) {
+								LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+								return;
+							}
+							if (manager->put_node(remote_node)) {
+								INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+							}
+
+							char ip[INET_ADDRSTRLEN];
+							inet_ntop(AF_INET, &manager->this_node.addr.sin_addr, ip, INET_ADDRSTRLEN);
+							Endpoint local_endpoint("xapian://" + std::string(ip) + ":" + std::to_string(manager->this_node.binary_port) + "/" + index_path);
+							Endpoint remote_endpoint(index_path, remote_node);
+							// Replicate database from the other node
+							INFO(this, "Syncing database from %s...\n", remote_node.name.c_str());
+							if (start_replication(remote_endpoint, local_endpoint)) {
+								INFO(this, "Database being synchronized from %s...\n", remote_node.name.c_str());
+							}
+						}
+					}
+					break;
+
 				case DISCOVERY_WAVE:
 					if (remote_node.unserialise(&ptr, end) == -1) {
 						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 						return;
 					}
 					if (manager->put_node(remote_node)) {
-						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
-					}
-					if (cmd == DISCOVERY_DB_WAVE) {
-						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %d!\n", remote_node.name.c_str(), index_path.c_str(), mastery_level);
+						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (3)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 					}
 					break;
-
 			}
 		}
 	}
