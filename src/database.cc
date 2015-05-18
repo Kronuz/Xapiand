@@ -31,11 +31,10 @@
 
 //change prefix to Q only
 #define DOCUMENT_ID_TERM_PREFIX "Q"
-#define DOCUMENT_OBJECT_TYPE_PREFIX "T"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
 #define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
-#define FIND_TERMS_RE "(?:([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[-\\w. ]+\"|[-\\w.]+)"
+#define FIND_TYPES_RE "(object/)?(array/)?(date|numeric|geospatial|boolean|string)|(object)"
 #define MAX_DOCS 100
 #define DATABASE_UPDATE_TIME 10
 
@@ -389,6 +388,7 @@ DatabasePool::checkin(Database **database)
 
 
 pcre *Database::compiled_find_field_re = NULL;
+pcre *Database::compiled_find_types_re = NULL;
 
 
 bool
@@ -1267,8 +1267,53 @@ Database::get_type(cJSON *field, const std::string &field_name)
             return type;
 	}
 
-	type[2] = STRING_TYPE;
-	return type;
+	return NO_TYPE;
+}
+
+
+std::string
+Database::str_type(char type)
+{
+	switch (type) {
+		case STRING_TYPE: return "string";
+		case NUMERIC_TYPE: return "numeric";
+		case BOOLEAN_TYPE: return "boolean";
+		case GEO_TYPE: return "geospatial";
+		case DATE_TYPE: return "date";
+		case OBJECT_TYPE: return "object";
+		case ARRAY_TYPE: return "array";
+	}
+	return "";
+}
+
+
+bool
+Database::set_types(const std::string &type, char sep_types[])
+{
+	group_t *gr = NULL;
+	int len = (int)type.size();
+	int ret = pcre_search(type.c_str(), len, 0, 0, FIND_TYPES_RE, &compiled_find_types_re , &gr);
+	if (ret != -1 && len == gr[0].end - gr[0].start) {
+		if (gr[4].end - gr[4].start != 0) {
+			sep_types[0] = OBJECT_TYPE;
+			sep_types[1] = NO_TYPE;
+			sep_types[2] = NO_TYPE;
+		} else {
+			if (gr[1].end - gr[1].start != 0) {
+				sep_types[0] = OBJECT_TYPE;
+			}
+			if (gr[2].end - gr[2].start != 0) {
+				sep_types[1] = ARRAY_TYPE;
+			}
+			sep_types[2] = std::string(type.c_str(), gr[3].start, gr[3].end - gr[3].start).at(0);
+		}
+		if (gr) {
+			free(gr);
+			gr = NULL;
+		}
+		return true;
+	}
+	return false;
 }
 
 
