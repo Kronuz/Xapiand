@@ -1876,11 +1876,12 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		std::string field_name_dot(query.c_str() + g[1].start, g[1].end - g[1].start);
 		std::string field_name(query.c_str() + g[2].start, g[2].end - g[2].start);
 		std::string field_value(query.c_str() + g[3].start, g[3].end - g[3].start);
+		data_field_t field_t = get_data_field(field_name);
 
 		if (isRange(field_value)) {
-			switch (field_type(field_name)[1]) {
+			switch (field_t.type) {
 				case NUMERIC_TYPE:
-					slot = get_slot(field_name);
+					slot = field_t.slot;
 					nvrp = new Xapian::NumberValueRangeProcessor(slot, field_name_dot, true);
 					LOG(this, "Numeric Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
 					nvrps.push_back(std::unique_ptr<Xapian::NumberValueRangeProcessor>(nvrp));
