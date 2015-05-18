@@ -396,25 +396,39 @@ void BinaryClient::repl_changeset(const std::string & message)
 	LOG(this, "BinaryClient::repl_changeset\n");
 	Xapian::WritableDatabase * wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database->db);
 
-	const char *p = message.c_str();
-	const char *p_end = p + message.size();
-
-	std::string filename = "changes.tmp";
-	const Endpoint &endpoint = *endpoints.begin();
-	std::string path = endpoint.path + "/" + filename;
-	int fd = ::open(path.c_str(), O_WRONLY|O_CREAT, 0644);
-	if (fd >= 0) {
-		if (::write(fd, p, p_end - p) != p_end - p) {
-			LOG_ERR(this, "Cannot write to %s\n", filename.c_str());
-			return;
-		}
-		::close(fd);
+	char path[] = "/tmp/xapian_changes.XXXXXX";
+	int fd = mkstemp(path);
+	if (fd < 0) {
+		LOG_ERR(this, "Cannot write to %s (1)\n", path);
+		return;
 	}
 
-	fd = ::open(path.c_str(), O_RDONLY);
-	wdb_->apply_changesets_from_fd(fd);
+	std::string header;
+	header += REPL_REPLY_CHANGESET;
+	header += encode_length(message.size());
 
-	::unlink(path.c_str());
+	if (::write(fd, header.data(), header.size()) != header.size()) {
+		LOG_ERR(this, "Cannot write to %s (2)\n", path);
+		return;
+	}
+
+	if (::write(fd, message.data(), message.size()) != message.size()) {
+		LOG_ERR(this, "Cannot write to %s (3)\n", path);
+		return;
+	}
+
+	::lseek(fd, 0, SEEK_SET);
+
+	try {
+		wdb_->apply_changesets_from_fd(fd);
+	} catch (...) {
+		::close(fd);
+		::unlink(path);
+		throw;
+	}
+
+	::close(fd);
+	::unlink(path);
 }
 
 void BinaryClient::repl_get_changesets(const std::string & message)
