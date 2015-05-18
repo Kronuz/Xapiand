@@ -1541,37 +1541,20 @@ Database::get_data_field(const std::string &field_name)
 }
 
 
-char*
-Database::get_type(cJSON *field, const std::string &field_name)
+char
+Database::get_type(cJSON *field, specifications_t &spc)
 {
-	char *_type = field_type(field_name);
-	char element_type = _type[1];
-	char *type = (char *)malloc(3);
-	LOG(this, "\n%c/%c\n", _type[0], _type[1]);
-	if (element_type != NO_TYPE) {
-		type[0] = '1';
-		type[1] = _type[0];
-		type[2] = _type[1];
-		return type;
-	}
-
-	type[0] = '0';
-	type[1] = ATOMIC_TYPE;
-	int f_type = field->type;
-	cJSON* aux = field;
-	if (f_type == cJSON_Array) {
+	int type = field->type;
+	cJSON *aux = field;
+	if (type == cJSON_Array) {
 		int num_ele = cJSON_GetArraySize(field);
 		aux = cJSON_GetArrayItem(field, 0);
-		f_type = aux->type;
+		type = aux->type;
 		bool meet_range = true;
-		if (f_type == cJSON_Array) {
-			type[1] = ARRAY_TYPE;
-			type[2] = GEO_TYPE;
-			return type;
-		}
+		if (type == cJSON_Array && spc.geo_detection) return GEO_TYPE;
 		for (int i = 0; i < num_ele; i++) {
 			aux = cJSON_GetArrayItem(field, i);
-			if (aux->type != f_type) {
+			if (aux->type != type && (aux->type > 1 || type > 1)) {
 				throw "Different types of data";
 			}
 			if (i % 2 == 0 && (aux->type != cJSON_Number || aux->valuedouble < -90.0 || aux->valuedouble > 90.00)) {
@@ -1580,32 +1563,23 @@ Database::get_type(cJSON *field, const std::string &field_name)
 				meet_range = false;
 			}
 		}
-		if (num_ele % 2 == 0 && meet_range) {
-			type[1] = ATOMIC_TYPE;
-			type[2] = GEO_TYPE;
-			return type;
+		if (num_ele % 2 == 0 && meet_range && spc.geo_detection) {
+			return GEO_TYPE;
 		}
-		type[1] = ARRAY_TYPE;
 	}
-	switch (f_type) {
-		case cJSON_Number:
-			type[2] = NUMERIC_TYPE;
-			return type;
-		case cJSON_False:
-			type[2] = BOOLEAN_TYPE;
-			return type;
-		case cJSON_True:
-			type[2] = BOOLEAN_TYPE;
-			return type;
+	switch (type) {
+		case cJSON_Number: if (spc.numeric_detection) return NUMERIC_TYPE; break;
+		case cJSON_False: if (spc.bool_detection) return BOOLEAN_TYPE; break;
+		case cJSON_True: if (spc.bool_detection) return BOOLEAN_TYPE; break;
 		case cJSON_String:
-			if (serialise_bool(aux->valuestring).size() != 0) {
-				type[2] = BOOLEAN_TYPE;
-			} else if (timestamp_date(aux->valuestring).size() != 0) {
-				type[2] = DATE_TYPE;
-			} else {
-				type[2] = STRING_TYPE;
+			if (spc.bool_detection && serialise_bool(aux->valuestring).size() != 0) {
+				return BOOLEAN_TYPE;
+			} else if (spc.date_detection && timestamp_date(aux->valuestring).size() != 0) {
+				return DATE_TYPE;
+			} else if (spc.string_detection) {
+				return STRING_TYPE;
 			}
-            return type;
+			break;
 	}
 
 	return NO_TYPE;
