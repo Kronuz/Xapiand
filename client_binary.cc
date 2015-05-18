@@ -142,17 +142,15 @@ char BinaryClient::get_message(double timeout, std::string & result, char requir
 
 	const char *msg_str = msg->dpos();
 	size_t msg_size = msg->nbytes();
-
-	std::string message = std::string(msg_str, msg_size);
-
-	std::string buf(&msg->type, 1);
-	buf += encode_length(msg_size);
-	buf += message;
-	LOG_BINARY_PROTO(this, "get_message: '%s'\n", repr(buf).c_str());
-
-	result = message;
-
 	char type = msg->type;
+
+	result.assign(msg_str, msg_size);
+
+	std::string buf;
+	buf += type;
+	buf += encode_length(msg_size);
+	buf += result;
+	LOG_BINARY_PROTO(this, "get_message: '%s'\n", repr(buf).c_str());
 
 	delete msg;
 
