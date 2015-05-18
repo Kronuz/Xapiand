@@ -532,51 +532,58 @@ Database::is_reserved(const std::string &word)
 
 
 void
-Database::index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, bool is_value)
+Database::index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, cJSON *properties, bool is_value, bool find)
 {
 	std::string subitem_name;
 	specifications_t spc_bef = spc_now;
 	if (item->type == cJSON_Object) {
-		update_specifications(item, spc_now, item_name);
+		update_specifications(item, spc_now, properties);
+		int offspring = 0;
 		int elements = cJSON_GetArraySize(item);
 		for (int i = 0; i < elements; i++) {
 			cJSON *subitem = cJSON_GetArrayItem(item, i);
+			cJSON *subproperties;
 			if (!is_reserved(subitem->string)) {
+				bool find = true;
+				subproperties = cJSON_GetObjectItem(properties, subitem->string);
+				if (!subproperties) {
+					find = false;
+					subproperties = cJSON_CreateObject();
+					cJSON_AddItemToObject(properties, subitem->string, subproperties);
+				}
 				subitem_name = (item_name.size() != 0) ? item_name + OFFSPRING_UNION + subitem->string : subitem->string;
 				if (subitem_name.at(subitem_name.size() - 3) == OFFSPRING_UNION[0]) {
 					std::string language(subitem_name, subitem_name.size() - 2, subitem_name.size());
 					spc_now.language = is_language(language) ? language : spc_now.language;
 				}
-				index_fields(subitem, subitem_name, spc_now, doc, is_value);
+				index_fields(subitem, subitem_name, spc_now, doc, subproperties, is_value, find);
+				offspring++;
 			} else if (strcmp(subitem->string, RESERVED_VALUE) == 0 && subitem->type != cJSON_Object) {
-				LOG_DATABASE_WRAP(this, "_value: %s name: %s\n", cJSON_Print(subitem), item_name.c_str());
-				specifications_t aux = spc_now;
-				update_specifications(item, spc_now, item_name);
 				if (is_value) {
-					index_values(doc, subitem, spc_now, item_name);
+					index_values(doc, subitem, spc_now, item_name, properties, find);
 				} else {
-					char *type = get_type(subitem, item_name);
-					if ((type[1] == ATOMIC_TYPE && type[2] == STRING_TYPE && strlen(subitem->valuestring) > 30 && std::string(subitem->valuestring).find(" ") != -1) || std::string(subitem->valuestring).find("\n") != -1) {
-						index_texts(doc, subitem, spc_now, item_name);
+					char type = spc_now.sep_types[2];
+					if (type == STRING_TYPE && subitem->type != cJSON_Array && ((strlen(subitem->valuestring) > 30 && std::string(subitem->valuestring).find(" ") != -1) || std::string(subitem->valuestring).find("\n") != -1)) {
+						index_texts(doc, subitem, spc_now, item_name, properties, find);
 					} else {
-						index_values(doc, subitem, spc_now, item_name);
-						index_terms(doc, subitem, spc_now, item_name);
+						index_values(doc, subitem, spc_now, item_name, properties, find);
+						index_terms(doc, subitem, spc_now, item_name, properties, true);
 					}
 				}
 				spc_now = aux;
 			}
 		}
 	} else {
-		spc_now.type = " ";
+		update_specifications(item, spc_now, properties);
 		if (is_value) {
-			index_values(doc, item, spc_now, item_name);
+			index_values(doc, item, spc_now, item_name, properties, find);
 		} else {
-			char *type = get_type(item, item_name);
-			if (type[1] == ATOMIC_TYPE && type[2] == STRING_TYPE && ((strlen(item->valuestring) > 30 && std::string(item->valuestring).find(" ") != -1) || std::string(item->valuestring).find("\n") != -1)) {
-				index_texts(doc, item, spc_now, item_name);
+			char type = spc_now.sep_types[2];
+			if (type == STRING_TYPE && item->type != cJSON_Array && ((strlen(item->valuestring) > 30 && std::string(item->valuestring).find(" ") != -1) || std::string(item->valuestring).find("\n") != -1)) {
+				index_texts(doc, item, spc_now, item_name, properties, find);
 			} else {
-				index_values(doc, item, spc_now, item_name);
-				index_terms(doc, item, spc_now, item_name);
+				index_values(doc, item, spc_now, item_name, properties, find);
+				index_terms(doc, item, spc_now, item_name, properties, true);
 			}
 		}
 	}
