@@ -44,7 +44,6 @@
 #define BOOLEAN_TYPE 'b'
 #define ARRAY_TYPE 'a'
 #define OBJECT_TYPE 'o'
-#define ATOMIC_TYPE 'u'
 #define NO_TYPE ' '
 
 #define CMD_NUMBER 0
