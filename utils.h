@@ -164,6 +164,12 @@ typedef struct search_s {
 	std::vector<std::string> suggested_query;
 } search_t;
 
+typedef struct data_field_s {
+	unsigned int slot;
+	std::string prefix;
+	char type;
+} data_field_t;
+
 typedef struct parser_query_s {
 	size_t length;
 	const char *offset;

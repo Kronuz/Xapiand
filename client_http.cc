@@ -680,7 +680,8 @@ void HttpClient::_search()
 			cJSON_AddItemToObject(root, name_result.c_str(), array_values);
 			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
 				cJSON *value = cJSON_CreateObject();
-				cJSON_AddStringToObject(value, "value", unserialise(database->field_type((*spy).first)[1], (*spy).first, *facet).c_str());
+                data_field_t field_t = database->get_data_field((*spy).first);
+				cJSON_AddStringToObject(value, "value", unserialise(field_t.type, (*spy).first, *facet).c_str());
 				cJSON_AddNumberToObject(value, "termfreq", facet.get_termfreq());
 				cJSON_AddItemToArray(array_values, value);
 			}
