@@ -413,7 +413,7 @@ void BinaryClient::repl_changeset(const std::string & message)
 		::close(fd);
 	}
 
-	fd = ::open(path.c_str(), O_RDONLY|O_CREAT);
+	fd = ::open(path.c_str(), O_RDONLY);
 	wdb_->apply_changesets_from_fd(fd);
 
 	::unlink(path.c_str());
