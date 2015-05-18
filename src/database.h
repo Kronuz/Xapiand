@@ -82,6 +82,7 @@ public:
 	size_t hash;
 	time_t access_time;
 	int mastery_level;
+	std::string checkout_revision;
 
 	Xapian::Database *db;
 
