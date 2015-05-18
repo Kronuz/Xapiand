@@ -204,7 +204,7 @@ XapiandManager::get_node_name()
 {
 	size_t length = 0;
 	unsigned char buf[512];
-	int fd = open("nodename", O_RDONLY);
+	int fd = open("nodename", O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
 		length = read(fd, (char *)buf, sizeof(buf) - 1);
 		if (length > 0) {
