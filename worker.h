@@ -40,7 +40,6 @@ protected:
 	pthread_mutex_t _mtx;
 	pthread_mutexattr_t _mtx_attr;
 
-public:
 	Worker *_parent;
 	std::list<Worker *> _children;
 	std::list<Worker *>::const_iterator _iterator;

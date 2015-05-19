@@ -62,7 +62,6 @@ private:
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 public:
-	XapiandManager *manager;
 	pthread_mutex_t clients_mutex;
 	pthread_mutexattr_t clients_mutex_attr;
 	std::list<BaseClient *>clients;
@@ -72,6 +71,10 @@ public:
 
 	void run();
 	void shutdown();
+
+	inline XapiandManager * manager() const {
+		return static_cast<XapiandManager *>(_parent);
+	}
 
 	static pthread_mutex_t static_mutex;
 	static int total_clients;

@@ -30,6 +30,7 @@
 #include "threadpool.h"
 #include "database.h"
 
+
 #include <ev++.h>
 
 //
@@ -70,14 +71,19 @@ public:
 
 class BaseClient : public Task, public Worker {
 public:
-	XapiandServer *server;
-
 	BaseClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	virtual ~BaseClient();
 
+	inline XapiandServer * server() const {
+		return static_cast<XapiandServer *>(_parent);
+	}
+
+	inline XapiandManager *manager() const {
+		return static_cast<XapiandServer *>(_parent)->manager();
+	}
+
 protected:
 	friend XapiandServer;
-
 
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
@@ -128,6 +134,5 @@ protected:
 	void destroy();
 	void shutdown();
 };
-
 
 #endif  /* XAPIAND_INCLUDED_CLIENT_BASE_H */
