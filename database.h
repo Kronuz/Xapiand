@@ -172,8 +172,8 @@ public:
 
 class DatabasesLRU : public lru_map<size_t, DatabaseQueue> {
 private:
-	bool persistent(DatabaseQueue & val) {
-		return (val.persistent || val.size() < val.count);
+	dropping_action on_drop(DatabaseQueue & val) {
+		return (val.persistent || val.size() < val.count) ? renew : drop;
 	}
 
 public:
