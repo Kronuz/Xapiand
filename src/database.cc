@@ -1509,7 +1509,7 @@ Database::split_fields(const std::string &field_name)
 data_field_t
 Database::get_data_field(const std::string &field_name)
 {
-	data_field_t res = {0, "", NO_TYPE};
+	data_field_t res = {0xffffffff, "", NO_TYPE};
 
 	if (field_name.empty()) {
 		return res;
@@ -1530,11 +1530,18 @@ Database::get_data_field(const std::string &field_name)
 	}
 
 	if (properties) {
-		res.slot = cJSON_GetObjectItem(properties, RESERVED_SLOT)->valueint;
-		res.prefix = cJSON_GetObjectItem(properties, RESERVED_PREFIX)->valuestring;
-		char sep_types[3];
-		set_types(cJSON_GetObjectItem(properties, RESERVED_TYPE)->valuestring, sep_types);
-		res.type = sep_types[2];
+		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
+		res.slot = (_aux) ? _aux->valueint : get_slot(field_name);
+		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
+		if (_aux) {
+			char sep_types[3];
+			set_types(_aux->valuestring, sep_types);
+			res.type = sep_types[2];
+		} else {
+			res.type = NO_TYPE;
+		}
+		_aux = cJSON_GetObjectItem(properties, RESERVED_PREFIX);
+		res.prefix = (_aux) ? _aux->valuestring : get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, res.type);
 	}
 
 	return res;
