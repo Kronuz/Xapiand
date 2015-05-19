@@ -54,13 +54,11 @@ int XapiandServer::binary_clients = 0;
 
 
 XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int discovery_sock_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
-	: Worker(manager_),
+	: Worker(manager_, loop_),
 	  manager(manager_),
-	  loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
 	  discovery_io(*loop),
 	  binary_io(*loop),
-	  break_loop(*loop),
 	  discovery_sock(discovery_sock_),
 	  http_sock(http_sock_),
 	  binary_sock(binary_sock_),
@@ -81,9 +79,6 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	pthread_mutexattr_settype(&clients_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&clients_mutex, &clients_mutex_attr);
 
-	break_loop.set<XapiandServer, &XapiandServer::break_loop_cb>(this);
-	break_loop.start();
-
 	discovery_io.set<XapiandServer, &XapiandServer::io_accept_discovery>(this);
 	discovery_io.start(discovery_sock, ev::READ);
 
@@ -102,8 +97,6 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 XapiandServer::~XapiandServer()
 {
 	destroy();
-
-	break_loop.stop();
 
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
@@ -476,13 +469,6 @@ void XapiandServer::destroy()
 }
 
 
-void XapiandServer::break_loop_cb(ev::async &watcher, int revents)
-{
-	LOG_OBJ(this, "Breaking server loop!\n");
-	loop->break_loop();
-}
-
-
 void XapiandServer::shutdown()
 {
 	Worker::shutdown();
@@ -494,6 +480,6 @@ void XapiandServer::shutdown()
 		destroy();
 	}
 	if (manager->shutdown_now) {
-		break_loop.send();
+		break_loop();
 	}
 }

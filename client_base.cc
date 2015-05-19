@@ -31,8 +31,8 @@
 const int WRITE_QUEUE_SIZE = 10;
 
 
-BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
-	: Worker(server_),
+BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
+	: Worker(server_, loop_),
 	  server(server_),
 	  io_read(*loop),
 	  io_write(*loop),

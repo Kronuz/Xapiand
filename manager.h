@@ -95,9 +95,6 @@ class XapiandManager : public Worker {
 #endif
 
 private:
-	ev::dynamic_loop dynamic_loop;
-	ev::loop_ref *loop;
-
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
@@ -116,9 +113,6 @@ private:
 
 	Database *cluster_database;
 
-	ev::async break_loop;
-	void break_loop_cb(ev::async &watcher, int revents);
-
 	void discovery_heartbeat_cb(ev::timer &watcher, int revents);
 	void discovery(const char *message, size_t size);
 
@@ -131,10 +125,6 @@ protected:
 	pthread_mutex_t nodes_mtx;
 	pthread_mutexattr_t nodes_mtx_attr;
 	nodes_map_t nodes;
-
-	pthread_mutex_t servers_mutex;
-	pthread_mutexattr_t servers_mutex_attr;
-	std::list<XapiandServer *>servers;
 
 	std::string get_node_name();
 	bool set_node_name(const std::string &node_name_);

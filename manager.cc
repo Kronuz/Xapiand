@@ -96,10 +96,8 @@ size_t Node::unserialise(const std::string &s)
 
 
 XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
-	: Worker(NULL),
-	  loop(loop_ ? loop_: &dynamic_loop),
+	: Worker(NULL, loop_),
 	  state(STATE_RESET),
-	  break_loop(*loop),
 	  discovery_heartbeat(*loop),
 	  database_pool(o.dbpool_size),
 	  shutdown_asap(0),
@@ -117,11 +115,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 
 	pthread_mutexattr_init(&nodes_mtx_attr);
 	pthread_mutexattr_settype(&nodes_mtx_attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&nodes_mtx, &qmtx_attr);
-
-	pthread_mutexattr_init(&servers_mutex_attr);
-	pthread_mutexattr_settype(&servers_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&servers_mutex, &servers_mutex_attr);
+	pthread_mutex_init(&nodes_mtx, &nodes_mtx_attr);
 
 	// Setup node from node database directory
 	std::string node_name_ = get_node_name();
@@ -167,9 +161,6 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 		assert(false);
 	}
 
-	break_loop.set<XapiandManager, &XapiandManager::break_loop_cb>(this);
-	break_loop.start();
-
 	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
 	async_shutdown.start();
 
@@ -192,9 +183,6 @@ XapiandManager::~XapiandManager()
 
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
-
-	pthread_mutex_destroy(&servers_mutex);
-	pthread_mutexattr_destroy(&servers_mutex_attr);
 
 	LOG_OBJ(this, "DELETED MANAGER!\n");
 }
@@ -547,13 +535,6 @@ void XapiandManager::shutdown_cb(ev::async &watcher, int revents)
 }
 
 
-void XapiandManager::break_loop_cb(ev::async &watcher, int revents)
-{
-	LOG_OBJ(this, "Breaking manager loop!\n");
-	loop->break_loop();
-}
-
-
 void XapiandManager::shutdown()
 {
 	Worker::shutdown();
@@ -565,7 +546,7 @@ void XapiandManager::shutdown()
 		thread_pool.finish();
 	}
 	if (shutdown_now) {
-		break_loop.send();
+		break_loop();
 	}
 }
 
