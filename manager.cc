@@ -255,9 +255,10 @@ XapiandManager::setup_node()
 	pthread_mutex_lock(&qmtx);
 
 	// Open cluster database
-	Endpoint cluster_endpoint("xapian://" + this_node.host_port() + "/.");
 	Endpoints cluster_endpoints;
+	Endpoint cluster_endpoint("xapian://" + this_node.host_port() + "/.");
 	cluster_endpoints.insert(cluster_endpoint);
+	LOG(this, "cluster_endpoint - endpoints: %s\n", cluster_endpoint.as_string().c_str());
 	if(!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE|DB_PERSISTENT)) {
 		new_cluster = true;
 		INFO(this, "Cluster database doesn't exist. Generating database...\n");

@@ -62,7 +62,7 @@ Endpoint::Endpoint(const std::string &path_, const Node &node_)
 {
 	protocol = "xapian";
 	path = path_;
-	host = node_.ip;
+	host = node_.ip();
 	port = node_.binary_port;
 }
 
