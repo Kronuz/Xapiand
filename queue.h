@@ -57,195 +57,155 @@ protected:
 	size_t limit;
 
 public:
-	Queue(size_t limit_=-1);
-	~Queue();
+	Queue(size_t limit_=-1)
+		: finished(false),
+		  limit(limit_) {
+		pthread_cond_init(&push_cond, 0);
+		pthread_cond_init(&pop_cond, 0);
 
-	void finish();
-	void clear();
-	bool push(T & element, double timeout=-1.0);
-	bool pop(T & element, double timeout=-1.0);
-
-	size_t size();
-	T & front();
-	bool empty();
-};
-
-
-template<class T, class Container>
-Queue<T, Container>::Queue(size_t limit_)
-	: finished(false),
-	  limit(limit_)
-{
-	pthread_cond_init(&push_cond, 0);
-	pthread_cond_init(&pop_cond, 0);
-
-	pthread_mutexattr_init(&qmtx_attr);
-	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&qmtx, &qmtx_attr);
-}
-
-
-template<class T, class Container>
-Queue<T, Container>::~Queue()
-{
-	finish();
-	pthread_mutex_destroy(&qmtx);
-	pthread_mutexattr_destroy(&qmtx_attr);
-
-	pthread_cond_destroy(&push_cond);
-	pthread_cond_destroy(&pop_cond);
-}
-
-
-template<class T, class Container>
-void Queue<T, Container>::finish()
-{
-	pthread_mutex_lock(&qmtx);
-
-	finished = true;
-
-	pthread_mutex_unlock(&qmtx);
-
-	// Signal the condition variable in case any threads are waiting
-	pthread_cond_broadcast(&push_cond);
-	pthread_cond_broadcast(&pop_cond);
-
-}
-
-
-template<class T, class Container>
-bool Queue<T, Container>::push(T & element, double timeout)
-{
-	struct timespec ts;
-	if (timeout > 0.0) {
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		ts.tv_sec = tv.tv_sec + int(timeout);
-		ts.tv_nsec = int((timeout - int(timeout)) * 1e9);
+		pthread_mutexattr_init(&qmtx_attr);
+		pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&qmtx, &qmtx_attr);
 	}
 
-	pthread_mutex_lock(&qmtx);
+	~Queue() {
+		finish();
+		pthread_mutex_destroy(&qmtx);
+		pthread_mutexattr_destroy(&qmtx_attr);
 
-	if (!finished) {
-		size_t size = _items_queue.size();
-		while (limit > 0 && limit < size) {
+		pthread_cond_destroy(&push_cond);
+		pthread_cond_destroy(&pop_cond);
+	}
+
+	void finish() {
+		pthread_mutex_lock(&qmtx);
+
+		finished = true;
+
+		pthread_mutex_unlock(&qmtx);
+
+		// Signal the condition variable in case any threads are waiting
+		pthread_cond_broadcast(&push_cond);
+		pthread_cond_broadcast(&pop_cond);
+	}
+
+	bool push(T & element, double timeout=-1.0) {
+		struct timespec ts;
+		if (timeout > 0.0) {
+			struct timeval tv;
+			gettimeofday(&tv, NULL);
+			ts.tv_sec = tv.tv_sec + int(timeout);
+			ts.tv_nsec = int((timeout - int(timeout)) * 1e9);
+		}
+
+		pthread_mutex_lock(&qmtx);
+
+		if (!finished) {
+			size_t size = _items_queue.size();
+			while (limit > 0 && limit < size) {
+				if (!finished && timeout != 0.0) {
+					if (timeout > 0.0) {
+						if (pthread_cond_timedwait(&pop_cond, &qmtx, &ts) == ETIMEDOUT) {
+							pthread_mutex_unlock(&qmtx);
+							return false;
+						}
+					} else {
+						pthread_cond_wait(&pop_cond, &qmtx);
+					}
+				} else {
+					pthread_mutex_unlock(&qmtx);
+					return false;
+				}
+				size = _items_queue.size();
+			}
+			// Insert the element in the FIFO queue
+			_items_queue.push(element);
+		}
+
+		// Now we need to unlock the mutex otherwise waiting threads will not be able
+		// to wake and lock the mutex by time before push is locking again
+		pthread_mutex_unlock(&qmtx);
+
+		// Notifiy waiting thread they can pop now
+		pthread_cond_signal(&push_cond);
+
+		return true;
+	}
+
+	bool pop(T & element, double timeout=-1.0) {
+		struct timespec ts;
+		if (timeout > 0.0) {
+			struct timeval tv;
+			gettimeofday(&tv, NULL);
+			ts.tv_sec = tv.tv_sec + int(timeout);
+			ts.tv_nsec = int((timeout - int(timeout)) * 1e9);
+		}
+
+		pthread_mutex_lock(&qmtx);
+
+		// While the queue is empty, make the thread that runs this wait
+		while(_items_queue.empty()) {
 			if (!finished && timeout != 0.0) {
 				if (timeout > 0.0) {
-					if (pthread_cond_timedwait(&pop_cond, &qmtx, &ts) == ETIMEDOUT) {
+					if (pthread_cond_timedwait(&push_cond, &qmtx, &ts) == ETIMEDOUT) {
 						pthread_mutex_unlock(&qmtx);
 						return false;
 					}
 				} else {
-					pthread_cond_wait(&pop_cond, &qmtx);
+					pthread_cond_wait(&push_cond, &qmtx);
 				}
 			} else {
 				pthread_mutex_unlock(&qmtx);
 				return false;
 			}
-			size = _items_queue.size();
 		}
-		// Insert the element in the FIFO queue
-		_items_queue.push(element);
-	}
 
-	// Now we need to unlock the mutex otherwise waiting threads will not be able
-	// to wake and lock the mutex by time before push is locking again
-	pthread_mutex_unlock(&qmtx);
+		//when the condition variable is unlocked, popped the element
+		element = _items_queue.front();
 
-	// Notifiy waiting thread they can pop now
-	pthread_cond_signal(&push_cond);
-
-	return true;
-}
-
-
-template<class T, class Container>
-bool Queue<T, Container>::pop(T & element, double timeout)
-{
-	struct timespec ts;
-	if (timeout > 0.0) {
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		ts.tv_sec = tv.tv_sec + int(timeout);
-		ts.tv_nsec = int((timeout - int(timeout)) * 1e9);
-	}
-
-	pthread_mutex_lock(&qmtx);
-
-	// While the queue is empty, make the thread that runs this wait
-	while(_items_queue.empty()) {
-		if (!finished && timeout != 0.0) {
-			if (timeout > 0.0) {
-				if (pthread_cond_timedwait(&push_cond, &qmtx, &ts) == ETIMEDOUT) {
-					pthread_mutex_unlock(&qmtx);
-					return false;
-				}
-			} else {
-				pthread_cond_wait(&push_cond, &qmtx);
-			}
-		} else {
-			pthread_mutex_unlock(&qmtx);
-			return false;
-		}
-	}
-
-	//when the condition variable is unlocked, popped the element
-	element = _items_queue.front();
-
-	//pop the element
-	_items_queue.pop();
-
-	pthread_mutex_unlock(&qmtx);
-
-	// Notifiy waiting thread they can push/push now
-	pthread_cond_signal(&push_cond);
-	pthread_cond_signal(&pop_cond);
-
-	return true;
-};
-
-
-template<class T, class Container>
-void Queue<T, Container>::clear()
-{
-	pthread_mutex_lock(&qmtx);
-	while (!_items_queue.empty()) {
+		//pop the element
 		_items_queue.pop();
+
+		pthread_mutex_unlock(&qmtx);
+
+		// Notifiy waiting thread they can push/push now
+		pthread_cond_signal(&push_cond);
+		pthread_cond_signal(&pop_cond);
+
+		return true;
 	}
-	pthread_mutex_unlock(&qmtx);
 
-	// Notifiy waiting thread they can push/push now
-	pthread_cond_signal(&pop_cond);
-}
+	void clear() {
+		pthread_mutex_lock(&qmtx);
+		while (!_items_queue.empty()) {
+			_items_queue.pop();
+		}
+		pthread_mutex_unlock(&qmtx);
 
+		// Notifiy waiting thread they can push/push now
+		pthread_cond_signal(&pop_cond);
+	}
 
-template<class T, class Container>
-bool Queue<T, Container>::empty()
-{
-	pthread_mutex_lock(&qmtx);
-	bool empty = _items_queue.empty();
-	pthread_mutex_unlock(&qmtx);
-	return empty;
-}
+	bool empty() {
+		pthread_mutex_lock(&qmtx);
+		bool empty = _items_queue.empty();
+		pthread_mutex_unlock(&qmtx);
+		return empty;
+	}
 
+	size_t size() {
+		pthread_mutex_lock(&qmtx);
+		size_t size = _items_queue.size();
+		pthread_mutex_unlock(&qmtx);
+		return size;
+	}
 
-template<class T, class Container>
-size_t Queue<T, Container>::size()
-{
-	pthread_mutex_lock(&qmtx);
-	size_t size = _items_queue.size();
-	pthread_mutex_unlock(&qmtx);
-	return size;
-};
-
-
-template<class T, class Container>
-T & Queue<T, Container>::front()
-{
-	pthread_mutex_lock(&qmtx);
-	T & front = _items_queue.front();
-	pthread_mutex_unlock(&qmtx);
-	return front;
+	T & front() {
+		pthread_mutex_lock(&qmtx);
+		T & front = _items_queue.front();
+		pthread_mutex_unlock(&qmtx);
+		return front;
+	}
 };
 
 
