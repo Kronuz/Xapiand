@@ -27,8 +27,8 @@
 #include "utils.h"
 
 #include <string>
+#include <arpa/inet.h>
 #include <netinet/in.h>
-
 
 struct Node {
 	std::string name;
@@ -36,10 +36,21 @@ struct Node {
 	int http_port;
 	int binary_port;
 	time_t touched;
+	std::string ip;
 
 	std::string serialise();
 	size_t unserialise(const char **p, const char *end);
 	size_t unserialise(const std::string &s);
+
+	Node() {
+		char ip_[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &addr.sin_addr, ip_, INET_ADDRSTRLEN);
+		ip.assign(ip_);
+	}
+
+	std::string host_port() {
+		return ip + ":" + std::to_string(binary_port);
+	}
 
 	inline bool operator==(const Node& other) const {
 		return (
