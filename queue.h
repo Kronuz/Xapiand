@@ -230,7 +230,17 @@ class QueueSet : public Queue<std::pair<Key, T>, std::list<std::pair<Key, T> > >
 	typedef typename queue_map_t::iterator map_iterator_t;
 
 protected:
+	enum duplicate_action {
+		update,  // Updates the content of the item in the queue
+		leave,   // Leaves the old item in the queue
+		renew    // Renews the item in the queue (also moving it to front)
+	};
+
 	queue_map_t _items_map;
+
+	duplicate_action on_dup(T & val) {
+		return renew;
+	}
 
 public:
 	QueueSet(size_t limit=-1) : Queue<std::pair<Key, T>, std::list<std::pair<Key, T> > >(limit) {}
@@ -263,7 +273,23 @@ public:
 	bool push(const key_value_pair_t & p, double timeout=-1.0) {
 		pthread_mutex_lock(&this->_qmtx);
 
-		erase(p.first);
+		map_iterator_t it = _items_map.find(p.first);
+		if (it != _items_map.end()) {
+			switch (on_dup(it->second->second)) {
+				case update:
+					it->second->second = p.second;
+				case leave:
+					// The item is already there, leave it alone
+					pthread_mutex_unlock(&this->_qmtx);
+					return true;
+				case renew:
+				default:
+					// The item is already there, move it to front
+					_items_map.erase(it);
+					this->_items_queue.erase(it->second);
+					break;
+			}
+		}
 
 		bool pushed = this->_push(p, timeout);
 
