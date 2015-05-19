@@ -24,7 +24,7 @@
 #define XAPIAND_INCLUDED_QUEUE_H
 
 #include <cerrno>
-#include <queue>
+#include <deque>
 #include <list>
 
 #ifdef HAVE_CXX11
@@ -39,13 +39,12 @@
 
 template<class T, class Container = std::deque<T> >
 class Queue {
-	typedef typename std::queue<T, Container> Queue_t;
-
 private:
-	Queue_t _items_queue;
 	struct timespec _ts;
 
 protected:
+	Container _items_queue;
+
 	// A mutex object to control access to the underlying queue object
 	pthread_mutex_t _qmtx;
 	pthread_mutexattr_t _qmtx_attr;
@@ -85,7 +84,7 @@ protected:
 				size = _items_queue.size();
 			}
 			// Insert the element in the FIFO queue
-			_items_queue.push(element);
+			_items_queue.push_front(element);
 		}
 
 		return true;
@@ -113,7 +112,7 @@ protected:
 		element = _items_queue.front();
 
 		//pop the element
-		_items_queue.pop();
+		_items_queue.pop_front();
 
 		return true;
 	}
@@ -187,9 +186,7 @@ public:
 
 	void clear() {
 		pthread_mutex_lock(&_qmtx);
-		while (!_items_queue.empty()) {
-			_items_queue.pop();
-		}
+		_items_queue.clear();
 		pthread_mutex_unlock(&_qmtx);
 
 		// Notifiy waiting thread they can push/push now
@@ -223,7 +220,6 @@ public:
 // A Queue with unique values
 template<class Key, class T = Key>
 class QueueSet : public Queue<std::pair<const Key, T>, std::list<std::pair<const Key, T> > > {
-	typedef Queue<T, std::list<std::pair<const Key, T> > > Queue_t;
 	typedef typename std::pair<const Key, T> key_value_pair_t;
 	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
 #ifdef HAVE_CXX11
@@ -233,20 +229,20 @@ class QueueSet : public Queue<std::pair<const Key, T>, std::list<std::pair<const
 #endif
 	typedef typename queue_map_t::iterator map_iterator_t;
 
-private:
+protected:
 	queue_map_t _items_map;
 
 public:
 	size_t erase(const Key & key) {
 		size_t items = 0;
-		pthread_mutex_lock(&Queue_t::_qmtx);
+		pthread_mutex_lock(&this->_qmtx);
 		map_iterator_t it = _items_map.find(key);
 		if (it != _items_map.end()) {
-			Queue_t::_items_queue.erase(it->second);
+			this->_items_queue.erase(it->second);
 			_items_map.erase(it);
 			items++;
 		}
-		pthread_mutex_unlock(&Queue_t::_qmtx);
+		pthread_mutex_unlock(&this->_qmtx);
 		return items;
 	}
 
@@ -263,24 +259,24 @@ public:
 #endif
 
 	bool push(const key_value_pair_t & p, double timeout=-1.0) {
-		pthread_mutex_lock(&Queue_t::_qmtx);
+		pthread_mutex_lock(&this->_qmtx);
 
 		erase(p.first);
 
-		bool pushed = _push(p, timeout);
+		bool pushed = this->_push(p, timeout);
 
 		if (pushed) {
-			list_iterator_t last = --Queue_t::_items_queue.end();
-			_items_map[p.first] = last;
+			list_iterator_t first = this->_items_queue.begin();
+			_items_map[p.first] = first;
 		}
 
 		// Now we need to unlock the mutex otherwise waiting threads will not be able
 		// to wake and lock the mutex by time before push is locking again
-		pthread_mutex_unlock(&Queue_t::_qmtx);
+		pthread_mutex_unlock(&this->_qmtx);
 
 		if (pushed) {
 			// Notifiy waiting thread they can pop now
-			pthread_cond_signal(&Queue_t::_push_cond);
+			pthread_cond_signal(&this->_push_cond);
 		}
 
 		return pushed;
@@ -289,9 +285,9 @@ public:
 	bool pop(T & element, double timeout=-1.0) {
 		key_value_pair_t p;
 
-		pthread_mutex_lock(&Queue_t::_qmtx);
+		pthread_mutex_lock(&this->_qmtx);
 
-		bool popped = _pop(p, timeout);
+		bool popped = this->_pop(p, timeout);
 
 		if (popped) {
 			element = p.second;
@@ -301,25 +297,25 @@ public:
 			}
 		}
 
-		pthread_mutex_unlock(&Queue_t::_qmtx);
+		pthread_mutex_unlock(&this->_qmtx);
 
 		if (popped) {
 			// Notifiy waiting thread they can push/push now
-			pthread_cond_signal(&Queue_t::_push_cond);
-			pthread_cond_signal(&Queue_t::_pop_cond);
+			pthread_cond_signal(&this->_push_cond);
+			pthread_cond_signal(&this->_pop_cond);
 		}
 
 		return popped;
 	}
 
 	void clear() {
-		pthread_mutex_lock(&Queue_t::_qmtx);
+		pthread_mutex_lock(&this->_qmtx);
 
 		_items_map.clear();
 
-		Queue_t::clear();
+		this->clear();
 
-		pthread_mutex_unlock(&Queue_t::_qmtx);
+		pthread_mutex_unlock(&this->_qmtx);
 	}
 
 };
