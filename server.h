@@ -62,10 +62,6 @@ private:
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 public:
-	pthread_mutex_t clients_mutex;
-	pthread_mutexattr_t clients_mutex_attr;
-	std::list<BaseClient *>clients;
-
 	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int discovery_sock_,int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
 	~XapiandServer();
 

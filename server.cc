@@ -74,10 +74,6 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
 
-	pthread_mutexattr_init(&clients_mutex_attr);
-	pthread_mutexattr_settype(&clients_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&clients_mutex, &clients_mutex_attr);
-
 	discovery_io.set<XapiandServer, &XapiandServer::io_accept_discovery>(this);
 	discovery_io.start(discovery_sock, ev::READ);
 
@@ -99,9 +95,6 @@ XapiandServer::~XapiandServer()
 
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
-
-	pthread_mutex_destroy(&clients_mutex);
-	pthread_mutexattr_destroy(&clients_mutex_attr);
 
 	LOG_OBJ(this, "DELETED SERVER!\n");
 }
