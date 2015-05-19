@@ -29,9 +29,9 @@
 
 
 struct ThreadInfo {
-    int threadNumber;
-    const char *format;
-    Queue<Task *> *workQueue;
+	int threadNumber;
+	const char *format;
+	Queue<Task *> *workQueue;
 };
 
 void Task::inc_ref()
@@ -70,20 +70,20 @@ Task::~Task()
 
 // Function that retrieves a task from a queue, runs it and deletes it
 void *ThreadPool::getWork(void * wq_=NULL) {
-    ThreadInfo *threadInfo = static_cast<ThreadInfo *>(wq_);
-    char name[100];
-    sprintf(name, threadInfo->format, threadInfo->threadNumber);
+	ThreadInfo *threadInfo = static_cast<ThreadInfo *>(wq_);
+	char name[100];
+	sprintf(name, threadInfo->format, threadInfo->threadNumber);
 #ifdef HAVE_PTHREAD_SETNAME_NP_2
-    pthread_setname_np(pthread_self(), name);
+	pthread_setname_np(pthread_self(), name);
 #else
-    pthread_setname_np(name);
+	pthread_setname_np(name);
 #endif
 	Task *mw;
 	while (threadInfo->workQueue->pop(mw)) {
 		mw->run();
 		mw->rel_ref();
 	}
-    delete threadInfo;
+	delete threadInfo;
 	return NULL;
 }
 
@@ -94,10 +94,10 @@ ThreadPool::ThreadPool(const char *format, int n) : numThreads(n) {
 
 	threads = new pthread_t[numThreads];
 	for (int i = 0; i < numThreads; ++i) {
-        ThreadInfo *threadInfo = new ThreadInfo();
-        threadInfo->threadNumber = i;
-        threadInfo->format = format;
-        threadInfo->workQueue = &workQueue;
+		ThreadInfo *threadInfo = new ThreadInfo();
+		threadInfo->threadNumber = i;
+		threadInfo->format = format;
+		threadInfo->workQueue = &workQueue;
 		if (pthread_create(&(threads[i]), 0, getWork, threadInfo) != 0) {
 			LOG_ERR(this, "ERROR: thread: %s\n", strerror(errno));
 			threads[i] = 0;
