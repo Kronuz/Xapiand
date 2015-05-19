@@ -222,7 +222,8 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 	endpoints.clear();
 	std::vector<std::string>::const_iterator i(dbpaths_.begin());
 	for (; i != dbpaths_.end(); i++) {
-		endpoints.insert(Endpoint(*i));
+		Endpoint endpoint("xapian://" + manager()->this_node.host_port() + "/" + *i);
+		endpoints.insert(endpoint);
 	}
 	dbpaths = dbpaths_;
 	pthread_mutex_unlock(&qmtx);
