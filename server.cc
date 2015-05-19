@@ -366,7 +366,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							Endpoint remote_endpoint(index_path, remote_node);
 							// Replicate database from the other node
 							INFO(this, "Syncing database from %s...\n", remote_node.name.c_str());
-							if (start_replication(remote_endpoint, local_endpoint)) {
+							if (trigger_replication(remote_endpoint, local_endpoint)) {
 								INFO(this, "Database being synchronized from %s...\n", remote_node.name.c_str());
 							}
 						}
@@ -433,7 +433,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 }
 
 
-bool XapiandServer::start_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+bool XapiandServer::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
 	int sock;
 	if ((sock = connect_tcp(src_endpoint.host.c_str(), std::to_string(src_endpoint.port).c_str())) < 0) {
