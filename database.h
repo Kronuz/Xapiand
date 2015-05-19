@@ -189,7 +189,6 @@ class DatabasePool {
 
 private:
 	bool finished;
-	QueueSet<size_t, Database *> updated_databases;
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
 	pthread_mutex_t qmtx;
@@ -204,6 +203,8 @@ public:
 	bool checkout(Database **database, const Endpoints &endpoints, int flags);
 	void checkin(Database **database);
 	void finish();
+
+	QueueSet<size_t, Database *> updated_databases;
 };
 
 #endif /* XAPIAND_INCLUDED_DATABASE_H */

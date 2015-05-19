@@ -79,7 +79,7 @@ void run(const opts_t &opts)
 
 	manager_ptr = &manager;
 
-	manager.run((int)opts.num_servers);
+	manager.run((int)opts.num_servers, 3);  // FIXME: make replicators an option
 
 	manager_ptr = NULL;
 }

@@ -24,6 +24,7 @@
 
 #include "utils.h"
 #include "server.h"
+#include "replicator.h"
 #include "length.h"
 #include "endpoint.h"
 
@@ -551,7 +552,7 @@ void XapiandManager::shutdown()
 }
 
 
-void XapiandManager::run(int num_servers)
+void XapiandManager::run(int num_servers, int num_replicators)
 {
 	std::string msg("Listening on ");
 	if (this_node.http_port != -1) {
@@ -567,7 +568,7 @@ void XapiandManager::run(int num_servers)
 
 	INFO(this, msg.c_str());
 
-	INFO(this, "Starting %d server worker thread%s.\n", num_servers, (num_servers == 1) ? "" : "s");
+	INFO(this, "Starting %d server worker thread%s and %d replicator%s.\n", num_servers, (num_servers == 1) ? "" : "s", num_replicators, (num_replicators == 1) ? "" : "s");
 
 	ThreadPool server_pool("S%d", num_servers);
 	for (int i = 0; i < num_servers; i++) {
@@ -575,14 +576,23 @@ void XapiandManager::run(int num_servers)
 		server_pool.addTask(server);
 	}
 
+	ThreadPool replicator_pool("R%d", num_replicators);
+	for (int i = 0; i < num_replicators; i++) {
+		XapiandReplicator *replicator = new XapiandReplicator(this, NULL, &database_pool, &thread_pool);
+		replicator_pool.addTask(replicator);
+	}
+
 	LOG_OBJ(this, "Starting manager loop...\n");
 	loop->run();
 	LOG_OBJ(this, "Manager loop ended!\n");
 
-	LOG_OBJ(this, "Waiting for threads...\n");
-
+	LOG_OBJ(this, "Waiting for servers...\n");
 	server_pool.finish();
 	server_pool.join();
+
+	LOG_OBJ(this, "Waiting for replicators...\n");
+	replicator_pool.finish();
+	replicator_pool.join();
 
 	LOG_OBJ(this, "Server ended!\n");
 }
