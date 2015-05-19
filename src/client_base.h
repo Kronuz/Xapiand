@@ -25,6 +25,7 @@
 
 #include "xapiand.h"
 
+#include "worker.h"
 #include "server.h"
 #include "threadpool.h"
 #include "database.h"
@@ -67,7 +68,7 @@ public:
 };
 
 
-class BaseClient : public Task {
+class BaseClient : public Task, public Worker {
 public:
 	XapiandServer *server;
 
@@ -76,7 +77,6 @@ public:
 
 protected:
 	friend XapiandServer;
-	std::list<BaseClient *>::const_iterator iterator;
 
 
 	pthread_mutex_t qmtx;

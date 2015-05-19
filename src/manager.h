@@ -27,6 +27,7 @@
 
 #include "database.h"
 #include "threadpool.h"
+#include "worker.h"
 
 #include <list>
 #include <ev++.h>
@@ -86,7 +87,7 @@ enum discovery_type {
 };
 
 
-class XapiandManager {
+class XapiandManager : public Worker {
 #ifdef HAVE_CXX11
 	typedef std::unordered_map<std::string, Node> nodes_map_t;
 #else
@@ -159,8 +160,6 @@ public:
 	void shutdown();
 
 	void reset_state();
-	std::list<XapiandServer *>::const_iterator attach_server(XapiandServer *server);
-	void detach_server(XapiandServer *server);
 
 	bool put_node(Node &node);
 	bool touch_node(std::string &node_name, Node *node=NULL);
