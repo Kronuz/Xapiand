@@ -54,6 +54,11 @@ char *normalize_path(const char * src, char * dst)
 }
 
 
+Endpoint::Endpoint()
+{
+}
+
+
 Endpoint::Endpoint(const std::string &path_, const Node &node_)
 {
 	port = node_.binary_port;
@@ -172,6 +177,12 @@ std::string Endpoint::as_string() const {
 bool Endpoint::operator< (const Endpoint & other) const
 {
 	return as_string() < other.as_string();
+}
+
+
+size_t Endpoint::hash() const {
+	std::hash<Endpoint> hash_fn;
+	return hash_fn(*this);
 }
 
 
