@@ -219,8 +219,8 @@ public:
 
 // A Queue with unique values
 template<class Key, class T = Key>
-class QueueSet : public Queue<std::pair<const Key, T>, std::list<std::pair<const Key, T> > > {
-	typedef typename std::pair<const Key, T> key_value_pair_t;
+class QueueSet : public Queue<std::pair<Key, T>, std::list<std::pair<Key, T> > > {
+	typedef typename std::pair<Key, T> key_value_pair_t;
 	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
 #ifdef HAVE_CXX11
 	typedef typename std::unordered_map<Key, list_iterator_t> queue_map_t;
