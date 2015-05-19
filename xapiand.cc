@@ -30,6 +30,8 @@
 
 #include <thread>
 #include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 using namespace TCLAP;
 
@@ -205,6 +207,22 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 }
 
 
+void daemonize(void) {
+	int fd;
+
+	if (fork() != 0) exit(0); /* parent exits */
+	setsid(); /* create a new session */
+
+	/* Every output goes to /dev/null */
+	if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
+		dup2(fd, STDIN_FILENO);
+		dup2(fd, STDOUT_FILENO);
+		dup2(fd, STDERR_FILENO);
+		if (fd > STDERR_FILENO) close(fd);
+	}
+}
+
+
 int main(int argc, char **argv)
 {
 	opts_t opts;
@@ -254,6 +272,10 @@ int main(int argc, char **argv)
 	int diff_t = (int)(init_time - mktime(timeinfo));
 	b_time.minute = diff_t / SLOT_TIME_SECOND;
 	b_time.second =  diff_t % SLOT_TIME_SECOND;
+
+	if (opts.daemonize) {
+		daemonize();
+	}
 
 	run(opts);
 
