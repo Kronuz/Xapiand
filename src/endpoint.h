@@ -36,20 +36,19 @@ struct Node {
 	int http_port;
 	int binary_port;
 	time_t touched;
-	std::string ip;
 
 	std::string serialise();
 	size_t unserialise(const char **p, const char *end);
 	size_t unserialise(const std::string &s);
 
-	Node() {
-		char ip_[INET_ADDRSTRLEN];
-		inet_ntop(AF_INET, &addr.sin_addr, ip_, INET_ADDRSTRLEN);
-		ip.assign(ip_);
+	std::string ip() const {
+		char ip[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
+		return std::string(ip);
 	}
 
-	std::string host_port() {
-		return ip + ":" + std::to_string(binary_port);
+	std::string host_port() const {
+		return ip() + ":" + std::to_string(binary_port);
 	}
 
 	inline bool operator==(const Node& other) const {
