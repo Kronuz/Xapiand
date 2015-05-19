@@ -43,25 +43,26 @@
 #endif
 
 
-template<typename key_t, typename value_t>
+template<class Key, class T>
 class lru_map {
-	typedef typename std::pair<const key_t, value_t> key_value_pair_t;
+	typedef typename std::pair<const Key, T> key_value_pair_t;
 	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
 	typedef typename std::list<key_value_pair_t>::reverse_iterator list_reverse_iterator_t;
 #ifdef HAVE_CXX11
-	typedef std::unordered_map<const key_t, list_iterator_t> lru_map_t;
+	typedef typename std::unordered_map<const Key, list_iterator_t> lru_map_t;
 #else
-	typedef std::map<const key_t, list_iterator_t> lru_map_t;
+	typedef typename std::map<const Key, list_iterator_t> lru_map_t;
 #endif
 	typedef typename std::list<key_value_pair_t> lru_list_t;
 	typedef typename lru_map_t::iterator map_iterator_t;
 
-protected:
+private:
 	lru_list_t _items_list;
 	lru_map_t _items_map;
 	size_t _max_size;
 
-	virtual bool persistent(value_t & val) {
+protected:
+	virtual bool persistent(T & val) {
 		return false;
 	}
 
@@ -70,7 +71,7 @@ public:
 		_max_size(max_size) {
 	}
 
-	size_t erase(const key_t & key) {
+	size_t erase(const Key & key) {
 		map_iterator_t it = _items_map.find(key);
 		if (it != _items_map.end()) {
 			_items_list.erase(it->second);
@@ -80,7 +81,7 @@ public:
 		return 0;
 	}
 
-	value_t & insert(const key_value_pair_t & p) {
+	T & insert(const key_value_pair_t & p) {
 		erase(p.first);
 
 		_items_list.push_front(p);
@@ -102,7 +103,7 @@ public:
 		return first->second;
 	}
 
-	value_t & at(const key_t & key) {
+	T & at(const Key & key) {
 		map_iterator_t it = _items_map.find(key);
 		if (it == _items_map.end()) {
 			throw std::range_error("There is no such key in cache");
@@ -112,15 +113,15 @@ public:
 		}
 	}
 
-	value_t & operator[] (const key_t & key) {
+	T & operator[] (const Key & key) {
 		try {
 			return at(key);
 		} catch (std::range_error) {
-			return insert(key_value_pair_t(key, value_t()));
+			return insert(key_value_pair_t(key, T()));
 		}
 	}
 
-	bool exists(const key_t & key) const {
+	bool exists(const Key & key) const {
 		return _items_map.find(key) != _items_map.end();
 	}
 
