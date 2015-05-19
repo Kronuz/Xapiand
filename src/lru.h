@@ -49,9 +49,9 @@ class lru_map {
 	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
 	typedef typename std::list<key_value_pair_t>::reverse_iterator list_reverse_iterator_t;
 #ifdef HAVE_CXX11
-	typedef typename std::unordered_map<const Key, list_iterator_t> lru_map_t;
+	typedef typename std::unordered_map<Key, list_iterator_t> lru_map_t;
 #else
-	typedef typename std::map<const Key, list_iterator_t> lru_map_t;
+	typedef typename std::map<Key, list_iterator_t> lru_map_t;
 #endif
 	typedef typename std::list<key_value_pair_t> lru_list_t;
 	typedef typename lru_map_t::iterator map_iterator_t;
