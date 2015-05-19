@@ -55,7 +55,6 @@ int XapiandServer::binary_clients = 0;
 
 XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int discovery_sock_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
 	: Worker(manager_, loop_),
-	  manager(manager_),
 	  http_io(*loop),
 	  discovery_io(*loop),
 	  binary_io(*loop),
@@ -169,7 +168,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 				LOG_DISCOVERY(this, "Badly formed message: No cluster name!\n");
 				return;
 			}
-			if (remote_cluster_name != manager->cluster_name) {
+			if (remote_cluster_name != manager()->cluster_name) {
 				return;
 			}
 
@@ -190,52 +189,52 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 						return;
 					}
-					if (remote_node == manager->this_node) {
+					if (remote_node == manager()->this_node) {
 						// It's me! ...wave hello!
-						manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
+						manager()->discovery(DISCOVERY_WAVE, manager()->this_node.serialise());
 					} else {
-						if (manager->touch_node(remote_node.name, &node)) {
+						if (manager()->touch_node(remote_node.name, &node)) {
 							if (remote_node == node) {
-								manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
+								manager()->discovery(DISCOVERY_WAVE, manager()->this_node.serialise());
 							} else {
-								manager->discovery(DISCOVERY_SNEER, remote_node.serialise());
+								manager()->discovery(DISCOVERY_SNEER, remote_node.serialise());
 							}
 						} else {
-							manager->discovery(DISCOVERY_WAVE, manager->this_node.serialise());
+							manager()->discovery(DISCOVERY_WAVE, manager()->this_node.serialise());
 						}
 					}
 					break;
 
 				case DISCOVERY_SNEER:
-					if (manager->state != STATE_READY) {
+					if (manager()->state != STATE_READY) {
 						if (remote_node.unserialise(&ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						if (remote_node == manager->this_node) {
-							if (manager->node_name.empty()) {
-								LOG_DISCOVERY(this, "Node name %s already taken. Retrying other name...\n", manager->this_node.name.c_str());
-								manager->reset_state();
+						if (remote_node == manager()->this_node) {
+							if (manager()->node_name.empty()) {
+								LOG_DISCOVERY(this, "Node name %s already taken. Retrying other name...\n", manager()->this_node.name.c_str());
+								manager()->reset_state();
 							} else {
-								LOG_ERR(this, "Cannot join the party. Node name %s already taken!\n", manager->this_node.name.c_str());
-								manager->state = STATE_BAD;
-								manager->this_node.name.clear();
-								manager->shutdown_asap = time(NULL);
-								manager->async_shutdown.send();
+								LOG_ERR(this, "Cannot join the party. Node name %s already taken!\n", manager()->this_node.name.c_str());
+								manager()->state = STATE_BAD;
+								manager()->this_node.name.clear();
+								manager()->shutdown_asap = time(NULL);
+								manager()->async_shutdown.send();
 							}
 						}
 					}
 					break;
 
 				case DISCOVERY_PING:
-					if (manager->state == STATE_READY) {
+					if (manager()->state == STATE_READY) {
 						if (unserialise_string(node_name, &ptr, end) == -1 || node_name.empty()) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						if (manager->touch_node(node_name)) {
+						if (manager()->touch_node(node_name)) {
 							// Received a ping, return pong
-							manager->discovery(DISCOVERY_PONG, serialise_string(manager->this_node.name));
+							manager()->discovery(DISCOVERY_PONG, serialise_string(manager()->this_node.name));
 						} else {
 							LOG_DISCOVERY(this, "Ignoring ping from unknown peer %s\n", node_name.c_str());
 						}
@@ -243,12 +242,12 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					break;
 
 				case DISCOVERY_PONG:
-					if (manager->state == STATE_READY) {
+					if (manager()->state == STATE_READY) {
 						if (unserialise_string(node_name, &ptr, end) == -1 || node_name.empty()) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						if (manager->touch_node(node_name)) {
+						if (manager()->touch_node(node_name)) {
 							// Do nothing (node was touched)
 						} else {
 							LOG_DISCOVERY(this, "Ignoring pong from unknown peer %s\n", node_name.c_str());
@@ -257,18 +256,18 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					break;
 
 				case DISCOVERY_BYE:
-					if (manager->state == STATE_READY) {
+					if (manager()->state == STATE_READY) {
 						if (remote_node.unserialise(&ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						manager->drop_node(remote_node.name);
+						manager()->drop_node(remote_node.name);
 						INFO(this, "Node %s left the party!\n", remote_node.name.c_str());
 					}
 					break;
 
 				case DISCOVERY_DB:
-					if (manager->state == STATE_READY) {
+					if (manager()->state == STATE_READY) {
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
 							return;
@@ -276,18 +275,18 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						mastery_level = database_pool->get_mastery_level(index_path);
 						if (mastery_level != -1) {
 							LOG_DISCOVERY(this, "Found local database '%s' with m:%d!\n", index_path.c_str(), mastery_level);
-							manager->discovery(
+							manager()->discovery(
 								DISCOVERY_DB_WAVE,
 								serialise_length(mastery_level) +  // The mastery level of the database
 								serialise_string(index_path) +  // The path of the index
-								manager->this_node.serialise()  // The node where the index is at
+								manager()->this_node.serialise()  // The node where the index is at
 							);
 						}
 					}
 					break;
 
 				case DISCOVERY_DB_WAVE:
-					if (manager->state == STATE_READY) {
+					if (manager()->state == STATE_READY) {
 						remote_mastery_level = unserialise_length(&ptr, end);
 						if (remote_mastery_level == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
@@ -302,7 +301,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						if (manager->put_node(remote_node)) {
+						if (manager()->put_node(remote_node)) {
 							INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 						}
 
@@ -311,26 +310,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					break;
 
 				case DISCOVERY_DB_UPDATED:
-
-					// void on_commit() {
-					// 	Database *database = NULL;
-					// 	if (database_pool->checkout(&database, endpoints_, 0)) {
-					// 		int mastery_level = database->mastery_level;
-					// 		database_pool->checkin(&database);
-
-					// 		if (mastery_level != -1) {
-					// 			const Endpoint &endpoint = *endpoints.begin();
-					// 			server->manager->discovery(
-					// 				DISCOVERY_DB_UPDATED,
-					// 				serialise_length(mastery_level) +  // The mastery level of the database
-					// 				serialise_string(endpoint.path) +  // The path of the index
-					// 				manager->this_node.serialise()  // The node where the index is at
-					// 			);
-					// 		}
-					// 	}
-					// }
-
-					if (manager->state == STATE_READY) {
+					if (manager()->state == STATE_READY) {
 						remote_mastery_level = unserialise_length(&ptr, end);
 						if (remote_mastery_level == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
@@ -347,13 +327,13 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 								LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 								return;
 							}
-							if (manager->put_node(remote_node)) {
+							if (manager()->put_node(remote_node)) {
 								INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 							}
 
 							char ip[INET_ADDRSTRLEN];
-							inet_ntop(AF_INET, &manager->this_node.addr.sin_addr, ip, INET_ADDRSTRLEN);
-							Endpoint local_endpoint("xapian://" + std::string(ip) + ":" + std::to_string(manager->this_node.binary_port) + "/" + index_path);
+							inet_ntop(AF_INET, &manager()->this_node.addr.sin_addr, ip, INET_ADDRSTRLEN);
+							Endpoint local_endpoint("xapian://" + std::string(ip) + ":" + std::to_string(manager()->this_node.binary_port) + "/" + index_path);
 							Endpoint remote_endpoint(index_path, remote_node);
 							// Replicate database from the other node
 							INFO(this, "Syncing database from %s...\n", remote_node.name.c_str());
@@ -369,7 +349,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 						return;
 					}
-					if (manager->put_node(remote_node)) {
+					if (manager()->put_node(remote_node)) {
 						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (3)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 					}
 					break;
@@ -473,13 +453,13 @@ void XapiandServer::shutdown()
 {
 	Worker::shutdown();
 
-	if (manager->shutdown_asap) {
+	if (manager()->shutdown_asap) {
 		if (http_clients <= 0) {
-			manager->shutdown_now = manager->shutdown_asap;
+			manager()->shutdown_now = manager()->shutdown_asap;
 		}
 		destroy();
 	}
-	if (manager->shutdown_now) {
+	if (manager()->shutdown_now) {
 		break_loop();
 	}
 }

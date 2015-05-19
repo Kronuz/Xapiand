@@ -93,9 +93,9 @@ HttpClient::~HttpClient()
 	int http_clients = --XapiandServer::http_clients;
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
 
-	if (server->manager->shutdown_asap) {
+	if (manager()->shutdown_asap) {
 		if (http_clients <= 0) {
-			server->manager->async_shutdown.send();
+			manager()->async_shutdown.send();
 		}
 	}
 
@@ -198,7 +198,7 @@ void HttpClient::run()
 		//LOG_HTTP_PROTO(this, "HOST: '%s'\n", repr(host).c_str());
 		//LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
 		if (path == "/quit") {
-			server->manager->async_shutdown.send();
+			manager()->async_shutdown.send();
 			return;
 		}
 
@@ -566,7 +566,7 @@ void HttpClient::_stats(query_t &e)
 	cJSON *root = cJSON_CreateObject();
 
 	if (e.server) {
-		cJSON_AddItemToObject(root, "Server status", server->manager->server_status());
+		cJSON_AddItemToObject(root, "Server status", manager()->server_status());
 	}
 	if (e.database) {
 		_endpointgen(e);
@@ -591,7 +591,7 @@ void HttpClient::_stats(query_t &e)
 		database_pool->checkin(&database);
 	}
 	if (e.stats.size() != 0) {
-		cJSON_AddItemToObject(root, "Stats time", server->manager->get_stats_time(e.stats));
+		cJSON_AddItemToObject(root, "Stats time", manager()->get_stats_time(e.stats));
 	}
 	if (e.pretty) {
 		result = cJSON_Print(root);
@@ -911,14 +911,14 @@ int HttpClient::_endpointgen(query_t &e)
 
 				std::string index_path = ns + path;
 				Endpoint index("xapian://" + node_name + index_path);
-				server->manager->discovery(DISCOVERY_DB, serialise_string(index.path));
+				manager()->discovery(DISCOVERY_DB, serialise_string(index.path));
 				int node_port = (index.port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.port;
 				node_name = index.host.empty() ? node_name : index.host;
 
 				// Convert node to endpoint:
 				char node_ip[INET_ADDRSTRLEN];
 				Node node;
-				if (!server->manager->touch_node(node_name, &node)) {
+				if (!manager()->touch_node(node_name, &node)) {
 					LOG(this, "Node %s not found\n", node_name.c_str());
 					host = node_name;
 					return CMD_UNKNOWN_HOST;
