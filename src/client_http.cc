@@ -431,6 +431,7 @@ void HttpClient::_index()
 	cJSON *document = cJSON_Parse(body.c_str());
 	if (!document) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
@@ -511,6 +512,7 @@ void HttpClient::_patch()
 	cJSON *patches = cJSON_Parse(body.c_str());
 	if (!patches) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
