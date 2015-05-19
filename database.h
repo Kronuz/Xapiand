@@ -189,6 +189,7 @@ class DatabasePool {
 
 private:
 	bool finished;
+	QueueSet<size_t, Database *> updated_databases;
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
 	pthread_mutex_t qmtx;

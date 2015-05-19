@@ -54,8 +54,8 @@ int XapiandServer::binary_clients = 0;
 
 
 XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int discovery_sock_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
-	: manager(manager_),
-	  iterator(manager->attach_server(this)),
+	: Worker(manager_),
+	  manager(manager_),
 	  loop(loop_ ? loop_: &dynamic_loop),
 	  http_io(*loop),
 	  discovery_io(*loop),
@@ -104,8 +104,6 @@ XapiandServer::~XapiandServer()
 	destroy();
 
 	break_loop.stop();
-
-	manager->detach_server(this);
 
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
@@ -485,36 +483,9 @@ void XapiandServer::break_loop_cb(ev::async &watcher, int revents)
 }
 
 
-std::list<BaseClient *>::const_iterator XapiandServer::attach_client(BaseClient *client)
-{
-	pthread_mutex_lock(&clients_mutex);
-	std::list<BaseClient *>::const_iterator iterator = clients.insert(clients.end(), client);
-	pthread_mutex_unlock(&clients_mutex);
-	return iterator;
-}
-
-
-void XapiandServer::detach_client(BaseClient *client)
-{
-	pthread_mutex_lock(&clients_mutex);
-	if (client->iterator != clients.end()) {
-		clients.erase(client->iterator);
-		client->iterator = clients.end();
-		LOG_OBJ(this, "DETACHED CLIENT!\n");
-	}
-	pthread_mutex_unlock(&clients_mutex);
-}
-
-
 void XapiandServer::shutdown()
 {
-	pthread_mutex_lock(&clients_mutex);
-	std::list<BaseClient *>::const_iterator it(clients.begin());
-	while (it != clients.end()) {
-		BaseClient *client = *(it++);
-		client->shutdown();
-	}
-	pthread_mutex_unlock(&clients_mutex);
+	Worker::shutdown();
 
 	if (manager->shutdown_asap) {
 		if (http_clients <= 0) {

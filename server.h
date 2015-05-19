@@ -27,13 +27,14 @@
 
 #include "threadpool.h"
 #include "database.h"
+#include "worker.h"
 #include "manager.h"
 
 #include <ev++.h>
 #include <list>
 
 
-class XapiandServer : public Task {
+class XapiandServer : public Task, public Worker {
 private:
 	ev::dynamic_loop dynamic_loop;
 	ev::loop_ref *loop;
@@ -86,9 +87,6 @@ public:
 protected:
 	friend class BaseClient;
 	friend class XapiandManager;
-	std::list<XapiandServer *>::const_iterator iterator;
-	std::list<BaseClient *>::const_iterator attach_client(BaseClient *client);
-	void detach_client(BaseClient *client);
 
 	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 };
