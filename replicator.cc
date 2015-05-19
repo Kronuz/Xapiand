@@ -35,14 +35,27 @@ XapiandReplicator::~XapiandReplicator()
 }
 
 void
+XapiandReplicator::on_commit(const Endpoint &endpoint, int mastery_level)
+{
+	manager()->discovery(
+		DISCOVERY_DB_UPDATED,
+		serialise_length(mastery_level) +  // The mastery level of the database
+		serialise_string(endpoint.path) +  // The path of the index
+		manager()->this_node.serialise()   // The node where the index is at
+	);
+}
+
+void
 XapiandReplicator::run()
 {
 	// Function that retrieves a task from a queue, runs it and deletes it
-	Database *database;
-	while (database_pool->updated_databases.pop(database)) {
+	LOG_OBJ(this, "Replicator started...\n");
+	DatabasePool::updated_database_pair_t p;
+	while (database_pool->updated_databases.pop(p)) {
 		LOG(this, "REPLICATOR GOT DATABASE!\n");
+		on_commit(p.first, p.second);
 	}
-	LOG(this, "Replicator ended!");
+	LOG_OBJ(this, "Replicator ended!\n");
 }
 
 void
