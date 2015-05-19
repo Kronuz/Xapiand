@@ -92,8 +92,10 @@ public:
 	int port;
 	std::string protocol, user, password, host, path, search;
 
+	Endpoint();
 	Endpoint(const std::string &path_, const Node &node_);
 	Endpoint(const std::string &uri, const std::string &base_=std::string(), int port_=XAPIAND_BINARY_SERVERPORT);
+	size_t hash() const;
 	std::string as_string() const;
 	bool operator< (const Endpoint & other) const;
 };
