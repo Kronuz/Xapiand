@@ -36,10 +36,6 @@
 
 class XapiandServer : public Task, public Worker {
 private:
-	ev::dynamic_loop dynamic_loop;
-	ev::loop_ref *loop;
-	ev::async break_loop;
-
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
@@ -64,8 +60,6 @@ private:
 #ifdef HAVE_REMOTE_PROTOCOL
 	void io_accept_binary(ev::io &watcher, int revents);
 #endif  /* HAVE_REMOTE_PROTOCOL */
-
-	void break_loop_cb(ev::async &watcher, int revents);
 
 public:
 	XapiandManager *manager;

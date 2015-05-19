@@ -25,11 +25,18 @@
 
 
 #include <list>
+#include <ev++.h>
 #include <pthread.h>
 
 
 class Worker
 {
+protected:
+	ev::loop_ref *loop;
+
+	ev::dynamic_loop _dynamic_loop;
+	ev::async _break_loop;
+
 	pthread_mutex_t _mtx;
 	pthread_mutexattr_t _mtx_attr;
 
@@ -53,17 +60,32 @@ public:
 		}
 		pthread_mutex_unlock(&_mtx);
 	}
+
+	void _break_loop_cb(ev::async &watcher, int revents) {
+		loop->break_loop();
+	}
+
 public:
-	Worker(Worker *parent) :
+	Worker(Worker *parent, ev::loop_ref *loop_) :
+		loop(loop_ ? loop_: &_dynamic_loop),
+		_break_loop(*loop),
 		_parent(parent),
 		_iterator(parent ? parent->_attach(this) : std::list<Worker *>::const_iterator())
 	{
 		pthread_mutexattr_init(&_mtx_attr);
 		pthread_mutexattr_settype(&_mtx_attr, PTHREAD_MUTEX_RECURSIVE);
 		pthread_mutex_init(&_mtx, &_mtx_attr);
+
+		_break_loop.set<Worker, &Worker::_break_loop_cb>(this);
+		_break_loop.start();
 	}
 
 	~Worker() {
+		_break_loop.stop();
+
+		pthread_mutex_destroy(&_mtx);
+		pthread_mutexattr_destroy(&_mtx_attr);
+
 		if (_parent) _parent->_detach(this);
 	}
 
@@ -75,6 +97,10 @@ public:
 			child->shutdown();
 		}
 		pthread_mutex_unlock(&_mtx);
+	}
+
+	void break_loop() {
+		_break_loop.send();
 	}
 };
 
