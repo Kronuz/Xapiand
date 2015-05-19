@@ -594,8 +594,8 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 			if (type == STRING_TYPE && item->type != cJSON_Array && ((strlen(item->valuestring) > 30 && std::string(item->valuestring).find(" ") != -1) || std::string(item->valuestring).find("\n") != -1)) {
 				index_texts(doc, item, spc_now, item_name, properties, find);
 			} else {
-				index_values(doc, item, spc_now, item_name, properties, find);
-				index_terms(doc, item, spc_now, item_name, properties, true);
+				index_terms(doc, item, spc_now, item_name, properties, find);
+				index_values(doc, item, spc_now, item_name, properties, true);
 			}
 		}
 	}
@@ -606,7 +606,7 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 void
 Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name, cJSON *scheme, bool find)
 {
-	LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	//LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!spc.store) return;
 	if (!spc.dynamic && !find) throw "This object is not dynamic";
 
@@ -662,7 +662,7 @@ Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc,
 void
 Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *scheme, bool find)
 {
-	LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	//LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!spc.store) return;
 	if (!spc.dynamic && !find) throw "This object is not dynamic";
 
@@ -755,7 +755,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 void
 Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *scheme, bool find)
 {
-	LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	//LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!spc.store) return;
 	if (!spc.dynamic && !find) throw "This object is not dynamic";
 
