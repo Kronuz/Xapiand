@@ -43,77 +43,43 @@ class Queue {
 
 private:
 	Queue_t _items_queue;
+	struct timespec _ts;
 
 protected:
 	// A mutex object to control access to the underlying queue object
-	pthread_mutex_t qmtx;
-	pthread_mutexattr_t qmtx_attr;
+	pthread_mutex_t _qmtx;
+	pthread_mutexattr_t _qmtx_attr;
 
 	// A variable condition to make threads wait on specified condition values
-	pthread_cond_t push_cond;
-	pthread_cond_t pop_cond;
+	pthread_cond_t _push_cond;
+	pthread_cond_t _pop_cond;
 
-	bool finished;
-	size_t limit;
+	bool _finished;
+	size_t _limit;
 
-public:
-	Queue(size_t limit_=-1)
-		: finished(false),
-		  limit(limit_) {
-		pthread_cond_init(&push_cond, 0);
-		pthread_cond_init(&pop_cond, 0);
-
-		pthread_mutexattr_init(&qmtx_attr);
-		pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
-		pthread_mutex_init(&qmtx, &qmtx_attr);
+	struct timespec & _timespec(double timeout) {
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		_ts.tv_sec = tv.tv_sec + int(timeout);
+		_ts.tv_nsec = int((timeout - int(timeout)) * 1e9);
+		return _ts;
 	}
 
-	~Queue() {
-		finish();
-		pthread_mutex_destroy(&qmtx);
-		pthread_mutexattr_destroy(&qmtx_attr);
+	bool _push(const T & element, double timeout) {
+		struct timespec *timeout_ts = (timeout > 0.0) ? &_timespec(timeout) : NULL;
 
-		pthread_cond_destroy(&push_cond);
-		pthread_cond_destroy(&pop_cond);
-	}
-
-	void finish() {
-		pthread_mutex_lock(&qmtx);
-
-		finished = true;
-
-		pthread_mutex_unlock(&qmtx);
-
-		// Signal the condition variable in case any threads are waiting
-		pthread_cond_broadcast(&push_cond);
-		pthread_cond_broadcast(&pop_cond);
-	}
-
-	bool push(T & element, double timeout=-1.0) {
-		struct timespec ts;
-		if (timeout > 0.0) {
-			struct timeval tv;
-			gettimeofday(&tv, NULL);
-			ts.tv_sec = tv.tv_sec + int(timeout);
-			ts.tv_nsec = int((timeout - int(timeout)) * 1e9);
-		}
-
-		pthread_mutex_lock(&qmtx);
-
-		if (!finished) {
+		if (!_finished) {
 			size_t size = _items_queue.size();
-			while (limit > 0 && limit < size) {
-				if (!finished && timeout != 0.0) {
-					if (timeout > 0.0) {
-						if (pthread_cond_timedwait(&pop_cond, &qmtx, &ts) == ETIMEDOUT) {
-							pthread_mutex_unlock(&qmtx);
+			while (_limit > 0 && _limit < size) {
+				if (!_finished && timeout) {
+					if (timeout_ts) {
+						if (pthread_cond_timedwait(&_pop_cond, &_qmtx, timeout_ts) == ETIMEDOUT) {
 							return false;
 						}
 					} else {
-						pthread_cond_wait(&pop_cond, &qmtx);
+						pthread_cond_wait(&_pop_cond, &_qmtx);
 					}
 				} else {
-					pthread_mutex_unlock(&qmtx);
 					return false;
 				}
 				size = _items_queue.size();
@@ -122,40 +88,23 @@ public:
 			_items_queue.push(element);
 		}
 
-		// Now we need to unlock the mutex otherwise waiting threads will not be able
-		// to wake and lock the mutex by time before push is locking again
-		pthread_mutex_unlock(&qmtx);
-
-		// Notifiy waiting thread they can pop now
-		pthread_cond_signal(&push_cond);
-
 		return true;
 	}
 
-	bool pop(T & element, double timeout=-1.0) {
-		struct timespec ts;
-		if (timeout > 0.0) {
-			struct timeval tv;
-			gettimeofday(&tv, NULL);
-			ts.tv_sec = tv.tv_sec + int(timeout);
-			ts.tv_nsec = int((timeout - int(timeout)) * 1e9);
-		}
-
-		pthread_mutex_lock(&qmtx);
+	bool _pop(T & element, double timeout) {
+		struct timespec *timeout_ts = (timeout > 0.0) ? &_timespec(timeout) : NULL;
 
 		// While the queue is empty, make the thread that runs this wait
 		while(_items_queue.empty()) {
-			if (!finished && timeout != 0.0) {
-				if (timeout > 0.0) {
-					if (pthread_cond_timedwait(&push_cond, &qmtx, &ts) == ETIMEDOUT) {
-						pthread_mutex_unlock(&qmtx);
+			if (!_finished && timeout) {
+				if (timeout_ts) {
+					if (pthread_cond_timedwait(&_push_cond, &_qmtx, timeout_ts) == ETIMEDOUT) {
 						return false;
 					}
 				} else {
-					pthread_cond_wait(&push_cond, &qmtx);
+					pthread_cond_wait(&_push_cond, &_qmtx);
 				}
 			} else {
-				pthread_mutex_unlock(&qmtx);
 				return false;
 			}
 		}
@@ -166,44 +115,105 @@ public:
 		//pop the element
 		_items_queue.pop();
 
-		pthread_mutex_unlock(&qmtx);
-
-		// Notifiy waiting thread they can push/push now
-		pthread_cond_signal(&push_cond);
-		pthread_cond_signal(&pop_cond);
-
 		return true;
 	}
 
+public:
+	Queue(size_t limit=-1)
+		: _finished(false),
+		  _limit(limit) {
+		pthread_cond_init(&_push_cond, 0);
+		pthread_cond_init(&_pop_cond, 0);
+
+		pthread_mutexattr_init(&_qmtx_attr);
+		pthread_mutexattr_settype(&_qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&_qmtx, &_qmtx_attr);
+	}
+
+	~Queue() {
+		finish();
+
+		pthread_mutex_destroy(&_qmtx);
+		pthread_mutexattr_destroy(&_qmtx_attr);
+
+		pthread_cond_destroy(&_push_cond);
+		pthread_cond_destroy(&_pop_cond);
+	}
+
+	void finish() {
+		pthread_mutex_lock(&_qmtx);
+
+		_finished = true;
+
+		pthread_mutex_unlock(&_qmtx);
+
+		// Signal the condition variable in case any threads are waiting
+		pthread_cond_broadcast(&_push_cond);
+		pthread_cond_broadcast(&_pop_cond);
+	}
+
+	bool push(const T & element, double timeout=-1.0) {
+		pthread_mutex_lock(&_qmtx);
+
+		bool pushed = _push(element, timeout);
+
+		// Now we need to unlock the mutex otherwise waiting threads will not be able
+		// to wake and lock the mutex by time before push is locking again
+		pthread_mutex_unlock(&_qmtx);
+
+		if (pushed) {
+			// Notifiy waiting thread they can pop now
+			pthread_cond_signal(&_push_cond);
+		}
+
+		return pushed;
+	}
+
+	bool pop(T & element, double timeout=-1.0) {
+		pthread_mutex_lock(&_qmtx);
+
+		bool popped = _pop(element, timeout);
+
+		pthread_mutex_unlock(&_qmtx);
+
+		if (popped) {
+			// Notifiy waiting thread they can push/push now
+			pthread_cond_signal(&_push_cond);
+			pthread_cond_signal(&_pop_cond);
+		}
+
+		return popped;
+	}
+
 	void clear() {
-		pthread_mutex_lock(&qmtx);
+		pthread_mutex_lock(&_qmtx);
 		while (!_items_queue.empty()) {
 			_items_queue.pop();
 		}
-		pthread_mutex_unlock(&qmtx);
+		pthread_mutex_unlock(&_qmtx);
 
 		// Notifiy waiting thread they can push/push now
-		pthread_cond_signal(&pop_cond);
+		pthread_cond_signal(&_pop_cond);
 	}
 
 	bool empty() {
-		pthread_mutex_lock(&qmtx);
+		pthread_mutex_lock(&_qmtx);
 		bool empty = _items_queue.empty();
-		pthread_mutex_unlock(&qmtx);
+		pthread_mutex_unlock(&_qmtx);
 		return empty;
 	}
 
 	size_t size() {
-		pthread_mutex_lock(&qmtx);
+		pthread_mutex_lock(&_qmtx);
 		size_t size = _items_queue.size();
-		pthread_mutex_unlock(&qmtx);
+		pthread_mutex_unlock(&_qmtx);
 		return size;
 	}
 
 	T & front() {
-		pthread_mutex_lock(&qmtx);
+		pthread_mutex_lock(&_qmtx);
 		T & front = _items_queue.front();
-		pthread_mutex_unlock(&qmtx);
+		pthread_mutex_unlock(&_qmtx);
 		return front;
 	}
 };
