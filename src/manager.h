@@ -69,9 +69,6 @@ typedef struct opts_s {
 } opts_t;
 
 
-class XapiandServer;
-class BaseClient;
-
 
 enum discovery_type {
 	DISCOVERY_HELLO,    // New node saying hello
@@ -145,7 +142,7 @@ public:
 
 	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
-	void run(int num_servers);
+	void run(int num_servers, int num_replicators);
 	void sig_shutdown_handler(int sig);
 	void shutdown();
 
