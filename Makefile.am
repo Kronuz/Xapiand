@@ -1,44 +1,53 @@
 ACLOCAL_AMFLAGS = -I m4
 
 bin_PROGRAMS = xapiand
-xapiand_SOURCES = xapiand.cc \
-	endpoint.cc \
-	database.cc \
-	manager.cc \
-	server.cc \
-	threadpool.cc \
+xapiand_SOURCES = \
+	cJSON.c \
+	cJSON_Utils.c \
 	client_base.cc \
 	client_binary.cc \
 	client_http.cc \
-	http_parser.c \
-	cJSON.cc \
-	cJSON_Utils.c \
-	md5.cc \
-	utils.cc \
-	length.cc \
+	database.cc \
+	endpoint.cc \
 	fields.cc \
+	http_parser.c \
+	length.cc \
+	\
+	manager.cc \
+	md5.cc \
 	multivalue.cc \
-	tests.cc
+	\
+	replicator.cc \
+	server.cc \
+	tests.cc \
+	threadpool.cc \
+	utils.cc \
+	\
+	xapiand.cc
 
-noinst_HEADERS = xapiand.h \
-	queue.h \
-	endpoint.h \
-	database.h \
-	manager.h \
-	server.h \
-	threadpool.h \
+noinst_HEADERS = \
+	cJSON.h \
+	cJSON_Utils.h \
 	client_base.h \
 	client_binary.h \
 	client_http.h \
-	http_parser.h \
-	cJSON.h \
-	cJSON_Utils.h \
-	md5.h \
-	utils.h \
-	length.h \
+	database.h \
+	endpoint.h \
 	fields.h \
+	http_parser.h \
+	length.h \
+	lru.h \
+	manager.h \
+	md5.h \
 	multivalue.h \
-	tests.h
+	queue.h \
+	replicator.h \
+	server.h \
+	tests.h \
+	threadpool.h \
+	utils.h \
+	worker.h \
+	xapiand.h
 
 EXTRA_DIST = Xapiand.xcodeproj/project.pbxproj
 
