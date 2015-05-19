@@ -222,8 +222,7 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 	endpoints.clear();
 	std::vector<std::string>::const_iterator i(dbpaths_.begin());
 	for (; i != dbpaths_.end(); i++) {
-		Endpoint endpoint("xapian://" + manager()->this_node.host_port() + "/" + *i);
-		endpoints.insert(endpoint);
+		endpoints.insert(Endpoint(*i));
 	}
 	dbpaths = dbpaths_;
 	pthread_mutex_unlock(&qmtx);
@@ -451,14 +450,18 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 	std::string revision(p, len);
 	p += len;
 
-	std::vector<std::string> dbpaths_;
 	len = decode_length(&p, p_end, true);
-	dbpaths_.push_back(std::string(p, len));
+	std::string index_path(p, len);
 	p += len;
 
-	select_db(dbpaths_, false, Xapian::DB_OPEN);
-
+	// Select endpoints and get database
+	pthread_mutex_lock(&qmtx);
+	endpoints.clear();
+	Endpoint endpoint("xapian://" + manager()->this_node.host_port() + "/" + index_path);
+	endpoints.insert(endpoint);
 	Xapian::Database * db_ = get_db(false);
+	pthread_mutex_unlock(&qmtx);
+
 	if (!db_)
 		throw Xapian::InvalidOperationError("Server has no open database");
 
