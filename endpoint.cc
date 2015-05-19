@@ -22,7 +22,6 @@
 
 #include "endpoint.h"
 
-#include <arpa/inet.h>
 #include <iostream>
 #include <limits.h>
 #include <unistd.h>
@@ -61,12 +60,10 @@ Endpoint::Endpoint()
 
 Endpoint::Endpoint(const std::string &path_, const Node &node_)
 {
-	port = node_.binary_port;
 	protocol = "xapian";
 	path = path_;
-	char ip[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &node_.addr.sin_addr, ip, INET_ADDRSTRLEN);
-	host = ip;
+	host = node_.ip;
+	port = node_.binary_port;
 }
 
 

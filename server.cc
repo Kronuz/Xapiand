@@ -32,7 +32,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 #include <assert.h>
 
@@ -324,9 +323,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 								INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 							}
 
-							char ip[INET_ADDRSTRLEN];
-							inet_ntop(AF_INET, &manager()->this_node.addr.sin_addr, ip, INET_ADDRSTRLEN);
-							Endpoint local_endpoint("xapian://" + std::string(ip) + ":" + std::to_string(manager()->this_node.binary_port) + "/" + index_path);
+							Endpoint local_endpoint("xapian://" + manager()->this_node.host_port() + "/" + index_path);
 							Endpoint remote_endpoint(index_path, remote_node);
 							// Replicate database from the other node
 							INFO(this, "Syncing database from %s...\n", remote_node.name.c_str());

@@ -34,7 +34,6 @@
 #include <sys/sysctl.h>
 #include <fcntl.h>
 #include <net/if.h> /* for IFF_LOOPBACK */
-#include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <unistd.h>
 
@@ -256,10 +255,7 @@ XapiandManager::setup_node()
 	pthread_mutex_lock(&qmtx);
 
 	// Open cluster database
-	char ip[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &this_node.addr.sin_addr, ip, INET_ADDRSTRLEN);
-
-	Endpoint cluster_endpoint("xapian://" + std::string(ip) + ":" + std::to_string(this_node.binary_port) + "/.");
+	Endpoint cluster_endpoint("xapian://" + this_node.host_port() + "/.");
 	Endpoints cluster_endpoints;
 	cluster_endpoints.insert(cluster_endpoint);
 	if(!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE|DB_PERSISTENT)) {
