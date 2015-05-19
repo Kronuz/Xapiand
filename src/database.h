@@ -146,7 +146,6 @@ public:
 	void clean_reserved(cJSON *root, cJSON *item);
 	std::string specificationstostr(specifications_t &spc);
 
-
 private:
 	bool _commit();
 };
