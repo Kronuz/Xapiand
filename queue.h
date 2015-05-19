@@ -219,4 +219,109 @@ public:
 };
 
 
+
+// A Queue with unique values
+template<class Key, class T = Key>
+class QueueSet : public Queue<std::pair<const Key, T>, std::list<std::pair<const Key, T> > > {
+	typedef Queue<T, std::list<std::pair<const Key, T> > > Queue_t;
+	typedef typename std::pair<const Key, T> key_value_pair_t;
+	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
+#ifdef HAVE_CXX11
+	typedef typename std::unordered_map<Key, list_iterator_t> queue_map_t;
+#else
+	typedef typename std::map<Key, list_iterator_t> queue_map_t;
+#endif
+	typedef typename queue_map_t::iterator map_iterator_t;
+
+private:
+	queue_map_t _items_map;
+
+public:
+	size_t erase(const Key & key) {
+		size_t items = 0;
+		pthread_mutex_lock(&Queue_t::_qmtx);
+		map_iterator_t it = _items_map.find(key);
+		if (it != _items_map.end()) {
+			Queue_t::_items_queue.erase(it->second);
+			_items_map.erase(it);
+			items++;
+		}
+		pthread_mutex_unlock(&Queue_t::_qmtx);
+		return items;
+	}
+
+	bool push(const Key &key, const T & element, double timeout=-1.0) {
+		key_value_pair_t p = key_value_pair_t(key, element);
+		return push(p, timeout);
+	}
+
+#if T == Key
+	bool push(const T & element, double timeout=-1.0) {
+		key_value_pair_t p = key_value_pair_t(element, element);
+		return push(p, timeout);
+	}
+#endif
+
+	bool push(const key_value_pair_t & p, double timeout=-1.0) {
+		pthread_mutex_lock(&Queue_t::_qmtx);
+
+		erase(p.first);
+
+		bool pushed = _push(p, timeout);
+
+		if (pushed) {
+			list_iterator_t last = --Queue_t::_items_queue.end();
+			_items_map[p.first] = last;
+		}
+
+		// Now we need to unlock the mutex otherwise waiting threads will not be able
+		// to wake and lock the mutex by time before push is locking again
+		pthread_mutex_unlock(&Queue_t::_qmtx);
+
+		if (pushed) {
+			// Notifiy waiting thread they can pop now
+			pthread_cond_signal(&Queue_t::_push_cond);
+		}
+
+		return pushed;
+	}
+
+	bool pop(T & element, double timeout=-1.0) {
+		key_value_pair_t p;
+
+		pthread_mutex_lock(&Queue_t::_qmtx);
+
+		bool popped = _pop(p, timeout);
+
+		if (popped) {
+			element = p.second;
+			map_iterator_t it = _items_map.find(p.first);
+			if (it != _items_map.end()) {
+				_items_map.erase(it);
+			}
+		}
+
+		pthread_mutex_unlock(&Queue_t::_qmtx);
+
+		if (popped) {
+			// Notifiy waiting thread they can push/push now
+			pthread_cond_signal(&Queue_t::_push_cond);
+			pthread_cond_signal(&Queue_t::_pop_cond);
+		}
+
+		return popped;
+	}
+
+	void clear() {
+		pthread_mutex_lock(&Queue_t::_qmtx);
+
+		_items_map.clear();
+
+		Queue_t::clear();
+
+		pthread_mutex_unlock(&Queue_t::_qmtx);
+	}
+
+};
+
 #endif /* XAPIAND_INCLUDED_QUEUE_H */
