@@ -69,7 +69,7 @@ protected:
 
 		if (!_finished) {
 			size_t size = _items_queue.size();
-			while (_limit > 0 && _limit < size) {
+			while (_limit >= 0 && size >= _limit) {
 				if (!_finished && timeout) {
 					if (timeout_ts) {
 						if (pthread_cond_timedwait(&_pop_cond, &_qmtx, timeout_ts) == ETIMEDOUT) {
