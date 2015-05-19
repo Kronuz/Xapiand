@@ -358,6 +358,7 @@ DatabasePool::checkin(Database **database)
 			std::string new_revision = database_->db->get_revision_info();
 			if (new_revision != database_->checkout_revision) {
 				LOG(this, "TRIGGER ON COMMIT HERE!\n");
+				updated_databases.push(database_->hash, database_);
 			}
 		}
 	} else {
