@@ -23,17 +23,29 @@
 #ifndef XAPIAND_INCLUDED_QUEUE_H
 #define XAPIAND_INCLUDED_QUEUE_H
 
-#include <queue>
 #include <cerrno>
+#include <queue>
+#include <list>
+
+#ifdef HAVE_CXX11
+#  include <unordered_map>
+#else
+#  include <map>
+#endif
 
 #include <sys/time.h>
 #include <pthread.h>
 
 
-template<class T>
-class Queue : public std::queue<T> {
+template<class T, class Container = std::deque<T> >
+class Queue {
+	typedef typename std::queue<T, Container> Queue_t;
+
 private:
-	// A mutex object to control access to the std::queue
+	Queue_t _items_queue;
+
+protected:
+	// A mutex object to control access to the underlying queue object
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
@@ -50,16 +62,17 @@ public:
 
 	void finish();
 	void clear();
-	bool push(T& element, double timeout=-1.0);
-	bool pop(T& element, double timeout=-1.0);
+	bool push(T & element, double timeout=-1.0);
+	bool pop(T & element, double timeout=-1.0);
 
 	size_t size();
+	T & front();
 	bool empty();
 };
 
 
-template<class T>
-Queue<T>::Queue(size_t limit_)
+template<class T, class Container>
+Queue<T, Container>::Queue(size_t limit_)
 	: finished(false),
 	  limit(limit_)
 {
@@ -72,8 +85,8 @@ Queue<T>::Queue(size_t limit_)
 }
 
 
-template<class T>
-Queue<T>::~Queue()
+template<class T, class Container>
+Queue<T, Container>::~Queue()
 {
 	finish();
 	pthread_mutex_destroy(&qmtx);
@@ -84,8 +97,8 @@ Queue<T>::~Queue()
 }
 
 
-template<class T>
-void Queue<T>::finish()
+template<class T, class Container>
+void Queue<T, Container>::finish()
 {
 	pthread_mutex_lock(&qmtx);
 
@@ -100,8 +113,8 @@ void Queue<T>::finish()
 }
 
 
-template<class T>
-bool Queue<T>::push(T& element, double timeout)
+template<class T, class Container>
+bool Queue<T, Container>::push(T & element, double timeout)
 {
 	struct timespec ts;
 	if (timeout > 0.0) {
@@ -114,7 +127,7 @@ bool Queue<T>::push(T& element, double timeout)
 	pthread_mutex_lock(&qmtx);
 
 	if (!finished) {
-		size_t size = std::queue<T>::size();
+		size_t size = _items_queue.size();
 		while (limit > 0 && limit < size) {
 			if (!finished && timeout != 0.0) {
 				if (timeout > 0.0) {
@@ -129,10 +142,10 @@ bool Queue<T>::push(T& element, double timeout)
 				pthread_mutex_unlock(&qmtx);
 				return false;
 			}
-			size = std::queue<T>::size();
+			size = _items_queue.size();
 		}
 		// Insert the element in the FIFO queue
-		std::queue<T>::push(element);
+		_items_queue.push(element);
 	}
 
 	// Now we need to unlock the mutex otherwise waiting threads will not be able
@@ -146,8 +159,8 @@ bool Queue<T>::push(T& element, double timeout)
 }
 
 
-template<class T>
-bool Queue<T>::pop(T& element, double timeout)
+template<class T, class Container>
+bool Queue<T, Container>::pop(T & element, double timeout)
 {
 	struct timespec ts;
 	if (timeout > 0.0) {
@@ -160,7 +173,7 @@ bool Queue<T>::pop(T& element, double timeout)
 	pthread_mutex_lock(&qmtx);
 
 	// While the queue is empty, make the thread that runs this wait
-	while(std::queue<T>::empty()) {
+	while(_items_queue.empty()) {
 		if (!finished && timeout != 0.0) {
 			if (timeout > 0.0) {
 				if (pthread_cond_timedwait(&push_cond, &qmtx, &ts) == ETIMEDOUT) {
@@ -177,10 +190,10 @@ bool Queue<T>::pop(T& element, double timeout)
 	}
 
 	//when the condition variable is unlocked, popped the element
-	element = std::queue<T>::front();
+	element = _items_queue.front();
 
 	//pop the element
-	std::queue<T>::pop();
+	_items_queue.pop();
 
 	pthread_mutex_unlock(&qmtx);
 
@@ -192,12 +205,12 @@ bool Queue<T>::pop(T& element, double timeout)
 };
 
 
-template<class T>
-void Queue<T>::clear()
+template<class T, class Container>
+void Queue<T, Container>::clear()
 {
 	pthread_mutex_lock(&qmtx);
-	while (!std::queue<T>::empty()) {
-		std::queue<T>::pop();
+	while (!_items_queue.empty()) {
+		_items_queue.pop();
 	}
 	pthread_mutex_unlock(&qmtx);
 
@@ -206,23 +219,34 @@ void Queue<T>::clear()
 }
 
 
-template<class T>
-bool Queue<T>::empty()
+template<class T, class Container>
+bool Queue<T, Container>::empty()
 {
 	pthread_mutex_lock(&qmtx);
-	bool empty = std::queue<T>::empty();
+	bool empty = _items_queue.empty();
 	pthread_mutex_unlock(&qmtx);
 	return empty;
 }
 
 
-template<class T>
-size_t Queue<T>::size()
+template<class T, class Container>
+size_t Queue<T, Container>::size()
 {
 	pthread_mutex_lock(&qmtx);
-	size_t size = std::queue<T>::size();
+	size_t size = _items_queue.size();
 	pthread_mutex_unlock(&qmtx);
 	return size;
 };
+
+
+template<class T, class Container>
+T & Queue<T, Container>::front()
+{
+	pthread_mutex_lock(&qmtx);
+	T & front = _items_queue.front();
+	pthread_mutex_unlock(&qmtx);
+	return front;
+};
+
 
 #endif /* XAPIAND_INCLUDED_QUEUE_H */
