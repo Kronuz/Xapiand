@@ -56,14 +56,19 @@ class lru_map {
 	typedef typename std::list<key_value_pair_t> lru_list_t;
 	typedef typename lru_map_t::iterator map_iterator_t;
 
-private:
+protected:
+	enum dropping_action {
+		drop,
+		leave,
+		renew
+	};
+
 	lru_list_t _items_list;
 	lru_map_t _items_map;
 	size_t _max_size;
 
-protected:
-	virtual bool persistent(T & val) {
-		return false;
+	dropping_action on_drop(T & val) {
+		return drop;
 	}
 
 public:
@@ -92,11 +97,17 @@ public:
 			list_reverse_iterator_t last = _items_list.rbegin();
 			for (size_t i = _items_map.size(); i != 0 && _items_map.size() > _max_size && last != _items_list.rend(); i--) {
 				list_iterator_t it = --(last++).base();
-				if (persistent(it->second)) {
-					_items_list.splice(_items_list.begin(), _items_list, it);
-				} else {
-					_items_map.erase(it->first);
-					_items_list.erase(it);
+				switch (on_drop(it->second)) {
+					case renew:
+						_items_list.splice(_items_list.begin(), _items_list, it);
+						break;
+					case leave:
+						break;
+					case drop:
+					default:
+						_items_map.erase(it->first);
+						_items_list.erase(it);
+						break;
 				}
 			}
 		}
