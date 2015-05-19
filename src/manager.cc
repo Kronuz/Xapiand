@@ -96,7 +96,8 @@ size_t Node::unserialise(const std::string &s)
 
 
 XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
-	: loop(loop_ ? loop_: &dynamic_loop),
+	: Worker(NULL),
+	  loop(loop_ ? loop_: &dynamic_loop),
 	  state(STATE_RESET),
 	  break_loop(*loop),
 	  discovery_heartbeat(*loop),
@@ -251,7 +252,7 @@ XapiandManager::set_node_name(const std::string &node_name_)
 
 bool XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-	XapiandServer *server = *servers.begin();
+	XapiandServer *server = static_cast<XapiandServer *>(*_children.begin());
 	return server->trigger_replication(src_endpoint, dst_endpoint);
 }
 
@@ -546,27 +547,6 @@ void XapiandManager::shutdown_cb(ev::async &watcher, int revents)
 }
 
 
-std::list<XapiandServer *>::const_iterator XapiandManager::attach_server(XapiandServer *server)
-{
-	pthread_mutex_lock(&servers_mutex);
-	std::list<XapiandServer *>::const_iterator iterator = servers.insert(servers.end(), server);
-	pthread_mutex_unlock(&servers_mutex);
-	return iterator;
-}
-
-
-void XapiandManager::detach_server(XapiandServer *server)
-{
-	pthread_mutex_lock(&servers_mutex);
-	if (server->iterator != servers.end()) {
-		servers.erase(server->iterator);
-		server->iterator = servers.end();
-		LOG_OBJ(this, "DETACHED SERVER!\n");
-	}
-	pthread_mutex_unlock(&servers_mutex);
-}
-
-
 void XapiandManager::break_loop_cb(ev::async &watcher, int revents)
 {
 	LOG_OBJ(this, "Breaking manager loop!\n");
@@ -576,13 +556,7 @@ void XapiandManager::break_loop_cb(ev::async &watcher, int revents)
 
 void XapiandManager::shutdown()
 {
-	pthread_mutex_lock(&servers_mutex);
-	std::list<XapiandServer *>::const_iterator it(servers.begin());
-	while (it != servers.end()) {
-		XapiandServer *server = *(it++);
-		server->shutdown();
-	}
-	pthread_mutex_unlock(&servers_mutex);
+	Worker::shutdown();
 
 	if (shutdown_asap) {
 		discovery(DISCOVERY_BYE, this_node.serialise());

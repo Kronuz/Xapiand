@@ -32,8 +32,8 @@ const int WRITE_QUEUE_SIZE = 10;
 
 
 BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
-	: server(server_),
-	  iterator(server->attach_client(this)),
+	: Worker(server_),
+	  server(server_),
 	  io_read(*loop),
 	  io_write(*loop),
 	  async_write(*loop),
@@ -77,8 +77,6 @@ BaseClient::~BaseClient()
 			delete buffer;
 		}
 	}
-
-	server->detach_client(this);
 
 	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = --XapiandServer::total_clients;
@@ -257,6 +255,8 @@ bool BaseClient::write(const char *buf, size_t buf_size)
 
 void BaseClient::shutdown()
 {
+	Worker::shutdown();
+
 	if (server->manager->shutdown_now) {
 		LOG_EV(this, "Signaled destroy!!\n");
 		destroy();
