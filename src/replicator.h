@@ -27,26 +27,10 @@
 #include "threadpool.h"
 #include "worker.h"
 #include "manager.h"
+#include "length.h"
 
 #include <ev++.h>
 
-		// void on_commit() {
-		// 	Database *database = NULL;
-		// 	if (database_pool->checkout(&database, endpoints_, 0)) {
-		// 		int mastery_level = database->mastery_level;
-		// 		database_pool->checkin(&database);
-
-		// 		if (mastery_level != -1) {
-		// 			const Endpoint &endpoint = *endpoints.begin();
-		// 			server->manager->discovery(
-		// 				DISCOVERY_DB_UPDATED,
-		// 				serialise_length(mastery_level) +  // The mastery level of the database
-		// 				serialise_string(endpoint.path) +  // The path of the index
-		// 				manager->this_node.serialise()  // The node where the index is at
-		// 			);
-		// 		}
-		// 	}
-		// }
 
 class XapiandReplicator : public Task, public Worker
 {
@@ -56,9 +40,12 @@ class XapiandReplicator : public Task, public Worker
 	void run();
 	void shutdown();
 
+	void on_commit(const Endpoint &endpoint, int mastery_level);
+
 public:
 	XapiandReplicator(XapiandManager *manager_, ev::loop_ref *loop_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
 	~XapiandReplicator();
+
 
 	inline XapiandManager * manager() const {
 		return static_cast<XapiandManager *>(_parent);
