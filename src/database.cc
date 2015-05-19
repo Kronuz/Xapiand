@@ -344,11 +344,11 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 void
 DatabasePool::checkin(Database **database)
 {
-	LOG_DATABASE(this, "- CHECKING IN DB %lx %s(%s)...\n", (unsigned long)*database, (*database)->writable ? "w" : "r", (*database)->endpoints.as_string().c_str());
+	Database *database_ = *database;
+
+	LOG_DATABASE(this, "- CHECKING IN DB %lx %s(%s)...\n", (unsigned long)*database, (*database)->writable ? "w" : "r", database_->endpoints.as_string().c_str());
 
 	pthread_mutex_lock(&qmtx);
-
-	Database *database_ = *database;
 
 	DatabaseQueue *queue;
 
