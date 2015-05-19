@@ -41,7 +41,8 @@
 BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
-	  running(false)
+	  running(false),
+	  repl_database(NULL)
 {
 	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = XapiandServer::total_clients;
@@ -80,12 +81,17 @@ bool BinaryClient::init_remote()
 	return true;
 }
 
+
 bool BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-	endpoints.insert(dst_endpoint);
+	LOG(this, "src_endpoint: %s\n", src_endpoint.as_string().c_str());
+	LOG(this, "dst_endpoint: %s\n", dst_endpoint.as_string().c_str());
+
 	repl_endpoints.insert(src_endpoint);
+	endpoints.insert(dst_endpoint);
 
 	if (!database_pool->checkout(&repl_database, endpoints, DB_WRITABLE|DB_SPAWN)) {
+		LOG_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
 		return false;
 	}
 	databases[repl_database->db] = repl_database;
@@ -456,7 +462,7 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 		throw Xapian::InvalidOperationError("Server has no open database");
 
 	bool need_whole_db = (uuid != db_->get_uuid());
-	LOG(this, "BinaryClient::repl_get_changesets for %s at %s (%d)\n", uuid.c_str(), repr(revision).c_str(), need_whole_db);
+	LOG(this, "BinaryClient::repl_get_changesets for %s (%s) at %s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(revision).c_str(), need_whole_db);
 
 	// write directly to the underlying socket...
 	db_->write_changesets_to_fd(sock, revision, need_whole_db);
