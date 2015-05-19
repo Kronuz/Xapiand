@@ -1655,7 +1655,7 @@ Database::clean_reserved(cJSON *root)
 void
 Database::clean_reserved(cJSON *root, cJSON *item)
 {
-	if (is_reserved(item->string)) {
+	if (is_reserved(item->string) && strcmp(item->string, RESERVED_VALUE) != 0) {
 		cJSON_DeleteItemFromObject(root, item->string);
 		return;
 	}

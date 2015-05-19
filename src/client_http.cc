@@ -761,8 +761,7 @@ void HttpClient::_search()
 					object = object_data;
 				} else {
 					database->clean_reserved(object);
-					cJSON_AddStringToObject(object, "_id", id.c_str());
-					cJSON_AddStringToObject(object, "_type", type.c_str());
+					cJSON_AddStringToObject(object, RESERVED_ID, id.c_str());
 				}
 
 				if (e.pretty) {
@@ -787,7 +786,7 @@ void HttpClient::_search()
 			}
 		} else {
 			cJSON *root = cJSON_CreateObject();
-			cJSON_AddStringToObject(root, "Response empty","No match found");
+			cJSON_AddStringToObject(root, "Response empty", "No match found");
 			if (e.pretty) {
 				result = cJSON_Print(root);
 			} else {
