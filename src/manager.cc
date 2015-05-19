@@ -249,10 +249,10 @@ XapiandManager::set_node_name(const std::string &node_name_)
 }
 
 
-bool XapiandManager::start_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+bool XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
 	XapiandServer *server = *servers.begin();
-	return server->start_replication(src_endpoint, dst_endpoint);
+	return server->trigger_replication(src_endpoint, dst_endpoint);
 }
 
 
@@ -289,7 +289,7 @@ XapiandManager::setup_node()
 		Endpoint remote_endpoint(".", node);
 		// Replicate database from the other node
 		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
-		if (start_replication(remote_endpoint, cluster_endpoint)) {
+		if (trigger_replication(remote_endpoint, cluster_endpoint)) {
 			INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
 			new_cluster = false;
 			break;
