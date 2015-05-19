@@ -37,4 +37,16 @@ XapiandReplicator::~XapiandReplicator()
 void
 XapiandReplicator::run()
 {
+	// Function that retrieves a task from a queue, runs it and deletes it
+	Database *database;
+	while (database_pool->updated_databases.pop(database)) {
+		LOG(this, "REPLICATOR GOT DATABASE!\n");
+	}
+	LOG(this, "Replicator ended!");
+}
+
+void
+XapiandReplicator::shutdown()
+{
+	database_pool->updated_databases.finish();
 }
