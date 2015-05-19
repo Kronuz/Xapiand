@@ -233,6 +233,8 @@ protected:
 	queue_map_t _items_map;
 
 public:
+	QueueSet(size_t limit=-1) : Queue<std::pair<Key, T>, std::list<std::pair<Key, T> > >(limit) {}
+
 	size_t erase(const Key & key) {
 		size_t items = 0;
 		pthread_mutex_lock(&this->_qmtx);
