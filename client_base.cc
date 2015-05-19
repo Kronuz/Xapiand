@@ -240,13 +240,15 @@ bool BaseClient::write(const char *buf, size_t buf_size)
 	LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
 
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
-	write_queue.push(buffer);
-	written += 1;
+	if (!write_queue.push(buffer)) {
+		return false;
+	}
 
 	if (sock == -1) {
 		return false;
 	}
 
+	written += 1;
 	async_write.send();
 
 	return true;
