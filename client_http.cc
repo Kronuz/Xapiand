@@ -249,7 +249,6 @@ void HttpClient::_head()
 	std::string result;
 	Xapian::docid docid = 0;
 	Xapian::QueryParser queryparser;
-	cJSON *root = cJSON_CreateObject();
 	query_t e;
 	int cmd = _endpointgen(e);
 
@@ -261,17 +260,20 @@ void HttpClient::_head()
 		case CMD_SCHEMA:
 		default:
 			cJSON *err_response = cJSON_CreateObject();
-			cJSON_AddItemToObject(root, "Response", err_response);
 			if (cmd == CMD_UNKNOWN)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
 			else
 				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
-			result = cJSON_PrintUnformatted(root);
+			if (e.pretty) {
+				result = cJSON_Print(err_response);
+			} else {
+				result = cJSON_PrintUnformatted(err_response);
+			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-			cJSON_Delete(root);
+			cJSON_Delete(err_response);
 			return;
 	}
 
@@ -302,15 +304,24 @@ void HttpClient::_head()
 		found = false;
 	}
 
+	cJSON *root = cJSON_CreateObject();
 	if(found){
 		cJSON_AddNumberToObject(root,"id",docid);
-		result = cJSON_PrintUnformatted(root);
+		if (e.pretty) {
+			result = cJSON_Print(root);
+		} else {
+			result = cJSON_PrintUnformatted(root);
+		}
 		result += "\n";
 		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 		write(result);
 	} else {
 		cJSON_AddStringToObject(root,"Error", "Document not found");
-		result = cJSON_PrintUnformatted(root);
+		if (e.pretty) {
+			result = cJSON_Print(root);
+		} else {
+			result = cJSON_PrintUnformatted(root);
+		}
 		result += "\n";
 		write(http_response(404, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
 	}
@@ -321,8 +332,6 @@ void HttpClient::_head()
 
 void HttpClient::_delete()
 {
-	cJSON *root = cJSON_CreateObject();
-	cJSON *data = cJSON_CreateObject();
 	std::string result;
 	query_t e;
 	int cmd = _endpointgen(e);
@@ -335,7 +344,6 @@ void HttpClient::_delete()
 		case CMD_SCHEMA:
 		default:
 			cJSON *err_response = cJSON_CreateObject();
-			cJSON_AddItemToObject(root, "Response", err_response);
 			if (cmd == CMD_UNKNOWN)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
@@ -343,11 +351,14 @@ void HttpClient::_delete()
 
 			else
 				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
-			result = cJSON_PrintUnformatted(root);
+			if (e.pretty) {
+				result = cJSON_Print(err_response);
+			} else {
+				result = cJSON_PrintUnformatted(err_response);
+			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-			cJSON_Delete(root);
-			cJSON_Delete(data);
+			cJSON_Delete(err_response);
 			return;
 	}
 
@@ -376,6 +387,8 @@ void HttpClient::_delete()
 	pthread_mutex_unlock(&qmtx);
 
 	database_pool->checkin(&database);
+	cJSON *root = cJSON_CreateObject();
+	cJSON *data = cJSON_CreateObject();
 	cJSON_AddStringToObject(data, "id", command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root, "delete", data);
@@ -393,8 +406,6 @@ void HttpClient::_delete()
 void HttpClient::_index()
 {
 	std::string result;
-	cJSON *root = cJSON_CreateObject();
-	cJSON *data = cJSON_CreateObject();
 	query_t e;
 	int cmd = _endpointgen(e);
 
@@ -406,7 +417,6 @@ void HttpClient::_index()
 		case CMD_SCHEMA:
 		default:
 			cJSON *err_response = cJSON_CreateObject();
-			cJSON_AddItemToObject(root, "Response", err_response);
 			if (cmd == CMD_BAD_ENDPS)
 				cJSON_AddStringToObject(err_response, "Error message","Expecting exactly one database");
 			else if (cmd == CMD_UNKNOWN)
@@ -415,11 +425,14 @@ void HttpClient::_index()
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
 			else
 				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
-			result = cJSON_PrintUnformatted(root);
+			if (e.pretty) {
+				result = cJSON_Print(err_response);
+			} else {
+				result = cJSON_PrintUnformatted(err_response);
+			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-			cJSON_Delete(root);
-			cJSON_Delete(data);
+			cJSON_Delete(err_response);
 			return;
 	}
 
@@ -458,6 +471,8 @@ void HttpClient::_index()
 	pthread_mutex_unlock(&qmtx);
 
 	database_pool->checkin(&database);
+	cJSON *root = cJSON_CreateObject();
+	cJSON *data = cJSON_CreateObject();
 	cJSON_AddStringToObject(data, "id", command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root, "index", data);
@@ -476,8 +491,6 @@ void HttpClient::_index()
 void HttpClient::_patch()
 {
 	std::string result;
-	cJSON *root = cJSON_CreateObject();
-	cJSON *data = cJSON_CreateObject();
 	query_t e;
 	int cmd = _endpointgen(e);
 
@@ -489,7 +502,6 @@ void HttpClient::_patch()
 		case CMD_SCHEMA:
 		default:
 			cJSON *err_response = cJSON_CreateObject();
-			cJSON_AddItemToObject(root, "Response", err_response);
 			if (cmd == CMD_BAD_ENDPS)
 				cJSON_AddStringToObject(err_response, "Error message","Expecting exactly one database");
 			else if (cmd == CMD_UNKNOWN)
@@ -498,12 +510,14 @@ void HttpClient::_patch()
 				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown host " + host).c_str());
 			else
 				cJSON_AddStringToObject(err_response, "Error message", "BAD QUERY");
-
-			result = cJSON_PrintUnformatted(root);
+			if (e.pretty) {
+				result = cJSON_Print(err_response);
+			} else {
+				result = cJSON_PrintUnformatted(err_response);
+			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-			cJSON_Delete(root);
-			cJSON_Delete(data);
+			cJSON_Delete(err_response);
 			return;
 	}
 
@@ -528,6 +542,8 @@ void HttpClient::_patch()
 	}
 
 	database_pool->checkin(&database);
+	cJSON *root = cJSON_CreateObject();
+	cJSON *data = cJSON_CreateObject();
 	cJSON_AddStringToObject(data, "id", command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root, "update", data);
@@ -631,19 +647,21 @@ void HttpClient::_search()
 				e.synonyms = false;
 				e.unique_doc = true;
 			}else {
-				cJSON *root = cJSON_CreateObject();
 				cJSON *err_response = cJSON_CreateObject();
-				cJSON_AddItemToObject(root, "Response", err_response);
 				if (cmd == CMD_UNKNOWN)
 					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
 				else if (cmd == CMD_UNKNOWN_HOST)
 					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
 				else
 					cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
-				result = cJSON_PrintUnformatted(root);
+				if (e.pretty) {
+					result = cJSON_Print(err_response);
+				} else {
+					result = cJSON_PrintUnformatted(err_response);
+				}
 				result += "\n";
 				write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-				cJSON_Delete(root);
+				cJSON_Delete(err_response);
 				return;
 			}
 	}
