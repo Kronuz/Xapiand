@@ -97,14 +97,14 @@ class Endpoint {
 
 public:
 	int port;
-	std::string protocol, user, password, host, path, search;
+	std::string user, password, host, path, search;
 	int mastery_level;
 
 	Endpoint();
 	Endpoint(const std::string &path_, const Node *	node_=NULL, int mastery_level_=-1);
 
 	bool is_local() const {
-		return protocol == "file" || (host == local_node.host() && port == local_node.binary_port);
+		return host == local_node.host() && port == local_node.binary_port;
 	}
 
 	size_t hash() const;
