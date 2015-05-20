@@ -130,7 +130,7 @@ Database::reopen()
 			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints_size, endpoints.as_string().c_str());
 		} else {
 			e = &*i;
-			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
+			if (e->is_local()) {
 				local = true;
 				wdb = Xapian::WritableDatabase(e->path, spawn ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
@@ -162,7 +162,7 @@ Database::reopen()
 		db = new Xapian::Database();
 		for (; i != endpoints.end(); ++i) {
 			e = &*i;
-			if (e->protocol == "file" || e->host == "localhost" || e->host == "127.0.0.1") {
+			if (e->is_local()) {
 				local = true;
 				try {
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
@@ -255,7 +255,7 @@ DatabasePool::get_mastery_level(const std::string &dir)
 	int mastery_level = -1;
 
 	Endpoints endpoints;
-	endpoints.insert(Endpoint("file://" + dir));
+	endpoints.insert(Endpoint(dir));
 
 	pthread_mutex_lock(&qmtx);
 	if (checkout(&database_, endpoints, 0)) {
