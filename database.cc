@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
@@ -71,6 +72,12 @@ Database::read_mastery(const std::string &dir)
 
 	LOG_DATABASE(this, "+ READING MASTERY OF INDEX '%s' (0x%08x)...\n", dir.c_str(), hash);
 
+	struct stat info;
+	if (stat(dir.c_str(), &info) || !(info.st_mode & S_IFDIR)) {
+		LOG_DATABASE(this, "- NO MASTERY OF INDEX '%s' (0x%08x)\n", dir.c_str(), hash);
+		return -1;
+	}
+
 	mastery_level = time(0);
 	unsigned char buf[512];
 
@@ -92,7 +99,7 @@ Database::read_mastery(const std::string &dir)
 		close(fd);
 	}
 
-	LOG_DATABASE(this, "- MASTERY OF INDEX '%s' (0x%08x): %d\n", dir.c_str(), hash, mastery_level);
+	LOG_DATABASE(this, "- MASTERY OF INDEX '%s' (0x%08x) is %d\n", dir.c_str(), hash, mastery_level);
 
 	return mastery_level;
 }
