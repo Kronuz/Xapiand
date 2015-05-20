@@ -338,7 +338,7 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 	}
 	database_->checkout_revision = database_->db->get_revision_info();
 
-	LOG_DATABASE(this, "+ CHECKOUT DB %lx %s(%s), %s at rev:'%s'\n", (unsigned long)database_, writable ? "w" : "r", endpoints.as_string().c_str(), database_->local ? "local" : "remote", repr(database_->checkout_revision, false).c_str());
+	LOG_DATABASE(this, "+ CHECKOUT DB %lx %s(%s), %s at rev:%s\n", (unsigned long)database_, writable ? "w" : "r", endpoints.as_string().c_str(), database_->local ? "local" : "remote", repr(database_->checkout_revision, false).c_str());
 
 	return true;
 }
