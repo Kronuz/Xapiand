@@ -122,7 +122,7 @@ void BinaryClient::on_read(const char *buf, ssize_t received)
 		if (type == '\xfe') {
 			state = replicationprotocol;  // Switch to replication protocol
 			type = static_cast<char>(REPL_MSG_GET_CHANGESETS);
-			LOG_BINARY_PROTO(this, "Switched to replication protocol");
+			LOG_BINARY(this, "Switched to replication protocol");
 		}
 
 		Buffer *msg = new Buffer(type, data.c_str(), data.size());
@@ -306,8 +306,6 @@ void BinaryClient::repl_end_of_changes(const std::string & message)
 {
 	if (state != init_replicationprotocol) {
 		LOG(this, "BinaryClient::repl_end_of_changes\n");
-		state = remoteprotocol;
-		LOG_BINARY_PROTO(this, "Switched back to remote protocol");
 		shutdown();
 		return;
 	}
@@ -339,8 +337,6 @@ void BinaryClient::repl_fail(const std::string & message)
 {
 	LOG(this, "BinaryClient::repl_fail\n");
 	LOG_ERR(this, "Replication failure!\n");
-	state = remoteprotocol;
-	LOG_BINARY_PROTO(this, "Switched back to remote protocol");
 	shutdown();
 }
 
