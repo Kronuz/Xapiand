@@ -327,17 +327,20 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 
 	pthread_mutex_unlock(&qmtx);
 
-	if (database_) {
-		if ((now - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
-			database_->reopen();
-			LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)database_);
-		}
-		database_->checkout_revision = database_->db->get_revision_info();
+	if (!database_) {
+		LOG_DATABASE(this, "+ CHECKOUT DB FAILED!\n");
+		return false;
 	}
 
-	LOG_DATABASE(this, "+ CHECKOUT DB %lx (%s)\n", (unsigned long)database_, database_->local ? "local" : "remote");
+	if ((now - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
+		database_->reopen();
+		LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)database_);
+	}
+	database_->checkout_revision = database_->db->get_revision_info();
 
-	return database_;
+	LOG_DATABASE(this, "+ CHECKOUT DB %lx (%s)\n", (unsigned long)database_, database_ && database_->local ? "local" : "remote");
+
+	return true;
 }
 
 
