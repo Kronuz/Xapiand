@@ -116,6 +116,7 @@ protected:
 
 		return true;
 	}
+
 	virtual void _clear() {
 		_items_queue.clear();
 	}
@@ -217,17 +218,15 @@ public:
 };
 
 
-
 // A Queue with unique values
-template<class Key, class T = Key>
-class QueueSet : public Queue<std::pair<Key, T>, std::list<std::pair<Key, T> > > {
-	typedef Queue<std::pair<Key, T>, std::list<std::pair<Key, T> > > Queue_t;
-	typedef std::pair<Key, T> key_value_pair_t;
-	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
+template<class T>
+class QueueSet : public Queue<T, std::list<T> > {
+	typedef Queue<T, std::list<T> > Queue_t;
+	typedef typename std::list<T>::iterator list_iterator_t;
 #ifdef HAVE_CXX11
-	typedef std::unordered_map<Key, list_iterator_t> queue_map_t;
+	typedef std::unordered_map<T, list_iterator_t> queue_map_t;
 #else
-	typedef std::map<Key, list_iterator_t> queue_map_t;
+	typedef std::map<T, list_iterator_t> queue_map_t;
 #endif
 	typedef typename queue_map_t::iterator map_iterator_t;
 
@@ -244,12 +243,12 @@ protected:
 		return renew;
 	}
 
-	bool _push(const key_value_pair_t & p, double timeout) {
-		map_iterator_t it = _items_map.find(p.first);
+	bool _push(const T & element, double timeout) {
+		map_iterator_t it = _items_map.find(element);
 		if (it != _items_map.end()) {
-			switch (on_dup(it->second->second)) {
+			switch (on_dup(*it->second)) {
 				case update:
-					it->second->second = p.second;
+					*it->second = element;
 				case leave:
 					// The item is already there, leave it alone
 					pthread_mutex_unlock(&this->_qmtx);
@@ -257,27 +256,27 @@ protected:
 				case renew:
 				default:
 					// The item is already there, move it to front
-					_items_map.erase(it);
 					this->_items_queue.erase(it->second);
+					_items_map.erase(it);
 					break;
 			}
 		}
 
-		bool pushed = Queue_t::_push(p, timeout);
+		bool pushed = Queue_t::_push(element, timeout);
 
 		if (pushed) {
 			list_iterator_t first = this->_items_queue.begin();
-			_items_map[p.first] = first;
+			_items_map[element] = first;
 		}
 
 		return pushed;
 	}
 
-	bool _pop(const key_value_pair_t & p, double timeout) {
-		bool popped = Queue_t::_pop(p, timeout);
+	bool _pop(T & element, double timeout) {
+		bool popped = Queue_t::_pop(element, timeout);
 
 		if (popped) {
-			map_iterator_t it = _items_map.find(p.first);
+			map_iterator_t it = _items_map.find(element);
 			if (it != _items_map.end()) {
 				_items_map.erase(it);
 			}
@@ -294,7 +293,7 @@ protected:
 public:
 	QueueSet(size_t limit=-1) : Queue_t(limit) {}
 
-	size_t erase(const Key & key) {
+	size_t erase(const T & key) {
 		size_t items = 0;
 		pthread_mutex_lock(&this->_qmtx);
 		map_iterator_t it = _items_map.find(key);
@@ -305,27 +304,6 @@ public:
 		}
 		pthread_mutex_unlock(&this->_qmtx);
 		return items;
-	}
-
-	bool push(const Key &key, const T & element, double timeout=-1.0) {
-		key_value_pair_t p = key_value_pair_t(key, element);
-		return _push(p, timeout);
-	}
-
-#if T == Key
-	bool push(const T & element, double timeout=-1.0) {
-		key_value_pair_t p = key_value_pair_t(element, element);
-		return _push(p, timeout);
-	}
-#endif
-
-	bool pop(T & element, double timeout=-1.0) {
-		key_value_pair_t p;
-		bool popped = Queue_t::_pop(p, timeout);
-		if (popped) {
-			element = p.second;
-		}
-		return popped;
 	}
 };
 
