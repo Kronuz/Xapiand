@@ -71,26 +71,26 @@ time_t init_time;
 times_row_t stats_cnt;
 
 
-std::string repr(const char * p, size_t size)
+std::string repr(const char * p, size_t size, bool friendly)
 {
 	char *buff = new char[size * 4 + 1];
 	char *d = buff;
 	const char *p_end = p + size;
 	while (p != p_end) {
 		char c = *p++;
-		if (c == 9) {
+		if (friendly && c == 9) {
 			*d++ = '\\';
 			*d++ = 't';
-		} else if (c == 10) {
+		} else if (friendly && c == 10) {
 			*d++ = '\\';
 			*d++ = 'n';
-		} else if (c == 13) {
+		} else if (friendly && c == 13) {
 			*d++ = '\\';
 			*d++ = 'r';
-		} else if (c == '\'') {
+		} else if (friendly && c == '\'') {
 			*d++ = '\\';
 			*d++ = '\'';
-		} else if (c >= ' ' && c <= '~') {
+		} else if (friendly && c >= ' ' && c <= '~') {
 			*d++ = c;
 		} else {
 			*d++ = '\\';
@@ -107,9 +107,9 @@ std::string repr(const char * p, size_t size)
 }
 
 
-std::string repr(const std::string &string)
+std::string repr(const std::string &string, bool friendly)
 {
-	return repr(string.c_str(), string.size());
+	return repr(string.c_str(), string.size(), friendly);
 }
 
 
