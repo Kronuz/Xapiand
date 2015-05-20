@@ -475,7 +475,6 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 		return;
 	}
 	db_->write_changesets_to_fd(fd, from_revision, need_whole_db);
-	LOG(this, "fd:%s\n", path);
 
 	// decode and send messages:
 	::lseek(fd, 0, SEEK_SET);
