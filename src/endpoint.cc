@@ -110,7 +110,7 @@ Endpoint::Endpoint(const std::string &uri_, const Node *node_, int mastery_level
 			node_ = &local_node;
 		}
 		protocol = "xapian";
-		host = node_->ip();
+		host = node_->host();
 		port = node_->binary_port;
 	}
 }
@@ -173,7 +173,7 @@ std::string Endpoint::as_string() const {
 }
 
 
-bool Endpoint::operator< (const Endpoint & other) const
+bool Endpoint::operator<(const Endpoint & other) const
 {
 	return as_string() < other.as_string();
 }
