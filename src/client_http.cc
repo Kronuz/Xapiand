@@ -258,6 +258,7 @@ void HttpClient::_head()
 		case CMD_SEARCH:
 		case CMD_FACETS:
 		case CMD_STATS:
+		case CMD_SCHEMA:
 		default:
 			cJSON *err_response = cJSON_CreateObject();
 			cJSON_AddItemToObject(root, "Response", err_response);
@@ -331,6 +332,7 @@ void HttpClient::_delete()
 		case CMD_SEARCH:
 		case CMD_FACETS:
 		case CMD_STATS:
+		case CMD_SCHEMA:
 		default:
 			cJSON *err_response = cJSON_CreateObject();
 			cJSON_AddItemToObject(root, "Response", err_response);
@@ -401,6 +403,7 @@ void HttpClient::_index()
 		case CMD_SEARCH:
 		case CMD_FACETS:
 		case CMD_STATS:
+		case CMD_SCHEMA:
 		default:
 			cJSON *err_response = cJSON_CreateObject();
 			cJSON_AddItemToObject(root, "Response", err_response);
@@ -483,6 +486,7 @@ void HttpClient::_patch()
 		case CMD_SEARCH:
 		case CMD_FACETS:
 		case CMD_STATS:
+		case CMD_SCHEMA:
 		default:
 			cJSON *err_response = cJSON_CreateObject();
 			cJSON_AddItemToObject(root, "Response", err_response);
@@ -587,6 +591,7 @@ void HttpClient::_stats(query_t &e)
 void HttpClient::_search()
 {
 	bool facets = false;
+	bool schema = false;
 	bool json_chunked = true;
 	std::string result;
 
@@ -613,6 +618,9 @@ void HttpClient::_search()
 		case CMD_STATS:
 			_stats(e);
 			return;
+		case CMD_SCHEMA:
+			schema = true;
+			break;
 		default:
 			if (Is_id_range(command)){
 				e.query.push_back(std::string("id:" + command));
@@ -644,6 +652,26 @@ void HttpClient::_search()
 	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
+	}
+
+	if (schema) {
+		std::string schema_;
+		if (database->get_metadata("scheme",schema_)) {
+			schema_ += "\n";
+			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, schema_));
+			return;
+		} else {
+			cJSON *err_response = cJSON_CreateObject();
+			cJSON_AddStringToObject(err_response, "Error message","schema not found");
+			if (e.pretty) {
+				schema_ = cJSON_Print(err_response);
+			} else {
+				schema_ = cJSON_PrintUnformatted(err_response);
+			}
+			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, schema_));
+			cJSON_Delete(err_response);
+			return;
+		}
 	}
 
 	Xapian::MSet mset;

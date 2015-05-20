@@ -1312,6 +1312,8 @@ int identify_cmd(std::string &commad)
 			return CMD_FACETS;
 		} else if (strcasecmp(commad.c_str(), "_stats") == 0) {
 			return CMD_STATS;
+		} else if (strcasecmp(commad.c_str(), "_schema") == 0) {
+			return CMD_SCHEMA;
 		}
 		return CMD_UNKNOWN;
 	} else return CMD_NUMBER;
