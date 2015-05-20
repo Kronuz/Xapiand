@@ -252,6 +252,8 @@ void fill_zeros_stats_sec(int start, int end);
 #define LOG_DISCOVERY(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_OBJ(...)
 #define LOG_DATABASE(...)
+#define LOG_HTTP(...)
+#define LOG_BINARY(...)
 #define LOG_HTTP_PROTO_PARSER(...)
 
 #define LOG_EV(...)

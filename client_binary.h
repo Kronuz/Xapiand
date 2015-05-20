@@ -38,13 +38,13 @@
 #endif
 
 enum replicate_reply_type {
-    REPL_REPLY_END_OF_CHANGES,  // No more changes to transfer.
-    REPL_REPLY_FAIL,            // Couldn't generate full set of changes.
-    REPL_REPLY_DB_HEADER,       // The start of a whole DB copy.
-    REPL_REPLY_DB_FILENAME,     // The name of a file in a DB copy.
-    REPL_REPLY_DB_FILEDATA,     // Contents of a file in a DB copy.
-    REPL_REPLY_DB_FOOTER,       // End of a whole DB copy.
-    REPL_REPLY_CHANGESET,       // A changeset file is being sent.
+    REPL_REPLY_END_OF_CHANGES,  // 0 - No more changes to transfer.
+    REPL_REPLY_FAIL,            // 1 - Couldn't generate full set of changes.
+    REPL_REPLY_DB_HEADER,       // 2 - The start of a whole DB copy.
+    REPL_REPLY_DB_FILENAME,     // 3 - The name of a file in a DB copy.
+    REPL_REPLY_DB_FILEDATA,     // 4 - Contents of a file in a DB copy.
+    REPL_REPLY_DB_FOOTER,       // 5 - End of a whole DB copy.
+    REPL_REPLY_CHANGESET,       // 6 - A changeset file is being sent.
     REPL_MSG_GET_CHANGESETS,
     REPL_MAX,
 };
