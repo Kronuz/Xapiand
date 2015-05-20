@@ -41,7 +41,7 @@ struct Node {
 	size_t unserialise(const char **p, const char *end);
 	size_t unserialise(const std::string &s);
 
-	std::string ip() const {
+	std::string host() const {
 		char ip[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
 		return std::string(ip);
@@ -102,9 +102,15 @@ public:
 
 	Endpoint();
 	Endpoint(const std::string &path_, const Node *	node_=NULL, int mastery_level_=-1);
+
+	bool is_local() const {
+		return protocol == "file" || (host == local_node.host() && port == local_node.binary_port);
+	}
+
 	size_t hash() const;
 	std::string as_string() const;
-	bool operator< (const Endpoint & other) const;
+	bool operator<(const Endpoint & other) const;
+	bool operator==(const Node &other) const;
 };
 
 
