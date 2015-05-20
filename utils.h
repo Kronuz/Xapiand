@@ -61,8 +61,8 @@
 
 void log(const char *file, int line, void *obj, const char *fmt, ...);
 
-std::string repr(const char *p, size_t size);
-std::string repr(const std::string &string);
+std::string repr(const char *p, size_t size, bool friendly=true);
+std::string repr(const std::string &string, bool friendly=true);
 
 
 inline bool ignored_errorno(int e, bool udp) {
