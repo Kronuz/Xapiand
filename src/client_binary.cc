@@ -181,7 +181,6 @@ void BinaryClient::send_message(char type_as_char, const std::string &message, d
 void BinaryClient::shutdown()
 {
 	BaseClient::shutdown();
-	destroy();  // Force destruction!
 }
 
 
