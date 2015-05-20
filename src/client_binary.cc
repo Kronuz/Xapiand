@@ -148,27 +148,31 @@ char BinaryClient::get_message(double timeout, std::string & result, char requir
 
 	const char *msg_str = msg->dpos();
 	size_t msg_size = msg->nbytes();
-	char type = msg->type;
+	char type_as_char = msg->type;
 
 	result.assign(msg_str, msg_size);
 
 	std::string buf;
-	buf += type;
+	buf += type_as_char;
+	LOG_BINARY(this, "get_message: '%s'\n", repr(buf, false).c_str());
+
 	buf += encode_length(msg_size);
 	buf += result;
-	LOG_BINARY_PROTO(this, "get_message: '%s'\n", repr(buf).c_str());
+	LOG_BINARY_PROTO(this, "msg = '%s'\n", repr(buf).c_str());
 
 	delete msg;
 
-	return type;
+	return type_as_char;
 }
 
 void BinaryClient::send_message(char type_as_char, const std::string &message, double end_time) {
-	std::string buf(&type_as_char, 1);
+	std::string buf;
+	buf += type_as_char;
+	LOG_BINARY(this, "send_message: '%s'\n", repr(buf, false).c_str());
+
 	buf += encode_length(message.size());
 	buf += message;
-
-	LOG_BINARY_PROTO(this, "send_message: '%s'\n", repr(buf).c_str());
+	LOG_BINARY_PROTO(this, "msg = '%s'\n", repr(buf).c_str());
 
 	write(buf);
 }
@@ -258,8 +262,10 @@ void BinaryClient::run()
 			}
 		} catch (const Xapian::NetworkError &e) {
 			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			shutdown();
 		} catch (...) {
 			LOG_ERR(this, "ERROR!\n");
+			shutdown();
 		}
 	}
 }
@@ -291,10 +297,6 @@ void BinaryClient::repl_run_one()
 	} catch (ConnectionClosed &) {
 		return;
 	} catch (...) {
-		// Propagate an unknown exception to the client.
-		send_message(REPLY_EXCEPTION, std::string());
-		// And rethrow it so our caller can log it and close the
-		// connection.
 		throw;
 	}
 
@@ -470,29 +472,56 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 	bool need_whole_db = (uuid != db_->get_uuid());
 	LOG(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
 
-	db_->write_changesets_to_fd(sock, from_revision, need_whole_db);
-	::shutdown(sock, SHUT_RDWR);
+	// write changesets to a temporary file
+	char path[] = "/tmp/xapian_changesets.XXXXXXXXXXXX";
+	int fd = mkstemp(path);
+	if (fd < 0) {
+		LOG_ERR(this, "Cannot write to %s (1)\n", path);
+		return;
+	}
+	db_->write_changesets_to_fd(fd, from_revision, need_whole_db);
+	LOG(this, "fd:%s\n", path);
 
-	// // write changesets to a temporary file
-	// char path[] = "/tmp/xapian_changesets.XXXXXXXXXXXX";
-	// int fd = mkstemp(path);
-	// if (fd < 0) {
-	// 	LOG_ERR(this, "Cannot write to %s (1)\n", path);
-	// 	return;
-	// }
-	// db_->write_changesets_to_fd(fd, revision, need_whole_db);
-	// ::lseek(fd, 0, SEEK_SET);
+	// decode and send messages:
+	::lseek(fd, 0, SEEK_SET);
 
-	// std::string buffer;
-	// char buf[1024];
-	// size_t size;
-	// while ((size = ::read(fd, buf, sizeof(buf)))) {
-	// 	buffer.append(buf, size);
-	// }
-	// LOG(this, "buffer size: %lu\n", buffer.size());
+	char buf[1024];
+	std::string buffer;
 
-	// ::close(fd);
-	// ::unlink(path);
+	size_t size = ::read(fd, buf, sizeof(buf));
+	buffer.append(buf, size);
+	p = buffer.data();
+	p_end = p + buffer.size();
+	const char *s = p;
+
+	while (p != p_end) {
+		char type_as_char = *p++;
+		size_t len = decode_length(&p, p_end);
+		size_t pos = p - s;
+		while (p_end - p < len || p_end - p < sizeof(buf) / 2) {
+			size = ::read(fd, buf, sizeof(buf));
+			if (!size) break;
+			buffer.append(buf, size);
+			s = p = buffer.data();
+			p_end = p + buffer.size();
+			p += pos;
+		}
+		if (p_end - p < len) {
+			send_message(REPL_REPLY_FAIL, "");
+			return;
+		}
+		std::string msg(p, len);
+		p += len;
+
+		send_message(type_as_char, msg);
+
+		buffer.erase(0, p - s);
+		s = p = buffer.data();
+		p_end = p + buffer.size();
+	}
+
+	::close(fd);
+	::unlink(path);
 
 	release_db(db_);
 }
