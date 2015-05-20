@@ -79,7 +79,7 @@ public:
 		_break_loop.start();
 	}
 
-	~Worker() {
+	virtual ~Worker() {
 		_break_loop.stop();
 
 		pthread_mutex_destroy(&_mtx);
