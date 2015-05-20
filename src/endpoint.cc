@@ -71,7 +71,7 @@ Endpoint::Endpoint(const std::string &uri_, const Node *node_, int mastery_level
 	base = getcwd(actualpath, PATH_MAX);
 	normalize_path(base.c_str(), actualpath);
 	base = actualpath;
-	protocol = slice_before(uri, "://");
+	std::string protocol = slice_before(uri, "://");
 	if (protocol.empty()) {
 		protocol = "file";
 	}
@@ -147,7 +147,7 @@ std::string Endpoint::as_string() const {
 	if (path.empty()) {
 		return ret;
 	}
-	ret += protocol + "://";
+	ret += "xapian://";
 	if (!user.empty() || !password.empty()) {
 		ret += user;
 		if (!password.empty()) {
