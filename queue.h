@@ -94,7 +94,7 @@ protected:
 		struct timespec *timeout_ts = (timeout > 0.0) ? &_timespec(timeout) : NULL;
 
 		// While the queue is empty, make the thread that runs this wait
-		while(_items_queue.empty()) {
+		while (_items_queue.empty()) {
 			if (!_finished && timeout) {
 				if (timeout_ts) {
 					if (pthread_cond_timedwait(&_push_cond, &_qmtx, timeout_ts) == ETIMEDOUT) {
