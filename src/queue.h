@@ -150,7 +150,6 @@ public:
 			return;
 		}
 		_finished = true;
-		_clear();
 		pthread_mutex_unlock(&_qmtx);
 
 		// Signal the condition variable in case any threads are waiting
