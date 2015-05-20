@@ -256,6 +256,8 @@ bool BaseClient::write(const char *buf, size_t buf_size)
 
 void BaseClient::shutdown()
 {
+	::shutdown(sock, SHUT_RDWR);
+
 	Worker::shutdown();
 
 	if (manager()->shutdown_now) {
