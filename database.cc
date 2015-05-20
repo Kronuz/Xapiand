@@ -275,7 +275,7 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 	bool spawn = flags & DB_SPAWN;
 	bool persistent = flags & DB_PERSISTENT;
 
-	LOG_DATABASE(this, "+ CHECKING OUT DB %lx %s(%s)...\n", (unsigned long)*database, writable ? "w" : "r", endpoints.as_string().c_str());
+	LOG_DATABASE(this, "++ CHECKING OUT DB %s(%s) [%lx]...\n", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)*database);
 
 	time_t now = time(0);
 	Database *database_ = NULL;
@@ -328,17 +328,17 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 	pthread_mutex_unlock(&qmtx);
 
 	if (!database_) {
-		LOG_DATABASE(this, "+ CHECKOUT DB FAILED!\n");
+		LOG_DATABASE(this, "!! FAILED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
 		return false;
 	}
 
 	if ((now - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
 		database_->reopen();
-		LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)database_);
+		LOG_DATABASE(this, "== REOPEN DB %s(%s) [%lx]\n", database_->writable ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
 	}
 	database_->checkout_revision = database_->db->get_revision_info();
 
-	LOG_DATABASE(this, "+ CHECKOUT DB %lx %s(%s), %s at rev:%s\n", (unsigned long)database_, writable ? "w" : "r", endpoints.as_string().c_str(), database_->local ? "local" : "remote", repr(database_->checkout_revision, false).c_str());
+	LOG_DATABASE(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx\n", writable ? "w" : "r", endpoints.as_string().c_str(), database_->local ? "local" : "remote", repr(database_->checkout_revision, false).c_str(), (unsigned long)database_);
 
 	return true;
 }
@@ -349,7 +349,7 @@ DatabasePool::checkin(Database **database)
 {
 	Database *database_ = *database;
 
-	LOG_DATABASE(this, "- CHECKING IN DB %lx %s(%s)...\n", (unsigned long)*database, (*database)->writable ? "w" : "r", database_->endpoints.as_string().c_str());
+	LOG_DATABASE(this, "-- CHECKING IN DB %s(%s) [%lx]...\n", database_->writable ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
 
 	pthread_mutex_lock(&qmtx);
 
@@ -379,7 +379,7 @@ DatabasePool::checkin(Database **database)
 
 	pthread_mutex_unlock(&qmtx);
 
-	LOG_DATABASE(this, "- CHECKIN DB %lx\n", (unsigned long)database_);
+	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", database_->writable ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
 }
 
 
