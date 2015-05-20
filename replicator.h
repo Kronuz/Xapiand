@@ -40,7 +40,7 @@ class XapiandReplicator : public Task, public Worker
 	void run();
 	void shutdown();
 
-	void on_commit(const Endpoint &endpoint, int mastery_level);
+	void on_commit(const Endpoint &endpoint);
 
 public:
 	XapiandReplicator(XapiandManager *manager_, ev::loop_ref *loop_, DatabasePool *database_pool_, ThreadPool *thread_pool_);

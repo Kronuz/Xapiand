@@ -357,8 +357,9 @@ DatabasePool::checkin(Database **database)
 		if (database_->local && database_->mastery_level != -1) {
 			std::string new_revision = database_->db->get_revision_info();
 			if (new_revision != database_->checkout_revision) {
-				const Endpoint &endpoint = *database_->endpoints.begin();
-				updated_databases.push(database_->hash, updated_database_pair_t(endpoint, database_->mastery_level));
+				Endpoint endpoint = *database_->endpoints.begin();
+				endpoint.mastery_level = database_->mastery_level;
+				updated_databases.push(endpoint);
 			}
 		}
 	} else {
