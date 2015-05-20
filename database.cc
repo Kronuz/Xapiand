@@ -332,10 +332,10 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 			database_->reopen();
 			LOG_DATABASE(this, "+ DB REOPEN %lx\n", (unsigned long)database_);
 		}
-		database_->checkout_revision = (*database)->db->get_revision_info();
+		database_->checkout_revision = database_->db->get_revision_info();
 	}
 
-	LOG_DATABASE(this, "+ CHECKOUT DB %lx\n", (unsigned long)database_);
+	LOG_DATABASE(this, "+ CHECKOUT DB %lx (%s)\n", (unsigned long)database_, database_->local ? "local" : "remote");
 
 	return database_;
 }
