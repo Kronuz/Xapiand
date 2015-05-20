@@ -457,7 +457,7 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 	// Select endpoints and get database
 	pthread_mutex_lock(&qmtx);
 	endpoints.clear();
-	Endpoint endpoint("xapian://" + manager()->this_node.host_port() + "/" + index_path);
+	Endpoint endpoint(index_path);
 	endpoints.insert(endpoint);
 	Xapian::Database * db_ = get_db(false);
 	pthread_mutex_unlock(&qmtx);

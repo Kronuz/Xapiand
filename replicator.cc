@@ -41,7 +41,7 @@ XapiandReplicator::on_commit(const Endpoint &endpoint)
 		DISCOVERY_DB_UPDATED,
 		serialise_length(endpoint.mastery_level) +  // The mastery level of the database
 		serialise_string(endpoint.path) +  // The path of the index
-		manager()->this_node.serialise()   // The node where the index is at
+		local_node.serialise()   // The node where the index is at
 	);
 }
 

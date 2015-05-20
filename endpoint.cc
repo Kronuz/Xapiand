@@ -27,6 +27,9 @@
 #include <unistd.h>
 
 
+Node local_node;
+
+
 char *normalize_path(const char * src, char * dst)
 {
 	int levels = 0;
@@ -59,51 +62,39 @@ Endpoint::Endpoint()
 }
 
 
-Endpoint::Endpoint(const std::string &path_, const Node &node_, int mastery_level_)
+Endpoint::Endpoint(const std::string &uri_, const Node *node_, int mastery_level_)
 	: mastery_level(mastery_level_)
 {
-	protocol = "xapian";
-	path = path_;
-	host = node_.ip();
-	port = node_.binary_port;
-}
-
-
-Endpoint::Endpoint(const std::string &uri, const std::string &base_, int port_) {
-	std::string in(uri);
+	std::string uri(uri_);
 	std::string base;
 	char actualpath[PATH_MAX + 1];
-	if (base_.empty()) {
-		base = getcwd(actualpath, PATH_MAX);
-	} else {
-		base = base_;
-	}
+	base = getcwd(actualpath, PATH_MAX);
 	normalize_path(base.c_str(), actualpath);
 	base = actualpath;
-	protocol = slice_before(in, "://");
+	protocol = slice_before(uri, "://");
 	if (protocol.empty()) {
 		protocol = "file";
 	}
-	search = slice_after(in, "?");
-	path = slice_after(in, "/");
-	std::string userpass = slice_before(in, "@");
+	search = slice_after(uri, "?");
+	path = slice_after(uri, "/");
+	std::string userpass = slice_before(uri, "@");
 	password = slice_after(userpass, ":");
 	user = userpass;
-	std::string portstring = slice_after(in, ":");
+	std::string portstring = slice_after(uri, ":");
 	port = atoi(portstring.c_str());
 	if (protocol.empty() || protocol == "file") {
 		if (path.empty()) {
-			path = in;
+			path = uri;
 		} else {
-			path = in + "/" + path;
+			path = uri + "/" + path;
 		}
 		port = 0;
 		search = "";
 		password = "";
 		user = "";
 	} else {
-		host = in;
-		if (!port) port = port_;
+		host = uri;
+		if (!port) port = XAPIAND_BINARY_SERVERPORT;
 	}
 	path = actualpath + path;
 	normalize_path(path.c_str(), actualpath);
@@ -112,6 +103,15 @@ Endpoint::Endpoint(const std::string &uri, const std::string &base_, int port_) 
 		path.erase(0, base.size());
 	} else {
 		path = "";
+	}
+
+	if (protocol == "file") {
+		if (!node_) {
+			node_ = &local_node;
+		}
+		protocol = "xapian";
+		host = node_->ip();
+		port = node_->binary_port;
 	}
 }
 
