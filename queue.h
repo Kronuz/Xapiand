@@ -64,7 +64,7 @@ protected:
 		return _ts;
 	}
 
-	bool _push(const T & element, double timeout) {
+	virtual bool _push(const T & element, double timeout) {
 		struct timespec *timeout_ts = (timeout > 0.0) ? &_timespec(timeout) : NULL;
 
 		if (!_finished) {
@@ -90,7 +90,7 @@ protected:
 		return true;
 	}
 
-	bool _pop(T & element, double timeout) {
+	virtual bool _pop(T & element, double timeout) {
 		struct timespec *timeout_ts = (timeout > 0.0) ? &_timespec(timeout) : NULL;
 
 		// While the queue is empty, make the thread that runs this wait
@@ -115,6 +115,9 @@ protected:
 		_items_queue.pop_front();
 
 		return true;
+	}
+	virtual void _clear() {
+		_items_queue.clear();
 	}
 
 public:
@@ -141,9 +144,12 @@ public:
 
 	void finish() {
 		pthread_mutex_lock(&_qmtx);
-
+		if (_finished) {
+			pthread_mutex_unlock(&_qmtx);
+			return;
+		}
 		_finished = true;
-
+		_clear();
 		pthread_mutex_unlock(&_qmtx);
 
 		// Signal the condition variable in case any threads are waiting
@@ -153,15 +159,11 @@ public:
 
 	bool push(const T & element, double timeout=-1.0) {
 		pthread_mutex_lock(&_qmtx);
-
 		bool pushed = _push(element, timeout);
-
-		// Now we need to unlock the mutex otherwise waiting threads will not be able
-		// to wake and lock the mutex by time before push is locking again
 		pthread_mutex_unlock(&_qmtx);
 
 		if (pushed) {
-			// Notifiy waiting thread they can pop now
+			// Notifiy waiting thread it can pop now
 			pthread_cond_signal(&_push_cond);
 		}
 
@@ -170,13 +172,11 @@ public:
 
 	bool pop(T & element, double timeout=-1.0) {
 		pthread_mutex_lock(&_qmtx);
-
 		bool popped = _pop(element, timeout);
-
 		pthread_mutex_unlock(&_qmtx);
 
 		if (popped) {
-			// Notifiy waiting thread they can push/push now
+			// Notifiy waiting thread it can push/push now
 			pthread_cond_signal(&_push_cond);
 			pthread_cond_signal(&_pop_cond);
 		}
@@ -186,10 +186,11 @@ public:
 
 	void clear() {
 		pthread_mutex_lock(&_qmtx);
-		_items_queue.clear();
+		_clear();
 		pthread_mutex_unlock(&_qmtx);
 
-		// Notifiy waiting thread they can push/push now
+		// Notifiy waiting thread it can push/push now
+		pthread_cond_signal(&_push_cond);
 		pthread_cond_signal(&_pop_cond);
 	}
 
@@ -220,12 +221,13 @@ public:
 // A Queue with unique values
 template<class Key, class T = Key>
 class QueueSet : public Queue<std::pair<Key, T>, std::list<std::pair<Key, T> > > {
-	typedef typename std::pair<Key, T> key_value_pair_t;
+	typedef Queue<std::pair<Key, T>, std::list<std::pair<Key, T> > > Queue_t;
+	typedef std::pair<Key, T> key_value_pair_t;
 	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
 #ifdef HAVE_CXX11
-	typedef typename std::unordered_map<Key, list_iterator_t> queue_map_t;
+	typedef std::unordered_map<Key, list_iterator_t> queue_map_t;
 #else
-	typedef typename std::map<Key, list_iterator_t> queue_map_t;
+	typedef std::map<Key, list_iterator_t> queue_map_t;
 #endif
 	typedef typename queue_map_t::iterator map_iterator_t;
 
@@ -242,8 +244,55 @@ protected:
 		return renew;
 	}
 
+	bool _push(const key_value_pair_t & p, double timeout) {
+		map_iterator_t it = _items_map.find(p.first);
+		if (it != _items_map.end()) {
+			switch (on_dup(it->second->second)) {
+				case update:
+					it->second->second = p.second;
+				case leave:
+					// The item is already there, leave it alone
+					pthread_mutex_unlock(&this->_qmtx);
+					return true;
+				case renew:
+				default:
+					// The item is already there, move it to front
+					_items_map.erase(it);
+					this->_items_queue.erase(it->second);
+					break;
+			}
+		}
+
+		bool pushed = Queue_t::_push(p, timeout);
+
+		if (pushed) {
+			list_iterator_t first = this->_items_queue.begin();
+			_items_map[p.first] = first;
+		}
+
+		return pushed;
+	}
+
+	bool _pop(const key_value_pair_t & p, double timeout) {
+		bool popped = Queue_t::_pop(p, timeout);
+
+		if (popped) {
+			map_iterator_t it = _items_map.find(p.first);
+			if (it != _items_map.end()) {
+				_items_map.erase(it);
+			}
+		}
+
+		return popped;
+	}
+
+	void _clear() {
+		Queue_t::_clear();
+		_items_map.clear();
+	}
+
 public:
-	QueueSet(size_t limit=-1) : Queue<std::pair<Key, T>, std::list<std::pair<Key, T> > >(limit) {}
+	QueueSet(size_t limit=-1) : Queue_t(limit) {}
 
 	size_t erase(const Key & key) {
 		size_t items = 0;
@@ -266,86 +315,18 @@ public:
 #if T == Key
 	bool push(const T & element, double timeout=-1.0) {
 		key_value_pair_t p = key_value_pair_t(element, element);
-		return push(p, timeout);
+		return Queue_t::push(p, timeout);
 	}
 #endif
 
-	bool push(const key_value_pair_t & p, double timeout=-1.0) {
-		pthread_mutex_lock(&this->_qmtx);
-
-		map_iterator_t it = _items_map.find(p.first);
-		if (it != _items_map.end()) {
-			switch (on_dup(it->second->second)) {
-				case update:
-					it->second->second = p.second;
-				case leave:
-					// The item is already there, leave it alone
-					pthread_mutex_unlock(&this->_qmtx);
-					return true;
-				case renew:
-				default:
-					// The item is already there, move it to front
-					_items_map.erase(it);
-					this->_items_queue.erase(it->second);
-					break;
-			}
-		}
-
-		bool pushed = this->_push(p, timeout);
-
-		if (pushed) {
-			list_iterator_t first = this->_items_queue.begin();
-			_items_map[p.first] = first;
-		}
-
-		// Now we need to unlock the mutex otherwise waiting threads will not be able
-		// to wake and lock the mutex by time before push is locking again
-		pthread_mutex_unlock(&this->_qmtx);
-
-		if (pushed) {
-			// Notifiy waiting thread they can pop now
-			pthread_cond_signal(&this->_push_cond);
-		}
-
-		return pushed;
-	}
-
 	bool pop(T & element, double timeout=-1.0) {
 		key_value_pair_t p;
-
-		pthread_mutex_lock(&this->_qmtx);
-
-		bool popped = this->_pop(p, timeout);
-
+		bool popped = Queue_t::_pop(p, timeout);
 		if (popped) {
 			element = p.second;
-			map_iterator_t it = _items_map.find(p.first);
-			if (it != _items_map.end()) {
-				_items_map.erase(it);
-			}
 		}
-
-		pthread_mutex_unlock(&this->_qmtx);
-
-		if (popped) {
-			// Notifiy waiting thread they can push/push now
-			pthread_cond_signal(&this->_push_cond);
-			pthread_cond_signal(&this->_pop_cond);
-		}
-
 		return popped;
 	}
-
-	void clear() {
-		pthread_mutex_lock(&this->_qmtx);
-
-		_items_map.clear();
-
-		this->clear();
-
-		pthread_mutex_unlock(&this->_qmtx);
-	}
-
 };
 
 #endif /* XAPIAND_INCLUDED_QUEUE_H */
