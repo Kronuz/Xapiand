@@ -107,7 +107,7 @@ void BaseClient::destroy()
 	sock = -1;
 	pthread_mutex_unlock(&qmtx);
 
-	write_queue.clear();
+	write_queue.finish();
 
 	LOG_OBJ(this, "DESTROYED CLIENT!\n");
 }
