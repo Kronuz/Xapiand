@@ -135,7 +135,6 @@ public:
 	unsigned char state;
 	std::string cluster_name;
 	std::string node_name;
-	Node this_node;
 
 	XapiandManager(ev::loop_ref *loop_, const opts_t &o);
 	~XapiandManager();

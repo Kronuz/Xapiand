@@ -47,10 +47,6 @@ struct Node {
 		return std::string(ip);
 	}
 
-	std::string host_port() const {
-		return ip() + ":" + std::to_string(binary_port);
-	}
-
 	inline bool operator==(const Node& other) const {
 		return (
 			stringtolower(name) == stringtolower(other.name) &&
@@ -61,6 +57,7 @@ struct Node {
 	}
 };
 
+extern Node local_node;
 
 class Endpoint;
 class Endpoints;
@@ -104,8 +101,7 @@ public:
 	int mastery_level;
 
 	Endpoint();
-	Endpoint(const std::string &path_, const Node &node_, int mastery_level_=-1);
-	Endpoint(const std::string &uri, const std::string &base_=std::string(), int port_=XAPIAND_BINARY_SERVERPORT);
+	Endpoint(const std::string &path_, const Node *	node_=NULL, int mastery_level_=-1);
 	size_t hash() const;
 	std::string as_string() const;
 	bool operator< (const Endpoint & other) const;
