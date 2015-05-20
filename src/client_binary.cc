@@ -467,7 +467,7 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 		throw Xapian::InvalidOperationError("Server has no open database");
 
 	bool need_whole_db = (uuid != db_->get_uuid());
-	LOG(this, "BinaryClient::repl_get_changesets for %s (%s) at %s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(revision).c_str(), need_whole_db);
+	LOG(this, "BinaryClient::repl_get_changesets for %s (%s) at rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(revision, false).c_str(), need_whole_db);
 
 	db_->write_changesets_to_fd(sock, revision, need_whole_db);
 	::shutdown(sock, SHUT_RDWR);
