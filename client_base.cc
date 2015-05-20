@@ -70,13 +70,6 @@ BaseClient::~BaseClient()
 {
 	destroy();
 
-	while(!write_queue.empty()) {
-		Buffer *buffer;
-		if (write_queue.pop(buffer, 0)) {
-			delete buffer;
-		}
-	}
-
 	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = --XapiandServer::total_clients;
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
@@ -108,6 +101,12 @@ void BaseClient::destroy()
 	pthread_mutex_unlock(&qmtx);
 
 	write_queue.finish();
+	while (!write_queue.empty()) {
+		Buffer *buffer;
+		if (write_queue.pop(buffer, 0)) {
+			delete buffer;
+		}
+	}
 
 	LOG_OBJ(this, "DESTROYED CLIENT!\n");
 }
