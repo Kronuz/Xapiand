@@ -314,7 +314,8 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						}
 
 						mastery_level = database_pool->get_mastery_level(index_path);
-						if (mastery_level > remote_mastery_level) {
+						if (mastery_level != -1 && mastery_level > remote_mastery_level) {
+							LOG_DISCOVERY(this, "Mastery of %s is %d (vs. remote %d)\n", index_path.c_str(), mastery_level, remote_mastery_level);
 							if (remote_node.unserialise(&ptr, end) == -1) {
 								LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 								return;
