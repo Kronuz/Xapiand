@@ -402,7 +402,7 @@ void BinaryClient::repl_changeset(const std::string & message)
 	LOG(this, "BinaryClient::repl_changeset\n");
 	Xapian::WritableDatabase * wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database->db);
 
-	char path[] = "/tmp/xapian_changes.XXXXXX";
+	char path[] = "/tmp/xapian_changes.XXXXXXXXXXXX";
 	int fd = mkstemp(path);
 	if (fd < 0) {
 		LOG_ERR(this, "Cannot write to %s (1)\n", path);
@@ -468,11 +468,29 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 	bool need_whole_db = (uuid != db_->get_uuid());
 	LOG(this, "BinaryClient::repl_get_changesets for %s (%s) at %s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(revision).c_str(), need_whole_db);
 
-	// write directly to the underlying socket...
 	db_->write_changesets_to_fd(sock, revision, need_whole_db);
-
-	// ...and shutdown the connection with the client
 	::shutdown(sock, SHUT_RDWR);
+
+	// // write changesets to a temporary file
+	// char path[] = "/tmp/xapian_changesets.XXXXXXXXXXXX";
+	// int fd = mkstemp(path);
+	// if (fd < 0) {
+	// 	LOG_ERR(this, "Cannot write to %s (1)\n", path);
+	// 	return;
+	// }
+	// db_->write_changesets_to_fd(fd, revision, need_whole_db);
+	// ::lseek(fd, 0, SEEK_SET);
+
+	// std::string buffer;
+	// char buf[1024];
+	// size_t size;
+	// while ((size = ::read(fd, buf, sizeof(buf)))) {
+	// 	buffer.append(buf, size);
+	// }
+	// LOG(this, "buffer size: %lu\n", buffer.size());
+
+	// ::close(fd);
+	// ::unlink(path);
 
 	release_db(db_);
 }
