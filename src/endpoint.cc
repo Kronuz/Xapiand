@@ -54,11 +54,13 @@ char *normalize_path(const char * src, char * dst)
 
 
 Endpoint::Endpoint()
+	: mastery_level(-1)
 {
 }
 
 
-Endpoint::Endpoint(const std::string &path_, const Node &node_)
+Endpoint::Endpoint(const std::string &path_, const Node &node_, int mastery_level_)
+	: mastery_level(mastery_level_)
 {
 	protocol = "xapian";
 	path = path_;
