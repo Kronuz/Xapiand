@@ -204,8 +204,7 @@ public:
 	void checkin(Database **database);
 	void finish();
 
-	typedef typename std::pair<Endpoint, int> updated_database_pair_t;
-	QueueSet<size_t, updated_database_pair_t> updated_databases;
+	QueueSet<Endpoint> updated_databases;
 };
 
 #endif /* XAPIAND_INCLUDED_DATABASE_H */
