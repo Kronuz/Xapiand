@@ -128,12 +128,12 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	}
 
 	// Bind tcp:HTTP, tcp:xapian-binary and udp:discovery ports
-	this_node.http_port = o.http_port;
-	this_node.binary_port = o.binary_port;
+	local_node.http_port = o.http_port;
+	local_node.binary_port = o.binary_port;
 
 	struct sockaddr_in addr;
 
-	this_node.addr = host_address();
+	local_node.addr = host_address();
 
 	if (discovery_port == 0) {
 		discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
@@ -141,19 +141,19 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	discovery_sock = bind_udp("discovery", discovery_port, discovery_addr, 1, o.discovery_group.c_str());
 
 	int http_tries = 1;
-	if (this_node.http_port == 0) {
-		this_node.http_port = XAPIAND_HTTP_SERVERPORT;
+	if (local_node.http_port == 0) {
+		local_node.http_port = XAPIAND_HTTP_SERVERPORT;
 		http_tries = 10;
 	}
-	http_sock = bind_tcp("http", this_node.http_port, addr, http_tries);
+	http_sock = bind_tcp("http", local_node.http_port, addr, http_tries);
 
 #ifdef HAVE_REMOTE_PROTOCOL
 	int binary_tries = 1;
-	if (this_node.binary_port == 0) {
-		this_node.binary_port = XAPIAND_BINARY_SERVERPORT;
+	if (local_node.binary_port == 0) {
+		local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
 		binary_tries = 10;
 	}
-	binary_sock = bind_tcp("binary", this_node.binary_port, addr, binary_tries);
+	binary_sock = bind_tcp("binary", local_node.binary_port, addr, binary_tries);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 	if (discovery_sock == -1 || http_sock == -1 || binary_sock == -1) {
@@ -173,7 +173,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 
 XapiandManager::~XapiandManager()
 {
-	discovery(DISCOVERY_BYE, this_node.serialise());
+	discovery(DISCOVERY_BYE, local_node.serialise());
 
 	destroy();
 
@@ -256,7 +256,7 @@ XapiandManager::setup_node()
 
 	// Open cluster database
 	Endpoints cluster_endpoints;
-	Endpoint cluster_endpoint("xapian://" + this_node.host_port() + "/.");
+	Endpoint cluster_endpoint(".");
 	cluster_endpoints.insert(cluster_endpoint);
 	LOG(this, "cluster_endpoint - endpoints: %s\n", cluster_endpoint.as_string().c_str());
 	if(!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE|DB_PERSISTENT)) {
@@ -273,7 +273,7 @@ XapiandManager::setup_node()
 	nodes_map_t::const_iterator it = nodes.cbegin();
 	for (; it != nodes.cend(); it++) {
 		const Node &node = it->second;
-		Endpoint remote_endpoint(".", node);
+		Endpoint remote_endpoint(".", &node);
 		// Replicate database from the other node
 		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
 		if (trigger_replication(remote_endpoint, cluster_endpoint)) {
@@ -293,7 +293,7 @@ XapiandManager::setup_node()
 		INFO(this, "Cluster is online!\n");
 	}
 
-	set_node_name(this_node.name);
+	set_node_name(local_node.name);
 
 	state = STATE_READY;
 
@@ -314,8 +314,8 @@ bool XapiandManager::put_node(Node &node)
 {
 	pthread_mutex_lock(&nodes_mtx);
 	std::string node_name_lower = stringtolower(node.name);
-	if (node_name_lower == stringtolower(this_node.name)) {
-		this_node.touched = time(NULL);
+	if (node_name_lower == stringtolower(local_node.name)) {
+		local_node.touched = time(NULL);
 		pthread_mutex_unlock(&nodes_mtx);
 		return false;
 	} else {
@@ -344,9 +344,9 @@ bool XapiandManager::touch_node(std::string &node_name, Node *node)
 {
 	pthread_mutex_lock(&nodes_mtx);
 	std::string node_name_lower = stringtolower(node_name);
-	if (node_name_lower == stringtolower(this_node.name)) {
-		this_node.touched = time(NULL);
-		if (node) *node = this_node;
+	if (node_name_lower == stringtolower(local_node.name)) {
+		local_node.touched = time(NULL);
+		if (node) *node = local_node;
 		pthread_mutex_unlock(&nodes_mtx);
 		return true;
 	} else {
@@ -465,21 +465,21 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 {
 	switch (state) {
 		case STATE_RESET:
-			if (!this_node.name.empty()) {
-				drop_node(this_node.name);
+			if (!local_node.name.empty()) {
+				drop_node(local_node.name);
 			}
 			if (node_name.empty()) {
-				this_node.name = name_generator();
+				local_node.name = name_generator();
 			} else {
-				this_node.name = node_name;
+				local_node.name = node_name;
 			}
-			INFO(this, "Advertising as %s...\n", this_node.name.c_str());
+			INFO(this, "Advertising as %s...\n", local_node.name.c_str());
 		case STATE_WAITING:
-			discovery(DISCOVERY_HELLO, this_node.serialise());
+			discovery(DISCOVERY_HELLO, local_node.serialise());
 			break;
 
 		case STATE_READY:
-			discovery(DISCOVERY_PING, serialise_string(this_node.name));
+			discovery(DISCOVERY_PING, serialise_string(local_node.name));
 			break;
 	}
 	if (state != STATE_READY && --state == STATE_SETUP) {
@@ -538,7 +538,7 @@ void XapiandManager::shutdown()
 	Worker::shutdown();
 
 	if (shutdown_asap) {
-		discovery(DISCOVERY_BYE, this_node.serialise());
+		discovery(DISCOVERY_BYE, local_node.serialise());
 		destroy();
 		LOG_OBJ(this, "Finishing thread pool!\n");
 		thread_pool.finish();
@@ -552,11 +552,11 @@ void XapiandManager::shutdown()
 void XapiandManager::run(int num_servers, int num_replicators)
 {
 	std::string msg("Listening on ");
-	if (this_node.http_port != -1) {
-		msg += "tcp:" + std::to_string(this_node.http_port) + " (http), ";
+	if (local_node.http_port != -1) {
+		msg += "tcp:" + std::to_string(local_node.http_port) + " (http), ";
 	}
-	if (this_node.binary_port != -1) {
-		msg += "tcp:" + std::to_string(this_node.binary_port) + " (xapian v" + std::to_string(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION) + "), ";
+	if (local_node.binary_port != -1) {
+		msg += "tcp:" + std::to_string(local_node.binary_port) + " (xapian v" + std::to_string(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION) + "), ";
 	}
 	if (discovery_port != -1) {
 		msg += "udp:" + std::to_string(discovery_port) + " (discovery v" + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION) + "), ";
