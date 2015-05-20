@@ -40,6 +40,42 @@
 #define DATABASE_UPDATE_TIME 10
 
 
+int read_mastery(const std::string &dir)
+{
+	LOG_DATABASE(NULL, "+ READING MASTERY OF INDEX '%s'...\n", dir.c_str());
+
+	struct stat info;
+	if (stat(dir.c_str(), &info) || !(info.st_mode & S_IFDIR)) {
+		LOG_DATABASE(NULL, "- NO MASTERY OF INDEX '%s'\n", dir.c_str());
+		return -1;
+	}
+
+	int mastery_level = time(0);
+	unsigned char buf[512];
+
+	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
+	if (fd < 0) {
+		fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+		if (fd >= 0) {
+			snprintf((char *)buf, sizeof(buf), "%d", mastery_level);
+			write(fd, buf, strlen((char *)buf));
+			close(fd);
+		}
+	} else {
+		mastery_level = 1;
+		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
+		if (length > 0) {
+			buf[length] = '\0';
+			mastery_level = atoi((const char *)buf);
+		}
+		close(fd);
+	}
+
+	LOG_DATABASE(NULL, "- MASTERY OF INDEX '%s' is %d\n", dir.c_str(), mastery_level);
+
+	return mastery_level;
+}
+
 class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 	std::vector<std::string> prefixes;
 
@@ -70,36 +106,7 @@ Database::read_mastery(const std::string &dir)
 	if (!local) return -1;
 	if (mastery_level != -1) return mastery_level;
 
-	LOG_DATABASE(this, "+ READING MASTERY OF INDEX '%s' (0x%08x)...\n", dir.c_str(), hash);
-
-	struct stat info;
-	if (stat(dir.c_str(), &info) || !(info.st_mode & S_IFDIR)) {
-		LOG_DATABASE(this, "- NO MASTERY OF INDEX '%s' (0x%08x)\n", dir.c_str(), hash);
-		return -1;
-	}
-
-	mastery_level = time(0);
-	unsigned char buf[512];
-
-	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
-	if (fd < 0) {
-		fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-		if (fd >= 0) {
-			snprintf((char *)buf, sizeof(buf), "%d", mastery_level);
-			write(fd, buf, strlen((char *)buf));
-			close(fd);
-		}
-	} else {
-		mastery_level = 1;
-		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
-		if (length > 0) {
-			buf[length] = '\0';
-			mastery_level = atoi((const char *)buf);
-		}
-		close(fd);
-	}
-
-	LOG_DATABASE(this, "- MASTERY OF INDEX '%s' (0x%08x) is %d\n", dir.c_str(), hash, mastery_level);
+	mastery_level = ::read_mastery(dir);
 
 	return mastery_level;
 }
@@ -258,8 +265,9 @@ void DatabasePool::finish() {
 int
 DatabasePool::get_mastery_level(const std::string &dir)
 {
+	int mastery_level;
+
 	Database *database_ = NULL;
-	int mastery_level = -1;
 
 	Endpoints endpoints;
 	endpoints.insert(Endpoint(dir));
@@ -268,8 +276,12 @@ DatabasePool::get_mastery_level(const std::string &dir)
 	if (checkout(&database_, endpoints, 0)) {
 		mastery_level = database_->mastery_level;
 		checkin(&database_);
+		pthread_mutex_unlock(&qmtx);
+		return mastery_level;
 	}
 	pthread_mutex_unlock(&qmtx);
+
+	mastery_level = read_mastery(dir);
 
 	return mastery_level;
 }
