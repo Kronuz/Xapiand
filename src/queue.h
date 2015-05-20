@@ -309,13 +309,13 @@ public:
 
 	bool push(const Key &key, const T & element, double timeout=-1.0) {
 		key_value_pair_t p = key_value_pair_t(key, element);
-		return push(p, timeout);
+		return _push(p, timeout);
 	}
 
 #if T == Key
 	bool push(const T & element, double timeout=-1.0) {
 		key_value_pair_t p = key_value_pair_t(element, element);
-		return Queue_t::push(p, timeout);
+		return _push(p, timeout);
 	}
 #endif
 
