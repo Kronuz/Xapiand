@@ -73,8 +73,14 @@
 #define DB_PERSISTENT 4  // Always try keeping the database in the database pool
 
 
+class DatabasePool;
+class DatabasesLRU;
+class DatabaseQueue;
+
+
 class Database {
 public:
+	DatabaseQueue *queue;
 	Endpoints endpoints;
 	bool writable;
 	bool spawn;
@@ -108,7 +114,7 @@ public:
 		bool string_detection;
 	} specifications_t;
 
-	Database(const Endpoints &endpoints, bool writable, bool spawn=true);
+	Database(DatabaseQueue * queue_, const Endpoints &endpoints, bool writable, bool spawn=true);
 	~Database();
 
 	int read_mastery(const std::string &dir);
@@ -151,12 +157,10 @@ private:
 };
 
 
-class DatabasePool;
-class DatabasesLRU;
-
 class DatabaseQueue : public Queue<Database *> {
 	// FIXME: Add queue creation time and delete databases when deleted queue
 
+	friend class Database;
 	friend class DatabasePool;
 	friend class DatabasesLRU;
 
