@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <assert.h>
 
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
@@ -87,8 +88,9 @@ class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 };
 
 
-Database::Database(const Endpoints &endpoints_, bool writable_, bool spawn_)
-	: endpoints(endpoints_),
+Database::Database(DatabaseQueue * queue_, const Endpoints &endpoints_, bool writable_, bool spawn_)
+	: queue(queue_),
+	  endpoints(endpoints_),
 	  writable(writable_),
 	  spawn(spawn_),
 	  hash(endpoints.hash()),
@@ -96,7 +98,15 @@ Database::Database(const Endpoints &endpoints_, bool writable_, bool spawn_)
 	  mastery_level(-1),
 	  db(NULL)
 {
+	queue->count++;
 	reopen();
+}
+
+
+Database::~Database()
+{
+	queue->count--;
+	delete db;
 }
 
 
@@ -210,12 +220,6 @@ Database::reopen()
 	}
 }
 
-
-Database::~Database()
-{
-	delete db;
-}
-
 DatabaseQueue::DatabaseQueue()
 	: persistent(false),
 	  count(0)
@@ -224,6 +228,8 @@ DatabaseQueue::DatabaseQueue()
 
 DatabaseQueue::~DatabaseQueue()
 {
+	assert(size() == count);
+
 	while (!empty()) {
 		Database *database;
 		if (pop(database)) {
@@ -314,16 +320,16 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 
 		if (!queue->pop(database_, 0)) {
 			if (!writable || queue->count == 0) {
-				queue->count++;  // Increment so other threads don't remove the queue
+				queue->count++;  // Increment so other threads don't delete the queue
 				pthread_mutex_unlock(&qmtx);
 				try {
-					database_ = new Database(endpoints, writable, spawn);
+					database_ = new Database(queue, endpoints, writable, spawn);
 				} catch (const Xapian::DatabaseOpeningError &err) {
 				} catch (const Xapian::Error &err) {
 					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
 				}
 				pthread_mutex_lock(&qmtx);
-				if (!database_) queue->count--;  // Decrement on error (no database_)
+				queue->count--;  // Decrement, count should have been already incremented if Database was created
 			} else {
 				// Lock until a database is available if it can't get one.
 				pthread_mutex_unlock(&qmtx);
@@ -338,7 +344,7 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 			*database = database_;
 		} else {
 			if (queue->count == 0) {
-				// There was an error and the queue ended up being empty
+				// There was an error and the queue ended up being empty, remove it!
 				databases.erase(hash);
 			}
 		}
@@ -388,11 +394,11 @@ DatabasePool::checkin(Database **database)
 		queue = &databases[database_->hash];
 	}
 
+	assert(database_->queue == queue);
+
 	queue->push(database_);
-	size_t queue_size = queue->size();
-	if (queue->count < queue_size) {
-		queue->count = queue_size;
-	}
+
+	assert(queue->count >= queue->size());
 
 	*database = NULL;
 
