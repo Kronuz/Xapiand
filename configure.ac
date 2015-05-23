@@ -22,12 +22,16 @@ AC_PROG_CXX
 AC_LANG(C++)
 
 # Checks for typedefs, structures, and compiler characteristics.
-AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])  # This needs autoconf-archive installed
-AX_CXX_HAVE_SSTREAM
 AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
+
+AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])  # This needs autoconf-archive installed
+AX_CXX_HAVE_SSTREAM
+
+AX_PROG_CCACHE_CC
+AX_PROG_CCACHE_CXX
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
