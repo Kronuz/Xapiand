@@ -171,6 +171,9 @@ private:
 public:
 	DatabaseQueue();
 	~DatabaseQueue();
+
+	bool inc_count(int max=-1);
+	bool dec_count();
 };
 
 

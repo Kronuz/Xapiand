@@ -98,14 +98,14 @@ Database::Database(DatabaseQueue * queue_, const Endpoints &endpoints_, bool wri
 	  mastery_level(-1),
 	  db(NULL)
 {
-	queue->count++;
+	queue->inc_count();
 	reopen();
 }
 
 
 Database::~Database()
 {
-	queue->count--;
+	queue->dec_count();
 	delete db;
 }
 
@@ -220,11 +220,13 @@ Database::reopen()
 	}
 }
 
+
 DatabaseQueue::DatabaseQueue()
 	: persistent(false),
 	  count(0)
 {
 }
+
 
 DatabaseQueue::~DatabaseQueue()
 {
@@ -236,6 +238,43 @@ DatabaseQueue::~DatabaseQueue()
 			delete database;
 		}
 	}
+}
+
+
+bool
+DatabaseQueue::inc_count(int max)
+{
+	pthread_mutex_lock(&_mtx);
+
+	if (max == -1 || count < max) {
+		count++;
+
+		pthread_mutex_unlock(&_mtx);
+		return true;
+	}
+
+	pthread_mutex_unlock(&_mtx);
+	return false;
+}
+
+
+bool
+DatabaseQueue::dec_count()
+{
+	pthread_mutex_lock(&_mtx);
+
+	assert(count > 0);
+
+	if (count > 0) {
+		count--;
+
+		pthread_mutex_unlock(&_mtx);
+		return true;
+	}
+
+	pthread_mutex_unlock(&_mtx);
+
+	return false;
 }
 
 
@@ -319,8 +358,8 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 		queue->persistent = persistent;
 
 		if (!queue->pop(database_, 0)) {
-			if (!writable || queue->count == 0) {
-				queue->count++;  // Increment so other threads don't delete the queue
+			// Increment so other threads don't delete the queue
+			if (queue->inc_count(writable ? 1 : -1)) {
 				pthread_mutex_unlock(&qmtx);
 				try {
 					database_ = new Database(queue, endpoints, writable, spawn);
@@ -329,7 +368,7 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
 				}
 				pthread_mutex_lock(&qmtx);
-				queue->count--;  // Decrement, count should have been already incremented if Database was created
+				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
 			} else {
 				// Lock until a database is available if it can't get one.
 				pthread_mutex_unlock(&qmtx);
