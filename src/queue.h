@@ -46,8 +46,8 @@ protected:
 	Container _items_queue;
 
 	// A mutex object to control access to the underlying queue object
-	pthread_mutex_t _qmtx;
-	pthread_mutexattr_t _qmtx_attr;
+	pthread_mutex_t _mtx;
+	pthread_mutexattr_t _mtx_attr;
 
 	// A variable condition to make threads wait on specified condition values
 	pthread_cond_t _push_cond;
@@ -72,11 +72,11 @@ protected:
 			while (_limit >= 0 && size >= _limit) {
 				if (!_finished && timeout) {
 					if (timeout_ts) {
-						if (pthread_cond_timedwait(&_pop_cond, &_qmtx, timeout_ts) == ETIMEDOUT) {
+						if (pthread_cond_timedwait(&_pop_cond, &_mtx, timeout_ts) == ETIMEDOUT) {
 							return false;
 						}
 					} else {
-						pthread_cond_wait(&_pop_cond, &_qmtx);
+						pthread_cond_wait(&_pop_cond, &_mtx);
 					}
 				} else {
 					return false;
@@ -97,11 +97,11 @@ protected:
 		while (_items_queue.empty()) {
 			if (!_finished && timeout) {
 				if (timeout_ts) {
-					if (pthread_cond_timedwait(&_push_cond, &_qmtx, timeout_ts) == ETIMEDOUT) {
+					if (pthread_cond_timedwait(&_push_cond, &_mtx, timeout_ts) == ETIMEDOUT) {
 						return false;
 					}
 				} else {
-					pthread_cond_wait(&_push_cond, &_qmtx);
+					pthread_cond_wait(&_push_cond, &_mtx);
 				}
 			} else {
 				return false;
@@ -128,29 +128,29 @@ public:
 		pthread_cond_init(&_push_cond, 0);
 		pthread_cond_init(&_pop_cond, 0);
 
-		pthread_mutexattr_init(&_qmtx_attr);
-		pthread_mutexattr_settype(&_qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
-		pthread_mutex_init(&_qmtx, &_qmtx_attr);
+		pthread_mutexattr_init(&_mtx_attr);
+		pthread_mutexattr_settype(&_mtx_attr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&_mtx, &_mtx_attr);
 	}
 
 	~Queue() {
 		finish();
 
-		pthread_mutex_destroy(&_qmtx);
-		pthread_mutexattr_destroy(&_qmtx_attr);
+		pthread_mutex_destroy(&_mtx);
+		pthread_mutexattr_destroy(&_mtx_attr);
 
 		pthread_cond_destroy(&_push_cond);
 		pthread_cond_destroy(&_pop_cond);
 	}
 
 	void finish() {
-		pthread_mutex_lock(&_qmtx);
+		pthread_mutex_lock(&_mtx);
 		if (_finished) {
-			pthread_mutex_unlock(&_qmtx);
+			pthread_mutex_unlock(&_mtx);
 			return;
 		}
 		_finished = true;
-		pthread_mutex_unlock(&_qmtx);
+		pthread_mutex_unlock(&_mtx);
 
 		// Signal the condition variable in case any threads are waiting
 		pthread_cond_broadcast(&_push_cond);
@@ -158,9 +158,9 @@ public:
 	}
 
 	bool push(const T & element, double timeout=-1.0) {
-		pthread_mutex_lock(&_qmtx);
+		pthread_mutex_lock(&_mtx);
 		bool pushed = _push(element, timeout);
-		pthread_mutex_unlock(&_qmtx);
+		pthread_mutex_unlock(&_mtx);
 
 		if (pushed) {
 			// Notifiy waiting thread it can pop now
@@ -171,9 +171,9 @@ public:
 	}
 
 	bool pop(T & element, double timeout=-1.0) {
-		pthread_mutex_lock(&_qmtx);
+		pthread_mutex_lock(&_mtx);
 		bool popped = _pop(element, timeout);
-		pthread_mutex_unlock(&_qmtx);
+		pthread_mutex_unlock(&_mtx);
 
 		if (popped) {
 			// Notifiy waiting thread it can push/push now
@@ -185,9 +185,9 @@ public:
 	}
 
 	void clear() {
-		pthread_mutex_lock(&_qmtx);
+		pthread_mutex_lock(&_mtx);
 		_clear();
-		pthread_mutex_unlock(&_qmtx);
+		pthread_mutex_unlock(&_mtx);
 
 		// Notifiy waiting thread it can push/push now
 		pthread_cond_signal(&_push_cond);
@@ -195,23 +195,23 @@ public:
 	}
 
 	bool empty() {
-		pthread_mutex_lock(&_qmtx);
+		pthread_mutex_lock(&_mtx);
 		bool empty = _items_queue.empty();
-		pthread_mutex_unlock(&_qmtx);
+		pthread_mutex_unlock(&_mtx);
 		return empty;
 	}
 
 	size_t size() {
-		pthread_mutex_lock(&_qmtx);
+		pthread_mutex_lock(&_mtx);
 		size_t size = _items_queue.size();
-		pthread_mutex_unlock(&_qmtx);
+		pthread_mutex_unlock(&_mtx);
 		return size;
 	}
 
 	T & front() {
-		pthread_mutex_lock(&_qmtx);
+		pthread_mutex_lock(&_mtx);
 		T & front = _items_queue.front();
-		pthread_mutex_unlock(&_qmtx);
+		pthread_mutex_unlock(&_mtx);
 		return front;
 	}
 };
@@ -250,7 +250,7 @@ protected:
 					*it->second = element;
 				case leave:
 					// The item is already there, leave it alone
-					pthread_mutex_unlock(&this->_qmtx);
+					pthread_mutex_unlock(&this->_mtx);
 					return true;
 				case renew:
 				default:
@@ -294,14 +294,14 @@ public:
 
 	size_t erase(const T & key) {
 		size_t items = 0;
-		pthread_mutex_lock(&this->_qmtx);
+		pthread_mutex_lock(&this->_mtx);
 		map_iterator_t it = _items_map.find(key);
 		if (it != _items_map.end()) {
 			this->_items_queue.erase(it->second);
 			_items_map.erase(it);
 			items++;
 		}
-		pthread_mutex_unlock(&this->_qmtx);
+		pthread_mutex_unlock(&this->_mtx);
 		return items;
 	}
 };
