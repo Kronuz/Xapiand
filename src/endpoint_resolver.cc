@@ -30,14 +30,13 @@
 EndpointList::EndpointList()
 	: status(ST_NEW),
 	  max_mastery_level(0),
-	  timeout(1),
 	  init_timeout(0.005)
 {
 	memset(&init_time, 0, sizeof (init_time));
 	memset(&last_recv, 0, sizeof (last_recv));
 	memset(&current_time, 0, sizeof (current_time));
 	memset(&next_wake, 0, sizeof (next_wake));
-	
+
 	pthread_cond_init(&time_cond, 0);
 	pthread_mutexattr_init(&endl_qmtx_attr);
 	pthread_mutexattr_settype(&endl_qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
@@ -68,25 +67,14 @@ void EndpointList::add_endpoint(const Endpoint &element) {
 	double elapsed = last_recv.tv_sec + (double)last_recv.tv_usec / 1e6;
 	elapsed -= init_time.tv_sec + (double)init_time.tv_usec / 1e6;
 
-	if (elapsed >= timeout) {
-		LOG(this, "Paso 5a\n");
-		status = ST_READY_TIME_OUT;
-	} else {
-		LOG(this, "Paso 5b\n");
-		if (element.mastery_level > max_mastery_level) {
-			max_mastery_level = element.mastery_level;
-			factor = 2;
-		}
-
-		elapsed *= factor;
-		if (elapsed >= timeout) {
-			elapsed = timeout;
-		}
-
-		next_wake.tv_nsec = (init_time.tv_usec * 1e3) + int((elapsed - int(elapsed)) * 1e9);
-		next_wake.tv_sec = init_time.tv_sec + (int)elapsed +  + (next_wake.tv_nsec / 1e9);
-		next_wake.tv_nsec %= (long)1e9;
+	if (element.mastery_level > max_mastery_level) {
+		max_mastery_level = element.mastery_level;
+		factor = 2;
 	}
+
+	next_wake.tv_nsec = (init_time.tv_usec * 1e3) + int((elapsed - int(elapsed)) * 1e9);
+	next_wake.tv_sec = init_time.tv_sec + (int)elapsed +  + (next_wake.tv_nsec / 1e9);
+	next_wake.tv_nsec %= (long)1e9;
 
 	pthread_mutex_unlock(&endl_qmtx);
 
@@ -94,35 +82,53 @@ void EndpointList::add_endpoint(const Endpoint &element) {
 }
 
 
-bool EndpointList::resolve_endpoint(const std::string &path, HttpClient *client, std::vector<Endpoint> &endpv, int n_endps){
-	int retval;
+bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, int n_endps, double timeout) {
+	int initial_status, retval;
+	double elapsed;
 
 	pthread_mutex_lock(&endl_qmtx);
 
-	while (status != ST_READY && status != ST_READY_TIME_OUT) {
-		switch (status) {
+	initial_status = status;
+
+	if (initial_status == ST_NEW) {
+		elapsed = timeout;
+	} else {
+		gettimeofday(&current_time, NULL);
+		elapsed = current_time.tv_sec + (double)current_time.tv_usec / 1e6;
+		elapsed -= init_time.tv_sec + (double)init_time.tv_usec / 1e6;
+
+		if (elapsed > timeout && endp_set.empty()) {
+			initial_status = ST_NEW;
+			elapsed = timeout;
+		} else if (elapsed > timeout * 10 && endp_set.size() < n_endps) {
+			initial_status = ST_NEW;
+			elapsed = timeout;
+		} else if (elapsed > 3600.0) {
+			manager->discovery(DISCOVERY_DB, serialise_string(path));
+		}
+	}
+
+	while (elapsed <= timeout) {
+		switch (initial_status) {
 			case ST_NEW:
 				retval = gettimeofday(&init_time, NULL);
 
-				client->manager()->discovery(DISCOVERY_DB, serialise_string(path));
+				manager->discovery(DISCOVERY_DB, serialise_string(path));
 
 				next_wake.tv_nsec = (init_time.tv_usec * 1e3) + int((init_timeout - int(init_timeout)) * 1e9);
 				next_wake.tv_sec = init_time.tv_sec + (int)init_timeout + (next_wake.tv_nsec / (long)1e9);
 				next_wake.tv_nsec %= (long)1e9;
 
-				status = ST_WAITING;
+				status = initial_status = ST_WAITING;
 
 			case ST_WAITING:
 				retval = pthread_cond_timedwait(&time_cond, &endl_qmtx, &next_wake);
 				if (retval == ETIMEDOUT) {
 					gettimeofday(&current_time, NULL);
-					double elapsed = current_time.tv_sec + (double)current_time.tv_usec / 1e6;
+					elapsed = current_time.tv_sec + (double)current_time.tv_usec / 1e6;
 					elapsed -= init_time.tv_sec + (double)init_time.tv_usec / 1e6;
-					
-					if (elapsed >= timeout) {
-						LOG(this,"Time wait over\n");
-						status = ST_READY_TIME_OUT;
-					} else {
+
+					if (elapsed < timeout) {
 						if (endp_set.size() < n_endps) {
 							elapsed *= 3.0;
 							if (elapsed >= timeout) {
@@ -132,7 +138,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, HttpClient *client,
 							next_wake.tv_sec = init_time.tv_sec + (int)elapsed + (next_wake.tv_nsec / 1e9);
 							next_wake.tv_nsec %= (long)1e9;
 						} else {
-							status = ST_READY;
+							elapsed = timeout + 1; // force it out
 						}
 					}
 				} else if (retval) {
@@ -142,7 +148,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, HttpClient *client,
 		}
 	}
 
-	if (status == ST_READY_TIME_OUT) {
+	if (endp_set.empty()) {
 		pthread_mutex_unlock(&endl_qmtx);
 		return false;
 	}
@@ -185,6 +191,7 @@ void EndpointList::show_list()
 	pthread_mutex_unlock(&endl_qmtx);
 }
 
+
 void EndpointResolver::add_index_endpoint(Endpoint index)
 {
 	pthread_mutex_lock(&re_qmtx);
@@ -195,11 +202,11 @@ void EndpointResolver::add_index_endpoint(Endpoint index)
 }
 
 
-bool EndpointResolver::resolve_index_endpoint(const std::string &path, HttpClient *client, std::vector<Endpoint> &endpv, int n_endps)
+bool EndpointResolver::resolve_index_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, int n_endps, double timeout)
 {
 	pthread_mutex_lock(&re_qmtx);
 	EndpointList &enl = (*this)[path];
 	pthread_mutex_unlock(&re_qmtx);
 
-	return enl.resolve_endpoint(path, client, endpv, n_endps);
+	return enl.resolve_endpoint(path, manager, endpv, n_endps, timeout);
 }
