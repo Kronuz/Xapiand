@@ -915,7 +915,7 @@ int HttpClient::_endpointgen(query_t &e)
 					has_node_name = true;
 				} else {
 					//LOG(this, "asked_node.path <%s>\n index_path <%s>\n",asked_node.path.c_str(),index_path.c_str());
-					if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, this, asked_nodes)) {
+					if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, manager(), asked_nodes)) {
 						return CMD_UNKNOWN_ENDPOINT;
 					}
 				}

@@ -37,8 +37,7 @@
 #define ST_WAITING 3
 #define ST_NEW_ENDP 4
 
-
-class HttpClient;
+class XapiandManager;
 
 class EndpointList {
 	std::set<Endpoint, Endpoint::compare> endp_set;
@@ -55,12 +54,11 @@ class EndpointList {
 	int status;
 	int max_mastery_level;
 	double init_timeout;
-	double timeout;
 
 public:
 	EndpointList();
 	~EndpointList();
-	bool resolve_endpoint(const std::string &path, HttpClient *client, std::vector<Endpoint> &endpv, int n_endps);
+	bool resolve_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, int n_endps, double timeout);
 	void add_endpoint(const Endpoint &element);
 	bool _get_endpoints(std::vector<Endpoint> &Endv, int n_endps);
 	size_t size();
@@ -78,7 +76,7 @@ class EndpointResolver : public lru_map<std::string, EndpointList>{
 
 public:
 	void add_index_endpoint(Endpoint index);
-	bool resolve_index_endpoint(const std::string &path, HttpClient *client, std::vector<Endpoint> &endpv, int n_endps=1);
+	bool resolve_index_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, int n_endps=1, double timeout=1.0);
 	EndpointResolver()
 	{
 		pthread_mutexattr_init(&re_qmtx_attr);
