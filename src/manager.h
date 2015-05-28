@@ -28,6 +28,7 @@
 #include "database.h"
 #include "threadpool.h"
 #include "worker.h"
+#include "endpoint_resolver.h"
 
 #include <list>
 #include <ev++.h>
@@ -131,6 +132,8 @@ public:
 	time_t shutdown_asap;
 	time_t shutdown_now;
 	ev::async async_shutdown;
+
+	EndpointResolver endp_r;
 
 	unsigned char state;
 	std::string cluster_name;
