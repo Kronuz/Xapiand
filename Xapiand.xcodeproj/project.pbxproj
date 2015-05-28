@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C314FA761B0E8E7300CCC85F /* endpoint_resolver.cc in Sources */ = {isa = PBXBuildFile; fileRef = C314FA741B0E8E7300CCC85F /* endpoint_resolver.cc */; };
 		E5289E361B0BD1EC00EBA5D8 /* cJSON_Utils.c in Sources */ = {isa = PBXBuildFile; fileRef = E5289E211B0BD1EC00EBA5D8 /* cJSON_Utils.c */; };
 		E5289E371B0BD1EC00EBA5D8 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = E5289E221B0BD1EC00EBA5D8 /* cJSON.c */; };
 		E5289E381B0BD1EC00EBA5D8 /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = E5289E231B0BD1EC00EBA5D8 /* http_parser.c */; };
@@ -41,6 +42,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C314FA741B0E8E7300CCC85F /* endpoint_resolver.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = endpoint_resolver.cc; sourceTree = "<group>"; };
+		C314FA751B0E8E7300CCC85F /* endpoint_resolver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = endpoint_resolver.h; sourceTree = "<group>"; };
 		E5289E0A1B0BD1EC00EBA5D8 /* cJSON_Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON_Utils.h; sourceTree = "<group>"; };
 		E5289E0B1B0BD1EC00EBA5D8 /* cJSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON.h; sourceTree = "<group>"; };
 		E5289E0C1B0BD1EC00EBA5D8 /* client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = client_base.h; sourceTree = "<group>"; };
@@ -109,6 +112,7 @@
 				E5289E0F1B0BD1EC00EBA5D8 /* config.h */,
 				E5289E101B0BD1EC00EBA5D8 /* database.h */,
 				E5289E111B0BD1EC00EBA5D8 /* endpoint.h */,
+				C314FA751B0E8E7300CCC85F /* endpoint_resolver.h */,
 				E5289E121B0BD1EC00EBA5D8 /* fields.h */,
 				E5289E131B0BD1EC00EBA5D8 /* http_parser.h */,
 				E5289E141B0BD1EC00EBA5D8 /* length.h */,
@@ -132,6 +136,7 @@
 				E5289E261B0BD1EC00EBA5D8 /* client_http.cc */,
 				E5289E271B0BD1EC00EBA5D8 /* database.cc */,
 				E5289E281B0BD1EC00EBA5D8 /* endpoint.cc */,
+				C314FA741B0E8E7300CCC85F /* endpoint_resolver.cc */,
 				E5289E291B0BD1EC00EBA5D8 /* fields.cc */,
 				E5289E2A1B0BD1EC00EBA5D8 /* length.cc */,
 				E5289E2B1B0BD1EC00EBA5D8 /* manager.cc */,
@@ -227,6 +232,7 @@
 				E5289E3F1B0BD1EC00EBA5D8 /* length.cc in Sources */,
 				E5289E421B0BD1EC00EBA5D8 /* multivalue.cc in Sources */,
 				E5289E371B0BD1EC00EBA5D8 /* cJSON.c in Sources */,
+				C314FA761B0E8E7300CCC85F /* endpoint_resolver.cc in Sources */,
 				E5289E391B0BD1EC00EBA5D8 /* client_base.cc in Sources */,
 				E5289E401B0BD1EC00EBA5D8 /* manager.cc in Sources */,
 			);

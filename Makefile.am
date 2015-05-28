@@ -9,6 +9,7 @@ xapiand_SOURCES = \
 	client_http.cc \
 	database.cc \
 	endpoint.cc \
+	endpoint_resolver.cc \
 	fields.cc \
 	http_parser.c \
 	length.cc \
@@ -33,6 +34,7 @@ noinst_HEADERS = \
 	client_http.h \
 	database.h \
 	endpoint.h \
+	endpoint_resolver.h \
 	fields.h \
 	http_parser.h \
 	length.h \
