@@ -652,6 +652,8 @@ void HttpClient::_search()
 					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
 				else if (cmd == CMD_UNKNOWN_HOST)
 					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+				else if (cmd == CMD_UNKNOWN_ENDPOINT)
+					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
 				else
 					cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
 				if (e.pretty) {
@@ -865,6 +867,7 @@ void HttpClient::_search()
 int HttpClient::_endpointgen(query_t &e)
 {
 	int cmd;
+	bool has_node_name = false;
 	struct http_parser_url u;
 	std::string b = repr(path);
 
@@ -902,33 +905,46 @@ int HttpClient::_endpointgen(query_t &e)
 					path = "";
 				}
 
+				std::string index_path = ns + path;
 				std::string node_name;
+				Endpoint asked_node("xapian://" + node_name + index_path);
+				std::vector<Endpoint> asked_nodes;
+
 				if (p.len_host) {
 					node_name = urldecode(p.off_host, p.len_host);
-				} else if (!host.empty()) {
-					node_name = host;
+					has_node_name = true;
+				} else {
+					//LOG(this, "asked_node.path <%s>\n index_path <%s>\n",asked_node.path.c_str(),index_path.c_str());
+					if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, this, asked_nodes)) {
+						return CMD_UNKNOWN_ENDPOINT;
+					}
 				}
 
-				std::string index_path = ns + path;
-				Endpoint index("xapian://" + node_name + index_path);
-				manager()->discovery(DISCOVERY_DB, serialise_string(index.path));
-				int node_port = (index.port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.port;
-				node_name = index.host.empty() ? node_name : index.host;
+				if (has_node_name) {
+					Endpoint index("xapian://" + node_name + index_path);
+					int node_port = (index.port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.port;
+					node_name = index.host.empty() ? node_name : index.host;
 
-				// Convert node to endpoint:
-				char node_ip[INET_ADDRSTRLEN];
-				Node node;
-				if (!manager()->touch_node(node_name, &node)) {
-					LOG(this, "Node %s not found\n", node_name.c_str());
-					host = node_name;
-					return CMD_UNKNOWN_HOST;
+					// Convert node to endpoint:
+					char node_ip[INET_ADDRSTRLEN];
+					Node node;
+					if (!manager()->touch_node(node_name, &node)) {
+						LOG(this, "Node %s not found\n", node_name.c_str());
+						host = node_name;
+						return CMD_UNKNOWN_HOST;
+					}
+					if (!node_port) node_port = node.binary_port;
+					inet_ntop(AF_INET, &(node.addr.sin_addr), node_ip, INET_ADDRSTRLEN);
+					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path);
+					endpoints.insert(endpoint);
+				} else {
+					std::vector<Endpoint>::iterator it_endp = asked_nodes.begin();
+					for (; it_endp != asked_nodes.end(); it_endp++) {
+						endpoints.insert(*it_endp);
+					}
+					//LOG(this, "show list after insert endpoints\n");
+					//manager()->endp_r.enl.show_list();
 				}
-				if (!node_port) node_port = node.binary_port;
-				inet_ntop(AF_INET, &(node.addr.sin_addr), node_ip, INET_ADDRSTRLEN);
-				Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path);
-
-				endpoints.insert(endpoint);
-
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endpoint.as_string().c_str());
 			}
 		}
