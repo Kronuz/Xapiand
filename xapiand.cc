@@ -194,6 +194,8 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		opts.gid = gid.getValue();
 		opts.num_servers = num_servers.getValue();
 		opts.dbpool_size = dbpool_size.getValue();
+		opts.threadpool_size = 10;
+		opts.endpoints_list_size = 10;
 
 		// Use 0 for guessing with defaults
 		if (opts.http_port == XAPIAND_HTTP_SERVERPORT) opts.http_port = 0;

@@ -67,6 +67,8 @@ typedef struct opts_s {
 	std::string discovery_group;
 	size_t num_servers;
 	size_t dbpool_size;
+	size_t threadpool_size;
+	size_t endpoints_list_size;
 } opts_t;
 
 
