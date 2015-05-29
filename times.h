@@ -57,10 +57,6 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp);
 #endif /* __APPLE__ */
 
 
-inline double timespec_to_double(const struct timespec *tps) {
-	return (double)tps->tv_sec + ((double)tps->tv_nsec / 1e9L);
-}
-
 #define _timespec_cmp(tsp0, cmp, tsp1) \
 	(((tsp0)->tv_sec == (tsp1)->tv_sec) ? \
 		((tsp0)->tv_nsec cmp (tsp1)->tv_nsec) : \

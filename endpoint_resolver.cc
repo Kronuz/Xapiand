@@ -49,17 +49,18 @@ EndpointList::~EndpointList()
 void EndpointList::add_endpoint(const Endpoint &element) {
 	pthread_mutex_lock(&endl_qmtx);
 
-	clock_gettime(CLOCK_REALTIME, &last_recv);
+	last_recv = now();
 
 	endp_set.insert(element);
 
-	int factor = 3;
+	double factor = 3.0;
 	if (element.mastery_level > max_mastery_level) {
 		max_mastery_level = element.mastery_level;
-		factor = 2;
+		factor = 2.0;
 	}
 
-	next_wake = init_time + (last_recv - init_time);
+	timespec_t elapsed = last_recv - init_time;
+	next_wake = init_time + elapsed * factor;
 
 	pthread_mutex_unlock(&endl_qmtx);
 
@@ -69,7 +70,7 @@ void EndpointList::add_endpoint(const Endpoint &element) {
 
 bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, int n_endps, double timeout) {
 	int initial_status, retval;
-	double elapsed;
+	timespec_t elapsed;
 
 	pthread_mutex_lock(&endl_qmtx);
 
@@ -78,8 +79,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 	if (initial_status == ST_NEW) {
 		elapsed = timeout;
 	} else {
-		clock_gettime(CLOCK_REALTIME, &current_time);
-		elapsed = timespec_to_double(&current_time) - timespec_to_double(&init_time);
+		elapsed = now() - init_time;
 
 		if (elapsed > timeout && endp_set.empty()) {
 			initial_status = ST_NEW;
@@ -106,8 +106,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 			case ST_WAITING:
 				retval = pthread_cond_timedwait(&time_cond, &endl_qmtx, &next_wake);
 				if (retval == ETIMEDOUT) {
-					clock_gettime(CLOCK_REALTIME, &current_time);
-					elapsed = timespec_to_double(&current_time) - timespec_to_double(&init_time);
+					elapsed = now() - init_time;
 
 					if (elapsed < timeout) {
 						if (endp_set.size() < n_endps) {
