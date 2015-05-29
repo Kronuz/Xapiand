@@ -41,7 +41,7 @@
 template<class T, class Container = std::deque<T> >
 class Queue {
 private:
-	struct timespec _ts;
+	timespec_t _ts;
 
 protected:
 	Container _items_queue;
@@ -57,14 +57,14 @@ protected:
 	bool _finished;
 	size_t _limit;
 
-	inline struct timespec & _timespec(double timeout) {
+	inline timespec_t & _timespec(double timeout) {
 		clock_gettime(CLOCK_REALTIME, &_ts);
 		timespec_add(&_ts, timeout);
 		return _ts;
 	}
 
 	virtual bool _push(const T & element, double timeout) {
-		struct timespec *timeout_ts = (timeout > 0.0) ? &_timespec(timeout) : NULL;
+		timespec_t *timeout_ts = (timeout > 0.0) ? &_timespec(timeout) : NULL;
 
 		if (!_finished) {
 			size_t size = _items_queue.size();
@@ -90,7 +90,7 @@ protected:
 	}
 
 	virtual bool _pop(T & element, double timeout) {
-		struct timespec *timeout_ts = (timeout > 0.0) ? &_timespec(timeout) : NULL;
+		timespec_t *timeout_ts = (timeout > 0.0) ? &_timespec(timeout) : NULL;
 
 		// While the queue is empty, make the thread that runs this wait
 		while (_items_queue.empty()) {
