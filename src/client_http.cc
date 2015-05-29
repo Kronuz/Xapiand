@@ -250,7 +250,7 @@ void HttpClient::_head()
 	Xapian::docid docid = 0;
 	Xapian::QueryParser queryparser;
 	query_t e;
-	int cmd = _endpointgen(e);
+	int cmd = _endpointgen(e,false);
 
 	switch (cmd) {
 		case CMD_NUMBER: break;
@@ -264,6 +264,8 @@ void HttpClient::_head()
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+			else if (cmd == CMD_UNKNOWN_ENDPOINT)
+				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
 			else
 				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
 			if (e.pretty) {
@@ -334,7 +336,7 @@ void HttpClient::_delete()
 {
 	std::string result;
 	query_t e;
-	int cmd = _endpointgen(e);
+	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
 		case CMD_NUMBER: break;
@@ -348,7 +350,8 @@ void HttpClient::_delete()
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
-
+			else if (cmd == CMD_UNKNOWN_ENDPOINT)
+				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
 			else
 				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
 			if (e.pretty) {
@@ -407,7 +410,7 @@ void HttpClient::_index()
 {
 	std::string result;
 	query_t e;
-	int cmd = _endpointgen(e);
+	int cmd = _endpointgen(e,true);
 
 	switch (cmd) {
 		case CMD_NUMBER: break;
@@ -423,6 +426,8 @@ void HttpClient::_index()
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+			else if (cmd == CMD_UNKNOWN_ENDPOINT)
+				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
 			else
 				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
 			if (e.pretty) {
@@ -492,7 +497,7 @@ void HttpClient::_patch()
 {
 	std::string result;
 	query_t e;
-	int cmd = _endpointgen(e);
+	int cmd = _endpointgen(e,true);
 
 	switch (cmd) {
 		case CMD_NUMBER: break;
@@ -508,6 +513,8 @@ void HttpClient::_patch()
 				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown task " + command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
 				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown host " + host).c_str());
+			else if (cmd == CMD_UNKNOWN_ENDPOINT)
+				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
 			else
 				cJSON_AddStringToObject(err_response, "Error message", "BAD QUERY");
 			if (e.pretty) {
@@ -569,7 +576,7 @@ void HttpClient::_stats(query_t &e)
 		cJSON_AddItemToObject(root, "Server status", manager()->server_status());
 	}
 	if (e.database) {
-		_endpointgen(e);
+		_endpointgen(e,false);
 		Database *database = NULL;
 		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
@@ -580,7 +587,7 @@ void HttpClient::_stats(query_t &e)
 		database_pool->checkin(&database);
 	}
 	if (e.document >= 0) {
-		_endpointgen(e);
+		_endpointgen(e,false);
 		Database *database = NULL;
 		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
@@ -612,7 +619,7 @@ void HttpClient::_search()
 	std::string result;
 
 	query_t e;
-	int cmd = _endpointgen(e);
+	int cmd = _endpointgen(e,false);
 
 	switch (cmd) {
 		case CMD_NUMBER:
@@ -864,7 +871,7 @@ void HttpClient::_search()
 	LOG(this, "FINISH SEARCH\n");
 }
 
-int HttpClient::_endpointgen(query_t &e)
+int HttpClient::_endpointgen(query_t &e, bool writable)
 {
 	int cmd;
 	bool has_node_name = false;
@@ -914,8 +921,14 @@ int HttpClient::_endpointgen(query_t &e)
 					node_name = urldecode(p.off_host, p.len_host);
 					has_node_name = true;
 				} else {
-					//LOG(this, "asked_node.path <%s>\n index_path <%s>\n",asked_node.path.c_str(),index_path.c_str());
-					if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, manager(), asked_nodes)) {
+
+					double timeout;
+					int num_endps = 1;
+					if (writable) {
+						timeout = 2;
+					} else timeout = 1;
+
+					if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, manager(), asked_nodes, num_endps ,timeout)) {
 						return CMD_UNKNOWN_ENDPOINT;
 					}
 				}
@@ -942,8 +955,6 @@ int HttpClient::_endpointgen(query_t &e)
 					for (; it_endp != asked_nodes.end(); it_endp++) {
 						endpoints.insert(*it_endp);
 					}
-					//LOG(this, "show list after insert endpoints\n");
-					//manager()->endp_r.enl.show_list();
 				}
 				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endpoint.as_string().c_str());
 			}
