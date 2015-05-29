@@ -26,9 +26,9 @@
 #include "endpoint.h"
 #include "lru.h"
 #include "length.h"
+#include "times.h"
 
 #include <queue>
-#include <sys/time.h>
 #include <pthread.h>
 
 #define ST_NEW 0
@@ -46,9 +46,9 @@ class EndpointList {
 	pthread_mutex_t endl_qmtx;
 	pthread_mutexattr_t endl_qmtx_attr;
 
-	struct timeval init_time;
-	struct timeval last_recv;
-	struct timeval current_time;
+	struct timespec init_time;
+	struct timespec last_recv;
+	struct timespec current_time;
 	struct timespec next_wake;
 
 	int status;
