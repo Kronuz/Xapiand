@@ -27,6 +27,7 @@
 		E5289E481B0BD1EC00EBA5D8 /* threadpool.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5289E331B0BD1EC00EBA5D8 /* threadpool.cc */; };
 		E5289E491B0BD1EC00EBA5D8 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5289E341B0BD1EC00EBA5D8 /* utils.cc */; };
 		E5289E4A1B0BD1EC00EBA5D8 /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5289E351B0BD1EC00EBA5D8 /* xapiand.cc */; };
+		E5EA6F3F1B18B46A00B8CE65 /* time.c in Sources */ = {isa = PBXBuildFile; fileRef = E5EA6F3E1B18B46A00B8CE65 /* time.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -87,6 +88,8 @@
 		E5289E341B0BD1EC00EBA5D8 /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utils.cc; sourceTree = "<group>"; };
 		E5289E351B0BD1EC00EBA5D8 /* xapiand.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = xapiand.cc; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5EA6F3D1B18B46A00B8CE65 /* time.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = time.h; sourceTree = "<group>"; };
+		E5EA6F3E1B18B46A00B8CE65 /* time.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = time.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,6 +149,8 @@
 				E5289E2F1B0BD1EC00EBA5D8 /* server.cc */,
 				E5289E311B0BD1EC00EBA5D8 /* tests.cc */,
 				E5289E331B0BD1EC00EBA5D8 /* threadpool.cc */,
+				E5EA6F3D1B18B46A00B8CE65 /* time.h */,
+				E5EA6F3E1B18B46A00B8CE65 /* time.c */,
 				E5289E341B0BD1EC00EBA5D8 /* utils.cc */,
 				E5289E351B0BD1EC00EBA5D8 /* xapiand.cc */,
 			);
@@ -229,6 +234,7 @@
 				E5289E3C1B0BD1EC00EBA5D8 /* database.cc in Sources */,
 				E5289E3A1B0BD1EC00EBA5D8 /* client_binary.cc in Sources */,
 				E5289E461B0BD1EC00EBA5D8 /* tests.cc in Sources */,
+				E5EA6F3F1B18B46A00B8CE65 /* time.c in Sources */,
 				E5289E3F1B0BD1EC00EBA5D8 /* length.cc in Sources */,
 				E5289E421B0BD1EC00EBA5D8 /* multivalue.cc in Sources */,
 				E5289E371B0BD1EC00EBA5D8 /* cJSON.c in Sources */,

@@ -22,6 +22,7 @@ xapiand_SOURCES = \
 	server.cc \
 	tests.cc \
 	threadpool.cc \
+	times.c \
 	utils.cc \
 	\
 	xapiand.cc
@@ -47,6 +48,7 @@ noinst_HEADERS = \
 	server.h \
 	tests.h \
 	threadpool.h \
+	times.h \
 	utils.h \
 	worker.h \
 	xapiand.h
