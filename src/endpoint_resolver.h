@@ -48,7 +48,6 @@ class EndpointList {
 
 	timespec_t init_time;
 	timespec_t last_recv;
-	timespec_t current_time;
 	timespec_t next_wake;
 
 	int status;
