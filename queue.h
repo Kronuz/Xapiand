@@ -23,6 +23,8 @@
 #ifndef XAPIAND_INCLUDED_QUEUE_H
 #define XAPIAND_INCLUDED_QUEUE_H
 
+#include "times.h"
+
 #include <cerrno>
 #include <deque>
 #include <list>
@@ -33,7 +35,6 @@
 #  include <map>
 #endif
 
-#include <sys/time.h>
 #include <pthread.h>
 
 
@@ -56,11 +57,9 @@ protected:
 	bool _finished;
 	size_t _limit;
 
-	struct timespec & _timespec(double timeout) {
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		_ts.tv_sec = tv.tv_sec + int(timeout);
-		_ts.tv_nsec = int((timeout - int(timeout)) * 1e9);
+	inline struct timespec & _timespec(double timeout) {
+		clock_gettime(CLOCK_REALTIME, &_ts);
+		timespec_add_double(&_ts, timeout);
 		return _ts;
 	}
 

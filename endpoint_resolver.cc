@@ -24,7 +24,6 @@
 #include "client_http.h"
 
 #include <unistd.h>
-#include <sys/time.h>
 
 
 EndpointList::EndpointList()
@@ -32,10 +31,10 @@ EndpointList::EndpointList()
 	  max_mastery_level(0),
 	  init_timeout(0.005)
 {
-	memset(&init_time, 0, sizeof (init_time));
-	memset(&last_recv, 0, sizeof (last_recv));
-	memset(&current_time, 0, sizeof (current_time));
-	memset(&next_wake, 0, sizeof (next_wake));
+	timespec_clear(&init_time);
+	timespec_clear(&last_recv);
+	timespec_clear(&current_time);
+	timespec_clear(&next_wake);
 
 	pthread_cond_init(&time_cond, 0);
 	pthread_mutexattr_init(&endl_qmtx_attr);
@@ -53,28 +52,20 @@ EndpointList::~EndpointList()
 
 
 void EndpointList::add_endpoint(const Endpoint &element) {
-	int factor = 3;
-
-	struct timeval result;
-	memset(&result, 0, sizeof result);
-
 	pthread_mutex_lock(&endl_qmtx);
+
+	clock_gettime(CLOCK_REALTIME, &last_recv);
 
 	endp_set.insert(element);
 
-	gettimeofday(&last_recv, NULL);
-
-	double elapsed = last_recv.tv_sec + (double)last_recv.tv_usec / 1e6;
-	elapsed -= init_time.tv_sec + (double)init_time.tv_usec / 1e6;
-
+	int factor = 3;
 	if (element.mastery_level > max_mastery_level) {
 		max_mastery_level = element.mastery_level;
 		factor = 2;
 	}
 
-	next_wake.tv_nsec = (init_time.tv_usec * 1e3) + int((elapsed - int(elapsed)) * 1e9);
-	next_wake.tv_sec = init_time.tv_sec + (int)elapsed +  + (next_wake.tv_nsec / 1e9);
-	next_wake.tv_nsec %= (long)1e9;
+	double elapsed = timespec_to_double(&last_recv) - timespec_to_double(&init_time);
+	timespec_add_double(timespec_set(&next_wake, &init_time), elapsed);
 
 	pthread_mutex_unlock(&endl_qmtx);
 
@@ -93,9 +84,8 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 	if (initial_status == ST_NEW) {
 		elapsed = timeout;
 	} else {
-		gettimeofday(&current_time, NULL);
-		elapsed = current_time.tv_sec + (double)current_time.tv_usec / 1e6;
-		elapsed -= init_time.tv_sec + (double)init_time.tv_usec / 1e6;
+		clock_gettime(CLOCK_REALTIME, &current_time);
+		elapsed = timespec_to_double(&current_time) - timespec_to_double(&init_time);
 
 		if (elapsed > timeout && endp_set.empty()) {
 			initial_status = ST_NEW;
@@ -111,22 +101,19 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 	while (elapsed <= timeout) {
 		switch (initial_status) {
 			case ST_NEW:
-				retval = gettimeofday(&init_time, NULL);
+				clock_gettime(CLOCK_REALTIME, &init_time);
 
 				manager->discovery(DISCOVERY_DB, serialise_string(path));
 
-				next_wake.tv_nsec = (init_time.tv_usec * 1e3) + int((init_timeout - int(init_timeout)) * 1e9);
-				next_wake.tv_sec = init_time.tv_sec + (int)init_timeout + (next_wake.tv_nsec / (long)1e9);
-				next_wake.tv_nsec %= (long)1e9;
+				timespec_add_double(timespec_set(&next_wake, &init_time), init_timeout);
 
 				status = initial_status = ST_WAITING;
 
 			case ST_WAITING:
 				retval = pthread_cond_timedwait(&time_cond, &endl_qmtx, &next_wake);
 				if (retval == ETIMEDOUT) {
-					gettimeofday(&current_time, NULL);
-					elapsed = current_time.tv_sec + (double)current_time.tv_usec / 1e6;
-					elapsed -= init_time.tv_sec + (double)init_time.tv_usec / 1e6;
+					clock_gettime(CLOCK_REALTIME, &current_time);
+					elapsed = timespec_to_double(&current_time) - timespec_to_double(&init_time);
 
 					if (elapsed < timeout) {
 						if (endp_set.size() < n_endps) {
@@ -134,9 +121,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 							if (elapsed >= timeout) {
 								elapsed = timeout;
 							}
-							next_wake.tv_nsec = (init_time.tv_usec * 1e3) + int((elapsed - int(elapsed)) * 1e9);
-							next_wake.tv_sec = init_time.tv_sec + (int)elapsed + (next_wake.tv_nsec / 1e9);
-							next_wake.tv_nsec %= (long)1e9;
+							timespec_add_double(timespec_set(&next_wake, &init_time), elapsed);
 						} else {
 							elapsed = timeout + 1; // force it out
 						}
