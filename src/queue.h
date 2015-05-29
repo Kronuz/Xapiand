@@ -83,7 +83,7 @@ protected:
 				size = _items_queue.size();
 			}
 			// Insert the element in the FIFO queue
-			_items_queue.push_front(element);
+			_items_queue.push_back(element);
 		}
 
 		return true;
