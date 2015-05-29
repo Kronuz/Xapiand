@@ -116,6 +116,102 @@ inline struct timespec * timespec_add(struct timespec *tps, double dt) {
 	(((tsp0)->tv_sec == (tsp1)->tv_sec) ? \
 		((tsp0)->tv_nsec cmp (tsp1)->tv_nsec) : \
 		((tsp0)->tv_sec cmp (tsp1)->tv_sec))
+;
 
+inline bool operator<(struct timespec &ts0, struct timespec &ts1) {
+	return timespec_cmp(&ts0, <, &ts1);
+}
+
+inline bool operator<=(struct timespec &ts0, struct timespec &ts1) {
+	return timespec_cmp(&ts0, <=, &ts1);
+}
+
+inline bool operator>(struct timespec &ts0, struct timespec &ts1) {
+	return timespec_cmp(&ts0, >, &ts1);
+}
+
+inline bool operator>=(struct timespec &ts0, struct timespec &ts1) {
+	return timespec_cmp(&ts0, >=, &ts1);
+}
+
+inline bool operator==(struct timespec &ts0, struct timespec &ts1) {
+	return timespec_cmp(&ts0, ==, &ts1);
+}
+
+inline bool operator!=(struct timespec &ts0, struct timespec &ts1) {
+	return timespec_cmp(&ts0, !=, &ts1);
+}
+
+inline bool operator<(struct timespec &ts0, double dt1) {
+	struct timespec ts1;
+	double_to_timespec(&ts1, dt1);
+	return timespec_cmp(&ts0, <, &ts1);
+}
+
+inline bool operator<=(struct timespec &ts0, double dt1) {
+	struct timespec ts1;
+	double_to_timespec(&ts1, dt1);
+	return timespec_cmp(&ts0, <=, &ts1);
+}
+
+inline bool operator>(struct timespec &ts0, double dt1) {
+	struct timespec ts1;
+	double_to_timespec(&ts1, dt1);
+	return timespec_cmp(&ts0, >, &ts1);
+}
+
+inline bool operator>=(struct timespec &ts0, double dt1) {
+	struct timespec ts1;
+	double_to_timespec(&ts1, dt1);
+	return timespec_cmp(&ts0, >=, &ts1);
+}
+
+inline bool operator==(struct timespec &ts0, double dt1) {
+	struct timespec ts1;
+	double_to_timespec(&ts1, dt1);
+	return timespec_cmp(&ts0, ==, &ts1);
+}
+
+inline bool operator!=(struct timespec &ts0, double dt1) {
+	struct timespec ts1;
+	double_to_timespec(&ts1, dt1);
+	return timespec_cmp(&ts0, !=, &ts1);
+}
+
+inline bool operator<(double dt0, struct timespec &ts1) {
+	struct timespec ts0;
+	double_to_timespec(&ts1, dt0);
+	return timespec_cmp(&ts0, <, &ts1);
+}
+
+inline bool operator<=(double dt0, struct timespec &ts1) {
+	struct timespec ts0;
+	double_to_timespec(&ts1, dt0);
+	return timespec_cmp(&ts0, <=, &ts1);
+}
+
+inline bool operator>(double dt0, struct timespec &ts1) {
+	struct timespec ts0;
+	double_to_timespec(&ts1, dt0);
+	return timespec_cmp(&ts0, >, &ts1);
+}
+
+inline bool operator>=(double dt0, struct timespec &ts1) {
+	struct timespec ts0;
+	double_to_timespec(&ts1, dt0);
+	return timespec_cmp(&ts0, >=, &ts1);
+}
+
+inline bool operator==(double dt0, struct timespec &ts1) {
+	struct timespec ts0;
+	double_to_timespec(&ts1, dt0);
+	return timespec_cmp(&ts0, ==, &ts1);
+}
+
+inline bool operator!=(double dt0, struct timespec &ts1) {
+	struct timespec ts0;
+	double_to_timespec(&ts1, dt0);
+	return timespec_cmp(&ts0, !=, &ts1);
+}
 
 #endif /* XAPIAND_TIME_H */
