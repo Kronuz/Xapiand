@@ -58,8 +58,7 @@ protected:
 	size_t _limit;
 
 	inline timespec_t & _timespec(double timeout) {
-		clock_gettime(CLOCK_REALTIME, &_ts);
-		timespec_add(&_ts, timeout);
+		_ts = now() + timeout;
 		return _ts;
 	}
 

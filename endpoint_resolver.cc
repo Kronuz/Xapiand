@@ -31,11 +31,6 @@ EndpointList::EndpointList()
 	  max_mastery_level(0),
 	  init_timeout(0.005)
 {
-	timespec_clear(&init_time);
-	timespec_clear(&last_recv);
-	timespec_clear(&current_time);
-	timespec_clear(&next_wake);
-
 	pthread_cond_init(&time_cond, 0);
 	pthread_mutexattr_init(&endl_qmtx_attr);
 	pthread_mutexattr_settype(&endl_qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
@@ -64,8 +59,7 @@ void EndpointList::add_endpoint(const Endpoint &element) {
 		factor = 2;
 	}
 
-	double elapsed = timespec_to_double(&last_recv) - timespec_to_double(&init_time);
-	timespec_add(timespec_set(&next_wake, &init_time), elapsed);
+	next_wake = init_time + (last_recv - init_time);
 
 	pthread_mutex_unlock(&endl_qmtx);
 
@@ -105,7 +99,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 
 				manager->discovery(DISCOVERY_DB, serialise_string(path));
 
-				timespec_add(timespec_set(&next_wake, &init_time), init_timeout);
+				next_wake = init_time + init_timeout;
 
 				status = initial_status = ST_WAITING;
 
@@ -121,7 +115,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 							if (elapsed >= timeout) {
 								elapsed = timeout;
 							}
-							timespec_add(timespec_set(&next_wake, &init_time), elapsed);
+							next_wake = init_time + elapsed;
 						} else {
 							elapsed = timeout + 1; // force it out
 						}
