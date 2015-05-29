@@ -336,7 +336,7 @@ void HttpClient::_delete()
 {
 	std::string result;
 	query_t e;
-	int cmd = _endpointgen(e, true);
+	int cmd = _endpointgen(e,true);
 
 	switch (cmd) {
 		case CMD_NUMBER: break;
@@ -576,7 +576,6 @@ void HttpClient::_stats(query_t &e)
 		cJSON_AddItemToObject(root, "Server status", manager()->server_status());
 	}
 	if (e.database) {
-		_endpointgen(e,false);
 		Database *database = NULL;
 		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
@@ -587,7 +586,6 @@ void HttpClient::_stats(query_t &e)
 		database_pool->checkin(&database);
 	}
 	if (e.document >= 0) {
-		_endpointgen(e,false);
 		Database *database = NULL;
 		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
@@ -873,7 +871,7 @@ void HttpClient::_search()
 
 int HttpClient::_endpointgen(query_t &e, bool writable)
 {
-	int cmd;
+	int cmd, retval;
 	bool has_node_name = false;
 	struct http_parser_url u;
 	std::string b = repr(path);
@@ -890,7 +888,14 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 			parser_url_path_t p;
 			memset(&p, 0, sizeof(p));
-			while (url_path(path_buf.c_str(), path_size, &p) == 0) {
+
+			retval = url_path(path_buf.c_str(), path_size, &p);
+
+			if (retval == -1) {
+				return CMD_BAD_QUERY;
+			}
+
+			while (retval == 0) {
 
 				command  = urldecode(p.off_command, p.len_command);
 
