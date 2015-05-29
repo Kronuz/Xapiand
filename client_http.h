@@ -68,7 +68,7 @@ public:
 	void _patch();
 	void _head();
 	void _stats(query_t &e);
-	int _endpointgen(query_t &e);
+	int _endpointgen(query_t &e, bool writable);
 	std::string http_response(int status, int mode, std::string content=std::string(""));
 };
 
