@@ -22,7 +22,7 @@ xapiand_SOURCES = \
 	server.cc \
 	tests.cc \
 	threadpool.cc \
-	times.c \
+	times.cc \
 	utils.cc \
 	\
 	xapiand.cc

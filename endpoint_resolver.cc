@@ -65,7 +65,7 @@ void EndpointList::add_endpoint(const Endpoint &element) {
 	}
 
 	double elapsed = timespec_to_double(&last_recv) - timespec_to_double(&init_time);
-	timespec_add_double(timespec_set(&next_wake, &init_time), elapsed);
+	timespec_add(timespec_set(&next_wake, &init_time), elapsed);
 
 	pthread_mutex_unlock(&endl_qmtx);
 
@@ -105,7 +105,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 
 				manager->discovery(DISCOVERY_DB, serialise_string(path));
 
-				timespec_add_double(timespec_set(&next_wake, &init_time), init_timeout);
+				timespec_add(timespec_set(&next_wake, &init_time), init_timeout);
 
 				status = initial_status = ST_WAITING;
 
@@ -121,7 +121,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 							if (elapsed >= timeout) {
 								elapsed = timeout;
 							}
-							timespec_add_double(timespec_set(&next_wake, &init_time), elapsed);
+							timespec_add(timespec_set(&next_wake, &init_time), elapsed);
 						} else {
 							elapsed = timeout + 1; // force it out
 						}
