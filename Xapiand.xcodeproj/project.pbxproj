@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C314FA761B0E8E7300CCC85F /* endpoint_resolver.cc in Sources */ = {isa = PBXBuildFile; fileRef = C314FA741B0E8E7300CCC85F /* endpoint_resolver.cc */; };
+		C39AE02D1B18E5D500203139 /* times.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE02C1B18E5D500203139 /* times.cc */; };
 		E5289E361B0BD1EC00EBA5D8 /* cJSON_Utils.c in Sources */ = {isa = PBXBuildFile; fileRef = E5289E211B0BD1EC00EBA5D8 /* cJSON_Utils.c */; };
 		E5289E371B0BD1EC00EBA5D8 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = E5289E221B0BD1EC00EBA5D8 /* cJSON.c */; };
 		E5289E381B0BD1EC00EBA5D8 /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = E5289E231B0BD1EC00EBA5D8 /* http_parser.c */; };
@@ -27,7 +28,6 @@
 		E5289E481B0BD1EC00EBA5D8 /* threadpool.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5289E331B0BD1EC00EBA5D8 /* threadpool.cc */; };
 		E5289E491B0BD1EC00EBA5D8 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5289E341B0BD1EC00EBA5D8 /* utils.cc */; };
 		E5289E4A1B0BD1EC00EBA5D8 /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = E5289E351B0BD1EC00EBA5D8 /* xapiand.cc */; };
-		E5EA6F3F1B18B46A00B8CE65 /* time.c in Sources */ = {isa = PBXBuildFile; fileRef = E5EA6F3E1B18B46A00B8CE65 /* time.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -45,6 +45,8 @@
 /* Begin PBXFileReference section */
 		C314FA741B0E8E7300CCC85F /* endpoint_resolver.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = endpoint_resolver.cc; sourceTree = "<group>"; };
 		C314FA751B0E8E7300CCC85F /* endpoint_resolver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = endpoint_resolver.h; sourceTree = "<group>"; };
+		C39AE02B1B18E54C00203139 /* times.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = times.h; sourceTree = "<group>"; };
+		C39AE02C1B18E5D500203139 /* times.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = times.cc; sourceTree = "<group>"; };
 		E5289E0A1B0BD1EC00EBA5D8 /* cJSON_Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON_Utils.h; sourceTree = "<group>"; };
 		E5289E0B1B0BD1EC00EBA5D8 /* cJSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON.h; sourceTree = "<group>"; };
 		E5289E0C1B0BD1EC00EBA5D8 /* client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = client_base.h; sourceTree = "<group>"; };
@@ -88,8 +90,6 @@
 		E5289E341B0BD1EC00EBA5D8 /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utils.cc; sourceTree = "<group>"; };
 		E5289E351B0BD1EC00EBA5D8 /* xapiand.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = xapiand.cc; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
-		E5EA6F3D1B18B46A00B8CE65 /* time.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = time.h; sourceTree = "<group>"; };
-		E5EA6F3E1B18B46A00B8CE65 /* time.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = time.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,6 +128,7 @@
 				E5289E1B1B0BD1EC00EBA5D8 /* server.h */,
 				E5289E1C1B0BD1EC00EBA5D8 /* tests.h */,
 				E5289E1D1B0BD1EC00EBA5D8 /* threadpool.h */,
+				C39AE02B1B18E54C00203139 /* times.h */,
 				E5289E1E1B0BD1EC00EBA5D8 /* utils.h */,
 				E5289E1F1B0BD1EC00EBA5D8 /* worker.h */,
 				E5289E201B0BD1EC00EBA5D8 /* xapiand.h */,
@@ -149,8 +150,7 @@
 				E5289E2F1B0BD1EC00EBA5D8 /* server.cc */,
 				E5289E311B0BD1EC00EBA5D8 /* tests.cc */,
 				E5289E331B0BD1EC00EBA5D8 /* threadpool.cc */,
-				E5EA6F3D1B18B46A00B8CE65 /* time.h */,
-				E5EA6F3E1B18B46A00B8CE65 /* time.c */,
+				C39AE02C1B18E5D500203139 /* times.cc */,
 				E5289E341B0BD1EC00EBA5D8 /* utils.cc */,
 				E5289E351B0BD1EC00EBA5D8 /* xapiand.cc */,
 			);
@@ -222,6 +222,7 @@
 			files = (
 				E5289E4A1B0BD1EC00EBA5D8 /* xapiand.cc in Sources */,
 				E5289E3D1B0BD1EC00EBA5D8 /* endpoint.cc in Sources */,
+				C39AE02D1B18E5D500203139 /* times.cc in Sources */,
 				E5289E3B1B0BD1EC00EBA5D8 /* client_http.cc in Sources */,
 				E5289E361B0BD1EC00EBA5D8 /* cJSON_Utils.c in Sources */,
 				E5289E481B0BD1EC00EBA5D8 /* threadpool.cc in Sources */,
@@ -234,7 +235,6 @@
 				E5289E3C1B0BD1EC00EBA5D8 /* database.cc in Sources */,
 				E5289E3A1B0BD1EC00EBA5D8 /* client_binary.cc in Sources */,
 				E5289E461B0BD1EC00EBA5D8 /* tests.cc in Sources */,
-				E5EA6F3F1B18B46A00B8CE65 /* time.c in Sources */,
 				E5289E3F1B0BD1EC00EBA5D8 /* length.cc in Sources */,
 				E5289E421B0BD1EC00EBA5D8 /* multivalue.cc in Sources */,
 				E5289E371B0BD1EC00EBA5D8 /* cJSON.c in Sources */,
