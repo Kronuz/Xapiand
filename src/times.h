@@ -51,16 +51,7 @@
 
 typedef	int	clockid_t;
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 int clock_gettime(clockid_t clk_id, struct timespec *tp);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __APPLE__ */
 
@@ -113,7 +104,7 @@ inline struct timespec * timespec_sub(struct timespec *tps0, const struct timesp
 }
 
 
-inline struct timespec * timespec_add_double(struct timespec *tps, double dt) {
+inline struct timespec * timespec_add(struct timespec *tps, double dt) {
 	struct timespec ts;
 	double_to_timespec(&ts, dt);
 	timespec_add(tps, &ts);

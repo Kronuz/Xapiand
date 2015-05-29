@@ -59,7 +59,7 @@ protected:
 
 	inline struct timespec & _timespec(double timeout) {
 		clock_gettime(CLOCK_REALTIME, &_ts);
-		timespec_add_double(&_ts, timeout);
+		timespec_add(&_ts, timeout);
 		return _ts;
 	}
 
