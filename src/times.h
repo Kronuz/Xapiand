@@ -34,6 +34,10 @@
 
 #include <sys/time.h>
 
+
+typedef struct timespec timespec_t;
+
+
 #ifdef __APPLE__
 
 #include <sys/resource.h>
@@ -51,38 +55,38 @@
 
 typedef	int	clockid_t;
 
-int clock_gettime(clockid_t clk_id, struct timespec *tp);
+int clock_gettime(clockid_t clk_id, timespec_t *tp);
 
 #endif /* __APPLE__ */
 
 
-inline struct timespec * timespec_clear(struct timespec *tps0) {
+inline timespec_t * timespec_clear(timespec_t *tps0) {
 	tps0->tv_nsec = 0;
 	tps0->tv_sec = 0;
 	return tps0;
 }
 
 
-inline double timespec_to_double(const struct timespec *tps) {
+inline double timespec_to_double(const timespec_t *tps) {
 	return (double)tps->tv_sec + ((double)tps->tv_nsec / 1e9L);
 }
 
 
-inline struct timespec * double_to_timespec(struct timespec *tps, double dt) {
+inline timespec_t * double_to_timespec(timespec_t *tps, double dt) {
 	tps->tv_nsec = (int)((dt - (int)dt) * 1e9L);
 	tps->tv_sec = (int)dt;
 	return tps;
 }
 
 
-inline struct timespec * timespec_set(struct timespec *tps0, const struct timespec *tps1) {
+inline timespec_t * timespec_set(timespec_t *tps0, const timespec_t *tps1) {
 	tps0->tv_nsec = tps1->tv_nsec;
 	tps0->tv_sec = tps1->tv_sec;
 	return tps0;
 }
 
 
-inline struct timespec * timespec_add(struct timespec *tps0, const struct timespec *tps1) {
+inline timespec_t * timespec_add(timespec_t *tps0, const timespec_t *tps1) {
 	tps0->tv_nsec += tps1->tv_nsec;
 	tps0->tv_sec += tps1->tv_sec;
 	while (tps0->tv_nsec >= 1e9L) {
@@ -93,7 +97,7 @@ inline struct timespec * timespec_add(struct timespec *tps0, const struct timesp
 }
 
 
-inline struct timespec * timespec_sub(struct timespec *tps0, const struct timespec *tps1) {
+inline timespec_t * timespec_sub(timespec_t *tps0, const timespec_t *tps1) {
 	tps0->tv_nsec -= tps1->tv_nsec;
 	tps0->tv_sec -= tps1->tv_sec;
 	while (tps0->tv_nsec < 0) {
@@ -104,8 +108,8 @@ inline struct timespec * timespec_sub(struct timespec *tps0, const struct timesp
 }
 
 
-inline struct timespec * timespec_add(struct timespec *tps, double dt) {
-	struct timespec ts;
+inline timespec_t * timespec_add(timespec_t *tps, double dt) {
+	timespec_t ts;
 	double_to_timespec(&ts, dt);
 	timespec_add(tps, &ts);
 	return tps;
@@ -118,98 +122,98 @@ inline struct timespec * timespec_add(struct timespec *tps, double dt) {
 		((tsp0)->tv_sec cmp (tsp1)->tv_sec))
 ;
 
-inline bool operator<(struct timespec &ts0, struct timespec &ts1) {
+inline bool operator<(timespec_t &ts0, timespec_t &ts1) {
 	return timespec_cmp(&ts0, <, &ts1);
 }
 
-inline bool operator<=(struct timespec &ts0, struct timespec &ts1) {
+inline bool operator<=(timespec_t &ts0, timespec_t &ts1) {
 	return timespec_cmp(&ts0, <=, &ts1);
 }
 
-inline bool operator>(struct timespec &ts0, struct timespec &ts1) {
+inline bool operator>(timespec_t &ts0, timespec_t &ts1) {
 	return timespec_cmp(&ts0, >, &ts1);
 }
 
-inline bool operator>=(struct timespec &ts0, struct timespec &ts1) {
+inline bool operator>=(timespec_t &ts0, timespec_t &ts1) {
 	return timespec_cmp(&ts0, >=, &ts1);
 }
 
-inline bool operator==(struct timespec &ts0, struct timespec &ts1) {
+inline bool operator==(timespec_t &ts0, timespec_t &ts1) {
 	return timespec_cmp(&ts0, ==, &ts1);
 }
 
-inline bool operator!=(struct timespec &ts0, struct timespec &ts1) {
+inline bool operator!=(timespec_t &ts0, timespec_t &ts1) {
 	return timespec_cmp(&ts0, !=, &ts1);
 }
 
-inline bool operator<(struct timespec &ts0, double dt1) {
-	struct timespec ts1;
+inline bool operator<(timespec_t &ts0, double dt1) {
+	timespec_t ts1;
 	double_to_timespec(&ts1, dt1);
 	return timespec_cmp(&ts0, <, &ts1);
 }
 
-inline bool operator<=(struct timespec &ts0, double dt1) {
-	struct timespec ts1;
+inline bool operator<=(timespec_t &ts0, double dt1) {
+	timespec_t ts1;
 	double_to_timespec(&ts1, dt1);
 	return timespec_cmp(&ts0, <=, &ts1);
 }
 
-inline bool operator>(struct timespec &ts0, double dt1) {
-	struct timespec ts1;
+inline bool operator>(timespec_t &ts0, double dt1) {
+	timespec_t ts1;
 	double_to_timespec(&ts1, dt1);
 	return timespec_cmp(&ts0, >, &ts1);
 }
 
-inline bool operator>=(struct timespec &ts0, double dt1) {
-	struct timespec ts1;
+inline bool operator>=(timespec_t &ts0, double dt1) {
+	timespec_t ts1;
 	double_to_timespec(&ts1, dt1);
 	return timespec_cmp(&ts0, >=, &ts1);
 }
 
-inline bool operator==(struct timespec &ts0, double dt1) {
-	struct timespec ts1;
+inline bool operator==(timespec_t &ts0, double dt1) {
+	timespec_t ts1;
 	double_to_timespec(&ts1, dt1);
 	return timespec_cmp(&ts0, ==, &ts1);
 }
 
-inline bool operator!=(struct timespec &ts0, double dt1) {
-	struct timespec ts1;
+inline bool operator!=(timespec_t &ts0, double dt1) {
+	timespec_t ts1;
 	double_to_timespec(&ts1, dt1);
 	return timespec_cmp(&ts0, !=, &ts1);
 }
 
-inline bool operator<(double dt0, struct timespec &ts1) {
-	struct timespec ts0;
+inline bool operator<(double dt0, timespec_t &ts1) {
+	timespec_t ts0;
 	double_to_timespec(&ts1, dt0);
 	return timespec_cmp(&ts0, <, &ts1);
 }
 
-inline bool operator<=(double dt0, struct timespec &ts1) {
-	struct timespec ts0;
+inline bool operator<=(double dt0, timespec_t &ts1) {
+	timespec_t ts0;
 	double_to_timespec(&ts1, dt0);
 	return timespec_cmp(&ts0, <=, &ts1);
 }
 
-inline bool operator>(double dt0, struct timespec &ts1) {
-	struct timespec ts0;
+inline bool operator>(double dt0, timespec_t &ts1) {
+	timespec_t ts0;
 	double_to_timespec(&ts1, dt0);
 	return timespec_cmp(&ts0, >, &ts1);
 }
 
-inline bool operator>=(double dt0, struct timespec &ts1) {
-	struct timespec ts0;
+inline bool operator>=(double dt0, timespec_t &ts1) {
+	timespec_t ts0;
 	double_to_timespec(&ts1, dt0);
 	return timespec_cmp(&ts0, >=, &ts1);
 }
 
-inline bool operator==(double dt0, struct timespec &ts1) {
-	struct timespec ts0;
+inline bool operator==(double dt0, timespec_t &ts1) {
+	timespec_t ts0;
 	double_to_timespec(&ts1, dt0);
 	return timespec_cmp(&ts0, ==, &ts1);
 }
 
-inline bool operator!=(double dt0, struct timespec &ts1) {
-	struct timespec ts0;
+inline bool operator!=(double dt0, timespec_t &ts1) {
+	timespec_t ts0;
 	double_to_timespec(&ts1, dt0);
 	return timespec_cmp(&ts0, !=, &ts1);
 }

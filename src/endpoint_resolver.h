@@ -46,10 +46,10 @@ class EndpointList {
 	pthread_mutex_t endl_qmtx;
 	pthread_mutexattr_t endl_qmtx_attr;
 
-	struct timespec init_time;
-	struct timespec last_recv;
-	struct timespec current_time;
-	struct timespec next_wake;
+	timespec_t init_time;
+	timespec_t last_recv;
+	timespec_t current_time;
+	timespec_t next_wake;
 
 	int status;
 	int max_mastery_level;
