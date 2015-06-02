@@ -98,8 +98,8 @@ Database::Database(DatabaseQueue * queue_, const Endpoints &endpoints_, bool wri
 	  mastery_level(-1),
 	  db(NULL)
 {
-	queue->inc_count();
 	reopen();
+	queue->inc_count();
 }
 
 
