@@ -111,7 +111,7 @@ private:
 	DatabasePool database_pool;
 	ThreadPool thread_pool;
 
-	Database *cluster_database;
+	Endpoints cluster_endpoints;
 
 	void discovery_heartbeat_cb(ev::timer &watcher, int revents);
 	void discovery(const char *message, size_t size);

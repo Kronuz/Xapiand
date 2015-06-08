@@ -82,6 +82,7 @@ private:
 	std::string repl_db_filename;
 	std::string repl_db_uuid;
 	size_t repl_db_revision;
+	bool repl_switched_db;
 
 	void on_read(const char *buf, ssize_t received);
 
