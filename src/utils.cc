@@ -38,6 +38,7 @@
 #include <netinet/tcp.h> /* for TCP_NODELAY */
 #include <netdb.h> /* for getaddrinfo */
 #include <unistd.h>
+#include <dirent.h>
 
 
 #define DATE_RE "([1-9][0-9]{3})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]{1,3}))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?"
@@ -1507,5 +1508,75 @@ std::string to_type(std::string type)
 		return std::string("D");
 	} else {
 		return std::string("S");
+	}
+}
+
+
+void delete_files(std::string path)
+{
+	unsigned char isFile = 0x8;
+	unsigned char isFolder = 0x4;
+
+	bool contains_folder = false;
+	DIR *Dir;
+
+	struct dirent *Subdir;
+	Dir = opendir(path.c_str());
+
+	if (!Dir) {
+		return;
+	}
+
+	Subdir =readdir(Dir);
+	while(Subdir) {
+		if ( Subdir->d_type == isFolder) {
+			if (strcmp(Subdir->d_name,".") != 0 && strcmp(Subdir->d_name,"..") != 0) {
+				contains_folder = true;
+			}
+		}
+
+		if ( Subdir->d_type == isFile) {
+			std::string file = path + "/" + std::string(Subdir->d_name);
+			if (remove(file.c_str()) != 0) {
+				LOG_ERR(NULL,"file %s could not be deleted\n",Subdir->d_name);
+			}
+		}
+		Subdir = readdir(Dir);
+	}
+
+	if (!contains_folder) {
+		if (rmdir(path.c_str()) !=0 ) {
+			LOG_ERR(NULL,"Directory %s could not be deleted\n",path.c_str());
+		}
+	}
+}
+
+
+void move_files(std::string src, std::string dst)
+{
+	unsigned char isFile = 0x8;
+
+	DIR *Dir;
+	struct dirent *Subdir;
+	Dir = opendir(src.c_str());
+
+	if (!Dir) {
+		return;
+	}
+
+	Subdir =readdir(Dir);
+	while (Subdir) {
+		if ( Subdir->d_type == isFile) {
+			std::string old_name = src + "/" + Subdir->d_name;
+			std::string new_name = dst + "/" + Subdir->d_name;
+			if (::rename(old_name.c_str(), new_name.c_str()) != 0) {
+				LOG_ERR(NULL, "Couldn't rename %s to %s",old_name.c_str(), new_name.c_str());
+			}
+		}
+		Subdir = readdir(Dir);
+	}
+
+	if (rmdir(src.c_str()) !=0 ) {
+		LOG_ERR(NULL,"Directory %s could not be deleted\n",src.c_str());
 	}
 }

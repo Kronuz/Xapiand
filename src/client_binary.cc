@@ -32,6 +32,7 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 
 //
@@ -42,7 +43,8 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  running(false),
-	  repl_database(NULL)
+	  repl_database(NULL),
+	  repl_switched_db(false)
 {
 	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int total_clients = XapiandServer::total_clients;
@@ -62,6 +64,10 @@ BinaryClient::~BinaryClient()
 	for (; it != databases.end(); it++) {
 		Database *database = it->second;
 		database_pool->checkin(&database);
+	}
+
+	if (repl_database) {
+		database_pool->checkin(&repl_database);
 	}
 
 	pthread_mutex_lock(&XapiandServer::static_mutex);
@@ -94,7 +100,6 @@ bool BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint
 		LOG_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
 		return false;
 	}
-	databases[repl_database->db] = repl_database;
 
 	state = init_replicationprotocol;
 	thread_pool->addTask(this);
@@ -305,6 +310,9 @@ void BinaryClient::repl_end_of_changes(const std::string & message)
 {
 	if (state != init_replicationprotocol) {
 		LOG(this, "BinaryClient::repl_end_of_changes\n");
+		if (repl_switched_db) {
+			database_pool->switch_db(*endpoints.cbegin());
+		}
 		shutdown();
 		return;
 	}
@@ -350,6 +358,22 @@ void BinaryClient::repl_set_db_header(const std::string & message)
 	p += length;
 	repl_db_revision = decode_length(&p, p_end);
 	repl_db_filename.clear();
+
+	Endpoint endpoint = *endpoints.begin();
+	std::string path_tmp = endpoint.path+"/.tmp";
+
+	int dir = ::mkdir(path_tmp.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	if (dir == 0) {
+		LOG(this,"Directory %s created\n",path_tmp.c_str());
+	} else if(dir == EEXIST) {
+		delete_files(path_tmp.c_str());
+		dir = ::mkdir(path_tmp.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		if (dir == 0) {
+			LOG(this,"Directory %s created\n",path_tmp.c_str());
+		}
+	} else {
+		LOG_ERR(this,"file %s not created\n",(endpoint.path+"/.tmp/").c_str());
+	}
 }
 
 
@@ -372,16 +396,18 @@ void BinaryClient::repl_set_db_filedata(const std::string & message)
 
 	const Endpoint &endpoint = *endpoints.begin();
 
-	std::string path = endpoint.path + "/" + repl_db_filename;
-	int fd = ::open((path + ".tmp").c_str(), O_WRONLY|O_CREAT, 0644);
+	std::string path = endpoint.path + "/.tmp/";
+	std::string path_filename = path + repl_db_filename;
+
+	int fd = ::open(path_filename.c_str(), O_WRONLY|O_CREAT|O_EXCL, 0644);
 	if (fd >= 0) {
+		LOG(this, "path_filename %s\n",path_filename.c_str());
 		if (::write(fd, p, p_end - p) != p_end - p) {
 			LOG_ERR(this, "Cannot write to %s\n", repl_db_filename.c_str());
 			return;
 		}
 		::close(fd);
 	}
-	::rename((path + ".tmp").c_str(), path.c_str());
 }
 
 
@@ -392,6 +418,22 @@ void BinaryClient::repl_set_db_footer(const std::string & message)
 	const char *p_end = p + message.size();
 	size_t revision = decode_length(&p, p_end);
 	// Indicates the end of a DB copy operation, signal switch
+
+	Endpoints endpoints_tmp;
+	Endpoint endpoint_tmp = *endpoints.begin();
+	endpoint_tmp.path.append("/.tmp");
+	endpoints_tmp.insert(endpoint_tmp);
+
+	if (repl_database != NULL) {
+		database_pool->checkin(&repl_database);
+		repl_database = NULL;
+	}
+
+	if (!database_pool->checkout(&repl_database, endpoints_tmp, DB_WRITABLE|DB_SPAWN)) {
+		LOG_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
+	}
+
+	repl_switched_db = true;
 }
 
 

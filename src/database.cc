@@ -151,7 +151,7 @@ Database::reopen()
 	if (writable) {
 		db = new Xapian::WritableDatabase();
 		if (endpoints_size != 1) {
-			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints_size, endpoints.as_string().c_str());
+			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s\n", endpoints_size, endpoints.as_string().c_str());
 		} else {
 			e = &*i;
 			if (e->is_local()) {
@@ -223,14 +223,18 @@ Database::reopen()
 
 DatabaseQueue::DatabaseQueue()
 	: persistent(false),
+	  is_switch_db(false),
 	  count(0)
 {
+	pthread_cond_init(&switch_cond,0);
 }
 
 
 DatabaseQueue::~DatabaseQueue()
 {
 	assert(size() == count);
+
+	pthread_cond_destroy(&switch_cond);
 
 	while (!empty()) {
 		Database *database;
@@ -281,20 +285,40 @@ DatabaseQueue::dec_count()
 DatabasePool::DatabasePool(size_t max_size)
 	: finished(false),
 	  databases(max_size),
-	  writable_databases(max_size)
+	  writable_databases(max_size),
+	  ref_database(NULL)
 {
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
+
+	pthread_cond_init(&checkin_cond,0);
+
+	prefix_rf_node = get_prefix("node", DOCUMENT_CUSTOM_TERM_PREFIX,'s');
+
+	Endpoints ref_endpoints;
+	Endpoint ref_endpoint(".refs");
+	ref_endpoints.insert(ref_endpoint);
+
+	if(!checkout(&ref_database, ref_endpoints, DB_WRITABLE|DB_PERSISTENT)) {
+		INFO(this, "Ref database doesn't exist. Generating database...\n");
+		if (!checkout(&ref_database, ref_endpoints,DB_WRITABLE|DB_SPAWN|DB_PERSISTENT)) {
+			LOG_ERR(this,"Database refs it could not be checkout\n");
+			assert(false);
+		}
+	}
 }
 
 
 DatabasePool::~DatabasePool()
 {
+	checkin(&ref_database);
+
 	finish();
 
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
+	pthread_cond_destroy(&checkin_cond);
 }
 
 
@@ -338,6 +362,7 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 	bool writable = flags & DB_WRITABLE;
 	bool spawn = flags & DB_SPAWN;
 	bool persistent = flags & DB_PERSISTENT;
+	bool initref = flags & DB_INIT_REF;
 
 	LOG_DATABASE(this, "++ CHECKING OUT DB %s(%s) [%lx]...\n", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)*database);
 
@@ -357,12 +382,21 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 		}
 		queue->persistent = persistent;
 
+		if (queue->is_switch_db) {
+			pthread_cond_wait(&queue->switch_cond, &qmtx);
+		}
+
 		if (!queue->pop(database_, 0)) {
 			// Increment so other threads don't delete the queue
 			if (queue->inc_count(writable ? 1 : -1)) {
 				pthread_mutex_unlock(&qmtx);
 				try {
 					database_ = new Database(queue, endpoints, writable, spawn);
+
+					if (writable && initref && endpoints.size() == 1) {
+						init_ref(endpoints);
+					}
+
 				} catch (const Xapian::DatabaseOpeningError &err) {
 				} catch (const Xapian::Error &err) {
 					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
@@ -441,9 +475,145 @@ DatabasePool::checkin(Database **database)
 
 	*database = NULL;
 
+	if (queue->is_switch_db) {
+		switch_db(*database_->endpoints.cbegin());
+	}
+
 	pthread_mutex_unlock(&qmtx);
 
+	pthread_cond_broadcast(&checkin_cond);
+
 	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", database_->writable ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
+}
+
+
+void DatabasePool::init_ref(Endpoints endpoints)
+{
+	Xapian::Document doc;
+	endpoints_set_t::iterator endp_it = endpoints.begin();
+
+	if (ref_database) {
+		for (; endp_it != endpoints.end(); endp_it++) {
+			std::string unique_id = prefixed(get_slot_hex(endp_it->path),DOCUMENT_ID_TERM_PREFIX);
+
+			Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
+			if (p == ref_database->db->postlist_end(unique_id)) {
+				doc.add_boolean_term(unique_id);
+				doc.add_term(prefixed(endp_it->node_name,prefix_rf_node));
+				doc.add_value(0, std::to_string(0));
+				ref_database->replace(unique_id, doc, true);
+			} else {
+				LOG(this,"The document already exists nothing to do\n");
+			}
+		}
+	}
+}
+
+
+void DatabasePool::inc_ref(Endpoints endpoints)
+{
+	Xapian::Document doc;
+	endpoints_set_t::iterator endp_it = endpoints.begin();
+
+	for (; endp_it != endpoints.end(); endp_it++) {
+		std::string unique_id = prefixed(get_slot_hex(endp_it->path),DOCUMENT_ID_TERM_PREFIX);
+
+		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
+
+		if (p == ref_database->db->postlist_end(unique_id)) {
+			//QUESTION: Document not found - should add?
+			//QUESTION: This case could happen?
+			doc.add_boolean_term(unique_id);
+			doc.add_term(prefixed(endp_it->node_name,prefix_rf_node));
+			doc.add_value(0, std::to_string(0));
+			ref_database->replace(unique_id, doc, true);
+		} else {
+			//Document found - reference increased
+			doc = ref_database->db->get_document(*p);
+			doc.add_boolean_term(unique_id);
+			doc.add_term(prefixed(endp_it->node_name,prefix_rf_node));
+			int nref = strtoint(doc.get_value(0));
+			doc.add_value(0, std::to_string(nref+1));
+			ref_database->replace(unique_id, doc, true);
+		}
+	}
+}
+
+
+void DatabasePool::dec_ref(Endpoints endpoints)
+{
+	Xapian::Document doc;
+	endpoints_set_t::iterator endp_it = endpoints.begin();
+
+	for (; endp_it != endpoints.end(); endp_it++) {
+
+		std::string unique_id = prefixed(get_slot_hex(endp_it->path),DOCUMENT_ID_TERM_PREFIX);
+		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
+
+		if (p != ref_database->db->postlist_end(unique_id)) {
+			doc = ref_database->db->get_document(*p);
+			doc.add_boolean_term(unique_id);
+			doc.add_term(prefixed(endp_it->node_name,prefix_rf_node));
+			int nref = strtoint(doc.get_value(0))-1;
+			doc.add_value(0, std::to_string(nref));
+			ref_database->replace(unique_id, doc, true);
+
+			if (nref == 0) {
+				//qmtx need a lock
+				pthread_cond_wait(&checkin_cond,&qmtx);
+				delete_files(endp_it->path);
+			}
+		}
+	}
+}
+
+
+bool DatabasePool::switch_db(const Endpoint &endpoint)
+{
+	bool switched = false;
+	Database *database;
+
+	pthread_mutex_lock(&qmtx);
+
+	size_t hash = endpoint.hash();
+	DatabaseQueue *queue, *wqueue;
+
+	queue = &databases[hash];
+	wqueue = &writable_databases[hash];
+
+	queue->is_switch_db = true;
+	wqueue->is_switch_db = true;
+
+	LOG(this,"queue --->> count %d size %d\n",queue->count,queue->size());
+	if (queue->count == queue->size() && wqueue->count == wqueue->size()) {
+		LOG(this,"Inside switch_db endpoit.path %s\n", endpoint.path.c_str());
+
+		while (!queue->empty()) {
+			if (queue->pop(database)) {
+				delete database;
+			}
+		}
+
+		while (!wqueue->empty()) {
+			if (wqueue->pop(database)) {
+				delete database;
+			}
+		}
+
+		move_files(endpoint.path + "/.tmp", endpoint.path);
+		queue->is_switch_db = false;
+		wqueue->is_switch_db = false;
+
+		switched = true;
+	} else {
+		LOG(this,"Inside switch_db not queue->count == queue->size()\n");
+	}
+
+	pthread_mutex_unlock(&qmtx);
+
+	if (switched) pthread_cond_broadcast(&queue->switch_cond);
+
+	return switched;
 }
 
 

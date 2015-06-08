@@ -104,9 +104,8 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  endp_r(o.endpoints_list_size),
-	  thread_pool("W%d", o.threadpool_size),
+	  thread_pool("W%d", (int)o.threadpool_size),
 	  cluster_name(o.cluster_name),
-	  cluster_database(NULL),
 	  node_name(o.node_name),
 	  discovery_port(o.discovery_port)
 {
@@ -177,10 +176,6 @@ XapiandManager::~XapiandManager()
 	discovery(DISCOVERY_BYE, local_node.serialise());
 
 	destroy();
-
-	if (cluster_database != NULL) {
-		database_pool.checkin(&cluster_database);
-	}
 
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
@@ -256,7 +251,8 @@ XapiandManager::setup_node()
 	pthread_mutex_lock(&qmtx);
 
 	// Open cluster database
-	Endpoints cluster_endpoints;
+	Database *cluster_database = NULL;
+	cluster_endpoints.clear();
 	Endpoint cluster_endpoint(".");
 	cluster_endpoints.insert(cluster_endpoint);
 	LOG(this, "cluster_endpoint - endpoints: %s\n", cluster_endpoint.as_string().c_str());

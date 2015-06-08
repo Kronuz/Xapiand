@@ -442,7 +442,7 @@ void HttpClient::_index()
 	}
 
 	Database *database = NULL;
-	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
+	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN|DB_INIT_REF)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
@@ -953,7 +953,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					}
 					if (!node_port) node_port = node.binary_port;
 					inet_ntop(AF_INET, &(node.addr.sin_addr), node_ip, INET_ADDRSTRLEN);
-					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path);
+					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path, NULL, -1, node_name);
 					endpoints.insert(endpoint);
 				} else {
 					std::vector<Endpoint>::iterator it_endp = asked_nodes.begin();
