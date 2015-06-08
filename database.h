@@ -71,6 +71,7 @@
 #define DB_WRITABLE 1    // Opens as writable
 #define DB_SPAWN 2       // Automatically creates the database if it doesn't exist
 #define DB_PERSISTENT 4  // Always try keeping the database in the database pool
+#define DB_INIT_REF 8	 // Initializes the writable index in the database .ref
 
 
 class DatabasePool;
@@ -165,8 +166,11 @@ class DatabaseQueue : public Queue<Database *> {
 	friend class DatabasesLRU;
 
 private:
+	bool is_switch_db;
 	bool persistent;
 	size_t count;
+
+	pthread_cond_t switch_cond;
 
 public:
 	DatabaseQueue();
@@ -180,7 +184,7 @@ public:
 class DatabasesLRU : public lru_map<size_t, DatabaseQueue> {
 private:
 	dropping_action on_drop(DatabaseQueue & val) {
-		return (val.persistent || val.size() < val.count) ? renew : drop;
+		return (val.persistent || val.size() < val.count || val.is_switch_db) ? renew : drop;
 	}
 
 public:
@@ -201,6 +205,16 @@ private:
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
+	pthread_cond_t checkin_cond;
+
+	Database *ref_database;
+	std::string prefix_rf_node;
+
+	void init_ref(Endpoints endpoints);
+	void inc_ref(Endpoints endpoints);
+	void dec_ref(Endpoints endpoints);
+
+
 public:
 	DatabasePool(size_t max_size);
 	~DatabasePool();
@@ -210,6 +224,8 @@ public:
 	bool checkout(Database **database, const Endpoints &endpoints, int flags);
 	void checkin(Database **database);
 	void finish();
+	bool switch_db(const Endpoint &endpoint);
+
 
 	QueueSet<Endpoint> updated_databases;
 };

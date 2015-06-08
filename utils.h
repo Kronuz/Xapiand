@@ -237,6 +237,8 @@ bool is_digits(const std::string &str);
 int get_minutes(std::string &hour, std::string &minute);
 bool Is_id_range(std::string &ids);
 std::string to_type(std::string type);
+void delete_files(std::string path);
+void move_files(std::string src, std::string dst);
 
 void update_pos_time();
 void fill_zeros_stats_cnt(int start, int end);

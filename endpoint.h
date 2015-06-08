@@ -97,11 +97,11 @@ class Endpoint {
 
 public:
 	int port;
-	std::string user, password, host, path, search;
+	std::string user, password, host, path, search, node_name;
 	int mastery_level;
 
 	Endpoint();
-	Endpoint(const std::string &path_, const Node *	node_=NULL, int mastery_level_=-1);
+	Endpoint(const std::string &path_, const Node *	node_=NULL, int mastery_level_=-1, std::string node_name="");
 
 	bool is_local() const {
 		return host == local_node.host() && port == local_node.binary_port;

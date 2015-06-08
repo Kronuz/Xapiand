@@ -299,7 +299,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %d!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
 
-						Endpoint index(index_path, &remote_node, (int)remote_mastery_level);
+						Endpoint index(index_path, &remote_node, (int)remote_mastery_level,remote_node.name);
 						manager()->endp_r.add_index_endpoint(index);
 					}
 					break;
