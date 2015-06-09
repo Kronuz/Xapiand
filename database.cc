@@ -41,7 +41,7 @@
 #define DATABASE_UPDATE_TIME 10
 
 
-int read_mastery(const std::string &dir)
+int read_mastery(const std::string &dir, bool force)
 {
 	LOG_DATABASE(NULL, "+ READING MASTERY OF INDEX '%s'...\n", dir.c_str());
 
@@ -51,25 +51,37 @@ int read_mastery(const std::string &dir)
 		return -1;
 	}
 
-	int mastery_level = time(0);
+	int mastery_level = -1;
 	unsigned char buf[512];
 
 	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd < 0) {
-		fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-		if (fd >= 0) {
-			snprintf((char *)buf, sizeof(buf), "%d", mastery_level);
-			write(fd, buf, strlen((char *)buf));
-			close(fd);
+		if(force) {
+			mastery_level = (int)time(0);
+			fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+			if (fd >= 0) {
+				snprintf((char *)buf, sizeof(buf), "%d", mastery_level);
+				write(fd, buf, strlen((char *)buf));
+				close(fd);
+			}
 		}
 	} else {
-		mastery_level = 1;
+		mastery_level = 0;
 		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
 		if (length > 0) {
 			buf[length] = '\0';
 			mastery_level = atoi((const char *)buf);
 		}
 		close(fd);
+		if (!mastery_level) {
+			mastery_level = (int)time(0);
+			fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+			if (fd >= 0) {
+				snprintf((char *)buf, sizeof(buf), "%d", mastery_level);
+				write(fd, buf, strlen((char *)buf));
+				close(fd);
+			}
+		}
 	}
 
 	LOG_DATABASE(NULL, "- MASTERY OF INDEX '%s' is %d\n", dir.c_str(), mastery_level);
@@ -116,7 +128,7 @@ Database::read_mastery(const std::string &dir)
 	if (!local) return -1;
 	if (mastery_level != -1) return mastery_level;
 
-	mastery_level = ::read_mastery(dir);
+	mastery_level = ::read_mastery(dir, true);
 
 	return mastery_level;
 }
@@ -350,7 +362,7 @@ DatabasePool::get_mastery_level(const std::string &dir)
 	}
 	pthread_mutex_unlock(&qmtx);
 
-	mastery_level = read_mastery(dir);
+	mastery_level = read_mastery(dir, false);
 
 	return mastery_level;
 }
