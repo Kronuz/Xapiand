@@ -38,6 +38,9 @@
 #include <algorithm>
 #include <queue>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
+
 
 #define RESERVED_WEIGHT "_weight"
 #define RESERVED_POSITION "_position"
@@ -172,6 +175,11 @@ private:
 
 	pthread_cond_t switch_cond;
 
+	DatabasePool *database_pool;
+	Endpoints endpoints;
+
+	void setup_endpoints(DatabasePool *database_pool_, const Endpoints &endpoints_);
+
 public:
 	DatabaseQueue();
 	~DatabaseQueue();
@@ -189,8 +197,7 @@ private:
 
 public:
 	DatabasesLRU(size_t max_size) :
-		lru_map(max_size) {
-	}
+		lru_map(max_size) {}
 };
 
 
@@ -200,6 +207,7 @@ class DatabasePool {
 
 private:
 	bool finished;
+	std::unordered_map<size_t, std::unordered_set<DatabaseQueue *> > queues;
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
 	pthread_mutex_t qmtx;
@@ -225,7 +233,8 @@ public:
 	void checkin(Database **database);
 	void finish();
 	bool switch_db(const Endpoint &endpoint);
-
+	void add_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
+	void drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
 
 	QueueSet<Endpoint> updated_databases;
 };
