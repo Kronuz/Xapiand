@@ -236,7 +236,8 @@ Database::reopen()
 DatabaseQueue::DatabaseQueue()
 	: persistent(false),
 	  is_switch_db(false),
-	  count(0)
+	  count(0),
+	  database_pool(NULL)
 {
 	pthread_cond_init(&switch_cond,0);
 }
@@ -248,6 +249,12 @@ DatabaseQueue::~DatabaseQueue()
 
 	pthread_cond_destroy(&switch_cond);
 
+	endpoints_set_t::const_iterator it_e = endpoints.cbegin();
+	for (; it_e != endpoints.cend(); it_e++) {
+		const Endpoint &endpoint = *it_e;
+		database_pool->drop_endpoint_queue(endpoint, this);
+	}
+
 	while (!empty()) {
 		Database *database;
 		if (pop(database)) {
@@ -256,6 +263,19 @@ DatabaseQueue::~DatabaseQueue()
 	}
 }
 
+void
+DatabaseQueue::setup_endpoints(DatabasePool *database_pool_, const Endpoints &endpoints_)
+{
+	if (database_pool == NULL) {
+		database_pool = database_pool_;
+		endpoints = endpoints_;
+		endpoints_set_t::const_iterator it_e = endpoints.cbegin();
+		for (; it_e != endpoints.cend(); it_e++) {
+			const Endpoint &endpoint = *it_e;
+			database_pool->add_endpoint_queue(endpoint, this);
+		}
+	}
+}
 
 bool
 DatabaseQueue::inc_count(int max)
@@ -343,6 +363,34 @@ void DatabasePool::finish() {
 }
 
 
+void DatabasePool::add_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue)
+{
+	pthread_mutex_lock(&qmtx);
+
+	size_t hash = endpoint.hash();
+	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
+	queues_set.insert(queue);
+
+	pthread_mutex_unlock(&qmtx);
+}
+
+
+void DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue)
+{
+	pthread_mutex_lock(&qmtx);
+
+	size_t hash = endpoint.hash();
+	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
+	queues_set.erase(queue);
+
+	if (queues_set.empty()) {
+		queues.erase(hash);
+	}
+
+	pthread_mutex_unlock(&qmtx);
+}
+
+
 int
 DatabasePool::get_mastery_level(const std::string &dir)
 {
@@ -393,6 +441,7 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 			queue = &databases[hash];
 		}
 		queue->persistent = persistent;
+		queue->setup_endpoints(this, endpoints);
 
 		if (queue->is_switch_db) {
 			pthread_cond_wait(&queue->switch_cond, &qmtx);
@@ -488,7 +537,11 @@ DatabasePool::checkin(Database **database)
 	*database = NULL;
 
 	if (queue->is_switch_db) {
-		switch_db(*database_->endpoints.cbegin());
+		Endpoints::const_iterator it_edp;
+		for(database_->endpoints.cbegin(); it_edp != database_->endpoints.cend(); it_edp++) {
+			const Endpoint &endpoint = *it_edp;
+			switch_db(endpoint);
+		}
 	}
 
 	pthread_mutex_unlock(&qmtx);
@@ -582,48 +635,49 @@ void DatabasePool::dec_ref(Endpoints endpoints)
 
 bool DatabasePool::switch_db(const Endpoint &endpoint)
 {
-	bool switched = false;
 	Database *database;
 
 	pthread_mutex_lock(&qmtx);
 
 	size_t hash = endpoint.hash();
-	DatabaseQueue *queue, *wqueue;
+	DatabaseQueue *queue;
 
-	queue = &databases[hash];
-	wqueue = &writable_databases[hash];
+	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
+	std::unordered_set<DatabaseQueue *>::const_iterator it_qs;
 
-	queue->is_switch_db = true;
-	wqueue->is_switch_db = true;
-
-	LOG(this,"queue --->> count %d size %d\n",queue->count,queue->size());
-	if (queue->count == queue->size() && wqueue->count == wqueue->size()) {
-		LOG(this,"Inside switch_db endpoit.path %s\n", endpoint.path.c_str());
-
-		while (!queue->empty()) {
-			if (queue->pop(database)) {
-				delete database;
-			}
+	bool switched = true;
+	for(it_qs=queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
+		queue = *it_qs;
+		queue->is_switch_db = true;
+		if (queue->count != queue->size()) {
+			switched = false;
+			break;
 		}
+	}
 
-		while (!wqueue->empty()) {
-			if (wqueue->pop(database)) {
-				delete database;
+	if (switched) {
+		for(it_qs=queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
+			queue = *it_qs;
+			while (!queue->empty()) {
+				if (queue->pop(database)) {
+					delete database;
+				}
 			}
 		}
 
 		move_files(endpoint.path + "/.tmp", endpoint.path);
-		queue->is_switch_db = false;
-		wqueue->is_switch_db = false;
 
-		switched = true;
+		for(it_qs=queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
+			queue = *it_qs;
+			queue->is_switch_db = false;
+
+			pthread_cond_broadcast(&queue->switch_cond);
+		}
 	} else {
 		LOG(this,"Inside switch_db not queue->count == queue->size()\n");
 	}
 
 	pthread_mutex_unlock(&qmtx);
-
-	if (switched) pthread_cond_broadcast(&queue->switch_cond);
 
 	return switched;
 }
