@@ -75,7 +75,7 @@
 #define DB_SPAWN 2       // Automatically creates the database if it doesn't exist
 #define DB_PERSISTENT 4  // Always try keeping the database in the database pool
 #define DB_INIT_REF 8	 // Initializes the writable index in the database .ref
-
+#define DB_VOLATILE 16   // Always drop the database from the database pool as soon as possible
 
 class DatabasePool;
 class DatabasesLRU;
