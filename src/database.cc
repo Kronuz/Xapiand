@@ -100,11 +100,10 @@ class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 };
 
 
-Database::Database(DatabaseQueue * queue_, const Endpoints &endpoints_, bool writable_, bool spawn_)
+Database::Database(DatabaseQueue * queue_, const Endpoints &endpoints_, int flags_)
 	: queue(queue_),
 	  endpoints(endpoints_),
-	  writable(writable_),
-	  spawn(spawn_),
+	  flags(flags_),
 	  hash(endpoints.hash()),
 	  access_time(time(0)),
 	  mastery_level(-1),
@@ -160,7 +159,7 @@ Database::reopen()
 
 	const Endpoint *e;
 	endpoints_set_t::const_iterator i(endpoints.begin());
-	if (writable) {
+	if (flags & DB_WRITABLE) {
 		db = new Xapian::WritableDatabase();
 		if (endpoints_size != 1) {
 			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s\n", endpoints_size, endpoints.as_string().c_str());
@@ -168,7 +167,7 @@ Database::reopen()
 			e = &*i;
 			if (e->is_local()) {
 				local = true;
-				wdb = Xapian::WritableDatabase(e->path, spawn ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
+				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
 			} else {
 				local = false;
@@ -204,7 +203,7 @@ Database::reopen()
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
 				} catch (const Xapian::DatabaseOpeningError &err) {
-					if (!spawn) throw;
+					if (!(flags & DB_SPAWN)) throw;
 					Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
@@ -420,7 +419,6 @@ bool
 DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flags)
 {
 	bool writable = flags & DB_WRITABLE;
-	bool spawn = flags & DB_SPAWN;
 	bool persistent = flags & DB_PERSISTENT;
 	bool initref = flags & DB_INIT_REF;
 
@@ -452,7 +450,7 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 			if (queue->inc_count(writable ? 1 : -1)) {
 				pthread_mutex_unlock(&qmtx);
 				try {
-					database_ = new Database(queue, endpoints, writable, spawn);
+					database_ = new Database(queue, endpoints, flags);
 
 					if (writable && initref && endpoints.size() == 1) {
 						init_ref(endpoints);
@@ -493,7 +491,7 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 
 	if ((now - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
 		database_->reopen();
-		LOG_DATABASE(this, "== REOPEN DB %s(%s) [%lx]\n", database_->writable ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
+		LOG_DATABASE(this, "== REOPEN DB %s(%s) [%lx]\n", (database_->flags & DB_WRITABLE) ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
 	}
 	database_->checkout_revision = database_->db->get_revision_info();
 
@@ -508,13 +506,13 @@ DatabasePool::checkin(Database **database)
 {
 	Database *database_ = *database;
 
-	LOG_DATABASE(this, "-- CHECKING IN DB %s(%s) [%lx]...\n", database_->writable ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
+	LOG_DATABASE(this, "-- CHECKING IN DB %s(%s) [%lx]...\n", (database_->flags & DB_WRITABLE) ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
 
 	pthread_mutex_lock(&qmtx);
 
 	DatabaseQueue *queue;
 
-	if (database_->writable) {
+	if (database_->flags & DB_WRITABLE) {
 		queue = &writable_databases[database_->hash];
 		if (database_->local && database_->mastery_level != -1) {
 			std::string new_revision = database_->db->get_revision_info();
@@ -548,7 +546,7 @@ DatabasePool::checkin(Database **database)
 
 	pthread_cond_broadcast(&checkin_cond);
 
-	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", database_->writable ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
+	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (database_->flags & DB_WRITABLE) ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
 }
 
 
@@ -690,8 +688,8 @@ pcre *Database::compiled_find_types_re = NULL;
 bool
 Database::drop(const std::string &doc_id, bool commit)
 {
-	if (!writable) {
-		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+	if (!(flags & DB_WRITABLE)) {
+		LOG_ERR(this, "ERROR: database is read-only\n");
 		return false;
 	}
 
@@ -749,8 +747,8 @@ Database::_commit()
 bool
 Database::patch(cJSON *patches, const std::string &_document_id, bool commit)
 {
-	if (!writable) {
-		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+	if (!(flags & DB_WRITABLE)) {
+		LOG_ERR(this, "ERROR: database is read-only\n");
 		return false;
 	}
 
@@ -1645,8 +1643,8 @@ Database::is_language(const std::string &language)
 bool
 Database::index(cJSON *document, const std::string &_document_id, bool commit)
 {
-	if (!writable) {
-		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
+	if (!(flags & DB_WRITABLE)) {
+		LOG_ERR(this, "ERROR: database is read-only\n");
 		return false;
 	}
 
@@ -2077,10 +2075,6 @@ search_t
 Database::search(query_t e)
 {
 	search_t srch_resul;
-	if (writable) {
-		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
-		return srch_resul;
-	}
 
 	Xapian::Query queryQ;
 	Xapian::Query queryP;
@@ -2592,11 +2586,6 @@ cJSON*
 Database::get_stats_database()
 {
 	cJSON *database = cJSON_CreateObject();
-	if (writable) {
-		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
-		return database;
-	}
-
 	unsigned int doccount = db->get_doccount();
 	unsigned int lastdocid = db->get_lastdocid();
 	cJSON_AddStringToObject(database, "uuid", db->get_uuid().c_str());
@@ -2615,10 +2604,7 @@ cJSON*
 Database::get_stats_docs(int id_doc)
 {
 	cJSON *document = cJSON_CreateObject();
-	if (writable) {
-		LOG_ERR(this, "ERROR: database is %s\n", writable ? "w" : "r");
-		return document;
-	}
+
 	try {
 		if (id_doc == 0) {
 			cJSON_AddStringToObject(document, "id", "all");
