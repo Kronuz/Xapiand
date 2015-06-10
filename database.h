@@ -86,8 +86,7 @@ class Database {
 public:
 	DatabaseQueue *queue;
 	Endpoints endpoints;
-	bool writable;
-	bool spawn;
+	int flags;
 	bool local;
 	size_t hash;
 	time_t access_time;
@@ -118,7 +117,7 @@ public:
 		bool string_detection;
 	} specifications_t;
 
-	Database(DatabaseQueue * queue_, const Endpoints &endpoints, bool writable, bool spawn=true);
+	Database(DatabaseQueue * queue_, const Endpoints &endpoints, int flags);
 	~Database();
 
 	int read_mastery(const std::string &dir);
