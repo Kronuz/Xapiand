@@ -66,10 +66,6 @@ BinaryClient::~BinaryClient()
 		database_pool->checkin(&database);
 	}
 
-	if (repl_database) {
-		database_pool->checkin(&repl_database);
-	}
-
 	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int binary_clients = --XapiandServer::binary_clients;
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
@@ -310,9 +306,16 @@ void BinaryClient::repl_end_of_changes(const std::string & message)
 {
 	if (state != init_replicationprotocol) {
 		LOG(this, "BinaryClient::repl_end_of_changes\n");
+
+		if (repl_database) {
+			database_pool->checkin(&repl_database);
+			repl_database = NULL;
+		}
+
 		if (repl_switched_db) {
 			database_pool->switch_db(*endpoints.cbegin());
 		}
+
 		shutdown();
 		return;
 	}
@@ -429,7 +432,7 @@ void BinaryClient::repl_set_db_footer(const std::string & message)
 		repl_database = NULL;
 	}
 
-	if (!database_pool->checkout(&repl_database, endpoints_tmp, DB_WRITABLE|DB_SPAWN)) {
+	if (!database_pool->checkout(&repl_database, endpoints_tmp, DB_WRITABLE|DB_SPAWN|DB_VOLATILE)) {
 		LOG_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
 	}
 

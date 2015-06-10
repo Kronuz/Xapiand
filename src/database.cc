@@ -528,25 +528,32 @@ DatabasePool::checkin(Database **database)
 
 	assert(database_->queue == queue);
 
-	queue->push(database_);
+	int flags = database_->flags;
+	Endpoints endpoints = database_->endpoints;
 
-	assert(queue->count >= queue->size());
-
-	*database = NULL;
+	if (database_->flags & DB_VOLATILE) {
+		delete database_;
+	} else {
+		queue->push(database_);
+	}
 
 	if (queue->is_switch_db) {
 		Endpoints::const_iterator it_edp;
-		for(database_->endpoints.cbegin(); it_edp != database_->endpoints.cend(); it_edp++) {
+		for(endpoints.cbegin(); it_edp != endpoints.cend(); it_edp++) {
 			const Endpoint &endpoint = *it_edp;
 			switch_db(endpoint);
 		}
 	}
 
+	assert(queue->count >= queue->size());
+
+	*database = NULL;
+
 	pthread_mutex_unlock(&qmtx);
 
 	pthread_cond_broadcast(&checkin_cond);
 
-	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (database_->flags & DB_WRITABLE) ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
+	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database_);
 }
 
 
