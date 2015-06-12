@@ -208,11 +208,11 @@ int test_unserialise_geo()
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Test is correct.\n");
-		return true;
+		LOG(NULL, "Testing unserialise LatLong coordinates is correct!\n");
+		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Test has mistakes.\n");
-		return false;
+		LOG_ERR(NULL, "ERROR: Testing unserialise LatLong coordinates has mistakes.\n");
+		return 1;
 	}
 }
 
