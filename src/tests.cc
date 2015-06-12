@@ -217,86 +217,148 @@ int test_unserialise_geo()
 }
 
 
-void test_position_time()
+// Testing the transformation of coordinates between CRS.
+int test_cartesian_transforms()
 {
-	std::cout << "Start Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
-	int start = b_time.minute, end = start + 10;
-	for (int i = start; i < end; i++) {
-		stats_cnt.index.cnt[i] = 1;
-		stats_cnt.index.tm_cnt[i] = 2;
-		stats_cnt.search.cnt[i] = 3;
-		stats_cnt.search.tm_cnt[i] = 4;
-		stats_cnt.del.cnt[i] = 5;
-		stats_cnt.del.tm_cnt[i] = 6;
-	}
-	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
-		stats_cnt.index.sec[i] = 1;
-		stats_cnt.index.tm_sec[i] = 2;
-		stats_cnt.search.sec[i] = 3;
-		stats_cnt.search.tm_sec[i] = 4;
-		stats_cnt.del.sec[i] = 5;
-		stats_cnt.del.tm_sec[i] = 6;
-	}
-	print_stats_sec();
-	print_stats_min(start, end);
-	update_pos_time();
-	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
-	print_stats_sec();
-	sleep(5);
-	update_pos_time();
-	std::cout << "Add 5 seconds" << std::endl;
-	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
-	print_stats_sec();
-	sleep(5);
-	update_pos_time();
-	std::cout << "Add 5 seconds" << std::endl;
-	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
-	print_stats_sec();
-	sleep(5);
-	update_pos_time();
-	std::cout << "Add 5 seconds" << std::endl;
-	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
-	print_stats_sec();
-	sleep(15);
-	update_pos_time();
-	std::cout << "Add 15 seconds" << std::endl;
-	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
-	print_stats_sec();
-	sleep(15);
-	update_pos_time();
-	std::cout << "Add 15 seconds" << std::endl;
-	std::cout << "Min: " << b_time.minute << "  Sec: " << b_time.second << std::endl;
-	print_stats_sec();
-	print_stats_min(start, end);
-}
+	std::vector<test_transform_t> SRID_2_WGS84;
+	// WGS72 to WGS84  (4322 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1238
+	SRID_2_WGS84.push_back({ 4322, 20.0,   10.0, 30.0, "20°0'0.141702''N  10°0'0.554000''E  30.959384"    });
+	SRID_2_WGS84.push_back({ 4322, 20.0,  -10.0, 30.0, "20°0'0.141702''N  9°59'59.446000''W  30.959384"   });
+	SRID_2_WGS84.push_back({ 4322, -20.0,  10.0, 30.0, "19°59'59.866682''S  10°0'0.554000''E  27.881203"  });
+	SRID_2_WGS84.push_back({ 4322, -20.0, -10.0, 30.0, "19°59'59.866682''S  9°59'59.446000''W  27.881203" });
 
+	// NAD83 to WGS84  (4269 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1252
+	SRID_2_WGS84.push_back({ 4269, 20.0,   10.0, 30.0, "19°59'59.956556''N  10°0'0.027905''E  30.746560"   });
+	SRID_2_WGS84.push_back({ 4269, 20.0,  -10.0, 30.0, "19°59'59.960418''N  9°59'59.960148''W  30.420209" });
+	SRID_2_WGS84.push_back({ 4269, -20.0,  10.0, 30.0, "20°0'0.017671''S  10°0'0.027905''E  31.430600"    });
+	SRID_2_WGS84.push_back({ 4269, -20.0, -10.0, 30.0, "20°0'0.021534''S  9°59'59.960148''W  31.104249"   });
 
-void print_stats_sec()
-{
-	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
-		std::cout << stats_cnt.index.sec[i] << " ";
+	// NAD27 to WGS84  (4267 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1173
+	SRID_2_WGS84.push_back({ 4267, 20.0,   10.0, 30.0, "20°0'0.196545''N  10°0'5.468256''E  150.554523"    });
+	SRID_2_WGS84.push_back({ 4267, 20.0,  -10.0, 30.0, "20°0'0.814568''N  9°59'54.627272''W  98.338209"    });
+	SRID_2_WGS84.push_back({ 4267, -20.0,  10.0, 30.0, "19°59'49.440208''S  10°0'5.468256''E  30.171742"   });
+	SRID_2_WGS84.push_back({ 4267, -20.0, -10.0, 30.0, "19°59'50.058155''S  9°59'54.627272''W  -22.045563" });
+
+	// OSGB36 to WGS84  (4277 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1314
+	SRID_2_WGS84.push_back({ 4277, 20.0,   10.0, 30.0, "20°0'13.337317''N  9°59'53.865759''E  -86.980683"   });
+	SRID_2_WGS84.push_back({ 4277, 20.0,  -10.0, 30.0, "20°0'12.801456''N  10°0'0.769107''W  -46.142419"    });
+	SRID_2_WGS84.push_back({ 4277, -20.0,  10.0, 30.0, "19°59'40.643875''S  9°59'54.003573''E  -457.728199" });
+	SRID_2_WGS84.push_back({ 4277, -20.0, -10.0, 30.0, "19°59'40.212914''S  10°0'0.693312''W  -416.880621"  });
+
+	// TM75 to WGS84  (4300 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1954
+	SRID_2_WGS84.push_back({ 4300, 20.0,   10.0, 30.0, "20°0'13.892799''N  9°59'52.446296''E  -87.320347"   });
+	SRID_2_WGS84.push_back({ 4300, 20.0,  -10.0, 30.0, "20°0'13.751990''N  10°0'1.815691''W  -44.678652"    });
+	SRID_2_WGS84.push_back({ 4300, -20.0,  10.0, 30.0, "19°59'39.325125''S  9°59'51.677477''E  -473.515164" });
+	SRID_2_WGS84.push_back({ 4300, -20.0, -10.0, 30.0, "19°59'38.457075''S  10°0'2.530766''W  -430.919043"  });
+
+	// TM65 to WGS84  (4299 to 4326) -> The results are very close to those obtained in the page:
+	// http://www.geocachingtoolbox.com/index.php?lang=en&page=coordinateConversion&status=result
+	SRID_2_WGS84.push_back({ 4299, 20.0,   10.0, 30.0, "20°0'13.891148''N  9°59'52.446252''E  -87.306642"   });
+	SRID_2_WGS84.push_back({ 4299, 20.0,  -10.0, 30.0, "20°0'13.750355''N  10°0'1.815376''W  -44.666252"    });
+	SRID_2_WGS84.push_back({ 4299, -20.0,  10.0, 30.0, "19°59'39.326103''S  9°59'51.677433''E  -473.472045" });
+	SRID_2_WGS84.push_back({ 4299, -20.0, -10.0, 30.0, "19°59'38.458068''S  10°0'2.530451''W  -430.877230"  });
+
+	// ED79 to WGS84  (4668 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/15752
+	SRID_2_WGS84.push_back({ 4668, 20.0,   10.0, 30.0, "19°59'55.589986''N  9°59'57.193708''E  134.068052" });
+	SRID_2_WGS84.push_back({ 4668, 20.0,  -10.0, 30.0, "19°59'55.211469''N  10°0'3.833722''W  166.051242"  });
+	SRID_2_WGS84.push_back({ 4668, -20.0,  10.0, 30.0, "20°0'2.862582''S  9°59'57.193708''E  215.468007"   });
+	SRID_2_WGS84.push_back({ 4668, -20.0, -10.0, 30.0, "20°0'2.484033''S  10°0'3.833722''W  247.450787"    });
+
+	// ED50 to WGS84  (4230 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1133
+	SRID_2_WGS84.push_back({ 4230, 20.0,   10.0, 30.0, "19°59'55.539823''N  9°59'57.199681''E  132.458626" });
+	SRID_2_WGS84.push_back({ 4230, 20.0,  -10.0, 30.0, "19°59'55.161306''N  10°0'3.839696''W  164.441824"  });
+	SRID_2_WGS84.push_back({ 4230, -20.0,  10.0, 30.0, "20°0'2.934649''S  9°59'57.199681''E  215.226660"   });
+	SRID_2_WGS84.push_back({ 4230, -20.0, -10.0, 30.0, "20°0'2.556100''S  10°0'3.839696''W  247.209441"    });
+
+	// TOYA to WGS84  (4301 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1230
+	SRID_2_WGS84.push_back({ 4301, 20.0,   10.0, 30.0, "20°0'22.962090''N  10°0'18.062821''E  -521.976076"   });
+	SRID_2_WGS84.push_back({ 4301, 20.0,  -10.0, 30.0, "20°0'24.921332''N  9°59'43.705140''W  -687.433480"   });
+	SRID_2_WGS84.push_back({ 4301, -20.0,  10.0, 30.0, "19°59'41.092892''S  10°0'18.062821''E  -990.556329"  });
+	SRID_2_WGS84.push_back({ 4301, -20.0, -10.0, 30.0, "19°59'43.051188''S  9°59'43.705140''W  -1156.025959" });
+
+	// DHDN to WGS84  (4314 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1673
+	SRID_2_WGS84.push_back({ 4314, 20.0,   10.0, 30.0, "20°0'7.291150''N  9°59'56.608634''E  48.138765"      });
+	SRID_2_WGS84.push_back({ 4314, 20.0,  -10.0, 30.0, "20°0'7.333754''N  9°59'56.393946''W  13.848005"      });
+	SRID_2_WGS84.push_back({ 4314, -20.0,  10.0, 30.0, "19°59'42.318425''S  9°59'57.393082''E  -235.013109"  });
+	SRID_2_WGS84.push_back({ 4314, -20.0, -10.0, 30.0, "19°59'43.086952''S  9°59'55.697370''W  -269.257292"  });
+
+	// OEG to WGS84  (4229 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1148
+	SRID_2_WGS84.push_back({ 4229, 20.0,   10.0, 30.0, "20°0'0.873728''N  10°0'4.503259''E  -13.466677"  });
+	SRID_2_WGS84.push_back({ 4229, 20.0,  -10.0, 30.0, "20°0'1.298641''N  9°59'57.049898''W  -49.366075" });
+	SRID_2_WGS84.push_back({ 4229, -20.0,  10.0, 30.0, "20°0'1.668233''S  10°0'4.503259''E  -4.574003"   });
+	SRID_2_WGS84.push_back({ 4229, -20.0, -10.0, 30.0, "20°0'2.093151''S  9°59'57.049898''W  -40.473350" });
+
+	// AGD84 to WGS84  (4203 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1236
+	SRID_2_WGS84.push_back({ 4203, 20.0,   10.0, 30.0, "20°0'5.339442''N  9°59'59.220714''E  -13.586401"    });
+	SRID_2_WGS84.push_back({ 4203, 20.0,  -10.0, 30.0, "20°0'5.064184''N  10°0'2.116232''W  2.879302"       });
+	SRID_2_WGS84.push_back({ 4203, -20.0,  10.0, 30.0, "19°59'57.371712''S  9°59'59.433464''E  -110.463889" });
+	SRID_2_WGS84.push_back({ 4203, -20.0, -10.0, 30.0, "19°59'57.257055''S  10°0'2.001422''W  -93.987306"   });
+
+	// SAD69 to WGS84  (4618 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1864
+	SRID_2_WGS84.push_back({ 4618, 20.0,   10.0, 30.0, "19°59'59.357117''N  10°0'0.374382''E  -13.677770" });
+	SRID_2_WGS84.push_back({ 4618, 20.0,  -10.0, 30.0, "19°59'59.360979''N  10°0'0.306624''W  -14.004125" });
+	SRID_2_WGS84.push_back({ 4618, -20.0,  10.0, 30.0, "20°0'1.862864''S  10°0'0.374382''E  14.368110"    });
+	SRID_2_WGS84.push_back({ 4618, -20.0, -10.0, 30.0, "20°0'1.866726''S  10°0'0.306624''W  14.041756"    });
+
+	// PUL42 to WGS84  (4178 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1334
+	SRID_2_WGS84.push_back({ 4178, 20.0,   10.0, 30.0, "19°59'57.750301''N  9°59'56.403911''E  92.107732" });
+	SRID_2_WGS84.push_back({ 4178, 20.0,  -10.0, 30.0, "19°59'57.019651''N  10°0'3.265190''W  123.917120" });
+	SRID_2_WGS84.push_back({ 4178, -20.0,  10.0, 30.0, "20°0'2.270413''S  9°59'57.198773''E  133.835302"  });
+	SRID_2_WGS84.push_back({ 4178, -20.0, -10.0, 30.0, "20°0'2.247538''S  10°0'2.616278''W  165.691341"   });
+
+	// MGI1901 to WGS84  (3906 to 4326) -> The results are very close to those obtained in the page:
+	// http://www.geocachingtoolbox.com/index.php?lang=en&page=coordinateConversion&status=result
+	SRID_2_WGS84.push_back({ 3906, 20.0,   10.0, 30.0, "20°0'8.506072''N  9°59'48.107356''E  -15.039391"    });
+	SRID_2_WGS84.push_back({ 3906, 20.0,  -10.0, 30.0, "20°0'7.306781''N  10°0'5.296242''W  -75.952463"     });
+	SRID_2_WGS84.push_back({ 3906, -20.0,  10.0, 30.0, "19°59'42.260450''S  9°59'52.463078''E  -364.894519" });
+	SRID_2_WGS84.push_back({ 3906, -20.0, -10.0, 30.0, "19°59'44.898670''S  10°0'1.823681''W  -425.555326"  });
+
+	// GGRS87 to WGS84  (4121 to 4326) -> The results are very close to those obtained in the page:
+	// http://georepository.com/calculator/convert/operation_id/1272
+	SRID_2_WGS84.push_back({ 4121, 20.0,   10.0, 30.0, "20°0'9.581041''N  10°0'3.727855''E  -58.402327"     });
+	SRID_2_WGS84.push_back({ 4121, 20.0,  -10.0, 30.0, "20°0'9.869982''N  9°59'58.660140''W  -82.810562"    });
+	SRID_2_WGS84.push_back({ 4121, -20.0,  10.0, 30.0, "19°59'54.508366''S  10°0'3.727855''E  -227.104937"  });
+	SRID_2_WGS84.push_back({ 4121, -20.0, -10.0, 30.0, "19°59'54.797256''S  9°59'58.660140''W  -251.513821" });
+
+	std::vector<test_transform_t>::const_iterator it = SRID_2_WGS84.begin();
+	int cont = 0;
+
+	try {
+		for ( ;it != SRID_2_WGS84.end(); it++) {
+			Cartesian c(it->lat_src, it->lon_src, it->h_src, Cartesian::DEGREES, it->SRID);
+			double lat, lon, height;
+			c.toGeodetic(lat, lon, height);
+			std::string get = c.Decimal2Degrees();
+			if (get.compare(it->res) != 0) {
+				cont++;
+				LOG_ERR(NULL, "ERROR: Resul: %s  Expected: %s\n", get.c_str(), it->res.c_str());
+			}
+		}
+	} catch (const std::exception &e) {
+		LOG_ERR(NULL, "ERROR: %s\n", e.what());
+		cont++;
 	}
-	std::cout << std::endl;
-	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
-		std::cout << stats_cnt.index.tm_sec[i] << " ";
+
+	if (cont == 0) {
+		LOG(NULL, "Testing the transformation of coordinates between CRS is correct!\n");
+		return 0;
+	} else {
+		LOG_ERR(NULL, "ERROR: Testing the transformation of coordinates between CRS has mistakes.\n");
+		return 1;
 	}
-	std::cout << std::endl;
-	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
-		std::cout << stats_cnt.search.sec[i] << " ";
-	}
-	std::cout << std::endl;
-	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
-		std::cout << stats_cnt.search.tm_sec[i] << " ";
-	}
-	std::cout << std::endl;
-	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
-		std::cout << stats_cnt.del.sec[i] << " ";
-	}
-	std::cout << std::endl;
-	for (int i = 0; i < SLOT_TIME_SECOND; i++) {
-		std::cout << stats_cnt.del.tm_sec[i] << " ";
-	}
-	std::cout << std::endl;
 }
 
 void print_stats_min(int start, int end)
