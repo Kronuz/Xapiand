@@ -25,6 +25,9 @@ xapiand_SOURCES = \
 	times.cc \
 	utils.cc \
 	\
+	exception.cc \
+	cartesian.cc \
+	\
 	xapiand.cc
 
 noinst_HEADERS = \
@@ -50,6 +53,8 @@ noinst_HEADERS = \
 	threadpool.h \
 	times.h \
 	utils.h \
+	exception.h \
+	cartesian.h \
 	worker.h \
 	xapiand.h
 
