@@ -361,30 +361,9 @@ int test_cartesian_transforms()
 	}
 }
 
-void print_stats_min(int start, int end)
+
+// Return number of mistakes.
+int do_tests()
 {
-	for (int i = start; i < end; i++) {
-		std::cout << stats_cnt.index.cnt[i] << " ";
-	}
-	std::cout << std::endl;
-	for (int i = start; i < end; i++) {
-		std::cout << stats_cnt.index.tm_cnt[i] << " ";
-	}
-	std::cout << std::endl;
-	for (int i = start; i < end; i++) {
-		std::cout << stats_cnt.search.cnt[i] << " ";
-	}
-	std::cout << std::endl;
-	for (int i = start; i < end; i++) {
-		std::cout << stats_cnt.search.tm_cnt[i] << " ";
-	}
-	std::cout << std::endl;
-	for (int i = start; i < end; i++) {
-		std::cout << stats_cnt.del.cnt[i] << " ";
-	}
-	std::cout << std::endl;
-	for (int i = start; i < end; i++) {
-		std::cout << stats_cnt.del.tm_cnt[i] << " ";
-	}
-	std::cout << std::endl;
+	return test_datetotimestamp() + test_distanceLatLong() + test_unserialise_date() + test_unserialise_geo() + test_cartesian_transforms();
 }
