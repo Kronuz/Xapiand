@@ -24,6 +24,7 @@
 
 
 const test test_timestamp_date[] = {
+	// Date 									Expected timestamp.
 	{ "2014-10-10",                             "1412899200.000000" },
 	{ "20141010",                               "1412899200.000000" },
 	{ "2014/10/10",                             "1412899200.000000" },
@@ -81,6 +82,7 @@ const test test_timestamp_date[] = {
 
 
 const test_str_double test_distanceLatLong_fields[] = {
+	// Distance LatLong       Expected distance.
 	{ "23.56, 48.76 ; 40mi",  64373.76 },
 	{ "23.56, 48.76 ; 40km",  40000.00 },
 	{ "23.56, 48.76 ; 40m",   40       },
@@ -97,6 +99,7 @@ const test_str_double test_distanceLatLong_fields[] = {
 
 
 const test test_unserialisedate[] {
+	// Date to be serialised.				 Expected date after unserialise.
 	{ "2010-10-10T23:05:24.800",             "2010-10-10T23:05:24.800" },
 	{ "2010101023:05:24",                    "2010-10-10T23:05:24.000" },
 	{ "2010/10/10",                          "2010-10-10T00:00:00.000" },
@@ -107,6 +110,7 @@ const test test_unserialisedate[] {
 
 
 const test test_unserialiseLatLong[] {
+	// Set of coordinates to serialise.		 Expected coordinates after unserialse.s
 	{ "20.35,78.90,23.45,32.14",             "20.35,78.9,23.45,32.14" },
 	{ "20.35, 78.90",                        "20.35,78.9"             },
 	{ "20.35 , 78.90 , 23.45 , 32.14",       "20.35,78.9,23.45,32.14" },
@@ -115,12 +119,12 @@ const test test_unserialiseLatLong[] {
 };
 
 
-bool test_datetotimestamp()
+// Testing the transformation between date string and timestamp.
+int test_datetotimestamp()
 {
 	int cont = 0;
 	for (const test *p = test_timestamp_date; p->str; ++p) {
 		std::string date = std::string(p->str);
-		LOG(NULL, "Date orig: %s\n", date.c_str());
 		std::string timestamp(timestamp_date(date));
 		if (timestamp.compare(p->expect) != 0) {
 			cont++;
@@ -129,21 +133,21 @@ bool test_datetotimestamp()
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Test is correct.\n");
-		return true;
+		LOG(NULL, "Testing the transformation between date string and timestamp is correct!\n");
+		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Test has mistakes.\n");
-		return false;
+		LOG_ERR(NULL, "ERROR: Testing the transformation between date string and timestamp has mistakes.\n");
+		return 1;
 	}
 }
 
 
-bool test_distanceLatLong()
+// Testing the conversion of units in LatLong Distance.
+int test_distanceLatLong()
 {
 	int cont = 0;
 	for (const test_str_double *p = test_distanceLatLong_fields; p->str; ++p) {
 		double coords_[3];
-		LOG(NULL, "Distance LatLong: %s\n", p->str);
 		if (get_coords(p->str, coords_) == 0) {
 			if (coords_[2] != p->val) {
 				cont++;
@@ -158,23 +162,22 @@ bool test_distanceLatLong()
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Test is correct.\n");
-		return true;
+		LOG(NULL, "Testing the conversion of units in LatLong Distance is correct!\n");
+		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Test has mistakes.\n");
-		return false;
+		LOG_ERR(NULL, "ERROR: Testing the conversion of units in LatLong Distance has mistakes.\n");
+		return 1;
 	}
 }
 
 
-bool test_unserialise_date()
+// Testing unserialise date.
+int test_unserialise_date()
 {
 	int cont = 0;
 	for (const test *p = test_unserialisedate; p->str; ++p) {
 		std::string date_s = serialise_date(p->str);
-		LOG(NULL, "Date serialise: %s\n", repr(date_s).c_str());
 		std::string date = unserialise_date(date_s);
-		LOG(NULL, "Date unserialise: %s\n", date.c_str());
 		if (date.compare(p->expect) != 0) {
 			cont++;
 			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", date.c_str(), p->expect);
@@ -182,23 +185,22 @@ bool test_unserialise_date()
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Test is correct.\n");
-		return true;
+		LOG(NULL, "Testing unserialise date is correct!\n");
+		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Test has mistakes.\n");
-		return false;
+		LOG_ERR(NULL, "ERROR: Testing unserialise date has mistakes.\n");
+		return 1;
 	}
 }
 
 
-bool test_unserialise_geo()
+// Testing unserialise LatLong coordinates.
+int test_unserialise_geo()
 {
 	int cont = 0;
 	for (const test *p = test_unserialiseLatLong; p->str; ++p) {
 		std::string geo_s = serialise_geo(p->str);
-		LOG(NULL, "Geo serialise: %s\n", repr(geo_s).c_str());
 		std::string geo = unserialise_geo(geo_s);
-		LOG(NULL, "Geo unserialise: %s\n", geo.c_str());
 		if (geo.compare(p->expect) != 0) {
 			cont++;
 			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", geo.c_str(), p->expect);
