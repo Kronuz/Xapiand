@@ -24,11 +24,12 @@
 #define XAPIAND_INCLUDED_TESTS_H
 
 #include <stdio.h>
- 
+
 #include <string.h>
 #include <algorithm>
 #include "utils.h"
 #include <unistd.h>
+#include "cartesian.h"
 
 typedef struct test {
 	const char *str;
@@ -40,12 +41,21 @@ typedef struct test_str_double {
 	const double val;
 } test_str_double;
 
-bool test_datetotimestamp();
-bool test_distanceLatLong();
-bool test_unserialise_date();
-bool test_unserialise_geo();
-void test_position_time();
-void print_stats_sec();
-void print_stats_min(int start = 0, int end = SLOT_TIME_MINUTE);
+typedef struct test_transform_s {
+	// Source CRS.
+	int SRID;
+	double lat_src;
+	double lon_src;
+	double h_src;
+	// Target CRS.
+	std::string res;
+} test_transform_t;
+
+int test_datetotimestamp();
+int test_distanceLatLong();
+int test_unserialise_date();
+int test_unserialise_geo();
+int test_cartesian_transforms();
+int do_tests();
 
 #endif /* XAPIAND_INCLUDED_TESTS_H */
