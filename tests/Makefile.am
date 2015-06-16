@@ -7,8 +7,6 @@ check_utils_SOURCES = check_utils.cc $(top_builddir)/src/utils.cc $(top_builddir
 check_utils_CFLAGS = @CHECK_CFLAGS@ -I$(top_builddir)/src/
 check_utils_LDADD = @CHECK_LIBS@
 
-EXTRA_DIST = Xapiand.xcodeproj/project.pbxproj
-
 AM_LDFLAGS = $(XAPIAN_LIBS)
 
 AM_CXXFLAGS = $(XAPIAN_CXXFLAGS)
