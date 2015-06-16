@@ -59,8 +59,11 @@ AC_LINK_IFELSE(
 CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
 
+AM_PATH_CHECK
+
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
+	tests/Makefile
 ])
 AC_OUTPUT
