@@ -1,5 +1,7 @@
 #include "../src/config.h"
 #include "../src/utils.h"
+#include "../src/tests.h"
+
 
 #include <config.h>
 #include <stdlib.h>
@@ -12,17 +14,31 @@ START_TEST(test_StartsWith)
 }
 END_TEST
 
+START_TEST(test_cartesian_transforms)
+{
+    ck_assert_int_eq(test_cartesian_transforms(),0);
+}
+END_TEST
+
+
 Suite * utils_suite(void)
 {
 
 	Suite *s;
-    TCase *tc_core;
+    TCase *tc_StartsWith;
+    TCase *tc_cartesian;
 
     s = suite_create("utils");
-    tc_core = tcase_create("Core");
 
-    tcase_add_test(tc_core, test_StartsWith);
-    suite_add_tcase(s, tc_core);
+    tc_StartsWith = tcase_create("StartsWith");
+    tcase_add_test(tc_StartsWith, test_StartsWith);
+    suite_add_tcase(s, tc_StartsWith);
+
+
+    tc_cartesian = tcase_create("Cartesian");
+    tcase_add_test(tc_cartesian, test_cartesian_transforms);
+    suite_add_tcase(s, tc_cartesian);
+
 
     return s;
 
