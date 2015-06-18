@@ -59,7 +59,8 @@ AC_LINK_IFELSE(
 CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
 
-AM_PATH_CHECK
+#AM_PATH_CHECK()
+PKG_CHECK_MODULES(CHECK, [check >= 0.9.4],,[AC_MSG_RESULT([no, testing is disabled])])
 
 AC_CONFIG_FILES([
 	Makefile
