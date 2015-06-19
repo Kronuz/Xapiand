@@ -35,6 +35,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <netinet/tcp.h> /* for TCP_NODELAY */
 #include <netdb.h> /* for getaddrinfo */
 #include <unistd.h>
