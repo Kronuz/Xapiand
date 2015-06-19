@@ -51,8 +51,8 @@ Cartesian::Cartesian(double lat, double lon, double height, LatLongUnits units)
 
 
 // Constructor receives a cartesian coordinate.
-// This constructor is private for ensure that we can't change the SRID.
-// This constructor is called from WGS84 coordinates.
+// This constructor receive a cartesian coordinate,
+// which was obtained from WGS84 CRS.
 Cartesian::Cartesian(double _x, double _y, double _z)
 {
 	SRID = WGS84;
@@ -60,6 +60,14 @@ Cartesian::Cartesian(double _x, double _y, double _z)
 	x = _x;
 	y = _y;
 	z = _z;
+}
+
+
+// Constructor default.
+Cartesian::Cartesian() {
+	SRID = WGS84;
+	datum = SRIDS_DATUMS.find(SRID)->second;
+	toCartesian(0, 0, 0, Cartesian::DEGREES);
 }
 
 
@@ -203,44 +211,51 @@ Cartesian::toGeodetic(double &lat, double &lon, double &height)
 double
 Cartesian::operator *(const Cartesian &p) const
 {
-	return (x * p.getX() + y * p.getY() + z * p.getZ());
+	return (x * p.x + y * p.y + z * p.z);
 }
 
 
 Cartesian
 Cartesian::operator ^(const Cartesian &p) const
 {
-	return Cartesian(y * p.getZ() - p.getY() * z, z * p.getX() - p.getZ() * x, x * p.getY() - p.getX() * y);
+	return Cartesian(y * p.z - p.y * z, z * p.x - p.z * x, x * p.y - p.x * y);
 }
 
 
 Cartesian
 Cartesian::operator +(const Cartesian &p) const
 {
-	return Cartesian(x + p.getX(), y + p.getY(), z + p.getZ());
+	return Cartesian(x + p.x, y + p.y, z + p.z);
 }
 
 
 Cartesian
 Cartesian::operator -(const Cartesian &p) const
 {
-	return Cartesian(x - p.getX(), y - p.getY(), z - p.getZ());
+	return Cartesian(x - p.x, y - p.y, z - p.z);
 }
 
 
 bool
 Cartesian::operator ==(const Cartesian &p) const
 {
-	return (x == p.getX() && y == p.getY() && z == p.getZ() && SRID == p.getSRID());
+	return (x == p.x && y == p.y && z == p.z && SRID == p.getSRID());
+}
+
+
+bool
+Cartesian::operator !=(const Cartesian &p) const
+{
+	return (x != p.x || y != p.y || z != p.z || SRID != p.getSRID());
 }
 
 
 Cartesian&
 Cartesian::operator =(const Cartesian &p)
 {
-	x = p.getX();
-	y = p.getY();
-	z = p.getZ();
+	x = p.x;
+	y = p.y;
+	z = p.z;
 	SRID = p.getSRID();
 	datum = p.getDatum();
 	return *this;
@@ -285,27 +300,6 @@ Cartesian::c_str() const
 	char *str = new char[tmp.size() + 1];
 	strcpy(str, tmp.c_str());
 	return str;
-}
-
-
-double
-Cartesian::getX() const
-{
-	return x;
-}
-
-
-double
-Cartesian::getY() const
-{
-	return y;
-}
-
-
-double
-Cartesian::getZ() const
-{
-	return z;
 }
 
 

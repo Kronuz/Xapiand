@@ -235,8 +235,14 @@ class Cartesian {
 			DEGREES
 		};
 
+		double x;
+		double y;
+		double z;
+
 		Cartesian(double lat, double lon, double height, LatLongUnits units, int SRID);
 		Cartesian(double lat, double lon, double height, LatLongUnits units);
+		Cartesian();
+		Cartesian(double x, double y, double z);
 
 		// Dot product
 		double operator*(const Cartesian &p) const;
@@ -246,15 +252,13 @@ class Cartesian {
 		Cartesian operator-(const Cartesian &p) const;
 		void toGeodetic(double &lat, double &lon, double &height);
 		bool operator==(const Cartesian &p) const;
+		bool operator!=(const Cartesian &p) const;
 		Cartesian& operator=(const Cartesian &p);
 		void normalize();
 		double norm();
 		Cartesian get_inverse();
 		std::string as_string() const;
 		char* c_str() const;
-		double getX() const;
-		double getY() const;
-		double getZ() const;
 		int getSRID() const;
 		int getDatum() const;
 		// tan(y / x)
@@ -262,13 +266,8 @@ class Cartesian {
 		std::string Decimal2Degrees();
 
 	private:
-		double x;
-		double y;
-		double z;
 		int SRID;
 		int datum;
-
-		Cartesian(double x, double y, double z);
 
 		void transform2WGS84();
 		void toCartesian(double lat, double lon, double height, LatLongUnits units);
