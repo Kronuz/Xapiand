@@ -20,13 +20,14 @@ xapiand_SOURCES = \
 	\
 	replicator.cc \
 	server.cc \
-	tests.cc \
 	threadpool.cc \
 	times.cc \
 	utils.cc \
 	\
 	exception.cc \
 	cartesian.cc \
+	geometry.cc \
+	htm.cc \
 	\
 	xapiand.cc
 
@@ -49,12 +50,13 @@ noinst_HEADERS = \
 	queue.h \
 	replicator.h \
 	server.h \
-	tests.h \
 	threadpool.h \
 	times.h \
 	utils.h \
 	exception.h \
 	cartesian.h \
+	geometry.h \
+	htm.h \
 	worker.h \
 	xapiand.h
 
