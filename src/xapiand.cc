@@ -65,8 +65,10 @@ void setup_signal_handlers(void) {
 // int num_servers, const char *cluster_name_, const char *node_name_, const char *discovery_group, int discovery_port, int http_port, int binary_port, size_t dbpool_size
 void run(const opts_t &opts)
 {
-#ifdef HAVE_PTHREAD_SETNAME_NP_2
+#ifdef HAVE_PTHREAD_SETNAME_NP_3
     pthread_setname_np(pthread_self(), "==");
+#elif HAVE_PTHREAD_SETNAME_NP_2
+	pthread_set_name_np(pthread_self(),"==");
 #else
     pthread_setname_np("==");
 #endif
