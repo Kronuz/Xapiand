@@ -33,6 +33,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#ifdef HAVE_PTHREAD_SETNAME_NP_2
+#include <pthread_np.h>
+#endif
+
+
 using namespace TCLAP;
 
 
