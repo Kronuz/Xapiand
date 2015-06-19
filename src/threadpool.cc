@@ -26,7 +26,10 @@
 
 #include <assert.h>
 #include <string.h>
+
+#ifdef HAVE_PTHREAD_SETNAME_NP_2
 #include <pthread_np.h>
+#endif
 
 
 struct ThreadInfo {
