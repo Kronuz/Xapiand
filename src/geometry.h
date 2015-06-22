@@ -23,7 +23,7 @@
 #ifndef XAPIAND_INCLUDED_GEOMETRY_H
 #define XAPIAND_INCLUDED_GEOMETRY_H
 
-#include "Cartesian.h"
+#include "cartesian.h"
 #include <vector>
 #include <fstream>
 
