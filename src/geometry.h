@@ -77,6 +77,8 @@ class Geometry {
 		int partition(std::vector<Cartesian> &pts, int first, int last);
 		bool compare(Cartesian &a, Cartesian &b);
 		double areaPolygon();
+		double vertex2centroid();
+		Cartesian centroidPolygon();
 };
 
 

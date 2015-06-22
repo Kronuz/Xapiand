@@ -290,7 +290,7 @@ Geometry::partition(std::vector<Cartesian> &pts, int first, int last)
 }
 
 
-// Found the polygon's area.
+// Found the polygon's area using Shoelace formula.
 double
 Geometry::areaPolygon()
 {
@@ -308,15 +308,44 @@ Geometry::areaPolygon()
 }
 
 
+// Found the polygon's centroid.
+Cartesian
+Geometry::centroidPolygon()
+{
+	double x = 0, y = 0, z = 0;
+	int len = corners.size();
+	std::vector<Cartesian>::const_iterator it = corners.begin();
+	for ( ; it != corners.end(); it++) {
+		x += (*it).x;
+		y += (*it).y;
+		z += (*it).z;
+	}
+	return Cartesian(x / len, y / len, z / len);
+}
+
+
+// Average distance from the vertex to the centroid of the polygon.
+double
+Geometry::vertex2centroid()
+{
+	Cartesian centroid = centroidPolygon();
+	double sum = 0;
+	std::vector<Cartesian>::iterator it = corners.begin();
+	for ( ; it != corners.end(); it++) {
+		sum += centroid.distance(*it);
+	}
+	return sum / corners.size();
+}
+
+
 // If the region is a bounding circle return the circle's radio.
-// Otherwise return the radius of a circle that fit the polygon's area.
+// Otherwise return the radius equal to vertex2Centroid().
 double
 Geometry::getRadius()
 {
 	if (corners.size() > 2) {
-		double side = sqrt(areaPolygon());
-		double r = sqrt(0.5 * side * side);
-		return r * M_PER_RADIUS_EARTH;
+		// return sqrt(0.5 * areaPolygon()) * M_PER_RADIUS_EARTH;
+		return vertex2centroid() * M_PER_RADIUS_EARTH;
 	} else {
 		return boundingCircle.arcangle * M_PER_RADIUS_EARTH;
 	}
