@@ -319,7 +319,7 @@ int test_hullConvex()
 // Python files are generated to view the results.
 int test_HTM_chull()
 {
-	double error = 0.1;
+	double error = 0.2;
 	bool partials = true;
 	int cont = 0;
 
