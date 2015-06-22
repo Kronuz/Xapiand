@@ -286,6 +286,14 @@ Cartesian::norm()
 }
 
 
+double
+Cartesian::distance(Cartesian &p)
+{
+	Cartesian c(x - p.x, y - p.y, z - p.z);
+	return c.norm();
+}
+
+
 std::string
 Cartesian::as_string() const
 {

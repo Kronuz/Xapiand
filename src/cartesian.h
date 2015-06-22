@@ -256,6 +256,7 @@ class Cartesian {
 		Cartesian& operator=(const Cartesian &p);
 		void normalize();
 		double norm();
+		double distance(Cartesian &p);
 		Cartesian get_inverse();
 		std::string as_string() const;
 		char* c_str() const;
