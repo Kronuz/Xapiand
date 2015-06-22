@@ -102,7 +102,7 @@ Geometry::Geometry(std::vector<Cartesian> &v)
 	int i, next_i, len = points_convex.size();
 	Cartesian constraint;
 
-	if (len < 3) throw Error("Convex Hull not found");
+	if (len < 3) throw MSG_Error("Convex Hull not found");
 
 	// The corners are in clockwise but we need the corners in counterclockwise order and normalize.
 	for (i = len - 1; i >= 0; i--) {
@@ -186,7 +186,7 @@ void
 Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &points_convex) {
 	int len = points.size();
 
-	if (len < 3) throw Error("Polygon should have al least three corners");
+	if (len < 3) throw MSG_Error("Polygon should have al least three corners");
 
 	// Find the min 'y' and the min 'x'
 	// Normalize the points.
@@ -235,7 +235,7 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 		while (true) {
 
 			// Not found the convex.
-			if (points_convex.size() == 1) throw Error("Convex Hull not found");
+			if (points_convex.size() == 1) throw MSG_Error("Convex Hull not found");
 
 			Cartesian last = points_convex.back();
 			points_convex.pop_back();

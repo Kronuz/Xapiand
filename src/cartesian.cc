@@ -30,7 +30,7 @@ Cartesian::Cartesian(double lat, double lon, double height, LatLongUnits units, 
 {
 	std::map<int, int>::const_iterator it;
 	if ((it = SRIDS_DATUMS.find(_SRID)) == SRIDS_DATUMS.end()) {
-		throw Error(std::string("SRID = " + std::to_string(_SRID) + " is not supported").c_str());
+		throw MSG_Error(std::string("SRID = " + std::to_string(_SRID) + " is not supported").c_str());
 	}
 
 	datum = it->second;
@@ -106,7 +106,7 @@ Cartesian::toCartesian(double lat, double lon, double height, LatLongUnits units
 	}
 
 	if (lat < -PI_HALF || lat > PI_HALF) {
-		throw Error("Latitude out-of-range");
+		throw MSG_Error("Latitude out-of-range");
 	}
 
 	ellipsoid_t ellipsoid = ellipsoids[datums[datum].ellipsoid];
@@ -136,7 +136,7 @@ Cartesian::atan2(double y, double x)
 	if (y < 0  && x < 0) return atan((y / x) - M_PI);
 	if (y > 0 && x == 0) return M_PI / 2.0;
 	if (y < 0 && x == 0) return - M_PI / 2.0;
-	if (y == 0 && x == 0) throw Error("Undefined atan2(0.0, 0.0)");
+	if (y == 0 && x == 0) throw MSG_Error("Undefined atan2(0.0, 0.0)");
 	return 0.0;
 }
 

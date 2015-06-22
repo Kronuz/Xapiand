@@ -30,7 +30,7 @@
 #include <sstream>
 #include "config.h"
 
-#define Error(_msg) Exception(_msg, __FILE__, __LINE__)
+#define MSG_Error(_msg) Exception(_msg, __FILE__, __LINE__)
 
 
 class Exception : public std::runtime_error {

@@ -127,7 +127,7 @@ HTM::cartesian2id(Cartesian &coord, std::string &name)
 			v1 = w1;
 			v2 = w2;
 		} else {
-			throw Error("It can not find cartesian coordinate's id");
+			throw MSG_Error("It can not find cartesian coordinate's id");
 		}
 	}
 
