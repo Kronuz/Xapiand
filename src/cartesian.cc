@@ -67,7 +67,21 @@ Cartesian::Cartesian(double _x, double _y, double _z)
 Cartesian::Cartesian() {
 	SRID = WGS84;
 	datum = SRIDS_DATUMS.find(SRID)->second;
-	toCartesian(0, 0, 0, Cartesian::DEGREES);
+	x = 0;
+	y = 0;
+	z = 1;
+}
+
+
+// Return if the SRID is supported for cartesian.
+bool
+Cartesian::is_SRID_supported(int _SRID)
+{
+	std::map<int, int>::const_iterator it;
+	if ((it = SRIDS_DATUMS.find(_SRID)) == SRIDS_DATUMS.end()) {
+		return false;
+	}
+	return true;
 }
 
 

@@ -265,6 +265,7 @@ class Cartesian {
 		// tan(y / x)
 		double atan2(double y, double x);
 		std::string Decimal2Degrees();
+		bool is_SRID_supported(int _SRID);
 
 	private:
 		int SRID;
