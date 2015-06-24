@@ -281,19 +281,26 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 	int len = (int)specification.size();
 	int start = 0;
 
+	Constraint c;
+	Geometry g(c);
+	HTM _htm(partials, error, g);
+
 	// Checking if the format is (lat lon [height]), (lat lon [height]), ... and save the points.
 	std::vector<std::string> res;
-	std::vector<Cartesian> pts;
+	std::string name;
+
 	while (pcre_search(specification.c_str(), len, start, 0, FIND_SUBPOLYGON_RE, &compiled_find_subpolygon_re, &gr) != -1) {
 		if (start != gr[0].start) throw MSG_Error("Syntax error in EWKT format");
 		std::string point(specification.c_str(), gr[2].start, gr[2].end - gr[2].start);
 		std::vector<std::string> coords = stringSplit(point, " ");
 		if (coords.size() == 3) {
 			Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), atof(coords.at(2).c_str()), Cartesian::DEGREES, SRID);
-			pts.push_back(c);
+			_htm.cartesian2id(c, name);
+			res.push_back(name);
 		} else if (coords.size() == 2) {
 			Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
-			pts.push_back(c);
+			_htm.cartesian2id(c, name);
+			res.push_back(name);
 		} else {
 			throw MSG_Error("The specification for POLYGON is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
 		}
@@ -307,10 +314,12 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 			std::vector<std::string> coords = stringSplit(*it, " ");
 			if (coords.size() == 3) {
 				Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), atof(coords.at(2).c_str()), Cartesian::DEGREES, SRID);
-				pts.push_back(c);
+				_htm.cartesian2id(c, name);
+				res.push_back(name);
 			} else if (coords.size() == 2) {
 				Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
-				pts.push_back(c);
+				_htm.cartesian2id(c, name);
+				res.push_back(name);
 			} else {
 				throw MSG_Error("The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]) or (lat lon [height]), ..., (lat lon [height]), ...");
 			}
@@ -324,12 +333,7 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 		gr = NULL;
 	}
 
-	Geometry g(pts);
-	HTM _htm(partials, error, g);
-	_htm.run();
-	gv.push_back(g);
-
-	return _htm.names;
+	return res;
 }
 
 
