@@ -527,6 +527,7 @@ EWKT_Parser::and_trixels(std::vector<std::string> &txs1, std::vector<std::string
 			if (s1 >= s2 && (*it1).find(*it2) == 0) {
 				std::vector<std::string> txs_aux = get_trixels(*it2, s1 - s2, *it1);
 				res.push_back(*it1);
+				break;
 			} else if (s2 > s1 && (*it2).find(*it1) == 0) {
 				std::vector<std::string> txs_aux = get_trixels(*it1, s2 - s1, *it2);
 				res.push_back(*it2);
