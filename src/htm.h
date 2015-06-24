@@ -118,6 +118,8 @@ class HTM {
 		void getCorners(const std::string &name, Cartesian &v0, Cartesian &v1, Cartesian &v2);
 		void writePython3D(const std::string &file);
 		std::string getCircle3D(int points);
+		void writePython3D(const std::string &file, std::vector<Geometry> &g, std::vector<std::string> &names_f);
+		std::string getCircle3D(const Constraint &bCircle, int points);
 };
 
 

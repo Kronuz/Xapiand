@@ -550,6 +550,61 @@ HTM::getCircle3D(int points)
 }
 
 
+std::string
+HTM::getCircle3D(const Constraint &bCircle, int points)
+{
+	double inc = RAD_PER_CIRCUMFERENCE / points;
+	std::string x0, y0, z0;
+	char x0s[DIGITS];
+	char y0s[DIGITS];
+	char z0s[DIGITS];
+	snprintf(x0s, DIGITS, "%.50f", bCircle.center.x);
+	snprintf(y0s, DIGITS, "%.50f", bCircle.center.y);
+	snprintf(z0s, DIGITS, "%.50f", bCircle.center.z);
+	std::string xs = "x = [" + std::string(x0s) + "]\n";
+	xs += "y = [" + std::string(y0s) + "]\n";
+	xs += "z = [" + std::string(z0s) + "]\n";
+	xs += "ax.plot3D(x, y, z, 'ko', linewidth = 2.0)\n\n";
+	std::string ys, zs;
+	if (bCircle.sign == POS) {
+		xs += "x = [";
+		ys = "y = [";
+		zs = "z = [";
+		Cartesian a = (bCircle.center.y == 0) ? Cartesian(0, 1, 0) : Cartesian(1.0, - (bCircle.center.x + bCircle.center.z) / bCircle.center.y, 1.0);
+		a.normalize();
+		Cartesian b = a ^ bCircle.center;
+
+		Cartesian vc;
+		for (double t = 0; t <= RAD_PER_CIRCUMFERENCE; t += inc) {
+			double rc = bCircle.arcangle * cos(t);
+			double rs = bCircle.arcangle * sin(t);
+			vc.x = bCircle.center.x + rc * a.x + rs * b.x;
+			vc.y = bCircle.center.y + rc * a.y + rs * b.y;
+			vc.z = bCircle.center.z + rc * a.z + rs * b.z;
+			char vcx[DIGITS];
+			char vcy[DIGITS];
+			char vcz[DIGITS];
+			snprintf(vcx, DIGITS, "%.50f", vc.x);
+			snprintf(vcy, DIGITS, "%.50f", vc.y);
+			snprintf(vcz, DIGITS, "%.50f", vc.z);
+			xs += std::string(vcx) + ", ";
+			ys += std::string(vcy) + ", ";
+			zs += std::string(vcz) + ", ";
+			if (t == 0.0) {
+				x0 = std::string(vcx) + ", ";
+				y0 = std::string(vcy) + ", ";
+				z0 = std::string(vcz) + ", ";
+			}
+		}
+		xs += x0 + "]\n";
+		ys += y0 + "]\n";
+		zs += z0 + "]\n";
+	}
+
+	return xs + ys + zs;
+}
+
+
 void
 HTM::writePython3D(const std::string &file)
 {
@@ -595,6 +650,86 @@ HTM::writePython3D(const std::string &file)
 
 	std::vector<std::string>::const_iterator itn = names.begin();
 	for ( ;itn != names.end(); itn++) {
+		Cartesian v0, v1, v2;
+		getCorners((*itn), v0, v1, v2);
+		char v0x[DIGITS];
+		char v0y[DIGITS];
+		char v0z[DIGITS];
+		snprintf(v0x, DIGITS, "%.50f", v0.x);
+		snprintf(v0y, DIGITS, "%.50f", v0.y);
+		snprintf(v0z, DIGITS, "%.50f", v0.z);
+		char v1x[DIGITS];
+		char v1y[DIGITS];
+		char v1z[DIGITS];
+		snprintf(v1x, DIGITS, "%.50f", v1.x);
+		snprintf(v1y, DIGITS, "%.50f", v1.y);
+		snprintf(v1z, DIGITS, "%.50f", v1.z);
+		char v2x[DIGITS];
+		char v2y[DIGITS];
+		char v2z[DIGITS];
+		snprintf(v2x, DIGITS, "%.50f", v2.x);
+		snprintf(v2y, DIGITS, "%.50f", v2.y);
+		snprintf(v2z, DIGITS, "%.50f", v2.z);
+		x = "x = [" + std::string(v0x) + ", " + std::string(v1x) + ", " + std::string(v2x) + ", " + std::string(v0x) + "]\n";
+		y = "y = [" + std::string(v0y) + ", " + std::string(v1y) + ", " + std::string(v2y) + ", " + std::string(v0y) + "]\n";
+		z = "z = [" + std::string(v0z) + ", " + std::string(v1z) + ", " + std::string(v2z) + ", " + std::string(v0z) + "]\n";
+		fs << (x + y + z) << "ax.plot3D(x, y, z, 'r-')\n\n";
+	}
+	fs << "plt.ion()\nplt.grid()\nplt.show()";
+	fs.close();
+}
+
+
+void
+HTM::writePython3D(const std::string &file, std::vector<Geometry> &g, std::vector<std::string> &names_f)
+{
+	std::ofstream fs(file);
+
+	fs << "from mpl_toolkits.mplot3d import Axes3D\n";
+	fs << "from mpl_toolkits.mplot3d.art3d import Poly3DCollection\n";
+	fs << "import matplotlib.pyplot as plt\n\n\n";
+	fs << "ax = Axes3D(plt.figure())\n";
+
+	std::vector<Geometry>::const_iterator it_g(g.begin());
+	for ( ;it_g != g.end(); it_g++) {
+		std::string x("x = ["), y("y = ["), z("z = [");
+		int numCorners = (*it_g).corners.size() - 1;
+		if (numCorners >= 2) {
+			for (int i = 0; i < numCorners; i++) {
+				char vx[DIGITS];
+				char vy[DIGITS];
+				char vz[DIGITS];
+				snprintf(vx, DIGITS, "%.50f", (*it_g).corners.at(i).x);
+				snprintf(vy, DIGITS, "%.50f", (*it_g).corners.at(i).y);
+				snprintf(vz, DIGITS, "%.50f", (*it_g).corners.at(i).z);
+				x += std::string(vx) + ", ";
+				y += std::string(vy) + ", ";
+				z += std::string(vz) + ", ";
+			}
+			char v0x[DIGITS];
+			char v0y[DIGITS];
+			char v0z[DIGITS];
+			snprintf(v0x, DIGITS, "%.50f", (*it_g).corners.at(numCorners).x);
+			snprintf(v0y, DIGITS, "%.50f", (*it_g).corners.at(numCorners).y);
+			snprintf(v0z, DIGITS, "%.50f", (*it_g).corners.at(numCorners).z);
+			char v1x[DIGITS];
+			char v1y[DIGITS];
+			char v1z[DIGITS];
+			snprintf(v1x, DIGITS, "%.50f", (*it_g).corners.at(0).x);
+			snprintf(v1y, DIGITS, "%.50f", (*it_g).corners.at(0).y);
+			snprintf(v1z, DIGITS, "%.50f", (*it_g).corners.at(0).z);
+			x += std::string(v0x) + ", " + std::string(v1x) + "]\n";
+			y += std::string(v0y) + ", " + std::string(v1y) + "]\n";
+			z += std::string(v0z) + ", " + std::string(v1z) + "]\n";
+			fs << (x + y + z) << "ax.plot3D(x, y, z, 'k-', linewidth = 2.0)\n\n";
+		} else {
+			fs << getCircle3D((*it_g).boundingCircle, 100) << "ax.plot3D(x, y, z, 'k-', linewidth = 2.0)\n\n";
+		}
+	}
+
+	std::vector<std::string>::const_iterator itn = names_f.begin();
+	std::string x, y, z;
+	for ( ;itn != names_f.end(); itn++) {
 		Cartesian v0, v1, v2;
 		getCorners((*itn), v0, v1, v2);
 		char v0x[DIGITS];
