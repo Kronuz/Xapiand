@@ -155,18 +155,28 @@ Suite* test_suite_cartesian(void)
 }
 
 
-Suite* test_suite_HTM(void)
+Suite* test_suite_convex_hull(void)
 {
 	Suite *s;
 	TCase *tc_hull_convex;
-	TCase *tc_htm_chull;
-	TCase *tc_htm_circle;
 
-	s = suite_create("Test of HTM");
+	s = suite_create("Test of Geometry Hull Convex");
 
 	tc_hull_convex = tcase_create("Convex hull from a set point");
 	tcase_add_test(tc_hull_convex, test_hullConvex);
 	suite_add_tcase(s, tc_hull_convex);
+
+	return s;
+}
+
+
+Suite* test_suite_HTM(void)
+{
+	Suite *s;
+	TCase *tc_htm_chull;
+	TCase *tc_htm_circle;
+
+	s = suite_create("Test of HTM");
 
 	tc_htm_chull = tcase_create("HTM for Polygons");
 	tcase_add_test(tc_htm_chull, test_HTM_chull);
@@ -230,6 +240,12 @@ int main(void)
 
 	cartesian = test_suite_cartesian();
 	sr = srunner_create(cartesian);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
+	srunner_free(sr);
+
+	chull = test_suite_convex_hull();
+	sr = srunner_create(chull);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed += srunner_ntests_failed(sr);
 	srunner_free(sr);
