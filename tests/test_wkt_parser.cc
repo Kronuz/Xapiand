@@ -95,3 +95,39 @@ int test_wkt_parser()
 		return 1;
 	}
 }
+
+
+// Test of speed
+int test_wkt_speed()
+{
+	int repeat = 10;
+	clock_t start = clock();
+	std::string EWKT("POLYGON ((39 -125, 39 -120, 42 -120, 39 -120))");
+	for (int i = 0; i < repeat; i++) {
+		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
+	}
+	LOG(NULL, "Time required for execution a single POLYGON: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+
+	start = clock();
+	EWKT = std::string("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10),(20 30, 35 35, 30 20, 20 30))");
+	for (int i = 0; i < repeat; i++) {
+		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
+	}
+	LOG(NULL, "Time required for execution a POLYGON compound: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+
+	start = clock();
+	EWKT = std::string("MULTIPOINT (10 40, 40 30, 20 20, 30 10)");
+	for (int i = 0; i < repeat; i++) {
+		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
+	}
+	LOG(NULL, "Time required for execution a MULTIPOINT: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+
+	start = clock();
+	EWKT = std::string("CIRCLE (39 -125, 10000)");
+	for (int i = 0; i < repeat; i++) {
+		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
+	}
+	LOG(NULL, "Time required for execution a CIRCLE: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+
+	return 0;
+}

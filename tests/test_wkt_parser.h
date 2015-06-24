@@ -28,9 +28,11 @@
 #include <algorithm>
 #include <unistd.h>
 #include "wkt_parser.h"
+#include <time.h>
 
 
 int test_wkt_parser();
+int test_wkt_speed();
 
 
 #endif /* XAPIAND_INCLUDED_TEST_WKT_PARSER_H */
