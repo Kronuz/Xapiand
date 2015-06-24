@@ -98,7 +98,7 @@ HTM::cartesian2id(Cartesian &coord, std::string &name)
 	id = start_id;
 
 	// Search in children's trixel
-	short depth = max_level;
+	short depth = MAX_LEVEL;
 	while (depth-- > 0) {
 		id <<= 2;
 		midPoint(v0, v1, w2);
@@ -649,6 +649,7 @@ HTM::writePython3D(const std::string &file)
 	}
 
 	std::vector<std::string>::const_iterator itn = names.begin();
+
 	for ( ;itn != names.end(); itn++) {
 		Cartesian v0, v1, v2;
 		getCorners((*itn), v0, v1, v2);
@@ -675,6 +676,7 @@ HTM::writePython3D(const std::string &file)
 		z = "z = [" + std::string(v0z) + ", " + std::string(v1z) + ", " + std::string(v2z) + ", " + std::string(v0z) + "]\n";
 		fs << (x + y + z) << "ax.plot3D(x, y, z, 'r-')\n\n";
 	}
+
 	fs << "plt.ion()\nplt.grid()\nplt.show()";
 	fs.close();
 }
