@@ -93,6 +93,13 @@ START_TEST(test_wkt_parser)
 END_TEST
 
 
+START_TEST(test_wkt_speed)
+{
+	ck_assert_int_eq(test_wkt_speed(), 0);
+}
+END_TEST
+
+
 Suite* test_suite_serialise(void)
 {
 	Suite *s;
@@ -188,10 +195,25 @@ Suite* test_suite_wkt_parser(void)
 }
 
 
+Suite* test_suite_wkt_speed(void)
+{
+	Suite *s;
+	TCase *tc_wkt_speed;
+
+	s = suite_create("Test WKT speed");
+
+	tc_wkt_speed = tcase_create("WKT speed");
+	tcase_add_test(tc_wkt_speed, test_wkt_speed);
+	suite_add_tcase(s, tc_wkt_speed);
+
+	return s;
+}
+
+
 int main(void)
 {
 	int number_failed = 0;
-	Suite *serialise, *unserialise, *cartesian, *HTM, *WKT;
+	Suite *serialise, *unserialise, *cartesian, *chull, *HTM, *WKT, *WKTspeed;
 	SRunner *sr;
 
 	serialise = test_suite_serialise();
@@ -220,6 +242,12 @@ int main(void)
 
 	WKT = test_suite_wkt_parser();
 	sr = srunner_create(WKT);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
+	srunner_free(sr);
+
+	WKTspeed = test_suite_wkt_speed();
+	sr = srunner_create(WKTspeed);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed += srunner_ntests_failed(sr);
 	srunner_free(sr);
