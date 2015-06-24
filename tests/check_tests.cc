@@ -22,6 +22,7 @@
 
 #include "test_serialise.h"
 #include "test_htm.h"
+#include "test_wkt_parser.h"
 #include <config.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -81,6 +82,13 @@ END_TEST
 START_TEST(test_HTM_circle)
 {
 	ck_assert_int_eq(test_HTM_circle(), 0);
+}
+END_TEST
+
+
+START_TEST(test_wkt_parser)
+{
+	ck_assert_int_eq(test_wkt_parser(), 0);
 }
 END_TEST
 
@@ -165,10 +173,25 @@ Suite* test_suite_HTM(void)
 }
 
 
+Suite* test_suite_wkt_parser(void)
+{
+	Suite *s;
+	TCase *tc_wkt_parser;
+
+	s = suite_create("Test of WKT parser");
+
+	tc_wkt_parser = tcase_create("WKT parser");
+	tcase_add_test(tc_wkt_parser, test_wkt_parser);
+	suite_add_tcase(s, tc_wkt_parser);
+
+	return s;
+}
+
+
 int main(void)
 {
 	int number_failed = 0;
-	Suite *serialise, *unserialise, *cartesian, *HTM;
+	Suite *serialise, *unserialise, *cartesian, *HTM, *WKT;
 	SRunner *sr;
 
 	serialise = test_suite_serialise();
@@ -191,6 +214,12 @@ int main(void)
 
 	HTM = test_suite_HTM();
 	sr = srunner_create(HTM);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
+	srunner_free(sr);
+
+	WKT = test_suite_wkt_parser();
+	sr = srunner_create(WKT);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed += srunner_ntests_failed(sr);
 	srunner_free(sr);
