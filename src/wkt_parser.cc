@@ -613,3 +613,25 @@ EWKT_Parser::get_trixels(std::string &father, int depth, std::string &son)
 
 	return sonsF;
 }
+
+
+bool is_like_EWKT(const char *str)
+{
+	group_t *gr = NULL;
+	int len = strlen(str);
+	int ret = pcre_search(str, len, 0, 0, FIND_GEOMETRY_RE, &compiled_find_geometry_re, &gr);
+	if (ret != -1 && len == gr[0].end - gr[0].start) {
+		if (gr) {
+			free(gr);
+			gr = NULL;
+		}
+		return true;
+	}
+
+	if (gr) {
+		free(gr);
+		gr = NULL;
+	}
+
+	return false;
+}
