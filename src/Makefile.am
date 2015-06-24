@@ -28,6 +28,7 @@ xapiand_SOURCES = \
 	cartesian.cc \
 	geometry.cc \
 	htm.cc \
+	wkt_parser.cc \
 	\
 	xapiand.cc
 
@@ -57,6 +58,7 @@ noinst_HEADERS = \
 	cartesian.h \
 	geometry.h \
 	htm.h \
+	wkt_parser.h \
 	worker.h \
 	xapiand.h
 
