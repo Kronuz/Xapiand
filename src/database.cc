@@ -1916,22 +1916,15 @@ Database::get_type(cJSON *field, specifications_t &spc)
 		aux = cJSON_GetArrayItem(field, 0);
 		type = aux->type;
 		bool meet_range = true;
-		if (type == cJSON_Array && spc.geo_detection) return GEO_TYPE;
-		for (int i = 0; i < num_ele; i++) {
+		if (type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
+		for (int i = 1; i < num_ele; i++) {
 			aux = cJSON_GetArrayItem(field, i);
 			if (aux->type != type && (aux->type > 1 || type > 1)) {
 				throw "Different types of data";
 			}
-			if (i % 2 == 0 && (aux->type != cJSON_Number || aux->valuedouble < -90.0 || aux->valuedouble > 90.00)) {
-				meet_range = false;
-			} else if (i % 2 == 1 && (aux->type != cJSON_Number || aux->valuedouble < -360.0 || aux->valuedouble > 360.00)) {
-				meet_range = false;
-			}
-		}
-		if (num_ele % 2 == 0 && meet_range && spc.geo_detection) {
-			return GEO_TYPE;
 		}
 	}
+
 	switch (type) {
 		case cJSON_Number: if (spc.numeric_detection) return NUMERIC_TYPE; break;
 		case cJSON_False: if (spc.bool_detection) return BOOLEAN_TYPE; break;
@@ -1941,6 +1934,9 @@ Database::get_type(cJSON *field, specifications_t &spc)
 				return BOOLEAN_TYPE;
 			} else if (spc.date_detection && timestamp_date(aux->valuestring).size() != 0) {
 				return DATE_TYPE;
+			} else if(spc.geo_detection && field->type != cJSON_Array && is_like_EWKT(aux->valuestring)) {
+				// For WKT format, it is not necessary to use arrays.
+				return GEO_TYPE;
 			} else if (spc.string_detection) {
 				return STRING_TYPE;
 			}
