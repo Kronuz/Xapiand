@@ -22,11 +22,11 @@
 
 #include "wkt_parser.h"
 
-#define FIND_GEOMETRY_RE "(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?(POLYGON|CIRCLE|MULTIPOLYGON|MULTIPOINT|TRIANGLE)[\\s]*\\(([()0-9.\\s,-]*)\\)|(GEOMETRYCOLLECTION|GEOMETRYINTERSECTION)[\\s]*\\(([()0-9.\\s,A-Z-]*)\\)"
+#define FIND_GEOMETRY_RE "(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?(POLYGON|CIRCLE|MULTIPOLYGON|POINT|MULTIPOINT|TRIANGLE)[\\s]*\\(([()0-9.\\s,-]*)\\)|(GEOMETRYCOLLECTION|GEOMETRYINTERSECTION)[\\s]*\\(([()0-9.\\s,A-Z-]*)\\)"
 #define FIND_CIRCLE_RE "(\\-?\\d*\\.\\d+|\\-?\\d+)\\s(\\-?\\d*\\.\\d+|\\-?\\d+)(\\s(\\-?\\d*\\.\\d+|\\-?\\d+))?[\\s]*\\,[\\s]*(\\d*\\.\\d+|\\d+)"
 #define FIND_SUBPOLYGON_RE "[\\s]*(\\(([\\-?\\d*\\.\\d+|\\-?\\d+\\s,]*)\\))[\\s]*(\\,)?"
 #define FIND_POLYGON_RE "[\\s]*[\\s]*\\((.*?\\))\\)[\\s]*(,)?"
-#define FIND_COLLECTION_RE "[\\s]*(POLYGON|CIRCLE|MULTIPOLYGON|MULTIPOINT|TRIANGLE)[\\s]*\\(([()0-9.\\s,-]*)\\)([\\s]*\\,[\\s]*)?"
+#define FIND_COLLECTION_RE "[\\s]*(POLYGON|CIRCLE|MULTIPOLYGON|POINT|MULTIPOINT|TRIANGLE)[\\s]*\\(([()0-9.\\s,-]*)\\)([\\s]*\\,[\\s]*)?"
 
 
 pcre *EWKT_Parser::compiled_find_geometry_re = NULL;
@@ -79,6 +79,7 @@ EWKT_Parser::EWKT_Parser(std::string &EWKT, bool _partials, double _error) : par
 			if (geometry.compare("CIRCLE") == 0) trixels = parse_circle(specification);
 			else if (geometry.compare("POLYGON") == 0) trixels = parse_polygon(specification);
 			else if (geometry.compare("MULTIPOLYGON") == 0) trixels = parse_multipolygon(specification);
+			else if (geometry.compare("POINT") == 0) trixels = parse_point(specification);
 			else if (geometry.compare("MULTIPOINT") == 0) trixels = parse_multipoint(specification);
 			else if (geometry.compare("TRIANGLE") == 0) trixels = parse_polygon(specification);
 		}
@@ -236,7 +237,43 @@ EWKT_Parser::parse_multipolygon(std::string &specification)
 // The specification is (lat lon [height], ..., lat lon [height]) or (lat lon [height]), ..., (lat lon [height]), ...
 // lat and lon in degrees.
 // height in meters.
-// Return the trixels that cover the region.
+// Return the points' trixels.
+std::vector<std::string>
+EWKT_Parser::parse_point(std::string &specification)
+{
+	group_t *gr = NULL;
+	int len = (int)specification.size();
+	int start = 0;
+
+	Constraint c;
+	Geometry g(c);
+	HTM _htm(partials, error, g);
+
+	// Checking if the format is (lat lon [height]), (lat lon [height]), ... and save the points.
+	std::vector<std::string> res;
+	std::string name;
+
+	std::vector<std::string> coords = stringSplit(specification, " (,");
+	if (coords.size() == 3) {
+		Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), atof(coords.at(2).c_str()), Cartesian::DEGREES, SRID);
+		_htm.cartesian2id(c, name);
+		res.push_back(name);
+	} else if (coords.size() == 2) {
+		Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
+		_htm.cartesian2id(c, name);
+		res.push_back(name);
+	} else {
+		throw MSG_Error("The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]) or (lat lon [height]), ..., (lat lon [height]), ...");
+	}
+
+	return res;
+}
+
+
+// The specification is lat lon [height]
+// lat and lon in degrees.
+// height in meters.
+// Return the point's trixels.
 std::vector<std::string>
 EWKT_Parser::parse_multipoint(std::string &specification)
 {
@@ -317,6 +354,7 @@ EWKT_Parser::parse_geometry_collection(std::string &data)
 		if (geometry.compare("CIRCLE") == 0) txs = parse_circle(specification);
 		else if (geometry.compare("POLYGON") == 0) txs = parse_polygon(specification);
 		else if (geometry.compare("MULTIPOLYGON") == 0) txs = parse_multipolygon(specification);
+		else if (geometry.compare("POINT") == 0) txs = parse_point(specification);
 		else if (geometry.compare("MULTIPOINT") == 0) txs = parse_multipoint(specification);
 		else if (geometry.compare("TRIANGLE") == 0) txs = parse_polygon(specification);
 
@@ -364,6 +402,7 @@ EWKT_Parser::parse_geometry_intersection(std::string &data)
 		if (geometry.compare("CIRCLE") == 0) txs = parse_circle(specification);
 		else if (geometry.compare("POLYGON") == 0) txs = parse_polygon(specification);
 		else if (geometry.compare("MULTIPOLYGON") == 0) txs = parse_multipolygon(specification);
+		else if (geometry.compare("POINT") == 0) txs = parse_point(specification);
 		else if (geometry.compare("MULTIPOINT") == 0) txs = parse_multipoint(specification);
 		else if (geometry.compare("TRIANGLE") == 0) txs = parse_polygon(specification);
 

@@ -53,6 +53,7 @@ class EWKT_Parser {
 		std::vector<std::string> parse_circle(std::string &specification);
 		std::vector<std::string> parse_polygon(std::string &specification);
 		std::vector<std::string> parse_multipolygon(std::string &specification);
+		std::vector<std::string> parse_point(std::string &specification);
 		std::vector<std::string> parse_multipoint(std::string &specification);
 		std::vector<std::string> parse_geometry_collection(std::string &data);
 		std::vector<std::string> parse_geometry_intersection(std::string &data);
