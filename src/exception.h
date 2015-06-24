@@ -30,17 +30,20 @@
 #include <sstream>
 #include "config.h"
 
-#define MSG_Error(_msg) Exception(_msg, __FILE__, __LINE__)
+#define MSG_Error(...) Exception(__FILE__, __LINE__, __VA_ARGS__)
+
+const int SIZE_BUFFER = 256;
 
 
 class Exception : public std::runtime_error {
 
 	private:
-		std::string msg;
+		char msg[SIZE_BUFFER];
 
 	public:
-		Exception(const char *_msg, const char *file, int line);
+		Exception(const char *file, int line, const char *format, ...);
 		~Exception() throw();
+
 		const char* what() const throw();
 };
 

@@ -24,8 +24,15 @@
 #include "exception.h"
 
 
-Exception::Exception(const char *_msg, const char *file, int line) :
-	std::runtime_error(_msg), msg(std::string(file) + ":" + std::to_string(line) + ":" + _msg) { }
+Exception::Exception(const char *file, int line, const char *format, ...) : std::runtime_error("")
+{
+	va_list argptr;
+	va_start(argptr, format);
+	char buffer[SIZE_BUFFER];
+	vsnprintf(buffer, SIZE_BUFFER, format, argptr);
+	snprintf(msg, SIZE_BUFFER, "%s:%d:%s", file, line, buffer);
+	va_end(argptr);
+}
 
 
 Exception::~Exception() throw() {}
@@ -34,5 +41,5 @@ Exception::~Exception() throw() {}
 const char*
 Exception::what() const throw()
 {
-	return msg.c_str();
+	return msg;
 }
