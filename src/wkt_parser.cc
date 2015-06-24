@@ -119,9 +119,7 @@ EWKT_Parser::parse_circle(std::string &specification)
 		HTM _htm(partials, error, g);
 		_htm.run();
 
-		// Python for the circle.
 		gv.push_back(g);
-		_htm.writePython3D("CIRCLE.py", gv, _htm.names);
 
 		return _htm.names;
 	} else {
@@ -195,12 +193,6 @@ EWKT_Parser::parse_polygon(std::string &specification)
 		}
 	}
 
-	// Python for the Polygon.
-	Constraint c;
-	Geometry g(c);
-	HTM _htm(partials, error, g);
-	_htm.writePython3D("POLYGON.py", gv, names_f);
-
 	return names_f;
 }
 
@@ -245,12 +237,6 @@ EWKT_Parser::parse_multipolygon(std::string &specification)
 			names_f = or_trixels(names_f, txs2);
 		}
 	}
-
-	// Python for the Polygon.
-	Constraint c;
-	Geometry g(c);
-	HTM _htm(partials, error, g);
-	_htm.writePython3D("MULTIPOLYGON.py", gv, names_f);
 
 	return names_f;
 }
@@ -315,9 +301,6 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 	_htm.run();
 	gv.push_back(g);
 
-	// Python for the Polygon.
-	_htm.writePython3D("MULTIPOINT.py", gv, _htm.names);
-
 	return _htm.names;
 }
 
@@ -368,12 +351,6 @@ EWKT_Parser::parse_geometry_collection(std::string &data)
 		}
 	}
 
-	// Python for the Polygon.
-	Constraint c;
-	Geometry g(c);
-	HTM _htm(partials, error, g);
-	_htm.writePython3D("GEOMETRYCOLLECTION.py", gv, names_f);
-
 	return names_f;
 }
 
@@ -423,12 +400,6 @@ EWKT_Parser::parse_geometry_intersection(std::string &data)
 			names_f = and_trixels(names_f, txs);
 		}
 	}
-
-	// Python for the Polygon.
-	Constraint c;
-	Geometry g(c);
-	HTM _htm(partials, error, g);
-	_htm.writePython3D("GEOMETRYINTERSECTION.py", gv, names_f);
 
 	return names_f;
 }
@@ -610,14 +581,3 @@ EWKT_Parser::get_trixels(std::string &father, int depth, std::string &son)
 
 	return sonsF;
 }
-
-
-/*void
-EWKT_Parser::printVector(const std::vector<std::string> &v)
-{
-	std::vector<std::string>::const_iterator it(v.begin());
-	for ( ; it != v.end(); it++) {
-		printf("%s  ", (*it).c_str());
-	}
-	printf("\n");
-}*/
