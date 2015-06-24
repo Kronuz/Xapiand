@@ -71,11 +71,11 @@ void setup_signal_handlers(void) {
 void run(const opts_t &opts)
 {
 #ifdef HAVE_PTHREAD_SETNAME_NP_3
-    pthread_setname_np(pthread_self(), "==");
+	pthread_setname_np(pthread_self(), "==");
 #elif HAVE_PTHREAD_SETNAME_NP_2
 	pthread_set_name_np(pthread_self(),"==");
 #else
-    pthread_setname_np("==");
+	pthread_setname_np("==");
 #endif
 
 	ev::default_loop default_loop;
