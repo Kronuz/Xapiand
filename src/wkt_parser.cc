@@ -51,7 +51,8 @@ pcre *EWKT_Parser::compiled_find_collection_re = NULL;
  * Coordinates for geometries may be:
  * (lat lon) or (lat lon height)
  *
- * This parser do not accept EMPTY geometries.
+ * This parser do not accept EMPTY geometries and
+ * the polygons are not required to be repeated first coordinate to end.
 */
 EWKT_Parser::EWKT_Parser(std::string &EWKT, bool _partials, double _error) : partials(_partials), error(_error)
 {
