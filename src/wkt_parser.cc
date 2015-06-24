@@ -22,11 +22,11 @@
 
 #include "wkt_parser.h"
 
-#define FIND_GEOMETRY_RE "(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?(POLYGON|CIRCLE|MULTIPOLYGON|MULTICIRCLE|MULTIPOINT|TRIANGLE)[\\s]*\\(([()0-9.\\s,-]*)\\)|(GEOMETRYCOLLECTION|GEOMETRYINTERSECTION)[\\s]*\\(([()0-9.\\s,A-Z-]*)\\)"
+#define FIND_GEOMETRY_RE "(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?(POLYGON|CIRCLE|MULTIPOLYGON|MULTIPOINT|TRIANGLE)[\\s]*\\(([()0-9.\\s,-]*)\\)|(GEOMETRYCOLLECTION|GEOMETRYINTERSECTION)[\\s]*\\(([()0-9.\\s,A-Z-]*)\\)"
 #define FIND_CIRCLE_RE "(\\-?\\d*\\.\\d+|\\-?\\d+)\\s(\\-?\\d*\\.\\d+|\\-?\\d+)(\\s(\\-?\\d*\\.\\d+|\\-?\\d+))?[\\s]*\\,[\\s]*(\\d*\\.\\d+|\\d+)"
 #define FIND_SUBPOLYGON_RE "[\\s]*(\\(([\\-?\\d*\\.\\d+|\\-?\\d+\\s,]*)\\))[\\s]*(\\,)?"
 #define FIND_POLYGON_RE "[\\s]*[\\s]*\\((.*?\\))\\)[\\s]*(,)?"
-#define FIND_COLLECTION_RE "[\\s]*(POLYGON|CIRCLE|MULTIPOLYGON|MULTICIRCLE|MULTIPOINT|TRIANGLE)[\\s]*\\(([()0-9.\\s,-]*)\\)([\\s]*\\,[\\s]*)?"
+#define FIND_COLLECTION_RE "[\\s]*(POLYGON|CIRCLE|MULTIPOLYGON|MULTIPOINT|TRIANGLE)[\\s]*\\(([()0-9.\\s,-]*)\\)([\\s]*\\,[\\s]*)?"
 
 
 pcre *EWKT_Parser::compiled_find_geometry_re = NULL;
