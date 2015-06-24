@@ -26,21 +26,22 @@
 #include "htm.h"
 #include "utils.h"
 
+extern pcre *compiled_find_geometry_re;
+extern pcre *compiled_find_circle_re;
+extern pcre *compiled_find_subpolygon_re;
+extern pcre *compiled_find_polygon_re;
+extern pcre *compiled_find_collection_re;
+
+bool is_like_EWKT(const char *str);
+
 
 class EWKT_Parser {
 	public:
-		std::vector<Geometry> G;
 		double error;
 		bool partials;
 		int SRID;
 		std::vector<Geometry> gv;
 		std::vector<std::string> trixels;
-
-		static pcre *compiled_find_geometry_re;
-		static pcre *compiled_find_circle_re;
-		static pcre *compiled_find_subpolygon_re;
-		static pcre *compiled_find_polygon_re;
-		static pcre *compiled_find_collection_re;
 
 		EWKT_Parser(std::string &EWKT, bool partials, double error);
 

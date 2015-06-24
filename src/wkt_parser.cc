@@ -29,11 +29,11 @@
 #define FIND_COLLECTION_RE "[\\s]*(POLYGON|CIRCLE|MULTIPOLYGON|POINT|MULTIPOINT|TRIANGLE)[\\s]*\\(([()0-9.\\s,-]*)\\)([\\s]*\\,[\\s]*)?"
 
 
-pcre *EWKT_Parser::compiled_find_geometry_re = NULL;
-pcre *EWKT_Parser::compiled_find_circle_re = NULL;
-pcre *EWKT_Parser::compiled_find_subpolygon_re = NULL;
-pcre *EWKT_Parser::compiled_find_polygon_re = NULL;
-pcre *EWKT_Parser::compiled_find_collection_re = NULL;
+pcre *compiled_find_geometry_re = NULL;
+pcre *compiled_find_circle_re = NULL;
+pcre *compiled_find_subpolygon_re = NULL;
+pcre *compiled_find_polygon_re = NULL;
+pcre *compiled_find_collection_re = NULL;
 
 
 /* Parser for EWKT (A PostGIS-specific format that includes the spatial reference system identifier (SRID))
