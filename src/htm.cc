@@ -36,9 +36,9 @@ HTM::HTM(bool partials_, double error, Geometry &region_) : region(region_), par
 	// Get the error with respect to the radius.
 	error = (error > 0.5) ? 1 : (error < 0.1) ? 0.2 : 2 * error;
 	double errorD =  error * region.getRadius();
-	max_level = MAX_LEVEL;
-	for (int i = 0; i <= MAX_LEVEL; i++) {
-		if (ERROR_NIVEL[i] < errorD || i == MAX_LEVEL) {
+	max_level = HTM_MAX_LEVEL;
+	for (int i = 0; i <= HTM_MAX_LEVEL; i++) {
+		if (ERROR_NIVEL[i] < errorD || i == HTM_MAX_LEVEL) {
 			max_level = i;
 			break;
 		}
@@ -98,7 +98,7 @@ HTM::cartesian2id(Cartesian &coord, std::string &name)
 	id = start_id;
 
 	// Search in children's trixel
-	short depth = MAX_LEVEL;
+	short depth = HTM_MAX_LEVEL;
 	while (depth-- > 0) {
 		id <<= 2;
 		midPoint(v0, v1, w2);

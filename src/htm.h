@@ -38,7 +38,7 @@
 #define DIGITS 50
 
 // Maximum level allowed (In this level the accuracy is 30 centimeters).
-#define MAX_LEVEL 25
+#define HTM_MAX_LEVEL 25
 
 // Radians in a circumference (2pi).
 const double RAD_PER_CIRCUMFERENCE = 6.28318530717958647692528677;
@@ -89,14 +89,14 @@ class HTM {
 		};
 
 		trixel_t start_trixels[8] = {
-			{ S0, "S0", 1, 5, 2 },
-			{ S1, "S1", 2, 5, 3 },
-			{ S2, "S2", 3, 5, 4 },
-			{ S3, "S3", 4, 5, 1 },
-			{ N0, "N0", 1, 0, 4 },
-			{ N1, "N1", 4, 0, 3 },
-			{ N2, "N2", 3, 0, 2 },
-			{ N3, "N3", 2, 0, 1 }
+			{ S0, "s0", 1, 5, 2 },
+			{ S1, "s1", 2, 5, 3 },
+			{ S2, "s2", 3, 5, 4 },
+			{ S3, "s3", 4, 5, 1 },
+			{ N0, "n0", 1, 0, 4 },
+			{ N1, "n1", 4, 0, 3 },
+			{ N2, "n2", 3, 0, 2 },
+			{ N3, "n3", 2, 0, 1 }
 		};
 
 		HTM(bool partials_, double error, Geometry &region_);
