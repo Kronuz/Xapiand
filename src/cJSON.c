@@ -659,7 +659,7 @@ static char *print_object(cJSON *item,int depth,int fmt,printbuffer *p)
 		if (fmt) for (i=0;i<depth-1;i++) *ptr++='\t';
 		*ptr++='}';*ptr++=0;
 	}
-	return out;	
+	return out;
 }
 
 /* Get Array size/item / object item. */
