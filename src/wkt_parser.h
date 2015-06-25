@@ -25,6 +25,7 @@
 
 #include "htm.h"
 #include "utils.h"
+#include <pcre.h>
 
 extern pcre *compiled_find_geometry_re;
 extern pcre *compiled_find_circle_re;
@@ -43,7 +44,7 @@ class EWKT_Parser {
 		std::vector<Geometry> gv;
 		std::vector<std::string> trixels;
 
-		EWKT_Parser(std::string &EWKT, bool partials, double error);
+		EWKT_Parser(const std::string &EWKT, bool partials, double error);
 
 		std::vector<std::string> stringSplit(const std::string &str, const std::string &delimiter);
 		std::vector<std::string> get_trixels(std::string &father, int depth, std::string &son);

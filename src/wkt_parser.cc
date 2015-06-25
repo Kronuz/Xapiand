@@ -54,7 +54,7 @@ pcre *compiled_find_collection_re = NULL;
  * This parser do not accept EMPTY geometries and
  * the polygons are not required to be repeated first coordinate to end.
 */
-EWKT_Parser::EWKT_Parser(std::string &EWKT, bool _partials, double _error) : partials(_partials), error(_error)
+EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error) : partials(_partials), error(_error)
 {
 	group_t *gr = NULL;
 	int len = (int)EWKT.size();
