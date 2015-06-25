@@ -149,7 +149,7 @@ int test_cartesian_transforms()
 			double lat, lon, height;
 			c.toGeodetic(lat, lon, height);
 			std::string get = c.Decimal2Degrees();
-			if (get.compare(it->res) != 0) {
+			if (strcasecmp(get.c_str(), it->res.c_str()) != 0) {
 				cont++;
 				LOG_ERR(NULL, "ERROR: Resul: %s  Expected: %s\n", get.c_str(), it->res.c_str());
 			}
@@ -271,7 +271,7 @@ int test_hullConvex()
 					std::string coord_exp;
 					if (!readEFile.eof()) {
 						std::getline(readEFile, coord_exp);
-						if (coord_exp.compare(coord_get) != 0) {
+						if (strcasecmp(coord_exp.c_str(), coord_get.c_str()) != 0) {
 							cont++;
 							LOG_ERR(NULL, "ERROR: Result(%s) Expect(%s).\n", coord_get.c_str(), coord_exp.c_str());
 						}
@@ -390,7 +390,7 @@ int test_HTM_chull()
 					std::string trixel_exp;
 					if (!readEFile.eof()) {
 						std::getline(readEFile, trixel_exp);
-						if (trixel_exp.compare(*itn) != 0) {
+						if (strcasecmp((*itn).c_str(), trixel_exp.c_str()) != 0) {
 							cont++;
 							LOG_ERR(NULL, "ERROR: File(%s) Result(%s) Expect(%s).\n", (*it_f).c_str(), (*itn).c_str(), trixel_exp.c_str());
 						}
@@ -469,7 +469,7 @@ int test_HTM_circle()
 						std::string trixel_exp;
 						if (!readEFile.eof()) {
 							std::getline(readEFile, trixel_exp);
-							if (trixel_exp.compare(*itn) != 0) {
+							if (strcasecmp((*itn).c_str(), trixel_exp.c_str()) != 0) {
 								cont++;
 								LOG_ERR(NULL, "ERROR: File (%s) Result(%s) Expect(%s).\n", file_expect.c_str(), (*itn).c_str(), trixel_exp.c_str());
 							}

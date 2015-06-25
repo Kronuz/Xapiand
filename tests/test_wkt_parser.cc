@@ -51,7 +51,7 @@ int test_wkt_parser()
 						std::string trixel_exp;
 						if (!readEFile.eof()) {
 							std::getline(readEFile, trixel_exp);
-							if (trixel_exp.compare(*itn) != 0) {
+							if (strcasecmp(trixel_exp.c_str(), (*itn).c_str()) != 0) {
 								cont++;
 								LOG_ERR(NULL, "ERROR: File (%s) Result(%s) Expect(%s).\n", file_expect.c_str(), (*itn).c_str(), trixel_exp.c_str());
 							}
