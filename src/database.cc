@@ -1819,11 +1819,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 			}
 		}
 
-	} catch (const std::string &err) {
-		LOG_DATABASE_WRAP(this, "ERROR: %s\n", err.c_str());
-		return false;
-	} catch (const char *err) {
-		LOG_DATABASE_WRAP(this, "ERROR: %s\n", err);
+	} catch (const std::exception &err) {
+		LOG_DATABASE_WRAP(this, "ERROR: %s\n", err.what());
 		return false;
 	}
 
