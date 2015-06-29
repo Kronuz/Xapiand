@@ -987,64 +987,71 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 		prefix = DOCUMENT_CUSTOM_TERM_PREFIX;
 	}
 
-	bool array_geo = true;
 	int elements = 1;
+
+	// If the type in scheme is not array, scheme is updated.
 	if (terms->type == cJSON_Array) {
 		if (type == GEO_TYPE) throw MSG_Error("An array can not serialized as a Geo Spatial");
 
 		elements = cJSON_GetArraySize(terms);
 		cJSON *term = cJSON_GetArrayItem(terms, 0);
-		if (type == GEO_TYPE && term->type != cJSON_Array) {
-			array_geo = false;
-		} else {
-			cJSON *_type = cJSON_GetObjectItem(scheme, RESERVED_TYPE);
-			if (_type) {
-				if (std::string(_type->valuestring).find("array") == -1) {
-					std::string s_type;
-					if (spc.sep_types[0] == OBJECT_TYPE) {
-						s_type = "object/array/" + str_type(type);
-					} else {
-						s_type = "array/" + str_type(type);
-					}
-					cJSON_ReplaceItemInObject(scheme, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
+
+		if (term->type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
+
+		cJSON *_type = cJSON_GetObjectItem(scheme, RESERVED_TYPE);
+		if (_type) {
+			if (std::string(_type->valuestring).find("array") == -1) {
+				std::string s_type;
+				if (spc.sep_types[0] == OBJECT_TYPE) {
+					s_type = "object/array/" + str_type(type);
+				} else {
+					s_type = "array/" + str_type(type);
 				}
-			} else {
-				cJSON_AddStringToObject(scheme, RESERVED_TYPE, std::string("array/" + str_type(type)).c_str());
+				cJSON_ReplaceItemInObject(scheme, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
 			}
+		} else {
+			cJSON_AddStringToObject(scheme, RESERVED_TYPE, std::string("array/" + str_type(type)).c_str());
 		}
 	}
 
 	for (int j = 0; j < elements; j++) {
 		cJSON *term = (terms->type == cJSON_Array) ? cJSON_GetArrayItem(terms, j) : terms;
-		if (!array_geo) {
-			term = terms;
-			j += elements;
-		}
 
 		std::string term_v(cJSON_Print(term));
-		if (term->type == cJSON_String || term->type == cJSON_Array) {
+		if (term->type == cJSON_String) {
 			term_v.assign(term_v, 1, term_v.size() - 2);
+
+			// If it is not a boolean prefix and it's a string type the value is passed to lowercase.
+			if (type == STRING_TYPE && !strhasupper(name)) {
+				term_v = stringtolower(term_v);
+			}
 		} else if (term->type == cJSON_Number) {
 			term_v = std::to_string(term->valuedouble);
 		}
 		LOG_DATABASE_WRAP(this, "Term -> %s: %s\n", prefix.c_str(), term_v.c_str());
 
-		term_v = serialise(type, term_v);
-		if (term_v.size() == 0) {
-			throw "ERROR: " + name + ": " + term_v + " can not serialized";
-		}
+		if (type == GEO_TYPE) {
+			std::vector<std::string> terms = serialise_geo(term_v, true, 0.2);
+			std::vector<std::string>::const_iterator it(terms.begin());
+			for ( ; it != terms.end(); it++) {
+				if (spc.position >= 0) {
+					std::string nameterm(prefixed(*it, prefix));
+					doc.add_posting(nameterm, spc.position, spc.weight);
+					LOG_DATABASE_WRAP(this, "Posting: %s\n", repr(nameterm).c_str());
+				} else {
+					std::string nameterm(prefixed(*it, prefix));
+					doc.add_term(nameterm, spc.weight);
+					LOG_DATABASE_WRAP(this, "Term: %s\n", repr(nameterm).c_str());
+				}
+			}
+		} else {
+			term_v = serialise(type, term_v);
+			if (term_v.size() == 0) throw MSG_Error("%s: %s can not be serialized", name.c_str(), term_v.c_str());
 
-		if (spc.position >= 0) {
-			if (!prefix.empty() && type == GEO_TYPE) {
-				insert_terms_geo(term_v, &doc, prefix, spc.weight, spc.position);
-			} else {
+			if (spc.position >= 0) {
 				std::string nameterm(prefixed(term_v, prefix));
 				doc.add_posting(nameterm, spc.position, spc.weight);
 				LOG_DATABASE_WRAP(this, "Posting: %s\n", repr(nameterm).c_str());
-			}
-		} else {
-			if (!prefix.empty() && type == GEO_TYPE) {
-				insert_terms_geo(term_v, &doc, prefix, spc.weight, -1);
 			} else {
 				std::string nameterm(prefixed(term_v, prefix));
 				doc.add_term(nameterm, spc.weight);
@@ -1060,18 +1067,25 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 {
 	//LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!spc.store) return;
-	if (!spc.dynamic && !find) throw "This object is not dynamic";
+	if (!spc.dynamic && !find) throw MSG_Error("This object is not dynamic");
 
 	char type = spc.sep_types[2];
 	if (type == NO_TYPE) {
 		type = get_type(values, spc);
 		spc.type = type;
 	}
-	if (type == NO_TYPE) throw "The field's value " + name + " is ambiguous";
+
+	if (type == NO_TYPE) throw MSG_Error("The field's value %s is ambiguous", name.c_str());
+
+	if (type == GEO_TYPE) {
+		// Geo is looking for space regions, which are specified by terms so only
+		// terms are indexed there is no point looking for values.
+		index_terms(doc, values, spc, name, scheme, find);
+		return;
+	}
 
 	if (!find) {
 		if (spc.sep_types[2] == NO_TYPE) {
-
 			cJSON_AddStringToObject(scheme, RESERVED_TYPE, str_type(type).c_str());
 		}
 		cJSON_AddStringToObject(scheme, RESERVED_INDEX, "not analyzed");
@@ -1086,46 +1100,46 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 		slot = _slot->valueint;
 	}
 
-	StringList s;
-	bool array_geo = true;
 	int elements = 1;
+
+	// If the type in scheme is not array, scheme is updated.
 	if (values->type == cJSON_Array) {
 		if (type == GEO_TYPE) throw MSG_Error("An array can not serialized as a Geo Spatial");
 
 		elements = cJSON_GetArraySize(values);
-		cJSON *term = cJSON_GetArrayItem(values, 0);
-		if (type == GEO_TYPE && term->type != cJSON_Array) {
-			array_geo = false;
-		} else {
-			cJSON *_type = cJSON_GetObjectItem(scheme, RESERVED_TYPE);
-			if (_type) {
-				if (std::string(_type->valuestring).find("array") == -1) {
-					std::string s_type;
-					if (spc.sep_types[0] == OBJECT_TYPE) {
-						s_type = "object/array/" + str_type(type);
-					} else {
-						s_type = "array/" + str_type(type);
-					}
-					cJSON_ReplaceItemInObject(scheme, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
+		cJSON *value = cJSON_GetArrayItem(values, 0);
+
+		if (value->type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
+
+		cJSON *_type = cJSON_GetObjectItem(scheme, RESERVED_TYPE);
+		if (_type) {
+			if (std::string(_type->valuestring).find("array") == -1) {
+				std::string s_type;
+				if (spc.sep_types[0] == OBJECT_TYPE) {
+					s_type = "object/array/" + str_type(type);
+				} else {
+					s_type = "array/" + str_type(type);
 				}
-			} else {
-				cJSON_AddStringToObject(scheme, RESERVED_TYPE, std::string("array/" + str_type(type)).c_str());
+				cJSON_ReplaceItemInObject(scheme, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
 			}
+		} else {
+			cJSON_AddStringToObject(scheme, RESERVED_TYPE, std::string("array/" + str_type(type)).c_str());
 		}
 	}
+
+	StringList s;
+
 	for (int j = 0; j < elements; j++) {
 		cJSON *value = (values->type == cJSON_Array) ? cJSON_GetArrayItem(values, j) : values;
-		if (!array_geo) {
-			value = values;
-			j += elements;
-		}
+
 		std::string value_v = cJSON_Print(value);
-		if (value->type == cJSON_String || value->type == cJSON_Array) {
+		if (value->type == cJSON_String) {
 			value_v.assign(value_v, 1, value_v.size() - 2);
 		} else if (value->type == cJSON_Number) {
 			value_v = std::to_string(value->valuedouble);
 		}
 		LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name.c_str(), value_v.c_str());
+
 		std::string value_s = serialise(type, value_v);
 		if (value_s.empty()) {
 			throw MSG_Error("%s: %s can not serialized", name.c_str(), value_v.c_str());
