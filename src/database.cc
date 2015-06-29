@@ -2272,8 +2272,12 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		std::string field_name(query.c_str() + g[2].start, g[2].end - g[2].start);
 		std::string field_value(query.c_str() + g[3].start, g[3].end - g[3].start);
 		data_field_t field_t = get_data_field(field_name);
+
+		// Geo type variables
 		std::vector<std::string> trixels;
 		std::vector<std::string>::const_iterator it;
+		bool partials = DE_PARTIALS;
+		double error = DE_ERROR;
 
 		if (isRange(field_value)) {
 			switch (field_t.type) {
@@ -2363,6 +2367,11 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case GEO_TYPE:
 					prefix = field_t.prefix;
 					field_value.assign(field_value, 1, field_value.size() - 2);
+					if (field_t.accuracy.size() > 0) {
+						partials = (serialise_bool(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
+						error = (field_t.accuracy.size() >= 2) ? strtodouble(field_t.accuracy.at(1)) : DE_ERROR;
+					}
+					LOG(this, "Partials: %d  Error: %f\n", partials, error);
 					trixels = serialise_geo(field_value, true, 0.5);
 					it = trixels.begin();
 					field_value = "";
