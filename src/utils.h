@@ -25,6 +25,7 @@
 
 #include "xapiand.h"
 #include "md5.h"
+#include "wkt_parser.h"
 
 #include <xapian.h>
 

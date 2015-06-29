@@ -30,7 +30,7 @@
 #include <xapian.h>
 
 #include "cJSON.h"
-#include "wkt_parser.h"
+#include "utils.h"
 #include "fields.h"
 #include "multivalue.h"
 
