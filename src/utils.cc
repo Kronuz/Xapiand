@@ -767,43 +767,10 @@ std::string unserialise_date(const std::string &serialise_val)
 }
 
 
-std::string serialise_geo(const std::string &field_value)
+std::vector<std::string> serialise_geo(const std::string &field_value, bool partials, double error)
 {
-	Xapian::LatLongCoords coords;
-	double latitude, longitude;
-	int len = (int) field_value.size(), Ncoord = 0, offset = 0;
-	bool end = false;
-	group_t *g = NULL;
-	while (pcre_search(field_value.c_str(), len, offset, 0, COORDS_RE, &compiled_coords_re, &g) != -1) {
-		std::string parse(field_value, g[1].start, g[1].end - g[1].start);
-		latitude = strtodouble(parse);
-		parse.assign(field_value, g[2].start, g[2].end - g[2].start);
-		longitude = strtodouble(parse);
-		Ncoord++;
-		try {
-			coords.append(Xapian::LatLongCoord(latitude, longitude));
-		} catch (Xapian::Error &e) {
-			LOG_ERR(NULL, "Latitude or longitude out-of-range\n");
-			return "";
-		}
-		LOG(NULL, "Coord %d: %f, %f\n", Ncoord, latitude, longitude);
-		if (g[2].end == len) {
-			end = true;
-			break;
-		}
-		offset = g[2].end;
-	}
-
-	if (g) {
-		free(g);
-		g = NULL;
-	}
-
-	if (Ncoord == 0 || !end) {
-		LOG_ERR(NULL, "ERROR: %s must be an array of doubles [lat, lon, lat, lon, ...]\n", field_value.c_str());
-		return "";
-	}
-	return coords.serialise();
+	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
+	return ewkt.trixels;
 }
 
 
@@ -1385,8 +1352,6 @@ serialise(char field_type, const std::string &field_value)
 			return serialise_numeric(field_value);
 		case DATE_TYPE:
 			return serialise_date(field_value);
-		case GEO_TYPE:
-			return serialise_geo(field_value);
 		case BOOLEAN_TYPE:
 			return serialise_bool(field_value);
 		case STRING_TYPE:

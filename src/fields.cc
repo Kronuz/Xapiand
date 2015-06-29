@@ -51,7 +51,7 @@ LatLongFieldProcessor::operator()(const std::string &str)
 	*/
 
 	LOG(this, "Inside of LatLongFieldProcessor %s\n", str.c_str());
-	std::string serialise = serialise_geo(str);
+	std::string serialise = "";//serialise_geo(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand LatLongs specification '" + str + "'");
 	}

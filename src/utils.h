@@ -205,7 +205,7 @@ int look_cmd(const char *);
 std::string serialise_numeric(const std::string &field_value);
 std::string serialise_date(const std::string &field_value);
 std::string unserialise_date(const std::string &serialise_val);
-std::string serialise_geo(const std::string &field_value);
+std::vector<std::string> serialise_geo(const std::string &field_value, bool partials, double error);
 std::string unserialise_geo(const std::string &serialise_val);
 std::string serialise_bool(const std::string &field_value);
 bool lat_lon(const std::string &str, int *grv, int size, int offset);
