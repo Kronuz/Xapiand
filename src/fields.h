@@ -39,15 +39,6 @@ class NumericFieldProcessor : public Xapian::FieldProcessor {
 };
 
 
-class LatLongFieldProcessor : public Xapian::FieldProcessor {
-	std::string prefix;
-
-	public:
-		LatLongFieldProcessor(const std::string &prefix);
-		Xapian::Query operator()(const std::string &str);
-};
-
-
 class BooleanFieldProcessor : public Xapian::FieldProcessor {
 	std::string prefix;
 
@@ -63,16 +54,6 @@ class DateFieldProcessor : public Xapian::FieldProcessor {
 	public:
 		DateFieldProcessor(const std::string &prefix);
 		Xapian::Query operator()(const std::string &str);
-};
-
-class LatLongDistanceFieldProcessor: public Xapian::FieldProcessor {
-	std::string prefix;
-	std::string field;
-	double coords_[3];
-
-public:
-	Xapian::Query operator()(const std::string &str);
-	LatLongDistanceFieldProcessor(std::string prefix, std::string field);
 };
 
 

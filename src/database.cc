@@ -2170,7 +2170,7 @@ Database::search(query_t e)
 
 		LOG(this, "e.terms size: %d\n", e.terms.size());
 		std::vector<std::string>::const_iterator tit(e.terms.begin());
-		flags = Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
+		flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
 		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 		first = true;
@@ -2250,16 +2250,12 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
 	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
 	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
-	std::vector<std::unique_ptr<LatLongFieldProcessor>> gfps;
-	std::vector<std::unique_ptr<LatLongDistanceFieldProcessor>> gdfps;
 	std::vector<std::unique_ptr<Xapian::NumberValueRangeProcessor>> nvrps;
 	std::vector<std::unique_ptr<Xapian::StringValueRangeProcessor>> svrps;
 	std::vector<std::unique_ptr<DateTimeValueRangeProcessor>> dvrps;
 	NumericFieldProcessor *nfp;
 	DateFieldProcessor *dfp;
 	BooleanFieldProcessor *bfp;
-	LatLongFieldProcessor *gfp;
-	LatLongDistanceFieldProcessor *gdfp;
 	Xapian::NumberValueRangeProcessor *nvrp;
 	Xapian::StringValueRangeProcessor *svrp;
 	DateTimeValueRangeProcessor *dvrp;
@@ -2365,6 +2361,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case GEO_TYPE:
+					flags |= Xapian::QueryParser::FLAG_WILDCARD;
 					prefix = field_t.prefix;
 					field_value.assign(field_value, 1, field_value.size() - 2);
 					if (field_t.accuracy.size() > 0) {

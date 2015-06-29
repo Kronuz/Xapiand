@@ -39,45 +39,6 @@ NumericFieldProcessor::operator()(const std::string &str)
 }
 
 
-LatLongFieldProcessor::LatLongFieldProcessor(const std::string &prefix_): prefix(prefix_) {}
-
-
-Xapian::Query
-LatLongFieldProcessor::operator()(const std::string &str)
-{
-	/*
-	 Note: parser_query do not accepts .2,.1 needs start with a numer before the dot
-	 eg. this works!! (0.2,0.1)
-	*/
-
-	LOG(this, "Inside of LatLongFieldProcessor %s\n", str.c_str());
-	std::string serialise = "";//serialise_geo(str);
-	if (serialise.size() == 0) {
-		throw Xapian::QueryParserError("Didn't understand LatLongs specification '" + str + "'");
-	}
-	return Xapian::Query(prefix + serialise);
-}
-
-
-LatLongDistanceFieldProcessor::LatLongDistanceFieldProcessor(std::string prefix_, std::string field_): prefix(prefix_), field(field_) {}
-
-
-Xapian::Query
-LatLongDistanceFieldProcessor::operator()(const std::string &str)
-{
-	LOG(this, "Inside of LatLongDistanceFieldProcessor %s\n", str.c_str());
-	if (get_coords(str, coords_) == 0) {
-		Xapian::LatLongCoord centre(coords_[0], coords_[1]);
-		LOG(this, "Longitud: %f latitud: %f max_range: %f meters\n", coords_[0],coords_[1], coords_[2]);
-		Xapian::GreatCircleMetric metric;
-
-		Xapian::LatLongDistancePostingSource ps(get_slot(field), centre, metric, coords_[2]);
-		return Xapian::Query(&ps);
-	}
-	throw Xapian::QueryParserError("LatLongDistanceFieldProcessor Didn't understand %s", str.c_str());
-}
-
-
 BooleanFieldProcessor::BooleanFieldProcessor(const std::string &prefix_): prefix(prefix_) {}
 
 
