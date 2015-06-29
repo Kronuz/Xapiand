@@ -2151,7 +2151,7 @@ Database::search(query_t e)
 
 		LOG(this, "e.terms size: %d\n", e.terms.size());
 		std::vector<std::string>::const_iterator tit(e.terms.begin());
-		flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
+		flags = Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
 		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 		first = true;
@@ -2159,6 +2159,7 @@ Database::search(query_t e)
 			srch =  _search(*tit, flags, false, "", e.unique_doc);
 			if (first) {
 				queryT = srch.query;
+				first = false;
 			} else {
 				queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, srch.query);
 			}
@@ -2252,6 +2253,8 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		std::string field_name(query.c_str() + g[2].start, g[2].end - g[2].start);
 		std::string field_value(query.c_str() + g[3].start, g[3].end - g[3].start);
 		data_field_t field_t = get_data_field(field_name);
+		std::vector<std::string> trixels;
+		std::vector<std::string>::const_iterator it;
 
 		if (isRange(field_value)) {
 			switch (field_t.type) {
@@ -2305,9 +2308,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					if (field_name.size() != 0) {
 						if(!unique_doc) {
 							prefix = field_t.prefix;
-							if (isupper(field_value.at(0))) {
-								prefix = prefix + ":";
-							}
 						} else {
 							prefix = "Q";
 						}
@@ -2315,6 +2315,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						LOG(this, "prefix calculated: %s\n", prefix.c_str());
 						if (strhasupper(field_name)) {
 							LOG(this, "Boolean Prefix\n");
+							if (isupper(field_value.at(0))) {
+								prefix = prefix + ":";
+							}
 							queryparser.add_boolean_prefix(field_name, prefix);
 						} else {
 							LOG(this, "Prefix\n");
@@ -2340,26 +2343,22 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					break;
 				case GEO_TYPE:
 					prefix = field_t.prefix;
-					if (isLatLongDistance(field_value)) {
-						gdfp = new LatLongDistanceFieldProcessor(prefix, field_name);
-						gdfps.push_back(std::unique_ptr<LatLongDistanceFieldProcessor>(gdfp));
-						if (strhasupper(field_name)) {
-							LOG(this, "Boolean Prefix\n");
-							queryparser.add_boolean_prefix(field_name, gdfp);
-						} else {
-							LOG(this, "Prefix\n");
-							queryparser.add_prefix(field_name, gdfp);
+					field_value.assign(field_value, 1, field_value.size() - 2);
+					trixels = serialise_geo(field_value, true, 0.5);
+					it = trixels.begin();
+					field_value = "";
+					for ( ; it != trixels.end(); it++) {
+						field_value += field_name_dot + (*it) + (((*it).size() == (HTM_MAX_LEVEL + 2)) ? " " : "* ");
+						for (int i = (*it).size() - 1; i > 1; i--) {
+							field_value += field_name_dot + std::string(*it, 0, i) + " ";
 						}
+					}
+					if (strhasupper(field_name)) {
+						LOG(this, "Boolean Prefix\n");
+						queryparser.add_boolean_prefix(field_name, prefix);
 					} else {
-						gfp = new LatLongFieldProcessor(prefix);
-						gfps.push_back(std::unique_ptr<LatLongFieldProcessor>(gfp));
-						if (strhasupper(field_name)) {
-							LOG(this, "Boolean Prefix\n");
-							queryparser.add_boolean_prefix(field_name, gfp);
-						} else {
-							LOG(this, "Prefix\n");
-							queryparser.add_prefix(field_name, gfp);
-						}
+						LOG(this, "Prefix\n");
+						queryparser.add_prefix(field_name, prefix);
 					}
 					break;
 				case BOOLEAN_TYPE:
@@ -2376,11 +2375,12 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					break;
 			}
 		}
+
 		if (first_time) {
-			querystring =  field_name_dot + field_value;
+			querystring = (field_t.type == GEO_TYPE) ? field_value : (field_name_dot + field_value);
 			first_time = false;
 		} else {
-			querystring += " " + field_name_dot + field_value;
+			querystring += (field_t.type == GEO_TYPE) ? field_value : (" " + field_name_dot + field_value);
 		}
 	}
 
