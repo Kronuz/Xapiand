@@ -21,7 +21,7 @@
  */
 
 
-#include "HTM.h"
+#include "htm.h"
 
 
 // Constructor for HTM earth.
