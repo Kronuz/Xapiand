@@ -29,6 +29,7 @@
 #include <string>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 
 struct Node {
 	std::string name;
