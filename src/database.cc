@@ -1888,7 +1888,7 @@ Database::split_fields(const std::string &field_name)
 data_field_t
 Database::get_data_field(const std::string &field_name)
 {
-	data_field_t res = {0xffffffff, "", NO_TYPE};
+	data_field_t res = {0xffffffff, "", NO_TYPE, std::vector<std::string>()};
 
 	if (field_name.empty()) {
 		return res;
@@ -1921,6 +1921,22 @@ Database::get_data_field(const std::string &field_name)
 		}
 		_aux = cJSON_GetObjectItem(properties, RESERVED_PREFIX);
 		res.prefix = (_aux) ? _aux->valuestring : get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, res.type);
+		_aux = cJSON_GetObjectItem(properties, RESERVED_ACCURACY);
+		if (_aux) {
+			if (_aux->type == cJSON_Array) {
+				int elements = cJSON_GetArraySize(_aux);
+				for (int i = 0; i < elements; i++) {
+					cJSON *acc = cJSON_GetArrayItem(_aux, i);
+					if (acc->type == cJSON_String) {
+						res.accuracy.push_back(acc->valuestring);
+					} else if (acc->type == cJSON_Number) {
+						res.accuracy.push_back(std::to_string(acc->valuedouble));
+					}
+				}
+			} else {
+				res.accuracy.push_back(_aux->valuestring);
+			}
+		}
 	}
 
 	return res;

@@ -172,6 +172,7 @@ typedef struct data_field_s {
 	unsigned int slot;
 	std::string prefix;
 	char type;
+	std::vector<std::string> accuracy;
 } data_field_t;
 
 typedef struct parser_query_s {
