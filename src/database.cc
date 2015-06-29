@@ -1031,7 +1031,13 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 		LOG_DATABASE_WRAP(this, "Term -> %s: %s\n", prefix.c_str(), term_v.c_str());
 
 		if (type == GEO_TYPE) {
-			std::vector<std::string> terms = serialise_geo(term_v, true, 0.2);
+			bool partials = DE_PARTIALS;
+			double error = DE_ERROR;
+			if (!spc.accuracy.empty()) {
+				partials = (serialise_bool(spc.accuracy.at(0)).compare("f") == 0) ? false : true;
+				error = (spc.accuracy.size() >= 2) ? strtodouble(spc.accuracy.at(1)) : DE_ERROR;
+			}
+			std::vector<std::string> terms = serialise_geo(term_v, partials, error);
 			std::vector<std::string>::const_iterator it(terms.begin());
 			for ( ; it != terms.end(); it++) {
 				if (spc.position >= 0) {
