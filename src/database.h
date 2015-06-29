@@ -77,6 +77,9 @@
 #define DB_INIT_REF 8	 // Initializes the writable index in the database .ref
 #define DB_VOLATILE 16   // Always drop the database from the database pool as soon as possible
 
+#define DE_PARTIALS true // Default partials for index and search geospatials.
+#define DE_ERROR 0.2 // Default error for index and search geospatials.
+
 class DatabasePool;
 class DatabasesLRU;
 class DatabaseQueue;
