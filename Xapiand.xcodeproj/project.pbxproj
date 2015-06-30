@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4630BEE41B42E88D00351058 /* geometry.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEDE1B42E88D00351058 /* geometry.cc */; };
+		4630BEE51B42E88D00351058 /* htm.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE01B42E88D00351058 /* htm.cc */; };
+		4630BEE61B42E88D00351058 /* wkt_parser.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE21B42E88D00351058 /* wkt_parser.cc */; };
 		C39AE0631B2F627E00203139 /* cJSON_Utils.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0351B2F627E00203139 /* cJSON_Utils.c */; };
 		C39AE0641B2F627E00203139 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0371B2F627E00203139 /* cJSON.c */; };
 		C39AE0651B2F627E00203139 /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0391B2F627E00203139 /* client_base.cc */; };
@@ -44,6 +47,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4630BEDE1B42E88D00351058 /* geometry.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = geometry.cc; path = src/geometry.cc; sourceTree = "<group>"; };
+		4630BEDF1B42E88D00351058 /* geometry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = geometry.h; path = src/geometry.h; sourceTree = "<group>"; };
+		4630BEE01B42E88D00351058 /* htm.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = htm.cc; path = src/htm.cc; sourceTree = "<group>"; };
+		4630BEE11B42E88D00351058 /* htm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = htm.h; path = src/htm.h; sourceTree = "<group>"; };
+		4630BEE21B42E88D00351058 /* wkt_parser.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wkt_parser.cc; path = src/wkt_parser.cc; sourceTree = "<group>"; };
+		4630BEE31B42E88D00351058 /* wkt_parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = wkt_parser.h; path = src/wkt_parser.h; sourceTree = "<group>"; };
 		C39AE0351B2F627E00203139 /* cJSON_Utils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cJSON_Utils.c; path = src/cJSON_Utils.c; sourceTree = "<group>"; };
 		C39AE0361B2F627E00203139 /* cJSON_Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cJSON_Utils.h; path = src/cJSON_Utils.h; sourceTree = "<group>"; };
 		C39AE0371B2F627E00203139 /* cJSON.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cJSON.c; path = src/cJSON.c; sourceTree = "<group>"; };
@@ -109,6 +118,12 @@
 		E5CEBCBD1A99C89000CD151F = {
 			isa = PBXGroup;
 			children = (
+				4630BEDE1B42E88D00351058 /* geometry.cc */,
+				4630BEDF1B42E88D00351058 /* geometry.h */,
+				4630BEE01B42E88D00351058 /* htm.cc */,
+				4630BEE11B42E88D00351058 /* htm.h */,
+				4630BEE21B42E88D00351058 /* wkt_parser.cc */,
+				4630BEE31B42E88D00351058 /* wkt_parser.h */,
 				C39AE0781B2F62D700203139 /* cartesian.cc */,
 				C39AE0791B2F62D700203139 /* cartesian.h */,
 				C39AE0351B2F627E00203139 /* cJSON_Utils.c */,
@@ -228,10 +243,13 @@
 				C39AE0771B2F627E00203139 /* xapiand.cc in Sources */,
 				C39AE07D1B2F62D700203139 /* exception.cc in Sources */,
 				C39AE06F1B2F627E00203139 /* md5.cc in Sources */,
+				4630BEE51B42E88D00351058 /* htm.cc in Sources */,
 				C39AE0711B2F627E00203139 /* replicator.cc in Sources */,
 				C39AE06A1B2F627E00203139 /* endpoint.cc in Sources */,
 				C39AE0671B2F627E00203139 /* client_http.cc in Sources */,
 				C39AE0721B2F627E00203139 /* server.cc in Sources */,
+				4630BEE61B42E88D00351058 /* wkt_parser.cc in Sources */,
+				4630BEE41B42E88D00351058 /* geometry.cc in Sources */,
 				C39AE07C1B2F62D700203139 /* cartesian.cc in Sources */,
 				C39AE0761B2F627E00203139 /* utils.cc in Sources */,
 				C39AE06D1B2F627E00203139 /* length.cc in Sources */,

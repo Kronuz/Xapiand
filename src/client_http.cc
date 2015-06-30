@@ -961,7 +961,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 						endpoints.insert(*it_endp);
 					}
 				}
-				LOG_CONN_WIRE(this,"Endpoint: -> %s\n", endpoint.as_string().c_str());
+				LOG_CONN_WIRE(this, "Endpoint: -> %s\n", endpoints.as_string().c_str());
 
 				retval = url_path(path_buf.c_str(), path_size, &p);
 			}
