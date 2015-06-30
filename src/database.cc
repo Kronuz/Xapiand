@@ -2539,14 +2539,14 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 	if (!e.order.empty()) {
 		sorter = new Xapian::MultiValueKeyMaker();
 		std::vector<std::string>::const_iterator oit(e.order.begin());
-		for (; oit != e.order.end(); oit++) {
+		for ( ; oit != e.order.end(); oit++) {
 			if (StartsWith(*oit, "-")) {
 				decreasing = true;
-				field.assign(*oit,1,(*oit).size() - 1);
+				field.assign(*oit, 1, (*oit).size() - 1);
 				sorter->add_value(get_slot(field), decreasing);
 			} else if (StartsWith(*oit, "+")) {
 				decreasing = false;
-				field.assign(*oit,1,(*oit).size()-1);
+				field.assign(*oit, 1, (*oit).size() - 1);
 				sorter->add_value(get_slot(field), decreasing);
 			} else {
 				decreasing = false;
