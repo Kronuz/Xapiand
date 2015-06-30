@@ -429,8 +429,8 @@ HTM::run()
 void
 HTM::saveRangeID(uInt64 id, const std::string &name)
 {
-	int i, mask;
-	uInt64 min, max;
+    int mask;
+    uInt64 min, max;
 
 	short level = name.size() - 2;
 	if (level < max_level) {
@@ -610,7 +610,7 @@ HTM::writePython3D(const std::string &file)
 {
 	std::ofstream fs(file);
 	std::string x("x = ["), y("y = ["), z("z = [");
-	int numCorners = region.corners.size() - 1;
+	int numCorners = (int)region.corners.size() - 1;
 
 	fs << "from mpl_toolkits.mplot3d import Axes3D\n";
 	fs << "from mpl_toolkits.mplot3d.art3d import Poly3DCollection\n";
@@ -695,7 +695,7 @@ HTM::writePython3D(const std::string &file, std::vector<Geometry> &g, std::vecto
 	std::vector<Geometry>::const_iterator it_g(g.begin());
 	for ( ;it_g != g.end(); it_g++) {
 		std::string x("x = ["), y("y = ["), z("z = [");
-		int numCorners = (*it_g).corners.size() - 1;
+		int numCorners = (int)(*it_g).corners.size() - 1;
 		if (numCorners >= 2) {
 			for (int i = 0; i < numCorners; i++) {
 				char vx[DIGITS];

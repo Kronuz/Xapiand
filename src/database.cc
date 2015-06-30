@@ -1952,7 +1952,6 @@ Database::get_type(cJSON *field, specifications_t &spc)
 		int num_ele = cJSON_GetArraySize(field);
 		aux = cJSON_GetArrayItem(field, 0);
 		type = aux->type;
-		bool meet_range = true;
 		if (type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
 		for (int i = 1; i < num_ele; i++) {
 			aux = cJSON_GetArrayItem(field, i);
@@ -2374,7 +2373,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					field_value = "";
 					for ( ; it != trixels.end(); it++) {
 						field_value += field_name_dot + (*it) + (((*it).size() == (HTM_MAX_LEVEL + 2)) ? " " : "* ");
-						for (int i = (*it).size() - 1; i > 1; i--) {
+						for (int i = (int)(*it).size() - 1; i > 1; i--) {
 							field_value += field_name_dot + std::string(*it, 0, i) + " ";
 						}
 					}

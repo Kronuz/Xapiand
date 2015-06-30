@@ -417,9 +417,9 @@ void BinaryClient::repl_set_db_filedata(const std::string & message)
 void BinaryClient::repl_set_db_footer(const std::string & message)
 {
 	LOG(this, "BinaryClient::repl_set_db_footer\n");
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-	size_t revision = decode_length(&p, p_end);
+	// const char *p = message.data();
+	// const char *p_end = p + message.size();
+	// size_t revision = decode_length(&p, p_end);
 	// Indicates the end of a DB copy operation, signal switch
 
 	Endpoints endpoints_tmp;

@@ -241,10 +241,6 @@ EWKT_Parser::parse_multipolygon(std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_point(std::string &specification)
 {
-	group_t *gr = NULL;
-	int len = (int)specification.size();
-	int start = 0;
-
 	Constraint c;
 	Geometry g(c);
 	HTM _htm(partials, error, g);
@@ -467,7 +463,7 @@ EWKT_Parser::xor_trixels(std::vector<std::string> &txs1, std::vector<std::string
 		std::vector<std::string>::iterator it2(txs2.begin());
 		bool no_changes = true;
 		for ( ;it2 != txs2.end(); ) {
-			int s1 = (*it1).size(), s2 = (*it2).size();
+			int s1 = (int)(*it1).size(), s2 = (int)(*it2).size();
 			if (s1 >= s2 && (*it1).find(*it2) == 0) {
 				if (s1 == s2) {
 					txs1.erase(it1);
@@ -515,7 +511,7 @@ EWKT_Parser::or_trixels(std::vector<std::string> &txs1, std::vector<std::string>
 		std::vector<std::string>::iterator it2(txs2.begin());
 		bool no_changes = true;
 		for ( ;it2 != txs2.end(); ) {
-			int s1 = (*it1).size(), s2 = (*it2).size();
+			int s1 = (int)(*it1).size(), s2 = (int)(*it2).size();
 			if (s1 >= s2 && (*it1).find(*it2) == 0) {
 				std::vector<std::string> txs_aux = get_trixels(*it2, s1 - s2, *it1);
 				txs1.erase(it1);
@@ -551,7 +547,7 @@ EWKT_Parser::and_trixels(std::vector<std::string> &txs1, std::vector<std::string
 	for ( ;it1 != txs1.end(); it1++) {
 		std::vector<std::string>::iterator it2(txs2.begin());
 		for ( ;it2 != txs2.end();) {
-			int s1 = (*it1).size(), s2 = (*it2).size();
+			int s1 = (int)(*it1).size(), s2 = (int)(*it2).size();
 			if (s1 >= s2 && (*it1).find(*it2) == 0) {
 				std::vector<std::string> txs_aux = get_trixels(*it2, s1 - s2, *it1);
 				res.push_back(*it1);
@@ -618,7 +614,7 @@ EWKT_Parser::get_trixels(std::string &father, int depth, std::string &son)
 bool is_like_EWKT(const char *str)
 {
 	group_t *gr = NULL;
-	int len = strlen(str);
+	int len = (int)strlen(str);
 	int ret = pcre_search(str, len, 0, 0, FIND_GEOMETRY_RE, &compiled_find_geometry_re, &gr);
 	if (ret != -1 && len == gr[0].end - gr[0].start) {
 		if (gr) {

@@ -99,7 +99,7 @@ Geometry::Geometry(std::vector<Cartesian> &v)
 	convexHull(v, points_convex);
 
 	// The convex is formed in counterclockwise.
-	int i, next_i, len = points_convex.size();
+	int i, next_i, len = (int)points_convex.size();
 	Cartesian constraint;
 
 	if (len < 3) throw MSG_Error("Convex Hull not found");
@@ -184,7 +184,7 @@ Geometry::compare(Cartesian &a, Cartesian &b)
 // Return a convex hull of a set of points using Graham Scan Algorithm.
 void
 Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &points_convex) {
-	int len = points.size();
+	int len = (int)points.size();
 
 	if (len < 3) throw MSG_Error("Polygon should have al least three corners");
 
@@ -212,7 +212,7 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 
 	// Sort the n - 1 elements in ascending angle.
 	P0 = points.at(0);
-	quickSort(points, 1, points.size() - 1);
+	quickSort(points, 1, (int)points.size() - 1);
 
 	// Deleting duplicates.
 	std::vector<Cartesian>::iterator it(points.begin());
@@ -224,7 +224,7 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 		it++;
 	}
 
-	len = points.size();
+	len = (int)points.size();
 
 	// Points convex
 	points_convex.push_back(P0);
@@ -294,7 +294,7 @@ Geometry::partition(std::vector<Cartesian> &pts, int first, int last)
 double
 Geometry::areaPolygon()
 {
-	int len = corners.size();
+	int len = (int)corners.size();
 	double D = 0;
 	double I = 0;
 	for (int i = 0; i < len; i++) {
@@ -313,7 +313,7 @@ Cartesian
 Geometry::centroidPolygon()
 {
 	double x = 0, y = 0, z = 0;
-	int len = corners.size();
+	int len = (int)corners.size();
 	std::vector<Cartesian>::const_iterator it = corners.begin();
 	for ( ; it != corners.end(); it++) {
 		x += (*it).x;

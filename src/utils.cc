@@ -175,7 +175,7 @@ int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries)
 
 	int tcp_backlog = XAPIAND_TCP_BACKLOG;
 	int optval = 1;
-	struct linger ling = {0, 0};
+	// struct linger ling = {0, 0};
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		LOG_ERR(NULL, "ERROR: %s socket: %s\n", type, strerror(errno));
@@ -291,7 +291,7 @@ int connect_tcp(const char *hostname, const char *servname)
 	int sock;
 
 	int optval = 1;
-	struct linger ling = {0, 0};
+	// struct linger ling = {0, 0};
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		LOG_ERR(NULL, "ERROR: cannot create binary connection: %s\n", strerror(errno));

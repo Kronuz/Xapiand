@@ -153,7 +153,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 			const char *ptr = buf + 3;
 			const char *end = buf + received;
-			size_t decoded;
+			// size_t decoded;
 
 			std::string remote_cluster_name;
 			if (unserialise_string(remote_cluster_name, &ptr, end) == -1 || remote_cluster_name.empty()) {
@@ -168,7 +168,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 			Node node;
 			Node remote_node;
-			Database *database = NULL;
+			// Database *database = NULL;
 			std::string index_path;
 			std::string node_name;
 			size_t mastery_level;
