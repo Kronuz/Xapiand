@@ -626,15 +626,19 @@ cJSON* XapiandManager::get_stats_time(const std::string &time_req)
 				second_time.minute = 0;
 				second_time.second = 0;
 			}
+
 			if (g) {
 				free(g);
 				g = NULL;
 			}
+
 			return get_stats_json(first_time, second_time);
-		} else {
-			cJSON_AddStringToObject(root_stats, "Error in time argument input", "Incorrect input.");
-			return root_stats;
 		}
+	}
+
+	if (g) {
+		free(g);
+		g = NULL;
 	}
 
 	cJSON_AddStringToObject(root_stats, "Error in time argument input", "Incorrect input.");

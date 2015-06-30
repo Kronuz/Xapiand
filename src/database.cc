@@ -2019,12 +2019,20 @@ Database::set_types(const std::string &type, char sep_types[])
 			}
 			sep_types[2] = std::string(type.c_str(), gr[3].start, gr[3].end - gr[3].start).at(0);
 		}
+
 		if (gr) {
 			free(gr);
 			gr = NULL;
 		}
+
 		return true;
 	}
+
+	if (gr) {
+		free(gr);
+		gr = NULL;
+	}
+
 	return false;
 }
 
@@ -2303,6 +2311,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					queryparser.add_valuerangeprocessor(dvrp);
 					break;
 				default:
+					if (g) {
+						free(g);
+						g = NULL;
+					}
 					throw Xapian::QueryParserError("This type of Data has no support for range search.\n");
 			}
 		} else {
@@ -2347,6 +2359,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					prefix = field_t.prefix;
 					field_value = timestamp_date(field_value);
 					if (field_value.size() == 0) {
+						if (g) {
+							free(g);
+							g = NULL;
+						}
 						throw Xapian::QueryParserError("Didn't understand date field name's specification: '" + field_name + "'");
 					}
 					dfp = new DateFieldProcessor(prefix);
@@ -2408,6 +2424,11 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		}
 	}
 
+	if (g) {
+		free(g);
+		g = NULL;
+	}
+
 	if (offset != len) {
 		throw Xapian::QueryParserError("Query '" + query + "' contains errors.\n" );
 	}
@@ -2423,11 +2444,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		queryparser.set_database(*db);
 		srch.query = queryparser.parse_query(querystring, flags);
 		srch.suggested_query.push_back(queryparser.get_corrected_query_string());
-	}
-
-	if (g) {
-		free(g);
-		g = NULL;
 	}
 
 	return srch;

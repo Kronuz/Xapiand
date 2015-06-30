@@ -949,6 +949,10 @@ std::string timestamp_date(const std::string &str)
 		}
 
 		if (!validate_date(n)) {
+			if (gr) {
+				free(gr);
+				gr = NULL;
+			}
 			return "";
 		}
 
@@ -965,15 +969,21 @@ std::string timestamp_date(const std::string &str)
 				offset = gr[0].end;
 				calculate_date(n, std::string(date_math, gr[1].start, gr[1].end - gr[1].start), std::string(date_math, gr[2].start, gr[2].end - gr[2].start));
 			}
-			if (gr) {
-				free(gr);
-				gr = NULL;
-			}
 			if (offset != len) {
+				if (gr) {
+					free(gr);
+					gr = NULL;
+				}
 				LOG(NULL, "ERROR: Date Math is used incorrectly.\n");
 				return "";
 			}
 		}
+
+		if (gr) {
+			free(gr);
+			gr = NULL;
+		}
+
 		time_t tt = 0;
 		struct tm *timeinfo = gmtime(&tt);
 		timeinfo->tm_year   = n[0] - 1900;
@@ -1044,14 +1054,9 @@ int get_coords(const std::string &str, double *coords)
 {
 	std::stringstream ss;
 	group_t *g = NULL;
-	int offset = 0, len = (int)str.size();
-	int ret = pcre_search(str.c_str(), len, offset, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &g);
-	while (ret != -1 && (g[0].end - g[0].start) == len) {
-		offset = g[0].end;
-		/*LOG(NULL,"group[1] %s\n" , std::string(str.c_str() + g[1].start, g[1].end - g[1].start).c_str());
-		 LOG(NULL,"group[2] %s\n" , std::string(str.c_str() + g[2].start, g[2].end - g[2].start).c_str());
-		 LOG(NULL,"group[3] %s\n" , std::string(str.c_str() + g[3].start, g[3].end - g[3].start).c_str());*/
-		ss.clear();
+	int len = (int)str.size();
+	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &g);
+	if (ret != -1 && (g[0].end - g[0].start) == len) {
 		ss << std::string(str.c_str() + g[1].start, g[1].end - g[1].start);
 		ss >> coords[0];
 		ss.clear();
@@ -1078,8 +1083,20 @@ int get_coords(const std::string &str, double *coords)
 				coords[2] *= 0.001;
 			}
 		}
+
+		if (g) {
+			free(g);
+			g = NULL;
+		}
+
 		return 0;
 	}
+
+	if (g) {
+		free(g);
+		g = NULL;
+	}
+
 	return -1;
 }
 
@@ -1088,13 +1105,16 @@ bool isRange(const std::string &str)
 {
 	group_t *gr = NULL;
 	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re , &gr);
+
+	if (gr) {
+		free(gr);
+		gr = NULL;
+	}
+
 	if (ret != -1) {
-		if (gr) {
-			free(gr);
-			gr = NULL;
-		}
 		return true;
 	}
+
 	return false;
 }
 
@@ -1111,6 +1131,12 @@ bool isLatLongDistance(const std::string &str)
 		}
 		return true;
 	}
+
+	if (gr) {
+		free(gr);
+		gr = NULL;
+	}
+
 	return false;
 }
 
@@ -1127,6 +1153,12 @@ bool isNumeric(const std::string &str)
 		}
 		return true;
 	}
+
+	if (g) {
+		free(g);
+		g = NULL;
+	}
+
 	return false;
 }
 
@@ -1445,19 +1477,36 @@ void fill_zeros_stats_sec(int start, int end)
 
 bool Is_id_range(std::string &ids)
 {
-	int len = (int) ids.size(), offset = 0;
+	int len = (int)ids.size(), offset = 0;
 	group_t *g = NULL;
 	while ((pcre_search(ids.c_str(), len, offset, 0, RANGE_ID_RE, &compiled_range_id_re, &g)) != -1) {
 		offset = g[0].end;
 		if (g[1].end - g[1].start && g[2].end - g[2].start) {
+			if (g) {
+				free(g);
+				g = NULL;
+			}
 			return true;
 		} else {
 			if(g[1].end - g[1].start){
+				if (g) {
+					free(g);
+					g = NULL;
+				}
 				return true;
 			} else {
+				if (g) {
+					free(g);
+					g = NULL;
+				}
 				return false;
 			}
 		}
+	}
+
+	if (g) {
+		free(g);
+		g = NULL;
 	}
 	return false;
 }
