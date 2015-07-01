@@ -2562,6 +2562,11 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 			Xapian::Enquire enquire = get_enquire(srch.query, sorter, &spies, e.is_nearest ? &e.nearest : NULL, e.is_fuzzy ? &e.fuzzy : NULL, &e.facets);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
+
+			// The range field processors are released.
+			nvrps.clear();
+			svrps.clear();
+			dvrps.clear();
 		} catch (const Xapian::DatabaseModifiedError &er) {
 			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 			if (t) reopen();
