@@ -1939,6 +1939,7 @@ Database::get_data_field(const std::string &field_name)
 		}
 	}
 
+	cJSON_Delete(scheme);
 	return res;
 }
 
@@ -2236,7 +2237,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		return srch;
 	}
 
-	int len = (int) query.size(), offset = 0;
+	int len = (int)query.size(), offset = 0;
 	group_t *g = NULL;
 	bool first_time = true;
 	std::string querystring;
