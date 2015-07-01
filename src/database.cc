@@ -2257,9 +2257,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
 	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
 	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
-	std::vector<std::unique_ptr<Xapian::NumberValueRangeProcessor>> nvrps;
-	std::vector<std::unique_ptr<Xapian::StringValueRangeProcessor>> svrps;
-	std::vector<std::unique_ptr<DateTimeValueRangeProcessor>> dvrps;
 	NumericFieldProcessor *nfp;
 	DateFieldProcessor *dfp;
 	BooleanFieldProcessor *bfp;

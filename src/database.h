@@ -97,6 +97,10 @@ public:
 	int mastery_level;
 	std::string checkout_revision;
 
+	std::vector<std::unique_ptr<Xapian::NumberValueRangeProcessor>> nvrps;
+	std::vector<std::unique_ptr<Xapian::StringValueRangeProcessor>> svrps;
+	std::vector<std::unique_ptr<DateTimeValueRangeProcessor>> dvrps;
+
 	Xapian::Database *db;
 
 	static pcre *compiled_find_field_re;
