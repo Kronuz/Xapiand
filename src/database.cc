@@ -560,12 +560,12 @@ void DatabasePool::init_ref(Endpoints endpoints)
 
 	if (ref_database) {
 		for (; endp_it != endpoints.end(); endp_it++) {
-			std::string unique_id = prefixed(get_slot_hex(endp_it->path),DOCUMENT_ID_TERM_PREFIX);
+			std::string unique_id = prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX);
 
 			Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 			if (p == ref_database->db->postlist_end(unique_id)) {
 				doc.add_boolean_term(unique_id);
-				doc.add_term(prefixed(endp_it->node_name,prefix_rf_node));
+				doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
 				doc.add_value(0, std::to_string(0));
 				ref_database->replace(unique_id, doc, true);
 			} else {
@@ -582,7 +582,7 @@ void DatabasePool::inc_ref(Endpoints endpoints)
 	endpoints_set_t::iterator endp_it = endpoints.begin();
 
 	for (; endp_it != endpoints.end(); endp_it++) {
-		std::string unique_id = prefixed(get_slot_hex(endp_it->path),DOCUMENT_ID_TERM_PREFIX);
+		std::string unique_id = prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX);
 
 		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 
@@ -590,16 +590,16 @@ void DatabasePool::inc_ref(Endpoints endpoints)
 			//QUESTION: Document not found - should add?
 			//QUESTION: This case could happen?
 			doc.add_boolean_term(unique_id);
-			doc.add_term(prefixed(endp_it->node_name,prefix_rf_node));
+			doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
 			doc.add_value(0, std::to_string(0));
 			ref_database->replace(unique_id, doc, true);
 		} else {
 			//Document found - reference increased
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
-			doc.add_term(prefixed(endp_it->node_name,prefix_rf_node));
+			doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
 			int nref = strtoint(doc.get_value(0));
-			doc.add_value(0, std::to_string(nref+1));
+			doc.add_value(0, std::to_string(nref + 1));
 			ref_database->replace(unique_id, doc, true);
 		}
 	}
@@ -613,20 +613,20 @@ void DatabasePool::dec_ref(Endpoints endpoints)
 
 	for (; endp_it != endpoints.end(); endp_it++) {
 
-		std::string unique_id = prefixed(get_slot_hex(endp_it->path),DOCUMENT_ID_TERM_PREFIX);
+		std::string unique_id = prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX);
 		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 
 		if (p != ref_database->db->postlist_end(unique_id)) {
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
-			doc.add_term(prefixed(endp_it->node_name,prefix_rf_node));
-			int nref = strtoint(doc.get_value(0))-1;
+			doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
+			int nref = strtoint(doc.get_value(0)) - 1;
 			doc.add_value(0, std::to_string(nref));
 			ref_database->replace(unique_id, doc, true);
 
 			if (nref == 0) {
 				//qmtx need a lock
-				pthread_cond_wait(&checkin_cond,&qmtx);
+				pthread_cond_wait(&checkin_cond, &qmtx);
 				delete_files(endp_it->path);
 			}
 		}
@@ -675,7 +675,7 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 			pthread_cond_broadcast(&queue->switch_cond);
 		}
 	} else {
-		LOG(this,"Inside switch_db not queue->count == queue->size()\n");
+		LOG(this, "Inside switch_db not queue->count == queue->size()\n");
 	}
 
 	pthread_mutex_unlock(&qmtx);
