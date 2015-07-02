@@ -285,8 +285,12 @@ void HttpClient::_head()
 		return;
 	}
 
-	queryparser.add_prefix("id", "Q");
-	Xapian::Query query = queryparser.parse_query(std::string("id:" + command));
+	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
+	if (isupper(command.at(0))) {
+		prefix += ":";
+	}
+	queryparser.add_prefix(RESERVED_ID, prefix);
+	Xapian::Query query = queryparser.parse_query(std::string(std::string(RESERVED_ID) + ":" + command));
 	Xapian::Enquire enquire(*database->db);
 	enquire.set_query(query);
 	Xapian::MSet mset = enquire.get_mset(0, 1);
@@ -308,7 +312,7 @@ void HttpClient::_head()
 
 	cJSON *root = cJSON_CreateObject();
 	if(found){
-		cJSON_AddNumberToObject(root,"id",docid);
+		cJSON_AddNumberToObject(root, RESERVED_ID, docid);
 		if (e.pretty) {
 			result = cJSON_Print(root);
 		} else {
@@ -318,7 +322,7 @@ void HttpClient::_head()
 		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 		write(result);
 	} else {
-		cJSON_AddStringToObject(root,"Error", "Document not found");
+		cJSON_AddStringToObject(root, "Error", "Document not found");
 		if (e.pretty) {
 			result = cJSON_Print(root);
 		} else {
