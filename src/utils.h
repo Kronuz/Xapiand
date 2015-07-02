@@ -48,7 +48,7 @@
 #define OBJECT_TYPE 'o'
 #define NO_TYPE ' '
 
-#define CMD_NUMBER 0
+#define CMD_ID 0
 #define CMD_SEARCH 1
 #define CMD_FACETS 2
 #define CMD_STATS 3

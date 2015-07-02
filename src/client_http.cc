@@ -253,7 +253,7 @@ void HttpClient::_head()
 	int cmd = _endpointgen(e,false);
 
 	switch (cmd) {
-		case CMD_NUMBER: break;
+		case CMD_ID: break;
 		case CMD_SEARCH:
 		case CMD_FACETS:
 		case CMD_STATS:
@@ -343,7 +343,7 @@ void HttpClient::_delete()
 	int cmd = _endpointgen(e,true);
 
 	switch (cmd) {
-		case CMD_NUMBER: break;
+		case CMD_ID: break;
 		case CMD_SEARCH:
 		case CMD_FACETS:
 		case CMD_STATS:
@@ -417,7 +417,7 @@ void HttpClient::_index()
 	int cmd = _endpointgen(e,true);
 
 	switch (cmd) {
-		case CMD_NUMBER: break;
+		case CMD_ID: break;
 		case CMD_SEARCH:
 		case CMD_FACETS:
 		case CMD_STATS:
@@ -504,7 +504,7 @@ void HttpClient::_patch()
 	int cmd = _endpointgen(e,true);
 
 	switch (cmd) {
-		case CMD_NUMBER: break;
+		case CMD_ID: break;
 		case CMD_SEARCH:
 		case CMD_FACETS:
 		case CMD_STATS:
@@ -624,7 +624,7 @@ void HttpClient::_search()
 	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
-		case CMD_NUMBER:
+		case CMD_ID:
 			e.query.push_back(std::string("id:" + command));
 			e.offset = 0;
 			e.limit = 1;
@@ -1131,7 +1131,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					}
 				}
 
-			} else if (cmd == CMD_NUMBER) {
+			} else if (cmd == CMD_ID) {
 				memset(&q, 0, sizeof(q));
 				if (url_qs("commit", query_buf.c_str(), query_size, &q) != -1) {
 					std::string pretty = serialise_bool(urldecode(q.offset, q.length));

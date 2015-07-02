@@ -1406,7 +1406,6 @@ serialise(char field_type, const std::string &field_value)
 
 int identify_cmd(std::string &commad)
 {
-	if (!is_digits(commad)) {
 		if (strcasecmp(commad.c_str(), "_search") == 0) {
 			return CMD_SEARCH;
 		} else if (strcasecmp(commad.c_str(), "_facets") == 0) {
@@ -1415,9 +1414,7 @@ int identify_cmd(std::string &commad)
 			return CMD_STATS;
 		} else if (strcasecmp(commad.c_str(), "_schema") == 0) {
 			return CMD_SCHEMA;
-		}
-		return CMD_UNKNOWN;
-	} else return CMD_NUMBER;
+		} else return CMD_ID;
 }
 
 
