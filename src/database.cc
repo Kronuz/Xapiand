@@ -2353,6 +2353,8 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						LOG(this, "Prefix\n");
 						queryparser.add_prefix(field_name, nfp);
 					}
+					if (field_value.at(0) == '-') field_value.at(0) = '_';
+					field_value = field_name_dot + field_value;
 					break;
 				case STRING_TYPE:
 					if (field_name.size() != 0) {
