@@ -2298,6 +2298,19 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					LOG(this, "Numeric Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
 					nvrps.push_back(std::unique_ptr<Xapian::NumberValueRangeProcessor>(nvrp));
 					queryparser.add_valuerangeprocessor(nvrp);
+					filter_term = get_numeric_term(field_value, field_t.accuracy, field_t.acc_prefix, prefixes);
+					if (!filter_term.empty()) {
+						it = prefixes.begin();
+						LOG(this, "Terms by accuracy\n");
+						for ( ; it != prefixes.end(); it++) {
+							nfp = new NumericFieldProcessor(*it);
+							nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
+							queryparser.add_prefix(*it, nfp);
+						}
+						field_value = filter_term + " AND " + field;
+					} else {
+						field_value = field;
+					}
 					break;
 				case STRING_TYPE:
 					if(!unique_doc) {
