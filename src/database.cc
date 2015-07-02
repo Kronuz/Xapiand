@@ -2165,7 +2165,7 @@ Database::search(query_t e)
 			}
 			sug_query.push_back(srch.suggested_query.back());
 		}
-		LOG(this, "e.query: %s\n", repr(queryQ.serialise()).c_str());
+		LOG(this, "e.query: %s\n", queryQ.get_description().c_str());
 
 
 		LOG(this, "e.partial size: %d\n", e.partial.size());
@@ -2184,7 +2184,7 @@ Database::search(query_t e)
 			}
 			sug_query.push_back(srch.suggested_query.back());
 		}
-		LOG(this, "e.partial: %s\n", repr(queryP.serialise()).c_str());
+		LOG(this, "e.partial: %s\n", queryP.get_description().c_str());
 
 
 		LOG(this, "e.terms size: %d\n", e.terms.size());
@@ -2203,7 +2203,7 @@ Database::search(query_t e)
 			}
 			sug_query.push_back(srch.suggested_query.back());
 		}
-		LOG(this, "e.terms: %s\n", repr(queryT.serialise()).c_str());
+		LOG(this, "e.terms: %s\n", queryT.get_description().c_str());
 
 		first = true;
 		if (e.query.size() != 0) {
@@ -2277,16 +2277,18 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 	while ((pcre_search(query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
 		offset = g[0].end;
+		std::string field(query.c_str() + g[0].start, g[0].end - g[0].start);
 		std::string field_name_dot(query.c_str() + g[1].start, g[1].end - g[1].start);
 		std::string field_name(query.c_str() + g[2].start, g[2].end - g[2].start);
 		std::string field_value(query.c_str() + g[3].start, g[3].end - g[3].start);
 		data_field_t field_t = get_data_field(field_name);
 
 		// Geo type variables
-		std::vector<std::string> trixels;
+		std::vector<std::string> trixels, prefixes;
 		std::vector<std::string>::const_iterator it;
 		bool partials = DE_PARTIALS;
 		double error = DE_ERROR;
+		std::string filter_term;
 
 		if (isRange(field_value)) {
 			switch (field_t.type) {
@@ -2307,6 +2309,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					svrps.push_back(std::unique_ptr<Xapian::StringValueRangeProcessor>(svrp));
 					LOG(this, "String Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
 					queryparser.add_valuerangeprocessor(svrp);
+					field_value = field_name_dot + field_value;
 					break;
 				case DATE_TYPE:
 					slot = field_t.slot;
@@ -2315,6 +2318,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					dvrps.push_back(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp));
 					LOG(this, "Date Slot: %u Field_name: %s\n", slot, field_name.c_str());
 					queryparser.add_valuerangeprocessor(dvrp);
+					field_value = field_name_dot + field_value;
 					break;
 				default:
 					if (g) {
@@ -2360,6 +2364,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 							queryparser.add_prefix(field_name, prefix);
 						}
 					}
+					field_value = field_name_dot + field_value;
 					break;
 				case DATE_TYPE:
 					prefix = field_t.prefix;
@@ -2380,6 +2385,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						LOG(this, "Prefix\n");
 						queryparser.add_prefix(field_name, dfp);
 					}
+					field_value = field_name_dot + field_value;
 					break;
 				case GEO_TYPE:
 					flags |= Xapian::QueryParser::FLAG_WILDCARD;
@@ -2423,10 +2429,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		}
 
 		if (first_time) {
-			querystring = (field_t.type == GEO_TYPE) ? field_value : (field_name_dot + field_value);
+			querystring = field_value;
 			first_time = false;
 		} else {
-			querystring += (field_t.type == GEO_TYPE) ? field_value : (" " + field_name_dot + field_value);
+			querystring += " " + field_value;
 		}
 	}
 
