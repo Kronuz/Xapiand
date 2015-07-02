@@ -30,8 +30,11 @@ NumericFieldProcessor::NumericFieldProcessor(const std::string &prefix_): prefix
 Xapian::Query
 NumericFieldProcessor::operator()(const std::string &str)
 {
-	LOG(this, "Numeric FP %s!!\n", str.c_str());
-	std::string serialise = serialise_numeric(str);
+	// For negative number, we receive _# and we serialise -#.
+	std::string serialise(str.c_str());
+	if (serialise.at(0) == '_') serialise.at(0) = '-';
+	LOG(this, "Numeric FP %s!!\n", serialise.c_str());
+	serialise = serialise_numeric(serialise);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand numeric specification '" + str + "'");
 	}
