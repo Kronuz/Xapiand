@@ -2255,9 +2255,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		}
 	}
 
-	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
-	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
-	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
 	NumericFieldProcessor *nfp;
 	DateFieldProcessor *dfp;
 	BooleanFieldProcessor *bfp;
@@ -2568,6 +2565,9 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 			nvrps.clear();
 			svrps.clear();
 			dvrps.clear();
+			nfps.clear();
+			dfps.clear();
+			bfps.clear();
 		} catch (const Xapian::DatabaseModifiedError &er) {
 			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 			if (t) reopen();
