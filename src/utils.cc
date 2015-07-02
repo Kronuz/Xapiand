@@ -899,6 +899,17 @@ double strtodouble(const std::string &str)
 }
 
 
+long long int strtolonglong(const std::string &str)
+{
+	long long int number;
+	std::stringstream ss;
+	ss << std::dec << str;
+	ss >> number;
+	ss.flush();
+	return number;
+}
+
+
 std::string timestamp_date(const std::string &str)
 {
 	int len = (int) str.size();
@@ -1598,4 +1609,111 @@ void move_files(std::string src, std::string dst)
 	if (rmdir(src.c_str()) != 0) {
 		LOG_ERR(NULL, "Directory %s could not be deleted\n", src.c_str());
 	}
+}
+
+
+// String tokenizer with str.
+std::vector<std::string> stringTokenizer(const std::string &str, const std::string &delimiter)
+{
+	std::vector<std::string> results;
+	size_t prev = 0, next = 0, len;
+
+	while ((next = str.find(delimiter, prev)) != std::string::npos) {
+		len = next - prev;
+		if (len > 0) {
+			results.push_back(str.substr(prev, len));
+		}
+		prev = next + delimiter.size();
+	}
+
+	if (prev < str.size()) {
+		results.push_back(str.substr(prev));
+	}
+
+	return results;
+}
+
+
+std::string get_numeric_term(const std::string &field_value, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::vector<std::string> &prefixes)
+{
+	struct TRANSFORM {
+		char operator() (char c) { return  (c == '-') ? '_' : c;}
+	};
+
+	std::string res;
+	std::vector<std::string> ranges = stringTokenizer(field_value, "..");
+	if (ranges.size() == 2) {
+		long long int start = strtolonglong(ranges.at(0));
+		long long int end = strtolonglong(ranges.at(1));
+		long long int size_r = end - start;
+
+		if (size_r < 0) return res;
+
+		std::vector<std::string>::const_iterator it(accuracy.begin());
+		std::vector<std::string>::const_iterator it_p(acc_prefix.begin());
+		long long int diff = size_r, diffN = LLONG_MIN;
+		std::string _prefixUP, _prefix;
+		long long int inc = 0, incUP = 0;
+		for ( ; it != accuracy.end(); it++, it_p++) {
+			long long int v = strtolonglong(*it), aux = size_r - v;
+			if (aux >= 0 && aux < diff) {
+				diff = aux;
+				inc = v;
+				_prefix = *it_p + ":";
+			} else if (aux < 0 && aux > diffN) {
+				diffN = aux;
+				incUP = v;
+				_prefixUP = *it_p + ":";
+			}
+		}
+
+		long long int startUP, endUP, num_tUP = 0;
+		if (incUP != 0) {
+			// It may be in the limit of two terms.
+			// For example 4900..5100  ==> (X:4000 OR X:5000) AND (X:4900 OR X:5100)
+			prefixes.push_back(std::string(_prefixUP.c_str(), 0, _prefixUP.size() - 1));
+			startUP = start - (start % incUP);
+			endUP = end - (end % incUP);
+			res = _prefixUP + std::to_string(startUP);
+			num_tUP++;
+			if (startUP != endUP) {
+				res = "(" + res + " OR " + _prefixUP + std::to_string(endUP) + ")";
+				num_tUP++;
+			}
+		}
+
+		if (inc == 0) {
+			std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
+			return res;
+		}
+
+		start = start - (start % inc);
+		end = end - (end % inc);
+		long long int num_terms = (end - start) / inc;
+		// If many terms are generated  or (A AND (A OR ...)) applying A only.
+		if (num_terms > 100 || (num_tUP == 1 && start == startUP)) {
+			std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
+			return res;
+		}
+
+		prefixes.push_back(std::string(_prefix.c_str(), 0, _prefix.size() - 1));
+		std::string or_terms("(" + _prefix + std::to_string(start));
+		for (long long int i = 1; i < num_terms; i++) {
+			long long int n_term = start + inc * i;
+			// (A AND (... OR A OR ...)) -> A
+			if (num_tUP == 1 && n_term == startUP) {
+				std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
+				return res;
+			}
+			or_terms += " OR " + _prefix + std::to_string(n_term);
+		}
+		or_terms += (start != end) ? " OR " + _prefix + std::to_string(end) + ")" : ")";
+
+		if (!or_terms.empty()) {
+			res += incUP != 0 ? " AND " + or_terms : or_terms;
+		}
+	}
+
+	std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
+	return res;
 }

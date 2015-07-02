@@ -488,7 +488,7 @@ EWKT_Parser::parse_geometry_intersection(std::string &data)
 }
 
 
-// String tokenizer.
+// String tokenizer by characters in delimiter.
 std::vector<std::string>
 EWKT_Parser::stringSplit(const std::string &str, const std::string &delimiter)
 {

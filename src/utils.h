@@ -26,6 +26,7 @@
 #include "xapiand.h"
 #include "md5.h"
 #include "wkt_parser.h"
+#include <limits.h>
 
 #include <xapian.h>
 
@@ -213,11 +214,13 @@ std::string serialise_bool(const std::string &field_value);
 bool lat_lon(const std::string &str, int *grv, int size, int offset);
 std::string stringtolower(const std::string &str);
 std::string stringtoupper(const std::string &str);
+std::vector<std::string> stringTokenizer(const std::string &str, const std::string &delimiter);
 unsigned int get_slot(const std::string &name);
 std::string prefixed(const std::string &term, const std::string &prefixO);
 unsigned int hex2int(const std::string &input);
 int strtoint(const std::string &str);
 double strtodouble(const std::string &str);
+long long int strtolonglong(const std::string &str);
 std::string timestamp_date(const std::string &str);
 std::string get_prefix(const std::string &name, const std::string &prefix, char type);
 std::string get_slot_hex(const std::string &name);
@@ -234,6 +237,7 @@ bool validate_date(int n[]);
 void calculate_date(int n[], const std::string &op, const std::string &units);
 std::string unserialise(char field_type, const std::string &field_name, const std::string &serialise_val);
 std::string serialise(char field_type, const std::string &field_value);
+std::string get_numeric_term(const std::string &field_value, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::vector<std::string> &prefixes);
 
 int identify_cmd(std::string &commad);
 bool is_digits(const std::string &str);
