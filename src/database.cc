@@ -2344,9 +2344,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 			switch (field_t.type) {
 				case NUMERIC_TYPE:
 					prefix = field_t.prefix;
-					if (isupper(field_value.at(0))) {
-						prefix = prefix + ":";
-					}
 					nfp = new NumericFieldProcessor(prefix);
 					nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
 					if (strhasupper(field_name)) {
