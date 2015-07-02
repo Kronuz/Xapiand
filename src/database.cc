@@ -1709,12 +1709,23 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	}
 
 	std::string document_id;
+	cJSON *subproperties = NULL;
 	if (_document_id.c_str()) {
 		//Make sure document_id is also a term (otherwise it doesn't replace an existing document)
 		doc.add_value(0, _document_id);
 		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
-		LOG_DATABASE_WRAP(this, "Slot: 0 id: %s  term: %s\n", _document_id.c_str(), document_id.c_str());
+		LOG_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s\n", _document_id.c_str(), document_id.c_str());
 		doc.add_boolean_term(document_id);
+
+		subproperties = cJSON_GetObjectItem(scheme, RESERVED_ID);
+		if (!subproperties) {
+			subproperties = cJSON_CreateObject();
+			cJSON_AddItemToObject(subproperties, "_type", cJSON_CreateString("string"));
+			cJSON_AddItemToObject(subproperties, "_index", cJSON_CreateString("not analyzed"));
+			cJSON_AddItemToObject(subproperties, "_slot", cJSON_CreateNumber(0));
+			cJSON_AddItemToObject(subproperties, "_prefix", cJSON_CreateString("Q"));
+			cJSON_AddItemToObject(properties, RESERVED_ID, subproperties);
+		}
 	} else {
 		LOG_ERR(this, "ERROR: Document must have an 'id'\n");
 		return false;
@@ -1743,7 +1754,6 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 		update_specifications(document, spc_now, properties);
 		specifications_t spc_bef = spc_now;
 
-		cJSON *subproperties = NULL;
 		if (document_texts) {
 			for (int i = 0; i < cJSON_GetArraySize(document_texts); i++) {
 				cJSON *texts = cJSON_GetArrayItem(document_texts, i);
