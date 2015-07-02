@@ -71,6 +71,9 @@
 #define OFFSPRING_UNION "__"
 #define LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
 
+//change prefix to Q only
+#define DOCUMENT_ID_TERM_PREFIX "Q"
+#define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
 #define DB_WRITABLE 1    // Opens as writable
 #define DB_SPAWN 2       // Automatically creates the database if it doesn't exist

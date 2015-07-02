@@ -31,10 +31,6 @@
 
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
-//change prefix to Q only
-#define DOCUMENT_ID_TERM_PREFIX "Q"
-#define DOCUMENT_CUSTOM_TERM_PREFIX "X"
-
 #define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
 #define FIND_TYPES_RE "(object/)?(array/)?(date|numeric|geospatial|boolean|string)|(object)"
 #define MAX_DOCS 100
