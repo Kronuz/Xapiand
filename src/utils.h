@@ -173,6 +173,7 @@ typedef struct data_field_s {
 	std::string prefix;
 	char type;
 	std::vector<std::string> accuracy;
+	std::vector<std::string> acc_prefix;
 } data_field_t;
 
 typedef struct parser_query_s {

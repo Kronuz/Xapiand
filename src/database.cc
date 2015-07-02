@@ -1158,14 +1158,35 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			std::vector<std::string>::const_iterator it = spc.accuracy.begin();
 			switch (type) {
 				case NUMERIC_TYPE: {
-					for ( ; it != spc.accuracy.end(); it++) {
-						double  _v = strtodouble(value_v);
-						int acc = strtoint(*it);
-						if (acc > 1) {
-							cJSON *new_term = cJSON_CreateNumber(_v - ((int)_v % acc));
-							index_terms(doc, new_term, spc, name, scheme, find);
-							cJSON_Delete(new_term);
+					int num_pre = 0;
+					cJSON *_prefix_accuracy = cJSON_GetObjectItem(scheme, RESERVED_ACC_PREFIX);
+					cJSON *_new_prefix_acc = (_prefix_accuracy) ? NULL : cJSON_CreateArray();
+					for ( ; it != spc.accuracy.end(); it++, num_pre++) {
+						long long int  _v = strtolonglong(value_v);
+						long long int acc = strtolonglong(*it);
+						if (acc >= 1) {
+							std::string term_v = std::to_string(_v - _v % acc);
+							std::string prefix;
+							if (_prefix_accuracy) {
+								prefix = cJSON_GetArrayItem(_prefix_accuracy, num_pre)->valuestring;
+							} else {
+								prefix = get_prefix(name + std::to_string(num_pre), DOCUMENT_CUSTOM_TERM_PREFIX, type);
+								cJSON_AddItemToArray(_new_prefix_acc, cJSON_CreateString(prefix.c_str()));
+							}
+							term_v = serialise(type, term_v);
+							if (spc.position >= 0) {
+								std::string nameterm(prefixed(term_v, prefix));
+								doc.add_posting(nameterm, spc.position, spc.weight);
+								LOG_DATABASE_WRAP(this, "Posting by accuracy: %s\n", repr(nameterm).c_str());
+							} else {
+								std::string nameterm(prefixed(term_v, prefix));
+								doc.add_term(nameterm, spc.weight);
+								LOG_DATABASE_WRAP(this, "Term by accuracy: %s\n", repr(nameterm).c_str());
+							}
 						}
+					}
+					if (_new_prefix_acc) {
+						cJSON_AddItemToObject(scheme, RESERVED_ACC_PREFIX, _new_prefix_acc);
 					}
 				}
 				case DATE_TYPE: {
@@ -1333,42 +1354,23 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	spc = cJSON_GetObjectItem(item, RESERVED_ACCURACY);
 	if (cJSON *accuracy = cJSON_GetObjectItem(scheme, RESERVED_ACCURACY)) {
 		if (spc) {
-			if (spc->type == cJSON_Array) {
-				int elements = cJSON_GetArraySize(spc);
-				for (int i = 0; i < elements; i++) {
-					cJSON *acc = cJSON_GetArrayItem(spc, i);
-					if (acc->type == cJSON_String) {
-						spc_now.accuracy.push_back(acc->valuestring);
-					} else if (acc->type == cJSON_Number) {
-						spc_now.accuracy.push_back(std::to_string(acc->valuedouble));
-					} else {
-						throw MSG_Error("Data inconsistency %s should be an array of strings or numerics", RESERVED_ACCURACY);
-					}
+			LOG(this, "Accuracy will not be taken into account because it was previously defined; if you want to define a new accuracy, you need to change the schema.\n");
+		}
+		spc_now.accuracy.clear();
+		if (accuracy->type == cJSON_Array) {
+			int elements = cJSON_GetArraySize(accuracy);
+			for (int i = 0; i < elements; i++) {
+				cJSON *acc = cJSON_GetArrayItem(accuracy, i);
+				if (acc->type == cJSON_String) {
+					spc_now.accuracy.push_back(acc->valuestring);
+				} else if (acc->type == cJSON_Number) {
+					spc_now.accuracy.push_back(std::to_string(acc->valuedouble));
 				}
-			} else if (spc->type == cJSON_String) {
-				spc_now.accuracy.push_back(spc->valuestring);
-			} else if (spc->type == cJSON_Number) {
-				spc_now.accuracy.push_back(std::to_string(spc->valuedouble));
-			} else {
-				throw MSG_Error("Data inconsistency %s should be string or numeric", RESERVED_ACCURACY);
 			}
-		} else {
-			spc_now.accuracy.clear();
-			if (accuracy->type == cJSON_Array) {
-				int elements = cJSON_GetArraySize(accuracy);
-				for (int i = 0; i < elements; i++) {
-					cJSON *acc = cJSON_GetArrayItem(accuracy, i);
-					if (acc->type == cJSON_String) {
-						spc_now.accuracy.push_back(acc->valuestring);
-					} else if (acc->type == cJSON_Number) {
-						spc_now.accuracy.push_back(std::to_string(acc->valuedouble));
-					}
-				}
-			} else if (accuracy->type == cJSON_String) {
-				spc_now.accuracy.push_back(accuracy->valuestring);
-			} else if (accuracy->type == cJSON_Number) {
-				spc_now.accuracy.push_back(std::to_string(accuracy->valuedouble));
-			}
+		} else if (accuracy->type == cJSON_String) {
+			spc_now.accuracy.push_back(accuracy->valuestring);
+		} else if (accuracy->type == cJSON_Number) {
+			spc_now.accuracy.push_back(std::to_string(accuracy->valuedouble));
 		}
 	} else if (spc) {
 		cJSON *acc_s = cJSON_CreateArray();
@@ -1889,7 +1891,7 @@ Database::split_fields(const std::string &field_name)
 data_field_t
 Database::get_data_field(const std::string &field_name)
 {
-	data_field_t res = {0xffffffff, "", NO_TYPE, std::vector<std::string>()};
+	data_field_t res = {0xffffffff, "", NO_TYPE, std::vector<std::string>(), std::vector<std::string>()};
 
 	if (field_name.empty()) {
 		return res;
@@ -1924,18 +1926,26 @@ Database::get_data_field(const std::string &field_name)
 		res.prefix = (_aux) ? _aux->valuestring : get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, res.type);
 		_aux = cJSON_GetObjectItem(properties, RESERVED_ACCURACY);
 		if (_aux) {
-			if (_aux->type == cJSON_Array) {
-				int elements = cJSON_GetArraySize(_aux);
-				for (int i = 0; i < elements; i++) {
-					cJSON *acc = cJSON_GetArrayItem(_aux, i);
-					if (acc->type == cJSON_String) {
-						res.accuracy.push_back(acc->valuestring);
-					} else if (acc->type == cJSON_Number) {
-						res.accuracy.push_back(std::to_string(acc->valuedouble));
-					}
+			int elements = cJSON_GetArraySize(_aux);
+			for (int i = 0; i < elements; i++) {
+				cJSON *acc = cJSON_GetArrayItem(_aux, i);
+				if (acc->type == cJSON_String) {
+					res.accuracy.push_back(acc->valuestring);
+				} else if (acc->type == cJSON_Number) {
+					res.accuracy.push_back(std::to_string(acc->valuedouble));
 				}
-			} else {
-				res.accuracy.push_back(_aux->valuestring);
+			}
+		}
+		_aux = cJSON_GetObjectItem(properties, RESERVED_ACC_PREFIX);
+		if (_aux) {
+			int elements = cJSON_GetArraySize(_aux);
+			for (int i = 0; i < elements; i++) {
+				cJSON *acc = cJSON_GetArrayItem(_aux, i);
+				if (acc->type == cJSON_String) {
+					res.acc_prefix.push_back(acc->valuestring);
+				} else if (acc->type == cJSON_Number) {
+					res.acc_prefix.push_back(std::to_string(acc->valuedouble));
+				}
 			}
 		}
 	}
