@@ -1717,7 +1717,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 		LOG_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s\n", _document_id.c_str(), document_id.c_str());
 		doc.add_boolean_term(document_id);
 
-		subproperties = cJSON_GetObjectItem(scheme, RESERVED_ID);
+		subproperties = cJSON_GetObjectItem(properties, RESERVED_ID);
 		if (!subproperties) {
 			subproperties = cJSON_CreateObject();
 			cJSON_AddItemToObject(subproperties, "_type", cJSON_CreateString("string"));
