@@ -289,7 +289,7 @@ void HttpClient::_head()
 	if (isupper(command.at(0))) {
 		prefix += ":";
 	}
-	queryparser.add_prefix(RESERVED_ID, prefix);
+	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
 	Xapian::Query query = queryparser.parse_query(std::string(std::string(RESERVED_ID) + ":" + command));
 	Xapian::Enquire enquire(*database->db);
 	enquire.set_query(query);
