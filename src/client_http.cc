@@ -617,7 +617,7 @@ void HttpClient::_search()
 	std::string result;
 
 	query_t e;
-	int cmd = _endpointgen(e,false);
+	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
 		case CMD_NUMBER:
@@ -654,13 +654,13 @@ void HttpClient::_search()
 			}else {
 				cJSON *err_response = cJSON_CreateObject();
 				if (cmd == CMD_UNKNOWN)
-					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
+					cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown task " + command).c_str());
 				else if (cmd == CMD_UNKNOWN_HOST)
-					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+					cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown host " + host).c_str());
 				else if (cmd == CMD_UNKNOWN_ENDPOINT)
-					cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
+					cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
 				else
-					cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
+					cJSON_AddStringToObject(err_response, "Error message", "BAD QUERY");
 				if (e.pretty) {
 					result = cJSON_Print(err_response);
 				} else {
@@ -681,13 +681,13 @@ void HttpClient::_search()
 
 	if (schema) {
 		std::string schema_;
-		if (database->get_metadata("scheme",schema_)) {
+		if (database->get_metadata("scheme", schema_)) {
 			schema_ += "\n";
 			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, schema_));
 			return;
 		} else {
 			cJSON *err_response = cJSON_CreateObject();
-			cJSON_AddStringToObject(err_response, "Error message","schema not found");
+			cJSON_AddStringToObject(err_response, "Error message", "schema not found");
 			if (e.pretty) {
 				schema_ = cJSON_Print(err_response);
 			} else {
