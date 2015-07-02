@@ -811,6 +811,7 @@ Database::is_reserved(const std::string &word)
 		word.compare(RESERVED_TERMS)       != 0 &&
 		word.compare(RESERVED_DATA)        != 0 &&
 		word.compare(RESERVED_ACCURACY)    != 0 &&
+		word.compare(RESERVED_ACC_PREFIX)  != 0 &&
 		word.compare(RESERVED_STORE)       != 0 &&
 		word.compare(RESERVED_TYPE)        != 0 &&
 		word.compare(RESERVED_ANALYZER)    != 0 &&
