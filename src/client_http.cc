@@ -625,7 +625,7 @@ void HttpClient::_search()
 
 	switch (cmd) {
 		case CMD_ID:
-			e.query.push_back(std::string("id:" + command));
+			e.terms.push_back(std::string("id:" + command));
 			e.offset = 0;
 			e.limit = 1;
 			e.check_at_least = 0;
