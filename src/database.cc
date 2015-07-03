@@ -2364,14 +2364,8 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					break;
 				case STRING_TYPE:
 					if (field_name.size() != 0) {
-						if(!unique_doc) {
-							prefix = field_t.prefix;
-						} else {
-							prefix = "Q";
-						}
-
-						LOG(this, "prefix calculated: %s\n", prefix.c_str());
-						if (strhasupper(field_name)) {
+						prefix = field_t.prefix;
+						if (strhasupper(field_name) || unique_doc) {
 							LOG(this, "Boolean Prefix\n");
 							if (isupper(field_value.at(0))) {
 								prefix = prefix + ":";
@@ -2382,7 +2376,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 							queryparser.add_prefix(field_name, prefix);
 						}
 					}
-					field_value = field_name_dot + field_value;
+					field_value = field;
 					break;
 				case DATE_TYPE:
 					prefix = field_t.prefix;
