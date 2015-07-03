@@ -625,7 +625,7 @@ void HttpClient::_search()
 
 	switch (cmd) {
 		case CMD_ID:
-			e.terms.push_back(std::string("id:" + command));
+			e.terms.push_back(std::string(RESERVED_ID) + ":" + command);
 			e.offset = 0;
 			e.limit = 1;
 			e.check_at_least = 0;
@@ -648,7 +648,7 @@ void HttpClient::_search()
 			break;
 		default:
 			if (Is_id_range(command)){
-				e.query.push_back(std::string("id:" + command));
+				e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
 				e.offset = 0;
 				e.limit = 1000;
 				e.check_at_least = 0;
