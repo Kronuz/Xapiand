@@ -1921,9 +1921,15 @@ Database::get_data_field(const std::string &field_name)
 	std::string json = db->get_metadata("scheme");
 	if (json.empty()) return res;
 
-	const char *uuid = db->get_uuid().c_str();
-	cJSON *scheme = cJSON_Parse(json.c_str());
-	cJSON *properties = cJSON_GetObjectItem(scheme, uuid);
+	std::string uuid(db->get_uuid());
+	cJSON *schema = cJSON_Parse(json.c_str());
+	if (!schema) {
+		throw MSG_Error("Schema's database is corrupt.");
+	}
+	cJSON *properties = cJSON_GetObjectItem(schema, uuid.c_str());
+	if (!properties) {
+		throw MSG_Error("Schema's database is corrupt, uuids do not match.");
+	}
 
 	std::vector<std::string> fields = split_fields(field_name);
 	std::vector<std::string>::const_iterator it= fields.begin();
@@ -1971,7 +1977,7 @@ Database::get_data_field(const std::string &field_name)
 		}
 	}
 
-	cJSON_Delete(scheme);
+	cJSON_Delete(schema);
 	return res;
 }
 
