@@ -2319,16 +2319,12 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case STRING_TYPE:
-					if(!unique_doc) {
-						slot = field_t.slot;
-					} else {
-						slot = 0;
-					}
+					slot = field_t.slot;
 					svrp = new Xapian::StringValueRangeProcessor(slot, field_name_dot, true);
 					svrps.push_back(std::unique_ptr<Xapian::StringValueRangeProcessor>(svrp));
 					LOG(this, "String Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
 					queryparser.add_valuerangeprocessor(svrp);
-					field_value = field_name_dot + field_value;
+					field_value = field;
 					break;
 				case DATE_TYPE:
 					slot = field_t.slot;
