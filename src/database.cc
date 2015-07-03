@@ -1705,18 +1705,18 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	std::string s_scheme = db->get_metadata("scheme");
 	cJSON *scheme;
 	cJSON *properties;
-	const char *uuid = db->get_uuid().c_str();
+	std::string uuid(db->get_uuid());
 	if (s_scheme.empty()) {
 		scheme = cJSON_CreateObject();
 		properties = cJSON_CreateObject();
-		cJSON_AddItemToObject(scheme, uuid, properties);
+		cJSON_AddItemToObject(scheme, uuid.c_str(), properties);
 	} else {
 		scheme = cJSON_Parse(s_scheme.c_str());
 		if (!scheme) {
 			LOG_ERR(this, "ERROR: Scheme is corrupt, you need provide a new one. JSON Before: [%s]\n", cJSON_GetErrorPtr());
 			return false;
 		}
-		properties = cJSON_GetObjectItem(scheme, uuid);
+		properties = cJSON_GetObjectItem(scheme, uuid.c_str());
 	}
 
 	std::string document_id;
