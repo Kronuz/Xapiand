@@ -902,7 +902,7 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 
 
 void
-Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name, cJSON *scheme, bool find)
+Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
 {
 	//LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!spc.store) return;
@@ -913,14 +913,14 @@ Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc,
 	std::string prefix;
 	if (!name.empty()) {
 		if (!find) {
-			if (spc.sep_types[2] == NO_TYPE) cJSON_AddStringToObject(scheme, RESERVED_TYPE, "string");
-			cJSON_AddStringToObject(scheme, "_analyzer", spc.analyzer.c_str());
-			cJSON_AddStringToObject(scheme, "_index" , "analyzed");
+			if (spc.sep_types[2] == NO_TYPE) cJSON_AddStringToObject(schema, RESERVED_TYPE, "string");
+			cJSON_AddStringToObject(schema, "_analyzer", spc.analyzer.c_str());
+			cJSON_AddStringToObject(schema, "_index" , "analyzed");
 		}
-		cJSON *_prefix = cJSON_GetObjectItem(scheme, RESERVED_PREFIX);
+		cJSON *_prefix = cJSON_GetObjectItem(schema, RESERVED_PREFIX);
 		if (!_prefix) {
 			prefix = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
-			cJSON_AddStringToObject(scheme, RESERVED_PREFIX , prefix.c_str());
+			cJSON_AddStringToObject(schema, RESERVED_PREFIX , prefix.c_str());
 		} else {
 			prefix = _prefix->valuestring;
 		}
@@ -958,7 +958,7 @@ Database::index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc,
 
 
 void
-Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *scheme, bool find)
+Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
 {
 	//LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!spc.store) return;
@@ -970,13 +970,13 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 	std::string prefix;
 	if (!name.empty()) {
 		if (!find) {
-			if (spc.sep_types[2] == NO_TYPE) cJSON_AddStringToObject(scheme, RESERVED_TYPE, str_type(type).c_str());
-			cJSON_AddStringToObject(scheme, RESERVED_INDEX, "not analyzed");
+			if (spc.sep_types[2] == NO_TYPE) cJSON_AddStringToObject(schema, RESERVED_TYPE, str_type(type).c_str());
+			cJSON_AddStringToObject(schema, RESERVED_INDEX, "not analyzed");
 		}
-		cJSON *_prefix = cJSON_GetObjectItem(scheme, RESERVED_PREFIX);
+		cJSON *_prefix = cJSON_GetObjectItem(schema, RESERVED_PREFIX);
 		if (!_prefix) {
 			prefix = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, type);
-			cJSON_AddStringToObject(scheme, RESERVED_PREFIX , prefix.c_str());
+			cJSON_AddStringToObject(schema, RESERVED_PREFIX , prefix.c_str());
 		} else {
 			prefix = _prefix->valuestring;
 		}
@@ -986,7 +986,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 
 	int elements = 1;
 
-	// If the type in scheme is not array, scheme is updated.
+	// If the type in schema is not array, schema is updated.
 	if (terms->type == cJSON_Array) {
 		if (type == GEO_TYPE) throw MSG_Error("An array can not serialized as a Geo Spatial");
 
@@ -995,7 +995,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 
 		if (term->type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
 
-		cJSON *_type = cJSON_GetObjectItem(scheme, RESERVED_TYPE);
+		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE);
 		if (_type) {
 			if (std::string(_type->valuestring).find("array") == -1) {
 				std::string s_type;
@@ -1004,10 +1004,10 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 				} else {
 					s_type = "array/" + str_type(type);
 				}
-				cJSON_ReplaceItemInObject(scheme, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
+				cJSON_ReplaceItemInObject(schema, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
 			}
 		} else {
-			cJSON_AddStringToObject(scheme, RESERVED_TYPE, std::string("array/" + str_type(type)).c_str());
+			cJSON_AddStringToObject(schema, RESERVED_TYPE, std::string("array/" + str_type(type)).c_str());
 		}
 	}
 
@@ -1066,7 +1066,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 
 
 void
-Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *scheme, bool find)
+Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
 {
 	//LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!spc.store) return;
@@ -1083,29 +1083,29 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 	if (type == GEO_TYPE) {
 		// Geo is looking for space regions, which are specified by terms so only
 		// terms are indexed there is no point looking for values.
-		index_terms(doc, values, spc, name, scheme, find);
+		index_terms(doc, values, spc, name, schema, find);
 		return;
 	}
 
 	if (!find) {
 		if (spc.sep_types[2] == NO_TYPE) {
-			cJSON_AddStringToObject(scheme, RESERVED_TYPE, str_type(type).c_str());
+			cJSON_AddStringToObject(schema, RESERVED_TYPE, str_type(type).c_str());
 		}
-		cJSON_AddStringToObject(scheme, RESERVED_INDEX, "not analyzed");
+		cJSON_AddStringToObject(schema, RESERVED_INDEX, "not analyzed");
 	}
 
 	unsigned int slot;
-	cJSON *_slot = cJSON_GetObjectItem(scheme, RESERVED_SLOT);
+	cJSON *_slot = cJSON_GetObjectItem(schema, RESERVED_SLOT);
 	if (!_slot) {
 		slot = get_slot(name);
-		cJSON_AddNumberToObject(scheme, RESERVED_SLOT, slot);
+		cJSON_AddNumberToObject(schema, RESERVED_SLOT, slot);
 	} else {
 		slot = _slot->valueint;
 	}
 
 	int elements = 1;
 
-	// If the type in scheme is not array, scheme is updated.
+	// If the type in schema is not array, schema is updated.
 	if (values->type == cJSON_Array) {
 		if (type == GEO_TYPE) throw MSG_Error("An array can not serialized as a Geo Spatial");
 
@@ -1114,7 +1114,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 
 		if (value->type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
 
-		cJSON *_type = cJSON_GetObjectItem(scheme, RESERVED_TYPE);
+		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE);
 		if (_type) {
 			if (std::string(_type->valuestring).find("array") == -1) {
 				std::string s_type;
@@ -1123,10 +1123,10 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 				} else {
 					s_type = "array/" + str_type(type);
 				}
-				cJSON_ReplaceItemInObject(scheme, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
+				cJSON_ReplaceItemInObject(schema, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
 			}
 		} else {
-			cJSON_AddStringToObject(scheme, RESERVED_TYPE, std::string("array/" + str_type(type)).c_str());
+			cJSON_AddStringToObject(schema, RESERVED_TYPE, std::string("array/" + str_type(type)).c_str());
 		}
 	}
 
@@ -1155,7 +1155,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			switch (type) {
 				case NUMERIC_TYPE: {
 					int num_pre = 0;
-					cJSON *_prefix_accuracy = cJSON_GetObjectItem(scheme, RESERVED_ACC_PREFIX);
+					cJSON *_prefix_accuracy = cJSON_GetObjectItem(schema, RESERVED_ACC_PREFIX);
 					cJSON *_new_prefix_acc = (_prefix_accuracy) ? NULL : cJSON_CreateArray();
 					for ( ; it != spc.accuracy.end(); it++, num_pre++) {
 						long long int  _v = strtolonglong(value_v);
@@ -1182,12 +1182,12 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 						}
 					}
 					if (_new_prefix_acc) {
-						cJSON_AddItemToObject(scheme, RESERVED_ACC_PREFIX, _new_prefix_acc);
+						cJSON_AddItemToObject(schema, RESERVED_ACC_PREFIX, _new_prefix_acc);
 					}
 				}
 				case DATE_TYPE: {
 					int num_pre = 0;
-					cJSON *_prefix_accuracy = cJSON_GetObjectItem(scheme, RESERVED_ACC_PREFIX);
+					cJSON *_prefix_accuracy = cJSON_GetObjectItem(schema, RESERVED_ACC_PREFIX);
 					cJSON *_new_prefix_acc = (_prefix_accuracy) ? NULL : cJSON_CreateArray();
 					for ( ; it != spc.accuracy.end(); it++, num_pre++) {
 						std::string acc(value_v), _v(stringtolower(*it));
@@ -1231,7 +1231,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 						}
 					}
 					if (_new_prefix_acc) {
-						cJSON_AddItemToObject(scheme, RESERVED_ACC_PREFIX, _new_prefix_acc);
+						cJSON_AddItemToObject(schema, RESERVED_ACC_PREFIX, _new_prefix_acc);
 					}
 				}
 			}
@@ -1244,7 +1244,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 
 
 void
-Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *scheme)
+Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema)
 {
 	//clean specifications locals
 	spc_now.type = "";
@@ -1252,7 +1252,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	spc_now.accuracy.clear();
 
 	cJSON *spc = cJSON_GetObjectItem(item, RESERVED_POSITION);
-	if (cJSON *position = cJSON_GetObjectItem(scheme, RESERVED_POSITION)) {
+	if (cJSON *position = cJSON_GetObjectItem(schema, RESERVED_POSITION)) {
 		if (spc) {
 			if (spc->type == cJSON_Number) {
 				spc_now.position = spc->valueint;
@@ -1265,14 +1265,14 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	} else if (spc) {
 		if (spc->type == cJSON_Number) {
 			spc_now.position = spc->valueint;
-			cJSON_AddNumberToObject(scheme, RESERVED_POSITION, spc->valueint);
+			cJSON_AddNumberToObject(schema, RESERVED_POSITION, spc->valueint);
 		} else {
 			throw MSG_Error("Data inconsistency %s should be integer", RESERVED_POSITION);
 		}
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_WEIGHT);
-	if (cJSON *weight = cJSON_GetObjectItem(scheme, RESERVED_WEIGHT)) {
+	if (cJSON *weight = cJSON_GetObjectItem(schema, RESERVED_WEIGHT)) {
 		if (spc) {
 			if (spc->type == cJSON_Number) {
 				spc_now.weight = spc->valueint;
@@ -1285,14 +1285,14 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	} else if (spc) {
 		if (spc->type == cJSON_Number) {
 			spc_now.weight = spc->valueint;
-			cJSON_AddNumberToObject(scheme, RESERVED_WEIGHT, spc->valueint);
+			cJSON_AddNumberToObject(schema, RESERVED_WEIGHT, spc->valueint);
 		} else {
 			throw MSG_Error("Data inconsistency %s should be integer", RESERVED_WEIGHT);
 		}
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_LANGUAGE);
-	if (cJSON *language = cJSON_GetObjectItem(scheme, RESERVED_LANGUAGE)) {
+	if (cJSON *language = cJSON_GetObjectItem(schema, RESERVED_LANGUAGE)) {
 		if (spc) {
 			if (spc->type == cJSON_String) {
 				spc_now.language = is_language(spc->valuestring) ? spc->valuestring : spc_now.language;
@@ -1305,7 +1305,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	} else if (spc) {
 		if (spc->type == cJSON_String) {
 			std::string lan = is_language(spc->valuestring) ? spc->valuestring : spc_now.language;
-			cJSON_AddStringToObject(scheme, RESERVED_LANGUAGE, lan.c_str());
+			cJSON_AddStringToObject(schema, RESERVED_LANGUAGE, lan.c_str());
 			spc_now.language = lan;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be string", RESERVED_LANGUAGE);
@@ -1313,7 +1313,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_SPELLING);
-	if (cJSON *spelling = cJSON_GetObjectItem(scheme, RESERVED_SPELLING)) {
+	if (cJSON *spelling = cJSON_GetObjectItem(schema, RESERVED_SPELLING)) {
 		if (spc) {
 			if (spc->type == cJSON_False) {
 				spc_now.spelling = false;
@@ -1327,10 +1327,10 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		}
 	} else if (spc) {
 		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(scheme, RESERVED_SPELLING);
+			cJSON_AddFalseToObject(schema, RESERVED_SPELLING);
 			spc_now.spelling = false;
 		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(scheme, RESERVED_SPELLING);
+			cJSON_AddTrueToObject(schema, RESERVED_SPELLING);
 			spc_now.spelling = true;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be boolean", RESERVED_SPELLING);
@@ -1338,7 +1338,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_POSITIONS);
-	if (cJSON *positions = cJSON_GetObjectItem(scheme, RESERVED_POSITIONS)) {
+	if (cJSON *positions = cJSON_GetObjectItem(schema, RESERVED_POSITIONS)) {
 		if (spc) {
 			if (spc->type == cJSON_False) {
 				spc_now.positions = false;
@@ -1352,10 +1352,10 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		}
 	} else if (spc) {
 		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(scheme, RESERVED_POSITIONS);
+			cJSON_AddFalseToObject(schema, RESERVED_POSITIONS);
 			spc_now.positions = false;
 		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(scheme, RESERVED_POSITIONS);
+			cJSON_AddTrueToObject(schema, RESERVED_POSITIONS);
 			spc_now.positions = true;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be boolean", RESERVED_POSITIONS);
@@ -1363,7 +1363,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_ACCURACY);
-	if (cJSON *accuracy = cJSON_GetObjectItem(scheme, RESERVED_ACCURACY)) {
+	if (cJSON *accuracy = cJSON_GetObjectItem(schema, RESERVED_ACCURACY)) {
 		if (spc) {
 			LOG(this, "Accuracy will not be taken into account because it was previously defined; if you want to define a new accuracy, you need to change the schema.\n");
 		}
@@ -1410,11 +1410,11 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		} else {
 			throw MSG_Error("Data inconsistency %s should be string or numeric", RESERVED_ACCURACY);
 		}
-		cJSON_AddItemToObject(scheme, RESERVED_ACCURACY, acc_s);
+		cJSON_AddItemToObject(schema, RESERVED_ACCURACY, acc_s);
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_TYPE);
-	if (cJSON *type = cJSON_GetObjectItem(scheme, RESERVED_TYPE)) {
+	if (cJSON *type = cJSON_GetObjectItem(schema, RESERVED_TYPE)) {
 		if (spc) {
 			if (spc->type == cJSON_String) {
 				std::string _type = stringtolower(spc->valuestring);
@@ -1435,7 +1435,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		if (spc->type == cJSON_String) {
 			if (set_types(spc->valuestring, spc_now.sep_types)) {
 				spc_now.type = stringtolower(spc->valuestring);
-				cJSON_AddStringToObject(scheme, RESERVED_TYPE, spc_now.type.c_str());
+				cJSON_AddStringToObject(schema, RESERVED_TYPE, spc_now.type.c_str());
 			} else {
 				throw MSG_Error("%s is invalid type", spc->valuestring);
 			}
@@ -1445,7 +1445,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_STORE);
-	if (cJSON *store = cJSON_GetObjectItem(scheme, RESERVED_STORE)) {
+	if (cJSON *store = cJSON_GetObjectItem(schema, RESERVED_STORE)) {
 		if (spc) {
 			if (spc->type == cJSON_False) {
 				spc_now.store = false;
@@ -1459,10 +1459,10 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		}
 	} else if (spc) {
 		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(scheme, RESERVED_STORE);
+			cJSON_AddFalseToObject(schema, RESERVED_STORE);
 			spc_now.store = false;
 		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(scheme, RESERVED_STORE);
+			cJSON_AddTrueToObject(schema, RESERVED_STORE);
 			spc_now.store = true;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be boolean", RESERVED_STORE);
@@ -1470,7 +1470,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_ANALYZER);
-	if (cJSON *analyzer = cJSON_GetObjectItem(scheme, RESERVED_ANALYZER)) {
+	if (cJSON *analyzer = cJSON_GetObjectItem(schema, RESERVED_ANALYZER)) {
 		if (spc) {
 			if (spc->type == cJSON_String) {
 				spc_now.analyzer = stringtoupper(spc->valuestring);
@@ -1483,7 +1483,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	} else if (spc) {
 		if (spc->type == cJSON_String) {
 			std::string _analyzer = stringtoupper(spc->valuestring);
-			cJSON_AddStringToObject(scheme, RESERVED_ANALYZER, _analyzer.c_str());
+			cJSON_AddStringToObject(schema, RESERVED_ANALYZER, _analyzer.c_str());
 			spc_now.analyzer = _analyzer;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be string", RESERVED_ANALYZER);
@@ -1491,7 +1491,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_DYNAMIC);
-	if (cJSON *dynamic = cJSON_GetObjectItem(scheme, RESERVED_DYNAMIC)) {
+	if (cJSON *dynamic = cJSON_GetObjectItem(schema, RESERVED_DYNAMIC)) {
 		if (spc) {
 			if (spc->type == cJSON_False) {
 				spc_now.dynamic = false;
@@ -1505,10 +1505,10 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		}
 	} else if (spc) {
 		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(scheme, RESERVED_DYNAMIC);
+			cJSON_AddFalseToObject(schema, RESERVED_DYNAMIC);
 			spc_now.dynamic = false;
 		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(scheme, RESERVED_DYNAMIC);
+			cJSON_AddTrueToObject(schema, RESERVED_DYNAMIC);
 			spc_now.dynamic = true;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be boolean", RESERVED_DYNAMIC);
@@ -1516,7 +1516,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_D_DETECTION);
-	if (cJSON *date_detection = cJSON_GetObjectItem(scheme, RESERVED_D_DETECTION)) {
+	if (cJSON *date_detection = cJSON_GetObjectItem(schema, RESERVED_D_DETECTION)) {
 		if (spc) {
 			if (spc->type == cJSON_False) {
 				spc_now.date_detection = false;
@@ -1530,10 +1530,10 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		}
 	} else if (spc) {
 		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(scheme, RESERVED_D_DETECTION);
+			cJSON_AddFalseToObject(schema, RESERVED_D_DETECTION);
 			spc_now.date_detection = false;
 		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(scheme, RESERVED_D_DETECTION);
+			cJSON_AddTrueToObject(schema, RESERVED_D_DETECTION);
 			spc_now.date_detection = true;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be boolean", RESERVED_D_DETECTION);
@@ -1541,7 +1541,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_N_DETECTION);
-	if (cJSON *numeric_detection = cJSON_GetObjectItem(scheme, RESERVED_N_DETECTION)) {
+	if (cJSON *numeric_detection = cJSON_GetObjectItem(schema, RESERVED_N_DETECTION)) {
 		if (spc) {
 			if (spc->type == cJSON_False) {
 				spc_now.numeric_detection = false;
@@ -1555,10 +1555,10 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		}
 	} else if (spc) {
 		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(scheme, RESERVED_N_DETECTION);
+			cJSON_AddFalseToObject(schema, RESERVED_N_DETECTION);
 			spc_now.numeric_detection = false;
 		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(scheme, RESERVED_N_DETECTION);
+			cJSON_AddTrueToObject(schema, RESERVED_N_DETECTION);
 			spc_now.numeric_detection = true;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be boolean", RESERVED_N_DETECTION);
@@ -1566,7 +1566,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_G_DETECTION);
-	if (cJSON *geo_detection = cJSON_GetObjectItem(scheme, RESERVED_G_DETECTION)) {
+	if (cJSON *geo_detection = cJSON_GetObjectItem(schema, RESERVED_G_DETECTION)) {
 		if (spc) {
 			if (spc->type == cJSON_False) {
 				spc_now.geo_detection = false;
@@ -1580,10 +1580,10 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		}
 	} else if (spc) {
 		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(scheme, RESERVED_G_DETECTION);
+			cJSON_AddFalseToObject(schema, RESERVED_G_DETECTION);
 			spc_now.geo_detection = false;
 		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(scheme, RESERVED_G_DETECTION);
+			cJSON_AddTrueToObject(schema, RESERVED_G_DETECTION);
 			spc_now.geo_detection = true;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be boolean", RESERVED_G_DETECTION);
@@ -1591,7 +1591,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_B_DETECTION);
-	if (cJSON *bool_detection = cJSON_GetObjectItem(scheme, RESERVED_B_DETECTION)) {
+	if (cJSON *bool_detection = cJSON_GetObjectItem(schema, RESERVED_B_DETECTION)) {
 		if (spc) {
 			if (spc->type == cJSON_False) {
 				spc_now.bool_detection = false;
@@ -1605,10 +1605,10 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		}
 	} else if (spc) {
 		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(scheme, RESERVED_B_DETECTION);
+			cJSON_AddFalseToObject(schema, RESERVED_B_DETECTION);
 			spc_now.bool_detection = false;
 		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(scheme, RESERVED_B_DETECTION);
+			cJSON_AddTrueToObject(schema, RESERVED_B_DETECTION);
 			spc_now.bool_detection = true;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be boolean", RESERVED_B_DETECTION);
@@ -1616,7 +1616,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_S_DETECTION);
-	if (cJSON *string_detection = cJSON_GetObjectItem(scheme, RESERVED_S_DETECTION)) {
+	if (cJSON *string_detection = cJSON_GetObjectItem(schema, RESERVED_S_DETECTION)) {
 		if (spc) {
 			if (spc->type == cJSON_False) {
 				spc_now.string_detection = false;
@@ -1630,10 +1630,10 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 		}
 	} else if (spc) {
 		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(scheme, RESERVED_S_DETECTION);
+			cJSON_AddFalseToObject(schema, RESERVED_S_DETECTION);
 			spc_now.string_detection = false;
 		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(scheme, RESERVED_S_DETECTION);
+			cJSON_AddTrueToObject(schema, RESERVED_S_DETECTION);
 			spc_now.string_detection = true;
 		} else {
 			throw MSG_Error("Data inconsistency %s should be boolean", RESERVED_S_DETECTION);
@@ -1702,21 +1702,21 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	cJSON *document_terms = cJSON_GetObjectItem(document, RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document, RESERVED_TEXTS);
 
-	std::string s_scheme = db->get_metadata("scheme");
-	cJSON *scheme;
+	std::string s_schema = db->get_metadata("schema");
+	cJSON *schema;
 	cJSON *properties;
 	std::string uuid(db->get_uuid());
-	if (s_scheme.empty()) {
-		scheme = cJSON_CreateObject();
+	if (s_schema.empty()) {
+		schema = cJSON_CreateObject();
 		properties = cJSON_CreateObject();
-		cJSON_AddItemToObject(scheme, uuid.c_str(), properties);
+		cJSON_AddItemToObject(schema, uuid.c_str(), properties);
 	} else {
-		scheme = cJSON_Parse(s_scheme.c_str());
-		if (!scheme) {
-			LOG_ERR(this, "ERROR: Scheme is corrupt, you need provide a new one. JSON Before: [%s]\n", cJSON_GetErrorPtr());
+		schema = cJSON_Parse(s_schema.c_str());
+		if (!schema) {
+			LOG_ERR(this, "ERROR: Schema is corrupt, you need provide a new one. JSON Before: [%s]\n", cJSON_GetErrorPtr());
 			return false;
 		}
-		properties = cJSON_GetObjectItem(scheme, uuid.c_str());
+		properties = cJSON_GetObjectItem(schema, uuid.c_str());
 	}
 
 	std::string document_id;
@@ -1855,8 +1855,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	}
 
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
-	LOG_DATABASE_WRAP(this, "Scheme: %s\n", cJSON_Print(scheme));
-	wdb->set_metadata("scheme", cJSON_Print(scheme));
+	LOG_DATABASE_WRAP(this, "Schema: %s\n", cJSON_Print(schema));
+	wdb->set_metadata("schema", cJSON_Print(schema));
 	return replace(document_id, doc, commit);
 }
 
@@ -1918,7 +1918,7 @@ Database::get_data_field(const std::string &field_name)
 		return res;
 	}
 
-	std::string json = db->get_metadata("scheme");
+	std::string json = db->get_metadata("schema");
 	if (json.empty()) return res;
 
 	std::string uuid(db->get_uuid());

@@ -160,12 +160,12 @@ public:
 	bool set_types(const std::string &type, char sep_types[]);
 	cJSON* get_stats_time(const std::string &time_req);
 	bool is_reserved(const std::string &word);
-	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, cJSON *scheme, bool is_value, bool find);
-	void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *scheme);
+	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, cJSON *schema, bool is_value, bool find);
+	void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema);
 	bool is_language(const std::string &language);
-	void index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name, cJSON *scheme, bool find);
-	void index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *scheme, bool find);
-	void index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *scheme, bool find);
+	void index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name, cJSON *schema, bool find);
+	void index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *schema, bool find);
+	void index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *schema, bool find);
 	void clean_reserved(cJSON *root);
 	void clean_reserved(cJSON *root, cJSON *item);
 	std::string specificationstostr(specifications_t &spc);
