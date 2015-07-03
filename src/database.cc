@@ -1186,7 +1186,10 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 					}
 				}
 				case DATE_TYPE: {
-					for ( ; it != spc.accuracy.end(); it++) {
+					int num_pre = 0;
+					cJSON *_prefix_accuracy = cJSON_GetObjectItem(scheme, RESERVED_ACC_PREFIX);
+					cJSON *_new_prefix_acc = (_prefix_accuracy) ? NULL : cJSON_CreateArray();
+					for ( ; it != spc.accuracy.end(); it++, num_pre++) {
 						std::string acc(value_v), _v(stringtolower(*it));
 						if (isNumeric(acc)) {
 							char date[25];
@@ -1198,25 +1201,37 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 							sprintf(date, "%.4d-%.2d-%.2dT%.2d:%.2d:%.2d%s", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, milliseconds.c_str());
 							acc = value_v = date;
 						}
-						if (_v.compare("year") == 0) {
-							acc = acc + "||//y";
-						} else if (_v.compare("month") == 0) {
-							acc = acc + "||//M";
-						} else if (_v.compare("day") == 0) {
-							acc = acc + "||//d";
-						} else if (_v.compare("hour") == 0) {
-							acc = acc + "||//h";
-						} else if (_v.compare("minute") == 0) {
-							acc = acc + "||//m";
-						} else if (_v.compare("second") == 0) {
-							acc = acc + "||//s";
-						}
+						if (_v.compare("year") == 0)        acc = acc + "||//y";
+						else if (_v.compare("month") == 0)  acc = acc + "||//M";
+						else if (_v.compare("week") == 0)   acc = acc + "||//w";
+						else if (_v.compare("day") == 0)    acc = acc + "||//d";
+						else if (_v.compare("hour") == 0)   acc = acc + "||//h";
+						else if (_v.compare("minute") == 0) acc = acc + "||//m";
+						else if (_v.compare("second") == 0) acc = acc + "||//s";
+
 						if (acc.compare(value_v) != 0) {
 							acc = timestamp_date(acc);
-							cJSON *new_term = cJSON_CreateString(acc.c_str());
-							index_terms(doc, new_term, spc, name, scheme, find);
-							cJSON_Delete(new_term);
+							std::string prefix;
+							if (_prefix_accuracy) {
+								prefix = cJSON_GetArrayItem(_prefix_accuracy, num_pre)->valuestring;
+							} else {
+								prefix = get_prefix(name + std::to_string(num_pre), DOCUMENT_CUSTOM_TERM_PREFIX, type);
+								cJSON_AddItemToArray(_new_prefix_acc, cJSON_CreateString(prefix.c_str()));
+							}
+							acc = serialise(type, acc);
+							if (spc.position >= 0) {
+								std::string nameterm(prefixed(acc, prefix));
+								doc.add_posting(nameterm, spc.position, spc.weight);
+								LOG_DATABASE_WRAP(this, "Posting by accuracy: %s\n", repr(nameterm).c_str());
+							} else {
+								std::string nameterm(prefixed(acc, prefix));
+								doc.add_term(nameterm, spc.weight);
+								LOG_DATABASE_WRAP(this, "Term by accuracy: %s\n", repr(nameterm).c_str());
+							}
 						}
+					}
+					if (_new_prefix_acc) {
+						cJSON_AddItemToObject(scheme, RESERVED_ACC_PREFIX, _new_prefix_acc);
 					}
 				}
 			}
