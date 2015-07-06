@@ -888,6 +888,17 @@ int strtoint(const std::string &str)
 }
 
 
+unsigned int strtounsignedint(const std::string &str)
+{
+	unsigned int number;
+	std::stringstream ss;
+	ss << std::dec << str;
+	ss >> number;
+	ss.flush();
+	return number;
+}
+
+
 double strtodouble(const std::string &str)
 {
 	double number;

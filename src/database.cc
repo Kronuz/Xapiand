@@ -1100,7 +1100,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 		slot = get_slot(name);
 		cJSON_AddNumberToObject(schema, RESERVED_SLOT, slot);
 	} else {
-		slot = _slot->valueint;
+		slot = strtounsignedint(cJSON_Print(_slot));
 	}
 
 	int elements = 1;
@@ -1940,7 +1940,7 @@ Database::get_data_field(const std::string &field_name)
 
 	if (properties) {
 		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
-		res.slot = (_aux) ? _aux->valueint : get_slot(field_name);
+		res.slot = (_aux) ? strtounsignedint(cJSON_Print(_aux)) : get_slot(field_name);
 		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
 		if (_aux) {
 			char sep_types[3];

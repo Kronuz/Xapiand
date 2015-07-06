@@ -214,6 +214,7 @@ unsigned int get_slot(const std::string &name);
 std::string prefixed(const std::string &term, const std::string &prefixO);
 unsigned int hex2int(const std::string &input);
 int strtoint(const std::string &str);
+unsigned int strtounsignedint(const std::string &str);
 double strtodouble(const std::string &str);
 long long int strtolonglong(const std::string &str);
 std::string timestamp_date(const std::string &str);
