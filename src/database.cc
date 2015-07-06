@@ -2157,7 +2157,7 @@ Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc
 }
 
 
-search_t
+Database::search_t
 Database::search(query_t e)
 {
 	search_t srch_resul;
@@ -2221,7 +2221,7 @@ Database::search(query_t e)
 		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 		first = true;
 		for (; tit != e.terms.end(); tit++) {
-			srch =  _search(*tit, flags, false, "", e.unique_doc);
+			srch = _search(*tit, flags, false, "", e.unique_doc);
 			if (first) {
 				queryT = srch.query;
 				first = false;
@@ -2264,7 +2264,7 @@ Database::search(query_t e)
 }
 
 
-search_t
+Database::search_t
 Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan, bool unique_doc)
 {
 	search_t srch;
@@ -2293,6 +2293,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		}
 	}
 
+	std::vector<std::string> added_prefixes;
 	NumericFieldProcessor *nfp;
 	DateFieldProcessor *dfp;
 	BooleanFieldProcessor *bfp;
@@ -2323,16 +2324,19 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					slot = field_t.slot;
 					nvrp = new Xapian::NumberValueRangeProcessor(slot, field_name_dot, true);
 					LOG(this, "Numeric Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
-					nvrps.push_back(std::unique_ptr<Xapian::NumberValueRangeProcessor>(nvrp));
+					srch.nvrps.push_back(std::move(std::unique_ptr<Xapian::NumberValueRangeProcessor>(nvrp)));
 					queryparser.add_valuerangeprocessor(nvrp);
 					filter_term = get_numeric_term(field_value, field_t.accuracy, field_t.acc_prefix, prefixes);
 					if (!filter_term.empty()) {
 						it = prefixes.begin();
 						LOG(this, "Terms by accuracy\n");
 						for ( ; it != prefixes.end(); it++) {
-							nfp = new NumericFieldProcessor(*it);
-							nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
-							queryparser.add_prefix(*it, nfp);
+							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
+								nfp = new NumericFieldProcessor(*it);
+								srch.nfps.push_back(std::move(std::unique_ptr<NumericFieldProcessor>(nfp)));
+								queryparser.add_prefix(*it, nfp);
+								added_prefixes.push_back(*it);
+							}
 						}
 						field_value = filter_term + " AND " + field;
 					} else {
@@ -2342,7 +2346,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case STRING_TYPE:
 					slot = field_t.slot;
 					svrp = new Xapian::StringValueRangeProcessor(slot, field_name_dot, true);
-					svrps.push_back(std::unique_ptr<Xapian::StringValueRangeProcessor>(svrp));
+					srch.svrps.push_back(std::move(std::unique_ptr<Xapian::StringValueRangeProcessor>(svrp)));
 					LOG(this, "String Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
 					queryparser.add_valuerangeprocessor(svrp);
 					field_value = field;
@@ -2351,10 +2355,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					slot = field_t.slot;
 					field_name_dot = std::string("");
 					dvrp = new DateTimeValueRangeProcessor(slot, field_name_dot);
-					dvrps.push_back(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp));
+					srch.dvrps.push_back(std::move(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp)));
 					LOG(this, "Date Slot: %u Field_name: %s\n", slot, field_name.c_str());
 					queryparser.add_valuerangeprocessor(dvrp);
-					field_value = field_name_dot + field_value;
+					field_value = field;
 					break;
 				default:
 					if (g) {
@@ -2368,7 +2372,8 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case NUMERIC_TYPE:
 					prefix = field_t.prefix;
 					nfp = new NumericFieldProcessor(prefix);
-					nfps.push_back(std::unique_ptr<NumericFieldProcessor>(nfp));
+					srch.
+					nfps.push_back(std::move(std::unique_ptr<NumericFieldProcessor>(nfp)));
 					if (strhasupper(field_name)) {
 						LOG(this, "Boolean Prefix\n");
 						queryparser.add_boolean_prefix(field_name, nfp);
@@ -2397,6 +2402,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					break;
 				case DATE_TYPE:
 					prefix = field_t.prefix;
+					if (field_value.at(0) == '"') field_value.assign(field_value, 1, field_value.size() - 2);
 					field_value = timestamp_date(field_value);
 					if (field_value.size() == 0) {
 						if (g) {
@@ -2406,7 +2412,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						throw Xapian::QueryParserError("Didn't understand date field name's specification: '" + field_name + "'");
 					}
 					dfp = new DateFieldProcessor(prefix);
-					dfps.push_back(std::unique_ptr<DateFieldProcessor>(dfp));
+					srch.dfps.push_back(std::move(std::unique_ptr<DateFieldProcessor>(dfp)));
 					if (strhasupper(field_name)) {
 						LOG(this, "Boolean Prefix\n");
 						queryparser.add_boolean_prefix(field_name, dfp);
@@ -2445,7 +2451,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case BOOLEAN_TYPE:
 					prefix = field_t.prefix;
 					bfp = new BooleanFieldProcessor(prefix);
-					bfps.push_back(std::unique_ptr<BooleanFieldProcessor>(bfp));
+					srch.bfps.push_back(std::move(std::unique_ptr<BooleanFieldProcessor>(bfp)));
 					if (strhasupper(field_name)) {
 						LOG(this, "Boolean Prefix\n");
 						queryparser.add_boolean_prefix(field_name, bfp);
@@ -2557,7 +2563,7 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 			std::vector<std::string>::const_iterator fit(facets->begin());
 			for (; fit != facets->end(); fit++) {
 				spy = new MultiValueCountMatchSpy(get_slot(*fit));
-				spies->push_back(std::make_pair (*fit, std::unique_ptr<MultiValueCountMatchSpy>(spy)));
+				spies->push_back(std::make_pair (*fit, std::move(std::unique_ptr<MultiValueCountMatchSpy>(spy))));
 				enquire.add_matchspy(spy);
 				LOG_ERR(this, "added spy de -%s-\n", (*fit).c_str());
 			}
@@ -2607,14 +2613,6 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 			Xapian::Enquire enquire = get_enquire(srch.query, sorter, &spies, e.is_nearest ? &e.nearest : NULL, e.is_fuzzy ? &e.fuzzy : NULL, &e.facets);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
-
-			// The range field processors are released.
-			nvrps.clear();
-			svrps.clear();
-			dvrps.clear();
-			nfps.clear();
-			dfps.clear();
-			bfps.clear();
 		} catch (const Xapian::DatabaseModifiedError &er) {
 			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 			if (t) reopen();

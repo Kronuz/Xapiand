@@ -164,11 +164,6 @@ typedef struct query_s {
 	similar_t nearest;
 } query_t;
 
-typedef struct search_s {
-	Xapian::Query query;
-	std::vector<std::string> suggested_query;
-} search_t;
-
 typedef struct data_field_s {
 	unsigned int slot;
 	std::string prefix;

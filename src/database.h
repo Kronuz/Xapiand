@@ -102,13 +102,6 @@ public:
 	int mastery_level;
 	std::string checkout_revision;
 
-	std::vector<std::unique_ptr<Xapian::NumberValueRangeProcessor>> nvrps;
-	std::vector<std::unique_ptr<Xapian::StringValueRangeProcessor>> svrps;
-	std::vector<std::unique_ptr<DateTimeValueRangeProcessor>> dvrps;
-	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
-	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
-	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
-
 	Xapian::Database *db;
 
 	static pcre *compiled_find_field_re;
@@ -132,6 +125,17 @@ public:
 		bool bool_detection;
 		bool string_detection;
 	} specifications_t;
+
+	typedef struct search_s {
+		Xapian::Query query;
+		std::vector<std::string> suggested_query;
+		std::vector<std::unique_ptr<Xapian::NumberValueRangeProcessor>> nvrps;
+		std::vector<std::unique_ptr<Xapian::StringValueRangeProcessor>> svrps;
+		std::vector<std::unique_ptr<DateTimeValueRangeProcessor>> dvrps;
+		std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
+		std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
+		std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
+	} search_t;
 
 	Database(DatabaseQueue * queue_, const Endpoints &endpoints, int flags);
 	~Database();
