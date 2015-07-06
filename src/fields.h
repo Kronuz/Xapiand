@@ -62,7 +62,7 @@ class DateTimeValueRangeProcessor: public Xapian::ValueRangeProcessor {
 	Xapian::valueno valno;
 
 	public:
-		DateTimeValueRangeProcessor(Xapian::valueno slot_, const std::string prefix);
+		DateTimeValueRangeProcessor(Xapian::valueno slot_, const std::string &prefix_);
 		Xapian::valueno operator()(std::string &begin, std::string &end);
 };
 

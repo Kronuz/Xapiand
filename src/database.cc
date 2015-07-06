@@ -2191,6 +2191,12 @@ Database::search(query_t e)
 				queryQ =  Xapian::Query(Xapian::Query::OP_AND, queryQ, srch.query);
 			}
 			sug_query.push_back(srch.suggested_query.back());
+			srch_resul.nvrps.insert(srch_resul.nvrps.end(), std::make_move_iterator(srch.nvrps.begin()), std::make_move_iterator(srch.nvrps.end()));
+			srch_resul.svrps.insert(srch_resul.svrps.end(), std::make_move_iterator(srch.svrps.begin()), std::make_move_iterator(srch.svrps.end()));
+			srch_resul.dvrps.insert(srch_resul.dvrps.end(), std::make_move_iterator(srch.dvrps.begin()), std::make_move_iterator(srch.dvrps.end()));
+			srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
+			srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+			srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 		}
 		LOG(this, "e.query: %s\n", queryQ.get_description().c_str());
 
@@ -2210,6 +2216,12 @@ Database::search(query_t e)
 				queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, srch.query);
 			}
 			sug_query.push_back(srch.suggested_query.back());
+			srch_resul.nvrps.insert(srch_resul.nvrps.end(), std::make_move_iterator(srch.nvrps.begin()), std::make_move_iterator(srch.nvrps.end()));
+			srch_resul.svrps.insert(srch_resul.svrps.end(), std::make_move_iterator(srch.svrps.begin()), std::make_move_iterator(srch.svrps.end()));
+			srch_resul.dvrps.insert(srch_resul.dvrps.end(), std::make_move_iterator(srch.dvrps.begin()), std::make_move_iterator(srch.dvrps.end()));
+			srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
+			srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+			srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 		}
 		LOG(this, "e.partial: %s\n", queryP.get_description().c_str());
 
@@ -2229,6 +2241,12 @@ Database::search(query_t e)
 				queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, srch.query);
 			}
 			sug_query.push_back(srch.suggested_query.back());
+			srch_resul.nvrps.insert(srch_resul.nvrps.end(), std::make_move_iterator(srch.nvrps.begin()), std::make_move_iterator(srch.nvrps.end()));
+			srch_resul.svrps.insert(srch_resul.svrps.end(), std::make_move_iterator(srch.svrps.begin()), std::make_move_iterator(srch.svrps.end()));
+			srch_resul.dvrps.insert(srch_resul.dvrps.end(), std::make_move_iterator(srch.dvrps.begin()), std::make_move_iterator(srch.dvrps.end()));
+			srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
+			srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+			srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 		}
 		LOG(this, "e.terms: %s\n", queryT.get_description().c_str());
 
@@ -2353,7 +2371,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					break;
 				case DATE_TYPE:
 					slot = field_t.slot;
-					field_name_dot = std::string("");
 					dvrp = new DateTimeValueRangeProcessor(slot, field_name_dot);
 					srch.dvrps.push_back(std::move(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp)));
 					LOG(this, "Date Slot: %u Field_name: %s\n", slot, field_name.c_str());
@@ -2465,10 +2482,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		}
 
 		if (first_time) {
-			querystring = field_value;
+			querystring = "(" + field_value + ")";
 			first_time = false;
 		} else {
-			querystring += " " + field_value;
+			querystring += " OR (" + (field_value) + ")";
 		}
 	}
 

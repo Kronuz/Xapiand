@@ -61,7 +61,7 @@ DateFieldProcessor::DateFieldProcessor(const std::string &prefix_): prefix(prefi
 
 Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 {
-	LOG(this, "Date FP!!\n");
+	LOG(this, "Date FP %s!!\n", str.c_str());
 	std::string serialise = serialise_date(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand date specification '" + str + "'");
@@ -70,7 +70,7 @@ Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 }
 
 
-DateTimeValueRangeProcessor::DateTimeValueRangeProcessor(Xapian::valueno slot_, std::string prefix_): valno(slot_), prefix(prefix_) {}
+DateTimeValueRangeProcessor::DateTimeValueRangeProcessor(Xapian::valueno slot_, const std::string &prefix_): valno(slot_), prefix(prefix_) {}
 
 
 Xapian::valueno
@@ -79,8 +79,14 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 	std::string buf;
 	LOG(this, "Inside of DateTimeValueRangeProcessor\n");
 
+	// Verify the prefix.
+	if (std::string(begin.c_str(), 0, prefix.size()).compare(prefix) == 0) {
+		begin.assign(begin.c_str(), prefix.size(), begin.size());
+	} else return valno;
+
 	if (begin.size() != 0) {
 		std::string serialise = serialise_date(begin);
+		printf("Begin: %s End: %s\n", begin.c_str(), end.c_str());
 		if (serialise.size() == 0) return Xapian::BAD_VALUENO;
 		buf = prefix + serialise;
 		begin.assign(buf.c_str(), buf.size());
@@ -91,9 +97,9 @@ DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
 	if (end.size() != 0) {
 		std::string serialise = serialise_date(end);
 		if (serialise.size() == 0) return Xapian::BAD_VALUENO;
-		buf = prefix + serialise;
+		buf = serialise;
 		end.assign(buf.c_str(), buf.size());
-		LOG(this, "Serialise of end %s\n", (prefix + buf).c_str());
+		LOG(this, "Serialise of end %s\n", buf.c_str());
 	}
 	LOG(this, "DateTimeValueRangeProcessor process\n");
 

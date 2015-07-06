@@ -1675,7 +1675,7 @@ std::string get_numeric_term(const std::string &field_value, const std::vector<s
 			}
 		}
 
-		long long int startUP, endUP, num_tUP = 0;
+		long long int startUP = 0, endUP = 0, num_tUP = 0;
 		if (incUP != 0) {
 			// It may be in the limit of two terms.
 			// For example 4900..5100  ==> (X:4000 OR X:5000) AND (X:4900 OR X:5100)
