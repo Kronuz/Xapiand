@@ -1702,7 +1702,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	cJSON *document_terms = cJSON_GetObjectItem(document, RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document, RESERVED_TEXTS);
 
-	std::string s_schema = db->get_metadata("schema");
+	std::string s_schema = db->get_metadata(SCHEMA);
 	cJSON *schema;
 	cJSON *properties;
 	std::string uuid(db->get_uuid());
@@ -1856,7 +1856,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 	LOG_DATABASE_WRAP(this, "Schema: %s\n", cJSON_Print(schema));
-	wdb->set_metadata("schema", cJSON_Print(schema));
+	wdb->set_metadata(SCHEMA, cJSON_Print(schema));
 	return replace(document_id, doc, commit);
 }
 
@@ -1918,7 +1918,7 @@ Database::get_data_field(const std::string &field_name)
 		return res;
 	}
 
-	std::string json = db->get_metadata("schema");
+	std::string json = db->get_metadata(SCHEMA);
 	if (json.empty()) return res;
 
 	std::string uuid(db->get_uuid());
