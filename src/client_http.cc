@@ -688,6 +688,7 @@ void HttpClient::_search()
 		if (database->get_metadata("scheme", schema_)) {
 			schema_ += "\n";
 			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, schema_));
+			database_pool->checkin(&database);
 			return;
 		} else {
 			cJSON *err_response = cJSON_CreateObject();
@@ -699,6 +700,7 @@ void HttpClient::_search()
 			}
 			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, schema_));
 			cJSON_Delete(err_response);
+			database_pool->checkin(&database);
 			return;
 		}
 	}
