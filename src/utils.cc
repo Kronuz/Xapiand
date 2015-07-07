@@ -1720,8 +1720,256 @@ std::string get_numeric_term(const std::string &field_value, const std::vector<s
 		if (!or_terms.empty()) {
 			res += incUP != 0 ? " AND " + or_terms : or_terms;
 		}
+
+		std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
 	}
 
-	std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
 	return res;
 }
+
+
+std::string get_date_term(const std::string &field_value, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::string &prefix)
+{
+	struct TRANSFORM {
+		char operator() (char c) { return  (c == '-') ? '_' : c;}
+	};
+
+	std::string res;
+	std::vector<std::string> ranges = stringTokenizer(field_value, "..");
+	if (ranges.size() == 2) {
+		std::string s(timestamp_date(ranges.at(0)));
+		std::string e(timestamp_date(ranges.at(1)));
+
+		if (s.empty() || e.empty()) throw Xapian::QueryParserError("Didn't understand date specification '" + field_value + "'");
+
+		double start = strtodouble(s);
+		double end = strtodouble(e);
+
+		if (end < start) return res;
+
+		time_t timestamp_s = (time_t) start;
+		time_t timestamp_e = (time_t) end;
+
+		struct tm *timeinfo = gmtime(&timestamp_s);
+		int n_s[6] = {timeinfo->tm_year, timeinfo->tm_mon, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec};
+		timeinfo = gmtime(&timestamp_e);
+		int n_e[6] = {timeinfo->tm_year, timeinfo->tm_mon, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec};
+
+		std::vector<std::string>::const_iterator it(accuracy.begin());
+		bool y = false, mon = false, w = false, d = false, h = false, min = false, sec = false;
+		int pos_y = 0, pos_mon = 0, pos_w = 0, pos_d = 0, pos_h = 0, pos_min = 0, pos_sec = 0;
+		for (int pos = 0; it != accuracy.end(); it++, pos++) {
+			std::string str = stringtolower(*it);
+			if (!y && str.compare("year") == 0) {
+				y = true;
+				pos_y = pos;
+			} else if (!mon && str.compare("month") == 0) {
+				mon = true;
+				pos_mon = pos;
+			} else if (!w && str.compare("week") == 0) {
+				w = true;
+				pos_w = pos;
+			} else if (!d && str.compare("day") == 0) {
+				d = true;
+				pos_d = pos;
+			} else if (!h && str.compare("hour") == 0) {
+				h = true;
+				pos_h = pos;
+			} else if (!min && str.compare("minute") == 0) {
+				min = true;
+				pos_min = pos;
+			} else if (!sec && str.compare("second") == 0) {
+				sec = true;
+				pos_sec = pos;
+			}
+		}
+
+		if (n_s[0] != n_e[0]) {
+			if (y) {
+				if ((n_e[0] - n_s[0]) > 100) return res;
+				prefix = acc_prefix.at(pos_y);
+				return "(" + terms_by_year(n_s, n_e, prefix) + ")";
+			}
+		} else if (n_s[1] != n_e[1]) {
+			if (mon) {
+				prefix = acc_prefix.at(pos_mon);
+				return "(" + terms_by_month(n_s, n_e, prefix) + ")";
+			} else if (y) {
+				prefix = acc_prefix.at(pos_y);
+				return "(" + terms_by_year(n_s, n_e, prefix) + ")";
+			}
+		} else if (n_s[2] != n_e[2]) {
+			if (d) {
+				prefix = acc_prefix.at(pos_d);
+				return "(" + terms_by_day(n_s, n_e, prefix) + ")";
+			} else if (mon) {
+				prefix = acc_prefix.at(pos_mon);
+				return "(" + terms_by_month(n_s, n_e, prefix) + ")";
+			} else if (y) {
+				prefix = acc_prefix.at(pos_y);
+				return "(" + terms_by_year(n_s, n_e, prefix) + ")";
+			}
+		} else if (n_s[3] != n_e[3]) {
+			if (h) {
+				prefix = acc_prefix.at(pos_h);
+				return "(" + terms_by_hour(n_s, n_e, prefix) + ")";
+			} else if (d) {
+				prefix = acc_prefix.at(pos_d);
+				return "(" + terms_by_day(n_s, n_e, prefix) + ")";
+			} else if (mon) {
+				prefix = acc_prefix.at(pos_mon);
+				return "(" + terms_by_month(n_s, n_e, prefix) + ")";
+			} else if (y) {
+				prefix = acc_prefix.at(pos_y);
+				return "(" + terms_by_year(n_s, n_e, prefix) + ")";
+			}
+		} else if (n_s[4] != n_e[4]) {
+			if (min) {
+				prefix = acc_prefix.at(pos_min);
+				return "(" + terms_by_minute(n_s, n_e, prefix) + ")";
+			} else if (h) {
+				prefix = acc_prefix.at(pos_h);
+				return "(" + terms_by_hour(n_s, n_e, prefix) + ")";
+			} else if (d) {
+				prefix = acc_prefix.at(pos_d);
+				return "(" + terms_by_day(n_s, n_e, prefix) + ")";
+			} else if (mon) {
+				prefix = acc_prefix.at(pos_mon);
+				return "(" + terms_by_month(n_s, n_e, prefix) + ")";
+			} else if (y) {
+				prefix = acc_prefix.at(pos_y);
+				return "(" + terms_by_year(n_s, n_e, prefix) + ")";
+			}
+		} else {
+			if (sec) {
+				prefix = acc_prefix.at(pos_sec);
+				return "(" + terms_by_second(n_s, n_e, prefix) + ")";
+			} else if (min) {
+				prefix = acc_prefix.at(pos_min);
+				return "(" + terms_by_minute(n_s, n_e, prefix) + ")";
+			} else if (h) {
+				prefix = acc_prefix.at(pos_h);
+				return "(" + terms_by_hour(n_s, n_e, prefix) + ")";
+			} else if (d) {
+				prefix = acc_prefix.at(pos_d);
+				return "(" + terms_by_day(n_s, n_e, prefix) + ")";
+			} else if (mon) {
+				prefix = acc_prefix.at(pos_mon);
+				return "(" + terms_by_month(n_s, n_e, prefix) + ")";
+			} else if (y) {
+				prefix = acc_prefix.at(pos_y);
+				return "(" + terms_by_year(n_s, n_e, prefix) + ")";
+			}
+		}
+	}
+
+	return res;
+}
+
+
+std::string terms_by_year(int n_s[], int n_e[], const std::string &prefix)
+{
+	std::string prefix_dot = prefix + ":";
+	std::string res;
+	n_s[1] = n_s[3] = n_s[4] = n_s[5] = n_e[1] = n_e[3] = n_e[4] = n_e[5] = 0;
+	n_s[2] = n_e[2] = 1;
+	while (n_s[0] != n_e[0]) {
+		res += prefix_dot + serialise_term(n_s) + " OR ";
+		n_s[0]++;
+	}
+
+	res += prefix_dot + serialise_term(n_e);
+	return res;
+}
+
+
+std::string terms_by_month(int n_s[], int n_e[], const std::string &prefix)
+{
+	std::string prefix_dot = prefix + ":";
+	std::string res;
+	n_s[3] = n_s[4] = n_s[5] = n_e[3] = n_e[4] = n_e[5] = 0;
+	n_s[2] = n_e[2] = 1;
+	while (n_s[1] != n_e[1]) {
+		res += prefix_dot + serialise_term(n_s) + " OR ";
+		n_s[1]++;
+	}
+
+	res += prefix_dot + serialise_term(n_e);
+	return res;
+}
+
+
+std::string terms_by_day(int n_s[], int n_e[], const std::string &prefix)
+{
+	std::string prefix_dot = prefix + ":";
+	std::string res;
+	n_s[3] = n_s[4] = n_s[5] = n_e[3] = n_e[4] = n_e[5] = 0;
+	while (n_s[2] != n_e[2]) {
+		res += prefix_dot + serialise_term(n_s) + " OR ";
+		n_s[2]++;
+	}
+
+	res += prefix_dot + serialise_term(n_e);
+	return res;
+}
+
+
+std::string terms_by_hour(int n_s[], int n_e[], const std::string &prefix)
+{
+	std::string prefix_dot = prefix + ":";
+	std::string res;
+	n_s[4] = n_s[5] = n_e[4] = n_e[5] = 0;
+	while (n_s[3] != n_e[3]) {
+		res += prefix_dot + serialise_term(n_s) + " OR ";
+		n_s[3]++;
+	}
+
+	res += prefix_dot + serialise_term(n_e);
+	return res;
+}
+
+
+std::string terms_by_minute(int n_s[], int n_e[], const std::string &prefix)
+{
+	std::string prefix_dot = prefix + ":";
+	std::string res;
+	n_s[5] = n_e[5] = 0;
+	while (n_s[4] != n_e[4]) {
+		res += prefix_dot + serialise_term(n_s) + " OR ";
+		n_s[4]++;
+	}
+
+	res += prefix_dot + serialise_term(n_e);
+	return res;
+}
+
+
+std::string terms_by_second(int n_s[], int n_e[], const std::string &prefix)
+{
+	std::string prefix_dot = prefix + ":";
+	std::string res;
+	while (n_s[5] != n_e[5]) {
+		res += prefix_dot + serialise_term(n_s) + " OR ";
+		n_s[5]++;
+	}
+
+	res += prefix_dot + serialise_term(n_e);
+	return res;
+}
+
+
+
+std::string serialise_term(int n[])
+{
+	time_t tt = 0;
+	struct tm *timeinfo = gmtime(&tt);
+	timeinfo->tm_year   = n[0];
+	timeinfo->tm_mon    = n[1];
+	timeinfo->tm_mday   = n[2];
+	timeinfo->tm_hour   = n[3];
+	timeinfo->tm_min    = n[4];
+	timeinfo->tm_sec    = n[5];
+	return std::to_string((double)timegm(timeinfo));
+}
+
+

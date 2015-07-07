@@ -1203,7 +1203,6 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 						}
 						if (_v.compare("year") == 0)        acc = acc + "||//y";
 						else if (_v.compare("month") == 0)  acc = acc + "||//M";
-						else if (_v.compare("week") == 0)   acc = acc + "||//w";
 						else if (_v.compare("day") == 0)    acc = acc + "||//d";
 						else if (_v.compare("hour") == 0)   acc = acc + "||//h";
 						else if (_v.compare("minute") == 0) acc = acc + "||//m";
@@ -2347,7 +2346,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					filter_term = get_numeric_term(field_value, field_t.accuracy, field_t.acc_prefix, prefixes);
 					if (!filter_term.empty()) {
 						it = prefixes.begin();
-						LOG(this, "Terms by accuracy\n");
 						for ( ; it != prefixes.end(); it++) {
 							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
 								nfp = new NumericFieldProcessor(*it);
@@ -2375,7 +2373,18 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					srch.dvrps.push_back(std::move(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp)));
 					LOG(this, "Date Slot: %u Field_name: %s\n", slot, field_name.c_str());
 					queryparser.add_valuerangeprocessor(dvrp);
-					field_value = field;
+					filter_term = get_date_term(field_value, field_t.accuracy, field_t.acc_prefix, field_name);
+					if (!filter_term.empty()) {
+						if (std::find(added_prefixes.begin(), added_prefixes.end(), field_name) == added_prefixes.end()) {
+							dfp = new DateFieldProcessor(field_name);
+							srch.dfps.push_back(std::move(std::unique_ptr<DateFieldProcessor>(dfp)));
+							queryparser.add_prefix(field_name, dfp);
+							added_prefixes.push_back(field_name);
+						}
+						field_value = filter_term + " AND " + field;
+					} else {
+						field_value = field;
+					}
 					break;
 				default:
 					if (g) {

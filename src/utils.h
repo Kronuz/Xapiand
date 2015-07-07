@@ -202,6 +202,7 @@ int look_cmd(const char *);
 
 std::string serialise_numeric(const std::string &field_value);
 std::string serialise_date(const std::string &field_value);
+std::string serialise_term(int n[]);
 std::string unserialise_date(const std::string &serialise_val);
 std::vector<std::string> serialise_geo(const std::string &field_value, bool partials, double error);
 std::string unserialise_geo(const std::string &serialise_val);
@@ -234,6 +235,13 @@ void calculate_date(int n[], const std::string &op, const std::string &units);
 std::string unserialise(char field_type, const std::string &field_name, const std::string &serialise_val);
 std::string serialise(char field_type, const std::string &field_value);
 std::string get_numeric_term(const std::string &field_value, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::vector<std::string> &prefixes);
+std::string get_date_term(const std::string &field_value, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::string &prefix);
+std::string terms_by_year(int n_s[], int n_e[], const std::string &prefix);
+std::string terms_by_month(int n_s[], int n_e[], const std::string &prefix);
+std::string terms_by_day(int n_s[], int n_e[], const std::string &prefix);
+std::string terms_by_hour(int n_s[], int n_e[], const std::string &prefix);
+std::string terms_by_minute(int n_s[], int n_e[], const std::string &prefix);
+std::string terms_by_second(int n_s[], int n_e[], const std::string &prefix);
 
 int identify_cmd(std::string &commad);
 bool is_digits(const std::string &str);
