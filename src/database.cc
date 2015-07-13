@@ -557,11 +557,9 @@ void DatabasePool::init_ref(Endpoints endpoints)
 {
 	Xapian::Document doc;
 	endpoints_set_t::iterator endp_it = endpoints.begin();
-
 	if (ref_database) {
 		for (; endp_it != endpoints.end(); endp_it++) {
 			std::string unique_id = prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX);
-
 			Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 			if (p == ref_database->db->postlist_end(unique_id)) {
 				doc.add_boolean_term(unique_id);
@@ -574,18 +572,13 @@ void DatabasePool::init_ref(Endpoints endpoints)
 		}
 	}
 }
-
-
 void DatabasePool::inc_ref(Endpoints endpoints)
 {
 	Xapian::Document doc;
 	endpoints_set_t::iterator endp_it = endpoints.begin();
-
 	for (; endp_it != endpoints.end(); endp_it++) {
 		std::string unique_id = prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX);
-
 		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
-
 		if (p == ref_database->db->postlist_end(unique_id)) {
 			//QUESTION: Document not found - should add?
 			//QUESTION: This case could happen?
@@ -604,18 +597,13 @@ void DatabasePool::inc_ref(Endpoints endpoints)
 		}
 	}
 }
-
-
 void DatabasePool::dec_ref(Endpoints endpoints)
 {
 	Xapian::Document doc;
 	endpoints_set_t::iterator endp_it = endpoints.begin();
-
 	for (; endp_it != endpoints.end(); endp_it++) {
-
 		std::string unique_id = prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX);
 		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
-
 		if (p != ref_database->db->postlist_end(unique_id)) {
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
@@ -623,7 +611,6 @@ void DatabasePool::dec_ref(Endpoints endpoints)
 			int nref = strtoint(doc.get_value(0)) - 1;
 			doc.add_value(0, std::to_string(nref));
 			ref_database->replace(unique_id, doc, true);
-
 			if (nref == 0) {
 				//qmtx need a lock
 				pthread_cond_wait(&checkin_cond, &qmtx);

@@ -29,6 +29,7 @@ xapiand_SOURCES = \
 	geometry.cc \
 	htm.cc \
 	wkt_parser.cc \
+	datetime.cc \
 	\
 	xapiand.cc
 
@@ -59,6 +60,7 @@ noinst_HEADERS = \
 	geometry.h \
 	htm.h \
 	wkt_parser.h \
+	datetime.h \
 	worker.h \
 	xapiand.h
 
