@@ -61,8 +61,10 @@ DateFieldProcessor::DateFieldProcessor(const std::string &prefix_): prefix(prefi
 
 Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 {
-	LOG(this, "Date FP %s!!\n", str.c_str());
-	std::string serialise = serialise_date(str);
+	std::string serialise(str.c_str());
+	if (serialise.at(0) == '_') serialise.at(0) = '-';
+	LOG(this, "Date FP %s!!\n", serialise.c_str());
+	serialise = serialise_date(serialise);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand date specification '" + str + "'");
 	}
