@@ -1156,7 +1156,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 								prefix = get_prefix(name + std::to_string(num_pre), DOCUMENT_CUSTOM_TERM_PREFIX, type);
 								cJSON_AddItemToArray(_new_prefix_acc, cJSON_CreateString(prefix.c_str()));
 							}
-							term_v = serialise(type, term_v);
+							term_v = serialise_numeric(term_v);
 							if (spc.position >= 0) {
 								std::string nameterm(prefixed(term_v, prefix));
 								doc.add_posting(nameterm, spc.position, spc.weight);
@@ -1177,26 +1177,18 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 					cJSON *_prefix_accuracy = cJSON_GetObjectItem(schema, RESERVED_ACC_PREFIX);
 					cJSON *_new_prefix_acc = (_prefix_accuracy) ? NULL : cJSON_CreateArray();
 					for ( ; it != spc.accuracy.end(); it++, num_pre++) {
-						std::string acc(value_v), _v(stringtolower(*it));
-						if (isNumeric(acc)) {
-							char date[25];
-							double epoch = strtodouble(timestamp_date(acc));
-							time_t timestamp = (time_t) epoch;
-							std::string milliseconds = std::to_string(epoch);
-							milliseconds.assign(milliseconds.c_str() + milliseconds.find("."), 4);
-							struct tm *timeinfo = gmtime(&timestamp);
-							sprintf(date, "%.4d-%.2d-%.2dT%.2d:%.2d:%.2d%s", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, milliseconds.c_str());
-							acc = value_v = date;
-						}
-						if (_v.compare("year") == 0)        acc = acc + "||//y";
-						else if (_v.compare("month") == 0)  acc = acc + "||//M";
-						else if (_v.compare("day") == 0)    acc = acc + "||//d";
-						else if (_v.compare("hour") == 0)   acc = acc + "||//h";
-						else if (_v.compare("minute") == 0) acc = acc + "||//m";
-						else if (_v.compare("second") == 0) acc = acc + "||//s";
+						std::string _v(stringtolower(*it)), acc(Datetime::ctime(value_v));
+						value_v.assign(acc);
+						bool findMath = acc.find("||") != std::string::npos;
+
+						if (_v.compare("year") == 0)        acc += (findMath ? "//y" : "||//y");
+						else if (_v.compare("month") == 0)  acc += (findMath ? "//M" : "||//M");
+						else if (_v.compare("day") == 0)    acc += (findMath ? "//d" : "||//d");
+						else if (_v.compare("hour") == 0)   acc += (findMath ? "//h" : "||//h");
+						else if (_v.compare("minute") == 0) acc += (findMath ? "//m" : "||//m");
+						else if (_v.compare("second") == 0) acc += (findMath ? "//s" : "||//s");
 
 						if (acc.compare(value_v) != 0) {
-							acc = timestamp_date(acc);
 							std::string prefix;
 							if (_prefix_accuracy) {
 								prefix = cJSON_GetArrayItem(_prefix_accuracy, num_pre)->valuestring;
@@ -1204,7 +1196,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 								prefix = get_prefix(name + std::to_string(num_pre), DOCUMENT_CUSTOM_TERM_PREFIX, type);
 								cJSON_AddItemToArray(_new_prefix_acc, cJSON_CreateString(prefix.c_str()));
 							}
-							acc = serialise(type, acc);
+							acc.assign(serialise_date(acc));
 							if (spc.position >= 0) {
 								std::string nameterm(prefixed(acc, prefix));
 								doc.add_posting(nameterm, spc.position, spc.weight);
@@ -1993,7 +1985,7 @@ Database::get_type(cJSON *field, specifications_t &spc)
 		case cJSON_String:
 			if (spc.bool_detection && serialise_bool(aux->valuestring).size() != 0) {
 				return BOOLEAN_TYPE;
-			} else if (spc.date_detection && timestamp_date(aux->valuestring).size() != 0) {
+			} else if (spc.date_detection && serialise_date(aux->valuestring).size() != 0) {
 				return DATE_TYPE;
 			} else if(spc.geo_detection && field->type != cJSON_Array && is_like_EWKT(aux->valuestring)) {
 				// For WKT format, it is not necessary to use arrays.
@@ -2416,8 +2408,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case DATE_TYPE:
 					prefix = field_t.prefix;
 					if (field_value.at(0) == '"') field_value.assign(field_value, 1, field_value.size() - 2);
-					field_value = timestamp_date(field_value);
-					if (field_value.size() == 0) {
+					try {
+						field_value = std::to_string(Datetime::timestamp(field_value));
+					} catch (const std::exception &ex) {
 						if (g) {
 							free(g);
 							g = NULL;
@@ -2433,6 +2426,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						LOG(this, "Prefix\n");
 						queryparser.add_prefix(field_name, dfp);
 					}
+					if (field_value.at(0) == '-') field_value.at(0) = '_';
 					field_value = field_name_dot + field_value;
 					break;
 				case GEO_TYPE:
