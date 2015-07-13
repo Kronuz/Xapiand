@@ -27,6 +27,7 @@
 #include <string.h>
 #include <algorithm>
 #include "../src/utils.h"
+#include "../src/datetime.h"
 #include <unistd.h>
 
 
