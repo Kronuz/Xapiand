@@ -26,6 +26,7 @@
 #include "xapiand.h"
 #include "md5.h"
 #include "wkt_parser.h"
+#include "datetime.h"
 #include <limits.h>
 
 #include <xapian.h>
