@@ -122,8 +122,6 @@ typedef struct pos_time_s {
 	unsigned short second;
 } pos_time_t;
 
-extern pcre *compiled_date_re;
-extern pcre *compiled_date_math_re;
 extern pcre *compiled_coords_re;
 extern pcre *compiled_coords_dist_re;
 extern pcre *compiled_numeric_re;
@@ -218,7 +216,6 @@ int strtoint(const std::string &str);
 unsigned int strtounsignedint(const std::string &str);
 double strtodouble(const std::string &str);
 long long int strtolonglong(const std::string &str);
-std::string timestamp_date(const std::string &str);
 std::string get_prefix(const std::string &name, const std::string &prefix, char type);
 std::string get_slot_hex(const std::string &name);
 bool strhasupper(const std::string &str);
@@ -229,9 +226,6 @@ bool isLatLongDistance(const std::string &str);
 void get_order(const std::string &str, query_t &e);
 bool isNumeric(const std::string &str);
 bool StartsWith(const std::string &text, const std::string &token);
-int number_days(int year, int month);
-bool validate_date(int n[]);
-void calculate_date(int n[], const std::string &op, const std::string &units);
 std::string unserialise(char field_type, const std::string &field_name, const std::string &serialise_val);
 std::string serialise(char field_type, const std::string &field_value);
 std::string get_numeric_term(const std::string &field_value, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::vector<std::string> &prefixes);
