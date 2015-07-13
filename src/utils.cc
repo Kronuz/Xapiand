@@ -725,6 +725,42 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 }
 
 
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, std::unique_ptr<group_t, group_t_deleter> &unique_groups)
+{
+	int erroffset;
+	const char *error;
+
+	// First, the regex string must be compiled.
+	if (*code == NULL) {
+		//pcre_free is not use because we use a struct pcre static and gets free at the end of the program
+		LOG(NULL, "pcre compiled is NULL.\n");
+		*code = pcre_compile(pattern, 0, &error, &erroffset, 0);
+		if (*code == NULL) {
+			LOG_ERR(NULL, "pcre_compile of %s failed (offset: %d), %s\n", pattern, erroffset, error);
+			return -1;
+		}
+	}
+
+	if (*code != NULL) {
+		int n;
+		if (pcre_fullinfo(*code, NULL, PCRE_INFO_CAPTURECOUNT, &n) != 0) {
+			return -1;
+		}
+
+		if (unique_groups == NULL) {
+			unique_groups = std::unique_ptr<group_t, group_t_deleter>(static_cast<group_t*>(malloc((n + 1) * 3 * sizeof(int))));
+		}
+
+		int *ocvector = (int*)(unique_groups.get());
+		if (pcre_exec(*code, 0, subject, length, startoffset, options, ocvector, (n + 1) * 3) >= 0) {
+			return 0;
+		} else return -1;
+	}
+
+	return -1;
+}
+
+
 std::string serialise_numeric(const std::string &field_value)
 {
 	double val;
@@ -1559,8 +1595,8 @@ std::string get_date_term(const std::string &field_value, const std::vector<std:
 				res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
 			}
 		}
-
 		std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
+
 		return res;
 	}
 

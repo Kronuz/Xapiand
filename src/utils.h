@@ -194,6 +194,14 @@ typedef struct group_s {
 	int end;
 } group_t;
 
+struct group_t_deleter {
+	void operator()(group_t *p) const {
+		if (p) {
+			free(p);
+		}
+	}
+};
+
 int url_path(const char* n1, size_t size, parser_url_path_t *par);
 int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
@@ -220,7 +228,11 @@ long long int strtolonglong(const std::string &str);
 std::string get_prefix(const std::string &name, const std::string &prefix, char type);
 std::string get_slot_hex(const std::string &name);
 bool strhasupper(const std::string &str);
+
+
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group_t **groups);
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, std::unique_ptr<group_t, group_t_deleter> &unique_groups);
+
 int get_coords(const std::string &str, double *coords);
 bool isRange(const std::string &str);
 bool isLatLongDistance(const std::string &str);
