@@ -311,16 +311,15 @@ Cartesian::distance(Cartesian &p)
 std::string
 Cartesian::as_string() const
 {
-	return "CRS = WGS84\n(" + std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(z) + ")";
+	return "SRID = " + std::to_string(SRID) + "\n(" + std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(z) + ")";
 }
 
 
 char*
 Cartesian::c_str() const
 {
-	std::string tmp = "SRID = " + std::to_string(SRID) + "\n(" + std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(z) + ")";
-	char *str = new char[tmp.size() + 1];
-	strcpy(str, tmp.c_str());
+	static char str[100];
+	snprintf(str, 100, "SRID = %d\n(%f %f %f)", SRID, x, y, z);
 	return str;
 }
 

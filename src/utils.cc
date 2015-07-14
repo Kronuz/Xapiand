@@ -1007,7 +1007,6 @@ bool isRange(const std::string &str)
 {
 	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re , unique_gr);
-	group_t *gr = unique_gr.get();
 
 	return (ret != -1) ? true : false;
 }
