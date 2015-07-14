@@ -689,42 +689,6 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 }
 
 
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, group_t **groups)
-{
-	int erroffset;
-	const char *error;
-
-	// First, the regex string must be compiled.
-	if (*code == NULL) {
-		//pcre_free is not use because we use a struct pcre static and gets free at the end of the program
-		LOG(NULL, "pcre compiled is NULL.\n");
-		*code = pcre_compile(pattern, 0, &error, &erroffset, 0);
-		if (*code == NULL) {
-			LOG_ERR(NULL, "pcre_compile of %s failed (offset: %d), %s\n", pattern, erroffset, error);
-			return -1;
-		}
-	}
-
-	if (*code != NULL) {
-		int n;
-		if (pcre_fullinfo(*code, NULL, PCRE_INFO_CAPTURECOUNT, &n) != 0) {
-			return -1;
-		}
-
-		if (*groups == NULL) {
-			*groups = (group_t *)malloc((n + 1) * 3 * sizeof(int));
-		}
-
-		int *ocvector = (int *)*groups;
-		if (pcre_exec(*code, 0, subject, length, startoffset, options, ocvector, (n + 1) * 3) >= 0) {
-			return 0;
-		} else return -1;
-	}
-
-	return -1;
-}
-
-
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, std::unique_ptr<group_t, group_t_deleter> &unique_groups)
 {
 	int erroffset;
@@ -749,9 +713,13 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 
 		if (unique_groups == NULL) {
 			unique_groups = std::unique_ptr<group_t, group_t_deleter>(static_cast<group_t*>(malloc((n + 1) * 3 * sizeof(int))));
+			if (unique_groups == NULL) {
+				LOG_ERR(NULL, "Memory can not be reserved\n");
+				return -1;
+			}
 		}
 
-		int *ocvector = (int*)(unique_groups.get());
+		int *ocvector = (int*)unique_groups.get();
 		if (pcre_exec(*code, 0, subject, length, startoffset, options, ocvector, (n + 1) * 3) >= 0) {
 			return 0;
 		} else return -1;
@@ -995,9 +963,11 @@ bool strhasupper(const std::string &str)
 int get_coords(const std::string &str, double *coords)
 {
 	std::stringstream ss;
-	group_t *g = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)str.size();
-	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &g);
+	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, unique_gr);
+	group_t *g = unique_gr.get();
+
 	if (ret != -1 && (g[0].end - g[0].start) == len) {
 		ss << std::string(str.c_str() + g[1].start, g[1].end - g[1].start);
 		ss >> coords[0];
@@ -1026,17 +996,7 @@ int get_coords(const std::string &str, double *coords)
 			}
 		}
 
-		if (g) {
-			free(g);
-			g = NULL;
-		}
-
 		return 0;
-	}
-
-	if (g) {
-		free(g);
-		g = NULL;
 	}
 
 	return -1;
@@ -1045,63 +1005,33 @@ int get_coords(const std::string &str, double *coords)
 
 bool isRange(const std::string &str)
 {
-	group_t *gr = NULL;
-	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re , &gr);
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re , unique_gr);
+	group_t *gr = unique_gr.get();
 
-	if (gr) {
-		free(gr);
-		gr = NULL;
-	}
-
-	if (ret != -1) {
-		return true;
-	}
-
-	return false;
+	return (ret != -1) ? true : false;
 }
 
 
 bool isLatLongDistance(const std::string &str)
 {
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)str.size();
-	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, &gr);
-	if (ret != -1 && (gr[0].end - gr[0].start) == len) {
-		if (gr) {
-			free(gr);
-			gr = NULL;
-		}
-		return true;
-	}
+	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, unique_gr);
+	group_t *gr = unique_gr.get();
 
-	if (gr) {
-		free(gr);
-		gr = NULL;
-	}
-
-	return false;
+	return (ret != -1 && (gr[0].end - gr[0].start) == len) ? true : false;
 }
 
 
 bool isNumeric(const std::string &str)
 {
-	group_t *g = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)str.size();
-	int ret = pcre_search(str.c_str(), len, 0, 0, NUMERIC_RE, &compiled_numeric_re, &g);
-	if (ret != -1 && (g[0].end - g[0].start) == len) {
-		if (g) {
-			free(g);
-			g = NULL;
-		}
-		return true;
-	}
+	int ret = pcre_search(str.c_str(), len, 0, 0, NUMERIC_RE, &compiled_numeric_re, unique_gr);
+	group_t *g = unique_gr.get();
 
-	if (g) {
-		free(g);
-		g = NULL;
-	}
-
-	return false;
+	return (ret != -1 && (g[0].end - g[0].start) == len) ? true : false;
 }
 
 
@@ -1230,37 +1160,18 @@ void fill_zeros_stats_sec(int start, int end)
 
 bool Is_id_range(std::string &ids)
 {
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)ids.size(), offset = 0;
-	group_t *g = NULL;
-	while ((pcre_search(ids.c_str(), len, offset, 0, RANGE_ID_RE, &compiled_range_id_re, &g)) != -1) {
+	while ((pcre_search(ids.c_str(), len, offset, 0, RANGE_ID_RE, &compiled_range_id_re, unique_gr)) != -1) {
+		group_t *g = unique_gr.get();
 		offset = g[0].end;
 		if (g[1].end - g[1].start && g[2].end - g[2].start) {
-			if (g) {
-				free(g);
-				g = NULL;
-			}
 			return true;
 		} else {
-			if(g[1].end - g[1].start){
-				if (g) {
-					free(g);
-					g = NULL;
-				}
-				return true;
-			} else {
-				if (g) {
-					free(g);
-					g = NULL;
-				}
-				return false;
-			}
+			return (g[1].end - g[1].start) ? true : false;
 		}
 	}
 
-	if (g) {
-		free(g);
-		g = NULL;
-	}
 	return false;
 }
 

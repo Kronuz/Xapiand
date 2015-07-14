@@ -56,17 +56,14 @@ pcre *compiled_find_collection_re = NULL;
 */
 EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error) : partials(_partials), error(_error)
 {
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)EWKT.size();
-	int ret = pcre_search(EWKT.c_str(), len, 0, 0, FIND_GEOMETRY_RE, &compiled_find_geometry_re , &gr);
+	int ret = pcre_search(EWKT.c_str(), len, 0, 0, FIND_GEOMETRY_RE, &compiled_find_geometry_re, unique_gr);
+	group_t *gr = unique_gr.get();
 	if (ret != -1 && len == gr[0].end - gr[0].start) {
 		if (gr[2].end - gr[2].start != 0) {
 			SRID = atoi(std::string(EWKT.c_str(), gr[2].start, gr[2].end - gr[2].start).c_str());
 			if (!Cartesian().is_SRID_supported(SRID)) {
-				if (gr) {
-					free(gr);
-					gr = NULL;
-				}
 				throw MSG_Error("SRID not supported");
 			}
 		} else {
@@ -88,16 +85,7 @@ EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error)
 			else if (geometry.compare("TRIANGLE") == 0) trixels = parse_polygon(specification);
 		}
 	} else {
-		if (gr) {
-			free(gr);
-			gr = NULL;
-		}
 		throw MSG_Error("Syntax error in EWKT format or geometry object not supported");
-	}
-
-	if (gr) {
-		free(gr);
-		gr = NULL;
 	}
 }
 
@@ -109,9 +97,10 @@ EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error)
 std::vector<std::string>
 EWKT_Parser::parse_circle(std::string &specification)
 {
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)specification.size();
-	int ret = pcre_search(specification.c_str(), len, 0, 0, FIND_CIRCLE_RE, &compiled_find_circle_re, &gr);
+	int ret = pcre_search(specification.c_str(), len, 0, 0, FIND_CIRCLE_RE, &compiled_find_circle_re, unique_gr);
+	group_t *gr = unique_gr.get();
 	if (ret != -1 && len == gr[0].end - gr[0].start) {
 		double lat = atof(std::string(specification.c_str(), gr[1].start, gr[1].end - gr[1].start).c_str());
 		double lon = atof(std::string(specification.c_str(), gr[2].start, gr[2].end - gr[2].start).c_str());
@@ -127,18 +116,10 @@ EWKT_Parser::parse_circle(std::string &specification)
 		Geometry g(c);
 		HTM _htm(partials, error, g);
 		_htm.run();
-
 		gv.push_back(g);
-		if (gr) {
-			free(gr);
-			gr = NULL;
-		}
+
 		return _htm.names;
 	} else {
-		if (gr) {
-			free(gr);
-			gr = NULL;
-		}
 		throw MSG_Error("The specification for CIRCLE is lat lon [height], radius in meters(double positive)");
 	}
 }
@@ -151,19 +132,16 @@ EWKT_Parser::parse_circle(std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_polygon(std::string &specification)
 {
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)specification.size();
 	int start = 0;
 
 	// Checking if the format is correct and processing the subpolygons.
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(specification.c_str(), len, start, 0, FIND_SUBPOLYGON_RE, &compiled_find_subpolygon_re, &gr) != -1) {
+	while (pcre_search(specification.c_str(), len, start, 0, FIND_SUBPOLYGON_RE, &compiled_find_subpolygon_re, unique_gr) != -1) {
+		group_t *gr = unique_gr.get();
 		if (start != gr[0].start) {
-			if (gr) {
-				free(gr);
-				gr = NULL;
-			}
 			throw MSG_Error("Syntax error in EWKT format");
 		}
 
@@ -172,10 +150,6 @@ EWKT_Parser::parse_polygon(std::string &specification)
 		std::vector<Cartesian> pts;
 		std::vector<std::string> points = stringSplit(subpolygon, ",");
 		if (points.size() == 0) {
-			if (gr) {
-				free(gr);
-				gr = NULL;
-			}
 			throw MSG_Error("Syntax error in EWKT formats");
 		}
 
@@ -190,10 +164,6 @@ EWKT_Parser::parse_polygon(std::string &specification)
 				Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
 				pts.push_back(c);
 			} else {
-				if (gr) {
-					free(gr);
-					gr = NULL;
-				}
 				throw MSG_Error("The specification for POLYGON is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
 			}
 		}
@@ -212,11 +182,6 @@ EWKT_Parser::parse_polygon(std::string &specification)
 		start = gr[0].end;
 	}
 
-	if (gr) {
-		free(gr);
-		gr = NULL;
-	}
-
 	if (start != len) {
 		throw MSG_Error("Syntax error in EWKT format");
 	}
@@ -232,19 +197,16 @@ EWKT_Parser::parse_polygon(std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_multipolygon(std::string &specification)
 {
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)specification.size();
 	int start = 0;
 
 	// Checking if the format is correct and and processing the polygons.
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(specification.c_str(), len, start, 0, FIND_POLYGON_RE, &compiled_find_polygon_re, &gr) != -1) {
+	while (pcre_search(specification.c_str(), len, start, 0, FIND_POLYGON_RE, &compiled_find_polygon_re, unique_gr) != -1) {
+		group_t *gr = unique_gr.get();
 		if (start != gr[0].start) {
-			if (gr) {
-				free(gr);
-				gr = NULL;
-			}
 			throw MSG_Error("Syntax error in EWKT format");
 		}
 		std::string polygon(specification.c_str(), gr[1].start, gr[1].end - gr[1].start);
@@ -256,11 +218,6 @@ EWKT_Parser::parse_multipolygon(std::string &specification)
 			names_f = or_trixels(names_f, txs);
 		}
 		start = gr[0].end;
-	}
-
-	if (gr) {
-		free(gr);
-		gr = NULL;
 	}
 
 	if (start != len) {
@@ -310,7 +267,7 @@ EWKT_Parser::parse_point(std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_multipoint(std::string &specification)
 {
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)specification.size();
 	int start = 0;
 
@@ -322,12 +279,9 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 	std::vector<std::string> res;
 	std::string name;
 
-	while (pcre_search(specification.c_str(), len, start, 0, FIND_SUBPOLYGON_RE, &compiled_find_subpolygon_re, &gr) != -1) {
+	while (pcre_search(specification.c_str(), len, start, 0, FIND_SUBPOLYGON_RE, &compiled_find_subpolygon_re, unique_gr) != -1) {
+		group_t *gr = unique_gr.get();
 		if (start != gr[0].start) {
-			if (gr) {
-				free(gr);
-				gr = NULL;
-			}
 			throw MSG_Error("Syntax error in EWKT format");
 		}
 		std::string point(specification.c_str(), gr[2].start, gr[2].end - gr[2].start);
@@ -341,18 +295,9 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 			_htm.cartesian2id(c, name);
 			res.push_back(name);
 		} else {
-			if (gr) {
-				free(gr);
-				gr = NULL;
-			}
 			throw MSG_Error("The specification for POLYGON is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
 		}
 		start = gr[0].end;
-	}
-
-	if (gr) {
-		free(gr);
-		gr = NULL;
 	}
 
 	if (start == 0) {
@@ -384,7 +329,7 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_geometry_collection(std::string &data)
 {
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)data.size();
 	int start = 0;
 
@@ -393,12 +338,9 @@ EWKT_Parser::parse_geometry_collection(std::string &data)
 	std::vector<std::string> geometry;
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(data.c_str(), len, start, 0, FIND_COLLECTION_RE, &compiled_find_collection_re, &gr) != -1) {
+	while (pcre_search(data.c_str(), len, start, 0, FIND_COLLECTION_RE, &compiled_find_collection_re, unique_gr) != -1) {
+		group_t *gr = unique_gr.get();
 		if (start != gr[0].start) {
-			if (gr) {
-				free(gr);
-				gr = NULL;
-			}
 			throw MSG_Error("Syntax error in EWKT format");
 		}
 		std::string geometry(data.c_str(), gr[1].start, gr[1].end - gr[1].start);
@@ -421,11 +363,6 @@ EWKT_Parser::parse_geometry_collection(std::string &data)
 		start = gr[0].end;
 	}
 
-	if (gr) {
-		free(gr);
-		gr = NULL;
-	}
-
 	if (start != len) {
 		throw MSG_Error("Syntax error in EWKT format");
 	}
@@ -438,7 +375,7 @@ EWKT_Parser::parse_geometry_collection(std::string &data)
 std::vector<std::string>
 EWKT_Parser::parse_geometry_intersection(std::string &data)
 {
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)data.size();
 	int start = 0;
 
@@ -447,12 +384,9 @@ EWKT_Parser::parse_geometry_intersection(std::string &data)
 	std::vector<std::string> geometry;
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(data.c_str(), len, start, 0, FIND_COLLECTION_RE, &compiled_find_collection_re, &gr) != -1) {
+	while (pcre_search(data.c_str(), len, start, 0, FIND_COLLECTION_RE, &compiled_find_collection_re, unique_gr) != -1) {
+		group_t *gr = unique_gr.get();
 		if (start != gr[0].start) {
-			if (gr) {
-				free(gr);
-				gr = NULL;
-			}
 			throw MSG_Error("Syntax error in EWKT format");
 		}
 		std::string geometry(data.c_str(), gr[1].start, gr[1].end - gr[1].start);
@@ -473,11 +407,6 @@ EWKT_Parser::parse_geometry_intersection(std::string &data)
 		}
 
 		start = gr[0].end;
-	}
-
-	if (gr) {
-		free(gr);
-		gr = NULL;
 	}
 
 	if (start != len) {
@@ -672,21 +601,10 @@ EWKT_Parser::get_trixels(std::string &father, int depth, std::string &son)
 
 bool is_like_EWKT(const char *str)
 {
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)strlen(str);
-	int ret = pcre_search(str, len, 0, 0, FIND_GEOMETRY_RE, &compiled_find_geometry_re, &gr);
-	if (ret != -1 && len == gr[0].end - gr[0].start) {
-		if (gr) {
-			free(gr);
-			gr = NULL;
-		}
-		return true;
-	}
+	int ret = pcre_search(str, len, 0, 0, FIND_GEOMETRY_RE, &compiled_find_geometry_re, unique_gr);
+	group_t *gr = unique_gr.get();
 
-	if (gr) {
-		free(gr);
-		gr = NULL;
-	}
-
-	return false;
+	return (ret != -1 && len == gr[0].end - gr[0].start) ? true : false;
 }

@@ -46,25 +46,18 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 	int len = (int)date.size();
 	int ret, offset = 0;
 	std::string oph, opm;
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	ret = pcre_search(date.c_str(), len, offset, 0, DATE_RE, &compiled_date_re, unique_gr);
+	group_t *gr = unique_gr.get();
 
-	ret = pcre_search(date.c_str(), len, offset, 0, DATE_RE, &compiled_date_re, &gr);
-
-	if (ret != -1 && len == (gr[0].end - gr[0].start)) {
+	if (ret != -1 && len == gr[0].end - gr[0].start) {
 		std::string parse(date, gr[1].start, gr[1].end - gr[1].start);
 		tm.year = strtoint(parse);
 		parse.assign(date, gr[3].start, gr[3].end - gr[3].start);
 		tm.mon = strtoint(parse);
 		parse.assign(date, gr[4].start, gr[4].end - gr[4].start);
 		tm.day = strtoint(parse);
-
-		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
-			if (gr) {
-				free(gr);
-				gr = NULL;
-			}
-			throw MSG_Error("Date is out of range");
-		}
+		if (!isvalidDate(tm.year, tm.mon, tm.day)) throw MSG_Error("Date is out of range");
 
 		if (gr[5].end - gr[5].start > 0) {
 			parse.assign(date, gr[6].start, gr[6].end - gr[6].start);
@@ -103,33 +96,18 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 		len = gr[16].end - gr[16].start;
 		if (len != 0) {
 			date_math.assign(date, gr[16].start, len);
-			if (gr) {
-				free(gr);
-				gr = NULL;
-			}
-			while (pcre_search(date_math.c_str(), len, offset, 0, DATE_MATH_RE, &compiled_date_math_re, &gr) == 0) {
+			unique_gr.reset();
+
+			while (pcre_search(date_math.c_str(), len, offset, 0, DATE_MATH_RE, &compiled_date_math_re, unique_gr) == 0) {
+				gr = unique_gr.get();
 				offset = gr[0].end;
 				computeDateMath(tm, std::string(date_math, gr[1].start, gr[1].end - gr[1].start), std::string(date_math, gr[2].start, gr[2].end - gr[2].start));
 			}
-			if (offset != len) {
-				if (gr) {
-					free(gr);
-					gr = NULL;
-				}
-				throw MSG_Error("Date Math (%s) is used incorrectly.\n", date_math.c_str());
-			}
+
+			if (offset != len) throw MSG_Error("Date Math (%s) is used incorrectly.\n", date_math.c_str());
 		}
 
-		if (gr) {
-			free(gr);
-			gr = NULL;
-		}
 		return;
-	}
-
-	if (gr) {
-		free(gr);
-		gr = NULL;
 	}
 
 	throw MSG_Error("In dateTimeParser, format is incorrect.");

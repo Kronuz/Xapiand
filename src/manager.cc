@@ -611,8 +611,10 @@ cJSON* XapiandManager::get_stats_time(const std::string &time_req)
 	cJSON *root_stats = cJSON_CreateObject();
 	pos_time_t first_time, second_time;
 	int len = (int) time_req.size();
-	group_t *g = NULL;
-	int ret = pcre_search(time_req.c_str(), len, 0, 0, TIME_RE, &compiled_time_re, &g);
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	int ret = pcre_search(time_req.c_str(), len, 0, 0, TIME_RE, &compiled_time_re, unique_gr);
+	group_t *g = unique_gr.get();
+
 	if (ret == 0 && (g[0].end - g[0].start) == len) {
 		if ((g[1].end - g[1].start) > 0) {
 			first_time.minute = 60 * (((g[3].end - g[3].start) > 0) ? strtoint(std::string(time_req.c_str() + g[3].start, g[3].end - g[3].start)) : 0);
@@ -627,18 +629,8 @@ cJSON* XapiandManager::get_stats_time(const std::string &time_req)
 				second_time.second = 0;
 			}
 
-			if (g) {
-				free(g);
-				g = NULL;
-			}
-
 			return get_stats_json(first_time, second_time);
 		}
-	}
-
-	if (g) {
-		free(g);
-		g = NULL;
 	}
 
 	cJSON_AddStringToObject(root_stats, "Error in time argument input", "Incorrect input.");

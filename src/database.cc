@@ -2019,9 +2019,10 @@ Database::str_type(char type)
 bool
 Database::set_types(const std::string &type, char sep_types[])
 {
-	group_t *gr = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	int len = (int)type.size();
-	int ret = pcre_search(type.c_str(), len, 0, 0, FIND_TYPES_RE, &compiled_find_types_re , &gr);
+	int ret = pcre_search(type.c_str(), len, 0, 0, FIND_TYPES_RE, &compiled_find_types_re, unique_gr);
+	group_t *gr = unique_gr.get();
 	if (ret != -1 && len == gr[0].end - gr[0].start) {
 		if (gr[4].end - gr[4].start != 0) {
 			sep_types[0] = OBJECT_TYPE;
@@ -2037,17 +2038,7 @@ Database::set_types(const std::string &type, char sep_types[])
 			sep_types[2] = std::string(type.c_str(), gr[3].start, gr[3].end - gr[3].start).at(0);
 		}
 
-		if (gr) {
-			free(gr);
-			gr = NULL;
-		}
-
 		return true;
-	}
-
-	if (gr) {
-		free(gr);
-		gr = NULL;
 	}
 
 	return false;
@@ -2272,7 +2263,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	}
 
 	int len = (int)query.size(), offset = 0;
-	group_t *g = NULL;
+	std::unique_ptr<group_t, group_t_deleter> unique_gr;
 	bool first_time = true;
 	std::string querystring;
 	Xapian::QueryParser queryparser;
@@ -2299,7 +2290,8 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	unsigned int slot;
 	std::string prefix;
 
-	while ((pcre_search(query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, &g)) != -1) {
+	while ((pcre_search(query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, unique_gr)) != -1) {
+		group_t *g = unique_gr.get();
 		offset = g[0].end;
 		std::string field(query.c_str() + g[0].start, g[0].end - g[0].start);
 		std::string field_name_dot(query.c_str() + g[1].start, g[1].end - g[1].start);
@@ -2366,10 +2358,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				default:
-					if (g) {
-						free(g);
-						g = NULL;
-					}
 					throw Xapian::QueryParserError("This type of Data has no support for range search.\n");
 			}
 		} else {
@@ -2477,11 +2465,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		} else {
 			querystring += " OR (" + (field_value) + ")";
 		}
-	}
-
-	if (g) {
-		free(g);
-		g = NULL;
 	}
 
 	if (offset != len) {
