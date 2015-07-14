@@ -35,6 +35,7 @@
 #include <vector>
 #include <locale>
 #include <algorithm>
+#include <memory>
 
 #include <sstream>
 #include <pcre.h>
