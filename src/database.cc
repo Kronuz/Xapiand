@@ -2399,10 +2399,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					try {
 						field_value = std::to_string(Datetime::timestamp(field_value));
 					} catch (const std::exception &ex) {
-						if (g) {
-							free(g);
-							g = NULL;
-						}
 						throw Xapian::QueryParserError("Didn't understand date field name's specification: '" + field_name + "'");
 					}
 					dfp = new DateFieldProcessor(prefix);
