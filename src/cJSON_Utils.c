@@ -55,7 +55,7 @@ static void cJSONUtils_PointerEncodedstrcpy(char *d,const char *s)
 char *cJSONUtils_FindPointerFromObjectTo(cJSON *object,cJSON *target)
 {
 	if (object==target) return strdup("");
-	
+
 	int type=object->type,c=0;
 	for (cJSON *obj=object->child;obj;obj=obj->next,c++)
 	{
@@ -115,11 +115,11 @@ static void cJSONUtils_InplaceDecodePointerString(char *string)
 static cJSON *cJSONUtils_PatchDetach(cJSON *object,const char *path)
 {
 	char *parentptr=0,*childptr=0;cJSON *parent=0;
-	
+
 	parentptr=strdup(path);	childptr=strrchr(parentptr,'/');	if (childptr) *childptr++=0;
 	parent=cJSONUtils_GetPointer(object,parentptr);
 	cJSONUtils_InplaceDecodePointerString(childptr);
-	
+
 	cJSON *ret=0;
 	if (!parent) ret=0;	// Couldn't find object to remove child from.
 	else if (parent->type==cJSON_Array)		ret=cJSON_DetachItemFromArray(parent,atoi(childptr));
@@ -153,11 +153,11 @@ static int cJSONUtils_Compare(cJSON *a,cJSON *b)
 static int cJSONUtils_ApplyPatch(cJSON *object,cJSON *patch)
 {
 	cJSON *op=0,*path=0,*value=0;int opcode=0;
-	
+
 	op=cJSON_GetObjectItem(patch,"op");
 	path=cJSON_GetObjectItem(patch,"path");
 	if (!op || !path) return 2;	// malformed patch.
-	
+
 	if		(!strcmp(op->valuestring,"add"))	opcode=0;
 	else if (!strcmp(op->valuestring,"remove")) opcode=1;
 	else if (!strcmp(op->valuestring,"replace"))opcode=2;
@@ -165,17 +165,17 @@ static int cJSONUtils_ApplyPatch(cJSON *object,cJSON *patch)
 	else if (!strcmp(op->valuestring,"copy"))	opcode=4;
 	else if (!strcmp(op->valuestring,"test"))	return cJSONUtils_Compare(cJSONUtils_GetPointer(object,path->valuestring),cJSON_GetObjectItem(patch,"value"));
 	else return 3; // unknown opcode.
-	
+
 	if (opcode==1 || opcode==2)	// Remove/Replace
 	{
 		cJSON_Delete(cJSONUtils_PatchDetach(object,path->valuestring));	// Get rid of old.
 		if (opcode==1) return 0;	// For Remove, this is job done.
 	}
-	
+
 	if (opcode==3 || opcode==4)	// Copy/Move uses "from".
 	{
 		cJSON *from=cJSON_GetObjectItem(patch,"from");	if (!from) return 4; // missing "from" for copy/move.
-		
+
 		if (opcode==3) value=cJSONUtils_PatchDetach(object,from->valuestring);
 		if (opcode==4) value=cJSONUtils_GetPointer(object,from->valuestring);
 		if (!value) return 5; // missing "from" for copy/move.
@@ -189,14 +189,14 @@ static int cJSONUtils_ApplyPatch(cJSON *object,cJSON *patch)
 		value=cJSON_Duplicate(value,1);
 		if (!value) return 8; // out of memory for add/replace.
 	}
-	
+
 	// Now, just add "value" to "path".
 	char *parentptr=0,*childptr=0;cJSON *parent=0;
-	
+
 	parentptr=strdup(path->valuestring);	childptr=strrchr(parentptr,'/');	if (childptr) *childptr++=0;
 	parent=cJSONUtils_GetPointer(object,parentptr);
 	cJSONUtils_InplaceDecodePointerString(childptr);
-	
+
 	// add, remove, replace, move, copy, test.
 	if (!parent) {free(parentptr); return 9;}	// Couldn't find object to add to.
 	else if (parent->type==cJSON_Array)
@@ -248,19 +248,19 @@ void cJSONUtils_AddPatchToArray(cJSON *array,const char *op,const char *path,cJS
 static void cJSONUtils_CompareToPatch(cJSON *patches,const char *path,cJSON *from,cJSON *to)
 {
 	if (from->type!=to->type)	{cJSONUtils_GeneratePatch(patches,"replace",path,0,to);	return;	}
-	
+
 	switch (from->type)
 	{
 		case cJSON_Number:
 			if (from->valueint!=to->valueint || from->valuedouble!=to->valuedouble)
 				cJSONUtils_GeneratePatch(patches,"replace",path,0,to);
 			return;
-			
+
 		case cJSON_String:
 			if (strcmp(from->valuestring,to->valuestring)!=0)
 				cJSONUtils_GeneratePatch(patches,"replace",path,0,to);
 			return;
-			
+
 		case cJSON_Array:
 		{
 			int c;char *newpath=(char*)malloc(strlen(path)+23);	// Allow space for 64bit int.
@@ -272,7 +272,7 @@ static void cJSONUtils_CompareToPatch(cJSON *patches,const char *path,cJSON *fro
 			free(newpath);
 			return;
 		}
-			
+
 		case cJSON_Object:
 			for (cJSON *a=from->child;a;a=a->next)
 			{
@@ -291,7 +291,7 @@ static void cJSONUtils_CompareToPatch(cJSON *patches,const char *path,cJSON *fro
 				}
 			}
 			return;
-			
+
 		default:			break;
 	}
 }
