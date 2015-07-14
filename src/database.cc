@@ -1681,15 +1681,20 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	cJSON *document_texts = cJSON_GetObjectItem(document, RESERVED_TEXTS);
 
 	std::string s_schema = db->get_metadata(SCHEMA);
+
+	// There are several throws and returns, so we use unique_ptr
+	// to call automatically cJSON_Delete. Only schema need to be released.
+	std::unique_ptr<cJSON, void(*)(cJSON*)> u_schema(cJSON_CreateObject(), [](cJSON* c) {cJSON_Delete(c);});
 	cJSON *schema;
 	cJSON *properties;
 	std::string uuid(db->get_uuid());
 	if (s_schema.empty()) {
-		schema = cJSON_CreateObject();
+		schema = u_schema.get();
 		properties = cJSON_CreateObject();
 		cJSON_AddItemToObject(schema, uuid.c_str(), properties);
 	} else {
-		schema = cJSON_Parse(s_schema.c_str());
+		u_schema = std::move(std::unique_ptr<cJSON, void(*)(cJSON*)>(cJSON_Parse(s_schema.c_str()), [](cJSON* c) {cJSON_Delete(c);}));
+		schema = u_schema.get();
 		if (!schema) {
 			LOG_ERR(this, "ERROR: Schema is corrupt, you need provide a new one. JSON Before: [%s]\n", cJSON_GetErrorPtr());
 			return false;
