@@ -243,6 +243,7 @@ void HttpClient::run()
 	io_read.start();
 }
 
+
 void HttpClient::_head()
 {
 	bool found = true;
@@ -310,31 +311,31 @@ void HttpClient::_head()
 		found = false;
 	}
 
-	cJSON *root = cJSON_CreateObject();
+	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 	if(found){
-		cJSON_AddNumberToObject(root, RESERVED_ID, docid);
+		cJSON_AddNumberToObject(root.get(), RESERVED_ID, docid);
 		if (e.pretty) {
-			result = cJSON_Print(root);
+			result = cJSON_Print(root.get());
 		} else {
-			result = cJSON_PrintUnformatted(root);
+			result = cJSON_PrintUnformatted(root.get());
 		}
 		result += "\n";
 		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 		write(result);
 	} else {
-		cJSON_AddStringToObject(root, "Error", "Document not found");
+		cJSON_AddStringToObject(root.get(), "Error", "Document not found");
 		if (e.pretty) {
-			result = cJSON_Print(root);
+			result = cJSON_Print(root.get());
 		} else {
-			result = cJSON_PrintUnformatted(root);
+			result = cJSON_PrintUnformatted(root.get());
 		}
 		result += "\n";
 		write(http_response(404, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
 	}
 
 	database_pool->checkin(&database);
-	cJSON_Delete(root);
 }
+
 
 void HttpClient::_delete()
 {
@@ -595,23 +596,24 @@ void HttpClient::_stats(query_t &e)
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 			return;
 		}
-		cJSON *JSON_document = database->get_stats_docs(e.document);
-		cJSON_AddItemToObject(root, "Document status", JSON_document);
+		unique_cJSON JSON_document = database->get_stats_docs(e.document);
+		cJSON_AddItemToObject(root.get(), "Document status", JSON_document.release());
 		database_pool->checkin(&database);
 	}
 	if (e.stats.size() != 0) {
-		cJSON_AddItemToObject(root, "Stats time", manager()->get_stats_time(e.stats));
+		unique_cJSON server_stats_time = manager()->get_stats_time(e.stats);
+		cJSON_AddItemToObject(root.get(), "Stats time", server_stats_time.release());
 	}
 	if (e.pretty) {
-		result = cJSON_Print(root);
+		result = cJSON_Print(root.get());
 	} else {
-		result = cJSON_PrintUnformatted(root);
+		result = cJSON_PrintUnformatted(root.get());
 	}
 	result += "\n\n";
 	result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 	write(result);
-	cJSON_Delete(root);
 }
+
 
 void HttpClient::_search()
 {
@@ -872,6 +874,7 @@ void HttpClient::_search()
 	database_pool->checkin(&database);
 	LOG(this, "FINISH SEARCH\n");
 }
+
 
 int HttpClient::_endpointgen(query_t &e, bool writable)
 {

@@ -200,12 +200,12 @@ static const char *parse_string(cJSON *item,const char *str)
 {
 	const char *ptr=str+1;char *ptr2;char *out;int len=0;unsigned uc,uc2;
 	if (*str!='\"') {ep=str;return 0;}	/* not a string! */
-	
+
 	while (*ptr!='\"' && *ptr && ++len) if (*ptr++ == '\\') ptr++;	/* Skip escaped quotes. */
-	
+
 	out=(char*)cJSON_malloc(len+1);	/* This is how long we need for the string, roughly. */
 	if (!out) return 0;
-	
+
 	ptr=str+1;ptr2=out;
 	while (*ptr!='\"' && *ptr)
 	{
@@ -234,7 +234,7 @@ static const char *parse_string(cJSON *item,const char *str)
 					}
 
 					len=4;if (uc<0x80) len=1;else if (uc<0x800) len=2;else if (uc<0x10000) len=3; ptr2+=len;
-					
+
 					switch (len) {
 						case 4: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
 						case 3: *--ptr2 =((uc | 0x80) & 0xBF); uc >>= 6;
@@ -259,7 +259,7 @@ static const char *parse_string(cJSON *item,const char *str)
 static char *print_string_ptr(const char *str,printbuffer *p)
 {
 	const char *ptr;char *ptr2,*out;int len=0,flag=0;unsigned char token;
-	
+
 	for (ptr=str;*ptr;ptr++) flag|=((*ptr>0 && *ptr<32)||(*ptr=='\"')||(*ptr=='\\'))?1:0;
 	if (!flag)
 	{
@@ -273,7 +273,7 @@ static char *print_string_ptr(const char *str,printbuffer *p)
 		ptr2[len+1]=0;
 		return out;
 	}
-	
+
 	if (!str)
 	{
 		if (p)	out=ensure(p,3);
@@ -283,7 +283,7 @@ static char *print_string_ptr(const char *str,printbuffer *p)
 		return out;
 	}
 	ptr=str;while ((token=*ptr) && ++len) {if (strchr("\"\\\b\f\n\r\t",token)) len++; else if (token<32) len+=5;ptr++;}
-	
+
 	if (p)	out=ensure(p,len+3);
 	else	out=(char*)cJSON_malloc(len+3);
 	if (!out) return 0;
@@ -445,7 +445,7 @@ static char *print_array(cJSON *item,int depth,int fmt,printbuffer *p)
 	cJSON *child=item->child;
 	int numentries=0,i=0,fail=0;
 	size_t tmplen=0;
-	
+
 	/* How many entries in the array? */
 	while (child) numentries++,child=child->next;
 	/* Explicitly handle numentries==0 */
@@ -514,7 +514,7 @@ static char *print_array(cJSON *item,int depth,int fmt,printbuffer *p)
 		cJSON_free(entries);
 		*ptr++=']';*ptr++=0;
 	}
-	return out;	
+	return out;
 }
 
 /* Build an object from the text. */
