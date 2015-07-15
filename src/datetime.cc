@@ -402,7 +402,7 @@ char*
 Datetime::isotime(const struct tm *tm)
 {
 	static char result[20];
-	sprintf(result, "%02.4d-%02.2d-%02.2dT%02.2d:%02.2d:%02.2d",
+	sprintf(result, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d",
 		_START_YEAR + tm->tm_year, tm->tm_mon + 1, tm->tm_mday,
 		tm->tm_hour, tm->tm_min, tm->tm_sec);
 	return result;
