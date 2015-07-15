@@ -42,11 +42,12 @@ protected:
 
 	Worker *_parent;
 	std::list<Worker *> _children;
-	std::list<Worker *>::const_iterator _iterator;
+	std::list<Worker *>::iterator _iterator;
+	/*should be const_iterator but in linux, std::list member functions use a standard iterator and not const_iterator*/
 
-	std::list<Worker *>::const_iterator _attach(Worker *child) {
+	std::list<Worker *>::iterator _attach(Worker *child) {
 		pthread_mutex_lock(&_mtx);
-		std::list<Worker *>::const_iterator iterator = _children.insert(_children.end(), child);
+		std::list<Worker *>::iterator iterator = _children.insert(_children.end(), child);
 		pthread_mutex_unlock(&_mtx);
 		return iterator;
 	}
@@ -69,7 +70,7 @@ public:
 		loop(loop_ ? loop_: &_dynamic_loop),
 		_break_loop(*loop),
 		_parent(parent),
-		_iterator(parent ? parent->_attach(this) : std::list<Worker *>::const_iterator())
+		_iterator(parent ? parent->_attach(this) : std::list<Worker *>::iterator())
 	{
 		pthread_mutexattr_init(&_mtx_attr);
 		pthread_mutexattr_settype(&_mtx_attr, PTHREAD_MUTEX_RECURSIVE);
@@ -90,7 +91,7 @@ public:
 
 	virtual void shutdown() {
 		pthread_mutex_lock(&_mtx);
-		std::list<Worker *>::const_iterator it(_children.begin());
+		std::list<Worker *>::iterator it(_children.begin());
 		while (it != _children.end()) {
 			Worker *child = *(it++);
 			child->shutdown();
