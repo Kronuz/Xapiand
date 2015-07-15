@@ -592,26 +592,26 @@ void XapiandManager::run(int num_servers, int num_replicators)
 }
 
 
-cJSON* XapiandManager::server_status()
+unique_cJSON XapiandManager::server_status()
 {
-	cJSON *root_status = cJSON_CreateObject();
+	unique_cJSON root_status(cJSON_CreateObject(), cJSON_Delete);
 	std::string contet_ser;
 	pthread_mutex_lock(&XapiandServer::static_mutex);
-	cJSON_AddNumberToObject(root_status, "Connections", XapiandServer::total_clients);
-	cJSON_AddNumberToObject(root_status, "Http connections", XapiandServer::http_clients);
-	cJSON_AddNumberToObject(root_status, "Xapian remote connections", XapiandServer::binary_clients);
+	cJSON_AddNumberToObject(root_status.get(), "Connections", XapiandServer::total_clients);
+	cJSON_AddNumberToObject(root_status.get(), "Http connections", XapiandServer::http_clients);
+	cJSON_AddNumberToObject(root_status.get(), "Xapian remote connections", XapiandServer::binary_clients);
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
-	cJSON_AddNumberToObject(root_status, "Size thread pool", thread_pool.length());
-	return root_status;
+	cJSON_AddNumberToObject(root_status.get(), "Size thread pool", thread_pool.length());
+	return std::move(root_status);
 }
 
 
-cJSON* XapiandManager::get_stats_time(const std::string &time_req)
+unique_cJSON XapiandManager::get_stats_time(const std::string &time_req)
 {
-	cJSON *root_stats = cJSON_CreateObject();
+	unique_cJSON root_stats(cJSON_CreateObject(), cJSON_Delete);
 	pos_time_t first_time, second_time;
 	int len = (int) time_req.size();
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int ret = pcre_search(time_req.c_str(), len, 0, 0, TIME_RE, &compiled_time_re, unique_gr);
 	group_t *g = unique_gr.get();
 
@@ -633,14 +633,14 @@ cJSON* XapiandManager::get_stats_time(const std::string &time_req)
 		}
 	}
 
-	cJSON_AddStringToObject(root_stats, "Error in time argument input", "Incorrect input.");
-	return root_stats;
+	cJSON_AddStringToObject(root_stats.get(), "Error in time argument input", "Incorrect input.");
+	return std::move(root_stats);
 }
 
 
-cJSON* XapiandManager::get_stats_json(pos_time_t first_time, pos_time_t second_time)
+unique_cJSON XapiandManager::get_stats_json(pos_time_t first_time, pos_time_t second_time)
 {
-	cJSON *root_stats = cJSON_CreateObject();
+	unique_cJSON root_stats(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *time_period = cJSON_CreateObject();
 
 	pthread_mutex_lock(&XapiandServer::static_mutex);
@@ -677,7 +677,7 @@ cJSON* XapiandManager::get_stats_json(pos_time_t first_time, pos_time_t second_t
 	}
 
 	if ((aux_first_min * SLOT_TIME_SECOND + aux_first_sec) > (aux_second_min * SLOT_TIME_SECOND + aux_second_sec)) {
-		cJSON_AddStringToObject(root_stats, "Error in time argument input", "First argument must be less or equal than the second.");
+		cJSON_AddStringToObject(root_stats.get(), "Error in time argument input", "First argument must be less or equal than the second.");
 	} else {
 		int cnt[3] = {0, 0, 0};
 		double tm_cnt[3] = {0.0, 0.0, 0.0};
@@ -716,14 +716,14 @@ cJSON* XapiandManager::get_stats_json(pos_time_t first_time, pos_time_t second_t
 			timeinfo = localtime(&p_time);
 			cJSON_AddStringToObject(time_period, "Period end", asctime(timeinfo));
 		}
-		cJSON_AddItemToObject(root_stats, "Time", time_period);
-		cJSON_AddNumberToObject(root_stats, "Docs index", cnt[0]);
-		cJSON_AddNumberToObject(root_stats, "Number searches", cnt[1]);
-		cJSON_AddNumberToObject(root_stats, "Docs deleted", cnt[2]);
-		cJSON_AddNumberToObject(root_stats, "Average time indexing", tm_cnt[0] / ((cnt[0] == 0) ? 1 : cnt[0]));
-		cJSON_AddNumberToObject(root_stats, "Average search time", tm_cnt[1] / ((cnt[1] == 0) ? 1 : cnt[1]));
-		cJSON_AddNumberToObject(root_stats, "Average deletion time", tm_cnt[2] / ((cnt[2] == 0) ? 1 : cnt[2]));
+		cJSON_AddItemToObject(root_stats.get(), "Time", time_period);
+		cJSON_AddNumberToObject(root_stats.get(), "Docs index", cnt[0]);
+		cJSON_AddNumberToObject(root_stats.get(), "Number searches", cnt[1]);
+		cJSON_AddNumberToObject(root_stats.get(), "Docs deleted", cnt[2]);
+		cJSON_AddNumberToObject(root_stats.get(), "Average time indexing", tm_cnt[0] / ((cnt[0] == 0) ? 1 : cnt[0]));
+		cJSON_AddNumberToObject(root_stats.get(), "Average search time", tm_cnt[1] / ((cnt[1] == 0) ? 1 : cnt[1]));
+		cJSON_AddNumberToObject(root_stats.get(), "Average deletion time", tm_cnt[2] / ((cnt[2] == 0) ? 1 : cnt[2]));
 	}
 
-	return root_stats;
+	return std::move(root_stats);
 }

@@ -260,23 +260,22 @@ void HttpClient::_head()
 		case CMD_STATS:
 		case CMD_SCHEMA:
 		default:
-			cJSON *err_response = cJSON_CreateObject();
+			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
 			if (cmd == CMD_UNKNOWN)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message",std::string("Unknown task "+command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message",std::string("Unknown host "+host).c_str());
 			else if (cmd == CMD_UNKNOWN_ENDPOINT)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
 			else
-				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
+				cJSON_AddStringToObject(err_response.get(), "Error message","BAD QUERY");
 			if (e.pretty) {
-				result = cJSON_Print(err_response);
+				result = cJSON_Print(err_response.get());
 			} else {
-				result = cJSON_PrintUnformatted(err_response);
+				result = cJSON_PrintUnformatted(err_response.get());
 			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-			cJSON_Delete(err_response);
 			return;
 	}
 
@@ -350,23 +349,22 @@ void HttpClient::_delete()
 		case CMD_STATS:
 		case CMD_SCHEMA:
 		default:
-			cJSON *err_response = cJSON_CreateObject();
+			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
 			if (cmd == CMD_UNKNOWN)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown task " + command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
 			else if (cmd == CMD_UNKNOWN_ENDPOINT)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
 			else
-				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
+				cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
 			if (e.pretty) {
-				result = cJSON_Print(err_response);
+				result = cJSON_Print(err_response.get());
 			} else {
-				result = cJSON_PrintUnformatted(err_response);
+				result = cJSON_PrintUnformatted(err_response.get());
 			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-			cJSON_Delete(err_response);
 			return;
 	}
 
@@ -395,20 +393,19 @@ void HttpClient::_delete()
 	pthread_mutex_unlock(&qmtx);
 
 	database_pool->checkin(&database);
-	cJSON *root = cJSON_CreateObject();
-	cJSON *data = cJSON_CreateObject();
+	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, "id", command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
-	cJSON_AddItemToObject(root, "delete", data);
+	cJSON_AddItemToObject(root.get(), "delete", data);
 	if (e.pretty) {
-		result = cJSON_Print(root);
+		result = cJSON_Print(root.get());
 	} else {
-		result = cJSON_PrintUnformatted(root);
+		result = cJSON_PrintUnformatted(root.get());
 	}
 	result += "\n\n";
 	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 	write(result);
-	cJSON_Delete(root);
 }
 
 void HttpClient::_index()
@@ -424,25 +421,24 @@ void HttpClient::_index()
 		case CMD_STATS:
 		case CMD_SCHEMA:
 		default:
-			cJSON *err_response = cJSON_CreateObject();
+			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
 			if (cmd == CMD_BAD_ENDPS)
-				cJSON_AddStringToObject(err_response, "Error message","Expecting exactly one database");
+				cJSON_AddStringToObject(err_response.get(), "Error message", "Expecting exactly one database");
 			else if (cmd == CMD_UNKNOWN)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown task "+command).c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown task " + command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown host "+host).c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
 			else if (cmd == CMD_UNKNOWN_ENDPOINT)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
 			else
-				cJSON_AddStringToObject(err_response, "Error message","BAD QUERY");
+				cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
 			if (e.pretty) {
-				result = cJSON_Print(err_response);
+				result = cJSON_Print(err_response.get());
 			} else {
-				result = cJSON_PrintUnformatted(err_response);
+				result = cJSON_PrintUnformatted(err_response.get());
 			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-			cJSON_Delete(err_response);
 			return;
 	}
 
@@ -454,7 +450,7 @@ void HttpClient::_index()
 
 	clock_t t = clock();
 
-	cJSON *document = cJSON_Parse(body.c_str());
+	unique_cJSON document(cJSON_Parse(body.c_str()), cJSON_Delete);
 	if (!document) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 		database_pool->checkin(&database);
@@ -462,12 +458,11 @@ void HttpClient::_index()
 		return;
 	}
 
-	if (!database->index(document, command, e.commit)) {
+	if (!database->index(document.get(), command, e.commit)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
-	cJSON_Delete(document);
 
 	t = clock() - t;
 	double time = (double)t / CLOCKS_PER_SEC;
@@ -481,20 +476,19 @@ void HttpClient::_index()
 	pthread_mutex_unlock(&qmtx);
 
 	database_pool->checkin(&database);
-	cJSON *root = cJSON_CreateObject();
-	cJSON *data = cJSON_CreateObject();
+	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, "id", command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
-	cJSON_AddItemToObject(root, "index", data);
+	cJSON_AddItemToObject(root.get(), "index", data);
 	if (e.pretty) {
-		result = cJSON_Print(root);
+		result = cJSON_Print(root.get());
 	} else {
-		result = cJSON_PrintUnformatted(root);
+		result = cJSON_PrintUnformatted(root.get());
 	}
 	result += "\n\n";
 	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 	write(result);
-	cJSON_Delete(root);
 }
 
 
@@ -511,25 +505,24 @@ void HttpClient::_patch()
 		case CMD_STATS:
 		case CMD_SCHEMA:
 		default:
-			cJSON *err_response = cJSON_CreateObject();
+			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
 			if (cmd == CMD_BAD_ENDPS)
-				cJSON_AddStringToObject(err_response, "Error message","Expecting exactly one database");
+				cJSON_AddStringToObject(err_response.get(), "Error message", "Expecting exactly one database");
 			else if (cmd == CMD_UNKNOWN)
-				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown task " + command).c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown task " + command).c_str());
 			else if (cmd == CMD_UNKNOWN_HOST)
-				cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown host " + host).c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
 			else if (cmd == CMD_UNKNOWN_ENDPOINT)
-				cJSON_AddStringToObject(err_response, "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
+				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
 			else
-				cJSON_AddStringToObject(err_response, "Error message", "BAD QUERY");
+				cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
 			if (e.pretty) {
-				result = cJSON_Print(err_response);
+				result = cJSON_Print(err_response.get());
 			} else {
-				result = cJSON_PrintUnformatted(err_response);
+				result = cJSON_PrintUnformatted(err_response.get());
 			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-			cJSON_Delete(err_response);
 			return;
 	}
 
@@ -539,7 +532,7 @@ void HttpClient::_patch()
 		return;
 	}
 
-	cJSON *patches = cJSON_Parse(body.c_str());
+	unique_cJSON patches(cJSON_Parse(body.c_str()), cJSON_Delete);
 	if (!patches) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 		database_pool->checkin(&database);
@@ -547,38 +540,37 @@ void HttpClient::_patch()
 		return;
 	}
 
-	if (!database->patch(patches, command, e.commit)) {
+	if (!database->patch(patches.get(), command, e.commit)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
 		return;
 	}
 
 	database_pool->checkin(&database);
-	cJSON *root = cJSON_CreateObject();
-	cJSON *data = cJSON_CreateObject();
+	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, "id", command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
-	cJSON_AddItemToObject(root, "update", data);
+	cJSON_AddItemToObject(root.get(), "update", data);
 	if (e.pretty) {
-		result = cJSON_Print(root);
+		result = cJSON_Print(root.get());
 	} else {
-		result = cJSON_PrintUnformatted(root);
+		result = cJSON_PrintUnformatted(root.get());
 	}
 	result += "\n\n";
 	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 	write(result);
-	cJSON_Delete(patches);
-	cJSON_Delete(root);
 }
 
 
 void HttpClient::_stats(query_t &e)
 {
 	std::string result;
-	cJSON *root = cJSON_CreateObject();
+	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 
 	if (e.server) {
-		cJSON_AddItemToObject(root, "Server status", manager()->server_status());
+		unique_cJSON server_stats = manager()->server_status();
+		cJSON_AddItemToObject(root.get(), "Server status", server_stats.release());
 	}
 	if (e.database) {
 		Database *database = NULL;
@@ -586,8 +578,8 @@ void HttpClient::_stats(query_t &e)
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 			return;
 		}
-		cJSON *JSON_database = database->get_stats_database();
-		cJSON_AddItemToObject(root, "Database status", JSON_database);
+		unique_cJSON JSON_database = database->get_stats_database();
+		cJSON_AddItemToObject(root.get(), "Database status", JSON_database.release());
 		database_pool->checkin(&database);
 	}
 	if (e.document >= 0) {
@@ -658,23 +650,22 @@ void HttpClient::_search()
 				e.synonyms = false;
 				e.unique_doc = true;
 			}else {
-				cJSON *err_response = cJSON_CreateObject();
+				unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
 				if (cmd == CMD_UNKNOWN)
-					cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown task " + command).c_str());
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown task " + command).c_str());
 				else if (cmd == CMD_UNKNOWN_HOST)
-					cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown host " + host).c_str());
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
 				else if (cmd == CMD_UNKNOWN_ENDPOINT)
-					cJSON_AddStringToObject(err_response, "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
 				else
-					cJSON_AddStringToObject(err_response, "Error message", "BAD QUERY");
+					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
 				if (e.pretty) {
-					result = cJSON_Print(err_response);
+					result = cJSON_Print(err_response.get());
 				} else {
-					result = cJSON_PrintUnformatted(err_response);
+					result = cJSON_PrintUnformatted(err_response.get());
 				}
 				result += "\n";
 				write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-				cJSON_Delete(err_response);
 				return;
 			}
 	}
@@ -693,15 +684,14 @@ void HttpClient::_search()
 			database_pool->checkin(&database);
 			return;
 		} else {
-			cJSON *err_response = cJSON_CreateObject();
-			cJSON_AddStringToObject(err_response, "Error message", "schema not found");
+			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
+			cJSON_AddStringToObject(err_response.get(), "Error message", "schema not found");
 			if (e.pretty) {
-				schema_ = cJSON_Print(err_response);
+				schema_ = cJSON_Print(err_response.get());
 			} else {
-				schema_ = cJSON_PrintUnformatted(err_response);
+				schema_ = cJSON_PrintUnformatted(err_response.get());
 			}
 			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, schema_));
-			cJSON_Delete(err_response);
 			database_pool->checkin(&database);
 			return;
 		}
@@ -736,28 +726,27 @@ void HttpClient::_search()
 
 	if (facets) {
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
-		cJSON *root = cJSON_CreateObject();
+		unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 		for (; spy != spies.end(); spy++) {
 			std::string name_result = (*spy).first;
-			cJSON *array_values = cJSON_CreateArray();
-			cJSON_AddItemToObject(root, name_result.c_str(), array_values);
+			cJSON *array_values = cJSON_CreateArray(); // It is managed by root.
 			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
-				cJSON *value = cJSON_CreateObject();
+				cJSON *value = cJSON_CreateObject(); // It is managed by array_values.
                 data_field_t field_t = database->get_data_field((*spy).first);
 				cJSON_AddStringToObject(value, "value", unserialise(field_t.type, (*spy).first, *facet).c_str());
 				cJSON_AddNumberToObject(value, "termfreq", facet.get_termfreq());
 				cJSON_AddItemToArray(array_values, value);
 			}
+			cJSON_AddItemToObject(root.get(), name_result.c_str(), array_values);
 		}
 		if (e.pretty) {
-			result = cJSON_Print(root);
+			result = cJSON_Print(root.get());
 		} else {
-			result = cJSON_PrintUnformatted(root);
+			result = cJSON_PrintUnformatted(root.get());
 		}
 		result += "\n\n";
 		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 		write(result);
-		cJSON_Delete(root);
 	} else {
 		int rc = 0;
 		if (mset.size() != 0) {
@@ -814,21 +803,21 @@ void HttpClient::_search()
 					write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
 				}
 
-				cJSON *object = cJSON_Parse(data.c_str());
-				cJSON *object_data = cJSON_GetObjectItem(object, RESERVED_DATA);
+				unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
+				cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
 				if (object_data) {
 					object_data = cJSON_Duplicate(object_data, 1);
-					cJSON_Delete(object);
-					object = object_data;
+					object.reset();
+					object = unique_cJSON(object_data, cJSON_Delete);
 				} else {
-					database->clean_reserved(object);
-					cJSON_AddStringToObject(object, RESERVED_ID, id.c_str());
+					database->clean_reserved(object.get());
+					cJSON_AddStringToObject(object.get(), RESERVED_ID, id.c_str());
 				}
 
 				if (e.pretty) {
-					result = cJSON_Print(object);
+					result = cJSON_Print(object.get());
 				} else {
-					result = cJSON_PrintUnformatted(object);
+					result = cJSON_PrintUnformatted(object.get());
 				}
 				result += "\n\n";
 				if(json_chunked) {
@@ -840,23 +829,21 @@ void HttpClient::_search()
 				if (!write(result)) {
 					break;
 				}
-				cJSON_Delete(object);
 			}
 			if(json_chunked) {
 				write("0\r\n\r\n");
 			}
 		} else {
-			cJSON *root = cJSON_CreateObject();
-			cJSON_AddStringToObject(root, "Response empty", "No match found");
+			unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+			cJSON_AddStringToObject(root.get(), "Response empty", "No match found");
 			if (e.pretty) {
-				result = cJSON_Print(root);
+				result = cJSON_Print(root.get());
 			} else {
-				result = cJSON_PrintUnformatted(root);
+				result = cJSON_PrintUnformatted(root.get());
 			}
 			result += "\n\n";
 			result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
 			write(result);
-			cJSON_Delete(root);
 		}
 	}
 
@@ -1181,6 +1168,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 	}
 	return cmd;
 }
+
 
 std::string HttpClient::http_response(int status, int mode, std::string content)
 {

@@ -764,15 +764,15 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit)
 		}
 	}
 
-	cJSON *data_json = cJSON_Parse(document.get_data().c_str());
+	unique_cJSON data_json(cJSON_Parse(document.get_data().c_str()), cJSON_Delete);
 	if (!data_json) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 		return false;
 	}
 
-	if (cJSONUtils_ApplyPatches(data_json, patches) == 0) {
+	if (cJSONUtils_ApplyPatches(data_json.get(), patches) == 0) {
 		//Object patched
-		return index(data_json, _document_id, commit);
+		return index(data_json.get(), _document_id, commit);
 	}
 
 	//Object no patched
@@ -832,7 +832,7 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 				subproperties = cJSON_GetObjectItem(properties, subitem->string);
 				if (!subproperties) {
 					find = false;
-					subproperties = cJSON_CreateObject();
+					subproperties = cJSON_CreateObject(); // It is managed by properties.
 					cJSON_AddItemToObject(properties, subitem->string, subproperties);
 				}
 				subitem_name = (item_name.size() != 0) ? item_name + OFFSPRING_UNION + subitem->string : subitem->string;
@@ -1142,7 +1142,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 				case NUMERIC_TYPE: {
 					int num_pre = 0;
 					cJSON *_prefix_accuracy = cJSON_GetObjectItem(schema, RESERVED_ACC_PREFIX);
-					cJSON *_new_prefix_acc = (_prefix_accuracy) ? NULL : cJSON_CreateArray();
+					cJSON *_new_prefix_acc = (_prefix_accuracy) ? NULL : cJSON_CreateArray(); // It is managed by schema
 					for ( ; it != spc.accuracy.end(); it++, num_pre++) {
 						long long int  _v = strtolonglong(value_v);
 						long long int acc = strtolonglong(*it);
@@ -1174,7 +1174,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 				case DATE_TYPE: {
 					int num_pre = 0;
 					cJSON *_prefix_accuracy = cJSON_GetObjectItem(schema, RESERVED_ACC_PREFIX);
-					cJSON *_new_prefix_acc = (_prefix_accuracy) ? NULL : cJSON_CreateArray();
+					cJSON *_new_prefix_acc = (_prefix_accuracy) ? NULL : cJSON_CreateArray(); // It is managed by schema
 					for ( ; it != spc.accuracy.end(); it++, num_pre++) {
 						std::string _v(stringtolower(*it)), acc(Datetime::ctime(value_v));
 						value_v.assign(acc);
@@ -1361,33 +1361,33 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 			spc_now.accuracy.push_back(std::to_string(accuracy->valuedouble));
 		}
 	} else if (spc) {
-		cJSON *acc_s = cJSON_CreateArray();
+		unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
 		if (spc->type == cJSON_Array) {
 			int elements = cJSON_GetArraySize(spc);
 			for (int i = 0; i < elements; i++) {
 				cJSON *acc = cJSON_GetArrayItem(spc, i);
 				if (acc->type == cJSON_String) {
 					spc_now.accuracy.push_back(acc->valuestring);
-					cJSON_AddItemToArray(acc_s, cJSON_CreateString(acc->valuestring));
+					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(acc->valuestring));
 				} else if (acc->type == cJSON_Number) {
 					std::string str = std::to_string(acc->valuedouble);
 					spc_now.accuracy.push_back(str);
-					cJSON_AddItemToArray(acc_s, cJSON_CreateString(str.c_str()));
+					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(str.c_str()));
 				} else {
 					throw MSG_Error("Data inconsistency %s should be an array of strings or numerics", RESERVED_ACCURACY);
 				}
 			}
 		} else if (spc->type == cJSON_String) {
 			spc_now.accuracy.push_back(spc->valuestring);
-			cJSON_AddItemToArray(acc_s, cJSON_CreateString(spc->valuestring));
+			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(spc->valuestring));
 		} else if (spc->type == cJSON_Number) {
 			std::string str = std::to_string(spc->valuedouble);
 			spc_now.accuracy.push_back(str);
-			cJSON_AddItemToArray(acc_s, cJSON_CreateString(str.c_str()));
+			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(str.c_str()));
 		} else {
 			throw MSG_Error("Data inconsistency %s should be string or numeric", RESERVED_ACCURACY);
 		}
-		cJSON_AddItemToObject(schema, RESERVED_ACCURACY, acc_s);
+		cJSON_AddItemToObject(schema, RESERVED_ACCURACY, acc_s.release());
 	}
 
 	spc = cJSON_GetObjectItem(item, RESERVED_TYPE);
@@ -1683,22 +1683,19 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 
 	// There are several throws and returns, so we use unique_ptr
 	// to call automatically cJSON_Delete. Only schema need to be released.
-	std::unique_ptr<cJSON, void(*)(cJSON*)> u_schema(cJSON_CreateObject(), [](cJSON* c) {cJSON_Delete(c);});
-	cJSON *schema;
+	unique_cJSON schema(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *properties;
 	std::string uuid(db->get_uuid());
 	if (s_schema.empty()) {
-		schema = u_schema.get();
-		properties = cJSON_CreateObject();
-		cJSON_AddItemToObject(schema, uuid.c_str(), properties);
+		properties = cJSON_CreateObject(); // It is managed by chema.
+		cJSON_AddItemToObject(schema.get(), uuid.c_str(), properties);
 	} else {
-		u_schema = std::move(std::unique_ptr<cJSON, void(*)(cJSON*)>(cJSON_Parse(s_schema.c_str()), [](cJSON* c) {cJSON_Delete(c);}));
-		schema = u_schema.get();
+		schema = std::move(unique_cJSON(cJSON_Parse(s_schema.c_str()), cJSON_Delete));
 		if (!schema) {
 			LOG_ERR(this, "ERROR: Schema is corrupt, you need provide a new one. JSON Before: [%s]\n", cJSON_GetErrorPtr());
 			return false;
 		}
-		properties = cJSON_GetObjectItem(schema, uuid.c_str());
+		properties = cJSON_GetObjectItem(schema.get(), uuid.c_str());
 	}
 
 	std::string document_id;
@@ -1712,7 +1709,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 
 		subproperties = cJSON_GetObjectItem(properties, RESERVED_ID);
 		if (!subproperties) {
-			subproperties = cJSON_CreateObject();
+			subproperties = cJSON_CreateObject(); // It is managed by properties.
 			cJSON_AddItemToObject(subproperties, "_type", cJSON_CreateString("string"));
 			cJSON_AddItemToObject(subproperties, "_index", cJSON_CreateString("not analyzed"));
 			cJSON_AddItemToObject(subproperties, "_slot", cJSON_CreateNumber(0));
@@ -1759,7 +1756,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 						subproperties = cJSON_GetObjectItem(properties, name_s.c_str());
 						if (!subproperties) {
 							find = false;
-							subproperties = cJSON_CreateObject();
+							subproperties = cJSON_CreateObject(); // It is managed by properties.
 							cJSON_AddItemToObject(properties, name_s.c_str(), subproperties);
 						}
 						update_specifications(texts, spc_now, subproperties);
@@ -1771,9 +1768,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 							}
 						}
 					} else {
-						cJSON *t = cJSON_CreateObject();
-						update_specifications(texts, spc_now, t);
-						cJSON_Delete(t);
+						unique_cJSON t(cJSON_CreateObject(), cJSON_Delete);
+						update_specifications(texts, spc_now, t.get());
 					}
 					index_texts(doc, text, spc_now, name_s, subproperties, find);
 					spc_now = spc_bef;
@@ -1796,14 +1792,13 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 						subproperties = cJSON_GetObjectItem(properties, name_s.c_str());
 						if (!subproperties) {
 							find = false;
-							subproperties = cJSON_CreateObject();
+							subproperties = cJSON_CreateObject(); // It is managed by properties.
 							cJSON_AddItemToObject(properties, name_s.c_str(), subproperties);
 						}
 						update_specifications(data_terms, spc_now, subproperties);
 					} else {
-						cJSON *t = cJSON_CreateObject();
-						update_specifications(data_terms, spc_now, t);
-						cJSON_Delete(t);
+						unique_cJSON t(cJSON_CreateObject(), cJSON_Delete);
+						update_specifications(data_terms, spc_now, t.get());
 					}
 					index_terms(doc, terms, spc_now, name_s, subproperties, find);
 					spc_now = spc_bef;
@@ -1822,7 +1817,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 				subproperties = cJSON_GetObjectItem(properties, item->string);
 				if (!subproperties) {
 					find = false;
-					subproperties = cJSON_CreateObject();
+					subproperties = cJSON_CreateObject(); // It is managed by properties.
 					cJSON_AddItemToObject(properties, item->string, subproperties);
 				}
 				index_fields(item, item->string, spc_now, doc, subproperties, false, find);
@@ -1837,8 +1832,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	}
 
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
-	LOG_DATABASE_WRAP(this, "Schema: %s\n", cJSON_Print(schema));
-	wdb->set_metadata(SCHEMA, cJSON_Print(schema));
+	wdb->set_metadata(SCHEMA, cJSON_Print(schema.get()));
+	LOG_DATABASE_WRAP(this, "Schema: %s\n", wdb->get_metadata(SCHEMA).c_str());
 	return replace(document_id, doc, commit);
 }
 
@@ -1904,11 +1899,11 @@ Database::get_data_field(const std::string &field_name)
 	if (json.empty()) return res;
 
 	std::string uuid(db->get_uuid());
-	cJSON *schema = cJSON_Parse(json.c_str());
+	unique_cJSON schema(cJSON_Parse(json.c_str()), cJSON_Delete);
 	if (!schema) {
 		throw MSG_Error("Schema's database is corrupt.");
 	}
-	cJSON *properties = cJSON_GetObjectItem(schema, uuid.c_str());
+	cJSON *properties = cJSON_GetObjectItem(schema.get(), uuid.c_str());
 	if (!properties) {
 		throw MSG_Error("Schema's database is corrupt, uuids do not match.");
 	}
@@ -1959,7 +1954,6 @@ Database::get_data_field(const std::string &field_name)
 		}
 	}
 
-	cJSON_Delete(schema);
 	return res;
 }
 
@@ -1968,15 +1962,14 @@ char
 Database::get_type(cJSON *field, specifications_t &spc)
 {
 	int type = field->type;
-	cJSON *aux = field;
 	if (type == cJSON_Array) {
 		int num_ele = cJSON_GetArraySize(field);
-		aux = cJSON_GetArrayItem(field, 0);
-		type = aux->type;
+		field = cJSON_GetArrayItem(field, 0);
+		type = field->type;
 		if (type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
 		for (int i = 1; i < num_ele; i++) {
-			aux = cJSON_GetArrayItem(field, i);
-			if (aux->type != type && (aux->type > 1 || type > 1)) {
+			field = cJSON_GetArrayItem(field, i);
+			if (field->type != type && (field->type > 1 || type > 1)) {
 				throw MSG_Error("Different types of data");
 			}
 		}
@@ -1987,11 +1980,11 @@ Database::get_type(cJSON *field, specifications_t &spc)
 		case cJSON_False: if (spc.bool_detection) return BOOLEAN_TYPE; break;
 		case cJSON_True: if (spc.bool_detection) return BOOLEAN_TYPE; break;
 		case cJSON_String:
-			if (spc.bool_detection && serialise_bool(aux->valuestring).size() != 0) {
+			if (spc.bool_detection && serialise_bool(field->valuestring).size() != 0) {
 				return BOOLEAN_TYPE;
-			} else if (spc.date_detection && serialise_date(aux->valuestring).size() != 0) {
+			} else if (spc.date_detection && serialise_date(field->valuestring).size() != 0) {
 				return DATE_TYPE;
-			} else if(spc.geo_detection && field->type != cJSON_Array && is_like_EWKT(aux->valuestring)) {
+			} else if(spc.geo_detection && field->type != cJSON_Array && is_like_EWKT(field->valuestring)) {
 				// For WKT format, it is not necessary to use arrays.
 				return GEO_TYPE;
 			} else if (spc.string_detection) {
@@ -2023,7 +2016,7 @@ Database::str_type(char type)
 bool
 Database::set_types(const std::string &type, char sep_types[])
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)type.size();
 	int ret = pcre_search(type.c_str(), len, 0, 0, FIND_TYPES_RE, &compiled_find_types_re, unique_gr);
 	group_t *gr = unique_gr.get();
@@ -2267,7 +2260,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	}
 
 	int len = (int)query.size(), offset = 0;
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	bool first_time = true;
 	std::string querystring;
 	Xapian::QueryParser queryparser;
@@ -2681,34 +2674,34 @@ Database::get_document(Xapian::docid did, Xapian::Document &doc)
 }
 
 
-cJSON*
+unique_cJSON
 Database::get_stats_database()
 {
-	cJSON *database = cJSON_CreateObject();
+	unique_cJSON database(cJSON_CreateObject(), cJSON_Delete);
 	unsigned int doccount = db->get_doccount();
 	unsigned int lastdocid = db->get_lastdocid();
-	cJSON_AddStringToObject(database, "uuid", db->get_uuid().c_str());
-	cJSON_AddNumberToObject(database, "doc_count", doccount);
-	cJSON_AddNumberToObject(database, "last_id", lastdocid);
-	cJSON_AddNumberToObject(database, "doc_del", lastdocid - doccount);
-	cJSON_AddNumberToObject(database, "av_length", db->get_avlength());
-	cJSON_AddNumberToObject(database, "doc_len_lower", db->get_doclength_lower_bound());
-	cJSON_AddNumberToObject(database, "doc_len_upper", db->get_doclength_upper_bound());
-	(db->has_positions()) ? cJSON_AddTrueToObject(database, "has_positions") : cJSON_AddFalseToObject(database, "has_positions");
-	return database;
+	cJSON_AddStringToObject(database.get(), "uuid", db->get_uuid().c_str());
+	cJSON_AddNumberToObject(database.get(), "doc_count", doccount);
+	cJSON_AddNumberToObject(database.get(), "last_id", lastdocid);
+	cJSON_AddNumberToObject(database.get(), "doc_del", lastdocid - doccount);
+	cJSON_AddNumberToObject(database.get(), "av_length", db->get_avlength());
+	cJSON_AddNumberToObject(database.get(), "doc_len_lower", db->get_doclength_lower_bound());
+	cJSON_AddNumberToObject(database.get(), "doc_len_upper", db->get_doclength_upper_bound());
+	(db->has_positions()) ? cJSON_AddTrueToObject(database.get(), "has_positions") : cJSON_AddFalseToObject(database.get(), "has_positions");
+	return std::move(database);
 }
 
 
-cJSON*
+unique_cJSON
 Database::get_stats_docs(int id_doc)
 {
-	cJSON *document = cJSON_CreateObject();
+	unique_cJSON document(cJSON_CreateObject(), cJSON_Delete);
 
 	try {
 		if (id_doc == 0) {
-			cJSON_AddStringToObject(document, "id", "all");
-			cJSON_AddNumberToObject(document, "allterms", std::distance(db->allterms_begin(), db->allterms_end()));
-			cJSON_AddNumberToObject(document, "allspellings", std::distance(db->spellings_begin(), db->spellings_end()));
+			cJSON_AddStringToObject(document.get(), "id", "all");
+			cJSON_AddNumberToObject(document.get(), "allterms", std::distance(db->allterms_begin(), db->allterms_end()));
+			cJSON_AddNumberToObject(document.get(), "allspellings", std::distance(db->spellings_begin(), db->spellings_end()));
 		} else {
 			Xapian::Document doc;
 			Xapian::QueryParser queryparser;
@@ -2724,41 +2717,42 @@ Database::get_stats_docs(int id_doc)
 					doc = db->get_document(*m);
 					break;
 				} catch (Xapian::InvalidArgumentError &err) {
-					cJSON_AddNumberToObject(document, "id", id_doc);
-					cJSON_AddStringToObject(document, "error",  "Document not found");
-					return document;
+					cJSON_AddNumberToObject(document.get(), "id", id_doc);
+					cJSON_AddStringToObject(document.get(), "error",  "Document not found");
+					return std::move(document);
 				} catch (Xapian::DocNotFoundError &err) {
-					cJSON_AddNumberToObject(document, "id", id_doc);
-					cJSON_AddStringToObject(document, "error",  "Document not found");
-					return document;
+					cJSON_AddNumberToObject(document.get(), "id", id_doc);
+					cJSON_AddStringToObject(document.get(), "error",  "Document not found");
+					return std::move(document);
 				} catch (const Xapian::Error &err) {
 					reopen();
 					m = mset.begin();
 				}
 			}
 
-			cJSON_AddStringToObject(document, "id", ("Q" + doc.get_value(0)).c_str());
-			cJSON_AddStringToObject(document, "data", doc.get_data().c_str());
-			cJSON_AddNumberToObject(document, "count_terms", doc.termlist_count());
+			cJSON_AddStringToObject(document.get(), "id", ("Q" + doc.get_value(0)).c_str());
+			cJSON_AddStringToObject(document.get(), "data", doc.get_data().c_str());
+			cJSON_AddNumberToObject(document.get(), "count_terms", doc.termlist_count());
 			Xapian::TermIterator it(doc.termlist_begin());
 			std::string terms;
 			for ( ; it != doc.termlist_end(); it++) {
 				terms = terms + repr(*it) + " ";
 			}
-			cJSON_AddStringToObject(document, "terms", terms.c_str());
-			cJSON_AddNumberToObject(document, "count_values", doc.values_count());
+			cJSON_AddStringToObject(document.get(), "terms", terms.c_str());
+			cJSON_AddNumberToObject(document.get(), "count_values", doc.values_count());
 			Xapian::ValueIterator iv(doc.values_begin());
 			std::string values;
 			for ( ; iv != doc.values_end(); iv++) {
 				values = values + std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
 			}
-			cJSON_AddStringToObject(document, "values", values.c_str());
+			cJSON_AddStringToObject(document.get(), "values", values.c_str());
 		}
 	} catch (const Xapian::Error &err) {
-		cJSON_AddNumberToObject(document, "id", id_doc);
-		cJSON_AddStringToObject(document, "error",  "Document not found");
+		cJSON_AddNumberToObject(document.get(), "id", id_doc);
+		cJSON_AddStringToObject(document.get(), "error",  "Document not found");
 	}
-	return document;
+
+	return std::move(document);
 }
 
 

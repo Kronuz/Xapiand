@@ -115,18 +115,17 @@ void log(const char *file, int line, void *obj, const char *format, ...)
 {
 	pthread_mutex_lock(&qmtx);
 
-	FILE * file_ = stderr;
 	char name[100];
 #ifdef HAVE_PTHREAD_SETNAME_NP_2
 
 #else
 	pthread_getname_np(pthread_self(), name, sizeof(name));
 #endif
-	// fprintf(file_, "tid(0x%012lx:%2s): 0x%012lx - %s:%d - ", (unsigned long)thread, name, (unsigned long)obj, file, line);
-	fprintf(file_, "tid(%2s): ../%s:%d: ", *name ? name : "--", file, line);
+	// fprintf(stderr, "tid(0x%012lx:%2s): 0x%012lx - %s:%d - ", (unsigned long)thread, name, (unsigned long)obj, file, line);
+	fprintf(stderr, "tid(%2s): ../%s:%d: ", *name ? name : "--", file, line);
 	va_list argptr;
 	va_start(argptr, format);
-	vfprintf(file_, format, argptr);
+	vfprintf(stderr, format, argptr);
 	va_end(argptr);
 
 	pthread_mutex_unlock(&qmtx);
@@ -689,7 +688,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 }
 
 
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, std::unique_ptr<group_t, group_t_deleter> &unique_groups)
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups)
 {
 	int erroffset;
 	const char *error;
@@ -712,7 +711,7 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 		}
 
 		if (unique_groups == NULL) {
-			unique_groups = std::unique_ptr<group_t, group_t_deleter>(static_cast<group_t*>(malloc((n + 1) * 3 * sizeof(int))));
+			unique_groups = unique_group(static_cast<group_t*>(malloc((n + 1) * 3 * sizeof(int))));
 			if (unique_groups == NULL) {
 				LOG_ERR(NULL, "Memory can not be reserved\n");
 				return -1;
@@ -963,7 +962,7 @@ bool strhasupper(const std::string &str)
 int get_coords(const std::string &str, double *coords)
 {
 	std::stringstream ss;
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)str.size();
 	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, unique_gr);
 	group_t *g = unique_gr.get();
@@ -1005,7 +1004,7 @@ int get_coords(const std::string &str, double *coords)
 
 bool isRange(const std::string &str)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re , unique_gr);
 
 	return (ret != -1) ? true : false;
@@ -1014,7 +1013,7 @@ bool isRange(const std::string &str)
 
 bool isLatLongDistance(const std::string &str)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)str.size();
 	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, unique_gr);
 	group_t *gr = unique_gr.get();
@@ -1025,7 +1024,7 @@ bool isLatLongDistance(const std::string &str)
 
 bool isNumeric(const std::string &str)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)str.size();
 	int ret = pcre_search(str.c_str(), len, 0, 0, NUMERIC_RE, &compiled_numeric_re, unique_gr);
 	group_t *g = unique_gr.get();
@@ -1159,7 +1158,7 @@ void fill_zeros_stats_sec(int start, int end)
 
 bool Is_id_range(std::string &ids)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)ids.size(), offset = 0;
 	while ((pcre_search(ids.c_str(), len, offset, 0, RANGE_ID_RE, &compiled_range_id_re, unique_gr)) != -1) {
 		group_t *g = unique_gr.get();

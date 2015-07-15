@@ -46,7 +46,7 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 	int len = (int)date.size();
 	int ret, offset = 0;
 	std::string oph, opm;
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	ret = pcre_search(date.c_str(), len, offset, 0, DATE_RE, &compiled_date_re, unique_gr);
 	group_t *gr = unique_gr.get();
 

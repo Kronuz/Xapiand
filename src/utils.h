@@ -27,6 +27,7 @@
 #include "md5.h"
 #include "wkt_parser.h"
 #include "datetime.h"
+#include "cJSON.h"
 #include <limits.h>
 
 #include <xapian.h>
@@ -201,6 +202,9 @@ struct group_t_deleter {
 	}
 };
 
+typedef std::unique_ptr<cJSON, void(*)(cJSON*)> unique_cJSON;
+typedef std::unique_ptr<group_t, group_t_deleter> unique_group;
+
 int url_path(const char* n1, size_t size, parser_url_path_t *par);
 int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
@@ -227,7 +231,7 @@ long long int strtolonglong(const std::string &str);
 std::string get_prefix(const std::string &name, const std::string &prefix, char type);
 std::string get_slot_hex(const std::string &name);
 bool strhasupper(const std::string &str);
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, std::unique_ptr<group_t, group_t_deleter> &unique_groups);
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups);
 int get_coords(const std::string &str, double *coords);
 bool isRange(const std::string &str);
 bool isLatLongDistance(const std::string &str);

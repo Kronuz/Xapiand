@@ -156,14 +156,13 @@ public:
 	search_t _search(const std::string &query, unsigned int flags, bool text, const std::string &lan, bool unique_doc);
 	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, similar_t *similar);
 	int get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
-	cJSON* get_stats_database();
-	cJSON* get_stats_docs(int id_doc);
+	unique_cJSON get_stats_database();
+	unique_cJSON get_stats_docs(int id_doc);
 	data_field_t get_data_field(const std::string &field_name);
 	std::vector<std::string> split_fields(const std::string &field_name);
 	char get_type(cJSON *field, specifications_t &spc);
 	std::string str_type(char type);
 	bool set_types(const std::string &type, char sep_types[]);
-	cJSON* get_stats_time(const std::string &time_req);
 	bool is_reserved(const std::string &word);
 	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, cJSON *schema, bool is_value, bool find);
 	void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema);

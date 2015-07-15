@@ -158,9 +158,9 @@ public:
 
 	void discovery(discovery_type type, const std::string &content);
 
-	cJSON* server_status();
-	cJSON* get_stats_time(const std::string &time_req);
-	cJSON* get_stats_json(pos_time_t first_time, pos_time_t second_time);
+	unique_cJSON server_status();
+	unique_cJSON get_stats_time(const std::string &time_req);
+	unique_cJSON get_stats_json(pos_time_t first_time, pos_time_t second_time);
 };
 
 

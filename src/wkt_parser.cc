@@ -56,7 +56,7 @@ pcre *compiled_find_collection_re = NULL;
 */
 EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error) : partials(_partials), error(_error)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)EWKT.size();
 	int ret = pcre_search(EWKT.c_str(), len, 0, 0, FIND_GEOMETRY_RE, &compiled_find_geometry_re, unique_gr);
 	group_t *gr = unique_gr.get();
@@ -97,7 +97,7 @@ EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error)
 std::vector<std::string>
 EWKT_Parser::parse_circle(std::string &specification)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)specification.size();
 	int ret = pcre_search(specification.c_str(), len, 0, 0, FIND_CIRCLE_RE, &compiled_find_circle_re, unique_gr);
 	group_t *gr = unique_gr.get();
@@ -132,7 +132,7 @@ EWKT_Parser::parse_circle(std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_polygon(std::string &specification)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)specification.size();
 	int start = 0;
 
@@ -197,7 +197,7 @@ EWKT_Parser::parse_polygon(std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_multipolygon(std::string &specification)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)specification.size();
 	int start = 0;
 
@@ -267,7 +267,7 @@ EWKT_Parser::parse_point(std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_multipoint(std::string &specification)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)specification.size();
 	int start = 0;
 
@@ -329,7 +329,7 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_geometry_collection(std::string &data)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)data.size();
 	int start = 0;
 
@@ -375,7 +375,7 @@ EWKT_Parser::parse_geometry_collection(std::string &data)
 std::vector<std::string>
 EWKT_Parser::parse_geometry_intersection(std::string &data)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)data.size();
 	int start = 0;
 
@@ -601,7 +601,7 @@ EWKT_Parser::get_trixels(std::string &father, int depth, std::string &son)
 
 bool is_like_EWKT(const char *str)
 {
-	std::unique_ptr<group_t, group_t_deleter> unique_gr;
+	unique_group unique_gr;
 	int len = (int)strlen(str);
 	int ret = pcre_search(str, len, 0, 0, FIND_GEOMETRY_RE, &compiled_find_geometry_re, unique_gr);
 	group_t *gr = unique_gr.get();
