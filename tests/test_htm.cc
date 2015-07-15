@@ -404,6 +404,8 @@ int test_HTM_chull()
 				if (!readEFile.eof()) {
 					cont++;
 					LOG_ERR(NULL, "ERROR: Expected more trixels.\n");
+					readFile.close();
+					readEFile.close();
 					break;
 				}
 
@@ -416,6 +418,9 @@ int test_HTM_chull()
 			LOG_ERR(NULL, "ERROR: File %s or %s not found.\n", (*it_f).c_str(), (*it_e).c_str());
 			cont ++;
 		}
+
+		readFile.close();
+		readEFile.close();
 	}
 
 	if (cont == 0) {
@@ -483,6 +488,7 @@ int test_HTM_circle()
 					if (!readEFile.eof()) {
 						cont++;
 						LOG_ERR(NULL, "ERROR: Expected more trixels.\n");
+						readEFile.close();
 						break;
 					}
 
@@ -491,11 +497,13 @@ int test_HTM_circle()
 					LOG_ERR(NULL, "ERROR: %s\n", e.what());
 					cont++;
 				}
+				readEFile.close();
 			} else {
 				LOG_ERR(NULL, "ERROR: File %s not found.\n", file_expect.c_str());
 				cont ++;
 			}
 		}
+		readFile.close();
 	} else {
 		LOG_ERR(NULL, "ERROR: File %s not found.\n", name.c_str());
 		cont ++;

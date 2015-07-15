@@ -58,6 +58,7 @@ int test_wkt_parser()
 						} else {
 							cont++;
 							LOG_ERR(NULL, "ERROR: Expected less trixels.\n");
+							readEFile.close();
 							break;
 						}
 					}
@@ -65,6 +66,7 @@ int test_wkt_parser()
 					if (!readEFile.eof()) {
 						cont++;
 						LOG_ERR(NULL, "ERROR: Expected more trixels.\n");
+						readEFile.close();
 						break;
 					}
 
@@ -77,11 +79,13 @@ int test_wkt_parser()
 					LOG_ERR(NULL, "ERROR: %s\n", e.what());
 					cont++;
 				}
+				readEFile.close();
 			} else {
 				LOG_ERR(NULL, "ERROR: File %s not found.\n", file_expect.c_str());
 				cont ++;
 			}
 		}
+		readFile.close();
 	} else {
 		LOG_ERR(NULL, "ERROR: File %s not found.\n", name.c_str());
 		cont ++;
