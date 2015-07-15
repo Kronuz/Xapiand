@@ -28,6 +28,7 @@
 #include <exception>
 #include <stdexcept>
 #include <sstream>
+#include <stdarg.h>
 #include "config.h"
 
 #define MSG_Error(...) Exception(__FILE__, __LINE__, __VA_ARGS__)

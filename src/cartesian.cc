@@ -20,6 +20,7 @@
  * IN THE SOFTWARE.
  */
 
+#include <string.h>
 
 #include "cartesian.h"
 
