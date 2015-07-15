@@ -26,6 +26,13 @@
 #include <sys/time.h>
 
 
+#ifdef __linux__
+
+#include <time.h>
+#include <unistd.h>
+
+#endif /*__linux__*/
+
 #ifdef __APPLE__
 
 #include <sys/resource.h>
