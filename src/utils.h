@@ -202,8 +202,15 @@ struct group_t_deleter {
 	}
 };
 
+struct char_ptr_deleter {
+	void operator()(char *c) const {
+		free(c);
+	}
+};
+
 typedef std::unique_ptr<cJSON, void(*)(cJSON*)> unique_cJSON;
 typedef std::unique_ptr<group_t, group_t_deleter> unique_group;
+typedef std::unique_ptr<char, char_ptr_deleter> unique_char_ptr;
 
 int url_path(const char* n1, size_t size, parser_url_path_t *par);
 int url_qs(const char *, const char *, size_t, parser_query_t *);

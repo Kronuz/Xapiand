@@ -999,8 +999,8 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 
 	for (int j = 0; j < elements; j++) {
 		cJSON *term = (terms->type == cJSON_Array) ? cJSON_GetArrayItem(terms, j) : terms;
-
-		std::string term_v(cJSON_Print(term));
+		unique_char_ptr _cprint(cJSON_Print(term));
+		std::string term_v(_cprint.get());
 		if (term->type == cJSON_String) {
 			term_v.assign(term_v, 1, term_v.size() - 2);
 
@@ -1086,7 +1086,8 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 		slot = get_slot(name);
 		cJSON_AddNumberToObject(schema, RESERVED_SLOT, slot);
 	} else {
-		slot = strtounsignedint(cJSON_Print(_slot));
+		unique_char_ptr _cprint(cJSON_Print(_slot));
+		slot = strtounsignedint(_cprint.get());
 	}
 
 	int elements = 1;
@@ -1120,8 +1121,8 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 
 	for (int j = 0; j < elements; j++) {
 		cJSON *value = (values->type == cJSON_Array) ? cJSON_GetArrayItem(values, j) : values;
-
-		std::string value_v = cJSON_Print(value);
+		unique_char_ptr _cprint(cJSON_Print(value));
+		std::string value_v(_cprint.get());
 		if (value->type == cJSON_String) {
 			value_v.assign(value_v, 1, value_v.size() - 2);
 		} else if (value->type == cJSON_Number) {
@@ -1672,7 +1673,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 
 	Xapian::Document doc;
 
-	std::string doc_data(cJSON_Print(document));
+	unique_char_ptr _cprint(cJSON_Print(document));
+	std::string doc_data(_cprint.get());
 	LOG_DATABASE_WRAP(this, "Document data: %s\n", doc_data.c_str());
 	doc.set_data(doc_data);
 
@@ -1832,7 +1834,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	}
 
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
-	wdb->set_metadata(SCHEMA, cJSON_Print(schema.get()));
+	_cprint = std::move(unique_char_ptr(cJSON_Print(schema.get())));
+	wdb->set_metadata(SCHEMA, _cprint.get());
 	LOG_DATABASE_WRAP(this, "Schema: %s\n", wdb->get_metadata(SCHEMA).c_str());
 	return replace(document_id, doc, commit);
 }
@@ -1909,7 +1912,7 @@ Database::get_data_field(const std::string &field_name)
 	}
 
 	std::vector<std::string> fields = split_fields(field_name);
-	std::vector<std::string>::const_iterator it= fields.begin();
+	std::vector<std::string>::const_iterator it = fields.begin();
 	for ( ; it != fields.end(); it++) {
 		properties = cJSON_GetObjectItem(properties, (*it).c_str());
 		if (!properties) break;
@@ -1917,7 +1920,8 @@ Database::get_data_field(const std::string &field_name)
 
 	if (properties) {
 		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
-		res.slot = (_aux) ? strtounsignedint(cJSON_Print(_aux)) : get_slot(field_name);
+		unique_char_ptr _cprint(cJSON_Print(_aux));
+		res.slot = (_aux) ? strtounsignedint(_cprint.get()) : get_slot(field_name);
 		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
 		if (_aux) {
 			char sep_types[3];

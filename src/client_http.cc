@@ -270,9 +270,11 @@ void HttpClient::_head()
 			else
 				cJSON_AddStringToObject(err_response.get(), "Error message","BAD QUERY");
 			if (e.pretty) {
-				result = cJSON_Print(err_response.get());
+				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
+				result.assign(_cprint.get());
 			} else {
-				result = cJSON_PrintUnformatted(err_response.get());
+				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
+				result.assign(_cprint.get());
 			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
@@ -314,9 +316,11 @@ void HttpClient::_head()
 	if(found){
 		cJSON_AddNumberToObject(root.get(), RESERVED_ID, docid);
 		if (e.pretty) {
-			result = cJSON_Print(root.get());
+			unique_char_ptr _cprint(cJSON_Print(root.get()));
+			result.assign(_cprint.get());
 		} else {
-			result = cJSON_PrintUnformatted(root.get());
+			unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
+			result.assign(_cprint.get());
 		}
 		result += "\n";
 		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
@@ -324,9 +328,11 @@ void HttpClient::_head()
 	} else {
 		cJSON_AddStringToObject(root.get(), "Error", "Document not found");
 		if (e.pretty) {
-			result = cJSON_Print(root.get());
+			unique_char_ptr _cprint(cJSON_Print(root.get()));
+			result.assign(_cprint.get());
 		} else {
-			result = cJSON_PrintUnformatted(root.get());
+			unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
+			result.assign(_cprint.get());
 		}
 		result += "\n";
 		write(http_response(404, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
@@ -359,9 +365,11 @@ void HttpClient::_delete()
 			else
 				cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
 			if (e.pretty) {
-				result = cJSON_Print(err_response.get());
+				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
+				result.assign(_cprint.get());
 			} else {
-				result = cJSON_PrintUnformatted(err_response.get());
+				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
+				result.assign(_cprint.get());
 			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
@@ -399,9 +407,11 @@ void HttpClient::_delete()
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root.get(), "delete", data);
 	if (e.pretty) {
-		result = cJSON_Print(root.get());
+		unique_char_ptr _cprint(cJSON_Print(root.get()));
+		result.assign(_cprint.get());
 	} else {
-		result = cJSON_PrintUnformatted(root.get());
+		unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
+		result.assign(_cprint.get());
 	}
 	result += "\n\n";
 	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
@@ -433,9 +443,11 @@ void HttpClient::_index()
 			else
 				cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
 			if (e.pretty) {
-				result = cJSON_Print(err_response.get());
+				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
+				result.assign(_cprint.get());
 			} else {
-				result = cJSON_PrintUnformatted(err_response.get());
+				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
+				result.assign(_cprint.get());
 			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
@@ -482,9 +494,11 @@ void HttpClient::_index()
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root.get(), "index", data);
 	if (e.pretty) {
-		result = cJSON_Print(root.get());
+		unique_char_ptr _cprint(cJSON_Print(root.get()));
+		result.assign(_cprint.get());
 	} else {
-		result = cJSON_PrintUnformatted(root.get());
+		unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
+		result.assign(_cprint.get());
 	}
 	result += "\n\n";
 	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
@@ -517,9 +531,11 @@ void HttpClient::_patch()
 			else
 				cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
 			if (e.pretty) {
-				result = cJSON_Print(err_response.get());
+				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
+				result.assign(_cprint.get());
 			} else {
-				result = cJSON_PrintUnformatted(err_response.get());
+				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
+				result.assign(_cprint.get());
 			}
 			result += "\n";
 			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
@@ -553,9 +569,11 @@ void HttpClient::_patch()
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root.get(), "update", data);
 	if (e.pretty) {
-		result = cJSON_Print(root.get());
+		unique_char_ptr _cprint(cJSON_Print(root.get()));
+		result.assign(_cprint.get());
 	} else {
-		result = cJSON_PrintUnformatted(root.get());
+		unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
+		result.assign(_cprint.get());
 	}
 	result += "\n\n";
 	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
@@ -597,9 +615,11 @@ void HttpClient::_stats(query_t &e)
 		cJSON_AddItemToObject(root.get(), "Stats time", server_stats_time.release());
 	}
 	if (e.pretty) {
-		result = cJSON_Print(root.get());
+		unique_char_ptr _cprint(cJSON_Print(root.get()));
+		result.assign(_cprint.get());
 	} else {
-		result = cJSON_PrintUnformatted(root.get());
+		unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
+		result.assign(_cprint.get());
 	}
 	result += "\n\n";
 	result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
@@ -660,9 +680,11 @@ void HttpClient::_search()
 				else
 					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
 				if (e.pretty) {
-					result = cJSON_Print(err_response.get());
+					unique_char_ptr _cprint(cJSON_Print(err_response.get()));
+					result.assign(_cprint.get());
 				} else {
-					result = cJSON_PrintUnformatted(err_response.get());
+					unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
+					result.assign(_cprint.get());
 				}
 				result += "\n";
 				write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
@@ -687,9 +709,11 @@ void HttpClient::_search()
 			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
 			cJSON_AddStringToObject(err_response.get(), "Error message", "schema not found");
 			if (e.pretty) {
-				schema_ = cJSON_Print(err_response.get());
+				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
+				schema_.assign(_cprint.get());
 			} else {
-				schema_ = cJSON_PrintUnformatted(err_response.get());
+				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
+				schema_.assign(_cprint.get());
 			}
 			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, schema_));
 			database_pool->checkin(&database);
@@ -740,9 +764,11 @@ void HttpClient::_search()
 			cJSON_AddItemToObject(root.get(), name_result.c_str(), array_values);
 		}
 		if (e.pretty) {
-			result = cJSON_Print(root.get());
+			unique_char_ptr _cprint(cJSON_Print(root.get()));
+			result.assign(_cprint.get());
 		} else {
-			result = cJSON_PrintUnformatted(root.get());
+			unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
+			result.assign(_cprint.get());
 		}
 		result += "\n\n";
 		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
@@ -813,11 +839,12 @@ void HttpClient::_search()
 					database->clean_reserved(object.get());
 					cJSON_AddStringToObject(object.get(), RESERVED_ID, id.c_str());
 				}
-
 				if (e.pretty) {
-					result = cJSON_Print(object.get());
+					unique_char_ptr _cprint(cJSON_Print(object.get()));
+					result.assign(_cprint.get());
 				} else {
-					result = cJSON_PrintUnformatted(object.get());
+					unique_char_ptr _cprint(cJSON_PrintUnformatted(object.get()));
+					result.assign(_cprint.get());
 				}
 				result += "\n\n";
 				if(json_chunked) {
@@ -837,9 +864,11 @@ void HttpClient::_search()
 			unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 			cJSON_AddStringToObject(root.get(), "Response empty", "No match found");
 			if (e.pretty) {
-				result = cJSON_Print(root.get());
+				unique_char_ptr _cprint(cJSON_Print(root.get()));
+				result.assign(_cprint.get());
 			} else {
-				result = cJSON_PrintUnformatted(root.get());
+				unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
+				result.assign(_cprint.get());
 			}
 			result += "\n\n";
 			result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
