@@ -45,7 +45,7 @@
 
 template<class Key, class T>
 class lru_map {
-	typedef typename std::pair<const Key, std::shared_ptr<T>> key_value_pair_t;
+	typedef typename std::pair<const Key, std::unique_ptr<T>> key_value_pair_t;
 	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
 	typedef typename std::list<key_value_pair_t>::reverse_iterator list_reverse_iterator_t;
 #ifdef HAVE_CXX11
@@ -86,10 +86,11 @@ public:
 		return 0;
 	}
 
-	T & insert(const key_value_pair_t & p) {
+	T & insert(key_value_pair_t &p) {
 		erase(p.first);
 
-		_items_list.push_front(p);
+		T *ptr = p.second.release();
+		_items_list.push_front(key_value_pair_t(p.first, std::unique_ptr<T>(ptr)));
 		list_iterator_t first = _items_list.begin();
 		_items_map[p.first] = first;
 
@@ -112,7 +113,7 @@ public:
 				}
 			}
 		}
-		T *ptr = first->second.get();
+		ptr = first->second.get();
 		return *ptr;
 	}
 
@@ -131,7 +132,8 @@ public:
 		try {
 			return at(key);
 		} catch (std::range_error) {
-			return insert(key_value_pair_t(key, std::shared_ptr<T>(new T())));
+			key_value_pair_t pair(key, std::unique_ptr<T>(new T()));
+			return insert(pair);
 		}
 	}
 
