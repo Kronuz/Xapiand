@@ -89,8 +89,7 @@ public:
 	T & insert(key_value_pair_t &p) {
 		erase(p.first);
 
-		T *ptr = p.second.release();
-		_items_list.push_front(key_value_pair_t(p.first, std::unique_ptr<T>(ptr)));
+		_items_list.push_front(std::move(p));
 		list_iterator_t first = _items_list.begin();
 		_items_map[p.first] = first;
 
@@ -113,7 +112,7 @@ public:
 				}
 			}
 		}
-		ptr = first->second.get();
+		T *ptr = first->second.get();
 		return *ptr;
 	}
 
