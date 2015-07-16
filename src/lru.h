@@ -45,7 +45,7 @@
 
 template<class Key, class T>
 class lru_map {
-	typedef typename std::pair<const Key, T> key_value_pair_t;
+	typedef typename std::pair<const Key, std::shared_ptr<T>> key_value_pair_t;
 	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
 	typedef typename std::list<key_value_pair_t>::reverse_iterator list_reverse_iterator_t;
 #ifdef HAVE_CXX11
@@ -97,7 +97,8 @@ public:
 			list_reverse_iterator_t last = _items_list.rbegin();
 			for (size_t i = _items_map.size(); i != 0 && _items_map.size() > _max_size && last != _items_list.rend(); i--) {
 				list_iterator_t it = --(last++).base();
-				switch (on_drop(it->second)) {
+				T *ptr = it->second.get();
+				switch (on_drop(*ptr)) {
 					case renew:
 						_items_list.splice(_items_list.begin(), _items_list, it);
 						break;
@@ -111,7 +112,8 @@ public:
 				}
 			}
 		}
-		return first->second;
+		T *ptr = first->second.get();
+		return *ptr;
 	}
 
 	T & at(const Key & key) {
@@ -120,7 +122,8 @@ public:
 			throw std::range_error("There is no such key in cache");
 		} else {
 			_items_list.splice(_items_list.begin(), _items_list, it->second);
-			return it->second->second;
+			T *ptr = it->second->second.get();
+			return *ptr;
 		}
 	}
 
@@ -128,7 +131,7 @@ public:
 		try {
 			return at(key);
 		} catch (std::range_error) {
-			return insert(key_value_pair_t(key, T()));
+			return insert(key_value_pair_t(key, std::shared_ptr<T>(new T())));
 		}
 	}
 
