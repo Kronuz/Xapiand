@@ -180,10 +180,10 @@ int BaseClient::write_directly()
 		return WR_ERR;
 	} else if (!write_queue.empty()) {
 		Buffer* buffer = write_queue.front();
-		
+
 		size_t buf_size = buffer->nbytes();
 		const char * buf = buffer->dpos();
-		
+
 #ifdef MSG_NOSIGNAL
 		ssize_t written = ::send(sock, buf, buf_size, MSG_NOSIGNAL);
 #else
@@ -235,7 +235,7 @@ void BaseClient::write_cb()
 	io_write.stop();
 }
 
-	
+
 void BaseClient::read_cb()
 {
 	if (sock != -1) {
