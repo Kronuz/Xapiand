@@ -94,6 +94,8 @@ class XapiandManager : public Worker {
 	typedef std::map<std::string, Node> nodes_map_t;
 #endif
 
+	friend class HttpClient;
+
 private:
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;

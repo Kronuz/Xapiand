@@ -392,13 +392,13 @@ void HttpClient::_delete()
 	t = clock() - t;
 	double time = (double)t / CLOCKS_PER_SEC;
 	LOG(this, "Time take for delete %f\n", time);
-	pthread_mutex_lock(&qmtx);
+	pthread_mutex_lock(&manager()->qmtx);
 	update_pos_time();
 	stats_cnt.del.cnt[b_time.minute]++;
 	stats_cnt.del.sec[b_time.second]++;
 	stats_cnt.del.tm_cnt[b_time.minute] += time;
 	stats_cnt.del.tm_sec[b_time.second] += time;
-	pthread_mutex_unlock(&qmtx);
+	pthread_mutex_unlock(&manager()->qmtx);
 
 	database_pool->checkin(&database);
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
@@ -479,13 +479,13 @@ void HttpClient::_index()
 	t = clock() - t;
 	double time = (double)t / CLOCKS_PER_SEC;
 	LOG(this, "Time take for index %f\n", time);
-	pthread_mutex_lock(&qmtx);
+	pthread_mutex_lock(&manager()->qmtx);
 	update_pos_time();
 	stats_cnt.index.cnt[b_time.minute]++;
 	stats_cnt.index.sec[b_time.second]++;
 	stats_cnt.index.tm_cnt[b_time.minute] += time;
 	stats_cnt.index.tm_sec[b_time.second] += time;
-	pthread_mutex_unlock(&qmtx);
+	pthread_mutex_unlock(&manager()->qmtx);
 
 	database_pool->checkin(&database);
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
@@ -879,13 +879,13 @@ void HttpClient::_search()
 	t = clock() - t;
 	double time = (double)t / CLOCKS_PER_SEC;
 	LOG(this, "Time take for search %f\n", time);
-	pthread_mutex_lock(&qmtx);
+	pthread_mutex_lock(&manager()->qmtx);
 	update_pos_time();
 	stats_cnt.search.cnt[b_time.minute]++;
 	stats_cnt.search.sec[b_time.second]++;
 	stats_cnt.search.tm_cnt[b_time.minute] += time;
 	stats_cnt.search.tm_sec[b_time.second] += time;
-	pthread_mutex_unlock(&qmtx);
+	pthread_mutex_unlock(&manager()->qmtx);
 
 	database_pool->checkin(&database);
 	LOG(this, "FINISH SEARCH\n");
