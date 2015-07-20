@@ -30,6 +30,10 @@
 
 const int WRITE_QUEUE_SIZE = 10;
 
+#define WR_OK 0
+#define WR_ERR 1
+#define WR_RETRY 2
+#define WR_PENDING 3
 
 BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: Worker(server_, loop_),
@@ -170,16 +174,16 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 }
 
 
-void BaseClient::write_cb()
+int BaseClient::write_directly()
 {
-	if (sock != -1 && !write_queue.empty()) {
+	if (sock == -1 && !write_queue.empty()) {
+		return WR_ERR;
+	} else if (!write_queue.empty()) {
 		Buffer* buffer = write_queue.front();
-
+		
 		size_t buf_size = buffer->nbytes();
 		const char * buf = buffer->dpos();
-
-		LOG_CONN_WIRE(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf, buf_size).c_str());
-
+		
 #ifdef MSG_NOSIGNAL
 		ssize_t written = ::send(sock, buf, buf_size, MSG_NOSIGNAL);
 #else
@@ -187,23 +191,51 @@ void BaseClient::write_cb()
 #endif
 
 		if (written < 0) {
-			if (sock != -1 && !ignored_errorno(errno, false)) {
+			if (ignored_errorno(errno, false)) {
+				return WR_RETRY;
+			} else {
 				LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
-				destroy();
+				return WR_ERR;
 			}
-		} else if (written == 0) {
-			// nothing written?
 		} else {
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
 				if(write_queue.pop(buffer)) {
 					delete buffer;
+					if (write_queue.empty()) {
+						return WR_OK;
+					} else {
+						return WR_PENDING;
+					}
 				}
+			} else {
+				return WR_PENDING;
 			}
 		}
-	}
+	   }
+	return WR_OK;
 }
 
+
+void BaseClient::write_cb()
+{
+	int status;
+	do {
+		pthread_mutex_lock(&qmtx);
+		status = write_directly();
+		pthread_mutex_unlock(&qmtx);
+		if (status == WR_ERR) {
+			destroy();
+			return;
+		} else if (status == WR_RETRY) {
+			io_write.start();
+			return;
+		}
+	} while (status != WR_OK);
+	io_write.stop();
+}
+
+	
 void BaseClient::read_cb()
 {
 	if (sock != -1) {
@@ -236,6 +268,7 @@ void BaseClient::async_write_cb(ev::async &watcher, int revents)
 
 bool BaseClient::write(const char *buf, size_t buf_size)
 {
+	int status;
 	LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
 
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
@@ -243,13 +276,20 @@ bool BaseClient::write(const char *buf, size_t buf_size)
 		return false;
 	}
 
-	if (sock == -1) {
-		return false;
-	}
-
 	written += 1;
-	async_write.send();
 
+	do {
+		pthread_mutex_lock(&qmtx);
+		status = write_directly();
+		pthread_mutex_unlock(&qmtx);
+		if (status == WR_ERR) {
+			destroy();
+			return false;
+		} else if (status == WR_RETRY) {
+			async_write.send();
+			return true;
+		}
+	} while (status != WR_OK);
 	return true;
 }
 

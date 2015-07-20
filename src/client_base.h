@@ -129,7 +129,8 @@ protected:
 	}
 
 	bool write(const char *buf, size_t buf_size);
-
+	int write_directly();
+	
 	void close();
 	void destroy();
 	void shutdown();
