@@ -101,7 +101,7 @@ Geometry::convexHull(std::vector<Cartesian> &v)
 	convexHull(v, points_convex);
 
 	// The convex is formed in counterclockwise.
-	int i, len = (int)points_convex.size();
+	int len = (int)points_convex.size();
 	if (len < 3) throw MSG_Error("Convex Hull not found");
 
 	// The corners are in clockwise but we need the corners in counterclockwise order and normalize.
@@ -161,11 +161,10 @@ Geometry::convexPolygon(std::vector<Cartesian> &v)
 	// Repeat the first corner at the end if it does not repeat.
 	if (*v.begin() != *(v.end() - 1)) v.push_back(*v.begin());
 
-	int len = v.size();
+	int len = (int)v.size();
 	if (len < 4) throw "Polygon should have at least three corners";
 
-	bool counterclockwise;
-	bool first_counterclockwise;
+	bool counterclockwise = false, first_counterclockwise = false;
 	std::vector<Cartesian>::iterator it(v.begin()), n_it, it_k, e_it(v.end() - 1);
 
 	//Check for the type of direction.
@@ -366,7 +365,6 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 double
 Geometry::areaPolygon()
 {
-	int len = (int)corners.size();
 	double D = 0;
 	double I = 0;
 	std::vector<Cartesian>::iterator it(corners.begin()), n_i, nn_i;
