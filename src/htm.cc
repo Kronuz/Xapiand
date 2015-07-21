@@ -31,8 +31,6 @@
 // Geometry region.
 HTM::HTM(bool partials_, double error, Geometry &region_) : region(region_), partials(partials_)
 {
-	ids = std::vector<uInt64>();
-	names = std::vector<std::string>();
 	// Get the error with respect to the radius.
 	error = (error > 0.5) ? 1 : (error < 0.1) ? 0.2 : 2 * error;
 	double errorD =  error * region.getRadius();
@@ -47,7 +45,7 @@ HTM::HTM(bool partials_, double error, Geometry &region_) : region(region_), par
 
 
 // Finds the inicial trixel containing the coord.
-uInt64
+void
 HTM::startTrixel(Cartesian &v0, Cartesian &v1, Cartesian &v2, const Cartesian &coord, std::string &name)
 {
 	uInt64 trixel_id = 0;
@@ -68,9 +66,9 @@ HTM::startTrixel(Cartesian &v0, Cartesian &v1, Cartesian &v2, const Cartesian &c
 	v0 = start_vertices[start_trixels[num].v0];
 	v1 = start_vertices[start_trixels[num].v1];
 	v2 = start_vertices[start_trixels[num].v2];
-	name = start_trixels[num].name;;
+	name = start_trixels[num].name;
 
-	return trixel_id;
+	return;
 }
 
 
@@ -85,22 +83,17 @@ HTM::midPoint(const Cartesian &v0, const Cartesian &v1, Cartesian &w)
 
 
 // Given a coord, return its HTM id
-uInt64
-HTM::cartesian2id(Cartesian &coord, std::string &name)
+void
+HTM::cartesian2name(Cartesian &coord, std::string &name)
 {
-	uInt64 start_id;
-	uInt64 id;
 	Cartesian v0, v1, v2;
 	Cartesian w0, w1, w2;
 
-	start_id = startTrixel(v0, v1, v2, coord, name);
-
-	id = start_id;
+	startTrixel(v0, v1, v2, coord, name);
 
 	// Search in children's trixel
 	short depth = HTM_MAX_LEVEL;
 	while (depth-- > 0) {
-		id <<= 2;
 		midPoint(v0, v1, w2);
 		midPoint(v1, v2, w0);
 		midPoint(v2, v0, w1);
@@ -110,19 +103,16 @@ HTM::cartesian2id(Cartesian &coord, std::string &name)
 			v2 = w1;
 		} else if(insideVector(v1, w0, w2, coord)) {
 			name += "1";
-			id |= 1;
 			v0 = v1;
 			v1 = w0;
 			v2 = w2;
 		} else if(insideVector(v2, w1, w0, coord)) {
 			name += "2";
-			id |= 2;
 			v0 = v2;
 			v1 = w1;
 			v2 = w0;
 		} else if(insideVector(w0, w1, w2, coord)) {
 			name += "3";
-			id |= 3;
 			v0 = w0;
 			v1 = w1;
 			v2 = w2;
@@ -337,25 +327,17 @@ HTM::boundingCircle(const Cartesian &v0, const Cartesian &v1, const Cartesian &v
 
 
 void
-HTM::lookupTrixels(int level, std::string name, const Cartesian &v0, const Cartesian &v1, const Cartesian &v2, uInt64 id_, int Pp, bool first_FULL)
+HTM::lookupTrixels(int level, std::string name, const Cartesian &v0, const Cartesian &v1, const Cartesian &v2)
 {
 	// Finish the recursion.
 	if (--level < 0) {
 		if (partials) {
-			ids.push_back(id_);
 			names.push_back(name);
 		}
 		return;
 	}
 
-	uInt64 offsprings_id[4], id = id_ << 2;
 	int P, F, type_trixels[4];
-
-	offsprings_id[0] = id;
-	offsprings_id[1] = id + 1;
-	offsprings_id[2] = id + 2;
-	offsprings_id[3] = id + 3;
-
 	Cartesian w0, w1, w2;
 	midPoint(v0, v1, w2);
 	midPoint(v1, v2, w0);
@@ -371,34 +353,29 @@ HTM::lookupTrixels(int level, std::string name, const Cartesian &v0, const Carte
 	P = (type_trixels[0] == HTM_PARTIAL) + (type_trixels[1] == HTM_PARTIAL) + (type_trixels[2] == HTM_PARTIAL) + (type_trixels[3] == HTM_PARTIAL);
 
 	if (F == 4) {
-		ids.push_back(id_);
 		names.push_back(name);
 		return;
 	}
 
 	// Save the full subtrixels' id
 	if (type_trixels[0] == HTM_FULL) {
-		ids.push_back(offsprings_id[0]);
 		names.push_back(name + "0");
 	}
 	if (type_trixels[1] == HTM_FULL) {
-		ids.push_back(offsprings_id[1]);
 		names.push_back(name + "1");
 	}
 	if (type_trixels[2] == HTM_FULL) {
-		ids.push_back(offsprings_id[2]);
 		names.push_back(name + "2");
 	}
 	if (type_trixels[3] == HTM_FULL) {
-		ids.push_back(offsprings_id[3]);
 		names.push_back(name + "3");
 	}
 
 	// Recursion
-	if (type_trixels[0] == HTM_PARTIAL) lookupTrixels(level, name + "0", v0, w2, w1, offsprings_id[0], P, first_FULL);
-	if (type_trixels[1] == HTM_PARTIAL) lookupTrixels(level, name + "1", v1, w0, w2, offsprings_id[1], P, first_FULL);
-	if (type_trixels[2] == HTM_PARTIAL) lookupTrixels(level, name + "2", v2, w1, w0, offsprings_id[2], P, first_FULL);
-	if (type_trixels[3] == HTM_PARTIAL) lookupTrixels(level, name + "3", w0, w1, w2, offsprings_id[3], P, first_FULL);
+	if (type_trixels[0] == HTM_PARTIAL) lookupTrixels(level, name + "0", v0, w2, w1);
+	if (type_trixels[1] == HTM_PARTIAL) lookupTrixels(level, name + "1", v1, w0, w2);
+	if (type_trixels[2] == HTM_PARTIAL) lookupTrixels(level, name + "2", v2, w1, w0);
+	if (type_trixels[3] == HTM_PARTIAL) lookupTrixels(level, name + "3", w0, w1, w2);
 	return;
 }
 
@@ -407,21 +384,21 @@ void
 HTM::run()
 {
 	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2]))
-		lookupTrixels(max_level, start_trixels[0].name, start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2], start_trixels[0].id, 0, true);
+		lookupTrixels(max_level, start_trixels[0].name, start_vertices[start_trixels[0].v0], start_vertices[start_trixels[0].v1], start_vertices[start_trixels[0].v2]);
 	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2]))
-		lookupTrixels(max_level, start_trixels[1].name, start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2], start_trixels[1].id, 0, true);
+		lookupTrixels(max_level, start_trixels[1].name, start_vertices[start_trixels[1].v0], start_vertices[start_trixels[1].v1], start_vertices[start_trixels[1].v2]);
 	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2]))
-		lookupTrixels(max_level, start_trixels[2].name, start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2], start_trixels[2].id, 0, true);
+		lookupTrixels(max_level, start_trixels[2].name, start_vertices[start_trixels[2].v0], start_vertices[start_trixels[2].v1], start_vertices[start_trixels[2].v2]);
 	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2]))
-		lookupTrixels(max_level, start_trixels[3].name, start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2], start_trixels[3].id, 0, true);
+		lookupTrixels(max_level, start_trixels[3].name, start_vertices[start_trixels[3].v0], start_vertices[start_trixels[3].v1], start_vertices[start_trixels[3].v2]);
 	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2]))
-		lookupTrixels(max_level, start_trixels[4].name, start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2], start_trixels[4].id, 0, true);
+		lookupTrixels(max_level, start_trixels[4].name, start_vertices[start_trixels[4].v0], start_vertices[start_trixels[4].v1], start_vertices[start_trixels[4].v2]);
 	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2]))
-		lookupTrixels(max_level, start_trixels[5].name, start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2], start_trixels[5].id, 0, true);
+		lookupTrixels(max_level, start_trixels[5].name, start_vertices[start_trixels[5].v0], start_vertices[start_trixels[5].v1], start_vertices[start_trixels[5].v2]);
 	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2]))
-		lookupTrixels(max_level, start_trixels[6].name, start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2], start_trixels[6].id, 0, true);
+		lookupTrixels(max_level, start_trixels[6].name, start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2]);
 	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2]))
-		lookupTrixels(max_level, start_trixels[7].name, start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2], start_trixels[7].id, 0, true);
+		lookupTrixels(max_level, start_trixels[7].name, start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2]);
 }
 
 

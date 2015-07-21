@@ -49,10 +49,38 @@ const double ERROR_NIVEL[] = {10066329.6, 5033164.8, 2516582.4, 1258291.2, 62914
 					   614.4,     307.2,     153.6,      76.8,      38.4,     19.2,     9.6,
 					   4.8,       2.4,       1.2,        0.6,       0.3}; // meters.
 
-typedef struct ranges_s {
-	uInt64 min;
-	uInt64 max;
-} ranges_t;
+typedef struct range_s {
+	uInt64 start;
+	uInt64 end;
+} range_t;
+
+typedef struct trixel_s {
+	uInt64 id;
+	std::string name;
+	int v0, v1, v2;
+} trixel_t;
+
+const uInt64 S0 = 8, S1 = 9, S2 = 10, S3 = 11, N0 = 12, N1 = 13, N2 = 14, N3 = 15;
+
+const Cartesian start_vertices[6] = {
+	Cartesian(0.0,  0.0,  1.0),
+	Cartesian(1.0,  0.0,  0.0),
+	Cartesian(0.0,  1.0,  0.0),
+	Cartesian(-1.0, 0.0,  0.0),
+	Cartesian(0.0,  -1.0, 0.0),
+	Cartesian(0.0,  0.0,  -1.0)
+};
+
+const trixel_t start_trixels[8] = {
+	{ S0, "s0", 1, 5, 2 },
+	{ S1, "s1", 2, 5, 3 },
+	{ S2, "s2", 3, 5, 4 },
+	{ S3, "s3", 4, 5, 1 },
+	{ N0, "n0", 1, 0, 4 },
+	{ N1, "n1", 4, 0, 3 },
+	{ N2, "n2", 3, 0, 2 },
+	{ N3, "n3", 2, 0, 1 }
+};
 
 
 // All the Geometry was obtained in the next papers:
@@ -63,63 +91,37 @@ typedef struct ranges_s {
 //     Dept. of Physics and Astronomy, Johns Hopkins University, Baltimore
 class HTM {
 
-	typedef struct trixel_s {
-		uInt64 id;
-		std::string name;
-		int v0, v1, v2;
-	} trixel_t;
-
 	public:
 		short max_level;
-		uInt64 S0 = 8, S1 = 9, S2 = 10, S3 = 11, N0 = 12, N1 = 13, N2 = 14, N3 = 15;
 		Geometry region;
-		std::vector<uInt64> ids;
-		std::vector<ranges_t> ranges;
 		std::vector<std::string> names;
-		int num_ranges;
 		bool partials;
-
-		Cartesian start_vertices[6] = {
-			Cartesian(0.0,  0.0,  1.0),
-			Cartesian(1.0,  0.0,  0.0),
-			Cartesian(0.0,  1.0,  0.0),
-			Cartesian(-1.0, 0.0,  0.0),
-			Cartesian(0.0,  -1.0, 0.0),
-			Cartesian(0.0,  0.0,  -1.0)
-		};
-
-		trixel_t start_trixels[8] = {
-			{ S0, "s0", 1, 5, 2 },
-			{ S1, "s1", 2, 5, 3 },
-			{ S2, "s2", 3, 5, 4 },
-			{ S3, "s3", 4, 5, 1 },
-			{ N0, "n0", 1, 0, 4 },
-			{ N1, "n1", 4, 0, 3 },
-			{ N2, "n2", 3, 0, 2 },
-			{ N3, "n3", 2, 0, 1 }
-		};
 
 		HTM(bool partials_, double error, Geometry &region_);
 
-		uInt64 startTrixel(Cartesian &v0, Cartesian &v1, Cartesian &v2, const Cartesian &coord, std::string &name);
-		void midPoint(const Cartesian &v0, const Cartesian &v1, Cartesian &w);
-		uInt64 cartesian2id(Cartesian &coord, std::string &name);
 		void run();
-		void lookupTrixels(int level, std::string name, const Cartesian &v0, const Cartesian &v1, const Cartesian &v2, uInt64 id_, int Pp, bool first_FULL);
+		void lookupTrixels(int level, std::string name, const Cartesian &v0, const Cartesian &v1, const Cartesian &v2);
 		int insideVertex(const Cartesian &v);
 		int verifyTrixel(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2);
 		bool thereisHole(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2);
-		bool insideVector(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2, const Cartesian &v);
 		bool intersectEdge(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2);
 		bool boundingCircle(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2);
 		bool testEdgePolygon(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2);
-		bool intersection(const Cartesian &v1, const Cartesian &v2, const Constraint &c);
-		void saveRangeID(uInt64 id, const std::string &name);
-		void getCorners(const std::string &name, Cartesian &v0, Cartesian &v1, Cartesian &v2);
 		void writePython3D(const std::string &file);
 		std::string getCircle3D(int points);
-		void writePython3D(const std::string &file, std::vector<Geometry> &g, std::vector<std::string> &names_f);
-		std::string getCircle3D(const Constraint &bCircle, int points);
+
+		static void startTrixel(Cartesian &v0, Cartesian &v1, Cartesian &v2, const Cartesian &coord, std::string &name);
+		static void cartesian2name(Cartesian &coord, std::string &name);
+		static void name2id(const std::string &name, uInt64 &id);
+		static bool insideVector(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2, const Cartesian &v);
+		static bool intersection(const Cartesian &v1, const Cartesian &v2, const Constraint &c);
+		static void midPoint(const Cartesian &v0, const Cartesian &v1, Cartesian &w);
+		static void insertRange(const std::string &name, std::vector<range_t> &ranges, int _max_level);
+		static void mergeRanges(std::vector<range_t> &_ranges);
+		static void getCorners(const std::string &name, Cartesian &v0, Cartesian &v1, Cartesian &v2);
+		static void writePython3D(const std::string &file, std::vector<Geometry> &g, std::vector<std::string> &names_f);
+		static std::string getCircle3D(const Constraint &bCircle, int points);
+		static bool compareRanges(const range_t &r1, const range_t &r2);
 };
 
 
