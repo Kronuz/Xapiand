@@ -1963,20 +1963,23 @@ Database::get_data_field(const std::string &field_name)
 
 
 char
-Database::get_type(cJSON *field, specifications_t &spc)
+Database::get_type(cJSON *_field, specifications_t &spc)
 {
-	int type = field->type;
+	cJSON *field;
+	int type = _field->type;
 	if (type == cJSON_Array) {
-		int num_ele = cJSON_GetArraySize(field);
-		field = cJSON_GetArrayItem(field, 0);
+		int num_ele = cJSON_GetArraySize(_field);
+		field = cJSON_GetArrayItem(_field, 0);
 		type = field->type;
 		if (type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
 		for (int i = 1; i < num_ele; i++) {
-			field = cJSON_GetArrayItem(field, i);
+			field = cJSON_GetArrayItem(_field, i);
 			if (field->type != type && (field->type > 1 || type > 1)) {
 				throw MSG_Error("Different types of data");
 			}
 		}
+	} else {
+		field = _field;
 	}
 
 	switch (type) {
