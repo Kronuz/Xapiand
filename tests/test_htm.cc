@@ -234,7 +234,7 @@ int test_hullConvex()
 			}
 
 			try {
-				Geometry g(pts);
+				Geometry g(pts, Geometry::CONVEX_HULL);
 				std::string x_s, y_s, z_s;
 				double x1, y1, z1;
 				int i = 1;
@@ -294,7 +294,7 @@ int test_hullConvex()
 				fs << "ax.set_xlabel('x')\nax.set_ylabel('y')\nax.set_zlabel('z')\n";
 				fs << "plt.show()\nplt.ion()\n";
 			} catch(const std::exception &e) {
-				LOG_ERR(NULL, "ERROR: %s\n", e.what());
+				LOG_ERR(NULL, "ERROR: (%s) %s\n", it_f->c_str(), e.what());
 				cont++;
 			}
 		} else {
@@ -324,39 +324,50 @@ int test_HTM_chull()
 	int cont = 0;
 
 	std::vector<std::string> files, expect_files, result_files;
+	std::vector<Geometry::typePoints> types;
 	files.push_back("examples/ColoradoPoly.txt");
 	expect_files.push_back("examples/ColoradoPoly_expect_HTM.txt");
 	result_files.push_back("examples/ColoradoPoly_polygon_HTM.py");
+	types.push_back(Geometry::CONVEX_POLYGON);
 	files.push_back("examples/Georgia.txt");
 	expect_files.push_back("examples/Georgia_expect_HTM.txt");
 	result_files.push_back("examples/Georgia_polygon_HTM.py");
+	types.push_back(Geometry::CONVEX_HULL);
 	files.push_back("examples/MexPoly.txt");
 	expect_files.push_back("examples/MexPoly_expect_HTM.txt");
 	result_files.push_back("examples/MexPoly_polygon_HTM.py");
+	types.push_back(Geometry::CONVEX_HULL);
 	files.push_back("examples/Nave.txt");
 	expect_files.push_back("examples/Nave_expect_HTM.txt");
 	result_files.push_back("examples/Nave_polygon_HTM.py");
+	types.push_back(Geometry::CONVEX_HULL);
 	files.push_back("examples/Poly.txt");
 	expect_files.push_back("examples/Poly_expect_HTM.txt");
 	result_files.push_back("examples/Poly_polygon_HTM.py");
+	types.push_back(Geometry::CONVEX_HULL);
 	files.push_back("examples/Poly2.txt");
 	expect_files.push_back("examples/Poly2_expect_HTM.txt");
 	result_files.push_back("examples/Poly2_polygon_HTM.py");
+	types.push_back(Geometry::CONVEX_HULL);
 	files.push_back("examples/Poly3.txt");
 	expect_files.push_back("examples/Poly3_expect_HTM.txt");
 	result_files.push_back("examples/Poly3_polygon_HTM.py");
+	types.push_back(Geometry::CONVEX_POLYGON);
 	files.push_back("examples/Strip.txt");
 	expect_files.push_back("examples/Strip_expect_HTM.txt");
 	result_files.push_back("examples/Strip_polygon_HTM.py");
+	types.push_back(Geometry::CONVEX_POLYGON);
 	files.push_back("examples/Utah.txt");
 	expect_files.push_back("examples/Utah_expect_HTM.txt");
 	result_files.push_back("examples/Utah_polygon_HTM.py");
+	types.push_back(Geometry::CONVEX_HULL);
 
 	std::vector<std::string>::const_iterator it_f(files.begin());
 	std::vector<std::string>::const_iterator it_e(expect_files.begin());
 	std::vector<std::string>::const_iterator it_r(result_files.begin());
+	std::vector<Geometry::typePoints>::const_iterator it_t(types.begin());
 
-	for ( ;it_f != files.end(); it_f++, it_e++, it_r++) {
+	for ( ;it_f != files.end(); it_f++, it_e++, it_r++, it_t++) {
 		std::ifstream readFile(*it_f);
 		std::ifstream readEFile(*it_e);
 
@@ -380,7 +391,7 @@ int test_HTM_chull()
 			}
 
 			try {
-				Geometry g(pts);
+				Geometry g(pts, *it_t);
 
 				HTM _htm(partials, error, g);
 				_htm.run();
@@ -411,7 +422,7 @@ int test_HTM_chull()
 
 				_htm.writePython3D(*it_r);
 			} catch(const std::exception &e) {
-				LOG_ERR(NULL, "ERROR: %s\n", e.what());
+				LOG_ERR(NULL, "ERROR: (%s) %s\n", it_f->c_str(), e.what());
 				cont++;
 			}
 		} else {

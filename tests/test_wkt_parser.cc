@@ -71,12 +71,9 @@ int test_wkt_parser()
 					}
 
 					// Python for the Geometry.
-					Constraint c;
-					Geometry g(c);
-					HTM _htm(partials, error, g);
-					_htm.writePython3D(file_result, ewkt.gv, ewkt.trixels);
+					HTM::writePython3D(file_result, ewkt.gv, ewkt.trixels);
 				} catch(const std::exception &e) {
-					LOG_ERR(NULL, "ERROR: %s\n", e.what());
+					LOG_ERR(NULL, "ERROR: (%s) %s\n", EWKT.c_str(), e.what());
 					cont++;
 				}
 				readEFile.close();
@@ -105,8 +102,9 @@ int test_wkt_parser()
 int test_wkt_speed()
 {
 	int repeat = 10;
-	clock_t start = clock();
-	std::string EWKT("POLYGON ((39 -125, 39 -120, 42 -120, 39 -120))");
+	clock_t start;
+	start = clock();
+	std::string EWKT("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10))");
 	for (int i = 0; i < repeat; i++) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
@@ -117,14 +115,28 @@ int test_wkt_speed()
 	for (int i = 0; i < repeat; i++) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
-	LOG(NULL, "Time required for execution a POLYGON compound: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+	LOG(NULL, "Time required for execution a compound POLYGON: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
-	EWKT = std::string("MULTIPOINT (10 40, 40 30, 20 20, 30 10)");
+	EWKT = std::string("CHULL ((35 10, 45 45, 15 40, 10 20, 35 10))");
 	for (int i = 0; i < repeat; i++) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
-	LOG(NULL, "Time required for execution a MULTIPOINT: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+	LOG(NULL, "Time required for execution a single CHULL: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+
+	start = clock();
+	EWKT = std::string("CHULL ((35 10, 45 45, 15 40, 10 20, 35 10),(20 30, 35 35, 30 20, 20 30))");
+	for (int i = 0; i < repeat; i++) {
+		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
+	}
+	LOG(NULL, "Time required for execution a compound CHULL: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+
+	start = clock();
+	EWKT = std::string("POINT (10 40)");
+	for (int i = 0; i < repeat; i++) {
+		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
+	}
+	LOG(NULL, "Time required for execution a POINT: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("CIRCLE (39 -125, 10000)");
