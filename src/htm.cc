@@ -456,25 +456,25 @@ HTM::compareRanges(const range_t &r1, const range_t &r2) {
 void
 HTM::mergeRanges(std::vector<range_t> &ranges)
 {
-	if (_ranges.size() <= 0) return;
+	if (ranges.size() <= 0) return;
 
 	// Vector sorted Low to High according to start.
-	sort(_ranges.begin(), _ranges.end(), compareRanges);
+	sort(ranges.begin(), ranges.end(), compareRanges);
 
-	std::vector<range_t>::iterator it(_ranges.begin() + 1);
-	for ( ; it != _ranges.end(); it++) {
+	std::vector<range_t>::iterator it(ranges.begin() + 1);
+	for ( ; it != ranges.end(); it++) {
 		std::vector<range_t>::iterator tmp(it - 1);	 // Get previous range.
 
 		if (tmp->end < it->start - 1) {	  // (start-1 for join adjacent integer ranges).
 			continue;					  // If current range is not overlapping with previous
 		} else if (tmp->end < it->end) {  // range, continue. Otherwise update the end of
 			tmp->end = it->end;			  // previous range, if ending of current range is more.
-			_ranges.erase(it);
+			ranges.erase(it);
 			it = tmp;
 			continue;
 		}
 
-		_ranges.erase(it);  // If ranges overlapping.
+		ranges.erase(it);  // If ranges overlapping.
 		it = tmp;
 	}
 }
