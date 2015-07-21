@@ -76,14 +76,16 @@ Geometry::Geometry(const Constraint &c)
 }
 
 
-Geometry::~Geometry()
+Geometry::Geometry(std::vector<Cartesian> &v, typePoints type)
 {
-	constraints.clear();
+	(type == Geometry::CONVEX_POLYGON) ? convexPolygon(v) : convexHull(v);
 }
 
 
 // Constructor for a set of points in the Earth.
-Geometry::Geometry(std::vector<Cartesian> &v)
+// typePolygon -> Geometry::CONVEX or Geometry::NO_CONVEX
+void
+Geometry::convexHull(std::vector<Cartesian> &v)
 {
 	// Constraints:
 	//    For each side, we have a 0-halfspace (great circle) passing through the 2 corners.
@@ -99,33 +101,149 @@ Geometry::Geometry(std::vector<Cartesian> &v)
 	convexHull(v, points_convex);
 
 	// The convex is formed in counterclockwise.
-	int i, next_i, len = (int)points_convex.size();
-	Cartesian constraint;
-
+	int i, len = (int)points_convex.size();
 	if (len < 3) throw MSG_Error("Convex Hull not found");
 
 	// The corners are in clockwise but we need the corners in counterclockwise order and normalize.
-	for (i = len - 1; i >= 0; i--) {
-		next_i = (i == 0) ? len - 1 : i - 1;
-		constraint = points_convex.at(i) ^ points_convex.at(next_i);
-		Constraint c = Constraint();
-		constraint.normalize();
-		c.center = constraint;
+	Cartesian center;
+	corners.reserve(len);
+	points_convex.insert(points_convex.begin(), *(points_convex.end() - 1));
+	std::vector<Cartesian>::reverse_iterator it(points_convex.rbegin()), n_it, e_it(points_convex.rend() - 1);
+	for (; it != e_it; it++) {
+		n_it = it + 1;
+		center = *it ^ *n_it;
+		center.normalize();
+		Constraint c;
+		c.center = center;
 		constraints.push_back(c);
-		corners.push_back(points_convex.at(i));
+		corners.push_back(*it);
 	}
 
 	// Calculate the bounding circle for the convex.
 	// Take it as the bounding circle of the triangle with the widest opening angle.
 	boundingCircle.distance = 1.0;
-	for (i = 0; i < corners.size(); i++) {
-		for (int j = i + 1; j < corners.size(); j++) {
-			for (int k = j + 1; k < corners.size(); k++) {
-				Cartesian v_aux = (corners.at(j) - corners.at(i)) ^ (corners.at(k) - corners.at(j));
+	std::vector<Cartesian>::iterator it_i(corners.begin()), it_j, it_k;
+	for ( ; it_i != corners.end(); it_i++) {
+		for (it_j = it_i + 1; it_j != corners.end(); it_j++) {
+			for (it_k = it_j + 1; it_k != corners.end(); it_k++) {
+				Cartesian v_aux = (*it_j - *it_i) ^ (*it_k - *it_j);
 				v_aux.normalize();
 				// Calculate the correct opening angle.
 				// Can take any corner to calculate the opening angle.
-				double d = v_aux * corners.at(i);
+				double d = v_aux * *it_i;
+				if (boundingCircle.distance > d) {
+					boundingCircle.distance = d;
+					boundingCircle.center = v_aux;
+					boundingCircle.arcangle = acos(d);
+					if (d <= -DBL_TOLERANCE) boundingCircle.sign = NEG;
+					else if (d >=  DBL_TOLERANCE) boundingCircle.sign = POS;
+					else boundingCircle.sign = ZERO;
+				}
+			}
+		}
+	}
+}
+
+
+// Constructor for a convex polygon.
+void
+Geometry::convexPolygon(std::vector<Cartesian> &v)
+{
+	// Constraints:
+	//    For each side, we have a 0-halfspace (great circle) passing through the 2 corners.
+	//    Since we are in counterclockwise order, the vector product of the two
+	//    successive corners just gives the correct constraint.
+	//
+	// Requirements:
+	//    Polygons should be counterclockwise.
+	//    Polygons should be convex.
+
+	// Repeat the first corner at the end if it does not repeat.
+	if (*v.begin() != *(v.end() - 1)) v.push_back(*v.begin());
+
+	int len = v.size();
+	if (len < 4) throw "Polygon should have at least three corners";
+
+	bool counterclockwise;
+	bool first_counterclockwise;
+	std::vector<Cartesian>::iterator it(v.begin()), n_it, it_k, e_it(v.end() - 1);
+
+	//Check for the type of direction.
+	Cartesian constraint;
+	for ( ; it != e_it; it++) {
+		// Direction should be the same for all.
+		n_it = it + 1;
+		if (it != v.begin()) {
+			// Calculate the direction of the third corner and restriction formed in the previous iteration.
+			if (constraint * *n_it < DBL_TOLERANCE) {
+				counterclockwise = false;
+				if (it == v.begin() + 1) {
+					first_counterclockwise = false;
+				}
+			} else {
+				counterclockwise = true;
+				if (it == v.begin() + 1) {
+					first_counterclockwise = true;
+				}
+			}
+
+			if (it != (v.begin() + 1) && counterclockwise != first_counterclockwise) {
+				throw MSG_Error("Polygon is not convex, You should use the constructor -> Geometry(g, Geometry::NO_CONVEX)");
+			}
+		}
+
+		// The vector product of the two successive corners just gives the correct constraint.
+		constraint = *it ^ *n_it;
+		if (constraint.norm() <= DBL_TOLERANCE) {
+			throw MSG_Error("Repeating corners, edge error, You should use the constructor -> Geometry(g, Geometry::NO_CONVEX)");
+		}
+	}
+
+	// Building convex always in counterclockwise.
+	if (counterclockwise) {
+		corners.reserve(v.size() - 1);
+		for (it = v.begin(); it != e_it; it++) {
+			n_it = it + 1;
+			constraint = *it ^ *n_it;
+			constraint.normalize();
+			// Convex hulls for a set of points on the surface of a sphere are only well defined
+			// if the points all fit within half of the globe. This is a 0-halfspace, or a halfspace
+			// with a arcangle pi/2.
+			Constraint c;
+			c.center = constraint;
+			constraints.push_back(c);
+			// Normalize the corner.
+			it->normalize();
+			corners.push_back(*it);
+		}
+	} else {
+		// If direction is clockwise, revert the direction.
+		corners.reserve(v.size() - 1);
+		std::vector<Cartesian>::reverse_iterator rit(v.rbegin()), rn_it, f_rit(v.rend() - 1);
+		for ( ; rit != f_rit; rit++) {
+			rn_it = rit + 1;
+			constraint = *rit ^ *rn_it;
+			constraint.normalize();
+			Constraint c;
+			c.center = constraint;
+			constraints.push_back(c);
+			// Normalize the corner.
+			rit->normalize();
+			corners.push_back(*rit);
+		}
+	}
+
+	// Calculate the bounding circle for the convex.
+	// Take it as the bounding circle of the triangle with the widest opening angle.
+	boundingCircle.distance = 1.0;
+	for (it = corners.begin(); it != corners.end(); it++) {
+		for (n_it = it + 1; n_it != corners.end(); n_it++) {
+			for (it_k = n_it + 1; it_k != corners.end(); it_k++) {
+				Cartesian v_aux = (*n_it - *it) ^ (*it_k - *n_it);
+				v_aux.normalize();
+				// Calculate the correct opening angle.
+				// Can take any corner to calculate the opening angle.
+				double d = v_aux * *it;
 				if (boundingCircle.distance > d) {
 					boundingCircle.distance = d;
 					boundingCircle.center = v_aux;
@@ -170,7 +288,7 @@ Geometry::dist(const Cartesian &a, const Cartesian &b)
 // Function used by quickSort to sort an vector of
 // points with respect to the first point P0.
 bool
-Geometry::compare(Cartesian &a, Cartesian &b)
+Geometry::compare(const Cartesian &P0, const Cartesian &a, const Cartesian &b)
 {
 	// Calculate direction.
 	int dir = direction(P0, a, b);
@@ -183,57 +301,46 @@ Geometry::compare(Cartesian &a, Cartesian &b)
 
 // Return a convex hull of a set of points using Graham Scan Algorithm.
 void
-Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &points_convex) {
+Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &points_convex)
+{
 	int len = (int)points.size();
+	if (len < 3) throw MSG_Error("Polygon should have at least three corners");
 
-	if (len < 3) throw MSG_Error("Polygon should have al least three corners");
-
-	// Find the min 'y' and the min 'x'
-	// Normalize the points.
-	points.at(0).normalize();
-	double x_min = points.at(0).x, y_min = points.at(0).y, z_min = points.at(0).z;
-	int i, swap_pos = 0;
-
-	for (i = 1; i < len; i++) {
-		// Normalize the points.
-		points.at(i).normalize();
-		if (points.at(i).y < y_min ||
-			(y_min == points.at(i).y && points.at(i).x < x_min) ||
-			(y_min == points.at(i).y && points.at(i).x == x_min && points.at(i).z < z_min)) {
-			x_min = points.at(i).x;
-			y_min = points.at(i).y;
-			z_min = points.at(i).z;
-			swap_pos = i;
+	// Find the min 'y', min 'x' and min 'z'.
+	std::vector<Cartesian>::iterator it(points.begin());
+	it->normalize(); // Normalize the points.
+	std::vector<Cartesian>::iterator it_swap(it);
+	for ( ; it != points.end(); it++) {
+		it->normalize(); // Normalize the point.
+		if (it->y < it_swap->y ||
+		  	(it_swap->y == it->y && it->x < it_swap->x) ||
+			(it_swap->y == it->y && it->x == it_swap->x && it->z < it_swap->z)) {
+			it_swap = it;
 		}
 	}
 
 	// Swap positions.
-	std::swap(points.at(swap_pos), points.at(0));
+	std::iter_swap(it_swap, points.begin());
 
 	// Sort the n - 1 elements in ascending angle.
-	P0 = points.at(0);
-	quickSort(points, 1, (int)points.size() - 1);
+	sort(++points.begin(), points.end(), std::bind(compare, *points.begin(), std::placeholders::_1, std::placeholders::_2));
 
-	// Deleting duplicates.
-	std::vector<Cartesian>::iterator it(points.begin());
-	for ( ; it != points.end() - 1; ) {
-		if (*it == *(it + 1)) {
-			points.erase(it + 1);
-			continue;
-		}
-		it++;
+	// Deleting duplicates points.
+	it = points.begin();
+	while (it != points.end() - 1) {
+		(*it == *(it + 1)) ? points.erase(it + 1) : it++;
 	}
 
-	len = (int)points.size();
+	if ((len = (int)points.size()) < 3) throw MSG_Error("Polygon should have at least three corners");
 
 	// Points convex
-	points_convex.push_back(P0);
-	points_convex.push_back(points.at(1));
-	points_convex.push_back(points.at(2));
+	it = points.begin();
+	points_convex.push_back(*it++);
+	points_convex.push_back(*it++);
+	points_convex.push_back(*it++);
 
-	for (i = 3; i < len; i++) {
+	for (; it != points.end(); it++) {
 		while (true) {
-
 			// Not found the convex.
 			if (points_convex.size() == 1) throw MSG_Error("Convex Hull not found");
 
@@ -242,7 +349,7 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 
 			Cartesian n_last = points_convex.back();
 
-			int direct = direction(n_last, last, points.at(i));
+			int direct = direction(n_last, last, *it);
 			if (direct != COUNTERCLOCKWISE) {
 				continue;
 			} else {
@@ -250,43 +357,8 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 				break;
 			}
 		}
-		points_convex.push_back(points.at(i));
+		points_convex.push_back(*it);
 	}
-}
-
-
-// Sort an vector of points with respect to the first point P0 and their angle using quick sort.
-void
-Geometry::quickSort(std::vector<Cartesian> &pts, int first, int last)
-{
-	int r;
-	if (first < last) {
-		r = partition(pts, first, last);
-		quickSort(pts, first, r);
-		quickSort(pts, r + 1, last);
-	}
-}
-
-
-// Partition for QuickSort
-int
-Geometry::partition(std::vector<Cartesian> &pts, int first, int last)
-{
-	int pivote =  first + (last - first) / 2;
-	Cartesian c = pts.at(pivote);
-	std::swap(pts.at(pivote), pts.at(last));
-	int i = first;
-	int j;
-
-	for (j = first; j < last; j++) {
-		if (compare(pts.at(j), c)) {
-			std::swap(pts.at(j), pts.at(i));
-			i = i + 1;
-		}
-	}
-
-	std::swap(pts.at(i), pts.at(last));
-	return i;
 }
 
 
@@ -297,11 +369,12 @@ Geometry::areaPolygon()
 	int len = (int)corners.size();
 	double D = 0;
 	double I = 0;
-	for (int i = 0; i < len; i++) {
-		int n_i = (i == len - 1) ? 0 : i + 1;
-		int nn_i = (n_i == len - 1) ? 0 : n_i + 1;
-		D += corners.at(i).x * corners.at(n_i).y * corners.at(nn_i).z;
-		I += corners.at(i).z * corners.at(n_i).y * corners.at(nn_i).x;
+	std::vector<Cartesian>::iterator it(corners.begin()), n_i, nn_i;
+	for (; it != corners.end(); it++) {
+		n_i = (it + 1 == corners.end()) ? corners.begin() : it + 1;
+		nn_i = (n_i + 1 == corners.end()) ? corners.begin() : n_i + 1;
+		D += it->x * n_i->y * nn_i->z;
+		I += it->z * n_i->y * nn_i->x;
 	}
 	double A = 0.5 * (D - I);
 	return (A < 0 ? -A : A);

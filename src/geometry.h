@@ -41,7 +41,6 @@ const double M_PER_RADIUS_EARTH = 6367444.7;
 // Radius maximum allowed in a constraints (all the earth).
 const double MAX_RADIUS_HALFSPACE_EARTH = 20003917.491659265; // meters
 
-
 class Constraint {
 	public:
 		int sign;
@@ -62,23 +61,26 @@ class Geometry {
 		Constraint boundingCircle;
 		std::vector<Cartesian> corners;
 
-		Geometry(const Constraint &c);
-		Geometry();
-		Geometry(std::vector<Cartesian> &v);
-		~Geometry();
-		double getRadius();
+		enum typePoints {
+			CONVEX_POLYGON,
+			CONVEX_HULL
+		};
 
-	private:
-		Cartesian P0;
-		void convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &points_convex);
-		int direction(const Cartesian &a, const Cartesian &b, const Cartesian &c);
-		double dist(const Cartesian &a, const Cartesian &b);
-		void quickSort(std::vector<Cartesian> &pts, int first, int last);
-		int partition(std::vector<Cartesian> &pts, int first, int last);
-		bool compare(Cartesian &a, Cartesian &b);
+		Geometry(const Constraint &c);
+		Geometry(std::vector<Cartesian> &v, typePoints type);
+		double getRadius();
+		void convexHull(std::vector<Cartesian> &v);
+		void convexPolygon(std::vector<Cartesian> &v);
 		double areaPolygon();
 		double vertex2centroid();
 		Cartesian centroidPolygon();
+
+	private:
+		void convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &points_convex);
+		static int direction(const Cartesian &a, const Cartesian &b, const Cartesian &c);
+		static double dist(const Cartesian &a, const Cartesian &b);
+		static bool compare(const Cartesian &P0, const Cartesian &a, const Cartesian &b);
+
 };
 
 
