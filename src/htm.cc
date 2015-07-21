@@ -121,7 +121,27 @@ HTM::cartesian2name(Cartesian &coord, std::string &name)
 		}
 	}
 
-	return id;
+	return;
+}
+
+
+// Receive a name of a trixel and save its id.
+void
+HTM::name2id(const std::string &name, uInt64 &id)
+{
+	int size = (int)name.size();
+
+	if (size < 2) throw MSG_Error("Trixel's name is too short");
+
+	if (size > HTM_MAX_LEVEL + 2) throw MSG_Error("Trixel's name is too long");
+
+	(name.at(0) == 'n') ? id = 3 : (name.at(0) == 's') ? id = 2 : throw MSG_Error("Trixel's name %s is incorrect", name.c_str());
+
+	for (int i = 1; i < size; i++) {
+		if(name.at(i) > '3' || name.at(i) < '0') throw MSG_Error("Trixel's name %s is incorrect", name.c_str());
+		id <<= 2;
+		id |= name.at(i) - '0';
+	}
 }
 
 
@@ -402,24 +422,61 @@ HTM::run()
 }
 
 
-//Save id and its ranges.
+//Save ranges.
 void
-HTM::saveRangeID(uInt64 id, const std::string &name)
+HTM::insertRange(const std::string &name, std::vector<range_t> &ranges, int _max_level)
 {
-    int mask;
-    uInt64 min, max;
+	int mask;
+	uInt64 start, end;
+	uInt64 id;
 
-	short level = name.size() - 2;
-	if (level < max_level) {
-		mask = (max_level - level) << 1;
-		min = id << mask;
-		max = min + ((uInt64) 1 << mask) - 1;
+	name2id(name, id);
+
+	int level = (int)name.size() - 2;
+	if (level < _max_level) {
+		mask = (_max_level - level) << 1;
+		start = id << mask;
+		end = start + ((uInt64) 1 << mask) - 1;
 	} else {
-		min = max = id;
+		start = end = id;
 	}
-	ids.push_back(id);
-	names.push_back(name);
-	ranges.push_back({min, max});
+
+	ranges.push_back({start, end});
+}
+
+
+bool
+HTM::compareRanges(const range_t &r1, const range_t &r2) {
+	return r1.start < r2.start;
+}
+
+
+// Merge Ranges.
+// Input: a vector of range_t
+void
+HTM::mergeRanges(std::vector<range_t> &_ranges)
+{
+	if (_ranges.size() <= 0) return;
+
+	// Vector sorted Low to High according to start.
+	sort(_ranges.begin(), _ranges.end(), compareRanges);
+
+	std::vector<range_t>::iterator it(_ranges.begin() + 1);
+	for ( ; it != _ranges.end(); it++) {
+		std::vector<range_t>::iterator tmp(it - 1);	 // Get previous range.
+
+		if (tmp->end < it->start - 1) {	  // (start-1 for join adjacent integer ranges).
+			continue;					  // If current range is not overlapping with previous
+		} else if (tmp->end < it->end) {  // range, continue. Otherwise update the end of
+			tmp->end = it->end;			  // previous range, if ending of current range is more.
+			_ranges.erase(it);
+			it = tmp;
+			continue;
+		}
+
+		_ranges.erase(it);  // If ranges overlapping.
+		it = tmp;
+	}
 }
 
 
