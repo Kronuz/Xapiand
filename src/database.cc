@@ -843,18 +843,16 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 				index_fields(subitem, subitem_name, spc_now, doc, subproperties, is_value, find);
 				offspring++;
 			} else if (strcmp(subitem->string, RESERVED_VALUE) == 0 && subitem->type != cJSON_Object) {
+				spc_now.sep_types[2] = (spc_now.sep_types[2] == NO_TYPE) ? get_type(subitem, spc_now): spc_now.sep_types[2];
+				if (spc_now.sep_types[2] == NO_TYPE) throw MSG_Error("The field's value %s is ambiguous", item_name.c_str());
+
 				if (is_value) {
 					index_values(doc, subitem, spc_now, item_name, properties, find);
+				} else if (spc_now.sep_types[2] == STRING_TYPE && subitem->type != cJSON_Array && ((strlen(subitem->valuestring) > 30 && std::string(subitem->valuestring).find(" ") != std::string::npos) || std::string(subitem->valuestring).find("\n") != std::string::npos)) {
+					index_texts(doc, subitem, spc_now, item_name, properties, find);
 				} else {
-					spc_now.sep_types[2] = (spc_now.sep_types[2] == NO_TYPE) ? get_type(subitem, spc_now): spc_now.sep_types[2];
-					if (spc_now.sep_types[2] == NO_TYPE) throw MSG_Error("The field's value %s is ambiguous", item_name.c_str());
-
-					if (spc_now.sep_types[2] == STRING_TYPE && subitem->type != cJSON_Array && ((strlen(subitem->valuestring) > 30 && std::string(subitem->valuestring).find(" ") != std::string::npos) || std::string(subitem->valuestring).find("\n") != std::string::npos)) {
-						index_texts(doc, subitem, spc_now, item_name, properties, find);
-					} else {
-						index_values(doc, subitem, spc_now, item_name, properties, find);
-						index_terms(doc, subitem, spc_now, item_name, properties, true);
-					}
+					index_values(doc, subitem, spc_now, item_name, properties, find);
+					index_terms(doc, subitem, spc_now, item_name, properties, true);
 				}
 			}
 		}
@@ -873,18 +871,16 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 		}
 	} else {
 		update_specifications(item, spc_now, properties);
+		spc_now.sep_types[2] = (spc_now.sep_types[2] == NO_TYPE) ? get_type(item, spc_now): spc_now.sep_types[2];
+		if (spc_now.sep_types[2] == NO_TYPE) throw MSG_Error("The field's value %s is ambiguous", item_name.c_str());
+
 		if (is_value) {
 			index_values(doc, item, spc_now, item_name, properties, find);
+		} else if (spc_now.sep_types[2] == STRING_TYPE && item->type != cJSON_Array && ((strlen(item->valuestring) > 30 && std::string(item->valuestring).find(" ") != std::string::npos) || std::string(item->valuestring).find("\n") != std::string::npos)) {
+			index_texts(doc, item, spc_now, item_name, properties, find);
 		} else {
-			spc_now.sep_types[2] = (spc_now.sep_types[2] == NO_TYPE) ? get_type(item, spc_now): spc_now.sep_types[2];
-			if (spc_now.sep_types[2] == NO_TYPE) throw MSG_Error("The field's value %s is ambiguous", item_name.c_str());
-
-			if (spc_now.sep_types[2] == STRING_TYPE && item->type != cJSON_Array && ((strlen(item->valuestring) > 30 && std::string(item->valuestring).find(" ") != std::string::npos) || std::string(item->valuestring).find("\n") != std::string::npos)) {
-				index_texts(doc, item, spc_now, item_name, properties, find);
-			} else {
-				index_terms(doc, item, spc_now, item_name, properties, find);
-				index_values(doc, item, spc_now, item_name, properties, true);
-			}
+			index_terms(doc, item, spc_now, item_name, properties, find);
+			index_values(doc, item, spc_now, item_name, properties, true);
 		}
 	}
 	spc_now = spc_bef;
@@ -1795,6 +1791,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 						unique_cJSON t(cJSON_CreateObject(), cJSON_Delete);
 						update_specifications(data_terms, spc_now, t.get());
 					}
+					spc_now.sep_types[2] = (spc_now.sep_types[2] == NO_TYPE) ? get_type(terms, spc_now): spc_now.sep_types[2];
+					if (spc_now.sep_types[2] == NO_TYPE) throw MSG_Error("The field's value %s is ambiguous", name_s.c_str());
 					index_terms(doc, terms, spc_now, name_s, subproperties, find);
 					spc_now = spc_bef;
 				} else {
