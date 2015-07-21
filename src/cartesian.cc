@@ -316,15 +316,6 @@ Cartesian::as_string() const
 }
 
 
-char*
-Cartesian::c_str() const
-{
-	static char str[100];
-	snprintf(str, 100, "SRID = %d\n(%f %f %f)", SRID, x, y, z);
-	return str;
-}
-
-
 int
 Cartesian::getSRID() const
 {

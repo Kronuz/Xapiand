@@ -259,7 +259,6 @@ class Cartesian {
 		double distance(Cartesian &p);
 		Cartesian get_inverse();
 		std::string as_string() const;
-		char* c_str() const;
 		int getSRID() const;
 		int getDatum() const;
 		// tan(y / x)
