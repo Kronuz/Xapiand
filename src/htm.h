@@ -117,7 +117,7 @@ class HTM {
 		static bool intersection(const Cartesian &v1, const Cartesian &v2, const Constraint &c);
 		static void midPoint(const Cartesian &v0, const Cartesian &v1, Cartesian &w);
 		static void insertRange(const std::string &name, std::vector<range_t> &ranges, int _max_level);
-		static void mergeRanges(std::vector<range_t> &_ranges);
+		static void mergeRanges(std::vector<range_t> &ranges);
 		static void getCorners(const std::string &name, Cartesian &v0, Cartesian &v1, Cartesian &v2);
 		static void writePython3D(const std::string &file, std::vector<Geometry> &g, std::vector<std::string> &names_f);
 		static std::string getCircle3D(const Constraint &bCircle, int points);

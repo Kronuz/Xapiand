@@ -454,7 +454,7 @@ HTM::compareRanges(const range_t &r1, const range_t &r2) {
 // Merge Ranges.
 // Input: a vector of range_t
 void
-HTM::mergeRanges(std::vector<range_t> &_ranges)
+HTM::mergeRanges(std::vector<range_t> &ranges)
 {
 	if (_ranges.size() <= 0) return;
 
