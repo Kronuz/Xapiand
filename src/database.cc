@@ -1762,6 +1762,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 						unique_cJSON t(cJSON_CreateObject(), cJSON_Delete);
 						update_specifications(texts, spc_now, t.get());
 					}
+					spc_now.sep_types[2] = (spc_now.sep_types[2] == NO_TYPE) ? get_type(text, spc_now): spc_now.sep_types[2];
+					if (spc_now.sep_types[2] == NO_TYPE) throw MSG_Error("The field's value %s is ambiguous", name_s.c_str());
 					index_texts(doc, text, spc_now, name_s, subproperties, find);
 					spc_now = spc_bef;
 				} else {
