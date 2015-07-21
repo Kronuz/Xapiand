@@ -46,19 +46,20 @@ class EWKT_Parser {
 
 		EWKT_Parser(const std::string &EWKT, bool partials, double error);
 
-		std::vector<std::string> stringSplit(const std::string &str, const std::string &delimiter);
-		std::vector<std::string> get_trixels(std::string &father, int depth, std::string &son);
-		std::vector<std::string> xor_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
-		std::vector<std::string> or_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
-		std::vector<std::string> and_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
-
 		std::vector<std::string> parse_circle(std::string &specification);
-		std::vector<std::string> parse_polygon(std::string &specification);
-		std::vector<std::string> parse_multipolygon(std::string &specification);
+		std::vector<std::string> parse_multicircle(std::string &specification);
+		std::vector<std::string> parse_polygon(std::string &specification, Geometry::typePoints type);
+		std::vector<std::string> parse_multipolygon(std::string &specification, Geometry::typePoints type);
 		std::vector<std::string> parse_point(std::string &specification);
 		std::vector<std::string> parse_multipoint(std::string &specification);
 		std::vector<std::string> parse_geometry_collection(std::string &data);
 		std::vector<std::string> parse_geometry_intersection(std::string &data);
+
+		static std::vector<std::string> stringSplit(const std::string &str, const std::string &delimiter);
+		static std::vector<std::string> get_trixels(std::string &father, int depth, std::string &son);
+		static std::vector<std::string> xor_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
+		static std::vector<std::string> or_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
+		static std::vector<std::string> and_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
 };
 
 
