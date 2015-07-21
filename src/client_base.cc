@@ -176,7 +176,7 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 
 int BaseClient::write_directly()
 {
-	if (sock == -1 && !write_queue.empty()) {
+	if (sock == -1) {
 		return WR_ERR;
 	} else if (!write_queue.empty()) {
 		Buffer* buffer = write_queue.front();
