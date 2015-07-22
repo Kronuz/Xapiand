@@ -999,11 +999,12 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 		unique_char_ptr _cprint(cJSON_Print(term));
 		std::string term_v(_cprint.get());
 		if (term->type == cJSON_String) {
-			if (term_v.find(" ") != std::string::npos) {
-				index_text(doc, term, spc, name, schema, true);
+			term_v.assign(term_v, 1, term_v.size() - 2);
+
+			if(term_v.find(" ") != std::string::npos && spc.sep_types[2] == STRING_TYPE) {
+				index_texts(doc, term, spc, name, schema, true);
 				continue;
 			}
-			term_v.assign(term_v, 1, term_v.size() - 2);
 
 			// If it is not a boolean prefix and it's a string type the value is passed to lowercase.
 			if (spc.sep_types[2] == STRING_TYPE && !strhasupper(name)) {
