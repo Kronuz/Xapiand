@@ -117,7 +117,7 @@ MultiValueCountMatchSpy::serialise() const {
 
 Xapian::MatchSpy *
 MultiValueCountMatchSpy::unserialise(const std::string & s,
-									 const Xapian::Registry &) const{
+									 const Xapian::Registry &) const {
 	const char * p = s.data();
 	const char * end = p + s.size();
 
