@@ -2516,9 +2516,9 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 		Xapian::ESet eset = enquire.get_eset(similar->n_eset, rset, &efp);
 
 		if (is_fuzzy) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end()));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), similar->n_term));
 		} else {
-			query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end());
+			query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), similar->n_term);
 		}
 		return;
 	}

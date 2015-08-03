@@ -1106,6 +1106,13 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					}
 
 					memset(&q, 0, sizeof(q));
+					if (url_qs("fuzzy.n_term", query_buf.c_str(), query_size, &q) != -1){
+						e.fuzzy.n_term = atoi(urldecode(q.offset, q.length).c_str());
+					} else {
+						e.fuzzy.n_term = 10;
+					}
+
+					memset(&q, 0, sizeof(q));
 					while (url_qs("fuzzy.field", query_buf.c_str(), query_size, &q) != -1){
 						e.fuzzy.field.push_back(urldecode(q.offset, q.length));
 					}
@@ -1137,6 +1144,13 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 						e.nearest.n_eset = atoi(urldecode(q.offset, q.length).c_str());
 					} else {
 						e.nearest.n_eset = 32;
+					}
+
+					memset(&q, 0, sizeof(q));
+					if (url_qs("nearest.n_term", query_buf.c_str(), query_size, &q) != -1){
+						e.nearest.n_term = atoi(urldecode(q.offset, q.length).c_str());
+					} else {
+						e.nearest.n_term = 10;
 					}
 
 					memset(&q, 0, sizeof(q));
