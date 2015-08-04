@@ -28,6 +28,7 @@
 #include "lru.h"
 
 #include <xapian.h>
+#include <xapian/matchspy.h>
 
 #include "cJSON.h"
 #include "utils.h"
@@ -82,9 +83,10 @@
 #define DB_INIT_REF 8	 // Initializes the writable index in the database .ref
 #define DB_VOLATILE 16   // Always drop the database from the database pool as soon as possible
 
-// Default partials and error for indexing and searching geospatials.
-#define DE_PARTIALS true
-#define DE_ERROR 0.2
+// Default partials, error and increment for indexing and searching geospatials.
+const bool DE_PARTIALS = true;
+const double DE_ERROR = 0.2;
+
 
 class DatabasePool;
 class DatabasesLRU;
@@ -129,11 +131,9 @@ public:
 	typedef struct search_s {
 		Xapian::Query query;
 		std::vector<std::string> suggested_query;
-		std::vector<std::unique_ptr<Xapian::NumberValueRangeProcessor>> nvrps;
-		std::vector<std::unique_ptr<Xapian::StringValueRangeProcessor>> svrps;
-		std::vector<std::unique_ptr<DateTimeValueRangeProcessor>> dvrps;
 		std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
 		std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
+		std::vector<std::unique_ptr<GeoFieldProcessor>> gfps;
 		std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
 	} search_t;
 

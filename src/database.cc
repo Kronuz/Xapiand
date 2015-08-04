@@ -2215,11 +2215,9 @@ Database::search(query_t e)
 				queryQ =  Xapian::Query(Xapian::Query::OP_AND, queryQ, srch.query);
 			}
 			sug_query.push_back(srch.suggested_query.back());
-			srch_resul.nvrps.insert(srch_resul.nvrps.end(), std::make_move_iterator(srch.nvrps.begin()), std::make_move_iterator(srch.nvrps.end()));
-			srch_resul.svrps.insert(srch_resul.svrps.end(), std::make_move_iterator(srch.svrps.begin()), std::make_move_iterator(srch.svrps.end()));
-			srch_resul.dvrps.insert(srch_resul.dvrps.end(), std::make_move_iterator(srch.dvrps.begin()), std::make_move_iterator(srch.dvrps.end()));
 			srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
 			srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+			srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 			srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 		}
 		LOG(this, "e.query: %s\n", queryQ.get_description().c_str());
@@ -2240,11 +2238,9 @@ Database::search(query_t e)
 				queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, srch.query);
 			}
 			sug_query.push_back(srch.suggested_query.back());
-			srch_resul.nvrps.insert(srch_resul.nvrps.end(), std::make_move_iterator(srch.nvrps.begin()), std::make_move_iterator(srch.nvrps.end()));
-			srch_resul.svrps.insert(srch_resul.svrps.end(), std::make_move_iterator(srch.svrps.begin()), std::make_move_iterator(srch.svrps.end()));
-			srch_resul.dvrps.insert(srch_resul.dvrps.end(), std::make_move_iterator(srch.dvrps.begin()), std::make_move_iterator(srch.dvrps.end()));
 			srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
 			srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+			srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 			srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 		}
 		LOG(this, "e.partial: %s\n", queryP.get_description().c_str());
@@ -2265,14 +2261,12 @@ Database::search(query_t e)
 				queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, srch.query);
 			}
 			sug_query.push_back(srch.suggested_query.back());
-			srch_resul.nvrps.insert(srch_resul.nvrps.end(), std::make_move_iterator(srch.nvrps.begin()), std::make_move_iterator(srch.nvrps.end()));
-			srch_resul.svrps.insert(srch_resul.svrps.end(), std::make_move_iterator(srch.svrps.begin()), std::make_move_iterator(srch.svrps.end()));
-			srch_resul.dvrps.insert(srch_resul.dvrps.end(), std::make_move_iterator(srch.dvrps.begin()), std::make_move_iterator(srch.dvrps.end()));
 			srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
 			srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+			srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 			srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 		}
-		LOG(this, "e.terms: %s\n", queryT.get_description().c_str());
+		LOG(this, "e.terms: %s\n", repr(queryT.get_description()).c_str());
 
 		first = true;
 		if (e.query.size() != 0) {
@@ -2319,8 +2313,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 	int len = (int)query.size(), offset = 0;
 	unique_group unique_gr;
-	bool first_time = true;
+	bool first_time = true, first_timeR = true;
 	std::string querystring;
+	Xapian::Query queryRange;
 	Xapian::QueryParser queryparser;
 	queryparser.set_database(*db);
 
@@ -2338,12 +2333,8 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	std::vector<std::string> added_prefixes;
 	NumericFieldProcessor *nfp;
 	DateFieldProcessor *dfp;
+	GeoFieldProcessor *gfp;
 	BooleanFieldProcessor *bfp;
-	Xapian::NumberValueRangeProcessor *nvrp;
-	Xapian::StringValueRangeProcessor *svrp;
-	DateTimeValueRangeProcessor *dvrp;
-	unsigned int slot;
-	std::string prefix;
 
 	while ((pcre_search(query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, unique_gr)) != -1) {
 		group_t *g = unique_gr.get();
@@ -2355,24 +2346,28 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		data_field_t field_t = get_data_field(field_name);
 
 		// Geo type variables
-		std::vector<std::string> trixels, prefixes;
+		std::vector<std::string> prefixes;
 		std::vector<std::string>::const_iterator it;
+		std::vector<range_t> ranges;
+		std::vector<range_t>::const_iterator rit;
 		bool partials = DE_PARTIALS;
 		double error = DE_ERROR;
-		std::string filter_term;
+		std::string filter_term, start, end, prefix;
+		unique_group unique_Range;
 
-		if (isRange(field_value)) {
+		if (isRange(field_value, unique_Range)) {
 			switch (field_t.type) {
 				case NUMERIC_TYPE:
-					slot = field_t.slot;
-					nvrp = new Xapian::NumberValueRangeProcessor(slot, field_name_dot, true);
-					LOG(this, "Numeric Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
-					srch.nvrps.push_back(std::move(std::unique_ptr<Xapian::NumberValueRangeProcessor>(nvrp)));
-					queryparser.add_valuerangeprocessor(nvrp);
-					filter_term = get_numeric_term(field_value, field_t.accuracy, field_t.acc_prefix, prefixes);
+					g = unique_Range.get();
+					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
+					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
+
+					filter_term = get_numeric_term(start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
+					queryRange = MultipleValueRange::getQuery(field_t.slot, NUMERIC_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
 						it = prefixes.begin();
 						for ( ; it != prefixes.end(); it++) {
+							// Xapian does not allow repeat prefixes.
 							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
 								nfp = new NumericFieldProcessor(*it);
 								srch.nfps.push_back(std::move(std::unique_ptr<NumericFieldProcessor>(nfp)));
@@ -2380,141 +2375,183 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 								added_prefixes.push_back(*it);
 							}
 						}
-						field_value = filter_term + " AND " + field;
-					} else {
-						field_value = field;
+						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), queryRange);
 					}
 					break;
 				case STRING_TYPE:
-					slot = field_t.slot;
-					svrp = new Xapian::StringValueRangeProcessor(slot, field_name_dot, true);
-					srch.svrps.push_back(std::move(std::unique_ptr<Xapian::StringValueRangeProcessor>(svrp)));
-					LOG(this, "String Slot: %u Field_name_dot: %s\n", slot, field_name_dot.c_str());
-					queryparser.add_valuerangeprocessor(svrp);
-					field_value = field;
+					g = unique_Range.get();
+					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
+					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
+					queryRange = MultipleValueRange::getQuery(field_t.slot, STRING_TYPE, start, end, field_name);
 					break;
 				case DATE_TYPE:
-					slot = field_t.slot;
-					dvrp = new DateTimeValueRangeProcessor(slot, field_name_dot);
-					srch.dvrps.push_back(std::move(std::unique_ptr<DateTimeValueRangeProcessor>(dvrp)));
-					LOG(this, "Date Slot: %u Field_name: %s\n", slot, field_name.c_str());
-					queryparser.add_valuerangeprocessor(dvrp);
-					filter_term = get_date_term(field_value, field_t.accuracy, field_t.acc_prefix, field_name);
+					g = unique_Range.get();
+					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
+					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
+
+					filter_term = get_date_term(start, end, field_t.accuracy, field_t.acc_prefix, prefix = field_name);
+					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
-						if (std::find(added_prefixes.begin(), added_prefixes.end(), field_name) == added_prefixes.end()) {
-							dfp = new DateFieldProcessor(field_name);
+						// Xapian does not allow repeat prefixes.
+						if (std::find(added_prefixes.begin(), added_prefixes.end(), prefix) == added_prefixes.end()) {
+							dfp = new DateFieldProcessor(prefix);
 							srch.dfps.push_back(std::move(std::unique_ptr<DateFieldProcessor>(dfp)));
-							queryparser.add_prefix(field_name, dfp);
-							added_prefixes.push_back(field_name);
+							queryparser.add_prefix(prefix, dfp);
+							added_prefixes.push_back(prefix);
 						}
-						field_value = filter_term + " AND " + field;
+						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), queryRange);
+					}
+					break;
+				case GEO_TYPE:
+					// Delete double quotes and .. (always): "..EWKT" -> EWKT
+					field_value.assign(field_value.c_str(), 3, field_value.size() - 4);
+					if (field_t.accuracy.size() == 2) {
+						partials = (serialise_bool(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
+						error = strtodouble(field_t.accuracy.at(1));
+					}
+					getEWKT_Ranges(field_value, partials, error, ranges);
+					prefix = field_t.acc_prefix.at(0);
+					filter_term = get_geo_term(ranges, field_t.acc_prefix, prefixes);
+					if (!filter_term.empty()) {
+						// Xapian does not allow repeat prefixes.
+						it = prefixes.begin();
+						for ( ; it != prefixes.end(); it++) {
+							// Xapian does not allow repeat prefixes.
+							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
+								gfp = new GeoFieldProcessor(*it);
+								srch.gfps.push_back(std::move(std::unique_ptr<GeoFieldProcessor>(gfp)));
+								queryparser.add_prefix(*it, gfp);
+								added_prefixes.push_back(*it);
+							}
+						}
+						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), GeoSpatialRange::getQuery(field_t.slot, ranges));
 					} else {
-						field_value = field;
+						queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges);
 					}
 					break;
 				default:
 					throw Xapian::QueryParserError("This type of Data has no support for range search.\n");
 			}
+
+			if (first_timeR) {
+				srch.query = queryRange;
+				first_timeR = false;
+			} else {
+				srch.query = Xapian::Query(Xapian::Query::OP_OR, srch.query, queryRange);
+			}
 		} else {
 			switch (field_t.type) {
 				case NUMERIC_TYPE:
-					prefix = field_t.prefix;
-					nfp = new NumericFieldProcessor(prefix);
-					srch.
-					nfps.push_back(std::move(std::unique_ptr<NumericFieldProcessor>(nfp)));
-					if (strhasupper(field_name)) {
-						LOG(this, "Boolean Prefix\n");
-						queryparser.add_boolean_prefix(field_name, nfp);
-					} else {
-						LOG(this, "Prefix\n");
-						queryparser.add_prefix(field_name, nfp);
+					// Xapian does not allow repeat prefixes.
+					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+						nfp = new NumericFieldProcessor(field_t.prefix);
+						srch.nfps.push_back(std::move(std::unique_ptr<NumericFieldProcessor>(nfp)));
+						if (strhasupper(field_name)) {
+							LOG(this, "Boolean Prefix\n");
+							queryparser.add_boolean_prefix(field_name, nfp);
+						} else {
+							LOG(this, "Prefix\n");
+							queryparser.add_prefix(field_name, nfp);
+						}
+						added_prefixes.push_back(field_t.prefix);
 					}
 					if (field_value.at(0) == '-') field_value.at(0) = '_';
 					field_value = field_name_dot + field_value;
 					break;
 				case STRING_TYPE:
-					if (field_name.size() != 0) {
-						prefix = field_t.prefix;
+					// Xapian does not allow repeat prefixes.
+					if (field_name.size() != 0 && std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
 						if (strhasupper(field_name) || unique_doc) {
 							LOG(this, "Boolean Prefix\n");
 							if (isupper(field_value.at(0))) {
-								prefix = prefix + ":";
+								field_t.prefix = field_t.prefix + ":";
 							}
-							queryparser.add_boolean_prefix(field_name, prefix);
+							queryparser.add_boolean_prefix(field_name, field_t.prefix);
 						} else {
 							LOG(this, "Prefix\n");
-							queryparser.add_prefix(field_name, prefix);
+							queryparser.add_prefix(field_name, field_t.prefix);
 						}
+						added_prefixes.push_back(field_t.prefix);
 					}
 					field_value = field;
 					break;
 				case DATE_TYPE:
-					prefix = field_t.prefix;
+					// If there are double quotes, they are deleted: "date" -> date
 					if (field_value.at(0) == '"') field_value.assign(field_value, 1, field_value.size() - 2);
 					try {
 						field_value = std::to_string(Datetime::timestamp(field_value));
+						// Xapian does not allow repeat prefixes.
+						if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+							dfp = new DateFieldProcessor(field_t.prefix);
+							srch.dfps.push_back(std::move(std::unique_ptr<DateFieldProcessor>(dfp)));
+							if (strhasupper(field_name)) {
+								LOG(this, "Boolean Prefix\n");
+								queryparser.add_boolean_prefix(field_name, dfp);
+							} else {
+								LOG(this, "Prefix\n");
+								queryparser.add_prefix(field_name, dfp);
+							}
+							added_prefixes.push_back(field_t.prefix);
+						}
+						if (field_value.at(0) == '-') field_value.at(0) = '_';
+						field_value = field_name_dot + field_value;
 					} catch (const std::exception &ex) {
 						throw Xapian::QueryParserError("Didn't understand date field name's specification: '" + field_name + "'");
 					}
-					dfp = new DateFieldProcessor(prefix);
-					srch.dfps.push_back(std::move(std::unique_ptr<DateFieldProcessor>(dfp)));
-					if (strhasupper(field_name)) {
-						LOG(this, "Boolean Prefix\n");
-						queryparser.add_boolean_prefix(field_name, dfp);
-					} else {
-						LOG(this, "Prefix\n");
-						queryparser.add_prefix(field_name, dfp);
-					}
-					if (field_value.at(0) == '-') field_value.at(0) = '_';
-					field_value = field_name_dot + field_value;
 					break;
 				case GEO_TYPE:
-					flags |= Xapian::QueryParser::FLAG_WILDCARD;
-					prefix = field_t.prefix;
+					// Delete double quotes (always): "EWKT" -> EWKT
 					field_value.assign(field_value, 1, field_value.size() - 2);
-					if (field_t.accuracy.size() > 0) {
+					if (field_t.accuracy.size() == 2) {
 						partials = (serialise_bool(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
-						error = (field_t.accuracy.size() >= 2) ? strtodouble(field_t.accuracy.at(1)) : DE_ERROR;
+						error = strtodouble(field_t.accuracy.at(1));
 					}
-					LOG(this, "Partials: %d  Error: %f\n", partials, error);
-					trixels = serialise_geo(field_value, true, 0.5);
-					it = trixels.begin();
+					getEWKT_Ranges(field_value, partials, error, ranges);
 					field_value = "";
-					for ( ; it != trixels.end(); it++) {
-						field_value += field_name_dot + (*it) + (((*it).size() == (HTM_MAX_LEVEL + 2)) ? " " : "* ");
-						for (int i = (int)(*it).size() - 1; i > 1; i--) {
-							field_value += field_name_dot + std::string(*it, 0, i) + " ";
-						}
+					rit = ranges.begin();
+					for ( ; rit != ranges.end(); rit++) {
+						field_value += field_name_dot + std::to_string(rit->start) + " AND ";
+						if (rit->start != rit->end) field_value += field_name_dot + std::to_string(rit->end) + " AND ";
 					}
-					if (strhasupper(field_name)) {
-						LOG(this, "Boolean Prefix\n");
-						queryparser.add_boolean_prefix(field_name, prefix);
-					} else {
-						LOG(this, "Prefix\n");
-						queryparser.add_prefix(field_name, prefix);
+					field_value.assign(field_value.c_str(), 0, field_value.size() - 5);
+					// Xapian does not allow repeat prefixes.
+					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+						gfp = new GeoFieldProcessor(field_t.prefix);
+						srch.gfps.push_back(std::move(std::unique_ptr<GeoFieldProcessor>(gfp)));
+						if (strhasupper(field_name)) {
+							LOG(this, "Boolean Prefix\n");
+							queryparser.add_boolean_prefix(field_name, gfp);
+						} else {
+							LOG(this, "Prefix\n");
+							queryparser.add_prefix(field_name, gfp);
+						}
+						added_prefixes.push_back(field_t.prefix);
 					}
 					break;
 				case BOOLEAN_TYPE:
-					prefix = field_t.prefix;
-					bfp = new BooleanFieldProcessor(prefix);
-					srch.bfps.push_back(std::move(std::unique_ptr<BooleanFieldProcessor>(bfp)));
-					if (strhasupper(field_name)) {
-						LOG(this, "Boolean Prefix\n");
-						queryparser.add_boolean_prefix(field_name, bfp);
-					} else {
-						LOG(this, "Prefix\n");
-						queryparser.add_prefix(field_name, bfp);
+					// Xapian does not allow repeat prefixes.
+					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+						bfp = new BooleanFieldProcessor(field_t.prefix);
+						srch.bfps.push_back(std::move(std::unique_ptr<BooleanFieldProcessor>(bfp)));
+						if (strhasupper(field_name)) {
+							LOG(this, "Boolean Prefix\n");
+							queryparser.add_boolean_prefix(field_name, bfp);
+						} else {
+							LOG(this, "Prefix\n");
+							queryparser.add_prefix(field_name, bfp);
+						}
+						added_prefixes.push_back(field_t.prefix);
 					}
 					field_value = field;
 					break;
 			}
-		}
 
-		if (first_time) {
-			querystring = "(" + field_value + ")";
-			first_time = false;
-		} else {
-			querystring += " OR (" + (field_value) + ")";
+			if (first_time) {
+				querystring = field_value;
+				first_time = false;
+			} else {
+				querystring += " OR " + field_value;
+			}
 		}
 	}
 
@@ -2522,17 +2559,19 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		throw Xapian::QueryParserError("Query '" + query + "' contains errors.\n" );
 	}
 
-	LOG_DATABASE_WRAP(this, "Query processed: (%s)\n", querystring.c_str());
+	LOG_DATABASE_WRAP(this, "Query terms processed: (%s)\n", querystring.c_str());
 
 	try {
-		srch.query = queryparser.parse_query(querystring, flags);
+		queryRange = queryparser.parse_query(querystring, flags);
 		srch.suggested_query.push_back(queryparser.get_corrected_query_string());
+		srch.query = Xapian::Query(Xapian::Query::OP_OR,  queryRange, srch.query);
 	} catch (const Xapian::Error &er) {
 		LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 		reopen();
 		queryparser.set_database(*db);
-		srch.query = queryparser.parse_query(querystring, flags);
+		queryRange = queryparser.parse_query(querystring, flags);
 		srch.suggested_query.push_back(queryparser.get_corrected_query_string());
+		srch.query = Xapian::Query(Xapian::Query::OP_OR,  queryRange, srch.query);
 	}
 
 	return srch;
