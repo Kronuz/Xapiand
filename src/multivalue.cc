@@ -150,3 +150,524 @@ MultiValueCountMatchSpy::get_description() const {
 	}
 	return d;
 }
+
+
+MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string &start_, const std::string &end_)
+	: ValuePostingSource(slot_), slot(slot_), start(start_), end(end_) {
+	set_maxweight(1.0);
+}
+
+
+// Receive start and end did not serialize.
+Xapian::Query
+MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string start_, std::string end_, const std::string &field_name) {
+	if (start_.empty() && end_.empty()){
+		return Xapian::Query::MatchAll;
+	} else if (start_.empty()) {
+		end_ = ::serialise(field_type, end_);
+		if (end_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
+		MultipleValueLE mvle(slot_, end_);
+		return Xapian::Query(&mvle);
+	} else if (end_.empty()) {
+		start_ = ::serialise(field_type, start_);
+		if (start_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
+		MultipleValueGE mvge(slot_, start_);
+		return Xapian::Query(&mvge);
+	}
+
+	// Multiple Value Range
+	start_ = ::serialise(field_type, start_);
+	if (start_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
+	end_ = ::serialise(field_type, end_);
+	if (end_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
+	if (start_ > end_) return Xapian::Query::MatchNothing;
+	MultipleValueRange mvr(slot_, start_, end_);
+	return Xapian::Query(&mvr);
+}
+
+
+bool
+MultipleValueRange::insideRange() {
+	StringList list;
+	list.unserialise(*value_it);
+	StringList::const_iterator i(list.begin());
+	for ( ; i != list.end(); i++) {
+		if (*i >= start && *i <= end) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+void
+MultipleValueRange::next(double min_wt) {
+	Xapian::ValuePostingSource::next(min_wt);
+	while (value_it != db.valuestream_end(slot)) {
+		if (insideRange()) break;
+		++value_it;
+	}
+}
+
+
+void
+MultipleValueRange::skip_to(Xapian::docid min_docid, double min_wt) {
+	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
+	while (value_it != db.valuestream_end(slot)) {
+		if (insideRange()) break;
+		++value_it;
+	}
+}
+
+
+bool
+MultipleValueRange::check(Xapian::docid min_docid, double min_wt) {
+	if (!ValuePostingSource::check(min_docid, min_wt)) {
+		// check returned false, so we know the document is not in the source.
+		return false;
+	}
+
+	if (value_it == db.valuestream_end(slot)) {
+		// return true, since we're definitely at the end of the list.
+		return true;
+	}
+
+	return insideRange();
+}
+
+
+double
+MultipleValueRange::get_weight() const
+{
+	return 1.0;
+}
+
+
+MultipleValueRange*
+MultipleValueRange::clone() const {
+	return new MultipleValueRange(slot, start, end);
+}
+
+
+std::string
+MultipleValueRange::name() const {
+	return "MultipleValueRange";
+}
+
+
+std::string
+MultipleValueRange::serialise() const {
+	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
+	values.append(encode_length(s_slot.size()));
+	values.append(s_slot);
+	values.append(encode_length(start.size()));
+	values.append(start);
+	values.append(encode_length(end.size()));
+	values.append(end);
+	serialised.append(encode_length(values.size()));
+	serialised.append(values);
+	return serialised;
+}
+
+
+MultipleValueRange*
+MultipleValueRange::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const {
+	StringList data;
+	data.unserialise(s);
+	return new MultipleValueRange(Xapian::sortable_unserialise(data.at(0)), data.at(1), data.at(2));
+}
+
+
+void
+MultipleValueRange::init(const Xapian::Database &db_) {
+	Xapian::ValuePostingSource::init(db_);
+
+	// Possible that no documents are in range.
+	termfreq_min = 0;
+}
+
+
+std::string
+MultipleValueRange::get_description() const {
+	std::string result("MultipleValueRange ");
+	result += std::to_string(slot) + " " + start;
+	result += " " + end;
+	return result;
+}
+
+
+MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, const std::string &start_)
+	: ValuePostingSource(slot_), slot(slot_), start(start_) {
+	set_maxweight(1.0);
+}
+
+
+bool
+MultipleValueGE::insideRange() {
+	StringList list;
+	list.unserialise(*value_it);
+	StringList::const_iterator i(list.begin());
+	for ( ; i != list.end(); i++) {
+		if (*i >= start) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+void
+MultipleValueGE::next(double min_wt) {
+	Xapian::ValuePostingSource::next(min_wt);
+	while (value_it != db.valuestream_end(slot)) {
+		if (insideRange()) break;
+		++value_it;
+	}
+}
+
+
+void
+MultipleValueGE::skip_to(Xapian::docid min_docid, double min_wt) {
+	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
+	while (value_it != db.valuestream_end(slot)) {
+		if (insideRange()) break;
+		++value_it;
+	}
+}
+
+
+bool
+MultipleValueGE::check(Xapian::docid min_docid, double min_wt) {
+	if (!ValuePostingSource::check(min_docid, min_wt)) {
+		// check returned false, so we know the document is not in the source.
+		return false;
+	}
+
+	if (value_it == db.valuestream_end(slot)) {
+		// return true, since we're definitely at the end of the list.
+		return true;
+	}
+
+	return insideRange();
+}
+
+
+double
+MultipleValueGE::get_weight() const
+{
+	return 1.0;
+}
+
+
+MultipleValueGE*
+MultipleValueGE::clone() const {
+	return new MultipleValueGE(slot, start);
+}
+
+
+std::string
+MultipleValueGE::name() const {
+	return "MultipleValueGE";
+}
+
+
+std::string
+MultipleValueGE::serialise() const {
+	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
+	values.append(encode_length(s_slot.size()));
+	values.append(s_slot);
+	values.append(encode_length(start.size()));
+	values.append(start);
+	serialised.append(encode_length(values.size()));
+	serialised.append(values);
+	return serialised;
+}
+
+
+MultipleValueGE*
+MultipleValueGE::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const {
+	StringList data;
+	data.unserialise(s);
+	return new MultipleValueGE(Xapian::sortable_unserialise(data.at(0)), data.at(1));
+}
+
+
+void
+MultipleValueGE::init(const Xapian::Database &db_) {
+	Xapian::ValuePostingSource::init(db_);
+
+	// Possible that no documents are in range.
+	termfreq_min = 0;
+}
+
+
+std::string
+MultipleValueGE::get_description() const {
+	std::string result("MultipleValueGE ");
+	result += std::to_string(slot) + " " + start + ")";
+	return result;
+}
+
+
+MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, const std::string &end_)
+	: ValuePostingSource(slot_), slot(slot_), end(end_) {
+	set_maxweight(1.0);
+}
+
+
+bool
+MultipleValueLE::insideRange() {
+	StringList list;
+	list.unserialise(*value_it);
+	StringList::const_iterator i(list.begin());
+	for ( ; i != list.end(); i++) {
+		if (*i <= end) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+void
+MultipleValueLE::next(double min_wt) {
+	Xapian::ValuePostingSource::next(min_wt);
+	while (value_it != db.valuestream_end(slot)) {
+		if (insideRange()) break;
+		++value_it;
+	}
+}
+
+
+void
+MultipleValueLE::skip_to(Xapian::docid min_docid, double min_wt) {
+	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
+	while (value_it != db.valuestream_end(slot)) {
+		if (insideRange()) break;
+		++value_it;
+	}
+}
+
+
+bool
+MultipleValueLE::check(Xapian::docid min_docid, double min_wt) {
+	if (!ValuePostingSource::check(min_docid, min_wt)) {
+		// check returned false, so we know the document is not in the source.
+		return false;
+	}
+
+	if (value_it == db.valuestream_end(slot)) {
+		// return true, since we're definitely at the end of the list.
+		return true;
+	}
+
+	return insideRange();
+}
+
+
+double
+MultipleValueLE::get_weight() const
+{
+	return 1.0;
+}
+
+
+MultipleValueLE*
+MultipleValueLE::clone() const {
+	return new MultipleValueLE(slot, end);
+}
+
+
+std::string
+MultipleValueLE::name() const {
+	return "MultipleValueLE";
+}
+
+
+std::string
+MultipleValueLE::serialise() const {
+	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
+	values.append(encode_length(s_slot.size()));
+	values.append(s_slot);
+	values.append(encode_length(end.size()));
+	values.append(end);
+	serialised.append(encode_length(values.size()));
+	serialised.append(values);
+	return serialised;
+}
+
+
+MultipleValueLE*
+MultipleValueLE::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const {
+	StringList data;
+	data.unserialise(s);
+	return new MultipleValueLE(Xapian::sortable_unserialise(data.at(0)), data.at(1));
+}
+
+
+void
+MultipleValueLE::init(const Xapian::Database &db_) {
+	Xapian::ValuePostingSource::init(db_);
+
+	// Possible that no documents are in range.
+	termfreq_min = 0;
+}
+
+
+std::string
+MultipleValueLE::get_description() const {
+	std::string result("MultipleValueLE ");
+	result += std::to_string(slot) + " " + end + ")";
+	return result;
+}
+
+
+GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_t> &ranges_)
+	: ValuePostingSource(slot_), slot(slot_) {
+	ranges.reserve(ranges_.size());
+	std::vector<range_t>::const_iterator it(ranges_.begin());
+	for ( ; it != ranges_.end(); it++) {
+		ranges.push_back({serialise_geo(it->start), serialise_geo(it->end)});
+	}
+}
+
+
+GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const std::vector<srange_t> &ranges_)
+	: ValuePostingSource(slot_), slot(slot_) {
+	ranges.reserve(ranges_.size());
+	ranges.insert(ranges.begin(), ranges_.begin(), ranges_.end());
+}
+
+
+// Receive start and end did not serialize.
+Xapian::Query
+GeoSpatialRange::getQuery(Xapian::valueno slot_, const std::vector<range_t> &ranges_) {
+	if (ranges_.empty()){
+		return Xapian::Query::MatchNothing;
+	}
+
+	// GeoSpatial Range
+	GeoSpatialRange gsr(slot_, ranges_);
+	return Xapian::Query(&gsr);
+}
+
+
+bool
+GeoSpatialRange::insideRanges() {
+	StringList list;
+	list.unserialise(*value_it);
+	StringList::const_iterator i(list.begin());
+	for ( ; i != list.end(); i += 2) {
+		StringList::const_iterator o(i + 1);
+		std::vector<srange_t>::const_iterator it(ranges.begin());
+		for ( ; it != ranges.end(); it++) {
+			if (*i <= it->end && *o >= it->start) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
+void
+GeoSpatialRange::next(double min_wt) {
+	Xapian::ValuePostingSource::next(min_wt);
+	while (value_it != db.valuestream_end(slot)) {
+		if (insideRanges()) break;
+		++value_it;
+	}
+}
+
+
+void
+GeoSpatialRange::skip_to(Xapian::docid min_docid, double min_wt) {
+	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
+	while (value_it != db.valuestream_end(slot)) {
+		if (insideRanges()) break;
+		++value_it;
+	}
+}
+
+
+bool
+GeoSpatialRange::check(Xapian::docid min_docid, double min_wt) {
+	if (!ValuePostingSource::check(min_docid, min_wt)) {
+		// check returned false, so we know the document is not in the source.
+		return false;
+	}
+
+	if (value_it == db.valuestream_end(slot)) {
+		// return true, since we're definitely at the end of the list.
+		return true;
+	}
+
+	return insideRanges();
+}
+
+
+double
+GeoSpatialRange::get_weight() const
+{
+	return 1.0;
+}
+
+
+GeoSpatialRange*
+GeoSpatialRange::clone() const {
+	return new GeoSpatialRange(slot, ranges);
+}
+
+
+std::string
+GeoSpatialRange::name() const {
+	return "GeoSpatialRange";
+}
+
+
+std::string
+GeoSpatialRange::serialise() const {
+	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
+	values.append(encode_length(s_slot.size()));
+	values.append(s_slot);
+	std::vector<srange_t>::const_iterator it(ranges.begin());
+	for ( ; it != ranges.end(); it++) {
+		values.append(encode_length(it->start.size()));
+		values.append(it->start);
+		values.append(encode_length(it->end.size()));
+		values.append(it->end);
+	}
+	serialised.append(encode_length(values.size()));
+	serialised.append(values);
+	return serialised;
+}
+
+
+GeoSpatialRange*
+GeoSpatialRange::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const {
+	StringList data;
+	std::vector<srange_t> ranges_;
+	data.unserialise(s);
+	std::vector<std::string>::const_iterator it(data.begin() + 1);
+	for ( ; it != data.end(); ++it) {
+		ranges_.push_back({*it, *(++it)});
+	}
+	return new GeoSpatialRange(Xapian::sortable_unserialise(data.at(0)), ranges_);
+}
+
+
+void
+GeoSpatialRange::init(const Xapian::Database &db_) {
+	Xapian::ValuePostingSource::init(db_);
+
+	// Possible that no documents are in range.
+	termfreq_min = 0;
+}
+
+
+std::string
+GeoSpatialRange::get_description() const {
+	std::string result("GeoSpatialRange ");
+	result += std::to_string(slot);
+	return result;
+}
