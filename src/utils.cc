@@ -917,9 +917,20 @@ double strtodouble(const std::string &str)
 }
 
 
-long long int strtolonglong(const std::string &str)
+long long int strtollong(const std::string &str)
 {
 	long long int number;
+	std::stringstream ss;
+	ss << std::dec << str;
+	ss >> number;
+	ss.flush();
+	return number;
+}
+
+
+uInt64 strtouInt64(const std::string &str)
+{
+	uInt64 number;
 	std::stringstream ss;
 	ss << std::dec << str;
 	ss >> number;
