@@ -768,25 +768,31 @@ std::string unserialise_date(const std::string &serialise_val)
 }
 
 
-std::vector<std::string> serialise_geo(const std::string &field_value, bool partials, double error)
-{
-	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
-	return ewkt.trixels;
+std::string serialise_geo(uInt64 id) {
+	id = Swap7Bytes(id);
+	const char serialise[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
+							   (char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF) };
+	return std::string(serialise, SIZE_BYTES_ID);
 }
 
 
-std::string unserialise_geo(const std::string &serialise_val)
+uInt64 unserialise_geo(const std::string &str) {
+	uInt64 id = (((uInt64)str.at(0) << 48) & 0xFF000000000000) | (((uInt64)str.at(1) << 40) & 0xFF0000000000) | \
+				(((uInt64)str.at(2) << 32) & 0xFF00000000)     | (((uInt64)str.at(3) << 24) & 0xFF000000)     | \
+				(((uInt64)str.at(4) << 16) & 0xFF0000)         | (((uInt64)str.at(5) <<  8) & 0xFF00)         | \
+				(str.at(6) & 0xFF);
+	return id;
+}
+
+
+void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges)
 {
-	Xapian::LatLongCoords coords;
-	coords.unserialise(serialise_val);
-	Xapian::LatLongCoordsIterator it = coords.begin();
-	std::stringstream ss;
-	for (; it != coords.end(); it++) {
-		ss << (*it).latitude;
-		ss << "," << (*it).longitude << ",";
+	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
+	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());
+	for (;it != ewkt.trixels.end(); it++) {
+		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
 	}
-	std::string _coords = ss.str();
-	return std::string(_coords, 0, _coords.size() - 1);
+	HTM::mergeRanges(ranges);
 }
 
 
