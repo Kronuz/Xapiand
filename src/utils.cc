@@ -45,7 +45,7 @@
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
 #define COORDS_DISTANCE_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d*|\\d+)\\s?;\\s?(\\d*\\.\\d*|\\d+)(ft|in|yd|mi|km|[m]{1,2}|cm)?"
 #define NUMERIC_RE "-?(\\d*\\.\\d+|\\d+)"
-#define FIND_RANGE_RE "([^ ]*\\.\\.)"
+#define FIND_RANGE_RE "([^ ]*)\\.\\.([^ ]*)"
 #define FIND_ORDER_RE "([_a-zA-Z][_a-zA-Z0-9]+,[_a-zA-Z][_a-zA-Z0-9]*)"
 #define RANGE_ID_RE "(\\d+)\\s?..\\s?(\\d*)"
 
