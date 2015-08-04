@@ -23,6 +23,7 @@
 #include "multivalue.h"
 
 #include "length.h"
+#include "utils.h"
 
 #include <assert.h>
 
