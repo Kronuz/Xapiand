@@ -56,6 +56,8 @@
 #define STATE_PTH 3
 #define STATE_HST 4
 
+#define MAX_TERMS 100
+
 pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 
 pcre *compiled_coords_re = NULL;
