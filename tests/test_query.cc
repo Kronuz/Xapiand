@@ -167,7 +167,7 @@ int test_query()
 	unique_cJSON document2(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
 
 	if(not database->index(document2.get(), "2", true)) {
-		LOG(NULL,"index Json_geo_2 failed\n");
+		LOG(NULL,"index Json_example_2 failed\n");
 	}
 
 	suggestions.clear();
@@ -175,8 +175,6 @@ int test_query()
 	query_elements.query.clear();
 	query_elements.facets.clear();
 	query_elements.is_fuzzy = true;
-	query_elements.fuzzy.n_rset = 5;
-	query_elements.fuzzy.n_eset = 32;
 	query_elements.fuzzy.n_term = 20;
 	query_elements.fuzzy.type.push_back("string"); /* Filter other types except string */
 	query_elements.query.push_back("description:future");
@@ -185,8 +183,7 @@ int test_query()
 	LOG(NULL, "rmset %d mset %d\n", rmset, mset.size());
 	if(rmset == 0 && mset.size() != 0) {
 		Xapian::MSetIterator m = mset.begin();
-		m++;
-		if(m.get_document().get_data().find("Planet Apes") != std::string::npos) {
+		if(m.get_document().get_data().find("Back to the Future") != std::string::npos) {
 			exit_success--;
 		} else {
 			LOG(NULL,"search similar failed, unintended result\n");
