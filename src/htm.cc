@@ -133,7 +133,7 @@ HTM::name2id(const std::string &name, uInt64 &id)
 
 	if (size < 2) throw MSG_Error("Trixel's name is too short");
 
-	if (size > HTM_MAX_LEVEL + 2) throw MSG_Error("Trixel's name is too long");
+	if (size > MAX_SIZE_NAME) throw MSG_Error("Trixel's name is too long");
 
 	(name.at(0) == 'n') ? id = 3 : (name.at(0) == 's') ? id = 2 : throw MSG_Error("Trixel's name %s is incorrect", name.c_str());
 
@@ -464,9 +464,9 @@ HTM::mergeRanges(std::vector<range_t> &ranges)
 	std::vector<range_t>::iterator it(ranges.begin() + 1);
 	for ( ; it != ranges.end(); it++) {
 		std::vector<range_t>::iterator tmp(it - 1);	 // Get previous range.
-
-		if (tmp->end < it->start - 1) {	  // (start-1 for join adjacent integer ranges).
-			continue;					  // If current range is not overlapping with previous
+		// If current range is not overlapping with previous.
+		if (tmp->end < it->start - 1) {  // (start-1) for join adjacent integer ranges).
+			continue;
 		} else if (tmp->end < it->end) {  // range, continue. Otherwise update the end of
 			tmp->end = it->end;			  // previous range, if ending of current range is more.
 			ranges.erase(it);

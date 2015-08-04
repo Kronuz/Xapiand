@@ -40,6 +40,11 @@
 // Maximum level allowed (In this level the accuracy is 30 centimeters).
 #define HTM_MAX_LEVEL 25
 
+// Constants.
+const size_t MAX_SIZE_NAME = HTM_MAX_LEVEL | '\x02';
+const size_t SIZE_BYTES_ID = 7;
+const size_t SIZE_BITS_ID = MAX_SIZE_NAME << 1;
+
 // Radians in a circumference (2pi).
 const double RAD_PER_CIRCUMFERENCE = 6.28318530717958647692528677;
 
