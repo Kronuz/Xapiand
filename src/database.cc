@@ -1173,7 +1173,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			}
 			for (size_t i = idx, j = i / BITS_LEVEL; i < SIZE_BITS_ID; i += BITS_LEVEL, j++) {
 				uInt64 vterm = val >> i;
-				prefix = cJSON_GetArrayItem(_prefix_accuracy, j)->valuestring;
+				prefix = cJSON_GetArrayItem(_prefix_accuracy, (int)j)->valuestring;
 				std::string nameterm(prefixed(serialise_geo(vterm), prefix));
 				doc.add_term(nameterm, spc.weight);
 			}
