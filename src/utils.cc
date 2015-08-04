@@ -1021,10 +1021,9 @@ int get_coords(const std::string &str, double *coords)
 }
 
 
-bool isRange(const std::string &str)
+bool isRange(const std::string &str, unique_group &unique_gr)
 {
-	unique_group unique_gr;
-	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re , unique_gr);
+	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re, unique_gr);
 
 	return (ret != -1) ? true : false;
 }
