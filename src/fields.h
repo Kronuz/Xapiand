@@ -57,6 +57,15 @@ class DateFieldProcessor : public Xapian::FieldProcessor {
 };
 
 
+class GeoFieldProcessor : public Xapian::FieldProcessor {
+	std::string prefix;
+
+	public:
+		GeoFieldProcessor(const std::string &prefix);
+		Xapian::Query operator()(const std::string &str);
+};
+
+
 class DateTimeValueRangeProcessor: public Xapian::ValueRangeProcessor {
 	std::string prefix;
 	Xapian::valueno valno;

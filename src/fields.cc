@@ -21,6 +21,8 @@
  */
 
 #include "fields.h"
+#include "multivalue.h"
+#include "utils.h"
 #include <xapian/query.h>
 
 
@@ -68,6 +70,18 @@ Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand date specification '" + str + "'");
 	}
+	return Xapian::Query(prefix + serialise);
+}
+
+
+GeoFieldProcessor::GeoFieldProcessor(const std::string &prefix_): prefix(prefix_) {}
+
+
+Xapian::Query GeoFieldProcessor::operator()(const std::string &str)
+{
+	std::string serialise(str.c_str());
+	LOG(this, "Geo FP %s!!\n", serialise.c_str());
+	serialise = serialise_geo(strtouInt64(serialise));
 	return Xapian::Query(prefix + serialise);
 }
 
