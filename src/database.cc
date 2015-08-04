@@ -2560,18 +2560,19 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	}
 
 	LOG_DATABASE_WRAP(this, "Query terms processed: (%s)\n", querystring.c_str());
-
-	try {
-		queryRange = queryparser.parse_query(querystring, flags);
-		srch.suggested_query.push_back(queryparser.get_corrected_query_string());
-		srch.query = Xapian::Query(Xapian::Query::OP_OR,  queryRange, srch.query);
-	} catch (const Xapian::Error &er) {
-		LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
-		reopen();
-		queryparser.set_database(*db);
-		queryRange = queryparser.parse_query(querystring, flags);
-		srch.suggested_query.push_back(queryparser.get_corrected_query_string());
-		srch.query = Xapian::Query(Xapian::Query::OP_OR,  queryRange, srch.query);
+	if (!first_time) {
+		try {
+			queryRange = queryparser.parse_query(querystring, flags);
+			srch.suggested_query.push_back(queryparser.get_corrected_query_string());
+			srch.query = Xapian::Query(Xapian::Query::OP_OR,  queryRange, srch.query);
+		} catch (const Xapian::Error &er) {
+			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+			reopen();
+			queryparser.set_database(*db);
+			queryRange = queryparser.parse_query(querystring, flags);
+			srch.suggested_query.push_back(queryparser.get_corrected_query_string());
+			srch.query = Xapian::Query(Xapian::Query::OP_OR,  queryRange, srch.query);
+		}
 	}
 
 	return srch;
