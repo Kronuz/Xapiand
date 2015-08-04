@@ -47,4 +47,24 @@
 #define HAVE_PTHREAD_SETNAME_NP_3 1
 #endif
 
+// Define macro for endian.
+#if defined(__linux__)
+	#include <endian.h>
+#elif defined(__APPLE__)
+	#include <libkern/OSByteOrder.h>
+	#define __BYTE_ORDER    BYTE_ORDER
+	#define __BIG_ENDIAN    BIG_ENDIAN
+	#define __LITTLE_ENDIAN LITTLE_ENDIAN
+	#define __PDP_ENDIAN    PDP_ENDIAN
+#elif defined(__FreeBSD__)
+	#include <sys/endian.h>
+#elif defined(_WIN16) || defined(_WIN32) || defined(_WIN64)
+	#include <winsock2.h>
+	#include <sys/param.h>
+	#define __BYTE_ORDER    BYTE_ORDER
+	#define __BIG_ENDIAN    BIG_ENDIAN
+	#define __LITTLE_ENDIAN LITTLE_ENDIAN
+	#define __PDP_ENDIAN    PDP_ENDIAN
+#endif
+
 #endif /* XAPIAND_INCLUDED_XAPIAND_H */
