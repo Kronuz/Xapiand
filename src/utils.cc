@@ -1067,8 +1067,6 @@ unserialise(char field_type, const std::string &field_name, const std::string &s
 			return std::to_string(Xapian::sortable_unserialise(serialise_val));
 		case DATE_TYPE:
 			return unserialise_date(serialise_val);
-		case GEO_TYPE:
-			return unserialise_geo(serialise_val);
 		case BOOLEAN_TYPE:
 			return (serialise_val.at(0) == 'f') ? "false" : "true";
 		case STRING_TYPE:
@@ -1303,83 +1301,67 @@ std::vector<std::string> stringTokenizer(const std::string &str, const std::stri
 }
 
 
-std::string get_numeric_term(const std::string &field_value, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::vector<std::string> &prefixes)
+std::string get_numeric_term(const std::string &start_, const std::string &end_, const std::vector<std::string> &accuracy,
+	const std::vector<std::string> &acc_prefix, std::vector<std::string> &prefixes)
 {
 	struct TRANSFORM {
 		char operator() (char c) { return  (c == '-') ? '_' : c;}
 	};
 
 	std::string res;
-	std::vector<std::string> ranges = stringTokenizer(field_value, "..");
-	if (ranges.size() == 2) {
-		long long int start = strtolonglong(ranges.at(0));
-		long long int end = strtolonglong(ranges.at(1));
+	if (!start_.empty() && !end_.empty()) {
+		long long int start = strtollong(start_);
+		long long int end = strtollong(end_);
 		long long int size_r = end - start;
 
 		if (size_r < 0) return res;
 
 		std::vector<std::string>::const_iterator it(accuracy.begin());
 		std::vector<std::string>::const_iterator it_p(acc_prefix.begin());
-		long long int diff = size_r, diffN = LLONG_MIN;
+		long long int diff = size_r, diffN = LLONG_MIN, inc = 0, incUP = 0, aux, aux2, i;
 		std::string _prefixUP, _prefix;
-		long long int inc = 0, incUP = 0;
+		// Get upper and lower increase and their prefixes.
 		for ( ; it != accuracy.end(); it++, it_p++) {
-			long long int v = strtolonglong(*it), aux = size_r - v;
-			if (aux >= 0 && aux < diff) {
-				diff = aux;
-				inc = v;
+			aux = strtollong(*it);
+			aux2 = size_r - aux;
+			if (aux2 >= 0 && aux2 < diff) {
+				diff = aux2;
+				inc = aux;
 				_prefix = *it_p + ":";
-			} else if (aux < 0 && aux > diffN) {
-				diffN = aux;
-				incUP = v;
+			} else if (aux2 < 0 && aux2 > diffN) {
+				diffN = aux2;
+				incUP = aux;
 				_prefixUP = *it_p + ":";
 			}
 		}
 
-		long long int startUP = 0, endUP = 0, num_tUP = 0;
+		// Set upper limits. Example accuracy=1000 -> 4900..5100  ==> (U:4000 OR U:5000).
 		if (incUP != 0) {
-			// It may be in the limit of two terms.
-			// For example 4900..5100  ==> (X:4000 OR X:5000) AND (X:4900 OR X:5100)
 			prefixes.push_back(std::string(_prefixUP.c_str(), 0, _prefixUP.size() - 1));
-			startUP = start - (start % incUP);
-			endUP = end - (end % incUP);
-			res = _prefixUP + std::to_string(startUP);
-			num_tUP++;
-			if (startUP != endUP) {
-				res = "(" + res + " OR " + _prefixUP + std::to_string(endUP) + ")";
-				num_tUP++;
+			aux = start - (start % incUP);
+			aux2 = end - (end % incUP);
+			res = _prefixUP + std::to_string(aux);
+			if (aux != aux2) {
+				res = "(" + res + " OR " + _prefixUP + std::to_string(aux2) + ")";
 			}
 		}
 
-		if (inc == 0) {
-			std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
-			return res;
-		}
-
-		start = start - (start % inc);
-		end = end - (end % inc);
-		long long int num_terms = (end - start) / inc;
-		// If many terms are generated  or (A AND (A OR ...)) applying A only.
-		if (num_terms > 100 || (num_tUP == 1 && start == startUP)) {
-			std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
-			return res;
-		}
-
-		prefixes.push_back(std::string(_prefix.c_str(), 0, _prefix.size() - 1));
-		std::string or_terms("(" + _prefix + std::to_string(start));
-		for (long long int i = 1; i < num_terms; i++) {
-			long long int n_term = start + inc * i;
-			// (A AND (... OR A OR ...)) -> A
-			if (num_tUP == 1 && n_term == startUP) {
-				std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
-				return res;
+		// Set lower limits. Example accuracy=100 -> 4900..5100 ==> (L:4900 OR L:5000 OR L:5100).
+		if (inc != 0) {
+			start = start - (start % inc);
+			end = end - (end % inc);
+			aux = (end - start) / inc;
+			// If terms are not too many.
+			if (aux < MAX_TERMS) {
+				prefixes.push_back(std::string(_prefix.c_str(), 0, _prefix.size() - 1));
+				std::string or_terms("(" + _prefix + std::to_string(start));
+				for (i = 1; i < aux; i++) {
+					aux2 = start + inc * i;
+					or_terms += " OR " + _prefix + std::to_string(aux2);
+				}
+				or_terms += (start != end) ? " OR " + _prefix + std::to_string(end) + ")" : ")";
+				incUP != 0 ? res += " AND " + or_terms : res = or_terms;
 			}
-			or_terms += " OR " + _prefix + std::to_string(n_term);
-		}
-		or_terms += (start != end) ? " OR " + _prefix + std::to_string(end) + ")" : ")";
-
-		if (!or_terms.empty()) {
-			res += incUP != 0 ? " AND " + or_terms : or_terms;
 		}
 
 		std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
@@ -1389,142 +1371,140 @@ std::string get_numeric_term(const std::string &field_value, const std::vector<s
 }
 
 
-std::string get_date_term(const std::string &field_value, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::string &prefix)
+std::string get_date_term(const std::string &start_, const std::string &end_, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::string &prefix)
 {
 	struct TRANSFORM {
 		char operator() (char c) { return  (c == '-') ? '_' : c;}
 	};
 
 	std::string res;
-	std::vector<std::string> ranges = stringTokenizer(field_value, "..");
-	if (ranges.size() == 2) {
-		std::string s(std::to_string(Datetime::timestamp(ranges.at(0))));
-		std::string e(std::to_string(Datetime::timestamp(ranges.at(1))));
+	if (!start_.empty() && !end_.empty()) {
+		try {
+			long double start = Datetime::timestamp(start_);
+			long double end = Datetime::timestamp(end_);
 
-		if (s.empty() || e.empty()) throw Xapian::QueryParserError("Didn't understand date specification '" + field_value + "'");
+			if (end < start) return res;
 
-		double start = strtodouble(s);
-		double end = strtodouble(e);
+			time_t timestamp_s = (time_t) start;
+			time_t timestamp_e = (time_t) end;
 
-		if (end < start) return res;
+			struct tm *timeinfo = gmtime(&timestamp_s);
+			int n_s[6] = {timeinfo->tm_year, timeinfo->tm_mon, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec};
+			timeinfo = gmtime(&timestamp_e);
+			int n_e[6] = {timeinfo->tm_year, timeinfo->tm_mon, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec};
 
-		time_t timestamp_s = (time_t) start;
-		time_t timestamp_e = (time_t) end;
-
-		struct tm *timeinfo = gmtime(&timestamp_s);
-		int n_s[6] = {timeinfo->tm_year, timeinfo->tm_mon, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec};
-		timeinfo = gmtime(&timestamp_e);
-		int n_e[6] = {timeinfo->tm_year, timeinfo->tm_mon, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec};
-
-		std::vector<std::string>::const_iterator it(accuracy.begin());
-		bool y = false, mon = false, w = false, d = false, h = false, min = false, sec = false;
-		int pos_y = 0, pos_mon = 0, pos_w = 0, pos_d = 0, pos_h = 0, pos_min = 0, pos_sec = 0;
-		for (int pos = 0; it != accuracy.end(); it++, pos++) {
-			std::string str = stringtolower(*it);
-			if (!y && str.compare("year") == 0) {
-				y = true;
-				pos_y = pos;
-			} else if (!mon && str.compare("month") == 0) {
-				mon = true;
-				pos_mon = pos;
-			} else if (!w && str.compare("week") == 0) {
-				w = true;
-				pos_w = pos;
-			} else if (!d && str.compare("day") == 0) {
-				d = true;
-				pos_d = pos;
-			} else if (!h && str.compare("hour") == 0) {
-				h = true;
-				pos_h = pos;
-			} else if (!min && str.compare("minute") == 0) {
-				min = true;
-				pos_min = pos;
-			} else if (!sec && str.compare("second") == 0) {
-				sec = true;
-				pos_sec = pos;
+			std::vector<std::string>::const_iterator it(accuracy.begin());
+			bool y = false, mon = false, w = false, d = false, h = false, min = false, sec = false;
+			int pos_y = 0, pos_mon = 0, pos_w = 0, pos_d = 0, pos_h = 0, pos_min = 0, pos_sec = 0;
+			// Get accuracies.
+			for (int pos = 0; it != accuracy.end(); it++, pos++) {
+				std::string str = stringtolower(*it);
+				if (!y && str.compare("year") == 0) {
+					y = true;
+					pos_y = pos;
+				} else if (!mon && str.compare("month") == 0) {
+					mon = true;
+					pos_mon = pos;
+				} else if (!w && str.compare("week") == 0) {
+					w = true;
+					pos_w = pos;
+				} else if (!d && str.compare("day") == 0) {
+					d = true;
+					pos_d = pos;
+				} else if (!h && str.compare("hour") == 0) {
+					h = true;
+					pos_h = pos;
+				} else if (!min && str.compare("minute") == 0) {
+					min = true;
+					pos_min = pos;
+				} else if (!sec && str.compare("second") == 0) {
+					sec = true;
+					pos_sec = pos;
+				}
 			}
+
+			if (n_s[0] != n_e[0]) {
+				if (y) {
+					if ((n_e[0] - n_s[0]) > MAX_TERMS) return res;
+					prefix = acc_prefix.at(pos_y);
+					res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
+				}
+			} else if (n_s[1] != n_e[1]) {
+				if (mon) {
+					prefix = acc_prefix.at(pos_mon);
+					res = "(" + terms_by_month(n_s, n_e, prefix) + ")";
+				} else if (y) {
+					prefix = acc_prefix.at(pos_y);
+					res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
+				}
+			} else if (n_s[2] != n_e[2]) {
+				if (d) {
+					prefix = acc_prefix.at(pos_d);
+					res = "(" + terms_by_day(n_s, n_e, prefix) + ")";
+				} else if (mon) {
+					prefix = acc_prefix.at(pos_mon);
+					res = "(" + terms_by_month(n_s, n_e, prefix) + ")";
+				} else if (y) {
+					prefix = acc_prefix.at(pos_y);
+					res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
+				}
+			} else if (n_s[3] != n_e[3]) {
+				if (h) {
+					prefix = acc_prefix.at(pos_h);
+					res = "(" + terms_by_hour(n_s, n_e, prefix) + ")";
+				} else if (d) {
+					prefix = acc_prefix.at(pos_d);
+					res = "(" + terms_by_day(n_s, n_e, prefix) + ")";
+				} else if (mon) {
+					prefix = acc_prefix.at(pos_mon);
+					res = "(" + terms_by_month(n_s, n_e, prefix) + ")";
+				} else if (y) {
+					prefix = acc_prefix.at(pos_y);
+					res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
+				}
+			} else if (n_s[4] != n_e[4]) {
+				if (min) {
+					prefix = acc_prefix.at(pos_min);
+					res = "(" + terms_by_minute(n_s, n_e, prefix) + ")";
+				} else if (h) {
+					prefix = acc_prefix.at(pos_h);
+					res = "(" + terms_by_hour(n_s, n_e, prefix) + ")";
+				} else if (d) {
+					prefix = acc_prefix.at(pos_d);
+					res = "(" + terms_by_day(n_s, n_e, prefix) + ")";
+				} else if (mon) {
+					prefix = acc_prefix.at(pos_mon);
+					res = "(" + terms_by_month(n_s, n_e, prefix) + ")";
+				} else if (y) {
+					prefix = acc_prefix.at(pos_y);
+					res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
+				}
+			} else {
+				if (sec) {
+					prefix = acc_prefix.at(pos_sec);
+					res = "(" + terms_by_second(n_s, n_e, prefix) + ")";
+				} else if (min) {
+					prefix = acc_prefix.at(pos_min);
+					res = "(" + terms_by_minute(n_s, n_e, prefix) + ")";
+				} else if (h) {
+					prefix = acc_prefix.at(pos_h);
+					res = "(" + terms_by_hour(n_s, n_e, prefix) + ")";
+				} else if (d) {
+					prefix = acc_prefix.at(pos_d);
+					res = "(" + terms_by_day(n_s, n_e, prefix) + ")";
+				} else if (mon) {
+					prefix = acc_prefix.at(pos_mon);
+					res = "(" + terms_by_month(n_s, n_e, prefix) + ")";
+				} else if (y) {
+					prefix = acc_prefix.at(pos_y);
+					res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
+				}
+			}
+
+			std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
+		} catch (const std::exception &ex) {
+			throw Xapian::QueryParserError("Didn't understand date specification '" + prefix + "'");
 		}
-
-		if (n_s[0] != n_e[0]) {
-			if (y) {
-				if ((n_e[0] - n_s[0]) > 100) return res;
-				prefix = acc_prefix.at(pos_y);
-				res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
-			}
-		} else if (n_s[1] != n_e[1]) {
-			if (mon) {
-				prefix = acc_prefix.at(pos_mon);
-				res = "(" + terms_by_month(n_s, n_e, prefix) + ")";
-			} else if (y) {
-				prefix = acc_prefix.at(pos_y);
-				res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
-			}
-		} else if (n_s[2] != n_e[2]) {
-			if (d) {
-				prefix = acc_prefix.at(pos_d);
-				res = "(" + terms_by_day(n_s, n_e, prefix) + ")";
-			} else if (mon) {
-				prefix = acc_prefix.at(pos_mon);
-				res = "(" + terms_by_month(n_s, n_e, prefix) + ")";
-			} else if (y) {
-				prefix = acc_prefix.at(pos_y);
-				res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
-			}
-		} else if (n_s[3] != n_e[3]) {
-			if (h) {
-				prefix = acc_prefix.at(pos_h);
-				res = "(" + terms_by_hour(n_s, n_e, prefix) + ")";
-			} else if (d) {
-				prefix = acc_prefix.at(pos_d);
-				res = "(" + terms_by_day(n_s, n_e, prefix) + ")";
-			} else if (mon) {
-				prefix = acc_prefix.at(pos_mon);
-				res = "(" + terms_by_month(n_s, n_e, prefix) + ")";
-			} else if (y) {
-				prefix = acc_prefix.at(pos_y);
-				res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
-			}
-		} else if (n_s[4] != n_e[4]) {
-			if (min) {
-				prefix = acc_prefix.at(pos_min);
-				res = "(" + terms_by_minute(n_s, n_e, prefix) + ")";
-			} else if (h) {
-				prefix = acc_prefix.at(pos_h);
-				res = "(" + terms_by_hour(n_s, n_e, prefix) + ")";
-			} else if (d) {
-				prefix = acc_prefix.at(pos_d);
-				res = "(" + terms_by_day(n_s, n_e, prefix) + ")";
-			} else if (mon) {
-				prefix = acc_prefix.at(pos_mon);
-				res = "(" + terms_by_month(n_s, n_e, prefix) + ")";
-			} else if (y) {
-				prefix = acc_prefix.at(pos_y);
-				res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
-			}
-		} else {
-			if (sec) {
-				prefix = acc_prefix.at(pos_sec);
-				res = "(" + terms_by_second(n_s, n_e, prefix) + ")";
-			} else if (min) {
-				prefix = acc_prefix.at(pos_min);
-				res = "(" + terms_by_minute(n_s, n_e, prefix) + ")";
-			} else if (h) {
-				prefix = acc_prefix.at(pos_h);
-				res = "(" + terms_by_hour(n_s, n_e, prefix) + ")";
-			} else if (d) {
-				prefix = acc_prefix.at(pos_d);
-				res = "(" + terms_by_day(n_s, n_e, prefix) + ")";
-			} else if (mon) {
-				prefix = acc_prefix.at(pos_mon);
-				res = "(" + terms_by_month(n_s, n_e, prefix) + ")";
-			} else if (y) {
-				prefix = acc_prefix.at(pos_y);
-				res = "(" + terms_by_year(n_s, n_e, prefix) + ")";
-			}
-		}
-		std::transform(res.begin(), res.end(), res.begin(), TRANSFORM());
-
-		return res;
 	}
 
 	return res;
@@ -1634,4 +1614,49 @@ std::string serialise_term(int n[])
 	timeinfo->tm_min    = n[4];
 	timeinfo->tm_sec    = n[5];
 	return std::to_string(Datetime::timegm(timeinfo));
+}
+
+
+std::string get_geo_term(std::vector<range_t> &ranges, const std::vector<std::string> &acc_prefix, std::vector<std::string> &prefixes)
+{
+	std::string result;
+	std::vector<range_t>::iterator rit(ranges.begin());
+	for ( ; rit != ranges.end(); rit++) {
+		std::bitset<SIZE_BITS_ID> b1(rit->start), b2(rit->end), res;
+		size_t idx = 0;
+		uInt64 val;
+		if (rit->start != rit->end) {
+			idx = SIZE_BITS_ID - 1;
+			for (; idx > 0 && b1.test(idx) == b2.test(idx); --idx) {
+				res.set(idx, b1.test(idx));
+			}
+			size_t aux = idx % BITS_LEVEL;
+			idx += aux ? BITS_LEVEL - aux : 0;
+			val = res.to_ullong() >> idx;
+		} else {
+			val = rit->start;
+		}
+
+		size_t tmp = (acc_prefix.size() - 1) * BITS_LEVEL;
+		if (idx > tmp) {
+			uInt64 _start = rit->start >> tmp, _end = rit->end >> tmp;
+			while (_start <= _end) {
+				std::string vterm(acc_prefix.at(acc_prefix.size() - 1) + ":" + std::to_string(_start));
+				if (result.find(vterm) == std::string::npos) {
+					result += (result.empty()) ? vterm : " OR " + vterm;
+					prefixes.push_back(acc_prefix.at(acc_prefix.size() - 1));
+				}
+				_start++;
+			}
+		} else {
+			size_t j = idx / BITS_LEVEL;
+			std::string vterm(acc_prefix.at(j) + ":" + std::to_string(val));
+			if (result.find(vterm) == std::string::npos) {
+				result += (result.empty()) ? vterm : " OR " + vterm;
+				prefixes.push_back(acc_prefix.at(j));
+			}
+		}
+	}
+
+	return result;
 }
