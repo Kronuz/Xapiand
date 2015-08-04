@@ -65,6 +65,19 @@
 #define SLOT_TIME_MINUTE 1440
 #define SLOT_TIME_SECOND 60
 
+#define INC_LEVEL 5
+#define BITS_LEVEL 10
+
+#if __BYTE_ORDER == __BIG_ENDIAN
+// No translation needed for big endian system.
+#define Swap7Bytes(val) val // HTM's trixel's ids are represent in 7 bytes.
+#elif __BYTE_ORDER == __LITTLE_ENDIAN
+// Swap 7 byte, 56 bit values. (If it is not big endian, It is considered little endian)
+#define Swap7Bytes(val) ((((val) >> 48) & 0xFF) | (((val) >> 32) & 0xFF00) | (((val) >> 16) & 0xFF0000) | \
+ 						(((val) >>  0) & 0xFF000000) | (((val) << 16) & 0xFF00000000) | \
+						(((val) << 32) & 0xFF0000000000) | (((val) << 48) & 0xFF000000000000))
+#endif
+
 void log(const char *file, int line, void *obj, const char *fmt, ...);
 
 std::string repr(const char *p, size_t size, bool friendly=true);
