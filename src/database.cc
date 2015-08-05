@@ -2573,6 +2573,8 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 			srch.suggested_query.push_back(queryparser.get_corrected_query_string());
 			srch.query = Xapian::Query(Xapian::Query::OP_OR,  queryRange, srch.query);
 		}
+	} else {
+		srch.suggested_query.push_back("");
 	}
 
 	return srch;
