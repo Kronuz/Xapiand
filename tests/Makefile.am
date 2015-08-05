@@ -21,3 +21,5 @@ set_query_test_LDADD = @CHECK_LIBS@
 
 AM_LDFLAGS = $(XAPIAN_LIBS)
 AM_CXXFLAGS = $(XAPIAN_CXXFLAGS)
+# FreeBSD not found check.h without -I option flag where the header is
+AM_CXXFLAGS += -I/usr/local/include/
