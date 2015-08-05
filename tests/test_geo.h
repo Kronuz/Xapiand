@@ -31,6 +31,8 @@
 #include "../src/database.h"
 #include "../src/endpoint.h"
 
+
 int geo_test_area();
 
-#endif /* XAPIAND_INCLUDED_TEST_SERIALISE_H */
+
+#endif /* GEO_INCLUDED_TEST_H */

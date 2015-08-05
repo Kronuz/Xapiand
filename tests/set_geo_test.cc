@@ -20,7 +20,6 @@
  * IN THE SOFTWARE.
  */
 
-
 #include <stdlib.h>
 #include <stdint.h>
 

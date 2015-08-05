@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_TEST_HTM_H
-#define XAPIAND_INCLUDED_TEST_HTM_H
+#ifndef INCLUDED_TEST_HTM_H
+#define INCLUDED_TEST_HTM_H
 
 #include <stdio.h>
 #include <string.h>
@@ -49,4 +49,4 @@ int test_HTM_chull();
 int test_HTM_circle();
 
 
-#endif /* XAPIAND_INCLUDED_TEST_HTM_H */
+#endif /* INCLUDED_TEST_HTM_H */

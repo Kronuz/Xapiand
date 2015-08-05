@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_TEST_XAPIAND_H
-#define XAPIAND_INCLUDED_TEST_XAPIAND_H
+#ifndef INCLUDED_TEST_QUERY_H
+#define INCLUDED_TEST_QUERY_H
 
 #include <sstream>
 #include <fstream>
@@ -31,6 +31,8 @@
 #include "../src/database.h"
 #include "../src/endpoint.h"
 
+
 int test_query();
 
-#endif /* XAPIAND_INCLUDED_TEST_XAPIAND_H */
+
+#endif /* INCLUDED_TEST_QUERY_H */

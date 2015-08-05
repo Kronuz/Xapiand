@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_TEST_WKT_PARSER_H
-#define XAPIAND_INCLUDED_TEST_WKT_PARSER_H
+#ifndef INCLUDED_TEST_WKT_PARSER_H
+#define INCLUDED_TEST_WKT_PARSER_H
 
 #include <stdio.h>
 #include <string.h>
@@ -35,4 +35,4 @@ int test_wkt_parser();
 int test_wkt_speed();
 
 
-#endif /* XAPIAND_INCLUDED_TEST_WKT_PARSER_H */
+#endif /* INCLUDED_TEST_WKT_PARSER_H */

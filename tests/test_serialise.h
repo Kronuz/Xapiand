@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_TEST_SERIALISE_H
-#define XAPIAND_INCLUDED_TEST_SERIALISE_H
+#ifndef INCLUDED_TEST_SERIALISE_H
+#define INCLUDED_TEST_SERIALISE_H
 
 #include <stdio.h>
 #include <string.h>
@@ -47,4 +47,4 @@ int test_unserialise_date();
 int test_unserialise_geo();
 
 
-#endif /* XAPIAND_INCLUDED_TEST_SERIALISE_H */
+#endif /* INCLUDED_TEST_SERIALISE_H */

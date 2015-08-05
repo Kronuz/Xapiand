@@ -22,14 +22,15 @@
 
 #include "test_query.h"
 
+
 int test_query()
 {
 	int exit_success = 6;
 
 	/*
-	*	The database used in the test is local
-	*	so the Endpoints and local_node are manipulated
-	*/
+	 *	The database used in the test is local
+	 *	so the Endpoints and local_node are manipulated
+	 */
 
 	local_node.name.assign("node_test");
 	local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
@@ -56,10 +57,10 @@ int test_query()
 	std::stringstream buffer;
 	buffer << fstream.rdbuf();
 	unique_cJSON document(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
-	if(database->index(document.get(), "1", true)) {
+	if (database->index(document.get(), "1", true)) {
 		exit_success--;
 	} else {
-		LOG(NULL,"index Json_example_1 failed\n");
+		LOG(NULL, "index Json_example_1 failed\n");
 	}
 
 	/* TEST query */
@@ -79,15 +80,15 @@ int test_query()
 	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 
 	int rmset = database->get_mset(query_elements, mset, spies, suggestions);
-	if(rmset == 0 && mset.size() != 0) {
+	if (rmset == 0 && mset.size() != 0) {
 		Xapian::MSetIterator m = mset.begin();
-		if(m.get_document().get_data().find("Back to the Future") != std::string::npos) {
+		if (m.get_document().get_data().find("Back to the Future") != std::string::npos) {
 			exit_success--;
 		} else {
-			LOG(NULL,"search query failed, unintended result\n");
+			LOG(NULL, "search query failed, unintended result\n");
 		}
 	} else {
-		LOG(NULL,"search query failed, database error\n");
+		LOG(NULL, "search query failed, database error\n");
 	}
 
 
@@ -99,15 +100,15 @@ int test_query()
 	query_elements.terms.push_back("actors__male:Michael J. Fox");
 
 	rmset = database->get_mset(query_elements, mset, spies, suggestions);
-	if(rmset == 0 && mset.size() != 0) {
+	if (rmset == 0 && mset.size() != 0) {
 		Xapian::MSetIterator m = mset.begin();
-		if(m.get_document().get_data().find("Back to the Future") != std::string::npos) {
+		if (m.get_document().get_data().find("Back to the Future") != std::string::npos) {
 			exit_success--;
 		} else {
-			LOG(NULL,"search terms failed, unintended result\n");
+			LOG(NULL, "search terms failed, unintended result\n");
 		}
 	} else {
-		LOG(NULL,"search terms failed, database error\n");
+		LOG(NULL, "search terms failed, database error\n");
 	}
 
 	/* TEST partial */
@@ -118,15 +119,15 @@ int test_query()
 	query_elements.partial.push_back("directed_by:Rob");
 
 	rmset = database->get_mset(query_elements, mset, spies, suggestions);
-	if(rmset == 0 && mset.size() != 0) {
+	if (rmset == 0 && mset.size() != 0) {
 		Xapian::MSetIterator m = mset.begin();
-		if(m.get_document().get_data().find("Back to the Future") != std::string::npos) {
+		if (m.get_document().get_data().find("Back to the Future") != std::string::npos) {
 			exit_success--;
 		} else {
-			LOG(NULL,"search partial failed, unintended result\n");
+			LOG(NULL, "search partial failed, unintended result\n");
 		}
 	} else {
-		LOG(NULL,"search partial failed, database error\n");
+		LOG(NULL, "search partial failed, database error\n");
 	}
 
 	/* TEST facets */
@@ -138,27 +139,28 @@ int test_query()
 	query_elements.facets.push_back("actors__male");
 
 	rmset = database->get_mset(query_elements, mset, spies, suggestions);
-	LOG(NULL,"rmset %d mset %d spies %d\n",rmset, mset.size(), spies.size());
-	if(rmset == 0 && mset.size() != 0 && spies.size() != 0) {
+	LOG(NULL, "rmset %d mset %d spies %d\n", rmset, mset.size(), spies.size());
+	if (rmset == 0 && mset.size() != 0 && spies.size() != 0) {
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
 		Xapian::TermIterator facet = (*spy).second->values_begin();
 		data_field_t field_t = database->get_data_field((*spy).first);
-		if(unserialise(field_t.type, (*spy).first, *facet).compare("Charlton Heston") == 0) {
+		if (unserialise(field_t.type, (*spy).first, *facet).compare("Charlton Heston") == 0) {
 			exit_success--;
 		} else {
-			LOG(NULL,"search facets failed, unintended result\n");
+			LOG(NULL, "search facets failed, unintended result\n");
 		}
 	} else {
-		LOG(NULL,"search facets failed, database error\n");
+		LOG(NULL, "search facets failed, database error\n");
 	}
 
 
-	/* TEST Fuzzy and nearest (get_similar)
-		in this test case the documents returned by the fuzzy search
-		are the same for the nearest search, the difference lies in fuzzy
-		return results mixed with the query and the input RSet
-		and nearest only documents related in the input RSet
-	*/
+	/*
+	 * TEST Fuzzy and nearest (get_similar)
+	 * in this test case the documents returned by the fuzzy search
+	 * are the same for the nearest search, the difference lies in fuzzy
+	 * return results mixed with the query and the input RSet
+	 * and nearest only documents related in the input RSet
+	 */
 
 	buffer.str(std::string());
 	fstream.close();
@@ -166,8 +168,8 @@ int test_query()
 	buffer << fstream.rdbuf();
 	unique_cJSON document2(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
 
-	if(not database->index(document2.get(), "2", true)) {
-		LOG(NULL,"index Json_example_2 failed\n");
+	if (not database->index(document2.get(), "2", true)) {
+		LOG(NULL, "index Json_example_2 failed\n");
 	}
 
 	suggestions.clear();
@@ -181,17 +183,18 @@ int test_query()
 
 	rmset = database->get_mset(query_elements, mset, spies, suggestions);
 	LOG(NULL, "rmset %d mset %d\n", rmset, mset.size());
-	if(rmset == 0 && mset.size() != 0) {
+	if (rmset == 0 && mset.size() != 0) {
 		Xapian::MSetIterator m = mset.begin();
-		if(m.get_document().get_data().find("Back to the Future") != std::string::npos) {
+		if (m.get_document().get_data().find("Back to the Future") != std::string::npos) {
 			exit_success--;
 		} else {
-			LOG(NULL,"search similar failed, unintended result\n");
+			LOG(NULL, "search similar failed, unintended result\n");
 		}
 	} else {
-		LOG(NULL,"search similar failed, database error\n");
+		LOG(NULL, "search similar failed, database error\n");
 	}
 
-	LOG(NULL,"exit success %d\n",exit_success);
+	LOG(NULL, "exit success %d\n", exit_success);
+
 	return exit_success;
 }

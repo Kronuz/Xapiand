@@ -22,13 +22,13 @@
 
 #include "test_geo.h"
 
+
 int geo_test_area()
 {
-
 	/*
 	 *	The database used in the test is local
 	 *	so the Endpoints and local_node are manipulated
-	*/
+	 */
 
 	int exit_success = 2;
 
@@ -44,21 +44,21 @@ int geo_test_area()
 	endpoints.insert(e);
 
 	DatabaseQueue *queue = new DatabaseQueue();
-	Database *database = new Database(queue, endpoints, DB_WRITABLE|DB_SPAWN);
+	Database *database = new Database(queue, endpoints, DB_WRITABLE | DB_SPAWN);
 
 	/*
-	 *	TEST query geolocation area
+	 *	TEST query Geolocation area
 	 *	searching for North Dakota area
 	 *	of the four documents indexed it will return 3 that fit into that area
-	*/
+	 */
 
 	std::stringstream buffer;
 	std::ifstream fstream("examples/Json_geo_1.txt");
 	buffer << fstream.rdbuf();
 	unique_cJSON document1(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
 
-	if(not database->index(document1.get(), "1", true)) {
-		LOG(NULL,"index Json_geo_1 failed\n");
+	if (not database->index(document1.get(), "1", true)) {
+		LOG(NULL, "index Json_geo_1 failed\n");
 	}
 
 	buffer.str(std::string());
@@ -67,8 +67,8 @@ int geo_test_area()
 	buffer << fstream.rdbuf();
 	unique_cJSON document2(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
 
-	if(not database->index(document2.get(), "2", true)) {
-		LOG(NULL,"index Json_geo_2 failed\n");
+	if (not database->index(document2.get(), "2", true)) {
+		LOG(NULL, "index Json_geo_2 failed\n");
 	}
 
 	buffer.str(std::string());
@@ -77,8 +77,8 @@ int geo_test_area()
 	buffer << fstream.rdbuf();
 	unique_cJSON document3(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
 
-	if(not database->index(document3.get(), "3", true)) {
-		LOG(NULL,"index Json_geo_3 failed\n");
+	if (not database->index(document3.get(), "3", true)) {
+		LOG(NULL, "index Json_geo_3 failed\n");
 	}
 
 	buffer.str(std::string());
@@ -87,8 +87,8 @@ int geo_test_area()
 	buffer << fstream.rdbuf();
 	unique_cJSON document4(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
 
-	if(not database->index(document4.get(), "4", true)) {
-		LOG(NULL,"index Json_geo_4 failed\n");
+	if (not database->index(document4.get(), "4", true)) {
+		LOG(NULL, "index Json_geo_4 failed\n");
 	}
 
 	query_t query_elements;
@@ -99,24 +99,24 @@ int geo_test_area()
 	query_elements.synonyms = false;
 	query_elements.is_fuzzy = false;
 	query_elements.is_nearest = false;
-	query_elements.terms.push_back("location:\"POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"");
+	query_elements.terms.push_back("location:\"..POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"");
 
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
 	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 
 	int rmset = database->get_mset(query_elements, mset, spies, suggestions);
-	if(mset.size() == 3) {
+	if (mset.size() == 3) {
 		exit_success--;
 	} else {
-		LOG(NULL,"search area failed, database error\n");
+		LOG(NULL, "search area failed, database error\n");
 	}
 
 	/*
 	 *	TEST query geolocation multi area
 	 *	searching for North Dakota and South Dakota area
 	 *	of the four documents indexed it will return 4 that fit into that area
-	*/
+	 */
 
 	buffer.str(std::string());
 	fstream.close();
@@ -124,19 +124,19 @@ int geo_test_area()
 	buffer << fstream.rdbuf();
 	unique_cJSON document5(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
 
-	if(not database->index(document5.get(), "1", true)) {
-		LOG(NULL,"index Json_geo_1_2 failed\n");
+	if (not database->index(document5.get(), "1", true)) {
+		LOG(NULL, "index Json_geo_1_2 failed\n");
 	}
 
 	query_elements.terms.clear();
-	query_elements.terms.push_back("location:\"MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"");
+	query_elements.terms.push_back("location:\"..MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"");
 
 	Xapian::MSet mset2;
 	rmset = database->get_mset(query_elements, mset2, spies, suggestions);
-	if(mset2.size() == 4) {
+	if (mset2.size() == 4) {
 		exit_success--;
 	} else {
-		LOG(NULL,"search multi area failed, database error\n");
+		LOG(NULL, "search multi area failed, database error\n");
 	}
 
 	return exit_success;
