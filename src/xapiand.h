@@ -58,6 +58,10 @@
 	#define __PDP_ENDIAN    PDP_ENDIAN
 #elif defined(__FreeBSD__)
 	#include <sys/endian.h>
+	#define __BYTE_ORDER    _BYTE_ORDER
+	#define __BIG_ENDIAN    _BIG_ENDIAN
+	#define __LITTLE_ENDIAN _LITTLE_ENDIAN
+	#define __PDP_ENDIAN    _PDP_ENDIAN
 #elif defined(_WIN16) || defined(_WIN32) || defined(_WIN64)
 	#include <winsock2.h>
 	#include <sys/param.h>
