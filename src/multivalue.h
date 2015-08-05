@@ -69,7 +69,7 @@ class MultiValueCountMatchSpy : public Xapian::ValueCountMatchSpy {
 
 // New Match Decider for multiple value range.
 class MultipleValueRange : public Xapian::ValuePostingSource {
-	// Range [end, end] for the search.
+	// Range [start, end] for the search.
 	std::string start, end;
 	Xapian::valueno slot;
 

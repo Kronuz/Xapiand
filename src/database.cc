@@ -2559,9 +2559,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		throw Xapian::QueryParserError("Query '" + query + "' contains errors.\n" );
 	}
 
-	LOG_DATABASE_WRAP(this, "Query terms processed: (%s)\n", querystring.c_str());
 	if (!first_time) {
 		try {
+			LOG_DATABASE_WRAP(this, "Query terms processed: (%s)\n", querystring.c_str());
 			queryRange = queryparser.parse_query(querystring, flags);
 			srch.suggested_query.push_back(queryparser.get_corrected_query_string());
 			srch.query = Xapian::Query(Xapian::Query::OP_OR,  queryRange, srch.query);
