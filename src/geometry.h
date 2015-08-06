@@ -60,6 +60,7 @@ class Geometry {
 		std::vector<Constraint> constraints;
 		Constraint boundingCircle;
 		std::vector<Cartesian> corners;
+		Cartesian centroid;
 
 		enum typePoints {
 			CONVEX_POLYGON,
@@ -71,12 +72,11 @@ class Geometry {
 		double getRadius();
 		void convexHull(std::vector<Cartesian> &v);
 		void convexPolygon(std::vector<Cartesian> &v);
-		double areaPolygon();
-		double vertex2centroid();
-		Cartesian centroidPolygon();
 
 	private:
 		void convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &points_convex);
+		double meanAngle2centroid();
+		void centroidPolygon();
 		static int direction(const Cartesian &a, const Cartesian &b, const Cartesian &c);
 		static double dist(const Cartesian &a, const Cartesian &b);
 		static bool compare(const Cartesian &P0, const Cartesian &a, const Cartesian &b);

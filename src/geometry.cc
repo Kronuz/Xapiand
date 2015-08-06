@@ -73,6 +73,7 @@ Geometry::Geometry(const Constraint &c)
 {
 	boundingCircle = c;
 	constraints.push_back(c);
+	centroid = c.center;
 }
 
 
@@ -142,6 +143,9 @@ Geometry::convexHull(std::vector<Cartesian> &v)
 			}
 		}
 	}
+
+	// Calculate the Polygon's centroid.
+	centroidPolygon();
 }
 
 
@@ -254,6 +258,9 @@ Geometry::convexPolygon(std::vector<Cartesian> &v)
 			}
 		}
 	}
+
+	// Calculate the Polygon's centroid.
+	centroidPolygon();
 }
 
 
@@ -312,7 +319,7 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 	for ( ; it != points.end(); it++) {
 		it->normalize(); // Normalize the point.
 		if (it->y < it_swap->y ||
-		  	(it_swap->y == it->y && it->x < it_swap->x) ||
+			(it_swap->y == it->y && it->x < it_swap->x) ||
 			(it_swap->y == it->y && it->x == it_swap->x && it->z < it_swap->z)) {
 			it_swap = it;
 		}
@@ -361,50 +368,32 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 }
 
 
-// Found the polygon's area using Shoelace formula.
-double
-Geometry::areaPolygon()
-{
-	double D = 0;
-	double I = 0;
-	std::vector<Cartesian>::iterator it(corners.begin()), n_i, nn_i;
-	for (; it != corners.end(); it++) {
-		n_i = (it + 1 == corners.end()) ? corners.begin() : it + 1;
-		nn_i = (n_i + 1 == corners.end()) ? corners.begin() : n_i + 1;
-		D += it->x * n_i->y * nn_i->z;
-		I += it->z * n_i->y * nn_i->x;
-	}
-	double A = 0.5 * (D - I);
-	return (A < 0 ? -A : A);
-}
-
-
-// Found the polygon's centroid.
-Cartesian
+// Calculate the Mass Center (centroid) of Polygon's points (Particles) with respect the point (0, 0, 0).
+void
 Geometry::centroidPolygon()
 {
 	double x = 0, y = 0, z = 0;
-	int len = (int)corners.size();
 	std::vector<Cartesian>::const_iterator it = corners.begin();
 	for ( ; it != corners.end(); it++) {
-		x += (*it).x;
-		y += (*it).y;
-		z += (*it).z;
+		x += it->x;
+		y += it->y;
+		z += it->z;
 	}
-	return Cartesian(x / len, y / len, z / len);
+	centroid = Cartesian(x, y, z);
+	centroid.normalize();
 }
 
 
-// Average distance from the vertex to the centroid of the polygon.
+// Average angle from the vertices to the polygon's centroid.
 double
-Geometry::vertex2centroid()
+Geometry::meanAngle2centroid()
 {
-	Cartesian centroid = centroidPolygon();
 	double sum = 0;
 	std::vector<Cartesian>::iterator it = corners.begin();
 	for ( ; it != corners.end(); it++) {
-		sum += centroid.distance(*it);
+		sum += acos(*it * centroid);
 	}
+
 	return sum / corners.size();
 }
 
@@ -416,7 +405,7 @@ Geometry::getRadius()
 {
 	if (corners.size() > 2) {
 		// return sqrt(0.5 * areaPolygon()) * M_PER_RADIUS_EARTH;
-		return vertex2centroid() * M_PER_RADIUS_EARTH;
+		return meanAngle2centroid() * M_PER_RADIUS_EARTH;
 	} else {
 		return boundingCircle.arcangle * M_PER_RADIUS_EARTH;
 	}
