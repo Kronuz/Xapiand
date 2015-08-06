@@ -785,7 +785,7 @@ uInt64 unserialise_geo(const std::string &str) {
 }
 
 
-void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges)
+void getEWKT_Ranges(const std::string &field_value, bool &partials, double &error, std::vector<range_t> &ranges)
 {
 	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
 	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());

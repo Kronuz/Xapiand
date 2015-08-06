@@ -235,7 +235,7 @@ std::string serialise_numeric(const std::string &field_value);
 std::string serialise_date(const std::string &field_value);
 std::string serialise_term(int n[]);
 std::string unserialise_date(const std::string &serialise_val);
-void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges);
+void getEWKT_Ranges(const std::string &field_value, bool &partials, double &error, std::vector<range_t> &ranges);
 std::string serialise_geo(uInt64 id);
 uInt64 unserialise_geo(const std::string &serialise_val);
 std::string serialise_bool(const std::string &field_value);
