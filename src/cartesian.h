@@ -255,9 +255,8 @@ class Cartesian {
 		bool operator!=(const Cartesian &p) const;
 		Cartesian& operator=(const Cartesian &p);
 		void normalize();
-		double norm();
-		double distance(Cartesian &p);
-		Cartesian get_inverse();
+		double norm() const;
+		Cartesian get_inverse() const;
 		std::string as_string() const;
 		int getSRID() const;
 		int getDatum() const;

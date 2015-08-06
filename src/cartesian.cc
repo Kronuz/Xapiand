@@ -288,24 +288,16 @@ Cartesian::normalize()
 
 
 Cartesian
-Cartesian::get_inverse()
+Cartesian::get_inverse() const
 {
 	return Cartesian(-x, -y, -z);
 }
 
 
 double
-Cartesian::norm()
+Cartesian::norm() const
 {
 	return sqrt(x * x + y * y + z * z);
-}
-
-
-double
-Cartesian::distance(Cartesian &p)
-{
-	Cartesian c(x - p.x, y - p.y, z - p.z);
-	return c.norm();
 }
 
 
