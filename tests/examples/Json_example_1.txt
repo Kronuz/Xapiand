@@ -15,6 +15,7 @@
         ]
     },
     "released": "1985-07-03",
+    "dummy_date": "20150810T10:12:12|| /w+2w/M+3M/M-3M+2M/M-2M//M+1w",
     "sequels": [
         "Back to the Future II",
         "Back to the Future III"

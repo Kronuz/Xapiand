@@ -23,9 +23,21 @@
 #include "test_query.h"
 
 
+#define NUMERIC_RANGE 1
+#define TIMESTAMP_RANGE 2
+#define TIMEISO_RANGE 3
+
+#define NUMERIC_QUERY "year:1900..1984"
+#define TIMESTAMP_QUERY "released:1968-01-02..1985-07-02"
+#define TIMEISO_QUERY "dummy_date:..20150810T10:12:12||/w+2w/M+3M/M-3M+2M/M-2M//M+1w-1d" /*ISO with date math*/
+
+#define NUMERIC_MSN "numeric"
+#define TIMESTAMP_MSN "timestamp"
+#define TIMEISO_MSN "time iso"
+
 int test_query()
 {
-	int exit_success = 6;
+	int exit_success = 9;
 
 	/*
 	 *	The database used in the test is local
@@ -61,6 +73,17 @@ int test_query()
 		exit_success--;
 	} else {
 		LOG(NULL, "index Json_example_1 failed\n");
+	}
+
+
+	buffer.str(std::string());
+	fstream.close();
+	fstream.open("examples/Json_example_2.txt");
+	buffer << fstream.rdbuf();
+	unique_cJSON document2(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
+
+	if (not database->index(document2.get(), "2", true)) {
+		LOG(NULL, "index Json_example_2 failed\n");
 	}
 
 	/* TEST query */
@@ -162,16 +185,6 @@ int test_query()
 	 * and nearest only documents related in the input RSet
 	 */
 
-	buffer.str(std::string());
-	fstream.close();
-	fstream.open("examples/Json_example_2.txt");
-	buffer << fstream.rdbuf();
-	unique_cJSON document2(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
-
-	if (not database->index(document2.get(), "2", true)) {
-		LOG(NULL, "index Json_example_2 failed\n");
-	}
-
 	suggestions.clear();
 	spies.clear();
 	query_elements.query.clear();
@@ -192,6 +205,52 @@ int test_query()
 		}
 	} else {
 		LOG(NULL, "search similar failed, database error\n");
+	}
+
+	suggestions.clear();
+	spies.clear();
+	query_elements.is_fuzzy = false;
+	query_elements.fuzzy.type.clear();
+
+	/* TEST Range */
+
+	std::string query_range;
+	std::string msn_range;
+	std::string result_range;
+
+	for(int i = 1; i <= 3; i++) {
+
+		switch(i) {
+			case NUMERIC_RANGE:
+				query_range.assign(NUMERIC_QUERY);
+				msn_range.assign(NUMERIC_MSN);
+				break;
+
+			case TIMESTAMP_RANGE:
+				query_range.assign(TIMESTAMP_QUERY);
+				msn_range.assign(TIMESTAMP_MSN);
+				break;
+
+			case TIMEISO_RANGE:
+				query_range.assign(TIMEISO_QUERY);
+				msn_range.assign(TIMEISO_MSN);
+				break;
+		}
+
+		query_elements.query.clear();
+		query_elements.query.push_back(query_range);
+
+		rmset = database->get_mset(query_elements, mset, spies, suggestions);
+		if (rmset == 0 && mset.size() != 0) {
+			Xapian::MSetIterator m = mset.begin();
+			if (m.get_document().get_data().find("Planet Apes") != std::string::npos) {
+				exit_success--;
+			} else {
+				LOG(NULL, "search %s range failed, unintended result\n",msn_range.c_str());
+			}
+		} else {
+			LOG(NULL, "search %s range failed, database error\n",msn_range.c_str());
+		}
 	}
 
 	LOG(NULL, "exit success %d\n", exit_success);
