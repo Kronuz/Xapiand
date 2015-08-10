@@ -1,11 +1,14 @@
 {
     "_data": "Back to the Future",
     "actors": {
-        "male": [
-            "Michael J. Fox",
-            "Christopher Lloyd",
-            "Thomas F. Wilson"
-        ],
+        "male": {
+            "_value": [
+             "Michael J. Fox",
+             "Christopher Lloyd",
+             "Thomas F. Wilson"
+            ],
+            "_weight": 1
+        },
         "female": [
             "Lea Thompson",
             "Jennifer Parker"
