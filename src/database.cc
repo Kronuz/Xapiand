@@ -2638,7 +2638,7 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 	enquire.set_query(query);
 
 	if (sorter) {
-		enquire.set_sort_by_key(sorter, false);
+		enquire.set_sort_by_key_then_relevance(sorter, false);
 	}
 
 	if (spies) {
