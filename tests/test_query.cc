@@ -216,7 +216,6 @@ int test_query()
 
 	std::string query_range;
 	std::string msn_range;
-	std::string result_range;
 
 	for(int i = 1; i <= 3; i++) {
 
