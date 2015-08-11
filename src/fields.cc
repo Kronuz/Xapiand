@@ -35,7 +35,6 @@ NumericFieldProcessor::operator()(const std::string &str)
 	// For negative number, we receive _# and we serialise -#.
 	std::string serialise(str.c_str());
 	if (serialise.at(0) == '_') serialise.at(0) = '-';
-	LOG(this, "Numeric FP %s!!\n", serialise.c_str());
 	serialise = serialise_numeric(serialise);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand numeric specification '" + str + "'");
@@ -49,7 +48,6 @@ BooleanFieldProcessor::BooleanFieldProcessor(const std::string &prefix_): prefix
 
 Xapian::Query BooleanFieldProcessor::operator()(const std::string &str)
 {
-	LOG(this, "Boolean FP!!\n");
 	std::string serialise = serialise_bool(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand bool specification '" + str + "'");
@@ -65,7 +63,6 @@ Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 {
 	std::string serialise(str.c_str());
 	if (serialise.at(0) == '_') serialise.at(0) = '-';
-	LOG(this, "Date FP %s!!\n", serialise.c_str());
 	serialise = serialise_date(serialise);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand date specification '" + str + "'");
@@ -80,43 +77,6 @@ GeoFieldProcessor::GeoFieldProcessor(const std::string &prefix_): prefix(prefix_
 Xapian::Query GeoFieldProcessor::operator()(const std::string &str)
 {
 	std::string serialise(str.c_str());
-	LOG(this, "Geo FP %s!!\n", serialise.c_str());
 	serialise = serialise_geo(strtouInt64(serialise));
 	return Xapian::Query(prefix + serialise);
-}
-
-
-DateTimeValueRangeProcessor::DateTimeValueRangeProcessor(Xapian::valueno slot_, const std::string &prefix_): valno(slot_), prefix(prefix_) {}
-
-
-Xapian::valueno
-DateTimeValueRangeProcessor::operator()(std::string &begin, std::string &end)
-{
-	std::string buf;
-	LOG(this, "Inside of DateTimeValueRangeProcessor\n");
-
-	// Verify the prefix.
-	if (std::string(begin.c_str(), 0, prefix.size()).compare(prefix) == 0) {
-		begin.assign(begin.c_str(), prefix.size(), begin.size());
-	} else return valno;
-
-	if (begin.size() != 0) {
-		std::string serialise = serialise_date(begin);
-		if (serialise.size() == 0) return Xapian::BAD_VALUENO;
-		buf = serialise;
-		begin.assign(buf.c_str(), buf.size());
-		LOG(this, "Serialise of begin %s\n", buf.c_str());
-	}
-	buf = "";
-
-	if (end.size() != 0) {
-		std::string serialise = serialise_date(end);
-		if (serialise.size() == 0) return Xapian::BAD_VALUENO;
-		buf = serialise;
-		end.assign(buf.c_str(), buf.size());
-		LOG(this, "Serialise of end %s\n", buf.c_str());
-	}
-	LOG(this, "DateTimeValueRangeProcessor process\n");
-
-	return valno;
 }

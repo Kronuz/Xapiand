@@ -66,14 +66,4 @@ class GeoFieldProcessor : public Xapian::FieldProcessor {
 };
 
 
-class DateTimeValueRangeProcessor: public Xapian::ValueRangeProcessor {
-	std::string prefix;
-	Xapian::valueno valno;
-
-	public:
-		DateTimeValueRangeProcessor(Xapian::valueno slot_, const std::string &prefix_);
-		Xapian::valueno operator()(std::string &begin, std::string &end);
-};
-
-
 #endif /* XAPIAND_INCLUDED_FIELDS_H */
