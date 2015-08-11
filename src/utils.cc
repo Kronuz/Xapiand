@@ -768,6 +768,27 @@ std::string unserialise_date(const std::string &serialise_val)
 }
 
 
+// Serialise a normalize cartesian coordinate in 12 bytes.
+std::string serialise_cartesian(const Cartesian &norm_cartesian) {
+	unsigned int x = Swap4Bytes(((unsigned int)(norm_cartesian.x * DOUBLE2INT + MAXDOU2INT)));
+	unsigned int y = Swap4Bytes((unsigned int)(norm_cartesian.y * DOUBLE2INT + MAXDOU2INT));
+	unsigned int z = Swap4Bytes((unsigned int)(norm_cartesian.z * DOUBLE2INT + MAXDOU2INT));
+	const char serialise[] = { (char)(x & 0xFF), (char)((x >>  8) & 0xFF), (char)((x >> 16) & 0xFF), (char)((x >> 24) & 0xFF),
+							   (char)(y & 0xFF), (char)((y >>  8) & 0xFF), (char)((y >> 16) & 0xFF), (char)((y >> 24) & 0xFF),
+							   (char)(z & 0xFF), (char)((z >>  8) & 0xFF), (char)((z >> 16) & 0xFF), (char)((z >> 24) & 0xFF) };
+	return std::string(serialise, SIZE_SERIALISE_CARTESIAN);
+}
+
+
+// Unserialise a serialise cartesian coordinate.
+Cartesian unserialise_cartesian(const std::string &str) {
+	double x = (((unsigned int)str.at(0) << 24) & 0xFF000000) | (((unsigned int)str.at(1) << 16) & 0xFF0000) | (((unsigned int)str.at(2) << 8) & 0xFF00) | (((unsigned int)str.at(3)) & 0xFF);
+	double y = (((unsigned int)str.at(4) << 24) & 0xFF000000) | (((unsigned int)str.at(5) << 16) & 0xFF0000) | (((unsigned int)str.at(6) << 8) & 0xFF00) | (((unsigned int)str.at(7)) & 0xFF);
+	double z = (((unsigned int)str.at(8) << 24) & 0xFF000000) | (((unsigned int)str.at(9) << 16) & 0xFF0000) | (((unsigned int)str.at(10) << 8) & 0xFF00) | (((unsigned int)str.at(11)) & 0xFF);
+	return Cartesian((x - MAXDOU2INT) / DOUBLE2INT, (y - MAXDOU2INT) / DOUBLE2INT, (z - MAXDOU2INT) / DOUBLE2INT);
+}
+
+
 std::string serialise_geo(uInt64 id) {
 	id = Swap7Bytes(id);
 	const char serialise[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),

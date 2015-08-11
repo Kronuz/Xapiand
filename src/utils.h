@@ -28,6 +28,7 @@
 #include "wkt_parser.h"
 #include "datetime.h"
 #include "cJSON.h"
+#include "multivalue.h"
 #include <limits.h>
 
 #include <xapian.h>
@@ -68,14 +69,21 @@
 #define INC_LEVEL 5
 #define BITS_LEVEL 10
 
+const unsigned int SIZE_SERIALISE_CARTESIAN = 12;
+const unsigned int DOUBLE2INT = 1000000000;
+const unsigned int MAXDOU2INT =  999999999;
+
 #if __BYTE_ORDER == __BIG_ENDIAN
 // No translation needed for big endian system.
 #define Swap7Bytes(val) val // HTM's trixel's ids are represent in 7 bytes.
+#define Swap4Bytes(val) val // Unsigned int is represent in 4 bytes
 #elif __BYTE_ORDER == __LITTLE_ENDIAN
 // Swap 7 byte, 56 bit values. (If it is not big endian, It is considered little endian)
 #define Swap7Bytes(val) ((((val) >> 48) & 0xFF) | (((val) >> 32) & 0xFF00) | (((val) >> 16) & 0xFF0000) | \
- 						(((val) >>  0) & 0xFF000000) | (((val) << 16) & 0xFF00000000) | \
+ 						((val) & 0xFF000000) | (((val) << 16) & 0xFF00000000) | \
 						(((val) << 32) & 0xFF0000000000) | (((val) << 48) & 0xFF000000000000))
+#define Swap4Bytes(val) ((((val) >> 24) & 0xFF) | (((val) >> 8) & 0xFF00) | \
+						(((val) <<  8) & 0xFF0000) | ((val << 24) & 0xFF000000))
 #endif
 
 void log(const char *file, int line, void *obj, const char *fmt, ...);
@@ -235,7 +243,10 @@ std::string serialise_numeric(const std::string &field_value);
 std::string serialise_date(const std::string &field_value);
 std::string serialise_term(int n[]);
 std::string unserialise_date(const std::string &serialise_val);
-void getEWKT_Ranges(const std::string &field_value, bool &partials, double &error, std::vector<range_t> &ranges);
+void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
+void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges);
+std::string serialise_cartesian(const Cartesian &norm_cartesian);
+Cartesian unserialise_cartesian(const std::string &str);
 std::string serialise_geo(uInt64 id);
 uInt64 unserialise_geo(const std::string &serialise_val);
 std::string serialise_bool(const std::string &field_value);
