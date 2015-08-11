@@ -31,6 +31,14 @@
 #include "htm.h"
 
 
+/*
+ * This class serializes a string vector.
+ * i.e
+ * StringList = {a, ..., b}
+ * values = encode_length(a.size()) + a + ... + encode_length(b.size()) + b
+ * symbol '+' means concatenate
+ * serialise = encode_length(values.size())values
+ */
 class StringList : public std::vector<std::string> {
 public:
 	void unserialise(const std::string & serialised);
@@ -40,6 +48,14 @@ public:
 };
 
 
+/*
+ * This class serializes a Cartesian vector.
+ * i.e
+ * StringList = {a, ..., b}
+ * serialise = serialise_cartesian(a) + ... + serialise_cartesian(b)
+ * symbol '+' means concatenate.
+ * It is not necessary to save the size because it's SIZE_SERIALISE_CARTESIAN for all.
+ */
 class CartesianList : public std::vector<Cartesian> {
 public:
 	void unserialise(const std::string & serialised);
@@ -47,6 +63,14 @@ public:
 };
 
 
+/*
+ * This class serializes a uInt64 vector.
+ * i.e
+ * StringList = {a, ..., b}
+ * serialise = serialise_geo(a) + ... + serialise_geo(b)
+ * symbol '+' means concatenate.
+ * It is not necessary to save the size because it's SIZE_BYTES_ID for all.
+ */
 class uInt64List : public std::vector<uInt64> {
 public:
 	void unserialise(const std::string & serialised);
@@ -186,8 +210,9 @@ class GeoSpatialRange : public Xapian::ValuePostingSource {
 	Xapian::valueno slot;
 	double angle;
 
-	// Calculate if some their values is inside ranges.
+	// Calculates the smallest angle between its centroids  and search centroids.
 	void calc_angle(const std::string &serialised);
+	// Calculates if some their values is inside ranges.
 	bool insideRanges();
 
 	public:
