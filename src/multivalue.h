@@ -180,17 +180,14 @@ class MultipleValueLE : public Xapian::ValuePostingSource {
 
 // New Match Decider for GeoSpatial value range.
 class GeoSpatialRange : public Xapian::ValuePostingSource {
-	typedef struct srange_s {
-		std::string start;
-		std::string end;
-	} srange_t;
-
 	// Ranges for the search.
-	std::vector<srange_t> ranges;
+	std::vector<range_t> ranges;
+	CartesianList centroids;
 	Xapian::valueno slot;
+	double angle;
 
-	GeoSpatialRange(Xapian::valueno slot_, const std::vector<srange_t> &ranges_);
 	// Calculate if some their values is inside ranges.
+	void calc_angle(const std::string &serialised);
 	bool insideRanges();
 
 	public:
@@ -200,7 +197,7 @@ class GeoSpatialRange : public Xapian::ValuePostingSource {
 		 *  @param slot_ The value slot to read values from.
 		 *  @param ranges
 		*/
-		GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_t> &ranges_);
+		GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_t> &ranges_, const CartesianList &centroids_);
 
 		void next(double min_wt);
 		void skip_to(Xapian::docid min_docid, double min_wt);
@@ -214,7 +211,7 @@ class GeoSpatialRange : public Xapian::ValuePostingSource {
 		std::string get_description() const;
 
 		// Call this function for create a new Query based in ranges.
-		static Xapian::Query getQuery(Xapian::valueno slot_, const std::vector<range_t> &ranges_);
+		static Xapian::Query getQuery(Xapian::valueno slot_, const std::vector<range_t> &ranges_, const CartesianList &centroids_);
 };
 
 
