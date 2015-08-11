@@ -281,8 +281,7 @@ MultipleValueRange::check(Xapian::docid min_docid, double min_wt) {
 
 
 double
-MultipleValueRange::get_weight() const
-{
+MultipleValueRange::get_weight() const {
 	return 1.0;
 }
 
@@ -397,8 +396,7 @@ MultipleValueGE::check(Xapian::docid min_docid, double min_wt) {
 
 
 double
-MultipleValueGE::get_weight() const
-{
+MultipleValueGE::get_weight() const {
 	return 1.0;
 }
 
@@ -510,8 +508,7 @@ MultipleValueLE::check(Xapian::docid min_docid, double min_wt) {
 
 
 double
-MultipleValueLE::get_weight() const
-{
+MultipleValueLE::get_weight() const {
 	return 1.0;
 }
 
