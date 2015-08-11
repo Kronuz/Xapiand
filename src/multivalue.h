@@ -40,6 +40,20 @@ public:
 };
 
 
+class CartesianList : public std::vector<Cartesian> {
+public:
+	void unserialise(const std::string & serialised);
+	std::string serialise() const;
+};
+
+
+class uInt64List : public std::vector<uInt64> {
+public:
+	void unserialise(const std::string & serialised);
+	std::string serialise() const;
+};
+
+
 /// Class for counting the frequencies of values in the matching documents.
 class MultiValueCountMatchSpy : public Xapian::ValueCountMatchSpy {
 	public:

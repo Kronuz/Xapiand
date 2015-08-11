@@ -81,6 +81,50 @@ StringList::serialise() const
 
 
 void
+CartesianList::unserialise(const std::string & serialised)
+{
+	for (size_t i = 0, j =  SIZE_SERIALISE_CARTESIAN; i < serialised.size(); i = j, j += SIZE_SERIALISE_CARTESIAN) {
+		push_back(unserialise_cartesian(serialised.substr(i, j)));
+	}
+}
+
+
+std::string
+CartesianList::serialise() const
+{
+	std::string serialised;
+	CartesianList::const_iterator i(begin());
+	for ( ; i != end(); i++) {
+		serialised.append(serialise_cartesian(*i));
+	}
+
+	return serialised;
+}
+
+
+void
+uInt64List::unserialise(const std::string & serialised)
+{
+	for (size_t i = 0, j = SIZE_BYTES_ID; i < serialised.size(); i = j, j += SIZE_BYTES_ID) {
+		push_back(unserialise_geo(serialised.substr(i, j)));
+	}
+}
+
+
+std::string
+uInt64List::serialise() const
+{
+	std::string serialised;
+	uInt64List::const_iterator i(begin());
+	for ( ; i != end(); i++) {
+		serialised.append(serialise_geo(*i));
+	}
+
+	return serialised;
+}
+
+
+void
 MultiValueCountMatchSpy::operator()(const Xapian::Document &doc, double) {
 	assert(internal.get());
 	++(internal->total);
