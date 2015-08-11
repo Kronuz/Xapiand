@@ -1123,10 +1123,12 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			error = strtodouble(spc.accuracy.at(1));
 		}
 		std::vector<range_t> ranges;
+		CartesianList centroids;
+		uInt64List start_end;
 		unique_char_ptr _cprint(cJSON_Print(values));
 		std::string value_v(_cprint.get());
 		value_v.assign(value_v, 1, value_v.size() - 2);
-		getEWKT_Ranges(value_v, partials, error, ranges);
+		getEWKT_Ranges(value_v, partials, error, ranges, centroids);
 		// Get terms prefix.
 		cJSON *_prefix_accuracy = cJSON_GetObjectItem(schema, RESERVED_ACC_PREFIX), *_new_prefix_acc;
 		std::string prefix;
@@ -1143,12 +1145,12 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 		// Index Values and terms
 		std::vector<range_t>::iterator it(ranges.begin());
 		for ( ; it != ranges.end(); it++) {
-			s.push_back(serialise_geo(it->start));
+			start_end.push_back(it->start);
 			// Index terms.
 			size_t idx = 0;
 			uInt64 val;
 			if (it->start != it->end) {
-				s.push_back(serialise_geo(it->end));
+				start_end.push_back(it->end);
 				std::bitset<SIZE_BITS_ID> b1(it->start), b2(it->end), res;
 				idx = SIZE_BITS_ID - 1;
 				for ( ; idx > 0 && b1.test(idx) == b2.test(idx); --idx) {
@@ -1168,7 +1170,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 				}
 				idx -= idx % BITS_LEVEL;
 			} else {
-				s.push_back(serialise_geo(it->end));
+				start_end.push_back(it->end);
 				val = it->start;
 			}
 			for (size_t i = idx, j = i / BITS_LEVEL; i < SIZE_BITS_ID; i += BITS_LEVEL, j++) {
@@ -1178,6 +1180,8 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 				doc.add_term(nameterm, spc.weight);
 			}
 		}
+		s.push_back(start_end.serialise());
+		s.push_back(centroids.serialise());
 	} else {
 		for (int j = 0; j < elements; j++) {
 			cJSON *value = (values->type == cJSON_Array) ? cJSON_GetArrayItem(values, j) : values;
@@ -2349,6 +2353,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		std::vector<std::string> prefixes;
 		std::vector<std::string>::const_iterator it;
 		std::vector<range_t> ranges;
+		CartesianList centroids;
 		std::vector<range_t>::const_iterator rit;
 		bool partials = DE_PARTIALS;
 		double error = DE_ERROR;
@@ -2409,7 +2414,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						partials = (serialise_bool(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
 						error = strtodouble(field_t.accuracy.at(1));
 					}
-					getEWKT_Ranges(field_value, partials, error, ranges);
+					getEWKT_Ranges(field_value, partials, error, ranges, centroids);
 					prefix = field_t.acc_prefix.at(0);
 					filter_term = get_geo_term(ranges, field_t.acc_prefix, prefixes);
 					if (!filter_term.empty()) {
@@ -2424,9 +2429,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 								added_prefixes.push_back(*it);
 							}
 						}
-						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), GeoSpatialRange::getQuery(field_t.slot, ranges));
+						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), GeoSpatialRange::getQuery(field_t.slot, ranges, centroids));
 					} else {
-						queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges);
+						queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges, centroids);
 					}
 					break;
 				default:
