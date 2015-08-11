@@ -794,3 +794,59 @@ HTM::writePython3D(const std::string &file, std::vector<Geometry> &g, std::vecto
 	fs << "plt.ion()\nplt.grid()\nplt.show()";
 	fs.close();
 }
+
+
+Cartesian
+HTM::getCentroid(const std::vector<std::string> &trixel_names)
+{
+	Cartesian w0, w1, w2, v0, v1, v2, centroid(0, 0, 0);
+
+	std::vector<std::string>::const_iterator it(trixel_names.begin());
+	for ( ; it != trixel_names.end(); it++) {
+		size_t trixel = it->at(1) - '0';
+		if (it->at(0) == 'S') {
+			v0 = start_vertices[start_trixels[trixel].v0];
+			v1 = start_vertices[start_trixels[trixel].v1];
+			v2 = start_vertices[start_trixels[trixel].v2];
+		} else {
+			trixel = trixel + 4;
+			v0 = start_vertices[start_trixels[trixel].v0];
+			v1 = start_vertices[start_trixels[trixel].v1];
+			v2 = start_vertices[start_trixels[trixel].v2];
+		}
+
+		size_t i = 2, len = it->size();
+		while (i < len) {
+			midPoint(v0, v1, w2);
+			midPoint(v1, v2, w0);
+			midPoint(v2, v0, w1);
+			switch (it->at(i)) {
+				case '0':
+					v1 = w2;
+					v2 = w1;
+					break;
+				case '1':
+					v0 = v1;
+					v1 = w0;
+					v2 = w2;
+					break;
+				case '2':
+					v0 = v2;
+					v1 = w1;
+					v2 = w0;
+					break;
+				case '3':
+					v0 = w0;
+					v1 = w1;
+					v2 = w2;
+					break;
+			}
+			i++;
+		}
+		centroid = centroid + v0 + v1 + v2;
+	}
+
+	centroid.normalize();
+
+	return centroid;
+}

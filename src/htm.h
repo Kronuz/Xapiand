@@ -43,7 +43,7 @@
 // Constants.
 const size_t MAX_SIZE_NAME = HTM_MAX_LEVEL | '\x02';
 const size_t SIZE_BYTES_ID = 7;
-const size_t SIZE_BITS_ID = MAX_SIZE_NAME << 1;
+const size_t SIZE_BITS_ID = 2 * MAX_SIZE_NAME;
 
 // Radians in a circumference (2pi).
 const double RAD_PER_CIRCUMFERENCE = 6.28318530717958647692528677;
@@ -127,6 +127,7 @@ class HTM {
 		static void writePython3D(const std::string &file, std::vector<Geometry> &g, std::vector<std::string> &names_f);
 		static std::string getCircle3D(const Constraint &bCircle, int points);
 		static bool compareRanges(const range_t &r1, const range_t &r2);
+		static Cartesian getCentroid(const std::vector<std::string> &trixel_names);
 };
 
 
