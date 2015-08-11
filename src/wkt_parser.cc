@@ -75,19 +75,43 @@ EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error)
 		if (gr[5].end - gr[5].start != 0) {
 			std::string data(EWKT.c_str(), gr[6].start, gr[6].end - gr[6].start);
 			std::string geometry = std::string(EWKT.c_str(), gr[5].start, gr[5].end - gr[5].start);
-			if (geometry.compare("GEOMETRYCOLLECTION") == 0) trixels = parse_geometry_collection(data);
-			else if (geometry.compare("GEOMETRYINTERSECTION") == 0) trixels = parse_geometry_intersection(data);
+			if (geometry.compare("GEOMETRYCOLLECTION") == 0) {
+				trixels = parse_geometry_collection(data);
+			} else if (geometry.compare("GEOMETRYINTERSECTION") == 0) {
+				trixels = parse_geometry_intersection(data);
+				return;
+			}
 		} else {
 			std::string geometry = std::string(EWKT.c_str(), gr[3].start, gr[3].end - gr[3].start);
 			std::string specification(EWKT.c_str(), gr[4].start, gr[4].end - gr[4].start);
-			if (geometry.compare("CIRCLE") == 0) trixels = parse_circle(specification);
-			else if (geometry.compare("MULTICIRCLE") == 0) trixels = parse_multicircle(specification);
-			else if (geometry.compare("POLYGON") == 0) trixels = parse_polygon(specification, Geometry::CONVEX_POLYGON);
-			else if (geometry.compare("MULTIPOLYGON") == 0) trixels = parse_multipolygon(specification, Geometry::CONVEX_POLYGON);
-			else if (geometry.compare("CHULL") == 0) trixels = parse_polygon(specification, Geometry::CONVEX_HULL);
-			else if (geometry.compare("MULTICHULL") == 0) trixels = parse_multipolygon(specification, Geometry::CONVEX_HULL);
-			else if (geometry.compare("POINT") == 0) trixels = parse_point(specification);
-			else if (geometry.compare("MULTIPOINT") == 0) trixels = parse_multipoint(specification);
+			if (geometry.compare("CIRCLE") == 0) {
+				trixels = parse_circle(specification);
+				return;
+			} else if (geometry.compare("MULTICIRCLE") == 0) {
+				trixels = parse_multicircle(specification);
+			} else if (geometry.compare("POLYGON") == 0) {
+				trixels = parse_polygon(specification, Geometry::CONVEX_POLYGON);
+				return;
+			} else if (geometry.compare("MULTIPOLYGON") == 0) {
+				trixels = parse_multipolygon(specification, Geometry::CONVEX_POLYGON);
+			} else if (geometry.compare("CHULL") == 0) {
+				trixels = parse_polygon(specification, Geometry::CONVEX_HULL);
+				return;
+			} else if (geometry.compare("MULTICHULL") == 0) {
+				trixels = parse_multipolygon(specification, Geometry::CONVEX_HULL);
+			} else if (geometry.compare("POINT") == 0) {
+				trixels = parse_point(specification);
+				return;
+			} else if (geometry.compare("MULTIPOINT") == 0) {
+				trixels = parse_multipoint(specification);
+			}
+		}
+		// Deleting duplicate centroids.
+		for (CartesianList::iterator it(centroids.begin()), del; it != centroids.end(); it++) {
+			del = it + 1;
+			while ((del = std::find(del, centroids.end(), *it)) != centroids.end()) {
+				del = centroids.erase(del);
+			}
 		}
 	} else {
 		throw MSG_Error("Syntax error in EWKT format or geometry object not supported");
@@ -122,6 +146,8 @@ EWKT_Parser::parse_circle(std::string &specification)
 		HTM _htm(partials, error, g);
 		_htm.run();
 		gv.push_back(g);
+
+		centroids.push_back(g.centroid);
 
 		return _htm.names;
 	} else {
@@ -225,6 +251,8 @@ EWKT_Parser::parse_polygon(std::string &specification, Geometry::typePoints type
 		start = gr[0].end;
 	}
 
+	centroids.push_back(HTM::getCentroid(names_f));
+
 	if (start != len) {
 		throw MSG_Error("Syntax error in EWKT format");
 	}
@@ -284,12 +312,16 @@ EWKT_Parser::parse_point(std::string &specification)
 	std::vector<std::string> coords = stringSplit(specification, " (,");
 	if (coords.size() == 3) {
 		Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), atof(coords.at(2).c_str()), Cartesian::DEGREES, SRID);
+		c.normalize();
 		HTM::cartesian2name(c, name);
 		res.push_back(name);
+		centroids.push_back(c);
 	} else if (coords.size() == 2) {
 		Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
+		c.normalize();
 		HTM::cartesian2name(c, name);
 		res.push_back(name);
+		centroids.push_back(c);
 	} else {
 		throw MSG_Error("The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]) or (lat lon [height]), ..., (lat lon [height]), ...");
 	}
@@ -322,12 +354,16 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 		std::vector<std::string> coords = stringSplit(point, " ");
 		if (coords.size() == 3) {
 			Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), atof(coords.at(2).c_str()), Cartesian::DEGREES, SRID);
+			c.normalize();
 			HTM::cartesian2name(c, name);
 			res.push_back(name);
+			centroids.push_back(c);
 		} else if (coords.size() == 2) {
 			Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
+			c.normalize();
 			HTM::cartesian2name(c, name);
 			res.push_back(name);
+			centroids.push_back(c);
 		} else {
 			throw MSG_Error("The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
 		}
@@ -341,12 +377,16 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 			std::vector<std::string> coords = stringSplit(*it, " ");
 			if (coords.size() == 3) {
 				Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), atof(coords.at(2).c_str()), Cartesian::DEGREES, SRID);
+				c.normalize();
 				HTM::cartesian2name(c, name);
 				res.push_back(name);
+				centroids.push_back(c);
 			} else if (coords.size() == 2) {
 				Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
+				c.normalize();
 				HTM::cartesian2name(c, name);
 				res.push_back(name);
+				centroids.push_back(c);
 			} else {
 				throw MSG_Error("The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]) or (lat lon [height]), ..., (lat lon [height]), ...");
 			}
@@ -446,6 +486,9 @@ EWKT_Parser::parse_geometry_intersection(std::string &data)
 
 		start = gr[0].end;
 	}
+
+	centroids.clear();
+	centroids.push_back(HTM::getCentroid(names_f));
 
 	if (start != len) {
 		throw MSG_Error("Syntax error in EWKT format");

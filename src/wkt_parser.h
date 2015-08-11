@@ -25,6 +25,7 @@
 
 #include "htm.h"
 #include "utils.h"
+#include "multivalue.h"
 #include <pcre.h>
 
 extern pcre *compiled_find_geometry_re;
@@ -43,6 +44,7 @@ class EWKT_Parser {
 		int SRID;
 		std::vector<Geometry> gv;
 		std::vector<std::string> trixels;
+		CartesianList centroids;
 
 		EWKT_Parser(const std::string &EWKT, bool partials, double error);
 
