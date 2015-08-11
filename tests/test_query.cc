@@ -217,7 +217,7 @@ int test_query()
 	std::string query_range;
 	std::string msn_range;
 
-	for(int i = 1; i <= 3; i++) {
+	for (int i = 1; i <= 3; i++) {
 
 		switch(i) {
 			case NUMERIC_RANGE:

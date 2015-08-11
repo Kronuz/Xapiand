@@ -2707,7 +2707,11 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 		} catch (const Xapian::Error &er) {
 			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 			return 2;
+		} catch (const std::exception &er) {
+			LOG_DATABASE_WRAP(this, "ERROR: %s\n", er.what());
+			return 1;
 		}
+
 		delete sorter;
 		return 0;
 	}
