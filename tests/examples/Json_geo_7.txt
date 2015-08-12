@@ -1,0 +1,7 @@
+{
+    "_data": "Mountain View, Wyoming",
+    "description": "Mountain View is a town in Uinta County, Wyoming, United States. The population was 1,286 at the 2010 census",
+    "_values": {
+        "location": "POINT (41.2695495 -110.34118652)"
+    }
+}

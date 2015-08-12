@@ -30,7 +30,7 @@ int geo_test_area()
 	 *	so the Endpoints and local_node are manipulated
 	 */
 
-	int exit_success = 2;
+	int exit_success = 4;
 
 	local_node.name.assign("node_test");
 	local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
@@ -50,6 +50,7 @@ int geo_test_area()
 	 *	TEST query Geolocation area
 	 *	searching for North Dakota area
 	 *	of the four documents indexed it will return 3 that fit into that area
+	 *	(Range query)
 	 */
 
 	std::stringstream buffer;
@@ -91,6 +92,46 @@ int geo_test_area()
 		LOG(NULL, "index Json_geo_4 failed\n");
 	}
 
+	buffer.str(std::string());
+	fstream.close();
+	fstream.open("examples/Json_geo_1_2.txt");
+	buffer << fstream.rdbuf();
+	unique_cJSON document5(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
+
+	if (not database->index(document5.get(), "1", true)) {
+		LOG(NULL, "index Json_geo_1_2 failed\n");
+	}
+
+	buffer.str(std::string());
+	fstream.close();
+	fstream.open("examples/Json_geo_5.txt");
+	buffer << fstream.rdbuf();
+	unique_cJSON document6(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
+
+	if (not database->index(document6.get(), "5", true)) {
+		LOG(NULL, "index Json_geo_5 failed\n");
+	}
+
+	buffer.str(std::string());
+	fstream.close();
+	fstream.open("examples/Json_geo_6.txt");
+	buffer << fstream.rdbuf();
+	unique_cJSON document7(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
+
+	if (not database->index(document7.get(), "6", true)) {
+		LOG(NULL, "index Json_geo_6 failed\n");
+	}
+
+	buffer.str(std::string());
+	fstream.close();
+	fstream.open("examples/Json_geo_7.txt");
+	buffer << fstream.rdbuf();
+	unique_cJSON document8(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
+
+	if (not database->index(document8.get(), "7", true)) {
+		LOG(NULL, "index Json_geo_7 failed\n");
+	}
+
 	query_t query_elements;
 	query_elements.offset = 0;
 	query_elements.limit = 10;
@@ -115,28 +156,51 @@ int geo_test_area()
 	/*
 	 *	TEST query geolocation multi area
 	 *	searching for North Dakota and South Dakota area
-	 *	of the four documents indexed it will return 4 that fit into that area
+	 *	of the four documents indexed it will return 5 that fit into that area
+	 *	(Range query)
 	 */
-
-	buffer.str(std::string());
-	fstream.close();
-	fstream.open("examples/Json_geo_1_2.txt");
-	buffer << fstream.rdbuf();
-	unique_cJSON document5(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
-
-	if (not database->index(document5.get(), "1", true)) {
-		LOG(NULL, "index Json_geo_1_2 failed\n");
-	}
 
 	query_elements.terms.clear();
 	query_elements.terms.push_back("location:\"..MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"");
 
 	Xapian::MSet mset2;
 	rmset = database->get_mset(query_elements, mset2, spies, suggestions);
-	if (mset2.size() == 4) {
+	LOG(NULL,"mset2 size %d\n",mset2.size());
+	if (mset2.size() == 5) {
 		exit_success--;
 	} else {
 		LOG(NULL, "search multi area failed, database error\n");
+	}
+
+	/*
+	 *	TEST query Geolocation with a chull location area
+	 *	searching for Wyoming area, it will return Utah too because
+	 *  it was indexed with convex hull and fit in the Wyoming area
+	 *	(Range query)
+	 */
+
+	query_elements.terms.clear();
+	query_elements.terms.push_back("location:\"..POLYGON ((44.96479793 -111.02783203, 44.96479793 -104.08447266, 41.04621681 -104.08447266, 41.00477542 -111.02783203))\"");
+	Xapian::MSet mset3;
+	rmset = database->get_mset(query_elements, mset3, spies, suggestions);
+	if (mset3.size() == 4) {
+		exit_success--;
+	} else {
+		LOG(NULL, "search area with a chull location failed, database error\n");
+	}
+
+	/*
+	 *	TEST query Geolocation with a term
+	 */
+
+	query_elements.terms.clear();
+	query_elements.terms.push_back("attraction_location:\"POINT (44.42789588 -110.58837891)\"");
+	Xapian::MSet mset4;
+	rmset = database->get_mset(query_elements, mset4, spies, suggestions);
+	if (mset4.size() == 1) {
+		exit_success--;
+	} else {
+		LOG(NULL, "search term area location failed, database error\n");
 	}
 
 	return exit_success;

@@ -1,0 +1,9 @@
+{
+    "_data": "Wyoming",
+    "description": "Wyoming is the 10th most extensive, but the least populous and the second least densely populated of the 50 United States. The western two thirds of the state is covered mostly with the mountain ranges and rangelands in the foothills of the eastern Rocky Mountains, while the eastern third of the state is high elevation prairie known as the High Plains. Cheyenne is the capital and the most populous city in Wyoming, with a population estimate of 62,448 in 2013.",
+    "_values": {
+        "location": "POLYGON ((44.96479793 -111.02783203 2244, 44.96479793 -104.08447266 969, 41.04621681 -104.08447266 1654, 41.00477542 -111.02783203 2183))"
+    },
+    "tourist_attractions": "Yellowstone National Park",
+    "attraction_location": "POINT (44.42789588, -110.58837891)"
+}
