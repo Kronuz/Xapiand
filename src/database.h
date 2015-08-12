@@ -74,7 +74,7 @@
 #define LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
 #define SCHEMA "schema"
 
-//change prefix to Q only
+// Default prefixes
 #define DOCUMENT_ID_TERM_PREFIX "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
@@ -160,7 +160,7 @@ public:
 	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, similar_t *similar);
 	int get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
 	unique_cJSON get_stats_database();
-	unique_cJSON get_stats_docs(int id_doc);
+	unique_cJSON get_stats_docs(const std::string &document_id);
 	data_field_t get_data_field(const std::string &field_name);
 	data_field_t get_slot_field(const std::string &field_name);
 	std::vector<std::string> split_fields(const std::string &field_name);

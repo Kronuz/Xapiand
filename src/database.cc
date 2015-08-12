@@ -1900,7 +1900,6 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 	_cprint = std::move(unique_char_ptr(cJSON_Print(schema.get())));
 	wdb->set_metadata(SCHEMA, _cprint.get());
-	LOG_DATABASE_WRAP(this, "Schema: %s\n", wdb->get_metadata(SCHEMA).c_str());
 	return replace(document_id, doc, commit);
 }
 
@@ -2879,64 +2878,59 @@ Database::get_stats_database()
 
 
 unique_cJSON
-Database::get_stats_docs(int id_doc)
+Database::get_stats_docs(const std::string &document_id)
 {
+	printf("%s\n", document_id.c_str());
 	unique_cJSON document(cJSON_CreateObject(), cJSON_Delete);
 
-	try {
-		if (id_doc == 0) {
-			cJSON_AddStringToObject(document.get(), "id", "all");
-			cJSON_AddNumberToObject(document.get(), "allterms", std::distance(db->allterms_begin(), db->allterms_end()));
-			cJSON_AddNumberToObject(document.get(), "allspellings", std::distance(db->spellings_begin(), db->spellings_end()));
-		} else {
-			Xapian::Document doc;
-			Xapian::QueryParser queryparser;
-			queryparser.add_prefix("id", "Q");
-			Xapian::Query query = queryparser.parse_query(std::string("id:" + std::to_string(id_doc)));
-			Xapian::Enquire enquire(*db);
-			enquire.set_query(query);
-			Xapian::MSet mset = enquire.get_mset(0, 1);
-			Xapian::MSetIterator m = mset.begin();
-			int t = 3;
-			for (; t >= 0; --t) {
-				try {
-					doc = db->get_document(*m);
-					break;
-				} catch (Xapian::InvalidArgumentError &err) {
-					cJSON_AddNumberToObject(document.get(), "id", id_doc);
-					cJSON_AddStringToObject(document.get(), "error",  "Document not found");
-					return std::move(document);
-				} catch (Xapian::DocNotFoundError &err) {
-					cJSON_AddNumberToObject(document.get(), "id", id_doc);
-					cJSON_AddStringToObject(document.get(), "error",  "Document not found");
-					return std::move(document);
-				} catch (const Xapian::Error &err) {
-					reopen();
-					m = mset.begin();
-				}
-			}
-
-			cJSON_AddStringToObject(document.get(), "id", ("Q" + doc.get_value(0)).c_str());
-			cJSON_AddStringToObject(document.get(), "data", doc.get_data().c_str());
-			cJSON_AddNumberToObject(document.get(), "count_terms", doc.termlist_count());
-			Xapian::TermIterator it(doc.termlist_begin());
-			std::string terms;
-			for ( ; it != doc.termlist_end(); it++) {
-				terms = terms + repr(*it) + " ";
-			}
-			cJSON_AddStringToObject(document.get(), "terms", terms.c_str());
-			cJSON_AddNumberToObject(document.get(), "count_values", doc.values_count());
-			Xapian::ValueIterator iv(doc.values_begin());
-			std::string values;
-			for ( ; iv != doc.values_end(); iv++) {
-				values = values + std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
-			}
-			cJSON_AddStringToObject(document.get(), "values", values.c_str());
-		}
-	} catch (const Xapian::Error &err) {
-		cJSON_AddNumberToObject(document.get(), "id", id_doc);
-		cJSON_AddStringToObject(document.get(), "error",  "Document not found");
+	Xapian::Document doc;
+	Xapian::QueryParser queryparser;
+	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
+	if (isupper(document_id.at(0))) {
+		prefix += ":";
 	}
+	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
+	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + document_id);
+	printf("%s\n", repr(query.get_description()).c_str());
+	Xapian::Enquire enquire(*db);
+	enquire.set_query(query);
+	Xapian::MSet mset = enquire.get_mset(0, 1);
+	Xapian::MSetIterator m = mset.begin();
+	int t = 3;
+	for (; t >= 0; --t) {
+		try {
+			doc = db->get_document(*m);
+			break;
+		} catch (Xapian::InvalidArgumentError &err) {
+			cJSON_AddStringToObject(document.get(), RESERVED_ID, document_id.c_str());
+			cJSON_AddStringToObject(document.get(), "_error",  "Document not found");
+			return std::move(document);
+		} catch (Xapian::DocNotFoundError &err) {
+			cJSON_AddStringToObject(document.get(), RESERVED_ID, document_id.c_str());
+			cJSON_AddStringToObject(document.get(), "_error",  "Document not found");
+			return std::move(document);
+		} catch (const Xapian::Error &err) {
+			reopen();
+			m = mset.begin();
+		}
+	}
+
+	cJSON_AddStringToObject(document.get(), RESERVED_ID, document_id.c_str());
+	cJSON_AddItemToObject(document.get(), RESERVED_DATA, cJSON_Parse(doc.get_data().c_str()));
+	cJSON_AddNumberToObject(document.get(), "_number_terms", doc.termlist_count());
+	Xapian::TermIterator it(doc.termlist_begin());
+	std::string terms;
+	for ( ; it != doc.termlist_end(); it++) {
+		terms = terms + repr(*it) + " ";
+	}
+	cJSON_AddStringToObject(document.get(), RESERVED_TERMS, terms.c_str());
+	cJSON_AddNumberToObject(document.get(), "_number_values", doc.values_count());
+	Xapian::ValueIterator iv(doc.values_begin());
+	std::string values;
+	for ( ; iv != doc.values_end(); iv++) {
+		values = values + std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
+	}
+	cJSON_AddStringToObject(document.get(), RESERVED_VALUES, values.c_str());
 
 	return std::move(document);
 }

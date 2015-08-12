@@ -600,7 +600,7 @@ void HttpClient::_stats(query_t &e)
 		cJSON_AddItemToObject(root.get(), "Database status", JSON_database.release());
 		database_pool->checkin(&database);
 	}
-	if (e.document >= 0) {
+	if (!e.document.empty()) {
 		Database *database = NULL;
 		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
@@ -1205,9 +1205,9 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 				memset(&q, 0, sizeof(q));
 				if (url_qs("document", query_buf.c_str(), query_size, &q) != -1) {
-					e.document = strtoint(urldecode(q.offset, q.length));
+					e.document = urldecode(q.offset, q.length);
 				} else {
-					e.document = -1;
+					e.document = "";
 				}
 
 				memset(&q, 0, sizeof(q));

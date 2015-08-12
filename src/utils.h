@@ -172,7 +172,7 @@ typedef struct query_s {
 	bool commit;
 	bool server;
 	bool database;
-	int document;
+	std::string document;
 	bool unique_doc;
 	bool is_fuzzy;
 	bool is_nearest;
