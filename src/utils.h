@@ -155,9 +155,9 @@ extern time_t init_time;
 extern times_row_t stats_cnt;
 
 typedef struct similar_s {
-	int n_rset;
-	int n_eset;
-	int n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
+	unsigned int n_rset;
+	unsigned int n_eset;
+	unsigned int n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
 	std::vector <std::string> field;
 	std::vector <std::string> type;
 } similar_t;
