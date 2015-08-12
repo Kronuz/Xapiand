@@ -166,9 +166,11 @@ Database::reopen()
 				local = true;
 				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
-			} else {
+			}
+#ifdef HAVE_REMOTE_PROTOCOL
+			else {
 				local = false;
-#ifdef XAPIAN_LOCAL_DB_FALLBACK
+# ifdef XAPIAN_LOCAL_DB_FALLBACK
 				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
 				try {
 					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
@@ -184,10 +186,11 @@ Database::reopen()
 				} catch (const Xapian::DatabaseOpeningError &err) {
 					wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
 				}
-#else
+# else
 				wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
-#endif
+# endif
 			}
+#endif
 			db->add_database(wdb);
 		}
 	} else {
@@ -205,9 +208,11 @@ Database::reopen()
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
 				}
-			} else {
+			}
+#ifdef HAVE_REMOTE_PROTOCOL
+			else {
 				local = false;
-#ifdef XAPIAN_LOCAL_DB_FALLBACK
+# ifdef XAPIAN_LOCAL_DB_FALLBACK
 				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
 				try {
 					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
@@ -219,10 +224,11 @@ Database::reopen()
 						if (endpoints_size == 1) read_mastery(e->path);
 					}
 				} catch (const Xapian::DatabaseOpeningError &err) {}
-#else
+# else
 				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
-#endif
+# endif
 			}
+#endif
 			db->add_database(rdb);
 		}
 	}
@@ -490,8 +496,9 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 		database_->reopen();
 		LOG_DATABASE(this, "== REOPEN DB %s(%s) [%lx]\n", (database_->flags & DB_WRITABLE) ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
 	}
+#ifdef HAVE_REMOTE_PROTOCOL
 	database_->checkout_revision = database_->db->get_revision_info();
-
+#endif
 	LOG_DATABASE(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx\n", writable ? "w" : "r", endpoints.as_string().c_str(), database_->local ? "local" : "remote", repr(database_->checkout_revision, false).c_str(), (unsigned long)database_);
 
 	return true;
@@ -511,6 +518,7 @@ DatabasePool::checkin(Database **database)
 
 	if (database_->flags & DB_WRITABLE) {
 		queue = &writable_databases[database_->hash];
+#ifdef HAVE_REMOTE_PROTOCOL
 		if (database_->local && database_->mastery_level != -1) {
 			std::string new_revision = database_->db->get_revision_info();
 			if (new_revision != database_->checkout_revision) {
@@ -519,6 +527,7 @@ DatabasePool::checkin(Database **database)
 				updated_databases.push(endpoint);
 			}
 		}
+#endif
 	} else {
 		queue = &databases[database_->hash];
 	}

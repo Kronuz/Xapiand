@@ -147,12 +147,13 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	}
 	http_sock = bind_tcp("http", local_node.http_port, addr, http_tries);
 
-#ifdef HAVE_REMOTE_PROTOCOL
+
 	int binary_tries = 1;
 	if (local_node.binary_port == 0) {
 		local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
 		binary_tries = 10;
 	}
+#ifdef HAVE_REMOTE_PROTOCOL
 	binary_sock = bind_tcp("binary", local_node.binary_port, addr, binary_tries);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
@@ -234,11 +235,13 @@ XapiandManager::set_node_name(const std::string &node_name_)
 }
 
 
+#ifdef HAVE_REMOTE_PROTOCOL
 bool XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
 	XapiandServer *server = static_cast<XapiandServer *>(*_children.begin());
 	return server->trigger_replication(src_endpoint, dst_endpoint);
 }
+#endif
 
 
 void
@@ -272,6 +275,7 @@ XapiandManager::setup_node()
 		const Node &node = it->second;
 		Endpoint remote_endpoint(".", &node);
 		// Replicate database from the other node
+#ifdef HAVE_REMOTE_PROTOCOL
 		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
 		if (trigger_replication(remote_endpoint, cluster_endpoint)) {
 			INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
@@ -281,6 +285,7 @@ XapiandManager::setup_node()
 		if (!new_cluster) {
 			INFO(this, "Cannot sync cluster data.\n");
 		}
+#endif
 	}
 	pthread_mutex_unlock(&nodes_mtx);
 
@@ -552,9 +557,11 @@ void XapiandManager::run(int num_servers, int num_replicators)
 	if (local_node.http_port != -1) {
 		msg += "tcp:" + std::to_string(local_node.http_port) + " (http), ";
 	}
+#ifdef HAVE_REMOTE_PROTOCOL
 	if (local_node.binary_port != -1) {
 		msg += "tcp:" + std::to_string(local_node.binary_port) + " (xapian v" + std::to_string(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION) + "), ";
 	}
+#endif
 	if (discovery_port != -1) {
 		msg += "udp:" + std::to_string(discovery_port) + " (discovery v" + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION) + "), ";
 	}

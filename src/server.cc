@@ -329,11 +329,13 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 							Endpoint local_endpoint(index_path);
 							Endpoint remote_endpoint(index_path, &remote_node);
+#ifdef HAVE_REMOTE_PROTOCOL
 							// Replicate database from the other node
 							INFO(this, "Syncing database from %s...\n", remote_node.name.c_str());
 							if (trigger_replication(remote_endpoint, local_endpoint)) {
 								INFO(this, "Database being synchronized from %s...\n", remote_node.name.c_str());
 							}
+#endif
 						}
 					}
 					break;
