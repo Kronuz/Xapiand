@@ -11,6 +11,7 @@
 		4630BEE51B42E88D00351058 /* htm.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE01B42E88D00351058 /* htm.cc */; };
 		4630BEE61B42E88D00351058 /* wkt_parser.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE21B42E88D00351058 /* wkt_parser.cc */; };
 		46740EEC1B5436120073C5E9 /* datetime.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46740EEA1B5436120073C5E9 /* datetime.cc */; };
+		C350589B1B7BAEE300901B80 /* multivaluekeymaker.cc in Sources */ = {isa = PBXBuildFile; fileRef = C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */; };
 		C39AE0631B2F627E00203139 /* cJSON_Utils.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0351B2F627E00203139 /* cJSON_Utils.c */; };
 		C39AE0641B2F627E00203139 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0371B2F627E00203139 /* cJSON.c */; };
 		C39AE0651B2F627E00203139 /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0391B2F627E00203139 /* client_base.cc */; };
@@ -56,6 +57,8 @@
 		4630BEE31B42E88D00351058 /* wkt_parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = wkt_parser.h; path = src/wkt_parser.h; sourceTree = "<group>"; };
 		46740EEA1B5436120073C5E9 /* datetime.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = datetime.cc; path = src/datetime.cc; sourceTree = "<group>"; };
 		46740EEB1B5436120073C5E9 /* datetime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = datetime.h; path = src/datetime.h; sourceTree = "<group>"; };
+		C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = multivaluekeymaker.cc; path = src/multivaluekeymaker.cc; sourceTree = "<group>"; };
+		C350589C1B7BAF0500901B80 /* multivaluekeymaker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = multivaluekeymaker.h; path = src/multivaluekeymaker.h; sourceTree = "<group>"; };
 		C39AE0351B2F627E00203139 /* cJSON_Utils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cJSON_Utils.c; path = src/cJSON_Utils.c; sourceTree = "<group>"; };
 		C39AE0361B2F627E00203139 /* cJSON_Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cJSON_Utils.h; path = src/cJSON_Utils.h; sourceTree = "<group>"; };
 		C39AE0371B2F627E00203139 /* cJSON.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cJSON.c; path = src/cJSON.c; sourceTree = "<group>"; };
@@ -161,6 +164,8 @@
 				C39AE0501B2F627E00203139 /* md5.h */,
 				C39AE0511B2F627E00203139 /* multivalue.cc */,
 				C39AE0521B2F627E00203139 /* multivalue.h */,
+				C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */,
+				C350589C1B7BAF0500901B80 /* multivaluekeymaker.h */,
 				C39AE0531B2F627E00203139 /* queue.h */,
 				C39AE0541B2F627E00203139 /* replicator.cc */,
 				C39AE0551B2F627E00203139 /* replicator.h */,
@@ -245,6 +250,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C350589B1B7BAEE300901B80 /* multivaluekeymaker.cc in Sources */,
 				C39AE0771B2F627E00203139 /* xapiand.cc in Sources */,
 				C39AE07D1B2F62D700203139 /* exception.cc in Sources */,
 				C39AE06F1B2F627E00203139 /* md5.cc in Sources */,
