@@ -1956,7 +1956,7 @@ Database::split_fields(const std::string &field_name)
 data_field_t
 Database::get_data_field(const std::string &field_name)
 {
-	data_field_t res = {0xffffffff, "", NO_TYPE, std::vector<std::string>(), std::vector<std::string>()};
+	data_field_t res = {Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<std::string>(), std::vector<std::string>()};
 
 	if (field_name.empty()) {
 		return res;
@@ -1985,7 +1985,7 @@ Database::get_data_field(const std::string &field_name)
 	if (properties) {
 		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
 		unique_char_ptr _cprint(cJSON_Print(_aux));
-		res.slot = (_aux) ? strtounsignedint(_cprint.get()) : get_slot(field_name);
+		res.slot = (_aux) ? strtouint(_cprint.get()) : get_slot(field_name);
 		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
 		if (_aux) {
 			char sep_types[3];
@@ -2027,7 +2027,7 @@ Database::get_data_field(const std::string &field_name)
 data_field_t
 Database::get_slot_field(const std::string &field_name)
 {
-	data_field_t res = {0xffffffff, "", NO_TYPE, std::vector<std::string>(), std::vector<std::string>()};
+	data_field_t res = {Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<std::string>(), std::vector<std::string>()};
 
 	if (field_name.empty()) {
 		return res;
@@ -2648,7 +2648,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 
 	for (int t = 3; t >= 0; --t) {
 		try{
-			Xapian::Enquire renquire = get_enquire(query, NULL, NULL, NULL, NULL, NULL);
+			Xapian::Enquire renquire = get_enquire(query, Xapian::BAD_VALUENO, 1, NULL, NULL, NULL, NULL, NULL);
 			Xapian::MSet mset = renquire.get_mset(0, similar->n_rset);
 			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); m++) {
 				rset.add_document(*m);
@@ -2680,7 +2680,9 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 
 
 Xapian::Enquire
-Database::get_enquire(Xapian::Query &query, Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies, similar_t *nearest, similar_t *fuzzy, std::vector<std::string> *facets)
+Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
+		Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
+		similar_t *nearest, similar_t *fuzzy, std::vector<std::string> *facets)
 {
 	std::string field;
 	MultiValueCountMatchSpy *spy;
@@ -2712,7 +2714,10 @@ Database::get_enquire(Xapian::Query &query, Multi_MultiValueKeyMaker *sorter, st
 		}
 	}
 
-	enquire.set_collapse_key(0);
+	if (collapse_key != Xapian::BAD_VALUENO) {
+		enquire.set_collapse_key(collapse_key, collapse_max);
+	}
+
 	return enquire;
 }
 
@@ -2723,8 +2728,17 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 	Multi_MultiValueKeyMaker *sorter = NULL;
 	bool decreasing;
 	std::string field;
-	int doccount = db->get_doccount();
-	int check_at_least = std::max(std::min(doccount, e.check_at_least), 0);
+	unsigned int doccount = db->get_doccount();
+	unsigned int check_at_least = std::max(std::min(doccount, e.check_at_least), (unsigned int)0);
+	Xapian::valueno collapse_key;
+
+	// Get the collapse key to use for queries.
+	if (!e.collapse.empty()) {
+		data_field_t field_t = get_slot_field(e.collapse);
+		collapse_key = field_t.slot;
+	} else {
+		collapse_key = Xapian::BAD_VALUENO;
+	}
 
 	if (!e.sort.empty()) {
 		sorter = new Multi_MultiValueKeyMaker();
@@ -2761,7 +2775,7 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 				delete sorter;
 				return 1;
 			}
-			Xapian::Enquire enquire = get_enquire(srch.query, sorter, &spies, e.is_nearest ? &e.nearest : NULL, e.is_fuzzy ? &e.fuzzy : NULL, &e.facets);
+			Xapian::Enquire enquire = get_enquire(srch.query, collapse_key, e.collapse_max, sorter, &spies, e.is_nearest ? &e.nearest : NULL, e.is_fuzzy ? &e.fuzzy : NULL, &e.facets);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
 		} catch (const Xapian::DatabaseModifiedError &er) {

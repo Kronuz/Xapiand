@@ -152,7 +152,9 @@ public:
 	bool get_document(Xapian::docid did, Xapian::Document &doc);
 	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &prefix, int w, int position);
 	int find_field(const std::string &str, int *g, int size_g, int len, int offset);
-	Xapian::Enquire get_enquire(Xapian::Query &query, Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies, similar_t *nearest, similar_t *fuzzy, std::vector<std::string> *facets);
+	Xapian::Enquire get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
+					Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
+					similar_t *nearest, similar_t *fuzzy, std::vector<std::string> *facets);
 	search_t search(query_t e);
 	search_t _search(const std::string &query, unsigned int flags, bool text, const std::string &lan, bool unique_doc);
 	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, similar_t *similar);
