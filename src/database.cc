@@ -2057,7 +2057,7 @@ Database::get_slot_field(const std::string &field_name)
 		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
 		unique_char_ptr _cprint(cJSON_Print(_aux));
 		if (_aux) {
-			res.slot = strtounsignedint(_cprint.get());
+			res.slot = strtouint(_cprint.get());
 		} else return res;
 		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
 		if (_aux) {

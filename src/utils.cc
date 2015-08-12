@@ -928,7 +928,7 @@ int strtoint(const std::string &str)
 }
 
 
-unsigned int strtounsignedint(const std::string &str)
+unsigned int strtouint(const std::string &str)
 {
 	unsigned int number;
 	std::stringstream ss;

@@ -1015,21 +1015,21 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 				memset(&q, 0, sizeof(q));
 				if (url_qs("offset", query_buf.c_str(), query_size, &q) != -1) {
-					e.offset = atoi(urldecode(q.offset, q.length).c_str());
+					e.offset = strtouint(urldecode(q.offset, q.length).c_str());
 				} else {
 					e.offset = 0;
 				}
 
 				memset(&q, 0, sizeof(q));
 				if (url_qs("check_at_least", query_buf.c_str(), query_size, &q) != -1) {
-					e.check_at_least = atoi(urldecode(q.offset, q.length).c_str());
+					e.check_at_least = strtouint(urldecode(q.offset, q.length).c_str());
 				} else {
 					e.check_at_least = 0;
 				}
 
 				memset(&q, 0, sizeof(q));
 				if (url_qs("limit", query_buf.c_str(), query_size, &q) != -1) {
-					e.limit = atoi(urldecode(q.offset, q.length).c_str());
+					e.limit = strtouint(urldecode(q.offset, q.length).c_str());
 				} else {
 					e.limit = 10;
 				}

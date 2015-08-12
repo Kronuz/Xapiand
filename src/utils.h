@@ -258,7 +258,7 @@ unsigned int get_slot(const std::string &name);
 std::string prefixed(const std::string &term, const std::string &prefixO);
 unsigned int hex2int(const std::string &input);
 int strtoint(const std::string &str);
-unsigned int strtounsignedint(const std::string &str);
+unsigned int strtouint(const std::string &str);
 double strtodouble(const std::string &str);
 long long int strtollong(const std::string &str);
 uInt64 strtouInt64(const std::string &str);
