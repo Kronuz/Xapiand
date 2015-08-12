@@ -1982,8 +1982,6 @@ Database::get_data_field(const std::string &field_name)
 			char sep_types[3];
 			set_types(_aux->valuestring, sep_types);
 			res.type = sep_types[2];
-		} else {
-			res.type = NO_TYPE;
 		}
 		_aux = cJSON_GetObjectItem(properties, RESERVED_PREFIX);
 		res.prefix = (_aux) ? _aux->valuestring : get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, res.type);
@@ -2010,6 +2008,53 @@ Database::get_data_field(const std::string &field_name)
 					res.acc_prefix.push_back(std::to_string(acc->valuedouble));
 				}
 			}
+		}
+	}
+
+	return res;
+}
+
+
+data_field_t
+Database::get_slot_field(const std::string &field_name)
+{
+	data_field_t res = {0xffffffff, "", NO_TYPE, std::vector<std::string>(), std::vector<std::string>()};
+
+	if (field_name.empty()) {
+		return res;
+	}
+
+	std::string json = db->get_metadata(SCHEMA);
+	if (json.empty()) return res;
+
+	std::string uuid(db->get_uuid());
+	unique_cJSON schema(cJSON_Parse(json.c_str()), cJSON_Delete);
+	if (!schema) {
+		throw MSG_Error("Schema's database is corrupt.");
+	}
+	cJSON *properties = cJSON_GetObjectItem(schema.get(), uuid.c_str());
+	if (!properties) {
+		throw MSG_Error("Schema's database is corrupt, uuids do not match.");
+	}
+
+	std::vector<std::string> fields = split_fields(field_name);
+	std::vector<std::string>::const_iterator it = fields.begin();
+	for ( ; it != fields.end(); it++) {
+		properties = cJSON_GetObjectItem(properties, (*it).c_str());
+		if (!properties) break;
+	}
+
+	if (properties) {
+		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
+		unique_char_ptr _cprint(cJSON_Print(_aux));
+		if (_aux) {
+			res.slot = strtounsignedint(_cprint.get());
+		} else return res;
+		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
+		if (_aux) {
+			char sep_types[3];
+			set_types(_aux->valuestring, sep_types);
+			res.type = sep_types[2];
 		}
 	}
 

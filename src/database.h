@@ -34,6 +34,7 @@
 #include "utils.h"
 #include "fields.h"
 #include "multivalue.h"
+#include "multivaluekeymaker.h"
 
 #include <pthread.h>
 #include <algorithm>
@@ -159,6 +160,7 @@ public:
 	unique_cJSON get_stats_database();
 	unique_cJSON get_stats_docs(int id_doc);
 	data_field_t get_data_field(const std::string &field_name);
+	data_field_t get_slot_field(const std::string &field_name);
 	std::vector<std::string> split_fields(const std::string &field_name);
 	char get_type(cJSON *field, specifications_t &spc);
 	std::string str_type(char type);
