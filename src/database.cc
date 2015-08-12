@@ -2865,14 +2865,14 @@ Database::get_stats_database()
 	unique_cJSON database(cJSON_CreateObject(), cJSON_Delete);
 	unsigned int doccount = db->get_doccount();
 	unsigned int lastdocid = db->get_lastdocid();
-	cJSON_AddStringToObject(database.get(), "uuid", db->get_uuid().c_str());
-	cJSON_AddNumberToObject(database.get(), "doc_count", doccount);
-	cJSON_AddNumberToObject(database.get(), "last_id", lastdocid);
-	cJSON_AddNumberToObject(database.get(), "doc_del", lastdocid - doccount);
-	cJSON_AddNumberToObject(database.get(), "av_length", db->get_avlength());
-	cJSON_AddNumberToObject(database.get(), "doc_len_lower", db->get_doclength_lower_bound());
-	cJSON_AddNumberToObject(database.get(), "doc_len_upper", db->get_doclength_upper_bound());
-	(db->has_positions()) ? cJSON_AddTrueToObject(database.get(), "has_positions") : cJSON_AddFalseToObject(database.get(), "has_positions");
+	cJSON_AddStringToObject(database.get(), "_uuid", db->get_uuid().c_str());
+	cJSON_AddNumberToObject(database.get(), "_doc_count", doccount);
+	cJSON_AddNumberToObject(database.get(), "_last_id", lastdocid);
+	cJSON_AddNumberToObject(database.get(), "_doc_del", lastdocid - doccount);
+	cJSON_AddNumberToObject(database.get(), "_av_length", db->get_avlength());
+	cJSON_AddNumberToObject(database.get(), "_doc_len_lower", db->get_doclength_lower_bound());
+	cJSON_AddNumberToObject(database.get(), "_doc_len_upper", db->get_doclength_upper_bound());
+	(db->has_positions()) ? cJSON_AddTrueToObject(database.get(), "_has_positions") : cJSON_AddFalseToObject(database.get(), "has_positions");
 	return std::move(database);
 }
 
@@ -2940,7 +2940,7 @@ bool
 ExpandDeciderFilterPrefixes::operator()(const std::string &term) const
 {
 	std::vector<std::string>::const_iterator i(prefixes.cbegin());
-	for (; i != prefixes.cend(); i++) {
+	for ( ;i != prefixes.cend(); i++) {
 		if (StartsWith(term, *i)) {
 			return true;
 		}
