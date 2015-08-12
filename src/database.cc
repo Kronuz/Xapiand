@@ -2671,7 +2671,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 
 
 Xapian::Enquire
-Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies, similar_t *nearest, similar_t *fuzzy, std::vector<std::string> *facets)
+Database::get_enquire(Xapian::Query &query, Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies, similar_t *nearest, similar_t *fuzzy, std::vector<std::string> *facets)
 {
 	std::string field;
 	MultiValueCountMatchSpy *spy;
@@ -2711,27 +2711,36 @@ Database::get_enquire(Xapian::Query &query, Xapian::MultiValueKeyMaker *sorter, 
 int
 Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
 {
-	Xapian::MultiValueKeyMaker *sorter = NULL;
+	Multi_MultiValueKeyMaker *sorter = NULL;
 	bool decreasing;
 	std::string field;
 	int doccount = db->get_doccount();
 	int check_at_least = std::max(std::min(doccount, e.check_at_least), 0);
 
-	if (!e.order.empty()) {
-		sorter = new Xapian::MultiValueKeyMaker();
-		std::vector<std::string>::const_iterator oit(e.order.begin());
-		for ( ; oit != e.order.end(); oit++) {
+	if (!e.sort.empty()) {
+		sorter = new Multi_MultiValueKeyMaker();
+		std::vector<std::string>::const_iterator oit(e.sort.begin());
+		for ( ; oit != e.sort.end(); oit++) {
 			if (StartsWith(*oit, "-")) {
 				decreasing = true;
 				field.assign(*oit, 1, (*oit).size() - 1);
-				sorter->add_value(get_slot(field), decreasing);
+				// If the field has not been indexed as a value or it is a geospatial, it isn't used like Multi_MultiValuesKeyMaker
+				data_field_t field_t = get_slot_field(field);
+				if (field_t.type == NO_TYPE || field_t.type == GEO_TYPE) continue;
+				sorter->add_value(field_t.slot, decreasing);
 			} else if (StartsWith(*oit, "+")) {
 				decreasing = false;
 				field.assign(*oit, 1, (*oit).size() - 1);
-				sorter->add_value(get_slot(field), decreasing);
+				// If the field has not been indexed as a value or it is a geospatial, it isn't used like Multi_MultiValuesKeyMaker
+				data_field_t field_t = get_slot_field(field);
+				if (field_t.type == NO_TYPE || field_t.type == GEO_TYPE) continue;
+				sorter->add_value(field_t.slot, decreasing);
 			} else {
 				decreasing = false;
-				sorter->add_value(get_slot(*oit), decreasing);
+				// If the field has not been indexed as a value or it is a geospatial, it isn't used like Multi_MultiValuesKeyMaker
+				data_field_t field_t = get_slot_field(*oit);
+				if (field_t.type == NO_TYPE || field_t.type == GEO_TYPE) continue;
+				sorter->add_value(field_t.slot, decreasing);
 			}
 		}
 	}
