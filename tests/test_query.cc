@@ -103,7 +103,7 @@ int test_query()
 	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 
 	int rmset = database->get_mset(query_elements, mset, spies, suggestions);
-	if (rmset == 0 && mset.size() != 0) {
+	if (rmset == 0 && !mset.empty()) {
 		Xapian::MSetIterator m = mset.begin();
 		if (m.get_document().get_data().find("Back to the Future") != std::string::npos) {
 			exit_success--;
@@ -123,7 +123,7 @@ int test_query()
 	query_elements.terms.push_back("actors__male:Michael J. Fox");
 
 	rmset = database->get_mset(query_elements, mset, spies, suggestions);
-	if (rmset == 0 && mset.size() != 0) {
+	if (rmset == 0 && !mset.empty()) {
 		Xapian::MSetIterator m = mset.begin();
 		if (m.get_document().get_data().find("Back to the Future") != std::string::npos) {
 			exit_success--;
@@ -142,7 +142,7 @@ int test_query()
 	query_elements.partial.push_back("directed_by:Rob");
 
 	rmset = database->get_mset(query_elements, mset, spies, suggestions);
-	if (rmset == 0 && mset.size() != 0) {
+	if (rmset == 0 && !mset.empty()) {
 		Xapian::MSetIterator m = mset.begin();
 		if (m.get_document().get_data().find("Back to the Future") != std::string::npos) {
 			exit_success--;
@@ -163,7 +163,7 @@ int test_query()
 
 	rmset = database->get_mset(query_elements, mset, spies, suggestions);
 	LOG(NULL, "rmset %d mset %d spies %d\n", rmset, mset.size(), spies.size());
-	if (rmset == 0 && mset.size() != 0 && spies.size() != 0) {
+	if (rmset == 0 && !mset.empty() && !spies.empty()) {
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
 		Xapian::TermIterator facet = (*spy).second->values_begin();
 		data_field_t field_t = database->get_data_field((*spy).first);
@@ -196,7 +196,7 @@ int test_query()
 
 	rmset = database->get_mset(query_elements, mset, spies, suggestions);
 	LOG(NULL, "rmset %d mset %d\n", rmset, mset.size());
-	if (rmset == 0 && mset.size() != 0) {
+	if (rmset == 0 && !mset.empty()) {
 		Xapian::MSetIterator m = mset.begin();
 		if (m.get_document().get_data().find("Back to the Future") != std::string::npos) {
 			exit_success--;
@@ -240,7 +240,7 @@ int test_query()
 		query_elements.query.push_back(query_range);
 
 		rmset = database->get_mset(query_elements, mset, spies, suggestions);
-		if (rmset == 0 && mset.size() != 0) {
+		if (rmset == 0 && !mset.empty()) {
 			Xapian::MSetIterator m = mset.begin();
 			if (m.get_document().get_data().find("Planet Apes") != std::string::npos) {
 				exit_success--;

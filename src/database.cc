@@ -845,7 +845,7 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 					subproperties = cJSON_CreateObject(); // It is managed by properties.
 					cJSON_AddItemToObject(properties, subitem->string, subproperties);
 				}
-				subitem_name = (item_name.size() != 0) ? item_name + OFFSPRING_UNION + subitem->string : subitem->string;
+				subitem_name = !item_name.empty() ? item_name + OFFSPRING_UNION + subitem->string : subitem->string;
 				if (subitem_name.at(subitem_name.size() - 3) == OFFSPRING_UNION[0]) {
 					std::string language(subitem_name, subitem_name.size() - 2, subitem_name.size());
 					spc_now.language = is_language(language) ? language : spc_now.language;
@@ -2095,9 +2095,9 @@ Database::get_type(cJSON *_field, specifications_t &spc)
 		case cJSON_False: if (spc.bool_detection) return BOOLEAN_TYPE; break;
 		case cJSON_True: if (spc.bool_detection) return BOOLEAN_TYPE; break;
 		case cJSON_String:
-			if (spc.bool_detection && serialise_bool(field->valuestring).size() != 0) {
+			if (spc.bool_detection && !serialise_bool(field->valuestring).empty()) {
 				return BOOLEAN_TYPE;
-			} else if (spc.date_detection && serialise_date(field->valuestring).size() != 0) {
+			} else if (spc.date_detection && !serialise_date(field->valuestring).empty()) {
 				return DATE_TYPE;
 			} else if(spc.geo_detection && field->type != cJSON_Array && is_like_EWKT(field->valuestring)) {
 				// For WKT format, it is not necessary to use arrays.
@@ -2326,11 +2326,11 @@ Database::search(query_t e)
 		LOG(this, "e.terms: %s\n", repr(queryT.get_description()).c_str());
 
 		first = true;
-		if (e.query.size() != 0) {
+		if (!e.query.empty()) {
 			queryF = queryQ;
 			first = false;
 		}
-		if (e.partial.size() != 0) {
+		if (!e.partial.empty()) {
 			if (first) {
 				queryF = queryP;
 				first = false;
@@ -2338,7 +2338,7 @@ Database::search(query_t e)
 				queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryP);
 			}
 		}
-		if (e.terms.size() != 0) {
+		if (!e.terms.empty()) {
 			if (first) {
 				queryF = queryT;
 				first = false;
@@ -2378,7 +2378,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 	if (text) {
 		queryparser.set_stemming_strategy(queryparser.STEM_SOME);
-		if (lan.size() != 0) {
+		if (!lan.empty()) {
 			LOG(this, "User-defined language: %s\n", lan.c_str());
 			queryparser.set_stemmer(Xapian::Stem(lan));
 		} else {
@@ -2518,7 +2518,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					break;
 				case STRING_TYPE:
 					// Xapian does not allow repeat prefixes.
-					if (field_name.size() != 0 && std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+					if (!field_name.empty() && std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
 						if (strhasupper(field_name) || unique_doc) {
 							LOG(this, "Boolean Prefix\n");
 							if (isupper(field_value.at(0))) {

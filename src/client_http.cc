@@ -610,7 +610,7 @@ void HttpClient::_stats(query_t &e)
 		cJSON_AddItemToObject(root.get(), "Document status", JSON_document.release());
 		database_pool->checkin(&database);
 	}
-	if (e.stats.size() != 0) {
+	if (!e.stats.empty()) {
 		unique_cJSON server_stats_time = manager()->get_stats_time(e.stats);
 		cJSON_AddItemToObject(root.get(), "Stats time", server_stats_time.release());
 	}
@@ -775,7 +775,7 @@ void HttpClient::_search()
 		write(result);
 	} else {
 		int rc = 0;
-		if (mset.size() != 0) {
+		if (!mset.empty()) {
 			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++, m++) {
 				Xapian::docid docid = 0;
 				std::string id;
