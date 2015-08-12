@@ -1035,6 +1035,13 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 				}
 
 				memset(&q, 0, sizeof(q));
+				if (url_qs("collapse_max", query_buf.c_str(), query_size, &q) != -1) {
+					e.collapse_max = strtouint(urldecode(q.offset, q.length).c_str());
+				} else {
+					e.collapse_max = 1;
+				}
+
+				memset(&q, 0, sizeof(q));
 				if (url_qs("spelling", query_buf.c_str(), query_size, &q) != -1) {
 					std::string spelling = serialise_bool(urldecode(q.offset, q.length));
 					(spelling.compare("f") == 0) ? e.spelling = false : e.spelling = true;
@@ -1080,6 +1087,13 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 				memset(&q, 0, sizeof(q));
 				while (url_qs("language", query_buf.c_str(), query_size, &q) != -1) {
 					e.language.push_back(urldecode(q.offset, q.length));
+				}
+
+				memset(&q, 0, sizeof(q));
+				if (url_qs("collapse", query_buf.c_str(), query_size, &q) != -1) {
+					e.collapse = urldecode(q.offset, q.length);
+				} else {
+					e.collapse = "";
 				}
 
 				memset(&q, 0, sizeof(q));

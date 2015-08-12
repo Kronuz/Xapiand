@@ -163,9 +163,9 @@ typedef struct similar_s {
 } similar_t;
 
 typedef struct query_s {
-	int offset;
-	int limit;
-	int check_at_least;
+	unsigned int offset;
+	unsigned int limit;
+	unsigned int check_at_least;
 	bool spelling;
 	bool synonyms;
 	bool pretty;
@@ -177,6 +177,8 @@ typedef struct query_s {
 	bool is_fuzzy;
 	bool is_nearest;
 	std::string stats;
+	std::string collapse;
+	unsigned int collapse_max;
 	std::vector <std::string> language;
 	std::vector <std::string> query;
 	std::vector <std::string> partial;

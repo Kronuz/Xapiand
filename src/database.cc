@@ -1093,7 +1093,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 		cJSON_AddNumberToObject(schema, RESERVED_SLOT, slot);
 	} else {
 		unique_char_ptr _cprint(cJSON_Print(_slot));
-		slot = strtounsignedint(_cprint.get());
+		slot = strtouint(_cprint.get());
 	}
 
 	int elements = 1;
