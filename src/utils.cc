@@ -40,6 +40,7 @@
 #include <netdb.h> /* for getaddrinfo */
 #include <unistd.h>
 #include <dirent.h>
+#include <bitset>
 
 
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"

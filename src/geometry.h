@@ -26,6 +26,8 @@
 #include "cartesian.h"
 #include <vector>
 #include <fstream>
+#include <functional>
+#include <algorithm>
 
 // Constants used for specify the sign of the bounding circle.
 #define NEG -1
