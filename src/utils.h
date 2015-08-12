@@ -181,7 +181,7 @@ typedef struct query_s {
 	std::vector <std::string> query;
 	std::vector <std::string> partial;
 	std::vector <std::string> terms;
-	std::vector <std::string> order;
+	std::vector <std::string> sort;
 	std::vector <std::string> facets;
 	similar_t fuzzy;
 	similar_t nearest;

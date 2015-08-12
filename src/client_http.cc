@@ -1068,8 +1068,8 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 				}
 
 				memset(&q, 0, sizeof(q));
-				while (url_qs("order", query_buf.c_str(), query_size, &q) != -1) {
-					e.order.push_back(urldecode(q.offset, q.length));
+				while (url_qs("sort", query_buf.c_str(), query_size, &q) != -1) {
+					e.sort.push_back(urldecode(q.offset, q.length));
 				}
 
 				memset(&q, 0, sizeof(q));
