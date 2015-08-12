@@ -2880,7 +2880,6 @@ Database::get_stats_database()
 unique_cJSON
 Database::get_stats_docs(const std::string &document_id)
 {
-	printf("%s\n", document_id.c_str());
 	unique_cJSON document(cJSON_CreateObject(), cJSON_Delete);
 
 	Xapian::Document doc;
@@ -2891,7 +2890,6 @@ Database::get_stats_docs(const std::string &document_id)
 	}
 	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
 	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + document_id);
-	printf("%s\n", repr(query.get_description()).c_str());
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
 	Xapian::MSet mset = enquire.get_mset(0, 1);
