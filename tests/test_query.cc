@@ -92,6 +92,7 @@ int test_query()
 	query_elements.offset = 0;
 	query_elements.limit = 10;
 	query_elements.check_at_least = 0;
+	query_elements.unique_doc = false;
 	query_elements.spelling = false;
 	query_elements.synonyms = false;
 	query_elements.is_fuzzy = false;
