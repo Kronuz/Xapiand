@@ -527,6 +527,7 @@ EWKT_Parser::xor_trixels(std::vector<std::string> &txs1, std::vector<std::string
 {
 	std::vector<std::string> res;
 	std::vector<std::string>::iterator it1(txs1.begin());
+	size_t current_pos = 0;
 	while (it1 != txs1.end()) {
 		bool inc = true;
 		std::vector<std::string>::iterator it2(txs2.begin());
@@ -540,7 +541,7 @@ EWKT_Parser::xor_trixels(std::vector<std::string> &txs1, std::vector<std::string
 					std::vector<std::string> txs_aux = get_trixels(*it2, s1 - s2, *it1);
 					it1 = txs1.erase(it1);
 					it2 = txs2.erase(it2);
-					it2 = txs2.insert(it2, txs_aux.begin(), txs_aux.end());
+					txs2.insert(it2, txs_aux.begin(), txs_aux.end());
 				}
 				inc = false;
 				break;
@@ -548,13 +549,17 @@ EWKT_Parser::xor_trixels(std::vector<std::string> &txs1, std::vector<std::string
 				std::vector<std::string> txs_aux = get_trixels(*it1, s2 - s1, *it2);
 				it2 = txs2.erase(it2);
 				it1 = txs1.erase(it1);
-				it1 = txs1.insert(it1, txs_aux.begin(), txs_aux.end());
+				txs1.insert(it1, txs_aux.begin(), txs_aux.end());
+				it1 = txs1.begin() + current_pos;
 				inc = false;
 				break;
 			}
 			it2++;
 		}
-		if (inc) it1++;
+		if (inc) {
+			it1++;
+			current_pos++;
+		}
 	}
 
 	res.reserve(txs1.size() + txs2.size());
