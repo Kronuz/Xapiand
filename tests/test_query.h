@@ -23,13 +23,8 @@
 #ifndef INCLUDED_TEST_QUERY_H
 #define INCLUDED_TEST_QUERY_H
 
-#include <sstream>
-#include <fstream>
-
-#include "../src/cJSON.h"
-#include "../src/utils.h"
-#include "../src/database.h"
-#include "../src/endpoint.h"
+#include "./../src/config.h"
+#include <stdio.h>
 
 
 int test_query();

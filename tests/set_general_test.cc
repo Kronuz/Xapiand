@@ -34,14 +34,6 @@ START_TEST(test_datetotimestamp)
 END_TEST
 
 
-
-START_TEST(test_distanceLatLong)
-{
-	ck_assert_int_eq(test_distanceLatLong(), 0);
-}
-END_TEST
-
-
 START_TEST(test_unserialise_date)
 {
 	ck_assert_int_eq(test_unserialise_date(), 0);
@@ -49,9 +41,30 @@ START_TEST(test_unserialise_date)
 END_TEST
 
 
-START_TEST(test_unserialise_geo)
+START_TEST(test_serialise_cartesian)
 {
-	ck_assert_int_eq(test_unserialise_geo(), 0);
+	ck_assert_int_eq(test_serialise_cartesian(), 0);
+}
+END_TEST
+
+
+START_TEST(test_unserialise_cartesian)
+{
+	ck_assert_int_eq(test_unserialise_cartesian(), 0);
+}
+END_TEST
+
+
+START_TEST(test_serialise_trixel_id)
+{
+	ck_assert_int_eq(test_serialise_trixel_id(), 0);
+}
+END_TEST
+
+
+START_TEST(test_unserialise_trixel_id)
+{
+	ck_assert_int_eq(test_unserialise_trixel_id(), 0);
 }
 END_TEST
 
@@ -101,8 +114,9 @@ END_TEST
 Suite* test_suite_serialise(void)
 {
 	Suite *s;
-	TCase *tc_distanceLatLong;
+	TCase *tc_serialise_cartesian;
 	TCase *tc_datetotimestamp;
+	TCase *tc_serialise_trixel_id;
 
 	s = suite_create("Tests of serialise");
 
@@ -110,9 +124,13 @@ Suite* test_suite_serialise(void)
 	tcase_add_test(tc_datetotimestamp, test_datetotimestamp);
 	suite_add_tcase(s, tc_datetotimestamp);
 
-	tc_distanceLatLong = tcase_create("Distance Latitud Longitude");
-	tcase_add_test(tc_distanceLatLong, test_distanceLatLong);
-	suite_add_tcase(s, tc_distanceLatLong);
+	tc_serialise_cartesian = tcase_create("Serialise Cartesian");
+	tcase_add_test(tc_serialise_cartesian, test_serialise_cartesian);
+	suite_add_tcase(s, tc_serialise_cartesian);
+
+	tc_serialise_trixel_id = tcase_create("Serialise HTM trixel's id");
+	tcase_add_test(tc_serialise_trixel_id, test_serialise_trixel_id);
+	suite_add_tcase(s, tc_serialise_trixel_id);
 
 	return s;
 }
@@ -122,7 +140,8 @@ Suite* test_suite_unserialise(void)
 {
 	Suite *s;
 	TCase *tc_unserialise_date;
-	TCase *tc_unserialise_geo;
+	TCase *tc_unserialise_cartesian;
+	TCase *tc_unserialise_trixel_id;
 
 	s = suite_create("Tests of unserialise");
 
@@ -130,9 +149,13 @@ Suite* test_suite_unserialise(void)
 	tcase_add_test(tc_unserialise_date, test_unserialise_date);
 	suite_add_tcase(s, tc_unserialise_date);
 
-	tc_unserialise_geo = tcase_create("Unserialise GeoSpatial");
-	tcase_add_test(tc_unserialise_geo, test_unserialise_geo);
-	suite_add_tcase(s, tc_unserialise_geo);
+	tc_unserialise_cartesian = tcase_create("Unserialise cartesian");
+	tcase_add_test(tc_unserialise_cartesian, test_unserialise_cartesian);
+	suite_add_tcase(s, tc_unserialise_cartesian);
+
+	tc_unserialise_trixel_id = tcase_create("Unserialise HTM trixel's id");
+	tcase_add_test(tc_unserialise_trixel_id, test_unserialise_trixel_id);
+	suite_add_tcase(s, tc_unserialise_trixel_id);
 
 	return s;
 }

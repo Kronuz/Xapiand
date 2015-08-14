@@ -23,12 +23,8 @@
 #ifndef INCLUDED_TEST_SERIALISE_H
 #define INCLUDED_TEST_SERIALISE_H
 
-#include <stdio.h>
-#include <string.h>
-#include <algorithm>
-#include "../src/utils.h"
-#include "../src/datetime.h"
-#include <unistd.h>
+#include "../src/config.h"
+#include "../src/htm.h"
 
 
 typedef struct test {
@@ -41,10 +37,31 @@ typedef struct test_str_double {
 	const double val;
 } test_str_double;
 
+typedef struct test_cartesian {
+	const Cartesian cartesian;
+	const char *expect_serialise;
+	const char *expect_unserialise;
+} test_cartesian;
+
+typedef struct test_trixel_id {
+	const uInt64 trixel_id;
+	const char *expect_serialise;
+	const uInt64 expect_unserialise;
+} test_trixel_id;
+
+
+// Testing the transformation between date string and timestamp.
 int test_datetotimestamp();
-int test_distanceLatLong();
+// Testing unserialise date.
 int test_unserialise_date();
-int test_unserialise_geo();
+// Testing serialise Cartesian.
+int test_serialise_cartesian();
+// Testing unserialise Cartesian.
+int test_unserialise_cartesian();
+// Testing serialise HTM trixel's id.
+int test_serialise_trixel_id();
+// Testing unserialise HTM trixel's id.
+int test_unserialise_trixel_id();
 
 
 #endif /* INCLUDED_TEST_SERIALISE_H */

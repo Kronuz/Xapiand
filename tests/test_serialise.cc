@@ -21,6 +21,8 @@
  */
 
 #include "test_serialise.h"
+#include "../src/datetime.h"
+#include "../src/serialise.h"
 
 
 const test test_timestamp_date[] = {
@@ -112,17 +114,31 @@ const test test_unserialisedate[] {
 };
 
 
-const test test_unserialiseLatLong[] {
-	// Set of coordinates to serialise.		 Expected coordinates after unserialse.s
-	{ "20.35,78.90,23.45,32.14",             "20.35,78.9,23.45,32.14" },
-	{ "20.35, 78.90",                        "20.35,78.9"             },
-	{ "20.35 , 78.90 , 23.45 , 32.14",       "20.35,78.9,23.45,32.14" },
-	{ "20, 78.90, 23.010, 32",               "20,78.9,23.01,32"       },
-	{ NULL,                                   NULL                    },
+const test_cartesian test_seri_cartesian[] {
+	// Cartesian.		                                    Expected serialise Cartesian.                       Expected Cartesian after of unserialise.
+	{ Cartesian(10.0, 20.0, 0.0, Cartesian::DEGREES),       "r\\xc6]\\xfdO\\xafY\\xe0E\\xe3=\\xe5",             "0.925602814 0.336891873 0.172520422"    },
+	{ Cartesian(30.0, 15.0, 0.0, Cartesian::DEGREES),       "m\\x8c[\\xe2H\\xfc\\xac\\x13YA\\xc8$",             "0.837915107 0.224518676 0.497483301"    },
+	{ Cartesian(40.0, 30.0, 21.0, Cartesian::DEGREES),      "cA\\xb4BR\\x7fl0a\\xc4BE",                         "0.665250371 0.384082481 0.640251974"    },
+	{ Cartesian(30.0, 28.0, 100.0, Cartesian::DEGREES),     "iB\\x02`S\\xe0\\xfe\\x88YA\\xc8L",                 "0.765933665 0.407254153 0.497483341"    },
+	{ Cartesian(-10.0, -20.0, 0.0, Cartesian::DEGREES),     "r\\xc6]\\xfd\\'\\x86:\\x1e1RV\\x19",               "0.925602814 -0.336891873 -0.172520422"  },
+	{ Cartesian(-30.0, 15.0, 0.0, Cartesian::DEGREES),      "m\\x8c[\\xe2H\\xfc\\xac\\x13\\x1d\\xf3\\xcb\\xda", "0.837915107 0.224518676 -0.497483301"   },
+	{ Cartesian(40.0, -30.0, 21.0, Cartesian::DEGREES),     "cA\\xb4B$\\xb6\\'\\xcea\\xc4BE",                   "0.665250371 -0.384082481 0.640251974"   },
+	{ Cartesian(30.0, 28.0, -100.0, Cartesian::DEGREES),    "iB\\x02\\x88S\\xe0\\xfe\\x9eYA\\xc7\\xfd",         "0.765933705 0.407254175 0.497483262"    },
+	{ Cartesian(-0.765933705, -0.407254175, -0.497483262),  "\\r\\xf3\\x91v#T\\x95`\\x1d\\xf3\\xcc\\x01",       "-0.765933705 -0.407254175 -0.497483262" },
+	{ Cartesian(),                                           NULL,                                               NULL                                    },
 };
 
 
-// Testing the transformation between date string and timestamp.
+const test_trixel_id test_seri_trixels[] {
+	// Trixel's id       Expected serialise id.         Expected id after of unserialise.
+	{ 13200083375642939, ".\\xe5g\\xe8\\x9cY;",         13200083375642939 },
+	{ 9106317391687190,  " Z%\\xbdW\\xee\\x16",         9106317391687190  },
+	{ 14549284226108186, "3\\xb0\\x7f6\\x08\\x8b\\x1a", 14549284226108186 },
+	{ 17752546963481661, "?\\x11\\xd8\\xef\\x9d\\xe4=", 17752546963481661 },
+	{ 0,                  NULL,                         0                 },
+};
+
+
 int test_datetotimestamp()
 {
 	int cont = 0;
@@ -151,42 +167,12 @@ int test_datetotimestamp()
 }
 
 
-// Testing the conversion of units in LatLong Distance.
-int test_distanceLatLong()
-{
-	int cont = 0;
-	for (const test_str_double *p = test_distanceLatLong_fields; p->str; ++p) {
-		double coords_[3];
-		if (get_coords(p->str, coords_) == 0) {
-			if (coords_[2] != p->val) {
-				cont++;
-				LOG_ERR(NULL, "ERROR: Resul: %f Expect: %f\n", coords_[2], p->val);
-			}
-		} else {
-			if (p->val != -1.0) {
-				cont++;
-				LOG_ERR(NULL, "ERROR: Resul: Error en format(-1) Expect: %f\n", p->val);
-			}
-		}
-	}
-
-	if (cont == 0) {
-		LOG(NULL, "Testing the conversion of units in LatLong Distance is correct!\n");
-		return 0;
-	} else {
-		LOG_ERR(NULL, "ERROR: Testing the conversion of units in LatLong Distance has mistakes.\n");
-		return 1;
-	}
-}
-
-
-// Testing unserialise date.
 int test_unserialise_date()
 {
 	int cont = 0;
 	for (const test *p = test_unserialisedate; p->str; ++p) {
-		std::string date_s = serialise_date(p->str);
-		std::string date = unserialise_date(date_s);
+		std::string date_s = Serialise::date(p->str);
+		std::string date = Unserialise::date(date_s);
 		if (date.compare(p->expect) != 0) {
 			cont++;
 			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", date.c_str(), p->expect);
@@ -203,25 +189,96 @@ int test_unserialise_date()
 }
 
 
-// Testing unserialise LatLong coordinates.
-int test_unserialise_geo()
+int test_serialise_cartesian()
 {
 	int cont = 0;
-	/*
-	for (const test *p = test_unserialiseLatLong; p->str; ++p) {
-		std::string geo_s = serialise_geo(p->str);
-		std::string geo = unserialise_geo(geo_s);
-		if (geo.compare(p->expect) != 0) {
+	for (const test_cartesian *p = test_seri_cartesian; p->expect_serialise; ++p) {
+		Cartesian c = p->cartesian;
+		c.normalize();
+		std::string res(repr(Serialise::cartesian(c)));
+		if (res.compare(p->expect_serialise) != 0) {
 			cont++;
-			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", geo.c_str(), p->expect);
+			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", res.c_str(), p->expect_serialise);
 		}
-	}*/
+	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing unserialise LatLong coordinates is correct!\n");
+		LOG(NULL, "Testing serialise Cartesian is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing unserialise LatLong coordinates has mistakes.\n");
+		LOG_ERR(NULL, "ERROR: Testing serialise Cartesian has mistakes.\n");
+		return 1;
+	}
+}
+
+
+int test_unserialise_cartesian()
+{
+	int cont = 0;
+	for (const test_cartesian *p = test_seri_cartesian; p->expect_unserialise; ++p) {
+		Cartesian c = p->cartesian;
+		c.normalize();
+		std::string serialise(Serialise::cartesian(c));
+		LOG(NULL, "Serialise: %s %s\n", p->expect_serialise, repr(serialise).c_str());
+		c = Unserialise::cartesian(serialise);
+		char res[40];
+		snprintf(res, sizeof(res), "%1.9f %1.9f %1.9f", c.x, c.y, c.z);
+		if (strcmp(res, p->expect_unserialise) != 0) {
+			cont++;
+			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", res, p->expect_unserialise);
+		}
+	}
+
+	if (cont == 0) {
+		LOG(NULL, "Testing unserialise Cartesian is correct!\n");
+		return 0;
+	} else {
+		LOG_ERR(NULL, "ERROR: Testing unserialise Cartesian has mistakes.\n");
+		return 1;
+	}
+}
+
+
+int test_serialise_trixel_id()
+{
+	int cont = 0;
+	for (const test_trixel_id *p = test_seri_trixels; p->expect_serialise; ++p) {
+		uInt64 trixel_id = p->trixel_id;
+		std::string res(repr(Serialise::trixel_id(trixel_id)));
+		if (res.compare(p->expect_serialise) != 0) {
+			cont++;
+			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", res.c_str(), p->expect_serialise);
+		}
+	}
+
+	if (cont == 0) {
+		LOG(NULL, "Testing serialise HTM Trixel's id is correct!\n");
+		return 0;
+	} else {
+		LOG_ERR(NULL, "ERROR: Testing serialise HTM Trixel's id has mistakes.\n");
+		return 1;
+	}
+}
+
+
+int test_unserialise_trixel_id()
+{
+	int cont = 0;
+	for (const test_trixel_id *p = test_seri_trixels; p->expect_serialise; ++p) {
+		uInt64 trixel_id = p->trixel_id;
+		std::string serialise(Serialise::trixel_id(trixel_id));
+		trixel_id = Unserialise::trixel_id(serialise);
+		if (p->trixel_id != trixel_id) {
+			cont++;
+			LOG_ERR(NULL, "ERROR: Resul: %llu Expect: %llu\n", trixel_id, p->trixel_id);
+		}
+	}
+
+	if (cont == 0) {
+		LOG(NULL, "Testing unserialise HTM Trixel's id is correct!\n");
+		return 0;
+	} else {
+		LOG_ERR(NULL, "ERROR: Testing unserialise HTM Trixel's id has mistakes.\n");
 		return 1;
 	}
 }

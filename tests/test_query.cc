@@ -20,7 +20,16 @@
  * IN THE SOFTWARE.
  */
 
+
 #include "test_query.h"
+#include "../src/cJSON.h"
+#include "../src/utils.h"
+#include "../src/serialise.h"
+#include "../src/database.h"
+#include "../src/endpoint.h"
+
+#include <sstream>
+#include <fstream>
 
 
 #define NUMERIC_RANGE 1
