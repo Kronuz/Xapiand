@@ -237,16 +237,6 @@ bool isRange(const std::string &str, unique_group &unique_gr);
 void get_order(const std::string &str, query_t &e);
 bool isNumeric(const std::string &str);
 bool StartsWith(const std::string &text, const std::string &token);
-std::string get_numeric_term(const std::string &start_, const std::string &end_, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::vector<std::string> &prefixes);
-std::string get_date_term(const std::string &start_, const std::string &end_, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::string &prefix);
-std::string terms_by_year(int n_s[], int n_e[], const std::string &prefix);
-std::string terms_by_month(int n_s[], int n_e[], const std::string &prefix);
-std::string terms_by_day(int n_s[], int n_e[], const std::string &prefix);
-std::string terms_by_hour(int n_s[], int n_e[], const std::string &prefix);
-std::string terms_by_minute(int n_s[], int n_e[], const std::string &prefix);
-std::string terms_by_second(int n_s[], int n_e[], const std::string &prefix);
-std::string get_geo_term(std::vector<range_t> &ranges, const std::vector<std::string> &acc_prefix, std::vector<std::string> &prefixes);
-
 int identify_cmd(std::string &commad);
 bool is_digits(const std::string &str);
 int get_minutes(std::string &hour, std::string &minute);

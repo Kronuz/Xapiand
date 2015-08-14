@@ -25,6 +25,7 @@
 #include "multivaluerange.h"
 #include "serialise.h"
 #include "cJSON_Utils.h"
+#include "generate_terms.h"
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -2423,7 +2424,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
 					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
 
-					filter_term = get_numeric_term(start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
+					filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, NUMERIC_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
 						it = prefixes.begin();
@@ -2450,7 +2451,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
 					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
 
-					filter_term = get_date_term(start, end, field_t.accuracy, field_t.acc_prefix, prefix = field_name);
+					filter_term = GenerateTerms::date(start, end, field_t.accuracy, field_t.acc_prefix, prefix = field_name);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
 						// Xapian does not allow repeat prefixes.
@@ -2472,7 +2473,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					getEWKT_Ranges(field_value, partials, error, ranges, centroids);
 					prefix = field_t.acc_prefix.at(0);
-					filter_term = get_geo_term(ranges, field_t.acc_prefix, prefixes);
+					filter_term = GenerateTerms::geo(ranges, field_t.acc_prefix, prefixes);
 					if (!filter_term.empty()) {
 						// Xapian does not allow repeat prefixes.
 						it = prefixes.begin();
