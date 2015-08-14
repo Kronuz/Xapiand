@@ -29,6 +29,8 @@
 #include "datetime.h"
 #include "cJSON.h"
 #include "multivalue.h"
+#include "geospatialrange.h"
+#include "htm.h"
 #include <limits.h>
 
 #include <xapian.h>
@@ -38,7 +40,6 @@
 #include <locale>
 #include <algorithm>
 #include <memory>
-
 #include <sstream>
 #include <pcre.h>
 #include <sys/time.h>
@@ -215,17 +216,10 @@ int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
 int look_cmd(const char *);
 
-std::string serialise_numeric(const std::string &field_value);
-std::string serialise_date(const std::string &field_value);
 std::string serialise_term(int n[]);
 std::string unserialise_date(const std::string &serialise_val);
 void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
 void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges);
-std::string serialise_cartesian(const Cartesian &norm_cartesian);
-Cartesian unserialise_cartesian(const std::string &str);
-std::string serialise_geo(uInt64 id);
-uInt64 unserialise_geo(const std::string &serialise_val);
-std::string serialise_bool(const std::string &field_value);
 bool lat_lon(const std::string &str, int *grv, int size, int offset);
 std::string stringtolower(const std::string &str);
 std::string stringtoupper(const std::string &str);
@@ -246,8 +240,6 @@ bool isRange(const std::string &str, unique_group &unique_gr);
 void get_order(const std::string &str, query_t &e);
 bool isNumeric(const std::string &str);
 bool StartsWith(const std::string &text, const std::string &token);
-std::string unserialise(char field_type, const std::string &field_name, const std::string &serialise_val);
-std::string serialise(char field_type, const std::string &field_value);
 std::string get_numeric_term(const std::string &start_, const std::string &end_, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::vector<std::string> &prefixes);
 std::string get_date_term(const std::string &start_, const std::string &end_, const std::vector<std::string> &accuracy, const std::vector<std::string> &acc_prefix, std::string &prefix);
 std::string terms_by_year(int n_s[], int n_e[], const std::string &prefix);

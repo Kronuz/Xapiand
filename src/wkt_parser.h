@@ -23,9 +23,8 @@
 #ifndef XAPIAND_INCLUDED_WKT_PARSER_H
 #define XAPIAND_INCLUDED_WKT_PARSER_H
 
-#include "htm.h"
 #include "utils.h"
-#include "multivalue.h"
+#include "geospatialrange.h"
 #include <pcre.h>
 
 extern pcre *compiled_find_geometry_re;

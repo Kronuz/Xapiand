@@ -28,8 +28,6 @@
 #include <string.h>
 #include <vector>
 
-#include "htm.h"
-
 
 /*
  * This class serializes a string vector.
@@ -45,36 +43,6 @@ public:
 	void unserialise(const char ** ptr, const char * end);
 	std::string serialise() const;
 
-};
-
-
-/*
- * This class serializes a Cartesian vector.
- * i.e
- * StringList = {a, ..., b}
- * serialise = serialise_cartesian(a) + ... + serialise_cartesian(b)
- * symbol '+' means concatenate.
- * It is not necessary to save the size because it's SIZE_SERIALISE_CARTESIAN for all.
- */
-class CartesianList : public std::vector<Cartesian> {
-public:
-	void unserialise(const std::string & serialised);
-	std::string serialise() const;
-};
-
-
-/*
- * This class serializes a uInt64 vector.
- * i.e
- * StringList = {a, ..., b}
- * serialise = serialise_geo(a) + ... + serialise_geo(b)
- * symbol '+' means concatenate.
- * It is not necessary to save the size because it's SIZE_BYTES_ID for all.
- */
-class uInt64List : public std::vector<uInt64> {
-public:
-	void unserialise(const std::string & serialised);
-	std::string serialise() const;
 };
 
 
@@ -102,141 +70,6 @@ class MultiValueCountMatchSpy : public Xapian::ValueCountMatchSpy {
 		virtual Xapian::MatchSpy * unserialise(const std::string & serialised,
 									   const Xapian::Registry & context) const;
 		virtual std::string get_description() const;
-};
-
-
-// New Match Decider for multiple value range.
-class MultipleValueRange : public Xapian::ValuePostingSource {
-	// Range [start, end] for the search.
-	std::string start, end;
-	Xapian::valueno slot;
-
-	// Calculate if some their values is inside range.
-	bool insideRange();
-
-	public:
-		/* Construct a new match decider which returns only documents with a
-		 *  some of their values inside of [start, end].
-		 *
-		 *  @param slot_ The value slot to read values from.
-		 *  @param start_  range's start.
-		 *  @param end_ range's end.
-		*/
-		MultipleValueRange(Xapian::valueno slot_, const std::string &start_, const std::string &end_);
-
-		void next(double min_wt);
-		void skip_to(Xapian::docid min_docid, double min_wt);
-		bool check(Xapian::docid min_docid, double min_wt);
-		double get_weight() const;
-		MultipleValueRange* clone() const;
-		std::string name() const;
-		std::string serialise() const;
-		MultipleValueRange* unserialise_with_registry(const std::string &serialised, const Xapian::Registry &) const;
-		void init(const Xapian::Database &db_);
-		std::string get_description() const;
-
-		// Call this function for create a new Query based in ranges.
-		static Xapian::Query getQuery(Xapian::valueno slot_, char field_type, std::string start_, std::string end_, const std::string &field_name);
-};
-
-
-// New Match Decider for multiple value GE.
-class MultipleValueGE : public Xapian::ValuePostingSource {
-	// Range [start, ..] for the search.
-	std::string start;
-	Xapian::valueno slot;
-
-	// Calculate if some their values is inside range.
-	bool insideRange();
-
-	public:
-		/* Construct a new match decider which returns only documents with a
-		 *  some of their values inside of [start, ..].
-		 *
-		 *  @param slot_ The value slot to read values from.
-		 *  @param start_  range's start.
-		*/
-		MultipleValueGE(Xapian::valueno slot_, const std::string &start_);
-
-		void next(double min_wt);
-		void skip_to(Xapian::docid min_docid, double min_wt);
-		bool check(Xapian::docid min_docid, double min_wt);
-		double get_weight() const;
-		MultipleValueGE* clone() const;
-		std::string name() const;
-		std::string serialise() const;
-		MultipleValueGE* unserialise_with_registry(const std::string &serialised, const Xapian::Registry &) const;
-		void init(const Xapian::Database &db_);
-		std::string get_description() const;
-};
-
-
-// New Match Decider for multiple value LE.
-class MultipleValueLE : public Xapian::ValuePostingSource {
-	// Range [.., end] for the search.
-	std::string end;
-	Xapian::valueno slot;
-
-	// Calculate if some their values is inside range.
-	bool insideRange();
-
-	public:
-		/* Construct a new match decider which returns only documents with a
-		 *  some of their values inside of [.., end].
-		 *
-		 *  @param slot_ The value slot to read values from.
-		 *  @param end_  range's end.
-		*/
-		MultipleValueLE(Xapian::valueno slot_, const std::string &end_);
-
-		void next(double min_wt);
-		void skip_to(Xapian::docid min_docid, double min_wt);
-		bool check(Xapian::docid min_docid, double min_wt);
-		double get_weight() const;
-		MultipleValueLE* clone() const;
-		std::string name() const;
-		std::string serialise() const;
-		MultipleValueLE* unserialise_with_registry(const std::string &serialised, const Xapian::Registry &) const;
-		void init(const Xapian::Database &db_);
-		std::string get_description() const;
-};
-
-
-// New Match Decider for GeoSpatial value range.
-class GeoSpatialRange : public Xapian::ValuePostingSource {
-	// Ranges for the search.
-	std::vector<range_t> ranges;
-	CartesianList centroids;
-	Xapian::valueno slot;
-	double angle;
-
-	// Calculates the smallest angle between its centroids  and search centroids.
-	void calc_angle(const std::string &serialised);
-	// Calculates if some their values is inside ranges.
-	bool insideRanges();
-
-	public:
-		/* Construct a new match decider which returns only documents with a
-		 *  some of their values inside of ranges.
-		 *
-		 *  @param slot_ The value slot to read values from.
-		 *  @param ranges
-		*/
-		GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_t> &ranges_, const CartesianList &centroids_);
-
-		void next(double min_wt);
-		void skip_to(Xapian::docid min_docid, double min_wt);
-		bool check(Xapian::docid min_docid, double min_wt);
-		double get_weight() const;
-		GeoSpatialRange* clone() const;
-		std::string name() const;
-		std::string serialise() const;
-		GeoSpatialRange* unserialise_with_registry(const std::string &serialised, const Xapian::Registry &) const;
-		void init(const Xapian::Database &db_);
-		std::string get_description() const;
-
-		// Call this function for create a new Query based in ranges.
-		static Xapian::Query getQuery(Xapian::valueno slot_, const std::vector<range_t> &ranges_, const CartesianList &centroids_);
 };
 
 

@@ -21,6 +21,9 @@
  */
 
 #include "database.h"
+#include "multivalue.h"
+#include "multivaluerange.h"
+#include "serialise.h"
 #include "cJSON_Utils.h"
 
 #include <stdlib.h>
