@@ -50,20 +50,20 @@ namespace Datetime {
 	extern pcre *compiled_date_re;
 	extern pcre *compiled_date_math_re;
 
-	extern void dateTimeParser(const std::string &date, tm_t &tm);
-	extern void computeDateMath(tm_t &tm, const std::string &op, const std::string &units);
-	extern bool isleapYear(int year);
-	extern bool isleapRef_year(int tm_year);
-	extern int getDays_month(int year, int month);
-	extern time_t toordinal(int year, int month, int day);
-	extern time_t timegm(struct tm *tm);
-	extern time_t timegm(tm_t &tm);
-	extern long double mtimegm(tm_t &tm);
-	extern long double timestamp(const std::string &date);
-	extern bool isvalidDate(int year, int month, int day);
-	extern char* isotime(const struct tm *timep);
-	extern ::std::string ctime(const ::std::string &epoch);
-	extern void normalizeMonths(int &year, int &mon);
+	void dateTimeParser(const std::string &date, tm_t &tm);
+	void computeDateMath(tm_t &tm, const std::string &op, const std::string &units);
+	bool isleapYear(int year);
+	bool isleapRef_year(int tm_year);
+	int getDays_month(int year, int month);
+	time_t toordinal(int year, int month, int day);
+	time_t timegm(struct tm *tm);
+	time_t timegm(tm_t &tm);
+	long double mtimegm(tm_t &tm);
+	long double timestamp(const std::string &date);
+	bool isvalidDate(int year, int month, int day);
+	char* isotime(const struct tm *timep);
+	::std::string ctime(const ::std::string &epoch);
+	void normalizeMonths(int &year, int &mon);
 };
 
 
