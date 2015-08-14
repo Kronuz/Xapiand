@@ -16,6 +16,7 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/endpoint.cc \
 			$(top_builddir)/src/exception.cc \
 			$(top_builddir)/src/fields.cc \
+			$(top_builddir)/src/generate_terms.cc \
 			$(top_builddir)/src/geometry.cc \
 			$(top_builddir)/src/geospatialrange.cc \
 			$(top_builddir)/src/htm.cc \

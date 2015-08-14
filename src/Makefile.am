@@ -14,6 +14,7 @@ xapiand_SOURCES = \
 	endpoint_resolver.cc \
 	exception.cc \
 	fields.cc \
+	generate_terms.cc \
 	geometry.cc \
 	geospatialrange.cc \
 	htm.cc \
@@ -46,6 +47,7 @@ noinst_HEADERS = \
 	endpoint_resolver.h \
 	exception.h \
 	fields.h \
+	generate_terms.h \
 	geometry.h \
 	geospatialrange.h \
 	htm.h \
