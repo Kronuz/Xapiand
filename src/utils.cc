@@ -924,6 +924,15 @@ bool isRange(const std::string &str, unique_group &unique_gr)
 }
 
 
+bool isRange(const std::string &str)
+{
+	unique_group unique_gr;
+	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re, unique_gr);
+
+	return (ret != -1) ? true : false;
+}
+
+
 bool isNumeric(const std::string &str)
 {
 	unique_group unique_gr;
@@ -935,7 +944,7 @@ bool isNumeric(const std::string &str)
 }
 
 
-bool StartsWith(const std::string &text, const std::string &token)
+bool startswith(const std::string &text, const std::string &token)
 {
 	if (text.length() < token.length())
 		return false;
@@ -943,7 +952,7 @@ bool StartsWith(const std::string &text, const std::string &token)
 }
 
 
-int identify_cmd(std::string &commad)
+int identify_cmd(const std::string &commad)
 {
 		if (strcasecmp(commad.c_str(), "_search") == 0) {
 			return CMD_SEARCH;
@@ -954,12 +963,6 @@ int identify_cmd(std::string &commad)
 		} else if (strcasecmp(commad.c_str(), "_schema") == 0) {
 			return CMD_SCHEMA;
 		} else return CMD_ID;
-}
-
-
-bool is_digits(const std::string &str)
-{
-	return std::all_of(str.begin(), str.end(), ::isdigit);
 }
 
 
@@ -1022,36 +1025,18 @@ void fill_zeros_stats_sec(int start, int end)
 }
 
 
-bool Is_id_range(std::string &ids)
-{
-	unique_group unique_gr;
-	int len = (int)ids.size(), offset = 0;
-	while ((pcre_search(ids.c_str(), len, offset, 0, RANGE_ID_RE, &compiled_range_id_re, unique_gr)) != -1) {
-		group_t *g = unique_gr.get();
-		offset = g[0].end;
-		if (g[1].end - g[1].start && g[2].end - g[2].start) {
-			return true;
-		} else {
-			return (g[1].end - g[1].start) ? true : false;
-		}
-	}
-
-	return false;
-}
-
-
-std::string to_type(std::string type)
+std::string to_type(const std::string &type)
 {
 	std::string low = stringtolower(type);
 	if (low.compare("numeric") == 0 || low.compare("n") == 0) {
 		return std::string("N");
-	}else if (low.compare("geospatial") == 0 || low.compare("g") == 0) {
+	} else if (low.compare("geospatial") == 0 || low.compare("g") == 0) {
 		return std::string("G");
-	}else if (low.compare("string") == 0 || low.compare("s") == 0) {
+	} else if (low.compare("string") == 0 || low.compare("s") == 0) {
 		return std::string("S");
-	}else if (low.compare("boolean") == 0 || low.compare("b") == 0) {
+	} else if (low.compare("boolean") == 0 || low.compare("b") == 0) {
 		return std::string("B");
-	}else if (low.compare("date") == 0 || low.compare("d") == 0) {
+	} else if (low.compare("date") == 0 || low.compare("d") == 0) {
 		return std::string("D");
 	} else {
 		return std::string("S");
@@ -1059,7 +1044,7 @@ std::string to_type(std::string type)
 }
 
 
-void delete_files(std::string path)
+void delete_files(const std::string &path)
 {
 	unsigned char isFile = 0x8;
 	unsigned char isFolder = 0x4;
@@ -1099,7 +1084,7 @@ void delete_files(std::string path)
 }
 
 
-void move_files(std::string src, std::string dst)
+void move_files(const std::string &src, const std::string &dst)
 {
 	unsigned char isFile = 0x8;
 

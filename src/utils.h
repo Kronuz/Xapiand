@@ -34,7 +34,6 @@
 #include <limits.h>
 
 #include <xapian.h>
-
 #include <string>
 #include <vector>
 #include <locale>
@@ -215,8 +214,6 @@ int url_path(const char* n1, size_t size, parser_url_path_t *par);
 int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
 int look_cmd(const char *);
-void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
-void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges);
 bool lat_lon(const std::string &str, int *grv, int size, int offset);
 std::string stringtolower(const std::string &str);
 std::string stringtoupper(const std::string &str);
@@ -234,16 +231,17 @@ std::string get_slot_hex(const std::string &name);
 bool strhasupper(const std::string &str);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups);
 bool isRange(const std::string &str, unique_group &unique_gr);
+bool isRange(const std::string &str);
 void get_order(const std::string &str, query_t &e);
 bool isNumeric(const std::string &str);
-bool StartsWith(const std::string &text, const std::string &token);
-int identify_cmd(std::string &commad);
-bool is_digits(const std::string &str);
-int get_minutes(std::string &hour, std::string &minute);
-bool Is_id_range(std::string &ids);
-std::string to_type(std::string type);
-void delete_files(std::string path);
-void move_files(std::string src, std::string dst);
+bool startswith(const std::string &text, const std::string &token);
+int identify_cmd(const std::string &commad);
+std::string to_type(const std::string &type);
+void delete_files(const std::string &path);
+void move_files(const std::string &src, const std::string &dst);
+void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
+void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges);
+
 
 void update_pos_time();
 void fill_zeros_stats_cnt(int start, int end);
