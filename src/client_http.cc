@@ -252,7 +252,7 @@ void HttpClient::_head()
 	Xapian::docid docid = 0;
 	Xapian::QueryParser queryparser;
 	query_t e;
-	int cmd = _endpointgen(e,false);
+	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
 		case CMD_ID: break;
@@ -347,7 +347,7 @@ void HttpClient::_delete()
 {
 	std::string result;
 	query_t e;
-	int cmd = _endpointgen(e,true);
+	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
 		case CMD_ID: break;
@@ -357,14 +357,16 @@ void HttpClient::_delete()
 		case CMD_SCHEMA:
 		default:
 			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
-			if (cmd == CMD_UNKNOWN)
-				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown task " + command).c_str());
-			else if (cmd == CMD_UNKNOWN_HOST)
-				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
-			else if (cmd == CMD_UNKNOWN_ENDPOINT)
-				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
-			else
-				cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
+			switch (cmd) {
+				case CMD_UNKNOWN_HOST:
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
+					break;
+				case CMD_UNKNOWN_ENDPOINT:
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
+					break;
+				default:
+					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
+			}
 			if (e.pretty) {
 				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
 				result.assign(_cprint.get());
@@ -423,7 +425,7 @@ void HttpClient::_index()
 {
 	std::string result;
 	query_t e;
-	int cmd = _endpointgen(e,true);
+	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
 		case CMD_ID: break;
@@ -433,16 +435,16 @@ void HttpClient::_index()
 		case CMD_SCHEMA:
 		default:
 			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
-			if (cmd == CMD_BAD_ENDPS)
-				cJSON_AddStringToObject(err_response.get(), "Error message", "Expecting exactly one database");
-			else if (cmd == CMD_UNKNOWN)
-				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown task " + command).c_str());
-			else if (cmd == CMD_UNKNOWN_HOST)
-				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
-			else if (cmd == CMD_UNKNOWN_ENDPOINT)
-				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
-			else
-				cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
+			switch (cmd) {
+				case CMD_UNKNOWN_HOST:
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
+					break;
+				case CMD_UNKNOWN_ENDPOINT:
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
+					break;
+				default:
+					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
+			}
 			if (e.pretty) {
 				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
 				result.assign(_cprint.get());
@@ -511,7 +513,7 @@ void HttpClient::_patch()
 {
 	std::string result;
 	query_t e;
-	int cmd = _endpointgen(e,true);
+	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
 		case CMD_ID: break;
@@ -521,16 +523,16 @@ void HttpClient::_patch()
 		case CMD_SCHEMA:
 		default:
 			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
-			if (cmd == CMD_BAD_ENDPS)
-				cJSON_AddStringToObject(err_response.get(), "Error message", "Expecting exactly one database");
-			else if (cmd == CMD_UNKNOWN)
-				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown task " + command).c_str());
-			else if (cmd == CMD_UNKNOWN_HOST)
-				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
-			else if (cmd == CMD_UNKNOWN_ENDPOINT)
-				cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
-			else
-				cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
+			switch (cmd) {
+				case CMD_UNKNOWN_HOST:
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
+					break;
+				case CMD_UNKNOWN_ENDPOINT:
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
+					break;
+				default:
+					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
+			}
 			if (e.pretty) {
 				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
 				result.assign(_cprint.get());
@@ -640,14 +642,7 @@ void HttpClient::_search()
 
 	switch (cmd) {
 		case CMD_ID:
-			e.terms.push_back(std::string(RESERVED_ID) + ":" + command);
-			e.offset = 0;
-			e.limit = 1;
-			e.check_at_least = 0;
-			e.spelling = true;
-			e.synonyms = false;
-			e.unique_doc = true;
-			json_chunked = false;
+			e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
 			break;
 		case CMD_SEARCH:
 			e.check_at_least = 0;
@@ -662,35 +657,27 @@ void HttpClient::_search()
 			schema = true;
 			break;
 		default:
-			if (Is_id_range(command)){
-				e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
-				e.offset = 0;
-				e.limit = 1000;
-				e.check_at_least = 0;
-				e.spelling = true;
-				e.synonyms = false;
-				e.unique_doc = true;
-			}else {
-				unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
-				if (cmd == CMD_UNKNOWN)
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown task " + command).c_str());
-				else if (cmd == CMD_UNKNOWN_HOST)
+			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
+			switch (cmd) {
+				case CMD_UNKNOWN_HOST:
 					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
-				else if (cmd == CMD_UNKNOWN_ENDPOINT)
+					break;
+				case CMD_UNKNOWN_ENDPOINT:
 					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
-				else
+					break;
+				default:
 					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
-				if (e.pretty) {
-					unique_char_ptr _cprint(cJSON_Print(err_response.get()));
-					result.assign(_cprint.get());
-				} else {
-					unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
-					result.assign(_cprint.get());
-				}
-				result += "\n";
-				write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
-				return;
 			}
+			if (e.pretty) {
+				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
+				result.assign(_cprint.get());
+			} else {
+				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
+				result.assign(_cprint.get());
+			}
+			result += "\n";
+			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+			return;
 	}
 
 	Database *database = NULL;
@@ -1186,6 +1173,41 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					(pretty.compare("f") == 0) ? e.commit = false : e.commit = true;
 				} else {
 					e.commit = false;
+				}
+
+				if (isRange(command)) {
+					memset(&q, 0, sizeof(q));
+					if (url_qs("offset", query_buf.c_str(), query_size, &q) != -1) {
+						e.offset = strtouint(urldecode(q.offset, q.length).c_str());
+					} else {
+						e.offset = 0;
+					}
+
+					memset(&q, 0, sizeof(q));
+					if (url_qs("check_at_least", query_buf.c_str(), query_size, &q) != -1) {
+						e.check_at_least = strtouint(urldecode(q.offset, q.length).c_str());
+					} else {
+						e.check_at_least = 0;
+					}
+
+					memset(&q, 0, sizeof(q));
+					if (url_qs("limit", query_buf.c_str(), query_size, &q) != -1) {
+						e.limit = strtouint(urldecode(q.offset, q.length).c_str());
+					} else {
+						e.limit = 10;
+					}
+
+					memset(&q, 0, sizeof(q));
+					if (url_qs("sort", query_buf.c_str(), query_size, &q) != -1) {
+						e.sort.push_back(urldecode(q.offset, q.length));
+					} else {
+						e.sort.push_back(RESERVED_ID);
+					}
+				} else {
+					e.limit = 1;
+					e.unique_doc = true;
+					e.offset = 0;
+					e.check_at_least = 0;
 				}
 			} else if (cmd == CMD_STATS) {
 				memset(&q, 0, sizeof(q));

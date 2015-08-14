@@ -2747,14 +2747,14 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 		sorter = new Multi_MultiValueKeyMaker();
 		std::vector<std::string>::const_iterator oit(e.sort.begin());
 		for ( ; oit != e.sort.end(); oit++) {
-			if (StartsWith(*oit, "-")) {
+			if (startswith(*oit, "-")) {
 				decreasing = true;
 				field.assign(*oit, 1, (*oit).size() - 1);
 				// If the field has not been indexed as a value or it is a geospatial, it isn't used like Multi_MultiValuesKeyMaker
 				data_field_t field_t = get_slot_field(field);
 				if (field_t.type == NO_TYPE || field_t.type == GEO_TYPE) continue;
 				sorter->add_value(field_t.slot, decreasing);
-			} else if (StartsWith(*oit, "+")) {
+			} else if (startswith(*oit, "+")) {
 				decreasing = false;
 				field.assign(*oit, 1, (*oit).size() - 1);
 				// If the field has not been indexed as a value or it is a geospatial, it isn't used like Multi_MultiValuesKeyMaker
@@ -2943,7 +2943,7 @@ ExpandDeciderFilterPrefixes::operator()(const std::string &term) const
 {
 	std::vector<std::string>::const_iterator i(prefixes.cbegin());
 	for ( ;i != prefixes.cend(); i++) {
-		if (StartsWith(term, *i)) {
+		if (startswith(term, *i)) {
 			return true;
 		}
 	}
