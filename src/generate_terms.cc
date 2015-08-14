@@ -27,6 +27,7 @@
 
 #include "generate_terms.h"
 #include <algorithm>
+#include <bitset>
 
 
 ::std::string

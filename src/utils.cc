@@ -46,8 +46,6 @@
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
 #define NUMERIC_RE "-?(\\d*\\.\\d+|\\d+)"
 #define FIND_RANGE_RE "([^ ]*)\\.\\.([^ ]*)"
-#define FIND_ORDER_RE "([_a-zA-Z][_a-zA-Z0-9]+,[_a-zA-Z][_a-zA-Z0-9]*)"
-#define RANGE_ID_RE "(\\d+)\\s?..\\s?(\\d*)"
 
 #define STATE_ERR -1
 #define STATE_CM0 0
@@ -61,7 +59,6 @@ pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 pcre *compiled_coords_re = NULL;
 pcre *compiled_numeric_re = NULL;
 pcre *compiled_find_range_re = NULL;
-pcre *compiled_range_id_re = NULL;
 
 pos_time_t b_time;
 time_t init_time;
