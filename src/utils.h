@@ -46,9 +46,6 @@
 #define SLOT_TIME_MINUTE 1440
 #define SLOT_TIME_SECOND 60
 
-#define INC_LEVEL 5
-#define BITS_LEVEL 10
-
 
 void log(const char *file, int line, void *obj, const char *fmt, ...);
 
@@ -196,6 +193,19 @@ struct char_ptr_deleter {
 	}
 };
 
+struct TRANSFORM_UPPER {
+	char operator() (char c) { return  toupper(c);}
+};
+
+struct TRANSFORM_LOWER {
+	char operator() (char c) { return  tolower(c);}
+};
+
+// Mapped [0-9] -> [A-J] and  [A-F] -> [R-W]
+struct TRANSFORM_MAP {
+	char operator() (char c) { return  c + 17;}
+};
+
 typedef std::unique_ptr<cJSON, void(*)(cJSON*)> unique_cJSON;
 typedef std::unique_ptr<group_t, group_t_deleter> unique_group;
 typedef std::unique_ptr<char, char_ptr_deleter> unique_char_ptr;
@@ -203,8 +213,6 @@ typedef std::unique_ptr<char, char_ptr_deleter> unique_char_ptr;
 int url_path(const char* n1, size_t size, parser_url_path_t *par);
 int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
-int look_cmd(const char *);
-bool lat_lon(const std::string &str, int *grv, int size, int offset);
 std::string stringtolower(const std::string &str);
 std::string stringtoupper(const std::string &str);
 std::vector<std::string> stringTokenizer(const std::string &str, const std::string &delimiter);

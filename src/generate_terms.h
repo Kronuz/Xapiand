@@ -28,6 +28,9 @@
 
 #define MAX_TERMS 100
 
+#define INC_LEVEL 5
+#define BITS_LEVEL 10
+
 
 namespace GenerateTerms {
 	typedef struct TRANSFORM_S {

@@ -384,11 +384,13 @@ const char * name_prefix[] = {
 	"leo", "vi", "bi", "bren", "thor",
 };
 
+
 const char * name_stem[] = {
 	"",
 	"go", "orbis", "apol", "adur", "mos", "ri", "i",
 	"na", "ole", "n",
 };
+
 
 const char * name_suffix[] = {
 	"",
@@ -401,6 +403,7 @@ const char * name_suffix[] = {
 	"wen", "thiel", "phin", "dir", "dor", "tor", "rod", "on",
 	"rdo", "dis",
 };
+
 
 std::string name_generator()
 {
@@ -727,13 +730,7 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 std::string stringtoupper(const std::string &str)
 {
 	std::string tmp = str;
-
-	struct TRANSFORM {
-		char operator() (char c) { return  toupper(c);}
-	};
-
-	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM());
-
+	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM_UPPER());
 	return tmp;
 }
 
@@ -741,13 +738,7 @@ std::string stringtoupper(const std::string &str)
 std::string stringtolower(const std::string &str)
 {
 	std::string tmp = str;
-
-	struct TRANSFORM {
-		char operator() (char c) { return  tolower(c);}
-	};
-
-	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM());
-
+	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM_LOWER());
 	return tmp;
 }
 
@@ -768,13 +759,8 @@ std::string prefixed(const std::string &term, const std::string &prefix)
 
 unsigned int get_slot(const std::string &name)
 {
-	if (stringtolower(name).compare("id") == 0) return 0;
-
-	std::string standard_name;
-
-	(strhasupper(name)) ? standard_name = stringtoupper(name) : standard_name = name;
-
-	std::string _md5(md5(standard_name), 24, 8);
+	// We are left with the last 8 characters.
+	std::string _md5(md5(strhasupper(name) ? stringtoupper(name) : name), 24, 8);
 	unsigned int slot = hex2int(_md5);
 	if (slot == 0x00000000) {
 		slot = 0x00000001; // 0->id
@@ -853,13 +839,8 @@ uInt64 strtouInt64(const std::string &str)
 
 std::string get_prefix(const std::string &name, const std::string &prefix, char type)
 {
-	std::string slot = get_slot_hex(name);
-
-	struct TRANSFORM {
-		char operator() (char c) { return  c + 17;}
-	};
-
-	std::transform(slot.begin(), slot.end(), slot.begin(), TRANSFORM());
+	std::string slot(get_slot_hex(name));
+	std::transform(slot.begin(), slot.end(), slot.begin(), TRANSFORM_MAP());
 	std::string res(prefix);
 	res.append(1, toupper(type));
 	return res + slot;
@@ -868,13 +849,8 @@ std::string get_prefix(const std::string &name, const std::string &prefix, char 
 
 std::string get_slot_hex(const std::string &name)
 {
-	std::string standard_name;
-	if (strhasupper(name)) {
-		standard_name = stringtoupper(name);
-	} else {
-		standard_name = name;
-	}
-	std::string _md5(md5(standard_name), 24, 8);
+	// We are left with the last 8 characters.
+	std::string _md5(md5(strhasupper(name) ? stringtoupper(name): name), 24, 8);
 	return stringtoupper(_md5);
 }
 
@@ -1074,7 +1050,7 @@ void move_files(const std::string &src, const std::string &dst)
 }
 
 
-// String tokenizer with str.
+// String tokenizer with the delimiter.
 std::vector<std::string> stringTokenizer(const std::string &str, const std::string &delimiter)
 {
 	std::vector<std::string> results;
