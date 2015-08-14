@@ -221,7 +221,6 @@ bool strhasupper(const std::string &str);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups);
 bool isRange(const std::string &str, unique_group &unique_gr);
 bool isRange(const std::string &str);
-void get_order(const std::string &str, query_t &e);
 bool isNumeric(const std::string &str);
 bool startswith(const std::string &text, const std::string &token);
 std::string to_type(const std::string &type);
@@ -229,7 +228,6 @@ void delete_files(const std::string &path);
 void move_files(const std::string &src, const std::string &dst);
 void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
 void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges);
-
 
 void update_pos_time();
 void fill_zeros_stats_cnt(int start, int end);
