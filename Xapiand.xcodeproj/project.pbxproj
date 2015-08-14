@@ -12,6 +12,8 @@
 		4630BEE61B42E88D00351058 /* wkt_parser.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE21B42E88D00351058 /* wkt_parser.cc */; };
 		46740EEC1B5436120073C5E9 /* datetime.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46740EEA1B5436120073C5E9 /* datetime.cc */; };
 		46B6B3CD1B7E3CEF000FA041 /* serialise.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46B6B3CB1B7E3CEF000FA041 /* serialise.cc */; };
+		46B6B3D21B7E4A1B000FA041 /* geospatialrange.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46B6B3CF1B7E4A1B000FA041 /* geospatialrange.cc */; };
+		46B6B3D31B7E4A1B000FA041 /* multivaluerange.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46B6B3D11B7E4A1B000FA041 /* multivaluerange.cc */; };
 		C350589B1B7BAEE300901B80 /* multivaluekeymaker.cc in Sources */ = {isa = PBXBuildFile; fileRef = C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */; };
 		C39AE0631B2F627E00203139 /* cJSON_Utils.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0351B2F627E00203139 /* cJSON_Utils.c */; };
 		C39AE0641B2F627E00203139 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0371B2F627E00203139 /* cJSON.c */; };
@@ -60,6 +62,10 @@
 		46740EEB1B5436120073C5E9 /* datetime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = datetime.h; path = src/datetime.h; sourceTree = "<group>"; };
 		46B6B3CB1B7E3CEF000FA041 /* serialise.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = serialise.cc; path = src/serialise.cc; sourceTree = "<group>"; };
 		46B6B3CC1B7E3CEF000FA041 /* serialise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = serialise.h; path = src/serialise.h; sourceTree = "<group>"; };
+		46B6B3CE1B7E4A1B000FA041 /* geospatialrange.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = geospatialrange.h; path = src/geospatialrange.h; sourceTree = "<group>"; };
+		46B6B3CF1B7E4A1B000FA041 /* geospatialrange.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = geospatialrange.cc; path = src/geospatialrange.cc; sourceTree = "<group>"; };
+		46B6B3D01B7E4A1B000FA041 /* multivaluerange.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = multivaluerange.h; path = src/multivaluerange.h; sourceTree = "<group>"; };
+		46B6B3D11B7E4A1B000FA041 /* multivaluerange.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = multivaluerange.cc; path = src/multivaluerange.cc; sourceTree = "<group>"; };
 		C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = multivaluekeymaker.cc; path = src/multivaluekeymaker.cc; sourceTree = "<group>"; };
 		C350589C1B7BAF0500901B80 /* multivaluekeymaker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = multivaluekeymaker.h; path = src/multivaluekeymaker.h; sourceTree = "<group>"; };
 		C39AE0351B2F627E00203139 /* cJSON_Utils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cJSON_Utils.c; path = src/cJSON_Utils.c; sourceTree = "<group>"; };
@@ -142,6 +148,10 @@
 				C39AE03F1B2F627E00203139 /* config.h */,
 				C39AE0401B2F627E00203139 /* database.cc */,
 				C39AE0411B2F627E00203139 /* database.h */,
+				46B6B3CE1B7E4A1B000FA041 /* geospatialrange.h */,
+				46B6B3CF1B7E4A1B000FA041 /* geospatialrange.cc */,
+				46B6B3D01B7E4A1B000FA041 /* multivaluerange.h */,
+				46B6B3D11B7E4A1B000FA041 /* multivaluerange.cc */,
 				46B6B3CB1B7E3CEF000FA041 /* serialise.cc */,
 				46B6B3CC1B7E3CEF000FA041 /* serialise.h */,
 				46740EEA1B5436120073C5E9 /* datetime.cc */,
@@ -278,7 +288,9 @@
 				C39AE06C1B2F627E00203139 /* http_parser.c in Sources */,
 				C39AE0691B2F627E00203139 /* endpoint_resolver.cc in Sources */,
 				C39AE0751B2F627E00203139 /* times.cc in Sources */,
+				46B6B3D31B7E4A1B000FA041 /* multivaluerange.cc in Sources */,
 				C39AE06E1B2F627E00203139 /* manager.cc in Sources */,
+				46B6B3D21B7E4A1B000FA041 /* geospatialrange.cc in Sources */,
 				C39AE0701B2F627E00203139 /* multivalue.cc in Sources */,
 				C39AE0641B2F627E00203139 /* cJSON.c in Sources */,
 				46740EEC1B5436120073C5E9 /* datetime.cc in Sources */,
