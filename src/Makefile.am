@@ -23,6 +23,7 @@ xapiand_SOURCES = \
 	multivalue.cc \
 	multivaluekeymaker.cc \
 	replicator.cc \
+	serialise.cc \
 	server.cc \
 	threadpool.cc \
 	times.cc \
@@ -54,6 +55,7 @@ noinst_HEADERS = \
 	multivaluekeymaker.h \
 	queue.h \
 	replicator.h \
+	serialise.cc \
 	server.h \
 	threadpool.h \
 	times.h \
