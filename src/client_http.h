@@ -36,10 +36,37 @@
 #define HTTP_CHUNKED 0x08
 #define HTTP_OPTIONS 0x10
 
+#define CMD_ID 0
+#define CMD_SEARCH 1
+#define CMD_FACETS 2
+#define CMD_STATS 3
+#define CMD_SCHEMA 4
+#define CMD_UNKNOWN_HOST 5
+#define CMD_UNKNOWN_ENDPOINT 6
+#define CMD_UNKNOWN -1
+#define CMD_BAD_QUERY -2
+#define CMD_BAD_ENDPS -3
 
-//
-//   A single instance of a non-blocking Xapiand HTTP protocol handler
-//
+#define HTTP_SEARCH "_search"
+#define HTTP_FACETS "_facets"
+#define HTTP_STATS  "_stats"
+#define HTTP_SCHEMA "_schema"
+
+
+static int identify_cmd(const std::string &commad) {
+	if (strcasecmp(commad.c_str(), HTTP_SEARCH) == 0) {
+		return CMD_SEARCH;
+	} else if (strcasecmp(commad.c_str(), HTTP_FACETS) == 0) {
+		return CMD_FACETS;
+	} else if (strcasecmp(commad.c_str(), HTTP_STATS) == 0) {
+		return CMD_STATS;
+	} else if (strcasecmp(commad.c_str(), HTTP_SCHEMA) == 0) {
+		return CMD_SCHEMA;
+	} else return CMD_ID;
+}
+
+
+// A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	struct http_parser parser;
 

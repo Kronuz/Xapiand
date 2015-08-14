@@ -952,20 +952,6 @@ bool startswith(const std::string &text, const std::string &token)
 }
 
 
-int identify_cmd(const std::string &commad)
-{
-		if (strcasecmp(commad.c_str(), "_search") == 0) {
-			return CMD_SEARCH;
-		} else if (strcasecmp(commad.c_str(), "_facets") == 0) {
-			return CMD_FACETS;
-		} else if (strcasecmp(commad.c_str(), "_stats") == 0) {
-			return CMD_STATS;
-		} else if (strcasecmp(commad.c_str(), "_schema") == 0) {
-			return CMD_SCHEMA;
-		} else return CMD_ID;
-}
-
-
 void update_pos_time()
 {
 	time_t t_current;

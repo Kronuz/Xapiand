@@ -43,17 +43,6 @@
 #include <pcre.h>
 #include <sys/time.h>
 
-#define CMD_ID 0
-#define CMD_SEARCH 1
-#define CMD_FACETS 2
-#define CMD_STATS 3
-#define CMD_SCHEMA 4
-#define CMD_UNKNOWN_HOST 5
-#define CMD_UNKNOWN_ENDPOINT 6
-#define CMD_UNKNOWN -1
-#define CMD_BAD_QUERY -2
-#define CMD_BAD_ENDPS -3
-
 #define SLOT_TIME_MINUTE 1440
 #define SLOT_TIME_SECOND 60
 
@@ -235,7 +224,6 @@ bool isRange(const std::string &str);
 void get_order(const std::string &str, query_t &e);
 bool isNumeric(const std::string &str);
 bool startswith(const std::string &text, const std::string &token);
-int identify_cmd(const std::string &commad);
 std::string to_type(const std::string &type);
 void delete_files(const std::string &path);
 void move_files(const std::string &src, const std::string &dst);
