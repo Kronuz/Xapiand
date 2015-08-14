@@ -688,7 +688,7 @@ void HttpClient::_search()
 
 	if (schema) {
 		std::string schema_;
-		if (database->get_metadata(SCHEMA, schema_)) {
+		if (database->get_metadata(DB_SCHEMA, schema_)) {
 			schema_ += "\n";
 			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, schema_));
 			database_pool->checkin(&database);

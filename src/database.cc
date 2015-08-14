@@ -849,8 +849,8 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 					subproperties = cJSON_CreateObject(); // It is managed by properties.
 					cJSON_AddItemToObject(properties, subitem->string, subproperties);
 				}
-				subitem_name = !item_name.empty() ? item_name + OFFSPRING_UNION + subitem->string : subitem->string;
-				if (subitem_name.at(subitem_name.size() - 3) == OFFSPRING_UNION[0]) {
+				subitem_name = !item_name.empty() ? item_name + DB_OFFSPRING_UNION + subitem->string : subitem->string;
+				if (subitem_name.at(subitem_name.size() - 3) == DB_OFFSPRING_UNION[0]) {
 					std::string language(subitem_name, subitem_name.size() - 2, subitem_name.size());
 					spc_now.language = is_language(language) ? language : spc_now.language;
 				}
@@ -1723,7 +1723,7 @@ Database::is_language(const std::string &language)
 	if (language.find(" ") != -1) {
 		return false;
 	}
-	return (std::string(LANGUAGES).find(language) != -1) ? true : false;
+	return (std::string(DB_LANGUAGES).find(language) != -1) ? true : false;
 }
 
 
@@ -1745,7 +1745,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	cJSON *document_terms = cJSON_GetObjectItem(document, RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document, RESERVED_TEXTS);
 
-	std::string s_schema = db->get_metadata(SCHEMA);
+	std::string s_schema = db->get_metadata(DB_SCHEMA);
 
 	// There are several throws and returns, so we use unique_ptr
 	// to call automatically cJSON_Delete. Only schema need to be released.
@@ -1826,7 +1826,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 							cJSON_AddItemToObject(properties, name_s.c_str(), subproperties);
 						}
 						update_specifications(texts, spc_now, subproperties);
-						if (name_s.at(name_s.size() - 3) == OFFSPRING_UNION[0]) {
+						if (name_s.at(name_s.size() - 3) == DB_OFFSPRING_UNION[0]) {
 							std::string language(name_s, name_s.size() - 2, name_s.size());
 							spc_now.language = is_language(language) ? language : spc_now.language;
 							if (cJSON* lan = cJSON_GetObjectItem(subproperties, RESERVED_LANGUAGE)) {
@@ -1903,7 +1903,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 	_cprint = std::move(unique_char_ptr(cJSON_Print(schema.get())));
-	wdb->set_metadata(SCHEMA, _cprint.get());
+	wdb->set_metadata(DB_SCHEMA, _cprint.get());
 	return replace(document_id, doc, commit);
 }
 
@@ -1937,16 +1937,16 @@ Database::split_fields(const std::string &field_name)
 	std::vector<std::string> fields;
 	std::string aux(field_name.c_str());
 	std::string::size_type pos = 0;
-	while (aux.at(pos) == OFFSPRING_UNION[0]) {
+	while (aux.at(pos) == DB_OFFSPRING_UNION[0]) {
 		pos++;
 	}
 	std::string::size_type start = pos;
-	while ((pos = aux.substr(start, aux.size()).find(OFFSPRING_UNION)) != -1) {
+	while ((pos = aux.substr(start, aux.size()).find(DB_OFFSPRING_UNION)) != -1) {
 		std::string token = aux.substr(0, start + pos);
 		fields.push_back(token);
-		aux.assign(aux, start + pos + strlen(OFFSPRING_UNION), aux.size());
+		aux.assign(aux, start + pos + strlen(DB_OFFSPRING_UNION), aux.size());
 		pos = 0;
-		while (aux.at(pos) == OFFSPRING_UNION[0]) {
+		while (aux.at(pos) == DB_OFFSPRING_UNION[0]) {
 			pos++;
 		}
 		start = pos;
@@ -1965,7 +1965,7 @@ Database::get_data_field(const std::string &field_name)
 		return res;
 	}
 
-	std::string json = db->get_metadata(SCHEMA);
+	std::string json = db->get_metadata(DB_SCHEMA);
 	if (json.empty()) return res;
 
 	std::string uuid(db->get_uuid());
@@ -2036,7 +2036,7 @@ Database::get_slot_field(const std::string &field_name)
 		return res;
 	}
 
-	std::string json = db->get_metadata(SCHEMA);
+	std::string json = db->get_metadata(DB_SCHEMA);
 	if (json.empty()) return res;
 
 	std::string uuid(db->get_uuid());

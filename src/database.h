@@ -69,9 +69,9 @@
 #define RESERVED_INDEX "_index"
 #define RESERVED_PREFIX "_prefix"
 #define RESERVED_ID "_id"
-#define OFFSPRING_UNION "__"
-#define LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
-#define SCHEMA "schema"
+#define DB_OFFSPRING_UNION "__"
+#define DB_LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
+#define DB_SCHEMA "schema"
 
 // Default prefixes
 #define DOCUMENT_ID_TERM_PREFIX "Q"
