@@ -727,29 +727,6 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 }
 
 
-void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids)
-{
-	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
-	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());
-	for (;it != ewkt.trixels.end(); it++) {
-		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
-	}
-	HTM::mergeRanges(ranges);
-	centroids = ewkt.centroids;
-}
-
-
-void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges)
-{
-	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
-	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());
-	for (;it != ewkt.trixels.end(); it++) {
-		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
-	}
-	HTM::mergeRanges(ranges);
-}
-
-
 std::string stringtoupper(const std::string &str)
 {
 	std::string tmp = str;

@@ -33,8 +33,6 @@ extern pcre *compiled_find_subpolygon_re;
 extern pcre *compiled_find_polygon_re;
 extern pcre *compiled_find_collection_re;
 
-bool is_like_EWKT(const char *str);
-
 
 class EWKT_Parser {
 	public:
@@ -61,6 +59,9 @@ class EWKT_Parser {
 		static std::vector<std::string> xor_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
 		static std::vector<std::string> or_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
 		static std::vector<std::string> and_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
+		static bool isEWKT(const char *str);
+		static void getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
+		static void getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges);
 };
 
 

@@ -673,7 +673,8 @@ EWKT_Parser::get_trixels(std::string &father, int depth, std::string &son)
 }
 
 
-bool is_like_EWKT(const char *str)
+bool
+EWKT_Parser::isEWKT(const char *str)
 {
 	unique_group unique_gr;
 	int len = (int)strlen(str);
@@ -681,4 +682,29 @@ bool is_like_EWKT(const char *str)
 	group_t *gr = unique_gr.get();
 
 	return (ret != -1 && len == gr[0].end - gr[0].start) ? true : false;
+}
+
+
+void
+EWKT_Parser::getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids)
+{
+	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
+	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());
+	for (;it != ewkt.trixels.end(); it++) {
+		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
+	}
+	HTM::mergeRanges(ranges);
+	centroids = ewkt.centroids;
+}
+
+
+void
+EWKT_Parser::getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges)
+{
+	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
+	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());
+	for (;it != ewkt.trixels.end(); it++) {
+		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
+	}
+	HTM::mergeRanges(ranges);
 }

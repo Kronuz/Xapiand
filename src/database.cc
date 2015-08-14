@@ -1037,7 +1037,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 				error = strtodouble(spc.accuracy.at(1));
 			}
 			std::vector<range_t> ranges;
-			getEWKT_Ranges(term_v, partials, error, ranges);
+			EWKT_Parser::getRanges(term_v, partials, error, ranges);
 			std::vector<range_t>::const_iterator it(ranges.begin());
 			if (spc.position >= 0) {
 				for ( ; it != ranges.end(); it++) {
@@ -1141,7 +1141,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 		unique_char_ptr _cprint(cJSON_Print(values));
 		std::string value_v(_cprint.get());
 		value_v.assign(value_v, 1, value_v.size() - 2);
-		getEWKT_Ranges(value_v, partials, error, ranges, centroids);
+		EWKT_Parser::getRanges(value_v, partials, error, ranges, centroids);
 		// Get terms prefix.
 		cJSON *_prefix_accuracy = cJSON_GetObjectItem(schema, RESERVED_ACC_PREFIX), *_new_prefix_acc;
 		std::string prefix;
@@ -2103,7 +2103,7 @@ Database::get_type(cJSON *_field, specifications_t &spc)
 				return BOOLEAN_TYPE;
 			} else if (spc.date_detection && !Serialise::date(field->valuestring).empty()) {
 				return DATE_TYPE;
-			} else if(spc.geo_detection && field->type != cJSON_Array && is_like_EWKT(field->valuestring)) {
+			} else if(spc.geo_detection && field->type != cJSON_Array && EWKT_Parser::isEWKT(field->valuestring)) {
 				// For WKT format, it is not necessary to use arrays.
 				return GEO_TYPE;
 			} else if (spc.string_detection) {
@@ -2471,7 +2471,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						partials = (Serialise::boolean(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
 						error = strtodouble(field_t.accuracy.at(1));
 					}
-					getEWKT_Ranges(field_value, partials, error, ranges, centroids);
+					EWKT_Parser::getRanges(field_value, partials, error, ranges, centroids);
 					prefix = field_t.acc_prefix.at(0);
 					filter_term = GenerateTerms::geo(ranges, field_t.acc_prefix, prefixes);
 					if (!filter_term.empty()) {
@@ -2568,7 +2568,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						partials = (Serialise::boolean(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
 						error = strtodouble(field_t.accuracy.at(1));
 					}
-					getEWKT_Ranges(field_value, partials, error, ranges);
+					EWKT_Parser::getRanges(field_value, partials, error, ranges);
 					field_value = "";
 					rit = ranges.begin();
 					for ( ; rit != ranges.end(); rit++) {

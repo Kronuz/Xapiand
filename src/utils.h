@@ -113,6 +113,8 @@ typedef struct pos_time_s {
 extern pcre *compiled_coords_re;
 extern pcre *compiled_numeric_re;
 extern pcre *compiled_find_range_re;
+
+// Varibles used by server stats.
 extern pos_time_t b_time;
 extern time_t init_time;
 extern times_row_t stats_cnt;
@@ -165,7 +167,6 @@ typedef struct parser_query_s {
 	const char *offset;
 } parser_query_t;
 
-
 typedef struct parser_url_path_s {
 	const char *offset;
 	size_t len_path;
@@ -207,18 +208,17 @@ bool lat_lon(const std::string &str, int *grv, int size, int offset);
 std::string stringtolower(const std::string &str);
 std::string stringtoupper(const std::string &str);
 std::vector<std::string> stringTokenizer(const std::string &str, const std::string &delimiter);
+int strtoint(const std::string &str);
+unsigned int strtouint(const std::string &str);
+long long int strtollong(const std::string &str);
+uInt64 strtouInt64(const std::string &str);
+double strtodouble(const std::string &str);
 unsigned int get_slot(const std::string &name);
 std::string prefixed(const std::string &term, const std::string &prefixO);
 unsigned int hex2int(const std::string &input);
-int strtoint(const std::string &str);
-unsigned int strtouint(const std::string &str);
-double strtodouble(const std::string &str);
-long long int strtollong(const std::string &str);
-uInt64 strtouInt64(const std::string &str);
 std::string get_prefix(const std::string &name, const std::string &prefix, char type);
 std::string get_slot_hex(const std::string &name);
 bool strhasupper(const std::string &str);
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups);
 bool isRange(const std::string &str, unique_group &unique_gr);
 bool isRange(const std::string &str);
 bool isNumeric(const std::string &str);
@@ -226,9 +226,7 @@ bool startswith(const std::string &text, const std::string &token);
 std::string to_type(const std::string &type);
 void delete_files(const std::string &path);
 void move_files(const std::string &src, const std::string &dst);
-void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
-void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges);
-
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups);
 void update_pos_time();
 void fill_zeros_stats_cnt(int start, int end);
 void fill_zeros_stats_sec(int start, int end);
