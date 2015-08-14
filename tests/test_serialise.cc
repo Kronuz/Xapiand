@@ -98,23 +98,6 @@ const test test_timestamp_date[] = {
 	};
 
 
-const test_str_double test_distanceLatLong_fields[] = {
-	// Distance LatLong       Expected distance.
-	{ "23.56, 48.76 ; 40mi",  64373.76 },
-	{ "23.56, 48.76 ; 40km",  40000.00 },
-	{ "23.56, 48.76 ; 40m",   40       },
-	{ "23.56, 48.76 ; 40",    40       },
-	{ "23.56,48.76;40yd",     36.57600 },
-	{ "23.56, 48.76; 40ft",   12.19200 },
-	{ "23.56, 48.76 ;40in",   1.01600  },
-	{ "23.56,48.76 ; 40cm",   0.4      },
-	{ "23.56, 48.76 ; 40mm",  0.04     },
-	{ "23.56, 48.76 ; 40mmi", -1.0     },
-	{ "23.56, 48.76k ; 40mm", -1.0     },
-	{ NULL,                   -1.0     },
-};
-
-
 const test test_unserialisedate[] {
 	// Date to be serialised.				 Expected date after unserialise.
 	{ "2010-10-10T23:05:24.800",             "2010-10-10T23:05:24.800" },

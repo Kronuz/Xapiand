@@ -1029,7 +1029,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 			bool partials = DE_PARTIALS;
 			double error = DE_ERROR;
 			if (!spc.accuracy.empty() && spc.accuracy.size() == 2) {
-				partials = (serialise_bool(spc.accuracy.at(0)).compare("f") == 0) ? false : true;
+				partials = (Serialise::boolean(spc.accuracy.at(0)).compare("f") == 0) ? false : true;
 				error = strtodouble(spc.accuracy.at(1));
 			}
 			std::vector<range_t> ranges;
@@ -1037,25 +1037,25 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 			std::vector<range_t>::const_iterator it(ranges.begin());
 			if (spc.position >= 0) {
 				for ( ; it != ranges.end(); it++) {
-					std::string nameterm(prefixed(serialise_geo(it->start), prefix));
+					std::string nameterm(prefixed(Serialise::trixel_id(it->start), prefix));
 					doc.add_posting(nameterm, spc.position, spc.weight);
 					if (it->start != it->end) {
-						nameterm.assign(prefixed(serialise_geo(it->end), prefix));
+						nameterm.assign(prefixed(Serialise::trixel_id(it->end), prefix));
 						doc.add_posting(nameterm, spc.position, spc.weight);
 					}
 				}
 			} else {
 				for ( ; it != ranges.end(); it++) {
-					std::string nameterm(prefixed(serialise_geo(it->start), prefix));
+					std::string nameterm(prefixed(Serialise::trixel_id(it->start), prefix));
 					doc.add_term(nameterm, spc.weight);
 					if (it->start != it->end) {
-						nameterm.assign(prefixed(serialise_geo(it->end), prefix));
+						nameterm.assign(prefixed(Serialise::trixel_id(it->end), prefix));
 						doc.add_term(nameterm, spc.weight);
 					}
 				}
 			}
 		} else {
-			term_v = serialise(spc.sep_types[2], term_v);
+			term_v = Serialise::serialise(spc.sep_types[2], term_v);
 			if (term_v.size() == 0) throw MSG_Error("%s: %s can not be serialized", name.c_str(), term_v.c_str());
 
 			if (spc.position >= 0) {
@@ -1128,7 +1128,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 		bool partials = DE_PARTIALS;
 		double error = DE_ERROR;
 		if (!spc.accuracy.empty() && spc.accuracy.size() == 2) {
-			partials = (serialise_bool(spc.accuracy.at(0)).compare("f") == 0) ? false : true;
+			partials = (Serialise::boolean(spc.accuracy.at(0)).compare("f") == 0) ? false : true;
 			error = strtodouble(spc.accuracy.at(1));
 		}
 		std::vector<range_t> ranges;
@@ -1171,7 +1171,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 					uInt64 _start = it->start >> tmp, _end = it->end >> tmp;
 					while (_start <= _end) {
 						prefix = cJSON_GetArrayItem(_prefix_accuracy, cJSON_GetArraySize(_prefix_accuracy) - 1)->valuestring;
-						std::string nameterm(prefixed(serialise_geo(_start), prefix));
+						std::string nameterm(prefixed(Serialise::trixel_id(_start), prefix));
 						doc.add_term(nameterm, spc.weight);
 						_start++;
 					}
@@ -1185,7 +1185,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			for (size_t i = idx, j = i / BITS_LEVEL; i < SIZE_BITS_ID; i += BITS_LEVEL, j++) {
 				uInt64 vterm = val >> i;
 				prefix = cJSON_GetArrayItem(_prefix_accuracy, (int)j)->valuestring;
-				std::string nameterm(prefixed(serialise_geo(vterm), prefix));
+				std::string nameterm(prefixed(Serialise::trixel_id(vterm), prefix));
 				doc.add_term(nameterm, spc.weight);
 			}
 		}
@@ -1203,7 +1203,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			}
 			LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name.c_str(), value_v.c_str());
 
-			std::string value_s = serialise(spc.sep_types[2], value_v);
+			std::string value_s = Serialise::serialise(spc.sep_types[2], value_v);
 			if (value_s.empty()) {
 				throw MSG_Error("%s: %s can not serialized", name.c_str(), value_v.c_str());
 			}
@@ -1229,7 +1229,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 									prefix = get_prefix(name + std::to_string(num_pre), DOCUMENT_CUSTOM_TERM_PREFIX, spc.sep_types[2]);
 									cJSON_AddItemToArray(_new_prefix_acc, cJSON_CreateString(prefix.c_str()));
 								}
-								term_v = serialise_numeric(term_v);
+								term_v = Serialise::numeric(term_v);
 								std::string nameterm(prefixed(term_v, prefix));
 								doc.add_term(nameterm, spc.weight);
 							}
@@ -1262,7 +1262,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 									prefix = get_prefix(name + std::to_string(num_pre), DOCUMENT_CUSTOM_TERM_PREFIX, spc.sep_types[2]);
 									cJSON_AddItemToArray(_new_prefix_acc, cJSON_CreateString(prefix.c_str()));
 								}
-								acc.assign(serialise_date(acc));
+								acc.assign(Serialise::date(acc));
 								std::string nameterm(prefixed(acc, prefix));
 								doc.add_term(nameterm, spc.weight);
 							}
@@ -2095,9 +2095,9 @@ Database::get_type(cJSON *_field, specifications_t &spc)
 		case cJSON_False: if (spc.bool_detection) return BOOLEAN_TYPE; break;
 		case cJSON_True: if (spc.bool_detection) return BOOLEAN_TYPE; break;
 		case cJSON_String:
-			if (spc.bool_detection && !serialise_bool(field->valuestring).empty()) {
+			if (spc.bool_detection && !Serialise::boolean(field->valuestring).empty()) {
 				return BOOLEAN_TYPE;
-			} else if (spc.date_detection && !serialise_date(field->valuestring).empty()) {
+			} else if (spc.date_detection && !Serialise::date(field->valuestring).empty()) {
 				return DATE_TYPE;
 			} else if(spc.geo_detection && field->type != cJSON_Array && is_like_EWKT(field->valuestring)) {
 				// For WKT format, it is not necessary to use arrays.
@@ -2464,7 +2464,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					// Delete double quotes and .. (always): "..EWKT" -> EWKT
 					field_value.assign(field_value.c_str(), 3, field_value.size() - 4);
 					if (field_t.accuracy.size() == 2) {
-						partials = (serialise_bool(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
+						partials = (Serialise::boolean(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
 						error = strtodouble(field_t.accuracy.at(1));
 					}
 					getEWKT_Ranges(field_value, partials, error, ranges, centroids);
@@ -2561,7 +2561,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					// Delete double quotes (always): "EWKT" -> EWKT
 					field_value.assign(field_value, 1, field_value.size() - 2);
 					if (field_t.accuracy.size() == 2) {
-						partials = (serialise_bool(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
+						partials = (Serialise::boolean(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
 						error = strtodouble(field_t.accuracy.at(1));
 					}
 					getEWKT_Ranges(field_value, partials, error, ranges);

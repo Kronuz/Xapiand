@@ -23,7 +23,7 @@
 #include "multivalue.h"
 
 #include "length.h"
-#include "utils.h"
+#include "serialise.h"
 
 #include <assert.h>
 
@@ -84,7 +84,7 @@ void
 CartesianList::unserialise(const std::string & serialised)
 {
 	for (size_t i = 0, j =  SIZE_SERIALISE_CARTESIAN; i < serialised.size(); i = j, j += SIZE_SERIALISE_CARTESIAN) {
-		push_back(unserialise_cartesian(serialised.substr(i, j)));
+		push_back(Unserialise::cartesian(serialised.substr(i, j)));
 	}
 }
 
@@ -95,7 +95,7 @@ CartesianList::serialise() const
 	std::string serialised;
 	CartesianList::const_iterator i(begin());
 	for ( ; i != end(); i++) {
-		serialised.append(serialise_cartesian(*i));
+		serialised.append(Serialise::cartesian(*i));
 	}
 
 	return serialised;
@@ -106,7 +106,7 @@ void
 uInt64List::unserialise(const std::string & serialised)
 {
 	for (size_t i = 0, j = SIZE_BYTES_ID; i < serialised.size(); i = j, j += SIZE_BYTES_ID) {
-		push_back(unserialise_geo(serialised.substr(i, j)));
+		push_back(Unserialise::trixel_id(serialised.substr(i, j)));
 	}
 }
 
@@ -117,7 +117,7 @@ uInt64List::serialise() const
 	std::string serialised;
 	uInt64List::const_iterator i(begin());
 	for ( ; i != end(); i++) {
-		serialised.append(serialise_geo(*i));
+		serialised.append(Serialise::trixel_id(*i));
 	}
 
 	return serialised;
@@ -208,21 +208,21 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 	if (start_.empty() && end_.empty()){
 		return Xapian::Query::MatchAll;
 	} else if (start_.empty()) {
-		end_ = ::serialise(field_type, end_);
+		end_ = Serialise::serialise(field_type, end_);
 		if (end_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
 		MultipleValueLE mvle(slot_, end_);
 		return Xapian::Query(&mvle);
 	} else if (end_.empty()) {
-		start_ = ::serialise(field_type, start_);
+		start_ = Serialise::serialise(field_type, start_);
 		if (start_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
 		MultipleValueGE mvge(slot_, start_);
 		return Xapian::Query(&mvge);
 	}
 
 	// Multiple Value Range
-	start_ = ::serialise(field_type, start_);
+	start_ = Serialise::serialise(field_type, start_);
 	if (start_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
-	end_ = ::serialise(field_type, end_);
+	end_ = Serialise::serialise(field_type, end_);
 	if (end_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
 	if (start_ > end_) return Xapian::Query::MatchNothing;
 	MultipleValueRange mvr(slot_, start_, end_);

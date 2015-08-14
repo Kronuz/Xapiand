@@ -44,7 +44,6 @@
 
 
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
-#define COORDS_DISTANCE_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d*|\\d+)\\s?;\\s?(\\d*\\.\\d*|\\d+)(ft|in|yd|mi|km|[m]{1,2}|cm)?"
 #define NUMERIC_RE "-?(\\d*\\.\\d+|\\d+)"
 #define FIND_RANGE_RE "([^ ]*)\\.\\.([^ ]*)"
 #define FIND_ORDER_RE "([_a-zA-Z][_a-zA-Z0-9]+,[_a-zA-Z][_a-zA-Z0-9]*)"
@@ -62,7 +61,6 @@
 pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 
 pcre *compiled_coords_re = NULL;
-pcre *compiled_coords_dist_re = NULL;
 pcre *compiled_numeric_re = NULL;
 pcre *compiled_find_range_re = NULL;
 pcre *compiled_range_id_re = NULL;
@@ -731,82 +729,6 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 }
 
 
-std::string serialise_numeric(const std::string &field_value)
-{
-	double val;
-	if (isNumeric(field_value)) {
-		val = strtodouble(field_value);
-		return Xapian::sortable_serialise(val);
-	}
-	return "";
-}
-
-
-std::string serialise_date(const std::string &field_value)
-{
-	try {
-		long double timestamp = Datetime::timestamp(field_value);
-		LOG(NULL, "FV: %s  Timestamp: %Lf\n", field_value.c_str(), timestamp);
-		return Xapian::sortable_serialise(timestamp);
-	} catch (const std::exception &ex) {
-		LOG_ERR(NULL, "ERROR: %s\n", ex.what());
-		return "";
-	}
-}
-
-
-std::string unserialise_date(const std::string &serialise_val)
-{
-	static char date[25];
-	double epoch = Xapian::sortable_unserialise(serialise_val);
-	time_t timestamp = (time_t) epoch;
-	int msec = round((epoch - timestamp) * 1000);
-	struct tm *timeinfo = gmtime(&timestamp);
-	sprintf(date, "%.4d-%.2d-%.2dT%.2d:%.2d:%.2d.%.3d", timeinfo->tm_year + _START_YEAR,
-		timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min,
-		timeinfo->tm_sec, msec);
-	return date;
-}
-
-
-// Serialise a normalize cartesian coordinate in 12 bytes.
-std::string serialise_cartesian(const Cartesian &norm_cartesian) {
-	unsigned int x = Swap4Bytes(((unsigned int)(norm_cartesian.x * DOUBLE2INT + MAXDOU2INT)));
-	unsigned int y = Swap4Bytes((unsigned int)(norm_cartesian.y * DOUBLE2INT + MAXDOU2INT));
-	unsigned int z = Swap4Bytes((unsigned int)(norm_cartesian.z * DOUBLE2INT + MAXDOU2INT));
-	const char serialise[] = { (char)(x & 0xFF), (char)((x >>  8) & 0xFF), (char)((x >> 16) & 0xFF), (char)((x >> 24) & 0xFF),
-							   (char)(y & 0xFF), (char)((y >>  8) & 0xFF), (char)((y >> 16) & 0xFF), (char)((y >> 24) & 0xFF),
-							   (char)(z & 0xFF), (char)((z >>  8) & 0xFF), (char)((z >> 16) & 0xFF), (char)((z >> 24) & 0xFF) };
-	return std::string(serialise, SIZE_SERIALISE_CARTESIAN);
-}
-
-
-// Unserialise a serialise cartesian coordinate.
-Cartesian unserialise_cartesian(const std::string &str) {
-	double x = (((unsigned int)str.at(0) << 24) & 0xFF000000) | (((unsigned int)str.at(1) << 16) & 0xFF0000) | (((unsigned int)str.at(2) << 8) & 0xFF00) | (((unsigned int)str.at(3)) & 0xFF);
-	double y = (((unsigned int)str.at(4) << 24) & 0xFF000000) | (((unsigned int)str.at(5) << 16) & 0xFF0000) | (((unsigned int)str.at(6) << 8) & 0xFF00) | (((unsigned int)str.at(7)) & 0xFF);
-	double z = (((unsigned int)str.at(8) << 24) & 0xFF000000) | (((unsigned int)str.at(9) << 16) & 0xFF0000) | (((unsigned int)str.at(10) << 8) & 0xFF00) | (((unsigned int)str.at(11)) & 0xFF);
-	return Cartesian((x - MAXDOU2INT) / DOUBLE2INT, (y - MAXDOU2INT) / DOUBLE2INT, (z - MAXDOU2INT) / DOUBLE2INT);
-}
-
-
-std::string serialise_geo(uInt64 id) {
-	id = Swap7Bytes(id);
-	const char serialise[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
-							   (char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF) };
-	return std::string(serialise, SIZE_BYTES_ID);
-}
-
-
-uInt64 unserialise_geo(const std::string &str) {
-	uInt64 id = (((uInt64)str.at(0) << 48) & 0xFF000000000000) | (((uInt64)str.at(1) << 40) & 0xFF0000000000) | \
-				(((uInt64)str.at(2) << 32) & 0xFF00000000)     | (((uInt64)str.at(3) << 24) & 0xFF000000)     | \
-				(((uInt64)str.at(4) << 16) & 0xFF0000)         | (((uInt64)str.at(5) <<  8) & 0xFF00)         | \
-				(str.at(6) & 0xFF);
-	return id;
-}
-
-
 void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids)
 {
 	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
@@ -827,20 +749,6 @@ void getEWKT_Ranges(const std::string &field_value, bool partials, double error,
 		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
 	}
 	HTM::mergeRanges(ranges);
-}
-
-
-std::string serialise_bool(const std::string &field_value)
-{
-	if (field_value.empty()) {
-		return "f";
-	} else if (strcasecmp(field_value.c_str(), "true") == 0) {
-		return "t";
-	} else if (strcasecmp(field_value.c_str(), "false") == 0) {
-		return "f";
-	} else {
-		return "";
-	}
 }
 
 
@@ -1010,65 +918,11 @@ bool strhasupper(const std::string &str)
 }
 
 
-int get_coords(const std::string &str, double *coords)
-{
-	std::stringstream ss;
-	unique_group unique_gr;
-	int len = (int)str.size();
-	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, unique_gr);
-	group_t *g = unique_gr.get();
-
-	if (ret != -1 && (g[0].end - g[0].start) == len) {
-		ss << std::string(str.c_str() + g[1].start, g[1].end - g[1].start);
-		ss >> coords[0];
-		ss.clear();
-		ss << std::string(str.c_str() + g[2].start, g[2].end - g[2].start);
-		ss >> coords[1];
-		ss.clear();
-		ss << std::string(str.c_str() + g[3].start, g[3].end - g[3].start);
-		ss >> coords[2];
-		if (g[4].end - g[4].start > 0) {
-			std::string units(str.c_str() + g[4].start, g[4].end - g[4].start);
-			if (units.compare("mi") == 0) {
-				coords[2] *= 1609.344;
-			} else if (units.compare("km") == 0) {
-				coords[2] *= 1000;
-			} else if (units.compare("yd") == 0) {
-				coords[2] *= 0.9144;
-			} else if (units.compare("ft") == 0) {
-				coords[2] *= 0.3048;
-			} else if (units.compare("in") == 0) {
-				coords[2] *= 0.0254;
-			} else if (units.compare("cm") == 0) {
-				coords[2] *= 0.01;
-			} else if (units.compare("mm") == 0) {
-				coords[2] *= 0.001;
-			}
-		}
-
-		return 0;
-	}
-
-	return -1;
-}
-
-
 bool isRange(const std::string &str, unique_group &unique_gr)
 {
 	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re, unique_gr);
 
 	return (ret != -1) ? true : false;
-}
-
-
-bool isLatLongDistance(const std::string &str)
-{
-	unique_group unique_gr;
-	int len = (int)str.size();
-	int ret = pcre_search(str.c_str(), len, 0, 0, COORDS_DISTANCE_RE, &compiled_coords_dist_re, unique_gr);
-	group_t *gr = unique_gr.get();
-
-	return (ret != -1 && (gr[0].end - gr[0].start) == len) ? true : false;
 }
 
 
@@ -1088,40 +942,6 @@ bool StartsWith(const std::string &text, const std::string &token)
 	if (text.length() < token.length())
 		return false;
 	return (text.compare(0, token.length(), token) == 0);
-}
-
-
-std::string
-unserialise(char field_type, const std::string &field_name, const std::string &serialise_val)
-{
-	switch (field_type) {
-		case NUMERIC_TYPE:
-			return std::to_string(Xapian::sortable_unserialise(serialise_val));
-		case DATE_TYPE:
-			return unserialise_date(serialise_val);
-		case BOOLEAN_TYPE:
-			return (serialise_val.at(0) == 'f') ? "false" : "true";
-		case STRING_TYPE:
-			return serialise_val;
-	}
-	return "";
-}
-
-
-std::string
-serialise(char field_type, const std::string &field_value)
-{
-	switch (field_type) {
-		case NUMERIC_TYPE:
-			return serialise_numeric(field_value);
-		case DATE_TYPE:
-			return serialise_date(field_value);
-		case BOOLEAN_TYPE:
-			return serialise_bool(field_value);
-		case STRING_TYPE:
-			return field_value;
-	}
-	return "";
 }
 
 

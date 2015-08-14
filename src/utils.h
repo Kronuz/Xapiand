@@ -43,15 +43,6 @@
 #include <pcre.h>
 #include <sys/time.h>
 
-#define NUMERIC_TYPE 'n'
-#define STRING_TYPE 's'
-#define DATE_TYPE 'd'
-#define GEO_TYPE 'g'
-#define BOOLEAN_TYPE 'b'
-#define ARRAY_TYPE 'a'
-#define OBJECT_TYPE 'o'
-#define NO_TYPE ' '
-
 #define CMD_ID 0
 #define CMD_SEARCH 1
 #define CMD_FACETS 2
@@ -69,22 +60,6 @@
 #define INC_LEVEL 5
 #define BITS_LEVEL 10
 
-const unsigned int SIZE_SERIALISE_CARTESIAN = 12;
-const unsigned int DOUBLE2INT = 1000000000;
-const unsigned int MAXDOU2INT =  999999999;
-
-#if __BYTE_ORDER == __BIG_ENDIAN
-// No translation needed for big endian system.
-#define Swap7Bytes(val) val // HTM's trixel's ids are represent in 7 bytes.
-#define Swap4Bytes(val) val // Unsigned int is represent in 4 bytes
-#elif __BYTE_ORDER == __LITTLE_ENDIAN
-// Swap 7 byte, 56 bit values. (If it is not big endian, It is considered little endian)
-#define Swap7Bytes(val) ((((val) >> 48) & 0xFF) | (((val) >> 32) & 0xFF00) | (((val) >> 16) & 0xFF0000) | \
- 						((val) & 0xFF000000) | (((val) << 16) & 0xFF00000000) | \
-						(((val) << 32) & 0xFF0000000000) | (((val) << 48) & 0xFF000000000000))
-#define Swap4Bytes(val) ((((val) >> 24) & 0xFF) | (((val) >> 8) & 0xFF00) | \
-						(((val) <<  8) & 0xFF0000) | ((val << 24) & 0xFF000000))
-#endif
 
 void log(const char *file, int line, void *obj, const char *fmt, ...);
 
@@ -147,7 +122,6 @@ typedef struct pos_time_s {
 } pos_time_t;
 
 extern pcre *compiled_coords_re;
-extern pcre *compiled_coords_dist_re;
 extern pcre *compiled_numeric_re;
 extern pcre *compiled_find_range_re;
 extern pos_time_t b_time;
@@ -268,9 +242,7 @@ std::string get_prefix(const std::string &name, const std::string &prefix, char 
 std::string get_slot_hex(const std::string &name);
 bool strhasupper(const std::string &str);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups);
-int get_coords(const std::string &str, double *coords);
 bool isRange(const std::string &str, unique_group &unique_gr);
-bool isLatLongDistance(const std::string &str);
 void get_order(const std::string &str, query_t &e);
 bool isNumeric(const std::string &str);
 bool StartsWith(const std::string &text, const std::string &token);

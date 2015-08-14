@@ -22,6 +22,7 @@
 
 #include "fields.h"
 #include "multivalue.h"
+#include "serialise.h"
 #include "utils.h"
 #include <xapian/query.h>
 
@@ -35,7 +36,7 @@ NumericFieldProcessor::operator()(const std::string &str)
 	// For negative number, we receive _# and we serialise -#.
 	std::string serialise(str.c_str());
 	if (serialise.at(0) == '_') serialise.at(0) = '-';
-	serialise = serialise_numeric(serialise);
+	serialise = Serialise::numeric(serialise);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand numeric specification '" + str + "'");
 	}
@@ -48,7 +49,7 @@ BooleanFieldProcessor::BooleanFieldProcessor(const std::string &prefix_): prefix
 
 Xapian::Query BooleanFieldProcessor::operator()(const std::string &str)
 {
-	std::string serialise = serialise_bool(str);
+	std::string serialise = Serialise::boolean(str);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand bool specification '" + str + "'");
 	}
@@ -63,7 +64,7 @@ Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 {
 	std::string serialise(str.c_str());
 	if (serialise.at(0) == '_') serialise.at(0) = '-';
-	serialise = serialise_date(serialise);
+	serialise = Serialise::date(serialise);
 	if (serialise.size() == 0) {
 		throw Xapian::QueryParserError("Didn't understand date specification '" + str + "'");
 	}
@@ -77,6 +78,6 @@ GeoFieldProcessor::GeoFieldProcessor(const std::string &prefix_): prefix(prefix_
 Xapian::Query GeoFieldProcessor::operator()(const std::string &str)
 {
 	std::string serialise(str.c_str());
-	serialise = serialise_geo(strtouInt64(serialise));
+	serialise = Serialise::trixel_id(strtouInt64(serialise));
 	return Xapian::Query(prefix + serialise);
 }

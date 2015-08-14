@@ -23,9 +23,7 @@
 #include "test_serialise.h"
 #include "test_htm.h"
 #include "test_wkt_parser.h"
-#include <config.h>
-#include <stdlib.h>
-#include <stdint.h>
+
 #include <check.h>
 
 

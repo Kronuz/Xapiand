@@ -47,7 +47,7 @@
 #define HAVE_PTHREAD_SETNAME_NP_3 1
 #endif
 
-// Define macro for endian.
+// Define macro for endianess.
 #if defined(__linux__)
 	#include <endian.h>
 #elif defined(__APPLE__)

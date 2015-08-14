@@ -27,8 +27,6 @@
 #include <sstream>
 #include <xapian.h>
 
-#include "utils.h"
-
 
 class NumericFieldProcessor : public Xapian::FieldProcessor {
 	std::string prefix;

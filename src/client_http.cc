@@ -26,6 +26,7 @@
 
 #include "multivalue.h"
 #include "utils.h"
+#include "serialise.h"
 #include "length.h"
 #include "cJSON.h"
 #include "manager.h"
@@ -757,7 +758,7 @@ void HttpClient::_search()
 			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
 				cJSON *value = cJSON_CreateObject(); // It is managed by array_values.
                 data_field_t field_t = database->get_data_field((*spy).first);
-				cJSON_AddStringToObject(value, "value", unserialise(field_t.type, (*spy).first, *facet).c_str());
+				cJSON_AddStringToObject(value, "value", Unserialise::unserialise(field_t.type, (*spy).first, *facet).c_str());
 				cJSON_AddNumberToObject(value, "termfreq", facet.get_termfreq());
 				cJSON_AddItemToArray(array_values, value);
 			}
@@ -1003,7 +1004,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 			memset(&q, 0, sizeof(q));
 			if (url_qs("pretty", query_buf.c_str(), query_size, &q) != -1) {
-				std::string pretty = serialise_bool(urldecode(q.offset, q.length));
+				std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
 				(pretty.compare("f") == 0) ? e.pretty = false : e.pretty = true;
 			} else {
 				e.pretty = false;
@@ -1043,7 +1044,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 				memset(&q, 0, sizeof(q));
 				if (url_qs("spelling", query_buf.c_str(), query_size, &q) != -1) {
-					std::string spelling = serialise_bool(urldecode(q.offset, q.length));
+					std::string spelling = Serialise::boolean(urldecode(q.offset, q.length));
 					(spelling.compare("f") == 0) ? e.spelling = false : e.spelling = true;
 				} else {
 					e.spelling = true;
@@ -1051,7 +1052,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 				memset(&q, 0, sizeof(q));
 				if (url_qs("synonyms", query_buf.c_str(), query_size, &q) != -1) {
-					std::string synonyms = serialise_bool(urldecode(q.offset, q.length));
+					std::string synonyms = Serialise::boolean(urldecode(q.offset, q.length));
 					(synonyms.compare("f") == 0) ? e.synonyms = false : e.synonyms = true;
 				} else {
 					e.synonyms = false;
@@ -1098,7 +1099,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 				memset(&q, 0, sizeof(q));
 				if (url_qs("fuzzy", query_buf.c_str(), query_size, &q) != -1) {
-					std::string fuzzy = serialise_bool(urldecode(q.offset, q.length));
+					std::string fuzzy = Serialise::boolean(urldecode(q.offset, q.length));
 					(fuzzy.compare("f") == 0) ? e.is_fuzzy = false : e.is_fuzzy = true;
 				} else {
 					e.is_fuzzy = false;
@@ -1139,7 +1140,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 				memset(&q, 0, sizeof(q));
 				if (url_qs("nearest", query_buf.c_str(), query_size, &q) != -1) {
-					std::string nearest = serialise_bool(urldecode(q.offset, q.length));
+					std::string nearest = Serialise::boolean(urldecode(q.offset, q.length));
 					(nearest.compare("f") == 0) ? e.is_nearest = false : e.is_nearest = true;
 				} else {
 					e.is_nearest = false;
@@ -1181,7 +1182,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 			} else if (cmd == CMD_ID) {
 				memset(&q, 0, sizeof(q));
 				if (url_qs("commit", query_buf.c_str(), query_size, &q) != -1) {
-					std::string pretty = serialise_bool(urldecode(q.offset, q.length));
+					std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
 					(pretty.compare("f") == 0) ? e.commit = false : e.commit = true;
 				} else {
 					e.commit = false;
@@ -1189,7 +1190,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 			} else if (cmd == CMD_STATS) {
 				memset(&q, 0, sizeof(q));
 				if (url_qs("server", query_buf.c_str(), query_size, &q) != -1) {
-					std::string server = serialise_bool(urldecode(q.offset, q.length));
+					std::string server = Serialise::boolean(urldecode(q.offset, q.length));
 					(server.compare("f") == 0) ? e.server = false : e.server = true;
 				} else {
 					e.server = false;
@@ -1197,7 +1198,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 				memset(&q, 0, sizeof(q));
 				if (url_qs("database", query_buf.c_str(), query_size, &q) != -1) {
-					std::string database = serialise_bool(urldecode(q.offset, q.length));
+					std::string database = Serialise::boolean(urldecode(q.offset, q.length));
 					(database.compare("f") == 0) ? e.database = false : e.database = true;
 				} else {
 					e.database = false;
