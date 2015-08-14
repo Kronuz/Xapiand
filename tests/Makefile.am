@@ -22,6 +22,7 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/md5.cc \
 			$(top_builddir)/src/multivalue.cc \
 			$(top_builddir)/src/multivaluekeymaker.cc \
+			$(top_builddir)/src/serialise.cc \
 			$(top_builddir)/src/times.cc \
 			$(top_builddir)/src/utils.cc \
 			$(top_builddir)/src/wkt_parser.cc
