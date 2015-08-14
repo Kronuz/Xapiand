@@ -71,6 +71,21 @@ Serialise::date(const std::string &field_value)
 
 
 std::string
+Serialise::date(int timeinfo_[])
+{
+	time_t tt = 0;
+	struct tm *timeinfo = gmtime(&tt);
+	timeinfo->tm_year   = timeinfo_[0];
+	timeinfo->tm_mon    = timeinfo_[1];
+	timeinfo->tm_mday   = timeinfo_[2];
+	timeinfo->tm_hour   = timeinfo_[3];
+	timeinfo->tm_min    = timeinfo_[4];
+	timeinfo->tm_sec    = timeinfo_[5];
+	return std::to_string(Datetime::timegm(timeinfo));
+}
+
+
+std::string
 Serialise::cartesian(const Cartesian &norm_cartesian)
 {
 	unsigned int x = Swap4Bytes(((unsigned int)(norm_cartesian.x * DOUBLE2INT) + MAXDOU2INT));

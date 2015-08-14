@@ -1370,11 +1370,11 @@ std::string terms_by_year(int n_s[], int n_e[], const std::string &prefix)
 	n_s[1] = n_s[3] = n_s[4] = n_s[5] = n_e[1] = n_e[3] = n_e[4] = n_e[5] = 0;
 	n_s[2] = n_e[2] = 1;
 	while (n_s[0] != n_e[0]) {
-		res += prefix_dot + serialise_term(n_s) + " OR ";
+		res += prefix_dot + Serialise::date(n_s) + " OR ";
 		n_s[0]++;
 	}
 
-	res += prefix_dot + serialise_term(n_e);
+	res += prefix_dot + Serialise::date(n_e);
 	return res;
 }
 
@@ -1386,11 +1386,11 @@ std::string terms_by_month(int n_s[], int n_e[], const std::string &prefix)
 	n_s[3] = n_s[4] = n_s[5] = n_e[3] = n_e[4] = n_e[5] = 0;
 	n_s[2] = n_e[2] = 1;
 	while (n_s[1] != n_e[1]) {
-		res += prefix_dot + serialise_term(n_s) + " OR ";
+		res += prefix_dot + Serialise::date(n_s) + " OR ";
 		n_s[1]++;
 	}
 
-	res += prefix_dot + serialise_term(n_e);
+	res += prefix_dot + Serialise::date(n_e);
 	return res;
 }
 
@@ -1401,11 +1401,11 @@ std::string terms_by_day(int n_s[], int n_e[], const std::string &prefix)
 	std::string res;
 	n_s[3] = n_s[4] = n_s[5] = n_e[3] = n_e[4] = n_e[5] = 0;
 	while (n_s[2] != n_e[2]) {
-		res += prefix_dot + serialise_term(n_s) + " OR ";
+		res += prefix_dot + Serialise::date(n_s) + " OR ";
 		n_s[2]++;
 	}
 
-	res += prefix_dot + serialise_term(n_e);
+	res += prefix_dot + Serialise::date(n_e);
 	return res;
 }
 
@@ -1416,11 +1416,11 @@ std::string terms_by_hour(int n_s[], int n_e[], const std::string &prefix)
 	std::string res;
 	n_s[4] = n_s[5] = n_e[4] = n_e[5] = 0;
 	while (n_s[3] != n_e[3]) {
-		res += prefix_dot + serialise_term(n_s) + " OR ";
+		res += prefix_dot + Serialise::date(n_s) + " OR ";
 		n_s[3]++;
 	}
 
-	res += prefix_dot + serialise_term(n_e);
+	res += prefix_dot + Serialise::date(n_e);
 	return res;
 }
 
@@ -1431,11 +1431,11 @@ std::string terms_by_minute(int n_s[], int n_e[], const std::string &prefix)
 	std::string res;
 	n_s[5] = n_e[5] = 0;
 	while (n_s[4] != n_e[4]) {
-		res += prefix_dot + serialise_term(n_s) + " OR ";
+		res += prefix_dot + Serialise::date(n_s) + " OR ";
 		n_s[4]++;
 	}
 
-	res += prefix_dot + serialise_term(n_e);
+	res += prefix_dot + Serialise::date(n_e);
 	return res;
 }
 
@@ -1445,27 +1445,12 @@ std::string terms_by_second(int n_s[], int n_e[], const std::string &prefix)
 	std::string prefix_dot = prefix + ":";
 	std::string res;
 	while (n_s[5] != n_e[5]) {
-		res += prefix_dot + serialise_term(n_s) + " OR ";
+		res += prefix_dot + Serialise::date(n_s) + " OR ";
 		n_s[5]++;
 	}
 
-	res += prefix_dot + serialise_term(n_e);
+	res += prefix_dot + Serialise::date(n_e);
 	return res;
-}
-
-
-
-std::string serialise_term(int n[])
-{
-	time_t tt = 0;
-	struct tm *timeinfo = gmtime(&tt);
-	timeinfo->tm_year   = n[0];
-	timeinfo->tm_mon    = n[1];
-	timeinfo->tm_mday   = n[2];
-	timeinfo->tm_hour   = n[3];
-	timeinfo->tm_min    = n[4];
-	timeinfo->tm_sec    = n[5];
-	return std::to_string(Datetime::timegm(timeinfo));
 }
 
 

@@ -215,9 +215,6 @@ int url_path(const char* n1, size_t size, parser_url_path_t *par);
 int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
 int look_cmd(const char *);
-
-std::string serialise_term(int n[]);
-std::string unserialise_date(const std::string &serialise_val);
 void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
 void getEWKT_Ranges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges);
 bool lat_lon(const std::string &str, int *grv, int size, int offset);
