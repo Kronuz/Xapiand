@@ -17,11 +17,13 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/exception.cc \
 			$(top_builddir)/src/fields.cc \
 			$(top_builddir)/src/geometry.cc \
+			$(top_builddir)/src/geospatialrange.cc \
 			$(top_builddir)/src/htm.cc \
 			$(top_builddir)/src/length.cc \
 			$(top_builddir)/src/md5.cc \
 			$(top_builddir)/src/multivalue.cc \
 			$(top_builddir)/src/multivaluekeymaker.cc \
+			$(top_builddir)/src/multivaluerange.cc \
 			$(top_builddir)/src/serialise.cc \
 			$(top_builddir)/src/times.cc \
 			$(top_builddir)/src/utils.cc \

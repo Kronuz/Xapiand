@@ -15,6 +15,7 @@ xapiand_SOURCES = \
 	exception.cc \
 	fields.cc \
 	geometry.cc \
+	geospatialrange.cc \
 	htm.cc \
 	http_parser.c \
 	length.cc \
@@ -22,6 +23,7 @@ xapiand_SOURCES = \
 	md5.cc \
 	multivalue.cc \
 	multivaluekeymaker.cc \
+	multivaluerange.cc \
 	replicator.cc \
 	serialise.cc \
 	server.cc \
@@ -45,6 +47,7 @@ noinst_HEADERS = \
 	exception.h \
 	fields.h \
 	geometry.h \
+	geospatialrange.h \
 	htm.h \
 	http_parser.h \
 	length.h \
@@ -53,6 +56,7 @@ noinst_HEADERS = \
 	md5.h \
 	multivalue.h \
 	multivaluekeymaker.h \
+	multivaluerange.h \
 	queue.h \
 	replicator.h \
 	serialise.cc \
