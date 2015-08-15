@@ -28,13 +28,21 @@
 
 // Data types
 #define NUMERIC_TYPE 'n'
-#define STRING_TYPE 's'
-#define DATE_TYPE 'd'
-#define GEO_TYPE 'g'
+#define STRING_TYPE  's'
+#define DATE_TYPE    'd'
+#define GEO_TYPE     'g'
 #define BOOLEAN_TYPE 'b'
-#define ARRAY_TYPE 'a'
-#define OBJECT_TYPE 'o'
-#define NO_TYPE ' '
+#define ARRAY_TYPE   'a'
+#define OBJECT_TYPE  'o'
+#define NO_TYPE      ' '
+
+#define NUMERIC_STR "numeric"
+#define STRING_STR  "string"
+#define DATE_STR    "date"
+#define GEO_STR     "geospatial"
+#define BOOLEAN_STR "boolean"
+#define ARRAY_STR   "array"
+#define OBJECT_STR  "object"
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 // No translation needed for big endian system.
@@ -67,6 +75,7 @@ namespace Serialise {
 	// Serialise a trixel's id (HTM).
 	std::string trixel_id(uInt64 id);
 	std::string boolean(const std::string &field_value);
+	std::string type(char type);
 };
 
 
@@ -79,6 +88,7 @@ namespace Unserialise {
 	// Unserialise a trixel's id (HTM).
 	uInt64 trixel_id(const std::string &str);
 	std::string boolean(const std::string &serialise_val);
+	std::string type(const std::string &str);
 };
 
 

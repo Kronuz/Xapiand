@@ -124,6 +124,22 @@ Serialise::boolean(const std::string &field_value)
 
 
 std::string
+Serialise::type(char type)
+{
+	switch (type) {
+		case STRING_TYPE:  return STRING_STR;
+		case NUMERIC_TYPE: return NUMERIC_STR;
+		case BOOLEAN_TYPE: return BOOLEAN_STR;
+		case GEO_TYPE:     return GEO_STR;
+		case DATE_TYPE:    return DATE_STR;
+		case OBJECT_TYPE:  return OBJECT_STR;
+		case ARRAY_TYPE:   return ARRAY_STR;
+	}
+	return "";
+}
+
+
+std::string
 Unserialise::unserialise(char field_type, const std::string &field_name, const std::string &serialise_val)
 {
 	switch (field_type) {
@@ -187,4 +203,24 @@ std::string
 Unserialise::boolean(const std::string &serialise_val)
 {
 	return serialise_val.at(0) == 'f' ? "false" : "true";
+}
+
+
+std::string
+Unserialise::type(const std::string &str)
+{
+	std::string low(stringtolower(str));
+	if (low.compare(NUMERIC_STR) == 0 || (low.size() == 1 && low[0] == NUMERIC_TYPE)) {
+		return std::string(1, toupper(NUMERIC_TYPE));
+	} else if (low.compare(GEO_STR) == 0     || (low.size() == 1 && low[0] == GEO_TYPE)) {
+		return std::string(1, toupper(GEO_TYPE));
+	} else if (low.compare(STRING_STR) == 0  || (low.size() == 1 && low[0] == STRING_TYPE)) {
+		return std::string(1, toupper(STRING_TYPE));
+	} else if (low.compare(BOOLEAN_STR) == 0 || (low.size() == 1 && low[0] == BOOLEAN_TYPE)) {
+		return std::string(1, toupper(BOOLEAN_TYPE));
+	} else if (low.compare(DATE_STR) == 0    || (low.size() == 1 && low[0] == DATE_TYPE)) {
+		return std::string(1, toupper(DATE_TYPE));
+	} else {
+		return std::string(1, toupper(STRING_TYPE));
+	}
 }
