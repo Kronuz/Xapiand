@@ -90,6 +90,7 @@ int read_mastery(const std::string &dir, bool force)
 	return mastery_level;
 }
 
+
 class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 	std::vector<std::string> prefixes;
 
@@ -567,18 +568,18 @@ DatabasePool::checkin(Database **database)
 }
 
 
-void DatabasePool::init_ref(Endpoints endpoints)
+void DatabasePool::init_ref(const Endpoints &endpoints)
 {
 	Xapian::Document doc;
-	endpoints_set_t::iterator endp_it = endpoints.begin();
+	endpoints_set_t::iterator endp_it(endpoints.begin());
 	if (ref_database) {
-		for (; endp_it != endpoints.end(); endp_it++) {
-			std::string unique_id = prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX);
+		for ( ; endp_it != endpoints.end(); endp_it++) {
+			std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
 			Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 			if (p == ref_database->db->postlist_end(unique_id)) {
 				doc.add_boolean_term(unique_id);
 				doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
-				doc.add_value(0, std::to_string(0));
+				doc.add_value(0, "0");
 				ref_database->replace(unique_id, doc, true);
 			} else {
 				LOG(this,"The document already exists nothing to do\n");
@@ -586,22 +587,24 @@ void DatabasePool::init_ref(Endpoints endpoints)
 		}
 	}
 }
-void DatabasePool::inc_ref(Endpoints endpoints)
+
+
+void DatabasePool::inc_ref(const Endpoints &endpoints)
 {
 	Xapian::Document doc;
-	endpoints_set_t::iterator endp_it = endpoints.begin();
-	for (; endp_it != endpoints.end(); endp_it++) {
-		std::string unique_id = prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX);
+	endpoints_set_t::iterator endp_it(endpoints.begin());
+	for ( ; endp_it != endpoints.end(); endp_it++) {
+		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
 		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 		if (p == ref_database->db->postlist_end(unique_id)) {
-			//QUESTION: Document not found - should add?
-			//QUESTION: This case could happen?
+			// QUESTION: Document not found - should add?
+			// QUESTION: This case could happen?
 			doc.add_boolean_term(unique_id);
 			doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
-			doc.add_value(0, std::to_string(0));
+			doc.add_value(0, "0");
 			ref_database->replace(unique_id, doc, true);
 		} else {
-			//Document found - reference increased
+			// Document found - reference increased
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
 			doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
@@ -611,12 +614,14 @@ void DatabasePool::inc_ref(Endpoints endpoints)
 		}
 	}
 }
-void DatabasePool::dec_ref(Endpoints endpoints)
+
+
+void DatabasePool::dec_ref(const Endpoints &endpoints)
 {
 	Xapian::Document doc;
-	endpoints_set_t::iterator endp_it = endpoints.begin();
-	for (; endp_it != endpoints.end(); endp_it++) {
-		std::string unique_id = prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX);
+	endpoints_set_t::iterator endp_it(endpoints.begin());
+	for ( ; endp_it != endpoints.end(); endp_it++) {
+		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
 		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 		if (p != ref_database->db->postlist_end(unique_id)) {
 			doc = ref_database->db->get_document(*p);
@@ -626,7 +631,7 @@ void DatabasePool::dec_ref(Endpoints endpoints)
 			doc.add_value(0, std::to_string(nref));
 			ref_database->replace(unique_id, doc, true);
 			if (nref == 0) {
-				//qmtx need a lock
+				// qmtx need a lock
 				pthread_cond_wait(&checkin_cond, &qmtx);
 				delete_files(endp_it->path);
 			}
@@ -645,10 +650,10 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 	DatabaseQueue *queue;
 
 	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
-	std::unordered_set<DatabaseQueue *>::const_iterator it_qs;
+	std::unordered_set<DatabaseQueue *>::const_iterator it_qs(queues_set.cbegin());
 
 	bool switched = true;
-	for(it_qs=queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
+	for ( ; it_qs != queues_set.cend(); it_qs++) {
 		queue = *it_qs;
 		queue->is_switch_db = true;
 		if (queue->count != queue->size()) {
@@ -658,7 +663,7 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 	}
 
 	if (switched) {
-		for(it_qs=queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
+		for (it_qs = queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
 			queue = *it_qs;
 			while (!queue->empty()) {
 				if (queue->pop(database)) {
@@ -669,7 +674,7 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 
 		move_files(endpoint.path + "/.tmp", endpoint.path);
 
-		for(it_qs=queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
+		for(it_qs = queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
 			queue = *it_qs;
 			queue->is_switch_db = false;
 
@@ -757,14 +762,19 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit)
 
 	Xapian::Document document;
 	Xapian::QueryParser queryparser;
-	queryparser.add_prefix("id", "Q");
-	Xapian::Query query = queryparser.parse_query(std::string("id:" + _document_id));
+
+	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
+	if (isupper(_document_id.at(0))) prefix += ":";
+	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
+    Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
+
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
 	Xapian::MSet mset = enquire.get_mset(0, 1);
 	Xapian::MSetIterator m = mset.begin();
+
 	int t = 3;
-	for (; t >= 0; --t) {
+	for ( ; t >= 0; --t) {
 		try {
 			document = db->get_document(*m);
 			break;
@@ -785,11 +795,11 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit)
 	}
 
 	if (cJSONUtils_ApplyPatches(data_json.get(), patches) == 0) {
-		//Object patched
+		// Object patched
 		return index(data_json.get(), _document_id, commit);
 	}
 
-	//Object no patched
+	// Object no patched
 	return false;
 }
 
@@ -825,6 +835,7 @@ Database::is_reserved(const std::string &word)
 		word.compare(RESERVED_ID)          != 0) {
 		return false;
 	}
+
 	return true;
 }
 
@@ -967,7 +978,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 	std::string prefix;
 	if (!name.empty()) {
 		if (!find) {
-			if (!cJSON_GetObjectItem(schema, RESERVED_TYPE)) cJSON_AddStringToObject(schema, RESERVED_TYPE, str_type(spc.sep_types[2]).c_str());
+			if (!cJSON_GetObjectItem(schema, RESERVED_TYPE)) cJSON_AddStringToObject(schema, RESERVED_TYPE, Serialise::type(spc.sep_types[2]).c_str());
 			cJSON_AddStringToObject(schema, RESERVED_INDEX, "not analyzed");
 		}
 		cJSON *_prefix = cJSON_GetObjectItem(schema, RESERVED_PREFIX);
@@ -997,14 +1008,14 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 			if (std::string(_type->valuestring).find("array") == -1) {
 				std::string s_type;
 				if (spc.sep_types[0] == OBJECT_TYPE) {
-					s_type = "object/array/" + str_type(spc.sep_types[2]);
+					s_type = "object/array/" + Serialise::type(spc.sep_types[2]);
 				} else {
-					s_type = "array/" + str_type(spc.sep_types[2]);
+					s_type = "array/" + Serialise::type(spc.sep_types[2]);
 				}
 				cJSON_ReplaceItemInObject(schema, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
 			}
 		} else {
-			cJSON_AddStringToObject(schema, RESERVED_TYPE, std::string("array/" + str_type(spc.sep_types[2])).c_str());
+			cJSON_AddStringToObject(schema, RESERVED_TYPE, std::string("array/" + Serialise::type(spc.sep_types[2])).c_str());
 		}
 	}
 
@@ -1085,7 +1096,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 
 	if (!find) {
 		if (!cJSON_GetObjectItem(schema, RESERVED_TYPE)) {
-			cJSON_AddStringToObject(schema, RESERVED_TYPE, str_type(spc.sep_types[2]).c_str());
+			cJSON_AddStringToObject(schema, RESERVED_TYPE, Serialise::type(spc.sep_types[2]).c_str());
 		}
 		cJSON_AddStringToObject(schema, RESERVED_INDEX, "not analyzed");
 	}
@@ -1116,14 +1127,14 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			if (std::string(_type->valuestring).find("array") == -1) {
 				std::string s_type;
 				if (spc.sep_types[0] == OBJECT_TYPE) {
-					s_type = "object/array/" + str_type(spc.sep_types[2]);
+					s_type = "object/array/" + Serialise::type(spc.sep_types[2]);
 				} else {
-					s_type = "array/" + str_type(spc.sep_types[2]);
+					s_type = "array/" + Serialise::type(spc.sep_types[2]);
 				}
 				cJSON_ReplaceItemInObject(schema, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
 			}
 		} else {
-			cJSON_AddStringToObject(schema, RESERVED_TYPE, std::string("array/" + str_type(spc.sep_types[2])).c_str());
+			cJSON_AddStringToObject(schema, RESERVED_TYPE, std::string("array/" + Serialise::type(spc.sep_types[2])).c_str());
 		}
 	}
 
@@ -1461,7 +1472,7 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 			if (spc->type == cJSON_String) {
 				std::string _type = stringtolower(spc->valuestring);
 				if (set_types(_type, spc_now.sep_types)) {
-					if (std::string(type->valuestring).find(str_type(spc_now.sep_types[2])) == -1) throw MSG_Error("Type inconsistency, it's %s not %s", type->valuestring, _type.c_str());
+					if (std::string(type->valuestring).find(Serialise::type(spc_now.sep_types[2])) == -1) throw MSG_Error("Type inconsistency, it's %s not %s", type->valuestring, _type.c_str());
 					spc_now.type = _type;
 				} else {
 					throw MSG_Error("%s is invalid type", spc->valuestring);
@@ -1685,33 +1696,33 @@ Database::update_specifications(cJSON *item, specifications_t &spc_now, cJSON *s
 
 
 std::string
-Database::specificationstostr(specifications_t &spc)
+Database::specificationstostr(const specifications_t &spc)
 {
 	std::stringstream str;
 	str << "\n{\n";
-	str << "\tposition: " << spc.position << "\n";
-	str << "\tweight: "   << spc.weight   << "\n";
-	str << "\tlanguage: " << spc.language << "\n";
+	str << "\t" << RESERVED_POSITION << ": " << spc.position << "\n";
+	str << "\t" << RESERVED_WEIGHT   << ": "   << spc.weight   << "\n";
+	str << "\t" << RESERVED_LANGUAGE << ": " << spc.language << "\n";
 
-	str << "\taccuracy: [ ";
+	str << "\t" << RESERVED_ACCURACY << ": [ ";
 	std::vector<std::string>::const_iterator it(spc.accuracy.begin());
 	for (; it != spc.accuracy.end(); it++) {
 		str << *it << " ";
 	}
 	str << "]\n";
 
-	str << "\ttype: " << spc.type << "\n";
-	str << "\tanalyzer: " << spc.analyzer << "\n";
+	str << "\t" << RESERVED_TYPE     << ": " << spc.type << "\n";
+	str << "\t" << RESERVED_ANALYZER << ": " << spc.analyzer << "\n";
 
-	str << "\tspelling: "          << ((spc.spelling)          ? "true" : "false") << "\n";
-	str << "\tpositions: "         << ((spc.positions)         ? "true" : "false") << "\n";
-	str << "\tstore: "             << ((spc.store)             ? "true" : "false") << "\n";
-	str << "\tdynamic: "           << ((spc.dynamic)           ? "true" : "false") << "\n";
-	str << "\tdate_detection: "    << ((spc.date_detection)    ? "true" : "false") << "\n";
-	str << "\tnumeric_detection: " << ((spc.numeric_detection) ? "true" : "false") << "\n";
-	str << "\tgeo_detection: "     << ((spc.geo_detection)     ? "true" : "false") << "\n";
-	str << "\tbool_detection: "    << ((spc.bool_detection)    ? "true" : "false") << "\n";
-	str << "\tstring_detection: "  << ((spc.string_detection)  ? "true" : "false") << "\n}\n";
+	str << "\t" << RESERVED_SPELLING    << ": " << ((spc.spelling)          ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_POSITIONS   << ": " << ((spc.positions)         ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_STORE       << ": " << ((spc.store)             ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_DYNAMIC     << ": " << ((spc.dynamic)           ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_D_DETECTION << ": " << ((spc.date_detection)    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_N_DETECTION << ": " << ((spc.numeric_detection) ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_G_DETECTION << ": " << ((spc.geo_detection)     ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_B_DETECTION << ": " << ((spc.bool_detection)    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_S_DETECTION << ": " << ((spc.string_detection)  ? "true" : "false") << "\n}\n";
 
 	return str.str();
 }
@@ -1720,10 +1731,10 @@ Database::specificationstostr(specifications_t &spc)
 bool
 Database::is_language(const std::string &language)
 {
-	if (language.find(" ") != -1) {
+	if (language.find(" ") != std::string::npos) {
 		return false;
 	}
-	return (std::string(DB_LANGUAGES).find(language) != -1) ? true : false;
+	return (std::string(DB_LANGUAGES).find(language) != std::string::npos) ? true : false;
 }
 
 
@@ -1804,8 +1815,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 		bool geo_detection = true;
 		bool bool_detection = true;
 		bool string_detection = true;
-		specifications_t spc_now = {position, weight, language, spelling, positions, accuracy, store, type, {NO_TYPE, NO_TYPE, NO_TYPE}, analyzer, dynamic,
-									date_detection, numeric_detection, geo_detection, bool_detection, string_detection};
+		specifications_t spc_now = { position, weight, language, spelling, positions, accuracy, store, type, {NO_TYPE, NO_TYPE, NO_TYPE}, analyzer, dynamic,
+									date_detection, numeric_detection, geo_detection, bool_detection, string_detection };
 
 		update_specifications(document, spc_now, properties);
 		specifications_t spc_bef = spc_now;
@@ -2116,22 +2127,6 @@ Database::get_type(cJSON *_field, specifications_t &spc)
 }
 
 
-std::string
-Database::str_type(char type)
-{
-	switch (type) {
-		case STRING_TYPE: return "string";
-		case NUMERIC_TYPE: return "numeric";
-		case BOOLEAN_TYPE: return "boolean";
-		case GEO_TYPE: return "geospatial";
-		case DATE_TYPE: return "date";
-		case OBJECT_TYPE: return "object";
-		case ARRAY_TYPE: return "array";
-	}
-	return "";
-}
-
-
 bool
 Database::set_types(const std::string &type, char sep_types[])
 {
@@ -2198,44 +2193,6 @@ Database::clean_reserved(cJSON *root, cJSON *item)
 				elements = cJSON_GetArraySize(item);
 			} else {
 				i++;
-			}
-		}
-	}
-}
-
-
-void
-Database::insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &prefix,
-	int w, int position)
-{
-	bool found;
-	int size = (int)g_serialise.size();
-	std::vector<std::string> terms;
-	for (int i = 6; i > 1; i--) {
-		for (int j = 0; j < size; j += 6) {
-			found = false;
-			std::string s_coord(g_serialise, j, i);
-
-			std::vector<std::string>::const_iterator it(terms.begin());
-			for (; it != terms.end(); it++) {
-				if (s_coord.compare(*it) == 0) {
-					found = true;
-					break;
-				}
-			}
-
-			if (!found) {
-				std::string nameterm(prefixed(s_coord, prefix));
-				LOG(this, "Nameterm: %s   Prefix: %s   Term: %s\n",  repr(nameterm).c_str(), prefix.c_str(), repr(s_coord).c_str());
-
-				if (position > 0) {
-					doc->add_posting(nameterm, position, w);
-					LOG_DATABASE_WRAP(this, "Posting: %s %d %d\n", repr(nameterm).c_str(), position, w);
-				} else {
-					doc->add_term(nameterm, w);
-					LOG_DATABASE_WRAP(this, "Term: %s %d\n", repr(nameterm).c_str(), w);
-				}
-				terms.push_back(s_coord);
 			}
 		}
 	}
@@ -2663,7 +2620,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 		}
 		std::vector<std::string>prefixes;
 		for(it = similar->type.begin(); it != similar->type.end(); it++) {
-			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + to_type(*it));
+			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + Unserialise::type(*it));
 		}
 		for(it = similar->field.begin(); it != similar->field.end(); it++) {
 			data_field_t field_t = get_data_field(*it);
@@ -2691,24 +2648,18 @@ Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key,
 	MultiValueCountMatchSpy *spy;
 	Xapian::Enquire enquire(*db);
 
-	if(nearest) {
-		get_similar(false, enquire, query, nearest);
-	}
+	if (nearest) get_similar(false, enquire, query, nearest);
 
-	if(fuzzy) {
-		get_similar(true, enquire, query, fuzzy);
-	}
+	if (fuzzy) get_similar(true, enquire, query, fuzzy);
 
 	enquire.set_query(query);
 
-	if (sorter) {
-		enquire.set_sort_by_key_then_relevance(sorter, false);
-	}
+	if (sorter) enquire.set_sort_by_key_then_relevance(sorter, false);
 
 	if (spies) {
 		if (!facets->empty()) {
 			std::vector<std::string>::const_iterator fit(facets->begin());
-			for (; fit != facets->end(); fit++) {
+			for ( ; fit != facets->end(); fit++) {
 				spy = new MultiValueCountMatchSpy(get_slot(*fit));
 				spies->push_back(std::make_pair (*fit, std::move(std::unique_ptr<MultiValueCountMatchSpy>(spy))));
 				enquire.add_matchspy(spy);
@@ -2800,6 +2751,7 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 		delete sorter;
 		return 0;
 	}
+
 	LOG_ERR(this, "ERROR: Cannot search!\n");
 	delete sorter;
 	return 2;
@@ -2827,7 +2779,7 @@ bool
 Database::set_metadata(const std::string &key, const std::string &value, bool commit)
 {
 	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Set metadata: t%d\n", t);
+		LOG_DATABASE_WRAP(this, "Set metadata: %d\n", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 		try {
 			wdb->set_metadata(key, value);
@@ -2846,7 +2798,7 @@ Database::set_metadata(const std::string &key, const std::string &value, bool co
 
 
 bool
-Database::get_document(Xapian::docid did, Xapian::Document &doc)
+Database::get_document(const Xapian::docid &did, Xapian::Document &doc)
 {
 	for (int t = 3; t >= 0; --t) {
 		try {
@@ -2888,12 +2840,12 @@ Database::get_stats_docs(const std::string &document_id)
 
 	Xapian::Document doc;
 	Xapian::QueryParser queryparser;
+
 	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
-	if (isupper(document_id.at(0))) {
-		prefix += ":";
-	}
+	if (isupper(document_id.at(0))) prefix += ":";
 	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
 	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + document_id);
+
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
 	Xapian::MSet mset = enquire.get_mset(0, 1);
@@ -2942,10 +2894,9 @@ bool
 ExpandDeciderFilterPrefixes::operator()(const std::string &term) const
 {
 	std::vector<std::string>::const_iterator i(prefixes.cbegin());
-	for ( ;i != prefixes.cend(); i++) {
-		if (startswith(term, *i)) {
-			return true;
-		}
+	for ( ; i != prefixes.cend(); i++) {
+		if (startswith(term, *i)) return true;
 	}
+
 	return prefixes.empty();
 }

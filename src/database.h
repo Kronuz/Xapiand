@@ -148,8 +148,7 @@ public:
 	bool replace(const std::string &document_id, const Xapian::Document &doc, bool commit);
 	bool get_metadata(const std::string &key, std::string &value);
 	bool set_metadata(const std::string &key, const std::string &value, bool commit);
-	bool get_document(Xapian::docid did, Xapian::Document &doc);
-	void insert_terms_geo(const std::string &g_serialise, Xapian::Document *doc, const std::string &prefix, int w, int position);
+	bool get_document(const Xapian::docid &did, Xapian::Document &doc);
 	int find_field(const std::string &str, int *g, int size_g, int len, int offset);
 	Xapian::Enquire get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
 					Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
@@ -164,7 +163,6 @@ public:
 	data_field_t get_slot_field(const std::string &field_name);
 	std::vector<std::string> split_fields(const std::string &field_name);
 	char get_type(cJSON *field, specifications_t &spc);
-	std::string str_type(char type);
 	bool set_types(const std::string &type, char sep_types[]);
 	bool is_reserved(const std::string &word);
 	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, cJSON *schema, bool is_value, bool find);
@@ -175,7 +173,7 @@ public:
 	void index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *schema, bool find);
 	void clean_reserved(cJSON *root);
 	void clean_reserved(cJSON *root, cJSON *item);
-	std::string specificationstostr(specifications_t &spc);
+	std::string specificationstostr(const specifications_t &spc);
 
 private:
 	bool _commit();
@@ -239,9 +237,9 @@ private:
 	Database *ref_database;
 	std::string prefix_rf_node;
 
-	void init_ref(Endpoints endpoints);
-	void inc_ref(Endpoints endpoints);
-	void dec_ref(Endpoints endpoints);
+	void init_ref(const Endpoints &endpoints);
+	void inc_ref(const Endpoints &endpoints);
+	void dec_ref(const Endpoints &endpoints);
 
 
 public:
