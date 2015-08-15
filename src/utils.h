@@ -231,7 +231,6 @@ bool isRange(const std::string &str, unique_group &unique_gr);
 bool isRange(const std::string &str);
 bool isNumeric(const std::string &str);
 bool startswith(const std::string &text, const std::string &token);
-std::string to_type(const std::string &type);
 void delete_files(const std::string &path);
 void move_files(const std::string &src, const std::string &dst);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups);
