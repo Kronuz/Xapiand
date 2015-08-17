@@ -35,18 +35,15 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-
-//
 // Xapian http client
-//
-
-#define METHOD_DELETE 0
-#define METHOD_HEAD 2
-#define METHOD_GET 1
-#define METHOD_POST 3
-#define METHOD_PUT 4
+#define METHOD_DELETE  0
+#define METHOD_HEAD    2
+#define METHOD_GET     1
+#define METHOD_POST    3
+#define METHOD_PUT     4
 #define METHOD_OPTIONS 6
-#define METHOD_PATCH 24
+#define METHOD_PATCH   24
+
 
 const char* status_code[6][5] = {
 	{},
@@ -125,10 +122,7 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 }
 
 
-//
 // HTTP parser callbacks.
-//
-
 const http_parser_settings HttpClient::settings = {
 	.on_message_begin = HttpClient::on_info,
 	.on_url = HttpClient::on_data,
@@ -194,10 +188,6 @@ void HttpClient::run()
 	std::string error;
 
 	try {
-		//LOG_HTTP_PROTO(this, "METHOD: %d\n", parser.method);
-		//LOG_HTTP_PROTO(this, "PATH: '%s'\n", repr(path).c_str());
-		//LOG_HTTP_PROTO(this, "HOST: '%s'\n", repr(host).c_str());
-		//LOG_HTTP_PROTO(this, "BODY: '%s'\n", repr(body).c_str());
 		if (path == "/quit") {
 			manager()->async_shutdown.send();
 			return;
@@ -262,14 +252,16 @@ void HttpClient::_head()
 		case CMD_SCHEMA:
 		default:
 			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
-			if (cmd == CMD_UNKNOWN)
-				cJSON_AddStringToObject(err_response.get(), "Error message",std::string("Unknown task "+command).c_str());
-			else if (cmd == CMD_UNKNOWN_HOST)
-				cJSON_AddStringToObject(err_response.get(), "Error message",std::string("Unknown host "+host).c_str());
-			else if (cmd == CMD_UNKNOWN_ENDPOINT)
-				cJSON_AddStringToObject(err_response.get(), "Error message",std::string("Unknown Endpoint - No one knows the index").c_str());
-			else
-				cJSON_AddStringToObject(err_response.get(), "Error message","BAD QUERY");
+			switch (cmd) {
+				case CMD_UNKNOWN_HOST:
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
+					break;
+				case CMD_UNKNOWN_ENDPOINT:
+					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
+					break;
+				default:
+					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
+			}
 			if (e.pretty) {
 				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
 				result.assign(_cprint.get());
@@ -298,9 +290,9 @@ void HttpClient::_head()
 	enquire.set_query(query);
 	Xapian::MSet mset = enquire.get_mset(0, 1);
 	if(mset.size()) {
-			Xapian::MSetIterator m = mset.begin();
+		Xapian::MSetIterator m = mset.begin();
 		int t = 3;
-		for (; t >= 0; --t) {
+		for ( ; t >= 0; --t) {
 			try {
 				docid = *m;
 				break;
@@ -406,7 +398,7 @@ void HttpClient::_delete()
 	database_pool->checkin(&database);
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
-	cJSON_AddStringToObject(data, "id", command.c_str());
+	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root.get(), "delete", data);
 	if (e.pretty) {
@@ -493,7 +485,7 @@ void HttpClient::_index()
 	database_pool->checkin(&database);
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
-	cJSON_AddStringToObject(data, "id", command.c_str());
+	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root.get(), "index", data);
 	if (e.pretty) {
@@ -568,7 +560,7 @@ void HttpClient::_patch()
 	database_pool->checkin(&database);
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
-	cJSON_AddStringToObject(data, "id", command.c_str());
+	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
 	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
 	cJSON_AddItemToObject(root.get(), "update", data);
 	if (e.pretty) {
@@ -887,9 +879,9 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 	struct http_parser_url u;
 	std::string b = repr(path);
 
-	LOG(this,"URL: %s\n", b.c_str());
+	LOG(this, "URL: %s\n", b.c_str());
 	if (http_parser_parse_url(b.c_str(), b.size(), 0, &u) == 0) {
-		LOG(this,"Parsing done\n");
+		LOG(this, "Parsing done\n");
 
 		if (u.field_set & (1 <<  UF_PATH )) {
 			size_t path_size = u.field_data[3].len;
@@ -908,7 +900,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 			while (retval == 0) {
 
-				command  = urldecode(p.off_command, p.len_command);
+				command = urldecode(p.off_command, p.len_command);
 
 				if (command.empty()) {
 					return CMD_BAD_QUERY;
@@ -937,14 +929,13 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					node_name = urldecode(p.off_host, p.len_host);
 					has_node_name = true;
 				} else {
-
 					double timeout;
 					int num_endps = 1;
 					if (writable) {
 						timeout = 2;
 					} else timeout = 1;
 
-					if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, manager(), asked_nodes, num_endps ,timeout)) {
+					if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, manager(), asked_nodes, num_endps, timeout)) {
 						return CMD_UNKNOWN_ENDPOINT;
 					}
 				}
@@ -968,7 +959,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					endpoints.insert(endpoint);
 				} else {
 					std::vector<Endpoint>::iterator it_endp = asked_nodes.begin();
-					for (; it_endp != asked_nodes.end(); it_endp++) {
+					for ( ; it_endp != asked_nodes.end(); it_endp++) {
 						endpoints.insert(*it_endp);
 					}
 				}
@@ -983,7 +974,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 		cmd = identify_cmd(command);
 
-		if (u.field_set & (1 <<  UF_QUERY )) {
+		if (u.field_set & (1 <<  UF_QUERY)) {
 			size_t query_size = u.field_data[4].len;
 			std::string query_buf(b.c_str() + u.field_data[4].off, u.field_data[4].len);
 
