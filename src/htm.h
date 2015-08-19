@@ -65,6 +65,10 @@ typedef struct trixel_s {
 	int v0, v1, v2;
 } trixel_t;
 
+typedef struct index_s {
+	int v0, v1, v2;
+} index_t;
+
 const uInt64 S0 = 8, S1 = 9, S2 = 10, S3 = 11, N0 = 12, N1 = 13, N2 = 14, N3 = 15;
 
 const Cartesian start_vertices[6] = {
@@ -77,14 +81,28 @@ const Cartesian start_vertices[6] = {
 };
 
 const trixel_t start_trixels[8] = {
-	{ S0, "s0", 1, 5, 2 },
-	{ S1, "s1", 2, 5, 3 },
 	{ S2, "s2", 3, 5, 4 },
+	{ N1, "n1", 4, 0, 3 },
+	{ S1, "s1", 2, 5, 3 },
+	{ N2, "n2", 3, 0, 2 },
 	{ S3, "s3", 4, 5, 1 },
 	{ N0, "n0", 1, 0, 4 },
-	{ N1, "n1", 4, 0, 3 },
-	{ N2, "n2", 3, 0, 2 },
+	{ S0, "s0", 1, 5, 2 },
 	{ N3, "n3", 2, 0, 1 }
+};
+
+const index_t S[4] = {
+	{ 1, 5, 2 },
+	{ 2, 5, 3 },
+	{ 3, 5, 4 },
+	{ 4, 5, 1 }
+};
+
+const index_t N[4] = {
+	{ 1, 0, 4 },
+	{ 4, 0, 3 },
+	{ 3, 0, 2 },
+	{ 2, 0, 1 }
 };
 
 

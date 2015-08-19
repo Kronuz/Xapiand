@@ -48,26 +48,11 @@ HTM::HTM(bool partials_, double error, Geometry &region_) : region(region_), par
 void
 HTM::startTrixel(Cartesian &v0, Cartesian &v1, Cartesian &v2, const Cartesian &coord, std::string &name)
 {
-	uInt64 trixel_id = 0;
-	if(coord.x > 0 && coord.y >= 0) {
-		trixel_id = (coord.z >= 0) ? N3 : S0;
-	} else if(coord.x <= 0 && coord.y > 0) {
-		trixel_id = (coord.z >= 0) ? N2 : S1;
-	} else if(coord.x < 0 && coord.y <= 0) {
-		trixel_id = (coord.z >= 0) ? N1 : S2;
-	} else if(coord.x >= 0 && coord.y < 0) {
-		trixel_id = (coord.z >= 0) ? N0 : S3;
-	} else {
-		trixel_id = (coord.z >= 0) ? N3 : S0;
-	}
-
-	// The enumeration begins in 8L.
-	int num = (int) (trixel_id - 8L);
+	size_t num = (coord.x > 0 ? 4 : 0) + (coord.y > 0 ? 2 : 0) + (coord.z > 0 ? 1 : 0);
 	v0 = start_vertices[start_trixels[num].v0];
 	v1 = start_vertices[start_trixels[num].v1];
 	v2 = start_vertices[start_trixels[num].v2];
 	name = start_trixels[num].name;
-
 	return;
 }
 
