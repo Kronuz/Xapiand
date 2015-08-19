@@ -24,7 +24,7 @@
 
 // Constraint in the Earth.
 // Radius in meters.
-Constraint::Constraint(Cartesian &center_, double radius) : center(center_)
+Constraint::Constraint(const Cartesian &center_, double radius) : center(center_)
 {
 	// We normalize the center, because  geometry works around a sphere unitary instead of a ellipsoid.
 	center.normalize();
@@ -36,7 +36,11 @@ Constraint::Constraint(Cartesian &center_, double radius) : center(center_)
 }
 
 
-// Do a great circle with center in (lat = 0, lon = 0, h = 0, DEGREES) -> (x = 1, y = 0, z = 0).
+// Do a great circle with the defined center.
+Constraint::Constraint(const Cartesian &center_) : center(center_), sign(ZERO), distance(0.0), arcangle(PI_HALF) { }
+
+
+// Defult Constructor. Do a great circle with center in (lat = 0, lon = 0, h = 0, DEGREES) -> (x = 1, y = 0, z = 0).
 Constraint::Constraint() : sign(ZERO), distance(0.0), arcangle(PI_HALF) { }
 
 
@@ -62,7 +66,7 @@ Constraint::operator=(const Constraint &c)
 double
 Constraint::meters2rad(double meters)
 {
-	if (meters < 0.1) meters = 0.1;
+	if (meters < MIN_RADIUS_METERS) return MIN_RADIUS_RADIANS;
 	else if (meters > MAX_RADIUS_HALFSPACE_EARTH) return M_PI;
 	return meters / M_PER_RADIUS_EARTH;
 }
@@ -102,7 +106,7 @@ Geometry::convexHull(std::vector<Cartesian> &v)
 	convexHull(v, points_convex);
 
 	// The convex is formed in counterclockwise.
-	int len = (int)points_convex.size();
+	size_t len = points_convex.size();
 	if (len < 3) throw MSG_Error("Convex Hull not found");
 
 	// The corners are in clockwise but we need the corners in counterclockwise order and normalize.
@@ -110,12 +114,11 @@ Geometry::convexHull(std::vector<Cartesian> &v)
 	corners.reserve(len);
 	points_convex.insert(points_convex.begin(), *(points_convex.end() - 1));
 	std::vector<Cartesian>::reverse_iterator it(points_convex.rbegin()), n_it, e_it(points_convex.rend() - 1);
-	for (; it != e_it; it++) {
+	for ( ; it != e_it; it++) {
 		n_it = it + 1;
 		center = *it ^ *n_it;
 		center.normalize();
-		Constraint c;
-		c.center = center;
+		Constraint c(center);
 		constraints.push_back(c);
 		corners.push_back(*it);
 	}
@@ -212,8 +215,7 @@ Geometry::convexPolygon(std::vector<Cartesian> &v)
 			// Convex hulls for a set of points on the surface of a sphere are only well defined
 			// if the points all fit within half of the globe. This is a 0-halfspace, or a halfspace
 			// with a arcangle pi/2.
-			Constraint c;
-			c.center = constraint;
+			Constraint c(constraint);
 			constraints.push_back(c);
 			// Normalize the corner.
 			it->normalize();
@@ -227,8 +229,7 @@ Geometry::convexPolygon(std::vector<Cartesian> &v)
 			rn_it = rit + 1;
 			constraint = *rit ^ *rn_it;
 			constraint.normalize();
-			Constraint c;
-			c.center = constraint;
+			Constraint c(constraint);
 			constraints.push_back(c);
 			// Normalize the corner.
 			rit->normalize();
@@ -316,7 +317,7 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 	std::vector<Cartesian>::iterator it(points.begin());
 	it->normalize(); // Normalize the points.
 	std::vector<Cartesian>::iterator it_swap(it);
-	for ( ; it != points.end(); it++) {
+	for (it++; it != points.end(); it++) {
 		it->normalize(); // Normalize the point.
 		if (it->y < it_swap->y ||
 			(it_swap->y == it->y && it->x < it_swap->x) ||
@@ -345,7 +346,7 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 	points_convex.push_back(*it++);
 	points_convex.push_back(*it++);
 
-	for (; it != points.end(); it++) {
+	for ( ; it != points.end(); it++) {
 		while (true) {
 			// Not found the convex.
 			if (points_convex.size() == 1) throw MSG_Error("Convex Hull not found");
@@ -404,8 +405,7 @@ double
 Geometry::getRadius()
 {
 	if (corners.size() > 2) {
-		// return sqrt(0.5 * areaPolygon()) * M_PER_RADIUS_EARTH;
-		return meanAngle2centroid() * M_PER_RADIUS_EARTH;
+		return SCALE_RADIUS * meanAngle2centroid() * M_PER_RADIUS_EARTH;
 	} else {
 		return boundingCircle.arcangle * M_PER_RADIUS_EARTH;
 	}

@@ -43,13 +43,24 @@ const double M_PER_RADIUS_EARTH = 6367444.7;
 // Radius maximum allowed in a constraints (all the earth).
 const double MAX_RADIUS_HALFSPACE_EARTH = 20003917.491659265; // meters
 
+// Constant for scaling the radius of a Polygon.
+const double SCALE_RADIUS = 0.70710678118654752440084436;
+
+// Min radius in meters allowed.
+const double MIN_RADIUS_METERS = 0.1;
+
+// Min radius in radians allowed, MIN_RADIUS_METERS / M_PER_RADIUS_EARTH.
+const double MIN_RADIUS_RADIANS = 0.00000001570488707974173690;
+
+
 class Constraint {
 	public:
 		int sign;
 		Cartesian center;
 		double distance, arcangle;
 
-		Constraint(Cartesian &center_, double radius);
+		Constraint(const Cartesian &center_, double radius);
+		Constraint(const Cartesian &center_);
 		Constraint();
 		bool operator==(const Constraint &c) const;
 		Constraint& operator=(const Constraint &c);
