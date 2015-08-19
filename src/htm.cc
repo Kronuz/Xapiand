@@ -336,9 +336,7 @@ HTM::lookupTrixels(int level, std::string name, const Cartesian &v0, const Carte
 {
 	// Finish the recursion.
 	if (--level < 0) {
-		if (partials) {
-			names.push_back(name);
-		}
+		partials ? names.push_back(name) : partial_names.push_back(name);
 		return;
 	}
 
@@ -404,20 +402,55 @@ HTM::run()
 		lookupTrixels(max_level, start_trixels[6].name, start_vertices[start_trixels[6].v0], start_vertices[start_trixels[6].v1], start_vertices[start_trixels[6].v2]);
 	if (HTM_OUTSIDE != verifyTrixel(start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2]))
 		lookupTrixels(max_level, start_trixels[7].name, start_vertices[start_trixels[7].v0], start_vertices[start_trixels[7].v1], start_vertices[start_trixels[7].v2]);
+
+	// If there is not full trixels, return the partial trixels although the partials is false.
+	if (names.size() == 0) {
+		names.reserve(partial_names.size());
+		names.insert(names.begin(), partial_names.begin(), partial_names.end());
+	}
+
+	simplifyTrixels();
+}
+
+
+void
+HTM::simplifyTrixels()
+{
+	size_t tlen, flen, j, k, l;
+	std::string father;
+	for (size_t i = 0;  names.size() - i > 3; ) {
+		l = i + 1;
+		j = l++;
+		k = l++;
+		tlen = names[i].size();
+		flen = tlen - 1;
+		father = names[i].substr(0, flen);
+		if (names[j].size() == tlen && names[j].compare(0, flen, father) == 0 && \
+			names[k].size() == tlen && names[k].compare(0, flen, father) == 0 && \
+			names[l].size() == tlen && names[l].compare(0, flen, father) == 0) {
+			names.erase(names.begin() + l);
+			names.erase(names.begin() + k);
+			names.erase(names.begin() + j);
+			names[i] = father;
+			i < 3 ? i = 0 : i -= 3;
+			continue;
+		}
+		++i;
+	}
 }
 
 
 //Save ranges.
 void
-HTM::insertRange(const std::string &name, std::vector<range_t> &ranges, int _max_level)
+HTM::insertRange(const std::string &name, std::vector<range_t> &ranges, size_t _max_level)
 {
-	int mask;
+	size_t mask;
 	uInt64 start, end;
 	uInt64 id;
 
 	name2id(name, id);
 
-	int level = (int)name.size() - 2;
+	size_t level = name.size() - 2;
 	if (level < _max_level) {
 		mask = (_max_level - level) << 1;
 		start = id << mask;
@@ -469,20 +502,19 @@ void
 HTM::getCorners(const std::string &name, Cartesian &v0, Cartesian &v1, Cartesian &v2)
 {
 	Cartesian w0, w1, w2;
-	int trixel = (int)(name.at(1) - '0');
+	size_t trixel = name.at(1) - '0';
 
-	if (name.at(0) == 'S') {
-		v0 = start_vertices[start_trixels[trixel].v0];
-		v1 = start_vertices[start_trixels[trixel].v1];
-		v2 = start_vertices[start_trixels[trixel].v2];
+	if (name.at(0) == 's') {
+		v0 = start_vertices[S[trixel].v0];
+		v1 = start_vertices[S[trixel].v1];
+		v2 = start_vertices[S[trixel].v2];
 	} else {
-		trixel = trixel + 4;
-		v0 = start_vertices[start_trixels[trixel].v0];
-		v1 = start_vertices[start_trixels[trixel].v1];
-		v2 = start_vertices[start_trixels[trixel].v2];
+		v0 = start_vertices[N[trixel].v0];
+		v1 = start_vertices[N[trixel].v1];
+		v2 = start_vertices[N[trixel].v2];
 	}
 
-	int i = 2, len = (int)name.size();
+	size_t i = 2, len = name.size();
 	while (i < len) {
 		midPoint(v0, v1, w2);
 		midPoint(v1, v2, w0);
@@ -510,12 +542,13 @@ HTM::getCorners(const std::string &name, Cartesian &v0, Cartesian &v1, Cartesian
 		}
 		i++;
 	}
+
 	return;
 }
 
 
 std::string
-HTM::getCircle3D(int points)
+HTM::getCircle3D(size_t points)
 {
 	double inc = RAD_PER_CIRCUMFERENCE / points;
 	std::string x0, y0, z0;
@@ -570,7 +603,7 @@ HTM::getCircle3D(int points)
 
 
 std::string
-HTM::getCircle3D(const Constraint &bCircle, int points)
+HTM::getCircle3D(const Constraint &bCircle, size_t points)
 {
 	double inc = RAD_PER_CIRCUMFERENCE / points;
 	std::string x0, y0, z0;
@@ -635,7 +668,7 @@ HTM::writePython3D(const std::string &file)
 	fs << "from mpl_toolkits.mplot3d.art3d import Poly3DCollection\n";
 	fs << "import matplotlib.pyplot as plt\n\n\n";
 	fs << "ax = Axes3D(plt.figure())\n";
-	if (numCorners >= 2) {
+	if (numCorners > 1) {
 		for (int i = 0; i < numCorners; i++) {
 			char vx[DIGITS];
 			char vy[DIGITS];
@@ -669,7 +702,7 @@ HTM::writePython3D(const std::string &file)
 
 	std::vector<std::string>::const_iterator itn = names.begin();
 
-	for ( ;itn != names.end(); itn++) {
+	for ( ; itn != names.end(); itn++) {
 		Cartesian v0, v1, v2;
 		getCorners((*itn), v0, v1, v2);
 		char v0x[DIGITS];
@@ -702,7 +735,7 @@ HTM::writePython3D(const std::string &file)
 
 
 void
-HTM::writePython3D(const std::string &file, std::vector<Geometry> &g, std::vector<std::string> &names_f)
+HTM::writePython3D(const std::string &file, const std::vector<Geometry> &g, const std::vector<std::string> &names_f)
 {
 	std::ofstream fs(file);
 
@@ -712,10 +745,10 @@ HTM::writePython3D(const std::string &file, std::vector<Geometry> &g, std::vecto
 	fs << "ax = Axes3D(plt.figure())\n";
 
 	std::vector<Geometry>::const_iterator it_g(g.begin());
-	for ( ;it_g != g.end(); it_g++) {
+	for ( ; it_g != g.end(); it_g++) {
 		std::string x("x = ["), y("y = ["), z("z = [");
-		int numCorners = (int)(*it_g).corners.size() - 1;
-		if (numCorners >= 2) {
+		int numCorners = (int)(it_g->corners.size()) - 1;
+		if (numCorners > 1) {
 			for (int i = 0; i < numCorners; i++) {
 				char vx[DIGITS];
 				char vy[DIGITS];
@@ -750,7 +783,7 @@ HTM::writePython3D(const std::string &file, std::vector<Geometry> &g, std::vecto
 
 	std::vector<std::string>::const_iterator itn = names_f.begin();
 	std::string x, y, z;
-	for ( ;itn != names_f.end(); itn++) {
+	for ( ; itn != names_f.end(); itn++) {
 		Cartesian v0, v1, v2;
 		getCorners((*itn), v0, v1, v2);
 		char v0x[DIGITS];
@@ -789,15 +822,14 @@ HTM::getCentroid(const std::vector<std::string> &trixel_names)
 	std::vector<std::string>::const_iterator it(trixel_names.begin());
 	for ( ; it != trixel_names.end(); it++) {
 		size_t trixel = it->at(1) - '0';
-		if (it->at(0) == 'S') {
-			v0 = start_vertices[start_trixels[trixel].v0];
-			v1 = start_vertices[start_trixels[trixel].v1];
-			v2 = start_vertices[start_trixels[trixel].v2];
+		if (it->at(0) == 's') {
+			v0 = start_vertices[S[trixel].v0];
+			v1 = start_vertices[S[trixel].v1];
+			v2 = start_vertices[S[trixel].v2];
 		} else {
-			trixel = trixel + 4;
-			v0 = start_vertices[start_trixels[trixel].v0];
-			v1 = start_vertices[start_trixels[trixel].v1];
-			v2 = start_vertices[start_trixels[trixel].v2];
+			v0 = start_vertices[N[trixel].v0];
+			v1 = start_vertices[N[trixel].v1];
+			v2 = start_vertices[N[trixel].v2];
 		}
 
 		size_t i = 2, len = it->size();

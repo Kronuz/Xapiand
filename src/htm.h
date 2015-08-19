@@ -113,6 +113,8 @@ const index_t N[4] = {
 //   * P. Z. Kunszt, A. S. Szalay, A. R. Thakar (631-637 2001). "The Hierarchical Triangular Mesh".
 //     Dept. of Physics and Astronomy, Johns Hopkins University, Baltimore
 class HTM {
+	private:
+		std::vector<std::string> partial_names;
 
 	public:
 		short max_level;
@@ -131,7 +133,8 @@ class HTM {
 		bool boundingCircle(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2);
 		bool testEdgePolygon(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2);
 		void writePython3D(const std::string &file);
-		std::string getCircle3D(int points);
+		std::string getCircle3D(size_t points);
+		void simplifyTrixels();
 
 		static void startTrixel(Cartesian &v0, Cartesian &v1, Cartesian &v2, const Cartesian &coord, std::string &name);
 		static void cartesian2name(Cartesian &coord, std::string &name);
@@ -139,11 +142,11 @@ class HTM {
 		static bool insideVector(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2, const Cartesian &v);
 		static bool intersection(const Cartesian &v1, const Cartesian &v2, const Constraint &c);
 		static void midPoint(const Cartesian &v0, const Cartesian &v1, Cartesian &w);
-		static void insertRange(const std::string &name, std::vector<range_t> &ranges, int _max_level);
+		static void insertRange(const std::string &name, std::vector<range_t> &ranges, size_t _max_level);
 		static void mergeRanges(std::vector<range_t> &ranges);
 		static void getCorners(const std::string &name, Cartesian &v0, Cartesian &v1, Cartesian &v2);
-		static void writePython3D(const std::string &file, std::vector<Geometry> &g, std::vector<std::string> &names_f);
-		static std::string getCircle3D(const Constraint &bCircle, int points);
+		static void writePython3D(const std::string &file, const std::vector<Geometry> &g, const std::vector<std::string> &names_f);
+		static std::string getCircle3D(const Constraint &bCircle, size_t points);
 		static bool compareRanges(const range_t &r1, const range_t &r2);
 		static Cartesian getCentroid(const std::vector<std::string> &trixel_names);
 };
