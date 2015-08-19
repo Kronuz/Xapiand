@@ -25,14 +25,16 @@
 #define FIND_GEOMETRY_RE "(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIRCLE|POINT|MULTIPOINT|CHULL|MULTICHULL)[\\s]*\\(([()0-9.\\s,-]*)\\)|(GEOMETRYCOLLECTION|GEOMETRYINTERSECTION)[\\s]*\\(([()0-9.\\s,A-Z-]*)\\)"
 #define FIND_CIRCLE_RE "(\\-?\\d*\\.\\d+|\\-?\\d+)\\s(\\-?\\d*\\.\\d+|\\-?\\d+)(\\s(\\-?\\d*\\.\\d+|\\-?\\d+))?[\\s]*\\,[\\s]*(\\d*\\.\\d+|\\d+)"
 #define FIND_SUBPOLYGON_RE "[\\s]*(\\(([\\-?\\d*\\.\\d+|\\-?\\d+\\s,]*)\\))[\\s]*(\\,)?"
-#define FIND_MULTI_RE "[\\s]*[\\s]*\\((.*?\\))\\)[\\s]*(,)?"
+#define FIND_MULTI_POLY_RE "[\\s]*[\\s]*\\((.*?\\))\\)[\\s]*(,)?"
+#define FIND_MULTI_CIRCLE_RE "[\\s]*[\\s]*\\((.*?)\\)[\\s]*(,)?"
 #define FIND_COLLECTION_RE "[\\s]*(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIRCLE|POINT|MULTIPOINT|CHULL|MULTICHULL)[\\s]*\\(([()0-9.\\s,-]*)\\)([\\s]*\\,[\\s]*)?"
 
 
 pcre *compiled_find_geometry_re = NULL;
 pcre *compiled_find_circle_re = NULL;
 pcre *compiled_find_subpolygon_re = NULL;
-pcre *compiled_find_multi_re = NULL;
+pcre *compiled_find_multi_poly_re = NULL;
+pcre *compiled_find_multi_circle_re = NULL;
 pcre *compiled_find_collection_re = NULL;
 
 
@@ -57,7 +59,7 @@ pcre *compiled_find_collection_re = NULL;
  * This parser do not accept EMPTY geometries and
  * The polygons are not required to be repeated first coordinate to end like EWKT.
 */
-EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error) : partials(_partials), error(_error)
+EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error) : error(_error), partials(_partials)
 {
 	unique_group unique_gr;
 	int len = (int)EWKT.size();
@@ -124,7 +126,7 @@ EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error)
 // height and radius in meters.
 // Return the trixels that cover the region.
 std::vector<std::string>
-EWKT_Parser::parse_circle(std::string &specification)
+EWKT_Parser::parse_circle(const std::string &specification)
 {
 	unique_group unique_gr;
 	int len = (int)specification.size();
@@ -161,16 +163,15 @@ EWKT_Parser::parse_circle(std::string &specification)
 // height and radius in meters.
 // Return the trixels that cover the region.
 std::vector<std::string>
-EWKT_Parser::parse_multicircle(std::string &specification)
+EWKT_Parser::parse_multicircle(const std::string &specification)
 {
 	unique_group unique_gr;
-	int len = (int)specification.size();
-	int start = 0;
+	int len = (int)specification.size(), start = 0;
 
 	// Checking if the format is correct and and processing the circles.
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(specification.c_str(), len, start, 0, FIND_MULTI_RE, &compiled_find_multi_re, unique_gr) != -1) {
+	while (pcre_search(specification.c_str(), len, start, 0, FIND_MULTI_CIRCLE_RE, &compiled_find_multi_circle_re, unique_gr) != -1) {
 		group_t *gr = unique_gr.get();
 		if (start != gr[0].start) {
 			throw MSG_Error("Syntax error in EWKT format (MULTICIRCLE)");
@@ -199,11 +200,10 @@ EWKT_Parser::parse_multicircle(std::string &specification)
 // height in meters.
 // Return the trixels that cover the region.
 std::vector<std::string>
-EWKT_Parser::parse_polygon(std::string &specification, Geometry::typePoints type)
+EWKT_Parser::parse_polygon(const std::string &specification, const Geometry::typePoints &type)
 {
 	unique_group unique_gr;
-	int len = (int)specification.size();
-	int start = 0;
+	int len = (int)specification.size(), start = 0;
 
 	// Checking if the format is correct and processing the subpolygons.
 	std::vector<std::string> names_f;
@@ -241,6 +241,7 @@ EWKT_Parser::parse_polygon(std::string &specification, Geometry::typePoints type
 		HTM _htm(partials, error, g);
 		_htm.run();
 		gv.push_back(g);
+
 		if (first) {
 			names_f = _htm.names;
 			first = false;
@@ -266,16 +267,15 @@ EWKT_Parser::parse_polygon(std::string &specification, Geometry::typePoints type
 // height in meters.
 // Return the trixels that cover the region.
 std::vector<std::string>
-EWKT_Parser::parse_multipolygon(std::string &specification, Geometry::typePoints type)
+EWKT_Parser::parse_multipolygon(const std::string &specification, const Geometry::typePoints &type)
 {
 	unique_group unique_gr;
-	int len = (int)specification.size();
-	int start = 0;
+	int len = (int)specification.size(), start = 0;
 
 	// Checking if the format is correct and and processing the polygons.
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(specification.c_str(), len, start, 0, FIND_MULTI_RE, &compiled_find_multi_re, unique_gr) != -1) {
+	while (pcre_search(specification.c_str(), len, start, 0, FIND_MULTI_POLY_RE, &compiled_find_multi_poly_re, unique_gr) != -1) {
 		group_t *gr = unique_gr.get();
 		if (start != gr[0].start) {
 			throw MSG_Error("Syntax error in EWKT format (MULTIPOLYGON)");
@@ -304,7 +304,7 @@ EWKT_Parser::parse_multipolygon(std::string &specification, Geometry::typePoints
 // height in meters.
 // Return the points' trixels.
 std::vector<std::string>
-EWKT_Parser::parse_point(std::string &specification)
+EWKT_Parser::parse_point(const std::string &specification)
 {
 	std::vector<std::string> res;
 	std::string name;
@@ -335,11 +335,10 @@ EWKT_Parser::parse_point(std::string &specification)
 // height in meters.
 // Return the point's trixels.
 std::vector<std::string>
-EWKT_Parser::parse_multipoint(std::string &specification)
+EWKT_Parser::parse_multipoint(const std::string &specification)
 {
 	unique_group unique_gr;
-	int len = (int)specification.size();
-	int start = 0;
+	int len = (int)specification.size(), start = 0;
 
 	// Checking if the format is (lat lon [height]), (lat lon [height]), ... and save the points.
 	std::vector<std::string> res;
@@ -401,11 +400,10 @@ EWKT_Parser::parse_multipoint(std::string &specification)
 
 // Parse a collection of geometries (join by OR operation).
 std::vector<std::string>
-EWKT_Parser::parse_geometry_collection(std::string &data)
+EWKT_Parser::parse_geometry_collection(const std::string &data)
 {
 	unique_group unique_gr;
-	int len = (int)data.size();
-	int start = 0;
+	int len = (int)data.size(), start = 0;
 
 	// Checking if the format is correct and processing the geometries.
 	std::vector<std::string> specification;
@@ -449,11 +447,10 @@ EWKT_Parser::parse_geometry_collection(std::string &data)
 
 // Parse a intersection of geomtries (join by AND operation).
 std::vector<std::string>
-EWKT_Parser::parse_geometry_intersection(std::string &data)
+EWKT_Parser::parse_geometry_intersection(const std::string &data)
 {
 	unique_group unique_gr;
-	int len = (int)data.size();
-	int start = 0;
+	int len = (int)data.size(), start = 0;
 
 	// Checking if the format is correct and processing the geometries.
 	std::vector<std::string> specification;
@@ -482,18 +479,18 @@ EWKT_Parser::parse_geometry_intersection(std::string &data)
 			first = false;
 		} else {
 			names_f = and_trixels(names_f, txs);
+			if (names_f.empty()) return names_f;
 		}
 
 		start = gr[0].end;
 	}
 
-	centroids.clear();
-	centroids.push_back(HTM::getCentroid(names_f));
-
 	if (start != len) {
 		throw MSG_Error("Syntax error in EWKT format");
 	}
 
+	centroids.clear();
+	centroids.push_back(HTM::getCentroid(names_f));
 	return names_f;
 }
 
@@ -532,7 +529,7 @@ EWKT_Parser::xor_trixels(std::vector<std::string> &txs1, std::vector<std::string
 		bool inc = true;
 		std::vector<std::string>::iterator it2(txs2.begin());
 		while (it2 != txs2.end()) {
-			int s1 = (int)(*it1).size(), s2 = (int)(*it2).size();
+			size_t s1 = it1->size(), s2 = it2->size();
 			if (s1 >= s2 && (*it1).find(*it2) == 0) {
 				if (s1 == s2) {
 					it1 = txs1.erase(it1);
@@ -579,7 +576,7 @@ EWKT_Parser::or_trixels(std::vector<std::string> &txs1, std::vector<std::string>
 		bool inc = true;
 		std::vector<std::string>::iterator it2(txs2.begin());
 		while (it2 != txs2.end()) {
-			int s1 = (int)(*it1).size(), s2 = (int)(*it2).size();
+			size_t s1 = it1->size(), s2 = it2->size();
 			if (s1 >= s2 && (*it1).find(*it2) == 0) {
 				it1 = txs1.erase(it1);
 				inc = false;
@@ -606,10 +603,10 @@ EWKT_Parser::and_trixels(std::vector<std::string> &txs1, std::vector<std::string
 {
 	std::vector<std::string> res;
 	std::vector<std::string>::iterator it1(txs1.begin());
-	for ( ;it1 != txs1.end(); it1++) {
+	for ( ; it1 != txs1.end(); it1++) {
 		std::vector<std::string>::iterator it2(txs2.begin());
 		while (it2 != txs2.end()) {
-			int s1 = (int)(*it1).size(), s2 = (int)(*it2).size();
+			size_t s1 = it1->size(), s2 = it2->size();
 			if (s1 >= s2 && (*it1).find(*it2) == 0) {
 				res.push_back(*it1);
 				break;
@@ -635,13 +632,14 @@ EWKT_Parser::and_trixels(std::vector<std::string> &txs1, std::vector<std::string
  *  /__\/__\					  /__\/__\
  */
 std::vector<std::string>
-EWKT_Parser::get_trixels(std::string &father, int depth, std::string &son)
+EWKT_Parser::get_trixels(const std::string &father, size_t depth, const std::string &son)
 {
 	std::vector<std::string> sonsF;
 	std::string p_son(father);
+	size_t m_size = father.size() + depth;
 
-	for (int i = 0; i < depth; i++) {
-		switch (son.at(father.size() + i)) {
+	for (size_t i = father.size(); i < m_size; i++) {
+		switch (son.at(i)) {
 			case '0':
 				sonsF.push_back(p_son + "1");
 				sonsF.push_back(p_son + "2");
@@ -688,9 +686,9 @@ EWKT_Parser::isEWKT(const char *str)
 void
 EWKT_Parser::getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids)
 {
-	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
+	EWKT_Parser ewkt(field_value, partials, error);
 	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());
-	for (;it != ewkt.trixels.end(); it++) {
+	for ( ; it != ewkt.trixels.end(); it++) {
 		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
 	}
 	HTM::mergeRanges(ranges);
@@ -701,9 +699,9 @@ EWKT_Parser::getRanges(const std::string &field_value, bool partials, double err
 void
 EWKT_Parser::getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges)
 {
-	EWKT_Parser ewkt = EWKT_Parser(field_value, partials, error);
+	EWKT_Parser ewkt(field_value, partials, error);
 	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());
-	for (;it != ewkt.trixels.end(); it++) {
+	for ( ; it != ewkt.trixels.end(); it++) {
 		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
 	}
 	HTM::mergeRanges(ranges);
