@@ -144,7 +144,7 @@ int test_cartesian_transforms()
 	int cont = 0;
 
 	try {
-		for ( ;it != SRID_2_WGS84.end(); it++) {
+		for ( ; it != SRID_2_WGS84.end(); it++) {
 			Cartesian c(it->lat_src, it->lon_src, it->h_src, Cartesian::DEGREES, it->SRID);
 			double lat, lon, height;
 			c.toGeodetic(lat, lon, height);
@@ -204,7 +204,7 @@ int test_hullConvex()
 	std::vector<std::string>::const_iterator it_e(expect_files.begin());
 	std::vector<std::string>::const_iterator it_r(result_files.begin());
 
-	for ( ;it_f != files.end(); it_f++, it_e++, it_r++) {
+	for ( ; it_f != files.end(); it_f++, it_e++, it_r++) {
 		std::ofstream fs(*it_r);
 		fs << "from mpl_toolkits.mplot3d import Axes3D\n";
 		fs << "from mpl_toolkits.mplot3d.art3d import Poly3DCollection\n";
@@ -241,7 +241,7 @@ int test_hullConvex()
 
 				std::vector<Cartesian>::iterator it_o = pts.begin();
 				fs << "\n# Original Points\n";
-				for ( ;it_o != pts.end(); it_o++) {
+				for ( ; it_o != pts.end(); it_o++) {
 					(*it_o).normalize();
 					if (i == 1) {
 						x1 = (*it_o).x;
@@ -257,7 +257,7 @@ int test_hullConvex()
 				std::vector<Cartesian>::const_iterator it = g.corners.begin();
 				fs << "# Points for the hull convex\n";
 				i = 1;
-				for ( ;it != g.corners.end(); it++) {
+				for ( ; it != g.corners.end(); it++) {
 					x_s += std::to_string((*it).x) + ", ";
 					y_s += std::to_string((*it).y) + ", ";
 					z_s += std::to_string((*it).z) + ", ";
@@ -367,7 +367,7 @@ int test_HTM_chull()
 	std::vector<std::string>::const_iterator it_r(result_files.begin());
 	std::vector<Geometry::typePoints>::const_iterator it_t(types.begin());
 
-	for ( ;it_f != files.end(); it_f++, it_e++, it_r++, it_t++) {
+	for ( ; it_f != files.end(); it_f++, it_e++, it_r++, it_t++) {
 		std::ifstream readFile(*it_f);
 		std::ifstream readEFile(*it_e);
 
@@ -397,7 +397,7 @@ int test_HTM_chull()
 				_htm.run();
 
 				std::vector<std::string>::const_iterator itn = _htm.names.begin();
-				for ( ;itn != _htm.names.end(); itn++) {
+				for ( ; itn != _htm.names.end(); itn++) {
 					std::string trixel_exp;
 					if (!readEFile.eof()) {
 						std::getline(readEFile, trixel_exp);
@@ -481,7 +481,7 @@ int test_HTM_circle()
 					_htm.run();
 
 					std::vector<std::string>::const_iterator itn = _htm.names.begin();
-					for ( ;itn != _htm.names.end(); itn++) {
+					for ( ; itn != _htm.names.end(); itn++) {
 						std::string trixel_exp;
 						if (!readEFile.eof()) {
 							std::getline(readEFile, trixel_exp);

@@ -219,7 +219,6 @@ int test_unserialise_cartesian()
 		Cartesian c = p->cartesian;
 		c.normalize();
 		std::string serialise(Serialise::cartesian(c));
-		LOG(NULL, "Serialise: %s %s\n", p->expect_serialise, repr(serialise).c_str());
 		c = Unserialise::cartesian(serialise);
 		char res[40];
 		snprintf(res, sizeof(res), "%1.9f %1.9f %1.9f", c.x, c.y, c.z);
