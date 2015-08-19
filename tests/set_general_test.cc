@@ -200,10 +200,12 @@ Suite* test_suite_HTM(void)
 	s = suite_create("Test of HTM");
 
 	tc_htm_chull = tcase_create("HTM for Polygons");
+	tcase_set_timeout(tc_htm_chull, 10);
 	tcase_add_test(tc_htm_chull, test_HTM_chull);
 	suite_add_tcase(s, tc_htm_chull);
 
 	tc_htm_circle = tcase_create("HTM for Bounding Circles");
+	tcase_set_timeout(tc_htm_circle, 10);
 	tcase_add_test(tc_htm_circle, test_HTM_circle);
 	suite_add_tcase(s, tc_htm_circle);
 
@@ -219,6 +221,7 @@ Suite* test_suite_wkt_parser(void)
 	s = suite_create("Test of WKT parser");
 
 	tc_wkt_parser = tcase_create("WKT parser");
+	tcase_set_timeout(tc_wkt_parser, 10);
 	tcase_add_test(tc_wkt_parser, test_wkt_parser);
 	suite_add_tcase(s, tc_wkt_parser);
 
@@ -234,6 +237,7 @@ Suite* test_suite_wkt_speed(void)
 	s = suite_create("Test WKT speed");
 
 	tc_wkt_speed = tcase_create("WKT speed");
+	tcase_set_timeout(tc_wkt_speed, 10);
 	tcase_add_test(tc_wkt_speed, test_wkt_speed);
 	suite_add_tcase(s, tc_wkt_speed);
 
