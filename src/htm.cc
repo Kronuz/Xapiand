@@ -26,13 +26,13 @@
 
 // Constructor for HTM earth.
 // If partials_ then return triangles partials.
-// Error: [0.1, 0.5], specific error according to the diameter of the circle
+// Error: [0.2, 0.5], specific error according to the diameter of the circle
 // or the circle that adjusts the area Polygono.
 // Geometry region.
 HTM::HTM(bool partials_, double error, Geometry &region_) : region(region_), partials(partials_)
 {
 	// Get the error with respect to the radius.
-	error = (error > 0.5) ? 1 : (error < 0.1) ? 0.2 : 2 * error;
+	error = (error > 0.5) ? 1.0 : (error < 0.2) ? 0.4 : 2 * error;
 	double errorD =  error * region.getRadius();
 	max_level = HTM_MAX_LEVEL;
 	for (int i = 0; i <= HTM_MAX_LEVEL; i++) {
