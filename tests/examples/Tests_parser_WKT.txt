@@ -25,3 +25,9 @@ examples/Collection_WKT.py
 GEOMETRYINTERSECTION (CIRCLE (90 0, 11002154.620412596), CIRCLE (-90 0, 11002154.620412596))
 examples/Intersection_Anillo.txt
 examples/Intersection_WKT.py
+MULTICIRCLE((10.0 10.0, 90000),(10.0 11, 90000),(10.5 10.5, 90000))
+examples/MultiCircle.txt
+examples/MultiCircle.py
+GEOMETRYINTERSECTION(CIRCLE (10.0 10.0, 90000), CIRCLE (10.0 11, 90000), CIRCLE(10.5 10.5, 90000), POLYGON((10.0 10.0, 10. 11, 10.5 10.5)))
+examples/GeometryIntersection.txt
+examples/GeometryIntersection.py
