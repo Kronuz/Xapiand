@@ -765,7 +765,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit)
 	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
 	if (isupper(_document_id.at(0))) prefix += ":";
 	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-    Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
+	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
 
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
@@ -1046,26 +1046,18 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 				partials = (Serialise::boolean(spc.accuracy.at(0)).compare("f") == 0) ? false : true;
 				error = strtodouble(spc.accuracy.at(1));
 			}
-			std::vector<range_t> ranges;
-			EWKT_Parser::getRanges(term_v, partials, error, ranges);
-			std::vector<range_t>::const_iterator it(ranges.begin());
+			std::vector<std::string> geo_terms;
+			EWKT_Parser::getIndexTerms(term_v, partials, error, geo_terms);
+			std::vector<std::string>::const_iterator it(geo_terms.begin());
 			if (spc.position >= 0) {
-				for ( ; it != ranges.end(); it++) {
-					std::string nameterm(prefixed(Serialise::trixel_id(it->start), prefix));
+				for ( ; it != geo_terms.end(); it++) {
+					std::string nameterm(prefixed(*it, prefix));
 					doc.add_posting(nameterm, spc.position, spc.weight);
-					if (it->start != it->end) {
-						nameterm.assign(prefixed(Serialise::trixel_id(it->end), prefix));
-						doc.add_posting(nameterm, spc.position, spc.weight);
-					}
 				}
 			} else {
-				for ( ; it != ranges.end(); it++) {
-					std::string nameterm(prefixed(Serialise::trixel_id(it->start), prefix));
+				for ( ; it != geo_terms.end(); it++) {
+					std::string nameterm(prefixed(*it, prefix));
 					doc.add_term(nameterm, spc.weight);
-					if (it->start != it->end) {
-						nameterm.assign(prefixed(Serialise::trixel_id(it->end), prefix));
-						doc.add_term(nameterm, spc.weight);
-					}
 				}
 			}
 		} else {
@@ -1969,7 +1961,7 @@ Database::split_fields(const std::string &field_name)
 data_field_t
 Database::get_data_field(const std::string &field_name)
 {
-	data_field_t res = {Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<std::string>(), std::vector<std::string>()};
+	data_field_t res = {Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<std::string>(), std::vector<std::string>(), false};
 
 	if (field_name.empty()) {
 		return res;
@@ -1998,7 +1990,7 @@ Database::get_data_field(const std::string &field_name)
 	if (properties) {
 		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
 		unique_char_ptr _cprint(cJSON_Print(_aux));
-		res.slot = (_aux) ? strtouint(_cprint.get()) : get_slot(field_name);
+		if (_aux) res.slot = strtouint(_cprint.get());
 		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
 		if (_aux) {
 			char sep_types[3];
@@ -2006,7 +1998,7 @@ Database::get_data_field(const std::string &field_name)
 			res.type = sep_types[2];
 		}
 		_aux = cJSON_GetObjectItem(properties, RESERVED_PREFIX);
-		res.prefix = (_aux) ? _aux->valuestring : get_prefix(field_name, DOCUMENT_CUSTOM_TERM_PREFIX, res.type);
+		if (_aux) res.prefix = _aux->valuestring;
 		_aux = cJSON_GetObjectItem(properties, RESERVED_ACCURACY);
 		if (_aux) {
 			int elements = cJSON_GetArraySize(_aux);
@@ -2040,7 +2032,7 @@ Database::get_data_field(const std::string &field_name)
 data_field_t
 Database::get_slot_field(const std::string &field_name)
 {
-	data_field_t res = {Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<std::string>(), std::vector<std::string>()};
+	data_field_t res = {Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<std::string>(), std::vector<std::string>(), false};
 
 	if (field_name.empty()) {
 		return res;
@@ -2069,9 +2061,8 @@ Database::get_slot_field(const std::string &field_name)
 	if (properties) {
 		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
 		unique_char_ptr _cprint(cJSON_Print(_aux));
-		if (_aux) {
-			res.slot = strtouint(_cprint.get());
-		} else return res;
+		if (_aux) res.slot = strtouint(_cprint.get());
+		else return res;
 		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
 		if (_aux) {
 			char sep_types[3];
@@ -2211,108 +2202,102 @@ Database::search(query_t e)
 	search_t srch;
 	bool first = true;
 
-	try {
-		LOG(this, "e.query size: %d  Spelling: %d Synonyms: %d\n", e.query.size(), e.spelling, e.synonyms);
-		std::vector<std::string>::const_iterator qit(e.query.begin());
-		std::vector<std::string>::const_iterator lit(e.language.begin());
-		std::string lan;
-		unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
-		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
-		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
-		for (; qit != e.query.end(); qit++) {
-			if (lit != e.language.end()) {
-				lan = *lit;
-				lit++;
-			}
-			srch = _search(*qit, flags, true, lan, e.unique_doc);
-			if (first) {
-				queryQ = srch.query;
-				first = false;
-			} else {
-				queryQ =  Xapian::Query(Xapian::Query::OP_AND, queryQ, srch.query);
-			}
-			sug_query.push_back(srch.suggested_query.back());
-			srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
-			srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
-			srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
-			srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
+	LOG(this, "e.query size: %d  Spelling: %d Synonyms: %d\n", e.query.size(), e.spelling, e.synonyms);
+	std::vector<std::string>::const_iterator qit(e.query.begin());
+	std::vector<std::string>::const_iterator lit(e.language.begin());
+	std::string lan;
+	unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
+	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
+	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
+	for (; qit != e.query.end(); qit++) {
+		if (lit != e.language.end()) {
+			lan = *lit;
+			lit++;
 		}
-		LOG(this, "e.query: %s\n", queryQ.get_description().c_str());
-
-
-		LOG(this, "e.partial size: %d\n", e.partial.size());
-		std::vector<std::string>::const_iterator pit(e.partial.begin());
-		flags = Xapian::QueryParser::FLAG_PARTIAL;
-		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
-		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
-		first = true;
-		for (; pit != e.partial.end(); pit++) {
-			srch = _search(*pit, flags, false, "", e.unique_doc);
-			if (first) {
-				queryP = srch.query;
-				first = false;
-			} else {
-				queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, srch.query);
-			}
-			sug_query.push_back(srch.suggested_query.back());
-			srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
-			srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
-			srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
-			srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-		}
-		LOG(this, "e.partial: %s\n", queryP.get_description().c_str());
-
-
-		LOG(this, "e.terms size: %d\n", e.terms.size());
-		std::vector<std::string>::const_iterator tit(e.terms.begin());
-		flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
-		if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
-		if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
-		first = true;
-		for (; tit != e.terms.end(); tit++) {
-			srch = _search(*tit, flags, false, "", e.unique_doc);
-			if (first) {
-				queryT = srch.query;
-				first = false;
-			} else {
-				queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, srch.query);
-			}
-			sug_query.push_back(srch.suggested_query.back());
-			srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
-			srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
-			srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
-			srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-		}
-		LOG(this, "e.terms: %s\n", repr(queryT.get_description()).c_str());
-
-		first = true;
-		if (!e.query.empty()) {
-			queryF = queryQ;
+		srch = _search(*qit, flags, true, lan, e.unique_doc);
+		if (first) {
+			queryQ = srch.query;
 			first = false;
+		} else {
+			queryQ =  Xapian::Query(Xapian::Query::OP_AND, queryQ, srch.query);
 		}
-		if (!e.partial.empty()) {
-			if (first) {
-				queryF = queryP;
-				first = false;
-			} else {
-				queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryP);
-			}
-		}
-		if (!e.terms.empty()) {
-			if (first) {
-				queryF = queryT;
-				first = false;
-			} else {
-				queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryT);
-			}
-		}
-		srch_resul.query = queryF;
-		srch_resul.suggested_query = sug_query;
-		return srch_resul;
-	} catch (const Xapian::Error &error) {
-		LOG_ERR(this, "ERROR: In search: %s\n", error.get_msg().c_str());
+		sug_query.push_back(srch.suggested_query.back());
+		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
+		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
+		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 	}
+	LOG(this, "e.query: %s\n", queryQ.get_description().c_str());
 
+
+	LOG(this, "e.partial size: %d\n", e.partial.size());
+	std::vector<std::string>::const_iterator pit(e.partial.begin());
+	flags = Xapian::QueryParser::FLAG_PARTIAL;
+	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
+	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
+	first = true;
+	for (; pit != e.partial.end(); pit++) {
+		srch = _search(*pit, flags, false, "", e.unique_doc);
+		if (first) {
+			queryP = srch.query;
+			first = false;
+		} else {
+			queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, srch.query);
+		}
+		sug_query.push_back(srch.suggested_query.back());
+		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
+		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
+		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
+	}
+	LOG(this, "e.partial: %s\n", queryP.get_description().c_str());
+
+
+	LOG(this, "e.terms size: %d\n", e.terms.size());
+	std::vector<std::string>::const_iterator tit(e.terms.begin());
+	flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
+	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
+	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
+	first = true;
+	for (; tit != e.terms.end(); tit++) {
+		srch = _search(*tit, flags, false, "", e.unique_doc);
+		if (first) {
+			queryT = srch.query;
+			first = false;
+		} else {
+			queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, srch.query);
+		}
+		sug_query.push_back(srch.suggested_query.back());
+		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
+		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
+		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
+	}
+	LOG(this, "e.terms: %s\n", repr(queryT.get_description()).c_str());
+
+	first = true;
+	if (!e.query.empty()) {
+		queryF = queryQ;
+		first = false;
+	}
+	if (!e.partial.empty()) {
+		if (first) {
+			queryF = queryP;
+			first = false;
+		} else {
+			queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryP);
+		}
+	}
+	if (!e.terms.empty()) {
+		if (first) {
+			queryF = queryT;
+			first = false;
+		} else {
+			queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryT);
+		}
+	}
+	srch_resul.query = queryF;
+	srch_resul.suggested_query = sug_query;
 	return srch_resul;
 }
 
@@ -2322,8 +2307,8 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 {
 	search_t srch;
 
-	if (query == "*") {
-		srch.query = Xapian::Query("");
+	if (query.compare("*") == 0) {
+		srch.query = Xapian::Query::MatchAll;
 		srch.suggested_query.push_back("");
 		return srch;
 	}
@@ -2338,13 +2323,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 	if (text) {
 		queryparser.set_stemming_strategy(queryparser.STEM_SOME);
-		if (!lan.empty()) {
-			LOG(this, "User-defined language: %s\n", lan.c_str());
-			queryparser.set_stemmer(Xapian::Stem(lan));
-		} else {
-			LOG(this, "Default language: en\n");
-			queryparser.set_stemmer(Xapian::Stem("en"));
-		}
+		lan.empty() ? queryparser.set_stemmer(Xapian::Stem("en")) : queryparser.set_stemmer(Xapian::Stem(lan));
 	}
 
 	std::vector<std::string> added_prefixes;
@@ -2362,29 +2341,30 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		std::string field_value(query.c_str() + g[3].start, g[3].end - g[3].start);
 		data_field_t field_t = get_data_field(field_name);
 
-		// Geo type variables
+		// Auxiliary variables.
 		std::vector<std::string> prefixes;
 		std::vector<std::string>::const_iterator it;
 		std::vector<range_t> ranges;
-		CartesianList centroids;
 		std::vector<range_t>::const_iterator rit;
+		CartesianList centroids;
 		bool partials = DE_PARTIALS;
 		double error = DE_ERROR;
 		std::string filter_term, start, end, prefix;
 		unique_group unique_Range;
 
 		if (isRange(field_value, unique_Range)) {
+			// If this field is not indexed as value, not process this query.
+			if (field_t.slot == Xapian::BAD_VALUENO) continue;
+
 			switch (field_t.type) {
 				case NUMERIC_TYPE:
 					g = unique_Range.get();
 					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
 					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
-
 					filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, NUMERIC_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
-						it = prefixes.begin();
-						for ( ; it != prefixes.end(); it++) {
+						for (it = prefixes.begin(); it != prefixes.end(); it++) {
 							// Xapian does not allow repeat prefixes.
 							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
 								nfp = new NumericFieldProcessor(*it);
@@ -2406,8 +2386,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					g = unique_Range.get();
 					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
 					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
-
-					filter_term = GenerateTerms::date(start, end, field_t.accuracy, field_t.acc_prefix, prefix = field_name);
+					filter_term = GenerateTerms::date(start, end, field_t.accuracy, field_t.acc_prefix, prefix);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
 						// Xapian does not allow repeat prefixes.
@@ -2428,12 +2407,15 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						error = strtodouble(field_t.accuracy.at(1));
 					}
 					EWKT_Parser::getRanges(field_value, partials, error, ranges, centroids);
-					prefix = field_t.acc_prefix.at(0);
+
+					// If the region for search is empty, not process this query.
+					if (ranges.empty()) continue;
+
+					queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges, centroids);
 					filter_term = GenerateTerms::geo(ranges, field_t.acc_prefix, prefixes);
 					if (!filter_term.empty()) {
 						// Xapian does not allow repeat prefixes.
-						it = prefixes.begin();
-						for ( ; it != prefixes.end(); it++) {
+						for (it = prefixes.begin(); it != prefixes.end(); it++) {
 							// Xapian does not allow repeat prefixes.
 							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
 								gfp = new GeoFieldProcessor(*it);
@@ -2442,77 +2424,56 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 								added_prefixes.push_back(*it);
 							}
 						}
-						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), GeoSpatialRange::getQuery(field_t.slot, ranges, centroids));
-					} else {
-						queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges, centroids);
+						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), queryRange);
 					}
 					break;
-				default:
-					throw Xapian::QueryParserError("This type of Data has no support for range search.\n");
 			}
 
+			// Concatenate with OR all the ranges queries.
 			if (first_timeR) {
 				srch.query = queryRange;
 				first_timeR = false;
-			} else {
-				srch.query = Xapian::Query(Xapian::Query::OP_OR, srch.query, queryRange);
-			}
+			} else srch.query = Xapian::Query(Xapian::Query::OP_OR, srch.query, queryRange);
 		} else {
+			// If the field has not been indexed as a term, not process this query.
+			if (!field_name.empty() && field_t.prefix.empty()) continue;
+
 			switch (field_t.type) {
 				case NUMERIC_TYPE:
 					// Xapian does not allow repeat prefixes.
 					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
 						nfp = new NumericFieldProcessor(field_t.prefix);
 						srch.nfps.push_back(std::move(std::unique_ptr<NumericFieldProcessor>(nfp)));
-						if (strhasupper(field_name)) {
-							LOG(this, "Boolean Prefix\n");
-							queryparser.add_boolean_prefix(field_name, nfp);
-						} else {
-							LOG(this, "Prefix\n");
-							queryparser.add_prefix(field_name, nfp);
-						}
+						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, nfp) : queryparser.add_prefix(field_name, nfp);
 						added_prefixes.push_back(field_t.prefix);
 					}
-					if (field_value.at(0) == '-') field_value.at(0) = '_';
-					field_value = field_name_dot + field_value;
+					if (field_value.at(0) == '-') {
+						field_value.at(0) = '_';
+						field = field_name_dot + field_value;
+					}
 					break;
 				case STRING_TYPE:
 					// Xapian does not allow repeat prefixes.
-					if (!field_name.empty() && std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
-						if (strhasupper(field_name) || unique_doc) {
-							LOG(this, "Boolean Prefix\n");
-							if (isupper(field_value.at(0))) {
-								field_t.prefix = field_t.prefix + ":";
-							}
-							queryparser.add_boolean_prefix(field_name, field_t.prefix);
-						} else {
-							LOG(this, "Prefix\n");
-							queryparser.add_prefix(field_name, field_t.prefix);
-						}
+					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, field_t.prefix) : queryparser.add_prefix(field_name, field_t.prefix);
 						added_prefixes.push_back(field_t.prefix);
 					}
-					field_value = field;
 					break;
 				case DATE_TYPE:
 					// If there are double quotes, they are deleted: "date" -> date
 					if (field_value.at(0) == '"') field_value.assign(field_value, 1, field_value.size() - 2);
 					try {
+						// Always pass to timestamp.
 						field_value = std::to_string(Datetime::timestamp(field_value));
 						// Xapian does not allow repeat prefixes.
 						if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
 							dfp = new DateFieldProcessor(field_t.prefix);
 							srch.dfps.push_back(std::move(std::unique_ptr<DateFieldProcessor>(dfp)));
-							if (strhasupper(field_name)) {
-								LOG(this, "Boolean Prefix\n");
-								queryparser.add_boolean_prefix(field_name, dfp);
-							} else {
-								LOG(this, "Prefix\n");
-								queryparser.add_prefix(field_name, dfp);
-							}
+							field_t.bool_term ? queryparser.add_boolean_prefix(field_name, dfp) : queryparser.add_prefix(field_name, dfp);
 							added_prefixes.push_back(field_t.prefix);
 						}
 						if (field_value.at(0) == '-') field_value.at(0) = '_';
-						field_value = field_name_dot + field_value;
+						field = field_name_dot + field_value;
 					} catch (const std::exception &ex) {
 						throw Xapian::QueryParserError("Didn't understand date field name's specification: '" + field_name + "'");
 					}
@@ -2524,25 +2485,20 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						partials = (Serialise::boolean(field_t.accuracy.at(0)).compare("f") == 0) ? false : true;
 						error = strtodouble(field_t.accuracy.at(1));
 					}
-					EWKT_Parser::getRanges(field_value, partials, error, ranges);
-					field_value = "";
-					rit = ranges.begin();
-					for ( ; rit != ranges.end(); rit++) {
-						field_value += field_name_dot + std::to_string(rit->start) + " AND ";
-						if (rit->start != rit->end) field_value += field_name_dot + std::to_string(rit->end) + " AND ";
-					}
-					field_value.assign(field_value.c_str(), 0, field_value.size() - 5);
+					EWKT_Parser::getSearchTerms(field_value, partials, error, prefixes);
+
+					// If the region for search is empty, not process this query.
+					if (prefixes.empty()) continue;
+
+					it = prefixes.begin();
+					field = field_name_dot + *it;
+					for (it++; it != prefixes.end(); it++)
+						field += " AND " + field_name_dot + *it;
 					// Xapian does not allow repeat prefixes.
 					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
 						gfp = new GeoFieldProcessor(field_t.prefix);
 						srch.gfps.push_back(std::move(std::unique_ptr<GeoFieldProcessor>(gfp)));
-						if (strhasupper(field_name)) {
-							LOG(this, "Boolean Prefix\n");
-							queryparser.add_boolean_prefix(field_name, gfp);
-						} else {
-							LOG(this, "Prefix\n");
-							queryparser.add_prefix(field_name, gfp);
-						}
+						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, gfp) : queryparser.add_prefix(field_name, gfp);
 						added_prefixes.push_back(field_t.prefix);
 					}
 					break;
@@ -2551,25 +2507,17 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
 						bfp = new BooleanFieldProcessor(field_t.prefix);
 						srch.bfps.push_back(std::move(std::unique_ptr<BooleanFieldProcessor>(bfp)));
-						if (strhasupper(field_name)) {
-							LOG(this, "Boolean Prefix\n");
-							queryparser.add_boolean_prefix(field_name, bfp);
-						} else {
-							LOG(this, "Prefix\n");
-							queryparser.add_prefix(field_name, bfp);
-						}
+						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, bfp) : queryparser.add_prefix(field_name, bfp);
 						added_prefixes.push_back(field_t.prefix);
 					}
-					field_value = field;
 					break;
 			}
 
+			// Concatenate with OR all the queries.
 			if (first_time) {
-				querystring = field_value;
+				querystring = field;
 				first_time = false;
-			} else {
-				querystring += " OR " + field_value;
-			}
+			} else querystring += " OR " + field;
 		}
 	}
 
@@ -2577,22 +2525,37 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		throw Xapian::QueryParserError("Query '" + query + "' contains errors.\n" );
 	}
 
-	if (!first_time) {
-		try {
-			LOG_DATABASE_WRAP(this, "Query terms processed: (%s)\n", querystring.c_str());
-			queryRange = queryparser.parse_query(querystring, flags);
-			srch.suggested_query.push_back(queryparser.get_corrected_query_string());
-			srch.query = Xapian::Query(Xapian::Query::OP_OR,  queryRange, srch.query);
-		} catch (const Xapian::Error &er) {
-			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
-			reopen();
-			queryparser.set_database(*db);
-			queryRange = queryparser.parse_query(querystring, flags);
-			srch.suggested_query.push_back(queryparser.get_corrected_query_string());
-			srch.query = Xapian::Query(Xapian::Query::OP_OR,  queryRange, srch.query);
-		}
-	} else {
-		srch.suggested_query.push_back("");
+	switch (first_time << 1 | first_timeR) {
+		case 0:
+			try {
+				srch.query = Xapian::Query(Xapian::Query::OP_OR, queryparser.parse_query(querystring, flags), srch.query);
+				srch.suggested_query.push_back(queryparser.get_corrected_query_string());
+			} catch (const Xapian::QueryParserError &er) {
+				LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+				reopen();
+				srch.query = Xapian::Query(Xapian::Query::OP_OR, queryparser.parse_query(querystring, flags), srch.query);
+				srch.suggested_query.push_back(queryparser.get_corrected_query_string());
+			}
+			break;
+		case 1:
+			try {
+				srch.query = queryparser.parse_query(querystring, flags);
+				srch.suggested_query.push_back(queryparser.get_corrected_query_string());
+			} catch (const Xapian::QueryParserError &er) {
+				LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+				reopen();
+				queryparser.set_database(*db);
+				srch.query = queryparser.parse_query(querystring, flags);
+				srch.suggested_query.push_back(queryparser.get_corrected_query_string());
+			}
+			break;
+		case 2:
+			srch.suggested_query.push_back("");
+			break;
+		case 3:
+			srch.query = Xapian::Query::MatchNothing;
+			srch.suggested_query.push_back("");
+			break;
 	}
 
 	return srch;
@@ -2747,12 +2710,10 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 			return 1;
 		}
 
-		delete sorter;
 		return 0;
 	}
 
-	LOG_ERR(this, "ERROR: Cannot search!\n");
-	delete sorter;
+	LOG_ERR(this, "ERROR: The search was not performed!\n");
 	return 2;
 }
 
