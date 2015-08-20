@@ -58,8 +58,8 @@ namespace Datetime {
 	time_t toordinal(int year, int month, int day);
 	time_t timegm(struct tm *tm);
 	time_t timegm(tm_t &tm);
-	long double mtimegm(tm_t &tm);
-	long double timestamp(const std::string &date);
+	double mtimegm(tm_t &tm);
+	double timestamp(const std::string &date);
 	bool isvalidDate(int year, int month, int day);
 	char* isotime(const struct tm *timep);
 	::std::string ctime(const ::std::string &epoch);

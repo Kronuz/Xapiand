@@ -332,18 +332,18 @@ Datetime::timegm(tm_t &tm)
  * Only for year greater than 0.
  * Return Timestamp with milliseconds as the decimal part.
  */
-long double
+double
 Datetime::mtimegm(tm_t &tm)
 {
 	normalizeMonths(tm.year, tm.mon);
-	long double result = (long double)toordinal(tm.year, tm.mon, 1) - _EPOCH_ORD + tm.day - 1;
+	double result = (double)toordinal(tm.year, tm.mon, 1) - _EPOCH_ORD + tm.day - 1;
 	result *= 24;
 	result += tm.hour;
 	result *= 60;
 	result += tm.min;
 	result *= 60;
 	result += tm.sec;
-	(result < 0) ? result -= tm.msec / 1000.0L : result += tm.msec / 1000.0L;
+	(result < 0) ? result -= tm.msec / 1000.0 : result += tm.msec / 1000.0;
 
 	return result;
 }
@@ -352,7 +352,7 @@ Datetime::mtimegm(tm_t &tm)
 /*
  * Return the timestamp of date.
  */
-long double
+double
 Datetime::timestamp(const std::string &date)
 {
 	if (!isNumeric(date)) {
@@ -360,7 +360,7 @@ Datetime::timestamp(const std::string &date)
 		dateTimeParser(date, tm);
 		return mtimegm(tm);
 	} else {
-		long double timestamp;
+		double timestamp;
 		std::stringstream ss;
 		ss << std::dec << date;
 		ss >> timestamp;
