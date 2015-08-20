@@ -21,6 +21,7 @@
  */
 
 #include "wkt_parser.h"
+#include "serialise.h"
 
 #define FIND_GEOMETRY_RE "(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIRCLE|POINT|MULTIPOINT|CHULL|MULTICHULL)[\\s]*\\(([()0-9.\\s,-]*)\\)|(GEOMETRYCOLLECTION|GEOMETRYINTERSECTION)[\\s]*\\(([()0-9.\\s,A-Z-]*)\\)"
 #define FIND_CIRCLE_RE "(\\-?\\d*\\.\\d+|\\-?\\d+)\\s(\\-?\\d*\\.\\d+|\\-?\\d+)(\\s(\\-?\\d*\\.\\d+|\\-?\\d+))?[\\s]*\\,[\\s]*(\\d*\\.\\d+|\\d+)"
@@ -445,7 +446,7 @@ EWKT_Parser::parse_geometry_collection(const std::string &data)
 }
 
 
-// Parse a intersection of geomtries (join by AND operation).
+// Parse a intersection of geometries (join by AND operation).
 std::vector<std::string>
 EWKT_Parser::parse_geometry_intersection(const std::string &data)
 {
@@ -687,6 +688,9 @@ void
 EWKT_Parser::getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids)
 {
 	EWKT_Parser ewkt(field_value, partials, error);
+
+	if (ewkt.trixels.empty()) return;
+
 	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());
 	for ( ; it != ewkt.trixels.end(); it++) {
 		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
@@ -697,12 +701,61 @@ EWKT_Parser::getRanges(const std::string &field_value, bool partials, double err
 
 
 void
-EWKT_Parser::getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges)
+EWKT_Parser::getIndexTerms(const std::string &field_value, bool partials, double error, std::vector<std::string> &terms)
 {
 	EWKT_Parser ewkt(field_value, partials, error);
+
+	if (ewkt.trixels.empty()) return;
+
+	std::vector<range_t> ranges;
 	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());
 	for ( ; it != ewkt.trixels.end(); it++) {
 		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
 	}
 	HTM::mergeRanges(ranges);
+
+	std::vector<range_t>::const_iterator rit(ranges.begin());
+	std::string result;
+	for (size_t num_ran = 0; rit != ranges.end(); rit++) {
+		if (num_ran < RANGES_BY_TERM) {
+			result += Serialise::trixel_id(rit->start) + Serialise::trixel_id(rit->end);
+			num_ran++;
+		} else {
+			terms.push_back(result);
+			result = Serialise::trixel_id(rit->start) + Serialise::trixel_id(rit->end);
+			num_ran = 1;
+		}
+	}
+	terms.push_back(result);
+}
+
+
+void
+EWKT_Parser::getSearchTerms(const std::string &field_value, bool partials, double error, std::vector<std::string> &terms)
+{
+	EWKT_Parser ewkt(field_value, partials, error);
+
+	if (ewkt.trixels.empty()) return;
+
+	std::vector<range_t> ranges;
+	std::vector<std::string>::const_iterator it(ewkt.trixels.begin());
+	for ( ; it != ewkt.trixels.end(); it++) {
+		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
+	}
+	HTM::mergeRanges(ranges);
+
+	std::vector<range_t>::const_iterator rit(ranges.begin());
+	std::string result(std::to_string(rit->start) + WKT_SEPARATOR + std::to_string(rit->end));
+	size_t num_ran = 1;
+	for (rit++; rit != ranges.end(); rit++) {
+		if (num_ran < RANGES_BY_TERM) {
+			result += WKT_SEPARATOR + std::to_string(rit->start) + WKT_SEPARATOR + std::to_string(rit->end);
+			num_ran++;
+		} else {
+			terms.push_back(result);
+			result = std::to_string(rit->start) + WKT_SEPARATOR + std::to_string(rit->end);
+			num_ran = 1;
+		}
+	}
+	terms.push_back(result);
 }
