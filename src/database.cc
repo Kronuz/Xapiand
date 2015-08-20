@@ -2641,7 +2641,7 @@ Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key,
 int
 Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
 {
-	Multi_MultiValueKeyMaker *sorter = NULL;
+	std::unique_ptr<Multi_MultiValueKeyMaker> unique_sorter;
 	bool decreasing;
 	std::string field;
 	unsigned int doccount = db->get_doccount();
@@ -2657,7 +2657,8 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 	}
 
 	if (!e.sort.empty()) {
-		sorter = new Multi_MultiValueKeyMaker();
+		Multi_MultiValueKeyMaker *sorter = new Multi_MultiValueKeyMaker();
+		unique_sorter = std::unique_ptr<Multi_MultiValueKeyMaker>(sorter);
 		std::vector<std::string>::const_iterator oit(e.sort.begin());
 		for ( ; oit != e.sort.end(); oit++) {
 			if (startswith(*oit, "-")) {
@@ -2687,11 +2688,7 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 	for (int t = 3; t >= 0; --t) {
 		try {
 			search_t srch = search(e);
-			if (srch.query.serialise().size() == 0) {
-				delete sorter;
-				return 1;
-			}
-			Xapian::Enquire enquire = get_enquire(srch.query, collapse_key, e.collapse_max, sorter, &spies, e.is_nearest ? &e.nearest : NULL, e.is_fuzzy ? &e.fuzzy : NULL, &e.facets);
+			Xapian::Enquire enquire = get_enquire(srch.query, collapse_key, e.collapse_max, unique_sorter.get(), &spies, e.is_nearest ? &e.nearest : NULL, e.is_fuzzy ? &e.fuzzy : NULL, &e.facets);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
 		} catch (const Xapian::DatabaseModifiedError &er) {
