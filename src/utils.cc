@@ -1032,22 +1032,19 @@ void move_files(const std::string &src, const std::string &dst)
 
 
 // String tokenizer with the delimiter.
-std::vector<std::string> stringTokenizer(const std::string &str, const std::string &delimiter)
+void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens)
 {
-	std::vector<std::string> results;
 	size_t prev = 0, next = 0, len;
 
 	while ((next = str.find(delimiter, prev)) != std::string::npos) {
 		len = next - prev;
 		if (len > 0) {
-			results.push_back(str.substr(prev, len));
+			tokens.push_back(str.substr(prev, len));
 		}
 		prev = next + delimiter.size();
 	}
 
 	if (prev < str.size()) {
-		results.push_back(str.substr(prev));
+		tokens.push_back(str.substr(prev));
 	}
-
-	return results;
 }

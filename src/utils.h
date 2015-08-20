@@ -157,6 +157,7 @@ typedef struct data_field_s {
 	char type;
 	std::vector<std::string> accuracy;
 	std::vector<std::string> acc_prefix;
+	bool bool_term;
 } data_field_t;
 
 typedef struct parser_query_s {
@@ -215,7 +216,7 @@ int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
 std::string stringtolower(const std::string &str);
 std::string stringtoupper(const std::string &str);
-std::vector<std::string> stringTokenizer(const std::string &str, const std::string &delimiter);
+void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens);
 int strtoint(const std::string &str);
 unsigned int strtouint(const std::string &str);
 long long int strtollong(const std::string &str);
