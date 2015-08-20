@@ -103,8 +103,8 @@ GenerateTerms::date(const ::std::string &start_, const ::std::string &end_, cons
 	::std::string res;
 	if (!start_.empty() && !end_.empty()) {
 		try {
-			long double start = Datetime::timestamp(start_);
-			long double end = Datetime::timestamp(end_);
+			double start = Datetime::timestamp(start_);
+			double end = Datetime::timestamp(end_);
 
 			if (end < start) return res;
 
