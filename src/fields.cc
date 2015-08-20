@@ -22,8 +22,8 @@
 
 #include "fields.h"
 #include "multivalue.h"
+#include "wkt_parser.h"
 #include "serialise.h"
-#include "utils.h"
 #include <xapian/query.h>
 
 
@@ -37,7 +37,7 @@ NumericFieldProcessor::operator()(const std::string &str)
 	std::string serialise(str.c_str());
 	if (serialise.at(0) == '_') serialise.at(0) = '-';
 	serialise = Serialise::numeric(serialise);
-	if (serialise.size() == 0) {
+	if (serialise.empty()) {
 		throw Xapian::QueryParserError("Didn't understand numeric specification '" + str + "'");
 	}
 	return Xapian::Query(prefix + serialise);
@@ -50,7 +50,7 @@ BooleanFieldProcessor::BooleanFieldProcessor(const std::string &prefix_): prefix
 Xapian::Query BooleanFieldProcessor::operator()(const std::string &str)
 {
 	std::string serialise = Serialise::boolean(str);
-	if (serialise.size() == 0) {
+	if (serialise.empty()) {
 		throw Xapian::QueryParserError("Didn't understand bool specification '" + str + "'");
 	}
 	return Xapian::Query(prefix + serialise);
@@ -65,7 +65,7 @@ Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 	std::string serialise(str.c_str());
 	if (serialise.at(0) == '_') serialise.at(0) = '-';
 	serialise = Serialise::date(serialise);
-	if (serialise.size() == 0) {
+	if (serialise.empty()) {
 		throw Xapian::QueryParserError("Didn't understand date specification '" + str + "'");
 	}
 	return Xapian::Query(prefix + serialise);
@@ -77,7 +77,12 @@ GeoFieldProcessor::GeoFieldProcessor(const std::string &prefix_): prefix(prefix_
 
 Xapian::Query GeoFieldProcessor::operator()(const std::string &str)
 {
-	std::string serialise(str.c_str());
-	serialise = Serialise::trixel_id(strtouInt64(serialise));
+	std::vector<std::string> values;
+	stringTokenizer(str, WKT_SEPARATOR, values);
+	std::vector<std::string>::const_iterator it(values.begin());
+	std::string serialise(Serialise::trixel_id(strtouInt64(*it)));
+	for (it++ ; it != values.end(); it++) {
+		serialise += Serialise::trixel_id(strtouInt64(*it));
+	}
 	return Xapian::Query(prefix + serialise);
 }
