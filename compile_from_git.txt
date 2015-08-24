@@ -46,9 +46,7 @@ sed "s/@VERSION@/$VERSION/" version.i.in > version.i
 touch doccomments.i
 
 # Build bindings
-mkdir -p modern
-swig -I../../xapian-core/include -c++ -python -threads -shadow -modern -O -outdir modern -o modern/xapian_wrap.cc python.i
-cd ..
+swig -I../../xapian-core/include -c++ -python -threads -shadow -modern -O -o xapian_wrap.cc python.i
 
 # Autoconf, configure and make:
 autoreconf --force --install -Im4 -I/usr/local/share/aclocal
