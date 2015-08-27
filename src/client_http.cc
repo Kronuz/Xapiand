@@ -270,7 +270,7 @@ void HttpClient::_head()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON | HTTP_MATCHED_COUNT, 0, result));
 			return;
 	}
 
@@ -316,10 +316,10 @@ void HttpClient::_head()
 			result.assign(_cprint.get());
 		}
 		result += "\n";
-		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
 		write(result);
 	} else {
-		cJSON_AddStringToObject(root.get(), "Error", "Document not found");
+		cJSON_AddStringToObject(root.get(), "Response empty", "Document not found");
 		if (e.pretty) {
 			unique_char_ptr _cprint(cJSON_Print(root.get()));
 			result.assign(_cprint.get());
@@ -328,7 +328,7 @@ void HttpClient::_head()
 			result.assign(_cprint.get());
 		}
 		result += "\n";
-		write(http_response(404, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+		write(http_response(404, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
 	}
 
 	database_pool->checkin(&database);
@@ -367,7 +367,7 @@ void HttpClient::_delete()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
 			return;
 	}
 
@@ -409,7 +409,7 @@ void HttpClient::_delete()
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
 	write(result);
 }
 
@@ -445,7 +445,7 @@ void HttpClient::_index()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
 			return;
 	}
 
@@ -496,7 +496,7 @@ void HttpClient::_index()
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
 	write(result);
 }
 
@@ -533,7 +533,7 @@ void HttpClient::_patch()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
 			return;
 	}
 
@@ -571,7 +571,7 @@ void HttpClient::_patch()
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
 	write(result);
 }
 
@@ -617,13 +617,14 @@ void HttpClient::_stats(query_t &e)
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+	result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
 	write(result);
 }
 
 
 void HttpClient::_search()
 {
+	int cout_matched = 0;
 	bool facets = false;
 	bool schema = false;
 	bool json_chunked = true;
@@ -668,7 +669,7 @@ void HttpClient::_search()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result));
+			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
 			return;
 	}
 
@@ -682,7 +683,7 @@ void HttpClient::_search()
 		std::string schema_;
 		if (database->get_metadata(DB_SCHEMA, schema_)) {
 			schema_ += "\n";
-			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, schema_));
+			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, schema_));
 			database_pool->checkin(&database);
 			return;
 		} else {
@@ -695,7 +696,7 @@ void HttpClient::_search()
 				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
 				schema_.assign(_cprint.get());
 			}
-			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, schema_));
+			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, schema_));
 			database_pool->checkin(&database);
 			return;
 		}
@@ -706,6 +707,7 @@ void HttpClient::_search()
 	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 	clock_t t = clock();
 	int rmset = database->get_mset(e, mset, spies, suggestions);
+	cout_matched = mset.size();
 	if (rmset == 1) {
 		LOG(this, "get_mset return 1\n");
 		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
@@ -751,7 +753,7 @@ void HttpClient::_search()
 			result.assign(_cprint.get());
 		}
 		result += "\n\n";
-		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
 		write(result);
 	} else {
 		int rc = 0;
@@ -806,7 +808,7 @@ void HttpClient::_search()
 				id = document.get_value(0);
 
 				if (rc == 0 && json_chunked) {
-					write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED));
+					write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED | HTTP_MATCHED_COUNT, cout_matched));
 				}
 
 				unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
@@ -828,9 +830,9 @@ void HttpClient::_search()
 				}
 				result += "\n\n";
 				if(json_chunked) {
-					result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, result);
+					result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, 0, result);
 				} else {
-					result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+					result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
 				}
 
 				if (!write(result)) {
@@ -851,7 +853,7 @@ void HttpClient::_search()
 				result.assign(_cprint.get());
 			}
 			result += "\n\n";
-			result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, result);
+			result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON | HTTP_MATCHED_COUNT, 0, result);
 			write(result);
 		}
 	}
@@ -1241,7 +1243,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 }
 
 
-std::string HttpClient::http_response(int status, int mode, std::string content)
+std::string HttpClient::http_response(int status, int mode, int matched_count, std::string content)
 {
 	char buffer[20];
 	std::string response;
@@ -1258,6 +1260,10 @@ std::string HttpClient::http_response(int status, int mode, std::string content)
 
 		if (mode & HTTP_OPTIONS) {
 			response += "Allow: GET,HEAD,POST,PUT,PATCH,OPTIONS" + eol;
+		}
+
+		if (mode & HTTP_MATCHED_COUNT) {
+			response += "X-Matched-cout: " + std::to_string(matched_count) + eol;
 		}
 
 		if (mode & HTTP_CHUNKED) {

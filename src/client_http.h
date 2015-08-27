@@ -35,6 +35,7 @@
 #define HTTP_JSON    0x04
 #define HTTP_CHUNKED 0x08
 #define HTTP_OPTIONS 0x10
+#define HTTP_MATCHED_COUNT 0x20
 
 #define CMD_ID     0
 #define CMD_SEARCH 1
@@ -96,7 +97,7 @@ public:
 	void _head();
 	void _stats(query_t &e);
 	int _endpointgen(query_t &e, bool writable);
-	std::string http_response(int status, int mode, std::string content=std::string(""));
+	std::string http_response(int status, int mode, int matched_count = 0, std::string content=std::string(""));
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_HTTP_H */
