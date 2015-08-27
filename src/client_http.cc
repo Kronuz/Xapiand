@@ -270,7 +270,7 @@ void HttpClient::_head()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON | HTTP_MATCHED_COUNT, 0, result));
+			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
 			return;
 	}
 
