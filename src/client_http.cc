@@ -943,6 +943,9 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 				}
 
 				if (has_node_name) {
+					if(index_path.at(0) != '/') {
+						index_path = '/' + index_path;
+					}
 					Endpoint index("xapian://" + node_name + index_path);
 					int node_port = (index.port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.port;
 					node_name = index.host.empty() ? node_name : index.host;
