@@ -63,6 +63,9 @@ Serialise::date(const std::string &field_value)
 	if (isNumeric(field_value)) {
 		timestamp = strtodouble(field_value);
 		return Xapian::sortable_serialise(timestamp);
+	} else {
+		timestamp = Datetime::timestamp(field_value);
+		return Xapian::sortable_serialise(timestamp);
 	}
 	return "";
 }
