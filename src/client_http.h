@@ -54,19 +54,6 @@
 #define HTTP_SCHEMA "_schema"
 
 
-static int identify_cmd(const std::string &commad) {
-	if (strcasecmp(commad.c_str(), HTTP_SEARCH) == 0) {
-		return CMD_SEARCH;
-	} else if (strcasecmp(commad.c_str(), HTTP_FACETS) == 0) {
-		return CMD_FACETS;
-	} else if (strcasecmp(commad.c_str(), HTTP_STATS) == 0) {
-		return CMD_STATS;
-	} else if (strcasecmp(commad.c_str(), HTTP_SCHEMA) == 0) {
-		return CMD_SCHEMA;
-	} else return CMD_ID;
-}
-
-
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	struct http_parser parser;
@@ -98,6 +85,7 @@ public:
 	void _stats(query_t &e);
 	int _endpointgen(query_t &e, bool writable);
 	std::string http_response(int status, int mode, int matched_count = 0, std::string content=std::string(""));
+	static int identify_cmd(const std::string &commad);
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_HTTP_H */

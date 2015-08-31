@@ -681,7 +681,7 @@ void HttpClient::_search()
 
 	if (schema) {
 		std::string schema_;
-		if (database->get_metadata(DB_SCHEMA, schema_)) {
+		if (database->get_metadata(RESERVED_SCHEMA, schema_)) {
 			schema_ += "\n";
 			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, schema_));
 			database_pool->checkin(&database);
@@ -818,7 +818,7 @@ void HttpClient::_search()
 					object.reset();
 					object = unique_cJSON(object_data, cJSON_Delete);
 				} else {
-					database->clean_reserved(object.get());
+					clean_reserved(object.get());
 					cJSON_AddStringToObject(object.get(), RESERVED_ID, id.c_str());
 				}
 				if (e.pretty) {
@@ -1290,4 +1290,19 @@ std::string HttpClient::http_response(int status, int mode, int matched_count, s
 	}
 
 	return response;
+}
+
+
+int
+HttpClient::identify_cmd(const std::string &commad)
+{
+	if (strcasecmp(commad.c_str(), HTTP_SEARCH) == 0) {
+		return CMD_SEARCH;
+	} else if (strcasecmp(commad.c_str(), HTTP_FACETS) == 0) {
+		return CMD_FACETS;
+	} else if (strcasecmp(commad.c_str(), HTTP_STATS) == 0) {
+		return CMD_STATS;
+	} else if (strcasecmp(commad.c_str(), HTTP_SCHEMA) == 0) {
+		return CMD_SCHEMA;
+	} else return CMD_ID;
 }
