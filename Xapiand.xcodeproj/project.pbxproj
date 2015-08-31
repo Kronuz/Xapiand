@@ -10,6 +10,7 @@
 		4630BEE41B42E88D00351058 /* geometry.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEDE1B42E88D00351058 /* geometry.cc */; };
 		4630BEE51B42E88D00351058 /* htm.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE01B42E88D00351058 /* htm.cc */; };
 		4630BEE61B42E88D00351058 /* wkt_parser.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE21B42E88D00351058 /* wkt_parser.cc */; };
+		465C42A51B8E37FE00861471 /* database_utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 465C42A41B8E37FE00861471 /* database_utils.cc */; };
 		46740EEC1B5436120073C5E9 /* datetime.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46740EEA1B5436120073C5E9 /* datetime.cc */; };
 		46B6B3CD1B7E3CEF000FA041 /* serialise.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46B6B3CB1B7E3CEF000FA041 /* serialise.cc */; };
 		46B6B3D21B7E4A1B000FA041 /* geospatialrange.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46B6B3CF1B7E4A1B000FA041 /* geospatialrange.cc */; };
@@ -59,6 +60,8 @@
 		4630BEE11B42E88D00351058 /* htm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = htm.h; path = src/htm.h; sourceTree = "<group>"; };
 		4630BEE21B42E88D00351058 /* wkt_parser.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = wkt_parser.cc; path = src/wkt_parser.cc; sourceTree = "<group>"; };
 		4630BEE31B42E88D00351058 /* wkt_parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = wkt_parser.h; path = src/wkt_parser.h; sourceTree = "<group>"; };
+		465C42A31B8E37FE00861471 /* database_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = database_utils.h; path = src/database_utils.h; sourceTree = "<group>"; };
+		465C42A41B8E37FE00861471 /* database_utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = database_utils.cc; path = src/database_utils.cc; sourceTree = "<group>"; };
 		46740EEA1B5436120073C5E9 /* datetime.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = datetime.cc; path = src/datetime.cc; sourceTree = "<group>"; };
 		46740EEB1B5436120073C5E9 /* datetime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = datetime.h; path = src/datetime.h; sourceTree = "<group>"; };
 		46B6B3CB1B7E3CEF000FA041 /* serialise.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = serialise.cc; path = src/serialise.cc; sourceTree = "<group>"; };
@@ -151,6 +154,8 @@
 				C39AE03F1B2F627E00203139 /* config.h */,
 				C39AE0401B2F627E00203139 /* database.cc */,
 				C39AE0411B2F627E00203139 /* database.h */,
+				465C42A31B8E37FE00861471 /* database_utils.h */,
+				465C42A41B8E37FE00861471 /* database_utils.cc */,
 				46740EEA1B5436120073C5E9 /* datetime.cc */,
 				46740EEB1B5436120073C5E9 /* datetime.h */,
 				C39AE0441B2F627E00203139 /* endpoint.cc */,
@@ -280,6 +285,7 @@
 				C39AE06A1B2F627E00203139 /* endpoint.cc in Sources */,
 				C39AE0671B2F627E00203139 /* client_http.cc in Sources */,
 				46B6B3D61B7E5B3C000FA041 /* generate_terms.cc in Sources */,
+				465C42A51B8E37FE00861471 /* database_utils.cc in Sources */,
 				C39AE0721B2F627E00203139 /* server.cc in Sources */,
 				4630BEE61B42E88D00351058 /* wkt_parser.cc in Sources */,
 				4630BEE41B42E88D00351058 /* geometry.cc in Sources */,

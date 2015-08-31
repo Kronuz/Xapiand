@@ -9,6 +9,7 @@ xapiand_SOURCES = \
 	client_binary.cc \
 	client_http.cc \
 	database.cc \
+	database_utils.cc \
 	datetime.cc \
 	endpoint.cc \
 	endpoint_resolver.cc \
@@ -42,6 +43,7 @@ noinst_HEADERS = \
 	client_binary.h \
 	client_http.h \
 	database.h \
+	database_utils.h \
 	datetime.h \
 	endpoint.h \
 	endpoint_resolver.h \
