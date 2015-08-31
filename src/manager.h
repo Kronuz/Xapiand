@@ -54,7 +54,7 @@
 typedef struct opts_s {
 	int verbosity;
 	bool daemonize;
-	bool glass;
+	bool chert;
 	std::string database;
 	std::string cluster_name;
 	std::string node_name;

@@ -161,7 +161,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		SwitchArg daemonize("d", "daemon", "daemonize (run in background).", cmd);
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
-		SwitchArg glass("", "glass", "Try using glass databases.", cmd, false);
+		SwitchArg chert("", "chert", "Use chert databases.", cmd, false);
 #endif
 
 		ValueArg<std::string> database("D", "database", "Node database.", false, ".", "path", cmd);
@@ -187,7 +187,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		opts.verbosity = verbosity.getValue();
 		opts.daemonize = daemonize.getValue();
 #ifdef XAPIAN_HAS_GLASS_BACKEND
-		opts.glass = glass.getValue();
+		opts.chert = chert.getValue();
 #endif
 		opts.database = database.getValue();
 		opts.cluster_name = cluster_name.getValue();
@@ -252,7 +252,7 @@ int main(int argc, char **argv)
 	INFO((void *)NULL, "Joined cluster: %s\n", opts.cluster_name.c_str());
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
-	if (opts.glass) {
+	if (!opts.chert) {
 		// Prefer glass database
 		if (setenv("XAPIAN_PREFER_GLASS", "1", false) == 0) {
 			INFO((void *)NULL, "Enabled glass database.\n");
