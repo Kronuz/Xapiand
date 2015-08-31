@@ -261,8 +261,8 @@ int main(int argc, char **argv)
 #endif
 
 	// Enable changesets
-	if (setenv("XAPIAN_MAX_CHANGESETS", "10", false) == 0) {
-		INFO((void *)NULL, "Database changesets set to 10.\n");
+	if (setenv("XAPIAN_MAX_CHANGESETS", "200", false) == 0) {
+		INFO((void *)NULL, "Database changesets set to 200.\n");
 	}
 
 	// Flush threshold increased
