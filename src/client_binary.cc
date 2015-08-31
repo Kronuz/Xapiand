@@ -469,7 +469,7 @@ void BinaryClient::repl_changeset(const std::string & message)
 	::lseek(fd, 0, SEEK_SET);
 
 	try {
-		wdb_->apply_changesets_from_fd(fd);
+		wdb_->apply_changeset_from_fd(fd);
 	} catch (...) {
 		::close(fd);
 		::unlink(path);
