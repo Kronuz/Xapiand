@@ -444,3 +444,15 @@ Datetime::normalizeMonths(int &year, int &mon)
 		year--;
 	}
 }
+
+
+bool
+Datetime::isDate(const std::string &date)
+{
+	int len = (int)date.size();
+	unique_group unique_gr;
+	int ret = pcre_search(date.c_str(), len, 0, 0, DATE_RE, &compiled_date_re, unique_gr);
+	group_t *gr = unique_gr.get();
+
+	return (ret != -1 && len == gr[0].end - gr[0].start) ? true : false;
+}

@@ -64,6 +64,7 @@ namespace Datetime {
 	char* isotime(const struct tm *timep);
 	::std::string ctime(const ::std::string &epoch);
 	void normalizeMonths(int &year, int &mon);
+	bool isDate(const std::string &date);
 };
 
 

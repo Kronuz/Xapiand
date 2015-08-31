@@ -30,8 +30,7 @@
 #include <xapian.h>
 #include <xapian/matchspy.h>
 
-#include "cJSON.h"
-#include "utils.h"
+#include "database_utils.h"
 #include "fields.h"
 #include "multivaluekeymaker.h"
 
@@ -42,50 +41,13 @@
 #include <unordered_map>
 #include <unordered_set>
 
-
-#define RESERVED_WEIGHT "_weight"
-#define RESERVED_POSITION "_position"
-#define RESERVED_LANGUAGE "_language"
-#define RESERVED_SPELLING "_spelling"
-#define RESERVED_POSITIONS "_positions"
-#define RESERVED_TEXTS "_texts"
-#define RESERVED_VALUES "_values"
-#define RESERVED_TERMS "_terms"
-#define RESERVED_DATA "_data"
-#define RESERVED_ACCURACY "_accuracy"
-#define RESERVED_ACC_PREFIX "_acc_prefix"
-#define RESERVED_STORE "_store"
-#define RESERVED_TYPE "_type"
-#define RESERVED_ANALYZER "_analyzer"
-#define RESERVED_DYNAMIC "_dynamic"
-#define RESERVED_D_DETECTION "_date_detection"
-#define RESERVED_N_DETECTION "_numeric_detection"
-#define RESERVED_G_DETECTION "_geo_detection"
-#define RESERVED_B_DETECTION "_bool_detection"
-#define RESERVED_S_DETECTION "_string_detection"
-#define RESERVED_VALUE "_value"
-#define RESERVED_NAME "_name"
-#define RESERVED_SLOT "_slot"
-#define RESERVED_INDEX "_index"
-#define RESERVED_PREFIX "_prefix"
-#define RESERVED_ID "_id"
-#define DB_OFFSPRING_UNION "__"
-#define DB_LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
-#define DB_SCHEMA "schema"
-
-// Default prefixes
-#define DOCUMENT_ID_TERM_PREFIX "Q"
-#define DOCUMENT_CUSTOM_TERM_PREFIX "X"
-
 #define DB_WRITABLE 1    // Opens as writable
 #define DB_SPAWN 2       // Automatically creates the database if it doesn't exist
 #define DB_PERSISTENT 4  // Always try keeping the database in the database pool
 #define DB_INIT_REF 8	 // Initializes the writable index in the database .ref
 #define DB_VOLATILE 16   // Always drop the database from the database pool as soon as possible
 
-// Default partials, error and increment for indexing and searching geospatials.
-const bool DE_PARTIALS = true;
-const double DE_ERROR = 0.2;
+const size_t START_POS = SIZE_BITS_ID - 4;
 
 
 class DatabasePool;
@@ -107,26 +69,6 @@ public:
 	Xapian::Database *db;
 
 	static pcre *compiled_find_field_re;
-	static pcre *compiled_find_types_re;
-
-	typedef struct specifications_s {
-		int position;
-		int weight;
-		std::string language;
-		bool spelling;
-		bool positions;
-		std::vector<std::string> accuracy;
-		bool store;
-		std::string type;
-		char sep_types[3];
-		std::string analyzer;
-		bool dynamic;
-		bool date_detection;
-		bool numeric_detection;
-		bool geo_detection;
-		bool bool_detection;
-		bool string_detection;
-	} specifications_t;
 
 	typedef struct search_s {
 		Xapian::Query query;
@@ -149,7 +91,6 @@ public:
 	bool get_metadata(const std::string &key, std::string &value);
 	bool set_metadata(const std::string &key, const std::string &value, bool commit);
 	bool get_document(const Xapian::docid &did, Xapian::Document &doc);
-	int find_field(const std::string &str, int *g, int size_g, int len, int offset);
 	Xapian::Enquire get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
 					Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
 					similar_t *nearest, similar_t *fuzzy, std::vector<std::string> *facets);
@@ -161,19 +102,10 @@ public:
 	unique_cJSON get_stats_docs(const std::string &document_id);
 	data_field_t get_data_field(const std::string &field_name);
 	data_field_t get_slot_field(const std::string &field_name);
-	std::vector<std::string> split_fields(const std::string &field_name);
-	char get_type(cJSON *field, specifications_t &spc);
-	bool set_types(const std::string &type, char sep_types[]);
-	bool is_reserved(const std::string &word);
-	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, cJSON *schema, bool is_value, bool find);
-	void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema);
-	bool is_language(const std::string &language);
-	void index_texts(Xapian::Document &doc, cJSON *text, specifications_t &spc, const std::string &name, cJSON *schema, bool find);
-	void index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *schema, bool find);
-	void index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *schema, bool find);
-	void clean_reserved(cJSON *root);
-	void clean_reserved(cJSON *root, cJSON *item);
-	std::string specificationstostr(const specifications_t &spc);
+	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, cJSON *schema, bool find, bool is_value = true);
+	void index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc, const std::string &name, cJSON *schema, bool find = true);
+	void index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *schema, bool find = true);
+	void index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *schema, bool find = true);
 
 private:
 	bool _commit();
@@ -257,5 +189,17 @@ public:
 
 	QueueSet<Endpoint> updated_databases;
 };
+
+
+class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
+	std::vector<std::string> prefixes;
+
+	public:
+		ExpandDeciderFilterPrefixes(const std::vector<std::string> &prefixes_)
+			: prefixes(prefixes_) { }
+
+		virtual bool operator() (const std::string &term) const;
+};
+
 
 #endif /* XAPIAND_INCLUDED_DATABASE_H */
