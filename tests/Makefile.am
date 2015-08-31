@@ -12,6 +12,7 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/cJSON.c \
 			$(top_builddir)/src/cJSON_Utils.c \
 			$(top_builddir)/src/database.cc \
+			$(top_builddir)/src/database_utils.cc \
 			$(top_builddir)/src/datetime.cc \
 			$(top_builddir)/src/endpoint.cc \
 			$(top_builddir)/src/exception.cc \
