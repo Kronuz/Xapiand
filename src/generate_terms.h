@@ -28,24 +28,21 @@
 
 #define MAX_TERMS 100
 
-#define INC_LEVEL 5
-#define BITS_LEVEL 10
-
 
 namespace GenerateTerms {
 	typedef struct TRANSFORM_S {
 		char operator() (char c) { return  (c == '-') ? '_' : c;}
 	} TRANSFORM;
 
-	::std::string numeric(const ::std::string &start_, const ::std::string &end_, const ::std::vector<::std::string> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes);
-	::std::string date(const ::std::string &start_, const ::std::string &end_, const ::std::vector<::std::string> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::string &prefix);
+	void numeric(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes);
+	void date(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::vector<std::string> &prefixes);
 	::std::string year(int tm_s[], int tm_e[], const ::std::string &prefix);
 	::std::string month(int tm_s[], int tm_e[], const ::std::string &prefix);
 	::std::string day(int tm_s[], int tm_e[], const ::std::string &prefix);
 	::std::string hour(int tm_s[], int tm_e[], const ::std::string &prefix);
 	::std::string minute(int tm_s[], int tm_e[], const ::std::string &prefix);
 	::std::string second(int tm_s[], int tm_e[], const ::std::string &prefix);
-	::std::string geo(::std::vector<range_t> &ranges, const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes);
+	void geo(::std::string &result_terms, const ::std::vector<range_t> &ranges, const ::std::vector<double> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes);
 };
 
 
