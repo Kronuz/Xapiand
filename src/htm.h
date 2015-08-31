@@ -40,6 +40,11 @@
 // Maximum level allowed (In this level the accuracy is 30 centimeters).
 #define HTM_MAX_LEVEL 25
 
+// Error for generating the trixels
+#define HTM_MIN_ERROR 0.2
+#define HTM_MAX_ERROR 0.5
+
+
 // Constants.
 const size_t MAX_SIZE_NAME = HTM_MAX_LEVEL | '\x02';
 const size_t SIZE_BYTES_ID = 7;

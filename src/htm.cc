@@ -24,11 +24,10 @@
 #include "htm.h"
 
 
-// Constructor for HTM earth.
+// Constructor for HTM.
 // If partials_ then return triangles partials.
-// Error: [0.2, 0.5], specific error according to the diameter of the circle
-// or the circle that adjusts the area Polygono.
-// Geometry region.
+// error should be in [HTM_MIN_VALUE, HTM_MAX_VALUE]; it specifics the error according to the diameter
+// of the circle or the circle that adjusts the Polygon's area.
 HTM::HTM(bool partials_, double error, Geometry &region_) : region(region_), partials(partials_)
 {
 	// Get the error with respect to the radius.
