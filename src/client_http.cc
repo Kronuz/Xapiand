@@ -1266,7 +1266,7 @@ std::string HttpClient::http_response(int status, int mode, int matched_count, s
 		}
 
 		if (mode & HTTP_MATCHED_COUNT) {
-			response += "X-Matched-cout: " + std::to_string(matched_count) + eol;
+			response += "X-Matched-count: " + std::to_string(matched_count) + eol;
 		}
 
 		if (mode & HTTP_CHUNKED) {
