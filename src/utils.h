@@ -151,15 +151,6 @@ typedef struct query_s {
 	similar_t nearest;
 } query_t;
 
-typedef struct data_field_s {
-	unsigned int slot;
-	std::string prefix;
-	char type;
-	std::vector<std::string> accuracy;
-	std::vector<std::string> acc_prefix;
-	bool bool_term;
-} data_field_t;
-
 typedef struct parser_query_s {
 	size_t length;
 	const char *offset;
