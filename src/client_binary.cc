@@ -445,7 +445,7 @@ void BinaryClient::repl_changeset(const std::string & message)
 	LOG(this, "BinaryClient::repl_changeset\n");
 	Xapian::WritableDatabase * wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database->db);
 
-	char path[] = "/tmp/xapian_changes.XXXXXXXXXXXX";
+	char path[] = "/tmp/xapian_changes.XXXXXX";
 	int fd = mkstemp(path);
 	if (fd < 0) {
 		LOG_ERR(this, "Cannot write to %s (1)\n", path);
@@ -513,7 +513,7 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 	LOG(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
 
 	// write changesets to a temporary file
-	char path[] = "/tmp/xapian_changesets.XXXXXXXXXXXX";
+	char path[] = "/tmp/xapian_changesets.XXXXXX";
 	int fd = mkstemp(path);
 	if (fd < 0) {
 		LOG_ERR(this, "Cannot write to %s (1)\n", path);
