@@ -59,13 +59,11 @@ Serialise::numeric(const std::string &field_value)
 std::string
 Serialise::date(const std::string &field_value)
 {
-	double timestamp;
-	if (isNumeric(field_value)) {
-		timestamp = strtodouble(field_value);
+	try {
+		double timestamp = Datetime::timestamp(field_value);
 		return Xapian::sortable_serialise(timestamp);
-	} else {
-		timestamp = Datetime::timestamp(field_value);
-		return Xapian::sortable_serialise(timestamp);
+	} catch (const std::exception &err) {
+		LOG_ERR(NULL, "ERROR: %s\n", err.what());
 	}
 	return "";
 }
