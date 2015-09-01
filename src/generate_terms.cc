@@ -29,7 +29,20 @@
 #include "generate_terms.h"
 #include <algorithm>
 #include <bitset>
+#include <map>
 #include <limits.h>
+
+
+static bool isnotSubtrixel(std::string &last_valid, const uInt64 &id_trixel) {
+	std::string res(std::bitset<SIZE_BITS_ID>(id_trixel).to_string());
+	res = res.substr(res.find("1"));
+	if (res.find(last_valid) == 0) {
+		return false;
+	} else {
+		last_valid = res;
+		return true;
+	}
+}
 
 
 void
@@ -284,13 +297,12 @@ GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ra
 	// The user does not specify the accuracy.
 	if (acc_prefix.empty()) return;
 
-	::std::vector<::std::string> result;
-	result.reserve(ranges.size());
-	prefixes.reserve(ranges.size());
+	::std::map<uInt64, ::std::string> result;
+	::std::set<::std::string> aux_p;
 	::std::vector<range_t>::const_iterator rit(ranges.begin());
 	for ( ; rit != ranges.end(); rit++) {
 		::std::bitset<SIZE_BITS_ID> b1(rit->start), b2(rit->end), res;
-		size_t idx = 0, j = 0;
+		int idx = -1;
 		uInt64 val;
 		if (rit->start != rit->end) {
 			idx = SIZE_BITS_ID - 1;
@@ -298,32 +310,31 @@ GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ra
 			val = res.to_ullong();
 		} else val = rit->start;
 
-        int posF = -1;
-		for (size_t i = 2; i < accuracy.size(); i++) {
-            if ((START_POS - 2 * accuracy[i]) <= idx) {
-				if (i > 2) {
-					j = i - 3;
-					posF = START_POS - accuracy[--i] * 2;
-				}
+		int posF = -1, j = 0;
+		for (int i = (int)(accuracy.size() - 1); i > 1; --i) {
+			if ((START_POS - 2 * accuracy[i]) > idx) {
+				posF = START_POS - accuracy[i] * 2;
+				j = i - 2;
 				break;
 			}
 		}
-		if (posF != -1) {
-			result.push_back(acc_prefix[j] + ":" + ::std::to_string(val >> posF));
-			prefixes.push_back(acc_prefix[j]);
-		}
+        if (posF != -1) result.insert(::std::pair<uInt64, ::std::string>(val >> posF, acc_prefix[j]));
 	}
 
 	// The search have trixels more big that the biggest trixel in accuracy.
 	if (result.empty()) return;
 
-	// Delete duplicates prefixes and terms.
-	::std::sort(prefixes.begin(), prefixes.end());
-	prefixes.erase(::std::unique(prefixes.begin(), prefixes.end()), prefixes.end());
-	::std::sort(result.begin(), result.end());
-	result.erase(::std::unique(result.begin(), result.end()), result.end());
-
-	::std::vector<::std::string>::const_iterator it(result.begin());
-	result_terms = *it;
-	for (it++; it != result.end(); it++) result_terms += " OR " + *it;
+	// Delete duplicates terms.
+	::std::map<uInt64, ::std::string>::iterator it(result.begin());
+	std::string last_valid(std::bitset<SIZE_BITS_ID>(it->first).to_string());
+	last_valid.assign(last_valid.substr(last_valid.find("1")));
+	result_terms = it->second + ":" + ::std::to_string(it->first);
+	aux_p.insert(it->second);
+	for (++it; it != result.end(); ++it) {
+		if (isnotSubtrixel(last_valid, it->first)) {
+			result_terms += " OR " + it->second + ":" + ::std::to_string(it->first);
+			aux_p.insert(it->second);
+		}
+	}
+	prefixes.assign(aux_p.begin(), aux_p.end());
 }
