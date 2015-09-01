@@ -52,16 +52,19 @@ END_TEST
 Suite* Generate_Terms(void)
 {
 	Suite *s = suite_create("Testing Generation of terms");
-	TCase *n = tcase_create("Generation numerical terms");
-	TCase *d = tcase_create("Generation of terms for dates");
-	TCase *g = tcase_create("Generation of terms for geospatials");
 
+	TCase *n = tcase_create("Generation numerical terms");
 	tcase_add_test(n, numeric_test);
-	tcase_add_test(d, date_test);
-	tcase_add_test(g, geo_test);
 	suite_add_tcase(s, n);
+
+	TCase *d = tcase_create("Generation of terms for dates");
+	tcase_add_test(d, date_test);
 	suite_add_tcase(s, d);
+
+	TCase *g = tcase_create("Generation of terms for geospatials");
+	tcase_add_test(g, geo_test);
 	suite_add_tcase(s, g);
+
 	return s;
 }
 
@@ -70,7 +73,6 @@ int main(void)
 {
 	Suite *st = Generate_Terms();
 	SRunner *sr = srunner_create(st);
-
 	srunner_run_all(sr, CK_NORMAL);
 	int number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);

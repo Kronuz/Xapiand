@@ -37,27 +37,22 @@ END_TEST
 
 Suite* query_search(void)
 {
-	Suite *s;
-	TCase *t;
+	Suite *s = suite_create("Query test");
 
-	s = suite_create("Query test");
-	t = tcase_create("Test for index and every search");
+	TCase *t = tcase_create("Test for index and every search");
 	tcase_add_test(t, test_query_search);
 	suite_add_tcase(s, t);
+
 	return s;
 }
 
 
 int main(void)
 {
-	int number_failed = 0;
-	Suite *query;
-	SRunner *sr;
-
-	query = query_search();
-	sr = srunner_create(query);
+	Suite *query = query_search();
+	SRunner *sr = srunner_create(query);
 	srunner_run_all(sr, CK_NORMAL);
-	number_failed = srunner_ntests_failed(sr);
+	int number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);
 
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;

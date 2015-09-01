@@ -38,27 +38,22 @@ END_TEST
 
 Suite* area_search(void)
 {
-	Suite *s;
-	TCase *t;
+	Suite *s = suite_create("Area search test");;
 
-	s = suite_create("Area search test");
-	t = tcase_create("North Dakota area");
+	TCase *t = tcase_create("North Dakota area");
 	tcase_add_test(t, geo_test_area);
 	suite_add_tcase(s, t);
+
 	return s;
 }
 
 
 int main(void)
 {
-	int number_failed = 0;
-	Suite *area;
-	SRunner *sr;
-
-	area = area_search();
-	sr = srunner_create(area);
+	Suite *area = area_search();
+	SRunner *sr = srunner_create(area);
 	srunner_run_all(sr, CK_NORMAL);
-	number_failed = srunner_ntests_failed(sr);
+	int number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);
 
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
