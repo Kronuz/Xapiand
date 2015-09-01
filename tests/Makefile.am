@@ -5,8 +5,8 @@ AUTOMAKE_OPTIONS = -Wno-portability
 check:
 	$(shell rm -rf .db_test1.db .db_test2.db)
 
-TESTS = set_general_test set_geo_test set_query_test
-check_PROGRAMS = set_general_test set_geo_test set_query_test
+check_PROGRAMS = set_general_test set_generate_terms_test set_geo_test set_query_test
+TESTS = $(check_PROGRAMS)
 
 headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/cJSON.c \
@@ -32,8 +32,10 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/wkt_parser.cc
 
 set_general_test_SOURCES = $(headers) set_general_test.cc test_serialise.cc test_htm.cc test_wkt_parser.cc
-#set_general_test_CFLAGS = @CHECK_CFLAGS@ -I$(top_builddir)/src/
 set_general_test_LDADD = @CHECK_LIBS@
+
+set_generate_terms_test_SOURCES = $(headers) set_generate_terms_test.cc test_generate_terms.cc
+set_generate_terms_test_LDADD = @CHECK_LIBS@
 
 set_geo_test_SOURCES = $(headers) set_geo_test.cc test_geo.cc
 set_geo_test_LDADD = @CHECK_LIBS@
