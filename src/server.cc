@@ -318,7 +318,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 						mastery_level = database_pool->get_mastery_level(index_path);
 						if (mastery_level != -1 && mastery_level > remote_mastery_level) {
-							LOG_DISCOVERY(this, "Mastery of %s is HIGHER: %d (vs. remote's %d) - Updating!\n", index_path.c_str(), mastery_level, remote_mastery_level);
+							LOG_DISCOVERY(this, "Mastery of remote's %s wins! (local:%d > remote:%d) - Updating!\n", index_path.c_str(), mastery_level, remote_mastery_level);
 							if (remote_node.unserialise(&ptr, end) == -1) {
 								LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 								return;
@@ -337,7 +337,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							}
 #endif
 						} else {
-							LOG_DISCOVERY(this, "Mastery of %s is LOWER: %d (vs. remote's %d) - Ignoring update!\n", index_path.c_str(), mastery_level, remote_mastery_level);
+							LOG_DISCOVERY(this, "Mastery of local's %s wins! (local:%d <= remote:%d) - Ignoring update!\n", index_path.c_str(), mastery_level, remote_mastery_level);
 						}
 					}
 					break;
