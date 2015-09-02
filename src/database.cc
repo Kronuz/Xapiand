@@ -1818,8 +1818,6 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 		LOG_DATABASE(this, "!! FAILED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
 		return false;
 	}
-
-	
 	
 	if ((now - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
 		database_->reopen();
