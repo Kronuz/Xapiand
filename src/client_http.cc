@@ -185,6 +185,7 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 
 void HttpClient::run()
 {
+	const char *error_str;
 	std::string error;
 
 	try {
@@ -217,9 +218,19 @@ void HttpClient::run()
 				break;
 		}
 	} catch (const Xapian::Error &err) {
-		error.assign(err.get_error_string());
+		error_str = err.get_error_string();
+		if (error_str) {
+			error.assign(error_str);
+		} else {
+			error.assign("Unkown Xapian error!");
+		}
 	} catch (const std::exception &err) {
-		error.assign(err.what());
+		error_str = err.what();
+		if (error_str) {
+			error.assign(error_str);
+		} else {
+			error.assign("Unkown exception!");
+		}
 	} catch (...) {
 		error.assign("Unkown error!");
 	}
