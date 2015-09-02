@@ -52,7 +52,7 @@ XapiandReplicator::run()
 	LOG_OBJ(this, "Replicator started...\n");
 	Endpoint endpoint;
 	while (database_pool->updated_databases.pop(endpoint)) {
-		LOG(this, "REPLICATOR GOT DATABASE: %s\n", endpoint.as_string().c_str());
+		LOG(this, "Replicator was informed database was updated: %s\n", endpoint.as_string().c_str());
 		on_commit(endpoint);
 	}
 	LOG_OBJ(this, "Replicator ended!\n");

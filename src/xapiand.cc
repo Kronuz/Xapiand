@@ -188,6 +188,8 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		opts.daemonize = daemonize.getValue();
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 		opts.chert = chert.getValue();
+#else
+		opts.chert = true;
 #endif
 		opts.database = database.getValue();
 		opts.cluster_name = cluster_name.getValue();
@@ -254,11 +256,17 @@ int main(int argc, char **argv)
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {
 		// Prefer glass database
-		if (setenv("XAPIAN_PREFER_GLASS", "1", false) == 0) {
-			INFO((void *)NULL, "Enabled glass database.\n");
+		if (setenv("XAPIAN_PREFER_GLASS", "1", false) != 0) {
+			opts.chert = true;
 		}
 	}
 #endif
+
+	if (opts.chert) {
+		INFO((void *)NULL, "By default using Chert databases.\n");
+	} else {
+		INFO((void *)NULL, "By default using Glass databases.\n");
+	}
 
 	// Enable changesets
 	if (setenv("XAPIAN_MAX_CHANGESETS", "200", false) == 0) {

@@ -318,7 +318,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 						mastery_level = database_pool->get_mastery_level(index_path);
 						if (mastery_level != -1 && mastery_level > remote_mastery_level) {
-							LOG_DISCOVERY(this, "Mastery of %s is %d (vs. remote %d)\n", index_path.c_str(), mastery_level, remote_mastery_level);
+							LOG_DISCOVERY(this, "Mastery of %s is HIGHER: %d (vs. remote's %d) - Updating!\n", index_path.c_str(), mastery_level, remote_mastery_level);
 							if (remote_node.unserialise(&ptr, end) == -1) {
 								LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 								return;
@@ -331,11 +331,13 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							Endpoint remote_endpoint(index_path, &remote_node);
 #ifdef HAVE_REMOTE_PROTOCOL
 							// Replicate database from the other node
-							INFO(this, "Syncing database from %s...\n", remote_node.name.c_str());
+							INFO(this, "Request syncing database from %s...\n", remote_node.name.c_str());
 							if (trigger_replication(remote_endpoint, local_endpoint)) {
 								INFO(this, "Database being synchronized from %s...\n", remote_node.name.c_str());
 							}
 #endif
+						} else {
+							LOG_DISCOVERY(this, "Mastery of %s is LOWER: %d (vs. remote's %d) - Ignoring update!\n", index_path.c_str(), mastery_level, remote_mastery_level);
 						}
 					}
 					break;
