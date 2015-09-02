@@ -1794,12 +1794,12 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 		LOG_DATABASE(this, "!! FAILED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
 		return false;
 	}
-	
+
 	if ((now - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
 		database_->reopen();
 		LOG_DATABASE(this, "== REOPEN DB %s(%s) [%lx]\n", (database_->flags & DB_WRITABLE) ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
 	}
-	
+
 #ifdef HAVE_REMOTE_PROTOCOL
 	if (database_->local) {
 		database_->checkout_revision = database_->db->get_revision_info();

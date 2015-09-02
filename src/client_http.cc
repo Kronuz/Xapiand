@@ -1234,8 +1234,8 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 				memset(&q, 0, sizeof(q));
 				if (url_qs("database", query_buf.c_str(), query_size, &q) != -1) {
-					std::string database = Serialise::boolean(urldecode(q.offset, q.length));
-					(database.compare("f") == 0) ? e.database = false : e.database = true;
+					std::string _database = Serialise::boolean(urldecode(q.offset, q.length));
+					(_database.compare("f") == 0) ? e.database = false : e.database = true;
 				} else {
 					e.database = false;
 				}
