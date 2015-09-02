@@ -1817,12 +1817,17 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 		return false;
 	}
 
+	
+	
 	if ((now - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
 		database_->reopen();
 		LOG_DATABASE(this, "== REOPEN DB %s(%s) [%lx]\n", (database_->flags & DB_WRITABLE) ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
 	}
+	
 #ifdef HAVE_REMOTE_PROTOCOL
-	database_->checkout_revision = database_->db->get_revision_info();
+	if (database_->local) {
+		database_->checkout_revision = database_->db->get_revision_info();
+	}
 #endif
 	LOG_DATABASE(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx\n", writable ? "w" : "r", endpoints.as_string().c_str(), database_->local ? "local" : "remote", repr(database_->checkout_revision, false).c_str(), (unsigned long)database_);
 
