@@ -82,37 +82,7 @@ int read_mastery(const std::string &dir, bool force)
 
 bool is_reserved(const std::string &word)
 {
-	if (word.compare(RESERVED_WEIGHT)      != 0 &&
-		word.compare(RESERVED_POSITION)    != 0 &&
-		word.compare(RESERVED_LANGUAGE)    != 0 &&
-		word.compare(RESERVED_SPELLING)    != 0 &&
-		word.compare(RESERVED_POSITIONS)   != 0 &&
-		word.compare(RESERVED_TEXTS)       != 0 &&
-		word.compare(RESERVED_VALUES)      != 0 &&
-		word.compare(RESERVED_TERMS)       != 0 &&
-		word.compare(RESERVED_DATA)        != 0 &&
-		word.compare(RESERVED_ACCURACY)    != 0 &&
-		word.compare(RESERVED_ACC_PREFIX)  != 0 &&
-		word.compare(RESERVED_STORE)       != 0 &&
-		word.compare(RESERVED_TYPE)        != 0 &&
-		word.compare(RESERVED_ANALYZER)    != 0 &&
-		word.compare(RESERVED_DYNAMIC)     != 0 &&
-		word.compare(RESERVED_D_DETECTION) != 0 &&
-		word.compare(RESERVED_N_DETECTION) != 0 &&
-		word.compare(RESERVED_G_DETECTION) != 0 &&
-		word.compare(RESERVED_B_DETECTION) != 0 &&
-		word.compare(RESERVED_S_DETECTION) != 0 &&
-		word.compare(RESERVED_VALUE)       != 0 &&
-		word.compare(RESERVED_NAME)        != 0 &&
-		word.compare(RESERVED_SLOT)        != 0 &&
-		word.compare(RESERVED_INDEX)       != 0 &&
-		word.compare(RESERVED_PREFIX)      != 0 &&
-		word.compare(RESERVED_ID)          != 0 &&
-		word.compare(RESERVED_BOOL_TERM)   != 0) {
-		return false;
-	}
-
-	return true;
+	return word.at(0) == '_' ? true : false;
 }
 
 
