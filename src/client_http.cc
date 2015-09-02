@@ -949,7 +949,8 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					} else timeout = 1;
 
 					if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, manager(), asked_nodes, num_endps, timeout)) {
-						return CMD_UNKNOWN_ENDPOINT;
+						has_node_name = true;
+						node_name = local_node.name;
 					}
 				}
 
