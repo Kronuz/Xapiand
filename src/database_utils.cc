@@ -90,11 +90,11 @@ void update_required_data(specifications_t &spc, const std::string &name, cJSON 
 {
 	// Add type to schema, if this has not been added.
 	if (!cJSON_GetObjectItem(schema, RESERVED_TYPE)) {
-		std::string type;
-		if (spc.sep_types[0] == OBJECT_TYPE) type = "object/";
-		if (spc.sep_types[1] == ARRAY_TYPE) type += "array/";
-		type += Serialise::type(spc.sep_types[2]);
-		cJSON_AddStringToObject(schema, RESERVED_TYPE, type.c_str());
+		cJSON *type = cJSON_CreateArray(); // Managed by shema
+		cJSON_AddItemToArray(type, cJSON_CreateNumber(spc.sep_types[0]));
+		cJSON_AddItemToArray(type, cJSON_CreateNumber(spc.sep_types[1]));
+		cJSON_AddItemToArray(type, cJSON_CreateNumber(spc.sep_types[2]));
+		cJSON_AddItemToObject(schema, RESERVED_TYPE, type);
 	}
 
 	// Insert prefix
@@ -247,14 +247,14 @@ void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_LANGUAGE))) {
 		spc_now.language.clear();
 		if (spc->type == cJSON_String) {
-			std::string lan = is_language(spc->valuestring) ? spc->valuestring : throw MSG_Error("%s: \"%s\" is not supported", RESERVED_LANGUAGE, spc->valuestring);
+			std::string lan = is_language(spc->valuestring) ? spc->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, spc->valuestring);
 			spc_now.language.push_back(lan);
 		} else if (spc->type == cJSON_Array) {
 			int elements = cJSON_GetArraySize(spc);
 			for (int i = 0; i < elements; i++) {
 				cJSON *_language = cJSON_GetArrayItem(spc, i);
 				if (_language->type == cJSON_String) {
-					std::string lan = is_language(_language->valuestring) ? _language->valuestring : throw MSG_Error("%s: \"%s\" is not supported", RESERVED_LANGUAGE, _language->valuestring);
+					std::string lan = is_language(_language->valuestring) ? _language->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, _language->valuestring);
 					spc_now.language.push_back(lan.c_str());
 				} else throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_LANGUAGE);
 			}
@@ -308,21 +308,22 @@ void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_ANALYZER))) {
 		spc_now.analyzer.clear();
 		if (spc->type == cJSON_String) {
-			std::string _analyzer = stringtoupper(spc->valuestring);
-			if (_analyzer.compare("STEM_SOME") != 0 && _analyzer.compare("STEM_NONE") != 0 &&
-				_analyzer.compare("STEM_ALL") != 0  && _analyzer.compare("STEM_ALL_Z") != 0)
-				throw MSG_Error("%s should be in {STEM_SOME, STEM_NONE, STEM_ALL, STEM_ALL_Z}", RESERVED_ANALYZER);
-			spc_now.analyzer.push_back(_analyzer);
+			if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0)      spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
+			else if (strcasecmp(spc->valuestring, str_analizer[1].c_str()) == 0) spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
+			else if (strcasecmp(spc->valuestring, str_analizer[2].c_str()) == 0) spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
+			else if (strcasecmp(spc->valuestring, str_analizer[3].c_str()) == 0) spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
+			else throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
 		} else if (spc->type == cJSON_Array) {
 			int elements = cJSON_GetArraySize(spc);
 			for (int i = 0; i < elements; i++) {
 				cJSON *analyzer = cJSON_GetArrayItem(spc, i);
 				if (spc->type == cJSON_String) {
 					std::string _analyzer = stringtoupper(analyzer->valuestring);
-					if (_analyzer.compare("STEM_SOME") != 0 && _analyzer.compare("STEM_NONE") != 0 &&
-						_analyzer.compare("STEM_ALL") != 0  && _analyzer.compare("STEM_ALL_Z") != 0)
-						throw MSG_Error("%s should be in {STEM_SOME, STEM_NONE, STEM_ALL, STEM_ALL_Z}", RESERVED_ANALYZER);
-					spc_now.analyzer.push_back(_analyzer);
+					if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0)      spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
+					else if (strcasecmp(spc->valuestring, str_analizer[1].c_str()) == 0) spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
+					else if (strcasecmp(spc->valuestring, str_analizer[2].c_str()) == 0) spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
+					else if (strcasecmp(spc->valuestring, str_analizer[3].c_str()) == 0) spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
+					else throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
 				} else throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_ANALYZER);
 			}
 		} else throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_ANALYZER);
@@ -330,7 +331,7 @@ void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 		spc_now.analyzer.clear();
 		int elements = cJSON_GetArraySize(spc);
 		for (int i = 0; i < elements; i++)
-			spc_now.analyzer.push_back(cJSON_GetArrayItem(spc, i)->valuestring);
+			spc_now.analyzer.push_back(cJSON_GetArrayItem(spc, i)->valueint);
 	}
 
 	// RESERVED_STORE is heritable and can change.
@@ -342,12 +343,12 @@ void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 	// RESERVED_INDEX is heritable and can change.
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_INDEX))) {
 		if (spc->type == cJSON_String) {
-			spc_now.index = stringtoupper(spc->valuestring);
-			if (spc_now.index.compare("TERM") != 0 && spc_now.index.compare("VALUE") != 0 &&
-				spc_now.index.compare("ALL") != 0)
-				throw MSG_Error("%s should be in {TERM, VALUE, ALL}", RESERVED_INDEX);
+			if (strcasecmp(spc->valuestring, str_index[0].c_str()) == 0) spc_now.index = ALL;
+			else if (strcasecmp(spc->valuestring, str_index[1].c_str()) == 0) spc_now.index = TERM;
+			else if (strcasecmp(spc->valuestring, str_index[2].c_str()) == 0) spc_now.index = VALUE;
+			else throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
 		} else throw MSG_Error("Data inconsistency, %s should be string", RESERVED_INDEX);
-	} else if ((spc = cJSON_GetObjectItem(schema, RESERVED_INDEX))) spc_now.store = spc->valuestring;
+	} else if ((spc = cJSON_GetObjectItem(schema, RESERVED_INDEX))) spc_now.index = spc->valueint;
 
 	// RESERVED_?_DETECTION is heritable but can't change.
 	if ((spc = cJSON_GetObjectItem(schema, RESERVED_D_DETECTION))) spc_now.date_detection = spc->type;
@@ -365,8 +366,9 @@ void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 	// RESERVED_TYPE isn't heritable and can't change once fixed the type field value.
 	if (!root) {
 		if ((spc = cJSON_GetObjectItem(schema, RESERVED_TYPE))) {
-			spc_now.type = spc->valuestring;
-			set_types(spc->valuestring, spc_now.sep_types);
+			spc_now.sep_types[0] = cJSON_GetArrayItem(spc, 0)->valueint;
+			spc_now.sep_types[1] = cJSON_GetArrayItem(spc, 1)->valueint;
+			spc_now.sep_types[2] = cJSON_GetArrayItem(spc, 2)->valueint;
 			// If the type field value hasn't fixed yet and its specified in the document, the schema is updated.
 			if (spc_now.sep_types[2] == NO_TYPE && (spc = cJSON_GetObjectItem(item, RESERVED_TYPE))) {
 				// In this point means that terms or values haven't been inserted with this field,
@@ -412,18 +414,20 @@ void insert_inheritable_specifications(cJSON *item, specifications_t &spc_now, c
 	// Restarting reserved words than which are not inherited.
 	spc_now.accuracy.clear();
 	spc_now.acc_prefix.clear();
-	spc_now.type = default_spc.type;
-	spc_now.sep_types[0] = spc_now.sep_types[1] = spc_now.sep_types[2];
+	spc_now.sep_types[0] = spc_now.sep_types[1] = spc_now.sep_types[2] = default_spc.sep_types[0];
 	spc_now.bool_term = default_spc.bool_term;
 
 	cJSON *spc;
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_TYPE))) {
 		if (spc->type == cJSON_String) {
-			spc_now.type = stringtolower(spc->valuestring);
-			if (set_types(spc->valuestring, spc_now.sep_types)) {
-				if (set_types(spc_now.type, spc_now.sep_types)) cJSON_AddStringToObject(schema, RESERVED_TYPE, spc_now.type.c_str());
-				else throw MSG_Error("This %s does not exist, it should be in {%s, %s, %s, %s, %s}", RESERVED_TYPE, NUMERIC_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
-			} else throw MSG_Error("%s is invalid type", spc->valuestring);
+			if (set_types(stringtolower(spc->valuestring), spc_now.sep_types)) {
+				cJSON *type = cJSON_CreateArray(); // Managed by shema
+				cJSON_AddItemToArray(type, cJSON_CreateNumber(spc_now.sep_types[0]));
+				cJSON_AddItemToArray(type, cJSON_CreateNumber(spc_now.sep_types[1]));
+				cJSON_AddItemToArray(type, cJSON_CreateNumber(spc_now.sep_types[2]));
+				cJSON_AddItemToObject(schema, RESERVED_TYPE, type);
+			}
+			else throw MSG_Error("This %s does not exist, it can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, NUMERIC_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
 		} else throw MSG_Error("Data inconsistency, %s should be string", RESERVED_TYPE);
 	}
 
@@ -463,16 +467,14 @@ void insert_inheritable_specifications(cJSON *item, specifications_t &spc_now, c
 				for (int i = 0; i < elements; i++) {
 					cJSON *acc = cJSON_GetArrayItem(spc, i);
 					if (acc->type == cJSON_String) {
-						int val;
-						if (strcasecmp(acc->valuestring, "year") == 0)        val = DB_YEAR2INT;
-						else if (strcasecmp(acc->valuestring, "month") == 0)  val = DB_MONTH2INT;
-						else if (strcasecmp(acc->valuestring, "day") == 0)    val = DB_DAY2INT;
-						else if (strcasecmp(acc->valuestring, "hour") == 0)   val = DB_HOUR2INT;
-						else if (strcasecmp(acc->valuestring, "minute") == 0) val = DB_MINUTE2INT;
-						else if (strcasecmp(acc->valuestring, "second") == 0) val = DB_SECOND2INT;
-						else throw MSG_Error("Data inconsistency, accuracy in %s should be a subarray of [\"second\", \"minute\", \"hour\", \"day\", \"week\", \"month\", \"year\"]", DATE_STR);
-						spc_now.accuracy.push_back(val);
-					} else throw MSG_Error("Data inconsistency, accuracy in %s should be a subarray of [\"second\", \"minute\", \"hour\", \"day\", \"week\", \"month\", \"year\"]", DATE_STR);
+						if (strcasecmp(acc->valuestring, str_time[5].c_str()) == 0)      spc_now.accuracy.push_back(DB_YEAR2INT);
+						else if (strcasecmp(acc->valuestring, str_time[4].c_str()) == 0) spc_now.accuracy.push_back(DB_MONTH2INT);
+						else if (strcasecmp(acc->valuestring, str_time[3].c_str()) == 0) spc_now.accuracy.push_back(DB_DAY2INT);
+						else if (strcasecmp(acc->valuestring, str_time[2].c_str()) == 0) spc_now.accuracy.push_back(DB_HOUR2INT);
+						else if (strcasecmp(acc->valuestring, str_time[1].c_str()) == 0) spc_now.accuracy.push_back(DB_MINUTE2INT);
+						else if (strcasecmp(acc->valuestring, str_time[0].c_str()) == 0) spc_now.accuracy.push_back(DB_SECOND2INT);
+						else throw MSG_Error("Data inconsistency, %s in %s should be a subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+					} else throw MSG_Error("Data inconsistency, %s in %s should be a subset of {%s, %s, %s, %s, %s, %s]}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
 				}
 				std::set<double> set_acc(spc_now.accuracy.begin(), spc_now.accuracy.end());
 				spc_now.accuracy.assign(set_acc.begin(), set_acc.end());
@@ -637,7 +639,7 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 		spc_now.language.clear();
 		unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
 		if (spc->type == cJSON_String) {
-			std::string lan = is_language(spc->valuestring) ? spc->valuestring : throw MSG_Error("%s: \"%s\" is not supported", RESERVED_LANGUAGE, spc->valuestring);
+			std::string lan = is_language(spc->valuestring) ? spc->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, spc->valuestring);
 			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(lan.c_str()));
 			spc_now.language.push_back(lan);
 		} else if (spc->type == cJSON_Array) {
@@ -645,7 +647,7 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 			for (int i = 0; i < elements; i++) {
 				cJSON *_language = cJSON_GetArrayItem(spc, i);
 				if (_language->type == cJSON_String) {
-					std::string lan = is_language(_language->valuestring) ? _language->valuestring : throw MSG_Error("%s: \"%s\" is not supported", RESERVED_LANGUAGE, _language->valuestring);
+					std::string lan = is_language(_language->valuestring) ? _language->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, _language->valuestring);
 					spc_now.language.push_back(lan.c_str());
 					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(lan.c_str()));
 				} else throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_LANGUAGE);
@@ -716,11 +718,16 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_INDEX))) {
 		if (spc->type == cJSON_String) {
-			spc_now.index = stringtoupper(spc->valuestring);
-			if (spc_now.index.compare("TERM") != 0 && spc_now.index.compare("VALUE") != 0 &&
-				spc_now.index.compare("ALL") != 0)
-				throw MSG_Error("%s should be in {TERM, VALUE, ALL}", RESERVED_INDEX);
-			cJSON_AddStringToObject(schema, RESERVED_INDEX, spc_now.index.c_str());
+			if (strcasecmp(spc->valuestring, str_index[0].c_str()) == 0) {
+				spc_now.index = ALL;
+				cJSON_AddNumberToObject(schema, RESERVED_INDEX, ALL);
+			} else if (strcasecmp(spc->valuestring, str_index[1].c_str()) == 0) {
+				spc_now.index = TERM;
+				cJSON_AddNumberToObject(schema, RESERVED_INDEX, TERM);
+			} else if (strcasecmp(spc->valuestring, str_index[2].c_str()) == 0) {
+				spc_now.index = VALUE;
+				cJSON_AddNumberToObject(schema, RESERVED_INDEX, VALUE);
+			} else throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
 		} else throw MSG_Error("Data inconsistency, %s should be string", RESERVED_INDEX);
 	}
 
@@ -728,23 +735,38 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 		spc_now.analyzer.clear();
 		unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
 		if (spc->type == cJSON_String) {
-			std::string _analyzer = stringtoupper(spc->valuestring);
-			if (_analyzer.compare("STEM_SOME") != 0 && _analyzer.compare("STEM_NONE") != 0 &&
-				_analyzer.compare("STEM_ALL") != 0  && _analyzer.compare("STEM_ALL_Z") != 0)
-				throw MSG_Error("%s should be in {STEM_SOME, STEM_NONE, STEM_ALL, STEM_ALL_Z}", RESERVED_ANALYZER);
-			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(_analyzer.c_str()));
-			spc_now.analyzer.push_back(_analyzer);
+			if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0) {
+				spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
+				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_SOME));
+			} else if (strcasecmp(spc->valuestring, str_analizer[1].c_str()) == 0) {
+				spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
+				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_NONE));
+			} else if (strcasecmp(spc->valuestring, str_analizer[2].c_str()) == 0) {
+				spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
+				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_ALL));
+			} else if (strcasecmp(spc->valuestring, str_analizer[3].c_str()) == 0) {
+				spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
+				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_ALL_Z));
+			} else throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
 		} else if (spc->type == cJSON_Array) {
 			int elements = cJSON_GetArraySize(spc);
 			for (int i = 0; i < elements; i++) {
 				cJSON *analyzer = cJSON_GetArrayItem(spc, i);
 				if (spc->type == cJSON_String) {
 					std::string _analyzer = stringtoupper(analyzer->valuestring);
-					if (_analyzer.compare("STEM_SOME") != 0 && _analyzer.compare("STEM_NONE") != 0 &&
-						_analyzer.compare("STEM_ALL") != 0  && _analyzer.compare("STEM_ALL_Z") != 0)
-						throw MSG_Error("%s should be in {STEM_SOME, STEM_NONE, STEM_ALL, STEM_ALL_Z}", RESERVED_ANALYZER);
-					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(_analyzer.c_str()));
-					spc_now.analyzer.push_back(_analyzer);
+					if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0) {
+						spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
+						cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_SOME));
+					} else if (strcasecmp(spc->valuestring, str_analizer[1].c_str()) == 0) {
+						spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
+						cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_NONE));
+					} else if (strcasecmp(spc->valuestring, str_analizer[2].c_str()) == 0) {
+						spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
+						cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_ALL));
+					} else if (strcasecmp(spc->valuestring, str_analizer[3].c_str()) == 0) {
+						spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
+						cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_ALL_Z));
+					} else throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
 				} else throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_ANALYZER);
 			}
 		} else throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_ANALYZER);
@@ -762,57 +784,6 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 	}
 
 	if (!root) insert_inheritable_specifications(item, spc_now, schema);
-}
-
-
-std::string specificationstostr(const specifications_t &spc)
-{
-	std::stringstream str;
-	str << "\n{\n";
-	str << "\t" << RESERVED_POSITION << ": [ ";
-	for (int i = 0; i < spc.position.size(); i++)
-		str << std::to_string(spc.position[i]) + " ";
-	str << "]\n";
-	str << "\t" << RESERVED_WEIGHT   << ": [ ";
-	for (int i = 0; i < spc.weight.size(); i++)
-		str << std::to_string(spc.weight[i]) + " ";
-	str << "]\n";
-	str << "\t" << RESERVED_LANGUAGE << ": [ ";
-	for (int i = 0; i < spc.language.size(); i++)
-		str << spc.language[i] + " ";
-	str << "]\n";
-	str << "\t" << RESERVED_ACCURACY << ": [ ";
-	for (int i = 0; i < spc.accuracy.size(); i++) {
-		str << spc.accuracy[i] << " ";
-	}
-	str << "]\n";
-	str << "\t" << RESERVED_ACC_PREFIX  << ": [ ";
-	for (int i = 0; i < spc.acc_prefix.size(); i++)
-		str << spc.acc_prefix[i] + " ";
-	str << "]\n";
-	str << "\t" << RESERVED_ANALYZER    << ": [ ";
-	for (int i = 0; i < spc.analyzer.size(); i++)
-		str << spc.analyzer[i] + " ";
-	str << "]\n";
-	str << "\t" << RESERVED_SPELLING    << ": [ ";
-	for (int i = 0; i < spc.spelling.size(); i++)
-		str << (spc.spelling[i] ? "true " : "false ");
-	str << "]\n";
-	str << "\t" << RESERVED_POSITIONS   << ": [ ";
-	for (int i = 0; i < spc.positions.size(); i++)
-		str << (spc.positions[i] ? "true " : "false ");
-	str << "]\n";
-	str << "\t" << RESERVED_TYPE        << ": " << spc.type << "\n";
-	str << "\t" << RESERVED_STORE       << ": " << ((spc.store)             ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_DYNAMIC     << ": " << ((spc.dynamic)           ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_D_DETECTION << ": " << ((spc.date_detection)    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_N_DETECTION << ": " << ((spc.numeric_detection) ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_G_DETECTION << ": " << ((spc.geo_detection)     ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_B_DETECTION << ": " << ((spc.bool_detection)    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_S_DETECTION << ": " << ((spc.string_detection)  ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_BOOL_TERM   << ": " << ((spc.bool_term)         ? "true" : "false") << "\n}\n";
-
-	return str.str();
 }
 
 
@@ -893,6 +864,15 @@ bool set_types(const std::string &type, char sep_types[])
 }
 
 
+std::string str_type(const char sep_types[]) {
+	std::stringstream str;
+	if (sep_types[0] == OBJECT_TYPE) str << "object/";
+	if (sep_types[1] == ARRAY_TYPE) str << "array/";
+	str << Serialise::type(sep_types[2]);
+	return str.str();
+}
+
+
 std::vector<std::string> split_fields(const std::string &field_name)
 {
 	std::vector<std::string> fields;
@@ -954,5 +934,99 @@ void clean_reserved(cJSON *root, cJSON *item)
 				i++;
 			}
 		}
+	}
+}
+
+
+std::string specificationstostr(const specifications_t &spc)
+{
+	std::stringstream str;
+	str << "\n{\n";
+	str << "\t" << RESERVED_POSITION << ": [ ";
+	for (int i = 0; i < spc.position.size(); i++)
+		str << spc.position[i] << " ";
+	str << "]\n";
+	str << "\t" << RESERVED_WEIGHT   << ": [ ";
+	for (int i = 0; i < spc.weight.size(); i++)
+		str << spc.weight[i] << " ";
+	str << "]\n";
+	str << "\t" << RESERVED_LANGUAGE << ": [ ";
+	for (int i = 0; i < spc.language.size(); i++)
+		str << spc.language[i] << " ";
+	str << "]\n";
+	str << "\t" << RESERVED_ACCURACY << ": [ ";
+	if (spc.sep_types[2] == DATE_TYPE) {
+		for (int i = 0; i < spc.accuracy.size(); i++) {
+			str << str_time[spc.accuracy[i]] << " ";
+		}
+	} else {
+		for (int i = 0; i < spc.accuracy.size(); i++) {
+			str << spc.accuracy[i] << " ";
+		}
+	}
+	str << "]\n";
+	str << "\t" << RESERVED_ACC_PREFIX  << ": [ ";
+	for (int i = 0; i < spc.acc_prefix.size(); i++)
+		str << spc.acc_prefix[i] << " ";
+	str << "]\n";
+	str << "\t" << RESERVED_ANALYZER    << ": [ ";
+	for (int i = 0; i < spc.analyzer.size(); i++)
+		str << str_analizer[spc.analyzer[i]] << " ";
+	str << "]\n";
+	str << "\t" << RESERVED_SPELLING    << ": [ ";
+	for (int i = 0; i < spc.spelling.size(); i++)
+		str << (spc.spelling[i] ? "true " : "false ");
+	str << "]\n";
+	str << "\t" << RESERVED_POSITIONS   << ": [ ";
+	for (int i = 0; i < spc.positions.size(); i++)
+		str << (spc.positions[i] ? "true " : "false ");
+	str << "]\n";
+	str << "\t" << RESERVED_TYPE        << ": " << str_type(spc.sep_types) << "\n";
+	str << "\t" << RESERVED_INDEX       << ": " << str_index[spc.index] << "\n";
+	str << "\t" << RESERVED_STORE       << ": " << ((spc.store)             ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_DYNAMIC     << ": " << ((spc.dynamic)           ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_D_DETECTION << ": " << ((spc.date_detection)    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_N_DETECTION << ": " << ((spc.numeric_detection) ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_G_DETECTION << ": " << ((spc.geo_detection)     ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_B_DETECTION << ": " << ((spc.bool_detection)    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_S_DETECTION << ": " << ((spc.string_detection)  ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_BOOL_TERM   << ": " << ((spc.bool_term)         ? "true" : "false") << "\n}\n";
+
+	return str.str();
+}
+
+
+void readable_schema(cJSON *schema) {
+	cJSON *_schema = cJSON_GetObjectItem(schema, RESERVED_SCHEMA);
+	int elements = cJSON_GetArraySize(_schema);
+	for (int i = 0; i < elements; i++) {
+		cJSON *field = cJSON_GetArrayItem(_schema, i);
+		if (!is_reserved(field->string) || strcmp(field->string, RESERVED_ID) == 0)
+			readable_field(field);
+	}
+}
+
+
+void readable_field(cJSON *field) {
+	int _size = cJSON_GetArraySize(field);
+	for (int i = 0; i < _size; i++) {
+		cJSON *item = cJSON_GetArrayItem(field, i);
+		if (!is_reserved(item->string)) readable_schema(field);
+		else if (strcmp(item->string, RESERVED_TYPE) == 0) {
+			char sep_types[3] = {(char)(cJSON_GetArrayItem(item, 0)->valueint), (char)(cJSON_GetArrayItem(item, 1)->valueint), (char)(cJSON_GetArrayItem(item, 2)->valueint)};
+			cJSON_ReplaceItemInObject(field, RESERVED_TYPE, cJSON_CreateString(str_type(sep_types).c_str()));
+			item = cJSON_GetObjectItem(field, RESERVED_ACCURACY);
+			if (item && sep_types[2] == DATE_TYPE) {
+				int _size = cJSON_GetArraySize(item);
+				for (int i = 0; i < _size; i++)
+					cJSON_ReplaceItemInArray(item, i, cJSON_CreateString(str_time[(cJSON_GetArrayItem(item, i)->valueint)].c_str()));
+			} else if (item && sep_types[2] == GEO_TYPE)
+				cJSON_ReplaceItemInArray(item, 0, cJSON_GetArrayItem(item, 0)->valueint ? cJSON_CreateTrue() : cJSON_CreateFalse());
+		} else if ((item = cJSON_GetObjectItem(field, RESERVED_ANALYZER))) {
+			int _size = cJSON_GetArraySize(item);
+			for (int i = 0; i < _size; i++)
+				cJSON_ReplaceItemInArray(item, i, cJSON_CreateString(str_analizer[cJSON_GetArrayItem(item, i)->valueint].c_str()));
+		} else if ((item = cJSON_GetObjectItem(field, RESERVED_INDEX)))
+			cJSON_ReplaceItemInObject(field, RESERVED_INDEX, cJSON_CreateString(str_index[item->valueint].c_str()));
 	}
 }

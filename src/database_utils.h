@@ -28,6 +28,7 @@
 #include "cJSON.h"
 
 #include <vector>
+#include <xapian.h>
 
 #define RESERVED_WEIGHT "_weight"
 #define RESERVED_POSITION "_position"
@@ -64,7 +65,12 @@
 #define DOCUMENT_ID_TERM_PREFIX "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
-enum datetoint { DB_SECOND2INT, DB_MINUTE2INT,  DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT };
+enum enum_time     { DB_SECOND2INT, DB_MINUTE2INT,  DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT };
+enum enum_index    { ALL, TERM, VALUE };
+
+const std::vector<std::string> str_time({ "second", "minute", "hour", "day", "month", "year" });
+const std::vector<std::string> str_analizer({ "STEM_NONE", "STEM_SOME", "STEM_ALL", "STEM_ALL_Z" });
+const std::vector<std::string> str_index({ "ALL", "TERM", "VALUE" });
 
 extern pcre *compiled_find_types_re;
 
@@ -74,14 +80,13 @@ typedef struct specifications_s {
 	std::vector<std::string> language;
 	std::vector<bool> spelling;
 	std::vector<bool> positions;
-	std::vector<std::string> analyzer;
+	std::vector<int> analyzer;
 	std::vector<double> accuracy;
 	std::vector<std::string> acc_prefix;
 	unsigned int slot;
 	char sep_types[3];
-	std::string type;
 	std::string prefix;
-	std::string index;
+	int index;
 	bool store;
 	bool dynamic;
 	bool date_detection;
@@ -94,30 +99,29 @@ typedef struct specifications_s {
 
 const std::vector<double> def_accuracy_geo  { 1, 0.2, 0, 5, 10, 15, 20, 25 }; // { partials, error, accuracy levels }
 const std::vector<double> def_accuracy_num  { 100, 1000, 10000, 100000 };
-const std::vector<double> def_acc_date      { DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT };
+const std::vector<double> def_acc_date      { DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT };
 
 const specifications_t default_spc = {
-	{ -1 },					// position
-	{ 1 },						// weight
-	{ "en" },					// language
-	{ false },					// spelling
-	{ false },					// positions
-	{ "STEM_SOME" },					// analyzer
-	std::vector<double>(),			// accuracy
-	std::vector<std::string>(),		// accuracy prefix
-	0,								// slot
-	{ NO_TYPE, NO_TYPE, NO_TYPE },	// sep_types
-	std::string(),					// type
-	"",								// prefix
-	"ALL",							// index
-	true,							// store
-	true,							// dynamic
-	true,							// date detection
-	true,							// numeric detection
-	true,							// geo detection
-	true,							// bool detection
-	true,							// string detection
-	false							// bool term
+	{ -1 },									// position
+	{ 1 },									// weight
+	{ "en" },								// language
+	{ false },								// spelling
+	{ false },								// positions
+	{ Xapian::TermGenerator::STEM_SOME },	// analyzer
+	std::vector<double>(),					// accuracy
+	std::vector<std::string>(),				// accuracy prefix
+	0,										// slot
+	{ NO_TYPE, NO_TYPE, NO_TYPE },			// sep_types
+	"",										// prefix
+	ALL,									// index
+	true,									// store
+	true,									// dynamic
+	true,									// date detection
+	true,									// numeric detection
+	true,									// geo detection
+	true,									// bool detection
+	true,									// string detection
+	false									// bool term
 };
 
 
@@ -132,10 +136,12 @@ typedef struct data_field_s {
 
 
 int read_mastery(const std::string &dir, bool force);
+// All the field that start with '_' are considered reserved word.
 bool is_reserved(const std::string &word);
 bool is_language(const std::string &language);
 char get_type(cJSON *field, specifications_t &spc);
 bool set_types(const std::string &type, char sep_types[]);
+std::string str_type(const char sep_types[]);
 std::vector<std::string> split_fields(const std::string &field_name);
 void clean_reserved(cJSON *root);
 void clean_reserved(cJSON *root, cJSON *item);
@@ -152,5 +158,9 @@ void update_required_data(specifications_t &spc, const std::string &name, cJSON 
 void insert_inheritable_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema);
 //Pass the struct specifications_t to string.
 std::string specificationstostr(const specifications_t &spc);
+// Accuracy, type, analyzer and index are saved like numbers into schema, this function transforms
+// this reserved word to their readable form.
+void readable_schema(cJSON *schema);
+void readable_field(cJSON *field);
 
 #endif	/* XAPIAND_INCLUDED_DATABASE_UTILS_H */
