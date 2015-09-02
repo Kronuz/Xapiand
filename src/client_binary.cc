@@ -277,7 +277,7 @@ void BinaryClient::repl_run_one()
 {
 	try {
 		static const dispatch_repl_func dispatch[] = {
-			&BinaryClient::repl_end_of_changes,
+			&BinaryClient::repl_setup_changes,
 			&BinaryClient::repl_fail,
 			&BinaryClient::repl_set_db_header,
 			&BinaryClient::repl_set_db_filename,
@@ -302,9 +302,30 @@ void BinaryClient::repl_run_one()
 
 }
 
-void BinaryClient::repl_end_of_changes(const std::string & message)
+void BinaryClient::repl_setup_changes(const std::string & message)
 {
-	if (state != init_replicationprotocol) {
+	if (state == init_replicationprotocol) {
+		LOG(this, "BinaryClient::repl_begin_of_changes\n");
+		state = replicationprotocol;
+
+		Xapian::Database *db_ = repl_database->db;
+
+		std::string msg;
+
+		std::string uuid = db_->get_uuid();
+		msg.append(encode_length(uuid.size()));
+		msg.append(uuid);
+
+		std::string revision = db_->get_revision_info();
+		msg.append(encode_length(revision.size()));
+		msg.append(revision);
+
+		const Endpoint &endpoint = *endpoints.begin();
+		msg.append(encode_length(endpoint.path.size()));
+		msg.append(endpoint.path);
+
+		send_message('\xfe', msg);
+	} else {
 		LOG(this, "BinaryClient::repl_end_of_changes\n");
 
 		if (repl_database) {
@@ -317,29 +338,7 @@ void BinaryClient::repl_end_of_changes(const std::string & message)
 		}
 
 		shutdown();
-		return;
 	}
-
-	LOG(this, "BinaryClient::repl_end_of_changes (init)\n");
-	state = replicationprotocol;
-
-	Xapian::Database *db_ = repl_database->db;
-
-	std::string msg;
-
-	std::string uuid = db_->get_uuid();
-	msg.append(encode_length(uuid.size()));
-	msg.append(uuid);
-
-	std::string revision = db_->get_revision_info();
-	msg.append(encode_length(revision.size()));
-	msg.append(revision);
-
-	const Endpoint &endpoint = *endpoints.begin();
-	msg.append(encode_length(endpoint.path.size()));
-	msg.append(endpoint.path);
-
-	send_message('\xfe', msg);
 }
 
 

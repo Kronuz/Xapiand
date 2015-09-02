@@ -87,7 +87,7 @@ private:
 	void on_read(const char *buf, ssize_t received);
 
 	void repl_run_one();
-	void repl_end_of_changes(const std::string & message);
+	void repl_setup_changes(const std::string & message);
 	void repl_fail(const std::string & message);
 	void repl_set_db_header(const std::string & message);
 	void repl_set_db_filename(const std::string & message);
