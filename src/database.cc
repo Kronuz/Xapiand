@@ -1752,12 +1752,14 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 
 	LOG_DATABASE(this, "++ CHECKING OUT DB %s(%s) [%lx]...\n", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)*database);
 
+	assert(*database == NULL);
+
 	time_t now = time(0);
 	Database *database_ = NULL;
 
 	pthread_mutex_lock(&qmtx);
 
-	if (!finished && *database == NULL) {
+	if (!finished) {
 		DatabaseQueue *queue = NULL;
 		size_t hash = endpoints.hash();
 

@@ -57,6 +57,7 @@
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	struct http_parser parser;
+	Database *database;
 
 	void on_read(const char *buf, ssize_t received);
 

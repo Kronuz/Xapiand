@@ -68,7 +68,8 @@ const char* status_code[6][5] = {
 };
 
 HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
-	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_)
+	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
+	  database(NULL)
 {
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -185,8 +186,9 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 
 void HttpClient::run()
 {
-	const char *error_str;
 	std::string error;
+	const char *error_str;
+	bool has_error = false;
 
 	try {
 		if (path == "/quit") {
@@ -218,6 +220,7 @@ void HttpClient::run()
 				break;
 		}
 	} catch (const Xapian::Error &err) {
+		has_error = true;
 		error_str = err.get_error_string();
 		if (error_str) {
 			error.assign(error_str);
@@ -225,6 +228,7 @@ void HttpClient::run()
 			error.assign("Unkown Xapian error!");
 		}
 	} catch (const std::exception &err) {
+		has_error = true;
 		error_str = err.what();
 		if (error_str) {
 			error.assign(error_str);
@@ -232,10 +236,14 @@ void HttpClient::run()
 			error.assign("Unkown exception!");
 		}
 	} catch (...) {
+		has_error = true;
 		error.assign("Unkown error!");
 	}
-	if (!error.empty()) {
+	if (has_error) {
 		LOG_ERR(this, "ERROR: %s\n", error.c_str());
+		if (database) {
+			database_pool->checkin(&database);
+		}
 		if (written) {
 			destroy();
 		} else {
@@ -285,7 +293,6 @@ void HttpClient::_head()
 			return;
 	}
 
-	Database *database = NULL;
 	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
@@ -382,7 +389,6 @@ void HttpClient::_delete()
 			return;
 	}
 
-	Database *database = NULL;
 	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
@@ -460,7 +466,6 @@ void HttpClient::_index()
 			return;
 	}
 
-	Database *database = NULL;
 	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN|DB_INIT_REF)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
@@ -548,7 +553,6 @@ void HttpClient::_patch()
 			return;
 	}
 
-	Database *database = NULL;
 	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
@@ -597,7 +601,6 @@ void HttpClient::_stats(query_t &e)
 		cJSON_AddItemToObject(root.get(), "Server status", server_stats.release());
 	}
 	if (e.database) {
-		Database *database = NULL;
 		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 			return;
@@ -607,7 +610,6 @@ void HttpClient::_stats(query_t &e)
 		database_pool->checkin(&database);
 	}
 	if (!e.document.empty()) {
-		Database *database = NULL;
 		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 			return;
@@ -684,7 +686,6 @@ void HttpClient::_search()
 			return;
 	}
 
-	Database *database = NULL;
 	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
 		return;
