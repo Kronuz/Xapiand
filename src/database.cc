@@ -239,8 +239,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit)
 	Xapian::MSet mset = enquire.get_mset(0, 1);
 	Xapian::MSetIterator m = mset.begin();
 
-	int t = 3;
-	for ( ; t >= 0; --t) {
+	for (int t = 3; t >= 0; --t) {
 		try {
 			document = db->get_document(*m);
 			break;
@@ -305,9 +304,9 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 					spc_now.sep_types[2] = get_type(subitem, spc_now);
 					update_required_data(spc_now, item_name, properties);
 				}
-				if (is_value || spc_now.index.compare("VALUE") == 0) {
+				if (is_value || spc_now.index == VALUE) {
 					index_values(doc, subitem, spc_now, item_name, properties, find);
-				} else if (spc_now.index.compare("TERM") == 0) {
+				} else if (spc_now.index == TERM) {
 					index_terms(doc, subitem, spc_now, item_name, properties, find);
 				} else {
 					index_terms(doc, subitem, spc_now, item_name, properties, find);
@@ -316,12 +315,9 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 			}
 		}
 		if (offspring != 0) {
-			cJSON *_type = cJSON_GetObjectItem(properties, RESERVED_TYPE);
-			if (_type && std::string(_type->valuestring).find("object") == std::string::npos) {
-				spc_now.sep_types[0] = OBJECT_TYPE;
-				std::string s_type("object/" + std::string(_type->valuestring));
-				cJSON_ReplaceItemInObject(properties, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
-			}
+			cJSON *_type = cJSON_GetObjectItem(properties, RESERVED_TYPE); // It is managed by schema.
+			if (_type && cJSON_GetArrayItem(_type, 0)->valueint == NO_TYPE)
+				cJSON_ReplaceItemInArray(_type, 0, cJSON_CreateNumber(OBJECT_TYPE));
 		}
 	} else {
 		find ? update_specifications(item, spc_now, properties) : insert_specifications(item, spc_now, properties);
@@ -329,9 +325,9 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 			spc_now.sep_types[2] = get_type(item, spc_now);
 			update_required_data(spc_now, item_name, properties);
 		}
-		if (is_value || spc_now.index.compare("VALUE") == 0) {
+		if (is_value || spc_now.index == VALUE) {
 			index_values(doc, item, spc_now, item_name, properties, find);
-		} else if (spc_now.index.compare("TERM") == 0) {
+		} else if (spc_now.index == TERM) {
 			index_terms(doc, item, spc_now, item_name, properties, find);
 		} else {
 			index_terms(doc, item, spc_now, item_name, properties, find);
@@ -359,12 +355,9 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 		if (value->type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
 
 		// If the type in schema is not array, schema is updated.
-		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE);
-		if (_type && std::string(_type->valuestring).find("array") == std::string::npos) {
-			std::string s_type = spc.sep_types[0] == OBJECT_TYPE ? "object/array/" + Serialise::type(spc.sep_types[2]) :
-																   "array/" + Serialise::type(spc.sep_types[2]);
-			cJSON_ReplaceItemInObject(schema, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
-		}
+		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE); // It is managed by schema.
+		if (_type && cJSON_GetArrayItem(_type, 1)->valueint == NO_TYPE)
+			cJSON_ReplaceItemInArray(_type, 1, cJSON_CreateNumber(ARRAY_TYPE));
 	}
 
 	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
@@ -377,15 +370,7 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 		if (spc.spelling[getPos(j, spc.spelling.size())]) {
 			term_generator.set_database(*wdb);
 			term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
-			if (spc.analyzer[getPos(j, spc.analyzer.size())].compare("STEM_SOME") == 0) {
-				term_generator.set_stemming_strategy(term_generator.STEM_SOME);
-			} else if (spc.analyzer[getPos(j, spc.analyzer.size())].compare("STEM_NONE") == 0) {
-				term_generator.set_stemming_strategy(term_generator.STEM_NONE);
-			} else if (spc.analyzer[getPos(j, spc.analyzer.size())].compare("STEM_ALL") == 0) {
-				term_generator.set_stemming_strategy(term_generator.STEM_ALL);
-			} else if (spc.analyzer[getPos(j, spc.analyzer.size())].compare("STEM_ALL_Z") == 0) {
-				term_generator.set_stemming_strategy(term_generator.STEM_ALL_Z);
-			}
+			term_generator.set_stemming_strategy((Xapian::TermGenerator::stem_strategy)spc.analyzer[getPos(j, spc.analyzer.size())]);
 		}
 
 		if (spc.positions[getPos(j, spc.positions.size())]) {
@@ -409,18 +394,14 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 
 	int elements = 1;
 	if (terms->type == cJSON_Array) {
-		if (spc.sep_types[2] == GEO_TYPE) throw MSG_Error("An array can not serialized as a Geo Spatial");
 		elements = cJSON_GetArraySize(terms);
 		cJSON *value = cJSON_GetArrayItem(terms, 0);
 		if (value->type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
 
 		// If the type in schema is not array, schema is updated.
-		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE);
-		if (_type && std::string(_type->valuestring).find("array") == std::string::npos) {
-			std::string s_type = spc.sep_types[0] == OBJECT_TYPE ? "object/array/" + Serialise::type(spc.sep_types[2]) :
-																   "array/" + Serialise::type(spc.sep_types[2]);
-			cJSON_ReplaceItemInObject(schema, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
-		}
+		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE); // It is managed by schema.
+		if (_type && cJSON_GetArrayItem(_type, 1)->valueint == NO_TYPE)
+			cJSON_ReplaceItemInArray(_type, 1, cJSON_CreateNumber(ARRAY_TYPE));
 	}
 
 	for (int j = 0; j < elements; j++) {
@@ -488,12 +469,9 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 		if (value->type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
 
 		// If the type in schema is not array, schema is updated.
-		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE);
-		if (_type && std::string(_type->valuestring).find("array") == std::string::npos) {
-			std::string s_type = spc.sep_types[0] == OBJECT_TYPE ? "object/array/" + Serialise::type(spc.sep_types[2]) :
-																   "array/" + Serialise::type(spc.sep_types[2]);
-			cJSON_ReplaceItemInObject(schema, RESERVED_TYPE, cJSON_CreateString(s_type.c_str()));
-		}
+		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE); // It is managed by schema.
+		if (_type && cJSON_GetArrayItem(_type, 1)->valueint == NO_TYPE)
+			cJSON_ReplaceItemInArray(_type, 1, cJSON_CreateNumber(ARRAY_TYPE));
 	}
 
 	StringList s;
@@ -579,8 +557,8 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 							acc += findMath ? "//d" : "||//d";
 							break;
 						case DB_HOUR2INT:
-					   		acc += findMath ? "//h" : "||//h";
-					   		break;
+							acc += findMath ? "//h" : "||//h";
+							break;
 						case DB_MINUTE2INT:
 							acc += findMath ? "//m" : "||//m";
 							break;
@@ -652,8 +630,12 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 		subproperties = cJSON_GetObjectItem(properties, RESERVED_ID);
 		if (!subproperties) {
 			subproperties = cJSON_CreateObject(); // It is managed by properties.
-			cJSON_AddItemToObject(subproperties, RESERVED_TYPE, cJSON_CreateString(STRING_STR));
-			cJSON_AddItemToObject(subproperties, RESERVED_INDEX, cJSON_CreateString("not analyzed"));
+			cJSON *type = cJSON_CreateArray(); // Managed by shema
+			cJSON_AddItemToArray(type, cJSON_CreateNumber(NO_TYPE));
+			cJSON_AddItemToArray(type, cJSON_CreateNumber(NO_TYPE));
+			cJSON_AddItemToArray(type, cJSON_CreateNumber(STRING_TYPE));
+			cJSON_AddItemToObject(subproperties, RESERVED_TYPE, type);
+			cJSON_AddItemToObject(subproperties, RESERVED_INDEX, cJSON_CreateNumber(ALL));
 			cJSON_AddItemToObject(subproperties, RESERVED_SLOT, cJSON_CreateNumber(0));
 			cJSON_AddItemToObject(subproperties, RESERVED_PREFIX, cJSON_CreateString(DOCUMENT_ID_TERM_PREFIX));
 			cJSON_AddItemToObject(subproperties, RESERVED_BOOL_TERM, cJSON_CreateTrue());
@@ -823,13 +805,11 @@ Database::get_data_field(const std::string &field_name)
 		if (!properties) break;
 	}
 
-	// If properties exits then the specifictions too.
+	// If properties exits then the specifications too.
 	if (properties) {
 		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
-		char sep_types[3];
-		set_types(_aux->valuestring, sep_types);
-		if (sep_types[2] == NO_TYPE) return res;
-		res.type = sep_types[2];
+		res.type = cJSON_GetArrayItem(_aux, 2)->valueint;
+		if (res.type == NO_TYPE) return res;
 
 		_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
 		unique_char_ptr _cprint(cJSON_Print(_aux));
@@ -842,7 +822,7 @@ Database::get_data_field(const std::string &field_name)
 		res.bool_term = _aux->type == cJSON_False ? false : true;
 
 		// Strings and booleans do not have accuracy.
-		if (sep_types[2] != STRING_TYPE && sep_types[2] != BOOLEAN_TYPE) {
+		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
 			_aux = cJSON_GetObjectItem(properties, RESERVED_ACCURACY);
 			int elements = cJSON_GetArraySize(_aux);
 			for (int i = 0; i < elements; i++) {
@@ -897,9 +877,7 @@ Database::get_slot_field(const std::string &field_name)
 		res.slot = strtouint(_cprint.get());
 
 		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
-		char sep_types[3];
-		set_types(_aux->valuestring, sep_types);
-		res.type = sep_types[2];
+		res.type = cJSON_GetArrayItem(_aux, 2)->valueint;
 	}
 
 	return res;
@@ -1076,7 +1054,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					g = unique_Range.get();
 					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
 					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
-                    GenerateTerms::numeric(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
+					GenerateTerms::numeric(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, NUMERIC_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
 						for (it = prefixes.begin(); it != prefixes.end(); it++) {
@@ -1101,7 +1079,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					g = unique_Range.get();
 					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
 					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
-                    GenerateTerms::date(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
+					GenerateTerms::date(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
 						for (it = prefixes.begin(); it != prefixes.end(); it++) {
@@ -1435,7 +1413,7 @@ Database::get_metadata(const std::string &key, std::string &value)
 			if (t) reopen();
 			continue;
 		}
-		return true;
+		return value.empty() ? false : true;
 	}
 	return false;
 }
@@ -1445,7 +1423,7 @@ bool
 Database::set_metadata(const std::string &key, const std::string &value, bool commit)
 {
 	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Set metadata: %d\n", t);
+		LOG_DATABASE_WRAP(this, "Metadata: %d\n", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 		try {
 			wdb->set_metadata(key, value);
@@ -1454,11 +1432,11 @@ Database::set_metadata(const std::string &key, const std::string &value, bool co
 			if (t) reopen();
 			continue;
 		}
-		LOG_DATABASE_WRAP(this, "Metadata set\n");
+		LOG_DATABASE_WRAP(this, "set_metadata was done\n");
 		return (commit) ? _commit() : true;
 	}
 
-	LOG_ERR(this, "ERROR: Cannot do set_metadata!\n");
+	LOG_ERR(this, "ERROR: set_metadata can not be done!\n");
 	return false;
 }
 
@@ -1516,8 +1494,8 @@ Database::get_stats_docs(const std::string &document_id)
 	enquire.set_query(query);
 	Xapian::MSet mset = enquire.get_mset(0, 1);
 	Xapian::MSetIterator m = mset.begin();
-	int t = 3;
-	for (; t >= 0; --t) {
+
+	for (int t = 3; t >= 0; --t) {
 		try {
 			doc = db->get_document(*m);
 			break;

@@ -27,7 +27,6 @@
 #include "queue.h"
 #include "lru.h"
 
-#include <xapian.h>
 #include <xapian/matchspy.h>
 
 #include "database_utils.h"
