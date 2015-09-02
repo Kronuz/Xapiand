@@ -112,25 +112,8 @@ Database::reopen()
 #ifdef HAVE_REMOTE_PROTOCOL
 			else {
 				local = false;
-# ifdef XAPIAN_LOCAL_DB_FALLBACK
-				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
-				try {
-					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
-					if (ldb.get_uuid() == rdb.get_uuid()) {
-						// Handle remote endpoints and figure out if the endpoint is a local database
-						LOG_DATABASE(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
-						wdb = Xapian::WritableDatabase(e->path, Xapian::DB_OPEN);
-						local = true;
-						if (endpoints_size == 1) read_mastery(e->path);
-					} else {
-						wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
-					}
-				} catch (const Xapian::DatabaseOpeningError &err) {
-					wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
-				}
-# else
+				// Writable remote databases do not have a local fallback
 				wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
-# endif
 			}
 #endif
 			db->add_database(wdb);
