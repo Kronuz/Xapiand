@@ -694,7 +694,10 @@ void HttpClient::_search()
 	if (schema) {
 		std::string schema_;
 		if (database->get_metadata(RESERVED_SCHEMA, schema_)) {
-			schema_ += "\n";
+			unique_cJSON jschema(cJSON_Parse(schema_.c_str()), cJSON_Delete);
+			readable_schema(jschema.get());
+			unique_char_ptr _cprint(cJSON_Print(jschema.get()));
+            schema_ = std::string(_cprint.get()) + "\n";
 			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, schema_));
 			database_pool->checkin(&database);
 			return;
