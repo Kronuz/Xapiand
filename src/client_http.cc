@@ -100,6 +100,8 @@ HttpClient::~HttpClient()
 
 	LOG_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)\n", http_clients);
 	assert(http_clients >= 0);
+
+	delete database;
 }
 
 
