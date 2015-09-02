@@ -290,9 +290,9 @@ XapiandManager::setup_node()
 	pthread_mutex_unlock(&nodes_mtx);
 
 	if (new_cluster) {
-		INFO(this, "New cluster is now online: %s!\n", cluster_name.c_str());
+		INFO(this, "Joined new cluster %s, is now online!\n", cluster_name.c_str());
 	} else {
-		INFO(this, "Cluster %s was already online.\n", cluster_name.c_str());
+		INFO(this, "Joined cluster %s, it was already online.\n", cluster_name.c_str());
 	}
 
 	set_node_name(local_node.name);

@@ -251,8 +251,6 @@ int main(int argc, char **argv)
 		"   [%s]\n"
 		"          Using Xapian v%s\n\n", PACKAGE_VERSION, PACKAGE_BUGREPORT, XAPIAN_VERSION);
 
-	INFO((void *)NULL, "Joined cluster: %s\n", opts.cluster_name.c_str());
-
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {
 		// Prefer glass database
