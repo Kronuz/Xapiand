@@ -498,7 +498,6 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			for ( ; it != ranges.end(); it++) {
 				start_end.push_back(it->start);
 				start_end.push_back(it->end);
-				printf("{ %llu, %llu }\n", it->start, it->end);
 				int idx = -1;
 				uInt64 val;
 				if (it->start != it->end) {
@@ -511,7 +510,6 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 					int pos = START_POS - spc.accuracy[i] * 2;
 					if (idx < pos) {
 						uInt64 vterm = val >> pos;
-						printf("%s %llu\n", spc.acc_prefix[i - 2].c_str(), vterm);
 						set_terms.insert(prefixed(Serialise::trixel_id(vterm), spc.acc_prefix[i - 2]));
 					} else break;
 				}
