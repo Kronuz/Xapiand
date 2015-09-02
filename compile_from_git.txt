@@ -48,6 +48,8 @@ touch doccomments.i
 # Build bindings
 swig -I../../xapian-core/include -c++ -python -threads -shadow -modern -O -o xapian_wrap.cc python.i
 
+cd ..
+
 # Autoconf, configure and make:
 autoreconf --force --install -Im4 -I/usr/local/share/aclocal
 ./configure --disable-dependency-tracking --prefix="$PREFIX" PYTHON_LIB="$PREFIX/lib/python2.7/site-packages" XAPIAN_CONFIG=$PREFIX/bin/xapian-config-1.3 --without-csharp --without-tcl --without-java --without-ruby --with-python --without-php
