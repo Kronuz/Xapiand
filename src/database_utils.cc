@@ -370,11 +370,13 @@ void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 			spc_now.sep_types[1] = cJSON_GetArrayItem(spc, 1)->valueint;
 			spc_now.sep_types[2] = cJSON_GetArrayItem(spc, 2)->valueint;
 			// If the type field value hasn't fixed yet and its specified in the document, the schema is updated.
-			if (spc_now.sep_types[2] == NO_TYPE && (spc = cJSON_GetObjectItem(item, RESERVED_TYPE))) {
-				// In this point means that terms or values haven't been inserted with this field,
-				// therefore, lets us to change prefix, slot and bool_term in the schema.
-				insert_inheritable_specifications(item, spc_now, schema);
-				update_required_data(spc_now, item->string, schema);
+			if (spc_now.sep_types[2] == NO_TYPE) {
+				if ((spc = cJSON_GetObjectItem(item, RESERVED_TYPE))) {
+					// In this point means that terms or values haven't been inserted with this field,
+					// therefore, lets us to change prefix, slot and bool_term in the schema.
+					insert_inheritable_specifications(item, spc_now, schema);
+					update_required_data(spc_now, item->string, schema);
+				}
 			} else {
 				// If type has been defined, the next reserved words have been defined too.
 				spc = cJSON_GetObjectItem(schema, RESERVED_PREFIX);
@@ -414,14 +416,18 @@ void insert_inheritable_specifications(cJSON *item, specifications_t &spc_now, c
 	// Restarting reserved words than which are not inherited.
 	spc_now.accuracy.clear();
 	spc_now.acc_prefix.clear();
-	spc_now.sep_types[0] = spc_now.sep_types[1] = spc_now.sep_types[2] = default_spc.sep_types[0];
+	spc_now.sep_types[0] = default_spc.sep_types[0];
+	spc_now.sep_types[1] = default_spc.sep_types[1];
+	spc_now.sep_types[2] = default_spc.sep_types[2];
 	spc_now.bool_term = default_spc.bool_term;
+	spc_now.prefix = default_spc.prefix;
+	spc_now.slot = default_spc.slot;
 
 	cJSON *spc;
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_TYPE))) {
 		if (spc->type == cJSON_String) {
 			if (set_types(stringtolower(spc->valuestring), spc_now.sep_types)) {
-				cJSON *type = cJSON_CreateArray(); // Managed by shema
+				cJSON *type = cJSON_CreateArray(); // Managed by schema
 				cJSON_AddItemToArray(type, cJSON_CreateNumber(spc_now.sep_types[0]));
 				cJSON_AddItemToArray(type, cJSON_CreateNumber(spc_now.sep_types[1]));
 				cJSON_AddItemToArray(type, cJSON_CreateNumber(spc_now.sep_types[2]));
@@ -823,7 +829,7 @@ char get_type(cJSON *_field, specifications_t &spc)
 				return BOOLEAN_TYPE;
 			} else if (spc.date_detection && Datetime::isDate(field->valuestring)) {
 				return DATE_TYPE;
-			} else if(spc.geo_detection && field->type != cJSON_Array && EWKT_Parser::isEWKT(field->valuestring)) {
+			} else if(spc.geo_detection && EWKT_Parser::isEWKT(field->valuestring)) {
 				return GEO_TYPE;
 			} else if (spc.string_detection) {
 				return STRING_TYPE;

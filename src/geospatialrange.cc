@@ -100,12 +100,10 @@ GeoSpatialRange::getQuery(Xapian::valueno slot_, const std::vector<range_t> &ran
 
 
 void
-GeoSpatialRange::calc_angle(const std::string &serialised) {
-	CartesianList centroids_;
-	centroids_.unserialise(serialised);
+GeoSpatialRange::calc_angle(const CartesianList &_centroids) {
 	angle = M_PI;
-	CartesianList::const_iterator it(centroids_.begin());
-	for ( ; it != centroids_.end(); it++) {
+	CartesianList::const_iterator it(_centroids.begin());
+	for ( ; it != _centroids.end(); it++) {
 		double aux = M_PI;
 		CartesianList::const_iterator itl(centroids.begin());
 		for ( ; itl != centroids.end(); itl++) {
@@ -122,14 +120,20 @@ GeoSpatialRange::insideRanges() {
 	StringList list;
 	list.unserialise(*value_it);
 	uInt64List _ranges;
-	_ranges.unserialise(list.at(0));
-	uInt64List::const_iterator i(_ranges.begin()), o;
-	for ( ; i != _ranges.end(); i += 2) {
-		o = i + 1;
+	CartesianList _centroids;
+	for (StringList::const_iterator it(list.begin()); it != list.end(); ++it) {
+		_ranges.unserialise(*it);
+		++it;
+		_centroids.unserialise(*it);
+	}
+
+	uInt64List::const_iterator start(_ranges.begin()), end;
+	for ( ; start != _ranges.end(); start += 2) {
+		end = start + 1;
 		std::vector<range_t>::const_iterator it(ranges.begin());
 		for ( ; it != ranges.end(); it++) {
-			if (*i <= it->end && *o >= it->start) {
-				calc_angle(list.at(1));
+			if (*start <= it->end && *end >= it->start) {
+				calc_angle(_centroids);
 				return true;
 			}
 		}
