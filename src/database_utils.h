@@ -58,8 +58,11 @@
 #define RESERVED_PREFIX "_prefix"
 #define RESERVED_ID "_id"
 #define RESERVED_SCHEMA "_schema"
+#define RESERVED_VERSION "_version"
+
 #define DB_OFFSPRING_UNION "__"
 #define DB_LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
+#define DB_VERSION_SCHEMA 2.0
 
 // Default prefixes
 #define DOCUMENT_ID_TERM_PREFIX "Q"

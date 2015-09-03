@@ -605,11 +605,17 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	bool find = false;
 	if (s_schema.empty()) {
 		properties = cJSON_CreateObject(); // It is managed by chema.
+		cJSON_AddItemToObject(schema.get(), RESERVED_VERSION, cJSON_CreateNumber(DB_VERSION_SCHEMA));
 		cJSON_AddItemToObject(schema.get(), RESERVED_SCHEMA, properties);
 	} else {
 		schema = std::move(unique_cJSON(cJSON_Parse(s_schema.c_str()), cJSON_Delete));
 		if (!schema) {
 			LOG_ERR(this, "ERROR: Schema is corrupt, you need provide a new one. JSON Before: [%s]\n", cJSON_GetErrorPtr());
+			return false;
+		}
+		cJSON *_version = cJSON_GetObjectItem(schema.get(), RESERVED_VERSION);
+		if (_version == NULL || _version->valuedouble != DB_VERSION_SCHEMA) {
+			LOG_ERR(this, "ERROR: Different database's version schemas, the current version is %1.1f\n", DB_VERSION_SCHEMA);
 			return false;
 		}
 		properties = cJSON_GetObjectItem(schema.get(), RESERVED_SCHEMA);
