@@ -1014,25 +1014,32 @@ void readable_schema(cJSON *schema) {
 
 
 void readable_field(cJSON *field) {
-	int _size = cJSON_GetArraySize(field);
-	for (int i = 0; i < _size; i++) {
-		cJSON *item = cJSON_GetArrayItem(field, i);
-		if (!is_reserved(item->string)) readable_schema(field);
-		else if (strcmp(item->string, RESERVED_TYPE) == 0) {
-			char sep_types[3] = {(char)(cJSON_GetArrayItem(item, 0)->valueint), (char)(cJSON_GetArrayItem(item, 1)->valueint), (char)(cJSON_GetArrayItem(item, 2)->valueint)};
-			cJSON_ReplaceItemInObject(field, RESERVED_TYPE, cJSON_CreateString(str_type(sep_types).c_str()));
-			item = cJSON_GetObjectItem(field, RESERVED_ACCURACY);
-			if (item && sep_types[2] == DATE_TYPE) {
-				int _size = cJSON_GetArraySize(item);
-				for (int i = 0; i < _size; i++)
-					cJSON_ReplaceItemInArray(item, i, cJSON_CreateString(str_time[(cJSON_GetArrayItem(item, i)->valueint)].c_str()));
-			} else if (item && sep_types[2] == GEO_TYPE)
-				cJSON_ReplaceItemInArray(item, 0, cJSON_GetArrayItem(item, 0)->valueint ? cJSON_CreateTrue() : cJSON_CreateFalse());
-		} else if ((item = cJSON_GetObjectItem(field, RESERVED_ANALYZER))) {
+	// Change this field in readable form.
+	printf("%s\n", field->string);
+	cJSON *item;
+	if ((item = cJSON_GetObjectItem(field, RESERVED_TYPE))) {
+		char sep_types[3] = {(char)(cJSON_GetArrayItem(item, 0)->valueint), (char)(cJSON_GetArrayItem(item, 1)->valueint), (char)(cJSON_GetArrayItem(item, 2)->valueint)};
+		cJSON_ReplaceItemInObject(field, RESERVED_TYPE, cJSON_CreateString(str_type(sep_types).c_str()));
+		item = cJSON_GetObjectItem(field, RESERVED_ACCURACY);
+		if (item && sep_types[2] == DATE_TYPE) {
 			int _size = cJSON_GetArraySize(item);
 			for (int i = 0; i < _size; i++)
-				cJSON_ReplaceItemInArray(item, i, cJSON_CreateString(str_analizer[cJSON_GetArrayItem(item, i)->valueint].c_str()));
-		} else if ((item = cJSON_GetObjectItem(field, RESERVED_INDEX)))
-			cJSON_ReplaceItemInObject(field, RESERVED_INDEX, cJSON_CreateString(str_index[item->valueint].c_str()));
+				cJSON_ReplaceItemInArray(item, i, cJSON_CreateString(str_time[(cJSON_GetArrayItem(item, i)->valueint)].c_str()));
+		} else if (item && sep_types[2] == GEO_TYPE)
+			cJSON_ReplaceItemInArray(item, 0, cJSON_GetArrayItem(item, 0)->valueint ? cJSON_CreateTrue() : cJSON_CreateFalse());
+	}
+	if ((item = cJSON_GetObjectItem(field, RESERVED_ANALYZER))) {
+		int _size = cJSON_GetArraySize(item);
+		for (int i = 0; i < _size; i++)
+			cJSON_ReplaceItemInArray(item, i, cJSON_CreateString(str_analizer[cJSON_GetArrayItem(item, i)->valueint].c_str()));
+	}
+	if ((item = cJSON_GetObjectItem(field, RESERVED_INDEX)))
+		cJSON_ReplaceItemInObject(field, RESERVED_INDEX, cJSON_CreateString(str_index[item->valueint].c_str()));
+
+	// Process its offsprings.
+	int _size = cJSON_GetArraySize(field);
+	for (int i = 0; i < _size; i++) {
+		item = cJSON_GetArrayItem(field, i);
+		if (!is_reserved(item->string)) readable_field(item);
 	}
 }
