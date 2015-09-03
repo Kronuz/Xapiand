@@ -1015,7 +1015,6 @@ void readable_schema(cJSON *schema) {
 
 void readable_field(cJSON *field) {
 	// Change this field in readable form.
-	printf("%s\n", field->string);
 	cJSON *item;
 	if ((item = cJSON_GetObjectItem(field, RESERVED_TYPE))) {
 		char sep_types[3] = {(char)(cJSON_GetArrayItem(item, 0)->valueint), (char)(cJSON_GetArrayItem(item, 1)->valueint), (char)(cJSON_GetArrayItem(item, 2)->valueint)};

@@ -699,7 +699,7 @@ void HttpClient::_search()
 			unique_cJSON jschema(cJSON_Parse(schema_.c_str()), cJSON_Delete);
 			readable_schema(jschema.get());
 			unique_char_ptr _cprint(cJSON_Print(jschema.get()));
-            schema_ = std::string(_cprint.get()) + "\n";
+			schema_ = std::string(_cprint.get()) + "\n";
 			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, schema_));
 			database_pool->checkin(&database);
 			return;
@@ -755,7 +755,7 @@ void HttpClient::_search()
 			cJSON *array_values = cJSON_CreateArray(); // It is managed by root.
 			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
 				cJSON *value = cJSON_CreateObject(); // It is managed by array_values.
-                data_field_t field_t = database->get_data_field((*spy).first);
+				data_field_t field_t = database->get_data_field((*spy).first);
 				cJSON_AddStringToObject(value, "value", Unserialise::unserialise(field_t.type, (*spy).first, *facet).c_str());
 				cJSON_AddNumberToObject(value, "termfreq", facet.get_termfreq());
 				cJSON_AddItemToArray(array_values, value);
