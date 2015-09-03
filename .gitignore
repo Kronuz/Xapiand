@@ -1,5 +1,6 @@
-/.libs
-/.deps
+.libs
+.deps
+.dirstamp
 
 # Automake stuff
 /Makefile
