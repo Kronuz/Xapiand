@@ -21,6 +21,10 @@ xapiand_SOURCES = \
 	htm.cc \
 	http_parser.c \
 	length.cc \
+	lz4/lz4.c \
+	lz4/lz4frame.c \
+	lz4/lz4hc.c \
+	lz4/xxhash.c \
 	manager.cc \
 	md5.cc \
 	multivalue.cc \
@@ -56,6 +60,11 @@ noinst_HEADERS = \
 	http_parser.h \
 	length.h \
 	lru.h \
+	lz4/lz4.h \
+	lz4/lz4frame_static.h \
+	lz4/lz4frame.h \
+	lz4/lz4hc.h \
+	lz4/xxhash.h \
 	manager.h \
 	md5.h \
 	multivalue.h \
