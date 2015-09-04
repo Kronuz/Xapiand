@@ -1043,3 +1043,21 @@ void stringTokenizer(const std::string &str, const std::string &delimiter, std::
 		tokens.push_back(str.substr(prev));
 	}
 }
+
+
+unsigned int levenshtein_distance(const std::string &str1, const std::string &str2)
+{
+	const size_t len1 = str1.size(), len2 = str2.size();
+	std::vector<unsigned int> col(len2 + 1), prev_col(len2 + 1);
+
+	for (unsigned int i = 0; i < prev_col.size(); i++) prev_col[i] = i;
+
+	for (unsigned int i = 0; i < len1; i++) {
+		col[0] = i + 1;
+		for (unsigned int j = 0; j < len2; j++)
+			col[j + 1] = std::min(std::min(prev_col[j + 1] + 1, col[j] + 1), prev_col[j] + (str1[i] == str2[j] ? 0 : 1));
+		col.swap(prev_col);
+	}
+
+	return prev_col[len2];
+}

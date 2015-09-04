@@ -230,6 +230,9 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 void update_pos_time();
 void fill_zeros_stats_cnt(int start, int end);
 void fill_zeros_stats_sec(int start, int end);
+// Levenshtein distance is a string metric for measuring the difference between two
+// sequences (known as edit distance).
+unsigned int levenshtein_distance(const std::string &str1, const std::string &str2);
 
 #define INFO(...) log(__FILE__, __LINE__, __VA_ARGS__)
 
