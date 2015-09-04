@@ -78,7 +78,7 @@ inline bool ignored_errorno(int e, bool udp) {
 
 		default:
 			return false;  // Do not ignore error
-    }
+	}
 }
 
 int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries);

@@ -51,7 +51,7 @@
 #elif __BYTE_ORDER == __LITTLE_ENDIAN
 // Swap 7 byte, 56 bit values. (If it is not big endian, It is considered little endian)
 #define Swap7Bytes(val) ((((val) >> 48) & 0xFF) | (((val) >> 32) & 0xFF00) | (((val) >> 16) & 0xFF0000) | \
- 						((val) & 0xFF000000) | (((val) << 16) & 0xFF00000000) | \
+						((val) & 0xFF000000) | (((val) << 16) & 0xFF00000000) | \
 						(((val) << 32) & 0xFF0000000000) | (((val) << 48) & 0xFF000000000000))
 #define Swap4Bytes(val) ((((val) >> 24) & 0xFF) | (((val) >> 8) & 0xFF00) | \
 						(((val) <<  8) & 0xFF0000) | ((val << 24) & 0xFF000000))

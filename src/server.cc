@@ -389,7 +389,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 	if ((client_sock = accept_tcp(watcher.fd)) < 0) {
 		if (!ignored_errorno(errno, false)) {
 			LOG_ERR(this, "ERROR: accept binary error (sock=%d): %s\n", binary_sock, strerror(errno));
-	    }
+		}
 	} else {
 		double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
 		double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;

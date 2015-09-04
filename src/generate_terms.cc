@@ -318,7 +318,7 @@ GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ra
 				break;
 			}
 		}
-        if (posF != -1) result.insert(::std::pair<uInt64, ::std::string>(val >> posF, acc_prefix[j]));
+		if (posF != -1) result.insert(::std::pair<uInt64, ::std::string>(val >> posF, acc_prefix[j]));
 	}
 
 	// The search have trixels more big that the biggest trixel in accuracy.
