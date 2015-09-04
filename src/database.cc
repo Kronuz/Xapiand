@@ -341,7 +341,7 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 void
 Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
 {
-	//LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	// LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!(find || spc.dynamic)) throw MSG_Error("This object is not dynamic");
 
 	if (!spc.store) return;
@@ -387,7 +387,7 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 void
 Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
 {
-	//LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	// LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!(find || spc.dynamic)) throw MSG_Error("This object is not dynamic");
 
 	if (!spc.store) return;
@@ -455,7 +455,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 void
 Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
 {
-	LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	// LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!(find || spc.dynamic)) throw MSG_Error("This object is not dynamic");
 
 	if (!spc.store) return;

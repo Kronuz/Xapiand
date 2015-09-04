@@ -756,7 +756,7 @@ void HttpClient::_search()
 			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
 				cJSON *value = cJSON_CreateObject(); // It is managed by array_values.
 				data_field_t field_t = database->get_data_field((*spy).first);
-				cJSON_AddStringToObject(value, "value", Unserialise::unserialise(field_t.type, (*spy).first, *facet).c_str());
+				cJSON_AddStringToObject(value, "value", Unserialise::unserialise(field_t.type, *facet).c_str());
 				cJSON_AddNumberToObject(value, "termfreq", facet.get_termfreq());
 				cJSON_AddItemToArray(array_values, value);
 			}
