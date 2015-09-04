@@ -302,19 +302,19 @@ int connect_tcp(const char *hostname, const char *servname)
 	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_LINGER (sock=%d): %s\n", sock, strerror(errno));
 	// }
 
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
-    hints.ai_protocol = 0;
+	struct addrinfo hints;
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
+	hints.ai_protocol = 0;
 
-    struct addrinfo *result;
-    if (getaddrinfo(hostname, servname, &hints, &result) < 0) {
+	struct addrinfo *result;
+	if (getaddrinfo(hostname, servname, &hints, &result) < 0) {
 		LOG_ERR(NULL, "Couldn't resolve host %s:%s\n", hostname, servname);
 		close(sock);
 		return -1;
-    }
+	}
 
 	if (connect(sock, result->ai_addr, result->ai_addrlen) < 0) {
 		LOG_ERR(NULL, "Cannot connect to %s:%d (sock=%d): %s\n", hostname, servname, sock, strerror(errno));
@@ -1027,7 +1027,6 @@ void move_files(const std::string &src, const std::string &dst)
 }
 
 
-// String tokenizer with the delimiter.
 void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens)
 {
 	size_t prev = 0, next = 0, len;

@@ -81,7 +81,7 @@ namespace Serialise {
 
 
 namespace Unserialise {
-	std::string unserialise(char field_type, const std::string &field_name, const std::string &serialise_val);
+	std::string unserialise(char field_type, const std::string &serialise_val);
 	std::string numeric(const std::string &serialise_val);
 	std::string date(const std::string &serialise_val);
 	// Unserialise a serialise cartesian coordinate.

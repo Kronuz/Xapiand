@@ -177,7 +177,7 @@ int test_query()
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
 		Xapian::TermIterator facet = (*spy).second->values_begin();
 		data_field_t field_t = database->get_data_field((*spy).first);
-		if (Unserialise::unserialise(field_t.type, (*spy).first, *facet).compare("Charlton Heston") == 0) {
+		if (Unserialise::unserialise(field_t.type, *facet).compare("Charlton Heston") == 0) {
 			exit_success--;
 		} else {
 			LOG(NULL, "search facets failed, unintended result\n");

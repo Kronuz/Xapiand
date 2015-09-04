@@ -139,7 +139,7 @@ Serialise::type(char type)
 
 
 std::string
-Unserialise::unserialise(char field_type, const std::string &field_name, const std::string &serialise_val)
+Unserialise::unserialise(char field_type, const std::string &serialise_val)
 {
 	switch (field_type) {
 		case NUMERIC_TYPE:

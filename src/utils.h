@@ -207,6 +207,7 @@ int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
 std::string stringtolower(const std::string &str);
 std::string stringtoupper(const std::string &str);
+// String tokenizer with the delimiter.
 void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens);
 int strtoint(const std::string &str);
 unsigned int strtouint(const std::string &str);
