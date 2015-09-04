@@ -23,7 +23,26 @@
 #ifndef XAPIAND_INCLUDED_MULTI_MULTIVALUEKEYMAKER_H
 #define XAPIAND_INCLUDED_MULTI_MULTIVALUEKEYMAKER_H
 
-#include <xapian.h>
+#include "serialise.h"
+#include "geospatialrange.h"
+#include "utils.h"
+
+#include <float.h>
+
+
+const std::string MAX_CMPVALUE(Xapian::sortable_serialise(DBL_MAX));
+const std::string STR_FOR_EMPTY("\xff");
+
+// Vector of slots
+typedef struct keys_values_s {
+	Xapian::valueno slot;
+	char type;
+	double valuenumeric;
+	std::string valuestring;
+	CartesianList valuegeo;
+	bool reverse;
+	bool hasValue;
+} keys_values_t;
 
 
 /*
@@ -36,7 +55,7 @@
  */
 class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
 	// Vector of slots
-	std::vector<std::pair<Xapian::valueno, bool> > slots;
+	std::vector<keys_values_t> slots;
 
 	public:
 		Multi_MultiValueKeyMaker() { }
@@ -48,8 +67,33 @@ class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
 
 		virtual std::string operator()(const Xapian::Document & doc) const;
 
-		void add_value(Xapian::valueno slot, bool reverse = false) {
-			slots.push_back(std::make_pair(slot, reverse));
+		void add_value(Xapian::valueno slot, char type, const std::string &value, bool reverse = false) {
+			if (!value.empty()) {
+				keys_values_t ins_key = { slot, type, 0, "", CartesianList(), reverse, true };
+				switch (type) {
+					case NUMERIC_TYPE:
+						ins_key.valuenumeric = strtodouble(value);
+						break;
+					case DATE_TYPE:
+						ins_key.valuenumeric = Datetime::timestamp(value);
+						break;
+					case BOOLEAN_TYPE:
+						ins_key.valuestring = strcasecmp(value.c_str(), "true") == 0 ? "t" : "f";
+						break;
+					case STRING_TYPE:
+						ins_key.valuestring = value;
+						break;
+					case GEO_TYPE:
+						std::vector<range_t> ranges;
+						std::string _value(value, 1, value.size() - 2);
+						EWKT_Parser::getRanges(_value, true, HTM_MIN_ERROR, ranges, ins_key.valuegeo);
+						break;
+				}
+				slots.push_back(ins_key);
+			} else if (type != GEO_TYPE) {
+				keys_values_t ins_key = { slot, type, 0, value, CartesianList(), reverse, false };
+				slots.push_back(ins_key);
+			}
 		}
 };
 

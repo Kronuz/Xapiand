@@ -1330,8 +1330,6 @@ int
 Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
 {
 	std::unique_ptr<Multi_MultiValueKeyMaker> unique_sorter;
-	bool decreasing;
-	std::string field;
 	unsigned int doccount = db->get_doccount();
 	unsigned int check_at_least = std::max(std::min(doccount, e.check_at_least), (unsigned int)0);
 	Xapian::valueno collapse_key;
@@ -1349,26 +1347,24 @@ Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::st
 		unique_sorter = std::unique_ptr<Multi_MultiValueKeyMaker>(sorter);
 		std::vector<std::string>::const_iterator oit(e.sort.begin());
 		for ( ; oit != e.sort.end(); oit++) {
-			if (startswith(*oit, "-")) {
-				decreasing = true;
-				field.assign(*oit, 1, (*oit).size() - 1);
-				// If the field has not been indexed as a value or it is a geospatial, it isn't used like Multi_MultiValuesKeyMaker
+			std::string field, value;
+			size_t pos = oit->find(":");
+			if (pos != std::string::npos) {
+				field = oit->substr(0, pos);
+				value = oit->substr(pos + 1);
+			} else field = *oit;
+
+			if (startswith(field, "-")) {
+				field.assign(field, 1, field.size() - 1);
 				data_field_t field_t = get_slot_field(field);
-				if (field_t.type == NO_TYPE || field_t.type == GEO_TYPE) continue;
-				sorter->add_value(field_t.slot, decreasing);
-			} else if (startswith(*oit, "+")) {
-				decreasing = false;
-				field.assign(*oit, 1, (*oit).size() - 1);
-				// If the field has not been indexed as a value or it is a geospatial, it isn't used like Multi_MultiValuesKeyMaker
+				if (field_t.type != NO_TYPE) sorter->add_value(field_t.slot, field_t.type, value, true);
+			} else if (startswith(field, "+")) {
+				field.assign(field, 1, field.size() - 1);
 				data_field_t field_t = get_slot_field(field);
-				if (field_t.type == NO_TYPE || field_t.type == GEO_TYPE) continue;
-				sorter->add_value(field_t.slot, decreasing);
+				if (field_t.type != NO_TYPE) sorter->add_value(field_t.slot, field_t.type, value);
 			} else {
-				decreasing = false;
-				// If the field has not been indexed as a value or it is a geospatial, it isn't used like Multi_MultiValuesKeyMaker
-				data_field_t field_t = get_slot_field(*oit);
-				if (field_t.type == NO_TYPE || field_t.type == GEO_TYPE) continue;
-				sorter->add_value(field_t.slot, decreasing);
+				data_field_t field_t = get_slot_field(field);
+				if (field_t.type != NO_TYPE) sorter->add_value(field_t.slot, field_t.type, value);
 			}
 		}
 	}
