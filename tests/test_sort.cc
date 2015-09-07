@@ -303,14 +303,12 @@ int make_search(const sort_t _tests[], int len)
 
 	for (size_t i = 0; i < len; ++i) {
 		sort_t p = _tests[i];
-		LOG(NULL, "%zu.- %s\n", i, p.query.c_str());
 		query.query.clear();
 		query.sort.clear();
 		query.query.push_back(p.query);
 
 		std::vector<std::string>::iterator it(p.sort.begin());
 		for ( ; it != p.sort.end(); it++) {
-			LOG(NULL, "{ %s }\n", it->c_str());
 			query.sort.push_back(*it);
 		}
 
@@ -329,7 +327,6 @@ int make_search(const sort_t _tests[], int len)
 			it = p.expect_result.begin();
 			Xapian::MSetIterator m = mset.begin();
 			for ( ; m != mset.end(); ++it, ++m) {
-				LOG(NULL, "%s\n", m.get_document().get_value(0).c_str());
 				std::string d_id(m.get_document().get_value(0));
 				if (it->compare(d_id) != 0) {
 					cont++;
