@@ -1,15 +1,11 @@
 ## Process this file with automake to produce Makefile.in
 
-AUTOMAKE_OPTIONS = -Wno-portability
-#Not portable due to shell
-check:
-	$(shell rm -rf .db_test1.db .db_test2.db)
-
 check_PROGRAMS = set_generate_terms_test \
 				 set_geo_test \
 				 set_htm_test \
 				 set_query_test \
 				 set_serialise_unserialise_test \
+				 set_sort_test \
 				 set_wkt_test
 
 TESTS = $(check_PROGRAMS)
@@ -51,6 +47,9 @@ set_query_test_LDADD = @CHECK_LIBS@
 
 set_serialise_unserialise_test_SOURCES = $(headers) set_serialise_unserialise_test.cc test_serialise.cc
 set_serialise_unserialise_test_LDADD = @CHECK_LIBS@
+
+set_sort_test_SOURCES = $(headers) set_sort_test.cc test_sort.cc
+set_sort_test_LDADD = @CHECK_LIBS@
 
 set_wkt_test_SOURCES = $(headers) set_wkt_test.cc test_wkt_parser.cc
 set_wkt_test_LDADD = @CHECK_LIBS@
