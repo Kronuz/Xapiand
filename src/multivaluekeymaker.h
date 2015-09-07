@@ -85,8 +85,7 @@ class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
 						break;
 					case GEO_TYPE:
 						std::vector<range_t> ranges;
-						std::string _value(value, 1, value.size() - 2);
-						EWKT_Parser::getRanges(_value, true, HTM_MIN_ERROR, ranges, ins_key.valuegeo);
+						EWKT_Parser::getRanges(value, true, HTM_MIN_ERROR, ranges, ins_key.valuegeo);
 						break;
 				}
 				slots.push_back(ins_key);

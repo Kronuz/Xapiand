@@ -52,7 +52,7 @@ static std::string findLargest(const std::string &multiValues) {
 }
 
 template <class Iterator>
-static std::string get_cmpvalue(Iterator v_it, const keys_values_t &sort_value) {
+static std::string get_cmpvalue(Iterator &v_it, const keys_values_t &sort_value) {
 	switch (sort_value.type) {
 		case NUMERIC_TYPE:
 		case DATE_TYPE: {
@@ -60,7 +60,7 @@ static std::string get_cmpvalue(Iterator v_it, const keys_values_t &sort_value) 
 			return Xapian::sortable_serialise(val);
 		}
 		case BOOLEAN_TYPE:
-			return (*v_it)[0] == sort_value.valuestring[0] ? Xapian::sortable_serialise(1) : Xapian::sortable_serialise(0);
+			return (*v_it)[0] == sort_value.valuestring[0] ? Xapian::sortable_serialise(0) : Xapian::sortable_serialise(1);
 		case STRING_TYPE:
 			return Xapian::sortable_serialise(levenshtein_distance(*v_it, sort_value.valuestring));
 		case GEO_TYPE: {
