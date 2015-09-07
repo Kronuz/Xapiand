@@ -1,0 +1,7 @@
+{
+	"name": "mundo",
+	"location": "CIRCLE(10 10, 2000)",
+	"year": 500,
+	"date": "2015-01-01",
+	"there": false
+}

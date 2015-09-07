@@ -1,0 +1,7 @@
+{
+	"name": ["cooking", "hola mundo"],
+	"location": "POINT(3.2 10.1)",
+	"year": [-10000, 0],
+	"date": ["0010-01-01", "0020-01-01"],
+	"there": [true, true]
+}

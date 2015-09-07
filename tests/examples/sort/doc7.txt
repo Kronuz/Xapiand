@@ -1,0 +1,7 @@
+{
+	"name": "hola",
+	"location": "CIRCLE(2 2, 2000)",
+	"year": 100,
+	"date": "0300-01-01",
+	"there": true
+}
