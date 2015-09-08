@@ -319,10 +319,10 @@ int make_search(const sort_t _tests[], int len)
 		int rmset = database->get_mset(query, mset, spies, suggestions);
 		if (rmset != 0) {
 			cont++;
-			LOG_ERR(NULL, "ERORR: Failed in get_mset\n");
+			LOG_ERR(NULL, "ERROR: Failed in get_mset\n");
 		} else if (mset.size() != p.expect_result.size()) {
 			cont++;
-			LOG_ERR(NULL, "ERORR: Different number of documents obtained\n");
+			LOG_ERR(NULL, "ERROR: Different number of documents obtained\n");
 		} else {
 			it = p.expect_result.begin();
 			Xapian::MSetIterator m = mset.begin();
@@ -330,7 +330,7 @@ int make_search(const sort_t _tests[], int len)
 				std::string d_id(m.get_document().get_value(0));
 				if (it->compare(d_id) != 0) {
 					cont++;
-					LOG_ERR(NULL, "ERORR: Result = %s:%s   Expected = %s:%s\n", RESERVED_ID, d_id.c_str(), RESERVED_ID, it->c_str());
+					LOG_ERR(NULL, "ERROR: Result = %s:%s   Expected = %s:%s\n", RESERVED_ID, d_id.c_str(), RESERVED_ID, it->c_str());
 				}
 			}
 		}

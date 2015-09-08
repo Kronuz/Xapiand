@@ -23,15 +23,96 @@
 #include "test_geo.h"
 
 
-int geo_test_area()
+static DatabaseQueue *queue = NULL;
+static Database *database = NULL;
+static std::string name_database(".db_testgeo.db");
+
+
+sort_t geo_range_tests[] {
+	// The range search always is sort by centroids' search.
+	{
+		// Search: The polygon's search  describes North Dakota.
+		"location:\"..POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"",
+		{ "North Dakota and South Dakota", "North Dakota", "Bismarck", "Minot" }
+	},
+	{
+		// Search: The Multipolygon's search  describes North Dakota and South Dakota.
+		"location:\"..MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"",
+		{ "North Dakota and South Dakota", "North Dakota", "Bismarck", "Minot", "Rapid City", "Wyoming" }
+	},
+	// { 0.073730, 0.073730, 0.094108, 0.122473, 0.122473, 0.122925, 0.273593, 0.273593, 0.648657, 0.648657 }
+	{
+		// Search: The polygon's search  describes Wyoming but the corners with a different heights.
+		"location:\"..POLYGON ((44.96479793 -111.02783203, 44.96479793 -104.08447266, 41.04621681 -104.08447266, 41.00477542 -111.02783203))\"",
+		{ "Wyoming", "Mountain View, Wyoming", "Utah", "North Dakota and South Dakota" }
+	},
+	// Search for all documents with location.
+	{
+		"location:..", { "North Dakota", "Bismarck", "Minot", "Rapid City", "Utah", "Wyoming", "Mountain View, Wyoming", "North Dakota and South Dakota" }
+	},
+	// There are not regions inside.
+	{
+		"location:\"..CIRCLE (40 -100, 1000)\"", { }
+	}
+};
+
+
+sort_t geo_terms_tests[] {
+	// Test for search by terms.
+	{
+		"location:\"POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"",
+		{ "North Dakota" }
+	},
+	{
+		"location:\"POINT ((46.84516443029276 -100.78857421875))\"",
+		{ "Bismarck" }
+	},
+	{
+		"location:\"POINT ((48.25394114463431 -101.2939453125))\"",
+		{ "Minot" }
+	},
+	{
+		"location:\"POINT ((43.992814500489914 -103.18359375))\"",
+		{ "Rapid City" }
+	},
+	{
+		"location:\"CHULL ((41.89409956 -113.93920898 1987, 42.02481361 -111.12670898 2095, 41.00477542 -111.02783203 2183, 40.95501133 -109.0612793 2606, 37.01132594 -109.03930664 1407, 37.02886945 -114.00512695 696))\"",
+		{ "Utah" }
+	},
+	{
+		"location:\"POLYGON ((44.96479793 -111.02783203 2244, 44.96479793 -104.08447266 969, 41.04621681 -104.08447266 1654, 41.00477542 -111.02783203 2183))\"",
+		{ "Wyoming" }
+	},
+	{
+		"location:\"POINT (41.2695495 -110.34118652)\"",
+		{ "Mountain View, Wyoming" }
+	},
+	{
+		"location:\"MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"",
+		{ "North Dakota and South Dakota" }
+	},
+	{
+		"attraction_location:\"POINT (44.42789588, -110.58837891)\"",
+		{ "Wyoming" }
+	},
+	{
+		"location:..", { "North Dakota", "Bismarck", "Minot", "Rapid City", "Utah", "Wyoming", "Mountain View, Wyoming", "North Dakota and South Dakota" }
+	},
+	// There are not terms.
+	{
+		"location:\"POINT (40, -100)\"", { }
+	}
+};
+
+
+int create_test_db()
 {
 	/*
 	 *	The database used in the test is local
-	 *	so the Endpoints and local_node are manipulated
+	 *	so the Endpoints and local_node are manipulated.
 	 */
 
-	int exit_success = 4;
-
+	int cont = 0;
 	local_node.name.assign("node_test");
 	local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
 
@@ -39,169 +120,133 @@ int geo_test_area()
 	Endpoint e;
 	e.node_name.assign("node_test");
 	e.port = XAPIAND_BINARY_SERVERPORT;
-	e.path.assign(".db_test1.db");
+	e.path.assign(name_database);
 	e.host.assign("0.0.0.0");
 	endpoints.insert(e);
 
-	DatabaseQueue *queue = new DatabaseQueue();
-	Database *database = new Database(queue, endpoints, DB_WRITABLE | DB_SPAWN);
+	// There are delete in the make_search.
+	queue = new DatabaseQueue();
+	database = new Database(queue, endpoints, DB_WRITABLE | DB_SPAWN);
 
-	/*
-	 *	TEST query Geolocation area
-	 *	searching for North Dakota area
-	 *	of the four documents indexed it will return 3 that fit into that area
-	 *	(Range query)
-	 */
+	std::vector<std::string> _docs({
+		"examples/geo_search/Json_geo_1.txt",
+		"examples/geo_search/Json_geo_2.txt",
+		"examples/geo_search/Json_geo_3.txt",
+		"examples/geo_search/Json_geo_4.txt",
+		"examples/geo_search/Json_geo_5.txt",
+		"examples/geo_search/Json_geo_6.txt",
+		"examples/geo_search/Json_geo_7.txt",
+		"examples/geo_search/Json_geo_8.txt"
+	});
 
-	std::stringstream buffer;
-	std::ifstream fstream("examples/Json_geo_1.txt");
-	buffer << fstream.rdbuf();
-	unique_cJSON document1(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
-
-	if (not database->index(document1.get(), "1", true)) {
-		LOG(NULL, "index Json_geo_1 failed\n");
+	// Index documents in the database.
+	size_t i = 1;
+	for (std::vector<std::string>::iterator it(_docs.begin()); it != _docs.end(); it++) {
+		std::ifstream fstream(*it);
+		std::stringstream buffer;
+		buffer << fstream.rdbuf();
+		unique_cJSON document(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
+		if (not database->index(document.get(), std::to_string(i), true)) {
+			cont++;
+			LOG_ERR(NULL, "ERROR: File %s can not index\n", it->c_str());
+		}
+		fstream.close();
+		++i;
 	}
 
-	buffer.str(std::string());
-	fstream.close();
-	fstream.open("examples/Json_geo_2.txt");
-	buffer << fstream.rdbuf();
-	unique_cJSON document2(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
+	return cont;
+}
 
-	if (not database->index(document2.get(), "2", true)) {
-		LOG(NULL, "index Json_geo_2 failed\n");
+
+int make_search(const sort_t _tests[], int len)
+{
+	int cont = 0;
+	query_t query;
+	query.offset = 0;
+	query.limit = 10;
+	query.check_at_least = 0;
+	query.spelling = false;
+	query.synonyms = false;
+	query.is_fuzzy = false;
+	query.is_nearest = false;
+
+	for (size_t i = 0; i < len; ++i) {
+		sort_t p = _tests[i];
+		query.query.clear();
+		query.query.push_back(p.query);
+
+		Xapian::MSet mset;
+		std::vector<std::string> suggestions;
+		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
+
+		int rmset = database->get_mset(query, mset, spies, suggestions);
+		if (rmset != 0) {
+			cont++;
+			LOG_ERR(NULL, "ERROR: Failed in get_mset\n");
+		} else if (mset.size() != p.expect_datas.size()) {
+			cont++;
+			LOG_ERR(NULL, "ERROR: Different number of documents obtained %zu  %zu\n", mset.size(), p.expect_datas.size());
+		} else {
+			std::vector<std::string>::const_iterator it(p.expect_datas.begin());
+			Xapian::MSetIterator m = mset.begin();
+			for ( ; m != mset.end(); ++it, ++m) {
+				std::string data(m.get_document().get_data());
+				unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
+				cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
+				if (object_data && it->compare(object_data->valuestring) != 0) {
+					cont++;
+					LOG_ERR(NULL, "ERROR: Result = %s:%s   Expected = %s:%s\n", RESERVED_DATA, data.c_str(), RESERVED_DATA, it->c_str());
+				}
+			}
+		}
 	}
 
-	buffer.str(std::string());
-	fstream.close();
-	fstream.open("examples/Json_geo_3.txt");
-	buffer << fstream.rdbuf();
-	unique_cJSON document3(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
+	// Delete de database and release memory.
+	delete_files(name_database);
+	delete database;
+	delete queue;
 
-	if (not database->index(document3.get(), "3", true)) {
-		LOG(NULL, "index Json_geo_3 failed\n");
+	return cont;
+}
+
+
+int geo_range_test()
+{
+	try {
+		int cont = create_test_db();
+		if (cont == 0 && make_search(geo_range_tests, sizeof(geo_range_tests) / sizeof(geo_range_tests[0])) == 0) {
+			LOG(NULL, "Testing search range geospatials is correct!\n");
+			return 0;
+		} else {
+			LOG_ERR(NULL, "ERROR: Testing search range geospatials has mistakes.\n");
+			return 1;
+		}
+	} catch (const Xapian::Error &err) {
+		LOG_ERR(NULL, "ERROR: %s\n", err.get_msg().c_str());
+		return 1;
+	} catch (const std::exception &err) {
+		LOG_ERR(NULL, "ERROR: %s\n", err.what());
+		return 1;
 	}
+}
 
-	buffer.str(std::string());
-	fstream.close();
-	fstream.open("examples/Json_geo_4.txt");
-	buffer << fstream.rdbuf();
-	unique_cJSON document4(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
 
-	if (not database->index(document4.get(), "4", true)) {
-		LOG(NULL, "index Json_geo_4 failed\n");
+int geo_terms_test()
+{
+	try {
+		int cont = create_test_db();
+		if (cont == 0 && make_search(geo_terms_tests, sizeof(geo_terms_tests) / sizeof(geo_terms_tests[0])) == 0) {
+			LOG(NULL, "Testing search by geospatial terms is correct!\n");
+			return 0;
+		} else {
+			LOG_ERR(NULL, "ERROR: Testing search by geospatial terms has mistakes.\n");
+			return 1;
+		}
+	} catch (const Xapian::Error &err) {
+		LOG_ERR(NULL, "ERROR: %s\n", err.get_msg().c_str());
+		return 1;
+	} catch (const std::exception &err) {
+		LOG_ERR(NULL, "ERROR: %s\n", err.what());
+		return 1;
 	}
-
-	buffer.str(std::string());
-	fstream.close();
-	fstream.open("examples/Json_geo_1_2.txt");
-	buffer << fstream.rdbuf();
-	unique_cJSON document5(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
-
-	if (not database->index(document5.get(), "1", true)) {
-		LOG(NULL, "index Json_geo_1_2 failed\n");
-	}
-
-	buffer.str(std::string());
-	fstream.close();
-	fstream.open("examples/Json_geo_5.txt");
-	buffer << fstream.rdbuf();
-	unique_cJSON document6(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
-
-	if (not database->index(document6.get(), "5", true)) {
-		LOG(NULL, "index Json_geo_5 failed\n");
-	}
-
-	buffer.str(std::string());
-	fstream.close();
-	fstream.open("examples/Json_geo_6.txt");
-	buffer << fstream.rdbuf();
-	unique_cJSON document7(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
-
-	if (not database->index(document7.get(), "6", true)) {
-		LOG(NULL, "index Json_geo_6 failed\n");
-	}
-
-	buffer.str(std::string());
-	fstream.close();
-	fstream.open("examples/Json_geo_7.txt");
-	buffer << fstream.rdbuf();
-	unique_cJSON document8(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
-
-	if (not database->index(document8.get(), "7", true)) {
-		LOG(NULL, "index Json_geo_7 failed\n");
-	}
-
-	query_t query_elements;
-	query_elements.offset = 0;
-	query_elements.limit = 10;
-	query_elements.check_at_least = 0;
-	query_elements.spelling = false;
-	query_elements.synonyms = false;
-	query_elements.is_fuzzy = false;
-	query_elements.is_nearest = false;
-	query_elements.terms.push_back("location:\"..POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"");
-
-	Xapian::MSet mset;
-	std::vector<std::string> suggestions;
-	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
-
-	int rmset = database->get_mset(query_elements, mset, spies, suggestions);
-	if (mset.size() == 3) {
-		exit_success--;
-	} else {
-		LOG(NULL, "search area failed, database error\n");
-	}
-
-	/*
-	 *	TEST query geolocation multi area
-	 *	searching for North Dakota and South Dakota area
-	 *	of the four documents indexed it will return 5 that fit into that area
-	 *	(Range query)
-	 */
-
-	query_elements.terms.clear();
-	query_elements.terms.push_back("location:\"..MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"");
-
-	Xapian::MSet mset2;
-	rmset = database->get_mset(query_elements, mset2, spies, suggestions);
-	LOG(NULL,"mset2 size %d\n",mset2.size());
-	if (mset2.size() == 5) {
-		exit_success--;
-	} else {
-		LOG(NULL, "search multi area failed, database error\n");
-	}
-
-	/*
-	 *	TEST query Geolocation with a chull location area
-	 *	searching for Wyoming area, it will return Utah too because
-	 *  it was indexed with convex hull and fit in the Wyoming area
-	 *	(Range query)
-	 */
-
-	query_elements.terms.clear();
-	query_elements.terms.push_back("location:\"..POLYGON ((44.96479793 -111.02783203, 44.96479793 -104.08447266, 41.04621681 -104.08447266, 41.00477542 -111.02783203))\"");
-	Xapian::MSet mset3;
-	rmset = database->get_mset(query_elements, mset3, spies, suggestions);
-	if (mset3.size() == 4) {
-		exit_success--;
-	} else {
-		LOG(NULL, "search area with a chull location failed, database error\n");
-	}
-
-	/*
-	 *	TEST query Geolocation with a term
-	 */
-
-	query_elements.terms.clear();
-	query_elements.terms.push_back("attraction_location:\"POINT (44.42789588 -110.58837891)\"");
-	Xapian::MSet mset4;
-	rmset = database->get_mset(query_elements, mset4, spies, suggestions);
-	if (mset4.size() == 1) {
-		exit_success--;
-	} else {
-		LOG(NULL, "search term area location failed, database error\n");
-	}
-
-	return exit_success;
 }

@@ -1,7 +1,0 @@
-{
-    "_data": "Bismarck",
-    "description": "North Dakota county",
-    "_values": {
-        "location": "POINT ((46.84516443029276 -100.78857421875))"
-    }
-}

@@ -28,20 +28,36 @@
 #include <check.h>
 
 
-START_TEST(geo_test_area)
+START_TEST(geo_range_test)
 {
-	ck_assert_int_eq(geo_test_area(), 0);
+	ck_assert_int_eq(geo_range_test(), 0);
 }
 END_TEST
 
 
-
-Suite* area_search(void)
+START_TEST(geo_terms_test)
 {
-	Suite *s = suite_create("Area search test");;
+	ck_assert_int_eq(geo_terms_test(), 0);
+}
+END_TEST
 
-	TCase *t = tcase_create("North Dakota area");
-	tcase_add_test(t, geo_test_area);
+
+Suite* range_search_geo(void)
+{
+	Suite *s = suite_create("Search by range in geospatials");
+	TCase *t = tcase_create("Search by range");
+	tcase_add_test(t, geo_range_test);
+	suite_add_tcase(s, t);
+
+	return s;
+}
+
+
+Suite* terms_search_geo(void)
+{
+	Suite *s = suite_create("Search by geospatials terms");
+	TCase *t = tcase_create("Search by terms");
+	tcase_add_test(t, geo_terms_test);
 	suite_add_tcase(s, t);
 
 	return s;
@@ -50,10 +66,16 @@ Suite* area_search(void)
 
 int main(void)
 {
-	Suite *area = area_search();
-	SRunner *sr = srunner_create(area);
+	Suite *range = range_search_geo();
+	SRunner *sr = srunner_create(range);
 	srunner_run_all(sr, CK_NORMAL);
 	int number_failed = srunner_ntests_failed(sr);
+	srunner_free(sr);
+
+	Suite *terms = terms_search_geo();
+	sr = srunner_create(terms);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
 	srunner_free(sr);
 
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;

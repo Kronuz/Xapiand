@@ -1096,12 +1096,15 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case GEO_TYPE:
-					// Delete double quotes and .. (always): "..EWKT" -> EWKT
+					// Validate special case.
+					if (field_value.compare("..") == 0) {
+						queryRange =  Xapian::Query::MatchAll;
+						break;
+					}
+
+					// The format is: "..EWKT". We always delete double quotes and .. -> EWKT
 					field_value.assign(field_value.c_str(), 3, field_value.size() - 4);
 					EWKT_Parser::getRanges(field_value, field_t.accuracy[0], field_t.accuracy[1], ranges, centroids);
-
-					// If the region for search is empty, not process this query.
-					if (ranges.empty()) continue;
 
 					queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges, centroids);
 					GenerateTerms::geo(filter_term, ranges, field_t.accuracy, field_t.acc_prefix, prefixes);

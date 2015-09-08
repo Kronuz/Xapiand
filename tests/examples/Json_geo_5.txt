@@ -1,7 +1,0 @@
-{
-    "_data": "Utah",
-    "description": "Utah has a population of about 2.9 million, approximately 80% of whom live along the Wasatch Front, centering on Salt Lake City. Utah is bordered by Colorado to the east, Wyoming to the northeast, Idaho to the north, Arizona to the south, and Nevada to the west. It also touches a corner of New Mexico in the southeast.",
-    "_values": {
-        "location": "CHULL ((41.89409956 -113.93920898 1987, 42.02481361 -111.12670898 2095, 41.00477542 -111.02783203 2183, 40.95501133 -109.0612793 2606, 37.01132594 -109.03930664 1407, 37.02886945 -114.00512695 696))"
-    }
-}

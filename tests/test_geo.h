@@ -32,7 +32,16 @@
 #include "../src/endpoint.h"
 
 
-int geo_test_area();
+typedef struct sort_s {
+	std::string query;
+	std::vector<std::string> expect_datas;
+} sort_t;
+
+
+int create_test_db();
+int make_search(const sort_t _tests[], int len);
+int geo_range_test();
+int geo_terms_test();
 
 
 #endif /* GEO_INCLUDED_TEST_H */

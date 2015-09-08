@@ -1,7 +1,0 @@
-{
-    "_data": "Rapid City",
-    "description": "South Dakota county",
-    "_values": {
-        "location": "POINT ((43.992814500489914 -103.18359375))"
-    }
-}
