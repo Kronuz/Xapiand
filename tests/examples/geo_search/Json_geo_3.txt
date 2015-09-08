@@ -1,0 +1,5 @@
+{
+	"_data": "Minot",
+	"description": "North Dakota county",
+	"location": "POINT ((48.25394114463431 -101.2939453125))"
+}

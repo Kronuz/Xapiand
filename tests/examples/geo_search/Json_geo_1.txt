@@ -1,0 +1,6 @@
+{
+	"_data": "North Dakota",
+	"description": "North Dakota is the most rural of all the states, with farms covering more than 90% of the land. North Dakota ranks first in the nation's production of spring and durum wheat; other agricultural products include barley, rye, sunflowers, dry edible beans, honey, oats, flaxseed, sugar beets, hay, beef cattle, sheep, and hogs",
+	"location": "POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))"
+}
+

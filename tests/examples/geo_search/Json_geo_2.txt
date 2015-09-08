@@ -1,0 +1,5 @@
+{
+	"_data": "Bismarck",
+	"description": "North Dakota county",
+	"location": "POINT ((46.84516443029276 -100.78857421875))"
+}
