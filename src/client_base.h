@@ -95,6 +95,10 @@ protected:
 	bool closed;
 	int sock;
 	int written;
+	std::string buffer_file;
+
+	int mode;
+	size_t file_size;
 
 	DatabasePool *database_pool;
 	ThreadPool *thread_pool;
@@ -116,6 +120,10 @@ protected:
 	// Socket is writable
 	void write_cb();
 
+	virtual void on_read_file(const char *buf, ssize_t received) = 0;
+
+	virtual void on_read_file_done() = 0;
+
 	virtual void on_read(const char *buf, ssize_t received) = 0;
 
 	inline bool write(const char *buf)
@@ -130,6 +138,9 @@ protected:
 
 	bool write(const char *buf, size_t buf_size);
 	int write_directly();
+
+	void read_file();
+	bool send_file(int fd);
 
 	void close();
 	void destroy();

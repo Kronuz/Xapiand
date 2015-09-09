@@ -125,6 +125,17 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 }
 
 
+void HttpClient::on_read_file(const char *buf, ssize_t received)
+{
+	LOG(this, "Not Implemented\n");
+}
+
+
+void HttpClient::on_read_file_done()
+{
+	LOG(this, "Not Implemented\n");
+}
+
 // HTTP parser callbacks.
 const http_parser_settings HttpClient::settings = {
 	.on_message_begin = HttpClient::on_info,

@@ -27,6 +27,8 @@
 #include "server.h"
 #include "utils.h"
 #include "length.h"
+#include "io_utils.h"
+
 
 #include <assert.h>
 #include <sys/socket.h>
@@ -101,6 +103,67 @@ bool BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint
 	thread_pool->addTask(this);
 
 	return true;
+}
+
+
+void BinaryClient::on_read_file_done()
+{
+	LOG(this, "BinaryClient::on_read_file_done\n");
+	::lseek(file_descriptor, 0, SEEK_SET);
+
+	char buf[1024];
+	const char *p;
+	const char *p_end;
+	std::string buffer;
+
+	size_t size = ::read(file_descriptor, buf, sizeof(buf));
+	buffer.append(buf, size);
+	p = buffer.data();
+	p_end = p + buffer.size();
+	const char *s = p;
+
+	try {
+		while (p != p_end) {
+			char type_as_char = *p++;
+			size_t len = decode_length(&p, p_end);
+			size_t pos = p - s;
+			while (p_end - p < len || p_end - p < sizeof(buf) / 2) {
+				size = ::read(file_descriptor, buf, sizeof(buf));
+				if (!size) break;
+				buffer.append(buf, size);
+				s = p = buffer.data();
+				p_end = p + buffer.size();
+				p += pos;
+			}
+			if (p_end - p < len) {
+				throw MSG_Error("Replication failure!");
+			}
+			std::string msg(p, len);
+			p += len;
+
+			repl_apply(static_cast<replicate_reply_type>(type_as_char), msg);
+
+			buffer.erase(0, p - s);
+			s = p = buffer.data();
+			p_end = p + buffer.size();
+		}
+	} catch (const Xapian::NetworkError &e) {
+		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+		shutdown();
+	}catch (const std::exception &err) {
+		LOG_ERR(this, "ERROR: %s\n", err.what());
+		shutdown();
+	}catch (...) {
+		LOG_ERR(this, "ERROR: Unkown exception!\n");
+		shutdown();
+	}
+	::unlink(file_path);
+}
+
+void BinaryClient::on_read_file(const char *buf, ssize_t size)
+{
+	LOG(this, "BinaryClient::on_read_file\n");
+	::io_write(file_descriptor, buf, size);
 }
 
 
@@ -236,6 +299,9 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 
 void BinaryClient::run()
 {
+	std::string message;
+	replicate_reply_type type;
+
 	while (true) {
 		pthread_mutex_lock(&qmtx);
 		if (state != init_remoteprotocol && messages_queue.empty()) {
@@ -255,8 +321,12 @@ void BinaryClient::run()
 					run_one();
 					break;
 				case init_replicationprotocol:
+					type = get_message(idle_timeout, message, REPL_MAX);
+					receive_repl();
+					break;
 				case replicationprotocol:
-					repl_run_one();
+					type = get_message(idle_timeout, message, REPL_MAX);
+					repl_apply(type, message);
 					break;
 
 			}
@@ -273,11 +343,11 @@ void BinaryClient::run()
 
 typedef void (BinaryClient::* dispatch_repl_func)(const std::string &);
 
-void BinaryClient::repl_run_one()
+void BinaryClient::repl_apply(replicate_reply_type type, const std::string &message)
 {
 	try {
 		static const dispatch_repl_func dispatch[] = {
-			&BinaryClient::repl_setup_changes,
+			&BinaryClient::repl_end_of_changes,
 			&BinaryClient::repl_fail,
 			&BinaryClient::repl_set_db_header,
 			&BinaryClient::repl_set_db_filename,
@@ -286,8 +356,7 @@ void BinaryClient::repl_run_one()
 			&BinaryClient::repl_changeset,
 			&BinaryClient::repl_get_changesets,
 		};
-		std::string message;
-		replicate_reply_type type = get_message(idle_timeout, message, REPL_MAX);
+
 		if (static_cast<char>(type) >= sizeof(dispatch) / sizeof(dispatch[0]) || !dispatch[type]) {
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(type);
@@ -295,50 +364,35 @@ void BinaryClient::repl_run_one()
 		}
 		(this->*(dispatch[type]))(message);
 	} catch (ConnectionClosed &) {
+		if (repl_database) {
+			database_pool->checkin(&repl_database);
+			repl_database = NULL;
+		}
 		return;
 	} catch (...) {
+		if (repl_database) {
+			database_pool->checkin(&repl_database);
+			repl_database = NULL;
+		}
 		throw;
 	}
 
 }
 
-void BinaryClient::repl_setup_changes(const std::string & message)
+void BinaryClient::repl_end_of_changes(const std::string & message)
 {
-	if (state == init_replicationprotocol) {
-		LOG(this, "BinaryClient::repl_begin_of_changes\n");
-		state = replicationprotocol;
+	LOG(this, "BinaryClient::repl_end_of_changes\n");
 
-		Xapian::Database *db_ = repl_database->db;
-
-		std::string msg;
-
-		std::string uuid = db_->get_uuid();
-		msg.append(encode_length(uuid.size()));
-		msg.append(uuid);
-
-		std::string revision = db_->get_revision_info();
-		msg.append(encode_length(revision.size()));
-		msg.append(revision);
-
-		const Endpoint &endpoint = *endpoints.begin();
-		msg.append(encode_length(endpoint.path.size()));
-		msg.append(endpoint.path);
-
-		send_message('\xfe', msg);
-	} else {
-		LOG(this, "BinaryClient::repl_end_of_changes\n");
-
-		if (repl_database) {
-			database_pool->checkin(&repl_database);
-			repl_database = NULL;
-		}
-
-		if (repl_switched_db) {
-			database_pool->switch_db(*endpoints.cbegin());
-		}
-
-		shutdown();
+	if (repl_database) {
+		database_pool->checkin(&repl_database);
+		repl_database = NULL;
 	}
+
+	if (repl_switched_db) {
+		database_pool->switch_db(*endpoints.cbegin());
+	}
+
+	shutdown();
 }
 
 
@@ -362,19 +416,19 @@ void BinaryClient::repl_set_db_header(const std::string & message)
 	repl_db_filename.clear();
 
 	Endpoint endpoint = *endpoints.begin();
-	std::string path_tmp = endpoint.path+"/.tmp";
+	std::string path_tmp = endpoint.path + "/.tmp";
 
 	int dir = ::mkdir(path_tmp.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	if (dir == 0) {
-		LOG(this,"Directory %s created\n",path_tmp.c_str());
+		LOG(this,"Directory %s created\n", path_tmp.c_str());
 	} else if(dir == EEXIST) {
 		delete_files(path_tmp.c_str());
 		dir = ::mkdir(path_tmp.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		if (dir == 0) {
-			LOG(this,"Directory %s created\n",path_tmp.c_str());
+			LOG(this,"Directory %s created\n", path_tmp.c_str());
 		}
 	} else {
-		LOG_ERR(this,"file %s not created\n",(endpoint.path+"/.tmp/").c_str());
+		LOG_ERR(this,"file %s not created\n", (endpoint.path+"/.tmp/").c_str());
 	}
 }
 
@@ -431,11 +485,12 @@ void BinaryClient::repl_set_db_footer(const std::string & message)
 		repl_database = NULL;
 	}
 
-	if (!database_pool->checkout(&repl_database, endpoints_tmp, DB_WRITABLE|DB_SPAWN|DB_VOLATILE)) {
+	if (!database_pool->checkout(&repl_database, endpoints_tmp, DB_WRITABLE|DB_VOLATILE)) {
 		LOG_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
 	}
 
 	repl_switched_db = true;
+	repl_just_switched_db = true;
 }
 
 
@@ -468,7 +523,8 @@ void BinaryClient::repl_changeset(const std::string & message)
 	::lseek(fd, 0, SEEK_SET);
 
 	try {
-		wdb_->apply_changeset_from_fd(fd);
+		wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);
+		repl_just_switched_db = false;
 	} catch (...) {
 		::close(fd);
 		::unlink(path);
@@ -478,6 +534,7 @@ void BinaryClient::repl_changeset(const std::string & message)
 	::close(fd);
 	::unlink(path);
 }
+
 
 void BinaryClient::repl_get_changesets(const std::string & message)
 {
@@ -511,57 +568,53 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 	bool need_whole_db = (uuid != db_->get_uuid());
 	LOG(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
 
-	// write changesets to a temporary file
-	char path[] = "/tmp/xapian_changesets.XXXXXX";
+	char path[] = "/tmp/xapian_changesets_sent.XXXXXX";
 	int fd = mkstemp(path);
 	if (fd < 0) {
 		LOG_ERR(this, "Cannot write to %s (1)\n", path);
 		return;
 	}
+
 	db_->write_changesets_to_fd(fd, from_revision, need_whole_db);
 
-	// decode and send messages:
-	::lseek(fd, 0, SEEK_SET);
-
-	char buf[1024];
-	std::string buffer;
-
-	size_t size = ::read(fd, buf, sizeof(buf));
-	buffer.append(buf, size);
-	p = buffer.data();
-	p_end = p + buffer.size();
-	const char *s = p;
-
-	while (p != p_end) {
-		char type_as_char = *p++;
-		size_t len = decode_length(&p, p_end);
-		size_t pos = p - s;
-		while (p_end - p < len || p_end - p < sizeof(buf) / 2) {
-			size = ::read(fd, buf, sizeof(buf));
-			if (!size) break;
-			buffer.append(buf, size);
-			s = p = buffer.data();
-			p_end = p + buffer.size();
-			p += pos;
-		}
-		if (p_end - p < len) {
-			send_message(REPL_REPLY_FAIL, "");
-			return;
-		}
-		std::string msg(p, len);
-		p += len;
-
-		send_message(type_as_char, msg);
-
-		buffer.erase(0, p - s);
-		s = p = buffer.data();
-		p_end = p + buffer.size();
-	}
+	send_file(fd);
 
 	::close(fd);
 	::unlink(path);
-
 	release_db(db_);
+}
+
+
+void BinaryClient::receive_repl()
+{
+	LOG(this, "BinaryClient::receive_repl (init)\n");
+
+	strcpy(file_path, "/tmp/xapian_changesets_received.XXXXXX");
+	file_descriptor = mkstemp(file_path);
+	if (file_descriptor < 0) {
+		LOG_ERR(this, "Cannot write to %s (1)\n", file_path);
+		return;
+	}
+
+	read_file();
+
+	Xapian::Database *db_ = repl_database->db;
+
+	std::string msg;
+
+	std::string uuid = db_->get_uuid();
+	msg.append(encode_length(uuid.size()));
+	msg.append(uuid);
+
+	std::string revision = db_->get_revision_info();
+	msg.append(encode_length(revision.size()));
+	msg.append(revision);
+
+	const Endpoint &endpoint = *endpoints.begin();
+	msg.append(encode_length(endpoint.path.size()));
+	msg.append(endpoint.path);
+
+	send_message('\xfe', msg);
 }
 
 #endif  /* HAVE_REMOTE_PROTOCOL */

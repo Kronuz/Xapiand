@@ -20,6 +20,7 @@ xapiand_SOURCES = \
 	geospatialrange.cc \
 	htm.cc \
 	http_parser.c \
+	io_utils.cc \
 	length.cc \
 	lz4/lz4.c \
 	lz4/lz4frame.c \
@@ -58,6 +59,7 @@ noinst_HEADERS = \
 	geospatialrange.h \
 	htm.h \
 	http_parser.h \
+	io_utils.h \
 	length.h \
 	lru.h \
 	lz4/lz4.h \

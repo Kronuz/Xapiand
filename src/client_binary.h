@@ -69,6 +69,8 @@ class BinaryClient : public BaseClient, public RemoteProtocol {
 private:
 	bool running;
 	enum binary_state state;
+	int file_descriptor;
+	char file_path[50];
 
 	databases_map_t databases;
 
@@ -83,11 +85,14 @@ private:
 	std::string repl_db_uuid;
 	size_t repl_db_revision;
 	bool repl_switched_db;
+	bool repl_just_switched_db;
 
 	void on_read(const char *buf, ssize_t received);
+	void on_read_file(const char *buf, ssize_t received);
+	void on_read_file_done();
 
-	void repl_run_one();
-	void repl_setup_changes(const std::string & message);
+	void repl_apply(replicate_reply_type type, const std::string & message);
+	void repl_end_of_changes(const std::string & message);
 	void repl_fail(const std::string & message);
 	void repl_set_db_header(const std::string & message);
 	void repl_set_db_filename(const std::string & message);
@@ -95,6 +100,7 @@ private:
 	void repl_set_db_footer(const std::string & message);
 	void repl_changeset(const std::string & message);
 	void repl_get_changesets(const std::string & message);
+	void receive_repl();
 
 public:
 	inline replicate_reply_type get_message(double timeout, std::string & result, replicate_reply_type required_type) {

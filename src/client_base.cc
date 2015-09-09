@@ -35,6 +35,9 @@ const int WRITE_QUEUE_SIZE = 10;
 #define WR_RETRY 2
 #define WR_PENDING 3
 
+#define MODE_READ_BUF 0
+#define MODE_READ_FILE 1
+
 BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: Worker(server_, loop_),
 	  io_read(*loop),
@@ -48,6 +51,8 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 	  write_queue(WRITE_QUEUE_SIZE)
 {
 	inc_ref();
+
+	mode = MODE_READ_BUF;
 
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
@@ -239,9 +244,11 @@ void BaseClient::write_cb()
 void BaseClient::read_cb()
 {
 	if (sock != -1) {
-		char buf[1024];
+		char buf[4096];
 
 		ssize_t received = ::read(sock, buf, sizeof(buf));
+		const char *buf_end = buf + received;
+		const char *buf_data = buf;
 
 		if (received < 0) {
 			if (sock != -1 && !ignored_errorno(errno, false)) {
@@ -254,7 +261,47 @@ void BaseClient::read_cb()
 			destroy();
 		} else {
 			LOG_CONN_WIRE(this, "(sock=%d) -->> '%s'\n", sock, repr(buf, received).c_str());
-			on_read(buf, received);
+
+			if (mode == MODE_READ_FILE) {
+				LOG(this, "BaseClient::read_cb mode Read file\n");
+
+				size_t file_size_to_write = received;
+				const char *file_buf_to_write = buf;
+				if (file_size == -1) {
+					buffer_file.append(buf, received);
+					buf_data = buffer_file.data();
+
+					buf_end = buf_data + buffer_file.size();
+					file_size = decode_length(&buf_data, buf_end, false);
+					if (file_size == -1) {
+						return;
+					}
+				}
+
+				if (file_size >= buf_end - buf_data) {
+					file_size_to_write = buf_end - buf_data;
+					file_buf_to_write = buf_data;
+					received = 0;
+					buf_data = NULL;
+				} else {
+					file_size_to_write = file_size;
+					file_buf_to_write = buf_data;
+					received = (buf_end - buf_data) - file_size;
+					buf_data += file_size;
+				}
+
+				if (file_size_to_write) {
+					on_read_file(file_buf_to_write, file_size_to_write);
+					file_size -= file_size_to_write;
+				}
+				if (file_size == 0) {
+					on_read_file_done();
+					mode = MODE_READ_BUF;
+				}
+			}
+			if (mode == MODE_READ_BUF && received) {
+				on_read(buf_data, received);
+			}
 		}
 	}
 }
@@ -304,4 +351,41 @@ void BaseClient::shutdown()
 		destroy();
 		rel_ref();
 	}
+}
+
+
+void BaseClient::read_file()
+{
+	mode = MODE_READ_FILE;
+	file_size = -1;
+}
+
+
+bool BaseClient::send_file(int fd)
+{
+	LOG(this, "BaseClient::send_file\n");
+	size_t count = 0;
+	char buf[8192];
+
+	size_t file_size = ::lseek(fd, 0, SEEK_END);
+	::lseek(fd, 0, SEEK_SET);
+
+	LOG(this,"file size %d\n", file_size);
+	std::string file_size_str = encode_length(file_size);
+	write(file_size_str);
+
+	while (count < file_size) {
+		size_t bytes = ::read(fd, buf, sizeof(buf));
+		if (bytes == -1) {
+			if (errno == EAGAIN) {
+				continue;
+			}
+			break;
+		} else if (bytes == 0) {
+			break;
+		}
+		write(buf, bytes);
+		count += bytes;
+	}
+	return count != file_size;
 }
