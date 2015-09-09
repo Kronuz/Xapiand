@@ -28,7 +28,7 @@ static Database *database = NULL;
 static std::string name_database(".db_testgeo.db");
 
 
-sort_t geo_range_tests[] {
+test_geo_t geo_range_tests[] {
 	// The range search always is sort by centroids' search.
 	{
 		// Search: The polygon's search  describes North Dakota.
@@ -57,7 +57,7 @@ sort_t geo_range_tests[] {
 };
 
 
-sort_t geo_terms_tests[] {
+test_geo_t geo_terms_tests[] {
 	// Test for search by terms.
 	{
 		"location:\"POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"",
@@ -158,7 +158,7 @@ int create_test_db()
 }
 
 
-int make_search(const sort_t _tests[], int len)
+int make_search(const test_geo_t _tests[], int len)
 {
 	int cont = 0;
 	query_t query;
@@ -171,7 +171,7 @@ int make_search(const sort_t _tests[], int len)
 	query.is_nearest = false;
 
 	for (size_t i = 0; i < len; ++i) {
-		sort_t p = _tests[i];
+		test_geo_t p = _tests[i];
 		query.query.clear();
 		query.query.push_back(p.query);
 

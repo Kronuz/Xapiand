@@ -30,18 +30,51 @@
 
 START_TEST(test_query_search)
 {
-	ck_assert_int_eq(test_query(), 0);
+	ck_assert_int_eq(test_query_search(), 0);
 }
 END_TEST
 
 
-Suite* query_search(void)
+START_TEST(test_terms_search)
 {
-	Suite *s = suite_create("Query test");
+	ck_assert_int_eq(test_terms_search(), 0);
+}
+END_TEST
 
-	TCase *t = tcase_create("Test for index and every search");
-	tcase_add_test(t, test_query_search);
+
+START_TEST(test_partials_search)
+{
+	ck_assert_int_eq(test_partials_search(), 0);
+}
+END_TEST
+
+
+START_TEST(test_facets_search)
+{
+	ck_assert_int_eq(test_facets_search(), 0);
+}
+END_TEST
+
+
+Suite* test_query(void)
+{
+	Suite *s = suite_create("Search Test");
+
+	TCase *q = tcase_create("Test for query");
+	tcase_add_test(q, test_query_search);
+	suite_add_tcase(s, q);
+
+	TCase *t = tcase_create("Test for terms");
+	tcase_add_test(t, test_terms_search);
 	suite_add_tcase(s, t);
+
+	TCase *p = tcase_create("Test for partials");
+	tcase_add_test(p, test_partials_search);
+	suite_add_tcase(s, p);
+
+	TCase *f = tcase_create("Test for facets");
+	tcase_add_test(f, test_facets_search);
+	suite_add_tcase(s, f);
 
 	return s;
 }
@@ -49,7 +82,7 @@ Suite* query_search(void)
 
 int main(void)
 {
-	Suite *query = query_search();
+	Suite *query = test_query();
 	SRunner *sr = srunner_create(query);
 	srunner_run_all(sr, CK_NORMAL);
 	int number_failed = srunner_ntests_failed(sr);

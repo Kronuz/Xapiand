@@ -32,14 +32,14 @@
 #include "../src/endpoint.h"
 
 
-typedef struct sort_s {
+typedef struct test_geo_s {
 	std::string query;
 	std::vector<std::string> expect_datas;
-} sort_t;
+} test_geo_t;
 
 
 int create_test_db();
-int make_search(const sort_t _tests[], int len);
+int make_search(const test_geo_t _tests[], int len);
 int geo_range_test();
 int geo_terms_test();
 
