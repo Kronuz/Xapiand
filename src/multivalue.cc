@@ -86,9 +86,19 @@ MultiValueCountMatchSpy::operator()(const Xapian::Document &doc, double) {
 	StringList list;
 	list.unserialise(doc.get_value(internal->slot));
 	StringList::const_iterator i(list.begin());
-	for (; i != list.end(); i++) {
-		std::string val(*i);
-		if (!val.empty()) ++(internal->values[val]);
+	if (is_geo) {
+		for ( ; i != list.end(); ++i) {
+			if (!i->empty()) {
+				StringList s;
+				s.push_back(*i);
+				s.push_back(*(++i));
+				++(internal->values[s.serialise()]);
+			}
+		}
+	} else {
+		for ( ; i != list.end(); i++) {
+			if (!i->empty()) ++(internal->values[*i]);
+		}
 	}
 }
 

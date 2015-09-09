@@ -905,7 +905,7 @@ Database::search(query_t e)
 	unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
-	for (; qit != e.query.end(); qit++) {
+	for ( ; qit != e.query.end(); qit++) {
 		if (lit != e.language.end()) {
 			lan = *lit;
 			lit++;
@@ -932,7 +932,7 @@ Database::search(query_t e)
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 	first = true;
-	for (; pit != e.partial.end(); pit++) {
+	for ( ; pit != e.partial.end(); pit++) {
 		srch = _search(*pit, flags, false, "", e.unique_doc);
 		if (first) {
 			queryP = srch.query;
@@ -955,7 +955,7 @@ Database::search(query_t e)
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 	first = true;
-	for (; tit != e.terms.end(); tit++) {
+	for ( ; tit != e.terms.end(); tit++) {
 		srch = _search(*tit, flags, false, "", e.unique_doc);
 		if (first) {
 			queryT = srch.query;
@@ -1313,10 +1313,13 @@ Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key,
 		if (!facets->empty()) {
 			std::vector<std::string>::const_iterator fit(facets->begin());
 			for ( ; fit != facets->end(); fit++) {
-				spy = new MultiValueCountMatchSpy(get_slot(*fit));
-				spies->push_back(std::make_pair (*fit, std::move(std::unique_ptr<MultiValueCountMatchSpy>(spy))));
-				enquire.add_matchspy(spy);
-				LOG_ERR(this, "added spy de -%s-\n", (*fit).c_str());
+				data_field_t field_t = get_slot_field(*fit);
+				if (field_t.type != NO_TYPE) {
+					spy = new MultiValueCountMatchSpy(get_slot(*fit), field_t.type == GEO_TYPE);
+					spies->push_back(std::make_pair (*fit, std::move(std::unique_ptr<MultiValueCountMatchSpy>(spy))));
+					enquire.add_matchspy(spy);
+					LOG_ERR(this, "added spy de -%s-\n", (*fit).c_str());
+				}
 			}
 		}
 	}
@@ -1627,7 +1630,7 @@ DatabasePool::DatabasePool(size_t max_size)
 
 	pthread_cond_init(&checkin_cond,0);
 
-	prefix_rf_node = get_prefix("node", DOCUMENT_CUSTOM_TERM_PREFIX,'s');
+	prefix_rf_node = get_prefix("node", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
 
 	Endpoints ref_endpoints;
 	Endpoint ref_endpoint(".refs");

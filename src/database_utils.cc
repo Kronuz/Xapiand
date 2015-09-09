@@ -103,7 +103,7 @@ void update_required_data(specifications_t &spc, const std::string &name, cJSON 
 			spc.prefix = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, spc.sep_types[2]);
 			cJSON_AddStringToObject(schema, RESERVED_PREFIX, spc.prefix.c_str());
 		}
-	} else spc.prefix = DOCUMENT_CUSTOM_TERM_PREFIX;
+	} else spc.prefix = default_spc.prefix;
 
 	// Insert slot.
 	if (spc.slot == default_spc.slot) {
