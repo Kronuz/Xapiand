@@ -1,0 +1,41 @@
+{
+	"_data": "Back to the Future",
+	"actors": {
+		"male": {
+			"_value": [
+			 "Michael J. Fox",
+			 "Christopher Lloyd",
+			 "Thomas F. Wilson"
+			],
+			"_weight": 1,
+			"_bool_term": true
+		},
+		"female": [
+			"Lea Thompson",
+			"Jennifer Parker"
+		]
+	},
+	"released": "1985-07-03",
+	"dummy_date": "20150810T10:12:12|| /w+2w/M+3M/M-3M+2M/M-2M//M+1w",
+	"sequels": [
+		"Back to the Future II",
+		"Back to the Future III"
+	],
+	"directed_by": "Robert Zemeckis",
+	"description": {
+		"_value": "Marty McFly, a typical American teenager of the Eighties, is accidentally sent back to 1955 in a plutonium-powered DeLorean \"timemachine\" invented by slightly mad scientist. During his often hysterical, always amazing trip back in time, Marty must make certain his teenage parents-to-be meet and fall in love - so he can get back to the future.",
+		"_weight": 0
+	},
+	"_values": {
+		"year": 1985,
+		"views": 200000,
+		"budget": "$19 million"
+	},
+	"location": "POINT (36.81674 -120.16011)",
+	"_weight": 0,
+	"_texts": [
+		{
+			"_value": "Marty McFly, a typical American teenager of the Eighties, is accidentally sent back to 1955 in a plutonium-powered DeLorean \"timemachine\" invented by slightly mad scientist. During his often hysterical, always amazing trip back in time, Marty must make certain his teenage parents-to-be meet and fall in love - so he can get back to the future"
+		}
+	]
+}

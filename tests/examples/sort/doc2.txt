@@ -1,4 +1,5 @@
 {
+	"_data": "2",
 	"name": ["book store", "book"],
 	"location": ["POINT(20 40)", "POINT(50 60)"],
 	"year": [2000, 2001],

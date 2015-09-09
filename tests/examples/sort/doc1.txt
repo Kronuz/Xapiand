@@ -1,4 +1,5 @@
 {
+	"_data": "1",
 	"name": ["cook", "cooked"],
 	"location": ["POINT(10 21)", "POINT(10 20)"],
 	"year": [2010, 2015],

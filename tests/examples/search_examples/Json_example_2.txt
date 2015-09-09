@@ -1,0 +1,33 @@
+{
+	"_data": "Planet Apes",
+	"actors": {
+		"male": [
+			"Roddy McDowall",
+			"Charlton Heston"
+		],
+		"female": [
+			"Linda Harrison",
+			"Kim Hunter"
+		]
+	},
+	"released": "1968-01-02",
+	"dummy_date": "20150810 10:12:12 || /w+2w/M+3M/M-3M+2M/M-2M//M",
+	"sequels": [
+		"Beneath the Planet of the Apes",
+		"Escape from the Planet of the Apes",
+		"Conquest of the Planet of the Apes",
+		"Battle for the Planet of the Apes"
+	],
+	"directed_by": "Franklin J. Schaffner",
+	"description": {
+		"_value": "text similar Marty McFly, a typical American teenager of the Eighties, is accidentally sent back to 1955 in a plutonium-powered DeLorean \"timemachine\" invented by slightly mad scientist. During his often hysterical, always amazing trip back in time, Marty must make certain his teenage parents-to-be meet and fall in love An astronaut crew crash lands on a planet in the distant time where intelligent talking apes are the dominant species, and humans are the oppressed and enslaved",
+		"_weight": 0
+	},
+	"_values": {
+		"year": 1968,
+		"views": 500000,
+		"budget": "$10 million"
+	},
+	"location": "POINT (40.7127837 -74.00594130000002)",
+	"_weight": 0
+}
