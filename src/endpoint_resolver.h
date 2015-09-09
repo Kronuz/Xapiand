@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __Xapiand__resolve_endpoint__
-#define __Xapiand__resolve_endpoint__
+#ifndef XAPIAN_INCLUDED_RESOLVER_ENDPOINT_H
+#define XAPIAN_INCLUDED_RESOLVER_ENDPOINT_H
 
 #include "endpoint.h"
 #include "lru.h"
@@ -90,4 +90,4 @@ public:
 	}
 };
 
-#endif /* defined(__Xapiand__resolve_endpoint__) */
+#endif /* defined(XAPIAN_INCLUDED_RESOLVER_ENDPOINT_H) */
