@@ -25,9 +25,26 @@
 
 #include "./../src/config.h"
 #include <stdio.h>
+#include <string>
+#include <vector>
 
 
-int test_query();
+typedef struct test_query_s {
+	std::vector<std::string> query;
+	std::vector<std::string> terms;
+	std::vector<std::string> partial;
+	std::vector<std::string> facets;
+	std::vector<std::string> expect_datas;
+	std::vector<std::string> expect_facets;
+} test_query_t;
+
+
+int create_test_db();
+int make_search(const test_query_t _tests[], int len);
+int test_query_search();
+int test_terms_search();
+int test_partials_search();
+int test_facets_search();
 
 
 #endif /* INCLUDED_TEST_QUERY_H */
