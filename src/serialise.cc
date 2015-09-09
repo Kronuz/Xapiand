@@ -150,6 +150,9 @@ Unserialise::unserialise(char field_type, const std::string &serialise_val)
 			return boolean(serialise_val);
 		case STRING_TYPE:
 			return serialise_val;
+		case GEO_TYPE: {
+			return geo(serialise_val);
+		}
 	}
 	return "";
 }
@@ -202,6 +205,31 @@ std::string
 Unserialise::boolean(const std::string &serialise_val)
 {
 	return serialise_val.at(0) == 'f' ? "false" : "true";
+}
+
+
+std::string
+Unserialise::geo(const std::string &serialise_val)
+{
+	StringList s_geo;
+	s_geo.unserialise(serialise_val);
+	uInt64List ranges;
+	ranges.unserialise(s_geo.at(0));
+	std::string res("Ranges: { ");
+	for (uInt64List::const_iterator it(ranges.begin()); it != ranges.end(); ++it) {
+		res += "[" + std::to_string(*it) + ", " + std::to_string(*(++it)) + "] ";
+	}
+	res += "}";
+
+	CartesianList centroids;
+	centroids.unserialise(s_geo.at(1));
+	res += "  Centroids: { ";
+	for (CartesianList::const_iterator it(centroids.begin()); it != centroids.end(); ++it) {
+		res += "(" + std::to_string(it->x) + ", " + std::to_string(it->y) + ", " + std::to_string(it->z) + ") ";
+	}
+	res += "}";
+
+	return res;
 }
 
 

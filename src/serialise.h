@@ -89,6 +89,7 @@ namespace Unserialise {
 	// Unserialise a trixel's id (HTM).
 	uInt64 trixel_id(const std::string &str);
 	std::string boolean(const std::string &serialise_val);
+	std::string geo(const std::string &serialise_val);
 	std::string type(const std::string &str);
 };
 
