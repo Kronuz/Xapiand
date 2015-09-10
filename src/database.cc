@@ -1638,7 +1638,7 @@ DatabasePool::DatabasePool(size_t max_size)
 
 	if(!checkout(&ref_database, ref_endpoints, DB_WRITABLE|DB_PERSISTENT)) {
 		INFO(this, "Ref database doesn't exist. Generating database...\n");
-		if (!checkout(&ref_database, ref_endpoints,DB_WRITABLE|DB_SPAWN|DB_PERSISTENT)) {
+		if (!checkout(&ref_database, ref_endpoints, DB_WRITABLE|DB_SPAWN|DB_PERSISTENT)) {
 			LOG_ERR(this,"Database refs it could not be checkout\n");
 			assert(false);
 		}
