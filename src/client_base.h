@@ -102,7 +102,7 @@ protected:
 	LZ4F_decompressionContext_t lz4_dCtx;
 	char *lz4_buffer;
 	char *read_buffer;
-	
+
 	int mode;
 	size_t file_size;
 	size_t block_size;

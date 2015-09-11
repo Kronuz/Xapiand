@@ -99,7 +99,7 @@ BaseClient::~BaseClient()
 
 	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", total_clients);
 	assert(total_clients >= 0);
-	
+
 	delete []read_buffer;
 	delete []lz4_buffer;
 	if (lz4_dCtx) {
@@ -393,26 +393,26 @@ void BaseClient::read_cb()
 							const char *srcBuf = file_buffer.data();
 							size_t readSize = file_buffer.size();
 							size_t nextToLoad = readSize;
-							
+
 							size_t readPos = 0;
 							size_t srcSize = 0;
-							
+
 							for(; readPos < readSize && nextToLoad; readPos += srcSize) {
 								size_t decSize = LZ4F_BLOCK_SIZE;
 								srcSize = readSize - readPos;
-								
+
 								nextToLoad = LZ4F_decompress(lz4_dCtx, lz4_buffer, &decSize, srcBuf + readPos, &srcSize, NULL);
 								if(LZ4F_isError(nextToLoad)) {
 									LOG_ERR(this, "Failed decompression: error %zd\n", nextToLoad);
 									destroy();
 									return;
 								}
-								
+
 								if(decSize) {
 									on_read_file(lz4_buffer, decSize);
 								}
 							}
-							
+
 							if (buf_data) {
 								length_buffer = std::string(buf_data, received);
 								buf_data = NULL;
