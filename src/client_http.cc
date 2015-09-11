@@ -127,13 +127,13 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 
 void HttpClient::on_read_file(const char *buf, ssize_t received)
 {
-	LOG(this, "Not Implemented\n");
+	LOG_ERR(this, "Not Implemented: HttpClient::on_read_file\n");
 }
 
 
 void HttpClient::on_read_file_done()
 {
-	LOG(this, "Not Implemented\n");
+	LOG_ERR(this, "Not Implemented: HttpClient::on_read_file_done\n");
 }
 
 // HTTP parser callbacks.
