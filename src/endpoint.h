@@ -115,7 +115,7 @@ public:
 	struct compare {
 		bool operator() (const Endpoint &a, const Endpoint &b) const
 		{
-			if(b.mastery_level > a.mastery_level)
+			if (b.mastery_level > a.mastery_level)
 				return true;
 			else return false;
 		}

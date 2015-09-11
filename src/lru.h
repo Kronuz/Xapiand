@@ -77,7 +77,7 @@ public:
 	}
 
 	size_t erase(const Key & key) {
-		map_iterator_t it = _items_map.find(key);
+		map_iterator_t it(_items_map.find(key));
 		if (it != _items_map.end()) {
 			_items_list.erase(it->second);
 			_items_map.erase(it);
@@ -90,11 +90,11 @@ public:
 		erase(p.first);
 
 		_items_list.push_front(std::move(p));
-		list_iterator_t first = _items_list.begin();
+		list_iterator_t first(_items_list.begin());
 		_items_map[p.first] = first;
 
 		if (_max_size != -1) {
-			list_reverse_iterator_t last = _items_list.rbegin();
+			list_reverse_iterator_t last(_items_list.rbegin());
 			for (size_t i = _items_map.size(); i != 0 && _items_map.size() > _max_size && last != _items_list.rend(); i--) {
 				list_iterator_t it = --(last++).base();
 				T *ptr = it->second.get();
@@ -117,7 +117,7 @@ public:
 	}
 
 	T & at(const Key & key) {
-		map_iterator_t it = _items_map.find(key);
+		map_iterator_t it(_items_map.find(key));
 		if (it == _items_map.end()) {
 			throw std::range_error("There is no such key in cache");
 		} else {

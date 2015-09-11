@@ -73,7 +73,7 @@ public:
 	// Wait for all threads to end
 	void join();
 
-	//Return size of the workQueue
+	// Return size of the workQueue
 	size_t length();
 };
 

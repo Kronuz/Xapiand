@@ -43,7 +43,7 @@
 #define DB_WRITABLE 1    // Opens as writable
 #define DB_SPAWN 2       // Automatically creates the database if it doesn't exist
 #define DB_PERSISTENT 4  // Always try keeping the database in the database pool
-#define DB_INIT_REF 8	 // Initializes the writable index in the database .ref
+#define DB_INIT_REF 8	 // Initializes the writable index in the database .refs
 #define DB_VOLATILE 16   // Always drop the database from the database pool as soon as possible
 
 const size_t START_POS = SIZE_BITS_ID - 4;
@@ -147,13 +147,13 @@ private:
 
 public:
 	DatabasesLRU(size_t max_size) :
-		lru_map(max_size) {}
+		lru_map(max_size) { }
 };
 
 
 class DatabasePool {
 	// FIXME: Add maximum number of databases available for the queue
-	// FIXME: Add cleanup for removing old dtabase queues
+	// FIXME: Add cleanup for removing old database queues
 
 private:
 	bool finished;

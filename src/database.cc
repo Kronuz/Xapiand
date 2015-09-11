@@ -1543,7 +1543,7 @@ DatabaseQueue::DatabaseQueue()
 	  count(0),
 	  database_pool(NULL)
 {
-	pthread_cond_init(&switch_cond,0);
+	pthread_cond_init(&switch_cond, 0);
 }
 
 
@@ -1553,8 +1553,8 @@ DatabaseQueue::~DatabaseQueue()
 
 	pthread_cond_destroy(&switch_cond);
 
-	endpoints_set_t::const_iterator it_e = endpoints.cbegin();
-	for (; it_e != endpoints.cend(); it_e++) {
+	endpoints_set_t::const_iterator it_e(endpoints.cbegin());
+	for ( ; it_e != endpoints.cend(); it_e++) {
 		const Endpoint &endpoint = *it_e;
 		database_pool->drop_endpoint_queue(endpoint, this);
 	}
@@ -1567,19 +1567,21 @@ DatabaseQueue::~DatabaseQueue()
 	}
 }
 
+
 void
 DatabaseQueue::setup_endpoints(DatabasePool *database_pool_, const Endpoints &endpoints_)
 {
 	if (database_pool == NULL) {
 		database_pool = database_pool_;
 		endpoints = endpoints_;
-		endpoints_set_t::const_iterator it_e = endpoints.cbegin();
-		for (; it_e != endpoints.cend(); it_e++) {
+		endpoints_set_t::const_iterator it_e(endpoints.cbegin());
+		for ( ; it_e != endpoints.cend(); it_e++) {
 			const Endpoint &endpoint = *it_e;
 			database_pool->add_endpoint_queue(endpoint, this);
 		}
 	}
 }
+
 
 bool
 DatabaseQueue::inc_count(int max)
@@ -1856,7 +1858,7 @@ DatabasePool::checkin(Database **database)
 
 	if (queue->is_switch_db) {
 		Endpoints::const_iterator it_edp;
-		for(endpoints.cbegin(); it_edp != endpoints.cend(); it_edp++) {
+		for (endpoints.cbegin(); it_edp != endpoints.cend(); it_edp++) {
 			const Endpoint &endpoint = *it_edp;
 			switch_db(endpoint);
 		}
@@ -1980,7 +1982,7 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 
 		move_files(endpoint.path + "/.tmp", endpoint.path);
 
-		for(it_qs = queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
+		for (it_qs = queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
 			queue = *it_qs;
 			queue->is_switch_db = false;
 

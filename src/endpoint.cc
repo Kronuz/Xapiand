@@ -57,9 +57,7 @@ char *normalize_path(const char * src, char * dst)
 
 
 Endpoint::Endpoint()
-	: mastery_level(-1)
-{
-}
+	: mastery_level(-1) { }
 
 
 Endpoint::Endpoint(const std::string &uri_, const Node *node_, int mastery_level_, std::string node_name_)
@@ -67,9 +65,8 @@ Endpoint::Endpoint(const std::string &uri_, const Node *node_, int mastery_level
 	  node_name(node_name_)
 {
 	std::string uri(uri_);
-	std::string base;
 	char actualpath[PATH_MAX + 1];
-	base = getcwd(actualpath, PATH_MAX);
+	std::string base(getcwd(actualpath, PATH_MAX));
 	normalize_path(base.c_str(), actualpath);
 	base = actualpath;
 	std::string protocol = slice_before(uri, "://");
@@ -229,7 +226,7 @@ size_t std::hash<Endpoints>::operator()(const Endpoints &e) const
 	size_t hash = 0;
 	std::hash<Endpoint> hash_fn;
 	endpoints_set_t::const_iterator j(e.cbegin());
-	for (int i=0; j != e.cend(); j++, i++) {
+	for (int i = 0; j != e.cend(); j++, i++) {
 		hash ^= hash_fn(*j);
 	}
 	return hash;

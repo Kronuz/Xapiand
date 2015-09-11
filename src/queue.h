@@ -174,7 +174,7 @@ public:
 		pthread_mutex_unlock(&_mtx);
 
 		if (popped) {
-			// Notifiy waiting thread it can push/push now
+			// Notifiy waiting thread it can push/pop now
 			pthread_cond_signal(&_push_cond);
 			pthread_cond_signal(&_pop_cond);
 		}
@@ -187,7 +187,7 @@ public:
 		_clear();
 		pthread_mutex_unlock(&_mtx);
 
-		// Notifiy waiting thread it can push/push now
+		// Notifiy waiting thread it can push/pop now
 		pthread_cond_signal(&_push_cond);
 		pthread_cond_signal(&_pop_cond);
 	}
