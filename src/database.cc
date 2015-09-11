@@ -1630,18 +1630,17 @@ DatabasePool::DatabasePool(size_t max_size)
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
 
-	pthread_cond_init(&checkin_cond,0);
+	pthread_cond_init(&checkin_cond, 0);
 
-	prefix_rf_node = get_prefix("node", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
+	prefix_rf_master = get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
 
 	Endpoints ref_endpoints;
-	Endpoint ref_endpoint(".refs");
-	ref_endpoints.insert(ref_endpoint);
+	ref_endpoints.insert(Endpoint(".refs"));
 
-	if(!checkout(&ref_database, ref_endpoints, DB_WRITABLE|DB_PERSISTENT)) {
+	if (!checkout(&ref_database, ref_endpoints, DB_WRITABLE | DB_PERSISTENT)) {
 		INFO(this, "Ref database doesn't exist. Generating database...\n");
-		if (!checkout(&ref_database, ref_endpoints, DB_WRITABLE|DB_SPAWN|DB_PERSISTENT)) {
-			LOG_ERR(this,"Database refs it could not be checkout\n");
+		if (!checkout(&ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+			LOG_ERR(this, "Database refs it could not be checkout.\n");
 			assert(false);
 		}
 	}
@@ -1878,16 +1877,18 @@ DatabasePool::checkin(Database **database)
 
 void DatabasePool::init_ref(const Endpoints &endpoints)
 {
-	Xapian::Document doc;
-	endpoints_set_t::iterator endp_it(endpoints.begin());
 	if (ref_database) {
+		endpoints_set_t::iterator endp_it(endpoints.begin());
 		for ( ; endp_it != endpoints.end(); endp_it++) {
 			std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
-			Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
+			Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
 			if (p == ref_database->db->postlist_end(unique_id)) {
+				Xapian::Document doc;
+				// Boolean term for the node.
 				doc.add_boolean_term(unique_id);
-				doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
-				doc.add_value(0, "0");
+				// Start values for the DB.
+				doc.add_boolean_term(prefixed(DB_MASTER, prefix_rf_master));
+				doc.add_value(SLOT_CREF, "0");
 				ref_database->replace(unique_id, doc, true);
 			} else {
 				LOG(this,"The document already exists nothing to do\n");
@@ -1908,14 +1909,12 @@ void DatabasePool::inc_ref(const Endpoints &endpoints)
 			// QUESTION: Document not found - should add?
 			// QUESTION: This case could happen?
 			doc.add_boolean_term(unique_id);
-			doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
 			doc.add_value(0, "0");
 			ref_database->replace(unique_id, doc, true);
 		} else {
 			// Document found - reference increased
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
-			doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
 			int nref = strtoint(doc.get_value(0));
 			doc.add_value(0, std::to_string(nref + 1));
 			ref_database->replace(unique_id, doc, true);
@@ -1934,7 +1933,6 @@ void DatabasePool::dec_ref(const Endpoints &endpoints)
 		if (p != ref_database->db->postlist_end(unique_id)) {
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
-			doc.add_term(prefixed(endp_it->node_name, prefix_rf_node));
 			int nref = strtoint(doc.get_value(0)) - 1;
 			doc.add_value(0, std::to_string(nref));
 			ref_database->replace(unique_id, doc, true);
@@ -1945,6 +1943,17 @@ void DatabasePool::dec_ref(const Endpoints &endpoints)
 			}
 		}
 	}
+}
+
+
+int DatabasePool::get_mastercount()
+{
+	if (ref_database) {
+		Xapian::PostingIterator p(ref_database->db->postlist_begin(DB_MASTER));
+		return std::distance(ref_database->db->postlist_begin(DB_MASTER), ref_database->db->postlist_end(DB_MASTER));
+	}
+
+	return 0;
 }
 
 

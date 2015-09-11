@@ -46,6 +46,11 @@
 #define DB_INIT_REF 8	 // Initializes the writable index in the database .refs
 #define DB_VOLATILE 16   // Always drop the database from the database pool as soon as possible
 
+#define DB_MASTER "M"
+#define DB_SLAVE  "S"
+
+#define SLOT_CREF 1	// Slot that saves the references counter
+
 const size_t START_POS = SIZE_BITS_ID - 4;
 
 
@@ -165,8 +170,9 @@ private:
 
 	pthread_cond_t checkin_cond;
 
+	// Variables for ".refs" database.
 	Database *ref_database;
-	std::string prefix_rf_node;
+	std::string prefix_rf_master;
 
 	void init_ref(const Endpoints &endpoints);
 	void inc_ref(const Endpoints &endpoints);
@@ -187,6 +193,8 @@ public:
 	void drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
 
 	QueueSet<Endpoint> updated_databases;
+
+	int get_mastercount();
 };
 
 
