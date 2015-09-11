@@ -18,6 +18,10 @@
 		46B6B3D61B7E5B3C000FA041 /* generate_terms.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46B6B3D41B7E5B3C000FA041 /* generate_terms.cc */; };
 		C350589B1B7BAEE300901B80 /* multivaluekeymaker.cc in Sources */ = {isa = PBXBuildFile; fileRef = C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */; };
 		C350589F1B99E75500901B80 /* io_utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = C350589D1B99E75500901B80 /* io_utils.cc */; };
+		C35058AB1BA325CC00901B80 /* lz4.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A21BA325CC00901B80 /* lz4.c */; };
+		C35058AC1BA325CC00901B80 /* lz4frame.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A51BA325CC00901B80 /* lz4frame.c */; };
+		C35058AD1BA325CC00901B80 /* lz4hc.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A71BA325CC00901B80 /* lz4hc.c */; };
+		C35058AE1BA325CC00901B80 /* xxhash.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A91BA325CC00901B80 /* xxhash.c */; };
 		C39AE0631B2F627E00203139 /* cJSON_Utils.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0351B2F627E00203139 /* cJSON_Utils.c */; };
 		C39AE0641B2F627E00203139 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0371B2F627E00203139 /* cJSON.c */; };
 		C39AE0651B2F627E00203139 /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0391B2F627E00203139 /* client_base.cc */; };
@@ -77,6 +81,15 @@
 		C350589C1B7BAF0500901B80 /* multivaluekeymaker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = multivaluekeymaker.h; path = src/multivaluekeymaker.h; sourceTree = "<group>"; };
 		C350589D1B99E75500901B80 /* io_utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = io_utils.cc; path = src/io_utils.cc; sourceTree = "<group>"; };
 		C350589E1B99E75500901B80 /* io_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = io_utils.h; path = src/io_utils.h; sourceTree = "<group>"; };
+		C35058A21BA325CC00901B80 /* lz4.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lz4.c; path = src/lz4/lz4.c; sourceTree = "<group>"; };
+		C35058A31BA325CC00901B80 /* lz4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lz4.h; path = src/lz4/lz4.h; sourceTree = "<group>"; };
+		C35058A41BA325CC00901B80 /* lz4frame_static.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lz4frame_static.h; path = src/lz4/lz4frame_static.h; sourceTree = "<group>"; };
+		C35058A51BA325CC00901B80 /* lz4frame.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lz4frame.c; path = src/lz4/lz4frame.c; sourceTree = "<group>"; };
+		C35058A61BA325CC00901B80 /* lz4frame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lz4frame.h; path = src/lz4/lz4frame.h; sourceTree = "<group>"; };
+		C35058A71BA325CC00901B80 /* lz4hc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lz4hc.c; path = src/lz4/lz4hc.c; sourceTree = "<group>"; };
+		C35058A81BA325CC00901B80 /* lz4hc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lz4hc.h; path = src/lz4/lz4hc.h; sourceTree = "<group>"; };
+		C35058A91BA325CC00901B80 /* xxhash.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = xxhash.c; path = src/lz4/xxhash.c; sourceTree = "<group>"; };
+		C35058AA1BA325CC00901B80 /* xxhash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = xxhash.h; path = src/lz4/xxhash.h; sourceTree = "<group>"; };
 		C39AE0351B2F627E00203139 /* cJSON_Utils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cJSON_Utils.c; path = src/cJSON_Utils.c; sourceTree = "<group>"; };
 		C39AE0361B2F627E00203139 /* cJSON_Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cJSON_Utils.h; path = src/cJSON_Utils.h; sourceTree = "<group>"; };
 		C39AE0371B2F627E00203139 /* cJSON.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cJSON.c; path = src/cJSON.c; sourceTree = "<group>"; };
@@ -142,6 +155,15 @@
 		E5CEBCBD1A99C89000CD151F = {
 			isa = PBXGroup;
 			children = (
+				C35058A21BA325CC00901B80 /* lz4.c */,
+				C35058A31BA325CC00901B80 /* lz4.h */,
+				C35058A41BA325CC00901B80 /* lz4frame_static.h */,
+				C35058A51BA325CC00901B80 /* lz4frame.c */,
+				C35058A61BA325CC00901B80 /* lz4frame.h */,
+				C35058A71BA325CC00901B80 /* lz4hc.c */,
+				C35058A81BA325CC00901B80 /* lz4hc.h */,
+				C35058A91BA325CC00901B80 /* xxhash.c */,
+				C35058AA1BA325CC00901B80 /* xxhash.h */,
 				C39AE0781B2F62D700203139 /* cartesian.cc */,
 				C39AE0791B2F62D700203139 /* cartesian.h */,
 				C39AE0351B2F627E00203139 /* cJSON_Utils.c */,
@@ -306,11 +328,15 @@
 				C39AE06C1B2F627E00203139 /* http_parser.c in Sources */,
 				C39AE0691B2F627E00203139 /* endpoint_resolver.cc in Sources */,
 				C39AE0751B2F627E00203139 /* times.cc in Sources */,
+				C35058AE1BA325CC00901B80 /* xxhash.c in Sources */,
+				C35058AC1BA325CC00901B80 /* lz4frame.c in Sources */,
 				46B6B3D31B7E4A1B000FA041 /* multivaluerange.cc in Sources */,
 				C39AE06E1B2F627E00203139 /* manager.cc in Sources */,
+				C35058AB1BA325CC00901B80 /* lz4.c in Sources */,
 				46B6B3D21B7E4A1B000FA041 /* geospatialrange.cc in Sources */,
 				C39AE0701B2F627E00203139 /* multivalue.cc in Sources */,
 				C39AE0641B2F627E00203139 /* cJSON.c in Sources */,
+				C35058AD1BA325CC00901B80 /* lz4hc.c in Sources */,
 				46740EEC1B5436120073C5E9 /* datetime.cc in Sources */,
 				C39AE0661B2F627E00203139 /* client_binary.cc in Sources */,
 			);
