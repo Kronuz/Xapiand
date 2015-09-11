@@ -27,6 +27,12 @@
 #include "client_base.h"
 #include "utils.h"
 
+#define LZ4_HEADER_SIZE 19
+#define LZ4_FOOTER_SIZE 12
+#define LZ4F_BLOCK_SIZE_ID LZ4F_max256KB
+#define LZ4F_BLOCK_SIZE (256*1024)
+
+#define BUF_SIZE 4096
 
 const int WRITE_QUEUE_SIZE = 10;
 
@@ -36,7 +42,9 @@ const int WRITE_QUEUE_SIZE = 10;
 #define WR_PENDING 3
 
 #define MODE_READ_BUF 0
-#define MODE_READ_FILE 1
+#define MODE_READ_FILE_TYPE 1
+#define MODE_READ_FILE_RAW 2
+#define MODE_READ_FILE_LZ4 3
 
 BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: Worker(server_, loop_),
@@ -48,11 +56,14 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 	  written(0),
 	  database_pool(database_pool_),
 	  thread_pool(thread_pool_),
-	  write_queue(WRITE_QUEUE_SIZE)
+	  write_queue(WRITE_QUEUE_SIZE),
+	  mode(MODE_READ_BUF),
+	  lz4_dCtx(NULL),
+	  lz4_buffer(NULL),
+	  read_buffer(new char[BUF_SIZE])
+
 {
 	inc_ref();
-
-	mode = MODE_READ_BUF;
 
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
@@ -88,6 +99,15 @@ BaseClient::~BaseClient()
 
 	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", total_clients);
 	assert(total_clients >= 0);
+	
+	delete []read_buffer;
+	delete []lz4_buffer;
+	if (lz4_dCtx) {
+		LZ4F_errorCode_t errorCode = LZ4F_freeDecompressionContext(lz4_dCtx);
+		if (LZ4F_isError(errorCode)) {
+			LOG_ERR(this, "Failed to free decompression context: error %zd\n", errorCode);
+		}
+	}
 }
 
 
@@ -182,6 +202,7 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 int BaseClient::write_directly()
 {
 	if (sock == -1) {
+		LOG_ERR(this, "ERROR: write error (sock=%d): Socket already closed!\n", sock);
 		return WR_ERR;
 	} else if (!write_queue.empty()) {
 		Buffer* buffer = write_queue.front();
@@ -243,63 +264,170 @@ void BaseClient::write_cb()
 
 void BaseClient::read_cb()
 {
-	if (sock != -1) {
-		char buf[4096];
+	LZ4F_errorCode_t errorCode;
 
-		ssize_t received = ::read(sock, buf, sizeof(buf));
-		const char *buf_end = buf + received;
-		const char *buf_data = buf;
+	if (sock != -1) {
+		ssize_t received = ::read(sock, read_buffer, sizeof(read_buffer));
+		const char *buf_end = read_buffer + received;
+		const char *buf_data = read_buffer;
 
 		if (received < 0) {
 			if (sock != -1 && !ignored_errorno(errno, false)) {
 				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
 				destroy();
+				return;
 			}
 		} else if (received == 0) {
 			// The peer has closed its half side of the connection.
 			LOG_CONN(this, "Received EOF (sock=%d)!\n", sock);
 			destroy();
+			return;
 		} else {
-			LOG_CONN_WIRE(this, "(sock=%d) -->> '%s'\n", sock, repr(buf, received).c_str());
+			LOG_CONN_WIRE(this, "(sock=%d) -->> '%s'\n", sock, repr(buf_data, received).c_str());
 
-			if (mode == MODE_READ_FILE) {
-				LOG(this, "BaseClient::read_cb mode Read file\n");
+			if (mode == MODE_READ_FILE_TYPE) {
+				switch (*buf_data++) {
+					case '\00':
+						mode = MODE_READ_FILE_RAW;
+						break;
+					case '\01':
+						mode = MODE_READ_FILE_LZ4;
 
-				size_t file_size_to_write = received;
-				const char *file_buf_to_write = buf;
-				if (file_size == -1) {
-					buffer_file.append(buf, received);
-					buf_data = buffer_file.data();
+						if (!lz4_buffer) {
+							lz4_buffer = new char[LZ4F_BLOCK_SIZE];
+							if (!lz4_buffer) {
+								LOG_ERR(this, "Not enough memory!!\n");
+								destroy();
+								return;
+							}
+						}
 
-					buf_end = buf_data + buffer_file.size();
-					file_size = decode_length(&buf_data, buf_end, false);
-					if (file_size == -1) {
+						if (lz4_dCtx) {
+							errorCode = LZ4F_freeDecompressionContext(lz4_dCtx);
+							if (LZ4F_isError(errorCode)) {
+								LOG_ERR(this, "Failed to free decompression context: error %zd\n", errorCode);
+								destroy();
+								return;
+							}
+							lz4_dCtx = NULL;
+						}
+						errorCode = LZ4F_createDecompressionContext(&lz4_dCtx, LZ4F_VERSION);
+						if (LZ4F_isError(errorCode)) {
+							LOG_ERR(this, "Failed to create decompression context: error %zd\n", errorCode);
+							destroy();
+							return;
+						}
+
+						break;
+					default:
+						LOG_CONN(this, "Received wrong file mode!\n");
+						destroy();
 						return;
-					}
 				}
-
-				if (file_size >= buf_end - buf_data) {
-					file_size_to_write = buf_end - buf_data;
-					file_buf_to_write = buf_data;
-					received = 0;
-					buf_data = NULL;
-				} else {
-					file_size_to_write = file_size;
-					file_buf_to_write = buf_data;
-					received = (buf_end - buf_data) - file_size;
-					buf_data += file_size;
-				}
-
-				if (file_size_to_write) {
-					on_read_file(file_buf_to_write, file_size_to_write);
-					file_size -= file_size_to_write;
-				}
-				if (file_size == 0) {
-					on_read_file_done();
-					mode = MODE_READ_BUF;
-				}
+				received--;
+				length_buffer.clear();
 			}
-			if (mode == MODE_READ_BUF && received) {
+
+			if (received && (mode == MODE_READ_FILE_RAW || mode == MODE_READ_FILE_LZ4)) {
+				do {
+
+					if (file_size == -1) {
+						if (buf_data) {
+							length_buffer.append(buf_data, received);
+						}
+						buf_data = length_buffer.data();
+
+						buf_end = buf_data + length_buffer.size();
+						file_size = decode_length(&buf_data, buf_end, false);
+
+						if (file_size == -1) {
+							return;
+						}
+						block_size = file_size;
+						file_buffer.clear();
+					}
+
+					const char *file_buf_to_write;
+					size_t block_size_to_write;
+					size_t buf_left_size = buf_end - buf_data;
+					if (block_size < buf_left_size) {
+						file_buf_to_write = buf_data;
+						block_size_to_write = block_size;
+						buf_data += block_size;
+						received = buf_left_size - block_size;
+					} else {
+						file_buf_to_write = buf_data;
+						block_size_to_write = buf_left_size;
+						buf_data = NULL;
+						received = 0;
+					}
+
+					if (mode == MODE_READ_FILE_RAW) {
+						if (block_size_to_write) {
+							on_read_file(file_buf_to_write, block_size_to_write);
+							block_size -= block_size_to_write;
+						}
+						if (file_size == 0 || block_size == 0) {
+							on_read_file_done();
+							mode = MODE_READ_BUF;
+						}
+
+					} else if (mode == MODE_READ_FILE_LZ4) {
+						if (block_size_to_write) {
+							file_buffer.append(file_buf_to_write, block_size_to_write);
+							block_size -= block_size_to_write;
+						}
+						if (file_size == 0) {
+							on_read_file_done();
+							mode = MODE_READ_BUF;
+							if (lz4_dCtx) {
+								errorCode = LZ4F_freeDecompressionContext(lz4_dCtx);
+								if (LZ4F_isError(errorCode)) {
+									LOG_ERR(this, "Failed to free decompression context: error %zd\n", errorCode);
+									destroy();
+									return;
+								}
+								lz4_dCtx = NULL;
+							}
+						} else if (block_size == 0) {
+							const char *srcBuf = file_buffer.data();
+							size_t readSize = file_buffer.size();
+							size_t nextToLoad = readSize;
+							
+							size_t readPos = 0;
+							size_t srcSize = 0;
+							
+							for(; readPos < readSize && nextToLoad; readPos += srcSize) {
+								size_t decSize = LZ4F_BLOCK_SIZE;
+								srcSize = readSize - readPos;
+								
+								nextToLoad = LZ4F_decompress(lz4_dCtx, lz4_buffer, &decSize, srcBuf + readPos, &srcSize, NULL);
+								if(LZ4F_isError(nextToLoad)) {
+									LOG_ERR(this, "Failed decompression: error %zd\n", nextToLoad);
+									destroy();
+									return;
+								}
+								
+								if(decSize) {
+									on_read_file(lz4_buffer, decSize);
+								}
+							}
+							
+							if (buf_data) {
+								length_buffer = std::string(buf_data, received);
+								buf_data = NULL;
+								received = 0;
+							} else {
+								length_buffer.clear();
+							}
+
+							file_size = -1;
+						}
+					}
+				} while (file_size == -1);
+			}
+
+			if (received && (mode == MODE_READ_BUF)) {
 				on_read(buf_data, received);
 			}
 		}
@@ -319,7 +447,7 @@ bool BaseClient::write(const char *buf, size_t buf_size)
 	LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
 
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
-	if (!write_queue.push(buffer)) {
+	if (!buffer || !write_queue.push(buffer)) {
 		return false;
 	}
 
@@ -340,6 +468,7 @@ bool BaseClient::write(const char *buf, size_t buf_size)
 	return true;
 }
 
+
 void BaseClient::shutdown()
 {
 	::shutdown(sock, SHUT_RDWR);
@@ -356,36 +485,119 @@ void BaseClient::shutdown()
 
 void BaseClient::read_file()
 {
-	mode = MODE_READ_FILE;
+	mode = MODE_READ_FILE_TYPE;
 	file_size = -1;
 }
 
 
 bool BaseClient::send_file(int fd)
 {
-	LOG(this, "BaseClient::send_file\n");
-	size_t count = 0;
-	char buf[8192];
+	static const LZ4F_preferences_t lz4_preferences = {
+		{ LZ4F_max256KB, LZ4F_blockLinked, LZ4F_contentChecksumEnabled, LZ4F_frame, 0, { 0, 0 } },
+		0,   /* compression level */
+		0,   /* autoflush */
+		{ 0, 0, 0, 0 },  /* reserved, must be set to 0 */
+	};
+
+	LZ4F_compressionContext_t ctx;
+	LZ4F_errorCode_t errorCode = LZ4F_createCompressionContext(&ctx, LZ4F_VERSION);
+	if (LZ4F_isError(errorCode)) {
+		LOG_ERR(this, "Failed to create compression context: error %zd\n", errorCode);
+		return false;
+	}
 
 	size_t file_size = ::lseek(fd, 0, SEEK_END);
 	::lseek(fd, 0, SEEK_SET);
 
-	LOG(this,"file size %d\n", file_size);
-	std::string file_size_str = encode_length(file_size);
-	write(file_size_str);
+	size_t count = 0;
+
+	if (!lz4_buffer) {
+		lz4_buffer = new char[LZ4F_BLOCK_SIZE];
+		if (!lz4_buffer) {
+			LOG_ERR(this, "Not enough memory!!\n");
+			return false;
+		}
+	}
+
+	char *src_buf = lz4_buffer;
+
+	size_t frame_size = LZ4F_compressBound(sizeof(src_buf), &lz4_preferences);
+	size_t dst_size =  frame_size + LZ4_HEADER_SIZE + LZ4_FOOTER_SIZE;
+	char *dst_buf = new char[dst_size];
+	if (!dst_buf) {
+		LOG_ERR(this, "Not enough memory!!\n");
+		return false;
+	}
+
+	// Signal LZ4 compressed content
+	if (!write("\01")) {
+		LOG_ERR(this, "Write failed!\n");
+		LZ4F_freeCompressionContext(ctx);
+		delete []dst_buf;
+		return false;
+	}
+
+	size_t bytes;
+	size_t offset = LZ4F_compressBegin(ctx, dst_buf, frame_size, &lz4_preferences);
 
 	while (count < file_size) {
-		size_t bytes = ::read(fd, buf, sizeof(buf));
-		if (bytes == -1) {
+		size_t src_size = ::read(fd, src_buf, sizeof(src_buf));
+		if (src_size == -1) {
 			if (errno == EAGAIN) {
 				continue;
 			}
-			break;
-		} else if (bytes == 0) {
+			LOG_ERR(this, "Read error!!\n");
+			LZ4F_freeCompressionContext(ctx);
+			delete []dst_buf;
+			return false;
+		} else if (src_size == 0) {
 			break;
 		}
-		write(buf, bytes);
+
+		bytes = LZ4F_compressUpdate(ctx, dst_buf + offset, dst_size - offset, src_buf, src_size, NULL);
+		if (LZ4F_isError(bytes)) {
+			LOG_ERR(this, "Compression failed: error %zd\n", bytes);
+			LZ4F_freeCompressionContext(ctx);
+			delete []dst_buf;
+			return false;
+		}
+
+		offset += bytes;
 		count += bytes;
+
+		if (dst_size - offset < frame_size + LZ4_FOOTER_SIZE) {
+			if (!write(encode_length(offset)) ||
+				!write(dst_buf, offset)) {
+				LOG_ERR(this, "Write failed!\n");
+				LZ4F_freeCompressionContext(ctx);
+				delete []dst_buf;
+				return false;
+			}
+			offset = 0;
+		}
 	}
+
+	bytes = LZ4F_compressEnd(ctx, dst_buf + offset, dst_size -  offset, NULL);
+	if (LZ4F_isError(bytes)) {
+		LOG_ERR(this, "Compression failed: error %zd\n", bytes);
+		LZ4F_freeCompressionContext(ctx);
+		delete []dst_buf;
+		return false;
+	}
+
+	offset += bytes;
+
+	if (!write(encode_length(offset)) ||
+		!write(dst_buf, offset) ||
+		!write(encode_length(0))) {
+		LOG_ERR(this, "Write failed!\n");
+		LZ4F_freeCompressionContext(ctx);
+		delete []dst_buf;
+		return false;
+	}
+
+	LZ4F_freeCompressionContext(ctx);
+	delete []dst_buf;
+
 	return count != file_size;
 }

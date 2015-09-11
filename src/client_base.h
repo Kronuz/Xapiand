@@ -30,6 +30,7 @@
 #include "threadpool.h"
 #include "database.h"
 
+#include "lz4/lz4frame.h"
 
 #include <ev++.h>
 
@@ -95,10 +96,16 @@ protected:
 	bool closed;
 	int sock;
 	int written;
-	std::string buffer_file;
+	std::string length_buffer;
+	std::string file_buffer;
 
+	LZ4F_decompressionContext_t lz4_dCtx;
+	char *lz4_buffer;
+	char *read_buffer;
+	
 	int mode;
 	size_t file_size;
+	size_t block_size;
 
 	DatabasePool *database_pool;
 	ThreadPool *thread_pool;
