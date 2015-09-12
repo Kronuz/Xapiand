@@ -359,6 +359,7 @@ void HttpClient::_head()
 	Xapian::docid docid = 0;
 	Xapian::QueryParser queryparser;
 	query_t e;
+
 	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
@@ -405,7 +406,7 @@ void HttpClient::_head()
 	Xapian::Enquire enquire(*database->db);
 	enquire.set_query(query);
 	Xapian::MSet mset = enquire.get_mset(0, 1);
-	if(mset.size()) {
+	if (mset.size()) {
 		Xapian::MSetIterator m = mset.begin();
 		int t = 3;
 		for ( ; t >= 0; --t) {
@@ -422,7 +423,7 @@ void HttpClient::_head()
 	}
 
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
-	if(found){
+	if (found) {
 		cJSON_AddNumberToObject(root.get(), RESERVED_ID, docid);
 		if (e.pretty) {
 			unique_char_ptr _cprint(cJSON_Print(root.get()));
@@ -455,6 +456,7 @@ void HttpClient::_delete()
 {
 	std::string result;
 	query_t e;
+
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
@@ -532,6 +534,7 @@ void HttpClient::_index()
 {
 	std::string result;
 	query_t e;
+
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
@@ -619,6 +622,7 @@ void HttpClient::_patch()
 {
 	std::string result;
 	query_t e;
+
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
@@ -742,6 +746,7 @@ void HttpClient::_search()
 	std::string result;
 
 	query_t e;
+
 	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {

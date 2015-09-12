@@ -498,10 +498,10 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par)
 	const char *n1, *n0;
 	const char *v0 = NULL;
 
-	if(par->offset == NULL) {
+	if (par->offset == NULL) {
 		n0 = n1 = qs;
 	} else {
-		n0 = n1 = par->offset + par -> length;
+		n0 = n1 = par->offset + par->length;
 	}
 
 	while (1) {
