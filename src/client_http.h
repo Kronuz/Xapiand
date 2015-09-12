@@ -60,8 +60,8 @@ class HttpClient : public BaseClient {
 	struct http_parser parser;
 	Database *database;
 
-	void on_read(const char *buf, ssize_t received);
-	void on_read_file(const char *buf, ssize_t received);
+	void on_read(const char *buf, size_t received);
+	void on_read_file(const char *buf, size_t received);
 	void on_read_file_done();
 
 	static const http_parser_settings settings;

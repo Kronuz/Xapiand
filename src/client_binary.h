@@ -87,8 +87,8 @@ private:
 	bool repl_switched_db;
 	bool repl_just_switched_db;
 
-	void on_read(const char *buf, ssize_t received);
-	void on_read_file(const char *buf, ssize_t received);
+	void on_read(const char *buf, size_t received);
+	void on_read_file(const char *buf, size_t received);
 	void on_read_file_done();
 
 	void repl_apply(replicate_reply_type type, const std::string & message);

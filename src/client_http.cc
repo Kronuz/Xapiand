@@ -158,8 +158,9 @@ HttpClient::~HttpClient()
 }
 
 
-void HttpClient::on_read(const char *buf, ssize_t received)
+void HttpClient::on_read(const char *buf, size_t received)
 {
+	LOG_CONN_WIRE(this, "BinaryClient::on_read: %zu bytes\n", received);
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
@@ -178,9 +179,9 @@ void HttpClient::on_read(const char *buf, ssize_t received)
 }
 
 
-void HttpClient::on_read_file(const char *buf, ssize_t received)
+void HttpClient::on_read_file(const char *buf, size_t received)
 {
-	LOG_ERR(this, "Not Implemented: HttpClient::on_read_file\n");
+	LOG_ERR(this, "Not Implemented: HttpClient::on_read_file: %zu bytes\n", received);
 }
 
 

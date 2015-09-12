@@ -108,7 +108,7 @@ bool BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint
 
 void BinaryClient::on_read_file_done()
 {
-	LOG(this, "BinaryClient::on_read_file_done\n");
+	LOG_CONN_WIRE(this, "BinaryClient::on_read_file_done\n");
 	::lseek(file_descriptor, 0, SEEK_SET);
 
 	char buf[1024];
@@ -160,15 +160,16 @@ void BinaryClient::on_read_file_done()
 	::unlink(file_path);
 }
 
-void BinaryClient::on_read_file(const char *buf, ssize_t size)
+void BinaryClient::on_read_file(const char *buf, size_t received)
 {
-	LOG(this, "BinaryClient::on_read_file\n");
-	::io_write(file_descriptor, buf, size);
+	LOG_CONN_WIRE(this, "BinaryClient::on_read_file: %zu bytes\n", received);
+	::io_write(file_descriptor, buf, received);
 }
 
 
-void BinaryClient::on_read(const char *buf, ssize_t received)
+void BinaryClient::on_read(const char *buf, size_t received)
 {
+	LOG_CONN_WIRE(this, "BinaryClient::on_read: %zu bytes\n", received);
 	buffer.append(buf, received);
 	while (buffer.length() >= 2) {
 		const char *o = buffer.data();
