@@ -71,6 +71,9 @@ class HttpClient : public BaseClient {
 	std::string header_name;
 	std::string header_value;
 
+	std::string content_type;
+	bool expect_100 = false;
+
 	std::string host;
 	std::string command;  //command or ID
 

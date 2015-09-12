@@ -47,7 +47,9 @@
 
 const char* status_code[6][5] = {
 	{},
-	{},
+	{
+		"Continue"
+	},
 	{
 		"OK",
 		"Created"
@@ -214,6 +216,11 @@ int HttpClient::on_info(http_parser* p) {
 			self->header_name.clear();
 			self->header_value.clear();
 			break;
+		case 50:  // headers done
+			if (self->expect_100) {
+				// Return 100 if client is expecting it
+				self->write(http_response(100, HTTP_STATUS | HTTP_HEADER, p->http_major, p->http_minor));
+			}
 	}
 
 	return 0;
@@ -241,9 +248,25 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	if (state >= 45 && state <= 50) {
 		self->header_value.append(at, length);
 		if (state == 50) {
-			if (strcasecmp(self->header_name.c_str(), "host") == 0) {
+			std::string name(self->header_name);
+			std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+
+			std::string value(self->header_value);
+			std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+
+			if (name.compare("host") == 0) {
 				self->host = self->header_value;
+			} else
+
+			if (name.compare("expect") == 0 && value.compare("100-continue") == 0) {
+				// Respond with HTTP/1.1 100 Continue
+				self->expect_100 = true;
+			} else
+
+			if (name.compare("content-type") == 0) {
+				self->content_type = value;
 			}
+
 			self->header_name.clear();
 			self->header_value.clear();
 		}
