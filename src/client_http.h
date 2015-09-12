@@ -43,8 +43,9 @@
 #define CMD_FACETS 2
 #define CMD_STATS  3
 #define CMD_SCHEMA 4
-#define CMD_UNKNOWN_HOST     5
-#define CMD_UNKNOWN_ENDPOINT 6
+#define CMD_UPLOAD 5
+#define CMD_UNKNOWN_HOST     6
+#define CMD_UNKNOWN_ENDPOINT 7
 #define CMD_UNKNOWN   -1
 #define CMD_BAD_QUERY -2
 #define CMD_BAD_ENDPS -3
@@ -53,6 +54,7 @@
 #define HTTP_FACETS "_facets"
 #define HTTP_STATS  "_stats"
 #define HTTP_SCHEMA "_schema"
+#define HTTP_UPLOAD "_upload"
 
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.

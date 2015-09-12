@@ -1014,12 +1014,11 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 			}
 
 			while (retval == 0) {
-
 				command = urldecode(p.off_command, p.len_command);
-
 				if (command.empty()) {
 					return CMD_BAD_QUERY;
 				}
+				std::transform(command.begin(), command.end(), command.begin(), ::tolower);
 
 				std::string ns;
 				if (p.len_namespace) {
@@ -1095,260 +1094,268 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 		if (u.field_set & (1 <<  UF_QUERY)) {
 			size_t query_size = u.field_data[4].len;
-			std::string query_buf(b.c_str() + u.field_data[4].off, u.field_data[4].len);
+			const char *query_str = b.data() + u.field_data[4].off;
 
 			parser_query_t q;
 
-			memset(&q, 0, sizeof(q));
-			if (url_qs("pretty", query_buf.c_str(), query_size, &q) != -1) {
+			q.offset = NULL;
+			if (url_qs("pretty", query_str, query_size, &q) != -1) {
 				std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
 				(pretty.compare("f") == 0) ? e.pretty = false : e.pretty = true;
 			} else {
 				e.pretty = false;
 			}
 
-			if (cmd == CMD_SEARCH || cmd == CMD_FACETS) {
+			switch (cmd) {
+				case CMD_SEARCH:
+				case CMD_FACETS:
+					e.unique_doc = false;
 
-				e.unique_doc = false;
-
-				memset(&q, 0, sizeof(q));
-				if (url_qs("offset", query_buf.c_str(), query_size, &q) != -1) {
-					e.offset = strtouint(urldecode(q.offset, q.length).c_str());
-				} else {
-					e.offset = 0;
-				}
-
-				memset(&q, 0, sizeof(q));
-				if (url_qs("check_at_least", query_buf.c_str(), query_size, &q) != -1) {
-					e.check_at_least = strtouint(urldecode(q.offset, q.length).c_str());
-				} else {
-					e.check_at_least = 0;
-				}
-
-				memset(&q, 0, sizeof(q));
-				if (url_qs("limit", query_buf.c_str(), query_size, &q) != -1) {
-					e.limit = strtouint(urldecode(q.offset, q.length).c_str());
-				} else {
-					e.limit = 10;
-				}
-
-				memset(&q, 0, sizeof(q));
-				if (url_qs("collapse_max", query_buf.c_str(), query_size, &q) != -1) {
-					e.collapse_max = strtouint(urldecode(q.offset, q.length).c_str());
-				} else {
-					e.collapse_max = 1;
-				}
-
-				memset(&q, 0, sizeof(q));
-				if (url_qs("spelling", query_buf.c_str(), query_size, &q) != -1) {
-					std::string spelling = Serialise::boolean(urldecode(q.offset, q.length));
-					(spelling.compare("f") == 0) ? e.spelling = false : e.spelling = true;
-				} else {
-					e.spelling = true;
-				}
-
-				memset(&q, 0, sizeof(q));
-				if (url_qs("synonyms", query_buf.c_str(), query_size, &q) != -1) {
-					std::string synonyms = Serialise::boolean(urldecode(q.offset, q.length));
-					(synonyms.compare("f") == 0) ? e.synonyms = false : e.synonyms = true;
-				} else {
-					e.synonyms = false;
-				}
-
-				memset(&q, 0, sizeof(q));
-				LOG(this, "Buffer: %s\n", query_buf.c_str());
-				while (url_qs("query", query_buf.c_str(), query_size, &q) != -1) {
-					LOG(this, "%s\n", urldecode(q.offset, q.length).c_str());
-					e.query.push_back(urldecode(q.offset, q.length));
-				}
-
-				memset(&q, 0, sizeof(q));
-				while (url_qs("partial", query_buf.c_str(), query_size, &q) != -1) {
-					e.partial.push_back(urldecode(q.offset, q.length));
-				}
-
-				memset(&q, 0, sizeof(q));
-				while (url_qs("terms", query_buf.c_str(), query_size, &q) != -1) {
-					e.terms.push_back(urldecode(q.offset, q.length));
-				}
-
-				memset(&q, 0, sizeof(q));
-				while (url_qs("sort", query_buf.c_str(), query_size, &q) != -1) {
-					e.sort.push_back(urldecode(q.offset, q.length));
-				}
-
-				memset(&q, 0, sizeof(q));
-				while (url_qs("facets", query_buf.c_str(), query_size, &q) != -1) {
-					e.facets.push_back(urldecode(q.offset, q.length));
-				}
-
-				memset(&q, 0, sizeof(q));
-				while (url_qs("language", query_buf.c_str(), query_size, &q) != -1) {
-					e.language.push_back(urldecode(q.offset, q.length));
-				}
-
-				memset(&q, 0, sizeof(q));
-				if (url_qs("collapse", query_buf.c_str(), query_size, &q) != -1) {
-					e.collapse = urldecode(q.offset, q.length);
-				} else {
-					e.collapse = "";
-				}
-
-				memset(&q, 0, sizeof(q));
-				if (url_qs("fuzzy", query_buf.c_str(), query_size, &q) != -1) {
-					std::string fuzzy = Serialise::boolean(urldecode(q.offset, q.length));
-					(fuzzy.compare("f") == 0) ? e.is_fuzzy = false : e.is_fuzzy = true;
-				} else {
-					e.is_fuzzy = false;
-				}
-
-				if(e.is_fuzzy) {
-					memset(&q, 0, sizeof(q));
-					if (url_qs("fuzzy.n_rset", query_buf.c_str(), query_size, &q) != -1){
-						e.fuzzy.n_rset = strtouint(urldecode(q.offset, q.length).c_str());
-					} else {
-						e.fuzzy.n_rset = 5;
-					}
-
-					memset(&q, 0, sizeof(q));
-					if (url_qs("fuzzy.n_eset", query_buf.c_str(), query_size, &q) != -1){
-						e.fuzzy.n_eset = strtouint(urldecode(q.offset, q.length).c_str());
-					} else {
-						e.fuzzy.n_eset = 32;
-					}
-
-					memset(&q, 0, sizeof(q));
-					if (url_qs("fuzzy.n_term", query_buf.c_str(), query_size, &q) != -1){
-						e.fuzzy.n_term = strtouint(urldecode(q.offset, q.length).c_str());
-					} else {
-						e.fuzzy.n_term = 10;
-					}
-
-					memset(&q, 0, sizeof(q));
-					while (url_qs("fuzzy.field", query_buf.c_str(), query_size, &q) != -1){
-						e.fuzzy.field.push_back(urldecode(q.offset, q.length));
-					}
-
-					memset(&q, 0, sizeof(q));
-					while (url_qs("fuzzy.type", query_buf.c_str(), query_size, &q) != -1){
-						e.fuzzy.type.push_back(urldecode(q.offset, q.length));
-					}
-				}
-
-				memset(&q, 0, sizeof(q));
-				if (url_qs("nearest", query_buf.c_str(), query_size, &q) != -1) {
-					std::string nearest = Serialise::boolean(urldecode(q.offset, q.length));
-					(nearest.compare("f") == 0) ? e.is_nearest = false : e.is_nearest = true;
-				} else {
-					e.is_nearest = false;
-				}
-
-				if(e.is_nearest) {
-					memset(&q, 0, sizeof(q));
-					if (url_qs("nearest.n_rset", query_buf.c_str(), query_size, &q) != -1){
-						e.nearest.n_rset = strtouint(urldecode(q.offset, q.length).c_str());
-					} else {
-						e.nearest.n_rset = 5;
-					}
-
-					memset(&q, 0, sizeof(q));
-					if (url_qs("nearest.n_eset", query_buf.c_str(), query_size, &q) != -1){
-						e.nearest.n_eset = strtouint(urldecode(q.offset, q.length).c_str());
-					} else {
-						e.nearest.n_eset = 32;
-					}
-
-					memset(&q, 0, sizeof(q));
-					if (url_qs("nearest.n_term", query_buf.c_str(), query_size, &q) != -1){
-						e.nearest.n_term = strtouint(urldecode(q.offset, q.length).c_str());
-					} else {
-						e.nearest.n_term = 10;
-					}
-
-					memset(&q, 0, sizeof(q));
-					while (url_qs("nearest.field", query_buf.c_str(), query_size, &q) != -1){
-						e.nearest.field.push_back(urldecode(q.offset, q.length));
-					}
-
-					memset(&q, 0, sizeof(q));
-					while (url_qs("nearest.type", query_buf.c_str(), query_size, &q) != -1){
-						e.nearest.type.push_back(urldecode(q.offset, q.length));
-					}
-				}
-
-			} else if (cmd == CMD_ID) {
-				memset(&q, 0, sizeof(q));
-				if (url_qs("commit", query_buf.c_str(), query_size, &q) != -1) {
-					std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
-					(pretty.compare("f") == 0) ? e.commit = false : e.commit = true;
-				} else {
-					e.commit = false;
-				}
-
-				if (isRange(command)) {
-					memset(&q, 0, sizeof(q));
-					if (url_qs("offset", query_buf.c_str(), query_size, &q) != -1) {
+					q.offset = NULL;
+					if (url_qs("offset", query_str, query_size, &q) != -1) {
 						e.offset = strtouint(urldecode(q.offset, q.length).c_str());
 					} else {
 						e.offset = 0;
 					}
 
-					memset(&q, 0, sizeof(q));
-					if (url_qs("check_at_least", query_buf.c_str(), query_size, &q) != -1) {
+					q.offset = NULL;
+					if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
 						e.check_at_least = strtouint(urldecode(q.offset, q.length).c_str());
 					} else {
 						e.check_at_least = 0;
 					}
 
-					memset(&q, 0, sizeof(q));
-					if (url_qs("limit", query_buf.c_str(), query_size, &q) != -1) {
+					q.offset = NULL;
+					if (url_qs("limit", query_str, query_size, &q) != -1) {
 						e.limit = strtouint(urldecode(q.offset, q.length).c_str());
 					} else {
 						e.limit = 10;
 					}
 
-					memset(&q, 0, sizeof(q));
-					if (url_qs("sort", query_buf.c_str(), query_size, &q) != -1) {
-						e.sort.push_back(urldecode(q.offset, q.length));
+					q.offset = NULL;
+					if (url_qs("collapse_max", query_str, query_size, &q) != -1) {
+						e.collapse_max = strtouint(urldecode(q.offset, q.length).c_str());
 					} else {
-						e.sort.push_back(RESERVED_ID);
+						e.collapse_max = 1;
 					}
-				} else {
-					e.limit = 1;
-					e.unique_doc = true;
-					e.offset = 0;
-					e.check_at_least = 0;
-				}
-			} else if (cmd == CMD_STATS) {
-				memset(&q, 0, sizeof(q));
-				if (url_qs("server", query_buf.c_str(), query_size, &q) != -1) {
-					std::string server = Serialise::boolean(urldecode(q.offset, q.length));
-					(server.compare("f") == 0) ? e.server = false : e.server = true;
-				} else {
-					e.server = false;
-				}
 
-				memset(&q, 0, sizeof(q));
-				if (url_qs("database", query_buf.c_str(), query_size, &q) != -1) {
-					std::string _database = Serialise::boolean(urldecode(q.offset, q.length));
-					(_database.compare("f") == 0) ? e.database = false : e.database = true;
-				} else {
-					e.database = false;
-				}
+					q.offset = NULL;
+					if (url_qs("spelling", query_str, query_size, &q) != -1) {
+						std::string spelling = Serialise::boolean(urldecode(q.offset, q.length));
+						(spelling.compare("f") == 0) ? e.spelling = false : e.spelling = true;
+					} else {
+						e.spelling = true;
+					}
 
-				memset(&q, 0, sizeof(q));
-				if (url_qs("document", query_buf.c_str(), query_size, &q) != -1) {
-					e.document = urldecode(q.offset, q.length);
-				} else {
-					e.document = "";
-				}
+					q.offset = NULL;
+					if (url_qs("synonyms", query_str, query_size, &q) != -1) {
+						std::string synonyms = Serialise::boolean(urldecode(q.offset, q.length));
+						(synonyms.compare("f") == 0) ? e.synonyms = false : e.synonyms = true;
+					} else {
+						e.synonyms = false;
+					}
 
-				memset(&q, 0, sizeof(q));
-				if (url_qs("stats", query_buf.c_str(), query_size, &q) != -1) {
-					e.stats = urldecode(q.offset, q.length);
-				} else {
-					e.stats = "";
-				}
+					q.offset = NULL;
+					LOG(this, "Buffer: %s\n", query_str);
+					while (url_qs("query", query_str, query_size, &q) != -1) {
+						LOG(this, "%s\n", urldecode(q.offset, q.length).c_str());
+						e.query.push_back(urldecode(q.offset, q.length));
+					}
+
+					q.offset = NULL;
+					while (url_qs("partial", query_str, query_size, &q) != -1) {
+						e.partial.push_back(urldecode(q.offset, q.length));
+					}
+
+					q.offset = NULL;
+					while (url_qs("terms", query_str, query_size, &q) != -1) {
+						e.terms.push_back(urldecode(q.offset, q.length));
+					}
+
+					q.offset = NULL;
+					while (url_qs("sort", query_str, query_size, &q) != -1) {
+						e.sort.push_back(urldecode(q.offset, q.length));
+					}
+
+					q.offset = NULL;
+					while (url_qs("facets", query_str, query_size, &q) != -1) {
+						e.facets.push_back(urldecode(q.offset, q.length));
+					}
+
+					q.offset = NULL;
+					while (url_qs("language", query_str, query_size, &q) != -1) {
+						e.language.push_back(urldecode(q.offset, q.length));
+					}
+
+					q.offset = NULL;
+					if (url_qs("collapse", query_str, query_size, &q) != -1) {
+						e.collapse = urldecode(q.offset, q.length);
+					} else {
+						e.collapse = "";
+					}
+
+					q.offset = NULL;
+					if (url_qs("fuzzy", query_str, query_size, &q) != -1) {
+						std::string fuzzy = Serialise::boolean(urldecode(q.offset, q.length));
+						(fuzzy.compare("f") == 0) ? e.is_fuzzy = false : e.is_fuzzy = true;
+					} else {
+						e.is_fuzzy = false;
+					}
+
+					if(e.is_fuzzy) {
+						q.offset = NULL;
+						if (url_qs("fuzzy.n_rset", query_str, query_size, &q) != -1){
+							e.fuzzy.n_rset = strtouint(urldecode(q.offset, q.length).c_str());
+						} else {
+							e.fuzzy.n_rset = 5;
+						}
+
+						q.offset = NULL;
+						if (url_qs("fuzzy.n_eset", query_str, query_size, &q) != -1){
+							e.fuzzy.n_eset = strtouint(urldecode(q.offset, q.length).c_str());
+						} else {
+							e.fuzzy.n_eset = 32;
+						}
+
+						q.offset = NULL;
+						if (url_qs("fuzzy.n_term", query_str, query_size, &q) != -1){
+							e.fuzzy.n_term = strtouint(urldecode(q.offset, q.length).c_str());
+						} else {
+							e.fuzzy.n_term = 10;
+						}
+
+						q.offset = NULL;
+						while (url_qs("fuzzy.field", query_str, query_size, &q) != -1){
+							e.fuzzy.field.push_back(urldecode(q.offset, q.length));
+						}
+
+						q.offset = NULL;
+						while (url_qs("fuzzy.type", query_str, query_size, &q) != -1){
+							e.fuzzy.type.push_back(urldecode(q.offset, q.length));
+						}
+					}
+
+					q.offset = NULL;
+					if (url_qs("nearest", query_str, query_size, &q) != -1) {
+						std::string nearest = Serialise::boolean(urldecode(q.offset, q.length));
+						(nearest.compare("f") == 0) ? e.is_nearest = false : e.is_nearest = true;
+					} else {
+						e.is_nearest = false;
+					}
+
+					if(e.is_nearest) {
+						q.offset = NULL;
+						if (url_qs("nearest.n_rset", query_str, query_size, &q) != -1){
+							e.nearest.n_rset = strtouint(urldecode(q.offset, q.length).c_str());
+						} else {
+							e.nearest.n_rset = 5;
+						}
+
+						q.offset = NULL;
+						if (url_qs("nearest.n_eset", query_str, query_size, &q) != -1){
+							e.nearest.n_eset = strtouint(urldecode(q.offset, q.length).c_str());
+						} else {
+							e.nearest.n_eset = 32;
+						}
+
+						q.offset = NULL;
+						if (url_qs("nearest.n_term", query_str, query_size, &q) != -1){
+							e.nearest.n_term = strtouint(urldecode(q.offset, q.length).c_str());
+						} else {
+							e.nearest.n_term = 10;
+						}
+
+						q.offset = NULL;
+						while (url_qs("nearest.field", query_str, query_size, &q) != -1){
+							e.nearest.field.push_back(urldecode(q.offset, q.length));
+						}
+
+						q.offset = NULL;
+						while (url_qs("nearest.type", query_str, query_size, &q) != -1){
+							e.nearest.type.push_back(urldecode(q.offset, q.length));
+						}
+					}
+					break;
+
+				case CMD_ID:
+					q.offset = NULL;
+					if (url_qs("commit", query_str, query_size, &q) != -1) {
+						std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
+						(pretty.compare("f") == 0) ? e.commit = false : e.commit = true;
+					} else {
+						e.commit = false;
+					}
+
+					if (isRange(command)) {
+						q.offset = NULL;
+						if (url_qs("offset", query_str, query_size, &q) != -1) {
+							e.offset = strtouint(urldecode(q.offset, q.length).c_str());
+						} else {
+							e.offset = 0;
+						}
+
+						q.offset = NULL;
+						if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
+							e.check_at_least = strtouint(urldecode(q.offset, q.length).c_str());
+						} else {
+							e.check_at_least = 0;
+						}
+
+						q.offset = NULL;
+						if (url_qs("limit", query_str, query_size, &q) != -1) {
+							e.limit = strtouint(urldecode(q.offset, q.length).c_str());
+						} else {
+							e.limit = 10;
+						}
+
+						q.offset = NULL;
+						if (url_qs("sort", query_str, query_size, &q) != -1) {
+							e.sort.push_back(urldecode(q.offset, q.length));
+						} else {
+							e.sort.push_back(RESERVED_ID);
+						}
+					} else {
+						e.limit = 1;
+						e.unique_doc = true;
+						e.offset = 0;
+						e.check_at_least = 0;
+					}
+					break;
+
+				case CMD_STATS:
+					q.offset = NULL;
+					if (url_qs("server", query_str, query_size, &q) != -1) {
+						std::string server = Serialise::boolean(urldecode(q.offset, q.length));
+						(server.compare("f") == 0) ? e.server = false : e.server = true;
+					} else {
+						e.server = false;
+					}
+
+					q.offset = NULL;
+					if (url_qs("database", query_str, query_size, &q) != -1) {
+						std::string _database = Serialise::boolean(urldecode(q.offset, q.length));
+						(_database.compare("f") == 0) ? e.database = false : e.database = true;
+					} else {
+						e.database = false;
+					}
+
+					q.offset = NULL;
+					if (url_qs("document", query_str, query_size, &q) != -1) {
+						e.document = urldecode(q.offset, q.length);
+					} else {
+						e.document = "";
+					}
+
+					q.offset = NULL;
+					if (url_qs("stats", query_str, query_size, &q) != -1) {
+						e.stats = urldecode(q.offset, q.length);
+					} else {
+						e.stats = "";
+					}
+					break;
+
+				case CMD_UPLOAD:
+					break;
 			}
 		}
 	} else {
@@ -1363,13 +1370,25 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 int
 HttpClient::identify_cmd(const std::string &commad)
 {
-	if (strcasecmp(commad.c_str(), HTTP_SEARCH) == 0) {
+	if (commad.compare(HTTP_SEARCH) == 0) {
 		return CMD_SEARCH;
-	} else if (strcasecmp(commad.c_str(), HTTP_FACETS) == 0) {
+	}
+
+	if (commad.compare(HTTP_FACETS) == 0) {
 		return CMD_FACETS;
-	} else if (strcasecmp(commad.c_str(), HTTP_STATS) == 0) {
+	}
+
+	if (commad.compare(HTTP_STATS) == 0) {
 		return CMD_STATS;
-	} else if (strcasecmp(commad.c_str(), HTTP_SCHEMA) == 0) {
+	}
+
+	if (commad.compare(HTTP_SCHEMA) == 0) {
 		return CMD_SCHEMA;
-	} else return CMD_ID;
+	}
+
+	if (commad.compare(HTTP_UPLOAD) == 0) {
+		return CMD_UPLOAD;
+	}
+
+	return CMD_ID;
 }
