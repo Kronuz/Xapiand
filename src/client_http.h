@@ -67,10 +67,11 @@ class HttpClient : public BaseClient {
 
 	std::string path;
 	std::string body;
-	std::string host;
-	std::string command; //command or ID
+	std::string header_name;
+	std::string header_value;
 
-	bool ishost = false;
+	std::string host;
+	std::string command;  //command or ID
 
 	static int on_info(http_parser* p);
 	static int on_data(http_parser* p, const char *at, size_t length);

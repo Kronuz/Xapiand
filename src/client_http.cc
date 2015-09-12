@@ -160,6 +160,8 @@ int HttpClient::on_info(http_parser* p) {
 		case 19:  // message_begin
 			self->path.clear();
 			self->body.clear();
+			self->header_name.clear();
+			self->header_value.clear();
 			break;
 	}
 
@@ -172,27 +174,35 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 
 	LOG_HTTP_PROTO_PARSER(self, "%3d. %s\n", p->state, repr(at, length).c_str());
 
-	switch (p->state) {
-		case 32: // path
-			self->path = std::string(at, length);
-			self->body = std::string();
-			break;
-		case 44:
-			if (strcasecmp(std::string(at, length).c_str(),"host") == 0) {
-				self->ishost = true;
+	int state = p->state;
+
+	// s_req_path  ->  s_req_http_start
+	if (state > 26 && state <= 32) {
+		self->path.append(at, length);
+	} else
+
+	// s_header_field  ->  s_header_value_discard_ws
+	if (state >= 43 && state <= 44) {
+		self->header_name.append(at, length);
+	} else
+
+	// s_header_value_discard_ws_almost_done  ->  s_header_almost_done
+	if (state >= 45 && state <= 50) {
+		self->header_value.append(at, length);
+		if (state == 50) {
+			if (strcasecmp(self->header_name.c_str(), "host") == 0) {
+				self->host = self->header_value;
 			}
-			break;
-		case 60: // receiving data from the buffer (1024 bytes)
-		case 62: // finished receiving data (last data)
-			self->body += std::string(at, length);
-			break;
-		case 50:
-			if (self->ishost) {
-				self->host = std::string(at, length);
-				self->ishost = false;
-			}
-			break;
+			self->header_name.clear();
+			self->header_value.clear();
+		}
+	} else
+
+	// s_body_identity  ->  s_message_done
+	if (state >= 60 && state <= 62) {
+		self->body.append(at, length);
 	}
+
 	return 0;
 }
 
