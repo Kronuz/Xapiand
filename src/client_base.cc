@@ -208,12 +208,12 @@ int BaseClient::write_directly()
 		Buffer* buffer = write_queue.front();
 
 		size_t buf_size = buffer->nbytes();
-		const char * buf = buffer->dpos();
+		const char *buf_data = buffer->dpos();
 
 #ifdef MSG_NOSIGNAL
-		ssize_t written = ::send(sock, buf, buf_size, MSG_NOSIGNAL);
+		ssize_t written = ::send(sock, buf_data, buf_size, MSG_NOSIGNAL);
 #else
-		ssize_t written = ::write(sock, buf, buf_size);
+		ssize_t written = ::write(sock, buf_data, buf_size);
 #endif
 
 		if (written < 0) {
@@ -223,10 +223,13 @@ int BaseClient::write_directly()
 				LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
 				return WR_ERR;
 			}
+		} else if (written == 0) {
+			return WR_PENDING;
 		} else {
+			LOG_CONN_WIRE(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf_data, written).c_str());
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
-				if(write_queue.pop(buffer)) {
+				if (write_queue.pop(buffer)) {
 					delete buffer;
 					if (write_queue.empty()) {
 						return WR_OK;
@@ -238,7 +241,7 @@ int BaseClient::write_directly()
 				return WR_PENDING;
 			}
 		}
-	   }
+	}
 	return WR_OK;
 }
 
@@ -444,12 +447,13 @@ void BaseClient::async_write_cb(ev::async &watcher, int revents)
 bool BaseClient::write(const char *buf, size_t buf_size)
 {
 	int status;
-	LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
 
 	Buffer *buffer = new Buffer('\0', buf, buf_size);
 	if (!buffer || !write_queue.push(buffer)) {
 		return false;
 	}
+
+	LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
 
 	written += 1;
 
