@@ -354,6 +354,12 @@ void HttpClient::run()
 }
 
 
+void HttpClient::_options()
+{
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS, parser.http_major, parser.http_minor));
+}
+
+
 void HttpClient::_head()
 {
 	query_t e;
@@ -369,6 +375,113 @@ void HttpClient::_head()
 	}
 }
 
+
+void HttpClient::_get()
+{
+	query_t e;
+	int cmd = _endpointgen(e, false);
+
+	switch (cmd) {
+		case CMD_ID:
+			e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
+			search_view(e, false, false);
+			break;
+		case CMD_SEARCH:
+			e.check_at_least = 0;
+			search_view(e, false, false);
+			break;
+		case CMD_FACETS:
+			search_view(e, true, false);
+			break;
+		case CMD_STATS:
+			stats_view(e);
+			break;
+		case CMD_SCHEMA:
+			search_view(e, false, true);
+			break;
+		default:
+			bad_request_view(e, cmd);
+			break;
+	}
+}
+
+
+void HttpClient::_put()
+{
+	query_t e;
+	int cmd = _endpointgen(e, true);
+
+	switch (cmd) {
+		case CMD_ID:
+			index_document_view(e);
+			break;
+		default:
+			bad_request_view(e, cmd);
+			break;
+	}
+}
+
+
+void HttpClient::_post()
+{
+	query_t e;
+	int cmd = _endpointgen(e, false);
+
+	switch (cmd) {
+		case CMD_ID:
+			e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
+			search_view(e, false, false);
+			break;
+		case CMD_SEARCH:
+			e.check_at_least = 0;
+			search_view(e, false, false);
+			break;
+		case CMD_FACETS:
+			search_view(e, true, false);
+			break;
+		case CMD_STATS:
+			stats_view(e);
+			break;
+		case CMD_SCHEMA:
+			search_view(e, false, true);
+			break;
+		default:
+			bad_request_view(e, cmd);
+			break;
+	}
+}
+
+
+void HttpClient::_patch()
+{
+	query_t e;
+	int cmd = _endpointgen(e, true);
+
+	switch (cmd) {
+		case CMD_ID:
+			update_document_view(e);
+			break;
+		default:
+			bad_request_view(e, cmd);
+			break;
+	}
+}
+
+
+void HttpClient::_delete()
+{
+	query_t e;
+	int cmd = _endpointgen(e, true);
+
+	switch (cmd) {
+		case CMD_ID:
+			delete_document_view(e);
+			break;
+		default:
+			bad_request_view(e, cmd);
+			break;
+	}
+}
 
 
 void HttpClient::document_info_view(const query_t &e)
@@ -438,22 +551,6 @@ void HttpClient::document_info_view(const query_t &e)
 }
 
 
-void HttpClient::_delete()
-{
-	query_t e;
-	int cmd = _endpointgen(e, true);
-
-	switch (cmd) {
-		case CMD_ID:
-			delete_document_view(e);
-			break;
-		default:
-			bad_request_view(e, cmd);
-			break;
-	}
-}
-
-
 void HttpClient::delete_document_view(const query_t &e)
 {
 	std::string result;
@@ -500,22 +597,6 @@ void HttpClient::delete_document_view(const query_t &e)
 	result += "\n\n";
 	result = http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result);
 	write(result);
-}
-
-
-void HttpClient::_put()
-{
-	query_t e;
-	int cmd = _endpointgen(e, true);
-
-	switch (cmd) {
-		case CMD_ID:
-			index_document_view(e);
-			break;
-		default:
-			bad_request_view(e, cmd);
-			break;
-	}
 }
 
 
@@ -575,22 +656,6 @@ void HttpClient::index_document_view(const query_t &e)
 	result += "\n\n";
 	result = http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result);
 	write(result);
-}
-
-
-void HttpClient::_patch()
-{
-	query_t e;
-	int cmd = _endpointgen(e, true);
-
-	switch (cmd) {
-		case CMD_ID:
-			update_document_view(e);
-			break;
-		default:
-			bad_request_view(e, cmd);
-			break;
-	}
 }
 
 
@@ -684,12 +749,6 @@ void HttpClient::stats_view(const query_t &e)
 }
 
 
-void HttpClient::_options()
-{
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS, parser.http_major, parser.http_minor));
-}
-
-
 void HttpClient::bad_request_view(const query_t &e, int cmd)
 {
 	std::string result;
@@ -715,66 +774,6 @@ void HttpClient::bad_request_view(const query_t &e, int cmd)
 	result += "\n";
 
 	write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
-}
-
-
-void HttpClient::_get()
-{
-	query_t e;
-	int cmd = _endpointgen(e, false);
-
-	switch (cmd) {
-		case CMD_ID:
-			e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
-			search_view(e, false, false);
-			break;
-		case CMD_SEARCH:
-			e.check_at_least = 0;
-			search_view(e, false, false);
-			break;
-		case CMD_FACETS:
-			search_view(e, true, false);
-			break;
-		case CMD_STATS:
-			stats_view(e);
-			break;
-		case CMD_SCHEMA:
-			search_view(e, false, true);
-			break;
-		default:
-			bad_request_view(e, cmd);
-			break;
-	}
-}
-
-
-void HttpClient::_post()
-{
-	query_t e;
-	int cmd = _endpointgen(e, false);
-
-	switch (cmd) {
-		case CMD_ID:
-			e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
-			search_view(e, false, false);
-			break;
-		case CMD_SEARCH:
-			e.check_at_least = 0;
-			search_view(e, false, false);
-			break;
-		case CMD_FACETS:
-			search_view(e, true, false);
-			break;
-		case CMD_STATS:
-			stats_view(e);
-			break;
-		case CMD_SCHEMA:
-			search_view(e, false, true);
-			break;
-		default:
-			bad_request_view(e, cmd);
-			break;
-	}
 }
 
 

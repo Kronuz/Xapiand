@@ -90,13 +90,13 @@ class HttpClient : public BaseClient {
 	void search_view(const query_t &e, bool facets, bool schema);
 	void bad_request_view(const query_t &e, int cmd);
 
-	void _delete();
-	void _put();
+	void _options();
+	void _head();
 	void _get();
+	void _put();
 	void _post();
 	void _patch();
-	void _head();
-	void _options();
+	void _delete();
 
 	int _endpointgen(query_t &e, bool writable);
 	static int identify_cmd(const std::string &commad);
