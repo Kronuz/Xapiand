@@ -519,9 +519,7 @@ bool BaseClient::send_file(int fd)
 		}
 	}
 
-	char *src_buf = lz4_buffer;
-
-	size_t frame_size = LZ4F_compressBound(sizeof(src_buf), &lz4_preferences);
+	size_t frame_size = LZ4F_compressBound(LZ4F_BLOCK_SIZE, &lz4_preferences);
 	size_t dst_size =  frame_size + LZ4_HEADER_SIZE + LZ4_FOOTER_SIZE;
 	char *dst_buf = new char[dst_size];
 	if (!dst_buf) {
@@ -541,7 +539,7 @@ bool BaseClient::send_file(int fd)
 	size_t offset = LZ4F_compressBegin(ctx, dst_buf, frame_size, &lz4_preferences);
 
 	while (count < file_size) {
-		size_t src_size = ::read(fd, src_buf, sizeof(src_buf));
+		size_t src_size = ::read(fd, lz4_buffer, LZ4F_BLOCK_SIZE);
 		if (src_size == -1) {
 			if (errno == EAGAIN) {
 				continue;
@@ -554,7 +552,7 @@ bool BaseClient::send_file(int fd)
 			break;
 		}
 
-		bytes = LZ4F_compressUpdate(ctx, dst_buf + offset, dst_size - offset, src_buf, src_size, NULL);
+		bytes = LZ4F_compressUpdate(ctx, dst_buf + offset, dst_size - offset, lz4_buffer, src_size, NULL);
 		if (LZ4F_isError(bytes)) {
 			LOG_ERR(this, "Compression failed: error %zd\n", bytes);
 			LZ4F_freeCompressionContext(ctx);
