@@ -30,12 +30,13 @@
 #include "http_parser.h"
 
 
-#define HTTP_HEADER  0x01
-#define HTTP_CONTENT 0x02
-#define HTTP_JSON    0x04
-#define HTTP_CHUNKED 0x08
-#define HTTP_OPTIONS 0x10
-#define HTTP_MATCHED_COUNT 0x20
+#define HTTP_STATUS         (1 << 0)
+#define HTTP_HEADER         (1 << 1)
+#define HTTP_CONTENT        (1 << 2)
+#define HTTP_JSON           (1 << 3)
+#define HTTP_CHUNKED        (1 << 4)
+#define HTTP_OPTIONS        (1 << 5)
+#define HTTP_MATCHED_COUNT  (1 << 6)
 
 #define CMD_ID     0
 #define CMD_SEARCH 1
@@ -88,7 +89,6 @@ public:
 	void _head();
 	void _stats(query_t &e);
 	int _endpointgen(query_t &e, bool writable);
-	std::string http_response(int status, int mode, int matched_count = 0, std::string content=std::string(""));
 	static int identify_cmd(const std::string &commad);
 };
 

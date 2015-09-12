@@ -67,6 +67,57 @@ const char* status_code[6][5] = {
 	}
 };
 
+std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string content=std::string(""))
+{
+	char buffer[20];
+	std::string response;
+	std::string eol("\r\n");
+
+	if (mode & HTTP_STATUS) {
+		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", http_major, http_minor, status);
+		response += buffer;
+		response += status_code[status / 100][status % 100] + eol;
+	}
+
+	if (mode & HTTP_HEADER) {
+		if (mode & HTTP_JSON) {
+			response += "Content-Type: application/json; charset=UTF-8" + eol;
+		}
+
+		if (mode & HTTP_OPTIONS) {
+			response += "Allow: GET,HEAD,POST,PUT,PATCH,OPTIONS" + eol;
+		}
+
+		if (mode & HTTP_MATCHED_COUNT) {
+			response += "X-Matched-count: " + std::to_string(matched_count) + eol;
+		}
+
+		if (mode & HTTP_CONTENT) {
+			if (mode & HTTP_CHUNKED) {
+				response += "Transfer-Encoding: chunked" + eol;
+			} else {
+				response += "Content-Length: ";
+				snprintf(buffer, sizeof(buffer), "%lu", content.size());
+				response += buffer + eol;
+			}
+		}
+		response += eol;
+	}
+
+	if (mode & HTTP_CONTENT) {
+		if (mode & HTTP_CHUNKED) {
+			snprintf(buffer, sizeof(buffer), "%lx", content.size());
+			response += buffer + eol;
+			response += content + eol;
+		} else {
+			response += content;
+		}
+	}
+
+	return response;
+}
+
+
 HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
 	  database(NULL)
@@ -234,12 +285,12 @@ void HttpClient::run()
 				_index();
 				break;
 			case METHOD_OPTIONS:
-				write(http_response(200, HTTP_HEADER | HTTP_OPTIONS));
+				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS, parser.http_major, parser.http_minor));
 				break;
 			case METHOD_PATCH:
 				_patch();
 			default:
-				write(http_response(501, HTTP_HEADER | HTTP_CONTENT));
+				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 				break;
 		}
 	} catch (const Xapian::Error &err) {
@@ -270,7 +321,7 @@ void HttpClient::run()
 		if (written) {
 			destroy();
 		} else {
-			write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
+			write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		}
 	}
 	io_read.start();
@@ -312,12 +363,12 @@ void HttpClient::_head()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
+			write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
 			return;
 	}
 
 	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
-		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
 	}
 
@@ -357,7 +408,7 @@ void HttpClient::_head()
 			result.assign(_cprint.get());
 		}
 		result += "\n";
-		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
+		result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result);
 		write(result);
 	} else {
 		cJSON_AddStringToObject(root.get(), "Response empty", "Document not found");
@@ -369,7 +420,7 @@ void HttpClient::_head()
 			result.assign(_cprint.get());
 		}
 		result += "\n";
-		write(http_response(404, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
+		write(http_response(404, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
 	}
 
 	database_pool->checkin(&database);
@@ -408,19 +459,19 @@ void HttpClient::_delete()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
+			write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
 			return;
 	}
 
 	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
-		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
 	}
 
 	clock_t t = clock();
 	if (!database->drop(command, e.commit)) {
 		database_pool->checkin(&database);
-		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
 	}
 
@@ -449,7 +500,7 @@ void HttpClient::_delete()
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
+	result = http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result);
 	write(result);
 }
 
@@ -485,12 +536,12 @@ void HttpClient::_index()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
+			write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
 			return;
 	}
 
 	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN|DB_INIT_REF)) {
-		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
 	}
 
@@ -500,13 +551,13 @@ void HttpClient::_index()
 	if (!document) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 		database_pool->checkin(&database);
-		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
 	}
 
 	if (!database->index(document.get(), command, e.commit)) {
 		database_pool->checkin(&database);
-		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
 	}
 
@@ -535,7 +586,7 @@ void HttpClient::_index()
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
+	result = http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result);
 	write(result);
 }
 
@@ -572,12 +623,12 @@ void HttpClient::_patch()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
+			write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
 			return;
 	}
 
 	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
-		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
 	}
 
@@ -585,13 +636,13 @@ void HttpClient::_patch()
 	if (!patches) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 		database_pool->checkin(&database);
-		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
 	}
 
 	if (!database->patch(patches.get(), command, e.commit)) {
 		database_pool->checkin(&database);
-		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
 	}
 
@@ -609,7 +660,7 @@ void HttpClient::_patch()
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
+	result = http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result);
 	write(result);
 }
 
@@ -625,7 +676,7 @@ void HttpClient::_stats(query_t &e)
 	}
 	if (e.database) {
 		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
-			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 			return;
 		}
 		unique_cJSON JSON_database = database->get_stats_database();
@@ -634,7 +685,7 @@ void HttpClient::_stats(query_t &e)
 	}
 	if (!e.document.empty()) {
 		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
-			write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 			return;
 		}
 		unique_cJSON JSON_document = database->get_stats_docs(e.document);
@@ -653,7 +704,7 @@ void HttpClient::_stats(query_t &e)
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
+	result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result);
 	write(result);
 }
 
@@ -705,12 +756,12 @@ void HttpClient::_search()
 				result.assign(_cprint.get());
 			}
 			result += "\n";
-			write(http_response(400, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result));
+			write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
 			return;
 	}
 
 	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
-		write(http_response(502, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
 	}
 
@@ -721,7 +772,7 @@ void HttpClient::_search()
 			readable_schema(jschema.get());
 			unique_char_ptr _cprint(cJSON_Print(jschema.get()));
 			schema_ = std::string(_cprint.get()) + "\n";
-			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, schema_));
+			write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, schema_));
 			database_pool->checkin(&database);
 			return;
 		} else {
@@ -734,7 +785,7 @@ void HttpClient::_search()
 				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
 				schema_.assign(_cprint.get());
 			}
-			write(http_response(200, HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, schema_));
+			write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, schema_));
 			database_pool->checkin(&database);
 			return;
 		}
@@ -748,14 +799,14 @@ void HttpClient::_search()
 	cout_matched = mset.size();
 	if (rmset == 1) {
 		LOG(this, "get_mset return 1\n");
-		write(http_response(400, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		database_pool->checkin(&database);
 		LOG(this, "ABORTED SEARCH\n");
 		return;
 	}
 	if (rmset == 2) {
 		LOG(this, "get_mset return 2\n");
-		write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
+		write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		database_pool->checkin(&database);
 		LOG(this, "ABORTED SEARCH\n");
 		return;
@@ -791,7 +842,7 @@ void HttpClient::_search()
 			result.assign(_cprint.get());
 		}
 		result += "\n\n";
-		result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
+		result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result);
 		write(result);
 	} else {
 		int rc = 0;
@@ -835,7 +886,7 @@ void HttpClient::_search()
 					if (written) {
 						write("0\r\n\r\n");
 					} else {
-						write(http_response(500, HTTP_HEADER | HTTP_CONTENT));
+						write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 					}
 					database_pool->checkin(&database);
 					LOG(this, "ABORTED SEARCH\n");
@@ -846,7 +897,7 @@ void HttpClient::_search()
 				id = document.get_value(0);
 
 				if (rc == 0 && json_chunked) {
-					write(http_response(200, HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED | HTTP_MATCHED_COUNT, cout_matched));
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_JSON | HTTP_CHUNKED | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, cout_matched));
 				}
 
 				unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
@@ -868,9 +919,9 @@ void HttpClient::_search()
 				}
 				result += "\n\n";
 				if(json_chunked) {
-					result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, 0, result);
+					result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, result);
 				} else {
-					result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, 0, result);
+					result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result);
 				}
 
 				if (!write(result)) {
@@ -891,7 +942,7 @@ void HttpClient::_search()
 				result.assign(_cprint.get());
 			}
 			result += "\n\n";
-			result = http_response(200,  HTTP_HEADER | HTTP_CONTENT | HTTP_JSON | HTTP_MATCHED_COUNT, 0, result);
+			result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, result);
 			write(result);
 		}
 	}
@@ -1282,53 +1333,6 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 		return CMD_BAD_QUERY;
 	}
 	return cmd;
-}
-
-
-std::string HttpClient::http_response(int status, int mode, int matched_count, std::string content)
-{
-	char buffer[20];
-	std::string response;
-	std::string eol("\r\n");
-
-	if (mode & HTTP_HEADER) {
-		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", parser.http_major, parser.http_minor, status);
-		response += buffer;
-		response += status_code[status / 100][status % 100] + eol;
-
-		if (mode & HTTP_JSON) {
-			response += "Content-Type: application/json; charset=UTF-8" + eol;
-		}
-
-		if (mode & HTTP_OPTIONS) {
-			response += "Allow: GET,HEAD,POST,PUT,PATCH,OPTIONS" + eol;
-		}
-
-		if (mode & HTTP_MATCHED_COUNT) {
-			response += "X-Matched-count: " + std::to_string(matched_count) + eol;
-		}
-
-		if (mode & HTTP_CHUNKED) {
-			response += "Transfer-Encoding: chunked" + eol;
-		} else {
-			response += "Content-Length: ";
-			snprintf(buffer, sizeof(buffer), "%lu", content.size());
-			response += buffer + eol;
-		}
-		response += eol;
-	}
-
-	if (mode & HTTP_CONTENT) {
-		if (mode & HTTP_CHUNKED) {
-			snprintf(buffer, sizeof(buffer), "%lx", content.size());
-			response += buffer + eol;
-			response += content + eol;
-		} else {
-			response += content;
-		}
-	}
-
-	return response;
 }
 
 
