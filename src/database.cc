@@ -886,7 +886,7 @@ Database::get_slot_field(const std::string &field_name)
 
 
 Database::search_t
-Database::search(query_t e)
+Database::search(const query_t &e)
 {
 	search_t srch_resul;
 
@@ -1254,7 +1254,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 
 void
-Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, similar_t *similar)
+Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_t *similar)
 {
 	Xapian::RSet rset;
 	std::vector<std::string>::const_iterator it;
@@ -1295,7 +1295,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 Xapian::Enquire
 Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
 		Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
-		similar_t *nearest, similar_t *fuzzy, std::vector<std::string> *facets)
+		const similar_t *nearest, const similar_t *fuzzy, const std::vector<std::string> *facets)
 {
 	std::string field;
 	MultiValueCountMatchSpy *spy;
@@ -1333,7 +1333,7 @@ Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key,
 
 
 int
-Database::get_mset(query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
+Database::get_mset(const query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
 {
 	std::unique_ptr<Multi_MultiValueKeyMaker> unique_sorter;
 	unsigned int doccount = db->get_doccount();
