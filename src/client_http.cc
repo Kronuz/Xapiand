@@ -299,17 +299,19 @@ void HttpClient::run()
 				_delete();
 				break;
 			case METHOD_GET:
+				_get();
+				break;
 			case METHOD_POST:
-				_search();
+				_post();
 				break;
 			case METHOD_HEAD:
 				_head();
 				break;
 			case METHOD_PUT:
-				_index();
+				_put();
 				break;
 			case METHOD_OPTIONS:
-				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS, parser.http_major, parser.http_minor));
+				_options();
 				break;
 			case METHOD_PATCH:
 				_patch();
@@ -354,43 +356,27 @@ void HttpClient::run()
 
 void HttpClient::_head()
 {
+	query_t e;
+	int cmd = _endpointgen(e, false);
+
+	switch (cmd) {
+		case CMD_ID:
+			document_info_view(e);
+			break;
+		default:
+			bad_request_view(e, cmd);
+			break;
+	}
+}
+
+
+
+void HttpClient::document_info_view(const query_t &e)
+{
 	bool found = true;
 	std::string result;
 	Xapian::docid docid = 0;
 	Xapian::QueryParser queryparser;
-	query_t e;
-
-	int cmd = _endpointgen(e, false);
-
-	switch (cmd) {
-		case CMD_ID: break;
-		case CMD_SEARCH:
-		case CMD_FACETS:
-		case CMD_STATS:
-		case CMD_SCHEMA:
-		default:
-			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
-			switch (cmd) {
-				case CMD_UNKNOWN_HOST:
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
-					break;
-				case CMD_UNKNOWN_ENDPOINT:
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
-					break;
-				default:
-					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
-			}
-			if (e.pretty) {
-				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
-				result.assign(_cprint.get());
-			} else {
-				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
-				result.assign(_cprint.get());
-			}
-			result += "\n";
-			write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
-			return;
-	}
 
 	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
@@ -454,41 +440,23 @@ void HttpClient::_head()
 
 void HttpClient::_delete()
 {
-	std::string result;
 	query_t e;
-
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
-		case CMD_ID: break;
-		case CMD_SEARCH:
-		case CMD_FACETS:
-		case CMD_STATS:
-		case CMD_SCHEMA:
+		case CMD_ID:
+			delete_document_view(e);
+			break;
 		default:
-			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
-			switch (cmd) {
-				case CMD_UNKNOWN_HOST:
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
-					break;
-				case CMD_UNKNOWN_ENDPOINT:
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
-					break;
-				default:
-					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
-			}
-			if (e.pretty) {
-				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
-				result.assign(_cprint.get());
-			} else {
-				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
-				result.assign(_cprint.get());
-			}
-			result += "\n";
-			write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
-			return;
+			bad_request_view(e, cmd);
+			break;
 	}
+}
 
+
+void HttpClient::delete_document_view(const query_t &e)
+{
+	std::string result;
 	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
@@ -516,7 +484,11 @@ void HttpClient::_delete()
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
-	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
+	if (e.commit) {
+		cJSON_AddTrueToObject(data, "commit");
+	} else {
+		cJSON_AddFalseToObject(data, "commit");
+	}
 	cJSON_AddItemToObject(root.get(), "delete", data);
 	if (e.pretty) {
 		unique_char_ptr _cprint(cJSON_Print(root.get()));
@@ -530,42 +502,26 @@ void HttpClient::_delete()
 	write(result);
 }
 
-void HttpClient::_index()
-{
-	std::string result;
-	query_t e;
 
+void HttpClient::_put()
+{
+	query_t e;
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
-		case CMD_ID: break;
-		case CMD_SEARCH:
-		case CMD_FACETS:
-		case CMD_STATS:
-		case CMD_SCHEMA:
+		case CMD_ID:
+			index_document_view(e);
+			break;
 		default:
-			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
-			switch (cmd) {
-				case CMD_UNKNOWN_HOST:
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
-					break;
-				case CMD_UNKNOWN_ENDPOINT:
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
-					break;
-				default:
-					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
-			}
-			if (e.pretty) {
-				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
-				result.assign(_cprint.get());
-			} else {
-				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
-				result.assign(_cprint.get());
-			}
-			result += "\n";
-			write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
-			return;
+			bad_request_view(e, cmd);
+			break;
 	}
+}
+
+
+void HttpClient::index_document_view(const query_t &e)
+{
+	std::string result;
 
 	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN|DB_INIT_REF)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
@@ -603,7 +559,11 @@ void HttpClient::_index()
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
-	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
+	if (e.commit) {
+		cJSON_AddTrueToObject(data, "commit");
+	} else {
+		cJSON_AddFalseToObject(data, "commit");
+	}
 	cJSON_AddItemToObject(root.get(), "index", data);
 	if (e.pretty) {
 		unique_char_ptr _cprint(cJSON_Print(root.get()));
@@ -620,40 +580,23 @@ void HttpClient::_index()
 
 void HttpClient::_patch()
 {
-	std::string result;
 	query_t e;
-
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
-		case CMD_ID: break;
-		case CMD_SEARCH:
-		case CMD_FACETS:
-		case CMD_STATS:
-		case CMD_SCHEMA:
+		case CMD_ID:
+			update_document_view(e);
+			break;
 		default:
-			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
-			switch (cmd) {
-				case CMD_UNKNOWN_HOST:
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
-					break;
-				case CMD_UNKNOWN_ENDPOINT:
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
-					break;
-				default:
-					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
-			}
-			if (e.pretty) {
-				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
-				result.assign(_cprint.get());
-			} else {
-				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
-				result.assign(_cprint.get());
-			}
-			result += "\n";
-			write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
-			return;
+			bad_request_view(e, cmd);
+			break;
 	}
+}
+
+
+void HttpClient::update_document_view(const query_t &e)
+{
+	std::string result;
 
 	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
@@ -678,7 +621,11 @@ void HttpClient::_patch()
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
-	(e.commit) ? cJSON_AddTrueToObject(data, "commit") : cJSON_AddFalseToObject(data, "commit");
+	if (e.commit) {
+		cJSON_AddTrueToObject(data, "commit");
+	} else {
+		cJSON_AddFalseToObject(data, "commit");
+	}
 	cJSON_AddItemToObject(root.get(), "update", data);
 	if (e.pretty) {
 		unique_char_ptr _cprint(cJSON_Print(root.get()));
@@ -693,7 +640,7 @@ void HttpClient::_patch()
 }
 
 
-void HttpClient::_stats(query_t &e)
+void HttpClient::stats_view(const query_t &e)
 {
 	std::string result;
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
@@ -737,57 +684,105 @@ void HttpClient::_stats(query_t &e)
 }
 
 
-void HttpClient::_search()
+void HttpClient::_options()
 {
-	int cout_matched = 0;
-	bool facets = false;
-	bool schema = false;
-	bool json_chunked = true;
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS, parser.http_major, parser.http_minor));
+}
+
+
+void HttpClient::bad_request_view(const query_t &e, int cmd)
+{
 	std::string result;
 
-	query_t e;
+	unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
+	switch (cmd) {
+		case CMD_UNKNOWN_HOST:
+			cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
+			break;
+		case CMD_UNKNOWN_ENDPOINT:
+			cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
+			break;
+		default:
+			cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
+	}
+	if (e.pretty) {
+		unique_char_ptr _cprint(cJSON_Print(err_response.get()));
+		result.assign(_cprint.get());
+	} else {
+		unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
+		result.assign(_cprint.get());
+	}
+	result += "\n";
 
+	write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
+}
+
+
+void HttpClient::_get()
+{
+	query_t e;
 	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
 		case CMD_ID:
 			e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
+			search_view(e, false, false);
 			break;
 		case CMD_SEARCH:
 			e.check_at_least = 0;
+			search_view(e, false, false);
 			break;
 		case CMD_FACETS:
-			facets = true;
+			search_view(e, true, false);
 			break;
 		case CMD_STATS:
-			_stats(e);
-			return;
+			stats_view(e);
+			break;
 		case CMD_SCHEMA:
-			schema = true;
+			search_view(e, false, true);
 			break;
 		default:
-			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
-			switch (cmd) {
-				case CMD_UNKNOWN_HOST:
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
-					break;
-				case CMD_UNKNOWN_ENDPOINT:
-					cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
-					break;
-				default:
-					cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
-			}
-			if (e.pretty) {
-				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
-				result.assign(_cprint.get());
-			} else {
-				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
-				result.assign(_cprint.get());
-			}
-			result += "\n";
-			write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
-			return;
+			bad_request_view(e, cmd);
+			break;
 	}
+}
+
+
+void HttpClient::_post()
+{
+	query_t e;
+	int cmd = _endpointgen(e, false);
+
+	switch (cmd) {
+		case CMD_ID:
+			e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
+			search_view(e, false, false);
+			break;
+		case CMD_SEARCH:
+			e.check_at_least = 0;
+			search_view(e, false, false);
+			break;
+		case CMD_FACETS:
+			search_view(e, true, false);
+			break;
+		case CMD_STATS:
+			stats_view(e);
+			break;
+		case CMD_SCHEMA:
+			search_view(e, false, true);
+			break;
+		default:
+			bad_request_view(e, cmd);
+			break;
+	}
+}
+
+
+void HttpClient::search_view(const query_t &e, bool facets, bool schema)
+{
+	std::string result;
+
+	bool json_chunked = true;
 
 	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
@@ -825,7 +820,7 @@ void HttpClient::_search()
 	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 	clock_t t = clock();
 	int rmset = database->get_mset(e, mset, spies, suggestions);
-	cout_matched = mset.size();
+	int cout_matched = mset.size();
 	if (rmset == 1) {
 		LOG(this, "get_mset return 1\n");
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
@@ -947,7 +942,7 @@ void HttpClient::_search()
 					result.assign(_cprint.get());
 				}
 				result += "\n\n";
-				if(json_chunked) {
+				if (json_chunked) {
 					result = http_response(200,  HTTP_CONTENT | HTTP_JSON | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, result);
 				} else {
 					result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result);
@@ -957,7 +952,7 @@ void HttpClient::_search()
 					break;
 				}
 			}
-			if(json_chunked) {
+			if (json_chunked) {
 				write("0\r\n\r\n");
 			}
 		} else {

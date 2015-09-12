@@ -82,19 +82,30 @@ class HttpClient : public BaseClient {
 	static int on_info(http_parser* p);
 	static int on_data(http_parser* p, const char *at, size_t length);
 
+	void stats_view(const query_t &e);
+	void delete_document_view(const query_t &e);
+	void index_document_view(const query_t &e);
+	void document_info_view(const query_t &e);
+	void update_document_view(const query_t &e);
+	void search_view(const query_t &e, bool facets, bool schema);
+	void bad_request_view(const query_t &e, int cmd);
+
+	void _delete();
+	void _put();
+	void _get();
+	void _post();
+	void _patch();
+	void _head();
+	void _options();
+
+	int _endpointgen(query_t &e, bool writable);
+	static int identify_cmd(const std::string &commad);
+
 public:
 	HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	~HttpClient();
 
 	void run();
-	void _delete();
-	void _index();
-	void _search();
-	void _patch();
-	void _head();
-	void _stats(query_t &e);
-	int _endpointgen(query_t &e, bool writable);
-	static int identify_cmd(const std::string &commad);
 };
 
 #endif /* XAPIAND_INCLUDED_CLIENT_HTTP_H */
