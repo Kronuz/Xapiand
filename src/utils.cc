@@ -694,8 +694,8 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 
 	// First, the regex string must be compiled.
 	if (*code == NULL) {
-		//pcre_free is not use because we use a struct pcre static and gets free at the end of the program
-		LOG(NULL, "pcre compiled is NULL.\n");
+		// pcre_free is not used after compiling the regular expression here because
+		// it's compiled into a global static variable, which gets freed by the end of the program.
 		*code = pcre_compile(pattern, 0, &error, &erroffset, 0);
 		if (*code == NULL) {
 			LOG_ERR(NULL, "pcre_compile of %s failed (offset: %d), %s\n", pattern, erroffset, error);
