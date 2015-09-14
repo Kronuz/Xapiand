@@ -592,12 +592,12 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 		std::string to_revision = databases[db_]->checkout_revision;
 		bool need_whole_db = (uuid != db_->get_uuid());
 		LOG(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
-		
+
 		if (fd < 0) {
 			LOG_ERR(this, "Cannot write to %s (1)\n", path);
 			return;
 		}
-		
+
 		db_->write_changesets_to_fd(fd, from_revision, need_whole_db);
 	} catch (...) {
 		release_db(db_);
