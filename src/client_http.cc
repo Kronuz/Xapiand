@@ -94,14 +94,12 @@ std::string http_response(int status, int mode, unsigned short http_major=0, uns
 			response += "X-Matched-count: " + std::to_string(matched_count) + eol;
 		}
 
-		if (mode & HTTP_CONTENT) {
-			if (mode & HTTP_CHUNKED) {
-				response += "Transfer-Encoding: chunked" + eol;
-			} else {
-				response += "Content-Length: ";
-				snprintf(buffer, sizeof(buffer), "%lu", content.size());
-				response += buffer + eol;
-			}
+		if (mode & HTTP_CHUNKED) {
+			response += "Transfer-Encoding: chunked" + eol;
+		} else {
+			response += "Content-Length: ";
+			snprintf(buffer, sizeof(buffer), "%lu", content.size());
+			response += buffer + eol;
 		}
 		response += eol;
 	}
