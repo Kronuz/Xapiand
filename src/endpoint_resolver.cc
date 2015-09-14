@@ -142,9 +142,9 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 bool EndpointList::_get_endpoints(std::vector<Endpoint> &Endv, int n_endps) {
 	int c;
 	bool find_endpoints = false;
-	std::set<Endpoint, Endpoint::compare>::const_iterator it_endp = endp_set.cbegin();
+	std::set<Endpoint, Endpoint::compare>::const_iterator it_endp(endp_set.cbegin());
 	for (c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
-		if(c == n_endps) {
+		if (c == n_endps) {
 			find_endpoints = true;
 		}
 		Endv.push_back(*it_endp);
@@ -166,15 +166,15 @@ bool EndpointList::empty() {
 void EndpointList::show_list()
 {
 	pthread_mutex_lock(&endl_qmtx);
-	std::set<Endpoint, Endpoint::compare>::iterator it;
-	for (it = endp_set.begin(); it != endp_set.end(); it++) {
-		LOG(this,"Endpoint list: --%s--\n",(*it).host.c_str());
+	std::set<Endpoint, Endpoint::compare>::iterator it(endp_set.begin());
+	for ( ; it != endp_set.end(); it++) {
+		LOG(this, "Endpoint list: --%s--\n", (*it).host.c_str());
 	}
 	pthread_mutex_unlock(&endl_qmtx);
 }
 
 
-void EndpointResolver::add_index_endpoint(Endpoint index)
+void EndpointResolver::add_index_endpoint(const Endpoint &index)
 {
 	pthread_mutex_lock(&re_qmtx);
 	EndpointList &enl = (*this)[index.path];

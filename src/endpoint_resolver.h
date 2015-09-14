@@ -72,7 +72,7 @@ class EndpointResolver : public lru_map<std::string, EndpointList> {
 	pthread_mutexattr_t re_qmtx_attr;
 
 public:
-	void add_index_endpoint(Endpoint index);
+	void add_index_endpoint(const Endpoint &index);
 	bool resolve_index_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, int n_endps=1, double timeout=1.0);
 
 	EndpointResolver(size_t max_size)
