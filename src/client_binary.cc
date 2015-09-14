@@ -149,12 +149,24 @@ void BinaryClient::on_read_file_done()
 		}
 	} catch (const Xapian::NetworkError &e) {
 		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+		if (repl_database) {
+			database_pool->checkin(&repl_database);
+			repl_database = NULL;
+		}
 		shutdown();
 	}catch (const std::exception &err) {
 		LOG_ERR(this, "ERROR: %s\n", err.what());
+		if (repl_database) {
+			database_pool->checkin(&repl_database);
+			repl_database = NULL;
+		}
 		shutdown();
 	}catch (...) {
 		LOG_ERR(this, "ERROR: Unkown exception!\n");
+		if (repl_database) {
+			database_pool->checkin(&repl_database);
+			repl_database = NULL;
+		}
 		shutdown();
 	}
 	::unlink(file_path);
@@ -333,9 +345,17 @@ void BinaryClient::run()
 			}
 		} catch (const Xapian::NetworkError &e) {
 			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			if (repl_database) {
+				database_pool->checkin(&repl_database);
+				repl_database = NULL;
+			}
 			shutdown();
 		} catch (...) {
 			LOG_ERR(this, "ERROR!\n");
+			if (repl_database) {
+				database_pool->checkin(&repl_database);
+				repl_database = NULL;
+			}
 			shutdown();
 		}
 	}
@@ -365,16 +385,8 @@ void BinaryClient::repl_apply(replicate_reply_type type, const std::string &mess
 		}
 		(this->*(dispatch[type]))(message);
 	} catch (ConnectionClosed &) {
-		if (repl_database) {
-			database_pool->checkin(&repl_database);
-			repl_database = NULL;
-		}
 		return;
 	} catch (...) {
-		if (repl_database) {
-			database_pool->checkin(&repl_database);
-			repl_database = NULL;
-		}
 		throw;
 	}
 
@@ -401,6 +413,10 @@ void BinaryClient::repl_fail(const std::string & message)
 {
 	LOG(this, "BinaryClient::repl_fail\n");
 	LOG_ERR(this, "Replication failure!\n");
+	if (repl_database) {
+		database_pool->checkin(&repl_database);
+		repl_database = NULL;
+	}
 	shutdown();
 }
 
@@ -539,6 +555,7 @@ void BinaryClient::repl_changeset(const std::string & message)
 
 void BinaryClient::repl_get_changesets(const std::string & message)
 {
+	Xapian::Database * db_;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
 
@@ -556,33 +573,44 @@ void BinaryClient::repl_get_changesets(const std::string & message)
 
 	// Select endpoints and get database
 	pthread_mutex_lock(&qmtx);
-	endpoints.clear();
-	Endpoint endpoint(index_path);
-	endpoints.insert(endpoint);
-	Xapian::Database * db_ = get_db(false);
+	try {
+		endpoints.clear();
+		Endpoint endpoint(index_path);
+		endpoints.insert(endpoint);
+		db_ = get_db(false);
+		if (!db_)
+			throw Xapian::InvalidOperationError("Server has no open database");
+	} catch (...) {
+		pthread_mutex_unlock(&qmtx);
+		throw;
+	}
 	pthread_mutex_unlock(&qmtx);
-
-	if (!db_)
-		throw Xapian::InvalidOperationError("Server has no open database");
-
-	std::string to_revision = databases[db_]->checkout_revision;
-	bool need_whole_db = (uuid != db_->get_uuid());
-	LOG(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
 
 	char path[] = "/tmp/xapian_changesets_sent.XXXXXX";
 	int fd = mkstemp(path);
-	if (fd < 0) {
-		LOG_ERR(this, "Cannot write to %s (1)\n", path);
-		return;
+	try {
+		std::string to_revision = databases[db_]->checkout_revision;
+		bool need_whole_db = (uuid != db_->get_uuid());
+		LOG(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
+		
+		if (fd < 0) {
+			LOG_ERR(this, "Cannot write to %s (1)\n", path);
+			return;
+		}
+		
+		db_->write_changesets_to_fd(fd, from_revision, need_whole_db);
+	} catch (...) {
+		release_db(db_);
+		::close(fd);
+		::unlink(path);
+		throw;
 	}
-
-	db_->write_changesets_to_fd(fd, from_revision, need_whole_db);
+	release_db(db_);
 
 	send_file(fd);
 
 	::close(fd);
 	::unlink(path);
-	release_db(db_);
 }
 
 
