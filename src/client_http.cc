@@ -79,6 +79,9 @@ std::string http_response(int status, int mode, unsigned short http_major=0, uns
 		snprintf(buffer, sizeof(buffer), "HTTP/%d.%d %d ", http_major, http_minor, status);
 		response += buffer;
 		response += status_code[status / 100][status % 100] + eol;
+		if (!(mode & HTTP_HEADER)) {
+			response += eol;
+		}
 	}
 
 	if (mode & HTTP_HEADER) {
@@ -218,7 +221,7 @@ int HttpClient::on_info(http_parser* p) {
 		case 50:  // headers done
 			if (self->expect_100) {
 				// Return 100 if client is expecting it
-				self->write(http_response(100, HTTP_STATUS | HTTP_HEADER, p->http_major, p->http_minor));
+				self->write(http_response(100, HTTP_STATUS, p->http_major, p->http_minor));
 			}
 	}
 
