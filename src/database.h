@@ -67,7 +67,7 @@ public:
 	bool local;
 	size_t hash;
 	time_t access_time;
-	int mastery_level;
+	long long mastery_level;
 	std::string checkout_revision;
 
 	Xapian::Database *db;
@@ -86,7 +86,7 @@ public:
 	Database(DatabaseQueue * queue_, const Endpoints &endpoints, int flags);
 	~Database();
 
-	int read_mastery(const std::string &dir);
+	long long read_mastery(const std::string &dir);
 	void reopen();
 	bool drop(const std::string &document_id, bool commit);
 	bool index(cJSON *document, const std::string &document_id, bool commit);
@@ -183,7 +183,7 @@ public:
 	DatabasePool(size_t max_size);
 	~DatabasePool();
 
-	int get_mastery_level(const std::string &dir);
+	long long get_mastery_level(const std::string &dir);
 
 	bool checkout(Database **database, const Endpoints &endpoints, int flags);
 	void checkin(Database **database);

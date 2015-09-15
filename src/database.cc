@@ -60,7 +60,7 @@ Database::~Database()
 }
 
 
-int
+long long
 Database::read_mastery(const std::string &dir)
 {
 	if (!local) return -1;
@@ -1700,10 +1700,10 @@ DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue
 }
 
 
-int
+long long
 DatabasePool::get_mastery_level(const std::string &dir)
 {
-	int mastery_level;
+	long long mastery_level;
 
 	Database *database_ = NULL;
 

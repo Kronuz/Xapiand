@@ -138,7 +138,7 @@ typedef struct data_field_s {
 } data_field_t;
 
 
-int read_mastery(const std::string &dir, bool force);
+long long read_mastery(const std::string &dir, bool force);
 // All the field that start with '_' are considered reserved word.
 bool is_reserved(const std::string &word);
 bool is_language(const std::string &language);
