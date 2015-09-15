@@ -1703,8 +1703,6 @@ DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue
 long long
 DatabasePool::get_mastery_level(const std::string &dir)
 {
-	long long mastery_level;
-
 	Database *database_ = NULL;
 
 	Endpoints endpoints;
@@ -1712,16 +1710,14 @@ DatabasePool::get_mastery_level(const std::string &dir)
 
 	pthread_mutex_lock(&qmtx);
 	if (checkout(&database_, endpoints, 0)) {
-		mastery_level = database_->mastery_level;
+		long long mastery_level = database_->mastery_level;
 		checkin(&database_);
 		pthread_mutex_unlock(&qmtx);
 		return mastery_level;
 	}
 	pthread_mutex_unlock(&qmtx);
 
-	mastery_level = read_mastery(dir, false);
-
-	return mastery_level;
+	return read_mastery(dir, false);
 }
 
 
