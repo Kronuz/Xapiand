@@ -46,12 +46,10 @@ long long read_mastery(const std::string &dir, bool force)
 
 	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd < 0) {
-		if(force) {
-			srand(time(0));
-			int r = rand() % 255;
-			mastery_level = (int)time(0);
-			mastery_level = mastery_level << 8;
-			mastery_level |= r;
+		if (force) {
+			srand((unsigned)time(NULL));
+			int r = rand() % 256;
+			mastery_level = (((long long)time(NULL)) << 8) | r;
 			fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 			if (fd >= 0) {
 				snprintf((char *)buf, sizeof(buf), "%lld", mastery_level);
@@ -68,11 +66,9 @@ long long read_mastery(const std::string &dir, bool force)
 		}
 		close(fd);
 		if (!mastery_level) {
-			srand(time(0));
-			int r = rand() % 255;
-			mastery_level = (int)time(0) << 8;
-			mastery_level = mastery_level << 8;
-			mastery_level |= r;
+			srand((unsigned)time(NULL));
+			int r = rand() % 256;
+			mastery_level = (((long long)time(NULL)) << 8) | r;
 			fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 			if (fd >= 0) {
 				snprintf((char *)buf, sizeof(buf), "%lld", mastery_level);

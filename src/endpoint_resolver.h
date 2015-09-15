@@ -51,7 +51,7 @@ class EndpointList {
 	timespec_t next_wake;
 
 	int status;
-	int max_mastery_level;
+	long long max_mastery_level;
 	double init_timeout;
 
 public:

@@ -100,7 +100,7 @@ class Endpoint {
 public:
 	int port;
 	std::string user, password, host, path, search, node_name;
-	int mastery_level;
+	long long mastery_level;
 
 	Endpoint();
 	Endpoint(const std::string &path_, const Node *	node_=NULL, int mastery_level_=-1, std::string node_name="");
