@@ -220,7 +220,8 @@ XapiandManager::set_node_name(const std::string &node_name_)
 
 	if (stringtolower(node_name) != stringtolower(node_name_)) {
 		node_name = node_name_;
-		int fd = open("nodename", O_WRONLY|O_CREAT, 0644);
+
+		int fd = open("nodename", O_WRONLY | O_CREAT, 0644);
 		if (fd >= 0) {
 			if (write(fd, node_name.c_str(), node_name.size()) != node_name.size()) {
 				assert(false);
@@ -476,7 +477,10 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			} else {
 				local_node.name = node_name;
 			}
-			INFO(this, "Advertising as %s...\n", local_node.name.c_str());
+			// Set the region.
+			local_node.region = get_region(stringtolower(local_node.name));
+
+			INFO(this, "Advertising as %s (Region: %d)...\n", local_node.name.c_str(), local_node.region);
 		case STATE_WAITING:
 			discovery(DISCOVERY_HELLO, local_node.serialise());
 			break;
@@ -597,6 +601,13 @@ void XapiandManager::run(int num_servers, int num_replicators)
 	replicator_pool.join();
 
 	LOG_OBJ(this, "Server ended!\n");
+}
+
+
+int XapiandManager::get_region(const std::string &str)
+{
+	std::hash<std::string> hash_fn;
+	return jump_consistent_hash(hash_fn(str), REGIONS_NUMBER);
 }
 
 
