@@ -62,7 +62,7 @@ long long read_mastery(const std::string &dir, bool force)
 		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
 		if (length > 0) {
 			buf[length] = '\0';
-			mastery_level = atoi((const char *)buf);
+			mastery_level = strtollong((const char *)buf);
 		}
 		close(fd);
 		if (!mastery_level) {
@@ -78,7 +78,7 @@ long long read_mastery(const std::string &dir, bool force)
 		}
 	}
 
-	LOG_DATABASE(NULL, "- MASTERY OF INDEX '%s' is %d\n", dir.c_str(), mastery_level);
+	LOG_DATABASE(NULL, "- MASTERY OF INDEX '%s' is %lld\n", dir.c_str(), mastery_level);
 
 	return mastery_level;
 }

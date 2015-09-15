@@ -72,7 +72,6 @@ unserialise_length(const char **p, const char *end, bool check_remaining)
 	return len;
 }
 
-
 std::string
 serialise_string(const std::string &input) {
 	std::string output;

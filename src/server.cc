@@ -171,8 +171,9 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 			// Database *database = NULL;
 			std::string index_path;
 			std::string node_name;
-			size_t mastery_level;
-			size_t remote_mastery_level;
+			std::string mastery_str;
+			long long mastery_level;
+			long long remote_mastery_level;
 
 			char cmd = buf[0];
 			switch (cmd) {
@@ -266,10 +267,11 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						}
 						mastery_level = database_pool->get_mastery_level(index_path);
 						if (mastery_level != -1) {
-							LOG_DISCOVERY(this, "Found local database '%s' with m:%d!\n", index_path.c_str(), mastery_level);
+							LOG_DISCOVERY(this, "Found local database '%s' with m:%lld!\n", index_path.c_str(), mastery_level);
+							mastery_str = std::to_string(mastery_level);
 							manager()->discovery(
 								DISCOVERY_DB_WAVE,
-								serialise_length(mastery_level) +  // The mastery level of the database
+								serialise_string(mastery_str) +  // The mastery level of the database
 								serialise_string(index_path) +  // The path of the index
 								local_node.serialise()  // The node where the index is at
 							);
@@ -279,11 +281,12 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 				case DISCOVERY_DB_WAVE:
 					if (manager()->state == STATE_READY) {
-						remote_mastery_level = unserialise_length(&ptr, end);
-						if (remote_mastery_level == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						if (unserialise_string(mastery_str, &ptr, end) == -1) {
+							LOG_DISCOVERY(this, "Badly formed message: No proper mastery!\n");
 							return;
 						}
+						remote_mastery_level = strtollong(mastery_str);
+
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
 							return;
@@ -297,20 +300,21 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 						}
 
-						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %d!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
+						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %lld!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
 
-						Endpoint index(index_path, &remote_node, (int)remote_mastery_level, remote_node.name);
+						Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
 						manager()->endp_r.add_index_endpoint(index);
 					}
 					break;
 
 				case DISCOVERY_DB_UPDATED:
 					if (manager()->state == STATE_READY) {
-						remote_mastery_level = unserialise_length(&ptr, end);
-						if (remote_mastery_level == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						if (unserialise_string(mastery_str, &ptr, end) == -1) {
+							LOG_DISCOVERY(this, "Badly formed message: No proper mastery!\n");
 							return;
 						}
+						remote_mastery_level = strtollong(mastery_str);
+
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
 							return;
@@ -318,7 +322,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 						mastery_level = database_pool->get_mastery_level(index_path);
 						if (mastery_level != -1 && mastery_level > remote_mastery_level) {
-							LOG_DISCOVERY(this, "Mastery of remote's %s wins! (local:%d > remote:%d) - Updating!\n", index_path.c_str(), mastery_level, remote_mastery_level);
+							LOG_DISCOVERY(this, "Mastery of remote's %s wins! (local:%lld > remote:%lld) - Updating!\n", index_path.c_str(), mastery_level, remote_mastery_level);
 							if (remote_node.unserialise(&ptr, end) == -1) {
 								LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 								return;
@@ -337,7 +341,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							}
 #endif
 						} else {
-							LOG_DISCOVERY(this, "Mastery of local's %s wins! (local:%d <= remote:%d) - Ignoring update!\n", index_path.c_str(), mastery_level, remote_mastery_level);
+							LOG_DISCOVERY(this, "Mastery of local's %s wins! (local:%lld <= remote:%lld) - Ignoring update!\n", index_path.c_str(), mastery_level, remote_mastery_level);
 						}
 					}
 					break;

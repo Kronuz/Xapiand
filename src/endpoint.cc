@@ -60,7 +60,7 @@ Endpoint::Endpoint()
 	: mastery_level(-1) { }
 
 
-Endpoint::Endpoint(const std::string &uri_, const Node *node_, int mastery_level_, std::string node_name_)
+Endpoint::Endpoint(const std::string &uri_, const Node *node_, long long mastery_level_, std::string node_name_)
 	: mastery_level(mastery_level_),
 	  node_name(node_name_)
 {
