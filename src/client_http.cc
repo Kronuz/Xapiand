@@ -69,6 +69,7 @@ const char* status_code[6][5] = {
 	}
 };
 
+
 std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string content=std::string(""))
 {
 	char buffer[20];

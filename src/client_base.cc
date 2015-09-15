@@ -400,18 +400,18 @@ void BaseClient::read_cb()
 							size_t readPos = 0;
 							size_t srcSize = 0;
 
-							for(; readPos < readSize && nextToLoad; readPos += srcSize) {
+							for ( ; readPos < readSize && nextToLoad; readPos += srcSize) {
 								size_t decSize = LZ4F_BLOCK_SIZE;
 								srcSize = readSize - readPos;
 
 								nextToLoad = LZ4F_decompress(lz4_dCtx, lz4_buffer, &decSize, srcBuf + readPos, &srcSize, NULL);
-								if(LZ4F_isError(nextToLoad)) {
+								if (LZ4F_isError(nextToLoad)) {
 									LOG_ERR(this, "Failed decompression: error %zd\n", nextToLoad);
 									destroy();
 									return;
 								}
 
-								if(decSize) {
+								if (decSize) {
 									on_read_file(lz4_buffer, decSize);
 								}
 							}

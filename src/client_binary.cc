@@ -63,7 +63,7 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 BinaryClient::~BinaryClient()
 {
 	databases_map_t::const_iterator it(databases.begin());
-	for (; it != databases.end(); it++) {
+	for ( ; it != databases.end(); it++) {
 		Database *database = it->second;
 		database_pool->checkin(&database);
 	}
@@ -154,14 +154,14 @@ void BinaryClient::on_read_file_done()
 			repl_database = NULL;
 		}
 		shutdown();
-	}catch (const std::exception &err) {
+	} catch (const std::exception &err) {
 		LOG_ERR(this, "ERROR: %s\n", err.what());
 		if (repl_database) {
 			database_pool->checkin(&repl_database);
 			repl_database = NULL;
 		}
 		shutdown();
-	}catch (...) {
+	} catch (...) {
 		LOG_ERR(this, "ERROR: Unkown exception!\n");
 		if (repl_database) {
 			database_pool->checkin(&repl_database);
@@ -171,6 +171,7 @@ void BinaryClient::on_read_file_done()
 	}
 	::unlink(file_path);
 }
+
 
 void BinaryClient::on_read_file(const char *buf, size_t received)
 {
@@ -242,6 +243,7 @@ char BinaryClient::get_message(double timeout, std::string & result, char requir
 	return type_as_char;
 }
 
+
 void BinaryClient::send_message(char type_as_char, const std::string &message, double end_time) {
 	std::string buf;
 	buf += type_as_char;
@@ -302,7 +304,7 @@ void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writ
 	pthread_mutex_lock(&qmtx);
 	endpoints.clear();
 	std::vector<std::string>::const_iterator i(dbpaths_.begin());
-	for (; i != dbpaths_.end(); i++) {
+	for ( ; i != dbpaths_.end(); i++) {
 		endpoints.insert(Endpoint(*i));
 	}
 	dbpaths = dbpaths_;
@@ -364,6 +366,7 @@ void BinaryClient::run()
 
 typedef void (BinaryClient::* dispatch_repl_func)(const std::string &);
 
+
 void BinaryClient::repl_apply(replicate_reply_type type, const std::string &message)
 {
 	try {
@@ -389,8 +392,8 @@ void BinaryClient::repl_apply(replicate_reply_type type, const std::string &mess
 	} catch (...) {
 		throw;
 	}
-
 }
+
 
 void BinaryClient::repl_end_of_changes(const std::string & message)
 {
@@ -435,17 +438,17 @@ void BinaryClient::repl_set_db_header(const std::string & message)
 	Endpoint endpoint = *endpoints.begin();
 	std::string path_tmp = endpoint.path + "/.tmp";
 
-	int dir = ::mkdir(path_tmp.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	if (dir == 0) {
-		LOG(this,"Directory %s created\n", path_tmp.c_str());
-	} else if(dir == EEXIST) {
+		LOG(this, "Directory %s created\n", path_tmp.c_str());
+	} else if (dir == EEXIST) {
 		delete_files(path_tmp.c_str());
-		dir = ::mkdir(path_tmp.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		if (dir == 0) {
-			LOG(this,"Directory %s created\n", path_tmp.c_str());
+			LOG(this, "Directory %s created\n", path_tmp.c_str());
 		}
 	} else {
-		LOG_ERR(this,"file %s not created\n", (endpoint.path+"/.tmp/").c_str());
+		LOG_ERR(this, "file %s not created\n", path_tmp.c_str());
 	}
 }
 
@@ -474,7 +477,7 @@ void BinaryClient::repl_set_db_filedata(const std::string & message)
 
 	int fd = ::open(path_filename.c_str(), O_WRONLY|O_CREAT|O_EXCL, 0644);
 	if (fd >= 0) {
-		LOG(this, "path_filename %s\n",path_filename.c_str());
+		LOG(this, "path_filename %s\n", path_filename.c_str());
 		if (::write(fd, p, p_end - p) != p_end - p) {
 			LOG_ERR(this, "Cannot write to %s\n", repl_db_filename.c_str());
 			return;

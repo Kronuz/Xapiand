@@ -88,6 +88,7 @@ size_t Node::unserialise(const char **p, const char *end)
 	return end - ptr;
 }
 
+
 size_t Node::unserialise(const std::string &s)
 {
 	const char *ptr = s.data();
@@ -118,7 +119,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	pthread_mutex_init(&nodes_mtx, &nodes_mtx_attr);
 
 	// Setup node from node database directory
-	std::string node_name_ = get_node_name();
+	std::string node_name_(get_node_name());
 	if (!node_name_.empty()) {
 		if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
 			LOG_ERR(this, "Node name %s doesn't match with the one in the cluster's database: %s!\n", node_name.c_str(), node_name_.c_str());
@@ -195,7 +196,7 @@ XapiandManager::get_node_name()
 		length = read(fd, (char *)buf, sizeof(buf) - 1);
 		if (length > 0) {
 			buf[length] = '\0';
-			for (size_t i=0, j=0; (buf[j] = buf[i]); j+=!isspace(buf[i++]));
+			for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
 		}
 		close(fd);
 	}
@@ -259,10 +260,10 @@ XapiandManager::setup_node()
 	Endpoint cluster_endpoint(".");
 	cluster_endpoints.insert(cluster_endpoint);
 	LOG(this, "cluster_endpoint - endpoints: %s\n", cluster_endpoint.as_string().c_str());
-	if(!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE|DB_PERSISTENT)) {
+	if (!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE | DB_PERSISTENT)) {
 		new_cluster = true;
 		INFO(this, "Cluster database doesn't exist. Generating database...\n");
-		if (!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE|DB_SPAWN|DB_PERSISTENT)) {
+		if (!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
 			assert(false);
 		}
 	}
@@ -270,8 +271,8 @@ XapiandManager::setup_node()
 
 	// Get a node (any node)
 	pthread_mutex_lock(&nodes_mtx);
-	nodes_map_t::const_iterator it = nodes.cbegin();
-	for (; it != nodes.cend(); it++) {
+	nodes_map_t::const_iterator it(nodes.cbegin());
+	for ( ; it != nodes.cend(); it++) {
 		const Node &node = it->second;
 		Endpoint remote_endpoint(".", &node);
 		// Replicate database from the other node
@@ -312,10 +313,10 @@ void XapiandManager::reset_state()
 }
 
 
-bool XapiandManager::put_node(Node &node)
+bool XapiandManager::put_node(const Node &node)
 {
 	pthread_mutex_lock(&nodes_mtx);
-	std::string node_name_lower = stringtolower(node.name);
+	std::string node_name_lower(stringtolower(node.name));
 	if (node_name_lower == stringtolower(local_node.name)) {
 		local_node.touched = time(NULL);
 		pthread_mutex_unlock(&nodes_mtx);
@@ -326,7 +327,7 @@ bool XapiandManager::put_node(Node &node)
 			if (node == node_ref) {
 				node_ref.touched = time(NULL);
 			}
-		} catch (const std::out_of_range& err) {
+		} catch (const std::out_of_range &err) {
 			Node &node_ref = nodes[node_name_lower];
 			node_ref = node;
 			node_ref.touched = time(NULL);
@@ -342,10 +343,10 @@ bool XapiandManager::put_node(Node &node)
 }
 
 
-bool XapiandManager::touch_node(std::string &node_name, Node *node)
+bool XapiandManager::touch_node(const std::string &node_name, Node *node)
 {
 	pthread_mutex_lock(&nodes_mtx);
-	std::string node_name_lower = stringtolower(node_name);
+	std::string node_name_lower(stringtolower(node_name));
 	if (node_name_lower == stringtolower(local_node.name)) {
 		local_node.touched = time(NULL);
 		if (node) *node = local_node;
@@ -358,7 +359,7 @@ bool XapiandManager::touch_node(std::string &node_name, Node *node)
 			if (node) *node = node_ref;
 			pthread_mutex_unlock(&nodes_mtx);
 			return true;
-		} catch (const std::out_of_range& err) {
+		} catch (const std::out_of_range &err) {
 		} catch(...) {
 			pthread_mutex_unlock(&nodes_mtx);
 			throw;
@@ -369,7 +370,7 @@ bool XapiandManager::touch_node(std::string &node_name, Node *node)
 }
 
 
-void XapiandManager::drop_node(std::string &node_name)
+void XapiandManager::drop_node(const std::string &node_name)
 {
 	pthread_mutex_lock(&nodes_mtx);
 	nodes.erase(stringtolower(node_name));

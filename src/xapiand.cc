@@ -183,7 +183,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of database endpoints in database pool.", false, 1000, "size", cmd);
 
 
-		cmd.parse( argc, argv );
+		cmd.parse(argc, argv);
 
 		opts.verbosity = verbosity.getValue();
 		opts.daemonize = daemonize.getValue();
@@ -213,7 +213,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		if (opts.discovery_port == XAPIAND_DISCOVERY_SERVERPORT) opts.discovery_port = 0;
 		if (opts.discovery_group.empty()) opts.discovery_group = XAPIAND_DISCOVERY_GROUP;
 
-	} catch (ArgException &e) { // catch any exceptions
+	} catch (const ArgException &e) { // catch any exceptions
 		std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
 	}
 }
