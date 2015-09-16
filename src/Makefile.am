@@ -13,6 +13,8 @@ xapiand_SOURCES = \
 	datetime.cc \
 	endpoint.cc \
 	endpoint_resolver.cc \
+	ev/ev.c \
+	ev/event.c	 \
 	exception.cc \
 	fields.cc \
 	generate_terms.cc \
@@ -52,6 +54,17 @@ noinst_HEADERS = \
 	datetime.h \
 	endpoint.h \
 	endpoint_resolver.h \
+	ev/ev_vars.h \
+	ev/ev_wrap.h \
+	ev/ev.h \
+	ev/ev++.h \
+	ev/event.h	 \
+	ev/ev_epoll.c \
+	ev/ev_kqueue.c \
+	ev/ev_poll.c \
+	ev/ev_port.c \
+	ev/ev_select.c \
+	ev/ev_win32.c \
 	exception.h \
 	fields.h \
 	generate_terms.h \

@@ -31,7 +31,7 @@
 #include "endpoint_resolver.h"
 
 #include <list>
-#include <ev++.h>
+#include "ev/ev++.h"
 #include <pthread.h>
 
 #ifdef HAVE_CXX11

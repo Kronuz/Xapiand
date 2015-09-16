@@ -29,7 +29,7 @@
 #include "manager.h"
 #include "length.h"
 
-#include <ev++.h>
+#include "ev/ev++.h"
 
 
 class XapiandReplicator : public Task, public Worker

@@ -35,18 +35,64 @@ AX_PROG_CCACHE_CC
 AX_PROG_CCACHE_CXX
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
-
+AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h sys/inotify.h sys/epoll.h sys/event.h port.h poll.h sys/select.h sys/eventfd.h sys/signalfd.h])
+ 
 # Checks for library functions.
-AC_CHECK_FUNCS([getcwd gettimeofday socket sranddev])
+AC_CHECK_FUNCS([getcwd gettimeofday socket sranddev inotify_init epoll_ctl kqueue port_create poll select eventfd signalfd])
 
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
-AC_CHECK_LIB(ev, ev_run, [], [AC_MSG_ERROR([libev not found, Xapiand requires libev-devel])], [-lev])
 AC_CHECK_LIB(pcre, pcre_compile, [], [AC_MSG_ERROR([libpcre not found, Xapiand requires libpcre-devel])], [-lpcre])
+
+
+# Checks for header files and library funcions for libev.
+
+AC_CHECK_HEADERS([sys/inotify.h sys/epoll.h sys/event.h port.h poll.h sys/select.h sys/eventfd.h sys/signalfd.h])
+
+AC_CHECK_FUNCS([inotify_init epoll_ctl kqueue port_create poll select eventfd signalfd])
+
+AC_CHECK_FUNCS(clock_gettime, [], [
+	if test $(uname) = Linux; then
+		# Un Linux, try syscall wrapper first
+		AC_MSG_CHECKING(for clock_gettime syscall)
+		AC_LINK_IFELSE(
+			[
+				AC_LANG_PROGRAM(
+					[
+						#include <unistd.h>
+						#include <sys/syscall.h>
+						#include <time.h>
+					],
+					[struct timespec ts; int status = syscall(SYS_clock_gettime, CLOCK_REALTIME, &ts)]
+				)
+			],
+			[
+				ac_have_clock_syscall=1
+				AC_DEFINE(HAVE_CLOCK_SYSCALL, 1, Define to 1 to use the syscall interface for clock_gettime)
+				AC_MSG_RESULT(yes)
+			],
+			[
+				AC_MSG_RESULT(no)
+			]
+		)
+	fi
+	if test -z "$ac_have_clock_syscall"; then
+		AC_CHECK_LIB(rt, clock_gettime)
+		unset ac_cv_func_clock_gettime
+		AC_CHECK_FUNCS(clock_gettime)
+	fi
+])
+
+AC_CHECK_FUNCS(nanosleep, [], [
+	AC_CHECK_LIB(rt, nanosleep)
+	unset ac_cv_func_nanosleep
+	AC_CHECK_FUNCS(nanosleep)
+])
+
 
 # Check for xapian.
 XO_LIB_XAPIAN([], [], [xapian-config-1.3])
+
 
 # Check for xapian's remote protocol
 save_LIBS="$LIBS"
@@ -56,7 +102,7 @@ CXXFLAGS="$CXXFLAGS $XAPIAN_CXXFLAGS"
 AC_LINK_IFELSE(
   [AC_LANG_PROGRAM([#include "xapian.h"], [class RemoteClient : public RemoteProtocol {}])],
   [AC_DEFINE([HAVE_REMOTE_PROTOCOL], 1, [Define to 1 if Xapian has RemoteProtocol available.])],
-  [AC_MSG_WARN([Xapian's RemoteProtocol is not available!])])
+  [AC_MSG_WARN(["Xapian's RemoteProtocol is not available!"])])
 CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
 

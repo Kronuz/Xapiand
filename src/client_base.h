@@ -32,7 +32,7 @@
 
 #include "lz4/lz4frame.h"
 
-#include <ev++.h>
+#include "ev/ev++.h"
 
 //
 //   Buffer class - allow for output buffering such that it can be written out
