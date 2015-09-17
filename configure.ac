@@ -162,8 +162,6 @@ AC_DEFINE_UNQUOTED([NEWLINE], [10], [
 # xapian
 ########################################################################
 
-AC_DEFINE(REGIONS_NUMBER, 10, Define to use the regions number)
-
 # Check for xapian library.
 XO_LIB_XAPIAN([], [], [xapian-config-1.3])
 

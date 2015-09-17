@@ -40,6 +40,7 @@
 
 #define TIME_RE "((([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)?"
 
+#define REGIONS_NUMBER 1
 
 const uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION | XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION << 8;
 
@@ -607,7 +608,9 @@ void XapiandManager::run(int num_servers, int num_replicators)
 int XapiandManager::get_region(const std::string &str)
 {
 	std::hash<std::string> hash_fn;
-	return jump_consistent_hash(hash_fn(str), REGIONS_NUMBER);
+	size_t regions = nodes.size() / REGIONS_NUMBER + 1;
+	LOG(this, "Regions: %zd\n", regions);
+	return jump_consistent_hash(hash_fn(str), regions);
 }
 
 
