@@ -143,7 +143,7 @@ port_init (EV_P_ int flags)
   if ((backend_fd = port_create ()) < 0)
     return 0;
 
-  assert (("libev: PORT_SOURCE_FD must not be zero", PORT_SOURCE_FD));
+  assert (((void)"libev: PORT_SOURCE_FD must not be zero", PORT_SOURCE_FD));
 
   fcntl (backend_fd, F_SETFD, FD_CLOEXEC); /* not sure if necessary, hopefully doesn't hurt */
 
