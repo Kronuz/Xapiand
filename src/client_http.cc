@@ -139,7 +139,8 @@ HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
 	  database(NULL),
 	  body_size(0),
-	  body_descriptor(0)
+	  body_descriptor(0),
+	  body_path("")
 {
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -168,9 +169,14 @@ HttpClient::~HttpClient()
 		}
 	}
 
-	if (body_descriptor) {
-		::close(body_descriptor);
-		::unlink(body_path);
+	if (body_descriptor && ::close(body_descriptor) < 0) {
+		LOG_ERR(this, "ERROR: Cannot close temporary file '%s': %s\n", body_path, strerror(errno));
+	}
+
+	if (*body_path) {
+		if (::unlink(body_path) < 0) {
+			LOG_ERR(this, "ERROR: Cannot delete temporary file '%s': %s\n", body_path, strerror(errno));
+		}
 	}
 
 	LOG_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)\n", http_clients);
@@ -239,8 +245,9 @@ int HttpClient::on_info(http_parser* p) {
 			self->body_size = 0;
 			self->header_name.clear();
 			self->header_value.clear();
-			if (self->body_descriptor) {
-				::close(self->body_descriptor);
+			if (self->body_descriptor && ::close(self->body_descriptor) < 0) {
+				LOG_ERR(self, "ERROR: Cannot close temporary file '%s': %s\n", self->body_path, strerror(errno));
+			} else {
 				self->body_descriptor = 0;
 			}
 			break;
@@ -325,8 +332,11 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 			}
 			::io_write(self->body_descriptor, at, length);
 			if (state == 62) {
-				::close(self->body_descriptor);
-				self->body_descriptor = 0;
+				if (self->body_descriptor && ::close(self->body_descriptor) < 0) {
+					LOG_ERR(self, "ERROR: Cannot close temporary file '%s': %s\n", self->body_path, strerror(errno));
+				} else {
+					self->body_descriptor = 0;
+				}
 			}
 		} else {
 			self->body.append(at, length);
@@ -499,6 +509,9 @@ void HttpClient::_post()
 			break;
 		case CMD_SCHEMA:
 			search_view(e, false, true);
+			break;
+		case CMD_UPLOAD:
+			upload_view(e);
 			break;
 		default:
 			bad_request_view(e, cmd);
@@ -829,6 +842,13 @@ void HttpClient::bad_request_view(const query_t &e, int cmd)
 	result += "\n";
 
 	write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT | HTTP_JSON, parser.http_major, parser.http_minor, 0, result));
+}
+
+
+void HttpClient::upload_view(const query_t &e)
+{
+	LOG(this, "Uploaded %s (%zu)\n", body_path, body_size);
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 }
 
 

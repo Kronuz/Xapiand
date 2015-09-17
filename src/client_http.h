@@ -91,6 +91,7 @@ class HttpClient : public BaseClient {
 	void index_document_view(const query_t &e);
 	void document_info_view(const query_t &e);
 	void update_document_view(const query_t &e);
+	void upload_view(const query_t &e);
 	void search_view(const query_t &e, bool facets, bool schema);
 	void bad_request_view(const query_t &e, int cmd);
 
