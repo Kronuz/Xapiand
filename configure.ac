@@ -89,6 +89,7 @@ AC_CHECK_FUNCS(nanosleep, [], [
 	AC_CHECK_FUNCS(nanosleep)
 ])
 
+AC_DEFINE(REGIONS_NUMBER, 10, Define to use the regions number)
 
 # Check for xapian.
 XO_LIB_XAPIAN([], [], [xapian-config-1.3])
