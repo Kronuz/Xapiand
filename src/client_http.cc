@@ -138,6 +138,7 @@ std::string http_response(int status, int mode, unsigned short http_major=0, uns
 HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
 	  database(NULL),
+	  body_size(0),
 	  body_descriptor(0)
 {
 	parser.data = this;
@@ -235,6 +236,7 @@ int HttpClient::on_info(http_parser* p) {
 		case 19:  // message_begin
 			self->path.clear();
 			self->body.clear();
+			self->body_size = 0;
 			self->header_name.clear();
 			self->header_value.clear();
 			if (self->body_descriptor) {
