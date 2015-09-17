@@ -42,8 +42,11 @@ AC_CHECK_FUNCS([getcwd gettimeofday socket sranddev inotify_init epoll_ctl kqueu
 
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
-AC_CHECK_LIB(pcre, pcre_compile, [], [AC_MSG_ERROR([libpcre not found, Xapiand requires libpcre-devel])], [-lpcre])
 
+
+########################################################################
+# libev
+########################################################################
 
 # Checks for header files and library funcions for libev.
 
@@ -89,11 +92,80 @@ AC_CHECK_FUNCS(nanosleep, [], [
 	AC_CHECK_FUNCS(nanosleep)
 ])
 
+
+########################################################################
+# libpcre
+########################################################################
+
+AC_CHECK_FUNCS(bcopy memmove strerror)
+
+AC_DEFINE(LINK_SIZE, 2, Internal link size for PCRE (2, 3, or 4 allowed; default=2))
+
+AC_DEFINE([SUPPORT_PCRE8], [], [
+  Define to any value to enable the 8 bit PCRE library.])
+
+AC_DEFINE_UNQUOTED([POSIX_MALLOC_THRESHOLD], [10], [
+  When calling PCRE via the POSIX interface, additional working storage
+  is required for holding the pointers to capturing substrings because
+  PCRE requires three integers per substring, whereas the POSIX
+  interface provides only two. If the number of expected substrings is
+  small, the wrapper function uses space on the stack, because this is
+  faster than using malloc() for each call. The threshold above which
+  the stack is no longer used is defined by POSIX_MALLOC_THRESHOLD.])
+
+AC_DEFINE_UNQUOTED([PARENS_NEST_LIMIT], [250], [
+  The value of PARENS_NEST_LIMIT specifies the maximum depth of nested
+  parentheses (of any kind) in a pattern. This limits the amount of system
+  stack that is used while compiling a pattern.])
+
+AC_DEFINE_UNQUOTED([MATCH_LIMIT], [10000000], [
+  The value of MATCH_LIMIT determines the default number of times the
+  internal match() function can be called during a single execution of
+  pcre_exec(). There is a runtime interface for setting a different
+  limit. The limit exists in order to catch runaway regular
+  expressions that take for ever to determine that they do not match.
+  The default is set very large so that it does not accidentally catch
+  legitimate cases.])
+
+AC_DEFINE_UNQUOTED([MATCH_LIMIT_RECURSION], [MATCH_LIMIT], [
+  The above limit applies to all calls of match(), whether or not they
+  increase the recursion depth. In some environments it is desirable
+  to limit the depth of recursive calls of match() more strictly, in
+  order to restrict the maximum amount of stack (or heap, if
+  NO_RECURSE is defined) that is used. The value of
+  MATCH_LIMIT_RECURSION applies only to recursive calls of match(). To
+  have any useful effect, it must be less than the value of
+  MATCH_LIMIT. The default is to use the same value as MATCH_LIMIT.
+  There is a runtime method for setting a different limit.])
+
+AC_DEFINE([MAX_NAME_SIZE], [32], [
+  This limit is parameterized just in case anybody ever wants to
+  change it. Care must be taken if it is increased, because it guards
+  against integer overflow caused by enormously large patterns.])
+
+AC_DEFINE([MAX_NAME_COUNT], [10000], [
+  This limit is parameterized just in case anybody ever wants to
+  change it. Care must be taken if it is increased, because it guards
+  against integer overflow caused by enormously large patterns.])
+
+AC_DEFINE_UNQUOTED([NEWLINE], [10], [
+  The value of NEWLINE determines the default newline character sequence. PCRE
+  client programs can override this by selecting other values at run time. In
+  ASCII environments, the value can be 10 (LF), 13 (CR), or 3338 (CRLF); in
+  EBCDIC environments the value can be 21 or 37 (LF), 13 (CR), or 3349 or 3365
+  (CRLF) because there are two alternative codepoints (0x15 and 0x25) that are
+  used as the NL line terminator that is equivalent to ASCII LF. In both ASCII
+  and EBCDIC environments the value can also be -1 (ANY), or -2 (ANYCRLF).])
+
+
+########################################################################
+# xapian
+########################################################################
+
 AC_DEFINE(REGIONS_NUMBER, 10, Define to use the regions number)
 
-# Check for xapian.
+# Check for xapian library.
 XO_LIB_XAPIAN([], [], [xapian-config-1.3])
-
 
 # Check for xapian's remote protocol
 save_LIBS="$LIBS"

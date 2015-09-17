@@ -24,7 +24,7 @@
 #define	XAPIAND_INCLUDED_DATABASE_UTILS_H
 
 #include "serialise.h"
-#include <pcre.h>
+#include "pcre/pcre.h"
 #include "cJSON.h"
 
 #include <vector>

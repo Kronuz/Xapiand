@@ -26,7 +26,7 @@
 #include <sys/time.h>
 #include <iostream>
 #include "utils.h"
-#include <pcre.h>
+#include "pcre/pcre.h"
 
 #define DATE_RE "([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]{1,3}))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?"
 #define DATE_MATH_RE "([+-]\\d+|\\/{1,2})([dyMwhms])"

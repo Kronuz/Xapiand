@@ -25,7 +25,7 @@
 
 #include "utils.h"
 #include "geospatialrange.h"
-#include <pcre.h>
+#include "pcre/pcre.h"
 
 extern pcre *compiled_find_geometry_re;
 extern pcre *compiled_find_circle_re;

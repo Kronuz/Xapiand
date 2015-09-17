@@ -40,7 +40,7 @@
 #include <algorithm>
 #include <memory>
 #include <sstream>
-#include <pcre.h>
+#include "pcre/pcre.h"
 #include <sys/time.h>
 
 #define SLOT_TIME_MINUTE 1440
