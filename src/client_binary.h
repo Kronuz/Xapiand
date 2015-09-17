@@ -70,7 +70,7 @@ private:
 	bool running;
 	enum binary_state state;
 	int file_descriptor;
-	char file_path[50];
+	char file_path[PATH_MAX];
 
 	databases_map_t databases;
 

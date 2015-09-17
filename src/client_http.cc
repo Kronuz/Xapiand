@@ -30,10 +30,14 @@
 #include "length.h"
 #include "cJSON.h"
 #include "manager.h"
+#include "io_utils.h"
 
 #include <assert.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+
+#define MAX_BODY_SIZE (250 * 1024 * 1024)
+#define MAX_BODY_MEM (1024 * 1024)
 
 // Xapian http client
 #define METHOD_DELETE  0
@@ -45,27 +49,36 @@
 #define METHOD_PATCH   24
 
 
-const char* status_code[6][5] = {
+const char* status_code[6][14] = {
 	{},
 	{
-		"Continue"
+		"Continue"                  // 100
 	},
 	{
-		"OK",
-		"Created"
+		"OK",                       // 200
+		"Created"                   // 201
 	},
 	{},
 	{
-		"Bad Request",
-		NULL,
-		NULL,
-		NULL,
-		"Not Found"
+		"Bad Request",              // 400
+		NULL,                       // 401
+		NULL,                       // 402
+		NULL,                       // 403
+		"Not Found",                // 404
+		NULL,                       // 405
+		NULL,                       // 406
+		NULL,                       // 407
+		NULL,                       // 408
+		NULL,                       // 409
+		NULL,                       // 410
+		NULL,                       // 411
+		NULL,                       // 412
+		"Request Entity Too Large"  // 413
 	},
 	{
-		"Internal Server Error",
-		"Not Implemented",
-		"Bad Gateway"
+		"Internal Server Error",    // 500
+		"Not Implemented",          // 501
+		"Bad Gateway"               // 502
 	}
 };
 
@@ -124,7 +137,8 @@ std::string http_response(int status, int mode, unsigned short http_major=0, uns
 
 HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
-	  database(NULL)
+	  database(NULL),
+	  body_descriptor(0)
 {
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -151,6 +165,11 @@ HttpClient::~HttpClient()
 		if (http_clients <= 0) {
 			manager()->async_shutdown.send();
 		}
+	}
+
+	if (body_descriptor) {
+		::close(body_descriptor);
+		::unlink(body_path);
 	}
 
 	LOG_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)\n", http_clients);
@@ -218,6 +237,10 @@ int HttpClient::on_info(http_parser* p) {
 			self->body.clear();
 			self->header_name.clear();
 			self->header_value.clear();
+			if (self->body_descriptor) {
+				::close(self->body_descriptor);
+				self->body_descriptor = 0;
+			}
 			break;
 		case 50:  // headers done
 			if (self->expect_100) {
@@ -277,7 +300,30 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 
 	// s_body_identity  ->  s_message_done
 	if (state >= 60 && state <= 62) {
-		self->body.append(at, length);
+		self->body_size += length;
+		if (self->body_size > MAX_BODY_SIZE) {
+			self->write(http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
+			self->close();
+			return 0;
+		} else if (self->body_descriptor || self->body_size > MAX_BODY_MEM) {
+			if (!self->body_descriptor) {
+				strcpy(self->body_path, "/tmp/xapiand_upload.XXXXXX");
+				self->body_descriptor = mkstemp(self->body_path);
+				if (self->body_descriptor < 0) {
+					LOG_ERR(self, "Cannot write to %s (1)\n", self->body_path);
+					return 0;
+				}
+				::io_write(self->body_descriptor, self->body.data(), self->body.size());
+				self->body.clear();
+			}
+			::io_write(self->body_descriptor, at, length);
+			if (state == 62) {
+				::close(self->body_descriptor);
+				self->body_descriptor = 0;
+			}
+		} else {
+			self->body.append(at, length);
+		}
 	}
 
 	return 0;

@@ -73,6 +73,10 @@ class HttpClient : public BaseClient {
 	std::string header_name;
 	std::string header_value;
 
+	size_t body_size;
+	int body_descriptor;
+	char body_path[PATH_MAX];
+
 	std::string content_type;
 	bool expect_100 = false;
 
