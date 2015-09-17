@@ -269,7 +269,7 @@ void BaseClient::read_cb()
 {
 	LZ4F_errorCode_t errorCode;
 
-	if (sock != -1) {
+	if (sock != -1 && !closed) {
 		ssize_t received = ::read(sock, read_buffer, BUF_SIZE);
 		const char *buf_end = read_buffer + received;
 		const char *buf_data = read_buffer;
