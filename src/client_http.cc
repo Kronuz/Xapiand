@@ -301,7 +301,7 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	// s_body_identity  ->  s_message_done
 	if (state >= 60 && state <= 62) {
 		self->body_size += length;
-		if (self->body_size > MAX_BODY_SIZE) {
+		if (self->body_size > MAX_BODY_SIZE || p->content_length > MAX_BODY_SIZE) {
 			self->write(http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
 			self->close();
 			return 0;
