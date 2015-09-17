@@ -99,7 +99,7 @@ AC_CHECK_FUNCS(nanosleep, [], [
 
 AC_CHECK_FUNCS(bcopy memmove strerror)
 
-AC_DEFINE(LINK_SIZE, 2, Internal link size for PCRE (2, 3, or 4 allowed; default=2))
+AC_DEFINE([LINK_SIZE], [2], [Internal link size for PCRE (2, 3, or 4 allowed; default=2)])
 
 AC_DEFINE([SUPPORT_PCRE8], [], [
   Define to any value to enable the 8 bit PCRE library.])
