@@ -1160,7 +1160,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 				retval = url_path(path_buf.c_str(), path_size, &p);
 			}
 		}
-		if ((parser.method == 4 || parser.method ==24) && endpoints.size()>1) {
+		if ((parser.method == 4 || parser.method ==24) && endpoints.size() > 1) {
 			return CMD_BAD_ENDPS;
 		}
 
