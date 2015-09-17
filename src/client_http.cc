@@ -285,6 +285,11 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 			} else
 
 			if (name.compare("expect") == 0 && value.compare("100-continue") == 0) {
+				if (p->content_length > MAX_BODY_SIZE) {
+					self->write(http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
+					self->close();
+					return 0;
+				}
 				// Respond with HTTP/1.1 100 Continue
 				self->expect_100 = true;
 			} else
