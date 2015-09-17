@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 # On OS X, use brew:
-# brew install automake autoconf autoconf-archive
+# brew install automake autoconf libtools pkg-config
 
 AC_PREREQ([2.69])
 AC_INIT([Xapiand], [3.0.0-alpha], [https://github.com/Kronuz/Xapiand])
