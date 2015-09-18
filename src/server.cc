@@ -219,31 +219,14 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					}
 					break;
 
-				case DISCOVERY_PING:
+				case DISCOVERY_HEARTBEAT:
 					if (manager()->state == STATE_READY) {
 						if (unserialise_string(node_name, &ptr, end) == -1 || node_name.empty()) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						if (manager()->touch_node(node_name)) {
-							// Received a ping, return pong
-							manager()->discovery(DISCOVERY_PONG, serialise_string(local_node.name));
-						} else {
-							LOG_DISCOVERY(this, "Ignoring ping from unknown peer %s\n", node_name.c_str());
-						}
-					}
-					break;
-
-				case DISCOVERY_PONG:
-					if (manager()->state == STATE_READY) {
-						if (unserialise_string(node_name, &ptr, end) == -1 || node_name.empty()) {
-							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
-							return;
-						}
-						if (manager()->touch_node(node_name)) {
-							// Do nothing (node was touched)
-						} else {
-							LOG_DISCOVERY(this, "Ignoring pong from unknown peer %s\n", node_name.c_str());
+						if (!manager()->touch_node(node_name)) {
+							LOG_DISCOVERY(this, "Ignoring heartbeat from unknown peer %s\n", node_name.c_str());
 						}
 					}
 					break;

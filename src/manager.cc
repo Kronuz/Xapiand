@@ -543,7 +543,7 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			break;
 
 		case STATE_READY:
-			discovery(DISCOVERY_PING, serialise_string(local_node.name));
+			discovery(DISCOVERY_HEARTBEAT, serialise_string(local_node.name));
 			break;
 	}
 	if (state != STATE_READY && --state == STATE_SETUP) {

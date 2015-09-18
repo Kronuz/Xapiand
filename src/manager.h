@@ -74,12 +74,11 @@ typedef struct opts_s {
 
 
 enum discovery_type {
-	DISCOVERY_HELLO,    // New node saying hello
-	DISCOVERY_WAVE,     // Nodes waving hello to the new node
-	DISCOVERY_SNEER,    // Nodes telling the client they don't agree on the new node's name
-	DISCOVERY_PING,     // Ping
-	DISCOVERY_PONG,     // Pong
-	DISCOVERY_BYE,      // Node says goodbye
+	DISCOVERY_HELLO,     // New node saying hello
+	DISCOVERY_WAVE,      // Nodes waving hello to the new node
+	DISCOVERY_SNEER,     // Nodes telling the client they don't agree on the new node's name
+	DISCOVERY_HEARTBEAT, // Heartbeat
+	DISCOVERY_BYE,       // Node says goodbye
 	DISCOVERY_DB,
 	DISCOVERY_DB_WAVE,
 	DISCOVERY_DB_UPDATED,
