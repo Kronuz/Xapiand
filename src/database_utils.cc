@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <random>
 
 #define FIND_TYPES_RE "(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" NUMERIC_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")"
 
@@ -47,9 +48,11 @@ long long read_mastery(const std::string &dir, bool force)
 	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd < 0) {
 		if (force) {
-			srand((unsigned)time(NULL));
-			int r = rand() % 256;
-			mastery_level = (((long long)time(NULL)) << 8) | r;
+			std::random_device rd;
+			std::mt19937 generator(rd());
+			std::uniform_int_distribution<int> distribution(0, 255);
+			mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 8;
+			mastery_level |= distribution(generator);
 			fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 			if (fd >= 0) {
 				snprintf((char *)buf, sizeof(buf), "%lld", mastery_level);
@@ -66,9 +69,11 @@ long long read_mastery(const std::string &dir, bool force)
 		}
 		close(fd);
 		if (!mastery_level) {
-			srand((unsigned)time(NULL));
-			int r = rand() % 256;
-			mastery_level = (((long long)time(NULL)) << 8) | r;
+			std::random_device rd;
+			std::mt19937 generator(rd());
+			std::uniform_int_distribution<int> distribution(0, 255);
+			mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 8;
+			mastery_level |= distribution(generator);
 			fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 			if (fd >= 0) {
 				snprintf((char *)buf, sizeof(buf), "%lld", mastery_level);
