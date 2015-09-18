@@ -30,7 +30,7 @@
 #include "threadpool.h"
 #include "database.h"
 
-#include "lz4/lz4frame.h"
+#include "compressor.h"
 
 #include "ev/ev++.h"
 
@@ -71,6 +71,7 @@ public:
 
 
 class BaseClient : public Task, public Worker {
+	friend Compressor;
 public:
 	BaseClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	virtual ~BaseClient();
@@ -97,10 +98,8 @@ protected:
 	int sock;
 	int written;
 	std::string length_buffer;
-	std::string file_buffer;
 
-	LZ4F_decompressionContext_t lz4_dCtx;
-	char *lz4_buffer;
+	Compressor *compressor;
 	char *read_buffer;
 
 	int mode;
@@ -127,11 +126,23 @@ protected:
 	// Socket is writable
 	void write_cb();
 
+	int write_directly();
+
+	void read_file();
+	bool send_file(int fd);
+	void destroy();
+	void shutdown();
+
+public:
 	virtual void on_read_file(const char *buf, size_t received) = 0;
 
 	virtual void on_read_file_done() = 0;
 
 	virtual void on_read(const char *buf, size_t received) = 0;
+
+	void close();
+
+	bool write(const char *buf, size_t buf_size);
 
 	inline bool write(const char *buf)
 	{
@@ -142,16 +153,6 @@ protected:
 	{
 		return write(buf.c_str(), buf.size());
 	}
-
-	bool write(const char *buf, size_t buf_size);
-	int write_directly();
-
-	void read_file();
-	bool send_file(int fd);
-
-	void close();
-	void destroy();
-	void shutdown();
 };
 
 #endif  /* XAPIAND_INCLUDED_CLIENT_BASE_H */

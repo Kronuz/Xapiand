@@ -847,8 +847,15 @@ void HttpClient::bad_request_view(const query_t &e, int cmd)
 
 void HttpClient::upload_view(const query_t &e)
 {
+	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
+		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
+		return;
+	}
+
 	LOG(this, "Uploaded %s (%zu)\n", body_path, body_size);
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
+
+	database_pool->checkin(&database);
 }
 
 

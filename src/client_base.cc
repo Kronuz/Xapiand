@@ -27,11 +27,6 @@
 #include "client_base.h"
 #include "utils.h"
 
-#define LZ4_HEADER_SIZE 19
-#define LZ4_FOOTER_SIZE 12
-#define LZ4F_BLOCK_SIZE_ID LZ4F_max256KB
-#define LZ4F_BLOCK_SIZE (256*1024)
-
 #define BUF_SIZE 4096
 
 const int WRITE_QUEUE_SIZE = 10;
@@ -46,6 +41,68 @@ const int WRITE_QUEUE_SIZE = 10;
 #define MODE_READ_FILE_RAW 2
 #define MODE_READ_FILE_LZ4 3
 
+class ClientLZ4Compressor : public LZ4Compressor
+{
+	int fd;
+	size_t file_size;
+	BaseClient *client;
+
+	ssize_t compressor_begin();
+	ssize_t compressor_read(char **buf, size_t size);
+	ssize_t compressor_write(const char *buf, size_t size);
+	ssize_t compressor_done();
+
+	ssize_t decompressor_write(const char *buf, size_t size);
+
+public:
+	ClientLZ4Compressor(BaseClient *client_, int fd_=0, size_t file_size_=0);
+};
+
+ClientLZ4Compressor::ClientLZ4Compressor(BaseClient *client_, int fd_, size_t file_size_)
+	: fd(fd_),
+	  file_size(file_size_),
+	  client(client_)
+{}
+
+ssize_t ClientLZ4Compressor::compressor_begin()
+{
+	if (!client->write("\01", 1)) {
+		return -1;
+	}
+	return 1;
+}
+
+ssize_t ClientLZ4Compressor::compressor_read(char **buf, size_t size)
+{
+	assert(*buf);
+	return ::read(fd, *buf, size);
+
+}
+
+ssize_t ClientLZ4Compressor::compressor_write(const char *buf, size_t size)
+{
+	std::string length(encode_length(size));
+	if (!client->write(length) || !client->write(buf, size)) {
+		return -1;
+	}
+	return length.size() + size;
+}
+
+ssize_t ClientLZ4Compressor::compressor_done()
+{
+	std::string length(encode_length(0));
+	if (!client->write(length)) {
+		return -1;
+	}
+	return length.size();
+}
+
+ssize_t ClientLZ4Compressor::decompressor_write(const char *buf, size_t size)
+{
+	client->on_read_file(buf, size);
+	return size;
+}
+
 BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
 	: Worker(server_, loop_),
 	  io_read(*loop),
@@ -58,8 +115,6 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 	  thread_pool(thread_pool_),
 	  write_queue(WRITE_QUEUE_SIZE),
 	  mode(MODE_READ_BUF),
-	  lz4_dCtx(NULL),
-	  lz4_buffer(NULL),
 	  read_buffer(new char[BUF_SIZE])
 
 {
@@ -101,13 +156,6 @@ BaseClient::~BaseClient()
 	assert(total_clients >= 0);
 
 	delete []read_buffer;
-	delete []lz4_buffer;
-	if (lz4_dCtx) {
-		LZ4F_errorCode_t errorCode = LZ4F_freeDecompressionContext(lz4_dCtx);
-		if (LZ4F_isError(errorCode)) {
-			LOG_ERR(this, "Failed to free decompression context: error %zd\n", errorCode);
-		}
-	}
 }
 
 
@@ -267,8 +315,6 @@ void BaseClient::write_cb()
 
 void BaseClient::read_cb()
 {
-	LZ4F_errorCode_t errorCode;
-
 	if (sock != -1 && !closed) {
 		ssize_t received = ::read(sock, read_buffer, BUF_SIZE);
 		const char *buf_end = read_buffer + received;
@@ -291,36 +337,14 @@ void BaseClient::read_cb()
 			if (mode == MODE_READ_FILE_TYPE) {
 				switch (*buf_data++) {
 					case '\00':
+						LOG_CONN(this, "Receiving raw file...\n");
 						mode = MODE_READ_FILE_RAW;
+						// compressor = new ClientNoCompressor(this);
 						break;
 					case '\01':
+						LOG_CONN(this, "Receiving LZ4 compressed file...\n");
 						mode = MODE_READ_FILE_LZ4;
-
-						if (!lz4_buffer) {
-							lz4_buffer = new char[LZ4F_BLOCK_SIZE];
-							if (!lz4_buffer) {
-								LOG_ERR(this, "Not enough memory!!\n");
-								destroy();
-								return;
-							}
-						}
-
-						if (lz4_dCtx) {
-							errorCode = LZ4F_freeDecompressionContext(lz4_dCtx);
-							if (LZ4F_isError(errorCode)) {
-								LOG_ERR(this, "Failed to free decompression context: error %zd\n", errorCode);
-								destroy();
-								return;
-							}
-							lz4_dCtx = NULL;
-						}
-						errorCode = LZ4F_createDecompressionContext(&lz4_dCtx, LZ4F_VERSION);
-						if (LZ4F_isError(errorCode)) {
-							LOG_ERR(this, "Failed to create decompression context: error %zd\n", errorCode);
-							destroy();
-							return;
-						}
-
+						compressor = new ClientLZ4Compressor(this);
 						break;
 					default:
 						LOG_CONN(this, "Received wrong file mode!\n");
@@ -347,7 +371,8 @@ void BaseClient::read_cb()
 							return;
 						}
 						block_size = file_size;
-						file_buffer.clear();
+						compressor->compressed.clear();
+						compressor->compressed_offset = 0;
 					}
 
 					const char *file_buf_to_write;
@@ -377,44 +402,20 @@ void BaseClient::read_cb()
 
 					} else if (mode == MODE_READ_FILE_LZ4) {
 						if (block_size_to_write) {
-							file_buffer.append(file_buf_to_write, block_size_to_write);
+							compressor->compressed.append(file_buf_to_write, block_size_to_write);
 							block_size -= block_size_to_write;
 						}
 						if (file_size == 0) {
+							compressor->compressed.clear();
+							compressor->compressed_offset = 0;
+							compressor->decompress();
+
 							on_read_file_done();
 							mode = MODE_READ_BUF;
-							if (lz4_dCtx) {
-								errorCode = LZ4F_freeDecompressionContext(lz4_dCtx);
-								if (LZ4F_isError(errorCode)) {
-									LOG_ERR(this, "Failed to free decompression context: error %zd\n", errorCode);
-									destroy();
-									return;
-								}
-								lz4_dCtx = NULL;
-							}
+							delete compressor;
+							compressor = NULL;
 						} else if (block_size == 0) {
-							const char *srcBuf = file_buffer.data();
-							size_t readSize = file_buffer.size();
-							size_t nextToLoad = readSize;
-
-							size_t readPos = 0;
-							size_t srcSize = 0;
-
-							for ( ; readPos < readSize && nextToLoad; readPos += srcSize) {
-								size_t decSize = LZ4F_BLOCK_SIZE;
-								srcSize = readSize - readPos;
-
-								nextToLoad = LZ4F_decompress(lz4_dCtx, lz4_buffer, &decSize, srcBuf + readPos, &srcSize, NULL);
-								if (LZ4F_isError(nextToLoad)) {
-									LOG_ERR(this, "Failed decompression: error %zd\n", nextToLoad);
-									destroy();
-									return;
-								}
-
-								if (decSize) {
-									on_read_file(lz4_buffer, decSize);
-								}
-							}
+							compressor->decompress();
 
 							if (buf_data) {
 								length_buffer = std::string(buf_data, received);
@@ -496,110 +497,8 @@ void BaseClient::read_file()
 
 bool BaseClient::send_file(int fd)
 {
-	static const LZ4F_preferences_t lz4_preferences = {
-		{ LZ4F_max256KB, LZ4F_blockLinked, LZ4F_contentChecksumEnabled, LZ4F_frame, 0, { 0, 0 } },
-		0,   /* compression level */
-		0,   /* autoflush */
-		{ 0, 0, 0, 0 },  /* reserved, must be set to 0 */
-	};
-
-	LZ4F_compressionContext_t ctx;
-	LZ4F_errorCode_t errorCode = LZ4F_createCompressionContext(&ctx, LZ4F_VERSION);
-	if (LZ4F_isError(errorCode)) {
-		LOG_ERR(this, "Failed to create compression context: error %zd\n", errorCode);
-		return false;
-	}
-
 	size_t file_size = ::lseek(fd, 0, SEEK_END);
 	::lseek(fd, 0, SEEK_SET);
-
-	size_t count = 0;
-
-	if (!lz4_buffer) {
-		lz4_buffer = new char[LZ4F_BLOCK_SIZE];
-		if (!lz4_buffer) {
-			LOG_ERR(this, "Not enough memory!!\n");
-			return false;
-		}
-	}
-
-	size_t frame_size = LZ4F_compressBound(LZ4F_BLOCK_SIZE, &lz4_preferences);
-	size_t dst_size =  frame_size + LZ4_HEADER_SIZE + LZ4_FOOTER_SIZE;
-	char *dst_buf = new char[dst_size];
-	if (!dst_buf) {
-		LOG_ERR(this, "Not enough memory!!\n");
-		return false;
-	}
-
-	// Signal LZ4 compressed content
-	if (!write("\01")) {
-		LOG_ERR(this, "Write failed!\n");
-		LZ4F_freeCompressionContext(ctx);
-		delete []dst_buf;
-		return false;
-	}
-
-	size_t bytes;
-	size_t offset = LZ4F_compressBegin(ctx, dst_buf, frame_size, &lz4_preferences);
-
-	while (count < file_size) {
-		size_t src_size = ::read(fd, lz4_buffer, LZ4F_BLOCK_SIZE);
-		if (src_size == -1) {
-			if (errno == EAGAIN) {
-				continue;
-			}
-			LOG_ERR(this, "Read error!!\n");
-			LZ4F_freeCompressionContext(ctx);
-			delete []dst_buf;
-			return false;
-		} else if (src_size == 0) {
-			break;
-		}
-
-		bytes = LZ4F_compressUpdate(ctx, dst_buf + offset, dst_size - offset, lz4_buffer, src_size, NULL);
-		if (LZ4F_isError(bytes)) {
-			LOG_ERR(this, "Compression failed: error %zd\n", bytes);
-			LZ4F_freeCompressionContext(ctx);
-			delete []dst_buf;
-			return false;
-		}
-
-		offset += bytes;
-		count += bytes;
-
-		if (dst_size - offset < frame_size + LZ4_FOOTER_SIZE) {
-			if (!write(encode_length(offset)) ||
-				!write(dst_buf, offset)) {
-				LOG_ERR(this, "Write failed!\n");
-				LZ4F_freeCompressionContext(ctx);
-				delete []dst_buf;
-				return false;
-			}
-			offset = 0;
-		}
-	}
-
-	bytes = LZ4F_compressEnd(ctx, dst_buf + offset, dst_size -  offset, NULL);
-	if (LZ4F_isError(bytes)) {
-		LOG_ERR(this, "Compression failed: error %zd\n", bytes);
-		LZ4F_freeCompressionContext(ctx);
-		delete []dst_buf;
-		return false;
-	}
-
-	offset += bytes;
-
-	if (!write(encode_length(offset)) ||
-		!write(dst_buf, offset) ||
-		!write(encode_length(0))) {
-		LOG_ERR(this, "Write failed!\n");
-		LZ4F_freeCompressionContext(ctx);
-		delete []dst_buf;
-		return false;
-	}
-
-	LZ4F_freeCompressionContext(ctx);
-	delete []dst_buf;
-
-	return count != file_size;
+	ClientLZ4Compressor lz4(this, fd, file_size);
+	return (lz4.compress() == file_size);
 }

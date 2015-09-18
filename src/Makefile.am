@@ -71,6 +71,7 @@ noinst_HEADERS = \
 	client_base.h \
 	client_binary.h \
 	client_http.h \
+	compressor.h \
 	database.h \
 	database_utils.h \
 	datetime.h \
