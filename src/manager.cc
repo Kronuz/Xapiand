@@ -36,6 +36,7 @@
 #include <net/if.h> /* for IFF_LOOPBACK */
 #include <ifaddrs.h>
 #include <unistd.h>
+#include <random>
 
 
 #define TIME_RE "((([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)?"
@@ -128,6 +129,9 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 		}
 		node_name = node_name_;
 	}
+
+	// Set the id in local node.
+	local_node.id = get_node_id();
 
 	// Bind tcp:HTTP, tcp:xapian-binary and udp:discovery ports
 	local_node.http_port = o.http_port;
@@ -234,6 +238,61 @@ XapiandManager::set_node_name(const std::string &node_name_)
 	}
 
 	INFO(this, "Node %s accepted to the party!\n", node_name.c_str());
+	return true;
+}
+
+
+double
+XapiandManager::get_node_id()
+{
+	int fd = open("nodeid", O_RDONLY | O_CLOEXEC);
+	if (fd >= 0) {
+        unsigned char buf[512];
+		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
+		if (length > 0) {
+			buf[length] = '\0';
+			for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
+		}
+		close(fd);
+		return strtodouble(std::string((const char *)buf, length));
+	} else {
+		fd = open("nodeid", O_WRONLY | O_CREAT, 0644);
+		double node_id = 0;
+		if (fd >= 0) {
+			std::random_device rd;
+			std::mt19937 generator(rd());
+			std::uniform_real_distribution<double> distribution(0.0, 1.0);
+			node_id = distribution(generator);
+			std::string str_id(std::to_string(node_id));
+			if (write(fd, str_id.c_str(), str_id.size()) != str_id.size()) {
+				assert(false);
+			}
+			close(fd);
+		} else {
+			assert(false);
+		}
+		return node_id;
+	}
+}
+
+
+bool
+XapiandManager::set_node_id(double node_id)
+{
+	if (node_id < 0.0 || node_id > 1.0) return false;
+
+	int fd = open("nodeid", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (fd >= 0) {
+		std::string str_id(std::to_string(node_id));
+		if (write(fd, str_id.c_str(), str_id.size()) != str_id.size()) {
+			assert(false);
+		}
+		close(fd);
+	} else {
+		assert(false);
+	}
+	local_node.id = node_id;
+
 	return true;
 }
 
@@ -478,10 +537,7 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			} else {
 				local_node.name = node_name;
 			}
-			// Set the region.
-			local_node.region = get_region(stringtolower(local_node.name));
-
-			INFO(this, "Advertising as %s (Region: %d)...\n", local_node.name.c_str(), local_node.region);
+			INFO(this, "Advertising as %s (id: %f)...\n", local_node.name.c_str(), local_node.id);
 		case STATE_WAITING:
 			discovery(DISCOVERY_HELLO, local_node.serialise());
 			break;
@@ -605,12 +661,20 @@ void XapiandManager::run(int num_servers, int num_replicators)
 }
 
 
-int XapiandManager::get_region(const std::string &str)
+int XapiandManager::get_region(const std::string &db_name)
 {
 	std::hash<std::string> hash_fn;
-	size_t regions = nodes.size() / REGIONS_NUMBER + 1;
-	LOG(this, "Regions: %zd\n", regions);
-	return jump_consistent_hash(hash_fn(str), regions);
+	int regions = sqrt(nodes.size());
+	LOG(this, "Regions: %d\n", regions);
+	return jump_consistent_hash(hash_fn(db_name), regions);
+}
+
+
+int XapiandManager::get_region(const double node_id)
+{
+	int regions = sqrt(nodes.size());
+	LOG(this, "Regions: %zu\n", regions);
+	return node_id * regions;
 }
 
 
