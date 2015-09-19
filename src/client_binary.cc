@@ -68,6 +68,10 @@ BinaryClient::~BinaryClient()
 		database_pool->checkin(&database);
 	}
 
+	if (repl_database) {
+		database_pool->checkin(&repl_database);
+	}
+
 	pthread_mutex_lock(&XapiandServer::static_mutex);
 	int binary_clients = --XapiandServer::binary_clients;
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
