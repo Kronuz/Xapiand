@@ -130,12 +130,15 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
 	async_write.start();
+	LOG_EV(this, "Start async event\n");
 
 	io_read.set<BaseClient, &BaseClient::io_cb>(this);
 	io_read.start(sock, ev::READ);
+	LOG_EV(this, "Start read event (sock=%d)\n", sock);
 
 	io_write.set<BaseClient, &BaseClient::io_cb>(this);
 	io_write.set(sock, ev::WRITE);
+	LOG_EV(this, "Setup write event (sock=%d)\n", sock);
 
 	LOG_OBJ(this, "CREATED CLIENT! (%d clients)\n", total_clients);
 }
@@ -220,13 +223,13 @@ void BaseClient::io_update() {
 
 void BaseClient::io_cb(ev::io &watcher, int revents)
 {
+	LOG_EV(this, "%s (sock=%d) %x\n", (revents & EV_ERROR) ? "EV_ERROR" : (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
+
 	if (revents & EV_ERROR) {
 		LOG_ERR(this, "ERROR: got invalid event (sock=%d): %s\n", sock, strerror(errno));
 		destroy();
 		return;
 	}
-
-	LOG_EV(this, "%s (sock=%d) %x\n", (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
 
 	assert(sock == watcher.fd || sock == -1);
 
@@ -332,17 +335,17 @@ void BaseClient::read_cb(ev::io &watcher, int revents)
 			if (mode == MODE_READ_FILE_TYPE) {
 				switch (*buf_data++) {
 					case '\00':
-						LOG_CONN(this, "Receiving raw file...\n");
+						LOG_CONN(this, "Receiving raw file (sock=%d)...\n", sock);
 						mode = MODE_READ_FILE_RAW;
 						// compressor = new ClientNoCompressor(this);
 						break;
 					case '\01':
-						LOG_CONN(this, "Receiving LZ4 compressed file...\n");
+						LOG_CONN(this, "Receiving LZ4 compressed file (sock=%d)...\n", sock);
 						mode = MODE_READ_FILE_LZ4;
 						compressor = new ClientLZ4Compressor(this);
 						break;
 					default:
-						LOG_CONN(this, "Received wrong file mode!\n");
+						LOG_CONN(this, "Received wrong file mode (sock=%d)!\n", sock);
 						destroy();
 						return;
 				}

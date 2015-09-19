@@ -645,9 +645,9 @@ void XapiandManager::run(int num_servers, int num_replicators)
 		replicator_pool.addTask(replicator);
 	}
 
-	LOG_OBJ(this, "Starting manager loop...\n");
+	LOG_EV(this, "Starting manager loop...\n");
 	loop->run();
-	LOG_OBJ(this, "Manager loop ended!\n");
+	LOG_EV(this, "Manager loop ended!\n");
 
 	LOG_OBJ(this, "Waiting for servers...\n");
 	server_pool.finish();

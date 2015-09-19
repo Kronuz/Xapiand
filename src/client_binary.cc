@@ -53,7 +53,7 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 	int binary_clients = ++XapiandServer::binary_clients;
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
 
-	LOG_CONN(this, "Got connection (sock=%d), %d binary client(s) of a total of %d connected.\n", sock, binary_clients, XapiandServer::total_clients);
+	LOG_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, binary_clients, XapiandServer::total_clients);
 
 	LOG_OBJ(this, "CREATED BINARY CLIENT! (%d clients)\n", binary_clients);
 	assert(binary_clients <= total_clients);
@@ -88,8 +88,7 @@ bool BinaryClient::init_remote()
 
 bool BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-	LOG(this, "src_endpoint: %s\n", src_endpoint.as_string().c_str());
-	LOG(this, "dst_endpoint: %s\n", dst_endpoint.as_string().c_str());
+	LOG(this, "init_replication: %s  -->  %s\n", src_endpoint.as_string().c_str(), dst_endpoint.as_string().c_str());
 
 	repl_endpoints.insert(src_endpoint);
 	endpoints.insert(dst_endpoint);

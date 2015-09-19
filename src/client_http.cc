@@ -150,7 +150,7 @@ HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	int http_clients = ++XapiandServer::http_clients;
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
 
-	LOG_CONN(this, "Got connection (sock=%d), %d http client(s) of a total of %d connected.\n", sock, http_clients, XapiandServer::total_clients);
+	LOG_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, http_clients, XapiandServer::total_clients);
 
 	LOG_OBJ(this, "CREATED HTTP CLIENT! (%d clients)\n", http_clients);
 	assert(http_clients <= total_clients);

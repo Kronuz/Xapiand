@@ -135,7 +135,7 @@ void check_tcp_backlog(int tcp_backlog)
 	int somaxconn;
 	size_t somaxconn_len = sizeof(somaxconn);
 	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
-		LOG_ERR(NULL, "ERROR: sysctl: %s\n", strerror(errno));
+		LOG_ERR(NULL, "ERROR: sysctl: [%d] %s\n", errno, strerror(errno));
 		return;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
@@ -148,7 +148,7 @@ void check_tcp_backlog(int tcp_backlog)
 	int somaxconn;
 	size_t somaxconn_len = sizeof(somaxconn);
 	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
-		LOG_ERR(NULL, "ERROR: sysctl: %s\n", strerror(errno));
+		LOG_ERR(NULL, "ERROR: sysctl: [%d] %s\n", errno, strerror(errno));
 		return;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
@@ -169,29 +169,29 @@ int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries)
 	// struct linger ling = {0, 0};
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s socket: %s\n", type, strerror(errno));
+		LOG_ERR(NULL, "ERROR: %s socket: [%d] %s\n", type, errno, strerror(errno));
 		return -1;
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same address
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt SO_REUSEADDR (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(NULL, "ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	}
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(NULL, "ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	}
 #endif
 	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: %s setsockopt TCP_NODELAY (sock=%d): %s\n", type, sock, strerror(errno));
+	// 	LOG_ERR(NULL, "ERROR: %s setsockopt TCP_NODELAY (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	// }
 
 	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: %s setsockopt SO_LINGER (sock=%d): %s\n", type, sock, strerror(errno));
+	// 	LOG_ERR(NULL, "ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	// }
 
 	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(NULL, "ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	}
 
 	memset(&addr, 0, sizeof(addr));
@@ -202,10 +202,10 @@ int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries)
 		addr.sin_port = htons(port);
 
 		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+			LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 		} else {
 			if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-				LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): %s\n", sock, strerror(errno));
+				LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 			}
 			check_tcp_backlog(tcp_backlog);
 			listen(sock, tcp_backlog);
@@ -213,7 +213,7 @@ int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries)
 		}
 	}
 
-	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	close(sock);
 	return -1;
 }
@@ -228,21 +228,21 @@ int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, c
 	struct ip_mreq mreq;
 
 	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s socket: %s\n", type, strerror(errno));
+		LOG_ERR(NULL, "ERROR: %s socket: [%d] %s\n", type, errno, strerror(errno));
 		return -1;
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same port
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt SO_REUSEPORT (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(NULL, "ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	}
 
 	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(NULL, "ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	}
 
 	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(NULL, "ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	}
 
 	// use setsockopt() to request that the kernel join a multicast group
@@ -250,7 +250,7 @@ int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, c
 	mreq.imr_multiaddr.s_addr = inet_addr(group);
 	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): %s\n", type, sock, strerror(errno));
+		LOG_ERR(NULL, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 		close(sock);
 		return -1;
 	}
@@ -263,7 +263,7 @@ int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, c
 		addr.sin_port = htons(port);
 
 		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+			LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 		} else {
 			fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
 			addr.sin_addr.s_addr = inet_addr(group);  // setup s_addr for sender (send to group)
@@ -271,7 +271,7 @@ int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, c
 		}
 	}
 
-	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): %s\n", type, sock, strerror(errno));
+	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	close(sock);
 	return -1;
 }
@@ -285,13 +285,13 @@ int connect_tcp(const char *hostname, const char *servname)
 	// struct linger ling = {0, 0};
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		LOG_ERR(NULL, "ERROR: cannot create binary connection: %s\n", strerror(errno));
+		LOG_ERR(NULL, "ERROR: cannot create binary connection: [%d] %s\n", errno, strerror(errno));
 		return -1;
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): %s\n", sock, strerror(errno));
+		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 	}
 #endif
 	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
@@ -344,15 +344,15 @@ int accept_tcp(int listener_sock)
 
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): %s\n", sock, strerror(errno));
+		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 	}
 #endif
 	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
+	// 	LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 	// }
 
 	if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-		LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): %s\n", sock, strerror(errno));
+		LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 	}
 
 	return sock;

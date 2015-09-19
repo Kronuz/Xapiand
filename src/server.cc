@@ -101,20 +101,20 @@ XapiandServer::~XapiandServer()
 
 void XapiandServer::run()
 {
-	LOG_OBJ(this, "Starting server loop...\n");
+	LOG_EV(this, "Starting server loop...\n");
 	loop->run(0);
-	LOG_OBJ(this, "Server loop ended!\n");
+	LOG_EV(this, "Server loop ended!\n");
 }
 
 
 void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 {
+	// LOG_EV(this, "Accept Discovery (sock=%d) %x\n", discovery_sock, revents);
+
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid discovery event (sock=%d): %s\n", discovery_sock, strerror(errno));
 		return;
 	}
-
-	LOG_EV(this, "Accept Discovery (sock=%d) %x\n", discovery_sock, revents);
 
 	assert(discovery_sock == watcher.fd || discovery_sock == -1);
 
@@ -347,12 +347,12 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 {
+	LOG_EV(this, "Accept HTTP (sock=%d) %x\n", http_sock, revents);
+
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid http event (sock=%d): %s\n", http_sock, strerror(errno));
 		return;
 	}
-
-	LOG_EV(this, "Accept HTTP (sock=%d) %x\n", http_sock, revents);
 
 	assert(http_sock == watcher.fd || http_sock == -1);
 
@@ -372,12 +372,12 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 #ifdef HAVE_REMOTE_PROTOCOL
 void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 {
+	LOG_EV(this, "Accept Binary (sock=%d) %x\n", binary_sock, revents);
+
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary_sock, strerror(errno));
 		return;
 	}
-
-	LOG_EV(this, "Accept Binary (sock=%d) %x\n", binary_sock, revents);
 
 	assert(binary_sock == watcher.fd || binary_sock == -1);
 
