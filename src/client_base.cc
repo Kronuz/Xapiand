@@ -234,11 +234,11 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 	assert(sock == watcher.fd || sock == -1);
 
 	if (revents & EV_WRITE) {
-		write_cb(watcher, revents);
+		write_cb(watcher.fd);
 	}
 
 	if (revents & EV_READ) {
-		read_cb(watcher, revents);
+		read_cb(watcher.fd);
 	}
 
 	io_update();
@@ -292,12 +292,12 @@ int BaseClient::write_directly(int fd)
 }
 
 
-void BaseClient::write_cb(ev::io &watcher, int revents)
+void BaseClient::write_cb(int fd)
 {
 	int status;
 	do {
 		pthread_mutex_lock(&qmtx);
-		status = write_directly(watcher.fd);
+		status = write_directly(fd);
 		pthread_mutex_unlock(&qmtx);
 		if (status == WR_ERR) {
 			destroy();
@@ -311,10 +311,10 @@ void BaseClient::write_cb(ev::io &watcher, int revents)
 }
 
 
-void BaseClient::read_cb(ev::io &watcher, int revents)
+void BaseClient::read_cb(int fd)
 {
 	if (!closed) {
-		ssize_t received = ::read(watcher.fd, read_buffer, BUF_SIZE);
+		ssize_t received = ::read(fd, read_buffer, BUF_SIZE);
 		const char *buf_end = read_buffer + received;
 		const char *buf_data = read_buffer;
 
