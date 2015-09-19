@@ -277,7 +277,7 @@ int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, c
 }
 
 
-int connect_tcp(const char *hostname, const char *servname)
+int connection_socket()
 {
 	int sock;
 
@@ -302,6 +302,15 @@ int connect_tcp(const char *hostname, const char *servname)
 	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_LINGER (sock=%d): %s\n", sock, strerror(errno));
 	// }
 
+	if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
+		LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+	}
+
+	return sock;
+}
+
+int connect_tcp(int sock, const char *hostname, const char *servname)
+{
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_INET;
@@ -317,10 +326,12 @@ int connect_tcp(const char *hostname, const char *servname)
 	}
 
 	if (connect(sock, result->ai_addr, result->ai_addrlen) < 0) {
-		LOG_ERR(NULL, "Cannot connect to %s:%d (sock=%d): %s\n", hostname, servname, sock, strerror(errno));
-		freeaddrinfo(result);
-		close(sock);
-		return -1;
+		if (!ignored_errorno(errno, false)) {
+			LOG_ERR(NULL, "Cannot connect to %s:%s (sock=%d): [%d] %s\n", hostname, servname, sock, errno, strerror(errno));
+			freeaddrinfo(result);
+			close(sock);
+			return -1;
+		}
 	}
 
 	freeaddrinfo(result);

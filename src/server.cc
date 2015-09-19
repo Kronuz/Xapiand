@@ -401,7 +401,7 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 bool XapiandServer::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
 	int sock;
-	if ((sock = connect_tcp(src_endpoint.host.c_str(), std::to_string(src_endpoint.port).c_str())) < 0) {
+	if ((sock = connection_socket()) < 0) {
 		return false;
 	}
 

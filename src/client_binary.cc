@@ -105,6 +105,14 @@ bool BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint
 	state = init_replicationprotocol;
 	thread_pool->addTask(this);
 
+	if ((sock = connect_tcp(sock, src_endpoint.host.c_str(), std::to_string(src_endpoint.port).c_str())) < 0) {
+		LOG_ERR(this, "Cannot connect to %s\n", src_endpoint.host.c_str(), std::to_string(src_endpoint.port).c_str());
+		database_pool->checkin(&repl_database);
+		repl_database = NULL;
+		return false;
+	}
+	LOG_CONN(this, "Connected to %s (sock=%d)!\n", src_endpoint.as_string().c_str(), sock);
+
 	return true;
 }
 
