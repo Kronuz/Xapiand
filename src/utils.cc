@@ -166,7 +166,6 @@ int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries)
 
 	int tcp_backlog = XAPIAND_TCP_BACKLOG;
 	int optval = 1;
-	// struct linger ling = {0, 0};
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		LOG_ERR(NULL, "ERROR: %s socket: [%d] %s\n", type, errno, strerror(errno));
@@ -177,22 +176,25 @@ int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries)
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
 		LOG_ERR(NULL, "ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	}
+
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
 		LOG_ERR(NULL, "ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	}
 #endif
-	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: %s setsockopt TCP_NODELAY (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	// }
-
-	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	// }
 
 	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
 		LOG_ERR(NULL, "ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 	}
+
+	// struct linger ling = {0, 0};
+	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
+	// 	LOG_ERR(NULL, "ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
+	// }
+
+	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+	// 	LOG_ERR(NULL, "ERROR: %s setsockopt TCP_NODELAY (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
+	// }
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
@@ -265,7 +267,9 @@ int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, c
 		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
 		} else {
-			fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
+			if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
+				LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+			}
 			addr.sin_addr.s_addr = inet_addr(group);  // setup s_addr for sender (send to group)
 			return sock;
 		}
@@ -282,7 +286,6 @@ int connection_socket()
 	int sock;
 
 	int optval = 1;
-	// struct linger ling = {0, 0};
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		LOG_ERR(NULL, "ERROR: cannot create binary connection: [%d] %s\n", errno, strerror(errno));
@@ -294,17 +297,19 @@ int connection_socket()
 		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 	}
 #endif
-	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
+
+	// if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
+	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 	// }
 
+	// struct linger ling = {0, 0};
 	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
 	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_LINGER (sock=%d): %s\n", sock, strerror(errno));
 	// }
 
-	if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-		LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-	}
+	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+	// 	LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
+	// }
 
 	return sock;
 }
@@ -326,17 +331,18 @@ int connect_tcp(int sock, const char *hostname, const char *servname)
 	}
 
 	if (connect(sock, result->ai_addr, result->ai_addrlen) < 0) {
-		if (!ignored_errorno(errno, false)) {
-			LOG_ERR(NULL, "Cannot connect to %s:%s (sock=%d): [%d] %s\n", hostname, servname, sock, errno, strerror(errno));
-			freeaddrinfo(result);
-			close(sock);
-			return -1;
+		LOG_ERR(NULL, "ERROR: connect error to %s:%s (sock=%d): [%d] %s\n", hostname, servname, sock, errno, strerror(errno));
+	} else {
+		freeaddrinfo(result);
+		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
+			LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 		}
+		return sock;
 	}
 
 	freeaddrinfo(result);
-
-	return sock;
+	close(sock);
+	return -1;
 }
 
 
@@ -350,6 +356,7 @@ int accept_tcp(int listener_sock)
 	socklen_t addrlen = sizeof(addr);
 
 	if ((sock = accept(listener_sock, (struct sockaddr *)&addr, &addrlen)) < 0) {
+		LOG_ERR(NULL, "ERROR: accept error (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 		return -1;
 	}
 
@@ -358,6 +365,16 @@ int accept_tcp(int listener_sock)
 		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 	}
 #endif
+
+	// if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
+	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+	// }
+
+	// struct linger ling = {0, 0};
+	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
+	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_LINGER (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+	// }
+
 	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
 	// 	LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 	// }
