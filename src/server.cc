@@ -347,7 +347,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 {
-	LOG_EV(this, "Accept HTTP (sock=%d) %x\n", http_sock, revents);
+	// LOG_EV(this, "Accept HTTP (sock=%d) %x\n", http_sock, revents);
 
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid http event (sock=%d): %s\n", http_sock, strerror(errno));
@@ -372,7 +372,7 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 #ifdef HAVE_REMOTE_PROTOCOL
 void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 {
-	LOG_EV(this, "Accept Binary (sock=%d) %x\n", binary_sock, revents);
+	// LOG_EV(this, "Accept Binary (sock=%d) %x\n", binary_sock, revents);
 
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary_sock, strerror(errno));

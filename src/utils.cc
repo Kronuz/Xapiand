@@ -204,15 +204,20 @@ int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries)
 		addr.sin_port = htons(port);
 
 		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-		} else {
-			if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-				LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+			if (!ignored_errorno(errno, true)) {
+				if (i == tries - 1) break;
+				LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
+				continue;
 			}
-			check_tcp_backlog(tcp_backlog);
-			listen(sock, tcp_backlog);
-			return sock;
 		}
+
+		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
+			LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+		}
+
+		check_tcp_backlog(tcp_backlog);
+		listen(sock, tcp_backlog);
+		return sock;
 	}
 
 	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
@@ -265,14 +270,19 @@ int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, c
 		addr.sin_port = htons(port);
 
 		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-		} else {
-			if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-				LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+			if (!ignored_errorno(errno, true)) {
+				if (i == tries - 1) break;
+				LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
+				continue;
 			}
-			addr.sin_addr.s_addr = inet_addr(group);  // setup s_addr for sender (send to group)
-			return sock;
 		}
+
+		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
+			LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+		}
+
+		addr.sin_addr.s_addr = inet_addr(group);  // setup s_addr for sender (send to group)
+		return sock;
 	}
 
 	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
@@ -331,18 +341,21 @@ int connect_tcp(int sock, const char *hostname, const char *servname)
 	}
 
 	if (connect(sock, result->ai_addr, result->ai_addrlen) < 0) {
-		LOG_ERR(NULL, "ERROR: connect error to %s:%s (sock=%d): [%d] %s\n", hostname, servname, sock, errno, strerror(errno));
-	} else {
-		freeaddrinfo(result);
-		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-			LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+		if (!ignored_errorno(errno, true)) {
+			LOG_ERR(NULL, "ERROR: connect error to %s:%s (sock=%d): [%d] %s\n", hostname, servname, sock, errno, strerror(errno));
+			freeaddrinfo(result);
+			close(sock);
+			return -1;
 		}
-		return sock;
 	}
 
 	freeaddrinfo(result);
-	close(sock);
-	return -1;
+
+	if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
+		LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+	}
+
+	return sock;
 }
 
 
@@ -356,7 +369,9 @@ int accept_tcp(int listener_sock)
 	socklen_t addrlen = sizeof(addr);
 
 	if ((sock = accept(listener_sock, (struct sockaddr *)&addr, &addrlen)) < 0) {
-		LOG_ERR(NULL, "ERROR: accept error (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+		if (!ignored_errorno(errno, true)) {
+			LOG_ERR(NULL, "ERROR: accept error (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+		}
 		return -1;
 	}
 
