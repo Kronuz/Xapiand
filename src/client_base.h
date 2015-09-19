@@ -121,12 +121,12 @@ protected:
 	void io_cb(ev::io &watcher, int revents);
 
 	// Receive message from client socket
-	void read_cb();
+	void read_cb(ev::io &watcher, int revents);
 
 	// Socket is writable
-	void write_cb();
+	void write_cb(ev::io &watcher, int revents);
 
-	int write_directly();
+	int write_directly(int fd);
 
 	void read_file();
 	bool send_file(int fd);

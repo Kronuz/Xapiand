@@ -215,7 +215,6 @@ void BaseClient::io_update() {
 	if (sock == -1) {
 		rel_ref();
 	}
-
 }
 
 
@@ -229,27 +228,23 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 
 	LOG_EV(this, "%s (sock=%d) %x\n", (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
 
-	if (sock == -1) {
-		return;
+	assert(sock == watcher.fd || sock == -1);
+
+	if (revents & EV_WRITE) {
+		write_cb(watcher, revents);
 	}
 
-	assert(sock == watcher.fd);
-
-	if (sock != -1 && revents & EV_WRITE) {
-		write_cb();
-	}
-
-	if (sock != -1 && revents & EV_READ) {
-		read_cb();
+	if (revents & EV_READ) {
+		read_cb(watcher, revents);
 	}
 
 	io_update();
 }
 
 
-int BaseClient::write_directly()
+int BaseClient::write_directly(int fd)
 {
-	if (sock == -1) {
+	if (fd == -1) {
 		LOG_ERR(this, "ERROR: write error (sock=%d): Socket already closed!\n", sock);
 		return WR_ERR;
 	} else if (!write_queue.empty()) {
@@ -259,9 +254,9 @@ int BaseClient::write_directly()
 		const char *buf_data = buffer->dpos();
 
 #ifdef MSG_NOSIGNAL
-		ssize_t written = ::send(sock, buf_data, buf_size, MSG_NOSIGNAL);
+		ssize_t written = ::send(fd, buf_data, buf_size, MSG_NOSIGNAL);
 #else
-		ssize_t written = ::write(sock, buf_data, buf_size);
+		ssize_t written = ::write(fd, buf_data, buf_size);
 #endif
 
 		if (written < 0) {
@@ -294,12 +289,12 @@ int BaseClient::write_directly()
 }
 
 
-void BaseClient::write_cb()
+void BaseClient::write_cb(ev::io &watcher, int revents)
 {
 	int status;
 	do {
 		pthread_mutex_lock(&qmtx);
-		status = write_directly();
+		status = write_directly(watcher.fd);
 		pthread_mutex_unlock(&qmtx);
 		if (status == WR_ERR) {
 			destroy();
@@ -313,15 +308,15 @@ void BaseClient::write_cb()
 }
 
 
-void BaseClient::read_cb()
+void BaseClient::read_cb(ev::io &watcher, int revents)
 {
-	if (sock != -1 && !closed) {
-		ssize_t received = ::read(sock, read_buffer, BUF_SIZE);
+	if (!closed) {
+		ssize_t received = ::read(watcher.fd, read_buffer, BUF_SIZE);
 		const char *buf_end = read_buffer + received;
 		const char *buf_data = read_buffer;
 
 		if (received < 0) {
-			if (sock != -1 && !ignored_errorno(errno, false)) {
+			if (!ignored_errorno(errno, false)) {
 				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
 				destroy();
 				return;
@@ -460,7 +455,7 @@ bool BaseClient::write(const char *buf, size_t buf_size)
 
 	do {
 		pthread_mutex_lock(&qmtx);
-		status = write_directly();
+		status = write_directly(sock);
 		pthread_mutex_unlock(&qmtx);
 		if (status == WR_ERR) {
 			destroy();

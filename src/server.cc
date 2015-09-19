@@ -114,21 +114,19 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 		return;
 	}
 
-	if (discovery_sock == -1) {
-		return;
-	}
+	LOG_EV(this, "Accept Discovery (sock=%d) %x\n", discovery_sock, revents);
 
-	assert(discovery_sock == watcher.fd);
+	assert(discovery_sock == watcher.fd || discovery_sock == -1);
 
-	if (discovery_sock != -1 && revents & EV_READ) {
+	if (revents & EV_READ) {
 		char buf[1024];
 		struct sockaddr_in addr;
 		socklen_t addrlen;
 
-		ssize_t received = ::recvfrom(discovery_sock, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
+		ssize_t received = ::recvfrom(watcher.fd, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
 
 		if (received < 0) {
-			if (discovery_sock != -1 && !ignored_errorno(errno, true)) {
+			if (!ignored_errorno(errno, true)) {
 				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", discovery_sock, strerror(errno));
 				destroy();
 			}
@@ -354,6 +352,10 @@ void XapiandServer::io_accept_http(ev::io &watcher, int revents)
 		return;
 	}
 
+	LOG_EV(this, "Accept HTTP (sock=%d) %x\n", http_sock, revents);
+
+	assert(http_sock == watcher.fd || http_sock == -1);
+
 	int client_sock;
 	if ((client_sock = accept_tcp(watcher.fd)) < 0) {
 		if (!ignored_errorno(errno, false)) {
@@ -374,6 +376,10 @@ void XapiandServer::io_accept_binary(ev::io &watcher, int revents)
 		LOG_EV(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary_sock, strerror(errno));
 		return;
 	}
+
+	LOG_EV(this, "Accept Binary (sock=%d) %x\n", binary_sock, revents);
+
+	assert(binary_sock == watcher.fd || binary_sock == -1);
 
 	int client_sock;
 	if ((client_sock = accept_tcp(watcher.fd)) < 0) {
