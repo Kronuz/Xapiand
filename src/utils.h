@@ -60,6 +60,7 @@ inline bool ignored_errorno(int e, bool udp) {
 		case EWOULDBLOCK:
 #endif
 		case EPIPE:
+		case EINPROGRESS:
 			return true;  //  Ignore error
 
 		case ENETDOWN:
