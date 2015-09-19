@@ -130,15 +130,15 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
 	async_write.start();
-	LOG_EV(this, "Start async event\n");
+	LOG_EV(this, "\tStart async write event\n");
 
 	io_read.set<BaseClient, &BaseClient::io_cb>(this);
 	io_read.start(sock, ev::READ);
-	LOG_EV(this, "Start read event (sock=%d)\n", sock);
+	LOG_EV(this, "\tStart read event (sock=%d)\n", sock);
 
 	io_write.set<BaseClient, &BaseClient::io_cb>(this);
 	io_write.set(sock, ev::WRITE);
-	LOG_EV(this, "Setup write event (sock=%d)\n", sock);
+	LOG_EV(this, "\tSetup write event (sock=%d)\n", sock);
 
 	LOG_OBJ(this, "CREATED CLIENT! (%d clients)\n", total_clients);
 }
@@ -174,7 +174,10 @@ void BaseClient::destroy()
 
 	// Stop and free watcher if client socket is closing
 	io_read.stop();
+	LOG_EV(this, "\tStop read event (sock=%d)\n", sock);
+
 	io_write.stop();
+	LOG_EV(this, "\tStop write event (sock=%d)\n", sock);
 
 	::close(sock);
 	sock = -1;
@@ -209,9 +212,11 @@ void BaseClient::io_update() {
 				destroy();
 			} else {
 				io_write.stop();
+				LOG_EV(this, "\tStop write event (sock=%d)\n", sock);
 			}
 		} else {
 			io_write.start();
+			LOG_EV(this, "\tStart write event (sock=%d)\n", sock);
 		}
 	}
 
@@ -304,10 +309,12 @@ void BaseClient::write_cb(int fd)
 			return;
 		} else if (status == WR_RETRY) {
 			io_write.start();
+			LOG_EV(this, "\tStart write event (sock=%d)\n", sock);
 			return;
 		}
 	} while (status != WR_OK);
 	io_write.stop();
+	LOG_EV(this, "\tStop write event (sock=%d)\n", sock);
 }
 
 
@@ -479,7 +486,7 @@ void BaseClient::shutdown()
 	Worker::shutdown();
 
 	if (manager()->shutdown_now) {
-		LOG_EV(this, "Signaled destroy!!\n");
+		LOG_EV(this, "\tSignaled destroy!!\n");
 		destroy();
 		rel_ref();
 	}

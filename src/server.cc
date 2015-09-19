@@ -54,6 +54,7 @@ int XapiandServer::binary_clients = 0;
 
 XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int discovery_sock_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
 	: Worker(manager_, loop_),
+	  async_setup_node(*loop),
 	  http_io(*loop),
 	  discovery_io(*loop),
 	  binary_io(*loop),
@@ -73,15 +74,22 @@ XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int 
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
 
+	async_setup_node.set<XapiandServer, &XapiandServer::async_setup_node_cb>(this);
+	async_setup_node.start();
+	LOG_EV(this, "\tStart async setup node event\n");
+
 	discovery_io.set<XapiandServer, &XapiandServer::io_accept_discovery>(this);
 	discovery_io.start(discovery_sock, ev::READ);
+	LOG_EV(this, "\tStart discovery event (sock=%d)\n", discovery_sock);
 
 	http_io.set<XapiandServer, &XapiandServer::io_accept_http>(this);
 	http_io.start(http_sock, ev::READ);
+	LOG_EV(this, "\tStart http accept event (sock=%d)\n", http_sock);
 
 #ifdef HAVE_REMOTE_PROTOCOL
 	binary_io.set<XapiandServer, &XapiandServer::io_accept_binary>(this);
 	binary_io.start(binary_sock, ev::READ);
+	LOG_EV(this, "\tStart binary accept event (sock=%d)\n", binary_sock);
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 	LOG_OBJ(this, "CREATED SERVER!\n");
@@ -101,9 +109,18 @@ XapiandServer::~XapiandServer()
 
 void XapiandServer::run()
 {
-	LOG_EV(this, "Starting server loop...\n");
+	LOG_EV(this, "\tStarting server loop...\n");
 	loop->run(0);
-	LOG_EV(this, "Server loop ended!\n");
+	LOG_EV(this, "\tServer loop ended!\n");
+}
+
+
+void XapiandServer::async_setup_node_cb(ev::async &watcher, int revents)
+{
+	manager()->setup_node(this);
+
+	async_setup_node.stop();
+	LOG_EV(this, "\tStop async setup node event\n");
 }
 
 
@@ -427,13 +444,21 @@ void XapiandServer::destroy()
 		return;
 	}
 
+	async_setup_node.stop();
+	LOG_EV(this, "\tStop async setup node event\n");
+
+	discovery_io.stop();
+	LOG_EV(this, "\tStop discovery event (sock=%d)\n", discovery_sock);
+
+	http_io.stop();
+	LOG_EV(this, "\tStop http accept event (sock=%d)\n", http_sock);
+
+	binary_io.stop();
+	LOG_EV(this, "\tStop binary accept event (sock=%d)\n", binary_sock);
+
 	discovery_sock = -1;
 	http_sock = -1;
 	binary_sock = -1;
-
-	discovery_io.stop();
-	http_io.stop();
-	binary_io.stop();
 
 	pthread_mutex_unlock(&qmtx);
 

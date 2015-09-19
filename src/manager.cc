@@ -112,6 +112,8 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	  node_name(o.node_name),
 	  discovery_port(o.discovery_port)
 {
+	INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
+
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
@@ -170,9 +172,11 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 
 	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
 	async_shutdown.start();
+	LOG_EV(this, "\tStart async shutdown event\n");
 
 	discovery_heartbeat.set<XapiandManager, &XapiandManager::discovery_heartbeat_cb>(this);
 	discovery_heartbeat.start(0, 1);
+	LOG_EV(this, "\tStart heartbeat event\n");
 
 	LOG_OBJ(this, "CREATED MANAGER!\n");
 }
@@ -297,17 +301,8 @@ XapiandManager::set_node_id(double node_id)
 }
 
 
-#ifdef HAVE_REMOTE_PROTOCOL
-bool XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
-{
-	XapiandServer *server = static_cast<XapiandServer *>(*_children.begin());
-	return server->trigger_replication(src_endpoint, dst_endpoint);
-}
-#endif
-
-
 void
-XapiandManager::setup_node()
+XapiandManager::setup_node(XapiandServer *server)
 {
 	bool new_cluster = false;
 
@@ -332,6 +327,7 @@ XapiandManager::setup_node()
 
 	// Get a node (any node)
 	pthread_mutex_lock(&nodes_mtx);
+
 	nodes_map_t::const_iterator it(nodes.cbegin());
 	for ( ; it != nodes.cend(); it++) {
 		const Node &node = it->second;
@@ -339,7 +335,7 @@ XapiandManager::setup_node()
 		// Replicate database from the other node
 #ifdef HAVE_REMOTE_PROTOCOL
 		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
-		if (trigger_replication(remote_endpoint, cluster_endpoint)) {
+		if (server->trigger_replication(remote_endpoint, *cluster_endpoints.begin())) {
 			INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
 			new_cluster = false;
 			break;
@@ -349,17 +345,18 @@ XapiandManager::setup_node()
 		}
 #endif
 	}
+
 	pthread_mutex_unlock(&nodes_mtx);
+
+	// Set node as ready!
+	set_node_name(local_node.name);
+	state = STATE_READY;
 
 	if (new_cluster) {
 		INFO(this, "Joined new cluster %s, is now online!\n", cluster_name.c_str());
 	} else {
 		INFO(this, "Joined cluster %s, it was already online.\n", cluster_name.c_str());
 	}
-
-	set_node_name(local_node.name);
-
-	state = STATE_READY;
 
 	pthread_mutex_unlock(&qmtx);
 }
@@ -504,6 +501,12 @@ void XapiandManager::destroy()
 		return;
 	}
 
+	async_shutdown.stop();
+	LOG_EV(this, "\tStop async shutdown event\n");
+
+	discovery_heartbeat.stop();
+	LOG_EV(this, "\tStop heartbeat event\n");
+
 	if (discovery_sock != -1) {
 		::close(discovery_sock);
 		discovery_sock = -1;
@@ -547,7 +550,8 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			break;
 	}
 	if (state != STATE_READY && --state == STATE_SETUP) {
-		setup_node();
+		XapiandServer *server = static_cast<XapiandServer *>(*_children.begin());
+		server->async_setup_node.send();
 	}
 }
 
@@ -645,9 +649,9 @@ void XapiandManager::run(int num_servers, int num_replicators)
 		replicator_pool.addTask(replicator);
 	}
 
-	LOG_EV(this, "Starting manager loop...\n");
+	LOG_EV(this, "\tStarting manager loop...\n");
 	loop->run();
-	LOG_EV(this, "Manager loop ended!\n");
+	LOG_EV(this, "\tManager loop ended!\n");
 
 	LOG_OBJ(this, "Waiting for servers...\n");
 	server_pool.finish();

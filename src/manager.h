@@ -86,6 +86,8 @@ enum discovery_type {
 };
 
 
+class XapiandServer;
+
 class XapiandManager : public Worker {
 #ifdef HAVE_CXX11
 	typedef std::unordered_map<std::string, Node> nodes_map_t;
@@ -131,7 +133,6 @@ protected:
 	bool set_node_name(const std::string &node_name_);
 	double get_node_id();
 	bool set_node_id(double node_id);
-	void setup_node();
 
 public:
 	time_t shutdown_asap;
@@ -147,7 +148,7 @@ public:
 	XapiandManager(ev::loop_ref *loop_, const opts_t &o);
 	~XapiandManager();
 
-	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
+	void setup_node(XapiandServer *server);
 
 	void run(int num_servers, int num_replicators);
 	void sig_shutdown_handler(int sig);

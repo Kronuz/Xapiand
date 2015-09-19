@@ -39,6 +39,8 @@ private:
 	pthread_mutex_t qmtx;
 	pthread_mutexattr_t qmtx_attr;
 
+	ev::async async_setup_node;
+
 	ev::io discovery_io;
 	int discovery_sock;
 
@@ -52,6 +54,8 @@ private:
 	ThreadPool *thread_pool;
 
 	void destroy();
+
+	void async_setup_node_cb(ev::async &watcher, int revents);
 
 	void io_accept_discovery(ev::io &watcher, int revents);
 
