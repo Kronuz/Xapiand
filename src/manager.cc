@@ -345,7 +345,7 @@ XapiandManager::setup_node()
 			break;
 		}
 		if (!new_cluster) {
-			INFO(this, "Cannot sync cluster data.\n");
+			LOG_ERR(this, "Cannot sync cluster data.\n");
 		}
 #endif
 	}
