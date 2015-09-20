@@ -72,7 +72,7 @@ class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
 				keys_values_t ins_key = { slot, type, 0, "", CartesianList(), reverse, true };
 				switch (type) {
 					case NUMERIC_TYPE:
-						ins_key.valuenumeric = strtodouble(value);
+						ins_key.valuenumeric = strtod(value);
 						break;
 					case DATE_TYPE:
 						ins_key.valuenumeric = Datetime::timestamp(value);

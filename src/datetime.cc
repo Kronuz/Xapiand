@@ -52,24 +52,24 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 
 	if (ret != -1 && len == gr[0].end - gr[0].start) {
 		std::string parse(date, gr[1].start, gr[1].end - gr[1].start);
-		tm.year = strtoint(parse);
+		tm.year = strtol(parse);
 		parse.assign(date, gr[3].start, gr[3].end - gr[3].start);
-		tm.mon = strtoint(parse);
+		tm.mon = strtol(parse);
 		parse.assign(date, gr[4].start, gr[4].end - gr[4].start);
-		tm.day = strtoint(parse);
+		tm.day = strtol(parse);
 		if (!isvalidDate(tm.year, tm.mon, tm.day)) throw MSG_Error("Date is out of range");
 
 		if (gr[5].end - gr[5].start > 0) {
 			parse.assign(date, gr[6].start, gr[6].end - gr[6].start);
-			tm.hour = strtoint(parse);
+			tm.hour = strtol(parse);
 			parse.assign(date, gr[7].start, gr[7].end - gr[7].start);
-			tm.min = strtoint(parse);
+			tm.min = strtol(parse);
 			if (gr[8].end - gr[8].start > 0) {
 				parse.assign(date, gr[9].start, gr[9].end - gr[9].start);
-				tm.sec = strtoint(parse);
+				tm.sec = strtol(parse);
 				if (gr[10].end - gr[10].start > 0) {
 					parse.assign(date, gr[11].start, gr[11].end - gr[11].start);
-					tm.msec = strtoint(parse);
+					tm.msec = strtol(parse);
 				} else {
 					tm.msec = 0;
 				}
@@ -122,7 +122,7 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 void
 Datetime::computeDateMath(tm_t &tm, const std::string &op, const std::string &units)
 {
-	int num = strtoint(std::string(op.c_str() + 1, op.size())), max_days;
+	int num = strtol(std::string(op.c_str() + 1, op.size())), max_days;
 	time_t dateGMT;
 	struct tm *timeinfo;
 	if (op.at(0) == '+' || op.at(0) == '-') {
@@ -418,7 +418,7 @@ Datetime::isotime(const struct tm *tm)
 Datetime::ctime(const ::std::string &epoch)
 {
 	if (isNumeric(epoch)) {
-		double mtimestamp = strtodouble(epoch);
+		double mtimestamp = strtod(epoch);
 		time_t timestamp = (time_t) mtimestamp;
 		std::string milliseconds = epoch;
 		milliseconds.assign(milliseconds.c_str() + milliseconds.find("."), 4);

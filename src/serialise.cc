@@ -49,7 +49,7 @@ Serialise::numeric(const std::string &field_value)
 {
 	double val;
 	if (isNumeric(field_value)) {
-		val = strtodouble(field_value);
+		val = strtod(field_value);
 		return Xapian::sortable_serialise(val);
 	}
 	return "";

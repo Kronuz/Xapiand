@@ -214,14 +214,15 @@ std::string stringtolower(const std::string &str);
 std::string stringtoupper(const std::string &str);
 // String tokenizer with the delimiter.
 void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens);
-int strtoint(const std::string &str);
-unsigned int strtouint(const std::string &str);
-long long int strtollong(const std::string &str);
-uInt64 strtouInt64(const std::string &str);
-double strtodouble(const std::string &str);
+
+long strtol(const std::string &str, int base=10);
+unsigned long strtoul(const std::string &str, int base=10);
+long long strtoll(const std::string &str, int base=10);
+unsigned long long strtoull(const std::string &str, int base=10);
+double strtod(const std::string &str);
+
 unsigned int get_slot(const std::string &name);
 std::string prefixed(const std::string &term, const std::string &prefixO);
-unsigned int hex2int(const std::string &input);
 std::string get_prefix(const std::string &name, const std::string &prefix, char type);
 std::string get_slot_hex(const std::string &name);
 bool strhasupper(const std::string &str);

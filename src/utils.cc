@@ -810,7 +810,7 @@ unsigned int get_slot(const std::string &name)
 {
 	// We are left with the last 8 characters.
 	std::string _md5(md5(strhasupper(name) ? stringtoupper(name) : name), 24, 8);
-	unsigned int slot = hex2int(_md5);
+	unsigned int slot = strtoul(_md5, 16);
 	if (slot == 0x00000000) {
 		slot = 0x00000001; // 0->id
 	} else if (slot == Xapian::BAD_VALUENO) {
@@ -820,69 +820,33 @@ unsigned int get_slot(const std::string &name)
 }
 
 
-unsigned int hex2int(const std::string &input)
+long strtol(const std::string &str, int base)
 {
-	unsigned int n;
-	std::stringstream ss;
-	ss << std::hex << input;
-	ss >> n;
-	ss.flush();
-	return n;
+	return strtol(str.c_str(), NULL, base);
 }
 
 
-int strtoint(const std::string &str)
+unsigned long strtoul(const std::string &str, int base)
 {
-	int number;
-	std::stringstream ss;
-	ss << std::dec << str;
-	ss >> number;
-	ss.flush();
-	return number;
+	return strtoul(str.c_str(), NULL, base);
 }
 
 
-unsigned int strtouint(const std::string &str)
+double strtod(const std::string &str)
 {
-	unsigned int number;
-	std::stringstream ss;
-	ss << std::dec << str;
-	ss >> number;
-	ss.flush();
-	return number;
+	return strtod(str.c_str(), NULL);
 }
 
 
-double strtodouble(const std::string &str)
+long long strtoll(const std::string &str, int base)
 {
-	double number;
-	std::stringstream ss;
-	ss << std::dec << str;
-	ss >> number;
-	ss.flush();
-	return number;
+	return strtoll(str.c_str(), NULL, base);
 }
 
 
-long long int strtollong(const std::string &str)
+unsigned long long strtoull(const std::string &str, int base)
 {
-	long long int number;
-	std::stringstream ss;
-	ss << std::dec << str;
-	ss >> number;
-	ss.flush();
-	return number;
-}
-
-
-uInt64 strtouInt64(const std::string &str)
-{
-	uInt64 number;
-	std::stringstream ss;
-	ss << std::dec << str;
-	ss >> number;
-	ss.flush();
-	return number;
+	return strtoull(str.c_str(), NULL, base);
 }
 
 

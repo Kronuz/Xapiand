@@ -293,7 +293,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No proper mastery!\n");
 							return;
 						}
-						remote_mastery_level = strtollong(mastery_str);
+						remote_mastery_level = strtoll(mastery_str);
 
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
@@ -324,7 +324,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No proper mastery!\n");
 							return;
 						}
-						remote_mastery_level = strtollong(mastery_str);
+						remote_mastery_level = strtoll(mastery_str);
 
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");

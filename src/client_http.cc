@@ -1194,28 +1194,28 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 					q.offset = NULL;
 					if (url_qs("offset", query_str, query_size, &q) != -1) {
-						e.offset = strtouint(urldecode(q.offset, q.length).c_str());
+						e.offset = strtoul(urldecode(q.offset, q.length));
 					} else {
 						e.offset = 0;
 					}
 
 					q.offset = NULL;
 					if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
-						e.check_at_least = strtouint(urldecode(q.offset, q.length).c_str());
+						e.check_at_least = strtoul(urldecode(q.offset, q.length));
 					} else {
 						e.check_at_least = 0;
 					}
 
 					q.offset = NULL;
 					if (url_qs("limit", query_str, query_size, &q) != -1) {
-						e.limit = strtouint(urldecode(q.offset, q.length).c_str());
+						e.limit = strtoul(urldecode(q.offset, q.length));
 					} else {
 						e.limit = 10;
 					}
 
 					q.offset = NULL;
 					if (url_qs("collapse_max", query_str, query_size, &q) != -1) {
-						e.collapse_max = strtouint(urldecode(q.offset, q.length).c_str());
+						e.collapse_max = strtoul(urldecode(q.offset, q.length));
 					} else {
 						e.collapse_max = 1;
 					}
@@ -1286,21 +1286,21 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					if(e.is_fuzzy) {
 						q.offset = NULL;
 						if (url_qs("fuzzy.n_rset", query_str, query_size, &q) != -1){
-							e.fuzzy.n_rset = strtouint(urldecode(q.offset, q.length).c_str());
+							e.fuzzy.n_rset = strtoul(urldecode(q.offset, q.length));
 						} else {
 							e.fuzzy.n_rset = 5;
 						}
 
 						q.offset = NULL;
 						if (url_qs("fuzzy.n_eset", query_str, query_size, &q) != -1){
-							e.fuzzy.n_eset = strtouint(urldecode(q.offset, q.length).c_str());
+							e.fuzzy.n_eset = strtoul(urldecode(q.offset, q.length));
 						} else {
 							e.fuzzy.n_eset = 32;
 						}
 
 						q.offset = NULL;
 						if (url_qs("fuzzy.n_term", query_str, query_size, &q) != -1){
-							e.fuzzy.n_term = strtouint(urldecode(q.offset, q.length).c_str());
+							e.fuzzy.n_term = strtoul(urldecode(q.offset, q.length));
 						} else {
 							e.fuzzy.n_term = 10;
 						}
@@ -1327,21 +1327,21 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					if(e.is_nearest) {
 						q.offset = NULL;
 						if (url_qs("nearest.n_rset", query_str, query_size, &q) != -1){
-							e.nearest.n_rset = strtouint(urldecode(q.offset, q.length).c_str());
+							e.nearest.n_rset = strtoul(urldecode(q.offset, q.length));
 						} else {
 							e.nearest.n_rset = 5;
 						}
 
 						q.offset = NULL;
 						if (url_qs("nearest.n_eset", query_str, query_size, &q) != -1){
-							e.nearest.n_eset = strtouint(urldecode(q.offset, q.length).c_str());
+							e.nearest.n_eset = strtoul(urldecode(q.offset, q.length));
 						} else {
 							e.nearest.n_eset = 32;
 						}
 
 						q.offset = NULL;
 						if (url_qs("nearest.n_term", query_str, query_size, &q) != -1){
-							e.nearest.n_term = strtouint(urldecode(q.offset, q.length).c_str());
+							e.nearest.n_term = strtoul(urldecode(q.offset, q.length));
 						} else {
 							e.nearest.n_term = 10;
 						}
@@ -1370,21 +1370,21 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					if (isRange(command)) {
 						q.offset = NULL;
 						if (url_qs("offset", query_str, query_size, &q) != -1) {
-							e.offset = strtouint(urldecode(q.offset, q.length).c_str());
+							e.offset = strtoul(urldecode(q.offset, q.length));
 						} else {
 							e.offset = 0;
 						}
 
 						q.offset = NULL;
 						if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
-							e.check_at_least = strtouint(urldecode(q.offset, q.length).c_str());
+							e.check_at_least = strtoul(urldecode(q.offset, q.length));
 						} else {
 							e.check_at_least = 0;
 						}
 
 						q.offset = NULL;
 						if (url_qs("limit", query_str, query_size, &q) != -1) {
-							e.limit = strtouint(urldecode(q.offset, q.length).c_str());
+							e.limit = strtoul(urldecode(q.offset, q.length));
 						} else {
 							e.limit = 10;
 						}

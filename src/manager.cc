@@ -252,14 +252,14 @@ XapiandManager::get_node_id()
 {
 	int fd = open("nodeid", O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
-        unsigned char buf[512];
-		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
+        char buf[512];
+		size_t length = read(fd, buf, sizeof(buf) - 1);
 		if (length > 0) {
 			buf[length] = '\0';
 			for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
 		}
 		close(fd);
-		return strtodouble(std::string((const char *)buf, length));
+		return strtod(std::string(buf, length));
 	} else {
 		fd = open("nodeid", O_WRONLY | O_CREAT, 0644);
 		double node_id = 0;
@@ -720,13 +720,13 @@ unique_cJSON XapiandManager::get_stats_time(const std::string &time_req)
 
 	if (ret == 0 && (g[0].end - g[0].start) == len) {
 		if ((g[1].end - g[1].start) > 0) {
-			first_time.minute = 60 * (((g[3].end - g[3].start) > 0) ? strtoint(std::string(time_req.c_str() + g[3].start, g[3].end - g[3].start)) : 0);
-			first_time.minute += ((g[4].end - g[4].start) > 0) ? strtoint(std::string(time_req.c_str() + g[4].start, g[4].end - g[4].start -1)) : 0;
-			first_time.second = ((g[5].end - g[5].start) > 0) ? strtoint(std::string(time_req.c_str() + g[5].start, g[5].end - g[5].start -1)) : 0;
+			first_time.minute = 60 * (((g[3].end - g[3].start) > 0) ? strtol(std::string(time_req.c_str() + g[3].start, g[3].end - g[3].start)) : 0);
+			first_time.minute += ((g[4].end - g[4].start) > 0) ? strtol(std::string(time_req.c_str() + g[4].start, g[4].end - g[4].start -1)) : 0;
+			first_time.second = ((g[5].end - g[5].start) > 0) ? strtol(std::string(time_req.c_str() + g[5].start, g[5].end - g[5].start -1)) : 0;
 			if ((g[6].end - g[6].start) > 0) {
-				second_time.minute = 60 * (((g[8].end - g[8].start) > 0) ? strtoint(std::string(time_req.c_str() + g[8].start, g[8].end - g[8].start)) : 0);
-				second_time.minute += ((g[9].end - g[9].start) > 0) ? strtoint(std::string(time_req.c_str() + g[9].start, g[9].end - g[9].start -1)) : 0;
-				second_time.second = ((g[10].end - g[10].start) > 0) ? strtoint(std::string(time_req.c_str() + g[10].start, g[10].end - g[10].start -1)) : 0;
+				second_time.minute = 60 * (((g[8].end - g[8].start) > 0) ? strtol(std::string(time_req.c_str() + g[8].start, g[8].end - g[8].start)) : 0);
+				second_time.minute += ((g[9].end - g[9].start) > 0) ? strtol(std::string(time_req.c_str() + g[9].start, g[9].end - g[9].start -1)) : 0;
+				second_time.second = ((g[10].end - g[10].start) > 0) ? strtol(std::string(time_req.c_str() + g[10].start, g[10].end - g[10].start -1)) : 0;
 			} else {
 				second_time.minute = 0;
 				second_time.second = 0;

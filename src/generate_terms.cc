@@ -50,8 +50,8 @@ GenerateTerms::numeric(::std::string &result_terms, const ::std::string &start_,
 	const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes)
 {
 	if (!start_.empty() && !end_.empty() && !accuracy.empty()) {
-		double d_start = strtodouble(start_);
-		double d_end = strtodouble(end_);
+		double d_start = strtod(start_);
+		double d_end = strtod(end_);
 		double size_r = d_end - d_start;
 
 		// If the range is negative or its values are outside of range of a long long,

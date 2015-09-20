@@ -80,9 +80,9 @@ Xapian::Query GeoFieldProcessor::operator()(const std::string &str)
 	std::vector<std::string> values;
 	stringTokenizer(str, WKT_SEPARATOR, values);
 	std::vector<std::string>::const_iterator it(values.begin());
-	std::string serialise(Serialise::trixel_id(strtouInt64(*it)));
+	std::string serialise(Serialise::trixel_id(strtoull(*it)));
 	for (it++ ; it != values.end(); it++) {
-		serialise += Serialise::trixel_id(strtouInt64(*it));
+		serialise += Serialise::trixel_id(strtoull(*it));
 	}
 	return Xapian::Query(prefix + serialise);
 }
