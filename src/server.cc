@@ -231,27 +231,25 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 				case DISCOVERY_WAVE:
 				case DISCOVERY_HEARTBEAT:
-					if (manager()->state == STATE_READY) {
-						if (remote_node.unserialise(&ptr, end) == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
-							return;
-						}
-						if (manager()->touch_node(remote_node.name, &node)) {
-							if (remote_node != node) {
-								manager()->drop_node(remote_node.name);
-								INFO(this, "Stalled node %s left the party!\n", remote_node.name.c_str());
-								if (manager()->put_node(remote_node)) {
-									INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
-								} else {
-									LOG_ERR(this, "ERROR: Cannot register remote node (1): %s\n", remote_node.name.c_str());
-								}
-							}
-						} else {
+					if (remote_node.unserialise(&ptr, end) == -1) {
+						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						return;
+					}
+					if (manager()->touch_node(remote_node.name, &node)) {
+						if (remote_node != node) {
+							manager()->drop_node(remote_node.name);
+							INFO(this, "Stalled node %s left the party!\n", remote_node.name.c_str());
 							if (manager()->put_node(remote_node)) {
-								INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+								INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 							} else {
-								LOG_ERR(this, "ERROR: Cannot register remote node (2): %s\n", remote_node.name.c_str());
+								LOG_ERR(this, "ERROR: Cannot register remote node (1): %s\n", remote_node.name.c_str());
 							}
+						}
+					} else {
+						if (manager()->put_node(remote_node)) {
+							INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+						} else {
+							LOG_ERR(this, "ERROR: Cannot register remote node (2): %s\n", remote_node.name.c_str());
 						}
 					}
 					break;
