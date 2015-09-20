@@ -48,15 +48,7 @@
 #define SLOT_TIME_SECOND 60
 
 
-template<class T>
-T random(T initial, T last)
-{
-	static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
-	static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
-	std::uniform_real_distribution<T> distribution(initial, last);
-	return distribution(rng);  // Use rng as a generator
-}
-
+double random(double initial, double last);
 
 void log(const char *file, int line, void *obj, const char *fmt, ...);
 

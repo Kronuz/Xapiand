@@ -64,6 +64,16 @@ pos_time_t b_time;
 time_t init_time;
 times_row_t stats_cnt;
 
+static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
+static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
+
+
+double random(double initial, double last)
+{
+	std::uniform_real_distribution<double> distribution(initial, last);
+	return distribution(rng);  // Use rng as a generator
+}
+
 
 std::string repr(const char * p, size_t size, bool friendly)
 {
