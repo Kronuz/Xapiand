@@ -184,6 +184,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 			std::string mastery_str;
 			long long mastery_level;
 			long long remote_mastery_level;
+			time_t now = time(NULL);
 
 			char cmd = buf[0];
 			switch (cmd) {
@@ -222,7 +223,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 								LOG_ERR(this, "Cannot join the party. Node name %s already taken!\n", local_node.name.c_str());
 								manager()->state = STATE_BAD;
 								local_node.name.clear();
-								manager()->shutdown_asap = time(NULL);
+								manager()->shutdown_asap = now;
 								manager()->async_shutdown.send();
 							}
 						}
@@ -236,13 +237,15 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						return;
 					}
 					if (manager()->touch_node(remote_node.name, &node)) {
-						if (remote_node != node && cmd == DISCOVERY_HEARTBEAT) {
-							manager()->drop_node(remote_node.name);
-							INFO(this, "Stalled node %s left the party!\n", remote_node.name.c_str());
-							if (manager()->put_node(remote_node)) {
-								INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
-							} else {
-								LOG_ERR(this, "ERROR: Cannot register remote node (1): %s\n", remote_node.name.c_str());
+						if (remote_node != node && remote_node.name != local_node.name) {
+							if (cmd == DISCOVERY_HEARTBEAT || node.touched < now - HEARTBEAT_MAX) {								
+								manager()->drop_node(remote_node.name);
+								INFO(this, "Stalled node %s left the party!\n", remote_node.name.c_str());
+								if (manager()->put_node(remote_node)) {
+									INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+								} else {
+									LOG_ERR(this, "ERROR: Cannot register remote node (1): %s\n", remote_node.name.c_str());
+								}
 							}
 						}
 					} else {
