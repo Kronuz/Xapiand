@@ -176,8 +176,8 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	LOG_EV(this, "\tStart async shutdown event\n");
 
 	discovery_heartbeat.set<XapiandManager, &XapiandManager::discovery_heartbeat_cb>(this);
-	discovery_heartbeat.start(0, HEARTBEAT_INIT);
-	LOG_EV(this, "\tStart heartbeat event\n");
+	discovery_heartbeat.set(0, HEARTBEAT_INIT);
+	LOG_EV(this, "\tSet heartbeat event\n");
 
 	LOG_OBJ(this, "CREATED MANAGER!\n");
 }
@@ -553,7 +553,6 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			break;
 
 		case STATE_SETUP:
-			INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
 			server = static_cast<XapiandServer *>(*_children.begin());
 			server->async_setup_node.send();
 			break;
@@ -661,6 +660,11 @@ void XapiandManager::run(int num_servers, int num_replicators)
 		XapiandReplicator *replicator = new XapiandReplicator(this, NULL, &database_pool, &thread_pool);
 		replicator_pool.addTask(replicator);
 	}
+
+	INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
+
+	discovery_heartbeat.start();
+	LOG_EV(this, "\tStart heartbeat event\n");
 
 	LOG_EV(this, "\tStarting manager loop...\n");
 	loop->run();
