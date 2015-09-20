@@ -44,7 +44,7 @@ Database::Database(DatabaseQueue * queue_, const Endpoints &endpoints_, int flag
 	  endpoints(endpoints_),
 	  flags(flags_),
 	  hash(endpoints.hash()),
-	  access_time(time(0)),
+	  access_time(time(NULL)),
 	  mastery_level(-1),
 	  db(NULL)
 {
@@ -75,7 +75,7 @@ Database::read_mastery(const std::string &dir)
 void
 Database::reopen()
 {
-	access_time = time(0);
+	access_time = time(NULL);
 
 	if (db) {
 		// Try to reopen
@@ -1732,7 +1732,7 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 
 	assert(*database == NULL);
 
-	time_t now = time(0);
+	time_t now = time(NULL);
 	Database *database_ = NULL;
 
 	pthread_mutex_lock(&qmtx);
