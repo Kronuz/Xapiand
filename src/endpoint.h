@@ -57,6 +57,10 @@ struct Node {
 			binary_port == other.binary_port
 		);
 	}
+
+	inline bool operator!=(const Node& other) const {
+		return !operator==(other);
+	}
 };
 
 extern Node local_node;

@@ -159,7 +159,6 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 				return;
 			}
 
-			// LOG(this, "%s says '%s'\n", inet_ntoa(addr.sin_addr), repr(buf, received).c_str());
 			uint16_t remote_protocol_version = *(uint16_t *)(buf + 1);
 			if ((remote_protocol_version & 0xff) > XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) {
 				LOG_DISCOVERY(this, "Badly formed message: Protocol version mismatch %x vs %x!\n", remote_protocol_version & 0xff, XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION);
@@ -168,7 +167,6 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 			const char *ptr = buf + 3;
 			const char *end = buf + received;
-			// size_t decoded;
 
 			std::string remote_cluster_name;
 			if (unserialise_string(remote_cluster_name, &ptr, end) == -1 || remote_cluster_name.empty()) {
@@ -176,16 +174,13 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 				return;
 			}
 			if (remote_cluster_name != manager()->cluster_name) {
+				// LOG_DISCOVERY(this, "Ignoring message from wrong cluster name!\n");
 				return;
 			}
 
-			// LOG_DISCOVERY(this, "%s on ip:%s, tcp:%d (http), tcp:%d (xapian), at pid:%d\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
-
 			Node node;
 			Node remote_node;
-			// Database *database = NULL;
 			std::string index_path;
-			std::string node_name;
 			std::string mastery_str;
 			long long mastery_level;
 			long long remote_mastery_level;
@@ -234,14 +229,29 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 					}
 					break;
 
+				case DISCOVERY_WAVE:
 				case DISCOVERY_HEARTBEAT:
 					if (manager()->state == STATE_READY) {
-						if (unserialise_string(node_name, &ptr, end) == -1 || node_name.empty()) {
+						if (remote_node.unserialise(&ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 							return;
 						}
-						if (!manager()->touch_node(node_name)) {
-							LOG_DISCOVERY(this, "Ignoring heartbeat from unknown peer %s\n", node_name.c_str());
+						if (manager()->touch_node(remote_node.name, &node)) {
+							if (remote_node != node) {
+								manager()->drop_node(remote_node.name);
+								INFO(this, "Stalled node %s left the party!\n", remote_node.name.c_str());
+								if (manager()->put_node(remote_node)) {
+									INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+								} else {
+									LOG_ERR(this, "ERROR: Cannot register remote node (1): %s\n", remote_node.name.c_str());
+								}
+							}
+						} else {
+							if (manager()->put_node(remote_node)) {
+								INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+							} else {
+								LOG_ERR(this, "ERROR: Cannot register remote node (2): %s\n", remote_node.name.c_str());
+							}
 						}
 					}
 					break;
@@ -295,7 +305,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							return;
 						}
 						if (manager()->put_node(remote_node)) {
-							INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+							INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 						}
 
 						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %lld!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
@@ -329,7 +339,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 								return;
 							}
 							if (manager()->put_node(remote_node)) {
-								INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+								INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 							}
 
 							Endpoint local_endpoint(index_path);
@@ -341,19 +351,9 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 								INFO(this, "Database being synchronized from %s...\n", remote_node.name.c_str());
 							}
 #endif
-						} else {
+						} else if (mastery_level != remote_mastery_level) {
 							LOG_DISCOVERY(this, "Mastery of local's %s wins! (local:%lld <= remote:%lld) - Ignoring update!\n", index_path.c_str(), mastery_level, remote_mastery_level);
 						}
-					}
-					break;
-
-				case DISCOVERY_WAVE:
-					if (remote_node.unserialise(&ptr, end) == -1) {
-						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
-						return;
-					}
-					if (manager()->put_node(remote_node)) {
-						INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (3)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 					}
 					break;
 			}
