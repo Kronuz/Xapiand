@@ -40,11 +40,22 @@
 #include <algorithm>
 #include <memory>
 #include <sstream>
-#include "pcre/pcre.h"
+#include <random>
 #include <sys/time.h>
+#include "pcre/pcre.h"
 
 #define SLOT_TIME_MINUTE 1440
 #define SLOT_TIME_SECOND 60
+
+
+template<class T>
+T random(T initial, T last)
+{
+	static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
+	static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
+	std::uniform_real_distribution<T> distribution(initial, last);
+	return distribution(rng);  // Use rng as a generator
+}
 
 
 void log(const char *file, int line, void *obj, const char *fmt, ...);

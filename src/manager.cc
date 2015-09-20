@@ -36,8 +36,11 @@
 #include <net/if.h> /* for IFF_LOOPBACK */
 #include <ifaddrs.h>
 #include <unistd.h>
-#include <random>
 
+
+#define HEARTBEAT_MIN 0.150
+#define HEARTBEAT_MAX 0.400
+#define HEARTBEAT_INIT (HEARTBEAT_MAX / 3)
 
 #define TIME_RE "((([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)?"
 
@@ -112,8 +115,6 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	  node_name(o.node_name),
 	  discovery_port(o.discovery_port)
 {
-	INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
-
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
@@ -175,7 +176,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	LOG_EV(this, "\tStart async shutdown event\n");
 
 	discovery_heartbeat.set<XapiandManager, &XapiandManager::discovery_heartbeat_cb>(this);
-	discovery_heartbeat.start(0, 1);
+	discovery_heartbeat.start(0, HEARTBEAT_INIT);
 	LOG_EV(this, "\tStart heartbeat event\n");
 
 	LOG_OBJ(this, "CREATED MANAGER!\n");
@@ -263,10 +264,7 @@ XapiandManager::get_node_id()
 		fd = open("nodeid", O_WRONLY | O_CREAT, 0644);
 		double node_id = 0;
 		if (fd >= 0) {
-			std::random_device rd;
-			std::mt19937 generator(rd());
-			std::uniform_real_distribution<double> distribution(0.0, 1.0);
-			node_id = distribution(generator);
+			node_id = random(0.0, 1.0);
 			std::string str_id(std::to_string(node_id));
 			if (write(fd, str_id.c_str(), str_id.size()) != str_id.size()) {
 				assert(false);
@@ -304,9 +302,7 @@ XapiandManager::set_node_id(double node_id)
 void
 XapiandManager::setup_node(XapiandServer *server)
 {
-	bool new_cluster = false;
-
-	discovery_heartbeat.set(0, 20);
+	int new_cluster = 0;
 
 	pthread_mutex_lock(&qmtx);
 
@@ -317,7 +313,7 @@ XapiandManager::setup_node(XapiandServer *server)
 	cluster_endpoints.insert(cluster_endpoint);
 	LOG(this, "cluster_endpoint - endpoints: %s\n", cluster_endpoint.as_string().c_str());
 	if (!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE | DB_PERSISTENT)) {
-		new_cluster = true;
+		new_cluster = 1;
 		INFO(this, "Cluster database doesn't exist. Generating database...\n");
 		if (!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
 			assert(false);
@@ -337,11 +333,8 @@ XapiandManager::setup_node(XapiandServer *server)
 		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
 		if (server->trigger_replication(remote_endpoint, *cluster_endpoints.begin())) {
 			INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
-			new_cluster = false;
+			new_cluster = 2;
 			break;
-		}
-		if (!new_cluster) {
-			LOG_ERR(this, "Cannot sync cluster data.\n");
 		}
 #endif
 	}
@@ -352,10 +345,16 @@ XapiandManager::setup_node(XapiandServer *server)
 	set_node_name(local_node.name);
 	state = STATE_READY;
 
-	if (new_cluster) {
-		INFO(this, "Joined new cluster %s, is now online!\n", cluster_name.c_str());
-	} else {
-		INFO(this, "Joined cluster %s, it was already online.\n", cluster_name.c_str());
+	switch (new_cluster) {
+		case 0:
+			INFO(this, "Joined cluster %s: It is now online!\n", cluster_name.c_str());
+			break;
+		case 1:
+			INFO(this, "Joined new cluster %s: It is now online!\n", cluster_name.c_str());
+			break;
+		case 2:
+			INFO(this, "Joined cluster %s: It was already online!\n", cluster_name.c_str());
+			break;
 	}
 
 	pthread_mutex_unlock(&qmtx);
@@ -366,7 +365,7 @@ void XapiandManager::reset_state()
 {
 	if (state != STATE_RESET) {
 		state = STATE_RESET;
-		discovery_heartbeat.set(0, 1);
+		discovery_heartbeat.set(0, HEARTBEAT_INIT);
 	}
 }
 
@@ -530,6 +529,9 @@ void XapiandManager::destroy()
 
 void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 {
+	double next_heartbeat;
+	XapiandServer *server;
+
 	switch (state) {
 		case STATE_RESET:
 			if (!local_node.name.empty()) {
@@ -541,18 +543,29 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 				local_node.name = node_name;
 			}
 			INFO(this, "Advertising as %s (id: %f)...\n", local_node.name.c_str(), local_node.id);
+
 		case STATE_WAITING:
 			discovery(DISCOVERY_HELLO, local_node.serialise());
+
+		default:
+			state--;
+			// LOG(this, "Waiting for responses %d...\n", state);
+			break;
+
+		case STATE_SETUP:
+			INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
+			server = static_cast<XapiandServer *>(*_children.begin());
+			server->async_setup_node.send();
 			break;
 
 		case STATE_READY:
 			discovery(DISCOVERY_HEARTBEAT, serialise_string(local_node.name));
+			next_heartbeat = random(HEARTBEAT_MIN, HEARTBEAT_MAX);
+			// LOG(this, "Planning next heartbeat in %f ms.\n", next_heartbeat * 1000.0);
+			discovery_heartbeat.set(next_heartbeat, HEARTBEAT_INIT);
 			break;
 	}
-	if (state != STATE_READY && --state == STATE_SETUP) {
-		XapiandServer *server = static_cast<XapiandServer *>(*_children.begin());
-		server->async_setup_node.send();
-	}
+
 }
 
 
