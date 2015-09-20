@@ -275,7 +275,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						}
 						mastery_level = database_pool->get_mastery_level(index_path);
 						if (mastery_level != -1) {
-							LOG_DISCOVERY(this, "Found local database '%s' with m:%lld!\n", index_path.c_str(), mastery_level);
+							LOG_DISCOVERY(this, "Found local database '%s' with m:%llx!\n", index_path.c_str(), mastery_level);
 							mastery_str = std::to_string(mastery_level);
 							manager()->discovery(
 								DISCOVERY_DB_WAVE,
@@ -308,7 +308,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 						}
 
-						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %lld!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
+						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %llx!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
 
 						if (manager()->get_region(local_node.id) == manager()->get_region(index_path)) {
 							LOG(this, "The DB is in the same region that this cluster!\n");
@@ -333,7 +333,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 						mastery_level = database_pool->get_mastery_level(index_path);
 						if (mastery_level != -1 && mastery_level > remote_mastery_level) {
-							LOG_DISCOVERY(this, "Mastery of remote's %s wins! (local:%lld > remote:%lld) - Updating!\n", index_path.c_str(), mastery_level, remote_mastery_level);
+							LOG_DISCOVERY(this, "Mastery of remote's %s wins! (local:%llx > remote:%llx) - Updating!\n", index_path.c_str(), mastery_level, remote_mastery_level);
 							if (remote_node.unserialise(&ptr, end) == -1) {
 								LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
 								return;
@@ -352,7 +352,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 							}
 #endif
 						} else if (mastery_level != remote_mastery_level) {
-							LOG_DISCOVERY(this, "Mastery of local's %s wins! (local:%lld <= remote:%lld) - Ignoring update!\n", index_path.c_str(), mastery_level, remote_mastery_level);
+							LOG_DISCOVERY(this, "Mastery of local's %s wins! (local:%llx <= remote:%llx) - Ignoring update!\n", index_path.c_str(), mastery_level, remote_mastery_level);
 						}
 					}
 					break;

@@ -32,6 +32,21 @@
 pcre *compiled_find_types_re = NULL;
 
 
+long long save_mastery(const std::string &dir)
+{
+	char buf[20];
+	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 8;
+	mastery_level |= (int)random(0, 255);
+	int fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+	if (fd >= 0) {
+		snprintf(buf, sizeof(buf), "%llx", mastery_level);
+		write(fd, buf, strlen(buf));
+		close(fd);
+	}
+	return mastery_level;
+}
+
+
 long long read_mastery(const std::string &dir, bool force)
 {
 	LOG_DATABASE(NULL, "+ READING MASTERY OF INDEX '%s'...\n", dir.c_str());
@@ -43,47 +58,27 @@ long long read_mastery(const std::string &dir, bool force)
 	}
 
 	long long mastery_level = -1;
-	unsigned char buf[512];
-
+	
 	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd < 0) {
 		if (force) {
-			std::random_device rd;
-			std::mt19937 generator(rd());
-			std::uniform_int_distribution<int> distribution(0, 255);
-			mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 8;
-			mastery_level |= distribution(generator);
-			fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-			if (fd >= 0) {
-				snprintf((char *)buf, sizeof(buf), "%lld", mastery_level);
-				write(fd, buf, strlen((char *)buf));
-				close(fd);
-			}
+			mastery_level = save_mastery(dir);
 		}
 	} else {
+		char buf[20];
 		mastery_level = 0;
-		size_t length = read(fd, (char *)buf, sizeof(buf) - 1);
+		size_t length = read(fd, buf, sizeof(buf) - 1);
 		if (length > 0) {
 			buf[length] = '\0';
-			mastery_level = strtollong((const char *)buf);
+			mastery_level = strtoll(buf, NULL, 16);
 		}
 		close(fd);
 		if (!mastery_level) {
-			std::random_device rd;
-			std::mt19937 generator(rd());
-			std::uniform_int_distribution<int> distribution(0, 255);
-			mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 8;
-			mastery_level |= distribution(generator);
-			fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-			if (fd >= 0) {
-				snprintf((char *)buf, sizeof(buf), "%lld", mastery_level);
-				write(fd, buf, strlen((char *)buf));
-				close(fd);
-			}
+			mastery_level = save_mastery(dir);
 		}
 	}
 
-	LOG_DATABASE(NULL, "- MASTERY OF INDEX '%s' is %lld\n", dir.c_str(), mastery_level);
+	LOG_DATABASE(NULL, "- MASTERY OF INDEX '%s' is %llx\n", dir.c_str(), mastery_level);
 
 	return mastery_level;
 }
