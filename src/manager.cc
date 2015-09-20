@@ -311,7 +311,6 @@ XapiandManager::setup_node(XapiandServer *server)
 	cluster_endpoints.clear();
 	Endpoint cluster_endpoint(".");
 	cluster_endpoints.insert(cluster_endpoint);
-	LOG(this, "cluster_endpoint - endpoints: %s\n", cluster_endpoint.as_string().c_str());
 	if (!database_pool.checkout(&cluster_database, cluster_endpoints, DB_WRITABLE | DB_PERSISTENT)) {
 		new_cluster = 1;
 		INFO(this, "Cluster database doesn't exist. Generating database...\n");
