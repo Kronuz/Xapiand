@@ -236,7 +236,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 						return;
 					}
 					if (manager()->touch_node(remote_node.name, &node)) {
-						if (remote_node != node) {
+						if (remote_node != node && cmd == DISCOVERY_HEARTBEAT) {
 							manager()->drop_node(remote_node.name);
 							INFO(this, "Stalled node %s left the party!\n", remote_node.name.c_str());
 							if (manager()->put_node(remote_node)) {
