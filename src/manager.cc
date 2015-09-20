@@ -446,7 +446,7 @@ struct sockaddr_in XapiandManager::host_address()
 				char ip[INET_ADDRSTRLEN];
 				addr = *(struct sockaddr_in *)ifa->ifa_addr;
 				inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
-				LOG_DISCOVERY(this, "Using %s, IP address = %s\n", ifa->ifa_name, ip);
+				LOG_DISCOVERY(this, "Node IP address is %s on interface %s\n", ip, ifa->ifa_name);
 				break;
 			}
 		}
