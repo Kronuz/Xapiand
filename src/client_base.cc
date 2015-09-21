@@ -160,7 +160,8 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 	  thread_pool(thread_pool_),
 	  write_queue(WRITE_QUEUE_SIZE),
 	  mode(MODE_READ_BUF),
-	  read_buffer(new char[BUF_SIZE])
+	  read_buffer(new char[BUF_SIZE]),
+	  compressor(NULL)
 
 {
 	inc_ref();
@@ -204,6 +205,7 @@ BaseClient::~BaseClient()
 	assert(total_clients >= 0);
 
 	delete []read_buffer;
+	delete compressor;
 }
 
 
@@ -536,7 +538,6 @@ bool BaseClient::send_file(int fd)
 	size_t file_size = ::lseek(fd, 0, SEEK_END);
 	::lseek(fd, 0, SEEK_SET);
 
-	Compressor *compressor;
 	switch (*TYPE_COMPRESSOR) {
 		case *NO_COMPRESSOR:
 			compressor = new ClientNoCompressor(this, fd, file_size);
@@ -548,5 +549,7 @@ bool BaseClient::send_file(int fd)
 	ssize_t compressed = compressor->compress();
 
 	delete compressor;
+	compressor = NULL;
+
 	return (compressed == file_size);
 }
