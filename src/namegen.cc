@@ -23,6 +23,7 @@
 #include "namegen.h"
 
 #include <random>
+#include <cstdlib>
 
 
 using namespace NameGen;
@@ -279,11 +280,12 @@ Reverser::Reverser(Generator *generator_) :
 {
 }
 
+
 std::string Reverser::toString()
 {
-	std::string str(Generator::toString());
+	std::wstring str = towstring(Generator::toString());
 	std::reverse(str.begin(), str.end());
-	return str;
+	return tostring(str);
 }
 
 Capitalizer::Capitalizer(Generator *generator_) :
@@ -293,9 +295,9 @@ Capitalizer::Capitalizer(Generator *generator_) :
 
 std::string Capitalizer::toString()
 {
-	std::string str(Generator::toString());
-	str[0] = toupper(str[0]);
-	return str;
+	std::wstring str = towstring(Generator::toString());
+	str[0] = towupper(str[0]);
+	return tostring(str);
 }
 
 
@@ -449,4 +451,42 @@ void Generator::GroupSymbol::add(char c)
 Generator::GroupLiteral::GroupLiteral() :
 	Group(group_types::literal)
 {
+}
+
+std::wstring towstring(const std::string & s)
+{
+	const char *cs = s.c_str();
+	const size_t wn = std::mbsrtowcs(NULL, &cs, 0, NULL);
+
+	if (wn == -1) {
+		return L"";
+	}
+
+	std::vector<wchar_t> buf(wn);
+	const size_t wn_again = std::mbsrtowcs(buf.data(), &cs, wn, NULL);
+
+	if (wn_again == -1) {
+		return L"";
+	}
+
+	return std::wstring(buf.data(), wn);
+}
+
+std::string tostring(const std::wstring & s)
+{
+	const wchar_t *cs = s.c_str();
+	const size_t wn = std::wcsrtombs(NULL, &cs, 0, NULL);
+
+	if (wn == -1) {
+		return "";
+	}
+
+	std::vector<char> buf(wn);
+	const size_t wn_again = std::wcsrtombs(buf.data(), &cs, wn, NULL);
+
+	if (wn_again == -1) {
+		return "";
+	}
+
+	return std::string(buf.data(), wn);
 }

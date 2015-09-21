@@ -271,3 +271,6 @@ public:
 };
 
 };
+
+std::wstring towstring(const std::string & s);
+std::string tostring(const std::wstring & s);

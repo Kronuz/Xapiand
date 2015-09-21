@@ -29,6 +29,7 @@
 #include "tclap/ZshCompletionOutput.h"
 
 #include <thread>
+#include <clocale>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -240,6 +241,8 @@ int main(int argc, char **argv)
 	opts_t opts;
 
 	parseOptions(argc, argv, opts);
+
+	std::setlocale(LC_CTYPE, "");
 
 	INFO((void *)NULL,
 		"\n\n"
