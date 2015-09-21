@@ -38,12 +38,12 @@ const int WRITE_QUEUE_SIZE = 10;
 
 #define MODE_READ_BUF 0
 #define MODE_READ_FILE_TYPE 1
-#define MODE_READ_FILE_RAW 2
-#define MODE_READ_FILE_LZ4 3
+#define MODE_READ_FILE 2
 
-#define NO_COMPRESSOR "\00"
-#define LZ4_COMPRESSOR "\01"
+#define NO_COMPRESSOR "\01"
+#define LZ4_COMPRESSOR "\02"
 #define TYPE_COMPRESSOR LZ4_COMPRESSOR
+
 
 class ClientReader : public CompressorReader
 {
@@ -71,10 +71,7 @@ protected:
 	ssize_t begin();
 	ssize_t read(char **buf, size_t size);
 	ssize_t write(const char *buf, size_t size);
-	ssize_t write_size(std::string size);
-	ssize_t write_without_size(const char *buf, size_t size);
 	ssize_t done();
-	ssize_t get_file_size();
 
 public:
 	ClientCompressorReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_) :
@@ -93,7 +90,6 @@ ssize_t ClientCompressorReader::read(char **buf, size_t size)
 {
 	assert(*buf);
 	return ::read(fd, *buf, size);
-
 }
 
 ssize_t ClientCompressorReader::write(const char *buf, size_t size)
@@ -105,22 +101,6 @@ ssize_t ClientCompressorReader::write(const char *buf, size_t size)
 	return length.size() + size;
 }
 
-ssize_t ClientCompressorReader::write_size(std::string size)
-{
-	if (!client->write(size)) {
-		return -1;
-	}
-	return size.size();
-}
-
-ssize_t ClientCompressorReader::write_without_size(const char *buf, size_t size)
-{
-	if (!client->write(buf, size)) {
-		return -1;
-	}
-	return size;
-}
-
 ssize_t ClientCompressorReader::done()
 {
 	std::string length(encode_length(0));
@@ -128,11 +108,6 @@ ssize_t ClientCompressorReader::done()
 		return -1;
 	}
 	return length.size();
-}
-
-ssize_t ClientCompressorReader::get_file_size()
-{
-	return file_size;
 }
 
 
@@ -411,14 +386,12 @@ void BaseClient::read_cb(int fd)
 
 			if (mode == MODE_READ_FILE_TYPE) {
 				switch (*buf_data++) {
-					case '\02':
-						LOG_CONN(this, "Receiving raw file (sock=%d)...\n", sock);
-						mode = MODE_READ_FILE_RAW;
+					case *NO_COMPRESSOR:
+						LOG_CONN(this, "Receiving uncompressed file (sock=%d)...\n", sock);
 						compressor = new ClientNoCompressor(this);
 						break;
-					case '\01':
+					case *LZ4_COMPRESSOR:
 						LOG_CONN(this, "Receiving LZ4 compressed file (sock=%d)...\n", sock);
-						mode = MODE_READ_FILE_LZ4;
 						compressor = new ClientLZ4Compressor(this);
 						break;
 					default:
@@ -428,11 +401,11 @@ void BaseClient::read_cb(int fd)
 				}
 				received--;
 				length_buffer.clear();
+				mode = MODE_READ_FILE;
 			}
 
-			if (received && (mode == MODE_READ_FILE_RAW || mode == MODE_READ_FILE_LZ4)) {
+			if (received && mode == MODE_READ_FILE) {
 				do {
-
 					if (file_size == -1) {
 						if (buf_data) {
 							length_buffer.append(buf_data, received);
@@ -465,48 +438,36 @@ void BaseClient::read_cb(int fd)
 						received = 0;
 					}
 
-					if (mode == MODE_READ_FILE_RAW) {
-						if (block_size_to_write) {
-							on_read_file(file_buf_to_write, block_size_to_write);
-							block_size -= block_size_to_write;
-						}
-						if (file_size == 0 || block_size == 0) {
-							on_read_file_done();
-							mode = MODE_READ_BUF;
+					if (block_size_to_write) {
+						compressor->decompressor->input.append(file_buf_to_write, block_size_to_write);
+						block_size -= block_size_to_write;
+					}
+					if (file_size == 0) {
+						compressor->decompressor->input.clear();
+						compressor->decompressor->offset = 0;
+						compressor->decompress();
+
+						on_read_file_done();
+						mode = MODE_READ_BUF;
+						delete compressor;
+						compressor = NULL;
+					} else if (block_size == 0) {
+						compressor->decompress();
+
+						if (buf_data) {
+							length_buffer = std::string(buf_data, received);
+							buf_data = NULL;
+							received = 0;
+						} else {
+							length_buffer.clear();
 						}
 
-					} else if (mode == MODE_READ_FILE_LZ4) {
-						if (block_size_to_write) {
-							compressor->decompressor->input.append(file_buf_to_write, block_size_to_write);
-							block_size -= block_size_to_write;
-						}
-						if (file_size == 0) {
-							compressor->decompressor->input.clear();
-							compressor->decompressor->offset = 0;
-							compressor->decompress();
-
-							on_read_file_done();
-							mode = MODE_READ_BUF;
-							delete compressor;
-							compressor = NULL;
-						} else if (block_size == 0) {
-							compressor->decompress();
-
-							if (buf_data) {
-								length_buffer = std::string(buf_data, received);
-								buf_data = NULL;
-								received = 0;
-							} else {
-								length_buffer.clear();
-							}
-
-							file_size = -1;
-						}
+						file_size = -1;
 					}
 				} while (file_size == -1);
 			}
 
-			if (received && (mode == MODE_READ_BUF)) {
+			if (received && mode == MODE_READ_BUF) {
 				on_read(buf_data, received);
 			}
 		}
@@ -577,11 +538,11 @@ bool BaseClient::send_file(int fd)
 
 	Compressor *compressor;
 	switch (*TYPE_COMPRESSOR) {
-		case *LZ4_COMPRESSOR:
-			compressor = new ClientLZ4Compressor(this, fd, file_size);
-			break;
 		case *NO_COMPRESSOR:
 			compressor = new ClientNoCompressor(this, fd, file_size);
+			break;
+		case *LZ4_COMPRESSOR:
+			compressor = new ClientLZ4Compressor(this, fd, file_size);
 			break;
 	}
 	ssize_t compressed = compressor->compress();
