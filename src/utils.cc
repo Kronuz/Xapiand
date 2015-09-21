@@ -21,6 +21,7 @@
  */
 
 #include "utils.h"
+#include "namegen.h"
 
 #include <string>
 #include <cstdlib>
@@ -427,56 +428,11 @@ int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets)
 }
 
 
-const char * name_prefix[] = {
-	"",
-	"bil", "bal", "ban",
-	"hil", "ham", "hal", "hol", "hob",
-	"wil", "me", "or", "ol", "od",
-	"gor", "for", "fos", "tol",
-	"ar", "fin", "ere",
-	"leo", "vi", "bi", "bren", "thor",
-};
-
-
-const char * name_stem[] = {
-	"",
-	"go", "orbis", "apol", "adur", "mos", "ri", "i",
-	"na", "ole", "n",
-};
-
-
-const char * name_suffix[] = {
-	"",
-	"tur", "axia", "and", "bo", "gil", "bin",
-	"bras", "las", "mac", "grim", "wise", "l",
-	"lo", "fo", "co",
-	"ra", "via", "da", "ne",
-	"ta",
-	"y",
-	"wen", "thiel", "phin", "dir", "dor", "tor", "rod", "on",
-	"rdo", "dis",
-};
-
+static NameGen::Generator generator("!" FANTASY_S_A);
 
 std::string name_generator()
 {
-	std::string name;
-
-	while (name.size() < 4) {
-		// Add the prefix...
-		name.append(name_prefix[(rand() % (sizeof(name_prefix) / sizeof(const char *)))]);
-
-		// Add the stem...
-		name.append(name_stem[(rand() % (sizeof(name_stem) / sizeof(const char *)))]);
-
-		// Add the suffix...
-		name.append(name_suffix[(rand() % (sizeof(name_suffix) / sizeof(const char *)))]);
-	}
-
-	// Make the first letter capital...
-	name[0] = toupper(name[0]);
-
-	return name;
+	return generator.toString();
 }
 
 
