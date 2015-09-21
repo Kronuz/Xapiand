@@ -32,84 +32,77 @@
 #define LZ4_FOOTER_SIZE 12
 #define LZ4F_BLOCK_SIZE_ID LZ4F_max256KB
 #define LZ4F_BLOCK_SIZE (256 * 1024)
+#define NOCOMPRESS_BUFFER_SIZE (8 * 1024)
 
 typedef char *char_ptr;
 
-class Compressor
+
+class CompressorReader
 {
-	ssize_t base_read(std::string &buffer, size_t &offset, char **buf, size_t size) {
-		if (buffer.size() == 0) {
-			// LOG(this, "base_read (0)\n");
+protected:
+public:
+	virtual ssize_t begin() {
+		output.clear();
+		offset = 0;
+		return 0;
+	};
+	virtual ssize_t read(char **buf, size_t size) {
+		LOG(this, "input size %lu \n",input.size());
+		if (input.size() == 0) {
+			LOG(this, "base_read (0)\n");
 			return 0;
 		}
-		if (offset >= buffer.size()) {
+		if (offset >= input.size()) {
 			errno = EWOULDBLOCK;
-			// LOG(this, "base_read (-1)\n");
+			LOG(this, "base_read (-1)\n");
 			return -1;
 		}
 		if (*buf) {
-			if (size > buffer.size() - offset) {
-				size = buffer.size() - offset;
+			if (size > input.size() - offset) {
+				size = input.size() - offset;
 			}
-			memcpy(buf, buffer.data() + offset, size);
+			memcpy(buf, input.data() + offset, size);
 			offset += size;
 		} else {
-			*buf = (char *)buffer.data();
-			offset = buffer.size();
+			*buf = (char *)input.data();
+			offset = input.size();
 			size = offset;
 		}
-		// LOG(this, "base_read: %s (%zu)\n", repr(*buf, size).c_str(), size);
+		LOG(this, "base_read: %s (%zu)\n", repr(*buf, size).c_str(), size);
 		return size;
-	}
-
-	ssize_t base_write(std::string &buffer, size_t &offset, const char *buf, size_t size) {
-		// LOG(this, "base_write: %s (%zu)\n", repr(buf, size).c_str(), size);
-		buffer.append(buf, size);
+	};
+	virtual ssize_t write(const char *buf, size_t size) {
+		LOG(this, "base_write: %s (%zu)\n", repr(buf, size).c_str(), size);
+		output.append(buf, size);
 		return size;
-	}
-
-protected:
-	virtual ssize_t compressor_begin() {
-		compressed.clear();
-		compressed_offset = 0;
-		decompressed_offset = 0;
-		return 0;
 	};
-	virtual ssize_t compressor_read(char **buf, size_t size) {
-		return base_read(decompressed, decompressed_offset, buf, size);
-	};
-	virtual ssize_t compressor_write(const char *buf, size_t size) {
-		return base_write(compressed, compressed_offset, buf, size);
-	};
-	virtual ssize_t compressor_done() { return 0; };
-
-	virtual ssize_t decompressor_begin() {
-		decompressed.clear();
-		decompressed_offset = 0;
-		compressed_offset = 0;
-		return 0;
-	};
-	virtual ssize_t decompressor_read(char **buf, size_t size) {
-		return base_read(compressed, compressed_offset, buf, size);
-	};
-	virtual ssize_t decompressor_write(const char *buf, size_t size) {
-		return base_write(decompressed, decompressed_offset, buf, size);
-	};
-	virtual ssize_t decompressor_done() { return 0; };
+	virtual ssize_t done() { return 0; };
 
 public:
-	size_t decompressed_offset;
-	std::string decompressed;
+	size_t offset;
+	std::string input;
+	std::string output;
 
-	size_t compressed_offset;
-	std::string compressed;
-
-	Compressor() : decompressed_offset(0), compressed_offset(0) {}
-	virtual ~Compressor() {}
-
-	virtual ssize_t compress() = 0;
-	virtual ssize_t decompress() = 0;
+	CompressorReader() : offset(0) {}
+	virtual ~CompressorReader() {}
 };
+
+
+class Compressor {
+public:
+	CompressorReader *decompressor;
+	CompressorReader *compressor;
+
+	virtual ssize_t decompress() = 0;
+	virtual ssize_t compress() = 0;
+
+	virtual ~Compressor() {
+		delete decompressor;
+		delete compressor;
+	}
+	Compressor(CompressorReader *decompressor_, CompressorReader *compressor_) :
+		decompressor(decompressor_), compressor(compressor_) {}
+}	;
 
 
 class NoCompressor : public Compressor
@@ -117,21 +110,26 @@ class NoCompressor : public Compressor
 	size_t count;
 
 public:
-	NoCompressor() : count(-1) {}
+	NoCompressor(CompressorReader *decompressor_, CompressorReader *compressor_) :
+		Compressor(decompressor_, compressor_), count(-1) {}
 	~NoCompressor() {}
 
 	ssize_t decompress() {
+		//LOG(this, "decompress!\n");
 		if (count == -1) {
 			count = 0;
-			if (decompressor_begin() < 0) {
+			//LOG(this, "decompress (decompressor->begin)\n");
+			if (decompressor->begin() < 0) {
 				LOG_ERR(this, "Begin failed!\n");
 				return -1;
 			}
 		}
 
+		//LOG(this, "decompress (while)\n");
 		while (true) {
 			char *src_buffer = NULL;
-			size_t read_size = decompressor_read(&src_buffer, -1);
+			//LOG(this, "decompress (decompressor->read)\n");
+			size_t read_size = decompressor->read(&src_buffer, -1);
 			if (read_size == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					return count;
@@ -139,16 +137,19 @@ public:
 				LOG_ERR(this, "Read error!!\n");
 				return -1;
 			} else if (read_size == 0) {
+				//LOG(this, "decompress (decompressor->read=0)\n");
 				break;
 			}
 			count += read_size;
-			if (decompressor_write(src_buffer, read_size) < 0) {
+			if (decompressor->write(src_buffer, read_size) < 0) {
+				//LOG(this, "decompress (decompressor->write)\n");
 				LOG_ERR(this, "Write failed!\n");
 				return -1;
 			}
 		}
 
-		if (decompressor_done() < 0) {
+		//LOG(this, "decompress (decompressor->done)\n");
+		if (decompressor->done() < 0) {
 			LOG_ERR(this, "Done failed!\n");
 			return -1;
 		}
@@ -157,34 +158,43 @@ public:
 	}
 
 	ssize_t compress() {
+		//LOG(this, "compress!\n");
 		if (count == -1) {
 			count = 0;
-			if (compressor_begin() < 0) {
+			//LOG(this, "compress (compressor->begin)\n");
+			if (compressor->begin() < 0) {
 				LOG_ERR(this, "Begin failed!\n");
 				return -1;
 			}
 		}
+		
 
+		//LOG(this, "compress (while)\n");
 		while (true) {
 			char *src_buffer = NULL;
-			size_t read_size = compressor_read(&src_buffer, -1);
+			//LOG(this, "compress (compressor->read)\n");
+			size_t read_size = compressor->read(&src_buffer, NOCOMPRESS_BUFFER_SIZE);
 			if (read_size == -1) {
+				//LOG(this, "compress (compressor->read=-1)\n");
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					return count;
 				}
 				LOG_ERR(this, "Read error!!\n");
 				return -1;
 			} else if (read_size == 0) {
+				//LOG(this, "compress (compressor->read=0)\n");
 				break;
 			}
 			count += read_size;
-			if (compressor_write(src_buffer, read_size) < 0) {
+			//LOG(this, "compress (compressor->write)\n");
+			if (compressor->write(src_buffer, read_size) < 0) {
 				LOG_ERR(this, "Write failed!\n");
 				return -1;
 			}
 		}
 
-		if (compressor_done() < 0) {
+		//LOG(this, "compress (compressor->done)\n");
+		if (compressor->done() < 0) {
 			LOG_ERR(this, "Done failed!\n");
 			return -1;
 		}
@@ -192,6 +202,7 @@ public:
 		return count;
 	}
 };
+
 
 class LZ4Compressor : public Compressor
 {
@@ -205,12 +216,13 @@ class LZ4Compressor : public Compressor
 	size_t offset;
 
 public:
-	LZ4Compressor()
-		: c_ctx(NULL),
-		  d_ctx(NULL),
-		  buffer(NULL),
-		  work_buffer(NULL),
-		  count(0)
+	LZ4Compressor(CompressorReader *decompressor_, CompressorReader *compressor_) :
+		Compressor(decompressor_, compressor_),
+		c_ctx(NULL),
+		d_ctx(NULL),
+		buffer(NULL),
+		work_buffer(NULL),
+		count(0)
 	{};
 
 	~LZ4Compressor() {
@@ -247,8 +259,8 @@ public:
 				throw MSG_Error("Failed to create decompression context");
 			}
 
-			// LOG(this, "decompress (decompressor_begin)\n");
-			if (decompressor_begin() < 0) {
+			// LOG(this, "decompress (decompressor->begin)\n");
+			if (decompressor->begin() < 0) {
 				LOG_ERR(this, "Begin failed!\n");
 				return -1;
 			}
@@ -257,17 +269,17 @@ public:
 		// LOG(this, "decompress (while)\n");
 		while (true) {
 			char *src_buffer = NULL;
-			// LOG(this, "decompress (decompressor_read)\n");
-			size_t read_size = decompressor_read(&src_buffer, -1);
+			// LOG(this, "decompress (decompressor->read)\n");
+			size_t read_size = decompressor->read(&src_buffer, -1);
 			if (read_size == -1) {
-				// LOG(this, "decompress (decompressor_read=-1)\n");
+				// LOG(this, "decompress (decompressor->read=-1)\n");
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					return count;
 				}
 				LOG_ERR(this, "Read error!!\n");
 				return -1;
 			} else if (read_size == 0) {
-				// LOG(this, "decompress (decompressor_read=0)\n");
+				// LOG(this, "decompress (decompressor->read=0)\n");
 				break;
 			}
 
@@ -295,8 +307,8 @@ public:
 
 				if (dst_size) {
 					count += dst_size;
-					// LOG(this, "decompress (decompressor_write)\n");
-					if (decompressor_write(buffer, dst_size) < 0) {
+					// LOG(this, "decompress (decompressor->write)\n");
+					if (decompressor->write(buffer, dst_size) < 0) {
 						LOG_ERR(this, "Write failed!\n");
 						return -1;
 					}
@@ -304,8 +316,8 @@ public:
 			}
 		}
 
-		// LOG(this, "decompress (decompressor_done)\n");
-		if (decompressor_done() < 0) {
+		// LOG(this, "decompress (decompressor->done)\n");
+		if (decompressor->done() < 0) {
 			LOG_ERR(this, "Done failed!\n");
 			return -1;
 		}
@@ -345,7 +357,7 @@ public:
 			}
 
 			// Signal LZ4 compressed content
-			if (compressor_begin() < 0) {
+			if (compressor->begin() < 0) {
 				LOG_ERR(this, "Write failed!\n");
 				return -1;
 			}
@@ -354,7 +366,7 @@ public:
 		}
 
 		while (true) {
-			size_t src_size = compressor_read(&buffer, LZ4F_BLOCK_SIZE);
+			size_t src_size = compressor->read(&buffer, LZ4F_BLOCK_SIZE);
 			if (src_size == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					return count;
@@ -375,7 +387,7 @@ public:
 			count += bytes;
 
 			if (work_size - offset < frame_size + LZ4_FOOTER_SIZE) {
-				if (compressor_write(work_buffer, offset) < 0) {
+				if (compressor->write(work_buffer, offset) < 0) {
 					LOG_ERR(this, "Write failed!\n");
 					return -1;
 				}
@@ -391,7 +403,7 @@ public:
 
 		offset += bytes;
 
-		if (compressor_write(work_buffer, offset) < 0 || compressor_done() < 0) {
+		if (compressor->write(work_buffer, offset) < 0 || compressor->done() < 0) {
 			LOG_ERR(this, "Write failed!\n");
 			return -1;
 		}
