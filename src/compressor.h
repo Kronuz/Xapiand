@@ -76,7 +76,14 @@ public:
 		output.append(buf, size);
 		return size;
 	};
+	virtual ssize_t write_size(std::string size) {
+		return size.size();
+	};
+	virtual ssize_t write_without_size(const char *buf, size_t size) {
+		return size;
+	};
 	virtual ssize_t done() { return 0; };
+	virtual ssize_t get_file_size() {return 0; };
 
 public:
 	size_t offset;
@@ -108,11 +115,14 @@ public:
 class NoCompressor : public Compressor
 {
 	size_t count;
+	char *buffer;
 
 public:
 	NoCompressor(CompressorReader *decompressor_, CompressorReader *compressor_) :
-		Compressor(decompressor_, compressor_), count(-1) {}
-	~NoCompressor() {}
+		Compressor(decompressor_, compressor_), count(-1), buffer(NULL) {}
+	~NoCompressor() {
+		delete []buffer;
+	}
 
 	ssize_t decompress() {
 		//LOG(this, "decompress!\n");
@@ -167,13 +177,22 @@ public:
 				return -1;
 			}
 		}
+
+		if (!buffer) {
+			buffer = new char[NOCOMPRESS_BUFFER_SIZE];
+		}
 		
+		ssize_t file_size = compressor->get_file_size();
+		std::string file_size_str = encode_length(file_size);
+		if (compressor->write_size(file_size_str) < 0) {
+			LOG_ERR(this, "Write size failed!\n");
+			return -1;
+		}
 
 		//LOG(this, "compress (while)\n");
-		while (true) {
-			char *src_buffer = NULL;
+		while (count < file_size) {
 			//LOG(this, "compress (compressor->read)\n");
-			size_t read_size = compressor->read(&src_buffer, NOCOMPRESS_BUFFER_SIZE);
+			size_t read_size = compressor->read(&buffer, NOCOMPRESS_BUFFER_SIZE);
 			if (read_size == -1) {
 				//LOG(this, "compress (compressor->read=-1)\n");
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -187,7 +206,7 @@ public:
 			}
 			count += read_size;
 			//LOG(this, "compress (compressor->write)\n");
-			if (compressor->write(src_buffer, read_size) < 0) {
+			if (compressor->write_without_size(buffer, read_size) < 0) {
 				LOG_ERR(this, "Write failed!\n");
 				return -1;
 			}

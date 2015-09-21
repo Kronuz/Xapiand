@@ -109,7 +109,6 @@ ssize_t ClientCompressorReader::write_size(std::string size)
 	return size.size();
 }
 
-
 ssize_t ClientCompressorReader::write_without_size(const char *buf, size_t size)
 {
 	if (!client->write(buf, size)) {
@@ -571,7 +570,7 @@ bool BaseClient::send_file(int fd)
 {
 	size_t file_size = ::lseek(fd, 0, SEEK_END);
 	::lseek(fd, 0, SEEK_SET);
-	ClientLZ4Compressor compressor(this, fd, file_size);
-	//ClientNoCompressor compressor(this, fd, file_size);
+	//ClientLZ4Compressor compressor(this, fd, file_size);
+	ClientNoCompressor compressor(this, fd, file_size);
 	return (compressor.compress() == file_size);
 }
