@@ -33,7 +33,9 @@
 
 struct Node {
 	std::string name;
-	double id;
+	uint64_t id;
+	int regions;
+	int region;
 	struct sockaddr_in addr;
 	int http_port;
 	int binary_port;
