@@ -36,7 +36,7 @@ long long save_mastery(const std::string &dir)
 {
 	char buf[20];
 	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 8;
-	mastery_level |= (int)random(0, 255);
+	mastery_level |= static_cast<int>(random_int(0, 255));
 	int fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		snprintf(buf, sizeof(buf), "%llx", mastery_level);

@@ -71,7 +71,7 @@ private:
 #endif  /* HAVE_REMOTE_PROTOCOL */
 
 public:
-	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int discovery_sock_,int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
+	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int discovery_sock_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
 	~XapiandServer();
 
 	void run();

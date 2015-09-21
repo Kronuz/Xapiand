@@ -519,7 +519,7 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 
 		case STATE_READY:
 			discovery(DISCOVERY_HEARTBEAT, local_node.serialise());
-			next_heartbeat = random(HEARTBEAT_MIN, HEARTBEAT_MAX);
+			next_heartbeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
 			// LOG(this, "Planning next heartbeat in %f ms.\n", next_heartbeat * 1000.0);
 			discovery_heartbeat.set(next_heartbeat, HEARTBEAT_INIT);
 			break;

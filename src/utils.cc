@@ -69,9 +69,16 @@ static std::random_device rd;  // Random device engine, usually based on /dev/ra
 static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
 
-double random(double initial, double last)
+double random_real(double initial, double last)
 {
 	std::uniform_real_distribution<double> distribution(initial, last);
+	return distribution(rng);  // Use rng as a generator
+}
+
+
+uint64_t random_int(uint64_t initial, uint64_t last)
+{
+	std::uniform_int_distribution<uint64_t> distribution(initial, last);
 	return distribution(rng);  // Use rng as a generator
 }
 

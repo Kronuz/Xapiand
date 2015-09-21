@@ -48,7 +48,8 @@
 #define SLOT_TIME_SECOND 60
 
 
-double random(double initial, double last);
+double random_real(double initial, double last);
+uint64_t random_int(uint64_t initial, uint64_t last);
 
 void log(const char *file, int line, void *obj, const char *fmt, ...);
 
