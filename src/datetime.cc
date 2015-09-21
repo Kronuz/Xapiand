@@ -52,24 +52,24 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 
 	if (ret != -1 && len == gr[0].end - gr[0].start) {
 		std::string parse(date, gr[1].start, gr[1].end - gr[1].start);
-		tm.year = strtol(parse);
+		tm.year = static_cast<int>(strtol(parse));
 		parse.assign(date, gr[3].start, gr[3].end - gr[3].start);
-		tm.mon = strtol(parse);
+		tm.mon = static_cast<int>(strtol(parse));
 		parse.assign(date, gr[4].start, gr[4].end - gr[4].start);
-		tm.day = strtol(parse);
+		tm.day = static_cast<int>(strtol(parse));
 		if (!isvalidDate(tm.year, tm.mon, tm.day)) throw MSG_Error("Date is out of range");
 
 		if (gr[5].end - gr[5].start > 0) {
 			parse.assign(date, gr[6].start, gr[6].end - gr[6].start);
-			tm.hour = strtol(parse);
+			tm.hour = static_cast<int>(strtol(parse));
 			parse.assign(date, gr[7].start, gr[7].end - gr[7].start);
-			tm.min = strtol(parse);
+			tm.min = static_cast<int>(strtol(parse));
 			if (gr[8].end - gr[8].start > 0) {
 				parse.assign(date, gr[9].start, gr[9].end - gr[9].start);
-				tm.sec = strtol(parse);
+				tm.sec = static_cast<int>(strtol(parse));
 				if (gr[10].end - gr[10].start > 0) {
 					parse.assign(date, gr[11].start, gr[11].end - gr[11].start);
-					tm.msec = strtol(parse);
+					tm.msec = static_cast<int>(strtol(parse));
 				} else {
 					tm.msec = 0;
 				}
@@ -122,7 +122,7 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 void
 Datetime::computeDateMath(tm_t &tm, const std::string &op, const std::string &units)
 {
-	int num = strtol(std::string(op.c_str() + 1, op.size())), max_days;
+	int num = static_cast<int>(strtol(std::string(op.c_str() + 1, op.size()))), max_days;
 	time_t dateGMT;
 	struct tm *timeinfo;
 	if (op.at(0) == '+' || op.at(0) == '-') {

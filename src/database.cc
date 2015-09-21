@@ -814,7 +814,7 @@ Database::get_data_field(const std::string &field_name)
 
 		_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
 		unique_char_ptr _cprint(cJSON_Print(_aux));
-		res.slot = strtoul(_cprint.get());
+		res.slot = static_cast<unsigned int>(strtoul(_cprint.get()));
 
 		_aux = cJSON_GetObjectItem(properties, RESERVED_PREFIX);
 		res.prefix = _aux->valuestring;
@@ -875,7 +875,7 @@ Database::get_slot_field(const std::string &field_name)
 	if (properties) {
 		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
 		unique_char_ptr _cprint(cJSON_Print(_aux));
-		res.slot = strtoul(_cprint.get());
+		res.slot = static_cast<unsigned int>(strtoul(_cprint.get()));
 
 		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
 		res.type = cJSON_GetArrayItem(_aux, 2)->valueint;
@@ -1911,7 +1911,7 @@ void DatabasePool::inc_ref(const Endpoints &endpoints)
 			// Document found - reference increased
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
-			int nref = strtol(doc.get_value(0));
+			int nref = static_cast<int>(strtol(doc.get_value(0)));
 			doc.add_value(0, std::to_string(nref + 1));
 			ref_database->replace(unique_id, doc, true);
 		}
@@ -1929,7 +1929,7 @@ void DatabasePool::dec_ref(const Endpoints &endpoints)
 		if (p != ref_database->db->postlist_end(unique_id)) {
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
-			int nref = strtol(doc.get_value(0)) - 1;
+			int nref = static_cast<int>(strtol(doc.get_value(0)) - 1);
 			doc.add_value(0, std::to_string(nref));
 			ref_database->replace(unique_id, doc, true);
 			if (nref == 0) {

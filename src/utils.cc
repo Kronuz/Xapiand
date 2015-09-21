@@ -766,7 +766,7 @@ unsigned int get_slot(const std::string &name)
 {
 	// We are left with the last 8 characters.
 	std::string _md5(md5(strhasupper(name) ? stringtoupper(name) : name), 24, 8);
-	unsigned int slot = strtoul(_md5, 16);
+	unsigned int slot = static_cast<unsigned int>(strtoul(_md5, 16));
 	if (slot == 0x00000000) {
 		slot = 0x00000001; // 0->id
 	} else if (slot == Xapian::BAD_VALUENO) {
