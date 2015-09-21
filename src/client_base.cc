@@ -41,8 +41,8 @@ const int WRITE_QUEUE_SIZE = 10;
 #define MODE_READ_FILE_RAW 2
 #define MODE_READ_FILE_LZ4 3
 
-#define LZ4_COMPRESSOR 0
-#define NO_COMPRESSOR 1
+#define NO_COMPRESSOR "\00"
+#define LZ4_COMPRESSOR "\01"
 #define TYPE_COMPRESSOR LZ4_COMPRESSOR
 
 class ClientReader : public CompressorReader
@@ -157,8 +157,8 @@ class ClientNoCompressor : public NoCompressor
 public:
 	ClientNoCompressor(BaseClient *client_, int fd_=0, size_t file_size_=0)
 	: NoCompressor(
-		new ClientDecompressorReader(client_, fd_, file_size_, "\02"),
-		new ClientCompressorReader(client_, fd_, file_size_, "\02")
+		new ClientDecompressorReader(client_, fd_, file_size_, NO_COMPRESSOR),
+		new ClientCompressorReader(client_, fd_, file_size_, NO_COMPRESSOR)
 	) {}
 };
 
@@ -167,8 +167,8 @@ class ClientLZ4Compressor : public LZ4Compressor
 public:
 	ClientLZ4Compressor(BaseClient *client_, int fd_=0, size_t file_size_=0)
 	: LZ4Compressor(
-		new ClientDecompressorReader(client_, fd_, file_size_, "\01"),
-		new ClientCompressorReader(client_, fd_, file_size_, "\01")
+		new ClientDecompressorReader(client_, fd_, file_size_, LZ4_COMPRESSOR),
+		new ClientCompressorReader(client_, fd_, file_size_, LZ4_COMPRESSOR)
 	) {}
 };
 
@@ -572,24 +572,20 @@ void BaseClient::read_file()
 
 bool BaseClient::send_file(int fd)
 {
-
 	size_t file_size = ::lseek(fd, 0, SEEK_END);
 	::lseek(fd, 0, SEEK_SET);
 
-	ssize_t compressed = 0;
-	switch (TYPE_COMPRESSOR) {
-		case LZ4_COMPRESSOR:
-		{
-			ClientLZ4Compressor compressor(this, fd, file_size);
-			compressed = compressor.compress();
+	Compressor *compressor;
+	switch (*TYPE_COMPRESSOR) {
+		case *LZ4_COMPRESSOR:
+			compressor = new ClientLZ4Compressor(this, fd, file_size);
 			break;
-		}
-		case NO_COMPRESSOR:
-		{
-			ClientNoCompressor compressor(this, fd, file_size);
-			compressed = compressor.compress();
+		case *NO_COMPRESSOR:
+			compressor = new ClientNoCompressor(this, fd, file_size);
 			break;
-		}
 	}
+	ssize_t compressed = compressor->compress();
+
+	delete compressor;
 	return (compressed == file_size);
 }
