@@ -41,6 +41,10 @@ const int WRITE_QUEUE_SIZE = 10;
 #define MODE_READ_FILE_RAW 2
 #define MODE_READ_FILE_LZ4 3
 
+#define LZ4_COMPRESSOR 0
+#define NO_COMPRESSOR 1
+#define TYPE_COMPRESSOR LZ4_COMPRESSOR
+
 class ClientReader : public CompressorReader
 {
 protected:
@@ -568,9 +572,24 @@ void BaseClient::read_file()
 
 bool BaseClient::send_file(int fd)
 {
+
 	size_t file_size = ::lseek(fd, 0, SEEK_END);
 	::lseek(fd, 0, SEEK_SET);
-	//ClientLZ4Compressor compressor(this, fd, file_size);
-	ClientNoCompressor compressor(this, fd, file_size);
-	return (compressor.compress() == file_size);
+
+	ssize_t compressed = 0;
+	switch (TYPE_COMPRESSOR) {
+		case LZ4_COMPRESSOR:
+		{
+			ClientLZ4Compressor compressor(this, fd, file_size);
+			compressed = compressor.compress();
+			break;
+		}
+		case NO_COMPRESSOR:
+		{
+			ClientNoCompressor compressor(this, fd, file_size);
+			compressed = compressor.compress();
+			break;
+		}
+	}
+	return (compressed == file_size);
 }
