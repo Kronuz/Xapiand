@@ -138,6 +138,7 @@
 		C39AE0791B2F62D700203139 /* cartesian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cartesian.h; path = src/cartesian.h; sourceTree = "<group>"; };
 		C39AE07A1B2F62D700203139 /* exception.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = exception.cc; path = src/exception.cc; sourceTree = "<group>"; };
 		C39AE07B1B2F62D700203139 /* exception.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = exception.h; path = src/exception.h; sourceTree = "<group>"; };
+		C3C37DB81BAF2EA900F99A84 /* compressor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = compressor.h; path = src/compressor.h; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -176,6 +177,7 @@
 				C39AE03C1B2F627E00203139 /* client_binary.h */,
 				C39AE03D1B2F627E00203139 /* client_http.cc */,
 				C39AE03E1B2F627E00203139 /* client_http.h */,
+				C3C37DB81BAF2EA900F99A84 /* compressor.h */,
 				C39AE03F1B2F627E00203139 /* config.h */,
 				C39AE0401B2F627E00203139 /* database.cc */,
 				C39AE0411B2F627E00203139 /* database.h */,
