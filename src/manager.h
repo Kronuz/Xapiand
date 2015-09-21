@@ -131,8 +131,8 @@ protected:
 
 	std::string get_node_name();
 	bool set_node_name(const std::string &node_name_);
-	double get_node_id();
-	bool set_node_id(double node_id);
+	uint64_t get_node_id();
+	bool set_node_id();
 
 public:
 	time_t shutdown_asap;
@@ -164,8 +164,8 @@ public:
 
 	// Return the region to which db name belongs.
 	int get_region(const std::string &db_name);
-	// Return the region to which node id belongs.
-	int get_region(const double node_id);
+	// Return the region to which local_node belongs.
+	int get_region();
 
 	unique_cJSON server_status();
 	unique_cJSON get_stats_time(const std::string &time_req);

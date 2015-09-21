@@ -242,53 +242,19 @@ XapiandManager::set_node_name(const std::string &node_name_)
 }
 
 
-double
+uint64_t
 XapiandManager::get_node_id()
 {
-	int fd = open("nodeid", O_RDONLY | O_CLOEXEC);
-	if (fd >= 0) {
-        char buf[512];
-		size_t length = read(fd, buf, sizeof(buf) - 1);
-		if (length > 0) {
-			buf[length] = '\0';
-			for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
-		}
-		close(fd);
-		return strtod(std::string(buf, length));
-	} else {
-		fd = open("nodeid", O_WRONLY | O_CREAT, 0644);
-		double node_id = 0;
-		if (fd >= 0) {
-			node_id = random(0.0, 1.0);
-			std::string str_id(std::to_string(node_id));
-			if (write(fd, str_id.c_str(), str_id.size()) != str_id.size()) {
-				assert(false);
-			}
-			close(fd);
-		} else {
-			assert(false);
-		}
-		return node_id;
-	}
+	return random_int(0, UINT64_MAX);
 }
 
 
 bool
-XapiandManager::set_node_id(double node_id)
+XapiandManager::set_node_id()
 {
-	if (node_id < 0.0 || node_id > 1.0) return false;
+	if (random_real(0, 1.0) < 0.5) return false;
 
-	int fd = open("nodeid", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (fd >= 0) {
-		std::string str_id(std::to_string(node_id));
-		if (write(fd, str_id.c_str(), str_id.size()) != str_id.size()) {
-			assert(false);
-		}
-		close(fd);
-	} else {
-		assert(false);
-	}
-	local_node.id = node_id;
+	local_node.id = get_node_id();
 
 	return true;
 }
@@ -678,18 +644,23 @@ void XapiandManager::run(int num_servers, int num_replicators)
 
 int XapiandManager::get_region(const std::string &db_name)
 {
+	if (local_node.regions == -1) {
+		local_node.regions = sqrt(nodes.size());
+		LOG(this, "Regions: %d\n", local_node.regions);
+	}
 	std::hash<std::string> hash_fn;
-	int regions = sqrt(nodes.size());
-	LOG(this, "Regions: %d\n", regions);
-	return jump_consistent_hash(hash_fn(db_name), regions);
+	return jump_consistent_hash(hash_fn(db_name), local_node.regions);
 }
 
 
-int XapiandManager::get_region(const double node_id)
+int XapiandManager::get_region()
 {
-	int regions = sqrt(nodes.size());
-	LOG(this, "Regions: %zu\n", regions);
-	return node_id * regions;
+	if (local_node.regions == -1) {
+		local_node.regions = sqrt(nodes.size());
+		LOG(this, "Regions: %d\n", local_node.regions);
+		local_node.region = jump_consistent_hash(local_node.id, local_node.regions);
+	}
+	return local_node.region;
 }
 
 

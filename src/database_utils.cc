@@ -58,7 +58,7 @@ long long read_mastery(const std::string &dir, bool force)
 	}
 
 	long long mastery_level = -1;
-	
+
 	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd < 0) {
 		if (force) {

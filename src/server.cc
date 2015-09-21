@@ -311,7 +311,7 @@ void XapiandServer::io_accept_discovery(ev::io &watcher, int revents)
 
 						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %llx!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
 
-						if (manager()->get_region(local_node.id) == manager()->get_region(index_path)) {
+						if (manager()->get_region() == manager()->get_region(index_path)) {
 							LOG(this, "The DB is in the same region that this cluster!\n");
 							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
 							manager()->endp_r.add_index_endpoint(index);
