@@ -318,7 +318,21 @@ std::string Collapser::toString()
 		} else {
 			cnt = 0;
 		}
-		if (cnt < ((ch == 'i') ? 1 : 2)) {
+		int mch = 2;
+		switch(ch) {
+			case 'a':
+			case 'h':
+			case 'i':
+			case 'j':
+			case 'q':
+			case 'u':
+			case 'v':
+			case 'w':
+			case 'x':
+			case 'y':
+				mch = 1;
+		}
+		if (cnt < mch) {
 			out.push_back(ch);
 		}
 		pch = ch;
