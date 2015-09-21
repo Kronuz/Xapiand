@@ -205,7 +205,7 @@ public:
 	static const std::unordered_map<std::string, const std::vector<const std::string> > symbols;
 
 	Generator();
-	Generator(const std::string &pattern);
+	Generator(const std::string &pattern, bool collapse_triples=true);
 	Generator(const std::vector<Generator *> & generators_);
 
 	virtual ~Generator();
@@ -266,6 +266,15 @@ class Capitalizer : public Generator
 {
 public:
 	Capitalizer(Generator *generator_);
+
+	std::string toString();
+};
+
+
+class Collapser : public Generator
+{
+public:
+	Collapser(Generator *generator_);
 
 	std::string toString();
 };

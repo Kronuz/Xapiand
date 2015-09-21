@@ -301,7 +301,33 @@ std::string Capitalizer::toString()
 }
 
 
-Generator::Generator(const std::string &pattern) {
+Collapser::Collapser(Generator *generator_) :
+	Generator(std::vector<Generator *>({generator_}))
+{
+}
+
+std::string Collapser::toString()
+{
+	std::wstring str = towstring(Generator::toString());
+	std::wstring out;
+	int cnt = 0;
+	wchar_t pch = L'\0';
+	for (auto ch : str) {
+		if (ch == pch) {
+			cnt++;
+		} else {
+			cnt = 0;
+		}
+		if (cnt < ((ch == 'i') ? 1 : 2)) {
+			out.push_back(ch);
+		}
+		pch = ch;
+	}
+	return tostring(out);
+}
+
+
+Generator::Generator(const std::string &pattern, bool collapse_triples) {
 	Group *top;
 	Generator *last;
 
@@ -363,7 +389,11 @@ Generator::Generator(const std::string &pattern) {
 	}
 
 	top = stack.top();
-	add(top->emit());
+	Generator *g = top->emit();
+	if (collapse_triples) {
+		g = new Collapser(g);
+	}
+	add(g);
 
 	while (!stack.empty()) {
 		delete stack.top();
