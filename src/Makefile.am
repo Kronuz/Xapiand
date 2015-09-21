@@ -33,6 +33,7 @@ xapiand_SOURCES = \
 	multivalue.cc \
 	multivaluekeymaker.cc \
 	multivaluerange.cc \
+	namegen.cc \
 	pcre/pcre_byte_order.c \
 	pcre/pcre_chartables.c \
 	pcre/pcre_compile.c \
@@ -108,6 +109,7 @@ noinst_HEADERS = \
 	multivalue.h \
 	multivaluekeymaker.h \
 	multivaluerange.h \
+	namegen.h \
 	pcre/pcre.h \
 	pcre/pcre_internal.h \
 	pcre/pcre_scanner.h \
