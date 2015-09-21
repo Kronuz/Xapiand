@@ -44,6 +44,7 @@
 		C39AE0771B2F627E00203139 /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0611B2F627E00203139 /* xapiand.cc */; };
 		C39AE07C1B2F62D700203139 /* cartesian.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0781B2F62D700203139 /* cartesian.cc */; };
 		C39AE07D1B2F62D700203139 /* exception.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE07A1B2F62D700203139 /* exception.cc */; };
+		C3C37DBB1BB05C6900F99A84 /* namegen.cc in Sources */ = {isa = PBXBuildFile; fileRef = C3C37DBA1BB05C6900F99A84 /* namegen.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -139,6 +140,8 @@
 		C39AE07A1B2F62D700203139 /* exception.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = exception.cc; path = src/exception.cc; sourceTree = "<group>"; };
 		C39AE07B1B2F62D700203139 /* exception.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = exception.h; path = src/exception.h; sourceTree = "<group>"; };
 		C3C37DB81BAF2EA900F99A84 /* compressor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = compressor.h; path = src/compressor.h; sourceTree = "<group>"; };
+		C3C37DBA1BB05C6900F99A84 /* namegen.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = namegen.cc; path = src/namegen.cc; sourceTree = "<group>"; };
+		C3C37DBC1BB05C8700F99A84 /* namegen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = namegen.h; path = src/namegen.h; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -218,6 +221,8 @@
 				C350589C1B7BAF0500901B80 /* multivaluekeymaker.h */,
 				46B6B3D11B7E4A1B000FA041 /* multivaluerange.cc */,
 				46B6B3D01B7E4A1B000FA041 /* multivaluerange.h */,
+				C3C37DBA1BB05C6900F99A84 /* namegen.cc */,
+				C3C37DBC1BB05C8700F99A84 /* namegen.h */,
 				C39AE0531B2F627E00203139 /* queue.h */,
 				C39AE0541B2F627E00203139 /* replicator.cc */,
 				C39AE0551B2F627E00203139 /* replicator.h */,
@@ -333,6 +338,7 @@
 				C35058AE1BA325CC00901B80 /* xxhash.c in Sources */,
 				C35058AC1BA325CC00901B80 /* lz4frame.c in Sources */,
 				46B6B3D31B7E4A1B000FA041 /* multivaluerange.cc in Sources */,
+				C3C37DBB1BB05C6900F99A84 /* namegen.cc in Sources */,
 				C39AE06E1B2F627E00203139 /* manager.cc in Sources */,
 				C35058AB1BA325CC00901B80 /* lz4.c in Sources */,
 				46B6B3D21B7E4A1B000FA041 /* geospatialrange.cc in Sources */,
