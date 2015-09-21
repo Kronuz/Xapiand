@@ -176,6 +176,7 @@ class Generator
 		group_types_t type;
 
 		Group(group_types_t type_);
+		virtual ~Group() {}
 
 		virtual void add(char c);
 		virtual void add(Generator *g);
