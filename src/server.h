@@ -23,20 +23,17 @@
 #ifndef XAPIAND_INCLUDED_SERVER_H
 #define XAPIAND_INCLUDED_SERVER_H
 
-#include "xapiand.h"
-
-#include "threadpool.h"
-#include "database.h"
-#include "worker.h"
 #include "manager.h"
+#include "server_base.h"
 
-#include "ev/ev++.h"
 #include <list>
-
+#include <vector>
 
 #define HEARTBEAT_MIN 0.150
 #define HEARTBEAT_MAX 0.400
 #define HEARTBEAT_INIT (HEARTBEAT_MAX / 2)
+
+class BaseServer;
 
 
 class XapiandServer : public Task, public Worker {
@@ -46,51 +43,34 @@ private:
 
 	ev::async async_setup_node;
 
-	ev::io discovery_io;
-	int discovery_sock;
-
-	ev::io http_io;
-	int http_sock;
-
-	ev::io binary_io;
-	int binary_sock;
-
-	DatabasePool *database_pool;
-	ThreadPool *thread_pool;
+	std::vector<BaseServer *> servers;
 
 	void destroy();
 
 	void async_setup_node_cb(ev::async &watcher, int revents);
 
-	void io_accept_discovery(ev::io &watcher, int revents);
-
-	void io_accept_http(ev::io &watcher, int revents);
-
-#ifdef HAVE_REMOTE_PROTOCOL
-	void io_accept_binary(ev::io &watcher, int revents);
-#endif  /* HAVE_REMOTE_PROTOCOL */
+	void register_server(BaseServer *server);
 
 public:
-	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_, int discovery_sock_, int http_sock_, int binary_sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
-	~XapiandServer();
-
-	void run();
-	void shutdown();
-
-	inline XapiandManager * manager() const {
-		return static_cast<XapiandManager *>(_parent);
-	}
-
 	static pthread_mutex_t static_mutex;
 	static int total_clients;
 	static int http_clients;
 	static int binary_clients;
 
+	inline XapiandManager * manager() const {
+		return static_cast<XapiandManager *>(_parent);
+	}
+
+	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_);
+	~XapiandServer();
+
+	void run();
+	void shutdown();
+
 protected:
 	friend class BaseClient;
 	friend class XapiandManager;
-
-	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 };
+
 
 #endif /* XAPIAND_INCLUDED_SERVER_H */
