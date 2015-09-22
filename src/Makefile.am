@@ -59,6 +59,10 @@ xapiand_SOURCES = \
 	replicator.cc \
 	serialise.cc \
 	server.cc \
+	server_base.cc \
+	server_binary.cc \
+	server_discovery.cc \
+	server_http.cc \
 	threadpool.cc \
 	times.cc \
 	utils.cc \
@@ -119,6 +123,10 @@ noinst_HEADERS = \
 	replicator.h \
 	serialise.cc \
 	server.h \
+	server_base.h \
+	server_binary.h \
+	server_discovery.h \
+	server_http.h \
 	threadpool.h \
 	times.h \
 	utils.h \
