@@ -435,7 +435,7 @@ int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets)
 }
 
 
-static NameGen::Generator generator("!" FANTASY_S_A);
+static NameGen::Generator generator("!<K|E><k|e|l><|||s>");
 
 std::string name_generator()
 {
