@@ -150,6 +150,10 @@ public:
 
 	void setup_node(XapiandServer *server);
 
+#ifdef HAVE_REMOTE_PROTOCOL
+	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint, XapiandServer *server);
+#endif
+
 	void run(int num_servers, int num_replicators);
 	void sig_shutdown_handler(int sig);
 	void shutdown();

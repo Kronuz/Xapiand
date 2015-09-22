@@ -27,6 +27,10 @@
 #include "replicator.h"
 #include "length.h"
 #include "endpoint.h"
+#include "client_binary.h"
+#include "server_http.h"
+#include "server_binary.h"
+#include "server_discovery.h"
 
 #include <list>
 #include <stdlib.h>
@@ -291,7 +295,7 @@ XapiandManager::setup_node(XapiandServer *server)
 		// Replicate database from the other node
 #ifdef HAVE_REMOTE_PROTOCOL
 		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
-		if (server->trigger_replication(remote_endpoint, *cluster_endpoints.begin())) {
+		if (trigger_replication(remote_endpoint, *cluster_endpoints.begin(), server)) {
 			INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
 			new_cluster = 2;
 			break;
@@ -487,6 +491,26 @@ void XapiandManager::destroy()
 }
 
 
+#ifdef HAVE_REMOTE_PROTOCOL
+bool XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint, XapiandServer *server)
+{
+	int client_sock;
+	if ((client_sock = connection_socket()) < 0) {
+		return false;
+	}
+
+	BinaryClient *client = new BinaryClient(server, server->loop, client_sock, &database_pool, &thread_pool, active_timeout, idle_timeout);
+
+	if (!client->init_replication(src_endpoint, dst_endpoint)) {
+		delete client;
+		return false;
+	}
+
+	return true;
+}
+#endif /* HAVE_REMOTE_PROTOCOL */
+
+
 void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 {
 	double next_heartbeat;
@@ -502,7 +526,7 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			} else {
 				local_node.name = node_name;
 			}
-			INFO(this, "Advertising as %s (id: %f)...\n", local_node.name.c_str(), local_node.id);
+			INFO(this, "Advertising as %s (id: %llu)...\n", local_node.name.c_str(), local_node.id);
 
 		case STATE_WAITING:
 			discovery(DISCOVERY_HELLO, local_node.serialise());
@@ -524,7 +548,6 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
 			discovery_heartbeat.set(next_heartbeat, HEARTBEAT_INIT);
 			break;
 	}
-
 }
 
 
@@ -611,7 +634,12 @@ void XapiandManager::run(int num_servers, int num_replicators)
 
 	ThreadPool server_pool("S%d", num_servers);
 	for (int i = 0; i < num_servers; i++) {
-		XapiandServer *server = new XapiandServer(this, NULL, discovery_sock, http_sock, binary_sock, &database_pool, &thread_pool);
+		XapiandServer *server = new XapiandServer(this, NULL);
+		server->register_server(new HttpServer(server, server->loop, http_sock, &database_pool, &thread_pool));
+#ifdef HAVE_REMOTE_PROTOCOL
+		server->register_server(new BinaryServer(server, server->loop, binary_sock, &database_pool, &thread_pool));
+#endif
+		server->register_server(new DiscoveryServer(server, server->loop, discovery_sock, &database_pool, &thread_pool));
 		server_pool.addTask(server);
 	}
 
