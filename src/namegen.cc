@@ -1,59 +1,24 @@
 /**
- * Copyright (C) 2015 German M. Bravo (Kronuz). All rights reserved.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to
- * deal in the Software without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * @file A fantasy name generator library.
+ * @version 1.0.0
+ * @license Public Domain
+ * @author German M. Bravo (Kronuz)
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- * IN THE SOFTWARE.
  */
 
 #include "namegen.h"
 
-#include <random>
-#include <cstdlib>
-
+#include <random>  // for std::uniform_real_distribution
+#include <cwctype>  // for std::towupper
+#include <algorithm>  // for std::reverse
 
 using namespace NameGen;
-
 
 static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
 static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
-/*
- *  s    Generic syllable
- *  v    Single vowel
- *  V    Single vowel or vowel combination
- *  c    Single consonant
- *  B    Single consonant or consonant combination suitable for beginning a word
- *  C    Single consonant or consonant combination suitable anywhere in a word
- *  i    Unit for an insult
- *  m    Unit for a mushy name
- *  M    Unit for a mushy name ending
- *  D    Consonant or consonant suited for a stupid person's name
- *  d    Syllable suited for a stupid person's name (always begins with a vowel)
- *
- *  '    Literal apostrophe
- *  -    Literal hyphen
- *
- *  ( )  Denotes that anything inside is literal
- *  < >  Denotes that anything inside is a special symbol
- *  |    Logical OR operator for use in ( ) and < >
- */
-
-const std::unordered_map<std::string, const std::vector<const std::string> >
+const std::unordered_map<std::string, const std::vector<std::string> >
 Generator::symbols = {
 	{
 		"s", {
@@ -705,8 +670,7 @@ Generator::symbols = {
 			"virrea",     // Success
 			"zea",        // The crystal growth
 		}
-	},
-
+	}
 };
 
 
@@ -878,7 +842,7 @@ Capitalizer::Capitalizer(Generator *generator_) :
 std::string Capitalizer::toString()
 {
 	std::wstring str = towstring(Generator::toString());
-	str[0] = towupper(str[0]);
+	str[0] = std::towupper(str[0]);
 	return tostring(str);
 }
 
@@ -1084,14 +1048,14 @@ std::wstring towstring(const std::string & s)
 	const char *cs = s.c_str();
 	const size_t wn = std::mbsrtowcs(NULL, &cs, 0, NULL);
 
-	if (wn == -1) {
+	if (wn == static_cast<size_t>(-1)) {
 		return L"";
 	}
 
 	std::vector<wchar_t> buf(wn);
 	const size_t wn_again = std::mbsrtowcs(buf.data(), &cs, wn, NULL);
 
-	if (wn_again == -1) {
+	if (wn_again == static_cast<size_t>(-1)) {
 		return L"";
 	}
 
@@ -1103,14 +1067,14 @@ std::string tostring(const std::wstring & s)
 	const wchar_t *cs = s.c_str();
 	const size_t wn = std::wcsrtombs(NULL, &cs, 0, NULL);
 
-	if (wn == -1) {
+	if (wn == static_cast<size_t>(-1)) {
 		return "";
 	}
 
 	std::vector<char> buf(wn);
 	const size_t wn_again = std::wcsrtombs(buf.data(), &cs, wn, NULL);
 
-	if (wn_again == -1) {
+	if (wn_again == static_cast<size_t>(-1)) {
 		return "";
 	}
 
