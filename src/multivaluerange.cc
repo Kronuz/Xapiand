@@ -27,7 +27,7 @@
 
 
 MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string &start_, const std::string &end_)
-	: ValuePostingSource(slot_), slot(slot_), start(start_), end(end_) {
+	: ValuePostingSource(slot_), start(start_), end(end_), slot(slot_) {
 	set_maxweight(1.0);
 }
 
@@ -170,7 +170,7 @@ MultipleValueRange::get_description() const {
 
 
 MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, const std::string &start_)
-	: ValuePostingSource(slot_), slot(slot_), start(start_) {
+	: ValuePostingSource(slot_), start(start_), slot(slot_) {
 	set_maxweight(1.0);
 }
 
@@ -282,7 +282,7 @@ MultipleValueGE::get_description() const {
 
 
 MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, const std::string &end_)
-	: ValuePostingSource(slot_), slot(slot_), end(end_) {
+	: ValuePostingSource(slot_), end(end_), slot(slot_) {
 	set_maxweight(1.0);
 }
 
