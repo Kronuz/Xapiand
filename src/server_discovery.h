@@ -25,6 +25,10 @@
 
 #include "server_base.h"
 
+#define HEARTBEAT_MIN 0.150
+#define HEARTBEAT_MAX 0.400
+#define HEARTBEAT_INIT (HEARTBEAT_MAX / 2)
+
 
 // Discovery Server
 class DiscoveryServer : public BaseServer {
