@@ -36,7 +36,7 @@ AX_PROG_CCACHE_CXX
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h sys/inotify.h sys/epoll.h sys/event.h port.h poll.h sys/select.h sys/eventfd.h sys/signalfd.h])
- 
+
 # Checks for library functions.
 AC_CHECK_FUNCS([getcwd gettimeofday socket sranddev inotify_init epoll_ctl kqueue port_create poll select eventfd signalfd])
 
@@ -177,7 +177,14 @@ AC_LINK_IFELSE(
 CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
 
-#AM_PATH_CHECK()
+AC_MSG_CHECKING(["Whether compiler understands -Wall -Wextra"])
+save_CXXFLAGS="$CFLAGS"
+CXXFLAGS="$CXXFLAGS -Wall -Wextra"
+AC_TRY_COMPILE([],[],
+  AC_MSG_RESULT(yes),
+  AC_MSG_RESULT(no)
+  CXXFLAGS="$save_CXXFLAGS")
+
 PKG_CHECK_MODULES(CHECK, [check >= 0.9.4],,[AC_MSG_RESULT([no, testing is disabled])])
 
 AC_CONFIG_FILES([
