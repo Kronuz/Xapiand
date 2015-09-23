@@ -31,8 +31,6 @@ int test_wkt_parser()
 	std::string name("examples/Tests_parser_WKT.txt");
 	std::ifstream readFile(name);
 	std::string EWKT, file_expect, file_result;
-	char files[50];
-	char output[50];
 	double error = 0.2;
 	bool partials = true;
 
