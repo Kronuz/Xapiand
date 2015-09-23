@@ -301,7 +301,7 @@ int make_search(const sort_t _tests[], int len)
 	query.is_fuzzy = false;
 	query.is_nearest = false;
 
-	for (size_t i = 0; i < len; ++i) {
+	for (int i = 0; i < len; ++i) {
 		sort_t p = _tests[i];
 		query.query.clear();
 		query.sort.clear();
@@ -339,7 +339,6 @@ int make_search(const sort_t _tests[], int len)
 	// Delete de database and release memory.
 	delete_files(name_database);
 	delete database;
-	delete queue;
 
 	return cont;
 }
