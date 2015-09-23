@@ -42,7 +42,7 @@ class XapiandReplicator : public Task, public Worker
 	void on_commit(const Endpoint &endpoint);
 
 public:
-	XapiandReplicator(XapiandManager *manager_, ev::loop_ref *loop_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
+	XapiandReplicator(XapiandManager *manager_, ev::loop_ref *loop_, DatabasePool *database_pool_);
 	~XapiandReplicator();
 
 
