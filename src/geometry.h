@@ -55,9 +55,9 @@ const double MIN_RADIUS_RADIANS = 0.00000001570488707974173690;
 
 class Constraint {
 	public:
-		int sign;
 		Cartesian center;
 		double distance, arcangle;
+		int sign;
 
 		Constraint(const Cartesian &center_, double radius);
 		Constraint(const Cartesian &center_);

@@ -37,11 +37,11 @@ Constraint::Constraint(const Cartesian &center_, double radius) : center(center_
 
 
 // Do a great circle with the defined center.
-Constraint::Constraint(const Cartesian &center_) : center(center_), sign(ZERO), distance(0.0), arcangle(PI_HALF) { }
+Constraint::Constraint(const Cartesian &center_) : center(center_), distance(0.0), arcangle(PI_HALF), sign(ZERO) { }
 
 
 // Defult Constructor. Do a great circle with center in (lat = 0, lon = 0, h = 0, DEGREES) -> (x = 1, y = 0, z = 0).
-Constraint::Constraint() : sign(ZERO), distance(0.0), arcangle(PI_HALF) { }
+Constraint::Constraint() : distance(0.0), arcangle(PI_HALF), sign(ZERO) { }
 
 
 bool
