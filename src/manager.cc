@@ -25,7 +25,6 @@
 #include "utils.h"
 #include "server.h"
 #include "replicator.h"
-#include "length.h"
 #include "endpoint.h"
 #include "client_binary.h"
 #include "server_http.h"
@@ -50,6 +49,7 @@ const uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_M
 pcre *XapiandManager::compiled_time_re = NULL;
 
 
+<<<<<<< HEAD
 std::string Node::serialise()
 {
 	std::string node_str;
@@ -100,6 +100,59 @@ ssize_t Node::unserialise(const std::string &s)
 }
 
 
+||||||| merged common ancestors
+std::string Node::serialise()
+{
+	std::string node_str;
+	if (!name.empty()) {
+		node_str.append(encode_length(addr.sin_addr.s_addr));
+		node_str.append(encode_length(http_port));
+		node_str.append(encode_length(binary_port));
+		node_str.append(serialise_string(name));
+	}
+	return node_str;
+}
+
+
+size_t Node::unserialise(const char **p, const char *end)
+{
+	size_t length;
+	const char *ptr = *p;
+
+	if ((length = decode_length(&ptr, end, false)) == -1) {
+		return -1;
+	}
+	addr.sin_addr.s_addr = (int)length;
+
+	if ((length = decode_length(&ptr, end, false)) == -1) {
+		return -1;
+	}
+	http_port = (int)length;
+
+	if ((length = decode_length(&ptr, end, false)) == -1) {
+		return -1;
+	}
+	binary_port = (int)length;
+
+	name.clear();
+	if (unserialise_string(name, &ptr, end) == -1 || name.empty()) {
+		return -1;
+	}
+
+	*p = ptr;
+	return end - ptr;
+}
+
+
+size_t Node::unserialise(const std::string &s)
+{
+	const char *ptr = s.data();
+	return unserialise(&ptr, ptr + s.size());
+}
+
+
+=======
+>>>>>>> Move the node serialise to a endpoint file
 XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	: Worker(NULL, loop_),
 	  discovery_heartbeat(*loop),

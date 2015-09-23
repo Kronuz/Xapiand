@@ -22,6 +22,8 @@
 
 #include "endpoint.h"
 
+#include "length.h"
+
 #include <iostream>
 #include <limits.h>
 #include <unistd.h>
@@ -53,6 +55,56 @@ char *normalize_path(const char * src, char * dst)
 	}
 	*dst++ = '\0';
 	return ret;
+}
+
+
+std::string Node::serialise() const
+{
+	std::string node_str;
+	if (!name.empty()) {
+		node_str.append(encode_length(addr.sin_addr.s_addr));
+		node_str.append(encode_length(http_port));
+		node_str.append(encode_length(binary_port));
+		node_str.append(serialise_string(name));
+	}
+	return node_str;
+}
+
+
+size_t Node::unserialise(const char **p, const char *end)
+{
+	size_t length;
+	const char *ptr = *p;
+	
+	if ((length = decode_length(&ptr, end, false)) == -1) {
+		return -1;
+	}
+	addr.sin_addr.s_addr = (int)length;
+	
+	if ((length = decode_length(&ptr, end, false)) == -1) {
+		return -1;
+	}
+	http_port = (int)length;
+	
+	if ((length = decode_length(&ptr, end, false)) == -1) {
+		return -1;
+	}
+	binary_port = (int)length;
+	
+	name.clear();
+	if (unserialise_string(name, &ptr, end) == -1 || name.empty()) {
+		return -1;
+	}
+	
+	*p = ptr;
+	return end - ptr;
+}
+
+
+size_t Node::unserialise(const std::string &s)
+{
+	const char *ptr = s.data();
+	return unserialise(&ptr, ptr + s.size());
 }
 
 
