@@ -81,6 +81,7 @@ enum discovery_type {
 	DISCOVERY_BYE,       // Node says goodbye
 	DISCOVERY_DB,
 	DISCOVERY_DB_WAVE,
+	DISCOVERY_BOSSY_DB_WAVE,
 	DISCOVERY_DB_UPDATED,
 	DISCOVERY_MAX
 };

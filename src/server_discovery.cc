@@ -187,21 +187,35 @@ void DiscoveryServer::io_accept(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
 							return;
 						}
+
+						if (server->manager()->get_region() == server->manager()->get_region(index_path) /* FIXME: missing leader check */) {
+							if (server->manager()->endp_r.get_master_node(index_path, &node, server->manager())) {
+								server->manager()->discovery(
+												DISCOVERY_BOSSY_DB_WAVE,
+												serialise_string(mastery_str) +  // The mastery level of the database
+												serialise_string(index_path) +  // The path of the index
+												node->serialise()					// The node where the index master is at
+												);
+								return;
+							}
+						}
+
 						mastery_level = database_pool->get_mastery_level(index_path);
 						if (mastery_level != -1) {
-							LOG_DISCOVERY(this, "Found local database '%s' with m:%llx!\n", index_path.c_str(), mastery_level);
-							mastery_str = std::to_string(mastery_level);
-							server->manager()->discovery(
-								DISCOVERY_DB_WAVE,
-								serialise_string(mastery_str) +  // The mastery level of the database
-								serialise_string(index_path) +  // The path of the index
-								local_node.serialise()  // The node where the index is at
-							);
+								LOG_DISCOVERY(this, "Found local database '%s' with m:%llx!\n", index_path.c_str(), mastery_level);
+								mastery_str = std::to_string(mastery_level);
+								server->manager()->discovery(
+												DISCOVERY_DB_WAVE,
+												serialise_string(mastery_str) +  // The mastery level of the database
+												serialise_string(index_path) +  // The path of the index
+												local_node.serialise()  // The node where the index is at
+												);
 						}
 					}
 					break;
 
 				case DISCOVERY_DB_WAVE:
+				case DISCOVERY_BOSSY_DB_WAVE:
 					if (server->manager()->state == STATE_READY) {
 						if (unserialise_string(mastery_str, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper mastery!\n");
@@ -227,11 +241,11 @@ void DiscoveryServer::io_accept(ev::io &watcher, int revents)
 						if (server->manager()->get_region() == server->manager()->get_region(index_path)) {
 							LOG(this, "The DB is in the same region that this cluster!\n");
 							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
-							server->manager()->endp_r.add_index_endpoint(index, false);
+							server->manager()->endp_r.add_index_endpoint(index, true, cmd == DISCOVERY_BOSSY_DB_WAVE);
 						} else if (server->manager()->endp_r.exists(index_path)) {
 							LOG(this, "The DB is in the LRU of this node!\n");
 							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
-							server->manager()->endp_r.add_index_endpoint(index, true);
+							server->manager()->endp_r.add_index_endpoint(index, false, cmd == DISCOVERY_BOSSY_DB_WAVE);
 						}
 					}
 					break;

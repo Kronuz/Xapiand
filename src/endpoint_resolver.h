@@ -54,12 +54,17 @@ class EndpointList {
 	long long max_mastery_level;
 	double init_timeout;
 
+	time_t resolved_time;
+	bool stop_wait;
+
 public:
 	EndpointList();
 	~EndpointList();
+	bool get_endpoints(XapiandManager *manager, size_t n_endps, std::vector<Endpoint> *endpv, const Node **last_node);
 	bool resolve_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, size_t n_endps, double timeout);
 	void add_endpoint(const Endpoint &element);
-	bool _get_endpoints(std::vector<Endpoint> &Endv, size_t n_endps);
+	void wakeup();
+
 	size_t size();
 	bool empty();
 	void show_list();
@@ -78,8 +83,9 @@ class EndpointResolver : public lru_map<std::string, EndpointList> {
 	}
 
 public:
-	void add_index_endpoint(const Endpoint &index, bool frozen);
+	void add_index_endpoint(const Endpoint &index, bool renew, bool wakeup);
 	bool resolve_index_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, size_t n_endps=1, double timeout=1.0);
+	bool get_master_node(const std::string &index, const Node **node, XapiandManager *manager);
 
 	EndpointResolver(size_t max_size)
 		: lru_map<std::string, EndpointList>(max_size),

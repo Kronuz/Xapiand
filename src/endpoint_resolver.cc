@@ -29,7 +29,9 @@
 EndpointList::EndpointList()
 	: status(ST_NEW),
 	  max_mastery_level(0),
-	  init_timeout(0.005)
+	  init_timeout(0.005),
+	  resolved_time(0),
+	  stop_wait(false)
 {
 	pthread_cond_init(&time_cond, 0);
 	pthread_mutexattr_init(&endl_qmtx_attr);
@@ -105,6 +107,13 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 
 			case ST_WAITING:
 				retval = pthread_cond_timedwait(&time_cond, &endl_qmtx, &next_wake);
+
+				if (stop_wait) {
+					elapsed = timeout + 1; // force it out
+					stop_wait = false;
+					break;
+				}
+
 				if (retval == ETIMEDOUT) {
 					elapsed = now() - init_time;
 
@@ -131,7 +140,11 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 		return false;
 	}
 
-	bool ret = _get_endpoints(endpv, n_endps);
+	if (resolved_time == 0) {
+		resolved_time = time(NULL);
+	}
+
+	bool ret = get_endpoints(manager, n_endps, &endpv, NULL);
 
 	pthread_mutex_unlock(&endl_qmtx);
 
@@ -139,15 +152,44 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 }
 
 
+<<<<<<< HEAD
 bool EndpointList::_get_endpoints(std::vector<Endpoint> &Endv, size_t n_endps) {
+||||||| merged common ancestors
+bool EndpointList::_get_endpoints(std::vector<Endpoint> &Endv, int n_endps) {
+	int c;
+=======
+bool EndpointList::get_endpoints(XapiandManager *manager, int n_endps, std::vector<Endpoint> *endpv, const Node **last_node)
+{
+	if (resolved_time != 0) {
+		return false;
+	}
+>>>>>>> Added bossy message in case endpoint mastery is known because is already in the lru
 	bool find_endpoints = false;
-	Endv.clear();
+	if (endpv) endpv->clear();
 	std::set<Endpoint, Endpoint::compare>::const_iterator it_endp(endp_set.cbegin());
+<<<<<<< HEAD
 	for (size_t c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
+||||||| merged common ancestors
+	for (c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
+=======
+	for (int c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
+		try {
+			const Node *node;
+			if (!manager->get_node((*it_endp).node_name, &node)) {
+				return false;
+			}
+			if (node->touched > time(NULL) + HEARTBEAT_MAX) {
+				return false;
+			}
+			if (last_node) *last_node = node;
+		} catch (const std::out_of_range &err) {
+			continue;
+		}
+>>>>>>> Added bossy message in case endpoint mastery is known because is already in the lru
 		if (c == n_endps) {
 			find_endpoints = true;
 		}
-		Endv.push_back(*it_endp);
+		if (endpv) endpv->push_back(*it_endp);
 	}
 	return find_endpoints;
 }
@@ -162,6 +204,12 @@ bool EndpointList::empty() {
 	return endp_set.empty();
 }
 
+void EndpointList::wakeup() {
+	if (resolved_time != 0) {
+		stop_wait = true;
+		pthread_cond_broadcast(&time_cond);
+	}
+}
 
 void EndpointList::show_list()
 {
@@ -174,15 +222,17 @@ void EndpointList::show_list()
 }
 
 
-void EndpointResolver::add_index_endpoint(const Endpoint &index, bool frozen)
+void EndpointResolver::add_index_endpoint(const Endpoint &index, bool renew, bool wakeup)
 {
 	pthread_mutex_lock(&re_qmtx);
-	get_action = frozen ? leave : renew;
+	get_action = renew ? EndpointResolver::renew : EndpointResolver::leave;
 	EndpointList &enl = (*this)[index.path];
-	get_action = renew;
+	get_action = EndpointResolver::renew;
 	pthread_mutex_unlock(&re_qmtx);
 
 	enl.add_endpoint(index);
+
+	if (wakeup) enl.wakeup();
 }
 
 
@@ -193,4 +243,14 @@ bool EndpointResolver::resolve_index_endpoint(const std::string &path, XapiandMa
 	pthread_mutex_unlock(&re_qmtx);
 
 	return enl.resolve_endpoint(path, manager, endpv, n_endps, timeout);
+}
+
+
+bool EndpointResolver::get_master_node(const std::string &index, const Node **node, XapiandManager *manager)
+{
+	pthread_mutex_lock(&re_qmtx);
+	EndpointList &enl = (*this)[index];
+	pthread_mutex_unlock(&re_qmtx);
+
+	return enl.get_endpoints(manager, 1, NULL, node);
 }
