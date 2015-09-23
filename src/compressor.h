@@ -47,14 +47,14 @@ public:
 		return 0;
 	};
 	virtual ssize_t read(char **buf, size_t size) {
-		LOG(this, "input size %lu \n",input.size());
+		//LOG(this, "input size %lu \n",input.size());
 		if (input.size() == 0) {
-			LOG(this, "base_read (0)\n");
+			//LOG(this, "base_read (0)\n");
 			return 0;
 		}
 		if (offset >= input.size()) {
 			errno = EWOULDBLOCK;
-			LOG(this, "base_read (-1)\n");
+			//LOG(this, "base_read (-1)\n");
 			return -1;
 		}
 		if (*buf) {
@@ -68,11 +68,11 @@ public:
 			offset = input.size();
 			size = offset;
 		}
-		LOG(this, "base_read: %s (%zu)\n", repr(*buf, size).c_str(), size);
+		//LOG(this, "base_read: %s (%zu)\n", repr(*buf, size).c_str(), size);
 		return size;
 	};
 	virtual ssize_t write(const char *buf, size_t size) {
-		LOG(this, "base_write: %s (%zu)\n", repr(buf, size).c_str(), size);
+		//LOG(this, "base_write: %s (%zu)\n", repr(buf, size).c_str(), size);
 		output.append(buf, size);
 		return size;
 	};
