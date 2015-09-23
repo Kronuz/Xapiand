@@ -363,21 +363,33 @@ bool XapiandManager::put_node(const Node &node)
 	return false;
 }
 
+bool XapiandManager::get_node(const std::string &node_name, const Node **node)
+{
+	try {
+		std::string node_name_lower(stringtolower(node_name));
+		const Node &node_ref = nodes.at(node_name_lower);
+		*node = &node_ref;
+		return true;
+	} catch (const std::out_of_range &err) {
+		return false;
+	}
+}
 
-bool XapiandManager::touch_node(const std::string &node_name, Node *node)
+
+bool XapiandManager::touch_node(const std::string &node_name, const Node **node)
 {
 	pthread_mutex_lock(&nodes_mtx);
 	std::string node_name_lower(stringtolower(node_name));
 	if (node_name_lower == stringtolower(local_node.name)) {
 		local_node.touched = time(NULL);
-		if (node) *node = local_node;
+		if (node) *node = &local_node;
 		pthread_mutex_unlock(&nodes_mtx);
 		return true;
 	} else {
 		try {
 			Node &node_ref = nodes.at(node_name_lower);
 			node_ref.touched = time(NULL);
-			if (node) *node = node_ref;
+			if (node) *node = &node_ref;
 			pthread_mutex_unlock(&nodes_mtx);
 			return true;
 		} catch (const std::out_of_range &err) {

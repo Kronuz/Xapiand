@@ -91,7 +91,7 @@ void DiscoveryServer::io_accept(ev::io &watcher, int revents)
 				return;
 			}
 
-			Node node;
+			const Node *node;
 			Node remote_node;
 			std::string index_path;
 			std::string mastery_str;
@@ -111,7 +111,7 @@ void DiscoveryServer::io_accept(ev::io &watcher, int revents)
 						server->manager()->discovery(DISCOVERY_WAVE, local_node.serialise());
 					} else {
 						if (server->manager()->touch_node(remote_node.name, &node)) {
-							if (remote_node == node) {
+							if (remote_node == *node) {
 								server->manager()->discovery(DISCOVERY_WAVE, local_node.serialise());
 							} else {
 								server->manager()->discovery(DISCOVERY_SNEER, remote_node.serialise());
@@ -150,8 +150,8 @@ void DiscoveryServer::io_accept(ev::io &watcher, int revents)
 						return;
 					}
 					if (server->manager()->touch_node(remote_node.name, &node)) {
-						if (remote_node != node && remote_node.name != local_node.name) {
-							if (cmd == DISCOVERY_HEARTBEAT || node.touched < now - HEARTBEAT_MAX) {
+						if (remote_node != *node && remote_node.name != local_node.name) {
+							if (cmd == DISCOVERY_HEARTBEAT || node->touched < now - HEARTBEAT_MAX) {
 								server->manager()->drop_node(remote_node.name);
 								INFO(this, "Stalled node %s left the party!\n", remote_node.name.c_str());
 								if (server->manager()->put_node(remote_node)) {

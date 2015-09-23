@@ -1141,14 +1141,14 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 					// Convert node to endpoint:
 					char node_ip[INET_ADDRSTRLEN];
-					Node node;
+					const Node *node;
 					if (!manager()->touch_node(node_name, &node)) {
 						LOG(this, "Node %s not found\n", node_name.c_str());
 						host = node_name;
 						return CMD_UNKNOWN_HOST;
 					}
-					if (!node_port) node_port = node.binary_port;
-					inet_ntop(AF_INET, &(node.addr.sin_addr), node_ip, INET_ADDRSTRLEN);
+					if (!node_port) node_port = node->binary_port;
+					inet_ntop(AF_INET, &(node->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
 					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path, NULL, -1, node_name);
 					endpoints.insert(endpoint);
 				} else {

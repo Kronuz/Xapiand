@@ -161,7 +161,8 @@ public:
 	void reset_state();
 
 	bool put_node(const Node &node);
-	bool touch_node(const std::string &node_name, Node *node=NULL);
+	bool get_node(const std::string &node_name, const Node **node);
+	bool touch_node(const std::string &node_name, const Node **node=NULL);
 	void drop_node(const std::string &node_name);
 
 	void discovery(discovery_type type, const std::string &content);
