@@ -207,7 +207,7 @@ void HttpClient::on_read(const char *buf, size_t received)
 }
 
 
-void HttpClient::on_read_file(const char *buf, size_t received)
+void HttpClient::on_read_file(const char *, size_t received)
 {
 	LOG_ERR(this, "Not Implemented: HttpClient::on_read_file: %zu bytes\n", received);
 }
@@ -845,7 +845,7 @@ void HttpClient::bad_request_view(const query_t &e, int cmd)
 }
 
 
-void HttpClient::upload_view(const query_t &e)
+void HttpClient::upload_view(const query_t &)
 {
 	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
@@ -1125,7 +1125,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					has_node_name = true;
 				} else {
 					double timeout;
-					int num_endps = 1;
+					size_t num_endps = 1;
 					if (writable) {
 						timeout = 2;
 					} else timeout = 1;

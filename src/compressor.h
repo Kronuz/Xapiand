@@ -107,7 +107,7 @@ public:
 
 class NoCompressor : public Compressor
 {
-	size_t count;
+	ssize_t count;
 	char *buffer;
 
 public:
@@ -133,7 +133,7 @@ public:
 		while (true) {
 			char *src_buffer = NULL;
 			// LOG(this, "decompress (decompressor->read)\n");
-			size_t read_size = decompressor->read(&src_buffer, -1);
+			ssize_t read_size = decompressor->read(&src_buffer, -1);
 			if (read_size == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					return count;
@@ -180,7 +180,7 @@ public:
 		// LOG(this, "compress (while)\n");
 		while (true) {
 			// LOG(this, "compress (compressor->read)\n");
-			size_t src_size = compressor->read(&buffer, NOCOMPRESS_BUFFER_SIZE);
+			ssize_t src_size = compressor->read(&buffer, NOCOMPRESS_BUFFER_SIZE);
 			if (src_size == -1) {
 				// LOG(this, "compress (compressor->read=-1)\n");
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -277,7 +277,7 @@ public:
 		while (true) {
 			char *src_buffer = NULL;
 			// LOG(this, "decompress (decompressor->read)\n");
-			size_t read_size = decompressor->read(&src_buffer, -1);
+			ssize_t read_size = decompressor->read(&src_buffer, -1);
 			if (read_size == -1) {
 				// LOG(this, "decompress (decompressor->read=-1)\n");
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -295,7 +295,7 @@ public:
 
 			// LOG(this, "\t read_size: %zu\n", read_size);
 
-			for (size_t read_pos = 0; read_pos < read_size && nextToLoad; read_pos += src_size) {
+			for (ssize_t read_pos = 0; read_pos < read_size && nextToLoad; read_pos += src_size) {
 				src_size = read_size - read_pos;
 				size_t dst_size = LZ4F_BLOCK_SIZE;
 
@@ -376,7 +376,7 @@ public:
 		// LOG(this, "compress (while)\n");
 		while (true) {
 			// LOG(this, "compress (compressor->read)\n");
-			size_t src_size = compressor->read(&buffer, LZ4F_BLOCK_SIZE);
+			ssize_t src_size = compressor->read(&buffer, LZ4F_BLOCK_SIZE);
 			if (src_size == -1) {
 				// LOG(this, "compress (compressor->read=-1)\n");
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
