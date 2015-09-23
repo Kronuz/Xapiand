@@ -49,14 +49,13 @@ BinaryClient::BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_
 	  repl_switched_db(false)
 {
 	pthread_mutex_lock(&XapiandServer::static_mutex);
-	int total_clients = XapiandServer::total_clients;
-	int binary_clients = ++XapiandServer::binary_clients;
+	XapiandServer::binary_clients++;
+	assert(XapiandServer::binary_clients <= XapiandServer::total_clients);
+
+	LOG_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, XapiandServer::binary_clients, XapiandServer::total_clients);
+
+	LOG_OBJ(this, "CREATED BINARY CLIENT! (%d clients)\n", XapiandServer::binary_clients);
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
-
-	LOG_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, binary_clients, XapiandServer::total_clients);
-
-	LOG_OBJ(this, "CREATED BINARY CLIENT! (%d clients)\n", binary_clients);
-	assert(binary_clients <= total_clients);
 }
 
 

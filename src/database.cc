@@ -1845,7 +1845,7 @@ DatabasePool::checkin(Database **database)
 	int flags = database_->flags;
 	Endpoints endpoints = database_->endpoints;
 
-	if (database_->flags & DB_VOLATILE) {
+	if (flags & DB_VOLATILE) {
 		delete database_;
 	} else {
 		queue->push(database_);

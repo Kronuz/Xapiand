@@ -146,14 +146,13 @@ HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	http_parser_init(&parser, HTTP_REQUEST);
 
 	pthread_mutex_lock(&XapiandServer::static_mutex);
-	int total_clients = XapiandServer::total_clients;
-	int http_clients = ++XapiandServer::http_clients;
+	XapiandServer::http_clients++;
+	assert(XapiandServer::http_clients <= XapiandServer::total_clients);
+
+	LOG_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, XapiandServer::http_clients, XapiandServer::total_clients);
+
+	LOG_OBJ(this, "CREATED HTTP CLIENT! (%d clients)\n", XapiandServer::http_clients);
 	pthread_mutex_unlock(&XapiandServer::static_mutex);
-
-	LOG_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, http_clients, XapiandServer::total_clients);
-
-	LOG_OBJ(this, "CREATED HTTP CLIENT! (%d clients)\n", http_clients);
-	assert(http_clients <= total_clients);
 }
 
 
@@ -197,12 +196,8 @@ void HttpClient::on_read(const char *buf, size_t received)
 			thread_pool->addTask(this);
 		}
 	} else {
-		enum http_errno err = HTTP_PARSER_ERRNO(&parser);
-		const char *desc = http_errno_description(err);
-		const char *msg = err != HPE_OK ? desc : "incomplete request";
-		LOG_HTTP_PROTO(this, msg);
-		// Handle error. Just close the connection.
-		destroy();
+		LOG_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? http_errno_description(HTTP_PARSER_ERRNO(&parser)) : "incomplete request");
+		destroy();  // Handle error. Just close the connection.
 	}
 }
 

@@ -169,10 +169,6 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(&qmtx, &qmtx_attr);
 
-	pthread_mutex_lock(&XapiandServer::static_mutex);
-	int total_clients = ++XapiandServer::total_clients;
-	pthread_mutex_unlock(&XapiandServer::static_mutex);
-
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
 	async_write.start();
 	LOG_EV(this, "\tStart async write event\n");
@@ -185,7 +181,10 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 	io_write.set(sock, ev::WRITE);
 	LOG_EV(this, "\tSetup write event (sock=%d)\n", sock);
 
-	LOG_OBJ(this, "CREATED CLIENT! (%d clients)\n", total_clients);
+	pthread_mutex_lock(&XapiandServer::static_mutex);
+	XapiandServer::total_clients++;
+	LOG_OBJ(this, "CREATED CLIENT! (%d clients)\n", XapiandServer::total_clients);
+	pthread_mutex_unlock(&XapiandServer::static_mutex);
 }
 
 
@@ -193,18 +192,18 @@ BaseClient::~BaseClient()
 {
 	destroy();
 
-	pthread_mutex_lock(&XapiandServer::static_mutex);
-	int total_clients = --XapiandServer::total_clients;
-	pthread_mutex_unlock(&XapiandServer::static_mutex);
-
 	pthread_mutex_destroy(&qmtx);
 	pthread_mutexattr_destroy(&qmtx_attr);
 
-	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", total_clients);
-	assert(total_clients >= 0);
-
 	delete []read_buffer;
 	delete compressor;
+
+	pthread_mutex_lock(&XapiandServer::static_mutex);
+	XapiandServer::total_clients--;
+	assert(XapiandServer::total_clients >= 0);
+
+	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", XapiandServer::total_clients);
+	pthread_mutex_unlock(&XapiandServer::static_mutex);
 }
 
 
