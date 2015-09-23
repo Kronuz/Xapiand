@@ -227,7 +227,11 @@ void DiscoveryServer::io_accept(ev::io &watcher, int revents)
 						if (server->manager()->get_region() == server->manager()->get_region(index_path)) {
 							LOG(this, "The DB is in the same region that this cluster!\n");
 							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
-							server->manager()->endp_r.add_index_endpoint(index);
+							server->manager()->endp_r.add_index_endpoint(index, false);
+						} else if (server->manager()->endp_r.exists(index_path)) {
+							LOG(this, "The DB is in the LRU of this node!\n");
+							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
+							server->manager()->endp_r.add_index_endpoint(index, true);
 						}
 					}
 					break;

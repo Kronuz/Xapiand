@@ -142,6 +142,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 bool EndpointList::_get_endpoints(std::vector<Endpoint> &Endv, int n_endps) {
 	int c;
 	bool find_endpoints = false;
+	Endv.clear();
 	std::set<Endpoint, Endpoint::compare>::const_iterator it_endp(endp_set.cbegin());
 	for (c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
 		if (c == n_endps) {
@@ -174,10 +175,12 @@ void EndpointList::show_list()
 }
 
 
-void EndpointResolver::add_index_endpoint(const Endpoint &index)
+void EndpointResolver::add_index_endpoint(const Endpoint &index, bool frozen)
 {
 	pthread_mutex_lock(&re_qmtx);
+	get_action = frozen ? leave : renew;
 	EndpointList &enl = (*this)[index.path];
+	get_action = renew;
 	pthread_mutex_unlock(&re_qmtx);
 
 	enl.add_endpoint(index);
