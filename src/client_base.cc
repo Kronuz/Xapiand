@@ -148,7 +148,7 @@ public:
 };
 
 
-BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
+BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double, double)
 	: Worker(server_, loop_),
 	  io_read(*loop),
 	  io_write(*loop),
@@ -156,13 +156,12 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 	  closed(false),
 	  sock(sock_),
 	  written(0),
+	  compressor(NULL),
+	  read_buffer(new char[BUF_SIZE]),
+	  mode(MODE_READ_BUF),
 	  database_pool(database_pool_),
 	  thread_pool(thread_pool_),
-	  write_queue(WRITE_QUEUE_SIZE),
-	  mode(MODE_READ_BUF),
-	  read_buffer(new char[BUF_SIZE]),
-	  compressor(NULL)
-
+	  write_queue(WRITE_QUEUE_SIZE)
 {
 	inc_ref();
 
@@ -477,7 +476,7 @@ void BaseClient::read_cb(int fd)
 }
 
 
-void BaseClient::async_write_cb(ev::async &watcher, int revents)
+void BaseClient::async_write_cb(ev::async &, int)
 {
 	io_update();
 }
@@ -535,7 +534,7 @@ void BaseClient::read_file()
 
 bool BaseClient::send_file(int fd)
 {
-	size_t file_size = ::lseek(fd, 0, SEEK_END);
+	ssize_t file_size = ::lseek(fd, 0, SEEK_END);
 	::lseek(fd, 0, SEEK_SET);
 
 	switch (*TYPE_COMPRESSOR) {

@@ -48,10 +48,10 @@ public:
 	char type;
 
 	Buffer(char type_, const char *bytes, size_t nbytes)
-		: pos(0),
+		: data(new char [nbytes]),
 		  len(nbytes),
-		  type(type_),
-		  data(new char [nbytes])
+		  pos(0),
+		  type(type_)
 	{
 		memcpy(data, bytes, nbytes);
 	}
@@ -103,7 +103,7 @@ protected:
 	char *read_buffer;
 
 	int mode;
-	size_t file_size;
+	ssize_t file_size;
 	size_t block_size;
 
 	DatabasePool *database_pool;

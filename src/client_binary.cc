@@ -127,7 +127,7 @@ void BinaryClient::on_read_file_done()
 	const char *p_end;
 	std::string buffer;
 
-	size_t size = ::read(file_descriptor, buf, sizeof(buf));
+	ssize_t size = ::read(file_descriptor, buf, sizeof(buf));
 	buffer.append(buf, size);
 	p = buffer.data();
 	p_end = p + buffer.size();
@@ -136,9 +136,9 @@ void BinaryClient::on_read_file_done()
 	try {
 		while (p != p_end) {
 			char type_as_char = *p++;
-			size_t len = decode_length(&p, p_end);
+			ssize_t len = decode_length(&p, p_end);
 			size_t pos = p - s;
-			while (p_end - p < len || p_end - p < sizeof(buf) / 2) {
+			while (p_end - p < len || static_cast<size_t>(p_end - p) < sizeof(buf) / 2) {
 				size = ::read(file_descriptor, buf, sizeof(buf));
 				if (!size) break;
 				buffer.append(buf, size);
@@ -201,7 +201,7 @@ void BinaryClient::on_read(const char *buf, size_t received)
 		const char *p_end = p + buffer.size();
 
 		char type = *p++;
-		size_t len = decode_length(&p, p_end, true);
+		ssize_t len = decode_length(&p, p_end, true);
 		if (len == -1) {
 			return;
 		}
@@ -228,7 +228,7 @@ void BinaryClient::on_read(const char *buf, size_t received)
 }
 
 
-char BinaryClient::get_message(double timeout, std::string & result, char required_type)
+char BinaryClient::get_message(double, std::string & result, char)
 {
 	Buffer* msg;
 	if (!messages_queue.pop(msg)) {
@@ -255,7 +255,7 @@ char BinaryClient::get_message(double timeout, std::string & result, char requir
 }
 
 
-void BinaryClient::send_message(char type_as_char, const std::string &message, double end_time) {
+void BinaryClient::send_message(char type_as_char, const std::string &message, double) {
 	std::string buf;
 	buf += type_as_char;
 	LOG_BINARY(this, "send_message: '%s'\n", repr(buf, false).c_str());
@@ -310,7 +310,7 @@ void BinaryClient::release_db(Xapian::Database *db_)
 }
 
 
-void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags)
+void BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool, int)
 {
 	pthread_mutex_lock(&qmtx);
 	endpoints.clear();
@@ -392,7 +392,7 @@ void BinaryClient::repl_apply(replicate_reply_type type, const std::string &mess
 			&BinaryClient::repl_get_changesets,
 		};
 
-		if (static_cast<char>(type) >= sizeof(dispatch) / sizeof(dispatch[0]) || !dispatch[type]) {
+		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0]) || !dispatch[type]) {
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(type);
 			throw Xapian::InvalidArgumentError(errmsg);
@@ -406,7 +406,7 @@ void BinaryClient::repl_apply(replicate_reply_type type, const std::string &mess
 }
 
 
-void BinaryClient::repl_end_of_changes(const std::string & message)
+void BinaryClient::repl_end_of_changes(const std::string &)
 {
 	LOG(this, "BinaryClient::repl_end_of_changes\n");
 
@@ -423,7 +423,7 @@ void BinaryClient::repl_end_of_changes(const std::string & message)
 }
 
 
-void BinaryClient::repl_fail(const std::string & message)
+void BinaryClient::repl_fail(const std::string &)
 {
 	LOG(this, "BinaryClient::repl_fail\n");
 	LOG_ERR(this, "Replication failure!\n");
@@ -498,7 +498,7 @@ void BinaryClient::repl_set_db_filedata(const std::string & message)
 }
 
 
-void BinaryClient::repl_set_db_footer(const std::string & message)
+void BinaryClient::repl_set_db_footer(const std::string &)
 {
 	LOG(this, "BinaryClient::repl_set_db_footer\n");
 	// const char *p = message.data();
@@ -541,12 +541,12 @@ void BinaryClient::repl_changeset(const std::string & message)
 	header += REPL_REPLY_CHANGESET;
 	header += encode_length(message.size());
 
-	if (::write(fd, header.data(), header.size()) != header.size()) {
+	if (::write(fd, header.data(), header.size()) != static_cast<ssize_t>(header.size())) {
 		LOG_ERR(this, "Cannot write to %s (2)\n", path);
 		return;
 	}
 
-	if (::write(fd, message.data(), message.size()) != message.size()) {
+	if (::write(fd, message.data(), message.size()) != static_cast<ssize_t>(message.size())) {
 		LOG_ERR(this, "Cannot write to %s (3)\n", path);
 		return;
 	}
