@@ -348,7 +348,7 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 
 	if (spc.bool_term) throw MSG_Error("A boolean term can not be indexed as text");
 
-	int elements = 1;
+	size_t elements = 1;
 	if (texts->type == cJSON_Array) {
 		elements = cJSON_GetArraySize(texts);
 		cJSON *value = cJSON_GetArrayItem(texts, 0);
@@ -361,8 +361,8 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 	}
 
 	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
-	for (int j = 0; j < elements; j++) {
-		cJSON *text = (texts->type == cJSON_Array) ? cJSON_GetArrayItem(texts, j) : texts;
+	for (size_t j = 0; j < elements; j++) {
+		cJSON *text = (texts->type == cJSON_Array) ? cJSON_GetArrayItem(texts, (int)j) : texts;
 		if (text->type != cJSON_String) throw MSG_Error("Text should be string or array of strings");
 		Xapian::TermGenerator term_generator;
 		term_generator.set_document(doc);
@@ -375,10 +375,10 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 
 		if (spc.positions[getPos(j, spc.positions.size())]) {
 			spc.prefix.empty() ? term_generator.index_text_without_positions(text->valuestring, spc.weight[getPos(j, spc.weight.size())]) : term_generator.index_text_without_positions(text->valuestring, spc.weight[getPos(j, spc.weight.size())], spc.prefix);
-			LOG_DATABASE_WRAP(this, "Text to Index with positions = %s: %s\n", spc.prefix.c_str(), text->valuestring);
+			LOG_DATABASE_WRAP(this, "Text to Index with positions = %s: %s\n", name.c_str(), text->valuestring);
 		} else {
 			spc.prefix.empty() ? term_generator.index_text(text->valuestring, spc.weight[getPos(j, spc.weight.size())]) : term_generator.index_text(text->valuestring, spc.weight[getPos(j, spc.weight.size())], spc.prefix);
-			LOG_DATABASE_WRAP(this, "Text to Index = %s: %s\n", spc.prefix.c_str(), text->valuestring);
+			LOG_DATABASE_WRAP(this, "Text to Index = %s: %s\n", name.c_str(), text->valuestring);
 		}
 	}
 }
@@ -392,7 +392,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 
 	if (!spc.store) return;
 
-	int elements = 1;
+	size_t elements = 1;
 	if (terms->type == cJSON_Array) {
 		elements = cJSON_GetArraySize(terms);
 		cJSON *value = cJSON_GetArrayItem(terms, 0);
@@ -404,8 +404,8 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 			cJSON_ReplaceItemInArray(_type, 1, cJSON_CreateNumber(ARRAY_TYPE));
 	}
 
-	for (int j = 0; j < elements; j++) {
-		cJSON *term = (terms->type == cJSON_Array) ? cJSON_GetArrayItem(terms, j) : terms;
+	for (size_t j = 0; j < elements; j++) {
+		cJSON *term = (terms->type == cJSON_Array) ? cJSON_GetArrayItem(terms, (int)j) : terms;
 		unique_char_ptr _cprint(cJSON_Print(term));
 		std::string term_v(_cprint.get());
 		if (term->type == cJSON_String) {
@@ -460,7 +460,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 
 	if (!spc.store) return;
 
-	int elements = 1;
+	size_t elements = 1;
 	if (values->type == cJSON_Array) {
 		elements = cJSON_GetArraySize(values);
 		cJSON *value = cJSON_GetArrayItem(values, 0);
@@ -473,8 +473,8 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 	}
 
 	StringList s;
-	for (int j = 0; j < elements; j++) {
-		cJSON *value = (values->type == cJSON_Array) ? cJSON_GetArrayItem(values, j) : values;
+	for (size_t j = 0; j < elements; j++) {
+		cJSON *value = (values->type == cJSON_Array) ? cJSON_GetArrayItem(values, (int)j) : values;
 		unique_char_ptr _cprint(cJSON_Print(value));
 		std::string value_v(_cprint.get());
 		if (value->type == cJSON_String) {
@@ -504,7 +504,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 					for ( ; b1.test(idx) == b2.test(idx); idx--) res.set(idx, b1.test(idx));
 					val = res.to_ullong();
 				} else val = it->start;
-				for (int i = 2; i < spc.accuracy.size(); i++) {
+				for (size_t i = 2; i < spc.accuracy.size(); i++) {
 					int pos = START_POS - spc.accuracy[i] * 2;
 					if (idx < pos) {
 						uInt64 vterm = val >> pos;
@@ -999,7 +999,7 @@ Database::search(const query_t &e)
 
 
 Database::search_t
-Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan, bool unique_doc)
+Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan, bool)
 {
 	search_t srch;
 
@@ -1538,8 +1538,8 @@ Database::get_stats_docs(const std::string &document_id)
 
 
 DatabaseQueue::DatabaseQueue()
-	: persistent(false),
-	  is_switch_db(false),
+	: is_switch_db(false),
+	  persistent(false),
 	  count(0),
 	  database_pool(NULL)
 {
@@ -1588,7 +1588,7 @@ DatabaseQueue::inc_count(int max)
 {
 	pthread_mutex_lock(&_mtx);
 
-	if (max == -1 || count < max) {
+	if (max == -1 || count < static_cast<size_t>(max)) {
 		count++;
 
 		pthread_mutex_unlock(&_mtx);

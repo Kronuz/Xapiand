@@ -511,10 +511,10 @@ void insert_inheritable_specifications(cJSON *item, specifications_t &spc_now, c
 		if ((spc = cJSON_GetObjectItem(item, RESERVED_ACC_PREFIX))) {
 			unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
 			if (spc->type == cJSON_Array) {
-				int elements = cJSON_GetArraySize(spc);
+				size_t elements = cJSON_GetArraySize(spc);
 				if (elements != size_acc) throw "Data inconsistency, there must be a prefix for each accuracy";
-				for (int i = 0; i < elements; i++) {
-					cJSON *acc = cJSON_GetArrayItem(spc, i);
+				for (size_t i = 0; i < elements; i++) {
+					cJSON *acc = cJSON_GetArrayItem(spc, (int)i);
 					if (acc->type == cJSON_String) {
 						cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(acc->valuestring));
 						spc_now.acc_prefix.push_back(acc->valuestring);
@@ -887,12 +887,12 @@ std::vector<std::string> split_fields(const std::string &field_name)
 {
 	std::vector<std::string> fields;
 	std::string aux(field_name.c_str());
-	std::string::size_type pos = 0;
+	size_t pos = 0;
 	while (aux.at(pos) == DB_OFFSPRING_UNION[0]) {
 		pos++;
 	}
-	std::string::size_type start = pos;
-	while ((pos = aux.substr(start, aux.size()).find(DB_OFFSPRING_UNION)) != -1) {
+	size_t start = pos;
+	while ((pos = aux.substr(start, aux.size()).find(DB_OFFSPRING_UNION)) != std::string::npos) {
 		std::string token = aux.substr(0, start + pos);
 		fields.push_back(token);
 		aux.assign(aux, start + pos + strlen(DB_OFFSPRING_UNION), aux.size());
@@ -953,42 +953,42 @@ std::string specificationstostr(const specifications_t &spc)
 	std::stringstream str;
 	str << "\n{\n";
 	str << "\t" << RESERVED_POSITION << ": [ ";
-	for (int i = 0; i < spc.position.size(); i++)
+	for (size_t i = 0; i < spc.position.size(); i++)
 		str << spc.position[i] << " ";
 	str << "]\n";
 	str << "\t" << RESERVED_WEIGHT   << ": [ ";
-	for (int i = 0; i < spc.weight.size(); i++)
+	for (size_t i = 0; i < spc.weight.size(); i++)
 		str << spc.weight[i] << " ";
 	str << "]\n";
 	str << "\t" << RESERVED_LANGUAGE << ": [ ";
-	for (int i = 0; i < spc.language.size(); i++)
+	for (size_t i = 0; i < spc.language.size(); i++)
 		str << spc.language[i] << " ";
 	str << "]\n";
 	str << "\t" << RESERVED_ACCURACY << ": [ ";
 	if (spc.sep_types[2] == DATE_TYPE) {
-		for (int i = 0; i < spc.accuracy.size(); i++) {
+		for (size_t i = 0; i < spc.accuracy.size(); i++) {
 			str << str_time[spc.accuracy[i]] << " ";
 		}
 	} else {
-		for (int i = 0; i < spc.accuracy.size(); i++) {
+		for (size_t i = 0; i < spc.accuracy.size(); i++) {
 			str << spc.accuracy[i] << " ";
 		}
 	}
 	str << "]\n";
 	str << "\t" << RESERVED_ACC_PREFIX  << ": [ ";
-	for (int i = 0; i < spc.acc_prefix.size(); i++)
+	for (size_t i = 0; i < spc.acc_prefix.size(); i++)
 		str << spc.acc_prefix[i] << " ";
 	str << "]\n";
 	str << "\t" << RESERVED_ANALYZER    << ": [ ";
-	for (int i = 0; i < spc.analyzer.size(); i++)
+	for (size_t i = 0; i < spc.analyzer.size(); i++)
 		str << str_analizer[spc.analyzer[i]] << " ";
 	str << "]\n";
 	str << "\t" << RESERVED_SPELLING    << ": [ ";
-	for (int i = 0; i < spc.spelling.size(); i++)
+	for (size_t i = 0; i < spc.spelling.size(); i++)
 		str << (spc.spelling[i] ? "true " : "false ");
 	str << "]\n";
 	str << "\t" << RESERVED_POSITIONS   << ": [ ";
-	for (int i = 0; i < spc.positions.size(); i++)
+	for (size_t i = 0; i < spc.positions.size(); i++)
 		str << (spc.positions[i] ? "true " : "false ");
 	str << "]\n";
 	str << "\t" << RESERVED_TYPE        << ": " << str_type(spc.sep_types) << "\n";
