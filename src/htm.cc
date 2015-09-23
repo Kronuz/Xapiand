@@ -113,7 +113,7 @@ HTM::cartesian2name(Cartesian &coord, std::string &name)
 void
 HTM::name2id(const std::string &name, uInt64 &id)
 {
-	int size = (int)name.size();
+	size_t size = name.size();
 
 	if (size < 2) throw MSG_Error("Trixel's name is too short");
 
@@ -121,7 +121,7 @@ HTM::name2id(const std::string &name, uInt64 &id)
 
 	(name.at(0) == 'n') ? id = 3 : (name.at(0) == 's') ? id = 2 : throw MSG_Error("Trixel's name %s is incorrect", name.c_str());
 
-	for (int i = 1; i < size; i++) {
+	for (size_t i = 1; i < size; i++) {
 		if(name.at(i) > '3' || name.at(i) < '0') throw MSG_Error("Trixel's name %s is incorrect", name.c_str());
 		id <<= 2;
 		id |= name.at(i) - '0';
@@ -218,21 +218,21 @@ HTM::testEdgePolygon(const Cartesian &v0, const Cartesian &v1, const Cartesian &
 	end_e[2] = v0;
 
 	// Checking each polygon's side against the 3 triangle edges for intersections.
-	for (int i = 0; i < region.corners.size(); i++) {
-		int j = (i == region.corners.size() - 1) ? 0 : i + 1;
+	for (size_t i = 0; i < region.corners.size(); i++) {
+		size_t j = (i == region.corners.size() - 1) ? 0 : i + 1;
 		Cartesian aux;
 		double d1, d2;
 		double dij = acos(region.corners.at(i) * region.corners.at(j));  // Distance between points i and j.
 
 		// Calculate the intersection with the 3 triangle's edges.
-		for (int k = 0; k < 3; k++) {
+		for (size_t k = 0; k < 3; k++) {
 			aux = coords[k] ^ (region.corners.at(i) ^ region.corners.at(j));
 			aux.normalize();
 			// If the intersection is inside the edge of the convex, its distance to the corners
 			// is smaller than the side of Polygon. This test has to be done for:
 			//     convex's edge and
 			//     triangle's edge.
-			for (int kk = 0; kk < 2; kk++) {
+			for (size_t kk = 0; kk < 2; kk++) {
 				d1 = acos(region.corners.at(i) * aux); // distance to the corner i
 				d2 = acos(region.corners.at(j) * aux); // distance to the corner j
 				// Test with the convex's edge
