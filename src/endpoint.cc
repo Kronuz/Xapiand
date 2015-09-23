@@ -71,9 +71,9 @@ std::string Node::serialise() const
 }
 
 
-size_t Node::unserialise(const char **p, const char *end)
+ssize_t Node::unserialise(const char **p, const char *end)
 {
-	size_t length;
+	ssize_t length;
 	const char *ptr = *p;
 	
 	if ((length = decode_length(&ptr, end, false)) == -1) {
@@ -101,7 +101,7 @@ size_t Node::unserialise(const char **p, const char *end)
 }
 
 
-size_t Node::unserialise(const std::string &s)
+ssize_t Node::unserialise(const std::string &s)
 {
 	const char *ptr = s.data();
 	return unserialise(&ptr, ptr + s.size());
