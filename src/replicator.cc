@@ -23,10 +23,9 @@
 #include "replicator.h"
 
 
-XapiandReplicator::XapiandReplicator(XapiandManager *manager_, ev::loop_ref *loop_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
+XapiandReplicator::XapiandReplicator(XapiandManager *manager_, ev::loop_ref *loop_, DatabasePool *database_pool_)
 	: Worker(manager_, loop_),
-	  database_pool(database_pool_),
-	  thread_pool(thread_pool_)
+	  database_pool(database_pool_)
 {
 }
 

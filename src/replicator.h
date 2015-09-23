@@ -35,7 +35,6 @@
 class XapiandReplicator : public Task, public Worker
 {
 	DatabasePool *database_pool;
-	ThreadPool *thread_pool;
 
 	void run();
 	void shutdown();
