@@ -57,7 +57,7 @@ class lru_map {
 	typedef typename lru_map_t::iterator map_iterator_t;
 
 protected:
-	enum dropping_action {
+	enum lru_action {
 		drop,
 		leave,
 		renew
@@ -67,11 +67,11 @@ protected:
 	lru_map_t _items_map;
 	ssize_t _max_size;
 
-	dropping_action on_drop(T &) {
+	virtual lru_action on_drop(T &) {
 		return drop;
 	}
 
-	virtual dropping_action on_get(T &) {
+	virtual lru_action on_get(T &) {
 		return renew;
 	}
 

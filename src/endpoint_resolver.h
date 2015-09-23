@@ -71,9 +71,9 @@ class EndpointResolver : public lru_map<std::string, EndpointList> {
 	pthread_mutex_t re_qmtx;
 	pthread_mutexattr_t re_qmtx_attr;
 
-	dropping_action get_action;
+	lru_action get_action;
 
-	dropping_action on_get(EndpointList &) {
+	lru_action on_get(EndpointList &) {
 		return get_action;
 	}
 

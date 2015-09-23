@@ -146,7 +146,7 @@ public:
 
 class DatabasesLRU : public lru_map<size_t, DatabaseQueue> {
 private:
-	dropping_action on_drop(DatabaseQueue & val) {
+	lru_action on_drop(DatabaseQueue & val) {
 		return (val.persistent || val.size() < val.count || val.is_switch_db) ? renew : drop;
 	}
 
