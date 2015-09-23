@@ -35,7 +35,7 @@ bool io_write(int fd, const char *buf, size_t size)
 			}
 			return false;
 		}
-		if (written == size) break;
+		if (static_cast<size_t>(written) == size) break;
 		size -= written;
 		buf += written;
 	}
