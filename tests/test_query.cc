@@ -297,7 +297,7 @@ int make_search(const test_query_t _tests[], int len)
 	query.is_nearest = false;
 	query.sort.push_back(RESERVED_ID); // All the result are sort by its id.
 
-	for (size_t i = 0; i < len; ++i) {
+	for (int i = 0; i < len; ++i) {
 		test_query_t p = _tests[i];
 		query.query.clear();
 		query.terms.clear();
@@ -379,7 +379,6 @@ int make_search(const test_query_t _tests[], int len)
 	// Delete de database and release memory.
 	delete_files(name_database);
 	delete database;
-	delete queue;
 
 	return cont;
 }
