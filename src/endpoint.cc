@@ -61,8 +61,9 @@ Endpoint::Endpoint()
 
 
 Endpoint::Endpoint(const std::string &uri_, const Node *node_, long long mastery_level_, std::string node_name_)
-	: mastery_level(mastery_level_),
-	  node_name(node_name_)
+	: node_name(node_name_),
+	  mastery_level(mastery_level_),
+	  available(true)
 {
 	std::string uri(uri_);
 	char actualpath[PATH_MAX + 1];

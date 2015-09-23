@@ -42,8 +42,8 @@ struct Node {
 	time_t touched;
 
 	std::string serialise();
-	size_t unserialise(const char **p, const char *end);
-	size_t unserialise(const std::string &s);
+	ssize_t unserialise(const char **p, const char *end);
+	ssize_t unserialise(const std::string &s);
 
 	std::string host() const {
 		char ip[INET_ADDRSTRLEN];
@@ -107,6 +107,9 @@ public:
 	int port;
 	std::string user, password, host, path, search, node_name;
 	long long mastery_level;
+
+	// If do not receive heartbeat from this endpoint, this flag is set in false.
+	bool available;
 
 	Endpoint();
 	Endpoint(const std::string &path_, const Node *	node_=NULL, long long mastery_level_=-1, std::string node_name="");
