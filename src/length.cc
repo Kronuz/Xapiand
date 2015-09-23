@@ -44,7 +44,7 @@ serialise_length(size_t len)
 	return result;
 }
 
-size_t
+ssize_t
 unserialise_length(const char **p, const char *end, bool check_remaining)
 {
 	const char *pos = *p;
@@ -81,9 +81,9 @@ serialise_string(const std::string &input) {
 }
 
 
-size_t
+ssize_t
 unserialise_string(std::string &output, const char **p, const char *end) {
-	size_t length = decode_length(p, end, true);
+	ssize_t length = decode_length(p, end, true);
 	if (length != -1) {
 		output.append(std::string(*p, length));
 		*p += length;

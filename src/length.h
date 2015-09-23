@@ -45,12 +45,12 @@ std::string serialise_length(size_t len);
  *
  *  @return	The decoded length.
  */
-size_t unserialise_length(const char **p, const char *end, bool check_remaining=false);
+ssize_t unserialise_length(const char **p, const char *end, bool check_remaining=false);
 
 
 std::string serialise_string(const std::string &input);
 
-size_t unserialise_string(std::string &output, const char **p, const char *end);
+ssize_t unserialise_string(std::string &output, const char **p, const char *end);
 
 
 #define encode_length serialise_length
