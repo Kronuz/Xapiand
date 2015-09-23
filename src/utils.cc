@@ -485,8 +485,8 @@ std::string urldecode(const char *src, size_t size)
 		if (*src == '%')
 		{
 			char dec1, dec2;
-			if (-1 != (dec1 = HEX2DEC[*(src + 1)])
-				&& -1 != (dec2 = HEX2DEC[*(src + 2)]))
+			if (-1 != (dec1 = HEX2DEC[static_cast<int>(*(src + 1))])
+				&& -1 != (dec2 = HEX2DEC[static_cast<int>(*(src + 2))]))
 			{
 				*pEnd++ = (dec1 << 4) + dec2;
 				src += 3;
@@ -527,39 +527,39 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par)
 		}
 		switch (cn) {
 			case '=' :
-			v0 = n1;
+				v0 = n1;
 			case '\0':
 			case '&' :
 			case ';' :
-			if(strlen(name) == n1 - n0 && strncmp(n0, name, n1 - n0) == 0) {
-				if (v0) {
-					const char *v1 = v0 + 1;
-					while (1) {
-						char cv = *v1;
-						if (v1 == nf) {
-							cv = '\0';
+				if (strlen(name) == static_cast<size_t>(n1 - n0) && strncmp(n0, name, n1 - n0) == 0) {
+					if (v0) {
+						const char *v1 = v0 + 1;
+						while (1) {
+							char cv = *v1;
+							if (v1 == nf) {
+								cv = '\0';
+							}
+							switch(cv) {
+								case '\0':
+								case '&' :
+								case ';' :
+								par->offset = v0 + 1;
+								par->length = v1 - v0 - 1;
+								return 0;
+							}
+							v1++;
 						}
-						switch(cv) {
-							case '\0':
-							case '&' :
-							case ';' :
-							par->offset = v0 + 1;
-							par->length = v1 - v0 - 1;
-							return 0;
-						}
-						v1++;
+					} else {
+						par->offset = n1 + 1;
+						par->length = 0;
+						return 0;
 					}
-				} else {
-					par->offset = n1 + 1;
-					par->length = 0;
-					return 0;
+				} else if (!cn) {
+					return -1;
+				} else if (cn != '=') {
+					n0 = n1 + 1;
+					v0 = NULL;
 				}
-			} else if (!cn) {
-				return -1;
-			} else if (cn != '=') {
-				n0 = n1 + 1;
-				v0 = NULL;
-			}
 		}
 		n1++;
 	}
