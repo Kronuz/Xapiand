@@ -67,8 +67,12 @@ protected:
 	lru_map_t _items_map;
 	size_t _max_size;
 
-	dropping_action on_drop(T & val) {
+	virtual dropping_action on_drop(T & val) {
 		return drop;
+	}
+
+	virtual dropping_action on_get(T & val) {
+		return renew;
 	}
 
 public:
@@ -121,8 +125,17 @@ public:
 		if (it == _items_map.end()) {
 			throw std::range_error("There is no such key in cache");
 		} else {
-			_items_list.splice(_items_list.begin(), _items_list, it->second);
 			T *ptr = it->second->second.get();
+			switch (on_get(*ptr)) {
+				case leave:
+					break;
+				case drop:
+					break;
+				default:
+				case renew:
+					_items_list.splice(_items_list.begin(), _items_list, it->second);
+					break;
+			}
 			return *ptr;
 		}
 	}
