@@ -22,6 +22,7 @@
 
 #include "endpoint_resolver.h"
 #include "client_http.h"
+#include "server_discovery.h"
 
 #include <unistd.h>
 
@@ -152,27 +153,16 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 }
 
 
-<<<<<<< HEAD
-bool EndpointList::_get_endpoints(std::vector<Endpoint> &Endv, size_t n_endps) {
-||||||| merged common ancestors
-bool EndpointList::_get_endpoints(std::vector<Endpoint> &Endv, int n_endps) {
-	int c;
-=======
-bool EndpointList::get_endpoints(XapiandManager *manager, int n_endps, std::vector<Endpoint> *endpv, const Node **last_node)
+bool EndpointList::get_endpoints(XapiandManager *manager, size_t n_endps, std::vector<Endpoint> *endpv, const Node **last_node)
 {
 	if (resolved_time != 0) {
 		return false;
 	}
->>>>>>> Added bossy message in case endpoint mastery is known because is already in the lru
+
 	bool find_endpoints = false;
 	if (endpv) endpv->clear();
 	std::set<Endpoint, Endpoint::compare>::const_iterator it_endp(endp_set.cbegin());
-<<<<<<< HEAD
 	for (size_t c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
-||||||| merged common ancestors
-	for (c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
-=======
-	for (int c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
 		try {
 			const Node *node;
 			if (!manager->get_node((*it_endp).node_name, &node)) {
@@ -185,7 +175,6 @@ bool EndpointList::get_endpoints(XapiandManager *manager, int n_endps, std::vect
 		} catch (const std::out_of_range &err) {
 			continue;
 		}
->>>>>>> Added bossy message in case endpoint mastery is known because is already in the lru
 		if (c == n_endps) {
 			find_endpoints = true;
 		}

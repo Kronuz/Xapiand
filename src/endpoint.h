@@ -41,7 +41,7 @@ struct Node {
 	int binary_port;
 	time_t touched;
 
-	std::string serialise(); const;
+	std::string serialise() const;
 	ssize_t unserialise(const char **p, const char *end);
 	ssize_t unserialise(const std::string &s);
 
