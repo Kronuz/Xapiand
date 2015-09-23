@@ -61,7 +61,7 @@ protected:
 		pthread_mutex_unlock(&_mtx);
 	}
 
-	void _break_loop_cb(ev::async &watcher, int revents) {
+	void _break_loop_cb(ev::async &, int) {
 		loop->break_loop();
 	}
 
