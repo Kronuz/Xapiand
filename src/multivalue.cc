@@ -41,11 +41,11 @@ StringList::unserialise(const char ** ptr, const char * end)
 {
 	const char *pos = *ptr;
 	clear();
-	size_t length = decode_length(&pos, end, true);
+	ssize_t length = decode_length(&pos, end, true);
 	if (length == -1 || length != end - pos) {
 		push_back(std::string(pos, end - pos));
 	} else {
-		size_t currlen;
+		ssize_t currlen;
 		while (pos != end) {
 			currlen = decode_length(&pos, end, true);
 			if (currlen == -1) {
@@ -132,7 +132,7 @@ MultiValueCountMatchSpy::unserialise(const std::string & s,
 	const char * end = p + s.size();
 
 	Xapian::valueno new_slot = (Xapian::valueno)decode_length(&p, end, false);
-	if (new_slot == -1) {
+	if (new_slot == Xapian::BAD_VALUENO) {
 		throw Xapian::NetworkError("Decoding error of serialised MultiValueCountMatchSpy");
 	}
 	if (p != end) {
