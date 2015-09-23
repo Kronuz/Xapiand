@@ -120,11 +120,11 @@ GenerateTerms::date(::std::string &result_terms, const ::std::string &start_, co
 			int tm_e[6] = { timeinfo->tm_sec, timeinfo->tm_min, timeinfo->tm_hour, timeinfo->tm_mday, timeinfo->tm_mon, timeinfo->tm_year };
 
 			// Find the accuracy needed.
-			char acc = DB_YEAR2INT;
+			int acc = DB_YEAR2INT;
 			while (acc >= DB_SECOND2INT && (tm_e[acc] - tm_s[acc]) == 0) acc--;
 
 			// Find the upper or equal accuracy.
-			char pos = 0;
+			size_t pos = 0;
 			while (accuracy[pos] < acc) pos++;
 			// If the accuracy needed is in accuracy.
 			if (acc == accuracy[pos]) {
