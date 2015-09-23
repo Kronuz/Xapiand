@@ -65,18 +65,18 @@ protected:
 
 	lru_list_t _items_list;
 	lru_map_t _items_map;
-	size_t _max_size;
+	ssize_t _max_size;
 
-	virtual dropping_action on_drop(T & val) {
+	dropping_action on_drop(T &) {
 		return drop;
 	}
 
-	virtual dropping_action on_get(T & val) {
+	virtual dropping_action on_get(T &) {
 		return renew;
 	}
 
 public:
-	lru_map(size_t max_size=-1) :
+	lru_map(ssize_t max_size=-1) :
 		_max_size(max_size) {
 	}
 
@@ -99,7 +99,7 @@ public:
 
 		if (_max_size != -1) {
 			list_reverse_iterator_t last(_items_list.rbegin());
-			for (size_t i = _items_map.size(); i != 0 && _items_map.size() > _max_size && last != _items_list.rend(); i--) {
+			for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); i--) {
 				list_iterator_t it = --(last++).base();
 				T *ptr = it->second.get();
 				switch (on_drop(*ptr)) {
