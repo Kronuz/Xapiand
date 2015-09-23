@@ -63,9 +63,9 @@ std::string Node::serialise()
 }
 
 
-size_t Node::unserialise(const char **p, const char *end)
+ssize_t Node::unserialise(const char **p, const char *end)
 {
-	size_t length;
+	ssize_t length;
 	const char *ptr = *p;
 
 	if ((length = decode_length(&ptr, end, false)) == -1) {
@@ -93,7 +93,7 @@ size_t Node::unserialise(const char **p, const char *end)
 }
 
 
-size_t Node::unserialise(const std::string &s)
+ssize_t Node::unserialise(const std::string &s)
 {
 	const char *ptr = s.data();
 	return unserialise(&ptr, ptr + s.size());
@@ -102,17 +102,17 @@ size_t Node::unserialise(const std::string &s)
 
 XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	: Worker(NULL, loop_),
-	  state(STATE_RESET),
 	  discovery_heartbeat(*loop),
+	  discovery_port(o.discovery_port),
 	  database_pool(o.dbpool_size),
+	  thread_pool("W%d", (int)o.threadpool_size),
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  endp_r(o.endpoints_list_size),
-	  thread_pool("W%d", (int)o.threadpool_size),
+	  state(STATE_RESET),
 	  cluster_name(o.cluster_name),
-	  node_name(o.node_name),
-	  discovery_port(o.discovery_port)
+	  node_name(o.node_name)
 {
 	pthread_mutexattr_init(&qmtx_attr);
 	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
@@ -232,7 +232,7 @@ XapiandManager::set_node_name(const std::string &node_name_)
 
 		int fd = open("nodename", O_WRONLY | O_CREAT, 0644);
 		if (fd >= 0) {
-			if (write(fd, node_name.c_str(), node_name.size()) != node_name.size()) {
+			if (write(fd, node_name.c_str(), node_name.size()) != static_cast<ssize_t>(node_name.size())) {
 				assert(false);
 			}
 			close(fd);
@@ -511,7 +511,7 @@ bool XapiandManager::trigger_replication(const Endpoint &src_endpoint, const End
 #endif /* HAVE_REMOTE_PROTOCOL */
 
 
-void XapiandManager::discovery_heartbeat_cb(ev::timer &watcher, int revents)
+void XapiandManager::discovery_heartbeat_cb(ev::timer &, int)
 {
 	double next_heartbeat;
 	XapiandServer *server;
@@ -590,7 +590,7 @@ void XapiandManager::discovery(discovery_type type, const std::string &content)
 }
 
 
-void XapiandManager::shutdown_cb(ev::async &watcher, int revents)
+void XapiandManager::shutdown_cb(ev::async &, int)
 {
 	sig_shutdown_handler(0);
 }
@@ -645,7 +645,7 @@ void XapiandManager::run(int num_servers, int num_replicators)
 
 	ThreadPool replicator_pool("R%d", num_replicators);
 	for (int i = 0; i < num_replicators; i++) {
-		XapiandReplicator *replicator = new XapiandReplicator(this, NULL, &database_pool, &thread_pool);
+		XapiandReplicator *replicator = new XapiandReplicator(this, NULL, &database_pool);
 		replicator_pool.addTask(replicator);
 	}
 
