@@ -170,7 +170,7 @@ int make_search(const test_geo_t _tests[], int len)
 	query.is_fuzzy = false;
 	query.is_nearest = false;
 
-	for (size_t i = 0; i < len; ++i) {
+	for (int i = 0; i < len; ++i) {
 		test_geo_t p = _tests[i];
 		query.query.clear();
 		query.query.push_back(p.query);
@@ -201,10 +201,9 @@ int make_search(const test_geo_t _tests[], int len)
 		}
 	}
 
-	// Delete de database and release memory.
+	// Delete the databases and release memory.
 	delete_files(name_database);
 	delete database;
-	delete queue;
 
 	return cont;
 }
