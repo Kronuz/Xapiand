@@ -68,7 +68,7 @@ void XapiandServer::run()
 }
 
 
-void XapiandServer::async_setup_node_cb(ev::async &watcher, int revents)
+void XapiandServer::async_setup_node_cb(ev::async &, int)
 {
 	manager()->setup_node(this);
 
