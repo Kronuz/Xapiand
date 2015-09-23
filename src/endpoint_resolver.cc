@@ -68,7 +68,7 @@ void EndpointList::add_endpoint(const Endpoint &element) {
 }
 
 
-bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, int n_endps, double timeout) {
+bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, size_t n_endps, double timeout) {
 	int initial_status, retval;
 	timespec_t elapsed;
 
@@ -139,12 +139,11 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 }
 
 
-bool EndpointList::_get_endpoints(std::vector<Endpoint> &Endv, int n_endps) {
-	int c;
+bool EndpointList::_get_endpoints(std::vector<Endpoint> &Endv, size_t n_endps) {
 	bool find_endpoints = false;
 	Endv.clear();
 	std::set<Endpoint, Endpoint::compare>::const_iterator it_endp(endp_set.cbegin());
-	for (c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
+	for (size_t c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
 		if (c == n_endps) {
 			find_endpoints = true;
 		}
@@ -187,7 +186,7 @@ void EndpointResolver::add_index_endpoint(const Endpoint &index, bool frozen)
 }
 
 
-bool EndpointResolver::resolve_index_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, int n_endps, double timeout)
+bool EndpointResolver::resolve_index_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, size_t n_endps, double timeout)
 {
 	pthread_mutex_lock(&re_qmtx);
 	EndpointList &enl = (*this)[path];

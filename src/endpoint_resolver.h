@@ -57,9 +57,9 @@ class EndpointList {
 public:
 	EndpointList();
 	~EndpointList();
-	bool resolve_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, int n_endps, double timeout);
+	bool resolve_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, size_t n_endps, double timeout);
 	void add_endpoint(const Endpoint &element);
-	bool _get_endpoints(std::vector<Endpoint> &Endv, int n_endps);
+	bool _get_endpoints(std::vector<Endpoint> &Endv, size_t n_endps);
 	size_t size();
 	bool empty();
 	void show_list();
@@ -73,13 +73,13 @@ class EndpointResolver : public lru_map<std::string, EndpointList> {
 
 	dropping_action get_action;
 
-	dropping_action on_get(EndpointList & val) {
+	dropping_action on_get(EndpointList &) {
 		return get_action;
 	}
 
 public:
 	void add_index_endpoint(const Endpoint &index, bool frozen);
-	bool resolve_index_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, int n_endps=1, double timeout=1.0);
+	bool resolve_index_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, size_t n_endps=1, double timeout=1.0);
 
 	EndpointResolver(size_t max_size)
 		: lru_map<std::string, EndpointList>(max_size),
