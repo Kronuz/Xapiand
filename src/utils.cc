@@ -125,7 +125,7 @@ std::string repr(const std::string &string, bool friendly)
 }
 
 
-void log(const char *file, int line, void *obj, const char *format, ...)
+void log(const char *file, int line, void *, const char *format, ...)
 {
 	pthread_mutex_lock(&qmtx);
 
@@ -146,7 +146,7 @@ void log(const char *file, int line, void *obj, const char *format, ...)
 }
 
 
-void check_tcp_backlog(int tcp_backlog)
+void check_tcp_backlog(int)
 {
 #if defined(NET_CORE_SOMAXCONN)
 	int name[3] = {CTL_NET, NET_CORE, NET_CORE_SOMAXCONN};
