@@ -1433,6 +1433,22 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 				case CMD_UPLOAD:
 					break;
 			}
+		} else {
+			//Especial case (search ID and empty query in the url)
+			if (cmd == CMD_ID) {
+				if (isRange(command)) {
+					e.offset = 0;
+					e.check_at_least = 0;
+					e.limit = 10;
+					e.sort.push_back(RESERVED_ID);
+					}
+				else {
+					e.limit = 1;
+					e.unique_doc = true;
+					e.offset = 0;
+					e.check_at_least = 0;
+				}
+			}
 		}
 	} else {
 		LOG_CONN_WIRE(this,"Parsing not done\n");
