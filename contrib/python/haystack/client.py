@@ -51,28 +51,29 @@ class Xapiand(object):
         self.has_3arg = {'search': False, 'facets': False, 'stats': False, 'head': False, 'delete': False, 'index': True, 'patch': True}
         self.has_id = {'search': False, 'facets': False, 'stats': False, 'delete': True, 'head': True, 'index': True, 'patch': True}
 
-    def build_url(self, action_request, query, endpoint, ip, body, _id, nodename):
+    def build_url(self, action_request, query, endpoint, ip, body, document_id, nodename):
         if type(endpoint) is list:
             endpoint = ','.join(endpoint)
 
         if ':' not in ip:
-            ip = ip + ':' + self.port
+            ip = '%s:%s' % (ip, self.port)
 
-        if self.has_id[action_request] or (action_request == 'search' and _id is not None):
+        if self.has_id[action_request] or (action_request == 'search' and document_id is not None):
             if nodename:
-                url = 'http://' + ip + '/' + endpoint + '@' + nodename + '/' + _id
+                url = 'http://%s/%s@%s/%s' % (ip, endpoint, nodename, document_id)
             else:
-                url = 'http://' + ip + '/' + endpoint + '/' + _id
-            if query:
-                url += '/?' + query
+                url = 'http://%s/%s/%s' % (ip, endpoint, document_id)
         else:
             if nodename:
-                url = 'http://' + ip + '/' + endpoint + '@' + nodename + '/_' + action_request + '/?' + query
+                url = 'http://%s/%s@%s/_%s/' % (ip, endpoint, nodename, action_request)
             else:
                 url = 'http://' + ip + '/' + endpoint + '/_' + action_request + '/?' + query
+                url = 'http://%s/%s/_%s/' % (ip, endpoint, action_request)
+        if query:
+            url += '/?%s' % query
         return url
 
-    def send_request(self, action_request, endpoint, query=None, ip='127.0.0.1', body=None, _id=None, nodename=None, time_out=None):
+    def send_request(self, action_request, endpoint, query=None, ip='127.0.0.1', body=None, document_id=None, nodename=None, time_out=None):
 
         """
         :arg action_request: Perform  index, delete, serch, facets, stats, patch, head actions per request
@@ -80,12 +81,12 @@ class Xapiand(object):
         :arg endpoint: index path
         :arg ip: address to connect to xapiand
         :arg body: File or dictionary with the body of the request
-        :arg _id: Document ID
+        :arg document_id: Document ID
         :arg nodename: Node name, if empty is assigned randomly
         """
 
         response = {}
-        url = self.build_url(action_request, query, endpoint, ip, body, _id, nodename)
+        url = self.build_url(action_request, query, endpoint, ip, body, document_id, nodename)
         try:
             if self.has_3arg[action_request]:
                 if isinstance(body, dict):
