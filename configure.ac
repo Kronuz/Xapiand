@@ -31,14 +31,14 @@ AC_TYPE_SSIZE_T
 AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])  # This needs autoconf-archive installed
 AX_CXX_HAVE_SSTREAM
 
-AX_PROG_CCACHE_CC
+# AX_PROG_CCACHE_CC
 AX_PROG_CCACHE_CXX
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h sys/inotify.h sys/epoll.h sys/event.h port.h poll.h sys/select.h sys/eventfd.h sys/signalfd.h])
+AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
 
 # Checks for library functions.
-AC_CHECK_FUNCS([getcwd gettimeofday socket inotify_init epoll_ctl kqueue port_create poll select eventfd signalfd])
+AC_CHECK_FUNCS([getcwd gettimeofday socket])
 
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
@@ -192,4 +192,5 @@ AC_CONFIG_FILES([
 	src/Makefile
 	tests/Makefile
 ])
+
 AC_OUTPUT
