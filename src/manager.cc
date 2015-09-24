@@ -486,11 +486,9 @@ void XapiandManager::discovery_heartbeat_cb(ev::timer &, int)
 			} else {
 				local_node.name = node_name;
 			}
-			INFO(this, "Advertising as %s (id: %llu)...\n", local_node.name.c_str(), local_node.id);
-
+			INFO(this, "Advertising as %s (id: %016llX)...\n", local_node.name.c_str(), local_node.id);
 		case STATE_WAITING:
 			discovery(DISCOVERY_HELLO, local_node.serialise());
-
 		default:
 			state--;
 			// LOG(this, "Waiting for responses %d...\n", state);
