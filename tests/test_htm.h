@@ -20,13 +20,13 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef INCLUDED_TEST_HTM_H
-#define INCLUDED_TEST_HTM_H
+#pragma once
 
 #include <stdio.h>
 #include <string.h>
 #include <algorithm>
 #include <unistd.h>
+
 #include "../src/utils.h"
 #include "../src/htm.h"
 
@@ -47,6 +47,3 @@ int test_cartesian_transforms();
 int test_hullConvex();
 int test_HTM_chull();
 int test_HTM_circle();
-
-
-#endif /* INCLUDED_TEST_HTM_H */

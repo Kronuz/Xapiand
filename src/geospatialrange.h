@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_GEOSPATIALRANGE_H
-#define XAPIAND_INCLUDED_GEOSPATIALRANGE_H
+#pragma once
 
 #include <xapian.h>
 
@@ -97,6 +96,3 @@ class GeoSpatialRange : public Xapian::ValuePostingSource {
 		// Call this function for create a new Query based in ranges.
 		static Xapian::Query getQuery(Xapian::valueno slot_, const std::vector<range_t> &ranges_, const CartesianList &centroids_);
 };
-
-
-#endif /* XAPIAND_INCLUDED_GEOSPATIALRANGE_H */

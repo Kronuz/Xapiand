@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_GENERATE_TERMS_H
-#define XAPIAND_INCLUDED_GENERATE_TERMS_H
+#pragma once
 
 #include "config.h"
 #include "htm.h"
@@ -44,6 +43,3 @@ namespace GenerateTerms {
 	::std::string second(int tm_s[], int tm_e[], const ::std::string &prefix);
 	void geo(::std::string &result_terms, const ::std::vector<range_t> &ranges, const ::std::vector<double> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes);
 };
-
-
-#endif /* XAPIAND_INCLUDED_GENERATE_TERMS_H */

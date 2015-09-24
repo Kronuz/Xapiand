@@ -20,10 +20,9 @@
  * IN THE SOFTWARE.
  */
 
-#include "config.h"
+#pragma once
 
-#ifndef XAPIAND_INCLUDED_XAPIAND_H
-#define XAPIAND_INCLUDED_XAPIAND_H
+#include "config.h"
 
 #define XAPIAND_CLUSTER_NAME         "Xapiand"
 #define XAPIAND_DISCOVERY_GROUP      "224.2.2.88"   /* Gossip group */
@@ -70,5 +69,3 @@
 	#define __LITTLE_ENDIAN LITTLE_ENDIAN
 	#define __PDP_ENDIAN    PDP_ENDIAN
 #endif
-
-#endif /* XAPIAND_INCLUDED_XAPIAND_H */

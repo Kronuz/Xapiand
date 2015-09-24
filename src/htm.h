@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_HTM_H
-#define XAPIAND_INCLUDED_HTM_H
+#pragma once
 
 #include <string.h>
 #include <stdlib.h>
@@ -155,6 +154,3 @@ class HTM {
 		static bool compareRanges(const range_t &r1, const range_t &r2);
 		static Cartesian getCentroid(const std::vector<std::string> &trixel_names);
 };
-
-
-#endif /* XAPIAND_INCLUDED_HTM_H */

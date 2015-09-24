@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_DATABASE_H
-#define XAPIAND_INCLUDED_DATABASE_H
+#pragma once
 
 #include "endpoint.h"
 #include "queue.h"
@@ -207,6 +206,3 @@ class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 
 		virtual bool operator() (const std::string &term) const;
 };
-
-
-#endif /* XAPIAND_INCLUDED_DATABASE_H */

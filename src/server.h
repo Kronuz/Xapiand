@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_SERVER_H
-#define XAPIAND_INCLUDED_SERVER_H
+#pragma once
 
 #include "manager.h"
 #include "server_base.h"
@@ -67,6 +66,3 @@ protected:
 	friend class BaseClient;
 	friend class XapiandManager;
 };
-
-
-#endif /* XAPIAND_INCLUDED_SERVER_H */

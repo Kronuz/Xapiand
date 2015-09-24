@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef INCLUDED_TEST_SERIALISE_H
-#define INCLUDED_TEST_SERIALISE_H
+#pragma once
 
 #include "../src/config.h"
 #include "../src/htm.h"
@@ -62,6 +61,3 @@ int test_unserialise_cartesian();
 int test_serialise_trixel_id();
 // Testing unserialise HTM trixel's id.
 int test_unserialise_trixel_id();
-
-
-#endif /* INCLUDED_TEST_SERIALISE_H */

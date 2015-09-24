@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_MULTIVALUERANGE_H
-#define XAPIAND_INCLUDED_MULTIVALUERANGE_H
+#pragma once
 
 #include <xapian.h>
 
@@ -124,6 +123,3 @@ class MultipleValueLE : public Xapian::ValuePostingSource {
 		void init(const Xapian::Database &db_);
 		std::string get_description() const;
 };
-
-
-#endif /* XAPIAND_INCLUDED_MULTIVALUERANGE_H */

@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_WKT_PARSER_H
-#define XAPIAND_INCLUDED_WKT_PARSER_H
+#pragma once
 
 #include "utils.h"
 #include "geospatialrange.h"
@@ -70,6 +69,3 @@ class EWKT_Parser {
 		static void getIndexTerms(const std::string &field_value, bool partials, double error, std::vector<std::string> &terms);
 		static void getSearchTerms(const std::string &field_value, bool partials, double error, std::vector<std::string> &terms);
 };
-
-
-#endif /* XAPIAND_INCLUDED_WKT_PARSER_H */

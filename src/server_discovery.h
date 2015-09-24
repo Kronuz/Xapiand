@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_SERVER_DISCOVERY_H
-#define XAPIAND_INCLUDED_SERVER_DISCOVERY_H
+#pragma once
 
 #include "server_base.h"
 
@@ -38,6 +37,3 @@ public:
 
 	void io_accept(ev::io &watcher, int revents);
 };
-
-
-#endif /* XAPIAND_INCLUDED_SERVER_DISCOVERY_H */

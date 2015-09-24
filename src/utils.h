@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_UTILS_H
-#define XAPIAND_INCLUDED_UTILS_H
+#pragma once
 
 #include "xapiand.h"
 #include "md5.h"
@@ -263,5 +262,3 @@ unsigned int levenshtein_distance(const std::string &str1, const std::string &st
 #define LOG_BINARY_PROTO(...)
 
 #define LOG_DATABASE_WRAP(...) log(__FILE__, __LINE__, __VA_ARGS__)
-
-#endif /* XAPIAND_INCLUDED_UTILS_H */

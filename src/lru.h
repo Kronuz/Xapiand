@@ -29,8 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef XAPIAND_INCLUDED_LRU_H
-#define	XAPIAND_INCLUDED_LRU_H
+#pragma once
 
 #include <cstddef>
 #include <stdexcept>
@@ -157,5 +156,3 @@ public:
 		return (_max_size == -1) ? _items_map.max_size() : _max_size;
 	}
 };
-
-#endif	/* XAPIAND_INCLUDED_LRU_H */

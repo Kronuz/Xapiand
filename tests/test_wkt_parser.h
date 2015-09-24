@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef INCLUDED_TEST_WKT_PARSER_H
-#define INCLUDED_TEST_WKT_PARSER_H
+#pragma once
 
 #include <stdio.h>
 #include <string.h>
@@ -33,6 +32,3 @@
 
 int test_wkt_parser();
 int test_wkt_speed();
-
-
-#endif /* INCLUDED_TEST_WKT_PARSER_H */

@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_MULTIVALUE_H
-#define XAPIAND_INCLUDED_MULTIVALUE_H
+#pragma once
 
 #include <xapian.h>
 
@@ -73,6 +72,3 @@ class MultiValueCountMatchSpy : public Xapian::ValueCountMatchSpy {
 									   const Xapian::Registry & context) const;
 		virtual std::string get_description() const;
 };
-
-
-#endif /* XAPIAND_INCLUDED_MULTIVALUE_H */

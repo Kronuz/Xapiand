@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_SERIALISE_UNSER_H
-#define XAPIAND_INCLUDED_SERIALISE_UNSER_H
+#pragma once
 
 #include "xapiand.h"
 #include "htm.h"
@@ -92,6 +91,3 @@ namespace Unserialise {
 	std::string geo(const std::string &serialise_val);
 	std::string type(const std::string &str);
 };
-
-
-#endif /* XAPIAND_INCLUDED_SERIALISE_UNSER_H */

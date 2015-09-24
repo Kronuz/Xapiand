@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_REPLICATOR_H
-#define XAPIAND_INCLUDED_REPLICATOR_H
+#pragma once
 
 #include "database.h"
 #include "threadpool.h"
@@ -50,5 +49,3 @@ public:
 		return static_cast<XapiandManager *>(_parent);
 	}
 };
-
-#endif /* XAPIAND_INCLUDED_REPLICATOR_H */

@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_QUEUE_H
-#define XAPIAND_INCLUDED_QUEUE_H
+#pragma once
 
 #include "times.h"
 
@@ -293,5 +292,3 @@ public:
 		return items;
 	}
 };
-
-#endif /* XAPIAND_INCLUDED_QUEUE_H */

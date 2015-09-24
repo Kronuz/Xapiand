@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef INCLUDED_TEST_QUERY_H
-#define INCLUDED_TEST_QUERY_H
+#pragma once
 
 #include "./../src/config.h"
 #include <stdio.h>
@@ -45,6 +44,3 @@ int test_query_search();
 int test_terms_search();
 int test_partials_search();
 int test_facets_search();
-
-
-#endif /* INCLUDED_TEST_QUERY_H */

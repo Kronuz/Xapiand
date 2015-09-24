@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_ENDPOINT_H
-#define XAPIAND_INCLUDED_ENDPOINT_H
+#pragma once
 
 #include "xapiand.h"
 #include "utils.h"
@@ -131,6 +130,3 @@ public:
 	size_t hash() const;
 	std::string as_string() const;
 };
-
-#endif /* XAPIAND_INCLUDED_ENDPOINT_H */
-

@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_MULTI_MULTIVALUEKEYMAKER_H
-#define XAPIAND_INCLUDED_MULTI_MULTIVALUEKEYMAKER_H
+#pragma once
 
 #include "serialise.h"
 #include "geospatialrange.h"
@@ -95,6 +94,3 @@ class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
 			}
 		}
 };
-
-
-#endif /* XAPIAND_INCLUDED_MULTI_MULTIVALUEKEYMAKER_H */

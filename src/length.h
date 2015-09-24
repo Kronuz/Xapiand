@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_LENGTH_H
-#define XAPIAND_INCLUDED_LENGTH_H
+#pragma once
 
 #include <string>
 
@@ -55,5 +54,3 @@ ssize_t unserialise_string(std::string &output, const char **p, const char *end)
 
 #define encode_length serialise_length
 #define decode_length unserialise_length
-
-#endif /* XAPIAND_INCLUDED_LENGTH_H */

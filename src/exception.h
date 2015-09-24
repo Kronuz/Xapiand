@@ -20,9 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_EXCEPTION_H
-#define XAPIAND_INCLUDED_EXCEPTION_H
-
+#pragma once
 
 #include <iostream>
 #include <exception>
@@ -47,6 +45,3 @@ class Exception : public std::runtime_error {
 
 		const char* what() const throw();
 };
-
-
-#endif /* XAPIAND_INCLUDED_EXCEPTION_H */

@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_DATETIME_H
-#define XAPIAND_INCLUDED_DATETIME_H
+#pragma once
 
 #include <sys/time.h>
 #include <iostream>
@@ -66,6 +65,3 @@ namespace Datetime {
 	void normalizeMonths(int &year, int &mon);
 	bool isDate(const std::string &date);
 };
-
-
-#endif /* XAPIAND_INCLUDED_DATETIME_H */

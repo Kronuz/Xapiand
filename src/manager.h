@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_MANAGER_H
-#define XAPIAND_INCLUDED_MANAGER_H
+#pragma once
 
 #include "xapiand.h"
 
@@ -169,6 +168,3 @@ public:
 	unique_cJSON get_stats_time(const std::string &time_req);
 	unique_cJSON get_stats_json(pos_time_t first_time, pos_time_t second_time);
 };
-
-
-#endif /* XAPIAND_INCLUDED_MANAGER_H */

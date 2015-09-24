@@ -20,13 +20,11 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_SERVER_BINARY_H
-#define XAPIAND_INCLUDED_SERVER_BINARY_H
+#pragma once
 
 #include "server_base.h"
 
 #ifdef HAVE_REMOTE_PROTOCOL
-
 
 // Binary Server
 class BinaryServer : public BaseServer {
@@ -39,5 +37,3 @@ public:
 
 
 #endif /* HAVE_REMOTE_PROTOCOL */
-
-#endif /* XAPIAND_INCLUDED_SERVER_BINARY_H */

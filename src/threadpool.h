@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_THREADPOOL_H
-#define XAPIAND_INCLUDED_THREADPOOL_H
+#pragma once
 
 #include "xapiand.h"
 
@@ -76,5 +75,3 @@ public:
 	// Return size of the workQueue
 	size_t length();
 };
-
-#endif /* XAPIAND_INCLUDED_THREADPOOL_H */

@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef INCLUDED_TEST_GENERATE_TERMS_H
-#define INCLUDED_TEST_GENERATE_TERMS_H
+#pragma once
 
 #include "../src/htm.h"
 
@@ -46,6 +45,3 @@ typedef struct testG_s {
 int numeric_test();
 int date_test();
 int geo_test();
-
-
-#endif /* INCLUDED_TEST_GENERATE_TERMS_H */

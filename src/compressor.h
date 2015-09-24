@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_LZ4_WRAPPER_H
-#define XAPIAND_INCLUDED_LZ4_WRAPPER_H
+#pragma once
 
 #include <assert.h>
 
@@ -425,5 +424,3 @@ public:
 		return count;
 	}
 };
-
-#endif  /* XAPIAND_INCLUDED_LZ4_WRAPPER_H */

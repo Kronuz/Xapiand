@@ -20,9 +20,6 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAN_INCLUDED_IO_UTILS_H
-#define XAPIAN_INCLUDED_IO_UTILS_H
+#pragma once
 
 bool io_write(int fd, const char *buf, size_t size);
-
-#endif /* defined(XAPIAN_INCLUDED_IO_UTILS_H) */

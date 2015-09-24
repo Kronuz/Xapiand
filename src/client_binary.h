@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_CLIENT_BINARY_H
-#define XAPIAND_INCLUDED_CLIENT_BINARY_H
+#pragma once
 
 #include "xapiand.h"
 
@@ -136,5 +135,3 @@ public:
 };
 
 #endif  /* HAVE_REMOTE_PROTOCOL */
-
-#endif /* XAPIAND_INCLUDED_CLIENT_BINARY_H */

@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_CLIENT_HTTP_H
-#define XAPIAND_INCLUDED_CLIENT_HTTP_H
+#pragma once
 
 #include "xapiand.h"
 
@@ -112,5 +111,3 @@ public:
 
 	void run();
 };
-
-#endif /* XAPIAND_INCLUDED_CLIENT_HTTP_H */

@@ -20,10 +20,10 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_GEOMETRY_H
-#define XAPIAND_INCLUDED_GEOMETRY_H
+#pragma once
 
 #include "cartesian.h"
+
 #include <vector>
 #include <fstream>
 #include <functional>
@@ -93,8 +93,4 @@ class Geometry {
 		static int direction(const Cartesian &a, const Cartesian &b, const Cartesian &c);
 		static double dist(const Cartesian &a, const Cartesian &b);
 		static bool compare(const Cartesian &P0, const Cartesian &a, const Cartesian &b);
-
 };
-
-
-#endif /* XAPIAND_INCLUDED_GEOMETRY_H */

@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAN_INCLUDED_RESOLVER_ENDPOINT_H
-#define XAPIAN_INCLUDED_RESOLVER_ENDPOINT_H
+#pragma once
 
 #include "endpoint.h"
 #include "lru.h"
@@ -102,5 +101,3 @@ public:
 		pthread_mutexattr_destroy(&re_qmtx_attr);
 	}
 };
-
-#endif /* defined(XAPIAN_INCLUDED_RESOLVER_ENDPOINT_H) */

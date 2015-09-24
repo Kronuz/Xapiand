@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_FIELDS_H
-#define XAPIAND_INCLUDED_FIELDS_H
+#pragma once
 
 #include <string.h>
 #include <sstream>
@@ -62,6 +61,3 @@ class GeoFieldProcessor : public Xapian::FieldProcessor {
 		GeoFieldProcessor(const std::string &prefix);
 		Xapian::Query operator()(const std::string &str);
 };
-
-
-#endif /* XAPIAND_INCLUDED_FIELDS_H */

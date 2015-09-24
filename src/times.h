@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_TIME_H
-#define XAPIAND_TIME_H
+#pragma once
 
 #include <sys/time.h>
 
@@ -211,6 +210,3 @@ inline bool operator==(double dt0, timespec_t &ts1) {
 inline bool operator!=(double dt0, timespec_t &ts1) {
 	return timespec_t(dt0) != ts1;
 }
-
-
-#endif /* XAPIAND_TIME_H */

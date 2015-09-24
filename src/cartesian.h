@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_CARTESIAN_H
-#define XAPIAND_INCLUDED_CARTESIAN_H
+#pragma once
 
 #include <stdio.h>
 #include <math.h>
@@ -272,6 +271,3 @@ class Cartesian {
 		void transform2WGS84();
 		void toCartesian(double lat, double lon, double height, LatLongUnits units);
 };
-
-
-#endif /* XAPIAND_INCLUDED_CARTESIAN_H */

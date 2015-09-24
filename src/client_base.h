@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_CLIENT_BASE_H
-#define XAPIAND_INCLUDED_CLIENT_BASE_H
+#pragma once
 
 #include "xapiand.h"
 
@@ -154,5 +153,3 @@ public:
 		return write(buf.c_str(), buf.size());
 	}
 };
-
-#endif  /* XAPIAND_INCLUDED_CLIENT_BASE_H */

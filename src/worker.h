@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_WORKER_H
-#define XAPIAND_INCLUDED_WORKER_H
+#pragma once
 
 
 #include <list>
@@ -103,6 +102,3 @@ public:
 		_break_loop.send();
 	}
 };
-
-
-#endif /* XAPIAND_INCLUDED_WORKER_H */

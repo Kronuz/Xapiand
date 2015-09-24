@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef INCLUDED_TEST_SORT_H
-#define INCLUDED_TEST_SORT_H
+#pragma once
 
 #include <sstream>
 #include <fstream>
@@ -46,6 +45,3 @@ int sort_test_numerical();
 int sort_test_date();
 int sort_test_boolean();
 int sort_test_geo();
-
-
-#endif /* INCLUDED_TEST_SORT_H */

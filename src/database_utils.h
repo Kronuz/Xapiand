@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_DATABASE_UTILS_H
-#define	XAPIAND_INCLUDED_DATABASE_UTILS_H
+#pragma once
 
 #include "serialise.h"
 #include "pcre/pcre.h"
@@ -165,5 +164,3 @@ std::string specificationstostr(const specifications_t &spc);
 // this reserved word to their readable form.
 void readable_schema(cJSON *schema);
 void readable_field(cJSON *field);
-
-#endif	/* XAPIAND_INCLUDED_DATABASE_UTILS_H */

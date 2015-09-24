@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef XAPIAND_INCLUDED_SERVER_BASE_H
-#define XAPIAND_INCLUDED_SERVER_BASE_H
+#pragma once
 
 #include "server.h"
 
@@ -54,6 +53,3 @@ public:
 
 	virtual void io_accept(ev::io &watcher, int revents) = 0;
 };
-
-
-#endif /* XAPIAND_INCLUDED_SERVER_BASE_H */

@@ -20,8 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef GEO_INCLUDED_TEST_H
-#define GEO_INCLUDED_TEST_H
+#pragma once
 
 #include <sstream>
 #include <fstream>
@@ -42,6 +41,3 @@ int create_test_db();
 int make_search(const test_geo_t _tests[], int len);
 int geo_range_test();
 int geo_terms_test();
-
-
-#endif /* GEO_INCLUDED_TEST_H */
