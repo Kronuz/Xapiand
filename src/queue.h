@@ -28,13 +28,7 @@
 #include <cerrno>
 #include <deque>
 #include <list>
-
-#ifdef HAVE_CXX11
-#  include <unordered_map>
-#else
-#  include <map>
-#endif
-
+#include <unordered_map>
 #include <pthread.h>
 
 
@@ -220,11 +214,7 @@ template<class T>
 class QueueSet : public Queue<T, std::list<T> > {
 	typedef Queue<T, std::list<T> > Queue_t;
 	typedef typename std::list<T>::iterator list_iterator_t;
-#ifdef HAVE_CXX11
 	typedef std::unordered_map<T, list_iterator_t> queue_map_t;
-#else
-	typedef std::map<T, list_iterator_t> queue_map_t;
-#endif
 	typedef typename queue_map_t::iterator map_iterator_t;
 
 protected:

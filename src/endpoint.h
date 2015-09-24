@@ -71,13 +71,8 @@ class Endpoint;
 class Endpoints;
 
 
-#ifdef HAVE_CXX11
-#  include <unordered_set>
-   typedef std::unordered_set<Endpoint> endpoints_set_t;
-#else
-#  include <set>
-   typedef std::set<Endpoint> endpoints_set_t;
-#endif
+#include <unordered_set>
+typedef std::unordered_set<Endpoint> endpoints_set_t;
 
 
 inline char *normalize_path(const char * src, char * dst);

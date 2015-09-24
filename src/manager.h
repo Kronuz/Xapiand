@@ -31,14 +31,10 @@
 #include "endpoint_resolver.h"
 
 #include <list>
-#include "ev/ev++.h"
-#include <pthread.h>
-
-#ifdef HAVE_CXX11
 #include <unordered_map>
-#else
-#include <map>
-#endif
+#include <pthread.h>
+#include "ev/ev++.h"
+
 
 #define XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION 1
 #define XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION 0
@@ -90,11 +86,7 @@ enum discovery_type {
 class XapiandServer;
 
 class XapiandManager : public Worker {
-#ifdef HAVE_CXX11
 	typedef std::unordered_map<std::string, Node> nodes_map_t;
-#else
-	typedef std::map<std::string, Node> nodes_map_t;
-#endif
 
 	friend class HttpClient;
 

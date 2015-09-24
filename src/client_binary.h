@@ -31,11 +31,8 @@
 
 #include <xapian.h>
 
-#ifdef HAVE_CXX11
-#  include <unordered_map>
-#else
-#  include <map>
-#endif
+#include <unordered_map>
+
 
 enum replicate_reply_type {
 	REPL_REPLY_END_OF_CHANGES,  // 0 - No more changes to transfer.
@@ -60,11 +57,7 @@ enum binary_state {
 //   A single instance of a non-blocking Xapiand binary protocol handler
 //
 class BinaryClient : public BaseClient, public RemoteProtocol {
-#ifdef HAVE_CXX11
 	typedef std::unordered_map<Xapian::Database *, Database *> databases_map_t;
-#else
-	typedef std::map<Xapian::Database *, Database *> databases_map_t;
-#endif
 
 private:
 	bool running;
