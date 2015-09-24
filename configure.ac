@@ -38,7 +38,7 @@ AX_PROG_CCACHE_CXX
 AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h sys/inotify.h sys/epoll.h sys/event.h port.h poll.h sys/select.h sys/eventfd.h sys/signalfd.h])
 
 # Checks for library functions.
-AC_CHECK_FUNCS([getcwd gettimeofday socket sranddev inotify_init epoll_ctl kqueue port_create poll select eventfd signalfd])
+AC_CHECK_FUNCS([getcwd gettimeofday socket inotify_init epoll_ctl kqueue port_create poll select eventfd signalfd])
 
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
