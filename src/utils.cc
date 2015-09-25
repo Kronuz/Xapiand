@@ -639,7 +639,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 						return state;
 					case STATE_UPL:
 						length = n0 - n1 - 1;
-						if (length == HTTP_UPLOAD_SIZE && strncmp(n1+1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) {
+						if (length == HTTP_UPLOAD_SIZE && strncmp(n1 + 1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) {
 							par->off_upload = n1 + 1;
 							par->len_upload = length;
 							state = length ? STATE_NSP : STATE_ERR;
@@ -732,7 +732,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 						break;
 					case STATE_UPL:
 						length = n0 - n1 - 1;
-						if (length == HTTP_UPLOAD_SIZE && strncmp(n1+1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) {
+						if (length == HTTP_UPLOAD_SIZE && strncmp(n1 + 1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) {
 							par->off_upload = n1 + 1;
 							par->len_upload = length;
 							state = length ? STATE_NSP : STATE_ERR;
