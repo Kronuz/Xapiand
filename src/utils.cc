@@ -51,9 +51,13 @@
 #define STATE_ERR -1
 #define STATE_CM0 0
 #define STATE_CMD 1
-#define STATE_NSP 2
-#define STATE_PTH 3
-#define STATE_HST 4
+#define STATE_UPL 2 /* case _upload */
+#define STATE_NSP 3
+#define STATE_PTH 4
+#define STATE_HST 5
+
+#define HTTP_UPLOAD "_upload"
+#define HTTP_UPLOAD_SIZE 7
 
 pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
 
@@ -581,13 +585,26 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 	} else {
 		state = STATE_NSP;
 		n0 = n1 = n2 = par->offset;
-		nf = par->off_command - 1;
+		if (par->off_upload) {
+			nf = par->off_upload - 1;
+		} else {
+			nf = par->off_command - 1;
+		}
 		direction = 1;
 	}
 
 	while (state != STATE_ERR) {
 		if (!(n1 >= ni && n1 <= nf)) {
-			return -1;
+			/*In case direction is backwards and not find any this [/ , @ :] */
+			if (state == STATE_UPL) {
+				state = STATE_NSP;
+				nf = n0;
+				n0 = n1 = n2 = ni;
+				direction = 1;
+				par->offset = n0;
+			} else {
+				return -1;
+			}
 		}
 
 		char cn = (n1 >= nf) ? '\0' : *n1;
@@ -620,6 +637,23 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 						if (cn) n1++;
 						par->offset = n1;
 						return state;
+					case STATE_UPL:
+						length = n0 - n1 - 1;
+						if (length == HTTP_UPLOAD_SIZE && strncmp(n1+1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) {
+							par->off_upload = n1 + 1;
+							par->len_upload = length;
+							state = length ? STATE_NSP : STATE_ERR;
+							nf = n1;
+							n0 = n1 = n2 = ni;
+							direction = 1;
+							par->offset = n0;
+						} else {
+							state = STATE_NSP;
+							nf = n0;
+							n0 = n1 = n2 = ni;
+							direction = 1;
+							par->offset = n0;
+						}
 				}
 				break;
 
@@ -630,6 +664,13 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 						n0 = n1;
 						break;
 					case STATE_CMD:
+						break;
+					case STATE_UPL:
+						state = STATE_NSP;
+						nf = n0;
+						n0 = n1 = n2 = ni;
+						direction = 1;
+						par->offset = n0;
 						break;
 					case STATE_NSP:
 						length = n1 - n0;
@@ -652,6 +693,13 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 						n0 = n1;
 						break;
 					case STATE_CMD:
+						break;
+					case STATE_UPL:
+						state = STATE_NSP;
+						nf = n0;
+						n0 = n1 = n2 = ni;
+						direction = 1;
+						par->offset = n0;
 						break;
 					case STATE_NSP:
 						length = n1 - n0;
@@ -679,11 +727,26 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 						length = n0 - n1;
 						par->off_command = n1 + 1;
 						par->len_command = length;
-						state = length ? STATE_NSP : STATE_ERR;
-						nf = n1;
-						n0 = n1 = n2 = ni;
-						direction = 1;
-						par->offset = n0;
+						state = length ? STATE_UPL : STATE_ERR;
+						n0 = n1;
+						break;
+					case STATE_UPL:
+						length = n0 - n1 - 1;
+						if (length == HTTP_UPLOAD_SIZE && strncmp(n1+1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) {
+							par->off_upload = n1 + 1;
+							par->len_upload = length;
+							state = length ? STATE_NSP : STATE_ERR;
+							nf = n1;
+							n0 = n1 = n2 = ni;
+							direction = 1;
+							par->offset = n0;
+						} else {
+							state = STATE_NSP;
+							nf = n0;
+							n0 = n1 = n2 = ni;
+							direction = 1;
+							par->offset = n0;
+						}
 						break;
 				}
 				break;

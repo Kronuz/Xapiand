@@ -171,6 +171,8 @@ typedef struct parser_url_path_s {
 	const char *off_namespace;
 	size_t len_command;
 	const char *off_command;
+	size_t len_upload;
+	const char *off_upload;
 } parser_url_path_t;
 
 typedef struct group_s {
