@@ -1159,6 +1159,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 				}
 				LOG_CONN_WIRE(this, "Endpoint: -> %s\n", endpoints.as_string().c_str());
 
+				p.len_host = 0; //Clean the host, so you not stay with the previous host in case doesn't come new one
 				retval = url_path(path_buf.c_str(), path_size, &p);
 			}
 		}
