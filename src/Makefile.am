@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS = -I ../m4
 
 bin_PROGRAMS = xapiand
+
 xapiand_SOURCES = \
 	cartesian.cc \
 	cJSON.c \
