@@ -207,10 +207,8 @@ std::string Endpoint::as_string() const {
 	}
 	ret += host;
 	if (port > 0) {
-		char port_[100];
-		snprintf(port_, sizeof(port_), "%d", port);
 		ret += ":";
-		ret += port_;
+		ret += std::to_string(port);
 	}
 	if (!host.empty() || port > 0) {
 		ret += "/";
