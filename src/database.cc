@@ -128,7 +128,10 @@ Database::reopen()
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
 				} catch (const Xapian::DatabaseOpeningError &err) {
-					if (!(flags & DB_SPAWN)) throw;
+					if (!(flags & DB_SPAWN))  {
+						delete db;
+						throw;
+					}
 					Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
