@@ -25,6 +25,7 @@ AC_LANG(C++)
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE
+
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
@@ -176,6 +177,9 @@ AC_LINK_IFELSE(
   [AC_MSG_WARN(["Xapian's RemoteProtocol is not available!"])])
 CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
+
+
+########################################################################
 
 AC_MSG_CHECKING(["Whether compiler understands -Wall -Wextra"])
 save_CXXFLAGS="$CFLAGS"
