@@ -225,7 +225,7 @@ protected:
 
 	queue_map_t _items_map;
 
-	duplicate_action on_dup(T &) {
+	virtual duplicate_action on_dup(T &) {
 		return renew;
 	}
 
