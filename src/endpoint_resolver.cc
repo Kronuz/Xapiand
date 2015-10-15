@@ -214,9 +214,9 @@ void EndpointList::show_list()
 void EndpointResolver::add_index_endpoint(const Endpoint &index, bool renew, bool wakeup)
 {
 	pthread_mutex_lock(&re_qmtx);
-	get_action = renew ? EndpointResolver::renew : EndpointResolver::leave;
+	action = renew ? lru::GetAction::renew : lru::GetAction::leave;
 	EndpointList &enl = (*this)[index.path];
-	get_action = EndpointResolver::renew;
+	action = lru::GetAction::renew;
 	pthread_mutex_unlock(&re_qmtx);
 
 	enl.add_endpoint(index);

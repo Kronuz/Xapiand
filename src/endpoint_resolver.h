@@ -71,15 +71,19 @@ public:
 
 
 
-class EndpointResolver : public lru_map<std::string, EndpointList> {
+class EndpointResolver : public lru::LRU<std::string, EndpointList> {
 	pthread_mutex_t re_qmtx;
 	pthread_mutexattr_t re_qmtx_attr;
 
-	lru_action get_action;
+	lru::GetAction action;
 
-	lru_action on_get(EndpointList &) {
-		return get_action;
-	}
+	EndpointList& operator[] (const std::string& key) {
+		try {
+			return at_and([this](EndpointList&){ return action; }, key);
+		} catch (std::range_error) {
+			return insert(std::make_pair(key, EndpointList()));
+		}
+	 }
 
 public:
 	void add_index_endpoint(const Endpoint &index, bool renew, bool wakeup);
@@ -87,8 +91,7 @@ public:
 	bool get_master_node(const std::string &index, const Node **node, XapiandManager *manager);
 
 	EndpointResolver(size_t max_size)
-		: lru_map<std::string, EndpointList>(max_size),
-		  get_action(renew)
+		: LRU<std::string, EndpointList>(max_size)
 	{
 		pthread_mutexattr_init(&re_qmtx_attr);
 		pthread_mutexattr_settype(&re_qmtx_attr, PTHREAD_MUTEX_RECURSIVE);

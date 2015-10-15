@@ -143,15 +143,19 @@ public:
 };
 
 
-class DatabasesLRU : public lru_map<size_t, DatabaseQueue> {
-private:
-	lru_action on_drop(DatabaseQueue & val) {
-		return (val.persistent || val.size() < val.count || val.is_switch_db) ? renew : drop;
-	}
+class DatabasesLRU : public lru::LRU<size_t, DatabaseQueue> {
 
 public:
 	DatabasesLRU(size_t max_size) :
-		lru_map(max_size) { }
+		LRU(max_size) { }
+
+	DatabaseQueue& operator[] (const size_t& key) {
+		try {
+			return at(key);
+		} catch (std::range_error) {
+			return insert_and([](DatabaseQueue & val){ return (val.persistent || val.size() < val.count || val.is_switch_db) ? lru::DropAction::renew : lru::DropAction::drop; } ,std::make_pair(key, DatabaseQueue()));
+		}
+	}
 };
 
 
