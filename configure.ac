@@ -29,7 +29,7 @@ AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
-AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])  # This needs autoconf-archive installed
+AX_CXX_COMPILE_STDCXX_14([noext], [mandatory])  # This needs autoconf-archive installed
 AX_CXX_HAVE_SSTREAM
 
 # AX_PROG_CCACHE_CC
