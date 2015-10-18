@@ -679,22 +679,16 @@ Generator::Generator()
 }
 
 
-Generator::Generator(const std::vector<Generator *> & generators_) :
-	generators(generators_)
+Generator::Generator(std::vector<std::unique_ptr<Generator>>&& generators_) :
+	generators(std::move(generators_))
 {
-}
-
-Generator::~Generator() {
-	for (auto g : generators) {
-		delete g;
-	}
 }
 
 
 size_t Generator::combinations()
 {
 	size_t total = 1;
-	for (auto g : generators) {
+	for (auto& g : generators) {
 		total *= g->combinations();
 	}
 	return total;
@@ -704,7 +698,7 @@ size_t Generator::combinations()
 size_t Generator::min()
 {
 	size_t final = 0;
-	for (auto g : generators) {
+	for (auto& g : generators) {
 		final += g->min();
 	}
 	return final;
@@ -714,7 +708,7 @@ size_t Generator::min()
 size_t Generator::max()
 {
 	size_t final = 0;
-	for (auto g : generators) {
+	for (auto& g : generators) {
 		final += g->max();
 	}
 	return final;
@@ -722,16 +716,16 @@ size_t Generator::max()
 
 std::string Generator::toString() {
 	std::string str;
-	for (auto g : generators) {
+	for (auto& g : generators) {
 		str.append(g->toString());
 	}
 	return str;
 }
 
 
-void Generator::add(Generator *g)
+void Generator::add(std::unique_ptr<Generator>&& g)
 {
-	generators.push_back(g);
+	generators.push_back(std::move(g));
 }
 
 
@@ -739,15 +733,15 @@ Random::Random()
 {
 }
 
-Random::Random(const std::vector<Generator *> & generators_) :
-	Generator(generators_)
+Random::Random(std::vector<std::unique_ptr<Generator>>&& generators_) :
+	Generator(std::move(generators_))
 {
 }
 
 size_t Random::combinations()
 {
 	size_t total = 0;
-	for (auto g : generators) {
+	for (auto& g : generators) {
 		total += g->combinations();
 	}
 	return total ? total : 1;
@@ -756,7 +750,7 @@ size_t Random::combinations()
 size_t Random::min()
 {
 	size_t final = -1;
-	for (auto g : generators) {
+	for (auto& g : generators) {
 		size_t current = g->min();
 		if (current < final) {
 			final = current;
@@ -768,7 +762,7 @@ size_t Random::min()
 size_t Random::max()
 {
 	size_t final = 0;
-	for (auto g : generators) {
+	for (auto& g : generators) {
 		size_t current = g->max();
 		if (current > final) {
 			final = current;
@@ -793,8 +787,8 @@ Sequence::Sequence()
 {
 }
 
-Sequence::Sequence(const std::vector<Generator *> & generators_) :
-	Generator(generators_)
+Sequence::Sequence(std::vector<std::unique_ptr<Generator>>&& generators_) :
+	Generator(std::move(generators_))
 {
 }
 
@@ -821,9 +815,9 @@ std::string Literal::toString()
 	return value;
 }
 
-Reverser::Reverser(Generator *generator_) :
-	Generator(std::vector<Generator *>({generator_}))
+Reverser::Reverser(std::unique_ptr<Generator>&& g)
 {
+	add(std::move(g));
 }
 
 
@@ -834,9 +828,9 @@ std::string Reverser::toString()
 	return tostring(str);
 }
 
-Capitalizer::Capitalizer(Generator *generator_) :
-	Generator(std::vector<Generator *>({generator_}))
+Capitalizer::Capitalizer(std::unique_ptr<Generator>&& g)
 {
+	add(std::move(g));
 }
 
 std::string Capitalizer::toString()
@@ -847,9 +841,9 @@ std::string Capitalizer::toString()
 }
 
 
-Collapser::Collapser(Generator *generator_) :
-	Generator(std::vector<Generator *>({generator_}))
+Collapser::Collapser(std::unique_ptr<Generator>&& g)
 {
+	add(std::move(g));
 }
 
 std::string Collapser::toString()
@@ -888,21 +882,20 @@ std::string Collapser::toString()
 
 
 Generator::Generator(const std::string &pattern, bool collapse_triples) {
-	Group *top;
-	Generator *last;
+	std::unique_ptr<Generator> last;
 
-	std::stack<Group *> stack;
-
-	stack.push(new GroupSymbol());
+	std::stack<std::unique_ptr<Group>> stack;
+	std::unique_ptr<Group> top = std::make_unique<GroupSymbol>();
 
 	for (auto c : pattern) {
-		top = stack.top();
 		switch (c) {
 			case '<':
-				stack.push(new GroupSymbol());
+				stack.push(std::move(top));
+				top = std::make_unique<GroupSymbol>();
 				break;
 			case '(':
-				stack.push(new GroupLiteral());
+				stack.push(std::move(top));
+				top = std::make_unique<GroupLiteral>();
 				break;
 			case '>':
 			case ')':
@@ -913,13 +906,10 @@ Generator::Generator(const std::string &pattern, bool collapse_triples) {
 				} else if (c == ')' && top->type != group_types::literal) {
 					throw std::invalid_argument("Unexpected ')' in pattern");
 				}
-
 				last = top->emit();
+				top = std::move(stack.top());
 				stack.pop();
-				delete top;
-
-				top = stack.top();
-				top->add(last);
+				top->add(std::move(last));
 				break;
 			case '|':
 				top->split();
@@ -944,21 +934,15 @@ Generator::Generator(const std::string &pattern, bool collapse_triples) {
 		}
 	}
 
-	if (stack.size() != 1) {
+	if (stack.size() != 0) {
 		throw std::invalid_argument("Missing closing bracket");
 	}
 
-	top = stack.top();
-	Generator *g = top->emit();
+	std::unique_ptr<Generator> g = top->emit();
 	if (collapse_triples) {
-		g = new Collapser(g);
+		g = std::make_unique<Collapser>(std::move(g));
 	}
-	add(g);
-
-	while (!stack.empty()) {
-		delete stack.top();
-		stack.pop();
-	}
+	add(std::move(g));
 }
 
 
@@ -967,51 +951,51 @@ Generator::Group::Group(group_types_t type_) :
 {
 }
 
-void Generator::Group::add(Generator *g)
+void Generator::Group::add(std::unique_ptr<Generator>&& g)
 {
 	while (!wrappers.empty()) {
 		switch (wrappers.top()) {
 			case reverser:
-				g = new Reverser(g);
+				g = std::make_unique<Reverser>(std::move(g));
 				break;
 			case capitalizer:
-				g = new Capitalizer(g);
+				g = std::make_unique<Capitalizer>(std::move(g));
 				break;
 		}
 		wrappers.pop();
 	}
 	if (set.size() == 0) {
-		set.push_back(new Sequence());
+		set.push_back(std::make_unique<Sequence>());
 	}
-	set.back()->add(g);
+	set.back()->add(std::move(g));
 }
 
 void Generator::Group::add(char c)
 {
 	std::string value(&c, 1);
-	Generator * g = new Random();
-	g->add(new Literal(value));
-	Group::add(g);
+	std::unique_ptr<Generator> g = std::make_unique<Random>();
+	g->add(std::make_unique<Literal>(value));
+	Group::add(std::move(g));
 }
 
-Generator * Generator::Group::emit()
+std::unique_ptr<Generator> Generator::Group::emit()
 {
-	switch(set.size()) {
+	switch (set.size()) {
 		case 0:
-			return new Literal("");
+			return std::make_unique<Literal>("");
 		case 1:
-			return *(set.begin());
+			return std::move(*set.begin());
 		default:
-			return new Random(set);
+			return std::make_unique<Random>(std::move(set));
 	}
 }
 
 void Generator::Group::split()
 {
 	if (set.size() == 0) {
-		set.push_back(new Sequence());
+		set.push_back(std::make_unique<Sequence>());
 	}
-	set.push_back(new Sequence());
+	set.push_back(std::make_unique<Sequence>());
 }
 
 void Generator::Group::wrap(wrappers_t type)
@@ -1027,15 +1011,15 @@ Generator::GroupSymbol::GroupSymbol() :
 void Generator::GroupSymbol::add(char c)
 {
 	std::string value(&c, 1);
-	Generator * g = new Random();
+	std::unique_ptr<Generator> g = std::make_unique<Random>();
 	try {
 		for (auto s : Generator::symbols.at(value)) {
-			g->add(new Literal(s));
+			g->add(std::make_unique<Literal>(s));
 		}
 	} catch (std::out_of_range) {
-		g->add(new Literal(value));
+		g->add(std::make_unique<Literal>(value));
 	}
-	Group::add(g);
+	Group::add(std::move(g));
 }
 
 Generator::GroupLiteral::GroupLiteral() :

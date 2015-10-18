@@ -71,6 +71,7 @@
 #include <stack>
 #include <vector>
 #include <unordered_map>
+#include <memory>  // for std::unique_ptr
 
 
 namespace NameGen {
@@ -148,27 +149,26 @@ class Generator
 
 	class Group {
 		std::stack<wrappers_t> wrappers;
-		std::vector<Generator *> set;
+		std::vector<std::unique_ptr<Generator>> set;
 
 	public:
 		group_types_t type;
 
 		Group(group_types_t type_);
-		virtual ~Group() {}
+
+		std::unique_ptr<Generator> emit();
+		void split();
+		void wrap(wrappers_t type);
+		void add(std::unique_ptr<Generator>&& g);
 
 		virtual void add(char c);
-		virtual void add(Generator *g);
-		virtual Generator * emit();
-		virtual void split();
-		virtual void wrap(wrappers_t type);
 	};
 
 
 	class GroupSymbol : public Group {
 	public:
 		GroupSymbol();
-
-		virtual void add(char c);
+		void add(char c);
 	};
 
 
@@ -178,23 +178,21 @@ class Generator
 	};
 
 protected:
-	std::vector<Generator *> generators;
+	std::vector<std::unique_ptr<Generator>> generators;
 
 public:
 	static const std::unordered_map<std::string, const std::vector<std::string> > symbols;
 
 	Generator();
-	Generator(const std::string &pattern, bool collapse_triples=true);
-	Generator(const std::vector<Generator *> & generators_);
-
-	virtual ~Generator();
+	Generator(const std::string& pattern, bool collapse_triples=true);
+	Generator(std::vector<std::unique_ptr<Generator>>&& generators_);
 
 	virtual size_t combinations();
 	virtual size_t min();
 	virtual size_t max();
 	virtual std::string toString();
 
-	void add(Generator *g);
+	void add(std::unique_ptr<Generator>&& g);
 };
 
 
@@ -202,7 +200,7 @@ class Random : public Generator
 {
 public:
 	Random();
-	Random(const std::vector<Generator *> & generators_);
+	Random(std::vector<std::unique_ptr<Generator>>&& generators_);
 
 	size_t combinations();
 	size_t min();
@@ -215,7 +213,7 @@ class Sequence : public Generator
 {
 public:
 	Sequence();
-	Sequence(const std::vector<Generator *> & generators_);
+	Sequence(std::vector<std::unique_ptr<Generator>>&& generators_);
 };
 
 
@@ -224,7 +222,7 @@ class Literal : public Generator
 	std::string value;
 
 public:
-	Literal(const std::string &value_);
+	Literal(const std::string& value_);
 
 	size_t combinations();
 	size_t min();
@@ -235,7 +233,7 @@ public:
 
 class Reverser : public Generator {
 public:
-	Reverser(Generator *generator_);
+	Reverser(std::unique_ptr<Generator>&& g);
 
 	std::string toString();
 };
@@ -244,7 +242,7 @@ public:
 class Capitalizer : public Generator
 {
 public:
-	Capitalizer(Generator *generator_);
+	Capitalizer(std::unique_ptr<Generator>&& g);
 
 	std::string toString();
 };
@@ -253,12 +251,12 @@ public:
 class Collapser : public Generator
 {
 public:
-	Collapser(Generator *generator_);
+	Collapser(std::unique_ptr<Generator>&& g);
 
 	std::string toString();
 };
 
 };
 
-std::wstring towstring(const std::string & s);
-std::string tostring(const std::wstring & s);
+std::wstring towstring(const std::string& s);
+std::string tostring(const std::wstring& s);
