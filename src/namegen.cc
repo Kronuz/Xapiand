@@ -899,7 +899,7 @@ Generator::Generator(const std::string &pattern, bool collapse_triples) {
 				break;
 			case '>':
 			case ')':
-				if (stack.size() == 1) {
+				if (stack.size() == 0) {
 					throw std::invalid_argument("Unbalanced brackets");
 				} else if (c == '>' && top->type != group_types::symbol) {
 					throw std::invalid_argument("Unexpected '>' in pattern");
