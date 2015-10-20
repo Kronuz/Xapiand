@@ -68,7 +68,7 @@ private:
 
 	// Buffers that are pending write
 	std::string buffer;
-	Queue<Buffer *> messages_queue;
+	queue::Queue<std::unique_ptr<Buffer>> messages_queue;
 
 	Database *repl_database;
 	std::string repl_uuid;

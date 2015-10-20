@@ -115,7 +115,7 @@ private:
 };
 
 
-class DatabaseQueue : public Queue<Database *> {
+class DatabaseQueue : public queue::Queue<Database *> {
 	// FIXME: Add queue creation time and delete databases when deleted queue
 
 	friend class Database;
@@ -136,6 +136,7 @@ private:
 
 public:
 	DatabaseQueue();
+	DatabaseQueue(DatabaseQueue&&);
 	~DatabaseQueue();
 
 	bool inc_count(int max=-1);
@@ -146,14 +147,19 @@ public:
 class DatabasesLRU : public lru::LRU<size_t, DatabaseQueue> {
 
 public:
-	DatabasesLRU(size_t max_size) :
-		LRU(max_size) { }
+	DatabasesLRU(ssize_t max_size) : LRU(max_size) { }
 
-	DatabaseQueue& operator[] (const size_t& key) {
+	DatabaseQueue& operator[] (size_t key) {
 		try {
 			return at(key);
 		} catch (std::range_error) {
-			return insert_and([](DatabaseQueue & val){ return (val.persistent || val.size() < val.count || val.is_switch_db) ? lru::DropAction::renew : lru::DropAction::drop; } ,std::make_pair(key, DatabaseQueue()));
+			return insert_and([](DatabaseQueue & val) {
+				if (val.persistent || val.size() < val.count || val.is_switch_db) {
+					return lru::DropAction::renew;
+				} else {
+					return lru::DropAction::drop;
+				}
+			}, std::make_pair(key, DatabaseQueue()));
 		}
 	}
 };
@@ -195,7 +201,7 @@ public:
 	void add_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
 	void drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
 
-	QueueSet<Endpoint> updated_databases;
+	queue::QueueSet<Endpoint> updated_databases;
 
 	int get_mastercount();
 };

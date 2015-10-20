@@ -230,10 +230,8 @@ void BaseClient::destroy()
 
 	write_queue.finish();
 	while (!write_queue.empty()) {
-		Buffer *buffer;
-		if (write_queue.pop(buffer, 0)) {
-			delete buffer;
-		}
+		std::shared_ptr<Buffer> buffer;
+		write_queue.pop(buffer, 0);
 	}
 
 	LOG_OBJ(this, "DESTROYED CLIENT!\n");
@@ -301,7 +299,7 @@ int BaseClient::write_directly(int fd)
 		LOG_ERR(this, "ERROR: write error (sock=%d): Socket already closed!\n", sock);
 		return WR_ERR;
 	} else if (!write_queue.empty()) {
-		Buffer* buffer = write_queue.front();
+		std::shared_ptr<Buffer> buffer = write_queue.front();
 
 		size_t buf_size = buffer->nbytes();
 		const char *buf_data = buffer->dpos();
@@ -326,7 +324,6 @@ int BaseClient::write_directly(int fd)
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
 				if (write_queue.pop(buffer)) {
-					delete buffer;
 					if (write_queue.empty()) {
 						return WR_OK;
 					} else {
@@ -485,8 +482,8 @@ bool BaseClient::write(const char *buf, size_t buf_size)
 {
 	int status;
 
-	Buffer *buffer = new Buffer('\0', buf, buf_size);
-	if (!buffer || !write_queue.push(buffer)) {
+	
+	if (!write_queue.push(std::make_shared<Buffer>('\0', buf, buf_size))) {
 		return false;
 	}
 

@@ -213,8 +213,7 @@ void BinaryClient::on_read(const char *buf, size_t received)
 			LOG_BINARY(this, "Switched to replication protocol");
 		}
 
-		Buffer *msg = new Buffer(type, data.c_str(), data.size());
-		messages_queue.push(msg);
+		messages_queue.push(std::make_unique<Buffer>(type, data.c_str(), data.size()));
 	}
 	pthread_mutex_lock(&qmtx);
 	if (!messages_queue.empty()) {
@@ -229,7 +228,7 @@ void BinaryClient::on_read(const char *buf, size_t received)
 
 char BinaryClient::get_message(double, std::string & result, char)
 {
-	Buffer* msg;
+	std::unique_ptr<Buffer>msg;
 	if (!messages_queue.pop(msg)) {
 		throw Xapian::NetworkError("No message available");
 	}
@@ -247,8 +246,6 @@ char BinaryClient::get_message(double, std::string & result, char)
 	buf += encode_length(msg_size);
 	buf += result;
 	LOG_BINARY_PROTO(this, "msg = '%s'\n", repr(buf).c_str());
-
-	delete msg;
 
 	return type_as_char;
 }

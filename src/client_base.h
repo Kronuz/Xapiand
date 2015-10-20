@@ -110,7 +110,7 @@ protected:
 
 	Endpoints endpoints;
 
-	Queue<Buffer *> write_queue;
+	queue::Queue<std::shared_ptr<Buffer>> write_queue;
 
 	void async_write_cb(ev::async &watcher, int revents);
 

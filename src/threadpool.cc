@@ -35,7 +35,7 @@
 struct ThreadInfo {
 	int threadNumber;
 	const char *format;
-	Queue<Task *> *workQueue;
+	queue::Queue<Task *> *workQueue;
 };
 
 void Task::inc_ref()

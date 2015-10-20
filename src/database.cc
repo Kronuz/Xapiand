@@ -1550,6 +1550,17 @@ DatabaseQueue::DatabaseQueue()
 }
 
 
+DatabaseQueue::DatabaseQueue(DatabaseQueue&& q) : Queue(std::move(q))
+{
+	is_switch_db = std::move(q.is_switch_db);
+	persistent = std::move(q.persistent);
+	count = std::move(q.count);
+	database_pool = std::move(q.database_pool);
+	pthread_cond_destroy(&q.switch_cond);
+	pthread_cond_init(&switch_cond, 0);
+}
+
+
 DatabaseQueue::~DatabaseQueue()
 {
 	assert(size() == count);
@@ -1589,16 +1600,12 @@ DatabaseQueue::setup_endpoints(DatabasePool *database_pool_, const Endpoints &en
 bool
 DatabaseQueue::inc_count(int max)
 {
-	pthread_mutex_lock(&_mtx);
+	std::unique_lock<std::mutex> lk(_mutex);
 
 	if (max == -1 || count < static_cast<size_t>(max)) {
 		count++;
-
-		pthread_mutex_unlock(&_mtx);
 		return true;
 	}
-
-	pthread_mutex_unlock(&_mtx);
 	return false;
 }
 
@@ -1606,18 +1613,15 @@ DatabaseQueue::inc_count(int max)
 bool
 DatabaseQueue::dec_count()
 {
-	pthread_mutex_lock(&_mtx);
+	std::unique_lock<std::mutex> lk(_mutex);
 
 	assert(count > 0);
 
 	if (count > 0) {
 		count--;
 
-		pthread_mutex_unlock(&_mtx);
 		return true;
 	}
-
-	pthread_mutex_unlock(&_mtx);
 
 	return false;
 }

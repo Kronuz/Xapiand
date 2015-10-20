@@ -53,7 +53,7 @@ class ThreadPool {
 private:
 	pthread_t *threads;
 	int numThreads;
-	Queue<Task *> workQueue;
+	queue::Queue<Task *> workQueue;
 	static void *getWork(void * wq_);
 
 public:
