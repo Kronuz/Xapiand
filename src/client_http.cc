@@ -32,6 +32,8 @@
 #include "manager.h"
 #include "io_utils.h"
 
+#include <unistd.h>
+
 #include <assert.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
