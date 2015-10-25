@@ -128,6 +128,30 @@ noinst_HEADERS = \
 	server_binary.h \
 	server_discovery.h \
 	server_http.h \
+	tclap/Arg.h \
+	tclap/ArgException.h \
+	tclap/ArgTraits.h \
+	tclap/CmdLine.h \
+	tclap/CmdLineInterface.h \
+	tclap/CmdLineOutput.h \
+	tclap/Constraint.h \
+	tclap/DocBookOutput.h \
+	tclap/HelpVisitor.h \
+	tclap/IgnoreRestVisitor.h \
+	tclap/MultiArg.h \
+	tclap/MultiSwitchArg.h \
+	tclap/OptionalUnlabeledTracker.h \
+	tclap/StandardTraits.h \
+	tclap/StdOutput.h \
+	tclap/SwitchArg.h \
+	tclap/UnlabeledMultiArg.h \
+	tclap/UnlabeledValueArg.h \
+	tclap/ValueArg.h \
+	tclap/ValuesConstraint.h \
+	tclap/VersionVisitor.h \
+	tclap/Visitor.h \
+	tclap/XorHandler.h \
+	tclap/ZshCompletionOutput.h \
 	threadpool.h \
 	times.h \
 	utils.h \
