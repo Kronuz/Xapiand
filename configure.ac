@@ -40,9 +40,20 @@ AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h s
 
 # Checks for library functions.
 AC_CHECK_FUNCS([getcwd gettimeofday socket])
-
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
+
+
+########################################################################
+# sparsehash
+########################################################################
+
+AC_CHECK_FUNCS(memcpy)
+AC_HEADER_STDC
+AC_CHECK_TYPES([uint16_t])     # defined in C99 systems
+AC_CHECK_TYPES([u_int16_t])    # defined in BSD-derived systems, and gnu
+AC_CHECK_TYPES([__uint16])     # defined in some windows systems (vc7)
+AC_CHECK_TYPES([long long])    # probably defined everywhere, but...
 
 
 ########################################################################

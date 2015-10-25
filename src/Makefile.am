@@ -128,6 +128,18 @@ noinst_HEADERS = \
 	server_binary.h \
 	server_discovery.h \
 	server_http.h \
+	sparsehash/dense_hash_map \
+	sparsehash/dense_hash_set \
+	sparsehash/internal \
+	sparsehash/internal/densehashtable.h \
+	sparsehash/internal/hashtable-common.h \
+	sparsehash/internal/libc_allocator_with_realloc.h \
+	sparsehash/internal/sparsehashtable.h \
+	sparsehash/sparse_hash_map \
+	sparsehash/sparse_hash_set \
+	sparsehash/sparsetable \
+	sparsehash/template_util.h \
+	sparsehash/type_traits.h \
 	tclap/Arg.h \
 	tclap/ArgException.h \
 	tclap/ArgTraits.h \
