@@ -669,6 +669,7 @@ void HttpClient::index_document_view(const query_t &e)
 {
 	std::string result;
 
+	buid_path_index(index_path);
 	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN|DB_INIT_REF)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
@@ -1112,7 +1113,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					path = "";
 				}
 
-				std::string index_path = ns + path;
+				index_path = ns + path;
 				std::string node_name;
 				Endpoint asked_node("xapian://" + node_name + index_path);
 				std::vector<Endpoint> asked_nodes;
@@ -1237,6 +1238,12 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					q.offset = NULL;
 					LOG(this, "Buffer: %s\n", query_str);
 					while (url_qs("query", query_str, query_size, &q) != -1) {
+						LOG(this, "%s\n", urldecode(q.offset, q.length).c_str());
+						e.query.push_back(urldecode(q.offset, q.length));
+					}
+
+					q.offset = NULL;
+					while (url_qs("q", query_str, query_size, &q) != -1) {
 						LOG(this, "%s\n", urldecode(q.offset, q.length).c_str());
 						e.query.push_back(urldecode(q.offset, q.length));
 					}

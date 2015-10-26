@@ -42,7 +42,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <bitset>
-
+#include <sys/stat.h>
 
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
 #define NUMERIC_RE "-?(\\d*\\.\\d+|\\d+)"
@@ -1066,6 +1066,36 @@ void move_files(const std::string &src, const std::string &dst)
 
 	if (rmdir(src.c_str()) != 0) {
 		LOG_ERR(NULL, "Directory %s could not be deleted\n", src.c_str());
+	}
+}
+
+
+inline bool exist(const std::string& path) {
+	struct stat buffer;
+	return (stat (path.c_str(), &buffer) == 0);
+}
+
+
+bool buid_path_index(const std::string& path)
+{
+	std::string dir = path;
+	std::size_t found = dir.find_last_of("/\\");
+	dir.resize(found);
+	if (exist(dir)) {
+		return true;
+	} else {
+		std::vector<std::string> directories;
+		stringTokenizer(dir, "/", directories);
+		dir.clear();
+		for (std::vector<std::string>::iterator it = directories.begin(); it != directories.end(); it++) {
+			dir = dir + *it + "/";
+			if (mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
+				continue;
+			} else {
+				return false;
+			}
+		}
+		return true;
 	}
 }
 

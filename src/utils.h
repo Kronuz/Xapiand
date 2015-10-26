@@ -234,6 +234,8 @@ bool isNumeric(const std::string &str);
 bool startswith(const std::string &text, const std::string &token);
 void delete_files(const std::string &path);
 void move_files(const std::string &src, const std::string &dst);
+inline bool exist(const std::string& name);
+bool buid_path_index(const std::string& path);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups);
 void update_pos_time();
 void fill_zeros_stats_cnt(int start, int end);
