@@ -131,7 +131,7 @@ class NoCompressor : public Compressor
 
 public:
 	NoCompressor(std::unique_ptr<CompressorReader> &&decompressor_, std::unique_ptr<CompressorReader> &&compressor_) :
-		Compressor(std::move(decompressor_), std::move(compressor_)), count(-1), buffer(NULL) {}
+		Compressor(std::move(decompressor_), std::move(compressor_)), count(-1), buffer(nullptr) {}
 
 	~NoCompressor() {
 		delete []buffer;
@@ -150,7 +150,7 @@ public:
 
 		// LOG(this, "decompress (while)\n");
 		while (true) {
-			char *src_buffer = NULL;
+			char *src_buffer = nullptr;
 			// LOG(this, "decompress (decompressor->read)\n");
 			ssize_t read_size = decompressor->read(&src_buffer, -1);
 			if (read_size == -1) {
@@ -186,7 +186,7 @@ public:
 			count = 0;
 
 			if (!buffer) {
-				buffer = new char [NOCOMPRESS_BUFFER_SIZE];
+				buffer = new char[NOCOMPRESS_BUFFER_SIZE];
 			}
 
 			// LOG(this, "compress (compressor->begin)\n");
@@ -244,10 +244,10 @@ class LZ4Compressor : public Compressor
 public:
 	LZ4Compressor(std::unique_ptr<CompressorReader> &&decompressor_, std::unique_ptr<CompressorReader> &&compressor_) :
 		Compressor(std::move(decompressor_), std::move(compressor_)),
-		c_ctx(NULL),
-		d_ctx(NULL),
-		buffer(NULL),
-		work_buffer(NULL),
+		c_ctx(nullptr),
+		d_ctx(nullptr),
+		buffer(nullptr),
+		work_buffer(nullptr),
 		count(0)
 	{};
 
@@ -277,7 +277,7 @@ public:
 
 		if (!d_ctx) {
 			if (!buffer) {
-				buffer = new char [LZ4F_BLOCK_SIZE];
+				buffer = new char[LZ4F_BLOCK_SIZE];
 			}
 			LZ4F_errorCode_t errorCode = LZ4F_createDecompressionContext(&d_ctx, LZ4F_VERSION);
 			if (LZ4F_isError(errorCode)) {
@@ -294,7 +294,7 @@ public:
 
 		// LOG(this, "decompress (while)\n");
 		while (true) {
-			char *src_buffer = NULL;
+			char *src_buffer = nullptr;
 			// LOG(this, "decompress (decompressor->read)\n");
 			ssize_t read_size = decompressor->read(&src_buffer, -1);
 			if (read_size == -1) {
@@ -321,7 +321,7 @@ public:
 				// LOG(this, "\t src_size (1): %zu\n", src_size);
 				// LOG(this, "\t dst_size (1): %zu\n", dst_size);
 
-				nextToLoad = LZ4F_decompress(d_ctx, buffer, &dst_size, src_buffer + read_pos, &src_size, NULL);
+				nextToLoad = LZ4F_decompress(d_ctx, buffer, &dst_size, src_buffer + read_pos, &src_size, nullptr);
 				if (LZ4F_isError(nextToLoad)) {
 					LOG_ERR(this, "Failed decompression: error %zd\n", nextToLoad);
 					return -1;
@@ -355,7 +355,7 @@ public:
 		// LOG(this, "compress!\n");
 		size_t bytes;
 		if (!c_ctx) {
-			assert(work_buffer == NULL);
+			assert(work_buffer == nullptr);
 
 			if (!buffer) {
 				buffer = new char[LZ4F_BLOCK_SIZE];
@@ -408,7 +408,7 @@ public:
 				break;
 			}
 
-			bytes = LZ4F_compressUpdate(c_ctx, work_buffer + offset, work_size - offset, buffer, src_size, NULL);
+			bytes = LZ4F_compressUpdate(c_ctx, work_buffer + offset, work_size - offset, buffer, src_size, nullptr);
 			if (LZ4F_isError(bytes)) {
 				LOG_ERR(this, "Compression failed: error %zd\n", bytes);
 				return -1;
@@ -427,7 +427,7 @@ public:
 			}
 		}
 
-		bytes = LZ4F_compressEnd(c_ctx, work_buffer + offset, work_size -  offset, NULL);
+		bytes = LZ4F_compressEnd(c_ctx, work_buffer + offset, work_size -  offset, nullptr);
 		if (LZ4F_isError(bytes)) {
 			LOG_ERR(this, "Compression failed: error %zd\n", bytes);
 			return -1;
