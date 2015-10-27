@@ -28,6 +28,19 @@
 #include <vector>
 
 
+#define EPOS (-2)
+#define EBADSTATE (-3)
+#define ENOID (-4)
+#define EOFH (-5)
+#define EOFB (-6)
+#define EOFF (-7)
+#define ECORRUPTH (-8)
+#define ECORRUPTF (-9)
+#define EBADID (-10)
+#define EBADCOOKIE (-11)
+#define EBADCHECKSUM (-12)
+
+
 typedef uint32_t chunk_size_t;
 typedef uint32_t did_t;  // Document ID
 typedef uint32_t offset_t;
@@ -47,7 +60,7 @@ class HaystackVolume
 {
 	friend HaystackFile;
 
-	offset_t offset;
+	offset_t eof_offset;
 
 	std::string data_path;
 	int data_file;
@@ -56,7 +69,7 @@ public:
 	HaystackVolume(const std::string& path, bool writable);
 	~HaystackVolume();
 
-	offset_t get_offset();
+	offset_t offset();
 };
 
 
@@ -75,30 +88,35 @@ class HaystackFile
 
 	struct NeedleFooter {
 		// chunk_size_t zero
-		magic_t magic;  // Magic number used to find possible needle end during recovery
-		checksum_t checksum;  // Checksum of the data portion of the needle
-		// padding to align total needle size to 8 bytes
-	};
+		struct Foot {
+			magic_t magic;  // Magic number used to find possible needle end during recovery
+			checksum_t checksum;  // Checksum of the data portion of the needle
+			// padding to align total needle size to 8 bytes
+		} foot;
+	} footer;
 
 	char* buffer;
 	size_t buffer_size;
 	size_t available_buffer;
 	chunk_size_t next_chunk_size;
 
+	did_t wanted_id;
+	cookie_t wanted_cookie;
+
 	std::shared_ptr<HaystackVolume> volume;
 protected:
-	offset_t offset;
+	offset_t current_offset;
 
 private:
 	off_t real_offset;
-	checksum_t checksum;
 
 	enum {
 		open,
 		writing,
 		reading,
 		closed,
-		error
+		error,
+		eof,
 	} state;
 
 	void write_header(size_t size);
@@ -111,7 +129,13 @@ public:
 
 	did_t id();
 	size_t size();
+	offset_t offset();
+	cookie_t cookie();
+	checksum_t checksum();
+
 	offset_t seek(offset_t offset_);
+	offset_t next();
+	offset_t rewind();
 
 	ssize_t write(const char* data, size_t size);
 	ssize_t read(char* data, size_t size);
@@ -157,7 +181,6 @@ public:
 class HaystackIndexedFile : public HaystackFile
 {
 	std::shared_ptr<HaystackIndex> index;
-	did_t id;
 
 public:
 	HaystackIndexedFile(Haystack* haystack, did_t id_, cookie_t cookie_);
