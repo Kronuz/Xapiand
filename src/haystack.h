@@ -26,6 +26,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 
 #define EPOS (-2)
@@ -96,8 +97,8 @@ class HaystackFile
 	} footer;
 
 	char* buffer;
-	size_t buffer_size;
-	size_t available_buffer;
+	ssize_t buffer_size;
+	ssize_t available_buffer;
 	chunk_size_t next_chunk_size;
 
 	did_t wanted_id;
@@ -111,7 +112,7 @@ private:
 	off_t real_offset;
 
 	enum {
-		open,
+		opened,
 		writing,
 		reading,
 		closed,

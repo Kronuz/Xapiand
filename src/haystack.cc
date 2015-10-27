@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 
 #define ALIGNMENT 8
 #define HEADER_SIZE 12
@@ -100,8 +101,8 @@ HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, did_t
 	header({
 		.head = {
 			.magic = MAGIC_HEADER,
-			.cookie = cookie_,
 			.id = id_,
+			.cookie = cookie_,
 			.size = 0,
 		},
 		.chunk_size = 0
@@ -122,7 +123,7 @@ HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, did_t
 	volume(volume_),
 	current_offset(volume->offset()),
 	real_offset(current_offset * ALIGNMENT + HEADER_SIZE),
-	state(open)
+	state(opened)
 {
 }
 
@@ -166,11 +167,11 @@ checksum_t HaystackFile::checksum()
 
 offset_t HaystackFile::seek(offset_t offset)
 {
-	if (state != eof && state != open && state != reading) {
+	if (state != eof && state != opened && state != reading) {
 		errno = EBADSTATE;
 		return -1;
 	}
-	state = open;
+	state = opened;
 	current_offset = offset;
 	real_offset = current_offset * ALIGNMENT + HEADER_SIZE;
 	return current_offset;
@@ -193,7 +194,7 @@ offset_t HaystackFile::rewind()
 
 ssize_t HaystackFile::read(char* data, size_t size)
 {
-	if (state != eof && state != open && state != reading) {
+	if (state != eof && state != opened && state != reading) {
 		errno = EBADSTATE;
 		return -1;
 	}
@@ -207,10 +208,10 @@ ssize_t HaystackFile::read(char* data, size_t size)
 		return 0;
 	}
 
-	if (state == open) {
+	if (state == opened) {
 		state = reading;
 
-		size_t header_size = sizeof(NeedleHeader::Head) + sizeof(chunk_size_t);
+		ssize_t header_size = sizeof(NeedleHeader::Head) + sizeof(chunk_size_t);
 		if (pread(volume->data_file, &header, header_size, real_offset) != header_size) {
 			state = error;
 			errno = EOFH;
@@ -260,7 +261,7 @@ ssize_t HaystackFile::read(char* data, size_t size)
 			next_chunk_size = *(chunk_size_t*)(buffer + available_buffer);
 		}
 
-		size_t current_size = size;
+		ssize_t current_size = size;
 		if (current_size > available_buffer) {
 			current_size = available_buffer;
 		}
@@ -316,7 +317,7 @@ size_t HaystackFile::write_chunk(const char* data, size_t size)
 	real_offset += sizeof(chunk_size_t);
 
 	ssize_t written = pwrite(volume->data_file, data, size, real_offset);
-	if (written != size) {
+	if (written != static_cast<ssize_t>(size)) {
 		throw VolumeError();
 	}
 	real_offset += size;
@@ -354,7 +355,7 @@ offset_t HaystackFile::write_footer()
 
 ssize_t HaystackFile::write(const char* data, size_t size)
 {
-	if (state != open && state != writing) {
+	if (state != opened && state != writing) {
 		errno = EBADSTATE;
 		return -1;
 	}
@@ -373,7 +374,7 @@ ssize_t HaystackFile::write(const char* data, size_t size)
 	off_t rewind_offset = real_offset;
 
 	try {
-		if (state == open) {
+		if (state == opened) {
 			state = writing;
 			write_header(0);
 		}
