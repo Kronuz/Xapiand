@@ -39,7 +39,7 @@ AX_PROG_CCACHE_CXX
 AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
 
 # Checks for library functions.
-AC_CHECK_FUNCS([getcwd gettimeofday socket])
+AC_CHECK_FUNCS([getcwd gettimeofday socket pread pwrite])
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
 

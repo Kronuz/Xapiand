@@ -24,39 +24,61 @@
 
 #include "xapiand.h"
 
-#include "sparsehash/sparse_hash_map"
 #include <string>
+#include <vector>
 
 
 class Haystack
 {
-	struct NeedleIndex {
-		uint64_t key;  // 64-bit object key
-		uint32_t offset;  // Offset of the needle in the haystack volume / 8
-		uint32_t size;  // Size of the needle / 8
-	};
-
+protected:
 	struct NeedleHeader {
 		uint64_t magic; // Magic number used to find the next possible needle during recovery
 		uint64_t cookie;  // Security cookie supplied by client to prevent brute force attacks
-		uint64_t key;  // 64-bit object key
-		uint8_t flags;  // File flags
-		size_t size;  // Data size
+		size_t size;  // Full size (uncompressed)
+		// uint32_t chunk_size
 		// data goes here...
 	};
 
 	struct NeedleFooter {
+		// uint32_t zero
 		uint64_t magic;  // Magic number used to find possible needle end during recovery
 		uint64_t checksum;  // Checksum of the data portion of the needle
 		// padding to align total needle size to 8 bytes
 	};
 
-	unsigned int volumes;
-	std::string path;
-	google::sparse_hash_map<uint64_t, std::pair<uint32_t, uint32_t>> index;
+	std::hash<std::string> hasher;
 
-	bool read_volume(unsigned int volume);
+	std::string index_path;
+	std::string data_path;
+
+	int index_file;
+	int data_file;
+
+	uint32_t index_base;
+	std::vector<uint32_t> index;
+
+	uint32_t get_offset(uint32_t docid);
+
 public:
-	Haystack(const std::string &path_);
+	Haystack(const std::string &path);
 	~Haystack();
+
+	ssize_t read(uint32_t docid, uint64_t cookie, char *data, size_t size);
+};
+
+
+class WritableHaystack : public Haystack
+{
+	uint32_t offset;
+
+	void set_offset(uint32_t docid, uint32_t offset);
+
+public:
+	WritableHaystack(const std::string &path);
+
+	void write_header(uint64_t cookie, size_t size);
+	ssize_t write_chunk(const char *data, size_t size);
+	uint32_t write_footer(size_t total_size, uint64_t checksum);
+
+	ssize_t write(uint32_t docid, uint64_t cookie, const char *data, size_t size);
 };
