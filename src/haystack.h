@@ -28,9 +28,11 @@
 #include <vector>
 
 
-class Haystack
+struct VolumeError : std::exception {};
+
+
+class HaystackVolume
 {
-protected:
 	struct NeedleHeader {
 		uint64_t magic; // Magic number used to find the next possible needle during recovery
 		uint64_t cookie;  // Security cookie supplied by client to prevent brute force attacks
@@ -46,42 +48,51 @@ protected:
 		// padding to align total needle size to 8 bytes
 	};
 
-	std::hash<std::string> hasher;
-
-	std::string index_path;
-	std::string data_path;
-
-	int index_file;
-	int data_file;
-
-	uint32_t index_base;
-	std::vector<uint32_t> index;
-
-	uint32_t get_offset(uint32_t docid);
-
-	ssize_t read_data(uint32_t offset, uint64_t cookie, char *data, size_t size);
-
-public:
-	Haystack(const std::string &path);
-	~Haystack();
-
-	ssize_t read(uint32_t docid, uint64_t cookie, char *data, size_t size);
-};
-
-
-class WritableHaystack : public Haystack
-{
 	uint32_t offset;
 
-	void set_offset(uint32_t docid, uint32_t offset);
+	std::string data_path;
+	int data_file;
 
 	void write_header(uint64_t cookie, size_t size);
 	ssize_t write_chunk(const char *data, size_t size);
 	uint32_t write_footer(size_t total_size, uint64_t checksum);
-	ssize_t write_data(uint64_t cookie, const char *data, size_t size);
 
 public:
-	WritableHaystack(const std::string &path);
+	HaystackVolume(const std::string &path, bool writable);
+	~HaystackVolume();
 
+	uint32_t get_offset();
+
+	ssize_t read_data(uint32_t offset, uint64_t cookie, char *data, size_t size);
+	ssize_t write_data(uint64_t cookie, const char *data, size_t size);
+};
+
+
+class HaystackIndex
+{
+	std::string index_path;
+	int index_file;
+
+	uint32_t index_base;
+	std::vector<uint32_t> index;
+
+public:
+	HaystackIndex(const std::string &path, bool writable);
+	~HaystackIndex();
+
+	uint32_t get_offset(uint32_t docid);
+	void set_offset(uint32_t docid, uint32_t offset);
+};
+
+
+class Haystack
+{
+	std::unique_ptr<HaystackIndex> index;
+	std::unique_ptr<HaystackVolume> volume;
+
+public:
+	Haystack(const std::string &path, bool writable=false);
+
+	ssize_t read(uint32_t docid, uint64_t cookie, char *data, size_t size);
 	ssize_t write(uint32_t docid, uint64_t cookie, const char *data, size_t size);
 };
