@@ -95,7 +95,7 @@ offset_t HaystackVolume::get_offset()
 }
 
 
-HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, cookie_t cookie_) :
+HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, did_t id_, cookie_t cookie_) :
 	buffer(nullptr),
 	buffer_size(0),
 	available_buffer(0),
@@ -103,6 +103,7 @@ HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, cooki
 	volume(volume_),
 	offset(volume->get_offset()),
 	real_offset(offset * ALIGNMENT + HEADER_SIZE),
+	id(id_),
 	cookie(cookie_),
 	total_size(0),
 	checksum(0),
@@ -219,6 +220,7 @@ void HaystackFile::write_header(size_t size)
 	NeedleHeader::Head head = {
 		.magic = MAGIC_HEADER,
 		.cookie = cookie,
+		.id = id,
 		.size = size,
 	};
 	if (pwrite(volume->data_file, &head, sizeof(NeedleHeader::Head), real_offset) != sizeof(NeedleHeader::Head)) {
@@ -341,19 +343,19 @@ HaystackIndex::~HaystackIndex()
 }
 
 
-offset_t HaystackIndex::get_offset(docid_t docid)
+offset_t HaystackIndex::get_offset(did_t id)
 {
-	size_t docpos = docid % INDEX_CACHE;
-	docid_t new_index_base = docid / INDEX_CACHE;
+	size_t docpos = id % INDEX_CACHE;
+	did_t new_index_base = id / INDEX_CACHE;
 
 	if (index_base != new_index_base || docpos > index.size()) {
 		if (!index_file) {
 			return -1;
 		}
 		index_base = new_index_base;
-		size_t index_offset = index_base * sizeof(docid_t) + HEADER_SIZE;
+		size_t index_offset = index_base * sizeof(did_t) + HEADER_SIZE;
 		index.resize(INDEX_CACHE);
-		ssize_t size = pread(index_file, index.data(), INDEX_CACHE * sizeof(docid_t), index_offset) / sizeof(docid_t);
+		ssize_t size = pread(index_file, index.data(), INDEX_CACHE * sizeof(did_t), index_offset) / sizeof(did_t);
 		index.resize(size);
 	}
 
@@ -361,11 +363,11 @@ offset_t HaystackIndex::get_offset(docid_t docid)
 }
 
 
-void HaystackIndex::set_offset(docid_t docid, offset_t offset)
+void HaystackIndex::set_offset(did_t id, offset_t offset)
 {
-	get_offset(docid);  // Open/udpate index if needed
+	get_offset(id);  // Open/udpate index if needed
 
-	size_t docpos = docid % INDEX_CACHE;
+	size_t docpos = id % INDEX_CACHE;
 	if (index.size() < docpos) {
 		index.resize(docpos + 1);
 	}
@@ -386,21 +388,21 @@ Haystack::Haystack(const std::string& path_, bool writable) :
 }
 
 
-HaystackIndexedFile Haystack::open(docid_t docid, cookie_t cookie, int mode)
+HaystackIndexedFile Haystack::open(did_t id, cookie_t cookie, int mode)
 {
-	HaystackIndexedFile f(this, docid, cookie);
+	HaystackIndexedFile f(this, id, cookie);
 	if (!(mode & O_APPEND)) {
-		offset_t offset = index->get_offset(docid);
+		offset_t offset = index->get_offset(id);
 		f.seek(offset);
 	}
 	return f;
 }
 
 
-HaystackIndexedFile::HaystackIndexedFile(Haystack* haystack, docid_t docid_, cookie_t cookie_) :
-	HaystackFile(haystack->volume, cookie_),
+HaystackIndexedFile::HaystackIndexedFile(Haystack* haystack, did_t id_, cookie_t cookie_) :
+	HaystackFile(haystack->volume, id_, cookie_),
 	index(haystack->index),
-	docid(docid_)
+	id(id_)
 {
 }
 
@@ -415,7 +417,7 @@ void HaystackIndexedFile::close()
 {
 	offset_t cur_offset = offset;
 	HaystackFile::close();
-	index->set_offset(docid, cur_offset);
+	index->set_offset(id, cur_offset);
 }
 
 

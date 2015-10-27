@@ -29,7 +29,7 @@
 
 
 typedef uint32_t chunk_size_t;
-typedef uint32_t docid_t;
+typedef uint32_t did_t;  // Document ID
 typedef uint32_t offset_t;
 typedef uint16_t cookie_t;
 typedef uint32_t checksum_t;
@@ -65,6 +65,7 @@ class HaystackFile
 	struct NeedleHeader {
 		struct Head {
 			magic_t magic; // Magic number used to find the next possible needle during recovery
+			did_t id;  // id
 			cookie_t cookie;  // Security cookie supplied by client to prevent brute force attacks
 			size_t size;  // Full size (uncompressed)
 			// data goes here...
@@ -90,6 +91,7 @@ protected:
 
 private:
 	off_t real_offset;
+	did_t id;
 	cookie_t cookie;
 	size_t total_size;
 	checksum_t checksum;
@@ -107,7 +109,7 @@ private:
 	offset_t write_footer();
 
 public:
-	HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, cookie_t cookie_);
+	HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, did_t id_, cookie_t cookie_);
 	~HaystackFile();
 
 	offset_t seek(offset_t offset_);
@@ -131,8 +133,8 @@ public:
 	HaystackIndex(const std::string& path, bool writable);
 	~HaystackIndex();
 
-	offset_t get_offset(docid_t docid);
-	void set_offset(docid_t docid, offset_t offset);
+	offset_t get_offset(did_t id);
+	void set_offset(did_t id, offset_t offset);
 };
 
 
@@ -146,17 +148,17 @@ class Haystack
 public:
 	Haystack(const std::string& path, bool writable=false);
 
-	HaystackIndexedFile open(docid_t docid, cookie_t cookie, int mode=0);
+	HaystackIndexedFile open(did_t id, cookie_t cookie, int mode=0);
 };
 
 
 class HaystackIndexedFile : public HaystackFile
 {
 	std::shared_ptr<HaystackIndex> index;
-	docid_t docid;
+	did_t id;
 
 public:
-	HaystackIndexedFile(Haystack* haystack, docid_t docid_, cookie_t cookie_);
+	HaystackIndexedFile(Haystack* haystack, did_t id_, cookie_t cookie_);
 	~HaystackIndexedFile();
 
 	void close();
