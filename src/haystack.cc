@@ -26,12 +26,12 @@
 #include <unistd.h>
 
 #define ALIGNMENT 8
-#define HEADER_SIZE 33
+#define HEADER_SIZE 12
 
 #define BUFFER_SIZE (ALIGNMENT * 1024)
 #define INDEX_CACHE (1024 * 1024)
-#define MAGIC_HEADER 0x0010091a15f74bff
-#define MAGIC_FOOTER 0x0048391831d0dfff
+#define MAGIC_HEADER 0x4859534b
+#define MAGIC_FOOTER 0x4b535948
 
 #define FLAG_DELETED (1 << 0)
 
@@ -432,14 +432,14 @@ void test_haystack()
 
 	Haystack writable_haystack(".", true);
 	const char data[] = "Hello World";
-	HaystackIndexedFile wf = writable_haystack.open(1, 0x4f4f4f4f4f4f4f4f, O_APPEND);
+	HaystackIndexedFile wf = writable_haystack.open(1, 0x4f4f, O_APPEND);
 	length = wf.write(data, sizeof(data));
 	wf.close();
 	assert(length == sizeof(data));
 
 	Haystack haystack(".");
 	char buffer[100];
-	HaystackIndexedFile rf = haystack.open(1, 0x4f4f4f4f4f4f4f4f);
+	HaystackIndexedFile rf = haystack.open(1, 0x4f4f);
 	length = rf.read(buffer, sizeof(buffer));
 	assert(length == sizeof(data));
 

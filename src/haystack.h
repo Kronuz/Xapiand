@@ -29,11 +29,12 @@
 
 
 typedef uint32_t chunk_size_t;
-typedef uint32_t offset_t;
 typedef uint32_t docid_t;
-typedef uint64_t cookie_t;
-typedef uint64_t checksum_t;
-typedef uint64_t magic_t;
+typedef uint32_t offset_t;
+typedef uint16_t cookie_t;
+typedef uint32_t checksum_t;
+typedef uint32_t magic_t;
+
 
 struct VolumeError : std::exception {};
 
