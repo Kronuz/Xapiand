@@ -98,7 +98,7 @@ protected:
 	int written;
 	std::string length_buffer;
 
-	Compressor *compressor;
+	std::unique_ptr<Compressor> compressor;
 	char *read_buffer;
 
 	int mode;

@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <memory>
 
 #include "client_base.h"
 #include "utils.h"
@@ -130,21 +131,21 @@ ssize_t ClientDecompressorReader::write(const char *buf, size_t size)
 class ClientNoCompressor : public NoCompressor
 {
 public:
-	ClientNoCompressor(BaseClient *client_, int fd_=0, size_t file_size_=0)
-	: NoCompressor(
-		new ClientDecompressorReader(client_, fd_, file_size_, NO_COMPRESSOR),
-		new ClientCompressorReader(client_, fd_, file_size_, NO_COMPRESSOR)
-	) {}
+	ClientNoCompressor(BaseClient *client_, int fd_=0, size_t file_size_=0) :
+		NoCompressor(
+			std::make_unique<ClientDecompressorReader>(client_, fd_, file_size_, NO_COMPRESSOR),
+			std::make_unique<ClientCompressorReader>(client_, fd_, file_size_, NO_COMPRESSOR)
+		) {}
 };
 
 class ClientLZ4Compressor : public LZ4Compressor
 {
 public:
-	ClientLZ4Compressor(BaseClient *client_, int fd_=0, size_t file_size_=0)
-	: LZ4Compressor(
-		new ClientDecompressorReader(client_, fd_, file_size_, LZ4_COMPRESSOR),
-		new ClientCompressorReader(client_, fd_, file_size_, LZ4_COMPRESSOR)
-	) {}
+	ClientLZ4Compressor(BaseClient *client_, int fd_=0, size_t file_size_=0) :
+		LZ4Compressor(
+			std::make_unique<ClientDecompressorReader>(client_, fd_, file_size_, LZ4_COMPRESSOR),
+			std::make_unique<ClientCompressorReader>(client_, fd_, file_size_, LZ4_COMPRESSOR)
+		) {}
 };
 
 
@@ -156,7 +157,6 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 	  closed(false),
 	  sock(sock_),
 	  written(0),
-	  compressor(NULL),
 	  read_buffer(new char[BUF_SIZE]),
 	  mode(MODE_READ_BUF),
 	  database_pool(database_pool_),
@@ -196,7 +196,6 @@ BaseClient::~BaseClient()
 	pthread_mutexattr_destroy(&qmtx_attr);
 
 	delete []read_buffer;
-	delete compressor;
 
 	pthread_mutex_lock(&XapiandServer::static_mutex);
 	XapiandServer::total_clients--;
@@ -385,11 +384,11 @@ void BaseClient::read_cb(int fd)
 				switch (*buf_data++) {
 					case *NO_COMPRESSOR:
 						LOG_CONN(this, "Receiving uncompressed file (sock=%d)...\n", sock);
-						compressor = new ClientNoCompressor(this);
+						compressor = std::make_unique<ClientNoCompressor>(this);
 						break;
 					case *LZ4_COMPRESSOR:
 						LOG_CONN(this, "Receiving LZ4 compressed file (sock=%d)...\n", sock);
-						compressor = new ClientLZ4Compressor(this);
+						compressor = std::make_unique<ClientLZ4Compressor>(this);
 						break;
 					default:
 						LOG_CONN(this, "Received wrong file mode (sock=%d)!\n", sock);
@@ -444,8 +443,7 @@ void BaseClient::read_cb(int fd)
 
 						on_read_file_done();
 						mode = MODE_READ_BUF;
-						delete compressor;
-						compressor = NULL;
+						compressor.reset(nullptr);
 					} else if (block_size == 0) {
 						compressor->decompress();
 
@@ -533,16 +531,16 @@ bool BaseClient::send_file(int fd)
 
 	switch (*TYPE_COMPRESSOR) {
 		case *NO_COMPRESSOR:
-			compressor = new ClientNoCompressor(this, fd, file_size);
+			compressor = std::make_unique<ClientNoCompressor>(this, fd, file_size);
 			break;
 		case *LZ4_COMPRESSOR:
-			compressor = new ClientLZ4Compressor(this, fd, file_size);
+			compressor = std::make_unique<ClientLZ4Compressor>(this, fd, file_size);
 			break;
 	}
+
 	ssize_t compressed = compressor->compress();
 
-	delete compressor;
-	compressor = NULL;
+	compressor.reset(nullptr);
 
 	return (compressed == file_size);
 }

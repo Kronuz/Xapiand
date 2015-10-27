@@ -23,6 +23,7 @@
 #pragma once
 
 #include <assert.h>
+#include <memory>
 
 #include "utils.h"
 #include "lz4/lz4frame.h"
@@ -110,19 +111,17 @@ public:
 
 class Compressor {
 public:
-	CompressorReader *decompressor;
-	CompressorReader *compressor;
+	std::unique_ptr<CompressorReader> decompressor;
+	std::unique_ptr<CompressorReader> compressor;
 
 	virtual ssize_t decompress() = 0;
 	virtual ssize_t compress() = 0;
 
-	virtual ~Compressor() {
-		delete decompressor;
-		delete compressor;
-	}
-	Compressor(CompressorReader *decompressor_, CompressorReader *compressor_) :
-		decompressor(decompressor_), compressor(compressor_) {}
-}	;
+	Compressor(std::unique_ptr<CompressorReader> &&decompressor_, std::unique_ptr<CompressorReader> &&compressor_) :
+		decompressor(std::move(decompressor_)),
+		compressor(std::move(compressor_))
+	{}
+};
 
 
 class NoCompressor : public Compressor
@@ -131,8 +130,8 @@ class NoCompressor : public Compressor
 	char *buffer;
 
 public:
-	NoCompressor(CompressorReader *decompressor_, CompressorReader *compressor_) :
-		Compressor(decompressor_, compressor_), count(-1), buffer(NULL) {}
+	NoCompressor(std::unique_ptr<CompressorReader> &&decompressor_, std::unique_ptr<CompressorReader> &&compressor_) :
+		Compressor(std::move(decompressor_), std::move(compressor_)), count(-1), buffer(NULL) {}
 
 	~NoCompressor() {
 		delete []buffer;
@@ -243,8 +242,8 @@ class LZ4Compressor : public Compressor
 	size_t offset;
 
 public:
-	LZ4Compressor(CompressorReader *decompressor_, CompressorReader *compressor_) :
-		Compressor(decompressor_, compressor_),
+	LZ4Compressor(std::unique_ptr<CompressorReader> &&decompressor_, std::unique_ptr<CompressorReader> &&compressor_) :
+		Compressor(std::move(decompressor_), std::move(compressor_)),
 		c_ctx(NULL),
 		d_ctx(NULL),
 		buffer(NULL),
