@@ -215,6 +215,7 @@ ssize_t HaystackFile::read(char* data, size_t size)
 
 void HaystackFile::write_header(size_t size)
 {
+	real_offset = offset * ALIGNMENT + HEADER_SIZE; // Header *always* starts at offset!
 	NeedleHeader::Head head = {
 		.magic = MAGIC_HEADER,
 		.cookie = cookie,
