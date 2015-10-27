@@ -37,31 +37,27 @@
 
 
 #ifndef HAVE_PREAD
-ssize_t pread(int fd, void *buf, size_t nbyte, off_t offset)
+ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset)
 {
-	off_t cur = lseek(fd, 0, SEEK_CUR);
 	lseek(fd, offset, SEEK_SET);
 	ssize_t ret = read(fd, buf, nbyte);
-	lseek(fd, cur, SEEK_SET);
 	return ret;
 }
 #endif
 
 #ifndef HAVE_PWRITE
-ssize_t pwrite(int fd, const void *buf, size_t nbyte, off_t offset)
+ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset)
 {
-	off_t cur = lseek(fd, 0, SEEK_CUR);
 	lseek(fd, offset, SEEK_SET);
 	ssize_t ret = write(fd, buf, nbyte);
-	lseek(fd, cur, SEEK_SET);
 	return ret;
 }
 #endif
 
 
-HaystackVolume::HaystackVolume(const std::string &path_, bool writable) :
+HaystackVolume::HaystackVolume(const std::string& path_, bool writable) :
 	data_path(path_ + "/haystack.data"),
-	data_file(open(data_path.c_str(), writable ? O_RDWR | O_CREAT | O_CLOEXEC : O_RDONLY | O_CLOEXEC, 0644))
+	data_file(::open(data_path.c_str(), writable ? O_RDWR | O_CREAT | O_CLOEXEC : O_RDONLY | O_CLOEXEC, 0644))
 {
 	if (data_file == -1) {
 		throw VolumeError();
@@ -69,17 +65,17 @@ HaystackVolume::HaystackVolume(const std::string &path_, bool writable) :
 
 	off_t real_offset = lseek(data_file, 0, SEEK_END);
 	if (real_offset == -1) {
-		close(data_file);
+		::close(data_file);
 		throw VolumeError();
 	}
 	if (real_offset == 0) {
 		if (ftruncate(data_file, HEADER_SIZE) == -1) {
-			close(data_file);
+			::close(data_file);
 			throw VolumeError();
 		}
 		real_offset = lseek(data_file, 0, SEEK_END);
 		if (real_offset <= 0) {
-			close(data_file);
+			::close(data_file);
 			throw VolumeError();
 		}
 	}
@@ -89,7 +85,7 @@ HaystackVolume::HaystackVolume(const std::string &path_, bool writable) :
 
 HaystackVolume::~HaystackVolume()
 {
-	close(data_file);
+	::close(data_file);
 }
 
 
@@ -99,18 +95,48 @@ uint32_t HaystackVolume::get_offset()
 }
 
 
-ssize_t HaystackVolume::read_data(uint32_t offset, uint64_t cookie, char *data, size_t size)
+HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, uint64_t cookie_) :
+	volume(volume_),
+	offset(volume->get_offset()),
+	real_offset(offset * ALIGNMENT + HEADER_SIZE),
+	cookie(cookie_),
+	total_size(0),
+	checksum(0),
+	state(open)
+{
+}
+
+
+HaystackFile::~HaystackFile()
+{
+	close();
+}
+
+
+uint32_t HaystackFile::seek(uint32_t offset_)
+{
+	if (state != open && state != reading) {
+		return -1;
+	}
+	state = reading;
+	offset = offset_;
+	real_offset = offset * ALIGNMENT + HEADER_SIZE;
+	return offset;
+}
+
+
+ssize_t HaystackFile::read(char* data, size_t size)
 {
 	char buffer[BUFFER_SIZE];
 	char* buffer_data = buffer;
 
-	if (offset == static_cast<uint32_t>(-1)) {
+	if (offset == volume->get_offset()) {
 		return 0;
 	}
 
-	off_t real_offset = offset * ALIGNMENT + HEADER_SIZE;
+	state = reading;
 
-	size_t buffer_size = pread(data_file, buffer_data, BUFFER_SIZE, real_offset);
+	size_t buffer_size = pread(volume->data_file, buffer_data, BUFFER_SIZE, real_offset);
 	if (buffer_size < sizeof(NeedleHeader)) {
 		return -1;
 	}
@@ -121,13 +147,13 @@ ssize_t HaystackVolume::read_data(uint32_t offset, uint64_t cookie, char *data, 
 	buffer_size -= sizeof(NeedleHeader);
 
 	if (header->magic != MAGIC_HEADER) {
-		return -1;
+		return -2;
 	}
 	if (header->cookie != cookie) {
-		return -1;
+		return -3;
 	}
 
-	size_t total_size = 0;
+	total_size = 0;
 	size_t this_size = size;
 
 	uint32_t chunk_size;
@@ -164,118 +190,141 @@ ssize_t HaystackVolume::read_data(uint32_t offset, uint64_t cookie, char *data, 
 					break;
 				}
 			} else {
-				return -1;
+				return -4;
 			}
 			buffer_data = buffer;
-			buffer_size = pread(data_file, buffer_data, BUFFER_SIZE, real_offset);
+			buffer_size = pread(volume->data_file, buffer_data, BUFFER_SIZE, real_offset);
 			real_offset += buffer_size;
 		}
 		if (buffer_size < sizeof(uint32_t)) {
 			memcpy(buffer, buffer_data, buffer_size);
 			buffer_data = buffer;
-			buffer_size = pread(data_file, buffer_data + buffer_size, BUFFER_SIZE - buffer_size, real_offset);
+			buffer_size = pread(volume->data_file, buffer_data + buffer_size, BUFFER_SIZE - buffer_size, real_offset);
 			real_offset += buffer_size;
 		}
-
 	} while (chunk_size);
 
 	NeedleFooter* footer = (NeedleFooter *)(buffer_data);
 
 	if (footer->magic != MAGIC_FOOTER) {
-		return -1;
+		return -5;
 	}
 
 	return total_size;
 }
 
 
-void HaystackVolume::write_header(uint64_t cookie, size_t size)
+void HaystackFile::write_header(size_t size)
 {
 	NeedleHeader header = {
 		.magic = MAGIC_HEADER,
 		.cookie = cookie,
 		.size = size,
 	};
-
-	if (::write(data_file, &header, sizeof(header)) != sizeof(header)) {
+	if (pwrite(volume->data_file, &header, sizeof(header), real_offset) != sizeof(header)) {
 		throw VolumeError();
 	}
+	real_offset += sizeof(header);
 }
 
 
-ssize_t HaystackVolume::write_chunk(const char *data, size_t size)
+size_t HaystackFile::write_chunk(const char* data, size_t size)
 {
 	uint32_t chunk_size = size;
-
-	if (::write(data_file, &chunk_size, sizeof(uint32_t)) != sizeof(uint32_t)) {
+	if (pwrite(volume->data_file, &chunk_size, sizeof(uint32_t), real_offset) != sizeof(uint32_t)) {
 		throw VolumeError();
 	}
+	real_offset += sizeof(uint32_t);
 
-	ssize_t total_size = ::write(data_file, data, size);
-	if (total_size != size) {
+	ssize_t written = pwrite(volume->data_file, data, size, real_offset);
+	if (written != size) {
 		throw VolumeError();
 	}
+	real_offset += size;
 
-	return total_size;
+	return size;
 }
 
 
-uint32_t HaystackVolume::write_footer(size_t total_size, uint64_t checksum)
+uint32_t HaystackFile::write_footer()
 {
-	off_t real_offset = offset * ALIGNMENT + HEADER_SIZE;
-
 	uint32_t zero = 0;
-	if (::write(data_file, &zero, sizeof(uint32_t)) != sizeof(uint32_t)) {
+	if (pwrite(volume->data_file, &zero, sizeof(uint32_t), real_offset) != sizeof(uint32_t)) {
 		throw VolumeError();
 	}
+	real_offset += sizeof(uint32_t);
 
 	NeedleFooter footer = {
 		.magic = MAGIC_FOOTER,
 		.checksum = checksum,
 	};
-	if (::write(data_file, &footer, sizeof(footer)) != sizeof(footer)) {
+	if (pwrite(volume->data_file, &footer, sizeof(footer), real_offset) != sizeof(footer)) {
 		throw VolumeError();
 	}
+	real_offset += sizeof(footer);
 
 	// Add padding
-	uint32_t new_offset = (real_offset - HEADER_SIZE + sizeof(NeedleHeader) + total_size + sizeof(NeedleFooter) + ALIGNMENT - 1) / ALIGNMENT;
-	if (ftruncate(data_file, HEADER_SIZE + new_offset * ALIGNMENT) == -1) {
+	uint32_t new_offset = (real_offset - HEADER_SIZE + ALIGNMENT - 1) / ALIGNMENT;
+	if (ftruncate(volume->data_file, HEADER_SIZE + new_offset * ALIGNMENT) == -1) {
 		throw VolumeError();
 	}
 
-	fsync(data_file);
+	write_header(total_size);
+
+	fsync(volume->data_file);
 
 	return new_offset;
 }
 
 
-ssize_t HaystackVolume::write_data(uint64_t cookie, const char *data, size_t size)
+ssize_t HaystackFile::write(const char* data, size_t size)
 {
-	off_t real_offset = offset * ALIGNMENT + HEADER_SIZE;
+	if (state != open && state != writing) {
+		return -1;
+	}
 
-	ssize_t total_size = 0;
+	if (offset != volume->get_offset()) {
+		state = error;
+		return -1;
+	}
+
+	off_t rewind_offset = real_offset;
 
 	try {
-		write_header(cookie, size);
-		total_size += write_chunk(data, size);
-		offset = write_footer(total_size, 0);
+		if (state == open) {
+			state = writing;
+			write_header(0);
+		}
+		size = write_chunk(data, size);
+		total_size += size;
 	} catch (VolumeError) {
-		if (ftruncate(data_file, real_offset) == -1) {
+		state = error;
+		if (ftruncate(volume->data_file, rewind_offset) == -1) {
 			throw VolumeError();
 		}
-		if ((real_offset = lseek(data_file, 0, SEEK_END)) == -1) {
+		if ((rewind_offset = lseek(volume->data_file, 0, SEEK_END)) == -1) {
 			throw VolumeError();
 		}
-		offset = (real_offset - HEADER_SIZE) / ALIGNMENT;
+		offset = (rewind_offset - HEADER_SIZE) / ALIGNMENT;
 		throw;
 	}
-	return total_size;
+
+	return size;
 }
 
 
-HaystackIndex::HaystackIndex(const std::string &path_, bool writable) :
+void HaystackFile::close()
+{
+	if (state == writing) {
+		offset = write_footer();
+	}
+	state = closed;
+}
+
+
+HaystackIndex::HaystackIndex(const std::string& path_, bool writable) :
 	index_path(path_ + "/haystack.index"),
-	index_file(open(index_path.c_str(), writable ? O_RDWR | O_CREAT | O_CLOEXEC : O_RDONLY | O_CLOEXEC, 0644)),
+	index_file(::open(index_path.c_str(), writable ? O_RDWR | O_CREAT | O_CLOEXEC : O_RDONLY | O_CLOEXEC, 0644)),
 	index_base(0)
 {
 	if (index_file == -1) {
@@ -288,7 +337,7 @@ HaystackIndex::HaystackIndex(const std::string &path_, bool writable) :
 
 HaystackIndex::~HaystackIndex()
 {
-	if (index_file) close(index_file);
+	::close(index_file);
 }
 
 
@@ -330,26 +379,43 @@ void HaystackIndex::set_offset(uint32_t docid, uint32_t offset)
 }
 
 
-Haystack::Haystack(const std::string &path_, bool writable) :
-	index(std::make_unique<HaystackIndex>(path_, writable)),
-	volume(std::make_unique<HaystackVolume>(path_, writable))
+Haystack::Haystack(const std::string& path_, bool writable) :
+	index(std::make_shared<HaystackIndex>(path_, writable)),
+	volume(std::make_shared<HaystackVolume>(path_, writable))
 {
 }
 
 
-ssize_t Haystack::read(uint32_t docid, uint64_t cookie, char *data, size_t size)
+HaystackIndexedFile Haystack::open(uint32_t docid, uint64_t cookie, int mode)
 {
-	uint32_t offset = index->get_offset(docid);
-	return volume->read_data(offset, cookie, data, size);
+	HaystackIndexedFile f(this, docid, cookie);
+	if (!(mode & O_APPEND)) {
+		uint32_t offset = index->get_offset(docid);
+		f.seek(offset);
+	}
+	return f;
 }
 
 
-ssize_t Haystack::write(uint32_t docid, uint64_t cookie, const char *data, size_t size)
+HaystackIndexedFile::HaystackIndexedFile(Haystack* haystack, uint32_t docid_, uint64_t cookie_) :
+	HaystackFile(haystack->volume, cookie_),
+	index(haystack->index),
+	docid(docid_)
 {
-	uint32_t cur_offset = volume->get_offset();
-	ssize_t total_size = volume->write_data(cookie, data, size);
+}
+
+
+HaystackIndexedFile::~HaystackIndexedFile()
+{
+	close();
+}
+
+
+void HaystackIndexedFile::close()
+{
+	uint32_t cur_offset = offset;
+	HaystackFile::close();
 	index->set_offset(docid, cur_offset);
-	return total_size;
 }
 
 
@@ -366,12 +432,15 @@ void test_haystack()
 
 	Haystack writable_haystack(".", true);
 	const char data[] = "Hello World";
-	length = writable_haystack.write(1, 123, data, sizeof(data));
+	HaystackIndexedFile wf = writable_haystack.open(1, 123, O_APPEND);
+	length = wf.write(data, sizeof(data));
+	wf.close();
 	assert(length == sizeof(data));
 
 	Haystack haystack(".");
 	char buffer[100];
-	length = haystack.read(1, 123, buffer, sizeof(buffer));
+	HaystackIndexedFile rf = haystack.open(1, 123);
+	length = rf.read(buffer, sizeof(buffer));
 	assert(length == sizeof(data));
 
 	assert(strncmp(buffer, data, sizeof(buffer)) == 0);

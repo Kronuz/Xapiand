@@ -31,7 +31,28 @@
 struct VolumeError : std::exception {};
 
 
+class HaystackFile;
+class HaystackIndexedFile;
+
+
 class HaystackVolume
+{
+	friend HaystackFile;
+
+	uint32_t offset;
+
+	std::string data_path;
+	int data_file;
+
+public:
+	HaystackVolume(const std::string& path, bool writable);
+	~HaystackVolume();
+
+	uint32_t get_offset();
+};
+
+
+class HaystackFile
 {
 	struct NeedleHeader {
 		uint64_t magic; // Magic number used to find the next possible needle during recovery
@@ -48,23 +69,38 @@ class HaystackVolume
 		// padding to align total needle size to 8 bytes
 	};
 
+	std::shared_ptr<HaystackVolume> volume;
+protected:
 	uint32_t offset;
 
-	std::string data_path;
-	int data_file;
+private:
+	off_t real_offset;
+	uint64_t cookie;
+	size_t total_size;
+	uint64_t checksum;
 
-	void write_header(uint64_t cookie, size_t size);
-	ssize_t write_chunk(const char *data, size_t size);
-	uint32_t write_footer(size_t total_size, uint64_t checksum);
+	enum {
+		open,
+		writing,
+		reading,
+		closed,
+		error
+	} state;
+
+	void write_header(size_t size);
+	size_t write_chunk(const char* data, size_t size);
+	uint32_t write_footer();
 
 public:
-	HaystackVolume(const std::string &path, bool writable);
-	~HaystackVolume();
+	HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, uint64_t cookie_);
+	~HaystackFile();
 
-	uint32_t get_offset();
+	uint32_t seek(uint32_t offset_);
 
-	ssize_t read_data(uint32_t offset, uint64_t cookie, char *data, size_t size);
-	ssize_t write_data(uint64_t cookie, const char *data, size_t size);
+	ssize_t write(const char* data, size_t size);
+	ssize_t read(char* data, size_t size);
+
+	void close();
 };
 
 
@@ -77,7 +113,7 @@ class HaystackIndex
 	std::vector<uint32_t> index;
 
 public:
-	HaystackIndex(const std::string &path, bool writable);
+	HaystackIndex(const std::string& path, bool writable);
 	~HaystackIndex();
 
 	uint32_t get_offset(uint32_t docid);
@@ -87,12 +123,26 @@ public:
 
 class Haystack
 {
-	std::unique_ptr<HaystackIndex> index;
-	std::unique_ptr<HaystackVolume> volume;
+	friend HaystackIndexedFile;
+
+	std::shared_ptr<HaystackIndex> index;
+	std::shared_ptr<HaystackVolume> volume;
 
 public:
-	Haystack(const std::string &path, bool writable=false);
+	Haystack(const std::string& path, bool writable=false);
 
-	ssize_t read(uint32_t docid, uint64_t cookie, char *data, size_t size);
-	ssize_t write(uint32_t docid, uint64_t cookie, const char *data, size_t size);
+	HaystackIndexedFile open(uint32_t docid, uint64_t cookie, int mode=0);
+};
+
+
+class HaystackIndexedFile : public HaystackFile
+{
+	std::shared_ptr<HaystackIndex> index;
+	uint32_t docid;
+
+public:
+	HaystackIndexedFile(Haystack* haystack, uint32_t docid_, uint64_t cookie_);
+	~HaystackIndexedFile();
+
+	void close();
 };
