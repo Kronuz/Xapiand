@@ -96,6 +96,15 @@ offset_t HaystackVolume::get_offset()
 
 
 HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, did_t id_, cookie_t cookie_) :
+	header({
+		.head = {
+			.magic = MAGIC_HEADER,
+			.cookie = cookie_,
+			.id = id_,
+			.size = 0,
+		},
+		.chunk_size = 0
+	}),
 	buffer(nullptr),
 	buffer_size(0),
 	available_buffer(0),
@@ -103,9 +112,6 @@ HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, did_t
 	volume(volume_),
 	offset(volume->get_offset()),
 	real_offset(offset * ALIGNMENT + HEADER_SIZE),
-	id(id_),
-	cookie(cookie_),
-	total_size(0),
 	checksum(0),
 	state(open)
 {
@@ -130,6 +136,18 @@ offset_t HaystackFile::seek(offset_t offset_)
 }
 
 
+did_t HaystackFile::id()
+{
+	return header.head.id;
+}
+
+
+size_t HaystackFile::size()
+{
+	return header.head.size;
+}
+
+
 ssize_t HaystackFile::read(char* data, size_t size)
 {
 	if (state != open && state != reading) {
@@ -142,6 +160,8 @@ ssize_t HaystackFile::read(char* data, size_t size)
 
 	if (state == open) {
 		state = reading;
+
+		cookie_t cookie = header.head.cookie;
 
 		size_t header_size = sizeof(NeedleHeader::Head) + sizeof(chunk_size_t);
 		if (pread(volume->data_file, &header, header_size, real_offset) != header_size) {
@@ -217,13 +237,8 @@ ssize_t HaystackFile::read(char* data, size_t size)
 void HaystackFile::write_header(size_t size)
 {
 	real_offset = offset * ALIGNMENT + HEADER_SIZE; // Header *always* starts at offset!
-	NeedleHeader::Head head = {
-		.magic = MAGIC_HEADER,
-		.cookie = cookie,
-		.id = id,
-		.size = size,
-	};
-	if (pwrite(volume->data_file, &head, sizeof(NeedleHeader::Head), real_offset) != sizeof(NeedleHeader::Head)) {
+	header.head.size = size;
+	if (pwrite(volume->data_file, &header.head, sizeof(NeedleHeader::Head), real_offset) != sizeof(NeedleHeader::Head)) {
 		throw VolumeError();
 	}
 	real_offset += sizeof(NeedleHeader::Head);
@@ -271,7 +286,7 @@ offset_t HaystackFile::write_footer()
 		throw VolumeError();
 	}
 
-	write_header(total_size);
+	write_header(header.head.size);
 
 	fsync(volume->data_file);
 
@@ -298,7 +313,7 @@ ssize_t HaystackFile::write(const char* data, size_t size)
 			write_header(0);
 		}
 		size = write_chunk(data, size);
-		total_size += size;
+		header.head.size += size;
 	} catch (VolumeError) {
 		state = error;
 		if (ftruncate(volume->data_file, rewind_offset) == -1) {
@@ -327,7 +342,8 @@ void HaystackFile::close()
 HaystackIndex::HaystackIndex(const std::string& path_, bool writable) :
 	index_path(path_ + "/haystack.index"),
 	index_file(::open(index_path.c_str(), writable ? O_RDWR | O_CREAT | O_CLOEXEC : O_RDONLY | O_CLOEXEC, 0644)),
-	index_base(0)
+	index_base(0),
+	index_touched(-1)
 {
 	if (index_file == -1) {
 		throw VolumeError();
@@ -349,9 +365,7 @@ offset_t HaystackIndex::get_offset(did_t id)
 	did_t new_index_base = id / INDEX_CACHE;
 
 	if (index_base != new_index_base || docpos > index.size()) {
-		if (!index_file) {
-			return -1;
-		}
+		flush();
 		index_base = new_index_base;
 		size_t index_offset = index_base * sizeof(did_t) + HEADER_SIZE;
 		index.resize(INDEX_CACHE);
@@ -365,19 +379,26 @@ offset_t HaystackIndex::get_offset(did_t id)
 
 void HaystackIndex::set_offset(did_t id, offset_t offset)
 {
-	get_offset(id);  // Open/udpate index if needed
-
-	size_t docpos = id % INDEX_CACHE;
-	if (index.size() < docpos) {
-		index.resize(docpos + 1);
+	offset_t old_offset = get_offset(id);  // Open/udpate index if needed
+	if (old_offset != offset) {
+		size_t docpos = id % INDEX_CACHE;
+		if (index.size() < docpos) {
+			index.resize(docpos + 1);
+		}
+		index[docpos] = offset;
+		index_touched = index_base;
 	}
-	index[docpos] = offset;
+}
 
-	size_t index_offset = index_base * sizeof(offset_t) + HEADER_SIZE;
 
-	// The following should be asynchronous:
-	pwrite(index_file, index.data(), index.size() * sizeof(offset_t), index_offset);
-	fsync(index_file);
+void HaystackIndex::flush()
+{
+	if (index_touched == index_base) {
+		index_touched = -1;
+		size_t index_offset = index_base * sizeof(offset_t) + HEADER_SIZE;
+		pwrite(index_file, index.data(), index.size() * sizeof(offset_t), index_offset);
+		fsync(index_file);
+	}
 }
 
 
@@ -396,6 +417,12 @@ HaystackIndexedFile Haystack::open(did_t id, cookie_t cookie, int mode)
 		f.seek(offset);
 	}
 	return f;
+}
+
+
+void Haystack::flush()
+{
+	index->flush();
 }
 
 
@@ -418,6 +445,7 @@ void HaystackIndexedFile::close()
 	offset_t cur_offset = offset;
 	HaystackFile::close();
 	index->set_offset(id, cur_offset);
+	index->flush();
 }
 
 
@@ -438,6 +466,9 @@ void test_haystack()
 	length = wf.write(data, sizeof(data));
 	wf.close();
 	assert(length == sizeof(data));
+
+	// The following should be asynchronous:
+	writable_haystack.flush();
 
 	Haystack haystack(".");
 	char buffer[100];

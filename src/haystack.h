@@ -91,9 +91,6 @@ protected:
 
 private:
 	off_t real_offset;
-	did_t id;
-	cookie_t cookie;
-	size_t total_size;
 	checksum_t checksum;
 
 	enum {
@@ -112,6 +109,8 @@ public:
 	HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, did_t id_, cookie_t cookie_);
 	~HaystackFile();
 
+	did_t id();
+	size_t size();
 	offset_t seek(offset_t offset_);
 
 	ssize_t write(const char* data, size_t size);
@@ -127,6 +126,7 @@ class HaystackIndex
 	int index_file;
 
 	offset_t index_base;
+	offset_t index_touched;
 	std::vector<offset_t> index;
 
 public:
@@ -135,6 +135,7 @@ public:
 
 	offset_t get_offset(did_t id);
 	void set_offset(did_t id, offset_t offset);
+	void flush();
 };
 
 
@@ -149,6 +150,7 @@ public:
 	Haystack(const std::string& path, bool writable=false);
 
 	HaystackIndexedFile open(did_t id, cookie_t cookie, int mode=0);
+	void flush();
 };
 
 
