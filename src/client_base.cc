@@ -45,7 +45,7 @@ const int WRITE_QUEUE_SIZE = 10;
 #define TYPE_COMPRESSOR LZ4_COMPRESSOR
 
 
-class ClientReader : public CompressorReader
+class ClientReader : public CompressorBufferReader
 {
 protected:
 	int fd;
@@ -416,8 +416,7 @@ void BaseClient::read_cb(int fd)
 							return;
 						}
 						block_size = file_size;
-						compressor->decompressor->input.clear();
-						compressor->decompressor->offset = 0;
+						compressor->decompressor->clear();
 					}
 
 					const char *file_buf_to_write;
@@ -436,12 +435,11 @@ void BaseClient::read_cb(int fd)
 					}
 
 					if (block_size_to_write) {
-						compressor->decompressor->input.append(file_buf_to_write, block_size_to_write);
+						compressor->decompressor->append(file_buf_to_write, block_size_to_write);
 						block_size -= block_size_to_write;
 					}
 					if (file_size == 0) {
-						compressor->decompressor->input.clear();
-						compressor->decompressor->offset = 0;
+						compressor->decompressor->clear();
 						compressor->decompress();
 
 						on_read_file_done();

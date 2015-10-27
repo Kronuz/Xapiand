@@ -38,14 +38,28 @@ typedef char *char_ptr;
 
 class CompressorReader
 {
-protected:
 public:
-	virtual ssize_t begin() {
+	virtual ~CompressorReader() {};
+
+	virtual ssize_t begin() = 0;
+	virtual ssize_t read(char **buf, size_t size) = 0;
+	virtual ssize_t write(const char *buf, size_t size) = 0;
+	virtual ssize_t done() = 0;
+
+	virtual void clear() = 0;
+	virtual void append(const char *buf, size_t size) = 0;
+};
+
+
+class CompressorBufferReader : public CompressorReader
+{
+public:
+	ssize_t begin() {
 		output.clear();
 		offset = 0;
 		return 0;
 	};
-	virtual ssize_t read(char **buf, size_t size) {
+	ssize_t read(char **buf, size_t size) {
 		//LOG(this, "input size %lu \n",input.size());
 		if (input.size() == 0) {
 			//LOG(this, "base_read (0)\n");
@@ -70,20 +84,27 @@ public:
 		//LOG(this, "base_read: %s (%zu)\n", repr(*buf, size).c_str(), size);
 		return size;
 	};
-	virtual ssize_t write(const char *buf, size_t size) {
+	ssize_t write(const char *buf, size_t size) {
 		//LOG(this, "base_write: %s (%zu)\n", repr(buf, size).c_str(), size);
 		output.append(buf, size);
 		return size;
 	};
-	virtual ssize_t done() { return 0; };
+	ssize_t done() { return 0; };
 
-public:
 	size_t offset;
 	std::string input;
 	std::string output;
 
-	CompressorReader() : offset(0) {}
-	virtual ~CompressorReader() {}
+public:
+	CompressorBufferReader() : offset(0) {}
+
+	void clear() {
+		input.clear();
+		offset = 0;
+	}
+	void append(const char *buf, size_t size) {
+		input.append(buf, size);
+	}
 };
 
 
