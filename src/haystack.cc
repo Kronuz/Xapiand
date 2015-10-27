@@ -108,7 +108,7 @@ ssize_t Haystack::read(uint32_t docid, uint64_t cookie, char *data, size_t size)
 	char* buffer_data = buffer;
 
 	uint32_t offset = get_offset(docid);
-	if (offset == -1) {
+	if (offset == static_cast<uint32_t>(-1)) {
 		return 0;
 	}
 
