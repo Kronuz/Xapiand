@@ -28,7 +28,7 @@
 #include <vector>
 
 
-typedef uint16_t chunk_size_t;
+typedef uint32_t chunk_size_t;
 typedef uint32_t offset_t;
 typedef uint32_t docid_t;
 typedef uint64_t cookie_t;
