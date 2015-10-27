@@ -102,12 +102,11 @@ uint32_t Haystack::get_offset(uint32_t docid)
 }
 
 
-ssize_t Haystack::read(uint32_t docid, uint64_t cookie, char *data, size_t size)
+ssize_t Haystack::read_data(uint32_t offset, uint64_t cookie, char *data, size_t size)
 {
 	char buffer[BUFFER_SIZE];
 	char* buffer_data = buffer;
 
-	uint32_t offset = get_offset(docid);
 	if (offset == static_cast<uint32_t>(-1)) {
 		return 0;
 	}
@@ -194,6 +193,13 @@ ssize_t Haystack::read(uint32_t docid, uint64_t cookie, char *data, size_t size)
 	}
 
 	return total_size;
+}
+
+
+ssize_t Haystack::read(uint32_t docid, uint64_t cookie, char *data, size_t size)
+{
+	uint32_t offset = get_offset(docid);
+	return read_data(offset, cookie, data, size);
 }
 
 
@@ -321,7 +327,7 @@ uint32_t WritableHaystack::write_footer(size_t total_size, uint64_t checksum)
 }
 
 
-ssize_t WritableHaystack::write(uint32_t docid, uint64_t cookie, const char *data, size_t size)
+ssize_t WritableHaystack::write_data(uint64_t cookie, const char *data, size_t size)
 {
 	off_t real_offset = offset * ALIGNMENT + HEADER_SIZE;
 
@@ -330,10 +336,7 @@ ssize_t WritableHaystack::write(uint32_t docid, uint64_t cookie, const char *dat
 	try {
 		write_header(cookie, size);
 		total_size += write_chunk(data, size);
-		uint32_t new_offset = write_footer(total_size, 0);
-
-		set_offset(docid, offset);
-		offset = new_offset;
+		offset = write_footer(total_size, 0);
 	} catch (VolumeError) {
 		if (ftruncate(data_file, real_offset) == -1) {
 			throw VolumeError();
@@ -342,10 +345,17 @@ ssize_t WritableHaystack::write(uint32_t docid, uint64_t cookie, const char *dat
 			throw VolumeError();
 		}
 		offset = (real_offset - HEADER_SIZE) / ALIGNMENT;
-
 		throw;
 	}
+	return total_size;
+}
 
+
+ssize_t WritableHaystack::write(uint32_t docid, uint64_t cookie, const char *data, size_t size)
+{
+	uint32_t cur_offset = offset;
+	ssize_t total_size = write_data(cookie, data, size);
+	set_offset(docid, cur_offset);
 	return total_size;
 }
 

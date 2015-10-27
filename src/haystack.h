@@ -59,6 +59,8 @@ protected:
 
 	uint32_t get_offset(uint32_t docid);
 
+	ssize_t read_data(uint32_t offset, uint64_t cookie, char *data, size_t size);
+
 public:
 	Haystack(const std::string &path);
 	~Haystack();
@@ -73,12 +75,13 @@ class WritableHaystack : public Haystack
 
 	void set_offset(uint32_t docid, uint32_t offset);
 
-public:
-	WritableHaystack(const std::string &path);
-
 	void write_header(uint64_t cookie, size_t size);
 	ssize_t write_chunk(const char *data, size_t size);
 	uint32_t write_footer(size_t total_size, uint64_t checksum);
+	ssize_t write_data(uint64_t cookie, const char *data, size_t size);
+
+public:
+	WritableHaystack(const std::string &path);
 
 	ssize_t write(uint32_t docid, uint64_t cookie, const char *data, size_t size);
 };
