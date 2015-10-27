@@ -89,13 +89,17 @@ HaystackVolume::~HaystackVolume()
 }
 
 
-uint32_t HaystackVolume::get_offset()
+offset_t HaystackVolume::get_offset()
 {
 	return offset;
 }
 
 
-HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, uint64_t cookie_) :
+HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, cookie_t cookie_) :
+	buffer(nullptr),
+	buffer_size(0),
+	available_buffer(0),
+	next_chunk_size(0),
 	volume(volume_),
 	offset(volume->get_offset()),
 	real_offset(offset * ALIGNMENT + HEADER_SIZE),
@@ -110,15 +114,15 @@ HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, uint6
 HaystackFile::~HaystackFile()
 {
 	close();
+	delete []buffer;
 }
 
 
-uint32_t HaystackFile::seek(uint32_t offset_)
+offset_t HaystackFile::seek(offset_t offset_)
 {
 	if (state != open && state != reading) {
 		return -1;
 	}
-	state = reading;
 	offset = offset_;
 	real_offset = offset * ALIGNMENT + HEADER_SIZE;
 	return offset;
@@ -127,114 +131,109 @@ uint32_t HaystackFile::seek(uint32_t offset_)
 
 ssize_t HaystackFile::read(char* data, size_t size)
 {
-	char buffer[BUFFER_SIZE];
-	char* buffer_data = buffer;
+	if (state != open && state != reading) {
+		return -1;
+	}
 
 	if (offset == volume->get_offset()) {
 		return 0;
 	}
 
-	state = reading;
+	if (state == open) {
+		state = reading;
 
-	size_t buffer_size = pread(volume->data_file, buffer_data, BUFFER_SIZE, real_offset);
-	if (buffer_size < sizeof(NeedleHeader)) {
-		return -1;
-	}
-	real_offset += buffer_size;
+		size_t header_size = sizeof(NeedleHeader::Head) + sizeof(chunk_size_t);
+		if (pread(volume->data_file, &header, header_size, real_offset) != header_size) {
+			state = error;
+			return -2;
+		}
+		real_offset += header_size;
 
-	NeedleHeader* header = (NeedleHeader *)(buffer_data);
-	buffer_data += sizeof(NeedleHeader);
-	buffer_size -= sizeof(NeedleHeader);
-
-	if (header->magic != MAGIC_HEADER) {
-		return -2;
-	}
-	if (header->cookie != cookie) {
-		return -3;
-	}
-
-	total_size = 0;
-	size_t this_size = size;
-
-	uint32_t chunk_size;
-	do {
-		chunk_size = *(uint32_t *)buffer_data;
-		buffer_data += sizeof(uint32_t);
-		buffer_size -= sizeof(uint32_t);
-
-		if (!chunk_size) {
-			break;
+		if (header.head.magic != MAGIC_HEADER) {
+			state = error;
+			return -3;
+		}
+		if (header.head.cookie != cookie) {
+			state = error;
+			return -4;
 		}
 
-		if (this_size > chunk_size) {
-			this_size = chunk_size;
-		}
+		next_chunk_size = header.chunk_size;
+	}
 
-		while (this_size) {
-			size_t current_size = buffer_size;
-			if (current_size > this_size) {
-				current_size = this_size;
+	ssize_t ret_size = 0;
+
+	while (size) {
+		if (!buffer || !available_buffer) {
+			if (!next_chunk_size) {
+				break;
 			}
-			if (current_size) {
-				if (total_size + current_size > size) {
-					current_size = size - total_size;
-					memcpy(data, buffer_data, current_size);
-					return total_size; // Cannot read whole file into the buffer!
-				}
-				memcpy(data, buffer_data, current_size);
-				data += current_size;
-				this_size -= current_size;
-				total_size += current_size;
-				if (!this_size) {
-					buffer_data += current_size;
-					break;
-				}
-			} else {
-				return -4;
+			available_buffer = next_chunk_size + sizeof(chunk_size_t);
+			if (available_buffer > buffer_size) {
+				delete []buffer;
+				buffer_size = available_buffer;
+				buffer = new char[buffer_size];
 			}
-			buffer_data = buffer;
-			buffer_size = pread(volume->data_file, buffer_data, BUFFER_SIZE, real_offset);
-			real_offset += buffer_size;
+			if (pread(volume->data_file, buffer, available_buffer, real_offset) != available_buffer) {
+				state = error;
+				return -5;
+			}
+			real_offset += available_buffer;
+			available_buffer -= sizeof(chunk_size_t);
+			next_chunk_size = *(chunk_size_t*)(buffer + available_buffer);
 		}
-		if (buffer_size < sizeof(uint32_t)) {
-			memcpy(buffer, buffer_data, buffer_size);
-			buffer_data = buffer;
-			buffer_size = pread(volume->data_file, buffer_data + buffer_size, BUFFER_SIZE - buffer_size, real_offset);
-			real_offset += buffer_size;
+
+		size_t current_size = size;
+		if (current_size > available_buffer) {
+			current_size = available_buffer;
 		}
-	} while (chunk_size);
-
-	NeedleFooter* footer = (NeedleFooter *)(buffer_data);
-
-	if (footer->magic != MAGIC_FOOTER) {
-		return -5;
+		memcpy(data, buffer, current_size);
+		available_buffer -= current_size;
+		size -= current_size;
+		ret_size += current_size;
 	}
 
-	return total_size;
+	if (!available_buffer && !next_chunk_size) {
+		NeedleFooter footer;
+		if (pread(volume->data_file, &footer, sizeof(NeedleFooter), real_offset) != sizeof(NeedleFooter)) {
+			state = error;
+			return -6;
+		}
+		real_offset += sizeof(NeedleFooter);
+
+		if (footer.magic != MAGIC_FOOTER) {
+			return -7;
+		}
+		// if (footer.checksum != checksum) {
+		// 	return -8;
+		// }
+	}
+
+	return ret_size;
 }
 
 
 void HaystackFile::write_header(size_t size)
 {
-	NeedleHeader header = {
+	NeedleHeader::Head head = {
 		.magic = MAGIC_HEADER,
 		.cookie = cookie,
 		.size = size,
 	};
-	if (pwrite(volume->data_file, &header, sizeof(header), real_offset) != sizeof(header)) {
+	if (pwrite(volume->data_file, &head, sizeof(NeedleHeader::Head), real_offset) != sizeof(NeedleHeader::Head)) {
 		throw VolumeError();
 	}
-	real_offset += sizeof(header);
+	real_offset += sizeof(NeedleHeader::Head);
 }
 
 
 size_t HaystackFile::write_chunk(const char* data, size_t size)
 {
-	uint32_t chunk_size = size;
-	if (pwrite(volume->data_file, &chunk_size, sizeof(uint32_t), real_offset) != sizeof(uint32_t)) {
+	chunk_size_t chunk_size = size;
+	if (pwrite(volume->data_file, &chunk_size, sizeof(chunk_size_t), real_offset) != sizeof(chunk_size_t)) {
 		throw VolumeError();
 	}
-	real_offset += sizeof(uint32_t);
+	real_offset += sizeof(chunk_size_t);
 
 	ssize_t written = pwrite(volume->data_file, data, size, real_offset);
 	if (written != size) {
@@ -246,25 +245,25 @@ size_t HaystackFile::write_chunk(const char* data, size_t size)
 }
 
 
-uint32_t HaystackFile::write_footer()
+offset_t HaystackFile::write_footer()
 {
-	uint32_t zero = 0;
-	if (pwrite(volume->data_file, &zero, sizeof(uint32_t), real_offset) != sizeof(uint32_t)) {
+	chunk_size_t zero = 0;
+	if (pwrite(volume->data_file, &zero, sizeof(chunk_size_t), real_offset) != sizeof(chunk_size_t)) {
 		throw VolumeError();
 	}
-	real_offset += sizeof(uint32_t);
+	real_offset += sizeof(chunk_size_t);
 
 	NeedleFooter footer = {
 		.magic = MAGIC_FOOTER,
 		.checksum = checksum,
 	};
-	if (pwrite(volume->data_file, &footer, sizeof(footer), real_offset) != sizeof(footer)) {
+	if (pwrite(volume->data_file, &footer, sizeof(NeedleFooter), real_offset) != sizeof(NeedleFooter)) {
 		throw VolumeError();
 	}
-	real_offset += sizeof(footer);
+	real_offset += sizeof(NeedleFooter);
 
 	// Add padding
-	uint32_t new_offset = (real_offset - HEADER_SIZE + ALIGNMENT - 1) / ALIGNMENT;
+	offset_t new_offset = (real_offset - HEADER_SIZE + ALIGNMENT - 1) / ALIGNMENT;
 	if (ftruncate(volume->data_file, HEADER_SIZE + new_offset * ALIGNMENT) == -1) {
 		throw VolumeError();
 	}
@@ -341,19 +340,19 @@ HaystackIndex::~HaystackIndex()
 }
 
 
-uint32_t HaystackIndex::get_offset(uint32_t docid)
+offset_t HaystackIndex::get_offset(docid_t docid)
 {
 	size_t docpos = docid % INDEX_CACHE;
-	uint32_t new_index_base = docid / INDEX_CACHE;
+	docid_t new_index_base = docid / INDEX_CACHE;
 
 	if (index_base != new_index_base || docpos > index.size()) {
 		if (!index_file) {
 			return -1;
 		}
 		index_base = new_index_base;
-		size_t index_offset = index_base * sizeof(uint32_t) + HEADER_SIZE;
+		size_t index_offset = index_base * sizeof(docid_t) + HEADER_SIZE;
 		index.resize(INDEX_CACHE);
-		ssize_t size = pread(index_file, index.data(), INDEX_CACHE * sizeof(uint32_t), index_offset) / sizeof(uint32_t);
+		ssize_t size = pread(index_file, index.data(), INDEX_CACHE * sizeof(docid_t), index_offset) / sizeof(docid_t);
 		index.resize(size);
 	}
 
@@ -361,7 +360,7 @@ uint32_t HaystackIndex::get_offset(uint32_t docid)
 }
 
 
-void HaystackIndex::set_offset(uint32_t docid, uint32_t offset)
+void HaystackIndex::set_offset(docid_t docid, offset_t offset)
 {
 	get_offset(docid);  // Open/udpate index if needed
 
@@ -371,10 +370,10 @@ void HaystackIndex::set_offset(uint32_t docid, uint32_t offset)
 	}
 	index[docpos] = offset;
 
-	size_t index_offset = index_base * sizeof(uint32_t) + HEADER_SIZE;
+	size_t index_offset = index_base * sizeof(offset_t) + HEADER_SIZE;
 
 	// The following should be asynchronous:
-	pwrite(index_file, index.data(), index.size() * sizeof(uint32_t), index_offset);
+	pwrite(index_file, index.data(), index.size() * sizeof(offset_t), index_offset);
 	fsync(index_file);
 }
 
@@ -386,18 +385,18 @@ Haystack::Haystack(const std::string& path_, bool writable) :
 }
 
 
-HaystackIndexedFile Haystack::open(uint32_t docid, uint64_t cookie, int mode)
+HaystackIndexedFile Haystack::open(docid_t docid, cookie_t cookie, int mode)
 {
 	HaystackIndexedFile f(this, docid, cookie);
 	if (!(mode & O_APPEND)) {
-		uint32_t offset = index->get_offset(docid);
+		offset_t offset = index->get_offset(docid);
 		f.seek(offset);
 	}
 	return f;
 }
 
 
-HaystackIndexedFile::HaystackIndexedFile(Haystack* haystack, uint32_t docid_, uint64_t cookie_) :
+HaystackIndexedFile::HaystackIndexedFile(Haystack* haystack, docid_t docid_, cookie_t cookie_) :
 	HaystackFile(haystack->volume, cookie_),
 	index(haystack->index),
 	docid(docid_)
@@ -413,7 +412,7 @@ HaystackIndexedFile::~HaystackIndexedFile()
 
 void HaystackIndexedFile::close()
 {
-	uint32_t cur_offset = offset;
+	offset_t cur_offset = offset;
 	HaystackFile::close();
 	index->set_offset(docid, cur_offset);
 }
@@ -432,14 +431,14 @@ void test_haystack()
 
 	Haystack writable_haystack(".", true);
 	const char data[] = "Hello World";
-	HaystackIndexedFile wf = writable_haystack.open(1, 123, O_APPEND);
+	HaystackIndexedFile wf = writable_haystack.open(1, 0x4f4f4f4f4f4f4f4f, O_APPEND);
 	length = wf.write(data, sizeof(data));
 	wf.close();
 	assert(length == sizeof(data));
 
 	Haystack haystack(".");
 	char buffer[100];
-	HaystackIndexedFile rf = haystack.open(1, 123);
+	HaystackIndexedFile rf = haystack.open(1, 0x4f4f4f4f4f4f4f4f);
 	length = rf.read(buffer, sizeof(buffer));
 	assert(length == sizeof(data));
 
