@@ -105,13 +105,12 @@ HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, did_t
 			.cookie = cookie_,
 			.size = 0,
 		},
-		.chunk_size = 0
+		.chunk_size = 0,
 	}),
 	footer({
 		.foot = {
 			.magic = MAGIC_FOOTER,
-			.checksum = 0
-
+			.checksum = 0,
 		}
 	}),
 	buffer(nullptr),
