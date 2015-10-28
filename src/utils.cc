@@ -87,13 +87,14 @@ uint64_t random_int(uint64_t initial, uint64_t last)
 }
 
 
-std::string repr(const char * p, size_t size, bool friendly)
+std::string repr(const void* p, size_t size, bool friendly)
 {
+	const char* q = (const char *)p;
 	char *buff = new char[size * 4 + 1];
 	char *d = buff;
-	const char *p_end = p + size;
+	const char *p_end = q + size;
 	while (p != p_end) {
-		char c = *p++;
+		char c = *q++;
 		if (friendly && c == 9) {
 			*d++ = '\\';
 			*d++ = 't';

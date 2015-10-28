@@ -52,7 +52,7 @@ uint64_t random_int(uint64_t initial, uint64_t last);
 
 void log(const char *file, int line, void *obj, const char *fmt, ...);
 
-std::string repr(const char *p, size_t size, bool friendly=true);
+std::string repr(const void *p, size_t size, bool friendly=true);
 std::string repr(const std::string &string, bool friendly=true);
 
 
