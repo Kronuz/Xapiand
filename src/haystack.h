@@ -76,6 +76,7 @@ public:
 
 class HaystackFile
 {
+	#pragma pack(push, 1)
 	struct NeedleHeader {
 		struct Head {
 			magic_t magic; // Magic number used to find the next possible needle during recovery
@@ -86,7 +87,6 @@ class HaystackFile
 		} head;
 		chunk_size_t chunk_size;
 	} header;
-
 	struct NeedleFooter {
 		// chunk_size_t zero
 		struct Foot {
@@ -95,6 +95,7 @@ class HaystackFile
 			// padding to align total needle size to 8 bytes
 		} foot;
 	} footer;
+	#pragma pack(pop)
 
 	char* buffer;
 	ssize_t buffer_size;
