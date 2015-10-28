@@ -80,19 +80,19 @@ Xapiand is written in C++14, it makes use of libpcre and libev (both of which ar
 Let's try and index some twitter like information. First, let's create a twitter user, and add some tweets (the twitter index will be created automatically):
 
 ```
-curl -XPUT 'http://localhost:8880/twitter/user/Kronuz' -d '{ "name" : "Shay Banon" }'
+curl -XPUT 'http://localhost:8880/twitter/user/Kronuz?commit=1' -d '{ "name" : "German M. Bravo" }'
 
-curl -XPUT 'http://localhost:8880/twitter/tweet/1' -d '
+curl -XPUT 'http://localhost:8880/twitter/tweet/1?commit=1' -d '
 {
     "user": "Kronuz",
     "postDate": "2015-11-15T13:12:00",
     "message": "Trying out Xapiand, so far so good?"
 }'
 
-curl -XPUT 'http://localhost:8880/twitter/tweet/2' -d '
+curl -XPUT 'http://localhost:8880/twitter/tweet/2?commit=1' -d '
 {
     "user": "Kronuz",
-    "postDate": "2009-11-15T14:12:12",
+    "postDate": "2015-10-15T10:31:18",
     "message": "Another tweet, will it be indexed?"
 }'
 ```
