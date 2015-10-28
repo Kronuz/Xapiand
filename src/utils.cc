@@ -93,7 +93,7 @@ std::string repr(const void* p, size_t size, bool friendly)
 	char *buff = new char[size * 4 + 1];
 	char *d = buff;
 	const char *p_end = q + size;
-	while (p != p_end) {
+	while (q != p_end) {
 		char c = *q++;
 		if (friendly && c == 9) {
 			*d++ = '\\';
