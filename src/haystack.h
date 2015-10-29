@@ -80,7 +80,7 @@ class HaystackFile
 	struct NeedleHeader {
 		struct Head {
 			magic_t magic; // Magic number used to find the next possible needle during recovery
-			did_t id;  // id
+			did_t id;  // document id (if 0, it's deleted)
 			cookie_t cookie;  // Security cookie supplied by client to prevent brute force attacks
 			size_t size;  // Full size (uncompressed)
 			// data goes here...
@@ -116,7 +116,6 @@ private:
 		opened,
 		writing,
 		reading,
-		closed,
 		error,
 		eof,
 	} state;
@@ -124,6 +123,7 @@ private:
 	void write_header(size_t size);
 	size_t write_chunk(const char* data, size_t size);
 	offset_t write_footer();
+	offset_t _seek(offset_t offset_);
 
 public:
 	HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, did_t id_, cookie_t cookie_);
@@ -142,7 +142,7 @@ public:
 	ssize_t write(const char* data, size_t size);
 	ssize_t read(char* data, size_t size);
 
-	void close();
+	offset_t commit();
 };
 
 
@@ -186,7 +186,6 @@ class HaystackIndexedFile : public HaystackFile
 
 public:
 	HaystackIndexedFile(Haystack* haystack, did_t id_, cookie_t cookie_);
-	~HaystackIndexedFile();
 
-	void close();
+	offset_t commit();
 };

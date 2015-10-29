@@ -129,7 +129,6 @@ HaystackFile::HaystackFile(const std::shared_ptr<HaystackVolume> &volume_, did_t
 
 HaystackFile::~HaystackFile()
 {
-	close();
 	delete []buffer;
 }
 
@@ -164,16 +163,22 @@ checksum_t HaystackFile::checksum()
 }
 
 
+offset_t HaystackFile::_seek(offset_t offset)
+{
+	state = opened;
+	current_offset = offset;
+	real_offset = current_offset * ALIGNMENT + HEADER_SIZE;
+	return current_offset;
+}
+
+
 offset_t HaystackFile::seek(offset_t offset)
 {
 	if (state != eof && state != opened && state != reading) {
 		errno = EBADSTATE;
 		return -1;
 	}
-	state = opened;
-	current_offset = offset;
-	real_offset = current_offset * ALIGNMENT + HEADER_SIZE;
-	return current_offset;
+	return _seek(offset);
 }
 
 
@@ -186,8 +191,17 @@ offset_t HaystackFile::next()
 
 offset_t HaystackFile::rewind()
 {
-	// End of file, go to next file
-	return seek(current_offset);
+	offset_t offset = _seek(current_offset);
+
+	if (state == writing) {
+		if (ftruncate(volume->data_file, real_offset) == -1) {
+			throw VolumeError();
+		}
+		if ((real_offset = lseek(volume->data_file, 0, SEEK_END)) == -1) {
+			throw VolumeError();
+		}
+	}
+	return offset;
 }
 
 
@@ -370,8 +384,6 @@ ssize_t HaystackFile::write(const char* data, size_t size)
 		return -1;
 	}
 
-	off_t rewind_offset = real_offset;
-
 	try {
 		if (state == opened) {
 			state = writing;
@@ -380,14 +392,8 @@ ssize_t HaystackFile::write(const char* data, size_t size)
 		size = write_chunk(data, size);
 		header.head.size += size;
 	} catch (VolumeError) {
+		rewind();
 		state = error;
-		if (ftruncate(volume->data_file, rewind_offset) == -1) {
-			throw VolumeError();
-		}
-		if ((rewind_offset = lseek(volume->data_file, 0, SEEK_END)) == -1) {
-			throw VolumeError();
-		}
-		current_offset = (rewind_offset - HEADER_SIZE) / ALIGNMENT;
 		throw;
 	}
 
@@ -395,12 +401,14 @@ ssize_t HaystackFile::write(const char* data, size_t size)
 }
 
 
-void HaystackFile::close()
+offset_t HaystackFile::commit()
 {
+	offset_t offset = current_offset;
 	if (state == writing) {
 		current_offset = write_footer();
 	}
-	state = closed;
+	state = opened;
+	return offset;
 }
 
 
@@ -498,18 +506,12 @@ HaystackIndexedFile::HaystackIndexedFile(Haystack* haystack, did_t id_, cookie_t
 }
 
 
-HaystackIndexedFile::~HaystackIndexedFile()
+offset_t HaystackIndexedFile::commit()
 {
-	close();
-}
-
-
-void HaystackIndexedFile::close()
-{
-	offset_t offset = current_offset;
-	HaystackFile::close();
+	offset_t offset = HaystackFile::commit();
 	index->set_offset(id(), offset);
 	index->flush();
+	return offset;
 }
 
 
@@ -531,7 +533,7 @@ void test_haystack()
 	const char data[] = "Hello World";
 	HaystackIndexedFile wf = writable_haystack.open(id, cookie, O_APPEND);
 	length = wf.write(data, sizeof(data));
-	wf.close();
+	wf.commit();
 	assert(length == sizeof(data));
 
 	// The following should be asynchronous:
