@@ -39,7 +39,7 @@
 #include <arpa/inet.h>
 
 #define MAX_BODY_SIZE (250 * 1024 * 1024)
-#define MAX_BODY_MEM (1024 * 1024)
+#define MAX_BODY_MEM (5 * 1024 * 1024)
 
 // Xapian http client
 #define METHOD_DELETE  0
@@ -317,6 +317,12 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 			self->close();
 			return 0;
 		} else if (self->body_descriptor || self->body_size > MAX_BODY_MEM) {
+
+			//The next two lines are switching off the write body in to a file option when the body is too large
+			//(for avoid have it in memory) but this feature is not available yet
+			self->write(http_response(413, HTTP_STATUS, p->http_major, p->http_minor)); // <-- remove leater!
+			self->close(); // <-- remove leater!
+
 			if (!self->body_descriptor) {
 				strcpy(self->body_path, "/tmp/xapiand_upload.XXXXXX");
 				self->body_descriptor = mkstemp(self->body_path);
