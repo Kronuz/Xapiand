@@ -471,6 +471,24 @@ bool XapiandManager::trigger_replication(const Endpoint &src_endpoint, const End
 #endif /* HAVE_REMOTE_PROTOCOL */
 
 
+bool XapiandManager::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename, XapiandServer *server)
+{
+	int client_sock;
+	if ((client_sock = connection_socket()) < 0) {
+		return false;
+	}
+
+	BinaryClient *client = new BinaryClient(server, server->loop, client_sock, &database_pool, &thread_pool, active_timeout, idle_timeout);
+
+	if (!client->init_storing(endpoints, did, filename)) {
+		delete client;
+		return false;
+	}
+
+	return true;
+}
+
+
 void XapiandManager::discovery_heartbeat_cb(ev::timer &, int)
 {
 	double next_heartbeat;

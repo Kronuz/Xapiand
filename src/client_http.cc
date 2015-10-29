@@ -693,6 +693,12 @@ void HttpClient::index_document_view(const query_t &e)
 		return;
 	}
 
+	// did = returned by index() call
+	// filename = Termoprary file
+	// if (manager()->store(endpoints, did, filename, _parent)) {
+	// 	INFO(this, "Storing %s...\n", filename.c_str());
+	// }
+
 	t = clock() - t;
 	double time = (double)t / CLOCKS_PER_SEC;
 	LOG(this, "Time take for index %f\n", time);

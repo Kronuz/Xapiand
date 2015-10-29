@@ -145,6 +145,7 @@ public:
 #ifdef HAVE_REMOTE_PROTOCOL
 	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint, XapiandServer *server);
 #endif
+	bool store(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename, XapiandServer *server);
 
 	void run(int num_servers, int num_replicators);
 	void sig_shutdown_handler(int sig);

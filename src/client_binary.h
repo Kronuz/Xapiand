@@ -27,10 +27,23 @@
 #ifdef HAVE_REMOTE_PROTOCOL
 
 #include "client_base.h"
+#include "haystack.h"
 
 #include <xapian.h>
 
 #include <unordered_map>
+
+
+enum storing_reply_type {
+	STORING_REPLY_READY,   // 0 - OK, begin sending
+	STORING_REPLY_DONE,
+	STORING_REPLY_FILE,
+	STORING_REPLY_DATA,
+	STORING_CREATE,
+	STORING_OPEN,
+	STORING_READ,
+	STORING_MAX,
+};
 
 
 enum replicate_reply_type {
@@ -45,11 +58,21 @@ enum replicate_reply_type {
 	REPL_MAX,
 };
 
+//
+// There are three binary server states:
+//     Remote Protocol - Used by Xapian while databases use the remote protocol
+//     Replication Protocol - Used by Xapian during the replication
+//     File Storing - Used by Xapiand to send files to store
+//
 enum binary_state {
 	init_remoteprotocol,
 	remoteprotocol,
-	init_replicationprotocol,
-	replicationprotocol,
+
+	replicationprotocol_slave,
+	replicationprotocol_master,
+
+	storingprotocol_sender,
+	storingprotocol_receiver,
 };
 
 //
@@ -79,10 +102,20 @@ private:
 	bool repl_switched_db;
 	bool repl_just_switched_db;
 
+	Xapian::docid storing_id;
+	Database *storing_database;
+	std::string storing_filename;
+	Endpoint storing_endpoint;
+	offset_t storing_offset;
+	cookie_t storing_cookie;
+	std::shared_ptr<HaystackVolume> storing_volume;
+	std::unique_ptr<HaystackFile> storing_file;
+
 	void on_read(const char *buf, size_t received);
 	void on_read_file(const char *buf, size_t received);
 	void on_read_file_done();
 
+	void repl_file_done();
 	void repl_apply(replicate_reply_type type, const std::string & message);
 	void repl_end_of_changes(const std::string & message);
 	void repl_fail(const std::string & message);
@@ -94,10 +127,23 @@ private:
 	void repl_get_changesets(const std::string & message);
 	void receive_repl();
 
+	void storing_file_done();
+	void storing_apply(storing_reply_type type, const std::string & message);
+	void storing_send(const std::string & message);
+	void storing_done(const std::string & message);
+	void storing_open(const std::string & message);
+	void storing_read(const std::string & message);
+	void storing_create(const std::string & message);
+
 public:
 	inline replicate_reply_type get_message(double timeout, std::string & result, replicate_reply_type required_type) {
 		char required_type_as_char = static_cast<char>(required_type);
 		return static_cast<replicate_reply_type>(get_message(timeout, result, required_type_as_char));
+	}
+
+	inline storing_reply_type get_message(double timeout, std::string & result, storing_reply_type required_type) {
+		char required_type_as_char = static_cast<char>(required_type);
+		return static_cast<storing_reply_type>(get_message(timeout, result, required_type_as_char));
 	}
 
 	inline message_type get_message(double timeout, std::string & result, message_type required_type) {
@@ -130,6 +176,7 @@ public:
 
 	bool init_remote();
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
+	bool init_storing(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename);
 
 	void run();
 };
