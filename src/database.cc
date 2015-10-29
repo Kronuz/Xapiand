@@ -589,12 +589,6 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 		return false;
 	}
 
-	unique_cJSON document(cJSON_Parse(body.c_str()), cJSON_Delete);
-	if (!document) {
-		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
-		return false;
-	}
-
 	Xapian::Document doc;
 	std::string document_id;
 
@@ -616,15 +610,22 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
 
+	if (ct_type != DOCUMENT_JSON) {
+		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
+		doc.set_data(body.data());
+		return replace(document_id, doc, commit);
+	}
+
+	unique_cJSON document(cJSON_Parse(body.c_str()), cJSON_Delete);
+	if (!document) {
+		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+		return false;
+	}
+
 	unique_char_ptr _cprint(cJSON_Print(document.get()));
 	std::string doc_data(_cprint.get());
 	LOG_DATABASE_WRAP(this, "Document to index: %s\n", doc_data.c_str());
 	doc.set_data(doc_data);
-
-	if (ct_type != DOCUMENT_JSON) {
-		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
-		return replace(document_id, doc, commit);
-	}
 
 	cJSON *document_terms = cJSON_GetObjectItem(document.get(), RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document.get(), RESERVED_TEXTS);
