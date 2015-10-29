@@ -116,7 +116,7 @@ static cJSON *cJSONUtils_PatchDetach(cJSON *object,const char *path)
 {
 	char *parentptr=0,*childptr=0;cJSON *parent=0;
 
-	parentptr=strdup(path);	childptr=strrchr(parentptr,'/');	if (childptr) *childptr++=0;
+	parentptr=strdup(path);	childptr=strrchr(parentptr,'/');	if (childptr) *childptr++=0; else childptr = parentptr;
 	parent=cJSONUtils_GetPointer(object,parentptr);
 	cJSONUtils_InplaceDecodePointerString(childptr);
 
@@ -193,7 +193,7 @@ static int cJSONUtils_ApplyPatch(cJSON *object,cJSON *patch)
 	// Now, just add "value" to "path".
 	char *parentptr=0,*childptr=0;cJSON *parent=0;
 
-	parentptr=strdup(path->valuestring);	childptr=strrchr(parentptr,'/');	if (childptr) *childptr++=0;
+	parentptr=strdup(path->valuestring);	childptr=strrchr(parentptr,'/');	if (childptr) *childptr++=0; else childptr = parentptr;
 	parent=cJSONUtils_GetPointer(object,parentptr);
 	cJSONUtils_InplaceDecodePointerString(childptr);
 
