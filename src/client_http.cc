@@ -302,6 +302,10 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 
 			if (name.compare("content-type") == 0) {
 				self->content_type = value;
+			} else
+
+			if (name.compare("content-length") == 0) {
+				self->content_length = value;
 			}
 
 			self->header_name.clear();
@@ -683,15 +687,7 @@ void HttpClient::index_document_view(const query_t &e)
 
 	clock_t t = clock();
 
-	unique_cJSON document(cJSON_Parse(body.c_str()), cJSON_Delete);
-	if (!document) {
-		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
-		database_pool->checkin(&database);
-		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
-		return;
-	}
-
-	if (!database->index(document.get(), command, e.commit)) {
+	if (!database->index(body, command, e.commit, content_type, content_length)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;
@@ -748,7 +744,7 @@ void HttpClient::update_document_view(const query_t &e)
 		return;
 	}
 
-	if (!database->patch(patches.get(), command, e.commit)) {
+	if (!database->patch(patches.get(), command, e.commit, content_type, content_length)) {
 		database_pool->checkin(&database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT, parser.http_major, parser.http_minor));
 		return;

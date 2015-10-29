@@ -78,6 +78,7 @@ class HttpClient : public BaseClient {
 	std::string index_path;
 
 	std::string content_type;
+	std::string content_length;
 	bool expect_100 = false;
 
 	std::string host;

@@ -36,6 +36,9 @@
 
 #define getPos(pos, size) ((pos) < (size) ? (pos) : (size))
 
+#define DOCUMENT_JSON "application/json"
+#define DEFAULT_OFFSET "0" /* Replace for the real offsert */
+
 pcre *Database::compiled_find_field_re = NULL;
 
 
@@ -222,7 +225,7 @@ Database::_commit()
 
 
 bool
-Database::patch(cJSON *patches, const std::string &_document_id, bool commit)
+Database::patch(cJSON *patches, const std::string &_document_id, bool commit, const std::string &ct_type, const std::string &ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
 		LOG_ERR(this, "ERROR: database is read-only\n");
@@ -264,7 +267,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit)
 
 	if (cJSONUtils_ApplyPatches(data_json.get(), patches) == 0) {
 		// Object patched
-		return index(data_json.get(), _document_id, commit);
+		return index(cJSON_PrintUnformatted(data_json.get()), _document_id, commit, ct_type, ct_length);
 	}
 
 	// Object no patched
@@ -579,22 +582,52 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 
 
 bool
-Database::index(cJSON *document, const std::string &_document_id, bool commit)
+Database::index(const std::string &body, const std::string &_document_id, bool commit, const std::string &ct_type, const std::string &ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
 		LOG_ERR(this, "ERROR: database is read-only\n");
 		return false;
 	}
 
-	Xapian::Document doc;
+	unique_cJSON document(cJSON_Parse(body.c_str()), cJSON_Delete);
+	if (!document) {
+		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+		return false;
+	}
 
-	unique_char_ptr _cprint(cJSON_Print(document));
+	Xapian::Document doc;
+	std::string document_id;
+
+	std::size_t found = ct_type.find_last_of("/");
+	std::string type(ct_type.c_str(), found);
+	std::string subtype(ct_type.c_str(), found+1, ct_type.size());
+
+	//Make sure document_id is also a boolean term (otherwise it doesn't replace an existing document)
+	doc.add_value(0, _document_id);
+	document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
+	LOG_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s\n", _document_id.c_str(), document_id.c_str());
+	doc.add_boolean_term(document_id);
+	doc.add_value(1, DEFAULT_OFFSET);
+	doc.add_value(2, ct_type);
+	doc.add_value(3, ct_length);
+
+	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX , STRING_TYPE);
+	doc.add_term(prefixed(ct_type, term_prefix));
+	doc.add_term(prefixed(type + "/*", term_prefix));
+	doc.add_term(prefixed("*/" + subtype, term_prefix));
+
+	unique_char_ptr _cprint(cJSON_Print(document.get()));
 	std::string doc_data(_cprint.get());
 	LOG_DATABASE_WRAP(this, "Document to index: %s\n", doc_data.c_str());
 	doc.set_data(doc_data);
 
-	cJSON *document_terms = cJSON_GetObjectItem(document, RESERVED_TERMS);
-	cJSON *document_texts = cJSON_GetObjectItem(document, RESERVED_TEXTS);
+	if (ct_type != DOCUMENT_JSON) {
+		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
+		return replace(document_id, doc, commit);
+	}
+
+	cJSON *document_terms = cJSON_GetObjectItem(document.get(), RESERVED_TERMS);
+	cJSON *document_texts = cJSON_GetObjectItem(document.get(), RESERVED_TEXTS);
 
 	std::string s_schema = db->get_metadata(RESERVED_SCHEMA);
 
@@ -604,7 +637,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	cJSON *properties;
 	bool find = false;
 	if (s_schema.empty()) {
-		properties = cJSON_CreateObject(); // It is managed by chema.
+		properties = cJSON_CreateObject(); // It is managed by schema.
 		cJSON_AddItemToObject(schema.get(), RESERVED_VERSION, cJSON_CreateNumber(DB_VERSION_SCHEMA));
 		cJSON_AddItemToObject(schema.get(), RESERVED_SCHEMA, properties);
 	} else {
@@ -622,15 +655,8 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 		find = true;
 	}
 
-	std::string document_id;
 	cJSON *subproperties = NULL;
 	if (_document_id.c_str()) {
-		//Make sure document_id is also a boolean term (otherwise it doesn't replace an existing document)
-		doc.add_value(0, _document_id);
-		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
-		LOG_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s\n", _document_id.c_str(), document_id.c_str());
-		doc.add_boolean_term(document_id);
-
 		subproperties = cJSON_GetObjectItem(properties, RESERVED_ID);
 		if (!subproperties) {
 			subproperties = cJSON_CreateObject(); // It is managed by properties.
@@ -653,7 +679,7 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 	try {
 		//Default specifications
 		specifications_t spc_now = default_spc;
-		find ? update_specifications(document, spc_now, properties, true) : insert_specifications(document, spc_now, properties);
+		find ? update_specifications(document.get(), spc_now, properties, true) : insert_specifications(document.get(), spc_now, properties);
 		specifications_t spc_bef = spc_now;
 
 		if (document_texts) {
@@ -729,9 +755,9 @@ Database::index(cJSON *document, const std::string &_document_id, bool commit)
 			}
 		}
 
-		int elements = cJSON_GetArraySize(document);
+		int elements = cJSON_GetArraySize(document.get());
 		for (int i = 0; i < elements; i++) {
-			cJSON *item = cJSON_GetArrayItem(document, i);
+			cJSON *item = cJSON_GetArrayItem(document.get(), i);
 			bool find = true;
 			if (!is_reserved(item->string)) {
 				subproperties = cJSON_GetObjectItem(properties, item->string);
