@@ -224,12 +224,12 @@ Database::_commit()
 }
 
 
-bool
+Xapian::docid
 Database::patch(cJSON *patches, const std::string &_document_id, bool commit, const std::string &ct_type, const std::string &ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
 		LOG_ERR(this, "ERROR: database is read-only\n");
-		return false;
+		return 0;
 	}
 
 	Xapian::Document document;
@@ -250,9 +250,9 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 			document = db->get_document(*m);
 			break;
 		} catch (Xapian::InvalidArgumentError &err) {
-			return false;
+			return 0;
 		} catch (Xapian::DocNotFoundError &err) {
-			return false;
+			return 0;
 		} catch (const Xapian::Error &err) {
 			reopen();
 			m = mset.begin();
@@ -262,7 +262,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 	unique_cJSON data_json(cJSON_Parse(document.get_data().c_str()), cJSON_Delete);
 	if (!data_json) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
-		return false;
+		return 0;
 	}
 
 	if (cJSONUtils_ApplyPatches(data_json.get(), patches) == 0) {
@@ -271,7 +271,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 	}
 
 	// Object no patched
-	return false;
+	return 0;
 }
 
 
@@ -581,12 +581,12 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 }
 
 
-bool
+Xapian::docid
 Database::index(const std::string &body, const std::string &_document_id, bool commit, const std::string &ct_type, const std::string &ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
 		LOG_ERR(this, "ERROR: database is read-only\n");
-		return false;
+		return 0;
 	}
 
 	Xapian::Document doc;
@@ -619,7 +619,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 	unique_cJSON document(cJSON_Parse(body.c_str()), cJSON_Delete);
 	if (!document) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
-		return false;
+		return 0;
 	}
 
 	unique_char_ptr _cprint(cJSON_Print(document.get()));
@@ -645,12 +645,12 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 		schema = std::move(unique_cJSON(cJSON_Parse(s_schema.c_str()), cJSON_Delete));
 		if (!schema) {
 			LOG_ERR(this, "ERROR: Schema is corrupt, you need provide a new one. JSON Before: [%s]\n", cJSON_GetErrorPtr());
-			return false;
+			return 0;
 		}
 		cJSON *_version = cJSON_GetObjectItem(schema.get(), RESERVED_VERSION);
 		if (_version == NULL || _version->valuedouble != DB_VERSION_SCHEMA) {
 			LOG_ERR(this, "ERROR: Different database's version schemas, the current version is %1.1f\n", DB_VERSION_SCHEMA);
-			return false;
+			return 0;
 		}
 		properties = cJSON_GetObjectItem(schema.get(), RESERVED_SCHEMA);
 		find = true;
@@ -674,7 +674,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 		}
 	} else {
 		LOG_ERR(this, "ERROR: Document must have an 'id'\n");
-		return false;
+		return 0;
 	}
 
 	try {
@@ -718,7 +718,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 					spc_now = spc_bef;
 				} else {
 					LOG_DATABASE_WRAP(this, "ERROR: Text's value must be defined\n");
-					return false;
+					return 0;
 				}
 			}
 		}
@@ -751,7 +751,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 					spc_now = spc_bef;
 				} else {
 					LOG_DATABASE_WRAP(this, "ERROR: Term must be defined\n");
-					return false;
+					return 0;
 				}
 			}
 		}
@@ -775,7 +775,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 
 	} catch (const std::exception &err) {
 		LOG_DATABASE_WRAP(this, "ERROR: %s\n", err.what());
-		return false;
+		return 0;
 	}
 
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
@@ -785,15 +785,16 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 }
 
 
-bool
+Xapian::docid
 Database::replace(const std::string &document_id, const Xapian::Document &doc, bool commit)
 {
+	Xapian::docid did;
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Inserting: -%s- t:%d\n", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
 		try {
 			LOG_DATABASE_WRAP(this, "Doing replace_document.\n");
-			wdb->replace_document(document_id, doc);
+			did = wdb->replace_document(document_id, doc);
 			LOG_DATABASE_WRAP(this, "Replace_document was done.\n");
 		} catch (const Xapian::Error &e) {
 			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
@@ -801,10 +802,35 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 			continue;
 		}
 		LOG_DATABASE_WRAP(this, "Document inserted\n");
-		return (commit) ? _commit() : true;
+		if (commit) _commit();
+		return did;
 	}
 
-	return false;
+	return 0;
+}
+
+
+Xapian::docid
+Database::replace(const Xapian::docid &did, const Xapian::Document &doc, bool commit)
+{
+	for (int t = 3; t >= 0; --t) {
+		LOG_DATABASE_WRAP(this, "Inserting: -did:%u- t:%d\n", did, t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+		try {
+			LOG_DATABASE_WRAP(this, "Doing replace_document.\n");
+			wdb->replace_document(did, doc);
+			LOG_DATABASE_WRAP(this, "Replace_document was done.\n");
+		} catch (const Xapian::Error &e) {
+			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			if (t) reopen();
+			continue;
+		}
+		LOG_DATABASE_WRAP(this, "Document inserted\n");
+		if (commit) _commit();
+		return did;
+	}
+
+	return 0;
 }
 
 

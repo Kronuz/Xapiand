@@ -88,9 +88,10 @@ public:
 	long long read_mastery(const std::string &dir);
 	void reopen();
 	bool drop(const std::string &document_id, bool commit);
-	bool index(const std::string &body, const std::string &document_id, bool commit, const std::string &ct_type, const std::string &ct_length);
-	bool patch(cJSON *patches, const std::string &_document_id, bool commit, const std::string &ct_type, const std::string &ct_length);
-	bool replace(const std::string &document_id, const Xapian::Document &doc, bool commit);
+	Xapian::docid index(const std::string &body, const std::string &document_id, bool commit, const std::string &ct_type, const std::string &ct_length);
+	Xapian::docid patch(cJSON *patches, const std::string &_document_id, bool commit, const std::string &ct_type, const std::string &ct_length);
+	Xapian::docid replace(const std::string &document_id, const Xapian::Document &doc, bool commit);
+	Xapian::docid replace(const Xapian::docid &did, const Xapian::Document &doc, bool commit);
 	bool get_metadata(const std::string &key, std::string &value);
 	bool set_metadata(const std::string &key, const std::string &value, bool commit);
 	bool get_document(const Xapian::docid &did, Xapian::Document &doc);
