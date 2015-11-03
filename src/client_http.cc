@@ -1077,6 +1077,7 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 				unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
 				if (!object) {
 					 write(http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, data, ct_type));
+					database_pool->checkin(&database);
 					return;
 				}
 
