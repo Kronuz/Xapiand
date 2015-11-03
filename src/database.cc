@@ -23,6 +23,7 @@
 #include "database.h"
 #include "multivalue.h"
 #include "multivaluerange.h"
+#include "length.h"
 #include "cJSON_Utils.h"
 #include "generate_terms.h"
 
@@ -36,9 +37,8 @@
 
 #define getPos(pos, size) ((pos) < (size) ? (pos) : (size))
 
-#define TYPE_JSON "application/json"
-#define TYPE_DEFAULT "application/x-www-form-urlencoded"
 #define DEFAULT_OFFSET "0" /* Replace for the real offsert */
+
 
 pcre *Database::compiled_find_field_re = NULL;
 
@@ -603,6 +603,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 	LOG_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s\n", _document_id.c_str(), document_id.c_str());
 	doc.add_boolean_term(document_id);
 	doc.add_value(1, DEFAULT_OFFSET);
+	doc.add_value(2, ct_type);
 	doc.add_value(3, ct_length);
 
 	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX , STRING_TYPE);
@@ -610,30 +611,34 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
 
-	if (ct_type != TYPE_JSON && ct_type != TYPE_DEFAULT) {
-		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
-		doc.set_data(body.data());
-		doc.add_value(2, ct_type);
-		return replace(document_id, doc, commit);
-	}
-
-	unique_cJSON document(cJSON_Parse(body.c_str()), cJSON_Delete);
-	if (!document) {
-		if (ct_type == TYPE_JSON) {
+	cJSON *json;
+	bool blob = true;
+	if (ct_type == "application/json") {
+		json = cJSON_Parse(body.c_str());
+		if (!json) {
 			LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 			return 0;
 		}
-		document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
-		doc.set_data(body.data());
-		doc.add_value(2, ct_type);
-		return replace(document_id, doc, commit);
+		blob = false;
+	} else if (ct_type == "application/x-www-form-urlencoded") {
+		json = cJSON_Parse(body.c_str());
+		if (json) {
+			doc.add_value(2, "application/json");
+			blob = false;
+		} else {
+			json = cJSON_Parse("{}");
+		}
+	} else if (ct_type == "plain/text") {
+		json = cJSON_Parse("{}");
+	} else {
+		json = cJSON_Parse("{}");
 	}
-	doc.add_value(2, TYPE_JSON);
+	unique_cJSON document(json, cJSON_Delete);
 
 	unique_char_ptr _cprint(cJSON_Print(document.get()));
 	std::string doc_data(_cprint.get());
 	LOG_DATABASE_WRAP(this, "Document to index: %s\n", doc_data.c_str());
-	doc.set_data(doc_data);
+	doc.set_data(encode_length(doc_data.size()) + doc_data + (blob ? body : ""));
 
 	cJSON *document_terms = cJSON_GetObjectItem(document.get(), RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document.get(), RESERVED_TEXTS);

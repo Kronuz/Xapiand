@@ -33,6 +33,7 @@
 #include "io_utils.h"
 
 #include <unistd.h>
+#include <regex>
 
 #include <assert.h>
 #include <sys/socket.h>
@@ -50,6 +51,7 @@
 #define METHOD_OPTIONS 6
 #define METHOD_PATCH   24
 
+std::regex header_accept_re("([a-z*+]*/[a-z*+]*)(?:;?(q=(?:\\d*\\.)?\\d+)?),?");
 
 const char* status_code[6][14] = {
 	{},
@@ -307,8 +309,27 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 
 			if (name.compare("content-length") == 0) {
 				self->content_length = value;
-			}
+			} else
 
+			if (name.compare("accept") == 0) {
+				int submatches[] = {1, 2};
+				std::regex_token_iterator<std::string::iterator> beg_re (value.begin(), value.end(), header_accept_re, submatches);
+				std::regex_token_iterator<std::string::iterator> end_re;
+				if (std::distance(beg_re, end_re)) {
+					while (beg_re != end_re) {
+						//Get the accept type part
+						std::string type(*beg_re++);
+						if(type.length() != 0) {
+							if(beg_re != end_re) {
+								//Get the accept prefereces
+								std::string num(*beg_re++);
+								if (num.length() != 0) self->accept_set.insert(std::make_pair(std::stod(std::string(num,2)), type));
+								else self->accept_set.insert(std::make_pair(1, type));
+							}
+						} else beg_re++;
+					}
+				}
+			}
 			self->header_name.clear();
 			self->header_value.clear();
 		}
@@ -1006,13 +1027,58 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 				}
 
 				data = document.get_data();
+				const char *p = data.data();
+				const char *p_end = p + data.size();
+				size_t length = decode_length(&p, p_end, true);
+				std::string ct_type = document.get_value(2);
+				bool type_found = false;
+				auto it = accept_set.begin();
+				for (; it != accept_set.end(); it++){
+					if (it->second == ct_type || it->second == "*/*") {
+						if (it->second == "application/json" || ct_type == "application/json") {
+							data = std::string(p, length);
+							ct_type = "application/json";
+							type_found = true;
+							break;
+						} else {
+							p += length;
+							data = std::string(p, p_end - p);
+							type_found = true;
+							break;
+						}
+					}
+				}
+
+				if (!type_found) {
+					std::string response_err;
+					unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+					cJSON_AddStringToObject(root.get(), "Error message", std::string("Response type " + ct_type + " not provided in the accept header").c_str());
+					if (e.pretty) {
+						unique_char_ptr _cprint(cJSON_Print(root.get()));
+						response_err.assign(_cprint.get());
+					} else {
+						unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
+						response_err.assign(_cprint.get());
+					}
+					response_err += "\n\n";
+					write(http_response(406, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_err));
+					database_pool->checkin(&database);
+					LOG(this, "ABORTED SEARCH\n");
+					return;
+				}
+
 				id = document.get_value(0);
+
+				unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
+				if (!object) {
+					 write(http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, data, ct_type));
+					return;
+				}
 
 				if (rc == 0 && json_chunked) {
 					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, cout_matched));
 				}
 
-				unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
 				cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
 				if (object_data) {
 					object_data = cJSON_Duplicate(object_data, 1);
