@@ -30,13 +30,13 @@
 
 
 #define HTTP_STATUS         (1 << 0)
-#define HTTP_HEADER			(1 << 1)
-#define HTTP_ACCEPT			(1 << 2)
-#define HTTP_BODY			(1 << 3)
-#define HTTP_CONTENT_TYPE	(1 << 4)
-#define HTTP_CHUNKED		(1 << 5)
-#define HTTP_OPTIONS		(1 << 6)
-#define HTTP_MATCHED_COUNT	(1 << 7)
+#define HTTP_HEADER         (1 << 1)
+#define HTTP_ACCEPT         (1 << 2)
+#define HTTP_BODY           (1 << 3)
+#define HTTP_CONTENT_TYPE   (1 << 4)
+#define HTTP_CHUNKED        (1 << 5)
+#define HTTP_OPTIONS        (1 << 6)
+#define HTTP_MATCHED_COUNT  (1 << 7)
 
 #define CMD_ID     0
 #define CMD_SEARCH 1
