@@ -1067,8 +1067,13 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 					return;
 				}
 
+				if (e.unique_doc && mset.size() == 1) {
+					json_chunked = false;
+				}
+
 				id = document.get_value(0);
 
+				/* Return data in case is not a json type */
 				unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
 				if (!object) {
 					 write(http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, data, ct_type));
@@ -1110,8 +1115,16 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 				write("0\r\n\r\n");
 			}
 		} else {
+			int status_code = 200;
 			unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
-			cJSON_AddStringToObject(root.get(), "Response empty", "No match found");
+
+			if (e.unique_doc) {
+				cJSON_AddStringToObject(root.get(), "Response empty", "No document found");
+				status_code = 404;
+			} else {
+				cJSON_AddStringToObject(root.get(), "Response empty", "No match found");
+			}
+
 			if (e.pretty) {
 				unique_char_ptr _cprint(cJSON_Print(root.get()));
 				result.assign(_cprint.get());
@@ -1120,7 +1133,7 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 				result.assign(_cprint.get());
 			}
 			result += "\n\n";
-			result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, result);
+			result = http_response(status_code,  HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, result);
 			write(result);
 		}
 	}
@@ -1264,6 +1277,8 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 			switch (cmd) {
 				case CMD_SEARCH:
 				case CMD_FACETS:
+
+					e.unique_doc = false;
 
 					q.offset = NULL;
 					if (url_qs("offset", query_str, query_size, &q) != -1) {
@@ -1476,6 +1491,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 						}
 					} else {
 						e.limit = 1;
+						e.unique_doc = true;
 						e.offset = 0;
 						e.check_at_least = 0;
 					}
@@ -1527,6 +1543,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					}
 				else {
 					e.limit = 1;
+					e.unique_doc = true;
 					e.offset = 0;
 					e.check_at_least = 0;
 				}
