@@ -984,7 +984,7 @@ Database::search(const query_t &e)
 			lan = *lit;
 			lit++;
 		}
-		srch = _search(*qit, flags, true, lan, e.unique_doc);
+		srch = _search(*qit, flags, true, lan);
 		if (first) {
 			queryQ = srch.query;
 			first = false;
@@ -1007,7 +1007,7 @@ Database::search(const query_t &e)
 	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 	first = true;
 	for ( ; pit != e.partial.end(); pit++) {
-		srch = _search(*pit, flags, false, "", e.unique_doc);
+		srch = _search(*pit, flags, false, "");
 		if (first) {
 			queryP = srch.query;
 			first = false;
@@ -1030,7 +1030,7 @@ Database::search(const query_t &e)
 	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 	first = true;
 	for ( ; tit != e.terms.end(); tit++) {
-		srch = _search(*tit, flags, false, "", e.unique_doc);
+		srch = _search(*tit, flags, false, "");
 		if (first) {
 			queryT = srch.query;
 			first = false;
@@ -1073,7 +1073,7 @@ Database::search(const query_t &e)
 
 
 Database::search_t
-Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan, bool)
+Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan)
 {
 	search_t srch;
 

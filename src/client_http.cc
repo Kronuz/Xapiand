@@ -1264,7 +1264,6 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 			switch (cmd) {
 				case CMD_SEARCH:
 				case CMD_FACETS:
-					e.unique_doc = false;
 
 					q.offset = NULL;
 					if (url_qs("offset", query_str, query_size, &q) != -1) {
@@ -1477,7 +1476,6 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 						}
 					} else {
 						e.limit = 1;
-						e.unique_doc = true;
 						e.offset = 0;
 						e.check_at_least = 0;
 					}
@@ -1529,7 +1527,6 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					}
 				else {
 					e.limit = 1;
-					e.unique_doc = true;
 					e.offset = 0;
 					e.check_at_least = 0;
 				}
