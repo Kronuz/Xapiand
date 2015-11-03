@@ -21,6 +21,7 @@
 		46B6B3D21B7E4A1B000FA041 /* geospatialrange.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46B6B3CF1B7E4A1B000FA041 /* geospatialrange.cc */; };
 		46B6B3D31B7E4A1B000FA041 /* multivaluerange.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46B6B3D11B7E4A1B000FA041 /* multivaluerange.cc */; };
 		46B6B3D61B7E5B3C000FA041 /* generate_terms.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46B6B3D41B7E5B3C000FA041 /* generate_terms.cc */; };
+		C31686531BE93D4600C232E5 /* haystack.cc in Sources */ = {isa = PBXBuildFile; fileRef = C31686521BE93D4600C232E5 /* haystack.cc */; };
 		C350589B1B7BAEE300901B80 /* multivaluekeymaker.cc in Sources */ = {isa = PBXBuildFile; fileRef = C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */; };
 		C350589F1B99E75500901B80 /* io_utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = C350589D1B99E75500901B80 /* io_utils.cc */; };
 		C35058AB1BA325CC00901B80 /* lz4.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A21BA325CC00901B80 /* lz4.c */; };
@@ -92,6 +93,8 @@
 		46B6B3D11B7E4A1B000FA041 /* multivaluerange.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = multivaluerange.cc; path = src/multivaluerange.cc; sourceTree = "<group>"; };
 		46B6B3D41B7E5B3C000FA041 /* generate_terms.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = generate_terms.cc; path = src/generate_terms.cc; sourceTree = "<group>"; };
 		46B6B3D51B7E5B3C000FA041 /* generate_terms.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = generate_terms.h; path = src/generate_terms.h; sourceTree = "<group>"; };
+		C31686511BE93D3B00C232E5 /* haystack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = haystack.h; path = src/haystack.h; sourceTree = "<group>"; };
+		C31686521BE93D4600C232E5 /* haystack.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = haystack.cc; path = src/haystack.cc; sourceTree = "<group>"; };
 		C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = multivaluekeymaker.cc; path = src/multivaluekeymaker.cc; sourceTree = "<group>"; };
 		C350589C1B7BAF0500901B80 /* multivaluekeymaker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = multivaluekeymaker.h; path = src/multivaluekeymaker.h; sourceTree = "<group>"; };
 		C350589D1B99E75500901B80 /* io_utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = io_utils.cc; path = src/io_utils.cc; sourceTree = "<group>"; };
@@ -214,6 +217,8 @@
 				4630BEDF1B42E88D00351058 /* geometry.h */,
 				46B6B3CF1B7E4A1B000FA041 /* geospatialrange.cc */,
 				46B6B3CE1B7E4A1B000FA041 /* geospatialrange.h */,
+				C31686521BE93D4600C232E5 /* haystack.cc */,
+				C31686511BE93D3B00C232E5 /* haystack.h */,
 				4630BEE01B42E88D00351058 /* htm.cc */,
 				4630BEE11B42E88D00351058 /* htm.h */,
 				C39AE0481B2F627E00203139 /* http_parser.c */,
@@ -348,6 +353,7 @@
 				4630BEE41B42E88D00351058 /* geometry.cc in Sources */,
 				C39AE07C1B2F62D700203139 /* cartesian.cc in Sources */,
 				C39AE0761B2F627E00203139 /* utils.cc in Sources */,
+				C31686531BE93D4600C232E5 /* haystack.cc in Sources */,
 				C39AE06D1B2F627E00203139 /* length.cc in Sources */,
 				C39AE0631B2F627E00203139 /* cJSON_Utils.c in Sources */,
 				46558F801BB0C77900D1ABDB /* server_discovery.cc in Sources */,
