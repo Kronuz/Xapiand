@@ -31,7 +31,6 @@ EndpointList::EndpointList()
 	: status(ST_NEW),
 	  max_mastery_level(0),
 	  init_timeout(0.005),
-	  resolved_time(0),
 	  stop_wait(false)
 {
 	pthread_cond_init(&time_cond, 0);
@@ -141,10 +140,6 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 		return false;
 	}
 
-	if (resolved_time == 0) {
-		resolved_time = time(NULL);
-	}
-
 	bool ret = get_endpoints(manager, n_endps, &endpv, NULL);
 
 	pthread_mutex_unlock(&endl_qmtx);
@@ -155,10 +150,6 @@ bool EndpointList::resolve_endpoint(const std::string &path, XapiandManager *man
 
 bool EndpointList::get_endpoints(XapiandManager *manager, size_t n_endps, std::vector<Endpoint> *endpv, const Node **last_node)
 {
-	if (resolved_time != 0) {
-		return false;
-	}
-
 	bool find_endpoints = false;
 	if (endpv) endpv->clear();
 	std::set<Endpoint, Endpoint::compare>::const_iterator it_endp(endp_set.cbegin());
@@ -194,10 +185,8 @@ bool EndpointList::empty() {
 }
 
 void EndpointList::wakeup() {
-	if (resolved_time != 0) {
-		stop_wait = true;
-		pthread_cond_broadcast(&time_cond);
-	}
+	stop_wait = true;
+	pthread_cond_broadcast(&time_cond);
 }
 
 void EndpointList::show_list()

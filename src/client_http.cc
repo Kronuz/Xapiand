@@ -323,7 +323,7 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 							if(beg_re != end_re) {
 								//Get the accept prefereces
 								std::string num(*beg_re++);
-								if (num.length() != 0) self->accept_set.insert(std::make_pair(std::stod(std::string(num,2)), type));
+								if (num.length() != 0) self->accept_set.insert(std::make_pair(std::stod(std::string(num, 2)), type));
 								else self->accept_set.insert(std::make_pair(1, type));
 							}
 						} else beg_re++;

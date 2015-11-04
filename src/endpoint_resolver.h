@@ -53,7 +53,6 @@ class EndpointList {
 	long long max_mastery_level;
 	double init_timeout;
 
-	time_t resolved_time;
 	bool stop_wait;
 
 public:
