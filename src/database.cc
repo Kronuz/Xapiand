@@ -1722,19 +1722,8 @@ DatabasePool::~DatabasePool()
 
 
 void
-DatabasePool::finish()
-{
-	std::lock_guard<std::mutex> lk(qmtx);
-
-	finished = true;
-}
-
-
-void
 DatabasePool::add_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue)
 {
-	std::lock_guard<std::mutex> lk(qmtx);
-
 	size_t hash = endpoint.hash();
 	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
 	queues_set.insert(queue);
@@ -1744,8 +1733,6 @@ DatabasePool::add_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue)
 void
 DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue)
 {
-	std::lock_guard<std::mutex> lk(qmtx);
-
 	size_t hash = endpoint.hash();
 	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
 	queues_set.erase(queue);
@@ -1759,20 +1746,24 @@ DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue
 long long
 DatabasePool::get_mastery_level(const std::string &dir)
 {
-	Database *database_ = NULL;
-
 	Endpoints endpoints;
 	endpoints.insert(Endpoint(dir));
-	{
-		std::lock_guard<std::mutex> lk(qmtx);
-		if (checkout(&database_, endpoints, 0)) {
-			long long mastery_level = database_->mastery_level;
-			checkin(&database_);
-			return mastery_level;
-		}
+
+	Database *database_ = NULL;
+	if (checkout(&database_, endpoints, 0)) {
+		long long mastery_level = database_->mastery_level;
+		checkin(&database_);
+		return mastery_level;
 	}
 
 	return read_mastery(dir, false);
+}
+
+
+void
+DatabasePool::finish()
+{
+	finished = true;
 }
 
 
@@ -1790,62 +1781,62 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 	time_t now = time(NULL);
 	Database *database_ = NULL;
 
-	{
-		std::unique_lock<std::mutex> lk(qmtx);
+	std::unique_lock<std::mutex> lk(qmtx);
 
-		if (!finished) {
-			DatabaseQueue *queue = NULL;
-			size_t hash = endpoints.hash();
+	if (!finished) {
+		DatabaseQueue *queue = NULL;
+		size_t hash = endpoints.hash();
 
-			if (writable) {
-				queue = &writable_databases[hash];
-			} else {
-				queue = &databases[hash];
-			}
-			queue->persistent = persistent;
-			queue->setup_endpoints(this, endpoints);
+		if (writable) {
+			queue = &writable_databases[hash];
+		} else {
+			queue = &databases[hash];
+		}
+		queue->persistent = persistent;
+		queue->setup_endpoints(this, endpoints);
 
-			if (queue->is_switch_db) {
-				queue->switch_cond.wait(lk);
-			}
+		if (queue->is_switch_db) {
+			queue->switch_cond.wait(lk);
+		}
 
-			if (!queue->pop(database_, 0)) {
-				// Increment so other threads don't delete the queue
-				if (queue->inc_count(writable ? 1 : -1)) {
-					lk.unlock();
-					try {
-						database_ = new Database(queue, endpoints, flags);
+		if (!queue->pop(database_, 0)) {
+			// Increment so other threads don't delete the queue
+			if (queue->inc_count(writable ? 1 : -1)) {
+				lk.unlock();
+				try {
+					database_ = new Database(queue, endpoints, flags);
 
-						if (writable && initref && endpoints.size() == 1) {
-							init_ref(endpoints);
-						}
-
-					} catch (const Xapian::DatabaseOpeningError &err) {
-					} catch (const Xapian::Error &err) {
-						LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
+					if (writable && initref && endpoints.size() == 1) {
+						init_ref(endpoints);
 					}
-					lk.lock();
-					queue->dec_count();  // Decrement, count should have been already incremented if Database was created
-				} else {
-					// Lock until a database is available if it can't get one.
-					lk.unlock();
-					int s = queue->pop(database_);
-					lk.lock();
-					if (!s) {
-						LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
-					}
+
+				} catch (const Xapian::DatabaseOpeningError &err) {
+				} catch (const Xapian::Error &err) {
+					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
 				}
-			}
-			if (database_) {
-				*database = database_;
+				lk.lock();
+				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
 			} else {
-				if (queue->count == 0) {
-					// There was an error and the queue ended up being empty, remove it!
-					databases.erase(hash);
+				// Lock until a database is available if it can't get one.
+				lk.unlock();
+				int s = queue->pop(database_);
+				lk.lock();
+				if (!s) {
+					LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
 				}
 			}
 		}
+		if (database_) {
+			*database = database_;
+		} else {
+			if (queue->count == 0) {
+				// There was an error and the queue ended up being empty, remove it!
+				databases.erase(hash);
+			}
+		}
 	}
+
+	lk.unlock();
 
 	if (!database_) {
 		LOG_DATABASE(this, "!! FAILED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
@@ -1918,91 +1909,7 @@ DatabasePool::checkin(Database **database)
 
 	*database = NULL;
 
-	// checkin_cond.notify_all();  // FIXME: uncomment (needed for dec_ref?)
-
 	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database_);
-}
-
-
-void DatabasePool::init_ref(const Endpoints &endpoints)
-{
-	if (ref_database) {
-		endpoints_set_t::iterator endp_it(endpoints.begin());
-		for ( ; endp_it != endpoints.end(); endp_it++) {
-			std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
-			Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
-			if (p == ref_database->db->postlist_end(unique_id)) {
-				Xapian::Document doc;
-				// Boolean term for the node.
-				doc.add_boolean_term(unique_id);
-				// Start values for the DB.
-				doc.add_boolean_term(prefixed(DB_MASTER, prefix_rf_master));
-				doc.add_value(SLOT_CREF, "0");
-				ref_database->replace(unique_id, doc, true);
-			} else {
-				LOG(this,"The document already exists nothing to do\n");
-			}
-		}
-	}
-}
-
-
-void DatabasePool::inc_ref(const Endpoints &endpoints)
-{
-	Xapian::Document doc;
-	endpoints_set_t::iterator endp_it(endpoints.begin());
-	for ( ; endp_it != endpoints.end(); endp_it++) {
-		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
-		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
-		if (p == ref_database->db->postlist_end(unique_id)) {
-			// QUESTION: Document not found - should add?
-			// QUESTION: This case could happen?
-			doc.add_boolean_term(unique_id);
-			doc.add_value(0, "0");
-			ref_database->replace(unique_id, doc, true);
-		} else {
-			// Document found - reference increased
-			doc = ref_database->db->get_document(*p);
-			doc.add_boolean_term(unique_id);
-			int nref = static_cast<int>(strtol(doc.get_value(0)));
-			doc.add_value(0, std::to_string(nref + 1));
-			ref_database->replace(unique_id, doc, true);
-		}
-	}
-}
-
-
-void DatabasePool::dec_ref(const Endpoints &endpoints)
-{
-	Xapian::Document doc;
-	endpoints_set_t::iterator endp_it(endpoints.begin());
-	for ( ; endp_it != endpoints.end(); endp_it++) {
-		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
-		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
-		if (p != ref_database->db->postlist_end(unique_id)) {
-			doc = ref_database->db->get_document(*p);
-			doc.add_boolean_term(unique_id);
-			int nref = static_cast<int>(strtol(doc.get_value(0)) - 1);
-			doc.add_value(0, std::to_string(nref));
-			ref_database->replace(unique_id, doc, true);
-			if (nref == 0) {
-				// qmtx need a lock
-				// checkin_cond.wait(lk);  // FIXME: needs lock
-				delete_files(endp_it->path);
-			}
-		}
-	}
-}
-
-
-int DatabasePool::get_mastercount()
-{
-	if (ref_database) {
-		Xapian::PostingIterator p(ref_database->db->postlist_begin(DB_MASTER));
-		return std::distance(ref_database->db->postlist_begin(DB_MASTER), ref_database->db->postlist_end(DB_MASTER));
-	}
-
-	return 0;
 }
 
 
@@ -2050,6 +1957,97 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 	}
 
 	return switched;
+}
+
+
+void DatabasePool::init_ref(const Endpoints &endpoints)
+{
+	std::lock_guard<std::mutex> lk(ref_mutex);
+
+	if (ref_database) {
+		endpoints_set_t::iterator endp_it(endpoints.begin());
+		for ( ; endp_it != endpoints.end(); endp_it++) {
+			std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
+			Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
+			if (p == ref_database->db->postlist_end(unique_id)) {
+				Xapian::Document doc;
+				// Boolean term for the node.
+				doc.add_boolean_term(unique_id);
+				// Start values for the DB.
+				doc.add_boolean_term(prefixed(DB_MASTER, prefix_rf_master));
+				doc.add_value(SLOT_CREF, "0");
+				ref_database->replace(unique_id, doc, true);
+			} else {
+				LOG(this,"The document already exists nothing to do\n");
+			}
+		}
+	}
+}
+
+
+void DatabasePool::inc_ref(const Endpoints &endpoints)
+{
+	std::lock_guard<std::mutex> lk(ref_mutex);
+
+	Xapian::Document doc;
+
+	endpoints_set_t::iterator endp_it(endpoints.begin());
+	for ( ; endp_it != endpoints.end(); endp_it++) {
+		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
+		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
+		if (p == ref_database->db->postlist_end(unique_id)) {
+			// QUESTION: Document not found - should add?
+			// QUESTION: This case could happen?
+			doc.add_boolean_term(unique_id);
+			doc.add_value(0, "0");
+			ref_database->replace(unique_id, doc, true);
+		} else {
+			// Document found - reference increased
+			doc = ref_database->db->get_document(*p);
+			doc.add_boolean_term(unique_id);
+			int nref = static_cast<int>(strtol(doc.get_value(0)));
+			doc.add_value(0, std::to_string(nref + 1));
+			ref_database->replace(unique_id, doc, true);
+		}
+	}
+}
+
+
+void DatabasePool::dec_ref(const Endpoints &endpoints)
+{
+	std::lock_guard<std::mutex> lk(ref_mutex);
+
+	Xapian::Document doc;
+
+	endpoints_set_t::iterator endp_it(endpoints.begin());
+	for ( ; endp_it != endpoints.end(); endp_it++) {
+		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
+		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
+		if (p != ref_database->db->postlist_end(unique_id)) {
+			doc = ref_database->db->get_document(*p);
+			doc.add_boolean_term(unique_id);
+			int nref = static_cast<int>(strtol(doc.get_value(0)) - 1);
+			doc.add_value(0, std::to_string(nref));
+			ref_database->replace(unique_id, doc, true);
+			if (nref == 0) {
+				// qmtx need a lock
+				delete_files(endp_it->path);
+			}
+		}
+	}
+}
+
+
+int DatabasePool::get_master_count()
+{
+	std::lock_guard<std::mutex> lk(ref_mutex);
+
+	if (ref_database) {
+		Xapian::PostingIterator p(ref_database->db->postlist_begin(DB_MASTER));
+		return std::distance(ref_database->db->postlist_begin(DB_MASTER), ref_database->db->postlist_end(DB_MASTER));
+	}
+
+	return 0;
 }
 
 

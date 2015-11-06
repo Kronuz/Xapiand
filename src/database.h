@@ -33,6 +33,7 @@
 #include "multivaluekeymaker.h"
 
 #include <mutex>
+#include <atomic>
 #include <condition_variable>
 #include <algorithm>
 #include <queue>
@@ -170,9 +171,10 @@ public:
 class DatabasePool {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
+	friend class DatabaseQueue;
 
 private:
-	bool finished;
+	std::atomic<bool> finished;
 	std::unordered_map<size_t, std::unordered_set<DatabaseQueue *> > queues;
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
@@ -181,13 +183,17 @@ private:
 	std::condition_variable checkin_cond;
 
 	// Variables for ".refs" database.
+	std::mutex ref_mutex;
 	Database *ref_database;
 	std::string prefix_rf_master;
 
 	void init_ref(const Endpoints &endpoints);
 	void inc_ref(const Endpoints &endpoints);
 	void dec_ref(const Endpoints &endpoints);
+	int get_master_count();
 
+	void add_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
+	void drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
 
 public:
 	DatabasePool(size_t max_size);
@@ -195,16 +201,12 @@ public:
 
 	long long get_mastery_level(const std::string &dir);
 
+	void finish();
 	bool checkout(Database **database, const Endpoints &endpoints, int flags);
 	void checkin(Database **database);
-	void finish();
 	bool switch_db(const Endpoint &endpoint);
-	void add_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
-	void drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
 
 	queue::QueueSet<Endpoint> updated_databases;
-
-	int get_mastercount();
 };
 
 
