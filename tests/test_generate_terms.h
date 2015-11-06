@@ -24,22 +24,22 @@
 
 #include "../src/htm.h"
 
-typedef struct test_s {
+using test_t = struct test_s {
 	std::string start;
 	std::string end;
 	std::vector<double> accuracy;
 	std::vector<std::string> acc_prefix;
 	std::string expected_terms;
 	std::vector<std::string> expected_prefixes;
-} test_t;
+};
 
-typedef struct testG_s {
+using testG_t = struct testG_s {
 	std::vector<range_t> ranges;
 	std::vector<double> accuracy;
 	std::vector<std::string> acc_prefix;
 	std::string expected_terms;
 	std::vector<std::string> expected_prefixes;
-} testG_t;
+};
 
 
 int numeric_test();

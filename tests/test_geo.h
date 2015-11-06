@@ -31,10 +31,10 @@
 #include "../src/endpoint.h"
 
 
-typedef struct test_geo_s {
+using test_geo_t = struct test_geo_s {
 	std::string query;
 	std::vector<std::string> expect_datas;
-} test_geo_t;
+};
 
 
 int create_test_db();

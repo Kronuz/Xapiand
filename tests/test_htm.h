@@ -31,7 +31,7 @@
 #include "../src/htm.h"
 
 
-typedef struct test_transform_s {
+using test_transform_t = struct test_transform_s {
 	// Source CRS.
 	int SRID;
 	double lat_src;
@@ -39,9 +39,9 @@ typedef struct test_transform_s {
 	double h_src;
 	// Target CRS.
 	std::string res;
-} test_transform_t;
+};
 
-typedef std::vector<test_transform_t> Vector_Transforms;
+using Vector_Transforms = std::vector<test_transform_t>;
 
 int test_cartesian_transforms();
 int test_hullConvex();

@@ -28,14 +28,14 @@
 #include <vector>
 
 
-typedef struct test_query_s {
+using test_query_t = struct test_query_s {
 	std::vector<std::string> query;
 	std::vector<std::string> terms;
 	std::vector<std::string> partial;
 	std::vector<std::string> facets;
 	std::vector<std::string> expect_datas;
 	std::vector<std::string> expect_facets;
-} test_query_t;
+};
 
 
 int create_test_db();

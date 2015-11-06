@@ -26,27 +26,27 @@
 #include "../src/htm.h"
 
 
-typedef struct test {
+using test_t = struct test {
 	const char *str;
 	const char *expect;
-} test;
+};
 
-typedef struct test_str_double {
+using test_str_double_t = struct test_str_double {
 	const char *str;
 	const double val;
-} test_str_double;
+};
 
-typedef struct test_cartesian {
+using test_cartesian_t = struct test_cartesian {
 	const Cartesian cartesian;
 	const char *expect_serialise;
 	const char *expect_unserialise;
-} test_cartesian;
+};
 
-typedef struct test_trixel_id {
+using test_trixel_id_t = struct test_trixel_id {
 	const uInt64 trixel_id;
 	const char *expect_serialise;
 	const uInt64 expect_unserialise;
-} test_trixel_id;
+};
 
 
 // Testing the transformation between date string and timestamp.

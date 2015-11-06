@@ -31,11 +31,11 @@
 #include "../src/endpoint.h"
 
 
-typedef struct sort_s {
+using sort_t = struct sort_s {
 	std::string query;
 	std::vector<std::string> sort;
 	std::vector<std::string> expect_result;
-} sort_t;
+};
 
 
 int create_test_db();
