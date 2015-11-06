@@ -228,7 +228,7 @@ BinaryClient::repl_file_done()
 		std::string msg(p, len);
 		p += len;
 
-		repl_apply(getReplicateType(type_as_char), msg);
+		repl_apply((ReplicateType)type_as_char, msg);
 
 		buffer.erase(0, p - s);
 		s = p = buffer.data();

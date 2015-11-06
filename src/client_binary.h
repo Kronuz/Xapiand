@@ -133,47 +133,12 @@ class BinaryClient : public BaseClient, public RemoteProtocol {
 public:
 	~BinaryClient();
 
-	inline ReplicateType getReplicateType(char type) {
-		switch (type) {
-			case toUType(ReplicateType::REPLY_END_OF_CHANGES): return ReplicateType::REPLY_END_OF_CHANGES;
-			case toUType(ReplicateType::REPLY_FAIL):           return ReplicateType::REPLY_FAIL;
-			case toUType(ReplicateType::REPLY_DB_HEADER):      return ReplicateType::REPLY_DB_HEADER;
-			case toUType(ReplicateType::REPLY_DB_FILENAME):    return ReplicateType::REPLY_DB_FILENAME;
-			case toUType(ReplicateType::REPLY_DB_FILEDATA):    return ReplicateType::REPLY_DB_FILEDATA;
-			case toUType(ReplicateType::REPLY_DB_FOOTER):      return ReplicateType::REPLY_DB_FOOTER;
-			case toUType(ReplicateType::REPLY_CHANGESET):      return ReplicateType::REPLY_CHANGESET;
-			case toUType(ReplicateType::MSG_GET_CHANGESETS):   return ReplicateType::MSG_GET_CHANGESETS;
-			case toUType(ReplicateType::MAX):                  return ReplicateType::MAX;
-			default:
-				std::string errmsg("Unexpected message type ");
-				errmsg += std::to_string(type);
-				throw Xapian::InvalidArgumentError(errmsg);
-		}
-	}
-
-	inline StoringType getStoringType(char type) {
-		switch (type) {
-			case toUType(StoringType::REPLY_READY): return StoringType::REPLY_READY;
-			case toUType(StoringType::REPLY_DONE):  return StoringType::REPLY_DONE;
-			case toUType(StoringType::REPLY_FILE):  return StoringType::REPLY_FILE;
-			case toUType(StoringType::REPLY_DATA):  return StoringType::REPLY_DATA;
-			case toUType(StoringType::CREATE):      return StoringType::CREATE;
-			case toUType(StoringType::OPEN):        return StoringType::OPEN;
-			case toUType(StoringType::READ):        return StoringType::READ;
-			case toUType(StoringType::MAX):         return StoringType::MAX;
-			default:
-				std::string errmsg("Unexpected message type ");
-				errmsg += std::to_string(type);
-				throw Xapian::InvalidArgumentError(errmsg);
-		}
-	}
-
 	inline ReplicateType get_message(double timeout, std::string & result, ReplicateType required_type) {
-		return getReplicateType(static_cast<char>(get_message(timeout, result, static_cast<message_type>(required_type))));
+		return (ReplicateType)get_message(timeout, result, static_cast<message_type>(required_type));
 	}
 
 	inline StoringType get_message(double timeout, std::string & result, StoringType required_type) {
-		return getStoringType(static_cast<char>(get_message(timeout, result, static_cast<message_type>(required_type))));
+		return (StoringType)get_message(timeout, result, static_cast<message_type>(required_type));
 	}
 
 	inline message_type get_message(double timeout, std::string &result, message_type) override {
