@@ -28,38 +28,50 @@
 #include "times.h"
 
 #include <queue>
-#include <pthread.h>
-
-#define ST_NEW 0
-#define ST_READY 1
-#define ST_READY_TIME_OUT 2
-#define ST_WAITING 3
-#define ST_NEW_ENDP 4
+#include <mutex>
+#include <condition_variable>
 
 class XapiandManager;
 
+using namespace std::chrono;
+using namespace std::literals;
+
+
 class EndpointList {
+	enum class State {
+		NEW,
+		READY,
+		READY_TIME_OUT,
+		WAITING,
+		NEW_ENDP
+	};
+
 	std::set<Endpoint, Endpoint::compare> endp_set;
 
-	pthread_cond_t time_cond;
-	pthread_mutex_t endl_qmtx;
-	pthread_mutexattr_t endl_qmtx_attr;
+	std::condition_variable time_cond;
+	std::mutex endl_qmtx;
 
-	timespec_t init_time;
-	timespec_t last_recv;
-	timespec_t next_wake;
+	system_clock::time_point init_time;
+	system_clock::time_point last_recv;
+	time_point<system_clock, duration<double, std::milli>> next_wake;
 
-	int status;
+	State status;
 	long long max_mastery_level;
-	double init_timeout;
 
+	duration<double, std::milli> init_timeout;
 	bool stop_wait;
 
 public:
 	EndpointList();
-	~EndpointList();
-	bool get_endpoints(XapiandManager *manager, size_t n_endps, std::vector<Endpoint> *endpv, const Node **last_node);
-	bool resolve_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, size_t n_endps, double timeout);
+
+	EndpointList(EndpointList&& other);
+
+	~EndpointList() = default;
+
+	bool get_endpoints(std::shared_ptr<XapiandManager> manager, size_t n_endps, std::vector<Endpoint> *endpv, const Node **last_node);
+
+	bool resolve_endpoint(const std::string &path, std::shared_ptr<XapiandManager> manager, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout);
+
 	void add_endpoint(const Endpoint &element);
 	void wakeup();
 
@@ -71,35 +83,26 @@ public:
 
 
 class EndpointResolver : public lru::LRU<std::string, EndpointList> {
-	pthread_mutex_t re_qmtx;
-	pthread_mutexattr_t re_qmtx_attr;
+	std::mutex re_qmtx;
 
 	lru::GetAction action;
 
 	EndpointList& operator[] (const std::string& key) {
 		try {
 			return at_and([this](EndpointList&){ return action; }, key);
-		} catch (std::range_error) {
+		} catch (const std::range_error&) {
 			return insert(std::make_pair(key, EndpointList()));
 		}
 	 }
 
 public:
 	void add_index_endpoint(const Endpoint &index, bool renew, bool wakeup);
-	bool resolve_index_endpoint(const std::string &path, XapiandManager *manager, std::vector<Endpoint> &endpv, size_t n_endps=1, double timeout=1.0);
-	bool get_master_node(const std::string &index, const Node **node, XapiandManager *manager);
 
-	EndpointResolver(size_t max_size)
-		: LRU<std::string, EndpointList>(max_size)
-	{
-		pthread_mutexattr_init(&re_qmtx_attr);
-		pthread_mutexattr_settype(&re_qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
-		pthread_mutex_init(&re_qmtx, &re_qmtx_attr);
-	}
+	bool resolve_index_endpoint(const std::string &path, std::shared_ptr<XapiandManager> manager, std::vector<Endpoint> &endpv, size_t n_endps=1, duration<double, std::milli> timeout=1s);
 
-	~EndpointResolver()
-	{
-		pthread_mutex_destroy(&re_qmtx);
-		pthread_mutexattr_destroy(&re_qmtx_attr);
-	}
+	bool get_master_node(const std::string &index, const Node **node, std::shared_ptr<XapiandManager> manager);
+
+	EndpointResolver(size_t max_size) : LRU<std::string, EndpointList>(max_size) { }
+
+	~EndpointResolver() = default;
 };

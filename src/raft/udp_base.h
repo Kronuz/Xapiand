@@ -20,44 +20,41 @@
  * IN THE SOFTWARE.
  */
 
-#include "replicator.h"
+#pragma once
 
-#include "servers/discovery.h"
+#include "../manager.h"
 
+// Values in seconds
+#define HEARTBEAT_MIN 0.250
+#define HEARTBEAT_MAX 0.500
 
-XapiandReplicator::XapiandReplicator(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_)
-	: Worker(std::move(manager_), loop_) { }
+#define XAPIAND_UDP_PROTOCOL_MAJOR_VERSION 1
+#define XAPIAND_UDP_PROTOCOL_MINOR_VERSION 0
 
+const uint16_t XAPIAND_UDP_PROTOCOL_VERSION = XAPIAND_UDP_PROTOCOL_MAJOR_VERSION | XAPIAND_UDP_PROTOCOL_MINOR_VERSION << 8;
 
-void
-XapiandReplicator::on_commit(const Endpoint &endpoint)
-{
-	std::string endpoint_mastery(std::to_string(endpoint.mastery_level));
-	manager()->discovery->send_message(
-        Discovery::Message::DB_UPDATED,
-		serialise_string(endpoint_mastery) +  // The mastery level of the database
-		serialise_string(endpoint.path) +  // The path of the index
-		local_node.serialise()   // The node where the index is at
-	);
-}
+class XapiandManager;
 
 
-void
-XapiandReplicator::run()
-{
-	// Function that retrieves a task from a queue, runs it and deletes it
-	LOG_OBJ(this, "Replicator started...\n");
-	Endpoint endpoint;
-	while (manager()->database_pool.updated_databases.pop(endpoint)) {
-		LOG(this, "Replicator was informed database was updated: %s\n", endpoint.as_string().c_str());
-		on_commit(endpoint);
-	}
-	LOG_OBJ(this, "Replicator ended!\n");
-}
+// Base class for sending UDP messages
+class BaseUDP {
+private:
+	XapiandManager *manager;
+	ev::loop_ref *loop;
 
+	struct sockaddr_in addr;
+	int port;
+	int sock;
 
-void
-XapiandReplicator::shutdown()
-{
-	manager()->database_pool.updated_databases.finish();
-}
+	std::string group;
+
+	void send_message(const char *buf, size_t buf_size);
+
+public:
+	enum class Message;
+
+	BaseUDP(XapiandManager *manager, ev::loop_ref *loop_, int port_, const std::string &group_, const std::string &description);
+	virtual ~Raft();
+
+	void send_message(const Message type, const std::string &content) const;
+};

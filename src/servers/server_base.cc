@@ -20,49 +20,28 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
-
-#include "manager.h"
 #include "server_base.h"
 
-#include <list>
-#include <vector>
-
-class BaseServer;
+#include "server.h"
 
 
-class XapiandServer : public Task, public Worker {
-private:
-	pthread_mutex_t qmtx;
-	pthread_mutexattr_t qmtx_attr;
+BaseServer::BaseServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, int sock_)
+	: Worker(std::move(server_), loop_),
+	  io(*loop)
+{
+	io.set<BaseServer, &BaseServer::io_accept>(this);
+	io.start(sock_, ev::READ);
+}
 
-	ev::async async_setup_node;
 
-	std::vector<BaseServer *> servers;
+BaseServer::~BaseServer()
+{
+	destroy();
+}
 
-	void destroy();
 
-	void async_setup_node_cb(ev::async &watcher, int revents);
-
-	void register_server(BaseServer *server);
-
-public:
-	static pthread_mutex_t static_mutex;
-	static int total_clients;
-	static int http_clients;
-	static int binary_clients;
-
-	inline XapiandManager * manager() const {
-		return static_cast<XapiandManager *>(_parent);
-	}
-
-	XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_);
-	~XapiandServer();
-
-	void run();
-	void shutdown();
-
-protected:
-	friend class BaseClient;
-	friend class XapiandManager;
-};
+void
+BaseServer::destroy()
+{
+	io.stop();
+}

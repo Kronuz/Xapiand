@@ -22,42 +22,60 @@
 
 #pragma once
 
-
 #include <list>
 #include "ev/ev++.h"
-#include <pthread.h>
+#include <mutex>
+#include <memory>
 
 
-class Worker
-{
+class Worker : public std::enable_shared_from_this<Worker> {
+	using sharedWorker = std::shared_ptr<Worker>;
+	using workerList = std::list<sharedWorker>;
+
 protected:
 	ev::loop_ref *loop;
 
 	ev::dynamic_loop _dynamic_loop;
+
 	ev::async _break_loop;
 
-	pthread_mutex_t _mtx;
-	pthread_mutexattr_t _mtx_attr;
+	std::mutex _mtx;
 
-	Worker *_parent;
-	std::list<Worker *> _children;
-	std::list<Worker *>::iterator _iterator;
-	/*should be const_iterator but in linux, std::list member functions use a standard iterator and not const_iterator*/
+	sharedWorker _parent;
+	workerList _children;
 
-	std::list<Worker *>::iterator _attach(Worker *child) {
-		pthread_mutex_lock(&_mtx);
-		std::list<Worker *>::iterator iterator = _children.insert(_children.end(), child);
-		pthread_mutex_unlock(&_mtx);
+	// _iterator should be const_iterator but in linux, std::list member functions
+	// use a standard iterator and not const_iterator.
+	workerList::iterator _iterator;
+
+	template<typename T, typename L>
+	Worker(T&& parent, L&& loop_)
+		: loop(loop_ ? std::forward<L>(loop_) : &_dynamic_loop),
+		  _break_loop(*loop),
+		  _parent(std::forward<T>(parent))
+	{
+		_break_loop.set<Worker, &Worker::_break_loop_cb>(this);
+		_break_loop.start();
+	}
+
+	void init() {
+		_iterator = _parent ? _parent->_attach(shared_from_this()) : workerList::iterator();
+	}
+
+	template<typename T>
+	workerList::iterator _attach(T&& child) {
+		std::lock_guard<std::mutex> lk(_mtx);
+		workerList::iterator iterator = _children.insert(_children.end(), std::forward<T>(child));
 		return iterator;
 	}
 
-	void _detach(Worker *child) {
-		pthread_mutex_lock(&_mtx);
+	template<typename T>
+	void _detach(T&& child) {
+		std::lock_guard<std::mutex> lk(_mtx);
 		if (child->_iterator != _children.end()) {
 			_children.erase(child->_iterator);
 			child->_iterator = _children.end();
 		}
-		pthread_mutex_unlock(&_mtx);
 	}
 
 	void _break_loop_cb(ev::async &, int) {
@@ -65,40 +83,39 @@ protected:
 	}
 
 public:
-	Worker(Worker *parent, ev::loop_ref *loop_) :
-		loop(loop_ ? loop_: &_dynamic_loop),
-		_break_loop(*loop),
-		_parent(parent),
-		_iterator(parent ? parent->_attach(this) : std::list<Worker *>::iterator())
-	{
-		pthread_mutexattr_init(&_mtx_attr);
-		pthread_mutexattr_settype(&_mtx_attr, PTHREAD_MUTEX_RECURSIVE);
-		pthread_mutex_init(&_mtx, &_mtx_attr);
-
-		_break_loop.set<Worker, &Worker::_break_loop_cb>(this);
-		_break_loop.start();
-	}
-
 	virtual ~Worker() {
 		_break_loop.stop();
-
-		pthread_mutex_destroy(&_mtx);
-		pthread_mutexattr_destroy(&_mtx_attr);
-
-		if (_parent) _parent->_detach(this);
 	}
 
 	virtual void shutdown() {
-		pthread_mutex_lock(&_mtx);
-		std::list<Worker *>::iterator it(_children.begin());
+		std::lock_guard<std::mutex> lk(_mtx);
+		workerList::iterator it(_children.begin());
 		while (it != _children.end()) {
-			Worker *child = *(it++);
+			sharedWorker child(std::move(*(it++)));
 			child->shutdown();
 		}
-		pthread_mutex_unlock(&_mtx);
 	}
 
 	void break_loop() {
 		_break_loop.send();
+	}
+
+	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
+	static inline decltype(auto) create(Args&&... args) {
+		/*
+		 * std::make_shared only can call a public constructor, for this reason
+		 * it is neccesary wrap the constructor in a struct.
+		 */
+		struct enable_make_shared : T {
+			enable_make_shared(Args&&... args) : T(std::forward<Args>(args)...) { }
+		};
+		auto worker_ = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
+		worker_->init();
+		return worker_;
+	}
+
+	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
+	inline decltype(auto) share_this() noexcept {
+		return std::static_pointer_cast<T>(shared_from_this());
 	}
 };

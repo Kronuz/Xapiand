@@ -27,8 +27,15 @@
 #define XAPIAND_CLUSTER_NAME         "Xapiand"
 #define XAPIAND_DISCOVERY_GROUP      "224.2.2.88"   /* Gossip group */
 #define XAPIAND_DISCOVERY_SERVERPORT 58870          /* Gossip port */
+#define XAPIAND_RAFT_GROUP           "224.2.2.89"   /* Gossip group */
+#define XAPIAND_RAFT_SERVERPORT      58880          /* Gossip port */
 #define XAPIAND_HTTP_SERVERPORT      8880           /* HTTP TCP port */
 #define XAPIAND_BINARY_SERVERPORT    8890           /* Binary TCP port */
+
+#define DBPOOL_SIZE          1000    /* Maximum number of database endpoints in database pool */
+#define NUM_REPLICATORS      3       /* Number of replicators */
+#define THEADPOOL_SIZE       10      /* Threadpool's size */
+#define ENDPOINT_LIST_SIZE   10      /* Endpoints List's size */
 
 #if !defined(_WIN32) && \
 	!defined(__linux__) && \

@@ -22,20 +22,17 @@
 
 #include "client_http.h"
 
-#include "http_parser.h"
-
 #include "multivalue.h"
 #include "utils.h"
 #include "serialise.h"
 #include "length.h"
 #include "cJSON.h"
-#include "manager.h"
 #include "io_utils.h"
 
 #include <unistd.h>
 #include <regex>
 
-#include <assert.h>
+#include <cassert>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
@@ -140,9 +137,9 @@ std::string http_response(int status, int mode, unsigned short http_major=0, uns
 }
 
 
-HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_)
-	: BaseClient(server_, loop, sock_, database_pool_, thread_pool_, active_timeout_, idle_timeout_),
-	  database(NULL),
+HttpClient::HttpClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loop_, int sock_)
+	: BaseClient(std::move(server_), loop_, sock_),
+	  database(nullptr),
 	  body_size(0),
 	  body_descriptor(0),
 	  body_path("")
@@ -150,22 +147,21 @@ HttpClient::HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, Da
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
 
-	pthread_mutex_lock(&XapiandServer::static_mutex);
+	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 	XapiandServer::http_clients++;
 	assert(XapiandServer::http_clients <= XapiandServer::total_clients);
 
 	LOG_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, XapiandServer::http_clients, XapiandServer::total_clients);
 
 	LOG_OBJ(this, "CREATED HTTP CLIENT! (%d clients)\n", XapiandServer::http_clients);
-	pthread_mutex_unlock(&XapiandServer::static_mutex);
 }
 
 
 HttpClient::~HttpClient()
 {
-	pthread_mutex_lock(&XapiandServer::static_mutex);
+	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	int http_clients = --XapiandServer::http_clients;
-	pthread_mutex_unlock(&XapiandServer::static_mutex);
+	lk.unlock();
 
 	if (manager()->shutdown_asap) {
 		if (http_clients <= 0) {
@@ -198,7 +194,7 @@ void HttpClient::on_read(const char *buf, size_t received)
 		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
 			io_read.stop();
 			written = 0;
-			thread_pool->addTask(this);
+			manager()->thread_pool.enqueue(share_this<HttpClient>());
 		}
 	} else {
 		LOG_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? http_errno_description(HTTP_PARSER_ERRNO(&parser)) : "incomplete request");
@@ -436,7 +432,7 @@ void HttpClient::run()
 	if (has_error) {
 		LOG_ERR(this, "ERROR: %s\n", error.c_str());
 		if (database) {
-			database_pool->checkin(&database);
+			manager()->database_pool.checkin(&database);
 		}
 		if (written) {
 			destroy();
@@ -588,7 +584,7 @@ void HttpClient::document_info_view(const query_t &e)
 	Xapian::docid docid = 0;
 	Xapian::QueryParser queryparser;
 
-	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
+	if (!manager()->database_pool.checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -644,37 +640,36 @@ void HttpClient::document_info_view(const query_t &e)
 		write(http_response(404, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 	}
 
-	database_pool->checkin(&database);
+	manager()->database_pool.checkin(&database);
 }
 
 
 void HttpClient::delete_document_view(const query_t &e)
 {
 	std::string result;
-	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
+	if (!manager()->database_pool.checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
-	clock_t t = clock();
+	auto tp_start = std::chrono::system_clock::now();
 	if (!database->drop(command, e.commit)) {
-		database_pool->checkin(&database);
+		manager()->database_pool.checkin(&database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
-	t = clock() - t;
-	double time = (double)t / CLOCKS_PER_SEC;
-	LOG(this, "Time take for delete %f\n", time);
-	pthread_mutex_lock(&manager()->qmtx);
+	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
+	LOG(this, "Time take for delete %d ms\n", time);
+	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
-	stats_cnt.del.cnt[b_time.minute]++;
+	stats_cnt.del.min[b_time.minute]++;
 	stats_cnt.del.sec[b_time.second]++;
-	stats_cnt.del.tm_cnt[b_time.minute] += time;
+	stats_cnt.del.tm_min[b_time.minute] += time;
 	stats_cnt.del.tm_sec[b_time.second] += time;
-	pthread_mutex_unlock(&manager()->qmtx);
+	lk.unlock();
 
-	database_pool->checkin(&database);
+	manager()->database_pool.checkin(&database);
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
@@ -702,37 +697,36 @@ void HttpClient::index_document_view(const query_t &e)
 	std::string result;
 
 	buid_path_index(index_path);
-	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN|DB_INIT_REF)) {
+	if (!manager()->database_pool.checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN|DB_INIT_REF)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
-	clock_t t = clock();
+	auto tp_start = std::chrono::system_clock::now();
 
 	if (!database->index(body, command, e.commit, content_type, content_length)) {
-		database_pool->checkin(&database);
+		manager()->database_pool.checkin(&database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
 	// did = returned by index() call
 	// filename = Termoprary file
-	// if (manager()->store(endpoints, did, filename, _parent)) {
+	// if (manager()->binary->store(endpoints, did, filename, server())) {
 	// 	INFO(this, "Storing %s...\n", filename.c_str());
 	// }
 
-	t = clock() - t;
-	double time = (double)t / CLOCKS_PER_SEC;
-	LOG(this, "Time take for index %f\n", time);
-	pthread_mutex_lock(&manager()->qmtx);
+	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
+	LOG(this, "Time take for index %d ms\n", time);
+	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
-	stats_cnt.index.cnt[b_time.minute]++;
+	stats_cnt.index.min[b_time.minute]++;
 	stats_cnt.index.sec[b_time.second]++;
-	stats_cnt.index.tm_cnt[b_time.minute] += time;
+	stats_cnt.index.tm_min[b_time.minute] += time;
 	stats_cnt.index.tm_sec[b_time.second] += time;
-	pthread_mutex_unlock(&manager()->qmtx);
+	lk.unlock();
 
-	database_pool->checkin(&database);
+	manager()->database_pool.checkin(&database);
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
@@ -759,7 +753,7 @@ void HttpClient::update_document_view(const query_t &e)
 {
 	std::string result;
 
-	if (!database_pool->checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
+	if (!manager()->database_pool.checkout(&database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -767,18 +761,18 @@ void HttpClient::update_document_view(const query_t &e)
 	unique_cJSON patches(cJSON_Parse(body.c_str()), cJSON_Delete);
 	if (!patches) {
 		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
-		database_pool->checkin(&database);
+		manager()->database_pool.checkin(&database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
 	if (!database->patch(patches.get(), command, e.commit, content_type, content_length)) {
-		database_pool->checkin(&database);
+		manager()->database_pool.checkin(&database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
-	database_pool->checkin(&database);
+	manager()->database_pool.checkin(&database);
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
@@ -811,22 +805,22 @@ void HttpClient::stats_view(const query_t &e)
 		cJSON_AddItemToObject(root.get(), "Server status", server_stats.release());
 	}
 	if (e.database) {
-		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
+		if (!manager()->database_pool.checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 			return;
 		}
 		unique_cJSON JSON_database = database->get_stats_database();
 		cJSON_AddItemToObject(root.get(), "Database status", JSON_database.release());
-		database_pool->checkin(&database);
+		manager()->database_pool.checkin(&database);
 	}
 	if (!e.document.empty()) {
-		if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
+		if (!manager()->database_pool.checkout(&database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 			return;
 		}
 		unique_cJSON JSON_document = database->get_stats_docs(e.document);
 		cJSON_AddItemToObject(root.get(), "Document status", JSON_document.release());
-		database_pool->checkin(&database);
+		manager()->database_pool.checkin(&database);
 	}
 	if (!e.stats.empty()) {
 		unique_cJSON server_stats_time = manager()->get_stats_time(e.stats);
@@ -875,7 +869,7 @@ void HttpClient::bad_request_view(const query_t &e, int cmd)
 
 void HttpClient::upload_view(const query_t &)
 {
-	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
+	if (!manager()->database_pool.checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -883,7 +877,7 @@ void HttpClient::upload_view(const query_t &)
 	LOG(this, "Uploaded %s (%zu)\n", body_path, body_size);
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 
-	database_pool->checkin(&database);
+	manager()->database_pool.checkin(&database);
 }
 
 
@@ -893,7 +887,7 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 
 	bool json_chunked = true;
 
-	if (!database_pool->checkout(&database, endpoints, DB_SPAWN)) {
+	if (!manager()->database_pool.checkout(&database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -906,7 +900,7 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 			unique_char_ptr _cprint(cJSON_Print(jschema.get()));
 			schema_ = std::string(_cprint.get()) + "\n";
 			write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, schema_));
-			database_pool->checkin(&database);
+			manager()->database_pool.checkin(&database);
 			return;
 		} else {
 			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
@@ -919,7 +913,7 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 				schema_.assign(_cprint.get());
 			}
 			write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, schema_));
-			database_pool->checkin(&database);
+			manager()->database_pool.checkin(&database);
 			return;
 		}
 	}
@@ -927,20 +921,20 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
 	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
-	clock_t t = clock();
+	auto tp_start = std::chrono::system_clock::now();
 	int rmset = database->get_mset(e, mset, spies, suggestions);
 	int cout_matched = mset.size();
 	if (rmset == 1) {
 		LOG(this, "get_mset return 1\n");
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		database_pool->checkin(&database);
+		manager()->database_pool.checkin(&database);
 		LOG(this, "ABORTED SEARCH\n");
 		return;
 	}
 	if (rmset == 2) {
 		LOG(this, "get_mset return 2\n");
 		write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		database_pool->checkin(&database);
+		manager()->database_pool.checkin(&database);
 		LOG(this, "ABORTED SEARCH\n");
 		return;
 	}
@@ -1021,7 +1015,7 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 					} else {
 						write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 					}
-					database_pool->checkin(&database);
+					manager()->database_pool.checkin(&database);
 					LOG(this, "ABORTED SEARCH\n");
 					return;
 				}
@@ -1062,7 +1056,7 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 					}
 					response_err += "\n\n";
 					write(http_response(406, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_err));
-					database_pool->checkin(&database);
+					manager()->database_pool.checkin(&database);
 					LOG(this, "ABORTED SEARCH\n");
 					return;
 				}
@@ -1077,7 +1071,7 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 				unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
 				if (!object) {
 					 write(http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, data, ct_type));
-					database_pool->checkin(&database);
+					manager()->database_pool.checkin(&database);
 					return;
 				}
 
@@ -1139,18 +1133,17 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 		}
 	}
 
-	t = clock() - t;
-	double time = (double)t / CLOCKS_PER_SEC;
-	LOG(this, "Time take for search %f\n", time);
-	pthread_mutex_lock(&manager()->qmtx);
+	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
+	LOG(this, "Time take for search %d ms\n", time);
+	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
-	stats_cnt.search.cnt[b_time.minute]++;
+	stats_cnt.search.min[b_time.minute]++;
 	stats_cnt.search.sec[b_time.second]++;
-	stats_cnt.search.tm_cnt[b_time.minute] += time;
+	stats_cnt.search.tm_min[b_time.minute] += time;
 	stats_cnt.search.tm_sec[b_time.second] += time;
-	pthread_mutex_unlock(&manager()->qmtx);
+	lk.unlock();
 
-	database_pool->checkin(&database);
+	manager()->database_pool.checkin(&database);
 	LOG(this, "FINISH SEARCH\n");
 }
 
@@ -1211,11 +1204,11 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					node_name = urldecode(p.off_host, p.len_host);
 					has_node_name = true;
 				} else {
-					double timeout;
+					duration<double, std::milli> timeout;
 					size_t num_endps = 1;
 					if (writable) {
-						timeout = 2;
-					} else timeout = 1;
+						timeout = 2s;
+					} else timeout = 1s;
 
 					if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, manager(), asked_nodes, num_endps, timeout)) {
 						has_node_name = true;
@@ -1233,8 +1226,8 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 
 					// Convert node to endpoint:
 					char node_ip[INET_ADDRSTRLEN];
-					const Node *node;
-					if (!manager()->touch_node(node_name, &node)) {
+					const Node *node = nullptr;
+					if (!manager()->touch_node(node_name, -1, &node)) {
 						LOG(this, "Node %s not found\n", node_name.c_str());
 						host = node_name;
 						return CMD_UNKNOWN_HOST;

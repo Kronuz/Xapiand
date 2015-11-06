@@ -22,34 +22,45 @@
 
 #pragma once
 
-#include "server.h"
+#include "udp_base.h"
+
+#include "server_discovery.h"
+
+#define XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION 1
+#define XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION 0
+
+constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION | XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION << 8;
 
 
-const int MSECS_IDLE_TIMEOUT_DEFAULT = 60000;
-const int MSECS_ACTIVE_TIMEOUT_DEFAULT = 15000;
+// Discovery for nodes and databases
+class Discovery : public BaseUDP {
+private:
+	ev::timer heartbeat;
 
-const double idle_timeout = MSECS_IDLE_TIMEOUT_DEFAULT * 1e-3;
-const double active_timeout = MSECS_ACTIVE_TIMEOUT_DEFAULT * 1e-3;
+	void heartbeat_cb(ev::timer &watcher, int revents);
 
-class XapiandServer;
-
-
-// This class lets make different types of servers.
-class BaseServer : public Worker {
-protected:
-	XapiandServer *server;
-
-	ev::io io;
-	int sock;
-
-	DatabasePool *database_pool;
-	ThreadPool *thread_pool;
-
-	void destroy();
+	friend DiscoveryServer;
 
 public:
-	BaseServer(XapiandServer *server, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
-	virtual ~BaseServer();
+	enum class Message {
+		HELLO,         // New node saying hello
+		WAVE,          // Nodes waving hello to the new node
+		SNEER,         // Nodes telling the client they don't agree on the new node's name
+		HEARTBEAT,     // Heartbeat
+		BYE,           // Node says goodbye
+		DB,            //
+		DB_WAVE,       //
+		BOSSY_DB_WAVE, //
+		DB_UPDATED,    //
+		MAX            //
+	};
 
-	virtual void io_accept(ev::io &watcher, int revents) = 0;
+	Discovery(std::shared_ptr<XapiandManager>&& manager_, ev::loop_ref *loop_, int port_, const std::string &group_);
+	~Discovery();
+
+	void send_message(Message type, const std::string &content);
+
+	std::string getDescription() const noexcept override;
+
+	std::function<void()> start = [this](){ heartbeat.again(); };
 };

@@ -20,44 +20,36 @@
  * IN THE SOFTWARE.
  */
 
-#include "replicator.h"
+#pragma once
 
-#include "servers/discovery.h"
+#include "../manager.h"
 
-
-XapiandReplicator::XapiandReplicator(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_)
-	: Worker(std::move(manager_), loop_) { }
-
-
-void
-XapiandReplicator::on_commit(const Endpoint &endpoint)
-{
-	std::string endpoint_mastery(std::to_string(endpoint.mastery_level));
-	manager()->discovery->send_message(
-        Discovery::Message::DB_UPDATED,
-		serialise_string(endpoint_mastery) +  // The mastery level of the database
-		serialise_string(endpoint.path) +  // The path of the index
-		local_node.serialise()   // The node where the index is at
-	);
-}
+// Values in seconds
+#define HEARTBEAT_MIN 1//0.250
+#define HEARTBEAT_MAX 2//0.500
 
 
-void
-XapiandReplicator::run()
-{
-	// Function that retrieves a task from a queue, runs it and deletes it
-	LOG_OBJ(this, "Replicator started...\n");
-	Endpoint endpoint;
-	while (manager()->database_pool.updated_databases.pop(endpoint)) {
-		LOG(this, "Replicator was informed database was updated: %s\n", endpoint.as_string().c_str());
-		on_commit(endpoint);
-	}
-	LOG_OBJ(this, "Replicator ended!\n");
-}
+// Base class for UDP messages configuration
+class BaseUDP {
+protected:
+	std::shared_ptr<XapiandManager> manager;
 
+	struct sockaddr_in addr;
 
-void
-XapiandReplicator::shutdown()
-{
-	manager()->database_pool.updated_databases.finish();
-}
+	int port;
+	int sock;
+
+	std::string description;
+
+	std::shared_ptr<ev::loop_ref> loop;
+
+	void sending_message(const std::string &message);
+
+public:
+	BaseUDP(std::shared_ptr<XapiandManager>&& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, const std::string &group_, int tries_ = 1);
+	virtual ~BaseUDP();
+
+	virtual std::string getDescription() const noexcept = 0;
+
+	void bind(int tries, const std::string &group);
+};

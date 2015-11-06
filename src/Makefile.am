@@ -60,12 +60,18 @@ xapiand_SOURCES = \
 	pcre/pcreposix.c \
 	replicator.cc \
 	serialise.cc \
-	server.cc \
-	server_base.cc \
-	server_binary.cc \
-	server_discovery.cc \
-	server_http.cc \
-	threadpool.cc \
+	servers/binary.cc \
+	servers/discovery.cc \
+	servers/http.cc \
+	servers/raft.cc \
+	servers/server.cc \
+	servers/server_base.cc \
+	servers/server_binary.cc \
+	servers/server_discovery.cc \
+	servers/server_http.cc \
+	servers/server_raft.cc \
+	servers/tcp_base.cc \
+	servers/udp_base.cc \
 	times.cc \
 	utils.cc \
 	wkt_parser.cc \
@@ -124,12 +130,19 @@ noinst_HEADERS = \
 	pcre/ucp.h \
 	queue.h \
 	replicator.h \
-	serialise.cc \
-	server.h \
-	server_base.h \
-	server_binary.h \
-	server_discovery.h \
-	server_http.h \
+	serialise.h \
+	servers/binary.h \
+	servers/discovery.h \
+	servers/http.h \
+	servers/raft.h \
+	servers/server.h \
+	servers/server_base.h \
+	servers/server_binary.h \
+	servers/server_discovery.h \
+	servers/server_http.h \
+	servers/server_raft.h \
+	servers/tcp_base.h \
+	servers/udp_base.h \
 	sparsehash/dense_hash_map \
 	sparsehash/dense_hash_set \
 	sparsehash/internal \

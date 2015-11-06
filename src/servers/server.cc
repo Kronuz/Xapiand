@@ -22,25 +22,19 @@
 
 #include "server.h"
 
+#include "server_base.h"
 
-//
-// Xapian Server.
-//
 
-pthread_mutex_t XapiandServer::static_mutex = PTHREAD_MUTEX_INITIALIZER;
+std::mutex XapiandServer::static_mutex;
 int XapiandServer::total_clients  = 0;
 int XapiandServer::http_clients   = 0;
 int XapiandServer::binary_clients = 0;
 
 
-XapiandServer::XapiandServer(XapiandManager *manager_, ev::loop_ref *loop_)
-	: Worker(manager_, loop_),
+XapiandServer::XapiandServer(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_)
+	: Worker(std::move(manager_), loop_),
 	  async_setup_node(*loop)
 {
-	pthread_mutexattr_init(&qmtx_attr);
-	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&qmtx, &qmtx_attr);
-
 	async_setup_node.set<XapiandServer, &XapiandServer::async_setup_node_cb>(this);
 	async_setup_node.start();
 	LOG_EV(this, "\tStart async setup node event\n");
@@ -53,54 +47,43 @@ XapiandServer::~XapiandServer()
 {
 	destroy();
 
-	pthread_mutex_destroy(&qmtx);
-	pthread_mutexattr_destroy(&qmtx_attr);
-
 	LOG_OBJ(this, "DELETED XAPIAN SERVER!\n");
 }
 
 
-void XapiandServer::run()
+void
+XapiandServer::run()
 {
 	LOG_EV(this, "\tStarting server loop...\n");
-	loop->run(0);
+	loop->run();
 	LOG_EV(this, "\tServer loop ended!\n");
 }
 
 
-void XapiandServer::async_setup_node_cb(ev::async &, int)
+void
+XapiandServer::async_setup_node_cb(ev::async &, int)
 {
-	manager()->setup_node(this);
+	manager()->setup_node(share_this<XapiandServer>());
 
 	async_setup_node.stop();
 	LOG_EV(this, "\tStop async setup node event\n");
 }
 
 
-void XapiandServer::destroy()
+void
+XapiandServer::destroy()
 {
-	pthread_mutex_lock(&qmtx);
-	if (servers.empty()) {
-		pthread_mutex_unlock(&qmtx);
-		return;
-	}
-
-	// Delete servers.
-	while (!servers.empty()) {
-		delete servers.back();
-		servers.pop_back();
-	}
+	std::lock_guard<std::mutex> lk(qmtx);
 
 	async_setup_node.stop();
 	LOG_EV(this, "\tStop async setup node event\n");
-
-	pthread_mutex_unlock(&qmtx);
 
 	LOG_OBJ(this, "DESTROYED XAPIAN SERVER!\n");
 }
 
 
-void XapiandServer::shutdown()
+void
+XapiandServer::shutdown()
 {
 	Worker::shutdown();
 
@@ -116,8 +99,9 @@ void XapiandServer::shutdown()
 }
 
 
-void XapiandServer::register_server(BaseServer *server) {
-	pthread_mutex_lock(&qmtx);
-	servers.push_back(server);
-	pthread_mutex_unlock(&qmtx);
+void
+XapiandServer::register_server(std::unique_ptr<BaseServer>&& server)
+{
+	std::lock_guard<std::mutex> lk(qmtx);
+	servers.push_back(std::move(server));
 }

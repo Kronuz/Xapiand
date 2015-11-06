@@ -22,18 +22,18 @@
 
 #pragma once
 
-#include "server_base.h"
+#include "tcp_base.h"
 
-#ifdef HAVE_REMOTE_PROTOCOL
+#include "server_http.h"
 
-// Binary Server
-class BinaryServer : public BaseServer {
+
+// Configuration data for Http
+class Http : public BaseTCP {
+	friend HttpServer;
+
 public:
-	BinaryServer(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
-	~BinaryServer();
+	Http(std::shared_ptr<XapiandManager>&& manager_, int port_);
+	~Http();
 
-	void io_accept(ev::io &watcher, int revents);
+	std::string getDescription() const noexcept override;
 };
-
-
-#endif /* HAVE_REMOTE_PROTOCOL */

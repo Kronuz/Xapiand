@@ -34,56 +34,47 @@
 #include <unordered_map>
 
 
-enum storing_reply_type {
-	STORING_REPLY_READY,   // 0 - OK, begin sending
-	STORING_REPLY_DONE,
-	STORING_REPLY_FILE,
-	STORING_REPLY_DATA,
-	STORING_CREATE,
-	STORING_OPEN,
-	STORING_READ,
-	STORING_MAX,
+enum class StoringType {
+	REPLY_READY,   // 0 - OK, begin sending
+	REPLY_DONE,
+	REPLY_FILE,
+	REPLY_DATA,
+	CREATE,
+	OPEN,
+	READ,
+	MAX,
+};
+
+enum class ReplicateType {
+	REPLY_END_OF_CHANGES,  // 0 - No more changes to transfer.
+	REPLY_FAIL,            // 1 - Couldn't generate full set of changes.
+	REPLY_DB_HEADER,       // 2 - The start of a whole DB copy.
+	REPLY_DB_FILENAME,     // 3 - The name of a file in a DB copy.
+	REPLY_DB_FILEDATA,     // 4 - Contents of a file in a DB copy.
+	REPLY_DB_FOOTER,       // 5 - End of a whole DB copy.
+	REPLY_CHANGESET,       // 6 - A changeset file is being sent.
+	MSG_GET_CHANGESETS,
+	MAX,
+};
+
+enum class State {
+	INIT_REMOTEPROTOCOL,
+	REMOTEPROTOCOL,
+
+	REPLICATIONPROTOCOL_SLAVE,
+	REPLICATIONPROTOCOL_MASTER,
+
+	STORINGPROTOCOL_SENDER,
+	STORINGPROTOCOL_RECEIVER,
 };
 
 
-enum replicate_reply_type {
-	REPL_REPLY_END_OF_CHANGES,  // 0 - No more changes to transfer.
-	REPL_REPLY_FAIL,            // 1 - Couldn't generate full set of changes.
-	REPL_REPLY_DB_HEADER,       // 2 - The start of a whole DB copy.
-	REPL_REPLY_DB_FILENAME,     // 3 - The name of a file in a DB copy.
-	REPL_REPLY_DB_FILEDATA,     // 4 - Contents of a file in a DB copy.
-	REPL_REPLY_DB_FOOTER,       // 5 - End of a whole DB copy.
-	REPL_REPLY_CHANGESET,       // 6 - A changeset file is being sent.
-	REPL_MSG_GET_CHANGESETS,
-	REPL_MAX,
-};
-
-//
-// There are three binary server states:
-//     Remote Protocol - Used by Xapian while databases use the remote protocol
-//     Replication Protocol - Used by Xapian during the replication
-//     File Storing - Used by Xapiand to send files to store
-//
-enum binary_state {
-	init_remoteprotocol,
-	remoteprotocol,
-
-	replicationprotocol_slave,
-	replicationprotocol_master,
-
-	storingprotocol_sender,
-	storingprotocol_receiver,
-};
-
-//
-//   A single instance of a non-blocking Xapiand binary protocol handler
-//
+// A single instance of a non-blocking Xapiand binary protocol handler
 class BinaryClient : public BaseClient, public RemoteProtocol {
-	typedef std::unordered_map<Xapian::Database *, Database *> databases_map_t;
+	using databases_map_t = std::unordered_map<Xapian::Database *, Database *>;
 
-private:
 	bool running;
-	enum binary_state state;
+	State state;
 	int file_descriptor;
 	char file_path[PATH_MAX];
 
@@ -111,74 +102,122 @@ private:
 	std::shared_ptr<HaystackVolume> storing_volume;
 	std::unique_ptr<HaystackFile> storing_file;
 
-	void on_read(const char *buf, size_t received);
-	void on_read_file(const char *buf, size_t received);
-	void on_read_file_done();
+	BinaryClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loop_, int sock_, double active_timeout_, double idle_timeout_);
+
+	void on_read(const char *buf, size_t received) override;
+	void on_read_file(const char *buf, size_t received) override;
+	void on_read_file_done() override;
 
 	void repl_file_done();
-	void repl_apply(replicate_reply_type type, const std::string & message);
-	void repl_end_of_changes(const std::string & message);
-	void repl_fail(const std::string & message);
+	void repl_apply(ReplicateType type, const std::string & message);
+	void repl_end_of_changes();
+	void repl_fail();
 	void repl_set_db_header(const std::string & message);
 	void repl_set_db_filename(const std::string & message);
 	void repl_set_db_filedata(const std::string & message);
-	void repl_set_db_footer(const std::string & message);
+	void repl_set_db_footer();
 	void repl_changeset(const std::string & message);
 	void repl_get_changesets(const std::string & message);
 	void receive_repl();
 
 	void storing_file_done();
-	void storing_apply(storing_reply_type type, const std::string & message);
+	void storing_apply(StoringType type, const std::string & message);
 	void storing_send(const std::string & message);
 	void storing_done(const std::string & message);
 	void storing_open(const std::string & message);
 	void storing_read(const std::string & message);
 	void storing_create(const std::string & message);
 
+	friend Worker;
+
 public:
-	inline replicate_reply_type get_message(double timeout, std::string & result, replicate_reply_type required_type) {
-		char required_type_as_char = static_cast<char>(required_type);
-		return static_cast<replicate_reply_type>(get_message(timeout, result, required_type_as_char));
+	~BinaryClient();
+
+	inline ReplicateType getReplicateType(char type) {
+		switch (type) {
+			case toUType(ReplicateType::REPLY_END_OF_CHANGES): return ReplicateType::REPLY_END_OF_CHANGES;
+			case toUType(ReplicateType::REPLY_FAIL):           return ReplicateType::REPLY_FAIL;
+			case toUType(ReplicateType::REPLY_DB_HEADER):      return ReplicateType::REPLY_DB_HEADER;
+			case toUType(ReplicateType::REPLY_DB_FILENAME):    return ReplicateType::REPLY_DB_FILENAME;
+			case toUType(ReplicateType::REPLY_DB_FILEDATA):    return ReplicateType::REPLY_DB_FILEDATA;
+			case toUType(ReplicateType::REPLY_DB_FOOTER):      return ReplicateType::REPLY_DB_FOOTER;
+			case toUType(ReplicateType::REPLY_CHANGESET):      return ReplicateType::REPLY_CHANGESET;
+			case toUType(ReplicateType::MSG_GET_CHANGESETS):   return ReplicateType::MSG_GET_CHANGESETS;
+			case toUType(ReplicateType::MAX):                  return ReplicateType::MAX;
+			default:
+				std::string errmsg("Unexpected message type ");
+				errmsg += std::to_string(type);
+				throw Xapian::InvalidArgumentError(errmsg);
+		}
 	}
 
-	inline storing_reply_type get_message(double timeout, std::string & result, storing_reply_type required_type) {
-		char required_type_as_char = static_cast<char>(required_type);
-		return static_cast<storing_reply_type>(get_message(timeout, result, required_type_as_char));
+	inline StoringType getStoringType(char type) {
+		switch (type) {
+			case toUType(StoringType::REPLY_READY): return StoringType::REPLY_READY;
+			case toUType(StoringType::REPLY_DONE):  return StoringType::REPLY_DONE;
+			case toUType(StoringType::REPLY_FILE):  return StoringType::REPLY_FILE;
+			case toUType(StoringType::REPLY_DATA):  return StoringType::REPLY_DATA;
+			case toUType(StoringType::CREATE):      return StoringType::CREATE;
+			case toUType(StoringType::OPEN):        return StoringType::OPEN;
+			case toUType(StoringType::READ):        return StoringType::READ;
+			case toUType(StoringType::MAX):         return StoringType::MAX;
+			default:
+				std::string errmsg("Unexpected message type ");
+				errmsg += std::to_string(type);
+				throw Xapian::InvalidArgumentError(errmsg);
+		}
 	}
 
-	inline message_type get_message(double timeout, std::string & result, message_type required_type) {
-		char required_type_as_char = static_cast<char>(required_type);
-		return static_cast<message_type>(get_message(timeout, result, required_type_as_char));
+	inline ReplicateType get_message(double timeout, std::string & result, ReplicateType required_type) {
+		return getReplicateType(static_cast<char>(get_message(timeout, result, static_cast<message_type>(required_type))));
 	}
 
-	char get_message(double timeout, std::string & result, char required_type);
-
-	inline void send_message(reply_type type, const std::string &message) {
-		char type_as_char = static_cast<char>(type);
-		send_message(type_as_char, message, 0.0);
+	inline StoringType get_message(double timeout, std::string & result, StoringType required_type) {
+		return getStoringType(static_cast<char>(get_message(timeout, result, static_cast<message_type>(required_type))));
 	}
 
-	inline void send_message(reply_type type, const std::string &message, double end_time) {
-		char type_as_char = static_cast<char>(type);
-		send_message(type_as_char, message, end_time);
+	inline message_type get_message(double timeout, std::string &result, message_type) override {
+		return static_cast<message_type>(get_message(timeout, result));
+	}
+
+	char get_message(double timeout, std::string &result);
+
+	inline void send_message(reply_type type, const std::string &message) override {
+		send_message(static_cast<char>(type), message, 0.0);
+	}
+
+	inline void send_message(reply_type type, const std::string &message, double end_time) override {
+		send_message(static_cast<char>(type), message, end_time);
+	}
+
+	inline void send_message(ReplicateType type, const std::string &message) {
+		send_message(static_cast<char>(type), message);
+	}
+
+	inline void send_message(ReplicateType type, const std::string &message, double end_time) {
+		send_message(static_cast<char>(type), message, end_time);
+	}
+
+	inline void send_message(StoringType type, const std::string &message) {
+		send_message(static_cast<char>(type), message);
+	}
+
+	inline void send_message(StoringType type, const std::string &message, double end_time) {
+		send_message(static_cast<char>(type), message, end_time);
 	}
 
 	void send_message(char type_as_char, const std::string &message, double end_time=0.0);
 
-
-	Xapian::Database * get_db(bool);
-	void release_db(Xapian::Database *);
-	void select_db(const std::vector<std::string> &, bool, int);
-	void shutdown();
-
-	BinaryClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
-	~BinaryClient();
+	Xapian::Database* get_db(bool) override;
+	void release_db(Xapian::Database *) override;
+	void select_db(const std::vector<std::string> &dbpaths_, bool, int) override;
+	void shutdown() override;
 
 	bool init_remote();
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 	bool init_storing(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename);
 
-	void run();
+	void run() override;
 };
 
 #endif  /* HAVE_REMOTE_PROTOCOL */

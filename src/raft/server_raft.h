@@ -20,39 +20,18 @@
  * IN THE SOFTWARE.
  */
 
-#include "server_http.h"
-#include "client_http.h"
+#pragma once
+
+#include "server_base.h"
 
 
-HttpServer::HttpServer(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
-	: BaseServer(server_, loop_, sock_, database_pool_, thread_pool_)
-{
-	LOG_EV(this, "Start http accept event (sock=%d)\n", sock);
-	LOG_OBJ(this, "CREATED HTTP SERVER!\n");
-}
+// Raft Server
+class RaftServer : public BaseServer {
+	Raft *raft;
 
+public:
+	RaftServer(XapiandServer *server_, Raft *raft, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
+	~RaftServer();
 
-HttpServer::~HttpServer()
-{
-	LOG_OBJ(this, "DELETED HTTP SERVER!\n");
-}
-
-
-void HttpServer::io_accept(ev::io &watcher, int revents)
-{
-	if (EV_ERROR & revents) {
-		LOG_EV(this, "ERROR: got invalid http event (sock=%d): %s\n", sock, strerror(errno));
-		return;
-	}
-
-	assert(sock == watcher.fd || sock == -1);
-
-	int client_sock;
-	if ((client_sock = accept_tcp(watcher.fd)) < 0) {
-		if (!ignored_errorno(errno, false)) {
-			LOG_ERR(this, "ERROR: accept http error (sock=%d): %s\n", sock, strerror(errno));
-		}
-	} else {
-		new HttpClient(server, loop, client_sock, database_pool, thread_pool, active_timeout, idle_timeout);
-	}
-}
+	void io_accept(ev::io &watcher, int revents);
+};

@@ -19,172 +19,173 @@
 
 namespace lru {
 
-	enum class DropAction {
-		drop,
-		leave,
-		renew
-	};
+enum class DropAction {
+	drop,
+	leave,
+	renew
+};
 
-	enum class GetAction {
-		leave,
-		renew
-	};
+enum class GetAction {
+	leave,
+	renew
+};
 
-	template<typename Key, typename T>
-	class LRU {
-	public:
+template<typename Key, typename T>
+class LRU {
+public:
 
-	protected:
-		std::list<std::pair<const Key, T>> _items_list;
-		std::unordered_map<Key, typename std::list<std::pair<const Key, T>>::iterator> _items_map;
-		ssize_t _max_size;
+protected:
+	std::list<std::pair<const Key, T>> _items_list;
+	std::unordered_map<Key, typename std::list<std::pair<const Key, T>>::iterator> _items_map;
+	ssize_t _max_size;
 
-	public:
-		LRU(ssize_t max_size=-1) : _max_size(max_size) {}
+public:
+	LRU(ssize_t max_size=-1) : _max_size(max_size) { }
 
-		size_t erase(const Key& key) {
-			auto it(_items_map.find(key));
-			if (it != _items_map.end()) {
-				_items_list.erase(it->second);
-				_items_map.erase(it);
-				return 1;
+	size_t erase(const Key& key) {
+		auto it(_items_map.find(key));
+		if (it != _items_map.end()) {
+			_items_list.erase(it->second);
+			_items_map.erase(it);
+			return 1;
+		}
+		return 0;
+	}
+
+	template<typename P>
+	T& insert(P&& p) {
+		erase(p.first);
+
+		_items_list.push_front(std::forward<P>(p));
+		auto first(_items_list.begin());
+		_items_map[first->first] = first;
+
+		if (_max_size != -1) {
+			auto last(_items_list.rbegin());
+			for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); i--) {
+				auto it = (++last).base();
+				_items_map.erase(it->first);
+				_items_list.erase(it);
+				last = _items_list.rbegin();
 			}
-			return 0;
 		}
 
-		template<typename P>
-		T& insert(P&& p) {
-			erase(p.first);
+		return first->second;
+	}
 
-			_items_list.push_front(std::forward<P>(p));
-			auto first(_items_list.begin());
-			_items_map[first->first] = first;
+	template<typename... Args>
+	T& emplace(Args&&... args) {
+		return insert(std::make_pair(std::forward<Args>(args)...));
+	}
 
-			if (_max_size != -1) {
-				auto last(_items_list.rbegin());
-				for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); i--) {
-					auto it = (++last).base();
-					_items_map.erase(it->first);
-					_items_list.erase(it);
-					last = _items_list.rbegin();
+	T& at(const Key& key) {
+		auto it(_items_map.find(key));
+		if (it == _items_map.end()) {
+			throw std::range_error("There is no such key in cache");
+		}
+
+		_items_list.splice(_items_list.begin(), _items_list, it->second);
+		return it->second->second;
+	}
+
+	T& get(const Key& key) {
+		try {
+			return at(key);
+		} catch (std::range_error) {
+			return insert(std::make_pair(key, T()));
+		}
+	}
+
+	T& operator[] (const Key& key) {
+		return get(key);
+	}
+
+	bool exists(const Key& key) const {
+		return _items_map.find(key) != _items_map.end();
+	}
+
+	bool empty() const {
+		return _items_map.empty();
+	}
+
+	size_t size() const {
+		return _items_map.size();
+	}
+
+	size_t max_size() const {
+		return (_max_size == -1) ? _items_map.max_size() : _max_size;
+	}
+
+	template<typename OnDrop, typename P>
+	T& insert_and(const OnDrop &on_drop, P&& p) {
+		erase(p.first);
+
+		_items_list.push_front(std::forward<P>(p));
+		auto first(_items_list.begin());
+		_items_map[first->first] = first;
+
+		if (_max_size != -1) {
+			auto last(_items_list.rbegin());
+			for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); i--) {
+				auto it = --last.base();
+				switch (on_drop(it->second)) {
+					case DropAction::renew:
+						_items_list.splice(_items_list.begin(), _items_list, it);
+						break;
+					case DropAction::leave:
+						break;
+					case DropAction::drop:
+						_items_map.erase(it->first);
+						_items_list.erase(it);
+						break;
 				}
-			}
-
-			return first->second;
-		}
-
-		template<typename... Args>
-		T& emplace(Args&&... args) {
-			return insert(std::make_pair(std::forward<Args>(args)...));
-		}
-
-		T& at(const Key& key) {
-			auto it(_items_map.find(key));
-			if (it == _items_map.end()) {
-				throw std::range_error("There is no such key in cache");
-			}
-
-			_items_list.splice(_items_list.begin(), _items_list, it->second);
-			return it->second->second;
-		}
-
-		T& get(const Key& key) {
-			try {
-				return at(key);
-			} catch (std::range_error) {
-				return insert(std::make_pair(key, T()));
+				last = _items_list.rbegin();
 			}
 		}
 
-		T& operator[] (const Key& key) {
-			return get(key);
+		return first->second;
+	}
+
+	template<typename OnDrop, typename... Args>
+	T& emplace_and(OnDrop&& on_drop, Args&&... args) {
+		return insert_and(std::forward<OnDrop>(on_drop), std::make_pair(std::forward<Args>(args)...));
+	}
+
+	template<typename OnGet>
+	T& at_and(const OnGet& on_get, const Key& key) {
+		auto it(_items_map.find(key));
+		if (it == _items_map.end()) {
+			throw std::range_error("There is no such key in cache");
 		}
 
-		bool exists(const Key& key) const {
-			return _items_map.find(key) != _items_map.end();
+		T& ref = it->second->second;
+		switch (on_get(ref)) {
+			case GetAction::leave:
+				break;
+			case GetAction::renew:
+				_items_list.splice(_items_list.begin(), _items_list, it->second);
+				break;
 		}
+		return ref;
+	}
 
-		bool empty() const {
-			return _items_map.empty();
-		}
-
-		size_t size() const {
-			return _items_map.size();
-		}
-
-		size_t max_size() const {
-			return (_max_size == -1) ? _items_map.max_size() : _max_size;
-		}
-
-		template<typename OnDrop, typename P>
-		T& insert_and(const OnDrop &on_drop, P&& p) {
-			erase(p.first);
-
-			_items_list.push_front(std::forward<P>(p));
-			auto first(_items_list.begin());
-			_items_map[first->first] = first;
-
-			if (_max_size != -1) {
-				auto last(_items_list.rbegin());
-				for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); i--) {
-					auto it = --last.base();
-					switch (on_drop(it->second)) {
-						case DropAction::renew:
-							_items_list.splice(_items_list.begin(), _items_list, it);
-							break;
-						case DropAction::leave:
-							break;
-						case DropAction::drop:
-							_items_map.erase(it->first);
-							_items_list.erase(it);
-							break;
-					}
-					last = _items_list.rbegin();
-				}
-			}
-
-			return first->second;
-		}
-
-		template<typename OnDrop, typename... Args>
-		T& emplace_and(OnDrop&& on_drop, Args&&... args) {
-			return insert_and(std::forward<OnDrop>(on_drop), std::make_pair(std::forward<Args>(args)...));
-		}
-
-		template<typename OnGet>
-		T& at_and(const OnGet& on_get, const Key& key) {
-			auto it(_items_map.find(key));
-			if (it == _items_map.end()) {
-				throw std::range_error("There is no such key in cache");
-			}
-
-			T& ref = it->second->second;
+	template<typename OnGet>
+	T& get_and(const OnGet& on_get, const Key& key) {
+		try {
+			return at_and(on_get, key);
+		} catch (std::range_error) {
+			T& ref = insert(std::make_pair(key, T()));
 			switch (on_get(ref)) {
 				case GetAction::leave:
 					break;
 				case GetAction::renew:
-					_items_list.splice(_items_list.begin(), _items_list, it->second);
 					break;
 			}
 			return ref;
 		}
+	}
+};
 
-		template<typename OnGet>
-		T& get_and(const OnGet& on_get, const Key& key) {
-			try {
-				return at_and(on_get, key);
-			} catch (std::range_error) {
-				T& ref = insert(std::make_pair(key, T()));
-				switch (on_get(ref)) {
-					case GetAction::leave:
-						break;
-					case GetAction::renew:
-						break;
-				}
-				return ref;
-			}
-		}
-	};
 };
 
 
@@ -195,8 +196,7 @@ namespace lru {
 #include <iostream>
 using namespace lru;
 
-void test_lru()
-{
+void test_lru() {
 	LRU<std::string, int> lru(3);
 	lru.insert(std::make_pair("test1", 111));
 	lru.insert(std::make_pair("test2", 222));
@@ -225,15 +225,15 @@ void test_lru()
 
 }
 
-void test_lru_emplace()
-{
+
+void test_lru_emplace() {
 	LRU<std::string, int> lru(3);
 	lru.emplace("test1", 111);
 	lru.emplace_and([](int&){ return DropAction::leave; }, "test2", 222);
 }
 
-void test_lru_actions()
-{
+
+void test_lru_actions() {
 	LRU<std::string, int> lru(3);
 	lru.insert(std::make_pair("test1", 111));
 	lru.insert(std::make_pair("test2", 222));
@@ -263,8 +263,8 @@ void test_lru_actions()
 	assert(lru.at("test6") == 666);
 }
 
-void test_lru_mutate()
-{
+
+void test_lru_mutate() {
 	LRU<std::string, int> lru(3);
 	lru.insert(std::make_pair("test1", 111));
 	assert(lru.at_and([](int& o){ o = 123; return GetAction::leave; }, "test1") == 123);
@@ -272,8 +272,8 @@ void test_lru_mutate()
 	assert(lru.at("test1") == 456);
 }
 
-int main()
-{
+
+int main() {
 	test_lru();
 	test_lru_emplace();
 	test_lru_actions();

@@ -173,11 +173,7 @@ namespace queue {
 		}
 
 	public:
-		Queue(size_t limit=-1) :
-		_ending(false),
-		_finished(false),
-		_limit(limit)
-		{}
+		Queue(size_t limit=-1) : _ending(false), _finished(false), _limit(limit) { }
 
 		// Move Constructor
 		Queue(Queue&& q) {
@@ -202,13 +198,15 @@ namespace queue {
 
 		// Copy Constructor
 		Queue(const Queue& q) = delete;
+
+		// Copy assigment
 		Queue& operator =(const Queue& q) = delete;
 
 		~Queue() {
 			finish();
 		}
 
-		void end() {
+		void end() noexcept {
 			if (_ending) {
 				return;
 			}
@@ -216,7 +214,7 @@ namespace queue {
 			_notify(false);
 		}
 
-		void finish() {
+		void finish() noexcept {
 			if (_finished) {
 				return;
 			}
@@ -273,9 +271,10 @@ namespace queue {
 	// A Queue with unique values
 	template<typename T>
 	class QueueSet : public Queue<T, std::list<T>> {
-		typedef Queue<T, std::list<T>> Queue_t;
+		using Queue_t = Queue<T, std::list<T>>;
+
 	protected:
-		std::unordered_map<T, typename std::list<T>::iterator > _items_map;
+		std::unordered_map<T, typename std::list<T>::iterator> _items_map;
 
 		template<typename E>
 		bool _push(E&& element, double timeout, std::unique_lock<std::mutex>& lk) {
@@ -292,7 +291,7 @@ namespace queue {
 		}
 
 	public:
-		QueueSet(size_t limit=-1) : Queue<T, std::list<T>>(limit) {}
+		QueueSet(size_t limit=-1) : Queue<T, std::list<T>>(limit) { }
 
 		template<typename E, typename OnDup>
 		bool push(E&& element, double timeout, OnDup on_dup) {
@@ -304,7 +303,7 @@ namespace queue {
 						// The item is already there...
 					case DupAction::update:
 						// Update the element object
-						*it->second = element;
+						*it->second = std::forward<E>(element);
 					case DupAction::leave:
 						// Leave it alone
 						return true;
@@ -375,163 +374,3 @@ namespace queue {
 	};
 
 };
-
-
-#ifdef TESTING_QUEUE
-// Use test as: c++ -DTESTING_QUEUE -std=c++14 -g -x c++ queue.h -o test_queue && ./test_queue
-
-#include <cassert>
-#include <iostream>
-
-#include <memory>
-#include <string>
-using namespace queue;
-
-void test_unique()
-{
-	Queue<std::unique_ptr<std::string>> messages_queue;
-	messages_queue.push(std::make_unique<std::string>("This is a unique data"));
-	assert(messages_queue.size() == 1);
-
-	std::unique_ptr<std::string> msg;
-	assert(messages_queue.pop(msg));
-
-	assert(messages_queue.size() == 0);
-	assert(*msg == "This is a unique data");
-}
-
-
-void test_shared()
-{
-	Queue<std::shared_ptr<std::string>> messages_queue;
-	messages_queue.push(std::make_shared<std::string>("This is a shared data"));
-	assert(messages_queue.size() == 1);
-
-	std::shared_ptr<std::string> shared = messages_queue.front();
-	assert(messages_queue.size() == 1);
-
-	assert(shared.use_count() == 2);
-
-	std::shared_ptr<std::string> msg;
-	assert(messages_queue.pop(msg));
-
-	assert(messages_queue.size() == 0);
-
-	assert(*msg == "This is a shared data");
-}
-
-
-void test_queue()
-{
-	Queue<int> q;
-	int val = 1;
-
-	q.push(val);
-	q.push(2);
-	q.push(3);
-	q.push(4);
-
-	int i1, i2, i3, i4;
-
-	assert(q.pop(i1, 0));
-	assert(q.pop(i2, 0));
-	assert(q.pop(i3, 0));
-	assert(q.pop(i4, 0));
-
-	// std::cout << i1 << ' ' << i2 << ' ' << i3 << ' ' << i4 << std::endl;
-
-	assert(i1 == 1);
-	assert(i2 == 2);
-	assert(i3 == 3);
-	assert(i4 == 4);
-}
-
-void test_queue_set()
-{
-	QueueSet<int> q;
-	int val = 1;
-
-	q.push(val);
-	q.push(2);
-	q.push(3);
-	q.push(4);
-	q.push(1);  // renew by default, doesn't insert a new item
-
-	int i1, i2, i3, i4, i5=789;
-
-	assert(q.pop(i1, 0));
-	assert(q.pop(i2, 0));
-	assert(q.pop(i3, 0));
-	assert(q.pop(i4, 0));
-	assert(!q.pop(i5, 0));
-
-	// std::cout << i1 << ' ' << i2 << ' ' << i3 << ' ' << i4 << ' ' << i5 << std::endl;
-
-	assert(i1 == 2);
-	assert(i2 == 3);
-	assert(i3 == 4);
-	assert(i4 == 1);
-	assert(i5 == 789);
-}
-
-void test_queue_set_on_dup()
-{
-	QueueSet<int> q;
-	int val = 1;
-
-	q.push(val);
-	q.push(2);
-	q.push(3);
-	q.push(4);
-	q.push(1, [](int&){ return DupAction::leave; });  // doesn't touch the item
-	q.push(2, [](int&){ return DupAction::update; });  // updates the item inplace
-	q.push(3, [](int&){ return DupAction::renew; });  // renews the item
-
-	int i1, i2, i3, i4, i5=789;
-
-	assert(q.pop(i1, 0));
-	assert(q.pop(i2, 0));
-	assert(q.pop(i3, 0));
-	assert(q.pop(i4, 0));
-	assert(!q.pop(i5, 0));
-
-	// std::cout << i1 << ' ' << i2 << ' ' << i3 << ' ' << i4 << ' ' << i5 << std::endl;
-
-	assert(i1 == 1);
-	assert(i2 == 2);
-	assert(i3 == 4);
-	assert(i4 == 3);
-	assert(i5 == 789);
-}
-
-
-void test_queue_move_constructor()
-{
-	std::pair<int, Queue<int>> foo = std::make_pair(1, Queue<int>());
-	foo.second.push(1);
-	foo.second.push(2);
-	foo.second.push(3);
-
-	int i1, i2, i3;
-
-	assert(foo.second.pop(i1, 0));
-	assert(foo.second.pop(i2, 0));
-	assert(foo.second.pop(i3, 0));
-	assert(foo.second.size() == 0);
-
-}
-
-
-int main()
-{
-
-	test_queue();
-	test_queue_set();
-	test_queue_set_on_dup();
-	test_unique();
-	test_shared();
-	test_queue_move_constructor();
-	return 0;
-}
-
-#endif

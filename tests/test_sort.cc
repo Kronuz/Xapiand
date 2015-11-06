@@ -23,7 +23,7 @@
 #include "test_sort.h"
 
 
-static DatabaseQueue *queue = NULL;
+static DatabaseQueue *d_queue = NULL;
 static Database *database = NULL;
 static std::string name_database(".db_testsort.db");
 
@@ -254,8 +254,8 @@ int create_test_db()
 	endpoints.insert(e);
 
 	// There are delete in the make_search.
-	queue = new DatabaseQueue();
-	database = new Database(queue, endpoints, DB_WRITABLE | DB_SPAWN);
+	d_queue = new DatabaseQueue();
+	database = new Database(d_queue, endpoints, DB_WRITABLE | DB_SPAWN);
 
 	std::vector<std::string> _docs({
 		"examples/sort/doc1.txt",

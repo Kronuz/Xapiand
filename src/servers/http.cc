@@ -20,16 +20,30 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#include "http.h"
 
-#include "server_base.h"
+#include "manager.h"
+
+#include <assert.h>
 
 
-// Http Server
-class HttpServer : public BaseServer {
-public:
-	HttpServer(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
-	~HttpServer();
+Http::Http(std::shared_ptr<XapiandManager>&& manager_, int port_)
+	: BaseTCP(std::move(manager_), port_, "Http", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1)
+{
+	local_node.http_port = port;
 
-	void io_accept(ev::io &watcher, int revents);
-};
+	LOG_OBJ(this, "CREATED CONFIGURATION FOR HTTP\n");
+}
+
+
+Http::~Http()
+{
+	LOG_OBJ(this, "DELETED CONFIGURATION FOR HTTP\n");
+}
+
+
+std::string
+Http::getDescription() const noexcept
+{
+	return "TCP:" + std::to_string(port) + " (" + description + ")";
+}

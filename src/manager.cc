@@ -23,13 +23,14 @@
 #include "manager.h"
 
 #include "utils.h"
-#include "server.h"
 #include "replicator.h"
 #include "endpoint.h"
+#include "servers/server.h"
 #include "client_binary.h"
-#include "server_http.h"
-#include "server_binary.h"
-#include "server_discovery.h"
+#include "servers/http.h"
+#include "servers/binary.h"
+#include "servers/discovery.h"
+#include "servers/raft.h"
 
 #include <list>
 #include <stdlib.h>
@@ -40,36 +41,22 @@
 #include <ifaddrs.h>
 #include <unistd.h>
 
-#define TIME_RE "((([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?([0-5]?[0-9]m)?([0-5]?[0-9]s)?)?"
 
-#define REGIONS_NUMBER 1
+std::regex XapiandManager::time_re = std::regex("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
 
-const uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION | XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION << 8;
-
-pcre *XapiandManager::compiled_time_re = NULL;
 
 XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
-	: Worker(NULL, loop_),
-	  discovery_heartbeat(*loop),
-	  discovery_port(o.discovery_port),
+	: Worker(nullptr, loop_),
 	  database_pool(o.dbpool_size),
-	  thread_pool("W%d", (int)o.threadpool_size),
+	  thread_pool(o.threadpool_size),
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  endp_r(o.endpoints_list_size),
-	  state(STATE_RESET),
+	  state(State::RESET),
 	  cluster_name(o.cluster_name),
 	  node_name(o.node_name)
 {
-	pthread_mutexattr_init(&qmtx_attr);
-	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&qmtx, &qmtx_attr);
-
-	pthread_mutexattr_init(&nodes_mtx_attr);
-	pthread_mutexattr_settype(&nodes_mtx_attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&nodes_mtx, &nodes_mtx_attr);
-
 	// Setup node from node database directory
 	std::string node_name_(get_node_name());
 	if (!node_name_.empty()) {
@@ -83,48 +70,12 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	// Set the id in local node.
 	local_node.id = get_node_id();
 
-	// Bind tcp:HTTP, tcp:xapian-binary and udp:discovery ports
-	local_node.http_port = o.http_port;
-	local_node.binary_port = o.binary_port;
-
-	struct sockaddr_in addr;
-
+	// Set addr in local node
 	local_node.addr = host_address();
-
-	if (discovery_port == 0) {
-		discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
-	}
-	discovery_sock = bind_udp("discovery", discovery_port, discovery_addr, 1, o.discovery_group.c_str());
-
-	int http_tries = 1;
-	if (local_node.http_port == 0) {
-		local_node.http_port = XAPIAND_HTTP_SERVERPORT;
-		http_tries = 10;
-	}
-	http_sock = bind_tcp("http", local_node.http_port, addr, http_tries);
-
-
-	int binary_tries = 1;
-	if (local_node.binary_port == 0) {
-		local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
-		binary_tries = 10;
-	}
-#ifdef HAVE_REMOTE_PROTOCOL
-	binary_sock = bind_tcp("binary", local_node.binary_port, addr, binary_tries);
-#endif  /* HAVE_REMOTE_PROTOCOL */
-
-	if (discovery_sock == -1 || http_sock == -1 || binary_sock == -1) {
-		LOG_ERR(this, "Cannot bind to sockets!\n");
-		assert(false);
-	}
 
 	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
 	async_shutdown.start();
 	LOG_EV(this, "\tStart async shutdown event\n");
-
-	discovery_heartbeat.set<XapiandManager, &XapiandManager::discovery_heartbeat_cb>(this);
-	discovery_heartbeat.set(0, HEARTBEAT_INIT);
-	LOG_EV(this, "\tSet heartbeat event\n");
 
 	LOG_OBJ(this, "CREATED MANAGER!\n");
 }
@@ -132,12 +83,9 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 
 XapiandManager::~XapiandManager()
 {
-	discovery(DISCOVERY_BYE, local_node.serialise());
+	discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 
 	destroy();
-
-	pthread_mutex_destroy(&qmtx);
-	pthread_mutexattr_destroy(&qmtx_attr);
 
 	LOG_OBJ(this, "DELETED MANAGER!\n");
 }
@@ -162,16 +110,16 @@ XapiandManager::get_node_name()
 
 
 bool
-XapiandManager::set_node_name(const std::string &node_name_)
+XapiandManager::set_node_name(const std::string &node_name_, std::unique_lock<std::mutex> &lk)
 {
 	if (node_name_.empty()) {
-		pthread_mutex_unlock(&qmtx);
+		lk.unlock();
 		return false;
 	}
 
 	node_name = get_node_name();
 	if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
-		pthread_mutex_unlock(&qmtx);
+		lk.unlock();
 		return false;
 	}
 
@@ -206,6 +154,7 @@ XapiandManager::set_node_id()
 {
 	if (random_real(0, 1.0) < 0.5) return false;
 
+	// std::lock_guard<std::mutex> lk(qmtx);
 	local_node.id = get_node_id();
 
 	return true;
@@ -213,14 +162,22 @@ XapiandManager::set_node_id()
 
 
 void
-XapiandManager::setup_node(XapiandServer *server)
+XapiandManager::setup_node()
+{
+	std::shared_ptr<XapiandServer> server = std::static_pointer_cast<XapiandServer>(*_children.begin());
+	server->async_setup_node.send();
+}
+
+
+void
+XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 {
 	int new_cluster = 0;
 
-	pthread_mutex_lock(&qmtx);
+	std::unique_lock<std::mutex> lk(qmtx);
 
 	// Open cluster database
-	Database *cluster_database = NULL;
+	Database *cluster_database = nullptr;
 	cluster_endpoints.clear();
 	Endpoint cluster_endpoint(".");
 	cluster_endpoints.insert(cluster_endpoint);
@@ -234,7 +191,7 @@ XapiandManager::setup_node(XapiandServer *server)
 	database_pool.checkin(&cluster_database);
 
 	// Get a node (any node)
-	pthread_mutex_lock(&nodes_mtx);
+	std::unique_lock<std::mutex> lk_n(nodes_mtx);
 
 	nodes_map_t::const_iterator it(nodes.cbegin());
 	for ( ; it != nodes.cend(); it++) {
@@ -243,7 +200,7 @@ XapiandManager::setup_node(XapiandServer *server)
 		// Replicate database from the other node
 #ifdef HAVE_REMOTE_PROTOCOL
 		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
-		if (trigger_replication(remote_endpoint, *cluster_endpoints.begin(), server)) {
+		if (binary->trigger_replication(remote_endpoint, *cluster_endpoints.begin(), std::move(server))) {
 			INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
 			new_cluster = 2;
 			break;
@@ -251,11 +208,11 @@ XapiandManager::setup_node(XapiandServer *server)
 #endif
 	}
 
-	pthread_mutex_unlock(&nodes_mtx);
+	lk_n.unlock();
 
 	// Set node as ready!
-	set_node_name(local_node.name);
-	state = STATE_READY;
+	set_node_name(local_node.name, lk);
+	state = State::READY;
 
 	switch (new_cluster) {
 		case 0:
@@ -268,50 +225,48 @@ XapiandManager::setup_node(XapiandServer *server)
 			INFO(this, "Joined cluster %s: It was already online!\n", cluster_name.c_str());
 			break;
 	}
-
-	pthread_mutex_unlock(&qmtx);
 }
 
 
-void XapiandManager::reset_state()
+void
+XapiandManager::reset_state()
 {
-	if (state != STATE_RESET) {
-		state = STATE_RESET;
-		discovery_heartbeat.set(0, HEARTBEAT_INIT);
+	if (state != State::RESET) {
+		state = State::RESET;
+		discovery->start();
 	}
 }
 
 
-bool XapiandManager::put_node(const Node &node)
+bool
+XapiandManager::put_node(const Node &node)
 {
-	pthread_mutex_lock(&nodes_mtx);
+	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string node_name_lower(stringtolower(node.name));
 	if (node_name_lower == stringtolower(local_node.name)) {
-		local_node.touched = time(NULL);
-		pthread_mutex_unlock(&nodes_mtx);
+		local_node.touched = epoch::now();
 		return false;
 	} else {
 		try {
 			Node &node_ref = nodes.at(node_name_lower);
 			if (node == node_ref) {
-				node_ref.touched = time(NULL);
+				node_ref.touched = epoch::now();
 			}
 		} catch (const std::out_of_range &err) {
 			Node &node_ref = nodes[node_name_lower];
 			node_ref = node;
-			node_ref.touched = time(NULL);
-			pthread_mutex_unlock(&nodes_mtx);
+			node_ref.touched = epoch::now();
 			return true;
-		} catch(...) {
-			pthread_mutex_unlock(&nodes_mtx);
+		} catch (...) {
 			throw;
 		}
 	}
-	pthread_mutex_unlock(&nodes_mtx);
 	return false;
 }
 
-bool XapiandManager::get_node(const std::string &node_name, const Node **node)
+
+bool
+XapiandManager::get_node(const std::string &node_name, const Node **node)
 {
 	try {
 		std::string node_name_lower(stringtolower(node_name));
@@ -324,42 +279,54 @@ bool XapiandManager::get_node(const std::string &node_name, const Node **node)
 }
 
 
-bool XapiandManager::touch_node(const std::string &node_name, const Node **node)
+bool
+XapiandManager::touch_node(const std::string &node_name, int region, const Node **node)
 {
-	pthread_mutex_lock(&nodes_mtx);
+	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string node_name_lower(stringtolower(node_name));
 	if (node_name_lower == stringtolower(local_node.name)) {
-		local_node.touched = time(NULL);
+		local_node.touched = epoch::now();
+		local_node.region.store(region);
 		if (node) *node = &local_node;
-		pthread_mutex_unlock(&nodes_mtx);
 		return true;
 	} else {
 		try {
 			Node &node_ref = nodes.at(node_name_lower);
-			node_ref.touched = time(NULL);
+			node_ref.touched = epoch::now();
+			node_ref.region.store(region);
 			if (node) *node = &node_ref;
-			pthread_mutex_unlock(&nodes_mtx);
 			return true;
 		} catch (const std::out_of_range &err) {
-		} catch(...) {
-			pthread_mutex_unlock(&nodes_mtx);
+		} catch (...) {
 			throw;
 		}
 	}
-	pthread_mutex_unlock(&nodes_mtx);
 	return false;
 }
 
 
-void XapiandManager::drop_node(const std::string &node_name)
+void
+XapiandManager::drop_node(const std::string &node_name)
 {
-	pthread_mutex_lock(&nodes_mtx);
+	std::lock_guard<std::mutex> lk(nodes_mtx);
 	nodes.erase(stringtolower(node_name));
-	pthread_mutex_unlock(&nodes_mtx);
 }
 
 
-struct sockaddr_in XapiandManager::host_address()
+int
+XapiandManager::get_nodes_by_region(int region)
+{
+	int cont = 0;
+	std::lock_guard<std::mutex> lk(nodes_mtx);
+	for (auto it(nodes.begin()); it != nodes.end(); it++) {
+		if (it->second.region.load() == region) cont++;
+	}
+	return cont;
+}
+
+
+struct sockaddr_in
+XapiandManager::host_address()
 {
 	struct sockaddr_in addr;
 	struct ifaddrs *if_addr_struct;
@@ -381,13 +348,14 @@ struct sockaddr_in XapiandManager::host_address()
 }
 
 
-void XapiandManager::sig_shutdown_handler(int sig)
+void
+XapiandManager::sig_shutdown_handler(int sig)
 {
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
 	 * the user really wanting to quit ASAP without waiting to persist
 	 * on disk. */
-	time_t now = time(NULL);
+	auto now = epoch::now();
 	if (shutdown_now && sig != SIGTERM) {
 		if (sig && shutdown_now + 1 < now) {
 			INFO(this, "You insist... exiting now.\n");
@@ -416,168 +384,32 @@ void XapiandManager::sig_shutdown_handler(int sig)
 }
 
 
-void XapiandManager::destroy()
+void
+XapiandManager::destroy()
 {
-	pthread_mutex_lock(&qmtx);
-	if (discovery_sock == -1 && http_sock == -1 && binary_sock == -1) {
-		pthread_mutex_unlock(&qmtx);
-		return;
-	}
+	std::lock_guard<std::mutex> lk(qmtx);
 
 	async_shutdown.stop();
 	LOG_EV(this, "\tStop async shutdown event\n");
-
-	discovery_heartbeat.stop();
-	LOG_EV(this, "\tStop heartbeat event\n");
-
-	if (discovery_sock != -1) {
-		::close(discovery_sock);
-		discovery_sock = -1;
-	}
-
-	if (http_sock != -1) {
-		::close(http_sock);
-		http_sock = -1;
-	}
-
-	if (binary_sock != -1) {
-		::close(binary_sock);
-		binary_sock = -1;
-	}
-
-	pthread_mutex_unlock(&qmtx);
 
 	LOG_OBJ(this, "DESTROYED MANAGER!\n");
 }
 
 
-#ifdef HAVE_REMOTE_PROTOCOL
-bool XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint, XapiandServer *server)
-{
-	int client_sock;
-	if ((client_sock = connection_socket()) < 0) {
-		return false;
-	}
-
-	BinaryClient *client = new BinaryClient(server, server->loop, client_sock, &database_pool, &thread_pool, active_timeout, idle_timeout);
-
-	if (!client->init_replication(src_endpoint, dst_endpoint)) {
-		delete client;
-		return false;
-	}
-
-	return true;
-}
-#endif /* HAVE_REMOTE_PROTOCOL */
-
-
-bool XapiandManager::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename, XapiandServer *server)
-{
-	int client_sock;
-	if ((client_sock = connection_socket()) < 0) {
-		return false;
-	}
-
-	BinaryClient *client = new BinaryClient(server, server->loop, client_sock, &database_pool, &thread_pool, active_timeout, idle_timeout);
-
-	if (!client->init_storing(endpoints, did, filename)) {
-		delete client;
-		return false;
-	}
-
-	return true;
-}
-
-
-void XapiandManager::discovery_heartbeat_cb(ev::timer &, int)
-{
-	double next_heartbeat;
-	XapiandServer *server;
-
-	switch (state) {
-		case STATE_RESET:
-			if (!local_node.name.empty()) {
-				drop_node(local_node.name);
-			}
-			if (node_name.empty()) {
-				local_node.name = name_generator();
-			} else {
-				local_node.name = node_name;
-			}
-			INFO(this, "Advertising as %s (id: %016llX)...\n", local_node.name.c_str(), local_node.id);
-		case STATE_WAITING:
-			discovery(DISCOVERY_HELLO, local_node.serialise());
-		default:
-			state--;
-			// LOG(this, "Waiting for responses %d...\n", state);
-			break;
-
-		case STATE_SETUP:
-			server = static_cast<XapiandServer *>(*_children.begin());
-			server->async_setup_node.send();
-			break;
-
-		case STATE_READY:
-			discovery(DISCOVERY_HEARTBEAT, local_node.serialise());
-			next_heartbeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
-			// LOG(this, "Planning next heartbeat in %f ms.\n", next_heartbeat * 1000.0);
-			discovery_heartbeat.set(next_heartbeat, HEARTBEAT_INIT);
-			break;
-	}
-}
-
-
-void XapiandManager::discovery(const char *buf, size_t buf_size)
-{
-	pthread_mutex_lock(&qmtx);
-	if (discovery_sock != -1) {
-		LOG_DISCOVERY_WIRE(this, "(sock=%d) <<-- '%s'\n", discovery_sock, repr(buf, buf_size).c_str());
-
-#ifdef MSG_NOSIGNAL
-		ssize_t written = ::sendto(discovery_sock, buf, buf_size, MSG_NOSIGNAL, (struct sockaddr *)&discovery_addr, sizeof(discovery_addr));
-#else
-		ssize_t written = ::sendto(discovery_sock, buf, buf_size, 0, (struct sockaddr *)&discovery_addr, sizeof(discovery_addr));
-#endif
-
-		if (written < 0) {
-			if (discovery_sock != -1 && !ignored_errorno(errno, true)) {
-				LOG_ERR(this, "ERROR: sendto error (sock=%d): %s\n", discovery_sock, strerror(errno));
-				destroy();
-			}
-		} else if (written == 0) {
-			// nothing written?
-		} else {
-
-		}
-	}
-	pthread_mutex_unlock(&qmtx);
-}
-
-
-void XapiandManager::discovery(discovery_type type, const std::string &content)
-{
-	if (!content.empty()) {
-		std::string message((const char *)&type, 1);
-		message.append(std::string((const char *)&XAPIAND_DISCOVERY_PROTOCOL_VERSION, sizeof(uint16_t)));
-		message.append(serialise_string(cluster_name));
-		message.append(content);
-		discovery(message.c_str(), message.size());
-	}
-}
-
-
-void XapiandManager::shutdown_cb(ev::async &, int)
+void
+XapiandManager::shutdown_cb(ev::async &, int)
 {
 	sig_shutdown_handler(0);
 }
 
 
-void XapiandManager::shutdown()
+void
+XapiandManager::shutdown()
 {
 	Worker::shutdown();
 
 	if (shutdown_asap) {
-		discovery(DISCOVERY_BYE, local_node.serialise());
+		discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 		destroy();
 		LOG_OBJ(this, "Finishing thread pool!\n");
 		thread_pool.finish();
@@ -588,47 +420,52 @@ void XapiandManager::shutdown()
 }
 
 
-void XapiandManager::run(int num_servers, int num_replicators)
+void
+XapiandManager::run(const opts_t &o)
 {
 	std::string msg("Listening on ");
-	if (local_node.http_port != -1) {
-		msg += "tcp:" + std::to_string(local_node.http_port) + " (http), ";
-	}
+
+	http = std::make_unique<Http>(share_this<XapiandManager>(), o.http_port);
+	msg += http->getDescription() + ", ";
+
 #ifdef HAVE_REMOTE_PROTOCOL
-	if (local_node.binary_port != -1) {
-		msg += "tcp:" + std::to_string(local_node.binary_port) + " (xapian v" + std::to_string(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION) + "), ";
-	}
+	binary = std::make_unique<Binary>(share_this<XapiandManager>(), o.binary_port);
+	msg += binary->getDescription() + ", ";
 #endif
-	if (discovery_port != -1) {
-		msg += "udp:" + std::to_string(discovery_port) + " (discovery v" + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION) + "), ";
-	}
+
+	discovery = std::make_unique<Discovery>(share_this<XapiandManager>(), loop, o.discovery_port, o.discovery_group);
+	msg += discovery->getDescription() + ", ";
+
+	raft = std::make_unique<Raft>(share_this<XapiandManager>(), loop, o.raft_port, o.raft_group);
+	msg += raft->getDescription() + ", ";
+
 	msg += "at pid:" + std::to_string(getpid()) + "...\n";
 
 	INFO(this, msg.c_str());
 
-	INFO(this, "Starting %d server worker thread%s and %d replicator%s.\n", num_servers, (num_servers == 1) ? "" : "s", num_replicators, (num_replicators == 1) ? "" : "s");
+	INFO(this, "Starting %d server worker thread%s and %d replicator%s.\n", o.num_servers, (o.num_servers == 1) ? "" : "s", o.num_replicators, (o.num_replicators == 1) ? "" : "s");
 
-	ThreadPool server_pool("S%d", num_servers);
-	for (int i = 0; i < num_servers; i++) {
-		XapiandServer *server = new XapiandServer(this, NULL);
-		server->register_server(new HttpServer(server, server->loop, http_sock, &database_pool, &thread_pool));
+	ThreadPool server_pool(o.num_servers);
+	for (size_t i = 0; i < o.num_servers; i++) {
+		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(share_this<XapiandManager>(), nullptr);
+		server->register_server(std::make_unique<HttpServer>(server->share_this<XapiandServer>(), server->loop, http));
 #ifdef HAVE_REMOTE_PROTOCOL
-		server->register_server(new BinaryServer(server, server->loop, binary_sock, &database_pool, &thread_pool));
+		server->register_server(std::make_unique<BinaryServer>(server->share_this<XapiandServer>(), server->loop, binary));
 #endif
-		server->register_server(new DiscoveryServer(server, server->loop, discovery_sock, &database_pool, &thread_pool));
-		server_pool.addTask(server);
+		server->register_server(std::make_unique<DiscoveryServer>(server->share_this<XapiandServer>(), server->loop, discovery));
+		server->register_server(std::make_unique<RaftServer>(server->share_this<XapiandServer>(), server->loop, raft));
+		server_pool.enqueue(std::move(server));
 	}
 
-	ThreadPool replicator_pool("R%d", num_replicators);
-	for (int i = 0; i < num_replicators; i++) {
-		XapiandReplicator *replicator = new XapiandReplicator(this, NULL, &database_pool);
-		replicator_pool.addTask(replicator);
+	ThreadPool replicator_pool(o.num_replicators);
+	for (size_t i = 0; i < o.num_replicators; i++) {
+		replicator_pool.enqueue(Worker::create<XapiandReplicator>(share_this<XapiandManager>(), nullptr));
 	}
 
 	INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
 
-	discovery_heartbeat.start();
-	LOG_EV(this, "\tStart heartbeat event\n");
+	discovery->start();
+	raft->start();
 
 	LOG_EV(this, "\tStarting manager loop...\n");
 	loop->run();
@@ -646,160 +483,136 @@ void XapiandManager::run(int num_servers, int num_replicators)
 }
 
 
-int XapiandManager::get_region(const std::string &db_name)
+int
+XapiandManager::get_region(const std::string &db_name)
 {
-	if (local_node.regions == -1) {
-		local_node.regions = sqrt(nodes.size());
-		LOG(this, "Regions: %d\n", local_node.regions);
+	if (local_node.regions.load() == -1) {
+		local_node.regions.store(sqrt(nodes.size()));
+		LOG(this, "Regions: %d\n", local_node.regions.load());
 	}
 	std::hash<std::string> hash_fn;
-	return jump_consistent_hash(hash_fn(db_name), local_node.regions);
+	return jump_consistent_hash(hash_fn(db_name), local_node.regions.load());
 }
 
 
-int XapiandManager::get_region()
+int
+XapiandManager::get_region()
 {
-	if (local_node.regions == -1) {
-		local_node.regions = sqrt(nodes.size());
-		LOG(this, "Regions: %d\n", local_node.regions);
-		local_node.region = jump_consistent_hash(local_node.id, local_node.regions);
+	LOG(this, "Get_region()\n");
+	if (local_node.regions.load() == -1) {
+		local_node.regions.store(sqrt(nodes.size()));
+		int region = jump_consistent_hash(local_node.id, local_node.regions.load());
+		if (local_node.region.load() != region) {
+			local_node.region.store(region);
+			raft->reset();
+		}
+		LOG(this, "Regions: %d Region: %d\n", local_node.regions.load(), local_node.region.load());
 	}
-	return local_node.region;
+	return local_node.region.load();
 }
 
 
-unique_cJSON XapiandManager::server_status()
+unique_cJSON
+XapiandManager::server_status()
 {
 	unique_cJSON root_status(cJSON_CreateObject(), cJSON_Delete);
-	std::string contet_ser;
-	pthread_mutex_lock(&XapiandServer::static_mutex);
+	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 	cJSON_AddNumberToObject(root_status.get(), "Connections", XapiandServer::total_clients);
 	cJSON_AddNumberToObject(root_status.get(), "Http connections", XapiandServer::http_clients);
 	cJSON_AddNumberToObject(root_status.get(), "Xapian remote connections", XapiandServer::binary_clients);
-	pthread_mutex_unlock(&XapiandServer::static_mutex);
-	cJSON_AddNumberToObject(root_status.get(), "Size thread pool", thread_pool.length());
-	return std::move(root_status);
+	cJSON_AddNumberToObject(root_status.get(), "Size thread pool", thread_pool.size());
+	return root_status;
 }
 
 
-unique_cJSON XapiandManager::get_stats_time(const std::string &time_req)
+unique_cJSON
+XapiandManager::get_stats_time(const std::string &time_req)
 {
-	unique_cJSON root_stats(cJSON_CreateObject(), cJSON_Delete);
-	pos_time_t first_time, second_time;
-	int len = (int) time_req.size();
-	unique_group unique_gr;
-	int ret = pcre_search(time_req.c_str(), len, 0, 0, TIME_RE, &compiled_time_re, unique_gr);
-	group_t *g = unique_gr.get();
-
-	if (ret == 0 && (g[0].end - g[0].start) == len) {
-		if ((g[1].end - g[1].start) > 0) {
-			first_time.minute = 60 * (((g[3].end - g[3].start) > 0) ? strtol(std::string(time_req.c_str() + g[3].start, g[3].end - g[3].start)) : 0);
-			first_time.minute += ((g[4].end - g[4].start) > 0) ? strtol(std::string(time_req.c_str() + g[4].start, g[4].end - g[4].start -1)) : 0;
-			first_time.second = ((g[5].end - g[5].start) > 0) ? strtol(std::string(time_req.c_str() + g[5].start, g[5].end - g[5].start -1)) : 0;
-			if ((g[6].end - g[6].start) > 0) {
-				second_time.minute = 60 * (((g[8].end - g[8].start) > 0) ? strtol(std::string(time_req.c_str() + g[8].start, g[8].end - g[8].start)) : 0);
-				second_time.minute += ((g[9].end - g[9].start) > 0) ? strtol(std::string(time_req.c_str() + g[9].start, g[9].end - g[9].start -1)) : 0;
-				second_time.second = ((g[10].end - g[10].start) > 0) ? strtol(std::string(time_req.c_str() + g[10].start, g[10].end - g[10].start -1)) : 0;
-			} else {
-				second_time.minute = 0;
-				second_time.second = 0;
-			}
-
-			return get_stats_json(first_time, second_time);
+	std::smatch m;
+	if (std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.size() && m.length(1) != 0) {
+		pos_time_t first_time, second_time;
+		first_time.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? strtol(m.str(3)) : 0);
+		first_time.minute += m.length(5) != 0 ? strtol(m.str(5)) : 0;
+		first_time.second = m.length(7) != 0 ? strtol(m.str(7)) : 0;
+		if (m.length(8) != 0) {
+			second_time.minute = SLOT_TIME_SECOND * (m.length(10) != 0 ? strtol(m.str(10)) : 0);
+			second_time.minute += m.length(12) != 0 ? strtol(m.str(12)) : 0;
+			second_time.second = m.length(14) != 0 ? strtol(m.str(14)) : 0;
+		} else {
+			second_time.minute = 0;
+			second_time.second = 0;
 		}
+		return get_stats_json(first_time, second_time);
 	}
 
+	unique_cJSON root_stats(cJSON_CreateObject(), cJSON_Delete);
 	cJSON_AddStringToObject(root_stats.get(), "Error in time argument input", "Incorrect input.");
-	return std::move(root_stats);
+	return root_stats;
 }
 
 
-unique_cJSON XapiandManager::get_stats_json(pos_time_t first_time, pos_time_t second_time)
+unique_cJSON
+XapiandManager::get_stats_json(pos_time_t &first_time, pos_time_t &second_time)
 {
 	unique_cJSON root_stats(cJSON_CreateObject(), cJSON_Delete);
-	cJSON *time_period = cJSON_CreateObject();
+	unique_cJSON time_period(cJSON_CreateObject(), cJSON_Delete);
 
-	pthread_mutex_lock(&XapiandServer::static_mutex);
+	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
-	time_t now_time = init_time;
-	pos_time_t b_time_cpy = b_time;
-	times_row_t stats_cnt_cpy = stats_cnt;
-	pthread_mutex_unlock(&XapiandServer::static_mutex);
+	auto now_time = std::chrono::system_clock::to_time_t(init_time);
+	auto b_time_cpy = b_time;
+	auto stats_cnt_cpy = stats_cnt;
+	lk.unlock();
 
-	int aux_second_sec;
-	int aux_first_sec;
-	int aux_second_min;
-	int aux_first_min;
-	bool seconds = (first_time.minute == 0) ? true : false;
-
+	auto seconds = first_time.minute == 0 ? true : false;
+	uint16_t start, end;
 	if (second_time.minute == 0 && second_time.second == 0) {
-		aux_second_sec =  first_time.second;
-		aux_first_sec = 0;
-		aux_second_min =  first_time.minute;
-		aux_first_min = 0;
-		second_time.minute = b_time_cpy.minute - first_time.minute;
-		second_time.second = b_time_cpy.second - first_time.second;
-		first_time.minute = b_time_cpy.minute;
-		first_time.second = b_time_cpy.second;
+		start = first_time.minute * SLOT_TIME_SECOND + first_time.second;
+		end = 0;
+		first_time.minute = (first_time.minute > b_time_cpy.minute ? SLOT_TIME_MINUTE + b_time_cpy.minute : b_time_cpy.minute) - first_time.minute;
+		first_time.second = (first_time.second > b_time_cpy.second ? SLOT_TIME_SECOND + b_time_cpy.second : b_time_cpy.second) - first_time.second;
 	} else {
-		aux_second_sec =  second_time.second;
-		aux_first_sec = first_time.second;
-		aux_second_min =  second_time.minute;
-		aux_first_min = first_time.minute;
-		first_time.minute = b_time_cpy.minute - first_time.minute;
-		first_time.second = b_time_cpy.second - first_time.second;
-		second_time.minute = b_time_cpy.minute - second_time.minute;
-		second_time.second = b_time_cpy.second - second_time.second;
+		start = second_time.minute * SLOT_TIME_SECOND + second_time.second;
+		end = first_time.minute * SLOT_TIME_SECOND + first_time.second;
+		first_time.minute = (second_time.minute > b_time_cpy.minute ? SLOT_TIME_MINUTE + b_time_cpy.minute : b_time_cpy.minute) - second_time.minute;
+		first_time.second = (second_time.second > b_time_cpy.second ? SLOT_TIME_SECOND + b_time_cpy.second : b_time_cpy.second) - second_time.second;
 	}
 
-	if ((aux_first_min * SLOT_TIME_SECOND + aux_first_sec) > (aux_second_min * SLOT_TIME_SECOND + aux_second_sec)) {
+	if (end > start) {
 		cJSON_AddStringToObject(root_stats.get(), "Error in time argument input", "First argument must be less or equal than the second.");
 	} else {
-		int cnt[3] = {0, 0, 0};
-		double tm_cnt[3] = {0.0, 0.0, 0.0};
-		struct tm *timeinfo = localtime(&now_time);
-		cJSON_AddStringToObject(time_period, "System time", asctime(timeinfo));
+		std::vector<uint64_t> cnt{0, 0, 0};
+		std::vector<double> tm_cnt{0.0, 0.0, 0.0};
+		cJSON_AddStringToObject(time_period.get(), "System time", ctime(&now_time));
 		if (seconds) {
-			for (int i = second_time.second; i <= first_time.second; i++) {
-				int j = (i < 0) ? SLOT_TIME_SECOND + i : i;
-				cnt[0] += stats_cnt_cpy.index.sec[j];
-				cnt[1] += stats_cnt_cpy.search.sec[j];
-				cnt[2] += stats_cnt_cpy.del.sec[j];
-				tm_cnt[0] += stats_cnt_cpy.index.tm_sec[j];
-				tm_cnt[1] += stats_cnt_cpy.search.tm_sec[j];
-				tm_cnt[2] += stats_cnt_cpy.del.tm_sec[j];
+			auto aux = first_time.second + start - end;
+			if (aux < SLOT_TIME_SECOND) {
+				add_stats_sec(first_time.second, aux, cnt, tm_cnt, stats_cnt_cpy);
+			} else {
+				add_stats_sec(first_time.second, SLOT_TIME_SECOND - 1, cnt, tm_cnt, stats_cnt_cpy);
+				add_stats_sec(0, aux % SLOT_TIME_SECOND, cnt, tm_cnt, stats_cnt_cpy);
 			}
-			time_t p_time = now_time - aux_second_sec;
-			timeinfo = localtime(&p_time);
-			cJSON_AddStringToObject(time_period, "Period start", asctime(timeinfo));
-			p_time = now_time - aux_first_sec;
-			timeinfo = localtime(&p_time);
-			cJSON_AddStringToObject(time_period, "Period end", asctime(timeinfo));
 		} else {
-			for (int i = second_time.minute; i <= first_time.minute; i++) {
-				int j = (i < 0) ? SLOT_TIME_MINUTE + i : i;
-				cnt[0] += stats_cnt_cpy.index.cnt[j];
-				cnt[1] += stats_cnt_cpy.search.cnt[j];
-				cnt[2] += stats_cnt_cpy.del.cnt[j];
-				tm_cnt[0] += stats_cnt_cpy.index.tm_cnt[j];
-				tm_cnt[1] += stats_cnt_cpy.search.tm_cnt[j];
-				tm_cnt[2] += stats_cnt_cpy.del.tm_cnt[j];
+			auto aux = first_time.minute + (start - end) / SLOT_TIME_SECOND;
+			if (aux < SLOT_TIME_MINUTE) {
+				add_stats_min(first_time.minute, aux, cnt, tm_cnt, stats_cnt_cpy);
+			} else {
+				add_stats_min(first_time.second, SLOT_TIME_MINUTE - 1, cnt, tm_cnt, stats_cnt_cpy);
+				add_stats_min(0, aux % SLOT_TIME_MINUTE, cnt, tm_cnt, stats_cnt_cpy);
 			}
-			time_t p_time = now_time - aux_second_min * SLOT_TIME_SECOND;
-			timeinfo = localtime(&p_time);
-			cJSON_AddStringToObject(time_period, "Period start", asctime(timeinfo));
-			p_time = now_time - aux_first_min * SLOT_TIME_SECOND;
-			timeinfo = localtime(&p_time);
-			cJSON_AddStringToObject(time_period, "Period end", asctime(timeinfo));
 		}
-		cJSON_AddItemToObject(root_stats.get(), "Time", time_period);
+		auto p_time = now_time - start;
+		cJSON_AddStringToObject(time_period.get(), "Period start", ctime(&p_time));
+		p_time = now_time - end;
+		cJSON_AddStringToObject(time_period.get(), "Period end", ctime(&p_time));
+		cJSON_AddItemToObject(root_stats.get(), "Time", time_period.release());
 		cJSON_AddNumberToObject(root_stats.get(), "Docs index", cnt[0]);
 		cJSON_AddNumberToObject(root_stats.get(), "Number searches", cnt[1]);
 		cJSON_AddNumberToObject(root_stats.get(), "Docs deleted", cnt[2]);
-		cJSON_AddNumberToObject(root_stats.get(), "Average time indexing", tm_cnt[0] / ((cnt[0] == 0) ? 1 : cnt[0]));
-		cJSON_AddNumberToObject(root_stats.get(), "Average search time", tm_cnt[1] / ((cnt[1] == 0) ? 1 : cnt[1]));
-		cJSON_AddNumberToObject(root_stats.get(), "Average deletion time", tm_cnt[2] / ((cnt[2] == 0) ? 1 : cnt[2]));
+		cJSON_AddNumberToObject(root_stats.get(), "Average time indexing", cnt[0] == 0 ? 0 : tm_cnt[0] / cnt[0]);
+		cJSON_AddNumberToObject(root_stats.get(), "Average search time", cnt[1] == 0 ? 0 : tm_cnt[1] / cnt[1]);
+		cJSON_AddNumberToObject(root_stats.get(), "Average deletion time", cnt[2] == 0 ? 0 : tm_cnt[2] / cnt[2]);
 	}
 
-	return std::move(root_stats);
+	return root_stats;
 }

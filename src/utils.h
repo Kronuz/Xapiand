@@ -42,10 +42,105 @@
 #include <random>
 #include <sys/time.h>
 #include "pcre/pcre.h"
+#include <chrono>
 
-#define SLOT_TIME_MINUTE 1440
-#define SLOT_TIME_SECOND 60
 
+constexpr uint16_t SLOT_TIME_MINUTE = 1440;
+constexpr uint8_t SLOT_TIME_SECOND = 60;
+
+using cont_time_t = struct cont_time_s {
+	uint32_t min[SLOT_TIME_MINUTE];
+	uint32_t sec[SLOT_TIME_SECOND];
+	uint64_t tm_min[SLOT_TIME_MINUTE];
+	uint64_t tm_sec[SLOT_TIME_SECOND];
+};
+
+using times_row_t = struct times_row_s {
+	cont_time_t index;
+	cont_time_t search;
+	cont_time_t del;
+};
+
+using pos_time_t = struct pos_time_s {
+	uint16_t minute;
+	uint8_t second;
+};
+
+using similar_t = struct similar_s {
+	unsigned int n_rset;
+	unsigned int n_eset;
+	unsigned int n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
+	std::vector <std::string> field;
+	std::vector <std::string> type;
+};
+
+using query_t = struct query_s {
+	unsigned int offset;
+	unsigned int limit;
+	unsigned int check_at_least;
+	bool spelling;
+	bool synonyms;
+	bool pretty;
+	bool commit;
+	bool server;
+	bool database;
+	std::string document;
+	bool unique_doc;
+	bool is_fuzzy;
+	bool is_nearest;
+	std::string stats;
+	std::string collapse;
+	unsigned int collapse_max;
+	std::vector <std::string> language;
+	std::vector <std::string> query;
+	std::vector <std::string> partial;
+	std::vector <std::string> terms;
+	std::vector <std::string> sort;
+	std::vector <std::string> facets;
+	similar_t fuzzy;
+	similar_t nearest;
+};
+
+using parser_query_t = struct parser_query_s {
+	size_t length;
+	const char *offset;
+};
+
+using parser_url_path_t = struct parser_url_path_s {
+	const char *offset;
+	size_t len_path;
+	const char *off_path;
+	size_t len_host;
+	const char *off_host;
+	size_t len_namespace;
+	const char *off_namespace;
+	size_t len_command;
+	const char *off_command;
+	size_t len_upload;
+	const char *off_upload;
+};
+
+extern pcre *compiled_coords_re;
+extern pcre *compiled_numeric_re;
+extern pcre *compiled_find_range_re;
+
+// Varibles used by server stats.
+extern pos_time_t b_time;
+extern std::chrono::time_point<std::chrono::system_clock> init_time;
+extern times_row_t stats_cnt;
+
+// It'll return the enum's underlying type.
+template<typename E>
+inline constexpr auto toUType(E enumerator) noexcept
+{
+	return static_cast<std::underlying_type_t<E>>(enumerator);
+}
+
+template<typename T, std::size_t N>
+inline constexpr std::size_t arraySize(T (&)[N]) noexcept
+{
+	return N;
+}
 
 double random_real(double initial, double last);
 uint64_t random_int(uint64_t initial, uint64_t last);
@@ -85,95 +180,8 @@ inline bool ignored_errorno(int e, bool udp) {
 	}
 }
 
-int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries);
-int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, const char *group);
-int connection_socket();
-int connect_tcp(int sock, const char *hostname, const char *servname);
-int accept_tcp(int listener_sock);
-
 std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
-
-typedef struct cont_time_s {
-	unsigned short cnt[SLOT_TIME_MINUTE];
-	unsigned short sec[SLOT_TIME_SECOND];
-	double tm_cnt[SLOT_TIME_MINUTE];
-	double tm_sec[SLOT_TIME_SECOND];
-} cont_time_t;
-
-typedef struct times_row_s {
-	cont_time_t index;
-	cont_time_t search;
-	cont_time_t del;
-} times_row_t;
-
-typedef struct pos_time_s {
-	unsigned short minute;
-	unsigned short second;
-} pos_time_t;
-
-extern pcre *compiled_coords_re;
-extern pcre *compiled_numeric_re;
-extern pcre *compiled_find_range_re;
-
-// Varibles used by server stats.
-extern pos_time_t b_time;
-extern time_t init_time;
-extern times_row_t stats_cnt;
-
-typedef struct similar_s {
-	unsigned int n_rset;
-	unsigned int n_eset;
-	unsigned int n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
-	std::vector <std::string> field;
-	std::vector <std::string> type;
-} similar_t;
-
-typedef struct query_s {
-	unsigned int offset;
-	unsigned int limit;
-	unsigned int check_at_least;
-	bool spelling;
-	bool synonyms;
-	bool pretty;
-	bool commit;
-	bool server;
-	bool database;
-	std::string document;
-	bool unique_doc;
-	bool is_fuzzy;
-	bool is_nearest;
-	std::string stats;
-	std::string collapse;
-	unsigned int collapse_max;
-	std::vector <std::string> language;
-	std::vector <std::string> query;
-	std::vector <std::string> partial;
-	std::vector <std::string> terms;
-	std::vector <std::string> sort;
-	std::vector <std::string> facets;
-	similar_t fuzzy;
-	similar_t nearest;
-} query_t;
-
-typedef struct parser_query_s {
-	size_t length;
-	const char *offset;
-} parser_query_t;
-
-typedef struct parser_url_path_s {
-	const char *offset;
-	size_t len_path;
-	const char *off_path;
-	size_t len_host;
-	const char *off_host;
-	size_t len_namespace;
-	const char *off_namespace;
-	size_t len_command;
-	const char *off_command;
-	size_t len_upload;
-	const char *off_upload;
-} parser_url_path_t;
 
 typedef struct group_s {
 	int start;
@@ -237,12 +245,20 @@ void move_files(const std::string &src, const std::string &dst);
 inline bool exist(const std::string& name);
 bool buid_path_index(const std::string& path);
 int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups);
+
 void update_pos_time();
-void fill_zeros_stats_cnt(int start, int end);
-void fill_zeros_stats_sec(int start, int end);
+void fill_zeros_stats_min(uint16_t start, uint16_t end);
+void fill_zeros_stats_sec(uint8_t start, uint8_t end);
+void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy);
+void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy);
+
 // Levenshtein distance is a string metric for measuring the difference between two
 // sequences (known as edit distance).
 unsigned int levenshtein_distance(const std::string &str1, const std::string &str2);
+
+namespace epoch {
+	auto now = []() noexcept { return std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); };
+}
 
 #define INFO(...) log(__FILE__, __LINE__, __VA_ARGS__)
 
@@ -253,15 +269,16 @@ unsigned int levenshtein_distance(const std::string &str1, const std::string &st
 
 #define LOG_CONN(...)
 #define LOG_DISCOVERY(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_OBJ(...)
+#define LOG_RAFT(...) log(__FILE__, __LINE__, __VA_ARGS__)
+#define LOG_OBJ(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_DATABASE(...)
 #define LOG_HTTP(...)
 #define LOG_BINARY(...)
 #define LOG_HTTP_PROTO_PARSER(...)
 
-#define LOG_EV(...)
+#define LOG_EV(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_CONN_WIRE(...)
-#define LOG_DISCOVERY_WIRE(...)
+#define LOG_UDP_WIRE(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_HTTP_PROTO(...)
 #define LOG_BINARY_PROTO(...)
 

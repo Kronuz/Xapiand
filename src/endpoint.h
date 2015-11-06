@@ -29,16 +29,31 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <atomic>
 
 struct Node {
 	std::string name;
 	uint64_t id;
-	int regions;
-	int region;
+	std::atomic<int> regions;
+	std::atomic<int> region;
 	struct sockaddr_in addr;
 	int http_port;
 	int binary_port;
 	time_t touched;
+
+	Node() : regions(1), region(0) { }
+
+	Node& operator =(const Node& node) {
+		name = node.name;
+		id = node.id;
+		regions.store(node.regions.load());
+		region.store(node.region.load());
+		addr = node.addr;
+		http_port = node.http_port;
+		binary_port = node.binary_port;
+		touched = node.touched;
+		return *this;
+	}
 
 	std::string serialise() const;
 	ssize_t unserialise(const char **p, const char *end);
@@ -50,16 +65,15 @@ struct Node {
 		return std::string(ip);
 	}
 
-	inline bool operator==(const Node& other) const {
-		return (
+	inline bool operator ==(const Node& other) const {
+		return
 			stringtolower(name) == stringtolower(other.name) &&
 			addr.sin_addr.s_addr == other.addr.sin_addr.s_addr &&
 			http_port == other.http_port &&
-			binary_port == other.binary_port
-		);
+			binary_port == other.binary_port;
 	}
 
-	inline bool operator!=(const Node& other) const {
+	inline bool operator !=(const Node& other) const {
 		return !operator==(other);
 	}
 };

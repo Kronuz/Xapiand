@@ -24,15 +24,15 @@
 
 #include "server_base.h"
 
-#define HEARTBEAT_MIN 0.150
-#define HEARTBEAT_MAX 0.400
-#define HEARTBEAT_INIT (HEARTBEAT_MAX / 2)
+class Discovery;
 
 
 // Discovery Server
 class DiscoveryServer : public BaseServer {
+	std::unique_ptr<Discovery> &discovery;
+
 public:
-	DiscoveryServer(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
+	DiscoveryServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, std::unique_ptr<Discovery> &discovery_);
 	~DiscoveryServer();
 
 	void io_accept(ev::io &watcher, int revents);

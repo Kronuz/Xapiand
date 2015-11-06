@@ -24,10 +24,7 @@
 
 #include "xapiand.h"
 
-#include "worker.h"
-#include "server.h"
-#include "threadpool.h"
-#include "database.h"
+#include "servers/server.h"
 
 #include "compressor.h"
 
@@ -39,20 +36,20 @@
 //
 
 class Buffer {
-	char *data;
 	size_t len;
+	char *data;
 
 public:
 	size_t pos;
 	char type;
 
 	Buffer(char type_, const char *bytes, size_t nbytes)
-		: data(new char [nbytes]),
-		  len(nbytes),
+		: len(nbytes),
+		  data(new char [len]),
 		  pos(0),
 		  type(type_)
 	{
-		memcpy(data, bytes, nbytes);
+		memcpy(data, bytes, len);
 	}
 
 	virtual ~Buffer() {
@@ -69,25 +66,47 @@ public:
 };
 
 
+enum class MODE;
+enum class WR;
+
+
 class BaseClient : public Task, public Worker {
 	friend Compressor;
+
+protected:
+	BaseClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loop_, int sock_);
+
 public:
-	BaseClient(XapiandServer *server_, ev::loop_ref *loop, int s, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
 	virtual ~BaseClient();
 
-	inline XapiandServer * server() const {
-		return static_cast<XapiandServer *>(_parent);
+	virtual void on_read_file(const char *buf, size_t received) = 0;
+
+	virtual void on_read_file_done() = 0;
+
+	virtual void on_read(const char *buf, size_t received) = 0;
+
+	void close();
+
+	bool write(const char *buf, size_t buf_size);
+
+	inline bool write(const char *buf) {
+		return write(buf, strlen(buf));
 	}
 
-	inline XapiandManager *manager() const {
-		return static_cast<XapiandServer *>(_parent)->manager();
+	inline bool write(const std::string &buf) {
+		return write(buf.c_str(), buf.size());
+	}
+
+	inline decltype(auto) server() noexcept {
+		return std::static_pointer_cast<XapiandServer>(_parent);
+	}
+
+	inline decltype(auto) manager() noexcept {
+		return std::static_pointer_cast<XapiandServer>(_parent)->manager();
 	}
 
 protected:
-	friend XapiandServer;
-
-	pthread_mutex_t qmtx;
-	pthread_mutexattr_t qmtx_attr;
+	std::mutex qmtx;
 
 	ev::io io_read;
 	ev::io io_write;
@@ -101,12 +120,9 @@ protected:
 	std::unique_ptr<Compressor> compressor;
 	char *read_buffer;
 
-	int mode;
+	MODE mode;
 	ssize_t file_size;
 	size_t block_size;
-
-	DatabasePool *database_pool;
-	ThreadPool *thread_pool;
 
 	Endpoints endpoints;
 
@@ -125,31 +141,10 @@ protected:
 	// Socket is writable
 	void write_cb(int fd);
 
-	int write_directly(int fd);
+	WR write_directly(int fd);
 
 	void read_file();
 	bool send_file(int fd);
 	void destroy();
 	void shutdown();
-
-public:
-	virtual void on_read_file(const char *buf, size_t received) = 0;
-
-	virtual void on_read_file_done() = 0;
-
-	virtual void on_read(const char *buf, size_t received) = 0;
-
-	void close();
-
-	bool write(const char *buf, size_t buf_size);
-
-	inline bool write(const char *buf)
-	{
-		return write(buf, strlen(buf));
-	}
-
-	inline bool write(const std::string &buf)
-	{
-		return write(buf.c_str(), buf.size());
-	}
 };

@@ -28,25 +28,15 @@
 #include "threadpool.h"
 #include "worker.h"
 #include "endpoint_resolver.h"
+#include "ev/ev++.h"
 
 #include <list>
 #include <unordered_map>
-#include <pthread.h>
-#include "ev/ev++.h"
+#include <mutex>
+#include <regex>
 
 
-#define XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION 1
-#define XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION 0
-
-#define STATE_BAD        -1
-#define STATE_READY       0
-#define STATE_SETUP       1
-#define STATE_WAITING_    2
-#define STATE_WAITING     3
-#define STATE_RESET       4
-
-
-typedef struct opts_s {
+using opts_t = struct opts_s {
 	int verbosity;
 	bool daemonize;
 	bool chert;
@@ -56,98 +46,93 @@ typedef struct opts_s {
 	unsigned int http_port;
 	unsigned int binary_port;
 	unsigned int discovery_port;
+	unsigned int raft_port;
 	std::string pidfile;
 	std::string uid;
 	std::string gid;
 	std::string discovery_group;
+	std::string raft_group;
 	size_t num_servers;
 	size_t dbpool_size;
+	size_t num_replicators;
 	size_t threadpool_size;
 	size_t endpoints_list_size;
-} opts_t;
-
-
-
-enum discovery_type {
-	DISCOVERY_HELLO,     // New node saying hello
-	DISCOVERY_WAVE,      // Nodes waving hello to the new node
-	DISCOVERY_SNEER,     // Nodes telling the client they don't agree on the new node's name
-	DISCOVERY_HEARTBEAT, // Heartbeat
-	DISCOVERY_BYE,       // Node says goodbye
-	DISCOVERY_DB,
-	DISCOVERY_DB_WAVE,
-	DISCOVERY_BOSSY_DB_WAVE,
-	DISCOVERY_DB_UPDATED,
-	DISCOVERY_MAX
 };
 
 
+class BaseUDP;
+class Binary;
+class Discovery;
+class Http;
+class HttpClient;
+class Raft;
 class XapiandServer;
 
-class XapiandManager : public Worker {
-	typedef std::unordered_map<std::string, Node> nodes_map_t;
 
-	friend class HttpClient;
+class XapiandManager : public Worker  {
+	using nodes_map_t = std::unordered_map<std::string, Node>;
 
-private:
-	pthread_mutex_t qmtx;
-	pthread_mutexattr_t qmtx_attr;
-
-	ev::timer discovery_heartbeat;
-	struct sockaddr_in discovery_addr;
-	int discovery_port;
-
-	int discovery_sock;
-	int http_sock;
-	int binary_sock;
-
-	static pcre *compiled_time_re;
-
-	DatabasePool database_pool;
-	ThreadPool thread_pool;
+	std::mutex qmtx;
 
 	Endpoints cluster_endpoints;
 
-	void discovery_heartbeat_cb(ev::timer &watcher, int revents);
-	void discovery(const char *message, size_t size);
+	static std::regex time_re;
 
-	void check_tcp_backlog(int tcp_backlog);
+	XapiandManager(ev::loop_ref *loop_, const opts_t &o);
+
 	void shutdown_cb(ev::async &watcher, int revents);
 	struct sockaddr_in host_address();
 	void destroy();
 
+	friend Worker;
+
 protected:
-	pthread_mutex_t nodes_mtx;
-	pthread_mutexattr_t nodes_mtx_attr;
+	std::mutex nodes_mtx;
 	nodes_map_t nodes;
 
 	std::string get_node_name();
-	bool set_node_name(const std::string &node_name_);
+	bool set_node_name(const std::string &node_name_, std::unique_lock<std::mutex> &lk);
 	uint64_t get_node_id();
 	bool set_node_id();
 
 public:
+	enum class State {
+		BAD,
+		READY,
+		SETUP,
+		WAITING_,
+		WAITING,
+		RESET
+	};
+
+	DatabasePool database_pool;
+	ThreadPool thread_pool;
+
 	time_t shutdown_asap;
 	time_t shutdown_now;
+
 	ev::async async_shutdown;
 
 	EndpointResolver endp_r;
 
-	unsigned char state;
+	std::unique_ptr<Http> http;
+#ifdef HAVE_REMOTE_PROTOCOL
+	std::unique_ptr<Binary> binary;
+#endif
+	std::unique_ptr<Discovery> discovery;
+	std::unique_ptr<Raft> raft;
+
+	State state;
 	std::string cluster_name;
 	std::string node_name;
 
-	XapiandManager(ev::loop_ref *loop_, const opts_t &o);
 	~XapiandManager();
 
-	void setup_node(XapiandServer *server);
+	void setup_node();
 
-#ifdef HAVE_REMOTE_PROTOCOL
-	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint, XapiandServer *server);
-#endif
-	bool store(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename, XapiandServer *server);
+	void setup_node(std::shared_ptr<XapiandServer>&& server);
 
-	void run(int num_servers, int num_replicators);
+	void run(const opts_t &o);
 	void sig_shutdown_handler(int sig);
 	void shutdown();
 
@@ -155,17 +140,20 @@ public:
 
 	bool put_node(const Node &node);
 	bool get_node(const std::string &node_name, const Node **node);
-	bool touch_node(const std::string &node_name, const Node **node=NULL);
+	bool touch_node(const std::string &node_name, int region, const Node **node=nullptr);
 	void drop_node(const std::string &node_name);
 
-	void discovery(discovery_type type, const std::string &content);
-
-	// Return the region to which db name belongs.
+	int get_nodes_by_region(int region);
+	// Return the region to which db name belongs
 	int get_region(const std::string &db_name);
-	// Return the region to which local_node belongs.
+	// Return the region to which local_node belongs
 	int get_region();
 
 	unique_cJSON server_status();
 	unique_cJSON get_stats_time(const std::string &time_req);
-	unique_cJSON get_stats_json(pos_time_t first_time, pos_time_t second_time);
+	unique_cJSON get_stats_json(pos_time_t &first_time, pos_time_t &second_time);
+
+	inline decltype(auto) get_lock() noexcept {
+		return std::unique_lock<std::mutex>(qmtx);
+	}
 };

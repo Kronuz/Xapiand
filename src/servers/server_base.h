@@ -20,44 +20,33 @@
  * IN THE SOFTWARE.
  */
 
-#include "replicator.h"
+#pragma once
 
-#include "servers/discovery.h"
-
-
-XapiandReplicator::XapiandReplicator(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_)
-	: Worker(std::move(manager_), loop_) { }
+#include "../worker.h"
+#include "server.h"
 
 
-void
-XapiandReplicator::on_commit(const Endpoint &endpoint)
-{
-	std::string endpoint_mastery(std::to_string(endpoint.mastery_level));
-	manager()->discovery->send_message(
-        Discovery::Message::DB_UPDATED,
-		serialise_string(endpoint_mastery) +  // The mastery level of the database
-		serialise_string(endpoint.path) +  // The path of the index
-		local_node.serialise()   // The node where the index is at
-	);
-}
+// This class lets make different types of servers.
+class BaseServer : public Worker {
+	friend Worker;
 
+protected:
+	ev::io io;
 
-void
-XapiandReplicator::run()
-{
-	// Function that retrieves a task from a queue, runs it and deletes it
-	LOG_OBJ(this, "Replicator started...\n");
-	Endpoint endpoint;
-	while (manager()->database_pool.updated_databases.pop(endpoint)) {
-		LOG(this, "Replicator was informed database was updated: %s\n", endpoint.as_string().c_str());
-		on_commit(endpoint);
+	BaseServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, int sock_);
+
+	void destroy();
+
+public:
+	virtual ~BaseServer();
+
+	virtual void io_accept(ev::io &watcher, int revents) = 0;
+
+	inline std::shared_ptr<XapiandServer> server() noexcept {
+		return std::static_pointer_cast<XapiandServer>(_parent);
 	}
-	LOG_OBJ(this, "Replicator ended!\n");
-}
 
-
-void
-XapiandReplicator::shutdown()
-{
-	manager()->database_pool.updated_databases.finish();
-}
+	inline decltype(auto) manager() noexcept {
+		return std::static_pointer_cast<XapiandServer>(_parent)->manager();
+	}
+};

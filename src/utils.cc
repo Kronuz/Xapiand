@@ -31,17 +31,8 @@
 #include <algorithm>
 #include <pthread.h>
 #include <xapian.h>
-
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h> /* for TCP_NODELAY */
-#include <netdb.h> /* for getaddrinfo */
-#include <unistd.h>
 #include <dirent.h>
-#include <bitset>
+#include <unistd.h>
 #include <sys/stat.h>
 
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
@@ -66,7 +57,7 @@ pcre *compiled_numeric_re = NULL;
 pcre *compiled_find_range_re = NULL;
 
 pos_time_t b_time;
-time_t init_time;
+std::chrono::time_point<std::chrono::system_clock> init_time;
 times_row_t stats_cnt;
 
 static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
@@ -151,286 +142,12 @@ void log(const char *file, int line, void *, const char *format, ...)
 }
 
 
-void check_tcp_backlog(int)
-{
-#if defined(NET_CORE_SOMAXCONN)
-	int name[3] = {CTL_NET, NET_CORE, NET_CORE_SOMAXCONN};
-	int somaxconn;
-	size_t somaxconn_len = sizeof(somaxconn);
-	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
-		LOG_ERR(NULL, "ERROR: sysctl: [%d] %s\n", errno, strerror(errno));
-		return;
-	}
-	if (somaxconn > 0 && somaxconn < tcp_backlog) {
-		LOG_ERR(NULL, "WARNING: The TCP backlog setting of %d cannot be enforced because "
-				"net.core.somaxconn"
-				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
-	}
-#elif defined(KIPC_SOMAXCONN)
-	int name[3] = {CTL_KERN, KERN_IPC, KIPC_SOMAXCONN};
-	int somaxconn;
-	size_t somaxconn_len = sizeof(somaxconn);
-	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
-		LOG_ERR(NULL, "ERROR: sysctl: [%d] %s\n", errno, strerror(errno));
-		return;
-	}
-	if (somaxconn > 0 && somaxconn < tcp_backlog) {
-		LOG_ERR(NULL, "WARNING: The TCP backlog setting of %d cannot be enforced because "
-				"kern.ipc.somaxconn"
-				" is set to the lower value of %d.\n", tcp_backlog, somaxconn);
-	}
-#endif
-}
-
-
-int bind_tcp(const char *type, int &port, struct sockaddr_in &addr, int tries)
-{
-	int sock;
-
-	int tcp_backlog = XAPIAND_TCP_BACKLOG;
-	int optval = 1;
-
-	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s socket: [%d] %s\n", type, errno, strerror(errno));
-		return -1;
-	}
-
-	// use setsockopt() to allow multiple listeners connected to the same address
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	}
-
-#ifdef SO_NOSIGPIPE
-	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	}
-#endif
-
-	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	}
-
-	// struct linger ling = {0, 0};
-	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	// }
-
-	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: %s setsockopt TCP_NODELAY (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	// }
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-	for (int i = 0; i < tries; i++, port++) {
-		addr.sin_port = htons(port);
-
-		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			if (!ignored_errorno(errno, true)) {
-				if (i == tries - 1) break;
-				LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-				continue;
-			}
-		}
-
-		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-			LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-		}
-
-		check_tcp_backlog(tcp_backlog);
-		listen(sock, tcp_backlog);
-		return sock;
-	}
-
-	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	close(sock);
-	return -1;
-}
-
-
-int bind_udp(const char *type, int &port, struct sockaddr_in &addr, int tries, const char *group)
-{
-	int sock;
-
-	int optval = 1;
-	unsigned char ttl = 3;
-	struct ip_mreq mreq;
-
-	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s socket: [%d] %s\n", type, errno, strerror(errno));
-		return -1;
-	}
-
-	// use setsockopt() to allow multiple listeners connected to the same port
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	}
-
-	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	}
-
-	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	}
-
-	// use setsockopt() to request that the kernel join a multicast group
-	memset(&mreq, 0, sizeof(mreq));
-	mreq.imr_multiaddr.s_addr = inet_addr(group);
-	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
-		LOG_ERR(NULL, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-		close(sock);
-		return -1;
-	}
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);  // bind to all addresses (differs from sender)
-
-	for (int i = 0; i < tries; i++, port++) {
-		addr.sin_port = htons(port);
-
-		if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			if (!ignored_errorno(errno, true)) {
-				if (i == tries - 1) break;
-				LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-				continue;
-			}
-		}
-
-		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-			LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-		}
-
-		addr.sin_addr.s_addr = inet_addr(group);  // setup s_addr for sender (send to group)
-		return sock;
-	}
-
-	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", type, sock, errno, strerror(errno));
-	close(sock);
-	return -1;
-}
-
-
-int connection_socket()
-{
-	int sock;
-
-	int optval = 1;
-
-	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		LOG_ERR(NULL, "ERROR: cannot create binary connection: [%d] %s\n", errno, strerror(errno));
-		return -1;
-	}
-
-#ifdef SO_NOSIGPIPE
-	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-	}
-#endif
-
-	// if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-	// }
-
-	// struct linger ling = {0, 0};
-	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_LINGER (sock=%d): %s\n", sock, strerror(errno));
-	// }
-
-	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
-	// }
-
-	return sock;
-}
-
-int connect_tcp(int sock, const char *hostname, const char *servname)
-{
-	struct addrinfo hints;
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
-	hints.ai_protocol = 0;
-
-	struct addrinfo *result;
-	if (getaddrinfo(hostname, servname, &hints, &result) < 0) {
-		LOG_ERR(NULL, "Couldn't resolve host %s:%s\n", hostname, servname);
-		close(sock);
-		return -1;
-	}
-
-	if (connect(sock, result->ai_addr, result->ai_addrlen) < 0) {
-		if (!ignored_errorno(errno, true)) {
-			LOG_ERR(NULL, "ERROR: connect error to %s:%s (sock=%d): [%d] %s\n", hostname, servname, sock, errno, strerror(errno));
-			freeaddrinfo(result);
-			close(sock);
-			return -1;
-		}
-	}
-
-	freeaddrinfo(result);
-
-	if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-		LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-	}
-
-	return sock;
-}
-
-
-int accept_tcp(int listener_sock)
-{
-	int sock;
-
-	int optval = 1;
-
-	struct sockaddr_in addr;
-	socklen_t addrlen = sizeof(addr);
-
-	if ((sock = accept(listener_sock, (struct sockaddr *)&addr, &addrlen)) < 0) {
-		if (!ignored_errorno(errno, true)) {
-			LOG_ERR(NULL, "ERROR: accept error (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-		}
-		return -1;
-	}
-
-#ifdef SO_NOSIGPIPE
-	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-	}
-#endif
-
-	// if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-	// }
-
-	// struct linger ling = {0, 0};
-	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_LINGER (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-	// }
-
-	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-	// }
-
-	if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-		LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
-	}
-
-	return sock;
-}
-
-
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets)
 {
 	/* It outputs a bucket number in the range [0, num_buckets).
 	   A Fast, Minimal Memory, Consistent Hash Algorithm
 	   [http://arxiv.org/pdf/1406.2294v1.pdf] */
-	int64_t b = 1, j = 0;
+	int64_t b = 0, j = 0;
 	while (j < num_buckets) {
 		b = j;
 		key = key * 2862933555777941757ULL + 1;
@@ -944,18 +661,16 @@ bool startswith(const std::string &text, const std::string &token)
 
 void update_pos_time()
 {
-	time_t t_current;
-	time(&t_current);
-	unsigned short aux_second = b_time.second;
-	unsigned short aux_minute = b_time.minute;
-	unsigned int t_elapsed = (unsigned int)(t_current - init_time);
+	auto t_current = std::chrono::system_clock::now();
+	auto aux_second = b_time.second;
+	auto aux_minute = b_time.minute;
+	auto t_elapsed = std::chrono::duration_cast<std::chrono::seconds>(t_current - init_time).count();
 	if (t_elapsed < SLOT_TIME_SECOND) {
 		b_time.second += t_elapsed;
 		if (b_time.second >= SLOT_TIME_SECOND) {
 			b_time.minute += b_time.second / SLOT_TIME_SECOND;
-			b_time.second = b_time.second % SLOT_TIME_SECOND;
-			fill_zeros_stats_sec(aux_second + 1, SLOT_TIME_SECOND -1);
-			fill_zeros_stats_sec(0, b_time.second);
+			fill_zeros_stats_sec(aux_second + 1, SLOT_TIME_SECOND - 1);
+			fill_zeros_stats_sec(0, b_time.second % SLOT_TIME_SECOND);
 		} else {
 			fill_zeros_stats_sec(aux_second + 1, b_time.second);
 		}
@@ -966,37 +681,62 @@ void update_pos_time()
 	}
 	init_time = t_current;
 	if (b_time.minute >= SLOT_TIME_MINUTE) {
-		b_time.minute = b_time.minute % SLOT_TIME_MINUTE;
-		fill_zeros_stats_cnt(aux_minute + 1, SLOT_TIME_MINUTE - 1);
-		fill_zeros_stats_cnt(0, b_time.minute);
+		fill_zeros_stats_min(aux_minute + 1, SLOT_TIME_MINUTE - 1);
+		fill_zeros_stats_min(0, b_time.minute % SLOT_TIME_MINUTE);
 	} else {
-		fill_zeros_stats_cnt(aux_minute + 1, b_time.minute);
+		fill_zeros_stats_min(aux_minute + 1, b_time.minute);
 	}
 }
 
 
-void fill_zeros_stats_cnt(int start, int end)
+void fill_zeros_stats_min(uint16_t start, uint16_t end)
 {
-	for (int i = start; i <= end; ++i) {
-		stats_cnt.index.cnt[i] = 0;
-		stats_cnt.index.tm_cnt[i] = 0;
-		stats_cnt.search.cnt[i] = 0;
-		stats_cnt.search.tm_cnt[i] = 0;
-		stats_cnt.del.cnt[i] = 0;
-		stats_cnt.del.tm_cnt[i] = 0;
+	for (auto i = start; i <= end; ++i) {
+		stats_cnt.index.min[i] = 0;
+		stats_cnt.index.tm_min[i] = 0;
+		stats_cnt.search.min[i] = 0;
+		stats_cnt.search.tm_min[i] = 0;
+		stats_cnt.del.min[i] = 0;
+		stats_cnt.del.tm_min[i] = 0;
 	}
 }
 
 
-void fill_zeros_stats_sec(int start, int end)
+void fill_zeros_stats_sec(uint8_t start, uint8_t end)
 {
-	for (int i = start; i <= end; ++i) {
+	for (auto i = start; i <= end; ++i) {
 		stats_cnt.index.sec[i] = 0;
 		stats_cnt.index.tm_sec[i] = 0;
 		stats_cnt.search.sec[i] = 0;
 		stats_cnt.search.tm_sec[i] = 0;
 		stats_cnt.del.sec[i] = 0;
 		stats_cnt.del.tm_sec[i] = 0;
+	}
+}
+
+
+void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy)
+{
+	for (auto i = start; i <= end; ++i) {
+		cnt[0] += stats_cnt_cpy.index.min[i];
+		cnt[1] += stats_cnt_cpy.search.min[i];
+		cnt[2] += stats_cnt_cpy.del.min[i];
+		tm_cnt[0] += stats_cnt_cpy.index.tm_min[i];
+		tm_cnt[1] += stats_cnt_cpy.search.tm_min[i];
+		tm_cnt[2] += stats_cnt_cpy.del.tm_min[i];
+	}
+}
+
+
+void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy)
+{
+	for (auto i = start; i <= end; ++i) {
+		cnt[0] += stats_cnt_cpy.index.sec[i];
+		cnt[1] += stats_cnt_cpy.search.sec[i];
+		cnt[2] += stats_cnt_cpy.del.sec[i];
+		tm_cnt[0] += stats_cnt_cpy.index.tm_sec[i];
+		tm_cnt[1] += stats_cnt_cpy.search.tm_sec[i];
+		tm_cnt[2] += stats_cnt_cpy.del.tm_sec[i];
 	}
 }
 

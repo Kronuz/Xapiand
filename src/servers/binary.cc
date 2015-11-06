@@ -1,0 +1,124 @@
+/*
+ * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+#include "binary.h"
+
+#ifdef HAVE_REMOTE_PROTOCOL
+
+#include "../client_binary.h"
+
+#include <assert.h>
+
+
+Binary::Binary(std::shared_ptr<XapiandManager>&& manager_, int port_)
+	: BaseTCP(std::move(manager_), port_, "Binary", port_ == XAPIAND_BINARY_SERVERPORT ? 10 : 1)
+{
+	local_node.binary_port = port;
+
+	LOG_OBJ(this, "CREATED CONFIGURATION FOR BINARY\n");
+}
+
+
+Binary::~Binary()
+{
+	LOG_OBJ(this, "DELETED CONFIGURATION FOR BINARY\n");
+}
+
+
+std::string
+Binary::getDescription() const noexcept
+{
+	return "TCP:" + std::to_string(port) + " (xapian v" + std::to_string(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION) + ")";
+}
+
+
+bool
+Binary::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint, std::shared_ptr<XapiandServer> server)
+{
+	int client_sock = connection_socket();
+	if (client_sock  < 0) {
+		return false;
+	}
+
+	auto client = Worker::create<BinaryClient>(server, server->loop, client_sock, active_timeout, idle_timeout);
+
+	if (!client->init_replication(src_endpoint, dst_endpoint)) {
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+Binary::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename, std::shared_ptr<XapiandServer> server)
+{
+	int client_sock = connection_socket();
+	if (client_sock < 0) {
+		return false;
+	}
+
+	auto client = Worker::create<BinaryClient>(server, server->loop, client_sock, active_timeout, idle_timeout);
+
+	if (!client->init_storing(endpoints, did, filename)) {
+		return false;
+	}
+
+	return true;
+}
+
+
+int
+Binary::connection_socket()
+{
+	int client_sock;
+	int optval = 1;
+
+	if ((client_sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+		LOG_ERR(NULL, "ERROR: cannot create binary connection: [%d] %s\n", errno, strerror(errno));
+		return -1;
+	}
+
+#ifdef SO_NOSIGPIPE
+	if (setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
+		LOG_ERR(NULL, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+	}
+#endif
+
+	// if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
+	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+	// }
+
+	// struct linger ling = {0, 0};
+	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
+	// 	LOG_ERR(NULL, "ERROR: setsockopt SO_LINGER (sock=%d): %s\n", sock, strerror(errno));
+	// }
+
+	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+	// 	LOG_ERR(NULL, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
+	// }
+
+	return client_sock;
+}
+
+
+#endif  /* HAVE_REMOTE_PROTOCOL */

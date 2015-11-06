@@ -22,12 +22,11 @@
 
 #pragma once
 
-#include "xapiand.h"
-
 #include "client_base.h"
 
 #include "http_parser.h"
 
+#include <memory>
 
 #define HTTP_STATUS         (1 << 0)
 #define HTTP_HEADER         (1 << 1)
@@ -62,9 +61,9 @@ class HttpClient : public BaseClient {
 	struct http_parser parser;
 	Database *database;
 
-	void on_read(const char *buf, size_t received);
-	void on_read_file(const char *buf, size_t received);
-	void on_read_file_done();
+	void on_read(const char *buf, size_t received) override;
+	void on_read_file(const char *buf, size_t received) override;
+	void on_read_file_done() override;
 
 	static const http_parser_settings settings;
 
@@ -118,9 +117,12 @@ class HttpClient : public BaseClient {
 	int _endpointgen(query_t &e, bool writable);
 	static int identify_cmd(const std::string &commad);
 
+	friend Worker;
+
 public:
-	HttpClient(XapiandServer *server_, ev::loop_ref *loop, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double active_timeout_, double idle_timeout_);
+	HttpClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loop_, int sock_);
+
 	~HttpClient();
 
-	void run();
+	void run() override;
 };

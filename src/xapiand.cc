@@ -34,21 +34,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#ifdef HAVE_PTHREAD_SETNAME_NP_2
-#include <pthread_np.h>
-#endif
-
 
 using namespace TCLAP;
 
+std::shared_ptr<XapiandManager> manager;
 
-XapiandManager *manager_ptr = NULL;
 
-
-static void sig_shutdown_handler(int sig)
-{
-	if (manager_ptr) {
-		manager_ptr->sig_shutdown_handler(sig);
+static void sig_shutdown_handler(int sig) {
+	if (manager) {
+		manager->sig_shutdown_handler(sig);
 	}
 }
 
@@ -64,33 +58,18 @@ void setup_signal_handlers(void) {
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = 0;
 	act.sa_handler = sig_shutdown_handler;
-	sigaction(SIGTERM, &act, NULL);
-	sigaction(SIGINT, &act, NULL);
+	sigaction(SIGTERM, &act, nullptr);
+	sigaction(SIGINT, &act, nullptr);
 }
 
 
-// int num_servers, const char *cluster_name_, const char *node_name_, const char *discovery_group, int discovery_port, int http_port, int binary_port, size_t dbpool_size
-void run(const opts_t &opts)
-{
-#ifdef HAVE_PTHREAD_SETNAME_NP_3
-	pthread_setname_np(pthread_self(), "==");
-#elif HAVE_PTHREAD_SETNAME_NP_2
-	pthread_set_name_np(pthread_self(),"==");
-#else
-	pthread_setname_np("==");
-#endif
-
-	ev::default_loop default_loop;
-
+// int num_servers, const char *cluster_name_, const char *node_name_, const char *discovery_group, int discovery_port, const char *raft_group, int raft_port, int http_port, int binary_port, size_t dbpool_size
+void run(const opts_t &opts) {
 	setup_signal_handlers();
-
-	XapiandManager manager(&default_loop, opts);
-
-	manager_ptr = &manager;
-
-	manager.run((int)opts.num_servers, 3);  // FIXME: make replicators an option
-
-	manager_ptr = NULL;
+	ev::default_loop default_loop;
+	manager = Worker::create<XapiandManager>(&default_loop, opts);
+	LOG(nullptr, "Call run, Num of share: %d\n", manager.use_count());
+	manager->run(opts);
 }
 
 
@@ -148,7 +127,7 @@ class CmdOutput : public StdOutput
 
 void parseOptions(int argc, char** argv, opts_t &opts)
 {
-	unsigned int nthreads = std::thread::hardware_concurrency() * 2;
+	const unsigned int nthreads = std::thread::hardware_concurrency() * 2;
 
 	try {
 		CmdLine cmd("", ' ', PACKAGE_STRING);
@@ -172,8 +151,12 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 
 		ValueArg<unsigned int> http_port("", "http", "HTTP REST API port", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
 		ValueArg<unsigned int> binary_port("", "xapian", "Xapian binary protocol port", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
+
 		ValueArg<unsigned int> discovery_port("", "discovery", "Discovery UDP port", false, XAPIAND_DISCOVERY_SERVERPORT, "port", cmd);
-		ValueArg<std::string> discovery_group("", "group", "Discovery UDP group", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
+		ValueArg<std::string> discovery_group("", "dgroup", "Discovery UDP group", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
+
+		ValueArg<unsigned int> raft_port("", "raft", "Raft UDP port", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
+		ValueArg<std::string> raft_group("", "rgroup", "Raft UDP group", false, XAPIAND_RAFT_GROUP, "group", cmd);
 
 		ValueArg<std::string> pidfile("p", "pid", "Write PID to <pidfile>.", false, "xapiand.pid", "pidfile", cmd);
 		ValueArg<std::string> uid("u", "uid", "User ID.", false, "xapiand", "uid", cmd);
@@ -181,7 +164,8 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 
 
 		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
-		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of database endpoints in database pool.", false, 1000, "size", cmd);
+		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of database endpoints in database pool.", false, DBPOOL_SIZE, "size", cmd);
+		ValueArg<size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
 
 
 		cmd.parse(argc, argv);
@@ -200,20 +184,16 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		opts.binary_port = binary_port.getValue();
 		opts.discovery_port = discovery_port.getValue();
 		opts.discovery_group = discovery_group.getValue();
+		opts.raft_port = raft_port.getValue();
+		opts.raft_group = raft_group.getValue();
 		opts.pidfile = pidfile.getValue();
 		opts.uid = uid.getValue();
 		opts.gid = gid.getValue();
 		opts.num_servers = num_servers.getValue();
 		opts.dbpool_size = dbpool_size.getValue();
-		opts.threadpool_size = 10;
-		opts.endpoints_list_size = 10;
-
-		// Use 0 for guessing with defaults
-		if (opts.http_port == XAPIAND_HTTP_SERVERPORT) opts.http_port = 0;
-		if (opts.binary_port == XAPIAND_BINARY_SERVERPORT) opts.binary_port = 0;
-		if (opts.discovery_port == XAPIAND_DISCOVERY_SERVERPORT) opts.discovery_port = 0;
-		if (opts.discovery_group.empty()) opts.discovery_group = XAPIAND_DISCOVERY_GROUP;
-
+		opts.num_replicators = num_replicators.getValue();
+		opts.threadpool_size = THEADPOOL_SIZE;
+		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
 	} catch (const ArgException &e) { // catch any exceptions
 		std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
 	}
@@ -244,7 +224,7 @@ int main(int argc, char **argv)
 
 	std::setlocale(LC_CTYPE, "");
 
-	INFO((void *)NULL,
+	INFO(nullptr,
 		"\n\n"
 		"  __  __           _                 _\n"
 		"  \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n"
@@ -265,14 +245,14 @@ int main(int argc, char **argv)
 #endif
 
 	if (opts.chert) {
-		INFO((void *)NULL, "By default using Chert databases.\n");
+		INFO(nullptr, "By default using Chert databases.\n");
 	} else {
-		INFO((void *)NULL, "By default using Glass databases.\n");
+		INFO(nullptr, "By default using Glass databases.\n");
 	}
 
 	// Enable changesets
 	if (setenv("XAPIAN_MAX_CHANGESETS", "200", false) == 0) {
-		INFO((void *)NULL, "Database changesets set to 200.\n");
+		INFO(nullptr, "Database changesets set to 200.\n");
 	}
 
 	// Flush threshold increased
@@ -280,15 +260,16 @@ int main(int argc, char **argv)
 	const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
 	if (p) flush_threshold = atoi(p);
 	if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", false) == 0) {
-		INFO((void *)NULL, "Increased flush threshold to 100000 (it was originally set to %d).\n", flush_threshold);
+		INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).\n", flush_threshold);
 	}
 
-	time(&init_time);
-	struct tm *timeinfo = localtime(&init_time);
+	init_time = std::chrono::system_clock::now();
+	time_t epoch = std::chrono::system_clock::to_time_t(init_time);
+	struct tm *timeinfo = localtime(&epoch);
 	timeinfo->tm_hour   = 0;
 	timeinfo->tm_min    = 0;
 	timeinfo->tm_sec    = 0;
-	int diff_t = (int)(init_time - mktime(timeinfo));
+	auto diff_t = epoch - mktime(timeinfo);
 	b_time.minute = diff_t / SLOT_TIME_SECOND;
 	b_time.second =  diff_t % SLOT_TIME_SECOND;
 
@@ -298,6 +279,6 @@ int main(int argc, char **argv)
 
 	run(opts);
 
-	INFO((void *)NULL, "Done with all work!\n");
+	INFO(nullptr, "Done with all work!\n");
 	return 0;
 }

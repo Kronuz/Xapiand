@@ -20,44 +20,31 @@
  * IN THE SOFTWARE.
  */
 
-#include "replicator.h"
+#pragma once
 
-#include "servers/discovery.h"
+#include "tcp_base.h"
 
+#ifdef HAVE_REMOTE_PROTOCOL
 
-XapiandReplicator::XapiandReplicator(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_)
-	: Worker(std::move(manager_), loop_) { }
-
-
-void
-XapiandReplicator::on_commit(const Endpoint &endpoint)
-{
-	std::string endpoint_mastery(std::to_string(endpoint.mastery_level));
-	manager()->discovery->send_message(
-        Discovery::Message::DB_UPDATED,
-		serialise_string(endpoint_mastery) +  // The mastery level of the database
-		serialise_string(endpoint.path) +  // The path of the index
-		local_node.serialise()   // The node where the index is at
-	);
-}
+#include "server_binary.h"
+#include "../endpoint.h"
 
 
-void
-XapiandReplicator::run()
-{
-	// Function that retrieves a task from a queue, runs it and deletes it
-	LOG_OBJ(this, "Replicator started...\n");
-	Endpoint endpoint;
-	while (manager()->database_pool.updated_databases.pop(endpoint)) {
-		LOG(this, "Replicator was informed database was updated: %s\n", endpoint.as_string().c_str());
-		on_commit(endpoint);
-	}
-	LOG_OBJ(this, "Replicator ended!\n");
-}
+// Configuration data for Binary
+class Binary : public BaseTCP {
+	friend BinaryServer;
+
+public:
+	Binary(std::shared_ptr<XapiandManager>&& manager_, int port_);
+	~Binary();
+
+	std::string getDescription() const noexcept override;
+
+	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint, std::shared_ptr<XapiandServer> server);
+	bool store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename, std::shared_ptr<XapiandServer> server);
+
+	int connection_socket();
+};
 
 
-void
-XapiandReplicator::shutdown()
-{
-	manager()->database_pool.updated_databases.finish();
-}
+#endif  /* HAVE_REMOTE_PROTOCOL */

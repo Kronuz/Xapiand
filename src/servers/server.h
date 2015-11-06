@@ -20,44 +20,45 @@
  * IN THE SOFTWARE.
  */
 
-#include "replicator.h"
+#pragma once
 
-#include "servers/discovery.h"
+#include "../manager.h"
 
-
-XapiandReplicator::XapiandReplicator(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_)
-	: Worker(std::move(manager_), loop_) { }
-
-
-void
-XapiandReplicator::on_commit(const Endpoint &endpoint)
-{
-	std::string endpoint_mastery(std::to_string(endpoint.mastery_level));
-	manager()->discovery->send_message(
-        Discovery::Message::DB_UPDATED,
-		serialise_string(endpoint_mastery) +  // The mastery level of the database
-		serialise_string(endpoint.path) +  // The path of the index
-		local_node.serialise()   // The node where the index is at
-	);
-}
+class BaseServer;
+class Binary;
 
 
-void
-XapiandReplicator::run()
-{
-	// Function that retrieves a task from a queue, runs it and deletes it
-	LOG_OBJ(this, "Replicator started...\n");
-	Endpoint endpoint;
-	while (manager()->database_pool.updated_databases.pop(endpoint)) {
-		LOG(this, "Replicator was informed database was updated: %s\n", endpoint.as_string().c_str());
-		on_commit(endpoint);
+class XapiandServer : public Task, public Worker {
+	std::mutex qmtx;
+
+	ev::async async_setup_node;
+
+	std::vector<std::unique_ptr<BaseServer>> servers;
+
+	XapiandServer(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_);
+
+	void destroy();
+
+	void async_setup_node_cb(ev::async& watcher, int revents);
+
+	void register_server(std::unique_ptr<BaseServer>&& server);
+
+	friend XapiandManager;
+	friend Binary;
+	friend Worker;
+
+public:
+	static std::mutex static_mutex;
+	static int total_clients;
+	static int http_clients;
+	static int binary_clients;
+
+	~XapiandServer();
+
+	inline decltype(auto) manager() noexcept {
+		return std::static_pointer_cast<XapiandManager>(_parent);
 	}
-	LOG_OBJ(this, "Replicator ended!\n");
-}
 
-
-void
-XapiandReplicator::shutdown()
-{
-	manager()->database_pool.updated_databases.finish();
-}
+	void run() override;
+	void shutdown() override;
+};

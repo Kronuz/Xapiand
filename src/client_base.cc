@@ -20,30 +20,35 @@
  * IN THE SOFTWARE.
  */
 
-#include <assert.h>
+#include "client_base.h"
+
+#include "utils.h"
+
+#include <cassert>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <memory>
 
-#include "client_base.h"
-#include "utils.h"
-
 #define BUF_SIZE 4096
-
-const int WRITE_QUEUE_SIZE = 10;
-
-#define WR_OK 0
-#define WR_ERR 1
-#define WR_RETRY 2
-#define WR_PENDING 3
-
-#define MODE_READ_BUF 0
-#define MODE_READ_FILE_TYPE 1
-#define MODE_READ_FILE 2
 
 #define NO_COMPRESSOR "\01"
 #define LZ4_COMPRESSOR "\02"
 #define TYPE_COMPRESSOR LZ4_COMPRESSOR
+
+constexpr int WRITE_QUEUE_SIZE = 10;
+
+enum class WR {
+	OK,
+	ERR,
+	RETRY,
+	PENDING
+};
+
+enum class MODE {
+	READ_BUF,
+	READ_FILE_TYPE,
+	READ_FILE
+};
 
 
 class ClientReader : public CompressorBufferReader
@@ -55,19 +60,15 @@ protected:
 	std::string header;
 
 public:
-	ClientReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_);
+	ClientReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_)
+		: fd(fd_),
+		  file_size(file_size_),
+		  client(client_),
+		  header(header_) { }
 };
 
-ClientReader::ClientReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_)
-	: fd(fd_),
-	  file_size(file_size_),
-	  client(client_),
-	  header(header_)
-{}
 
-
-class ClientCompressorReader : public ClientReader
-{
+class ClientCompressorReader : public ClientReader {
 protected:
 	ssize_t begin();
 	ssize_t read(char **buf, size_t size);
@@ -75,11 +76,13 @@ protected:
 	ssize_t done();
 
 public:
-	ClientCompressorReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_) :
-		ClientReader(client_, fd_, file_size_, header_) {}
+	ClientCompressorReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_)
+		: ClientReader(client_, fd_, file_size_, header_) { }
 };
 
-ssize_t ClientCompressorReader::begin()
+
+ssize_t
+ClientCompressorReader::begin()
 {
 	if (!client->write(header)) {
 		return -1;
@@ -87,13 +90,17 @@ ssize_t ClientCompressorReader::begin()
 	return 1;
 }
 
-ssize_t ClientCompressorReader::read(char **buf, size_t size)
+
+ssize_t
+ClientCompressorReader::read(char **buf, size_t size)
 {
 	assert(*buf);
 	return ::read(fd, *buf, size);
 }
 
-ssize_t ClientCompressorReader::write(const char *buf, size_t size)
+
+ssize_t
+ClientCompressorReader::write(const char *buf, size_t size)
 {
 	std::string length(encode_length(size));
 	if (!client->write(length) || !client->write(buf, size)) {
@@ -102,7 +109,9 @@ ssize_t ClientCompressorReader::write(const char *buf, size_t size)
 	return length.size() + size;
 }
 
-ssize_t ClientCompressorReader::done()
+
+ssize_t
+ClientCompressorReader::done()
 {
 	std::string length(encode_length(0));
 	if (!client->write(length)) {
@@ -112,24 +121,24 @@ ssize_t ClientCompressorReader::done()
 }
 
 
-class ClientDecompressorReader : public ClientReader
-{
+class ClientDecompressorReader : public ClientReader {
 protected:
 	ssize_t write(const char *buf, size_t size);
 public:
-	ClientDecompressorReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_) :
-		ClientReader(client_, fd_, file_size_, header_) {}
+	ClientDecompressorReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_)
+		: ClientReader(client_, fd_, file_size_, header_) { }
 };
 
-ssize_t ClientDecompressorReader::write(const char *buf, size_t size)
+
+ssize_t
+ClientDecompressorReader::write(const char *buf, size_t size)
 {
 	client->on_read_file(buf, size);
 	return size;
 }
 
 
-class ClientNoCompressor : public NoCompressor
-{
+class ClientNoCompressor : public NoCompressor {
 public:
 	ClientNoCompressor(BaseClient *client_, int fd_=0, size_t file_size_=0) :
 		NoCompressor(
@@ -138,8 +147,8 @@ public:
 		) {}
 };
 
-class ClientLZ4Compressor : public LZ4Compressor
-{
+
+class ClientLZ4Compressor : public LZ4Compressor {
 public:
 	ClientLZ4Compressor(BaseClient *client_, int fd_=0, size_t file_size_=0) :
 		LZ4Compressor(
@@ -149,8 +158,8 @@ public:
 };
 
 
-BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_, double, double)
-	: Worker(server_, loop_),
+BaseClient::BaseClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loop_, int sock_)
+	: Worker(std::move(server_), loop_),
 	  io_read(*loop),
 	  io_write(*loop),
 	  async_write(*loop),
@@ -158,17 +167,9 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 	  sock(sock_),
 	  written(0),
 	  read_buffer(new char[BUF_SIZE]),
-	  mode(MODE_READ_BUF),
-	  database_pool(database_pool_),
-	  thread_pool(thread_pool_),
+	  mode(MODE::READ_BUF),
 	  write_queue(WRITE_QUEUE_SIZE)
 {
-	inc_ref();
-
-	pthread_mutexattr_init(&qmtx_attr);
-	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&qmtx, &qmtx_attr);
-
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
 	async_write.start();
 	LOG_EV(this, "\tStart async write event\n");
@@ -181,10 +182,9 @@ BaseClient::BaseClient(XapiandServer *server_, ev::loop_ref *loop_, int sock_, D
 	io_write.set(sock, ev::WRITE);
 	LOG_EV(this, "\tSetup write event (sock=%d)\n", sock);
 
-	pthread_mutex_lock(&XapiandServer::static_mutex);
+	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 	XapiandServer::total_clients++;
 	LOG_OBJ(this, "CREATED CLIENT! (%d clients)\n", XapiandServer::total_clients);
-	pthread_mutex_unlock(&XapiandServer::static_mutex);
 }
 
 
@@ -192,27 +192,23 @@ BaseClient::~BaseClient()
 {
 	destroy();
 
-	pthread_mutex_destroy(&qmtx);
-	pthread_mutexattr_destroy(&qmtx_attr);
-
 	delete []read_buffer;
 
-	pthread_mutex_lock(&XapiandServer::static_mutex);
+	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 	XapiandServer::total_clients--;
 	assert(XapiandServer::total_clients >= 0);
 
 	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", XapiandServer::total_clients);
-	pthread_mutex_unlock(&XapiandServer::static_mutex);
 }
 
 
-void BaseClient::destroy()
+void
+BaseClient::destroy()
 {
 	close();
 
-	pthread_mutex_lock(&qmtx);
+	std::unique_lock<std::mutex> lk(qmtx);
 	if (sock == -1) {
-		pthread_mutex_unlock(&qmtx);
 		return;
 	}
 
@@ -225,7 +221,7 @@ void BaseClient::destroy()
 
 	::close(sock);
 	sock = -1;
-	pthread_mutex_unlock(&qmtx);
+	lk.unlock();
 
 	write_queue.finish();
 	while (!write_queue.empty()) {
@@ -237,7 +233,9 @@ void BaseClient::destroy()
 }
 
 
-void BaseClient::close() {
+void
+BaseClient::close()
+{
 	if (closed) {
 		return;
 	}
@@ -247,7 +245,9 @@ void BaseClient::close() {
 }
 
 
-void BaseClient::io_update() {
+void
+BaseClient::io_update()
+{
 	if (sock != -1) {
 		if (write_queue.empty()) {
 			if (closed) {
@@ -261,14 +261,11 @@ void BaseClient::io_update() {
 			LOG_EV(this, "\tStart write event (sock=%d)\n", sock);
 		}
 	}
-
-	if (sock == -1) {
-		rel_ref();
-	}
 }
 
 
-void BaseClient::io_cb(ev::io &watcher, int revents)
+void
+BaseClient::io_cb(ev::io &watcher, int revents)
 {
 	LOG_EV(this, "%s (sock=%d) %x\n", (revents & EV_ERROR) ? "EV_ERROR" : (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
 
@@ -292,11 +289,12 @@ void BaseClient::io_cb(ev::io &watcher, int revents)
 }
 
 
-int BaseClient::write_directly(int fd)
+WR
+BaseClient::write_directly(int fd)
 {
 	if (fd == -1) {
 		LOG_ERR(this, "ERROR: write error (sock=%d): Socket already closed!\n", sock);
-		return WR_ERR;
+		return WR::ERR;
 	} else if (!write_queue.empty()) {
 		std::shared_ptr<Buffer> buffer = write_queue.front();
 
@@ -311,55 +309,57 @@ int BaseClient::write_directly(int fd)
 
 		if (written < 0) {
 			if (ignored_errorno(errno, false)) {
-				return WR_RETRY;
+				return WR::RETRY;
 			} else {
 				LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
-				return WR_ERR;
+				return WR::ERR;
 			}
 		} else if (written == 0) {
-			return WR_PENDING;
+			return WR::PENDING;
 		} else {
 			LOG_CONN_WIRE(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf_data, written).c_str());
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
 				if (write_queue.pop(buffer)) {
 					if (write_queue.empty()) {
-						return WR_OK;
+						return WR::OK;
 					} else {
-						return WR_PENDING;
+						return WR::PENDING;
 					}
 				}
 			} else {
-				return WR_PENDING;
+				return WR::PENDING;
 			}
 		}
 	}
-	return WR_OK;
+	return WR::OK;
 }
 
 
-void BaseClient::write_cb(int fd)
+void
+BaseClient::write_cb(int fd)
 {
-	int status;
+	WR status;
 	do {
-		pthread_mutex_lock(&qmtx);
+		std::unique_lock<std::mutex> lk(qmtx);
 		status = write_directly(fd);
-		pthread_mutex_unlock(&qmtx);
-		if (status == WR_ERR) {
+		lk.unlock();
+		if (status == WR::ERR) {
 			destroy();
 			return;
-		} else if (status == WR_RETRY) {
+		} else if (status == WR::RETRY) {
 			io_write.start();
 			LOG_EV(this, "\tStart write event (sock=%d)\n", sock);
 			return;
 		}
-	} while (status != WR_OK);
+	} while (status != WR::OK);
 	io_write.stop();
 	LOG_EV(this, "\tStop write event (sock=%d)\n", sock);
 }
 
 
-void BaseClient::read_cb(int fd)
+void
+BaseClient::read_cb(int fd)
 {
 	if (!closed) {
 		ssize_t received = ::read(fd, read_buffer, BUF_SIZE);
@@ -380,7 +380,7 @@ void BaseClient::read_cb(int fd)
 		} else {
 			LOG_CONN_WIRE(this, "(sock=%d) -->> '%s'\n", sock, repr(buf_data, received).c_str());
 
-			if (mode == MODE_READ_FILE_TYPE) {
+			if (mode == MODE::READ_FILE_TYPE) {
 				switch (*buf_data++) {
 					case *NO_COMPRESSOR:
 						LOG_CONN(this, "Receiving uncompressed file (sock=%d)...\n", sock);
@@ -397,10 +397,10 @@ void BaseClient::read_cb(int fd)
 				}
 				received--;
 				length_buffer.clear();
-				mode = MODE_READ_FILE;
+				mode = MODE::READ_FILE;
 			}
 
-			if (received && mode == MODE_READ_FILE) {
+			if (received && mode == MODE::READ_FILE) {
 				do {
 					if (file_size == -1) {
 						if (buf_data) {
@@ -429,7 +429,7 @@ void BaseClient::read_cb(int fd)
 					} else {
 						file_buf_to_write = buf_data;
 						block_size_to_write = buf_left_size;
-						buf_data = NULL;
+						buf_data = nullptr;
 						received = 0;
 					}
 
@@ -442,14 +442,14 @@ void BaseClient::read_cb(int fd)
 						compressor->decompress();
 
 						on_read_file_done();
-						mode = MODE_READ_BUF;
-						compressor.reset(nullptr);
+						mode = MODE::READ_BUF;
+						compressor.reset();
 					} else if (block_size == 0) {
 						compressor->decompress();
 
 						if (buf_data) {
 							length_buffer = std::string(buf_data, received);
-							buf_data = NULL;
+							buf_data = nullptr;
 							received = 0;
 						} else {
 							length_buffer.clear();
@@ -460,7 +460,7 @@ void BaseClient::read_cb(int fd)
 				} while (file_size == -1);
 			}
 
-			if (received && mode == MODE_READ_BUF) {
+			if (received && mode == MODE::READ_BUF) {
 				on_read(buf_data, received);
 			}
 		}
@@ -468,17 +468,19 @@ void BaseClient::read_cb(int fd)
 }
 
 
-void BaseClient::async_write_cb(ev::async &, int)
+void
+BaseClient::async_write_cb(ev::async &, int)
 {
 	io_update();
 }
 
 
-bool BaseClient::write(const char *buf, size_t buf_size)
+bool
+BaseClient::write(const char *buf, size_t buf_size)
 {
-	int status;
+	WR status;
 
-	
+
 	if (!write_queue.push(std::make_shared<Buffer>('\0', buf, buf_size))) {
 		return false;
 	}
@@ -488,22 +490,23 @@ bool BaseClient::write(const char *buf, size_t buf_size)
 	written += 1;
 
 	do {
-		pthread_mutex_lock(&qmtx);
+		std::unique_lock<std::mutex> lk(qmtx);
 		status = write_directly(sock);
-		pthread_mutex_unlock(&qmtx);
-		if (status == WR_ERR) {
+		lk.unlock();
+		if (status == WR::ERR) {
 			destroy();
 			return false;
-		} else if (status == WR_RETRY) {
+		} else if (status == WR::RETRY) {
 			async_write.send();
 			return true;
 		}
-	} while (status != WR_OK);
+	} while (status != WR::OK);
 	return true;
 }
 
 
-void BaseClient::shutdown()
+void
+BaseClient::shutdown()
 {
 	::shutdown(sock, SHUT_RDWR);
 
@@ -512,19 +515,20 @@ void BaseClient::shutdown()
 	if (manager()->shutdown_now) {
 		LOG_EV(this, "\tSignaled destroy!!\n");
 		destroy();
-		rel_ref();
 	}
 }
 
 
-void BaseClient::read_file()
+void
+BaseClient::read_file()
 {
-	mode = MODE_READ_FILE_TYPE;
+	mode = MODE::READ_FILE_TYPE;
 	file_size = -1;
 }
 
 
-bool BaseClient::send_file(int fd)
+bool
+BaseClient::send_file(int fd)
 {
 	ssize_t file_size = ::lseek(fd, 0, SEEK_END);
 	::lseek(fd, 0, SEEK_SET);
@@ -540,7 +544,7 @@ bool BaseClient::send_file(int fd)
 
 	ssize_t compressed = compressor->compress();
 
-	compressor.reset(nullptr);
+	compressor.reset();
 
 	return (compressed == file_size);
 }

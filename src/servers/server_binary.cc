@@ -20,32 +20,48 @@
  * IN THE SOFTWARE.
  */
 
-#include "server_base.h"
+#include "server_binary.h"
+
+#ifdef HAVE_REMOTE_PROTOCOL
+
+#include "binary.h"
+#include "client_binary.h"
 
 
-BaseServer::BaseServer(XapiandServer *server_, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_)
-	: Worker(server_, loop_),
-	  server(server_),
-	  io(*loop),
-	  sock(sock_),
-	  database_pool(database_pool_),
-	  thread_pool(thread_pool_)
+BinaryServer::BinaryServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, std::unique_ptr<Binary> &binary_)
+	: BaseServer(std::move(server_), loop_, binary_->sock),
+	  binary(binary_)
 {
-	io.set<BaseServer, &BaseServer::io_accept>(this);
-	io.start(sock, ev::READ);
+	LOG_EV(this, "Start binary accept event (sock=%d)\n", binary->sock);
+	LOG_OBJ(this, "CREATED BINARY SERVER!\n");
 }
 
 
-BaseServer::~BaseServer()
+BinaryServer::~BinaryServer()
 {
-	destroy();
+	LOG_OBJ(this, "DELETED BINARY SERVER!\n");
 }
 
 
-void BaseServer::destroy()
+void
+BinaryServer::io_accept(ev::io &watcher, int revents)
 {
-	if (sock == -1) return;
+	if (EV_ERROR & revents) {
+		LOG_EV(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary->sock, strerror(errno));
+		return;
+	}
 
-	sock = -1;
-	io.stop();
+	assert(binary->sock == watcher.fd || binary->sock == -1);
+
+	int client_sock;
+	if ((client_sock = binary->accept()) < 0) {
+		if (!ignored_errorno(errno, false)) {
+			LOG_ERR(this, "ERROR: accept binary error (sock=%d): %s\n", binary->sock, strerror(errno));
+		}
+	} else {
+		auto client = Worker::create<BinaryClient>(server(), loop, client_sock, active_timeout, idle_timeout);
+	}
 }
+
+
+#endif /* HAVE_REMOTE_PROTOCOL */

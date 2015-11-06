@@ -65,6 +65,7 @@ std::string Node::serialise() const
 		node_str.append(encode_length(addr.sin_addr.s_addr));
 		node_str.append(encode_length(http_port));
 		node_str.append(encode_length(binary_port));
+		node_str.append(encode_length(region.load()));
 		node_str.append(serialise_string(name));
 	}
 	return node_str;
@@ -75,27 +76,32 @@ ssize_t Node::unserialise(const char **p, const char *end)
 {
 	ssize_t length;
 	const char *ptr = *p;
-	
+
 	if ((length = decode_length(&ptr, end, false)) == -1) {
 		return -1;
 	}
-	addr.sin_addr.s_addr = (int)length;
-	
+	addr.sin_addr.s_addr = static_cast<int>(length);
+
 	if ((length = decode_length(&ptr, end, false)) == -1) {
 		return -1;
 	}
-	http_port = (int)length;
-	
+	http_port = static_cast<int>(length);
+
 	if ((length = decode_length(&ptr, end, false)) == -1) {
 		return -1;
 	}
-	binary_port = (int)length;
-	
+	binary_port = static_cast<int>(length);
+
+	if ((length = decode_length(&ptr, end, false)) == -1) {
+		return -1;
+	}
+	region.store(static_cast<int>(length));
+
 	name.clear();
 	if (unserialise_string(name, &ptr, end) == -1 || name.empty()) {
 		return -1;
 	}
-	
+
 	*p = ptr;
 	return end - ptr;
 }

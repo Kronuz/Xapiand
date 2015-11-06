@@ -31,21 +31,20 @@
 #include "ev/ev++.h"
 
 
-class XapiandReplicator : public Task, public Worker
-{
-	DatabasePool *database_pool;
+class XapiandReplicator : public Task, public Worker {
+	XapiandReplicator(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_);
 
-	void run();
-	void shutdown();
+	void run() override;
+	void shutdown() override;
 
 	void on_commit(const Endpoint &endpoint);
 
+	friend Worker;
+
 public:
-	XapiandReplicator(XapiandManager *manager_, ev::loop_ref *loop_, DatabasePool *database_pool_);
-	~XapiandReplicator();
+	~XapiandReplicator() = default;
 
-
-	inline XapiandManager * manager() const {
-		return static_cast<XapiandManager *>(_parent);
+	inline decltype(auto) manager() const noexcept {
+		return std::static_pointer_cast<XapiandManager>(_parent);
 	}
 };
