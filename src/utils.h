@@ -278,7 +278,7 @@ namespace epoch {
 
 #define LOG_EV(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_CONN_WIRE(...)
-#define LOG_UDP_WIRE(...) log(__FILE__, __LINE__, __VA_ARGS__)
+#define LOG_UDP_WIRE(...)
 #define LOG_HTTP_PROTO(...)
 #define LOG_BINARY_PROTO(...)
 

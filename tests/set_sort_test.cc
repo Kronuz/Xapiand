@@ -60,8 +60,7 @@ START_TEST(sort_test_geo)
 END_TEST
 
 
-Suite* test_sort_string(void)
-{
+Suite* test_sort_string(void) {
 	Suite *s = suite_create("Test sort by field of type string");
 
 	TCase *tc_sort_string = tcase_create("Field name with or without its value");
@@ -72,8 +71,7 @@ Suite* test_sort_string(void)
 }
 
 
-Suite* test_sort_numerical(void)
-{
+Suite* test_sort_numerical(void) {
 	Suite *s = suite_create("Test sort by field of type numerical");
 
 	TCase *tc_sort_numerical = tcase_create("Field name with or without its value");
@@ -84,8 +82,7 @@ Suite* test_sort_numerical(void)
 }
 
 
-Suite* test_sort_date(void)
-{
+Suite* test_sort_date(void) {
 	Suite *s = suite_create("Test sort by field of type date");
 
 	TCase *tc_sort_date = tcase_create("Field name with or without its value");
@@ -96,8 +93,7 @@ Suite* test_sort_date(void)
 }
 
 
-Suite* test_sort_boolean(void)
-{
+Suite* test_sort_boolean(void) {
 	Suite *s = suite_create("Test sort by field of type boolean");
 
 	TCase *tc_sort_boolean = tcase_create("Field name with or without its value");
@@ -108,8 +104,7 @@ Suite* test_sort_boolean(void)
 }
 
 
-Suite* test_sort_geo(void)
-{
+Suite* test_sort_geo(void) {
 	Suite *s = suite_create("Test sort by field of type geospatial");
 
 	TCase *tc_sort_geo = tcase_create("Field name with or without its value");
@@ -120,8 +115,7 @@ Suite* test_sort_geo(void)
 }
 
 
-int main(void)
-{
+int main(void) {
 	Suite *sort_string = test_sort_string();
 	SRunner *sr = srunner_create(sort_string);
 	srunner_run_all(sr, CK_NORMAL);

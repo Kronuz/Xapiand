@@ -1068,6 +1068,7 @@ Database::search(const query_t &e)
 	}
 	srch_resul.query = queryF;
 	srch_resul.suggested_query = sug_query;
+
 	return srch_resul;
 }
 

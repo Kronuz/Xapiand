@@ -53,8 +53,7 @@ START_TEST(test_HTM_circle)
 END_TEST
 
 
-Suite* test_suite_cartesian(void)
-{
+Suite* test_suite_cartesian(void) {
 	Suite *s = suite_create("Test of transformation of coordinates between CRS");
 
 	TCase *tc_cartesian_transforms = tcase_create("Transformation of coordinates between CRS");
@@ -65,8 +64,7 @@ Suite* test_suite_cartesian(void)
 }
 
 
-Suite* test_suite_convex_hull(void)
-{
+Suite* test_suite_convex_hull(void) {
 	Suite *s = suite_create("Test of Geometry Hull Convex");
 
 	TCase *tc_hull_convex = tcase_create("Convex hull from a set point");
@@ -77,8 +75,7 @@ Suite* test_suite_convex_hull(void)
 }
 
 
-Suite* test_suite_htm(void)
-{
+Suite* test_suite_htm(void) {
 	Suite *s = suite_create("Test of HTM");
 
 	TCase *tc_htm_chull = tcase_create("HTM for Polygons");
@@ -95,8 +92,7 @@ Suite* test_suite_htm(void)
 }
 
 
-int main(void)
-{
+int main(void) {
 	Suite *cartesian = test_suite_cartesian();
 	SRunner *sr = srunner_create(cartesian);
 	srunner_run_all(sr, CK_NORMAL);

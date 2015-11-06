@@ -56,8 +56,7 @@ START_TEST(test_facets_search)
 END_TEST
 
 
-Suite* test_query(void)
-{
+Suite* test_query(void) {
 	Suite *s = suite_create("Search Test");
 
 	TCase *q = tcase_create("Test for query");
@@ -80,8 +79,7 @@ Suite* test_query(void)
 }
 
 
-int main(void)
-{
+int main(void) {
 	Suite *query = test_query();
 	SRunner *sr = srunner_create(query);
 	srunner_run_all(sr, CK_NORMAL);

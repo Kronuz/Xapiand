@@ -42,8 +42,7 @@ START_TEST(geo_terms_test)
 END_TEST
 
 
-Suite* range_search_geo(void)
-{
+Suite* range_search_geo(void) {
 	Suite *s = suite_create("Search by range in geospatials");
 	TCase *t = tcase_create("Search by range");
 	tcase_add_test(t, geo_range_test);
@@ -53,8 +52,7 @@ Suite* range_search_geo(void)
 }
 
 
-Suite* terms_search_geo(void)
-{
+Suite* terms_search_geo(void) {
 	Suite *s = suite_create("Search by geospatials terms");
 	TCase *t = tcase_create("Search by terms");
 	tcase_add_test(t, geo_terms_test);
@@ -64,8 +62,7 @@ Suite* terms_search_geo(void)
 }
 
 
-int main(void)
-{
+int main(void) {
 	Suite *range = range_search_geo();
 	SRunner *sr = srunner_create(range);
 	srunner_run_all(sr, CK_NORMAL);

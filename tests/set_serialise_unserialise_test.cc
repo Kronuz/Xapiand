@@ -67,8 +67,7 @@ START_TEST(test_unserialise_trixel_id)
 END_TEST
 
 
-Suite* test_suite_serialise(void)
-{
+Suite* test_suite_serialise(void) {
 	Suite *s = suite_create("Tests of serialise");
 
 	TCase *tc_datetotimestamp = tcase_create("Serialise Date");
@@ -87,8 +86,7 @@ Suite* test_suite_serialise(void)
 }
 
 
-Suite* test_suite_unserialise(void)
-{
+Suite* test_suite_unserialise(void) {
 	Suite *s = suite_create("Tests of unserialise");
 
 	TCase *tc_unserialise_date = tcase_create("Unserialise date");
@@ -107,8 +105,7 @@ Suite* test_suite_unserialise(void)
 }
 
 
-int main(void)
-{
+int main(void) {
 	Suite *serialise = test_suite_serialise();
 	SRunner *sr = srunner_create(serialise);
 	srunner_run_all(sr, CK_NORMAL);

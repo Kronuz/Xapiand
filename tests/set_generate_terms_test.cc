@@ -49,8 +49,7 @@ START_TEST(geo_test)
 END_TEST
 
 
-Suite* Generate_Terms(void)
-{
+Suite* Generate_Terms(void) {
 	Suite *s = suite_create("Testing Generation of terms");
 
 	TCase *n = tcase_create("Generation numerical terms");
@@ -69,8 +68,7 @@ Suite* Generate_Terms(void)
 }
 
 
-int main(void)
-{
+int main(void) {
 	Suite *st = Generate_Terms();
 	SRunner *sr = srunner_create(st);
 	srunner_run_all(sr, CK_NORMAL);

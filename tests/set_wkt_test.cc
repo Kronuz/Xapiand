@@ -39,8 +39,7 @@ START_TEST(test_wkt_speed)
 END_TEST
 
 
-Suite* test_suite_wkt(void)
-{
+Suite* test_suite_wkt(void) {
 	Suite *s = suite_create("Test of WKT");
 
 	TCase *tc_wkt_parser = tcase_create("WKT parser");
@@ -57,8 +56,7 @@ Suite* test_suite_wkt(void)
 }
 
 
-int main(void)
-{
+int main(void) {
 	Suite *wkt = test_suite_wkt();
 	SRunner *sr = srunner_create(wkt);
 	srunner_run_all(sr, CK_NORMAL);
