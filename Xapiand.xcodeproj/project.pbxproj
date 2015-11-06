@@ -28,6 +28,7 @@
 		46DFA9B21BC4800E008D8144 /* discovery.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46DFA9AE1BC4800E008D8144 /* discovery.cc */; };
 		46DFA9B31BC4800E008D8144 /* http.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46DFA9AF1BC4800E008D8144 /* http.cc */; };
 		46DFA9B41BC4800E008D8144 /* tcp_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46DFA9B01BC4800E008D8144 /* tcp_base.cc */; };
+		C31686551BED38EB00C232E5 /* haystack.cc in Sources */ = {isa = PBXBuildFile; fileRef = C31686541BED38EB00C232E5 /* haystack.cc */; };
 		C350589B1B7BAEE300901B80 /* multivaluekeymaker.cc in Sources */ = {isa = PBXBuildFile; fileRef = C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */; };
 		C350589F1B99E75500901B80 /* io_utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = C350589D1B99E75500901B80 /* io_utils.cc */; };
 		C35058AB1BA325CC00901B80 /* lz4.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A21BA325CC00901B80 /* lz4.c */; };
@@ -112,6 +113,8 @@
 		46DFA9AF1BC4800E008D8144 /* http.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = http.cc; path = src/servers/http.cc; sourceTree = "<group>"; };
 		46DFA9B01BC4800E008D8144 /* tcp_base.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tcp_base.cc; path = src/servers/tcp_base.cc; sourceTree = "<group>"; };
 		46DFA9B51BC4809D008D8144 /* http.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = http.h; path = src/servers/http.h; sourceTree = "<group>"; };
+		C31686541BED38EB00C232E5 /* haystack.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = haystack.cc; path = src/haystack.cc; sourceTree = "<group>"; };
+		C31686561BED390400C232E5 /* haystack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = haystack.h; path = src/haystack.h; sourceTree = "<group>"; };
 		C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = multivaluekeymaker.cc; path = src/multivaluekeymaker.cc; sourceTree = "<group>"; };
 		C350589C1B7BAF0500901B80 /* multivaluekeymaker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = multivaluekeymaker.h; path = src/multivaluekeymaker.h; sourceTree = "<group>"; };
 		C350589D1B99E75500901B80 /* io_utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = io_utils.cc; path = src/io_utils.cc; sourceTree = "<group>"; };
@@ -233,6 +236,8 @@
 				4630BEDF1B42E88D00351058 /* geometry.h */,
 				46B6B3CF1B7E4A1B000FA041 /* geospatialrange.cc */,
 				46B6B3CE1B7E4A1B000FA041 /* geospatialrange.h */,
+				C31686541BED38EB00C232E5 /* haystack.cc */,
+				C31686561BED390400C232E5 /* haystack.h */,
 				4630BEE01B42E88D00351058 /* htm.cc */,
 				4630BEE11B42E88D00351058 /* htm.h */,
 				C39AE0481B2F627E00203139 /* http_parser.c */,
@@ -372,6 +377,7 @@
 				C39AE06A1B2F627E00203139 /* endpoint.cc in Sources */,
 				C39AE0671B2F627E00203139 /* client_http.cc in Sources */,
 				46DFA9A51BC3014E008D8144 /* server_discovery.cc in Sources */,
+				C31686551BED38EB00C232E5 /* haystack.cc in Sources */,
 				46DFA9A71BC3014E008D8144 /* server_raft.cc in Sources */,
 				46B6B3D61B7E5B3C000FA041 /* generate_terms.cc in Sources */,
 				465C42A51B8E37FE00861471 /* database_utils.cc in Sources */,
