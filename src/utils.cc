@@ -25,11 +25,13 @@
 
 #include <string>
 #include <cstdlib>
+#include <thread>
+#include <mutex>
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <algorithm>
-#include <pthread.h>
 #include <xapian.h>
 #include <dirent.h>
 #include <unistd.h>
@@ -50,7 +52,7 @@
 #define HTTP_UPLOAD "_upload"
 #define HTTP_UPLOAD_SIZE 7
 
-pthread_mutex_t qmtx = PTHREAD_MUTEX_INITIALIZER;
+std::mutex log_mutex;
 
 pcre *compiled_coords_re = NULL;
 pcre *compiled_numeric_re = NULL;
@@ -123,22 +125,13 @@ std::string repr(const std::string &string, bool friendly)
 
 void log(const char *file, int line, void *, const char *format, ...)
 {
-	pthread_mutex_lock(&qmtx);
-
-	char name[100];
-#ifdef HAVE_PTHREAD_SETNAME_NP_2
-
-#else
-	pthread_getname_np(pthread_self(), name, sizeof(name));
-#endif
-	// fprintf(stderr, "tid(0x%012lx:%2s): 0x%012lx - %s:%d - ", (unsigned long)thread, name, (unsigned long)obj, file, line);
-	fprintf(stderr, "tid(%2s): ../%s:%d: ", *name ? name : "--", file, line);
+	std::hash<std::thread::id> hasher;
+	std::lock_guard<std::mutex> lk(log_mutex);
+	fprintf(stderr, "tid(%zx): ../%s:%d: ", hasher(std::this_thread::get_id()), file, line);
 	va_list argptr;
 	va_start(argptr, format);
 	vfprintf(stderr, format, argptr);
 	va_end(argptr);
-
-	pthread_mutex_unlock(&qmtx);
 }
 
 
