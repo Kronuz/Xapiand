@@ -23,12 +23,12 @@
 #include "test_sort.h"
 
 
-static DatabaseQueue *d_queue = NULL;
-static Database *database = NULL;
+static DatabaseQueue *d_queue = nullptr;
+static Database *database = nullptr;
 static std::string name_database(".db_testsort.db");
 
 
-sort_t string_tests[] {
+const sort_t string_tests[] {
 	/*
 	 * Table reference data to verify the ordering
 	 * levens(fieldname:value) -> levenshtein_distance(get_value(fieldname), value)
@@ -69,7 +69,7 @@ sort_t string_tests[] {
 };
 
 
-sort_t numerical_tests[] {
+const sort_t numerical_tests[] {
 	/*
 	 * Table reference data to verify the ordering
 	 * dist(fieldname:value) -> abs(Xapian::sortable_unserialise(get_value(fieldname)) - value)
@@ -108,7 +108,7 @@ sort_t numerical_tests[] {
 };
 
 
-sort_t date_tests[] {
+const sort_t date_tests[] {
 	/*
 	 * Table reference data to verify the ordering.
 	 * dist(fieldname:value) -> abs(Xapian::sortable_unserialise(get_value(fieldname)) - Datetime::timestamp(value))
@@ -162,7 +162,7 @@ sort_t date_tests[] {
 };
 
 
-sort_t boolean_tests[] {
+const sort_t boolean_tests[] {
 	/*
 	 * Table reference data to verify the ordering
 	 * dist(fieldname:value) -> get_value(fieldname) == value ? 0 : 1
@@ -200,7 +200,7 @@ sort_t boolean_tests[] {
 };
 
 
-sort_t geo_tests[] {
+const sort_t geo_tests[] {
 	/*
 	 * Table reference data to verify the ordering
 	 * radius(fieldname:value) -> Angle between centroids of value and centroids saved in the slot.
@@ -239,8 +239,7 @@ sort_t geo_tests[] {
 };
 
 
-int create_test_db()
-{
+int create_test_db() {
 	int cont = 0;
 	local_node.name.assign("node_test");
 	local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
@@ -276,10 +275,9 @@ int create_test_db()
 		std::ifstream fstream(*it);
 		std::stringstream buffer;
 		buffer << fstream.rdbuf();
-		unique_cJSON document(cJSON_Parse(buffer.str().c_str()), cJSON_Delete);
-		if (not database->index(document.get(), std::to_string(i), true)) {
+		if (database->index(buffer.str(), std::to_string(i), true, "application/json", std::to_string(fstream.tellg())) == 0) {
 			cont++;
-			LOG_ERR(NULL, "ERROR: File %s can not index\n", it->c_str());
+			LOG_ERR(nullptr, "ERROR: File %s can not index\n", it->c_str());
 		}
 		fstream.close();
 		++i;
@@ -289,8 +287,7 @@ int create_test_db()
 }
 
 
-int make_search(const sort_t _tests[], int len)
-{
+int make_search(const sort_t _tests[], int len) {
 	int cont = 0;
 	query_t query;
 	query.offset = 0;
@@ -319,10 +316,10 @@ int make_search(const sort_t _tests[], int len)
 		int rmset = database->get_mset(query, mset, spies, suggestions);
 		if (rmset != 0) {
 			cont++;
-			LOG_ERR(NULL, "ERROR: Failed in get_mset\n");
+			LOG_ERR(nullptr, "ERROR: Failed in get_mset\n");
 		} else if (mset.size() != p.expect_result.size()) {
 			cont++;
-			LOG_ERR(NULL, "ERROR: Different number of documents obtained\n");
+			LOG_ERR(nullptr, "ERROR: Different number of documents obtained\n");
 		} else {
 			it = p.expect_result.begin();
 			Xapian::MSetIterator m = mset.begin();
@@ -330,7 +327,7 @@ int make_search(const sort_t _tests[], int len)
 				std::string d_id(m.get_document().get_value(0));
 				if (it->compare(d_id) != 0) {
 					cont++;
-					LOG_ERR(NULL, "ERROR: Result = %s:%s   Expected = %s:%s\n", RESERVED_ID, d_id.c_str(), RESERVED_ID, it->c_str());
+					LOG_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s\n", RESERVED_ID, d_id.c_str(), RESERVED_ID, it->c_str());
 				}
 			}
 		}
@@ -344,106 +341,101 @@ int make_search(const sort_t _tests[], int len)
 }
 
 
-int sort_test_string()
-{
+int sort_test_string() {
 	try {
 		int cont = create_test_db();
-		if (cont == 0 && make_search(string_tests, sizeof(string_tests) / sizeof(string_tests[0])) == 0) {
-			LOG(NULL, "Testing sort strings is correct!\n");
+		if (cont == 0 && make_search(string_tests, arraySize(string_tests)) == 0) {
+			LOG(nullptr, "Testing sort strings is correct!\n");
 			return 0;
 		} else {
-			LOG_ERR(NULL, "ERROR: Testing sort strings has mistakes.\n");
+			LOG_ERR(nullptr, "ERROR: Testing sort strings has mistakes.\n");
 			return 1;
 		}
 	} catch (const Xapian::Error &err) {
-		LOG_ERR(NULL, "ERROR: %s\n", err.get_msg().c_str());
+		LOG_ERR(nullptr, "ERROR: %s\n", err.get_msg().c_str());
 		return 1;
 	} catch (const std::exception &err) {
-		LOG_ERR(NULL, "ERROR: %s\n", err.what());
+		LOG_ERR(nullptr, "ERROR: %s\n", err.what());
 		return 1;
 	}
 }
 
 
-int sort_test_numerical()
-{
+int sort_test_numerical() {
 	try {
 		int cont = create_test_db();
-		if (cont == 0 && make_search(numerical_tests, sizeof(numerical_tests) / sizeof(numerical_tests[0])) == 0) {
-			LOG(NULL, "Testing sort numbers is correct!\n");
+		if (cont == 0 && make_search(numerical_tests, arraySize(numerical_tests)) == 0) {
+			LOG(nullptr, "Testing sort numbers is correct!\n");
 			return 0;
 		} else {
-			LOG_ERR(NULL, "ERROR: Testing sort numbers has mistakes.\n");
+			LOG_ERR(nullptr, "ERROR: Testing sort numbers has mistakes.\n");
 			return 1;
 		}
 	} catch (const Xapian::Error &err) {
-		LOG_ERR(NULL, "ERROR: %s\n", err.get_msg().c_str());
+		LOG_ERR(nullptr, "ERROR: %s\n", err.get_msg().c_str());
 		return 1;
 	} catch (const std::exception &err) {
-		LOG_ERR(NULL, "ERROR: %s\n", err.what());
+		LOG_ERR(nullptr, "ERROR: %s\n", err.what());
 		return 1;
 	}
 }
 
 
-int sort_test_date()
-{
+int sort_test_date() {
 	try {
 		int cont = create_test_db();
-		if (cont == 0 && make_search(date_tests, sizeof(date_tests) / sizeof(date_tests[0])) == 0) {
-			LOG(NULL, "Testing sort dates is correct!\n");
+		if (cont == 0 && make_search(date_tests, arraySize(date_tests)) == 0) {
+			LOG(nullptr, "Testing sort dates is correct!\n");
 			return 0;
 		} else {
-			LOG_ERR(NULL, "ERROR: Testing sort dates has mistakes.\n");
+			LOG_ERR(nullptr, "ERROR: Testing sort dates has mistakes.\n");
 			return 1;
 		}
 	} catch (const Xapian::Error &err) {
-		LOG_ERR(NULL, "ERROR: %s\n", err.get_msg().c_str());
+		LOG_ERR(nullptr, "ERROR: %s\n", err.get_msg().c_str());
 		return 1;
 	} catch (const std::exception &err) {
-		LOG_ERR(NULL, "ERROR: %s\n", err.what());
+		LOG_ERR(nullptr, "ERROR: %s\n", err.what());
 		return 1;
 	}
 }
 
 
-int sort_test_boolean()
-{
+int sort_test_boolean() {
 	try {
 		int cont = create_test_db();
-		if (cont == 0 && make_search(boolean_tests, sizeof(boolean_tests) / sizeof(boolean_tests[0])) == 0) {
-			LOG(NULL, "Testing sort booleans is correct!\n");
+		if (cont == 0 && make_search(boolean_tests, arraySize(boolean_tests)) == 0) {
+			LOG(nullptr, "Testing sort booleans is correct!\n");
 			return 0;
 		} else {
-			LOG_ERR(NULL, "ERROR: Testing sort booleans has mistakes.\n");
+			LOG_ERR(nullptr, "ERROR: Testing sort booleans has mistakes.\n");
 			return 1;
 		}
 	} catch (const Xapian::Error &err) {
-		LOG_ERR(NULL, "ERROR: %s\n", err.get_msg().c_str());
+		LOG_ERR(nullptr, "ERROR: %s\n", err.get_msg().c_str());
 		return 1;
 	} catch (const std::exception &err) {
-		LOG_ERR(NULL, "ERROR: %s\n", err.what());
+		LOG_ERR(nullptr, "ERROR: %s\n", err.what());
 		return 1;
 	}
 }
 
 
-int sort_test_geo()
-{
+int sort_test_geo() {
 	try {
 		int cont = create_test_db();
-		if (cont == 0 && make_search(geo_tests, sizeof(geo_tests) / sizeof(geo_tests[0])) == 0) {
-			LOG(NULL, "Testing sort geospatials is correct!\n");
+		if (cont == 0 && make_search(geo_tests, arraySize(geo_tests)) == 0) {
+			LOG(nullptr, "Testing sort geospatials is correct!\n");
 			return 0;
 		} else {
-			LOG_ERR(NULL, "ERROR: Testing sort geospatials has mistakes.\n");
+			LOG_ERR(nullptr, "ERROR: Testing sort geospatials has mistakes.\n");
 			return 1;
 		}
 	} catch (const Xapian::Error &err) {
-		LOG_ERR(NULL, "ERROR: %s\n", err.get_msg().c_str());
+		LOG_ERR(nullptr, "ERROR: %s\n", err.get_msg().c_str());
 		return 1;
 	} catch (const std::exception &err) {
-		LOG_ERR(NULL, "ERROR: %s\n", err.what());
+		LOG_ERR(nullptr, "ERROR: %s\n", err.what());
 		return 1;
 	}
 }

@@ -25,7 +25,7 @@
 #include "../src/serialise.h"
 
 
-const test test_timestamp_date[] = {
+const test_t test_timestamp_date[] = {
 	// Date 									Expected timestamp.
 	{ "2014-01-01||-1M/y",                      "1388534399.999000"   },
 	{ "2014-10-10||-12M",                       "1381363200.000000"   },
@@ -95,11 +95,11 @@ const test test_timestamp_date[] = {
 	{ "2010-10-10Z",                            ""                    },
 	{ "2010-10-10 09:10:10 - 6:56",             ""                    },
 	{ "2010-10-10 09:10:10 -656",               ""                    },
-	{ NULL,                                     NULL                  },
+	{ nullptr,                                  nullptr               },
 	};
 
 
-const test test_unserialisedate[] {
+const test_t test_unserialisedate[] {
 	// Date to be serialised.				 Expected date after unserialise.
 	{ "2010-10-10T23:05:24.800",             "2010-10-10T23:05:24.800" },
 	{ "2010101023:05:24",                    "2010-10-10T23:05:24.000" },
@@ -109,11 +109,11 @@ const test test_unserialisedate[] {
 	{ "9999/12/20T08:10-03:00||/y",          "9999-12-31T23:59:59.999" },
 	{ "-62135596800.000",                    "0001-01-01T00:00:00.000" },
 	{ "253402300799",                        "9999-12-31T23:59:59.000" },
-	{ NULL,                                  NULL                      },
+	{ nullptr,                               nullptr                   },
 };
 
 
-const test_cartesian test_seri_cartesian[] {
+const test_cartesian_t test_seri_cartesian[] {
 	// Cartesian.		                                    Expected serialise Cartesian.                       Expected Cartesian after of unserialise.
 	{ Cartesian(10.0, 20.0, 0.0, Cartesian::DEGREES),       "r\\xc6]\\xfdO\\xafY\\xe0E\\xe3=\\xe5",             "0.925602814 0.336891873 0.172520422"    },
 	{ Cartesian(30.0, 15.0, 0.0, Cartesian::DEGREES),       "m\\x8c[\\xe2H\\xfc\\xac\\x13YA\\xc8$",             "0.837915107 0.224518676 0.497483301"    },
@@ -124,97 +124,93 @@ const test_cartesian test_seri_cartesian[] {
 	{ Cartesian(40.0, -30.0, 21.0, Cartesian::DEGREES),     "cA\\xb4B$\\xb6\\'\\xcea\\xc4BE",                   "0.665250371 -0.384082481 0.640251974"   },
 	{ Cartesian(30.0, 28.0, -100.0, Cartesian::DEGREES),    "iB\\x02\\x88S\\xe0\\xfe\\x9eYA\\xc7\\xfd",         "0.765933705 0.407254175 0.497483262"    },
 	{ Cartesian(-0.765933705, -0.407254175, -0.497483262),  "\\r\\xf3\\x91v#T\\x95`\\x1d\\xf3\\xcc\\x01",       "-0.765933705 -0.407254175 -0.497483262" },
-	{ Cartesian(),                                           NULL,                                               NULL                                    },
+	{ Cartesian(),                                          nullptr,                                            nullptr                                  },
 };
 
 
-const test_trixel_id test_seri_trixels[] {
+const test_trixel_id_t test_seri_trixels[] {
 	// Trixel's id       Expected serialise id.         Expected id after of unserialise.
 	{ 13200083375642939, ".\\xe5g\\xe8\\x9cY;",         13200083375642939 },
 	{ 9106317391687190,  " Z%\\xbdW\\xee\\x16",         9106317391687190  },
 	{ 14549284226108186, "3\\xb0\\x7f6\\x08\\x8b\\x1a", 14549284226108186 },
 	{ 17752546963481661, "?\\x11\\xd8\\xef\\x9d\\xe4=", 17752546963481661 },
-	{ 0,                  NULL,                         0                 },
+	{ 0,                 nullptr,                       0                 },
 };
 
 
-int test_datetotimestamp()
-{
+int test_datetotimestamp() {
 	int cont = 0;
-	for (const test *p = test_timestamp_date; p->str; ++p) {
+	for (const test_t *p = test_timestamp_date; p->str; ++p) {
 		std::string date = std::string(p->str);
 		std::string timestamp;
 		try {
 			timestamp = std::to_string(Datetime::timestamp(date));
 		} catch (const std::exception &ex) {
-			LOG_ERR(NULL, "ERROR: %s\n", ex.what());
+			LOG_ERR(nullptr, "ERROR: %s\n", ex.what());
 			timestamp = "";
 		}
 		if (timestamp.compare(p->expect) != 0) {
 			cont++;
-			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", timestamp.c_str(), p->expect);
+			LOG_ERR(nullptr, "ERROR: Resul: %s Expect: %s\n", timestamp.c_str(), p->expect);
 		}
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing the transformation between date string and timestamp is correct!\n");
+		LOG(nullptr, "Testing the transformation between date string and timestamp is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing the transformation between date string and timestamp has mistakes.\n");
+		LOG_ERR(nullptr, "ERROR: Testing the transformation between date string and timestamp has mistakes.\n");
 		return 1;
 	}
 }
 
 
-int test_unserialise_date()
-{
+int test_unserialise_date() {
 	int cont = 0;
-	for (const test *p = test_unserialisedate; p->str; ++p) {
+	for (const test_t *p = test_unserialisedate; p->str; ++p) {
 		std::string date_s(Serialise::date(std::to_string(Datetime::timestamp(p->str))));
 		std::string date = Unserialise::date(date_s);
 		if (date.compare(p->expect) != 0) {
 			cont++;
-			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", date.c_str(), p->expect);
+			LOG_ERR(nullptr, "ERROR: Resul: %s Expect: %s\n", date.c_str(), p->expect);
 		}
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing unserialise date is correct!\n");
+		LOG(nullptr, "Testing unserialise date is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing unserialise date has mistakes.\n");
+		LOG_ERR(nullptr, "ERROR: Testing unserialise date has mistakes.\n");
 		return 1;
 	}
 }
 
 
-int test_serialise_cartesian()
-{
+int test_serialise_cartesian() {
 	int cont = 0;
-	for (const test_cartesian *p = test_seri_cartesian; p->expect_serialise; ++p) {
+	for (const test_cartesian_t *p = test_seri_cartesian; p->expect_serialise; ++p) {
 		Cartesian c = p->cartesian;
 		c.normalize();
 		std::string res(repr(Serialise::cartesian(c)));
 		if (res.compare(p->expect_serialise) != 0) {
 			cont++;
-			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", res.c_str(), p->expect_serialise);
+			LOG_ERR(nullptr, "ERROR: Resul: %s Expect: %s\n", res.c_str(), p->expect_serialise);
 		}
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing serialise Cartesian is correct!\n");
+		LOG(nullptr, "Testing serialise Cartesian is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing serialise Cartesian has mistakes.\n");
+		LOG_ERR(nullptr, "ERROR: Testing serialise Cartesian has mistakes.\n");
 		return 1;
 	}
 }
 
 
-int test_unserialise_cartesian()
-{
+int test_unserialise_cartesian() {
 	int cont = 0;
-	for (const test_cartesian *p = test_seri_cartesian; p->expect_unserialise; ++p) {
+	for (const test_cartesian_t *p = test_seri_cartesian; p->expect_unserialise; ++p) {
 		Cartesian c = p->cartesian;
 		c.normalize();
 		std::string serialise(Serialise::cartesian(c));
@@ -223,60 +219,58 @@ int test_unserialise_cartesian()
 		snprintf(res, sizeof(res), "%1.9f %1.9f %1.9f", c.x, c.y, c.z);
 		if (strcmp(res, p->expect_unserialise) != 0) {
 			cont++;
-			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", res, p->expect_unserialise);
+			LOG_ERR(nullptr, "ERROR: Resul: %s Expect: %s\n", res, p->expect_unserialise);
 		}
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing unserialise Cartesian is correct!\n");
+		LOG(nullptr, "Testing unserialise Cartesian is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing unserialise Cartesian has mistakes.\n");
+		LOG_ERR(nullptr, "ERROR: Testing unserialise Cartesian has mistakes.\n");
 		return 1;
 	}
 }
 
 
-int test_serialise_trixel_id()
-{
+int test_serialise_trixel_id() {
 	int cont = 0;
-	for (const test_trixel_id *p = test_seri_trixels; p->expect_serialise; ++p) {
+	for (const test_trixel_id_t *p = test_seri_trixels; p->expect_serialise; ++p) {
 		uInt64 trixel_id = p->trixel_id;
 		std::string res(repr(Serialise::trixel_id(trixel_id)));
 		if (res.compare(p->expect_serialise) != 0) {
 			cont++;
-			LOG_ERR(NULL, "ERROR: Resul: %s Expect: %s\n", res.c_str(), p->expect_serialise);
+			LOG_ERR(nullptr, "ERROR: Resul: %s Expect: %s\n", res.c_str(), p->expect_serialise);
 		}
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing serialise HTM Trixel's id is correct!\n");
+		LOG(nullptr, "Testing serialise HTM Trixel's id is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing serialise HTM Trixel's id has mistakes.\n");
+		LOG_ERR(nullptr, "ERROR: Testing serialise HTM Trixel's id has mistakes.\n");
 		return 1;
 	}
 }
 
 
-int test_unserialise_trixel_id()
-{
+int test_unserialise_trixel_id() {
 	int cont = 0;
-	for (const test_trixel_id *p = test_seri_trixels; p->expect_serialise; ++p) {
+	for (const test_trixel_id_t *p = test_seri_trixels; p->expect_serialise; ++p) {
 		uInt64 trixel_id = p->trixel_id;
 		std::string serialise(Serialise::trixel_id(trixel_id));
 		trixel_id = Unserialise::trixel_id(serialise);
 		if (p->trixel_id != trixel_id) {
 			cont++;
-			LOG_ERR(NULL, "ERROR: Resul: %llu Expect: %llu\n", trixel_id, p->trixel_id);
+			LOG_ERR(nullptr, "ERROR: Resul: %llu Expect: %llu\n", trixel_id, p->trixel_id);
 		}
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing unserialise HTM Trixel's id is correct!\n");
+		LOG(nullptr, "Testing unserialise HTM Trixel's id is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing unserialise HTM Trixel's id has mistakes.\n");
+		LOG_ERR(nullptr, "ERROR: Testing unserialise HTM Trixel's id has mistakes.\n");
 		return 1;
 	}
 }

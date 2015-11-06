@@ -24,8 +24,7 @@
 
 
 // Testing the transformation of coordinates between CRS.
-int test_cartesian_transforms()
-{
+int test_cartesian_transforms() {
 	Vector_Transforms SRID_2_WGS84;
 	// WGS72 to WGS84  (4322 to 4326) -> The results are very close to those obtained in the page:
 	// http://georepository.com/calculator/convert/operation_id/1238
@@ -151,19 +150,19 @@ int test_cartesian_transforms()
 			std::string get = c.Decimal2Degrees();
 			if (strcasecmp(get.c_str(), it->res.c_str()) != 0) {
 				cont++;
-				LOG_ERR(NULL, "ERROR: Resul: %s  Expected: %s\n", get.c_str(), it->res.c_str());
+				LOG_ERR(nullptr, "ERROR: Resul: %s  Expected: %s\n", get.c_str(), it->res.c_str());
 			}
 		}
 	} catch (const std::exception &e) {
-		LOG_ERR(NULL, "ERROR: %s\n", e.what());
+		LOG_ERR(nullptr, "ERROR: %s\n", e.what());
 		cont++;
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing the transformation of coordinates between CRS is correct!\n");
+		LOG(nullptr, "Testing the transformation of coordinates between CRS is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing the transformation of coordinates between CRS has mistakes.\n");
+		LOG_ERR(nullptr, "ERROR: Testing the transformation of coordinates between CRS has mistakes.\n");
 		return 1;
 	}
 }
@@ -171,8 +170,7 @@ int test_cartesian_transforms()
 
 // Testing the elimination of points that make the non-convex polygon.
 // Python files are generated to view the results.
-int test_hullConvex()
-{
+int test_hullConvex() {
 	int cont = 0;
 	std::vector<std::string> files, expect_files, result_files;
 	files.push_back("examples/ColoradoPoly.txt");
@@ -273,18 +271,18 @@ int test_hullConvex()
 						std::getline(readEFile, coord_exp);
 						if (strcasecmp(coord_exp.c_str(), coord_get.c_str()) != 0) {
 							cont++;
-							LOG_ERR(NULL, "ERROR: Result(%s) Expect(%s).\n", coord_get.c_str(), coord_exp.c_str());
+							LOG_ERR(nullptr, "ERROR: Result(%s) Expect(%s).\n", coord_get.c_str(), coord_exp.c_str());
 						}
 					} else {
 						cont++;
-						LOG_ERR(NULL, "ERROR: Expected less corners.\n");
+						LOG_ERR(nullptr, "ERROR: Expected less corners.\n");
 						break;
 					}
 				}
 
 				if (!readEFile.eof()) {
 					cont++;
-					LOG_ERR(NULL, "ERROR: Expected more corners.\n");
+					LOG_ERR(nullptr, "ERROR: Expected more corners.\n");
 					break;
 				}
 
@@ -294,11 +292,11 @@ int test_hullConvex()
 				fs << "ax.set_xlabel('x')\nax.set_ylabel('y')\nax.set_zlabel('z')\n";
 				fs << "plt.show()\nplt.ion()\n";
 			} catch(const std::exception &e) {
-				LOG_ERR(NULL, "ERROR: (%s) %s\n", it_f->c_str(), e.what());
+				LOG_ERR(nullptr, "ERROR: (%s) %s\n", it_f->c_str(), e.what());
 				cont++;
 			}
 		} else {
-			LOG_ERR(NULL, "ERROR: File %s or %s not found.\n", (*it_f).c_str(), (*it_e).c_str());
+			LOG_ERR(nullptr, "ERROR: File %s or %s not found.\n", (*it_f).c_str(), (*it_e).c_str());
 			cont ++;
 		}
 
@@ -306,10 +304,10 @@ int test_hullConvex()
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing Geometry Hull Convex is correct!, run with python examples/{file}_convex_hull.py to see the hull convex.\n");
+		LOG(nullptr, "Testing Geometry Hull Convex is correct!, run with python examples/{file}_convex_hull.py to see the hull convex.\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing Geometry Hull Convex has mistakes.\n");
+		LOG_ERR(nullptr, "ERROR: Testing Geometry Hull Convex has mistakes.\n");
 		return 1;
 	}
 }
@@ -317,8 +315,7 @@ int test_hullConvex()
 
 // Testing HTM for Polygons.
 // Python files are generated to view the results.
-int test_HTM_chull()
-{
+int test_HTM_chull() {
 	double error = 0.2;
 	bool partials = true;
 	int cont = 0;
@@ -403,18 +400,18 @@ int test_HTM_chull()
 						std::getline(readEFile, trixel_exp);
 						if (strcasecmp((*itn).c_str(), trixel_exp.c_str()) != 0) {
 							cont++;
-							LOG_ERR(NULL, "ERROR: File(%s) Result(%s) Expect(%s).\n", (*it_f).c_str(), (*itn).c_str(), trixel_exp.c_str());
+							LOG_ERR(nullptr, "ERROR: File(%s) Result(%s) Expect(%s).\n", (*it_f).c_str(), (*itn).c_str(), trixel_exp.c_str());
 						}
 					} else {
 						cont++;
-						LOG_ERR(NULL, "ERROR: Expected less trixels.\n");
+						LOG_ERR(nullptr, "ERROR: Expected less trixels.\n");
 						break;
 					}
 				}
 
 				if (!readEFile.eof()) {
 					cont++;
-					LOG_ERR(NULL, "ERROR: Expected more trixels.\n");
+					LOG_ERR(nullptr, "ERROR: Expected more trixels.\n");
 					readFile.close();
 					readEFile.close();
 					break;
@@ -422,11 +419,11 @@ int test_HTM_chull()
 
 				_htm.writePython3D(*it_r);
 			} catch(const std::exception &e) {
-				LOG_ERR(NULL, "ERROR: (%s) %s\n", it_f->c_str(), e.what());
+				LOG_ERR(nullptr, "ERROR: (%s) %s\n", it_f->c_str(), e.what());
 				cont++;
 			}
 		} else {
-			LOG_ERR(NULL, "ERROR: File %s or %s not found.\n", (*it_f).c_str(), (*it_e).c_str());
+			LOG_ERR(nullptr, "ERROR: File %s or %s not found.\n", (*it_f).c_str(), (*it_e).c_str());
 			cont ++;
 		}
 
@@ -435,10 +432,10 @@ int test_HTM_chull()
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing HTM polygon is correct!, run with python examples/{file}_polygon_HTM.py to see the trixels that cover the hull convex.\n");
+		LOG(nullptr, "Testing HTM polygon is correct!, run with python examples/{file}_polygon_HTM.py to see the trixels that cover the hull convex.\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing polygon HTM has mistakes.\n");
+		LOG_ERR(nullptr, "ERROR: Testing polygon HTM has mistakes.\n");
 		return 1;
 	}
 }
@@ -446,8 +443,7 @@ int test_HTM_chull()
 
 // Testing HTM for bounding circles.
 // Python files are generated to view the results.
-int test_HTM_circle()
-{
+int test_HTM_circle() {
 	int cont = 0;
 	std::string name("examples/Circles_HTM.txt");
 	std::ifstream readFile(name);
@@ -487,44 +483,44 @@ int test_HTM_circle()
 							std::getline(readEFile, trixel_exp);
 							if (strcasecmp((*itn).c_str(), trixel_exp.c_str()) != 0) {
 								cont++;
-								LOG_ERR(NULL, "ERROR: File (%s) Result(%s) Expect(%s).\n", file_expect.c_str(), (*itn).c_str(), trixel_exp.c_str());
+								LOG_ERR(nullptr, "ERROR: File (%s) Result(%s) Expect(%s).\n", file_expect.c_str(), (*itn).c_str(), trixel_exp.c_str());
 							}
 						} else {
 							cont++;
-							LOG_ERR(NULL, "ERROR: Expected less trixels.\n");
+							LOG_ERR(nullptr, "ERROR: Expected less trixels.\n");
 							break;
 						}
 					}
 
 					if (!readEFile.eof()) {
 						cont++;
-						LOG_ERR(NULL, "ERROR: Expected more trixels.\n");
+						LOG_ERR(nullptr, "ERROR: Expected more trixels.\n");
 						readEFile.close();
 						break;
 					}
 
 					_htm.writePython3D(file_result);
 				} catch(const std::exception &e) {
-					LOG_ERR(NULL, "ERROR: %s\n", e.what());
+					LOG_ERR(nullptr, "ERROR: %s\n", e.what());
 					cont++;
 				}
 				readEFile.close();
 			} else {
-				LOG_ERR(NULL, "ERROR: File %s not found.\n", file_expect.c_str());
+				LOG_ERR(nullptr, "ERROR: File %s not found.\n", file_expect.c_str());
 				cont ++;
 			}
 		}
 		readFile.close();
 	} else {
-		LOG_ERR(NULL, "ERROR: File %s not found.\n", name.c_str());
+		LOG_ERR(nullptr, "ERROR: File %s not found.\n", name.c_str());
 		cont ++;
 	}
 
 	if (cont == 0) {
-		LOG(NULL, "Testing HTM bounding circle is correct!, run with python examples/Circle{#}_HTM.py to see the trixels that cover the bounding circle.\n");
+		LOG(nullptr, "Testing HTM bounding circle is correct!, run with python examples/Circle{#}_HTM.py to see the trixels that cover the bounding circle.\n");
 		return 0;
 	} else {
-		LOG_ERR(NULL, "ERROR: Testing HTM bounding circle has mistakes.\n");
+		LOG_ERR(nullptr, "ERROR: Testing HTM bounding circle has mistakes.\n");
 		return 1;
 	}
 }
