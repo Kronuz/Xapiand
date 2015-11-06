@@ -118,9 +118,9 @@ private:
 };
 
 
-class DatabaseQueue :
-	public std::enable_shared_from_this<DatabaseQueue>,
-	public queue::Queue<std::shared_ptr<Database>> {
+class DatabaseQueue : public queue::Queue<std::shared_ptr<Database>>,
+		      public std::enable_shared_from_this<DatabaseQueue>
+{
 	// FIXME: Add queue creation time and delete databases when deleted queue
 
 	friend class Database;
@@ -184,18 +184,13 @@ private:
 
 	std::condition_variable checkin_cond;
 
-	// Variables for ".refs" database.
-	std::mutex ref_mutex;
-	std::shared_ptr<Database> ref_database;
-	std::string prefix_rf_master;
-
 	void init_ref(const Endpoints &endpoints);
 	void inc_ref(const Endpoints &endpoints);
 	void dec_ref(const Endpoints &endpoints);
 	int get_master_count();
 
-	void add_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue);
-	void drop_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue);
+	void add_endpoint_queue(const Endpoint &endpoint, std::shared_ptr<DatabaseQueue>&& queue);
+	void drop_endpoint_queue(const Endpoint &endpoint, std::shared_ptr<DatabaseQueue>&& queue);
 
 public:
 	DatabasePool(size_t max_size);

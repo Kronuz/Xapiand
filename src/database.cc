@@ -52,6 +52,7 @@ Database::Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endp
 	  mastery_level(-1)
 {
 	reopen();
+
 	if (auto queue = weak_queue.lock()) {
 		queue->inc_count();
 	}
@@ -1691,14 +1692,6 @@ DatabasePool::DatabasePool(size_t max_size)
 	  databases(max_size),
 	  writable_databases(max_size)
 {
-	prefix_rf_master = get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
-
-	Endpoints ref_endpoints;
-	ref_endpoints.insert(Endpoint(".refs"));
-	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
-		LOG_ERR(this, "Database refs it could not be checkout.\n");
-		assert(false);
-	}
 }
 
 
@@ -1709,7 +1702,7 @@ DatabasePool::~DatabasePool()
 
 
 void
-DatabasePool::add_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue> &queue)
+DatabasePool::add_endpoint_queue(const Endpoint &endpoint, std::shared_ptr<DatabaseQueue>&& queue)
 {
 	size_t hash = endpoint.hash();
 	auto &queues_set = queues[hash];
@@ -1718,7 +1711,7 @@ DatabasePool::add_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr
 
 
 void
-DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue> &queue)
+DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, std::shared_ptr<DatabaseQueue>&& queue)
 {
 	size_t hash = endpoint.hash();
 	auto &queues_set = queues[hash];
@@ -1927,7 +1920,13 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 
 void DatabasePool::init_ref(const Endpoints &endpoints)
 {
-	std::lock_guard<std::mutex> lk(ref_mutex);
+	Endpoints ref_endpoints;
+	ref_endpoints.insert(Endpoint(".refs"));
+	std::shared_ptr<Database> ref_database;
+	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+		LOG_ERR(this, "Database refs it could not be checkout.\n");
+		assert(false);
+	}
 
 	endpoints_set_t::iterator endp_it(endpoints.begin());
 	for ( ; endp_it != endpoints.end(); endp_it++) {
@@ -1938,19 +1937,27 @@ void DatabasePool::init_ref(const Endpoints &endpoints)
 			// Boolean term for the node.
 			doc.add_boolean_term(unique_id);
 			// Start values for the DB.
-			doc.add_boolean_term(prefixed(DB_MASTER, prefix_rf_master));
+			doc.add_boolean_term(prefixed(DB_MASTER, get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE)));
 			doc.add_value(SLOT_CREF, "0");
 			ref_database->replace(unique_id, doc, true);
 		} else {
 			LOG(this,"The document already exists nothing to do\n");
 		}
 	}
+
+	checkin(ref_database);
 }
 
 
 void DatabasePool::inc_ref(const Endpoints &endpoints)
 {
-	std::lock_guard<std::mutex> lk(ref_mutex);
+	Endpoints ref_endpoints;
+	ref_endpoints.insert(Endpoint(".refs"));
+	std::shared_ptr<Database> ref_database;
+	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+		LOG_ERR(this, "Database refs it could not be checkout.\n");
+		assert(false);
+	}
 
 	Xapian::Document doc;
 
@@ -1973,12 +1980,20 @@ void DatabasePool::inc_ref(const Endpoints &endpoints)
 			ref_database->replace(unique_id, doc, true);
 		}
 	}
+
+	checkin(ref_database);
 }
 
 
 void DatabasePool::dec_ref(const Endpoints &endpoints)
 {
-	std::lock_guard<std::mutex> lk(ref_mutex);
+	Endpoints ref_endpoints;
+	ref_endpoints.insert(Endpoint(".refs"));
+	std::shared_ptr<Database> ref_database;
+	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+		LOG_ERR(this, "Database refs it could not be checkout.\n");
+		assert(false);
+	}
 
 	Xapian::Document doc;
 
@@ -1998,19 +2013,31 @@ void DatabasePool::dec_ref(const Endpoints &endpoints)
 			}
 		}
 	}
+
+	checkin(ref_database);
 }
 
 
 int DatabasePool::get_master_count()
 {
-	std::lock_guard<std::mutex> lk(ref_mutex);
+	Endpoints ref_endpoints;
+	ref_endpoints.insert(Endpoint(".refs"));
+	std::shared_ptr<Database> ref_database;
+	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+		LOG_ERR(this, "Database refs it could not be checkout.\n");
+		assert(false);
+	}
+
+	int count = 0;
 
 	if (ref_database) {
 		Xapian::PostingIterator p(ref_database->db->postlist_begin(DB_MASTER));
-		return std::distance(ref_database->db->postlist_begin(DB_MASTER), ref_database->db->postlist_end(DB_MASTER));
+		count = std::distance(ref_database->db->postlist_begin(DB_MASTER), ref_database->db->postlist_end(DB_MASTER));
 	}
 
-	return 0;
+	checkin(ref_database);
+
+	return count;
 }
 
 

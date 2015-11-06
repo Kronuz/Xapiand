@@ -177,10 +177,11 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 	std::unique_lock<std::mutex> lk(qmtx);
 
 	// Open cluster database
-	std::shared_ptr<Database> cluster_database;
 	cluster_endpoints.clear();
 	Endpoint cluster_endpoint(".");
 	cluster_endpoints.insert(cluster_endpoint);
+
+	std::shared_ptr<Database> cluster_database;
 	if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_PERSISTENT)) {
 		new_cluster = 1;
 		INFO(this, "Cluster database doesn't exist. Generating database...\n");
