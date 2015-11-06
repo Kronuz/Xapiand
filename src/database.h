@@ -32,7 +32,8 @@
 #include "fields.h"
 #include "multivaluekeymaker.h"
 
-#include <pthread.h>
+#include <mutex>
+#include <condition_variable>
 #include <algorithm>
 #include <queue>
 #include <memory>
@@ -128,7 +129,7 @@ private:
 	bool persistent;
 	size_t count;
 
-	pthread_cond_t switch_cond;
+	std::condition_variable switch_cond;
 
 	DatabasePool *database_pool;
 	Endpoints endpoints;
@@ -175,10 +176,9 @@ private:
 	std::unordered_map<size_t, std::unordered_set<DatabaseQueue *> > queues;
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
-	pthread_mutex_t qmtx;
-	pthread_mutexattr_t qmtx_attr;
+	std::mutex qmtx;
 
-	pthread_cond_t checkin_cond;
+	std::condition_variable checkin_cond;
 
 	// Variables for ".refs" database.
 	Database *ref_database;

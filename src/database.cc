@@ -1617,7 +1617,6 @@ DatabaseQueue::DatabaseQueue()
 	  count(0),
 	  database_pool(NULL)
 {
-	pthread_cond_init(&switch_cond, 0);
 }
 
 
@@ -1627,16 +1626,12 @@ DatabaseQueue::DatabaseQueue(DatabaseQueue&& q) : Queue(std::move(q))
 	persistent = std::move(q.persistent);
 	count = std::move(q.count);
 	database_pool = std::move(q.database_pool);
-	pthread_cond_destroy(&q.switch_cond);
-	pthread_cond_init(&switch_cond, 0);
 }
 
 
 DatabaseQueue::~DatabaseQueue()
 {
 	assert(size() == count);
-
-	pthread_cond_destroy(&switch_cond);
 
 	endpoints_set_t::const_iterator it_e(endpoints.cbegin());
 	for ( ; it_e != endpoints.cend(); it_e++) {
@@ -1704,12 +1699,6 @@ DatabasePool::DatabasePool(size_t max_size)
 	  writable_databases(max_size),
 	  ref_database(NULL)
 {
-	pthread_mutexattr_init(&qmtx_attr);
-	pthread_mutexattr_settype(&qmtx_attr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&qmtx, &qmtx_attr);
-
-	pthread_cond_init(&checkin_cond, 0);
-
 	prefix_rf_master = get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
 
 	Endpoints ref_endpoints;
@@ -1728,43 +1717,34 @@ DatabasePool::DatabasePool(size_t max_size)
 DatabasePool::~DatabasePool()
 {
 	checkin(&ref_database);
-
 	finish();
-
-	pthread_mutex_destroy(&qmtx);
-	pthread_mutexattr_destroy(&qmtx_attr);
-	pthread_cond_destroy(&checkin_cond);
 }
 
 
 void
 DatabasePool::finish()
 {
-	pthread_mutex_lock(&qmtx);
+	std::lock_guard<std::mutex> lk(qmtx);
 
 	finished = true;
-
-	pthread_mutex_unlock(&qmtx);
 }
 
 
 void
 DatabasePool::add_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue)
 {
-	pthread_mutex_lock(&qmtx);
+	std::lock_guard<std::mutex> lk(qmtx);
 
 	size_t hash = endpoint.hash();
 	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
 	queues_set.insert(queue);
-
-	pthread_mutex_unlock(&qmtx);
 }
 
 
 void
 DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue)
 {
-	pthread_mutex_lock(&qmtx);
+	std::lock_guard<std::mutex> lk(qmtx);
 
 	size_t hash = endpoint.hash();
 	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
@@ -1773,8 +1753,6 @@ DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue
 	if (queues_set.empty()) {
 		queues.erase(hash);
 	}
-
-	pthread_mutex_unlock(&qmtx);
 }
 
 
@@ -1785,15 +1763,14 @@ DatabasePool::get_mastery_level(const std::string &dir)
 
 	Endpoints endpoints;
 	endpoints.insert(Endpoint(dir));
-
-	pthread_mutex_lock(&qmtx);
-	if (checkout(&database_, endpoints, 0)) {
-		long long mastery_level = database_->mastery_level;
-		checkin(&database_);
-		pthread_mutex_unlock(&qmtx);
-		return mastery_level;
+	{
+		std::lock_guard<std::mutex> lk(qmtx);
+		if (checkout(&database_, endpoints, 0)) {
+			long long mastery_level = database_->mastery_level;
+			checkin(&database_);
+			return mastery_level;
+		}
 	}
-	pthread_mutex_unlock(&qmtx);
 
 	return read_mastery(dir, false);
 }
@@ -1813,62 +1790,62 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 	time_t now = time(NULL);
 	Database *database_ = NULL;
 
-	pthread_mutex_lock(&qmtx);
+	{
+		std::unique_lock<std::mutex> lk(qmtx);
 
-	if (!finished) {
-		DatabaseQueue *queue = NULL;
-		size_t hash = endpoints.hash();
+		if (!finished) {
+			DatabaseQueue *queue = NULL;
+			size_t hash = endpoints.hash();
 
-		if (writable) {
-			queue = &writable_databases[hash];
-		} else {
-			queue = &databases[hash];
-		}
-		queue->persistent = persistent;
-		queue->setup_endpoints(this, endpoints);
-
-		if (queue->is_switch_db) {
-			pthread_cond_wait(&queue->switch_cond, &qmtx);
-		}
-
-		if (!queue->pop(database_, 0)) {
-			// Increment so other threads don't delete the queue
-			if (queue->inc_count(writable ? 1 : -1)) {
-				pthread_mutex_unlock(&qmtx);
-				try {
-					database_ = new Database(queue, endpoints, flags);
-
-					if (writable && initref && endpoints.size() == 1) {
-						init_ref(endpoints);
-					}
-
-				} catch (const Xapian::DatabaseOpeningError &err) {
-				} catch (const Xapian::Error &err) {
-					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
-				}
-				pthread_mutex_lock(&qmtx);
-				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
+			if (writable) {
+				queue = &writable_databases[hash];
 			} else {
-				// Lock until a database is available if it can't get one.
-				pthread_mutex_unlock(&qmtx);
-				int s = queue->pop(database_);
-				pthread_mutex_lock(&qmtx);
-				if (!s) {
-					LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
+				queue = &databases[hash];
+			}
+			queue->persistent = persistent;
+			queue->setup_endpoints(this, endpoints);
+
+			if (queue->is_switch_db) {
+				queue->switch_cond.wait(lk);
+			}
+
+			if (!queue->pop(database_, 0)) {
+				// Increment so other threads don't delete the queue
+				if (queue->inc_count(writable ? 1 : -1)) {
+					lk.unlock();
+					try {
+						database_ = new Database(queue, endpoints, flags);
+
+						if (writable && initref && endpoints.size() == 1) {
+							init_ref(endpoints);
+						}
+
+					} catch (const Xapian::DatabaseOpeningError &err) {
+					} catch (const Xapian::Error &err) {
+						LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
+					}
+					lk.lock();
+					queue->dec_count();  // Decrement, count should have been already incremented if Database was created
+				} else {
+					// Lock until a database is available if it can't get one.
+					lk.unlock();
+					int s = queue->pop(database_);
+					lk.lock();
+					if (!s) {
+						LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
+					}
 				}
 			}
-		}
-		if (database_) {
-			*database = database_;
-		} else {
-			if (queue->count == 0) {
-				// There was an error and the queue ended up being empty, remove it!
-				databases.erase(hash);
+			if (database_) {
+				*database = database_;
+			} else {
+				if (queue->count == 0) {
+					// There was an error and the queue ended up being empty, remove it!
+					databases.erase(hash);
+				}
 			}
 		}
 	}
-
-	pthread_mutex_unlock(&qmtx);
 
 	if (!database_) {
 		LOG_DATABASE(this, "!! FAILED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
@@ -1898,7 +1875,7 @@ DatabasePool::checkin(Database **database)
 
 	LOG_DATABASE(this, "-- CHECKING IN DB %s(%s) [%lx]...\n", (database_->flags & DB_WRITABLE) ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
 
-	pthread_mutex_lock(&qmtx);
+	std::lock_guard<std::mutex> lk(qmtx);
 
 	DatabaseQueue *queue;
 
@@ -1941,9 +1918,7 @@ DatabasePool::checkin(Database **database)
 
 	*database = NULL;
 
-	pthread_mutex_unlock(&qmtx);
-
-	pthread_cond_broadcast(&checkin_cond);
+	// checkin_cond.notify_all();  // FIXME: uncomment (needed for dec_ref?)
 
 	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database_);
 }
@@ -2012,7 +1987,7 @@ void DatabasePool::dec_ref(const Endpoints &endpoints)
 			ref_database->replace(unique_id, doc, true);
 			if (nref == 0) {
 				// qmtx need a lock
-				pthread_cond_wait(&checkin_cond, &qmtx);
+				// checkin_cond.wait(lk);  // FIXME: needs lock
 				delete_files(endp_it->path);
 			}
 		}
@@ -2035,7 +2010,7 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 {
 	Database *database;
 
-	pthread_mutex_lock(&qmtx);
+	std::lock_guard<std::mutex> lk(qmtx);
 
 	size_t hash = endpoint.hash();
 	DatabaseQueue *queue;
@@ -2068,14 +2043,11 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 		for (it_qs = queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
 			queue = *it_qs;
 			queue->is_switch_db = false;
-
-			pthread_cond_broadcast(&queue->switch_cond);
+			queue->switch_cond.notify_all();
 		}
 	} else {
 		LOG(this, "Inside switch_db not queue->count == queue->size()\n");
 	}
-
-	pthread_mutex_unlock(&qmtx);
 
 	return switched;
 }
