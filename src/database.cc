@@ -43,24 +43,26 @@
 pcre *Database::compiled_find_field_re = NULL;
 
 
-Database::Database(DatabaseQueue * queue_, const Endpoints &endpoints_, int flags_)
-	: queue(queue_),
+Database::Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endpoints_, int flags_)
+	: weak_queue(queue_),
 	  endpoints(endpoints_),
 	  flags(flags_),
 	  hash(endpoints.hash()),
 	  access_time(time(NULL)),
-	  mastery_level(-1),
-	  db(NULL)
+	  mastery_level(-1)
 {
 	reopen();
-	queue->inc_count();
+	if (auto queue = weak_queue.lock()) {
+		queue->inc_count();
+	}
 }
 
 
 Database::~Database()
 {
-	queue->dec_count();
-	delete db;
+	if (auto queue = weak_queue.lock()) {
+		queue->dec_count();
+	}
 }
 
 
@@ -89,8 +91,7 @@ Database::reopen()
 		} catch (const Xapian::Error &err) {
 			LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
 			db->close();
-			delete db;
-			db = NULL;
+			db.reset();
 		}
 	}
 
@@ -103,7 +104,7 @@ Database::reopen()
 	const Endpoint *e;
 	endpoints_set_t::const_iterator i(endpoints.begin());
 	if (flags & DB_WRITABLE) {
-		db = new Xapian::WritableDatabase();
+		db = std::make_unique<Xapian::WritableDatabase>();
 		if (endpoints_size != 1) {
 			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s\n", endpoints_size, endpoints.as_string().c_str());
 		} else {
@@ -123,7 +124,7 @@ Database::reopen()
 			db->add_database(wdb);
 		}
 	} else {
-		db = new Xapian::Database();
+		db = std::make_unique<Xapian::Database>();
 		for (; i != endpoints.end(); ++i) {
 			e = &*i;
 			if (e->is_local()) {
@@ -133,10 +134,10 @@ Database::reopen()
 					if (endpoints_size == 1) read_mastery(e->path);
 				} catch (const Xapian::DatabaseOpeningError &err) {
 					if (!(flags & DB_SPAWN))  {
-						delete db;
+						db.reset();
 						throw;
 					}
-					Xapian::WritableDatabase wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
+					wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
 				}
@@ -179,7 +180,7 @@ Database::drop(const std::string &doc_id, bool commit)
 
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Deleting: -%s- t:%d\n", document_id.c_str(), t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(document_id);
 		}catch (const Xapian::DatabaseCorruptError &e) {
@@ -208,7 +209,7 @@ Database::_commit()
 {
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Commit: t%d\n", t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->commit();
 		} catch (const Xapian::Error &e) {
@@ -367,7 +368,7 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 			cJSON_ReplaceItemInArray(_type, 1, cJSON_CreateNumber(ARRAY_TYPE));
 	}
 
-	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 	for (size_t j = 0; j < elements; j++) {
 		cJSON *text = (texts->type == cJSON_Array) ? cJSON_GetArrayItem(texts, (int)j) : texts;
 		if (text->type != cJSON_String) throw MSG_Error("Text should be string or array of strings");
@@ -796,7 +797,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 		return 0;
 	}
 
-	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 	_cprint = std::move(unique_char_ptr(cJSON_Print(schema.get())));
 	wdb->set_metadata(RESERVED_SCHEMA, _cprint.get());
 	return replace(document_id, doc, commit);
@@ -809,7 +810,7 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 	Xapian::docid did;
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Inserting: -%s- t:%d\n", document_id.c_str(), t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			LOG_DATABASE_WRAP(this, "Doing replace_document.\n");
 			did = wdb->replace_document(document_id, doc);
@@ -833,7 +834,7 @@ Database::replace(const Xapian::docid &did, const Xapian::Document &doc, bool co
 {
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Inserting: -did:%u- t:%d\n", did, t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			LOG_DATABASE_WRAP(this, "Doing replace_document.\n");
 			wdb->replace_document(did, doc);
@@ -1502,7 +1503,7 @@ Database::set_metadata(const std::string &key, const std::string &value, bool co
 {
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Metadata: %d\n", t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->set_metadata(key, value);
 		} catch (const Xapian::Error &e) {
@@ -1615,8 +1616,7 @@ Database::get_stats_docs(const std::string &document_id)
 DatabaseQueue::DatabaseQueue()
 	: is_switch_db(false),
 	  persistent(false),
-	  count(0),
-	  database_pool(NULL)
+	  count(0)
 {
 }
 
@@ -1626,7 +1626,7 @@ DatabaseQueue::DatabaseQueue(DatabaseQueue&& q) : Queue(std::move(q))
 	is_switch_db = std::move(q.is_switch_db);
 	persistent = std::move(q.persistent);
 	count = std::move(q.count);
-	database_pool = std::move(q.database_pool);
+	weak_database_pool = std::move(q.weak_database_pool);
 }
 
 
@@ -1634,31 +1634,23 @@ DatabaseQueue::~DatabaseQueue()
 {
 	assert(size() == count);
 
-	endpoints_set_t::const_iterator it_e(endpoints.cbegin());
-	for ( ; it_e != endpoints.cend(); it_e++) {
-		const Endpoint &endpoint = *it_e;
-		database_pool->drop_endpoint_queue(endpoint, this);
-	}
-
-	while (!empty()) {
-		Database *database;
-		if (pop(database)) {
-			delete database;
+	if (auto database_pool = weak_database_pool.lock()) {
+		for (auto &endpoint : endpoints) {
+			database_pool->drop_endpoint_queue(endpoint, shared_from_this());
 		}
 	}
 }
 
 
 void
-DatabaseQueue::setup_endpoints(DatabasePool *database_pool_, const Endpoints &endpoints_)
+DatabaseQueue::setup_endpoints(const std::shared_ptr<DatabasePool>& database_pool_, const Endpoints &endpoints_)
 {
-	if (database_pool == NULL) {
-		database_pool = database_pool_;
+	auto database_pool = weak_database_pool.lock();
+	if (!database_pool) {
+		weak_database_pool = database_pool = database_pool_;
 		endpoints = endpoints_;
-		endpoints_set_t::const_iterator it_e(endpoints.cbegin());
-		for ( ; it_e != endpoints.cend(); it_e++) {
-			const Endpoint &endpoint = *it_e;
-			database_pool->add_endpoint_queue(endpoint, this);
+		for (auto &endpoint : endpoints) {
+			database_pool->add_endpoint_queue(endpoint, shared_from_this());
 		}
 	}
 }
@@ -1697,45 +1689,39 @@ DatabaseQueue::dec_count()
 DatabasePool::DatabasePool(size_t max_size)
 	: finished(false),
 	  databases(max_size),
-	  writable_databases(max_size),
-	  ref_database(NULL)
+	  writable_databases(max_size)
 {
 	prefix_rf_master = get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
 
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
-
-	if (!checkout(&ref_database, ref_endpoints, DB_WRITABLE | DB_PERSISTENT)) {
-		INFO(this, "Ref database doesn't exist. Generating database...\n");
-		if (!checkout(&ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
-			LOG_ERR(this, "Database refs it could not be checkout.\n");
-			assert(false);
-		}
+	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+		LOG_ERR(this, "Database refs it could not be checkout.\n");
+		assert(false);
 	}
 }
 
 
 DatabasePool::~DatabasePool()
 {
-	checkin(&ref_database);
 	finish();
 }
 
 
 void
-DatabasePool::add_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue)
+DatabasePool::add_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue> &queue)
 {
 	size_t hash = endpoint.hash();
-	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
+	auto &queues_set = queues[hash];
 	queues_set.insert(queue);
 }
 
 
 void
-DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue)
+DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue> &queue)
 {
 	size_t hash = endpoint.hash();
-	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
+	auto &queues_set = queues[hash];
 	queues_set.erase(queue);
 
 	if (queues_set.empty()) {
@@ -1750,10 +1736,10 @@ DatabasePool::get_mastery_level(const std::string &dir)
 	Endpoints endpoints;
 	endpoints.insert(Endpoint(dir));
 
-	Database *database_ = NULL;
-	if (checkout(&database_, endpoints, 0)) {
-		long long mastery_level = database_->mastery_level;
-		checkin(&database_);
+	std::shared_ptr<Database> database;
+	if (checkout(database, endpoints, 0)) {
+		long long mastery_level = database->mastery_level;
+		checkin(database);
 		return mastery_level;
 	}
 
@@ -1769,43 +1755,42 @@ DatabasePool::finish()
 
 
 bool
-DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flags)
+DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &endpoints, int flags)
 {
 	bool writable = flags & DB_WRITABLE;
 	bool persistent = flags & DB_PERSISTENT;
 	bool initref = flags & DB_INIT_REF;
 
-	LOG_DATABASE(this, "++ CHECKING OUT DB %s(%s) [%lx]...\n", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)*database);
+	LOG_DATABASE(this, "++ CHECKING OUT DB %s(%s) [%lx]...\n", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 
-	assert(*database == NULL);
+	assert(!database);
 
 	time_t now = time(NULL);
-	Database *database_ = NULL;
 
 	std::unique_lock<std::mutex> lk(qmtx);
 
 	if (!finished) {
-		DatabaseQueue *queue = NULL;
 		size_t hash = endpoints.hash();
 
+		std::shared_ptr<DatabaseQueue> queue;
 		if (writable) {
-			queue = &writable_databases[hash];
+			queue = writable_databases[hash];
 		} else {
-			queue = &databases[hash];
+			queue = databases[hash];
 		}
 		queue->persistent = persistent;
-		queue->setup_endpoints(this, endpoints);
+		queue->setup_endpoints(shared_from_this(), endpoints);
 
 		if (queue->is_switch_db) {
 			queue->switch_cond.wait(lk);
 		}
 
-		if (!queue->pop(database_, 0)) {
+		if (!queue->pop(database, 0)) {
 			// Increment so other threads don't delete the queue
 			if (queue->inc_count(writable ? 1 : -1)) {
 				lk.unlock();
 				try {
-					database_ = new Database(queue, endpoints, flags);
+					database = std::make_shared<Database>(queue, endpoints, flags);
 
 					if (writable && initref && endpoints.size() == 1) {
 						init_ref(endpoints);
@@ -1820,16 +1805,14 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 			} else {
 				// Lock until a database is available if it can't get one.
 				lk.unlock();
-				int s = queue->pop(database_);
+				int s = queue->pop(database);
 				lk.lock();
 				if (!s) {
 					LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
 				}
 			}
 		}
-		if (database_) {
-			*database = database_;
-		} else {
+		if (!database) {
 			if (queue->count == 0) {
 				// There was an error and the queue ended up being empty, remove it!
 				databases.erase(hash);
@@ -1839,63 +1822,61 @@ DatabasePool::checkout(Database **database, const Endpoints &endpoints, int flag
 
 	lk.unlock();
 
-	if (!database_) {
+	if (!database) {
 		LOG_DATABASE(this, "!! FAILED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
 		return false;
 	}
 
-	if ((now - database_->access_time) >= DATABASE_UPDATE_TIME && !writable) {
-		database_->reopen();
-		LOG_DATABASE(this, "== REOPEN DB %s(%s) [%lx]\n", (database_->flags & DB_WRITABLE) ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
+	if ((now - database->access_time) >= DATABASE_UPDATE_TIME && !writable) {
+		database->reopen();
+		LOG_DATABASE(this, "== REOPEN DB %s(%s) [%lx]\n", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 	}
 
 #ifdef HAVE_REMOTE_PROTOCOL
-	if (database_->local) {
-		database_->checkout_revision = database_->db->get_revision_info();
+	if (database->local) {
+		database->checkout_revision = database->db->get_revision_info();
 	}
 #endif
-	LOG_DATABASE(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx\n", writable ? "w" : "r", endpoints.as_string().c_str(), database_->local ? "local" : "remote", repr(database_->checkout_revision, false).c_str(), (unsigned long)database_);
+	LOG_DATABASE(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx\n", writable ? "w" : "r", endpoints.as_string().c_str(), database->local ? "local" : "remote", repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
 
 	return true;
 }
 
 
 void
-DatabasePool::checkin(Database **database)
+DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
-	Database *database_ = *database;
+	LOG_DATABASE(this, "-- CHECKING IN DB %s(%s) [%lx]...\n", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 
-	LOG_DATABASE(this, "-- CHECKING IN DB %s(%s) [%lx]...\n", (database_->flags & DB_WRITABLE) ? "w" : "r", database_->endpoints.as_string().c_str(), (unsigned long)database_);
+	assert(database);
 
 	std::lock_guard<std::mutex> lk(qmtx);
 
-	DatabaseQueue *queue;
+	std::shared_ptr<DatabaseQueue> queue;
 
-	if (database_->flags & DB_WRITABLE) {
-		queue = &writable_databases[database_->hash];
+	if (database->flags & DB_WRITABLE) {
+		queue = writable_databases[database->hash];
 #ifdef HAVE_REMOTE_PROTOCOL
-		if (database_->local && database_->mastery_level != -1) {
-			std::string new_revision = database_->db->get_revision_info();
-			if (new_revision != database_->checkout_revision) {
-				Endpoint endpoint = *database_->endpoints.begin();
-				endpoint.mastery_level = database_->mastery_level;
+		if (database->local && database->mastery_level != -1) {
+			std::string new_revision = database->db->get_revision_info();
+			if (new_revision != database->checkout_revision) {
+				Endpoint endpoint = *database->endpoints.begin();
+				endpoint.mastery_level = database->mastery_level;
 				updated_databases.push(endpoint);
 			}
 		}
 #endif
 	} else {
-		queue = &databases[database_->hash];
+		queue = databases[database->hash];
 	}
 
-	assert(database_->queue == queue);
+	assert(database->weak_queue.lock() == queue);
 
-	int flags = database_->flags;
-	Endpoints endpoints = database_->endpoints;
+	int flags = database->flags;
+	Endpoints &endpoints = database->endpoints;
 
-	if (flags & DB_VOLATILE) {
-		delete database_;
-	} else {
-		queue->push(database_);
+	if (!(flags & DB_VOLATILE)) {
+		queue->push(database);
 	}
 
 	if (queue->is_switch_db) {
@@ -1908,27 +1889,20 @@ DatabasePool::checkin(Database **database)
 
 	assert(queue->count >= queue->size());
 
-	*database = NULL;
+	database.reset();
 
-	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database_);
+	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 }
 
 
 bool DatabasePool::switch_db(const Endpoint &endpoint)
 {
-	Database *database;
-
 	std::lock_guard<std::mutex> lk(qmtx);
 
-	size_t hash = endpoint.hash();
-	DatabaseQueue *queue;
-
-	std::unordered_set<DatabaseQueue *> &queues_set = queues[hash];
-	std::unordered_set<DatabaseQueue *>::const_iterator it_qs(queues_set.cbegin());
+	auto queues_set = queues[endpoint.hash()];
 
 	bool switched = true;
-	for ( ; it_qs != queues_set.cend(); it_qs++) {
-		queue = *it_qs;
+	for (auto& queue : queues_set) {
 		queue->is_switch_db = true;
 		if (queue->count != queue->size()) {
 			switched = false;
@@ -1937,19 +1911,9 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 	}
 
 	if (switched) {
-		for (it_qs = queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
-			queue = *it_qs;
-			while (!queue->empty()) {
-				if (queue->pop(database)) {
-					delete database;
-				}
-			}
-		}
-
 		move_files(endpoint.path + "/.tmp", endpoint.path);
 
-		for (it_qs = queues_set.cbegin(); it_qs != queues_set.cend(); it_qs++) {
-			queue = *it_qs;
+		for (auto& queue : queues_set) {
 			queue->is_switch_db = false;
 			queue->switch_cond.notify_all();
 		}
@@ -1965,22 +1929,20 @@ void DatabasePool::init_ref(const Endpoints &endpoints)
 {
 	std::lock_guard<std::mutex> lk(ref_mutex);
 
-	if (ref_database) {
-		endpoints_set_t::iterator endp_it(endpoints.begin());
-		for ( ; endp_it != endpoints.end(); endp_it++) {
-			std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
-			Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
-			if (p == ref_database->db->postlist_end(unique_id)) {
-				Xapian::Document doc;
-				// Boolean term for the node.
-				doc.add_boolean_term(unique_id);
-				// Start values for the DB.
-				doc.add_boolean_term(prefixed(DB_MASTER, prefix_rf_master));
-				doc.add_value(SLOT_CREF, "0");
-				ref_database->replace(unique_id, doc, true);
-			} else {
-				LOG(this,"The document already exists nothing to do\n");
-			}
+	endpoints_set_t::iterator endp_it(endpoints.begin());
+	for ( ; endp_it != endpoints.end(); endp_it++) {
+		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
+		Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
+		if (p == ref_database->db->postlist_end(unique_id)) {
+			Xapian::Document doc;
+			// Boolean term for the node.
+			doc.add_boolean_term(unique_id);
+			// Start values for the DB.
+			doc.add_boolean_term(prefixed(DB_MASTER, prefix_rf_master));
+			doc.add_value(SLOT_CREF, "0");
+			ref_database->replace(unique_id, doc, true);
+		} else {
+			LOG(this,"The document already exists nothing to do\n");
 		}
 	}
 }

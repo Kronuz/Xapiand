@@ -67,14 +67,15 @@ BinaryClient::BinaryClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref 
 
 BinaryClient::~BinaryClient()
 {
-	databases_map_t::const_iterator it(databases.begin());
-	for ( ; it != databases.end(); it++) {
-		Database *database = it->second;
-		manager()->database_pool.checkin(&database);
+	for (auto& database : databases) {
+		manager()->database_pool.checkin(database.second);
 	}
 
 	if (repl_database) {
-		manager()->database_pool.checkin(&repl_database);
+		manager()->database_pool.checkin(repl_database);
+	}
+	if (storing_database) {
+		manager()->database_pool.checkin(storing_database);
 	}
 
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
@@ -103,7 +104,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 	repl_endpoints.insert(src_endpoint);
 	endpoints.insert(dst_endpoint);
 
-	if (!manager()->database_pool.checkout(&repl_database, endpoints, DB_WRITABLE | DB_SPAWN)) {
+	if (!manager()->database_pool.checkout(repl_database, endpoints, DB_WRITABLE | DB_SPAWN)) {
 		LOG_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
 		return false;
 	}
@@ -113,8 +114,8 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(src_endpoint.port))) < 0) {
 		LOG_ERR(this, "Cannot connect to %s\n", src_endpoint.host.c_str(), std::to_string(src_endpoint.port).c_str());
-		manager()->database_pool.checkin(&repl_database);
-		repl_database = nullptr;
+		manager()->database_pool.checkin(repl_database);
+		repl_database.reset();
 		return false;
 	}
 	LOG_CONN(this, "Connected to %s (sock=%d)!\n", src_endpoint.as_string().c_str(), sock);
@@ -162,30 +163,30 @@ BinaryClient::on_read_file_done()
 			default:
 				LOG_ERR(this, "ERROR: Invalid on_read_file_done for state: %d\n", state);
 				if (repl_database) {
-					manager()->database_pool.checkin(&repl_database);
-					repl_database = nullptr;
+					manager()->database_pool.checkin(repl_database);
+					repl_database.reset();
 				}
 				shutdown();
 		};
 	} catch (const Xapian::NetworkError &e) {
 		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 		if (repl_database) {
-			manager()->database_pool.checkin(&repl_database);
-			repl_database = nullptr;
+			manager()->database_pool.checkin(repl_database);
+			repl_database.reset();
 		}
 		shutdown();
 	} catch (const std::exception &err) {
 		LOG_ERR(this, "ERROR: %s\n", err.what());
 		if (repl_database) {
-			manager()->database_pool.checkin(&repl_database);
-			repl_database = nullptr;
+			manager()->database_pool.checkin(repl_database);
+			repl_database.reset();
 		}
 		shutdown();
 	} catch (...) {
 		LOG_ERR(this, "ERROR: Unkown exception!\n");
 		if (repl_database) {
-			manager()->database_pool.checkin(&repl_database);
-			repl_database = nullptr;
+			manager()->database_pool.checkin(repl_database);
+			repl_database.reset();
 		}
 		shutdown();
 	}
@@ -261,7 +262,7 @@ BinaryClient::storing_file_done()
 
 	Endpoints endpoints;
 	endpoints.insert(storing_endpoint);
-	if (!manager()->database_pool.checkout(&storing_database, endpoints, DB_WRITABLE|DB_SPAWN)) {
+	if (!manager()->database_pool.checkout(storing_database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		LOG_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
 		haystack_file.rewind();
 		throw MSG_Error("Storage failure (2)!");
@@ -273,8 +274,8 @@ BinaryClient::storing_file_done()
 	doc.add_value(1, encode_length(haystack_offset));
 	storing_database->replace(storing_id, doc, true);
 
-	manager()->database_pool.checkin(&storing_database);
-	storing_database = nullptr;
+	manager()->database_pool.checkin(storing_database);
+	storing_database.reset();
 
 	std::string msg;
 	msg.append(encode_length(haystack_offset));
@@ -393,15 +394,15 @@ BinaryClient::get_db(bool writable_)
 	Endpoints endpoints_ = endpoints;
 	lk.unlock();
 
-	Database *database = nullptr;
-	if (!manager()->database_pool.checkout(&database, endpoints_, (writable_ ? DB_WRITABLE : 0) | DB_SPAWN)) {
+	std::shared_ptr<Database> database;
+	if (!manager()->database_pool.checkout(database, endpoints_, (writable_ ? DB_WRITABLE : 0) | DB_SPAWN)) {
 		return nullptr;
 	}
 
 	lk.lock();
-	databases[database->db] = database;
+	databases[database->db.get()] = database;
 
-	return database->db;
+	return database->db.get();
 }
 
 
@@ -410,11 +411,11 @@ BinaryClient::release_db(Xapian::Database *db_)
 {
 	if (db_) {
 		std::unique_lock<std::mutex> lk(qmtx);
-		Database *database = databases[db_];
+		std::shared_ptr<Database> database = databases[db_];
 		databases.erase(db_);
 		lk.unlock();
 
-		manager()->database_pool.checkin(&database);
+		manager()->database_pool.checkin(database);
 	}
 }
 
@@ -474,15 +475,15 @@ BinaryClient::run()
 		} catch (const Xapian::NetworkError &e) {
 			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (repl_database) {
-				manager()->database_pool.checkin(&repl_database);
-				repl_database = nullptr;
+				manager()->database_pool.checkin(repl_database);
+				repl_database.reset();
 			}
 			shutdown();
 		} catch (...) {
 			LOG_ERR(this, "ERROR!\n");
 			if (repl_database) {
-				manager()->database_pool.checkin(&repl_database);
-				repl_database = nullptr;
+				manager()->database_pool.checkin(repl_database);
+				repl_database.reset();
 			}
 			shutdown();
 		}
@@ -522,8 +523,8 @@ BinaryClient::repl_end_of_changes()
 	LOG(this, "BinaryClient::repl_end_of_changes\n");
 
 	if (repl_database) {
-		manager()->database_pool.checkin(&repl_database);
-		repl_database = nullptr;
+		manager()->database_pool.checkin(repl_database);
+		repl_database.reset();
 	}
 
 	if (repl_switched_db) {
@@ -540,8 +541,8 @@ BinaryClient::repl_fail()
 	LOG(this, "BinaryClient::repl_fail\n");
 	LOG_ERR(this, "Replication failure!\n");
 	if (repl_database) {
-		manager()->database_pool.checkin(&repl_database);
-		repl_database = nullptr;
+		manager()->database_pool.checkin(repl_database);
+		repl_database.reset();
 	}
 	shutdown();
 }
@@ -627,12 +628,12 @@ BinaryClient::repl_set_db_footer()
 	endpoint_tmp.path.append("/.tmp");
 	endpoints_tmp.insert(endpoint_tmp);
 
-	if (repl_database != nullptr) {
-		manager()->database_pool.checkin(&repl_database);
-		repl_database = nullptr;
+	if (repl_database) {
+		manager()->database_pool.checkin(repl_database);
+		repl_database.reset();
 	}
 
-	if (!manager()->database_pool.checkout(&repl_database, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
+	if (!manager()->database_pool.checkout(repl_database, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
 		LOG_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
 	}
 
@@ -645,7 +646,7 @@ void
 BinaryClient::repl_changeset(const std::string &message)
 {
 	LOG(this, "BinaryClient::repl_changeset\n");
-	Xapian::WritableDatabase *wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database->db);
+	Xapian::WritableDatabase *wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database->db.get());
 
 	char path[] = "/tmp/xapian_changes.XXXXXX";
 	int fd = mkstemp(path);
@@ -759,7 +760,7 @@ BinaryClient::receive_repl()
 
 	read_file();
 
-	Xapian::Database *db_ = repl_database->db;
+	Xapian::Database *db_ = repl_database->db.get();
 
 	std::string msg;
 

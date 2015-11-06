@@ -59,7 +59,7 @@
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	struct http_parser parser;
-	Database *database;
+	std::shared_ptr<Database> database;
 
 	void on_read(const char *buf, size_t received) override;
 	void on_read_file(const char *buf, size_t received) override;

@@ -62,7 +62,7 @@ class DatabaseQueue;
 
 class Database {
 public:
-	DatabaseQueue *queue;
+	std::weak_ptr<DatabaseQueue> weak_queue;
 	Endpoints endpoints;
 	int flags;
 	bool local;
@@ -71,7 +71,7 @@ public:
 	long long mastery_level;
 	std::string checkout_revision;
 
-	Xapian::Database *db;
+	std::unique_ptr<Xapian::Database> db;
 
 	static pcre *compiled_find_field_re;
 
@@ -84,7 +84,7 @@ public:
 		std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
 	} search_t;
 
-	Database(DatabaseQueue * queue_, const Endpoints &endpoints, int flags);
+	Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endpoints, int flags);
 	~Database();
 
 	long long read_mastery(const std::string &dir);
@@ -118,7 +118,9 @@ private:
 };
 
 
-class DatabaseQueue : public queue::Queue<Database *> {
+class DatabaseQueue :
+	public std::enable_shared_from_this<DatabaseQueue>,
+	public queue::Queue<std::shared_ptr<Database>> {
 	// FIXME: Add queue creation time and delete databases when deleted queue
 
 	friend class Database;
@@ -132,10 +134,10 @@ private:
 
 	std::condition_variable switch_cond;
 
-	DatabasePool *database_pool;
+	std::weak_ptr<DatabasePool> weak_database_pool;
 	Endpoints endpoints;
 
-	void setup_endpoints(DatabasePool *database_pool_, const Endpoints &endpoints_);
+	void setup_endpoints(const std::shared_ptr<DatabasePool>& database_pool_, const Endpoints &endpoints_);
 
 public:
 	DatabaseQueue();
@@ -147,35 +149,35 @@ public:
 };
 
 
-class DatabasesLRU : public lru::LRU<size_t, DatabaseQueue> {
+class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
 
 public:
 	DatabasesLRU(ssize_t max_size) : LRU(max_size) { }
 
-	DatabaseQueue& operator[] (size_t key) {
+	std::shared_ptr<DatabaseQueue>& operator[] (size_t key) {
 		try {
 			return at(key);
 		} catch (std::range_error) {
-			return insert_and([](DatabaseQueue & val) {
-				if (val.persistent || val.size() < val.count || val.is_switch_db) {
+			return insert_and([](std::shared_ptr<DatabaseQueue> & val) {
+				if (val->persistent || val->size() < val->count || val->is_switch_db) {
 					return lru::DropAction::renew;
 				} else {
 					return lru::DropAction::drop;
 				}
-			}, std::make_pair(key, DatabaseQueue()));
+			}, std::make_pair(key, std::make_shared<DatabaseQueue>()));
 		}
 	}
 };
 
 
-class DatabasePool {
+class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
 	friend class DatabaseQueue;
 
 private:
 	std::atomic<bool> finished;
-	std::unordered_map<size_t, std::unordered_set<DatabaseQueue *> > queues;
+	std::unordered_map<size_t, std::unordered_set<std::shared_ptr<DatabaseQueue>>> queues;
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
 	std::mutex qmtx;
@@ -184,7 +186,7 @@ private:
 
 	// Variables for ".refs" database.
 	std::mutex ref_mutex;
-	Database *ref_database;
+	std::shared_ptr<Database> ref_database;
 	std::string prefix_rf_master;
 
 	void init_ref(const Endpoints &endpoints);
@@ -192,8 +194,8 @@ private:
 	void dec_ref(const Endpoints &endpoints);
 	int get_master_count();
 
-	void add_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
-	void drop_endpoint_queue(const Endpoint &endpoint, DatabaseQueue *queue);
+	void add_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue);
+	void drop_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 
 public:
 	DatabasePool(size_t max_size);
@@ -202,8 +204,8 @@ public:
 	long long get_mastery_level(const std::string &dir);
 
 	void finish();
-	bool checkout(Database **database, const Endpoints &endpoints, int flags);
-	void checkin(Database **database);
+	bool checkout(std::shared_ptr<Database>& database, const Endpoints &endpoints, int flags);
+	void checkin(std::shared_ptr<Database>& database);
 	bool switch_db(const Endpoint &endpoint);
 
 	queue::QueueSet<Endpoint> updated_databases;

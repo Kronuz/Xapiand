@@ -71,20 +71,18 @@ enum class State {
 
 // A single instance of a non-blocking Xapiand binary protocol handler
 class BinaryClient : public BaseClient, public RemoteProtocol {
-	using databases_map_t = std::unordered_map<Xapian::Database *, Database *>;
-
 	bool running;
 	State state;
 	int file_descriptor;
 	char file_path[PATH_MAX];
 
-	databases_map_t databases;
+	std::unordered_map<Xapian::Database *, std::shared_ptr<Database>> databases;
 
 	// Buffers that are pending write
 	std::string buffer;
 	queue::Queue<std::unique_ptr<Buffer>> messages_queue;
 
-	Database *repl_database;
+	std::shared_ptr<Database> repl_database;
 	std::string repl_uuid;
 	Endpoints repl_endpoints;
 	std::string repl_db_filename;
@@ -94,7 +92,7 @@ class BinaryClient : public BaseClient, public RemoteProtocol {
 	bool repl_just_switched_db;
 
 	Xapian::docid storing_id;
-	Database *storing_database;
+	std::shared_ptr<Database> storing_database;
 	std::string storing_filename;
 	Endpoint storing_endpoint;
 	offset_t storing_offset;
