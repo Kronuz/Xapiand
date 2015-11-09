@@ -413,17 +413,18 @@ XapiandManager::async_shutdown_cb(ev::async &, int)
 void
 XapiandManager::shutdown()
 {
+	Worker::shutdown();
+
 	if (shutdown_asap) {
 		discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 		destroy();
 		LOG_OBJ(this, "Finishing thread pool!\n");
 		thread_pool.finish();
 	}
+
 	if (shutdown_now) {
 		break_loop();
 	}
-
-	Worker::shutdown();
 }
 
 

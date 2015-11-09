@@ -85,6 +85,14 @@ XapiandServer::destroy()
 void
 XapiandServer::shutdown()
 {
+	std::unique_lock<std::mutex> lk(qmtx);
+	for (auto & server : servers) {
+		server->shutdown();
+	}
+	lk.unlock();
+
+	Worker::shutdown();
+
 	time_t shutdown_asap = manager()->shutdown_asap;
 	if (shutdown_asap) {
 		if (http_clients <= 0) {
@@ -97,14 +105,6 @@ XapiandServer::shutdown()
 	if (shutdown_now) {
 		break_loop();
 	}
-
-	std::unique_lock<std::mutex> lk(qmtx);
-	for (auto & server : servers) {
-		server->shutdown();
-	}
-	lk.unlock();
-
-	Worker::shutdown();
 }
 
 
