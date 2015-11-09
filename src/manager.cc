@@ -87,6 +87,9 @@ XapiandManager::~XapiandManager()
 
 	destroy();
 
+	async_shutdown.stop();
+	LOG_EV(this, "\tStop async shutdown event\n");
+
 	LOG_OBJ(this, "DELETED MANAGER!\n");
 }
 
@@ -393,9 +396,6 @@ void
 XapiandManager::destroy()
 {
 	std::lock_guard<std::mutex> lk(qmtx);
-
-	async_shutdown.stop();
-	LOG_EV(this, "\tStop async shutdown event\n");
 
 	LOG_OBJ(this, "DESTROYED MANAGER!\n");
 }
