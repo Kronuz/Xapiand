@@ -23,7 +23,7 @@
 #include "test_sort.h"
 
 
-static DatabaseQueue *d_queue = nullptr;
+std::shared_ptr<DatabaseQueue>d_queue;
 static Database *database = nullptr;
 static std::string name_database(".db_testsort.db");
 
@@ -253,7 +253,6 @@ int create_test_db() {
 	endpoints.insert(e);
 
 	// There are delete in the make_search.
-	d_queue = new DatabaseQueue();
 	database = new Database(d_queue, endpoints, DB_WRITABLE | DB_SPAWN);
 
 	std::vector<std::string> _docs({
@@ -289,7 +288,7 @@ int create_test_db() {
 
 int make_search(const sort_t _tests[], int len) {
 	int cont = 0;
-	query_t query;
+	query_field query;
 	query.offset = 0;
 	query.limit = 10;
 	query.check_at_least = 0;
