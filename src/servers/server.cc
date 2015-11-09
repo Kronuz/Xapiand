@@ -85,8 +85,6 @@ XapiandServer::destroy()
 void
 XapiandServer::shutdown()
 {
-	Worker::shutdown();
-
 	time_t shutdown_asap = manager()->shutdown_asap;
 	if (shutdown_asap) {
 		if (http_clients <= 0) {
@@ -99,6 +97,8 @@ XapiandServer::shutdown()
 	if (shutdown_now) {
 		break_loop();
 	}
+
+	Worker::shutdown();
 }
 
 

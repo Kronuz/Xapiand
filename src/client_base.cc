@@ -508,12 +508,12 @@ BaseClient::shutdown()
 {
 	::shutdown(sock, SHUT_RDWR);
 
-	Worker::shutdown();
-
 	if (manager()->shutdown_now) {
 		LOG_EV(this, "\tSignaled destroy!!\n");
 		destroy();
 	}
+
+	Worker::shutdown();
 }
 
 
