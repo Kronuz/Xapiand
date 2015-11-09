@@ -395,8 +395,6 @@ XapiandManager::sig_shutdown_handler(int sig)
 void
 XapiandManager::destroy()
 {
-	std::lock_guard<std::mutex> lk(qmtx);
-
 	LOG_OBJ(this, "DESTROYED MANAGER!\n");
 }
 
