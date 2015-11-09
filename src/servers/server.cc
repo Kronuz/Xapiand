@@ -85,6 +85,8 @@ XapiandServer::destroy()
 void
 XapiandServer::shutdown()
 {
+	LOG_OBJ(this, "XapiandServer::shutdown()\n");
+
 	std::unique_lock<std::mutex> lk(qmtx);
 	for (auto & server : servers) {
 		server->shutdown();

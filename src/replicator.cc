@@ -59,5 +59,7 @@ XapiandReplicator::run()
 void
 XapiandReplicator::shutdown()
 {
+	LOG_OBJ(this, "XapiandReplicator::shutdown()\n");
+
 	manager()->database_pool.updated_databases.finish();
 }

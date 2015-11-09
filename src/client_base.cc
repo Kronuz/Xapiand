@@ -506,6 +506,8 @@ BaseClient::write(const char *buf, size_t buf_size)
 void
 BaseClient::shutdown()
 {
+	LOG_OBJ(this, "BaseClient::shutdown()\n");
+
 	::shutdown(sock, SHUT_RDWR);
 
 	Worker::shutdown();

@@ -417,6 +417,8 @@ XapiandManager::async_shutdown_cb(ev::async &, int)
 void
 XapiandManager::shutdown()
 {
+	LOG_OBJ(this, "XapiandManager::shutdown()\n");
+
 	Worker::shutdown();
 
 	if (shutdown_asap) {

@@ -378,6 +378,8 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 void
 BinaryClient::shutdown()
 {
+	LOG_OBJ(this, "BinaryClient::shutdown()\n");
+
 	BaseClient::shutdown();
 }
 
