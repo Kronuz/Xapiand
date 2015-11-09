@@ -58,6 +58,11 @@ protected:
 		_break_loop.start();
 	}
 
+	void _create() {
+		std::lock_guard<std::mutex> lk(_mtx);
+		_iterator = _parent ? _parent->_attach(shared_from_this()) : workerList::iterator();
+	}
+
 	template<typename T>
 	workerList::iterator _attach(T&& child) {
 		std::lock_guard<std::mutex> lk(_mtx);
@@ -106,7 +111,7 @@ public:
 			enable_make_shared(Args&&... args) : T(std::forward<Args>(args)...) { }
 		};
 		auto worker = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
-		worker->_iterator = worker->_parent ? worker->_parent->_attach(worker->shared_from_this()) : workerList::iterator();
+		worker->_create();
 		return worker;
 	}
 
