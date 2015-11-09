@@ -87,9 +87,13 @@ class EndpointResolver : public lru::LRU<std::string, EndpointList> {
 
 	lru::GetAction action;
 
+	EndpointResolver() : action(lru::GetAction::renew) {}
+
 	EndpointList& operator[] (const std::string& key) {
 		try {
-			return at_and([this](EndpointList&){ return action; }, key);
+			return at_and([this](EndpointList&){
+				return action;
+			}, key);
 		} catch (const std::range_error&) {
 			return insert(std::make_pair(key, EndpointList()));
 		}
