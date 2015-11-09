@@ -92,7 +92,9 @@ public:
 		std::lock_guard<std::mutex> lk(_mtx);
 		workerList::iterator it(_children.begin());
 		while (it != _children.end()) {
-			sharedWorker child(std::move(*(it++)));
+			sharedWorker child(std::move(*it));
+			_children.erase(it++);
+			child->_iterator = _children.end();
 			child->shutdown();
 		}
 	}
