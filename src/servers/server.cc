@@ -98,6 +98,12 @@ XapiandServer::shutdown()
 		break_loop();
 	}
 
+	std::unique_lock<std::mutex> lk(qmtx);
+	for (auto & server : servers) {
+		server->shutdown();
+	}
+	lk.unlock();
+
 	Worker::shutdown();
 }
 
