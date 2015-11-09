@@ -1225,7 +1225,7 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					// Convert node to endpoint:
 					char node_ip[INET_ADDRSTRLEN];
 					const Node *node = nullptr;
-					if (!manager()->touch_node(node_name, -1, &node)) {
+					if (!manager()->touch_node(node_name, UNKNOWN_REGION, &node)) {
 						LOG(this, "Node %s not found\n", node_name.c_str());
 						host = node_name;
 						return CMD_UNKNOWN_HOST;

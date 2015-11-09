@@ -35,6 +35,7 @@
 #include <mutex>
 #include <regex>
 
+#define UNKNOWN_REGION -1
 
 using opts_t = struct opts_s {
 	int verbosity;

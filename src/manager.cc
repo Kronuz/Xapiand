@@ -287,7 +287,9 @@ XapiandManager::touch_node(const std::string &node_name, int region, const Node 
 	std::string node_name_lower(stringtolower(node_name));
 	if (node_name_lower == stringtolower(local_node.name)) {
 		local_node.touched = epoch::now();
-		local_node.region.store(region);
+		if (region != UNKNOWN_REGION) {
+			local_node.region.store(region);
+		}
 		if (node) *node = &local_node;
 		return true;
 	} else {
