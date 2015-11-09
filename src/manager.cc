@@ -73,7 +73,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	// Set addr in local node
 	local_node.addr = host_address();
 
-	async_shutdown.set<XapiandManager, &XapiandManager::shutdown_cb>(this);
+	async_shutdown.set<XapiandManager, &XapiandManager::async_shutdown_cb>(this);
 	async_shutdown.start();
 	LOG_EV(this, "\tStart async shutdown event\n");
 
@@ -402,8 +402,10 @@ XapiandManager::destroy()
 
 
 void
-XapiandManager::shutdown_cb(ev::async &, int)
+XapiandManager::async_shutdown_cb(ev::async &, int)
 {
+	LOG_EV(this, "\tAsync shutdown event received!\n");
+
 	sig_shutdown_handler(0);
 }
 

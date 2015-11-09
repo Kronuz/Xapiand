@@ -81,7 +81,7 @@ class XapiandManager : public Worker  {
 
 	XapiandManager(ev::loop_ref *loop_, const opts_t &o);
 
-	void shutdown_cb(ev::async &watcher, int revents);
+	void async_shutdown_cb(ev::async &watcher, int revents);
 	struct sockaddr_in host_address();
 	void destroy();
 
