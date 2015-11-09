@@ -57,7 +57,7 @@ BinaryClient::BinaryClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref 
 {
 	int binary_clients = ++XapiandServer::binary_clients;
 	int total_clients = XapiandServer::total_clients;
-	assert(XapiandServer::binary_clients <= XapiandServer::total_clients);
+	assert(binary_clients <= total_clients);
 
 	LOG_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, binary_clients, total_clients);
 
