@@ -79,7 +79,6 @@ XapiandServer::destroy()
 	LOG_EV(this, "\tStop async setup node event\n");
 
 	LOG_OBJ(this, "DESTROYED XAPIAN SERVER!\n");
-	Worker::detach();  // this detaches the client from the parent
 }
 
 

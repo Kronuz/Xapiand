@@ -44,6 +44,4 @@ void
 BaseServer::destroy()
 {
 	io.stop();
-
-	Worker::detach();
 }

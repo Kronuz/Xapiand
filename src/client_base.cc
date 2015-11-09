@@ -230,7 +230,6 @@ BaseClient::destroy()
 	}
 
 	LOG_OBJ(this, "DESTROYED CLIENT!\n");
-	Worker::detach();  // this detaches the client from the parent
 }
 
 
