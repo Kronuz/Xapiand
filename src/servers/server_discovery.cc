@@ -96,7 +96,7 @@ DiscoveryServer::io_accept(ev::io &watcher, int revents)
 				return;
 			}
 
-			const Node *node;
+			const Node *node = nullptr;
 			Node remote_node;
 			std::string index_path;
 			std::string mastery_str;
