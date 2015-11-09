@@ -179,7 +179,7 @@ HttpClient::~HttpClient()
 		}
 	}
 
-	LOG_OBJ(this, "DELETED HTTP CLIENT! (%d clients left) [%d]\n", http_clients, shutdown_asap);
+	LOG_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)\n", http_clients);
 	assert(http_clients >= 0);
 }
 
