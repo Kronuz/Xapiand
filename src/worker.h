@@ -69,8 +69,7 @@ protected:
 	template<typename T>
 	workerList::iterator _attach(T&& child) {
 		std::lock_guard<std::mutex> lk(_mtx);
-		workerList::iterator iterator = _children.insert(_children.end(), std::forward<T>(child));
-		return iterator;
+		return _children.insert(_children.end(), std::forward<T>(child));
 	}
 
 	template<typename T>
