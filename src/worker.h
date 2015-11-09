@@ -52,15 +52,18 @@ protected:
 	Worker(T&& parent, L&& loop_)
 		: loop(loop_ ? std::forward<L>(loop_) : &_dynamic_loop),
 		  _break_loop(*loop),
-		  _parent(std::forward<T>(parent))
+		  _parent(std::forward<T>(parent)),
+		  _iterator(workerList::iterator())
 	{
 		_break_loop.set<Worker, &Worker::_break_loop_cb>(this);
 		_break_loop.start();
 	}
 
 	void _create() {
-		std::lock_guard<std::mutex> lk(_mtx);
-		_iterator = _parent ? _parent->_attach(shared_from_this()) : workerList::iterator();
+		if (_parent) {
+		    std::lock_guard<std::mutex> lk(_mtx);
+		    _iterator = _parent->_attach(shared_from_this());
+		}
 	}
 
 	template<typename T>
