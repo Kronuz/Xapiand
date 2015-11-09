@@ -391,7 +391,9 @@ XapiandManager::sig_shutdown_handler(int sig)
 		};
 	}
 
-	shutdown_asap = now;
+	if (now > shutdown_asap + 1) {
+		shutdown_asap = now;
+	}
 	shutdown();
 }
 
