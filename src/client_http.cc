@@ -147,21 +147,19 @@ HttpClient::HttpClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loo
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
 
-	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-	XapiandServer::http_clients++;
-	assert(XapiandServer::http_clients <= XapiandServer::total_clients);
+	int http_clients = ++XapiandServer::http_clients;
+	int total_clients = XapiandServer::total_clients;
+	assert(http_clients <= total_clients);
 
-	LOG_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, XapiandServer::http_clients, XapiandServer::total_clients);
+	LOG_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, http_clients, total_clients);
 
-	LOG_OBJ(this, "CREATED HTTP CLIENT! (%d clients)\n", XapiandServer::http_clients);
+	LOG_OBJ(this, "CREATED HTTP CLIENT! (%d clients)\n", http_clients);
 }
 
 
 HttpClient::~HttpClient()
 {
-	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	int http_clients = --XapiandServer::http_clients;
-	lk.unlock();
 
 	if (manager()->shutdown_asap) {
 		if (http_clients <= 0) {

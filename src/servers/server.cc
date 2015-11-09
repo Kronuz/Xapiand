@@ -26,9 +26,9 @@
 
 
 std::mutex XapiandServer::static_mutex;
-int XapiandServer::total_clients  = 0;
-int XapiandServer::http_clients   = 0;
-int XapiandServer::binary_clients = 0;
+std::atomic_int XapiandServer::total_clients(0);
+std::atomic_int XapiandServer::http_clients(0);
+std::atomic_int XapiandServer::binary_clients(0);
 
 
 XapiandServer::XapiandServer(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_)

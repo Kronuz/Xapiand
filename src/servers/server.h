@@ -49,9 +49,9 @@ class XapiandServer : public Task, public Worker {
 
 public:
 	static std::mutex static_mutex;
-	static int total_clients;
-	static int http_clients;
-	static int binary_clients;
+	static std::atomic_int total_clients;
+	static std::atomic_int http_clients;
+	static std::atomic_int binary_clients;
 
 	~XapiandServer();
 

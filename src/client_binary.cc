@@ -55,13 +55,13 @@ BinaryClient::BinaryClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref 
 	  storing_offset(0),
 	  storing_cookie(0)
 {
-	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-	XapiandServer::binary_clients++;
+	int binary_clients = ++XapiandServer::binary_clients;
+	int total_clients = XapiandServer::total_clients;
 	assert(XapiandServer::binary_clients <= XapiandServer::total_clients);
 
-	LOG_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, XapiandServer::binary_clients, XapiandServer::total_clients);
+	LOG_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, binary_clients, total_clients);
 
-	LOG_OBJ(this, "CREATED BINARY CLIENT! (%d clients)\n", XapiandServer::binary_clients);
+	LOG_OBJ(this, "CREATED BINARY CLIENT! (%d clients)\n", binary_clients);
 }
 
 
@@ -78,9 +78,7 @@ BinaryClient::~BinaryClient()
 		manager()->database_pool.checkin(storing_database);
 	}
 
-	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	int binary_clients = --XapiandServer::binary_clients;
-	lk.unlock();
 
 	LOG_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)\n", binary_clients);
 	assert(binary_clients >= 0);

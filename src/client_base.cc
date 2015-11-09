@@ -182,9 +182,8 @@ BaseClient::BaseClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loo
 	io_write.set(sock, ev::WRITE);
 	LOG_EV(this, "\tSetup write event (sock=%d)\n", sock);
 
-	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-	XapiandServer::total_clients++;
-	LOG_OBJ(this, "CREATED CLIENT! (%d clients)\n", XapiandServer::total_clients);
+	int total_clients = ++XapiandServer::total_clients;
+	LOG_OBJ(this, "CREATED CLIENT! (%d clients)\n", total_clients);
 }
 
 
@@ -194,11 +193,10 @@ BaseClient::~BaseClient()
 
 	delete []read_buffer;
 
-	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-	XapiandServer::total_clients--;
-	assert(XapiandServer::total_clients >= 0);
+	int total_clients = --XapiandServer::total_clients;
+	assert(total_clients >= 0);
 
-	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", XapiandServer::total_clients);
+	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", total_clients);
 }
 
 
