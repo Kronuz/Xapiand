@@ -66,41 +66,6 @@ using pos_time_t = struct pos_time_s {
 	uint8_t second;
 };
 
-using similar_t = struct similar_s {
-	unsigned int n_rset;
-	unsigned int n_eset;
-	unsigned int n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
-	std::vector <std::string> field;
-	std::vector <std::string> type;
-};
-
-using query_t = struct query_s {
-	unsigned int offset;
-	unsigned int limit;
-	unsigned int check_at_least;
-	bool spelling;
-	bool synonyms;
-	bool pretty;
-	bool commit;
-	bool server;
-	bool database;
-	std::string document;
-	bool unique_doc;
-	bool is_fuzzy;
-	bool is_nearest;
-	std::string stats;
-	std::string collapse;
-	unsigned int collapse_max;
-	std::vector <std::string> language;
-	std::vector <std::string> query;
-	std::vector <std::string> partial;
-	std::vector <std::string> terms;
-	std::vector <std::string> sort;
-	std::vector <std::string> facets;
-	similar_t fuzzy;
-	similar_t nearest;
-};
-
 using parser_query_t = struct parser_query_s {
 	size_t length;
 	const char *offset;

@@ -137,6 +137,64 @@ typedef struct data_field_s {
 } data_field_t;
 
 
+struct similar_field {
+	unsigned int n_rset;
+	unsigned int n_eset;
+	unsigned int n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
+	std::vector <std::string> field;
+	std::vector <std::string> type;
+
+	similar_field(): n_rset(5), n_eset(32), n_term(10) {}
+};
+
+struct query_field {
+	unsigned int offset;
+	unsigned int limit;
+	unsigned int check_at_least;
+	bool spelling;
+	bool synonyms;
+	bool pretty;
+	bool commit;
+	bool server;
+	bool database;
+	std::string document;
+	bool unique_doc;
+	bool is_fuzzy;
+	bool is_nearest;
+	std::string stats;
+	std::string collapse;
+	unsigned int collapse_max;
+	std::vector <std::string> language;
+	std::vector <std::string> query;
+	std::vector <std::string> partial;
+	std::vector <std::string> terms;
+	std::vector <std::string> sort;
+	std::vector <std::string> facets;
+	similar_field fuzzy;
+	similar_field nearest;
+
+	query_field()
+	: offset(0),
+	  limit(10),
+	  check_at_least(0),
+	  spelling(true),
+	  synonyms(false),
+	  pretty(false),
+	  commit(false),
+	  server(false),
+	  database(false),
+	  document(""),
+	  unique_doc(false),
+	  is_fuzzy(false),
+	  is_nearest(false),
+	  stats(""),
+	  collapse(""),
+	  collapse_max(1),
+	  fuzzy(),
+	  nearest(){}
+
+};
+
 long long read_mastery(const std::string &dir, bool force);
 // All the field that start with '_' are considered reserved word.
 bool is_reserved(const std::string &word);

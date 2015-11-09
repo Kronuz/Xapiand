@@ -99,11 +99,11 @@ public:
 	bool get_document(const Xapian::docid &did, Xapian::Document &doc);
 	Xapian::Enquire get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
 					Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
-					const similar_t *nearest, const similar_t *fuzzy, const std::vector<std::string> *facets);
-	search_t search(const query_t &e);
+					const similar_field *nearest, const similar_field *fuzzy, const std::vector<std::string> *facets);
+	search_t search(const query_field &e);
 	search_t _search(const std::string &query, unsigned int flags, bool text, const std::string &lan);
-	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_t *similar);
-	int get_mset(const query_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
+	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field *similar);
+	int get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
 	unique_cJSON get_stats_database();
 	unique_cJSON get_stats_docs(const std::string &document_id);
 	data_field_t get_data_field(const std::string &field_name);

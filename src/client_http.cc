@@ -450,7 +450,7 @@ void HttpClient::_options()
 
 void HttpClient::_head()
 {
-	query_t e;
+	query_field e;
 	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
@@ -466,7 +466,7 @@ void HttpClient::_head()
 
 void HttpClient::_get()
 {
-	query_t e;
+	query_field e;
 	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
@@ -496,7 +496,7 @@ void HttpClient::_get()
 
 void HttpClient::_put()
 {
-	query_t e;
+	query_field e;
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
@@ -512,7 +512,7 @@ void HttpClient::_put()
 
 void HttpClient::_post()
 {
-	query_t e;
+	query_field e;
 	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
@@ -545,7 +545,7 @@ void HttpClient::_post()
 
 void HttpClient::_patch()
 {
-	query_t e;
+	query_field e;
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
@@ -561,7 +561,7 @@ void HttpClient::_patch()
 
 void HttpClient::_delete()
 {
-	query_t e;
+	query_field e;
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
@@ -575,7 +575,7 @@ void HttpClient::_delete()
 }
 
 
-void HttpClient::document_info_view(const query_t &e)
+void HttpClient::document_info_view(const query_field &e)
 {
 	bool found = true;
 	std::string result;
@@ -642,7 +642,7 @@ void HttpClient::document_info_view(const query_t &e)
 }
 
 
-void HttpClient::delete_document_view(const query_t &e)
+void HttpClient::delete_document_view(const query_field &e)
 {
 	std::string result;
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE|DB_SPAWN)) {
@@ -690,7 +690,7 @@ void HttpClient::delete_document_view(const query_t &e)
 }
 
 
-void HttpClient::index_document_view(const query_t &e)
+void HttpClient::index_document_view(const query_field &e)
 {
 	std::string result;
 
@@ -747,7 +747,7 @@ void HttpClient::index_document_view(const query_t &e)
 }
 
 
-void HttpClient::update_document_view(const query_t &e)
+void HttpClient::update_document_view(const query_field &e)
 {
 	std::string result;
 
@@ -793,7 +793,7 @@ void HttpClient::update_document_view(const query_t &e)
 }
 
 
-void HttpClient::stats_view(const query_t &e)
+void HttpClient::stats_view(const query_field &e)
 {
 	std::string result;
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
@@ -837,7 +837,7 @@ void HttpClient::stats_view(const query_t &e)
 }
 
 
-void HttpClient::bad_request_view(const query_t &e, int cmd)
+void HttpClient::bad_request_view(const query_field &e, int cmd)
 {
 	std::string result;
 
@@ -865,7 +865,7 @@ void HttpClient::bad_request_view(const query_t &e, int cmd)
 }
 
 
-void HttpClient::upload_view(const query_t &)
+void HttpClient::upload_view(const query_field &)
 {
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
@@ -879,7 +879,7 @@ void HttpClient::upload_view(const query_t &)
 }
 
 
-void HttpClient::search_view(const query_t &e, bool facets, bool schema)
+void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 {
 	std::string result;
 
@@ -1146,7 +1146,7 @@ void HttpClient::search_view(const query_t &e, bool facets, bool schema)
 }
 
 
-int HttpClient::_endpointgen(query_t &e, bool writable)
+int HttpClient::_endpointgen(query_field &e, bool writable)
 {
 	int cmd, retval;
 	bool has_node_name = false;
@@ -1262,58 +1262,42 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 			if (url_qs("pretty", query_str, query_size, &q) != -1) {
 				std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
 				(pretty.compare("f") == 0) ? e.pretty = false : e.pretty = true;
-			} else {
-				e.pretty = false;
 			}
 
 			switch (cmd) {
 				case CMD_SEARCH:
 				case CMD_FACETS:
 
-					e.unique_doc = false;
-
 					q.offset = NULL;
 					if (url_qs("offset", query_str, query_size, &q) != -1) {
 						e.offset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-					} else {
-						e.offset = 0;
 					}
 
 					q.offset = NULL;
 					if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
 						e.check_at_least = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-					} else {
-						e.check_at_least = 0;
 					}
 
 					q.offset = NULL;
 					if (url_qs("limit", query_str, query_size, &q) != -1) {
 						e.limit = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-					} else {
-						e.limit = 10;
 					}
 
 					q.offset = NULL;
 					if (url_qs("collapse_max", query_str, query_size, &q) != -1) {
 						e.collapse_max = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-					} else {
-						e.collapse_max = 1;
 					}
 
 					q.offset = NULL;
 					if (url_qs("spelling", query_str, query_size, &q) != -1) {
 						std::string spelling = Serialise::boolean(urldecode(q.offset, q.length));
 						(spelling.compare("f") == 0) ? e.spelling = false : e.spelling = true;
-					} else {
-						e.spelling = true;
 					}
 
 					q.offset = NULL;
 					if (url_qs("synonyms", query_str, query_size, &q) != -1) {
 						std::string synonyms = Serialise::boolean(urldecode(q.offset, q.length));
 						(synonyms.compare("f") == 0) ? e.synonyms = false : e.synonyms = true;
-					} else {
-						e.synonyms = false;
 					}
 
 					q.offset = NULL;
@@ -1357,38 +1341,28 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					q.offset = NULL;
 					if (url_qs("collapse", query_str, query_size, &q) != -1) {
 						e.collapse = urldecode(q.offset, q.length);
-					} else {
-						e.collapse = "";
 					}
 
 					q.offset = NULL;
 					if (url_qs("fuzzy", query_str, query_size, &q) != -1) {
 						std::string fuzzy = Serialise::boolean(urldecode(q.offset, q.length));
 						(fuzzy.compare("f") == 0) ? e.is_fuzzy = false : e.is_fuzzy = true;
-					} else {
-						e.is_fuzzy = false;
 					}
 
 					if(e.is_fuzzy) {
 						q.offset = NULL;
 						if (url_qs("fuzzy.n_rset", query_str, query_size, &q) != -1){
 							e.fuzzy.n_rset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-						} else {
-							e.fuzzy.n_rset = 5;
 						}
 
 						q.offset = NULL;
 						if (url_qs("fuzzy.n_eset", query_str, query_size, &q) != -1){
 							e.fuzzy.n_eset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-						} else {
-							e.fuzzy.n_eset = 32;
 						}
 
 						q.offset = NULL;
 						if (url_qs("fuzzy.n_term", query_str, query_size, &q) != -1){
 							e.fuzzy.n_term = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-						} else {
-							e.fuzzy.n_term = 10;
 						}
 
 						q.offset = NULL;
@@ -1406,8 +1380,6 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					if (url_qs("nearest", query_str, query_size, &q) != -1) {
 						std::string nearest = Serialise::boolean(urldecode(q.offset, q.length));
 						(nearest.compare("f") == 0) ? e.is_nearest = false : e.is_nearest = true;
-					} else {
-						e.is_nearest = false;
 					}
 
 					if(e.is_nearest) {
@@ -1421,15 +1393,11 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 						q.offset = NULL;
 						if (url_qs("nearest.n_eset", query_str, query_size, &q) != -1){
 							e.nearest.n_eset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-						} else {
-							e.nearest.n_eset = 32;
 						}
 
 						q.offset = NULL;
 						if (url_qs("nearest.n_term", query_str, query_size, &q) != -1){
 							e.nearest.n_term = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-						} else {
-							e.nearest.n_term = 10;
 						}
 
 						q.offset = NULL;
@@ -1449,30 +1417,22 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					if (url_qs("commit", query_str, query_size, &q) != -1) {
 						std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
 						(pretty.compare("f") == 0) ? e.commit = false : e.commit = true;
-					} else {
-						e.commit = false;
 					}
 
 					if (isRange(command)) {
 						q.offset = NULL;
 						if (url_qs("offset", query_str, query_size, &q) != -1) {
 							e.offset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-						} else {
-							e.offset = 0;
 						}
 
 						q.offset = NULL;
 						if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
 							e.check_at_least = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-						} else {
-							e.check_at_least = 0;
 						}
 
 						q.offset = NULL;
 						if (url_qs("limit", query_str, query_size, &q) != -1) {
 							e.limit = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
-						} else {
-							e.limit = 10;
 						}
 
 						q.offset = NULL;
@@ -1494,30 +1454,22 @@ int HttpClient::_endpointgen(query_t &e, bool writable)
 					if (url_qs("server", query_str, query_size, &q) != -1) {
 						std::string server = Serialise::boolean(urldecode(q.offset, q.length));
 						(server.compare("f") == 0) ? e.server = false : e.server = true;
-					} else {
-						e.server = false;
 					}
 
 					q.offset = NULL;
 					if (url_qs("database", query_str, query_size, &q) != -1) {
 						std::string _database = Serialise::boolean(urldecode(q.offset, q.length));
 						(_database.compare("f") == 0) ? e.database = false : e.database = true;
-					} else {
-						e.database = false;
 					}
 
 					q.offset = NULL;
 					if (url_qs("document", query_str, query_size, &q) != -1) {
 						e.document = urldecode(q.offset, q.length);
-					} else {
-						e.document = "";
 					}
 
 					q.offset = NULL;
 					if (url_qs("stats", query_str, query_size, &q) != -1) {
 						e.stats = urldecode(q.offset, q.length);
-					} else {
-						e.stats = "";
 					}
 					break;
 

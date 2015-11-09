@@ -97,14 +97,14 @@ class HttpClient : public BaseClient {
 	static int on_info(http_parser* p);
 	static int on_data(http_parser* p, const char *at, size_t length);
 
-	void stats_view(const query_t &e);
-	void delete_document_view(const query_t &e);
-	void index_document_view(const query_t &e);
-	void document_info_view(const query_t &e);
-	void update_document_view(const query_t &e);
-	void upload_view(const query_t &e);
-	void search_view(const query_t &e, bool facets, bool schema);
-	void bad_request_view(const query_t &e, int cmd);
+	void stats_view(const query_field &e);
+	void delete_document_view(const query_field &e);
+	void index_document_view(const query_field &e);
+	void document_info_view(const query_field &e);
+	void update_document_view(const query_field &e);
+	void upload_view(const query_field &e);
+	void search_view(const query_field &e, bool facets, bool schema);
+	void bad_request_view(const query_field &e, int cmd);
 
 	void _options();
 	void _head();
@@ -114,7 +114,7 @@ class HttpClient : public BaseClient {
 	void _patch();
 	void _delete();
 
-	int _endpointgen(query_t &e, bool writable);
+	int _endpointgen(query_field &e, bool writable);
 	static int identify_cmd(const std::string &commad);
 
 	friend Worker;
