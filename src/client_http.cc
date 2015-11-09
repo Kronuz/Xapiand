@@ -161,7 +161,9 @@ HttpClient::~HttpClient()
 {
 	int http_clients = --XapiandServer::http_clients;
 
-	if (manager()->shutdown_asap) {
+	time_t shutdown_asap = manager()->shutdown_asap;
+
+	if (shutdown_asap) {
 		if (http_clients <= 0) {
 			manager()->async_shutdown.send();
 		}
@@ -177,7 +179,7 @@ HttpClient::~HttpClient()
 		}
 	}
 
-	LOG_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)\n", http_clients);
+	LOG_OBJ(this, "DELETED HTTP CLIENT! (%d clients left) [%d]\n", http_clients, shutdown_asap);
 	assert(http_clients >= 0);
 }
 

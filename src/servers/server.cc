@@ -87,13 +87,16 @@ XapiandServer::shutdown()
 {
 	Worker::shutdown();
 
-	if (manager()->shutdown_asap) {
+	time_t shutdown_asap = manager()->shutdown_asap;
+	if (shutdown_asap) {
 		if (http_clients <= 0) {
-			manager()->shutdown_now.store(manager()->shutdown_asap);
+			manager()->shutdown_now.store(shutdown_asap);
 		}
 		destroy();
 	}
-	if (manager()->shutdown_now) {
+
+	time_t shutdown_now = manager()->shutdown_now;
+	if (shutdown_now) {
 		break_loop();
 	}
 }
