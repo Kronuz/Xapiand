@@ -365,13 +365,13 @@ XapiandManager::sig_shutdown_handler(int sig)
 	 * on disk. */
 	auto now = epoch::now();
 	if (shutdown_now && sig != SIGTERM) {
-		if (sig && shutdown_now + 1 < now) {
+		if (sig && now > shutdown_now + 1 && now < shutdown_asap + 4) {
 			INFO(this, "You insist... exiting now.\n");
 			// remove pid file here, use: getpid();
 			exit(1); /* Exit with an error since this was not a clean shutdown. */
 		}
 	} else if (shutdown_asap && sig != SIGTERM) {
-		if (shutdown_asap + 1 < now) {
+		if (now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			shutdown_now = now;
 			INFO(this, "Trying immediate shutdown.\n");
 		}
