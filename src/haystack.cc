@@ -81,7 +81,7 @@ HaystackVolume::HaystackVolume(const std::string& path_, bool writable) :
 			throw VolumeError();
 		}
 	}
-	eof_offset = (real_offset - HEADER_SIZE) / ALIGNMENT;
+	eof_offset = static_cast<offset_t>((real_offset - HEADER_SIZE) / ALIGNMENT);
 }
 
 
@@ -185,7 +185,7 @@ offset_t HaystackFile::seek(offset_t offset)
 offset_t HaystackFile::next()
 {
 	// End of file, go to next file
-	return seek((real_offset - HEADER_SIZE + ALIGNMENT - 1) / ALIGNMENT);
+	return seek(static_cast<offset_t>((real_offset - HEADER_SIZE + ALIGNMENT - 1) / ALIGNMENT));
 }
 
 
@@ -323,7 +323,7 @@ void HaystackFile::write_header(size_t size)
 
 size_t HaystackFile::write_chunk(const char* data, size_t size)
 {
-	chunk_size_t chunk_size = size;
+	chunk_size_t chunk_size = static_cast<chunk_size_t>(size);
 	if (pwrite(volume->data_file, &chunk_size, sizeof(chunk_size_t), real_offset) != sizeof(chunk_size_t)) {
 		throw VolumeError();
 	}
@@ -353,7 +353,7 @@ offset_t HaystackFile::write_footer()
 	real_offset += sizeof(NeedleFooter::Foot);
 
 	// Add padding
-	offset_t new_offset = (real_offset - HEADER_SIZE + ALIGNMENT - 1) / ALIGNMENT;
+	offset_t new_offset = static_cast<offset_t>((real_offset - HEADER_SIZE + ALIGNMENT - 1) / ALIGNMENT);
 	if (ftruncate(volume->data_file, HEADER_SIZE + new_offset * ALIGNMENT) == -1) {
 		throw VolumeError();
 	}

@@ -833,7 +833,7 @@ void BinaryClient::storing_done(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	storing_offset = decode_length(&p, p_end, false);
+	storing_offset = static_cast<offset_t>(decode_length(&p, p_end, false));
 	storing_cookie = decode_length(&p, p_end, false);
 }
 
@@ -844,8 +844,8 @@ void BinaryClient::storing_open(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	storing_id = decode_length(&p, p_end, false);
-	storing_offset = decode_length(&p, p_end, false);
+	storing_id = static_cast<Xapian::docid>(decode_length(&p, p_end, false));
+	storing_offset = static_cast<offset_t>(decode_length(&p, p_end, false));
 	storing_cookie = decode_length(&p, p_end, false);
 
 	// The following should be from a pool of Haystack storage (single writable)
@@ -883,7 +883,7 @@ void BinaryClient::storing_create(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	storing_id = decode_length(&p, p_end, false);
+	storing_id = static_cast<Xapian::docid>(decode_length(&p, p_end, false));
 	storing_endpoint = Endpoint(std::string(p, p_end - p));
 
 	strcpy(file_path, "/tmp/xapian_storing.XXXXXX");
