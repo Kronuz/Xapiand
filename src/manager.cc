@@ -364,19 +364,21 @@ XapiandManager::sig_shutdown_handler(int sig)
 	 * the user really wanting to quit ASAP without waiting to persist
 	 * on disk. */
 	auto now = epoch::now();
+
 	if (shutdown_now && sig != SIGTERM) {
-		if (sig && now > shutdown_now + 1 && now < shutdown_asap + 4) {
+		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			INFO(this, "You insist... exiting now.\n");
 			// remove pid file here, use: getpid();
 			exit(1); /* Exit with an error since this was not a clean shutdown. */
 		}
 	} else if (shutdown_asap && sig != SIGTERM) {
-		if (now > shutdown_asap + 1 && now < shutdown_asap + 4) {
+		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			shutdown_now = now;
 			INFO(this, "Trying immediate shutdown.\n");
+		} else if (sig == 0) {
+			shutdown_now = now;
 		}
 	} else {
-		shutdown_asap = now;
 		switch (sig) {
 			case SIGINT:
 				INFO(this, "Received SIGINT scheduling shutdown...\n");
@@ -388,6 +390,8 @@ XapiandManager::sig_shutdown_handler(int sig)
 				INFO(this, "Received shutdown signal, scheduling shutdown...\n");
 		};
 	}
+
+	shutdown_asap = now;
 	shutdown();
 }
 
