@@ -296,7 +296,9 @@ XapiandManager::touch_node(const std::string &node_name, int region, const Node 
 		try {
 			Node &node_ref = nodes.at(node_name_lower);
 			node_ref.touched = epoch::now();
-			node_ref.region.store(region);
+			if (region != UNKNOWN_REGION) {
+				node_ref.region.store(region);
+			}
 			if (node) *node = &node_ref;
 			return true;
 		} catch (const std::out_of_range &err) {
