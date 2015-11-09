@@ -87,11 +87,9 @@ class EndpointResolver : public lru::LRU<std::string, EndpointList> {
 
 	lru::GetAction action;
 
-	EndpointResolver() : action(lru::GetAction::renew) {}
-
 	EndpointList& operator[] (const std::string& key) {
 		try {
-			return at_and([this](EndpointList&){
+			return at_and([this](EndpointList&) {
 				return action;
 			}, key);
 		} catch (const std::range_error&) {
@@ -106,7 +104,9 @@ public:
 
 	bool get_master_node(const std::string &index, const Node **node, std::shared_ptr<XapiandManager> manager);
 
-	EndpointResolver(size_t max_size) : LRU<std::string, EndpointList>(max_size) { }
+	EndpointResolver(size_t max_size) :
+	    LRU<std::string, EndpointList>(max_size),
+	    action(lru::GetAction::renew) {}
 
 	~EndpointResolver() = default;
 };
