@@ -103,6 +103,7 @@ XapiandServer::shutdown()
 
 	time_t shutdown_now = manager()->shutdown_now;
 	if (shutdown_now) {
+		LOG_OBJ(this, "Breaking Server loop!\n");
 		break_loop();
 	}
 }

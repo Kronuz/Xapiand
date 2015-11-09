@@ -425,6 +425,7 @@ XapiandManager::shutdown()
 	}
 
 	if (shutdown_now) {
+		LOG_OBJ(this, "Breaking Manager loop!\n");
 		break_loop();
 	}
 }
