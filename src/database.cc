@@ -1932,8 +1932,6 @@ void DatabasePool::init_ref(const Endpoints &endpoints)
 			doc.add_boolean_term(prefixed(DB_MASTER, get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE)));
 			doc.add_value(SLOT_CREF, "0");
 			ref_database->replace(unique_id, doc, true);
-		} else {
-			LOG(this,"The document already exists nothing to do\n");
 		}
 	}
 
