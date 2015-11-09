@@ -89,13 +89,13 @@ public:
 	}
 
 	virtual void shutdown() {
-		std::lock_guard<std::mutex> lk(_mtx);
+		std::unique_lock<std::mutex> lk(_mtx);
 		workerList::iterator it(_children.begin());
 		while (it != _children.end()) {
-			sharedWorker child(std::move(*it));
-			_children.erase(it++);
-			child->_iterator = _children.end();
+			sharedWorker child(*it);
+			lk.unlock();
 			child->shutdown();
+			lk.lock();
 		}
 	}
 

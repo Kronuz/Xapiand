@@ -378,6 +378,8 @@ void HttpClient::run()
 
 	try {
 		if (path == "/quit") {
+			time_t now = epoch::now();
+			manager()->shutdown_asap = now;
 			manager()->async_shutdown.send();
 			return;
 		}
