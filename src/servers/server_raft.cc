@@ -56,7 +56,7 @@ RaftServer::io_accept(ev::io &watcher, int revents)
 	if (revents & EV_READ) {
 		char buf[1024];
 		struct sockaddr_in addr;
-		socklen_t addrlen;
+		socklen_t addrlen = sizeof(addr);
 
 		ssize_t received = ::recvfrom(watcher.fd, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
 
