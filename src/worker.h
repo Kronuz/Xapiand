@@ -110,6 +110,10 @@ public:
 		return worker;
 	}
 
+	void detach() {
+	    _detach(shared_from_this());
+	}
+
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
 	inline decltype(auto) share_this() noexcept {
 		return std::static_pointer_cast<T>(shared_from_this());

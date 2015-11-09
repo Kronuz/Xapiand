@@ -398,6 +398,7 @@ XapiandManager::destroy()
 	LOG_EV(this, "\tStop async shutdown event\n");
 
 	LOG_OBJ(this, "DESTROYED MANAGER!\n");
+	Worker::detach();  // this detaches the manager from the parent
 }
 
 
