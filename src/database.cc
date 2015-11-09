@@ -642,11 +642,6 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 	LOG_DATABASE_WRAP(this, "Document to index: %s\n", doc_data.c_str());
 	doc.set_data(encode_length(doc_data.size()) + doc_data + (blob ? body : ""));
 
-	if (blob) {
-		//It's no need to process the json
-		return replace(document_id, doc, commit);
-	}
-
 	cJSON *document_terms = cJSON_GetObjectItem(document.get(), RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document.get(), RESERVED_TEXTS);
 
