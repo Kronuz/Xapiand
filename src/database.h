@@ -137,8 +137,6 @@ private:
 	std::weak_ptr<DatabasePool> weak_database_pool;
 	Endpoints endpoints;
 
-	void setup_endpoints(const std::shared_ptr<DatabasePool>& database_pool_, const Endpoints &endpoints_);
-
 public:
 	DatabaseQueue();
 	DatabaseQueue(DatabaseQueue&&);
@@ -176,11 +174,13 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 	friend class DatabaseQueue;
 
 private:
+	std::mutex qmtx;
 	std::atomic<bool> finished;
+
 	std::unordered_map<size_t, std::unordered_set<std::shared_ptr<DatabaseQueue>>> queues;
+
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
-	std::mutex qmtx;
 
 	std::condition_variable checkin_cond;
 
@@ -189,8 +189,8 @@ private:
 	void dec_ref(const Endpoints &endpoints);
 	int get_master_count();
 
-	void add_endpoint_queue(const Endpoint &endpoint, std::shared_ptr<DatabaseQueue>&& queue);
-	void drop_endpoint_queue(const Endpoint &endpoint, std::shared_ptr<DatabaseQueue>&& queue);
+	void add_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue);
+	void drop_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 
 public:
 	DatabasePool(size_t max_size);

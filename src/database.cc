@@ -1634,26 +1634,6 @@ DatabaseQueue::DatabaseQueue(DatabaseQueue&& q) : Queue(std::move(q))
 DatabaseQueue::~DatabaseQueue()
 {
 	assert(size() == count);
-
-	if (auto database_pool = weak_database_pool.lock()) {
-		for (auto &endpoint : endpoints) {
-			database_pool->drop_endpoint_queue(endpoint, shared_from_this());
-		}
-	}
-}
-
-
-void
-DatabaseQueue::setup_endpoints(const std::shared_ptr<DatabasePool>& database_pool_, const Endpoints &endpoints_)
-{
-	auto database_pool = weak_database_pool.lock();
-	if (!database_pool) {
-		weak_database_pool = database_pool = database_pool_;
-		endpoints = endpoints_;
-		for (auto &endpoint : endpoints) {
-			database_pool->add_endpoint_queue(endpoint, shared_from_this());
-		}
-	}
 }
 
 
@@ -1661,6 +1641,14 @@ bool
 DatabaseQueue::inc_count(int max)
 {
 	std::unique_lock<std::mutex> lk(_mutex);
+
+	if (count == 0) {
+		if (auto database_pool = weak_database_pool.lock()) {
+			for (auto &endpoint : endpoints) {
+				database_pool->add_endpoint_queue(endpoint, shared_from_this());
+			}
+		}
+	}
 
 	if (max == -1 || count < static_cast<size_t>(max)) {
 		count++;
@@ -1683,6 +1671,12 @@ DatabaseQueue::dec_count()
 		return true;
 	}
 
+	if (auto database_pool = weak_database_pool.lock()) {
+		for (auto &endpoint : endpoints) {
+			database_pool->drop_endpoint_queue(endpoint, shared_from_this());
+		}
+	}
+
 	return false;
 }
 
@@ -1702,7 +1696,7 @@ DatabasePool::~DatabasePool()
 
 
 void
-DatabasePool::add_endpoint_queue(const Endpoint &endpoint, std::shared_ptr<DatabaseQueue>&& queue)
+DatabasePool::add_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
 	size_t hash = endpoint.hash();
 	auto &queues_set = queues[hash];
@@ -1711,7 +1705,7 @@ DatabasePool::add_endpoint_queue(const Endpoint &endpoint, std::shared_ptr<Datab
 
 
 void
-DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, std::shared_ptr<DatabaseQueue>&& queue)
+DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
 	size_t hash = endpoint.hash();
 	auto &queues_set = queues[hash];
@@ -1772,7 +1766,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 			queue = databases[hash];
 		}
 		queue->persistent = persistent;
-		queue->setup_endpoints(shared_from_this(), endpoints);
 
 		if (queue->is_switch_db) {
 			queue->switch_cond.wait(lk);
