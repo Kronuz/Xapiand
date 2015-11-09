@@ -1001,7 +1001,6 @@ Database::search(const query_t &e)
 	}
 	LOG(this, "e.query: %s\n", queryQ.get_description().c_str());
 
-
 	LOG(this, "e.partial size: %d\n", e.partial.size());
 	std::vector<std::string>::const_iterator pit(e.partial.begin());
 	flags = Xapian::QueryParser::FLAG_PARTIAL;
