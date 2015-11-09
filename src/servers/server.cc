@@ -89,7 +89,7 @@ XapiandServer::shutdown()
 
 	if (manager()->shutdown_asap) {
 		if (http_clients <= 0) {
-			manager()->shutdown_now = manager()->shutdown_asap;
+			manager()->shutdown_now.store(manager()->shutdown_asap);
 		}
 		destroy();
 	}

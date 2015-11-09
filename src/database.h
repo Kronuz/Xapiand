@@ -175,7 +175,7 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 
 private:
 	std::mutex qmtx;
-	std::atomic<bool> finished;
+	std::atomic_bool finished;
 
 	std::unordered_map<size_t, std::unordered_set<std::shared_ptr<DatabaseQueue>>> queues;
 
