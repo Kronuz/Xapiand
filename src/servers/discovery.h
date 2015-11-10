@@ -62,5 +62,7 @@ public:
 
 	std::string getDescription() const noexcept override;
 
-	std::function<void()> start = [this](){ heartbeat.again(); };
+	inline void start() {
+		heartbeat.again();
+	}
 };
