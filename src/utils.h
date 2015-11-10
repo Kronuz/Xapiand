@@ -43,6 +43,7 @@
 #include <sys/time.h>
 #include "pcre/pcre.h"
 #include <chrono>
+#include <regex>
 
 
 constexpr uint16_t SLOT_TIME_MINUTE = 1440;
@@ -87,7 +88,7 @@ using parser_url_path_t = struct parser_url_path_s {
 
 extern pcre *compiled_coords_re;
 extern pcre *compiled_numeric_re;
-extern pcre *compiled_find_range_re;
+extern std::regex find_range_re;
 
 // Varibles used by server stats.
 extern pos_time_t b_time;
@@ -201,7 +202,6 @@ std::string prefixed(const std::string &term, const std::string &prefixO);
 std::string get_prefix(const std::string &name, const std::string &prefix, char type);
 std::string get_slot_hex(const std::string &name);
 bool strhasupper(const std::string &str);
-bool isRange(const std::string &str, unique_group &unique_gr);
 bool isRange(const std::string &str);
 bool isNumeric(const std::string &str);
 bool startswith(const std::string &text, const std::string &token);

@@ -39,7 +39,6 @@
 
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
 #define NUMERIC_RE "-?(\\d*\\.\\d+|\\d+)"
-#define FIND_RANGE_RE "([^ ]*)\\.\\.([^ ]*)"
 
 #define STATE_ERR -1
 #define STATE_CM0 0
@@ -56,7 +55,7 @@ std::mutex log_mutex;
 
 pcre *compiled_coords_re = NULL;
 pcre *compiled_numeric_re = NULL;
-pcre *compiled_find_range_re = NULL;
+std::regex find_range_re = std::regex("([^ ]*)\\.\\.([^ ]*)", std::regex::optimize);
 
 pos_time_t b_time;
 std::chrono::time_point<std::chrono::system_clock> init_time;
@@ -616,20 +615,9 @@ bool strhasupper(const std::string &str)
 }
 
 
-bool isRange(const std::string &str, unique_group &unique_gr)
-{
-	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re, unique_gr);
-
-	return (ret != -1) ? true : false;
-}
-
-
-bool isRange(const std::string &str)
-{
-	unique_group unique_gr;
-	int ret = pcre_search(str.c_str(), (int)str.size(), 0, 0, FIND_RANGE_RE, &compiled_find_range_re, unique_gr);
-
-	return (ret != -1) ? true : false;
+bool isRange(const std::string &str) {
+	std::smatch m;
+	return std::regex_match(str, m, find_range_re);
 }
 
 
