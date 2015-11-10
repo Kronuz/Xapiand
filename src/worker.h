@@ -58,10 +58,7 @@ protected:
 	}
 
 	void _create() {
-		if (_parent) {
-		    std::lock_guard<std::mutex> lk(_mtx);
-		    _iterator = _parent->_attach(shared_from_this());
-		}
+		_iterator = _parent->_attach(shared_from_this());
 	}
 
 	template<typename T>
@@ -117,7 +114,7 @@ public:
 	}
 
 	void detach() {
-	    _detach(shared_from_this());
+		_parent->_detach(shared_from_this());
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
