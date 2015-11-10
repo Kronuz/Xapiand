@@ -63,12 +63,12 @@ RaftServer::io_accept(ev::io &watcher, int revents)
 		if (received < 0) {
 			if (!ignored_errorno(errno, true)) {
 				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", raft->sock, strerror(errno));
-				server()->shutdown();
+				manager()->shutdown();
 			}
 		} else if (received == 0) {
 			// If no messages are available to be received and the peer has performed an orderly shutdown.
 			LOG_CONN(this, "Received EOF (sock=%d)!\n", raft->sock);
-			server()->shutdown();
+			manager()->shutdown();
 		} else {
 			LOG_UDP_WIRE(this, "Raft: (sock=%d) -->> '%s'\n", raft->sock, repr(buf, received).c_str());
 
