@@ -27,8 +27,8 @@
 #include <assert.h>
 
 
-Http::Http(std::shared_ptr<XapiandManager>&& manager_, int port_)
-	: BaseTCP(std::move(manager_), port_, "Http", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1)
+Http::Http(const std::shared_ptr<XapiandManager>& manager_, int port_)
+	: BaseTCP(manager_, port_, "Http", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1)
 {
 	local_node.http_port = port;
 

@@ -33,7 +33,7 @@ class BaseServer : public Worker {
 protected:
 	ev::io io;
 
-	BaseServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, int sock_);
+	BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, int sock_);
 
 	void destroy();
 

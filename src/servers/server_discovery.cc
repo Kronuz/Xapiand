@@ -29,8 +29,8 @@
 #include <assert.h>
 
 
-DiscoveryServer::DiscoveryServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, std::unique_ptr<Discovery> &discovery_)
-	: BaseServer(std::move(server_), loop_, discovery_->sock),
+DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Discovery> &discovery_)
+	: BaseServer(server_, loop_, discovery_->sock),
 	discovery(discovery_)
 {
 	LOG_EV(this, "Start discovery event (sock=%d)\n", discovery->sock);

@@ -27,8 +27,8 @@
 #include <assert.h>
 
 
-Raft::Raft(std::shared_ptr<XapiandManager>&& manager_, ev::loop_ref *loop_, int port_, const std::string &group_)
-	: BaseUDP(std::move(manager_), loop_, port_, "Raft", group_),
+Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_)
+	: BaseUDP(manager_, loop_, port_, "Raft", group_),
 	  term(0),
 	  num_servers(0),
 	  election_leader(*loop),

@@ -35,7 +35,7 @@ class Binary : public BaseTCP {
 	friend BinaryServer;
 
 public:
-	Binary(std::shared_ptr<XapiandManager>&& manager_, int port_);
+	Binary(const std::shared_ptr<XapiandManager>& manager_, int port_);
 	~Binary();
 
 	std::string getDescription() const noexcept override;

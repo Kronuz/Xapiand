@@ -25,8 +25,8 @@
 #include "server.h"
 
 
-BaseServer::BaseServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, int sock_)
-	: Worker(std::move(server_), loop_),
+BaseServer::BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, int sock_)
+	: Worker(server_, loop_),
 	  io(*loop)
 {
 	io.set<BaseServer, &BaseServer::io_accept>(this);

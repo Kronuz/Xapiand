@@ -29,8 +29,8 @@
 #include <fcntl.h>
 
 
-BaseUDP::BaseUDP(std::shared_ptr<XapiandManager>&& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, const std::string &group_, int tries_)
-	: manager(std::move(manager_)),
+BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, const std::string &group_, int tries_)
+	: manager(manager_),
 	  port(port_),
 	  description(description_),
 	  loop(loop_)

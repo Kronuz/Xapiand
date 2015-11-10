@@ -46,7 +46,7 @@ protected:
 	void sending_message(const std::string &message);
 
 public:
-	BaseUDP(std::shared_ptr<XapiandManager>&& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, const std::string &group_, int tries_ = 1);
+	BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, const std::string &group_, int tries_ = 1);
 	virtual ~BaseUDP();
 
 	virtual std::string getDescription() const noexcept = 0;

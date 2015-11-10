@@ -49,7 +49,7 @@ protected:
 	std::string description;
 
 public:
-	BaseTCP(std::shared_ptr<XapiandManager>&& manager_, int port_, const std::string &description_, int tries_);
+	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, const std::string &description_, int tries_);
 	virtual ~BaseTCP();
 
 	virtual std::string getDescription() const noexcept = 0;

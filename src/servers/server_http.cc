@@ -26,8 +26,8 @@
 #include "http.h"
 
 
-HttpServer::HttpServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, std::unique_ptr<Http> &http_)
-	: BaseServer(std::move(server_), loop_, http_->sock),
+HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Http> &http_)
+	: BaseServer(server_, loop_, http_->sock),
 	  http(http_)
 {
 	LOG_EV(this, "Start http accept event (sock=%d)\n", http->sock);

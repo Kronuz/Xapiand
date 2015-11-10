@@ -38,7 +38,7 @@ class BinaryServer : public BaseServer {
 	std::unique_ptr<Binary> &binary;
 
 public:
-	BinaryServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, std::unique_ptr<Binary> &binary_);
+	BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Binary> &binary_);
 
 	~BinaryServer();
 

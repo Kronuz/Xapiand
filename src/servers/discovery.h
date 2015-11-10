@@ -55,7 +55,7 @@ public:
 		MAX            //
 	};
 
-	Discovery(std::shared_ptr<XapiandManager>&& manager_, ev::loop_ref *loop_, int port_, const std::string &group_);
+	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_);
 	~Discovery();
 
 	void send_message(Message type, const std::string &content);

@@ -32,7 +32,7 @@ class DiscoveryServer : public BaseServer {
 	std::unique_ptr<Discovery> &discovery;
 
 public:
-	DiscoveryServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, std::unique_ptr<Discovery> &discovery_);
+	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Discovery> &discovery_);
 	~DiscoveryServer();
 
 	void io_accept(ev::io &watcher, int revents);

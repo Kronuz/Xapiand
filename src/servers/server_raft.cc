@@ -28,8 +28,8 @@
 #include <assert.h>
 
 
-RaftServer::RaftServer(std::shared_ptr<XapiandServer>&& server_, ev::loop_ref *loop_, std::unique_ptr<Raft> &raft_)
-	: BaseServer(std::move(server_), loop_, raft_->sock),
+RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Raft> &raft_)
+	: BaseServer(server_, loop_, raft_->sock),
 	raft(raft_)
 {
 	LOG_EV(this, "Start raft event (sock=%d)\n", raft->sock);

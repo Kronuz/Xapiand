@@ -29,8 +29,8 @@
 #include <assert.h>
 
 
-Binary::Binary(std::shared_ptr<XapiandManager>&& manager_, int port_)
-	: BaseTCP(std::move(manager_), port_, "Binary", port_ == XAPIAND_BINARY_SERVERPORT ? 10 : 1)
+Binary::Binary(const std::shared_ptr<XapiandManager>& manager_, int port_)
+	: BaseTCP(manager_, port_, "Binary", port_ == XAPIAND_BINARY_SERVERPORT ? 10 : 1)
 {
 	local_node.binary_port = port;
 

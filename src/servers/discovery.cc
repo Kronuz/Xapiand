@@ -25,8 +25,8 @@
 #include <assert.h>
 
 
-Discovery::Discovery(std::shared_ptr<XapiandManager>&& manager_, ev::loop_ref *loop_, int port_, const std::string &group_)
-	: BaseUDP(std::move(manager_), loop_, port_, "Discovery", group_),
+Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_)
+	: BaseUDP(manager_, loop_, port_, "Discovery", group_),
 	  heartbeat(*loop)
 {
 	heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
