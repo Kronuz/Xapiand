@@ -44,4 +44,6 @@ void
 BaseServer::destroy()
 {
 	io.stop();
+
+	LOG_OBJ(this, "DESTROYED BASE SERVER!\n");
 }
