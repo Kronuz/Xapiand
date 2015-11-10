@@ -43,10 +43,6 @@ public:
 
 	virtual void io_accept(ev::io &watcher, int revents) = 0;
 
-	inline std::shared_ptr<XapiandServer> server() noexcept {
-		return std::static_pointer_cast<XapiandServer>(_parent);
-	}
-
 	inline decltype(auto) manager() noexcept {
 		return std::static_pointer_cast<XapiandServer>(_parent)->manager();
 	}

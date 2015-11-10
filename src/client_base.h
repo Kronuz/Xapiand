@@ -97,10 +97,6 @@ public:
 		return write(buf.c_str(), buf.size());
 	}
 
-	inline decltype(auto) server() noexcept {
-		return std::static_pointer_cast<BaseServer>(_parent)->server();
-	}
-
 	inline decltype(auto) manager() noexcept {
 		return std::static_pointer_cast<BaseServer>(_parent)->manager();
 	}
