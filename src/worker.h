@@ -58,7 +58,9 @@ protected:
 	}
 
 	void _create() {
-		_iterator = _parent->_attach(shared_from_this());
+		if (_parent) {
+			_iterator = _parent->_attach(shared_from_this());
+		}
 	}
 
 	template<typename T>
@@ -114,7 +116,9 @@ public:
 	}
 
 	void detach() {
-		_parent->_detach(shared_from_this());
+		if (_parent) {
+			_parent->_detach(shared_from_this());
+		}
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
