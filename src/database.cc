@@ -33,14 +33,12 @@
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
 #define DATABASE_UPDATE_TIME 10
-#define FIND_FIELD_RE "(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\" ]+)"
 
 #define getPos(pos, size) ((pos) < (size) ? (pos) : (size))
 
 #define DEFAULT_OFFSET "0" /* Replace for the real offsert */
 
-
-pcre *Database::compiled_find_field_re = NULL;
+std::regex Database::find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
 
 
 Database::Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endpoints_, int flags_)
@@ -1080,8 +1078,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		return srch;
 	}
 
-	int len = (int)query.size(), offset = 0;
-	unique_group unique_gr;
+	int size_match = 0;
 	bool first_time = true, first_timeR = true;
 	std::string querystring;
 	Xapian::Query queryRange;
@@ -1099,13 +1096,14 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 	GeoFieldProcessor *gfp;
 	BooleanFieldProcessor *bfp;
 
-	while ((pcre_search(query.c_str(), len, offset, 0, FIND_FIELD_RE, &compiled_find_field_re, unique_gr)) != -1) {
-		group_t *g = unique_gr.get();
-		offset = g[0].end;
-		std::string field(query.c_str() + g[0].start, g[0].end - g[0].start);
-		std::string field_name_dot(query.c_str() + g[1].start, g[1].end - g[1].start);
-		std::string field_name(query.c_str() + g[2].start, g[2].end - g[2].start);
-		std::string field_value(query.c_str() + g[3].start, g[3].end - g[3].start);
+	std::sregex_iterator next(query.begin(), query.end(), find_field_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	while (next != end) {
+		std::string field(next->str(0));
+		size_match += next->length(0);
+		std::string field_name_dot(next->str(1));
+		std::string field_name(next->str(2));
+		std::string field_value(next->str(3));
 		data_field_t field_t = get_data_field(field_name);
 
 		// Auxiliary variables.
@@ -1117,15 +1115,18 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		std::string filter_term, start, end, prefix;
 		unique_group unique_Range;
 
-		if (isRange(field_value, unique_Range)) {
+		std::smatch m;
+		if (std::regex_match(field_value, m, find_range_re)) {
 			// If this field is not indexed as value, not process this query.
-			if (field_t.slot == Xapian::BAD_VALUENO) continue;
+			if (field_t.slot == Xapian::BAD_VALUENO) {
+				next++;
+				continue;
+			}
 
 			switch (field_t.type) {
 				case NUMERIC_TYPE:
-					g = unique_Range.get();
-					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
-					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
+					start = m.str(1);
+					end = m.str(2);
 					GenerateTerms::numeric(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, NUMERIC_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
@@ -1142,15 +1143,13 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					}
 					break;
 				case STRING_TYPE:
-					g = unique_Range.get();
-					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
-					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
+					start = m.str(1);
+					end = m.str(2);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, STRING_TYPE, start, end, field_name);
 					break;
 				case DATE_TYPE:
-					g = unique_Range.get();
-					start = std::string(field_value.c_str() + g[1].start, g[1].end - g[1].start);
-					end = std::string(field_value.c_str() + g[2].start, g[2].end - g[2].start);
+					start = m.str(1);
+					end = m.str(2);
 					GenerateTerms::date(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
@@ -1202,7 +1201,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 			} else srch.query = Xapian::Query(Xapian::Query::OP_OR, srch.query, queryRange);
 		} else {
 			// If the field has not been indexed as a term, not process this query.
-			if (!field_name.empty() && field_t.prefix.empty()) continue;
+			if (!field_name.empty() && field_t.prefix.empty()) {
+				next++;
+				continue;
+			}
 
 			switch (field_t.type) {
 				case NUMERIC_TYPE:
@@ -1250,7 +1252,10 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					EWKT_Parser::getSearchTerms(field_value, field_t.accuracy[0], field_t.accuracy[1], prefixes);
 
 					// If the region for search is empty, not process this query.
-					if (prefixes.empty()) continue;
+					if (prefixes.empty()) {
+						next++;
+						continue;
+					}
 
 					it = prefixes.begin();
 					field = field_name_dot + *it;
@@ -1281,9 +1286,11 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				first_time = false;
 			} else querystring += " OR " + field;
 		}
+
+		next++;
 	}
 
-	if (offset != len) {
+	if (static_cast<size_t>(size_match) != query.size()) {
 		throw Xapian::QueryParserError("Query '" + query + "' contains errors.\n" );
 	}
 

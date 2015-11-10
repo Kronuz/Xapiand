@@ -26,17 +26,17 @@
 #include "queue.h"
 #include "lru.h"
 
-#include <xapian/matchspy.h>
-
 #include "database_utils.h"
 #include "fields.h"
 #include "multivaluekeymaker.h"
 
+#include <xapian/matchspy.h>
+
 #include <mutex>
+#include <regex>
 #include <atomic>
 #include <condition_variable>
 #include <algorithm>
-#include <queue>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -52,7 +52,7 @@
 
 #define SLOT_CREF 1	// Slot that saves the references counter
 
-const size_t START_POS = SIZE_BITS_ID - 4;
+constexpr size_t START_POS = SIZE_BITS_ID - 4;
 
 
 class DatabasePool;
@@ -73,16 +73,16 @@ public:
 
 	std::unique_ptr<Xapian::Database> db;
 
-	static pcre *compiled_find_field_re;
+	static std::regex find_field_re;
 
-	typedef struct search_s {
+	struct search_t {
 		Xapian::Query query;
 		std::vector<std::string> suggested_query;
 		std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
 		std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
 		std::vector<std::unique_ptr<GeoFieldProcessor>> gfps;
 		std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
-	} search_t;
+	};
 
 	Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endpoints, int flags);
 	~Database();
