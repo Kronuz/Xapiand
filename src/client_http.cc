@@ -306,22 +306,16 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 			} else
 
 			if (name.compare("accept") == 0) {
-				int submatches[] = {1, 2};
-				std::regex_token_iterator<std::string::iterator> beg_re (value.begin(), value.end(), header_accept_re, submatches);
-				std::regex_token_iterator<std::string::iterator> end_re;
-				if (std::distance(beg_re, end_re)) {
-					while (beg_re != end_re) {
-						//Get the accept type part
-						std::string type(*beg_re++);
-						if(type.length() != 0) {
-							if(beg_re != end_re) {
-								//Get the accept prefereces
-								std::string num(*beg_re++);
-								if (num.length() != 0) self->accept_set.insert(std::make_pair(std::stod(std::string(num, 2)), type));
-								else self->accept_set.insert(std::make_pair(1, type));
-							}
-						} else beg_re++;
+				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_continuous);
+				std::sregex_iterator end;
+				LOG(nullptr, "+++++++++ Start Regex %d\n", std::distance(next, end));
+				while (next != end) {
+					LOG(nullptr, "+++++++++ [match]: %d\n", next->size());
+					if (next->length(1) != 0) {
+						next->length(2) != 0 ? self->accept_set.insert(std::make_pair(std::stod(std::string(next->str(2), 2)), next->str(1)))
+											 : self->accept_set.insert(std::make_pair(1, next->str(1)));
 					}
+					next++;
 				}
 			}
 			self->header_name.clear();
