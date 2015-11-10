@@ -23,6 +23,10 @@
 #include "server.h"
 
 #include "server_base.h"
+#include "server_binary.h"
+#include "server_http.h"
+#include "server_discovery.h"
+#include "server_raft.h"
 
 
 std::mutex XapiandServer::static_mutex;
@@ -87,12 +91,6 @@ XapiandServer::shutdown()
 {
 	LOG_OBJ(this, "XapiandServer::shutdown()\n");
 
-	std::unique_lock<std::mutex> lk(qmtx);
-	for (auto & server : servers) {
-		server->shutdown();
-	}
-	lk.unlock();
-
 	Worker::shutdown();
 
 	time_t shutdown_asap = manager()->shutdown_asap;
@@ -108,12 +106,4 @@ XapiandServer::shutdown()
 		LOG_OBJ(this, "Breaking Server loop!\n");
 		break_loop();
 	}
-}
-
-
-void
-XapiandServer::register_server(std::unique_ptr<BaseServer>&& server)
-{
-	std::lock_guard<std::mutex> lk(qmtx);
-	servers.push_back(std::move(server));
 }

@@ -59,9 +59,46 @@ BinaryServer::io_accept(ev::io &watcher, int revents)
 			LOG_ERR(this, "ERROR: accept binary error (sock=%d): %s\n", binary->sock, strerror(errno));
 		}
 	} else {
-		auto client = Worker::create<BinaryClient>(server(), loop, client_sock, active_timeout, idle_timeout);
+		Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
 	}
 }
 
+
+bool
+BinaryServer::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+{
+	int client_sock = binary->connection_socket();
+	if (client_sock  < 0) {
+		return false;
+	}
+
+	auto client = Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
+
+	if (!client->init_replication(src_endpoint, dst_endpoint)) {
+		return false;
+	}
+
+	INFO(this, "Database being synchronized from %s...\n", src_endpoint.as_string().c_str());
+
+	return true;
+}
+
+
+bool
+BinaryServer::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename)
+{
+	int client_sock = binary->connection_socket();
+	if (client_sock < 0) {
+		return false;
+	}
+
+	auto client = Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
+
+	if (!client->init_storing(endpoints, did, filename)) {
+		return false;
+	}
+
+	return true;
+}
 
 #endif /* HAVE_REMOTE_PROTOCOL */

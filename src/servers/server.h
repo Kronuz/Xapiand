@@ -25,7 +25,10 @@
 #include "../manager.h"
 
 class BaseServer;
-class Binary;
+class BinaryServer;
+class HttpServer;
+class DiscoveryServer;
+class RaftServer;
 
 
 class XapiandServer : public Task, public Worker {
@@ -33,18 +36,13 @@ class XapiandServer : public Task, public Worker {
 
 	ev::async async_setup_node;
 
-	std::vector<std::unique_ptr<BaseServer>> servers;
-
 	XapiandServer(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_);
 
 	void destroy();
 
 	void async_setup_node_cb(ev::async& watcher, int revents);
 
-	void register_server(std::unique_ptr<BaseServer>&& server);
-
 	friend XapiandManager;
-	friend Binary;
 	friend Worker;
 
 public:

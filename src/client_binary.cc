@@ -45,7 +45,7 @@
 // Xapian binary client
 //
 
-BinaryClient::BinaryClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loop_, int sock_, double active_timeout_, double idle_timeout_)
+BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *loop_, int sock_, double active_timeout_, double idle_timeout_)
 	: BaseClient(std::move(server_), loop_, sock_),
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  running(false),

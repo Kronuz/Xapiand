@@ -51,42 +51,6 @@ Binary::getDescription() const noexcept
 }
 
 
-bool
-Binary::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint, std::shared_ptr<XapiandServer> server)
-{
-	int client_sock = connection_socket();
-	if (client_sock  < 0) {
-		return false;
-	}
-
-	auto client = Worker::create<BinaryClient>(server, server->loop, client_sock, active_timeout, idle_timeout);
-
-	if (!client->init_replication(src_endpoint, dst_endpoint)) {
-		return false;
-	}
-
-	return true;
-}
-
-
-bool
-Binary::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename, std::shared_ptr<XapiandServer> server)
-{
-	int client_sock = connection_socket();
-	if (client_sock < 0) {
-		return false;
-	}
-
-	auto client = Worker::create<BinaryClient>(server, server->loop, client_sock, active_timeout, idle_timeout);
-
-	if (!client->init_storing(endpoints, did, filename)) {
-		return false;
-	}
-
-	return true;
-}
-
-
 int
 Binary::connection_socket()
 {

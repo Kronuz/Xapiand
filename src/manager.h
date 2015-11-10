@@ -116,7 +116,6 @@ public:
 
 	EndpointResolver endp_r;
 
-	std::shared_ptr<Binary> binary;
 	std::shared_ptr<Raft> raft;
 	std::shared_ptr<Discovery> discovery;
 
@@ -146,6 +145,9 @@ public:
 	int get_region(const std::string &db_name);
 	// Return the region to which local_node belongs
 	int get_region();
+
+	void trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
+	void store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename);
 
 	unique_cJSON server_status();
 	unique_cJSON get_stats_time(const std::string &time_req);

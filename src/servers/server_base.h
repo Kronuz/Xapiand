@@ -29,6 +29,7 @@
 // This class lets make different types of servers.
 class BaseServer : public Worker {
 	friend Worker;
+	friend XapiandServer;
 
 protected:
 	ev::io io;

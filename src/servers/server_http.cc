@@ -57,6 +57,6 @@ HttpServer::io_accept(ev::io &watcher, int revents)
 			LOG_ERR(this, "ERROR: accept http error (sock=%d): %s\n", http->sock, strerror(errno));
 		}
 	} else {
-		Worker::create<HttpClient>(server(), loop, client_sock);
+		Worker::create<HttpClient>(share_this<HttpServer>(), loop, client_sock);
 	}
 }

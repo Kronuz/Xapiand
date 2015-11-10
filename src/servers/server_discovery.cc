@@ -300,9 +300,7 @@ DiscoveryServer::io_accept(ev::io &watcher, int revents)
 #ifdef HAVE_REMOTE_PROTOCOL
 							// Replicate database from the other node
 							INFO(this, "Request syncing database from %s...\n", remote_node.name.c_str());
-							if (manager()->binary->trigger_replication(remote_endpoint, local_endpoint, server())) {
-								INFO(this, "Database being synchronized from %s...\n", remote_node.name.c_str());
-							}
+							manager()->trigger_replication(remote_endpoint, local_endpoint);
 #endif
 						} else if (mastery_level != remote_mastery_level) {
 							LOG_DISCOVERY(this, "Mastery of local's %s wins! (local:%llx <= remote:%llx) - Ignoring update!\n", index_path.c_str(), mastery_level, remote_mastery_level);

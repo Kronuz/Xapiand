@@ -204,11 +204,12 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 		// Replicate database from the other node
 #ifdef HAVE_REMOTE_PROTOCOL
 		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
-		if (binary->trigger_replication(remote_endpoint, *cluster_endpoints.begin(), std::move(server))) {
-			INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
-			new_cluster = 2;
-			break;
-		}
+
+		trigger_replication(remote_endpoint, *cluster_endpoints.begin());
+
+		INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
+		new_cluster = 2;
+		break;  // FIXME: Retry with other nodes if it fails
 #endif
 	}
 
@@ -446,7 +447,7 @@ XapiandManager::run(const opts_t &o)
 	msg += http->getDescription() + ", ";
 
 #ifdef HAVE_REMOTE_PROTOCOL
-	binary = std::make_shared<Binary>(manager, o.binary_port);
+	auto binary = std::make_shared<Binary>(manager, o.binary_port);
 	msg += binary->getDescription() + ", ";
 #endif
 
@@ -465,12 +466,12 @@ XapiandManager::run(const opts_t &o)
 	ThreadPool server_pool(o.num_servers);
 	for (size_t i = 0; i < o.num_servers; i++) {
 		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(manager, nullptr);
-		server->register_server(std::make_unique<HttpServer>(server, server->loop, http));
+		Worker::create<HttpServer>(server, server->loop, http);
 #ifdef HAVE_REMOTE_PROTOCOL
-		server->register_server(std::make_unique<BinaryServer>(server, server->loop, binary));
+		Worker::create<BinaryServer>(server, server->loop, binary);
 #endif
-		server->register_server(std::make_unique<DiscoveryServer>(server, server->loop, discovery));
-		server->register_server(std::make_unique<RaftServer>(server, server->loop, raft));
+		Worker::create<DiscoveryServer>(server, server->loop, discovery);
+		Worker::create<RaftServer>(server, server->loop, raft);
 		server_pool.enqueue(std::move(server));
 	}
 
@@ -526,6 +527,18 @@ XapiandManager::get_region()
 		LOG(this, "Regions: %d Region: %d\n", local_node.regions.load(), local_node.region.load());
 	}
 	return local_node.region.load();
+}
+
+
+void XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+{
+    // FIXME: Implement this using a queue!
+}
+
+
+void XapiandManager::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename)
+{
+    // FIXME: Implement this using a queue!
 }
 
 

@@ -40,9 +40,6 @@ public:
 
 	std::string getDescription() const noexcept override;
 
-	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint, std::shared_ptr<XapiandServer> server);
-	bool store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename, std::shared_ptr<XapiandServer> server);
-
 	int connection_socket();
 };
 

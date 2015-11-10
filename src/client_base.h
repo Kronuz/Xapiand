@@ -24,7 +24,7 @@
 
 #include "xapiand.h"
 
-#include "servers/server.h"
+#include "servers/server_base.h"
 
 #include "compressor.h"
 
@@ -74,7 +74,7 @@ class BaseClient : public Task, public Worker {
 	friend Compressor;
 
 protected:
-	BaseClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loop_, int sock_);
+	BaseClient(std::shared_ptr<BaseServer> server_, ev::loop_ref *loop_, int sock_);
 
 public:
 	virtual ~BaseClient();
@@ -98,11 +98,11 @@ public:
 	}
 
 	inline decltype(auto) server() noexcept {
-		return std::static_pointer_cast<XapiandServer>(_parent);
+		return std::static_pointer_cast<BaseServer>(_parent)->server();
 	}
 
 	inline decltype(auto) manager() noexcept {
-		return std::static_pointer_cast<XapiandServer>(_parent)->manager();
+		return std::static_pointer_cast<BaseServer>(_parent)->manager();
 	}
 
 protected:

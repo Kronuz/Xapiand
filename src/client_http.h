@@ -24,6 +24,7 @@
 
 #include "client_base.h"
 
+#include "servers/server_http.h"
 #include "http_parser.h"
 
 #include <memory>
@@ -120,7 +121,7 @@ class HttpClient : public BaseClient {
 	friend Worker;
 
 public:
-	HttpClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loop_, int sock_);
+	HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref *loop_, int sock_);
 
 	~HttpClient();
 

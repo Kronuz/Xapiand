@@ -137,7 +137,7 @@ std::string http_response(int status, int mode, unsigned short http_major=0, uns
 }
 
 
-HttpClient::HttpClient(std::shared_ptr<XapiandServer> server_, ev::loop_ref *loop_, int sock_)
+HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref *loop_, int sock_)
 	: BaseClient(std::move(server_), loop_, sock_),
 	  database(nullptr),
 	  body_size(0),
@@ -712,7 +712,7 @@ void HttpClient::index_document_view(const query_field &e)
 
 	// did = returned by index() call
 	// filename = Termoprary file
-	// if (manager()->binary->store(endpoints, did, filename, server())) {
+	// if (manager()->store(endpoints, did, filename)) {
 	// 	INFO(this, "Storing %s...\n", filename.c_str());
 	// }
 
