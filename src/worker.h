@@ -29,8 +29,7 @@
 
 
 class Worker : public std::enable_shared_from_this<Worker> {
-	using sharedWorker = std::shared_ptr<Worker>;
-	using workerList = std::list<sharedWorker>;
+	using WorkerList = std::list<std::shared_ptr<Worker>>;
 
 protected:
 	ev::loop_ref *loop;
@@ -41,19 +40,18 @@ protected:
 
 	std::mutex _mtx;
 
-	sharedWorker _parent;
-	workerList _children;
+	std::shared_ptr<Worker> _parent;
+	WorkerList _children;
 
 	// _iterator should be const_iterator but in linux, std::list member functions
 	// use a standard iterator and not const_iterator.
-	workerList::iterator _iterator;
+	WorkerList::iterator _iterator;
 
 	template<typename T, typename L>
 	Worker(T&& parent, L&& loop_)
 		: loop(loop_ ? std::forward<L>(loop_) : &_dynamic_loop),
 		  _async_break_loop(*loop),
-		  _parent(std::forward<T>(parent)),
-		  _iterator(workerList::iterator())
+		  _parent(std::forward<T>(parent))
 	{
 		_async_break_loop.set<Worker, &Worker::_async_break_loop_cb>(this);
 		_async_break_loop.start();
@@ -67,7 +65,7 @@ protected:
 	}
 
 	template<typename T>
-	workerList::iterator _attach(T&& child) {
+	WorkerList::iterator _attach(T&& child) {
 		std::lock_guard<std::mutex> lk(_mtx);
 		return _children.insert(_children.end(), std::forward<T>(child));
 	}
@@ -92,9 +90,8 @@ public:
 
 	virtual void shutdown() {
 		std::unique_lock<std::mutex> lk(_mtx);
-		workerList::iterator it(_children.begin());
-		while (it != _children.end()) {
-			sharedWorker child(*(it++));
+		for (auto it = _children.begin(); it != _children.end();) {
+			auto child = *it++;
 			lk.unlock();
 			child->shutdown();
 			lk.lock();
