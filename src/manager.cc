@@ -440,18 +440,20 @@ XapiandManager::run(const opts_t &o)
 {
 	std::string msg("Listening on ");
 
-	http = std::make_unique<Http>(share_this<XapiandManager>(), o.http_port);
+	auto manager = share_this<XapiandManager>();
+
+	http = std::make_unique<Http>(manager, o.http_port);
 	msg += http->getDescription() + ", ";
 
 #ifdef HAVE_REMOTE_PROTOCOL
-	binary = std::make_unique<Binary>(share_this<XapiandManager>(), o.binary_port);
+	binary = std::make_unique<Binary>(manager, o.binary_port);
 	msg += binary->getDescription() + ", ";
 #endif
 
-	discovery = std::make_unique<Discovery>(share_this<XapiandManager>(), loop, o.discovery_port, o.discovery_group);
+	discovery = std::make_unique<Discovery>(manager, loop, o.discovery_port, o.discovery_group);
 	msg += discovery->getDescription() + ", ";
 
-	raft = std::make_unique<Raft>(share_this<XapiandManager>(), loop, o.raft_port, o.raft_group);
+	raft = std::make_unique<Raft>(manager, loop, o.raft_port, o.raft_group);
 	msg += raft->getDescription() + ", ";
 
 	msg += "at pid:" + std::to_string(getpid()) + "...\n";
@@ -462,19 +464,19 @@ XapiandManager::run(const opts_t &o)
 
 	ThreadPool server_pool(o.num_servers);
 	for (size_t i = 0; i < o.num_servers; i++) {
-		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(share_this<XapiandManager>(), nullptr);
-		server->register_server(std::make_unique<HttpServer>(server->share_this<XapiandServer>(), server->loop, http));
+		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(manager, nullptr);
+		server->register_server(std::make_unique<HttpServer>(server, server->loop, http));
 #ifdef HAVE_REMOTE_PROTOCOL
-		server->register_server(std::make_unique<BinaryServer>(server->share_this<XapiandServer>(), server->loop, binary));
+		server->register_server(std::make_unique<BinaryServer>(server, server->loop, binary));
 #endif
-		server->register_server(std::make_unique<DiscoveryServer>(server->share_this<XapiandServer>(), server->loop, discovery));
-		server->register_server(std::make_unique<RaftServer>(server->share_this<XapiandServer>(), server->loop, raft));
+		server->register_server(std::make_unique<DiscoveryServer>(server, server->loop, discovery));
+		server->register_server(std::make_unique<RaftServer>(server, server->loop, raft));
 		server_pool.enqueue(std::move(server));
 	}
 
 	ThreadPool replicator_pool(o.num_replicators);
 	for (size_t i = 0; i < o.num_replicators; i++) {
-		replicator_pool.enqueue(Worker::create<XapiandReplicator>(share_this<XapiandManager>(), nullptr));
+		replicator_pool.enqueue(Worker::create<XapiandReplicator>(manager, nullptr));
 	}
 
 	INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
