@@ -28,7 +28,7 @@
 #include <assert.h>
 
 
-RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Raft> &raft_)
+RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft> &raft_)
 	: BaseServer(server_, loop_, raft_->sock),
 	raft(raft_)
 {

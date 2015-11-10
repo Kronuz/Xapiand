@@ -442,18 +442,18 @@ XapiandManager::run(const opts_t &o)
 
 	auto manager = share_this<XapiandManager>();
 
-	http = std::make_unique<Http>(manager, o.http_port);
+	auto http = std::make_shared<Http>(manager, o.http_port);
 	msg += http->getDescription() + ", ";
 
 #ifdef HAVE_REMOTE_PROTOCOL
-	binary = std::make_unique<Binary>(manager, o.binary_port);
+	binary = std::make_shared<Binary>(manager, o.binary_port);
 	msg += binary->getDescription() + ", ";
 #endif
 
-	discovery = std::make_unique<Discovery>(manager, loop, o.discovery_port, o.discovery_group);
+	discovery = std::make_shared<Discovery>(manager, loop, o.discovery_port, o.discovery_group);
 	msg += discovery->getDescription() + ", ";
 
-	raft = std::make_unique<Raft>(manager, loop, o.raft_port, o.raft_group);
+	raft = std::make_shared<Raft>(manager, loop, o.raft_port, o.raft_group);
 	msg += raft->getDescription() + ", ";
 
 	msg += "at pid:" + std::to_string(getpid()) + "...\n";

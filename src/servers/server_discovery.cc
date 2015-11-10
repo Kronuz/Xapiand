@@ -29,7 +29,7 @@
 #include <assert.h>
 
 
-DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Discovery> &discovery_)
+DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery> &discovery_)
 	: BaseServer(server_, loop_, discovery_->sock),
 	discovery(discovery_)
 {

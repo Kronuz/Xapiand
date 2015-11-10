@@ -28,7 +28,7 @@
 #include "client_binary.h"
 
 
-BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Binary> &binary_)
+BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Binary> &binary_)
 	: BaseServer(server_, loop_, binary_->sock),
 	  binary(binary_)
 {

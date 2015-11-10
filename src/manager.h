@@ -116,12 +116,9 @@ public:
 
 	EndpointResolver endp_r;
 
-	std::unique_ptr<Http> http;
-#ifdef HAVE_REMOTE_PROTOCOL
-	std::unique_ptr<Binary> binary;
-#endif
-	std::unique_ptr<Discovery> discovery;
-	std::unique_ptr<Raft> raft;
+	std::shared_ptr<Binary> binary;
+	std::shared_ptr<Raft> raft;
+	std::shared_ptr<Discovery> discovery;
 
 	State state;
 	std::string cluster_name;

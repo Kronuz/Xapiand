@@ -29,10 +29,10 @@ class Raft;
 
 // Raft Server
 class RaftServer : public BaseServer {
-	std::unique_ptr<Raft> &raft;
+	std::shared_ptr<Raft> raft;
 
 public:
-	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Raft> &raft_);
+	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft> &raft_);
 	~RaftServer();
 
 	void io_accept(ev::io &watcher, int revents);

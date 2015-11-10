@@ -29,10 +29,10 @@ class Discovery;
 
 // Discovery Server
 class DiscoveryServer : public BaseServer {
-	std::unique_ptr<Discovery> &discovery;
+	std::shared_ptr<Discovery> discovery;
 
 public:
-	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Discovery> &discovery_);
+	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery> &discovery_);
 	~DiscoveryServer();
 
 	void io_accept(ev::io &watcher, int revents);

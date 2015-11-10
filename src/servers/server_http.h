@@ -29,10 +29,10 @@ class Http;
 
 // Http Server
 class HttpServer : public BaseServer {
-	std::unique_ptr<Http> &http;
+	std::shared_ptr<Http> http;
 
 public:
-	HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Http> &http_);
+	HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Http> &http_);
 	~HttpServer();
 
 	void io_accept(ev::io &watcher, int revents) override;

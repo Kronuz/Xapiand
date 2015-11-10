@@ -26,7 +26,7 @@
 #include "http.h"
 
 
-HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, std::unique_ptr<Http> &http_)
+HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Http> &http_)
 	: BaseServer(server_, loop_, http_->sock),
 	  http(http_)
 {
