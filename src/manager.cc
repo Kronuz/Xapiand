@@ -530,13 +530,15 @@ XapiandManager::get_region()
 }
 
 
-void XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+void
+XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
     // FIXME: Implement this using a queue!
 }
 
 
-void XapiandManager::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename)
+void
+XapiandManager::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename)
 {
     // FIXME: Implement this using a queue!
 }
