@@ -94,7 +94,7 @@ public:
 		std::unique_lock<std::mutex> lk(_mtx);
 		workerList::iterator it(_children.begin());
 		while (it != _children.end()) {
-			sharedWorker child(*it);
+			sharedWorker child(*(it++));
 			lk.unlock();
 			child->shutdown();
 			lk.lock();
