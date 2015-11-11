@@ -141,6 +141,9 @@ protected:
 
 	void read_file();
 	bool send_file(int fd);
-	void destroy();
+
+
+public:
 	void shutdown();
+	void destroy();
 };
