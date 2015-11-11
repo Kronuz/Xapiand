@@ -70,7 +70,7 @@ enum class MODE;
 enum class WR;
 
 
-class BaseClient : public Task, public Worker {
+class BaseClient : public Task<>, public Worker {
 	friend Compressor;
 
 protected:

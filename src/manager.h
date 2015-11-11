@@ -107,7 +107,7 @@ public:
 	};
 
 	DatabasePool database_pool;
-	ThreadPool thread_pool;
+	ThreadPool<> thread_pool;
 
 	std::atomic<time_t> shutdown_asap;
 	std::atomic<time_t> shutdown_now;

@@ -31,7 +31,7 @@
 #include "ev/ev++.h"
 
 
-class XapiandReplicator : public Task, public Worker {
+class XapiandReplicator : public Task<>, public Worker {
 	XapiandReplicator(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_);
 
 	void run() override;

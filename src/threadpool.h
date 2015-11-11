@@ -30,16 +30,6 @@
 #include <vector>
 
 
-//
-//   Base task for Tasks
-//   run() should be overloaded and expensive calculations done there
-//
-class Task {
-	virtual void run() = 0;
-	friend class ThreadPool;
-};
-
-
 template<typename F, typename Tuple, std::size_t... I>
 static inline constexpr decltype(auto) apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
 	return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
@@ -74,7 +64,7 @@ class function_mo : private std::function<F> {
 
 public:
 	template<typename Fun, typename = std::enable_if_t<!std::is_copy_constructible<Fun>::value &&
-		!std::is_copy_assignable<Fun>::value>>
+	!std::is_copy_assignable<Fun>::value>>
 	function_mo(Fun fun) : std::function<F>(impl_move<Fun>(std::move(fun))) { }
 
 	function_mo() = default;
@@ -87,50 +77,67 @@ public:
 };
 
 
-class ThreadPool {
-	std::vector<std::thread> threads;
-	queue::Queue<function_mo<void()>> tasks;
+//
+//   Base task for Tasks
+//   run() should be overloaded and expensive calculations done there
+//
 
-	// Function that retrieves a task from a fifo queue, runs it and deletes it
-	void worker() {
-		function_mo<void()> task;
-		while (tasks.pop(task)) {
-			task();
-		}
-	}
+
+template<typename... Params>
+class TaskQueue;
+
+
+template<typename... Params>
+class Task {
+	friend TaskQueue<Params...>;
+
+	virtual void run(Params...) = 0;
+};
+
+
+template<typename... Params>
+class TaskQueue {
+protected:
+	queue::Queue<function_mo<void(Params...)>> tasks;
 
 public:
-	// Allocate a thread pool and set them to work trying to get tasks
-	ThreadPool(size_t num_threads) {
-		threads.reserve(num_threads);
-		for (size_t idx = 0; idx < num_threads; ++idx) {
-			threads.emplace_back(&ThreadPool::worker, this);
-		}
+	// Wait for the threads to finish
+	virtual ~TaskQueue() {
+		finish();
 	}
 
-	// Wait for the threads to finish
-	~ThreadPool() {
-		finish();
-		join();
+	// Function that retrieves a task from a fifo queue, runs it and deletes it
+	template<typename... Params_>
+	bool call(Params_&&... params) {
+		function_mo<void(Params...)> task;
+		if (TaskQueue::tasks.pop(task)) {
+			task(std::forward<Params_>(params)...);
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	// Enqueues any function to be executed
 	template<typename F, typename... Args>
-	auto enqueue(F&& f, Args&&... args) -> std::future<std::result_of_t<F(Args...)>> {
+	auto enqueue(F&& f, Args&&... args) -> std::future<std::result_of_t<F(Params..., Args...)>> {
 		auto t = std::make_tuple(std::forward<Args>(args)...);
-		auto task = std::packaged_task<std::result_of_t<F(Args...)>()>(
-			[f = std::forward<F>(f), t = std::move(t)]() mutable {
-				return apply(std::move(f), std::move(t));
-			});
+		auto task = std::packaged_task<std::result_of_t<F(Params..., Args...)>(Params...)>
+		(
+			[f = std::forward<F>(f), t = std::move(t)] (Params... params) mutable {
+				auto ot = std::make_tuple(std::move(params)...);
+				return apply(std::move(f), std::tuple_cat(ot, t));
+			}
+		 );
 		auto res = task.get_future();
 		tasks.push(std::move(task));
 		return res;
 	}
 
 	// Enqueues a Task object to be executed
-	decltype(auto) enqueue(std::shared_ptr<Task>&& nt) {
-		return enqueue([nt = std::move(nt)]() {
-			nt->run();
+	decltype(auto) enqueue(std::shared_ptr<Task<Params...>>&& nt) {
+		return enqueue([nt = std::move(nt)](Params... params) {
+			nt->run(std::move(params)...);
 		});
 	}
 
@@ -144,6 +151,42 @@ public:
 		tasks.end();
 	}
 
+	// Return size of the tasks queue
+	size_t size() {
+		return tasks.size();
+	}
+
+};
+
+
+template<typename... Params>
+class ThreadPool : public TaskQueue<Params...> {
+	std::vector<std::thread> threads;
+
+	// Function that retrieves a task from a fifo queue, runs it and deletes it
+	template<typename... Params_>
+	void worker(Params_&&... params) {
+		function_mo<void(Params...)> task;
+		while (TaskQueue<Params...>::tasks.pop(task)) {
+			task(std::forward<Params_>(params)...);
+		}
+	}
+
+public:
+	// Allocate a thread pool and set them to work trying to get tasks
+	template<typename... Params_>
+	ThreadPool(size_t num_threads, Params_&&... params) {
+		threads.reserve(num_threads);
+		for (size_t idx = 0; idx < num_threads; ++idx) {
+			threads.emplace_back(&ThreadPool::worker<Params_...>, this, std::forward<Params_>(params)...);
+		}
+	}
+
+	// Wait for the threads to finish
+	~ThreadPool() {
+		join();
+	}
+
 	// Wait for all threads
 	void join() {
 		for (auto& thread : threads) {
@@ -151,10 +194,5 @@ public:
 				thread.join();
 			}
 		}
-	}
-
-	// Return size of the tasks queue
-	size_t size() {
-		return tasks.size();
 	}
 };

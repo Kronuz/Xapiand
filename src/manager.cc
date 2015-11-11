@@ -463,7 +463,7 @@ XapiandManager::run(const opts_t &o)
 
 	INFO(this, "Starting %d server worker thread%s and %d replicator%s.\n", o.num_servers, (o.num_servers == 1) ? "" : "s", o.num_replicators, (o.num_replicators == 1) ? "" : "s");
 
-	ThreadPool server_pool(o.num_servers);
+	ThreadPool<> server_pool(o.num_servers);
 	for (size_t i = 0; i < o.num_servers; i++) {
 		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(manager, nullptr);
 		Worker::create<HttpServer>(server, server->loop, http);
@@ -475,7 +475,7 @@ XapiandManager::run(const opts_t &o)
 		server_pool.enqueue(std::move(server));
 	}
 
-	ThreadPool replicator_pool(o.num_replicators);
+	ThreadPool<> replicator_pool(o.num_replicators);
 	for (size_t i = 0; i < o.num_replicators; i++) {
 		replicator_pool.enqueue(Worker::create<XapiandReplicator>(manager, nullptr));
 	}

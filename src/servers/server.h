@@ -31,7 +31,7 @@ class DiscoveryServer;
 class RaftServer;
 
 
-class XapiandServer : public Task, public Worker {
+class XapiandServer : public Task<>, public Worker {
 	std::mutex qmtx;
 
 	ev::async async_setup_node;
