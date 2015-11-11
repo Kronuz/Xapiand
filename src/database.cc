@@ -1078,7 +1078,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		return srch;
 	}
 
-	int size_match = 0;
+	size_t size_match = 0;
 	bool first_time = true, first_timeR = true;
 	std::string querystring;
 	Xapian::Query queryRange;
@@ -1290,7 +1290,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		next++;
 	}
 
-	if (static_cast<size_t>(size_match) != query.size()) {
+	if (size_match != query.size()) {
 		throw Xapian::QueryParserError("Query '" + query + "' contains errors.\n" );
 	}
 
