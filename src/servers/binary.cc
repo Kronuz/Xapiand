@@ -85,4 +85,53 @@ Binary::connection_socket()
 }
 
 
+void
+Binary::add_server(const std::shared_ptr<BinaryServer> &server)
+{
+	std::lock_guard<std::mutex> lk(bsmtx);
+	servers.push_back(server);
+}
+
+
+void
+Binary::async_signal_send()
+{
+	std::lock_guard<std::mutex> lk(bsmtx);
+	for (auto it = servers.begin(); it != servers.end();) {
+		auto server = (*it).lock();
+		if (server) {
+			server->async_signal.send();
+			it++;
+		} else {
+			servers.erase(it++);
+		}
+	}
+}
+
+
+std::future<bool>
+Binary::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+{
+	auto future = tasks.enqueue([src_endpoint, dst_endpoint] (const std::shared_ptr<BinaryServer> &server) {
+		return server->trigger_replication(src_endpoint, dst_endpoint);
+	});
+
+	async_signal_send();
+
+	return future;
+}
+
+
+std::future<bool>
+Binary::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename)
+{
+	auto future = tasks.enqueue([endpoints, did, filename] (const std::shared_ptr<BinaryServer> &server) {
+		return server->store(endpoints, did, filename);
+	});
+
+	async_signal_send();
+	
+	return future;
+}
+
 #endif  /* HAVE_REMOTE_PROTOCOL */

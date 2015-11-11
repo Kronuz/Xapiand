@@ -30,8 +30,13 @@
 
 BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Binary> &binary_)
 	: BaseServer(server_, loop_, binary_->sock),
-	  binary(binary_)
+	  binary(binary_),
+	  async_signal(*loop_)
 {
+	async_signal.set<BinaryServer, &BinaryServer::async_signal_cb>(this);
+	async_signal.start();
+	LOG_EV(this, "\tStart binary async signal event\n");
+
 	LOG_EV(this, "Start binary accept event (sock=%d)\n", binary->sock);
 	LOG_OBJ(this, "CREATED BINARY SERVER!\n");
 }
@@ -40,6 +45,13 @@ BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::lo
 BinaryServer::~BinaryServer()
 {
 	LOG_OBJ(this, "DELETED BINARY SERVER!\n");
+}
+
+
+void
+BinaryServer::async_signal_cb(ev::async &watcher, int revents)
+{
+	while (binary->tasks.call(share_this<BinaryServer>())) {}
 }
 
 

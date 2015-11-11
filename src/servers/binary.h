@@ -28,11 +28,18 @@
 
 #include "server_binary.h"
 #include "../endpoint.h"
+#include "../ev/ev++.h"
 
 
 // Configuration data for Binary
 class Binary : public BaseTCP {
 	friend BinaryServer;
+
+	std::mutex bsmtx;
+	void async_signal_send();
+
+	std::vector<std::weak_ptr<BinaryServer>> servers;
+	TaskQueue<const std::shared_ptr<BinaryServer>&> tasks;
 
 public:
 	Binary(const std::shared_ptr<XapiandManager>& manager_, int port_);
@@ -41,6 +48,11 @@ public:
 	std::string getDescription() const noexcept override;
 
 	int connection_socket();
+
+	void add_server(const std::shared_ptr<BinaryServer> &server);
+
+	std::future<bool> trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
+	std::future<bool> store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename);
 };
 
 

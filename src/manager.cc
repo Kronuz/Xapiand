@@ -447,7 +447,7 @@ XapiandManager::run(const opts_t &o)
 	msg += http->getDescription() + ", ";
 
 #ifdef HAVE_REMOTE_PROTOCOL
-	auto binary = std::make_shared<Binary>(manager, o.binary_port);
+	binary = std::make_shared<Binary>(manager, o.binary_port);
 	msg += binary->getDescription() + ", ";
 #endif
 
@@ -468,7 +468,7 @@ XapiandManager::run(const opts_t &o)
 		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(manager, nullptr);
 		Worker::create<HttpServer>(server, server->loop, http);
 #ifdef HAVE_REMOTE_PROTOCOL
-		Worker::create<BinaryServer>(server, server->loop, binary);
+		binary->add_server(Worker::create<BinaryServer>(server, server->loop, binary));
 #endif
 		Worker::create<DiscoveryServer>(server, server->loop, discovery);
 		Worker::create<RaftServer>(server, server->loop, raft);
@@ -530,17 +530,16 @@ XapiandManager::get_region()
 }
 
 
-void
+std::future<bool>
 XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-    // FIXME: Implement this using a queue!
+	return binary->trigger_replication(src_endpoint, dst_endpoint);
 }
 
-
-void
+std::future<bool>
 XapiandManager::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename)
 {
-    // FIXME: Implement this using a queue!
+	return binary->store(endpoints, did, filename);
 }
 
 

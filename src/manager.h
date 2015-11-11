@@ -118,6 +118,7 @@ public:
 
 	std::shared_ptr<Raft> raft;
 	std::shared_ptr<Discovery> discovery;
+	std::shared_ptr<Binary> binary;
 
 	State state;
 	std::string cluster_name;
@@ -146,8 +147,8 @@ public:
 	// Return the region to which local_node belongs
 	int get_region();
 
-	void trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
-	void store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename);
+	std::future<bool> trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
+	std::future<bool> store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename);
 
 	unique_cJSON server_status();
 	unique_cJSON get_stats_time(const std::string &time_req);
