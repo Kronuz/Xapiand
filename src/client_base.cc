@@ -254,11 +254,11 @@ BaseClient::io_update()
 				destroy();
 			} else {
 				io_write.stop();
-				LOG_EV(this, "\tStop write event (sock=%d)\n", sock);
+				LOG_EV(this, "\tDisable write event (sock=%d)\n", sock);
 			}
 		} else {
 			io_write.start();
-			LOG_EV(this, "\tStart write event (sock=%d)\n", sock);
+			LOG_EV(this, "\tEnable write event (sock=%d)\n", sock);
 		}
 	}
 }
@@ -349,12 +349,12 @@ BaseClient::write_cb(int fd)
 			return;
 		} else if (status == WR::RETRY) {
 			io_write.start();
-			LOG_EV(this, "\tStart write event (sock=%d)\n", sock);
+			LOG_EV(this, "\tEnable write event (sock=%d)\n", sock);
 			return;
 		}
 	} while (status != WR::OK);
 	io_write.stop();
-	LOG_EV(this, "\tStop write event (sock=%d)\n", sock);
+	LOG_EV(this, "\tDisable write event (sock=%d)\n", sock);
 }
 
 
