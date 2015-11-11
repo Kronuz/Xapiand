@@ -77,7 +77,10 @@ BinaryServer::io_accept(ev::io &watcher, int revents)
 
 	if (!client->init_remote()) {
 		client->destroy();
+		return;
 	}
+
+	INFO(this, "Accepted new client! (sock=%d)\n", client_sock);
 }
 
 
@@ -116,6 +119,8 @@ BinaryServer::store(const Endpoints &endpoints, const Xapian::docid &did, const 
 		client->destroy();
 		return false;
 	}
+
+	INFO(this, "Storing %s in %s...\n", filename.c_str(), endpoints.as_string().c_str());
 
 	return true;
 }
