@@ -453,6 +453,8 @@ BinaryClient::run()
 	while (!messages_queue.empty()) {
 		try {
 			switch (state) {
+				case State::INIT_REMOTEPROTOCOL:
+					LOG_ERR(this, "Unexpected INIT_REMOTEPROTOCOL!\n");
 				case State::REMOTEPROTOCOL:
 					run_one();
 					break;
