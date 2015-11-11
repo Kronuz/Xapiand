@@ -72,7 +72,8 @@ enum class State {
 
 // A single instance of a non-blocking Xapiand binary protocol handler
 class BinaryClient : public BaseClient, public RemoteProtocol {
-	bool running;
+	std::atomic_int running;
+
 	State state;
 	int file_descriptor;
 	char file_path[PATH_MAX];

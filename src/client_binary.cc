@@ -48,7 +48,7 @@
 BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *loop_, int sock_, double active_timeout_, double idle_timeout_)
 	: BaseClient(std::move(server_), loop_, sock_),
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
-	  running(false),
+	  running(0),
 	  repl_database(nullptr),
 	  repl_switched_db(false),
 	  storing_database(NULL),
@@ -324,10 +324,8 @@ BinaryClient::on_read(const char *buf, size_t received)
 		messages_queue.push(std::make_unique<Buffer>(type, data.c_str(), data.size()));
 	}
 
-	std::lock_guard<std::mutex> lk(qmtx);
 	if (!messages_queue.empty()) {
 		if (!running) {
-			running = true;
 			manager()->thread_pool.enqueue(share_this<BinaryClient>());
 		}
 	}
@@ -436,33 +434,33 @@ BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool, int)
 void
 BinaryClient::run()
 {
-	LOG_OBJ(this, "BinaryClient::run() BEGINS!\n");
+	LOG_OBJ(this, "BinaryClient::run:BEGIN\n");
+	if (running++) {
+		running--;
+		return;
+	}
 
 	std::string message;
 	ReplicateType repl_type;
 	StoringType storing_type;
 
-	while (true) {
-		std::unique_lock<std::mutex> lk(qmtx);
-		if (state != State::INIT_REMOTEPROTOCOL && messages_queue.empty()) {
-			running = false;
-			break;
-		}
-		lk.unlock();
+	if (state == State::INIT_REMOTEPROTOCOL) {
+		state = State::REMOTEPROTOCOL;
+		msg_update(std::string());
+	}
 
+	while (!messages_queue.empty()) {
 		try {
 			switch (state) {
-				case State::INIT_REMOTEPROTOCOL:
-					state = State::REMOTEPROTOCOL;
-					msg_update(std::string());
-					break;
 				case State::REMOTEPROTOCOL:
 					run_one();
 					break;
+
 				case State::REPLICATIONPROTOCOL_SLAVE:
 					get_message(idle_timeout, message, ReplicateType::MAX);
 					receive_repl();
 					break;
+
 				case State::REPLICATIONPROTOCOL_MASTER:
 					repl_type = get_message(idle_timeout, message, ReplicateType::MAX);
 					repl_apply(repl_type, message);
@@ -491,7 +489,8 @@ BinaryClient::run()
 		}
 	}
 
-	LOG_OBJ(this, "BinaryClient::run() ENDS!\n");
+	running--;
+	LOG_OBJ(this, "BinaryClient::run:END\n");
 }
 
 
