@@ -309,16 +309,17 @@ BinaryClient::on_read(const char *buf, size_t received)
 		std::string data = std::string(p, len);
 		buffer.erase(0, p - o + len);
 
+		LOG_BINARY(this, "Received message '\\%02x' (state=0x%x)\n", type, state);
 		switch (type) {
 			case SWITCH_TO_REPL:
 				state = State::REPLICATIONPROTOCOL_MASTER;  // Switch to replication protocol
 				type = toUType(ReplicateType::MSG_GET_CHANGESETS);
-				LOG_BINARY(this, "Switched to replication protocol");
+				LOG_BINARY(this, "Switched to replication protocol\n");
 				break;
 			case SWITCH_TO_STORING:
 				state = State::STORINGPROTOCOL_RECEIVER;  // Switch to file storing
 				type = toUType(StoringType::CREATE);
-				LOG_BINARY(this, "Switched to file storing");
+				LOG_BINARY(this, "Switched to file storing\n");
 				break;
 		}
 
