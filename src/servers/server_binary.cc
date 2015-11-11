@@ -71,7 +71,11 @@ BinaryServer::io_accept(ev::io &watcher, int revents)
 			LOG_ERR(this, "ERROR: accept binary error (sock=%d): %s\n", binary->sock, strerror(errno));
 		}
 	} else {
-		Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
+		auto client = Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
+
+		if (!client->init_remote()) {
+			client->detach();
+		}
 	}
 }
 
