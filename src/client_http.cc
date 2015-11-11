@@ -192,7 +192,9 @@ void HttpClient::on_read(const char *buf, size_t received)
 		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
 			io_read.stop();
 			written = 0;
-			manager()->thread_pool.enqueue(share_this<HttpClient>());
+			if (!closed) {
+				manager()->thread_pool.enqueue(share_this<HttpClient>());
+			}
 		}
 	} else {
 		LOG_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? http_errno_description(HTTP_PARSER_ERRNO(&parser)) : "incomplete request");
@@ -434,7 +436,8 @@ void HttpClient::run()
 			write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		}
 	}
-	io_read.start();
+
+	if (!closed) io_read.start();
 }
 
 
