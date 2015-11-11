@@ -29,6 +29,8 @@ class Discovery;
 
 // Discovery Server
 class DiscoveryServer : public BaseServer {
+	friend Discovery;
+
 	std::shared_ptr<Discovery> discovery;
 
 public:

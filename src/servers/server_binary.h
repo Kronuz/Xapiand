@@ -35,6 +35,8 @@ class Binary;
 
 // Binary Server
 class BinaryServer : public BaseServer {
+	friend Binary;
+
 	std::shared_ptr<Binary> binary;
 
 public:

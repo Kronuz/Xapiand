@@ -29,6 +29,8 @@ class Raft;
 
 // Raft Server
 class RaftServer : public BaseServer {
+	friend Raft;
+
 	std::shared_ptr<Raft> raft;
 
 public:
