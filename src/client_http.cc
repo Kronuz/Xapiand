@@ -310,14 +310,19 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 			if (name.compare("accept") == 0) {
 				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_continuous);
 				std::sregex_iterator end;
-				LOG(nullptr, "+++++++++ Start Regex %d\n", std::distance(next, end));
+				size_t size_match = 0;
 				while (next != end) {
-					LOG(nullptr, "+++++++++ [match]: %d\n", next->size());
-					if (next->length(1) != 0) {
-						next->length(2) != 0 ? self->accept_set.insert(std::make_pair(std::stod(std::string(next->str(2), 2)), next->str(1)))
-											 : self->accept_set.insert(std::make_pair(1, next->str(1)));
-					}
+					size_match += next->length(0);
+					LOG(nullptr, "%s  [%s] %zu [%s]\n", next->str(1).c_str(), next->str(2).c_str(), next->length(2), next->length(2) != 0 ? std::string(next->str(2), 2).c_str() : " ");
+					next->length(2) != 0 ? self->accept_set.insert(std::make_pair(std::stod(std::string(next->str(2), 2)), next->str(1)))
+										 : self->accept_set.insert(std::make_pair(1, next->str(1)));
 					next++;
+				}
+
+				if (size_match != value.size()) {
+					self->write(http_response(400, HTTP_STATUS, p->http_major, p->http_minor)); // <-- remove leater!
+					self->close();
+					return 0;
 				}
 			}
 			self->header_name.clear();
@@ -1024,7 +1029,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 				std::string ct_type = document.get_value(2);
 				bool type_found = false;
 				auto it = accept_set.begin();
-				for (; it != accept_set.end(); it++){
+				for ( ; it != accept_set.end(); it++){
 					if (it->second == ct_type || it->second == "*/*") {
 						if (it->second == "application/json" || ct_type == "application/json") {
 							data = std::string(p, length);
