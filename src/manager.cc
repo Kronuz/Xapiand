@@ -205,11 +205,12 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 #ifdef HAVE_REMOTE_PROTOCOL
 		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
 
-		trigger_replication(remote_endpoint, *cluster_endpoints.begin());
-
-		INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
-		new_cluster = 2;
-		break;  // FIXME: Retry with other nodes if it fails
+		auto ret = trigger_replication(remote_endpoint, *cluster_endpoints.begin());
+		if (ret.get()) {
+			INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
+			new_cluster = 2;
+			break;
+		}
 #endif
 	}
 
