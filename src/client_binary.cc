@@ -309,7 +309,7 @@ BinaryClient::on_read(const char *buf, size_t received)
 		std::string data = std::string(p, len);
 		buffer.erase(0, p - o + len);
 
-		LOG_BINARY(this, "Received message '\\%02x' (state=0x%x)\n", type, state);
+		LOG_BINARY(this, "on_read message: '\\%02x' (state=0x%x)\n", type, state);
 		switch (type) {
 			case SWITCH_TO_REPL:
 				state = State::REPLICATIONPROTOCOL_MASTER;  // Switch to replication protocol
