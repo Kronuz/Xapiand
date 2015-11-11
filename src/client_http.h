@@ -69,11 +69,8 @@ class HttpClient : public BaseClient {
 	static const http_parser_settings settings;
 
 	struct accept_preference_comp {
-		bool operator() (const std::pair<int, std::string> a, std::pair<int, std::string> b) const
-		{
-			if (b.first >= a.first)
-				return true;
-			else return false;
+		constexpr bool operator()(const std::pair<double, std::string>& l, const std::pair<double, std::string>& r) const noexcept {
+			return l.first == r.first ? l.second < r.second : l.first < r.first;
 		}
 	};
 
@@ -89,7 +86,7 @@ class HttpClient : public BaseClient {
 
 	std::string content_type;
 	std::string content_length;
-	std::set<std::pair<double,std::string>, accept_preference_comp> accept_set;
+	std::set<std::pair<double, std::string>, accept_preference_comp> accept_set;
 	bool expect_100 = false;
 
 	std::string host;
