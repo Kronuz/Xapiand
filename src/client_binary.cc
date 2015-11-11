@@ -49,6 +49,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *
 	: BaseClient(std::move(server_), loop_, sock_),
 	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  running(0),
+	  state(State::INIT_REMOTEPROTOCOL),
 	  repl_database(nullptr),
 	  repl_switched_db(false),
 	  storing_database(NULL),
@@ -88,7 +89,9 @@ BinaryClient::~BinaryClient()
 bool
 BinaryClient::init_remote()
 {
+	LOG(this, "init_remote\n");
 	state = State::INIT_REMOTEPROTOCOL;
+
 	manager()->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
 }
@@ -98,6 +101,7 @@ bool
 BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
 	LOG(this, "init_replication: %s  -->  %s\n", src_endpoint.as_string().c_str(), dst_endpoint.as_string().c_str());
+	state = State::REPLICATIONPROTOCOL_SLAVE;
 
 	repl_endpoints.insert(src_endpoint);
 	endpoints.insert(dst_endpoint);
@@ -107,9 +111,6 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		return false;
 	}
 
-	state = State::REPLICATIONPROTOCOL_SLAVE;
-	manager()->thread_pool.enqueue(share_this<BinaryClient>());
-
 	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(src_endpoint.port))) < 0) {
 		LOG_ERR(this, "Cannot connect to %s\n", src_endpoint.host.c_str(), std::to_string(src_endpoint.port).c_str());
 		manager()->database_pool.checkin(repl_database);
@@ -118,6 +119,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 	}
 	LOG_CONN(this, "Connected to %s (sock=%d)!\n", src_endpoint.as_string().c_str(), sock);
 
+	manager()->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
 }
 
@@ -125,13 +127,11 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 bool BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename)
 {
 	LOG(this, "init_storing: %s  -->  %s\n", filename.c_str(), endpoints_.as_string().c_str());
+	state = State::STORINGPROTOCOL_SENDER;
 
 	storing_id = did;
 	storing_filename = filename;
 	storing_endpoint = *endpoints_.begin();
-
-	state = State::STORINGPROTOCOL_SENDER;
-	manager()->thread_pool.enqueue(share_this<BinaryClient>());
 
 	if ((sock = BaseTCP::connect(sock, storing_endpoint.host.c_str(), std::to_string(storing_endpoint.port).c_str())) < 0) {
 		LOG_ERR(this, "Cannot connect to %s\n", storing_endpoint.host.c_str(), std::to_string(storing_endpoint.port).c_str());
@@ -139,6 +139,7 @@ bool BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid
 	}
 	LOG_CONN(this, "Connected to %s (sock=%d)!\n", storing_endpoint.as_string().c_str(), sock);
 
+	manager()->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
 }
 
