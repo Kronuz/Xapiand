@@ -436,6 +436,8 @@ BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool, int)
 void
 BinaryClient::run()
 {
+	LOG_OBJ(this, "BinaryClient::run() BEGINS!\n");
+
 	std::string message;
 	ReplicateType repl_type;
 	StoringType storing_type;
@@ -488,6 +490,8 @@ BinaryClient::run()
 			shutdown();
 		}
 	}
+
+	LOG_OBJ(this, "BinaryClient::run() ENDS!\n");
 }
 
 
@@ -503,7 +507,7 @@ BinaryClient::repl_apply(ReplicateType type, const std::string &message)
 			case ReplicateType::REPLY_DB_FILEDATA:    repl_set_db_filedata(message); return;
 			case ReplicateType::REPLY_DB_FOOTER:      repl_set_db_footer();          return;
 			case ReplicateType::REPLY_CHANGESET:      repl_changeset(message);       return;
-			case ReplicateType::MSG_GET_CHANGESETS:   repl_get_changesets(message);   return;
+			case ReplicateType::MSG_GET_CHANGESETS:   repl_get_changesets(message);  return;
 			default:
 				std::string errmsg("Unexpected message type ");
 				errmsg += std::to_string(toUType(type));
