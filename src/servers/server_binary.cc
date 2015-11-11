@@ -65,17 +65,18 @@ BinaryServer::io_accept(ev::io &watcher, int revents)
 
 	assert(binary->sock == watcher.fd || binary->sock == -1);
 
-	int client_sock;
-	if ((client_sock = binary->accept()) < 0) {
+	int client_sock = binary->accept();
+	if (client_sock < 0) {
 		if (!ignored_errorno(errno, false)) {
 			LOG_ERR(this, "ERROR: accept binary error (sock=%d): %s\n", binary->sock, strerror(errno));
 		}
-	} else {
-		auto client = Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
+		return;
+	}
 
-		if (!client->init_remote()) {
-			client->detach();
-		}
+	auto client = Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
+
+	if (!client->init_remote()) {
+		client->destroy();
 	}
 }
 
@@ -91,6 +92,7 @@ BinaryServer::trigger_replication(const Endpoint &src_endpoint, const Endpoint &
 	auto client = Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
 
 	if (!client->init_replication(src_endpoint, dst_endpoint)) {
+		client->destroy();
 		return false;
 	}
 
@@ -111,6 +113,7 @@ BinaryServer::store(const Endpoints &endpoints, const Xapian::docid &did, const 
 	auto client = Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
 
 	if (!client->init_storing(endpoints, did, filename)) {
+		client->destroy();
 		return false;
 	}
 
