@@ -108,7 +108,7 @@ protected:
 	ev::io io_write;
 	ev::async async_write;
 
-	bool closed;
+	std::atomic_bool closed;
 	int sock;
 	int written;
 	std::string length_buffer;
