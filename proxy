@@ -236,7 +236,7 @@ class XapianProxyServer(ProxyServer):
                 length, size = decode_length(buf[1:], True)
                 msg_id, msg_len, msg_body, buf = buf[0], buf[1:1 + size], buf[1 + size:1 + size + length], buf[1 + size + length:]
                 assert length == len(msg_body)
-                msg = (self.replies if direction else self.messages)[cmd]
+                msg = (self.replies if direction else self.messages).get(cmd, 'UNKNOWN')
                 dir_repr = "<<<" if direction else ">>>"
                 print("%27s %r" % ("%s %s:" % (msg, dir_repr), msg_id))
                 print("%27s %r" % ("length(%s):" % length, msg_len))
