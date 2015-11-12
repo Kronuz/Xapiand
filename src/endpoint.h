@@ -128,11 +128,8 @@ public:
 	bool operator<(const Endpoint & other) const;
 	bool operator==(const Node &other) const;
 	struct compare {
-		bool operator() (const Endpoint &a, const Endpoint &b) const
-		{
-			if (b.mastery_level > a.mastery_level)
-				return true;
-			else return false;
+		constexpr bool operator() (const Endpoint &a, const Endpoint &b) const noexcept {
+			return b.mastery_level > a.mastery_level;
 		}
 	};
 
