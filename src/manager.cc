@@ -396,6 +396,7 @@ XapiandManager::sig_shutdown_handler(int sig)
 
 	if (now > XapiandManager::shutdown_asap + 1) {
 		XapiandManager::shutdown_asap = now;
+		log_kill();
 	}
 	shutdown();
 }

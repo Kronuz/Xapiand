@@ -58,8 +58,6 @@
 #define HTTP_UPLOAD "_upload"
 #define HTTP_UPLOAD_SIZE 7
 
-std::mutex log_mutex;
-
 pcre *compiled_coords_re = NULL;
 pcre *compiled_numeric_re = NULL;
 std::regex find_range_re = std::regex("([^ ]*)\\.\\.([^ ]*)", std::regex::optimize);
@@ -160,14 +158,84 @@ std::string repr(const std::string &string, bool friendly)
 }
 
 
-void log(const char *file, int line, void *, const char *format, ...)
+std::atomic_bool log_runner(true);
+static std::mutex log_mutex;
+static std::map<uint64_t, std::pair<std::chrono::time_point<std::chrono::system_clock>, std::string>> log_map;
+std::thread log_thread([] {
+	while (log_runner) {
+		auto now = std::chrono::system_clock::now();
+		{
+			std::lock_guard<std::mutex> lk(log_mutex);
+			for (auto it = log_map.begin(); it != log_map.end();) {
+				if (now > it->second.first) {
+					std::cerr << it->second.second;
+					it = log_map.erase(it);
+				} else {
+					++it;
+				}
+			}
+		}
+		if(log_runner) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+});
+
+void log_kill()
+{
+	log_runner = false;
+	log_thread.join();
+}
+
+
+std::string _log(const char *file, int line, void *, const char *format, va_list ap)
+{
+	char buffer[2048];
+
+	snprintf(buffer, sizeof(buffer), "tid(%s): ../%s:%d: ", get_thread_name().c_str(), file, line);
+	size_t buffer_len = strlen(buffer);
+
+	vsnprintf(&buffer[buffer_len], sizeof(buffer) - buffer_len, format, ap);
+
+	return buffer;
+}
+
+void log(const char *file, int line, void *obj, const char *format, ...)
 {
 	std::lock_guard<std::mutex> lk(log_mutex);
-	fprintf(stderr, "tid(%s): ../%s:%d: ", get_thread_name().c_str(), file, line);
+
 	va_list argptr;
 	va_start(argptr, format);
-	vfprintf(stderr, format, argptr);
+	std::cerr << _log(file, line, obj, format, argptr);
 	va_end(argptr);
+}
+
+uint64_t log_timed(const char *file, int line, int timeout, void *obj, const char *format, ...)
+{
+	std::lock_guard<std::mutex> lk(log_mutex);
+	uint64_t id = 0;
+
+	va_list argptr;
+	va_start(argptr, format);
+	if (timeout) {
+		id = random_int(1, UINT64_MAX);
+		log_map[id] = std::make_pair(std::chrono::system_clock::now() + std::chrono::milliseconds(timeout), _log(file, line, obj, format, argptr));
+	} else {
+		std::cerr << _log(file, line, obj, format, argptr);
+	}
+	va_end(argptr);
+	return id;
+}
+
+void log_clear(uint64_t id, const char *file, int line, void *obj, const char *format, ...)
+{
+	std::lock_guard<std::mutex> lk(log_mutex);
+	try {
+		log_map.erase(id);
+	} catch(...) {
+		va_list argptr;
+		va_start(argptr, format);
+		std::cerr << _log(file, line, obj, format, argptr);
+		va_end(argptr);
+	}
 }
 
 

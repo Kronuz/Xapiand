@@ -115,6 +115,9 @@ void set_thread_name(const std::string &name);
 std::string get_thread_name();
 
 void log(const char *file, int line, void *obj, const char *fmt, ...);
+uint64_t log_timed(const char *file, int line, int timeout, void *obj, const char *format, ...);
+void log_clear(uint64_t id, const char *file, int line, void *obj, const char *format, ...);
+void log_kill();
 
 std::string repr(const void *p, size_t size, bool friendly=true);
 std::string repr(const std::string &string, bool friendly=true);
@@ -228,26 +231,41 @@ namespace epoch {
 	auto now = []() noexcept { return std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); };
 }
 
-#define INFO(...) log(__FILE__, __LINE__, __VA_ARGS__)
+#define _(...)
+#define _LOG_ENABLED(...) log(__FILE__, __LINE__, __VA_ARGS__)
+#define _LOG_TIMED_100(...) auto __timed = log_timed(__FILE__, __LINE__, 100, __VA_ARGS__)
+#define _LOG_TIMED_500(...) auto __timed = log_timed(__FILE__, __LINE__, 500, __VA_ARGS__)
+#define _LOG_TIMED_1000(...) auto __timed = log_timed(__FILE__, __LINE__, 1000, __VA_ARGS__)
+#define _LOG_TIMED_CLEAR(...) log_clear(__timed, __FILE__, __LINE__, __VA_ARGS__)
 
-#define LOG(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_ERR(...) log(__FILE__, __LINE__, __VA_ARGS__)
+
+#define INFO _LOG_ENABLED
+
+#define LOG _LOG_ENABLED
+
+#define LOG_ERR _LOG_ENABLED
 
 #define LOG_DEBUG(...)
 
-#define LOG_CONN(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_DISCOVERY(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_RAFT(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_OBJ(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_DATABASE(...)
-#define LOG_HTTP(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_BINARY(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_HTTP_PROTO_PARSER(...)
+#define LOG_CONN _LOG_ENABLED
+#define LOG_DISCOVERY _LOG_ENABLED
+#define LOG_RAFT _LOG_ENABLED
+#define LOG_OBJ _LOG_ENABLED
+#define LOG_OBJ_BEGIN _LOG_TIMED_100
+#define LOG_OBJ_END _LOG_TIMED_CLEAR
+#define LOG_DATABASE _
+#define LOG_DATABASE_BEGIN _LOG_TIMED_100
+#define LOG_DATABASE_END _LOG_TIMED_CLEAR
+#define LOG_HTTP _LOG_ENABLED
+#define LOG_BINARY _LOG_ENABLED
+#define LOG_HTTP_PROTO_PARSER _
 
-#define LOG_EV(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_CONN_WIRE(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_UDP_WIRE(...)
-#define LOG_HTTP_PROTO(...)
-#define LOG_BINARY_PROTO(...)
+#define LOG_EV _LOG_ENABLED
+#define LOG_EV_BEGIN _LOG_TIMED_500
+#define LOG_EV_END _LOG_TIMED_CLEAR
+#define LOG_CONN_WIRE _LOG_ENABLED
+#define LOG_UDP_WIRE _
+#define LOG_HTTP_PROTO _
+#define LOG_BINARY_PROTO _
 
-#define LOG_DATABASE_WRAP(...) log(__FILE__, __LINE__, __VA_ARGS__)
+#define LOG_DATABASE_WRAP _LOG_ENABLED
