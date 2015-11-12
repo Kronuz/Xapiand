@@ -65,6 +65,8 @@ void setup_signal_handlers(void) {
 
 // int num_servers, const char *cluster_name_, const char *node_name_, const char *discovery_group, int discovery_port, const char *raft_group, int raft_port, int http_port, int binary_port, size_t dbpool_size
 void run(const opts_t &opts) {
+	set_thread_name("===");
+
 	setup_signal_handlers();
 	ev::default_loop default_loop;
 	manager = Worker::create<XapiandManager>(&default_loop, opts);

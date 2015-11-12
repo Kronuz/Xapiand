@@ -24,6 +24,8 @@
 
 #include "queue.h"
 
+#include <stdio.h>
+
 #include <thread>
 #include <future>
 #include <cassert>
@@ -165,7 +167,10 @@ class ThreadPool : public TaskQueue<Params...> {
 
 	// Function that retrieves a task from a fifo queue, runs it and deletes it
 	template<typename... Params_>
-	void worker(Params_&&... params) {
+	void worker(const std::string& format, size_t idx, Params_&&... params) {
+		char name[100];
+		snprintf(name, sizeof(name), format.c_str(), idx);
+		set_thread_name(std::string(name));
 		function_mo<void(Params...)> task;
 		while (TaskQueue<Params...>::tasks.pop(task)) {
 			task(std::forward<Params_>(params)...);
@@ -175,10 +180,10 @@ class ThreadPool : public TaskQueue<Params...> {
 public:
 	// Allocate a thread pool and set them to work trying to get tasks
 	template<typename... Params_>
-	ThreadPool(size_t num_threads, Params_&&... params) {
+	ThreadPool(const std::string& format, size_t num_threads, Params_&&... params) {
 		threads.reserve(num_threads);
 		for (size_t idx = 0; idx < num_threads; ++idx) {
-			threads.emplace_back(&ThreadPool::worker<Params_...>, this, std::forward<Params_>(params)...);
+			threads.emplace_back(&ThreadPool::worker<Params_...>, this, format, idx, std::forward<Params_>(params)...);
 		}
 	}
 

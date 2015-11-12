@@ -48,7 +48,7 @@ std::regex XapiandManager::time_re = std::regex("((([01]?[0-9]|2[0-3])h)?(([0-5]
 XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	: Worker(nullptr, loop_),
 	  database_pool(o.dbpool_size),
-	  thread_pool(o.threadpool_size),
+	  thread_pool("W%zu", o.threadpool_size),
 	  shutdown_asap(0),
 	  shutdown_now(0),
 	  async_shutdown(*loop),
@@ -464,7 +464,7 @@ XapiandManager::run(const opts_t &o)
 
 	INFO(this, "Starting %d server worker thread%s and %d replicator%s.\n", o.num_servers, (o.num_servers == 1) ? "" : "s", o.num_replicators, (o.num_replicators == 1) ? "" : "s");
 
-	ThreadPool<> server_pool(o.num_servers);
+	ThreadPool<> server_pool("S%zu", o.num_servers);
 	for (size_t i = 0; i < o.num_servers; i++) {
 		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(manager, nullptr);
 		Worker::create<HttpServer>(server, server->loop, http);
@@ -476,7 +476,7 @@ XapiandManager::run(const opts_t &o)
 		server_pool.enqueue(std::move(server));
 	}
 
-	ThreadPool<> replicator_pool(o.num_replicators);
+	ThreadPool<> replicator_pool("R%zu", o.num_replicators);
 	for (size_t i = 0; i < o.num_replicators; i++) {
 		replicator_pool.enqueue(Worker::create<XapiandReplicator>(manager, nullptr));
 	}

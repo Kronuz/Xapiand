@@ -37,6 +37,13 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#ifdef HAVE_PTHREAD_H
+#include <pthread.h>
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>
+#endif
+#endif
+
 #define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
 #define NUMERIC_RE "-?(\\d*\\.\\d+|\\d+)"
 
@@ -63,6 +70,38 @@ times_row_t stats_cnt;
 
 static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
 static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
+
+static std::hash<std::thread::id> thread_hasher;
+
+
+void set_thread_name(const std::string &name)
+{
+#if defined(HAVE_PTHREAD_SETNAME_NP_1)
+	pthread_setname_np(name.c_str());
+#elif defined(HAVE_PTHREAD_SETNAME_NP_2)
+	pthread_setname_np(pthread_self(), name.c_str());
+#elif defined(HAVE_PTHREAD_SETNAME_NP_3)
+	pthread_setname_np(pthread_self(), name.c_str(), NULL);
+#elif defined(HAVE_PTHREAD_SET_NAME_NP_2)
+	pthread_set_name_np(pthread_self(), name.c_str());
+#endif
+}
+
+
+std::string get_thread_name()
+{
+	char name[100] = {0};
+#if defined(HAVE_PTHREAD_GETNAME_NP_3)
+	pthread_getname_np(pthread_self(), name, sizeof(name));
+#elif defined(HAVE_PTHREAD_GET_NAME_NP_3)
+	pthread_get_name_np(pthread_self(), name, sizeof(name));
+#elif defined(HAVE_PTHREAD_GET_NAME_NP_1)
+	strncpy(name, pthread_get_name_np(pthread_self()), sizeof(name));
+#else
+	snprintf(name, sizeof(name), "%zx", thread_hasher(std::this_thread::get_id()));
+#endif
+      return std::string(name);
+}
 
 
 double random_real(double initial, double last)
@@ -124,9 +163,8 @@ std::string repr(const std::string &string, bool friendly)
 
 void log(const char *file, int line, void *, const char *format, ...)
 {
-	std::hash<std::thread::id> hasher;
 	std::lock_guard<std::mutex> lk(log_mutex);
-	fprintf(stderr, "tid(%zx): ../%s:%d: ", hasher(std::this_thread::get_id()), file, line);
+	fprintf(stderr, "tid(%s): ../%s:%d: ", get_thread_name().c_str(), file, line);
 	va_list argptr;
 	va_start(argptr, format);
 	vfprintf(stderr, format, argptr);

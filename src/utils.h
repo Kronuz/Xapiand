@@ -111,6 +111,9 @@ inline constexpr std::size_t arraySize(T (&)[N]) noexcept
 double random_real(double initial, double last);
 uint64_t random_int(uint64_t initial, uint64_t last);
 
+void set_thread_name(const std::string &name);
+std::string get_thread_name();
+
 void log(const char *file, int line, void *obj, const char *fmt, ...);
 
 std::string repr(const void *p, size_t size, bool friendly=true);
@@ -232,17 +235,17 @@ namespace epoch {
 
 #define LOG_DEBUG(...)
 
-#define LOG_CONN(...)
+#define LOG_CONN(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_DISCOVERY(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_RAFT(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_OBJ(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_DATABASE(...)
-#define LOG_HTTP(...)
-#define LOG_BINARY(...)
+#define LOG_HTTP(...) log(__FILE__, __LINE__, __VA_ARGS__)
+#define LOG_BINARY(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_HTTP_PROTO_PARSER(...)
 
 #define LOG_EV(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define LOG_CONN_WIRE(...)
+#define LOG_CONN_WIRE(...) log(__FILE__, __LINE__, __VA_ARGS__)
 #define LOG_UDP_WIRE(...)
 #define LOG_HTTP_PROTO(...)
 #define LOG_BINARY_PROTO(...)
