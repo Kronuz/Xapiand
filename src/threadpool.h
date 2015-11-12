@@ -129,8 +129,7 @@ public:
 		auto task = std::packaged_task<std::result_of_t<F(Params..., Args...)>(Params...)>
 		(
 			[f = std::forward<F>(f), t = std::move(t)] (Params... params) mutable {
-				auto ot = std::make_tuple(std::move(params)...);
-				return apply(std::move(f), std::tuple_cat(ot, t));
+				return apply(std::move(f), std::tuple_cat(std::make_tuple(std::move(params)...), std::move(t)));
 			}
 		 );
 		auto res = task.get_future();
