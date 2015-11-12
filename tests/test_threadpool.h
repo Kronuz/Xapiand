@@ -35,7 +35,7 @@ using namespace queue;
 static std::mutex mutex;
 
 
-class TestTask : public Task {
+class TestTask : public Task<> {
 	std::string name;
 	double sleep;
 	std::string& results;
