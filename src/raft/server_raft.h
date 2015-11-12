@@ -33,5 +33,5 @@ public:
 	RaftServer(XapiandServer *server_, Raft *raft, ev::loop_ref *loop_, int sock_, DatabasePool *database_pool_, ThreadPool *thread_pool_);
 	~RaftServer();
 
-	void io_accept(ev::io &watcher, int revents);
+	void io_accept_cb(ev::io &watcher, int revents);
 };

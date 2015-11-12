@@ -45,7 +45,7 @@ DiscoveryServer::~DiscoveryServer()
 
 
 void
-DiscoveryServer::io_accept(ev::io &watcher, int revents)
+DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid discovery event (sock=%d): %s\n", discovery->sock, strerror(errno));

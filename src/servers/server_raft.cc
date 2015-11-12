@@ -44,7 +44,7 @@ RaftServer::~RaftServer()
 
 
 void
-RaftServer::io_accept(ev::io &watcher, int revents)
+RaftServer::io_accept_cb(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid raft event (sock=%d): %s\n", raft->sock, strerror(errno));

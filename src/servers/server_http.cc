@@ -42,7 +42,7 @@ HttpServer::~HttpServer()
 
 
 void
-HttpServer::io_accept(ev::io &watcher, int revents)
+HttpServer::io_accept_cb(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid http event (sock=%d): %s\n", http->sock, strerror(errno));

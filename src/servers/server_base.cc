@@ -29,7 +29,7 @@ BaseServer::BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	: Worker(server_, loop_),
 	  io(*loop)
 {
-	io.set<BaseServer, &BaseServer::io_accept>(this);
+	io.set<BaseServer, &BaseServer::io_accept_cb>(this);
 	io.start(sock_, ev::READ);
 }
 

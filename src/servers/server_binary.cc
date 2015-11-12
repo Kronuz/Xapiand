@@ -56,7 +56,7 @@ BinaryServer::async_signal_cb(ev::async &, int)
 
 
 void
-BinaryServer::io_accept(ev::io &watcher, int revents)
+BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 {
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary->sock, strerror(errno));

@@ -246,7 +246,7 @@ BaseClient::close()
 
 
 void
-BaseClient::io_update()
+BaseClient::io_cb_update()
 {
 	if (sock != -1) {
 		if (write_queue.empty()) {
@@ -337,7 +337,7 @@ BaseClient::write_directly(int fd)
 
 
 void
-BaseClient::write_cb(int fd)
+BaseClient::io_cb_write(int fd)
 {
 	WR status;
 	do {
@@ -359,7 +359,7 @@ BaseClient::write_cb(int fd)
 
 
 void
-BaseClient::read_cb(int fd)
+BaseClient::io_cb_read(int fd)
 {
 	if (!closed) {
 		ssize_t received = ::read(fd, read_buffer, BUF_SIZE);

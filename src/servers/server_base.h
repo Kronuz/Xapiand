@@ -41,7 +41,7 @@ protected:
 public:
 	virtual ~BaseServer();
 
-	virtual void io_accept(ev::io &watcher, int revents) = 0;
+	virtual void io_accept_cb(ev::io &watcher, int revents) = 0;
 
 	inline decltype(auto) manager() noexcept {
 		return std::static_pointer_cast<XapiandServer>(_parent)->manager();

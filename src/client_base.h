@@ -126,16 +126,16 @@ protected:
 
 	void async_write_cb(ev::async &watcher, int revents);
 
-	void io_update();
+	void io_cb_update();
 
 	// Generic callback
 	void io_cb(ev::io &watcher, int revents);
 
 	// Receive message from client socket
-	void read_cb(int fd);
+	void io_cb_read(int fd);
 
 	// Socket is writable
-	void write_cb(int fd);
+	void io_cb_write(int fd);
 
 	WR write_directly(int fd);
 

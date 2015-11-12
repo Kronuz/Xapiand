@@ -37,5 +37,5 @@ public:
 	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft> &raft_);
 	~RaftServer();
 
-	void io_accept(ev::io &watcher, int revents);
+	void io_accept_cb(ev::io &watcher, int revents);
 };
