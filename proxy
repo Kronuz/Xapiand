@@ -45,7 +45,13 @@ def decode_length(buf, check=False):
         length = ord(length)
     if check and len(buf) < length:
         raise ValueError("Bad encoded length: insufficient data")
-    return length, size
+    return length, size, buf[length:]
+
+
+def decode_string(buf):
+    length, size, new_buf = decode_length(buf, True)
+    msg_length, msg_body = buf[:size], buf[size:size + length]
+    return length, msg_length, msg_body, new_buf
 
 
 class Forward(object):
@@ -156,6 +162,14 @@ class ProxyServer(object):
         del self.reads[from_client]
 
 
+def enum_dict(*args):
+    ret = {}
+    for i, arg in enumerate(args):
+        ret[i] = arg
+        ret[arg] = i
+    return ret
+
+
 class XapianProxyServer(ProxyServer):
     """
     Xapian binary Protocol
@@ -163,90 +177,163 @@ class XapianProxyServer(ProxyServer):
     """
     buffers = {}
 
-    messages = [
-        'MSG_ALLTERMS',             # All Terms
-        'MSG_COLLFREQ',             # Get Collection Frequency
-        'MSG_DOCUMENT',             # Get Document
-        'MSG_TERMEXISTS',           # Term Exists?
-        'MSG_TERMFREQ',             # Get Term Frequency
-        'MSG_VALUESTATS',           # Get value statistics
-        'MSG_KEEPALIVE',            # Keep-alive
-        'MSG_DOCLENGTH',            # Get Doc Length
-        'MSG_QUERY',                # Run Query
-        'MSG_TERMLIST',             # Get TermList
-        'MSG_POSITIONLIST',         # Get PositionList
-        'MSG_POSTLIST',             # Get PostList
-        'MSG_REOPEN',               # Reopen
-        'MSG_UPDATE',               # Get Updated DocCount and AvLength
-        'MSG_ADDDOCUMENT',          # Add Document
-        'MSG_CANCEL',               # Cancel
-        'MSG_DELETEDOCUMENTTERM',   # Delete Document by term
-        'MSG_COMMIT',               # Commit
-        'MSG_REPLACEDOCUMENT',      # Replace Document
-        'MSG_REPLACEDOCUMENTTERM',  # Replace Document by term
-        'MSG_DELETEDOCUMENT',       # Delete Document
-        'MSG_WRITEACCESS',          # Upgrade to WritableDatabase
-        'MSG_GETMETADATA',          # Get metadata
-        'MSG_SETMETADATA',          # Set metadata
-        'MSG_ADDSPELLING',          # Add a spelling
-        'MSG_REMOVESPELLING',       # Remove a spelling
-        'MSG_GETMSET',              # Get MSet
-        'MSG_SHUTDOWN',             # Shutdown
-        'MSG_METADATAKEYLIST',      # Iterator for metadata keys
-        'MSG_FREQS',                # Get termfreq and collfreq
-        'MSG_UNIQUETERMS',          # Get number of unique terms in doc
-        'MSG_SELECT',               # Select current database
-    ]
+    messages = {
+        'REMOTE': enum_dict(
+            'MSG_ALLTERMS',             # All Terms
+            'MSG_COLLFREQ',             # Get Collection Frequency
+            'MSG_DOCUMENT',             # Get Document
+            'MSG_TERMEXISTS',           # Term Exists?
+            'MSG_TERMFREQ',             # Get Term Frequency
+            'MSG_VALUESTATS',           # Get value statistics
+            'MSG_KEEPALIVE',            # Keep-alive
+            'MSG_DOCLENGTH',            # Get Doc Length
+            'MSG_QUERY',                # Run Query
+            'MSG_TERMLIST',             # Get TermList
+            'MSG_POSITIONLIST',         # Get PositionList
+            'MSG_POSTLIST',             # Get PostList
+            'MSG_REOPEN',               # Reopen
+            'MSG_UPDATE',               # Get Updated DocCount and AvLength
+            'MSG_ADDDOCUMENT',          # Add Document
+            'MSG_CANCEL',               # Cancel
+            'MSG_DELETEDOCUMENTTERM',   # Delete Document by term
+            'MSG_COMMIT',               # Commit
+            'MSG_REPLACEDOCUMENT',      # Replace Document
+            'MSG_REPLACEDOCUMENTTERM',  # Replace Document by term
+            'MSG_DELETEDOCUMENT',       # Delete Document
+            'MSG_WRITEACCESS',          # Upgrade to WritableDatabase
+            'MSG_GETMETADATA',          # Get metadata
+            'MSG_SETMETADATA',          # Set metadata
+            'MSG_ADDSPELLING',          # Add a spelling
+            'MSG_REMOVESPELLING',       # Remove a spelling
+            'MSG_GETMSET',              # Get MSet
+            'MSG_SHUTDOWN',             # Shutdown
+            'MSG_METADATAKEYLIST',      # Iterator for metadata keys
+            'MSG_FREQS',                # Get termfreq and collfreq
+            'MSG_UNIQUETERMS',          # Get number of unique terms in doc
+            'MSG_SELECT',               # Select current database
+        ),
+        'REPL': enum_dict(
+            'REPLY_END_OF_CHANGES',
+            'REPLY_FAIL',
+            'REPLY_DB_HEADER',
+            'REPLY_DB_FILENAME',
+            'REPLY_DB_FILEDATA',
+            'REPLY_DB_FOOTER',
+            'REPLY_CHANGESET',
+            'MSG_GET_CHANGESETS',
+        ),
+        'STORING': enum_dict(
+            'REPLY_READY',
+            'REPLY_DONE',
+            'REPLY_FILE',
+            'REPLY_DATA',
+            'MSG_CREATE',
+            'MSG_OPEN',
+            'MSG_READ',
+        ),
+    }
 
-    replies = [
-        'REPLY_UPDATE',             # Updated database stats
-        'REPLY_EXCEPTION',          # Exception
-        'REPLY_DONE',               # Done sending list
-        'REPLY_ALLTERMS',           # All Terms
-        'REPLY_COLLFREQ',           # Get Collection Frequency
-        'REPLY_DOCDATA',            # Get Document
-        'REPLY_TERMDOESNTEXIST',    # Term Doesn't Exist
-        'REPLY_TERMEXISTS',         # Term Exists
-        'REPLY_TERMFREQ',           # Get Term Frequency
-        'REPLY_VALUESTATS',         # Value statistics
-        'REPLY_DOCLENGTH',          # Get Doc Length
-        'REPLY_STATS',              # Stats
-        'REPLY_TERMLIST',           # Get Termlist
-        'REPLY_POSITIONLIST',       # Get PositionList
-        'REPLY_POSTLISTSTART',      # Start of a postlist
-        'REPLY_POSTLISTITEM',       # Item in body of a postlist
-        'REPLY_VALUE',              # Document Value
-        'REPLY_ADDDOCUMENT',        # Add Document
-        'REPLY_RESULTS',            # Results (MSet)
-        'REPLY_METADATA',           # Metadata
-        'REPLY_METADATAKEYLIST',    # Iterator for metadata keys
-        'REPLY_FREQS',              # Get termfreq and collfreq
-        'REPLY_UNIQUETERMS',        # Get number of unique terms in doc
-    ]
+    replies = {
+        'REMOTE': enum_dict(
+            'REPLY_UPDATE',             # Updated database stats
+            'REPLY_EXCEPTION',          # Exception
+            'REPLY_DONE',               # Done sending list
+            'REPLY_ALLTERMS',           # All Terms
+            'REPLY_COLLFREQ',           # Get Collection Frequency
+            'REPLY_DOCDATA',            # Get Document
+            'REPLY_TERMDOESNTEXIST',    # Term Doesn't Exist
+            'REPLY_TERMEXISTS',         # Term Exists
+            'REPLY_TERMFREQ',           # Get Term Frequency
+            'REPLY_VALUESTATS',         # Value statistics
+            'REPLY_DOCLENGTH',          # Get Doc Length
+            'REPLY_STATS',              # Stats
+            'REPLY_TERMLIST',           # Get Termlist
+            'REPLY_POSITIONLIST',       # Get PositionList
+            'REPLY_POSTLISTSTART',      # Start of a postlist
+            'REPLY_POSTLISTITEM',       # Item in body of a postlist
+            'REPLY_VALUE',              # Document Value
+            'REPLY_ADDDOCUMENT',        # Add Document
+            'REPLY_RESULTS',            # Results (MSet)
+            'REPLY_METADATA',           # Metadata
+            'REPLY_METADATAKEYLIST',    # Iterator for metadata keys
+            'REPLY_FREQS',              # Get termfreq and collfreq
+            'REPLY_UNIQUETERMS',        # Get number of unique terms in doc
+        ),
+        'REPL': enum_dict(
+            '_REPLY_END_OF_CHANGES',
+            '_REPLY_FAIL',
+            '_REPLY_DB_HEADER',
+            '_REPLY_DB_FILENAME',
+            '_REPLY_DB_FILEDATA',
+            '_REPLY_DB_FOOTER',
+            '_REPLY_CHANGESET',
+            '_MSG_GET_CHANGESETS',
+        ),
+        'STORING': enum_dict(
+            '_REPLY_READY',
+            '_REPLY_DONE',
+            '_REPLY_FILE',
+            '_REPLY_DATA',
+            '_MSG_CREATE',
+            '_MSG_OPEN',
+            '_MSG_READ',
+        ),
+    }
 
     def on_accept(self, from_client, from_peer, to_client, to_peer, direction):
         super(XapianProxyServer, self).on_accept(from_client, from_peer, to_client, to_peer, direction)
+        self.protocol = 'REMOTE'
 
     def on_recv(self, data, from_client, from_peer, to_client, to_peer, direction):
         super(XapianProxyServer, self).on_recv(data, from_client, from_peer, to_client, to_peer, direction)
         buf = self.buffers.setdefault(from_client, ['', ''])[direction] + data
         while buf:
             try:
-                cmd = ord(buf[0])
-                length, size = decode_length(buf[1:], True)
-                msg_id, msg_len, msg_body, buf = buf[0], buf[1:1 + size], buf[1 + size:1 + size + length], buf[1 + size + length:]
+                msg_id = buf[0]
+                cmd = ord(msg_id)
+                length, msg_length, msg_body, buf = decode_string(buf[1:])
                 assert length == len(msg_body)
+                if not direction and cmd == ord('\xfe'):
+                    self.protocol = 'REPL'
+                    cmd = self.messages[self.protocol]['MSG_GET_CHANGESETS']
+                elif not direction and cmd == ord('\xfd'):
+                    self.protocol = 'STORING'
+                    cmd = self.messages[self.protocol]['MSG_CREATE']
                 try:
-                    msg = (self.replies if direction else self.messages)[cmd]
-                except IndexError:
+                    msg = (self.replies[self.protocol] if direction else self.messages[self.protocol])[cmd]
+                except KeyError:
                     msg = 'UNKNOWN'
                 dir_repr = "<<<" if direction else ">>>"
-                print("%27s %r" % ("%s %s:" % (msg, dir_repr), msg_id))
-                print("%27s %r" % ("length(%s):" % length, msg_len))
-                print("%27s %r" % ("body:", msg_body))
+                self.dump_print("%s: %s %s" % (self.protocol, msg, dir_repr), msg_id)
+                dump_func = 'dump_%s_%s' % (self.protocol, msg)
+                try:
+                    getattr(self, dump_func.lower(), self.dump)(length, msg_length, msg_body)
+                except Exception:
+                    self.dump_print("ERROR", "Bad message!!")
+                    self.dump(length, msg_length, msg_body)
+
             except ValueError:
                 break
         self.buffers[from_client][direction] = buf
+
+    def dump_print(self, name, value):
+        print("%35s %r" % ("%s:" % name, value))
+
+    def dump(self, length, msg_length, msg_body):
+        self.dump_print("length(%s)" % length, msg_length)
+        self.dump_print("body", msg_body)
+
+    def dump_repl_msg_get_changesets(self, length, msg_length, msg_body):
+        buf = msg_body
+        length, msg_length, uuid, buf = decode_string(buf)
+        length, msg_length, from_revision, buf = decode_string(buf)
+        length, msg_length, index_path, buf = decode_string(buf)
+
+        self.dump_print("uuid", uuid)
+        self.dump_print("from_revision", from_revision)
+        self.dump_print("index_path", index_path)
+        if buf:
+            self.dump_print("body", buf)
 
     def on_close(self, from_client, from_peer, to_client, to_peer, direction):
         super(XapianProxyServer, self).on_close(from_client, from_peer, to_client, to_peer, direction)
