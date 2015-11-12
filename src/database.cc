@@ -1620,9 +1620,7 @@ Database::get_stats_docs(const std::string &document_id)
 DatabaseQueue::DatabaseQueue()
 	: is_switch_db(false),
 	  persistent(false),
-	  count(0)
-{
-}
+	  count(0) { }
 
 
 DatabaseQueue::DatabaseQueue(DatabaseQueue&& q) : Queue(std::move(q))
@@ -1687,9 +1685,7 @@ DatabaseQueue::dec_count()
 DatabasePool::DatabasePool(size_t max_size)
 	: finished(false),
 	  databases(max_size),
-	  writable_databases(max_size)
-{
-}
+	  writable_databases(max_size) { }
 
 
 DatabasePool::~DatabasePool()
@@ -1884,7 +1880,8 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 }
 
 
-bool DatabasePool::switch_db(const Endpoint &endpoint)
+bool
+DatabasePool::switch_db(const Endpoint &endpoint)
 {
 	std::lock_guard<std::mutex> lk(qmtx);
 
@@ -1914,7 +1911,8 @@ bool DatabasePool::switch_db(const Endpoint &endpoint)
 }
 
 
-void DatabasePool::init_ref(const Endpoints &endpoints)
+void
+DatabasePool::init_ref(const Endpoints &endpoints)
 {
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
@@ -1943,7 +1941,8 @@ void DatabasePool::init_ref(const Endpoints &endpoints)
 }
 
 
-void DatabasePool::inc_ref(const Endpoints &endpoints)
+void
+DatabasePool::inc_ref(const Endpoints &endpoints)
 {
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
@@ -1979,7 +1978,8 @@ void DatabasePool::inc_ref(const Endpoints &endpoints)
 }
 
 
-void DatabasePool::dec_ref(const Endpoints &endpoints)
+void
+DatabasePool::dec_ref(const Endpoints &endpoints)
 {
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
@@ -2012,7 +2012,8 @@ void DatabasePool::dec_ref(const Endpoints &endpoints)
 }
 
 
-int DatabasePool::get_master_count()
+int
+DatabasePool::get_master_count()
 {
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));

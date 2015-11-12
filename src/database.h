@@ -119,8 +119,7 @@ private:
 
 
 class DatabaseQueue : public queue::Queue<std::shared_ptr<Database>>,
-		      public std::enable_shared_from_this<DatabaseQueue>
-{
+		      public std::enable_shared_from_this<DatabaseQueue> {
 	// FIXME: Add queue creation time and delete databases when deleted queue
 
 	friend class Database;
