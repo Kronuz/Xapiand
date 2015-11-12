@@ -112,7 +112,7 @@ public:
 	template<typename... Params_>
 	bool call(Params_&&... params) {
 		function_mo<void(Params...)> task;
-		if (TaskQueue::tasks.pop(task)) {
+		if (TaskQueue::tasks.pop(task, 0)) {
 			task(std::forward<Params_>(params)...);
 			return true;
 		} else {
