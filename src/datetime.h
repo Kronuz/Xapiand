@@ -24,11 +24,7 @@
 
 #include <sys/time.h>
 #include <iostream>
-#include "utils.h"
-#include "pcre/pcre.h"
-
-#define DATE_RE "([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]{1,3}))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?"
-#define DATE_MATH_RE "([+-]\\d+|\\/{1,2})([dyMwhms])"
+#include <regex>
 
 #define _EPOCH      1970
 #define _START_YEAR 1900
@@ -36,7 +32,7 @@
 
 
 namespace Datetime {
-	typedef struct tm_s {
+	struct tm_t {
 		int year;
 		int mon;
 		int day;
@@ -44,10 +40,10 @@ namespace Datetime {
 		int min;
 		int sec;
 		int msec;
-	} tm_t;
+	};
 
-	extern pcre *compiled_date_re;
-	extern pcre *compiled_date_math_re;
+	extern std::regex date_re;
+	extern std::regex date_math_re;
 
 	void dateTimeParser(const std::string &date, tm_t &tm);
 	void computeDateMath(tm_t &tm, const std::string &op, const std::string &units);

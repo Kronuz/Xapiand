@@ -22,14 +22,18 @@
 
 #include "datetime.h"
 
+#include "utils.h"
 
-pcre *Datetime::compiled_date_re = NULL;
-pcre *Datetime::compiled_date_math_re = NULL;
+
+std::regex Datetime::date_re("([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]{1,3}))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?", std::regex::optimize);
+std::regex Datetime::date_math_re("([+-]\\d+|\\/{1,2})([dyMwhms])", std::regex::optimize);
+
 
 static const int days[2][12] = {
 	{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
 	{31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 };
+
 
 static const int cumdays[2][12] = {
 	{0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334},
@@ -43,46 +47,32 @@ static const int cumdays[2][12] = {
 void
 Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 {
-	int len = (int)date.size();
-	int ret, offset = 0;
 	std::string oph, opm;
-	unique_group unique_gr;
-	ret = pcre_search(date.c_str(), len, offset, 0, DATE_RE, &compiled_date_re, unique_gr);
-	group_t *gr = unique_gr.get();
+	std::smatch m;
+	if (std::regex_match(date, m, date_re) && static_cast<size_t>(m.length(0)) == date.size()) {
+		tm.year = static_cast<int>(strtol(m.str(1)));
+		tm.mon = static_cast<int>(strtol(m.str(3)));
+		tm.day = static_cast<int>(strtol(m.str(4)));
+		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
+			throw MSG_Error("Date is out of range");
+		}
 
-	if (ret != -1 && len == gr[0].end - gr[0].start) {
-		std::string parse(date, gr[1].start, gr[1].end - gr[1].start);
-		tm.year = static_cast<int>(strtol(parse));
-		parse.assign(date, gr[3].start, gr[3].end - gr[3].start);
-		tm.mon = static_cast<int>(strtol(parse));
-		parse.assign(date, gr[4].start, gr[4].end - gr[4].start);
-		tm.day = static_cast<int>(strtol(parse));
-		if (!isvalidDate(tm.year, tm.mon, tm.day)) throw MSG_Error("Date is out of range");
-
-		if (gr[5].end - gr[5].start > 0) {
-			parse.assign(date, gr[6].start, gr[6].end - gr[6].start);
-			tm.hour = static_cast<int>(strtol(parse));
-			parse.assign(date, gr[7].start, gr[7].end - gr[7].start);
-			tm.min = static_cast<int>(strtol(parse));
-			if (gr[8].end - gr[8].start > 0) {
-				parse.assign(date, gr[9].start, gr[9].end - gr[9].start);
-				tm.sec = static_cast<int>(strtol(parse));
-				if (gr[10].end - gr[10].start > 0) {
-					parse.assign(date, gr[11].start, gr[11].end - gr[11].start);
-					tm.msec = static_cast<int>(strtol(parse));
-				} else {
-					tm.msec = 0;
-				}
+		if (m.length(5) > 0) {
+			tm.hour = static_cast<int>(strtol(m.str(6)));
+			tm.min = static_cast<int>(strtol(m.str(7)));
+			if (m.length(8) > 0) {
+				tm.sec = static_cast<int>(strtol(m.str(9)));
+				tm.msec = m.length(10) > 0 ? static_cast<int>(strtol(m.str(11))) : 0;
 			} else {
 				tm.sec = tm.msec = 0;
 			}
-			if (gr[12].end - gr[12].start > 1) {
-				if (std::string(date, gr[13].start - 1, 1).compare("+") == 0) {
-					oph = "-" + std::string(date, gr[13].start, gr[13].end - gr[13].start);
-					opm = "-" + std::string(date, gr[14].start, gr[14].end - gr[14].start);
+			if (m.length(12) > 1) {
+				if (std::string(date, m.position(13) - 1, 1) == "+") {
+					oph = "-" + m.str(13);
+					opm = "-" + m.str(14);
 				} else {
-					oph = "+" + std::string(date, gr[13].start, gr[13].end - gr[13].start);
-					opm = "+" + std::string(date, gr[14].start, gr[14].end - gr[14].start);
+					oph = "+" + m.str(13);
+					opm = "+" + m.str(14);
 				}
 				computeDateMath(tm, oph, "h");
 				computeDateMath(tm, opm, "m");
@@ -92,19 +82,19 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 		}
 
 		//Processing Date Math
-		std::string date_math;
-		len = gr[16].end - gr[16].start;
-		if (len != 0) {
-			date_math.assign(date, gr[16].start, len);
-			unique_gr.reset();
-
-			while (pcre_search(date_math.c_str(), len, offset, 0, DATE_MATH_RE, &compiled_date_math_re, unique_gr) == 0) {
-				gr = unique_gr.get();
-				offset = gr[0].end;
-				computeDateMath(tm, std::string(date_math, gr[1].start, gr[1].end - gr[1].start), std::string(date_math, gr[2].start, gr[2].end - gr[2].start));
+		if (m.length(16) != 0) {
+			int size_match = 0;
+			std::sregex_iterator next(m.str(16).begin(), m.str(16).end(), date_math_re, std::regex_constants::match_continuous);
+			std::sregex_iterator end;
+			while (next != end) {
+				size_match += next->length(0);
+				computeDateMath(tm, next->str(1), next->str(2));
+				next++;
 			}
 
-			if (offset != len) throw MSG_Error("Date Math (%s) is used incorrectly.\n", date_math.c_str());
+			if (m.length(16) != size_match) {
+				throw MSG_Error("Date Math (%s) is used incorrectly.\n", m.str(16).c_str());
+			}
 		}
 
 		return;
@@ -449,10 +439,6 @@ Datetime::normalizeMonths(int &year, int &mon)
 bool
 Datetime::isDate(const std::string &date)
 {
-	int len = (int)date.size();
-	unique_group unique_gr;
-	int ret = pcre_search(date.c_str(), len, 0, 0, DATE_RE, &compiled_date_re, unique_gr);
-	group_t *gr = unique_gr.get();
-
-	return (ret != -1 && len == gr[0].end - gr[0].start) ? true : false;
+	std::smatch m;
+	return std::regex_match(date, m, date_re) && static_cast<size_t>(m.length(0)) == date.size();
 }
