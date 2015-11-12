@@ -314,7 +314,6 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 				size_t size_match = 0;
 				while (next != end) {
 					size_match += next->length(0);
-					LOG(nullptr, "%s  [%s] %zu [%s]\n", next->str(1).c_str(), next->str(2).c_str(), next->length(2), next->length(2) != 0 ? std::string(next->str(2), 2).c_str() : " ");
 					next->length(2) != 0 ? self->accept_set.insert(std::make_pair(std::stod(std::string(next->str(2), 2)), next->str(1)))
 										 : self->accept_set.insert(std::make_pair(1, next->str(1)));
 					next++;

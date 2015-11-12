@@ -41,7 +41,6 @@ BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, con
 	  port(port_),
 	  description(description_)
 {
-	LOG(this, "Num of share TCP: %d\n", manager.use_count());
 	bind(tries_);
 	LOG(this, "Listening sock=%d\n", sock);
 }
