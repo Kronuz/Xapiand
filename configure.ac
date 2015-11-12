@@ -35,13 +35,17 @@ AX_CXX_HAVE_SSTREAM
 # AX_PROG_CCACHE_CC
 AX_PROG_CCACHE_CXX
 
+AX_PTHREAD_SET_NAME  # Check what pthread_set_name variant there is
+AX_PTHREAD_GET_NAME
+
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([pthread.h fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
 
 # Checks for library functions.
 AC_CHECK_FUNCS([getcwd gettimeofday socket pread pwrite])
+
 # Checks for libraries.
-AC_CHECK_LIB(pthread, pthread_create, [], [AC_MSG_ERROR([pthread not found, Xapiand requires pthread-devel])], [-lpthread])
+AC_CHECK_LIB(pthread, pthread_create, [], [], [-lpthread])
 
 
 ########################################################################

@@ -48,14 +48,6 @@
 #define XAPIAND_TCP_BACKLOG       511     /* TCP listen backlog */
 #endif
 
-#if defined(__APPLE__)
-#define HAVE_PTHREAD_SETNAME_NP_1 1
-#elif defined(__FreeBSD__)
-#define HAVE_PTHREAD_SETNAME_NP_2 1
-#else
-#define HAVE_PTHREAD_SETNAME_NP_3 1
-#endif
-
 // Define macro for endianess.
 #if defined(__linux__)
 	#include <endian.h>
