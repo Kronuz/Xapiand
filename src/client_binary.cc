@@ -716,7 +716,6 @@ BinaryClient::repl_get_changesets(const std::string &message)
 	p += len;
 
 	// Select endpoints and get database
-	std::unique_lock<std::mutex> lk(qmtx);
 	try {
 		endpoints.clear();
 		Endpoint endpoint(index_path);
@@ -727,7 +726,6 @@ BinaryClient::repl_get_changesets(const std::string &message)
 	} catch (...) {
 		throw;
 	}
-	lk.unlock();
 
 	char path[] = "/tmp/xapian_changesets_sent.XXXXXX";
 	int fd = mkstemp(path);
