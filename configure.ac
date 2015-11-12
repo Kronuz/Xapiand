@@ -192,7 +192,7 @@ LIBS="$save_LIBS"
 
 ########################################################################
 
-AC_MSG_CHECKING(["Whether compiler understands -Wall -Wextra"])
+AC_MSG_CHECKING(["whether compiler understands -Wall -Wextra"])
 save_CXXFLAGS="$CFLAGS"
 CXXFLAGS="$CXXFLAGS -Wall -Wextra"
 AC_TRY_COMPILE([],[],
@@ -210,18 +210,23 @@ AC_CONFIG_FILES([
 
 
 ########################################################################
+# --with-* options
+########################################################################
 
 
-AC_ARG_WITH(proxy,
-  [AS_HELP_STRING([--with-proxy@<:@=8860@:>@],
+AC_MSG_CHECKING([whether to use a proxy for binary protocol])
+AC_ARG_WITH(binary-proxy,
+  [AS_HELP_STRING([--with-binary-proxy@<:@=8860@:>@],
     [use proxy to send binary traffic from 8890->8860])],
-  [],
-  [with_proxy=no])
-if test "$with_proxy" = "yes"; then
-  AC_DEFINE_UNQUOTED([XAPIAND_BINARY_PROXY], [8860], [Define to the proxy port Xapian will redirect binary traffic to.])
-elif test "$with_proxy" != "no"; then
-  AC_DEFINE_UNQUOTED([XAPIAND_BINARY_PROXY], [$with_proxy], [Define to the proxy port Xapian will redirect binary traffic to.])
-fi
+  [
+    if test "$withval" = "yes"; then withval="8860"; fi
+    AC_DEFINE_UNQUOTED([XAPIAND_BINARY_PROXY], [$withval], [Define to what port binary traffic will be redirected to.])
+    AC_MSG_RESULT([yes (8890->$withval)])
+  ],
+  [AC_MSG_RESULT(no)])
+
+
+########################################################################
 
 
 AC_OUTPUT
