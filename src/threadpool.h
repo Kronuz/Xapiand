@@ -23,12 +23,15 @@
 #pragma once
 
 #include "queue.h"
+#include "utils.h"
 
-#include <stdio.h>
-
+#include <iostream>
+#include <string>
+#include <tuple>
 #include <thread>
 #include <future>
 #include <cassert>
+#include <vector>
 #include <vector>
 
 
@@ -83,7 +86,6 @@ public:
 //   Base task for Tasks
 //   run() should be overloaded and expensive calculations done there
 //
-
 
 template<typename... Params>
 class TaskQueue;
