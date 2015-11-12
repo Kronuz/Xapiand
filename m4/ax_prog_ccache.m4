@@ -58,7 +58,7 @@ AC_DEFUN([_AX_PROG_CCACHE], [
 		if test -n "$CCACHE"; then
 			AC_MSG_NOTICE([Using ccache, prefixing '$$1' with '$CCACHE'])
 			ax_ccache_compiler="$CCACHE $$1"
-		elif test "with_ccache" = "yes"; then
+		elif test "$with_ccache" = "yes"; then
 			AC_MSG_ERROR([Cannot use ccache, not present.])
 		else
 			AC_MSG_NOTICE([Not using ccache, not present.])
