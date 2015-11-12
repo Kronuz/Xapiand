@@ -21,8 +21,10 @@
  */
 
 #include "test_serialise.h"
+
 #include "../src/datetime.h"
 #include "../src/serialise.h"
+#include "../src/utils.h"
 
 
 const test_t test_timestamp_date[] = {
