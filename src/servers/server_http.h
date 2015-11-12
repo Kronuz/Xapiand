@@ -37,5 +37,5 @@ public:
 	HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Http> &http_);
 	~HttpServer();
 
-	void io_accept(ev::io &watcher, int revents) override;
+	void io_accept_cb(ev::io &watcher, int revents) override;
 };

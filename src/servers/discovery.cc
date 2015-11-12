@@ -48,6 +48,7 @@ Discovery::~Discovery()
 void
 Discovery::heartbeat_cb(ev::timer &, int)
 {
+	LOG_EV(this, "Discovery::heartbeat_cb:BEGIN\n");
 	switch (manager->state) {
 		case XapiandManager::State::RESET:
 			if (!local_node.name.empty()) {
@@ -83,6 +84,7 @@ Discovery::heartbeat_cb(ev::timer &, int)
 			LOG_ERR(this, "ERROR: Manager is in BAD state!!\n");
 			break;
 	}
+	LOG_EV(this, "Discovery::heartbeat_cb:END\n");
 }
 
 

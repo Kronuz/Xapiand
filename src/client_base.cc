@@ -267,6 +267,7 @@ BaseClient::io_cb_update()
 void
 BaseClient::io_cb(ev::io &watcher, int revents)
 {
+	LOG_EV(this, "BaseClient::io_cb:BEGIN\n");
 	LOG_EV(this, "%s (sock=%d) %x\n", (revents & EV_ERROR) ? "EV_ERROR" : (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
 
 	if (revents & EV_ERROR) {
@@ -278,14 +279,15 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 	assert(sock == watcher.fd || sock == -1);
 
 	if (revents & EV_WRITE) {
-		write_cb(watcher.fd);
+		io_cb_write(watcher.fd);
 	}
 
 	if (revents & EV_READ) {
-		read_cb(watcher.fd);
+		io_cb_read(watcher.fd);
 	}
 
-	io_update();
+	io_cb_update();
+	LOG_EV(this, "BaseClient::io_cb:END\n");
 }
 
 
@@ -471,7 +473,9 @@ BaseClient::io_cb_read(int fd)
 void
 BaseClient::async_write_cb(ev::async &, int)
 {
-	io_update();
+	LOG_EV(this, "BaseClient::async_write_cb:BEGIN\n");
+	io_cb_update();
+	LOG_EV(this, "BaseClient::async_write_cb:END\n");
 }
 
 

@@ -44,6 +44,7 @@ HttpServer::~HttpServer()
 void
 HttpServer::io_accept_cb(ev::io &watcher, int revents)
 {
+	LOG_EV(this, "HttpServer::io_accept_cb:BEGIN\n");
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid http event (sock=%d): %s\n", http->sock, strerror(errno));
 		return;
@@ -59,4 +60,5 @@ HttpServer::io_accept_cb(ev::io &watcher, int revents)
 	} else {
 		Worker::create<HttpClient>(share_this<HttpServer>(), loop, client_sock);
 	}
+	LOG_EV(this, "HttpServer::io_accept_cb:END\n");
 }

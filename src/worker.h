@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "utils.h"
+
 #include <list>
 #include "ev/ev++.h"
 #include <mutex>
@@ -79,7 +81,9 @@ protected:
 	}
 
 	void _async_break_loop_cb(ev::async &, int) {
+		LOG_EV(this, "Worker::_async_break_loop_cb:BEGIN\n");
 		loop->break_loop();
+		LOG_EV(this, "Worker::_async_break_loop_cb:END\n");
 	}
 
 public:
