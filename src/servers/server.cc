@@ -95,15 +95,15 @@ XapiandServer::shutdown()
 
 	Worker::shutdown();
 
-	time_t shutdown_asap = manager()->shutdown_asap;
+	time_t shutdown_asap = XapiandManager::shutdown_asap;
 	if (shutdown_asap) {
 		if (http_clients <= 0) {
-			manager()->shutdown_now.store(shutdown_asap);
+			XapiandManager::shutdown_now.store(shutdown_asap);
 		}
 		destroy();
 	}
 
-	time_t shutdown_now = manager()->shutdown_now;
+	time_t shutdown_now = XapiandManager::shutdown_now;
 	if (shutdown_now) {
 		LOG_OBJ(this, "Breaking Server loop!\n");
 		break_loop();

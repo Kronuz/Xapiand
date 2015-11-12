@@ -44,13 +44,14 @@
 
 std::regex XapiandManager::time_re = std::regex("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
 
+std::atomic<time_t> XapiandManager::shutdown_asap(0);
+std::atomic<time_t> XapiandManager::shutdown_now(0);
+
 
 XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	: Worker(nullptr, loop_),
 	  database_pool(o.dbpool_size),
 	  thread_pool("W%zu", o.threadpool_size),
-	  shutdown_asap(0),
-	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  endp_r(o.endpoints_list_size),
 	  state(State::RESET),
@@ -367,18 +368,18 @@ XapiandManager::sig_shutdown_handler(int sig)
 	 * on disk. */
 	auto now = epoch::now();
 
-	if (shutdown_now && sig != SIGTERM) {
-		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
+	if (XapiandManager::shutdown_now && sig != SIGTERM) {
+		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
 			INFO(this, "You insist... exiting now.\n");
 			// remove pid file here, use: getpid();
 			exit(1); /* Exit with an error since this was not a clean shutdown. */
 		}
-	} else if (shutdown_asap && sig != SIGTERM) {
-		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
-			shutdown_now = now;
+	} else if (XapiandManager::shutdown_asap && sig != SIGTERM) {
+		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
+			XapiandManager::shutdown_now = now;
 			INFO(this, "Trying immediate shutdown.\n");
 		} else if (sig == 0) {
-			shutdown_now = now;
+			XapiandManager::shutdown_now = now;
 		}
 	} else {
 		switch (sig) {
@@ -393,8 +394,8 @@ XapiandManager::sig_shutdown_handler(int sig)
 		};
 	}
 
-	if (now > shutdown_asap + 1) {
-		shutdown_asap = now;
+	if (now > XapiandManager::shutdown_asap + 1) {
+		XapiandManager::shutdown_asap = now;
 	}
 	shutdown();
 }
@@ -425,14 +426,14 @@ XapiandManager::shutdown()
 
 	Worker::shutdown();
 
-	if (shutdown_asap) {
+	if (XapiandManager::shutdown_asap) {
 		discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 		destroy();
 		LOG_OBJ(this, "Finishing thread pool!\n");
 		thread_pool.finish();
 	}
 
-	if (shutdown_now) {
+	if (XapiandManager::shutdown_now) {
 		LOG_OBJ(this, "Breaking Manager loop!\n");
 		break_loop();
 	}

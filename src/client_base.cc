@@ -517,7 +517,7 @@ BaseClient::shutdown()
 
 	Worker::shutdown();
 
-	if (manager()->shutdown_now) {
+	if (XapiandManager::shutdown_now) {
 		LOG_EV(this, "\tSignaled destroy!!\n");
 		destroy();
 	}
