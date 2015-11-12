@@ -67,8 +67,20 @@
 #define DOCUMENT_ID_TERM_PREFIX "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
-enum enum_time     { DB_SECOND2INT, DB_MINUTE2INT,  DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT };
-enum enum_index    { ALL, TERM, VALUE };
+enum enum_time {
+	DB_SECOND2INT,
+	DB_MINUTE2INT,
+	DB_HOUR2INT,
+	DB_DAY2INT,
+	DB_MONTH2INT,
+	DB_YEAR2INT,
+};
+
+enum enum_index {
+	ALL,
+	TERM,
+	VALUE
+};
 
 const std::vector<std::string> str_time({ "second", "minute", "hour", "day", "month", "year" });
 const std::vector<std::string> str_analizer({ "STEM_NONE", "STEM_SOME", "STEM_ALL", "STEM_ALL_Z" });
@@ -97,7 +109,7 @@ typedef struct specifications_s {
 	bool bool_detection;
 	bool string_detection;
 	bool bool_term;
-} specifications_t;
+};
 
 const std::vector<double> def_accuracy_geo  { 1, 0.2, 0, 5, 10, 15, 20, 25 }; // { partials, error, accuracy levels }
 const std::vector<double> def_accuracy_num  { 100, 1000, 10000, 100000 };
@@ -144,7 +156,8 @@ struct similar_field {
 	std::vector <std::string> field;
 	std::vector <std::string> type;
 
-	similar_field(): n_rset(5), n_eset(32), n_term(10) {}
+	similar_field()
+		: n_rset(5), n_eset(32), n_term(10) { }
 };
 
 struct query_field {
@@ -174,24 +187,9 @@ struct query_field {
 	similar_field nearest;
 
 	query_field()
-	: offset(0),
-	  limit(10),
-	  check_at_least(0),
-	  spelling(true),
-	  synonyms(false),
-	  pretty(false),
-	  commit(false),
-	  server(false),
-	  database(false),
-	  document(""),
-	  unique_doc(false),
-	  is_fuzzy(false),
-	  is_nearest(false),
-	  stats(""),
-	  collapse(""),
-	  collapse_max(1),
-	  fuzzy(),
-	  nearest(){}
+		: offset(0), limit(10), check_at_least(0), spelling(true), synonyms(false), pretty(false),
+		  commit(false), server(false), database(false), document(""), unique_doc(false), is_fuzzy(false),
+		  is_nearest(false), stats(""), collapse(""), collapse_max(1), fuzzy(), nearest() { }
 
 };
 

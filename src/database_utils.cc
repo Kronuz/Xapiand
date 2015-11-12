@@ -44,8 +44,7 @@ long long save_mastery(const std::string &dir) {
 }
 
 
-long long read_mastery(const std::string &dir, bool force)
-{
+long long read_mastery(const std::string &dir, bool force) {
 	LOG_DATABASE(NULL, "+ READING MASTERY OF INDEX '%s'...\n", dir.c_str());
 
 	struct stat info;
@@ -81,14 +80,12 @@ long long read_mastery(const std::string &dir, bool force)
 }
 
 
-bool is_reserved(const std::string &word)
-{
+bool is_reserved(const std::string &word) {
 	return word.at(0) == '_' ? true : false;
 }
 
 
-void update_required_data(specifications_t &spc, const std::string &name, cJSON *schema)
-{
+void update_required_data(specifications_t &spc, const std::string &name, cJSON *schema) {
 	// Add type to schema, if this has not been added.
 	if (!cJSON_GetObjectItem(schema, RESERVED_TYPE)) {
 		cJSON *type = cJSON_CreateArray(); // Managed by shema
@@ -203,8 +200,7 @@ void update_required_data(specifications_t &spc, const std::string &name, cJSON 
 }
 
 
-void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema, bool root)
-{
+void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema, bool root) {
 	cJSON *spc;
 	// RESERVED_POSITION is heritable and can change between documents.
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_POSITION))) {
@@ -412,8 +408,7 @@ void update_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 }
 
 
-void insert_inheritable_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema)
-{
+void insert_inheritable_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema) {
 	// Restarting reserved words than which are not inherited.
 	spc_now.accuracy.clear();
 	spc_now.acc_prefix.clear();
@@ -551,8 +546,7 @@ void insert_inheritable_specifications(cJSON *item, specifications_t &spc_now, c
 }
 
 
-void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema, bool root)
-{
+void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema, bool root) {
 	cJSON *spc;
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_D_DETECTION))) {
 		if (spc->type == cJSON_False) {
@@ -794,8 +788,7 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 }
 
 
-bool is_language(const std::string &language)
-{
+bool is_language(const std::string &language) {
 	if (language.find(" ") != std::string::npos) {
 		return false;
 	}
@@ -803,8 +796,7 @@ bool is_language(const std::string &language)
 }
 
 
-char get_type(cJSON *_field, specifications_t &spc)
-{
+char get_type(cJSON *_field, specifications_t &spc) {
 	if (_field->type == cJSON_Object) throw MSG_Error("%s can not be an object", RESERVED_VALUE);
 
 	cJSON *field;
@@ -875,8 +867,7 @@ std::string str_type(const char sep_types[]) {
 }
 
 
-std::vector<std::string> split_fields(const std::string &field_name)
-{
+std::vector<std::string> split_fields(const std::string &field_name) {
 	std::vector<std::string> fields;
 	std::string aux(field_name.c_str());
 	size_t pos = 0;
@@ -899,8 +890,7 @@ std::vector<std::string> split_fields(const std::string &field_name)
 }
 
 
-void clean_reserved(cJSON *root)
-{
+void clean_reserved(cJSON *root) {
 	int elements = cJSON_GetArraySize(root);
 	for (int i = 0; i < elements; ) {
 		cJSON *item = cJSON_GetArrayItem(root, i);
@@ -918,8 +908,7 @@ void clean_reserved(cJSON *root)
 }
 
 
-void clean_reserved(cJSON *root, cJSON *item)
-{
+void clean_reserved(cJSON *root, cJSON *item) {
 	if (is_reserved(item->string) && strcmp(item->string, RESERVED_VALUE) != 0) {
 		cJSON_DeleteItemFromObject(root, item->string);
 		return;
@@ -940,8 +929,7 @@ void clean_reserved(cJSON *root, cJSON *item)
 }
 
 
-std::string specificationstostr(const specifications_t &spc)
-{
+std::string specificationstostr(const specifications_t &spc) {
 	std::stringstream str;
 	str << "\n{\n";
 	str << "\t" << RESERVED_POSITION << ": [ ";
