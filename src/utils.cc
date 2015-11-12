@@ -71,8 +71,6 @@ times_row_t stats_cnt;
 static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
 static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
-static std::hash<std::thread::id> thread_hasher;
-
 
 void set_thread_name(const std::string &name)
 {
@@ -98,6 +96,7 @@ std::string get_thread_name()
 #elif defined(HAVE_PTHREAD_GET_NAME_NP_1)
 	strncpy(name, pthread_get_name_np(pthread_self()), sizeof(name));
 #else
+	static std::hash<std::thread::id> thread_hasher;
 	snprintf(name, sizeof(name), "%zx", thread_hasher(std::this_thread::get_id()));
 #endif
       return std::string(name);
