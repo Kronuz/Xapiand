@@ -208,4 +208,20 @@ AC_CONFIG_FILES([
 	tests/Makefile
 ])
 
+
+########################################################################
+
+
+AC_ARG_WITH(proxy,
+  [AS_HELP_STRING([--with-proxy@<:@=8860@:>@],
+    [use proxy to send binary traffic from 8890->8860])],
+  [],
+  [with_proxy=no])
+if test "$with_proxy" = "yes"; then
+  AC_DEFINE_UNQUOTED([XAPIAND_BINARY_PROXY], [8860], [Define to the proxy port Xapian will redirect binary traffic to.])
+elif test "$with_proxy" != "no"; then
+  AC_DEFINE_UNQUOTED([XAPIAND_BINARY_PROXY], [$with_proxy], [Define to the proxy port Xapian will redirect binary traffic to.])
+fi
+
+
 AC_OUTPUT

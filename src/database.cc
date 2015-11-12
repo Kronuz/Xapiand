@@ -117,7 +117,8 @@ Database::reopen()
 			else {
 				local = false;
 				// Writable remote databases do not have a local fallback
-				wdb = Xapian::Remote::open_writable(e->host, e->port, 0, 10000, e->path);
+				int port = (e->port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e->port;
+				wdb = Xapian::Remote::open_writable(e->host, port, 0, 10000, e->path);
 			}
 #endif
 			db->add_database(wdb);
@@ -145,7 +146,8 @@ Database::reopen()
 			else {
 				local = false;
 # ifdef XAPIAN_LOCAL_DB_FALLBACK
-				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
+				int port = (e->port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e->port;
+				rdb = Xapian::Remote::open(e->host, port, 0, 10000, e->path);
 				try {
 					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (ldb.get_uuid() == rdb.get_uuid()) {
@@ -157,7 +159,7 @@ Database::reopen()
 					}
 				} catch (const Xapian::DatabaseOpeningError &err) {}
 # else
-				rdb = Xapian::Remote::open(e->host, e->port, 0, 10000, e->path);
+				rdb = Xapian::Remote::open(e->host, port, 0, 10000, e->path);
 # endif
 			}
 #endif

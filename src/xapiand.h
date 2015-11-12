@@ -31,6 +31,9 @@
 #define XAPIAND_RAFT_SERVERPORT      58880          /* Gossip port */
 #define XAPIAND_HTTP_SERVERPORT      8880           /* HTTP TCP port */
 #define XAPIAND_BINARY_SERVERPORT    8890           /* Binary TCP port */
+#ifndef XAPIAND_BINARY_PROXY
+#define XAPIAND_BINARY_PROXY         XAPIAND_BINARY_SERVERPORT
+#endif
 
 #define DBPOOL_SIZE          1000    /* Maximum number of database endpoints in database pool */
 #define NUM_REPLICATORS      3       /* Number of replicators */

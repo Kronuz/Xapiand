@@ -130,7 +130,7 @@ Binary::store(const Endpoints &endpoints, const Xapian::docid &did, const std::s
 	});
 
 	async_signal_send();
-	
+
 	return future;
 }
 

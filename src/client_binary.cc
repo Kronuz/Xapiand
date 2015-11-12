@@ -111,8 +111,10 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		return false;
 	}
 
-	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(src_endpoint.port))) < 0) {
-		LOG_ERR(this, "Cannot connect to %s\n", src_endpoint.host.c_str(), std::to_string(src_endpoint.port).c_str());
+	int port = (src_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : src_endpoint.port;
+
+	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) < 0) {
+		LOG_ERR(this, "Cannot connect to %s\n", src_endpoint.host.c_str(), std::to_string(port).c_str());
 		manager()->database_pool.checkin(repl_database);
 		repl_database.reset();
 		return false;
@@ -133,8 +135,10 @@ bool BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid
 	storing_filename = filename;
 	storing_endpoint = *endpoints_.begin();
 
-	if ((sock = BaseTCP::connect(sock, storing_endpoint.host.c_str(), std::to_string(storing_endpoint.port).c_str())) < 0) {
-		LOG_ERR(this, "Cannot connect to %s\n", storing_endpoint.host.c_str(), std::to_string(storing_endpoint.port).c_str());
+	int port = (storing_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : storing_endpoint.port;
+
+	if ((sock = BaseTCP::connect(sock, storing_endpoint.host.c_str(), std::to_string(port).c_str())) < 0) {
+		LOG_ERR(this, "Cannot connect to %s\n", storing_endpoint.host.c_str(), std::to_string(port).c_str());
 		return false;
 	}
 	LOG_CONN(this, "Connected to %s (sock=%d)!\n", storing_endpoint.as_string().c_str(), sock);

@@ -88,7 +88,7 @@ bool
 BinaryServer::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
 	int client_sock = binary->connection_socket();
-	if (client_sock  < 0) {
+	if (client_sock < 0) {
 		return false;
 	}
 
