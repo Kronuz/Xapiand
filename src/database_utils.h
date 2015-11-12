@@ -88,7 +88,7 @@ const std::vector<std::string> str_index({ "ALL", "TERM", "VALUE" });
 
 extern std::regex find_types_re;
 
-typedef struct specifications_s {
+struct specifications_t {
 	std::vector<int> position;
 	std::vector<int> weight;
 	std::vector<std::string> language;
@@ -139,14 +139,14 @@ const specifications_t default_spc = {
 };
 
 
-typedef struct data_field_s {
+struct data_field_t {
 	unsigned int slot;
 	std::string prefix;
 	char type;
 	std::vector<double> accuracy;
 	std::vector<std::string> acc_prefix;
 	bool bool_term;
-} data_field_t;
+};
 
 
 struct similar_field {
