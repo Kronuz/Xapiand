@@ -273,6 +273,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 	if (revents & EV_ERROR) {
 		LOG_ERR(this, "ERROR: got invalid event (sock=%d): %s\n", sock, strerror(errno));
 		destroy();
+		LOG_EV_END(this, "BaseClient::io_cb:END\n");
 		return;
 	}
 

@@ -47,6 +47,7 @@ HttpServer::io_accept_cb(ev::io &watcher, int revents)
 	LOG_EV_BEGIN(this, "HttpServer::io_accept_cb:BEGIN\n");
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid http event (sock=%d): %s\n", http->sock, strerror(errno));
+		LOG_EV_END(this, "HttpServer::io_accept_cb:END\n");
 		return;
 	}
 

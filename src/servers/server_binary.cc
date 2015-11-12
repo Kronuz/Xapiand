@@ -66,6 +66,7 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary->sock, strerror(errno));
+		LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
 		return;
 	}
 
@@ -76,6 +77,7 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 		if (!ignored_errorno(errno, false)) {
 			LOG_ERR(this, "ERROR: accept binary error (sock=%d): %s\n", binary->sock, strerror(errno));
 		}
+		LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
 		return;
 	}
 
@@ -83,6 +85,7 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 
 	if (!client->init_remote()) {
 		client->destroy();
+		LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
 		return;
 	}
 

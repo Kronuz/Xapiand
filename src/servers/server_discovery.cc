@@ -50,6 +50,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 	LOG_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN\n");
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid discovery event (sock=%d): %s\n", discovery->sock, strerror(errno));
+		LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 		return;
 	}
 
@@ -76,12 +77,14 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 
 			if (received < 4) {
 				LOG_DISCOVERY(this, "Badly formed message: Incomplete!\n");
+				LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 				return;
 			}
 
 			uint16_t remote_protocol_version = *(uint16_t *)(buf + 1);
 			if ((remote_protocol_version & 0xff) > XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) {
 				LOG_DISCOVERY(this, "Badly formed message: Protocol version mismatch %x vs %x!\n", remote_protocol_version & 0xff, XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION);
+				LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 				return;
 			}
 
@@ -91,9 +94,11 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 			std::string remote_cluster_name;
 			if (unserialise_string(remote_cluster_name, &ptr, end) == -1 || remote_cluster_name.empty()) {
 				LOG_DISCOVERY(this, "Badly formed message: No cluster name!\n");
+				LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 				return;
 			}
 			if (remote_cluster_name != discovery->manager->cluster_name) {
+				LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 				return;
 			}
 
@@ -111,6 +116,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				case toUType(Discovery::Message::HELLO):
 					if (remote_node.unserialise(&ptr, end) == -1) {
 						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 						return;
 					}
 					if (remote_node == local_node) {
@@ -133,6 +139,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 					if (discovery->manager->state != XapiandManager::State::READY) {
 						if (remote_node.unserialise(&ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 							return;
 						}
 						if (remote_node == local_node) {
@@ -154,6 +161,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				case toUType(Discovery::Message::HEARTBEAT):
 					if (remote_node.unserialise(&ptr, end) == -1) {
 						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+						LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 						return;
 					}
 
@@ -192,6 +200,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 					if (discovery->manager->state == XapiandManager::State::READY) {
 						if (remote_node.unserialise(&ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 							return;
 						}
 						discovery->manager->drop_node(remote_node.name);
@@ -203,6 +212,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 					if (discovery->manager->state == XapiandManager::State::READY) {
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
+							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 							return;
 						}
 
@@ -214,6 +224,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 												serialise_string(index_path) +  // The path of the index
 												node->serialise()					// The node where the index master is at
 												);
+								LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 								return;
 							}
 						}
@@ -237,17 +248,20 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 					if (discovery->manager->state == XapiandManager::State::READY) {
 						if (unserialise_string(mastery_str, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper mastery!\n");
+							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 							return;
 						}
 						remote_mastery_level = strtoll(mastery_str);
 
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
+							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 							return;
 						}
 
 						if (remote_node.unserialise(&ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 							return;
 						}
 						if (discovery->manager->put_node(remote_node)) {
@@ -272,17 +286,20 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 					if (discovery->manager->state == XapiandManager::State::READY) {
 						if (unserialise_string(mastery_str, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No proper mastery!\n");
+							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 							return;
 						}
 						remote_mastery_level = strtoll(mastery_str);
 
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
+							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 							return;
 						}
 
 						mastery_level = manager()->database_pool.get_mastery_level(index_path);
 						if (mastery_level == -1) {
+							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 							return;
 						}
 
@@ -290,6 +307,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							LOG_DISCOVERY(this, "Mastery of remote's %s wins! (local:%llx > remote:%llx) - Updating!\n", index_path.c_str(), mastery_level, remote_mastery_level);
 							if (remote_node.unserialise(&ptr, end) == -1) {
 								LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
+								LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 								return;
 							}
 							if (discovery->manager->put_node(remote_node)) {
