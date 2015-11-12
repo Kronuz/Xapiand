@@ -46,7 +46,7 @@ RaftServer::~RaftServer()
 void
 RaftServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	LOG_EV(this, "RaftServer::io_accept_cb:BEGIN\n");
+	LOG_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN\n");
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid raft event (sock=%d): %s\n", raft->sock, strerror(errno));
 		return;
@@ -265,5 +265,5 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 		}
 	}
 
-	LOG_EV(this, "RaftServer::io_accept_cb:END\n");
+	LOG_EV_END(this, "RaftServer::io_accept_cb:END\n");
 }

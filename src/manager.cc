@@ -412,11 +412,11 @@ XapiandManager::destroy()
 void
 XapiandManager::async_shutdown_cb(ev::async &, int)
 {
-	LOG_EV(this, "XapiandManager::async_shutdown_cb:BEGIN\n");
+	LOG_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN\n");
 	LOG_EV(this, "\tAsync shutdown event received!\n");
 
 	sig_shutdown_handler(0);
-	LOG_EV(this, "XapiandManager::async_shutdown_cb:END\n");
+	LOG_EV_END(this, "XapiandManager::async_shutdown_cb:END\n");
 }
 
 

@@ -51,18 +51,18 @@ BinaryServer::~BinaryServer()
 void
 BinaryServer::async_signal_cb(ev::async &, int)
 {
-	LOG_EV(this, "BinaryServer::async_signal_cb:BEGIN\n");
+	LOG_EV_BEGIN(this, "BinaryServer::async_signal_cb:BEGIN\n");
 
 	while (binary->tasks.call(share_this<BinaryServer>())) {}
 
-	LOG_EV(this, "BinaryServer::async_signal_cb:END\n");
+	LOG_EV_END(this, "BinaryServer::async_signal_cb:END\n");
 }
 
 
 void
 BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	LOG_EV(this, "BinaryServer::io_accept_cb:BEGIN\n");
+	LOG_EV_BEGIN(this, "BinaryServer::io_accept_cb:BEGIN\n");
 
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary->sock, strerror(errno));
@@ -88,7 +88,7 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 
 	INFO(this, "Accepted new client! (sock=%d)\n", client_sock);
 
-	LOG_EV(this, "BinaryServer::io_accept_cb:END\n");
+	LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
 }
 
 

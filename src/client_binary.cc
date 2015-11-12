@@ -440,7 +440,7 @@ BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool, int)
 void
 BinaryClient::run()
 {
-	LOG_OBJ(this, "BinaryClient::run:BEGIN\n");
+	LOG_OBJ_BEGIN(this, "BinaryClient::run:BEGIN\n");
 	if (running++) {
 		running--;
 		return;
@@ -498,7 +498,7 @@ BinaryClient::run()
 	}
 
 	running--;
-	LOG_OBJ(this, "BinaryClient::run:END\n");
+	LOG_OBJ_END(this, "BinaryClient::run:END\n");
 }
 
 

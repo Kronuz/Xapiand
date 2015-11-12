@@ -67,12 +67,12 @@ XapiandServer::run()
 void
 XapiandServer::async_setup_node_cb(ev::async &, int)
 {
-	LOG_EV(this, "XapiandServer::async_setup_cb:BEGIN\n");
+	LOG_EV_BEGIN(this, "XapiandServer::async_setup_cb:BEGIN\n");
 	manager()->setup_node(share_this<XapiandServer>());
 
 	async_setup_node.stop();
 	LOG_EV(this, "\tStop async setup node event\n");
-	LOG_EV(this, "XapiandServer::async_setup_cb:END\n");
+	LOG_EV_END(this, "XapiandServer::async_setup_cb:END\n");
 }
 
 

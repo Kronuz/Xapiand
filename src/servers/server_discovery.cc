@@ -47,7 +47,7 @@ DiscoveryServer::~DiscoveryServer()
 void
 DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	LOG_EV(this, "DiscoveryServer::io_accept_cb:BEGIN\n");
+	LOG_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN\n");
 	if (EV_ERROR & revents) {
 		LOG_EV(this, "ERROR: got invalid discovery event (sock=%d): %s\n", discovery->sock, strerror(errno));
 		return;
@@ -314,5 +314,5 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 			}
 		}
 	}
-	LOG_EV(this, "DiscoveryServer::io_accept_cb:END\n");
+	LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END\n");
 }

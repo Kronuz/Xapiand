@@ -75,7 +75,7 @@ Raft::reset()
 void
 Raft::leader_election_cb(ev::timer &, int)
 {
-	LOG_EV(this, "Raft::leader_election_cb:BEGIN\n");
+	LOG_EV_BEGIN(this, "Raft::leader_election_cb:BEGIN\n");
 	if (manager->state == XapiandManager::State::READY) {
 		// calculate when the timeout would happen
 		ev::tstamp remaining_time = last_activity + election_timeout - ev::now(*loop);
@@ -99,16 +99,16 @@ Raft::leader_election_cb(ev::timer &, int)
 	// Start the timer again.
 	election_leader.set(election_timeout, 0.);
 	election_leader.start();
-	LOG_EV(this, "Raft::leader_election_cb:END\n");
+	LOG_EV_END(this, "Raft::leader_election_cb:END\n");
 }
 
 
 void
 Raft::heartbeat_cb(ev::timer &, int)
 {
-	LOG_EV(this, "Raft::heartbeat_cb:BEGIN\n");
+	LOG_EV_BEGIN(this, "Raft::heartbeat_cb:BEGIN\n");
 	send_message(Message::HEARTBEAT_LEADER, local_node.serialise());
-	LOG_EV(this, "Raft::heartbeat_cb:END\n");
+	LOG_EV_END(this, "Raft::heartbeat_cb:END\n");
 }
 
 

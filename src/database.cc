@@ -1747,7 +1747,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 	bool persistent = flags & DB_PERSISTENT;
 	bool initref = flags & DB_INIT_REF;
 
-	LOG_DATABASE(this, "++ CHECKING OUT DB %s(%s) [%lx]...\n", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
+	LOG_DATABASE_BEGIN(this, "++ CHECKING OUT DB %s(%s) [%lx]...\n", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 
 	assert(!database);
 
@@ -1808,7 +1808,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 	lk.unlock();
 
 	if (!database) {
-		LOG_DATABASE(this, "!! FAILED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
+		LOG_DATABASE_END(this, "!! FAILED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
 		return false;
 	}
 
@@ -1822,8 +1822,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 		database->checkout_revision = database->db->get_revision_info();
 	}
 #endif
-	LOG_DATABASE(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx\n", writable ? "w" : "r", endpoints.as_string().c_str(), database->local ? "local" : "remote", repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
-
+	LOG_DATABASE_END(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx\n", writable ? "w" : "r", endpoints.as_string().c_str(), database->local ? "local" : "remote", repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
 	return true;
 }
 
@@ -1831,7 +1830,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 void
 DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
-	LOG_DATABASE(this, "-- CHECKING IN DB %s(%s) [%lx]...\n", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
+	LOG_DATABASE_BEGIN(this, "-- CHECKING IN DB %s(%s) [%lx]...\n", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 
 	assert(database);
 
@@ -1876,7 +1875,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	database.reset();
 
-	LOG_DATABASE(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
+	LOG_DATABASE_END(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 }
 
 
