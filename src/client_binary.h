@@ -40,9 +40,9 @@ enum class StoringType {
 	REPLY_DONE,
 	REPLY_FILE,
 	REPLY_DATA,
-	CREATE,
-	OPEN,
-	READ,
+	MSG_CREATE,
+	MSG_OPEN,
+	MSG_READ,
 	MAX,
 };
 

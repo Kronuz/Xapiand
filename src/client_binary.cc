@@ -322,7 +322,7 @@ BinaryClient::on_read(const char *buf, size_t received)
 				break;
 			case SWITCH_TO_STORING:
 				state = State::STORINGPROTOCOL_RECEIVER;  // Switch to file storing
-				type = toUType(StoringType::CREATE);
+				type = toUType(StoringType::MSG_CREATE);
 				LOG_BINARY(this, "Switched to file storing\n");
 				break;
 		}
@@ -802,12 +802,12 @@ void BinaryClient::storing_apply(StoringType type, const std::string & message)
 		case StoringType::REPLY_DONE:
 			storing_done(message);
 			break;
-		case StoringType::CREATE:
+		case StoringType::MSG_CREATE:
 			storing_create(message);
 			break;
-		case StoringType::READ:
+		case StoringType::MSG_READ:
 			storing_read(message);
-		case StoringType::OPEN:
+		case StoringType::MSG_OPEN:
 			storing_open(message);
 			break;
 		case StoringType::REPLY_FILE:
