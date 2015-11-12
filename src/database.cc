@@ -1873,9 +1873,9 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	assert(queue->count >= queue->size());
 
-	database.reset();
-
 	LOG_DATABASE_END(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
+
+	database.reset();
 }
 
 
