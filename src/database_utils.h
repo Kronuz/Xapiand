@@ -23,9 +23,9 @@
 #pragma once
 
 #include "serialise.h"
-#include "pcre/pcre.h"
 #include "cJSON.h"
 
+#include <regex>
 #include <vector>
 #include <xapian.h>
 
@@ -74,7 +74,7 @@ const std::vector<std::string> str_time({ "second", "minute", "hour", "day", "mo
 const std::vector<std::string> str_analizer({ "STEM_NONE", "STEM_SOME", "STEM_ALL", "STEM_ALL_Z" });
 const std::vector<std::string> str_index({ "ALL", "TERM", "VALUE" });
 
-extern pcre *compiled_find_types_re;
+extern std::regex find_types_re;
 
 typedef struct specifications_s {
 	std::vector<int> position;

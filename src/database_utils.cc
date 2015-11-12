@@ -27,13 +27,10 @@
 #include <unistd.h>
 #include <random>
 
-#define FIND_TYPES_RE "(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" NUMERIC_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")"
-
-pcre *compiled_find_types_re = NULL;
+std::regex find_types_re("(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" NUMERIC_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")", std::regex::icase | std::regex::optimize);
 
 
-long long save_mastery(const std::string &dir)
-{
+long long save_mastery(const std::string &dir) {
 	char buf[20];
 	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 16;
 	mastery_level |= static_cast<int>(random_int(0, 0xffff));
@@ -846,27 +843,22 @@ char get_type(cJSON *_field, specifications_t &spc)
 }
 
 
-bool set_types(const std::string &type, char sep_types[])
-{
-	unique_group unique_gr;
-	int len = (int)type.size();
-	int ret = pcre_search(type.c_str(), len, 0, 0, FIND_TYPES_RE, &compiled_find_types_re, unique_gr);
-	group_t *gr = unique_gr.get();
-	if (ret != -1 && len == gr[0].end - gr[0].start) {
-		if (gr[4].end - gr[4].start != 0) {
+bool set_types(const std::string &type, char sep_types[]) {
+	std::smatch m;
+	if (std::regex_match(type, m, find_types_re) && static_cast<size_t>(m.length(0)) == type.size()) {
+		if (m.length(4) != 0) {
 			sep_types[0] = OBJECT_TYPE;
 			sep_types[1] = NO_TYPE;
 			sep_types[2] = NO_TYPE;
 		} else {
-			if (gr[1].end - gr[1].start != 0) {
+			if (m.length(1) != 0) {
 				sep_types[0] = OBJECT_TYPE;
 			}
-			if (gr[2].end - gr[2].start != 0) {
+			if (m.length(2) != 0) {
 				sep_types[1] = ARRAY_TYPE;
 			}
-			sep_types[2] = std::string(type.c_str(), gr[3].start, gr[3].end - gr[3].start).at(0);
+			sep_types[2] = m.str(3).at(0);
 		}
-
 		return true;
 	}
 
