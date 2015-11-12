@@ -49,7 +49,7 @@ BinaryServer::~BinaryServer()
 
 
 void
-BinaryServer::async_signal_cb(ev::async &watcher, int revents)
+BinaryServer::async_signal_cb(ev::async &, int)
 {
 	while (binary->tasks.call(share_this<BinaryServer>())) {}
 }
