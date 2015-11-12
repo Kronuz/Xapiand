@@ -264,10 +264,15 @@ if __name__ == '__main__':
     else:
         server_class = default_server_class
     try:
-        server = server_class(('', int(args[0])), ('localhost', int(args[1])))
+        host, _, port = args[1].partition(':')
+        if not port:
+            host, port = 'localhost', host
+        server = server_class(('', int(args[0])), (host, int(port)))
     except IndexError:
         print("Proxy listens to <in_port> and redirects traffic to a server listening on <out_port>")
-        print("usage: %s [--xapian|--raw] <in_port> <out_port>" % os.path.basename(sys.argv[0]))
+        print("usage: %s [--xapian|--raw] <in_port> [<host>:]<out_port>" % os.path.basename(sys.argv[0]))
+        print("example:")
+        print("    %s --xapian 8860 localhost:8890" % os.path.basename(sys.argv[0]))
         sys.exit(1)
     try:
         server.main_loop()
