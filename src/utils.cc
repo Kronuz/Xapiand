@@ -77,7 +77,7 @@ void set_thread_name(const std::string &name)
 #elif defined(HAVE_PTHREAD_SETNAME_NP_2)
 	pthread_setname_np(pthread_self(), name.c_str());
 #elif defined(HAVE_PTHREAD_SETNAME_NP_3)
-	pthread_setname_np(pthread_self(), name.c_str(), NULL);
+	pthread_setname_np(pthread_self(), name.c_str(), nullptr);
 #elif defined(HAVE_PTHREAD_SET_NAME_NP_2)
 	pthread_set_name_np(pthread_self(), name.c_str());
 #endif
