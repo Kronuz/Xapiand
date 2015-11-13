@@ -22,7 +22,10 @@ OUTGOING = 1
 
 def decode_length(buf, check=False):
     size = 0
-    length = buf[0]
+    try:
+        length = buf[0]
+    except IndexError:
+        raise ValueError("Bad encoded length: insufficient data")
     buf = buf[1:]
     size += 1
     if length == b'\xff':
