@@ -402,9 +402,6 @@ EWKT_Parser::parse_geometry_collection(const std::string &data)
 std::vector<std::string>
 EWKT_Parser::parse_geometry_intersection(const std::string &data)
 {
-	unique_group unique_gr;
-	int len = (int)data.size(), start = 0;
-
 	// Checking if the format is correct and processing the geometries.
 	std::vector<std::string> names_f;
 	bool first = true;
@@ -435,7 +432,7 @@ EWKT_Parser::parse_geometry_intersection(const std::string &data)
 		}
 	}
 
-	if (start != len) {
+	if (match_size != data.size()) {
 		throw MSG_Error("Syntax error in EWKT format");
 	}
 
