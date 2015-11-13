@@ -149,8 +149,7 @@ std::string repr(const void* p, size_t size, bool friendly) {
 }
 
 
-std::string repr(const std::string &string, bool friendly)
-{
+std::string repr(const std::string &string, bool friendly) {
 	return repr(string.c_str(), string.size(), friendly);
 }
 
