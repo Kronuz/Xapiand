@@ -44,9 +44,6 @@
 #endif
 #endif
 
-#define COORDS_RE "(\\d*\\.\\d+|\\d+)\\s?,\\s?(\\d*\\.\\d+|\\d+)"
-#define NUMERIC_RE "-?(\\d*\\.\\d+|\\d+)"
-
 #define STATE_ERR -1
 #define STATE_CM0 0
 #define STATE_CMD 1
@@ -58,9 +55,8 @@
 #define HTTP_UPLOAD "_upload"
 #define HTTP_UPLOAD_SIZE 7
 
-pcre *compiled_coords_re = NULL;
-pcre *compiled_numeric_re = NULL;
-std::regex find_range_re = std::regex("([^ ]*)\\.\\.([^ ]*)", std::regex::optimize);
+std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
+std::regex find_range_re("([^ ]*)\\.\\.([^ ]*)", std::regex::optimize);
 
 std::mutex log_mutex;
 
@@ -563,45 +559,6 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 }
 
 
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups) {
-	int erroffset;
-	const char *error;
-
-	// First, the regex string must be compiled.
-	if (*code == NULL) {
-		// pcre_free is not used after compiling the regular expression here because
-		// it's compiled into a global static variable, which gets freed by the end of the program.
-		*code = pcre_compile(pattern, 0, &error, &erroffset, 0);
-		if (*code == NULL) {
-			LOG_ERR(NULL, "pcre_compile of %s failed (offset: %d), %s\n", pattern, erroffset, error);
-			return -1;
-		}
-	}
-
-	if (*code != NULL) {
-		int n;
-		if (pcre_fullinfo(*code, NULL, PCRE_INFO_CAPTURECOUNT, &n) != 0) {
-			return -1;
-		}
-
-		if (unique_groups == NULL) {
-			unique_groups = unique_group(static_cast<group_t*>(malloc((n + 1) * 3 * sizeof(int))));
-			if (unique_groups == NULL) {
-				LOG_ERR(NULL, "Memory can not be reserved\n");
-				return -1;
-			}
-		}
-
-		int *ocvector = (int*)unique_groups.get();
-		if (pcre_exec(*code, 0, subject, length, startoffset, options, ocvector, (n + 1) * 3) >= 0) {
-			return 0;
-		} else return -1;
-	}
-
-	return -1;
-}
-
-
 std::string stringtoupper(const std::string &str) {
 	std::string tmp = str;
 	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM_UPPER());
@@ -696,12 +653,8 @@ bool isRange(const std::string &str) {
 
 
 bool isNumeric(const std::string &str) {
-	unique_group unique_gr;
-	int len = (int)str.size();
-	int ret = pcre_search(str.c_str(), len, 0, 0, NUMERIC_RE, &compiled_numeric_re, unique_gr);
-	group_t *g = unique_gr.get();
-
-	return (ret != -1 && (g[0].end - g[0].start) == len) ? true : false;
+	std::smatch m;
+	return std::regex_match(str, m, numeric_re) && static_cast<size_t>(m.length(0)) == str.size();
 }
 
 

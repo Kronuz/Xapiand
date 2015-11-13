@@ -41,7 +41,6 @@
 #include <sstream>
 #include <random>
 #include <sys/time.h>
-#include "pcre/pcre.h"
 #include <chrono>
 #include <regex>
 #include <thread>
@@ -92,8 +91,7 @@ struct group_t {
 	int end;
 };
 
-extern pcre *compiled_coords_re;
-extern pcre *compiled_numeric_re;
+extern std::regex numeric_re;
 extern std::regex find_range_re;
 
 extern std::mutex log_mutex;
@@ -229,7 +227,6 @@ void delete_files(const std::string &path);
 void move_files(const std::string &src, const std::string &dst);
 inline bool exist(const std::string& name);
 bool buid_path_index(const std::string& path);
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups);
 
 void update_pos_time();
 void fill_zeros_stats_min(uint16_t start, uint16_t end);

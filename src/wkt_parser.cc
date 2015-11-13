@@ -23,20 +23,13 @@
 #include "wkt_parser.h"
 #include "serialise.h"
 
-#define FIND_GEOMETRY_RE "(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIRCLE|POINT|MULTIPOINT|CHULL|MULTICHULL)[\\s]*\\(([()0-9.\\s,-]*)\\)|(GEOMETRYCOLLECTION|GEOMETRYINTERSECTION)[\\s]*\\(([()0-9.\\s,A-Z-]*)\\)"
-#define FIND_CIRCLE_RE "(\\-?\\d*\\.\\d+|\\-?\\d+)\\s(\\-?\\d*\\.\\d+|\\-?\\d+)(\\s(\\-?\\d*\\.\\d+|\\-?\\d+))?[\\s]*\\,[\\s]*(\\d*\\.\\d+|\\d+)"
-#define FIND_SUBPOLYGON_RE "[\\s]*(\\(([\\-?\\d*\\.\\d+|\\-?\\d+\\s,]*)\\))[\\s]*(\\,)?"
-#define FIND_MULTI_POLY_RE "[\\s]*[\\s]*\\((.*?\\))\\)[\\s]*(,)?"
-#define FIND_MULTI_CIRCLE_RE "[\\s]*[\\s]*\\((.*?)\\)[\\s]*(,)?"
-#define FIND_COLLECTION_RE "[\\s]*(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIRCLE|POINT|MULTIPOINT|CHULL|MULTICHULL)[\\s]*\\(([()0-9.\\s,-]*)\\)([\\s]*\\,[\\s]*)?"
 
-
-pcre *compiled_find_geometry_re = NULL;
-pcre *compiled_find_circle_re = NULL;
-pcre *compiled_find_subpolygon_re = NULL;
-pcre *compiled_find_multi_poly_re = NULL;
-pcre *compiled_find_multi_circle_re = NULL;
-pcre *compiled_find_collection_re = NULL;
+std::regex find_geometry_re("(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIRCLE|POINT|MULTIPOINT|CHULL|MULTICHULL)[\\s]*\\(([()0-9.\\s,-]*)\\)|(GEOMETRYCOLLECTION|GEOMETRYINTERSECTION)[\\s]*\\(([()0-9.\\s,A-Z-]*)\\)", std::regex::icase | std::regex::optimize);
+std::regex find_circle_re("(\\-?\\d*\\.\\d+|\\-?\\d+)\\s(\\-?\\d*\\.\\d+|\\-?\\d+)(\\s(\\-?\\d*\\.\\d+|\\-?\\d+))?[\\s]*\\,[\\s]*(\\d*\\.\\d+|\\d+)", std::regex::icase | std::regex::optimize);
+std::regex find_subpolygon_re("[\\s]*(\\(([\\-?\\d*\\.\\d+|\\-?\\d+\\s,]*)\\))[\\s]*(\\,)?", std::regex::icase | std::regex::optimize);
+std::regex find_multi_poly_re("[\\s]*[\\s]*\\((.*?\\))\\)[\\s]*(,)?", std::regex::icase | std::regex::optimize);
+std::regex find_multi_circle_re("[\\s]*[\\s]*\\((.*?)\\)[\\s]*(,)?", std::regex::icase | std::regex::optimize);
+std::regex find_collection_re("[\\s]*(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIRCLE|POINT|MULTIPOINT|CHULL|MULTICHULL)[\\s]*\\(([()0-9.\\s,-]*)\\)([\\s]*\\,[\\s]*)?", std::regex::icase | std::regex::optimize);
 
 
 /* Parser for EWKT (A PostGIS-specific format that includes the spatial reference system identifier (SRID))
@@ -62,51 +55,46 @@ pcre *compiled_find_collection_re = NULL;
 */
 EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error) : error(_error), partials(_partials)
 {
-	unique_group unique_gr;
-	int len = (int)EWKT.size();
-	int ret = pcre_search(EWKT.c_str(), len, 0, 0, FIND_GEOMETRY_RE, &compiled_find_geometry_re, unique_gr);
-	group_t *gr = unique_gr.get();
-	if (ret != -1 && len == gr[0].end - gr[0].start) {
-		if (gr[2].end - gr[2].start != 0) {
-			SRID = atoi(std::string(EWKT.c_str(), gr[2].start, gr[2].end - gr[2].start).c_str());
+	std::smatch m;
+	if (std::regex_match(EWKT, m, find_geometry_re) && static_cast<size_t>(m.length(0)) == EWKT.size()) {
+		if (m.length(2) != 0) {
+			SRID = std::stoi(m.str(2));
 			if (!Cartesian().is_SRID_supported(SRID)) {
 				throw MSG_Error("SRID not supported");
 			}
 		} else {
 			SRID = 4326; // WGS 84 default.
 		}
-		if (gr[5].end - gr[5].start != 0) {
-			std::string data(EWKT.c_str(), gr[6].start, gr[6].end - gr[6].start);
-			std::string geometry = std::string(EWKT.c_str(), gr[5].start, gr[5].end - gr[5].start);
+		if (m.length(5) != 0) {
+			std::string geometry(m.str(5));
 			if (geometry.compare("GEOMETRYCOLLECTION") == 0) {
-				trixels = parse_geometry_collection(data);
+				trixels = parse_geometry_collection(m.str(6));
 			} else if (geometry.compare("GEOMETRYINTERSECTION") == 0) {
-				trixels = parse_geometry_intersection(data);
+				trixels = parse_geometry_intersection(m.str(6));
 				return;
 			}
 		} else {
-			std::string geometry = std::string(EWKT.c_str(), gr[3].start, gr[3].end - gr[3].start);
-			std::string specification(EWKT.c_str(), gr[4].start, gr[4].end - gr[4].start);
+			std::string geometry(m.str(3));
 			if (geometry.compare("CIRCLE") == 0) {
-				trixels = parse_circle(specification);
+				trixels = parse_circle(m.str(4));
 				return;
 			} else if (geometry.compare("MULTICIRCLE") == 0) {
-				trixels = parse_multicircle(specification);
+				trixels = parse_multicircle(m.str(4));
 			} else if (geometry.compare("POLYGON") == 0) {
-				trixels = parse_polygon(specification, Geometry::CONVEX_POLYGON);
+				trixels = parse_polygon(m.str(4), Geometry::CONVEX_POLYGON);
 				return;
 			} else if (geometry.compare("MULTIPOLYGON") == 0) {
-				trixels = parse_multipolygon(specification, Geometry::CONVEX_POLYGON);
+				trixels = parse_multipolygon(m.str(4), Geometry::CONVEX_POLYGON);
 			} else if (geometry.compare("CHULL") == 0) {
-				trixels = parse_polygon(specification, Geometry::CONVEX_HULL);
+				trixels = parse_polygon(m.str(4), Geometry::CONVEX_HULL);
 				return;
 			} else if (geometry.compare("MULTICHULL") == 0) {
-				trixels = parse_multipolygon(specification, Geometry::CONVEX_HULL);
+				trixels = parse_multipolygon(m.str(4), Geometry::CONVEX_HULL);
 			} else if (geometry.compare("POINT") == 0) {
-				trixels = parse_point(specification);
+				trixels = parse_point(m.str(4));
 				return;
 			} else if (geometry.compare("MULTIPOINT") == 0) {
-				trixels = parse_multipoint(specification);
+				trixels = parse_multipoint(m.str(4));
 			}
 		}
 		// Deleting duplicate centroids.
@@ -129,20 +117,12 @@ EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error)
 std::vector<std::string>
 EWKT_Parser::parse_circle(const std::string &specification)
 {
-	unique_group unique_gr;
-	int len = (int)specification.size();
-	int ret = pcre_search(specification.c_str(), len, 0, 0, FIND_CIRCLE_RE, &compiled_find_circle_re, unique_gr);
-	group_t *gr = unique_gr.get();
-	if (ret != -1 && len == gr[0].end - gr[0].start) {
-		double lat = atof(std::string(specification.c_str(), gr[1].start, gr[1].end - gr[1].start).c_str());
-		double lon = atof(std::string(specification.c_str(), gr[2].start, gr[2].end - gr[2].start).c_str());
-		double h;
-		if (gr[4].end - gr[4].start > 0) {
-			h = atof(std::string(specification.c_str(), gr[4].start, gr[4].end - gr[4].start).c_str());
-		} else {
-			h = 0;
-		}
-		double radius = atof(std::string(specification.c_str(), gr[5].start, gr[5].end - gr[5].start).c_str());
+	std::smatch m;
+	if (std::regex_match(specification, m, find_circle_re) && static_cast<size_t>(m.length(0)) == specification.size()) {
+		double lat = std::stod(m.str(1));
+		double lon = std::stod(m.str(2));
+		double h = m.length(4) > 0 ? std::stod(m.str(4)) : 0;
+		double radius = std::stod(m.str(5));
 		Cartesian center(lat, lon, h, Cartesian::DEGREES, SRID);
 		Constraint c(center, radius);
 		Geometry g(c);
@@ -166,29 +146,25 @@ EWKT_Parser::parse_circle(const std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_multicircle(const std::string &specification)
 {
-	unique_group unique_gr;
-	int len = (int)specification.size(), start = 0;
-
-	// Checking if the format is correct and and processing the circles.
+	// Checking if the format is correct and circles are procesed.
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(specification.c_str(), len, start, 0, FIND_MULTI_CIRCLE_RE, &compiled_find_multi_circle_re, unique_gr) != -1) {
-		group_t *gr = unique_gr.get();
-		if (start != gr[0].start) {
-			throw MSG_Error("Syntax error in EWKT format (MULTICIRCLE)");
-		}
-		std::string circle(specification.c_str(), gr[1].start, gr[1].end - gr[1].start);
+	size_t match_size = 0;
+
+	std::sregex_iterator next(specification.begin(), specification.end(), find_multi_circle_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	for ( ; next != end; ++next) {
+		match_size += next->length(0);
 		if (first) {
-			names_f = parse_circle(circle);
+			names_f = parse_circle(next->str(1));
 			first = false;
 		} else {
-			std::vector<std::string> txs = parse_circle(circle);
+			std::vector<std::string> txs = parse_circle(next->str(1));
 			names_f = or_trixels(names_f, txs);
 		}
-		start = gr[0].end;
 	}
 
-	if (start != len) {
+	if (match_size != specification.size()) {
 		throw MSG_Error("Syntax error in EWKT format (MULTICIRCLE)");
 	}
 
@@ -203,35 +179,29 @@ EWKT_Parser::parse_multicircle(const std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_polygon(const std::string &specification, const Geometry::typePoints &type)
 {
-	unique_group unique_gr;
-	int len = (int)specification.size(), start = 0;
-
-	// Checking if the format is correct and processing the subpolygons.
+	// Checking if the format is correct and subpolygons are procesed.
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(specification.c_str(), len, start, 0, FIND_SUBPOLYGON_RE, &compiled_find_subpolygon_re, unique_gr) != -1) {
-		group_t *gr = unique_gr.get();
-		if (start != gr[0].start) {
-			throw MSG_Error("Syntax error in EWKT format (POLYGON)");
-		}
+	size_t match_size = 0;
 
-		std::string subpolygon(specification.c_str(), gr[2].start, gr[2].end - gr[2].start);
+	std::sregex_iterator next(specification.begin(), specification.end(), find_subpolygon_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	for ( ; next != end; ++next) {
+		match_size += next->length(0);
 		// split points
 		std::vector<Cartesian> pts;
-		std::vector<std::string> points = stringSplit(subpolygon, ",");
-		if (points.size() == 0) {
-			throw MSG_Error("Syntax error in EWKT format (POLYGON)");
-		}
+		std::vector<std::string> points = stringSplit(next->str(2), ",");
+		if (points.size() == 0) throw MSG_Error("Syntax error in EWKT format (POLYGON)");
 
 		std::vector<std::string>::iterator it_p(points.begin());
 		for ( ; it_p != points.end(); it_p++) {
 			// Get lat, lon and height.
 			std::vector<std::string> coords = stringSplit(*it_p, " ");
 			if (coords.size() == 3) {
-				Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), atof(coords.at(2).c_str()), Cartesian::DEGREES, SRID);
+				Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), std::stod(coords.at(2)), Cartesian::DEGREES, SRID);
 				pts.push_back(c);
 			} else if (coords.size() == 2) {
-				Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
+				Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), 0, Cartesian::DEGREES, SRID);
 				pts.push_back(c);
 			} else {
 				throw MSG_Error("The specification for POLYGON is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
@@ -249,13 +219,11 @@ EWKT_Parser::parse_polygon(const std::string &specification, const Geometry::typ
 		} else {
 			names_f = xor_trixels(names_f, _htm.names);
 		}
-
-		start = gr[0].end;
 	}
 
 	centroids.push_back(HTM::getCentroid(names_f));
 
-	if (start != len) {
+	if (match_size != specification.size()) {
 		throw MSG_Error("Syntax error in EWKT format");
 	}
 
@@ -270,29 +238,24 @@ EWKT_Parser::parse_polygon(const std::string &specification, const Geometry::typ
 std::vector<std::string>
 EWKT_Parser::parse_multipolygon(const std::string &specification, const Geometry::typePoints &type)
 {
-	unique_group unique_gr;
-	int len = (int)specification.size(), start = 0;
-
-	// Checking if the format is correct and and processing the polygons.
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(specification.c_str(), len, start, 0, FIND_MULTI_POLY_RE, &compiled_find_multi_poly_re, unique_gr) != -1) {
-		group_t *gr = unique_gr.get();
-		if (start != gr[0].start) {
-			throw MSG_Error("Syntax error in EWKT format (MULTIPOLYGON)");
-		}
-		std::string polygon(specification.c_str(), gr[1].start, gr[1].end - gr[1].start);
+	size_t match_size = 0;
+
+	std::sregex_iterator next(specification.begin(), specification.end(), find_multi_poly_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	for ( ; next != end; ++next) {
+		match_size += next->length(0);
 		if (first) {
-			names_f = parse_polygon(polygon, type);
+			names_f = parse_polygon(next->str(1), type);
 			first = false;
 		} else {
-			std::vector<std::string> txs = parse_polygon(polygon, type);
+			std::vector<std::string> txs = parse_polygon(next->str(1), type);
 			names_f = or_trixels(names_f, txs);
 		}
-		start = gr[0].end;
 	}
 
-	if (start != len) {
+	if (match_size != specification.size()) {
 		throw MSG_Error("Syntax error in EWKT format (MULTIPOLYGON)");
 	}
 
@@ -312,13 +275,13 @@ EWKT_Parser::parse_point(const std::string &specification)
 
 	std::vector<std::string> coords = stringSplit(specification, " (,");
 	if (coords.size() == 3) {
-		Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), atof(coords.at(2).c_str()), Cartesian::DEGREES, SRID);
+		Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), std::stod(coords.at(2)), Cartesian::DEGREES, SRID);
 		c.normalize();
 		HTM::cartesian2name(c, name);
 		res.push_back(name);
 		centroids.push_back(c);
 	} else if (coords.size() == 2) {
-		Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
+		Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), 0, Cartesian::DEGREES, SRID);
 		c.normalize();
 		HTM::cartesian2name(c, name);
 		res.push_back(name);
@@ -338,28 +301,24 @@ EWKT_Parser::parse_point(const std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_multipoint(const std::string &specification)
 {
-	unique_group unique_gr;
-	int len = (int)specification.size(), start = 0;
-
 	// Checking if the format is (lat lon [height]), (lat lon [height]), ... and save the points.
 	std::vector<std::string> res;
 	std::string name;
+	size_t match_size = 0;
 
-	while (pcre_search(specification.c_str(), len, start, 0, FIND_SUBPOLYGON_RE, &compiled_find_subpolygon_re, unique_gr) != -1) {
-		group_t *gr = unique_gr.get();
-		if (start != gr[0].start) {
-			throw MSG_Error("Syntax error in EWKT format (MULTIPOINT)");
-		}
-		std::string point(specification.c_str(), gr[2].start, gr[2].end - gr[2].start);
-		std::vector<std::string> coords = stringSplit(point, " ");
+	std::sregex_iterator next(specification.begin(), specification.end(), find_subpolygon_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	for ( ; next != end; ++next) {
+		match_size += next->length(0);
+		std::vector<std::string> coords = stringSplit(next->str(2), " ");
 		if (coords.size() == 3) {
-			Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), atof(coords.at(2).c_str()), Cartesian::DEGREES, SRID);
+			Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), std::stod(coords.at(2)), Cartesian::DEGREES, SRID);
 			c.normalize();
 			HTM::cartesian2name(c, name);
 			res.push_back(name);
 			centroids.push_back(c);
 		} else if (coords.size() == 2) {
-			Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
+			Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), 0, Cartesian::DEGREES, SRID);
 			c.normalize();
 			HTM::cartesian2name(c, name);
 			res.push_back(name);
@@ -367,22 +326,21 @@ EWKT_Parser::parse_multipoint(const std::string &specification)
 		} else {
 			throw MSG_Error("The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]), (lat lon [height], ..., lat lon [height]), ...");
 		}
-		start = gr[0].end;
 	}
 
-	if (start == 0) {
+	if (match_size == 0) {
 		std::vector<std::string> points = stringSplit(specification, ",");
 		std::vector<std::string>::const_iterator it(points.begin());
 		for ( ; it != points.end(); it++) {
 			std::vector<std::string> coords = stringSplit(*it, " ");
 			if (coords.size() == 3) {
-				Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), atof(coords.at(2).c_str()), Cartesian::DEGREES, SRID);
+				Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), std::stod(coords.at(2)), Cartesian::DEGREES, SRID);
 				c.normalize();
 				HTM::cartesian2name(c, name);
 				res.push_back(name);
 				centroids.push_back(c);
 			} else if (coords.size() == 2) {
-				Cartesian c(atof(coords.at(0).c_str()), atof(coords.at(1).c_str()), 0, Cartesian::DEGREES, SRID);
+				Cartesian c(std::stod(coords.at(0)), std::stod(coords.at(1)), 0, Cartesian::DEGREES, SRID);
 				c.normalize();
 				HTM::cartesian2name(c, name);
 				res.push_back(name);
@@ -391,7 +349,7 @@ EWKT_Parser::parse_multipoint(const std::string &specification)
 				throw MSG_Error("The specification for MULTIPOINT is (lat lon [height], ..., lat lon [height]) or (lat lon [height]), ..., (lat lon [height]), ...");
 			}
 		}
-	} else if (start != len) {
+	} else if (match_size != specification.size()) {
 		throw MSG_Error("Syntax error in EWKT format (MULTIPOINT)");
 	}
 
@@ -403,21 +361,17 @@ EWKT_Parser::parse_multipoint(const std::string &specification)
 std::vector<std::string>
 EWKT_Parser::parse_geometry_collection(const std::string &data)
 {
-	unique_group unique_gr;
-	int len = (int)data.size(), start = 0;
-
 	// Checking if the format is correct and processing the geometries.
-	std::vector<std::string> specification;
-	std::vector<std::string> geometry;
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(data.c_str(), len, start, 0, FIND_COLLECTION_RE, &compiled_find_collection_re, unique_gr) != -1) {
-		group_t *gr = unique_gr.get();
-		if (start != gr[0].start) {
-			throw MSG_Error("Syntax error in EWKT format (GEOMETRYCOLLECTION)");
-		}
-		std::string geometry(data.c_str(), gr[1].start, gr[1].end - gr[1].start);
-		std::string specification(data.c_str(), gr[2].start, gr[2].end - gr[2].start);
+	size_t match_size = 0;
+
+	std::sregex_iterator next(data.begin(), data.end(), find_collection_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	for ( ; next != end; ++next) {
+		match_size += next->length(0);
+		std::string geometry(next->str(1));
+		std::string specification(next->str(2));
 		std::vector<std::string> txs;
 		if (geometry.compare("CIRCLE") == 0) txs = parse_circle(specification);
 		else if (geometry.compare("MULTICIRCLE") == 0) txs = parse_multicircle(specification);
@@ -434,11 +388,9 @@ EWKT_Parser::parse_geometry_collection(const std::string &data)
 		} else {
 			names_f = or_trixels(names_f, txs);
 		}
-
-		start = gr[0].end;
 	}
 
-	if (start != len) {
+	if (match_size != data.size()) {
 		throw MSG_Error("Syntax error in EWKT format");
 	}
 
@@ -454,17 +406,16 @@ EWKT_Parser::parse_geometry_intersection(const std::string &data)
 	int len = (int)data.size(), start = 0;
 
 	// Checking if the format is correct and processing the geometries.
-	std::vector<std::string> specification;
-	std::vector<std::string> geometry;
 	std::vector<std::string> names_f;
 	bool first = true;
-	while (pcre_search(data.c_str(), len, start, 0, FIND_COLLECTION_RE, &compiled_find_collection_re, unique_gr) != -1) {
-		group_t *gr = unique_gr.get();
-		if (start != gr[0].start) {
-			throw MSG_Error("Syntax error in EWKT format (GEOMETRYINTERSECTION)");
-		}
-		std::string geometry(data.c_str(), gr[1].start, gr[1].end - gr[1].start);
-		std::string specification(data.c_str(), gr[2].start, gr[2].end - gr[2].start);
+	size_t match_size = 0;
+
+	std::sregex_iterator next(data.begin(), data.end(), find_collection_re, std::regex_constants::match_continuous);
+	std::sregex_iterator end;
+	for ( ; next != end; ++next) {
+		match_size += next->length(0);
+		std::string geometry(next->str(1));
+		std::string specification(next->str(2));
 		std::vector<std::string> txs;
 		if (geometry.compare("CIRCLE") == 0) txs = parse_circle(specification);
 		else if (geometry.compare("MULTICIRCLE") == 0) txs = parse_multicircle(specification);
@@ -482,8 +433,6 @@ EWKT_Parser::parse_geometry_intersection(const std::string &data)
 			names_f = and_trixels(names_f, txs);
 			if (names_f.empty()) return names_f;
 		}
-
-		start = gr[0].end;
 	}
 
 	if (start != len) {
@@ -673,14 +622,10 @@ EWKT_Parser::get_trixels(const std::string &father, size_t depth, const std::str
 
 
 bool
-EWKT_Parser::isEWKT(const char *str)
+EWKT_Parser::isEWKT(const std::string &str)
 {
-	unique_group unique_gr;
-	int len = (int)strlen(str);
-	int ret = pcre_search(str, len, 0, 0, FIND_GEOMETRY_RE, &compiled_find_geometry_re, unique_gr);
-	group_t *gr = unique_gr.get();
-
-	return (ret != -1 && len == gr[0].end - gr[0].start) ? true : false;
+	std::smatch m;
+	return std::regex_match(str, m, find_geometry_re) && static_cast<size_t>(m.length(0)) == str.size();
 }
 
 

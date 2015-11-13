@@ -24,19 +24,20 @@
 
 #include "utils.h"
 #include "geospatialrange.h"
-#include "pcre/pcre.h"
 
-extern pcre *compiled_find_geometry_re;
-extern pcre *compiled_find_circle_re;
-extern pcre *compiled_find_subpolygon_re;
-extern pcre *compiled_find_polygon_re;
-extern pcre *compiled_find_collection_re;
+#include <regex>
 
 // Each uInt64 is serialised into 7 bytes, but each zero byte in a term is
 // currently internally encoded as two bytes. Internally a uInt64 can be encoded
 // in maximum 13 bytes.
 #define RANGES_BY_TERM 9
 #define WKT_SEPARATOR  ";"
+
+extern std::regex find_geometry_re;
+extern std::regex find_circle_re;
+extern std::regex find_subpolygon_re;
+extern std::regex find_polygon_re;
+extern std::regex find_collection_re;
 
 
 class EWKT_Parser {
@@ -64,7 +65,7 @@ class EWKT_Parser {
 		static std::vector<std::string> xor_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
 		static std::vector<std::string> or_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
 		static std::vector<std::string> and_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
-		static bool isEWKT(const char *str);
+		static bool isEWKT(const std::string &str);
 		static void getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
 		static void getIndexTerms(const std::string &field_value, bool partials, double error, std::vector<std::string> &terms);
 		static void getSearchTerms(const std::string &field_value, bool partials, double error, std::vector<std::string> &terms);
