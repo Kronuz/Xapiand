@@ -44,35 +44,36 @@
 #include "pcre/pcre.h"
 #include <chrono>
 #include <regex>
+#include <thread>
 
 
 constexpr uint16_t SLOT_TIME_MINUTE = 1440;
 constexpr uint8_t SLOT_TIME_SECOND = 60;
 
-using cont_time_t = struct cont_time_s {
+struct cont_time_t {
 	uint32_t min[SLOT_TIME_MINUTE];
 	uint32_t sec[SLOT_TIME_SECOND];
 	uint64_t tm_min[SLOT_TIME_MINUTE];
 	uint64_t tm_sec[SLOT_TIME_SECOND];
 };
 
-using times_row_t = struct times_row_s {
+struct times_row_t {
 	cont_time_t index;
 	cont_time_t search;
 	cont_time_t del;
 };
 
-using pos_time_t = struct pos_time_s {
+struct pos_time_t {
 	uint16_t minute;
 	uint8_t second;
 };
 
-using parser_query_t = struct parser_query_s {
+struct parser_query_t {
 	size_t length;
 	const char *offset;
 };
 
-using parser_url_path_t = struct parser_url_path_s {
+struct parser_url_path_t {
 	const char *offset;
 	size_t len_path;
 	const char *off_path;
@@ -86,9 +87,16 @@ using parser_url_path_t = struct parser_url_path_s {
 	const char *off_upload;
 };
 
+struct group_t {
+	int start;
+	int end;
+};
+
 extern pcre *compiled_coords_re;
 extern pcre *compiled_numeric_re;
 extern std::regex find_range_re;
+
+extern std::mutex log_mutex;
 
 // Varibles used by server stats.
 extern pos_time_t b_time;
@@ -97,14 +105,12 @@ extern times_row_t stats_cnt;
 
 // It'll return the enum's underlying type.
 template<typename E>
-inline constexpr auto toUType(E enumerator) noexcept
-{
+inline constexpr auto toUType(E enumerator) noexcept {
 	return static_cast<std::underlying_type_t<E>>(enumerator);
 }
 
 template<typename T, std::size_t N>
-inline constexpr std::size_t arraySize(T (&)[N]) noexcept
-{
+inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
 	return N;
 }
 
@@ -152,13 +158,9 @@ inline bool ignored_errorno(int e, bool udp) {
 	}
 }
 
+
 std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
-
-typedef struct group_s {
-	int start;
-	int end;
-} group_t;
 
 struct group_t_deleter {
 	void operator()(group_t *p) const {
@@ -245,7 +247,7 @@ namespace epoch {
 
 #define LOG_ERR _LOG_ENABLED
 
-#define LOG_DEBUG(...)
+#define LOG_DEBUG _
 
 #define LOG_CONN _LOG_ENABLED
 #define LOG_DISCOVERY _LOG_ENABLED

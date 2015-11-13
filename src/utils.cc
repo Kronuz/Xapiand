@@ -62,6 +62,8 @@ pcre *compiled_coords_re = NULL;
 pcre *compiled_numeric_re = NULL;
 std::regex find_range_re = std::regex("([^ ]*)\\.\\.([^ ]*)", std::regex::optimize);
 
+std::mutex log_mutex;
+
 pos_time_t b_time;
 std::chrono::time_point<std::chrono::system_clock> init_time;
 times_row_t stats_cnt;
@@ -70,8 +72,7 @@ static std::random_device rd;  // Random device engine, usually based on /dev/ra
 static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
 
-void set_thread_name(const std::string &name)
-{
+void set_thread_name(const std::string &name) {
 #if defined(HAVE_PTHREAD_SETNAME_NP_1)
 	pthread_setname_np(name.c_str());
 #elif defined(HAVE_PTHREAD_SETNAME_NP_2)
@@ -84,8 +85,7 @@ void set_thread_name(const std::string &name)
 }
 
 
-std::string get_thread_name()
-{
+std::string get_thread_name() {
 	char name[100] = {0};
 #if defined(HAVE_PTHREAD_GETNAME_NP_3)
 	pthread_getname_np(pthread_self(), name, sizeof(name));
@@ -97,26 +97,23 @@ std::string get_thread_name()
 	static std::hash<std::thread::id> thread_hasher;
 	snprintf(name, sizeof(name), "%zx", thread_hasher(std::this_thread::get_id()));
 #endif
-      return std::string(name);
+	return std::string(name);
 }
 
 
-double random_real(double initial, double last)
-{
+double random_real(double initial, double last) {
 	std::uniform_real_distribution<double> distribution(initial, last);
 	return distribution(rng);  // Use rng as a generator
 }
 
 
-uint64_t random_int(uint64_t initial, uint64_t last)
-{
+uint64_t random_int(uint64_t initial, uint64_t last) {
 	std::uniform_int_distribution<uint64_t> distribution(initial, last);
 	return distribution(rng);  // Use rng as a generator
 }
 
 
-std::string repr(const void* p, size_t size, bool friendly)
-{
+std::string repr(const void* p, size_t size, bool friendly) {
 	const char* q = (const char *)p;
 	char *buff = new char[size * 4 + 1];
 	char *d = buff;
@@ -198,49 +195,21 @@ std::string _log(const char *file, int line, void *, const char *format, va_list
 	return buffer;
 }
 
-void log(const char *file, int line, void *obj, const char *format, ...)
-{
-	std::lock_guard<std::mutex> lk(log_mutex);
 
+void
+Log::end(const char *file, int line, void *obj, const char *format, ...)
+{
 	va_list argptr;
 	va_start(argptr, format);
-	std::cerr << _log(file, line, obj, format, argptr);
-	va_end(argptr);
-}
-
-uint64_t log_timed(const char *file, int line, int timeout, void *obj, const char *format, ...)
-{
-	std::lock_guard<std::mutex> lk(log_mutex);
-	uint64_t id = 0;
-
-	va_list argptr;
-	va_start(argptr, format);
-	if (timeout) {
-		id = random_int(1, UINT64_MAX);
-		log_map[id] = std::make_pair(std::chrono::system_clock::now() + std::chrono::milliseconds(timeout), _log(file, line, obj, format, argptr));
-	} else {
-		std::cerr << _log(file, line, obj, format, argptr);
+	if (!log_runner) {
+		std::lock_guard<std::mutex> lk(log_mutex);
+		std::cerr << log(file, line, obj, format, argptr);
 	}
 	va_end(argptr);
-	return id;
-}
-
-void log_clear(uint64_t id, const char *file, int line, void *obj, const char *format, ...)
-{
-	std::lock_guard<std::mutex> lk(log_mutex);
-	try {
-		log_map.erase(id);
-	} catch(...) {
-		va_list argptr;
-		va_start(argptr, format);
-		std::cerr << _log(file, line, obj, format, argptr);
-		va_end(argptr);
-	}
 }
 
 
-int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets)
-{
+int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 	/* It outputs a bucket number in the range [0, num_buckets).
 	   A Fast, Minimal Memory, Consistent Hash Algorithm
 	   [http://arxiv.org/pdf/1406.2294v1.pdf] */
@@ -256,14 +225,12 @@ int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets)
 
 static NameGen::Generator generator("!<K|E><k|e|l><|||s>");
 
-std::string name_generator()
-{
+std::string name_generator() {
 	return generator.toString();
 }
 
 
-const char HEX2DEC[256] =
-{
+const char HEX2DEC[256] = {
 	/*       0  1  2  3   4  5  6  7   8  9  A  B   C  D  E  F */
 	/* 0 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
 	/* 1 */ -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1, -1,-1,-1,-1,
@@ -287,8 +254,7 @@ const char HEX2DEC[256] =
 };
 
 
-std::string urldecode(const char *src, size_t size)
-{
+std::string urldecode(const char *src, size_t size) {
 	// Note from RFC1630:  "Sequences which start with a percent sign
 	// but are not followed by two hexadecimal characters (0-9, A-F) are reserved
 	// for future extension"
@@ -327,8 +293,7 @@ std::string urldecode(const char *src, size_t size)
 }
 
 
-int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par)
-{
+int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 	const char *nf = qs + size;
 	const char *n1, *n0;
 	const char *v0 = NULL;
@@ -386,8 +351,7 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par)
 }
 
 
-int url_path(const char* ni, size_t size, parser_url_path_t *par)
-{
+int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 	const char *nf = ni + size;
 	const char *n0, *n1, *n2 = NULL;
 	int state, direction;
@@ -581,8 +545,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par)
 }
 
 
-int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups)
-{
+int pcre_search(const char *subject, int length, int startoffset, int options, const char *pattern, pcre **code, unique_group &unique_groups) {
 	int erroffset;
 	const char *error;
 
@@ -621,24 +584,21 @@ int pcre_search(const char *subject, int length, int startoffset, int options, c
 }
 
 
-std::string stringtoupper(const std::string &str)
-{
+std::string stringtoupper(const std::string &str) {
 	std::string tmp = str;
 	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM_UPPER());
 	return tmp;
 }
 
 
-std::string stringtolower(const std::string &str)
-{
+std::string stringtolower(const std::string &str) {
 	std::string tmp = str;
 	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM_LOWER());
 	return tmp;
 }
 
 
-std::string prefixed(const std::string &term, const std::string &prefix)
-{
+std::string prefixed(const std::string &term, const std::string &prefix) {
 	if (isupper(term.at(0))) {
 		return (prefix.empty()) ? term : prefix + ":" + term;
 	}
@@ -647,8 +607,7 @@ std::string prefixed(const std::string &term, const std::string &prefix)
 }
 
 
-unsigned int get_slot(const std::string &name)
-{
+unsigned int get_slot(const std::string &name) {
 	// We are left with the last 8 characters.
 	std::string _md5(md5(strhasupper(name) ? stringtoupper(name) : name), 24, 8);
 	unsigned int slot = static_cast<unsigned int>(strtoul(_md5, 16));
@@ -661,38 +620,32 @@ unsigned int get_slot(const std::string &name)
 }
 
 
-long strtol(const std::string &str, int base)
-{
+long strtol(const std::string &str, int base) {
 	return strtol(str.c_str(), NULL, base);
 }
 
 
-unsigned long strtoul(const std::string &str, int base)
-{
+unsigned long strtoul(const std::string &str, int base) {
 	return strtoul(str.c_str(), NULL, base);
 }
 
 
-double strtod(const std::string &str)
-{
+double strtod(const std::string &str) {
 	return strtod(str.c_str(), NULL);
 }
 
 
-long long strtoll(const std::string &str, int base)
-{
+long long strtoll(const std::string &str, int base) {
 	return strtoll(str.c_str(), NULL, base);
 }
 
 
-unsigned long long strtoull(const std::string &str, int base)
-{
+unsigned long long strtoull(const std::string &str, int base) {
 	return strtoull(str.c_str(), NULL, base);
 }
 
 
-std::string get_prefix(const std::string &name, const std::string &prefix, char type)
-{
+std::string get_prefix(const std::string &name, const std::string &prefix, char type) {
 	std::string slot(get_slot_hex(name));
 	std::transform(slot.begin(), slot.end(), slot.begin(), TRANSFORM_MAP());
 	std::string res(prefix);
@@ -701,16 +654,14 @@ std::string get_prefix(const std::string &name, const std::string &prefix, char 
 }
 
 
-std::string get_slot_hex(const std::string &name)
-{
+std::string get_slot_hex(const std::string &name) {
 	// We are left with the last 8 characters.
 	std::string _md5(md5(strhasupper(name) ? stringtoupper(name): name), 24, 8);
 	return stringtoupper(_md5);
 }
 
 
-bool strhasupper(const std::string &str)
-{
+bool strhasupper(const std::string &str) {
 	std::string::const_iterator it(str.begin());
 	for ( ; it != str.end(); it++) {
 		if (isupper(*it)) return true;
@@ -726,8 +677,7 @@ bool isRange(const std::string &str) {
 }
 
 
-bool isNumeric(const std::string &str)
-{
+bool isNumeric(const std::string &str) {
 	unique_group unique_gr;
 	int len = (int)str.size();
 	int ret = pcre_search(str.c_str(), len, 0, 0, NUMERIC_RE, &compiled_numeric_re, unique_gr);
@@ -737,16 +687,14 @@ bool isNumeric(const std::string &str)
 }
 
 
-bool startswith(const std::string &text, const std::string &token)
-{
+bool startswith(const std::string &text, const std::string &token) {
 	if (text.length() < token.length())
 		return false;
 	return (text.compare(0, token.length(), token) == 0);
 }
 
 
-void update_pos_time()
-{
+void update_pos_time() {
 	auto t_current = std::chrono::system_clock::now();
 	auto aux_second = b_time.second;
 	auto aux_minute = b_time.minute;
@@ -775,8 +723,7 @@ void update_pos_time()
 }
 
 
-void fill_zeros_stats_min(uint16_t start, uint16_t end)
-{
+void fill_zeros_stats_min(uint16_t start, uint16_t end) {
 	for (auto i = start; i <= end; ++i) {
 		stats_cnt.index.min[i] = 0;
 		stats_cnt.index.tm_min[i] = 0;
@@ -788,8 +735,7 @@ void fill_zeros_stats_min(uint16_t start, uint16_t end)
 }
 
 
-void fill_zeros_stats_sec(uint8_t start, uint8_t end)
-{
+void fill_zeros_stats_sec(uint8_t start, uint8_t end) {
 	for (auto i = start; i <= end; ++i) {
 		stats_cnt.index.sec[i] = 0;
 		stats_cnt.index.tm_sec[i] = 0;
@@ -801,8 +747,7 @@ void fill_zeros_stats_sec(uint8_t start, uint8_t end)
 }
 
 
-void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy)
-{
+void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy) {
 	for (auto i = start; i <= end; ++i) {
 		cnt[0] += stats_cnt_cpy.index.min[i];
 		cnt[1] += stats_cnt_cpy.search.min[i];
@@ -814,8 +759,7 @@ void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t> &cnt, std
 }
 
 
-void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy)
-{
+void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy) {
 	for (auto i = start; i <= end; ++i) {
 		cnt[0] += stats_cnt_cpy.index.sec[i];
 		cnt[1] += stats_cnt_cpy.search.sec[i];
@@ -827,8 +771,7 @@ void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::
 }
 
 
-void delete_files(const std::string &path)
-{
+void delete_files(const std::string &path) {
 	unsigned char isFile = 0x8;
 	unsigned char isFolder = 0x4;
 
@@ -867,8 +810,7 @@ void delete_files(const std::string &path)
 }
 
 
-void move_files(const std::string &src, const std::string &dst)
-{
+void move_files(const std::string &src, const std::string &dst) {
 	unsigned char isFile = 0x8;
 
 	DIR *Dir;
@@ -903,8 +845,7 @@ inline bool exist(const std::string& path) {
 }
 
 
-bool buid_path_index(const std::string& path)
-{
+bool buid_path_index(const std::string& path) {
 	std::string dir = path;
 	std::size_t found = dir.find_last_of("/\\");
 	dir.resize(found);
@@ -927,8 +868,7 @@ bool buid_path_index(const std::string& path)
 }
 
 
-void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens)
-{
+void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens) {
 	size_t prev = 0, next = 0, len;
 
 	while ((next = str.find(delimiter, prev)) != std::string::npos) {
@@ -945,8 +885,7 @@ void stringTokenizer(const std::string &str, const std::string &delimiter, std::
 }
 
 
-unsigned int levenshtein_distance(const std::string &str1, const std::string &str2)
-{
+unsigned int levenshtein_distance(const std::string &str1, const std::string &str2) {
 	const size_t len1 = str1.size(), len2 = str2.size();
 	std::vector<unsigned int> col(len2 + 1), prev_col(len2 + 1);
 

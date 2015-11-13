@@ -281,8 +281,6 @@ int main(int argc, char **argv)
 
 	run(opts);
 
-	log_kill();
-
 	INFO(nullptr, "Done with all work!\n");
 	return 0;
 }

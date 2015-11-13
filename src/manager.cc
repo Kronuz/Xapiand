@@ -371,8 +371,6 @@ XapiandManager::sig_shutdown_handler(int sig)
 	if (XapiandManager::shutdown_now && sig != SIGTERM) {
 		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
 			INFO(this, "You insist... exiting now.\n");
-			// remove pid file here, use: getpid();
-			log_kill();
 			exit(1); /* Exit with an error since this was not a clean shutdown. */
 		}
 	} else if (XapiandManager::shutdown_asap && sig != SIGTERM) {
