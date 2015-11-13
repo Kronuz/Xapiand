@@ -1115,7 +1115,6 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		std::vector<range_t>::const_iterator rit;
 		CartesianList centroids;
 		std::string filter_term, start, end, prefix;
-		unique_group unique_Range;
 
 		std::smatch m;
 		if (std::regex_match(field_value, m, find_range_re)) {

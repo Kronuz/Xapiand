@@ -86,11 +86,6 @@ struct parser_url_path_t {
 	const char *off_upload;
 };
 
-struct group_t {
-	int start;
-	int end;
-};
-
 extern std::regex numeric_re;
 extern std::regex find_range_re;
 
@@ -172,12 +167,6 @@ inline bool ignored_errorno(int e, bool udp) {
 std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
-struct group_t_deleter {
-	void operator()(group_t *p) const {
-		free(p);
-	}
-};
-
 struct char_ptr_deleter {
 	void operator()(char *c) const {
 		free(c);
@@ -198,7 +187,6 @@ struct TRANSFORM_MAP {
 };
 
 typedef std::unique_ptr<cJSON, void(*)(cJSON*)> unique_cJSON;
-typedef std::unique_ptr<group_t, group_t_deleter> unique_group;
 typedef std::unique_ptr<char, char_ptr_deleter> unique_char_ptr;
 
 int url_path(const char* n1, size_t size, parser_url_path_t *par);
