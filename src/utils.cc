@@ -154,35 +154,54 @@ std::string repr(const std::string &string, bool friendly) {
 }
 
 
-std::atomic_bool log_runner(true);
-static std::mutex log_mutex;
-static std::map<uint64_t, std::pair<std::chrono::time_point<std::chrono::system_clock>, std::string>> log_map;
-std::thread log_thread([] {
-	while (log_runner) {
-		auto now = std::chrono::system_clock::now();
-		{
-			std::lock_guard<std::mutex> lk(log_mutex);
-			for (auto it = log_map.begin(); it != log_map.end();) {
-				if (now > it->second.first) {
-					std::cerr << it->second.second;
-					it = log_map.erase(it);
-				} else {
-					++it;
-				}
-			}
-		}
-		if(log_runner) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
-});
-
-void log_kill()
+Log::Log(const char *file, int line, void *obj, const char *format, ...) : log_runner(false)
 {
-	log_runner = false;
-	log_thread.join();
+	va_list argptr;
+	va_start(argptr, format);
+	std::lock_guard<std::mutex> lk(log_mutex);
+	std::cerr << log(file, line, obj, format, argptr);
+	va_end(argptr);
 }
 
 
-std::string _log(const char *file, int line, void *, const char *format, va_list ap)
+Log::Log(const char *file, int line, int timeout, void *obj, const char *format, ...) : log_runner(false)
+{
+	va_list argptr;
+	va_start(argptr, format);
+	if (timeout) {
+		log_runner = true;
+		log_tp_end = std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+		log_start = log(file, line, obj, format, argptr);
+		log_thread = std::thread([this]() {
+			while (log_runner) {
+				auto now = std::chrono::system_clock::now();
+				if (now > log_tp_end) {
+					std::lock_guard<std::mutex> lk(log_mutex);
+					std::cerr << log_start;
+					log_runner = false;
+				}
+				if (log_runner) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+		});
+	} else {
+		std::lock_guard<std::mutex> lk(log_mutex);
+		std::cerr << log(file, line, obj, format, argptr);
+	}
+	va_end(argptr);
+}
+
+
+Log::~Log()
+{
+	if (log_thread.joinable()) {
+		log_runner = false;
+		log_thread.join();
+	}
+}
+
+
+std::string
+Log::log(const char *file, int line, void *, const char *format, va_list ap)
 {
 	char buffer[2048];
 

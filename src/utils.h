@@ -120,13 +120,25 @@ uint64_t random_int(uint64_t initial, uint64_t last);
 void set_thread_name(const std::string &name);
 std::string get_thread_name();
 
-void log(const char *file, int line, void *obj, const char *fmt, ...);
-uint64_t log_timed(const char *file, int line, int timeout, void *obj, const char *format, ...);
-void log_clear(uint64_t id, const char *file, int line, void *obj, const char *format, ...);
-void log_kill();
-
 std::string repr(const void *p, size_t size, bool friendly=true);
 std::string repr(const std::string &string, bool friendly=true);
+
+
+class Log {
+	std::string log_start;
+	std::atomic_bool log_runner;
+	std::thread log_thread;
+	std::chrono::time_point<std::chrono::system_clock> log_tp_end;
+
+	std::string log(const char *file, int line, void *, const char *format, va_list ap);
+
+public:
+	Log(const char *file, int line, int timeout, void *obj, const char *format, ...);
+	Log(const char *file, int line, void *obj, const char *fmt, ...);
+	~Log();
+
+	void end(const char *file, int line, void *obj, const char *format, ...);
+};
 
 
 inline bool ignored_errorno(int e, bool udp) {
@@ -234,11 +246,11 @@ namespace epoch {
 }
 
 #define _(...)
-#define _LOG_ENABLED(...) log(__FILE__, __LINE__, __VA_ARGS__)
-#define _LOG_TIMED_100(...) auto __timed = log_timed(__FILE__, __LINE__, 100, __VA_ARGS__)
-#define _LOG_TIMED_500(...) auto __timed = log_timed(__FILE__, __LINE__, 500, __VA_ARGS__)
-#define _LOG_TIMED_1000(...) auto __timed = log_timed(__FILE__, __LINE__, 1000, __VA_ARGS__)
-#define _LOG_TIMED_CLEAR(...) log_clear(__timed, __FILE__, __LINE__, __VA_ARGS__)
+#define _LOG_ENABLED(...) Log(__FILE__, __LINE__, __VA_ARGS__)
+#define _LOG_TIMED_100(...) Log __timed(__FILE__, __LINE__, 100, __VA_ARGS__)
+#define _LOG_TIMED_500(...) Log __timed(__FILE__, __LINE__, 500, __VA_ARGS__)
+#define _LOG_TIMED_1000(...) Log __timed(__FILE__, __LINE__, 1000, __VA_ARGS__)
+#define _LOG_TIMED_CLEAR(...) __timed.end(__FILE__, __LINE__, __VA_ARGS__)
 
 
 #define INFO _LOG_ENABLED
