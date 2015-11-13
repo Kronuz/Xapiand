@@ -31,28 +31,6 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/multivaluekeymaker.cc \
 			$(top_builddir)/src/multivaluerange.cc \
 			$(top_builddir)/src/namegen.cc \
-			$(top_builddir)/src/pcre/pcre_byte_order.c \
-			$(top_builddir)/src/pcre/pcre_chartables.c \
-			$(top_builddir)/src/pcre/pcre_compile.c \
-			$(top_builddir)/src/pcre/pcre_config.c \
-			$(top_builddir)/src/pcre/pcre_dfa_exec.c \
-			$(top_builddir)/src/pcre/pcre_exec.c \
-			$(top_builddir)/src/pcre/pcre_fullinfo.c \
-			$(top_builddir)/src/pcre/pcre_get.c \
-			$(top_builddir)/src/pcre/pcre_globals.c \
-			$(top_builddir)/src/pcre/pcre_maketables.c \
-			$(top_builddir)/src/pcre/pcre_newline.c \
-			$(top_builddir)/src/pcre/pcre_ord2utf8.c \
-			$(top_builddir)/src/pcre/pcre_printint.c \
-			$(top_builddir)/src/pcre/pcre_refcount.c \
-			$(top_builddir)/src/pcre/pcre_string_utils.c \
-			$(top_builddir)/src/pcre/pcre_study.c \
-			$(top_builddir)/src/pcre/pcre_tables.c \
-			$(top_builddir)/src/pcre/pcre_ucd.c \
-			$(top_builddir)/src/pcre/pcre_valid_utf8.c \
-			$(top_builddir)/src/pcre/pcre_version.c \
-			$(top_builddir)/src/pcre/pcre_xclass.c \
-			$(top_builddir)/src/pcre/pcreposix.c \
 			$(top_builddir)/src/queue.h \
 			$(top_builddir)/src/serialise.cc \
 			$(top_builddir)/src/threadpool.h \
