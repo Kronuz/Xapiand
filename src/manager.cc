@@ -509,7 +509,6 @@ XapiandManager::get_region(const std::string &db_name)
 {
 	if (local_node.regions.load() == -1) {
 		local_node.regions.store(sqrt(nodes.size()));
-		LOG(this, "Regions: %d\n", local_node.regions.load());
 	}
 	std::hash<std::string> hash_fn;
 	return jump_consistent_hash(hash_fn(db_name), local_node.regions.load());
@@ -519,7 +518,6 @@ XapiandManager::get_region(const std::string &db_name)
 int
 XapiandManager::get_region()
 {
-	LOG(this, "Get_region()\n");
 	if (local_node.regions.load() == -1) {
 		local_node.regions.store(sqrt(nodes.size()));
 		int region = jump_consistent_hash(local_node.id, local_node.regions.load());
@@ -527,7 +525,7 @@ XapiandManager::get_region()
 			local_node.region.store(region);
 			raft->reset();
 		}
-		LOG(this, "Regions: %d Region: %d\n", local_node.regions.load(), local_node.region.load());
+		LOG_RAFT(this, "Regions: %d Region: %d\n", local_node.regions.load(), local_node.region.load());
 	}
 	return local_node.region.load();
 }

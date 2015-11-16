@@ -186,7 +186,7 @@ HttpClient::~HttpClient()
 
 void HttpClient::on_read(const char *buf, size_t received)
 {
-	LOG_CONN_WIRE(this, "BinaryClient::on_read: %zu bytes\n", received);
+	LOG_CONN_WIRE(this, "HttpClient::on_read: %zu bytes\n", received);
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
