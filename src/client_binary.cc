@@ -533,13 +533,13 @@ BinaryClient::repl_end_of_changes()
 {
 	LOG(this, "BinaryClient::repl_end_of_changes\n");
 
+	if (repl_switched_db) {
+		manager()->database_pool.switch_db(*endpoints.cbegin());
+	}
+
 	if (repl_database) {
 		manager()->database_pool.checkin(repl_database);
 		repl_database.reset();
-	}
-
-	if (repl_switched_db) {
-		manager()->database_pool.switch_db(*endpoints.cbegin());
 	}
 
 	shutdown();
