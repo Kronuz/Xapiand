@@ -51,6 +51,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *
 	  running(0),
 	  state(State::INIT_REMOTEPROTOCOL),
 	  repl_database(nullptr),
+	  repl_database_tmp(nullptr),
 	  repl_switched_db(false),
 	  storing_database(NULL),
 	  storing_offset(0),
@@ -75,6 +76,11 @@ BinaryClient::~BinaryClient()
 	if (repl_database) {
 		manager()->database_pool.checkin(repl_database);
 	}
+
+	if (repl_database_tmp) {
+		manager()->database_pool.checkin(repl_database_tmp);
+	}
+
 	if (storing_database) {
 		manager()->database_pool.checkin(storing_database);
 	}
@@ -106,7 +112,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 	repl_endpoints.insert(src_endpoint);
 	endpoints.insert(dst_endpoint);
 
-	if (!manager()->database_pool.checkout(repl_database, endpoints, DB_WRITABLE | DB_SPAWN)) {
+	if (!manager()->database_pool.checkout(repl_database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION)) {
 		LOG_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
 		return false;
 	}
@@ -169,6 +175,10 @@ BinaryClient::on_read_file_done()
 					manager()->database_pool.checkin(repl_database);
 					repl_database.reset();
 				}
+				if (repl_database_tmp) {
+					manager()->database_pool.checkin(repl_database_tmp);
+					repl_database_tmp.reset();
+				}
 				shutdown();
 		};
 	} catch (const Xapian::NetworkError &e) {
@@ -177,6 +187,10 @@ BinaryClient::on_read_file_done()
 			manager()->database_pool.checkin(repl_database);
 			repl_database.reset();
 		}
+		if (repl_database_tmp) {
+			manager()->database_pool.checkin(repl_database_tmp);
+			repl_database_tmp.reset();
+		}
 		shutdown();
 	} catch (const std::exception &err) {
 		LOG_ERR(this, "ERROR: %s\n", err.what());
@@ -184,12 +198,20 @@ BinaryClient::on_read_file_done()
 			manager()->database_pool.checkin(repl_database);
 			repl_database.reset();
 		}
+		if (repl_database_tmp) {
+			manager()->database_pool.checkin(repl_database_tmp);
+			repl_database_tmp.reset();
+		}
 		shutdown();
 	} catch (...) {
 		LOG_ERR(this, "ERROR: Unkown exception!\n");
 		if (repl_database) {
 			manager()->database_pool.checkin(repl_database);
 			repl_database.reset();
+		}
+		if (repl_database_tmp) {
+			manager()->database_pool.checkin(repl_database_tmp);
+			repl_database_tmp.reset();
 		}
 		shutdown();
 	}
@@ -542,6 +564,11 @@ BinaryClient::repl_end_of_changes()
 		repl_database.reset();
 	}
 
+	if (repl_database_tmp) {
+		manager()->database_pool.checkin(repl_database_tmp);
+		repl_database_tmp.reset();
+	}
+
 	shutdown();
 }
 
@@ -555,6 +582,11 @@ BinaryClient::repl_fail()
 		manager()->database_pool.checkin(repl_database);
 		repl_database.reset();
 	}
+	if (repl_database_tmp) {
+		manager()->database_pool.checkin(repl_database_tmp);
+		repl_database_tmp.reset();
+	}
+
 	shutdown();
 }
 
@@ -639,12 +671,7 @@ BinaryClient::repl_set_db_footer()
 	endpoint_tmp.path.append("/.tmp");
 	endpoints_tmp.insert(endpoint_tmp);
 
-	if (repl_database) {
-		manager()->database_pool.checkin(repl_database);
-		repl_database.reset();
-	}
-
-	if (!manager()->database_pool.checkout(repl_database, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
+	if (!manager()->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
 		LOG_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
 	}
 

@@ -46,6 +46,7 @@
 #define DB_PERSISTENT 4  // Always try keeping the database in the database pool
 #define DB_INIT_REF 8	 // Initializes the writable index in the database .refs
 #define DB_VOLATILE 16   // Always drop the database from the database pool as soon as possible
+#define DB_REPLICATION 32 //use conditional pop in the queue, only pop when replication is done
 
 #define DB_MASTER "M"
 #define DB_SLAVE  "S"
@@ -143,6 +144,13 @@ public:
 
 	bool inc_count(int max=-1);
 	bool dec_count();
+
+	enum class replica_state {
+		REPLICA_FREE,
+		REPLICA_LOCK
+	};
+
+	replica_state state;
 };
 
 

@@ -1619,7 +1619,8 @@ Database::get_stats_docs(const std::string &document_id)
 DatabaseQueue::DatabaseQueue()
 	: is_switch_db(false),
 	  persistent(false),
-	  count(0) { }
+	  count(0),
+	  state(replica_state::REPLICA_FREE) { }
 
 
 DatabaseQueue::DatabaseQueue(DatabaseQueue&& q) : Queue(std::move(q))
@@ -1628,6 +1629,7 @@ DatabaseQueue::DatabaseQueue(DatabaseQueue&& q) : Queue(std::move(q))
 	persistent = std::move(q.persistent);
 	count = std::move(q.count);
 	weak_database_pool = std::move(q.weak_database_pool);
+	state = std::move(q.state);
 }
 
 
@@ -1745,6 +1747,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 	bool writable = flags & DB_WRITABLE;
 	bool persistent = flags & DB_PERSISTENT;
 	bool initref = flags & DB_INIT_REF;
+	bool replication = flags & DB_REPLICATION;
 
 	LOG_DATABASE_BEGIN(this, "++ CHECKING OUT DB %s(%s) [%lx]...\n", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 
@@ -1765,7 +1768,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 		}
 		queue->persistent = persistent;
 
-		if (queue->is_switch_db) {
+		if (replication && queue->state == DatabaseQueue::replica_state::REPLICA_LOCK) {
 			queue->switch_cond.wait(lk);
 		}
 
@@ -1801,6 +1804,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 				// There was an error and the queue ended up being empty, remove it!
 				databases.erase(hash);
 			}
+		} else if (replication) {
+			queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
 		}
 	}
 
@@ -1864,10 +1869,13 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	if (queue->is_switch_db) {
 		Endpoints::const_iterator it_edp;
-		for (endpoints.cbegin(); it_edp != endpoints.cend(); it_edp++) {
+		for (it_edp = endpoints.cbegin(); it_edp != endpoints.cend(); it_edp++) {
 			const Endpoint &endpoint = *it_edp;
 			switch_db(endpoint);
 		}
+	} else if (flags & DB_REPLICATION) {
+		queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
+		queue->switch_cond.notify_one();
 	}
 
 	assert(queue->count >= queue->size());
@@ -1899,7 +1907,8 @@ DatabasePool::switch_db(const Endpoint &endpoint)
 
 		for (auto& queue : queues_set) {
 			queue->is_switch_db = false;
-			queue->switch_cond.notify_all();
+			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
+			queue->switch_cond.notify_one();
 		}
 	} else {
 		LOG(this, "Inside switch_db not queue->count == queue->size()\n");

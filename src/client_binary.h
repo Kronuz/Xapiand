@@ -85,6 +85,7 @@ class BinaryClient : public BaseClient, public RemoteProtocol {
 	queue::Queue<std::unique_ptr<Buffer>> messages_queue;
 
 	std::shared_ptr<Database> repl_database;
+	std::shared_ptr<Database> repl_database_tmp;
 	std::string repl_uuid;
 	Endpoints repl_endpoints;
 	std::string repl_db_filename;
