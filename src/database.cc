@@ -1618,8 +1618,8 @@ Database::get_stats_docs(const std::string &document_id)
 
 DatabaseQueue::DatabaseQueue()
 	: persistent(false),
-	state(replica_state::REPLICA_FREE),
-	count(0){ }
+	  state(replica_state::REPLICA_FREE),
+	  count(0){ }
 
 
 DatabaseQueue::DatabaseQueue(DatabaseQueue&& q) : Queue(std::move(q))
