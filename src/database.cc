@@ -1617,15 +1617,13 @@ Database::get_stats_docs(const std::string &document_id)
 
 
 DatabaseQueue::DatabaseQueue()
-	: is_switch_db(false),
-	  persistent(false),
-	  count(0),
-	  state(replica_state::REPLICA_FREE) { }
+	: persistent(false),
+	state(replica_state::REPLICA_FREE),
+	count(0){ }
 
 
 DatabaseQueue::DatabaseQueue(DatabaseQueue&& q) : Queue(std::move(q))
 {
-	is_switch_db = std::move(q.is_switch_db);
 	persistent = std::move(q.persistent);
 	count = std::move(q.count);
 	weak_database_pool = std::move(q.weak_database_pool);
@@ -1766,11 +1764,15 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 		} else {
 			queue = databases[hash];
 		}
-		queue->persistent = persistent;
 
-		if (replication && queue->state == DatabaseQueue::replica_state::REPLICA_LOCK) {
-			queue->switch_cond.wait(lk);
+		if (replication) {
+			if (queue->state != DatabaseQueue::replica_state::REPLICA_FREE) {
+				queue->switch_cond.wait(lk);
+			}
+			queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
 		}
+
+		queue->persistent = persistent;
 
 		if (!queue->pop(database, 0)) {
 			// Increment so other threads don't delete the queue
@@ -1800,12 +1802,11 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 			}
 		}
 		if (!database) {
+			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
 			if (queue->count == 0) {
 				// There was an error and the queue ended up being empty, remove it!
 				databases.erase(hash);
 			}
-		} else if (replication) {
-			queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
 		}
 	}
 
@@ -1867,15 +1868,18 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		queue->push(database);
 	}
 
-	if (queue->is_switch_db) {
-		Endpoints::const_iterator it_edp;
-		for (it_edp = endpoints.cbegin(); it_edp != endpoints.cend(); it_edp++) {
-			const Endpoint &endpoint = *it_edp;
-			switch_db(endpoint);
-		}
-	} else if (flags & DB_REPLICATION) {
-		queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
-		queue->switch_cond.notify_one();
+	switch (queue->state) {
+		case DatabaseQueue::replica_state::REPLICA_SWITCH:
+			for (auto endpoint : endpoints) {
+				switch_db(endpoint);
+			}
+			break;
+		case DatabaseQueue::replica_state::REPLICA_LOCK:
+			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
+			queue->switch_cond.notify_one();
+			break;
+		case DatabaseQueue::replica_state::REPLICA_FREE:
+			break;
 	}
 
 	assert(queue->count >= queue->size());
@@ -1895,7 +1899,7 @@ DatabasePool::switch_db(const Endpoint &endpoint)
 
 	bool switched = true;
 	for (auto& queue : queues_set) {
-		queue->is_switch_db = true;
+		queue->state = DatabaseQueue::replica_state::REPLICA_SWITCH;
 		if (queue->count != queue->size()) {
 			switched = false;
 			break;
@@ -1906,7 +1910,6 @@ DatabasePool::switch_db(const Endpoint &endpoint)
 		move_files(endpoint.path + "/.tmp", endpoint.path);
 
 		for (auto& queue : queues_set) {
-			queue->is_switch_db = false;
 			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
 			queue->switch_cond.notify_one();
 		}

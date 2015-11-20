@@ -128,7 +128,13 @@ class DatabaseQueue : public queue::Queue<std::shared_ptr<Database>>,
 	friend class DatabasesLRU;
 
 private:
-	bool is_switch_db;
+	enum class replica_state {
+		REPLICA_FREE,
+		REPLICA_LOCK,
+		REPLICA_SWITCH
+	};
+	replica_state state;
+
 	bool persistent;
 	size_t count;
 
@@ -144,13 +150,6 @@ public:
 
 	bool inc_count(int max=-1);
 	bool dec_count();
-
-	enum class replica_state {
-		REPLICA_FREE,
-		REPLICA_LOCK
-	};
-
-	replica_state state;
 };
 
 
@@ -164,7 +163,7 @@ public:
 			return at(key);
 		} catch (std::range_error) {
 			return insert_and([](std::shared_ptr<DatabaseQueue> & val) {
-				if (val->persistent || val->size() < val->count || val->is_switch_db) {
+				if (val->persistent || val->size() < val->count || val->state != DatabaseQueue::replica_state::REPLICA_FREE) {
 					return lru::DropAction::renew;
 				} else {
 					return lru::DropAction::drop;
