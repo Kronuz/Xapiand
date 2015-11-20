@@ -109,13 +109,23 @@ uint64_t random_int(uint64_t initial, uint64_t last) {
 }
 
 
-std::string repr(const void* p, size_t size, bool friendly) {
+std::string repr(const void* p, size_t size, bool friendly, size_t max_size) {
 	const char* q = (const char *)p;
 	char *buff = new char[size * 4 + 1];
 	char *d = buff;
 	const char *p_end = q + size;
+	const char *max_a = max_size ? q + (max_size * 2 / 3) : p_end + 1;
+	const char *max_b = max_size ? p_end - (max_size / 3) : q - 1;
 	while (q != p_end) {
 		char c = *q++;
+		if (q >= max_a && q <= max_b) {
+			if (q == max_a) {
+				*d++ = '.';
+				*d++ = '.';
+				*d++ = '.';
+			}
+			continue;
+		}
 		if (friendly && c == 9) {
 			*d++ = '\\';
 			*d++ = 't';
@@ -145,10 +155,11 @@ std::string repr(const void* p, size_t size, bool friendly) {
 }
 
 
-std::string repr(const std::string &string, bool friendly) {
-	return repr(string.c_str(), string.size(), friendly);
+std::string repr(const std::string &string, bool friendly, size_t max_size) {
+	return repr(string.c_str(), string.size(), friendly, max_size);
 }
 
+char Log::buffer[1024 * 1024];
 
 Log::Log(const char *file, int line, void *obj, const char *format, ...) : log_runner(false)
 {
@@ -196,11 +207,9 @@ Log::~Log()
 }
 
 
-std::string
+const char*
 Log::log(const char *file, int line, void *, const char *format, va_list ap)
 {
-	char buffer[2048];
-
 	snprintf(buffer, sizeof(buffer), "tid(%s): ../%s:%d: ", get_thread_name().c_str(), file, line);
 	size_t buffer_len = strlen(buffer);
 

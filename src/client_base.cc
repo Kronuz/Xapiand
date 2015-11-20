@@ -320,7 +320,8 @@ BaseClient::write_directly(int fd)
 		} else if (written == 0) {
 			return WR::PENDING;
 		} else {
-			LOG_CONN_WIRE(this, "(sock=%d) <<-- '%s'\n", sock, repr(buf_data, written).c_str());
+			auto x(repr(buf_data, written, true, 500));
+			LOG_CONN_WIRE(this, "(sock=%d) <<-- '%s' [%zu] (%zu bytes)\n", sock, x.c_str(), x.size(), written);
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
 				if (write_queue.pop(buffer)) {
@@ -381,7 +382,8 @@ BaseClient::io_cb_read(int fd)
 			destroy();
 			return;
 		} else {
-			LOG_CONN_WIRE(this, "(sock=%d) -->> '%s'\n", sock, repr(buf_data, received).c_str());
+			auto x(repr(buf_data, received, true, 500));
+			LOG_CONN_WIRE(this, "(sock=%d) -->> '%s' [%zu] (%zu bytes)\n", sock, x.c_str(), x.size(), received);
 
 			if (mode == MODE::READ_FILE_TYPE) {
 				switch (*buf_data++) {
@@ -489,7 +491,7 @@ BaseClient::write(const char *buf, size_t buf_size)
 		return false;
 	}
 
-	LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
+	//LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
 
 	written += 1;
 
