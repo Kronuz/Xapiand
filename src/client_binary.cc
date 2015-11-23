@@ -106,7 +106,7 @@ BinaryClient::init_remote()
 bool
 BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-	LOG(this, "init_replication: %s  -->  %s\n", src_endpoint.as_string().c_str(), dst_endpoint.as_string().c_str());
+	LOG_REPLICATION(this, "init_replication: %s  -->  %s\n", src_endpoint.as_string().c_str(), dst_endpoint.as_string().c_str());
 	state = State::REPLICATIONPROTOCOL_SLAVE;
 
 	repl_endpoints.insert(src_endpoint);
@@ -232,7 +232,7 @@ BinaryClient::on_read_file_done()
 void
 BinaryClient::repl_file_done()
 {
-	LOG(this, "BinaryClient::repl_file_done\n");
+	LOG_REPLICATION(this, "BinaryClient::repl_file_done\n");
 
 	char buf[1024];
 	const char *p;
@@ -562,7 +562,7 @@ BinaryClient::repl_apply(ReplicateType type, const std::string &message)
 void
 BinaryClient::repl_end_of_changes()
 {
-	LOG(this, "BinaryClient::repl_end_of_changes\n");
+	LOG_REPLICATION(this, "BinaryClient::repl_end_of_changes\n");
 
 	if (repl_switched_db) {
 		manager()->database_pool.switch_db(*endpoints.cbegin());
@@ -585,7 +585,7 @@ BinaryClient::repl_end_of_changes()
 void
 BinaryClient::repl_fail()
 {
-	LOG(this, "BinaryClient::repl_fail\n");
+	LOG_REPLICATION(this, "BinaryClient::repl_fail\n");
 	LOG_ERR(this, "Replication failure!\n");
 	if (repl_database) {
 		manager()->database_pool.checkin(repl_database);
@@ -603,7 +603,7 @@ BinaryClient::repl_fail()
 void
 BinaryClient::repl_set_db_header(const std::string &message)
 {
-	LOG(this, "BinaryClient::repl_set_db_header\n");
+	LOG_REPLICATION(this, "BinaryClient::repl_set_db_header\n");
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	size_t length = decode_length(&p, p_end, true);
@@ -633,7 +633,7 @@ BinaryClient::repl_set_db_header(const std::string &message)
 void
 BinaryClient::repl_set_db_filename(const std::string &message)
 {
-	LOG(this, "BinaryClient::repl_set_db_filename\n");
+	LOG_REPLICATION(this, "BinaryClient::repl_set_db_filename\n");
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	repl_db_filename.assign(p, p_end - p);
@@ -643,8 +643,7 @@ BinaryClient::repl_set_db_filename(const std::string &message)
 void
 BinaryClient::repl_set_db_filedata(const std::string &message)
 {
-	LOG(this, "BinaryClient::repl_set_db_filedata\n");
-	LOG(this, "Writing changeset file\n");
+	LOG_REPLICATION(this, "BinaryClient::repl_set_db_filedata\n");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -656,7 +655,7 @@ BinaryClient::repl_set_db_filedata(const std::string &message)
 
 	int fd = ::open(path_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
 	if (fd >= 0) {
-		LOG(this, "path_filename %s\n", path_filename.c_str());
+		LOG_REPLICATION(this, "path_filename %s\n", path_filename.c_str());
 		if (::write(fd, p, p_end - p) != p_end - p) {
 			LOG_ERR(this, "Cannot write to %s\n", repl_db_filename.c_str());
 			return;
@@ -669,7 +668,7 @@ BinaryClient::repl_set_db_filedata(const std::string &message)
 void
 BinaryClient::repl_set_db_footer()
 {
-	LOG(this, "BinaryClient::repl_set_db_footer\n");
+	LOG_REPLICATION(this, "BinaryClient::repl_set_db_footer\n");
 	// const char *p = message.data();
 	// const char *p_end = p + message.size();
 	// size_t revision = decode_length(&p, p_end);
@@ -683,7 +682,7 @@ BinaryClient::repl_set_db_footer()
 void
 BinaryClient::repl_changeset(const std::string &message)
 {
-	LOG(this, "BinaryClient::repl_changeset\n");
+	LOG_REPLICATION(this, "BinaryClient::repl_changeset\n");
 	Xapian::WritableDatabase *wdb_;
 	if (repl_database_tmp) {
 		wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database_tmp->db.get());
@@ -764,7 +763,7 @@ BinaryClient::repl_get_changesets(const std::string &message)
 	try {
 		std::string to_revision = databases[db_]->checkout_revision;
 		bool need_whole_db = (uuid != db_->get_uuid());
-		LOG(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
+		LOG_REPLICATION(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
 
 		if (fd < 0) {
 			LOG_ERR(this, "Cannot write to %s (1)\n", path);
@@ -790,7 +789,7 @@ BinaryClient::repl_get_changesets(const std::string &message)
 void
 BinaryClient::receive_repl()
 {
-	LOG(this, "BinaryClient::receive_repl (init)\n");
+	LOG_REPLICATION(this, "BinaryClient::receive_repl (init)\n");
 
 	strcpy(file_path, "/tmp/xapian_changesets_received.XXXXXX");
 	file_descriptor = mkstemp(file_path);
