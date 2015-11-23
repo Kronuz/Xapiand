@@ -618,14 +618,14 @@ BinaryClient::repl_set_db_header(const std::string &message)
 	int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	if (dir == 0) {
 		LOG(this, "Directory %s created\n", path_tmp.c_str());
-	} else if (dir == EEXIST) {
+	} else if (errno == EEXIST) {
 		delete_files(path_tmp.c_str());
 		dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		if (dir == 0) {
 			LOG(this, "Directory %s created\n", path_tmp.c_str());
 		}
 	} else {
-		LOG_ERR(this, "file %s not created\n", path_tmp.c_str());
+		LOG_ERR(this, "Directory %s not created (%s)\n", path_tmp.c_str(), strerror(errno));
 	}
 }
 
