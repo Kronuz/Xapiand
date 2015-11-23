@@ -131,7 +131,8 @@ private:
 	enum class replica_state {
 		REPLICA_FREE,
 		REPLICA_LOCK,
-		REPLICA_SWITCH
+		REPLICA_SWITCH,
+		REPLICA_WAITING
 	};
 	replica_state state;
 

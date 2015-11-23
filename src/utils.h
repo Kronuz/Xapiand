@@ -270,3 +270,4 @@ namespace epoch {
 #define LOG_BINARY_PROTO _
 
 #define LOG_DATABASE_WRAP _LOG_ENABLED
+#define LOG_REPLICATION _LOG_ENABLED

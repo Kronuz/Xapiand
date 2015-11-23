@@ -1617,8 +1617,8 @@ Database::get_stats_docs(const std::string &document_id)
 
 
 DatabaseQueue::DatabaseQueue()
-	: persistent(false),
-	  state(replica_state::REPLICA_FREE),
+	: state(replica_state::REPLICA_FREE),
+	  persistent(false),
 	  count(0){ }
 
 
@@ -1766,10 +1766,22 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 		}
 
 		if (replication) {
-			if (queue->state != DatabaseQueue::replica_state::REPLICA_FREE) {
-				queue->switch_cond.wait(lk);
+			switch (queue->state) {
+
+				case DatabaseQueue::replica_state::REPLICA_FREE:
+					queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
+					break;
+
+				case DatabaseQueue::replica_state::REPLICA_LOCK:
+					queue->state = DatabaseQueue::replica_state::REPLICA_WAITING;
+					queue->switch_cond.wait(lk);
+					break;
+
+				case DatabaseQueue::replica_state::REPLICA_SWITCH:
+				case DatabaseQueue::replica_state::REPLICA_WAITING:
+					LOG_REPLICATION(this, "A replication task is already waiting\n");
+					return false;
 			}
-			queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
 		}
 
 		queue->persistent = persistent;
@@ -1875,6 +1887,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 			}
 			break;
 		case DatabaseQueue::replica_state::REPLICA_LOCK:
+		case DatabaseQueue::replica_state::REPLICA_WAITING:
 			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
 			queue->switch_cond.notify_one();
 			break;
