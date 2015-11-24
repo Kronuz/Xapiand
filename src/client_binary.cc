@@ -117,15 +117,6 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		return false;
 	}
 
-	Endpoints endpoints_tmp;
-	Endpoint endpoint_tmp = *endpoints.begin();
-	endpoint_tmp.path.append("/.tmp");
-	endpoints_tmp.insert(endpoint_tmp);
-
-	if (!manager()->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
-		LOG_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
-	}
-
 	int port = (src_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : src_endpoint.port;
 
 	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) < 0) {
@@ -673,6 +664,15 @@ BinaryClient::repl_set_db_footer()
 	// const char *p_end = p + message.size();
 	// size_t revision = decode_length(&p, p_end);
 	// Indicates the end of a DB copy operation, signal switch
+
+	Endpoints endpoints_tmp;
+	Endpoint endpoint_tmp = *endpoints.begin();
+	endpoint_tmp.path.append("/.tmp");
+	endpoints_tmp.insert(endpoint_tmp);
+
+	if (!manager()->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
+		LOG_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
+	}
 
 	repl_switched_db = true;
 	repl_just_switched_db = true;
