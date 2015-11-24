@@ -1767,16 +1767,14 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 
 		if (replication) {
 			switch (queue->state) {
-
 				case DatabaseQueue::replica_state::REPLICA_FREE:
 					queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
 					break;
-
 				case DatabaseQueue::replica_state::REPLICA_LOCK:
 					queue->state = DatabaseQueue::replica_state::REPLICA_WAITING;
 					queue->switch_cond.wait(lk);
+					queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
 					break;
-
 				case DatabaseQueue::replica_state::REPLICA_SWITCH:
 				case DatabaseQueue::replica_state::REPLICA_WAITING:
 					LOG_REPLICATION(this, "A replication task is already waiting\n");
