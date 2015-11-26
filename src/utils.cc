@@ -157,8 +157,6 @@ std::string repr(const std::string &string, bool friendly, size_t max_size) {
 	return repr(string.c_str(), string.size(), friendly, max_size);
 }
 
-char Log::buffer[1024 * 1024];
-
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 	/* It outputs a bucket number in the range [0, num_buckets).
 	   A Fast, Minimal Memory, Consistent Hash Algorithm
