@@ -155,7 +155,7 @@ bool EndpointList::get_endpoints(std::shared_ptr<XapiandManager> manager, size_t
 			if (!manager->get_node((*it_endp).node_name, &node)) {
 				return false;
 			}
-			if (node->touched > epoch::now() + HEARTBEAT_MAX) {
+			if (node->touched > epoch::now<>() + HEARTBEAT_MAX) {
 				return false;
 			}
 			if (last_node) *last_node = node;

@@ -30,6 +30,8 @@
 #include "multivalue.h"
 #include "geospatialrange.h"
 #include "htm.h"
+#include "log.h"
+
 #include <limits.h>
 
 #include <xapian.h>
@@ -89,8 +91,6 @@ struct parser_url_path_t {
 extern std::regex numeric_re;
 extern std::regex find_range_re;
 
-extern std::mutex log_mutex;
-
 // Varibles used by server stats.
 extern pos_time_t b_time;
 extern std::chrono::time_point<std::chrono::system_clock> init_time;
@@ -115,25 +115,6 @@ std::string get_thread_name();
 
 std::string repr(const void *p, size_t size, bool friendly=true, size_t max_size=0);
 std::string repr(const std::string &string, bool friendly=true, size_t max_size=0);
-
-
-class Log {
-	static char buffer[];
-
-	std::string log_start;
-	std::atomic_bool log_runner;
-	std::thread log_thread;
-	std::chrono::time_point<std::chrono::system_clock> log_tp_end;
-
-	const char* log(const char *file, int line, void *, const char *format, va_list ap);
-
-public:
-	Log(const char *file, int line, int timeout, void *obj, const char *format, ...);
-	Log(const char *file, int line, void *obj, const char *fmt, ...);
-	~Log();
-
-	void end(const char *file, int line, void *obj, const char *format, ...);
-};
 
 
 inline bool ignored_errorno(int e, bool udp) {
@@ -229,45 +210,8 @@ void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::
 unsigned int levenshtein_distance(const std::string &str1, const std::string &str2);
 
 namespace epoch {
-	auto now = []() noexcept { return std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); };
+	template<typename Period = std::chrono::seconds>
+	auto now = []() noexcept {
+		return std::chrono::duration_cast<Period>(std::chrono::system_clock::now().time_since_epoch()).count();
+	};
 }
-
-#define _(...)
-#define _LOG_ENABLED(...) Log(__FILE__, __LINE__, __VA_ARGS__)
-#define _LOG_TIMED_100(...) Log __timed(__FILE__, __LINE__, 100, __VA_ARGS__)
-#define _LOG_TIMED_500(...) Log __timed(__FILE__, __LINE__, 500, __VA_ARGS__)
-#define _LOG_TIMED_1000(...) Log __timed(__FILE__, __LINE__, 1000, __VA_ARGS__)
-#define _LOG_TIMED_CLEAR(...) __timed.end(__FILE__, __LINE__, __VA_ARGS__)
-
-
-#define INFO _LOG_ENABLED
-
-#define LOG _LOG_ENABLED
-
-#define LOG_ERR _LOG_ENABLED
-
-#define LOG_DEBUG _
-
-#define LOG_CONN _LOG_ENABLED
-#define LOG_DISCOVERY _LOG_ENABLED
-#define LOG_RAFT _LOG_ENABLED
-#define LOG_OBJ _LOG_ENABLED
-#define LOG_OBJ_BEGIN _LOG_TIMED_100
-#define LOG_OBJ_END _LOG_TIMED_CLEAR
-#define LOG_DATABASE _
-#define LOG_DATABASE_BEGIN _LOG_TIMED_100
-#define LOG_DATABASE_END _LOG_TIMED_CLEAR
-#define LOG_HTTP _LOG_ENABLED
-#define LOG_BINARY _LOG_ENABLED
-#define LOG_HTTP_PROTO_PARSER _
-
-#define LOG_EV _LOG_ENABLED
-#define LOG_EV_BEGIN _LOG_TIMED_500
-#define LOG_EV_END _LOG_TIMED_CLEAR
-#define LOG_CONN_WIRE _LOG_ENABLED
-#define LOG_UDP_WIRE _
-#define LOG_HTTP_PROTO _
-#define LOG_BINARY_PROTO _
-
-#define LOG_DATABASE_WRAP _LOG_ENABLED
-#define LOG_REPLICATION _LOG_ENABLED

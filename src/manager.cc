@@ -251,18 +251,18 @@ XapiandManager::put_node(const Node &node)
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string node_name_lower(stringtolower(node.name));
 	if (node_name_lower == stringtolower(local_node.name)) {
-		local_node.touched = epoch::now();
+		local_node.touched = epoch::now<>();
 		return false;
 	} else {
 		try {
 			Node &node_ref = nodes.at(node_name_lower);
 			if (node == node_ref) {
-				node_ref.touched = epoch::now();
+				node_ref.touched = epoch::now<>();
 			}
 		} catch (const std::out_of_range &err) {
 			Node &node_ref = nodes[node_name_lower];
 			node_ref = node;
-			node_ref.touched = epoch::now();
+			node_ref.touched = epoch::now<>();
 			return true;
 		} catch (...) {
 			throw;
@@ -292,7 +292,7 @@ XapiandManager::touch_node(const std::string &node_name, int region, const Node 
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string node_name_lower(stringtolower(node_name));
 	if (node_name_lower == stringtolower(local_node.name)) {
-		local_node.touched = epoch::now();
+		local_node.touched = epoch::now<>();
 		if (region != UNKNOWN_REGION) {
 			local_node.region.store(region);
 		}
@@ -301,7 +301,7 @@ XapiandManager::touch_node(const std::string &node_name, int region, const Node 
 	} else {
 		try {
 			Node &node_ref = nodes.at(node_name_lower);
-			node_ref.touched = epoch::now();
+			node_ref.touched = epoch::now<>();
 			if (region != UNKNOWN_REGION) {
 				node_ref.region.store(region);
 			}
@@ -366,7 +366,7 @@ XapiandManager::sig_shutdown_handler(int sig)
 	 * If we receive the signal the second time, we interpret this as
 	 * the user really wanting to quit ASAP without waiting to persist
 	 * on disk. */
-	auto now = epoch::now();
+	auto now = epoch::now<>();
 
 	if (XapiandManager::shutdown_now && sig != SIGTERM) {
 		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {

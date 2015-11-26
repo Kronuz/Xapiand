@@ -37,5 +37,5 @@ public:
 	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery> &discovery_);
 	~DiscoveryServer();
 
-	void io_accept_cb(ev::io &watcher, int revents);
+	void io_accept_cb(ev::io &watcher, int revents) override;
 };

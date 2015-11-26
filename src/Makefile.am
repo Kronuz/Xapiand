@@ -26,6 +26,7 @@ xapiand_SOURCES = \
 	http_parser.c \
 	io_utils.cc \
 	length.cc \
+	log.cc \
 	lz4/lz4.c \
 	lz4/lz4frame.c \
 	lz4/lz4hc.c \
@@ -89,6 +90,7 @@ noinst_HEADERS = \
 	http_parser.h \
 	io_utils.h \
 	length.h \
+	log.h \
 	lru.h \
 	lz4/lz4.h \
 	lz4/lz4frame_static.h \
@@ -116,6 +118,7 @@ noinst_HEADERS = \
 	servers/server_raft.h \
 	servers/tcp_base.h \
 	servers/udp_base.h \
+	slist.h \
 	sparsehash/dense_hash_map \
 	sparsehash/dense_hash_set \
 	sparsehash/internal \

@@ -26,6 +26,7 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/geospatialrange.cc \
 			$(top_builddir)/src/htm.cc \
 			$(top_builddir)/src/length.cc \
+			$(top_builddir)/src/log.cc \
 			$(top_builddir)/src/md5.cc \
 			$(top_builddir)/src/multivalue.cc \
 			$(top_builddir)/src/multivaluekeymaker.cc \
@@ -33,6 +34,7 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/namegen.cc \
 			$(top_builddir)/src/queue.h \
 			$(top_builddir)/src/serialise.cc \
+			$(top_builddir)/src/slist.h \
 			$(top_builddir)/src/threadpool.h \
 			$(top_builddir)/src/times.cc \
 			$(top_builddir)/src/utils.cc \

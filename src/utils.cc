@@ -58,14 +58,12 @@
 std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
 std::regex find_range_re("([^ ]*)\\.\\.([^ ]*)", std::regex::optimize);
 
-std::mutex log_mutex;
-
 pos_time_t b_time;
 std::chrono::time_point<std::chrono::system_clock> init_time;
 times_row_t stats_cnt;
 
 static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
-static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
+static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
 
 void set_thread_name(const std::string &name) {
@@ -160,77 +158,6 @@ std::string repr(const std::string &string, bool friendly, size_t max_size) {
 }
 
 char Log::buffer[1024 * 1024];
-
-Log::Log(const char *file, int line, void *obj, const char *format, ...) : log_runner(false)
-{
-	va_list argptr;
-	va_start(argptr, format);
-	std::lock_guard<std::mutex> lk(log_mutex);
-	std::cerr << log(file, line, obj, format, argptr);
-	va_end(argptr);
-}
-
-
-Log::Log(const char *file, int line, int timeout, void *obj, const char *format, ...) : log_runner(false)
-{
-	va_list argptr;
-	va_start(argptr, format);
-	if (timeout) {
-		log_runner = true;
-		log_tp_end = std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
-		log_start = log(file, line, obj, format, argptr);
-		log_thread = std::thread([this]() {
-			while (log_runner) {
-				auto now = std::chrono::system_clock::now();
-				if (now > log_tp_end) {
-					std::lock_guard<std::mutex> lk(log_mutex);
-					std::cerr << log_start;
-					log_runner = false;
-				}
-				if (log_runner) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			}
-		});
-	} else {
-		std::lock_guard<std::mutex> lk(log_mutex);
-		std::cerr << log(file, line, obj, format, argptr);
-	}
-	va_end(argptr);
-}
-
-
-Log::~Log()
-{
-	if (log_thread.joinable()) {
-		log_runner = false;
-		log_thread.join();
-	}
-}
-
-
-const char*
-Log::log(const char *file, int line, void *, const char *format, va_list ap)
-{
-	snprintf(buffer, sizeof(buffer), "tid(%s): ../%s:%d: ", get_thread_name().c_str(), file, line);
-	size_t buffer_len = strlen(buffer);
-
-	vsnprintf(&buffer[buffer_len], sizeof(buffer) - buffer_len, format, ap);
-
-	return buffer;
-}
-
-
-void
-Log::end(const char *file, int line, void *obj, const char *format, ...)
-{
-	va_list argptr;
-	va_start(argptr, format);
-	if (!log_runner) {
-		std::lock_guard<std::mutex> lk(log_mutex);
-		std::cerr << log(file, line, obj, format, argptr);
-	}
-	va_end(argptr);
-}
-
 
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 	/* It outputs a bucket number in the range [0, num_buckets).

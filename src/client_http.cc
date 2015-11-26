@@ -379,7 +379,7 @@ void HttpClient::run()
 
 	try {
 		if (path == "/quit") {
-			time_t now = epoch::now();
+			time_t now = epoch::now<>();
 			XapiandManager::shutdown_asap = now;
 			manager()->async_shutdown.send();
 			return;
