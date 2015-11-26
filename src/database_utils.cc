@@ -22,6 +22,8 @@
 
 #include "database_utils.h"
 #include "utils.h"
+#include "log.h"
+
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>

@@ -20,9 +20,11 @@
  * IN THE SOFTWARE.
  */
 
+#include "serialise.h"
+
 #include "datetime.h"
 #include "utils.h"
-#include "serialise.h"
+#include "log.h"
 
 #include <xapian.h>
 

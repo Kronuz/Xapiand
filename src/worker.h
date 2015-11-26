@@ -22,10 +22,11 @@
 
 #pragma once
 
-#include "utils.h"
+#include "log.h"
+
+#include "ev/ev++.h"
 
 #include <list>
-#include "ev/ev++.h"
 #include <mutex>
 #include <memory>
 

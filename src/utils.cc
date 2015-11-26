@@ -21,6 +21,7 @@
  */
 
 #include "utils.h"
+#include "log.h"
 #include "namegen.h"
 
 #include <string>

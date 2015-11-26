@@ -25,6 +25,7 @@
 #include "multivaluerange.h"
 #include "length.h"
 #include "cJSON_Utils.h"
+#include "log.h"
 #include "generate_terms.h"
 
 #include <assert.h>

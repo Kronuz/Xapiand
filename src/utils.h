@@ -30,7 +30,6 @@
 #include "multivalue.h"
 #include "geospatialrange.h"
 #include "htm.h"
-#include "log.h"
 
 #include <limits.h>
 
