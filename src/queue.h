@@ -240,8 +240,9 @@ namespace queue {
 		}
 
 		void clear() {
-			std::lock_guard<std::mutex> lk(_mutex);
+			std::unique_lock<std::mutex> lk(_mutex);
 			bool cleared = _clear_impl(lk);
+			lk.unlock();
 			_notify(cleared);
 		}
 
