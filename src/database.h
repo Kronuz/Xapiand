@@ -132,11 +132,11 @@ private:
 		REPLICA_FREE,
 		REPLICA_LOCK,
 		REPLICA_SWITCH,
-		REPLICA_WAITING
 	};
-	replica_state state;
 
+	replica_state state;
 	bool persistent;
+
 	size_t count;
 
 	std::condition_variable switch_cond;
@@ -198,6 +198,7 @@ private:
 
 	void add_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	void drop_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue);
+	bool _switch_db(const Endpoint &endpoint);
 
 public:
 	DatabasePool(size_t max_size);

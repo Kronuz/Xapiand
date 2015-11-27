@@ -1766,24 +1766,26 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 			queue = databases[hash];
 		}
 
+		DatabaseQueue::replica_state old_state = queue->state;
+
 		if (replication) {
 			switch (queue->state) {
 				case DatabaseQueue::replica_state::REPLICA_FREE:
 					queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
 					break;
 				case DatabaseQueue::replica_state::REPLICA_LOCK:
-					queue->state = DatabaseQueue::replica_state::REPLICA_WAITING;
-					queue->switch_cond.wait(lk);
-					queue->state = DatabaseQueue::replica_state::REPLICA_LOCK;
-					break;
 				case DatabaseQueue::replica_state::REPLICA_SWITCH:
-				case DatabaseQueue::replica_state::REPLICA_WAITING:
 					LOG_REPLICATION(this, "A replication task is already waiting\n");
 					LOG_DATABASE_END(this, "!! ABORTED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
 					return false;
 			}
+		} else {
+			if (queue->state == DatabaseQueue::replica_state::REPLICA_SWITCH) {
+				queue->switch_cond.wait(lk);
+			}
 		}
 
+		bool old_persistent = queue->persistent;
 		queue->persistent = persistent;
 
 		if (!queue->pop(database, 0)) {
@@ -1814,7 +1816,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 			}
 		}
 		if (!database) {
-			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
+			queue->state = old_state;
+			queue->persistent = old_persistent;
 			if (queue->count == 0) {
 				// There was an error and the queue ended up being empty, remove it!
 				databases.erase(hash);
@@ -1883,13 +1886,11 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	switch (queue->state) {
 		case DatabaseQueue::replica_state::REPLICA_SWITCH:
 			for (auto endpoint : endpoints) {
-				switch_db(endpoint);
+				_switch_db(endpoint);
 			}
 			break;
 		case DatabaseQueue::replica_state::REPLICA_LOCK:
-		case DatabaseQueue::replica_state::REPLICA_WAITING:
 			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
-			queue->switch_cond.notify_one();
 			break;
 		case DatabaseQueue::replica_state::REPLICA_FREE:
 			break;
@@ -1904,10 +1905,8 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 
 bool
-DatabasePool::switch_db(const Endpoint &endpoint)
+DatabasePool::_switch_db(const Endpoint &endpoint)
 {
-	std::lock_guard<std::mutex> lk(qmtx);
-
 	auto queues_set = queues[endpoint.hash()];
 
 	bool switched = true;
@@ -1924,13 +1923,21 @@ DatabasePool::switch_db(const Endpoint &endpoint)
 
 		for (auto& queue : queues_set) {
 			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
-			queue->switch_cond.notify_one();
+			queue->switch_cond.notify_all();
 		}
 	} else {
 		LOG(this, "Inside switch_db not queue->count == queue->size()\n");
 	}
 
 	return switched;
+}
+
+
+bool
+DatabasePool::switch_db(const Endpoint &endpoint)
+{
+	std::lock_guard<std::mutex> lk(qmtx);
+	return _switch_db(endpoint);
 }
 
 
