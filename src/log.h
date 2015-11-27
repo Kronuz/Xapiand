@@ -33,16 +33,16 @@
 
 class Log : public std::enable_shared_from_this<Log> {
 protected:
-	Log(const char *file, int line, int timeout, void *obj, const char *format, va_list argptr);
+	Log(const char *file, int line, const char *prefix, const char *suffix, int timeout, void *obj, const char *format, va_list argptr);
 
 public:
 	std::string str_start;
 	long long epoch_end;
 	std::atomic_bool finished;
 
-	static std::shared_ptr<Log> timed(const char *file, int line, int timeout, void *obj, const char *format, ...);
-	static void end(std::shared_ptr<Log>&& l, const char *file, int line, void *obj, const char *format, ...);
-	static void log(const char *file, int line, void *obj, const char *format, ...);
+	static std::shared_ptr<Log> timed(const char *file, int line, const char *prefix, const char *suffix, int timeout, void *obj, const char *format, ...);
+	static void end(std::shared_ptr<Log>&& l, const char *file, int line, const char *prefix, const char *suffix, void *obj, const char *format, ...);
+	static void log(const char *file, int line, const char *prefix, const char *suffix, void *obj, const char *format, ...);
 };
 
 
@@ -91,18 +91,23 @@ public:
 
 
 #define _(...)
-#define _LOG_ENABLED(...) Log::log(__FILE__, __LINE__, __VA_ARGS__)
-#define _LOG_TIMED_100(...) auto __timed_log = Log::timed(__FILE__, __LINE__, 100, __VA_ARGS__)
-#define _LOG_TIMED_500(...) auto __timed_log = Log::timed(__FILE__, __LINE__, 500, __VA_ARGS__)
-#define _LOG_TIMED_1000(...) auto __timed_log = Log::timed(__FILE__, __LINE__, 1000, __VA_ARGS__)
-#define _LOG_TIMED_CLEAR(...) Log::end(std::move(__timed_log), __FILE__, __LINE__, __VA_ARGS__)
+#define _LOG_LOG_ENABLED(...) Log::log(__FILE__, __LINE__, "\033[1;30m", "\033[0m", __VA_ARGS__)
+#define _LOG_INFO_ENABLED(...) Log::log(__FILE__, __LINE__, "\033[1;36m", "\033[0m", __VA_ARGS__)
+#define _LOG_ERR_ENABLED(...) Log::log(__FILE__, __LINE__, "\033[1;31m", "\033[0m", __VA_ARGS__)
+#define _LOG_WARN_ENABLED(...) Log::log(__FILE__, __LINE__, "\033[1;33m", "\033[0m", __VA_ARGS__)
+#define _LOG_ENABLED(...) Log::log(__FILE__, __LINE__, "\033[0m", "\033[0m", __VA_ARGS__)
+#define _LOG_TIMED_100(...) auto __timed_log = Log::timed(__FILE__, __LINE__, "\033[1;35m", "\033[0m", 100, __VA_ARGS__)
+#define _LOG_TIMED_500(...) auto __timed_log = Log::timed(__FILE__, __LINE__, "\033[1;35m", "\033[0m", 500, __VA_ARGS__)
+#define _LOG_TIMED_1000(...) auto __timed_log = Log::timed(__FILE__, __LINE__, "\033[1;35m", "\033[0m", 1000, __VA_ARGS__)
+#define _LOG_TIMED_CLEAR(...) Log::end(std::move(__timed_log), __FILE__, __LINE__, "\033[1;35m", "\033[0m", __VA_ARGS__)
 
 
-#define INFO _LOG_ENABLED
+#define INFO _LOG_INFO_ENABLED
 
-#define LOG _LOG_ENABLED
+#define LOG _LOG_LOG_ENABLED
 
-#define LOG_ERR _LOG_ENABLED
+#define LOG_ERR _LOG_ERR_ENABLED
+#define LOG_WARN _LOG_WARN_ENABLED
 
 #define LOG_DEBUG _
 
