@@ -227,6 +227,7 @@ public:
 				queue = databases[hash];
 			}
 
+			queue->checkin_callbacks.clear();
 			queue->checkin_callbacks.enqueue(std::forward<F>(f), std::forward<Args>(args)...);
 		}
 		return ret;
