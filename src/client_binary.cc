@@ -113,12 +113,12 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 	endpoints.insert(dst_endpoint);
 
 	if (!manager()->database_pool.checkout(repl_database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
-		this,
+		manager=manager(),
 		src_endpoint,
 		dst_endpoint
 	] {
-		LOG(this, "Triggering replication for %s after checkin!\n", dst_endpoint.as_string().c_str());
-		manager()->trigger_replication(src_endpoint, dst_endpoint);
+		LOG(manager.get(), "Triggering replication for %s after checkin!\n", dst_endpoint.as_string().c_str());
+		manager->trigger_replication(src_endpoint, dst_endpoint);
 	})) {
 		LOG_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
 		return false;
