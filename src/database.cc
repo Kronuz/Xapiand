@@ -1779,6 +1779,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &end
 				case DatabaseQueue::replica_state::REPLICA_SWITCH:
 				case DatabaseQueue::replica_state::REPLICA_WAITING:
 					LOG_REPLICATION(this, "A replication task is already waiting\n");
+					LOG_DATABASE_END(this, "!! ABORTED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
 					return false;
 			}
 		}
