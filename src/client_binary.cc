@@ -716,6 +716,16 @@ BinaryClient::repl_changeset(const std::string &message)
 	try {
 		wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);
 		repl_just_switched_db = false;
+	} catch(const Xapian::NetworkError &e) {
+		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+		::close(fd);
+		::unlink(path);
+		throw;
+	} catch (const Xapian::DatabaseError &e) {
+		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+		::close(fd);
+		::unlink(path);
+		throw;
 	} catch (...) {
 		::close(fd);
 		::unlink(path);
