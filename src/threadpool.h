@@ -145,6 +145,10 @@ public:
 		});
 	}
 
+	void clear() {
+		tasks.clear();
+	}
+
 	// Tell the tasks to finish so all threads exit as soon as possible
 	void finish() {
 		tasks.finish();
