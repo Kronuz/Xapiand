@@ -24,26 +24,8 @@
 #include "utils.h"
 
 std::mutex log_mutex;
-std::atomic_bool log_runner(true);
 slist<std::shared_ptr<Log>> log_list;
-
-std::unique_ptr<ThreadLog> log_thread = std::make_unique<ThreadLog>([]() {
-	while (log_runner.load()) {
-		auto now = epoch::now<std::chrono::milliseconds>();
-		for (auto it = log_list.begin(); it != log_list.end(); ++it) {
-			if ((*it)->finished) {
-				log_list.erase(it);
-			} else if (now > (*it)->epoch_end) {
-				std::unique_lock<std::mutex> lk(log_mutex);
-				std::cerr << (*it)->str_start;
-				lk.unlock();
-				(*it)->finished.store(true);
-				log_list.erase(it);
-			}
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
-});
+std::unique_ptr<ThreadLog> log_thread(ThreadLog::create());
 
 
 Log::Log(const char *file, int line, int timeout, void *, const char *format, va_list argptr)
@@ -120,4 +102,26 @@ Log::log(const char *file, int line, void *, const char *format, ...)
 	fprintf(stderr, "tid(%s): ../%s:%d: ", get_thread_name().c_str(), file, line);
 	vfprintf(stderr, format, argptr);
 	va_end(argptr);
+}
+
+
+void
+ThreadLog::thread_function() const
+{
+	while (running.load()) {
+		auto now = epoch::now<std::chrono::milliseconds>();
+		for (auto it = log_list.begin(); it != log_list.end(); ) {
+			if ((*it)->finished) {
+				it = log_list.erase(it);
+			} else if (now > (*it)->epoch_end) {
+				(*it)->finished = true;
+				std::lock_guard<std::mutex> lk(log_mutex);
+				std::cerr << (*it)->str_start;
+				it = log_list.erase(it);
+			} else {
+				++it;
+			}
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
 }

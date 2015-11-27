@@ -26,265 +26,152 @@
 #include <iostream>
 
 
-template <typename T>
+template<typename T>
 class slist {
 	struct Node {
-	private:
-		bool contains_data;
-		bool isHead;
-		bool isTail;
-
-	public:
 		T data;
 		std::shared_ptr<Node> next;
-		std::shared_ptr<Node> previous;
-
-		Node()
-			: contains_data(false),
-			  isHead(false),
-			  isTail(false) { }
 
 		template<typename Data>
-		Node(Data&& _data)
-			: contains_data(true),
-			  isHead(false),
-			  isTail(false),
-			  data(std::forward<Data>(_data)) { }
+		Node(Data&& _data) : data(std::forward<Data>(_data)) { }
 
-		auto set_head() {
-			isHead = true;
-		}
-
-		auto set_tail() {
-			isTail = true;
-		}
-
-		inline auto is_normal() const {
-			return contains_data && !isHead && !isTail;
-		}
-
-		inline auto is_auxiliary() {
-			return !contains_data && !isHead && !isTail;
-		}
-
-		inline auto is_head() const {
-			return isHead;
-		}
-
-		inline auto is_tail() const {
-			return isTail;
-		}
+		Node() = default;
 	};
 
 	std::shared_ptr<Node> head;
-	std::shared_ptr<Node> tail;
 
-	friend class iterator;
+	std::function<bool(const T&, const T&)> key_compare;
+
+	slist(const slist&) = delete;
+	void operator=(const slist&) = delete;
 
 public:
 	slist()
 		: head(std::make_shared<Node>()),
-		  tail(std::make_shared<Node>()) {
-		head->set_head();
-		tail->set_tail();
-		head->next = std::make_shared<Node>();
-		head->next->next = tail;
-	}
+		  key_compare([](const T& t1, const T& t2) { return t1 == t2; }) { }
+
+	template<typename KeyCompare>
+	slist(KeyCompare&& _key_compare)
+		: head(std::make_shared<Node>()),
+		  key_compare(std::forward<KeyCompare>(_key_compare)) { }
 
 	class iterator {
-		std::shared_ptr<Node> target;   // Node where the iterator is visiting.
-		std::shared_ptr<Node> pre_aux;  // Auxiliary node in data structure.
-		std::shared_ptr<Node> pre_cell; // Normal node in data structure.
+		std::shared_ptr<Node> p;
 
-		friend class slist<T>;
+		friend slist;
 
 	public:
-		iterator() = default;
+		iterator(std::shared_ptr<Node> _p)
+			: p(std::move(_p)) { }
 
-		iterator(const iterator &rhs)
-			: target(rhs.target),
-			  pre_aux(rhs.pre_aux),
-			  pre_cell(rhs.pre_cell) { }
+		iterator(const iterator& it)
+			: p(it.p) { }
 
-		const iterator& operator=(const iterator &rhs) {
-			target = rhs.target;
-			pre_aux = rhs.pre_aux;
-			pre_cell = rhs.pre_cell;
-			return *this;
-		}
-
-		auto next() {
-			if (target->is_tail()) return false;
-
-			pre_cell = std::atomic_load(&target);
-			pre_aux = std::atomic_load(&target->next);
-
-			update();
-
-			return true;
-		}
-
-		void update() {
-			if (pre_aux->next == target) return;
-
-			auto p = pre_aux;
-			auto n = std::atomic_load(&p->next);
-			while (n->is_auxiliary()) {
-				std::atomic_compare_exchange_weak(&pre_cell->next, &p, n);
-				p = n;
-				n = std::atomic_load(&p->next);
-			}
-			pre_aux = p;
-			target = n;
-		}
-
-		iterator operator++(int) { // Postfix.
-			iterator temp(*this);
-			next();
-			return temp;
-		}
-
-		iterator& operator++() { // Prefix
-			next();
-			return *this;
-		}
-
-		bool operator==(const iterator& rhs) const {
-			return target->next != rhs.pre_cell;
-		}
-
-		bool operator!=(const iterator& rhs) const {
-			return target->next != rhs.pre_cell;
+		explicit operator bool() const {
+			return p != nullptr;
 		}
 
 		T& operator*() const {
-			return target->data;
+			return p->data;
 		}
 
 		T* operator->() const {
-			return &target->data;
+			return &p->data;
 		}
 
-		explicit operator bool() const {
-			return !target->is_tail();
+		auto operator==(const iterator& it) const {
+			return p == it.p;
+		}
+
+		auto operator!=(const iterator& it) const {
+			return p != it.p;
+		}
+
+		iterator& operator++() { // Prefix.
+			p = std::atomic_load(&p->next);
+			return *this;
+		}
+
+		iterator operator++(int) { // Postfix.
+			iterator result(*this);
+			++(*this);
+			return result;
 		}
 	};
 
-private:
-	auto try_insert(iterator& it, std::shared_ptr<Node> q, std::shared_ptr<Node> a) {
-		std::atomic_store(&q->next, a);
-		std::atomic_store(&a->next, it.target);
-		return std::atomic_compare_exchange_weak(&it.pre_aux->next, &it.target, q);
-	}
-
-	auto try_delete(iterator& it) {
-		auto d = it.target;
-		auto n = it.target->next;
-		if (!std::atomic_compare_exchange_weak(&it.pre_aux->next, &d, n)) {
-			return false;
-		}
-
-		std::atomic_store(&d->previous, it.pre_cell);
-		auto p = it.pre_cell;
-		while (p->previous) {
-			p = std::atomic_load(&p->previous);
-		}
-
-		auto s = std::atomic_load(&p->next);
-		while (n->next->is_auxiliary()) {
+	auto find(const T& data) const {
+		auto n = std::atomic_load(&head->next);
+		while (n && !key_compare(n->data, data)) {
 			n = std::atomic_load(&n->next);
 		}
 
-		bool change;
+		return n != nullptr;
+	}
+
+	template<typename Data>
+	auto push_front(Data&& data) {
+		auto n = std::make_shared<Node>(std::forward<Data>(data));
 		do {
-			change = std::atomic_compare_exchange_weak(&p->next, &s, n);
-			if (!change) {
-				s = std::atomic_load(&p->next);
+			n->next = std::atomic_load(&head->next);
+		} while (!std::atomic_compare_exchange_weak(&head->next, &n->next, n));
+	}
+
+	auto pop_front() {
+		auto curr = std::atomic_load(&head->next);
+		while (curr && !std::atomic_compare_exchange_weak(&head->next, &curr, curr->next));
+		return curr ? true : false;
+	}
+
+	auto remove(const T& data) {
+		std::shared_ptr<Node> prev, curr;
+		do {
+			prev = std::atomic_load(&head);
+			curr = std::atomic_load(&head->next);
+			while (curr && !key_compare(curr->data, data)) {
+				prev = std::atomic_load(&prev->next);
+				curr = std::atomic_load(&curr->next);
 			}
-		} while (!change && !p->previous && n->next->is_auxiliary());
+			if (!curr) return false;
+		} while (!std::atomic_compare_exchange_weak(&prev->next, &curr, curr->next));
 
 		return true;
 	}
 
-	auto find_from(iterator& it, const T& _data) {
-		while (it) {
-			if (it.target->data == _data) {
-				return true;
+	auto erase(const iterator& it) {
+		while (true) {
+			auto prev = iterator(std::atomic_load(&head));
+			auto curr = iterator(std::atomic_load(&head->next));
+			while (curr && curr != it) {
+				++prev;
+				++curr;
 			}
-			it.next();
-		}
 
-		return false;
+			if (curr) {
+				if (std::atomic_compare_exchange_weak(&prev.p->next, &curr.p, curr.p->next)) {
+					return iterator(prev.p->next);
+				}
+			} else {
+				return end();
+			}
+		}
 	}
 
-public:
+	auto size() const {
+		auto result = 0u;
+		for (auto node = std::atomic_load(&head->next); node; node = std::atomic_load(&node->next))
+			++result;
+		return result;
+	}
+
 	auto begin() const {
-		iterator it;
-		it.pre_cell = std::atomic_load(&head);
-		it.pre_aux = std::atomic_load(&head->next);
-		it.update();
-		return it;
+		return iterator(std::atomic_load(&head->next));
 	}
 
 	auto end() const {
-		return iterator();
+		return iterator(std::shared_ptr<Node>());
 	}
 
-	template<typename Data>
-	auto push_front(Data&& _data) {
-		auto q = std::make_shared<Node>(std::forward<Data>(_data));
-		auto a = std::make_shared<Node>();
-		auto it = begin();
-		while (!try_insert(it, q, a)) {
-			it.update();
-		}
-	}
-
-	template<typename Data>
-	auto insert(iterator& it, Data&& _data) {
-		auto q = std::make_shared<Node>(std::forward<Data>(_data));
-		auto a = std::make_shared<Node>();
-		while (!try_insert(it, q, a)) {
-			it.update();
-		}
-	}
-
-	auto pop_front() {
-		auto it = begin();
-		while (!try_delete(it)) {
-			it.update();
-		}
-	}
-
-	auto erase(iterator& it) {
-		while (!try_delete(it)) {
-			it.update();
-		}
-	}
-
-	auto remove(const T& _data) {
-		auto it = begin();
-		while (find_from(it, _data)) {
-			if (try_delete(it)) return true;
-			it.update();
-		}
-
-		return false;
-	}
-
-	auto find(const T& _data) {
-		auto it = begin();
-		return find_from(it, _data);
-	}
-
-	inline auto size() const {
-		size_t number_nodes = 0;
-		auto it = begin();
-		while (it) {
-			++number_nodes;
-			it.next();
-		}
-
-		return number_nodes;
+	auto clear() {
+		std::atomic_store(&head->next, std::shared_ptr<Node>());
 	}
 };

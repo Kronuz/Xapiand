@@ -46,27 +46,48 @@ public:
 };
 
 
-extern std::mutex log_mutex;
-extern std::atomic_bool log_runner;
-extern slist<std::shared_ptr<Log>> log_list;
-
-
 class ThreadLog {
-	std::thread t;
-
 public:
-	template <class F, class... Args>
-	ThreadLog(F&& f, Args&&... args)
-		: t(std::forward<F>(f), std::forward<Args>(args)...) { }
+	std::thread inner_thread;
+	std::atomic_bool running;
+
+	void thread_function() const;
+
+
+	ThreadLog()
+		: running(true) { }
+
+	ThreadLog(const ThreadLog&) = delete;
+	ThreadLog& operator=(const ThreadLog&) = delete;
 
 	~ThreadLog() {
-		log_runner.store(false);
-		t.detach();
+		printf("Deleting\n");
+		if (inner_thread.joinable()) {
+			printf("joinable\n");
+			inner_thread.detach();
+			printf("detach\n");
+			running.store(false);
+		}
+	}
+
+	inline void start() {
+		printf("++ It is Joinable: %s\n", inner_thread.joinable() ? "true" : "false");
+		inner_thread = std::thread(&ThreadLog::thread_function, this);
+		printf("-- It is Joinable: %s\n", inner_thread.joinable() ? "true" : "false");
+	}
+
+	static inline std::unique_ptr<ThreadLog> create() {
+		auto t = std::make_unique<ThreadLog>();
+		t->start();
+		printf("t -> is  join: %d\n", t->inner_thread.joinable());
+		return t;
 	}
 };
 
 
-extern std::unique_ptr<ThreadLog> log_thread;
+// extern std::mutex log_mutex;
+// extern slist<std::shared_ptr<Log>> log_list;
+// extern std::unique_ptr<ThreadLog> log_thread;
 
 
 #define _(...)
