@@ -1740,8 +1740,7 @@ DatabasePool::finish()
 }
 
 
-bool
-DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &endpoints, int flags)
+bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &endpoints, int flags)
 {
 	bool writable = flags & DB_WRITABLE;
 	bool persistent = flags & DB_PERSISTENT;
@@ -1854,7 +1853,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	assert(database);
 
-	std::lock_guard<std::mutex> lk(qmtx);
+	std::unique_lock<std::mutex> lk(qmtx);
 
 	std::shared_ptr<DatabaseQueue> queue;
 
@@ -1883,14 +1882,19 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		queue->push(database);
 	}
 
+	bool signal_checkins = false;
 	switch (queue->state) {
 		case DatabaseQueue::replica_state::REPLICA_SWITCH:
 			for (auto endpoint : endpoints) {
 				_switch_db(endpoint);
 			}
+			if (queue->state == DatabaseQueue::replica_state::REPLICA_FREE) {
+				signal_checkins = true;
+			}
 			break;
 		case DatabaseQueue::replica_state::REPLICA_LOCK:
 			queue->state = DatabaseQueue::replica_state::REPLICA_FREE;
+			signal_checkins = true;
 			break;
 		case DatabaseQueue::replica_state::REPLICA_FREE:
 			break;
@@ -1901,6 +1905,12 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	LOG_DATABASE_END(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 
 	database.reset();
+
+	lk.unlock();
+
+	if (signal_checkins) {
+		while (queue->checkin_callbacks.call()) {}
+	}
 }
 
 

@@ -25,6 +25,7 @@
 #include "endpoint.h"
 #include "queue.h"
 #include "lru.h"
+#include "threadpool.h"
 
 #include "database_utils.h"
 #include "fields.h"
@@ -144,6 +145,8 @@ private:
 	std::weak_ptr<DatabasePool> weak_database_pool;
 	Endpoints endpoints;
 
+	TaskQueue<> checkin_callbacks;
+
 public:
 	DatabaseQueue();
 	DatabaseQueue(DatabaseQueue&&);
@@ -207,6 +210,28 @@ public:
 	long long get_mastery_level(const std::string &dir);
 
 	void finish();
+
+	template<typename F, typename... Args>
+	bool checkout(std::shared_ptr<Database>& database, const Endpoints &endpoints, int flags, F&& f, Args&&... args)
+	{
+		bool ret = checkout(database, endpoints, flags);
+		if (!ret) {
+			std::unique_lock<std::mutex> lk(qmtx);
+
+			size_t hash = endpoints.hash();
+
+			std::shared_ptr<DatabaseQueue> queue;
+			if (flags & DB_WRITABLE) {
+				queue = writable_databases[hash];
+			} else {
+				queue = databases[hash];
+			}
+
+			queue->checkin_callbacks.enqueue(std::forward<F>(f), std::forward<Args>(args)...);
+		}
+		return ret;
+	}
+
 	bool checkout(std::shared_ptr<Database>& database, const Endpoints &endpoints, int flags);
 	void checkin(std::shared_ptr<Database>& database);
 	bool switch_db(const Endpoint &endpoint);
