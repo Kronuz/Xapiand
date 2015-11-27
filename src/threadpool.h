@@ -133,7 +133,6 @@ public:
 			}
 		 );
 		auto res = task.get_future();
-		tasks.push(std::move(task));
 		bool pushed = tasks.push(std::move(task));
 		assert(pushed);
 		return res;
