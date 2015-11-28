@@ -121,6 +121,9 @@ class LogThread {
 
 #define _(args...)
 #define _LOG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, args)
+#define _LOG_TIMED(t, args...) auto __timed_log = Log::log(t, __FILE__, __LINE__, NO_COL, args)
+#define _LOG_TIMED_CLEAR(args...) __timed_log->unlog(__FILE__, __LINE__, NO_COL, args)
+
 #define _LOG_LOG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, LOG_COL, args)
 #define _LOG_DEBUG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
 #define _LOG_INFO_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, INFO_COL, args)
@@ -128,13 +131,15 @@ class LogThread {
 #define _LOG_ERR_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 #define _LOG_CRITICAL_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, CRITICAL_COL, args)
 #define _LOG_FATAL_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, FATAL_COL, args)
-#define _LOG_TIMED(t, args...) auto __timed_log = Log::log(t, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+
 #define _LOG_TIMED_100(args...) auto __timed_log = Log::log(100ms, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 #define _LOG_TIMED_500(args...) auto __timed_log = Log::log(500ms, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 #define _LOG_TIMED_1000(args...) auto __timed_log = Log::log(1s, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
-#define _LOG_TIMED_CLEAR(args...) __timed_log->unlog(__FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_N_CLEAR(args...) __timed_log->unlog(__FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 
 #define LOG _LOG_ENABLED
+#define LOG_BEGIN _LOG_TIMED
+#define LOG_END _LOG_TIMED_CLEAR
 
 #define LOG_DEBUG _LOG_DEBUG_ENABLED
 #define LOG_INFO _LOG_INFO_ENABLED
@@ -148,17 +153,17 @@ class LogThread {
 #define LOG_RAFT _LOG_LOG_ENABLED
 #define LOG_OBJ _LOG_LOG_ENABLED
 #define LOG_OBJ_BEGIN _LOG_TIMED_100
-#define LOG_OBJ_END _LOG_TIMED_CLEAR
+#define LOG_OBJ_END _LOG_TIMED_N_CLEAR
 #define LOG_DATABASE _
 #define LOG_DATABASE_BEGIN _LOG_TIMED_100
-#define LOG_DATABASE_END _LOG_TIMED_CLEAR
+#define LOG_DATABASE_END _LOG_TIMED_N_CLEAR
 #define LOG_HTTP _LOG_LOG_ENABLED
 #define LOG_BINARY _LOG_LOG_ENABLED
 #define LOG_HTTP_PROTO_PARSER _
 
 #define LOG_EV _LOG_LOG_ENABLED
 #define LOG_EV_BEGIN _LOG_TIMED_500
-#define LOG_EV_END _LOG_TIMED_CLEAR
+#define LOG_EV_END _LOG_TIMED_N_CLEAR
 #define LOG_CONN_WIRE _LOG_LOG_ENABLED
 #define LOG_UDP_WIRE _
 #define LOG_HTTP_PROTO _
