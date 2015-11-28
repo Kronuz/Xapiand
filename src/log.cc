@@ -23,14 +23,10 @@
 #include "log.h"
 #include "utils.h"
 
-std::mutex log_mutex;
-slist<std::shared_ptr<Log>> log_list;
-std::unique_ptr<ThreadLog> log_thread(ThreadLog::create());
 
-
-Log::Log(int timeout, const std::string& str) :
+Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_) :
+	wakeup(wakeup_),
 	str_start(str),
-	epoch_end(epoch::now<std::chrono::milliseconds>() + timeout),
 	finished(false)
 {}
 
@@ -49,61 +45,117 @@ Log::str_format(const char *file, int line, const char *suffix, const char *pref
 
 
 std::shared_ptr<Log>
-Log::timed(const char *file, int line, int timeout, const char *suffix, const char *prefix, void *obj, const char *format, ...)
+Log::log(std::chrono::time_point<std::chrono::system_clock> wakeup, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...)
 {
-	// std::make_shared only can call a public constructor, for this reason
-	// it is neccesary wrap the constructor in a struct.
-	struct enable_make_shared : Log {
-		enable_make_shared(int timeout, const std::string& str) : Log(timeout, str) {}
-	};
-
 	va_list argptr;
 	va_start(argptr, format);
 	std::string str(str_format(file, line, suffix, prefix, obj, format, argptr));
 	va_end(argptr);
 
-	std::shared_ptr<Log> l_ptr;
-	if (timeout) {
-		l_ptr = std::make_shared<enable_make_shared>(timeout, str);
-		log_list.push_front(l_ptr->shared_from_this());
-	} else {
-		std::lock_guard<std::mutex> lk(log_mutex);
-		std::cerr << str << std::endl;
+	return print(str, wakeup);
+}
+
+void
+Log::clear()
+{
+	finished.store(true);
+}
+
+
+void
+Log::unlog(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...)
+{
+	if (finished.exchange(true)) {
+		va_list argptr;
+		va_start(argptr, format);
+		std::string str(str_format(file, line, suffix, prefix, obj, format, argptr));
+		va_end(argptr);
+
+		print(str);
+	}
+}
+
+
+std::shared_ptr<Log>
+Log::add(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup)
+{
+	static LogThread thread;
+
+	// std::make_shared only can call a public constructor, for this reason
+	// it is neccesary wrap the constructor in a struct.
+	struct enable_make_shared : Log {
+		enable_make_shared(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup) : Log(str, wakeup) {}
+	};
+
+	auto l_ptr = std::make_shared<enable_make_shared>(str, wakeup);
+	thread.log_list.push_front(l_ptr);
+
+	if (thread.wakeup.load() > l_ptr->wakeup) {
+		thread.wakeup_signal.notify_one();
 	}
 	return l_ptr;
 }
 
 
-void
-Log::log(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...)
+std::shared_ptr<Log>
+Log::print(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup)
 {
-	va_list argptr;
-	va_start(argptr, format);
-	std::string str(str_format(file, line, suffix, prefix, obj, format, argptr));
-	va_end(argptr);
+	if (wakeup > std::chrono::system_clock::now()) {
+		return add(str, wakeup);
+	} else {
+		static std::mutex log_mutex;
+		std::lock_guard<std::mutex> lk(log_mutex);
+		std::cerr << str;
+		return std::shared_ptr<Log>();
+	}
+}
 
-	std::lock_guard<std::mutex> lk(log_mutex);
-	std::cerr << str << std::endl;
+
+LogThread::LogThread() :
+	running(true),
+	inner_thread(&LogThread::thread_function, this)
+{}
+
+
+LogThread::~LogThread()
+{
+	running.store(false);
+	wakeup_signal.notify_one();
+	try {
+		inner_thread.join();
+	} catch (std::system_error) {
+	}
 }
 
 
 void
-ThreadLog::thread_function() const
+LogThread::thread_function()
 {
+	std::mutex mtx;
+	std::unique_lock<std::mutex> lk(mtx);
 	while (running.load()) {
-		auto now = epoch::now<std::chrono::milliseconds>();
-		for (auto it = log_list.begin(); it != log_list.end(); ) {
-			if ((*it)->finished) {
+		auto now = std::chrono::system_clock::now();
+		auto next_wakeup = now + 3s;
+		for (auto it = log_list.begin(); it != log_list.end();) {
+			auto l_ptr = *it;
+			if (l_ptr->finished) {
 				it = log_list.erase(it);
-			} else if (now > (*it)->epoch_end) {
-				(*it)->finished = true;
-				std::lock_guard<std::mutex> lk(log_mutex);
-				std::cerr << (*it)->str_start;
+			} else if (l_ptr->wakeup < now) {
+				l_ptr->finished.store(true);
+				Log::print(l_ptr->str_start);
 				it = log_list.erase(it);
 			} else {
+				if (l_ptr->wakeup < next_wakeup) {
+					next_wakeup = l_ptr->wakeup;
+				}
 				++it;
 			}
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		if (next_wakeup < now + 100ms) {
+			next_wakeup = now + 100ms;
+		}
+		wakeup.store(next_wakeup);
+		wakeup_signal.wait_until(lk, next_wakeup);
+		// Log::print("Wee!!\n");
 	}
 }

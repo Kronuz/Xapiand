@@ -29,77 +29,68 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <chrono>
+#include <condition_variable>
+
+using namespace std::literals;
 
 
 class Log : public std::enable_shared_from_this<Log> {
-protected:
-	Log(int timeout, const std::string& str);
+	friend class LogThread;
 
-	static std::string str_format(const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, va_list argptr);
+	static std::string str_format(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, va_list argptr);
+	static std::shared_ptr<Log> add(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup);
 
-public:
+	std::chrono::time_point<std::chrono::system_clock> wakeup;
 	std::string str_start;
-	long long epoch_end;
 	std::atomic_bool finished;
 
-	static std::shared_ptr<Log> timed(const char *file, int line, int timeout, const char *suffix, const char *prefix, void *obj, const char *format, ...);
+protected:
+	Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_);
 
-	static void log(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
+public:
+	template <typename T, typename R, typename... Args>
+	static std::shared_ptr<Log> log(std::chrono::duration<T, R> timeout, Args&&... args) {
+		return log(std::chrono::system_clock::now() + timeout, std::forward<Args>(args)...);
+	}
+
+	template <typename T, typename R>
+	static std::shared_ptr<Log> print(const std::string& str, std::chrono::duration<T, R> timeout) {
+		return print(str, std::chrono::system_clock::now() + timeout);
+	}
 
 	template <typename... Args>
-	static void end(std::shared_ptr<Log>&& l, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, Args... args)
-	{
-		if (l && !l->finished) {
-			l->finished = true;
-			return;
-		}
-		log(file, line, suffix, prefix, obj, format, args...);
+	static std::shared_ptr<Log> log(int timeout, Args&&... args) {
+		return log(std::chrono::system_clock::now() + std::chrono::milliseconds(timeout), std::forward<Args>(args)...);
 	}
+
+	static std::shared_ptr<Log> print(const std::string& str, int timeout=0) {
+		return print(str, std::chrono::system_clock::now() + std::chrono::milliseconds(timeout));
+	}
+
+	static std::shared_ptr<Log> log(std::chrono::time_point<std::chrono::system_clock> wakeup, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
+	static std::shared_ptr<Log> print(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup);
+	void unlog(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
+	void clear();
 };
 
 
-class ThreadLog {
-public:
-	std::thread inner_thread;
+class LogThread {
+	friend Log;
+
+	std::condition_variable wakeup_signal;
+	std::atomic<std::chrono::time_point<std::chrono::system_clock>> wakeup;
+
 	std::atomic_bool running;
+	std::thread inner_thread;
+	slist<std::shared_ptr<Log>> log_list;
 
-	void thread_function() const;
+	void thread_function();
 
-
-	ThreadLog()
-		: running(true) { }
-
-	ThreadLog(const ThreadLog&) = delete;
-	ThreadLog& operator=(const ThreadLog&) = delete;
-
-	~ThreadLog() {
-		printf("Deleting\n");
-		if (inner_thread.joinable()) {
-			printf("joinable\n");
-			inner_thread.detach();
-			printf("detach\n");
-			running.store(false);
-		}
-	}
-
-	inline void start() {
-		printf("++ It is Joinable: %s\n", inner_thread.joinable() ? "true" : "false");
-		inner_thread = std::thread(&ThreadLog::thread_function, this);
-		printf("-- It is Joinable: %s\n", inner_thread.joinable() ? "true" : "false");
-	}
-
-	static inline std::unique_ptr<ThreadLog> create() {
-		auto t = std::make_unique<ThreadLog>();
-		t->start();
-		printf("t -> is  join: %d\n", t->inner_thread.joinable());
-		return t;
-	}
+	LogThread();
+	~LogThread();
 };
 
-
-// extern std::mutex log_mutex;
-// extern slist<std::shared_ptr<Log>> log_list;
-// extern std::unique_ptr<ThreadLog> log_thread;
 
 #define NOCOL "\033[0m"
 #define BLACK "\033[0;30m"
@@ -127,17 +118,17 @@ public:
 #define WARN_COL BRIGHT_YELLOW
 
 #define _(...)
-#define _LOG_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, __VA_ARGS__)
-#define _LOG_LOG_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, DEBUG_COL, __VA_ARGS__)
-#define _LOG_DEBUG_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, DEBUG_COL, __VA_ARGS__)
-#define _LOG_INFO_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, INFO_COL, __VA_ARGS__)
-#define _LOG_ERR_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, ERR_COL, __VA_ARGS__)
-#define _LOG_FATAL_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, FATAL_COL, __VA_ARGS__)
-#define _LOG_WARN_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, WARN_COL, __VA_ARGS__)
-#define _LOG_TIMED_100(...) auto __timed_log = Log::timed(__FILE__, __LINE__, 100, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
-#define _LOG_TIMED_500(...) auto __timed_log = Log::timed(__FILE__, __LINE__, 500, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
-#define _LOG_TIMED_1000(...) auto __timed_log = Log::timed(__FILE__, __LINE__, 1000, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
-#define _LOG_TIMED_CLEAR(...) Log::end(std::move(__timed_log), __FILE__, __LINE__, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
+#define _LOG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, __VA_ARGS__)
+#define _LOG_LOG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, DEBUG_COL, __VA_ARGS__)
+#define _LOG_DEBUG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, DEBUG_COL, __VA_ARGS__)
+#define _LOG_INFO_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, INFO_COL, __VA_ARGS__)
+#define _LOG_ERR_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, ERR_COL, __VA_ARGS__)
+#define _LOG_FATAL_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, FATAL_COL, __VA_ARGS__)
+#define _LOG_WARN_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, WARN_COL, __VA_ARGS__)
+#define _LOG_TIMED_100(...) auto __timed_log = Log::log(100ms, __FILE__, __LINE__, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
+#define _LOG_TIMED_500(...) auto __timed_log = Log::log(500ms, __FILE__, __LINE__, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
+#define _LOG_TIMED_1000(...) auto __timed_log = Log::log(1s, __FILE__, __LINE__, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
+#define _LOG_TIMED_CLEAR(...) __timed_log->unlog(__FILE__, __LINE__, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
 
 #define LOG _LOG_LOG_ENABLED
 #define CLOG _LOG_ENABLED
