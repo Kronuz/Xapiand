@@ -28,17 +28,23 @@ slist<std::shared_ptr<Log>> log_list;
 std::unique_ptr<ThreadLog> log_thread(ThreadLog::create());
 
 
-Log::Log(const char *file, int line, int timeout, const char *suffix, const char *prefix, void *, const char *format, va_list argptr)
-	: epoch_end(epoch::now<std::chrono::milliseconds>() + timeout),
-	  finished(false)
-{
+Log::Log(int timeout, const std::string& str) :
+	str_start(str),
+	epoch_end(epoch::now<std::chrono::milliseconds>() + timeout),
+	finished(false)
+{}
+
+
+std::string
+Log::str_format(const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, va_list argptr) {
 	char buffer[1024 * 1024];
 	snprintf(buffer, sizeof(buffer), "tid(%s): ../%s:%d: %s", get_thread_name().c_str(), file, line, prefix);
 	size_t buffer_len = strlen(buffer);
 	vsnprintf(&buffer[buffer_len], sizeof(buffer) - buffer_len, format, argptr);
 	buffer_len = strlen(buffer);
 	snprintf(&buffer[buffer_len], sizeof(buffer) - buffer_len, "%s", suffix);
-	str_start = buffer;
+	return buffer;
+
 }
 
 
@@ -48,66 +54,36 @@ Log::timed(const char *file, int line, int timeout, const char *suffix, const ch
 	// std::make_shared only can call a public constructor, for this reason
 	// it is neccesary wrap the constructor in a struct.
 	struct enable_make_shared : Log {
-		enable_make_shared(const char *file, int line, int timeout, const char *suffix, const char *prefix, void *obj, const char *format, va_list argptr)
-			: Log(file, line, timeout, suffix, prefix, obj, format, argptr) { }
+		enable_make_shared(int timeout, const std::string& str) : Log(timeout, str) {}
 	};
 
 	va_list argptr;
 	va_start(argptr, format);
+	std::string str(str_format(file, line, suffix, prefix, obj, format, argptr));
+	va_end(argptr);
 
+	std::shared_ptr<Log> l_ptr;
 	if (timeout) {
-		std::shared_ptr<Log> l_ptr = std::make_shared<enable_make_shared>(file, line, timeout, suffix, prefix, obj, format, argptr);
+		l_ptr = std::make_shared<enable_make_shared>(timeout, str);
 		log_list.push_front(l_ptr->shared_from_this());
-		va_end(argptr);
-		return l_ptr;
 	} else {
 		std::lock_guard<std::mutex> lk(log_mutex);
-		fprintf(stderr, "tid(%s): ../%s:%d: %s", get_thread_name().c_str(), file, line, prefix);
-		vfprintf(stderr, format, argptr);
-		fprintf(stderr, "%s", suffix);
-		va_end(argptr);
-		return std::shared_ptr<Log>();
+		std::cerr << str << std::endl;
 	}
+	return l_ptr;
 }
 
 
 void
-Log::end(std::shared_ptr<Log>&& l, const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, ...)
-{
-	if (l) {
-		if (l->finished) {
-			va_list argptr;
-			va_start(argptr, format);
-			std::lock_guard<std::mutex> lk(log_mutex);
-			fprintf(stderr, "tid(%s): ../%s:%d: %s", get_thread_name().c_str(), file, line, prefix);
-			vfprintf(stderr, format, argptr);
-			fprintf(stderr, "%s", suffix);
-			va_end(argptr);
-		} else {
-			l->finished = true;
-		}
-	} else {
-		va_list argptr;
-		va_start(argptr, format);
-		std::lock_guard<std::mutex> lk(log_mutex);
-		fprintf(stderr, "tid(%s): ../%s:%d: %s", get_thread_name().c_str(), file, line, prefix);
-		vfprintf(stderr, format, argptr);
-		fprintf(stderr, "%s", suffix);
-		va_end(argptr);
-	}
-}
-
-
-void
-Log::log(const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, ...)
+Log::log(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	std::lock_guard<std::mutex> lk(log_mutex);
-	fprintf(stderr, "tid(%s): ../%s:%d: %s", get_thread_name().c_str(), file, line, prefix);
-	vfprintf(stderr, format, argptr);
-	fprintf(stderr, "%s", suffix);
+	std::string str(str_format(file, line, suffix, prefix, obj, format, argptr));
 	va_end(argptr);
+
+	std::lock_guard<std::mutex> lk(log_mutex);
+	std::cerr << str << std::endl;
 }
 
 

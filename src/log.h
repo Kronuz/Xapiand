@@ -33,7 +33,9 @@
 
 class Log : public std::enable_shared_from_this<Log> {
 protected:
-	Log(const char *file, int line, int timeout, const char *suffix, const char *prefix, void *obj, const char *format, va_list argptr);
+	Log(int timeout, const std::string& str);
+
+	static std::string str_format(const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, va_list argptr);
 
 public:
 	std::string str_start;
@@ -41,8 +43,18 @@ public:
 	std::atomic_bool finished;
 
 	static std::shared_ptr<Log> timed(const char *file, int line, int timeout, const char *suffix, const char *prefix, void *obj, const char *format, ...);
-	static void end(std::shared_ptr<Log>&& l, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
+
 	static void log(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
+
+	template <typename... Args>
+	static void end(std::shared_ptr<Log>&& l, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, Args... args)
+	{
+		if (l && !l->finished) {
+			l->finished = true;
+			return;
+		}
+		log(file, line, suffix, prefix, obj, format, args...);
+	}
 };
 
 
