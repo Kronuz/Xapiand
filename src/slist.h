@@ -96,9 +96,7 @@ public:
 	template<typename Data>
 	auto push_front(Data&& data) {
 		auto n = std::make_shared<Node>(std::forward<Data>(data));
-		do {
-			n->next = std::atomic_load(&head->next);
-		} while (!std::atomic_compare_exchange_weak(&head->next, &n->next, n));
+		while (!std::atomic_compare_exchange_weak(&head->next, &n->next, n));
 	}
 
 	auto pop_front() {
