@@ -110,7 +110,8 @@ public:
 
 #define DEBUG_COL DARK_GREY
 #define INFO_COL BRIGHT_CYAN
-#define ERR_COL BRIGHT_RED
+#define ERR_COL RED
+#define FATAL_COL BRIGHT_RED
 #define WARN_COL BRIGHT_YELLOW
 
 #define _(...)
@@ -119,6 +120,7 @@ public:
 #define _LOG_DEBUG_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, DEBUG_COL, __VA_ARGS__)
 #define _LOG_INFO_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, INFO_COL, __VA_ARGS__)
 #define _LOG_ERR_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, ERR_COL, __VA_ARGS__)
+#define _LOG_FATAL_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, FATAL_COL, __VA_ARGS__)
 #define _LOG_WARN_ENABLED(...) Log::log(__FILE__, __LINE__, NOCOL, WARN_COL, __VA_ARGS__)
 #define _LOG_TIMED_100(...) auto __timed_log = Log::timed(__FILE__, __LINE__, 100, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
 #define _LOG_TIMED_500(...) auto __timed_log = Log::timed(__FILE__, __LINE__, 500, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
@@ -129,8 +131,9 @@ public:
 #define CLOG _LOG_ENABLED
 #define INFO _LOG_INFO_ENABLED
 #define ERR _LOG_ERR_ENABLED
+#define FATAL _LOG_FATAL_ENABLED
 #define WARN _LOG_WARN_ENABLED
-#define DEBUG _LOG_DEBUG_ENABLED
+#define DBG _LOG_DEBUG_ENABLED
 
 #define LOG_ERR _LOG_ERR_ENABLED
 #define LOG_WARN _LOG_WARN_ENABLED
