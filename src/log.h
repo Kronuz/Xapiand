@@ -119,19 +119,20 @@ class LogThread {
 #define CRITICAL_COL BRIGHT_RED
 #define FATAL_COL BRIGHT_RED
 
-#define _(...)
-#define _LOG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, __VA_ARGS__)
-#define _LOG_LOG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, LOG_COL, __VA_ARGS__)
-#define _LOG_DEBUG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, DEBUG_COL, __VA_ARGS__)
-#define _LOG_INFO_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, INFO_COL, __VA_ARGS__)
-#define _LOG_WARN_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, WARN_COL, __VA_ARGS__)
-#define _LOG_ERR_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, ERR_COL, __VA_ARGS__)
-#define _LOG_CRITICAL_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, CRITICAL_COL, __VA_ARGS__)
-#define _LOG_FATAL_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, FATAL_COL, __VA_ARGS__)
-#define _LOG_TIMED_100(...) auto __timed_log = Log::log(100ms, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, __VA_ARGS__)
-#define _LOG_TIMED_500(...) auto __timed_log = Log::log(500ms, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, __VA_ARGS__)
-#define _LOG_TIMED_1000(...) auto __timed_log = Log::log(1s, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, __VA_ARGS__)
-#define _LOG_TIMED_CLEAR(...) __timed_log->unlog(__FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, __VA_ARGS__)
+#define _(args...)
+#define _LOG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, args)
+#define _LOG_LOG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, LOG_COL, args)
+#define _LOG_DEBUG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
+#define _LOG_INFO_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, INFO_COL, args)
+#define _LOG_WARN_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, WARN_COL, args)
+#define _LOG_ERR_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define _LOG_CRITICAL_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, CRITICAL_COL, args)
+#define _LOG_FATAL_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, FATAL_COL, args)
+#define _LOG_TIMED(t, args...) auto __timed_log = Log::log(t, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_100(args...) auto __timed_log = Log::log(100ms, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_500(args...) auto __timed_log = Log::log(500ms, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_1000(args...) auto __timed_log = Log::log(1s, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_CLEAR(args...) __timed_log->unlog(__FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 
 #define LOG _LOG_ENABLED
 
