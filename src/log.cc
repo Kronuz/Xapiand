@@ -24,6 +24,9 @@
 #include "utils.h"
 
 
+#define BUFFER_SIZE (1024 * 1024)
+
+
 Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_) :
 	wakeup(wakeup_),
 	str_start(str),
@@ -33,14 +36,11 @@ Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clo
 
 std::string
 Log::str_format(const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, va_list argptr) {
-	char buffer[1024 * 1024];
-	snprintf(buffer, sizeof(buffer), "tid(%s): ../%s:%d: %s", get_thread_name().c_str(), file, line, prefix);
-	size_t buffer_len = strlen(buffer);
-	vsnprintf(&buffer[buffer_len], sizeof(buffer) - buffer_len, format, argptr);
-	buffer_len = strlen(buffer);
-	snprintf(&buffer[buffer_len], sizeof(buffer) - buffer_len, "%s", suffix);
-	return buffer;
-
+	char* buffer = new char[BUFFER_SIZE];
+	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
+	std::string result = "tid(" + get_thread_name() + "): " + file + ":" + std::to_string(line) + ": " + prefix + buffer + suffix;
+	delete []buffer;
+	return result;
 }
 
 
