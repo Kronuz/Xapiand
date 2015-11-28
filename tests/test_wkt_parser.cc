@@ -86,7 +86,7 @@ int test_wkt_parser() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing WKT parser is correct!, run with python examples/{#}_WKT.py to see the trixels that cover the geometry.\n");
+		LOG_DEBUG(nullptr, "Testing WKT parser is correct!, run with python examples/{#}_WKT.py to see the trixels that cover the geometry.\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing WKT parser has mistakes.\n");
@@ -105,42 +105,42 @@ int test_wkt_speed()
 	for (int i = 0; i < repeat; i++) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
-	LOG(nullptr, "Time required for execution a single POLYGON: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+	LOG_DEBUG(nullptr, "Time required for execution a single POLYGON: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10),(20 30, 35 35, 30 20, 20 30))");
 	for (int i = 0; i < repeat; i++) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
-	LOG(nullptr, "Time required for execution a compound POLYGON: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+	LOG_DEBUG(nullptr, "Time required for execution a compound POLYGON: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("CHULL ((35 10, 45 45, 15 40, 10 20, 35 10))");
 	for (int i = 0; i < repeat; i++) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
-	LOG(nullptr, "Time required for execution a single CHULL: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+	LOG_DEBUG(nullptr, "Time required for execution a single CHULL: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("CHULL ((35 10, 45 45, 15 40, 10 20, 35 10),(20 30, 35 35, 30 20, 20 30))");
 	for (int i = 0; i < repeat; i++) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
-	LOG(nullptr, "Time required for execution a compound CHULL: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+	LOG_DEBUG(nullptr, "Time required for execution a compound CHULL: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("POINT (10 40)");
 	for (int i = 0; i < repeat; i++) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
-	LOG(nullptr, "Time required for execution a POINT: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+	LOG_DEBUG(nullptr, "Time required for execution a POINT: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("CIRCLE (39 -125, 10000)");
 	for (int i = 0; i < repeat; i++) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
-	LOG(nullptr, "Time required for execution a CIRCLE: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
+	LOG_DEBUG(nullptr, "Time required for execution a CIRCLE: %f seconds\n", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	return 0;
 }

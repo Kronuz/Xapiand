@@ -70,7 +70,7 @@ int test_pool_func() {
 	std::vector<std::future<int>> results;
 	test_pool_class_t obj;
 
-	LOG(nullptr, "+++++++++* 72\n");
+	LOG_DEBUG(nullptr, "+++++++++* 72\n");
 
 	int i = 1;
 
@@ -79,38 +79,38 @@ int test_pool_func() {
 		return i * i;
 	}));
 	i++;
-	LOG(nullptr, "+++++++++* 82\n");
+	LOG_DEBUG(nullptr, "+++++++++* 82\n");
 
 	// Using lambda with parameters
 	results.emplace_back(pool.enqueue([](int i) {
 		return i * i;
 	}, i));
 	i++;
-	LOG(nullptr, "+++++++++* 89\n");
+	LOG_DEBUG(nullptr, "+++++++++* 89\n");
 
 	// Using regular function
 	results.emplace_back(pool.enqueue(_test_pool_func_func, i));
 	i++;
-	LOG(nullptr, "+++++++++* 94\n");
+	LOG_DEBUG(nullptr, "+++++++++* 94\n");
 
 	// Using member function
 	results.emplace_back(pool.enqueue([&obj](int i) {
 		return obj.func(i);
 	}, i));
 	i++;
-	LOG(nullptr, "+++++++++* 100\n");
+	LOG_DEBUG(nullptr, "+++++++++* 100\n");
 
 	int total = 0;
 	for (auto& result: results) {
 		total += result.get();
 	}
-	LOG(nullptr, "+++++++++* 107\n");
+	LOG_DEBUG(nullptr, "+++++++++* 107\n");
 
 	if (total != 30) {
 		LOG_ERR(nullptr, "ThreadPool::enqueue functions with int is not working correctly.\n");
 		return 1;
 	}
-	LOG(nullptr, "+++++++++* 113\n");
+	LOG_DEBUG(nullptr, "+++++++++* 113\n");
 
 	return 0;
 }

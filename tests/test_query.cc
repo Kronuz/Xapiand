@@ -284,7 +284,7 @@ int create_test_db() {
 
 
 int make_search(const test_query_t _tests[], int len) {
-	LOG(nullptr, "++++++ Start Search\n");
+	LOG_DEBUG(nullptr, "++++++ Start Search\n");
 	int cont = 0;
 	query_field query;
 	query.offset = 0;
@@ -331,7 +331,7 @@ int make_search(const test_query_t _tests[], int len) {
 		Xapian::MSet mset;
 		std::vector<std::string> suggestions;
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
-		LOG(nullptr, "++++++ Start Search in DB\n");
+		LOG_DEBUG(nullptr, "++++++ Start Search in DB\n");
 		int rmset = database->get_mset(query, mset, spies, suggestions);
 		if (rmset != 0) {
 			cont++;
@@ -392,7 +392,7 @@ int test_query_search() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(test_query, arraySize(test_query)) == 0) {
-			LOG(nullptr, "Testing search using query is correct!\n");
+			LOG_DEBUG(nullptr, "Testing search using query is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing search using query has mistakes.\n");
@@ -412,7 +412,7 @@ int test_terms_search() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(test_terms, arraySize(test_terms)) == 0) {
-			LOG(nullptr, "Testing search using terms is correct!\n");
+			LOG_DEBUG(nullptr, "Testing search using terms is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing search using terms has mistakes.\n");
@@ -432,7 +432,7 @@ int test_partials_search() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(test_partials, arraySize(test_partials)) == 0) {
-			LOG(nullptr, "Testing search using partials is correct!\n");
+			LOG_DEBUG(nullptr, "Testing search using partials is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing search using partials has mistakes.\n");
@@ -451,9 +451,9 @@ int test_partials_search() {
 int test_facets_search() {
 	try {
 		int cont = create_test_db();
-		LOG(nullptr, "++++++ Call Make Search\n");
+		LOG_DEBUG(nullptr, "++++++ Call Make Search\n");
 		if (cont == 0 && make_search(test_facets, arraySize(test_facets)) == 0) {
-			LOG(nullptr, "Testing facets is correct!\n");
+			LOG_DEBUG(nullptr, "Testing facets is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing facets has mistakes.\n");

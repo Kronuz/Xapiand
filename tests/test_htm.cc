@@ -159,7 +159,7 @@ int test_cartesian_transforms() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing the transformation of coordinates between CRS is correct!\n");
+		LOG_DEBUG(nullptr, "Testing the transformation of coordinates between CRS is correct!\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing the transformation of coordinates between CRS has mistakes.\n");
@@ -304,7 +304,7 @@ int test_hullConvex() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing Geometry Hull Convex is correct!, run with python examples/{file}_convex_hull.py to see the hull convex.\n");
+		LOG_DEBUG(nullptr, "Testing Geometry Hull Convex is correct!, run with python examples/{file}_convex_hull.py to see the hull convex.\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing Geometry Hull Convex has mistakes.\n");
@@ -432,7 +432,7 @@ int test_HTM_chull() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing HTM polygon is correct!, run with python examples/{file}_polygon_HTM.py to see the trixels that cover the hull convex.\n");
+		LOG_DEBUG(nullptr, "Testing HTM polygon is correct!, run with python examples/{file}_polygon_HTM.py to see the trixels that cover the hull convex.\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing polygon HTM has mistakes.\n");
@@ -517,7 +517,7 @@ int test_HTM_circle() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing HTM bounding circle is correct!, run with python examples/Circle{#}_HTM.py to see the trixels that cover the bounding circle.\n");
+		LOG_DEBUG(nullptr, "Testing HTM bounding circle is correct!, run with python examples/Circle{#}_HTM.py to see the trixels that cover the bounding circle.\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing HTM bounding circle has mistakes.\n");

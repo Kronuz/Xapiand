@@ -665,7 +665,7 @@ void HttpClient::delete_document_view(const query_field &e)
 	}
 
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
-	LOG(this, "Time take for delete %d ms\n", time);
+	LOG_DEBUG(this, "Time take for delete %d ms\n", time);
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
 	stats_cnt.del.min[b_time.minute]++;
@@ -718,11 +718,11 @@ void HttpClient::index_document_view(const query_field &e)
 	// did = returned by index() call
 	// filename = Termoprary file
 	// if (manager()->store(endpoints, did, filename)) {
-	// 	INFO(this, "Storing %s...\n", filename.c_str());
+	// 	LOG_INFO(this, "Storing %s...\n", filename.c_str());
 	// }
 
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
-	LOG(this, "Time take for index %d ms\n", time);
+	LOG_DEBUG(this, "Time take for index %d ms\n", time);
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
 	stats_cnt.index.min[b_time.minute]++;
@@ -879,7 +879,7 @@ void HttpClient::upload_view(const query_field &)
 		return;
 	}
 
-	LOG(this, "Uploaded %s (%zu)\n", body_path, body_size);
+	LOG_DEBUG(this, "Uploaded %s (%zu)\n", body_path, body_size);
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 
 	manager()->database_pool.checkin(database);
@@ -930,25 +930,25 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	int rmset = database->get_mset(e, mset, spies, suggestions);
 	int cout_matched = mset.size();
 	if (rmset == 1) {
-		LOG(this, "get_mset return 1\n");
+		LOG_DEBUG(this, "get_mset return 1\n");
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		manager()->database_pool.checkin(database);
-		LOG(this, "ABORTED SEARCH\n");
+		LOG_DEBUG(this, "ABORTED SEARCH\n");
 		return;
 	}
 	if (rmset == 2) {
-		LOG(this, "get_mset return 2\n");
+		LOG_DEBUG(this, "get_mset return 2\n");
 		write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		manager()->database_pool.checkin(database);
-		LOG(this, "ABORTED SEARCH\n");
+		LOG_DEBUG(this, "ABORTED SEARCH\n");
 		return;
 	}
 
 
-	LOG(this, "Suggered querys\n");
+	LOG_DEBUG(this, "Suggered querys\n");
 	std::vector<std::string>::const_iterator it_s(suggestions.begin());
 	for ( ; it_s != suggestions.end(); it_s++) {
-		LOG(this, "\t%s\n", (*it_s).c_str());
+		LOG_DEBUG(this, "\t%s\n", (*it_s).c_str());
 	}
 
 	if (facets) {
@@ -1021,7 +1021,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 						write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 					}
 					manager()->database_pool.checkin(database);
-					LOG(this, "ABORTED SEARCH\n");
+					LOG_DEBUG(this, "ABORTED SEARCH\n");
 					return;
 				}
 
@@ -1062,7 +1062,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 					response_err += "\n\n";
 					write(http_response(406, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_err));
 					manager()->database_pool.checkin(database);
-					LOG(this, "ABORTED SEARCH\n");
+					LOG_DEBUG(this, "ABORTED SEARCH\n");
 					return;
 				}
 
@@ -1139,7 +1139,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	}
 
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
-	LOG(this, "Time take for search %d ms\n", time);
+	LOG_DEBUG(this, "Time take for search %d ms\n", time);
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
 	stats_cnt.search.min[b_time.minute]++;
@@ -1149,7 +1149,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	lk.unlock();
 
 	manager()->database_pool.checkin(database);
-	LOG(this, "FINISH SEARCH\n");
+	LOG_DEBUG(this, "FINISH SEARCH\n");
 }
 
 
@@ -1233,7 +1233,7 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 					char node_ip[INET_ADDRSTRLEN];
 					const Node *node = nullptr;
 					if (!manager()->touch_node(node_name, UNKNOWN_REGION, &node)) {
-						LOG(this, "Node %s not found\n", node_name.c_str());
+						LOG_DEBUG(this, "Node %s not found\n", node_name.c_str());
 						host = node_name;
 						return CMD_UNKNOWN_HOST;
 					}
@@ -1308,15 +1308,15 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 					}
 
 					q.offset = NULL;
-					LOG(this, "Buffer: %s\n", query_str);
+					LOG_DEBUG(this, "Buffer: %s\n", query_str);
 					while (url_qs("query", query_str, query_size, &q) != -1) {
-						LOG(this, "%s\n", urldecode(q.offset, q.length).c_str());
+						LOG_DEBUG(this, "%s\n", urldecode(q.offset, q.length).c_str());
 						e.query.push_back(urldecode(q.offset, q.length));
 					}
 
 					q.offset = NULL;
 					while (url_qs("q", query_str, query_size, &q) != -1) {
-						LOG(this, "%s\n", urldecode(q.offset, q.length).c_str());
+						LOG_DEBUG(this, "%s\n", urldecode(q.offset, q.length).c_str());
 						e.query.push_back(urldecode(q.offset, q.length));
 					}
 

@@ -176,9 +176,9 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 						if (remote_node != *node && remote_node.name != local_node.name) {
 							if (cmd == toUType(Discovery::Message::HEARTBEAT) || node->touched < now - HEARTBEAT_MAX) {
 								discovery->manager->drop_node(remote_node.name);
-								INFO(this, "Stalled node %s left the party!\n", remote_node.name.c_str());
+								LOG_INFO(this, "Stalled node %s left the party!\n", remote_node.name.c_str());
 								if (discovery->manager->put_node(remote_node)) {
-									INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+									LOG_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 									local_node.regions.store(-1);
 									discovery->manager->get_region();
 								} else {
@@ -188,7 +188,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 						}
 					} else {
 						if (discovery->manager->put_node(remote_node)) {
-							INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+							LOG_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 							local_node.regions.store(-1);
 							discovery->manager->get_region();
 						} else {
@@ -205,7 +205,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							return;
 						}
 						discovery->manager->drop_node(remote_node.name);
-						INFO(this, "Node %s left the party!\n", remote_node.name.c_str());
+						LOG_INFO(this, "Node %s left the party!\n", remote_node.name.c_str());
 					}
 					break;
 
@@ -266,17 +266,17 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							return;
 						}
 						if (discovery->manager->put_node(remote_node)) {
-							INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+							LOG_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 						}
 
 						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %llx!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
 
 						if (discovery->manager->get_region() == discovery->manager->get_region(index_path)) {
-							LOG(this, "The DB is in the same region that this cluster!\n");
+							LOG_DEBUG(this, "The DB is in the same region that this cluster!\n");
 							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
 							discovery->manager->endp_r.add_index_endpoint(index, true, cmd == toUType(Discovery::Message::BOSSY_DB_WAVE));
 						} else if (discovery->manager->endp_r.exists(index_path)) {
-							LOG(this, "The DB is in the LRU of this node!\n");
+							LOG_DEBUG(this, "The DB is in the LRU of this node!\n");
 							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
 							discovery->manager->endp_r.add_index_endpoint(index, false, cmd == toUType(Discovery::Message::BOSSY_DB_WAVE));
 						}
@@ -312,17 +312,17 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 								return;
 							}
 							if (discovery->manager->put_node(remote_node)) {
-								INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+								LOG_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 							}
 
 							Endpoint local_endpoint(index_path);
 							Endpoint remote_endpoint(index_path, &remote_node);
 #ifdef HAVE_REMOTE_PROTOCOL
 							// Replicate database from the other node
-							INFO(this, "Request syncing database from %s...\n", remote_node.name.c_str());
+							LOG_INFO(this, "Request syncing database from %s...\n", remote_node.name.c_str());
 							auto ret = manager()->trigger_replication(remote_endpoint, local_endpoint);
 							if (ret.get()) {
-								INFO(this, "Replication triggered!\n");
+								LOG_INFO(this, "Replication triggered!\n");
 							}
 #endif
 						} else if (mastery_level != remote_mastery_level) {

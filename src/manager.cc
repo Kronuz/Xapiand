@@ -141,7 +141,7 @@ XapiandManager::set_node_name(const std::string &node_name_, std::unique_lock<st
 		}
 	}
 
-	INFO(this, "Node %s accepted to the party!\n", node_name.c_str());
+	LOG_INFO(this, "Node %s accepted to the party!\n", node_name.c_str());
 	return true;
 }
 
@@ -188,7 +188,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 	std::shared_ptr<Database> cluster_database;
 	if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_PERSISTENT)) {
 		new_cluster = 1;
-		INFO(this, "Cluster database doesn't exist. Generating database...\n");
+		LOG_INFO(this, "Cluster database doesn't exist. Generating database...\n");
 		if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
 			assert(false);
 		}
@@ -204,11 +204,11 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 		Endpoint remote_endpoint(".", &node);
 		// Replicate database from the other node
 #ifdef HAVE_REMOTE_PROTOCOL
-		INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
+		LOG_INFO(this, "Syncing cluster data from %s...\n", node.name.c_str());
 
 		auto ret = trigger_replication(remote_endpoint, *cluster_endpoints.begin());
 		if (ret.get()) {
-			INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
+			LOG_INFO(this, "Cluster data being synchronized from %s...\n", node.name.c_str());
 			new_cluster = 2;
 			break;
 		}
@@ -223,13 +223,13 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 
 	switch (new_cluster) {
 		case 0:
-			INFO(this, "Joined cluster %s: It is now online!\n", cluster_name.c_str());
+			LOG_INFO(this, "Joined cluster %s: It is now online!\n", cluster_name.c_str());
 			break;
 		case 1:
-			INFO(this, "Joined new cluster %s: It is now online!\n", cluster_name.c_str());
+			LOG_INFO(this, "Joined new cluster %s: It is now online!\n", cluster_name.c_str());
 			break;
 		case 2:
-			INFO(this, "Joined cluster %s: It was already online!\n", cluster_name.c_str());
+			LOG_INFO(this, "Joined cluster %s: It was already online!\n", cluster_name.c_str());
 			break;
 	}
 }
@@ -370,26 +370,26 @@ XapiandManager::sig_shutdown_handler(int sig)
 
 	if (XapiandManager::shutdown_now && sig != SIGTERM) {
 		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
-			INFO(this, "You insist... exiting now.\n");
+			LOG_INFO(this, "You insist... exiting now.\n");
 			exit(1); /* Exit with an error since this was not a clean shutdown. */
 		}
 	} else if (XapiandManager::shutdown_asap && sig != SIGTERM) {
 		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
 			XapiandManager::shutdown_now = now;
-			INFO(this, "Trying immediate shutdown.\n");
+			LOG_INFO(this, "Trying immediate shutdown.\n");
 		} else if (sig == 0) {
 			XapiandManager::shutdown_now = now;
 		}
 	} else {
 		switch (sig) {
 			case SIGINT:
-				INFO(this, "Received SIGINT scheduling shutdown...\n");
+				LOG_INFO(this, "Received SIGINT scheduling shutdown...\n");
 				break;
 			case SIGTERM:
-				INFO(this, "Received SIGTERM scheduling shutdown...\n");
+				LOG_INFO(this, "Received SIGTERM scheduling shutdown...\n");
 				break;
 			default:
-				INFO(this, "Received shutdown signal, scheduling shutdown...\n");
+				LOG_INFO(this, "Received shutdown signal, scheduling shutdown...\n");
 		};
 	}
 
@@ -462,9 +462,9 @@ XapiandManager::run(const opts_t &o)
 
 	msg += "at pid:" + std::to_string(getpid()) + "...\n";
 
-	INFO(this, msg.c_str());
+	LOG_INFO(this, msg.c_str());
 
-	INFO(this, "Starting %d server worker thread%s and %d replicator%s.\n", o.num_servers, (o.num_servers == 1) ? "" : "s", o.num_replicators, (o.num_replicators == 1) ? "" : "s");
+	LOG_INFO(this, "Starting %d server worker thread%s and %d replicator%s.\n", o.num_servers, (o.num_servers == 1) ? "" : "s", o.num_replicators, (o.num_replicators == 1) ? "" : "s");
 
 	ThreadPool<> server_pool("S%zu", o.num_servers);
 	for (size_t i = 0; i < o.num_servers; i++) {
@@ -483,7 +483,7 @@ XapiandManager::run(const opts_t &o)
 		replicator_pool.enqueue(Worker::create<XapiandReplicator>(manager, nullptr));
 	}
 
-	INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
+	LOG_INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
 
 	discovery->start();
 	raft->start();

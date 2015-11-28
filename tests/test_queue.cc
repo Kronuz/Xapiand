@@ -183,7 +183,7 @@ int test_queue_set_on_dup() {
 		return 1;
 	}
 
-	LOG(nullptr, "%d %d %d %d %d\n", i1, i2, i3, i4, i5);
+	LOG_DEBUG(nullptr, "%d %d %d %d %d\n", i1, i2, i3, i4, i5);
 
 	if (i1 != 1 || i2 != 2 || i3 != 4 || i4 != 3 || i5 != 789) {
 		LOG_ERR(nullptr, "QueueSet::pop with set_on_dup is changing memory.\n");

@@ -344,7 +344,7 @@ int sort_test_string() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(string_tests, arraySize(string_tests)) == 0) {
-			LOG(nullptr, "Testing sort strings is correct!\n");
+			LOG_DEBUG(nullptr, "Testing sort strings is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing sort strings has mistakes.\n");
@@ -364,7 +364,7 @@ int sort_test_numerical() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(numerical_tests, arraySize(numerical_tests)) == 0) {
-			LOG(nullptr, "Testing sort numbers is correct!\n");
+			LOG_DEBUG(nullptr, "Testing sort numbers is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing sort numbers has mistakes.\n");
@@ -384,7 +384,7 @@ int sort_test_date() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(date_tests, arraySize(date_tests)) == 0) {
-			LOG(nullptr, "Testing sort dates is correct!\n");
+			LOG_DEBUG(nullptr, "Testing sort dates is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing sort dates has mistakes.\n");
@@ -404,7 +404,7 @@ int sort_test_boolean() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(boolean_tests, arraySize(boolean_tests)) == 0) {
-			LOG(nullptr, "Testing sort booleans is correct!\n");
+			LOG_DEBUG(nullptr, "Testing sort booleans is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing sort booleans has mistakes.\n");
@@ -424,7 +424,7 @@ int sort_test_geo() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(geo_tests, arraySize(geo_tests)) == 0) {
-			LOG(nullptr, "Testing sort geospatials is correct!\n");
+			LOG_DEBUG(nullptr, "Testing sort geospatials is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing sort geospatials has mistakes.\n");

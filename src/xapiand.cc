@@ -70,7 +70,7 @@ void run(const opts_t &opts) {
 	setup_signal_handlers();
 	ev::default_loop default_loop;
 	manager = Worker::create<XapiandManager>(&default_loop, opts);
-	LOG(nullptr, "Call run, Num of share: %d\n", manager.use_count());
+	LOG_DEBUG(nullptr, "Call run, Num of share: %d\n", manager.use_count());
 	manager->run(opts);
 }
 
@@ -226,7 +226,7 @@ int main(int argc, char **argv)
 
 	std::setlocale(LC_CTYPE, "");
 
-	INFO(nullptr,
+	LOG_INFO(nullptr,
 		"\n\n"
 		"  __  __           _                 _\n"
 		"  \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n"
@@ -247,14 +247,14 @@ int main(int argc, char **argv)
 #endif
 
 	if (opts.chert) {
-		INFO(nullptr, "By default using Chert databases.\n");
+		LOG_INFO(nullptr, "By default using Chert databases.\n");
 	} else {
-		INFO(nullptr, "By default using Glass databases.\n");
+		LOG_INFO(nullptr, "By default using Glass databases.\n");
 	}
 
 	// Enable changesets
 	if (setenv("XAPIAN_MAX_CHANGESETS", "200", false) == 0) {
-		INFO(nullptr, "Database changesets set to 200.\n");
+		LOG_INFO(nullptr, "Database changesets set to 200.\n");
 	}
 
 	// Flush threshold increased
@@ -262,7 +262,7 @@ int main(int argc, char **argv)
 	const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
 	if (p) flush_threshold = atoi(p);
 	if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", false) == 0) {
-		INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).\n", flush_threshold);
+		LOG_INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).\n", flush_threshold);
 	}
 
 	init_time = std::chrono::system_clock::now();
@@ -281,6 +281,6 @@ int main(int argc, char **argv)
 
 	run(opts);
 
-	INFO(nullptr, "Done with all work!\n");
+	LOG_INFO(nullptr, "Done with all work!\n");
 	return 0;
 }

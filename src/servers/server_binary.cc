@@ -89,7 +89,7 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 		return;
 	}
 
-	INFO(this, "Accepted new client! (sock=%d)\n", client_sock);
+	LOG_INFO(this, "Accepted new client! (sock=%d)\n", client_sock);
 
 	LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
 }
@@ -110,7 +110,7 @@ BinaryServer::trigger_replication(const Endpoint &src_endpoint, const Endpoint &
 		return false;
 	}
 
-	INFO(this, "Database being synchronized from %s...\n", src_endpoint.as_string().c_str());
+	LOG_INFO(this, "Database being synchronized from %s...\n", src_endpoint.as_string().c_str());
 
 	return true;
 }
@@ -131,7 +131,7 @@ BinaryServer::store(const Endpoints &endpoints, const Xapian::docid &did, const 
 		return false;
 	}
 
-	INFO(this, "Storing %s in %s...\n", filename.c_str(), endpoints.as_string().c_str());
+	LOG_INFO(this, "Storing %s in %s...\n", filename.c_str(), endpoints.as_string().c_str());
 
 	return true;
 }

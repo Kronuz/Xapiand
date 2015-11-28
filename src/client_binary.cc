@@ -95,7 +95,7 @@ BinaryClient::~BinaryClient()
 bool
 BinaryClient::init_remote()
 {
-	LOG(this, "init_remote\n");
+	LOG_DEBUG(this, "init_remote\n");
 	state = State::INIT_REMOTEPROTOCOL;
 
 	manager()->thread_pool.enqueue(share_this<BinaryClient>());
@@ -117,7 +117,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		src_endpoint,
 		dst_endpoint
 	] {
-		LOG(manager.get(), "Triggering replication for %s after checkin!\n", dst_endpoint.as_string().c_str());
+		LOG_DEBUG(manager.get(), "Triggering replication for %s after checkin!\n", dst_endpoint.as_string().c_str());
 		manager->trigger_replication(src_endpoint, dst_endpoint);
 	})) {
 		LOG_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
@@ -141,7 +141,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 bool BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename)
 {
-	LOG(this, "init_storing: %s  -->  %s\n", filename.c_str(), endpoints_.as_string().c_str());
+	LOG_DEBUG(this, "init_storing: %s  -->  %s\n", filename.c_str(), endpoints_.as_string().c_str());
 	state = State::STORINGPROTOCOL_SENDER;
 
 	storing_id = did;
@@ -273,7 +273,7 @@ BinaryClient::repl_file_done()
 void
 BinaryClient::storing_file_done()
 {
-	LOG(this, "BinaryClient::storing_file_done\n");
+	LOG_DEBUG(this, "BinaryClient::storing_file_done\n");
 
 	cookie_t haystack_cookie = random_int(0, 0xffff);
 
@@ -285,7 +285,7 @@ BinaryClient::storing_file_done()
 	char buf[8 * 1024];
 	ssize_t size;
 	while ((size = ::read(file_descriptor, buf, sizeof(buf))) > 0) {
-		LOG(this, "Store %zd bytes from buf in the Haystack storage!\n", size);
+		LOG_DEBUG(this, "Store %zd bytes from buf in the Haystack storage!\n", size);
 		if (haystack_file.write(buf, size) != size) {
 			haystack_file.rewind();
 			throw MSG_Error("Storage failure (1)!");
@@ -615,12 +615,12 @@ BinaryClient::repl_set_db_header(const std::string &message)
 
 	int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	if (dir == 0) {
-		LOG(this, "Directory %s created\n", path_tmp.c_str());
+		LOG_DEBUG(this, "Directory %s created\n", path_tmp.c_str());
 	} else if (errno == EEXIST) {
 		delete_files(path_tmp.c_str());
 		dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		if (dir == 0) {
-			LOG(this, "Directory %s created\n", path_tmp.c_str());
+			LOG_DEBUG(this, "Directory %s created\n", path_tmp.c_str());
 		}
 	} else {
 		LOG_ERR(this, "Directory %s not created (%s)\n", path_tmp.c_str(), strerror(errno));
@@ -867,7 +867,7 @@ void BinaryClient::storing_apply(StoringType type, const std::string & message)
 
 void BinaryClient::storing_send(const std::string &)
 {
-	LOG(this, "BinaryClient::storing_send (init)\n");
+	LOG_DEBUG(this, "BinaryClient::storing_send (init)\n");
 
 	std::string msg;
 	msg.append(encode_length(storing_id));
@@ -886,7 +886,7 @@ void BinaryClient::storing_send(const std::string &)
 
 void BinaryClient::storing_done(const std::string & message)
 {
-	LOG(this, "BinaryClient::storing_done\n");
+	LOG_DEBUG(this, "BinaryClient::storing_done\n");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -897,7 +897,7 @@ void BinaryClient::storing_done(const std::string & message)
 
 void BinaryClient::storing_open(const std::string & message)
 {
-	LOG(this, "BinaryClient::storing_open\n");
+	LOG_DEBUG(this, "BinaryClient::storing_open\n");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -921,7 +921,7 @@ void BinaryClient::storing_open(const std::string & message)
 
 void BinaryClient::storing_read(const std::string &)
 {
-	LOG(this, "BinaryClient::storing_read\n");
+	LOG_DEBUG(this, "BinaryClient::storing_read\n");
 
 	char buffer[8192];
 	size_t size = storing_file->read(buffer, sizeof(buffer));
@@ -936,7 +936,7 @@ void BinaryClient::storing_read(const std::string &)
 
 void BinaryClient::storing_create(const std::string & message)
 {
-	LOG(this, "BinaryClient::storing_create\n");
+	LOG_DEBUG(this, "BinaryClient::storing_create\n");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();

@@ -216,7 +216,7 @@ int geo_range_test() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(geo_range_tests, arraySize(geo_range_tests)) == 0) {
-			LOG(nullptr, "Testing search range geospatials is correct!\n");
+			LOG_DEBUG(nullptr, "Testing search range geospatials is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing search range geospatials has mistakes.\n");
@@ -236,7 +236,7 @@ int geo_terms_test() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(geo_terms_tests, arraySize(geo_terms_tests)) == 0) {
-			LOG(nullptr, "Testing search by geospatial terms is correct!\n");
+			LOG_DEBUG(nullptr, "Testing search by geospatial terms is correct!\n");
 			return 0;
 		} else {
 			LOG_ERR(nullptr, "ERROR: Testing search by geospatial terms has mistakes.\n");

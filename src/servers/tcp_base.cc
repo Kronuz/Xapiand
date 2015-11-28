@@ -42,7 +42,7 @@ BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, con
 	  description(description_)
 {
 	bind(tries_);
-	LOG(this, "Listening sock=%d\n", sock);
+	LOG_DEBUG(this, "Listening sock=%d\n", sock);
 }
 
 

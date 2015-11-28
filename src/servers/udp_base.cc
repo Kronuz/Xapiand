@@ -35,9 +35,9 @@ BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *
 	  description(description_),
 	  loop(loop_)
 {
-	LOG(this, "Num of share UDP: %d\n", manager.use_count());
+	LOG_DEBUG(this, "Num of share UDP: %d\n", manager.use_count());
 	bind(tries_, group_);
-	LOG(this, "Listening sock=%d\n", sock);
+	LOG_DEBUG(this, "Listening sock=%d\n", sock);
 }
 
 

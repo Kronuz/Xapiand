@@ -158,7 +158,7 @@ int test_datetotimestamp() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing the transformation between date string and timestamp is correct!\n");
+		LOG_DEBUG(nullptr, "Testing the transformation between date string and timestamp is correct!\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing the transformation between date string and timestamp has mistakes.\n");
@@ -179,7 +179,7 @@ int test_unserialise_date() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing unserialise date is correct!\n");
+		LOG_DEBUG(nullptr, "Testing unserialise date is correct!\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing unserialise date has mistakes.\n");
@@ -201,7 +201,7 @@ int test_serialise_cartesian() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing serialise Cartesian is correct!\n");
+		LOG_DEBUG(nullptr, "Testing serialise Cartesian is correct!\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing serialise Cartesian has mistakes.\n");
@@ -226,7 +226,7 @@ int test_unserialise_cartesian() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing unserialise Cartesian is correct!\n");
+		LOG_DEBUG(nullptr, "Testing unserialise Cartesian is correct!\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing unserialise Cartesian has mistakes.\n");
@@ -247,7 +247,7 @@ int test_serialise_trixel_id() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing serialise HTM Trixel's id is correct!\n");
+		LOG_DEBUG(nullptr, "Testing serialise HTM Trixel's id is correct!\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing serialise HTM Trixel's id has mistakes.\n");
@@ -269,7 +269,7 @@ int test_unserialise_trixel_id() {
 	}
 
 	if (cont == 0) {
-		LOG(nullptr, "Testing unserialise HTM Trixel's id is correct!\n");
+		LOG_DEBUG(nullptr, "Testing unserialise HTM Trixel's id is correct!\n");
 		return 0;
 	} else {
 		LOG_ERR(nullptr, "ERROR: Testing unserialise HTM Trixel's id has mistakes.\n");

@@ -192,7 +192,7 @@ Database::drop(const std::string &doc_id, bool commit)
 			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			return false;
 		}catch (const Xapian::Error &e) {
-			LOG(this, "Inside catch drop\n");
+			LOG_DEBUG(this, "Inside catch drop\n");
 			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
@@ -970,7 +970,7 @@ Database::search(const query_field &e)
 	search_t srch;
 	bool first = true;
 
-	LOG(this, "e.query size: %d  Spelling: %d Synonyms: %d\n", e.query.size(), e.spelling, e.synonyms);
+	LOG_DEBUG(this, "e.query size: %d  Spelling: %d Synonyms: %d\n", e.query.size(), e.spelling, e.synonyms);
 	std::vector<std::string>::const_iterator qit(e.query.begin());
 	std::vector<std::string>::const_iterator lit(e.language.begin());
 	std::string lan;
@@ -995,9 +995,9 @@ Database::search(const query_field &e)
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 	}
-	LOG(this, "e.query: %s\n", queryQ.get_description().c_str());
+	LOG_DEBUG(this, "e.query: %s\n", queryQ.get_description().c_str());
 
-	LOG(this, "e.partial size: %d\n", e.partial.size());
+	LOG_DEBUG(this, "e.partial size: %d\n", e.partial.size());
 	std::vector<std::string>::const_iterator pit(e.partial.begin());
 	flags = Xapian::QueryParser::FLAG_PARTIAL;
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
@@ -1017,10 +1017,10 @@ Database::search(const query_field &e)
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 	}
-	LOG(this, "e.partial: %s\n", queryP.get_description().c_str());
+	LOG_DEBUG(this, "e.partial: %s\n", queryP.get_description().c_str());
 
 
-	LOG(this, "e.terms size: %d\n", e.terms.size());
+	LOG_DEBUG(this, "e.terms size: %d\n", e.terms.size());
 	std::vector<std::string>::const_iterator tit(e.terms.begin());
 	flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
@@ -1040,7 +1040,7 @@ Database::search(const query_field &e)
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 	}
-	LOG(this, "e.terms: %s\n", repr(queryT.get_description()).c_str());
+	LOG_DEBUG(this, "e.terms: %s\n", repr(queryT.get_description()).c_str());
 
 	first = true;
 	if (!e.query.empty()) {
@@ -1936,7 +1936,7 @@ DatabasePool::_switch_db(const Endpoint &endpoint)
 			queue->switch_cond.notify_all();
 		}
 	} else {
-		LOG(this, "Inside switch_db not queue->count == queue->size()\n");
+		LOG_DEBUG(this, "Inside switch_db not queue->count == queue->size()\n");
 	}
 
 	return switched;

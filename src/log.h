@@ -92,7 +92,7 @@ class LogThread {
 };
 
 
-#define NOCOL "\033[0m"
+#define NO_COL "\033[0m"
 #define BLACK "\033[0;30m"
 #define GREY "\033[0;37m"
 #define RED "\033[0;31m"
@@ -111,37 +111,36 @@ class LogThread {
 #define BRIGHT_CYAN "\033[1;36m"
 #define WHITE "\033[1;37m"
 
-#define DEBUG_COL DARK_GREY
+#define LOG_COL DARK_GREY
+#define DEBUG_COL NO_COL
 #define INFO_COL BRIGHT_CYAN
-#define ERR_COL RED
-#define FATAL_COL BRIGHT_RED
 #define WARN_COL BRIGHT_YELLOW
+#define ERR_COL RED
+#define CRITICAL_COL BRIGHT_RED
+#define FATAL_COL BRIGHT_RED
 
 #define _(...)
-#define _LOG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, __VA_ARGS__)
-#define _LOG_LOG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, DEBUG_COL, __VA_ARGS__)
-#define _LOG_DEBUG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, DEBUG_COL, __VA_ARGS__)
-#define _LOG_INFO_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, INFO_COL, __VA_ARGS__)
-#define _LOG_ERR_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, ERR_COL, __VA_ARGS__)
-#define _LOG_FATAL_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, FATAL_COL, __VA_ARGS__)
-#define _LOG_WARN_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NOCOL, WARN_COL, __VA_ARGS__)
-#define _LOG_TIMED_100(...) auto __timed_log = Log::log(100ms, __FILE__, __LINE__, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
-#define _LOG_TIMED_500(...) auto __timed_log = Log::log(500ms, __FILE__, __LINE__, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
-#define _LOG_TIMED_1000(...) auto __timed_log = Log::log(1s, __FILE__, __LINE__, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
-#define _LOG_TIMED_CLEAR(...) __timed_log->unlog(__FILE__, __LINE__, NOCOL, BRIGHT_MAGENTA, __VA_ARGS__)
+#define _LOG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, __VA_ARGS__)
+#define _LOG_LOG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, LOG_COL, __VA_ARGS__)
+#define _LOG_DEBUG_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, DEBUG_COL, __VA_ARGS__)
+#define _LOG_INFO_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, INFO_COL, __VA_ARGS__)
+#define _LOG_WARN_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, WARN_COL, __VA_ARGS__)
+#define _LOG_ERR_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, ERR_COL, __VA_ARGS__)
+#define _LOG_CRITICAL_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, CRITICAL_COL, __VA_ARGS__)
+#define _LOG_FATAL_ENABLED(...) Log::log(0ms, __FILE__, __LINE__, NO_COL, FATAL_COL, __VA_ARGS__)
+#define _LOG_TIMED_100(...) auto __timed_log = Log::log(100ms, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, __VA_ARGS__)
+#define _LOG_TIMED_500(...) auto __timed_log = Log::log(500ms, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, __VA_ARGS__)
+#define _LOG_TIMED_1000(...) auto __timed_log = Log::log(1s, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, __VA_ARGS__)
+#define _LOG_TIMED_CLEAR(...) __timed_log->unlog(__FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, __VA_ARGS__)
 
-#define LOG _LOG_LOG_ENABLED
-#define CLOG _LOG_ENABLED
-#define INFO _LOG_INFO_ENABLED
-#define ERR _LOG_ERR_ENABLED
-#define FATAL _LOG_FATAL_ENABLED
-#define WARN _LOG_WARN_ENABLED
-#define DBG _LOG_DEBUG_ENABLED
+#define LOG _LOG_ENABLED
 
-#define LOG_ERR _LOG_ERR_ENABLED
+#define LOG_DEBUG _LOG_DEBUG_ENABLED
+#define LOG_INFO _LOG_INFO_ENABLED
 #define LOG_WARN _LOG_WARN_ENABLED
-
-#define LOG_DEBUG _
+#define LOG_ERR _LOG_ERR_ENABLED
+#define LOG_CRITICAL _LOG_FATAL_ENABLED
+#define LOG_FATAL _LOG_FATAL_ENABLED
 
 #define LOG_CONN _LOG_LOG_ENABLED
 #define LOG_DISCOVERY _LOG_LOG_ENABLED

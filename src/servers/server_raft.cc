@@ -238,7 +238,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 				case toUType(Raft::Message::REQUEST_DATA):
 					if (raft->state == Raft::State::LEADER) {
-						LOG(this, "Sending Data!\n");
+						LOG_DEBUG(this, "Sending Data!\n");
 						raft->send_message(Raft::Message::RESPONSE_DATA, local_node.serialise() +
 							serialise_string(std::to_string(raft->num_servers)) +
 							serialise_string(std::to_string(raft->term)));
@@ -254,7 +254,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 						return;
 					}
 
-					LOG(this, "Receiving Data!\n");
+					LOG_DEBUG(this, "Receiving Data!\n");
 					if (unserialise_string(str_servers, &ptr, end) == -1) {
 						LOG_RAFT(this, "Badly formed message: No proper number of servers!\n");
 						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
