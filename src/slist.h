@@ -45,6 +45,9 @@ class slist {
 
 public:
 	slist() : head(std::make_shared<Node>()) {}
+	~slist() {
+		clear();
+	}
 
 	class iterator {
 		std::shared_ptr<Node> p;
@@ -139,6 +142,7 @@ public:
 	}
 
 	auto clear() {
-		std::atomic_store(&head->next, std::shared_ptr<Node>());
+		auto it = begin();
+		while ((it = erase(it)) != end());
 	}
 };
