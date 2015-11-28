@@ -28,7 +28,7 @@ slist<std::shared_ptr<Log>> log_list;
 std::unique_ptr<ThreadLog> log_thread(ThreadLog::create());
 
 
-Log::Log(const char *file, int line, const char *prefix, const char *suffix, int timeout, void *, const char *format, va_list argptr)
+Log::Log(const char *file, int line, int timeout, const char *suffix, const char *prefix, void *, const char *format, va_list argptr)
 	: epoch_end(epoch::now<std::chrono::milliseconds>() + timeout),
 	  finished(false)
 {
@@ -43,20 +43,20 @@ Log::Log(const char *file, int line, const char *prefix, const char *suffix, int
 
 
 std::shared_ptr<Log>
-Log::timed(const char *file, int line, const char *prefix, const char *suffix, int timeout, void *obj, const char *format, ...)
+Log::timed(const char *file, int line, int timeout, const char *suffix, const char *prefix, void *obj, const char *format, ...)
 {
 	// std::make_shared only can call a public constructor, for this reason
 	// it is neccesary wrap the constructor in a struct.
 	struct enable_make_shared : Log {
-		enable_make_shared(const char *file, int line, const char *prefix, const char *suffix, int timeout, void *obj, const char *format, va_list argptr)
-			: Log(file, line, prefix, suffix, timeout, obj, format, argptr) { }
+		enable_make_shared(const char *file, int line, int timeout, const char *suffix, const char *prefix, void *obj, const char *format, va_list argptr)
+			: Log(file, line, timeout, suffix, prefix, obj, format, argptr) { }
 	};
 
 	va_list argptr;
 	va_start(argptr, format);
 
 	if (timeout) {
-		std::shared_ptr<Log> l_ptr = std::make_shared<enable_make_shared>(file, line, prefix, suffix, timeout, obj, format, argptr);
+		std::shared_ptr<Log> l_ptr = std::make_shared<enable_make_shared>(file, line, timeout, suffix, prefix, obj, format, argptr);
 		log_list.push_front(l_ptr->shared_from_this());
 		va_end(argptr);
 		return l_ptr;
@@ -72,7 +72,7 @@ Log::timed(const char *file, int line, const char *prefix, const char *suffix, i
 
 
 void
-Log::end(std::shared_ptr<Log>&& l, const char *file, int line, const char *prefix, const char *suffix, void *, const char *format, ...)
+Log::end(std::shared_ptr<Log>&& l, const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, ...)
 {
 	if (l) {
 		if (l->finished) {
@@ -99,7 +99,7 @@ Log::end(std::shared_ptr<Log>&& l, const char *file, int line, const char *prefi
 
 
 void
-Log::log(const char *file, int line, const char *prefix, const char *suffix, void *, const char *format, ...)
+Log::log(const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
