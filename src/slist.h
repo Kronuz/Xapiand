@@ -40,20 +40,11 @@ class slist {
 
 	std::shared_ptr<Node> head;
 
-	std::function<bool(const T&, const T&)> key_compare;
-
 	slist(const slist&) = delete;
 	void operator=(const slist&) = delete;
 
 public:
-	slist()
-		: head(std::make_shared<Node>()),
-		  key_compare([](const T& t1, const T& t2) { return t1 == t2; }) { }
-
-	template<typename KeyCompare>
-	slist(KeyCompare&& _key_compare)
-		: head(std::make_shared<Node>()),
-		  key_compare(std::forward<KeyCompare>(_key_compare)) { }
+	slist() : head(std::make_shared<Node>()) {}
 
 	class iterator {
 		std::shared_ptr<Node> p;
@@ -99,15 +90,6 @@ public:
 		}
 	};
 
-	auto find(const T& data) const {
-		auto n = std::atomic_load(&head->next);
-		while (n && !key_compare(n->data, data)) {
-			n = std::atomic_load(&n->next);
-		}
-
-		return n != nullptr;
-	}
-
 	template<typename Data>
 	auto push_front(Data&& data) {
 		auto n = std::make_shared<Node>(std::forward<Data>(data));
@@ -120,21 +102,6 @@ public:
 		auto curr = std::atomic_load(&head->next);
 		while (curr && !std::atomic_compare_exchange_weak(&head->next, &curr, curr->next));
 		return curr ? true : false;
-	}
-
-	auto remove(const T& data) {
-		std::shared_ptr<Node> prev, curr;
-		do {
-			prev = std::atomic_load(&head);
-			curr = std::atomic_load(&head->next);
-			while (curr && !key_compare(curr->data, data)) {
-				prev = std::atomic_load(&prev->next);
-				curr = std::atomic_load(&curr->next);
-			}
-			if (!curr) return false;
-		} while (!std::atomic_compare_exchange_weak(&prev->next, &curr, curr->next));
-
-		return true;
 	}
 
 	auto erase(const iterator& it) {
