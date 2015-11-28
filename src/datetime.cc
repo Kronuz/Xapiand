@@ -368,17 +368,17 @@ bool
 Datetime::isvalidDate(int year, int month, int day)
 {
 	if (year < 1) {
-		LOG_ERR(NULL, "ERROR: Year is out of range.\n");
+		LOG_ERR(nullptr, "ERROR: Year is out of range.\n");
 		return false;
 	}
 
 	try {
 		if (day < 1 || day > getDays_month(year, month)) {
-			LOG_ERR(NULL, "ERROR: Day is out of range for month.\n");
+			LOG_ERR(nullptr, "ERROR: Day is out of range for month.\n");
 			return false;
 		}
 	} catch (const std::exception &ex) {
-		LOG_ERR(NULL, "ERROR: %s.\n", ex.what());
+		LOG_ERR(nullptr, "ERROR: %s.\n", ex.what());
 		return false;
 	}
 

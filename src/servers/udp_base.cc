@@ -93,20 +93,20 @@ BaseUDP::bind(int tries, const std::string &group)
 		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			if (!ignored_errorno(errno, true)) {
 				if (i == tries - 1) break;
-				LOG_DEBUG(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+				LOG_DEBUG(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
 				continue;
 			}
 		}
 
 		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-			LOG_ERR(NULL, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+			LOG_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 		}
 
 		addr.sin_addr.s_addr = inet_addr(group.c_str());  // setup s_addr for sender (send to group)
 		return;
 	}
 
-	LOG_ERR(NULL, "ERROR: %s bind error (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+	LOG_ERR(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
 	close(sock);
 	assert(false);
 }
