@@ -83,7 +83,7 @@ class LogThread {
 
 	std::atomic_bool running;
 	std::thread inner_thread;
-	slist<std::shared_ptr<Log>> log_list;
+	slist<std::weak_ptr<Log>> log_list;
 
 	void thread_function();
 

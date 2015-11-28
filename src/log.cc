@@ -137,8 +137,10 @@ LogThread::thread_function()
 		auto now = std::chrono::system_clock::now();
 		auto next_wakeup = now + 3s;
 		for (auto it = log_list.begin(); it != log_list.end();) {
-			auto l_ptr = *it;
-			if (l_ptr->finished) {
+			auto l_ptr = it->lock();
+			if (!l_ptr) {
+				it = log_list.erase(it);
+			} else if (l_ptr->finished) {
 				it = log_list.erase(it);
 			} else if (l_ptr->wakeup < now) {
 				l_ptr->finished.store(true);
