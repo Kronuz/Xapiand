@@ -223,10 +223,7 @@ BaseClient::destroy()
 	lk.unlock();
 
 	write_queue.finish();
-	while (!write_queue.empty()) {
-		std::shared_ptr<Buffer> buffer;
-		write_queue.pop(buffer, 0);
-	}
+	write_queue.clear();
 
 	LOG_OBJ(this, "DESTROYED CLIENT!\n");
 
