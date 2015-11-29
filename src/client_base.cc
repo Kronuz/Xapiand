@@ -297,6 +297,7 @@ BaseClient::write_directly(int fd)
 {
 	if (fd == -1) {
 		LOG_ERR(this, "ERROR: write error (sock=%d): Socket already closed!\n", sock);
+		LOG_DEBUG(this, "WR:ERR 1: (sock=%d)\n", sock);
 		return WR::ERR;
 	} else if (!write_queue.empty()) {
 		std::shared_ptr<Buffer> buffer = write_queue.front();
@@ -312,12 +313,15 @@ BaseClient::write_directly(int fd)
 
 		if (written < 0) {
 			if (ignored_errorno(errno, false)) {
+				LOG_DEBUG(this, "WR:RETRY: (sock=%d)\n", sock);
 				return WR::RETRY;
 			} else {
 				LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
+				LOG_DEBUG(this, "WR:ERR 2: (sock=%d)\n", sock);
 				return WR::ERR;
 			}
 		} else if (written == 0) {
+			LOG_DEBUG(this, "WR:PENDING 1: (sock=%d)\n", sock);
 			return WR::PENDING;
 		} else {
 			auto str(repr(buf_data, written, true, 500));
@@ -326,39 +330,75 @@ BaseClient::write_directly(int fd)
 			if (buffer->nbytes() == 0) {
 				if (write_queue.pop(buffer)) {
 					if (write_queue.empty()) {
+						LOG_DEBUG(this, "WR:OK 1: (sock=%d)\n", sock);
 						return WR::OK;
 					} else {
+						LOG_DEBUG(this, "WR:PENDING 2: (sock=%d)\n", sock);
 						return WR::PENDING;
 					}
 				}
 			} else {
+				LOG_DEBUG(this, "WR:PENDING 3: (sock=%d)\n", sock);
 				return WR::PENDING;
 			}
 		}
 	}
+	LOG_DEBUG(this, "WR:OK 2: (sock=%d)\n", sock);
 	return WR::OK;
+}
+
+
+bool
+BaseClient::_write(int fd, bool async)
+{
+	WR status;
+
+	do {
+		std::unique_lock<std::mutex> lk(qmtx);
+		status = write_directly(fd);
+		lk.unlock();
+
+		if (status == WR::ERR) {
+			destroy();
+			return false;
+		} else if (status == WR::RETRY) {
+			if (!async) {
+			    io_write.start();
+			    LOG_EV(this, "\tEnable write event (sock=%d)\n", sock);
+			} else {
+			    async_write.send();
+			}
+			return true;
+		}
+	} while (status != WR::OK);
+
+	if (!async) {
+		io_write.stop();
+		LOG_EV(this, "\tDisable write event (sock=%d)\n", sock);
+	}
+
+	return true;
+}
+
+bool
+BaseClient::write(const char *buf, size_t buf_size)
+{
+	if (!write_queue.push(std::make_shared<Buffer>('\0', buf, buf_size))) {
+		return false;
+	}
+
+	//LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
+
+	written += 1;
+
+	return _write(sock, true);
 }
 
 
 void
 BaseClient::io_cb_write(int fd)
 {
-	WR status;
-	do {
-		std::unique_lock<std::mutex> lk(qmtx);
-		status = write_directly(fd);
-		lk.unlock();
-		if (status == WR::ERR) {
-			destroy();
-			return;
-		} else if (status == WR::RETRY) {
-			io_write.start();
-			LOG_EV(this, "\tEnable write event (sock=%d)\n", sock);
-			return;
-		}
-	} while (status != WR::OK);
-	io_write.stop();
-	LOG_EV(this, "\tDisable write event (sock=%d)\n", sock);
+	_write(fd, false);
 }
 
 
@@ -479,35 +519,6 @@ BaseClient::async_write_cb(ev::async &, int)
 	LOG_EV_BEGIN(this, "BaseClient::async_write_cb:BEGIN\n");
 	io_cb_update();
 	LOG_EV_END(this, "BaseClient::async_write_cb:END\n");
-}
-
-
-bool
-BaseClient::write(const char *buf, size_t buf_size)
-{
-	WR status;
-
-	if (!write_queue.push(std::make_shared<Buffer>('\0', buf, buf_size))) {
-		return false;
-	}
-
-	//LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
-
-	written += 1;
-
-	do {
-		std::unique_lock<std::mutex> lk(qmtx);
-		status = write_directly(sock);
-		lk.unlock();
-		if (status == WR::ERR) {
-			destroy();
-			return false;
-		} else if (status == WR::RETRY) {
-			async_write.send();
-			return true;
-		}
-	} while (status != WR::OK);
-	return true;
 }
 
 

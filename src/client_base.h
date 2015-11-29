@@ -73,6 +73,8 @@ enum class WR;
 class BaseClient : public Task<>, public Worker {
 	friend Compressor;
 
+	bool _write(int fd, bool async);
+
 protected:
 	BaseClient(std::shared_ptr<BaseServer> server_, ev::loop_ref *loop_, int sock_);
 
