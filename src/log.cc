@@ -24,7 +24,7 @@
 #include "utils.h"
 
 
-#define BUFFER_SIZE (1024 * 1024)
+#define BUFFER_SIZE (10 * 1024)
 
 
 Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_) :
