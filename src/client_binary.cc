@@ -472,6 +472,7 @@ BinaryClient::run()
 	LOG_OBJ_BEGIN(this, "BinaryClient::run:BEGIN\n");
 	if (running++) {
 		running--;
+		LOG_OBJ_END(this, "BinaryClient::run:END\n");
 		return;
 	}
 

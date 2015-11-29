@@ -373,6 +373,8 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 
 void HttpClient::run()
 {
+	LOG_OBJ_BEGIN(this, "HttpClient::run:BEGIN\n");
+
 	std::string error;
 	const char *error_str;
 	bool has_error = false;
@@ -382,6 +384,7 @@ void HttpClient::run()
 			time_t now = epoch::now<>();
 			XapiandManager::shutdown_asap = now;
 			manager()->async_shutdown.send();
+			LOG_OBJ_END(this, "HttpClient::run:END\n");
 			return;
 		}
 
@@ -446,6 +449,8 @@ void HttpClient::run()
 		LOG_EV(this, "\tEnable read event (sock=%d)\n", sock);
 		io_read.start();
 	}
+
+	LOG_OBJ_END(this, "HttpClient::run:END\n");
 }
 
 
