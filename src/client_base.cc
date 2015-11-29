@@ -41,7 +41,8 @@ enum class WR {
 	OK,
 	ERR,
 	RETRY,
-	PENDING
+	PENDING,
+	CLOSED
 };
 
 enum class MODE {
@@ -297,7 +298,7 @@ BaseClient::write_directly(int fd)
 {
 	if (fd == -1) {
 		LOG_ERR(this, "ERROR: write error (sock=%d): Socket already closed!\n", sock);
-		LOG_DEBUG(this, "WR:ERR 1: (sock=%d)\n", sock);
+		LOG_DEBUG(this, "WR:ERR.1: (sock=%d)\n", sock);
 		return WR::ERR;
 	} else if (!write_queue.empty()) {
 		std::shared_ptr<Buffer> buffer = write_queue.front();
@@ -317,12 +318,12 @@ BaseClient::write_directly(int fd)
 				return WR::RETRY;
 			} else {
 				LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
-				LOG_DEBUG(this, "WR:ERR 2: (sock=%d)\n", sock);
+				LOG_DEBUG(this, "WR:ERR.2: (sock=%d)\n", sock);
 				return WR::ERR;
 			}
 		} else if (written == 0) {
-			LOG_DEBUG(this, "WR:PENDING 1: (sock=%d)\n", sock);
-			return WR::PENDING;
+			LOG_DEBUG(this, "WR:CLOSED: (sock=%d)\n", sock);
+			return WR::CLOSED;
 		} else {
 			auto str(repr(buf_data, written, true, 500));
 			LOG_CONN_WIRE(this, "(sock=%d) <<-- '%s' [%zu] (%zu bytes)\n", sock, str.c_str(), str.size(), written);
@@ -330,20 +331,20 @@ BaseClient::write_directly(int fd)
 			if (buffer->nbytes() == 0) {
 				if (write_queue.pop(buffer)) {
 					if (write_queue.empty()) {
-						LOG_DEBUG(this, "WR:OK 1: (sock=%d)\n", sock);
+						LOG_DEBUG(this, "WR:OK.1: (sock=%d)\n", sock);
 						return WR::OK;
 					} else {
-						LOG_DEBUG(this, "WR:PENDING 2: (sock=%d)\n", sock);
+						LOG_DEBUG(this, "WR:PENDING.1: (sock=%d)\n", sock);
 						return WR::PENDING;
 					}
 				}
 			} else {
-				LOG_DEBUG(this, "WR:PENDING 3: (sock=%d)\n", sock);
+				LOG_DEBUG(this, "WR:PENDING.2: (sock=%d)\n", sock);
 				return WR::PENDING;
 			}
 		}
 	}
-	LOG_DEBUG(this, "WR:OK 2: (sock=%d)\n", sock);
+	LOG_DEBUG(this, "WR:OK.2: (sock=%d)\n", sock);
 	return WR::OK;
 }
 
@@ -358,17 +359,25 @@ BaseClient::_write(int fd, bool async)
 		status = write_directly(fd);
 		lk.unlock();
 
-		if (status == WR::ERR) {
-			destroy();
-			return false;
-		} else if (status == WR::RETRY) {
-			if (!async) {
-			    io_write.start();
-			    LOG_EV(this, "\tEnable write event (sock=%d)\n", sock);
-			} else {
-			    async_write.send();
-			}
-			return true;
+		switch (status) {
+			case WR::ERR:
+			case WR::CLOSED:
+				if (!async) {
+					io_write.stop();
+					LOG_EV(this, "\tDisable write event (sock=%d)\n", sock);
+				}
+				destroy();
+				return false;
+			case WR::RETRY:
+				if (!async) {
+					io_write.start();
+					LOG_EV(this, "\tEnable write event (sock=%d)\n", sock);
+				} else {
+					async_write.send();
+				}
+				return true;
+			default:
+				break;
 		}
 	} while (status != WR::OK);
 
