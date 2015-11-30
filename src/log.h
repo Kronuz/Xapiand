@@ -120,9 +120,9 @@ class LogThread {
 #define FATAL_COL BRIGHT_RED
 
 #define _(args...)
-#define _LOG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, args)
-#define _LOG_TIMED(t, args...) auto __timed_log = Log::log(t, __FILE__, __LINE__, NO_COL, args)
-#define _LOG_TIMED_CLEAR(args...) __timed_log->unlog(__FILE__, __LINE__, NO_COL, args)
+#define _LOG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, NO_COL, args)
+#define _LOG_TIMED(t, args...) auto __timed_log = Log::log(t, __FILE__, __LINE__, NO_COL, NO_COL, args)
+#define _LOG_TIMED_CLEAR(args...) __timed_log->unlog(__FILE__, __LINE__, NO_COL, NO_COL, args)
 
 #define _LOG_LOG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, LOG_COL, args)
 #define _LOG_DEBUG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
