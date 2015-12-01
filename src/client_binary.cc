@@ -678,8 +678,10 @@ BinaryClient::repl_set_db_footer()
 	endpoint_tmp.path.append("/.tmp");
 	endpoints_tmp.insert(endpoint_tmp);
 
-	if (!manager()->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
-		LOG_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
+	if (!repl_database_tmp) {
+		if (!manager()->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
+			LOG_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
+		}
 	}
 
 	repl_switched_db = true;
