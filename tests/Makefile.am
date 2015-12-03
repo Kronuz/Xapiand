@@ -6,6 +6,7 @@ check_PROGRAMS = set_generate_terms_test \
 				 set_query_test \
 				 set_queue_test \
 				 set_serialise_unserialise_test \
+				 set_slist_test \
 				 set_sort_test \
 				 set_threadpool_test \
 				 set_wkt_test
@@ -57,6 +58,9 @@ set_queue_test_LDADD = @CHECK_LIBS@
 
 set_serialise_unserialise_test_SOURCES = $(headers) set_serialise_unserialise_test.cc test_serialise.cc
 set_serialise_unserialise_test_LDADD = @CHECK_LIBS@
+
+set_slist_test_SOURCES = $(headers) set_slist_test.cc test_slist.cc
+set_slist_test_LDADD = @CHECK_LIBS@
 
 set_sort_test_SOURCES = $(headers) set_sort_test.cc test_sort.cc
 set_sort_test_LDADD = @CHECK_LIBS@
