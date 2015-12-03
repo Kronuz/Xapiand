@@ -177,8 +177,8 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 						if (vote == "1") {
 							raft->votes++;
-							LOG_RAFT(this, "Number of servers: %d;  Votos received: %d\n", raft->num_servers, raft->votes);
-							if (raft->votes > raft->num_servers / 2) {
+							LOG_RAFT(this, "Number of servers: %d;  Votos received: %d\n", raft->number_servers.load(), raft->votes);
+							if (raft->votes > raft->number_servers / 2) {
 								LOG_RAFT(this, "It becomes the leader for region: %d\n", local_node.region.load());
 								raft->state = Raft::State::LEADER;
 								raft->start_heartbeat();
@@ -217,7 +217,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
 						return;
 					}
-					raft->num_servers = strtoull(str_servers);
+					raft->number_servers.store(strtoull(str_servers));
 
 					if (unserialise_string(str_remote_term, &ptr, end) == -1) {
 						LOG_RAFT(this, "Badly formed message: No proper term!\n");
@@ -240,7 +240,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 					if (raft->state == Raft::State::LEADER) {
 						LOG_DEBUG(this, "Sending Data!\n");
 						raft->send_message(Raft::Message::RESPONSE_DATA, local_node.serialise() +
-							serialise_string(std::to_string(raft->num_servers)) +
+							serialise_string(std::to_string(raft->number_servers)) +
 							serialise_string(std::to_string(raft->term)));
 					}
 					break;
@@ -260,7 +260,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
 						return;
 					}
-					raft->num_servers = strtoull(str_servers);
+					raft->number_servers.store(strtoull(str_servers));
 
 					if (unserialise_string(str_remote_term, &ptr, end) == -1) {
 						LOG_RAFT(this, "Badly formed message: No proper term!\n");
