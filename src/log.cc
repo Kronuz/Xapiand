@@ -21,21 +21,21 @@
  */
 
 #include "log.h"
-#include "utils.h"
 
+#include "utils.h"
 
 #define BUFFER_SIZE (10 * 1024)
 
 
-Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_) :
-	wakeup(wakeup_),
-	str_start(str),
-	finished(false)
-{}
+Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_)
+	: wakeup(wakeup_),
+	  str_start(str),
+	  finished(false) { }
 
 
 std::string
-Log::str_format(const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, va_list argptr) {
+Log::str_format(const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, va_list argptr)
+{
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	std::string result = "tid(" + get_thread_name() + "): " + file + ":" + std::to_string(line) + ": " + prefix + buffer + suffix;
@@ -54,6 +54,7 @@ Log::log(std::chrono::time_point<std::chrono::system_clock> wakeup, const char *
 
 	return print(str, wakeup);
 }
+
 
 void
 Log::clear()
@@ -84,15 +85,17 @@ Log::add(const std::string& str, std::chrono::time_point<std::chrono::system_clo
 	// std::make_shared only can call a public constructor, for this reason
 	// it is neccesary wrap the constructor in a struct.
 	struct enable_make_shared : Log {
-		enable_make_shared(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup) : Log(str, wakeup) {}
+		enable_make_shared(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup)
+			: Log(str, wakeup) { }
 	};
 
 	auto l_ptr = std::make_shared<enable_make_shared>(str, wakeup);
-	thread.log_list.push_front(l_ptr);
+	thread.log_list.push_front(l_ptr->shared_from_this());
 
 	if (thread.wakeup.load() > l_ptr->wakeup) {
 		thread.wakeup_signal.notify_one();
 	}
+
 	return l_ptr;
 }
 
@@ -111,10 +114,9 @@ Log::print(const std::string& str, std::chrono::time_point<std::chrono::system_c
 }
 
 
-LogThread::LogThread() :
-	running(true),
-	inner_thread(&LogThread::thread_function, this)
-{}
+LogThread::LogThread()
+	: running(true),
+	  inner_thread(&LogThread::thread_function, this) { }
 
 
 LogThread::~LogThread()
@@ -123,7 +125,7 @@ LogThread::~LogThread()
 	wakeup_signal.notify_one();
 	try {
 		inner_thread.join();
-	} catch (std::system_error) {
+	} catch (const std::system_error&) {
 	}
 }
 
@@ -136,21 +138,15 @@ LogThread::thread_function()
 	while (running.load()) {
 		auto now = std::chrono::system_clock::now();
 		auto next_wakeup = now + 3s;
-		for (auto it = log_list.begin(); it != log_list.end();) {
-			auto l_ptr = it->lock();
-			if (!l_ptr) {
-				it = log_list.erase(it);
-			} else if (l_ptr->finished) {
-				it = log_list.erase(it);
-			} else if (l_ptr->wakeup < now) {
-				l_ptr->finished.store(true);
-				Log::print(l_ptr->str_start);
-				it = log_list.erase(it);
-			} else {
-				if (l_ptr->wakeup < next_wakeup) {
-					next_wakeup = l_ptr->wakeup;
-				}
-				++it;
+		for (auto it = log_list.begin(); it != log_list.end(); ++it) {
+			if (it->use_count() == 1 || (*it)->finished.load()) {
+				log_list.erase(it);
+			} else if ((*it)->wakeup < now) {
+				(*it)->finished.store(true);
+				Log::print((*it)->str_start);
+				log_list.erase(it);
+			} else if ((*it)->wakeup < next_wakeup) {
+				next_wakeup = (*it)->wakeup;
 			}
 		}
 		if (next_wakeup < now + 100ms) {
@@ -158,6 +154,5 @@ LogThread::thread_function()
 		}
 		wakeup.store(next_wakeup);
 		wakeup_signal.wait_until(lk, next_wakeup);
-		// Log::print("Wee!!\n");
 	}
 }
