@@ -22,6 +22,11 @@
 
 #include "test_sort.h"
 
+#include "../src/cJSON.h"
+#include "../src/log.h"
+#include "../src/database.h"
+#include "../src/endpoint.h"
+
 
 std::shared_ptr<DatabaseQueue>d_queue;
 static Database *database = nullptr;

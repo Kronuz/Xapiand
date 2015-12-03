@@ -23,9 +23,7 @@
 #include "test_geo.h"
 
 #include <check.h>
-
 #include <stdlib.h>
-#include <stdint.h>
 
 
 START_TEST(geo_range_test)

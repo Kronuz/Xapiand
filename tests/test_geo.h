@@ -22,16 +22,11 @@
 
 #pragma once
 
-#include <sstream>
-#include <fstream>
-
-#include "../src/cJSON.h"
-#include "../src/utils.h"
-#include "../src/database.h"
-#include "../src/endpoint.h"
+#include <vector>
+#include <string>
 
 
-using test_geo_t = struct test_geo_s {
+struct test_geo_t {
 	std::string query;
 	std::vector<std::string> expect_datas;
 };

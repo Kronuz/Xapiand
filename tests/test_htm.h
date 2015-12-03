@@ -22,16 +22,11 @@
 
 #pragma once
 
-#include <stdio.h>
-#include <string.h>
-#include <algorithm>
-#include <unistd.h>
-
-#include "../src/utils.h"
-#include "../src/htm.h"
+#include <vector>
+#include <string>
 
 
-using test_transform_t = struct test_transform_s {
+struct test_transform_t {
 	// Source CRS.
 	int SRID;
 	double lat_src;
@@ -41,7 +36,9 @@ using test_transform_t = struct test_transform_s {
 	std::string res;
 };
 
-using Vector_Transforms = std::vector<test_transform_t>;
+
+using VectorTransforms = std::vector<test_transform_t>;
+
 
 int test_cartesian_transforms();
 int test_hullConvex();

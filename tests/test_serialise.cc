@@ -24,6 +24,7 @@
 
 #include "../src/datetime.h"
 #include "../src/serialise.h"
+#include "../src/log.h"
 #include "../src/utils.h"
 
 

@@ -20,12 +20,10 @@
  * IN THE SOFTWARE.
  */
 
-#include <stdlib.h>
-#include <stdint.h>
-
 #include "test_generate_terms.h"
 
 #include <check.h>
+#include <stdlib.h>
 
 
 START_TEST(numeric_test)

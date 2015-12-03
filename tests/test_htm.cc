@@ -22,10 +22,15 @@
 
 #include "test_htm.h"
 
+#include "../src/log.h"
+#include "../src/htm.h"
+
+#include <algorithm>
+
 
 // Testing the transformation of coordinates between CRS.
 int test_cartesian_transforms() {
-	Vector_Transforms SRID_2_WGS84;
+	VectorTransforms SRID_2_WGS84;
 	// WGS72 to WGS84  (4322 to 4326) -> The results are very close to those obtained in the page:
 	// http://georepository.com/calculator/convert/operation_id/1238
 	SRID_2_WGS84.push_back({ 4322, 20.0,   10.0, 30.0, "20°0'0.141702''N  10°0'0.554000''E  30.959384"    });
@@ -139,7 +144,7 @@ int test_cartesian_transforms() {
 	SRID_2_WGS84.push_back({ 4121, -20.0, -10.0, 30.0, "19°59'54.797256''S  9°59'58.660140''W  -251.513821" });
 
 
-	Vector_Transforms::const_iterator it = SRID_2_WGS84.begin();
+	VectorTransforms::const_iterator it = SRID_2_WGS84.begin();
 	int cont = 0;
 
 	try {

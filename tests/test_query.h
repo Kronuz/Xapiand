@@ -22,13 +22,11 @@
 
 #pragma once
 
-#include "./../src/config.h"
-#include <stdio.h>
 #include <string>
 #include <vector>
 
 
-using test_query_t = struct test_query_s {
+struct test_query_t {
 	std::vector<std::string> query;
 	std::vector<std::string> terms;
 	std::vector<std::string> partial;

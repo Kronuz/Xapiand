@@ -23,7 +23,7 @@
 #include "test_queue.h"
 
 #include "../src/queue.h"
-#include "../src/utils.h"
+#include "../src/log.h"
 
 using namespace queue;
 

@@ -22,16 +22,11 @@
 
 #pragma once
 
-#include <sstream>
-#include <fstream>
-
-#include "../src/cJSON.h"
-#include "../src/utils.h"
-#include "../src/database.h"
-#include "../src/endpoint.h"
+#include <string>
+#include <vector>
 
 
-using sort_t = struct sort_s {
+struct sort_t {
 	std::string query;
 	std::vector<std::string> sort;
 	std::vector<std::string> expect_result;

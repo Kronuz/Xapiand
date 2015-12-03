@@ -22,27 +22,29 @@
 
 #pragma once
 
-#include "../src/config.h"
 #include "../src/htm.h"
 
 
-using test_t = struct test {
+struct test_t {
 	const char *str;
 	const char *expect;
 };
 
-using test_str_double_t = struct test_str_double {
+
+struct test_str_double_t {
 	const char *str;
 	const double val;
 };
 
-using test_cartesian_t = struct test_cartesian {
+
+struct test_cartesian_t {
 	const Cartesian cartesian;
 	const char *expect_serialise;
 	const char *expect_unserialise;
 };
 
-using test_trixel_id_t = struct test_trixel_id {
+
+struct test_trixel_id_t {
 	const uInt64 trixel_id;
 	const char *expect_serialise;
 	const uInt64 expect_unserialise;

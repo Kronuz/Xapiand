@@ -22,6 +22,13 @@
 
 #include "test_wkt_parser.h"
 
+#include "wkt_parser.h"
+#include "log.h"
+
+#include <string>
+#include <algorithm>
+#include <time.h>
+
 
 // Testing WKT parser.
 // Python files are generated to view the results.

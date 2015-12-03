@@ -22,7 +22,14 @@
 
 #include "test_geo.h"
 
+#include "../src/cJSON.h"
+#include "../src/log.h"
+#include "../src/database.h"
+#include "../src/endpoint.h"
 #include "../src/length.h"
+
+#include <sstream>
+#include <fstream>
 
 
 std::shared_ptr<DatabaseQueue>d_queue;

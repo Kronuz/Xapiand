@@ -23,6 +23,7 @@
 #include "test_sort.h"
 
 #include <check.h>
+#include <stdlib.h>
 
 
 START_TEST(sort_test_string)

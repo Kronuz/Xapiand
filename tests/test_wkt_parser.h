@@ -22,12 +22,7 @@
 
 #pragma once
 
-#include <stdio.h>
-#include <string.h>
-#include <algorithm>
-#include <unistd.h>
-#include "wkt_parser.h"
-#include <time.h>
+#include <iostream>
 
 
 int test_wkt_parser();

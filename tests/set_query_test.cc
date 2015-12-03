@@ -20,12 +20,10 @@
  * IN THE SOFTWARE.
  */
 
-#include <stdlib.h>
-#include <stdint.h>
-
 #include "test_query.h"
 
 #include <check.h>
+#include <stdlib.h>
 
 
 START_TEST(test_query_search)

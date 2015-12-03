@@ -24,7 +24,8 @@
 
 #include "../src/htm.h"
 
-using test_t = struct test_s {
+
+struct test_t {
 	std::string start;
 	std::string end;
 	std::vector<double> accuracy;
@@ -33,7 +34,8 @@ using test_t = struct test_s {
 	std::vector<std::string> expected_prefixes;
 };
 
-using testG_t = struct testG_s {
+
+struct testG_t {
 	std::vector<range_t> ranges;
 	std::vector<double> accuracy;
 	std::vector<std::string> acc_prefix;

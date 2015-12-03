@@ -24,7 +24,7 @@
 #include "test_query.h"
 
 #include "../src/cJSON.h"
-#include "../src/utils.h"
+#include "../src/log.h"
 #include "../src/serialise.h"
 #include "../src/database.h"
 #include "../src/endpoint.h"
