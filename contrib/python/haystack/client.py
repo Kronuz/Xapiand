@@ -38,27 +38,28 @@ class Xapiand(object):
     go-between for API calls to it
     """
 
-    def __init__(self):
-        self.port = '8880'
-        self.method = dict()
-        self.method['search'] = requests.get
-        self.method['facets'] = requests.get
-        self.method['stats'] = requests.get
-        self.method['delete'] = requests.delete
-        self.method['head'] = requests.head
-        self.method['index'] = requests.put
-        self.method['patch'] = requests.patch
-        self.has_3arg = {'search': False, 'facets': False, 'stats': False, 'head': False, 'delete': False, 'index': True, 'patch': True}
-        self.has_id = {'search': False, 'facets': False, 'stats': False, 'delete': True, 'head': True, 'index': True, 'patch': True}
+    _methods = dict(
+        search=requests.get,
+        facets=requests.get,
+        stats=requests.get,
+        delete=requests.delete,
+        head=requests.head,
+        index=requests.put,
+        patch=requests.patch,
+    )
 
-    def build_url(self, action_request, query, endpoint, ip, body, document_id, nodename):
-        if type(endpoint) is list:
+    def __init__(self, commit=True, port=8880):
+        self.port = port
+        self.commit = commit
+
+    def build_url(self, action_request, endpoint, ip, body, document_id, nodename):
+        if isinstance(endpoint, (tuple, list)):
             endpoint = ','.join(endpoint)
 
         if ':' not in ip:
             ip = '%s:%s' % (ip, self.port)
 
-        if self.has_id[action_request] or (action_request == 'search' and document_id is not None):
+        if document_id is not None:
             if nodename:
                 url = 'http://%s/%s@%s/%s' % (ip, endpoint, nodename, document_id)
             else:
@@ -67,13 +68,10 @@ class Xapiand(object):
             if nodename:
                 url = 'http://%s/%s@%s/_%s/' % (ip, endpoint, nodename, action_request)
             else:
-                url = 'http://' + ip + '/' + endpoint + '/_' + action_request + '/?' + query
                 url = 'http://%s/%s/_%s/' % (ip, endpoint, action_request)
-        if query:
-            url += '/?%s' % query
         return url
 
-    def send_request(self, action_request, endpoint, query=None, ip='127.0.0.1', body=None, document_id=None, nodename=None, time_out=None):
+    def send_request(self, action_request, endpoint, ip='127.0.0.1', body=None, document_id=None, nodename=None, **kwargs):
 
         """
         :arg action_request: Perform  index, delete, serch, facets, stats, patch, head actions per request
@@ -84,28 +82,31 @@ class Xapiand(object):
         :arg document_id: Document ID
         :arg nodename: Node name, if empty is assigned randomly
         """
-
+        params = kwargs.pop('params', None)
+        if params is not None:
+            kwargs['params'] = dict((k.replace('__', '.'), (v and 1 or 0) if isinstance(v, bool) else v) for k, v in params.items())
         response = {}
-        url = self.build_url(action_request, query, endpoint, ip, body, document_id, nodename)
+        method = self._methods[action_request]
+        url = self.build_url(action_request, endpoint, ip, body, document_id, nodename)
         try:
-            if self.has_3arg[action_request]:
+            if body is not None:
                 if isinstance(body, dict):
-                    res = self.method[action_request](url, json.dumps(body), timeout=time_out)
-                    response['results'] = res.iter_lines()
+                    body = json.dumps(body)
                 elif os.path.isfile(body):
-                    res = self.method[action_request](url, open(body, 'r'), timeout=time_out)
-                    response['results'] = res.iter_lines()
+                    body = open(body, 'r')
+                res = method(url, body, **kwargs)
             else:
-                res = self.method[action_request](url, timeout=time_out)
-                if action_request == 'facets':
-                    response['facets'] = res.iter_lines()
-                else:
-                    response['results'] = res.iter_lines()
+                res = method(url, **kwargs)
 
-                if 'x-matched-count' in res.headers:
-                    response['size'] = res.headers['x-matched-count']
-                elif action_request == 'search' and not res.ok:
-                    response['size'] = 0
+            if action_request == 'facets':
+                response['facets'] = res.iter_lines()
+            else:
+                response['results'] = res.iter_lines()
+
+            if 'x-matched-count' in res.headers:
+                response['size'] = res.headers['x-matched-count']
+            elif action_request == 'search' and not res.ok:
+                response['size'] = 0
 
             return response
 
@@ -122,3 +123,95 @@ class Xapiand(object):
 
         except requests.exceptions.ConnectionError as e:
             raise e
+
+    def search(self, endpoint, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
+        kwargs = kwargs or {}
+        kwargs.update(kw)
+        kwargs['params'] = dict(
+            pretty=pretty,
+        )
+        if query is None:
+            kwargs['params']['query'] = query
+        if partial is None:
+            kwargs['params']['partial'] = partial
+        if terms is None:
+            kwargs['params']['terms'] = terms
+        if offset is None:
+            kwargs['params']['offset'] = offset
+        if limit is None:
+            kwargs['params']['limit'] = limit
+        if sort is None:
+            kwargs['params']['sort'] = sort
+        if facets is None:
+            kwargs['params']['facets'] = facets
+        if language is None:
+            kwargs['params']['language'] = language
+        return self.send_request('search', endpoint, **kwargs)
+
+    def facets(self, endpoint, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
+        kwargs = kwargs or {}
+        kwargs.update(kw)
+        kwargs['params'] = dict(
+            pretty=pretty,
+        )
+        if query is None:
+            kwargs['params']['query'] = query
+        if partial is None:
+            kwargs['params']['partial'] = partial
+        if terms is None:
+            kwargs['params']['terms'] = terms
+        if offset is None:
+            kwargs['params']['offset'] = offset
+        if limit is None:
+            kwargs['params']['limit'] = limit
+        if sort is None:
+            kwargs['params']['sort'] = sort
+        if facets is None:
+            kwargs['params']['facets'] = facets
+        if language is None:
+            kwargs['params']['language'] = language
+        return self.send_request('facets', endpoint, **kwargs)
+
+    def stats(self, endpoint, pretty=False, kwargs=None):
+        kwargs = kwargs or {}
+        kwargs['params'] = dict(
+            pretty=pretty,
+        )
+        return self.send_request('stats', endpoint, **kwargs)
+
+    def head(self, endpoint, document_id, pretty=False, kwargs=None):
+        kwargs = kwargs or {}
+        kwargs['document_id'] = document_id
+        kwargs['params'] = dict(
+            pretty=pretty,
+        )
+        return self.send_request('head', endpoint, **kwargs)
+
+    def delete(self, endpoint, document_id, commit=None, pretty=False, kwargs=None):
+        kwargs = kwargs or {}
+        kwargs['document_id'] = document_id
+        kwargs['params'] = dict(
+            commit=self.commit if commit is None else commit,
+            pretty=pretty,
+        )
+        return self.send_request('delete', endpoint, **kwargs)
+
+    def index(self, endpoint, document_id, body, commit=None, pretty=False, kwargs=None):
+        kwargs = kwargs or {}
+        kwargs['document_id'] = document_id
+        kwargs['body'] = body
+        kwargs['params'] = dict(
+            commit=self.commit if commit is None else commit,
+            pretty=pretty,
+        )
+        return self.send_request('index', endpoint, **kwargs)
+
+    def patch(self, endpoint, document_id, body, commit=None, pretty=False, kwargs=None):
+        kwargs = kwargs or {}
+        kwargs['document_id'] = document_id
+        kwargs['body'] = body
+        kwargs['params'] = dict(
+            commit=self.commit if commit is None else commit,
+            pretty=pretty,
+        )
+        return self.send_request('patch', endpoint, **kwargs)
