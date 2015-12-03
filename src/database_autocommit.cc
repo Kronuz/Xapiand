@@ -22,23 +22,23 @@
 
 #include "database_autocommit.h"
 
- std::mutex DatabaseAutocommit::mtx;
+
+std::mutex DatabaseAutocommit::mtx;
 std::condition_variable DatabaseAutocommit::wakeup_signal;
 std::unordered_map<Endpoints, DatabaseCommitStatus> DatabaseAutocommit::databases;
 std::chrono::time_point<std::chrono::system_clock> DatabaseAutocommit::next_wakeup_time(std::chrono::system_clock::now() + 10s);
 
 
-std::chrono::time_point<std::chrono::system_clock> DatabaseCommitStatus::next_wakeup_time()
+std::chrono::time_point<std::chrono::system_clock>
+DatabaseCommitStatus::next_wakeup_time()
 {
 	return max_commit_time < commit_time ? max_commit_time : commit_time;
 }
 
 
-DatabaseAutocommit::DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_) :
-	running(true),
-	manager(manager_)
-{
-}
+DatabaseAutocommit::DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_)
+	: running(true),
+	  manager(manager_) { }
 
 
 DatabaseAutocommit::~DatabaseAutocommit()
@@ -47,11 +47,12 @@ DatabaseAutocommit::~DatabaseAutocommit()
 }
 
 
-void DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
+void
+DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
 {
 	std::lock_guard<std::mutex> lk(DatabaseAutocommit::mtx);
 
-	DatabaseCommitStatus & status = DatabaseAutocommit::databases[database->endpoints];
+	DatabaseCommitStatus& status = DatabaseAutocommit::databases[database->endpoints];
 
 	auto now = std::chrono::system_clock::now();
 	if (!status.database.lock()) {
@@ -66,7 +67,8 @@ void DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& databas
 }
 
 
-void DatabaseAutocommit::run()
+void
+DatabaseAutocommit::run()
 {
 	while (running) {
 		std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx);
@@ -74,14 +76,13 @@ void DatabaseAutocommit::run()
 
 		auto now = std::chrono::system_clock::now();
 
-		for (auto it = DatabaseAutocommit::databases.begin(); it != DatabaseAutocommit::databases.end();) {
+		for (auto it = DatabaseAutocommit::databases.begin(); it != DatabaseAutocommit::databases.end(); ) {
 			auto endpoints = it->first;
 			auto status = it->second;
-			auto _database = status.database.lock();
-			if (_database) {
+			if (status.database.lock()) {
 				auto next_wakeup_time = status.next_wakeup_time();
 				if (next_wakeup_time <= now) {
-					DatabaseAutocommit::databases.erase(it++);
+					DatabaseAutocommit::databases.erase(it);
 					lk.unlock();
 					std::shared_ptr<Database> database;
 					if (manager->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
@@ -100,5 +101,3 @@ void DatabaseAutocommit::run()
 		}
 	}
 }
-
-
