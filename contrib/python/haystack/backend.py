@@ -222,7 +222,7 @@ class XapianSearchBackend(BaseSearchBackend):
             ip = settings.XAPIAN_SERVER
 
             for endpoint in endpoints:
-                client.send_request(action_request='index', endpoint=endpoint, query='commit=true', ip=ip, body=document_json, _id=document_id)
+                client.send_request(action_request='index', endpoint=endpoint, params=dict(commit=True), ip=ip, data=document_json, document_id=document_id)
 
     def update(self, index, iterable, commit=False):
         for obj in iterable:
@@ -234,7 +234,7 @@ class XapianSearchBackend(BaseSearchBackend):
         ip = settings.XAPIAN_SERVER
         client = Xapiand()
         for endpoint in endpoints:
-            client.send_request(action_request='delete', endpoint=endpoint, query=None, ip=ip, body=None, _id=document_id)
+            client.send_request(action_request='delete', endpoint=endpoint, ip=ip, document_id=document_id)
 
     def clear(self, models=[], commit=True):
         pass
@@ -261,15 +261,15 @@ class XapianSearchBackend(BaseSearchBackend):
             if not terms:
                 terms = set()
                 for model in models:
-                    terms.add('terms=%s:%s.%s' % (DJANGO_CT.upper(), model._meta.app_label, model._meta.module_name))
+                    terms.add('%s:%s.%s' % (DJANGO_CT.upper(), model._meta.app_label, model._meta.module_name))
 
         hints = hints or {}
         endpoints = self.endpoints.for_read(models=models, **hints)
         ip = settings.XAPIAN_SERVER
-        query = self.setup_query(offset=offset, limit=limit, queries=queries, terms=terms, partials=partials)
+        params = dict(offset=offset, limit=limit, query=queries, terms=terms, partials=partials)
 
         client = Xapiand()
-        results = client.send_request(action_request='search', endpoint=endpoints, query=query, ip=ip)
+        results = client.send_request(action_request='search', endpoint=endpoints, params=params, ip=ip)
         results_obj = XapianSearchResults(results)
 
         return {
@@ -277,32 +277,6 @@ class XapianSearchBackend(BaseSearchBackend):
             'facet': results_obj.facets,
             'hits': results_obj.size,
         }
-
-    def setup_query(self, offset=None, limit=None, queries=None, terms=None, partials=None):
-        connector = '&'
-        final_query = str()
-        if queries:
-            final_query = connector.join((final_query, connector.join(queries)))
-
-        if terms:
-            final_query = connector.join((final_query, connector.join(terms)))
-
-        if partials:
-            final_query = connector.join((final_query, connector.join(partials)))
-
-        if offset:
-            if final_query[0] == '&':
-                final_query = ''.join(('offset=' + str(offset), final_query))
-            else:
-                final_query = connector.join(('offset=' + str(offset), final_query))
-
-        if limit:
-            if final_query[0] == '&':
-                final_query = ''.join(('limit=' + str(limit), final_query))
-            else:
-                final_query = connector.join(('limit=' + str(limit), final_query))
-
-        return final_query
 
     def build_schema(self, fields):
         """
@@ -392,51 +366,51 @@ class XapianSearchQuery(BaseSearchQuery):
     def build_query_fragment(self, field, filter_type, value):
 
         if filter_type == 'contains':
-            self.queries.add('query=%s:%s' % (field, value))
+            self.queries.add('%s:%s' % (field, value))
             value = '###'
 
         # xapiand use operator AND_MAYBE with several partial, query and terms
         elif filter_type == 'like':
             for v in value.split():
-                self.partials.append('partial=%s:%s' % (field, v))
+                self.partials.append('%s:%s' % (field, v))
             value = '###'
 
         elif filter_type == 'exact':
             if field == DOCUMENT_AC_FIELD:
                 for v in value.split():
-                    self.partials.append('partial=%s:%s' % (field, v))
+                    self.partials.append('%s:%s' % (field, v))
                 value = '###'
             elif field == DOCUMENT_TAGS_FIELD:
-                value = 'terms=%s:%s' % (field, value)
+                value = '%s:%s' % (field, value)
                 self.terms.add(value)
                 value = '###'
             else:
-                self.queries.add('query=%s:"%s"' % (field, value))
+                self.queries.add('%s:"%s"' % (field, value))
                 value = '###'
 
         # FIXME: Xapiand support EWKT, It needs to implement a way to indicate which primitive is used
         # elif filter_type == 'geo':
 
         elif filter_type == 'gte':
-            self.queries.add('query=%s:%s..' % (field, value))
+            self.queries.add('%s:%s..' % (field, value))
             value = '###'
 
         elif filter_type == 'gt':
-            self.queries.add('query=%s:..%s' % (field, value))
+            self.queries.add('%s:..%s' % (field, value))
             self.queries.add('NOT %s' % '%s:%s' % (field, value))
             value = '###'
 
         elif filter_type == 'lte':
-            self.queries.add('query=%s:..%s' % (field, value))
+            self.queries.add('%s:..%s' % (field, value))
             value = '###'
 
         elif filter_type == 'lt':
-            self.queries.add('query=%s:%s..' % (field, value))
+            self.queries.add('%s:%s..' % (field, value))
             self.queries.add('NOT %s' % '%s:%s' % (field, value))
             value = '###'
 
         elif filter_type == 'startswith':
-            self.queries.add('query=%s:%s*' % (field, value))
+            self.queries.add('%s:%s*' % (field, value))
             value = '###'
 
         return value
