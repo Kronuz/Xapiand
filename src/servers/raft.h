@@ -38,27 +38,6 @@ constexpr uint16_t XAPIAND_RAFT_PROTOCOL_VERSION = XAPIAND_RAFT_PROTOCOL_MAJOR_V
 // The Raft consensus algorithm
 class Raft : public BaseUDP {
 private:
-	uint64_t term;
-	size_t votes;
-	size_t num_servers;
-
-	ev::timer election_leader;
-	ev::tstamp election_timeout;
-
-	ev::timer heartbeat;
-	ev::tstamp last_activity;
-
-	std::string votedFor;
-	std::string leader;
-
-	void leader_election_cb(ev::timer &watcher, int revents);
-	void heartbeat_cb(ev::timer &watcher, int revents);
-
-	void start_heartbeat();
-
-	friend RaftServer;
-
-public:
 	enum class State {
 		LEADER,
 		FOLLOWER,
@@ -75,8 +54,31 @@ public:
 		RESET,              // Force reset a node
 	};
 
-	State state;
+	uint64_t term;
+	size_t votes;
 
+	std::atomic_bool running;
+
+	ev::timer election_leader;
+	ev::tstamp election_timeout;
+
+	ev::timer heartbeat;
+	ev::tstamp last_activity;
+
+	std::string votedFor;
+	std::string leader;
+
+	State state;
+	std::atomic_size_t number_servers;
+
+	void leader_election_cb(ev::timer &watcher, int revents);
+	void heartbeat_cb(ev::timer &watcher, int revents);
+
+	void start_heartbeat();
+
+	friend RaftServer;
+
+public:
 	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_);
 	~Raft();
 
@@ -89,6 +91,22 @@ public:
 	std::string getDescription() const noexcept override;
 
 	inline void start() {
-		election_leader.start();
+		if (!running.exchange(true)) {
+			election_leader.start();
+			LOG_RAFT(this, "Raft was started!\n");
+		}
+		number_servers.store(manager->get_nodes_by_region(local_node.region.load()) + 1);
+	}
+
+	inline void stop() {
+		if (running.exchange(false)) {
+			election_leader.stop();
+			if (state == State::LEADER) {
+				heartbeat.stop();
+			}
+			state = State::FOLLOWER;
+			number_servers.store(1);
+			LOG_RAFT(this, "Raft was stopped!\n");
+		}
 	}
 };

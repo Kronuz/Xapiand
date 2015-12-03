@@ -30,10 +30,11 @@
 Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_)
 	: BaseUDP(manager_, loop_, port_, "Raft", group_),
 	  term(0),
-	  num_servers(0),
+	  running(false),
 	  election_leader(*loop),
 	  heartbeat(*loop),
-	  state(State::FOLLOWER)
+	  state(State::FOLLOWER),
+	  number_servers(0)
 {
 	election_timeout = random_real(ELECTION_LEADER_MIN, ELECTION_LEADER_MAX);
 	election_leader.set<Raft, &Raft::leader_election_cb>(this);
@@ -79,16 +80,14 @@ Raft::leader_election_cb(ev::timer &, int)
 	if (manager->state == XapiandManager::State::READY) {
 		// calculate when the timeout would happen
 		ev::tstamp remaining_time = last_activity + election_timeout - ev::now(*loop);
-		LOG_RAFT(this, "Raft { Reg: %d; State: %d; Rem_t: %f; Elec_t: %f; Term: %llu; #ser: %d; Lead: %s }\n",
-			manager->get_region(), state, remaining_time, election_timeout, term, num_servers, leader.c_str());
+		LOG_RAFT(this, "Raft { Reg: %d; State: %d; Rem_t: %f; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }\n",
+			local_node.region.load(), state, remaining_time, election_timeout, term, number_servers.load(), leader.c_str());
 
 		if (remaining_time < 0. && state != State::LEADER) {
 			state = State::CANDIDATE;
 			term++;
 			votes = 0;
 			votedFor.clear();
-			// Plus 1, because local_node is in the region too.
-			num_servers = manager->get_nodes_by_region(manager->get_region()) + 1;
 			send_message(Message::REQUEST_VOTE, local_node.serialise() + serialise_string(std::to_string(term)));
 			election_timeout = random_real(ELECTION_LEADER_MIN, ELECTION_LEADER_MAX);
 		}
@@ -116,7 +115,7 @@ void
 Raft::start_heartbeat()
 {
 	send_message(Message::LEADER, local_node.serialise() +
-		serialise_string(std::to_string(num_servers)) +
+		serialise_string(std::to_string(number_servers.load())) +
 		serialise_string(std::to_string(term)));
 
 	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
