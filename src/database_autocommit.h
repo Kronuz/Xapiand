@@ -58,7 +58,7 @@ public:
 	DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_);
 	~DatabaseAutocommit();
 
-	static void signal_changed(const std::shared_ptr<Database> &database);
+	static void signal_changed(const std::shared_ptr<Database>& database);
 
 	void run();
 };

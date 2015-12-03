@@ -47,7 +47,7 @@ DatabaseAutocommit::~DatabaseAutocommit()
 }
 
 
-void DatabaseAutocommit::signal_changed(const std::shared_ptr<Database> &database)
+void DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
 {
 	std::lock_guard<std::mutex> lk(DatabaseAutocommit::mtx);
 
