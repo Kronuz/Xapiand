@@ -96,7 +96,7 @@ DatabaseAutocommit::run()
 					++it;
 				}
 			} else {
-				DatabaseAutocommit::databases.erase(it++);
+				it = DatabaseAutocommit::databases.erase(it);
 			}
 		}
 	}
