@@ -715,6 +715,10 @@ void HttpClient::index_document_view(const query_field &e)
 
 	auto tp_start = std::chrono::system_clock::now();
 
+	if (content_type.empty()) {
+		content_type = "application/json";
+	}
+
 	if (!database->index(body, command, e.commit, content_type, content_length)) {
 		manager()->database_pool.checkin(database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
