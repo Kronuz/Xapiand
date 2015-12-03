@@ -141,8 +141,8 @@ public:
 	bool get_node(const std::string &node_name, const Node **node);
 	bool touch_node(const std::string &node_name, int region, const Node **node=nullptr);
 	void drop_node(const std::string &node_name);
+	size_t get_nodes_by_region(int region);
 
-	int get_nodes_by_region(int region);
 	// Return the region to which db name belongs
 	int get_region(const std::string &db_name);
 	// Return the region to which local_node belongs
