@@ -108,5 +108,6 @@ public:
 			number_servers.store(1);
 			LOG_RAFT(this, "Raft was stopped!\n");
 		}
+		number_servers.store(manager->get_nodes_by_region(local_node.region.load()) + 1);
 	}
 };

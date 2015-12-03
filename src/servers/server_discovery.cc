@@ -206,6 +206,8 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 						}
 						discovery->manager->drop_node(remote_node.name);
 						LOG_INFO(this, "Node %s left the party!\n", remote_node.name.c_str());
+						local_node.regions.store(-1);
+						discovery->manager->get_region();
 					}
 					break;
 
