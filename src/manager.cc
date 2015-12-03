@@ -246,6 +246,13 @@ XapiandManager::reset_state()
 
 
 bool
+XapiandManager::is_single_node()
+{
+	return nodes.size() == 1;
+}
+
+
+bool
 XapiandManager::put_node(const Node &node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);

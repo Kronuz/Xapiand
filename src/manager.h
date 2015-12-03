@@ -135,6 +135,7 @@ public:
 	void shutdown();
 
 	void reset_state();
+	bool is_single_node();
 
 	bool put_node(const Node &node);
 	bool get_node(const std::string &node_name, const Node **node);

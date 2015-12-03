@@ -1220,9 +1220,14 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 						timeout = 2s;
 					} else timeout = 1s;
 
-					if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, manager(), asked_nodes, num_endps, timeout)) {
+					if (manager()->is_single_node()) {
 						has_node_name = true;
 						node_name = local_node.name;
+					} else {
+						if (!manager()->endp_r.resolve_index_endpoint(asked_node.path, manager(), asked_nodes, num_endps, timeout)) {
+							has_node_name = true;
+							node_name = local_node.name;
+						}
 					}
 				}
 
