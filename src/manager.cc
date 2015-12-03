@@ -493,7 +493,6 @@ XapiandManager::run(const opts_t &o)
 	LOG_INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
 
 	discovery->start();
-	raft->start();
 
 	LOG_EV(this, "\tStarting manager loop...\n");
 	loop->run();
@@ -526,11 +525,18 @@ int
 XapiandManager::get_region()
 {
 	if (local_node.regions.load() == -1) {
-		local_node.regions.store(sqrt(nodes.size()));
-		int region = jump_consistent_hash(local_node.id, local_node.regions.load());
-		if (local_node.region.load() != region) {
-			local_node.region.store(region);
-			raft->reset();
+		if (is_single_node()) {
+			local_node.regions.store(1);
+			local_node.region.store(0);
+			raft->stop();
+		} else {
+			raft->start();
+			local_node.regions.store(sqrt(nodes.size() + 1));
+			int region = jump_consistent_hash(local_node.id, local_node.regions.load());
+			if (local_node.region.load() != region) {
+				local_node.region.store(region);
+				raft->reset();
+			}
 		}
 		LOG_RAFT(this, "Regions: %d Region: %d\n", local_node.regions.load(), local_node.region.load());
 	}
