@@ -114,6 +114,7 @@ class HttpClient : public BaseClient {
 
 	int _endpointgen(query_field &e, bool writable);
 	static int identify_cmd(const std::string &commad);
+	void clean_http_headers();
 
 	friend Worker;
 

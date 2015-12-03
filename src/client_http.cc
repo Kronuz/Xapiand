@@ -413,6 +413,7 @@ void HttpClient::run()
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 				break;
 		}
+		clean_http_headers();
 	} catch (const Xapian::Error &err) {
 		has_error = true;
 		error_str = err.get_error_string();
@@ -1543,4 +1544,18 @@ HttpClient::identify_cmd(const std::string &commad)
 	}
 
 	return CMD_ID;
+}
+
+
+void
+HttpClient::clean_http_headers()
+{
+	path.clear();
+	body.clear();
+	header_name.clear();
+	header_value.clear();
+	content_type.clear();
+	content_length.clear();
+	host.clear();
+	command.clear();
 }
