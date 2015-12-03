@@ -10,6 +10,7 @@ xapiand_SOURCES = \
 	client_binary.cc \
 	client_http.cc \
 	database.cc \
+	database_autocommit.cc \
 	database_utils.cc \
 	datetime.cc \
 	endpoint.cc \
@@ -65,6 +66,7 @@ noinst_HEADERS = \
 	client_http.h \
 	compressor.h \
 	database.h \
+	database_autocommit.h \
 	database_utils.h \
 	datetime.h \
 	endpoint.h \

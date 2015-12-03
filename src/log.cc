@@ -141,11 +141,11 @@ LogThread::thread_function()
 		for (auto it = log_list.begin(); it != log_list.end(); ++it) {
 			if (it->use_count() == 1 || (*it)->finished.load()) {
 				log_list.erase(it);
-			} else if ((*it)->wakeup < now) {
+			} else if ((*it)->wakeup <= now) {
 				(*it)->finished.store(true);
 				Log::print((*it)->str_start);
 				log_list.erase(it);
-			} else if ((*it)->wakeup < next_wakeup) {
+			} else if (next_wakeup > (*it)->wakeup) {
 				next_wakeup = (*it)->wakeup;
 			}
 		}

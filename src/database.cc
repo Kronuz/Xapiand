@@ -21,6 +21,7 @@
  */
 
 #include "database.h"
+#include "database_autocommit.h"
 #include "multivalue.h"
 #include "multivaluerange.h"
 #include "length.h"
@@ -171,7 +172,7 @@ Database::reopen()
 
 
 bool
-Database::drop(const std::string &doc_id, bool commit)
+Database::drop(const std::string &doc_id, bool _commit)
 {
 	if (!(flags & DB_WRITABLE)) {
 		LOG_ERR(this, "ERROR: database is read-only\n");
@@ -198,7 +199,11 @@ Database::drop(const std::string &doc_id, bool commit)
 			continue;
 		}
 		LOG_DATABASE_WRAP(this, "Document deleted\n");
-		return (commit) ? _commit() : true;
+		if (_commit) return commit();
+		else {
+			modified = true;
+			return true;
+		}
 	}
 
 	LOG_ERR(this, "ERROR: Cannot delete document: %s!\n", document_id.c_str());
@@ -207,7 +212,7 @@ Database::drop(const std::string &doc_id, bool commit)
 
 
 bool
-Database::_commit()
+Database::commit()
 {
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Commit: t%d\n", t);
@@ -229,7 +234,7 @@ Database::_commit()
 
 
 Xapian::docid
-Database::patch(cJSON *patches, const std::string &_document_id, bool commit, const std::string &ct_type, const std::string &ct_length)
+Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, const std::string &ct_type, const std::string &ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
 		LOG_ERR(this, "ERROR: database is read-only\n");
@@ -271,7 +276,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool commit, co
 
 	if (cJSONUtils_ApplyPatches(data_json.get(), patches) == 0) {
 		// Object patched
-		return index(cJSON_PrintUnformatted(data_json.get()), _document_id, commit, ct_type, ct_length);
+		return index(cJSON_PrintUnformatted(data_json.get()), _document_id, _commit, ct_type, ct_length);
 	}
 
 	// Object no patched
@@ -586,7 +591,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 
 
 Xapian::docid
-Database::index(const std::string &body, const std::string &_document_id, bool commit, const std::string &ct_type, const std::string &ct_length)
+Database::index(const std::string &body, const std::string &_document_id, bool _commit, const std::string &ct_type, const std::string &ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
 		LOG_ERR(this, "ERROR: database is read-only\n");
@@ -797,12 +802,12 @@ Database::index(const std::string &body, const std::string &_document_id, bool c
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 	_cprint = std::move(unique_char_ptr(cJSON_Print(schema.get())));
 	wdb->set_metadata(RESERVED_SCHEMA, _cprint.get());
-	return replace(document_id, doc, commit);
+	return replace(document_id, doc, _commit);
 }
 
 
 Xapian::docid
-Database::replace(const std::string &document_id, const Xapian::Document &doc, bool commit)
+Database::replace(const std::string &document_id, const Xapian::Document &doc, bool _commit)
 {
 	Xapian::docid did;
 	for (int t = 3; t >= 0; --t) {
@@ -818,7 +823,8 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 			continue;
 		}
 		LOG_DATABASE_WRAP(this, "Document inserted\n");
-		if (commit) _commit();
+		if (_commit) commit();
+		else modified = true;
 		return did;
 	}
 
@@ -827,7 +833,7 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 
 
 Xapian::docid
-Database::replace(const Xapian::docid &did, const Xapian::Document &doc, bool commit)
+Database::replace(const Xapian::docid &did, const Xapian::Document &doc, bool _commit)
 {
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Inserting: -did:%u- t:%d\n", did, t);
@@ -842,7 +848,8 @@ Database::replace(const Xapian::docid &did, const Xapian::Document &doc, bool co
 			continue;
 		}
 		LOG_DATABASE_WRAP(this, "Document inserted\n");
-		if (commit) _commit();
+		if (_commit) commit();
+		else modified = true;
 		return did;
 	}
 
@@ -1503,7 +1510,7 @@ Database::get_metadata(const std::string &key, std::string &value)
 
 
 bool
-Database::set_metadata(const std::string &key, const std::string &value, bool commit)
+Database::set_metadata(const std::string &key, const std::string &value, bool _commit)
 {
 	for (int t = 3; t >= 0; --t) {
 		LOG_DATABASE_WRAP(this, "Metadata: %d\n", t);
@@ -1516,7 +1523,7 @@ Database::set_metadata(const std::string &key, const std::string &value, bool co
 			continue;
 		}
 		LOG_DATABASE_WRAP(this, "set_metadata was done\n");
-		return (commit) ? _commit() : true;
+		return (_commit) ? commit() : true;
 	}
 
 	LOG_ERR(this, "ERROR: set_metadata can not be done!\n");
@@ -1826,7 +1833,9 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 
 	lk.unlock();
 
-	if (!database) {
+	if (database) {
+		database->modified = false;
+	} else {
 		LOG_DATABASE_END(this, "!! FAILED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
 		return false;
 	}
@@ -1877,6 +1886,10 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	int flags = database->flags;
 	Endpoints &endpoints = database->endpoints;
+
+	if (database->modified) {
+		DatabaseAutocommit::signal_changed(database);
+	}
 
 	if (!(flags & DB_VOLATILE)) {
 		queue->push(database);
