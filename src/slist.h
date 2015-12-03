@@ -26,121 +26,314 @@
 #include <iostream>
 
 
-template<typename T>
+/*
+ * Lock Free Shared Single-Linked List Using Compare and Swap.
+ * This structure is based in the article:
+ * "Lock-Free Linked List Using Compare-and-Swap", John D. Valois, 1995.
+ */
+
+template <typename T>
 class slist {
 	struct Node {
+	private:
+		bool contains_data;
+		bool isHead;
+		bool isTail;
+
+	public:
 		T data;
 		std::shared_ptr<Node> next;
+		std::shared_ptr<Node> previous; // Auxiliar node used only for try_delete algorithm.
+
+		Node()
+			: contains_data(false),
+			  isHead(false),
+			  isTail(false) { }
 
 		template<typename Data>
-		Node(Data&& _data) : data(std::forward<Data>(_data)) { }
+		Node(Data&& _data)
+			: contains_data(true),
+			  isHead(false),
+			  isTail(false),
+			  data(std::forward<Data>(_data)) { }
 
-		Node() = default;
+		auto set_head() {
+			isHead = true;
+		}
+
+		auto set_tail() {
+			isTail = true;
+		}
+
+		inline auto is_normal() const {
+			return contains_data && !isHead && !isTail;
+		}
+
+		inline auto is_auxiliary() {
+			return !contains_data && !isHead && !isTail;
+		}
+
+		inline auto is_head() const {
+			return isHead;
+		}
+
+		inline auto is_tail() const {
+			return isTail;
+		}
 	};
 
 	std::shared_ptr<Node> head;
+	std::shared_ptr<Node> tail;
+	std::atomic_size_t number_nodes;
 
-	slist(const slist&) = delete;
-	void operator=(const slist&) = delete;
+	friend class iterator;
 
 public:
-	slist() : head(std::make_shared<Node>()) {}
+	slist()
+		: head(std::make_shared<Node>()),
+		  tail(std::make_shared<Node>()),
+		  number_nodes(0)
+	{
+		head->set_head();
+		tail->set_tail();
+		head->next = std::make_shared<Node>();
+		head->next->next = tail;
+	}
+
 	~slist() {
 		clear();
 	}
 
 	class iterator {
-		std::shared_ptr<Node> p;
+		std::shared_ptr<Node> target;   // Node where the iterator is visiting.
+		std::shared_ptr<Node> pre_aux;  // Auxiliary node in data structure.
+		std::shared_ptr<Node> pre_cell; // Normal node in data structure.
 
-		friend slist;
+		friend class slist<T>;
 
 	public:
-		iterator(std::shared_ptr<Node> _p)
-			: p(std::move(_p)) { }
+		iterator() = default;
 
-		iterator(const iterator& it)
-			: p(it.p) { }
+		iterator(const iterator &rhs)
+			: target(rhs.target),
+			  pre_aux(rhs.pre_aux),
+			  pre_cell(rhs.pre_cell) { }
 
-		explicit operator bool() const {
-			return p != nullptr;
-		}
-
-		T& operator*() const {
-			return p->data;
-		}
-
-		T* operator->() const {
-			return &p->data;
-		}
-
-		auto operator==(const iterator& it) const {
-			return p == it.p;
-		}
-
-		auto operator!=(const iterator& it) const {
-			return p != it.p;
-		}
-
-		iterator& operator++() { // Prefix.
-			p = std::atomic_load(&p->next);
+		const iterator& operator=(const iterator &rhs) {
+			target = rhs.target;
+			pre_aux = rhs.pre_aux;
+			pre_cell = rhs.pre_cell;
 			return *this;
 		}
 
+		auto next() {
+			if (target->is_tail()) return false;
+
+			pre_cell = std::atomic_load(&target);
+			pre_aux = std::atomic_load(&target->next);
+
+			update();
+
+			return true;
+		}
+
+		void update() {
+			if (pre_aux->next == target) return;
+
+			auto p = pre_aux;
+			auto n = std::atomic_load(&p->next);
+			while (n->is_auxiliary()) {
+				std::atomic_compare_exchange_strong(&pre_cell->next, &p, n);
+				p = n;
+				n = std::atomic_load(&p->next);
+			}
+			pre_aux = p;
+			target = n;
+		}
+
 		iterator operator++(int) { // Postfix.
-			iterator result(*this);
-			++(*this);
-			return result;
+			iterator temp(*this);
+			next();
+			return temp;
+		}
+
+		iterator& operator++() { // Prefix
+			next();
+			return *this;
+		}
+
+		bool operator==(const iterator& rhs) const {
+			return target->next == rhs.pre_aux;
+		}
+
+		bool operator!=(const iterator& rhs) const {
+			return target->next != rhs.pre_aux;
+		}
+
+		T& operator*() const {
+			return target->data;
+		}
+
+		T* operator->() const {
+			return &target->data;
+		}
+
+		explicit operator bool() const {
+			return !target->is_tail();
 		}
 	};
 
-	template<typename Data>
-	auto push_front(Data&& data) {
-		auto n = std::make_shared<Node>(std::forward<Data>(data));
-		while (!std::atomic_compare_exchange_weak(&head->next, &n->next, n));
+private:
+	auto try_insert(iterator& it, std::shared_ptr<Node>& q, std::shared_ptr<Node>& a) {
+		std::atomic_store(&a->next, it.target);
+		std::atomic_store(&q->next, a);
+		auto d = it.target;
+		return std::atomic_compare_exchange_strong(&it.pre_aux->next, &d, q);
 	}
 
-	auto pop_front() {
-		auto curr = std::atomic_load(&head->next);
-		while (curr && !std::atomic_compare_exchange_weak(&head->next, &curr, curr->next));
-		return curr ? true : false;
-	}
-
-	auto erase(const iterator& it) {
-		while (true) {
-			auto prev = iterator(std::atomic_load(&head));
-			auto curr = iterator(std::atomic_load(&head->next));
-			while (curr && curr != it) {
-				++prev;
-				++curr;
-			}
-
-			if (curr) {
-				if (std::atomic_compare_exchange_weak(&prev.p->next, &curr.p, curr.p->next)) {
-					return iterator(prev.p->next);
-				}
-			} else {
-				return end();
-			}
+	auto try_delete(iterator& it) {
+		auto d = it.target;
+		auto n = it.target->next;
+		if (!std::atomic_compare_exchange_strong(&it.pre_aux->next, &d, n)) {
+			return false;
 		}
+
+		std::atomic_store(&d->previous, it.pre_cell);
+		auto p = it.pre_cell;
+		while (p->previous) {
+			p = std::atomic_load(&p->previous);
+		}
+
+		auto s = std::atomic_load(&p->next);
+		while (n->next->is_auxiliary()) {
+			n = std::atomic_load(&n->next);
+		}
+
+		bool change;
+		do {
+			change = std::atomic_compare_exchange_strong(&p->next, &s, n);
+		} while (!change && !p->previous && !n->next->is_auxiliary());
+
+		return true;
 	}
 
-	auto size() const {
-		auto result = 0u;
-		for (auto node = std::atomic_load(&head->next); node; node = std::atomic_load(&node->next))
-			++result;
-		return result;
+	auto find_from(iterator& it, const T& _data) {
+		while (it) {
+			if (it.target->data == _data) {
+				return true;
+			}
+			it.next();
+		}
+
+		return false;
 	}
 
+public:
 	auto begin() const {
-		return iterator(std::atomic_load(&head->next));
+		iterator it;
+		it.pre_cell = std::atomic_load(&head);
+		it.pre_aux = std::atomic_load(&head->next);
+		it.update();
+		return it;
 	}
 
 	auto end() const {
-		return iterator(std::shared_ptr<Node>());
+		return iterator();
 	}
 
-	auto clear() {
+	/*
+	 * New node with _data is inserted at the front of the list.
+	 */
+	template<typename Data>
+	auto push_front(Data&& _data) {
+		auto q = std::make_shared<Node>(std::forward<Data>(_data));
+		auto a = std::make_shared<Node>();
 		auto it = begin();
-		while ((it = erase(it)) != end());
+		while (!try_insert(it, q, a)) {
+			it.update();
+		}
+		++number_nodes;
+	}
+
+	/*
+	 * New node with _data is inserted after the iterator.
+	 * The iterator is pointing to the new node.
+	 */
+	template<typename Data>
+	auto insert(iterator& it, Data&& _data) {
+		auto q = std::make_shared<Node>(std::forward<Data>(_data));
+		auto a = std::make_shared<Node>();
+		while (!try_insert(it, q, a)) {
+			it.update();
+		}
+		++number_nodes;
+	}
+
+	/*
+	 * If the list has nodes, the first node is deleted.
+	 */
+	auto pop_front() {
+		auto it = begin();
+		while (it) {
+			if (try_delete(it)) {
+				--number_nodes;
+				return;
+			}
+			it.update();
+		}
+	}
+
+	/*
+	 * Erase the iterator.
+	 * The iterator is pointing to the previous node.
+	 */
+	auto erase(iterator& it) {
+		while (it) {
+			if (try_delete(it)) {
+				--number_nodes;
+				return;
+			}
+			it.update();
+		}
+	}
+
+	/*
+	 * Deletes the first node that contains _data.
+	 * Returns if a node was deleted.
+	 */
+	auto remove(const T& _data) {
+		auto it = begin();
+		while (find_from(it, _data)) {
+			if (try_delete(it)) {
+				--number_nodes;
+				return true;
+			}
+			it.update();
+		}
+
+		return false;
+	}
+
+	/*
+	 * Returns if _data is on the list.
+	 */
+	auto find(const T& _data) {
+		auto it = begin();
+		return find_from(it, _data);
+	}
+
+	inline auto size() const {
+		return number_nodes.load();
+	}
+
+	inline auto clear() {
+		auto it = begin();
+		while (it) {
+			if (try_delete(it)) {
+				--number_nodes;
+			} else {
+				it.update();
+			}
+		}
 	}
 };
