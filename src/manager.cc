@@ -248,7 +248,7 @@ XapiandManager::reset_state()
 bool
 XapiandManager::is_single_node()
 {
-	return nodes.size() == 1;
+	return nodes.size() == 0;
 }
 
 
