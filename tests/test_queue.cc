@@ -32,23 +32,23 @@ int test_unique() {
 	Queue<std::unique_ptr<std::string>> messages_queue;
 	messages_queue.push(std::make_unique<std::string>("This is a unique data"));
 	if (messages_queue.size() != 1) {
-		LOG_ERR(nullptr, "push is not working with unique_ptr.\n");
+		L_ERR(nullptr, "push is not working with unique_ptr.\n");
 		return 1;
 	}
 
 	std::unique_ptr<std::string> msg;
 	if (!messages_queue.pop(msg)) {
-		LOG_ERR(nullptr, "pop is not working with unique_ptr.\n");
+		L_ERR(nullptr, "pop is not working with unique_ptr.\n");
 		return 1;
 	}
 
 	if (messages_queue.size() != 0) {
-		LOG_ERR(nullptr, "size is not working with unique_ptr.\n");
+		L_ERR(nullptr, "size is not working with unique_ptr.\n");
 		return 1;
 	}
 
 	if (*msg != "This is a unique data") {
-		LOG_ERR(nullptr, "pop is changing memory with unique_ptr.\n");
+		L_ERR(nullptr, "pop is changing memory with unique_ptr.\n");
 		return 1;
 	}
 
@@ -60,34 +60,34 @@ int test_shared() {
 	Queue<std::shared_ptr<std::string>> messages_queue;
 	messages_queue.push(std::make_shared<std::string>("This is a shared data"));
 	if (messages_queue.size() != 1) {
-		LOG_ERR(nullptr, "push is not working with shared_ptr.\n");
+		L_ERR(nullptr, "push is not working with shared_ptr.\n");
 		return 1;
 	}
 
 	std::shared_ptr<std::string> shared = messages_queue.front();
 	if (messages_queue.size() != 1) {
-		LOG_ERR(nullptr, "front is not working with shared_ptr.\n");
+		L_ERR(nullptr, "front is not working with shared_ptr.\n");
 		return 1;
 	}
 
 	if (shared.use_count() != 2) {
-		LOG_ERR(nullptr, "Lose memory with shared_ptr.\n");
+		L_ERR(nullptr, "Lose memory with shared_ptr.\n");
 		return 1;
 	}
 
 	std::shared_ptr<std::string> msg;
 	if (!messages_queue.pop(msg)) {
-		LOG_ERR(nullptr, "pop is not working with shared_ptr.\n");
+		L_ERR(nullptr, "pop is not working with shared_ptr.\n");
 		return 1;
 	}
 
 	if (messages_queue.size() != 0)  {
-		LOG_ERR(nullptr, "size is not working with shared_ptr.\n");
+		L_ERR(nullptr, "size is not working with shared_ptr.\n");
 		return 1;
 	}
 
 	if (*msg != "This is a shared data")  {
-		LOG_ERR(nullptr, "pop is changing memory with shared_ptr.\n");
+		L_ERR(nullptr, "pop is changing memory with shared_ptr.\n");
 		return 1;
 	}
 
@@ -106,19 +106,19 @@ int test_queue() {
 	q.push(val);
 
 	if (q.size() != 4) {
-		LOG_ERR(nullptr, "push is not working with int.\n");
+		L_ERR(nullptr, "push is not working with int.\n");
 		return 1;
 	}
 
 	int i1, i2, i3, i4;
 
 	if (!q.pop(i1, 0) || !q.pop(i2, 0) || !q.pop(i3, 0) || !q.pop(i4, 0)) {
-		LOG_ERR(nullptr, "pop is not working with int.\n");
+		L_ERR(nullptr, "pop is not working with int.\n");
 		return 1;
 	}
 
 	if (i1 != 1 || i2 != 2 || i3 != 3 || i4 != 4) {
-		LOG_ERR(nullptr, "pop is changing memory with int.\n");
+		L_ERR(nullptr, "pop is changing memory with int.\n");
 		return 1;
 	}
 
@@ -138,19 +138,19 @@ int test_queue_set() {
 	q.push(1);  // renew by default, doesn't insert a new item
 
 	if (q.size() != 4) {
-		LOG_ERR(nullptr, "QueueSet::push is not working.\n");
+		L_ERR(nullptr, "QueueSet::push is not working.\n");
 		return 1;
 	}
 
 	int i1, i2, i3, i4, i5 = 789;
 
 	if (!q.pop(i1, 0) || !q.pop(i2, 0) || !q.pop(i3, 0) || !q.pop(i4, 0) || q.pop(i5, 0)) {
-		LOG_ERR(nullptr, "QueueSet::pop is not working.\n");
+		L_ERR(nullptr, "QueueSet::pop is not working.\n");
 		return 1;
 	}
 
 	if (i1 != 2 || i2 != 3 || i3 != 4 || i4 != 1 || i5 != 789) {
-		LOG_ERR(nullptr, "QueueSet::pop is changing memory.\n");
+		L_ERR(nullptr, "QueueSet::pop is changing memory.\n");
 		return 1;
 	}
 
@@ -172,21 +172,21 @@ int test_queue_set_on_dup() {
 	q.push(3, [](int&){ return DupAction::renew; });  // renews the item
 
 	if (q.size() != 4) {
-		LOG_ERR(nullptr, "QueueSet::push with set_on_dup is not working.\n");
+		L_ERR(nullptr, "QueueSet::push with set_on_dup is not working.\n");
 		return 1;
 	}
 
 	int i1, i2, i3, i4, i5 = 789;
 
 	if (!q.pop(i1, 0) || !q.pop(i2, 0) || !q.pop(i3, 0) || !q.pop(i4, 0) || q.pop(i5, 0)) {
-		LOG_ERR(nullptr, "QueueSet::pop with set_on_dup is not working.\n");
+		L_ERR(nullptr, "QueueSet::pop with set_on_dup is not working.\n");
 		return 1;
 	}
 
-	LOG_DEBUG(nullptr, "%d %d %d %d %d\n", i1, i2, i3, i4, i5);
+	L_DEBUG(nullptr, "%d %d %d %d %d\n", i1, i2, i3, i4, i5);
 
 	if (i1 != 1 || i2 != 2 || i3 != 4 || i4 != 3 || i5 != 789) {
-		LOG_ERR(nullptr, "QueueSet::pop with set_on_dup is changing memory.\n");
+		L_ERR(nullptr, "QueueSet::pop with set_on_dup is changing memory.\n");
 		return 1;
 	}
 
@@ -203,7 +203,7 @@ int test_queue_constructor() {
 	int i1, i2, i3;
 
 	if (!foo.second.pop(i1, 0) || !foo.second.pop(i2, 0) || !foo.second.pop(i3, 0) || foo.second.size() != 0) {
-		LOG_ERR(nullptr, "QueueSet move constructor is not working.\n");
+		L_ERR(nullptr, "QueueSet move constructor is not working.\n");
 		return 1;
 	}
 

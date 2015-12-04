@@ -325,29 +325,29 @@ int numeric_test() {
 		GenerateTerms::numeric(result_terms, p.start, p.end, p.accuracy, p.acc_prefix, prefixes);
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
-				LOG_DEBUG(nullptr, "ERROR: Diferent numbers of prefix\n");
+				L_DEBUG(nullptr, "ERROR: Diferent numbers of prefix\n");
 				cont++;
 				continue;
 			}
 			std::vector<std::string>::const_iterator it(prefixes.begin()), ite(p.expected_prefixes.begin());
 			for ( ; it != prefixes.end(); it++, ite++) {
 				if (it->compare(*ite) != 0) {
-					LOG_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s\n", it->c_str(), ite->c_str());
+					L_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s\n", it->c_str(), ite->c_str());
 					cont++;
 					continue;
 				}
 			}
 		} else {
-			LOG_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s\n", result_terms.c_str(), p.expected_terms.c_str());
+			L_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s\n", result_terms.c_str(), p.expected_terms.c_str());
 			cont++;
 		}
 	}
 
 	if (cont == 0) {
-		LOG_DEBUG(nullptr, "Testing generation numerical terms is correct!\n");
+		L_DEBUG(nullptr, "Testing generation numerical terms is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(nullptr, "ERROR: Testing generation numerical terms has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing generation numerical terms has mistakes.\n");
 		return 1;
 	}
 }
@@ -362,29 +362,29 @@ int date_test() {
 		GenerateTerms::date(result_terms, p.start, p.end, p.accuracy, p.acc_prefix, prefixes);
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
-				LOG_DEBUG(nullptr, "ERROR: Diferent numbers of prefix\n");
+				L_DEBUG(nullptr, "ERROR: Diferent numbers of prefix\n");
 				cont++;
 				continue;
 			}
 			std::vector<std::string>::const_iterator it(prefixes.begin()), ite(p.expected_prefixes.begin());
 			for ( ; it != prefixes.end(); it++, ite++) {
 				if (it->compare(*ite) != 0) {
-					LOG_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s\n", it->c_str(), ite->c_str());
+					L_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s\n", it->c_str(), ite->c_str());
 					cont++;
 					continue;
 				}
 			}
 		} else {
-			LOG_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s\n", result_terms.c_str(), p.expected_terms.c_str());
+			L_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s\n", result_terms.c_str(), p.expected_terms.c_str());
 			cont++;
 		}
 	}
 
 	if (cont == 0) {
-		LOG_DEBUG(nullptr, "Testing generation of terms for dates is correct!\n");
+		L_DEBUG(nullptr, "Testing generation of terms for dates is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(nullptr, "ERROR: Testing generation of terms for dates has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing generation of terms for dates has mistakes.\n");
 		return 1;
 	}
 }
@@ -399,29 +399,29 @@ int geo_test() {
 		GenerateTerms::geo(result_terms, p.ranges, p.accuracy, p.acc_prefix, prefixes);
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
-				LOG_DEBUG(nullptr, "ERROR: Diferent numbers of prefix\n");
+				L_DEBUG(nullptr, "ERROR: Diferent numbers of prefix\n");
 				cont++;
 				continue;
 			}
 			std::vector<std::string>::const_iterator it(prefixes.begin()), ite(p.expected_prefixes.begin());
 			for ( ; it != prefixes.end(); it++, ite++) {
 				if (it->compare(*ite) != 0) {
-					LOG_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s\n", it->c_str(), ite->c_str());
+					L_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s\n", it->c_str(), ite->c_str());
 					cont++;
 					continue;
 				}
 			}
 		} else {
-			LOG_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s\n", result_terms.c_str(), p.expected_terms.c_str());
+			L_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s\n", result_terms.c_str(), p.expected_terms.c_str());
 			cont++;
 		}
 	}
 
 	if (cont == 0) {
-		LOG_DEBUG(nullptr, "Testing generation of terms for geospatials is correct!\n");
+		L_DEBUG(nullptr, "Testing generation of terms for geospatials is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(nullptr, "ERROR: Testing generation of terms for geospatials has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing generation of terms for geospatials has mistakes.\n");
 		return 1;
 	}
 }

@@ -61,14 +61,14 @@ public:
 		return 0;
 	};
 	ssize_t read(char **buf, size_t size) {
-		//LOG_DEBUG(this, "input size %lu \n",input.size());
+		//L_DEBUG(this, "input size %lu \n",input.size());
 		if (input.size() == 0) {
-			//LOG_DEBUG(this, "base_read (0)\n");
+			//L_DEBUG(this, "base_read (0)\n");
 			return 0;
 		}
 		if (offset >= input.size()) {
 			errno = EWOULDBLOCK;
-			//LOG_DEBUG(this, "base_read (-1)\n");
+			//L_DEBUG(this, "base_read (-1)\n");
 			return -1;
 		}
 		if (*buf) {
@@ -82,11 +82,11 @@ public:
 			offset = input.size();
 			size = offset;
 		}
-		//LOG_DEBUG(this, "base_read: %s (%zu)\n", repr(*buf, size).c_str(), size);
+		//L_DEBUG(this, "base_read: %s (%zu)\n", repr(*buf, size).c_str(), size);
 		return size;
 	};
 	ssize_t write(const char *buf, size_t size) {
-		//LOG_DEBUG(this, "base_write: %s (%zu)\n", repr(buf, size).c_str(), size);
+		//L_DEBUG(this, "base_write: %s (%zu)\n", repr(buf, size).c_str(), size);
 		output.append(buf, size);
 		return size;
 	};
@@ -138,42 +138,42 @@ public:
 	}
 
 	ssize_t decompress() {
-		// LOG_DEBUG(this, "decompress!\n");
+		// L_DEBUG(this, "decompress!\n");
 		if (count == -1) {
 			count = 0;
-			// LOG_DEBUG(this, "decompress (decompressor->begin)\n");
+			// L_DEBUG(this, "decompress (decompressor->begin)\n");
 			if (decompressor->begin() < 0) {
-				LOG_ERR(this, "Begin failed!\n");
+				L_ERR(this, "Begin failed!\n");
 				return -1;
 			}
 		}
 
-		// LOG_DEBUG(this, "decompress (while)\n");
+		// L_DEBUG(this, "decompress (while)\n");
 		while (true) {
 			char *src_buffer = nullptr;
-			// LOG_DEBUG(this, "decompress (decompressor->read)\n");
+			// L_DEBUG(this, "decompress (decompressor->read)\n");
 			ssize_t read_size = decompressor->read(&src_buffer, -1);
 			if (read_size == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					return count;
 				}
-				LOG_ERR(this, "Read error!!\n");
+				L_ERR(this, "Read error!!\n");
 				return -1;
 			} else if (read_size == 0) {
-				// LOG_DEBUG(this, "decompress (decompressor->read=0)\n");
+				// L_DEBUG(this, "decompress (decompressor->read=0)\n");
 				break;
 			}
 			count += read_size;
 			if (decompressor->write(src_buffer, read_size) < 0) {
-				// LOG_DEBUG(this, "decompress (decompressor->write)\n");
-				LOG_ERR(this, "Write failed!\n");
+				// L_DEBUG(this, "decompress (decompressor->write)\n");
+				L_ERR(this, "Write failed!\n");
 				return -1;
 			}
 		}
 
-		// LOG_DEBUG(this, "decompress (decompressor->done)\n");
+		// L_DEBUG(this, "decompress (decompressor->done)\n");
 		if (decompressor->done() < 0) {
-			LOG_ERR(this, "Done failed!\n");
+			L_ERR(this, "Done failed!\n");
 			return -1;
 		}
 
@@ -181,7 +181,7 @@ public:
 	}
 
 	ssize_t compress() {
-		// LOG_DEBUG(this, "compress!\n");
+		// L_DEBUG(this, "compress!\n");
 		if (count == -1) {
 			count = 0;
 
@@ -189,39 +189,39 @@ public:
 				buffer = new char[NOCOMPRESS_BUFFER_SIZE];
 			}
 
-			// LOG_DEBUG(this, "compress (compressor->begin)\n");
+			// L_DEBUG(this, "compress (compressor->begin)\n");
 			if (compressor->begin() < 0) {
-				LOG_ERR(this, "Begin failed!\n");
+				L_ERR(this, "Begin failed!\n");
 				return -1;
 			}
 		}
 
-		// LOG_DEBUG(this, "compress (while)\n");
+		// L_DEBUG(this, "compress (while)\n");
 		while (true) {
-			// LOG_DEBUG(this, "compress (compressor->read)\n");
+			// L_DEBUG(this, "compress (compressor->read)\n");
 			ssize_t src_size = compressor->read(&buffer, NOCOMPRESS_BUFFER_SIZE);
 			if (src_size == -1) {
-				// LOG_DEBUG(this, "compress (compressor->read=-1)\n");
+				// L_DEBUG(this, "compress (compressor->read=-1)\n");
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					return count;
 				}
-				LOG_ERR(this, "Read error!!\n");
+				L_ERR(this, "Read error!!\n");
 				return -1;
 			} else if (src_size == 0) {
-				// LOG_DEBUG(this, "compress (compressor->read=0)\n");
+				// L_DEBUG(this, "compress (compressor->read=0)\n");
 				break;
 			}
 			count += src_size;
-			// LOG_DEBUG(this, "compress (compressor->write)\n");
+			// L_DEBUG(this, "compress (compressor->write)\n");
 			if (compressor->write(buffer, src_size) < 0) {
-				LOG_ERR(this, "Write failed!\n");
+				L_ERR(this, "Write failed!\n");
 				return -1;
 			}
 		}
 
-		// LOG_DEBUG(this, "compress (compressor->done)\n");
+		// L_DEBUG(this, "compress (compressor->done)\n");
 		if (compressor->done() < 0) {
-			LOG_ERR(this, "Done failed!\n");
+			L_ERR(this, "Done failed!\n");
 			return -1;
 		}
 
@@ -260,20 +260,20 @@ public:
 		if (d_ctx) {
 			errorCode = LZ4F_freeDecompressionContext(d_ctx);
 			if (LZ4F_isError(errorCode)) {
-				LOG_ERR(this, "Failed to free decompression context: error %zd\n", errorCode);
+				L_ERR(this, "Failed to free decompression context: error %zd\n", errorCode);
 			}
 		}
 
 		if (c_ctx) {
 			errorCode = LZ4F_freeCompressionContext(c_ctx);
 			if (LZ4F_isError(errorCode)) {
-				LOG_ERR(this, "Failed to free compression context: error %zd\n", errorCode);
+				L_ERR(this, "Failed to free compression context: error %zd\n", errorCode);
 			}
 		}
 	};
 
 	ssize_t decompress() {
-		// LOG_DEBUG(this, "decompress!\n");
+		// L_DEBUG(this, "decompress!\n");
 
 		if (!d_ctx) {
 			if (!buffer) {
@@ -281,70 +281,70 @@ public:
 			}
 			LZ4F_errorCode_t errorCode = LZ4F_createDecompressionContext(&d_ctx, LZ4F_VERSION);
 			if (LZ4F_isError(errorCode)) {
-				LOG_ERR(this, "Failed to create decompression context: error %zd\n", errorCode);
+				L_ERR(this, "Failed to create decompression context: error %zd\n", errorCode);
 				throw MSG_Error("Failed to create decompression context");
 			}
 
-			// LOG_DEBUG(this, "decompress (decompressor->begin)\n");
+			// L_DEBUG(this, "decompress (decompressor->begin)\n");
 			if (decompressor->begin() < 0) {
-				LOG_ERR(this, "Begin failed!\n");
+				L_ERR(this, "Begin failed!\n");
 				return -1;
 			}
 		}
 
-		// LOG_DEBUG(this, "decompress (while)\n");
+		// L_DEBUG(this, "decompress (while)\n");
 		while (true) {
 			char *src_buffer = nullptr;
-			// LOG_DEBUG(this, "decompress (decompressor->read)\n");
+			// L_DEBUG(this, "decompress (decompressor->read)\n");
 			ssize_t read_size = decompressor->read(&src_buffer, -1);
 			if (read_size == -1) {
-				// LOG_DEBUG(this, "decompress (decompressor->read=-1)\n");
+				// L_DEBUG(this, "decompress (decompressor->read=-1)\n");
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					return count;
 				}
-				LOG_ERR(this, "Read error!!\n");
+				L_ERR(this, "Read error!!\n");
 				return -1;
 			} else if (read_size == 0) {
-				// LOG_DEBUG(this, "decompress (decompressor->read=0)\n");
+				// L_DEBUG(this, "decompress (decompressor->read=0)\n");
 				break;
 			}
 
 			size_t src_size;
 			size_t nextToLoad = read_size;
 
-			// LOG_DEBUG(this, "\t read_size: %zu\n", read_size);
+			// L_DEBUG(this, "\t read_size: %zu\n", read_size);
 
 			for (ssize_t read_pos = 0; read_pos < read_size && nextToLoad; read_pos += src_size) {
 				src_size = read_size - read_pos;
 				size_t dst_size = LZ4F_BLOCK_SIZE;
 
-				// LOG_DEBUG(this, "\t src_size (1): %zu\n", src_size);
-				// LOG_DEBUG(this, "\t dst_size (1): %zu\n", dst_size);
+				// L_DEBUG(this, "\t src_size (1): %zu\n", src_size);
+				// L_DEBUG(this, "\t dst_size (1): %zu\n", dst_size);
 
 				nextToLoad = LZ4F_decompress(d_ctx, buffer, &dst_size, src_buffer + read_pos, &src_size, nullptr);
 				if (LZ4F_isError(nextToLoad)) {
-					LOG_ERR(this, "Failed decompression: error %zd\n", nextToLoad);
+					L_ERR(this, "Failed decompression: error %zd\n", nextToLoad);
 					return -1;
 				}
 
-				// LOG_DEBUG(this, "\t nextToLoad: %zu\n", nextToLoad);
-				// LOG_DEBUG(this, "\t src_size (2): %zu\n", src_size);
-				// LOG_DEBUG(this, "\t dst_size (2): %zu\n", dst_size);
+				// L_DEBUG(this, "\t nextToLoad: %zu\n", nextToLoad);
+				// L_DEBUG(this, "\t src_size (2): %zu\n", src_size);
+				// L_DEBUG(this, "\t dst_size (2): %zu\n", dst_size);
 
 				if (dst_size) {
 					count += dst_size;
-					// LOG_DEBUG(this, "decompress (decompressor->write)\n");
+					// L_DEBUG(this, "decompress (decompressor->write)\n");
 					if (decompressor->write(buffer, dst_size) < 0) {
-						LOG_ERR(this, "Write failed!\n");
+						L_ERR(this, "Write failed!\n");
 						return -1;
 					}
 				}
 			}
 		}
 
-		// LOG_DEBUG(this, "decompress (decompressor->done)\n");
+		// L_DEBUG(this, "decompress (decompressor->done)\n");
 		if (decompressor->done() < 0) {
-			LOG_ERR(this, "Done failed!\n");
+			L_ERR(this, "Done failed!\n");
 			return -1;
 		}
 
@@ -352,7 +352,7 @@ public:
 	}
 
 	ssize_t compress() {
-		// LOG_DEBUG(this, "compress!\n");
+		// L_DEBUG(this, "compress!\n");
 		size_t bytes;
 		if (!c_ctx) {
 			assert(work_buffer == nullptr);
@@ -371,46 +371,46 @@ public:
 
 			LZ4F_errorCode_t errorCode = LZ4F_createCompressionContext(&c_ctx, LZ4F_VERSION);
 			if (LZ4F_isError(errorCode)) {
-				LOG_ERR(this, "Failed to create compression context: error %zd\n", errorCode);
+				L_ERR(this, "Failed to create compression context: error %zd\n", errorCode);
 				throw MSG_Error("Failed to create compression context");
 			}
 
 			work_size =  frame_size + LZ4_HEADER_SIZE + LZ4_FOOTER_SIZE;
 			work_buffer = new char[work_size];
 			if (!work_buffer) {
-				LOG_ERR(this, "Not enough memory!!\n");
+				L_ERR(this, "Not enough memory!!\n");
 				return -1;
 			}
 
 			// Signal LZ4 compressed content
-			// LOG_DEBUG(this, "compress (compressor->begin)\n");
+			// L_DEBUG(this, "compress (compressor->begin)\n");
 			if (compressor->begin() < 0) {
-				LOG_ERR(this, "Write failed!\n");
+				L_ERR(this, "Write failed!\n");
 				return -1;
 			}
 
 			offset = LZ4F_compressBegin(c_ctx, work_buffer, frame_size, &lz4_preferences);
 		}
 
-		// LOG_DEBUG(this, "compress (while)\n");
+		// L_DEBUG(this, "compress (while)\n");
 		while (true) {
-			// LOG_DEBUG(this, "compress (compressor->read)\n");
+			// L_DEBUG(this, "compress (compressor->read)\n");
 			ssize_t src_size = compressor->read(&buffer, LZ4F_BLOCK_SIZE);
 			if (src_size == -1) {
-				// LOG_DEBUG(this, "compress (compressor->read=-1)\n");
+				// L_DEBUG(this, "compress (compressor->read=-1)\n");
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					return count;
 				}
-				LOG_ERR(this, "Read error!!\n");
+				L_ERR(this, "Read error!!\n");
 				return -1;
 			} else if (src_size == 0) {
-				// LOG_DEBUG(this, "compress (compressor->read=0)\n");
+				// L_DEBUG(this, "compress (compressor->read=0)\n");
 				break;
 			}
 
 			bytes = LZ4F_compressUpdate(c_ctx, work_buffer + offset, work_size - offset, buffer, src_size, nullptr);
 			if (LZ4F_isError(bytes)) {
-				LOG_ERR(this, "Compression failed: error %zd\n", bytes);
+				L_ERR(this, "Compression failed: error %zd\n", bytes);
 				return -1;
 			}
 
@@ -418,9 +418,9 @@ public:
 			count += bytes;
 
 			if (work_size - offset < frame_size + LZ4_FOOTER_SIZE) {
-				// LOG_DEBUG(this, "compress (compressor->write)\n");
+				// L_DEBUG(this, "compress (compressor->write)\n");
 				if (compressor->write(work_buffer, offset) < 0) {
-					LOG_ERR(this, "Write failed!\n");
+					L_ERR(this, "Write failed!\n");
 					return -1;
 				}
 				offset = 0;
@@ -429,15 +429,15 @@ public:
 
 		bytes = LZ4F_compressEnd(c_ctx, work_buffer + offset, work_size -  offset, nullptr);
 		if (LZ4F_isError(bytes)) {
-			LOG_ERR(this, "Compression failed: error %zd\n", bytes);
+			L_ERR(this, "Compression failed: error %zd\n", bytes);
 			return -1;
 		}
 
 		offset += bytes;
 
-		// LOG_DEBUG(this, "compress (compressor->done)\n");
+		// L_DEBUG(this, "compress (compressor->done)\n");
 		if (compressor->write(work_buffer, offset) < 0 || compressor->done() < 0) {
-			LOG_ERR(this, "Write failed!\n");
+			L_ERR(this, "Write failed!\n");
 			return -1;
 		}
 

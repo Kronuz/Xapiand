@@ -75,7 +75,7 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 	int client_sock = binary->accept();
 	if (client_sock < 0) {
 		if (!ignored_errorno(errno, false)) {
-			LOG_ERR(this, "ERROR: accept binary error (sock=%d): %s\n", binary->sock, strerror(errno));
+			L_ERR(this, "ERROR: accept binary error (sock=%d): %s\n", binary->sock, strerror(errno));
 		}
 		LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
 		return;
@@ -89,7 +89,7 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 		return;
 	}
 
-	LOG_INFO(this, "Accepted new client! (sock=%d)\n", client_sock);
+	L_INFO(this, "Accepted new client! (sock=%d)\n", client_sock);
 
 	LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
 }
@@ -110,7 +110,7 @@ BinaryServer::trigger_replication(const Endpoint &src_endpoint, const Endpoint &
 		return false;
 	}
 
-	LOG_INFO(this, "Database being synchronized from %s...\n", src_endpoint.as_string().c_str());
+	L_INFO(this, "Database being synchronized from %s...\n", src_endpoint.as_string().c_str());
 
 	return true;
 }
@@ -131,7 +131,7 @@ BinaryServer::store(const Endpoints &endpoints, const Xapian::docid &did, const 
 		return false;
 	}
 
-	LOG_INFO(this, "Storing %s in %s...\n", filename.c_str(), endpoints.as_string().c_str());
+	L_INFO(this, "Storing %s in %s...\n", filename.c_str(), endpoints.as_string().c_str());
 
 	return true;
 }

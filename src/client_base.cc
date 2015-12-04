@@ -269,7 +269,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 	LOG_EV(this, "%s (sock=%d) %x\n", (revents & EV_ERROR) ? "EV_ERROR" : (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
 
 	if (revents & EV_ERROR) {
-		LOG_ERR(this, "ERROR: got invalid event (sock=%d): %s\n", sock, strerror(errno));
+		L_ERR(this, "ERROR: got invalid event (sock=%d): %s\n", sock, strerror(errno));
 		destroy();
 		LOG_EV_END(this, "BaseClient::io_cb:END\n");
 		return;
@@ -294,8 +294,8 @@ WR
 BaseClient::write_directly(int fd)
 {
 	if (fd == -1) {
-		LOG_ERR(this, "ERROR: write error (sock=%d): Socket already closed!\n", sock);
-		LOG_DEBUG(this, "WR:ERR.1: (sock=%d)\n", sock);
+		L_ERR(this, "ERROR: write error (sock=%d): Socket already closed!\n", sock);
+		L_DEBUG(this, "WR:ERR.1: (sock=%d)\n", sock);
 		return WR::ERR;
 	} else if (!write_queue.empty()) {
 		std::shared_ptr<Buffer> buffer = write_queue.front();
@@ -311,15 +311,15 @@ BaseClient::write_directly(int fd)
 
 		if (written < 0) {
 			if (ignored_errorno(errno, false)) {
-				LOG_DEBUG(this, "WR:RETRY: (sock=%d)\n", sock);
+				L_DEBUG(this, "WR:RETRY: (sock=%d)\n", sock);
 				return WR::RETRY;
 			} else {
-				LOG_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
-				LOG_DEBUG(this, "WR:ERR.2: (sock=%d)\n", sock);
+				L_ERR(this, "ERROR: write error (sock=%d): %s\n", sock, strerror(errno));
+				L_DEBUG(this, "WR:ERR.2: (sock=%d)\n", sock);
 				return WR::ERR;
 			}
 		} else if (written == 0) {
-			LOG_DEBUG(this, "WR:CLOSED: (sock=%d)\n", sock);
+			L_DEBUG(this, "WR:CLOSED: (sock=%d)\n", sock);
 			return WR::CLOSED;
 		} else {
 			auto str(repr(buf_data, written, true, 500));
@@ -328,20 +328,20 @@ BaseClient::write_directly(int fd)
 			if (buffer->nbytes() == 0) {
 				if (write_queue.pop(buffer)) {
 					if (write_queue.empty()) {
-						LOG_DEBUG(this, "WR:OK.1: (sock=%d)\n", sock);
+						L_DEBUG(this, "WR:OK.1: (sock=%d)\n", sock);
 						return WR::OK;
 					} else {
-						LOG_DEBUG(this, "WR:PENDING.1: (sock=%d)\n", sock);
+						L_DEBUG(this, "WR:PENDING.1: (sock=%d)\n", sock);
 						return WR::PENDING;
 					}
 				}
 			} else {
-				LOG_DEBUG(this, "WR:PENDING.2: (sock=%d)\n", sock);
+				L_DEBUG(this, "WR:PENDING.2: (sock=%d)\n", sock);
 				return WR::PENDING;
 			}
 		}
 	}
-	LOG_DEBUG(this, "WR:OK.2: (sock=%d)\n", sock);
+	L_DEBUG(this, "WR:OK.2: (sock=%d)\n", sock);
 	return WR::OK;
 }
 
@@ -418,7 +418,7 @@ BaseClient::io_cb_read(int fd)
 
 		if (received < 0) {
 			if (!ignored_errorno(errno, false)) {
-				LOG_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
+				L_ERR(this, "ERROR: read error (sock=%d): %s\n", sock, strerror(errno));
 				destroy();
 				return;
 			}

@@ -154,7 +154,7 @@ int create_test_db() {
 		buffer << fstream.rdbuf();
 		if (database->index(buffer.str(), std::to_string(i), true, "application/json", std::to_string(fstream.tellg())) == 0) {
 			cont++;
-			LOG_ERR(nullptr, "ERROR: File %s can not index\n", it->c_str());
+			L_ERR(nullptr, "ERROR: File %s can not index\n", it->c_str());
 		}
 		fstream.close();
 		++i;
@@ -187,10 +187,10 @@ int make_search(const test_geo_t _tests[], int len) {
 		int rmset = database->get_mset(query, mset, spies, suggestions);
 		if (rmset != 0) {
 			cont++;
-			LOG_ERR(nullptr, "ERROR: Failed in get_mset\n");
+			L_ERR(nullptr, "ERROR: Failed in get_mset\n");
 		} else if (mset.size() != p.expect_datas.size()) {
 			cont++;
-			LOG_ERR(nullptr, "ERROR: Different number of documents obtained %zu  %zu\n", mset.size(), p.expect_datas.size());
+			L_ERR(nullptr, "ERROR: Different number of documents obtained %zu  %zu\n", mset.size(), p.expect_datas.size());
 		} else {
 			std::vector<std::string>::const_iterator it(p.expect_datas.begin());
 			Xapian::MSetIterator m = mset.begin();
@@ -205,7 +205,7 @@ int make_search(const test_geo_t _tests[], int len) {
 				cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
 				if (object_data && it->compare(object_data->valuestring) != 0) {
 					cont++;
-					LOG_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s\n", RESERVED_DATA, data.c_str(), RESERVED_DATA, it->c_str());
+					L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s\n", RESERVED_DATA, data.c_str(), RESERVED_DATA, it->c_str());
 				}
 			}
 		}
@@ -223,17 +223,17 @@ int geo_range_test() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(geo_range_tests, arraySize(geo_range_tests)) == 0) {
-			LOG_DEBUG(nullptr, "Testing search range geospatials is correct!\n");
+			L_DEBUG(nullptr, "Testing search range geospatials is correct!\n");
 			return 0;
 		} else {
-			LOG_ERR(nullptr, "ERROR: Testing search range geospatials has mistakes.\n");
+			L_ERR(nullptr, "ERROR: Testing search range geospatials has mistakes.\n");
 			return 1;
 		}
 	} catch (const Xapian::Error &err) {
-		LOG_ERR(nullptr, "ERROR: %s\n", err.get_msg().c_str());
+		L_ERR(nullptr, "ERROR: %s\n", err.get_msg().c_str());
 		return 1;
 	} catch (const std::exception &err) {
-		LOG_ERR(nullptr, "ERROR: %s\n", err.what());
+		L_ERR(nullptr, "ERROR: %s\n", err.what());
 		return 1;
 	}
 }
@@ -243,17 +243,17 @@ int geo_terms_test() {
 	try {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(geo_terms_tests, arraySize(geo_terms_tests)) == 0) {
-			LOG_DEBUG(nullptr, "Testing search by geospatial terms is correct!\n");
+			L_DEBUG(nullptr, "Testing search by geospatial terms is correct!\n");
 			return 0;
 		} else {
-			LOG_ERR(nullptr, "ERROR: Testing search by geospatial terms has mistakes.\n");
+			L_ERR(nullptr, "ERROR: Testing search by geospatial terms has mistakes.\n");
 			return 1;
 		}
 	} catch (const Xapian::Error &err) {
-		LOG_ERR(nullptr, "ERROR: %s\n", err.get_msg().c_str());
+		L_ERR(nullptr, "ERROR: %s\n", err.get_msg().c_str());
 		return 1;
 	} catch (const std::exception &err) {
-		LOG_ERR(nullptr, "ERROR: %s\n", err.what());
+		L_ERR(nullptr, "ERROR: %s\n", err.what());
 		return 1;
 	}
 }

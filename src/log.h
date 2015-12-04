@@ -24,53 +24,90 @@
 
 #include "slist.h"
 
+#include <syslog.h>
+
 #include <atomic>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <thread>
 #include <chrono>
+#include <vector>
+#include <fstream>
 #include <condition_variable>
 
 using namespace std::literals;
 
 
+class Logger {
+public:
+	virtual void log(int priority, const std::string& str) = 0;
+};
+
+
+class StreamLogger : public Logger {
+	std::ofstream ofs;
+public:
+	StreamLogger(const char* filename) : ofs(std::ofstream(filename, std::ofstream::out)) {}
+	void log(int priority, const std::string& str);
+};
+
+
+class StderrLogger : public Logger {
+public:
+	void log(int priority, const std::string& str);
+};
+
+
+class SysLog : public Logger {
+public:
+	SysLog(const char *ident="xapiand", int option=LOG_PID|LOG_CONS, int facility=LOG_USER);
+	~SysLog();
+
+	void log(int priority, const std::string& str);
+};
+
+
 class Log : public std::enable_shared_from_this<Log> {
 	friend class LogThread;
 
+
 	static std::string str_format(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, va_list argptr);
-	static std::shared_ptr<Log> add(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup);
+	static std::shared_ptr<Log> add(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
 
 	std::chrono::time_point<std::chrono::system_clock> wakeup;
 	std::string str_start;
+	int priority;
 	std::atomic_bool finished;
 
 protected:
-	Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_);
+	Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_);
 
 public:
+	static std::vector<std::unique_ptr<Logger>> handlers;
+
 	template <typename T, typename R, typename... Args>
-	static std::shared_ptr<Log> log(std::chrono::duration<T, R> timeout, Args&&... args) {
-		return log(std::chrono::system_clock::now() + timeout, std::forward<Args>(args)...);
+	static std::shared_ptr<Log> log(std::chrono::duration<T, R> timeout, int priority, Args&&... args) {
+		return log(std::chrono::system_clock::now() + timeout, priority, std::forward<Args>(args)...);
 	}
 
 	template <typename T, typename R>
-	static std::shared_ptr<Log> print(const std::string& str, std::chrono::duration<T, R> timeout) {
-		return print(str, std::chrono::system_clock::now() + timeout);
+	static std::shared_ptr<Log> print(const std::string& str, std::chrono::duration<T, R> timeout, int priority=LOG_DEBUG) {
+		return print(str, std::chrono::system_clock::now() + timeout, priority);
 	}
 
 	template <typename... Args>
-	static std::shared_ptr<Log> log(int timeout, Args&&... args) {
-		return log(std::chrono::system_clock::now() + std::chrono::milliseconds(timeout), std::forward<Args>(args)...);
+	static std::shared_ptr<Log> log(int timeout, int priority, Args&&... args) {
+		return log(std::chrono::system_clock::now() + std::chrono::milliseconds(timeout), priority, std::forward<Args>(args)...);
 	}
 
-	static std::shared_ptr<Log> print(const std::string& str, int timeout=0) {
-		return print(str, std::chrono::system_clock::now() + std::chrono::milliseconds(timeout));
+	static std::shared_ptr<Log> print(const std::string& str, int timeout=0, int priority=LOG_DEBUG) {
+		return print(str, std::chrono::system_clock::now() + std::chrono::milliseconds(timeout), priority);
 	}
 
-	static std::shared_ptr<Log> log(std::chrono::time_point<std::chrono::system_clock> wakeup, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
-	static std::shared_ptr<Log> print(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup);
-	void unlog(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
+	static std::shared_ptr<Log> log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
+	static std::shared_ptr<Log> print(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
+	void unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
 	void clear();
 };
 
@@ -112,40 +149,46 @@ class LogThread {
 
 #define LOG_COL DARK_GREY
 #define DEBUG_COL NO_COL
+#define NOTICE_COL GREY
 #define INFO_COL BRIGHT_CYAN
-#define WARN_COL BRIGHT_YELLOW
+#define WARNING_COL BRIGHT_YELLOW
 #define ERR_COL RED
-#define CRITICAL_COL BRIGHT_RED
-#define FATAL_COL BRIGHT_RED
+#define CRIT_COL BRIGHT_RED
+#define ALERT_COL BRIGHT_RED
+#define EMERG_COL BRIGHT_RED
 
 #define _(args...)
-#define _LOG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, NO_COL, args)
-#define _LOG_TIMED(t, args...) auto __timed_log = Log::log(t, __FILE__, __LINE__, NO_COL, NO_COL, args)
-#define _LOG_TIMED_CLEAR(args...) __timed_log->unlog(__FILE__, __LINE__, NO_COL, NO_COL, args)
+#define _LOG_ENABLED(args...) Log::log(0ms, LOG_DEBUG, __FILE__, __LINE__, NO_COL, NO_COL, args)
+#define _LOG_TIMED(t, args...) auto __timed_log = Log::log(t, LOG_DEBUG, __FILE__, __LINE__, NO_COL, NO_COL, args)
+#define _LOG_TIMED_CLEAR(args...) __timed_log->unlog(LOG_DEBUG, __FILE__, __LINE__, NO_COL, NO_COL, args)
 
-#define _LOG_LOG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, LOG_COL, args)
-#define _LOG_DEBUG_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
-#define _LOG_INFO_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, INFO_COL, args)
-#define _LOG_WARN_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, WARN_COL, args)
-#define _LOG_ERR_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, ERR_COL, args)
-#define _LOG_CRITICAL_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, CRITICAL_COL, args)
-#define _LOG_FATAL_ENABLED(args...) Log::log(0ms, __FILE__, __LINE__, NO_COL, FATAL_COL, args)
+#define _LOG_LOG_ENABLED(args...) Log::log(0ms, LOG_DEBUG, __FILE__, __LINE__, NO_COL, LOG_COL, args)
+#define _LOG_DEBUG_ENABLED(args...) Log::log(0ms, LOG_DEBUG, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
+#define _LOG_NOTICE_ENABLED(args...) Log::log(0ms, LOG_NOTICE, __FILE__, __LINE__, NO_COL, NOTICE_COL, args)
+#define _LOG_INFO_ENABLED(args...) Log::log(0ms, LOG_INFO, __FILE__, __LINE__, NO_COL, INFO_COL, args)
+#define _LOG_WARNING_ENABLED(args...) Log::log(0ms, LOG_WARNING, __FILE__, __LINE__, NO_COL, WARNING_COL, args)
+#define _LOG_ERR_ENABLED(args...) Log::log(0ms, LOG_ERR, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define _LOG_CRIT_ENABLED(args...) Log::log(0ms, LOG_CRIT, __FILE__, __LINE__, NO_COL, CRIT_COL, args)
+#define _LOG_ALERT_ENABLED(args...) Log::log(0ms, LOG_ALERT, __FILE__, __LINE__, NO_COL, ALERT_COL, args)
+#define _LOG_EMERG_ENABLED(args...) Log::log(0ms, LOG_EMERG, __FILE__, __LINE__, NO_COL, EMERG_COL, args)
 
-#define _LOG_TIMED_100(args...) auto __timed_log = Log::log(100ms, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
-#define _LOG_TIMED_500(args...) auto __timed_log = Log::log(500ms, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
-#define _LOG_TIMED_1000(args...) auto __timed_log = Log::log(1s, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
-#define _LOG_TIMED_N_CLEAR(args...) __timed_log->unlog(__FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_100(args...) auto __timed_log = Log::log(100ms, LOG_DEBUG, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_500(args...) auto __timed_log = Log::log(500ms, LOG_DEBUG, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_1000(args...) auto __timed_log = Log::log(1s, LOG_DEBUG, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_N_CLEAR(args...) __timed_log->unlog(LOG_DEBUG, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 
 #define LOG _LOG_ENABLED
 #define LOG_BEGIN _LOG_TIMED
 #define LOG_END _LOG_TIMED_CLEAR
 
-#define LOG_DEBUG _LOG_DEBUG_ENABLED
-#define LOG_INFO _LOG_INFO_ENABLED
-#define LOG_WARN _LOG_WARN_ENABLED
-#define LOG_ERR _LOG_ERR_ENABLED
-#define LOG_CRITICAL _LOG_FATAL_ENABLED
-#define LOG_FATAL _LOG_FATAL_ENABLED
+#define L_DEBUG _LOG_DEBUG_ENABLED
+#define L_NOTICE _LOG_NOTICE_ENABLED
+#define L_INFO _LOG_INFO_ENABLED
+#define L_WARNING _LOG_WARNING_ENABLED
+#define L_ERR _LOG_ERR_ENABLED
+#define L_CRIT _LOG_CRIT_ENABLED
+#define L_ALERT _LOG_ALERT_ENABLED
+#define L_EMERG _LOG_EMERG_ENABLED
 
 #define LOG_CONN _LOG_LOG_ENABLED
 #define LOG_DISCOVERY _LOG_LOG_ENABLED

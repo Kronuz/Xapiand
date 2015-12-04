@@ -95,7 +95,7 @@ BinaryClient::~BinaryClient()
 bool
 BinaryClient::init_remote()
 {
-	LOG_DEBUG(this, "init_remote\n");
+	L_DEBUG(this, "init_remote\n");
 	state = State::INIT_REMOTEPROTOCOL;
 
 	manager()->thread_pool.enqueue(share_this<BinaryClient>());
@@ -117,17 +117,17 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		src_endpoint,
 		dst_endpoint
 	] {
-		LOG_DEBUG(manager.get(), "Triggering replication for %s after checkin!\n", dst_endpoint.as_string().c_str());
+		L_DEBUG(manager.get(), "Triggering replication for %s after checkin!\n", dst_endpoint.as_string().c_str());
 		manager->trigger_replication(src_endpoint, dst_endpoint);
 	})) {
-		LOG_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
+		L_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
 		return false;
 	}
 
 	int port = (src_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : src_endpoint.port;
 
 	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) < 0) {
-		LOG_ERR(this, "Cannot connect to %s\n", src_endpoint.host.c_str(), std::to_string(port).c_str());
+		L_ERR(this, "Cannot connect to %s\n", src_endpoint.host.c_str(), std::to_string(port).c_str());
 		manager()->database_pool.checkin(repl_database);
 		repl_database.reset();
 		return false;
@@ -141,7 +141,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 bool BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename)
 {
-	LOG_DEBUG(this, "init_storing: %s  -->  %s\n", filename.c_str(), endpoints_.as_string().c_str());
+	L_DEBUG(this, "init_storing: %s  -->  %s\n", filename.c_str(), endpoints_.as_string().c_str());
 	state = State::STORINGPROTOCOL_SENDER;
 
 	storing_id = did;
@@ -151,7 +151,7 @@ bool BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid
 	int port = (storing_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : storing_endpoint.port;
 
 	if ((sock = BaseTCP::connect(sock, storing_endpoint.host.c_str(), std::to_string(port).c_str())) < 0) {
-		LOG_ERR(this, "Cannot connect to %s\n", storing_endpoint.host.c_str(), std::to_string(port).c_str());
+		L_ERR(this, "Cannot connect to %s\n", storing_endpoint.host.c_str(), std::to_string(port).c_str());
 		return false;
 	}
 	LOG_CONN(this, "Connected to %s (sock=%d)!\n", storing_endpoint.as_string().c_str(), sock);
@@ -177,7 +177,7 @@ BinaryClient::on_read_file_done()
 				storing_file_done();
 				break;
 			default:
-				LOG_ERR(this, "ERROR: Invalid on_read_file_done for state: %d\n", state);
+				L_ERR(this, "ERROR: Invalid on_read_file_done for state: %d\n", state);
 				if (repl_database) {
 					manager()->database_pool.checkin(repl_database);
 					repl_database.reset();
@@ -189,7 +189,7 @@ BinaryClient::on_read_file_done()
 				shutdown();
 		};
 	} catch (const Xapian::NetworkError &e) {
-		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+		L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 		if (repl_database) {
 			manager()->database_pool.checkin(repl_database);
 			repl_database.reset();
@@ -200,7 +200,7 @@ BinaryClient::on_read_file_done()
 		}
 		shutdown();
 	} catch (const std::exception &err) {
-		LOG_ERR(this, "ERROR: %s\n", err.what());
+		L_ERR(this, "ERROR: %s\n", err.what());
 		if (repl_database) {
 			manager()->database_pool.checkin(repl_database);
 			repl_database.reset();
@@ -211,7 +211,7 @@ BinaryClient::on_read_file_done()
 		}
 		shutdown();
 	} catch (...) {
-		LOG_ERR(this, "ERROR: Unkown exception!\n");
+		L_ERR(this, "ERROR: Unkown exception!\n");
 		if (repl_database) {
 			manager()->database_pool.checkin(repl_database);
 			repl_database.reset();
@@ -273,7 +273,7 @@ BinaryClient::repl_file_done()
 void
 BinaryClient::storing_file_done()
 {
-	LOG_DEBUG(this, "BinaryClient::storing_file_done\n");
+	L_DEBUG(this, "BinaryClient::storing_file_done\n");
 
 	cookie_t haystack_cookie = random_int(0, 0xffff);
 
@@ -285,7 +285,7 @@ BinaryClient::storing_file_done()
 	char buf[8 * 1024];
 	ssize_t size;
 	while ((size = ::read(file_descriptor, buf, sizeof(buf))) > 0) {
-		LOG_DEBUG(this, "Store %zd bytes from buf in the Haystack storage!\n", size);
+		L_DEBUG(this, "Store %zd bytes from buf in the Haystack storage!\n", size);
 		if (haystack_file.write(buf, size) != size) {
 			haystack_file.rewind();
 			throw MSG_Error("Storage failure (1)!");
@@ -295,7 +295,7 @@ BinaryClient::storing_file_done()
 	Endpoints endpoints;
 	endpoints.insert(storing_endpoint);
 	if (!manager()->database_pool.checkout(storing_database, endpoints, DB_WRITABLE|DB_SPAWN)) {
-		LOG_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
+		L_ERR(this, "Cannot checkout %s\n", endpoints.as_string().c_str());
 		haystack_file.rewind();
 		throw MSG_Error("Storage failure (2)!");
 	}
@@ -489,7 +489,7 @@ BinaryClient::run()
 		try {
 			switch (state) {
 				case State::INIT_REMOTEPROTOCOL:
-					LOG_ERR(this, "Unexpected INIT_REMOTEPROTOCOL!\n");
+					L_ERR(this, "Unexpected INIT_REMOTEPROTOCOL!\n");
 				case State::REMOTEPROTOCOL:
 					run_one();
 					break;
@@ -511,14 +511,14 @@ BinaryClient::run()
 					break;
 			}
 		} catch (const Xapian::NetworkError &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (repl_database) {
 				manager()->database_pool.checkin(repl_database);
 				repl_database.reset();
 			}
 			shutdown();
 		} catch (...) {
-			LOG_ERR(this, "ERROR!\n");
+			L_ERR(this, "ERROR!\n");
 			if (repl_database) {
 				manager()->database_pool.checkin(repl_database);
 				repl_database.reset();
@@ -585,7 +585,7 @@ void
 BinaryClient::repl_fail()
 {
 	LOG_REPLICATION(this, "BinaryClient::repl_fail\n");
-	LOG_ERR(this, "Replication failure!\n");
+	L_ERR(this, "Replication failure!\n");
 	if (repl_database) {
 		manager()->database_pool.checkin(repl_database);
 		repl_database.reset();
@@ -616,15 +616,15 @@ BinaryClient::repl_set_db_header(const std::string &message)
 
 	int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	if (dir == 0) {
-		LOG_DEBUG(this, "Directory %s created\n", path_tmp.c_str());
+		L_DEBUG(this, "Directory %s created\n", path_tmp.c_str());
 	} else if (errno == EEXIST) {
 		delete_files(path_tmp.c_str());
 		dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		if (dir == 0) {
-			LOG_DEBUG(this, "Directory %s created\n", path_tmp.c_str());
+			L_DEBUG(this, "Directory %s created\n", path_tmp.c_str());
 		}
 	} else {
-		LOG_ERR(this, "Directory %s not created (%s)\n", path_tmp.c_str(), strerror(errno));
+		L_ERR(this, "Directory %s not created (%s)\n", path_tmp.c_str(), strerror(errno));
 	}
 }
 
@@ -656,7 +656,7 @@ BinaryClient::repl_set_db_filedata(const std::string &message)
 	if (fd >= 0) {
 		LOG_REPLICATION(this, "path_filename %s\n", path_filename.c_str());
 		if (::write(fd, p, p_end - p) != p_end - p) {
-			LOG_ERR(this, "Cannot write to %s\n", repl_db_filename.c_str());
+			L_ERR(this, "Cannot write to %s\n", repl_db_filename.c_str());
 			return;
 		}
 		::close(fd);
@@ -680,7 +680,7 @@ BinaryClient::repl_set_db_footer()
 
 	if (!repl_database_tmp) {
 		if (!manager()->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
-			LOG_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
+			L_ERR(this, "Cannot checkout tmp %s\n", endpoint_tmp.path.c_str());
 		}
 	}
 
@@ -703,7 +703,7 @@ BinaryClient::repl_changeset(const std::string &message)
 	char path[] = "/tmp/xapian_changes.XXXXXX";
 	int fd = mkstemp(path);
 	if (fd < 0) {
-		LOG_ERR(this, "Cannot write to %s (1)\n", path);
+		L_ERR(this, "Cannot write to %s (1)\n", path);
 		return;
 	}
 
@@ -712,12 +712,12 @@ BinaryClient::repl_changeset(const std::string &message)
 	header += encode_length(message.size());
 
 	if (::write(fd, header.data(), header.size()) != static_cast<ssize_t>(header.size())) {
-		LOG_ERR(this, "Cannot write to %s (2)\n", path);
+		L_ERR(this, "Cannot write to %s (2)\n", path);
 		return;
 	}
 
 	if (::write(fd, message.data(), message.size()) != static_cast<ssize_t>(message.size())) {
-		LOG_ERR(this, "Cannot write to %s (3)\n", path);
+		L_ERR(this, "Cannot write to %s (3)\n", path);
 		return;
 	}
 
@@ -727,12 +727,12 @@ BinaryClient::repl_changeset(const std::string &message)
 		wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);
 		repl_just_switched_db = false;
 	} catch(const Xapian::NetworkError &e) {
-		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+		L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 		::close(fd);
 		::unlink(path);
 		throw;
 	} catch (const Xapian::DatabaseError &e) {
-		LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+		L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 		::close(fd);
 		::unlink(path);
 		throw;
@@ -786,7 +786,7 @@ BinaryClient::repl_get_changesets(const std::string &message)
 		LOG_REPLICATION(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
 
 		if (fd < 0) {
-			LOG_ERR(this, "Cannot write to %s (1)\n", path);
+			L_ERR(this, "Cannot write to %s (1)\n", path);
 			return;
 		}
 
@@ -814,7 +814,7 @@ BinaryClient::receive_repl()
 	strcpy(file_path, "/tmp/xapian_changesets_received.XXXXXX");
 	file_descriptor = mkstemp(file_path);
 	if (file_descriptor < 0) {
-		LOG_ERR(this, "Cannot write to %s (1)\n", file_path);
+		L_ERR(this, "Cannot write to %s (1)\n", file_path);
 		return;
 	}
 
@@ -870,7 +870,7 @@ void BinaryClient::storing_apply(StoringType type, const std::string & message)
 
 void BinaryClient::storing_send(const std::string &)
 {
-	LOG_DEBUG(this, "BinaryClient::storing_send (init)\n");
+	L_DEBUG(this, "BinaryClient::storing_send (init)\n");
 
 	std::string msg;
 	msg.append(encode_length(storing_id));
@@ -889,7 +889,7 @@ void BinaryClient::storing_send(const std::string &)
 
 void BinaryClient::storing_done(const std::string & message)
 {
-	LOG_DEBUG(this, "BinaryClient::storing_done\n");
+	L_DEBUG(this, "BinaryClient::storing_done\n");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -900,7 +900,7 @@ void BinaryClient::storing_done(const std::string & message)
 
 void BinaryClient::storing_open(const std::string & message)
 {
-	LOG_DEBUG(this, "BinaryClient::storing_open\n");
+	L_DEBUG(this, "BinaryClient::storing_open\n");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -924,7 +924,7 @@ void BinaryClient::storing_open(const std::string & message)
 
 void BinaryClient::storing_read(const std::string &)
 {
-	LOG_DEBUG(this, "BinaryClient::storing_read\n");
+	L_DEBUG(this, "BinaryClient::storing_read\n");
 
 	char buffer[8192];
 	size_t size = storing_file->read(buffer, sizeof(buffer));
@@ -939,7 +939,7 @@ void BinaryClient::storing_read(const std::string &)
 
 void BinaryClient::storing_create(const std::string & message)
 {
-	LOG_DEBUG(this, "BinaryClient::storing_create\n");
+	L_DEBUG(this, "BinaryClient::storing_create\n");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -949,7 +949,7 @@ void BinaryClient::storing_create(const std::string & message)
 	strcpy(file_path, "/tmp/xapian_storing.XXXXXX");
 	file_descriptor = mkstemp(file_path);
 	if (file_descriptor < 0) {
-		LOG_ERR(this, "Cannot write to %s (1)\n", file_path);
+		L_ERR(this, "Cannot write to %s (1)\n", file_path);
 		return;
 	}
 

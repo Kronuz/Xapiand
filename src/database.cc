@@ -90,7 +90,7 @@ Database::reopen()
 			db->reopen();
 			return;
 		} catch (const Xapian::Error &err) {
-			LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
 			db->close();
 			db.reset();
 		}
@@ -107,7 +107,7 @@ Database::reopen()
 	if (flags & DB_WRITABLE) {
 		db = std::make_unique<Xapian::WritableDatabase>();
 		if (endpoints_size != 1) {
-			LOG_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s\n", endpoints_size, endpoints.as_string().c_str());
+			L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s\n", endpoints_size, endpoints.as_string().c_str());
 		} else {
 			e = &*i;
 			if (e->is_local()) {
@@ -175,7 +175,7 @@ bool
 Database::drop(const std::string &doc_id, bool _commit)
 {
 	if (!(flags & DB_WRITABLE)) {
-		LOG_ERR(this, "ERROR: database is read-only\n");
+		L_ERR(this, "ERROR: database is read-only\n");
 		return false;
 	}
 
@@ -187,14 +187,14 @@ Database::drop(const std::string &doc_id, bool _commit)
 		try {
 			wdb->delete_document(document_id);
 		}catch (const Xapian::DatabaseCorruptError &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			return false;
 		}catch (const Xapian::DatabaseError &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			return false;
 		}catch (const Xapian::Error &e) {
-			LOG_DEBUG(this, "Inside catch drop\n");
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			L_DEBUG(this, "Inside catch drop\n");
+			L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
@@ -206,7 +206,7 @@ Database::drop(const std::string &doc_id, bool _commit)
 		}
 	}
 
-	LOG_ERR(this, "ERROR: Cannot delete document: %s!\n", document_id.c_str());
+	L_ERR(this, "ERROR: Cannot delete document: %s!\n", document_id.c_str());
 	return false;
 }
 
@@ -220,7 +220,7 @@ Database::commit()
 		try {
 			wdb->commit();
 		} catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
@@ -228,7 +228,7 @@ Database::commit()
 		return true;
 	}
 
-	LOG_ERR(this, "ERROR: Cannot do commit!\n");
+	L_ERR(this, "ERROR: Cannot do commit!\n");
 	return false;
 }
 
@@ -237,7 +237,7 @@ Xapian::docid
 Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, const std::string &ct_type, const std::string &ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
-		LOG_ERR(this, "ERROR: database is read-only\n");
+		L_ERR(this, "ERROR: database is read-only\n");
 		return 0;
 	}
 
@@ -270,7 +270,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, c
 
 	unique_cJSON data_json(cJSON_Parse(document.get_data().c_str()), cJSON_Delete);
 	if (!data_json) {
-		LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+		L_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 		return 0;
 	}
 
@@ -594,7 +594,7 @@ Xapian::docid
 Database::index(const std::string &body, const std::string &_document_id, bool _commit, const std::string &ct_type, const std::string &ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
-		LOG_ERR(this, "ERROR: database is read-only\n");
+		L_ERR(this, "ERROR: database is read-only\n");
 		return 0;
 	}
 
@@ -624,7 +624,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	if (ct_type == "application/json") {
 		json = cJSON_Parse(body.c_str());
 		if (!json) {
-			LOG_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+			L_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
 			return 0;
 		}
 		blob = false;
@@ -665,12 +665,12 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	} else {
 		schema = std::move(unique_cJSON(cJSON_Parse(s_schema.c_str()), cJSON_Delete));
 		if (!schema) {
-			LOG_ERR(this, "ERROR: Schema is corrupt, you need provide a new one. JSON Before: [%s]\n", cJSON_GetErrorPtr());
+			L_ERR(this, "ERROR: Schema is corrupt, you need provide a new one. JSON Before: [%s]\n", cJSON_GetErrorPtr());
 			return 0;
 		}
 		cJSON *_version = cJSON_GetObjectItem(schema.get(), RESERVED_VERSION);
 		if (_version == NULL || _version->valuedouble != DB_VERSION_SCHEMA) {
-			LOG_ERR(this, "ERROR: Different database's version schemas, the current version is %1.1f\n", DB_VERSION_SCHEMA);
+			L_ERR(this, "ERROR: Different database's version schemas, the current version is %1.1f\n", DB_VERSION_SCHEMA);
 			return 0;
 		}
 		properties = cJSON_GetObjectItem(schema.get(), RESERVED_SCHEMA);
@@ -694,7 +694,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 			cJSON_AddItemToObject(properties, RESERVED_ID, subproperties);
 		}
 	} else {
-		LOG_ERR(this, "ERROR: Document must have an 'id'\n");
+		L_ERR(this, "ERROR: Document must have an 'id'\n");
 		return 0;
 	}
 
@@ -818,7 +818,7 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 			did = wdb->replace_document(document_id, doc);
 			LOG_DATABASE_WRAP(this, "Replace_document was done.\n");
 		} catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
@@ -843,7 +843,7 @@ Database::replace(const Xapian::docid &did, const Xapian::Document &doc, bool _c
 			wdb->replace_document(did, doc);
 			LOG_DATABASE_WRAP(this, "Replace_document was done.\n");
 		} catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
@@ -977,7 +977,7 @@ Database::search(const query_field &e)
 	search_t srch;
 	bool first = true;
 
-	LOG_DEBUG(this, "e.query size: %d  Spelling: %d Synonyms: %d\n", e.query.size(), e.spelling, e.synonyms);
+	L_DEBUG(this, "e.query size: %d  Spelling: %d Synonyms: %d\n", e.query.size(), e.spelling, e.synonyms);
 	std::vector<std::string>::const_iterator qit(e.query.begin());
 	std::vector<std::string>::const_iterator lit(e.language.begin());
 	std::string lan;
@@ -1002,9 +1002,9 @@ Database::search(const query_field &e)
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 	}
-	LOG_DEBUG(this, "e.query: %s\n", queryQ.get_description().c_str());
+	L_DEBUG(this, "e.query: %s\n", queryQ.get_description().c_str());
 
-	LOG_DEBUG(this, "e.partial size: %d\n", e.partial.size());
+	L_DEBUG(this, "e.partial size: %d\n", e.partial.size());
 	std::vector<std::string>::const_iterator pit(e.partial.begin());
 	flags = Xapian::QueryParser::FLAG_PARTIAL;
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
@@ -1024,10 +1024,10 @@ Database::search(const query_field &e)
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 	}
-	LOG_DEBUG(this, "e.partial: %s\n", queryP.get_description().c_str());
+	L_DEBUG(this, "e.partial: %s\n", queryP.get_description().c_str());
 
 
-	LOG_DEBUG(this, "e.terms size: %d\n", e.terms.size());
+	L_DEBUG(this, "e.terms size: %d\n", e.terms.size());
 	std::vector<std::string>::const_iterator tit(e.terms.begin());
 	flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
@@ -1047,7 +1047,7 @@ Database::search(const query_field &e)
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 	}
-	LOG_DEBUG(this, "e.terms: %s\n", repr(queryT.get_description()).c_str());
+	L_DEBUG(this, "e.terms: %s\n", repr(queryT.get_description()).c_str());
 
 	first = true;
 	if (!e.query.empty()) {
@@ -1309,7 +1309,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				srch.query = Xapian::Query(Xapian::Query::OP_OR, queryparser.parse_query(querystring, flags), srch.query);
 				srch.suggested_query.push_back(queryparser.get_corrected_query_string());
 			} catch (const Xapian::QueryParserError &er) {
-				LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+				L_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 				reopen();
 				srch.query = Xapian::Query(Xapian::Query::OP_OR, queryparser.parse_query(querystring, flags), srch.query);
 				srch.suggested_query.push_back(queryparser.get_corrected_query_string());
@@ -1320,7 +1320,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				srch.query = queryparser.parse_query(querystring, flags);
 				srch.suggested_query.push_back(queryparser.get_corrected_query_string());
 			} catch (const Xapian::QueryParserError &er) {
-				LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+				L_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 				reopen();
 				queryparser.set_database(*db);
 				srch.query = queryparser.parse_query(querystring, flags);
@@ -1354,7 +1354,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 				rset.add_document(*m);
 			}
 		}catch (const Xapian::Error &er) {
-			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
@@ -1404,7 +1404,7 @@ Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key,
 				if (field_t.type != NO_TYPE) {
 					spy = std::make_unique<MultiValueCountMatchSpy>(get_slot(*fit), field_t.type == GEO_TYPE);
 					enquire.add_matchspy(spy.get());
-					LOG_ERR(this, "added spy de -%s-\n", (*fit).c_str());
+					L_ERR(this, "added spy de -%s-\n", (*fit).c_str());
 					spies->push_back(std::make_pair(*fit, std::move(spy)));
 				}
 			}
@@ -1469,15 +1469,15 @@ Database::get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pa
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
 		} catch (const Xapian::DatabaseModifiedError &er) {
-			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		} catch (const Xapian::NetworkError &er) {
-			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		} catch (const Xapian::Error &er) {
-			LOG_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", er.get_msg().c_str());
 			return 2;
 		} catch (const std::exception &er) {
 			LOG_DATABASE_WRAP(this, "ERROR: %s\n", er.what());
@@ -1487,7 +1487,7 @@ Database::get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pa
 		return 0;
 	}
 
-	LOG_ERR(this, "ERROR: The search was not performed!\n");
+	L_ERR(this, "ERROR: The search was not performed!\n");
 	return 2;
 }
 
@@ -1499,7 +1499,7 @@ Database::get_metadata(const std::string &key, std::string &value)
 		try {
 			value = db->get_metadata(key);
 		} catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
@@ -1518,7 +1518,7 @@ Database::set_metadata(const std::string &key, const std::string &value, bool _c
 		try {
 			wdb->set_metadata(key, value);
 		} catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
@@ -1526,7 +1526,7 @@ Database::set_metadata(const std::string &key, const std::string &value, bool _c
 		return (_commit) ? commit() : true;
 	}
 
-	LOG_ERR(this, "ERROR: set_metadata can not be done!\n");
+	L_ERR(this, "ERROR: set_metadata can not be done!\n");
 	return false;
 }
 
@@ -1538,7 +1538,7 @@ Database::get_document(const Xapian::docid &did, Xapian::Document &doc)
 		try {
 			doc = db->get_document(did);
 		} catch (const Xapian::Error &e) {
-			LOG_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
+			L_ERR(this, "ERROR: %s\n", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
@@ -1807,7 +1807,7 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 
 				} catch (const Xapian::DatabaseOpeningError &err) {
 				} catch (const Xapian::Error &err) {
-					LOG_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
+					L_ERR(this, "ERROR: %s\n", err.get_msg().c_str());
 				}
 				lk.lock();
 				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
@@ -1817,7 +1817,7 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 				int s = queue->pop(database);
 				lk.lock();
 				if (!s) {
-					LOG_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
+					L_ERR(this, "ERROR: Database is not available. Writable: %d", writable);
 				}
 			}
 		}
@@ -1949,7 +1949,7 @@ DatabasePool::_switch_db(const Endpoint &endpoint)
 			queue->switch_cond.notify_all();
 		}
 	} else {
-		LOG_DEBUG(this, "Inside switch_db not queue->count == queue->size()\n");
+		L_DEBUG(this, "Inside switch_db not queue->count == queue->size()\n");
 	}
 
 	return switched;
@@ -1971,7 +1971,7 @@ DatabasePool::init_ref(const Endpoints &endpoints)
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
-		LOG_ERR(this, "Database refs it could not be checkout.\n");
+		L_ERR(this, "Database refs it could not be checkout.\n");
 		assert(false);
 	}
 
@@ -2001,7 +2001,7 @@ DatabasePool::inc_ref(const Endpoints &endpoints)
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
-		LOG_ERR(this, "Database refs it could not be checkout.\n");
+		L_ERR(this, "Database refs it could not be checkout.\n");
 		assert(false);
 	}
 
@@ -2038,7 +2038,7 @@ DatabasePool::dec_ref(const Endpoints &endpoints)
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
-		LOG_ERR(this, "Database refs it could not be checkout.\n");
+		L_ERR(this, "Database refs it could not be checkout.\n");
 		assert(false);
 	}
 
@@ -2072,7 +2072,7 @@ DatabasePool::get_master_count()
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
-		LOG_ERR(this, "Database refs it could not be checkout.\n");
+		L_ERR(this, "Database refs it could not be checkout.\n");
 		assert(false);
 	}
 

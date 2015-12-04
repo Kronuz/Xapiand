@@ -28,9 +28,58 @@
 #define BUFFER_SIZE (10 * 1024)
 
 
-Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_)
+// LOG_EMERG    0 = System is unusable
+// LOG_ALERT    1 = Action must be taken immediately
+// LOG_CRIT     2 = Critical conditions
+// LOG_ERR      3 = Error conditions
+// LOG_WARNING  4 = Warning conditions
+// LOG_NOTICE   5 = Normal but significant condition
+// LOG_INFO     6 = Informational
+// LOG_DEBUG    7 = Debug-level messages
+const char *priorities[] = {
+	EMERG_COL "EMERG" NO_COL,
+	ALERT_COL "ALERT" NO_COL,
+	CRIT_COL "CRIT" NO_COL,
+	ERR_COL "ERR" NO_COL,
+	WARNING_COL "WARNING" NO_COL,
+	NOTICE_COL "NOTICE" NO_COL,
+	INFO_COL "INFO" NO_COL,
+	DEBUG_COL "DEBUG" NO_COL,
+};
+
+
+void StreamLogger::log(int priority, const std::string& str) {
+	ofs << priorities[priority] << ": " << str;
+}
+
+
+void StderrLogger::log(int priority, const std::string& str) {
+	std::cerr << priorities[priority] << ": " << str;
+}
+
+
+SysLog::SysLog(const char *ident, int option, int facility) {
+	openlog(ident, option, facility);
+}
+
+
+SysLog::~SysLog() {
+	closelog();
+}
+
+
+void SysLog::log(int priority, const std::string& str) {
+	syslog(priority, "%s", str.c_str());
+}
+
+
+std::vector<std::unique_ptr<Logger>> Log::handlers;
+
+
+Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_)
 	: wakeup(wakeup_),
 	  str_start(str),
+	  priority(priority_),
 	  finished(false) { }
 
 
@@ -49,14 +98,14 @@ Log::str_format(const char *file, int line, const char *suffix, const char *pref
 
 
 std::shared_ptr<Log>
-Log::log(std::chrono::time_point<std::chrono::system_clock> wakeup, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...)
+Log::log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
 	std::string str(str_format(file, line, suffix, prefix, obj, format, argptr));
 	va_end(argptr);
 
-	return print(str, wakeup);
+	return print(str, wakeup, priority);
 }
 
 
@@ -68,7 +117,7 @@ Log::clear()
 
 
 void
-Log::unlog(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...)
+Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...)
 {
 	if (finished.exchange(true)) {
 		va_list argptr;
@@ -76,24 +125,24 @@ Log::unlog(const char *file, int line, const char *suffix, const char *prefix, v
 		std::string str(str_format(file, line, suffix, prefix, obj, format, argptr));
 		va_end(argptr);
 
-		print(str);
+		print(str, 0, priority);
 	}
 }
 
 
 std::shared_ptr<Log>
-Log::add(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup)
+Log::add(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
 {
 	static LogThread thread;
 
 	// std::make_shared only can call a public constructor, for this reason
 	// it is neccesary wrap the constructor in a struct.
 	struct enable_make_shared : Log {
-		enable_make_shared(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup)
-			: Log(str, wakeup) { }
+		enable_make_shared(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
+			: Log(str, wakeup, priority) { }
 	};
 
-	auto l_ptr = std::make_shared<enable_make_shared>(str, wakeup);
+	auto l_ptr = std::make_shared<enable_make_shared>(str, wakeup, priority);
 	thread.log_list.push_front(l_ptr->shared_from_this());
 
 	if (thread.wakeup.load() > l_ptr->wakeup) {
@@ -105,14 +154,19 @@ Log::add(const std::string& str, std::chrono::time_point<std::chrono::system_clo
 
 
 std::shared_ptr<Log>
-Log::print(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup)
+Log::print(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
 {
+	if (!Log::handlers.size()) {
+		Log::handlers.push_back(std::make_unique<StderrLogger>());
+	}
 	if (wakeup > std::chrono::system_clock::now()) {
-		return add(str, wakeup);
+		return add(str, wakeup, priority);
 	} else {
 		static std::mutex log_mutex;
 		std::lock_guard<std::mutex> lk(log_mutex);
-		std::cerr << str;
+		for (auto& handler : Log::handlers) {
+			handler->log(priority, str);
+		}
 		return std::shared_ptr<Log>();
 	}
 }
@@ -147,7 +201,7 @@ LogThread::thread_function()
 				log_list.erase(it);
 			} else if ((*it)->wakeup <= now) {
 				(*it)->finished.store(true);
-				Log::print((*it)->str_start);
+				Log::print((*it)->str_start, 0, (*it)->priority);
 				log_list.erase(it);
 			} else if (next_wakeup > (*it)->wakeup) {
 				next_wakeup = (*it)->wakeup;

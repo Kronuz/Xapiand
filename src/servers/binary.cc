@@ -59,27 +59,27 @@ Binary::connection_socket()
 	int optval = 1;
 
 	if ((client_sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		LOG_ERR(nullptr, "ERROR: cannot create binary connection: [%d] %s\n", errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: cannot create binary connection: [%d] %s\n", errno, strerror(errno));
 		return -1;
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		LOG_ERR(nullptr, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 	}
 #endif
 
 	// if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(nullptr, "ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+	// 	L_ERR(nullptr, "ERROR: setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
 	// }
 
 	// struct linger ling = {0, 0};
 	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-	// 	LOG_ERR(nullptr, "ERROR: setsockopt SO_LINGER (sock=%d): %s\n", sock, strerror(errno));
+	// 	L_ERR(nullptr, "ERROR: setsockopt SO_LINGER (sock=%d): %s\n", sock, strerror(errno));
 	// }
 
 	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	LOG_ERR(nullptr, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
+	// 	L_ERR(nullptr, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s\n", sock, strerror(errno));
 	// }
 
 	return client_sock;

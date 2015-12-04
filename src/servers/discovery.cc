@@ -59,7 +59,7 @@ Discovery::heartbeat_cb(ev::timer &, int)
 			} else {
 				local_node.name = manager->node_name;
 			}
-			LOG_INFO(this, "Advertising as %s (id: %016llX)...\n", local_node.name.c_str(), local_node.id);
+			L_INFO(this, "Advertising as %s (id: %016llX)...\n", local_node.name.c_str(), local_node.id);
 			send_message(Message::HELLO, local_node.serialise());
 			manager->state = XapiandManager::State::WAITING;
 			break;
@@ -81,7 +81,7 @@ Discovery::heartbeat_cb(ev::timer &, int)
 			break;
 
 		case XapiandManager::State::BAD:
-			LOG_ERR(this, "ERROR: Manager is in BAD state!!\n");
+			L_ERR(this, "ERROR: Manager is in BAD state!!\n");
 			break;
 	}
 	LOG_EV_END(this, "Discovery::heartbeat_cb:END\n");

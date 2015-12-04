@@ -702,7 +702,7 @@ void delete_files(const std::string &path) {
 		if (Subdir->d_type == isFile) {
 			std::string file = path + "/" + std::string(Subdir->d_name);
 			if (remove(file.c_str()) != 0) {
-				LOG_ERR(nullptr, "File %s could not be deleted\n", Subdir->d_name);
+				L_ERR(nullptr, "File %s could not be deleted\n", Subdir->d_name);
 			}
 		}
 		Subdir = readdir(Dir);
@@ -710,7 +710,7 @@ void delete_files(const std::string &path) {
 
 	if (!contains_folder) {
 		if (rmdir(path.c_str()) != 0) {
-			LOG_ERR(nullptr, "Directory %s could not be deleted\n", path.c_str());
+			L_ERR(nullptr, "Directory %s could not be deleted\n", path.c_str());
 		}
 	}
 }
@@ -733,14 +733,14 @@ void move_files(const std::string &src, const std::string &dst) {
 			std::string old_name = src + "/" + Subdir->d_name;
 			std::string new_name = dst + "/" + Subdir->d_name;
 			if (::rename(old_name.c_str(), new_name.c_str()) != 0) {
-				LOG_ERR(nullptr, "Couldn't rename %s to %s\n", old_name.c_str(), new_name.c_str());
+				L_ERR(nullptr, "Couldn't rename %s to %s\n", old_name.c_str(), new_name.c_str());
 			}
 		}
 		Subdir = readdir(Dir);
 	}
 
 	if (rmdir(src.c_str()) != 0) {
-		LOG_ERR(nullptr, "Directory %s could not be deleted\n", src.c_str());
+		L_ERR(nullptr, "Directory %s could not be deleted\n", src.c_str());
 	}
 }
 

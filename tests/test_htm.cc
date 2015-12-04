@@ -155,19 +155,19 @@ int test_cartesian_transforms() {
 			std::string get = c.Decimal2Degrees();
 			if (strcasecmp(get.c_str(), it->res.c_str()) != 0) {
 				cont++;
-				LOG_ERR(nullptr, "ERROR: Resul: %s  Expected: %s\n", get.c_str(), it->res.c_str());
+				L_ERR(nullptr, "ERROR: Resul: %s  Expected: %s\n", get.c_str(), it->res.c_str());
 			}
 		}
 	} catch (const std::exception &e) {
-		LOG_ERR(nullptr, "ERROR: %s\n", e.what());
+		L_ERR(nullptr, "ERROR: %s\n", e.what());
 		cont++;
 	}
 
 	if (cont == 0) {
-		LOG_DEBUG(nullptr, "Testing the transformation of coordinates between CRS is correct!\n");
+		L_DEBUG(nullptr, "Testing the transformation of coordinates between CRS is correct!\n");
 		return 0;
 	} else {
-		LOG_ERR(nullptr, "ERROR: Testing the transformation of coordinates between CRS has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing the transformation of coordinates between CRS has mistakes.\n");
 		return 1;
 	}
 }
@@ -276,18 +276,18 @@ int test_hullConvex() {
 						std::getline(readEFile, coord_exp);
 						if (strcasecmp(coord_exp.c_str(), coord_get.c_str()) != 0) {
 							cont++;
-							LOG_ERR(nullptr, "ERROR: Result(%s) Expect(%s).\n", coord_get.c_str(), coord_exp.c_str());
+							L_ERR(nullptr, "ERROR: Result(%s) Expect(%s).\n", coord_get.c_str(), coord_exp.c_str());
 						}
 					} else {
 						cont++;
-						LOG_ERR(nullptr, "ERROR: Expected less corners.\n");
+						L_ERR(nullptr, "ERROR: Expected less corners.\n");
 						break;
 					}
 				}
 
 				if (!readEFile.eof()) {
 					cont++;
-					LOG_ERR(nullptr, "ERROR: Expected more corners.\n");
+					L_ERR(nullptr, "ERROR: Expected more corners.\n");
 					break;
 				}
 
@@ -297,11 +297,11 @@ int test_hullConvex() {
 				fs << "ax.set_xlabel('x')\nax.set_ylabel('y')\nax.set_zlabel('z')\n";
 				fs << "plt.show()\nplt.ion()\n";
 			} catch(const std::exception &e) {
-				LOG_ERR(nullptr, "ERROR: (%s) %s\n", it_f->c_str(), e.what());
+				L_ERR(nullptr, "ERROR: (%s) %s\n", it_f->c_str(), e.what());
 				cont++;
 			}
 		} else {
-			LOG_ERR(nullptr, "ERROR: File %s or %s not found.\n", (*it_f).c_str(), (*it_e).c_str());
+			L_ERR(nullptr, "ERROR: File %s or %s not found.\n", (*it_f).c_str(), (*it_e).c_str());
 			cont ++;
 		}
 
@@ -309,10 +309,10 @@ int test_hullConvex() {
 	}
 
 	if (cont == 0) {
-		LOG_DEBUG(nullptr, "Testing Geometry Hull Convex is correct!, run with python examples/{file}_convex_hull.py to see the hull convex.\n");
+		L_DEBUG(nullptr, "Testing Geometry Hull Convex is correct!, run with python examples/{file}_convex_hull.py to see the hull convex.\n");
 		return 0;
 	} else {
-		LOG_ERR(nullptr, "ERROR: Testing Geometry Hull Convex has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing Geometry Hull Convex has mistakes.\n");
 		return 1;
 	}
 }
@@ -405,18 +405,18 @@ int test_HTM_chull() {
 						std::getline(readEFile, trixel_exp);
 						if (strcasecmp((*itn).c_str(), trixel_exp.c_str()) != 0) {
 							cont++;
-							LOG_ERR(nullptr, "ERROR: File(%s) Result(%s) Expect(%s).\n", (*it_f).c_str(), (*itn).c_str(), trixel_exp.c_str());
+							L_ERR(nullptr, "ERROR: File(%s) Result(%s) Expect(%s).\n", (*it_f).c_str(), (*itn).c_str(), trixel_exp.c_str());
 						}
 					} else {
 						cont++;
-						LOG_ERR(nullptr, "ERROR: Expected less trixels.\n");
+						L_ERR(nullptr, "ERROR: Expected less trixels.\n");
 						break;
 					}
 				}
 
 				if (!readEFile.eof()) {
 					cont++;
-					LOG_ERR(nullptr, "ERROR: Expected more trixels.\n");
+					L_ERR(nullptr, "ERROR: Expected more trixels.\n");
 					readFile.close();
 					readEFile.close();
 					break;
@@ -424,11 +424,11 @@ int test_HTM_chull() {
 
 				_htm.writePython3D(*it_r);
 			} catch(const std::exception &e) {
-				LOG_ERR(nullptr, "ERROR: (%s) %s\n", it_f->c_str(), e.what());
+				L_ERR(nullptr, "ERROR: (%s) %s\n", it_f->c_str(), e.what());
 				cont++;
 			}
 		} else {
-			LOG_ERR(nullptr, "ERROR: File %s or %s not found.\n", (*it_f).c_str(), (*it_e).c_str());
+			L_ERR(nullptr, "ERROR: File %s or %s not found.\n", (*it_f).c_str(), (*it_e).c_str());
 			cont ++;
 		}
 
@@ -437,10 +437,10 @@ int test_HTM_chull() {
 	}
 
 	if (cont == 0) {
-		LOG_DEBUG(nullptr, "Testing HTM polygon is correct!, run with python examples/{file}_polygon_HTM.py to see the trixels that cover the hull convex.\n");
+		L_DEBUG(nullptr, "Testing HTM polygon is correct!, run with python examples/{file}_polygon_HTM.py to see the trixels that cover the hull convex.\n");
 		return 0;
 	} else {
-		LOG_ERR(nullptr, "ERROR: Testing polygon HTM has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing polygon HTM has mistakes.\n");
 		return 1;
 	}
 }
@@ -488,44 +488,44 @@ int test_HTM_circle() {
 							std::getline(readEFile, trixel_exp);
 							if (strcasecmp((*itn).c_str(), trixel_exp.c_str()) != 0) {
 								cont++;
-								LOG_ERR(nullptr, "ERROR: File (%s) Result(%s) Expect(%s).\n", file_expect.c_str(), (*itn).c_str(), trixel_exp.c_str());
+								L_ERR(nullptr, "ERROR: File (%s) Result(%s) Expect(%s).\n", file_expect.c_str(), (*itn).c_str(), trixel_exp.c_str());
 							}
 						} else {
 							cont++;
-							LOG_ERR(nullptr, "ERROR: Expected less trixels.\n");
+							L_ERR(nullptr, "ERROR: Expected less trixels.\n");
 							break;
 						}
 					}
 
 					if (!readEFile.eof()) {
 						cont++;
-						LOG_ERR(nullptr, "ERROR: Expected more trixels.\n");
+						L_ERR(nullptr, "ERROR: Expected more trixels.\n");
 						readEFile.close();
 						break;
 					}
 
 					_htm.writePython3D(file_result);
 				} catch(const std::exception &e) {
-					LOG_ERR(nullptr, "ERROR: %s\n", e.what());
+					L_ERR(nullptr, "ERROR: %s\n", e.what());
 					cont++;
 				}
 				readEFile.close();
 			} else {
-				LOG_ERR(nullptr, "ERROR: File %s not found.\n", file_expect.c_str());
+				L_ERR(nullptr, "ERROR: File %s not found.\n", file_expect.c_str());
 				cont ++;
 			}
 		}
 		readFile.close();
 	} else {
-		LOG_ERR(nullptr, "ERROR: File %s not found.\n", name.c_str());
+		L_ERR(nullptr, "ERROR: File %s not found.\n", name.c_str());
 		cont ++;
 	}
 
 	if (cont == 0) {
-		LOG_DEBUG(nullptr, "Testing HTM bounding circle is correct!, run with python examples/Circle{#}_HTM.py to see the trixels that cover the bounding circle.\n");
+		L_DEBUG(nullptr, "Testing HTM bounding circle is correct!, run with python examples/Circle{#}_HTM.py to see the trixels that cover the bounding circle.\n");
 		return 0;
 	} else {
-		LOG_ERR(nullptr, "ERROR: Testing HTM bounding circle has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing HTM bounding circle has mistakes.\n");
 		return 1;
 	}
 }
