@@ -38,12 +38,23 @@ DatabaseCommitStatus::next_wakeup_time()
 
 DatabaseAutocommit::DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_)
 	: running(true),
-	  manager(manager_) { }
+	  manager(manager_)
+{
+		L_OBJ(this, "CREATED DATABASE AUTOCOMMIT!\n");
+}
 
 
 DatabaseAutocommit::~DatabaseAutocommit()
 {
 	running.store(false);
+	L_OBJ(this , "DELETED DATABASE AUTOCOMMIT!\n");
+}
+
+void
+DatabaseAutocommit::shutdown()
+{
+	running.store(false);
+	wakeup_signal.notify_all();
 }
 
 
@@ -71,7 +82,7 @@ DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
 void
 DatabaseAutocommit::run()
 {
-	LOG_OBJ(this, "Committer started...\n");
+	L_OBJ(this, "Committer started...\n");
 	while (running) {
 		std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx);
 		DatabaseAutocommit::wakeup_signal.wait_until(lk, DatabaseAutocommit::next_wakeup_time);
@@ -104,5 +115,5 @@ DatabaseAutocommit::run()
 			}
 		}
 	}
-	LOG_OBJ(this, "Committer ended!...\n");
+	L_OBJ(this, "Committer ended!...\n");
 }
