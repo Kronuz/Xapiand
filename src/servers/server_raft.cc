@@ -65,7 +65,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 		if (received < 0) {
 			if (!ignored_errorno(errno, true)) {
-				L_ERR(this, "ERROR: read error (sock=%d): %s\n", raft->sock, strerror(errno));
+				L_ERR(this, "ERROR: read error (sock=%d): %s", raft->sock, strerror(errno));
 				manager()->shutdown();
 			}
 		} else if (received == 0) {
@@ -130,7 +130,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 					if (remote_term > raft->term) {
 						if (raft->state == Raft::State::LEADER && remote_node != local_node) {
-							L_ERR(this, "ERROR: Node %s (with highest term) does not receive this node as a leader. Therefore, this node will reset!\n", remote_node.name.c_str());
+							L_ERR(this, "ERROR: Node %s (with highest term) does not receive this node as a leader. Therefore, this node will reset!", remote_node.name.c_str());
 							raft->reset();
 						}
 
@@ -142,7 +142,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 							serialise_string("1") + serialise_string(str_remote_term));
 					} else {
 						if (raft->state == Raft::State::LEADER && remote_node != local_node) {
-							L_ERR(this, "ERROR: Remote node %s does not recognize this node (with highest term) as a leader. Therefore, remote node will reset!\n", remote_node.name.c_str());
+							L_ERR(this, "ERROR: Remote node %s does not recognize this node (with highest term) as a leader. Therefore, remote node will reset!", remote_node.name.c_str());
 							raft->send_message(Raft::Message::RESET, remote_node.serialise());
 							LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
 							return;
@@ -238,7 +238,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 				case toUType(Raft::Message::REQUEST_DATA):
 					if (raft->state == Raft::State::LEADER) {
-						L_DEBUG(this, "Sending Data!\n");
+						L_DEBUG(this, "Sending Data!");
 						raft->send_message(Raft::Message::RESPONSE_DATA, local_node.serialise() +
 							serialise_string(std::to_string(raft->number_servers)) +
 							serialise_string(std::to_string(raft->term)));
@@ -254,7 +254,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 						return;
 					}
 
-					L_DEBUG(this, "Receiving Data!\n");
+					L_DEBUG(this, "Receiving Data!");
 					if (unserialise_string(str_servers, &ptr, end) == -1) {
 						LOG_RAFT(this, "Badly formed message: No proper number of servers!\n");
 						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);

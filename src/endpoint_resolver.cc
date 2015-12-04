@@ -199,7 +199,7 @@ EndpointList::show_list()
 	std::lock_guard<std::mutex> lk(endl_qmtx);
 	std::set<Endpoint, Endpoint::compare>::iterator it(endp_set.begin());
 	for ( ; it != endp_set.end(); it++) {
-		L_DEBUG(this, "Endpoint list: --%s--\n", (*it).host.c_str());
+		L_DEBUG(this, "Endpoint list: --%s--", (*it).host.c_str());
 	}
 }
 

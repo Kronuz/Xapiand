@@ -149,20 +149,20 @@ int test_datetotimestamp() {
 		try {
 			timestamp = std::to_string(Datetime::timestamp(date));
 		} catch (const std::exception &ex) {
-			L_ERR(nullptr, "ERROR: %s\n", ex.what());
+			L_ERR(nullptr, "ERROR: %s", ex.what());
 			timestamp = "";
 		}
 		if (timestamp.compare(p->expect) != 0) {
 			cont++;
-			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s\n", timestamp.c_str(), p->expect);
+			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", timestamp.c_str(), p->expect);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing the transformation between date string and timestamp is correct!\n");
+		L_DEBUG(nullptr, "Testing the transformation between date string and timestamp is correct!");
 		return 0;
 	} else {
-		L_ERR(nullptr, "ERROR: Testing the transformation between date string and timestamp has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing the transformation between date string and timestamp has mistakes.");
 		return 1;
 	}
 }
@@ -175,15 +175,15 @@ int test_unserialise_date() {
 		std::string date = Unserialise::date(date_s);
 		if (date.compare(p->expect) != 0) {
 			cont++;
-			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s\n", date.c_str(), p->expect);
+			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", date.c_str(), p->expect);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing unserialise date is correct!\n");
+		L_DEBUG(nullptr, "Testing unserialise date is correct!");
 		return 0;
 	} else {
-		L_ERR(nullptr, "ERROR: Testing unserialise date has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing unserialise date has mistakes.");
 		return 1;
 	}
 }
@@ -197,15 +197,15 @@ int test_serialise_cartesian() {
 		std::string res(repr(Serialise::cartesian(c)));
 		if (res.compare(p->expect_serialise) != 0) {
 			cont++;
-			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s\n", res.c_str(), p->expect_serialise);
+			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res.c_str(), p->expect_serialise);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing serialise Cartesian is correct!\n");
+		L_DEBUG(nullptr, "Testing serialise Cartesian is correct!");
 		return 0;
 	} else {
-		L_ERR(nullptr, "ERROR: Testing serialise Cartesian has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing serialise Cartesian has mistakes.");
 		return 1;
 	}
 }
@@ -222,15 +222,15 @@ int test_unserialise_cartesian() {
 		snprintf(res, sizeof(res), "%1.9f %1.9f %1.9f", c.x, c.y, c.z);
 		if (strcmp(res, p->expect_unserialise) != 0) {
 			cont++;
-			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s\n", res, p->expect_unserialise);
+			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res, p->expect_unserialise);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing unserialise Cartesian is correct!\n");
+		L_DEBUG(nullptr, "Testing unserialise Cartesian is correct!");
 		return 0;
 	} else {
-		L_ERR(nullptr, "ERROR: Testing unserialise Cartesian has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing unserialise Cartesian has mistakes.");
 		return 1;
 	}
 }
@@ -243,15 +243,15 @@ int test_serialise_trixel_id() {
 		std::string res(repr(Serialise::trixel_id(trixel_id)));
 		if (res.compare(p->expect_serialise) != 0) {
 			cont++;
-			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s\n", res.c_str(), p->expect_serialise);
+			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res.c_str(), p->expect_serialise);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing serialise HTM Trixel's id is correct!\n");
+		L_DEBUG(nullptr, "Testing serialise HTM Trixel's id is correct!");
 		return 0;
 	} else {
-		L_ERR(nullptr, "ERROR: Testing serialise HTM Trixel's id has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing serialise HTM Trixel's id has mistakes.");
 		return 1;
 	}
 }
@@ -265,15 +265,15 @@ int test_unserialise_trixel_id() {
 		trixel_id = Unserialise::trixel_id(serialise);
 		if (p->trixel_id != trixel_id) {
 			cont++;
-			L_ERR(nullptr, "ERROR: Resul: %llu Expect: %llu\n", trixel_id, p->trixel_id);
+			L_ERR(nullptr, "ERROR: Resul: %llu Expect: %llu", trixel_id, p->trixel_id);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing unserialise HTM Trixel's id is correct!\n");
+		L_DEBUG(nullptr, "Testing unserialise HTM Trixel's id is correct!");
 		return 0;
 	} else {
-		L_ERR(nullptr, "ERROR: Testing unserialise HTM Trixel's id has mistakes.\n");
+		L_ERR(nullptr, "ERROR: Testing unserialise HTM Trixel's id has mistakes.");
 		return 1;
 	}
 }

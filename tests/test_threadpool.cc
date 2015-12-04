@@ -38,7 +38,7 @@ int test_pool() {
 	pool.join();
 
 	if (results != "<1<2<3<44>2>3>1>") {
-		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly.\n");
+		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly.");
 		return 1;
 	}
 
@@ -57,7 +57,7 @@ int test_pool_limit() {
 	pool.join();
 
 	if (results != "<1<2<32><44>3>1>") {
-		L_ERR(nullptr, "ThreadPool's limit is not working correctly.\n");
+		L_ERR(nullptr, "ThreadPool's limit is not working correctly.");
 		return 1;
 	}
 
@@ -100,7 +100,7 @@ int test_pool_func() {
 	}
 
 	if (total != 30) {
-		L_ERR(nullptr, "ThreadPool::enqueue functions with int is not working correctly.\n");
+		L_ERR(nullptr, "ThreadPool::enqueue functions with int is not working correctly.");
 		return 1;
 	}
 
@@ -144,7 +144,7 @@ int test_pool_func_shared() {
 	}
 
 	if (total != 30) {
-		L_ERR(nullptr, "ThreadPool::enqueue functions with std::shared_ptr is not working correctly.\n");
+		L_ERR(nullptr, "ThreadPool::enqueue functions with std::shared_ptr is not working correctly.");
 		return 1;
 	}
 
@@ -188,7 +188,7 @@ int test_pool_func_unique() {
 	}
 
 	if (total != 30)  {
-		L_ERR(nullptr, "ThreadPool::enqueue functions with std::unique_ptr is not working correctly.\n");
+		L_ERR(nullptr, "ThreadPool::enqueue functions with std::unique_ptr is not working correctly.");
 		return 1;
 	}
 

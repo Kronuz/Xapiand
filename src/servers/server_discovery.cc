@@ -66,7 +66,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 
 		if (received < 0) {
 			if (!ignored_errorno(errno, true)) {
-				L_ERR(this, "ERROR: read error (sock=%d): %s\n", discovery->sock, strerror(errno));
+				L_ERR(this, "ERROR: read error (sock=%d): %s", discovery->sock, strerror(errno));
 				manager()->shutdown();
 			}
 		} else if (received == 0) {
@@ -148,7 +148,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 								LOG_DISCOVERY(this, "Node name %s already taken. Retrying other name...\n", local_node.name.c_str());
 								discovery->manager->reset_state();
 							} else {
-								L_ERR(this, "Cannot join the party. Node name %s already taken!\n", local_node.name.c_str());
+								L_ERR(this, "Cannot join the party. Node name %s already taken!", local_node.name.c_str());
 								discovery->manager->state = XapiandManager::State::BAD;
 								local_node.name.clear();
 								discovery->manager->shutdown_asap = now;
@@ -176,23 +176,23 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 						if (remote_node != *node && remote_node.name != local_node.name) {
 							if (cmd == toUType(Discovery::Message::HEARTBEAT) || node->touched < now - HEARTBEAT_MAX) {
 								discovery->manager->drop_node(remote_node.name);
-								L_INFO(this, "Stalled node %s left the party!\n", remote_node.name.c_str());
+								L_INFO(this, "Stalled node %s left the party!", remote_node.name.c_str());
 								if (discovery->manager->put_node(remote_node)) {
-									L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+									L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 									local_node.regions.store(-1);
 									discovery->manager->get_region();
 								} else {
-									L_ERR(this, "ERROR: Cannot register remote node (1): %s\n", remote_node.name.c_str());
+									L_ERR(this, "ERROR: Cannot register remote node (1): %s", remote_node.name.c_str());
 								}
 							}
 						}
 					} else {
 						if (discovery->manager->put_node(remote_node)) {
-							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 							local_node.regions.store(-1);
 							discovery->manager->get_region();
 						} else {
-							L_ERR(this, "ERROR: Cannot register remote node (2): %s\n", remote_node.name.c_str());
+							L_ERR(this, "ERROR: Cannot register remote node (2): %s", remote_node.name.c_str());
 						}
 					}
 					break;
@@ -205,7 +205,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							return;
 						}
 						discovery->manager->drop_node(remote_node.name);
-						L_INFO(this, "Node %s left the party!\n", remote_node.name.c_str());
+						L_INFO(this, "Node %s left the party!", remote_node.name.c_str());
 						local_node.regions.store(-1);
 						discovery->manager->get_region();
 					}
@@ -268,17 +268,17 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							return;
 						}
 						if (discovery->manager->put_node(remote_node)) {
-							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 						}
 
 						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %llx!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
 
 						if (discovery->manager->get_region() == discovery->manager->get_region(index_path)) {
-							L_DEBUG(this, "The DB is in the same region that this cluster!\n");
+							L_DEBUG(this, "The DB is in the same region that this cluster!");
 							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
 							discovery->manager->endp_r.add_index_endpoint(index, true, cmd == toUType(Discovery::Message::BOSSY_DB_WAVE));
 						} else if (discovery->manager->endp_r.exists(index_path)) {
-							L_DEBUG(this, "The DB is in the LRU of this node!\n");
+							L_DEBUG(this, "The DB is in the LRU of this node!");
 							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
 							discovery->manager->endp_r.add_index_endpoint(index, false, cmd == toUType(Discovery::Message::BOSSY_DB_WAVE));
 						}
@@ -314,17 +314,17 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 								return;
 							}
 							if (discovery->manager->put_node(remote_node)) {
-								L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)\n", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+								L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 							}
 
 							Endpoint local_endpoint(index_path);
 							Endpoint remote_endpoint(index_path, &remote_node);
 #ifdef HAVE_REMOTE_PROTOCOL
 							// Replicate database from the other node
-							L_INFO(this, "Request syncing database from %s...\n", remote_node.name.c_str());
+							L_INFO(this, "Request syncing database from %s...", remote_node.name.c_str());
 							auto ret = manager()->trigger_replication(remote_endpoint, local_endpoint);
 							if (ret.get()) {
-								L_INFO(this, "Replication triggered!\n");
+								L_INFO(this, "Replication triggered!");
 							}
 #endif
 						} else if (mastery_level != remote_mastery_level) {

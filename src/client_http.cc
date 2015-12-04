@@ -170,12 +170,12 @@ HttpClient::~HttpClient()
 	}
 
 	if (body_descriptor && ::close(body_descriptor) < 0) {
-		L_ERR(this, "ERROR: Cannot close temporary file '%s': %s\n", body_path, strerror(errno));
+		L_ERR(this, "ERROR: Cannot close temporary file '%s': %s", body_path, strerror(errno));
 	}
 
 	if (*body_path) {
 		if (::unlink(body_path) < 0) {
-			L_ERR(this, "ERROR: Cannot delete temporary file '%s': %s\n", body_path, strerror(errno));
+			L_ERR(this, "ERROR: Cannot delete temporary file '%s': %s", body_path, strerror(errno));
 		}
 	}
 
@@ -206,13 +206,13 @@ void HttpClient::on_read(const char *buf, size_t received)
 
 void HttpClient::on_read_file(const char *, size_t received)
 {
-	L_ERR(this, "Not Implemented: HttpClient::on_read_file: %zu bytes\n", received);
+	L_ERR(this, "Not Implemented: HttpClient::on_read_file: %zu bytes", received);
 }
 
 
 void HttpClient::on_read_file_done()
 {
-	L_ERR(this, "Not Implemented: HttpClient::on_read_file_done\n");
+	L_ERR(this, "Not Implemented: HttpClient::on_read_file_done");
 }
 
 // HTTP parser callbacks.
@@ -243,7 +243,7 @@ int HttpClient::on_info(http_parser* p) {
 			self->header_name.clear();
 			self->header_value.clear();
 			if (self->body_descriptor && ::close(self->body_descriptor) < 0) {
-				L_ERR(self, "ERROR: Cannot close temporary file '%s': %s\n", self->body_path, strerror(errno));
+				L_ERR(self, "ERROR: Cannot close temporary file '%s': %s", self->body_path, strerror(errno));
 			} else {
 				self->body_descriptor = 0;
 			}
@@ -348,7 +348,7 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 				strcpy(self->body_path, "/tmp/xapiand_upload.XXXXXX");
 				self->body_descriptor = mkstemp(self->body_path);
 				if (self->body_descriptor < 0) {
-					L_ERR(self, "Cannot write to %s (1)\n", self->body_path);
+					L_ERR(self, "Cannot write to %s (1)", self->body_path);
 					return 0;
 				}
 				::io_write(self->body_descriptor, self->body.data(), self->body.size());
@@ -357,7 +357,7 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 			::io_write(self->body_descriptor, at, length);
 			if (state == 62) {
 				if (self->body_descriptor && ::close(self->body_descriptor) < 0) {
-					L_ERR(self, "ERROR: Cannot close temporary file '%s': %s\n", self->body_path, strerror(errno));
+					L_ERR(self, "ERROR: Cannot close temporary file '%s': %s", self->body_path, strerror(errno));
 				} else {
 					self->body_descriptor = 0;
 				}
@@ -435,7 +435,7 @@ void HttpClient::run()
 		error.assign("Unkown error!");
 	}
 	if (has_error) {
-		L_ERR(this, "ERROR: %s\n", error.c_str());
+		L_ERR(this, "ERROR: %s", error.c_str());
 		if (database) {
 			manager()->database_pool.checkin(database);
 		}
@@ -671,7 +671,7 @@ void HttpClient::delete_document_view(const query_field &e)
 	}
 
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
-	L_DEBUG(this, "Time take for delete %d ms\n", time);
+	L_DEBUG(this, "Time take for delete %d ms", time);
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
 	stats_cnt.del.min[b_time.minute]++;
@@ -728,11 +728,11 @@ void HttpClient::index_document_view(const query_field &e)
 	// did = returned by index() call
 	// filename = Termoprary file
 	// if (manager()->store(endpoints, did, filename)) {
-	// 	L_INFO(this, "Storing %s...\n", filename.c_str());
+	// 	L_INFO(this, "Storing %s...", filename.c_str());
 	// }
 
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
-	L_DEBUG(this, "Time take for index %d ms\n", time);
+	L_DEBUG(this, "Time take for index %d ms", time);
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
 	stats_cnt.index.min[b_time.minute]++;
@@ -775,7 +775,7 @@ void HttpClient::update_document_view(const query_field &e)
 
 	unique_cJSON patches(cJSON_Parse(body.c_str()), cJSON_Delete);
 	if (!patches) {
-		L_ERR(this, "ERROR: JSON Before: [%s]\n", cJSON_GetErrorPtr());
+		L_ERR(this, "ERROR: JSON Before: [%s]", cJSON_GetErrorPtr());
 		manager()->database_pool.checkin(database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
@@ -889,7 +889,7 @@ void HttpClient::upload_view(const query_field &)
 		return;
 	}
 
-	L_DEBUG(this, "Uploaded %s (%zu)\n", body_path, body_size);
+	L_DEBUG(this, "Uploaded %s (%zu)", body_path, body_size);
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 
 	manager()->database_pool.checkin(database);
@@ -940,25 +940,25 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	int rmset = database->get_mset(e, mset, spies, suggestions);
 	int cout_matched = mset.size();
 	if (rmset == 1) {
-		L_DEBUG(this, "get_mset return 1\n");
+		L_DEBUG(this, "get_mset return 1");
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		manager()->database_pool.checkin(database);
-		L_DEBUG(this, "ABORTED SEARCH\n");
+		L_DEBUG(this, "ABORTED SEARCH");
 		return;
 	}
 	if (rmset == 2) {
-		L_DEBUG(this, "get_mset return 2\n");
+		L_DEBUG(this, "get_mset return 2");
 		write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		manager()->database_pool.checkin(database);
-		L_DEBUG(this, "ABORTED SEARCH\n");
+		L_DEBUG(this, "ABORTED SEARCH");
 		return;
 	}
 
 
-	L_DEBUG(this, "Suggered querys\n");
+	L_DEBUG(this, "Suggered querys");
 	std::vector<std::string>::const_iterator it_s(suggestions.begin());
 	for ( ; it_s != suggestions.end(); it_s++) {
-		L_DEBUG(this, "\t%s\n", (*it_s).c_str());
+		L_DEBUG(this, "\t%s", (*it_s).c_str());
 	}
 
 	if (facets) {
@@ -1031,7 +1031,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 						write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 					}
 					manager()->database_pool.checkin(database);
-					L_DEBUG(this, "ABORTED SEARCH\n");
+					L_DEBUG(this, "ABORTED SEARCH");
 					return;
 				}
 
@@ -1072,7 +1072,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 					response_err += "\n\n";
 					write(http_response(406, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_err));
 					manager()->database_pool.checkin(database);
-					L_DEBUG(this, "ABORTED SEARCH\n");
+					L_DEBUG(this, "ABORTED SEARCH");
 					return;
 				}
 
@@ -1149,7 +1149,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	}
 
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
-	L_DEBUG(this, "Time take for search %d ms\n", time);
+	L_DEBUG(this, "Time take for search %d ms", time);
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
 	stats_cnt.search.min[b_time.minute]++;
@@ -1159,7 +1159,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	lk.unlock();
 
 	manager()->database_pool.checkin(database);
-	L_DEBUG(this, "FINISH SEARCH\n");
+	L_DEBUG(this, "FINISH SEARCH");
 }
 
 
@@ -1248,7 +1248,7 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 					char node_ip[INET_ADDRSTRLEN];
 					const Node *node = nullptr;
 					if (!manager()->touch_node(node_name, UNKNOWN_REGION, &node)) {
-						L_DEBUG(this, "Node %s not found\n", node_name.c_str());
+						L_DEBUG(this, "Node %s not found", node_name.c_str());
 						host = node_name;
 						return CMD_UNKNOWN_HOST;
 					}
@@ -1323,15 +1323,15 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 					}
 
 					q.offset = NULL;
-					L_DEBUG(this, "Buffer: %s\n", query_str);
+					L_DEBUG(this, "Buffer: %s", query_str);
 					while (url_qs("query", query_str, query_size, &q) != -1) {
-						L_DEBUG(this, "%s\n", urldecode(q.offset, q.length).c_str());
+						L_DEBUG(this, "%s", urldecode(q.offset, q.length).c_str());
 						e.query.push_back(urldecode(q.offset, q.length));
 					}
 
 					q.offset = NULL;
 					while (url_qs("q", query_str, query_size, &q) != -1) {
-						L_DEBUG(this, "%s\n", urldecode(q.offset, q.length).c_str());
+						L_DEBUG(this, "%s", urldecode(q.offset, q.length).c_str());
 						e.query.push_back(urldecode(q.offset, q.length));
 					}
 

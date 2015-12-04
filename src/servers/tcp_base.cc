@@ -42,7 +42,7 @@ BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, con
 	  description(description_)
 {
 	bind(tries_);
-	L_DEBUG(this, "Listening sock=%d\n", sock);
+	L_DEBUG(this, "Listening sock=%d", sock);
 }
 
 
@@ -61,32 +61,32 @@ BaseTCP::bind(int tries)
 	int optval = 1;
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		L_ERR(nullptr, "ERROR: %s socket: [%d] %s\n", description.c_str(), errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: %s socket: [%d] %s", description.c_str(), errno, strerror(errno));
 		assert(false);
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same address
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
-		L_ERR(nullptr, "ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: %s setsockopt SO_REUSEADDR (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		L_ERR(nullptr, "ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: %s setsockopt SO_NOSIGPIPE (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	}
 #endif
 
 	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-		L_ERR(nullptr, "ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: %s setsockopt SO_KEEPALIVE (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	}
 
 	// struct linger ling = {0, 0};
 	// if (setsockopt(sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-	// 	L_ERR(nullptr, "ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+	// 	L_ERR(nullptr, "ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	// }
 
 	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	L_ERR(nullptr, "ERROR: %s setsockopt TCP_NODELAY (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+	// 	L_ERR(nullptr, "ERROR: %s setsockopt TCP_NODELAY (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	// }
 
 	memset(&addr, 0, sizeof(addr));
@@ -99,13 +99,13 @@ BaseTCP::bind(int tries)
 		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			if (!ignored_errorno(errno, true)) {
 				if (i == tries - 1) break;
-				L_DEBUG(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+				L_DEBUG(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 				continue;
 			}
 		}
 
 		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-			L_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+			L_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 
 		check_backlog(tcp_backlog);
@@ -113,7 +113,7 @@ BaseTCP::bind(int tries)
 		return;
 	}
 
-	L_ERR(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+	L_ERR(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	close(sock);
 	assert(false);
 }
@@ -131,32 +131,32 @@ BaseTCP::accept()
 
 	if ((client_sock = ::accept(sock, (struct sockaddr *)&addr, &addrlen)) < 0) {
 		if (!ignored_errorno(errno, true)) {
-			L_ERR(nullptr, "ERROR: accept error (client_sock=%d): [%d] %s\n", client_sock, errno, strerror(errno));
+			L_ERR(nullptr, "ERROR: accept error (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 		}
 		return -1;
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) < 0) {
-		L_ERR(nullptr, "ERROR: setsockopt SO_NOSIGPIPE (client_sock=%d): [%d] %s\n", client_sock, errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: setsockopt SO_NOSIGPIPE (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	}
 #endif
 
 	// if (setsockopt(client_sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-	// 	L_ERR(nullptr, "ERROR: setsockopt SO_KEEPALIVE (client_sock=%d): [%d] %s\n", client_sock, errno, strerror(errno));
+	// 	L_ERR(nullptr, "ERROR: setsockopt SO_KEEPALIVE (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	// }
 
 	// struct linger ling = {0, 0};
 	// if (setsockopt(client_sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
-	// 	L_ERR(nullptr, "ERROR: setsockopt SO_LINGER (client_sock=%d): [%d] %s\n", client_sock, errno, strerror(errno));
+	// 	L_ERR(nullptr, "ERROR: setsockopt SO_LINGER (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	// }
 
 	// if (setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	L_ERR(nullptr, "ERROR: setsockopt TCP_NODELAY (client_sock=%d): [%d] %s\n", client_sock, errno, strerror(errno));
+	// 	L_ERR(nullptr, "ERROR: setsockopt TCP_NODELAY (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	// }
 
 	if (fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-		L_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (client_sock=%d): [%d] %s\n", client_sock, errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	}
 
 	return client_sock;
@@ -171,7 +171,7 @@ BaseTCP::check_backlog(int)
 	int somaxconn;
 	size_t somaxconn_len = sizeof(somaxconn);
 	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
-		L_ERR(nullptr, "ERROR: sysctl: [%d] %s\n", errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: sysctl: [%d] %s", errno, strerror(errno));
 		return;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
@@ -184,7 +184,7 @@ BaseTCP::check_backlog(int)
 	int somaxconn;
 	size_t somaxconn_len = sizeof(somaxconn);
 	if (sysctl(name, 3, &somaxconn, &somaxconn_len, 0, 0) < 0) {
-		L_ERR(nullptr, "ERROR: sysctl: [%d] %s\n", errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: sysctl: [%d] %s", errno, strerror(errno));
 		return;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
@@ -207,14 +207,14 @@ int BaseTCP::connect(int sock_, const std::string &hostname, const std::string &
 
 	struct addrinfo *result;
 	if (getaddrinfo(hostname.c_str(), servname.c_str(), &hints, &result) < 0) {
-		L_ERR(nullptr, "Couldn't resolve host %s:%s\n", hostname.c_str(), servname.c_str());
+		L_ERR(nullptr, "Couldn't resolve host %s:%s", hostname.c_str(), servname.c_str());
 		close(sock_);
 		return -1;
 	}
 
 	if (::connect(sock_, result->ai_addr, result->ai_addrlen) < 0) {
 		if (!ignored_errorno(errno, true)) {
-			L_ERR(nullptr, "ERROR: connect error to %s:%s (sock=%d): [%d] %s\n", hostname.c_str(), servname.c_str(), sock_, errno, strerror(errno));
+			L_ERR(nullptr, "ERROR: connect error to %s:%s (sock=%d): [%d] %s", hostname.c_str(), servname.c_str(), sock_, errno, strerror(errno));
 			freeaddrinfo(result);
 			close(sock_);
 			return -1;
@@ -224,7 +224,7 @@ int BaseTCP::connect(int sock_, const std::string &hostname, const std::string &
 	freeaddrinfo(result);
 
 	if (fcntl(sock_, F_SETFL, fcntl(sock_, F_GETFL, 0) | O_NONBLOCK) < 0) {
-		L_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock_, errno, strerror(errno));
+		L_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock_, errno, strerror(errno));
 	}
 
 	return sock_;

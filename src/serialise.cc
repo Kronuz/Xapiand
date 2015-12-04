@@ -65,7 +65,7 @@ Serialise::date(const std::string &field_value)
 		double timestamp = Datetime::timestamp(field_value);
 		return Xapian::sortable_serialise(timestamp);
 	} catch (const std::exception &err) {
-		L_ERR(nullptr, "ERROR: %s\n", err.what());
+		L_ERR(nullptr, "ERROR: %s", err.what());
 	}
 	return "";
 }

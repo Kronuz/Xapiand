@@ -49,12 +49,12 @@ const char *priorities[] = {
 
 
 void StreamLogger::log(int priority, const std::string& str) {
-	ofs << priorities[priority] << ": " << str;
+	ofs << priorities[priority] << ": " << str << std::endl;
 }
 
 
 void StderrLogger::log(int priority, const std::string& str) {
-	std::cerr << priorities[priority] << ": " << str;
+	std::cerr << priorities[priority] << ": " << str << std::endl;
 }
 
 

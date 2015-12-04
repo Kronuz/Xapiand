@@ -35,9 +35,9 @@ BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *
 	  description(description_),
 	  loop(loop_)
 {
-	L_DEBUG(this, "Num of share UDP: %d\n", manager.use_count());
+	L_DEBUG(this, "Num of share UDP: %d", manager.use_count());
 	bind(tries_, group_);
-	L_DEBUG(this, "Listening sock=%d\n", sock);
+	L_DEBUG(this, "Listening sock=%d", sock);
 }
 
 
@@ -56,21 +56,21 @@ BaseUDP::bind(int tries, const std::string &group)
 	struct ip_mreq mreq;
 
 	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-		L_ERR(this, "ERROR: %s socket: [%d] %s\n", description.c_str(), errno, strerror(errno));
+		L_ERR(this, "ERROR: %s socket: [%d] %s", description.c_str(), errno, strerror(errno));
 		assert(false);
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same port
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) < 0) {
-		L_ERR(this, "ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+		L_ERR(this, "ERROR: %s setsockopt SO_REUSEPORT (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	}
 
 	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
-		L_ERR(this, "ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+		L_ERR(this, "ERROR: %s setsockopt IP_MULTICAST_LOOP (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	}
 
 	if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) < 0) {
-		L_ERR(this, "ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+		L_ERR(this, "ERROR: %s setsockopt IP_MULTICAST_TTL (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	}
 
 	// use setsockopt() to request that the kernel join a multicast group
@@ -78,7 +78,7 @@ BaseUDP::bind(int tries, const std::string &group)
 	mreq.imr_multiaddr.s_addr = inet_addr(group.c_str());
 	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
-		L_ERR(this, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+		L_ERR(this, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 		close(sock);
 		assert(false);
 	}
@@ -93,20 +93,20 @@ BaseUDP::bind(int tries, const std::string &group)
 		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			if (!ignored_errorno(errno, true)) {
 				if (i == tries - 1) break;
-				L_DEBUG(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+				L_DEBUG(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 				continue;
 			}
 		}
 
 		if (fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
-			L_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s\n", sock, errno, strerror(errno));
+			L_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 
 		addr.sin_addr.s_addr = inet_addr(group.c_str());  // setup s_addr for sender (send to group)
 		return;
 	}
 
-	L_ERR(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s\n", description.c_str(), sock, errno, strerror(errno));
+	L_ERR(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	close(sock);
 	assert(false);
 }
@@ -127,7 +127,7 @@ BaseUDP::sending_message(const std::string &message)
 
 		if (written < 0) {
 			if (sock != -1 && !ignored_errorno(errno, true)) {
-				L_ERR(this, "ERROR: sendto error (sock=%d): %s\n", sock, strerror(errno));
+				L_ERR(this, "ERROR: sendto error (sock=%d): %s", sock, strerror(errno));
 				manager->shutdown();
 			}
 		}

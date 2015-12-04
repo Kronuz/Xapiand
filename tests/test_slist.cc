@@ -98,7 +98,7 @@ int test_push_front() {
 	if (l.size() == elements) {
 		return 0;
 	} else {
-		L_ERR(nullptr, "Elements in the List: %zu  Expected: %zu\n", l.size(), elements);
+		L_ERR(nullptr, "Elements in the List: %zu  Expected: %zu", l.size(), elements);
 		return 1;
 	}
 }
@@ -117,7 +117,7 @@ int test_insert() {
 	if (l.size() == elements) {
 		return 0;
 	} else {
-		L_ERR(nullptr, "Elements in the List: %zu  Expected: %zu\n", l.size(), elements);
+		L_ERR(nullptr, "Elements in the List: %zu  Expected: %zu", l.size(), elements);
 		return 1;
 	}
 }
@@ -145,10 +145,10 @@ int test_correct_order() {
 	if (res_push == expected && res_ins == expected) {
 		return 0;
 	} else {
-		L_ERR(nullptr, "Elements push_front: { %s }\n", res_push.c_str());
-		L_ERR(nullptr, "Expected push_front: { %s }\n", expected.c_str());
-		L_ERR(nullptr, "Elements insert: { %s }\n", res_ins.c_str());
-		L_ERR(nullptr, "Expected insert: { %s }\n", expected.c_str());
+		L_ERR(nullptr, "Elements push_front: { %s }", res_push.c_str());
+		L_ERR(nullptr, "Expected push_front: { %s }", expected.c_str());
+		L_ERR(nullptr, "Elements insert: { %s }", res_ins.c_str());
+		L_ERR(nullptr, "Expected insert: { %s }", expected.c_str());
 		return 1;
 	}
 }
@@ -173,8 +173,8 @@ int test_remove() {
 	if (res == expected) {
 		return 0;
 	} else {
-		L_ERR(nullptr, "Elements in the List: { %s }\n", res.c_str());
-		L_ERR(nullptr, "Expected: { %s }\n", expected.c_str());
+		L_ERR(nullptr, "Elements in the List: { %s }", res.c_str());
+		L_ERR(nullptr, "Expected: { %s }", expected.c_str());
 		return 1;
 	}
 }
@@ -200,8 +200,8 @@ int test_erase() {
 	if (res == expected) {
 		return 0;
 	} else {
-		L_ERR(nullptr, "Elements in the List: { %s }\n", res.c_str());
-		L_ERR(nullptr, "Expected: { %s }\n", expected.c_str());
+		L_ERR(nullptr, "Elements in the List: { %s }", res.c_str());
+		L_ERR(nullptr, "Expected: { %s }", expected.c_str());
 		return 1;
 	}
 }
@@ -226,8 +226,8 @@ int test_pop_front() {
 	if (l.size() == half && res == expected) {
 		return 0;
 	} else {
-		L_ERR(nullptr, "Elements in the List: { %s } (Size: %zu)\n", res.c_str(), l.size());
-		L_ERR(nullptr, "Expected: { %s } (Size: %zu)\n", expected.c_str(), half);
+		L_ERR(nullptr, "Elements in the List: { %s } (Size: %zu)", res.c_str(), l.size());
+		L_ERR(nullptr, "Expected: { %s } (Size: %zu)", expected.c_str(), half);
 		return 1;
 	}
 }
@@ -251,7 +251,7 @@ int test_find() {
 	if (found == l.size()) {
 		return 0;
 	} else {
-		L_ERR(nullptr, "Elements found: %zu  Expected: %zu\n", found, l.size());
+		L_ERR(nullptr, "Elements found: %zu  Expected: %zu", found, l.size());
 		return 1;
 	}
 }
@@ -275,7 +275,7 @@ int test_multiple_producers() {
 	if (l.size() == elements) {
 		return 0;
 	} else {
-		L_ERR(nullptr, "Elements in the List: %zu  Expected: %zu\n", l.size(), elements);
+		L_ERR(nullptr, "Elements in the List: %zu  Expected: %zu", l.size(), elements);
 		return 1;
 	}
 }
@@ -302,7 +302,7 @@ int test_multiple_producers_consumers() {
 	if (l.size() == static_cast<size_t>(elements - deletes.load())) {
 		return 0;
 	} else {
-		L_ERR(nullptr, "Elements in the List: %zu  Expected: %zu\n", l.size(), elements - deletes.load());
+		L_ERR(nullptr, "Elements in the List: %zu  Expected: %zu", l.size(), elements - deletes.load());
 		return 1;
 	}
 }
@@ -329,7 +329,7 @@ int test_multiple_producers_consumers_v2() {
 	if (l.size() == static_cast<size_t>(elements - deletes.load())) {
 		return 0;
 	} else {
-		L_ERR(nullptr, "Elements in the List: %zu  Expected: %d\n", l.size(), elements - deletes.load());
+		L_ERR(nullptr, "Elements in the List: %zu  Expected: %d", l.size(), elements - deletes.load());
 		return 1;
 	}
 }

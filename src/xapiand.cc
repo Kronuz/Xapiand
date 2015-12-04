@@ -69,7 +69,7 @@ void run(const opts_t &opts) {
 	setup_signal_handlers();
 	ev::default_loop default_loop;
 	manager = Worker::create<XapiandManager>(&default_loop, opts);
-	L_DEBUG(nullptr, "Call run, Num of share: %d\n", manager.use_count());
+	L_DEBUG(nullptr, "Call run, Num of share: %d", manager.use_count());
 	manager->run(opts);
 }
 
@@ -208,7 +208,7 @@ void daemonize(void) {
 
 	pid_t pid = fork();
 	if (pid != 0) {
-		L_INFO(nullptr, "Done with all work here. Daemon on process ID [%d] taking over!\n", pid);
+		L_INFO(nullptr, "Done with all work here. Daemon on process ID [%d] taking over!", pid);
 		exit(0); /* parent exits */
 	}
 	setsid(); /* create a new session */
@@ -252,7 +252,7 @@ int main(int argc, char **argv)
 		banner();
 	}
 
-	L_INFO(nullptr, "Running on process ID [%d]\n", getpid());
+	L_INFO(nullptr, "Running on process ID [%d]", getpid());
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {
@@ -264,14 +264,14 @@ int main(int argc, char **argv)
 #endif
 
 	if (opts.chert) {
-		L_INFO(nullptr, "By default using Chert databases.\n");
+		L_INFO(nullptr, "By default using Chert databases.");
 	} else {
-		L_INFO(nullptr, "By default using Glass databases.\n");
+		L_INFO(nullptr, "By default using Glass databases.");
 	}
 
 	// Enable changesets
 	if (setenv("XAPIAN_MAX_CHANGESETS", "200", false) == 0) {
-		L_INFO(nullptr, "Database changesets set to 200.\n");
+		L_INFO(nullptr, "Database changesets set to 200.");
 	}
 
 	// Flush threshold increased
@@ -279,12 +279,12 @@ int main(int argc, char **argv)
 	const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
 	if (p) flush_threshold = atoi(p);
 	if (flush_threshold < 100000 && setenv("XAPIAN_FLUSH_THRESHOLD", "100000", false) == 0) {
-		L_INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).\n", flush_threshold);
+		L_INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).", flush_threshold);
 	}
 
 	assert(!chdir(opts.database.c_str()));
 	char buffer[MAXPATHLEN];
-	L_INFO(nullptr, "Changed current working directory to %s\n", getcwd(buffer, sizeof(buffer)));
+	L_INFO(nullptr, "Changed current working directory to %s", getcwd(buffer, sizeof(buffer)));
 
 	init_time = std::chrono::system_clock::now();
 	time_t epoch = std::chrono::system_clock::to_time_t(init_time);
@@ -298,6 +298,6 @@ int main(int argc, char **argv)
 
 	run(opts);
 
-	L_INFO(nullptr, "Done with all work!\n");
+	L_INFO(nullptr, "Done with all work!");
 	return 0;
 }
