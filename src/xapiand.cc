@@ -66,8 +66,6 @@ void setup_signal_handlers(void) {
 
 // int num_servers, const char *cluster_name_, const char *node_name_, const char *discovery_group, int discovery_port, const char *raft_group, int raft_port, int http_port, int binary_port, size_t dbpool_size
 void run(const opts_t &opts) {
-	set_thread_name("===");
-
 	setup_signal_handlers();
 	ev::default_loop default_loop;
 	manager = Worker::create<XapiandManager>(&default_loop, opts);
@@ -206,7 +204,11 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 void daemonize(void) {
 	int fd;
 
-	if (fork() != 0) exit(0); /* parent exits */
+	pid_t pid = fork();
+	if (pid != 0) {
+		LOG_INFO(nullptr, "Done with all work here. Daemon on process ID [%d] taking over!\n", pid);
+		exit(0); /* parent exits */
+	}
 	setsid(); /* create a new session */
 
 	/* Every output goes to /dev/null */
@@ -219,14 +221,8 @@ void daemonize(void) {
 }
 
 
-int main(int argc, char **argv)
-{
-	opts_t opts;
-
-	parseOptions(argc, argv, opts);
-
-	std::setlocale(LC_CTYPE, "");
-
+void banner() {
+	set_thread_name("==");
 	LOG_INFO(nullptr,
 		"\n\n" WHITE
 		"  __  __           _                 _\n"
@@ -237,8 +233,24 @@ int main(int argc, char **argv)
 		"            |_|  " BRIGHT_GREEN "v%s\n" GREEN
 		"   [%s]\n"
 		"          Using Xapian v%s\n\n", PACKAGE_VERSION, PACKAGE_BUGREPORT, XAPIAN_VERSION);
+}
 
-	LOG_INFO(nullptr, "Running on process ID: %d\n", getpid());
+
+int main(int argc, char **argv)
+{
+	opts_t opts;
+
+	parseOptions(argc, argv, opts);
+
+	std::setlocale(LC_CTYPE, "");
+
+	banner();
+	if (opts.daemonize) {
+		daemonize();
+		banner();
+	}
+
+	LOG_INFO(nullptr, "Running on process ID [%d]\n", getpid());
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {
@@ -281,10 +293,6 @@ int main(int argc, char **argv)
 	auto diff_t = epoch - mktime(timeinfo);
 	b_time.minute = diff_t / SLOT_TIME_SECOND;
 	b_time.second =  diff_t % SLOT_TIME_SECOND;
-
-	if (opts.daemonize) {
-		daemonize();
-	}
 
 	run(opts);
 
