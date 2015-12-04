@@ -238,6 +238,8 @@ int main(int argc, char **argv)
 		"   [%s]\n"
 		"          Using Xapian v%s\n\n", PACKAGE_VERSION, PACKAGE_BUGREPORT, XAPIAN_VERSION);
 
+	LOG_INFO(nullptr, "Running on process ID: %d\n", getpid());
+
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {
 		// Prefer glass database
