@@ -279,6 +279,8 @@ int main(int argc, char **argv)
 		daemonize();
 	}
 
+	assert(!chdir(opts.database.c_str()));
+
 	run(opts);
 
 	LOG_INFO(nullptr, "Done with all work!\n");
