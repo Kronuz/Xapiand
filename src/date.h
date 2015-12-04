@@ -32,6 +32,7 @@
 #include <ostream>
 #include <ratio>
 #include <stdexcept>
+#include <sstream>
 
 namespace date
 {
@@ -1073,7 +1074,7 @@ inline
 std::ostream&
 operator<<(std::ostream& os, const day& d)
 {
-    detail::save_stream _(os);
+    // detail::save_stream _(os);
     os.fill('0');
     os.flags(std::ios::dec | std::ios::right);
     os.width(2);
@@ -1371,7 +1372,7 @@ inline
 std::ostream&
 operator<<(std::ostream& os, const year& y)
 {
-    detail::save_stream _(os);
+    // detail::save_stream _(os);
     os.fill('0');
     os.flags(std::ios::dec | std::ios::internal);
     os.width(4 + (y < year{0}));
@@ -2410,7 +2411,7 @@ inline
 std::ostream&
 operator<<(std::ostream& os, const year_month_day& ymd)
 {
-    detail::save_stream _(os);
+    // detail::save_stream _(os);
     os.fill('0');
     os.flags(std::ios::dec | std::ios::right);
     os << ymd.year() << '-';
@@ -3328,7 +3329,7 @@ public:
     operator<<(std::ostream& os, const time_of_day_storage& t)
     {
         using namespace std;
-        detail::save_stream _(os);
+        // detail::save_stream _(os);
         os.fill('0');
         os.flags(std::ios::dec | std::ios::right);
         if (t.mode_ != am && t.mode_ != pm)
@@ -3394,7 +3395,7 @@ public:
     operator<<(std::ostream& os, const time_of_day_storage& t)
     {
         using namespace std;
-        detail::save_stream _(os);
+        // detail::save_stream _(os);
         if (static_cast<precision>(t) < std::chrono::hours{0})
             os << '-';
         os.fill('0');
@@ -3465,7 +3466,7 @@ public:
     operator<<(std::ostream& os, const time_of_day_storage& t)
     {
         using namespace std;
-        detail::save_stream _(os);
+        // detail::save_stream _(os);
         if (static_cast<precision>(t) < std::chrono::hours{0})
             os << '-';
         os.fill('0');
@@ -3545,7 +3546,7 @@ public:
     operator<<(std::ostream& os, const time_of_day_storage& t)
     {
         using namespace std;
-        detail::save_stream _(os);
+        // detail::save_stream _(os);
         if (static_cast<precision>(t) < std::chrono::hours{0})
             os << '-';
         os.fill('0');
@@ -3713,6 +3714,13 @@ std::ostream&
 operator<<(std::ostream& os, const day_point& dp)
 {
     return os << year_month_day(dp);
+}
+
+template <typename T>
+std::string to_string(const T& t) {
+	std::stringstream ss;
+	ss << t;
+	return ss.str();
 }
 
 }  // namespace date
