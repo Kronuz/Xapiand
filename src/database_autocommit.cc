@@ -50,8 +50,9 @@ DatabaseAutocommit::~DatabaseAutocommit()
 void
 DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
 {
+	//Window open perhaps
 	//std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx, std::defer_lock);
-	
+
 	DatabaseCommitStatus& status = DatabaseAutocommit::databases[database->endpoints];
 
 	auto now = std::chrono::system_clock::now();
