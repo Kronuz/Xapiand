@@ -228,13 +228,13 @@ int main(int argc, char **argv)
 	std::setlocale(LC_CTYPE, "");
 
 	LOG_INFO(nullptr,
-		"\n\n"
+		"\n\n" WHITE
 		"  __  __           _                 _\n"
 		"  \\ \\/ /__ _ _ __ (_) __ _ _ __   __| |\n"
 		"   \\  // _` | '_ \\| |/ _` | '_ \\ / _` |\n"
 		"   /  \\ (_| | |_) | | (_| | | | | (_| |\n"
 		"  /_/\\_\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n"
-		"            |_|  v%s\n"
+		"            |_|  " BRIGHT_GREEN "v%s\n" GREEN
 		"   [%s]\n"
 		"          Using Xapian v%s\n\n", PACKAGE_VERSION, PACKAGE_BUGREPORT, XAPIAN_VERSION);
 
