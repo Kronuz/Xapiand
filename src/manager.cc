@@ -491,10 +491,9 @@ XapiandManager::run(const opts_t &o)
 		replicator_pool.enqueue(Worker::create<XapiandReplicator>(manager, nullptr));
 	}
 
-	ThreadPool<> autocommit_pool("C%zu", 3);
-	for (size_t i = 0; i < o.num_replicators; i++) {
-		//autocommit_pool.enqueue(std::make_shared<DatabaseAutocommit>(manager));
-		DatabaseAutocommit dbac(manager);
+	ThreadPool<> autocommit_pool("C%zu", o.num_committers);
+	for (size_t i = 0; i < o.num_committers; i++) {
+		autocommit_pool.enqueue(std::make_shared<DatabaseAutocommit>(manager));
 	}
 
 	LOG_INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
@@ -513,6 +512,10 @@ XapiandManager::run(const opts_t &o)
 	replicator_pool.finish();
 	replicator_pool.join();
 
+	LOG_OBJ(this, "Waiting for committers...\n");
+	autocommit_pool.finish();
+	autocommit_pool.join();
+	
 	LOG_OBJ(this, "Server ended!\n");
 }
 

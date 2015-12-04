@@ -167,6 +167,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
 		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of database endpoints in database pool.", false, DBPOOL_SIZE, "size", cmd);
 		ValueArg<size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
+		ValueArg<size_t> num_committers("", "committers", "Number of committers.", false, NUM_COMMITTERS, "committers", cmd);
 
 
 		cmd.parse(argc, argv);
@@ -193,6 +194,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		opts.num_servers = num_servers.getValue();
 		opts.dbpool_size = dbpool_size.getValue();
 		opts.num_replicators = num_replicators.getValue();
+		opts.num_committers = num_committers.getValue();
 		opts.threadpool_size = THEADPOOL_SIZE;
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
 	} catch (const ArgException &e) { // catch any exceptions

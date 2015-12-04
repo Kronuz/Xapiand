@@ -60,5 +60,5 @@ public:
 
 	static void signal_changed(const std::shared_ptr<Database>& database);
 
-	void run();
+	void run() override;
 };

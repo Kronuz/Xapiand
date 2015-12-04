@@ -58,6 +58,7 @@ using opts_t = struct opts_s {
 	size_t num_replicators;
 	size_t threadpool_size;
 	size_t endpoints_list_size;
+	size_t num_committers;
 };
 
 
