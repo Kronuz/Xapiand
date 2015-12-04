@@ -24,6 +24,7 @@
 
 #include "utils.h"
 #include "replicator.h"
+#include "database_autocommit.h"
 #include "endpoint.h"
 #include "servers/server.h"
 #include "client_binary.h"
@@ -488,6 +489,12 @@ XapiandManager::run(const opts_t &o)
 	ThreadPool<> replicator_pool("R%zu", o.num_replicators);
 	for (size_t i = 0; i < o.num_replicators; i++) {
 		replicator_pool.enqueue(Worker::create<XapiandReplicator>(manager, nullptr));
+	}
+
+	ThreadPool<> autocommit_pool("C%zu", 3);
+	for (size_t i = 0; i < o.num_replicators; i++) {
+		//autocommit_pool.enqueue(std::make_shared<DatabaseAutocommit>(manager));
+		DatabaseAutocommit dbac(manager);
 	}
 
 	LOG_INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
