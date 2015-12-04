@@ -32,6 +32,7 @@
 #include <clocale>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/param.h>  // for MAXPATHLEN
 #include <fcntl.h>
 
 
@@ -265,6 +266,10 @@ int main(int argc, char **argv)
 		LOG_INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).\n", flush_threshold);
 	}
 
+	assert(!chdir(opts.database.c_str()));
+	char buffer[MAXPATHLEN];
+	LOG_INFO(nullptr, "Changed current working directory to %s\n", getcwd(buffer, sizeof(buffer)));
+
 	init_time = std::chrono::system_clock::now();
 	time_t epoch = std::chrono::system_clock::to_time_t(init_time);
 	struct tm *timeinfo = localtime(&epoch);
@@ -278,8 +283,6 @@ int main(int argc, char **argv)
 	if (opts.daemonize) {
 		daemonize();
 	}
-
-	assert(!chdir(opts.database.c_str()));
 
 	run(opts);
 
