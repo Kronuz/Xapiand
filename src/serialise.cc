@@ -118,6 +118,10 @@ Serialise::boolean(const std::string &field_value)
 		return "t";
 	} else if (strcasecmp(field_value.c_str(), "false") == 0) {
 		return "f";
+	} else if (strcasecmp(field_value.c_str(), "1") == 0) {
+		return "t";
+	} else if (strcasecmp(field_value.c_str(), "0") == 0) {
+		return "f";
 	} else {
 		return "";
 	}
