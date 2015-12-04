@@ -70,6 +70,7 @@ DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
 void
 DatabaseAutocommit::run()
 {
+	LOG_OBJ(this, "Committer started...\n");
 	while (running) {
 		std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx);
 		DatabaseAutocommit::wakeup_signal.wait_until(lk, DatabaseAutocommit::next_wakeup_time);
@@ -102,4 +103,5 @@ DatabaseAutocommit::run()
 			}
 		}
 	}
+	LOG_OBJ(this, "Committer ended!...\n");
 }
