@@ -77,9 +77,9 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 
 	async_shutdown.set<XapiandManager, &XapiandManager::async_shutdown_cb>(this);
 	async_shutdown.start();
-	LOG_EV(this, "\tStart async shutdown event\n");
+	L_EV(this, "\tStart async shutdown event");
 
-	LOG_OBJ(this, "CREATED MANAGER!\n");
+	L_OBJ(this, "CREATED MANAGER!");
 }
 
 
@@ -90,9 +90,9 @@ XapiandManager::~XapiandManager()
 	destroy();
 
 	async_shutdown.stop();
-	LOG_EV(this, "\tStop async shutdown event\n");
+	L_EV(this, "\tStop async shutdown event");
 
-	LOG_OBJ(this, "DELETED MANAGER!\n");
+	L_OBJ(this, "DELETED MANAGER!");
 }
 
 
@@ -357,7 +357,7 @@ XapiandManager::host_address()
 				char ip[INET_ADDRSTRLEN];
 				addr = *(struct sockaddr_in *)ifa->ifa_addr;
 				inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
-				LOG_DISCOVERY(this, "Node IP address is %s on interface %s\n", ip, ifa->ifa_name);
+				L_DISCOVERY(this, "Node IP address is %s on interface %s", ip, ifa->ifa_name);
 				break;
 			}
 		}
@@ -411,37 +411,37 @@ XapiandManager::sig_shutdown_handler(int sig)
 void
 XapiandManager::destroy()
 {
-	LOG_OBJ(this, "DESTROYED MANAGER!\n");
+	L_OBJ(this, "DESTROYED MANAGER!");
 }
 
 
 void
 XapiandManager::async_shutdown_cb(ev::async &, int)
 {
-	LOG_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN\n");
-	LOG_EV(this, "\tAsync shutdown event received!\n");
+	L_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN");
+	L_EV(this, "\tAsync shutdown event received!");
 
 	sig_shutdown_handler(0);
-	LOG_EV_END(this, "XapiandManager::async_shutdown_cb:END\n");
+	L_EV_END(this, "XapiandManager::async_shutdown_cb:END");
 }
 
 
 void
 XapiandManager::shutdown()
 {
-	LOG_OBJ(this, "XapiandManager::shutdown()\n");
+	L_OBJ(this, "XapiandManager::shutdown()");
 
 	Worker::shutdown();
 
 	if (XapiandManager::shutdown_asap) {
 		discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 		destroy();
-		LOG_OBJ(this, "Finishing thread pool!\n");
+		L_OBJ(this, "Finishing thread pool!");
 		thread_pool.finish();
 	}
 
 	if (XapiandManager::shutdown_now) {
-		LOG_OBJ(this, "Breaking Manager loop!\n");
+		L_OBJ(this, "Breaking Manager loop!");
 		break_loop();
 	}
 }
@@ -496,26 +496,22 @@ XapiandManager::run(const opts_t &o)
 		autocommit_pool.enqueue(std::make_shared<DatabaseAutocommit>(manager));
 	}
 
-	L_INFO(this, "Joining cluster %s...\n", cluster_name.c_str());
+	L_INFO(this, "Joining cluster %s...", cluster_name.c_str());
 
 	discovery->start();
 
-	LOG_EV(this, "\tStarting manager loop...\n");
+	L_EV(this, "\tStarting manager loop...");
 	loop->run();
-	LOG_EV(this, "\tManager loop ended!\n");
+	L_EV(this, "\tManager loop ended!");
 
-	LOG_OBJ(this, "Waiting for servers...\n");
+	L_OBJ(this, "Waiting for servers...");
 	server_pool.finish();
 	server_pool.join();
 
-	LOG_OBJ(this, "Waiting for replicators...\n");
+	L_OBJ(this, "Waiting for replicators...");
 	replicator_pool.finish();
 	replicator_pool.join();
 
-	LOG_OBJ(this, "Waiting for committers...\n");
-	autocommit_pool.finish();
-	autocommit_pool.join();
-	
 	LOG_OBJ(this, "Server ended!\n");
 }
 
@@ -548,7 +544,7 @@ XapiandManager::get_region()
 				raft->reset();
 			}
 		}
-		LOG_RAFT(this, "Regions: %d Region: %d\n", local_node.regions.load(), local_node.region.load());
+		L_RAFT(this, "Regions: %d Region: %d", local_node.regions.load(), local_node.region.load());
 	}
 	return local_node.region.load();
 }

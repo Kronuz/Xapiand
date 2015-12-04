@@ -117,7 +117,7 @@ BaseUDP::sending_message(const std::string &message)
 {
 	std::unique_lock<std::mutex> lk(manager->get_lock());
 	if (sock != -1) {
-		LOG_UDP_WIRE(this, "(sock=%d) <<-- '%s'\n", sock, repr(message).c_str());
+		L_UDP_WIRE(this, "(sock=%d) <<-- '%s'", sock, repr(message).c_str());
 
 #ifdef MSG_NOSIGNAL
 		ssize_t written = ::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&addr, sizeof(addr));

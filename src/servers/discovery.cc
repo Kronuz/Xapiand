@@ -31,9 +31,9 @@ Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_r
 {
 	heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
 	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
-	LOG_DISCOVERY(this, "\tSet heartbeat timeout event %f\n", heartbeat.repeat);
+	L_DISCOVERY(this, "\tSet heartbeat timeout event %f", heartbeat.repeat);
 
-	LOG_OBJ(this, "CREATED DISCOVERY\n");
+	L_OBJ(this, "CREATED DISCOVERY");
 }
 
 
@@ -41,14 +41,14 @@ Discovery::~Discovery()
 {
 	heartbeat.stop();
 
-	LOG_OBJ(this, "DELETED DISCOVERY\n");
+	L_OBJ(this, "DELETED DISCOVERY");
 }
 
 
 void
 Discovery::heartbeat_cb(ev::timer &, int)
 {
-	LOG_EV_BEGIN(this, "Discovery::heartbeat_cb:BEGIN\n");
+	L_EV_BEGIN(this, "Discovery::heartbeat_cb:BEGIN");
 	switch (manager->state) {
 		case XapiandManager::State::RESET:
 			if (!local_node.name.empty()) {
@@ -84,7 +84,7 @@ Discovery::heartbeat_cb(ev::timer &, int)
 			L_ERR(this, "ERROR: Manager is in BAD state!!");
 			break;
 	}
-	LOG_EV_END(this, "Discovery::heartbeat_cb:END\n");
+	L_EV_END(this, "Discovery::heartbeat_cb:END");
 }
 
 

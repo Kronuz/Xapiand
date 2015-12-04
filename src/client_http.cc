@@ -151,9 +151,9 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref *loop_,
 	int total_clients = XapiandServer::total_clients;
 	assert(http_clients <= total_clients);
 
-	LOG_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, http_clients, total_clients);
+	L_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.", sock, http_clients, total_clients);
 
-	LOG_OBJ(this, "CREATED HTTP CLIENT! (%d clients)\n", http_clients);
+	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
 }
 
 
@@ -179,18 +179,18 @@ HttpClient::~HttpClient()
 		}
 	}
 
-	LOG_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)\n", http_clients);
+	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)", http_clients);
 	assert(http_clients >= 0);
 }
 
 
 void HttpClient::on_read(const char *buf, size_t received)
 {
-	LOG_CONN_WIRE(this, "HttpClient::on_read: %zu bytes\n", received);
+	L_CONN_WIRE(this, "HttpClient::on_read: %zu bytes", received);
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
-			LOG_EV(this, "\tDisable read event (sock=%d)\n", sock);
+			L_EV(this, "\tDisable read event (sock=%d)", sock);
 			io_read.stop();
 			written = 0;
 			if (!closed) {
@@ -198,7 +198,7 @@ void HttpClient::on_read(const char *buf, size_t received)
 			}
 		}
 	} else {
-		LOG_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? http_errno_description(HTTP_PARSER_ERRNO(&parser)) : "incomplete request");
+		L_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? http_errno_description(HTTP_PARSER_ERRNO(&parser)) : "incomplete request");
 		destroy();  // Handle error. Just close the connection.
 	}
 }
@@ -231,7 +231,7 @@ const http_parser_settings HttpClient::settings = {
 int HttpClient::on_info(http_parser* p) {
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
-	LOG_HTTP_PROTO_PARSER(self, "%3d. (INFO)\n", p->state);
+	L_HTTP_PROTO_PARSER(self, "%3d. (INFO)", p->state);
 
 	switch (p->state) {
 		case 18:  // message_complete
@@ -262,7 +262,7 @@ int HttpClient::on_info(http_parser* p) {
 int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
-	LOG_HTTP_PROTO_PARSER(self, "%3d. %s\n", p->state, repr(at, length).c_str());
+	L_HTTP_PROTO_PARSER(self, "%3d. %s", p->state, repr(at, length).c_str());
 
 	int state = p->state;
 
@@ -373,7 +373,7 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 
 void HttpClient::run()
 {
-	LOG_OBJ_BEGIN(this, "HttpClient::run:BEGIN\n");
+	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 
 	std::string error;
 	const char *error_str;
@@ -384,7 +384,7 @@ void HttpClient::run()
 			time_t now = epoch::now<>();
 			XapiandManager::shutdown_asap = now;
 			manager()->async_shutdown.send();
-			LOG_OBJ_END(this, "HttpClient::run:END\n");
+			L_OBJ_END(this, "HttpClient::run:END");
 			return;
 		}
 
@@ -447,11 +447,11 @@ void HttpClient::run()
 	}
 
 	if (!closed) {
-		LOG_EV(this, "\tEnable read event (sock=%d)\n", sock);
+		L_EV(this, "\tEnable read event (sock=%d)", sock);
 		io_read.start();
 	}
 
-	LOG_OBJ_END(this, "HttpClient::run:END\n");
+	L_OBJ_END(this, "HttpClient::run:END");
 }
 
 
@@ -1170,9 +1170,9 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 	struct http_parser_url u;
 	std::string b = repr(path);
 
-	LOG_HTTP_PROTO_PARSER(this, "URL: %s\n", b.c_str());
+	L_HTTP_PROTO_PARSER(this, "URL: %s", b.c_str());
 	if (http_parser_parse_url(b.c_str(), b.size(), 0, &u) == 0) {
-		LOG_HTTP_PROTO_PARSER(this, "HTTP parsing done!\n");
+		L_HTTP_PROTO_PARSER(this, "HTTP parsing done!");
 
 		if (u.field_set & (1 <<  UF_PATH )) {
 			size_t path_size = u.field_data[3].len;
@@ -1262,7 +1262,7 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 						endpoints.insert(*it_endp);
 					}
 				}
-				LOG_CONN_WIRE(this, "Endpoint: -> %s\n", endpoints.as_string().c_str());
+				L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.as_string().c_str());
 
 				p.len_host = 0; //Clean the host, so you not stay with the previous host in case doesn't come new one
 				retval = url_path(path_buf.c_str(), path_size, &p);
@@ -1516,7 +1516,7 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 			}
 		}
 	} else {
-		LOG_CONN_WIRE(this,"Parsing not done\n");
+		L_CONN_WIRE(this,"Parsing not done");
 		/* Bad query */
 		return CMD_BAD_QUERY;
 	}

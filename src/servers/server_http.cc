@@ -30,24 +30,24 @@ HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	: BaseServer(server_, loop_, http_->sock),
 	  http(http_)
 {
-	LOG_EV(this, "Start http accept event (sock=%d)\n", http->sock);
-	LOG_OBJ(this, "CREATED HTTP SERVER!\n");
+	L_EV(this, "Start http accept event (sock=%d)", http->sock);
+	L_OBJ(this, "CREATED HTTP SERVER!");
 }
 
 
 HttpServer::~HttpServer()
 {
-	LOG_OBJ(this, "DELETED HTTP SERVER!\n");
+	L_OBJ(this, "DELETED HTTP SERVER!");
 }
 
 
 void
 HttpServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	LOG_EV_BEGIN(this, "HttpServer::io_accept_cb:BEGIN\n");
+	L_EV_BEGIN(this, "HttpServer::io_accept_cb:BEGIN");
 	if (EV_ERROR & revents) {
-		LOG_EV(this, "ERROR: got invalid http event (sock=%d): %s\n", http->sock, strerror(errno));
-		LOG_EV_END(this, "HttpServer::io_accept_cb:END\n");
+		L_EV(this, "ERROR: got invalid http event (sock=%d): %s", http->sock, strerror(errno));
+		L_EV_END(this, "HttpServer::io_accept_cb:END");
 		return;
 	}
 
@@ -61,5 +61,5 @@ HttpServer::io_accept_cb(ev::io &watcher, int revents)
 	} else {
 		Worker::create<HttpClient>(share_this<HttpServer>(), loop, client_sock);
 	}
-	LOG_EV_END(this, "HttpServer::io_accept_cb:END\n");
+	L_EV_END(this, "HttpServer::io_accept_cb:END");
 }

@@ -82,9 +82,9 @@ protected:
 	}
 
 	void _async_break_loop_cb(ev::async &, int) {
-		LOG_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN\n");
+		L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
 		loop->break_loop();
-		LOG_EV_END(this, "Worker::_async_break_loop_cb:END\n");
+		L_EV_END(this, "Worker::_async_break_loop_cb:END");
 	}
 
 public:

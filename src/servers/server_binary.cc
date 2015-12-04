@@ -35,38 +35,38 @@ BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::lo
 {
 	async_signal.set<BinaryServer, &BinaryServer::async_signal_cb>(this);
 	async_signal.start();
-	LOG_EV(this, "\tStart binary async signal event\n");
+	L_EV(this, "\tStart binary async signal event");
 
-	LOG_EV(this, "Start binary accept event (sock=%d)\n", binary->sock);
-	LOG_OBJ(this, "CREATED BINARY SERVER!\n");
+	L_EV(this, "Start binary accept event (sock=%d)", binary->sock);
+	L_OBJ(this, "CREATED BINARY SERVER!");
 }
 
 
 BinaryServer::~BinaryServer()
 {
-	LOG_OBJ(this, "DELETED BINARY SERVER!\n");
+	L_OBJ(this, "DELETED BINARY SERVER!");
 }
 
 
 void
 BinaryServer::async_signal_cb(ev::async &, int)
 {
-	LOG_EV_BEGIN(this, "BinaryServer::async_signal_cb:BEGIN\n");
+	L_EV_BEGIN(this, "BinaryServer::async_signal_cb:BEGIN");
 
 	while (binary->tasks.call(share_this<BinaryServer>())) {}
 
-	LOG_EV_END(this, "BinaryServer::async_signal_cb:END\n");
+	L_EV_END(this, "BinaryServer::async_signal_cb:END");
 }
 
 
 void
 BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	LOG_EV_BEGIN(this, "BinaryServer::io_accept_cb:BEGIN\n");
+	L_EV_BEGIN(this, "BinaryServer::io_accept_cb:BEGIN");
 
 	if (EV_ERROR & revents) {
-		LOG_EV(this, "ERROR: got invalid binary event (sock=%d): %s\n", binary->sock, strerror(errno));
-		LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
+		L_EV(this, "ERROR: got invalid binary event (sock=%d): %s", binary->sock, strerror(errno));
+		L_EV_END(this, "BinaryServer::io_accept_cb:END");
 		return;
 	}
 
@@ -77,7 +77,7 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 		if (!ignored_errorno(errno, false)) {
 			L_ERR(this, "ERROR: accept binary error (sock=%d): %s", binary->sock, strerror(errno));
 		}
-		LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
+		L_EV_END(this, "BinaryServer::io_accept_cb:END");
 		return;
 	}
 
@@ -85,13 +85,13 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 
 	if (!client->init_remote()) {
 		client->destroy();
-		LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
+		L_EV_END(this, "BinaryServer::io_accept_cb:END");
 		return;
 	}
 
 	L_INFO(this, "Accepted new client! (sock=%d)", client_sock);
 
-	LOG_EV_END(this, "BinaryServer::io_accept_cb:END\n");
+	L_EV_END(this, "BinaryServer::io_accept_cb:END");
 }
 
 

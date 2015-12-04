@@ -33,14 +33,14 @@ DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, 
 	: BaseServer(server_, loop_, discovery_->sock),
 	discovery(discovery_)
 {
-	LOG_EV(this, "Start discovery event (sock=%d)\n", discovery->sock);
-	LOG_OBJ(this, "CREATED DISCOVERY SERVER!\n");
+	L_EV(this, "Start discovery event (sock=%d)", discovery->sock);
+	L_OBJ(this, "CREATED DISCOVERY SERVER!");
 }
 
 
 DiscoveryServer::~DiscoveryServer()
 {
-	LOG_OBJ(this, "DELETED DISCOVERY SERVER!\n");
+	L_OBJ(this, "DELETED DISCOVERY SERVER!");
 }
 
 
@@ -48,10 +48,10 @@ void
 DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
 	auto now = epoch::now<std::chrono::milliseconds>();
-	LOG_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN %lld\n", now);
+	L_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN %lld", now);
 	if (EV_ERROR & revents) {
-		LOG_EV(this, "ERROR: got invalid discovery event (sock=%d): %s\n", discovery->sock, strerror(errno));
-		LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+		L_EV(this, "ERROR: got invalid discovery event (sock=%d): %s", discovery->sock, strerror(errno));
+		L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 		return;
 	}
 
@@ -71,21 +71,21 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 			}
 		} else if (received == 0) {
 			// If no messages are available to be received and the peer has performed an orderly shutdown.
-			LOG_CONN(this, "Received EOF (sock=%d)!\n", discovery->sock);
+			L_CONN(this, "Received EOF (sock=%d)!", discovery->sock);
 			manager()->shutdown();
 		} else {
-			LOG_UDP_WIRE(this, "Discovery: (sock=%d) -->> '%s'\n", discovery->sock, repr(buf, received).c_str());
+			L_UDP_WIRE(this, "Discovery: (sock=%d) -->> '%s'", discovery->sock, repr(buf, received).c_str());
 
 			if (received < 4) {
-				LOG_DISCOVERY(this, "Badly formed message: Incomplete!\n");
-				LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+				L_DISCOVERY(this, "Badly formed message: Incomplete!");
+				L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 				return;
 			}
 
 			uint16_t remote_protocol_version = *(uint16_t *)(buf + 1);
 			if ((remote_protocol_version & 0xff) > XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) {
-				LOG_DISCOVERY(this, "Badly formed message: Protocol version mismatch %x vs %x!\n", remote_protocol_version & 0xff, XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION);
-				LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+				L_DISCOVERY(this, "Badly formed message: Protocol version mismatch %x vs %x!", remote_protocol_version & 0xff, XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION);
+				L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 				return;
 			}
 
@@ -94,12 +94,12 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 
 			std::string remote_cluster_name;
 			if (unserialise_string(remote_cluster_name, &ptr, end) == -1 || remote_cluster_name.empty()) {
-				LOG_DISCOVERY(this, "Badly formed message: No cluster name!\n");
-				LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+				L_DISCOVERY(this, "Badly formed message: No cluster name!");
+				L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 				return;
 			}
 			if (remote_cluster_name != discovery->manager->cluster_name) {
-				LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+				L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 				return;
 			}
 
@@ -116,8 +116,8 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 			switch (cmd) {
 				case toUType(Discovery::Message::HELLO):
 					if (remote_node.unserialise(&ptr, end) == -1) {
-						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
-						LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+						L_DISCOVERY(this, "Badly formed message: No proper node!");
+						L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 						return;
 					}
 					if (remote_node == local_node) {
@@ -139,13 +139,13 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				case toUType(Discovery::Message::SNEER):
 					if (discovery->manager->state != XapiandManager::State::READY) {
 						if (remote_node.unserialise(&ptr, end) == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
-							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+							L_DISCOVERY(this, "Badly formed message: No proper node!");
+							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 						if (remote_node == local_node) {
 							if (discovery->manager->node_name.empty()) {
-								LOG_DISCOVERY(this, "Node name %s already taken. Retrying other name...\n", local_node.name.c_str());
+								L_DISCOVERY(this, "Node name %s already taken. Retrying other name...", local_node.name.c_str());
 								discovery->manager->reset_state();
 							} else {
 								L_ERR(this, "Cannot join the party. Node name %s already taken!", local_node.name.c_str());
@@ -161,8 +161,8 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				case toUType(Discovery::Message::WAVE):
 				case toUType(Discovery::Message::HEARTBEAT):
 					if (remote_node.unserialise(&ptr, end) == -1) {
-						LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
-						LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+						L_DISCOVERY(this, "Badly formed message: No proper node!");
+						L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 						return;
 					}
 
@@ -200,8 +200,8 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				case toUType(Discovery::Message::BYE):
 					if (discovery->manager->state == XapiandManager::State::READY) {
 						if (remote_node.unserialise(&ptr, end) == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
-							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+							L_DISCOVERY(this, "Badly formed message: No proper node!");
+							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 						discovery->manager->drop_node(remote_node.name);
@@ -214,8 +214,8 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				case toUType(Discovery::Message::DB):
 					if (discovery->manager->state == XapiandManager::State::READY) {
 						if (unserialise_string(index_path, &ptr, end) == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
-							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+							L_DISCOVERY(this, "Badly formed message: No index path!");
+							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 
@@ -227,14 +227,14 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 												serialise_string(index_path) +  // The path of the index
 												node->serialise()					// The node where the index master is at
 												);
-								LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+								L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 								return;
 							}
 						}
 
 						mastery_level = manager()->database_pool.get_mastery_level(index_path);
 						if (mastery_level != -1) {
-								LOG_DISCOVERY(this, "Found local database '%s' with m:%llx!\n", index_path.c_str(), mastery_level);
+								L_DISCOVERY(this, "Found local database '%s' with m:%llx!", index_path.c_str(), mastery_level);
 								mastery_str = std::to_string(mastery_level);
 								discovery->send_message(
 												Discovery::Message::DB_WAVE,
@@ -250,28 +250,28 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				case toUType(Discovery::Message::BOSSY_DB_WAVE):
 					if (discovery->manager->state == XapiandManager::State::READY) {
 						if (unserialise_string(mastery_str, &ptr, end) == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No proper mastery!\n");
-							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+							L_DISCOVERY(this, "Badly formed message: No proper mastery!");
+							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 						remote_mastery_level = strtoll(mastery_str);
 
 						if (unserialise_string(index_path, &ptr, end) == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
-							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+							L_DISCOVERY(this, "Badly formed message: No index path!");
+							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 
 						if (remote_node.unserialise(&ptr, end) == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
-							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+							L_DISCOVERY(this, "Badly formed message: No proper node!");
+							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 						if (discovery->manager->put_node(remote_node)) {
 							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
 						}
 
-						LOG_DISCOVERY(this, "Node %s has '%s' with a mastery of %llx!\n", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
+						L_DISCOVERY(this, "Node %s has '%s' with a mastery of %llx!", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
 
 						if (discovery->manager->get_region() == discovery->manager->get_region(index_path)) {
 							L_DEBUG(this, "The DB is in the same region that this cluster!");
@@ -288,29 +288,29 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				case toUType(Discovery::Message::DB_UPDATED):
 					if (discovery->manager->state == XapiandManager::State::READY) {
 						if (unserialise_string(mastery_str, &ptr, end) == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No proper mastery!\n");
-							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+							L_DISCOVERY(this, "Badly formed message: No proper mastery!");
+							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 						remote_mastery_level = strtoll(mastery_str);
 
 						if (unserialise_string(index_path, &ptr, end) == -1) {
-							LOG_DISCOVERY(this, "Badly formed message: No index path!\n");
-							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+							L_DISCOVERY(this, "Badly formed message: No index path!");
+							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 
 						mastery_level = manager()->database_pool.get_mastery_level(index_path);
 						if (mastery_level == -1) {
-							LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 
 						if (mastery_level > remote_mastery_level) {
-							LOG_DISCOVERY(this, "Mastery of remote's %s wins! (local:%llx > remote:%llx) - Updating!\n", index_path.c_str(), mastery_level, remote_mastery_level);
+							L_DISCOVERY(this, "Mastery of remote's %s wins! (local:%llx > remote:%llx) - Updating!", index_path.c_str(), mastery_level, remote_mastery_level);
 							if (remote_node.unserialise(&ptr, end) == -1) {
-								LOG_DISCOVERY(this, "Badly formed message: No proper node!\n");
-								LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+								L_DISCOVERY(this, "Badly formed message: No proper node!");
+								L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 								return;
 							}
 							if (discovery->manager->put_node(remote_node)) {
@@ -328,7 +328,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							}
 #endif
 						} else if (mastery_level != remote_mastery_level) {
-							LOG_DISCOVERY(this, "Mastery of local's %s wins! (local:%llx <= remote:%llx) - Ignoring update!\n", index_path.c_str(), mastery_level, remote_mastery_level);
+							L_DISCOVERY(this, "Mastery of local's %s wins! (local:%llx <= remote:%llx) - Ignoring update!", index_path.c_str(), mastery_level, remote_mastery_level);
 						}
 					}
 					break;
@@ -336,5 +336,5 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 		}
 	}
 
-	LOG_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld\n", now);
+	L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 }

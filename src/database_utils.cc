@@ -47,11 +47,11 @@ long long save_mastery(const std::string &dir) {
 
 
 long long read_mastery(const std::string &dir, bool force) {
-	LOG_DATABASE(NULL, "+ READING MASTERY OF INDEX '%s'...\n", dir.c_str());
+	L_DATABASE(NULL, "+ READING MASTERY OF INDEX '%s'...", dir.c_str());
 
 	struct stat info;
 	if (stat(dir.c_str(), &info) || !(info.st_mode & S_IFDIR)) {
-		LOG_DATABASE(NULL, "- NO MASTERY OF INDEX '%s'\n", dir.c_str());
+		L_DATABASE(NULL, "- NO MASTERY OF INDEX '%s'", dir.c_str());
 		return -1;
 	}
 
@@ -76,7 +76,7 @@ long long read_mastery(const std::string &dir, bool force) {
 		}
 	}
 
-	LOG_DATABASE(NULL, "- MASTERY OF INDEX '%s' is %llx\n", dir.c_str(), mastery_level);
+	L_DATABASE(NULL, "- MASTERY OF INDEX '%s' is %llx", dir.c_str(), mastery_level);
 
 	return mastery_level;
 }

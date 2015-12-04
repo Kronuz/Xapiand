@@ -32,13 +32,13 @@ Http::Http(const std::shared_ptr<XapiandManager>& manager_, int port_)
 {
 	local_node.http_port = port;
 
-	LOG_OBJ(this, "CREATED CONFIGURATION FOR HTTP\n");
+	L_OBJ(this, "CREATED CONFIGURATION FOR HTTP");
 }
 
 
 Http::~Http()
 {
-	LOG_OBJ(this, "DELETED CONFIGURATION FOR HTTP\n");
+	L_OBJ(this, "DELETED CONFIGURATION FOR HTTP");
 }
 
 

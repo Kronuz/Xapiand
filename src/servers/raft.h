@@ -93,7 +93,7 @@ public:
 	inline void start() {
 		if (!running.exchange(true)) {
 			election_leader.start();
-			LOG_RAFT(this, "Raft was started!\n");
+			L_RAFT(this, "Raft was started!");
 		}
 		number_servers.store(manager->get_nodes_by_region(local_node.region.load()) + 1);
 	}
@@ -106,7 +106,7 @@ public:
 			}
 			state = State::FOLLOWER;
 			number_servers.store(1);
-			LOG_RAFT(this, "Raft was stopped!\n");
+			L_RAFT(this, "Raft was stopped!");
 		}
 		number_servers.store(manager->get_nodes_by_region(local_node.region.load()) + 1);
 	}

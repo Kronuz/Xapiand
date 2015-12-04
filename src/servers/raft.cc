@@ -39,12 +39,12 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_,
 	election_timeout = random_real(ELECTION_LEADER_MIN, ELECTION_LEADER_MAX);
 	election_leader.set<Raft, &Raft::leader_election_cb>(this);
 	election_leader.set(election_timeout, 0.);
-	LOG_EV(this, "\tStart election leader event\n");
+	L_EV(this, "\tStart election leader event");
 	last_activity = ev::now(*loop);
 
 	heartbeat.set<Raft, &Raft::heartbeat_cb>(this);
 
-	LOG_OBJ(this, "CREATED RAFT CONSENSUS\n");
+	L_OBJ(this, "CREATED RAFT CONSENSUS");
 }
 
 
@@ -56,7 +56,7 @@ Raft::~Raft()
 		heartbeat.stop();
 	}
 
-	LOG_OBJ(this, "DELETED RAFT CONSENSUS\n");
+	L_OBJ(this, "DELETED RAFT CONSENSUS");
 }
 
 
@@ -69,18 +69,18 @@ Raft::reset()
 
 	state = State::FOLLOWER;
 
-	LOG_RAFT(this, "Raft was restarted!\n");
+	L_RAFT(this, "Raft was restarted!");
 }
 
 
 void
 Raft::leader_election_cb(ev::timer &, int)
 {
-	LOG_EV_BEGIN(this, "Raft::leader_election_cb:BEGIN\n");
+	L_EV_BEGIN(this, "Raft::leader_election_cb:BEGIN");
 	if (manager->state == XapiandManager::State::READY) {
 		// calculate when the timeout would happen
 		ev::tstamp remaining_time = last_activity + election_timeout - ev::now(*loop);
-		LOG_RAFT(this, "Raft { Reg: %d; State: %d; Rem_t: %f; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }\n",
+		L_RAFT(this, "Raft { Reg: %d; State: %d; Rem_t: %f; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
 			local_node.region.load(), state, remaining_time, election_timeout, term, number_servers.load(), leader.c_str());
 
 		if (remaining_time < 0. && state != State::LEADER) {
@@ -92,22 +92,22 @@ Raft::leader_election_cb(ev::timer &, int)
 			election_timeout = random_real(ELECTION_LEADER_MIN, ELECTION_LEADER_MAX);
 		}
 	} else {
-		LOG_RAFT(this, "Waiting manager get ready!!\n");
+		L_RAFT(this, "Waiting manager get ready!!");
 	}
 
 	// Start the timer again.
 	election_leader.set(election_timeout, 0.);
 	election_leader.start();
-	LOG_EV_END(this, "Raft::leader_election_cb:END\n");
+	L_EV_END(this, "Raft::leader_election_cb:END");
 }
 
 
 void
 Raft::heartbeat_cb(ev::timer &, int)
 {
-	LOG_EV_BEGIN(this, "Raft::heartbeat_cb:BEGIN\n");
+	L_EV_BEGIN(this, "Raft::heartbeat_cb:BEGIN");
 	send_message(Message::HEARTBEAT_LEADER, local_node.serialise());
-	LOG_EV_END(this, "Raft::heartbeat_cb:END\n");
+	L_EV_END(this, "Raft::heartbeat_cb:END");
 }
 
 
@@ -120,7 +120,7 @@ Raft::start_heartbeat()
 
 	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
 	heartbeat.again();
-	LOG_RAFT(this, "\tSet heartbeat timeout event %f\n", heartbeat.repeat);
+	L_RAFT(this, "\tSet heartbeat timeout event %f", heartbeat.repeat);
 
 	leader = stringtolower(local_node.name);
 }

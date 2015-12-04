@@ -173,18 +173,18 @@ BaseClient::BaseClient(std::shared_ptr<BaseServer> server_, ev::loop_ref *loop_,
 {
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
 	async_write.start();
-	LOG_EV(this, "\tStart async write event\n");
+	L_EV(this, "\tStart async write event");
 
 	io_read.set<BaseClient, &BaseClient::io_cb>(this);
 	io_read.start(sock, ev::READ);
-	LOG_EV(this, "\tStart read event (sock=%d)\n", sock);
+	L_EV(this, "\tStart read event (sock=%d)", sock);
 
 	io_write.set<BaseClient, &BaseClient::io_cb>(this);
 	io_write.set(sock, ev::WRITE);
-	LOG_EV(this, "\tSetup write event (sock=%d)\n", sock);
+	L_EV(this, "\tSetup write event (sock=%d)", sock);
 
 	int total_clients = ++XapiandServer::total_clients;
-	LOG_OBJ(this, "CREATED CLIENT! (%d clients)\n", total_clients);
+	L_OBJ(this, "CREATED CLIENT! (%d clients)", total_clients);
 }
 
 
@@ -197,7 +197,7 @@ BaseClient::~BaseClient()
 	int total_clients = --XapiandServer::total_clients;
 	assert(total_clients >= 0);
 
-	LOG_OBJ(this, "DELETED CLIENT! (%d clients left)\n", total_clients);
+	L_OBJ(this, "DELETED CLIENT! (%d clients left)", total_clients);
 }
 
 
@@ -213,10 +213,10 @@ BaseClient::destroy()
 
 	// Stop and free watcher if client socket is closing
 	io_read.stop();
-	LOG_EV(this, "\tStop read event (sock=%d)\n", sock);
+	L_EV(this, "\tStop read event (sock=%d)", sock);
 
 	io_write.stop();
-	LOG_EV(this, "\tStop write event (sock=%d)\n", sock);
+	L_EV(this, "\tStop write event (sock=%d)", sock);
 
 	::close(sock);
 	sock = -1;
@@ -225,7 +225,7 @@ BaseClient::destroy()
 	write_queue.finish();
 	write_queue.clear();
 
-	LOG_OBJ(this, "DESTROYED CLIENT!\n");
+	L_OBJ(this, "DESTROYED CLIENT!");
 
 	detach();
 }
@@ -239,7 +239,7 @@ BaseClient::close()
 	}
 
 	closed = true;
-	LOG_OBJ(this, "CLOSED CLIENT!\n");
+	L_OBJ(this, "CLOSED CLIENT!");
 }
 
 
@@ -252,11 +252,11 @@ BaseClient::io_cb_update()
 				destroy();
 			} else {
 				io_write.stop();
-				LOG_EV(this, "\tDisable write event (sock=%d)\n", sock);
+				L_EV(this, "\tDisable write event (sock=%d)", sock);
 			}
 		} else {
 			io_write.start();
-			LOG_EV(this, "\tEnable write event (sock=%d)\n", sock);
+			L_EV(this, "\tEnable write event (sock=%d)", sock);
 		}
 	}
 }
@@ -265,13 +265,13 @@ BaseClient::io_cb_update()
 void
 BaseClient::io_cb(ev::io &watcher, int revents)
 {
-	LOG_EV_BEGIN(this, "BaseClient::io_cb:BEGIN\n");
-	LOG_EV(this, "%s (sock=%d) %x\n", (revents & EV_ERROR) ? "EV_ERROR" : (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
+	L_EV_BEGIN(this, "BaseClient::io_cb:BEGIN");
+	L_EV(this, "%s (sock=%d) %x", (revents & EV_ERROR) ? "EV_ERROR" : (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
 
 	if (revents & EV_ERROR) {
 		L_ERR(this, "ERROR: got invalid event (sock=%d): %s", sock, strerror(errno));
 		destroy();
-		LOG_EV_END(this, "BaseClient::io_cb:END\n");
+		L_EV_END(this, "BaseClient::io_cb:END");
 		return;
 	}
 
@@ -286,7 +286,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 	}
 
 	io_cb_update();
-	LOG_EV_END(this, "BaseClient::io_cb:END\n");
+	L_EV_END(this, "BaseClient::io_cb:END");
 }
 
 
@@ -323,7 +323,7 @@ BaseClient::write_directly(int fd)
 			return WR::CLOSED;
 		} else {
 			auto str(repr(buf_data, written, true, 500));
-			LOG_CONN_WIRE(this, "(sock=%d) <<-- '%s' [%zu] (%zu bytes)\n", sock, str.c_str(), str.size(), written);
+			L_CONN_WIRE(this, "(sock=%d) <<-- '%s' [%zu] (%zu bytes)", sock, str.c_str(), str.size(), written);
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
 				if (write_queue.pop(buffer)) {
@@ -361,14 +361,14 @@ BaseClient::_write(int fd, bool async)
 			case WR::CLOSED:
 				if (!async) {
 					io_write.stop();
-					LOG_EV(this, "\tDisable write event (sock=%d)\n", sock);
+					L_EV(this, "\tDisable write event (sock=%d)", sock);
 				}
 				destroy();
 				return false;
 			case WR::RETRY:
 				if (!async) {
 					io_write.start();
-					LOG_EV(this, "\tEnable write event (sock=%d)\n", sock);
+					L_EV(this, "\tEnable write event (sock=%d)", sock);
 				} else {
 					async_write.send();
 				}
@@ -380,7 +380,7 @@ BaseClient::_write(int fd, bool async)
 
 	if (!async) {
 		io_write.stop();
-		LOG_EV(this, "\tDisable write event (sock=%d)\n", sock);
+		L_EV(this, "\tDisable write event (sock=%d)", sock);
 	}
 
 	return true;
@@ -393,7 +393,7 @@ BaseClient::write(const char *buf, size_t buf_size)
 		return false;
 	}
 
-	//LOG_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'\n", sock, repr(buf, buf_size).c_str());
+	//L_CONN_WIRE(this, "(sock=%d) <ENQUEUE> '%s'", sock, repr(buf, buf_size).c_str());
 
 	written += 1;
 
@@ -424,25 +424,25 @@ BaseClient::io_cb_read(int fd)
 			}
 		} else if (received == 0) {
 			// The peer has closed its half side of the connection.
-			LOG_CONN(this, "Received EOF (sock=%d)!\n", sock);
+			L_CONN(this, "Received EOF (sock=%d)!", sock);
 			destroy();
 			return;
 		} else {
 			auto str(repr(buf_data, received, true, 500));
-			LOG_CONN_WIRE(this, "(sock=%d) -->> '%s' [%zu] (%zu bytes)\n", sock, str.c_str(), str.size(), received);
+			L_CONN_WIRE(this, "(sock=%d) -->> '%s' [%zu] (%zu bytes)", sock, str.c_str(), str.size(), received);
 
 			if (mode == MODE::READ_FILE_TYPE) {
 				switch (*buf_data++) {
 					case *NO_COMPRESSOR:
-						LOG_CONN(this, "Receiving uncompressed file (sock=%d)...\n", sock);
+						L_CONN(this, "Receiving uncompressed file (sock=%d)...", sock);
 						compressor = std::make_unique<ClientNoCompressor>(this);
 						break;
 					case *LZ4_COMPRESSOR:
-						LOG_CONN(this, "Receiving LZ4 compressed file (sock=%d)...\n", sock);
+						L_CONN(this, "Receiving LZ4 compressed file (sock=%d)...", sock);
 						compressor = std::make_unique<ClientLZ4Compressor>(this);
 						break;
 					default:
-						LOG_CONN(this, "Received wrong file mode (sock=%d)!\n", sock);
+						L_CONN(this, "Received wrong file mode (sock=%d)!", sock);
 						destroy();
 						return;
 				}
@@ -522,23 +522,23 @@ BaseClient::io_cb_read(int fd)
 void
 BaseClient::async_write_cb(ev::async &, int)
 {
-	LOG_EV_BEGIN(this, "BaseClient::async_write_cb:BEGIN\n");
+	L_EV_BEGIN(this, "BaseClient::async_write_cb:BEGIN");
 	io_cb_update();
-	LOG_EV_END(this, "BaseClient::async_write_cb:END\n");
+	L_EV_END(this, "BaseClient::async_write_cb:END");
 }
 
 
 void
 BaseClient::shutdown()
 {
-	LOG_OBJ(this, "BaseClient::shutdown()\n");
+	L_OBJ(this, "BaseClient::shutdown()");
 
 	::shutdown(sock, SHUT_RDWR);
 
 	Worker::shutdown();
 
 	if (XapiandManager::shutdown_now) {
-		LOG_EV(this, "\tSignaled destroy!!\n");
+		L_EV(this, "\tSignaled destroy!!");
 		destroy();
 	}
 }

@@ -153,7 +153,7 @@ Database::reopen()
 				try {
 					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (ldb.get_uuid() == rdb.get_uuid()) {
-						LOG_DATABASE(this, "Endpoint %s fallback to local database!\n", e->as_string().c_str());
+						L_DATABASE(this, "Endpoint %s fallback to local database!", e->as_string().c_str());
 						// Handle remote endpoints and figure out if the endpoint is a local database
 						rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 						local = true;
@@ -182,7 +182,7 @@ Database::drop(const std::string &doc_id, bool _commit)
 	std::string document_id  = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
 
 	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Deleting: -%s- t:%d\n", document_id.c_str(), t);
+		L_DATABASE_WRAP(this, "Deleting: -%s- t:%d", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(document_id);
@@ -198,7 +198,7 @@ Database::drop(const std::string &doc_id, bool _commit)
 			if (t) reopen();
 			continue;
 		}
-		LOG_DATABASE_WRAP(this, "Document deleted\n");
+		L_DATABASE_WRAP(this, "Document deleted");
 		if (_commit) return commit();
 		else {
 			modified = true;
@@ -215,7 +215,7 @@ bool
 Database::commit()
 {
 	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Commit: t%d\n", t);
+		L_DATABASE_WRAP(this, "Commit: t%d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->commit();
@@ -224,7 +224,7 @@ Database::commit()
 			if (t) reopen();
 			continue;
 		}
-		LOG_DATABASE_WRAP(this, "Commit made\n");
+		L_DATABASE_WRAP(this, "Commit made");
 		return true;
 	}
 
@@ -356,7 +356,7 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 void
 Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
 {
-	// LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	// L_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!(find || spc.dynamic)) throw MSG_Error("This object is not dynamic");
 
 	if (!spc.store) return;
@@ -390,10 +390,10 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 
 		if (spc.positions[getPos(j, spc.positions.size())]) {
 			spc.prefix.empty() ? term_generator.index_text_without_positions(text->valuestring, spc.weight[getPos(j, spc.weight.size())]) : term_generator.index_text_without_positions(text->valuestring, spc.weight[getPos(j, spc.weight.size())], spc.prefix);
-			LOG_DATABASE_WRAP(this, "Text to Index with positions = %s: %s\n", name.c_str(), text->valuestring);
+			L_DATABASE_WRAP(this, "Text to Index with positions = %s: %s", name.c_str(), text->valuestring);
 		} else {
 			spc.prefix.empty() ? term_generator.index_text(text->valuestring, spc.weight[getPos(j, spc.weight.size())]) : term_generator.index_text(text->valuestring, spc.weight[getPos(j, spc.weight.size())], spc.prefix);
-			LOG_DATABASE_WRAP(this, "Text to Index = %s: %s\n", name.c_str(), text->valuestring);
+			L_DATABASE_WRAP(this, "Text to Index = %s: %s", name.c_str(), text->valuestring);
 		}
 	}
 }
@@ -402,7 +402,7 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 void
 Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
 {
-	// LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	// L_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!(find || spc.dynamic)) throw MSG_Error("This object is not dynamic");
 
 	if (!spc.store) return;
@@ -431,7 +431,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 			}
 		} else if (term->type == cJSON_Number) term_v = std::to_string(term->valuedouble);
 
-		LOG_DATABASE_WRAP(this, "%d Term -> %s: %s\n", j, spc.prefix.c_str(), term_v.c_str());
+		L_DATABASE_WRAP(this, "%d Term -> %s: %s", j, spc.prefix.c_str(), term_v.c_str());
 
 		if (spc.sep_types[2] == GEO_TYPE) {
 			std::vector<std::string> geo_terms;
@@ -456,11 +456,11 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 			if (spc.position[getPos(j, spc.position.size())] >= 0) {
 				std::string nameterm(prefixed(term_v, spc.prefix));
 				doc.add_posting(nameterm, spc.position[getPos(j, spc.position.size())], spc.bool_term ? 0: spc.weight[getPos(j, spc.weight.size())]);
-				LOG_DATABASE_WRAP(this, "Bool: %d  Posting: %s\n", spc.bool_term, repr(nameterm).c_str());
+				L_DATABASE_WRAP(this, "Bool: %d  Posting: %s", spc.bool_term, repr(nameterm).c_str());
 			} else {
 				std::string nameterm(prefixed(term_v, spc.prefix));
 				spc.bool_term ? doc.add_boolean_term(nameterm) : doc.add_term(nameterm, spc.weight[getPos(j, spc.weight.size())]);
-				LOG_DATABASE_WRAP(this, "Bool: %d  Term: %s\n", spc.bool_term, repr(nameterm).c_str());
+				L_DATABASE_WRAP(this, "Bool: %d  Term: %s", spc.bool_term, repr(nameterm).c_str());
 			}
 		}
 	}
@@ -470,7 +470,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 void
 Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
 {
-	// LOG_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
+	// L_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!(find || spc.dynamic)) throw MSG_Error("This object is not dynamic");
 
 	if (!spc.store) return;
@@ -498,7 +498,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			value_v = std::to_string(value->valuedouble);
 		}
 
-		LOG_DATABASE_WRAP(this, "Name: (%s) Value: (%s)\n", name.c_str(), value_v.c_str());
+		L_DATABASE_WRAP(this, "Name: (%s) Value: (%s)", name.c_str(), value_v.c_str());
 
 		if (spc.sep_types[2] == GEO_TYPE) {
 			std::vector<range_t> ranges;
@@ -586,7 +586,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 	}
 
 	doc.add_value(spc.slot, s.serialise());
-	LOG_DATABASE_WRAP(this, "Slot: %u serialized: %s\n", spc.slot, repr(s.serialise()).c_str());
+	L_DATABASE_WRAP(this, "Slot: %u serialized: %s", spc.slot, repr(s.serialise()).c_str());
 }
 
 
@@ -608,7 +608,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	//Make sure document_id is also a boolean term (otherwise it doesn't replace an existing document)
 	doc.add_value(0, _document_id);
 	document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
-	LOG_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s\n", _document_id.c_str(), document_id.c_str());
+	L_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s", _document_id.c_str(), document_id.c_str());
 	doc.add_boolean_term(document_id);
 	doc.add_value(1, DEFAULT_OFFSET);
 	doc.add_value(2, ct_type);
@@ -645,7 +645,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 
 	unique_char_ptr _cprint(cJSON_Print(document.get()));
 	std::string doc_data(_cprint.get());
-	LOG_DATABASE_WRAP(this, "Document to index: %s\n", doc_data.c_str());
+	L_DATABASE_WRAP(this, "Document to index: %s", doc_data.c_str());
 	doc.set_data(encode_length(doc_data.size()) + doc_data + (blob ? body : ""));
 
 	cJSON *document_terms = cJSON_GetObjectItem(document.get(), RESERVED_TERMS);
@@ -738,7 +738,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 					index_texts(doc, text, spc_now, name_s, subproperties, find);
 					spc_now = spc_bef;
 				} else {
-					LOG_DATABASE_WRAP(this, "ERROR: Text's value must be defined\n");
+					L_DATABASE_WRAP(this, "ERROR: Text's value must be defined");
 					return 0;
 				}
 			}
@@ -771,7 +771,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 					index_terms(doc, terms, spc_now, name_s, subproperties, find);
 					spc_now = spc_bef;
 				} else {
-					LOG_DATABASE_WRAP(this, "ERROR: Term must be defined\n");
+					L_DATABASE_WRAP(this, "ERROR: Term must be defined");
 					return 0;
 				}
 			}
@@ -795,7 +795,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 		}
 
 	} catch (const std::exception &err) {
-		LOG_DATABASE_WRAP(this, "ERROR: %s\n", err.what());
+		L_DATABASE_WRAP(this, "ERROR: %s", err.what());
 		return 0;
 	}
 
@@ -811,18 +811,18 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 {
 	Xapian::docid did;
 	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Inserting: -%s- t:%d\n", document_id.c_str(), t);
+		L_DATABASE_WRAP(this, "Inserting: -%s- t:%d", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			LOG_DATABASE_WRAP(this, "Doing replace_document.\n");
+			L_DATABASE_WRAP(this, "Doing replace_document.");
 			did = wdb->replace_document(document_id, doc);
-			LOG_DATABASE_WRAP(this, "Replace_document was done.\n");
+			L_DATABASE_WRAP(this, "Replace_document was done.");
 		} catch (const Xapian::Error &e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
-		LOG_DATABASE_WRAP(this, "Document inserted\n");
+		L_DATABASE_WRAP(this, "Document inserted");
 		if (_commit) commit();
 		else modified = true;
 		return did;
@@ -836,18 +836,18 @@ Xapian::docid
 Database::replace(const Xapian::docid &did, const Xapian::Document &doc, bool _commit)
 {
 	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Inserting: -did:%u- t:%d\n", did, t);
+		L_DATABASE_WRAP(this, "Inserting: -did:%u- t:%d", did, t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			LOG_DATABASE_WRAP(this, "Doing replace_document.\n");
+			L_DATABASE_WRAP(this, "Doing replace_document.");
 			wdb->replace_document(did, doc);
-			LOG_DATABASE_WRAP(this, "Replace_document was done.\n");
+			L_DATABASE_WRAP(this, "Replace_document was done.");
 		} catch (const Xapian::Error &e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
-		LOG_DATABASE_WRAP(this, "Document inserted\n");
+		L_DATABASE_WRAP(this, "Document inserted");
 		if (_commit) commit();
 		else modified = true;
 		return did;
@@ -1480,7 +1480,7 @@ Database::get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pa
 			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			return 2;
 		} catch (const std::exception &er) {
-			LOG_DATABASE_WRAP(this, "ERROR: %s\n", er.what());
+			L_DATABASE_WRAP(this, "ERROR: %s", er.what());
 			return 1;
 		}
 
@@ -1513,7 +1513,7 @@ bool
 Database::set_metadata(const std::string &key, const std::string &value, bool _commit)
 {
 	for (int t = 3; t >= 0; --t) {
-		LOG_DATABASE_WRAP(this, "Metadata: %d\n", t);
+		L_DATABASE_WRAP(this, "Metadata: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->set_metadata(key, value);
@@ -1522,7 +1522,7 @@ Database::set_metadata(const std::string &key, const std::string &value, bool _c
 			if (t) reopen();
 			continue;
 		}
-		LOG_DATABASE_WRAP(this, "set_metadata was done\n");
+		L_DATABASE_WRAP(this, "set_metadata was done");
 		return (_commit) ? commit() : true;
 	}
 
@@ -1754,7 +1754,7 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 	bool initref = flags & DB_INIT_REF;
 	bool replication = flags & DB_REPLICATION;
 
-	LOG_DATABASE_BEGIN(this, "++ CHECKING OUT DB %s(%s) [%lx]...\n", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
+	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB %s(%s) [%lx]...", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 
 	assert(!database);
 
@@ -1781,8 +1781,8 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 					break;
 				case DatabaseQueue::replica_state::REPLICA_LOCK:
 				case DatabaseQueue::replica_state::REPLICA_SWITCH:
-					LOG_REPLICATION(this, "A replication task is already waiting\n");
-					LOG_DATABASE_END(this, "!! ABORTED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
+					L_REPLICATION(this, "A replication task is already waiting");
+					L_DATABASE_END(this, "!! ABORTED CHECKOUT DB (%s)!", endpoints.as_string().c_str());
 					return false;
 			}
 		} else {
@@ -1836,13 +1836,13 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 	if (database) {
 		database->modified = false;
 	} else {
-		LOG_DATABASE_END(this, "!! FAILED CHECKOUT DB (%s)!\n", endpoints.as_string().c_str());
+		L_DATABASE_END(this, "!! FAILED CHECKOUT DB (%s)!", endpoints.as_string().c_str());
 		return false;
 	}
 
 	if ((now - database->access_time) >= DATABASE_UPDATE_TIME && !writable) {
 		database->reopen();
-		LOG_DATABASE(this, "== REOPEN DB %s(%s) [%lx]\n", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
+		L_DATABASE(this, "== REOPEN DB %s(%s) [%lx]", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 	}
 
 #ifdef HAVE_REMOTE_PROTOCOL
@@ -1850,7 +1850,7 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 		database->checkout_revision = database->db->get_revision_info();
 	}
 #endif
-	LOG_DATABASE_END(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx\n", writable ? "w" : "r", endpoints.as_string().c_str(), database->local ? "local" : "remote", repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
+	L_DATABASE_END(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx", writable ? "w" : "r", endpoints.as_string().c_str(), database->local ? "local" : "remote", repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
 	return true;
 }
 
@@ -1858,7 +1858,7 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 void
 DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
-	LOG_DATABASE_BEGIN(this, "-- CHECKING IN DB %s(%s) [%lx]...\n", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
+	L_DATABASE_BEGIN(this, "-- CHECKING IN DB %s(%s) [%lx]...", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 
 	assert(database);
 
@@ -1915,7 +1915,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	assert(queue->count >= queue->size());
 
-	LOG_DATABASE_END(this, "-- CHECKED IN DB %s(%s) [%lx]\n", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
+	L_DATABASE_END(this, "-- CHECKED IN DB %s(%s) [%lx]", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 
 	database.reset();
 

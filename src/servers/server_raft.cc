@@ -32,14 +32,14 @@ RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	: BaseServer(server_, loop_, raft_->sock),
 	raft(raft_)
 {
-	LOG_EV(this, "Start raft event (sock=%d)\n", raft->sock);
-	LOG_OBJ(this, "CREATED RAFT SERVER!\n");
+	L_EV(this, "Start raft event (sock=%d)", raft->sock);
+	L_OBJ(this, "CREATED RAFT SERVER!");
 }
 
 
 RaftServer::~RaftServer()
 {
-	LOG_OBJ(this, "DELETED RAFT SERVER!\n");
+	L_OBJ(this, "DELETED RAFT SERVER!");
 }
 
 
@@ -47,10 +47,10 @@ void
 RaftServer::io_accept_cb(ev::io &watcher, int revents)
 {
 	auto now = epoch::now<std::chrono::milliseconds>();
-	LOG_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN %lld\n", now);
+	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN %lld", now);
 	if (EV_ERROR & revents) {
-		LOG_EV(this, "ERROR: got invalid raft event (sock=%d): %s\n", raft->sock, strerror(errno));
-		LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+		L_EV(this, "ERROR: got invalid raft event (sock=%d): %s", raft->sock, strerror(errno));
+		L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 		return;
 	}
 
@@ -70,21 +70,21 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 			}
 		} else if (received == 0) {
 			// If no messages are available to be received and the peer has performed an orderly shutdown.
-			LOG_CONN(this, "Received EOF (sock=%d)!\n", raft->sock);
+			L_CONN(this, "Received EOF (sock=%d)!", raft->sock);
 			manager()->shutdown();
 		} else {
-			LOG_UDP_WIRE(this, "Raft: (sock=%d) -->> '%s'\n", raft->sock, repr(buf, received).c_str());
+			L_UDP_WIRE(this, "Raft: (sock=%d) -->> '%s'", raft->sock, repr(buf, received).c_str());
 
 			if (received < 4) {
-				LOG_RAFT(this, "Badly formed message: Incomplete!\n");
-				LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+				L_RAFT(this, "Badly formed message: Incomplete!");
+				L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 				return;
 			}
 
 			uint16_t remote_protocol_version = *(uint16_t *)(buf + 1);
 			if ((remote_protocol_version & 0xff) > XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION) {
-				LOG_RAFT(this, "Badly formed message: Protocol version mismatch %x vs %x!\n", remote_protocol_version & 0xff, XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION);
-				LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+				L_RAFT(this, "Badly formed message: Protocol version mismatch %x vs %x!", remote_protocol_version & 0xff, XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION);
+				L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 				return;
 			}
 
@@ -93,20 +93,20 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 			std::string remote_cluster_name;
 			if (unserialise_string(remote_cluster_name, &ptr, end) == -1 || remote_cluster_name.empty()) {
-				LOG_RAFT(this, "Badly formed message: No cluster name!\n");
-				LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+				L_RAFT(this, "Badly formed message: No cluster name!");
+				L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 				return;
 			}
 
 			Node remote_node;
 			if (remote_node.unserialise(&ptr, end) == -1) {
-				LOG_RAFT(this, "Badly formed message: No proper node!\n");
-				LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+				L_RAFT(this, "Badly formed message: No proper node!");
+				L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 				return;
 			}
 
 			if (remote_cluster_name != manager()->cluster_name || local_node.region.load() != remote_node.region.load()) {
-				LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+				L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 				return;
 			}
 
@@ -120,13 +120,13 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 					raft->register_activity();
 
 					if (unserialise_string(str_remote_term, &ptr, end) == -1) {
-						LOG_RAFT(this, "Badly formed message: No proper term!\n");
-						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+						L_RAFT(this, "Badly formed message: No proper term!");
+						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
 					remote_term = strtoull(str_remote_term);
 
-					LOG_RAFT(this, "remote_term: %llu  local_term: %llu\n", remote_term, raft->term);
+					L_RAFT(this, "remote_term: %llu  local_term: %llu", remote_term, raft->term);
 
 					if (remote_term > raft->term) {
 						if (raft->state == Raft::State::LEADER && remote_node != local_node) {
@@ -137,28 +137,28 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 						raft->votedFor = stringtolower(remote_node.name);
 						raft->term = remote_term;
 
-						LOG_RAFT(this, "It Vote for %s\n", raft->votedFor.c_str());
+						L_RAFT(this, "It Vote for %s", raft->votedFor.c_str());
 						raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 							serialise_string("1") + serialise_string(str_remote_term));
 					} else {
 						if (raft->state == Raft::State::LEADER && remote_node != local_node) {
 							L_ERR(this, "ERROR: Remote node %s does not recognize this node (with highest term) as a leader. Therefore, remote node will reset!", remote_node.name.c_str());
 							raft->send_message(Raft::Message::RESET, remote_node.serialise());
-							LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+							L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 							return;
 						}
 
 						if (remote_term < raft->term) {
-							LOG_RAFT(this, "Vote for %s\n", raft->votedFor.c_str());
+							L_RAFT(this, "Vote for %s", raft->votedFor.c_str());
 							raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 								serialise_string("0") + serialise_string(std::to_string(raft->term)));
 						} else if (raft->votedFor.empty()) {
 							raft->votedFor = stringtolower(remote_node.name);
-							LOG_RAFT(this, "Vote for %s\n", raft->votedFor.c_str());
+							L_RAFT(this, "Vote for %s", raft->votedFor.c_str());
 							raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 								serialise_string("1") + serialise_string(std::to_string(raft->term)));
 						} else {
-							LOG_RAFT(this, "Vote for %s\n", raft->votedFor.c_str());
+							L_RAFT(this, "Vote for %s", raft->votedFor.c_str());
 							raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 								serialise_string("0") + serialise_string(std::to_string(raft->term)));
 						}
@@ -170,26 +170,26 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 					if (remote_node == local_node && raft->state == Raft::State::CANDIDATE) {
 						if (unserialise_string(vote, &ptr, end) == -1) {
-							LOG_RAFT(this, "Badly formed message: No proper vote!\n");
-							LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+							L_RAFT(this, "Badly formed message: No proper vote!");
+							L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 							return;
 						}
 
 						if (vote == "1") {
 							raft->votes++;
-							LOG_RAFT(this, "Number of servers: %d;  Votos received: %d\n", raft->number_servers.load(), raft->votes);
+							L_RAFT(this, "Number of servers: %d;  Votos received: %d", raft->number_servers.load(), raft->votes);
 							if (raft->votes > raft->number_servers / 2) {
-								LOG_RAFT(this, "It becomes the leader for region: %d\n", local_node.region.load());
+								L_RAFT(this, "It becomes the leader for region: %d", local_node.region.load());
 								raft->state = Raft::State::LEADER;
 								raft->start_heartbeat();
 							}
-							LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+							L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 							return;
 						}
 
 						if (unserialise_string(str_remote_term, &ptr, end) == -1) {
-							LOG_RAFT(this, "Badly formed message: No proper term!\n");
-							LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+							L_RAFT(this, "Badly formed message: No proper term!");
+							L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 							return;
 						}
 						remote_term = strtoull(str_remote_term);
@@ -197,7 +197,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 						if (raft->term < remote_term) {
 							raft->term = remote_term;
 							raft->state = Raft::State::FOLLOWER;
-							LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+							L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 							return;
 						}
 					}
@@ -208,20 +208,20 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 					if (raft->state == Raft::State::LEADER) {
 						assert(remote_node == local_node);
-						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
 
 					if (unserialise_string(str_servers, &ptr, end) == -1) {
-						LOG_RAFT(this, "Badly formed message: No proper number of servers!\n");
-						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+						L_RAFT(this, "Badly formed message: No proper number of servers!");
+						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
 					raft->number_servers.store(strtoull(str_servers));
 
 					if (unserialise_string(str_remote_term, &ptr, end) == -1) {
-						LOG_RAFT(this, "Badly formed message: No proper term!\n");
-						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+						L_RAFT(this, "Badly formed message: No proper term!");
+						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
 					raft->term = strtoull(str_remote_term);
@@ -250,21 +250,21 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 					if (raft->state == Raft::State::LEADER) {
 						assert(remote_node == local_node);
-						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
 
 					L_DEBUG(this, "Receiving Data!");
 					if (unserialise_string(str_servers, &ptr, end) == -1) {
-						LOG_RAFT(this, "Badly formed message: No proper number of servers!\n");
-						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+						L_RAFT(this, "Badly formed message: No proper number of servers!");
+						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
 					raft->number_servers.store(strtoull(str_servers));
 
 					if (unserialise_string(str_remote_term, &ptr, end) == -1) {
-						LOG_RAFT(this, "Badly formed message: No proper term!\n");
-						LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+						L_RAFT(this, "Badly formed message: No proper term!");
+						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
 					raft->term = strtoull(str_remote_term);
@@ -275,14 +275,14 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 				case toUType(Raft::Message::HEARTBEAT_LEADER):
 					raft->register_activity();
 					if (raft->leader != stringtolower(remote_node.name)) {
-						LOG_RAFT(this, "Request the raft server's configuration!\n");
+						L_RAFT(this, "Request the raft server's configuration!");
 						raft->send_message(Raft::Message::REQUEST_DATA, local_node.serialise());
 					}
-					// LOG_RAFT(this, "Listening %s's heartbeat in timestamp: %f!\n", remote_node.name.c_str(), raft->last_activity);
+					// L_RAFT(this, "Listening %s's heartbeat in timestamp: %f!", remote_node.name.c_str(), raft->last_activity);
 					break;
 			}
 		}
 	}
 
-	LOG_EV_END(this, "RaftServer::io_accept_cb:END %lld\n", now);
+	L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 }

@@ -61,9 +61,9 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *
 	int total_clients = XapiandServer::total_clients;
 	assert(binary_clients <= total_clients);
 
-	LOG_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.\n", sock, binary_clients, total_clients);
+	L_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.", sock, binary_clients, total_clients);
 
-	LOG_OBJ(this, "CREATED BINARY CLIENT! (%d clients)\n", binary_clients);
+	L_OBJ(this, "CREATED BINARY CLIENT! (%d clients)", binary_clients);
 }
 
 
@@ -87,7 +87,7 @@ BinaryClient::~BinaryClient()
 
 	int binary_clients = --XapiandServer::binary_clients;
 
-	LOG_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)\n", binary_clients);
+	L_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)", binary_clients);
 	assert(binary_clients >= 0);
 }
 
@@ -106,7 +106,7 @@ BinaryClient::init_remote()
 bool
 BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
-	LOG_REPLICATION(this, "init_replication: %s  -->  %s\n", src_endpoint.as_string().c_str(), dst_endpoint.as_string().c_str());
+	L_REPLICATION(this, "init_replication: %s  -->  %s", src_endpoint.as_string().c_str(), dst_endpoint.as_string().c_str());
 	state = State::REPLICATIONPROTOCOL_SLAVE;
 
 	repl_endpoints.insert(src_endpoint);
@@ -132,7 +132,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		repl_database.reset();
 		return false;
 	}
-	LOG_CONN(this, "Connected to %s (sock=%d)!\n", src_endpoint.as_string().c_str(), sock);
+	L_CONN(this, "Connected to %s (sock=%d)!", src_endpoint.as_string().c_str(), sock);
 
 	manager()->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
@@ -154,7 +154,7 @@ bool BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid
 		L_ERR(this, "Cannot connect to %s", storing_endpoint.host.c_str(), std::to_string(port).c_str());
 		return false;
 	}
-	LOG_CONN(this, "Connected to %s (sock=%d)!\n", storing_endpoint.as_string().c_str(), sock);
+	L_CONN(this, "Connected to %s (sock=%d)!", storing_endpoint.as_string().c_str(), sock);
 
 	manager()->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
@@ -164,7 +164,7 @@ bool BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid
 void
 BinaryClient::on_read_file_done()
 {
-	LOG_CONN_WIRE(this, "BinaryClient::on_read_file_done\n");
+	L_CONN_WIRE(this, "BinaryClient::on_read_file_done");
 
 	::lseek(file_descriptor, 0, SEEK_SET);
 
@@ -230,7 +230,7 @@ BinaryClient::on_read_file_done()
 void
 BinaryClient::repl_file_done()
 {
-	LOG_REPLICATION(this, "BinaryClient::repl_file_done\n");
+	L_REPLICATION(this, "BinaryClient::repl_file_done");
 
 	char buf[1024];
 	const char *p;
@@ -319,7 +319,7 @@ BinaryClient::storing_file_done()
 void
 BinaryClient::on_read_file(const char *buf, size_t received)
 {
-	LOG_CONN_WIRE(this, "BinaryClient::on_read_file: %zu bytes\n", received);
+	L_CONN_WIRE(this, "BinaryClient::on_read_file: %zu bytes", received);
 	::io_write(file_descriptor, buf, received);
 }
 
@@ -327,7 +327,7 @@ BinaryClient::on_read_file(const char *buf, size_t received)
 void
 BinaryClient::on_read(const char *buf, size_t received)
 {
-	LOG_CONN_WIRE(this, "BinaryClient::on_read: %zu bytes\n", received);
+	L_CONN_WIRE(this, "BinaryClient::on_read: %zu bytes", received);
 	buffer.append(buf, received);
 	while (buffer.length() >= 2) {
 		const char *o = buffer.data();
@@ -342,17 +342,17 @@ BinaryClient::on_read(const char *buf, size_t received)
 		std::string data = std::string(p, len);
 		buffer.erase(0, p - o + len);
 
-		LOG_BINARY(this, "on_read message: '\\%02x' (state=0x%x)\n", type, state);
+		L_BINARY(this, "on_read message: '\\%02x' (state=0x%x)", type, state);
 		switch (type) {
 			case SWITCH_TO_REPL:
 				state = State::REPLICATIONPROTOCOL_MASTER;  // Switch to replication protocol
 				type = toUType(ReplicateType::MSG_GET_CHANGESETS);
-				LOG_BINARY(this, "Switched to replication protocol\n");
+				L_BINARY(this, "Switched to replication protocol");
 				break;
 			case SWITCH_TO_STORING:
 				state = State::STORINGPROTOCOL_RECEIVER;  // Switch to file storing
 				type = toUType(StoringType::MSG_CREATE);
-				LOG_BINARY(this, "Switched to file storing\n");
+				L_BINARY(this, "Switched to file storing");
 				break;
 		}
 
@@ -383,11 +383,11 @@ BinaryClient::get_message(double, std::string &result)
 
 	std::string buf;
 	buf += type_as_char;
-	LOG_BINARY(this, "get_message: '%s'\n", repr(buf, false).c_str());
+	L_BINARY(this, "get_message: '%s'", repr(buf, false).c_str());
 
 	buf += encode_length(msg_size);
 	buf += result;
-	LOG_BINARY_PROTO(this, "msg = '%s'\n", repr(buf).c_str());
+	L_BINARY_PROTO(this, "msg = '%s'", repr(buf).c_str());
 
 	return type_as_char;
 }
@@ -398,11 +398,11 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 {
 	std::string buf;
 	buf += type_as_char;
-	LOG_BINARY(this, "send_message: '%s'\n", repr(buf, false).c_str());
+	L_BINARY(this, "send_message: '%s'", repr(buf, false).c_str());
 
 	buf += encode_length(message.size());
 	buf += message;
-	LOG_BINARY_PROTO(this, "msg = '%s'\n", repr(buf).c_str());
+	L_BINARY_PROTO(this, "msg = '%s'", repr(buf).c_str());
 
 	write(buf);
 }
@@ -411,7 +411,7 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 void
 BinaryClient::shutdown()
 {
-	LOG_OBJ(this, "BinaryClient::shutdown()\n");
+	L_OBJ(this, "BinaryClient::shutdown()");
 
 	BaseClient::shutdown();
 }
@@ -469,10 +469,10 @@ BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool, int)
 void
 BinaryClient::run()
 {
-	LOG_OBJ_BEGIN(this, "BinaryClient::run:BEGIN\n");
+	L_OBJ_BEGIN(this, "BinaryClient::run:BEGIN");
 	if (running++) {
 		running--;
-		LOG_OBJ_END(this, "BinaryClient::run:END\n");
+		L_OBJ_END(this, "BinaryClient::run:END");
 		return;
 	}
 
@@ -528,7 +528,7 @@ BinaryClient::run()
 	}
 
 	running--;
-	LOG_OBJ_END(this, "BinaryClient::run:END\n");
+	L_OBJ_END(this, "BinaryClient::run:END");
 }
 
 
@@ -561,7 +561,7 @@ BinaryClient::repl_apply(ReplicateType type, const std::string &message)
 void
 BinaryClient::repl_end_of_changes()
 {
-	LOG_REPLICATION(this, "BinaryClient::repl_end_of_changes\n");
+	L_REPLICATION(this, "BinaryClient::repl_end_of_changes");
 
 	if (repl_switched_db) {
 		manager()->database_pool.switch_db(*endpoints.cbegin());
@@ -584,7 +584,7 @@ BinaryClient::repl_end_of_changes()
 void
 BinaryClient::repl_fail()
 {
-	LOG_REPLICATION(this, "BinaryClient::repl_fail\n");
+	L_REPLICATION(this, "BinaryClient::repl_fail");
 	L_ERR(this, "Replication failure!");
 	if (repl_database) {
 		manager()->database_pool.checkin(repl_database);
@@ -602,7 +602,7 @@ BinaryClient::repl_fail()
 void
 BinaryClient::repl_set_db_header(const std::string &message)
 {
-	LOG_REPLICATION(this, "BinaryClient::repl_set_db_header\n");
+	L_REPLICATION(this, "BinaryClient::repl_set_db_header");
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	size_t length = decode_length(&p, p_end, true);
@@ -632,7 +632,7 @@ BinaryClient::repl_set_db_header(const std::string &message)
 void
 BinaryClient::repl_set_db_filename(const std::string &message)
 {
-	LOG_REPLICATION(this, "BinaryClient::repl_set_db_filename\n");
+	L_REPLICATION(this, "BinaryClient::repl_set_db_filename");
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	repl_db_filename.assign(p, p_end - p);
@@ -642,7 +642,7 @@ BinaryClient::repl_set_db_filename(const std::string &message)
 void
 BinaryClient::repl_set_db_filedata(const std::string &message)
 {
-	LOG_REPLICATION(this, "BinaryClient::repl_set_db_filedata\n");
+	L_REPLICATION(this, "BinaryClient::repl_set_db_filedata");
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -654,7 +654,7 @@ BinaryClient::repl_set_db_filedata(const std::string &message)
 
 	int fd = ::open(path_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
 	if (fd >= 0) {
-		LOG_REPLICATION(this, "path_filename %s\n", path_filename.c_str());
+		L_REPLICATION(this, "path_filename %s", path_filename.c_str());
 		if (::write(fd, p, p_end - p) != p_end - p) {
 			L_ERR(this, "Cannot write to %s", repl_db_filename.c_str());
 			return;
@@ -667,7 +667,7 @@ BinaryClient::repl_set_db_filedata(const std::string &message)
 void
 BinaryClient::repl_set_db_footer()
 {
-	LOG_REPLICATION(this, "BinaryClient::repl_set_db_footer\n");
+	L_REPLICATION(this, "BinaryClient::repl_set_db_footer");
 	// const char *p = message.data();
 	// const char *p_end = p + message.size();
 	// size_t revision = decode_length(&p, p_end);
@@ -692,7 +692,7 @@ BinaryClient::repl_set_db_footer()
 void
 BinaryClient::repl_changeset(const std::string &message)
 {
-	LOG_REPLICATION(this, "BinaryClient::repl_changeset\n");
+	L_REPLICATION(this, "BinaryClient::repl_changeset");
 	Xapian::WritableDatabase *wdb_;
 	if (repl_database_tmp) {
 		wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database_tmp->db.get());
@@ -783,7 +783,7 @@ BinaryClient::repl_get_changesets(const std::string &message)
 	try {
 		std::string to_revision = databases[db_]->checkout_revision;
 		bool need_whole_db = (uuid != db_->get_uuid());
-		LOG_REPLICATION(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]\n", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
+		L_REPLICATION(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
 
 		if (fd < 0) {
 			L_ERR(this, "Cannot write to %s (1)", path);
@@ -809,7 +809,7 @@ BinaryClient::repl_get_changesets(const std::string &message)
 void
 BinaryClient::receive_repl()
 {
-	LOG_REPLICATION(this, "BinaryClient::receive_repl (init)\n");
+	L_REPLICATION(this, "BinaryClient::receive_repl (init)");
 
 	strcpy(file_path, "/tmp/xapian_changesets_received.XXXXXX");
 	file_descriptor = mkstemp(file_path);

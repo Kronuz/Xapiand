@@ -34,13 +34,13 @@ Binary::Binary(const std::shared_ptr<XapiandManager>& manager_, int port_)
 {
 	local_node.binary_port = port;
 
-	LOG_OBJ(this, "CREATED CONFIGURATION FOR BINARY\n");
+	L_OBJ(this, "CREATED CONFIGURATION FOR BINARY");
 }
 
 
 Binary::~Binary()
 {
-	LOG_OBJ(this, "DELETED CONFIGURATION FOR BINARY\n");
+	L_OBJ(this, "DELETED CONFIGURATION FOR BINARY");
 }
 
 
