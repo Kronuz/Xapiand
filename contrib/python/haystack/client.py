@@ -199,6 +199,14 @@ class Xapiand(object):
         )
         return self.send_request('head', endpoint, **kwargs)
 
+    def get(self, endpoint, document_id, pretty=False, kwargs=None):
+        kwargs = kwargs or {}
+        kwargs['document_id'] = document_id
+        kwargs['params'] = dict(
+            pretty=pretty,
+        )
+        return self.send_request('get', endpoint, **kwargs)
+
     def delete(self, endpoint, document_id, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
         kwargs['document_id'] = document_id
