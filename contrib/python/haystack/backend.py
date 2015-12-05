@@ -88,7 +88,6 @@ class XapianSearchResults:
 
     def get_data(self, result):
         if result:
-            result = json.loads(result)
             result = self.fix_data(result)
             result['model_name'] = result.pop('module_name')
             result['score'] = 0
@@ -206,7 +205,7 @@ class XapianSearchBackend(BaseSearchBackend):
                             pass
 
                 if 'stored' in field:
-                        document_json.setdefault(_field_name, {KEY_FIELD_STORE: field['stored']})
+                    document_json.setdefault(_field_name, {KEY_FIELD_STORE: field['stored']})
 
             model = obj._meta.model
             if model._deferred:
