@@ -28,24 +28,24 @@
 #define BUFFER_SIZE (10 * 1024)
 
 const char *priorities[] = {
-	"🔥",	// LOG_EMERG    0 = System is unusable
-	"⭐",	// LOG_ALERT    1 = Action must be taken immediately
-	"⛔️",	// LOG_CRIT     2 = Critical conditions
-	"🔴",	// LOG_ERR      3 = Error conditions
-	"🔶",	// LOG_WARNING  4 = Warning conditions
-	"⚪",	// LOG_NOTICE   5 = Normal but significant condition
-	"🔵",	// LOG_INFO     6 = Informational
-	"⚫",	// LOG_DEBUG    7 = Debug-level messages
+	EMERG_COL "•" NO_COL,	// LOG_EMERG    0 = System is unusable
+	ALERT_COL "•" NO_COL,	// LOG_ALERT    1 = Action must be taken immediately
+	CRIT_COL "•" NO_COL,	// LOG_CRIT     2 = Critical conditions
+	ERR_COL "•" NO_COL,	// LOG_ERR      3 = Error conditions
+	WARNING_COL "•" NO_COL,	// LOG_WARNING  4 = Warning conditions
+	NOTICE_COL "•" NO_COL,	// LOG_NOTICE   5 = Normal but significant condition
+	INFO_COL "•" NO_COL,	// LOG_INFO     6 = Informational
+	DEBUG_COL "•" NO_COL,	// LOG_DEBUG    7 = Debug-level messages
 };
 
 
 void StreamLogger::log(int priority, const std::string& str) {
-	ofs << priorities[priority] << "  " << str << std::endl;
+	ofs << priorities[priority] << " " << str << std::endl;
 }
 
 
 void StderrLogger::log(int priority, const std::string& str) {
-	std::cerr << priorities[priority] << "  " << str << std::endl;
+	std::cerr << priorities[priority] << " " << str << std::endl;
 }
 
 
