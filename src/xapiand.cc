@@ -252,8 +252,6 @@ int main(int argc, char **argv)
 		banner();
 	}
 
-	L_INFO(nullptr, "Running on process ID [%d]", getpid());
-
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {
 		// Prefer glass database
