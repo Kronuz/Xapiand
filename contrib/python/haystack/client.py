@@ -121,6 +121,7 @@ class Xapiand(object):
             if stream:
                 def results(lines):
                     for line in lines:
+                        # filter out keep-alive new lines
                         if line:
                             yield json.loads(line) if is_json else line
                 results = results(res.iter_lines())
