@@ -39,14 +39,14 @@ class Xapiand(object):
     """
 
     _methods = dict(
-        search=requests.get,
-        facets=requests.get,
-        stats=requests.get,
-        get=requests.get,
-        delete=requests.delete,
-        head=requests.head,
-        index=requests.put,
-        patch=requests.patch,
+        search=(requests.get, True, 'results'),
+        facets=(requests.get, True, 'facets'),
+        stats=(requests.get, False, 'result'),
+        get=(requests.get, False, 'result'),
+        delete=(requests.delete, False, 'result'),
+        head=(requests.head, False, 'result'),
+        index=(requests.put, False, 'result'),
+        patch=(requests.patch, False, 'result'),
     )
 
     def __init__(self, ip='127.0.0.1', port=8880, commit=False):
@@ -91,7 +91,7 @@ class Xapiand(object):
         :arg document_id: Document ID
         :arg body: File or dictionary with the body of the request
         """
-        method = self._methods[action_request]
+        method, stream, key = self._methods[action_request]
 
         url = self.build_url(action_request, endpoint, ip, port, nodename, document_id, body)
 
@@ -99,7 +99,10 @@ class Xapiand(object):
         if params is not None:
             kwargs['params'] = dict((k.replace('__', '.'), (v and 1 or 0) if isinstance(v, bool) else v) for k, v in params.items())
 
-        response = {}
+        stream = kwargs.pop('stream', stream)
+        if stream is not None:
+            kwargs['stream'] = stream
+
         try:
             if body is not None:
                 if isinstance(body, dict):
@@ -110,10 +113,27 @@ class Xapiand(object):
             else:
                 res = method(url, **kwargs)
 
-            if action_request == 'facets':
-                response['facets'] = res.iter_lines()
+            if res.status_code != 200:
+                raise requests.exceptions.HTTPError("Return code is %s" % res.status_code)
+
+            is_json = 'application/json' in res.headers['content-type']
+
+            if stream:
+                def results(lines):
+                    for line in lines:
+                        if line:
+                            yield json.loads(line) if is_json else line
+                results = results(res.iter_lines())
             else:
-                response['results'] = res.iter_lines()
+                results = [res.json() if is_json else res.content]
+
+            if key == 'result':
+                for result in results:
+                    results = result
+                    break
+
+            response = {}
+            response[key] = results
 
             if 'x-matched-count' in res.headers:
                 response['size'] = res.headers['x-matched-count']
