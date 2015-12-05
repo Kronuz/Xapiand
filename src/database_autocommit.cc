@@ -88,6 +88,7 @@ DatabaseAutocommit::run()
 		DatabaseAutocommit::wakeup_signal.wait_until(lk, DatabaseAutocommit::next_wakeup_time);
 
 		auto now = std::chrono::system_clock::now();
+		DatabaseAutocommit::next_wakeup_time = now + 20s;
 
 		for (auto it = DatabaseAutocommit::databases.begin(); it != DatabaseAutocommit::databases.end(); ) {
 			auto endpoints = it->first;
