@@ -42,52 +42,64 @@ class Xapiand(object):
         search=requests.get,
         facets=requests.get,
         stats=requests.get,
+        get=requests.get,
         delete=requests.delete,
         head=requests.head,
         index=requests.put,
         patch=requests.patch,
     )
 
-    def __init__(self, commit=True, port=8880):
+    def __init__(self, ip='127.0.0.1', port=8880, commit=False):
+        if ip and ':' in ip:
+            ip, _, port = ip.partition(':')
+        self.ip = ip
         self.port = port
         self.commit = commit
 
-    def build_url(self, action_request, endpoint, ip, body, document_id, nodename):
+    def build_url(self, action_request, endpoint, ip, port, nodename, document_id, body):
+        if ip and ':' in ip:
+            ip, _, port = ip.partition(':')
+        if not ip:
+            ip = self.ip
+        if not port:
+            port = self.port
+        host = '%s:%s' % (ip, port)
+
         if isinstance(endpoint, (tuple, list)):
             endpoint = ','.join(endpoint)
 
-        if ':' not in ip:
-            ip = '%s:%s' % (ip, self.port)
-
         if document_id is not None:
             if nodename:
-                url = 'http://%s/%s@%s/%s' % (ip, endpoint, nodename, document_id)
+                url = 'http://%s/%s@%s/%s' % (host, endpoint, nodename, document_id)
             else:
-                url = 'http://%s/%s/%s' % (ip, endpoint, document_id)
+                url = 'http://%s/%s/%s' % (host, endpoint, document_id)
         else:
             if nodename:
-                url = 'http://%s/%s@%s/_%s/' % (ip, endpoint, nodename, action_request)
+                url = 'http://%s/%s@%s/_%s/' % (host, endpoint, nodename, action_request)
             else:
-                url = 'http://%s/%s/_%s/' % (ip, endpoint, action_request)
+                url = 'http://%s/%s/_%s/' % (host, endpoint, action_request)
         return url
 
-    def send_request(self, action_request, endpoint, ip='127.0.0.1', body=None, document_id=None, nodename=None, **kwargs):
-
+    def send_request(self, action_request, endpoint, ip=None, port=None, nodename=None, document_id=None, body=None, **kwargs):
         """
-        :arg action_request: Perform  index, delete, serch, facets, stats, patch, head actions per request
+        :arg action_request: Perform index, delete, serch, facets, stats, patch, head actions per request
         :arg query: Query to process on xapiand
         :arg endpoint: index path
         :arg ip: address to connect to xapiand
-        :arg body: File or dictionary with the body of the request
-        :arg document_id: Document ID
+        :arg port: port to conntct to xapiand
         :arg nodename: Node name, if empty is assigned randomly
+        :arg document_id: Document ID
+        :arg body: File or dictionary with the body of the request
         """
+        method = self._methods[action_request]
+
+        url = self.build_url(action_request, endpoint, ip, port, nodename, document_id, body)
+
         params = kwargs.pop('params', None)
         if params is not None:
             kwargs['params'] = dict((k.replace('__', '.'), (v and 1 or 0) if isinstance(v, bool) else v) for k, v in params.items())
+
         response = {}
-        method = self._methods[action_request]
-        url = self.build_url(action_request, endpoint, ip, body, document_id, nodename)
         try:
             if body is not None:
                 if isinstance(body, dict):
