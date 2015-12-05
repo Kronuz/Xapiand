@@ -522,7 +522,7 @@ XapiandManager::run(const opts_t &o)
 	autocommit_pool.finish();
 	autocommit_pool.join();
 
-	L_OBJ(this, "Server ended!\n");
+	L_OBJ(this, "Server ended!");
 }
 
 
