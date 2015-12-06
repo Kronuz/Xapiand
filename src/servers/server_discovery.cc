@@ -34,13 +34,13 @@ DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, 
 	discovery(discovery_)
 {
 	L_EV(this, "Start discovery event (sock=%d)", discovery->sock);
-	L_OBJ(this, "CREATED DISCOVERY SERVER!");
+	L_OBJ(this, "CREATED DISCOVERY SERVER! [%llx]", this);
 }
 
 
 DiscoveryServer::~DiscoveryServer()
 {
-	L_OBJ(this, "DELETED DISCOVERY SERVER!");
+	L_OBJ(this, "DELETED DISCOVERY SERVER! [%llx]", this);
 }
 
 

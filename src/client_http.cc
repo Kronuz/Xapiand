@@ -153,7 +153,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref *loop_,
 
 	L_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.", sock, http_clients, total_clients);
 
-	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients)", http_clients);
+	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients) [%llx]", http_clients, this);
 }
 
 
@@ -179,7 +179,7 @@ HttpClient::~HttpClient()
 		}
 	}
 
-	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)", http_clients);
+	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left) [%llx]", http_clients, this);
 	assert(http_clients >= 0);
 }
 

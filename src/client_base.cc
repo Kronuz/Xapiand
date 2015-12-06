@@ -184,7 +184,7 @@ BaseClient::BaseClient(std::shared_ptr<BaseServer> server_, ev::loop_ref *loop_,
 	L_EV(this, "\tSetup write event (sock=%d)", sock);
 
 	int total_clients = ++XapiandServer::total_clients;
-	L_OBJ(this, "CREATED CLIENT! (%d clients)", total_clients);
+	L_OBJ(this, "CREATED CLIENT! (%d clients) [%llx]", total_clients, this);
 }
 
 
@@ -197,7 +197,7 @@ BaseClient::~BaseClient()
 	int total_clients = --XapiandServer::total_clients;
 	assert(total_clients >= 0);
 
-	L_OBJ(this, "DELETED CLIENT! (%d clients left)", total_clients);
+	L_OBJ(this, "DELETED CLIENT! (%d clients left) [%llx]", total_clients, this);
 }
 
 
@@ -225,7 +225,7 @@ BaseClient::destroy()
 	write_queue.finish();
 	write_queue.clear();
 
-	L_OBJ(this, "DESTROYED CLIENT!");
+	L_OBJ(this, "DESTROYED CLIENT! [%llx]", this);
 
 	detach();
 }
@@ -239,7 +239,7 @@ BaseClient::close()
 	}
 
 	closed = true;
-	L_OBJ(this, "CLOSED CLIENT!");
+	L_OBJ(this, "CLOSED CLIENT! [%llx]", this);
 }
 
 
@@ -531,7 +531,7 @@ BaseClient::async_write_cb(ev::async &, int)
 void
 BaseClient::shutdown()
 {
-	L_OBJ(this, "BaseClient::shutdown()");
+	L_CALL(this, "BaseClient::shutdown()");
 
 	::shutdown(sock, SHUT_RDWR);
 

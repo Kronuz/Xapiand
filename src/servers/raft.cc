@@ -44,7 +44,7 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_,
 
 	heartbeat.set<Raft, &Raft::heartbeat_cb>(this);
 
-	L_OBJ(this, "CREATED RAFT CONSENSUS");
+	L_OBJ(this, "CREATED RAFT CONSENSUS [%llx]", this);
 }
 
 
@@ -56,7 +56,7 @@ Raft::~Raft()
 		heartbeat.stop();
 	}
 
-	L_OBJ(this, "DELETED RAFT CONSENSUS");
+	L_OBJ(this, "DELETED RAFT CONSENSUS [%llx]", this);
 }
 
 

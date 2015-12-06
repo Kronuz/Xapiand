@@ -31,13 +31,13 @@ HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	  http(http_)
 {
 	L_EV(this, "Start http accept event (sock=%d)", http->sock);
-	L_OBJ(this, "CREATED HTTP SERVER!");
+	L_OBJ(this, "CREATED HTTP SERVER! [%llx]", this);
 }
 
 
 HttpServer::~HttpServer()
 {
-	L_OBJ(this, "DELETED HTTP SERVER!");
+	L_OBJ(this, "DELETED HTTP SERVER! [%llx]", this);
 }
 
 

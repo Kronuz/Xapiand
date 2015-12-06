@@ -79,7 +79,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	async_shutdown.start();
 	L_EV(this, "\tStart async shutdown event");
 
-	L_OBJ(this, "CREATED MANAGER!");
+	L_OBJ(this, "CREATED MANAGER! [%llx]", this);
 }
 
 
@@ -92,7 +92,7 @@ XapiandManager::~XapiandManager()
 	async_shutdown.stop();
 	L_EV(this, "\tStop async shutdown event");
 
-	L_OBJ(this, "DELETED MANAGER!");
+	L_OBJ(this, "DELETED MANAGER! [%llx]", this);
 }
 
 
@@ -411,7 +411,7 @@ XapiandManager::sig_shutdown_handler(int sig)
 void
 XapiandManager::destroy()
 {
-	L_OBJ(this, "DESTROYED MANAGER!");
+	L_OBJ(this, "DESTROYED MANAGER! [%llx]", this);
 }
 
 
@@ -429,19 +429,19 @@ XapiandManager::async_shutdown_cb(ev::async &, int)
 void
 XapiandManager::shutdown()
 {
-	L_OBJ(this, "XapiandManager::shutdown()");
+	L_CALL(this, "XapiandManager::shutdown()");
 
 	Worker::shutdown();
 
 	if (XapiandManager::shutdown_asap) {
 		discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 		destroy();
-		L_OBJ(this, "Finishing thread pool!");
+		L_DEBUG(this, "Finishing thread pool!");
 		thread_pool.finish();
 	}
 
 	if (XapiandManager::shutdown_now) {
-		L_OBJ(this, "Breaking Manager loop!");
+		L_DEBUG(this, "Breaking Manager loop!");
 		break_loop();
 	}
 }
@@ -507,22 +507,22 @@ XapiandManager::run(const opts_t &o)
 	loop->run();
 	L_EV(this, "\tManager loop ended!");
 
-	L_OBJ(this, "Waiting for servers...");
+	L_DEBUG(this, "Waiting for servers...");
 	server_pool.finish();
 	server_pool.join();
 
-	L_OBJ(this, "Waiting for replicators...");
+	L_DEBUG(this, "Waiting for replicators...");
 	replicator_pool.finish();
 	replicator_pool.join();
 
-	L_OBJ(this, "Waiting for committers...");
+	L_DEBUG(this, "Waiting for committers...");
 	for (auto& commiter: committers) {
 		commiter->shutdown();
 	}
 	autocommit_pool.finish();
 	autocommit_pool.join();
 
-	L_OBJ(this, "Server ended!");
+	L_DEBUG(this, "Server ended!");
 }
 
 

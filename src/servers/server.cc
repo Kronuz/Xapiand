@@ -43,7 +43,7 @@ XapiandServer::XapiandServer(std::shared_ptr<XapiandManager> manager_, ev::loop_
 	async_setup_node.start();
 	L_EV(this, "\tStart async setup node event");
 
-	L_OBJ(this, "CREATED XAPIAN SERVER!");
+	L_OBJ(this, "CREATED XAPIAN SERVER! [%llx]", this);
 }
 
 
@@ -51,7 +51,7 @@ XapiandServer::~XapiandServer()
 {
 	destroy();
 
-	L_OBJ(this, "DELETED XAPIAN SERVER!");
+	L_OBJ(this, "DELETED XAPIAN SERVER! [%llx]", this);
 }
 
 
@@ -84,14 +84,14 @@ XapiandServer::destroy()
 	async_setup_node.stop();
 	L_EV(this, "\tStop async setup node event");
 
-	L_OBJ(this, "DESTROYED XAPIAN SERVER!");
+	L_OBJ(this, "DESTROYED XAPIAN SERVER! [%llx]", this);
 }
 
 
 void
 XapiandServer::shutdown()
 {
-	L_OBJ(this, "XapiandServer::shutdown()");
+	L_CALL(this, "XapiandServer::shutdown()");
 
 	Worker::shutdown();
 
@@ -105,7 +105,7 @@ XapiandServer::shutdown()
 
 	time_t shutdown_now = XapiandManager::shutdown_now;
 	if (shutdown_now) {
-		L_OBJ(this, "Breaking Server loop!");
+		L_DEBUG(this, "Breaking Server loop!");
 		break_loop();
 	}
 }

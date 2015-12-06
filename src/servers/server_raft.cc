@@ -33,13 +33,13 @@ RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	raft(raft_)
 {
 	L_EV(this, "Start raft event (sock=%d)", raft->sock);
-	L_OBJ(this, "CREATED RAFT SERVER!");
+	L_OBJ(this, "CREATED RAFT SERVER! [%llx]", this);
 }
 
 
 RaftServer::~RaftServer()
 {
-	L_OBJ(this, "DELETED RAFT SERVER!");
+	L_OBJ(this, "DELETED RAFT SERVER! [%llx]", this);
 }
 
 

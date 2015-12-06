@@ -46,20 +46,20 @@ void
 XapiandReplicator::run()
 {
 	// Function that retrieves a task from a queue, runs it and deletes it
-	L_OBJ(this, "Replicator started...");
+	L_DEBUG(this, "Replicator started...");
 	Endpoint endpoint;
 	while (manager()->database_pool.updated_databases.pop(endpoint)) {
 		L_DEBUG(this, "Replicator was informed database was updated: %s", endpoint.as_string().c_str());
 		on_commit(endpoint);
 	}
-	L_OBJ(this, "Replicator ended!");
+	L_DEBUG(this, "Replicator ended!");
 }
 
 
 void
 XapiandReplicator::shutdown()
 {
-	L_OBJ(this, "XapiandReplicator::shutdown()");
+	L_CALL(this, "XapiandReplicator::shutdown()");
 
 	manager()->database_pool.updated_databases.finish();
 }
