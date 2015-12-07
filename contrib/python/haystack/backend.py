@@ -22,8 +22,6 @@
 #
 from __future__ import absolute_import, unicode_literals
 
-import json
-
 from haystack import connections
 from haystack.constants import ID, DJANGO_CT, DJANGO_ID
 from haystack.backends import BaseEngine, BaseSearchBackend, BaseSearchQuery, log_query

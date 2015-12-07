@@ -31,6 +31,75 @@ except ImportError:
     raise ImportError("Xapiand requires the installation of the requests module.")
 
 
+class XapiandResponse(object):
+    def __init__(self, response, size=0, result=None, results=None, facets=None, results_stream=None, facets_stream=None):
+        self._response = response
+
+        self.size = size
+
+        self.value = self.result = result
+
+        self.results = results
+        self.results_stream = results_stream
+        try:
+            self.value = self._results_first = self.next('results', False)
+        except StopIteration:
+            pass
+
+        self.facets = facets
+        self.facets_stream = facets_stream
+        try:
+            self._facets_first = self.next('facets', False)
+        except StopIteration:
+            pass
+
+    def __len__(self):
+        return self.size
+
+    def __iter__(self):
+        return self
+
+    def next(self, attr='results', chk_idx=True):
+        idx = getattr(self, '_%s_idx', 0)
+        if chk_idx and idx >= self.size:
+            raise StopIteration
+
+        first = getattr(self, '_%s_first' % attr, None)
+        if first is not None:
+            setattr(self, '_%s_first' % attr, None)
+            setattr(self, '_%s_idx', idx + 1)
+            return first
+
+        stream = getattr(self, '%s_stream' % attr)
+        if stream is not None:
+            res = self.post_process(stream.next())
+            setattr(self, '_%s_idx', idx + 1)
+            return res
+
+        results = getattr(self, attr)
+        if results:
+            results = getattr(self, attr)
+            setattr(self, '_%s_idx', idx + 1)
+            try:
+                res = self.post_process(results[idx])
+                setattr(self, '_%s_idx', idx + 1)
+                return res
+            except IndexError:
+                pass
+
+        raise StopIteration
+    __next__ = next
+
+    def __del__(self):
+        if self.results_stream:
+            self.results_stream.close()
+        if self.facets_stream:
+            self.facets_stream.close()
+
+    def post_process(self, result):
+        return result
+
+
 class Xapiand(object):
 
     """
@@ -38,15 +107,16 @@ class Xapiand(object):
     go-between for API calls to it
     """
 
+    session = requests.Session()
     _methods = dict(
-        search=(requests.get, True, 'results'),
-        facets=(requests.get, True, 'facets'),
-        stats=(requests.get, False, 'result'),
-        get=(requests.get, False, 'result'),
-        delete=(requests.delete, False, 'result'),
-        head=(requests.head, False, 'result'),
-        index=(requests.put, False, 'result'),
-        patch=(requests.patch, False, 'result'),
+        search=(session.get, True, 'results'),
+        facets=(session.get, True, 'facets'),
+        stats=(session.get, False, 'result'),
+        get=(session.get, False, 'result'),
+        delete=(session.delete, False, 'result'),
+        head=(session.head, False, 'result'),
+        index=(session.put, False, 'result'),
+        patch=(session.patch, False, 'result'),
     )
 
     def __init__(self, ip='127.0.0.1', port=8880, commit=False):
@@ -133,15 +203,15 @@ class Xapiand(object):
                     results = result
                     break
 
-            response = {}
-            response[key] = results
+            kwargs = {}
+            if stream:
+                kwargs['%s_stream' % key] = results
+            else:
+                kwargs['%s' % key] = results
 
-            if 'x-matched-count' in res.headers:
-                response['size'] = res.headers['x-matched-count']
-            elif action_request == 'search' and not res.ok:
-                response['size'] = 0
+            kwargs['size'] = int(res.headers.get('X-Matched-count', 0))
 
-            return response
+            return XapiandResponse(res, **kwargs)
 
         except requests.exceptions.HTTPError as e:
             raise e
