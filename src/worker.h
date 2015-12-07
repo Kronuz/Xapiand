@@ -68,6 +68,7 @@ protected:
 
 	template<typename T>
 	WorkerList::iterator _attach(T&& child) {
+		L_OBJ(this, "Worker child [%llx] attached to [%llx]", child.get(), this);
 		std::lock_guard<std::mutex> lk(_mtx);
 		return _children.insert(_children.end(), std::forward<T>(child));
 	}
@@ -79,6 +80,7 @@ protected:
 			_children.erase(child->_iterator);
 			child->_iterator = _children.end();
 		}
+		L_OBJ(this, "Worker child [%llx] detached from [%llx]", child.get(), this);
 	}
 
 	void _async_break_loop_cb(ev::async &, int) {
@@ -116,6 +118,7 @@ public:
 			enable_make_shared(Args&&... args) : T(std::forward<Args>(args)...) { }
 		};
 		auto worker = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
+
 		worker->_create();
 		return worker;
 	}
