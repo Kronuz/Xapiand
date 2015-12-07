@@ -140,8 +140,9 @@ public:
 
 	// Enqueues a Task object to be executed
 	decltype(auto) enqueue(std::shared_ptr<Task<Params...>> nt) {
-		return enqueue([nt = std::move(nt)](Params... params) {
+		return enqueue([nt = std::move(nt)](Params... params) mutable {
 			nt->run(std::move(params)...);
+			nt.reset();
 		});
 	}
 
