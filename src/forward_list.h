@@ -348,7 +348,6 @@ public:
 	auto insert_after(iterator position, InputIterator first, InputIterator last) {
 		while (first != last) {
 			_insert_after(position, *first++);
-
 		}
 		return position;
 	}
