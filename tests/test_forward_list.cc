@@ -445,7 +445,7 @@ int test_single_producer_consumer() {
 
 
 void task_producer(ForwardList<int>& mylist, std::atomic_size_t& elements) {
-	for (int i = 0; i < 5000; i++) {
+	for (int i = 0; i < 1000; i++) {
 		mylist.insert_after(mylist.before_begin(), i);
 		++elements;
 		mylist.push_front(i);
@@ -468,7 +468,10 @@ int test_multiple_producers() {
 	}
 
 	for (auto& ele : threads) {
-		ele.join();
+		try {
+			ele.join();
+		} catch (const std::system_error&) {
+		}
 	}
 
 	if (elements.load() == mylist.size()) {
@@ -519,7 +522,10 @@ int test_multiple_producers_consumers() {
 	}
 
 	for (auto& ele : threads) {
-		ele.join();
+		try {
+			ele.join();
+		} catch (const std::system_error&) {
+		}
 	}
 
 	if (elements.load() == mylist.size()) {
@@ -561,7 +567,10 @@ int test_multiple_producers_consumers_v2() {
 	}
 
 	for (auto& ele : threads) {
-		ele.join();
+		try {
+			ele.join();
+		} catch (const std::system_error&) {
+		}
 	}
 
 	if (mylist.size() == 0) {
