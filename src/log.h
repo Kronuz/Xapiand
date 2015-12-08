@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "slist.h"
+#include "forward_list.h"
 
 #include <syslog.h>
 
@@ -120,7 +120,7 @@ class LogThread {
 
 	std::atomic_bool running;
 	std::thread inner_thread;
-	slist<std::shared_ptr<Log>> log_list;
+	ForwardList<std::shared_ptr<Log>> log_list;
 
 	void thread_function();
 

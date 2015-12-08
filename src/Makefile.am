@@ -121,7 +121,7 @@ noinst_HEADERS = \
 	servers/server_raft.h \
 	servers/tcp_base.h \
 	servers/udp_base.h \
-	slist.h \
+	forward_list.h \
 	sparsehash/dense_hash_map \
 	sparsehash/dense_hash_set \
 	sparsehash/internal \
