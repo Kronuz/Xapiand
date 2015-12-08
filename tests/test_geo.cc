@@ -32,8 +32,8 @@
 #include <fstream>
 
 
-std::shared_ptr<DatabaseQueue>d_queue;
-static Database *database = nullptr;
+std::shared_ptr<DatabaseQueue> d_queue;
+static std::shared_ptr<Database> database;
 static std::string name_database(".db_testgeo.db");
 
 
@@ -132,8 +132,7 @@ int create_test_db() {
 	e.host.assign("0.0.0.0");
 	endpoints.insert(e);
 
-	// There are delete in the make_search.
-	database = new Database(d_queue, endpoints, DB_WRITABLE | DB_SPAWN);
+	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN);
 
 	std::vector<std::string> _docs({
 		"examples/geo_search/Json_geo_1.txt",
@@ -211,9 +210,8 @@ int make_search(const test_geo_t _tests[], int len) {
 		}
 	}
 
-	// Delete the databases and release memory.
+	// Delete the files created.
 	delete_files(name_database);
-	delete database;
 
 	return cont;
 }

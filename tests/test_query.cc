@@ -35,7 +35,7 @@
 
 
 std::shared_ptr<DatabaseQueue>d_queue;
-static Database *database = nullptr;
+static std::shared_ptr<Database> database;
 static std::string name_database(".db_testsearch.db");
 
 
@@ -237,7 +237,7 @@ int create_test_db() {
 	endpoints.insert(e);
 
 	// There are delete in the make_search.
-	database = new Database(d_queue, endpoints, DB_WRITABLE | DB_SPAWN);
+	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN);
 
 	std::vector<std::string> _docs({
 		// Examples used in test geo.
@@ -380,9 +380,8 @@ int make_search(const test_query_t _tests[], int len) {
 		}
 	}
 
-	// Delete de database and release memory.
+	// Delete the files created.
 	delete_files(name_database);
-	delete database;
 
 	return cont;
 }
