@@ -36,7 +36,7 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/namegen.cc \
 			$(top_builddir)/src/queue.h \
 			$(top_builddir)/src/serialise.cc \
-			$(top_builddir)/src/slist.h \
+			$(top_builddir)/src/forward_list.h \
 			$(top_builddir)/src/threadpool.h \
 			$(top_builddir)/src/times.cc \
 			$(top_builddir)/src/utils.cc \
