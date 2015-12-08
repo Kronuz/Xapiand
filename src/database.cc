@@ -1177,7 +1177,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 				case GEO_TYPE:
 					// Validate special case.
 					if (field_value.compare("..") == 0) {
-						queryRange =  Xapian::Query::MatchAll;
+						queryRange = Xapian::Query::MatchAll;
 						break;
 					}
 
