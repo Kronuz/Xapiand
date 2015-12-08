@@ -120,7 +120,7 @@ class LogThread {
 
 	std::atomic_bool running;
 	std::thread inner_thread;
-	ForwardList<std::shared_ptr<Log>> log_list;
+	ForwardList<std::weak_ptr<Log>> log_list;
 
 	void thread_function();
 

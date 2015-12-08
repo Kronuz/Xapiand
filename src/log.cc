@@ -189,14 +189,15 @@ LogThread::thread_function()
 		auto now = std::chrono::system_clock::now();
 		auto next_wakeup = now + 3s;
 		for (auto it = log_list.begin(); it != log_list.end(); ) {
-			if (it->use_count() == 1 || (*it)->finished.load()) {
+			auto l_ptr = it->lock();
+			if (!l_ptr || l_ptr->finished.load()) {
 				it = log_list.erase(it);
-			} else if ((*it)->wakeup <= now) {
-				(*it)->finished.store(true);
-				Log::print((*it)->str_start, 0, (*it)->priority);
+			} else if (l_ptr->wakeup <= now) {
+				l_ptr->finished.store(true);
+				Log::print(l_ptr->str_start, 0, l_ptr->priority);
 				it = log_list.erase(it);
-			} else if (next_wakeup > (*it)->wakeup) {
-				next_wakeup = (*it)->wakeup;
+			} else if (next_wakeup > l_ptr->wakeup) {
+				next_wakeup = l_ptr->wakeup;
 				++it;
 			}
 		}
