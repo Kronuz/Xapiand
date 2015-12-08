@@ -57,7 +57,7 @@
 #define HTTP_UPLOAD_SIZE 7
 
 std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
-std::regex find_range_re("([^ ]*)\\.\\.([^ ]*)", std::regex::optimize);
+std::regex find_range_re("(.*)\\.\\.(.*)", std::regex::optimize);
 
 pos_time_t b_time;
 std::chrono::time_point<std::chrono::system_clock> init_time;
