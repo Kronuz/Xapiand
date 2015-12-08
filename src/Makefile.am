@@ -85,6 +85,7 @@ noinst_HEADERS = \
 	ev/ev_win32.c \
 	exception.h \
 	fields.h \
+	forward_list.h \
 	generate_terms.h \
 	geometry.h \
 	geospatialrange.h \
@@ -121,7 +122,6 @@ noinst_HEADERS = \
 	servers/server_raft.h \
 	servers/tcp_base.h \
 	servers/udp_base.h \
-	forward_list.h \
 	sparsehash/dense_hash_map \
 	sparsehash/dense_hash_set \
 	sparsehash/internal \
