@@ -99,7 +99,7 @@ const test_t test_timestamp_date[] = {
 	{ "2010-10-10 09:10:10 - 6:56",             ""                    },
 	{ "2010-10-10 09:10:10 -656",               ""                    },
 	{ nullptr,                                  nullptr               },
-	};
+};
 
 
 const test_t test_unserialisedate[] {

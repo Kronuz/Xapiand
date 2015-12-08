@@ -85,12 +85,13 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 		//Processing Date Math
 		if (m.length(16) != 0) {
 			int size_match = 0;
-			std::sregex_iterator next(m.str(16).begin(), m.str(16).end(), date_math_re, std::regex_constants::match_continuous);
+			std::string date_math(m.str(16));
+			std::sregex_iterator next(date_math.begin(), date_math.end(), date_math_re, std::regex_constants::match_continuous);
 			std::sregex_iterator end;
 			while (next != end) {
 				size_match += next->length(0);
 				computeDateMath(tm, next->str(1), next->str(2));
-				next++;
+				++next;
 			}
 
 			if (m.length(16) != size_match) {
