@@ -219,7 +219,7 @@ class XapianSearchBackend(BaseSearchBackend):
             ip = settings.XAPIAN_SERVER
 
             for endpoint in endpoints:
-                client.send_request(action_request='index', endpoint=endpoint, params=dict(commit=True), ip=ip, data=document_json, document_id=document_id)
+                client.send_request(action_request='index', endpoint=endpoint, params=dict(commit=True), ip=ip, body=document_json, document_id=document_id)
 
     def update(self, index, iterable, commit=False):
         for obj in iterable:
@@ -263,7 +263,7 @@ class XapianSearchBackend(BaseSearchBackend):
         hints = hints or {}
         endpoints = self.endpoints.for_read(models=models, **hints)
         ip = settings.XAPIAN_SERVER
-        params = dict(offset=offset, limit=limit, query=queries, terms=terms, partials=partials)
+        params = dict(offset=offset, limit=limit, query=queries, terms=terms, partial=partials)
 
         client = Xapiand()
         results = client.send_request(action_request='search', endpoint=endpoints, params=params, ip=ip)
