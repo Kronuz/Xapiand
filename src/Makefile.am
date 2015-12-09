@@ -33,7 +33,6 @@ xapiand_SOURCES = \
 	lz4/lz4hc.c \
 	lz4/xxhash.c \
 	manager.cc \
-	md5.cc \
 	multivalue.cc \
 	multivaluekeymaker.cc \
 	multivaluerange.cc \
@@ -102,7 +101,6 @@ noinst_HEADERS = \
 	lz4/lz4hc.h \
 	lz4/xxhash.h \
 	manager.h \
-	md5.h \
 	multivalue.h \
 	multivaluekeymaker.h \
 	multivaluerange.h \
