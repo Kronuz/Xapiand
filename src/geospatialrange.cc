@@ -26,14 +26,13 @@
 #include "serialise.h"
 
 
-static double
-geo_weight_from_angle(double angle) {
+static double geo_weight_from_angle(double angle) {
 	return (M_PI - angle) * M_PER_RADIUS_EARTH;
 }
 
 
 void
-CartesianList::unserialise(const std::string & serialised)
+CartesianList::unserialise(const std::string& serialised)
 {
 	for (size_t i = 0, j =  SIZE_SERIALISE_CARTESIAN; i < serialised.size(); i = j, j += SIZE_SERIALISE_CARTESIAN) {
 		push_back(Unserialise::cartesian(serialised.substr(i, j)));
@@ -45,8 +44,7 @@ std::string
 CartesianList::serialise() const
 {
 	std::string serialised;
-	CartesianList::const_iterator i(begin());
-	for ( ; i != end(); i++) {
+	for (auto i = begin(); i != end(); ++i) {
 		serialised.append(Serialise::cartesian(*i));
 	}
 
@@ -55,7 +53,7 @@ CartesianList::serialise() const
 
 
 void
-uInt64List::unserialise(const std::string & serialised)
+uInt64List::unserialise(const std::string& serialised)
 {
 	for (size_t i = 0, j = SIZE_BYTES_ID; i < serialised.size(); i = j, j += SIZE_BYTES_ID) {
 		push_back(Unserialise::trixel_id(serialised.substr(i, j)));
@@ -67,8 +65,7 @@ std::string
 uInt64List::serialise() const
 {
 	std::string serialised;
-	uInt64List::const_iterator i(begin());
-	for ( ; i != end(); i++) {
+	for (auto i = begin(); i != end(); ++i) {
 		serialised.append(Serialise::trixel_id(*i));
 	}
 
@@ -76,8 +73,9 @@ uInt64List::serialise() const
 }
 
 
-GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_t> &ranges_, const CartesianList &centroids_)
-	: ValuePostingSource(slot_), slot(slot_) {
+GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_t>& ranges_, const CartesianList& centroids_)
+	: ValuePostingSource(slot_), slot(slot_)
+{
 	ranges.reserve(ranges_.size());
 	ranges.insert(ranges.end(), ranges_.begin(), ranges_.end());
 	centroids.reserve(centroids_.size());
@@ -88,7 +86,8 @@ GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_
 
 // Receive start and end did not serialize.
 Xapian::Query
-GeoSpatialRange::getQuery(Xapian::valueno slot_, const std::vector<range_t> &ranges_, const CartesianList &centroids_) {
+GeoSpatialRange::getQuery(Xapian::valueno slot_, const std::vector<range_t>& ranges_, const CartesianList& centroids_)
+{
 	if (ranges_.empty()){
 		return Xapian::Query::MatchNothing;
 	}
@@ -100,13 +99,12 @@ GeoSpatialRange::getQuery(Xapian::valueno slot_, const std::vector<range_t> &ran
 
 
 void
-GeoSpatialRange::calc_angle(const CartesianList &_centroids) {
+GeoSpatialRange::calc_angle(const CartesianList& _centroids) noexcept
+{
 	angle = M_PI;
-	CartesianList::const_iterator it(_centroids.begin());
-	for ( ; it != _centroids.end(); it++) {
+	for (auto it = _centroids.begin(); it != _centroids.end(); ++it) {
 		double aux = M_PI;
-		CartesianList::const_iterator itl(centroids.begin());
-		for ( ; itl != centroids.end(); itl++) {
+		for (auto itl = centroids.begin(); itl != centroids.end(); ++itl) {
 			double rad_angle = acos(*it * *itl);
 			if (rad_angle < aux) aux = rad_angle;
 		}
@@ -116,22 +114,21 @@ GeoSpatialRange::calc_angle(const CartesianList &_centroids) {
 
 
 bool
-GeoSpatialRange::insideRanges() {
+GeoSpatialRange::insideRanges() noexcept
+{
 	StringList list;
 	list.unserialise(*value_it);
 	uInt64List _ranges;
 	CartesianList _centroids;
-	for (StringList::const_iterator it(list.begin()); it != list.end(); ++it) {
+	for (auto it = list.begin(); it != list.end(); ++it) {
 		_ranges.unserialise(*it);
 		++it;
 		_centroids.unserialise(*it);
 	}
 
-	uInt64List::const_iterator start(_ranges.begin()), end;
-	for ( ; start != _ranges.end(); start += 2) {
-		end = start + 1;
-		std::vector<range_t>::const_iterator it(ranges.begin());
-		for ( ; it != ranges.end(); it++) {
+	for (auto start = _ranges.begin(); start != _ranges.end(); start += 2) {
+		auto end = start + 1;
+		for (auto it = ranges.begin(); it != ranges.end(); ++it) {
 			if (*start <= it->end && *end >= it->start) {
 				calc_angle(_centroids);
 				return true;
@@ -143,7 +140,8 @@ GeoSpatialRange::insideRanges() {
 
 
 void
-GeoSpatialRange::next(double min_wt) {
+GeoSpatialRange::next(double min_wt)
+{
 	Xapian::ValuePostingSource::next(min_wt);
 	while (value_it != db.valuestream_end(slot)) {
 		if (insideRanges()) break;
@@ -153,7 +151,8 @@ GeoSpatialRange::next(double min_wt) {
 
 
 void
-GeoSpatialRange::skip_to(Xapian::docid min_docid, double min_wt) {
+GeoSpatialRange::skip_to(Xapian::docid min_docid, double min_wt)
+{
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
 	while (value_it != db.valuestream_end(slot)) {
 		if (insideRanges()) break;
@@ -163,7 +162,8 @@ GeoSpatialRange::skip_to(Xapian::docid min_docid, double min_wt) {
 
 
 bool
-GeoSpatialRange::check(Xapian::docid min_docid, double min_wt) {
+GeoSpatialRange::check(Xapian::docid min_docid, double min_wt)
+{
 	if (!ValuePostingSource::check(min_docid, min_wt)) {
 		// check returned false, so we know the document is not in the source.
 		return false;
@@ -179,31 +179,34 @@ GeoSpatialRange::check(Xapian::docid min_docid, double min_wt) {
 
 
 double
-GeoSpatialRange::get_weight() const {
+GeoSpatialRange::get_weight() const
+{
 	return geo_weight_from_angle(angle);
 }
 
 
 GeoSpatialRange*
-GeoSpatialRange::clone() const {
+GeoSpatialRange::clone() const
+{
 	return new GeoSpatialRange(slot, ranges, centroids);
 }
 
 
 std::string
-GeoSpatialRange::name() const {
+GeoSpatialRange::name() const
+{
 	return "GeoSpatialRange";
 }
 
 
 std::string
-GeoSpatialRange::serialise() const {
+GeoSpatialRange::serialise() const
+{
 	std::string serialised, values, aux(Xapian::sortable_serialise(slot));
 	values.append(encode_length(aux.size()));
 	values.append(aux);
 	uInt64List s;
-	std::vector<range_t>::const_iterator it(ranges.begin());
-	for ( ; it != ranges.end(); it++) {
+	for (auto it = ranges.begin(); it != ranges.end(); ++it) {
 		s.push_back(it->start);
 		s.push_back(it->end);
 	}
@@ -220,15 +223,15 @@ GeoSpatialRange::serialise() const {
 
 
 GeoSpatialRange*
-GeoSpatialRange::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const {
+GeoSpatialRange::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
+{
 	StringList data;
 	data.unserialise(s);
 	uInt64List uInt64_;
 	uInt64_.unserialise(data.at(1));
 	std::vector<range_t> ranges_;
 	ranges_.reserve(uInt64_.size() / 2);
-	uInt64List::const_iterator it(uInt64_.begin());
-	for ( ; it != uInt64_.end(); it++) {
+	for (auto it = uInt64_.begin(); it != uInt64_.end(); ++it) {
 		ranges_.push_back({*it, *++it});
 	}
 	CartesianList centroids_;
@@ -238,7 +241,8 @@ GeoSpatialRange::unserialise_with_registry(const std::string &s, const Xapian::R
 
 
 void
-GeoSpatialRange::init(const Xapian::Database &db_) {
+GeoSpatialRange::init(const Xapian::Database& db_)
+{
 	Xapian::ValuePostingSource::init(db_);
 
 	// Possible that no documents are in range.
@@ -247,7 +251,8 @@ GeoSpatialRange::init(const Xapian::Database &db_) {
 
 
 std::string
-GeoSpatialRange::get_description() const {
+GeoSpatialRange::get_description() const
+{
 	std::string result("GeoSpatialRange ");
 	result += std::to_string(slot);
 	return result;

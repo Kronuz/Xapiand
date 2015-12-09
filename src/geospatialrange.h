@@ -40,7 +40,7 @@
  */
 class CartesianList : public std::vector<Cartesian> {
 public:
-	void unserialise(const std::string & serialised);
+	void unserialise(const std::string& serialised);
 	std::string serialise() const;
 };
 
@@ -55,7 +55,7 @@ public:
  */
 class uInt64List : public std::vector<uInt64> {
 public:
-	void unserialise(const std::string & serialised);
+	void unserialise(const std::string& serialised);
 	std::string serialise() const;
 };
 
@@ -69,30 +69,30 @@ class GeoSpatialRange : public Xapian::ValuePostingSource {
 	double angle;
 
 	// Calculates the smallest angle between its centroids  and search centroids.
-	void calc_angle(const CartesianList &_centroids);
+	void calc_angle(const CartesianList& _centroids) noexcept;
 	// Calculates if some their values is inside ranges.
-	bool insideRanges();
+	bool insideRanges() noexcept;
 
-	public:
-		/* Construct a new match decider which returns only documents with a
-		 *  some of their values inside of ranges.
-		 *
-		 *  @param slot_ The value slot to read values from.
-		 *  @param ranges
-		*/
-		GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_t> &ranges_, const CartesianList &centroids_);
+public:
+	/* Construct a new match decider which returns only documents with a
+	 *  some of their values inside of ranges.
+	 *
+	 *  @param slot_ The value slot to read values from.
+	 *  @param ranges
+	*/
+	GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_t>& ranges_, const CartesianList& centroids_);
 
-		void next(double min_wt);
-		void skip_to(Xapian::docid min_docid, double min_wt);
-		bool check(Xapian::docid min_docid, double min_wt);
-		double get_weight() const;
-		GeoSpatialRange* clone() const;
-		std::string name() const;
-		std::string serialise() const;
-		GeoSpatialRange* unserialise_with_registry(const std::string &serialised, const Xapian::Registry &) const;
-		void init(const Xapian::Database &db_);
-		std::string get_description() const;
+	void next(double min_wt) override;
+	void skip_to(Xapian::docid min_docid, double min_wt) override;
+	bool check(Xapian::docid min_docid, double min_wt) override;
+	double get_weight() const override;
+	GeoSpatialRange* clone() const override;
+	std::string name() const override;
+	std::string serialise() const override;
+	GeoSpatialRange* unserialise_with_registry(const std::string& serialised, const Xapian::Registry&) const override;
+	void init(const Xapian::Database& db_) override;
+	std::string get_description() const override;
 
-		// Call this function for create a new Query based in ranges.
-		static Xapian::Query getQuery(Xapian::valueno slot_, const std::vector<range_t> &ranges_, const CartesianList &centroids_);
+	// Call this function for create a new Query based in ranges.
+	static Xapian::Query getQuery(Xapian::valueno slot_, const std::vector<range_t>& ranges_, const CartesianList& centroids_);
 };
