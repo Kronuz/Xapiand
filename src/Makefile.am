@@ -22,6 +22,8 @@ xapiand_SOURCES = \
 	generate_terms.cc \
 	geometry.cc \
 	geospatialrange.cc \
+	hash/md5.cc \
+	hash/sha256.cc \
 	haystack.cc \
 	htm.cc \
 	http_parser.c \
@@ -88,6 +90,8 @@ noinst_HEADERS = \
 	generate_terms.h \
 	geometry.h \
 	geospatialrange.h \
+	hash/md5.h \
+	hash/sha256.h \
 	haystack.h \
 	htm.h \
 	http_parser.h \
