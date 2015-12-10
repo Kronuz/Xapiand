@@ -27,10 +27,11 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/generate_terms.cc \
 			$(top_builddir)/src/geometry.cc \
 			$(top_builddir)/src/geospatialrange.cc \
+			$(top_builddir)/src/hash/md5.cc \
+			$(top_builddir)/src/hash/sha256.cc \
 			$(top_builddir)/src/htm.cc \
 			$(top_builddir)/src/length.cc \
 			$(top_builddir)/src/log.cc \
-			$(top_builddir)/src/md5.cc \
 			$(top_builddir)/src/multivalue.cc \
 			$(top_builddir)/src/multivaluekeymaker.cc \
 			$(top_builddir)/src/multivaluerange.cc \
