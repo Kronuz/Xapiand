@@ -42,26 +42,26 @@ const test_geo_t geo_range_tests[] {
 	{
 		// Search: The polygon's search  describes North Dakota.
 		"location:\"..POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"",
-		{ "North Dakota and South Dakota", "North Dakota", "Bismarck", "Minot" }
+		"", { "North Dakota and South Dakota", "North Dakota", "Bismarck", "Minot" }
 	},
 	{
 		// Search: The Multipolygon's search  describes North Dakota and South Dakota.
 		"location:\"..MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"",
-		{ "North Dakota and South Dakota", "North Dakota", "Bismarck", "Minot", "Rapid City", "Wyoming" }
+		"", { "North Dakota and South Dakota", "North Dakota", "Bismarck", "Minot", "Rapid City", "Wyoming" }
 	},
 	// { 0.073730, 0.073730, 0.094108, 0.122473, 0.122473, 0.122925, 0.273593, 0.273593, 0.648657, 0.648657 }
 	{
 		// Search: The polygon's search  describes Wyoming but the corners with a different heights.
 		"location:\"..POLYGON ((44.96479793 -111.02783203, 44.96479793 -104.08447266, 41.04621681 -104.08447266, 41.00477542 -111.02783203))\"",
-		{ "Wyoming", "Mountain View, Wyoming", "Utah", "North Dakota and South Dakota" }
+		"", { "Wyoming", "Mountain View, Wyoming", "Utah", "North Dakota and South Dakota" }
 	},
 	// Search for all documents with location.
 	{
-		"location:..", { "North Dakota", "Bismarck", "Minot", "Rapid City", "Utah", "Wyoming", "Mountain View, Wyoming", "North Dakota and South Dakota" }
+		"location:..", "", { "North Dakota", "Bismarck", "Minot", "Rapid City", "Utah", "Wyoming", "Mountain View, Wyoming", "North Dakota and South Dakota" }
 	},
 	// There are not regions inside.
 	{
-		"location:\"..CIRCLE (40 -100, 1000)\"", { }
+		"location:\"..CIRCLE (40 -100, 1000)\"", "", { }
 	}
 };
 
@@ -69,47 +69,44 @@ const test_geo_t geo_range_tests[] {
 const test_geo_t geo_terms_tests[] {
 	// Test for search by terms.
 	{
-		"location:\"POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"",
+		"", "location:\"POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))\"",
 		{ "North Dakota" }
 	},
 	{
-		"location:\"POINT ((46.84516443029276 -100.78857421875))\"",
+		"", "location:\"POINT ((46.84516443029276 -100.78857421875))\"",
 		{ "Bismarck" }
 	},
 	{
-		"location:\"POINT ((48.25394114463431 -101.2939453125))\"",
+		"", "location:\"POINT ((48.25394114463431 -101.2939453125))\"",
 		{ "Minot" }
 	},
 	{
-		"location:\"POINT ((43.992814500489914 -103.18359375))\"",
+		"", "location:\"POINT ((43.992814500489914 -103.18359375))\"",
 		{ "Rapid City" }
 	},
 	{
-		"location:\"CHULL ((41.89409956 -113.93920898 1987, 42.02481361 -111.12670898 2095, 41.00477542 -111.02783203 2183, 40.95501133 -109.0612793 2606, 37.01132594 -109.03930664 1407, 37.02886945 -114.00512695 696))\"",
+		"", "location:\"CHULL ((41.89409956 -113.93920898 1987, 42.02481361 -111.12670898 2095, 41.00477542 -111.02783203 2183, 40.95501133 -109.0612793 2606, 37.01132594 -109.03930664 1407, 37.02886945 -114.00512695 696))\"",
 		{ "Utah" }
 	},
 	{
-		"location:\"POLYGON ((44.96479793 -111.02783203 2244, 44.96479793 -104.08447266 969, 41.04621681 -104.08447266 1654, 41.00477542 -111.02783203 2183))\"",
+		"", "location:\"POLYGON ((44.96479793 -111.02783203 2244, 44.96479793 -104.08447266 969, 41.04621681 -104.08447266 1654, 41.00477542 -111.02783203 2183))\"",
 		{ "Wyoming" }
 	},
 	{
-		"location:\"POINT (41.2695495 -110.34118652)\"",
+		"", "location:\"POINT (41.2695495 -110.34118652)\"",
 		{ "Mountain View, Wyoming" }
 	},
 	{
-		"location:\"MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"",
+		"", "location:\"MULTIPOLYGON (((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625)), ((45.89000815866182 -103.974609375, 45.89000815866182 -96.6357421875, 42.779275360241904 -96.6796875, 43.03677585761058 -103.9306640625)))\"",
 		{ "North Dakota and South Dakota" }
 	},
 	{
-		"attraction_location:\"POINT (44.42789588, -110.58837891)\"",
+		"", "attraction_location:\"POINT (44.42789588, -110.58837891)\"",
 		{ "Wyoming" }
-	},
-	{
-		"location:..", { "North Dakota", "Bismarck", "Minot", "Rapid City", "Utah", "Wyoming", "Mountain View, Wyoming", "North Dakota and South Dakota" }
 	},
 	// There are not terms.
 	{
-		"location:\"POINT (40, -100)\"", { }
+		"", "location:\"POINT (40, -100)\"", { }
 	}
 };
 
@@ -177,7 +174,9 @@ int make_search(const test_geo_t _tests[], int len) {
 	for (int i = 0; i < len; ++i) {
 		test_geo_t p = _tests[i];
 		query.query.clear();
-		query.query.push_back(p.query);
+		query.terms.clear();
+		if (!p.query.empty()) query.query.push_back(p.query);
+		if (!p.terms.empty()) query.terms.push_back(p.terms);
 
 		Xapian::MSet mset;
 		std::vector<std::string> suggestions;
