@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		462C9EB51C18FC2200BB960E /* sha256.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB01C18FC2200BB960E /* sha256.cc */; };
+		462C9EB61C18FC2200BB960E /* md5.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB11C18FC2200BB960E /* md5.cc */; };
 		4630BEE41B42E88D00351058 /* geometry.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEDE1B42E88D00351058 /* geometry.cc */; };
 		4630BEE51B42E88D00351058 /* htm.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE01B42E88D00351058 /* htm.cc */; };
 		4630BEE61B42E88D00351058 /* wkt_parser.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE21B42E88D00351058 /* wkt_parser.cc */; };
@@ -49,7 +51,6 @@
 		C39AE06C1B2F627E00203139 /* http_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0481B2F627E00203139 /* http_parser.c */; };
 		C39AE06D1B2F627E00203139 /* length.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE04A1B2F627E00203139 /* length.cc */; };
 		C39AE06E1B2F627E00203139 /* manager.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE04D1B2F627E00203139 /* manager.cc */; };
-		C39AE06F1B2F627E00203139 /* md5.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE04F1B2F627E00203139 /* md5.cc */; };
 		C39AE0701B2F627E00203139 /* multivalue.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0511B2F627E00203139 /* multivalue.cc */; };
 		C39AE0711B2F627E00203139 /* replicator.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0541B2F627E00203139 /* replicator.cc */; };
 		C39AE0751B2F627E00203139 /* times.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE05C1B2F627E00203139 /* times.cc */; };
@@ -73,6 +74,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		462C9EB01C18FC2200BB960E /* sha256.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = sha256.cc; path = src/hash/sha256.cc; sourceTree = "<group>"; };
+		462C9EB11C18FC2200BB960E /* md5.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = md5.cc; path = src/hash/md5.cc; sourceTree = "<group>"; };
+		462C9EB21C18FC2200BB960E /* endian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = endian.h; path = src/hash/endian.h; sourceTree = "<group>"; };
+		462C9EB31C18FC2200BB960E /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = md5.h; path = src/hash/md5.h; sourceTree = "<group>"; };
+		462C9EB41C18FC2200BB960E /* sha256.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sha256.h; path = src/hash/sha256.h; sourceTree = "<group>"; };
 		4630BEDE1B42E88D00351058 /* geometry.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = geometry.cc; path = src/geometry.cc; sourceTree = "<group>"; };
 		4630BEDF1B42E88D00351058 /* geometry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = geometry.h; path = src/geometry.h; sourceTree = "<group>"; };
 		4630BEE01B42E88D00351058 /* htm.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = htm.cc; path = src/htm.cc; sourceTree = "<group>"; };
@@ -161,8 +167,6 @@
 		C39AE04C1B2F627E00203139 /* lru.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lru.h; path = src/lru.h; sourceTree = "<group>"; };
 		C39AE04D1B2F627E00203139 /* manager.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = manager.cc; path = src/manager.cc; sourceTree = "<group>"; };
 		C39AE04E1B2F627E00203139 /* manager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = manager.h; path = src/manager.h; sourceTree = "<group>"; };
-		C39AE04F1B2F627E00203139 /* md5.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = md5.cc; path = src/md5.cc; sourceTree = "<group>"; };
-		C39AE0501B2F627E00203139 /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = md5.h; path = src/md5.h; sourceTree = "<group>"; };
 		C39AE0511B2F627E00203139 /* multivalue.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = multivalue.cc; path = src/multivalue.cc; sourceTree = "<group>"; };
 		C39AE0521B2F627E00203139 /* multivalue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = multivalue.h; path = src/multivalue.h; sourceTree = "<group>"; };
 		C39AE0531B2F627E00203139 /* queue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = queue.h; path = src/queue.h; sourceTree = "<group>"; };
@@ -227,6 +231,7 @@
 				46740EEB1B5436120073C5E9 /* datetime.h */,
 				46DFA9AE1BC4800E008D8144 /* discovery.cc */,
 				46DFA9AB1BC4800E008D8144 /* discovery.h */,
+				462C9EB21C18FC2200BB960E /* endian.h */,
 				C39AE0421B2F627E00203139 /* endpoint_resolver.cc */,
 				C39AE0431B2F627E00203139 /* endpoint_resolver.h */,
 				C39AE0441B2F627E00203139 /* endpoint.cc */,
@@ -266,8 +271,8 @@
 				C35058A81BA325CC00901B80 /* lz4hc.h */,
 				C39AE04D1B2F627E00203139 /* manager.cc */,
 				C39AE04E1B2F627E00203139 /* manager.h */,
-				C39AE04F1B2F627E00203139 /* md5.cc */,
-				C39AE0501B2F627E00203139 /* md5.h */,
+				462C9EB11C18FC2200BB960E /* md5.cc */,
+				462C9EB31C18FC2200BB960E /* md5.h */,
 				C39AE0511B2F627E00203139 /* multivalue.cc */,
 				C39AE0521B2F627E00203139 /* multivalue.h */,
 				C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */,
@@ -295,6 +300,8 @@
 				46DFA9971BC3014E008D8144 /* server_raft.h */,
 				46DFA9A01BC3014E008D8144 /* server.cc */,
 				46DFA9981BC3014E008D8144 /* server.h */,
+				462C9EB01C18FC2200BB960E /* sha256.cc */,
+				462C9EB41C18FC2200BB960E /* sha256.h */,
 				46DFA9B01BC4800E008D8144 /* tcp_base.cc */,
 				46DFA9AC1BC4800E008D8144 /* tcp_base.h */,
 				C39AE05B1B2F627E00203139 /* threadpool.h */,
@@ -378,10 +385,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				462C9EB61C18FC2200BB960E /* md5.cc in Sources */,
 				C350589B1B7BAEE300901B80 /* multivaluekeymaker.cc in Sources */,
 				C39AE0771B2F627E00203139 /* xapiand.cc in Sources */,
 				C39AE07D1B2F62D700203139 /* exception.cc in Sources */,
-				C39AE06F1B2F627E00203139 /* md5.cc in Sources */,
 				4630BEE51B42E88D00351058 /* htm.cc in Sources */,
 				46B6B3CD1B7E3CEF000FA041 /* serialise.cc in Sources */,
 				C350589F1B99E75500901B80 /* io_utils.cc in Sources */,
@@ -419,6 +426,7 @@
 				46DFA9B11BC4800E008D8144 /* binary.cc in Sources */,
 				C39AE06E1B2F627E00203139 /* manager.cc in Sources */,
 				46DFA9A91BC3014E008D8144 /* udp_base.cc in Sources */,
+				462C9EB51C18FC2200BB960E /* sha256.cc in Sources */,
 				C35058AB1BA325CC00901B80 /* lz4.c in Sources */,
 				46B6B3D21B7E4A1B000FA041 /* geospatialrange.cc in Sources */,
 				C39AE0701B2F627E00203139 /* multivalue.cc in Sources */,
