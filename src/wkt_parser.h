@@ -24,14 +24,10 @@
 
 #include "utils.h"
 #include "geospatialrange.h"
+#include "serialise.h"
 
 #include <regex>
 
-// Each uInt64 is serialised into 7 bytes, but each zero byte in a term is
-// currently internally encoded as two bytes. Internally a uInt64 can be encoded
-// in maximum 13 bytes.
-#define RANGES_BY_TERM 9
-#define WKT_SEPARATOR  ";"
 
 extern std::regex find_geometry_re;
 extern std::regex find_circle_re;
@@ -41,32 +37,31 @@ extern std::regex find_collection_re;
 
 
 class EWKT_Parser {
-	public:
-		double error;
-		bool partials;
-		int SRID;
-		std::vector<Geometry> gv;
-		std::vector<std::string> trixels;
-		CartesianList centroids;
+	double error;
+	bool partials;
+	int SRID;
 
-		EWKT_Parser(const std::string &EWKT, bool partia2s, double error);
+public:
+	std::vector<Geometry> gv;
+	CartesianList centroids;
+	std::vector<std::string> trixels;
 
-		std::vector<std::string> parse_circle(const std::string &specification);
-		std::vector<std::string> parse_multicircle(const std::string &specification);
-		std::vector<std::string> parse_polygon(const std::string &specification, const Geometry::typePoints &type);
-		std::vector<std::string> parse_multipolygon(const std::string &specification, const Geometry::typePoints &type);
-		std::vector<std::string> parse_point(const std::string &specification);
-		std::vector<std::string> parse_multipoint(const std::string &specification);
-		std::vector<std::string> parse_geometry_collection(const std::string &data);
-		std::vector<std::string> parse_geometry_intersection(const std::string &data);
+	EWKT_Parser(const std::string &EWKT, bool partials, double error);
 
-		static std::vector<std::string> stringSplit(const std::string &str, const std::string &delimiter);
-		static std::vector<std::string> get_trixels(const std::string &father, size_t depth, const std::string &son);
-		static std::vector<std::string> xor_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
-		static std::vector<std::string> or_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
-		static std::vector<std::string> and_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
-		static bool isEWKT(const std::string &str);
-		static void getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
-		static void getIndexTerms(const std::string &field_value, bool partials, double error, std::vector<std::string> &terms);
-		static void getSearchTerms(const std::string &field_value, bool partials, double error, std::vector<std::string> &terms);
+	std::vector<std::string> parse_circle(const std::string &specification);
+	std::vector<std::string> parse_multicircle(const std::string &specification);
+	std::vector<std::string> parse_polygon(const std::string &specification, const Geometry::typePoints &type);
+	std::vector<std::string> parse_multipolygon(const std::string &specification, const Geometry::typePoints &type);
+	std::vector<std::string> parse_point(const std::string &specification);
+	std::vector<std::string> parse_multipoint(const std::string &specification);
+	std::vector<std::string> parse_geometry_collection(const std::string &data);
+	std::vector<std::string> parse_geometry_intersection(const std::string &data);
+
+	static std::vector<std::string> stringSplit(const std::string &str, const std::string &delimiter);
+	static std::vector<std::string> get_trixels(const std::string &father, size_t depth, const std::string &son);
+	static std::vector<std::string> xor_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
+	static std::vector<std::string> or_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
+	static std::vector<std::string> and_trixels(std::vector<std::string> &txs1, std::vector<std::string> &txs2);
+	static bool isEWKT(const std::string &str);
+	static void getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
 };

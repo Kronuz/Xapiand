@@ -23,8 +23,10 @@
 #include "serialise.h"
 
 #include "datetime.h"
+#include "wkt_parser.h"
 #include "utils.h"
 #include "log.h"
+#include "hash/sha256.h"
 
 #include <xapian.h>
 
@@ -41,6 +43,8 @@ Serialise::serialise(char field_type, const std::string &field_value)
 			return boolean(field_value);
 		case STRING_TYPE:
 			return field_value;
+		case GEO_TYPE:
+			return ewkt(field_value);
 	}
 	return "";
 }
@@ -106,6 +110,24 @@ Serialise::trixel_id(uInt64 id)
 	const char serialise[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
 							   (char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF) };
 	return std::string(serialise, SIZE_BYTES_ID);
+}
+
+
+std::string
+Serialise::ewkt(const std::string &field_value)
+{
+	std::string result;
+
+	EWKT_Parser ewkt(field_value, false, HTM_MIN_ERROR);
+
+	if (ewkt.trixels.empty()) return result;
+
+	for (auto it = ewkt.trixels.begin(); it != ewkt.trixels.end(); ++it) {
+		result += *it;
+	}
+
+	SHA256 sha256;
+	return sha256(result);
 }
 
 

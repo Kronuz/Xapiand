@@ -325,7 +325,7 @@ GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ra
 	if (result.empty()) return;
 
 	// Delete duplicates terms.
-	::std::map<uInt64, ::std::string>::iterator it(result.begin());
+	auto it = result.begin();
 	std::string last_valid(std::bitset<SIZE_BITS_ID>(it->first).to_string());
 	last_valid.assign(last_valid.substr(last_valid.find("1")));
 	result_terms = it->second + ":" + ::std::to_string(it->first);

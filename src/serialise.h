@@ -22,8 +22,10 @@
 
 #pragma once
 
-#include "xapiand.h"
 #include "htm.h"
+
+#include "hash/endian.h"
+
 
 // Data types
 #define NUMERIC_TYPE 'n'
@@ -43,6 +45,7 @@
 #define ARRAY_STR   "array"
 #define OBJECT_STR  "object"
 
+
 #if __BYTE_ORDER == __BIG_ENDIAN
 // No translation needed for big endian system.
 #define Swap7Bytes(val) val // HTM's trixel's ids are represent in 7 bytes.
@@ -57,9 +60,9 @@
 #endif
 
 
-const unsigned int SIZE_SERIALISE_CARTESIAN = 12;
-const unsigned int DOUBLE2INT = 1000000000;
-const unsigned int MAXDOU2INT =  999999999;
+constexpr uint32_t SIZE_SERIALISE_CARTESIAN = 12;
+constexpr uint32_t DOUBLE2INT = 1000000000;
+constexpr uint32_t MAXDOU2INT =  999999999;
 
 
 namespace Serialise {
@@ -74,6 +77,8 @@ namespace Serialise {
 	std::string cartesian(const Cartesian &norm_cartesian);
 	// Serialise a trixel's id (HTM).
 	std::string trixel_id(uInt64 id);
+	// Serialise an EWKT string.
+	std::string ewkt(const std::string &field_value);
 	std::string boolean(const std::string &field_value);
 	std::string type(char type);
 };
