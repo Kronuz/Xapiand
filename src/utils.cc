@@ -23,6 +23,7 @@
 #include "utils.h"
 #include "log.h"
 #include "namegen.h"
+#include "hash/md5.h"
 
 #include <string>
 #include <cstdlib>
@@ -158,6 +159,7 @@ std::string repr(const std::string &string, bool friendly, size_t max_size) {
 	return repr(string.c_str(), string.size(), friendly, max_size);
 }
 
+
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 	/* It outputs a bucket number in the range [0, num_buckets).
 	   A Fast, Minimal Memory, Consistent Hash Algorithm
@@ -173,6 +175,7 @@ int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 
 
 static NameGen::Generator generator("!<K|E><k|e|l><|||s>");
+
 
 std::string name_generator() {
 	return generator.toString();
@@ -518,6 +521,7 @@ std::string prefixed(const std::string &term, const std::string &prefix) {
 
 
 unsigned int get_slot(const std::string &name) {
+	MD5 md5;
 	// We are left with the last 8 characters.
 	std::string _md5(md5(strhasupper(name) ? stringtoupper(name) : name), 24, 8);
 	unsigned int slot = static_cast<unsigned int>(strtoul(_md5, 16));
@@ -565,6 +569,7 @@ std::string get_prefix(const std::string &name, const std::string &prefix, char 
 
 
 std::string get_slot_hex(const std::string &name) {
+	MD5 md5;
 	// We are left with the last 8 characters.
 	std::string _md5(md5(strhasupper(name) ? stringtoupper(name): name), 24, 8);
 	return stringtoupper(_md5);

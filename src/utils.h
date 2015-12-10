@@ -23,7 +23,6 @@
 #pragma once
 
 #include "xapiand.h"
-#include "md5.h"
 #include "wkt_parser.h"
 #include "datetime.h"
 #include "cJSON.h"
