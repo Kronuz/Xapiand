@@ -24,10 +24,11 @@
 #include "multivalue.h"
 #include "wkt_parser.h"
 #include "serialise.h"
+
 #include <xapian/query.h>
 
 
-NumericFieldProcessor::NumericFieldProcessor(const std::string &prefix_): prefix(prefix_) {}
+NumericFieldProcessor::NumericFieldProcessor(const std::string &prefix_) : prefix(prefix_) { }
 
 
 Xapian::Query
@@ -44,10 +45,11 @@ NumericFieldProcessor::operator()(const std::string &str)
 }
 
 
-BooleanFieldProcessor::BooleanFieldProcessor(const std::string &prefix_): prefix(prefix_) {}
+BooleanFieldProcessor::BooleanFieldProcessor(const std::string &prefix_) : prefix(prefix_) { }
 
 
-Xapian::Query BooleanFieldProcessor::operator()(const std::string &str)
+Xapian::Query
+BooleanFieldProcessor::operator()(const std::string &str)
 {
 	std::string serialise = Serialise::boolean(str);
 	if (serialise.empty()) {
@@ -57,10 +59,11 @@ Xapian::Query BooleanFieldProcessor::operator()(const std::string &str)
 }
 
 
-DateFieldProcessor::DateFieldProcessor(const std::string &prefix_): prefix(prefix_) {}
+DateFieldProcessor::DateFieldProcessor(const std::string &prefix_): prefix(prefix_) { }
 
 
-Xapian::Query DateFieldProcessor::operator()(const std::string &str)
+Xapian::Query
+DateFieldProcessor::operator()(const std::string &str)
 {
 	std::string serialise(str.c_str());
 	if (serialise.at(0) == '_') serialise.at(0) = '-';
@@ -72,17 +75,12 @@ Xapian::Query DateFieldProcessor::operator()(const std::string &str)
 }
 
 
-GeoFieldProcessor::GeoFieldProcessor(const std::string &prefix_): prefix(prefix_) {}
+GeoFieldProcessor::GeoFieldProcessor(const std::string &prefix_): prefix(prefix_) { }
 
 
-Xapian::Query GeoFieldProcessor::operator()(const std::string &str)
+Xapian::Query
+GeoFieldProcessor::operator()(const std::string &str)
 {
-	std::vector<std::string> values;
-	stringTokenizer(str, WKT_SEPARATOR, values);
-	std::vector<std::string>::const_iterator it(values.begin());
-	std::string serialise(Serialise::trixel_id(strtoull(*it)));
-	for (it++ ; it != values.end(); it++) {
-		serialise += Serialise::trixel_id(strtoull(*it));
-	}
+	std::string serialise(Serialise::trixel_id(std::stoull(str)));
 	return Xapian::Query(prefix + serialise);
 }
