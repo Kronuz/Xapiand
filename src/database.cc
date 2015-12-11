@@ -1602,15 +1602,18 @@ Database::get_stats_docs(const std::string &document_id)
 DatabaseQueue::DatabaseQueue()
 	: state(replica_state::REPLICA_FREE),
 	  persistent(false),
-	  count(0){ }
+	  count(0) { }
 
 
-DatabaseQueue::DatabaseQueue(DatabaseQueue&& q) : Queue(std::move(q))
+DatabaseQueue::DatabaseQueue(DatabaseQueue&& q)
 {
+	std::lock_guard<std::mutex> lk(q._mutex);
+	_items_queue = std::move(q._items_queue);
+	_limit = std::move(q._limit);
+	state = std::move(q.state);
 	persistent = std::move(q.persistent);
 	count = std::move(q.count);
 	weak_database_pool = std::move(q.weak_database_pool);
-	state = std::move(q.state);
 }
 
 
