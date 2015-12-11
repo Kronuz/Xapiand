@@ -36,11 +36,15 @@
 
 #define DATABASE_UPDATE_TIME 10
 
-#define getPos(pos, size) ((pos) < (size) ? (pos) : (size))
-
 #define DEFAULT_OFFSET "0" /* Replace for the real offsert */
 
+
 std::regex Database::find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
+
+
+static auto getPos = [](size_t pos, size_t size) noexcept {
+	return pos < size ? pos : size;
+};
 
 
 Database::Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endpoints_, int flags_)
