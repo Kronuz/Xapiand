@@ -30,15 +30,15 @@ using namespace queue;
 int test_pool() {
 	std::string results;
 	ThreadPool<> pool("W%zu", 4);
-	pool.enqueue(std::make_shared<TestTask>("1", 1.000, results));
-	pool.enqueue(std::make_shared<TestTask>("2", 0.250, results));
-	pool.enqueue(std::make_shared<TestTask>("3", 0.500, results));
-	pool.enqueue(std::make_shared<TestTask>("4", 0.125, results));
+	pool.enqueue(std::make_shared<TestTask>("1", 0.500, results));
+	pool.enqueue(std::make_shared<TestTask>("2", 0.010, results));
+	pool.enqueue(std::make_shared<TestTask>("3", 0.100, results));
+	pool.enqueue(std::make_shared<TestTask>("4", 0.001, results));
 	pool.end();
 	pool.join();
 
 	if (results != "<1<2<3<44>2>3>1>") {
-		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly.");
+		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<3<44>2>3>1>", results.c_str());
 		return 1;
 	}
 
@@ -49,15 +49,14 @@ int test_pool() {
 int test_pool_limit() {
 	std::string results;
 	ThreadPool<> pool("W%zu", 3);
-	pool.enqueue(std::make_shared<TestTask>("1", 1.000, results));
-	pool.enqueue(std::make_shared<TestTask>("2", 0.250, results));
-	pool.enqueue(std::make_shared<TestTask>("3", 0.500, results));
-	pool.enqueue(std::make_shared<TestTask>("4", 0.125, results));
+	pool.enqueue(std::make_shared<TestTask>("1", 0.500, results));
+	pool.enqueue(std::make_shared<TestTask>("2", 0.010, results));
+	pool.enqueue(std::make_shared<TestTask>("3", 0.100, results));
+	pool.enqueue(std::make_shared<TestTask>("4", 0.001, results));
 	pool.end();
 	pool.join();
-
 	if (results != "<1<2<32><44>3>1>") {
-		L_ERR(nullptr, "ThreadPool's limit is not working correctly.");
+		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<32><44>3>1>", results.c_str());
 		return 1;
 	}
 
@@ -76,23 +75,23 @@ int test_pool_func() {
 	results.emplace_back(pool.enqueue([i = i]() {
 		return i * i;
 	}));
-	i++;
+	++i;
 
 	// Using lambda with parameters
 	results.emplace_back(pool.enqueue([](int i) {
 		return i * i;
 	}, i));
-	i++;
+	++i;
 
 	// Using regular function
 	results.emplace_back(pool.enqueue(_test_pool_func_func, i));
-	i++;
+	++i;
 
 	// Using member function
 	results.emplace_back(pool.enqueue([&obj](int i) {
 		return obj.func(i);
 	}, i));
-	i++;
+	++i;
 
 	int total = 0;
 	for (auto& result: results) {
@@ -100,9 +99,12 @@ int test_pool_func() {
 	}
 
 	if (total != 30) {
-		L_ERR(nullptr, "ThreadPool::enqueue functions with int is not working correctly.");
+		L_ERR(nullptr, "ThreadPool::enqueue functions with int is not working correctly. Result: %d Expect: 30", total);
 		return 1;
 	}
+
+	pool.end();
+	pool.join();
 
 	return 0;
 }
@@ -120,23 +122,23 @@ int test_pool_func_shared() {
 	results.emplace_back(pool.enqueue([i = std::make_shared<int>(i)]() {
 		return *i * *i;
 	}));
-	i++;
+	++i;
 
 	// Using lambda with parameters
 	results.emplace_back(pool.enqueue([](std::shared_ptr<int> i) {
 		return *i * *i;
 	}, std::make_shared<int>(i)));
-	i++;
+	++i;
 
 	// Using regular function
 	results.emplace_back(pool.enqueue(_test_pool_func_func_shared, std::make_shared<int>(i)));
-	i++;
+	++i;
 
 	// Using member function
 	results.emplace_back(pool.enqueue([&obj](std::shared_ptr<int> i) {
 		return obj.func_shared(i);
 	}, std::make_shared<int>(i)));
-	i++;
+	++i;
 
 	int total = 0;
 	for (auto& result: results) {
@@ -144,9 +146,12 @@ int test_pool_func_shared() {
 	}
 
 	if (total != 30) {
-		L_ERR(nullptr, "ThreadPool::enqueue functions with std::shared_ptr is not working correctly.");
+		L_ERR(nullptr, "ThreadPool::enqueue functions with std::shared_ptr is not working correctly. Result: %d Expect: 30", total);
 		return 1;
 	}
+
+	pool.end();
+	pool.join();
 
 	return 0;
 }
@@ -164,23 +169,23 @@ int test_pool_func_unique() {
 	results.emplace_back(pool.enqueue([i = std::make_unique<int>(i)]() {
 		return *i * *i;
 	}));
-	i++;
+	++i;
 
 	// Using lambda with parameters
 	results.emplace_back(pool.enqueue([](std::unique_ptr<int> i) {
 		return *i * *i;
 	}, std::make_unique<int>(i)));
-	i++;
+	++i;
 
 	// Using regular function
 	results.emplace_back(pool.enqueue(_test_pool_func_func_unique, std::make_unique<int>(i)));
-	i++;
+	++i;
 
 	// Using member function
 	results.emplace_back(pool.enqueue([&obj](std::unique_ptr<int> i) {
 		return obj.func_unique(std::move(i));
 	}, std::make_unique<int>(i)));
-	i++;
+	++i;
 
 	int total = 0;
 	for (auto& result: results) {
@@ -188,9 +193,12 @@ int test_pool_func_unique() {
 	}
 
 	if (total != 30)  {
-		L_ERR(nullptr, "ThreadPool::enqueue functions with std::unique_ptr is not working correctly.");
+		L_ERR(nullptr, "ThreadPool::enqueue functions with std::unique_ptr is not working correctly. Result: %d Expect: 30", total);
 		return 1;
 	}
+
+	pool.end();
+	pool.join();
 
 	return 0;
 }

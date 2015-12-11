@@ -47,7 +47,6 @@ class TestTask : public Task<> {
 		std::this_thread::sleep_for(std::chrono::duration<double>(sleep));
 		lk.lock();
 		results += name + ">";
-		lk.unlock();
 	}
 
 public:

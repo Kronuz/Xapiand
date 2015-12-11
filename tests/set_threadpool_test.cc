@@ -66,27 +66,22 @@ Suite* testTheadpool(void) {
 	Suite *s = suite_create("Test class Threadpool");
 
 	TCase *tc_pool = tcase_create("Test ThreadPool::enqueue");
-	tcase_set_timeout(tc_pool, 10);
 	tcase_add_test(tc_pool, threadpool_test);
 	suite_add_tcase(s, tc_pool);
 
 	TCase *tc_pool_limit = tcase_create("Test ThreadPool's limit");
-	tcase_set_timeout(tc_pool_limit, 10);
 	tcase_add_test(tc_pool_limit, threadpool_limit);
 	suite_add_tcase(s, tc_pool_limit);
 
 	TCase *tc_pool_func_int = tcase_create("ThreadPool::enqueue functions with int");
-	tcase_set_timeout(tc_pool_func_int, 10);
 	tcase_add_test(tc_pool_func_int, test_threadpool_function);
 	suite_add_tcase(s, tc_pool_func_int);
 
 	TCase *tc_pool_func_shared = tcase_create("ThreadPool::enqueue functions with std::shared_ptr");
-	tcase_set_timeout(tc_pool_func_shared, 10);
 	tcase_add_test(tc_pool_func_shared, test_threadpool_function_shared);
 	suite_add_tcase(s, tc_pool_func_shared);
 
 	TCase *tc_pool_func_unique = tcase_create("ThreadPool::enqueue functions with std::unique_ptr");
-	tcase_set_timeout(tc_pool_func_unique, 10);
 	tcase_add_test(tc_pool_func_unique, test_threadpool_function_unique);
 	suite_add_tcase(s, tc_pool_func_unique);
 
