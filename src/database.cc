@@ -104,10 +104,10 @@ Database::reopen()
 	Xapian::WritableDatabase wdb;
 	Xapian::Database ldb;
 
-	size_t endpoints_size = endpoints.size();
+	auto endpoints_size = endpoints.size();
 
 	const Endpoint *e;
-	endpoints_set_t::const_iterator i(endpoints.begin());
+	auto i = endpoints.begin();
 	if (flags & DB_WRITABLE) {
 		db = std::make_unique<Xapian::WritableDatabase>();
 		if (endpoints_size != 1) {
@@ -130,8 +130,7 @@ Database::reopen()
 			db->add_database(wdb);
 		}
 	} else {
-		db = std::make_unique<Xapian::Database>();
-		for (; i != endpoints.end(); ++i) {
+		for (db = std::make_unique<Xapian::Database>(); i != endpoints.end(); ++i) {
 			e = &*i;
 			if (e->is_local()) {
 				local = true;
@@ -163,7 +162,7 @@ Database::reopen()
 						local = true;
 						if (endpoints_size == 1) read_mastery(e->path);
 					}
-				} catch (const Xapian::DatabaseOpeningError &err) {}
+				} catch (const Xapian::DatabaseOpeningError &err) { }
 # else
 				rdb = Xapian::Remote::open(e->host, port, 0, 10000, e->path);
 # endif
@@ -183,20 +182,20 @@ Database::drop(const std::string &doc_id, bool _commit)
 		return false;
 	}
 
-	std::string document_id  = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
+	std::string document_id = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
 
 	for (int t = 3; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Deleting: -%s- t:%d", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(document_id);
-		}catch (const Xapian::DatabaseCorruptError &e) {
+		} catch (const Xapian::DatabaseCorruptError &e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			return false;
-		}catch (const Xapian::DatabaseError &e) {
+		} catch (const Xapian::DatabaseError &e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			return false;
-		}catch (const Xapian::Error &e) {
+		} catch (const Xapian::Error &e) {
 			L_DEBUG(this, "Inside catch drop");
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			if (t) reopen();
@@ -251,7 +250,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, c
 	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
 	if (isupper(_document_id.at(0))) prefix += ":";
 	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
+	auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
 
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
@@ -262,9 +261,9 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, c
 		try {
 			document = db->get_document(*m);
 			break;
-		} catch (Xapian::InvalidArgumentError &err) {
+		} catch (const Xapian::InvalidArgumentError &err) {
 			return 0;
-		} catch (Xapian::DocNotFoundError &err) {
+		} catch (const Xapian::DocNotFoundError &err) {
 			return 0;
 		} catch (const Xapian::Error &err) {
 			reopen();
@@ -280,7 +279,8 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, c
 
 	if (cJSONUtils_ApplyPatches(data_json.get(), patches) == 0) {
 		// Object patched
-		return index(cJSON_PrintUnformatted(data_json.get()), _document_id, _commit, ct_type, ct_length);
+		unique_char_ptr _cprint(cJSON_PrintUnformatted(data_json.get()));
+		return index(_cprint.get(), _document_id, _commit, ct_type, ct_length);
 	}
 
 	// Object no patched
@@ -297,7 +297,7 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 		find ? update_specifications(item, spc_now, properties) : insert_specifications(item, spc_now, properties);
 		int offspring = 0;
 		int elements = cJSON_GetArraySize(item);
-		for (int i = 0; i < elements; i++) {
+		for (int i = 0; i < elements; ++i) {
 			cJSON *subitem = cJSON_GetArrayItem(item, i);
 			cJSON *subproperties;
 			if (!is_reserved(subitem->string)) {
@@ -317,7 +317,7 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 					}
 				}
 				index_fields(subitem, subitem_name, spc_now, doc, subproperties, find, is_value);
-				offspring++;
+				++offspring;
 			} else if (strcmp(subitem->string, RESERVED_VALUE) == 0) {
 				if (spc_now.sep_types[2] == NO_TYPE) {
 					spc_now.sep_types[2] = get_type(subitem, spc_now);
@@ -360,7 +360,6 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 void
 Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
 {
-	// L_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
 	if (!(find || spc.dynamic)) throw MSG_Error("This object is not dynamic");
 
 	if (!spc.store) return;
@@ -380,7 +379,7 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 	}
 
 	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-	for (size_t j = 0; j < elements; j++) {
+	for (size_t j = 0; j < elements; ++j) {
 		cJSON *text = (texts->type == cJSON_Array) ? cJSON_GetArrayItem(texts, (int)j) : texts;
 		if (text->type != cJSON_String) throw MSG_Error("Text should be string or array of strings");
 		Xapian::TermGenerator term_generator;
@@ -423,7 +422,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 			cJSON_ReplaceItemInArray(_type, 1, cJSON_CreateNumber(ARRAY_TYPE));
 	}
 
-	for (size_t j = 0; j < elements; j++) {
+	for (size_t j = 0; j < elements; ++j) {
 		cJSON *term = (terms->type == cJSON_Array) ? cJSON_GetArrayItem(terms, (int)j) : terms;
 		unique_char_ptr _cprint(cJSON_Print(term));
 		std::string term_v(_cprint.get());
@@ -475,7 +474,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 	}
 
 	StringList s;
-	for (size_t j = 0; j < elements; j++) {
+	for (size_t j = 0; j < elements; ++j) {
 		cJSON *value = (values->type == cJSON_Array) ? cJSON_GetArrayItem(values, (int)j) : values;
 		unique_char_ptr _cprint(cJSON_Print(value));
 		std::string value_v(_cprint.get());
@@ -494,18 +493,19 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			EWKT_Parser::getRanges(value_v, spc.accuracy[0], spc.accuracy[1], ranges, centroids);
 			// Index Values and looking for terms generated by accuracy.
 			std::set<std::string> set_terms;
-			for (auto it = ranges.begin(); it != ranges.end(); it++) {
+			for (auto it = ranges.begin(); it != ranges.end(); ++it) {
 				start_end.push_back(it->start);
 				start_end.push_back(it->end);
 				int idx = -1;
 				uInt64 val;
 				if (it->start != it->end) {
 					std::bitset<SIZE_BITS_ID> b1(it->start), b2(it->end), res;
-					idx = SIZE_BITS_ID - 1;
-					for ( ; b1.test(idx) == b2.test(idx); idx--) res.set(idx, b1.test(idx));
+					for (idx = SIZE_BITS_ID - 1; b1.test(idx) == b2.test(idx); --idx) {
+						res.set(idx, b1.test(idx));
+					}
 					val = res.to_ullong();
 				} else val = it->start;
-				for (size_t i = 2; i < spc.accuracy.size(); i++) {
+				for (size_t i = 2; i < spc.accuracy.size(); ++i) {
 					int pos = START_POS - spc.accuracy[i] * 2;
 					if (idx < pos) {
 						uInt64 vterm = val >> pos;
@@ -516,7 +516,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 				}
 			}
 			// Insert terms generated by accuracy.
-			for (auto it = set_terms.begin(); it != set_terms.end(); it++)
+			for (auto it = set_terms.begin(); it != set_terms.end(); ++it)
 				doc.add_term(*it);
 			s.push_back(start_end.serialise());
 			s.push_back(centroids.serialise());
@@ -530,10 +530,9 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			// Index terms generated by accuracy.
 			switch (spc.sep_types[2]) {
 				case NUMERIC_TYPE: {
-					for (size_t len = spc.accuracy.size(), i = 0; i < len; i++) {
-						long long _v = strtoll(value_v);
-						std::string term_v = std::to_string(_v - _v % (long long)spc.accuracy[i]);
-						term_v = Serialise::numeric(term_v);
+					for (size_t len = spc.accuracy.size(), i = 0; i < len; ++i) {
+						long long _v = std::stoll(value_v);
+						std::string term_v = Serialise::numeric(std::to_string(_v - _v % (long long)spc.accuracy[i]));
 						std::string nameterm(prefixed(term_v, spc.acc_prefix[i]));
 						doc.add_term(nameterm);
 					}
@@ -541,7 +540,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 				}
 				case DATE_TYPE: {
 					bool findMath = value_v.find("||") != std::string::npos;
-					for (size_t len = spc.accuracy.size(), i = 0; i < len; i++) {
+					for (size_t len = spc.accuracy.size(), i = 0; i < len; ++i) {
 						std::string acc(value_v);
 						switch ((char)spc.accuracy[i]) {
 							case DB_YEAR2INT:
@@ -591,7 +590,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 
 	std::size_t found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
-	std::string subtype(ct_type.c_str(), found+1, ct_type.size());
+	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
 
 	//Make sure document_id is also a boolean term (otherwise it doesn't replace an existing document)
 	doc.add_value(0, _document_id);
@@ -624,8 +623,6 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 		} else {
 			json = cJSON_Parse("{}");
 		}
-	} else if (ct_type == "plain/text") {
-		json = cJSON_Parse("{}");
 	} else {
 		json = cJSON_Parse("{}");
 	}
@@ -657,7 +654,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 			return 0;
 		}
 		cJSON *_version = cJSON_GetObjectItem(schema.get(), RESERVED_VERSION);
-		if (_version == NULL || _version->valuedouble != DB_VERSION_SCHEMA) {
+		if (_version == nullptr || _version->valuedouble != DB_VERSION_SCHEMA) {
 			L_ERR(this, "ERROR: Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 			return 0;
 		}
@@ -665,7 +662,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 		find = true;
 	}
 
-	cJSON *subproperties = NULL;
+	cJSON *subproperties = nullptr;
 	if (_document_id.c_str()) {
 		subproperties = cJSON_GetObjectItem(properties, RESERVED_ID);
 		if (!subproperties) {
@@ -693,7 +690,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 		specifications_t spc_bef = spc_now;
 
 		if (document_texts) {
-			for (int _size = cJSON_GetArraySize(document_texts), i = 0; i < _size; i++) {
+			for (int _size = cJSON_GetArraySize(document_texts), i = 0; i < _size; ++i) {
 				cJSON *texts = cJSON_GetArrayItem(document_texts, i);
 				cJSON *name = cJSON_GetObjectItem(texts, RESERVED_NAME);
 				cJSON *text = cJSON_GetObjectItem(texts, RESERVED_VALUE);
@@ -733,7 +730,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 		}
 
 		if (document_terms) {
-			for (int i = 0; i < cJSON_GetArraySize(document_terms); i++) {
+			for (int i = 0; i < cJSON_GetArraySize(document_terms); ++i) {
 				cJSON *data_terms = cJSON_GetArrayItem(document_terms, i);
 				cJSON *name = cJSON_GetObjectItem(data_terms, RESERVED_NAME);
 				cJSON *terms = cJSON_GetObjectItem(data_terms, RESERVED_VALUE);
@@ -766,7 +763,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 		}
 
 		int elements = cJSON_GetArraySize(document.get());
-		for (int i = 0; i < elements; i++) {
+		for (int i = 0; i < elements; ++i) {
 			cJSON *item = cJSON_GetArrayItem(document.get(), i);
 			bool find = true;
 			if (!is_reserved(item->string)) {
@@ -848,7 +845,7 @@ Database::replace(const Xapian::docid &did, const Xapian::Document &doc, bool _c
 data_field_t
 Database::get_data_field(const std::string &field_name)
 {
-	data_field_t res = {Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false};
+	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
 
 	if (field_name.empty()) {
 		return res;
@@ -866,9 +863,8 @@ Database::get_data_field(const std::string &field_name)
 		throw MSG_Error("Schema's database was not found");
 	}
 
-	std::vector<std::string> fields = split_fields(field_name);
-	std::vector<std::string>::const_iterator it = fields.begin();
-	for ( ; it != fields.end(); it++) {
+	auto fields = split_fields(field_name);
+	for (auto it = fields.begin(); it != fields.end(); ++it) {
 		properties = cJSON_GetObjectItem(properties, (*it).c_str());
 		if (!properties) break;
 	}
@@ -881,7 +877,7 @@ Database::get_data_field(const std::string &field_name)
 
 		_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
 		unique_char_ptr _cprint(cJSON_Print(_aux));
-		res.slot = static_cast<unsigned int>(strtoul(_cprint.get()));
+		res.slot = static_cast<unsigned int>(std::stoul(_cprint.get()));
 
 		_aux = cJSON_GetObjectItem(properties, RESERVED_PREFIX);
 		res.prefix = _aux->valuestring;
@@ -893,14 +889,14 @@ Database::get_data_field(const std::string &field_name)
 		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
 			_aux = cJSON_GetObjectItem(properties, RESERVED_ACCURACY);
 			int elements = cJSON_GetArraySize(_aux);
-			for (int i = 0; i < elements; i++) {
+			for (int i = 0; i < elements; ++i) {
 				cJSON *acc = cJSON_GetArrayItem(_aux, i);
 				res.accuracy.push_back(acc->valuedouble);
 			}
 
 			_aux = cJSON_GetObjectItem(properties, RESERVED_ACC_PREFIX);
 			elements = cJSON_GetArraySize(_aux);
-			for (int i = 0; i < elements; i++) {
+			for (int i = 0; i < elements; ++i) {
 				cJSON *acc = cJSON_GetArrayItem(_aux, i);
 				res.acc_prefix.push_back(acc->valuestring);
 			}
@@ -914,7 +910,7 @@ Database::get_data_field(const std::string &field_name)
 data_field_t
 Database::get_slot_field(const std::string &field_name)
 {
-	data_field_t res = {Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false};
+	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
 
 	if (field_name.empty()) {
 		return res;
@@ -927,14 +923,14 @@ Database::get_slot_field(const std::string &field_name)
 	if (!schema) {
 		throw MSG_Error("Schema's database is corrupt.");
 	}
+
 	cJSON *properties = cJSON_GetObjectItem(schema.get(), RESERVED_SCHEMA);
 	if (!properties) {
 		throw MSG_Error("Schema's database is corrupt.");
 	}
 
-	std::vector<std::string> fields = split_fields(field_name);
-	std::vector<std::string>::const_iterator it = fields.begin();
-	for ( ; it != fields.end(); it++) {
+	auto fields = split_fields(field_name);
+	for (auto it = fields.begin(); it != fields.end(); ++it) {
 		properties = cJSON_GetObjectItem(properties, (*it).c_str());
 		if (!properties) break;
 	}
@@ -942,7 +938,7 @@ Database::get_slot_field(const std::string &field_name)
 	if (properties) {
 		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
 		unique_char_ptr _cprint(cJSON_Print(_aux));
-		res.slot = static_cast<unsigned int>(strtoul(_cprint.get()));
+		res.slot = static_cast<unsigned int>(std::stoul(_cprint.get()));
 
 		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
 		res.type = cJSON_GetArrayItem(_aux, 2)->valueint;
@@ -966,16 +962,14 @@ Database::search(const query_field &e)
 	bool first = true;
 
 	L_DEBUG(this, "e.query size: %d  Spelling: %d Synonyms: %d", e.query.size(), e.spelling, e.synonyms);
-	std::vector<std::string>::const_iterator qit(e.query.begin());
-	std::vector<std::string>::const_iterator lit(e.language.begin());
+	auto lit = e.language.begin();
 	std::string lan;
 	unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
-	for ( ; qit != e.query.end(); qit++) {
+	for (auto qit = e.query.begin(); qit != e.query.end(); ++qit) {
 		if (lit != e.language.end()) {
-			lan = *lit;
-			lit++;
+			lan = *lit++;
 		}
 		srch = _search(*qit, flags, true, lan);
 		if (first) {
@@ -993,12 +987,11 @@ Database::search(const query_field &e)
 	L_DEBUG(this, "e.query: %s", queryQ.get_description().c_str());
 
 	L_DEBUG(this, "e.partial size: %d", e.partial.size());
-	std::vector<std::string>::const_iterator pit(e.partial.begin());
 	flags = Xapian::QueryParser::FLAG_PARTIAL;
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 	first = true;
-	for ( ; pit != e.partial.end(); pit++) {
+	for (auto pit = e.partial.begin(); pit != e.partial.end(); ++pit) {
 		srch = _search(*pit, flags, false, "");
 		if (first) {
 			queryP = srch.query;
@@ -1016,12 +1009,11 @@ Database::search(const query_field &e)
 
 
 	L_DEBUG(this, "e.terms size: %d", e.terms.size());
-	std::vector<std::string>::const_iterator tit(e.terms.begin());
 	flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 	first = true;
-	for ( ; tit != e.terms.end(); tit++) {
+	for (auto tit = e.terms.begin(); tit != e.terms.end(); ++tit) {
 		srch = _search(*tit, flags, false, "");
 		if (first) {
 			queryT = srch.query;
@@ -1116,7 +1108,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		if (std::regex_match(field_value, m, find_range_re)) {
 			// If this field is not indexed as value, not process this query.
 			if (field_t.slot == Xapian::BAD_VALUENO) {
-				next++;
+				++next;
 				continue;
 			}
 
@@ -1127,7 +1119,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					GenerateTerms::numeric(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, NUMERIC_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
-						for (it = prefixes.begin(); it != prefixes.end(); it++) {
+						for (it = prefixes.begin(); it != prefixes.end(); ++it) {
 							// Xapian does not allow repeat prefixes.
 							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
 								nfp = std::make_unique<NumericFieldProcessor>(*it);
@@ -1150,7 +1142,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					GenerateTerms::date(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
-						for (it = prefixes.begin(); it != prefixes.end(); it++) {
+						for (it = prefixes.begin(); it != prefixes.end(); ++it) {
 							// Xapian does not allow repeat prefixes.
 							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
 								dfp = std::make_unique<DateFieldProcessor>(*it);
@@ -1177,7 +1169,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					GenerateTerms::geo(filter_term, ranges, field_t.accuracy, field_t.acc_prefix, prefixes);
 					if (!filter_term.empty()) {
 						// Xapian does not allow repeat prefixes.
-						for (it = prefixes.begin(); it != prefixes.end(); it++) {
+						for (it = prefixes.begin(); it != prefixes.end(); ++it) {
 							// Xapian does not allow repeat prefixes.
 							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
 								gfp = std::make_unique<GeoFieldProcessor>(*it);
@@ -1199,7 +1191,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		} else {
 			// If the field has not been indexed as a term, not process this query.
 			if (!field_name.empty() && field_t.prefix.empty()) {
-				next++;
+				++next;
 				continue;
 			}
 
@@ -1250,7 +1242,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 					// If the region for search is empty, not process this query.
 					if (field_value.empty()) {
-						next++;
+						++next;
 						continue;
 					}
 
@@ -1280,7 +1272,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 			} else querystring += " OR " + field;
 		}
 
-		next++;
+		++next;
 	}
 
 	if (size_match != query.size()) {
@@ -1328,28 +1320,30 @@ void
 Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field *similar)
 {
 	Xapian::RSet rset;
-	std::vector<std::string>::const_iterator it;
 
 	for (int t = 3; t >= 0; --t) {
-		try{
-			Xapian::Enquire renquire = get_enquire(query, Xapian::BAD_VALUENO, 1, NULL, NULL, NULL, NULL, NULL);
+		try {
+			Xapian::Enquire renquire = get_enquire(query, Xapian::BAD_VALUENO, 1, nullptr, nullptr, nullptr, nullptr, nullptr);
 			Xapian::MSet mset = renquire.get_mset(0, similar->n_rset);
-			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); m++) {
+			for (auto m = mset.begin(); m != mset.end(); ++m) {
 				rset.add_document(*m);
 			}
-		}catch (const Xapian::Error &er) {
+		} catch (const Xapian::Error &er) {
 			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
-		std::vector<std::string>prefixes;
-		for(it = similar->type.begin(); it != similar->type.end(); it++) {
+
+		std::vector<std::string> prefixes;
+		for (auto it = similar->type.begin(); it != similar->type.end(); ++it) {
 			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + Unserialise::type(*it));
 		}
-		for(it = similar->field.begin(); it != similar->field.end(); it++) {
+
+		for(auto it = similar->field.begin(); it != similar->field.end(); ++it) {
 			data_field_t field_t = get_data_field(*it);
 			prefixes.push_back(field_t.prefix);
 		}
+
 		ExpandDeciderFilterPrefixes efp(prefixes);
 		Xapian::ESet eset = enquire.get_eset(similar->n_eset, rset, &efp);
 
@@ -1382,8 +1376,7 @@ Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key,
 
 	if (spies) {
 		if (!facets->empty()) {
-			std::vector<std::string>::const_iterator fit(facets->begin());
-			for ( ; fit != facets->end(); fit++) {
+			for (auto fit = facets->begin(); fit != facets->end(); ++fit) {
 				data_field_t field_t = get_slot_field(*fit);
 				if (field_t.type != NO_TYPE) {
 					spy = std::make_unique<MultiValueCountMatchSpy>(get_slot(*fit), field_t.type == GEO_TYPE);
@@ -1404,10 +1397,11 @@ Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key,
 
 
 int
-Database::get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset)
+Database::get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
+		std::vector<std::string> &suggestions, int offset)
 {
 	unsigned int doccount = db->get_doccount();
-	unsigned int check_at_least = std::max(std::min(doccount, e.check_at_least), (unsigned int)0);
+	unsigned int check_at_least = std::max(std::min(doccount, e.check_at_least), 0u);
 	Xapian::valueno collapse_key;
 
 	// Get the collapse key to use for queries.
@@ -1422,8 +1416,7 @@ Database::get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pa
 	Multi_MultiValueKeyMaker *sorter = nullptr;
 	if (!e.sort.empty()) {
 		sorter = &sorter_obj;
-		std::vector<std::string>::const_iterator oit(e.sort.begin());
-		for ( ; oit != e.sort.end(); oit++) {
+		for (auto oit = e.sort.begin(); oit != e.sort.end(); ++oit) {
 			std::string field, value;
 			size_t pos = oit->find(":");
 			if (pos != std::string::npos) {
@@ -1546,7 +1539,7 @@ Database::get_stats_database()
 	cJSON_AddNumberToObject(database.get(), "av_length", db->get_avlength());
 	cJSON_AddNumberToObject(database.get(), "doc_len_lower", db->get_doclength_lower_bound());
 	cJSON_AddNumberToObject(database.get(), "doc_len_upper", db->get_doclength_upper_bound());
-	(db->has_positions()) ? cJSON_AddTrueToObject(database.get(), "has_positions") : cJSON_AddFalseToObject(database.get(), "has_positions");
+	db->has_positions() ? cJSON_AddTrueToObject(database.get(), "has_positions") : cJSON_AddFalseToObject(database.get(), "has_positions");
 	return std::move(database);
 }
 
@@ -1590,16 +1583,14 @@ Database::get_stats_docs(const std::string &document_id)
 	cJSON_AddStringToObject(document.get(), RESERVED_ID, document_id.c_str());
 	cJSON_AddItemToObject(document.get(), RESERVED_DATA, cJSON_Parse(doc.get_data().c_str()));
 	cJSON_AddNumberToObject(document.get(), "number_terms", doc.termlist_count());
-	Xapian::TermIterator it(doc.termlist_begin());
 	std::string terms;
-	for ( ; it != doc.termlist_end(); it++) {
+	for (auto it = doc.termlist_begin(); it != doc.termlist_end(); ++it) {
 		terms = terms + repr(*it) + " ";
 	}
 	cJSON_AddStringToObject(document.get(), RESERVED_TERMS, terms.c_str());
 	cJSON_AddNumberToObject(document.get(), "number_values", doc.values_count());
-	Xapian::ValueIterator iv(doc.values_begin());
 	std::string values;
-	for ( ; iv != doc.values_end(); iv++) {
+	for (auto iv = doc.values_begin(); iv != doc.values_end(); ++iv) {
 		values = values + std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
 	}
 	cJSON_AddStringToObject(document.get(), RESERVED_VALUES, values.c_str());
@@ -1636,16 +1627,17 @@ DatabaseQueue::inc_count(int max)
 
 	if (count == 0) {
 		if (auto database_pool = weak_database_pool.lock()) {
-			for (auto &endpoint : endpoints) {
+			for (auto& endpoint : endpoints) {
 				database_pool->add_endpoint_queue(endpoint, shared_from_this());
 			}
 		}
 	}
 
 	if (max == -1 || count < static_cast<size_t>(max)) {
-		count++;
+		++count;
 		return true;
 	}
+
 	return false;
 }
 
@@ -1658,13 +1650,12 @@ DatabaseQueue::dec_count()
 	assert(count > 0);
 
 	if (count > 0) {
-		count--;
-
+		--count;
 		return true;
 	}
 
 	if (auto database_pool = weak_database_pool.lock()) {
-		for (auto &endpoint : endpoints) {
+		for (auto& endpoint : endpoints) {
 			database_pool->drop_endpoint_queue(endpoint, shared_from_this());
 		}
 	}
@@ -1686,19 +1677,19 @@ DatabasePool::~DatabasePool()
 
 
 void
-DatabasePool::add_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue)
+DatabasePool::add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
 	size_t hash = endpoint.hash();
-	auto &queues_set = queues[hash];
+	auto& queues_set = queues[hash];
 	queues_set.insert(queue);
 }
 
 
 void
-DatabasePool::drop_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue)
+DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
 	size_t hash = endpoint.hash();
-	auto &queues_set = queues[hash];
+	auto& queues_set = queues[hash];
 	queues_set.erase(queue);
 
 	if (queues_set.empty()) {
@@ -1731,7 +1722,7 @@ DatabasePool::finish()
 }
 
 
-bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints &endpoints, int flags)
+bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {
 	bool writable = flags & DB_WRITABLE;
 	bool persistent = flags & DB_PERSISTENT;
@@ -1741,8 +1732,6 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB %s(%s) [%lx]...", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 
 	assert(!database);
-
-	time_t now = time(NULL);
 
 	std::unique_lock<std::mutex> lk(qmtx);
 
@@ -1756,7 +1745,7 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 			queue = databases[hash];
 		}
 
-		DatabaseQueue::replica_state old_state = queue->state;
+		auto old_state = queue->state;
 
 		if (replication) {
 			switch (queue->state) {
@@ -1959,8 +1948,7 @@ DatabasePool::init_ref(const Endpoints &endpoints)
 		assert(false);
 	}
 
-	endpoints_set_t::iterator endp_it(endpoints.begin());
-	for ( ; endp_it != endpoints.end(); endp_it++) {
+	for (auto endp_it = endpoints.begin(); endp_it != endpoints.end(); ++endp_it) {
 		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
 		Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
 		if (p == ref_database->db->postlist_end(unique_id)) {
@@ -1991,8 +1979,7 @@ DatabasePool::inc_ref(const Endpoints &endpoints)
 
 	Xapian::Document doc;
 
-	endpoints_set_t::iterator endp_it(endpoints.begin());
-	for ( ; endp_it != endpoints.end(); endp_it++) {
+	for (auto endp_it = endpoints.begin(); endp_it != endpoints.end(); ++endp_it) {
 		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
 		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 		if (p == ref_database->db->postlist_end(unique_id)) {
@@ -2005,7 +1992,7 @@ DatabasePool::inc_ref(const Endpoints &endpoints)
 			// Document found - reference increased
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
-			int nref = static_cast<int>(strtol(doc.get_value(0)));
+			int nref = std::stoi(doc.get_value(0));
 			doc.add_value(0, std::to_string(nref + 1));
 			ref_database->replace(unique_id, doc, true);
 		}
@@ -2028,14 +2015,13 @@ DatabasePool::dec_ref(const Endpoints &endpoints)
 
 	Xapian::Document doc;
 
-	endpoints_set_t::iterator endp_it(endpoints.begin());
-	for ( ; endp_it != endpoints.end(); endp_it++) {
+	for (auto endp_it = endpoints.begin(); endp_it != endpoints.end(); ++endp_it) {
 		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
 		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 		if (p != ref_database->db->postlist_end(unique_id)) {
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
-			int nref = static_cast<int>(strtol(doc.get_value(0)) - 1);
+			int nref = std::stoi(doc.get_value(0)) - 1;
 			doc.add_value(0, std::to_string(nref));
 			ref_database->replace(unique_id, doc, true);
 			if (nref == 0) {
@@ -2076,8 +2062,7 @@ DatabasePool::get_master_count()
 bool
 ExpandDeciderFilterPrefixes::operator()(const std::string &term) const
 {
-	std::vector<std::string>::const_iterator i(prefixes.cbegin());
-	for ( ; i != prefixes.cend(); i++) {
+	for (auto i = prefixes.cbegin(); i != prefixes.cend(); ++i) {
 		if (startswith(term, *i)) return true;
 	}
 

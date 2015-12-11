@@ -109,7 +109,8 @@ public:
 	search_t search(const query_field &e);
 	search_t _search(const std::string &query, unsigned int flags, bool text, const std::string &lan);
 	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field *similar);
-	int get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies, std::vector<std::string> &suggestions, int offset = 0);
+	int get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
+					std::vector<std::string> &suggestions, int offset = 0);
 	unique_cJSON get_stats_database();
 	unique_cJSON get_stats_docs(const std::string &document_id);
 	data_field_t get_data_field(const std::string &field_name);
@@ -201,8 +202,8 @@ private:
 	void dec_ref(const Endpoints &endpoints);
 	int get_master_count();
 
-	void add_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue);
-	void drop_endpoint_queue(const Endpoint &endpoint, const std::shared_ptr<DatabaseQueue>& queue);
+	void add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
+	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	bool _switch_db(const Endpoint &endpoint);
 
 public:
@@ -214,7 +215,7 @@ public:
 	void finish();
 
 	template<typename F, typename... Args>
-	bool checkout(std::shared_ptr<Database>& database, const Endpoints &endpoints, int flags, F&& f, Args&&... args)
+	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args)
 	{
 		bool ret = checkout(database, endpoints, flags);
 		if (!ret) {
@@ -246,9 +247,9 @@ public:
 class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 	std::vector<std::string> prefixes;
 
-	public:
-		ExpandDeciderFilterPrefixes(const std::vector<std::string> &prefixes_)
-			: prefixes(prefixes_) { }
+public:
+	ExpandDeciderFilterPrefixes(const std::vector<std::string> &prefixes_)
+		: prefixes(prefixes_) { }
 
-		virtual bool operator() (const std::string &term) const;
+	virtual bool operator() (const std::string &term) const override;
 };
