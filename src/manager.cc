@@ -142,7 +142,7 @@ XapiandManager::set_node_name(const std::string &node_name_, std::unique_lock<st
 		}
 	}
 
-	L_INFO(this, "Node %s accepted to the party!", node_name.c_str());
+	L_NOTICE(this, "Node %s accepted to the party!", node_name.c_str());
 	return true;
 }
 
@@ -224,13 +224,13 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 
 	switch (new_cluster) {
 		case 0:
-			L_INFO(this, "Joined cluster %s: It is now online!", cluster_name.c_str());
+			L_NOTICE(this, "Joined cluster %s: It is now online!", cluster_name.c_str());
 			break;
 		case 1:
-			L_INFO(this, "Joined new cluster %s: It is now online!", cluster_name.c_str());
+			L_NOTICE(this, "Joined new cluster %s: It is now online!", cluster_name.c_str());
 			break;
 		case 2:
-			L_INFO(this, "Joined cluster %s: It was already online!", cluster_name.c_str());
+			L_NOTICE(this, "Joined cluster %s: It was already online!", cluster_name.c_str());
 			break;
 	}
 }
@@ -470,7 +470,7 @@ XapiandManager::run(const opts_t &o)
 
 	msg += "at pid:" + std::to_string(getpid()) + "...";
 
-	L_INFO(this, msg.c_str());
+	L_NOTICE(this, msg.c_str());
 
 	L_INFO(this, "Starting %d server worker thread%s and %d replicator%s.", o.num_servers, (o.num_servers == 1) ? "" : "s", o.num_replicators, (o.num_replicators == 1) ? "" : "s");
 
