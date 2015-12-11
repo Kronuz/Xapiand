@@ -52,7 +52,7 @@ Database::Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endp
 	  endpoints(endpoints_),
 	  flags(flags_),
 	  hash(endpoints.hash()),
-	  access_time(time(NULL)),
+	  access_time(system_clock::now()),
 	  mastery_level(-1)
 {
 	reopen();
@@ -86,7 +86,7 @@ Database::read_mastery(const std::string &dir)
 void
 Database::reopen()
 {
-	access_time = time(NULL);
+	access_time = system_clock::now();
 
 	if (db) {
 		// Try to reopen
@@ -1824,7 +1824,7 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 		return false;
 	}
 
-	if ((now - database->access_time) >= DATABASE_UPDATE_TIME && !writable) {
+	if (!writable && duration_cast<seconds>(system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
 		database->reopen();
 		L_DATABASE(this, "== REOPEN DB %s(%s) [%lx]", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 	}

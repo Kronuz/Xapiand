@@ -41,6 +41,7 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <chrono>
 
 #define DB_WRITABLE 1    // Opens as writable
 #define DB_SPAWN 2       // Automatically creates the database if it doesn't exist
@@ -54,8 +55,10 @@
 
 #define SLOT_CREF 1	// Slot that saves the references counter
 
+
 constexpr size_t START_POS = SIZE_BITS_ID - 4;
 
+using namespace std::chrono;
 
 class DatabasePool;
 class DatabasesLRU;
@@ -69,7 +72,7 @@ public:
 	int flags;
 	bool local;
 	size_t hash;
-	time_t access_time;
+	system_clock::time_point access_time;
 	bool modified;
 	long long mastery_level;
 	std::string checkout_revision;
