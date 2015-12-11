@@ -30,10 +30,13 @@ using namespace queue;
 int test_pool() {
 	std::string results;
 	ThreadPool<> pool("W%zu", 4);
-	pool.enqueue(std::make_shared<TestTask>("1", 0.500, results));
-	pool.enqueue(std::make_shared<TestTask>("2", 0.010, results));
-	pool.enqueue(std::make_shared<TestTask>("3", 0.100, results));
-	pool.enqueue(std::make_shared<TestTask>("4", 0.001, results));
+	pool.enqueue(std::make_shared<TestTask>("1", 0.08, results));
+	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
+	pool.enqueue(std::make_shared<TestTask>("2", 0.02, results));
+	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
+	pool.enqueue(std::make_shared<TestTask>("3", 0.04, results));
+	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
+	pool.enqueue(std::make_shared<TestTask>("4", 0.01, results));
 	pool.end();
 	pool.join();
 
@@ -49,10 +52,13 @@ int test_pool() {
 int test_pool_limit() {
 	std::string results;
 	ThreadPool<> pool("W%zu", 3);
-	pool.enqueue(std::make_shared<TestTask>("1", 0.500, results));
-	pool.enqueue(std::make_shared<TestTask>("2", 0.010, results));
-	pool.enqueue(std::make_shared<TestTask>("3", 0.100, results));
-	pool.enqueue(std::make_shared<TestTask>("4", 0.001, results));
+	pool.enqueue(std::make_shared<TestTask>("1", 0.08, results));
+	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
+	pool.enqueue(std::make_shared<TestTask>("2", 0.02, results));
+	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
+	pool.enqueue(std::make_shared<TestTask>("3", 0.04, results));
+	std::this_thread::sleep_for(std::chrono::duration<double>(0.001));
+	pool.enqueue(std::make_shared<TestTask>("4", 0.01, results));
 	pool.end();
 	pool.join();
 	if (results != "<1<2<32><44>3>1>") {
