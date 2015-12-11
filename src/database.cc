@@ -1874,7 +1874,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	bool signal_checkins = false;
 	switch (queue->state) {
 		case DatabaseQueue::replica_state::REPLICA_SWITCH:
-			for (auto endpoint : endpoints) {
+			for (auto& endpoint : endpoints) {
 				_switch_db(endpoint);
 			}
 			if (queue->state == DatabaseQueue::replica_state::REPLICA_FREE) {
@@ -1898,7 +1898,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	lk.unlock();
 
 	if (signal_checkins) {
-		while (queue->checkin_callbacks.call()) {}
+		while (queue->checkin_callbacks.call());
 	}
 }
 
