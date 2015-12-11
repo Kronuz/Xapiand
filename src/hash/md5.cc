@@ -227,7 +227,7 @@ void MD5::add(const void* data, size_t numBytes)
 		while (numBytes > 0 && m_bufferSize < BlockSize)
 		{
 			m_buffer[m_bufferSize++] = *current++;
-			numBytes--;
+			--numBytes;
 		}
 	}
 
@@ -256,7 +256,7 @@ void MD5::add(const void* data, size_t numBytes)
 	while (numBytes > 0)
 	{
 		m_buffer[m_bufferSize++] = *current++;
-		numBytes--;
+		--numBytes;
 	}
 }
 
@@ -274,7 +274,7 @@ void MD5::processBuffer()
 	size_t paddedLength = m_bufferSize * 8;
 
 	// plus one bit set to 1 (always appended)
-	paddedLength++;
+	++paddedLength;
 
 	// number of bits must be (numBits % 512) = 448
 	size_t lower11Bits = paddedLength & 511;
@@ -295,9 +295,9 @@ void MD5::processBuffer()
 		extra[0] = 128;
 
 	size_t i;
-	for (i = m_bufferSize + 1; i < BlockSize; i++)
+	for (i = m_bufferSize + 1; i < BlockSize; ++i)
 		m_buffer[i] = 0;
-	for (; i < paddedLength; i++)
+	for (; i < paddedLength; ++i)
 		extra[i - BlockSize] = 0;
 
 	// add message length in bits as 64 bit number
@@ -337,7 +337,7 @@ std::string MD5::getHash()
 	// convert to hex string
 	std::string result;
 	result.reserve(2 * HashBytes);
-	for (int i = 0; i < HashBytes; i++)
+	for (int i = 0; i < HashBytes; ++i)
 	{
 		static const char dec2hex[16+1] = "0123456789abcdef";
 		result += dec2hex[(rawHash[i] >> 4) & 15];
@@ -353,14 +353,14 @@ void MD5::getHash(unsigned char buffer[MD5::HashBytes])
 {
 	// save old hash if buffer is partially filled
 	uint32_t oldHash[HashValues];
-	for (int i = 0; i < HashValues; i++)
+	for (int i = 0; i < HashValues; ++i)
 		oldHash[i] = m_hash[i];
 
 	// process remaining bytes
 	processBuffer();
 
 	unsigned char* current = buffer;
-	for (int i = 0; i < HashValues; i++)
+	for (int i = 0; i < HashValues; ++i)
 	{
 		*current++ =  m_hash[i]        & 0xFF;
 		*current++ = (m_hash[i] >>  8) & 0xFF;

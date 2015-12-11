@@ -104,7 +104,7 @@ void SHA256::processBlock(const void* data)
 	// convert to big endian
 	uint32_t words[64];
 	int i;
-	for (i = 0; i < 16; i++)
+	for (i = 0; i < 16; ++i)
 #if defined(__BYTE_ORDER) && (__BYTE_ORDER != 0) && (__BYTE_ORDER == __BIG_ENDIAN)
 		words[i] =      input[i];
 #else
@@ -134,7 +134,7 @@ void SHA256::processBlock(const void* data)
 	x = a + f1(f,g,h) + 0xc19bf174 + words[15]; y = f2(b,c,d); e += x; a = x + y;
 
 	// extend to 24 words
-	for (; i < 24; i++)
+	for (; i < 24; ++i)
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
@@ -151,7 +151,7 @@ void SHA256::processBlock(const void* data)
 	x = a + f1(f,g,h) + 0x76f988da + words[23]; y = f2(b,c,d); e += x; a = x + y;
 
 	// extend to 32 words
-	for (; i < 32; i++)
+	for (; i < 32; ++i)
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
@@ -168,7 +168,7 @@ void SHA256::processBlock(const void* data)
 	x = a + f1(f,g,h) + 0x14292967 + words[31]; y = f2(b,c,d); e += x; a = x + y;
 
 	// extend to 40 words
-	for (; i < 40; i++)
+	for (; i < 40; ++i)
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
@@ -185,7 +185,7 @@ void SHA256::processBlock(const void* data)
 	x = a + f1(f,g,h) + 0x92722c85 + words[39]; y = f2(b,c,d); e += x; a = x + y;
 
 	// extend to 48 words
-	for (; i < 48; i++)
+	for (; i < 48; ++i)
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
@@ -202,7 +202,7 @@ void SHA256::processBlock(const void* data)
 	x = a + f1(f,g,h) + 0x106aa070 + words[47]; y = f2(b,c,d); e += x; a = x + y;
 
 	// extend to 56 words
-	for (; i < 56; i++)
+	for (; i < 56; ++i)
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
@@ -219,7 +219,7 @@ void SHA256::processBlock(const void* data)
 	x = a + f1(f,g,h) + 0x682e6ff3 + words[55]; y = f2(b,c,d); e += x; a = x + y;
 
 	// extend to 64 words
-	for (; i < 64; i++)
+	for (; i < 64; ++i)
 		words[i] = words[i-16] +
 				(rotate(words[i-15],  7) ^ rotate(words[i-15], 18) ^ (words[i-15] >>  3)) +
 				words[i-7] +
@@ -257,7 +257,7 @@ void SHA256::add(const void* data, size_t numBytes)
 		while (numBytes > 0 && m_bufferSize < BlockSize)
 		{
 			m_buffer[m_bufferSize++] = *current++;
-			numBytes--;
+			--numBytes;
 		}
 	}
 
@@ -286,7 +286,7 @@ void SHA256::add(const void* data, size_t numBytes)
 	while (numBytes > 0)
 	{
 		m_buffer[m_bufferSize++] = *current++;
-		numBytes--;
+		--numBytes;
 	}
 }
 
@@ -304,7 +304,7 @@ void SHA256::processBuffer()
 	size_t paddedLength = m_bufferSize * 8;
 
 	// plus one bit set to 1 (always appended)
-	paddedLength++;
+	++paddedLength;
 
 	// number of bits must be (numBits % 512) = 448
 	size_t lower11Bits = paddedLength & 511;
@@ -325,9 +325,9 @@ void SHA256::processBuffer()
 		extra[0] = 128;
 
 	size_t i;
-	for (i = m_bufferSize + 1; i < BlockSize; i++)
+	for (i = m_bufferSize + 1; i < BlockSize; ++i)
 		m_buffer[i] = 0;
-	for (; i < paddedLength; i++)
+	for (; i < paddedLength; ++i)
 		extra[i - BlockSize] = 0;
 
 	// add message length in bits as 64 bit number
@@ -367,7 +367,7 @@ std::string SHA256::getHash()
 	// convert to hex string
 	std::string result;
 	result.reserve(2 * HashBytes);
-	for (int i = 0; i < HashBytes; i++)
+	for (int i = 0; i < HashBytes; ++i)
 	{
 		static const char dec2hex[16+1] = "0123456789abcdef";
 		result += dec2hex[(rawHash[i] >> 4) & 15];
@@ -383,14 +383,14 @@ void SHA256::getHash(unsigned char buffer[SHA256::HashBytes])
 {
 	// save old hash if buffer is partially filled
 	uint32_t oldHash[HashValues];
-	for (int i = 0; i < HashValues; i++)
+	for (int i = 0; i < HashValues; ++i)
 		oldHash[i] = m_hash[i];
 
 	// process remaining bytes
 	processBuffer();
 
 	unsigned char* current = buffer;
-	for (int i = 0; i < HashValues; i++)
+	for (int i = 0; i < HashValues; ++i)
 	{
 		*current++ = (m_hash[i] >> 24) & 0xFF;
 		*current++ = (m_hash[i] >> 16) & 0xFF;
