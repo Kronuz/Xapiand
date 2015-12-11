@@ -50,6 +50,7 @@ DatabaseAutocommit::~DatabaseAutocommit()
 	L_OBJ(this , "DELETED DATABASE AUTOCOMMIT! [%llx]", this);
 }
 
+
 void
 DatabaseAutocommit::shutdown()
 {
