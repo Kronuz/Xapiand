@@ -36,8 +36,6 @@
 
 #define DATABASE_UPDATE_TIME 10
 
-#define getPos(pos, size) ((pos) < (size) ? (pos) : (size))
-
 #define DEFAULT_OFFSET "0" /* Replace for the real offset */
 
 
