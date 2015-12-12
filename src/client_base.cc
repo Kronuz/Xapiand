@@ -52,8 +52,7 @@ enum class MODE {
 };
 
 
-class ClientReader : public CompressorBufferReader
-{
+class ClientReader : public CompressorBufferReader {
 protected:
 	int fd;
 	size_t file_size;
@@ -145,7 +144,7 @@ public:
 		NoCompressor(
 			std::make_unique<ClientDecompressorReader>(client_, fd_, file_size_, NO_COMPRESSOR),
 			std::make_unique<ClientCompressorReader>(client_, fd_, file_size_, NO_COMPRESSOR)
-		) {}
+		) { }
 };
 
 
@@ -155,7 +154,7 @@ public:
 		LZ4Compressor(
 			std::make_unique<ClientDecompressorReader>(client_, fd_, file_size_, LZ4_COMPRESSOR),
 			std::make_unique<ClientCompressorReader>(client_, fd_, file_size_, LZ4_COMPRESSOR)
-		) {}
+		) { }
 };
 
 
@@ -386,6 +385,7 @@ BaseClient::_write(int fd, bool async)
 	return true;
 }
 
+
 bool
 BaseClient::write(const char *buf, size_t buf_size)
 {
@@ -446,7 +446,7 @@ BaseClient::io_cb_read(int fd)
 						destroy();
 						return;
 				}
-				received--;
+				--received;
 				length_buffer.clear();
 				mode = MODE::READ_FILE;
 			}

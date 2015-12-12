@@ -139,7 +139,8 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 }
 
 
-bool BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename)
+bool
+BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename)
 {
 	L_DEBUG(this, "init_storing: %s  -->  %s", filename.c_str(), endpoints_.as_string().c_str());
 	state = State::STORINGPROTOCOL_SENDER;
@@ -458,8 +459,7 @@ BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool, int)
 {
 	std::lock_guard<std::mutex> lk(qmtx);
 	endpoints.clear();
-	std::vector<std::string>::const_iterator i(dbpaths_.begin());
-	for ( ; i != dbpaths_.end(); i++) {
+	for (auto i = dbpaths_.begin(); i != dbpaths_.end(); ++i) {
 		endpoints.insert(Endpoint(*i));
 	}
 	dbpaths = dbpaths_;
@@ -471,7 +471,7 @@ BinaryClient::run()
 {
 	L_OBJ_BEGIN(this, "BinaryClient::run:BEGIN");
 	if (running++) {
-		running--;
+		--running;
 		L_OBJ_END(this, "BinaryClient::run:END");
 		return;
 	}
@@ -527,7 +527,7 @@ BinaryClient::run()
 		}
 	}
 
-	running--;
+	--running;
 	L_OBJ_END(this, "BinaryClient::run:END");
 }
 
@@ -840,7 +840,8 @@ BinaryClient::receive_repl()
 }
 
 
-void BinaryClient::storing_apply(StoringType type, const std::string & message)
+void
+BinaryClient::storing_apply(StoringType type, const std::string & message)
 {
 	switch (type) {
 		case StoringType::REPLY_READY:
@@ -868,7 +869,9 @@ void BinaryClient::storing_apply(StoringType type, const std::string & message)
 	}
 }
 
-void BinaryClient::storing_send(const std::string &)
+
+void
+BinaryClient::storing_send(const std::string &)
 {
 	L_DEBUG(this, "BinaryClient::storing_send (init)");
 
@@ -887,7 +890,8 @@ void BinaryClient::storing_send(const std::string &)
 }
 
 
-void BinaryClient::storing_done(const std::string & message)
+void
+BinaryClient::storing_done(const std::string & message)
 {
 	L_DEBUG(this, "BinaryClient::storing_done");
 
@@ -898,7 +902,8 @@ void BinaryClient::storing_done(const std::string & message)
 }
 
 
-void BinaryClient::storing_open(const std::string & message)
+void
+BinaryClient::storing_open(const std::string & message)
 {
 	L_DEBUG(this, "BinaryClient::storing_open");
 
@@ -922,7 +927,8 @@ void BinaryClient::storing_open(const std::string & message)
 }
 
 
-void BinaryClient::storing_read(const std::string &)
+void
+BinaryClient::storing_read(const std::string &)
 {
 	L_DEBUG(this, "BinaryClient::storing_read");
 
@@ -937,7 +943,8 @@ void BinaryClient::storing_read(const std::string &)
 }
 
 
-void BinaryClient::storing_create(const std::string & message)
+void
+BinaryClient::storing_create(const std::string & message)
 {
 	L_DEBUG(this, "BinaryClient::storing_create");
 

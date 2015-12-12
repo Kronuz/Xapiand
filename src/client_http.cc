@@ -84,8 +84,7 @@ const char* status_code[6][14] = {
 };
 
 
-std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string body=std::string(""), std::string ct_type=std::string("application/json; charset=UTF-8"))
-{
+std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string body=std::string(""), std::string ct_type=std::string("application/json; charset=UTF-8")) {
 	char buffer[20];
 	std::string response;
 	std::string eol("\r\n");
@@ -184,7 +183,8 @@ HttpClient::~HttpClient()
 }
 
 
-void HttpClient::on_read(const char *buf, size_t received)
+void
+HttpClient::on_read(const char *buf, size_t received)
 {
 	L_CONN_WIRE(this, "HttpClient::on_read: %zu bytes", received);
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
@@ -204,16 +204,19 @@ void HttpClient::on_read(const char *buf, size_t received)
 }
 
 
-void HttpClient::on_read_file(const char *, size_t received)
+void
+HttpClient::on_read_file(const char *, size_t received)
 {
 	L_ERR(this, "Not Implemented: HttpClient::on_read_file: %zu bytes", received);
 }
 
 
-void HttpClient::on_read_file_done()
+void
+HttpClient::on_read_file_done()
 {
 	L_ERR(this, "Not Implemented: HttpClient::on_read_file_done");
 }
+
 
 // HTTP parser callbacks.
 const http_parser_settings HttpClient::settings = {
@@ -228,7 +231,9 @@ const http_parser_settings HttpClient::settings = {
 };
 
 
-int HttpClient::on_info(http_parser* p) {
+int
+HttpClient::on_info(http_parser* p)
+{
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
 	L_HTTP_PROTO_PARSER(self, "%3d. (INFO)", p->state);
@@ -259,7 +264,9 @@ int HttpClient::on_info(http_parser* p) {
 }
 
 
-int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
+int
+HttpClient::on_data(http_parser* p, const char *at, size_t length)
+{
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
 	L_HTTP_PROTO_PARSER(self, "%3d. %s", p->state, repr(at, length).c_str());
@@ -316,7 +323,7 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 					size_match += next->length(0);
 					next->length(2) != 0 ? self->accept_set.insert(std::make_pair(std::stod(std::string(next->str(2), 2)), next->str(1)))
 										 : self->accept_set.insert(std::make_pair(1, next->str(1)));
-					next++;
+					++next;
 				}
 
 				if (size_match != value.size()) {
@@ -328,10 +335,7 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 			self->header_name.clear();
 			self->header_value.clear();
 		}
-	} else
-
-	// s_body_identity  ->  s_message_done
-	if (state >= 60 && state <= 62) {
+	} else if (state >= 60 && state <= 62) { // s_body_identity  ->  s_message_done
 		self->body_size += length;
 		if (self->body_size > MAX_BODY_SIZE || p->content_length > MAX_BODY_SIZE) {
 			self->write(http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
@@ -371,7 +375,8 @@ int HttpClient::on_data(http_parser* p, const char *at, size_t length) {
 }
 
 
-void HttpClient::run()
+void
+HttpClient::run()
 {
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 
@@ -455,13 +460,15 @@ void HttpClient::run()
 }
 
 
-void HttpClient::_options()
+void
+HttpClient::_options()
 {
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS, parser.http_major, parser.http_minor));
 }
 
 
-void HttpClient::_head()
+void
+HttpClient::_head()
 {
 	query_field e;
 	int cmd = _endpointgen(e, false);
@@ -477,7 +484,8 @@ void HttpClient::_head()
 }
 
 
-void HttpClient::_get()
+void
+HttpClient::_get()
 {
 	query_field e;
 	int cmd = _endpointgen(e, false);
@@ -507,7 +515,8 @@ void HttpClient::_get()
 }
 
 
-void HttpClient::_put()
+void
+HttpClient::_put()
 {
 	query_field e;
 	int cmd = _endpointgen(e, true);
@@ -523,7 +532,8 @@ void HttpClient::_put()
 }
 
 
-void HttpClient::_post()
+void
+HttpClient::_post()
 {
 	query_field e;
 	int cmd = _endpointgen(e, false);
@@ -556,7 +566,8 @@ void HttpClient::_post()
 }
 
 
-void HttpClient::_patch()
+void
+HttpClient::_patch()
 {
 	query_field e;
 	int cmd = _endpointgen(e, true);
@@ -572,7 +583,8 @@ void HttpClient::_patch()
 }
 
 
-void HttpClient::_delete()
+void
+HttpClient::_delete()
 {
 	query_field e;
 	int cmd = _endpointgen(e, true);
@@ -588,7 +600,8 @@ void HttpClient::_delete()
 }
 
 
-void HttpClient::document_info_view(const query_field &e)
+void
+HttpClient::document_info_view(const query_field &e)
 {
 	bool found = true;
 	std::string result;
@@ -655,7 +668,8 @@ void HttpClient::document_info_view(const query_field &e)
 }
 
 
-void HttpClient::delete_document_view(const query_field &e)
+void
+HttpClient::delete_document_view(const query_field &e)
 {
 	std::string result;
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE|DB_SPAWN)) {
@@ -674,8 +688,8 @@ void HttpClient::delete_document_view(const query_field &e)
 	L_DEBUG(this, "Time take for delete %d ms", time);
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
-	stats_cnt.del.min[b_time.minute]++;
-	stats_cnt.del.sec[b_time.second]++;
+	++stats_cnt.del.min[b_time.minute];
+	++stats_cnt.del.sec[b_time.second];
 	stats_cnt.del.tm_min[b_time.minute] += time;
 	stats_cnt.del.tm_sec[b_time.second] += time;
 	lk.unlock();
@@ -703,7 +717,8 @@ void HttpClient::delete_document_view(const query_field &e)
 }
 
 
-void HttpClient::index_document_view(const query_field &e)
+void
+HttpClient::index_document_view(const query_field &e)
 {
 	std::string result;
 
@@ -735,8 +750,8 @@ void HttpClient::index_document_view(const query_field &e)
 	L_DEBUG(this, "Time take for index %d ms", time);
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
-	stats_cnt.index.min[b_time.minute]++;
-	stats_cnt.index.sec[b_time.second]++;
+	++stats_cnt.index.min[b_time.minute];
+	++stats_cnt.index.sec[b_time.second];
 	stats_cnt.index.tm_min[b_time.minute] += time;
 	stats_cnt.index.tm_sec[b_time.second] += time;
 	lk.unlock();
@@ -764,11 +779,12 @@ void HttpClient::index_document_view(const query_field &e)
 }
 
 
-void HttpClient::update_document_view(const query_field &e)
+void
+HttpClient::update_document_view(const query_field &e)
 {
 	std::string result;
 
-	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE|DB_SPAWN)) {
+	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -810,7 +826,8 @@ void HttpClient::update_document_view(const query_field &e)
 }
 
 
-void HttpClient::stats_view(const query_field &e)
+void
+HttpClient::stats_view(const query_field &e)
 {
 	std::string result;
 	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
@@ -854,7 +871,8 @@ void HttpClient::stats_view(const query_field &e)
 }
 
 
-void HttpClient::bad_request_view(const query_field &e, int cmd)
+void
+HttpClient::bad_request_view(const query_field &e, int cmd)
 {
 	std::string result;
 
@@ -882,7 +900,8 @@ void HttpClient::bad_request_view(const query_field &e, int cmd)
 }
 
 
-void HttpClient::upload_view(const query_field &)
+void
+HttpClient::upload_view(const query_field &)
 {
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
@@ -896,7 +915,8 @@ void HttpClient::upload_view(const query_field &)
 }
 
 
-void HttpClient::search_view(const query_field &e, bool facets, bool schema)
+void
+HttpClient::search_view(const query_field &e, bool facets, bool schema)
 {
 	std::string result;
 
@@ -956,15 +976,13 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 
 
 	L_DEBUG(this, "Suggered querys");
-	std::vector<std::string>::const_iterator it_s(suggestions.begin());
-	for ( ; it_s != suggestions.end(); it_s++) {
+	for (auto it_s = suggestions.begin(); it_s != suggestions.end(); ++it_s) {
 		L_DEBUG(this, "\t%s", (*it_s).c_str());
 	}
 
 	if (facets) {
-		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
 		unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
-		for (; spy != spies.end(); spy++) {
+		for (auto spy = spies.begin(); spy != spies.end(); ++spy) {
 			std::string name_result = (*spy).first;
 			cJSON *array_values = cJSON_CreateArray(); // It is managed by root.
 			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
@@ -989,7 +1007,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	} else {
 		int rc = 0;
 		if (!mset.empty()) {
-			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); rc++, m++) {
+			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); ++rc, ++m) {
 				Xapian::docid docid = 0;
 				std::string id;
 				int rank = 0;
@@ -1041,8 +1059,7 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 				size_t length = decode_length(&p, p_end, true);
 				std::string ct_type = document.get_value(2);
 				bool type_found = false;
-				auto it = accept_set.begin();
-				for ( ; it != accept_set.end(); it++){
+				for (auto it = accept_set.begin(); it != accept_set.end(); ++it) {
 					if (it->second == ct_type || it->second == "*/*") {
 						if (it->second == "application/json" || ct_type == "application/json") {
 							data = std::string(p, length);
@@ -1152,8 +1169,8 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	L_DEBUG(this, "Time take for search %d ms", time);
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
-	stats_cnt.search.min[b_time.minute]++;
-	stats_cnt.search.sec[b_time.second]++;
+	++stats_cnt.search.min[b_time.minute];
+	++stats_cnt.search.sec[b_time.second];
 	stats_cnt.search.tm_min[b_time.minute] += time;
 	stats_cnt.search.tm_sec[b_time.second] += time;
 	lk.unlock();
@@ -1163,7 +1180,8 @@ void HttpClient::search_view(const query_field &e, bool facets, bool schema)
 }
 
 
-int HttpClient::_endpointgen(query_field &e, bool writable)
+int
+HttpClient::_endpointgen(query_field &e, bool writable)
 {
 	int cmd, retval;
 	bool has_node_name = false;
@@ -1257,8 +1275,7 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path, NULL, -1, node_name);
 					endpoints.insert(endpoint);
 				} else {
-					std::vector<Endpoint>::iterator it_endp = asked_nodes.begin();
-					for ( ; it_endp != asked_nodes.end(); it_endp++) {
+					for (auto it_endp = asked_nodes.begin(); it_endp != asked_nodes.end(); ++it_endp) {
 						endpoints.insert(*it_endp);
 					}
 				}
@@ -1268,7 +1285,7 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 				retval = url_path(path_buf.c_str(), path_size, &p);
 			}
 		}
-		if ((parser.method == 4 || parser.method ==24) && endpoints.size() > 1) {
+		if ((parser.method == 4 || parser.method == 24) && endpoints.size() > 1) {
 			return CMD_BAD_ENDPS;
 		}
 
@@ -1280,7 +1297,7 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 
 			parser_query_t q;
 
-			q.offset = NULL;
+			q.offset = nullptr;
 			if (url_qs("pretty", query_str, query_size, &q) != -1) {
 				std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
 				(pretty.compare("f") == 0) ? e.pretty = false : e.pretty = true;
@@ -1290,144 +1307,144 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 				case CMD_SEARCH:
 				case CMD_FACETS:
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("offset", query_str, query_size, &q) != -1) {
-						e.offset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+						e.offset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
-						e.check_at_least = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+						e.check_at_least = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("limit", query_str, query_size, &q) != -1) {
-						e.limit = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+						e.limit = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("collapse_max", query_str, query_size, &q) != -1) {
-						e.collapse_max = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+						e.collapse_max = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("spelling", query_str, query_size, &q) != -1) {
 						std::string spelling = Serialise::boolean(urldecode(q.offset, q.length));
 						(spelling.compare("f") == 0) ? e.spelling = false : e.spelling = true;
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("synonyms", query_str, query_size, &q) != -1) {
 						std::string synonyms = Serialise::boolean(urldecode(q.offset, q.length));
 						(synonyms.compare("f") == 0) ? e.synonyms = false : e.synonyms = true;
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					L_DEBUG(this, "Buffer: %s", query_str);
 					while (url_qs("query", query_str, query_size, &q) != -1) {
 						L_DEBUG(this, "%s", urldecode(q.offset, q.length).c_str());
 						e.query.push_back(urldecode(q.offset, q.length));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					while (url_qs("q", query_str, query_size, &q) != -1) {
 						L_DEBUG(this, "%s", urldecode(q.offset, q.length).c_str());
 						e.query.push_back(urldecode(q.offset, q.length));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					while (url_qs("partial", query_str, query_size, &q) != -1) {
 						e.partial.push_back(urldecode(q.offset, q.length));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					while (url_qs("terms", query_str, query_size, &q) != -1) {
 						e.terms.push_back(urldecode(q.offset, q.length));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					while (url_qs("sort", query_str, query_size, &q) != -1) {
 						e.sort.push_back(urldecode(q.offset, q.length));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					while (url_qs("facets", query_str, query_size, &q) != -1) {
 						e.facets.push_back(urldecode(q.offset, q.length));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					while (url_qs("language", query_str, query_size, &q) != -1) {
 						e.language.push_back(urldecode(q.offset, q.length));
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("collapse", query_str, query_size, &q) != -1) {
 						e.collapse = urldecode(q.offset, q.length);
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("fuzzy", query_str, query_size, &q) != -1) {
 						std::string fuzzy = Serialise::boolean(urldecode(q.offset, q.length));
 						(fuzzy.compare("f") == 0) ? e.is_fuzzy = false : e.is_fuzzy = true;
 					}
 
 					if(e.is_fuzzy) {
-						q.offset = NULL;
+						q.offset = nullptr;
 						if (url_qs("fuzzy.n_rset", query_str, query_size, &q) != -1){
-							e.fuzzy.n_rset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+							e.fuzzy.n_rset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						if (url_qs("fuzzy.n_eset", query_str, query_size, &q) != -1){
-							e.fuzzy.n_eset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+							e.fuzzy.n_eset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						if (url_qs("fuzzy.n_term", query_str, query_size, &q) != -1){
-							e.fuzzy.n_term = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+							e.fuzzy.n_term = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						while (url_qs("fuzzy.field", query_str, query_size, &q) != -1){
 							e.fuzzy.field.push_back(urldecode(q.offset, q.length));
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						while (url_qs("fuzzy.type", query_str, query_size, &q) != -1){
 							e.fuzzy.type.push_back(urldecode(q.offset, q.length));
 						}
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("nearest", query_str, query_size, &q) != -1) {
 						std::string nearest = Serialise::boolean(urldecode(q.offset, q.length));
 						(nearest.compare("f") == 0) ? e.is_nearest = false : e.is_nearest = true;
 					}
 
 					if(e.is_nearest) {
-						q.offset = NULL;
+						q.offset = nullptr;
 						if (url_qs("nearest.n_rset", query_str, query_size, &q) != -1){
-							e.nearest.n_rset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+							e.nearest.n_rset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 						} else {
 							e.nearest.n_rset = 5;
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						if (url_qs("nearest.n_eset", query_str, query_size, &q) != -1){
-							e.nearest.n_eset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+							e.nearest.n_eset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						if (url_qs("nearest.n_term", query_str, query_size, &q) != -1){
-							e.nearest.n_term = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+							e.nearest.n_term = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						while (url_qs("nearest.field", query_str, query_size, &q) != -1){
 							e.nearest.field.push_back(urldecode(q.offset, q.length));
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						while (url_qs("nearest.type", query_str, query_size, &q) != -1){
 							e.nearest.type.push_back(urldecode(q.offset, q.length));
 						}
@@ -1435,29 +1452,29 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 					break;
 
 				case CMD_ID:
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("commit", query_str, query_size, &q) != -1) {
 						std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
 						(pretty.compare("f") == 0) ? e.commit = false : e.commit = true;
 					}
 
 					if (isRange(command)) {
-						q.offset = NULL;
+						q.offset = nullptr;
 						if (url_qs("offset", query_str, query_size, &q) != -1) {
-							e.offset = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+							e.offset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
-							e.check_at_least = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+							e.check_at_least = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						if (url_qs("limit", query_str, query_size, &q) != -1) {
-							e.limit = static_cast<unsigned int>(strtoul(urldecode(q.offset, q.length)));
+							e.limit = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
-						q.offset = NULL;
+						q.offset = nullptr;
 						if (url_qs("sort", query_str, query_size, &q) != -1) {
 							e.sort.push_back(urldecode(q.offset, q.length));
 						} else {
@@ -1472,24 +1489,24 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 					break;
 
 				case CMD_STATS:
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("server", query_str, query_size, &q) != -1) {
 						std::string server = Serialise::boolean(urldecode(q.offset, q.length));
 						(server.compare("f") == 0) ? e.server = false : e.server = true;
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("database", query_str, query_size, &q) != -1) {
 						std::string _database = Serialise::boolean(urldecode(q.offset, q.length));
 						(_database.compare("f") == 0) ? e.database = false : e.database = true;
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("document", query_str, query_size, &q) != -1) {
 						e.document = urldecode(q.offset, q.length);
 					}
 
-					q.offset = NULL;
+					q.offset = nullptr;
 					if (url_qs("stats", query_str, query_size, &q) != -1) {
 						e.stats = urldecode(q.offset, q.length);
 					}
@@ -1520,6 +1537,7 @@ int HttpClient::_endpointgen(query_field &e, bool writable)
 		/* Bad query */
 		return CMD_BAD_QUERY;
 	}
+
 	return cmd;
 }
 
