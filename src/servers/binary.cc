@@ -98,13 +98,13 @@ void
 Binary::async_signal_send()
 {
 	std::lock_guard<std::mutex> lk(bsmtx);
-	for (auto it = servers.begin(); it != servers.end();) {
+	for (auto it = servers.begin(); it != servers.end(); ) {
 		auto server = (*it).lock();
 		if (server) {
 			server->async_signal.send();
-			it++;
+			++it;
 		} else {
-			servers.erase(it++);
+			it = servers.erase(it);
 		}
 	}
 }
