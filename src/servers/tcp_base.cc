@@ -93,7 +93,7 @@ BaseTCP::bind(int tries)
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	for (int i = 0; i < tries; i++, port++) {
+	for (int i = 0; i < tries; ++i, ++port) {
 		addr.sin_port = htons(port);
 
 		if (::bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {

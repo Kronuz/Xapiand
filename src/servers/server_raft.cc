@@ -176,7 +176,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 						}
 
 						if (vote == "1") {
-							raft->votes++;
+							++raft->votes;
 							L_RAFT(this, "Number of servers: %d;  Votos received: %d", raft->number_servers.load(), raft->votes);
 							if (raft->votes > raft->number_servers / 2) {
 								L_RAFT(this, "It becomes the leader for region: %d", local_node.region.load());

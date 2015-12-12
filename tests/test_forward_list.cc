@@ -445,7 +445,7 @@ int test_single_producer_consumer() {
 
 
 void task_producer(ForwardList<int>& mylist, std::atomic_size_t& elements) {
-	for (int i = 0; i < 1000; i++) {
+	for (int i = 0; i < 1000; ++i) {
 		mylist.insert_after(mylist.before_begin(), i);
 		++elements;
 		mylist.push_front(i);

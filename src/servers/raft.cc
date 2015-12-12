@@ -85,7 +85,7 @@ Raft::leader_election_cb(ev::timer &, int)
 
 		if (remaining_time < 0. && state != State::LEADER) {
 			state = State::CANDIDATE;
-			term++;
+			++term;
 			votes = 0;
 			votedFor.clear();
 			send_message(Message::REQUEST_VOTE, local_node.serialise() + serialise_string(std::to_string(term)));
