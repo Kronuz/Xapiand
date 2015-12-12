@@ -20,18 +20,18 @@
  * IN THE SOFTWARE.
  */
 
-#include <string.h>
-
 #include "cartesian.h"
+
+#include <string.h>
 
 
 // Constructor receives latitude, longitude and their units on specific CRS
 // which are converted to cartesian coordinates, and then they are converted to CRS WGS84.
 Cartesian::Cartesian(double lat, double lon, double height, LatLongUnits units, int _SRID)
 {
-	std::map<int, int>::const_iterator it;
-	if ((it = SRIDS_DATUMS.find(_SRID)) == SRIDS_DATUMS.end()) {
-		throw MSG_Error(std::string("SRID = " + std::to_string(_SRID) + " is not supported").c_str());
+	auto it = SRIDS_DATUMS.find(_SRID);
+	if (it == SRIDS_DATUMS.end()) {
+		throw MSG_Error("SRID = %d is not supported", _SRID);
 	}
 
 	datum = it->second;
@@ -76,10 +76,10 @@ Cartesian::Cartesian() {
 
 // Return if the SRID is supported for cartesian.
 bool
-Cartesian::is_SRID_supported(int _SRID)
+Cartesian::is_SRID_supported(int _SRID) const noexcept
 {
-	std::map<int, int>::const_iterator it;
-	if ((it = SRIDS_DATUMS.find(_SRID)) == SRIDS_DATUMS.end()) {
+	auto it = SRIDS_DATUMS.find(_SRID);
+	if (it == SRIDS_DATUMS.end()) {
 		return false;
 	}
 	return true;
@@ -88,7 +88,7 @@ Cartesian::is_SRID_supported(int _SRID)
 
 // Applies 7 - Helmert transformation to this point using the datum parameters.
 void
-Cartesian::transform2WGS84()
+Cartesian::transform2WGS84() noexcept
 {
 	datum_t t = datums[datum];
 	double s_1 = t.s + 1;
@@ -124,7 +124,7 @@ Cartesian::toCartesian(double lat, double lon, double height, LatLongUnits units
 		throw MSG_Error("Latitude out-of-range");
 	}
 
-	ellipsoid_t ellipsoid = ellipsoids[datums[datum].ellipsoid];
+	auto ellipsoid = ellipsoids[datums[datum].ellipsoid];
 
 	double a = ellipsoid.major_axis;
 	double e2 = ellipsoid.e2;
@@ -144,7 +144,7 @@ Cartesian::toCartesian(double lat, double lon, double height, LatLongUnits units
 // of the inputs in order to return the appropriate quadrant of the computed angle,
 // which is not possible for the single-argument arctangent function.
 double
-Cartesian::atan2(double y, double x)
+Cartesian::atan2(double y, double x) const
 {
 	if (x > 0) return atan(y / x);
 	if (y >= 0 && x < 0) return atan((y / x) + M_PI);
@@ -159,7 +159,7 @@ Cartesian::atan2(double y, double x)
 // Convert decimal format of lat and lon to Degrees Minutes Seconds
 // Return a string with "lat  lon  height".
 std::string
-Cartesian::Decimal2Degrees()
+Cartesian::Decimal2Degrees() const noexcept
 {
 	double lat, lon, height;
 	toGeodetic(lat, lon, height);
@@ -169,6 +169,7 @@ Cartesian::Decimal2Degrees()
 	int mlon = (int)((lon - dlon) * 60.0);
 	double slat = (lat - dlat - mlat / 60.0) * 3600.0;
 	double slon = (lon - dlon - mlon / 60.0) * 3600.0;
+
 	std::string direction;
 	if (lat >= 0) {
 		direction = "''N";
@@ -178,7 +179,8 @@ Cartesian::Decimal2Degrees()
 		mlat = - 1 * mlat;
 		slat = - 1 * slat;
 	}
-	std::string res =  std::to_string(dlat) + "°" + std::to_string(mlat) + "'" + std::to_string(slat) + direction;
+
+	std::string res = std::to_string(dlat) + "°" + std::to_string(mlat) + "'" + std::to_string(slat) + direction;
 	if (lon >= 0) {
 		direction = "''E";
 	} else {
@@ -188,6 +190,7 @@ Cartesian::Decimal2Degrees()
 		slon = - 1 * slon;
 	}
 	res += "  " + std::to_string(dlon) + "°" + std::to_string(mlon) + "'" + std::to_string(slon) + direction + "  " + std::to_string(height);
+
 	return res;
 }
 
@@ -195,7 +198,7 @@ Cartesian::Decimal2Degrees()
 // Converts (geocentric) cartesian (x, y, z) to (ellipsoidal geodetic) latitude / longitude coordinates.
 // Modified lat and lon in degrees, height in meters.
 void
-Cartesian::toGeodetic(double &lat, double &lon, double &height)
+Cartesian::toGeodetic(double &lat, double &lon, double &height) const noexcept
 {
 	lon = atan2(y, x);
 	double p = sqrt(x * x + y * y);
@@ -224,49 +227,49 @@ Cartesian::toGeodetic(double &lat, double &lon, double &height)
 
 
 double
-Cartesian::operator *(const Cartesian &p) const
+Cartesian::operator*(const Cartesian &p) const noexcept
 {
 	return (x * p.x + y * p.y + z * p.z);
 }
 
 
 Cartesian
-Cartesian::operator ^(const Cartesian &p) const
+Cartesian::operator^(const Cartesian &p) const noexcept
 {
 	return Cartesian(y * p.z - p.y * z, z * p.x - p.z * x, x * p.y - p.x * y);
 }
 
 
 Cartesian
-Cartesian::operator +(const Cartesian &p) const
+Cartesian::operator+(const Cartesian &p) const noexcept
 {
 	return Cartesian(x + p.x, y + p.y, z + p.z);
 }
 
 
 Cartesian
-Cartesian::operator -(const Cartesian &p) const
+Cartesian::operator-(const Cartesian &p) const noexcept
 {
 	return Cartesian(x - p.x, y - p.y, z - p.z);
 }
 
 
 bool
-Cartesian::operator ==(const Cartesian &p) const
+Cartesian::operator==(const Cartesian &p) const noexcept
 {
 	return (x == p.x && y == p.y && z == p.z && SRID == p.getSRID());
 }
 
 
 bool
-Cartesian::operator !=(const Cartesian &p) const
+Cartesian::operator!=(const Cartesian &p) const noexcept
 {
 	return (x != p.x || y != p.y || z != p.z || SRID != p.getSRID());
 }
 
 
 Cartesian&
-Cartesian::operator =(const Cartesian &p)
+Cartesian::operator=(const Cartesian &p) noexcept
 {
 	x = p.x;
 	y = p.y;
@@ -278,7 +281,7 @@ Cartesian::operator =(const Cartesian &p)
 
 
 void
-Cartesian::normalize()
+Cartesian::normalize() noexcept
 {
 	double sum = sqrt(x * x + y * y + z * z);
 	x /= sum;
@@ -288,35 +291,35 @@ Cartesian::normalize()
 
 
 Cartesian
-Cartesian::get_inverse() const
+Cartesian::get_inverse() const noexcept
 {
 	return Cartesian(-x, -y, -z);
 }
 
 
 double
-Cartesian::norm() const
+Cartesian::norm() const noexcept
 {
 	return sqrt(x * x + y * y + z * z);
 }
 
 
 std::string
-Cartesian::as_string() const
+Cartesian::as_string() const noexcept
 {
 	return "SRID = " + std::to_string(SRID) + "\n(" + std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(z) + ")";
 }
 
 
 int
-Cartesian::getSRID() const
+Cartesian::getSRID() const noexcept
 {
 	return SRID;
 }
 
 
 int
-Cartesian::getDatum() const
+Cartesian::getDatum() const noexcept
 {
 	return datum;
 }

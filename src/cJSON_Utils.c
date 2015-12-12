@@ -303,5 +303,3 @@ cJSON* cJSONUtils_GeneratePatches(cJSON *from,cJSON *to)
 	cJSONUtils_CompareToPatch(patches,"",from,to);
 	return patches;
 }
-
-

@@ -68,14 +68,14 @@
 #define GGRS87  4121
 
 // Double tolerance.
-const double DBL_TOLERANCE = 1e-15;
+constexpr double DBL_TOLERANCE = 1e-15;
 
 // Constant used for converting degrees to radians and back
-const double RAD_PER_DEG = 0.01745329251994329576923691;
-const double DEG_PER_RAD = 57.2957795130823208767981548;
+constexpr double RAD_PER_DEG = 0.01745329251994329576923691;
+constexpr double DEG_PER_RAD = 57.2957795130823208767981548;
 
 // Constant used to verify the range of latitude.
-const double PI_HALF = 1.57079632679489661923132169;
+constexpr double PI_HALF = 1.57079632679489661923132169;
 
 
 // The formulas used for the conversions were obtained from:
@@ -228,46 +228,46 @@ class Cartesian {
 		{ "GGRS87", RF, -199.87, 74.79, 246.62, 0.0, 0.0, 0.0, 0.0 }
 	};
 
-	public:
-		enum LatLongUnits {
-			RADIANS,
-			DEGREES
-		};
+public:
+	enum LatLongUnits {
+		RADIANS,
+		DEGREES
+	};
 
-		double x;
-		double y;
-		double z;
+	double x;
+	double y;
+	double z;
 
-		Cartesian(double lat, double lon, double height, LatLongUnits units, int SRID);
-		Cartesian(double lat, double lon, double height, LatLongUnits units);
-		Cartesian();
-		Cartesian(double x, double y, double z);
+	Cartesian(double lat, double lon, double height, LatLongUnits units, int SRID);
+	Cartesian(double lat, double lon, double height, LatLongUnits units);
+	Cartesian();
+	Cartesian(double x, double y, double z);
 
-		// Dot product
-		double operator*(const Cartesian &p) const;
-		// Vector product
-		Cartesian operator^(const Cartesian &p) const;
-		Cartesian operator+(const Cartesian &p) const;
-		Cartesian operator-(const Cartesian &p) const;
-		void toGeodetic(double &lat, double &lon, double &height);
-		bool operator==(const Cartesian &p) const;
-		bool operator!=(const Cartesian &p) const;
-		Cartesian& operator=(const Cartesian &p);
-		void normalize();
-		double norm() const;
-		Cartesian get_inverse() const;
-		std::string as_string() const;
-		int getSRID() const;
-		int getDatum() const;
-		// tan(y / x)
-		double atan2(double y, double x);
-		std::string Decimal2Degrees();
-		bool is_SRID_supported(int _SRID);
+	// Dot product
+	double operator*(const Cartesian &p) const noexcept;
+	// Vector product
+	Cartesian operator^(const Cartesian &p) const noexcept;
+	Cartesian operator+(const Cartesian &p) const noexcept;
+	Cartesian operator-(const Cartesian &p) const noexcept;
+	void toGeodetic(double &lat, double &lon, double &height) const noexcept;
+	bool operator==(const Cartesian &p) const noexcept;
+	bool operator!=(const Cartesian &p) const noexcept;
+	Cartesian& operator=(const Cartesian &p) noexcept;
+	void normalize() noexcept;
+	double norm() const noexcept;
+	Cartesian get_inverse() const noexcept;
+	std::string as_string() const noexcept;
+	int getSRID() const noexcept;
+	int getDatum() const noexcept;
+	// tan(y / x)
+	double atan2(double y, double x) const;
+	std::string Decimal2Degrees() const noexcept;
+	bool is_SRID_supported(int _SRID) const noexcept;
 
-	private:
-		int SRID;
-		int datum;
+private:
+	int SRID;
+	int datum;
 
-		void transform2WGS84();
-		void toCartesian(double lat, double lon, double height, LatLongUnits units);
+	void transform2WGS84() noexcept;
+	void toCartesian(double lat, double lon, double height, LatLongUnits units);
 };
