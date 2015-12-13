@@ -180,6 +180,13 @@ class LogThread {
 #define L_BEGIN _LOG_TIMED
 #define L_END _LOG_TIMED_CLEAR
 
+#define L_OBJ_BEGIN _LOG_TIMED_1000
+#define L_OBJ_END _LOG_TIMED_N_CLEAR
+#define L_DATABASE_BEGIN _LOG_TIMED_100
+#define L_DATABASE_END _LOG_TIMED_N_CLEAR
+#define L_EV_BEGIN _LOG_TIMED_500
+#define L_EV_END _LOG_TIMED_N_CLEAR
+
 #define L_DEBUG _LOG_DEBUG_ENABLED
 #define L_INFO _LOG_INFO_ENABLED
 #define L_NOTICE _LOG_NOTICE_ENABLED
@@ -189,28 +196,21 @@ class LogThread {
 #define L_ALERT _LOG_ALERT_ENABLED
 #define L_EMERG _LOG_EMERG_ENABLED
 
-#define L_CONN _LOG_LOG_ENABLED
-#define L_DISCOVERY _LOG_LOG_ENABLED
-#define L_RAFT _LOG_LOG_ENABLED
-#define L_CALL _LOG_LOG_ENABLED
-#define L_OBJ _LOG_LOG_ENABLED
-#define L_OBJ_BEGIN _LOG_TIMED_1000
-#define L_OBJ_END _LOG_TIMED_N_CLEAR
-#define L_DATABASE _
-#define L_DATABASE_BEGIN _LOG_TIMED_100
-#define L_DATABASE_END _LOG_TIMED_N_CLEAR
-#define L_HTTP _LOG_LOG_ENABLED
-#define L_BINARY _LOG_LOG_ENABLED
-#define L_HTTP_PROTO_PARSER _
+// Enable the following, when needed, using _LOG_LOG_ENABLED:
 
-#define L_EV _LOG_LOG_ENABLED
-#define L_EV_BEGIN _LOG_TIMED_500
-#define L_EV_END _LOG_TIMED_N_CLEAR
-#define L_CONN_WIRE _LOG_LOG_ENABLED
+#define L_CALL _
+#define L_CONN _
+#define L_RAFT _
+#define L_DISCOVERY _
+#define L_REPLICATION _
+#define L_OBJ _
+#define L_DATABASE _
+#define L_HTTP _
+#define L_BINARY _
+#define L_HTTP_PROTO_PARSER _
+#define L_EV _
+#define L_CONN_WIRE _
 #define L_UDP_WIRE _
 #define L_HTTP_PROTO _
 #define L_BINARY_PROTO _
-
-#define L_DATABASE_WRAP _LOG_LOG_ENABLED
-
-#define L_REPLICATION _LOG_LOG_ENABLED
+#define L_DATABASE_WRAP _
