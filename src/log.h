@@ -149,8 +149,8 @@ class LogThread {
 
 #define LOG_COL DARK_GREY
 #define DEBUG_COL NO_COL
-#define NOTICE_COL GREY
-#define INFO_COL BRIGHT_CYAN
+#define INFO_COL CYAN
+#define NOTICE_COL BRIGHT_CYAN
 #define WARNING_COL BRIGHT_YELLOW
 #define ERR_COL RED
 #define CRIT_COL BRIGHT_RED
@@ -164,8 +164,8 @@ class LogThread {
 
 #define _LOG_LOG_ENABLED(args...) Log::log(0ms, LOG_DEBUG, __FILE__, __LINE__, NO_COL, LOG_COL, args)
 #define _LOG_DEBUG_ENABLED(args...) Log::log(0ms, LOG_DEBUG, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
-#define _LOG_NOTICE_ENABLED(args...) Log::log(0ms, LOG_NOTICE, __FILE__, __LINE__, NO_COL, NOTICE_COL, args)
 #define _LOG_INFO_ENABLED(args...) Log::log(0ms, LOG_INFO, __FILE__, __LINE__, NO_COL, INFO_COL, args)
+#define _LOG_NOTICE_ENABLED(args...) Log::log(0ms, LOG_NOTICE, __FILE__, __LINE__, NO_COL, NOTICE_COL, args)
 #define _LOG_WARNING_ENABLED(args...) Log::log(0ms, LOG_WARNING, __FILE__, __LINE__, NO_COL, WARNING_COL, args)
 #define _LOG_ERR_ENABLED(args...) Log::log(0ms, LOG_ERR, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 #define _LOG_CRIT_ENABLED(args...) Log::log(0ms, LOG_CRIT, __FILE__, __LINE__, NO_COL, CRIT_COL, args)
@@ -182,8 +182,8 @@ class LogThread {
 #define L_END _LOG_TIMED_CLEAR
 
 #define L_DEBUG _LOG_DEBUG_ENABLED
-#define L_NOTICE _LOG_NOTICE_ENABLED
 #define L_INFO _LOG_INFO_ENABLED
+#define L_NOTICE _LOG_NOTICE_ENABLED
 #define L_WARNING _LOG_WARNING_ENABLED
 #define L_ERR _LOG_ERR_ENABLED
 #define L_CRIT _LOG_CRIT_ENABLED
