@@ -39,6 +39,10 @@
 using namespace std::literals;
 
 
+#define DEFAULT_LOG_LEVEL LOG_DEBUG  // The default log_level (higher than this are filtered out)
+#define LOCATION_LOG_LEVEL LOG_DEBUG  // The minumum log_level that prints file:line
+
+
 class Logger {
 public:
 	virtual void log(int priority, const std::string& str) = 0;
@@ -71,7 +75,7 @@ public:
 class Log : public std::enable_shared_from_this<Log> {
 	friend class LogThread;
 
-	static std::string str_format(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, va_list argptr);
+	static std::string str_format(int priority, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, va_list argptr);
 	static std::shared_ptr<Log> add(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
 
 	std::chrono::time_point<std::chrono::system_clock> wakeup;

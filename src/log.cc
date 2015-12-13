@@ -65,7 +65,7 @@ void SysLog::log(int priority, const std::string& str) {
 }
 
 
-int Log::log_level = LOG_INFO;
+int Log::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Log::handlers;
 
 
@@ -77,14 +77,14 @@ Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clo
 
 
 std::string
-Log::str_format(const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, va_list argptr)
+Log::str_format(int priority, const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, va_list argptr)
 {
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	auto iso8601 = "[" + date::to_string(std::chrono::system_clock::now()) + "]";
-	auto tid = "(" + get_thread_name() + ")";
-	auto location = std::string(file) + ":" + std::to_string(line);
-	std::string result = iso8601 + " " + tid + + " " + location + ": " + prefix + buffer + suffix;
+	auto tid = " (" + get_thread_name() + ")";
+	auto location = (priority >= LOCATION_LOG_LEVEL) ? " " + std::string(file) + ":" + std::to_string(line) : std::string();
+	std::string result = iso8601 + tid + location + ": " + prefix + buffer + suffix;
 	delete []buffer;
 	return result;
 }
@@ -95,7 +95,7 @@ Log::log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority
 {
 	va_list argptr;
 	va_start(argptr, format);
-	std::string str(str_format(file, line, suffix, prefix, obj, format, argptr));
+	std::string str(str_format(priority, file, line, suffix, prefix, obj, format, argptr));
 	va_end(argptr);
 
 	return print(str, wakeup, priority);
@@ -115,7 +115,7 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 	if (finished.exchange(true)) {
 		va_list argptr;
 		va_start(argptr, format);
-		std::string str(str_format(file, line, suffix, prefix, obj, format, argptr));
+		std::string str(str_format(priority, file, line, suffix, prefix, obj, format, argptr));
 		va_end(argptr);
 
 		print(str, 0, priority);
