@@ -208,7 +208,7 @@ void daemonize(void) {
 
 	pid_t pid = fork();
 	if (pid != 0) {
-		L_INFO(nullptr, "Done with all work here. Daemon on process ID [%d] taking over!", pid);
+		L_NOTICE(nullptr, "Xapiand is done with all work here. Daemon on process ID [%d] taking over!", pid);
 		exit(0); /* parent exits */
 	}
 	setsid(); /* create a new session */
@@ -251,6 +251,7 @@ int main(int argc, char **argv)
 		daemonize();
 		banner();
 	}
+	L_NOTICE(nullptr, "Xapiand started.");
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 	if (!opts.chert) {
@@ -262,9 +263,9 @@ int main(int argc, char **argv)
 #endif
 
 	if (opts.chert) {
-		L_INFO(nullptr, "By default using Chert databases.");
+		L_INFO(nullptr, "Using Chert databases by default.");
 	} else {
-		L_INFO(nullptr, "By default using Glass databases.");
+		L_INFO(nullptr, "Using Glass databases by default.");
 	}
 
 	// Enable changesets
@@ -282,7 +283,7 @@ int main(int argc, char **argv)
 
 	assert(!chdir(opts.database.c_str()));
 	char buffer[MAXPATHLEN];
-	L_INFO(nullptr, "Changed current working directory to %s", getcwd(buffer, sizeof(buffer)));
+	L_NOTICE(nullptr, "Changed current working directory to %s", getcwd(buffer, sizeof(buffer)));
 
 	init_time = std::chrono::system_clock::now();
 	time_t epoch = std::chrono::system_clock::to_time_t(init_time);
@@ -296,6 +297,6 @@ int main(int argc, char **argv)
 
 	run(opts);
 
-	L_INFO(nullptr, "Done with all work!");
+	L_NOTICE(nullptr, "Xapiand is done with all work!");
 	return 0;
 }

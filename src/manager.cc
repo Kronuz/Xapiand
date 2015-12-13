@@ -357,7 +357,7 @@ XapiandManager::host_address()
 				char ip[INET_ADDRSTRLEN];
 				addr = *(struct sockaddr_in *)ifa->ifa_addr;
 				inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
-				L_DISCOVERY(this, "Node IP address is %s on interface %s", ip, ifa->ifa_name);
+				L_NOTICE(this, "Node IP address is %s on interface %s", ip, ifa->ifa_name);
 				break;
 			}
 		}
