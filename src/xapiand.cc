@@ -246,6 +246,8 @@ int main(int argc, char **argv)
 
 	std::setlocale(LC_CTYPE, "");
 
+	Log::log_level += opts.verbosity;
+
 	banner();
 	if (opts.daemonize) {
 		daemonize();
