@@ -127,14 +127,7 @@ Log::add(const std::string& str, std::chrono::time_point<std::chrono::system_clo
 {
 	static LogThread thread;
 
-	// std::make_shared only can call a public constructor, for this reason
-	// it is neccesary wrap the constructor in a struct.
-	struct enable_make_shared : Log {
-		enable_make_shared(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
-			: Log(str, wakeup, priority) { }
-	};
-
-	auto l_ptr = std::make_shared<enable_make_shared>(str, wakeup, priority);
+	auto l_ptr = std::make_shared<Log>(str, wakeup, priority);
 	thread.log_list.push_front(l_ptr->shared_from_this());
 
 	if (thread.wakeup.load() > l_ptr->wakeup) {
@@ -159,7 +152,7 @@ Log::print(const std::string& str, std::chrono::time_point<std::chrono::system_c
 		for (auto& handler : Log::handlers) {
 			handler->log(priority, str);
 		}
-		return std::shared_ptr<Log>();
+		return std::make_shared<Log>(str, wakeup, priority);
 	}
 }
 

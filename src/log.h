@@ -71,7 +71,6 @@ public:
 class Log : public std::enable_shared_from_this<Log> {
 	friend class LogThread;
 
-
 	static std::string str_format(const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, va_list argptr);
 	static std::shared_ptr<Log> add(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
 
@@ -80,11 +79,10 @@ class Log : public std::enable_shared_from_this<Log> {
 	int priority;
 	std::atomic_bool finished;
 
-protected:
-	Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_);
-
 public:
 	static std::vector<std::unique_ptr<Logger>> handlers;
+
+	Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_);
 
 	template <typename T, typename R, typename... Args>
 	static std::shared_ptr<Log> log(std::chrono::duration<T, R> timeout, int priority, Args&&... args) {
