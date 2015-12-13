@@ -80,6 +80,7 @@ class Log : public std::enable_shared_from_this<Log> {
 	std::atomic_bool finished;
 
 public:
+	static int log_level;
 	static std::vector<std::unique_ptr<Logger>> handlers;
 
 	Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_);

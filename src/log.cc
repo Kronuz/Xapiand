@@ -65,6 +65,7 @@ void SysLog::log(int priority, const std::string& str) {
 }
 
 
+int Log::log_level = LOG_INFO;
 std::vector<std::unique_ptr<Logger>> Log::handlers;
 
 
@@ -141,6 +142,10 @@ Log::add(const std::string& str, std::chrono::time_point<std::chrono::system_clo
 std::shared_ptr<Log>
 Log::print(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
 {
+	if (priority > Log::log_level) {
+		return std::make_shared<Log>(str, wakeup, priority);
+	}
+
 	if (!Log::handlers.size()) {
 		Log::handlers.push_back(std::make_unique<StderrLogger>());
 	}
