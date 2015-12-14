@@ -3,6 +3,7 @@
 check_PROGRAMS = set_forward_list_test \
 				 set_generate_terms_test \
 				 set_geo_test \
+				 set_hash_test \
 				 set_htm_test \
 				 set_query_test \
 				 set_queue_test \
@@ -52,6 +53,9 @@ set_generate_terms_test_LDADD = @CHECK_LIBS@
 
 set_geo_test_SOURCES = $(headers) set_geo_test.cc test_geo.cc
 set_geo_test_LDADD = @CHECK_LIBS@
+
+set_hash_test_SOURCES = $(headers) set_hash_test.cc test_hash.cc
+set_hash_test_LDADD = @CHECK_LIBS@
 
 set_htm_test_SOURCES = $(headers) set_htm_test.cc test_htm.cc
 set_htm_test_LDADD = @CHECK_LIBS@
