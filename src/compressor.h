@@ -35,10 +35,9 @@
 #define NOCOMPRESS_BUFFER_SIZE (16 * 1024)
 
 
-class CompressorReader
-{
+class CompressorReader {
 public:
-	virtual ~CompressorReader() {};
+	virtual ~CompressorReader() { };
 
 	virtual ssize_t begin() = 0;
 	virtual ssize_t read(char **buf, size_t size) = 0;
@@ -50,15 +49,15 @@ public:
 };
 
 
-class CompressorBufferReader : public CompressorReader
-{
+class CompressorBufferReader : public CompressorReader {
 public:
-	ssize_t begin() {
+	ssize_t begin() override {
 		output.clear();
 		offset = 0;
 		return 0;
 	};
-	ssize_t read(char **buf, size_t size) {
+
+	ssize_t read(char **buf, size_t size) override {
 		//L_DEBUG(this, "input size %lu ",input.size());
 		if (input.size() == 0) {
 			//L_DEBUG(this, "base_read (0)");
@@ -83,25 +82,28 @@ public:
 		//L_DEBUG(this, "base_read: %s (%zu)", repr(*buf, size).c_str(), size);
 		return size;
 	};
-	ssize_t write(const char *buf, size_t size) {
+
+	ssize_t write(const char *buf, size_t size) override {
 		//L_DEBUG(this, "base_write: %s (%zu)", repr(buf, size).c_str(), size);
 		output.append(buf, size);
 		return size;
 	};
-	ssize_t done() { return 0; };
+
+	ssize_t done() override { return 0; };
 
 	size_t offset;
 	std::string input;
 	std::string output;
 
 public:
-	CompressorBufferReader() : offset(0) {}
+	CompressorBufferReader() : offset(0) { }
 
-	void clear() {
+	void clear() override {
 		input.clear();
 		offset = 0;
 	}
-	void append(const char *buf, size_t size) {
+
+	void append(const char *buf, size_t size) override {
 		input.append(buf, size);
 	}
 };
@@ -117,19 +119,17 @@ public:
 
 	Compressor(std::unique_ptr<CompressorReader> &&decompressor_, std::unique_ptr<CompressorReader> &&compressor_) :
 		decompressor(std::move(decompressor_)),
-		compressor(std::move(compressor_))
-	{}
+		compressor(std::move(compressor_)) { }
 };
 
 
-class NoCompressor : public Compressor
-{
+class NoCompressor : public Compressor {
 	ssize_t count;
 	char *buffer;
 
 public:
 	NoCompressor(std::unique_ptr<CompressorReader> &&decompressor_, std::unique_ptr<CompressorReader> &&compressor_) :
-		Compressor(std::move(decompressor_), std::move(compressor_)), count(-1), buffer(nullptr) {}
+	Compressor(std::move(decompressor_), std::move(compressor_)), count(-1), buffer(nullptr) { }
 
 	~NoCompressor() {
 		delete []buffer;
@@ -228,8 +228,7 @@ public:
 };
 
 
-class LZ4Compressor : public Compressor
-{
+class LZ4Compressor : public Compressor {
 	LZ4F_compressionContext_t c_ctx;
 	LZ4F_decompressionContext_t d_ctx;
 	char *buffer;
@@ -246,8 +245,7 @@ public:
 		d_ctx(nullptr),
 		buffer(nullptr),
 		work_buffer(nullptr),
-		count(0)
-	{};
+		count(0) { };
 
 	~LZ4Compressor() {
 		delete []buffer;
