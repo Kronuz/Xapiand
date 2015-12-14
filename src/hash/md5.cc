@@ -71,7 +71,7 @@ namespace
 		return (a << c) | (a >> (32 - c));
 	}
 
-#if defined(__BYTE_ORDER) && (__BYTE_ORDER != 0) && (__BYTE_ORDER == __BIG_ENDIAN)
+#if __BYTE_ORDER == __BIG_ENDIAN
 	inline uint32_t swap(uint32_t x)
 	{
 #if defined(__GNUC__) || defined(__clang__)
@@ -103,10 +103,10 @@ void MD5::processBlock(const void* data)
 	const uint32_t* words = (uint32_t*) data;
 
 	// computations are little endian, swap data if necessary
-#if defined(__BYTE_ORDER) && (__BYTE_ORDER != 0) && (__BYTE_ORDER == __BIG_ENDIAN)
+#if __BYTE_ORDER == __BIG_ENDIAN
 #define LITTLEENDIAN(x) swap(x)
 #else
-#define LITTLEENDIAN(x) (x)
+#define LITTLEENDIAN(x) x
 #endif
 
 	// first round

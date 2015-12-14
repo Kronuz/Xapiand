@@ -54,6 +54,7 @@ namespace
 		return (a >> c) | (a << (32 - c));
 	}
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
 	inline uint32_t swap(uint32_t x)
 	{
 #if defined(__GNUC__) || defined(__clang__)
@@ -68,6 +69,7 @@ namespace
 			((x <<  8) & 0x00FF0000) |
 			(x << 24);
 	}
+#endif
 
 	// mix functions for processBlock()
 	inline uint32_t f1(uint32_t e, uint32_t f, uint32_t g)
@@ -105,7 +107,7 @@ void SHA256::processBlock(const void* data)
 	uint32_t words[64];
 	int i;
 	for (i = 0; i < 16; ++i)
-#if defined(__BYTE_ORDER) && (__BYTE_ORDER != 0) && (__BYTE_ORDER == __BIG_ENDIAN)
+#if __BYTE_ORDER == __BIG_ENDIAN
 		words[i] =      input[i];
 #else
 		words[i] = swap(input[i]);
