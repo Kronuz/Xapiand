@@ -30,6 +30,7 @@
 #include "database_utils.h"
 #include "fields.h"
 #include "multivaluekeymaker.h"
+#include "multivalue.h"
 
 #include <xapian/matchspy.h>
 

@@ -27,6 +27,7 @@
 #include "utils.h"
 #include "log.h"
 #include "hash/sha256.h"
+#include "multivalue.h"
 
 #include <xapian.h>
 

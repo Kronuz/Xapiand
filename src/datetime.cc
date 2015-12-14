@@ -22,6 +22,7 @@
 
 #include "datetime.h"
 
+#include "exception.h"
 #include "log.h"
 #include "utils.h"
 

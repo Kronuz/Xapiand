@@ -21,13 +21,17 @@
  */
 
 #include "database_utils.h"
+
 #include "utils.h"
 #include "log.h"
+#include "datetime.h"
+#include "wkt_parser.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <random>
+
 
 std::regex find_types_re("(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" NUMERIC_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")", std::regex::icase | std::regex::optimize);
 

@@ -25,6 +25,8 @@
 #include "serialise.h"
 #include "geospatialrange.h"
 #include "utils.h"
+#include "datetime.h"
+#include "wkt_parser.h"
 
 #include <float.h>
 
