@@ -254,7 +254,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
-						remote_mastery_level = strtoll(mastery_str);
+						remote_mastery_level = std::stoll(mastery_str);
 
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							L_DISCOVERY(this, "Badly formed message: No index path!");
@@ -292,7 +292,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
-						remote_mastery_level = strtoll(mastery_str);
+						remote_mastery_level = std::stoll(mastery_str);
 
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							L_DISCOVERY(this, "Badly formed message: No index path!");

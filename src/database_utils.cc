@@ -68,7 +68,7 @@ long long read_mastery(const std::string &dir, bool force) {
 		size_t length = read(fd, buf, sizeof(buf) - 1);
 		if (length > 0) {
 			buf[length] = '\0';
-			mastery_level = strtoll(buf, NULL, 16);
+			mastery_level = std::stoll(buf, NULL, 16);
 		}
 		close(fd);
 		if (!mastery_level) {

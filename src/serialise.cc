@@ -55,7 +55,7 @@ Serialise::numeric(const std::string &field_value)
 {
 	double val;
 	if (isNumeric(field_value)) {
-		val = strtod(field_value);
+		val = std::stod(field_value);
 		return Xapian::sortable_serialise(val);
 	}
 	return "";

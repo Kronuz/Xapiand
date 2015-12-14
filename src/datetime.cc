@@ -51,19 +51,19 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 	std::string oph, opm;
 	std::smatch m;
 	if (std::regex_match(date, m, date_re) && static_cast<size_t>(m.length(0)) == date.size()) {
-		tm.year = static_cast<int>(strtol(m.str(1)));
-		tm.mon = static_cast<int>(strtol(m.str(3)));
-		tm.day = static_cast<int>(strtol(m.str(4)));
+		tm.year = std::stoi(m.str(1));
+		tm.mon = std::stoi(m.str(3));
+		tm.day = std::stoi(m.str(4));
 		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
 			throw MSG_Error("Date is out of range");
 		}
 
 		if (m.length(5) > 0) {
-			tm.hour = static_cast<int>(strtol(m.str(6)));
-			tm.min = static_cast<int>(strtol(m.str(7)));
+			tm.hour = std::stoi(m.str(6));
+			tm.min = std::stoi(m.str(7));
 			if (m.length(8) > 0) {
-				tm.sec = static_cast<int>(strtol(m.str(9)));
-				tm.msec = m.length(10) > 0 ? static_cast<int>(strtol(m.str(11))) : 0;
+				tm.sec = std::stoi(m.str(9));
+				tm.msec = m.length(10) > 0 ? std::stoi(m.str(11)) : 0;
 			} else {
 				tm.sec = tm.msec = 0;
 			}
@@ -114,10 +114,10 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 void
 Datetime::computeDateMath(tm_t &tm, const std::string &op, const std::string &units)
 {
-	int num = static_cast<int>(strtol(std::string(op.c_str() + 1, op.size()))), max_days;
 	time_t dateGMT;
 	struct tm *timeinfo;
 	if (op.at(0) == '+' || op.at(0) == '-') {
+		int max_days, num = std::stoi(std::string(op.c_str() + 1, op.size()));
 		switch (units.at(0)) {
 			case 'y':
 				(op.at(0) == '+') ? tm.year += num : tm.year -= num;
@@ -410,7 +410,7 @@ Datetime::isotime(const struct tm *tm)
 Datetime::ctime(const ::std::string &epoch)
 {
 	if (isNumeric(epoch)) {
-		double mtimestamp = strtod(epoch);
+		double mtimestamp = std::stod(epoch);
 		time_t timestamp = (time_t) mtimestamp;
 		std::string milliseconds = epoch;
 		milliseconds.assign(milliseconds.c_str() + milliseconds.find("."), 4);

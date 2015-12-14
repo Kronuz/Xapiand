@@ -524,38 +524,13 @@ unsigned int get_slot(const std::string &name) {
 	MD5 md5;
 	// We are left with the last 8 characters.
 	std::string _md5(md5(strhasupper(name) ? stringtoupper(name) : name), 24, 8);
-	unsigned int slot = static_cast<unsigned int>(strtoul(_md5, 16));
+	unsigned int slot = static_cast<unsigned int>(std::stoul(_md5, nullptr, 16));
 	if (slot == 0x00000000) {
 		slot = 0x00000001; // 0->id
 	} else if (slot == Xapian::BAD_VALUENO) {
 		slot = 0xfffffffe;
 	}
 	return slot;
-}
-
-
-long strtol(const std::string &str, int base) {
-	return strtol(str.c_str(), NULL, base);
-}
-
-
-unsigned long strtoul(const std::string &str, int base) {
-	return strtoul(str.c_str(), NULL, base);
-}
-
-
-double strtod(const std::string &str) {
-	return strtod(str.c_str(), NULL);
-}
-
-
-long long strtoll(const std::string &str, int base) {
-	return strtoll(str.c_str(), NULL, base);
-}
-
-
-unsigned long long strtoull(const std::string &str, int base) {
-	return strtoull(str.c_str(), NULL, base);
 }
 
 

@@ -178,12 +178,6 @@ std::string stringtoupper(const std::string &str);
 // String tokenizer with the delimiter.
 void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens);
 
-long strtol(const std::string &str, int base=10);
-unsigned long strtoul(const std::string &str, int base=10);
-long long strtoll(const std::string &str, int base=10);
-unsigned long long strtoull(const std::string &str, int base=10);
-double strtod(const std::string &str);
-
 unsigned int get_slot(const std::string &name);
 std::string prefixed(const std::string &term, const std::string &prefixO);
 std::string get_prefix(const std::string &name, const std::string &prefix, char type);

@@ -592,13 +592,13 @@ XapiandManager::get_stats_time(const std::string &time_req)
 	std::smatch m;
 	if (std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.size() && m.length(1) != 0) {
 		pos_time_t first_time, second_time;
-		first_time.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? strtol(m.str(3)) : 0);
-		first_time.minute += m.length(5) != 0 ? strtol(m.str(5)) : 0;
-		first_time.second = m.length(7) != 0 ? strtol(m.str(7)) : 0;
+		first_time.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? std::stoi(m.str(3)) : 0);
+		first_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
+		first_time.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
 		if (m.length(8) != 0) {
-			second_time.minute = SLOT_TIME_SECOND * (m.length(10) != 0 ? strtol(m.str(10)) : 0);
-			second_time.minute += m.length(12) != 0 ? strtol(m.str(12)) : 0;
-			second_time.second = m.length(14) != 0 ? strtol(m.str(14)) : 0;
+			second_time.minute = SLOT_TIME_SECOND * (m.length(10) != 0 ? std::stoi(m.str(10)) : 0);
+			second_time.minute += m.length(12) != 0 ? std::stoi(m.str(12)) : 0;
+			second_time.second = m.length(14) != 0 ? std::stoi(m.str(14)) : 0;
 		} else {
 			second_time.minute = 0;
 			second_time.second = 0;

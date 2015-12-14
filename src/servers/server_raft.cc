@@ -124,7 +124,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
-					remote_term = strtoull(str_remote_term);
+					remote_term = std::stoull(str_remote_term);
 
 					L_RAFT(this, "remote_term: %llu  local_term: %llu", remote_term, raft->term);
 
@@ -192,7 +192,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 							L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 							return;
 						}
-						remote_term = strtoull(str_remote_term);
+						remote_term = std::stoull(str_remote_term);
 
 						if (raft->term < remote_term) {
 							raft->term = remote_term;
@@ -217,14 +217,14 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
-					raft->number_servers.store(strtoull(str_servers));
+					raft->number_servers.store(std::stoull(str_servers));
 
 					if (unserialise_string(str_remote_term, &ptr, end) == -1) {
 						L_RAFT(this, "Badly formed message: No proper term!");
 						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
-					raft->term = strtoull(str_remote_term);
+					raft->term = std::stoull(str_remote_term);
 
 					raft->leader = stringtolower(remote_node.name);
 					raft->state = Raft::State::FOLLOWER;
@@ -260,14 +260,14 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
-					raft->number_servers.store(strtoull(str_servers));
+					raft->number_servers.store(std::stoull(str_servers));
 
 					if (unserialise_string(str_remote_term, &ptr, end) == -1) {
 						L_RAFT(this, "Badly formed message: No proper term!");
 						L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 						return;
 					}
-					raft->term = strtoull(str_remote_term);
+					raft->term = std::stoull(str_remote_term);
 
 					raft->leader = stringtolower(remote_node.name);
 					break;

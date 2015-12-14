@@ -71,7 +71,7 @@ class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
 				keys_values_t ins_key = { slot, type, 0, "", CartesianList(), reverse, true };
 				switch (type) {
 					case NUMERIC_TYPE:
-						ins_key.valuenumeric = strtod(value);
+						ins_key.valuenumeric = std::stod(value);
 						break;
 					case DATE_TYPE:
 						ins_key.valuenumeric = Datetime::timestamp(value);
