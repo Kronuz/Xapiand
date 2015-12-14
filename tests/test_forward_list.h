@@ -20,6 +20,8 @@
  * IN THE SOFTWARE.
  */
 
+#pragma once
+
 #include "../src/forward_list.h"
 
 
