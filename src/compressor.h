@@ -34,8 +34,6 @@
 #define LZ4F_BLOCK_SIZE (256 * 1024)
 #define NOCOMPRESS_BUFFER_SIZE (16 * 1024)
 
-typedef char *char_ptr;
-
 
 class CompressorReader
 {
