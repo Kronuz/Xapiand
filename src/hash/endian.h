@@ -20,6 +20,7 @@
  * IN THE SOFTWARE.
  */
 
+#pragma once
 
 /*
  * Define macro for endianess.
@@ -29,7 +30,7 @@
 #if defined(__linux__)
 	#include <endian.h>
 #elif defined(__APPLE__)
-	#include <libkern/OSByteOrder.h>
+	#include <machine/endian.h>
 	#define __BYTE_ORDER    BYTE_ORDER
 	#define __BIG_ENDIAN    BIG_ENDIAN
 	#define __LITTLE_ENDIAN LITTLE_ENDIAN
@@ -41,8 +42,7 @@
 	#define __LITTLE_ENDIAN _LITTLE_ENDIAN
 	#define __PDP_ENDIAN    _PDP_ENDIAN
 #elif defined(_WIN16) || defined(_WIN32) || defined(_WIN64)
-	#include <winsock2.h>
-	#include <sys/param.h>
+	#include <include/endian.h>
 	#define __BYTE_ORDER    BYTE_ORDER
 	#define __BIG_ENDIAN    BIG_ENDIAN
 	#define __LITTLE_ENDIAN LITTLE_ENDIAN
