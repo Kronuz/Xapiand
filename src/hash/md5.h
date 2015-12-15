@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ *
  * Copyright (c) 2014,2015 Stephan Brumme. All rights reserved.
  * see http://create.stephan-brumme.com/disclaimer.html
  *
