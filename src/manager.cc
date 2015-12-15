@@ -576,7 +576,7 @@ XapiandManager::store(const Endpoints &endpoints, const Xapian::docid &did, cons
 unique_cJSON
 XapiandManager::server_status()
 {
-	unique_cJSON root_status(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON root_status(cJSON_CreateObject());
 	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 	cJSON_AddNumberToObject(root_status.get(), "Connections", XapiandServer::total_clients);
 	cJSON_AddNumberToObject(root_status.get(), "Http connections", XapiandServer::http_clients);
@@ -606,7 +606,7 @@ XapiandManager::get_stats_time(const std::string &time_req)
 		return get_stats_json(first_time, second_time);
 	}
 
-	unique_cJSON root_stats(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON root_stats(cJSON_CreateObject());
 	cJSON_AddStringToObject(root_stats.get(), "Error in time argument input", "Incorrect input.");
 	return root_stats;
 }
@@ -615,8 +615,8 @@ XapiandManager::get_stats_time(const std::string &time_req)
 unique_cJSON
 XapiandManager::get_stats_json(pos_time_t &first_time, pos_time_t &second_time)
 {
-	unique_cJSON root_stats(cJSON_CreateObject(), cJSON_Delete);
-	unique_cJSON time_period(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON root_stats(cJSON_CreateObject());
+	unique_cJSON time_period(cJSON_CreateObject());
 
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();

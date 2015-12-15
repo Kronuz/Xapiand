@@ -271,7 +271,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, c
 		}
 	}
 
-	unique_cJSON data_json(cJSON_Parse(document.get_data().c_str()), cJSON_Delete);
+	unique_cJSON data_json(cJSON_Parse(document.get_data().c_str()));
 	if (!data_json) {
 		L_ERR(this, "ERROR: JSON Before: [%s]", cJSON_GetErrorPtr());
 		return 0;
@@ -626,7 +626,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	} else {
 		json = cJSON_Parse("{}");
 	}
-	unique_cJSON document(json, cJSON_Delete);
+	unique_cJSON document(json);
 
 	unique_char_ptr _cprint(cJSON_Print(document.get()));
 	std::string doc_data(_cprint.get());
@@ -640,7 +640,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 
 	// There are several throws and returns, so we use unique_ptr
 	// to call automatically cJSON_Delete. Only schema need to be released.
-	unique_cJSON schema(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON schema(cJSON_CreateObject());
 	cJSON *properties;
 	bool find = false;
 	if (s_schema.empty()) {
@@ -648,7 +648,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 		cJSON_AddItemToObject(schema.get(), RESERVED_VERSION, cJSON_CreateNumber(DB_VERSION_SCHEMA));
 		cJSON_AddItemToObject(schema.get(), RESERVED_SCHEMA, properties);
 	} else {
-		schema = std::move(unique_cJSON(cJSON_Parse(s_schema.c_str()), cJSON_Delete));
+		schema = std::move(unique_cJSON(cJSON_Parse(s_schema.c_str())));
 		if (!schema) {
 			L_ERR(this, "ERROR: Schema is corrupt, you need provide a new one. JSON Before: [%s]", cJSON_GetErrorPtr());
 			return 0;
@@ -713,7 +713,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 							}
 						}
 					} else { // Only need to get the specifications.
-						unique_cJSON t(cJSON_CreateObject(), cJSON_Delete);
+						unique_cJSON t(cJSON_CreateObject());
 						update_specifications(texts, spc_now, t.get());
 					}
 					if (spc_now.sep_types[2] == NO_TYPE) {
@@ -746,7 +746,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 						}
 						find ? update_specifications(data_terms, spc_now, subproperties) : insert_specifications(data_terms, spc_now, subproperties);
 					} else {
-						unique_cJSON t(cJSON_CreateObject(), cJSON_Delete);
+						unique_cJSON t(cJSON_CreateObject());
 						update_specifications(data_terms, spc_now, t.get());
 					}
 					if (spc_now.sep_types[2] == NO_TYPE) {
@@ -854,7 +854,7 @@ Database::get_data_field(const std::string &field_name)
 	std::string json = db->get_metadata(RESERVED_SCHEMA);
 	if (json.empty()) return res;
 
-	unique_cJSON schema(cJSON_Parse(json.c_str()), cJSON_Delete);
+	unique_cJSON schema(cJSON_Parse(json.c_str()));
 	if (!schema) {
 		throw MSG_Error("Schema's database is corrupt");
 	}
@@ -919,7 +919,7 @@ Database::get_slot_field(const std::string &field_name)
 	std::string json = db->get_metadata(RESERVED_SCHEMA);
 	if (json.empty()) return res;
 
-	unique_cJSON schema(cJSON_Parse(json.c_str()), cJSON_Delete);
+	unique_cJSON schema(cJSON_Parse(json.c_str()));
 	if (!schema) {
 		throw MSG_Error("Schema's database is corrupt.");
 	}
@@ -1528,7 +1528,7 @@ Database::get_document(const Xapian::docid &did, Xapian::Document &doc)
 unique_cJSON
 Database::get_stats_database()
 {
-	unique_cJSON database(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON database(cJSON_CreateObject());
 	unsigned int doccount = db->get_doccount();
 	unsigned int lastdocid = db->get_lastdocid();
 	cJSON_AddStringToObject(database.get(), "uuid", db->get_uuid().c_str());
@@ -1546,7 +1546,7 @@ Database::get_stats_database()
 unique_cJSON
 Database::get_stats_docs(const std::string &document_id)
 {
-	unique_cJSON document(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON document(cJSON_CreateObject());
 
 	Xapian::Document doc;
 	Xapian::QueryParser queryparser;

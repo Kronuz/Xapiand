@@ -351,7 +351,7 @@ int make_search(const test_query_t _tests[], int len) {
 					size_t length = decode_length(&p, p_end, true);
 					data = std::string(p, length);
 
-					unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
+					unique_cJSON object(cJSON_Parse(data.c_str()));
 					cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
 					if (object_data && it->compare(object_data->valuestring) != 0) {
 						cont++;

@@ -130,7 +130,7 @@ void update_required_data(specifications_t &spc, const std::string &name, cJSON 
 	switch (spc.sep_types[2]) {
 		case GEO_TYPE: {
 			if (spc.accuracy.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray(), cJSON_Delete), _accuracy(cJSON_CreateArray(), cJSON_Delete);
+				unique_cJSON _prefix_accuracy(cJSON_CreateArray()), _accuracy(cJSON_CreateArray());
 				cJSON_AddItemToArray(_accuracy.get(), cJSON_CreateNumber(def_accuracy_geo[0]));
 				cJSON_AddItemToArray(_accuracy.get(), cJSON_CreateNumber(def_accuracy_geo[1]));
 				spc.accuracy.push_back(def_accuracy_geo[0]);
@@ -145,7 +145,7 @@ void update_required_data(specifications_t &spc, const std::string &name, cJSON 
 				cJSON_AddItemToObject(schema, RESERVED_ACCURACY, _accuracy.release());
 				cJSON_AddItemToObject(schema, RESERVED_ACC_PREFIX, _prefix_accuracy.release());
 			} else if (spc.acc_prefix.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray(), cJSON_Delete);
+				unique_cJSON _prefix_accuracy(cJSON_CreateArray());
 				for (std::vector<double>::iterator it(spc.accuracy.begin() + 2); it != spc.accuracy.end(); it++) {
 					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE);
 					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
@@ -157,7 +157,7 @@ void update_required_data(specifications_t &spc, const std::string &name, cJSON 
 		}
 		case NUMERIC_TYPE: {
 			if (spc.accuracy.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray(), cJSON_Delete), _accuracy(cJSON_CreateArray(), cJSON_Delete);
+				unique_cJSON _prefix_accuracy(cJSON_CreateArray()), _accuracy(cJSON_CreateArray());
 				for (std::vector<double>::const_iterator it(def_accuracy_num.begin()); it != def_accuracy_num.end(); it++) {
 					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, NUMERIC_TYPE);
 					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
@@ -168,7 +168,7 @@ void update_required_data(specifications_t &spc, const std::string &name, cJSON 
 				cJSON_AddItemToObject(schema, RESERVED_ACCURACY, _accuracy.release());
 				cJSON_AddItemToObject(schema, RESERVED_ACC_PREFIX, _prefix_accuracy.release());
 			} else if (spc.acc_prefix.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray(), cJSON_Delete);
+				unique_cJSON _prefix_accuracy(cJSON_CreateArray());
 				for (std::vector<double>::iterator it(spc.accuracy.begin()); it != spc.accuracy.end(); it++) {
 					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, NUMERIC_TYPE);
 					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
@@ -181,7 +181,7 @@ void update_required_data(specifications_t &spc, const std::string &name, cJSON 
 		case DATE_TYPE: {
 			// Use default accuracy.
 			if (spc.accuracy.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray(), cJSON_Delete), _accuracy(cJSON_CreateArray(), cJSON_Delete);
+				unique_cJSON _prefix_accuracy(cJSON_CreateArray()), _accuracy(cJSON_CreateArray());
 				for (std::vector<double>::const_iterator it(def_acc_date.begin()); it != def_acc_date.end(); it++) {
 					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE);
 					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
@@ -192,7 +192,7 @@ void update_required_data(specifications_t &spc, const std::string &name, cJSON 
 				cJSON_AddItemToObject(schema, RESERVED_ACCURACY, _accuracy.release());
 				cJSON_AddItemToObject(schema, RESERVED_ACC_PREFIX, _prefix_accuracy.release());
 			} else if (spc.acc_prefix.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray(), cJSON_Delete);
+				unique_cJSON _prefix_accuracy(cJSON_CreateArray());
 				for (std::vector<double>::iterator it(spc.accuracy.begin()); it != spc.accuracy.end(); it++) {
 					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE);
 					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
@@ -442,7 +442,7 @@ void insert_inheritable_specifications(cJSON *item, specifications_t &spc_now, c
 	size_t size_acc = 0;
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_ACCURACY))) {
 		if (default_spc.sep_types[2] == NO_TYPE) throw MSG_Error("You should specify %s, for verify if the accuracy is correct", RESERVED_TYPE);
-		unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
+		unique_cJSON acc_s(cJSON_CreateArray());
 		if (spc->type == cJSON_Array) {
 			if (default_spc.sep_types[2] == GEO_TYPE) {
 				int elements = cJSON_GetArraySize(spc);
@@ -507,7 +507,7 @@ void insert_inheritable_specifications(cJSON *item, specifications_t &spc_now, c
 
 		// Accuracy prefix is taken into account only if accuracy is defined.
 		if ((spc = cJSON_GetObjectItem(item, RESERVED_ACC_PREFIX))) {
-			unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
+			unique_cJSON acc_s(cJSON_CreateArray());
 			if (spc->type == cJSON_Array) {
 				size_t elements = cJSON_GetArraySize(spc);
 				if (elements != size_acc) throw "Data inconsistency, there must be a prefix for each accuracy";
@@ -606,7 +606,7 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_POSITION))) {
 		spc_now.position.clear();
-		unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
+		unique_cJSON acc_s(cJSON_CreateArray());
 		if (spc->type == cJSON_Number) {
 			spc_now.position.push_back(spc->valueint);
 			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(spc->valueint));
@@ -625,7 +625,7 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_WEIGHT))) {
 		spc_now.weight.clear();
-		unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
+		unique_cJSON acc_s(cJSON_CreateArray());
 		if (spc->type == cJSON_Number) {
 			spc_now.weight.push_back(spc->valueint);
 			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(spc->valueint));
@@ -644,7 +644,7 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_LANGUAGE))) {
 		spc_now.language.clear();
-		unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
+		unique_cJSON acc_s(cJSON_CreateArray());
 		if (spc->type == cJSON_String) {
 			std::string lan = is_language(spc->valuestring) ? spc->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, spc->valuestring);
 			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(lan.c_str()));
@@ -665,7 +665,7 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_SPELLING))) {
 		spc_now.spelling.clear();
-		unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
+		unique_cJSON acc_s(cJSON_CreateArray());
 		if (spc->type == cJSON_False) {
 			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateFalse());
 			spc_now.spelling.push_back(false);
@@ -690,7 +690,7 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_POSITIONS))) {
 		spc_now.positions.clear();
-		unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
+		unique_cJSON acc_s(cJSON_CreateArray());
 		if (spc->type == cJSON_False) {
 			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateFalse());
 			spc_now.positions.push_back(false);
@@ -740,7 +740,7 @@ void insert_specifications(cJSON *item, specifications_t &spc_now, cJSON *schema
 
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_ANALYZER))) {
 		spc_now.analyzer.clear();
-		unique_cJSON acc_s(cJSON_CreateArray(), cJSON_Delete);
+		unique_cJSON acc_s(cJSON_CreateArray());
 		if (spc->type == cJSON_String) {
 			if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0) {
 				spc_now.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);

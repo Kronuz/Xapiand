@@ -638,7 +638,7 @@ HttpClient::document_info_view(const query_field &e)
 		found = false;
 	}
 
-	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON root(cJSON_CreateObject());
 	if (found) {
 		cJSON_AddNumberToObject(root.get(), RESERVED_ID, docid);
 		if (e.pretty) {
@@ -695,7 +695,7 @@ HttpClient::delete_document_view(const query_field &e)
 	lk.unlock();
 
 	manager()->database_pool.checkin(database);
-	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON root(cJSON_CreateObject());
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
 	if (e.commit) {
@@ -757,7 +757,7 @@ HttpClient::index_document_view(const query_field &e)
 	lk.unlock();
 
 	manager()->database_pool.checkin(database);
-	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON root(cJSON_CreateObject());
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
 	if (e.commit) {
@@ -789,7 +789,7 @@ HttpClient::update_document_view(const query_field &e)
 		return;
 	}
 
-	unique_cJSON patches(cJSON_Parse(body.c_str()), cJSON_Delete);
+	unique_cJSON patches(cJSON_Parse(body.c_str()));
 	if (!patches) {
 		L_ERR(this, "ERROR: JSON Before: [%s]", cJSON_GetErrorPtr());
 		manager()->database_pool.checkin(database);
@@ -804,7 +804,7 @@ HttpClient::update_document_view(const query_field &e)
 	}
 
 	manager()->database_pool.checkin(database);
-	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON root(cJSON_CreateObject());
 	cJSON *data = cJSON_CreateObject(); // It is managed by root.
 	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
 	if (e.commit) {
@@ -830,7 +830,7 @@ void
 HttpClient::stats_view(const query_field &e)
 {
 	std::string result;
-	unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON root(cJSON_CreateObject());
 
 	if (e.server) {
 		unique_cJSON server_stats = manager()->server_status();
@@ -876,7 +876,7 @@ HttpClient::bad_request_view(const query_field &e, int cmd)
 {
 	std::string result;
 
-	unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
+	unique_cJSON err_response(cJSON_CreateObject());
 	switch (cmd) {
 		case CMD_UNKNOWN_HOST:
 			cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
@@ -930,7 +930,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	if (schema) {
 		std::string schema_;
 		if (database->get_metadata(RESERVED_SCHEMA, schema_)) {
-			unique_cJSON jschema(cJSON_Parse(schema_.c_str()), cJSON_Delete);
+			unique_cJSON jschema(cJSON_Parse(schema_.c_str()));
 			readable_schema(jschema.get());
 			unique_char_ptr _cprint(cJSON_Print(jschema.get()));
 			schema_ = std::string(_cprint.get()) + "\n";
@@ -938,7 +938,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 			manager()->database_pool.checkin(database);
 			return;
 		} else {
-			unique_cJSON err_response(cJSON_CreateObject(), cJSON_Delete);
+			unique_cJSON err_response(cJSON_CreateObject());
 			cJSON_AddStringToObject(err_response.get(), "Error message", "schema not found");
 			if (e.pretty) {
 				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
@@ -981,7 +981,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	}
 
 	if (facets) {
-		unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+		unique_cJSON root(cJSON_CreateObject());
 		for (auto spy = spies.begin(); spy != spies.end(); ++spy) {
 			std::string name_result = (*spy).first;
 			cJSON *array_values = cJSON_CreateArray(); // It is managed by root.
@@ -1072,7 +1072,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 
 				if (!type_found) {
 					std::string response_err;
-					unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+					unique_cJSON root(cJSON_CreateObject());
 					cJSON_AddStringToObject(root.get(), "Error message", std::string("Response type " + ct_type + " not provided in the accept header").c_str());
 					if (e.pretty) {
 						unique_char_ptr _cprint(cJSON_Print(root.get()));
@@ -1095,7 +1095,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 				id = document.get_value(0);
 
 				/* Return data in case is not a json type */
-				unique_cJSON object(cJSON_Parse(data.c_str()), cJSON_Delete);
+				unique_cJSON object(cJSON_Parse(data.c_str()));
 				if (!object) {
 					 write(http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, data, ct_type));
 					manager()->database_pool.checkin(database);
@@ -1110,7 +1110,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 				if (object_data) {
 					object_data = cJSON_Duplicate(object_data, 1);
 					object.reset();
-					object = unique_cJSON(object_data, cJSON_Delete);
+					object = unique_cJSON(object_data);
 				} else {
 					clean_reserved(object.get());
 					cJSON_AddStringToObject(object.get(), RESERVED_ID, id.c_str());
@@ -1138,7 +1138,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 			}
 		} else {
 			int status_code = 200;
-			unique_cJSON root(cJSON_CreateObject(), cJSON_Delete);
+			unique_cJSON root(cJSON_CreateObject());
 
 			if (e.unique_doc) {
 				cJSON_AddStringToObject(root.get(), "Response empty", "No document found");

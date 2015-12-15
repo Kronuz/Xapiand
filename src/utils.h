@@ -148,6 +148,14 @@ struct char_ptr_deleter {
 	}
 };
 
+
+struct cJSON_Deleter {
+	void operator()(cJSON *j) const {
+		cJSON_Delete(j);
+	}
+};
+
+
 struct TRANSFORM_UPPER {
 	char operator() (char c) { return  toupper(c);}
 };
@@ -161,7 +169,7 @@ struct TRANSFORM_MAP {
 	char operator() (char c) { return  c + 17;}
 };
 
-typedef std::unique_ptr<cJSON, void(*)(cJSON*)> unique_cJSON;
+typedef std::unique_ptr<cJSON, cJSON_Deleter> unique_cJSON;
 typedef std::unique_ptr<char, char_ptr_deleter> unique_char_ptr;
 
 int url_path(const char* n1, size_t size, parser_url_path_t *par);
