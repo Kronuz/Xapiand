@@ -1045,7 +1045,6 @@ Database::search(const query_field &e)
 	if (!e.terms.empty()) {
 		if (first) {
 			queryF = queryT;
-			first = false;
 		} else {
 			queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryT);
 		}
