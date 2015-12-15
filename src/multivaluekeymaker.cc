@@ -121,7 +121,6 @@ Multi_MultiValueKeyMaker::operator()(const Xapian::Document & doc) const
 	// Don't crash if slots is empty.
 	if (i == slots.end()) return result;
 
-	size_t last_not_empty_forwards = 0;
 	while (true) {
 		// All values (except for the last if it's sorted forwards) need to
 		// be adjusted.
@@ -130,7 +129,6 @@ Multi_MultiValueKeyMaker::operator()(const Xapian::Document & doc) const
 		std::string v = i->hasValue ? reverse_sort ? findLargest(doc.get_value(i->slot), *i) : findSmallest(doc.get_value(i->slot), *i) :
 									  reverse_sort ? findLargest(doc.get_value(i->slot)) : findSmallest(doc.get_value(i->slot));
 		// RULE: v is never empty, because if there is not value in the slot v is MAX_CMPVALUE or STR_FOR_EMPTY.
-		last_not_empty_forwards = result.size();
 
 		if (++i == slots.end() && !reverse_sort) {
 			// No need to adjust the last value if it's sorted forwards.
@@ -149,7 +147,6 @@ Multi_MultiValueKeyMaker::operator()(const Xapian::Document & doc) const
 			}
 			result.append("\xff\xff", 2);
 			if (i == slots.end()) break;
-			last_not_empty_forwards = result.size();
 		} else {
 			// For a forward ordered value (unless it's the last value), we
 			// convert any '\0' to "\0\xff".  We insert "\0\0" after the
@@ -162,7 +159,6 @@ Multi_MultiValueKeyMaker::operator()(const Xapian::Document & doc) const
 				j = nul;
 			}
 			result.append(v, j, std::string::npos);
-			last_not_empty_forwards = result.size();
 			result.append("\0", 2);
 		}
 	}
