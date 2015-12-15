@@ -670,7 +670,7 @@ Schema::get_schema()
 void
 Schema::store()
 {
-	if (to_store) {
+	if (true || to_store) {
 		unique_char_ptr _cprint = std::move(unique_char_ptr(cJSON_Print(get_schema())));
 		db->set_metadata(RESERVED_SCHEMA, _cprint.get());
 	}
