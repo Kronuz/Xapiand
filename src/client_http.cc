@@ -1010,17 +1010,12 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); ++rc, ++m) {
 				Xapian::docid docid = 0;
 				std::string id;
-				int rank = 0;
-				double weight = 0, percent = 0;
 				std::string data;
 
 				int t = 3;
 				for ( ; t >= 0; --t) {
 					try {
 						docid = *m;
-						rank = m.get_rank();
-						weight = m.get_weight();
-						percent = m.get_percent();
 						break;
 					} catch (const Xapian::Error &err) {
 						database->reopen();
