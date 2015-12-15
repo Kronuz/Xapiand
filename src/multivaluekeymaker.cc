@@ -21,6 +21,7 @@
  */
 
 #include "multivaluekeymaker.h"
+
 #include "multivalue.h"
 
 #include <cmath>
@@ -32,7 +33,7 @@ static std::string findSmallest(const std::string &multiValues) {
 	s.unserialise(multiValues);
 	StringList::const_iterator it(s.begin());
 	std::string smallest(*it);
-	for (it++; it != s.end(); it++) {
+	for (++it; it != s.end(); ++it) {
 		if (smallest > *it) smallest = *it;
 	}
 	return smallest;
@@ -45,7 +46,7 @@ static std::string findLargest(const std::string &multiValues) {
 	s.unserialise(multiValues);
 	StringList::const_iterator it(s.begin());
 	std::string largest(*it);
-	for (it++; it != s.end(); it++) {
+	for (++it; it != s.end(); ++it) {
 		if (*it > largest) largest = *it;
 	}
 	return largest;
@@ -67,11 +68,9 @@ static std::string get_cmpvalue(Iterator &v_it, const keys_values_t &sort_value)
 			CartesianList centroids;
 			centroids.unserialise(*(++v_it));
 			double angle = M_PI;
-			CartesianList::const_iterator c_it(sort_value.valuegeo.begin());
-			for ( ; c_it != sort_value.valuegeo.end(); c_it++) {
+			for (auto c_it = sort_value.valuegeo.begin(); c_it != sort_value.valuegeo.end(); ++c_it) {
 				double aux = M_PI;
-				CartesianList::const_iterator itl(centroids.begin());
-				for ( ; itl != centroids.end(); itl++) {
+				for (auto itl = centroids.begin(); itl != centroids.end(); ++itl) {
 					double rad_angle = acos(*c_it * *itl);
 					if (rad_angle < aux) aux = rad_angle;
 				}
@@ -90,7 +89,7 @@ static std::string findSmallest(const std::string &multiValues, const keys_value
 	s.unserialise(multiValues);
 	StringList::const_iterator it(s.begin());
 	std::string smallest(get_cmpvalue(it, sort_value));
-	for (it++; it != s.end(); it++) {
+	for (++it; it != s.end(); ++it) {
 		std::string aux(get_cmpvalue(it, sort_value));
 		if (smallest > aux) smallest = aux;
 	}
@@ -104,7 +103,7 @@ static std::string findLargest(const std::string &multiValues, const keys_values
 	s.unserialise(multiValues);
 	StringList::const_iterator it(s.begin());
 	std::string largest(get_cmpvalue(it, sort_value));
-	for (it++; it != s.end(); it++) {
+	for (++it; it != s.end(); ++it) {
 		std::string aux(get_cmpvalue(it, sort_value));
 		if (aux > largest) largest = aux;
 	}
@@ -117,7 +116,7 @@ Multi_MultiValueKeyMaker::operator()(const Xapian::Document & doc) const
 {
 	std::string result;
 
-	std::vector<keys_values_t>::const_iterator i = slots.begin();
+	auto i = slots.begin();
 	// Don't crash if slots is empty.
 	if (i == slots.end()) return result;
 

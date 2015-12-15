@@ -35,7 +35,7 @@ const std::string MAX_CMPVALUE(Xapian::sortable_serialise(DBL_MAX));
 const std::string STR_FOR_EMPTY("\xff");
 
 // Vector of slots
-typedef struct keys_values_s {
+struct keys_values_t {
 	Xapian::valueno slot;
 	char type;
 	double valuenumeric;
@@ -43,7 +43,7 @@ typedef struct keys_values_s {
 	CartesianList valuegeo;
 	bool reverse;
 	bool hasValue;
-} keys_values_t;
+};
 
 
 /*
@@ -58,41 +58,41 @@ class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
 	// Vector of slots
 	std::vector<keys_values_t> slots;
 
-	public:
-		Multi_MultiValueKeyMaker() { }
+public:
+	Multi_MultiValueKeyMaker() = default;
 
-		template <class Iterator>
-		Multi_MultiValueKeyMaker(Iterator begin, Iterator end) {
-			while (begin != end) add_value(*begin++);
-		}
+	template <class Iterator>
+	Multi_MultiValueKeyMaker(Iterator begin, Iterator end) {
+		while (begin != end) add_value(*begin++);
+	}
 
-		virtual std::string operator()(const Xapian::Document & doc) const;
+	virtual std::string operator()(const Xapian::Document & doc) const override;
 
-		void add_value(Xapian::valueno slot, char type, const std::string &value, bool reverse = false) {
-			if (!value.empty()) {
-				keys_values_t ins_key = { slot, type, 0, "", CartesianList(), reverse, true };
-				switch (type) {
-					case NUMERIC_TYPE:
-						ins_key.valuenumeric = std::stod(value);
-						break;
-					case DATE_TYPE:
-						ins_key.valuenumeric = Datetime::timestamp(value);
-						break;
-					case BOOLEAN_TYPE:
-						ins_key.valuestring = strcasecmp(value.c_str(), "true") == 0 ? "t" : "f";
-						break;
-					case STRING_TYPE:
-						ins_key.valuestring = value;
-						break;
-					case GEO_TYPE:
-						std::vector<range_t> ranges;
-						EWKT_Parser::getRanges(value, true, HTM_MIN_ERROR, ranges, ins_key.valuegeo);
-						break;
-				}
-				slots.push_back(ins_key);
-			} else if (type != GEO_TYPE) {
-				keys_values_t ins_key = { slot, type, 0, value, CartesianList(), reverse, false };
-				slots.push_back(ins_key);
+	void add_value(Xapian::valueno slot, char type, const std::string &value, bool reverse = false) {
+		if (!value.empty()) {
+			keys_values_t ins_key = { slot, type, 0, "", CartesianList(), reverse, true };
+			switch (type) {
+				case NUMERIC_TYPE:
+					ins_key.valuenumeric = std::stod(value);
+					break;
+				case DATE_TYPE:
+					ins_key.valuenumeric = Datetime::timestamp(value);
+					break;
+				case BOOLEAN_TYPE:
+					ins_key.valuestring = strcasecmp(value.c_str(), "true") == 0 ? "t" : "f";
+					break;
+				case STRING_TYPE:
+					ins_key.valuestring = value;
+					break;
+				case GEO_TYPE:
+					std::vector<range_t> ranges;
+					EWKT_Parser::getRanges(value, true, HTM_MIN_ERROR, ranges, ins_key.valuegeo);
+					break;
 			}
+			slots.push_back(ins_key);
+		} else if (type != GEO_TYPE) {
+			keys_values_t ins_key = { slot, type, 0, value, CartesianList(), reverse, false };
+			slots.push_back(ins_key);
 		}
+	}
 };
