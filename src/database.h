@@ -31,6 +31,7 @@
 #include "fields.h"
 #include "multivaluekeymaker.h"
 #include "multivalue.h"
+#include "schema.h"
 
 #include <xapian/matchspy.h>
 
@@ -44,46 +45,32 @@
 #include <unordered_set>
 #include <chrono>
 
-#define DB_WRITABLE 1    // Opens as writable
-#define DB_SPAWN 2       // Automatically creates the database if it doesn't exist
-#define DB_PERSISTENT 4  // Always try keeping the database in the database pool
-#define DB_INIT_REF 8	 // Initializes the writable index in the database .refs
-#define DB_VOLATILE 16   // Always drop the database from the database pool as soon as possible
-#define DB_REPLICATION 32 //use conditional pop in the queue, only pop when replication is done
+#define DB_WRITABLE     1 // Opens as writable
+#define DB_SPAWN        2 // Automatically creates the database if it doesn't exist
+#define DB_PERSISTENT   4 // Always try keeping the database in the database pool
+#define DB_INIT_REF     8 // Initializes the writable index in the database .refs
+#define DB_VOLATILE    16 // Always drop the database from the database pool as soon as possible
+#define DB_REPLICATION 32 // Use conditional pop in the queue, only pop when replication is done
 
 #define DB_MASTER "M"
 #define DB_SLAVE  "S"
 
-#define SLOT_CREF 1	// Slot that saves the references counter
+#define DB_SLOT_ID     0 // Slot ID document
+#define DB_SLOT_OFFSET 1 // Slot offset for data
+#define DB_SLOT_TYPE   2 // Slot type data
+#define DB_SLOT_LENGTH 3 // Slot length data
+#define DB_SLOT_CREF   4 // Slot that saves the references counter
 
 
 constexpr size_t START_POS = SIZE_BITS_ID - 4;
 
+
 using namespace std::chrono;
 
-class Database;
+
 class DatabasePool;
 class DatabasesLRU;
 class DatabaseQueue;
-
-
-class Schema {
-	Database* db;
-
-	unique_cJSON schema;
-	bool to_store;
-
-public:
-	bool find;
-
-	Schema(Database* db_);
-
-	cJSON* get_schema();
-	cJSON* get_properties();
-	cJSON* get_subproperties(const char* attr, bool init=false);
-
-	void store();
-};
 
 
 class Database {

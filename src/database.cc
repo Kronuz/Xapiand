@@ -48,8 +48,7 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 
 
 Database::Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endpoints_, int flags_)
-	: schema(this),
-	  weak_queue(queue_),
+	: weak_queue(queue_),
 	  endpoints(endpoints_),
 	  flags(flags_),
 	  hash(endpoints.hash()),
@@ -57,6 +56,8 @@ Database::Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endp
 	  mastery_level(-1)
 {
 	reopen();
+
+	schema = Schema(this);
 
 	if (auto queue = weak_queue.lock()) {
 		queue->inc_count();
@@ -313,7 +314,7 @@ Database::index_fields(cJSON *item, const std::string &item_name, specifications
 						spc_now.language.push_back(language);
 					}
 				}
-				cJSON *subproperties = schema.get_subproperties(subitem->string);
+				cJSON *subproperties = schema.get_properties(properties, subitem->string);
 				index_fields(subitem, subitem_name, spc_now, doc, subproperties, schema.find, is_value);
 				++offspring;
 			} else if (strcmp(subitem->string, RESERVED_VALUE) == 0) {
@@ -579,104 +580,6 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 }
 
 
-Schema::Schema(Database* db_)
-	: db(db_),
-	  to_store(false),
-	  find(false)
-{}
-
-
-cJSON*
-Schema::get_properties()
-{
-	find = true;
-	cJSON* schema = get_schema();
-	if (!schema) {
-		throw MSG_Error("Schema's database is corrupt.");
-	}
-
-	cJSON* properties = cJSON_GetObjectItem(schema, RESERVED_SCHEMA);
-	if (!properties) {
-		to_store = true;
-		find = false;
-		properties = cJSON_CreateObject(); // It is managed by schema.
-		cJSON_AddItemToObject(schema, RESERVED_VERSION, cJSON_CreateNumber(DB_VERSION_SCHEMA));
-		cJSON_AddItemToObject(schema, RESERVED_SCHEMA, properties);
-	}
-
-	return properties;
-}
-
-
-cJSON*
-Schema::get_subproperties(const char* attr, bool init)
-{
-	find = true;
-	cJSON* properties = get_properties();
-
-	cJSON* subproperties = cJSON_GetObjectItem(properties, attr);
-	if (!subproperties) {
-		to_store = true;
-		find = false;
-		subproperties = cJSON_CreateObject(); // It is managed by properties.
-		if (init) {
-			cJSON *type = cJSON_CreateArray(); // Managed by shema
-			cJSON_AddItemToArray(type, cJSON_CreateNumber(NO_TYPE));
-			cJSON_AddItemToArray(type, cJSON_CreateNumber(NO_TYPE));
-			cJSON_AddItemToArray(type, cJSON_CreateNumber(STRING_TYPE));
-			cJSON_AddItemToObject(subproperties, RESERVED_TYPE, type);
-			cJSON_AddItemToObject(subproperties, RESERVED_INDEX, cJSON_CreateNumber(ALL));
-			cJSON_AddItemToObject(subproperties, RESERVED_SLOT, cJSON_CreateNumber(0));
-			cJSON_AddItemToObject(subproperties, RESERVED_PREFIX, cJSON_CreateString(DOCUMENT_ID_TERM_PREFIX));
-			cJSON_AddItemToObject(subproperties, RESERVED_BOOL_TERM, cJSON_CreateTrue());
-		}
-		cJSON_AddItemToObject(properties, attr, subproperties);
-	}
-	return subproperties;
-}
-
-
-cJSON*
-Schema::get_schema()
-{
-	if (!schema) {
-		std::string s_schema;
-		db->get_metadata(RESERVED_SCHEMA, s_schema);
-
-		if (s_schema.empty()) {
-			to_store = true;
-			schema = std::move(unique_cJSON(cJSON_CreateObject()));
-		} else {
-			to_store = false;
-			schema = std::move(unique_cJSON(cJSON_Parse(s_schema.c_str())));
-			if (!schema) {
-				L_ERR(this, "ERROR: Schema is corrupt, you need provide a new one. JSON Before: [%s]", cJSON_GetErrorPtr());
-				return nullptr;
-			}
-
-			cJSON *version = cJSON_GetObjectItem(schema.get(), RESERVED_VERSION);
-			if (version == nullptr || version->valuedouble != DB_VERSION_SCHEMA) {
-				L_ERR(this, "ERROR: Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
-				schema.reset();
-				return nullptr;
-			}
-		}
-	}
-
-	return schema.get();
-}
-
-
-void
-Schema::store()
-{
-	if (true || to_store) {
-		unique_char_ptr _cprint = std::move(unique_char_ptr(cJSON_Print(get_schema())));
-		db->set_metadata(RESERVED_SCHEMA, _cprint.get());
-	}
-}
-
-
 Xapian::docid
 Database::index(const std::string &body, const std::string &_document_id, bool _commit, const std::string &ct_type, const std::string &ct_length)
 {
@@ -692,20 +595,22 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	std::string type(ct_type.c_str(), found);
 	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
 
-	//Make sure document_id is also a boolean term (otherwise it doesn't replace an existing document)
-	doc.add_value(0, _document_id);
+	// Make sure document_id is also a boolean term (otherwise it doesn't replace an existing document)
+	doc.add_value(DB_SLOT_ID, _document_id);
 	document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
 	L_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s", _document_id.c_str(), document_id.c_str());
 	doc.add_boolean_term(document_id);
-	doc.add_value(1, DEFAULT_OFFSET);
-	doc.add_value(2, ct_type);
-	doc.add_value(3, ct_length);
+	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
+	doc.add_value(DB_SLOT_TYPE, ct_type);
+	doc.add_value(DB_SLOT_LENGTH, ct_length);
 
+	// Index terms for content-type
 	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX , STRING_TYPE);
 	doc.add_term(prefixed(ct_type, term_prefix));
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
 
+	// Check the type for data to index
 	cJSON *json;
 	bool blob = true;
 	if (ct_type == "application/json") {
@@ -718,7 +623,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	} else if (ct_type == "application/x-www-form-urlencoded") {
 		json = cJSON_Parse(body.c_str());
 		if (json) {
-			doc.add_value(2, "application/json");
+			doc.add_value(DB_SLOT_TYPE, "application/json");
 			blob = false;
 		} else {
 			json = cJSON_Parse("{}");
@@ -728,6 +633,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	}
 	unique_cJSON document(json);
 
+	// Index document
 	unique_char_ptr _cprint(cJSON_Print(document.get()));
 	std::string doc_data(_cprint.get());
 	L_DATABASE_WRAP(this, "Document to index: %s", doc_data.c_str());
@@ -736,21 +642,20 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	cJSON *document_terms = cJSON_GetObjectItem(document.get(), RESERVED_TERMS);
 	cJSON *document_texts = cJSON_GetObjectItem(document.get(), RESERVED_TEXTS);
 
-	cJSON *properties = schema.get_properties();
-	bool find = schema.find;
+	cJSON *properties = schema.get_properties_schema();
 
 	cJSON *subproperties = nullptr;
 	if (_document_id.c_str()) {
-		subproperties = schema.get_subproperties(RESERVED_ID, true);
+		subproperties = schema.get_properties_id(properties);
 	} else {
 		L_ERR(this, "ERROR: Document must have an 'id'");
 		return 0;
 	}
 
 	try {
-		//Default specifications
+		// Default specifications
 		specifications_t spc_now = default_spc;
-		if (find) {
+		if (schema.find) {
 			update_specifications(document.get(), spc_now, properties, true);
 		} else {
 			insert_specifications(document.get(), spc_now, properties);
@@ -763,12 +668,10 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 				cJSON *name = cJSON_GetObjectItem(texts, RESERVED_NAME);
 				cJSON *text = cJSON_GetObjectItem(texts, RESERVED_VALUE);
 				if (text) {
-					bool find = true;
 					std::string name_s = name ? name->type == cJSON_String ? name->valuestring : throw MSG_Error("%s should be string", RESERVED_NAME) : std::string();
 					if (!name_s.empty()) {
-						subproperties = schema.get_subproperties(name_s.c_str());
-						find = schema.find;
-						if (find) {
+						subproperties = schema.get_properties(properties, name_s.c_str());
+						if (schema.find) {
 							update_specifications(texts, spc_now, subproperties);
 						} else {
 							insert_specifications(texts, spc_now, subproperties);
@@ -788,7 +691,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 						spc_now.sep_types[2] = get_type(text, spc_now);
 						update_required_data(spc_now, name_s, subproperties);
 					}
-					index_texts(doc, text, spc_now, name_s, subproperties, find);
+					index_texts(doc, text, spc_now, name_s, subproperties, schema.find);
 					spc_now = spc_bef;
 				} else {
 					L_DATABASE_WRAP(this, "ERROR: Text's value must be defined");
@@ -803,12 +706,10 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 				cJSON *name = cJSON_GetObjectItem(data_terms, RESERVED_NAME);
 				cJSON *terms = cJSON_GetObjectItem(data_terms, RESERVED_VALUE);
 				if (terms) {
-					bool find = true;
 					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : "";
 					if (!name_s.empty()) {
-						subproperties = schema.get_subproperties(name_s.c_str());
-						find = schema.find;
-						if (find) {
+						subproperties = schema.get_properties(properties, name_s.c_str());
+						if (schema.find) {
 							update_specifications(data_terms, spc_now, subproperties);
 						} else {
 							insert_specifications(data_terms, spc_now, subproperties);
@@ -821,7 +722,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 						get_type(terms, spc_now);
 						update_required_data(spc_now, name_s, subproperties);
 					}
-					index_terms(doc, terms, spc_now, name_s, subproperties, find);
+					index_terms(doc, terms, spc_now, name_s, subproperties, schema.find);
 					spc_now = spc_bef;
 				} else {
 					L_DATABASE_WRAP(this, "ERROR: Term must be defined");
@@ -832,14 +733,12 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 
 		int elements = cJSON_GetArraySize(document.get());
 		for (int i = 0; i < elements; ++i) {
-			bool find = true;
 			cJSON *item = cJSON_GetArrayItem(document.get(), i);
 			if (!is_reserved(item->string)) {
-				subproperties = schema.get_subproperties(item->string);
-				find = schema.find;
-				index_fields(item, item->string, spc_now, doc, subproperties, find, false);
+				subproperties = schema.get_properties(properties, item->string);
+				index_fields(item, item->string, spc_now, doc, subproperties, schema.find, false);
 			} else if (strcmp(item->string, RESERVED_VALUES) == 0) {
-				index_fields(item, "", spc_now, doc, properties, find);
+				index_fields(item, "", spc_now, doc, properties, schema.find);
 			}
 		}
 
@@ -914,7 +813,7 @@ Database::get_data_field(const std::string &field_name)
 		return res;
 	}
 
-	cJSON *properties = schema.get_properties();
+	cJSON *properties = schema.get_properties_schema();
 
 	auto fields = split_fields(field_name);
 	for (auto it = fields.begin(); it != fields.end(); ++it) {
@@ -969,7 +868,7 @@ Database::get_slot_field(const std::string &field_name)
 		return res;
 	}
 
-	cJSON *properties = schema.get_properties();
+	cJSON *properties = schema.get_properties_schema();
 
 	auto fields = split_fields(field_name);
 	for (auto it = fields.begin(); it != fields.end(); ++it) {
@@ -2001,7 +1900,7 @@ DatabasePool::init_ref(const Endpoints &endpoints)
 			doc.add_boolean_term(unique_id);
 			// Start values for the DB.
 			doc.add_boolean_term(prefixed(DB_MASTER, get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE)));
-			doc.add_value(SLOT_CREF, "0");
+			doc.add_value(DB_SLOT_CREF, "0");
 			ref_database->replace(unique_id, doc, true);
 		}
 	}
