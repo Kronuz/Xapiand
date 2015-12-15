@@ -42,23 +42,22 @@
 #define EBADCHECKSUM (-12)
 
 
-typedef uint32_t chunk_size_t;
-typedef uint32_t did_t;  // Document ID
-typedef uint32_t offset_t;
-typedef uint16_t cookie_t;
-typedef uint32_t checksum_t;
-typedef uint32_t magic_t;
+using chunk_size_t = uint32_t;
+using did_t        = uint32_t;  // Document ID
+using offset_t     = uint32_t;
+using cookie_t     = uint16_t;
+using checksum_t   = uint32_t;
+using magic_t      = uint32_t;
 
 
-struct VolumeError : std::exception {};
+struct VolumeError : std::exception { };
 
 
 class HaystackFile;
 class HaystackIndexedFile;
 
 
-class HaystackVolume
-{
+class HaystackVolume {
 	friend HaystackFile;
 
 	offset_t eof_offset;
@@ -74,8 +73,7 @@ public:
 };
 
 
-class HaystackFile
-{
+class HaystackFile {
 	#pragma pack(push, 1)
 	struct NeedleHeader {
 		struct Head {
@@ -87,6 +85,7 @@ class HaystackFile
 		} head;
 		chunk_size_t chunk_size;
 	} header;
+
 	struct NeedleFooter {
 		// chunk_size_t zero
 		struct Foot {
@@ -95,8 +94,8 @@ class HaystackFile
 			// padding to align total needle size to 8 bytes
 		} foot;
 	} footer;
-	#pragma pack(pop)
 
+	#pragma pack(pop)
 	char* buffer;
 	ssize_t buffer_size;
 	ssize_t available_buffer;
@@ -106,19 +105,22 @@ class HaystackFile
 	cookie_t wanted_cookie;
 
 	std::shared_ptr<HaystackVolume> volume;
+
 protected:
 	offset_t current_offset;
 
 private:
 	off_t real_offset;
 
-	enum {
-		opened,
-		writing,
-		reading,
-		error,
-		eof,
-	} state;
+	enum class State {
+		OPENED,
+		WRITING,
+		READING,
+		ERROR,
+		H_EOF,
+	};
+
+	State state;
 
 	void write_header(size_t size);
 	size_t write_chunk(const char* data, size_t size);
@@ -146,8 +148,7 @@ public:
 };
 
 
-class HaystackIndex
-{
+class HaystackIndex {
 	std::string index_path;
 	int index_file;
 
@@ -165,8 +166,7 @@ public:
 };
 
 
-class Haystack
-{
+class Haystack {
 	friend HaystackIndexedFile;
 
 	std::shared_ptr<HaystackIndex> index;
@@ -180,8 +180,7 @@ public:
 };
 
 
-class HaystackIndexedFile : public HaystackFile
-{
+class HaystackIndexedFile : public HaystackFile {
 	std::shared_ptr<HaystackIndex> index;
 
 public:
