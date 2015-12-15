@@ -61,13 +61,35 @@ constexpr size_t START_POS = SIZE_BITS_ID - 4;
 
 using namespace std::chrono;
 
+class Database;
 class DatabasePool;
 class DatabasesLRU;
 class DatabaseQueue;
 
 
+class Schema {
+	Database* db;
+
+	unique_cJSON schema;
+	bool to_store;
+
+public:
+	bool find;
+
+	Schema(Database* db_);
+
+	cJSON* get_schema();
+	cJSON* get_properties();
+	cJSON* get_subproperties(const char* attr, bool init=false);
+
+	void store();
+};
+
+
 class Database {
 public:
+	Schema schema;
+
 	std::weak_ptr<DatabaseQueue> weak_queue;
 	Endpoints endpoints;
 	int flags;
@@ -96,13 +118,13 @@ public:
 
 	long long read_mastery(const std::string &dir);
 	void reopen();
-	bool drop(const std::string &document_id, bool commit_);
+	bool drop(const std::string &document_id, bool commit_=false);
 	Xapian::docid index(const std::string &body, const std::string &document_id, bool commit_, const std::string &ct_type, const std::string &ct_length);
 	Xapian::docid patch(cJSON *patches, const std::string &_document_id, bool commit_, const std::string &ct_type, const std::string &ct_length);
-	Xapian::docid replace(const std::string &document_id, const Xapian::Document &doc, bool commit_);
-	Xapian::docid replace(const Xapian::docid &did, const Xapian::Document &doc, bool commit_);
+	Xapian::docid replace(const std::string &document_id, const Xapian::Document &doc, bool commit_=false);
+	Xapian::docid replace(const Xapian::docid &did, const Xapian::Document &doc, bool commit_=false);
 	bool get_metadata(const std::string &key, std::string &value);
-	bool set_metadata(const std::string &key, const std::string &value, bool commit_);
+	bool set_metadata(const std::string &key, const std::string &value, bool commit_=false);
 	bool get_document(const Xapian::docid &did, Xapian::Document &doc);
 	Xapian::Enquire get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
 					Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
