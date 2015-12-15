@@ -21,20 +21,23 @@
  */
 
 #include "multivaluerange.h"
+
 #include "multivalue.h"
 #include "length.h"
 #include "serialise.h"
 
 
 MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string &start_, const std::string &end_)
-	: ValuePostingSource(slot_), start(start_), end(end_), slot(slot_) {
+	: ValuePostingSource(slot_), start(start_), end(end_), slot(slot_)
+{
 	set_maxweight(1.0);
 }
 
 
 // Receive start and end did not serialize.
 Xapian::Query
-MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string start_, std::string end_, const std::string &field_name) {
+MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string &start_, std::string &end_, const std::string &field_name)
+{
 	if (start_.empty() && end_.empty()){
 		return Xapian::Query::MatchAll;
 	} else if (start_.empty()) {
@@ -61,11 +64,11 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 
 
 bool
-MultipleValueRange::insideRange() {
+MultipleValueRange::insideRange()  const noexcept
+{
 	StringList list;
 	list.unserialise(*value_it);
-	StringList::const_iterator i(list.begin());
-	for ( ; i != list.end(); i++) {
+	for (auto i = list.begin(); i != list.end(); ++i) {
 		if (*i >= start && *i <= end) {
 			return true;
 		}
@@ -75,7 +78,8 @@ MultipleValueRange::insideRange() {
 
 
 void
-MultipleValueRange::next(double min_wt) {
+MultipleValueRange::next(double min_wt)
+{
 	Xapian::ValuePostingSource::next(min_wt);
 	while (value_it != db.valuestream_end(slot)) {
 		if (insideRange()) break;
@@ -85,7 +89,8 @@ MultipleValueRange::next(double min_wt) {
 
 
 void
-MultipleValueRange::skip_to(Xapian::docid min_docid, double min_wt) {
+MultipleValueRange::skip_to(Xapian::docid min_docid, double min_wt)
+{
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
 	while (value_it != db.valuestream_end(slot)) {
 		if (insideRange()) break;
@@ -95,7 +100,8 @@ MultipleValueRange::skip_to(Xapian::docid min_docid, double min_wt) {
 
 
 bool
-MultipleValueRange::check(Xapian::docid min_docid, double min_wt) {
+MultipleValueRange::check(Xapian::docid min_docid, double min_wt)
+{
 	if (!ValuePostingSource::check(min_docid, min_wt)) {
 		// check returned false, so we know the document is not in the source.
 		return false;
@@ -111,25 +117,29 @@ MultipleValueRange::check(Xapian::docid min_docid, double min_wt) {
 
 
 double
-MultipleValueRange::get_weight() const {
+MultipleValueRange::get_weight() const
+{
 	return 1.0;
 }
 
 
 MultipleValueRange*
-MultipleValueRange::clone() const {
+MultipleValueRange::clone() const
+{
 	return new MultipleValueRange(slot, start, end);
 }
 
 
 std::string
-MultipleValueRange::name() const {
+MultipleValueRange::name() const
+{
 	return "MultipleValueRange";
 }
 
 
 std::string
-MultipleValueRange::serialise() const {
+MultipleValueRange::serialise() const
+{
 	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
 	values.append(encode_length(s_slot.size()));
 	values.append(s_slot);
@@ -144,7 +154,8 @@ MultipleValueRange::serialise() const {
 
 
 MultipleValueRange*
-MultipleValueRange::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const {
+MultipleValueRange::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const
+{
 	StringList data;
 	data.unserialise(s);
 	return new MultipleValueRange(Xapian::sortable_unserialise(data.at(0)), data.at(1), data.at(2));
@@ -152,7 +163,8 @@ MultipleValueRange::unserialise_with_registry(const std::string &s, const Xapian
 
 
 void
-MultipleValueRange::init(const Xapian::Database &db_) {
+MultipleValueRange::init(const Xapian::Database &db_)
+{
 	Xapian::ValuePostingSource::init(db_);
 
 	// Possible that no documents are in range.
@@ -161,7 +173,8 @@ MultipleValueRange::init(const Xapian::Database &db_) {
 
 
 std::string
-MultipleValueRange::get_description() const {
+MultipleValueRange::get_description() const
+{
 	std::string result("MultipleValueRange ");
 	result += std::to_string(slot) + " " + start;
 	result += " " + end;
@@ -170,17 +183,18 @@ MultipleValueRange::get_description() const {
 
 
 MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, const std::string &start_)
-	: ValuePostingSource(slot_), start(start_), slot(slot_) {
+	: ValuePostingSource(slot_), start(start_), slot(slot_)
+{
 	set_maxweight(1.0);
 }
 
 
 bool
-MultipleValueGE::insideRange() {
+MultipleValueGE::insideRange() const noexcept
+{
 	StringList list;
 	list.unserialise(*value_it);
-	StringList::const_iterator i(list.begin());
-	for ( ; i != list.end(); i++) {
+	for (auto i = list.begin(); i != list.end(); ++i) {
 		if (*i >= start) {
 			return true;
 		}
@@ -190,7 +204,8 @@ MultipleValueGE::insideRange() {
 
 
 void
-MultipleValueGE::next(double min_wt) {
+MultipleValueGE::next(double min_wt)
+{
 	Xapian::ValuePostingSource::next(min_wt);
 	while (value_it != db.valuestream_end(slot)) {
 		if (insideRange()) break;
@@ -200,7 +215,8 @@ MultipleValueGE::next(double min_wt) {
 
 
 void
-MultipleValueGE::skip_to(Xapian::docid min_docid, double min_wt) {
+MultipleValueGE::skip_to(Xapian::docid min_docid, double min_wt)
+{
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
 	while (value_it != db.valuestream_end(slot)) {
 		if (insideRange()) break;
@@ -210,7 +226,8 @@ MultipleValueGE::skip_to(Xapian::docid min_docid, double min_wt) {
 
 
 bool
-MultipleValueGE::check(Xapian::docid min_docid, double min_wt) {
+MultipleValueGE::check(Xapian::docid min_docid, double min_wt)
+{
 	if (!ValuePostingSource::check(min_docid, min_wt)) {
 		// check returned false, so we know the document is not in the source.
 		return false;
@@ -226,25 +243,29 @@ MultipleValueGE::check(Xapian::docid min_docid, double min_wt) {
 
 
 double
-MultipleValueGE::get_weight() const {
+MultipleValueGE::get_weight() const
+{
 	return 1.0;
 }
 
 
 MultipleValueGE*
-MultipleValueGE::clone() const {
+MultipleValueGE::clone() const
+{
 	return new MultipleValueGE(slot, start);
 }
 
 
 std::string
-MultipleValueGE::name() const {
+MultipleValueGE::name() const
+{
 	return "MultipleValueGE";
 }
 
 
 std::string
-MultipleValueGE::serialise() const {
+MultipleValueGE::serialise() const
+{
 	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
 	values.append(encode_length(s_slot.size()));
 	values.append(s_slot);
@@ -257,7 +278,8 @@ MultipleValueGE::serialise() const {
 
 
 MultipleValueGE*
-MultipleValueGE::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const {
+MultipleValueGE::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const
+{
 	StringList data;
 	data.unserialise(s);
 	return new MultipleValueGE(Xapian::sortable_unserialise(data.at(0)), data.at(1));
@@ -265,7 +287,8 @@ MultipleValueGE::unserialise_with_registry(const std::string &s, const Xapian::R
 
 
 void
-MultipleValueGE::init(const Xapian::Database &db_) {
+MultipleValueGE::init(const Xapian::Database &db_)
+{
 	Xapian::ValuePostingSource::init(db_);
 
 	// Possible that no documents are in range.
@@ -274,7 +297,8 @@ MultipleValueGE::init(const Xapian::Database &db_) {
 
 
 std::string
-MultipleValueGE::get_description() const {
+MultipleValueGE::get_description() const
+{
 	std::string result("MultipleValueGE ");
 	result += std::to_string(slot) + " " + start + ")";
 	return result;
@@ -282,17 +306,18 @@ MultipleValueGE::get_description() const {
 
 
 MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, const std::string &end_)
-	: ValuePostingSource(slot_), end(end_), slot(slot_) {
+	: ValuePostingSource(slot_), end(end_), slot(slot_)
+{
 	set_maxweight(1.0);
 }
 
 
 bool
-MultipleValueLE::insideRange() {
+MultipleValueLE::insideRange() const noexcept
+{
 	StringList list;
 	list.unserialise(*value_it);
-	StringList::const_iterator i(list.begin());
-	for ( ; i != list.end(); i++) {
+	for (auto i = list.begin(); i != list.end(); ++i) {
 		if (*i <= end) {
 			return true;
 		}
@@ -302,7 +327,8 @@ MultipleValueLE::insideRange() {
 
 
 void
-MultipleValueLE::next(double min_wt) {
+MultipleValueLE::next(double min_wt)
+{
 	Xapian::ValuePostingSource::next(min_wt);
 	while (value_it != db.valuestream_end(slot)) {
 		if (insideRange()) break;
@@ -312,7 +338,8 @@ MultipleValueLE::next(double min_wt) {
 
 
 void
-MultipleValueLE::skip_to(Xapian::docid min_docid, double min_wt) {
+MultipleValueLE::skip_to(Xapian::docid min_docid, double min_wt)
+{
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
 	while (value_it != db.valuestream_end(slot)) {
 		if (insideRange()) break;
@@ -322,7 +349,8 @@ MultipleValueLE::skip_to(Xapian::docid min_docid, double min_wt) {
 
 
 bool
-MultipleValueLE::check(Xapian::docid min_docid, double min_wt) {
+MultipleValueLE::check(Xapian::docid min_docid, double min_wt)
+{
 	if (!ValuePostingSource::check(min_docid, min_wt)) {
 		// check returned false, so we know the document is not in the source.
 		return false;
@@ -338,25 +366,29 @@ MultipleValueLE::check(Xapian::docid min_docid, double min_wt) {
 
 
 double
-MultipleValueLE::get_weight() const {
+MultipleValueLE::get_weight() const
+{
 	return 1.0;
 }
 
 
 MultipleValueLE*
-MultipleValueLE::clone() const {
+MultipleValueLE::clone() const
+{
 	return new MultipleValueLE(slot, end);
 }
 
 
 std::string
-MultipleValueLE::name() const {
+MultipleValueLE::name() const
+{
 	return "MultipleValueLE";
 }
 
 
 std::string
-MultipleValueLE::serialise() const {
+MultipleValueLE::serialise() const
+{
 	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
 	values.append(encode_length(s_slot.size()));
 	values.append(s_slot);
@@ -369,7 +401,8 @@ MultipleValueLE::serialise() const {
 
 
 MultipleValueLE*
-MultipleValueLE::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const {
+MultipleValueLE::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const
+{
 	StringList data;
 	data.unserialise(s);
 	return new MultipleValueLE(Xapian::sortable_unserialise(data.at(0)), data.at(1));
@@ -377,7 +410,8 @@ MultipleValueLE::unserialise_with_registry(const std::string &s, const Xapian::R
 
 
 void
-MultipleValueLE::init(const Xapian::Database &db_) {
+MultipleValueLE::init(const Xapian::Database &db_)
+{
 	Xapian::ValuePostingSource::init(db_);
 
 	// Possible that no documents are in range.
@@ -386,7 +420,8 @@ MultipleValueLE::init(const Xapian::Database &db_) {
 
 
 std::string
-MultipleValueLE::get_description() const {
+MultipleValueLE::get_description() const
+{
 	std::string result("MultipleValueLE ");
 	result += std::to_string(slot) + " " + end + ")";
 	return result;

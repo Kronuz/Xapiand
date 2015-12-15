@@ -28,18 +28,18 @@
 
 
 void
-StringList::unserialise(const std::string & serialised)
+StringList::unserialise(const std::string& serialised)
 {
-	const char * ptr = serialised.data();
-	const char * end = serialised.data() + serialised.size();
+	const char* ptr = serialised.data();
+	const char* end = serialised.data() + serialised.size();
 	unserialise(&ptr, end);
 }
 
 
 void
-StringList::unserialise(const char ** ptr, const char * end)
+StringList::unserialise(const char** ptr, const char* end)
 {
-	const char *pos = *ptr;
+	const char* pos = *ptr;
 	clear();
 	ssize_t length = decode_length(&pos, end, true);
 	if (length == -1 || length != end - pos) {
@@ -66,7 +66,7 @@ StringList::serialise() const
 	std::string serialised, values;
 	StringList::const_iterator i(begin());
 	if (size() > 1) {
-		for (; i != end(); i++) {
+		for ( ; i != end(); ++i) {
 			values.append(encode_length((*i).size()));
 			values.append(*i);
 		}
@@ -80,14 +80,14 @@ StringList::serialise() const
 
 
 void
-MultiValueCountMatchSpy::operator()(const Xapian::Document &doc, double) {
+MultiValueCountMatchSpy::operator()(const Xapian::Document &doc, double)
+{
 	assert(internal.get());
 	++(internal->total);
 	StringList list;
 	list.unserialise(doc.get_value(internal->slot));
-	StringList::const_iterator i(list.begin());
 	if (is_geo) {
-		for ( ; i != list.end(); ++i) {
+		for (auto i = list.begin(); i != list.end(); ++i) {
 			if (!i->empty()) {
 				StringList s;
 				s.push_back(*i);
@@ -96,28 +96,31 @@ MultiValueCountMatchSpy::operator()(const Xapian::Document &doc, double) {
 			}
 		}
 	} else {
-		for ( ; i != list.end(); i++) {
+		for (auto i = list.begin(); i != list.end(); ++i) {
 			if (!i->empty()) ++(internal->values[*i]);
 		}
 	}
 }
 
 
-Xapian::MatchSpy *
-MultiValueCountMatchSpy::clone() const {
+Xapian::MatchSpy*
+MultiValueCountMatchSpy::clone() const
+{
 	assert(internal.get());
 	return new MultiValueCountMatchSpy(internal->slot);
 }
 
 
 std::string
-MultiValueCountMatchSpy::name() const {
+MultiValueCountMatchSpy::name() const
+{
 	return "Xapian::MultiValueCountMatchSpy";
 }
 
 
 std::string
-MultiValueCountMatchSpy::serialise() const {
+MultiValueCountMatchSpy::serialise() const
+{
 	assert(internal.get());
 	std::string result;
 	result += encode_length(internal->slot);
@@ -125,11 +128,11 @@ MultiValueCountMatchSpy::serialise() const {
 }
 
 
-Xapian::MatchSpy *
-MultiValueCountMatchSpy::unserialise(const std::string & s,
-									 const Xapian::Registry &) const {
-	const char * p = s.data();
-	const char * end = p + s.size();
+Xapian::MatchSpy*
+MultiValueCountMatchSpy::unserialise(const std::string& s, const Xapian::Registry&) const
+{
+	const char* p = s.data();
+	const char* end = p + s.size();
 
 	Xapian::valueno new_slot = (Xapian::valueno)decode_length(&p, end, false);
 	if (new_slot == Xapian::BAD_VALUENO) {
@@ -144,9 +147,10 @@ MultiValueCountMatchSpy::unserialise(const std::string & s,
 
 
 std::string
-MultiValueCountMatchSpy::get_description() const {
+MultiValueCountMatchSpy::get_description() const
+{
 	char buffer[20];
-	std::string d = "MultiValueCountMatchSpy(";
+	std::string d("MultiValueCountMatchSpy(");
 	if (internal.get()) {
 		snprintf(buffer, sizeof(buffer), "%u", internal->total);
 		d += buffer;

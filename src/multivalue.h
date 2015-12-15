@@ -24,7 +24,7 @@
 
 #include <xapian.h>
 
-#include <string.h>
+#include <string>
 #include <vector>
 
 
@@ -38,8 +38,8 @@
  */
 class StringList : public std::vector<std::string> {
 public:
-	void unserialise(const std::string & serialised);
-	void unserialise(const char ** ptr, const char * end);
+	void unserialise(const std::string& serialised);
+	void unserialise(const char** ptr, const char* end);
 	std::string serialise() const;
 
 };
@@ -49,26 +49,25 @@ public:
 class MultiValueCountMatchSpy : public Xapian::ValueCountMatchSpy {
 	bool is_geo;
 
-	public:
-		/// Construct an empty MultiValueCountMatchSpy.
-		MultiValueCountMatchSpy(): Xapian::ValueCountMatchSpy() {}
+public:
+	/// Construct an empty MultiValueCountMatchSpy.
+	MultiValueCountMatchSpy() = default;
 
-		/** Construct a MatchSpy which counts the values in a particular slot.
-		 *
-		 *  Further slots can be added by calling @a add_slot().
-		 */
-		MultiValueCountMatchSpy(Xapian::valueno slot_, bool _is_geo = false) : Xapian::ValueCountMatchSpy(slot_), is_geo(_is_geo) {}
+	/** Construct a MatchSpy which counts the values in a particular slot.
+	 *
+	 *  Further slots can be added by calling @a add_slot().
+	 */
+	MultiValueCountMatchSpy(Xapian::valueno slot_, bool _is_geo = false) : Xapian::ValueCountMatchSpy(slot_), is_geo(_is_geo) { }
 
-		/** Implementation of virtual operator().
-		 *
-		 *  This implementation tallies values for a matching document.
-		 */
-		void operator()(const Xapian::Document &doc, double wt);
+	/** Implementation of virtual operator().
+	 *
+	 *  This implementation tallies values for a matching document.
+	 */
+	void operator()(const Xapian::Document &doc, double wt) override;
 
-		virtual Xapian::MatchSpy * clone() const;
-		virtual std::string name() const;
-		virtual std::string serialise() const;
-		virtual Xapian::MatchSpy * unserialise(const std::string & serialised,
-									   const Xapian::Registry & context) const;
-		virtual std::string get_description() const;
+	Xapian::MatchSpy* clone() const override;
+	std::string name() const override;
+	std::string serialise() const override;
+	Xapian::MatchSpy* unserialise(const std::string& serialised, const Xapian::Registry& context) const override;
+	std::string get_description() const override;
 };

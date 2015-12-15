@@ -22,12 +22,12 @@
 
 #pragma once
 
+#include "htm.h"
+
 #include <xapian.h>
 
 #include <string.h>
 #include <vector>
-
-#include "htm.h"
 
 
 /*

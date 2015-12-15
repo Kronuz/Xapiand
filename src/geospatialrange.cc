@@ -21,6 +21,7 @@
  */
 
 #include "geospatialrange.h"
+
 #include "multivalue.h"
 #include "length.h"
 #include "serialise.h"
@@ -34,7 +35,7 @@ static double geo_weight_from_angle(double angle) {
 void
 CartesianList::unserialise(const std::string& serialised)
 {
-	for (size_t i = 0, j =  SIZE_SERIALISE_CARTESIAN; i < serialised.size(); i = j, j += SIZE_SERIALISE_CARTESIAN) {
+	for (size_t i = 0, j = SIZE_SERIALISE_CARTESIAN; i < serialised.size(); i = j, j += SIZE_SERIALISE_CARTESIAN) {
 		push_back(Unserialise::cartesian(serialised.substr(i, j)));
 	}
 }
@@ -74,7 +75,8 @@ uInt64List::serialise() const
 
 
 GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_t>& ranges_, const CartesianList& centroids_)
-	: ValuePostingSource(slot_), slot(slot_)
+	: ValuePostingSource(slot_),
+	  slot(slot_)
 {
 	ranges.reserve(ranges_.size());
 	ranges.insert(ranges.end(), ranges_.begin(), ranges_.end());
