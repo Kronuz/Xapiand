@@ -42,6 +42,7 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/multivaluerange.cc \
 			$(top_builddir)/src/namegen.cc \
 			$(top_builddir)/src/queue.h \
+			$(top_builddir)/src/schema.cc \
 			$(top_builddir)/src/serialise.cc \
 			$(top_builddir)/src/threadpool.h \
 			$(top_builddir)/src/times.cc \

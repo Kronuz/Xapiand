@@ -40,6 +40,7 @@ xapiand_SOURCES = \
 	multivaluerange.cc \
 	namegen.cc \
 	replicator.cc \
+	schema.cc \
 	serialise.cc \
 	servers/binary.cc \
 	servers/discovery.cc \
@@ -111,6 +112,7 @@ noinst_HEADERS = \
 	namegen.h \
 	queue.h \
 	replicator.h \
+	schema.h \
 	serialise.h \
 	servers/binary.h \
 	servers/discovery.h \
