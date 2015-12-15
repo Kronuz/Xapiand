@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		462C9EB51C18FC2200BB960E /* sha256.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB01C18FC2200BB960E /* sha256.cc */; };
 		462C9EB61C18FC2200BB960E /* md5.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB11C18FC2200BB960E /* md5.cc */; };
+		462C9EB91C20D39400BB960E /* schema.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB71C20D39400BB960E /* schema.cc */; };
 		4630BEE41B42E88D00351058 /* geometry.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEDE1B42E88D00351058 /* geometry.cc */; };
 		4630BEE51B42E88D00351058 /* htm.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE01B42E88D00351058 /* htm.cc */; };
 		4630BEE61B42E88D00351058 /* wkt_parser.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE21B42E88D00351058 /* wkt_parser.cc */; };
@@ -79,6 +80,8 @@
 		462C9EB21C18FC2200BB960E /* endian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = endian.h; path = src/hash/endian.h; sourceTree = "<group>"; };
 		462C9EB31C18FC2200BB960E /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = md5.h; path = src/hash/md5.h; sourceTree = "<group>"; };
 		462C9EB41C18FC2200BB960E /* sha256.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sha256.h; path = src/hash/sha256.h; sourceTree = "<group>"; };
+		462C9EB71C20D39400BB960E /* schema.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = schema.cc; path = src/schema.cc; sourceTree = "<group>"; };
+		462C9EB81C20D39400BB960E /* schema.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = schema.h; path = src/schema.h; sourceTree = "<group>"; };
 		4630BEDE1B42E88D00351058 /* geometry.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = geometry.cc; path = src/geometry.cc; sourceTree = "<group>"; };
 		4630BEDF1B42E88D00351058 /* geometry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = geometry.h; path = src/geometry.h; sourceTree = "<group>"; };
 		4630BEE01B42E88D00351058 /* htm.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = htm.cc; path = src/htm.cc; sourceTree = "<group>"; };
@@ -286,6 +289,8 @@
 				46DFA9921BC3014E008D8144 /* raft.h */,
 				C39AE0541B2F627E00203139 /* replicator.cc */,
 				C39AE0551B2F627E00203139 /* replicator.h */,
+				462C9EB71C20D39400BB960E /* schema.cc */,
+				462C9EB81C20D39400BB960E /* schema.h */,
 				46B6B3CB1B7E3CEF000FA041 /* serialise.cc */,
 				46B6B3CC1B7E3CEF000FA041 /* serialise.h */,
 				46DFA99B1BC3014E008D8144 /* server_base.cc */,
@@ -424,6 +429,7 @@
 				C3C37DBB1BB05C6900F99A84 /* namegen.cc in Sources */,
 				46DFA9B21BC4800E008D8144 /* discovery.cc in Sources */,
 				46DFA9B11BC4800E008D8144 /* binary.cc in Sources */,
+				462C9EB91C20D39400BB960E /* schema.cc in Sources */,
 				C39AE06E1B2F627E00203139 /* manager.cc in Sources */,
 				46DFA9A91BC3014E008D8144 /* udp_base.cc in Sources */,
 				462C9EB51C18FC2200BB960E /* sha256.cc in Sources */,
