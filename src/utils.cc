@@ -24,6 +24,7 @@
 #include "log.h"
 #include "namegen.h"
 #include "hash/md5.h"
+#include "xapiand.h"
 
 #include <string>
 #include <cstdlib>
