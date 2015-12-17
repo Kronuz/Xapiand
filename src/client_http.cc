@@ -385,7 +385,7 @@ HttpClient::run()
 {
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
-	tcp_nopush(sock);
+	// tcp_nopush(sock);
 
 	std::string error;
 	const char *error_str;
@@ -458,7 +458,7 @@ HttpClient::run()
 		}
 	}
 
-	tcp_push(sock);
+	// tcp_push(sock);
 	response_ends = std::chrono::system_clock::now();
 	request_begining = true;
 
