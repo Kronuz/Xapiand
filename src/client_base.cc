@@ -418,7 +418,11 @@ BaseClient::io_cb_read(int fd)
 
 		if (received < 0) {
 			if (!ignored_errorno(errno, false)) {
-				L_ERR(this, "ERROR: read error (sock=%d): %s", sock, strerror(errno));
+				if (errno == ECONNRESET) {
+					L_WARNING(this, "WARNING: read error (sock=%d): %s", sock, strerror(errno));
+				} else {
+					L_ERR(this, "ERROR: read error (sock=%d): %s", sock, strerror(errno));
+				}
 				destroy();
 				return;
 			}
