@@ -119,7 +119,9 @@ class HttpClient : public BaseClient {
 
 	int _endpointgen(query_field &e, bool writable);
 	static int identify_cmd(const std::string &commad);
-	void clean_http_headers();
+
+	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string body=std::string(""), std::string ct_type=std::string("application/json; charset=UTF-8"));
+	void clean_http_request();
 
 	friend Worker;
 

@@ -84,7 +84,8 @@ const char* status_code[6][14] = {
 };
 
 
-std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string body=std::string(""), std::string ct_type=std::string("application/json; charset=UTF-8")) {
+std::string
+HttpClient::http_response(int status, int mode, unsigned short http_major, unsigned short http_minor, int matched_count, std::string body, std::string ct_type) {
 	char buffer[20];
 	std::string response;
 	std::string eol("\r\n");
@@ -130,6 +131,10 @@ std::string http_response(int status, int mode, unsigned short http_major=0, uns
 		} else {
 			response += body;
 		}
+	}
+
+	if (!(mode & HTTP_CHUNKED)) {
+		clean_http_request();
 	}
 
 	return response;
@@ -261,7 +266,7 @@ HttpClient::on_info(http_parser* p)
 		case 50:  // headers done
 			if (self->expect_100) {
 				// Return 100 if client is expecting it
-				self->write(http_response(100, HTTP_STATUS, p->http_major, p->http_minor));
+				self->write(self->http_response(100, HTTP_STATUS, p->http_major, p->http_minor));
 			}
 	}
 
@@ -304,7 +309,7 @@ HttpClient::on_data(http_parser* p, const char *at, size_t length)
 
 			if (name.compare("expect") == 0 && value.compare("100-continue") == 0) {
 				if (p->content_length > MAX_BODY_SIZE) {
-					self->write(http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
+					self->write(self->http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
 					self->close();
 					return 0;
 				}
@@ -332,7 +337,7 @@ HttpClient::on_data(http_parser* p, const char *at, size_t length)
 				}
 
 				if (size_match != value.size()) {
-					self->write(http_response(400, HTTP_STATUS, p->http_major, p->http_minor)); // <-- remove leater!
+					self->write(self->http_response(400, HTTP_STATUS, p->http_major, p->http_minor)); // <-- remove leater!
 					self->close();
 					return 0;
 				}
@@ -343,14 +348,14 @@ HttpClient::on_data(http_parser* p, const char *at, size_t length)
 	} else if (state >= 60 && state <= 62) { // s_body_identity  ->  s_message_done
 		self->body_size += length;
 		if (self->body_size > MAX_BODY_SIZE || p->content_length > MAX_BODY_SIZE) {
-			self->write(http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
+			self->write(self->http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
 			self->close();
 			return 0;
 		} else if (self->body_descriptor || self->body_size > MAX_BODY_MEM) {
 
 			//The next two lines are switching off the write body in to a file option when the body is too large
 			//(for avoid have it in memory) but this feature is not available yet
-			self->write(http_response(413, HTTP_STATUS, p->http_major, p->http_minor)); // <-- remove leater!
+			self->write(self->http_response(413, HTTP_STATUS, p->http_major, p->http_minor)); // <-- remove leater!
 			self->close(); // <-- remove leater!
 
 			if (!self->body_descriptor) {
@@ -425,7 +430,6 @@ HttpClient::run()
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 				break;
 		}
-		clean_http_headers();
 	} catch (const Xapian::Error &err) {
 		has_error = true;
 		error_str = err.get_error_string();
@@ -456,17 +460,6 @@ HttpClient::run()
 		} else {
 			write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		}
-	}
-
-	// tcp_push(sock);
-	response_ends = std::chrono::system_clock::now();
-	request_begining = true;
-
-	L_INFO(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
-
-	if (!closed) {
-		L_EV(this, "\tEnable read event (sock=%d)", sock);
-		io_read.start();
 	}
 
 	L_OBJ_END(this, "HttpClient::run:END");
@@ -662,8 +655,7 @@ HttpClient::document_info_view(const query_field &e)
 			result.assign(_cprint.get());
 		}
 		result += "\n";
-		result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result);
-		write(result);
+		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 	} else {
 		cJSON_AddStringToObject(root.get(), "Response empty", "Document not found");
 		if (e.pretty) {
@@ -725,8 +717,7 @@ HttpClient::delete_document_view(const query_field &e)
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result);
-	write(result);
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 }
 
 
@@ -787,8 +778,7 @@ HttpClient::index_document_view(const query_field &e)
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result);
-	write(result);
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 }
 
 
@@ -834,8 +824,7 @@ HttpClient::update_document_view(const query_field &e)
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result);
-	write(result);
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 }
 
 
@@ -879,8 +868,7 @@ HttpClient::stats_view(const query_field &e)
 		result.assign(_cprint.get());
 	}
 	result += "\n\n";
-	result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result);
-	write(result);
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 }
 
 
@@ -908,7 +896,6 @@ HttpClient::bad_request_view(const query_field &e, int cmd)
 		result.assign(_cprint.get());
 	}
 	result += "\n";
-
 	write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 }
 
@@ -1015,8 +1002,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 			result.assign(_cprint.get());
 		}
 		result += "\n\n";
-		result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result);
-		write(result);
+		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 	} else {
 		int rc = 0;
 		if (!mset.empty()) {
@@ -1052,7 +1038,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 				if (t < 0) {
 					// On errors, abort
 					if (written) {
-						write("0\r\n\r\n");
+						write(http_response(0, HTTP_BODY, 0, 0, 0, "0\r\n\r\n"));
 					} else {
 						write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 					}
@@ -1110,7 +1096,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 				/* Return data in case is not a json type */
 				unique_cJSON object(cJSON_Parse(data.c_str()));
 				if (!object) {
-					 write(http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, data, ct_type));
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, data, ct_type));
 					manager()->database_pool.checkin(database);
 					return;
 				}
@@ -1137,17 +1123,18 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 				}
 				result += "\n\n";
 				if (json_chunked) {
-					result = http_response(200,  HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, result);
+					if (!write(http_response(200, HTTP_BODY | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, result))) {
+						break;
+					}
 				} else {
-					result = http_response(200,  HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result);
+					if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result))) {
+						break;
+					}
 				}
 
-				if (!write(result)) {
-					break;
-				}
 			}
 			if (json_chunked) {
-				write("0\r\n\r\n");
+				write(http_response(0, HTTP_BODY, 0, 0, 0, "0\r\n\r\n"));
 			}
 		} else {
 			int status_code = 200;
@@ -1168,8 +1155,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 				result.assign(_cprint.get());
 			}
 			result += "\n\n";
-			result = http_response(status_code,  HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, result);
-			write(result);
+			write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, result));
 		}
 	}
 
@@ -1578,7 +1564,7 @@ HttpClient::identify_cmd(const std::string &commad)
 
 
 void
-HttpClient::clean_http_headers()
+HttpClient::clean_http_request()
 {
 	path.clear();
 	body.clear();
@@ -1588,4 +1574,15 @@ HttpClient::clean_http_headers()
 	content_length.clear();
 	host.clear();
 	command.clear();
+
+	// tcp_push(sock);
+
+	response_ends = std::chrono::system_clock::now();
+	request_begining = true;
+	L_INFO(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
+
+	if (!closed) {
+		L_EV(this, "\tEnable read event (sock=%d)", sock);
+		io_read.start();
+	}
 }
