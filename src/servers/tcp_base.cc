@@ -36,21 +36,6 @@
 #include <netdb.h> /* for getaddrinfo */
 
 
-void _tcp_nopush(int sock, int optval) {
-#ifdef TCP_NOPUSH
-	if (setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) < 0) {
-		L_ERR(nullptr, "ERROR: setsockopt TCP_NOPUSH (sock=%d): [%d] %s", sock, errno, strerror(errno));
-	}
-#endif
-
-#ifdef TCP_CORK
-	if (setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) < 0) {
-		L_ERR(nullptr, "ERROR: setsockopt TCP_CORK (sock=%d): [%d] %s", sock, errno, strerror(errno));
-	}
-#endif
-}
-
-
 BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, const std::string &description_, int tries_, int flags_)
 	: manager(manager_),
 	  port(port_),

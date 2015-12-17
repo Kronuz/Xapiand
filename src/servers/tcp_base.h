@@ -39,17 +39,6 @@ constexpr double idle_timeout = 60;
 constexpr double active_timeout = 15;
 
 
-void _tcp_nopush(int sock, int optval);
-
-inline void tcp_nopush(int sock) {
-	_tcp_nopush(sock, 1);
-}
-
-inline void tcp_push(int sock) {
-	_tcp_nopush(sock, 0);
-}
-
-
 // Base class for configuration data for TCP.
 class BaseTCP {
 private:

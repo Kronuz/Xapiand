@@ -141,7 +141,8 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref *loop_,
 	  database(nullptr),
 	  body_size(0),
 	  body_descriptor(0),
-	  body_path("")
+	  body_path(""),
+	  request_begining(true)
 {
 	parser.data = this;
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -186,6 +187,10 @@ HttpClient::~HttpClient()
 void
 HttpClient::on_read(const char *buf, size_t received)
 {
+	if (request_begining) {
+		request_begining = false;
+		request_begins = std::chrono::system_clock::now();
+	}
 	L_CONN_WIRE(this, "HttpClient::on_read: %zu bytes", received);
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
@@ -379,6 +384,7 @@ void
 HttpClient::run()
 {
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
+	response_begins = std::chrono::system_clock::now();
 
 	std::string error;
 	const char *error_str;
@@ -450,6 +456,11 @@ HttpClient::run()
 			write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		}
 	}
+
+	response_ends = std::chrono::system_clock::now();
+	request_begining = true;
+
+	L_INFO(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
 
 	if (!closed) {
 		L_EV(this, "\tEnable read event (sock=%d)", sock);

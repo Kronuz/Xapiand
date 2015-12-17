@@ -211,3 +211,16 @@ namespace epoch {
 		return std::chrono::duration_cast<Period>(std::chrono::system_clock::now().time_since_epoch()).count();
 	};
 }
+
+std::string delta_string(std::chrono::time_point<std::chrono::system_clock> start, std::chrono::time_point<std::chrono::system_clock> end);
+
+
+void _tcp_nopush(int sock, int optval);
+
+inline void tcp_nopush(int sock) {
+	_tcp_nopush(sock, 1);
+}
+
+inline void tcp_push(int sock) {
+	_tcp_nopush(sock, 0);
+}

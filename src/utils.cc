@@ -31,6 +31,7 @@
 #include <thread>
 #include <mutex>
 
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -39,6 +40,11 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <sys/stat.h>
+
+#include <sys/socket.h>
+#include <netinet/in.h> /* for IPPROTO_TCP */
+#include <netinet/tcp.h> /* for TCP_NODELAY */
+
 
 #ifdef HAVE_PTHREAD_H
 #include <pthread.h>
@@ -786,4 +792,43 @@ unsigned int levenshtein_distance(const std::string &str1, const std::string &st
 	}
 
 	return prev_col[len2];
+}
+
+
+std::string
+delta_string(std::chrono::time_point<std::chrono::system_clock> start, std::chrono::time_point<std::chrono::system_clock> end)
+{
+	static const char *units[] = {"s", "ms", "\xc2\xb5s", "ns"};
+	static const long double scaling[] = {1, 1e3, 1e6, 1e9};
+
+	long double delta = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+	delta /= 1e9;  // convert nanoseconds to seconds (as a double)
+	long double timespan = delta;
+
+	if (delta < 0) delta = -delta;
+
+	int order = (delta > 0) ? -floorl(log10l(delta)) / 3 : 3;
+	if (order > 3) order = 3;
+
+	timespan = (timespan * scaling[order] * 1000.0 + 0.5) / 1000.0;
+
+	char buf[100];
+	snprintf(buf, 100, "%Lg%s", timespan, units[order]);
+	return buf;
+}
+
+
+void _tcp_nopush(int sock, int optval) {
+#ifdef TCP_NOPUSH
+	if (setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) < 0) {
+		L_ERR(nullptr, "ERROR: setsockopt TCP_NOPUSH (sock=%d): [%d] %s", sock, errno, strerror(errno));
+	}
+#endif
+
+#ifdef TCP_CORK
+	if (setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) < 0) {
+		L_ERR(nullptr, "ERROR: setsockopt TCP_CORK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+	}
+#endif
 }
