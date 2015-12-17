@@ -28,7 +28,7 @@
 
 
 Http::Http(const std::shared_ptr<XapiandManager>& manager_, int port_)
-	: BaseTCP(manager_, port_, "Http", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1)
+	: BaseTCP(manager_, port_, "Http", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY | CONN_TCP_DEFER_ACCEPT)
 {
 	local_node.http_port = port;
 

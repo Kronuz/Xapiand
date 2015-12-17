@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "xapiand.h"
+
 #include "cJSON.h"
 
 #include <limits.h>

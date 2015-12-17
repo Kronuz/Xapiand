@@ -27,10 +27,11 @@
 #include "../client_binary.h"
 
 #include <assert.h>
+#include <netinet/tcp.h> /* for TCP_NODELAY */
 
 
 Binary::Binary(const std::shared_ptr<XapiandManager>& manager_, int port_)
-	: BaseTCP(manager_, port_, "Binary", port_ == XAPIAND_BINARY_SERVERPORT ? 10 : 1)
+	: BaseTCP(manager_, port_, "Binary", port_ == XAPIAND_BINARY_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY)
 {
 	local_node.binary_port = port;
 
@@ -78,9 +79,11 @@ Binary::connection_socket()
 	// 	L_ERR(nullptr, "ERROR: setsockopt SO_LINGER (sock=%d): %s", sock, strerror(errno));
 	// }
 
-	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	L_ERR(nullptr, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s", sock, strerror(errno));
-	// }
+	if (flags & CONN_TCP_NODELAY) {
+		if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+			L_ERR(nullptr, "ERROR: setsockopt TCP_NODELAY (sock=%d): %s", sock, strerror(errno));
+		}
+	}
 
 	return client_sock;
 }

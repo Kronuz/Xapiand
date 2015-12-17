@@ -36,9 +36,25 @@
 #include <netdb.h> /* for getaddrinfo */
 
 
-BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, const std::string &description_, int tries_)
+void _tcp_nopush(int sock, int optval) {
+#ifdef TCP_NOPUSH
+	if (setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) < 0) {
+		L_ERR(nullptr, "ERROR: setsockopt TCP_NOPUSH (sock=%d): [%d] %s", sock, errno, strerror(errno));
+	}
+#endif
+
+#ifdef TCP_CORK
+	if (setsockopt(sock, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) < 0) {
+		L_ERR(nullptr, "ERROR: setsockopt TCP_CORK (sock=%d): [%d] %s", sock, errno, strerror(errno));
+	}
+#endif
+}
+
+
+BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, const std::string &description_, int tries_, int flags_)
 	: manager(manager_),
 	  port(port_),
+	  flags(flags_),
 	  description(description_)
 {
 	bind(tries_);
@@ -85,9 +101,28 @@ BaseTCP::bind(int tries)
 	// 	L_ERR(nullptr, "ERROR: %s setsockopt SO_LINGER (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	// }
 
-	// if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	L_ERR(nullptr, "ERROR: %s setsockopt TCP_NODELAY (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
-	// }
+	if (flags & CONN_TCP_DEFER_ACCEPT) {
+		// Activate TCP_DEFER_ACCEPT (dataready's SO_ACCEPTFILTER) for HTTP connections only.
+		// We want the HTTP server to wakeup accepting connections that already have some data
+		// to read; this is not the case for binary servers where the server is the one first
+		// sending data.
+
+#ifdef SO_ACCEPTFILTER
+		struct accept_filter_arg af = {"dataready", ""};
+
+		if (setsockopt(client_sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) < 0) {
+			L_ERR(nullptr, "ERROR: setsockopt SO_ACCEPTFILTER (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+		}
+#endif
+
+#ifdef TCP_DEFER_ACCEPT
+		int optval = 1;
+
+		if (setsockopt(client_sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) < 0) {
+			L_ERR(nullptr, "ERROR: setsockopt TCP_DEFER_ACCEPT (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+		}
+#endif
+	}
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
@@ -151,9 +186,11 @@ BaseTCP::accept()
 	// 	L_ERR(nullptr, "ERROR: setsockopt SO_LINGER (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
 	// }
 
-	// if (setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
-	// 	L_ERR(nullptr, "ERROR: setsockopt TCP_NODELAY (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
-	// }
+	if (flags & CONN_TCP_NODELAY) {
+		if (setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) < 0) {
+			L_ERR(nullptr, "ERROR: setsockopt TCP_NODELAY (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+		}
+	}
 
 	if (fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK) < 0) {
 		L_ERR(nullptr, "ERROR: fcntl O_NONBLOCK (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));

@@ -27,11 +27,27 @@
 #include <iostream>
 #include <string>
 
+
+#define CONN_TCP_NODELAY       1
+#define CONN_TCP_DEFER_ACCEPT  2
+
+
 class XapiandManager;
 
 // Values in seconds.
 constexpr double idle_timeout = 60;
 constexpr double active_timeout = 15;
+
+
+void _tcp_nopush(int sock, int optval);
+
+inline void tcp_nopush(int sock) {
+	_tcp_nopush(sock, 1);
+}
+
+inline void tcp_push(int sock) {
+	_tcp_nopush(sock, 0);
+}
 
 
 // Base class for configuration data for TCP.
@@ -46,10 +62,12 @@ protected:
 	int port;
 	int sock;
 
+	int flags;
+
 	std::string description;
 
 public:
-	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, const std::string &description_, int tries_);
+	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, const std::string &description_, int tries_, int flags_);
 	virtual ~BaseTCP();
 
 	virtual std::string getDescription() const noexcept = 0;
