@@ -95,16 +95,16 @@ BaseTCP::bind(int tries)
 #ifdef SO_ACCEPTFILTER
 		struct accept_filter_arg af = {"dataready", ""};
 
-		if (setsockopt(client_sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) < 0) {
-			L_ERR(nullptr, "ERROR: setsockopt SO_ACCEPTFILTER (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+		if (setsockopt(sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) < 0) {
+			L_ERR(nullptr, "ERROR: setsockopt SO_ACCEPTFILTER (client_sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 #endif
 
 #ifdef TCP_DEFER_ACCEPT
 		int optval = 1;
 
-		if (setsockopt(client_sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) < 0) {
-			L_ERR(nullptr, "ERROR: setsockopt TCP_DEFER_ACCEPT (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+		if (setsockopt(sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) < 0) {
+			L_ERR(nullptr, "ERROR: setsockopt TCP_DEFER_ACCEPT (client_sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 #endif
 	}
