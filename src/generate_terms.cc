@@ -47,7 +47,7 @@ static bool isnotSubtrixel(std::string &last_valid, const uInt64 &id_trixel) {
 
 void
 GenerateTerms::numeric(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy,
-	const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes)
+		const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes)
 {
 	if (!start_.empty() && !end_.empty() && !accuracy.empty()) {
 		double d_start = std::stod(start_);
@@ -102,7 +102,8 @@ GenerateTerms::numeric(::std::string &result_terms, const ::std::string &start_,
 
 
 void
-GenerateTerms::date(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::vector<std::string> &prefixes)
+GenerateTerms::date(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy,
+		const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes)
 {
 	if (!start_.empty() && !end_.empty() && !accuracy.empty()) {
 		try {
@@ -292,7 +293,8 @@ GenerateTerms::second(int tm_s[], int tm_e[], const ::std::string &prefix)
 
 
 void
-GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ranges,  const ::std::vector<double> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes)
+GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ranges,  const ::std::vector<double> &accuracy,
+		const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes)
 {
 	// The user does not specify the accuracy.
 	if (acc_prefix.empty()) return;

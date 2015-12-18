@@ -33,13 +33,16 @@ namespace GenerateTerms {
 		char operator() (char c) { return  (c == '-') ? '_' : c;}
 	} TRANSFORM;
 
-	void numeric(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes);
-	void date(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::vector<std::string> &prefixes);
+	void numeric(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy,
+			const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes);
+	void date(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy,
+			const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes);
 	::std::string year(int tm_s[], int tm_e[], const ::std::string &prefix);
 	::std::string month(int tm_s[], int tm_e[], const ::std::string &prefix);
 	::std::string day(int tm_s[], int tm_e[], const ::std::string &prefix);
 	::std::string hour(int tm_s[], int tm_e[], const ::std::string &prefix);
 	::std::string minute(int tm_s[], int tm_e[], const ::std::string &prefix);
 	::std::string second(int tm_s[], int tm_e[], const ::std::string &prefix);
-	void geo(::std::string &result_terms, const ::std::vector<range_t> &ranges, const ::std::vector<double> &accuracy, const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes);
+	void geo(::std::string &result_terms, const ::std::vector<range_t> &ranges, const ::std::vector<double> &accuracy,
+			const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes);
 };

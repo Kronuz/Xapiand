@@ -1004,7 +1004,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 		lan.empty() ? queryparser.set_stemmer(Xapian::Stem(default_spc.language[0])) : queryparser.set_stemmer(Xapian::Stem(lan));
 	}
 
-	std::vector<std::string> added_prefixes;
+	std::unordered_set<std::string> added_prefixes;
 	std::unique_ptr<NumericFieldProcessor> nfp;
 	std::unique_ptr<DateFieldProcessor> dfp;
 	std::unique_ptr<GeoFieldProcessor> gfp;
@@ -1045,10 +1045,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					if (!filter_term.empty()) {
 						for (it = prefixes.begin(); it != prefixes.end(); ++it) {
 							// Xapian does not allow repeat prefixes.
-							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
+							if (added_prefixes.insert(*it).second) {
 								nfp = std::make_unique<NumericFieldProcessor>(*it);
 								queryparser.add_prefix(*it, nfp.get());
-								added_prefixes.push_back(*it);
 								srch.nfps.push_back(std::move(nfp));
 							}
 						}
@@ -1068,10 +1067,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					if (!filter_term.empty()) {
 						for (it = prefixes.begin(); it != prefixes.end(); ++it) {
 							// Xapian does not allow repeat prefixes.
-							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
+							if (added_prefixes.insert(*it).second) {
 								dfp = std::make_unique<DateFieldProcessor>(*it);
 								queryparser.add_prefix(*it, dfp.get());
-								added_prefixes.push_back(*it);
 								srch.dfps.push_back(std::move(dfp));
 							}
 						}
@@ -1095,10 +1093,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						// Xapian does not allow repeat prefixes.
 						for (it = prefixes.begin(); it != prefixes.end(); ++it) {
 							// Xapian does not allow repeat prefixes.
-							if (std::find(added_prefixes.begin(), added_prefixes.end(), *it) == added_prefixes.end()) {
+							if (added_prefixes.insert(*it).second) {
 								gfp = std::make_unique<GeoFieldProcessor>(*it);
 								queryparser.add_prefix(*it, gfp.get());
-								added_prefixes.push_back(*it);
 								srch.gfps.push_back(std::move(gfp));
 							}
 						}
@@ -1122,10 +1119,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 			switch (field_t.type) {
 				case NUMERIC_TYPE:
 					// Xapian does not allow repeat prefixes.
-					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+					if (added_prefixes.insert(field_t.prefix).second) {
 						nfp = std::make_unique<NumericFieldProcessor>(field_t.prefix);
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, nfp.get()) : queryparser.add_prefix(field_name, nfp.get());
-						added_prefixes.push_back(field_t.prefix);
 						srch.nfps.push_back(std::move(nfp));
 					}
 					if (field_value.at(0) == '-') {
@@ -1135,9 +1131,8 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					break;
 				case STRING_TYPE:
 					// Xapian does not allow repeat prefixes.
-					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+					if (added_prefixes.insert(field_t.prefix).second) {
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, field_t.prefix) : queryparser.add_prefix(field_name, field_t.prefix);
-						added_prefixes.push_back(field_t.prefix);
 					}
 					break;
 				case DATE_TYPE:
@@ -1147,10 +1142,9 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 						// Always pass to timestamp.
 						field_value = std::to_string(Datetime::timestamp(field_value));
 						// Xapian does not allow repeat prefixes.
-						if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+						if (added_prefixes.insert(field_t.prefix).second) {
 							dfp = std::make_unique<DateFieldProcessor>(field_t.prefix);
 							field_t.bool_term ? queryparser.add_boolean_prefix(field_name, dfp.get()) : queryparser.add_prefix(field_name, dfp.get());
-							added_prefixes.push_back(field_t.prefix);
 							srch.dfps.push_back(std::move(dfp));
 						}
 						if (field_value.at(0) == '-') field_value.at(0) = '_';
@@ -1173,17 +1167,15 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 					field = field_name_dot + field_value;
 
 					// Xapian does not allow repeat prefixes.
-					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+					if (added_prefixes.insert(field_t.prefix).second) {
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, field_t.prefix) : queryparser.add_prefix(field_name, field_t.prefix);
-						added_prefixes.push_back(field_t.prefix);
 					}
 					break;
 				case BOOLEAN_TYPE:
 					// Xapian does not allow repeat prefixes.
-					if (std::find(added_prefixes.begin(), added_prefixes.end(), field_t.prefix) == added_prefixes.end()) {
+					if (added_prefixes.insert(field_t.prefix).second) {
 						bfp = std::make_unique<BooleanFieldProcessor>(field_t.prefix);
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, bfp.get()) : queryparser.add_prefix(field_name, bfp.get());
-						added_prefixes.push_back(field_t.prefix);
 						srch.bfps.push_back(std::move(bfp));
 					}
 					break;
