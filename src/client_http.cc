@@ -283,18 +283,14 @@ HttpClient::on_data(http_parser* p, const char *at, size_t length)
 
 	int state = p->state;
 
-	// s_req_path  ->  s_req_http_start
 	if (state > 26 && state <= 32) {
+		// s_req_path  ->  s_req_http_start
 		self->path.append(at, length);
-	} else
-
-	// s_header_field  ->  s_header_value_discard_ws
-	if (state >= 43 && state <= 44) {
+	} else if (state >= 43 && state <= 44) {
+		// s_header_field  ->  s_header_value_discard_ws
 		self->header_name.append(at, length);
-	} else
-
-	// s_header_value_discard_ws_almost_done  ->  s_header_almost_done
-	if (state >= 45 && state <= 50) {
+	} else if (state >= 45 && state <= 50) {
+		// s_header_value_discard_ws_almost_done  ->  s_header_almost_done
 		self->header_value.append(at, length);
 		if (state == 50) {
 			std::string name(self->header_name);
@@ -305,9 +301,7 @@ HttpClient::on_data(http_parser* p, const char *at, size_t length)
 
 			if (name.compare("host") == 0) {
 				self->host = self->header_value;
-			} else
-
-			if (name.compare("expect") == 0 && value.compare("100-continue") == 0) {
+			} else if (name.compare("expect") == 0 && value.compare("100-continue") == 0) {
 				if (p->content_length > MAX_BODY_SIZE) {
 					self->write(self->http_response(413, HTTP_STATUS, p->http_major, p->http_minor));
 					self->close();
@@ -315,17 +309,11 @@ HttpClient::on_data(http_parser* p, const char *at, size_t length)
 				}
 				// Respond with HTTP/1.1 100 Continue
 				self->expect_100 = true;
-			} else
-
-			if (name.compare("content-type") == 0) {
+			} else if (name.compare("content-type") == 0) {
 				self->content_type = value;
-			} else
-
-			if (name.compare("content-length") == 0) {
+			} else if (name.compare("content-length") == 0) {
 				self->content_length = value;
-			} else
-
-			if (name.compare("accept") == 0) {
+			} else if (name.compare("accept") == 0) {
 				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_continuous);
 				std::sregex_iterator end;
 				size_t size_match = 0;
@@ -931,7 +919,8 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 	}
 
 	if (schema) {
-		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, database->schema.to_string(e.pretty)));
+		std::string result(database->schema.to_string(e.pretty) + "\n\n");
+		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 		manager()->database_pool.checkin(database);
 		return;
 	}
