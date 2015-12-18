@@ -678,7 +678,7 @@ HttpClient::delete_document_view(const query_field_t &e)
 	}
 	auto tp_end = std::chrono::system_clock::now();
 
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(tp_end - tp_start).count();
+	auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
@@ -740,7 +740,7 @@ HttpClient::index_document_view(const query_field_t &e)
 	// 	L_INFO(this, "Storing %s...", filename.c_str());
 	// }
 
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(tp_end - tp_start).count();
+	auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
@@ -1133,7 +1133,7 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 	}
 	auto tp_end = std::chrono::system_clock::now();
 
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(tp_end - tp_start).count();
+	auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();

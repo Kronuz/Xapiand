@@ -42,6 +42,7 @@
 #include <ifaddrs.h>
 #include <unistd.h>
 
+#define NANOSEC 1e-9
 
 std::regex XapiandManager::time_re = std::regex("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
 
@@ -670,9 +671,9 @@ XapiandManager::get_stats_json(pos_time_t &first_time, pos_time_t &second_time)
 		cJSON_AddNumberToObject(root_stats.get(), "Docs index", cnt[0]);
 		cJSON_AddNumberToObject(root_stats.get(), "Number searches", cnt[1]);
 		cJSON_AddNumberToObject(root_stats.get(), "Docs deleted", cnt[2]);
-		cJSON_AddNumberToObject(root_stats.get(), "Average time indexing (secs)", cnt[0] == 0 ? 0 : tm_cnt[0] / cnt[0]);
-		cJSON_AddNumberToObject(root_stats.get(), "Average search time (secs)", cnt[1] == 0 ? 0 :  tm_cnt[1] / cnt[1]);
-		cJSON_AddNumberToObject(root_stats.get(), "Average deletion time (secs)", cnt[2] == 0 ? 0 : tm_cnt[2] / cnt[2]);
+		cJSON_AddNumberToObject(root_stats.get(), "Average time indexing (secs)", cnt[0] == 0 ? 0 : (tm_cnt[0] / cnt[0])*NANOSEC);
+		cJSON_AddNumberToObject(root_stats.get(), "Average search time (secs)", cnt[1] == 0 ? 0 :  (tm_cnt[1] / cnt[1])*NANOSEC);
+		cJSON_AddNumberToObject(root_stats.get(), "Average deletion time (secs)", cnt[2] == 0 ? 0 : (tm_cnt[2] / cnt[2])*NANOSEC);
 	}
 
 	return root_stats;
