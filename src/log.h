@@ -175,6 +175,8 @@ class LogThread {
 #define _LOG_ALERT_ENABLED(args...) Log::log(0ms, LOG_ALERT, __FILE__, __LINE__, NO_COL, ALERT_COL, args)
 #define _LOG_EMERG_ENABLED(args...) Log::log(0ms, LOG_EMERG, __FILE__, __LINE__, NO_COL, EMERG_COL, args)
 
+#define _LOG_EV_ENABLED(args...) Log::log(0ms, LOG_DEBUG, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
+
 #define _LOG_TIMED_100(args...) auto __timed_log = Log::log(100ms, LOG_DEBUG, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 #define _LOG_TIMED_500(args...) auto __timed_log = Log::log(500ms, LOG_DEBUG, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 #define _LOG_TIMED_1000(args...) auto __timed_log = Log::log(1s, LOG_DEBUG, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)

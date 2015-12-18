@@ -77,7 +77,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 
 	async_shutdown.set<XapiandManager, &XapiandManager::async_shutdown_cb>(this);
 	async_shutdown.start();
-	L_EV(this, "\tStart async shutdown event");
+	L_EV(this, "Start async shutdown event");
 
 	L_OBJ(this, "CREATED MANAGER! [%llx]", this);
 }
@@ -90,7 +90,7 @@ XapiandManager::~XapiandManager()
 	destroy();
 
 	async_shutdown.stop();
-	L_EV(this, "\tStop async shutdown event");
+	L_EV(this, "Stop async shutdown event");
 
 	L_OBJ(this, "DELETED MANAGER! [%llx]", this);
 }
@@ -419,7 +419,7 @@ void
 XapiandManager::async_shutdown_cb(ev::async &, int)
 {
 	L_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN");
-	L_EV(this, "\tAsync shutdown event received!");
+	L_EV(this, "Async shutdown event received!");
 
 	sig_shutdown_handler(0);
 	L_EV_END(this, "XapiandManager::async_shutdown_cb:END");
@@ -503,9 +503,9 @@ XapiandManager::run(const opts_t &o)
 
 	discovery->start();
 
-	L_EV(this, "\tStarting manager loop...");
+	L_EV(this, "Starting manager loop...");
 	loop->run();
-	L_EV(this, "\tManager loop ended!");
+	L_EV(this, "Manager loop ended!");
 
 	L_DEBUG(this, "Waiting for servers...");
 	server_pool.finish();

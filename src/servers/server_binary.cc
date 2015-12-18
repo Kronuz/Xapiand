@@ -35,7 +35,7 @@ BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::lo
 {
 	async_signal.set<BinaryServer, &BinaryServer::async_signal_cb>(this);
 	async_signal.start();
-	L_EV(this, "\tStart binary async signal event");
+	L_EV(this, "Start binary async signal event");
 
 	L_EV(this, "Start binary accept event (sock=%d)", binary->sock);
 	L_OBJ(this, "CREATED BINARY SERVER! [%llx]", this);

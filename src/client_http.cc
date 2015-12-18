@@ -200,7 +200,7 @@ HttpClient::on_read(const char *buf, size_t received)
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
-			L_EV(this, "\tDisable read event (sock=%d)", sock);
+			L_EV(this, "Disable read event (sock=%d)", sock);
 			io_read.stop();
 			written = 0;
 			if (!closed) {
