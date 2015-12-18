@@ -750,8 +750,12 @@ HttpClient::index_document_view(const query_field &e)
 	// 	L_INFO(this, "Storing %s...", filename.c_str());
 	// }
 
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
-	L_DEBUG(this, "Time take for index %d ms", time);
+	auto tp_now = std::chrono::system_clock::now();
+
+	L_TIME(this, "Indexing took %s", delta_string(tp_start, tp_now).c_str());
+
+	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(tp_now - tp_start).count();
+
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
 	++stats_cnt.index.min[b_time.minute];
@@ -1579,7 +1583,7 @@ HttpClient::clean_http_request()
 
 	response_ends = std::chrono::system_clock::now();
 	request_begining = true;
-	L_INFO(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
+	L_TIME(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
 
 	async_read.send();
 }

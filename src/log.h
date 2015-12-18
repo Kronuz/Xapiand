@@ -205,6 +205,7 @@ class LogThread {
 // Enable the following, when needed, using _LOG_LOG_ENABLED:
 
 #define L_CALL _
+#define L_TIME _
 #define L_CONN _
 #define L_RAFT _
 #define L_DISCOVERY _
