@@ -62,18 +62,18 @@ const char* status_code[6][14] = {
 	{},
 	{
 		"Bad Request",              // 400
-		NULL,                       // 401
-		NULL,                       // 402
-		NULL,                       // 403
+		nullptr,                    // 401
+		nullptr,                    // 402
+		nullptr,                    // 403
 		"Not Found",                // 404
-		NULL,                       // 405
+		nullptr,                    // 405
 		"Not Acceptable",           // 406
-		NULL,                       // 407
-		NULL,                       // 408
-		NULL,                       // 409
-		NULL,                       // 410
-		NULL,                       // 411
-		NULL,                       // 412
+		nullptr,                    // 407
+		nullptr,                    // 408
+		nullptr,                    // 409
+		nullptr,                    // 410
+		nullptr,                    // 411
+		nullptr,                    // 412
 		"Request Entity Too Large"  // 413
 	},
 	{
@@ -476,7 +476,7 @@ HttpClient::_options()
 void
 HttpClient::_head()
 {
-	query_field e;
+	query_field_t e;
 	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
@@ -493,7 +493,7 @@ HttpClient::_head()
 void
 HttpClient::_get()
 {
-	query_field e;
+	query_field_t e;
 	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
@@ -524,7 +524,7 @@ HttpClient::_get()
 void
 HttpClient::_put()
 {
-	query_field e;
+	query_field_t e;
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
@@ -541,7 +541,7 @@ HttpClient::_put()
 void
 HttpClient::_post()
 {
-	query_field e;
+	query_field_t e;
 	int cmd = _endpointgen(e, false);
 
 	switch (cmd) {
@@ -575,7 +575,7 @@ HttpClient::_post()
 void
 HttpClient::_patch()
 {
-	query_field e;
+	query_field_t e;
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
@@ -592,7 +592,7 @@ HttpClient::_patch()
 void
 HttpClient::_delete()
 {
-	query_field e;
+	query_field_t e;
 	int cmd = _endpointgen(e, true);
 
 	switch (cmd) {
@@ -607,7 +607,7 @@ HttpClient::_delete()
 
 
 void
-HttpClient::document_info_view(const query_field &e)
+HttpClient::document_info_view(const query_field_t &e)
 {
 	bool found = true;
 	std::string result;
@@ -674,7 +674,7 @@ HttpClient::document_info_view(const query_field &e)
 
 
 void
-HttpClient::delete_document_view(const query_field &e)
+HttpClient::delete_document_view(const query_field_t &e)
 {
 	std::string result;
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE|DB_SPAWN)) {
@@ -724,7 +724,7 @@ HttpClient::delete_document_view(const query_field &e)
 
 
 void
-HttpClient::index_document_view(const query_field &e)
+HttpClient::index_document_view(const query_field_t &e)
 {
 	std::string result;
 
@@ -786,7 +786,7 @@ HttpClient::index_document_view(const query_field &e)
 
 
 void
-HttpClient::update_document_view(const query_field &e)
+HttpClient::update_document_view(const query_field_t &e)
 {
 	std::string result;
 
@@ -832,7 +832,7 @@ HttpClient::update_document_view(const query_field &e)
 
 
 void
-HttpClient::stats_view(const query_field &e)
+HttpClient::stats_view(const query_field_t &e)
 {
 	std::string result;
 	unique_cJSON root(cJSON_CreateObject());
@@ -876,7 +876,7 @@ HttpClient::stats_view(const query_field &e)
 
 
 void
-HttpClient::bad_request_view(const query_field &e, int cmd)
+HttpClient::bad_request_view(const query_field_t &e, int cmd)
 {
 	std::string result;
 
@@ -904,7 +904,7 @@ HttpClient::bad_request_view(const query_field &e, int cmd)
 
 
 void
-HttpClient::upload_view(const query_field &)
+HttpClient::upload_view(const query_field_t &)
 {
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
@@ -919,7 +919,7 @@ HttpClient::upload_view(const query_field &)
 
 
 void
-HttpClient::search_view(const query_field &e, bool facets, bool schema)
+HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 {
 	std::string result;
 
@@ -931,29 +931,9 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	}
 
 	if (schema) {
-		std::string schema_;
-		if (database->get_metadata(RESERVED_SCHEMA, schema_)) {
-			unique_cJSON jschema(cJSON_Parse(schema_.c_str()));
-			readable_schema(jschema.get());
-			unique_char_ptr _cprint(cJSON_Print(jschema.get()));
-			schema_ = std::string(_cprint.get()) + "\n";
-			write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, schema_));
-			manager()->database_pool.checkin(database);
-			return;
-		} else {
-			unique_cJSON err_response(cJSON_CreateObject());
-			cJSON_AddStringToObject(err_response.get(), "Error message", "schema not found");
-			if (e.pretty) {
-				unique_char_ptr _cprint(cJSON_Print(err_response.get()));
-				schema_.assign(_cprint.get());
-			} else {
-				unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
-				schema_.assign(_cprint.get());
-			}
-			write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, schema_));
-			manager()->database_pool.checkin(database);
-			return;
-		}
+		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, database->schema.to_string(e.pretty)));
+		manager()->database_pool.checkin(database);
+		return;
 	}
 
 	Xapian::MSet mset;
@@ -1181,7 +1161,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 
 
 int
-HttpClient::_endpointgen(query_field &e, bool writable)
+HttpClient::_endpointgen(query_field_t &e, bool writable)
 {
 	int cmd, retval;
 	bool has_node_name = false;
@@ -1272,7 +1252,7 @@ HttpClient::_endpointgen(query_field &e, bool writable)
 					}
 					if (!node_port) node_port = node->binary_port;
 					inet_ntop(AF_INET, &(node->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
-					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path, NULL, -1, node_name);
+					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path, nullptr, -1, node_name);
 					endpoints.insert(endpoint);
 				} else {
 					for (auto it_endp = asked_nodes.begin(); it_endp != asked_nodes.end(); ++it_endp) {
