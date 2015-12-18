@@ -670,9 +670,9 @@ XapiandManager::get_stats_json(pos_time_t &first_time, pos_time_t &second_time)
 		cJSON_AddNumberToObject(root_stats.get(), "Docs index", cnt[0]);
 		cJSON_AddNumberToObject(root_stats.get(), "Number searches", cnt[1]);
 		cJSON_AddNumberToObject(root_stats.get(), "Docs deleted", cnt[2]);
-		cJSON_AddNumberToObject(root_stats.get(), "Average time indexing", cnt[0] == 0 ? 0 : tm_cnt[0] / cnt[0]);
-		cJSON_AddNumberToObject(root_stats.get(), "Average search time", cnt[1] == 0 ? 0 : tm_cnt[1] / cnt[1]);
-		cJSON_AddNumberToObject(root_stats.get(), "Average deletion time", cnt[2] == 0 ? 0 : tm_cnt[2] / cnt[2]);
+		cJSON_AddNumberToObject(root_stats.get(), "Average time indexing (secs)", cnt[0] == 0 ? 0 : tm_cnt[0] / cnt[0]);
+		cJSON_AddNumberToObject(root_stats.get(), "Average search time (secs)", cnt[1] == 0 ? 0 :  tm_cnt[1] / cnt[1]);
+		cJSON_AddNumberToObject(root_stats.get(), "Average deletion time (secs)", cnt[2] == 0 ? 0 : tm_cnt[2] / cnt[2]);
 	}
 
 	return root_stats;
