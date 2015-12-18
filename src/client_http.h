@@ -37,6 +37,7 @@
 #define HTTP_CHUNKED        (1 << 5)
 #define HTTP_OPTIONS        (1 << 6)
 #define HTTP_MATCHED_COUNT  (1 << 7)
+#define HTTP_EXPECTED100    (1 << 8)
 
 #define CMD_ID     0
 #define CMD_SEARCH 1

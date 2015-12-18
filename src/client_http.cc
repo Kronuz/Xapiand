@@ -133,7 +133,7 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 		}
 	}
 
-	if (!(mode & HTTP_CHUNKED)) {
+	if (!(mode & HTTP_CHUNKED) && !(mode & HTTP_EXPECTED100)) {
 		clean_http_request();
 	}
 
@@ -266,7 +266,7 @@ HttpClient::on_info(http_parser* p)
 		case 50:  // headers done
 			if (self->expect_100) {
 				// Return 100 if client is expecting it
-				self->write(self->http_response(100, HTTP_STATUS, p->http_major, p->http_minor));
+				self->write(self->http_response(100, HTTP_STATUS | HTTP_EXPECTED100, p->http_major, p->http_minor));
 			}
 	}
 
