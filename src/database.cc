@@ -381,11 +381,19 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, const std::string &na
 			term_generator.set_stemming_strategy((Xapian::TermGenerator::stem_strategy)schema.specification.analyzer[getPos(j, schema.specification.analyzer.size())]);
 		}
 
-		if (schema.specification.positions[getPos(j, schema.specification.positions.size())]) {
-			schema.specification.prefix.empty() ? term_generator.index_text_without_positions(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())]) : term_generator.index_text_without_positions(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())], schema.specification.prefix);
+		if (schema.specification.positions[getPos(j, schema.specification.positions.size())] > 0) {
+			if (schema.specification.prefix.empty()) {
+				term_generator.index_text_without_positions(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())]);
+			} else {
+				term_generator.index_text_without_positions(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())], schema.specification.prefix);
+			}
 			L_DATABASE_WRAP(this, "Text to Index with positions = %s: %s", name.c_str(), text->valuestring);
 		} else {
-			schema.specification.prefix.empty() ? term_generator.index_text(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())]) : term_generator.index_text(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())], schema.specification.prefix);
+			if (schema.specification.prefix.empty()) {
+				term_generator.index_text(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())]);
+			} else {
+				term_generator.index_text(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())], schema.specification.prefix);
+			}
 			L_DATABASE_WRAP(this, "Text to Index = %s: %s", name.c_str(), text->valuestring);
 		}
 	}
@@ -432,11 +440,19 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, const std::string &na
 
 		if (schema.specification.position[getPos(j, schema.specification.position.size())] >= 0) {
 			std::string nameterm(prefixed(term_v, schema.specification.prefix));
-			doc.add_posting(nameterm, schema.specification.position[getPos(j, schema.specification.position.size())], schema.specification.bool_term ? 0: schema.specification.weight[getPos(j, schema.specification.weight.size())]);
+			if (schema.specification.bool_term) {
+				doc.add_posting(nameterm, schema.specification.position[getPos(j, schema.specification.position.size())], 0);
+			} else {
+				doc.add_posting(nameterm, schema.specification.position[getPos(j, schema.specification.position.size())], schema.specification.weight[getPos(j, schema.specification.weight.size())]);
+			}
 			L_DATABASE_WRAP(this, "Bool: %d  Posting: %s", schema.specification.bool_term, repr(nameterm).c_str());
 		} else {
 			std::string nameterm(prefixed(term_v, schema.specification.prefix));
-			schema.specification.bool_term ? doc.add_boolean_term(nameterm) : doc.add_term(nameterm, schema.specification.weight[getPos(j, schema.specification.weight.size())]);
+			if (schema.specification.bool_term) {
+				doc.add_boolean_term(nameterm);
+			} else {
+				doc.add_term(nameterm, schema.specification.weight[getPos(j, schema.specification.weight.size())]);
+			}
 			L_DATABASE_WRAP(this, "Bool: %d  Term: %s", schema.specification.bool_term, repr(nameterm).c_str());
 		}
 	}
