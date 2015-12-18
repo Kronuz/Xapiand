@@ -77,7 +77,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 
 	async_shutdown.set<XapiandManager, &XapiandManager::async_shutdown_cb>(this);
 	async_shutdown.start();
-	L_EV(this, "Start async shutdown event");
+	L_EV(this, "Start manager's async shutdown event");
 
 	L_OBJ(this, "CREATED MANAGER! [%llx]", this);
 }

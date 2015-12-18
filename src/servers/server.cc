@@ -41,7 +41,7 @@ XapiandServer::XapiandServer(std::shared_ptr<XapiandManager> manager_, ev::loop_
 {
 	async_setup_node.set<XapiandServer, &XapiandServer::async_setup_node_cb>(this);
 	async_setup_node.start();
-	L_EV(this, "Start async setup node event");
+	L_EV(this, "Start server's async setup node event");
 
 	L_OBJ(this, "CREATED XAPIAN SERVER! [%llx]", this);
 }
@@ -71,7 +71,7 @@ XapiandServer::async_setup_node_cb(ev::async &, int)
 	manager()->setup_node(share_this<XapiandServer>());
 
 	async_setup_node.stop();
-	L_EV(this, "Stop async setup node event");
+	L_EV(this, "Stop server's async setup node event");
 	L_EV_END(this, "XapiandServer::async_setup_cb:END");
 }
 
@@ -82,7 +82,7 @@ XapiandServer::destroy()
 	std::lock_guard<std::mutex> lk(qmtx);
 
 	async_setup_node.stop();
-	L_EV(this, "Stop async setup node event");
+	L_EV(this, "Stop server's async setup node event");
 
 	L_OBJ(this, "DESTROYED XAPIAN SERVER! [%llx]", this);
 }
