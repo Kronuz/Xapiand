@@ -55,20 +55,41 @@ specification_t::to_string()
 	std::stringstream str;
 	str << "\n{\n";
 	str << "\t" << RESERVED_POSITION << ": [ ";
-	for (size_t i = 0; i < position.size(); ++i) {
-		str << position[i] << " ";
+	for (auto i = position.begin(); i != position.end(); ++i) {
+		str << *i << " ";
 	}
 	str << "]\n";
+
 	str << "\t" << RESERVED_WEIGHT   << ": [ ";
-	for (size_t i = 0; i < weight.size(); ++i) {
-		str << weight[i] << " ";
+	for (auto i = weight.begin(); i != weight.end(); ++i) {
+		str << *i << " ";
 	}
 	str << "]\n";
+
 	str << "\t" << RESERVED_LANGUAGE << ": [ ";
-	for (size_t i = 0; i < language.size(); ++i) {
-		str << language[i] << " ";
+	for (auto i = language.begin(); i != language.end(); ++i) {
+		str << *i << " ";
 	}
 	str << "]\n";
+
+	str << "\t" << RESERVED_SPELLING << ": [ ";
+	for (auto i = spelling.begin(); i != spelling.end(); ++i) {
+		str << (*i ? "true" : "false") << " ";
+	}
+	str << "]\n";
+
+	str << "\t" << RESERVED_POSITIONS<< ": [ ";
+	for (auto i = positions.begin(); i != positions.end(); ++i) {
+		str << (*i ? "true" : "false") << " ";
+	}
+	str << "]\n";
+
+	str << "\t" << RESERVED_ANALYZER    << ": [ ";
+	for (auto i = analyzer.begin(); i != analyzer.end(); ++i) {
+		str << str_analizer[*i] << " ";
+	}
+	str << "]\n";
+
 	str << "\t" << RESERVED_ACCURACY << ": [ ";
 	if (sep_types[2] == DATE_TYPE) {
 		for (size_t i = 0; i < accuracy.size(); ++i) {
@@ -80,28 +101,17 @@ specification_t::to_string()
 		}
 	}
 	str << "]\n";
+
 	str << "\t" << RESERVED_ACC_PREFIX  << ": [ ";
 	for (size_t i = 0; i < acc_prefix.size(); ++i) {
 		str << acc_prefix[i] << " ";
 	}
 	str << "]\n";
-	str << "\t" << RESERVED_ANALYZER    << ": [ ";
-	for (size_t i = 0; i < analyzer.size(); ++i) {
-		str << str_analizer[analyzer[i]] << " ";
-	}
-	str << "]\n";
-	str << "\t" << RESERVED_SPELLING    << ": [ ";
-	for (size_t i = 0; i < spelling.size(); ++i) {
-		str << (spelling[i] ? "true " : "false ");
-	}
-	str << "]\n";
-	str << "\t" << RESERVED_POSITIONS   << ": [ ";
-	for (size_t i = 0; i < positions.size(); ++i) {
-		str << (positions[i] ? "true " : "false ");
-	}
-	str << "]\n";
-	str << "\t" << RESERVED_TYPE        << ": " << str_type(sep_types) << "\n";
-	str << "\t" << RESERVED_INDEX       << ": " << str_index[index] << "\n";
+
+	str << "\t" << RESERVED_SLOT        << ": " << slot                 << "\n";
+	str << "\t" << RESERVED_TYPE        << ": " << str_type(sep_types)  << "\n";
+	str << "\t" << RESERVED_PREFIX      << ": " << prefix               << "\n";
+	str << "\t" << RESERVED_INDEX       << ": " << str_index[index]     << "\n";
 	str << "\t" << RESERVED_STORE       << ": " << ((store)             ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_DYNAMIC     << ": " << ((dynamic)           ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_D_DETECTION << ": " << ((date_detection)    ? "true" : "false") << "\n";
@@ -218,6 +228,15 @@ Schema::store()
 void
 Schema::update_specification(cJSON* item)
 {
+	specification.accuracy.clear();
+	specification.acc_prefix.clear();
+	specification.sep_types[0] = default_spc.sep_types[0];
+	specification.sep_types[1] = default_spc.sep_types[1];
+	specification.sep_types[2] = STRING_TYPE;
+	specification.bool_term = default_spc.bool_term;
+	specification.prefix = default_spc.prefix;
+	specification.slot = default_spc.slot;
+
 	cJSON* spc;
 
 	// RESERVED_POSITION is heritable and can change between documents.
