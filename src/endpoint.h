@@ -117,7 +117,7 @@ public:
 	long long mastery_level;
 
 	Endpoint();
-	Endpoint(const std::string &path_, const Node *	node_=NULL, long long mastery_level_=-1, std::string node_name="");
+	Endpoint(const std::string &path_, const Node *	node_=nullptr, long long mastery_level_=-1, std::string node_name="");
 
 	bool is_local() const {
 		return host == local_node.host() && port == local_node.binary_port;

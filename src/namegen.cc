@@ -1030,14 +1030,14 @@ Generator::GroupLiteral::GroupLiteral() :
 std::wstring towstring(const std::string & s)
 {
 	const char *cs = s.c_str();
-	const size_t wn = std::mbsrtowcs(NULL, &cs, 0, NULL);
+	const size_t wn = std::mbsrtowcs(nullptr, &cs, 0, nullptr);
 
 	if (wn == static_cast<size_t>(-1)) {
 		return L"";
 	}
 
 	std::vector<wchar_t> buf(wn);
-	const size_t wn_again = std::mbsrtowcs(buf.data(), &cs, wn, NULL);
+	const size_t wn_again = std::mbsrtowcs(buf.data(), &cs, wn, nullptr);
 
 	if (wn_again == static_cast<size_t>(-1)) {
 		return L"";
@@ -1049,14 +1049,14 @@ std::wstring towstring(const std::string & s)
 std::string tostring(const std::wstring & s)
 {
 	const wchar_t *cs = s.c_str();
-	const size_t wn = std::wcsrtombs(NULL, &cs, 0, NULL);
+	const size_t wn = std::wcsrtombs(nullptr, &cs, 0, nullptr);
 
 	if (wn == static_cast<size_t>(-1)) {
 		return "";
 	}
 
 	std::vector<char> buf(wn);
-	const size_t wn_again = std::wcsrtombs(buf.data(), &cs, wn, NULL);
+	const size_t wn_again = std::wcsrtombs(buf.data(), &cs, wn, nullptr);
 
 	if (wn_again == static_cast<size_t>(-1)) {
 		return "";
