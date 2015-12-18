@@ -25,7 +25,7 @@
 #include "../src/generate_terms.h"
 #include "../src/log.h"
 #include "../src/utils.h"
-#include "../src/database_utils.h"
+#include "../src/schema.h"
 
 #include <limits.h>
 
