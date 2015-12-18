@@ -22,7 +22,6 @@
 
 #include "database.h"
 #include "database_autocommit.h"
-#include "multivalue.h"
 #include "multivaluerange.h"
 #include "length.h"
 #include "cJSON_Utils.h"
@@ -56,8 +55,6 @@ Database::Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endp
 	  mastery_level(-1)
 {
 	reopen();
-
-	schema = Schema(this);
 
 	if (auto queue = weak_queue.lock()) {
 		queue->inc_count();
@@ -94,6 +91,7 @@ Database::reopen()
 		// Try to reopen
 		try {
 			db->reopen();
+			schema.setDatabase(this);
 			return;
 		} catch (const Xapian::Error &err) {
 			L_ERR(this, "ERROR: %s", err.get_msg().c_str());
@@ -173,6 +171,8 @@ Database::reopen()
 			db->add_database(rdb);
 		}
 	}
+
+	schema.setDatabase(this);
 }
 
 
@@ -219,6 +219,8 @@ Database::drop(const std::string &doc_id, bool _commit)
 bool
 Database::commit()
 {
+	schema.store();
+
 	for (int t = 3; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Commit: t%d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -291,94 +293,79 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, c
 
 
 void
-Database::index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, cJSON *properties, bool find, bool is_value)
+Database::index_fields(cJSON *item,  const std::string &item_name, Xapian::Document &doc, cJSON *properties, bool is_value)
 {
-	std::string subitem_name;
-	specifications_t spc_bef = spc_now;
+	specification_t spc_bef = schema.specification;
 	if (item->type == cJSON_Object) {
-		if (find) {
-			update_specifications(item, spc_now, properties);
-		} else {
-			insert_specifications(item, spc_now, properties);
-		}
-		int offspring = 0;
+		bool offsprings = false;
 		int elements = cJSON_GetArraySize(item);
 		for (int i = 0; i < elements; ++i) {
 			cJSON *subitem = cJSON_GetArrayItem(item, i);
 			if (!is_reserved(subitem->string)) {
-				subitem_name = !item_name.empty() ? item_name + DB_OFFSPRING_UNION + subitem->string : subitem->string;
+				std::string subitem_name = !item_name.empty() ? item_name + DB_OFFSPRING_UNION + subitem->string : subitem->string;
 				if (size_t pfound = subitem_name.rfind(DB_OFFSPRING_UNION) != std::string::npos) {
 					std::string language(subitem_name.substr(pfound + strlen(DB_OFFSPRING_UNION)));
 					if (is_language(language)) {
-						spc_now.language.clear();
-						spc_now.language.push_back(language);
+						schema.specification.language.clear();
+						schema.specification.language.push_back(language);
 					}
 				}
-				cJSON *subproperties = schema.get_properties(properties, subitem->string);
-				index_fields(subitem, subitem_name, spc_now, doc, subproperties, schema.find, is_value);
-				++offspring;
+				cJSON *subproperties = schema.get_subproperties(properties, subitem->string, subitem);
+				index_fields(subitem, subitem_name, doc, subproperties, is_value);
+				offsprings = true;
 			} else if (strcmp(subitem->string, RESERVED_VALUE) == 0) {
-				if (spc_now.sep_types[2] == NO_TYPE) {
-					spc_now.sep_types[2] = get_type(subitem, spc_now);
-					update_required_data(spc_now, item_name, properties);
+				if (schema.specification.sep_types[2] == NO_TYPE) {
+					schema.set_type(subitem, item_name, properties);
 				}
-				if (is_value || spc_now.index == VALUE) {
-					index_values(doc, subitem, spc_now, item_name, properties, find);
-				} else if (spc_now.index == TERM) {
-					index_terms(doc, subitem, spc_now, item_name, properties, find);
+				if (is_value || schema.specification.index == VALUE) {
+					index_values(doc, subitem, item_name, properties);
+				} else if (schema.specification.index == TERM) {
+					index_terms(doc, subitem, item_name, properties);
 				} else {
-					index_terms(doc, subitem, spc_now, item_name, properties, find);
-					index_values(doc, subitem, spc_now, item_name, properties);
+					index_terms(doc, subitem, item_name, properties);
+					index_values(doc, subitem, item_name, properties);
 				}
 			}
 		}
-		if (offspring != 0) {
-			cJSON *_type = cJSON_GetObjectItem(properties, RESERVED_TYPE); // It is managed by schema.
-			if (_type && cJSON_GetArrayItem(_type, 0)->valueint == NO_TYPE)
-				cJSON_ReplaceItemInArray(_type, 0, cJSON_CreateNumber(OBJECT_TYPE));
+		if (offsprings) {
+			schema.set_type_to_object(properties);
 		}
 	} else {
-		if (find) {
-			update_specifications(item, spc_now, properties);
-		} else {
-			insert_specifications(item, spc_now, properties);
+		if (schema.specification.sep_types[2] == NO_TYPE) {
+			schema.set_type(item, item_name, properties);
 		}
-		if (spc_now.sep_types[2] == NO_TYPE) {
-			spc_now.sep_types[2] = get_type(item, spc_now);
-			update_required_data(spc_now, item_name, properties);
-		}
-		if (is_value || spc_now.index == VALUE) {
-			index_values(doc, item, spc_now, item_name, properties, find);
-		} else if (spc_now.index == TERM) {
-			index_terms(doc, item, spc_now, item_name, properties, find);
+		if (is_value || schema.specification.index == VALUE) {
+			index_values(doc, item, item_name, properties);
+		} else if (schema.specification.index == TERM) {
+			index_terms(doc, item, item_name, properties);
 		} else {
-			index_terms(doc, item, spc_now, item_name, properties, find);
-			index_values(doc, item, spc_now, item_name, properties);
+			index_terms(doc, item, item_name, properties);
+			index_values(doc, item, item_name, properties);
 		}
 	}
-	spc_now = spc_bef;
+
+	schema.specification = spc_bef;
 }
 
 
 void
-Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
+Database::index_texts(Xapian::Document &doc, cJSON *texts, const std::string &name, cJSON *properties)
 {
-	if (!(find || spc.dynamic)) throw MSG_Error("This object is not dynamic");
+	// L_DATABASE_WRAP(this, "Texts => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
+	if (!(schema.found_field || schema.specification.dynamic)) throw MSG_Error("This object is not dynamic");
 
-	if (!spc.store) return;
+	if (!schema.specification.store) return;
 
-	if (spc.bool_term) throw MSG_Error("A boolean term can not be indexed as text");
+	if (schema.specification.bool_term) throw MSG_Error("A boolean term can not be indexed as text");
 
 	size_t elements = 1;
 	if (texts->type == cJSON_Array) {
 		elements = cJSON_GetArraySize(texts);
 		cJSON *value = cJSON_GetArrayItem(texts, 0);
-		if (value->type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
-
-		// If the type in schema is not array, schema is updated.
-		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE); // It is managed by schema.
-		if (_type && cJSON_GetArrayItem(_type, 1)->valueint == NO_TYPE)
-			cJSON_ReplaceItemInArray(_type, 1, cJSON_CreateNumber(ARRAY_TYPE));
+		if (value->type == cJSON_Array) {
+			throw MSG_Error("It can not be indexed array of arrays");
+		}
+		schema.set_type_to_array(properties);
 	}
 
 	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -387,18 +374,18 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 		if (text->type != cJSON_String) throw MSG_Error("Text should be string or array of strings");
 		Xapian::TermGenerator term_generator;
 		term_generator.set_document(doc);
-		term_generator.set_stemmer(Xapian::Stem(spc.language[getPos(j, spc.language.size())]));
-		if (spc.spelling[getPos(j, spc.spelling.size())]) {
+		term_generator.set_stemmer(Xapian::Stem(schema.specification.language[getPos(j, schema.specification.language.size())]));
+		if (schema.specification.spelling[getPos(j, schema.specification.spelling.size())]) {
 			term_generator.set_database(*wdb);
 			term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
-			term_generator.set_stemming_strategy((Xapian::TermGenerator::stem_strategy)spc.analyzer[getPos(j, spc.analyzer.size())]);
+			term_generator.set_stemming_strategy((Xapian::TermGenerator::stem_strategy)schema.specification.analyzer[getPos(j, schema.specification.analyzer.size())]);
 		}
 
-		if (spc.positions[getPos(j, spc.positions.size())]) {
-			spc.prefix.empty() ? term_generator.index_text_without_positions(text->valuestring, spc.weight[getPos(j, spc.weight.size())]) : term_generator.index_text_without_positions(text->valuestring, spc.weight[getPos(j, spc.weight.size())], spc.prefix);
+		if (schema.specification.positions[getPos(j, schema.specification.positions.size())]) {
+			schema.specification.prefix.empty() ? term_generator.index_text_without_positions(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())]) : term_generator.index_text_without_positions(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())], schema.specification.prefix);
 			L_DATABASE_WRAP(this, "Text to Index with positions = %s: %s", name.c_str(), text->valuestring);
 		} else {
-			spc.prefix.empty() ? term_generator.index_text(text->valuestring, spc.weight[getPos(j, spc.weight.size())]) : term_generator.index_text(text->valuestring, spc.weight[getPos(j, spc.weight.size())], spc.prefix);
+			schema.specification.prefix.empty() ? term_generator.index_text(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())]) : term_generator.index_text(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())], schema.specification.prefix);
 			L_DATABASE_WRAP(this, "Text to Index = %s: %s", name.c_str(), text->valuestring);
 		}
 	}
@@ -406,23 +393,21 @@ Database::index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc
 
 
 void
-Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
+Database::index_terms(Xapian::Document &doc, cJSON *terms, const std::string &name, cJSON *properties)
 {
-	// L_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
-	if (!(find || spc.dynamic)) throw MSG_Error("This object is not dynamic");
+	// L_DATABASE_WRAP(this, "Terms => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
+	if (!(schema.found_field || schema.specification.dynamic)) throw MSG_Error("This object is not dynamic");
 
-	if (!spc.store) return;
+	if (!schema.specification.store) return;
 
 	size_t elements = 1;
 	if (terms->type == cJSON_Array) {
 		elements = cJSON_GetArraySize(terms);
 		cJSON *value = cJSON_GetArrayItem(terms, 0);
-		if (value->type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
-
-		// If the type in schema is not array, schema is updated.
-		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE); // It is managed by schema.
-		if (_type && cJSON_GetArrayItem(_type, 1)->valueint == NO_TYPE)
-			cJSON_ReplaceItemInArray(_type, 1, cJSON_CreateNumber(ARRAY_TYPE));
+		if (value->type == cJSON_Array) {
+			throw MSG_Error("It can not be indexed array of arrays");
+		}
+		schema.set_type_to_array(properties);
 	}
 
 	for (size_t j = 0; j < elements; ++j) {
@@ -431,49 +416,49 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc
 		std::string term_v(_cprint.get());
 		if (term->type == cJSON_String) {
 			term_v.assign(term_v, 1, term_v.size() - 2);
-			if(!spc.bool_term && term_v.find(" ") != std::string::npos && spc.sep_types[2] == STRING_TYPE) {
-				index_texts(doc, term, spc, name, schema);
+			if(!schema.specification.bool_term && term_v.find(" ") != std::string::npos && schema.specification.sep_types[2] == STRING_TYPE) {
+				index_texts(doc, term, name, properties);
 				continue;
 			}
-		} else if (term->type == cJSON_Number) term_v = std::to_string(term->valuedouble);
+		} else if (term->type == cJSON_Number) {
+			term_v = std::to_string(term->valuedouble);
+		}
 
-		L_DATABASE_WRAP(this, "%d Term -> %s: %s", j, spc.prefix.c_str(), term_v.c_str());
+		L_DATABASE_WRAP(this, "%d Term -> %s: %s", j, schema.specification.prefix.c_str(), term_v.c_str());
 
-		term_v = Serialise::serialise(spc.sep_types[2], term_v);
+		term_v = Serialise::serialise(schema.specification.sep_types[2], term_v);
 		if (term_v.empty()) throw MSG_Error("%s: %s can not be serialized", name.c_str(), term_v.c_str());
-		if (spc.sep_types[2] == STRING_TYPE && !spc.bool_term) term_v = stringtolower(term_v);
+		if (schema.specification.sep_types[2] == STRING_TYPE && !schema.specification.bool_term) term_v = stringtolower(term_v);
 
-		if (spc.position[getPos(j, spc.position.size())] >= 0) {
-			std::string nameterm(prefixed(term_v, spc.prefix));
-			doc.add_posting(nameterm, spc.position[getPos(j, spc.position.size())], spc.bool_term ? 0: spc.weight[getPos(j, spc.weight.size())]);
-			L_DATABASE_WRAP(this, "Bool: %d  Posting: %s", spc.bool_term, repr(nameterm).c_str());
+		if (schema.specification.position[getPos(j, schema.specification.position.size())] >= 0) {
+			std::string nameterm(prefixed(term_v, schema.specification.prefix));
+			doc.add_posting(nameterm, schema.specification.position[getPos(j, schema.specification.position.size())], schema.specification.bool_term ? 0: schema.specification.weight[getPos(j, schema.specification.weight.size())]);
+			L_DATABASE_WRAP(this, "Bool: %d  Posting: %s", schema.specification.bool_term, repr(nameterm).c_str());
 		} else {
-			std::string nameterm(prefixed(term_v, spc.prefix));
-			spc.bool_term ? doc.add_boolean_term(nameterm) : doc.add_term(nameterm, spc.weight[getPos(j, spc.weight.size())]);
-			L_DATABASE_WRAP(this, "Bool: %d  Term: %s", spc.bool_term, repr(nameterm).c_str());
+			std::string nameterm(prefixed(term_v, schema.specification.prefix));
+			schema.specification.bool_term ? doc.add_boolean_term(nameterm) : doc.add_term(nameterm, schema.specification.weight[getPos(j, schema.specification.weight.size())]);
+			L_DATABASE_WRAP(this, "Bool: %d  Term: %s", schema.specification.bool_term, repr(nameterm).c_str());
 		}
 	}
 }
 
 
 void
-Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *schema, bool find)
+Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &name, cJSON *properties)
 {
-	// L_DATABASE_WRAP(this, "specifications: %s", specificationstostr(spc).c_str());
-	if (!(find || spc.dynamic)) throw MSG_Error("This object is not dynamic");
+	// L_DATABASE_WRAP(this, "Values => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
+	if (!(schema.found_field || schema.specification.dynamic)) throw MSG_Error("This object is not dynamic");
 
-	if (!spc.store) return;
+	if (!schema.specification.store) return;
 
 	size_t elements = 1;
 	if (values->type == cJSON_Array) {
 		elements = cJSON_GetArraySize(values);
 		cJSON *value = cJSON_GetArrayItem(values, 0);
-		if (value->type == cJSON_Array) throw MSG_Error("It can not be indexed array of arrays");
-
-		// If the type in schema is not array, schema is updated.
-		cJSON *_type = cJSON_GetObjectItem(schema, RESERVED_TYPE); // It is managed by schema.
-		if (_type && cJSON_GetArrayItem(_type, 1)->valueint == NO_TYPE)
-			cJSON_ReplaceItemInArray(_type, 1, cJSON_CreateNumber(ARRAY_TYPE));
+		if (value->type == cJSON_Array) {
+			throw MSG_Error("It can not be indexed array of arrays");
+		}
+		schema.set_type_to_array(properties);
 	}
 
 	StringList s;
@@ -489,11 +474,11 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 
 		L_DATABASE_WRAP(this, "Name: (%s) Value: (%s)", name.c_str(), value_v.c_str());
 
-		if (spc.sep_types[2] == GEO_TYPE) {
+		if (schema.specification.sep_types[2] == GEO_TYPE) {
 			std::vector<range_t> ranges;
 			CartesianList centroids;
 			uInt64List start_end;
-			EWKT_Parser::getRanges(value_v, spc.accuracy[0], spc.accuracy[1], ranges, centroids);
+			EWKT_Parser::getRanges(value_v, schema.specification.accuracy[0], schema.specification.accuracy[1], ranges, centroids);
 			// Index Values and looking for terms generated by accuracy.
 			std::set<std::string> set_terms;
 			for (auto it = ranges.begin(); it != ranges.end(); ++it) {
@@ -508,11 +493,11 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 					}
 					val = res.to_ullong();
 				} else val = it->start;
-				for (size_t i = 2; i < spc.accuracy.size(); ++i) {
-					int pos = START_POS - spc.accuracy[i] * 2;
+				for (size_t i = 2; i < schema.specification.accuracy.size(); ++i) {
+					int pos = START_POS - schema.specification.accuracy[i] * 2;
 					if (idx < pos) {
 						uInt64 vterm = val >> pos;
-						set_terms.insert(prefixed(Serialise::trixel_id(vterm), spc.acc_prefix[i - 2]));
+						set_terms.insert(prefixed(Serialise::trixel_id(vterm), schema.specification.acc_prefix[i - 2]));
 					} else {
 						break;
 					}
@@ -524,28 +509,28 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 			s.push_back(start_end.serialise());
 			s.push_back(centroids.serialise());
 		} else {
-			std::string value_s = Serialise::serialise(spc.sep_types[2], value_v);
+			std::string value_s = Serialise::serialise(schema.specification.sep_types[2], value_v);
 			if (value_s.empty()) {
 				throw MSG_Error("%s: %s can not serialized", name.c_str(), value_v.c_str());
 			}
 			s.push_back(value_s);
 
 			// Index terms generated by accuracy.
-			switch (spc.sep_types[2]) {
+			switch (schema.specification.sep_types[2]) {
 				case NUMERIC_TYPE: {
-					for (size_t len = spc.accuracy.size(), i = 0; i < len; ++i) {
+					for (size_t len = schema.specification.accuracy.size(), i = 0; i < len; ++i) {
 						long long _v = std::stoll(value_v);
-						std::string term_v = Serialise::numeric(std::to_string(_v - _v % (long long)spc.accuracy[i]));
-						std::string nameterm(prefixed(term_v, spc.acc_prefix[i]));
+						std::string term_v = Serialise::numeric(std::to_string(_v - _v % (long long)schema.specification.accuracy[i]));
+						std::string nameterm(prefixed(term_v, schema.specification.acc_prefix[i]));
 						doc.add_term(nameterm);
 					}
 					break;
 				}
 				case DATE_TYPE: {
 					bool findMath = value_v.find("||") != std::string::npos;
-					for (size_t len = spc.accuracy.size(), i = 0; i < len; ++i) {
+					for (size_t len = schema.specification.accuracy.size(), i = 0; i < len; ++i) {
 						std::string acc(value_v);
-						switch ((char)spc.accuracy[i]) {
+						switch ((char)schema.specification.accuracy[i]) {
 							case DB_YEAR2INT:
 								acc += findMath ? "//y" : "||//y";
 								break;
@@ -566,7 +551,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 								break;
 						}
 						acc.assign(Serialise::date(acc));
-						std::string nameterm(prefixed(acc, spc.acc_prefix[i]));
+						std::string nameterm(prefixed(acc, schema.specification.acc_prefix[i]));
 						doc.add_term(nameterm);
 					}
 					break;
@@ -575,8 +560,8 @@ Database::index_values(Xapian::Document &doc, cJSON *values, specifications_t &s
 		}
 	}
 
-	doc.add_value(spc.slot, s.serialise());
-	L_DATABASE_WRAP(this, "Slot: %u serialized: %s", spc.slot, repr(s.serialise()).c_str());
+	doc.add_value(schema.specification.slot, s.serialise());
+	L_DATABASE_WRAP(this, "Slot: %u serialized: %s", schema.specification.slot, repr(s.serialise()).c_str());
 }
 
 
@@ -585,6 +570,11 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 {
 	if (!(flags & DB_WRITABLE)) {
 		L_ERR(this, "ERROR: database is read-only");
+		return 0;
+	}
+
+	if (_document_id.empty()) {
+		L_ERR(this, "ERROR: Document must have an 'id'");
 		return 0;
 	}
 
@@ -639,115 +629,93 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	L_DATABASE_WRAP(this, "Document to index: %s", doc_data.c_str());
 	doc.set_data(encode_length(doc_data.size()) + doc_data + (blob ? body : ""));
 
-	cJSON *document_terms = cJSON_GetObjectItem(document.get(), RESERVED_TERMS);
-	cJSON *document_texts = cJSON_GetObjectItem(document.get(), RESERVED_TEXTS);
-
-	cJSON *properties = schema.get_properties_schema();
-
-	cJSON *subproperties = nullptr;
-	if (_document_id.c_str()) {
-		subproperties = schema.get_properties_id(properties);
-	} else {
-		L_ERR(this, "ERROR: Document must have an 'id'");
-		return 0;
-	}
+	// Save a copy of schema for undo changes.
+	auto _schema = schema.getSchema();
+	auto _to_store = schema.getStore();
 
 	try {
-		// Default specifications
-		specifications_t spc_now = default_spc;
-		if (schema.find) {
-			update_specifications(document.get(), spc_now, properties, true);
-		} else {
-			insert_specifications(document.get(), spc_now, properties);
-		}
-		specifications_t spc_bef = spc_now;
+		cJSON *properties = schema.get_properties_schema();
+		cJSON *subproperties = nullptr;
 
-		if (document_texts) {
-			for (int _size = cJSON_GetArraySize(document_texts), i = 0; i < _size; ++i) {
-				cJSON *texts = cJSON_GetArrayItem(document_texts, i);
-				cJSON *name = cJSON_GetObjectItem(texts, RESERVED_NAME);
-				cJSON *text = cJSON_GetObjectItem(texts, RESERVED_VALUE);
-				if (text) {
-					std::string name_s = name ? name->type == cJSON_String ? name->valuestring : throw MSG_Error("%s should be string", RESERVED_NAME) : std::string();
-					if (!name_s.empty()) {
-						subproperties = schema.get_properties(properties, name_s.c_str());
-						if (schema.find) {
-							update_specifications(texts, spc_now, subproperties);
-						} else {
-							insert_specifications(texts, spc_now, subproperties);
-						}
-						if (size_t pfound = name_s.rfind(DB_OFFSPRING_UNION) != std::string::npos) {
-							std::string language(name_s.substr(pfound + strlen(DB_OFFSPRING_UNION)));
-							if (is_language(language)) {
-								spc_now.language.clear();
-								spc_now.language.push_back(language);
-							}
-						}
-					} else { // Only need to get the specifications.
-						unique_cJSON t(cJSON_CreateObject());
-						update_specifications(texts, spc_now, t.get());
-					}
-					if (spc_now.sep_types[2] == NO_TYPE) {
-						spc_now.sep_types[2] = get_type(text, spc_now);
-						update_required_data(spc_now, name_s, subproperties);
-					}
-					index_texts(doc, text, spc_now, name_s, subproperties, schema.find);
-					spc_now = spc_bef;
-				} else {
-					L_DATABASE_WRAP(this, "ERROR: Text's value must be defined");
-					return 0;
-				}
-			}
-		}
+		schema.update_root(properties, document.get());
 
-		if (document_terms) {
-			for (int i = 0; i < cJSON_GetArraySize(document_terms); ++i) {
-				cJSON *data_terms = cJSON_GetArrayItem(document_terms, i);
-				cJSON *name = cJSON_GetObjectItem(data_terms, RESERVED_NAME);
-				cJSON *terms = cJSON_GetObjectItem(data_terms, RESERVED_VALUE);
-				if (terms) {
-					std::string name_s = (name && name->type == cJSON_String) ? name->valuestring : "";
-					if (!name_s.empty()) {
-						subproperties = schema.get_properties(properties, name_s.c_str());
-						if (schema.find) {
-							update_specifications(data_terms, spc_now, subproperties);
-						} else {
-							insert_specifications(data_terms, spc_now, subproperties);
-						}
-					} else {
-						unique_cJSON t(cJSON_CreateObject());
-						update_specifications(data_terms, spc_now, t.get());
-					}
-					if (spc_now.sep_types[2] == NO_TYPE) {
-						get_type(terms, spc_now);
-						update_required_data(spc_now, name_s, subproperties);
-					}
-					index_terms(doc, terms, spc_now, name_s, subproperties, schema.find);
-					spc_now = spc_bef;
-				} else {
-					L_DATABASE_WRAP(this, "ERROR: Term must be defined");
-					return 0;
-				}
-			}
-		}
+		specification_t spc_bef = schema.specification;
 
 		int elements = cJSON_GetArraySize(document.get());
 		for (int i = 0; i < elements; ++i) {
 			cJSON *item = cJSON_GetArrayItem(document.get(), i);
 			if (!is_reserved(item->string)) {
-				subproperties = schema.get_properties(properties, item->string);
-				index_fields(item, item->string, spc_now, doc, subproperties, schema.find, false);
+				subproperties = schema.get_subproperties(properties, item->string, item);
+				index_fields(item, item->string, doc, subproperties, false);
 			} else if (strcmp(item->string, RESERVED_VALUES) == 0) {
-				index_fields(item, "", spc_now, doc, properties, schema.find);
+				if (item->type != cJSON_Object) {
+					throw MSG_Error("%s must be an object", RESERVED_VALUES);
+				}
+				index_fields(item, "", doc, properties);
+			} else if (strcmp(item->string, RESERVED_TEXTS) == 0) {
+				for (int _size = cJSON_GetArraySize(item), i = 0; i < _size; ++i) {
+					cJSON *subitem = cJSON_GetArrayItem(item, i);
+					cJSON *name = cJSON_GetObjectItem(subitem, RESERVED_NAME);
+					cJSON *value = cJSON_GetObjectItem(subitem, RESERVED_VALUE);
+					if (value) {
+						std::string name_s = name ? name->type == cJSON_String ? name->valuestring : throw MSG_Error("%s should be string", RESERVED_NAME) : std::string();
+						if (name_s.empty()) {
+							// Only need to update the specifications.
+							schema.update_specification(subitem);
+							subproperties = cJSON_CreateObject();
+						} else {
+							subproperties = schema.get_subproperties(properties, name_s.c_str(), subitem);
+							if (size_t pfound = name_s.rfind(DB_OFFSPRING_UNION) != std::string::npos) {
+								std::string language(name_s.substr(pfound + strlen(DB_OFFSPRING_UNION)));
+								if (is_language(language)) {
+									schema.specification.language.clear();
+									schema.specification.language.push_back(language);
+								}
+							}
+						}
+						if (schema.specification.sep_types[2] == NO_TYPE) {
+							schema.set_type(value, name_s, subproperties);
+						}
+						index_texts(doc, value, name_s, subproperties);
+						schema.specification = spc_bef;
+					} else {
+						throw MSG_Error("Value must be defined");
+					}
+				}
+			} else if (strcmp(item->string, RESERVED_TERMS) == 0) {
+				for (int _size = cJSON_GetArraySize(item), i = 0; i < _size; ++i) {
+					cJSON *subitem = cJSON_GetArrayItem(item, i);
+					cJSON *name = cJSON_GetObjectItem(subitem, RESERVED_NAME);
+					cJSON *value = cJSON_GetObjectItem(subitem, RESERVED_VALUE);
+					if (value) {
+						std::string name_s = name ? name->type == cJSON_String ? name->valuestring : throw MSG_Error("%s should be string", RESERVED_NAME) : std::string();
+						if (name_s.empty()) {
+							// Only need to update the specifications.
+							schema.update_specification(subitem);
+							subproperties = cJSON_CreateObject();
+						} else {
+							subproperties = schema.get_subproperties(properties, name_s.c_str(), subitem);
+						}
+						if (schema.specification.sep_types[2] == NO_TYPE) {
+							schema.set_type(value, name_s, subproperties);
+						}
+						index_terms(doc, value, name_s, subproperties);
+						schema.specification = spc_bef;
+					} else {
+						throw MSG_Error("Value must be defined");
+					}
+				}
 			}
 		}
-
 	} catch (const std::exception &err) {
-		L_DATABASE_WRAP(this, "ERROR: %s", err.what());
+		// Back to the initial schema if there are changes.
+		if (schema.getStore()) {
+			schema.setSchema(std::move(_schema));
+			schema.setStore(_to_store);
+		}
+		L_ERR(this, "ERROR: %s", err.what());
 		return 0;
 	}
-
-	schema.store(); // Stores schema only if needed
 
 	return replace(document_id, doc, _commit);
 }
@@ -890,7 +858,7 @@ Database::get_slot_field(const std::string &field_name)
 
 
 Database::search_t
-Database::search(const query_field &e)
+Database::search(const query_field_t &e)
 {
 	search_t srch_resul;
 
@@ -1257,7 +1225,7 @@ Database::_search(const std::string &query, unsigned int flags, bool text, const
 
 
 void
-Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field *similar)
+Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field_t *similar)
 {
 	Xapian::RSet rset;
 
@@ -1300,7 +1268,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &qu
 Xapian::Enquire
 Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
 		Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
-		const similar_field *nearest, const similar_field *fuzzy, const std::vector<std::string> *facets)
+		const similar_field_t *nearest, const similar_field_t *fuzzy, const std::vector<std::string> *facets)
 {
 	std::string field;
 	std::unique_ptr<MultiValueCountMatchSpy> spy;
@@ -1337,7 +1305,7 @@ Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key,
 
 
 int
-Database::get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
+Database::get_mset(const query_field_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
 		std::vector<std::string> &suggestions, int offset)
 {
 	unsigned int doccount = db->get_doccount();
@@ -1420,8 +1388,11 @@ Database::get_metadata(const std::string &key, std::string &value)
 			if (t) reopen();
 			continue;
 		}
+		L_DATABASE_WRAP(this, "get_metadata was done");
 		return value.empty() ? false : true;
 	}
+
+	L_ERR(this, "ERROR: get_metadata can not be done!");
 	return false;
 }
 
@@ -1430,7 +1401,6 @@ bool
 Database::set_metadata(const std::string &key, const std::string &value, bool _commit)
 {
 	for (int t = 3; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Metadata: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->set_metadata(key, value);

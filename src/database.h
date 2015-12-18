@@ -61,6 +61,8 @@
 #define DB_SLOT_LENGTH 3 // Slot length data
 #define DB_SLOT_CREF   4 // Slot that saves the references counter
 
+#define DB_SLOT_RESERVED 10 // Reserved slots by special data
+
 
 constexpr size_t START_POS = SIZE_BITS_ID - 4;
 
@@ -115,20 +117,20 @@ public:
 	bool get_document(const Xapian::docid &did, Xapian::Document &doc);
 	Xapian::Enquire get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
 					Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
-					const similar_field *nearest, const similar_field *fuzzy, const std::vector<std::string> *facets);
-	search_t search(const query_field &e);
+					const similar_field_t *nearest, const similar_field_t *fuzzy, const std::vector<std::string> *facets);
+	search_t search(const query_field_t &e);
 	search_t _search(const std::string &query, unsigned int flags, bool text, const std::string &lan);
-	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field *similar);
-	int get_mset(const query_field &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
+	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field_t *similar);
+	int get_mset(const query_field_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
 					std::vector<std::string> &suggestions, int offset = 0);
 	unique_cJSON get_stats_database();
 	unique_cJSON get_stats_docs(const std::string &document_id);
 	data_field_t get_data_field(const std::string &field_name);
 	data_field_t get_slot_field(const std::string &field_name);
-	void index_fields(cJSON *item, const std::string &item_name, specifications_t &spc_now, Xapian::Document &doc, cJSON *schema, bool find, bool is_value = true);
-	void index_texts(Xapian::Document &doc, cJSON *texts, specifications_t &spc, const std::string &name, cJSON *schema, bool find = true);
-	void index_terms(Xapian::Document &doc, cJSON *terms, specifications_t &spc, const std::string &name, cJSON *schema, bool find = true);
-	void index_values(Xapian::Document &doc, cJSON *values, specifications_t &spc, const std::string &name, cJSON *schema, bool find = true);
+	void index_fields(cJSON *item, const std::string &item_name, Xapian::Document &doc, cJSON *properties, bool is_value=true);
+	void index_texts(Xapian::Document &doc, cJSON *texts, const std::string &name, cJSON *properties);
+	void index_terms(Xapian::Document &doc, cJSON *terms, const std::string &name, cJSON *properties);
+	void index_values(Xapian::Document &doc, cJSON *values, const std::string &name, cJSON *properties);
 	bool commit();
 };
 
