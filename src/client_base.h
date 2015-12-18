@@ -109,6 +109,7 @@ protected:
 	ev::io io_read;
 	ev::io io_write;
 	ev::async async_write;
+	ev::async async_read;
 
 	std::atomic_bool closed;
 	int sock;
@@ -127,6 +128,7 @@ protected:
 	queue::Queue<std::shared_ptr<Buffer>> write_queue;
 
 	void async_write_cb(ev::async &watcher, int revents);
+	void async_read_cb(ev::async &watcher, int revents);
 
 	void io_cb_update();
 

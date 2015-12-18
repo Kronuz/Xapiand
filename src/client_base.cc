@@ -163,6 +163,7 @@ BaseClient::BaseClient(std::shared_ptr<BaseServer> server_, ev::loop_ref *loop_,
 	  io_read(*loop),
 	  io_write(*loop),
 	  async_write(*loop),
+	  async_read(*loop),
 	  closed(false),
 	  sock(sock_),
 	  written(0),
@@ -173,6 +174,10 @@ BaseClient::BaseClient(std::shared_ptr<BaseServer> server_, ev::loop_ref *loop_,
 	async_write.set<BaseClient, &BaseClient::async_write_cb>(this);
 	async_write.start();
 	L_EV(this, "\tStart async write event");
+
+	async_read.set<BaseClient, &BaseClient::async_read_cb>(this);
+	async_read.start();
+	L_EV(this, "\tStart async read event");
 
 	io_read.set<BaseClient, &BaseClient::io_cb>(this);
 	io_read.start(sock, ev::READ);
@@ -526,9 +531,27 @@ BaseClient::io_cb_read(int fd)
 void
 BaseClient::async_write_cb(ev::async &, int)
 {
+	L_CALL(this, "BaseClient::async_write_cb");
 	L_EV_BEGIN(this, "BaseClient::async_write_cb:BEGIN");
+
 	io_cb_update();
+
 	L_EV_END(this, "BaseClient::async_write_cb:END");
+}
+
+
+void
+BaseClient::async_read_cb(ev::async &, int)
+{
+	L_CALL(this, "BaseClient::async_read_cb");
+	L_EV_BEGIN(this, "BaseClient::async_read_cb:BEGIN");
+
+	if (!closed) {
+		io_read.start();
+		L_EV(this, "\tEnable read event (sock=%d) [%d]", sock, io_read.is_active());
+	}
+
+	L_EV_END(this, "BaseClient::async_read_cb:END");
 }
 
 

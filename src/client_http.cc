@@ -1581,8 +1581,5 @@ HttpClient::clean_http_request()
 	request_begining = true;
 	L_INFO(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
 
-	if (!closed) {
-		L_EV(this, "\tEnable read event (sock=%d)", sock);
-		io_read.start();
-	}
+	async_read.send();
 }
