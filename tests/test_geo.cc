@@ -144,12 +144,12 @@ int create_test_db() {
 
 	// Index documents in the database.
 	size_t i = 1;
-	for (std::vector<std::string>::iterator it(_docs.begin()); it != _docs.end(); it++) {
+	for (auto it = _docs.begin(); it != _docs.end(); ++it) {
 		std::ifstream fstream(*it);
 		std::stringstream buffer;
 		buffer << fstream.rdbuf();
 		if (database->index(buffer.str(), std::to_string(i), true, "application/json", std::to_string(fstream.tellg())) == 0) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: File %s can not index", it->c_str());
 		}
 		fstream.close();
@@ -184,10 +184,10 @@ int make_search(const test_geo_t _tests[], int len) {
 
 		int rmset = database->get_mset(query, mset, spies, suggestions);
 		if (rmset != 0) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: Failed in get_mset");
 		} else if (mset.size() != p.expect_datas.size()) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: Different number of documents obtained %zu  %zu", mset.size(), p.expect_datas.size());
 		} else {
 			std::vector<std::string>::const_iterator it(p.expect_datas.begin());
@@ -202,7 +202,7 @@ int make_search(const test_geo_t _tests[], int len) {
 				unique_cJSON object(cJSON_Parse(data.c_str()));
 				cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
 				if (object_data && it->compare(object_data->valuestring) != 0) {
-					cont++;
+					++cont;
 					L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, data.c_str(), RESERVED_DATA, it->c_str());
 				}
 			}

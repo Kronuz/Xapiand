@@ -49,18 +49,16 @@ int test_wkt_parser() {
 			if (readEFile.is_open()) {
 				try {
 					EWKT_Parser ewkt = EWKT_Parser(EWKT, partials, error);
-
-					std::vector<std::string>::const_iterator itn = ewkt.trixels.begin();
-					for ( ;itn != ewkt.trixels.end(); itn++) {
+					for (auto itn = ewkt.trixels.begin(); itn != ewkt.trixels.end(); ++itn) {
 						std::string trixel_exp;
 						if (!readEFile.eof()) {
 							std::getline(readEFile, trixel_exp);
 							if (strcasecmp(trixel_exp.c_str(), (*itn).c_str()) != 0) {
-								cont++;
+								++cont;
 								L_ERR(nullptr, "ERROR: File (%s) Result(%s) Expect(%s).", file_expect.c_str(), (*itn).c_str(), trixel_exp.c_str());
 							}
 						} else {
-							cont++;
+							++cont;
 							L_ERR(nullptr, "ERROR: Expected less trixels.");
 							readEFile.close();
 							break;
@@ -68,7 +66,7 @@ int test_wkt_parser() {
 					}
 
 					if (!readEFile.eof()) {
-						cont++;
+						++cont;
 						L_ERR(nullptr, "ERROR: Expected more trixels.");
 						readEFile.close();
 						break;
@@ -78,18 +76,18 @@ int test_wkt_parser() {
 					HTM::writePython3D(file_result, ewkt.gv, ewkt.trixels);
 				} catch(const std::exception &e) {
 					L_ERR(nullptr, "ERROR: (%s) %s", EWKT.c_str(), e.what());
-					cont++;
+					++cont;
 				}
 				readEFile.close();
 			} else {
 				L_ERR(nullptr, "ERROR: File %s not found.", file_expect.c_str());
-				cont ++;
+				++cont;
 			}
 		}
 		readFile.close();
 	} else {
 		L_ERR(nullptr, "ERROR: File %s not found.", name.c_str());
-		cont ++;
+		++cont;
 	}
 
 	if (cont == 0) {
@@ -109,42 +107,42 @@ int test_wkt_speed()
 	clock_t start;
 	start = clock();
 	std::string EWKT("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10))");
-	for (int i = 0; i < repeat; i++) {
+	for (int i = 0; i < repeat; ++i) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
 	L_DEBUG(nullptr, "Time required for execution a single POLYGON: %f seconds", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10),(20 30, 35 35, 30 20, 20 30))");
-	for (int i = 0; i < repeat; i++) {
+	for (int i = 0; i < repeat; ++i) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
 	L_DEBUG(nullptr, "Time required for execution a compound POLYGON: %f seconds", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("CHULL ((35 10, 45 45, 15 40, 10 20, 35 10))");
-	for (int i = 0; i < repeat; i++) {
+	for (int i = 0; i < repeat; ++i) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
 	L_DEBUG(nullptr, "Time required for execution a single CHULL: %f seconds", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("CHULL ((35 10, 45 45, 15 40, 10 20, 35 10),(20 30, 35 35, 30 20, 20 30))");
-	for (int i = 0; i < repeat; i++) {
+	for (int i = 0; i < repeat; ++i) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
 	L_DEBUG(nullptr, "Time required for execution a compound CHULL: %f seconds", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("POINT (10 40)");
-	for (int i = 0; i < repeat; i++) {
+	for (int i = 0; i < repeat; ++i) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
 	L_DEBUG(nullptr, "Time required for execution a POINT: %f seconds", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
 	start = clock();
 	EWKT = std::string("CIRCLE (39 -125, 10000)");
-	for (int i = 0; i < repeat; i++) {
+	for (int i = 0; i < repeat; ++i) {
 		EWKT_Parser ewkt = EWKT_Parser(EWKT, true, 0.1);
 	}
 	L_DEBUG(nullptr, "Time required for execution a CIRCLE: %f seconds", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));

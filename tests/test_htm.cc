@@ -143,24 +143,22 @@ int test_cartesian_transforms() {
 	SRID_2_WGS84.push_back({ 4121, -20.0,  10.0, 30.0, "19°59'54.508366''S  10°0'3.727855''E  -227.104937"  });
 	SRID_2_WGS84.push_back({ 4121, -20.0, -10.0, 30.0, "19°59'54.797256''S  9°59'58.660140''W  -251.513821" });
 
-
-	VectorTransforms::const_iterator it = SRID_2_WGS84.begin();
 	int cont = 0;
 
 	try {
-		for ( ; it != SRID_2_WGS84.end(); it++) {
+		for (auto it = SRID_2_WGS84.begin(); it != SRID_2_WGS84.end(); ++it) {
 			Cartesian c(it->lat_src, it->lon_src, it->h_src, Cartesian::DEGREES, it->SRID);
 			double lat, lon, height;
 			c.toGeodetic(lat, lon, height);
 			std::string get = c.Decimal2Degrees();
 			if (strcasecmp(get.c_str(), it->res.c_str()) != 0) {
-				cont++;
+				++cont;
 				L_ERR(nullptr, "ERROR: Resul: %s  Expected: %s", get.c_str(), it->res.c_str());
 			}
 		}
 	} catch (const std::exception &e) {
 		L_ERR(nullptr, "ERROR: %s", e.what());
-		cont++;
+		++cont;
 	}
 
 	if (cont == 0) {
@@ -203,11 +201,11 @@ int test_hullConvex() {
 	expect_files.push_back("examples/Utah_expect_convex.txt");
 	result_files.push_back("examples/Utah_convex_hull.py");
 
-	std::vector<std::string>::const_iterator it_f(files.begin());
-	std::vector<std::string>::const_iterator it_e(expect_files.begin());
-	std::vector<std::string>::const_iterator it_r(result_files.begin());
+	auto it_f = files.begin();
+	auto it_e = expect_files.begin();
+	auto it_r = result_files.begin();
 
-	for ( ; it_f != files.end(); it_f++, it_e++, it_r++) {
+	for ( ; it_f != files.end(); ++it_f, ++it_e, ++it_r) {
 		std::ofstream fs(*it_r);
 		fs << "from mpl_toolkits.mplot3d import Axes3D\n";
 		fs << "from mpl_toolkits.mplot3d.art3d import Poly3DCollection\n";
@@ -227,7 +225,7 @@ int test_hullConvex() {
 				readFile >> output;
 				if (contLL == 0) {
 					lat = atof(output);
-					contLL++;
+					++contLL;
 				} else {
 					lon = atof(output);
 					Cartesian c(lat, lon, 0, Cartesian::DEGREES);
@@ -242,25 +240,23 @@ int test_hullConvex() {
 				double x1, y1, z1;
 				int i = 1;
 
-				std::vector<Cartesian>::iterator it_o = pts.begin();
 				fs << "\n# Original Points\n";
-				for ( ; it_o != pts.end(); it_o++) {
+				for (auto it_o = pts.begin(); it_o != pts.end(); ++it_o) {
 					(*it_o).normalize();
 					if (i == 1) {
 						x1 = (*it_o).x;
 						y1 = (*it_o).y;
 						z1 = (*it_o).z;
-						i++;
+						++i;
 						fs << "x1 = " << x1 << ";\n" << "y1 = " << y1 << ";\n" << "z1 = " << z1 << ";\n";
 					}
 					fs << "x = [" << (*it_o).x << "];\ny = [" << (*it_o).y << "];\nz = [" << (*it_o).z << "]\n";
 					fs << "ax.plot3D(x, y, z, 'ro', lw = 2.0, ms = 6);\n";
 				}
 
-				std::vector<Cartesian>::const_iterator it = g.corners.begin();
 				fs << "# Points for the hull convex\n";
 				i = 1;
-				for ( ; it != g.corners.end(); it++) {
+				for (auto it = g.corners.begin(); it != g.corners.end(); ++it) {
 					x_s += std::to_string((*it).x) + ", ";
 					y_s += std::to_string((*it).y) + ", ";
 					z_s += std::to_string((*it).z) + ", ";
@@ -268,25 +264,25 @@ int test_hullConvex() {
 						x1 = (*it).x;
 						y1 = (*it).y;
 						z1 = (*it).z;
-						i++;
+						++i;
 					}
 					std::string coord_get = std::to_string((*it).x) + " " + std::to_string((*it).y) + " " + std::to_string((*it).z);
 					std::string coord_exp;
 					if (!readEFile.eof()) {
 						std::getline(readEFile, coord_exp);
 						if (strcasecmp(coord_exp.c_str(), coord_get.c_str()) != 0) {
-							cont++;
+							++cont;
 							L_ERR(nullptr, "ERROR: Result(%s) Expect(%s).", coord_get.c_str(), coord_exp.c_str());
 						}
 					} else {
-						cont++;
+						++cont;
 						L_ERR(nullptr, "ERROR: Expected less corners.");
 						break;
 					}
 				}
 
 				if (!readEFile.eof()) {
-					cont++;
+					++cont;
 					L_ERR(nullptr, "ERROR: Expected more corners.");
 					break;
 				}
@@ -298,11 +294,11 @@ int test_hullConvex() {
 				fs << "plt.show()\nplt.ion()\n";
 			} catch(const std::exception &e) {
 				L_ERR(nullptr, "ERROR: (%s) %s", it_f->c_str(), e.what());
-				cont++;
+				++cont;
 			}
 		} else {
 			L_ERR(nullptr, "ERROR: File %s or %s not found.", (*it_f).c_str(), (*it_e).c_str());
-			cont ++;
+			++cont;
 		}
 
 		fs.close();
@@ -364,12 +360,12 @@ int test_HTM_chull() {
 	result_files.push_back("examples/Utah_polygon_HTM.py");
 	types.push_back(Geometry::CONVEX_HULL);
 
-	std::vector<std::string>::const_iterator it_f(files.begin());
-	std::vector<std::string>::const_iterator it_e(expect_files.begin());
-	std::vector<std::string>::const_iterator it_r(result_files.begin());
-	std::vector<Geometry::typePoints>::const_iterator it_t(types.begin());
+	auto it_f = files.begin();
+	auto it_e = expect_files.begin();
+	auto it_r = result_files.begin();
+	auto it_t = types.begin();
 
-	for ( ; it_f != files.end(); it_f++, it_e++, it_r++, it_t++) {
+	for ( ; it_f != files.end(); ++it_f, ++it_e, ++it_r, ++it_t) {
 		std::ifstream readFile(*it_f);
 		std::ifstream readEFile(*it_e);
 
@@ -383,7 +379,7 @@ int test_HTM_chull() {
 				readFile >> output;
 				if (contLL == 0) {
 					lat = atof(output);
-					contLL++;
+					++contLL;
 				} else {
 					lon = atof(output);
 					Cartesian c(lat, lon, 0, Cartesian::DEGREES);
@@ -398,24 +394,23 @@ int test_HTM_chull() {
 				HTM _htm(partials, error, g);
 				_htm.run();
 
-				std::vector<std::string>::const_iterator itn = _htm.names.begin();
-				for ( ; itn != _htm.names.end(); itn++) {
+				for (auto itn = _htm.names.begin(); itn != _htm.names.end(); ++itn) {
 					std::string trixel_exp;
 					if (!readEFile.eof()) {
 						std::getline(readEFile, trixel_exp);
 						if (strcasecmp((*itn).c_str(), trixel_exp.c_str()) != 0) {
-							cont++;
+							++cont;
 							L_ERR(nullptr, "ERROR: File(%s) Result(%s) Expect(%s).", (*it_f).c_str(), (*itn).c_str(), trixel_exp.c_str());
 						}
 					} else {
-						cont++;
+						++cont;
 						L_ERR(nullptr, "ERROR: Expected less trixels.");
 						break;
 					}
 				}
 
 				if (!readEFile.eof()) {
-					cont++;
+					++cont;
 					L_ERR(nullptr, "ERROR: Expected more trixels.");
 					readFile.close();
 					readEFile.close();
@@ -425,11 +420,11 @@ int test_HTM_chull() {
 				_htm.writePython3D(*it_r);
 			} catch(const std::exception &e) {
 				L_ERR(nullptr, "ERROR: (%s) %s", it_f->c_str(), e.what());
-				cont++;
+				++cont;
 			}
 		} else {
 			L_ERR(nullptr, "ERROR: File %s or %s not found.", (*it_f).c_str(), (*it_e).c_str());
-			cont ++;
+			++cont;
 		}
 
 		readFile.close();
@@ -481,24 +476,23 @@ int test_HTM_circle() {
 					HTM _htm(partials, error, g);
 					_htm.run();
 
-					std::vector<std::string>::const_iterator itn = _htm.names.begin();
-					for ( ; itn != _htm.names.end(); itn++) {
+					for (auto itn = _htm.names.begin(); itn != _htm.names.end(); ++itn) {
 						std::string trixel_exp;
 						if (!readEFile.eof()) {
 							std::getline(readEFile, trixel_exp);
 							if (strcasecmp((*itn).c_str(), trixel_exp.c_str()) != 0) {
-								cont++;
+								++cont;
 								L_ERR(nullptr, "ERROR: File (%s) Result(%s) Expect(%s).", file_expect.c_str(), (*itn).c_str(), trixel_exp.c_str());
 							}
 						} else {
-							cont++;
+							++cont;
 							L_ERR(nullptr, "ERROR: Expected less trixels.");
 							break;
 						}
 					}
 
 					if (!readEFile.eof()) {
-						cont++;
+						++cont;
 						L_ERR(nullptr, "ERROR: Expected more trixels.");
 						readEFile.close();
 						break;
@@ -507,18 +501,18 @@ int test_HTM_circle() {
 					_htm.writePython3D(file_result);
 				} catch(const std::exception &e) {
 					L_ERR(nullptr, "ERROR: %s", e.what());
-					cont++;
+					++cont;
 				}
 				readEFile.close();
 			} else {
 				L_ERR(nullptr, "ERROR: File %s not found.", file_expect.c_str());
-				cont ++;
+				++cont;
 			}
 		}
 		readFile.close();
 	} else {
 		L_ERR(nullptr, "ERROR: File %s not found.", name.c_str());
-		cont ++;
+		++cont;
 	}
 
 	if (cont == 0) {

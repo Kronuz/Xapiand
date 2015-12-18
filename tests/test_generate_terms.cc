@@ -326,20 +326,21 @@ int numeric_test() {
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
 				L_DEBUG(nullptr, "ERROR: Diferent numbers of prefix");
-				cont++;
+				++cont;
 				continue;
 			}
-			std::vector<std::string>::const_iterator it(prefixes.begin()), ite(p.expected_prefixes.begin());
-			for ( ; it != prefixes.end(); it++, ite++) {
+			auto it = prefixes.begin();
+			auto ite = p.expected_prefixes.begin();
+			for ( ; it != prefixes.end(); ++it, ++ite) {
 				if (it->compare(*ite) != 0) {
 					L_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s", it->c_str(), ite->c_str());
-					cont++;
+					++cont;
 					continue;
 				}
 			}
 		} else {
 			L_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
-			cont++;
+			++cont;
 		}
 	}
 
@@ -363,20 +364,21 @@ int date_test() {
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
 				L_DEBUG(nullptr, "ERROR: Diferent numbers of prefix");
-				cont++;
+				++cont;
 				continue;
 			}
-			std::vector<std::string>::const_iterator it(prefixes.begin()), ite(p.expected_prefixes.begin());
-			for ( ; it != prefixes.end(); it++, ite++) {
+			auto it = prefixes.begin();
+			auto ite = p.expected_prefixes.begin();
+			for ( ; it != prefixes.end(); ++it, ++ite) {
 				if (it->compare(*ite) != 0) {
 					L_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s", it->c_str(), ite->c_str());
-					cont++;
+					++cont;
 					continue;
 				}
 			}
 		} else {
 			L_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
-			cont++;
+			++cont;
 		}
 	}
 
@@ -400,20 +402,21 @@ int geo_test() {
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
 				L_DEBUG(nullptr, "ERROR: Diferent numbers of prefix");
-				cont++;
+				++cont;
 				continue;
 			}
-			std::vector<std::string>::const_iterator it(prefixes.begin()), ite(p.expected_prefixes.begin());
-			for ( ; it != prefixes.end(); it++, ite++) {
+			auto it = prefixes.begin();
+			auto ite = p.expected_prefixes.begin();
+			for ( ; it != prefixes.end(); ++it, ++ite) {
 				if (it->compare(*ite) != 0) {
 					L_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s", it->c_str(), ite->c_str());
-					cont++;
+					++cont;
 					continue;
 				}
 			}
 		} else {
 			L_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
-			cont++;
+			++cont;
 		}
 	}
 

@@ -153,7 +153,7 @@ int test_datetotimestamp() {
 			timestamp = "";
 		}
 		if (timestamp.compare(p->expect) != 0) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", timestamp.c_str(), p->expect);
 		}
 	}
@@ -174,7 +174,7 @@ int test_unserialise_date() {
 		std::string date_s(Serialise::date(std::to_string(Datetime::timestamp(p->str))));
 		std::string date = Unserialise::date(date_s);
 		if (date.compare(p->expect) != 0) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", date.c_str(), p->expect);
 		}
 	}
@@ -196,7 +196,7 @@ int test_serialise_cartesian() {
 		c.normalize();
 		std::string res(repr(Serialise::cartesian(c)));
 		if (res.compare(p->expect_serialise) != 0) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res.c_str(), p->expect_serialise);
 		}
 	}
@@ -221,7 +221,7 @@ int test_unserialise_cartesian() {
 		char res[40];
 		snprintf(res, sizeof(res), "%1.9f %1.9f %1.9f", c.x, c.y, c.z);
 		if (strcmp(res, p->expect_unserialise) != 0) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res, p->expect_unserialise);
 		}
 	}
@@ -242,7 +242,7 @@ int test_serialise_trixel_id() {
 		uInt64 trixel_id = p->trixel_id;
 		std::string res(repr(Serialise::trixel_id(trixel_id)));
 		if (res.compare(p->expect_serialise) != 0) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: Resul: %s Expect: %s", res.c_str(), p->expect_serialise);
 		}
 	}
@@ -264,7 +264,7 @@ int test_unserialise_trixel_id() {
 		std::string serialise(Serialise::trixel_id(trixel_id));
 		trixel_id = Unserialise::trixel_id(serialise);
 		if (p->trixel_id != trixel_id) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: Resul: %llu Expect: %llu", trixel_id, p->trixel_id);
 		}
 	}

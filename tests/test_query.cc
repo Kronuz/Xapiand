@@ -327,7 +327,6 @@ int make_search(const test_query_t _tests[], int len) {
 			Xapian::MSet mset;
 			std::vector<std::string> suggestions;
 			std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
-			L_ERR(nullptr, "++++++ Start Search in DB %d", i);
 			int rmset = database->get_mset(query, mset, spies, suggestions);
 			if (rmset != 0) {
 				++cont;

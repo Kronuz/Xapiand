@@ -275,12 +275,12 @@ int create_test_db() {
 
 	// Index documents in the database.
 	size_t i = 1;
-	for (std::vector<std::string>::iterator it(_docs.begin()); it != _docs.end(); it++) {
+	for (auto it = _docs.begin(); it != _docs.end(); ++it) {
 		std::ifstream fstream(*it);
 		std::stringstream buffer;
 		buffer << fstream.rdbuf();
 		if (database->index(buffer.str(), std::to_string(i), true, "application/json", std::to_string(fstream.tellg())) == 0) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: File %s can not index", it->c_str());
 		}
 		fstream.close();
@@ -308,8 +308,7 @@ int make_search(const sort_t _tests[], int len) {
 		query.sort.clear();
 		query.query.push_back(p.query);
 
-		std::vector<std::string>::iterator it(p.sort.begin());
-		for ( ; it != p.sort.end(); it++) {
+		for (auto it = p.sort.begin(); it != p.sort.end(); ++it) {
 			query.sort.push_back(*it);
 		}
 
@@ -319,18 +318,17 @@ int make_search(const sort_t _tests[], int len) {
 
 		int rmset = database->get_mset(query, mset, spies, suggestions);
 		if (rmset != 0) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: Failed in get_mset");
 		} else if (mset.size() != p.expect_result.size()) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: Different number of documents obtained");
 		} else {
-			it = p.expect_result.begin();
 			Xapian::MSetIterator m = mset.begin();
-			for ( ; m != mset.end(); ++it, ++m) {
+			for (auto it = p.expect_result.begin(); m != mset.end(); ++it, ++m) {
 				std::string d_id(m.get_document().get_value(0));
 				if (it->compare(d_id) != 0) {
-					cont++;
+					++cont;
 					L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_ID, d_id.c_str(), RESERVED_ID, it->c_str());
 				}
 			}
