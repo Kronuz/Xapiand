@@ -225,14 +225,11 @@ std::string urldecode(const char *src, size_t size) {
 	char * const pStart = new char[size];
 	char * pEnd = pStart;
 
-	while (src < SRC_LAST_DEC)
-	{
-		if (*src == '%')
-		{
+	while (src < SRC_LAST_DEC) {
+		if (*src == '%') {
 			char dec1, dec2;
 			if (-1 != (dec1 = HEX2DEC[static_cast<int>(*(src + 1))])
-				&& -1 != (dec2 = HEX2DEC[static_cast<int>(*(src + 2))]))
-			{
+				&& -1 != (dec2 = HEX2DEC[static_cast<int>(*(src + 2))])) {
 				*pEnd++ = (dec1 << 4) + dec2;
 				src += 3;
 				continue;
@@ -244,7 +241,7 @@ std::string urldecode(const char *src, size_t size) {
 
 	// the last 2- chars
 	while (src < SRC_END)
-	*pEnd++ = *src++;
+		*pEnd++ = *src++;
 
 	std::string sResult(pStart, pEnd);
 	delete [] pStart;
@@ -256,9 +253,9 @@ std::string urldecode(const char *src, size_t size) {
 int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 	const char *nf = qs + size;
 	const char *n1, *n0;
-	const char *v0 = NULL;
+	const char *v0 = nullptr;
 
-	if (par->offset == NULL) {
+	if (par->offset == nullptr) {
 		n0 = n1 = qs;
 	} else {
 		n0 = n1 = par->offset + par->length;
@@ -291,7 +288,7 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 								par->length = v1 - v0 - 1;
 								return 0;
 							}
-							v1++;
+							++v1;
 						}
 					} else {
 						par->offset = n1 + 1;
@@ -302,10 +299,10 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 					return -1;
 				} else if (cn != '=') {
 					n0 = n1 + 1;
-					v0 = NULL;
+					v0 = nullptr;
 				}
 		}
-		n1++;
+		++n1;
 	}
 	return -1;
 }
@@ -313,11 +310,11 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 
 int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 	const char *nf = ni + size;
-	const char *n0, *n1, *n2 = NULL;
+	const char *n0, *n1, *n2 = nullptr;
 	int state, direction;
 	size_t length;
 
-	if (par->offset == NULL) {
+	if (par->offset == nullptr) {
 		state = STATE_CM0;
 		n0 = n1 = n2 = nf - 1;
 		direction = -1;
@@ -354,7 +351,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 			case ',':
 				switch (state) {
 					case STATE_CM0:
-						state++;
+						++state;
 						n0 = n1;
 						break;
 					case STATE_CMD:
@@ -365,7 +362,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						par->off_path = n0;
 						par->len_path = length;
 						state = length ? 0 : STATE_ERR;
-						if (cn) n1++;
+						if (cn) ++n1;
 						par->offset = n1;
 						return state;
 					case STATE_HST:
@@ -373,7 +370,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						par->off_host = n0;
 						par->len_host = length;
 						state = length ? 0 : STATE_ERR;
-						if (cn) n1++;
+						if (cn) ++n1;
 						par->offset = n1;
 						return state;
 					case STATE_UPL:
@@ -399,7 +396,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 			case ':':
 				switch (state) {
 					case STATE_CM0:
-						state++;
+						++state;
 						n0 = n1;
 						break;
 					case STATE_CMD:
@@ -428,7 +425,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 			case '@':
 				switch (state) {
 					case STATE_CM0:
-						state++;
+						++state;
 						n0 = n1;
 						break;
 					case STATE_CMD:
@@ -493,7 +490,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 			default:
 				switch (state) {
 					case STATE_CM0:
-						state++;
+						++state;
 						n0 = n1;
 						break;
 				}
@@ -560,8 +557,7 @@ std::string get_slot_hex(const std::string &name) {
 
 
 bool strhasupper(const std::string &str) {
-	std::string::const_iterator it(str.begin());
-	for ( ; it != str.end(); it++) {
+	for (auto it = str.begin(); it != str.end(); ++it) {
 		if (isupper(*it)) return true;
 	}
 
@@ -758,7 +754,7 @@ bool buid_path_index(const std::string& path) {
 		std::vector<std::string> directories;
 		stringTokenizer(dir, "/", directories);
 		dir.clear();
-		for (std::vector<std::string>::iterator it = directories.begin(); it != directories.end(); it++) {
+		for (auto it = directories.begin(); it != directories.end(); ++it) {
 			dir = dir + *it + "/";
 			if (mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
 				continue;
@@ -792,11 +788,11 @@ unsigned int levenshtein_distance(const std::string &str1, const std::string &st
 	const size_t len1 = str1.size(), len2 = str2.size();
 	std::vector<unsigned int> col(len2 + 1), prev_col(len2 + 1);
 
-	for (unsigned int i = 0; i < prev_col.size(); i++) prev_col[i] = i;
+	for (unsigned int i = 0; i < prev_col.size(); ++i) prev_col[i] = i;
 
-	for (unsigned int i = 0; i < len1; i++) {
+	for (unsigned int i = 0; i < len1; ++i) {
 		col[0] = i + 1;
-		for (unsigned int j = 0; j < len2; j++)
+		for (unsigned int j = 0; j < len2; ++j)
 			col[j + 1] = std::min(std::min(prev_col[j + 1] + 1, col[j] + 1), prev_col[j] + (str1[i] == str2[j] ? 0 : 1));
 		col.swap(prev_col);
 	}
