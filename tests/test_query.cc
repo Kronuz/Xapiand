@@ -267,12 +267,12 @@ int create_test_db() {
 
 	// Index documents in the database.
 	size_t i = 1;
-	for (std::vector<std::string>::iterator it(_docs.begin()); it != _docs.end(); it++) {
+	for (auto it = _docs.begin(); it != _docs.end(); ++it) {
 		std::ifstream fstream(*it);
 		std::stringstream buffer;
 		buffer << fstream.rdbuf();
 		if (database->index(buffer.str(), std::to_string(i), true, "application/json", std::to_string(fstream.tellg())) == 0) {
-			cont++;
+			++cont;
 			L_ERR(nullptr, "ERROR: File %s can not index", it->c_str());
 		}
 		fstream.close();
