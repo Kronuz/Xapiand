@@ -284,9 +284,8 @@ int create_test_db() {
 
 
 int make_search(const test_query_t _tests[], int len) {
-	L_DEBUG(nullptr, "++++++ Start Search");
 	int cont = 0;
-	query_field query;
+	query_field_t query;
 	query.offset = 0;
 	query.limit = 20;
 	query.check_at_least = 0;
@@ -296,88 +295,88 @@ int make_search(const test_query_t _tests[], int len) {
 	query.is_nearest = false;
 	query.sort.push_back(RESERVED_ID); // All the result are sort by its id.
 
-	for (int i = 0; i < len; ++i) {
-		test_query_t p = _tests[i];
-		query.query.clear();
-		query.terms.clear();
-		query.partial.clear();
-		query.facets.clear();
+	try {
+		for (int i = 0; i < len; ++i) {
+			test_query_t p = _tests[i];
+			query.query.clear();
+			query.terms.clear();
+			query.partial.clear();
+			query.facets.clear();
 
-		// Insert query
-		std::vector<std::string>::const_iterator it(p.query.begin());
-		for ( ; it != p.query.end(); it++) {
-			query.query.push_back(*it);
-		}
+			// Insert query
+			for (auto it = p.query.begin(); it != p.query.end(); ++it) {
+				query.query.push_back(*it);
+			}
 
-		// Insert terms
-		it = p.terms.begin();
-		for ( ; it != p.terms.end(); it++) {
-			query.terms.push_back(*it);
-		}
+			// Insert terms
+			for (auto it = p.terms.begin(); it != p.terms.end(); ++it) {
+				query.terms.push_back(*it);
+			}
 
-		// Insert partials
-		it = p.partial.begin();
-		for ( ; it != p.partial.end(); it++) {
-			query.partial.push_back(*it);
-		}
+			// Insert partials
+			for (auto it = p.partial.begin(); it != p.partial.end(); ++it) {
+				query.partial.push_back(*it);
+			}
 
-		// Insert facets
-		it = p.facets.begin();
-		for ( ; it != p.facets.end(); it++) {
-			query.facets.push_back(*it);
-		}
+			// Insert facets
+			for (auto it = p.facets.begin(); it != p.facets.end(); ++it) {
+				query.facets.push_back(*it);
+			}
 
 
-		Xapian::MSet mset;
-		std::vector<std::string> suggestions;
-		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
-		L_DEBUG(nullptr, "++++++ Start Search in DB");
-		int rmset = database->get_mset(query, mset, spies, suggestions);
-		if (rmset != 0) {
-			cont++;
-			L_ERR(nullptr, "ERROR: Failed in get_mset");
-		} else {
-			// Check by documents
-			if (mset.size() != p.expect_datas.size()) {
-				cont++;
-				L_ERR(nullptr, "ERROR: Different number of documents obtained, get: %zu expected: %zu", mset.size(), p.expect_datas.size());
+			Xapian::MSet mset;
+			std::vector<std::string> suggestions;
+			std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
+			L_ERR(nullptr, "++++++ Start Search in DB %d", i);
+			int rmset = database->get_mset(query, mset, spies, suggestions);
+			if (rmset != 0) {
+				++cont;
+				L_ERR(nullptr, "ERROR: Failed in get_mset");
 			} else {
-				it = p.expect_datas.begin();
-				Xapian::MSetIterator m = mset.begin();
-				for ( ; m != mset.end(); ++it, ++m) {
-					std::string data = m.get_document().get_data().data();
-					const char *p = data.data();
-					const char *p_end = p + data.size();
-					size_t length = decode_length(&p, p_end, true);
-					data = std::string(p, length);
+				// Check by documents
+				if (mset.size() != p.expect_datas.size()) {
+					++cont;
+					L_ERR(nullptr, "ERROR: Different number of documents obtained, get: %zu expected: %zu", mset.size(), p.expect_datas.size());
+				} else {
+					Xapian::MSetIterator m = mset.begin();
+					for (auto it = p.expect_datas.begin(); m != mset.end(); ++it, ++m) {
+						std::string data = m.get_document().get_data().data();
+						const char *p = data.data();
+						const char *p_end = p + data.size();
+						size_t length = decode_length(&p, p_end, true);
+						data = std::string(p, length);
 
-					unique_cJSON object(cJSON_Parse(data.c_str()));
-					cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
-					if (object_data && it->compare(object_data->valuestring) != 0) {
-						cont++;
-						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, data.c_str(), RESERVED_DATA, it->c_str());
+						unique_cJSON object(cJSON_Parse(data.c_str()));
+						cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
+						if (object_data && it->compare(object_data->valuestring) != 0) {
+							++cont;
+							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, data.c_str(), RESERVED_DATA, it->c_str());
+						}
 					}
 				}
-			}
-			// Check by facets
-			if (!p.facets.empty()) {
-				std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>::const_iterator spy(spies.begin());
-				Xapian::TermIterator facet = (*spy).second->values_begin();
-				it = p.expect_facets.begin();
-				for ( ; facet != (*spy).second->values_end() && it !=  p.expect_facets.end(); ++facet, ++it) {
-					data_field_t field_t = database->get_data_field((*spy).first);
-					std::string str_facet(Unserialise::unserialise(field_t.type, *facet));
-					if (str_facet.compare(*it) != 0) {
-						cont++;
-						L_ERR(nullptr, "ERROR: Facet result = %s   Facet expected = %s", str_facet.c_str(), it->c_str());
+				// Check by facets
+				if (!p.facets.empty()) {
+					auto spy = spies.begin();
+					auto facet = (*spy).second->values_begin();
+					auto it = p.expect_facets.begin();
+					for ( ; facet != (*spy).second->values_end() && it !=  p.expect_facets.end(); ++facet, ++it) {
+						data_field_t field_t = database->get_data_field((*spy).first);
+						std::string str_facet(Unserialise::unserialise(field_t.type, *facet));
+						if (str_facet.compare(*it) != 0) {
+							++cont;
+							L_ERR(nullptr, "ERROR: Facet result = %s   Facet expected = %s", str_facet.c_str(), it->c_str());
+						}
 					}
-				}
-				if (it !=  p.expect_facets.end() || facet != (*spy).second->values_end()) {
-					cont++;
-					L_ERR(nullptr, "ERROR: Different number of terms generated by facets obtained");
+					if (it !=  p.expect_facets.end() || facet != (*spy).second->values_end()) {
+						++cont;
+						L_ERR(nullptr, "ERROR: Different number of terms generated by facets obtained");
+					}
 				}
 			}
 		}
+	} catch (const std::exception &e) {
+		L_ERR(nullptr, "ERROR: %s\n", e.what());
+		++cont;
 	}
 
 	// Delete the files created.
@@ -450,7 +449,6 @@ int test_partials_search() {
 int test_facets_search() {
 	try {
 		int cont = create_test_db();
-		L_DEBUG(nullptr, "++++++ Call Make Search");
 		if (cont == 0 && make_search(test_facets, arraySize(test_facets)) == 0) {
 			L_DEBUG(nullptr, "Testing facets is correct!");
 			return 0;
