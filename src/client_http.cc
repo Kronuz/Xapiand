@@ -688,16 +688,18 @@ HttpClient::delete_document_view(const query_field &e)
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
+	auto tp_end = std::chrono::system_clock::now();
 
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
-	L_DEBUG(this, "Time take for delete %d ms", time);
-	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
-	update_pos_time();
-	++stats_cnt.del.min[b_time.minute];
-	++stats_cnt.del.sec[b_time.second];
-	stats_cnt.del.tm_min[b_time.minute] += time;
-	stats_cnt.del.tm_sec[b_time.second] += time;
-	lk.unlock();
+	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(tp_end - tp_start).count();
+	{
+		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
+		update_pos_time();
+		++stats_cnt.del.min[b_time.minute];
+		++stats_cnt.del.sec[b_time.second];
+		stats_cnt.del.tm_min[b_time.minute] += time;
+		stats_cnt.del.tm_sec[b_time.second] += time;
+	}
+	L_TIME(this, "Deletion took %s", delta_string(tp_start, tp_end).c_str());
 
 	manager()->database_pool.checkin(database);
 	unique_cJSON root(cJSON_CreateObject());
@@ -732,17 +734,17 @@ HttpClient::index_document_view(const query_field &e)
 		return;
 	}
 
-	auto tp_start = std::chrono::system_clock::now();
-
 	if (content_type.empty()) {
 		content_type = "application/json";
 	}
 
+	auto tp_start = std::chrono::system_clock::now();
 	if (!database->index(body, command, e.commit, content_type, content_length)) {
 		manager()->database_pool.checkin(database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
+	auto tp_end = std::chrono::system_clock::now();
 
 	// did = returned by index() call
 	// filename = Termoprary file
@@ -750,19 +752,16 @@ HttpClient::index_document_view(const query_field &e)
 	// 	L_INFO(this, "Storing %s...", filename.c_str());
 	// }
 
-	auto tp_now = std::chrono::system_clock::now();
-
-	L_TIME(this, "Indexing took %s", delta_string(tp_start, tp_now).c_str());
-
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(tp_now - tp_start).count();
-
-	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
-	update_pos_time();
-	++stats_cnt.index.min[b_time.minute];
-	++stats_cnt.index.sec[b_time.second];
-	stats_cnt.index.tm_min[b_time.minute] += time;
-	stats_cnt.index.tm_sec[b_time.second] += time;
-	lk.unlock();
+	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(tp_end - tp_start).count();
+	{
+		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
+		update_pos_time();
+		++stats_cnt.index.min[b_time.minute];
+		++stats_cnt.index.sec[b_time.second];
+		stats_cnt.index.tm_min[b_time.minute] += time;
+		stats_cnt.index.tm_sec[b_time.second] += time;
+	}
+	L_TIME(this, "Indexing took %s", delta_string(tp_start, tp_end).c_str());
 
 	manager()->database_pool.checkin(database);
 	unique_cJSON root(cJSON_CreateObject());
@@ -960,6 +959,7 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
 	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
+
 	auto tp_start = std::chrono::system_clock::now();
 	int rmset = database->get_mset(e, mset, spies, suggestions);
 	int cout_matched = mset.size();
@@ -1162,16 +1162,18 @@ HttpClient::search_view(const query_field &e, bool facets, bool schema)
 			write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, result));
 		}
 	}
+	auto tp_end = std::chrono::system_clock::now();
 
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - tp_start).count();
-	L_DEBUG(this, "Time take for search %d ms", time);
-	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
-	update_pos_time();
-	++stats_cnt.search.min[b_time.minute];
-	++stats_cnt.search.sec[b_time.second];
-	stats_cnt.search.tm_min[b_time.minute] += time;
-	stats_cnt.search.tm_sec[b_time.second] += time;
-	lk.unlock();
+	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(tp_end - tp_start).count();
+	{
+		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
+		update_pos_time();
+		++stats_cnt.search.min[b_time.minute];
+		++stats_cnt.search.sec[b_time.second];
+		stats_cnt.search.tm_min[b_time.minute] += time;
+		stats_cnt.search.tm_sec[b_time.second] += time;
+	}
+	L_TIME(this, "Searching took %s", delta_string(tp_start, tp_end).c_str());
 
 	manager()->database_pool.checkin(database);
 	L_DEBUG(this, "FINISH SEARCH");
