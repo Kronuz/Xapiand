@@ -78,6 +78,142 @@ void run(const opts_t &opts) {
 // user defined output.
 class CmdOutput : public StdOutput
 {
+	inline void spacePrint(std::ostream& os,
+			       const std::string& s,
+			       int maxWidth,
+			       int indentSpaces,
+			       int secondLineOffset,
+			       bool endl=true) const {
+		int len = static_cast<int>(s.length());
+
+		if ((len + indentSpaces > maxWidth) && maxWidth > 0) {
+			int allowedLen = maxWidth - indentSpaces;
+			int start = 0;
+			while (start < len) {
+				// find the substring length
+				// int stringLen = std::min<int>( len - start, allowedLen );
+				// doing it this way to support a VisualC++ 2005 bug
+				using namespace std;
+				int stringLen = min<int>( len - start, allowedLen );
+
+				// trim the length so it doesn't end in middle of a word
+				if (stringLen == allowedLen) {
+					while (stringLen >= 0 &&
+					       s[stringLen+start] != ' ' &&
+					       s[stringLen+start] != ',' &&
+					       s[stringLen+start] != '|') {
+						stringLen--;
+					}
+				}
+
+				// ok, the word is longer than the line, so just split
+				// wherever the line ends
+				if (stringLen <= 0) {
+					stringLen = allowedLen;
+				}
+
+				// check for newlines
+				for (int i = 0; i < stringLen; i++) {
+					if (s[start+i] == '\n') {
+						stringLen = i+1;
+					}
+				}
+
+				if (start != 0) {
+					os << std::endl;
+				}
+
+				// print the indent
+				for (int i = 0; i < indentSpaces; i++) {
+					os << " ";
+				}
+
+				if (start == 0) {
+					// handle second line offsets
+					indentSpaces += secondLineOffset;
+
+					// adjust allowed len
+					allowedLen -= secondLineOffset;
+				}
+
+				os << s.substr(start,stringLen);
+
+				// so we don't start a line with a space
+				while (s[stringLen+start] == ' ' && start < len) {
+					start++;
+				}
+
+				start += stringLen;
+			}
+		} else {
+			for (int i = 0; i < indentSpaces; i++) {
+				os << " ";
+			}
+			os << s;
+			if (endl) {
+				os << std::endl;
+			}
+		}
+	}
+
+	inline void _longUsage( CmdLineInterface& _cmd, std::ostream& os ) const {
+		std::list<Arg*> argList = _cmd.getArgList();
+		std::string message = _cmd.getMessage();
+		XorHandler xorHandler = _cmd.getXorHandler();
+		std::vector< std::vector<Arg*> > xorList = xorHandler.getXorList();
+
+		size_t max = 0;
+
+		for (int i = 0; static_cast<unsigned int>(i) < xorList.size(); i++) {
+			for (ArgVectorIterator it = xorList[i].begin(); it != xorList[i].end(); it++) {
+				const std::string& id = (*it)->longID();
+				if (id.size() > max) {
+					max = id.size();
+				}
+			}
+		}
+
+		// first the xor
+		for (int i = 0; static_cast<unsigned int>(i) < xorList.size(); i++) {
+			for (ArgVectorIterator it = xorList[i].begin(); it != xorList[i].end(); it++) {
+				const std::string& id = (*it)->longID();
+				spacePrint(os, id, 75, 3, 3, false);
+				spacePrint(os, (*it)->getDescription(), 75, 2 + max - id.size(), 3 + id.size(), false);
+
+				if (it+1 != xorList[i].end()) {
+					spacePrint(os, "-- OR --", 75, 9, 0);
+				}
+			}
+			os << std::endl << std::endl;
+		}
+
+		// then the rest
+		for (ArgListIterator it = argList.begin(); it != argList.end(); it++) {
+			if (!xorHandler.contains((*it))) {
+				const std::string& id = (*it)->longID();
+				if (id.size() > max) {
+					max = id.size();
+				}
+			}
+		}
+
+		// then the rest
+		for (ArgListIterator it = argList.begin(); it != argList.end(); it++) {
+			if (!xorHandler.contains( (*it) )) {
+				const std::string& id = (*it)->longID();
+				spacePrint(os, id, 75, 3, 3, false);
+				spacePrint(os, (*it)->getDescription(), 75, 2 + max - id.size(), 3 + id.size(), false);
+				os << std::endl;
+			}
+		}
+
+		os << std::endl;
+
+		if (!message.empty()) {
+			spacePrint( os, message, 75, 3, 0 );
+		}
+	}
+
 	public:
 		virtual void failure(CmdLineInterface& _cmd, ArgException& e) {
 			std::string progName = _cmd.getProgramName();
@@ -169,8 +305,21 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
 		ValueArg<size_t> num_committers("", "committers", "Number of committers.", false, NUM_COMMITTERS, "committers", cmd);
 
-
-		cmd.parse(argc, argv);
+		std::vector<std::string> args;
+		for (int i = 0; i < argc; i++) {
+			if (i == 0) {
+				const char* a = strrchr(argv[i], '/');
+				if (a) {
+					++a;
+				} else {
+					a = argv[i];
+				}
+				args.push_back(a);
+			} else {
+				args.push_back(argv[i]);
+			}
+		}
+		cmd.parse(args);
 
 		opts.verbosity = verbosity.getValue();
 		opts.daemonize = daemonize.getValue();
