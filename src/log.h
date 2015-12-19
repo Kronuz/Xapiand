@@ -186,13 +186,6 @@ class LogThread {
 #define L_BEGIN _LOG_TIMED
 #define L_END _LOG_TIMED_CLEAR
 
-#define L_OBJ_BEGIN _LOG_TIMED_1000
-#define L_OBJ_END _LOG_TIMED_N_CLEAR
-#define L_DATABASE_BEGIN _LOG_TIMED_100
-#define L_DATABASE_END _LOG_TIMED_N_CLEAR
-#define L_EV_BEGIN _LOG_TIMED_500
-#define L_EV_END _LOG_TIMED_N_CLEAR
-
 #define L_DEBUG _LOG_DEBUG_ENABLED
 #define L_INFO _LOG_INFO_ENABLED
 #define L_NOTICE _LOG_NOTICE_ENABLED
@@ -221,3 +214,20 @@ class LogThread {
 #define L_HTTP_PROTO _
 #define L_BINARY_PROTO _
 #define L_DATABASE_WRAP _
+
+// #define L_BEGIN_END
+#ifdef L_BEGIN_END
+#define L_OBJ_BEGIN _LOG_TIMED_1000
+#define L_OBJ_END _LOG_TIMED_N_CLEAR
+#define L_DATABASE_BEGIN _LOG_TIMED_100
+#define L_DATABASE_END _LOG_TIMED_N_CLEAR
+#define L_EV_BEGIN _LOG_TIMED_500
+#define L_EV_END _LOG_TIMED_N_CLEAR
+#else
+#define L_OBJ_BEGIN _
+#define L_OBJ_END _
+#define L_DATABASE_BEGIN _
+#define L_DATABASE_END _
+#define L_EV_BEGIN _
+#define L_EV_END _
+#endif
