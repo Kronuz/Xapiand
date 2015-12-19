@@ -437,12 +437,12 @@ XapiandManager::shutdown()
 	if (XapiandManager::shutdown_asap) {
 		discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 		destroy();
-		L_DEBUG(this, "Finishing thread pool!");
+		L_OBJ(this, "Finishing thread pool!");
 		thread_pool.finish();
 	}
 
 	if (XapiandManager::shutdown_now) {
-		L_DEBUG(this, "Breaking Manager loop!");
+		L_EV(this, "Breaking Manager loop!");
 		break_loop();
 	}
 }

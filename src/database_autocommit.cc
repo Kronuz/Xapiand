@@ -40,7 +40,7 @@ DatabaseAutocommit::DatabaseAutocommit(const std::shared_ptr<XapiandManager>& ma
 	: running(true),
 	  manager(manager_)
 {
-		L_OBJ(this, "CREATED DATABASE AUTOCOMMIT! [%llx]", this);
+	L_OBJ(this, "CREATED DATABASE AUTOCOMMIT! [%llx]", this);
 }
 
 
@@ -83,7 +83,6 @@ DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
 void
 DatabaseAutocommit::run()
 {
-	L_DEBUG(this, "Committer started...");
 	while (running) {
 		std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx);
 		DatabaseAutocommit::wakeup_signal.wait_until(lk, DatabaseAutocommit::next_wakeup_time);
@@ -102,6 +101,7 @@ DatabaseAutocommit::run()
 					std::shared_ptr<Database> database;
 					if (manager->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
 						database->commit();
+						L_DEBUG(this, "Autocommit: %s%s", endpoints.as_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "");
 						manager->database_pool.checkin(database);
 					}
 					lk.lock();
@@ -117,5 +117,4 @@ DatabaseAutocommit::run()
 			}
 		}
 	}
-	L_DEBUG(this, "Committer ended!...");
 }
