@@ -36,9 +36,10 @@
 #endif
 
 #define DBPOOL_SIZE          1000    /* Maximum number of database endpoints in database pool */
-#define NUM_REPLICATORS      3       /* Number of replicators */
-#define NUM_COMMITTERS       3       /* Number of threads handling the commits*/
-#define THEADPOOL_SIZE       10      /* Threadpool's size */
+#define NUM_REPLICATORS      10      /* Number of replicators */
+#define NUM_COMMITTERS       10      /* Number of threads handling the commits*/
+#define THEADPOOL_SIZE       100     /* Threadpool's size */
+#define SERVERS_MULTIPLIER   4       /* Server workers multiplier (by number of CPUs) */
 #define ENDPOINT_LIST_SIZE   10      /* Endpoints List's size */
 
 #if !defined(_WIN32) && \

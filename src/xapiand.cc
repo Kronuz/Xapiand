@@ -264,7 +264,7 @@ class CmdOutput : public StdOutput
 
 void parseOptions(int argc, char** argv, opts_t &opts)
 {
-	const unsigned int nthreads = std::thread::hardware_concurrency() * 2;
+	const unsigned int nthreads = std::thread::hardware_concurrency() * SERVERS_MULTIPLIER;
 
 	try {
 		CmdLine cmd("", ' ', PACKAGE_STRING);
