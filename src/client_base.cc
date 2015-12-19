@@ -299,7 +299,7 @@ BaseClient::write_directly(int fd)
 {
 	if (fd == -1) {
 		L_ERR(this, "ERROR: write error (sock=%d): Socket already closed!", sock);
-		L_DEBUG(this, "WR:ERR.1: (sock=%d)", sock);
+		L_CONN(this, "WR:ERR.1: (sock=%d)", sock);
 		return WR::ERR;
 	} else if (!write_queue.empty()) {
 		std::shared_ptr<Buffer> buffer = write_queue.front();
@@ -315,15 +315,15 @@ BaseClient::write_directly(int fd)
 
 		if (written < 0) {
 			if (ignored_errorno(errno, false)) {
-				L_DEBUG(this, "WR:RETRY: (sock=%d)", sock);
+				L_CONN(this, "WR:RETRY: (sock=%d)", sock);
 				return WR::RETRY;
 			} else {
 				L_ERR(this, "ERROR: write error (sock=%d): %s", sock, strerror(errno));
-				L_DEBUG(this, "WR:ERR.2: (sock=%d)", sock);
+				L_CONN(this, "WR:ERR.2: (sock=%d)", sock);
 				return WR::ERR;
 			}
 		} else if (written == 0) {
-			L_DEBUG(this, "WR:CLOSED: (sock=%d)", sock);
+			L_CONN(this, "WR:CLOSED: (sock=%d)", sock);
 			return WR::CLOSED;
 		} else {
 			auto str(repr(buf_data, written, true, 500));
@@ -332,20 +332,20 @@ BaseClient::write_directly(int fd)
 			if (buffer->nbytes() == 0) {
 				if (write_queue.pop(buffer)) {
 					if (write_queue.empty()) {
-						L_DEBUG(this, "WR:OK.1: (sock=%d)", sock);
+						L_CONN(this, "WR:OK.1: (sock=%d)", sock);
 						return WR::OK;
 					} else {
-						L_DEBUG(this, "WR:PENDING.1: (sock=%d)", sock);
+						L_CONN(this, "WR:PENDING.1: (sock=%d)", sock);
 						return WR::PENDING;
 					}
 				}
 			} else {
-				L_DEBUG(this, "WR:PENDING.2: (sock=%d)", sock);
+				L_CONN(this, "WR:PENDING.2: (sock=%d)", sock);
 				return WR::PENDING;
 			}
 		}
 	}
-	L_DEBUG(this, "WR:OK.2: (sock=%d)", sock);
+	L_CONN(this, "WR:OK.2: (sock=%d)", sock);
 	return WR::OK;
 }
 
