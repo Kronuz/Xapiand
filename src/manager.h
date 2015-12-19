@@ -41,6 +41,7 @@ using opts_t = struct opts_s {
 	int verbosity;
 	bool daemonize;
 	bool chert;
+	bool solo;
 	std::string database;
 	std::string cluster_name;
 	std::string node_name;

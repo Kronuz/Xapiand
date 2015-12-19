@@ -282,6 +282,8 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		SwitchArg chert("", "chert", "Use chert databases.", cmd, false);
 #endif
 
+		SwitchArg solo("", "solo", "Run solo indexer (no replication or discovery).", cmd, false);
+
 		ValueArg<std::string> database("D", "database", "Node database.", false, ".", "path", cmd);
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
 		ValueArg<std::string> node_name("n", "name", "Node name.", false, "", "node", cmd);
@@ -298,7 +300,6 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<std::string> pidfile("p", "pid", "Write PID to <pidfile>.", false, "xapiand.pid", "pidfile", cmd);
 		ValueArg<std::string> uid("u", "uid", "User ID.", false, "xapiand", "uid", cmd);
 		ValueArg<std::string> gid("g", "gid", "Group ID.", false, "xapiand", "uid", cmd);
-
 
 		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
 		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of database endpoints in database pool.", false, DBPOOL_SIZE, "size", cmd);
@@ -328,6 +329,9 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 #else
 		opts.chert = true;
 #endif
+
+		opts.solo = solo.getValue();
+
 		opts.database = database.getValue();
 		opts.cluster_name = cluster_name.getValue();
 		opts.node_name = node_name.getValue();
@@ -342,7 +346,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		opts.gid = gid.getValue();
 		opts.num_servers = num_servers.getValue();
 		opts.dbpool_size = dbpool_size.getValue();
-		opts.num_replicators = num_replicators.getValue();
+		opts.num_replicators = opts.solo ? 0 : num_replicators.getValue();
 		opts.num_committers = num_committers.getValue();
 		opts.threadpool_size = THEADPOOL_SIZE;
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
@@ -419,9 +423,11 @@ int main(int argc, char **argv)
 		L_INFO(nullptr, "Using Glass databases by default.");
 	}
 
-	// Enable changesets
-	if (setenv("XAPIAN_MAX_CHANGESETS", "20", false) == 0) {
-		L_INFO(nullptr, "Database changesets set to 20.");
+	if (!opts.solo) {
+		// Enable changesets
+		if (setenv("XAPIAN_MAX_CHANGESETS", "20", false) == 0) {
+			L_INFO(nullptr, "Database changesets set to 20.");
+		}
 	}
 
 	// Flush threshold increased
