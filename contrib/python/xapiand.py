@@ -126,7 +126,7 @@ class Xapiand(object):
         self.port = port
         self.commit = commit
 
-    def build_url(self, action_request, endpoint, ip, port, nodename, document_id, body):
+    def build_url(self, action_request, index, doc_type, ip, port, nodename, id, body):
         if ip and ':' in ip:
             ip, _, port = ip.partition(':')
         if not ip:
@@ -135,35 +135,38 @@ class Xapiand(object):
             port = self.port
         host = '%s:%s' % (ip, port)
 
-        if isinstance(endpoint, (tuple, list)):
-            endpoint = ','.join(endpoint)
+        if isinstance(index, (tuple, list)):
+            index = ','.join(index)
 
-        if document_id is not None:
+        if doc_type:
+            index += '/%s' % doc_type
+
+        if id is not None:
             if nodename:
-                url = 'http://%s/%s@%s/%s' % (host, endpoint, nodename, document_id)
+                url = 'http://%s/%s@%s/%s' % (host, index, nodename, id)
             else:
-                url = 'http://%s/%s/%s' % (host, endpoint, document_id)
+                url = 'http://%s/%s/%s' % (host, index, id)
         else:
             if nodename:
-                url = 'http://%s/%s@%s/_%s/' % (host, endpoint, nodename, action_request)
+                url = 'http://%s/%s@%s/_%s/' % (host, index, nodename, action_request)
             else:
-                url = 'http://%s/%s/_%s/' % (host, endpoint, action_request)
+                url = 'http://%s/%s/_%s/' % (host, index, action_request)
         return url
 
-    def _send_request(self, action_request, endpoint, ip=None, port=None, nodename=None, document_id=None, body=None, **kwargs):
+    def _send_request(self, action_request, index, doc_type=None, ip=None, port=None, nodename=None, id=None, body=None, **kwargs):
         """
         :arg action_request: Perform index, delete, serch, facets, stats, patch, head actions per request
         :arg query: Query to process on xapiand
-        :arg endpoint: index path
+        :arg index: index path
         :arg ip: address to connect to xapiand
         :arg port: port to conntct to xapiand
         :arg nodename: Node name, if empty is assigned randomly
-        :arg document_id: Document ID
+        :arg id: Document ID
         :arg body: File or dictionary with the body of the request
         """
         method, stream, key = self._methods[action_request]
 
-        url = self.build_url(action_request, endpoint, ip, port, nodename, document_id, body)
+        url = self.build_url(action_request, index, doc_type, ip, port, nodename, id, body)
 
         params = kwargs.pop('params', None)
         if params is not None:
@@ -210,7 +213,7 @@ class Xapiand(object):
 
         return XapiandResponse(res, **kwargs)
 
-    def search(self, endpoint, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
+    def search(self, index, doc_type=None, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
         kwargs = kwargs or {}
         kwargs.update(kw)
         kwargs['params'] = dict(
@@ -232,9 +235,9 @@ class Xapiand(object):
             kwargs['params']['facets'] = facets
         if language is None:
             kwargs['params']['language'] = language
-        return self._send_request('search', endpoint, **kwargs)
+        return self._send_request('search', index, doc_type, **kwargs)
 
-    def facets(self, endpoint, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
+    def facets(self, index, doc_type=None, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
         kwargs = kwargs or {}
         kwargs.update(kw)
         kwargs['params'] = dict(
@@ -256,56 +259,56 @@ class Xapiand(object):
             kwargs['params']['facets'] = facets
         if language is None:
             kwargs['params']['language'] = language
-        return self._send_request('facets', endpoint, **kwargs)
+        return self._send_request('facets', index, doc_type, **kwargs)
 
-    def stats(self, endpoint, pretty=False, kwargs=None):
+    def stats(self, index, doc_type=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
         kwargs['params'] = dict(
             pretty=pretty,
         )
-        return self._send_request('stats', endpoint, **kwargs)
+        return self._send_request('stats', index, doc_type, **kwargs)
 
-    def head(self, endpoint, document_id, pretty=False, kwargs=None):
+    def head(self, index, doc_type, id, pretty=False, kwargs=None):
         kwargs = kwargs or {}
-        kwargs['document_id'] = document_id
+        kwargs['id'] = id
         kwargs['params'] = dict(
             pretty=pretty,
         )
-        return self._send_request('head', endpoint, **kwargs)
+        return self._send_request('head', index, doc_type, **kwargs)
 
-    def get(self, endpoint, document_id, pretty=False, kwargs=None):
+    def get(self, index, doc_type, id, pretty=False, kwargs=None):
         kwargs = kwargs or {}
-        kwargs['document_id'] = document_id
+        kwargs['id'] = id
         kwargs['params'] = dict(
             pretty=pretty,
         )
-        return self._send_request('get', endpoint, **kwargs)
+        return self._send_request('get', index, doc_type, **kwargs)
 
-    def delete(self, endpoint, document_id, commit=None, pretty=False, kwargs=None):
+    def delete(self, index, doc_type, id, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
-        kwargs['document_id'] = document_id
+        kwargs['id'] = id
         kwargs['params'] = dict(
             commit=self.commit if commit is None else commit,
             pretty=pretty,
         )
-        return self._send_request('delete', endpoint, **kwargs)
+        return self._send_request('delete', index, doc_type, **kwargs)
 
-    def index(self, endpoint, document_id, body, commit=None, pretty=False, kwargs=None):
+    def index(self, index, doc_type, body, id, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
-        kwargs['document_id'] = document_id
+        kwargs['id'] = id
         kwargs['body'] = body
         kwargs['params'] = dict(
             commit=self.commit if commit is None else commit,
             pretty=pretty,
         )
-        return self._send_request('index', endpoint, **kwargs)
+        return self._send_request('index', index, doc_type, **kwargs)
 
-    def patch(self, endpoint, document_id, body, commit=None, pretty=False, kwargs=None):
+    def patch(self, index, doc_type, body, id, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
-        kwargs['document_id'] = document_id
+        kwargs['id'] = id
         kwargs['body'] = body
         kwargs['params'] = dict(
             commit=self.commit if commit is None else commit,
             pretty=pretty,
         )
-        return self._send_request('patch', endpoint, **kwargs)
+        return self._send_request('patch', index, doc_type, **kwargs)

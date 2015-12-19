@@ -217,7 +217,7 @@ class XapianSearchBackend(BaseSearchBackend):
             document_id = get_identifier(obj)
             client = Xapiand(settings.XAPIAN_SERVER)
             for endpoint in endpoints:
-                client.index(endpoint, document_id, document_json)
+                client.index(endpoint, None, document_json, id=document_id)
 
     def update(self, index, iterable, commit=False):
         for obj in iterable:
@@ -228,7 +228,7 @@ class XapianSearchBackend(BaseSearchBackend):
         document_id = get_identifier(obj)
         client = Xapiand(settings.XAPIAN_SERVER)
         for endpoint in endpoints:
-            client.delete(endpoint, document_id)
+            client.delete(endpoint, None, id=document_id)
 
     def clear(self, models=[], commit=True):
         pass
@@ -261,7 +261,7 @@ class XapianSearchBackend(BaseSearchBackend):
         endpoints = self.endpoints.for_read(models=models, **hints)
 
         client = Xapiand(settings.XAPIAN_SERVER)
-        results = search(endpoints, query=queries, partial=partials, terms=terms, offset=offset, limit=limit)
+        results = client.search(endpoints, None, query=queries, partial=partials, terms=terms, offset=offset, limit=limit)
         results_obj = XapianSearchResults(results)
 
         return {
