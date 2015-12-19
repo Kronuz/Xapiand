@@ -101,7 +101,7 @@ DatabaseAutocommit::run()
 					std::shared_ptr<Database> database;
 					if (manager->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
 						database->commit();
-						L_DEBUG(this, "Autocommit: %s%s", endpoints.as_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "");
+						L_INFO(this, "Autocommit: %s%s", endpoints.as_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "");
 						manager->database_pool.checkin(database);
 					}
 					lk.lock();

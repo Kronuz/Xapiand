@@ -53,7 +53,7 @@ std::atomic<time_t> XapiandManager::shutdown_now(0);
 XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	: Worker(nullptr, loop_),
 	  database_pool(o.dbpool_size),
-	  thread_pool("W%zu", o.threadpool_size),
+	  thread_pool("W%02zu", o.threadpool_size),
 	  async_shutdown(*loop),
 	  endp_r(o.endpoints_list_size),
 	  state(State::RESET),
@@ -473,9 +473,7 @@ XapiandManager::run(const opts_t &o)
 
 	L_NOTICE(this, msg.c_str());
 
-	L_INFO(this, "Starting %d server worker thread%s and %d replicator%s.", o.num_servers, (o.num_servers == 1) ? "" : "s", o.num_replicators, (o.num_replicators == 1) ? "" : "s");
-
-	ThreadPool<> server_pool("S%zu", o.num_servers);
+	ThreadPool<> server_pool("S%02zu", o.num_servers);
 	for (size_t i = 0; i < o.num_servers; i++) {
 		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(manager, nullptr);
 		Worker::create<HttpServer>(server, server->loop, http);
@@ -487,18 +485,28 @@ XapiandManager::run(const opts_t &o)
 		server_pool.enqueue(std::move(server));
 	}
 
-	ThreadPool<> replicator_pool("R%zu", o.num_replicators);
+	ThreadPool<> replicator_pool("R%02zu", o.num_replicators);
 	for (size_t i = 0; i < o.num_replicators; i++) {
 		replicator_pool.enqueue(Worker::create<XapiandReplicator>(manager, nullptr));
 	}
 
-	ThreadPool<> autocommit_pool("C%zu", o.num_committers);
+	ThreadPool<> autocommit_pool("C%02zu", o.num_committers);
 	std::vector<std::shared_ptr<DatabaseAutocommit>> committers;
 	for (size_t i = 0; i < o.num_committers; i++) {
 		auto dbcommit = std::make_shared<DatabaseAutocommit>(manager);
 		autocommit_pool.enqueue(dbcommit);
 		committers.push_back(dbcommit);
 	}
+
+	L_NOTICE(this, "Started %d server%s"
+		     ", %d worker thread%s"
+		     ", %d autocommitter%s"
+		     ", %d replicator%s.",
+		o.num_servers, (o.num_servers == 1) ? "" : "s",
+		o.threadpool_size, (o.threadpool_size == 1) ? "" : "s",
+		o.num_committers, (o.num_committers == 1) ? "" : "s",
+		o.num_replicators, (o.num_replicators == 1) ? "" : "s"
+	);
 
 	L_INFO(this, "Joining cluster %s...", cluster_name.c_str());
 

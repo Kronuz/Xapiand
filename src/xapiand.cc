@@ -377,7 +377,7 @@ void daemonize(void) {
 
 
 void banner() {
-	set_thread_name("==");
+	set_thread_name("===");
 	L_INFO(nullptr,
 		"\n\n" WHITE
 		"  __  __           _                 _\n"
