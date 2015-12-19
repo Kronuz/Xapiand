@@ -150,7 +150,7 @@ class Xapiand(object):
                 url = 'http://%s/%s/_%s/' % (host, endpoint, action_request)
         return url
 
-    def send_request(self, action_request, endpoint, ip=None, port=None, nodename=None, document_id=None, body=None, **kwargs):
+    def _send_request(self, action_request, endpoint, ip=None, port=None, nodename=None, document_id=None, body=None, **kwargs):
         """
         :arg action_request: Perform index, delete, serch, facets, stats, patch, head actions per request
         :arg query: Query to process on xapiand
@@ -173,59 +173,42 @@ class Xapiand(object):
         if stream is not None:
             kwargs['stream'] = stream
 
-        try:
-            if body is not None:
-                if isinstance(body, dict):
-                    body = json.dumps(body)
-                elif os.path.isfile(body):
-                    body = open(body, 'r')
-                res = method(url, body, **kwargs)
-            else:
-                res = method(url, **kwargs)
+        if body is not None:
+            if isinstance(body, dict):
+                body = json.dumps(body)
+            elif os.path.isfile(body):
+                body = open(body, 'r')
+            res = method(url, body, **kwargs)
+        else:
+            res = method(url, **kwargs)
+        res.raise_for_status()
 
-            if res.status_code != 200:
-                raise requests.exceptions.HTTPError("Return code is %s" % res.status_code)
+        is_json = 'application/json' in res.headers['content-type']
 
-            is_json = 'application/json' in res.headers['content-type']
+        if stream:
+            def results(lines):
+                for line in lines:
+                    # filter out keep-alive new lines
+                    if line:
+                        yield json.loads(line) if is_json else line
+            results = results(res.iter_lines())
+        else:
+            results = [res.json() if is_json else res.content]
 
-            if stream:
-                def results(lines):
-                    for line in lines:
-                        # filter out keep-alive new lines
-                        if line:
-                            yield json.loads(line) if is_json else line
-                results = results(res.iter_lines())
-            else:
-                results = [res.json() if is_json else res.content]
+        if key == 'result':
+            for result in results:
+                results = result
+                break
 
-            if key == 'result':
-                for result in results:
-                    results = result
-                    break
+        kwargs = {}
+        if stream:
+            kwargs['%s_stream' % key] = results
+        else:
+            kwargs['%s' % key] = results
 
-            kwargs = {}
-            if stream:
-                kwargs['%s_stream' % key] = results
-            else:
-                kwargs['%s' % key] = results
+        kwargs['size'] = int(res.headers.get('X-Matched-count', 0))
 
-            kwargs['size'] = int(res.headers.get('X-Matched-count', 0))
-
-            return XapiandResponse(res, **kwargs)
-
-        except requests.exceptions.HTTPError as e:
-            raise e
-
-        except requests.exceptions.ConnectTimeout as e:
-            raise e
-        except requests.exceptions.ReadTimeout as e:
-            raise e
-
-        except requests.exceptions.Timeout as e:
-            raise e
-
-        except requests.exceptions.ConnectionError as e:
-            raise e
+        return XapiandResponse(res, **kwargs)
 
     def search(self, endpoint, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
         kwargs = kwargs or {}
@@ -249,7 +232,7 @@ class Xapiand(object):
             kwargs['params']['facets'] = facets
         if language is None:
             kwargs['params']['language'] = language
-        return self.send_request('search', endpoint, **kwargs)
+        return self._send_request('search', endpoint, **kwargs)
 
     def facets(self, endpoint, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
         kwargs = kwargs or {}
@@ -273,14 +256,14 @@ class Xapiand(object):
             kwargs['params']['facets'] = facets
         if language is None:
             kwargs['params']['language'] = language
-        return self.send_request('facets', endpoint, **kwargs)
+        return self._send_request('facets', endpoint, **kwargs)
 
     def stats(self, endpoint, pretty=False, kwargs=None):
         kwargs = kwargs or {}
         kwargs['params'] = dict(
             pretty=pretty,
         )
-        return self.send_request('stats', endpoint, **kwargs)
+        return self._send_request('stats', endpoint, **kwargs)
 
     def head(self, endpoint, document_id, pretty=False, kwargs=None):
         kwargs = kwargs or {}
@@ -288,7 +271,7 @@ class Xapiand(object):
         kwargs['params'] = dict(
             pretty=pretty,
         )
-        return self.send_request('head', endpoint, **kwargs)
+        return self._send_request('head', endpoint, **kwargs)
 
     def get(self, endpoint, document_id, pretty=False, kwargs=None):
         kwargs = kwargs or {}
@@ -296,7 +279,7 @@ class Xapiand(object):
         kwargs['params'] = dict(
             pretty=pretty,
         )
-        return self.send_request('get', endpoint, **kwargs)
+        return self._send_request('get', endpoint, **kwargs)
 
     def delete(self, endpoint, document_id, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
@@ -305,7 +288,7 @@ class Xapiand(object):
             commit=self.commit if commit is None else commit,
             pretty=pretty,
         )
-        return self.send_request('delete', endpoint, **kwargs)
+        return self._send_request('delete', endpoint, **kwargs)
 
     def index(self, endpoint, document_id, body, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
@@ -315,7 +298,7 @@ class Xapiand(object):
             commit=self.commit if commit is None else commit,
             pretty=pretty,
         )
-        return self.send_request('index', endpoint, **kwargs)
+        return self._send_request('index', endpoint, **kwargs)
 
     def patch(self, endpoint, document_id, body, commit=None, pretty=False, kwargs=None):
         kwargs = kwargs or {}
@@ -325,4 +308,4 @@ class Xapiand(object):
             commit=self.commit if commit is None else commit,
             pretty=pretty,
         )
-        return self.send_request('patch', endpoint, **kwargs)
+        return self._send_request('patch', endpoint, **kwargs)

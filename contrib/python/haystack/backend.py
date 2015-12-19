@@ -33,7 +33,7 @@ from django.utils.importlib import import_module
 from django.core.exceptions import ImproperlyConfigured
 from django.utils import six
 
-from .client import Xapiand
+from ..xapiand import Xapiand
 
 
 DOCUMENT_TAGS_FIELD = 'tags'
@@ -215,11 +215,9 @@ class XapianSearchBackend(BaseSearchBackend):
             self.build_json(document_json, DJANGO_CT.upper(), get_model_ct(obj), 0, TERM)
 
             document_id = get_identifier(obj)
-            client = Xapiand()
-            ip = settings.XAPIAN_SERVER
-
+            client = Xapiand(settings.XAPIAN_SERVER)
             for endpoint in endpoints:
-                client.send_request(action_request='index', endpoint=endpoint, params=dict(commit=True), ip=ip, body=document_json, document_id=document_id)
+                client.index(endpoint, document_id, document_json)
 
     def update(self, index, iterable, commit=False):
         for obj in iterable:
@@ -228,10 +226,9 @@ class XapianSearchBackend(BaseSearchBackend):
     def remove(self, obj, commit=False):
         endpoints = self.endpoints.for_write(instance=obj)
         document_id = get_identifier(obj)
-        ip = settings.XAPIAN_SERVER
-        client = Xapiand()
+        client = Xapiand(settings.XAPIAN_SERVER)
         for endpoint in endpoints:
-            client.send_request(action_request='delete', endpoint=endpoint, ip=ip, document_id=document_id)
+            client.delete(endpoint, document_id)
 
     def clear(self, models=[], commit=True):
         pass
@@ -262,11 +259,9 @@ class XapianSearchBackend(BaseSearchBackend):
 
         hints = hints or {}
         endpoints = self.endpoints.for_read(models=models, **hints)
-        ip = settings.XAPIAN_SERVER
-        params = dict(offset=offset, limit=limit, query=queries, terms=terms, partial=partials)
 
-        client = Xapiand()
-        results = client.send_request(action_request='search', endpoint=endpoints, params=params, ip=ip)
+        client = Xapiand(settings.XAPIAN_SERVER)
+        results = search(endpoints, query=queries, partial=partials, terms=terms, offset=offset, limit=limit)
         results_obj = XapianSearchResults(results)
 
         return {
