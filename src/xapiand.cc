@@ -178,7 +178,7 @@ class CmdOutput : public StdOutput
 			for (ArgVectorIterator it = xorList[i].begin(); it != xorList[i].end(); it++) {
 				const std::string& id = (*it)->longID();
 				spacePrint(os, id, 75, 3, 3, false);
-				spacePrint(os, (*it)->getDescription(), 75, 2 + max - id.size(), 3 + id.size(), false);
+				spacePrint(os, (*it)->getDescription(), 75, static_cast<int>(2 + max - id.size()), static_cast<int>(3 + id.size()), false);
 
 				if (it+1 != xorList[i].end()) {
 					spacePrint(os, "-- OR --", 75, 9, 0);
@@ -202,7 +202,7 @@ class CmdOutput : public StdOutput
 			if (!xorHandler.contains( (*it) )) {
 				const std::string& id = (*it)->longID();
 				spacePrint(os, id, 75, 3, 3, false);
-				spacePrint(os, (*it)->getDescription(), 75, 2 + max - id.size(), 3 + id.size(), false);
+				spacePrint(os, (*it)->getDescription(), 75, static_cast<int>(2 + max - id.size()), static_cast<int>(3 + id.size()), false);
 				os << std::endl;
 			}
 		}

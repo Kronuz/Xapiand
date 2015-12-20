@@ -49,11 +49,10 @@ DiscoveryServer::~DiscoveryServer()
 void
 DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	auto now = epoch::now<std::chrono::milliseconds>();
-	L_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN %lld", now);
+	L_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN");
 	if (EV_ERROR & revents) {
 		L_EV(this, "ERROR: got invalid discovery event (sock=%d): %s", discovery->sock, strerror(errno));
-		L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
+		L_EV_END(this, "DiscoveryServer::io_accept_cb:END");
 		return;
 	}
 

@@ -48,11 +48,10 @@ RaftServer::~RaftServer()
 void
 RaftServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	auto now = epoch::now<std::chrono::milliseconds>();
-	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN %lld", now);
+	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN");
 	if (EV_ERROR & revents) {
 		L_EV(this, "ERROR: got invalid raft event (sock=%d): %s", raft->sock, strerror(errno));
-		L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
+		L_EV_END(this, "RaftServer::io_accept_cb:END");
 		return;
 	}
 
