@@ -108,6 +108,10 @@ bool operator == (Endpoints const& le, Endpoints const& re);
 
 
 class Endpoint {
+	static std::string cwd;
+
+	std::string& getcwd();
+
 	inline std::string slice_after(std::string &subject, std::string delimiter);
 	inline std::string slice_before(std::string &subject, std::string delimiter);
 
