@@ -323,7 +323,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
 		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
 
-		ValueArg<unsigned int> http_port("", "http", "TCP HTTP port number to listen on REST API.", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
+		ValueArg<unsigned int> http_port("", "http", "TCP HTTP port number to listen on for REST API.", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
 		ValueArg<unsigned int> binary_port("", "xapian", "Xapian binary protocol TCP port number to listen on.", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
 
 		ValueArg<unsigned int> discovery_port("", "discovery", "Discovery UDP port number to listen on.", false, XAPIAND_DISCOVERY_SERVERPORT, "port", cmd);
