@@ -171,6 +171,8 @@ class UnlabeledMultiArg : public MultiArg<T>
 		 */
 		virtual std::string longID(const std::string& val="val") const;
 
+		virtual std::string getDescription() const;
+
 		/**
 		 * Opertor ==.
 		 * \param a - The Arg to be compared to this.
@@ -279,8 +281,17 @@ template<class T>
 std::string UnlabeledMultiArg<T>::longID(const std::string& val) const
 {
 	static_cast<void>(val); // Ignore input, don't warn
-	return std::string("<") + _typeDesc + ">  (accepted multiple times)";
+	return std::string("<") + _typeDesc + ">";
 }
+
+template<class T>
+inline std::string UnlabeledMultiArg<T>::getDescription() const
+{
+	std::string desc = Arg::getDescription();
+	desc += " (accepted multiple times)";
+	return desc;
+}
+
 
 template<class T>
 bool UnlabeledMultiArg<T>::operator==(const Arg& a) const

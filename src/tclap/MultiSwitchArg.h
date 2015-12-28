@@ -120,7 +120,9 @@ class MultiSwitchArg : public SwitchArg
 		 * Returns the longID for this Arg.
 		 */
 		std::string longID(const std::string& val) const;
-		
+
+		std::string getDescription() const;
+
 		void reset();
 
 };
@@ -199,7 +201,15 @@ MultiSwitchArg::shortID(const std::string& val) const
 inline std::string 
 MultiSwitchArg::longID(const std::string& val) const
 {
-	return Arg::longID(val) + "  (accepted multiple times)";
+	return Arg::longID(val);
+}
+
+inline std::string 
+MultiSwitchArg::getDescription() const
+{
+	std::string desc = Arg::getDescription();
+	desc += " (accepted multiple times)";
+	return desc;
 }
 
 inline void

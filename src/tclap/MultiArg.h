@@ -213,6 +213,8 @@ public:
 	 */
 	virtual std::string longID(const std::string& val="val") const;
 
+	virtual std::string getDescription() const;
+
 	/**
 	 * Once we've matched the first value, then the arg is no longer
 	 * required.
@@ -374,7 +376,15 @@ template<class T>
 std::string MultiArg<T>::longID(const std::string& val) const
 {
 	static_cast<void>(val); // Ignore input, don't warn
-	return Arg::longID(_typeDesc) + "  (accepted multiple times)";
+	return Arg::longID(_typeDesc);
+}
+
+template<class T>
+inline std::string MultiArg<T>::getDescription() const
+{
+	std::string desc = Arg::getDescription();
+	desc += " (accepted multiple times)";
+	return desc;
 }
 
 /**

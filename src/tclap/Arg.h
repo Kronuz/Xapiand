@@ -278,7 +278,7 @@ class Arg
 		/**
 		 * Returns the argument description.
 		 */
-		std::string getDescription() const;
+		virtual std::string getDescription() const;
 
 		/**
 		 * Indicates whether the argument is required.
