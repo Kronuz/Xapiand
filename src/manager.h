@@ -39,7 +39,7 @@
 
 using opts_t = struct opts_s {
 	int verbosity;
-	bool daemonize;
+	bool detach;
 	bool chert;
 	bool solo;
 	std::string database;
@@ -50,6 +50,7 @@ using opts_t = struct opts_s {
 	unsigned int discovery_port;
 	unsigned int raft_port;
 	std::string pidfile;
+	std::string logfile;
 	std::string uid;
 	std::string gid;
 	std::string discovery_group;

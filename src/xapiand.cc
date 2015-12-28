@@ -275,8 +275,9 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		CmdOutput output;
 		cmd.setOutput(&output);
 
-		MultiSwitchArg verbosity("v", "verbose", "Increase verbosity.", cmd);
-		SwitchArg daemonize("d", "daemon", "daemonize (run in background).", cmd);
+		SwitchArg detach("d", "detach", "detach process (run in background).", cmd);
+		MultiSwitchArg verbose("v", "verbose", "Increase verbosity.", cmd);
+		ValueArg<unsigned int> verbosity("", "verbosity", "Set verbosity.", false, 0, "verbosity", cmd);
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 		SwitchArg chert("", "chert", "Use chert databases.", cmd, false);
@@ -297,7 +298,8 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<unsigned int> raft_port("", "raft", "Raft UDP port", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
 		ValueArg<std::string> raft_group("", "rgroup", "Raft UDP group", false, XAPIAND_RAFT_GROUP, "group", cmd);
 
-		ValueArg<std::string> pidfile("p", "pid", "Write PID to <pidfile>.", false, "xapiand.pid", "pidfile", cmd);
+		ValueArg<std::string> pidfile("", "pidfile", "Write PID to <pidfile>.", false, "xapiand.pid", "pidfile", cmd);
+		ValueArg<std::string> logfile("", "logfile", "Write logs to <logfile>.", false, "xapiand.log", "logfile", cmd);
 		ValueArg<std::string> uid("u", "uid", "User ID.", false, "xapiand", "uid", cmd);
 		ValueArg<std::string> gid("g", "gid", "Group ID.", false, "xapiand", "uid", cmd);
 
@@ -322,8 +324,8 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		}
 		cmd.parse(args);
 
-		opts.verbosity = verbosity.getValue();
-		opts.daemonize = daemonize.getValue();
+		opts.verbosity = verbosity.getValue() + verbose.getValue();
+		opts.detach = detach.getValue();
 #ifdef XAPIAN_HAS_GLASS_BACKEND
 		opts.chert = chert.getValue();
 #else
@@ -342,6 +344,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		opts.raft_port = raft_port.getValue();
 		opts.raft_group = raft_group.getValue();
 		opts.pidfile = pidfile.getValue();
+		opts.logfile = logfile.getValue();
 		opts.uid = uid.getValue();
 		opts.gid = gid.getValue();
 		opts.num_servers = num_servers.getValue();
@@ -356,7 +359,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 }
 
 
-void daemonize(void) {
+void detach(void) {
 	int fd;
 
 	pid_t pid = fork();
@@ -402,8 +405,8 @@ int main(int argc, char **argv)
 	Log::log_level += opts.verbosity;
 
 	banner();
-	if (opts.daemonize) {
-		daemonize();
+	if (opts.detach) {
+		detach();
 		banner();
 	}
 	L_NOTICE(nullptr, "Xapiand started.");
