@@ -275,36 +275,36 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		CmdOutput output;
 		cmd.setOutput(&output);
 
-		SwitchArg detach("d", "detach", "detach process (run in background).", cmd);
+		SwitchArg detach("d", "detach", "detach process. (run in background)", cmd);
 		MultiSwitchArg verbose("v", "verbose", "Increase verbosity.", cmd);
 		ValueArg<unsigned int> verbosity("", "verbosity", "Set verbosity.", false, 0, "verbosity", cmd);
 
 #ifdef XAPIAN_HAS_GLASS_BACKEND
-		SwitchArg chert("", "chert", "Use chert databases.", cmd, false);
+		SwitchArg chert("", "chert", "Prefer Chert databases.", cmd, false);
 #endif
 
-		SwitchArg solo("", "solo", "Run solo indexer (no replication or discovery).", cmd, false);
+		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
 
-		ValueArg<std::string> database("D", "database", "Node database.", false, ".", "path", cmd);
+		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
-		ValueArg<std::string> node_name("n", "name", "Node name.", false, "", "node", cmd);
+		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
 
-		ValueArg<unsigned int> http_port("", "http", "HTTP REST API port", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
-		ValueArg<unsigned int> binary_port("", "xapian", "Xapian binary protocol port", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
+		ValueArg<unsigned int> http_port("", "http", "TCP HTTP port number to listen on REST API.", false, XAPIAND_HTTP_SERVERPORT, "port", cmd);
+		ValueArg<unsigned int> binary_port("", "xapian", "Xapian binary protocol TCP port number to listen on.", false, XAPIAND_BINARY_SERVERPORT, "port", cmd);
 
-		ValueArg<unsigned int> discovery_port("", "discovery", "Discovery UDP port", false, XAPIAND_DISCOVERY_SERVERPORT, "port", cmd);
-		ValueArg<std::string> discovery_group("", "dgroup", "Discovery UDP group", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
+		ValueArg<unsigned int> discovery_port("", "discovery", "Discovery UDP port number to listen on.", false, XAPIAND_DISCOVERY_SERVERPORT, "port", cmd);
+		ValueArg<std::string> discovery_group("", "dgroup", "Discovery UDP group name.", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
 
-		ValueArg<unsigned int> raft_port("", "raft", "Raft UDP port", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
-		ValueArg<std::string> raft_group("", "rgroup", "Raft UDP group", false, XAPIAND_RAFT_GROUP, "group", cmd);
+		ValueArg<unsigned int> raft_port("", "raft", "Raft UDP port number to listen on.", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
+		ValueArg<std::string> raft_group("", "rgroup", "Raft UDP group name.", false, XAPIAND_RAFT_GROUP, "group", cmd);
 
-		ValueArg<std::string> pidfile("", "pidfile", "Write PID to <pidfile>.", false, "xapiand.pid", "pidfile", cmd);
-		ValueArg<std::string> logfile("", "logfile", "Write logs to <logfile>.", false, "xapiand.log", "logfile", cmd);
-		ValueArg<std::string> uid("u", "uid", "User ID.", false, "xapiand", "uid", cmd);
-		ValueArg<std::string> gid("g", "gid", "Group ID.", false, "xapiand", "uid", cmd);
+		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "xapiand.pid", "file", cmd);
+		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "xapiand.log", "file", cmd);
+		ValueArg<std::string> uid("", "uid", "User ID.", false, "xapiand", "uid", cmd);
+		ValueArg<std::string> gid("", "gid", "Group ID.", false, "xapiand", "uid", cmd);
 
 		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
-		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of database endpoints in database pool.", false, DBPOOL_SIZE, "size", cmd);
+		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
 		ValueArg<size_t> num_replicators("", "replicators", "Number of replicators.", false, NUM_REPLICATORS, "replicators", cmd);
 		ValueArg<size_t> num_committers("", "committers", "Number of committers.", false, NUM_COMMITTERS, "committers", cmd);
 
