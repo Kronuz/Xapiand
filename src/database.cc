@@ -501,7 +501,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &
 				start_end.push_back(it->start);
 				start_end.push_back(it->end);
 				int idx = -1;
-				uInt64 val;
+				uint64_t val;
 				if (it->start != it->end) {
 					std::bitset<SIZE_BITS_ID> b1(it->start), b2(it->end), res;
 					for (idx = SIZE_BITS_ID - 1; b1.test(idx) == b2.test(idx); --idx) {
@@ -512,7 +512,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &
 				for (size_t i = 2; i < schema.specification.accuracy.size(); ++i) {
 					int pos = START_POS - schema.specification.accuracy[i] * 2;
 					if (idx < pos) {
-						uInt64 vterm = val >> pos;
+						uint64_t vterm = val >> pos;
 						set_terms.insert(prefixed(Serialise::trixel_id(vterm), schema.specification.acc_prefix[i - 2]));
 					} else {
 						break;

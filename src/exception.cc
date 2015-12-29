@@ -20,11 +20,11 @@
  * IN THE SOFTWARE.
  */
 
-
 #include "exception.h"
 
 
-Exception::Exception(const char *file, int line, const char *format, ...) : std::runtime_error("")
+Exception::Exception(const char *file, int line, const char *format, ...)
+	: std::runtime_error("")
 {
 	va_list argptr;
 	va_start(argptr, format);
@@ -35,11 +35,8 @@ Exception::Exception(const char *file, int line, const char *format, ...) : std:
 }
 
 
-Exception::~Exception() throw() {}
-
-
 const char*
-Exception::what() const throw()
+Exception::what() const noexcept
 {
 	return msg;
 }

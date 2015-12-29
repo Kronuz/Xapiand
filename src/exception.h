@@ -22,26 +22,26 @@
 
 #pragma once
 
+#include "config.h"
+
 #include <iostream>
 #include <exception>
 #include <stdexcept>
 #include <sstream>
 #include <stdarg.h>
-#include "config.h"
 
 #define MSG_Error(...) Exception(__FILE__, __LINE__, __VA_ARGS__)
 
-const int SIZE_BUFFER = 256;
+
+constexpr int SIZE_BUFFER = 256;
 
 
 class Exception : public std::runtime_error {
+	char msg[SIZE_BUFFER];
 
-	private:
-		char msg[SIZE_BUFFER];
+public:
+	Exception(const char *file, int line, const char *format, ...);
+	~Exception() = default;
 
-	public:
-		Exception(const char *file, int line, const char *format, ...);
-		~Exception() throw();
-
-		const char* what() const throw();
+	const char* what() const noexcept;
 };
