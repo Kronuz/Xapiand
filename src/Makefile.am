@@ -62,7 +62,8 @@ xapiand_SOURCES = \
 	times.cc \
 	utils.cc \
 	wkt_parser.cc \
-	xapiand.cc
+	xapiand.cc \
+	xchange/convert.cc
 
 noinst_HEADERS = \
 	cartesian.h \
@@ -200,7 +201,9 @@ noinst_HEADERS = \
 	utils.h \
 	wkt_parser.h \
 	worker.h \
-	xapiand.h
+	xapiand.h \
+	xchange/convert.h \
+	xchange/rapidjson.hpp
 
 noinst_HEADERS += \
 	msgpack/src/msgpack/pack_define.h \
