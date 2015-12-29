@@ -25,9 +25,6 @@
 #include "cartesian.h"
 
 #include <vector>
-#include <fstream>
-#include <functional>
-#include <algorithm>
 
 // Constants used for specify the sign of the bounding circle.
 #define NEG -1
@@ -37,60 +34,129 @@
 #define CLOCKWISE 1
 #define COUNTERCLOCKWISE 2
 
-// Earth radius in meters.
-const double M_PER_RADIUS_EARTH = 6367444.7;
 
-// Radius maximum allowed in a constraints (all the earth).
-const double MAX_RADIUS_HALFSPACE_EARTH = 20003917.491659265; // meters
+// Earth radius in meters
+constexpr double M_PER_RADIUS_EARTH = 6367444.7;
 
-// Constant for scaling the radius of a Polygon.
-const double SCALE_RADIUS = 0.70710678118654752440084436;
+// Radius maximum in meters allowed in a constraint (all the earth)
+constexpr double MAX_RADIUS_HALFSPACE_EARTH = 20003917.491659265;
 
-// Min radius in meters allowed.
-const double MIN_RADIUS_METERS = 0.1;
+// Constant for scaling the radius of a Polygon
+constexpr double SCALE_RADIUS = 0.70710678118654752440084436;
+
+// Min radius in meters allowed
+constexpr double MIN_RADIUS_METERS = 0.1;
 
 // Min radius in radians allowed, MIN_RADIUS_METERS / M_PER_RADIUS_EARTH.
-const double MIN_RADIUS_RADIANS = 0.00000001570488707974173690;
+constexpr double MIN_RADIUS_RADIANS = 0.00000001570488707974173690;
+
+// Radius in meters of a great circle
+constexpr double RADIUS_GREAT_CIRCLE = 10001958.7458296325;
 
 
+enum class GeometryType {
+	CONVEX_POLYGON,
+	CONVEX_HULL
+};
+
+
+/*
+ * A circular area, given by the plane slicing it off sphere.
+ */
 class Constraint {
-	public:
-		Cartesian center;
-		double distance, arcangle;
-		int sign;
+	void set_data(double meters);
 
-		Constraint(const Cartesian &center_, double radius);
-		Constraint(const Cartesian &center_);
-		Constraint();
-		bool operator==(const Constraint &c) const;
-		Constraint& operator=(const Constraint &c);
-		double meters2rad(double meters);
+public:
+	Cartesian center;
+	double arcangle;
+	double distance;
+	double radius;    // Radius in meters
+	int sign;
+
+	/*
+	 * Does a great circle with center in
+	 * (lat = 0, lon = 0, h = 0) -> (x = 1, y = 0, z = 0)
+	 */
+	Constraint();
+	// Does a great circle with the defined center
+	Constraint(Cartesian&& _center);
+	// Constraint in the Earth. Radius in meters
+	Constraint(Cartesian&& _center, double radius);
+	// Move constructor
+	Constraint(Constraint&& c) = default;
+	// Copy constructor
+	Constraint(const Constraint& c) = default;
+
+	// Move assignment
+	Constraint& operator=(Constraint&& c) = default;
+	// Copy assignment
+	Constraint& operator=(const Constraint& c) = default;
+	bool operator==(const Constraint& c) const noexcept;
+	bool operator!=(const Constraint& c) const noexcept;
 };
 
 
 class Geometry {
-	public:
-		std::vector<Constraint> constraints;
-		Constraint boundingCircle;
-		std::vector<Cartesian> corners;
-		Cartesian centroid;
+	// Calculates the convex hull of a set of points using Graham Scan Algorithm
+	void convexHull(std::vector<Cartesian>&& points, std::vector<Cartesian> &points_convex) const;
 
-		enum typePoints {
-			CONVEX_POLYGON,
-			CONVEX_HULL
-		};
+	// Set the Polygon's centroid
+	void setCentroid();
 
-		Geometry(const Constraint &c);
-		Geometry(std::vector<Cartesian> &v, typePoints type);
-		double getRadius();
-		void convexHull(std::vector<Cartesian> &v);
-		void convexPolygon(std::vector<Cartesian> &v);
+	// Average angle from the vertices to the polygon's centroid
+	double meanAngle2centroid() const;
 
-	private:
-		void convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &points_convex);
-		double meanAngle2centroid();
-		void centroidPolygon();
-		static int direction(const Cartesian &a, const Cartesian &b, const Cartesian &c);
-		static double dist(const Cartesian &a, const Cartesian &b);
-		static bool compare(const Cartesian &P0, const Cartesian &a, const Cartesian &b);
+	/*
+	 * Obtains the direction of the vectors.
+	 * Returns:
+	 *   If the vectors are COLLINEAR, CLOCKWISE or COUNTERCLOCKWISE
+	 */
+	static int direction(const Cartesian &a, const Cartesian &b, const Cartesian &c) noexcept;
+
+	// Returns the squared distance between two vectors
+	static double dist(const Cartesian &a, const Cartesian &b) noexcept;
+
+public:
+	Constraint boundingCircle;
+	std::vector<Constraint> constraints;
+	std::vector<Cartesian> corners;
+	Cartesian centroid;
+
+	Geometry() = delete;
+	// The region is specified by a bounding circle.
+	Geometry(Constraint&& constraint);
+	// Constructor from a set of points (v) in the Earth
+	Geometry(std::vector<Cartesian>&& v, const GeometryType &type);
+	// Move Constructor
+	Geometry(Geometry&&) = default;
+	// Copy Constructor
+	Geometry(const Geometry&) = delete;
+
+	// Move assignment
+	Geometry& operator=(Geometry&& c) = default;
+	// Copy assignment
+	Geometry& operator=(const Geometry& c) = delete;
+
+	/*
+	 * Constraints:
+	 *  For each side, we have a 0-halfspace (great circle) passing through the 2 corners.
+	 *  Since we are in counterclockwise order, the vector product of the two
+	 *  successive corners just gives the correct constraint.
+	 *
+	 * Requirements:
+	 *  All points should fit within half of the globe.
+	 */
+	void convexHull(std::vector<Cartesian>&& v);
+
+	/*
+	 * Constraints:
+	 *    For each side, we have a 0-halfspace (great circle) passing through the 2 corners.
+	 *    Since we are in counterclockwise order, the vector product of the two
+	 *    successive corners just gives the correct constraint.
+	 *
+	 * Requirements:
+	 *    Polygons should be counterclockwise.
+	 *    Polygons should be convex.
+	 */
+	void convexPolygon(std::vector<Cartesian>&& v);
 };

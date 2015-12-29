@@ -33,7 +33,7 @@
 #include <limits.h>
 
 
-static bool isnotSubtrixel(std::string &last_valid, const uInt64 &id_trixel) {
+static bool isnotSubtrixel(std::string &last_valid, const uint64_t &id_trixel) {
 	std::string res(std::bitset<SIZE_BITS_ID>(id_trixel).to_string());
 	res = res.substr(res.find("1"));
 	if (res.find(last_valid) == 0) {
@@ -299,16 +299,14 @@ GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ra
 	// The user does not specify the accuracy.
 	if (acc_prefix.empty()) return;
 
-	::std::map<uInt64, ::std::string> result;
+	::std::map<uint64_t, ::std::string> result;
 	::std::set<::std::string> aux_p;
-	::std::vector<range_t>::const_iterator rit(ranges.begin());
-	for ( ; rit != ranges.end(); rit++) {
+	for (auto rit = ranges.begin(); rit != ranges.end(); ++rit) {
 		::std::bitset<SIZE_BITS_ID> b1(rit->start), b2(rit->end), res;
 		int idx = -1;
-		uInt64 val;
+		uint64_t val;
 		if (rit->start != rit->end) {
-			idx = SIZE_BITS_ID - 1;
-			for ( ; idx > 0 && b1.test(idx) == b2.test(idx); --idx) res.set(idx, b1.test(idx));
+			for (idx = SIZE_BITS_ID - 1; idx > 0 && b1.test(idx) == b2.test(idx); --idx) res.set(idx, b1.test(idx));
 			val = res.to_ullong();
 		} else val = rit->start;
 
@@ -320,7 +318,7 @@ GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ra
 				break;
 			}
 		}
-		if (posF != -1) result.insert(::std::pair<uInt64, ::std::string>(val >> posF, acc_prefix[j]));
+		if (posF != -1) result.insert(::std::pair<uint64_t, ::std::string>(val >> posF, acc_prefix[j]));
 	}
 
 	// The search have trixels more big that the biggest trixel in accuracy.

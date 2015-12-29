@@ -20,165 +20,177 @@
  * IN THE SOFTWARE.
  */
 
- #include "geometry.h"
+#include "geometry.h"
 
-// Constraint in the Earth.
-// Radius in meters.
-Constraint::Constraint(const Cartesian &center_, double radius) : center(center_)
+#include <cmath>
+#include <type_traits>
+
+
+Constraint::Constraint()
+	: arcangle(PI_HALF),
+	  distance(0.0),
+	  radius(RADIUS_GREAT_CIRCLE),
+	  sign(ZERO) { }
+
+
+Constraint::Constraint(Cartesian&& _center)
+	: center(std::move(_center)),
+	  arcangle(PI_HALF),
+	  distance(0.0),
+	  radius(RADIUS_GREAT_CIRCLE),
+	  sign(ZERO)
 {
-	// We normalize the center, because  geometry works around a sphere unitary instead of a ellipsoid.
+	/*
+	 * We normalize the center, because geometry works around a sphere
+	 * unitary instead of a ellipsoid.
+	 */
 	center.normalize();
-	arcangle = meters2rad(radius);
-	distance = cos(arcangle);
-	if (distance <= -DBL_TOLERANCE) sign = NEG;
-	else if (distance >=  DBL_TOLERANCE) sign = POS;
-	else sign = ZERO;
 }
 
 
-// Do a great circle with the defined center.
-Constraint::Constraint(const Cartesian &center_) : center(center_), distance(0.0), arcangle(PI_HALF), sign(ZERO) { }
+Constraint::Constraint(Cartesian&& _center, double _radius)
+	: center(std::move(_center))
+{
+	/*
+	 * We normalize the center, because geometry works around a sphere
+	 * unitary instead of a ellipsoid.
+	 */
+	center.normalize();
 
+	set_data(_radius);
 
-// Defult Constructor. Do a great circle with center in (lat = 0, lon = 0, h = 0, DEGREES) -> (x = 1, y = 0, z = 0).
-Constraint::Constraint() : distance(0.0), arcangle(PI_HALF), sign(ZERO) { }
+	if (distance > DBL_TOLERANCE) {
+		sign = POS;
+	} else if (distance < -DBL_TOLERANCE) {
+		sign = NEG;
+	} else {
+		sign = ZERO;
+	}
+}
 
 
 bool
-Constraint::operator ==(const Constraint &c) const
+Constraint::operator==(const Constraint &c) const noexcept
 {
-	return (center == c.center && arcangle == c.arcangle);
+	return center == c.center && arcangle == c.arcangle;
 }
 
 
-Constraint&
-Constraint::operator=(const Constraint &c)
+bool
+Constraint::operator!=(const Constraint &c) const noexcept
 {
-	sign = c.sign;
-	center = c.center;
-	distance = c.distance;
-	arcangle = c.arcangle;
-	return *this;
+	return center != c.center || arcangle != c.arcangle;
 }
 
 
-// Convert distance in meters to earth's radians.
-double
-Constraint::meters2rad(double meters)
-{
-	if (meters < MIN_RADIUS_METERS) return MIN_RADIUS_RADIANS;
-	else if (meters > MAX_RADIUS_HALFSPACE_EARTH) return M_PI;
-	return meters / M_PER_RADIUS_EARTH;
-}
-
-
-// The region is specified by a bounding circle.
-Geometry::Geometry(const Constraint &c)
-{
-	boundingCircle = c;
-	constraints.push_back(c);
-	centroid = c.center;
-}
-
-
-Geometry::Geometry(std::vector<Cartesian> &v, typePoints type)
-{
-	(type == Geometry::CONVEX_POLYGON) ? convexPolygon(v) : convexHull(v);
-}
-
-
-// Constructor for a set of points in the Earth.
-// typePolygon -> Geometry::CONVEX or Geometry::NO_CONVEX
 void
-Geometry::convexHull(std::vector<Cartesian> &v)
+Constraint::set_data(double meters)
 {
-	// Constraints:
-	//    For each side, we have a 0-halfspace (great circle) passing through the 2 corners.
-	//    Since we are in counterclockwise order, the vector product of the two
-	//    successive corners just gives the correct constraint.
-	//
-	// Requirements:
-	//    Set of points, Not necessarily must form a convex Polygono.
-	//	  All points should fit within half of the globe.
+	if (meters < MIN_RADIUS_METERS) {
+		arcangle = MIN_RADIUS_RADIANS;
+		distance = 1.0;
+		radius = MIN_RADIUS_METERS;
+	} else if (meters > MAX_RADIUS_HALFSPACE_EARTH) {
+		arcangle = M_PI;
+		distance = -1.0;
+		radius = MAX_RADIUS_HALFSPACE_EARTH;
+	} else {
+		arcangle = meters / M_PER_RADIUS_EARTH;
+		distance = std::cos(arcangle);
+		radius = meters;
+	}
+}
 
-	// We found the convex hull for the points given, using Graham Scan Algorithm.
+
+Geometry::Geometry(Constraint&& constraint)
+	: boundingCircle(std::move(constraint)),
+	  constraints({ boundingCircle }),
+	  centroid(boundingCircle.center) { }
+
+
+Geometry::Geometry(std::vector<Cartesian>&& v, const GeometryType &type)
+{
+	type == GeometryType::CONVEX_POLYGON ? convexPolygon(std::move(v)) : convexHull(std::move(v));
+}
+
+
+void
+Geometry::convexHull(std::vector<Cartesian>&& v)
+{
 	std::vector<Cartesian> points_convex;
-	convexHull(v, points_convex);
+	points_convex.reserve(v.size());
 
 	// The convex is formed in counterclockwise.
+	convexHull(std::move(v), points_convex);
+
 	size_t len = points_convex.size();
 	if (len < 3) throw MSG_Error("Convex Hull not found");
 
 	// The corners are in clockwise but we need the corners in counterclockwise order and normalize.
-	Cartesian center;
 	corners.reserve(len);
+
+	// Duplicates the last point at the begin.
 	points_convex.insert(points_convex.begin(), *(points_convex.end() - 1));
-	std::vector<Cartesian>::reverse_iterator it(points_convex.rbegin()), n_it, e_it(points_convex.rend() - 1);
-	for ( ; it != e_it; it++) {
-		n_it = it + 1;
-		center = *it ^ *n_it;
+
+	auto e_it = points_convex.rend() - 1;
+	for (auto it = points_convex.rbegin(); it != e_it; ++it) {
+		auto n_it = it + 1;
+		auto center = *it ^ *n_it;
 		center.normalize();
-		Constraint c(center);
-		constraints.push_back(c);
+		constraints.push_back(Constraint(std::move(center)));
 		corners.push_back(*it);
 	}
 
-	// Calculate the bounding circle for the convex.
-	// Take it as the bounding circle of the triangle with the widest opening angle.
+	/*
+	 * Calculates the bounding circle for the convex.
+	 * Takes it as the bounding circle of the triangle with the widest opening angle.
+	 */
 	boundingCircle.distance = 1.0;
-	std::vector<Cartesian>::iterator it_i(corners.begin()), it_j, it_k;
-	for ( ; it_i != corners.end(); it_i++) {
-		for (it_j = it_i + 1; it_j != corners.end(); it_j++) {
-			for (it_k = it_j + 1; it_k != corners.end(); it_k++) {
-				Cartesian v_aux = (*it_j - *it_i) ^ (*it_k - *it_j);
+	for (auto it_i = corners.begin(); it_i != corners.end(); ++it_i) {
+		for (auto it_j = it_i + 1; it_j != corners.end(); ++it_j) {
+			for (auto it_k = it_j + 1; it_k != corners.end(); ++it_k) {
+				auto v_aux = (*it_j - *it_i) ^ (*it_k - *it_j);
 				v_aux.normalize();
-				// Calculate the correct opening angle.
-				// Can take any corner to calculate the opening angle.
+				/*
+				 * Calculates the correct opening angle.
+				 * Can take any corner to calculate the opening angle.
+				 */
 				double d = v_aux * *it_i;
 				if (boundingCircle.distance > d) {
 					boundingCircle.distance = d;
-					boundingCircle.center = v_aux;
-					boundingCircle.arcangle = acos(d);
-					if (d <= -DBL_TOLERANCE) boundingCircle.sign = NEG;
-					else if (d >=  DBL_TOLERANCE) boundingCircle.sign = POS;
+					boundingCircle.center = std::move(v_aux);
+					boundingCircle.arcangle = std::acos(d);
+					if (d > DBL_TOLERANCE) boundingCircle.sign = POS;
+					else if (d < -DBL_TOLERANCE) boundingCircle.sign = NEG;
 					else boundingCircle.sign = ZERO;
 				}
 			}
 		}
 	}
 
-	// Calculate the Polygon's centroid.
-	centroidPolygon();
+	// Sets the Polygon's centroid.
+	setCentroid();
 }
 
 
 // Constructor for a convex polygon.
 void
-Geometry::convexPolygon(std::vector<Cartesian> &v)
+Geometry::convexPolygon(std::vector<Cartesian>&& v)
 {
-	// Constraints:
-	//    For each side, we have a 0-halfspace (great circle) passing through the 2 corners.
-	//    Since we are in counterclockwise order, the vector product of the two
-	//    successive corners just gives the correct constraint.
-	//
-	// Requirements:
-	//    Polygons should be counterclockwise.
-	//    Polygons should be convex.
-
-	// Repeat the first corner at the end if it does not repeat.
+	// Repeats the first corner at the end if it does not repeat.
 	if (*v.begin() != *(v.end() - 1)) v.push_back(*v.begin());
 
-	int len = (int)v.size();
+	auto len = v.size();
 	if (len < 4) throw "Polygon should have at least three corners";
 
 	bool counterclockwise = false, first_counterclockwise = false;
-	std::vector<Cartesian>::iterator it(v.begin()), n_it, it_k, e_it(v.end() - 1);
+	auto e_it = v.end() - 1;
 
-	//Check for the type of direction.
+	// Check for the type of direction.
 	Cartesian constraint;
-	for ( ; it != e_it; it++) {
+	for (auto it = v.begin(); it != e_it; ++it) {
 		// Direction should be the same for all.
-		n_it = it + 1;
+		auto n_it = it + 1;
 		if (it != v.begin()) {
 			// Calculate the direction of the third corner and restriction formed in the previous iteration.
 			if (constraint * *n_it < DBL_TOLERANCE) {
@@ -194,43 +206,37 @@ Geometry::convexPolygon(std::vector<Cartesian> &v)
 			}
 
 			if (it != (v.begin() + 1) && counterclockwise != first_counterclockwise) {
-				throw MSG_Error("Polygon is not convex, You should use the constructor -> Geometry(g, Geometry::NO_CONVEX)");
+				throw MSG_Error("Polygon is not convex, You should use the constructor -> Geometry(g, Geometry::Type::CONVEX_HULL)");
 			}
 		}
 
 		// The vector product of the two successive corners just gives the correct constraint.
 		constraint = *it ^ *n_it;
-		if (constraint.norm() <= DBL_TOLERANCE) {
-			throw MSG_Error("Repeating corners, edge error, You should use the constructor -> Geometry(g, Geometry::NO_CONVEX)");
+		if (constraint.norm() < DBL_TOLERANCE) {
+			throw MSG_Error("Repeating corners, edge error, You should use the constructor -> Geometry(g, Geometry::Type::CONVEX_HULL)");
 		}
 	}
 
 	// Building convex always in counterclockwise.
+	corners.reserve(len - 1);
 	if (counterclockwise) {
-		corners.reserve(v.size() - 1);
-		for (it = v.begin(); it != e_it; it++) {
-			n_it = it + 1;
+		for (auto it = v.begin(); it != e_it; ++it) {
+			auto n_it = it + 1;
 			constraint = *it ^ *n_it;
 			constraint.normalize();
-			// Convex hulls for a set of points on the surface of a sphere are only well defined
-			// if the points all fit within half of the globe. This is a 0-halfspace, or a halfspace
-			// with a arcangle pi/2.
-			Constraint c(constraint);
-			constraints.push_back(c);
-			// Normalize the corner.
+			constraints.push_back(std::move(constraint));
+			// Normalizes the corner.
 			it->normalize();
 			corners.push_back(*it);
 		}
 	} else {
 		// If direction is clockwise, revert the direction.
-		corners.reserve(v.size() - 1);
-		std::vector<Cartesian>::reverse_iterator rit(v.rbegin()), rn_it, f_rit(v.rend() - 1);
-		for ( ; rit != f_rit; rit++) {
-			rn_it = rit + 1;
+		auto f_rit = v.rend() - 1;
+		for (auto rit = v.rbegin(); rit != f_rit; ++rit) {
+			auto rn_it = rit + 1;
 			constraint = *rit ^ *rn_it;
 			constraint.normalize();
-			Constraint c(constraint);
-			constraints.push_back(c);
+			constraints.push_back(std::move(constraint));
 			// Normalize the corner.
 			rit->normalize();
 			corners.push_back(*rit);
@@ -240,36 +246,35 @@ Geometry::convexPolygon(std::vector<Cartesian> &v)
 	// Calculate the bounding circle for the convex.
 	// Take it as the bounding circle of the triangle with the widest opening angle.
 	boundingCircle.distance = 1.0;
-	for (it = corners.begin(); it != corners.end(); it++) {
-		for (n_it = it + 1; n_it != corners.end(); n_it++) {
-			for (it_k = n_it + 1; it_k != corners.end(); it_k++) {
-				Cartesian v_aux = (*n_it - *it) ^ (*it_k - *n_it);
+	for (auto it = corners.begin(); it != corners.end(); ++it) {
+		for (auto n_it = it + 1; n_it != corners.end(); ++n_it) {
+			for (auto it_k = n_it + 1; it_k != corners.end(); ++it_k) {
+				auto v_aux = (*n_it - *it) ^ (*it_k - *n_it);
 				v_aux.normalize();
-				// Calculate the correct opening angle.
-				// Can take any corner to calculate the opening angle.
+				/*
+				 * Calculate the correct opening angle.
+				 * Can take any corner to calculate the opening angle.
+				 */
 				double d = v_aux * *it;
 				if (boundingCircle.distance > d) {
 					boundingCircle.distance = d;
-					boundingCircle.center = v_aux;
-					boundingCircle.arcangle = acos(d);
-					if (d <= -DBL_TOLERANCE) boundingCircle.sign = NEG;
-					else if (d >=  DBL_TOLERANCE) boundingCircle.sign = POS;
+					boundingCircle.center = std::move(v_aux);
+					boundingCircle.arcangle = std::acos(d);
+					if (d > DBL_TOLERANCE) boundingCircle.sign = POS;
+					else if (d < -DBL_TOLERANCE) boundingCircle.sign = NEG;
 					else boundingCircle.sign = ZERO;
 				}
 			}
 		}
 	}
 
-	// Calculate the Polygon's centroid.
-	centroidPolygon();
+	// Sets the Polygon's centroid.
+	setCentroid();
 }
 
 
-// Obtain the direction of the vectors.
-// Return:
-// 		If the vectors are collinear, clockwise or counterclockwise.
 int
-Geometry::direction(const Cartesian &a, const Cartesian &b, const Cartesian &c)
+Geometry::direction(const Cartesian &a, const Cartesian &b, const Cartesian &c) noexcept
 {
 	Cartesian aux = a ^ b;
 	double angle = aux * c;
@@ -283,41 +288,25 @@ Geometry::direction(const Cartesian &a, const Cartesian &b, const Cartesian &c)
 }
 
 
-// Return the distance^2 between two vectors.
 double
-Geometry::dist(const Cartesian &a, const Cartesian &b)
+Geometry::dist(const Cartesian &a, const Cartesian &b) noexcept
 {
 	Cartesian p = a - b;
-	return (p.x * p.x + p.y * p.y + p.z * p.z);
+	return p.x * p.x + p.y * p.y + p.z * p.z;
 }
 
 
-// Function used by quickSort to sort an vector of
-// points with respect to the first point P0.
-bool
-Geometry::compare(const Cartesian &P0, const Cartesian &a, const Cartesian &b)
-{
-	// Calculate direction.
-	int dir = direction(P0, a, b);
-	if (dir == COLLINEAR) {
-		return ((dist(P0, b) > dist(P0, a)) ? true : false);
-	}
-	return (dir == COUNTERCLOCKWISE) ? true : false;
-}
-
-
-// Return a convex hull of a set of points using Graham Scan Algorithm.
 void
-Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &points_convex)
+Geometry::convexHull(std::vector<Cartesian>&& points, std::vector<Cartesian> &points_convex) const
 {
-	int len = (int)points.size();
+	auto len = points.size();
 	if (len < 3) throw MSG_Error("Polygon should have at least three corners");
 
 	// Find the min 'y', min 'x' and min 'z'.
-	std::vector<Cartesian>::iterator it(points.begin());
-	it->normalize(); // Normalize the points.
-	std::vector<Cartesian>::iterator it_swap(it);
-	for (it++; it != points.end(); it++) {
+	auto it = points.begin();
+	it->normalize(); // Normalize the point.
+	auto it_swap = it;
+	for (++it; it != points.end(); ++it) {
 		it->normalize(); // Normalize the point.
 		if (it->y < it_swap->y ||
 			(it_swap->y == it->y && it->x < it_swap->x) ||
@@ -329,16 +318,23 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 	// Swap positions.
 	std::iter_swap(it_swap, points.begin());
 
-	// Sort the n - 1 elements in ascending angle.
-	sort(++points.begin(), points.end(), std::bind(compare, *points.begin(), std::placeholders::_1, std::placeholders::_2));
+	// Sort the n - 1 elements in ascending angle with respect to the first point P0.
+	std::sort(++points.begin(), points.end(), [P0 = *points.begin()](const Cartesian &a, const Cartesian &b) {
+		// Calculate direction.
+		int dir = direction(P0, a, b);
+		if (dir == COLLINEAR) {
+			return ((dist(P0, b) > dist(P0, a)) ? true : false);
+		}
+		return (dir == COUNTERCLOCKWISE) ? true : false;
+	});
 
 	// Deleting duplicates points.
 	it = points.begin();
 	while (it != points.end() - 1) {
-		(*it == *(it + 1)) ? points.erase(it + 1) : it++;
+		*it == *(it + 1) ? it = points.erase(it) : ++it;
 	}
 
-	if ((len = (int)points.size()) < 3) throw MSG_Error("Polygon should have at least three corners");
+	if ((len = points.size()) < 3) throw MSG_Error("Polygon should have at least three corners");
 
 	// Points convex
 	it = points.begin();
@@ -346,7 +342,7 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 	points_convex.push_back(*it++);
 	points_convex.push_back(*it++);
 
-	for ( ; it != points.end(); it++) {
+	for ( ; it != points.end(); ++it) {
 		while (true) {
 			// Not found the convex.
 			if (points_convex.size() == 1) throw MSG_Error("Convex Hull not found");
@@ -369,44 +365,29 @@ Geometry::convexHull(std::vector<Cartesian> &points, std::vector<Cartesian> &poi
 }
 
 
-// Calculate the Mass Center (centroid) of Polygon's points (Particles) with respect the point (0, 0, 0).
 void
-Geometry::centroidPolygon()
+Geometry::setCentroid()
 {
 	double x = 0, y = 0, z = 0;
-	std::vector<Cartesian>::const_iterator it = corners.begin();
-	for ( ; it != corners.end(); it++) {
+	for (auto it = corners.begin(); it != corners.end(); ++it) {
 		x += it->x;
 		y += it->y;
 		z += it->z;
 	}
 	centroid = Cartesian(x, y, z);
 	centroid.normalize();
+
+	boundingCircle.radius = SCALE_RADIUS * meanAngle2centroid() * M_PER_RADIUS_EARTH;
 }
 
 
-// Average angle from the vertices to the polygon's centroid.
 double
-Geometry::meanAngle2centroid()
+Geometry::meanAngle2centroid() const
 {
 	double sum = 0;
-	std::vector<Cartesian>::iterator it = corners.begin();
-	for ( ; it != corners.end(); it++) {
-		sum += acos(*it * centroid);
+	for (auto it = corners.begin(); it != corners.end(); ++it) {
+		sum += std::acos(*it * centroid);
 	}
 
 	return sum / corners.size();
-}
-
-
-// If the region is a bounding circle return the circle's radio.
-// Otherwise return the radius equal to vertex2Centroid().
-double
-Geometry::getRadius()
-{
-	if (corners.size() > 2) {
-		return SCALE_RADIUS * meanAngle2centroid() * M_PER_RADIUS_EARTH;
-	} else {
-		return boundingCircle.arcangle * M_PER_RADIUS_EARTH;
-	}
 }
