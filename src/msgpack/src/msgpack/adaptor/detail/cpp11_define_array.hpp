@@ -14,7 +14,7 @@
 #include "../adaptor_base.hpp"
 
 // for MSGPACK_ADD_ENUM
-#include "int.hpp"
+#include "../int.hpp"
 
 #include <type_traits>
 #include <tuple>
