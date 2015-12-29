@@ -22,8 +22,8 @@
 
 #include "log.h"
 
-#include "date.h"
 #include "utils.h"
+#include "datetime.h"
 
 #define BUFFER_SIZE (10 * 1024)
 
@@ -81,7 +81,7 @@ Log::str_format(int priority, const char *file, int line, const char *suffix, co
 {
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
-	auto iso8601 = "[" + date::to_string(std::chrono::system_clock::now()) + "]";
+	auto iso8601 = "[" + Datetime::to_string(std::chrono::system_clock::now()) + "]";
 	auto tid = " (" + get_thread_name() + ")";
 	auto location = (priority >= LOCATION_LOG_LEVEL) ? " " + std::string(file) + ":" + std::to_string(line) : std::string();
 	std::string result = iso8601 + tid + location + ": " + prefix + buffer + suffix;

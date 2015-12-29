@@ -70,7 +70,6 @@ noinst_HEADERS = \
 	database.h \
 	database_autocommit.h \
 	database_utils.h \
-	date.h \
 	datetime.h \
 	endpoint.h \
 	endpoint_resolver.h \
