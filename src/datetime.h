@@ -22,9 +22,10 @@
 
 #pragma once
 
-#include <sys/time.h>
+#include <ctime>
 #include <iostream>
 #include <regex>
+#include <chrono>
 
 #define _EPOCH      1970
 #define _START_YEAR 1900
@@ -42,8 +43,8 @@ namespace Datetime {
 		int msec;
 	};
 
-	extern std::regex date_re;
-	extern std::regex date_math_re;
+	extern const std::regex date_re;
+	extern const std::regex date_math_re;
 
 	void dateTimeParser(const std::string &date, tm_t &tm);
 	void computeDateMath(tm_t &tm, const std::string &op, const std::string &units);
@@ -56,8 +57,10 @@ namespace Datetime {
 	double mtimegm(tm_t &tm);
 	double timestamp(const std::string &date);
 	bool isvalidDate(int year, int month, int day);
-	char* isotime(const struct tm *timep);
+	char* isotime(const struct tm *timep, int microseconds=0);
 	::std::string ctime(const ::std::string &epoch);
+	::std::string ctime(double epoch);
 	void normalizeMonths(int &year, int &mon);
 	bool isDate(const std::string &date);
+	std::string to_string(const std::chrono::time_point<std::chrono::system_clock> &tp);
 };

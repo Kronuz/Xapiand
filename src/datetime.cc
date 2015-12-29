@@ -27,19 +27,22 @@
 #include "utils.h"
 
 
-std::regex Datetime::date_re("([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]{1,3}))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?", std::regex::optimize);
-std::regex Datetime::date_math_re("([+-]\\d+|\\/{1,2})([dyMwhms])", std::regex::optimize);
+const std::regex Datetime::date_re("([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]{1,3}))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?", std::regex::optimize);
+const std::regex Datetime::date_math_re("([+-]\\d+|\\/{1,2})([dyMwhms])", std::regex::optimize);
 
 
-static const int days[2][12] = {
-	{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
-	{31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+static constexpr double MICROSECOND = 1000000.0;
+
+
+static constexpr int days[2][12] = {
+	{ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
+	{ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
 };
 
 
-static const int cumdays[2][12] = {
-	{0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334},
-	{0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335}
+static constexpr int cumdays[2][12] = {
+	{ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 },
+	{ 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 }
 };
 
 
@@ -392,34 +395,47 @@ Datetime::isvalidDate(int year, int month, int day)
  * Return a string with the date in ISO 8601 Format.
  */
 char*
-Datetime::isotime(const struct tm *tm)
+Datetime::isotime(const struct tm *tm, int microseconds)
 {
-	static char result[20];
-	sprintf(result, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d",
+	static char result[30];
+	sprintf(result, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.%2.6d",
 		_START_YEAR + tm->tm_year, tm->tm_mon + 1, tm->tm_mday,
-		tm->tm_hour, tm->tm_min, tm->tm_sec);
+		tm->tm_hour, tm->tm_min, tm->tm_sec, microseconds);
 	return result;
 }
 
 
 /*
  * Transform a epoch string to ISO 8601 format if epoch is numeric,
- * the decimal part of epoch are milliseconds.
+ * the decimal part of epoch are microseconds.
  * If epoch does not numeric, return epoch.
  */
 ::std::string
 Datetime::ctime(const ::std::string &epoch)
 {
 	if (isNumeric(epoch)) {
-		double mtimestamp = std::stod(epoch);
-		time_t timestamp = (time_t) mtimestamp;
-		std::string milliseconds = epoch;
-		milliseconds.assign(milliseconds.c_str() + milliseconds.find("."), 4);
+		double utimestamp = std::stod(epoch);
+		time_t timestamp = (time_t) utimestamp;
+		std::string microseconds = epoch;
 		struct tm *timeinfo = gmtime(&timestamp);
-		return isotime(timeinfo);
+		return isotime(timeinfo, std::stod(std::string(microseconds.c_str() + microseconds.find("."), 7)) * MICROSECOND);
 	} else {
 		return epoch;
 	}
+}
+
+
+/*
+ * Transforms a epoch in seconds to ISO 8601 format,
+ * the decimal part of epoch are microseconds.
+ */
+::std::string
+Datetime::ctime(double epoch)
+{
+	time_t timestamp = (time_t) epoch;
+	int microseconds = (epoch - timestamp) * MICROSECOND;
+	struct tm *timeinfo = gmtime(&timestamp);
+	return isotime(timeinfo, microseconds);
 }
 
 
@@ -444,4 +460,11 @@ Datetime::isDate(const std::string &date)
 {
 	std::smatch m;
 	return std::regex_match(date, m, date_re) && static_cast<size_t>(m.length(0)) == date.size();
+}
+
+
+std::string
+Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock> &tp)
+{
+	return ctime(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() / MICROSECOND);
 }

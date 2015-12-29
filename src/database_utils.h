@@ -67,7 +67,7 @@
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
 
-extern std::regex find_types_re;
+extern const std::regex find_types_re;
 
 
 struct data_field_t {
