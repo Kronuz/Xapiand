@@ -46,14 +46,14 @@ public:
 
 
 /*
- * This class serializes a uInt64 vector.
+ * This class serializes a uint64_t vector.
  * i.e
  * StringList = {a, ..., b}
  * serialise = serialise_geo(a) + ... + serialise_geo(b)
  * symbol '+' means concatenate.
  * It is not necessary to save the size because it's SIZE_BYTES_ID for all.
  */
-class uInt64List : public std::vector<uInt64> {
+class uInt64List : public std::vector<uint64_t> {
 public:
 	void unserialise(const std::string& serialised);
 	std::string serialise() const;

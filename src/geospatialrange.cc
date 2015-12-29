@@ -26,6 +26,8 @@
 #include "length.h"
 #include "serialise.h"
 
+#include <cmath>
+
 
 static double geo_weight_from_angle(double angle) {
 	return (M_PI - angle) * M_PER_RADIUS_EARTH;
