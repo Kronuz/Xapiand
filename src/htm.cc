@@ -673,7 +673,7 @@ HTM::writePython3D(const std::string &file) const
 {
 	std::ofstream fs(file);
 	std::string x("x = ["), y("y = ["), z("z = [");
-	int numCorners = region.corners.size() - 1;
+	int numCorners = (int)region.corners.size() - 1;
 
 	fs << "from mpl_toolkits.mplot3d import Axes3D\n";
 	fs << "from mpl_toolkits.mplot3d.art3d import Poly3DCollection\n";

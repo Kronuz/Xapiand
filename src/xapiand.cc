@@ -39,6 +39,7 @@
 
 using namespace TCLAP;
 
+
 std::shared_ptr<XapiandManager> manager;
 
 
@@ -75,16 +76,13 @@ void run(const opts_t &opts) {
 }
 
 
-// This exemplifies how the output class can be overridden to provide
-// user defined output.
-class CmdOutput : public StdOutput
-{
-	inline void spacePrint(std::ostream& os,
-			       const std::string& s,
-			       int maxWidth,
-			       int indentSpaces,
-			       int secondLineOffset,
-			       bool endl=true) const {
+/*
+ * This exemplifies how the output class can be overridden to provide
+ * user defined output.
+ */
+class CmdOutput : public StdOutput {
+	inline void spacePrint(std::ostream& os, const std::string& s, int maxWidth,
+				int indentSpaces, int secondLineOffset, bool endl=true) const {
 		int len = static_cast<int>(s.length());
 
 		if ((len + indentSpaces > maxWidth) && maxWidth > 0) {
@@ -95,15 +93,15 @@ class CmdOutput : public StdOutput
 				// int stringLen = std::min<int>( len - start, allowedLen );
 				// doing it this way to support a VisualC++ 2005 bug
 				using namespace std;
-				int stringLen = min<int>( len - start, allowedLen );
+				int stringLen = min<int>(len - start, allowedLen);
 
 				// trim the length so it doesn't end in middle of a word
 				if (stringLen == allowedLen) {
 					while (stringLen >= 0 &&
-					       s[stringLen+start] != ' ' &&
-					       s[stringLen+start] != ',' &&
-					       s[stringLen+start] != '|') {
-						stringLen--;
+						s[stringLen+start] != ' ' &&
+						s[stringLen+start] != ',' &&
+						s[stringLen+start] != '|') {
+						--stringLen;
 					}
 				}
 
@@ -114,9 +112,9 @@ class CmdOutput : public StdOutput
 				}
 
 				// check for newlines
-				for (int i = 0; i < stringLen; i++) {
+				for (int i = 0; i < stringLen; ++i) {
 					if (s[start+i] == '\n') {
-						stringLen = i+1;
+						stringLen = i + 1;
 					}
 				}
 
@@ -125,7 +123,7 @@ class CmdOutput : public StdOutput
 				}
 
 				// print the indent
-				for (int i = 0; i < indentSpaces; i++) {
+				for (int i = 0; i < indentSpaces; ++i) {
 					os << " ";
 				}
 
@@ -141,13 +139,13 @@ class CmdOutput : public StdOutput
 
 				// so we don't start a line with a space
 				while (s[stringLen+start] == ' ' && start < len) {
-					start++;
+					++start;
 				}
 
 				start += stringLen;
 			}
 		} else {
-			for (int i = 0; i < indentSpaces; i++) {
+			for (int i = 0; i < indentSpaces; ++i) {
 				os << " ";
 			}
 			os << s;
@@ -157,40 +155,41 @@ class CmdOutput : public StdOutput
 		}
 	}
 
-	inline void _shortUsage( CmdLineInterface& _cmd, std::ostream& os ) const {
+	inline void _shortUsage(CmdLineInterface& _cmd, std::ostream& os) const {
 		std::list<Arg*> argList = _cmd.getArgList();
 		std::string progName = _cmd.getProgramName();
 		XorHandler xorHandler = _cmd.getXorHandler();
-		std::vector< std::vector<Arg*> > xorList = xorHandler.getXorList();
+		std::vector<std::vector<Arg*>> xorList = xorHandler.getXorList();
 
 		std::string s = progName + " ";
 
 		// first the xor
-		for ( int i = 0; static_cast<unsigned int>(i) < xorList.size(); i++ )
-			{
-				s += " {";
-				for ( ArgVectorIterator it = xorList[i].begin();
-					  it != xorList[i].end(); it++ )
-					s += (*it)->shortID() + "|";
-
-				s[s.length()-1] = '}';
+		for (size_t i = 0; i < xorList.size(); ++i) {
+			s += " {";
+			for (auto it = xorList[i].begin(); it != xorList[i].end(); ++it) {
+				s += (*it)->shortID() + "|";
 			}
 
+			s[s.length() - 1] = '}';
+		}
+
 		// then the rest
-		for (ArgListIterator it = argList.begin(); it != argList.end(); it++)
-			if ( !xorHandler.contains( (*it) ) )
+		for (auto it = argList.begin(); it != argList.end(); ++it) {
+			if (!xorHandler.contains((*it))) {
 				s += " " + (*it)->shortID();
+			}
+		}
 
 		// if the program name is too long, then adjust the second line offset
 		int secondLineOffset = static_cast<int>(progName.length()) + 2;
-		if ( secondLineOffset > LINE_LENGTH / 2 ) {
+		if (secondLineOffset > LINE_LENGTH / 2) {
 			secondLineOffset = static_cast<int>(LINE_LENGTH / 2);
 		}
 
-		spacePrint( os, s, LINE_LENGTH, 3, secondLineOffset );
+		spacePrint(os, s, LINE_LENGTH, 3, secondLineOffset);
 	}
 
-	inline void _longUsage( CmdLineInterface& _cmd, std::ostream& os ) const {
+	inline void _longUsage(CmdLineInterface& _cmd, std::ostream& os) const {
 		std::list<Arg*> argList = _cmd.getArgList();
 		std::string message = _cmd.getMessage();
 		XorHandler xorHandler = _cmd.getXorHandler();
@@ -198,8 +197,8 @@ class CmdOutput : public StdOutput
 
 		size_t max = 0;
 
-		for (int i = 0; static_cast<unsigned int>(i) < xorList.size(); i++) {
-			for (ArgVectorIterator it = xorList[i].begin(); it != xorList[i].end(); it++) {
+		for (size_t i = 0; i < xorList.size(); ++i) {
+			for (auto it = xorList[i].begin(); it != xorList[i].end(); ++it) {
 				const std::string& id = (*it)->longID();
 				if (id.size() > max) {
 					max = id.size();
@@ -208,13 +207,13 @@ class CmdOutput : public StdOutput
 		}
 
 		// first the xor
-		for (int i = 0; static_cast<unsigned int>(i) < xorList.size(); i++) {
-			for (ArgVectorIterator it = xorList[i].begin(); it != xorList[i].end(); it++) {
+		for (size_t i = 0; i < xorList.size(); ++i) {
+			for (auto it = xorList[i].begin(); it != xorList[i].end(); ++it) {
 				const std::string& id = (*it)->longID();
-				spacePrint(os, id, (max + 3), 3, 3, false);
-				spacePrint(os, (*it)->getDescription(), LINE_LENGTH - (max - 10), static_cast<int>((2 + max) - id.size()), static_cast<int>(3 + id.size()), false);
+				spacePrint(os, id, (int)max + 3, 3, 3, false);
+				spacePrint(os, (*it)->getDescription(), LINE_LENGTH - ((int)max - 10), static_cast<int>((2 + max) - id.size()), static_cast<int>(3 + id.size()), false);
 
-				if (it+1 != xorList[i].end()) {
+				if (it + 1 != xorList[i].end()) {
 					spacePrint(os, "-- OR --", LINE_LENGTH, 9, 0);
 				}
 			}
@@ -222,7 +221,7 @@ class CmdOutput : public StdOutput
 		}
 
 		// then the rest
-		for (ArgListIterator it = argList.begin(); it != argList.end(); it++) {
+		for (auto it = argList.begin(); it != argList.end(); ++it) {
 			if (!xorHandler.contains((*it))) {
 				const std::string& id = (*it)->longID();
 				if (id.size() > max) {
@@ -232,11 +231,11 @@ class CmdOutput : public StdOutput
 		}
 
 		// then the rest
-		for (ArgListIterator it = argList.begin(); it != argList.end(); it++) {
-			if (!xorHandler.contains( (*it) )) {
+		for (auto it = argList.begin(); it != argList.end(); ++it) {
+			if (!xorHandler.contains((*it))) {
 				const std::string& id = (*it)->longID();
-				spacePrint(os, id, (max + 3), 3, 3, false);
-				spacePrint(os, (*it)->getDescription(), LINE_LENGTH - (max - 10), static_cast<int>((2 + max) - id.size()), static_cast<int>(3 + id.size()), false);
+				spacePrint(os, id, (int)max + 3, 3, 3, false);
+				spacePrint(os, (*it)->getDescription(), LINE_LENGTH - ((int)max - 10), static_cast<int>((2 + max) - id.size()), static_cast<int>(3 + id.size()), false);
 				os << std::endl;
 			}
 		}
@@ -248,56 +247,55 @@ class CmdOutput : public StdOutput
 		}
 	}
 
-	public:
-		virtual void failure(CmdLineInterface& _cmd, ArgException& e) {
-			std::string progName = _cmd.getProgramName();
+public:
+	virtual void failure(CmdLineInterface& _cmd, ArgException& e) {
+		std::string progName = _cmd.getProgramName();
 
-			std::cerr << "Error: " << e.argId() << std::endl;
+		std::cerr << "Error: " << e.argId() << std::endl;
 
-			spacePrint(std::cerr, e.error(), LINE_LENGTH, 3, 0);
+		spacePrint(std::cerr, e.error(), LINE_LENGTH, 3, 0);
 
-			std::cerr << std::endl;
+		std::cerr << std::endl;
 
-			if (_cmd.hasHelpAndVersion()) {
-				std::cerr << "Usage: " << std::endl;
+		if (_cmd.hasHelpAndVersion()) {
+			std::cerr << "Usage: " << std::endl;
 
-				_shortUsage( _cmd, std::cerr );
+			_shortUsage( _cmd, std::cerr );
 
-				std::cerr << std::endl << "For complete usage and help type: "
-						  << std::endl << "   " << progName << " "
-						  << Arg::nameStartString() << "help"
-						  << std::endl << std::endl;
-			} else {
-				usage(_cmd);
-			}
-
-			throw ExitException(1);
+			std::cerr << std::endl << "For complete usage and help type: "
+					  << std::endl << "   " << progName << " "
+					  << Arg::nameStartString() << "help"
+					  << std::endl << std::endl;
+		} else {
+			usage(_cmd);
 		}
 
-		virtual void usage(CmdLineInterface& _cmd) {
-			spacePrint(std::cout, PACKAGE_STRING, LINE_LENGTH, 0, 0);
-			spacePrint(std::cout, "[" PACKAGE_BUGREPORT "]", LINE_LENGTH, 0, 0);
+		throw ExitException(1);
+	}
 
-			std::cout << std::endl;
+	virtual void usage(CmdLineInterface& _cmd) {
+		spacePrint(std::cout, PACKAGE_STRING, LINE_LENGTH, 0, 0);
+		spacePrint(std::cout, "[" PACKAGE_BUGREPORT "]", LINE_LENGTH, 0, 0);
 
-			std::cout << "Usage: " << std::endl;
+		std::cout << std::endl;
 
-			_shortUsage(_cmd, std::cout);
+		std::cout << "Usage: " << std::endl;
 
-			std::cout << std::endl << "Where: " << std::endl;
+		_shortUsage(_cmd, std::cout);
 
-			_longUsage(_cmd, std::cout);
-		}
+		std::cout << std::endl << "Where: " << std::endl;
 
-		virtual void version(CmdLineInterface& _cmd) {
-			std::string xversion = _cmd.getVersion();
-			std::cout << xversion << std::endl;
-		}
+		_longUsage(_cmd, std::cout);
+	}
+
+	virtual void version(CmdLineInterface& _cmd) {
+		std::string xversion = _cmd.getVersion();
+		std::cout << xversion << std::endl;
+	}
 };
 
 
-void parseOptions(int argc, char** argv, opts_t &opts)
-{
+void parseOptions(int argc, char** argv, opts_t &opts) {
 	const unsigned int nthreads = std::thread::hardware_concurrency() * SERVERS_MULTIPLIER;
 
 	try {
@@ -343,7 +341,7 @@ void parseOptions(int argc, char** argv, opts_t &opts)
 		ValueArg<size_t> num_committers("", "committers", "Number of committers.", false, NUM_COMMITTERS, "committers", cmd);
 
 		std::vector<std::string> args;
-		for (int i = 0; i < argc; i++) {
+		for (int i = 0; i < argc; ++i) {
 			if (i == 0) {
 				const char* a = strrchr(argv[i], '/');
 				if (a) {
@@ -428,8 +426,7 @@ void banner() {
 }
 
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 	opts_t opts;
 
 	parseOptions(argc, argv, opts);
