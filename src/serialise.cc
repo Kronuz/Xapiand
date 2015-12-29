@@ -105,7 +105,7 @@ Serialise::cartesian(const Cartesian &norm_cartesian)
 
 
 std::string
-Serialise::trixel_id(uInt64 id)
+Serialise::trixel_id(uint64_t id)
 {
 	id = Swap7Bytes(id);
 	const char serialise[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
@@ -212,20 +212,20 @@ Unserialise::date(const std::string &serialise_val)
 Cartesian
 Unserialise::cartesian(const std::string &str)
 {
-	double x = (((unsigned int)str.at(0) << 24) & 0xFF000000) | (((unsigned int)str.at(1) << 16) & 0xFF0000) | (((unsigned int)str.at(2) << 8) & 0xFF00) | (((unsigned int)str.at(3)) & 0xFF);
-	double y = (((unsigned int)str.at(4) << 24) & 0xFF000000) | (((unsigned int)str.at(5) << 16) & 0xFF0000) | (((unsigned int)str.at(6) << 8) & 0xFF00) | (((unsigned int)str.at(7)) & 0xFF);
+	double x = (((unsigned int)str.at(0) << 24) & 0xFF000000) | (((unsigned int)str.at(1) << 16) & 0xFF0000) | (((unsigned int)str.at(2) << 8) & 0xFF00)  | (((unsigned int)str.at(3)) & 0xFF);
+	double y = (((unsigned int)str.at(4) << 24) & 0xFF000000) | (((unsigned int)str.at(5) << 16) & 0xFF0000) | (((unsigned int)str.at(6) << 8) & 0xFF00)  | (((unsigned int)str.at(7)) & 0xFF);
 	double z = (((unsigned int)str.at(8) << 24) & 0xFF000000) | (((unsigned int)str.at(9) << 16) & 0xFF0000) | (((unsigned int)str.at(10) << 8) & 0xFF00) | (((unsigned int)str.at(11)) & 0xFF);
 	return Cartesian((x - MAXDOU2INT) / DOUBLE2INT, (y - MAXDOU2INT) / DOUBLE2INT, (z - MAXDOU2INT) / DOUBLE2INT);
 }
 
 
-uInt64
+uint64_t
 Unserialise::trixel_id(const std::string &str)
 {
-	uInt64 id = (((uInt64)str.at(0) << 48) & 0xFF000000000000) | (((uInt64)str.at(1) << 40) & 0xFF0000000000) | \
-				(((uInt64)str.at(2) << 32) & 0xFF00000000)     | (((uInt64)str.at(3) << 24) & 0xFF000000)     | \
-				(((uInt64)str.at(4) << 16) & 0xFF0000)         | (((uInt64)str.at(5) <<  8) & 0xFF00)         | \
-				(str.at(6) & 0xFF);
+	uint64_t id = (((uint64_t)str.at(0) << 48) & 0xFF000000000000) | (((uint64_t)str.at(1) << 40) & 0xFF0000000000) | \
+				  (((uint64_t)str.at(2) << 32) & 0xFF00000000)     | (((uint64_t)str.at(3) << 24) & 0xFF000000)     | \
+				  (((uint64_t)str.at(4) << 16) & 0xFF0000)         | (((uint64_t)str.at(5) <<  8) & 0xFF00)         | \
+				  (str.at(6) & 0xFF);
 	return id;
 }
 

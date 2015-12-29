@@ -1115,7 +1115,7 @@ Schema::insert_inheritable_specifications(cJSON* item, cJSON* properties)
 				for (int i = 0; i < elements; ++i) {
 					cJSON* acc = cJSON_GetArrayItem(spc, i);
 					if (acc->type == cJSON_Number && acc->valuedouble >= 1.0) {
-						specification.accuracy.push_back((uInt64)(acc->valuedouble));
+						specification.accuracy.push_back((uint64_t)(acc->valuedouble));
 					} else {
 						throw MSG_Error("Data inconsistency, accuracy in %s should be an array of positive numbers", NUMERIC_STR);
 					}

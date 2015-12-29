@@ -76,7 +76,7 @@ namespace Serialise {
 	// Serialise a normalize cartesian coordinate in SIZE_SERIALISE_CARTESIAN bytes.
 	std::string cartesian(const Cartesian &norm_cartesian);
 	// Serialise a trixel's id (HTM).
-	std::string trixel_id(uInt64 id);
+	std::string trixel_id(uint64_t id);
 	// Serialise an EWKT string.
 	std::string ewkt(const std::string &field_value);
 	std::string boolean(const std::string &field_value);
@@ -91,7 +91,7 @@ namespace Unserialise {
 	// Unserialise a serialise cartesian coordinate.
 	Cartesian cartesian(const std::string &str);
 	// Unserialise a trixel's id (HTM).
-	uInt64 trixel_id(const std::string &str);
+	uint64_t trixel_id(const std::string &str);
 	std::string boolean(const std::string &serialise_val);
 	std::string geo(const std::string &serialise_val);
 	std::string type(const std::string &str);

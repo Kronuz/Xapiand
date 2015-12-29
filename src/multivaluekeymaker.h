@@ -89,10 +89,9 @@ public:
 					EWKT_Parser::getRanges(value, true, HTM_MIN_ERROR, ranges, ins_key.valuegeo);
 					break;
 			}
-			slots.push_back(ins_key);
+			slots.push_back(std::move(ins_key));
 		} else if (type != GEO_TYPE) {
-			keys_values_t ins_key = { slot, type, 0, value, CartesianList(), reverse, false };
-			slots.push_back(ins_key);
+			slots.push_back({ slot, type, 0, value, CartesianList(), reverse, false });
 		}
 	}
 };
