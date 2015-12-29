@@ -202,8 +202,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 	// Get a node (any node)
 	std::unique_lock<std::mutex> lk_n(nodes_mtx);
 
-	nodes_map_t::const_iterator it(nodes.cbegin());
-	for ( ; it != nodes.cend(); it++) {
+	for (auto it = nodes.cbegin(); it != nodes.cend(); ++it) {
 		const Node &node = it->second;
 		Endpoint remote_endpoint(".", &node);
 		// Replicate database from the other node
@@ -476,7 +475,7 @@ XapiandManager::run(const opts_t &o)
 	L_NOTICE(this, msg.c_str());
 
 	ThreadPool<> server_pool("S%02zu", o.num_servers);
-	for (size_t i = 0; i < o.num_servers; i++) {
+	for (size_t i = 0; i < o.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(manager, nullptr);
 		Worker::create<HttpServer>(server, server->loop, http);
 #ifdef HAVE_REMOTE_PROTOCOL
@@ -488,13 +487,13 @@ XapiandManager::run(const opts_t &o)
 	}
 
 	ThreadPool<> replicator_pool("R%02zu", o.num_replicators);
-	for (size_t i = 0; i < o.num_replicators; i++) {
+	for (size_t i = 0; i < o.num_replicators; ++i) {
 		replicator_pool.enqueue(Worker::create<XapiandReplicator>(manager, nullptr));
 	}
 
 	ThreadPool<> autocommit_pool("C%02zu", o.num_committers);
 	std::vector<std::shared_ptr<DatabaseAutocommit>> committers;
-	for (size_t i = 0; i < o.num_committers; i++) {
+	for (size_t i = 0; i < o.num_committers; ++i) {
 		auto dbcommit = std::make_shared<DatabaseAutocommit>(manager);
 		autocommit_pool.enqueue(dbcommit);
 		committers.push_back(dbcommit);
@@ -681,9 +680,9 @@ XapiandManager::get_stats_json(pos_time_t &first_time, pos_time_t &second_time)
 		cJSON_AddNumberToObject(root_stats.get(), "Docs index", cnt[0]);
 		cJSON_AddNumberToObject(root_stats.get(), "Number searches", cnt[1]);
 		cJSON_AddNumberToObject(root_stats.get(), "Docs deleted", cnt[2]);
-		cJSON_AddNumberToObject(root_stats.get(), "Average time indexing (secs)", cnt[0] == 0 ? 0 : (tm_cnt[0] / cnt[0])*NANOSEC);
-		cJSON_AddNumberToObject(root_stats.get(), "Average search time (secs)", cnt[1] == 0 ? 0 :  (tm_cnt[1] / cnt[1])*NANOSEC);
-		cJSON_AddNumberToObject(root_stats.get(), "Average deletion time (secs)", cnt[2] == 0 ? 0 : (tm_cnt[2] / cnt[2])*NANOSEC);
+		cJSON_AddNumberToObject(root_stats.get(), "Average time indexing (secs)", cnt[0] == 0 ? 0 : (tm_cnt[0] / cnt[0]) * NANOSEC);
+		cJSON_AddNumberToObject(root_stats.get(), "Average search time (secs)", cnt[1] == 0 ? 0 :  (tm_cnt[1] / cnt[1]) * NANOSEC);
+		cJSON_AddNumberToObject(root_stats.get(), "Average deletion time (secs)", cnt[2] == 0 ? 0 : (tm_cnt[2] / cnt[2]) * NANOSEC);
 	}
 
 	return root_stats;
