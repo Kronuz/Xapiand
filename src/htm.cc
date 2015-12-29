@@ -27,7 +27,7 @@
 #include <fstream>
 
 
-const Cartesian start_vertices[6] = {
+static const Cartesian start_vertices[6] = {
 	Cartesian(0.0,  0.0,  1.0),
 	Cartesian(1.0,  0.0,  0.0),
 	Cartesian(0.0,  1.0,  0.0),
@@ -37,7 +37,7 @@ const Cartesian start_vertices[6] = {
 };
 
 
-const trixel_t start_trixels[8] = {
+static const trixel_t start_trixels[8] = {
 	{ S2, "s2", 3, 5, 4 },
 	{ N1, "n1", 4, 0, 3 },
 	{ S1, "s1", 2, 5, 3 },
@@ -49,7 +49,7 @@ const trixel_t start_trixels[8] = {
 };
 
 
-const index_t S[4] = {
+static const index_t S[4] = {
 	{ 1, 5, 2 },
 	{ 2, 5, 3 },
 	{ 3, 5, 4 },
@@ -57,7 +57,7 @@ const index_t S[4] = {
 };
 
 
-const index_t N[4] = {
+static const index_t N[4] = {
 	{ 1, 0, 4 },
 	{ 4, 0, 3 },
 	{ 3, 0, 2 },

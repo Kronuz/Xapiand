@@ -24,8 +24,8 @@
 
 #include <cmath>
 
-
-constexpr int DATUM_WGS84 = 0; // Datum for WGS84.
+// Datum for WGS84
+#define DATUM_WGS84 0
 
 
 /*
@@ -34,7 +34,7 @@ constexpr int DATUM_WGS84 = 0; // Datum for WGS84.
  * http://icvficheros.icv.gva.es/ICV/geova/erva/Utilidades/jornada_ETRS89/1_ANTECEDENTES_IGN.pdf
  * http://www.geocachingtoolbox.com/?page=datumEllipsoidDetails
  */
-const ellipsoid_t ellipsoids[12] = {
+static const ellipsoid_t ellipsoids[12] = {
 	// Used by GPS and default in this aplication.
 	{ "World Geodetic System 1984 (WE)",	 6378137,     6356752.314245179, 0.00669437999014131699613723 },
 	{ "Geodetic Reference System 1980 (RF)", 6378137,     6356752.314140356, 0.00669438002290078762535911 },
@@ -62,7 +62,7 @@ const ellipsoid_t ellipsoids[12] = {
  * http://earth-info.nga.mil/GandG/coordsys/datums/NATO_DT.pdfs
  * http://georepository.com/search/by-name/?query=&include_world=on
  */
-const datum_t datums[17] = {
+static const datum_t datums[17] = {
 	// World Geodetic System 1984 (WGS84)
 	// EPSG_SRID: 4326
 	// Code NATO: WGE
@@ -134,7 +134,7 @@ const datum_t datums[17] = {
 };
 
 
-const std::map<int, int> SRIDS_DATUMS({
+static const std::map<int, int> SRIDS_DATUMS({
 	std::pair<int, int>(WGS84,    0),
 	std::pair<int, int>(WGS72,    1),
 	std::pair<int, int>(NAD83,    2),
