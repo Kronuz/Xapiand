@@ -42,7 +42,7 @@ inline char* u32toa(uint32_t value, char* buffer) {
     if (value < 10000) {
         const uint32_t d1 = (value / 100) << 1;
         const uint32_t d2 = (value % 100) << 1;
-        
+
         if (value >= 1000)
             *buffer++ = cDigitsLut[d1];
         if (value >= 100)

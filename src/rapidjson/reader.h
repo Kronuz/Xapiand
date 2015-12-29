@@ -1,5 +1,5 @@
 // Tencent is pleased to support the open source community by making RapidJSON available.
-// 
+//
 // Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip. All rights reserved.
 //
 // Licensed under the MIT License (the "License"); you may not use this file except
@@ -7,9 +7,9 @@
 //
 // http://opensource.org/licenses/MIT
 //
-// Unless required by applicable law or agreed to in writing, software distributed 
-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
-// CONDITIONS OF ANY KIND, either express or implied. See the License for the 
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
 
 #ifndef RAPIDJSON_READER_H_
@@ -149,7 +149,7 @@ enum ParseFlag {
 
 /*! \class rapidjson::Handler
     \brief Concept for receiving events from GenericReader upon parsing.
-    The functions return true if no error occurs. If they return false, 
+    The functions return true if no error occurs. If they return false,
     the event publisher should terminate the process.
 \code
 concept Handler {
@@ -438,7 +438,7 @@ public:
 
     //! Whether a parse error has occured in the last parsing.
     bool HasParseError() const { return parseResult_.IsError(); }
-    
+
     //! Get the \ref ParseErrorCode of last parsing.
     ParseErrorCode GetParseErrorCode() const { return parseResult_.Code(); }
 
@@ -504,7 +504,7 @@ private:
     void ParseObject(InputStream& is, Handler& handler) {
         RAPIDJSON_ASSERT(is.Peek() == '{');
         is.Take();  // Skip '{'
-        
+
         if (!handler.StartObject())
             RAPIDJSON_PARSE_ERROR(kParseErrorTermination, is.Tell());
 
@@ -547,11 +547,11 @@ private:
                     SkipWhitespaceAndComments<parseFlags>(is);
                     RAPIDJSON_PARSE_ERROR_EARLY_RETURN_VOID;
                     break;
-                case '}': 
+                case '}':
                     if (!handler.EndObject(memberCount))
                         RAPIDJSON_PARSE_ERROR(kParseErrorTermination, is.Tell());
                     return;
-                default:  
+                default:
                     RAPIDJSON_PARSE_ERROR(kParseErrorObjectMissCommaOrCurlyBracket, is.Tell());
                     break;
             }
@@ -563,10 +563,10 @@ private:
     void ParseArray(InputStream& is, Handler& handler) {
         RAPIDJSON_ASSERT(is.Peek() == '[');
         is.Take();  // Skip '['
-        
+
         if (!handler.StartArray())
             RAPIDJSON_PARSE_ERROR(kParseErrorTermination, is.Tell());
-        
+
         SkipWhitespaceAndComments<parseFlags>(is);
         RAPIDJSON_PARSE_ERROR_EARLY_RETURN_VOID;
 
@@ -590,11 +590,11 @@ private:
                     SkipWhitespaceAndComments<parseFlags>(is);
                     RAPIDJSON_PARSE_ERROR_EARLY_RETURN_VOID;
                     break;
-                case ']': 
+                case ']':
                     if (!handler.EndArray(elementCount))
                         RAPIDJSON_PARSE_ERROR(kParseErrorTermination, is.Tell());
                     return;
-                default:  
+                default:
                     RAPIDJSON_PARSE_ERROR(kParseErrorArrayMissCommaOrSquareBracket, is.Tell());
                     break;
             }
@@ -877,8 +877,8 @@ private:
         bool useDouble = false;
         double d = 0.0;
         if (use64bit) {
-            if (minus) 
-                while (s.Peek() >= '0' && s.Peek() <= '9') {                    
+            if (minus)
+                while (s.Peek() >= '0' && s.Peek() <= '9') {
                      if (i64 >= RAPIDJSON_UINT64_C2(0x0CCCCCCC, 0xCCCCCCCC)) // 2^63 = 9223372036854775808
                         if (i64 != RAPIDJSON_UINT64_C2(0x0CCCCCCC, 0xCCCCCCCC) || s.Peek() > '8') {
                             d = i64;
@@ -889,7 +889,7 @@ private:
                     significandDigit++;
                 }
             else
-                while (s.Peek() >= '0' && s.Peek() <= '9') {                    
+                while (s.Peek() >= '0' && s.Peek() <= '9') {
                     if (i64 >= RAPIDJSON_UINT64_C2(0x19999999, 0x99999999)) // 2^64 - 1 = 18446744073709551615
                         if (i64 != RAPIDJSON_UINT64_C2(0x19999999, 0x99999999) || s.Peek() > '5') {
                             d = i64;
@@ -925,7 +925,7 @@ private:
                 // Use i64 to store significand in 64-bit architecture
                 if (!use64bit)
                     i64 = i;
-        
+
                 while (s.Peek() >= '0' && s.Peek() <= '9') {
                     if (i64 > RAPIDJSON_UINT64_C2(0x1FFFFF, 0xFFFFFFFF)) // 2^53 - 1 for fast path
                         break;
@@ -1120,7 +1120,7 @@ private:
 #undef N
 #undef N16
 //!@endcond
-        
+
         if (sizeof(Ch) == 1 || unsigned(c) < 256)
             return (Token)tokenMap[(unsigned char)c];
         else
@@ -1441,7 +1441,7 @@ private:
             // Error flag has been set.
             return;
         }
-        
+
         switch (src) {
         case IterativeParsingStartState:            RAPIDJSON_PARSE_ERROR(kParseErrorDocumentEmpty, is.Tell()); return;
         case IterativeParsingFinishState:           RAPIDJSON_PARSE_ERROR(kParseErrorDocumentRootNotSingular, is.Tell()); return;
@@ -1451,7 +1451,7 @@ private:
         case IterativeParsingMemberValueState:      RAPIDJSON_PARSE_ERROR(kParseErrorObjectMissCommaOrCurlyBracket, is.Tell()); return;
         case IterativeParsingElementState:          RAPIDJSON_PARSE_ERROR(kParseErrorArrayMissCommaOrSquareBracket, is.Tell()); return;
         default:                                    RAPIDJSON_PARSE_ERROR(kParseErrorUnspecificSyntaxError, is.Tell()); return;
-        }       
+        }
     }
 
     template <unsigned parseFlags, typename InputStream, typename Handler>
