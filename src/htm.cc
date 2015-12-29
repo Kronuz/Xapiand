@@ -366,20 +366,20 @@ HTM::lookupTrixels(int8_t level, std::string name, const Cartesian &v0, const Ca
 		return;
 	}
 
-	int P, F, type_trixels[4];
 	Cartesian w0, w1, w2;
 	midPoint(v0, v1, w2);
 	midPoint(v1, v2, w0);
 	midPoint(v2, v0, w1);
 
-	type_trixels[0] = verifyTrixel(v0, w2, w1);
-	type_trixels[1] = verifyTrixel(v1, w0, w2);
-	type_trixels[2] = verifyTrixel(v2, w1, w0);
-	type_trixels[3] = verifyTrixel(w0, w1, w2);
+	int type_trixels[4] = {
+		verifyTrixel(v0, w2, w1),
+		verifyTrixel(v1, w0, w2),
+		verifyTrixel(v2, w1, w0),
+		verifyTrixel(w0, w1, w2)
+	};
 
 	// Number of full and partial subtrixels.
-	F = (type_trixels[0] == HTM_FULL)  + (type_trixels[1] == HTM_FULL)  + (type_trixels[2] == HTM_FULL)  + (type_trixels[3] == HTM_FULL);
-	P = (type_trixels[0] == HTM_PARTIAL) + (type_trixels[1] == HTM_PARTIAL) + (type_trixels[2] == HTM_PARTIAL) + (type_trixels[3] == HTM_PARTIAL);
+	int F = (type_trixels[0] == HTM_FULL) + (type_trixels[1] == HTM_FULL) + (type_trixels[2] == HTM_FULL) + (type_trixels[3] == HTM_FULL);
 
 	if (F == 4) {
 		names.push_back(std::move(name));
