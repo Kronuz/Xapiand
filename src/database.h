@@ -91,8 +91,6 @@ public:
 
 	std::unique_ptr<Xapian::Database> db;
 
-	static std::regex find_field_re;
-
 	struct search_t {
 		Xapian::Query query;
 		std::vector<std::string> suggested_query;

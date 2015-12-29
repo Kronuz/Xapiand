@@ -44,7 +44,9 @@
 
 #define NANOSEC 1e-9
 
-std::regex XapiandManager::time_re = std::regex("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
+
+static const std::regex time_re("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
+
 
 std::atomic<time_t> XapiandManager::shutdown_asap(0);
 std::atomic<time_t> XapiandManager::shutdown_now(0);

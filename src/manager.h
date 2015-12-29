@@ -80,8 +80,6 @@ class XapiandManager : public Worker  {
 
 	Endpoints cluster_endpoints;
 
-	static std::regex time_re;
-
 	XapiandManager(ev::loop_ref *loop_, const opts_t &o);
 
 	void async_shutdown_cb(ev::async &watcher, int revents);

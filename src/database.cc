@@ -38,7 +38,7 @@
 #define DEFAULT_OFFSET "0" /* Replace for the real offset */
 
 
-std::regex Database::find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
+static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
 
 
 static auto getPos = [](size_t pos, size_t size) noexcept {

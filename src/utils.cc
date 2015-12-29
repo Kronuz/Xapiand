@@ -65,12 +65,15 @@
 #define HTTP_UPLOAD "_upload"
 #define HTTP_UPLOAD_SIZE 7
 
-std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
-std::regex find_range_re("(.*)\\.\\.(.*)", std::regex::optimize);
+
+const std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
+const std::regex find_range_re("(.*)\\.\\.(.*)", std::regex::optimize);
+
 
 pos_time_t b_time;
 std::chrono::time_point<std::chrono::system_clock> init_time;
 times_row_t stats_cnt;
+
 
 static std::random_device rd;  // Random device engine, usually based on /dev/random on UNIX-like systems
 static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed

@@ -48,9 +48,11 @@
 #define METHOD_OPTIONS 6
 #define METHOD_PATCH   24
 
-std::regex header_accept_re("([a-z*+]+/[a-z*+]+)(?:;?(q=(?:\\d*\\.)?\\d+)?),?");
 
-const char* status_code[6][14] = {
+static const std::regex header_accept_re("([a-z*+]+/[a-z*+]+)(?:;?(q=(?:\\d*\\.)?\\d+)?),?");
+
+
+static const char* status_code[6][14] = {
 	{},
 	{
 		"Continue"                  // 100

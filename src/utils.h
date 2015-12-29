@@ -82,8 +82,8 @@ struct parser_url_path_t {
 	const char *off_upload;
 };
 
-extern std::regex numeric_re;
-extern std::regex find_range_re;
+extern const std::regex numeric_re;
+extern const std::regex find_range_re;
 
 // Varibles used by server stats.
 extern pos_time_t b_time;
