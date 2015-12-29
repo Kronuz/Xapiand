@@ -45,9 +45,9 @@ struct test_cartesian_t {
 
 
 struct test_trixel_id_t {
-	const uInt64 trixel_id;
+	const uint64_t trixel_id;
 	const char *expect_serialise;
-	const uInt64 expect_unserialise;
+	const uint64_t expect_unserialise;
 };
 
 

@@ -118,16 +118,16 @@ const test_t test_unserialisedate[] {
 
 const test_cartesian_t test_seri_cartesian[] {
 	// Cartesian.		                                    Expected serialise Cartesian.                       Expected Cartesian after of unserialise.
-	{ Cartesian(10.0, 20.0, 0.0, Cartesian::DEGREES),       "r\\xc6]\\xfdO\\xafY\\xe0E\\xe3=\\xe5",             "0.925602814 0.336891873 0.172520422"    },
-	{ Cartesian(30.0, 15.0, 0.0, Cartesian::DEGREES),       "m\\x8c[\\xe2H\\xfc\\xac\\x13YA\\xc8$",             "0.837915107 0.224518676 0.497483301"    },
-	{ Cartesian(40.0, 30.0, 21.0, Cartesian::DEGREES),      "cA\\xb4BR\\x7fl0a\\xc4BE",                         "0.665250371 0.384082481 0.640251974"    },
-	{ Cartesian(30.0, 28.0, 100.0, Cartesian::DEGREES),     "iB\\x02`S\\xe0\\xfe\\x88YA\\xc8L",                 "0.765933665 0.407254153 0.497483341"    },
-	{ Cartesian(-10.0, -20.0, 0.0, Cartesian::DEGREES),     "r\\xc6]\\xfd\\'\\x86:\\x1e1RV\\x19",               "0.925602814 -0.336891873 -0.172520422"  },
-	{ Cartesian(-30.0, 15.0, 0.0, Cartesian::DEGREES),      "m\\x8c[\\xe2H\\xfc\\xac\\x13\\x1d\\xf3\\xcb\\xda", "0.837915107 0.224518676 -0.497483301"   },
-	{ Cartesian(40.0, -30.0, 21.0, Cartesian::DEGREES),     "cA\\xb4B$\\xb6\\'\\xcea\\xc4BE",                   "0.665250371 -0.384082481 0.640251974"   },
-	{ Cartesian(30.0, 28.0, -100.0, Cartesian::DEGREES),    "iB\\x02\\x88S\\xe0\\xfe\\x9eYA\\xc7\\xfd",         "0.765933705 0.407254175 0.497483262"    },
-	{ Cartesian(-0.765933705, -0.407254175, -0.497483262),  "\\r\\xf3\\x91v#T\\x95`\\x1d\\xf3\\xcc\\x01",       "-0.765933705 -0.407254175 -0.497483262" },
-	{ Cartesian(),                                          nullptr,                                            nullptr                                  },
+	{ Cartesian(10.0, 20.0, 0.0, CartesianUnits::DEGREES),       "r\\xc6]\\xfdO\\xafY\\xe0E\\xe3=\\xe5",             "0.925602814 0.336891873 0.172520422"    },
+	{ Cartesian(30.0, 15.0, 0.0, CartesianUnits::DEGREES),       "m\\x8c[\\xe2H\\xfc\\xac\\x13YA\\xc8$",             "0.837915107 0.224518676 0.497483301"    },
+	{ Cartesian(40.0, 30.0, 21.0, CartesianUnits::DEGREES),      "cA\\xb4BR\\x7fl0a\\xc4BE",                         "0.665250371 0.384082481 0.640251974"    },
+	{ Cartesian(30.0, 28.0, 100.0, CartesianUnits::DEGREES),     "iB\\x02`S\\xe0\\xfe\\x88YA\\xc8L",                 "0.765933665 0.407254153 0.497483341"    },
+	{ Cartesian(-10.0, -20.0, 0.0, CartesianUnits::DEGREES),     "r\\xc6]\\xfd\\'\\x86:\\x1e1RV\\x19",               "0.925602814 -0.336891873 -0.172520422"  },
+	{ Cartesian(-30.0, 15.0, 0.0, CartesianUnits::DEGREES),      "m\\x8c[\\xe2H\\xfc\\xac\\x13\\x1d\\xf3\\xcb\\xda", "0.837915107 0.224518676 -0.497483301"   },
+	{ Cartesian(40.0, -30.0, 21.0, CartesianUnits::DEGREES),     "cA\\xb4B$\\xb6\\'\\xcea\\xc4BE",                   "0.665250371 -0.384082481 0.640251974"   },
+	{ Cartesian(30.0, 28.0, -100.0, CartesianUnits::DEGREES),    "iB\\x02\\x88S\\xe0\\xfe\\x9eYA\\xc7\\xfd",         "0.765933705 0.407254175 0.497483262"    },
+	{ Cartesian(-0.765933705, -0.407254175, -0.497483262),       "\\r\\xf3\\x91v#T\\x95`\\x1d\\xf3\\xcc\\x01",       "-0.765933705 -0.407254175 -0.497483262" },
+	{ Cartesian(),                                               nullptr,                                            nullptr                                  },
 };
 
 
@@ -239,7 +239,7 @@ int test_unserialise_cartesian() {
 int test_serialise_trixel_id() {
 	int cont = 0;
 	for (const test_trixel_id_t *p = test_seri_trixels; p->expect_serialise; ++p) {
-		uInt64 trixel_id = p->trixel_id;
+		uint64_t trixel_id = p->trixel_id;
 		std::string res(repr(Serialise::trixel_id(trixel_id)));
 		if (res.compare(p->expect_serialise) != 0) {
 			++cont;
@@ -260,7 +260,7 @@ int test_serialise_trixel_id() {
 int test_unserialise_trixel_id() {
 	int cont = 0;
 	for (const test_trixel_id_t *p = test_seri_trixels; p->expect_serialise; ++p) {
-		uInt64 trixel_id = p->trixel_id;
+		uint64_t trixel_id = p->trixel_id;
 		std::string serialise(Serialise::trixel_id(trixel_id));
 		trixel_id = Unserialise::trixel_id(serialise);
 		if (p->trixel_id != trixel_id) {

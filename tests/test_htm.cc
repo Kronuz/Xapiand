@@ -147,7 +147,7 @@ int test_cartesian_transforms() {
 
 	try {
 		for (auto it = SRID_2_WGS84.begin(); it != SRID_2_WGS84.end(); ++it) {
-			Cartesian c(it->lat_src, it->lon_src, it->h_src, Cartesian::DEGREES, it->SRID);
+			Cartesian c(it->lat_src, it->lon_src, it->h_src, CartesianUnits::DEGREES, it->SRID);
 			double lat, lon, height;
 			c.toGeodetic(lat, lon, height);
 			std::string get = c.Decimal2Degrees();
@@ -228,14 +228,13 @@ int test_hullConvex() {
 					++contLL;
 				} else {
 					lon = atof(output);
-					Cartesian c(lat, lon, 0, Cartesian::DEGREES);
+					Cartesian c(lat, lon, 0, CartesianUnits::DEGREES);
 					pts.push_back(c);
 					contLL = 0;
 				}
 			}
 
 			try {
-				Geometry g(pts, Geometry::CONVEX_HULL);
 				std::string x_s, y_s, z_s;
 				double x1, y1, z1;
 				int i = 1;
@@ -254,6 +253,7 @@ int test_hullConvex() {
 					fs << "ax.plot3D(x, y, z, 'ro', lw = 2.0, ms = 6);\n";
 				}
 
+				Geometry g(std::move(pts), GeometryType::CONVEX_HULL);
 				fs << "# Points for the hull convex\n";
 				i = 1;
 				for (auto it = g.corners.begin(); it != g.corners.end(); ++it) {
@@ -322,43 +322,43 @@ int test_HTM_chull() {
 	int cont = 0;
 
 	std::vector<std::string> files, expect_files, result_files;
-	std::vector<Geometry::typePoints> types;
+	std::vector<GeometryType> types;
 	files.push_back("examples/ColoradoPoly.txt");
 	expect_files.push_back("examples/ColoradoPoly_expect_HTM.txt");
 	result_files.push_back("examples/ColoradoPoly_polygon_HTM.py");
-	types.push_back(Geometry::CONVEX_POLYGON);
+	types.push_back(GeometryType::CONVEX_POLYGON);
 	files.push_back("examples/Georgia.txt");
 	expect_files.push_back("examples/Georgia_expect_HTM.txt");
 	result_files.push_back("examples/Georgia_polygon_HTM.py");
-	types.push_back(Geometry::CONVEX_HULL);
+	types.push_back(GeometryType::CONVEX_HULL);
 	files.push_back("examples/MexPoly.txt");
 	expect_files.push_back("examples/MexPoly_expect_HTM.txt");
 	result_files.push_back("examples/MexPoly_polygon_HTM.py");
-	types.push_back(Geometry::CONVEX_HULL);
+	types.push_back(GeometryType::CONVEX_HULL);
 	files.push_back("examples/Nave.txt");
 	expect_files.push_back("examples/Nave_expect_HTM.txt");
 	result_files.push_back("examples/Nave_polygon_HTM.py");
-	types.push_back(Geometry::CONVEX_HULL);
+	types.push_back(GeometryType::CONVEX_HULL);
 	files.push_back("examples/Poly.txt");
 	expect_files.push_back("examples/Poly_expect_HTM.txt");
 	result_files.push_back("examples/Poly_polygon_HTM.py");
-	types.push_back(Geometry::CONVEX_HULL);
+	types.push_back(GeometryType::CONVEX_HULL);
 	files.push_back("examples/Poly2.txt");
 	expect_files.push_back("examples/Poly2_expect_HTM.txt");
 	result_files.push_back("examples/Poly2_polygon_HTM.py");
-	types.push_back(Geometry::CONVEX_HULL);
+	types.push_back(GeometryType::CONVEX_HULL);
 	files.push_back("examples/Poly3.txt");
 	expect_files.push_back("examples/Poly3_expect_HTM.txt");
 	result_files.push_back("examples/Poly3_polygon_HTM.py");
-	types.push_back(Geometry::CONVEX_POLYGON);
+	types.push_back(GeometryType::CONVEX_POLYGON);
 	files.push_back("examples/Strip.txt");
 	expect_files.push_back("examples/Strip_expect_HTM.txt");
 	result_files.push_back("examples/Strip_polygon_HTM.py");
-	types.push_back(Geometry::CONVEX_POLYGON);
+	types.push_back(GeometryType::CONVEX_POLYGON);
 	files.push_back("examples/Utah.txt");
 	expect_files.push_back("examples/Utah_expect_HTM.txt");
 	result_files.push_back("examples/Utah_polygon_HTM.py");
-	types.push_back(Geometry::CONVEX_HULL);
+	types.push_back(GeometryType::CONVEX_HULL);
 
 	auto it_f = files.begin();
 	auto it_e = expect_files.begin();
@@ -382,16 +382,14 @@ int test_HTM_chull() {
 					++contLL;
 				} else {
 					lon = atof(output);
-					Cartesian c(lat, lon, 0, Cartesian::DEGREES);
+					Cartesian c(lat, lon, 0, CartesianUnits::DEGREES);
 					pts.push_back(c);
 					contLL = 0;
 				}
 			}
 
 			try {
-				Geometry g(pts, *it_t);
-
-				HTM _htm(partials, error, g);
+				HTM _htm(partials, error, Geometry(std::move(pts), *it_t));
 				_htm.run();
 
 				for (auto itn = _htm.names.begin(); itn != _htm.names.end(); ++itn) {
@@ -469,11 +467,7 @@ int test_HTM_circle() {
 			std::ifstream readEFile(file_expect);
 			if (readEFile.is_open()) {
 				try {
-					Cartesian center(lat, lon, 0, Cartesian::DEGREES);
-					Constraint c(center, radius);
-					Geometry g(c);
-
-					HTM _htm(partials, error, g);
+					HTM _htm(partials, error, Geometry(Constraint(Cartesian(lat, lon, 0, CartesianUnits::DEGREES), radius)));
 					_htm.run();
 
 					for (auto itn = _htm.names.begin(); itn != _htm.names.end(); ++itn) {
