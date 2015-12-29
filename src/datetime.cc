@@ -26,12 +26,11 @@
 #include "log.h"
 #include "utils.h"
 
+#define MICROSEC 1e-6
+
 
 const std::regex Datetime::date_re("([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]{1,3}))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\\|\\|[ ]*([+-/\\dyMwdhms]+))?", std::regex::optimize);
 const std::regex Datetime::date_math_re("([+-]\\d+|\\/{1,2})([dyMwhms])", std::regex::optimize);
-
-
-static constexpr double MICROSECOND = 1000000.0;
 
 
 static constexpr int days[2][12] = {
@@ -418,7 +417,7 @@ Datetime::ctime(const ::std::string &epoch)
 		time_t timestamp = (time_t) utimestamp;
 		std::string microseconds = epoch;
 		struct tm *timeinfo = gmtime(&timestamp);
-		return isotime(timeinfo, std::stod(std::string(microseconds.c_str() + microseconds.find("."), 7)) * MICROSECOND);
+		return isotime(timeinfo, std::stod(std::string(microseconds.c_str() + microseconds.find("."), 7)) / MICROSEC);
 	} else {
 		return epoch;
 	}
@@ -433,7 +432,7 @@ Datetime::ctime(const ::std::string &epoch)
 Datetime::ctime(double epoch)
 {
 	time_t timestamp = (time_t) epoch;
-	int microseconds = (epoch - timestamp) * MICROSECOND;
+	int microseconds = (epoch - timestamp) / MICROSEC;
 	struct tm *timeinfo = gmtime(&timestamp);
 	return isotime(timeinfo, microseconds);
 }
@@ -466,5 +465,5 @@ Datetime::isDate(const std::string &date)
 std::string
 Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock> &tp)
 {
-	return ctime(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() / MICROSECOND);
+	return ctime(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * MICROSEC);
 }
