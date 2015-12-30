@@ -1226,7 +1226,7 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 				}
 
 				if (has_node_name) {
-					if(index_path.at(0) != '/') {
+					if (index_path.at(0) != '/') {
 						index_path = '/' + index_path;
 					}
 					Endpoint index("xapian://" + node_name + index_path);
