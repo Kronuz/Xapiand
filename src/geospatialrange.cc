@@ -37,8 +37,8 @@ static double geo_weight_from_angle(double angle) {
 void
 CartesianList::unserialise(const std::string& serialised)
 {
-	for (size_t i = 0, j = SIZE_SERIALISE_CARTESIAN; i < serialised.size(); i = j, j += SIZE_SERIALISE_CARTESIAN) {
-		push_back(Unserialise::cartesian(serialised.substr(i, j)));
+	for (size_t i = 0; i < serialised.size(); i += SIZE_SERIALISE_CARTESIAN) {
+		push_back(Unserialise::cartesian(serialised.substr(i, SIZE_SERIALISE_CARTESIAN)));
 	}
 }
 
@@ -58,8 +58,8 @@ CartesianList::serialise() const
 void
 uInt64List::unserialise(const std::string& serialised)
 {
-	for (size_t i = 0, j = SIZE_BYTES_ID; i < serialised.size(); i = j, j += SIZE_BYTES_ID) {
-		push_back(Unserialise::trixel_id(serialised.substr(i, j)));
+	for (size_t i = 0; i < serialised.size(); i += SIZE_BYTES_ID) {
+		push_back(Unserialise::trixel_id(serialised.substr(i, SIZE_BYTES_ID)));
 	}
 }
 
