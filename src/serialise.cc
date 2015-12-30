@@ -54,9 +54,8 @@ Serialise::serialise(char field_type, const std::string &field_value)
 std::string
 Serialise::numeric(const std::string &field_value)
 {
-	double val;
 	if (isNumeric(field_value)) {
-		val = std::stod(field_value);
+		double val = std::stod(field_value);
 		return Xapian::sortable_serialise(val);
 	}
 	return "";
@@ -212,9 +211,13 @@ Unserialise::date(const std::string &serialise_val)
 Cartesian
 Unserialise::cartesian(const std::string &str)
 {
-	double x = (((unsigned int)str.at(0) << 24) & 0xFF000000) | (((unsigned int)str.at(1) << 16) & 0xFF0000) | (((unsigned int)str.at(2) << 8) & 0xFF00)  | (((unsigned int)str.at(3)) & 0xFF);
-	double y = (((unsigned int)str.at(4) << 24) & 0xFF000000) | (((unsigned int)str.at(5) << 16) & 0xFF0000) | (((unsigned int)str.at(6) << 8) & 0xFF00)  | (((unsigned int)str.at(7)) & 0xFF);
-	double z = (((unsigned int)str.at(8) << 24) & 0xFF000000) | (((unsigned int)str.at(9) << 16) & 0xFF0000) | (((unsigned int)str.at(10) << 8) & 0xFF00) | (((unsigned int)str.at(11)) & 0xFF);
+	if (str.size() != SIZE_SERIALISE_CARTESIAN) {
+		throw MSG_Error("Can not unserialise cartesian: [%s] %zu", str.c_str(), str.size());
+	}
+
+	double x = (((unsigned)str[0] << 24) & 0xFF000000) | (((unsigned)str[1] << 16) & 0xFF0000) | (((unsigned)str[2] << 8) & 0xFF00)  | (((unsigned)str[3]) & 0xFF);
+	double y = (((unsigned)str[4] << 24) & 0xFF000000) | (((unsigned)str[5] << 16) & 0xFF0000) | (((unsigned)str[6] << 8) & 0xFF00)  | (((unsigned)str[7]) & 0xFF);
+	double z = (((unsigned)str[8] << 24) & 0xFF000000) | (((unsigned)str[9] << 16) & 0xFF0000) | (((unsigned)str[10] << 8) & 0xFF00) | (((unsigned)str[11]) & 0xFF);
 	return Cartesian((x - MAXDOU2INT) / DOUBLE2INT, (y - MAXDOU2INT) / DOUBLE2INT, (z - MAXDOU2INT) / DOUBLE2INT);
 }
 
@@ -222,10 +225,14 @@ Unserialise::cartesian(const std::string &str)
 uint64_t
 Unserialise::trixel_id(const std::string &str)
 {
-	uint64_t id = (((uint64_t)str.at(0) << 48) & 0xFF000000000000) | (((uint64_t)str.at(1) << 40) & 0xFF0000000000) | \
-				  (((uint64_t)str.at(2) << 32) & 0xFF00000000)     | (((uint64_t)str.at(3) << 24) & 0xFF000000)     | \
-				  (((uint64_t)str.at(4) << 16) & 0xFF0000)         | (((uint64_t)str.at(5) <<  8) & 0xFF00)         | \
-				  (str.at(6) & 0xFF);
+	if (str.size() != SIZE_BYTES_ID) {
+		throw MSG_Error("Can not unserialise trixel_id [%s] %zu", str.c_str(), str.size());
+	}
+
+	uint64_t id = (((uint64_t)str[0] << 48) & 0xFF000000000000) | (((uint64_t)str[1] << 40) & 0xFF0000000000) | \
+				  (((uint64_t)str[2] << 32) & 0xFF00000000)     | (((uint64_t)str[3] << 24) & 0xFF000000)     | \
+				  (((uint64_t)str[4] << 16) & 0xFF0000)         | (((uint64_t)str[5] <<  8) & 0xFF00)         | \
+				  (str[6] & 0xFF);
 	return id;
 }
 
@@ -245,7 +252,7 @@ Unserialise::geo(const std::string &serialise_val)
 	uInt64List ranges;
 	ranges.unserialise(s_geo.at(0));
 	std::string res("Ranges: { ");
-	for (uInt64List::const_iterator it(ranges.begin()); it != ranges.end(); ++it) {
+	for (auto it = ranges.begin(); it != ranges.end(); ++it) {
 		res += "[" + std::to_string(*it) + ", " + std::to_string(*(++it)) + "] ";
 	}
 	res += "}";
@@ -253,7 +260,7 @@ Unserialise::geo(const std::string &serialise_val)
 	CartesianList centroids;
 	centroids.unserialise(s_geo.at(1));
 	res += "  Centroids: { ";
-	for (CartesianList::const_iterator it(centroids.begin()); it != centroids.end(); ++it) {
+	for (auto it = centroids.begin(); it != centroids.end(); ++it) {
 		res += "(" + std::to_string(it->x) + ", " + std::to_string(it->y) + ", " + std::to_string(it->z) + ") ";
 	}
 	res += "}";

@@ -158,7 +158,7 @@ MultipleValueRange::unserialise_with_registry(const std::string &s, const Xapian
 {
 	StringList data;
 	data.unserialise(s);
-	return new MultipleValueRange(Xapian::sortable_unserialise(data.at(0)), data.at(1), data.at(2));
+	return new MultipleValueRange(Xapian::sortable_unserialise(data[0]), data[1], data[2]);
 }
 
 
@@ -282,7 +282,7 @@ MultipleValueGE::unserialise_with_registry(const std::string &s, const Xapian::R
 {
 	StringList data;
 	data.unserialise(s);
-	return new MultipleValueGE(Xapian::sortable_unserialise(data.at(0)), data.at(1));
+	return new MultipleValueGE(Xapian::sortable_unserialise(data[0]), data[1]);
 }
 
 
@@ -405,7 +405,7 @@ MultipleValueLE::unserialise_with_registry(const std::string &s, const Xapian::R
 {
 	StringList data;
 	data.unserialise(s);
-	return new MultipleValueLE(Xapian::sortable_unserialise(data.at(0)), data.at(1));
+	return new MultipleValueLE(Xapian::sortable_unserialise(data[0]), data[1]);
 }
 
 

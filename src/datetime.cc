@@ -119,31 +119,31 @@ Datetime::computeDateMath(tm_t &tm, const std::string &op, const std::string &un
 {
 	time_t dateGMT;
 	struct tm *timeinfo;
-	if (op.at(0) == '+' || op.at(0) == '-') {
+	if (op[0] == '+' || op[0] == '-') {
 		int max_days, num = std::stoi(std::string(op.c_str() + 1, op.size()));
-		switch (units.at(0)) {
+		switch (units[0]) {
 			case 'y':
-				(op.at(0) == '+') ? tm.year += num : tm.year -= num;
+				(op[0] == '+') ? tm.year += num : tm.year -= num;
 				break;
 			case 'M':
-				(op.at(0) == '+') ? tm.mon += num : tm.mon -= num;
+				(op[0] == '+') ? tm.mon += num : tm.mon -= num;
 				normalizeMonths(tm.year, tm.mon);
 				max_days = getDays_month(tm.year, tm.mon);
 				if (tm.day > max_days) tm.day = max_days;
 				break;
 			case 'w':
-				(op.at(0) == '+') ? tm.day += 7 * num : tm.day -= 7 * num; break;
+				(op[0] == '+') ? tm.day += 7 * num : tm.day -= 7 * num; break;
 			case 'd':
-				(op.at(0) == '+') ? tm.day += num : tm.day -= num; break;
+				(op[0] == '+') ? tm.day += num : tm.day -= num; break;
 			case 'h':
-				(op.at(0) == '+') ? tm.hour += num : tm.hour -= num; break;
+				(op[0] == '+') ? tm.hour += num : tm.hour -= num; break;
 			case 'm':
-				(op.at(0) == '+') ? tm.min += num : tm.min -= num; break;
+				(op[0] == '+') ? tm.min += num : tm.min -= num; break;
 			case 's':
-				(op.at(0) == '+') ? tm.sec += num : tm.sec -= num; break;
+				(op[0] == '+') ? tm.sec += num : tm.sec -= num; break;
 		}
 	} else {
-		switch (units.at(0)) {
+		switch (units[0]) {
 			case 'y':
 				if (op.compare("/") == 0) {
 					tm.mon = 12;

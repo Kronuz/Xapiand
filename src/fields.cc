@@ -36,7 +36,7 @@ NumericFieldProcessor::operator()(const std::string &str)
 {
 	// For negative number, we receive _# and we serialise -#.
 	std::string serialise(str.c_str());
-	if (serialise.at(0) == '_') serialise.at(0) = '-';
+	if (serialise[0] == '_') serialise[0] = '-';
 	serialise = Serialise::numeric(serialise);
 	if (serialise.empty()) {
 		throw Xapian::QueryParserError("Didn't understand numeric specification '" + str + "'");
@@ -66,7 +66,7 @@ Xapian::Query
 DateFieldProcessor::operator()(const std::string &str)
 {
 	std::string serialise(str.c_str());
-	if (serialise.at(0) == '_') serialise.at(0) = '-';
+	if (serialise[0] == '_') serialise[0] = '-';
 	serialise = Serialise::date(serialise);
 	if (serialise.empty()) {
 		throw Xapian::QueryParserError("Didn't understand date specification '" + str + "'");

@@ -232,15 +232,15 @@ GeoSpatialRange::unserialise_with_registry(const std::string& s, const Xapian::R
 	StringList data;
 	data.unserialise(s);
 	uInt64List uInt64_;
-	uInt64_.unserialise(data.at(1));
+	uInt64_.unserialise(data[1]);
 	std::vector<range_t> ranges_;
 	ranges_.reserve(uInt64_.size() / 2);
 	for (auto it = uInt64_.begin(); it != uInt64_.end(); ++it) {
 		ranges_.push_back({*it, *++it});
 	}
 	CartesianList centroids_;
-	centroids_.unserialise(data.at(2));
-	return new GeoSpatialRange(Xapian::sortable_unserialise(data.at(0)), ranges_, centroids_);
+	centroids_.unserialise(data[2]);
+	return new GeoSpatialRange(Xapian::sortable_unserialise(data[0]), ranges_, centroids_);
 }
 
 
