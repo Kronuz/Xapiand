@@ -69,9 +69,9 @@ class GeoSpatialRange : public Xapian::ValuePostingSource {
 	double angle;
 
 	// Calculates the smallest angle between its centroids  and search centroids.
-	void calc_angle(const CartesianList& _centroids) noexcept;
+	void calc_angle(const CartesianList& _centroids);
 	// Calculates if some their values is inside ranges.
-	bool insideRanges() noexcept;
+	bool insideRanges();
 
 public:
 	/* Construct a new match decider which returns only documents with a

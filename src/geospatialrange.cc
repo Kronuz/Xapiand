@@ -103,7 +103,7 @@ GeoSpatialRange::getQuery(Xapian::valueno slot_, const std::vector<range_t>& ran
 
 
 void
-GeoSpatialRange::calc_angle(const CartesianList& _centroids) noexcept
+GeoSpatialRange::calc_angle(const CartesianList& _centroids)
 {
 	angle = M_PI;
 	for (auto it = _centroids.begin(); it != _centroids.end(); ++it) {
@@ -118,7 +118,7 @@ GeoSpatialRange::calc_angle(const CartesianList& _centroids) noexcept
 
 
 bool
-GeoSpatialRange::insideRanges() noexcept
+GeoSpatialRange::insideRanges()
 {
 	StringList list;
 	list.unserialise(*value_it);
@@ -139,6 +139,7 @@ GeoSpatialRange::insideRanges() noexcept
 			}
 		}
 	}
+
 	return false;
 }
 
