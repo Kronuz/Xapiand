@@ -674,13 +674,6 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 							subproperties = cJSON_CreateObject();
 						} else {
 							subproperties = schema.get_subproperties(properties, name_s.c_str(), subitem);
-							if (size_t pfound = name_s.rfind(DB_OFFSPRING_UNION) != std::string::npos) {
-								std::string language(name_s.substr(pfound + strlen(DB_OFFSPRING_UNION)));
-								if (is_language(language)) {
-									schema.specification.language.clear();
-									schema.specification.language.push_back(language);
-								}
-							}
 						}
 						if (schema.specification.sep_types[2] == NO_TYPE) {
 							schema.set_type(value, name_s, subproperties);
