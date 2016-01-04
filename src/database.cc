@@ -326,6 +326,7 @@ Database::index_fields(cJSON *item,  const std::string &item_name, Xapian::Docum
 					index_values(doc, subitem, item_name, properties);
 				}
 			}
+			schema.specification = spc_bef;
 		}
 		if (offsprings) {
 			schema.set_type_to_object(properties);
@@ -342,9 +343,8 @@ Database::index_fields(cJSON *item,  const std::string &item_name, Xapian::Docum
 			index_terms(doc, item, item_name, properties);
 			index_values(doc, item, item_name, properties);
 		}
+		schema.specification = spc_bef;
 	}
-
-	schema.specification = spc_bef;
 }
 
 
