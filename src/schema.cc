@@ -190,15 +190,15 @@ Schema::update_root(cJSON* properties, cJSON* root)
 		cJSON_AddItemToObject(properties, RESERVED_ID, properties_id);
 
 		to_store = true;
-		insert(root, properties, true);
+		insert(root, properties, RESERVED_SCHEMA, true);
 	}
 }
 
 
 cJSON*
-Schema::get_subproperties(cJSON* properties, const char* attr, cJSON* item)
+Schema::get_subproperties(cJSON* properties, const char* field_name, cJSON* item)
 {
-	cJSON* subproperties = cJSON_GetObjectItem(properties, attr);
+	cJSON* subproperties = cJSON_GetObjectItem(properties, field_name);
 	if (subproperties) {
 		found_field = true;
 		update(item, subproperties);
@@ -206,8 +206,8 @@ Schema::get_subproperties(cJSON* properties, const char* attr, cJSON* item)
 		to_store = true;
 		found_field = false;
 		subproperties = cJSON_CreateObject(); // It is managed by item.
-		cJSON_AddItemToObject(properties, attr, subproperties);
-		insert(item, subproperties);
+		cJSON_AddItemToObject(properties, field_name, subproperties);
+		insert(item, subproperties, field_name);
 	}
 
 	return subproperties;
@@ -454,7 +454,7 @@ Schema::to_string(bool pretty)
 
 
 void
-Schema::insert(cJSON* item, cJSON* properties, bool root)
+Schema::insert(cJSON* item, cJSON* properties, const std::string &item_name, bool root)
 {
 	cJSON* spc;
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_D_DETECTION))) {
@@ -586,6 +586,18 @@ Schema::insert(cJSON* item, cJSON* properties, bool root)
 			throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_LANGUAGE);
 		}
 		cJSON_AddItemToObject(properties, RESERVED_LANGUAGE, acc_s.release());
+	} else {
+		size_t pfound = item_name.rfind(DB_OFFSPRING_UNION);
+		if (pfound != std::string::npos) {
+			std::string language(item_name.substr(pfound + strlen(DB_OFFSPRING_UNION)));
+			if (is_language(language)) {
+				unique_cJSON acc_s(cJSON_CreateArray());
+				specification.language.clear();
+				specification.language.push_back(language);
+				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(language.c_str()));
+				cJSON_AddItemToObject(properties, RESERVED_LANGUAGE, acc_s.release());
+			}
+		}
 	}
 
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_SPELLING))) {

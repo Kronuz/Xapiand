@@ -293,7 +293,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, c
 
 
 void
-Database::index_fields(cJSON *item,  const std::string &item_name, Xapian::Document &doc, cJSON *properties, bool is_value)
+Database::index_fields(cJSON *item, const std::string &item_name, Xapian::Document &doc, cJSON *properties, bool is_value)
 {
 	specification_t spc_bef = schema.specification;
 	if (item->type == cJSON_Object) {
@@ -303,13 +303,6 @@ Database::index_fields(cJSON *item,  const std::string &item_name, Xapian::Docum
 			cJSON *subitem = cJSON_GetArrayItem(item, i);
 			if (!is_reserved(subitem->string)) {
 				std::string subitem_name = !item_name.empty() ? item_name + DB_OFFSPRING_UNION + subitem->string : subitem->string;
-				if (size_t pfound = subitem_name.rfind(DB_OFFSPRING_UNION) != std::string::npos) {
-					std::string language(subitem_name.substr(pfound + strlen(DB_OFFSPRING_UNION)));
-					if (is_language(language)) {
-						schema.specification.language.clear();
-						schema.specification.language.push_back(language);
-					}
-				}
 				cJSON *subproperties = schema.get_subproperties(properties, subitem->string, subitem);
 				index_fields(subitem, subitem_name, doc, subproperties, is_value);
 				offsprings = true;

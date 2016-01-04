@@ -178,7 +178,7 @@ private:
 	/*
 	 * All the reserved word found in a new field are added in properties.
 	 */
-	void insert(cJSON* item, cJSON* properties, bool root=false);
+	void insert(cJSON* item, cJSON* properties, const std::string &item_name, bool root=false);
 
 	/*
 	 * For updating the specifications, first we check whether the document contains reserved words that can be
