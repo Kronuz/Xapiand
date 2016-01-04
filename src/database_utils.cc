@@ -125,8 +125,8 @@ bool set_types(const std::string &type, std::vector<char> &sep_types) {
 
 std::string str_type(const std::vector<char> &sep_types) {
 	std::stringstream str;
-	if (sep_types[0] == OBJECT_TYPE) str << "object/";
-	if (sep_types[1] == ARRAY_TYPE) str << "array/";
+	if (sep_types[0] == OBJECT_TYPE) str << OBJECT_STR << "/";
+	if (sep_types[1] == ARRAY_TYPE) str << ARRAY_STR << "/";
 	str << Serialise::type(sep_types[2]);
 	return str.str();
 }

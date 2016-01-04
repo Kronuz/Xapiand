@@ -445,14 +445,11 @@ Schema::to_string(bool pretty)
 		}
 	}
 
-	std::string str;
 	if (pretty) {
-		str = unique_char_ptr(cJSON_Print(schema_readable.get())).get();
+		return unique_char_ptr(cJSON_Print(schema_readable.get())).get();
 	} else {
-		str = unique_char_ptr(cJSON_PrintUnformatted(schema_readable.get())).get();
+		return unique_char_ptr(cJSON_PrintUnformatted(schema_readable.get())).get();
 	}
-
-	return str;
 }
 
 
@@ -1207,7 +1204,7 @@ Schema::update_required_data(const std::string &name, cJSON* properties)
 {
 	// Add type to properties, if this has not been added.
 	if (!cJSON_GetObjectItem(properties, RESERVED_TYPE)) {
-		cJSON* type = cJSON_CreateArray(); // Managed by shema
+		cJSON* type = cJSON_CreateArray(); // Managed by schema
 		cJSON_AddItemToArray(type, cJSON_CreateNumber(specification.sep_types[0]));
 		cJSON_AddItemToArray(type, cJSON_CreateNumber(specification.sep_types[1]));
 		cJSON_AddItemToArray(type, cJSON_CreateNumber(specification.sep_types[2]));

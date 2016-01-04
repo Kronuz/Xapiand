@@ -20,7 +20,6 @@
  * IN THE SOFTWARE.
  */
 
-
 #include "test_query.h"
 
 #include "../src/cJSON.h"
@@ -220,7 +219,6 @@ const test_query_t test_facets[] {
 		}
 	}
 };
-
 
 
 int create_test_db() {
