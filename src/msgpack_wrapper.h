@@ -77,7 +77,7 @@ public:
 	std::string to_rapidjson(msgpack::object &ob, bool prettify=true);
 	rapidjson::Document to_rapidjson(msgpack::object &ob);
 
-	void json_load(rapidjson::Document& doc, std::string str);
+	static bool json_load(rapidjson::Document& doc, std::string str);
 	static MsgPack to_MsgPack(const rapidjson::Document& doc);
 	static std::string to_MsgPack_str(const rapidjson::Document& doc);
 

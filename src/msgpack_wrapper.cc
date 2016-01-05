@@ -24,9 +24,12 @@
 
 #include "msgpack_wrapper.h"
 
+#include "rapidjson/error/en.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
 #include "xchange/rapidjson.hpp"
+
+#include "log.h"
 
 
 MsgPack::MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object& o)
@@ -193,10 +196,17 @@ MsgPack::to_rapidjson(msgpack::object &ob)
 }
 
 
-void
+bool
 MsgPack::json_load(rapidjson::Document& doc, std::string str)
 {
-	doc.Parse(str.data());
+	rapidjson::ParseResult parse_done = doc.Parse(str.data());
+
+	if (!parse_done) {
+		L_ERR("JSON parse error: %s (%u)\n", GetParseError_En(parse_done.Code()), parse_done.Offset());
+		return false;
+	} else {
+		return true;
+	}
 }
 
 
