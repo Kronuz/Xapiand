@@ -37,17 +37,19 @@ class MsgPack {
 		friend MsgPack;
 
 	public:
-		object_handle(const msgpack::object& obj, std::unique_ptr<msgpack::zone>&& z)
-			: obj(obj),
+		object_handle(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z)
+			: obj(o),
 			  zone(std::move(z))
 		{
 			user.set_zone(*zone.get());
 		}
 
-		object_handle(object_handle&& _handler)
+		object_handle(object_handle&& _handler) noexcept
 			: obj(std::move(_handler.obj)),
 			  zone(std::move(_handler.zone)),
 			  user(std::move(_handler.user)) { }
+
+		object_handle(const object_handle&) = delete;
 	};
 
 	std::shared_ptr<object_handle> handler;
@@ -57,20 +59,35 @@ class MsgPack {
 public:
 	msgpack::object& obj;
 
+	MsgPack() = delete;
 	MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object& o);
 	MsgPack(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z);
 	MsgPack(msgpack::unpacked& u);
 	MsgPack(const std::string& buffer);
+	MsgPack(MsgPack&& other) noexcept;
+	MsgPack(const MsgPack& other);
 
 	MsgPack operator[](const MsgPack& o);
 	MsgPack operator[](const std::string& name);
 	MsgPack operator[](uint32_t off);
 
-	template <typename T>
-	MsgPack& operator=(T v) {
+	template<typename T, typename = std::enable_if_t<!std::is_base_of<MsgPack, std::decay_t<T>>::value>>
+	MsgPack& operator=(T&& v) {
 		msgpack::object o(std::forward<T>(v), handler->zone.get());
 		obj.type = o.type;
 		obj.via = o.via;
+		return *this;
+	}
+
+	MsgPack& operator=(const MsgPack& other) {
+		handler = other.handler;
+		obj = handler->obj;
+		return *this;
+	}
+
+	MsgPack& operator=(MsgPack&& other) {
+		handler = std::move(other.handler);
+		obj = handler->obj;
 		return *this;
 	}
 

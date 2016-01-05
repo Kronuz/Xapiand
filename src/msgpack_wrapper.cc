@@ -43,6 +43,16 @@ MsgPack::MsgPack(const std::string& buffer)
 	  obj(handler->obj) { }
 
 
+MsgPack::MsgPack(MsgPack&& other) noexcept
+	: handler(std::move(other.handler)),
+	  obj(handler->obj) { }
+
+
+MsgPack::MsgPack(const MsgPack& other)
+	: handler(other.handler),
+	  obj(handler->obj) { }
+
+
 MsgPack
 MsgPack::operator[](const MsgPack& o)
 {
