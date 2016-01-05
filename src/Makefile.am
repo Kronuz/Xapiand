@@ -35,11 +35,7 @@ xapiand_SOURCES = \
 	lz4/lz4hc.c \
 	lz4/xxhash.c \
 	manager.cc \
-	msgpack/src/unpack.c \
-	msgpack/src/objectc.c \
-	msgpack/src/version.c \
-	msgpack/src/vrefbuffer.c \
-	msgpack/src/zone.c \
+	msgpack_wrapper.cc \
 	multivalue.cc \
 	multivaluekeymaker.cc \
 	multivaluerange.cc \
@@ -111,6 +107,7 @@ noinst_HEADERS = \
 	lz4/lz4hc.h \
 	lz4/xxhash.h \
 	manager.h \
+	msgpack_wrapper.h \
 	multivalue.h \
 	multivaluekeymaker.h \
 	multivaluerange.h \
@@ -204,144 +201,6 @@ noinst_HEADERS = \
 	xapiand.h \
 	xchange/convert.h \
 	xchange/rapidjson.hpp
-
-noinst_HEADERS += \
-	msgpack/src/msgpack/pack_define.h \
-	msgpack/src/msgpack/pack_template.h \
-	msgpack/src/msgpack/unpack_define.h \
-	msgpack/src/msgpack/unpack_template.h \
-	msgpack/src/msgpack/util.h \
-	msgpack/src/msgpack/sysdep.h \
-	msgpack/src/msgpack/gcc_atomic.h \
-	msgpack/src/msgpack.h \
-	msgpack/src/msgpack/sbuffer.h \
-	msgpack/src/msgpack/version.h \
-	msgpack/src/msgpack/version_master.h \
-	msgpack/src/msgpack/vrefbuffer.h \
-	msgpack/src/msgpack/zbuffer.h \
-	msgpack/src/msgpack/fbuffer.h \
-	msgpack/src/msgpack/pack.h \
-	msgpack/src/msgpack/unpack.h \
-	msgpack/src/msgpack/object.h \
-	msgpack/src/msgpack/zone.h
-
-noinst_HEADERS += \
-	msgpack/src/msgpack/predef.h \
-	msgpack/src/msgpack/predef/make.h \
-	msgpack/src/msgpack/predef/platform.h \
-	msgpack/src/msgpack/predef/other.h \
-	msgpack/src/msgpack/predef/platform/windows_phone.h \
-	msgpack/src/msgpack/predef/platform/windows_desktop.h \
-	msgpack/src/msgpack/predef/platform/mingw.h \
-	msgpack/src/msgpack/predef/platform/windows_store.h \
-	msgpack/src/msgpack/predef/platform/windows_runtime.h \
-	msgpack/src/msgpack/predef/architecture/x86.h \
-	msgpack/src/msgpack/predef/architecture/arm.h \
-	msgpack/src/msgpack/predef/architecture/convex.h \
-	msgpack/src/msgpack/predef/architecture/parisc.h \
-	msgpack/src/msgpack/predef/architecture/sys390.h \
-	msgpack/src/msgpack/predef/architecture/x86/32.h \
-	msgpack/src/msgpack/predef/architecture/x86/64.h \
-	msgpack/src/msgpack/predef/architecture/m68k.h \
-	msgpack/src/msgpack/predef/architecture/sys370.h \
-	msgpack/src/msgpack/predef/architecture/rs6k.h \
-	msgpack/src/msgpack/predef/architecture/mips.h \
-	msgpack/src/msgpack/predef/architecture/pyramid.h \
-	msgpack/src/msgpack/predef/architecture/alpha.h \
-	msgpack/src/msgpack/predef/architecture/superh.h \
-	msgpack/src/msgpack/predef/architecture/z.h \
-	msgpack/src/msgpack/predef/architecture/blackfin.h \
-	msgpack/src/msgpack/predef/architecture/sparc.h \
-	msgpack/src/msgpack/predef/architecture/ppc.h \
-	msgpack/src/msgpack/predef/architecture/ia64.h \
-	msgpack/src/msgpack/predef/other/endian.h \
-	msgpack/src/msgpack/predef/language/objc.h \
-	msgpack/src/msgpack/predef/language/stdcpp.h \
-	msgpack/src/msgpack/predef/language/stdc.h \
-	msgpack/src/msgpack/predef/detail/endian_compat.h \
-	msgpack/src/msgpack/predef/detail/comp_detected.h \
-	msgpack/src/msgpack/predef/detail/platform_detected.h \
-	msgpack/src/msgpack/predef/detail/os_detected.h \
-	msgpack/src/msgpack/predef/detail/test.h \
-	msgpack/src/msgpack/predef/detail/_exception.h \
-	msgpack/src/msgpack/predef/detail/_cassert.h \
-	msgpack/src/msgpack/predef/version_number.h \
-	msgpack/src/msgpack/predef/compiler.h \
-	msgpack/src/msgpack/predef/compiler/borland.h \
-	msgpack/src/msgpack/predef/compiler/kai.h \
-	msgpack/src/msgpack/predef/compiler/hp_acc.h \
-	msgpack/src/msgpack/predef/compiler/ibm.h \
-	msgpack/src/msgpack/predef/compiler/sgi_mipspro.h \
-	msgpack/src/msgpack/predef/compiler/digitalmars.h \
-	msgpack/src/msgpack/predef/compiler/llvm.h \
-	msgpack/src/msgpack/predef/compiler/sunpro.h \
-	msgpack/src/msgpack/predef/compiler/watcom.h \
-	msgpack/src/msgpack/predef/compiler/comeau.h \
-	msgpack/src/msgpack/predef/compiler/edg.h \
-	msgpack/src/msgpack/predef/compiler/pgi.h \
-	msgpack/src/msgpack/predef/compiler/microtec.h \
-	msgpack/src/msgpack/predef/compiler/metaware.h \
-	msgpack/src/msgpack/predef/compiler/palm.h \
-	msgpack/src/msgpack/predef/compiler/iar.h \
-	msgpack/src/msgpack/predef/compiler/intel.h \
-	msgpack/src/msgpack/predef/compiler/clang.h \
-	msgpack/src/msgpack/predef/compiler/visualc.h \
-	msgpack/src/msgpack/predef/compiler/ekopath.h \
-	msgpack/src/msgpack/predef/compiler/gcc_xml.h \
-	msgpack/src/msgpack/predef/compiler/compaq.h \
-	msgpack/src/msgpack/predef/compiler/dignus.h \
-	msgpack/src/msgpack/predef/compiler/tendra.h \
-	msgpack/src/msgpack/predef/compiler/greenhills.h \
-	msgpack/src/msgpack/predef/compiler/mpw.h \
-	msgpack/src/msgpack/predef/compiler/metrowerks.h \
-	msgpack/src/msgpack/predef/compiler/diab.h \
-	msgpack/src/msgpack/predef/compiler/gcc.h \
-	msgpack/src/msgpack/predef/os/unix.h \
-	msgpack/src/msgpack/predef/os/bsd.h \
-	msgpack/src/msgpack/predef/os/solaris.h \
-	msgpack/src/msgpack/predef/os/windows.h \
-	msgpack/src/msgpack/predef/os/hpux.h \
-	msgpack/src/msgpack/predef/os/macos.h \
-	msgpack/src/msgpack/predef/os/os400.h \
-	msgpack/src/msgpack/predef/os/beos.h \
-	msgpack/src/msgpack/predef/os/aix.h \
-	msgpack/src/msgpack/predef/os/bsd/dragonfly.h \
-	msgpack/src/msgpack/predef/os/bsd/net.h \
-	msgpack/src/msgpack/predef/os/bsd/free.h \
-	msgpack/src/msgpack/predef/os/bsd/bsdi.h \
-	msgpack/src/msgpack/predef/os/bsd/open.h \
-	msgpack/src/msgpack/predef/os/cygwin.h \
-	msgpack/src/msgpack/predef/os/irix.h \
-	msgpack/src/msgpack/predef/os/ios.h \
-	msgpack/src/msgpack/predef/os/amigaos.h \
-	msgpack/src/msgpack/predef/os/vms.h \
-	msgpack/src/msgpack/predef/os/linux.h \
-	msgpack/src/msgpack/predef/os/qnxnto.h \
-	msgpack/src/msgpack/predef/os/haiku.h \
-	msgpack/src/msgpack/predef/os/android.h \
-	msgpack/src/msgpack/predef/architecture.h \
-	msgpack/src/msgpack/predef/os.h \
-	msgpack/src/msgpack/predef/library.h \
-	msgpack/src/msgpack/predef/version.h \
-	msgpack/src/msgpack/predef/language.h \
-	msgpack/src/msgpack/predef/library/c/_prefix.h \
-	msgpack/src/msgpack/predef/library/c/uc.h \
-	msgpack/src/msgpack/predef/library/c/gnu.h \
-	msgpack/src/msgpack/predef/library/c/vms.h \
-	msgpack/src/msgpack/predef/library/c/zos.h \
-	msgpack/src/msgpack/predef/library/c.h \
-	msgpack/src/msgpack/predef/library/std/_prefix.h \
-	msgpack/src/msgpack/predef/library/std/cxx.h \
-	msgpack/src/msgpack/predef/library/std/sgi.h \
-	msgpack/src/msgpack/predef/library/std/libcomo.h \
-	msgpack/src/msgpack/predef/library/std/stdcpp3.h \
-	msgpack/src/msgpack/predef/library/std/vacpp.h \
-	msgpack/src/msgpack/predef/library/std/stlport.h \
-	msgpack/src/msgpack/predef/library/std/dinkumware.h \
-	msgpack/src/msgpack/predef/library/std/msl.h \
-	msgpack/src/msgpack/predef/library/std/roguewave.h \
-	msgpack/src/msgpack/predef/library/std/modena.h \
-	msgpack/src/msgpack/predef/library/std.h
 
 noinst_HEADERS += \
 	msgpack/src/msgpack.hpp \
