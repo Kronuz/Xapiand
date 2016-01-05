@@ -24,37 +24,50 @@
 
 class MsgPack;
 
+
 inline bool operator==(const MsgPack& x, const MsgPack& y);
-inline bool operator!=(const MsgPack& x, const MsgPack& y);
+
 
 class MsgPack {
-	struct object_handle {
-		object_handle(msgpack::object const& obj, msgpack::unique_ptr<msgpack::zone>& z) :
-		obj(obj), zone(msgpack::move(z)) {
+	class object_handle {
+		msgpack::object obj;
+		std::unique_ptr<msgpack::zone> zone;
+		msgpack::detail::unpack_user user;
+
+		friend MsgPack;
+
+	public:
+		object_handle(const msgpack::object& obj, std::unique_ptr<msgpack::zone>&& z)
+			: obj(obj),
+			  zone(std::move(z))
+		{
 			user.set_zone(*zone.get());
 		}
 
-		msgpack::object obj;
-		msgpack::unique_ptr<msgpack::zone> zone;
-		msgpack::detail::unpack_user user;
+		object_handle(object_handle&& _handler)
+			: obj(std::move(_handler.obj)),
+			  zone(std::move(_handler.zone)),
+			  user(std::move(_handler.user)) { }
 	};
 
 	std::shared_ptr<object_handle> handler;
 
+	std::shared_ptr<object_handle> make_handler(const std::string& buffer);
+
 public:
 	msgpack::object& obj;
 
-	MsgPack(std::shared_ptr<object_handle> const& unpacked, msgpack::object& o);
-	MsgPack(msgpack::object const& o, msgpack::unique_ptr<msgpack::zone>& z);
+	MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object& o);
+	MsgPack(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z);
 	MsgPack(msgpack::unpacked& u);
-	MsgPack(const std::string & buffer);
+	MsgPack(const std::string& buffer);
 
 	MsgPack operator[](const MsgPack& o);
 	MsgPack operator[](const std::string& name);
 	MsgPack operator[](uint32_t off);
 
 	template <typename T>
-	MsgPack & operator= (T v) {
+	MsgPack& operator=(T v) {
 		msgpack::object o(std::forward<T>(v), handler->zone.get());
 		obj.type = o.type;
 		obj.via = o.via;
@@ -65,14 +78,17 @@ public:
 		MsgPack* obj;
 		uint32_t off;
 
+		friend class MsgPack;
+
+	public:
 		iterator& operator++() {
-			off++;
+			++off;
 			return *this;
 		}
 
 		iterator operator++(int) {
 			iterator tmp(*this);
-			off++;
+			++off;
 			return tmp;
 		}
 
@@ -82,7 +98,7 @@ public:
 			return *this;
 		}
 
-		MsgPack operator*() {
+		MsgPack operator*() const {
 			switch (obj->obj.type) {
 				case msgpack::type::MAP:
 					return MsgPack(obj->handler, obj->obj.via.map.ptr[off].key);
@@ -93,16 +109,16 @@ public:
 			}
 		}
 
-		bool operator==(const iterator& other) {
+		bool operator==(const iterator& other) const {
 			return *obj == *other.obj && off == other.off;
 		}
 
-		bool operator!=(const iterator& other) {
+		bool operator!=(const iterator& other) const {
 			return !operator==(other);
 		}
 	};
 
-	typedef const iterator const_iterator;
+	using const_iterator = const iterator;
 
 	iterator begin() {
 		return {
@@ -110,33 +126,33 @@ public:
 			.off = 0
 		};
 	}
+
 	const_iterator begin() const { return begin(); }
 	const_iterator cbegin() const { return begin(); }
+
 	iterator end() {
 		return {
 			.obj = this,
 			.off = obj.type == msgpack::type::MAP ? obj.via.map.size : obj.via.array.size
 		};
 	}
-	const_iterator end() const { return end();}
-	const_iterator cend() const { return end();}
 
-private:
-	std::shared_ptr<object_handle> make_handler(const std::string & buffer);
+	const_iterator end() const { return end(); }
+	const_iterator cend() const { return end(); }
 };
 
-inline bool operator==(const MsgPack& x, const MsgPack& y)
-{
+
+inline bool operator==(const MsgPack& x, const MsgPack& y) {
 	return x.obj == y.obj;
 }
 
-inline bool operator!=(const MsgPack& x, const MsgPack& y)
-{
+
+inline bool operator!=(const MsgPack& x, const MsgPack& y) {
 	return !(x == y);
 }
 
-inline std::ostream& operator<< (std::ostream& s, const MsgPack& o)
-{
+
+inline std::ostream& operator<<(std::ostream& s, const MsgPack& o) {
 	s << o.obj;
 	return s;
 }
