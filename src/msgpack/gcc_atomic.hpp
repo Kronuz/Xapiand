@@ -14,7 +14,7 @@
 #ifdef ENABLE_GCC_CXX_ATOMIC
 #if defined(__GNUC__) && ((__GNUC__*10 + __GNUC_MINOR__) < 41)
 
-#include "msgpack/gcc_atomic.h"
+#include "gcc_atomic.h"
 #include <bits/atomicity.h>
 
 int _msgpack_sync_decr_and_fetch(volatile _msgpack_atomic_counter_t* ptr)

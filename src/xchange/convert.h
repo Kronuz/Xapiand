@@ -27,7 +27,7 @@
 #include "../rapidjson/stringbuffer.h"
 #include "../rapidjson/writer.h"
 
-#include "../msgpack/src/msgpack.hpp"
+#include "../msgpack.hpp"
 #include "rapidjson.hpp"
 
 

@@ -20,9 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-
-#include "msgpack/src/msgpack/object.hpp"
-#include "msgpack/src/msgpack.hpp"
+#include "msgpack.hpp"
 
 class MsgPack;
 

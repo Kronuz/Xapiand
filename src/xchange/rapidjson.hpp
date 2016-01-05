@@ -23,7 +23,7 @@
 #ifndef MSGPACK_TYPE_RAPIDJSON_DOCUMENT_HPP__
 #define MSGPACK_TYPE_RAPIDJSON_DOCUMENT_HPP__
 
-#include "../msgpack/src/msgpack.hpp"
+#include "../msgpack.hpp"
 #include "../rapidjson/document.h"
 
 namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { namespace adaptor {
