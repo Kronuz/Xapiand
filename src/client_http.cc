@@ -725,7 +725,7 @@ HttpClient::index_document_view(const query_field_t &e)
 	}
 
 	if (content_type.empty()) {
-		content_type = "application/json";
+		content_type = JSON_TYPE;
 	}
 
 	auto tp_start = std::chrono::system_clock::now();
@@ -1030,9 +1030,9 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 				bool type_found = false;
 				for (auto it = accept_set.begin(); it != accept_set.end(); ++it) {
 					if (it->second == ct_type || it->second == "*/*") {
-						if (it->second == "application/json" || ct_type == "application/json") {
+						if (it->second == JSON_TYPE || ct_type == JSON_TYPE) {
 							data = std::string(p, length);
-							ct_type = "application/json";
+							ct_type = JSON_TYPE;
 							type_found = true;
 							break;
 						} else {

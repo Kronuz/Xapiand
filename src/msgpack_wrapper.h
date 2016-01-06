@@ -74,13 +74,12 @@ public:
 	MsgPack operator[](const std::string& name) const;
 	MsgPack operator[](uint32_t off) const;
 
-	std::string prettify(const rapidjson::Document& doc);
-	std::string to_rapidjson(msgpack::object &ob, bool prettify=true);
-	rapidjson::Document to_rapidjson(msgpack::object &ob);
-
-	static bool json_load(rapidjson::Document& doc, std::string str);
+	static std::string prettify(const rapidjson::Document& doc);
+	static std::string to_string(msgpack::object &ob, bool prettify=true);
+	static rapidjson::Document to_rapidjson(msgpack::object &ob);
+	static bool json_load(rapidjson::Document& doc, const std::string& str);
 	static MsgPack to_MsgPack(const rapidjson::Document& doc, msgpack::sbuffer& sbuf);
-	static std::string to_MsgPack_str(const rapidjson::Document& doc, msgpack::sbuffer& sbuf);
+	static std::string to_string(const rapidjson::Document& doc);
 
 	template<typename T, typename = std::enable_if_t<!std::is_base_of<MsgPack, std::decay_t<T>>::value>>
 	MsgPack& operator=(T&& v) {

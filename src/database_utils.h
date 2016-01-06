@@ -66,6 +66,10 @@
 #define DOCUMENT_ID_TERM_PREFIX "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
+#define JSON_TYPE "application/json"
+#define FORM_URLENCODED_TYPE "application/x-www-form-urlencoded"
+#define MSGPACK_TYPE "application/x-msgpack"
+
 
 extern const std::regex find_types_re;
 
@@ -134,13 +138,13 @@ enum class MIMEType {
 };
 
 
-long long read_mastery(const std::string &dir, bool force);
+long long read_mastery(const std::string& dir, bool force);
 // All the field that start with '_' are considered reserved word.
-bool is_reserved(const std::string &word);
-bool is_language(const std::string &language);
-bool set_types(const std::string &type, std::vector<char> &sep_types);
-std::string str_type(const std::vector<char> &sep_types);
-std::vector<std::string> split_fields(const std::string &field_name);
+bool is_reserved(const std::string& word);
+bool is_language(const std::string& language);
+bool set_types(const std::string& type, std::vector<char>& sep_types);
+std::string str_type(const std::vector<char>& sep_types);
+std::vector<std::string> split_fields(const std::string& field_name);
 void clean_reserved(cJSON *root);
 void clean_reserved(cJSON *root, cJSON *item);
-MIMEType get_mimetype(std::string type);
+MIMEType get_mimetype(const std::string& type);

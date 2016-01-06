@@ -575,7 +575,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &
 
 
 MsgPack
-Database::getobj_from_dataType(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob, msgpack::sbuffer &buffer)
+Database::getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob, msgpack::sbuffer &buffer)
 {
 	rapidjson::Document rdoc;
 
@@ -586,48 +586,49 @@ Database::getobj_from_dataType(Xapian::Document& doc, const std::string &body, c
 			if (MsgPack::json_load(rdoc, body)) {
 				blob = false;
 				return MsgPack::to_MsgPack(rdoc, buffer);
-			} throw "MsgPack::json_load Error";
+			}
+			throw MSG_Error("MsgPack::json_load can not do the parser");
 		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
 			if (MsgPack::json_load(rdoc, body)) {
-				doc.add_value(DB_SLOT_TYPE, "application/json");
+				doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
 				blob = false;
 				return MsgPack::to_MsgPack(rdoc, buffer);
 			} else {
-				MsgPack::json_load(rdoc, "{}");
-				return MsgPack::to_MsgPack(rdoc, buffer);
+				return MsgPack(std::string());
 			}
 		case MIMEType::APPLICATION_X_MSGPACK:
 			return MsgPack(body);
 		case MIMEType::UNKNOW:
-			MsgPack::json_load(rdoc, "{}");
-			return MsgPack::to_MsgPack(rdoc, buffer);
+			return MsgPack(std::string());
 	}
 }
 
 
 void
-Database::preindex(Xapian::Document& doc, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
+Database::index_required_data(Xapian::Document& doc, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
 {
 	std::size_t found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
 	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
 
-	// Make sure document_id is also a boolean term (otherwise it doesn't replace an existing document)
+	// Saves document's id in DB_SLOT_ID
 	doc.add_value(DB_SLOT_ID, _document_id);
+
+	// Document's id is also a boolean term (otherwise it doesn't replace an existing document)
 	term_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
+	doc.add_boolean_term(term_id);
 	L_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s", _document_id.c_str(), document_id.c_str());
 
-	doc.add_boolean_term(term_id);
+	// Indexing the content values of data.
 	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
 	doc.add_value(DB_SLOT_TYPE, ct_type);
 	doc.add_value(DB_SLOT_LENGTH, ct_length);
 
 	// Index terms for content-type
-	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX , STRING_TYPE);
+	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
 	doc.add_term(prefixed(ct_type, term_prefix));
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
-
 }
 
 
@@ -644,16 +645,15 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 		return 0;
 	}
 
+	// Index required data for the document
 	Xapian::Document doc;
 	std::string term_id;
+	index_required_data(doc, term_id, _document_id, ct_type, ct_length);
+
+	// Create MsgPack object
 	bool blob = true;
 	msgpack::sbuffer buffer;
-
-	//Preindex setup for the document
-	preindex(doc, term_id, _document_id, ct_type, ct_length);
-
-	// Check the type for data to index and create MsgPack object
-	MsgPack obj = getobj_from_dataType(doc, body, ct_type, blob, buffer);
+	MsgPack obj = getMsgPack(doc, body, ct_type, blob, buffer);
 
 	L_DATABASE_WRAP(this, "Document to index: %s", buffer.data());
 	doc.set_data(encode_length(buffer.size()) + std::string(buffer.data(), buffer.size()) + (blob ? body : ""));

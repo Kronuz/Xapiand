@@ -37,7 +37,7 @@
 const std::regex find_types_re("(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" NUMERIC_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")", std::regex::icase | std::regex::optimize);
 
 
-long long save_mastery(const std::string &dir) {
+long long save_mastery(const std::string& dir) {
 	char buf[20];
 	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 16;
 	mastery_level |= static_cast<int>(random_int(0, 0xffff));
@@ -51,7 +51,7 @@ long long save_mastery(const std::string &dir) {
 }
 
 
-long long read_mastery(const std::string &dir, bool force) {
+long long read_mastery(const std::string& dir, bool force) {
 	L_DATABASE(nullptr, "+ READING MASTERY OF INDEX '%s'...", dir.c_str());
 
 	struct stat info;
@@ -87,12 +87,12 @@ long long read_mastery(const std::string &dir, bool force) {
 }
 
 
-bool is_reserved(const std::string &word) {
+bool is_reserved(const std::string& word) {
 	return word.at(0) == '_' ? true : false;
 }
 
 
-bool is_language(const std::string &language) {
+bool is_language(const std::string& language) {
 	if (language.find(" ") != std::string::npos) {
 		return false;
 	}
@@ -100,7 +100,7 @@ bool is_language(const std::string &language) {
 }
 
 
-bool set_types(const std::string &type, std::vector<char> &sep_types) {
+bool set_types(const std::string& type, std::vector<char>& sep_types) {
 	std::smatch m;
 	if (std::regex_match(type, m, find_types_re) && static_cast<size_t>(m.length(0)) == type.size()) {
 		if (m.length(4) != 0) {
@@ -123,7 +123,7 @@ bool set_types(const std::string &type, std::vector<char> &sep_types) {
 }
 
 
-std::string str_type(const std::vector<char> &sep_types) {
+std::string str_type(const std::vector<char>& sep_types) {
 	std::stringstream str;
 	if (sep_types[0] == OBJECT_TYPE) str << OBJECT_STR << "/";
 	if (sep_types[1] == ARRAY_TYPE) str << ARRAY_STR << "/";
@@ -132,7 +132,7 @@ std::string str_type(const std::vector<char> &sep_types) {
 }
 
 
-std::vector<std::string> split_fields(const std::string &field_name) {
+std::vector<std::string> split_fields(const std::string& field_name) {
 	std::vector<std::string> fields;
 	std::string aux(field_name.c_str());
 	size_t pos = 0;
@@ -194,16 +194,14 @@ void clean_reserved(cJSON *root, cJSON *item) {
 }
 
 
-MIMEType get_mimetype(std::string type) {
-
-	if (type == "application/json") {
+MIMEType get_mimetype(const std::string& type) {
+	if (type == JSON_TYPE) {
 		return MIMEType::APPLICATION_JSON;
-	} else if (type == "application/x-www-form-urlencoded") {
+	} else if (type == FORM_URLENCODED_TYPE) {
 		return MIMEType::APPLICATION_XWWW_FORM_URLENCODED;
-	} else if (type == "application/x-msgpack") {
+	} else if (type == MSGPACK_TYPE) {
 		return MIMEType::APPLICATION_X_MSGPACK;
 	} else {
 		return MIMEType::UNKNOW;
 	}
 }
-

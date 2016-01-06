@@ -171,7 +171,7 @@ MsgPack::prettify(const rapidjson::Document& doc)
 
 
 std::string
-MsgPack::to_rapidjson(msgpack::object &ob, bool prettify)
+MsgPack::to_string(msgpack::object &ob, bool prettify)
 {
 	rapidjson::Document doc;
 	ob.convert(&doc);
@@ -180,7 +180,7 @@ MsgPack::to_rapidjson(msgpack::object &ob, bool prettify)
 		return MsgPack::prettify(doc);
 	} else {
 		std::ostringstream oss;
-		oss << obj;
+		oss << ob;
 		return oss.str();
 	}
 }
@@ -196,7 +196,7 @@ MsgPack::to_rapidjson(msgpack::object &ob)
 
 
 bool
-MsgPack::json_load(rapidjson::Document& doc, std::string str)
+MsgPack::json_load(rapidjson::Document& doc, const std::string& str)
 {
 	rapidjson::ParseResult parse_done = doc.Parse(str.data());
 
@@ -218,8 +218,9 @@ MsgPack::to_MsgPack(const rapidjson::Document& doc, msgpack::sbuffer& sbuf)
 
 
 std::string
-MsgPack::to_MsgPack_str(const rapidjson::Document& doc, msgpack::sbuffer& sbuf)
+MsgPack::to_string(const rapidjson::Document& doc)
 {
+	msgpack::sbuffer sbuf;
 	msgpack::pack(&sbuf, doc);
 	return std::string(sbuf.data(), sbuf.size());
 }

@@ -77,6 +77,9 @@ class DatabaseQueue;
 
 
 class Database {
+	MsgPack getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob, msgpack::sbuffer& buf);
+	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
+
 public:
 	Schema schema;
 
@@ -126,8 +129,6 @@ public:
 	unique_cJSON get_stats_docs(const std::string &document_id);
 	data_field_t get_data_field(const std::string &field_name);
 	data_field_t get_slot_field(const std::string &field_name);
-	MsgPack getobj_from_dataType(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob, msgpack::sbuffer& buf);
-	void preindex(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
 	void index_fields(cJSON *item, const std::string &item_name, Xapian::Document &doc, cJSON *properties, bool is_value=true);
 	void index_texts(Xapian::Document &doc, cJSON *texts, const std::string &name, cJSON *properties);
 	void index_terms(Xapian::Document &doc, cJSON *terms, const std::string &name, cJSON *properties);
