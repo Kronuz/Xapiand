@@ -89,8 +89,7 @@ MsgPack::operator[](const std::string& name) const
 		const msgpack::object_kv* pend(obj.via.map.ptr + obj.via.map.size);
 		for ( ; p != pend; ++p) {
 			if (p->key.type == msgpack::type::STR) {
-				// std::cout << std::string(p->key.via.str.ptr, p->key.via.str.size) << std::endl;
-				if (!name.compare(p->key.via.str.ptr)) {
+				if (name.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0) {
 					return MsgPack(handler, p->val);
 				}
 			}
