@@ -192,3 +192,18 @@ void clean_reserved(cJSON *root, cJSON *item) {
 		}
 	}
 }
+
+
+MIMEType get_mimetype(std::string type) {
+
+	if (type == "application/json") {
+		return MIMEType::APPLICATION_JSON;
+	} else if (type == "application/x-www-form-urlencoded") {
+		return MIMEType::APPLICATION_XWWW_FORM_URLENCODED;
+	} else if (type == "application/x-msgpack") {
+		return MIMEType::APPLICATION_X_MSGPACK;
+	} else {
+		return MIMEType::UNKNOW;
+	}
+}
+

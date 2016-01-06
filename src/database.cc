@@ -574,6 +574,63 @@ Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &
 }
 
 
+MsgPack
+Database::getobj_from_dataType(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob, msgpack::sbuffer &buffer)
+{
+	rapidjson::Document rdoc;
+
+	MIMEType t = get_mimetype(ct_type);
+
+	switch (t) {
+		case MIMEType::APPLICATION_JSON:
+			if (MsgPack::json_load(rdoc, body)) {
+				blob = false;
+				return MsgPack::to_MsgPack(rdoc, buffer);
+			} throw "MsgPack::json_load Error";
+		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
+			if (MsgPack::json_load(rdoc, body)) {
+				doc.add_value(DB_SLOT_TYPE, "application/json");
+				blob = false;
+				return MsgPack::to_MsgPack(rdoc, buffer);
+			} else {
+				MsgPack::json_load(rdoc, "{}");
+				return MsgPack::to_MsgPack(rdoc, buffer);
+			}
+		case MIMEType::APPLICATION_X_MSGPACK:
+			return MsgPack(body);
+		case MIMEType::UNKNOW:
+			MsgPack::json_load(rdoc, "{}");
+			return MsgPack::to_MsgPack(rdoc, buffer);
+	}
+}
+
+
+void
+Database::preindex(Xapian::Document& doc, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
+{
+	std::size_t found = ct_type.find_last_of("/");
+	std::string type(ct_type.c_str(), found);
+	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
+
+	// Make sure document_id is also a boolean term (otherwise it doesn't replace an existing document)
+	doc.add_value(DB_SLOT_ID, _document_id);
+	term_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
+	L_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s", _document_id.c_str(), document_id.c_str());
+
+	doc.add_boolean_term(term_id);
+	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
+	doc.add_value(DB_SLOT_TYPE, ct_type);
+	doc.add_value(DB_SLOT_LENGTH, ct_length);
+
+	// Index terms for content-type
+	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX , STRING_TYPE);
+	doc.add_term(prefixed(ct_type, term_prefix));
+	doc.add_term(prefixed(type + "/*", term_prefix));
+	doc.add_term(prefixed("*/" + subtype, term_prefix));
+
+}
+
+
 Xapian::docid
 Database::index(const std::string &body, const std::string &_document_id, bool _commit, const std::string &ct_type, const std::string &ct_length)
 {
@@ -588,55 +645,21 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	}
 
 	Xapian::Document doc;
-	std::string document_id;
-
-	std::size_t found = ct_type.find_last_of("/");
-	std::string type(ct_type.c_str(), found);
-	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
-
-	// Make sure document_id is also a boolean term (otherwise it doesn't replace an existing document)
-	doc.add_value(DB_SLOT_ID, _document_id);
-	document_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
-	L_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s", _document_id.c_str(), document_id.c_str());
-	doc.add_boolean_term(document_id);
-	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
-	doc.add_value(DB_SLOT_TYPE, ct_type);
-	doc.add_value(DB_SLOT_LENGTH, ct_length);
-
-	// Index terms for content-type
-	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX , STRING_TYPE);
-	doc.add_term(prefixed(ct_type, term_prefix));
-	doc.add_term(prefixed(type + "/*", term_prefix));
-	doc.add_term(prefixed("*/" + subtype, term_prefix));
-
-	// Check the type for data to index
-	cJSON *json;
+	std::string term_id;
 	bool blob = true;
-	if (ct_type == "application/json") {
-		json = cJSON_Parse(body.c_str());
-		if (!json) {
-			L_ERR(this, "ERROR: JSON Before: [%s]", cJSON_GetErrorPtr());
-			return 0;
-		}
-		blob = false;
-	} else if (ct_type == "application/x-www-form-urlencoded") {
-		json = cJSON_Parse(body.c_str());
-		if (json) {
-			doc.add_value(DB_SLOT_TYPE, "application/json");
-			blob = false;
-		} else {
-			json = cJSON_Parse("{}");
-		}
-	} else {
-		json = cJSON_Parse("{}");
-	}
-	unique_cJSON document(json);
+	msgpack::sbuffer buffer;
 
-	// Index document
-	unique_char_ptr _cprint(cJSON_Print(document.get()));
-	std::string doc_data(_cprint.get());
-	L_DATABASE_WRAP(this, "Document to index: %s", doc_data.c_str());
-	doc.set_data(encode_length(doc_data.size()) + doc_data + (blob ? body : ""));
+	//Preindex setup for the document
+	preindex(doc, term_id, _document_id, ct_type, ct_length);
+
+	// Check the type for data to index and create MsgPack object
+	MsgPack obj = getobj_from_dataType(doc, body, ct_type, blob, buffer);
+
+	L_DATABASE_WRAP(this, "Document to index: %s", buffer.data());
+	doc.set_data(encode_length(buffer.size()) + std::string(buffer.data(), buffer.size()) + (blob ? body : ""));
+
+	cJSON *json;
+	unique_cJSON document(json);
 
 	// Save a copy of schema for undo changes.
 	auto _schema = schema.getSchema();
@@ -719,7 +742,7 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 		return 0;
 	}
 
-	return replace(document_id, doc, _commit);
+	return replace(term_id, doc, _commit);
 }
 
 

@@ -126,6 +126,14 @@ struct query_field_t {
 };
 
 
+enum class MIMEType {
+	APPLICATION_JSON,
+	APPLICATION_XWWW_FORM_URLENCODED,
+	APPLICATION_X_MSGPACK,
+	UNKNOW
+};
+
+
 long long read_mastery(const std::string &dir, bool force);
 // All the field that start with '_' are considered reserved word.
 bool is_reserved(const std::string &word);
@@ -135,3 +143,4 @@ std::string str_type(const std::vector<char> &sep_types);
 std::vector<std::string> split_fields(const std::string &field_name);
 void clean_reserved(cJSON *root);
 void clean_reserved(cJSON *root, cJSON *item);
+MIMEType get_mimetype(std::string type);
