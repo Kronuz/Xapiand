@@ -27,17 +27,17 @@
 #include "serialise.h"
 
 
-enum enum_time {
-	DB_SECOND2INT,
-	DB_MINUTE2INT,
-	DB_HOUR2INT,
-	DB_DAY2INT,
-	DB_MONTH2INT,
-	DB_YEAR2INT,
+enum class unitTime {
+	SECOND,
+	MINUTE,
+	HOUR,
+	DAY,
+	MONTH,
+	YEAR,
 };
 
 
-enum enum_index {
+enum class Index {
 	ALL,
 	TERM,
 	VALUE
@@ -51,7 +51,7 @@ const std::vector<std::string> str_index({ "ALL", "TERM", "VALUE" });
 
 const std::vector<double> def_accuracy_geo  { 1, 0.2, 0, 5, 10, 15, 20, 25 }; // { partials, error, accuracy levels }
 const std::vector<double> def_accuracy_num  { 100, 1000, 10000, 100000 };
-const std::vector<double> def_acc_date      { DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT };
+const std::vector<double> def_acc_date      { toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) };
 
 
 struct specification_t {
@@ -66,7 +66,7 @@ struct specification_t {
 	unsigned int slot;
 	std::vector<char> sep_types;
 	std::string prefix;
-	int index;
+	Index index;
 	bool store;
 	bool dynamic;
 	bool date_detection;

@@ -121,37 +121,37 @@ GenerateTerms::date(::std::string &result_terms, const ::std::string &start_, co
 			int tm_e[6] = { timeinfo->tm_sec, timeinfo->tm_min, timeinfo->tm_hour, timeinfo->tm_mday, timeinfo->tm_mon, timeinfo->tm_year };
 
 			// Find the accuracy needed.
-			int acc = DB_YEAR2INT;
-			while (acc >= DB_SECOND2INT && (tm_e[acc] - tm_s[acc]) == 0) acc--;
+			int acc = toUType(unitTime::YEAR);
+			while (acc >= toUType(unitTime::SECOND) && (tm_e[acc] - tm_s[acc]) == 0) acc--;
 
 			// Find the upper or equal accuracy.
 			size_t pos = 0;
 			while (accuracy[pos] < acc) pos++;
 			// If the accuracy needed is in accuracy.
 			if (acc == accuracy[pos]) {
-				switch ((char)accuracy[pos]) {
-					case DB_YEAR2INT:
+				switch ((unitTime)accuracy[pos]) {
+					case unitTime::YEAR:
 						if ((tm_e[5] - tm_s[5]) > MAX_TERMS) return;
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = year(tm_s, tm_e, prefixes.back());
 						break;
-					case DB_MONTH2INT:
+					case unitTime::MONTH:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = month(tm_s, tm_e, prefixes.back());
 						break;
-					case DB_DAY2INT:
+					case unitTime::DAY:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = day(tm_s, tm_e, prefixes.back());
 						break;
-					case DB_HOUR2INT:
+					case unitTime::HOUR:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = hour(tm_s, tm_e, prefixes.back());
 						break;
-					case DB_MINUTE2INT:
+					case unitTime::MINUTE:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = minute(tm_s, tm_e, prefixes.back());
 						break;
-					case DB_SECOND2INT:
+					case unitTime::SECOND:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = second(tm_s, tm_e, prefixes.back());
 						break;
@@ -159,33 +159,33 @@ GenerateTerms::date(::std::string &result_terms, const ::std::string &start_, co
 			}
 			// If there is an upper accuracy
 			if (accuracy[pos] != acc || ++pos < accuracy.size()) {
-				switch ((char)accuracy[pos]) {
-					case DB_YEAR2INT:
+				switch ((unitTime)accuracy[pos]) {
+					case unitTime::YEAR:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = result_terms.empty() ? year(tm_s, tm_e, prefixes.back()) :
 									   year(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
 						break;
-					case DB_MONTH2INT:
+					case unitTime::MONTH:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = result_terms.empty() ? month(tm_s, tm_e, prefixes.back()) :
 									   month(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
 						break;
-					case DB_DAY2INT:
+					case unitTime::DAY:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = result_terms.empty() ? day(tm_s, tm_e, prefixes.back()) :
 									   day(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
 						break;
-					case DB_HOUR2INT:
+					case unitTime::HOUR:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = result_terms.empty() ? hour(tm_s, tm_e, prefixes.back()) :
 									   hour(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
 						break;
-					case DB_MINUTE2INT:
+					case unitTime::MINUTE:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = result_terms.empty() ? minute(tm_s, tm_e, prefixes.back()) :
 									   minute(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
 						break;
-					case DB_SECOND2INT:
+					case unitTime::SECOND:
 						prefixes.push_back(acc_prefix[pos]);
 						result_terms = result_terms.empty() ? second(tm_s, tm_e, prefixes.back()) :
 									   second(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";

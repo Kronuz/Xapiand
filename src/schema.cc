@@ -38,7 +38,7 @@ specification_t::specification_t()
 		  analyzer({ Xapian::TermGenerator::STEM_SOME }),
 		  slot(0),
 		  sep_types({ NO_TYPE, NO_TYPE, NO_TYPE }),
-		  index(ALL),
+		  index(Index::ALL),
 		  store(true),
 		  dynamic(true),
 		  date_detection(true),
@@ -111,7 +111,7 @@ specification_t::to_string()
 	str << "\t" << RESERVED_SLOT        << ": " << slot                 << "\n";
 	str << "\t" << RESERVED_TYPE        << ": " << str_type(sep_types)  << "\n";
 	str << "\t" << RESERVED_PREFIX      << ": " << prefix               << "\n";
-	str << "\t" << RESERVED_INDEX       << ": " << str_index[index]     << "\n";
+	str << "\t" << RESERVED_INDEX       << ": " << str_index[toUType(index)]     << "\n";
 	str << "\t" << RESERVED_STORE       << ": " << ((store)             ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_DYNAMIC     << ": " << ((dynamic)           ? "true" : "false") << "\n";
 	str << "\t" << RESERVED_D_DETECTION << ": " << ((date_detection)    ? "true" : "false") << "\n";
@@ -183,7 +183,7 @@ Schema::update_root(cJSON* properties, cJSON* root)
 		cJSON_AddItemToArray(type, cJSON_CreateNumber(NO_TYPE));
 		cJSON_AddItemToArray(type, cJSON_CreateNumber(STRING_TYPE));
 		cJSON_AddItemToObject(properties_id, RESERVED_TYPE, type);
-		cJSON_AddItemToObject(properties_id, RESERVED_INDEX, cJSON_CreateNumber(ALL));
+        cJSON_AddItemToObject(properties_id, RESERVED_INDEX, cJSON_CreateNumber(toUType(Index::ALL)));
 		cJSON_AddItemToObject(properties_id, RESERVED_SLOT, cJSON_CreateNumber(DB_SLOT_ID));
 		cJSON_AddItemToObject(properties_id, RESERVED_PREFIX, cJSON_CreateString(DOCUMENT_ID_TERM_PREFIX));
 		cJSON_AddItemToObject(properties_id, RESERVED_BOOL_TERM, cJSON_CreateTrue());
@@ -389,11 +389,11 @@ Schema::update_specification(cJSON* item)
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_INDEX))) {
 		if (spc->type == cJSON_String) {
 			if (strcasecmp(spc->valuestring, str_index[0].c_str()) == 0) {
-				specification.index = ALL;
+				specification.index = Index::ALL;
 			} else if (strcasecmp(spc->valuestring, str_index[1].c_str()) == 0) {
-				specification.index = TERM;
+				specification.index = Index::TERM;
 			} else if (strcasecmp(spc->valuestring, str_index[2].c_str()) == 0) {
-				specification.index = VALUE;
+				specification.index = Index::VALUE;
 			} else {
 				throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
 			}
@@ -673,14 +673,14 @@ Schema::insert(cJSON* item, cJSON* properties, const std::string &item_name, boo
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_INDEX))) {
 		if (spc->type == cJSON_String) {
 			if (strcasecmp(spc->valuestring, str_index[0].c_str()) == 0) {
-				specification.index = ALL;
-				cJSON_AddNumberToObject(properties, RESERVED_INDEX, ALL);
+				specification.index = Index::ALL;
+				cJSON_AddNumberToObject(properties, RESERVED_INDEX, toUType(Index::ALL));
 			} else if (strcasecmp(spc->valuestring, str_index[1].c_str()) == 0) {
-				specification.index = TERM;
-				cJSON_AddNumberToObject(properties, RESERVED_INDEX, TERM);
+				specification.index = Index::TERM;
+				cJSON_AddNumberToObject(properties, RESERVED_INDEX, toUType(Index::TERM));
 			} else if (strcasecmp(spc->valuestring, str_index[2].c_str()) == 0) {
-				specification.index = VALUE;
-				cJSON_AddNumberToObject(properties, RESERVED_INDEX, VALUE);
+				specification.index = Index::VALUE;
+				cJSON_AddNumberToObject(properties, RESERVED_INDEX, toUType(Index::VALUE));
 			} else {
 				throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
 			}
@@ -950,11 +950,11 @@ Schema::update(cJSON* item, cJSON* properties, bool root)
 	if ((spc = cJSON_GetObjectItem(item, RESERVED_INDEX))) {
 		if (spc->type == cJSON_String) {
 			if (strcasecmp(spc->valuestring, str_index[0].c_str()) == 0) {
-				specification.index = ALL;
+				specification.index = Index::ALL;
 			} else if (strcasecmp(spc->valuestring, str_index[1].c_str()) == 0) {
-				specification.index = TERM;
+				specification.index = Index::TERM;
 			} else if (strcasecmp(spc->valuestring, str_index[2].c_str()) == 0) {
-				specification.index = VALUE;
+				specification.index = Index::VALUE;
 			} else {
 				throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
 			}
@@ -962,7 +962,7 @@ Schema::update(cJSON* item, cJSON* properties, bool root)
 			throw MSG_Error("Data inconsistency, %s should be string", RESERVED_INDEX);
 		}
 	} else if ((spc = cJSON_GetObjectItem(properties, RESERVED_INDEX))) {
-		specification.index = spc->valueint;
+		specification.index = (Index)spc->valueint;
 	}
 
 	// RESERVED_?_DETECTION is heritable but can't change.
@@ -1105,12 +1105,12 @@ Schema::insert_inheritable_specifications(cJSON* item, cJSON* properties)
 				for (int i = 0; i < elements; ++i) {
 					cJSON* acc = cJSON_GetArrayItem(spc, i);
 					if (acc->type == cJSON_String) {
-						if (strcasecmp(acc->valuestring, str_time[5].c_str()) == 0)      specification.accuracy.push_back(DB_YEAR2INT);
-						else if (strcasecmp(acc->valuestring, str_time[4].c_str()) == 0) specification.accuracy.push_back(DB_MONTH2INT);
-						else if (strcasecmp(acc->valuestring, str_time[3].c_str()) == 0) specification.accuracy.push_back(DB_DAY2INT);
-						else if (strcasecmp(acc->valuestring, str_time[2].c_str()) == 0) specification.accuracy.push_back(DB_HOUR2INT);
-						else if (strcasecmp(acc->valuestring, str_time[1].c_str()) == 0) specification.accuracy.push_back(DB_MINUTE2INT);
-						else if (strcasecmp(acc->valuestring, str_time[0].c_str()) == 0) specification.accuracy.push_back(DB_SECOND2INT);
+						if (strcasecmp(acc->valuestring, str_time[5].c_str()) == 0)      specification.accuracy.push_back(toUType(unitTime::YEAR));
+						else if (strcasecmp(acc->valuestring, str_time[4].c_str()) == 0) specification.accuracy.push_back(toUType(unitTime::MONTH));
+						else if (strcasecmp(acc->valuestring, str_time[3].c_str()) == 0) specification.accuracy.push_back(toUType(unitTime::DAY));
+						else if (strcasecmp(acc->valuestring, str_time[2].c_str()) == 0) specification.accuracy.push_back(toUType(unitTime::HOUR));
+						else if (strcasecmp(acc->valuestring, str_time[1].c_str()) == 0) specification.accuracy.push_back(toUType(unitTime::MINUTE));
+						else if (strcasecmp(acc->valuestring, str_time[0].c_str()) == 0) specification.accuracy.push_back(toUType(unitTime::SECOND));
 						else throw MSG_Error("Data inconsistency, %s in %s should be a subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
 					} else {
 						throw MSG_Error("Data inconsistency, %s in %s should be a subset of {%s, %s, %s, %s, %s, %s]}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());

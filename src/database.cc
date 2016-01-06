@@ -310,9 +310,9 @@ Database::index_fields(cJSON *item, const std::string &item_name, Xapian::Docume
 				if (schema.specification.sep_types[2] == NO_TYPE) {
 					schema.set_type(subitem, item_name, properties);
 				}
-				if (is_value || schema.specification.index == VALUE) {
+				if (is_value || schema.specification.index == Index::VALUE) {
 					index_values(doc, subitem, item_name, properties);
-				} else if (schema.specification.index == TERM) {
+				} else if (schema.specification.index == Index::TERM) {
 					index_terms(doc, subitem, item_name, properties);
 				} else {
 					index_terms(doc, subitem, item_name, properties);
@@ -328,9 +328,9 @@ Database::index_fields(cJSON *item, const std::string &item_name, Xapian::Docume
 		if (schema.specification.sep_types[2] == NO_TYPE) {
 			schema.set_type(item, item_name, properties);
 		}
-		if (is_value || schema.specification.index == VALUE) {
+		if (is_value || schema.specification.index == Index::VALUE) {
 			index_values(doc, item, item_name, properties);
-		} else if (schema.specification.index == TERM) {
+		} else if (schema.specification.index == Index::TERM) {
 			index_terms(doc, item, item_name, properties);
 		} else {
 			index_terms(doc, item, item_name, properties);
@@ -539,23 +539,23 @@ Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &
 					bool findMath = value_v.find("||") != std::string::npos;
 					for (size_t len = schema.specification.accuracy.size(), i = 0; i < len; ++i) {
 						std::string acc(value_v);
-						switch ((char)schema.specification.accuracy[i]) {
-							case DB_YEAR2INT:
+						switch ((unitTime)schema.specification.accuracy[i]) {
+							case unitTime::YEAR:
 								acc += findMath ? "//y" : "||//y";
 								break;
-							case DB_MONTH2INT:
+							case unitTime::MONTH:
 								acc += findMath ? "//M" : "||//M";
 								break;
-							case DB_DAY2INT:
+							case unitTime::DAY:
 								acc += findMath ? "//d" : "||//d";
 								break;
-							case DB_HOUR2INT:
+							case unitTime::HOUR:
 								acc += findMath ? "//h" : "||//h";
 								break;
-							case DB_MINUTE2INT:
+							case unitTime::MINUTE:
 								acc += findMath ? "//m" : "||//m";
 								break;
-							case DB_SECOND2INT:
+							case unitTime::SECOND:
 								acc += findMath ? "//s" : "||//s";
 								break;
 						}
