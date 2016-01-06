@@ -201,7 +201,7 @@ MsgPack::json_load(rapidjson::Document& doc, std::string str)
 	rapidjson::ParseResult parse_done = doc.Parse(str.data());
 
 	if (!parse_done) {
-		L_ERR("JSON parse error: %s (%u)\n", GetParseError_En(parse_done.Code()), parse_done.Offset());
+		L_ERR(nullptr, "JSON parse error: %s (%u)\n", GetParseError_En(parse_done.Code()), parse_done.Offset());
 		return false;
 	} else {
 		return true;
