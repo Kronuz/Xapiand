@@ -104,7 +104,7 @@ MsgPack::operator[](const std::string& name) const
 			msgpack::detail::unpack_map_item(obj, p->key, p->val);
 		}
 
-		msgpack::detail::unpack_str(handler->user, name.data(), name.size(), np->key);
+		msgpack::detail::unpack_str(handler->user, name.data(), (uint32_t)name.size(), np->key);
 		msgpack::detail::unpack_nil(np->val);
 		msgpack::detail::unpack_map_item(obj, np->key, np->val);
 
