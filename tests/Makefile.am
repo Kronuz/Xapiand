@@ -7,6 +7,7 @@ check_PROGRAMS = set_forward_list_test \
 				 set_haystack_test \
 				 set_htm_test \
 				 set_lru_test \
+				 set_msgpack_test \
 				 set_query_test \
 				 set_queue_test \
 				 set_serialise_unserialise_test \
@@ -37,6 +38,7 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/length.cc \
 			$(top_builddir)/src/log.cc \
 			$(top_builddir)/src/lru.h \
+			$(top_builddir)/src/msgpack_wrapper.cc \
 			$(top_builddir)/src/multivalue.cc \
 			$(top_builddir)/src/multivaluekeymaker.cc \
 			$(top_builddir)/src/multivaluerange.cc \
@@ -70,6 +72,9 @@ set_htm_test_LDADD = @CHECK_LIBS@
 
 set_lru_test_SOURCES = $(headers) set_lru_test.cc test_lru.cc
 set_lru_test_LDADD = @CHECK_LIBS@
+
+set_msgpack_test_SOURCES = $(headers) set_msgpack_test.cc test_msgpack.cc
+set_msgpack_test_LDADD = @CHECK_LIBS@
 
 set_query_test_SOURCES = $(headers) set_query_test.cc test_query.cc
 set_query_test_LDADD = @CHECK_LIBS@
