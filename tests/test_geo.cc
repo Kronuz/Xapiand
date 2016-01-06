@@ -132,14 +132,14 @@ int create_test_db() {
 	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN);
 
 	std::vector<std::string> _docs({
-		"examples/geo_search/Json_geo_1.txt",
-		"examples/geo_search/Json_geo_2.txt",
-		"examples/geo_search/Json_geo_3.txt",
-		"examples/geo_search/Json_geo_4.txt",
-		"examples/geo_search/Json_geo_5.txt",
-		"examples/geo_search/Json_geo_6.txt",
-		"examples/geo_search/Json_geo_7.txt",
-		"examples/geo_search/Json_geo_8.txt"
+		"examples/json/geo_1.txt",
+		"examples/json/geo_2.txt",
+		"examples/json/geo_3.txt",
+		"examples/json/geo_4.txt",
+		"examples/json/geo_5.txt",
+		"examples/json/geo_6.txt",
+		"examples/json/geo_7.txt",
+		"examples/json/geo_8.txt"
 	});
 
 	// Index documents in the database.

@@ -34,7 +34,7 @@
 // Python files are generated to view the results.
 int test_wkt_parser() {
 	int cont = 0;
-	std::string name("examples/Tests_parser_WKT.txt");
+	std::string name("examples/wkt/parser_tests.txt");
 	std::ifstream readFile(name);
 	std::string EWKT, file_expect, file_result;
 	double error = 0.2;

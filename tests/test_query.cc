@@ -239,14 +239,14 @@ int create_test_db() {
 
 	std::vector<std::string> _docs({
 		// Examples used in test geo.
-		"examples/geo_search/Json_geo_1.txt",
-		"examples/geo_search/Json_geo_2.txt",
-		"examples/geo_search/Json_geo_3.txt",
-		"examples/geo_search/Json_geo_4.txt",
-		"examples/geo_search/Json_geo_5.txt",
-		"examples/geo_search/Json_geo_6.txt",
-		"examples/geo_search/Json_geo_7.txt",
-		"examples/geo_search/Json_geo_8.txt",
+		"examples/json/geo_1.txt",
+		"examples/json/geo_2.txt",
+		"examples/json/geo_3.txt",
+		"examples/json/geo_4.txt",
+		"examples/json/geo_5.txt",
+		"examples/json/geo_6.txt",
+		"examples/json/geo_7.txt",
+		"examples/json/geo_8.txt",
 		// Examples used in test sort.
 		"examples/sort/doc1.txt",
 		"examples/sort/doc2.txt",
@@ -259,8 +259,8 @@ int create_test_db() {
 		"examples/sort/doc9.txt",
 		"examples/sort/doc10.txt",
 		// Search examples.
-		"examples/search_examples/Json_example_1.txt",
-		"examples/search_examples/Json_example_2.txt"
+		"examples/json/example_1.txt",
+		"examples/json/example_2.txt"
 	});
 
 	// Index documents in the database.
