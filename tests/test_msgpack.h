@@ -26,6 +26,9 @@
 
 
 bool read_file_contents(const std::string& filename, std::string* contents);
+bool write_file_contents(const std::string& filename, const std::string& contents);
 int test_correct_cpp();
+int test_pack();
+int test_unpack();
 int test_explore_json();
 int test_add_items();

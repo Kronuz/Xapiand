@@ -25,9 +25,17 @@
 #include "../src/msgpack_wrapper.h"
 #include "../src/log.h"
 
-#include <iostream>
 #include <fstream>
 #include <sstream>
+
+
+bool write_file_contents(const std::string& filename, const std::string& contents) {
+	std::ofstream of(filename.data(), std::ios::out | std::ios::binary);
+	if (of.bad())
+		return false;
+	of.write(contents.data(), contents.size());
+	return true;
+}
 
 
 bool read_file_contents(const std::string& filename, std::string* contents) {
@@ -55,10 +63,66 @@ int test_correct_cpp() {
 }
 
 
+int test_pack() {
+	std::string buffer;
+	if (!read_file_contents("examples/msgpack/json_test1.txt", &buffer)) {
+		L_ERR(nullptr, "ERROR: Can not read the file [examples/json_test1.txt]");
+		return 1;
+	}
+
+	rapidjson::Document doc;
+	if (!MsgPack::json_load(doc, buffer)) {
+		return 1;
+	}
+
+	msgpack::sbuffer sbuf;
+	MsgPack::to_MsgPack(doc, sbuf);
+
+	std::string pack_expected;
+	if (!read_file_contents("examples/msgpack/test1.mpack", &pack_expected)) {
+		L_ERR(nullptr, "ERROR: Can not read the file [examples/test1.mpack]");
+		return 1;
+	}
+
+	if (pack_expected != std::string(sbuf.data(), sbuf.size())) {
+		L_ERR(nullptr, "ERROR: MsgPack::to_MsgPack is no working correctly");
+		return 1;
+	}
+
+	return 0;
+}
+
+
+int test_unpack() {
+	std::string buffer;
+	if (!read_file_contents("examples/msgpack/test1.mpack", &buffer)) {
+		L_ERR(nullptr, "ERROR: Can not read the file [examples/test1.mpack]");
+		return 1;
+	}
+
+	MsgPack obj(buffer);
+
+	std::string expected;
+	if (!read_file_contents("examples/msgpack/json_test1_unpack.txt", &expected)) {
+		L_ERR(nullptr, "ERROR: Can not read the file [examples/json_test1_unpack.txt]");
+		return 1;
+	}
+
+	std::stringstream ss;
+	ss << obj;
+	if (expected != ss.str()) {
+		L_ERR(nullptr, "ERROR: Add items with MsgPack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), ss.str().c_str());
+		return 1;
+	}
+
+	return 0;
+}
+
+
 int test_explore_json() {
 	std::string buffer;
 	if (!read_file_contents("examples/msgpack/test2.mpack", &buffer)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/test1.mpack]");
+		L_ERR(nullptr, "ERROR: Can not read the file [examples/test2.mpack]");
 		return 1;
 	}
 
@@ -106,13 +170,13 @@ int test_explore_json() {
 int test_add_items() {
 	std::string expected;
 	if (!read_file_contents("examples/msgpack/json_test2.txt", &expected)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/json_test1.txt]");
+		L_ERR(nullptr, "ERROR: Can not read the file [examples/json_test2.txt]");
 		return 1;
 	}
 
 	std::string buffer;
 	if (!read_file_contents("examples/msgpack/test2.mpack", &buffer)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/test1.mpack]");
+		L_ERR(nullptr, "ERROR: Can not read the file [examples/test2.mpack]");
 		return 1;
 	}
 

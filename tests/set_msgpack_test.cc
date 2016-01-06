@@ -33,6 +33,20 @@ START_TEST(test_msgpack_cpp)
 END_TEST
 
 
+START_TEST(test_msgpack_pack)
+{
+	ck_assert_int_eq(test_pack(), 0);
+}
+END_TEST
+
+
+START_TEST(test_msgpack_unpack)
+{
+	ck_assert_int_eq(test_unpack(), 0);
+}
+END_TEST
+
+
 START_TEST(test_msgpack_explore_json)
 {
 	ck_assert_int_eq(test_explore_json(), 0);
@@ -53,6 +67,14 @@ Suite* testMsgPack(void) {
 	TCase *tc_cpp = tcase_create("Test version of cpp");
 	tcase_add_test(tc_cpp, test_msgpack_cpp);
 	suite_add_tcase(s, tc_cpp);
+
+	TCase *tc_pack = tcase_create("Test pack");
+	tcase_add_test(tc_pack, test_msgpack_pack);
+	suite_add_tcase(s, tc_pack);
+
+	TCase *tc_unpack = tcase_create("Test unpack");
+	tcase_add_test(tc_unpack, test_msgpack_unpack);
+	suite_add_tcase(s, tc_unpack);
 
 	TCase *tc_explore_json = tcase_create("Test explore json");
 	tcase_add_test(tc_explore_json, test_msgpack_explore_json);
