@@ -10,6 +10,7 @@
 		462C9EB51C18FC2200BB960E /* sha256.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB01C18FC2200BB960E /* sha256.cc */; };
 		462C9EB61C18FC2200BB960E /* md5.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB11C18FC2200BB960E /* md5.cc */; };
 		462C9EB91C20D39400BB960E /* schema.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB71C20D39400BB960E /* schema.cc */; };
+		462C9EBC1C3DACF700BB960E /* msgpack_wrapper.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EBA1C3DACF700BB960E /* msgpack_wrapper.cc */; };
 		4630BEE41B42E88D00351058 /* geometry.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEDE1B42E88D00351058 /* geometry.cc */; };
 		4630BEE51B42E88D00351058 /* htm.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE01B42E88D00351058 /* htm.cc */; };
 		4630BEE61B42E88D00351058 /* wkt_parser.cc in Sources */ = {isa = PBXBuildFile; fileRef = 4630BEE21B42E88D00351058 /* wkt_parser.cc */; };
@@ -83,6 +84,9 @@
 		462C9EB41C18FC2200BB960E /* sha256.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sha256.h; path = src/hash/sha256.h; sourceTree = "<group>"; };
 		462C9EB71C20D39400BB960E /* schema.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = schema.cc; path = src/schema.cc; sourceTree = "<group>"; };
 		462C9EB81C20D39400BB960E /* schema.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = schema.h; path = src/schema.h; sourceTree = "<group>"; };
+		462C9EBA1C3DACF700BB960E /* msgpack_wrapper.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack_wrapper.cc; path = src/msgpack_wrapper.cc; sourceTree = "<group>"; };
+		462C9EBB1C3DACF700BB960E /* msgpack_wrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = msgpack_wrapper.h; path = src/msgpack_wrapper.h; sourceTree = "<group>"; };
+		462C9EBD1C3DAD3300BB960E /* msgpack.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = msgpack.hpp; path = src/msgpack.hpp; sourceTree = "<group>"; };
 		4630BEDE1B42E88D00351058 /* geometry.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = geometry.cc; path = src/geometry.cc; sourceTree = "<group>"; };
 		4630BEDF1B42E88D00351058 /* geometry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = geometry.h; path = src/geometry.h; sourceTree = "<group>"; };
 		4630BEE01B42E88D00351058 /* htm.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = htm.cc; path = src/htm.cc; sourceTree = "<group>"; };
@@ -287,6 +291,9 @@
 				C350589C1B7BAF0500901B80 /* multivaluekeymaker.h */,
 				46B6B3D11B7E4A1B000FA041 /* multivaluerange.cc */,
 				46B6B3D01B7E4A1B000FA041 /* multivaluerange.h */,
+				462C9EBD1C3DAD3300BB960E /* msgpack.hpp */,
+				462C9EBA1C3DACF700BB960E /* msgpack_wrapper.cc */,
+				462C9EBB1C3DACF700BB960E /* msgpack_wrapper.h */,
 				C3C37DBA1BB05C6900F99A84 /* namegen.cc */,
 				C3C37DBC1BB05C8700F99A84 /* namegen.h */,
 				C39AE0531B2F627E00203139 /* queue.h */,
@@ -417,6 +424,7 @@
 				C39AE0761B2F627E00203139 /* utils.cc in Sources */,
 				C39AE06D1B2F627E00203139 /* length.cc in Sources */,
 				C39AE0631B2F627E00203139 /* cJSON_Utils.c in Sources */,
+				462C9EBC1C3DACF700BB960E /* msgpack_wrapper.cc in Sources */,
 				C39AE06B1B2F627E00203139 /* fields.cc in Sources */,
 				C39AE0681B2F627E00203139 /* database.cc in Sources */,
 				46DFA9A81BC3014E008D8144 /* server.cc in Sources */,
