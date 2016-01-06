@@ -63,20 +63,20 @@ MsgPack::MsgPack(const MsgPack& other)
 
 
 MsgPack
-MsgPack::operator[](const MsgPack& o)
+MsgPack::operator[](const MsgPack& o) const
 {
 	if (o.obj.type == msgpack::type::STR) {
 		return operator[](std::string(o.obj.via.str.ptr, o.obj.via.str.size));
 	}
 	if (o.obj.type == msgpack::type::POSITIVE_INTEGER) {
-		return operator[](static_cast<int32_t>(o.obj.via.u64));
+		return operator[](static_cast<uint32_t>(o.obj.via.u64));
 	}
 	throw msgpack::type_error();
 }
 
 
 MsgPack
-MsgPack::operator[](const std::string& name)
+MsgPack::operator[](const std::string& name) const
 {
 	if (obj.type == msgpack::type::NIL) {
 		obj.type = msgpack::type::MAP;
@@ -117,7 +117,7 @@ MsgPack::operator[](const std::string& name)
 
 
 MsgPack
-MsgPack::operator[](uint32_t off)
+MsgPack::operator[](uint32_t off) const
 {
 	if (obj.type == msgpack::type::NIL) {
 		obj.type = msgpack::type::ARRAY;

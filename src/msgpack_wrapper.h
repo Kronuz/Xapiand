@@ -69,9 +69,9 @@ public:
 	MsgPack(MsgPack&& other) noexcept;
 	MsgPack(const MsgPack& other);
 
-	MsgPack operator[](const MsgPack& o);
-	MsgPack operator[](const std::string& name);
-	MsgPack operator[](uint32_t off);
+	MsgPack operator[](const MsgPack& o) const;
+	MsgPack operator[](const std::string& name) const;
+	MsgPack operator[](uint32_t off) const;
 
 	std::string prettify(const rapidjson::Document& doc);
 	std::string to_rapidjson(msgpack::object &ob, bool prettify=true);
@@ -101,13 +101,21 @@ public:
 		return *this;
 	}
 
-	struct iterator {
+	class iterator {
 		MsgPack* obj;
 		uint32_t off;
 
 		friend class MsgPack;
 
 	public:
+		iterator(MsgPack* o, uint32_t _off)
+			: obj(o),
+			  off(_off) { }
+
+		iterator(const iterator& it)
+			: obj(it.obj),
+			  off(it.off) { }
+
 		iterator& operator++() {
 			++off;
 			return *this;
@@ -143,25 +151,23 @@ public:
 		bool operator!=(const iterator& other) const {
 			return !operator==(other);
 		}
+
+		explicit operator bool() const {
+			return obj->obj.type == msgpack::type::MAP ? obj->obj.via.map.size != off : obj->obj.via.array.size != off;
+		}
 	};
 
 	using const_iterator = const iterator;
 
 	iterator begin() {
-		return {
-			.obj = this,
-			.off = 0
-		};
+		return iterator(this, 0);
 	}
 
 	const_iterator begin() const { return begin(); }
 	const_iterator cbegin() const { return begin(); }
 
 	iterator end() {
-		return {
-			.obj = this,
-			.off = obj.type == msgpack::type::MAP ? obj.via.map.size : obj.via.array.size
-		};
+		return iterator(this, obj.type == msgpack::type::MAP ? obj.via.map.size : obj.via.array.size);
 	}
 
 	const_iterator end() const { return end(); }
