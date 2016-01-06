@@ -78,8 +78,8 @@ public:
 	rapidjson::Document to_rapidjson(msgpack::object &ob);
 
 	static bool json_load(rapidjson::Document& doc, std::string str);
-	static MsgPack to_MsgPack(const rapidjson::Document& doc);
-	static std::string to_MsgPack_str(const rapidjson::Document& doc);
+	static MsgPack to_MsgPack(const rapidjson::Document& doc, msgpack::sbuffer& sbuf);
+	static std::string to_MsgPack_str(const rapidjson::Document& doc, msgpack::sbuffer& sbuf);
 
 	template<typename T, typename = std::enable_if_t<!std::is_base_of<MsgPack, std::decay_t<T>>::value>>
 	MsgPack& operator=(T&& v) {

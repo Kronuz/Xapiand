@@ -211,18 +211,16 @@ MsgPack::json_load(rapidjson::Document& doc, std::string str)
 
 
 MsgPack
-MsgPack::to_MsgPack(const rapidjson::Document& doc)
+MsgPack::to_MsgPack(const rapidjson::Document& doc, msgpack::sbuffer& sbuf)
 {
-	msgpack::sbuffer sbuf;
 	msgpack::pack(&sbuf, doc);
 	return MsgPack(std::string(sbuf.data(), sbuf.size()));
 }
 
 
 std::string
-MsgPack::to_MsgPack_str(const rapidjson::Document& doc)
+MsgPack::to_MsgPack_str(const rapidjson::Document& doc, msgpack::sbuffer& sbuf)
 {
-	msgpack::sbuffer sbuf;
 	msgpack::pack(&sbuf, doc);
 	return std::string(sbuf.data(), sbuf.size());
 }
