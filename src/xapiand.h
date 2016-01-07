@@ -24,6 +24,8 @@
 
 #include "config.h"
 
+//#include <cstdio>
+
 #define XAPIAND_CLUSTER_NAME         "Xapiand"
 #define XAPIAND_DISCOVERY_GROUP      "224.2.2.88"   /* Gossip group */
 #define XAPIAND_DISCOVERY_SERVERPORT 58870          /* Gossip port */
@@ -49,3 +51,10 @@
 #else
 #define XAPIAND_TCP_BACKLOG       511     /* TCP listen backlog */
 #endif
+
+/*
+ *	RapidJSON uses 32-bit array/string indices even on 64-bit platforms,
+ *	instead of using \c size_t. Users may override the SizeType by defining
+ */
+// #define RAPIDJSON_NO_SIZETYPEDEFINE
+// namespace rapidjson { typedef ::std::size_t SizeType; }
