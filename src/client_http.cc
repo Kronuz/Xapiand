@@ -29,6 +29,9 @@
 #include "cJSON.h"
 #include "io_utils.h"
 
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/prettywriter.h"
+
 #include <unistd.h>
 #include <regex>
 
@@ -1559,4 +1562,20 @@ HttpClient::clean_http_request()
 	L_TIME(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
 
 	async_read.send();
+}
+
+
+std::string
+HttpClient::json_print(rapidjson::Document& doc, bool pretty)
+{
+	rapidjson::StringBuffer buffer;
+
+	if (pretty) {
+		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+		doc.Accept(writer);
+	} else {
+		rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+		doc.Accept(writer);
+	}
+	return std::string(buffer.GetString(), buffer.GetSize());
 }

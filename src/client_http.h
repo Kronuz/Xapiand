@@ -123,6 +123,7 @@ class HttpClient : public BaseClient {
 
 	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string body=std::string(""), std::string ct_type=std::string("application/json; charset=UTF-8"));
 	void clean_http_request();
+	std::string json_print(rapidjson::Document& doc, bool pretty);
 
 	friend Worker;
 
