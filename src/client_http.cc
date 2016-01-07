@@ -637,27 +637,15 @@ HttpClient::document_info_view(const query_field_t &e)
 		found = false;
 	}
 
-	unique_cJSON root(cJSON_CreateObject());
+	rapidjson::Document root(rapidjson::Type::kObjectType);
 	if (found) {
-		cJSON_AddNumberToObject(root.get(), RESERVED_ID, docid);
-		if (e.pretty) {
-			unique_char_ptr _cprint(cJSON_Print(root.get()));
-			result.assign(_cprint.get());
-		} else {
-			unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
-			result.assign(_cprint.get());
-		}
+		root.AddMember(RESERVED_ID, docid, root.GetAllocator());
+		result = json_print(root, e.pretty);
 		result += "\n";
 		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 	} else {
-		cJSON_AddStringToObject(root.get(), "Response empty", "Document not found");
-		if (e.pretty) {
-			unique_char_ptr _cprint(cJSON_Print(root.get()));
-			result.assign(_cprint.get());
-		} else {
-			unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
-			result.assign(_cprint.get());
-		}
+		root.AddMember("Response empty", "Document not found", root.GetAllocator());
+		result = json_print(root, e.pretty);
 		result += "\n";
 		write(http_response(404, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
 	}
@@ -1048,17 +1036,17 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 				}
 
 				if (!type_found) {
-					std::string response_err;
-					unique_cJSON root(cJSON_CreateObject());
-					cJSON_AddStringToObject(root.get(), "Error message", std::string("Response type " + ct_type + " not provided in the accept header").c_str());
-					if (e.pretty) {
-						unique_char_ptr _cprint(cJSON_Print(root.get()));
-						response_err.assign(_cprint.get());
-					} else {
-						unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
-						response_err.assign(_cprint.get());
-					}
+					rapidjson::Document root(rapidjson::Type::kObjectType);
+					rapidjson::Value err;
+					rapidjson::StringBuffer buffer;
+
+					std::string err_str("Response type " + ct_type + " not provided in the accept header");
+					err.SetString(err_str.c_str(), err_str.size());
+					root.AddMember("Error message", err, root.GetAllocator());
+
+					std::string response_err = json_print(root, e.pretty);
 					response_err += "\n\n";
+
 					write(http_response(406, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_err));
 					manager()->database_pool.checkin(database);
 					L_DEBUG(this, "ABORTED SEARCH");
