@@ -28,6 +28,8 @@
 #include "wkt_parser.h"
 #include "serialise.h"
 
+#include "rapidjson/error/en.h"
+
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -203,5 +205,18 @@ MIMEType get_mimetype(const std::string& type) {
 		return MIMEType::APPLICATION_X_MSGPACK;
 	} else {
 		return MIMEType::UNKNOW;
+	}
+}
+
+
+bool json_load(rapidjson::Document& doc, const std::string& str)
+{
+	rapidjson::ParseResult parse_done = doc.Parse(str.data());
+
+	if (!parse_done) {
+		L_ERR(nullptr, "JSON parse error: %s (%u)\n", GetParseError_En(parse_done.Code()), parse_done.Offset());
+		return false;
+	} else {
+		return true;
 	}
 }

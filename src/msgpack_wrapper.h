@@ -69,8 +69,9 @@ class MsgPack {
 
 	std::shared_ptr<object_handle> handler;
 
-	std::shared_ptr<object_handle> make_handler(const std::string& buffer);
 	std::shared_ptr<MsgPack::object_handle> make_handler();
+	std::shared_ptr<object_handle> make_handler(const std::string& buffer);
+	std::shared_ptr<MsgPack::object_handle> make_handler(const rapidjson::Document& doc);
 
 public:
 	msgpack::object& obj;
@@ -80,6 +81,7 @@ public:
 	MsgPack(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z);
 	MsgPack(msgpack::unpacked& u);
 	MsgPack(const std::string& buffer);
+	MsgPack(const rapidjson::Document& doc);
 	MsgPack(MsgPack&& other) noexcept;
 	MsgPack(const MsgPack& other);
 
@@ -87,13 +89,11 @@ public:
 	MsgPack operator[](const std::string& name) const;
 	MsgPack operator[](uint32_t off) const;
 
-	static std::string prettify(const rapidjson::Document& doc);
-	static std::string to_string(msgpack::object &ob, bool prettify=true);
-	static rapidjson::Document to_rapidjson(msgpack::object &ob);
-	static bool json_load(rapidjson::Document& doc, const std::string& str);
-	static MsgPack to_MsgPack(const rapidjson::Document& doc, msgpack::sbuffer& sbuf);
+	std::string to_json_string(bool prettify);
+	static rapidjson::Document to_json(msgpack::object &ob);
 	static std::string to_string(const rapidjson::Document& doc);
-
+	std::string to_string();
+	
 	inline std::string getKey() const {
 		return std::string(obj.via.map.ptr->key.via.str.ptr, obj.via.map.ptr->key.via.str.size);
 	}

@@ -583,16 +583,16 @@ Database::getMsgPack(Xapian::Document& doc, const std::string &body, const std::
 
 	switch (t) {
 		case MIMEType::APPLICATION_JSON:
-			if (MsgPack::json_load(rdoc, body)) {
+			if (json_load(rdoc, body)) {
 				blob = false;
-				return MsgPack::to_MsgPack(rdoc, buffer);
+				return MsgPack(rdoc);
 			}
 			throw MSG_Error("MsgPack::json_load can not do the parser");
 		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
-			if (MsgPack::json_load(rdoc, body)) {
+			if (json_load(rdoc, body)) {
 				doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
 				blob = false;
-				return MsgPack::to_MsgPack(rdoc, buffer);
+				return MsgPack(rdoc);
 			} else {
 				return MsgPack(std::string());
 			}

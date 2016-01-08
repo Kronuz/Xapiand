@@ -23,6 +23,7 @@
 #pragma once
 
 #include "cJSON.h"
+#include "rapidjson/document.h"
 
 #include <regex>
 #include <vector>
@@ -148,3 +149,4 @@ std::vector<std::string> split_fields(const std::string& field_name);
 void clean_reserved(cJSON *root);
 void clean_reserved(cJSON *root, cJSON *item);
 MIMEType get_mimetype(const std::string& type);
+bool json_load(rapidjson::Document& doc, const std::string& str);

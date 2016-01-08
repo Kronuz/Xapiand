@@ -24,7 +24,6 @@
 
 #include "msgpack_wrapper.h"
 
-#include "rapidjson/error/en.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
 #include "xchange/rapidjson.hpp"
@@ -57,6 +56,11 @@ MsgPack::MsgPack(const std::string& buffer)
 	  obj(handler->obj) { }
 
 
+MsgPack::MsgPack(const rapidjson::Document& doc)
+	: handler(make_handler(doc)),
+	  obj(handler->obj) { }
+
+
 MsgPack::MsgPack(MsgPack&& other) noexcept
 	: handler(std::move(other.handler)),
 	  obj(handler->obj) { }
@@ -65,6 +69,31 @@ MsgPack::MsgPack(MsgPack&& other) noexcept
 MsgPack::MsgPack(const MsgPack& other)
 	: handler(other.handler),
 	  obj(handler->obj) { }
+
+
+std::shared_ptr<MsgPack::object_handle>
+MsgPack::make_handler()
+{
+	return std::make_shared<MsgPack::object_handle>();
+}
+
+
+std::shared_ptr<MsgPack::object_handle>
+MsgPack::make_handler(const std::string& buffer)
+{
+	msgpack::unpacked u;
+	msgpack::unpack(&u, buffer.data(), buffer.size());
+	return std::make_shared<MsgPack::object_handle>(u.get(), msgpack::move(u.zone()));
+}
+
+
+std::shared_ptr<MsgPack::object_handle>
+MsgPack::make_handler(const rapidjson::Document& doc)
+{
+	auto zone(std::make_unique<msgpack::zone>());
+	msgpack::object obj(doc, *zone.get());
+	return std::make_shared<MsgPack::object_handle>(obj, msgpack::move(zone));
+}
 
 
 MsgPack
@@ -156,50 +185,25 @@ MsgPack::operator[](uint32_t off) const
 }
 
 
-std::shared_ptr<MsgPack::object_handle>
-MsgPack::make_handler(const std::string& buffer)
-{
-	msgpack::unpacked u;
-	msgpack::unpack(&u, buffer.data(), buffer.size());
-	return std::make_shared<MsgPack::object_handle>(u.get(), msgpack::move(u.zone()));
-}
-
-
-std::shared_ptr<MsgPack::object_handle>
-MsgPack::make_handler()
-{
-	return std::make_shared<MsgPack::object_handle>();
-}
-
-
 std::string
-MsgPack::prettify(const rapidjson::Document& doc)
+MsgPack::to_json_string(bool prettify)
 {
-	rapidjson::StringBuffer buffer;
-	rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
-	doc.Accept(writer);
-	return std::string(buffer.GetString(), buffer.GetSize());
-}
-
-
-std::string
-MsgPack::to_string(msgpack::object &ob, bool prettify)
-{
-	rapidjson::Document doc;
-	ob.convert(&doc);
-
 	if (prettify) {
-		return MsgPack::prettify(doc);
+		rapidjson::Document doc = to_json(obj);
+		rapidjson::StringBuffer buffer;
+		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+		doc.Accept(writer);
+		return std::string(buffer.GetString(), buffer.GetSize());
 	} else {
 		std::ostringstream oss;
-		oss << ob;
+		oss << obj;
 		return oss.str();
 	}
 }
 
 
 rapidjson::Document
-MsgPack::to_rapidjson(msgpack::object &ob)
+MsgPack::to_json(msgpack::object &ob)
 {
 	rapidjson::Document doc;
 	ob.convert(&doc);
@@ -207,32 +211,18 @@ MsgPack::to_rapidjson(msgpack::object &ob)
 }
 
 
-bool
-MsgPack::json_load(rapidjson::Document& doc, const std::string& str)
-{
-	rapidjson::ParseResult parse_done = doc.Parse(str.data());
-
-	if (!parse_done) {
-		L_ERR(nullptr, "JSON parse error: %s (%u)\n", GetParseError_En(parse_done.Code()), parse_done.Offset());
-		return false;
-	} else {
-		return true;
-	}
-}
-
-
-MsgPack
-MsgPack::to_MsgPack(const rapidjson::Document& doc, msgpack::sbuffer& sbuf)
-{
-	msgpack::pack(&sbuf, doc);
-	return MsgPack(std::string(sbuf.data(), sbuf.size()));
-}
-
-
 std::string
-MsgPack::to_string(const rapidjson::Document& doc)
+MsgPack::to_string()
 {
 	msgpack::sbuffer sbuf;
-	msgpack::pack(&sbuf, doc);
+	msgpack::pack(&sbuf, obj);
 	return std::string(sbuf.data(), sbuf.size());
 }
+
+
+//TODO:
+// crear adaptador para objetos MsgPack
+
+// agregar metodo remove()
+
+// agregar metodo at(), parecido a operator[], pero no crea nuevos, salta excepcion
