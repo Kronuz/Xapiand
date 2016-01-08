@@ -58,7 +58,6 @@ class MsgPack {
 			: obj(),
 			  zone(new msgpack::zone)
 		{
-			fprintf(stderr, "handler constructor\n");
 			user.set_zone(*zone.get());
 			obj.type = msgpack::type::MAP;
 			obj.via.map.size = 0;

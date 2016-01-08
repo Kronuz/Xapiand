@@ -64,9 +64,7 @@ MsgPack::MsgPack(const MsgPack& other)
 
 MsgPack::MsgPack()
 	: handler(std::make_shared<object_handle>()),
-	  obj(handler->obj) {
-		  fprintf(stderr, "MSGPACK constructor\n");
-	  }
+	  obj(handler->obj) { }
 
 
 MsgPack
