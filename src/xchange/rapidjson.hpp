@@ -251,7 +251,7 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
     template <typename Encoding, typename Allocator, typename StackAllocator>
     struct object_with_zone< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> > {
         void operator()(msgpack::object::with_zone& o, rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> const& v) const {
-            o << static_cast<rapidjson::GenericValue<Encoding, Allocator>&>(v);
+            o << static_cast<const rapidjson::GenericValue<Encoding, Allocator>&>(v);
         }
     };
 }}}
