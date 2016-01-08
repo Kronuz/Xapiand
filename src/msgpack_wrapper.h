@@ -53,16 +53,28 @@ class MsgPack {
 			  user(std::move(_handler.user)) { }
 
 		object_handle(const object_handle&) = delete;
+
+		object_handle()
+			: obj(),
+			  zone(new msgpack::zone)
+		{
+			fprintf(stderr, "handler constructor\n");
+			user.set_zone(*zone.get());
+			obj.type = msgpack::type::MAP;
+			obj.via.map.size = 0;
+			obj.via.map.ptr = nullptr;
+		}
 	};
 
 	std::shared_ptr<object_handle> handler;
 
 	std::shared_ptr<object_handle> make_handler(const std::string& buffer);
+	std::shared_ptr<MsgPack::object_handle> make_handler();
 
 public:
 	msgpack::object& obj;
 
-	MsgPack() = delete;
+	MsgPack();
 	MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object& o);
 	MsgPack(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z);
 	MsgPack(msgpack::unpacked& u);

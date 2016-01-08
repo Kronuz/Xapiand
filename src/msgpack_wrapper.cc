@@ -62,6 +62,13 @@ MsgPack::MsgPack(const MsgPack& other)
 	  obj(handler->obj) { }
 
 
+MsgPack::MsgPack()
+	: handler(std::make_shared<object_handle>()),
+	  obj(handler->obj) {
+		  fprintf(stderr, "MSGPACK constructor\n");
+	  }
+
+
 MsgPack
 MsgPack::operator[](const MsgPack& o) const
 {
@@ -157,6 +164,13 @@ MsgPack::make_handler(const std::string& buffer)
 	msgpack::unpacked u;
 	msgpack::unpack(&u, buffer.data(), buffer.size());
 	return std::make_shared<MsgPack::object_handle>(u.get(), msgpack::move(u.zone()));
+}
+
+
+std::shared_ptr<MsgPack::object_handle>
+MsgPack::make_handler()
+{
+	return std::make_shared<MsgPack::object_handle>();
 }
 
 
