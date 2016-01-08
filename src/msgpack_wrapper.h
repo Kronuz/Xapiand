@@ -20,6 +20,8 @@
  * IN THE SOFTWARE.
  */
 
+#pragma once
+
 #include "msgpack.hpp"
 
 #include "rapidjson/document.h"
@@ -91,6 +93,10 @@ public:
 	static bool json_load(rapidjson::Document& doc, const std::string& str);
 	static MsgPack to_MsgPack(const rapidjson::Document& doc, msgpack::sbuffer& sbuf);
 	static std::string to_string(const rapidjson::Document& doc);
+
+	inline std::string getKey() const {
+		return std::string(obj.via.map.ptr->key.via.str.ptr, obj.via.map.ptr->key.via.str.size);
+	}
 
 	template<typename T, typename = std::enable_if_t<!std::is_base_of<MsgPack, std::decay_t<T>>::value>>
 	MsgPack& operator=(T&& v) {
@@ -183,6 +189,10 @@ public:
 
 	const_iterator end() const { return end(); }
 	const_iterator cend() const { return end(); }
+
+	explicit operator bool() const {
+		return obj.type == msgpack::type::MAP ? obj.via.map.size : obj.via.array.size;
+	}
 };
 
 

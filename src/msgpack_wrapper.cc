@@ -32,6 +32,11 @@
 #include "log.h"
 
 
+MsgPack::MsgPack()
+	: handler(std::make_shared<object_handle>()),
+	  obj(handler->obj) { }
+
+
 MsgPack::MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object& o)
 	: handler(unpacked),
 	  obj(o) { }
@@ -59,11 +64,6 @@ MsgPack::MsgPack(MsgPack&& other) noexcept
 
 MsgPack::MsgPack(const MsgPack& other)
 	: handler(other.handler),
-	  obj(handler->obj) { }
-
-
-MsgPack::MsgPack()
-	: handler(std::make_shared<object_handle>()),
 	  obj(handler->obj) { }
 
 
