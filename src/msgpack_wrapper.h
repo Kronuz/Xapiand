@@ -91,7 +91,6 @@ public:
 
 	std::string to_json_string(bool prettify);
 	static rapidjson::Document to_json(msgpack::object &ob);
-	static std::string to_string(const rapidjson::Document& doc);
 	std::string to_string();
 	
 	inline std::string getKey() const {
