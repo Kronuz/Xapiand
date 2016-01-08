@@ -86,13 +86,17 @@ public:
 	MsgPack(const MsgPack& other);
 
 	MsgPack operator[](const MsgPack& o) const;
-	MsgPack operator[](const std::string& name) const;
+	MsgPack operator[](const std::string& key) const;
 	MsgPack operator[](uint32_t off) const;
 
-	std::string to_json_string(bool prettify);
-	static rapidjson::Document to_json(msgpack::object &ob);
+	MsgPack at(const MsgPack& o) const;
+	MsgPack at(const std::string& key) const;
+	MsgPack at(uint32_t off) const;
+
+	std::string to_json_string(bool prettify=false);
 	std::string to_string();
-	
+	rapidjson::Document to_json();
+
 	inline std::string getKey() const {
 		return std::string(obj.via.map.ptr->key.via.str.ptr, obj.via.map.ptr->key.via.str.size);
 	}

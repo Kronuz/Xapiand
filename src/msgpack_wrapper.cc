@@ -110,7 +110,7 @@ MsgPack::operator[](const MsgPack& o) const
 
 
 MsgPack
-MsgPack::operator[](const std::string& name) const
+MsgPack::operator[](const std::string& key) const
 {
 	if (obj.type == msgpack::type::NIL) {
 		obj.type = msgpack::type::MAP;
@@ -123,7 +123,7 @@ MsgPack::operator[](const std::string& name) const
 		const msgpack::object_kv* pend(obj.via.map.ptr + obj.via.map.size);
 		for ( ; p != pend; ++p) {
 			if (p->key.type == msgpack::type::STR) {
-				if (name.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0) {
+				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0) {
 					return MsgPack(handler, p->val);
 				}
 			}
@@ -138,7 +138,7 @@ MsgPack::operator[](const std::string& name) const
 			msgpack::detail::unpack_map_item(obj, p->key, p->val);
 		}
 
-		msgpack::detail::unpack_str(handler->user, name.data(), (uint32_t)name.size(), np->key);
+		msgpack::detail::unpack_str(handler->user, key.data(), (uint32_t)key.size(), np->key);
 		msgpack::detail::unpack_nil(np->val);
 		msgpack::detail::unpack_map_item(obj, np->key, np->val);
 
@@ -185,11 +185,67 @@ MsgPack::operator[](uint32_t off) const
 }
 
 
+MsgPack
+MsgPack::at(const MsgPack& o) const
+{
+	if (o.obj.type == msgpack::type::STR) {
+		return at(std::string(o.obj.via.str.ptr, o.obj.via.str.size));
+	}
+	if (o.obj.type == msgpack::type::POSITIVE_INTEGER) {
+		return at(static_cast<uint32_t>(o.obj.via.u64));
+	}
+	throw msgpack::type_error();
+}
+
+
+MsgPack
+MsgPack::at(const std::string& key) const
+{
+	if (obj.type == msgpack::type::NIL) {
+		throw std::out_of_range(key);
+	}
+
+	if (obj.type == msgpack::type::MAP) {
+		const msgpack::object_kv* pend(obj.via.map.ptr + obj.via.map.size);
+		for (auto p = obj.via.map.ptr; p != pend; ++p) {
+			if (p->key.type == msgpack::type::STR) {
+				if (key == std::string(p->key.via.str.ptr, p->key.via.str.size)) {
+					return MsgPack(handler, p->val);
+				}
+			}
+		}
+
+		throw std::out_of_range(key);
+	}
+
+	throw msgpack::type_error();
+}
+
+
+MsgPack
+MsgPack::at(uint32_t off) const
+{
+	if (obj.type == msgpack::type::NIL) {
+		throw std::out_of_range(std::to_string(off));
+	}
+
+	if (obj.type == msgpack::type::ARRAY) {
+		if (off < obj.via.array.size) {
+			return MsgPack(handler, obj.via.array.ptr[off]);
+		}
+
+		throw std::out_of_range(std::to_string(off));
+	}
+
+	throw msgpack::type_error();
+}
+
+
 std::string
 MsgPack::to_json_string(bool prettify)
 {
 	if (prettify) {
-		rapidjson::Document doc = to_json(obj);
+		rapidjson::Document doc = to_json();
 		rapidjson::StringBuffer buffer;
 		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
 		doc.Accept(writer);
@@ -203,10 +259,10 @@ MsgPack::to_json_string(bool prettify)
 
 
 rapidjson::Document
-MsgPack::to_json(msgpack::object &ob)
+MsgPack::to_json()
 {
 	rapidjson::Document doc;
-	ob.convert(&doc);
+	obj.convert(&doc);
 	return doc;
 }
 
@@ -218,11 +274,3 @@ MsgPack::to_string()
 	msgpack::pack(&sbuf, obj);
 	return std::string(sbuf.data(), sbuf.size());
 }
-
-
-//TODO:
-// crear adaptador para objetos MsgPack
-
-// agregar metodo remove()
-
-// agregar metodo at(), parecido a operator[], pero no crea nuevos, salta excepcion
