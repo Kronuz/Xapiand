@@ -26,6 +26,8 @@
 
 #include "rapidjson/document.h"
 
+#define MSGPACK_MAP_INIT_SIZE 50
+
 
 class MsgPack;
 
@@ -68,6 +70,7 @@ class MsgPack {
 	};
 
 	std::shared_ptr<object_handle> handler;
+	size_t m_alloc;
 
 	std::shared_ptr<MsgPack::object_handle> make_handler();
 	std::shared_ptr<object_handle> make_handler(const std::string& buffer);
@@ -85,9 +88,9 @@ public:
 	MsgPack(MsgPack&& other) noexcept;
 	MsgPack(const MsgPack& other);
 
-	MsgPack operator[](const MsgPack& o) const;
-	MsgPack operator[](const std::string& key) const;
-	MsgPack operator[](uint32_t off) const;
+	MsgPack operator[](const MsgPack& o);
+	MsgPack operator[](const std::string& key);
+	MsgPack operator[](uint32_t off);
 
 	MsgPack at(const MsgPack& o) const;
 	MsgPack at(const std::string& key) const;
@@ -96,6 +99,7 @@ public:
 	std::string to_json_string(bool prettify=false);
 	std::string to_string();
 	rapidjson::Document to_json();
+	void expand_map();
 
 	inline std::string getKey() const {
 		return std::string(obj.via.map.ptr->key.via.str.ptr, obj.via.map.ptr->key.via.str.size);
