@@ -31,6 +31,34 @@
 
 class MsgPack;
 
+namespace msgpack {
+	MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
+		namespace adaptor {
+			template <>
+			struct convert<MsgPack> {
+				msgpack::object const& operator()(msgpack::object const& o, MsgPack& v) const;
+			};
+
+			template <>
+			struct pack<MsgPack> {
+				template <typename Stream>
+				msgpack::packer<Stream>& operator()(msgpack::packer<Stream>& o, const MsgPack& v) const;
+			};
+
+			template <>
+			struct object<MsgPack> {
+				void operator()(msgpack::object& o, MsgPack const& v) const;
+			};
+
+			template <>
+			struct object_with_zone<MsgPack> {
+				void operator()(msgpack::object::with_zone& o, MsgPack const& v) const;
+			};
+			
+		} // namespace adaptor
+	} // MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
+} // namespace msgpack
+
 
 inline bool operator==(const MsgPack& x, const MsgPack& y);
 
@@ -105,17 +133,11 @@ public:
 		return std::string(obj.via.map.ptr->key.via.str.ptr, obj.via.map.ptr->key.via.str.size);
 	}
 
-	template<typename T, typename = std::enable_if_t<!std::is_base_of<MsgPack, std::decay_t<T>>::value>>
+	template<typename T>
 	MsgPack& operator=(T&& v) {
 		msgpack::object o(std::forward<T>(v), handler->zone.get());
 		obj.type = o.type;
 		obj.via = o.via;
-		return *this;
-	}
-
-	MsgPack& operator=(const MsgPack& other) {
-		handler = other.handler;
-		obj = handler->obj;
 		return *this;
 	}
 

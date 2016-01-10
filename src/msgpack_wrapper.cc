@@ -298,3 +298,34 @@ MsgPack::expand_map()
 		m_alloc = nsize;
 	}
 }
+
+
+namespace msgpack {
+	MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
+		namespace adaptor {
+			msgpack::object const& convert<MsgPack>::operator()(msgpack::object const& o, MsgPack& v) const {
+				v = MsgPack(o, std::make_unique<msgpack::zone>());
+				return o;
+			}
+			
+			template <typename Stream>
+			msgpack::packer<Stream>& pack<MsgPack>::operator()(msgpack::packer<Stream>& o, const MsgPack& v) const {
+				o << v;
+				return o;
+			}
+			
+			void object<MsgPack>::operator()(msgpack::object& o, MsgPack const& v) const {
+				msgpack::object obj(v.obj);
+				o.type = obj.type;
+				o.via = obj.via;
+			}
+			
+			void object_with_zone<MsgPack>::operator()(msgpack::object::with_zone& o, MsgPack const& v) const {
+				msgpack::object obj(v.obj, o.zone);
+				o.type = obj.type;
+				o.via = obj.via;
+			}
+			
+		} // namespace adaptor
+	} // MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
+} // namespace msgpack
