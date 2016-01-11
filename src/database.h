@@ -77,7 +77,7 @@ class DatabaseQueue;
 
 
 class Database {
-	MsgPack getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob, msgpack::sbuffer& buf);
+	MsgPack getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob);
 	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
 
 public:

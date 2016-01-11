@@ -575,7 +575,7 @@ Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &
 
 
 MsgPack
-Database::getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob, msgpack::sbuffer &buffer)
+Database::getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob)
 {
 	rapidjson::Document rdoc;
 
@@ -594,12 +594,12 @@ Database::getMsgPack(Xapian::Document& doc, const std::string &body, const std::
 				blob = false;
 				return MsgPack(rdoc);
 			} else {
-				return MsgPack(std::string());
+				return MsgPack();
 			}
 		case MIMEType::APPLICATION_X_MSGPACK:
 			return MsgPack(body);
 		case MIMEType::UNKNOW:
-			return MsgPack(std::string());
+			return MsgPack();
 	}
 }
 
@@ -652,11 +652,11 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 
 	// Create MsgPack object
 	bool blob = true;
-	msgpack::sbuffer buffer;
-	MsgPack obj = getMsgPack(doc, body, ct_type, blob, buffer);
+	MsgPack obj = getMsgPack(doc, body, ct_type, blob);
+	std::string obj_str = obj.to_string();
 
 	L_DATABASE_WRAP(this, "Document to index: %s", buffer.data());
-	doc.set_data(encode_length(buffer.size()) + std::string(buffer.data(), buffer.size()) + (blob ? body : ""));
+	doc.set_data(encode_length(obj_str.size()) + obj_str + (blob ? body : ""));
 
 	cJSON *json;
 	unique_cJSON document(json);
