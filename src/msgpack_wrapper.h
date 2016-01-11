@@ -141,12 +141,6 @@ public:
 		return *this;
 	}
 
-	MsgPack& operator=(MsgPack&& other) {
-		handler = std::move(other.handler);
-		obj = handler->obj;
-		return *this;
-	}
-
 	class iterator {
 		MsgPack* obj;
 		uint32_t off;
