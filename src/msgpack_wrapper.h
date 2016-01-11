@@ -26,17 +26,18 @@
 
 #include "rapidjson/document.h"
 
-#define MSGPACK_MAP_INIT_SIZE 50
+#define MSGPACK_MAP_INIT_SIZE 100
 
 
 class MsgPack;
+
 
 namespace msgpack {
 	MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
 		namespace adaptor {
 			template <>
 			struct convert<MsgPack> {
-				msgpack::object const& operator()(msgpack::object const& o, MsgPack& v) const;
+				const msgpack::object& operator()(const msgpack::object& o, MsgPack& v) const;
 			};
 
 			template <>
@@ -47,14 +48,13 @@ namespace msgpack {
 
 			template <>
 			struct object<MsgPack> {
-				void operator()(msgpack::object& o, MsgPack const& v) const;
+				void operator()(msgpack::object& o, const MsgPack& v) const;
 			};
 
 			template <>
 			struct object_with_zone<MsgPack> {
-				void operator()(msgpack::object::with_zone& o, MsgPack const& v) const;
+				void operator()(msgpack::object::with_zone& o, const MsgPack& v) const;
 			};
-			
 		} // namespace adaptor
 	} // MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
 } // namespace msgpack
