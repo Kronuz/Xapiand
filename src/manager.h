@@ -152,9 +152,9 @@ public:
 	std::future<bool> trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 	std::future<bool> store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename);
 
-	unique_cJSON server_status();
-	unique_cJSON get_stats_time(const std::string &time_req);
-	unique_cJSON get_stats_json(pos_time_t &first_time, pos_time_t &second_time);
+	void server_status(MsgPack& stats);
+	void get_stats_time(MsgPack& stats, const std::string &time_req);
+	void _get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time_t& second_time);
 
 	inline decltype(auto) get_lock() noexcept {
 		return std::unique_lock<std::mutex>(qmtx);

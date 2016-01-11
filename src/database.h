@@ -125,8 +125,8 @@ public:
 	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field_t *similar);
 	int get_mset(const query_field_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
 					std::vector<std::string> &suggestions, int offset = 0);
-	unique_cJSON get_stats_database();
-	unique_cJSON get_stats_docs(const std::string &document_id);
+	void get_stats_database(MsgPack stats);
+	void get_stats_docs(MsgPack stats, const std::string &document_id);
 	data_field_t get_data_field(const std::string &field_name);
 	data_field_t get_slot_field(const std::string &field_name);
 	void index_fields(cJSON *item, const std::string &item_name, Xapian::Document &doc, cJSON *properties, bool is_value=true);

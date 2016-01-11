@@ -783,20 +783,22 @@ HttpClient::update_document_view(const query_field_t &e)
 void
 HttpClient::stats_view(const query_field_t &e)
 {
-	std::string result;
-	unique_cJSON root(cJSON_CreateObject());
+	std::string response_str;
+	MsgPack response;
 
 	if (e.server) {
-		unique_cJSON server_stats = manager()->server_status();
-		cJSON_AddItemToObject(root.get(), "Server status", server_stats.release());
+		MsgPack server_st;
+		manager()->server_status(server_st);
+		response["Server status"] = server_st;
 	}
 	if (e.database) {
 		if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 			return;
 		}
-		unique_cJSON JSON_database = database->get_stats_database();
-		cJSON_AddItemToObject(root.get(), "Database status", JSON_database.release());
+		MsgPack database_st;
+		database->get_stats_database(database_st);
+		response["Database status"] = database_st;
 		manager()->database_pool.checkin(database);
 	}
 	if (!e.document.empty()) {
@@ -804,23 +806,19 @@ HttpClient::stats_view(const query_field_t &e)
 			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 			return;
 		}
-		unique_cJSON JSON_document = database->get_stats_docs(e.document);
-		cJSON_AddItemToObject(root.get(), "Document status", JSON_document.release());
+		MsgPack doc_st;
+		database->get_stats_docs(doc_st, e.document);
+		response["Document status"] = doc_st;
 		manager()->database_pool.checkin(database);
 	}
 	if (!e.stats.empty()) {
-		unique_cJSON server_stats_time = manager()->get_stats_time(e.stats);
-		cJSON_AddItemToObject(root.get(), "Stats time", server_stats_time.release());
+		MsgPack sta_st;
+		manager()->get_stats_time(sta_st, e.stats);
+		response["Stats time"] = sta_st;
 	}
-	if (e.pretty) {
-		unique_char_ptr _cprint(cJSON_Print(root.get()));
-		result.assign(_cprint.get());
-	} else {
-		unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
-		result.assign(_cprint.get());
-	}
-	result += "\n\n";
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
+	response_str = response.to_json_string(e.pretty);
+	response_str += "\n\n";
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
 
 

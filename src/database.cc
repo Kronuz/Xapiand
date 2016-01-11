@@ -1453,29 +1453,25 @@ Database::get_document(const Xapian::docid &did, Xapian::Document &doc)
 }
 
 
-unique_cJSON
-Database::get_stats_database()
+void
+Database::get_stats_database(MsgPack stats)
 {
-	unique_cJSON database(cJSON_CreateObject());
 	unsigned int doccount = db->get_doccount();
 	unsigned int lastdocid = db->get_lastdocid();
-	cJSON_AddStringToObject(database.get(), "uuid", db->get_uuid().c_str());
-	cJSON_AddNumberToObject(database.get(), "doc_count", doccount);
-	cJSON_AddNumberToObject(database.get(), "last_id", lastdocid);
-	cJSON_AddNumberToObject(database.get(), "doc_del", lastdocid - doccount);
-	cJSON_AddNumberToObject(database.get(), "av_length", db->get_avlength());
-	cJSON_AddNumberToObject(database.get(), "doc_len_lower", db->get_doclength_lower_bound());
-	cJSON_AddNumberToObject(database.get(), "doc_len_upper", db->get_doclength_upper_bound());
-	db->has_positions() ? cJSON_AddTrueToObject(database.get(), "has_positions") : cJSON_AddFalseToObject(database.get(), "has_positions");
-	return std::move(database);
+	stats["uuid"] = db->get_uuid().c_str();
+	stats["doc_count"] = doccount;
+	stats["last_id"] = lastdocid;
+	stats["doc_del"] = lastdocid - doccount;
+	stats["av_length"] = db->get_avlength();
+	stats["doc_len_lower"] =  db->get_doclength_lower_bound();
+	stats["doc_len_upper"] = db->get_doclength_upper_bound();
+	db->has_positions() ? stats["has_positions"] = true : stats["has_positions"] = false;
 }
 
 
-unique_cJSON
-Database::get_stats_docs(const std::string &document_id)
+void
+Database::get_stats_docs(MsgPack stats, const std::string &document_id)
 {
-	unique_cJSON document(cJSON_CreateObject());
-
 	Xapian::Document doc;
 	Xapian::QueryParser queryparser;
 
@@ -1489,40 +1485,46 @@ Database::get_stats_docs(const std::string &document_id)
 	Xapian::MSet mset = enquire.get_mset(0, 1);
 	Xapian::MSetIterator m = mset.begin();
 
+	stats[RESERVED_ID] = document_id.c_str();
+
 	for (int t = 3; t >= 0; --t) {
 		try {
 			doc = db->get_document(*m);
 			break;
 		} catch (Xapian::InvalidArgumentError &err) {
-			cJSON_AddStringToObject(document.get(), RESERVED_ID, document_id.c_str());
-			cJSON_AddStringToObject(document.get(), "_error",  "Document not found");
-			return std::move(document);
+			stats["_error"] = "Invalid internal document id";
 		} catch (Xapian::DocNotFoundError &err) {
-			cJSON_AddStringToObject(document.get(), RESERVED_ID, document_id.c_str());
-			cJSON_AddStringToObject(document.get(), "_error",  "Document not found");
-			return std::move(document);
+			stats["_error"] = "Document not found ";
 		} catch (const Xapian::Error &err) {
 			reopen();
 			m = mset.begin();
 		}
 	}
 
-	cJSON_AddStringToObject(document.get(), RESERVED_ID, document_id.c_str());
-	cJSON_AddItemToObject(document.get(), RESERVED_DATA, cJSON_Parse(doc.get_data().c_str()));
-	cJSON_AddNumberToObject(document.get(), "number_terms", doc.termlist_count());
+	std::string data = doc.get_data();
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	size_t length = decode_length(&p, p_end, true);
+	data = std::string(p, length);
+
+	MsgPack data_msgp(data);
+	stats[RESERVED_DATA] = data_msgp.to_json_string();
+
+	std::string ct_type = doc.get_value(2);
+	ct_type != JSON_TYPE ? stats["has_blob"] = true : stats["has_blob"] = false;
+
+	stats["number_terms"] = doc.termlist_count();
 	std::string terms;
 	for (auto it = doc.termlist_begin(); it != doc.termlist_end(); ++it) {
 		terms = terms + repr(*it) + " ";
 	}
-	cJSON_AddStringToObject(document.get(), RESERVED_TERMS, terms.c_str());
-	cJSON_AddNumberToObject(document.get(), "number_values", doc.values_count());
+	stats[RESERVED_TERMS] = terms;
+	stats["number_values"] = doc.values_count();
 	std::string values;
 	for (auto iv = doc.values_begin(); iv != doc.values_end(); ++iv) {
 		values = values + std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
 	}
-	cJSON_AddStringToObject(document.get(), RESERVED_VALUES, values.c_str());
-
-	return std::move(document);
+	stats[RESERVED_VALUES] = values;
 }
 
 
