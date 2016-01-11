@@ -147,6 +147,23 @@ public:
 		return *this;
 	}
 
+	template<typename T>
+	void add_item_to_array(T&& v) {
+		if (obj.type == msgpack::type::NIL) {
+			obj.type = msgpack::type::ARRAY;
+			obj.via.array.ptr = nullptr;
+			obj.via.array.size = 0;
+		}
+
+		if (obj.type == msgpack::type::ARRAY) {
+			auto r_size = obj.via.array.size + 1;
+			expand_array(r_size);
+			msgpack::detail::unpack_array_item(obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
+		} else {
+			throw msgpack::type_error();
+		}
+	}
+
 	class iterator {
 		MsgPack* obj;
 		uint32_t off;
