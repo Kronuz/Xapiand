@@ -657,7 +657,7 @@ HttpClient::document_info_view(const query_field_t &e)
 void
 HttpClient::delete_document_view(const query_field_t &e)
 {
-	std::string result;
+	std::string response_str;
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
@@ -683,31 +683,21 @@ HttpClient::delete_document_view(const query_field_t &e)
 	L_TIME(this, "Deletion took %s", delta_string(tp_start, tp_end).c_str());
 
 	manager()->database_pool.checkin(database);
-	unique_cJSON root(cJSON_CreateObject());
-	cJSON *data = cJSON_CreateObject(); // It is managed by root.
-	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
-	if (e.commit) {
-		cJSON_AddTrueToObject(data, "commit");
-	} else {
-		cJSON_AddFalseToObject(data, "commit");
-	}
-	cJSON_AddItemToObject(root.get(), "delete", data);
-	if (e.pretty) {
-		unique_char_ptr _cprint(cJSON_Print(root.get()));
-		result.assign(_cprint.get());
-	} else {
-		unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
-		result.assign(_cprint.get());
-	}
-	result += "\n\n";
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
+
+	MsgPack response, data;
+	data[RESERVED_ID] = command.c_str();
+	e.commit ? data["commit"] = true : data["commit"] = false;
+	response["delete"] = data;
+	response_str = response.to_json_string(e.pretty);
+	response_str += "\n\n";
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
 
 
 void
 HttpClient::index_document_view(const query_field_t &e)
 {
-	std::string result;
+	std::string response_str;
 
 	buid_path_index(index_path);
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE|DB_SPAWN|DB_INIT_REF)) {
@@ -745,31 +735,20 @@ HttpClient::index_document_view(const query_field_t &e)
 	L_TIME(this, "Indexing took %s", delta_string(tp_start, tp_end).c_str());
 
 	manager()->database_pool.checkin(database);
-	unique_cJSON root(cJSON_CreateObject());
-	cJSON *data = cJSON_CreateObject(); // It is managed by root.
-	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
-	if (e.commit) {
-		cJSON_AddTrueToObject(data, "commit");
-	} else {
-		cJSON_AddFalseToObject(data, "commit");
-	}
-	cJSON_AddItemToObject(root.get(), "index", data);
-	if (e.pretty) {
-		unique_char_ptr _cprint(cJSON_Print(root.get()));
-		result.assign(_cprint.get());
-	} else {
-		unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
-		result.assign(_cprint.get());
-	}
-	result += "\n\n";
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
+	MsgPack response, data;
+	data[RESERVED_ID] = command.c_str();
+	e.commit ? data["commit"] = true : data["commit"] = false;
+	response["index"] = data;
+	response_str = response.to_json_string(e.pretty);
+	response_str += "\n\n";
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
 
 
 void
 HttpClient::update_document_view(const query_field_t &e)
 {
-	std::string result;
+	std::string response_str;
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
@@ -791,24 +770,13 @@ HttpClient::update_document_view(const query_field_t &e)
 	}
 
 	manager()->database_pool.checkin(database);
-	unique_cJSON root(cJSON_CreateObject());
-	cJSON *data = cJSON_CreateObject(); // It is managed by root.
-	cJSON_AddStringToObject(data, RESERVED_ID, command.c_str());
-	if (e.commit) {
-		cJSON_AddTrueToObject(data, "commit");
-	} else {
-		cJSON_AddFalseToObject(data, "commit");
-	}
-	cJSON_AddItemToObject(root.get(), "update", data);
-	if (e.pretty) {
-		unique_char_ptr _cprint(cJSON_Print(root.get()));
-		result.assign(_cprint.get());
-	} else {
-		unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
-		result.assign(_cprint.get());
-	}
-	result += "\n\n";
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
+	MsgPack response, data;
+	data[RESERVED_ID] = command.c_str();
+	e.commit ? data["commit"] = true : data["commit"] = false;
+	response["update"] = data;
+	response_str = response.to_json_string(e.pretty);
+	response_str += "\n\n";
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
 
 
@@ -859,28 +827,23 @@ HttpClient::stats_view(const query_field_t &e)
 void
 HttpClient::bad_request_view(const query_field_t &e, int cmd)
 {
-	std::string result;
+	std::string response_str;
 
-	unique_cJSON err_response(cJSON_CreateObject());
+	MsgPack err_response;
 	switch (cmd) {
 		case CMD_UNKNOWN_HOST:
-			cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown host " + host).c_str());
+			err_response["Error message"] =  std::string("Unknown host " + host).c_str();
 			break;
 		case CMD_UNKNOWN_ENDPOINT:
-			cJSON_AddStringToObject(err_response.get(), "Error message", std::string("Unknown Endpoint - No one knows the index").c_str());
+			err_response["Error message"] = std::string("Unknown Endpoint - No one knows the index").c_str();
 			break;
 		default:
-			cJSON_AddStringToObject(err_response.get(), "Error message", "BAD QUERY");
+			err_response["Error message"] = "BAD QUERY";
 	}
-	if (e.pretty) {
-		unique_char_ptr _cprint(cJSON_Print(err_response.get()));
-		result.assign(_cprint.get());
-	} else {
-		unique_char_ptr _cprint(cJSON_PrintUnformatted(err_response.get()));
-		result.assign(_cprint.get());
-	}
-	result += "\n";
-	write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
+
+	response_str = err_response.to_json_string(e.pretty);
+	response_str += "\n";
+	write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
 
 
