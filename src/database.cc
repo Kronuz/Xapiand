@@ -1454,7 +1454,7 @@ Database::get_document(const Xapian::docid &did, Xapian::Document &doc)
 
 
 void
-Database::get_stats_database(MsgPack stats)
+Database::get_stats_database(MsgPack& stats)
 {
 	unsigned int doccount = db->get_doccount();
 	unsigned int lastdocid = db->get_lastdocid();
@@ -1470,7 +1470,7 @@ Database::get_stats_database(MsgPack stats)
 
 
 void
-Database::get_stats_docs(MsgPack stats, const std::string &document_id)
+Database::get_stats_docs(MsgPack& stats, const std::string &document_id)
 {
 	Xapian::Document doc;
 	Xapian::QueryParser queryparser;
