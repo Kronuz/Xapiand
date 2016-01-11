@@ -603,7 +603,7 @@ void
 HttpClient::document_info_view(const query_field_t &e)
 {
 	bool found = true;
-	std::string result;
+	std::string response_str;
 	Xapian::docid docid = 0;
 	Xapian::QueryParser queryparser;
 
@@ -637,17 +637,17 @@ HttpClient::document_info_view(const query_field_t &e)
 		found = false;
 	}
 
-	rapidjson::Document root(rapidjson::Type::kObjectType);
+	MsgPack response;
 	if (found) {
-		root.AddMember(RESERVED_ID, docid, root.GetAllocator());
-		result = json_print(root, e.pretty);
-		result += "\n";
-		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
+		response[RESERVED_ID] = docid;
+		response_str = response.to_json_string(e.pretty);
+		response_str += "\n";
+		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 	} else {
-		root.AddMember("Response empty", "Document not found", root.GetAllocator());
-		result = json_print(root, e.pretty);
-		result += "\n";
-		write(http_response(404, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
+		response["Response empty"] = "Document not found";
+		response_str = response.to_json_string(e.pretty);
+		response_str += "\n";
+		write(http_response(404, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 	}
 
 	manager()->database_pool.checkin(database);
