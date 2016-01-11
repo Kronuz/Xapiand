@@ -89,12 +89,10 @@ class MsgPack {
 
 		object_handle()
 			: obj(),
-			  zone(new msgpack::zone)
+			  zone(std::make_unique<msgpack::zone>())
 		{
 			user.set_zone(*zone.get());
-			obj.type = msgpack::type::MAP;
-			obj.via.map.size = 0;
-			obj.via.map.ptr = nullptr;
+			obj.type = msgpack::type::NIL;
 		}
 	};
 
