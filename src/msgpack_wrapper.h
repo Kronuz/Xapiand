@@ -26,7 +26,8 @@
 
 #include "rapidjson/document.h"
 
-#define MSGPACK_MAP_INIT_SIZE 100
+#define MSGPACK_MAP_INIT_SIZE 64
+#define MSGPACK_ARRAY_INIT_SIZE 64
 
 
 class MsgPack;
@@ -128,8 +129,13 @@ public:
 	std::string to_string();
 	rapidjson::Document to_json();
 	void expand_map();
+	void expand_array(size_t r_size);
 
-	inline std::string getKey() const {
+	inline size_t capacity() const noexcept {
+		return m_alloc;
+	}
+
+	inline std::string key() const {
 		return std::string(obj.via.map.ptr->key.via.str.ptr, obj.via.map.ptr->key.via.str.size);
 	}
 
