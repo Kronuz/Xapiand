@@ -1458,7 +1458,7 @@ Database::get_stats_database(MsgPack stats)
 {
 	unsigned int doccount = db->get_doccount();
 	unsigned int lastdocid = db->get_lastdocid();
-	stats["uuid"] = db->get_uuid().c_str();
+	stats["uuid"] = db->get_uuid();
 	stats["doc_count"] = doccount;
 	stats["last_id"] = lastdocid;
 	stats["doc_del"] = lastdocid - doccount;
@@ -1485,7 +1485,7 @@ Database::get_stats_docs(MsgPack stats, const std::string &document_id)
 	Xapian::MSet mset = enquire.get_mset(0, 1);
 	Xapian::MSetIterator m = mset.begin();
 
-	stats[RESERVED_ID] = document_id.c_str();
+	stats[RESERVED_ID] = document_id;
 
 	for (int t = 3; t >= 0; --t) {
 		try {
