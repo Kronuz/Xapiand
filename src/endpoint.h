@@ -85,7 +85,8 @@ class Endpoints;
 
 
 #include <unordered_set>
-typedef std::unordered_set<Endpoint> endpoints_set_t;
+
+using endpoints_set_t = std::unordered_set<Endpoint>;
 
 
 inline char *normalize_path(const char * src, char * dst);

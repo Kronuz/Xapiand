@@ -272,7 +272,7 @@ Unserialise::geo(const std::string &serialise_val)
 std::string
 Unserialise::type(const std::string &str)
 {
-	std::string low(stringtolower(str));
+	std::string low = lower_string(str);
 	if (low.compare(NUMERIC_STR) == 0 || (low.size() == 1 && low[0] == NUMERIC_TYPE)) {
 		return std::string(1, toupper(NUMERIC_TYPE));
 	} else if (low.compare(GEO_STR) == 0     || (low.size() == 1 && low[0] == GEO_TYPE)) {

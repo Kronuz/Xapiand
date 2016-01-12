@@ -429,7 +429,7 @@ Database::index_terms(Xapian::Document &doc, cJSON *terms, const std::string &na
 
 		term_v = Serialise::serialise(schema.specification.sep_types[2], term_v);
 		if (term_v.empty()) throw MSG_Error("%s: %s can not be serialized", name.c_str(), term_v.c_str());
-		if (schema.specification.sep_types[2] == STRING_TYPE && !schema.specification.bool_term) term_v = stringtolower(term_v);
+		if (schema.specification.sep_types[2] == STRING_TYPE && !schema.specification.bool_term) to_lower(term_v);
 
 		if (schema.specification.position[getPos(j, schema.specification.position.size())] >= 0) {
 			std::string nameterm(prefixed(term_v, schema.specification.prefix));

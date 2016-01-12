@@ -65,7 +65,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	// Setup node from node database directory
 	std::string node_name_(get_node_name());
 	if (!node_name_.empty()) {
-		if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
+		if (!node_name.empty() && lower_string(node_name) != lower_string(node_name_)) {
 			L_ERR(this, "Node name %s doesn't match with the one in the cluster's database: %s!", node_name.c_str(), node_name_.c_str());
 			assert(false);
 		}
@@ -126,12 +126,16 @@ XapiandManager::set_node_name(const std::string &node_name_, std::unique_lock<st
 	}
 
 	node_name = get_node_name();
-	if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
+
+	std::string lower_node_name = lower_string(node_name);
+	std::string _lower_node_name = lower_string(node_name_);
+
+	if (!node_name.empty() && lower_node_name != _lower_node_name) {
 		lk.unlock();
 		return false;
 	}
 
-	if (stringtolower(node_name) != stringtolower(node_name_)) {
+	if (lower_node_name != _lower_node_name) {
 		node_name = node_name_;
 
 		int fd = open("nodename", O_WRONLY | O_CREAT, 0644);
@@ -259,18 +263,18 @@ bool
 XapiandManager::put_node(const Node &node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	std::string node_name_lower(stringtolower(node.name));
-	if (node_name_lower == stringtolower(local_node.name)) {
+	std::string lower_node_name(lower_string(node.name));
+	if (lower_node_name == lower_string(local_node.name)) {
 		local_node.touched = epoch::now<>();
 		return false;
 	} else {
 		try {
-			Node &node_ref = nodes.at(node_name_lower);
+			Node &node_ref = nodes.at(lower_node_name);
 			if (node == node_ref) {
 				node_ref.touched = epoch::now<>();
 			}
 		} catch (const std::out_of_range &err) {
-			Node &node_ref = nodes[node_name_lower];
+			Node &node_ref = nodes[lower_node_name];
 			node_ref = node;
 			node_ref.touched = epoch::now<>();
 			return true;
@@ -286,8 +290,7 @@ bool
 XapiandManager::get_node(const std::string &node_name, const Node **node)
 {
 	try {
-		std::string node_name_lower(stringtolower(node_name));
-		const Node &node_ref = nodes.at(node_name_lower);
+		const Node &node_ref = nodes.at(lower_string(node_name));
 		*node = &node_ref;
 		return true;
 	} catch (const std::out_of_range &err) {
@@ -300,8 +303,8 @@ bool
 XapiandManager::touch_node(const std::string &node_name, int region, const Node **node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	std::string node_name_lower(stringtolower(node_name));
-	if (node_name_lower == stringtolower(local_node.name)) {
+	std::string lower_node_name(lower_string(node_name));
+	if (lower_node_name == lower_string(local_node.name)) {
 		local_node.touched = epoch::now<>();
 		if (region != UNKNOWN_REGION) {
 			local_node.region.store(region);
@@ -310,7 +313,7 @@ XapiandManager::touch_node(const std::string &node_name, int region, const Node 
 		return true;
 	} else {
 		try {
-			Node &node_ref = nodes.at(node_name_lower);
+			Node &node_ref = nodes.at(lower_node_name);
 			node_ref.touched = epoch::now<>();
 			if (region != UNKNOWN_REGION) {
 				node_ref.region.store(region);
@@ -330,7 +333,7 @@ void
 XapiandManager::drop_node(const std::string &node_name)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	nodes.erase(stringtolower(node_name));
+	nodes.erase(lower_string(node_name));
 }
 
 
