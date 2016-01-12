@@ -78,6 +78,16 @@ class MsgPack {
 			  zone(std::move(z))
 		{
 			user.set_zone(*zone.get());
+			switch (obj.type) {
+				case msgpack::type::MAP:
+					obj.via.map.m_alloc = obj.via.map.size;
+					break;
+				case msgpack::type::ARRAY:
+					obj.via.array.m_alloc = obj.via.array.size;
+					break;
+				default:
+					break;
+			}
 		}
 
 		object_handle(object_handle&& _handler) noexcept
@@ -88,8 +98,7 @@ class MsgPack {
 		object_handle(const object_handle&) = delete;
 
 		object_handle()
-			: obj(),
-			  zone(std::make_unique<msgpack::zone>())
+			: zone(std::make_unique<msgpack::zone>())
 		{
 			user.set_zone(*zone.get());
 			obj.type = msgpack::type::NIL;
@@ -97,7 +106,6 @@ class MsgPack {
 	};
 
 	std::shared_ptr<object_handle> handler;
-	size_t m_alloc;
 
 	std::shared_ptr<MsgPack::object_handle> make_handler();
 	std::shared_ptr<object_handle> make_handler(const std::string& buffer);
@@ -123,19 +131,13 @@ public:
 	MsgPack at(const std::string& key) const;
 	MsgPack at(uint32_t off) const;
 
+	std::string key() const;
 	std::string to_json_string(bool prettify=false);
 	std::string to_string();
 	rapidjson::Document to_json();
 	void expand_map();
 	void expand_array(size_t r_size);
-
-	inline size_t capacity() const noexcept {
-		return m_alloc;
-	}
-
-	inline std::string key() const {
-		return std::string(obj.via.map.ptr->key.via.str.ptr, obj.via.map.ptr->key.via.str.size);
-	}
+	size_t capacity() const noexcept;
 
 	template<typename T>
 	MsgPack& operator=(T&& v) {
@@ -151,6 +153,7 @@ public:
 			obj.type = msgpack::type::ARRAY;
 			obj.via.array.ptr = nullptr;
 			obj.via.array.size = 0;
+			obj.via.array.m_alloc = 0;
 		}
 
 		if (obj.type == msgpack::type::ARRAY) {
