@@ -240,7 +240,7 @@ MsgPack::key() const
 
 
 std::string
-MsgPack::to_json_string(bool prettify)
+MsgPack::to_json_string(bool prettify) const
 {
 	if (prettify) {
 		rapidjson::Document doc = to_json();
@@ -257,7 +257,7 @@ MsgPack::to_json_string(bool prettify)
 
 
 rapidjson::Document
-MsgPack::to_json()
+MsgPack::to_json() const
 {
 	rapidjson::Document doc;
 	obj.convert(&doc);
@@ -266,7 +266,7 @@ MsgPack::to_json()
 
 
 std::string
-MsgPack::to_string()
+MsgPack::to_string() const
 {
 	msgpack::sbuffer sbuf;
 	msgpack::pack(&sbuf, obj);
@@ -355,6 +355,13 @@ MsgPack::erase(const std::string& key)
 	}
 
 	throw msgpack::type_error();
+}
+
+
+MsgPack
+MsgPack::duplicate() const
+{
+	return MsgPack(to_string());
 }
 
 

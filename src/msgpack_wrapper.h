@@ -132,13 +132,14 @@ public:
 	MsgPack at(uint32_t off) const;
 
 	std::string key() const;
-	std::string to_json_string(bool prettify=false);
-	std::string to_string();
-	rapidjson::Document to_json();
+	std::string to_json_string(bool prettify=false) const;
+	std::string to_string() const;
+	rapidjson::Document to_json() const;
 	void expand_map();
 	void expand_array(size_t r_size);
 	size_t capacity() const noexcept;
 	bool erase(const std::string& key);
+	MsgPack duplicate() const;
 
 	template<typename T>
 	MsgPack& operator=(T&& v) {
