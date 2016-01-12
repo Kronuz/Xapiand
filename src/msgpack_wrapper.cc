@@ -197,7 +197,7 @@ MsgPack::at(const std::string& key) const
 		const msgpack::object_kv* pend(obj.via.map.ptr + obj.via.map.size);
 		for (auto p = obj.via.map.ptr; p != pend; ++p) {
 			if (p->key.type == msgpack::type::STR) {
-				if (key == std::string(p->key.via.str.ptr, p->key.via.str.size)) {
+				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0)  {
 					return MsgPack(handler, p->val);
 				}
 			}
@@ -342,8 +342,8 @@ MsgPack::erase(const std::string& key)
 		size_t size = obj.via.map.size;
 		const msgpack::object_kv* pend(obj.via.map.ptr + obj.via.map.size);
 		for (auto p = obj.via.map.ptr; p != pend; ++p) {
+			--size;
 			if (p->key.type == msgpack::type::STR) {
-				--size;
 				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0) {
 					memcpy(p, p + 1, size * sizeof(msgpack::object_kv));
 					--obj.via.map.size;
