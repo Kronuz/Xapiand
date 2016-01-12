@@ -863,6 +863,7 @@ HttpClient::upload_view(const query_field_t &)
 void
 HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 {
+	std::string response_str;
 	std::string result;
 
 	bool json_chunked = true;
@@ -908,31 +909,32 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 	}
 
 	if (facets) {
-		unique_cJSON root(cJSON_CreateObject());
+		MsgPack response;
 		for (auto spy = spies.begin(); spy != spies.end(); ++spy) {
 			std::string name_result = (*spy).first;
-			cJSON *array_values = cJSON_CreateArray(); // It is managed by root.
-			for (Xapian::TermIterator facet = (*spy).second->values_begin(); facet != (*spy).second->values_end(); ++facet) {
-				cJSON *value = cJSON_CreateObject(); // It is managed by array_values.
+			int offset;
+			MsgPack array;
+			Xapian::TermIterator facet = (*spy).second->values_begin();
+			for (offset=0; facet != (*spy).second->values_end(); ++facet, offset++) {
+				MsgPack value;
 				data_field_t field_t = database->get_data_field((*spy).first);
-				cJSON_AddStringToObject(value, "value", Unserialise::unserialise(field_t.type, *facet).c_str());
-				cJSON_AddNumberToObject(value, "termfreq", facet.get_termfreq());
-				cJSON_AddItemToArray(array_values, value);
+				value["value"] = Unserialise::unserialise(field_t.type, *facet);
+				value["termfreq"] = facet.get_termfreq();
+				array[offset] = value;
 			}
-			cJSON_AddItemToObject(root.get(), name_result.c_str(), array_values);
+			response[name_result] = array;
 		}
-		if (e.pretty) {
-			unique_char_ptr _cprint(cJSON_Print(root.get()));
-			result.assign(_cprint.get());
-		} else {
-			unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
-			result.assign(_cprint.get());
-		}
-		result += "\n\n";
-		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
+		response_str = response.to_json_string(e.pretty);
+		response_str += "\n\n";
+		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 	} else {
 		int rc = 0;
 		if (!mset.empty()) {
+
+			if (e.unique_doc && mset.size() == 1) {
+				json_chunked = false;
+			}
+
 			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); ++rc, ++m) {
 				Xapian::docid docid = 0;
 				std::string id;
@@ -997,25 +999,14 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 				}
 
 				if (!type_found) {
-					rapidjson::Document root(rapidjson::Type::kObjectType);
-					rapidjson::Value err;
-					rapidjson::StringBuffer buffer;
-
-					std::string err_str("Response type " + ct_type + " not provided in the accept header");
-					err.SetString(err_str.c_str(), err_str.size());
-					root.AddMember("Error message", err, root.GetAllocator());
-
-					std::string response_err = json_print(root, e.pretty);
-					response_err += "\n\n";
-
-					write(http_response(406, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_err));
+					MsgPack response;
+					response["Error message"] = std::string("Response type " + ct_type + " not provided in the accept header");
+					response_str = response.to_json_string();
+					response_str += "\n\n";
+					write(http_response(406, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 					manager()->database_pool.checkin(database);
 					L_DEBUG(this, "ABORTED SEARCH");
 					return;
-				}
-
-				if (e.unique_doc && mset.size() == 1) {
-					json_chunked = false;
 				}
 
 				id = document.get_value(0);
@@ -1065,24 +1056,17 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 			}
 		} else {
 			int status_code = 200;
-			unique_cJSON root(cJSON_CreateObject());
+			MsgPack response;
 
 			if (e.unique_doc) {
-				cJSON_AddStringToObject(root.get(), "Response empty", "No document found");
+				response["Response empty"] = "No document found";
 				status_code = 404;
 			} else {
-				cJSON_AddStringToObject(root.get(), "Response empty", "No match found");
+				response["Response empty"] = "No match found";
 			}
-
-			if (e.pretty) {
-				unique_char_ptr _cprint(cJSON_Print(root.get()));
-				result.assign(_cprint.get());
-			} else {
-				unique_char_ptr _cprint(cJSON_PrintUnformatted(root.get()));
-				result.assign(_cprint.get());
-			}
-			result += "\n\n";
-			write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, result));
+			response_str = response.to_json_string(e.pretty);
+			response_str += "\n\n";
+			write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, response_str));
 		}
 	}
 	auto tp_end = std::chrono::system_clock::now();
