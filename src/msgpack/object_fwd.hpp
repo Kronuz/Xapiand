@@ -48,11 +48,13 @@ struct object_kv;
 
 struct object_array {
     uint32_t size;
+    uint32_t m_alloc;
     msgpack::object* ptr;
 };
 
 struct object_map {
     uint32_t size;
+    uint32_t m_alloc;
     msgpack::object_kv* ptr;
 };
 
