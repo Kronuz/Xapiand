@@ -506,17 +506,13 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 }
 
 
-std::string stringtoupper(const std::string &str) {
-	std::string tmp = str;
-	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM_UPPER());
-	return tmp;
+void to_upper(std::string& str) {
+	for (auto& c : str) c = toupper(c);
 }
 
 
-std::string stringtolower(const std::string &str) {
-	std::string tmp = str;
-	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM_LOWER());
-	return tmp;
+void to_lower(std::string& str) {
+	for (auto& c : str) c = tolower(c);
 }
 
 
@@ -532,7 +528,7 @@ std::string prefixed(const std::string &term, const std::string &prefix) {
 unsigned int get_slot(const std::string &name) {
 	MD5 md5;
 	// We are left with the last 8 characters.
-	std::string _md5(md5(strhasupper(name) ? stringtoupper(name) : name), 24, 8);
+	std::string _md5(md5(strhasupper(name) ? upper_string(name) : name), 24, 8);
 	unsigned int slot = static_cast<unsigned int>(std::stoul(_md5, nullptr, 16));
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
@@ -545,24 +541,30 @@ unsigned int get_slot(const std::string &name) {
 
 std::string get_prefix(const std::string &name, const std::string &prefix, char type) {
 	std::string slot(get_slot_hex(name));
-	std::transform(slot.begin(), slot.end(), slot.begin(), TRANSFORM_MAP());
+	// Mapped [0-9] -> [A-J] and [A-F] -> [R-W]
+	for (auto& c : slot) c += 17;
+
 	std::string res(prefix);
 	res.append(1, toupper(type));
 	return res + slot;
 }
 
 
-std::string get_slot_hex(const std::string &name) {
+std::string get_slot_hex(const std::string& name) {
 	MD5 md5;
 	// We are left with the last 8 characters.
-	std::string _md5(md5(strhasupper(name) ? stringtoupper(name): name), 24, 8);
-	return stringtoupper(_md5);
+	std::string _md5(md5(strhasupper(name) ? upper_string(name): name), 24, 8);
+	to_upper(_md5);
+
+	return _md5;
 }
 
 
-bool strhasupper(const std::string &str) {
-	for (auto it = str.begin(); it != str.end(); ++it) {
-		if (isupper(*it)) return true;
+bool strhasupper(const std::string& str) {
+	for (auto& c : str) {
+		if (isupper(c)) {
+			return true;
+		}
 	}
 
 	return false;

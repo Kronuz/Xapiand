@@ -144,6 +144,7 @@ inline bool ignored_errorno(int e, bool udp) {
 std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
+
 struct char_ptr_deleter {
 	void operator()(char *c) const {
 		free(c);
@@ -158,27 +159,30 @@ struct cJSON_Deleter {
 };
 
 
-struct TRANSFORM_UPPER {
-	char operator() (char c) { return  toupper(c);}
-};
+using unique_cJSON = std::unique_ptr<cJSON, cJSON_Deleter>;
+using unique_char_ptr = std::unique_ptr<char, char_ptr_deleter>;
 
-struct TRANSFORM_LOWER {
-	char operator() (char c) { return  tolower(c);}
-};
+template<typename... Args>
+std::string upper_string(Args&&... args) {
+	std::string tmp(std::forward<Args>(args)...);
+	for (auto& c : tmp) c = toupper(c);
+	return tmp;
+}
 
-// Mapped [0-9] -> [A-J] and  [A-F] -> [R-W]
-struct TRANSFORM_MAP {
-	char operator() (char c) { return  c + 17;}
-};
+template<typename... Args>
+std::string lower_string(Args&&... args) {
+	std::string tmp(std::forward<Args>(args)...);
+	for (auto& c : tmp) c = tolower(c);
+	return tmp;
+}
 
-typedef std::unique_ptr<cJSON, cJSON_Deleter> unique_cJSON;
-typedef std::unique_ptr<char, char_ptr_deleter> unique_char_ptr;
+void to_upper(std::string& str);
+void to_lower(std::string& str);
 
 int url_path(const char* n1, size_t size, parser_url_path_t *par);
 int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
-std::string stringtolower(const std::string &str);
-std::string stringtoupper(const std::string &str);
+
 // String tokenizer with the delimiter.
 void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens);
 
