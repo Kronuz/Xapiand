@@ -67,7 +67,7 @@ struct Node {
 
 	inline bool operator ==(const Node& other) const {
 		return
-			stringtolower(name) == stringtolower(other.name) &&
+			lower_string(name) == lower_string(other.name) &&
 			addr.sin_addr.s_addr == other.addr.sin_addr.s_addr &&
 			http_port == other.http_port &&
 			binary_port == other.binary_port;
