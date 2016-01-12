@@ -345,8 +345,6 @@ MsgPack::erase(const std::string& key)
 			if (p->key.type == msgpack::type::STR) {
 				--size;
 				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0) {
-					//msgpack::object_kv* aux;
-					//memcpy(aux, p + 1, size*sizeof(msgpack::object));
 					memcpy(p, p + 1, size * sizeof(msgpack::object_kv));
 					--obj.via.map.size;
 					return true;
@@ -355,7 +353,7 @@ MsgPack::erase(const std::string& key)
 		}
 		return false;
 	}
-	
+
 	throw msgpack::type_error();
 }
 
