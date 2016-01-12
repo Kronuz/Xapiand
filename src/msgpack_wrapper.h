@@ -138,6 +138,7 @@ public:
 	void expand_map();
 	void expand_array(size_t r_size);
 	size_t capacity() const noexcept;
+	bool erase(const std::string& key);
 
 	template<typename T>
 	MsgPack& operator=(T&& v) {

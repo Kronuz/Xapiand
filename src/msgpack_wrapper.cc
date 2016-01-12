@@ -335,6 +335,31 @@ MsgPack::capacity() const noexcept
 }
 
 
+bool
+MsgPack::erase(const std::string& key)
+{
+	if (obj.type == msgpack::type::MAP) {
+		size_t size = obj.via.map.size;
+		const msgpack::object_kv* pend(obj.via.map.ptr + obj.via.map.size);
+		for (auto p = obj.via.map.ptr; p != pend; ++p) {
+			if (p->key.type == msgpack::type::STR) {
+				--size;
+				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0) {
+					//msgpack::object_kv* aux;
+					//memcpy(aux, p + 1, size*sizeof(msgpack::object));
+					memcpy(p, p + 1, size * sizeof(msgpack::object_kv));
+					--obj.via.map.size;
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	throw msgpack::type_error();
+}
+
+
 namespace msgpack {
 	MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
 		namespace adaptor {
