@@ -24,6 +24,7 @@
 
 #include "msgpack_wrapper.h"
 #include "rapidjson/document.h"
+#include "msgpack_wrapper.h"
 
 #include <regex>
 #include <vector>
@@ -149,3 +150,11 @@ std::vector<std::string> split_fields(const std::string& field_name);
 void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
 bool json_load(rapidjson::Document& doc, const std::string& str);
+void apply_patch(MsgPack patch, MsgPack object);
+bool patch_add(MsgPack& obj_patch, MsgPack& object);
+bool patch_remove(MsgPack& obj_patch, MsgPack& object);
+bool patch_replace(MsgPack& obj_patch, MsgPack& object);
+bool patch_move(MsgPack& obj_patch, MsgPack& object);
+bool patch_copy(MsgPack& obj_patch, MsgPack& object);
+MsgPack get_patch_path(MsgPack& obj_patch, MsgPack& object, const char* path, std::string& target, bool verify_exist=false);
+MsgPack get_patch_value(MsgPack& obj_patch);

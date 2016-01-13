@@ -36,6 +36,17 @@
 #include <random>
 
 
+
+#define PATCH_ADD "add"
+#define PATCH_REM "remove"
+#define PATCH_REP "replace"
+#define PATCH_MOV "move"
+#define PATCH_COP "copy"
+#define PATCH_TES "test"
+
+#define PATCH_PATH "path"
+#define PATCH_FROM "from"
+
 const std::regex find_types_re("(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" NUMERIC_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")", std::regex::icase | std::regex::optimize);
 
 
@@ -196,3 +207,182 @@ bool json_load(rapidjson::Document& doc, const std::string& str)
 		return true;
 	}
 }
+
+
+void apply_patch(MsgPack patch, MsgPack object)
+{
+	if (patch.obj.type == msgpack::type::ARRAY) {
+		for (auto elem : patch) {
+			try {
+				MsgPack op = elem.at("op");
+				std::string op_str = op.to_json_string();
+
+				if		(op_str.compare(PATCH_ADD) == 0) patch_add(patch, object);
+				else if (op_str.compare(PATCH_REM) == 0) patch_remove(patch, object);
+				else if (op_str.compare(PATCH_REP) == 0) patch_replace(patch, object);
+				else if (op_str.compare(PATCH_MOV) == 0) patch_move(patch, object);
+				else if (op_str.compare(PATCH_COP) == 0) patch_copy(patch, object);
+				else if (op_str.compare(PATCH_TES) == 0) ;
+
+			} catch (const std::out_of_range& err) {
+				throw MSG_Error("Objects MUST have exactly one \"op\" member");
+			}
+
+		}
+
+	}
+
+	throw msgpack::type_error();
+}
+
+
+bool patch_add(MsgPack& obj_patch, MsgPack& object)
+{
+	std::string target;
+	try {
+		MsgPack o = get_patch_path(obj_patch, object, PATCH_PATH, target);
+		MsgPack val = get_patch_value(obj_patch);
+		o[target] = val;
+	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Error in patch add: %s", e.what());
+		return false;
+	}
+	return true;
+}
+
+
+bool patch_remove(MsgPack& obj_patch, MsgPack& object)
+{
+	std::string target;
+	try {
+		MsgPack o = get_patch_path(obj_patch, object, PATCH_PATH, target);
+		o.erase(target);
+	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Error in patch remove: %s", e.what());
+		return false;
+	} catch (msgpack::type_error& e){
+		L_ERR(nullptr, "Error in patch remove: %s", e.what());
+		return false;
+	}
+	return true;
+}
+
+
+bool patch_replace(MsgPack& obj_patch, MsgPack& object)
+{
+	std::string target;
+
+	try {
+		MsgPack o = get_patch_path(obj_patch, object, PATCH_PATH, target);
+		MsgPack val = get_patch_value(obj_patch);
+		o[target] = val;
+	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Error in patch remove: %s", e.what());
+		return false;
+	}
+	return true;
+}
+
+
+bool patch_move(MsgPack& obj_patch, MsgPack& object)
+{
+	std::string old_target;
+	std::string new_target;
+	try {
+		MsgPack path = get_patch_path(obj_patch, object, PATCH_PATH, new_target);
+		MsgPack from = get_patch_path(obj_patch, object, PATCH_FROM, old_target, true);
+		MsgPack val = from[old_target];
+		from.erase(old_target);
+		path[new_target] = val;
+	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Error in patch remove: %s", e.what());
+		return false;
+	}
+	return true;
+}
+
+
+bool patch_copy(MsgPack& obj_patch, MsgPack& object)
+{
+	std::string old_target;
+	std::string new_target;
+	try {
+		MsgPack path = get_patch_path(obj_patch, object, PATCH_PATH, new_target);
+		MsgPack from = get_patch_path(obj_patch, object, PATCH_FROM, old_target, true);
+		MsgPack val = from[old_target];
+		path[new_target] = val;
+	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Error in patch remove: %s", e.what());
+		return false;
+	}
+	return true;
+}
+
+
+MsgPack get_patch_path(MsgPack& obj_patch, MsgPack& object, const char* path, std::string& target, bool verify_exist)
+{
+	try {
+		MsgPack path = obj_patch.at(path);
+		std::string path_str = path.to_json_string();
+		path_str = path_str.substr(1, path_str.size()-2);
+
+		std::vector<std::string> path_split;
+		stringTokenizer(path_str, "\\/", path_split);
+
+		bool is_target = false;
+		int ct = 0;
+
+		MsgPack o = object;
+		for(auto s: path_split) {
+			ct++;
+			if (ct == path_split.size()) {
+				is_target = true;
+				target = s;
+
+				if (!verify_exist) {
+					return o;
+				}
+			}
+
+			try {
+				if (is_target && verify_exist) {
+					o.at(s);
+				} else {
+					o = o.at(s);
+				}
+			} catch (std::out_of_range err) {
+				try {
+					//If the "-" character is used to index the end of the array
+					int offset = strict_string_to_int(s);
+					o = o.at(offset);
+				} catch (const std::invalid_argument& e) {
+					std::string err_msg("The object itself or an array containing it does need to exist in: ");
+					err_msg.append(obj_patch["path"].to_json_string());
+					throw MSG_Error(err_msg.c_str());
+				} catch (const std::out_of_range& e) {
+					std::string err_msg("The index MUST NOT be greater than the array size in: ");
+					err_msg.append(obj_patch["path"].to_json_string());
+					throw MSG_Error(err_msg.c_str());
+				}
+			}
+		}
+
+		return o;
+
+	} catch (const std::out_of_range& err) {
+		throw MSG_Error("Object MUST have exactly one \"path\" member");
+	}
+
+}
+
+
+MsgPack get_patch_value(MsgPack& obj_patch)
+{
+	try {
+		MsgPack value = obj_patch.at("value");
+		return value;
+	} catch(std::out_of_range err) {
+		throw MSG_Error("Object MUST have exactly one \"value\" member in \"add\" operation");
+	}
+}
+

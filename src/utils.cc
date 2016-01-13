@@ -773,6 +773,13 @@ bool buid_path_index(const std::string& path) {
 }
 
 
+int strict_string_to_int(const std::string &s) {
+	if (s.find_first_not_of("0123456789") != std::string::npos)
+		throw std::invalid_argument("Cannot convert value");
+	return std::stoi(s.c_str(), NULL, 10);
+}
+
+
 void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens) {
 	size_t prev = 0, next = 0, len;
 
