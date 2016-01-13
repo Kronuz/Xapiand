@@ -1012,8 +1012,8 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 				id = document.get_value(0);
 
 				/* Return data in case is not a json type */
-				unique_cJSON object(cJSON_Parse(data.c_str()));
-				if (!object) {
+				MsgPack doc_data(data);
+				if (doc_data.obj.type != msgpack::type::MAP) {
 					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, data, ct_type));
 					manager()->database_pool.checkin(database);
 					return;
@@ -1023,23 +1023,14 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, cout_matched));
 				}
 
-				cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
-				if (object_data) {
-					object_data = cJSON_Duplicate(object_data, 1);
-					object.reset();
-					object = unique_cJSON(object_data);
-				} else {
-					clean_reserved(object.get());
-					cJSON_AddStringToObject(object.get(), RESERVED_ID, id.c_str());
+				try {
+					doc_data = doc_data.at(RESERVED_DATA);
+				} catch (const msgpack::type_error&) {
+					clean_reserved(doc_data);
+					doc_data[RESERVED_ID] = id;
 				}
-				if (e.pretty) {
-					unique_char_ptr _cprint(cJSON_Print(object.get()));
-					result.assign(_cprint.get());
-				} else {
-					unique_char_ptr _cprint(cJSON_PrintUnformatted(object.get()));
-					result.assign(_cprint.get());
-				}
-				result += "\n\n";
+
+				result.assign(doc_data.to_json_string(e.pretty) + "\n\n");
 				if (json_chunked) {
 					if (!write(http_response(200, HTTP_BODY | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, result))) {
 						break;

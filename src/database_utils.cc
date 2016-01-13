@@ -98,7 +98,7 @@ bool is_language(const std::string& language) {
 	if (language.find(" ") != std::string::npos) {
 		return false;
 	}
-	return (std::string(DB_LANGUAGES).find(language) != std::string::npos) ? true : false;
+	return std::string(DB_LANGUAGES).find(language) != std::string::npos ? true : false;
 }
 
 
