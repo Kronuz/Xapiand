@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "cJSON.h"
+#include "msgpack_wrapper.h"
 #include "rapidjson/document.h"
 
 #include <regex>
@@ -146,7 +146,6 @@ bool is_language(const std::string& language);
 bool set_types(const std::string& type, std::vector<char>& sep_types);
 std::string str_type(const std::vector<char>& sep_types);
 std::vector<std::string> split_fields(const std::string& field_name);
-void clean_reserved(cJSON *root);
-void clean_reserved(cJSON *root, cJSON *item);
+void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
 bool json_load(rapidjson::Document& doc, const std::string& str);

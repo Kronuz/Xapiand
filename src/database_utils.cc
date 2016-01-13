@@ -157,39 +157,15 @@ std::vector<std::string> split_fields(const std::string& field_name) {
 }
 
 
-void clean_reserved(cJSON *root) {
-	int elements = cJSON_GetArraySize(root);
-	for (int i = 0; i < elements; ) {
-		cJSON *item = cJSON_GetArrayItem(root, i);
-		if (is_reserved(item->string)) {
-			cJSON_DeleteItemFromObject(root, item->string);
-		} else {
-			clean_reserved(root, item);
-		}
-		if (elements > cJSON_GetArraySize(root)) {
-			elements = cJSON_GetArraySize(root);
-		} else {
-			++i;
-		}
-	}
-}
-
-
-void clean_reserved(cJSON *root, cJSON *item) {
-	if (is_reserved(item->string) && strcmp(item->string, RESERVED_VALUE) != 0) {
-		cJSON_DeleteItemFromObject(root, item->string);
-		return;
-	}
-
-	if (item->type == cJSON_Object) {
-		int elements = cJSON_GetArraySize(item);
-		for (int i = 0; i < elements; ) {
-			cJSON *subitem = cJSON_GetArrayItem(item, i);
-			clean_reserved(item, subitem);
-			if (elements > cJSON_GetArraySize(item)) {
-				elements = cJSON_GetArraySize(item);
+void clean_reserved(MsgPack& document) {
+	if (document.obj.type == msgpack::type::MAP) {
+		for (auto item_key : document) {
+			std::string str_key(item_key.obj.via.str.ptr, item_key.obj.via.str.size);
+			if (is_reserved(str_key) && str_key != RESERVED_VALUE) {
+				document.erase(str_key);
 			} else {
-				++i;
+				auto item_doc = document.at(str_key);
+				clean_reserved(item_doc, str_key);
 			}
 		}
 	}
