@@ -217,7 +217,7 @@ void apply_patch(MsgPack patch, MsgPack object)
 				MsgPack op = elem.at("op");
 				std::string op_str = op.to_json_string();
 
-				if		(op_str.compare(PATCH_ADD) == 0) patch_add(patch, object);
+				if      (op_str.compare(PATCH_ADD) == 0) patch_add(patch, object);
 				else if (op_str.compare(PATCH_REM) == 0) patch_remove(patch, object);
 				else if (op_str.compare(PATCH_REP) == 0) patch_replace(patch, object);
 				else if (op_str.compare(PATCH_MOV) == 0) patch_move(patch, object);
