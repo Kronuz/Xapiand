@@ -155,16 +155,21 @@ public:
 		return schema.at(RESERVED_SCHEMA);
 	}
 
+	inline std::string to_string() const {
+		return schema.to_string();
+	}
+
 	inline MsgPack getSchema() const {
-		return MsgPack(schema);
+		return schema.duplicate();
 	}
 
 	inline bool getStore() const {
 		return to_store;
 	}
 
-	inline void setSchema(MsgPack&& _schema) {
-		schema = std::move(_schema);
+	template<typename... Args>
+	inline void setSchema(Arg&&... args) {
+		schema = MsgPack(std::forward<Args>(args)...);
 	}
 
 	inline void setStore(bool _to_store) {

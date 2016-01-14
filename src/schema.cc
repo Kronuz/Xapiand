@@ -161,7 +161,7 @@ Schema::setDatabase(Database* _db)
 
 
 void
-Schema::update_root(MsgPack& properties, const MsgPack& item_doc)
+Schema::update_root(MsgPack& properties, const MsgPack& item_doc) const
 {
 	// Reset specification
 	specification = default_spc;
