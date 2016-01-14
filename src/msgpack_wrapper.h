@@ -154,6 +154,49 @@ public:
 	}
 
 	template<typename T>
+	void insert_item_to_array(int offset, T&& v) {
+
+		if (obj.type == msgpack::type::NIL) {
+			obj.type = msgpack::type::ARRAY;
+			obj.via.array.ptr = nullptr;
+			obj.via.array.size = 0;
+			obj.via.array.m_alloc = 0;
+		}
+
+		if (obj.type == msgpack::type::ARRAY) {
+			if (obj.via.array.size - 1 < offset) {
+				auto r_size = offset + 1;
+				expand_array(r_size);
+
+				const msgpack::object* npend(obj.via.array.ptr + r_size - 1);
+				for (auto np = obj.via.array.ptr + obj.via.array.size; np != npend; ++np) {
+					msgpack::detail::unpack_nil(*np);
+					msgpack::detail::unpack_array_item(obj, *np);
+				}
+
+				msgpack::detail::unpack_array_item(obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
+			} else {
+				auto new_size = obj.via.array.size + 1;
+				expand_array(new_size);
+
+				auto p = obj.via.array.ptr + offset;
+
+				if (p->type == msgpack::type::NIL) {
+					msgpack::object o(std::forward<T>(v), handler->zone.get());
+					operator[](offset) = o;
+				} else {
+					memcpy(p + 1, p, (obj.via.array.size - offset) * sizeof(msgpack::object));
+					++obj.via.array.size;
+					msgpack::object o(std::forward<T>(v), handler->zone.get());
+					operator[](offset) = o;
+				}
+			}
+		} else {
+			throw msgpack::type_error();
+		}
+	}
+
+	template<typename T>
 	void add_item_to_array(T&& v) {
 		if (obj.type == msgpack::type::NIL) {
 			obj.type = msgpack::type::ARRAY;
