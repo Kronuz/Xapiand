@@ -156,5 +156,6 @@ bool patch_remove(MsgPack& obj_patch, MsgPack& object);
 bool patch_replace(MsgPack& obj_patch, MsgPack& object);
 bool patch_move(MsgPack& obj_patch, MsgPack& object);
 bool patch_copy(MsgPack& obj_patch, MsgPack& object);
+bool patch_test(MsgPack& obj_patch, MsgPack& object);
 MsgPack get_patch_path(MsgPack& obj_patch, MsgPack& object, const char* path, std::string& target, bool verify_exist=false);
 MsgPack get_patch_value(MsgPack& obj_patch);

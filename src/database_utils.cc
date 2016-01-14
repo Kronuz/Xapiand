@@ -222,14 +222,12 @@ void apply_patch(MsgPack patch, MsgPack object)
 				else if (op_str.compare(PATCH_REP) == 0) patch_replace(patch, object);
 				else if (op_str.compare(PATCH_MOV) == 0) patch_move(patch, object);
 				else if (op_str.compare(PATCH_COP) == 0) patch_copy(patch, object);
-				else if (op_str.compare(PATCH_TES) == 0) ;
+				else if (op_str.compare(PATCH_TES) == 0) patch_test(patch, object);
 
 			} catch (const std::out_of_range& err) {
 				throw MSG_Error("Objects MUST have exactly one \"op\" member");
 			}
-
 		}
-
 	}
 
 	throw msgpack::type_error();
@@ -277,7 +275,7 @@ bool patch_replace(MsgPack& obj_patch, MsgPack& object)
 		MsgPack val = get_patch_value(obj_patch);
 		o[target] = val;
 	} catch (const std::exception& e) {
-		L_ERR(nullptr, "Error in patch remove: %s", e.what());
+		L_ERR(nullptr, "Error in patch replace: %s", e.what());
 		return false;
 	}
 	return true;
@@ -295,7 +293,7 @@ bool patch_move(MsgPack& obj_patch, MsgPack& object)
 		from.erase(old_target);
 		path[new_target] = val;
 	} catch (const std::exception& e) {
-		L_ERR(nullptr, "Error in patch remove: %s", e.what());
+		L_ERR(nullptr, "Error in patch move: %s", e.what());
 		return false;
 	}
 	return true;
@@ -312,7 +310,29 @@ bool patch_copy(MsgPack& obj_patch, MsgPack& object)
 		MsgPack val = from[old_target];
 		path[new_target] = val;
 	} catch (const std::exception& e) {
-		L_ERR(nullptr, "Error in patch remove: %s", e.what());
+		L_ERR(nullptr, "Error in patch copy: %s", e.what());
+		return false;
+	}
+	return true;
+}
+
+
+bool patch_test(MsgPack& obj_patch, MsgPack& object)
+{
+	std::string target;
+	try {
+		MsgPack o = get_patch_path(obj_patch, object, PATCH_PATH, target);
+		MsgPack val = get_patch_value(obj_patch);
+		MsgPack o_val = o[target];
+		
+		if (val == o_val) {
+			return true;
+		} else {
+			return false;
+		}
+		
+	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Error in patch test: %s", e.what());
 		return false;
 	}
 	return true;
