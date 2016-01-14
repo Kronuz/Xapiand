@@ -362,11 +362,11 @@ MsgPack get_patch_path(const MsgPack& obj_patch, MsgPack& object, const char* pa
 					o = o.at(offset);
 				} catch (const std::invalid_argument& e) {
 					std::string err_msg("The object itself or an array containing it does need to exist in: ");
-					err_msg.append(obj_patch["path"].to_json_string());
+					err_msg.append(obj_patch.at("path").to_json_string());
 					throw MSG_Error(err_msg.c_str());
 				} catch (const std::out_of_range& e) {
 					std::string err_msg("The index MUST NOT be greater than the array size in: ");
-					err_msg.append(obj_patch["path"].to_json_string());
+					err_msg.append(obj_patch.at("path").to_json_string());
 					throw MSG_Error(err_msg.c_str());
 				}
 			}

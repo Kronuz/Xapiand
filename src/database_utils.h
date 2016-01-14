@@ -149,7 +149,7 @@ std::string str_type(const std::vector<char>& sep_types);
 std::vector<std::string> split_fields(const std::string& field_name);
 void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
-bool json_load(rapidjson::Document& doc, const std::string& str);
+void json_load(rapidjson::Document& doc, const std::string& str);
 void apply_patch(const MsgPack& patch, MsgPack& object);
 bool patch_add(const MsgPack& obj_patch, MsgPack& object);
 bool patch_remove(const MsgPack& obj_patch, MsgPack& object);
