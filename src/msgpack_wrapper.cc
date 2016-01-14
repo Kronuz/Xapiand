@@ -274,16 +274,6 @@ MsgPack::find(uint32_t off) const
 
 
 std::string
-MsgPack::key() const
-{
-	if (obj.via.map.ptr->key.type == msgpack::type::STR) {
-		return std::string(obj.via.map.ptr->key.via.str.ptr, obj.via.map.ptr->key.via.str.size);
-	}
-	return std::string();
-}
-
-
-std::string
 MsgPack::to_json_string(bool prettify) const
 {
 	if (prettify) {

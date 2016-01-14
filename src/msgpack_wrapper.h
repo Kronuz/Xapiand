@@ -135,7 +135,6 @@ public:
 	bool find(const std::string& key) const;
 	bool find(uint32_t off) const;
 
-	std::string key() const;
 	std::string to_json_string(bool prettify=false) const;
 	std::string to_string() const;
 	rapidjson::Document to_json() const;
