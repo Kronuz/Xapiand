@@ -324,13 +324,11 @@ bool patch_test(MsgPack& obj_patch, MsgPack& object)
 		MsgPack o = get_patch_path(obj_patch, object, PATCH_PATH, target);
 		MsgPack val = get_patch_value(obj_patch);
 		MsgPack o_val = o[target];
-		
 		if (val == o_val) {
 			return true;
 		} else {
 			return false;
 		}
-		
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch test: %s", e.what());
 		return false;
