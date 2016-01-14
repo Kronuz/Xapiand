@@ -138,20 +138,30 @@ std::string repr(const void* p, size_t size, bool friendly, size_t max_size) {
 			}
 			continue;
 		}
-		if (friendly && c == 9) {
-			*d++ = '\\';
-			*d++ = 't';
-		} else if (friendly && c == 10) {
-			*d++ = '\\';
-			*d++ = 'n';
-		} else if (friendly && c == 13) {
-			*d++ = '\\';
-			*d++ = 'r';
-		} else if (friendly && c == '\'') {
-			*d++ = '\\';
-			*d++ = '\'';
-		} else if (friendly && c >= ' ' && c <= '~') {
-			*d++ = c;
+		if (friendly) {
+			switch (c) {
+				case 9:
+					*d++ = '\\';
+					*d++ = 't';
+					break;
+				case 10:
+					*d++ = '\\';
+					*d++ = 'n';
+					break;
+				case 13:
+					*d++ = '\\';
+					*d++ = 'r';
+					break;
+				case '\'':
+					*d++ = '\\';
+					*d++ = '\'';
+					break;
+				default:
+					if (c >= ' ' && c <= '~') {
+						*d++ = c;
+					}
+					break;
+			}
 		} else {
 			*d++ = '\\';
 			*d++ = 'x';
