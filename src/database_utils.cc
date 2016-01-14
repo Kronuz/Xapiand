@@ -371,7 +371,7 @@ MsgPack get_patch_path(MsgPack& obj_patch, MsgPack& object, const char* path, st
 			} catch (std::out_of_range err) {
 				try {
 					//If the "-" character is used to index the end of the array
-					int offset = strict_string_to_int(s);
+					int offset = strict_stoi(s);
 					o = o.at(offset);
 				} catch (const std::invalid_argument& e) {
 					std::string err_msg("The object itself or an array containing it does need to exist in: ");

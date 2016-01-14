@@ -158,7 +158,6 @@ struct cJSON_Deleter {
 	}
 };
 
-
 using unique_cJSON = std::unique_ptr<cJSON, cJSON_Deleter>;
 using unique_char_ptr = std::unique_ptr<char, char_ptr_deleter>;
 
@@ -186,7 +185,7 @@ std::string urldecode(const char *, size_t);
 // String tokenizer with the delimiter.
 void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens);
 
-unsigned int get_slot(const std::string &name);
+unsigned get_slot(const std::string &name);
 std::string prefixed(const std::string &term, const std::string &prefixO);
 std::string get_prefix(const std::string &name, const std::string &prefix, char type);
 std::string get_slot_hex(const std::string &name);
@@ -198,7 +197,7 @@ void delete_files(const std::string &path);
 void move_files(const std::string &src, const std::string &dst);
 inline bool exist(const std::string& name);
 bool buid_path_index(const std::string& path);
-int strict_string_to_int(std::string const &s);
+int strict_stoi(std::string const &s);
 
 void update_pos_time();
 void fill_zeros_stats_min(uint16_t start, uint16_t end);
@@ -210,15 +209,7 @@ void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::
 // sequences (known as edit distance).
 unsigned int levenshtein_distance(const std::string &str1, const std::string &str2);
 
-namespace epoch {
-	template<typename Period = std::chrono::seconds>
-	auto now = []() noexcept {
-		return std::chrono::duration_cast<Period>(std::chrono::system_clock::now().time_since_epoch()).count();
-	};
-}
-
-std::string delta_string(std::chrono::time_point<std::chrono::system_clock> start, std::chrono::time_point<std::chrono::system_clock> end);
-
+std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end);
 
 void _tcp_nopush(int sock, int optval);
 
@@ -228,4 +219,11 @@ inline void tcp_nopush(int sock) {
 
 inline void tcp_push(int sock) {
 	_tcp_nopush(sock, 0);
+}
+
+namespace epoch {
+	template<typename Period = std::chrono::seconds>
+	auto now = []() noexcept {
+		return std::chrono::duration_cast<Period>(std::chrono::system_clock::now().time_since_epoch()).count();
+	};
 }

@@ -254,8 +254,9 @@ std::string urldecode(const char *src, size_t size) {
 	}
 
 	// the last 2- chars
-	while (src < SRC_END)
+	while (src < SRC_END) {
 		*pEnd++ = *src++;
+	}
 
 	std::string sResult(pStart, pEnd);
 	delete [] pStart;
@@ -275,7 +276,7 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 		n0 = n1 = par->offset + par->length;
 	}
 
-	while (1) {
+	while (true) {
 		char cn = *n1;
 		if (n1 == nf) {
 			cn = '\0';
@@ -535,11 +536,11 @@ std::string prefixed(const std::string &term, const std::string &prefix) {
 }
 
 
-unsigned int get_slot(const std::string &name) {
+unsigned get_slot(const std::string &name) {
 	MD5 md5;
 	// We are left with the last 8 characters.
 	std::string _md5(md5(strhasupper(name) ? upper_string(name) : name), 24, 8);
-	unsigned int slot = static_cast<unsigned int>(std::stoul(_md5, nullptr, 16));
+	unsigned slot = static_cast<unsigned int>(std::stoul(_md5, nullptr, 16));
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
 	} else if (slot == Xapian::BAD_VALUENO) {
@@ -563,15 +564,14 @@ std::string get_prefix(const std::string &name, const std::string &prefix, char 
 std::string get_slot_hex(const std::string& name) {
 	MD5 md5;
 	// We are left with the last 8 characters.
-	std::string _md5(md5(strhasupper(name) ? upper_string(name): name), 24, 8);
-	to_upper(_md5);
+	std::string _md5(upper_string(md5(strhasupper(name) ? upper_string(name): name), 24, 8));
 
 	return _md5;
 }
 
 
 bool strhasupper(const std::string& str) {
-	for (auto& c : str) {
+	for (const auto& c : str) {
 		if (isupper(c)) {
 			return true;
 		}
@@ -594,9 +594,11 @@ bool isNumeric(const std::string &str) {
 
 
 bool startswith(const std::string &text, const std::string &token) {
-	if (text.length() < token.length())
+	if (text.length() < token.length()) {
 		return false;
-	return (text.compare(0, token.length(), token) == 0);
+	}
+
+	return text.compare(0, token.length(), token) == 0;
 }
 
 
@@ -756,7 +758,7 @@ void move_files(const std::string &src, const std::string &dst) {
 
 inline bool exist(const std::string& path) {
 	struct stat buffer;
-	return (stat (path.c_str(), &buffer) == 0);
+	return stat(path.c_str(), &buffer) == 0;
 }
 
 
@@ -770,8 +772,8 @@ bool buid_path_index(const std::string& path) {
 		std::vector<std::string> directories;
 		stringTokenizer(dir, "/", directories);
 		dir.clear();
-		for (auto it = directories.begin(); it != directories.end(); ++it) {
-			dir = dir + *it + "/";
+		for (const auto& _dir : directories) {
+			dir = dir + _dir + "/";
 			if (mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
 				continue;
 			} else {
@@ -783,10 +785,11 @@ bool buid_path_index(const std::string& path) {
 }
 
 
-int strict_string_to_int(const std::string &s) {
-	if (s.find_first_not_of("0123456789") != std::string::npos)
+int strict_stoi(const std::string &s) {
+	if (s.find_first_not_of("0123456789") != std::string::npos) {
 		throw std::invalid_argument("Cannot convert value");
-	return std::stoi(s.c_str(), NULL, 10);
+	}
+	return std::stoi(s, nullptr, 10);
 }
 
 
@@ -807,16 +810,19 @@ void stringTokenizer(const std::string &str, const std::string &delimiter, std::
 }
 
 
-unsigned int levenshtein_distance(const std::string &str1, const std::string &str2) {
+unsigned levenshtein_distance(const std::string &str1, const std::string &str2) {
 	const size_t len1 = str1.size(), len2 = str2.size();
-	std::vector<unsigned int> col(len2 + 1), prev_col(len2 + 1);
+	std::vector<unsigned> col(len2 + 1), prev_col(len2 + 1);
 
-	for (unsigned int i = 0; i < prev_col.size(); ++i) prev_col[i] = i;
+	for (unsigned i = 0; i < prev_col.size(); ++i) {
+		prev_col[i] = i;
+	}
 
-	for (unsigned int i = 0; i < len1; ++i) {
+	for (unsigned i = 0; i < len1; ++i) {
 		col[0] = i + 1;
-		for (unsigned int j = 0; j < len2; ++j)
+		for (unsigned j = 0; j < len2; ++j) {
 			col[j + 1] = std::min(std::min(prev_col[j + 1] + 1, col[j] + 1), prev_col[j] + (str1[i] == str2[j] ? 0 : 1));
+		}
 		col.swap(prev_col);
 	}
 
@@ -824,11 +830,9 @@ unsigned int levenshtein_distance(const std::string &str1, const std::string &st
 }
 
 
-std::string
-delta_string(std::chrono::time_point<std::chrono::system_clock> start, std::chrono::time_point<std::chrono::system_clock> end)
-{
-	static const char *units[] = {"s", "ms", "\xc2\xb5s", "ns"};
-	static const long double scaling[] = {1, 1e3, 1e6, 1e9};
+std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end) {
+	static const char *units[] = { "s", "ms", "\xc2\xb5s", "ns" };
+	static const long double scaling[] = { 1, 1e3, 1e6, 1e9 };
 
 	long double delta = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
