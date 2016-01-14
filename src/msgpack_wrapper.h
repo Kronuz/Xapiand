@@ -131,6 +131,10 @@ public:
 	MsgPack at(const std::string& key) const;
 	MsgPack at(uint32_t off) const;
 
+	bool find(const MsgPack& o) const;
+	bool find(const std::string& key) const;
+	bool find(uint32_t off) const;
+
 	std::string key() const;
 	std::string to_json_string(bool prettify=false) const;
 	std::string to_string() const;
@@ -240,7 +244,7 @@ public:
 	const_iterator cend() const { return end(); }
 
 	explicit operator bool() const {
-		return obj.type == msgpack::type::MAP ? obj.via.map.size : obj.via.array.size;
+		return obj.type != msgpack::type::NIL;
 	}
 };
 

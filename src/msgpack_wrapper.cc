@@ -229,6 +229,50 @@ MsgPack::at(uint32_t off) const
 }
 
 
+bool
+MsgPack::find(const MsgPack& o) const
+{
+	if (o.obj.type == msgpack::type::STR) {
+		return find(std::string(o.obj.via.str.ptr, o.obj.via.str.size));
+	}
+
+	if (o.obj.type == msgpack::type::POSITIVE_INTEGER) {
+		return find(static_cast<uint32_t>(o.obj.via.u64));
+	}
+
+	return false;
+}
+
+
+bool
+MsgPack::find(const std::string& key) const
+{
+	if (obj.type == msgpack::type::MAP) {
+		const msgpack::object_kv* pend(obj.via.map.ptr + obj.via.map.size);
+		for (auto p = obj.via.map.ptr; p != pend; ++p) {
+			if (p->key.type == msgpack::type::STR) {
+				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0)  {
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+
+bool
+MsgPack::find(uint32_t off) const
+{
+	if (obj.type == msgpack::type::ARRAY && off < obj.via.array.size) {
+		return true;
+	}
+
+	return false;
+}
+
+
 std::string
 MsgPack::key() const
 {
