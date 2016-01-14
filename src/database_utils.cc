@@ -47,6 +47,7 @@
 #define PATCH_PATH "path"
 #define PATCH_FROM "from"
 
+
 const std::regex find_types_re("(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" NUMERIC_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")", std::regex::icase | std::regex::optimize);
 
 
@@ -196,34 +197,27 @@ MIMEType get_mimetype(const std::string& type) {
 }
 
 
-bool json_load(rapidjson::Document& doc, const std::string& str)
-{
+void json_load(rapidjson::Document& doc, const std::string& str) {
 	rapidjson::ParseResult parse_done = doc.Parse(str.data());
-
 	if (!parse_done) {
-		L_ERR(nullptr, "JSON parse error: %s (%u)\n", GetParseError_En(parse_done.Code()), parse_done.Offset());
-		return false;
-	} else {
-		return true;
+		throw MSG_Error("JSON parse error: %s (%u)\n", GetParseError_En(parse_done.Code()), parse_done.Offset());
 	}
 }
 
 
-void apply_patch(MsgPack patch, MsgPack object)
-{
+void apply_patch(const MsgPack& patch, MsgPack& object) {
 	if (patch.obj.type == msgpack::type::ARRAY) {
-		for (auto elem : patch) {
+		for (const auto elem : patch) {
 			try {
 				MsgPack op = elem.at("op");
 				std::string op_str = op.to_json_string();
 
-				if      (op_str.compare(PATCH_ADD) == 0) patch_add(patch, object);
-				else if (op_str.compare(PATCH_REM) == 0) patch_remove(patch, object);
-				else if (op_str.compare(PATCH_REP) == 0) patch_replace(patch, object);
-				else if (op_str.compare(PATCH_MOV) == 0) patch_move(patch, object);
-				else if (op_str.compare(PATCH_COP) == 0) patch_copy(patch, object);
-				else if (op_str.compare(PATCH_TES) == 0) patch_test(patch, object);
-
+				if      (op_str.compare(PATCH_ADD) == 0) patch_add(elem, object);
+				else if (op_str.compare(PATCH_REM) == 0) patch_remove(elem, object);
+				else if (op_str.compare(PATCH_REP) == 0) patch_replace(elem, object);
+				else if (op_str.compare(PATCH_MOV) == 0) patch_move(elem, object);
+				else if (op_str.compare(PATCH_COP) == 0) patch_copy(elem, object);
+				else if (op_str.compare(PATCH_TES) == 0) patch_test(elem, object);
 			} catch (const std::out_of_range& err) {
 				throw MSG_Error("Objects MUST have exactly one \"op\" member");
 			}
@@ -234,8 +228,7 @@ void apply_patch(MsgPack patch, MsgPack object)
 }
 
 
-bool patch_add(MsgPack& obj_patch, MsgPack& object)
-{
+bool patch_add(const MsgPack& obj_patch, MsgPack& object) {
 	std::string target;
 	try {
 		MsgPack o = get_patch_path(obj_patch, object, PATCH_PATH, target);
@@ -249,8 +242,7 @@ bool patch_add(MsgPack& obj_patch, MsgPack& object)
 }
 
 
-bool patch_remove(MsgPack& obj_patch, MsgPack& object)
-{
+bool patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 	std::string target;
 	try {
 		MsgPack o = get_patch_path(obj_patch, object, PATCH_PATH, target);
@@ -266,8 +258,7 @@ bool patch_remove(MsgPack& obj_patch, MsgPack& object)
 }
 
 
-bool patch_replace(MsgPack& obj_patch, MsgPack& object)
-{
+bool patch_replace(const MsgPack& obj_patch, MsgPack& object) {
 	std::string target;
 
 	try {
@@ -282,8 +273,7 @@ bool patch_replace(MsgPack& obj_patch, MsgPack& object)
 }
 
 
-bool patch_move(MsgPack& obj_patch, MsgPack& object)
-{
+bool patch_move(const MsgPack& obj_patch, MsgPack& object) {
 	std::string old_target;
 	std::string new_target;
 	try {
@@ -300,8 +290,7 @@ bool patch_move(MsgPack& obj_patch, MsgPack& object)
 }
 
 
-bool patch_copy(MsgPack& obj_patch, MsgPack& object)
-{
+bool patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 	std::string old_target;
 	std::string new_target;
 	try {
@@ -317,8 +306,7 @@ bool patch_copy(MsgPack& obj_patch, MsgPack& object)
 }
 
 
-bool patch_test(MsgPack& obj_patch, MsgPack& object)
-{
+bool patch_test(const MsgPack& obj_patch, MsgPack& object) {
 	std::string target;
 	try {
 		MsgPack o = get_patch_path(obj_patch, object, PATCH_PATH, target);
@@ -337,8 +325,7 @@ bool patch_test(MsgPack& obj_patch, MsgPack& object)
 }
 
 
-MsgPack get_patch_path(MsgPack& obj_patch, MsgPack& object, const char* path, std::string& target, bool verify_exist)
-{
+MsgPack get_patch_path(const MsgPack& obj_patch, MsgPack& object, const char* path, std::string& target, bool verify_exist) {
 	try {
 		MsgPack path = obj_patch.at(path);
 		std::string path_str = path.to_json_string();
@@ -394,8 +381,7 @@ MsgPack get_patch_path(MsgPack& obj_patch, MsgPack& object, const char* path, st
 }
 
 
-MsgPack get_patch_value(MsgPack& obj_patch)
-{
+MsgPack get_patch_value(const MsgPack& obj_patch) {
 	try {
 		MsgPack value = obj_patch.at("value");
 		return value;
@@ -403,4 +389,3 @@ MsgPack get_patch_value(MsgPack& obj_patch)
 		throw MSG_Error("Object MUST have exactly one \"value\" member in \"add\" operation");
 	}
 }
-
