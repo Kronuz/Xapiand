@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "cJSON.h"
+#include "msgpack_wrapper.h"
 #include "utils.h"
 #include "serialise.h"
 
@@ -55,12 +55,12 @@ const std::vector<double> def_acc_date      { toUType(unitTime::HOUR), toUType(u
 
 
 struct specification_t {
-	std::vector<int> position;
-	std::vector<int> weight;
+	std::vector<unsigned> position;
+	std::vector<unsigned> weight;
 	std::vector<std::string> language;
 	std::vector<bool> spelling;
 	std::vector<bool> positions;
-	std::vector<int> analyzer;
+	std::vector<unsigned> analyzer;
 	std::vector<double> accuracy;
 	std::vector<std::string> acc_prefix;
 	unsigned int slot;
@@ -107,13 +107,13 @@ public:
 	 * Updates the properties of schema using root.
 	 * Returns properties of schema updated.
 	 */
-	void update_root(cJSON* properties, cJSON* root);
+	void update_root(MsgPack& properties, const MsgPack& item_doc);
 
 	/*
 	 * Updates properties of attr using item.
 	 * Returns properties of attr updated.
 	 */
-	cJSON* get_subproperties(cJSON* properties, const char* attr, cJSON* item);
+	MsgPack get_subproperties(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key);
 
 	/*
 	 * Stores schema only if needed.
@@ -121,29 +121,29 @@ public:
 	void store();
 
 	/*
-	 * Updates only specification using item.
+	 * Updates only specification struct using item_doc.
 	 */
-	void update_specification(cJSON* item);
+	void update_specification(const MsgPack& item_doc);
 
 	/*
 	 * Sets the type of field and updates properties.
 	 */
-	void set_type(cJSON* field, const std::string &field_name, cJSON* properties);
+	void set_type(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key);
 
 	/*
 	 * Set type to array in schema.
 	 */
-	void set_type_to_array(cJSON* properties);
+	void set_type_to_array(MsgPack& properties);
 
 	/*
-	 * Set type to array in schema.
+	 * Set type to object in schema.
 	 */
-	void set_type_to_object(cJSON* properties);
+	void set_type_to_object(MsgPack& properties);
 
 	/*
-	 * Accuracy, type, analyzer and index of schema are transformed to readable form.
+	 * Transforms schema into string.
 	 */
-	std::string to_string(bool pretty);
+	std::string to_string(bool prettify);
 
 	/*
 	 * Getters and Setters.
@@ -151,17 +151,19 @@ public:
 
 	void setDatabase(Database* _db);
 
-	cJSON* get_properties_schema();
-
-	inline unique_cJSON getSchema() {
-		return unique_cJSON(cJSON_Duplicate(schema.get(), 1));
+	inline MsgPack getProperties_schema() const {
+		return schema.at(RESERVED_SCHEMA);
 	}
 
-	inline bool getStore() {
+	inline MsgPack getSchema() const {
+		return MsgPack(schema);
+	}
+
+	inline bool getStore() const {
 		return to_store;
 	}
 
-	inline void setSchema(unique_cJSON&& _schema) {
+	inline void setSchema(MsgPack&& _schema) {
 		schema = std::move(_schema);
 	}
 
@@ -172,39 +174,39 @@ public:
 private:
 	Database* db;
 
-	unique_cJSON schema;
+	MsgPack schema;
 	bool to_store;
 
 	/*
-	 * All the reserved word found in a new field are added in properties.
+	 * All the reserved word found into item_doc are added in properties.
 	 */
-	void insert(cJSON* item, cJSON* properties, const std::string &item_name, bool root=false);
+	void insert(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key, bool is_root=false);
 
 	/*
-	 * For updating the specifications, first we check whether the document contains reserved words that can be
+	 * Updates properties, first we check whether the document contains reserved words that can be
 	 * modified, otherwise we check in properties and if reserved words do not exist, we take the values
-	 * of the parent if they are heritable.
+	 * of the parent if they are inheritable.
 	 */
-	void update(cJSON* item, cJSON* properties, bool root=false);
+	void update(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key, bool is_root=false);
 
 	/*
-	 * It inserts fields that are not hereditary and if _type has been fixed these can not be modified.
+	 * It inserts properties that are not inheritable. Only it is called when _type has not been fixed.
 	 */
-	void insert_inheritable_specifications(cJSON* item, cJSON* properties);
+	void insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc);
 
 	/*
-	 * For updating required data in properties. When a new field is inserted in the scheme it is
+	 * For updating required data in properties. When a new item is inserted in the schema, it is
 	 * necessary verify that all the required reserved words are defined, otherwise they will be defined.
 	 */
-	void update_required_data(const std::string &name, cJSON* properties);
+	void update_required_data(MsgPack& properties, const std::string& item_key);
 
 	/*
-	 * Recursively transforms the field into a readable form.
+	 * Recursively transforms item_schema into a readable form.
 	 */
-	void readable(cJSON* field);
+	MsgPack readable(MsgPack&& item_schema);
 
 	/*
-	 * Return the field's type
+	 * Return the item_doc's type
 	 */
-	char get_type(cJSON* field);
+	char get_type(const MsgPack& item_doc);
 };

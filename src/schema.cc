@@ -30,7 +30,7 @@ const specification_t default_spc;
 
 
 specification_t::specification_t()
-		: position({ -1 }),
+		: position({ 1 }),
 		  weight({ 1 }),
 		  language({ "en" }),
 		  spelling({ false }),
@@ -112,14 +112,14 @@ specification_t::to_string()
 	str << "\t" << RESERVED_TYPE        << ": " << str_type(sep_types)  << "\n";
 	str << "\t" << RESERVED_PREFIX      << ": " << prefix               << "\n";
 	str << "\t" << RESERVED_INDEX       << ": " << str_index[toUType(index)]     << "\n";
-	str << "\t" << RESERVED_STORE       << ": " << ((store)             ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_DYNAMIC     << ": " << ((dynamic)           ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_D_DETECTION << ": " << ((date_detection)    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_N_DETECTION << ": " << ((numeric_detection) ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_G_DETECTION << ": " << ((geo_detection)     ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_B_DETECTION << ": " << ((bool_detection)    ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_S_DETECTION << ": " << ((string_detection)  ? "true" : "false") << "\n";
-	str << "\t" << RESERVED_BOOL_TERM   << ": " << ((bool_term)         ? "true" : "false") << "\n}\n";
+	str << "\t" << RESERVED_STORE       << ": " << (store             ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_DYNAMIC     << ": " << (dynamic           ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_D_DETECTION << ": " << (date_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_N_DETECTION << ": " << (numeric_detection ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_G_DETECTION << ": " << (geo_detection     ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_B_DETECTION << ": " << (bool_detection    ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_S_DETECTION << ": " << (string_detection  ? "true" : "false") << "\n";
+	str << "\t" << RESERVED_BOOL_TERM   << ": " << (bool_term         ? "true" : "false") << "\n}\n";
 
 	return str.str();
 }
@@ -139,75 +139,63 @@ Schema::setDatabase(Database* _db)
 
 	if (s_schema.empty()) {
 		to_store = true;
-		schema = unique_cJSON(cJSON_CreateObject());
-		cJSON_AddItemToObject(schema.get(), RESERVED_VERSION, cJSON_CreateNumber(DB_VERSION_SCHEMA));
-		cJSON_AddItemToObject(schema.get(), RESERVED_SCHEMA, cJSON_CreateObject());
+		schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;
+		schema[RESERVED_SCHEMA];
 	} else {
 		to_store = false;
-		schema = unique_cJSON(cJSON_Parse(s_schema.c_str()));
-
-		if (!schema) {
-			schema.reset();
-			throw MSG_Error("Schema is corrupt, you need provide a new one. JSON Before: [%s]", cJSON_GetErrorPtr());
-		}
-
-		cJSON* version = cJSON_GetObjectItem(schema.get(), RESERVED_VERSION);
-		if (!version || version->valuedouble != DB_VERSION_SCHEMA) {
-			L(nullptr, "version: %s  %f ", version ? "EXIST" : "NULL", version ? version->valuedouble : 0.0);
-			schema.reset();
-			throw MSG_Error("Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
+		schema = MsgPack(s_schema);
+		if (schema.obj.type != msgpack::type::MAP) {
+			try {
+				auto version = schema.at(RESERVED_VERSION);
+				if (version.obj.via.f64 != DB_VERSION_SCHEMA) {
+					throw MSG_Error("Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
+				}
+			} catch (const msgpack::type_error&)) {
+				throw MSG_Error("Schema is corrupt, you need provide a new one");
+			}
+		} else {
+			throw MSG_Error("Schema is corrupt, you need provide a new one");
 		}
 	}
-}
-
-
-cJSON*
-Schema::get_properties_schema() {
-	return cJSON_GetObjectItem(schema.get(), RESERVED_SCHEMA);
 }
 
 
 void
-Schema::update_root(cJSON* properties, cJSON* root)
+Schema::update_root(MsgPack& properties, const MsgPack& item_doc)
 {
 	// Reset specification
 	specification = default_spc;
 
-	cJSON* properties_id = cJSON_GetObjectItem(properties, RESERVED_ID);
+	auto properties_id = properties[RESERVED_ID];
 	if (properties_id) {
-		update(root, properties, true);
+		update(properties, item_doc, RESERVED_SCHEMA, true);
 	} else {
-		properties_id = cJSON_CreateObject(); // It is managed by properties.
-		cJSON* type = cJSON_CreateArray(); // Managed by properties
-		cJSON_AddItemToArray(type, cJSON_CreateNumber(NO_TYPE));
-		cJSON_AddItemToArray(type, cJSON_CreateNumber(NO_TYPE));
-		cJSON_AddItemToArray(type, cJSON_CreateNumber(STRING_TYPE));
-		cJSON_AddItemToObject(properties_id, RESERVED_TYPE, type);
-        cJSON_AddItemToObject(properties_id, RESERVED_INDEX, cJSON_CreateNumber(toUType(Index::ALL)));
-		cJSON_AddItemToObject(properties_id, RESERVED_SLOT, cJSON_CreateNumber(DB_SLOT_ID));
-		cJSON_AddItemToObject(properties_id, RESERVED_PREFIX, cJSON_CreateString(DOCUMENT_ID_TERM_PREFIX));
-		cJSON_AddItemToObject(properties_id, RESERVED_BOOL_TERM, cJSON_CreateTrue());
-		cJSON_AddItemToObject(properties, RESERVED_ID, properties_id);
+		auto type = properties_id[RESERVED_TYPE];
+		type.add_item_to_array(NO_TYPE);
+		type.add_item_to_array(NO_TYPE);
+		type.add_item_to_array(NO_TYPE);
 
+        properties_id[RESERVED_INDEX] = (unsigned)Index::ALL;
+		properties_id[RESERVED_SLOT] = DB_SLOT_ID;
+		properties_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
+		properties_id[RESERVED_BOOL_TERM] = true;
 		to_store = true;
-		insert(root, properties, RESERVED_SCHEMA, true);
+		insert(properties, item_doc, RESERVED_SCHEMA, true);
 	}
 }
 
 
-cJSON*
-Schema::get_subproperties(cJSON* properties, const char* field_name, cJSON* item)
+MsgPack
+Schema::get_subproperties(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key)
 {
-	cJSON* subproperties = cJSON_GetObjectItem(properties, field_name);
+	auto subproperties = properties[item_key];
 	if (subproperties) {
 		found_field = true;
-		update(item, subproperties);
+		update(subproperties, item_doc, item_key);
 	} else {
 		to_store = true;
 		found_field = false;
-		subproperties = cJSON_CreateObject(); // It is managed by item.
-		cJSON_AddItemToObject(properties, field_name, subproperties);
-		insert(item, subproperties, field_name);
+		insert(subproperties, item_doc, item_key);
 	}
 
 	return subproperties;
@@ -218,15 +206,14 @@ void
 Schema::store()
 {
 	if (to_store) {
-		unique_char_ptr _cprint(cJSON_Print(schema.get()));
-		db->set_metadata(RESERVED_SCHEMA, _cprint.get());
+		db->set_metadata(RESERVED_SCHEMA, schema.to_string());
 		to_store = false;
 	}
 }
 
 
 void
-Schema::update_specification(cJSON* item)
+Schema::update_specification(const MsgPack& item_doc)
 {
 	specification.accuracy.clear();
 	specification.acc_prefix.clear();
@@ -237,61 +224,67 @@ Schema::update_specification(cJSON* item)
 	specification.prefix = default_spc.prefix;
 	specification.slot = default_spc.slot;
 
-	cJSON* spc;
-
 	// RESERVED_POSITION is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_POSITION))) {
+	try {
+		auto doc_position = item_doc.at(RESERVED_POSITION);
 		specification.position.clear();
-		if (spc->type == cJSON_Number) {
-			specification.position.push_back(spc->valueint);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _position = cJSON_GetArrayItem(spc, i);
-				if (_position->type == cJSON_Number) {
-					specification.position.push_back(_position->valueint);
+		if (doc_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
+			specification.position.push_back(doc_position.obj.via.u64);
+		} else if (doc_position.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_position.obj.via.array.size; ++i) {
+				auto _position = doc_position.at(i);
+				if (_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
+					specification.doc_position.push_back(_position.obj.via.u64);
 				} else {
-					throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_POSITION);
+					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_POSITION);
 				}
 			}
 		} else {
-			throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_POSITION);
+			throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_POSITION);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
 	// RESERVED_WEIGHT is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_WEIGHT))) {
+	try {
+		auto doc_weight = item_doc.at(RESERVED_WEIGHT);
 		specification.weight.clear();
-		if (spc->type == cJSON_Number) {
-			specification.weight.push_back(spc->valueint);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _weight = cJSON_GetArrayItem(spc, i);
-				if (_weight->type == cJSON_Number) {
-					specification.weight.push_back(_weight->valueint);
+		if (doc_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
+			specification.weight.push_back(doc_weight.obj.via.u64);
+		} else if (doc_weight.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_weight.obj.via.array.size; ++i) {
+				auto _weight = doc_weight.at(i);
+				if (_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
+					specification.doc_weight.push_back(_weight.obj.via.u64);
 				} else {
-					throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_WEIGHT);
+					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_WEIGHT);
 				}
 			}
 		} else {
-			throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_WEIGHT);
+			throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_WEIGHT);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
 	// RESERVED_LANGUAGE is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_LANGUAGE))) {
+	try {
+		auto doc_language = item_doc.at(RESERVED_LANGUAGE);
 		specification.language.clear();
-		if (spc->type == cJSON_String) {
-			std::string lan = is_language(spc->valuestring) ? spc->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, spc->valuestring);
-			specification.language.push_back(lan);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _language = cJSON_GetArrayItem(spc, i);
-				if (_language->type == cJSON_String) {
-					std::string lan = is_language(_language->valuestring) ? _language->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, _language->valuestring);
-					specification.language.push_back(lan.c_str());
+		if (doc_language.obj.type == msgpack::type::STR) {
+			std::string str_language(doc_language.obj.via.str.ptr, doc_language.obj.via.str.size);
+			if (is_language(str_language)) {
+				specification.language.push_back(std::move(str_language));
+			} else {
+				throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, lan.c_str());
+			}
+		} else if (doc_language.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_language.obj.via.array.size; ++i) {
+				auto _language = doc_language.at(i);
+				if (_language.obj.type == msgpack::type::STR) {
+					std::string str_language(_language.obj.via.str.ptr, _language.obj.via.str.size);
+					if (is_language(str_language)) {
+						specification.language.push_back(std::move(str_language));
+					} else {
+						throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, lan.c_str());
+					}
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_LANGUAGE);
 				}
@@ -299,19 +292,19 @@ Schema::update_specification(cJSON* item)
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_LANGUAGE);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
 	// RESERVED_SPELLING is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_SPELLING))) {
+	try {
+		auto doc_spelling = item_doc.at(RESERVED_SPELLING);
 		specification.spelling.clear();
-		if (spc->type < cJSON_NULL) {
-			specification.spelling.push_back(spc->type);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _spelling = cJSON_GetArrayItem(spc, i);
-				if (_spelling->type < cJSON_NULL) {
-					specification.spelling.push_back(_spelling->type);
+		if (doc_spelling.obj.type == msgpack::type::BOOLEAN) {
+			specification.spelling.push_back(doc_spelling.obj.via.boolean);
+		} else if (doc_spelling.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_spelling.obj.via.array.size; ++i) {
+				auto _spelling = doc_spelling.at(i);
+				if (_spelling.obj.type == msgpack::type::BOOLEAN) {
+					specification.spelling.push_back(_spelling.obj.via.boolean);
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_SPELLING);
 				}
@@ -319,19 +312,19 @@ Schema::update_specification(cJSON* item)
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_SPELLING);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
 	// RESERVED_POSITIONS is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_POSITIONS))) {
+	try {
+		auto doc_positions = item_doc.at(RESERVED_POSITIONS);
 		specification.positions.clear();
-		if (spc->type < cJSON_NULL) {
-			specification.positions.push_back(spc->type);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _positions = cJSON_GetArrayItem(spc, i);
-				if (_positions->type < cJSON_NULL) {
-					specification.positions.push_back(_positions->type);
+		if (doc_positions.obj.type == msgpack::type::BOOLEAN) {
+			specification.positions.push_back(doc_positions.obj.via.boolean);
+		} else if (doc_positions.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_positions.obj.via.array.size; ++i) {
+				auto _positions = doc_positions.at(i);
+				if (_positions.obj.type == msgpack::type::BOOLEAN) {
+					specification.positions.push_back(_positions.obj.type);
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_POSITIONS);
 				}
@@ -339,30 +332,37 @@ Schema::update_specification(cJSON* item)
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_POSITIONS);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
 	// RESERVED_ANALYZER is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_ANALYZER))) {
+	try {
+		auto doc_analyzer = item_doc.at(RESERVED_ANALYZER);
 		specification.analyzer.clear();
-		if (spc->type == cJSON_String) {
-			if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0)      specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
-			else if (strcasecmp(spc->valuestring, str_analizer[1].c_str()) == 0) specification.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
-			else if (strcasecmp(spc->valuestring, str_analizer[2].c_str()) == 0) specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
-			else if (strcasecmp(spc->valuestring, str_analizer[3].c_str()) == 0) specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
-			else throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* analyzer = cJSON_GetArrayItem(spc, i);
-				if (spc->type == cJSON_String) {
-					std::string _analyzer = stringtoupper(analyzer->valuestring);
-					if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0) {
+		if (doc_analyzer.obj.type == msgpack::type::STR) {
+			std::string _analyzer(upper_string(doc_analyzer.obj.via.str.ptr, doc_analyzer.obj.via.str.size));
+			if (_analyzer == str_analizer[0]) {
+				specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
+			} else if (_analyzer == str_analizer[1]) {
+				specification.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
+			} else if (_analyzer == str_analizer[2]) {
+				specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
+			} else if (_analyzer == str_analizer[3]) {
+				specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
+			} else {
+				throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
+			}
+		} else if (doc_analyzer.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_analyzer.obj.via.array.size; ++i) {
+				auto analyzer = doc_analyzer.at(i);
+				if (analyzer.obj.type == msgpack::type::STR) {
+					std::string _analyzer(upper_string(analyzer.obj.via.str.ptr, analyzer.obj.via.str.size));
+					if (_analyzer == str_analizer[0]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
-					} else if (strcasecmp(spc->valuestring, str_analizer[1].c_str()) == 0) {
+					} else if (_analyzer == str_analizer[1]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
-					} else if (strcasecmp(spc->valuestring, str_analizer[2].c_str()) == 0) {
+					} else if (_analyzer == str_analizer[2]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
-					} else if (strcasecmp(spc->valuestring, str_analizer[3].c_str()) == 0) {
+					} else if (_analyzer == str_analizer[3]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
 					} else {
 						throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
@@ -374,25 +374,28 @@ Schema::update_specification(cJSON* item)
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_ANALYZER);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
 	// RESERVED_STORE is heritable and can change.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_STORE))) {
-		if (spc->type < cJSON_NULL) {
-			specification.store = spc->type;
+	try {
+		auto doc_store = item_doc.at(RESERVED_STORE);
+		if (doc_store.obj.type == msgpack::type::BOOLEAN) {
+			specification.store = doc_store.obj.via.boolean;
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean", RESERVED_STORE);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
 	// RESERVED_INDEX is heritable and can change.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_INDEX))) {
-		if (spc->type == cJSON_String) {
-			if (strcasecmp(spc->valuestring, str_index[0].c_str()) == 0) {
+	try {
+		auto doc_index = item_doc.at(RESERVED_INDEX);
+		if (doc_index.obj.type == msgpack::type::STR) {
+			std::string _index(upper_string(doc_index.obj.via.str.ptr, doc_index.obj.via.str.size));
+			if (_index == str_index[0]) {
 				specification.index = Index::ALL;
-			} else if (strcasecmp(spc->valuestring, str_index[1].c_str()) == 0) {
+			} else if (_index == str_index[1]) {
 				specification.index = Index::TERM;
-			} else if (strcasecmp(spc->valuestring, str_index[2].c_str()) == 0) {
+			} else if (_index == str_index[2]) {
 				specification.index = Index::VALUE;
 			} else {
 				throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
@@ -400,184 +403,179 @@ Schema::update_specification(cJSON* item)
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string", RESERVED_INDEX);
 		}
-	}
+	} catch (const msgpack::type_error&);
 }
 
 
 void
-Schema::set_type(cJSON* field, const std::string &field_name, cJSON* properties) {
-	specification.sep_types[2] = get_type(field);
-	update_required_data(field_name, properties);
-}
-
-
-void
-Schema::set_type_to_array(cJSON* properties)
+Schema::set_type(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key)
 {
-	cJSON* _type = cJSON_GetObjectItem(properties, RESERVED_TYPE);
-	if (_type && cJSON_GetArrayItem(_type, 1)->valueint == NO_TYPE) {
-		cJSON_ReplaceItemInArray(_type, 1, cJSON_CreateNumber(ARRAY_TYPE));
-		to_store = true;
-	}
+	specification.sep_types[2] = get_type(item_doc);
+	update_required_data(properties, item_key);
+}
+
+
+void
+Schema::set_type_to_array(MsgPack& properties)
+{
+	try {
+		auto _type = properties.at(RESERVED_TYPE).at(1);
+		if (_type.obj.via.u64 == NO_TYPE) {
+			_type = ARRAY_TYPE;
+			to_store = true;
+		}
+	} catch (const msgpack::type_error&);
 }
 
 void
-Schema::set_type_to_object(cJSON* properties)
+Schema::set_type_to_object(MsgPack& properties)
 {
-	cJSON* _type = cJSON_GetObjectItem(properties, RESERVED_TYPE);
-	if (_type && cJSON_GetArrayItem(_type, 0)->valueint == NO_TYPE) {
-		cJSON_ReplaceItemInArray(_type, 0, cJSON_CreateNumber(OBJECT_TYPE));
-		to_store = true;
-	}
+	try {
+		auto _type = properties.at(RESERVED_TYPE).at(0);
+		if (_type.obj.via.u64 == NO_TYPE) {
+			_type = OBJECT_TYPE;
+			to_store = true;
+		}
+	} catch (const msgpack::type_error&);
 }
 
 
 std::string
-Schema::to_string(bool pretty)
+Schema::to_string(bool prettify)
 {
-	unique_cJSON schema_readable(cJSON_Duplicate(schema.get(), 1));
-	cJSON* properties = cJSON_GetObjectItem(schema_readable.get(), RESERVED_SCHEMA);
-	int elements = cJSON_GetArraySize(properties);
-	for (int i = 0; i < elements; ++i) {
-		cJSON* field = cJSON_GetArrayItem(properties, i);
-		if (!is_reserved(field->string) || strcmp(field->string, RESERVED_ID) == 0) {
-			readable(field);
+	MsgPack schema_readable = schema.duplicate();
+	auto properties = schema_readable.at(RESERVED_SCHEMA);
+	for (auto item_key : properties) {
+		std::string str_key(item_key.obj.via.str.ptr, item_key.obj.via.str.size);
+		if (!is_reserved(str_key)) {
+			readable(properties.at(str_key));
 		}
 	}
 
-	if (pretty) {
-		return unique_char_ptr(cJSON_Print(schema_readable.get())).get();
-	} else {
-		return unique_char_ptr(cJSON_PrintUnformatted(schema_readable.get())).get();
-	}
+	return schema_readable.to_json_string(prettify);
 }
 
 
 void
-Schema::insert(cJSON* item, cJSON* properties, const std::string &item_name, bool root)
+Schema::insert(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key, bool is_root)
 {
-	cJSON* spc;
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_D_DETECTION))) {
-		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(properties, RESERVED_D_DETECTION);
-			specification.date_detection = false;
-		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(properties, RESERVED_D_DETECTION);
-			specification.date_detection = true;
+	try {
+		auto doc_d_detection = item_doc.at(RESERVED_D_DETECTION);
+		if (doc_d_detection.obj.type == msgpack::type::BOOLEAN) {
+			properties[RESERVED_D_DETECTION] = doc_d_detection.obj.via.boolean;
+			specification.date_detection = doc_d_detection.obj.via.boolean;
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean", RESERVED_D_DETECTION);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_N_DETECTION))) {
-		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(properties, RESERVED_N_DETECTION);
-			specification.numeric_detection = false;
-		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(properties, RESERVED_N_DETECTION);
-			specification.numeric_detection = true;
+	try {
+		auto doc_n_detection = item_doc.at(RESERVED_N_DETECTION);
+		if (doc_n_detection.obj.type == msgpack::type::BOOLEAN) {
+			properties[RESERVED_N_DETECTION] = doc_n_detection.obj.via.boolean;
+			specification.numeric_detection = doc_n_detection.obj.via.boolean;
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean", RESERVED_N_DETECTION);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_G_DETECTION))) {
-		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(properties, RESERVED_G_DETECTION);
-			specification.geo_detection = false;
-		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(properties, RESERVED_G_DETECTION);
-			specification.geo_detection = true;
+	try {
+		auto doc_g_detection = item_doc.at(RESERVED_G_DETECTION);
+		if (doc_g_detection.obj.type == msgpack::type::BOOLEAN) {
+			properties[RESERVED_G_DETECTION] = doc_g_detection.obj.via.boolean;
+			specification.geo_detection = doc_g_detection.obj.via.boolean;
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean", RESERVED_G_DETECTION);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_B_DETECTION))) {
-		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(properties, RESERVED_B_DETECTION);
-			specification.bool_detection = false;
-		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(properties, RESERVED_B_DETECTION);
-			specification.bool_detection = true;
+	try {
+		auto doc_b_detection = item_doc.at(RESERVED_B_DETECTION);
+		if (doc_b_detection.obj.type == msgpack::type::BOOLEAN) {
+			properties[RESERVED_B_DETECTION] = doc_b_detection.obj.via.boolean;
+			specification.bool_detection = doc_b_detection.obj.via.boolean;
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean", RESERVED_B_DETECTION);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_S_DETECTION))) {
-		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(properties, RESERVED_S_DETECTION);
-			specification.string_detection = false;
-		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(properties, RESERVED_S_DETECTION);
-			specification.string_detection = true;
+	try {
+		auto doc_s_detection = item_doc.at(RESERVED_S_DETECTION);
+		if (doc_s_detection.obj.type == msgpack::type::BOOLEAN) {
+			properties[RESERVED_S_DETECTION] = doc_s_detection.obj.via.boolean;
+			specification.string_detection = doc_s_detection.obj.via.boolean;
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean", RESERVED_S_DETECTION);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_POSITION))) {
+	try {
+		auto doc_position = item_doc.at(RESERVED_POSITION);
 		specification.position.clear();
-		unique_cJSON acc_s(cJSON_CreateArray());
-		if (spc->type == cJSON_Number) {
-			specification.position.push_back(spc->valueint);
-			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(spc->valueint));
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _position = cJSON_GetArrayItem(spc, i);
-				if (_position->type == cJSON_Number) {
-					specification.position.push_back(_position->valueint);
-					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(_position->valueint));
+		if (doc_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
+			specification.position.push_back(doc_position.obj.via.u64);
+			properties[RESERVED_POSITION].add_item_to_array(doc_position.obj.via.u64);
+		} else if (doc_position.obj.type == msgpack::type::ARRAY) {
+			MsgPack position = properties[RESERVED_POSITION];
+			for (int i = 0; i < doc_position.obj.via.array.size; ++i) {
+				auto _position = doc_position.at(i);
+				if (_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
+					specification.position.push_back(_position.obj.via.u64);
+					position.add_item_to_array(_position.obj.via.u64);
 				} else {
-					throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_POSITION);
+					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_POSITION);
 				}
 			}
 		} else {
-			throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_POSITION);
+			throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_POSITION);
 		}
-		cJSON_AddItemToObject(properties, RESERVED_POSITION, acc_s.release());
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_WEIGHT))) {
+	try {
+		auto doc_weight = item_doc.at(RESERVED_WEIGHT);
 		specification.weight.clear();
-		unique_cJSON acc_s(cJSON_CreateArray());
-		if (spc->type == cJSON_Number) {
-			specification.weight.push_back(spc->valueint);
-			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(spc->valueint));
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _weight = cJSON_GetArrayItem(spc, i);
-				if (_weight->type == cJSON_Number) {
-					specification.weight.push_back(_weight->valueint);
-					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(_weight->valueint));
+		if (doc_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
+			specification.weight.push_back(doc_weight.obj.via.u64);
+			properties[RESERVED_WEIGHT].add_item_to_array(doc_weight.obj.via.u64);
+		} else if (doc_weight.obj.type == msgpack::type::ARRAY) {
+			auto weight = properties[RESERVED_WEIGHT];
+			for (int i = 0; i < doc_weight.obj.via.array.size; ++i) {
+				auto _weight = doc_weight.at(i);
+				if (_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
+					specification.weight.push_back(_weight.obj.via.u64);
+					weight.add_item_to_array(_weight.obj.via.u64);
 				} else {
-					throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_WEIGHT);
+					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_WEIGHT);
 				}
 			}
 		} else {
-			throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_WEIGHT);
+			throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_WEIGHT);
 		}
-		cJSON_AddItemToObject(properties, RESERVED_WEIGHT, acc_s.release());
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_LANGUAGE))) {
+	try {
+		auto doc_language = item_doc.at(RESERVED_LANGUAGE);
 		specification.language.clear();
-		unique_cJSON acc_s(cJSON_CreateArray());
-		if (spc->type == cJSON_String) {
-			std::string lan = is_language(spc->valuestring) ? spc->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, spc->valuestring);
-			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(lan.c_str()));
-			specification.language.push_back(lan);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _language = cJSON_GetArrayItem(spc, i);
-				if (_language->type == cJSON_String) {
-					std::string lan = is_language(_language->valuestring) ? _language->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, _language->valuestring);
-					specification.language.push_back(lan.c_str());
-					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(lan.c_str()));
+		if (doc_language.obj.type == msgpack::type::STR) {
+			std::string str_language(doc_language.obj.via.str.ptr, doc_language.obj.via.str.size);
+			if (is_language(str_language) {
+				properties[RESERVED_LANGUAGE].add_item_to_array(str_language);
+				specification.language.push_back(std::move(str_language));
+			} else {
+				throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, lan.c_str());
+			}
+		} else if (doc_language.obj.type == msgpack::type::ARRAY) {
+			auto language = properties[RESERVED_LANGUAGE];
+			for (int i = 0; i < doc_language.obj.via.array.size; ++i) {
+				auto _language = doc_language.at(i);
+				if (_language.obj.type == msgpack::type::STR) {
+					std::string str_language(_language.obj.via.str.ptr, _language.obj.via.str.size);
+					if (is_language(str_language)) {
+						language.add_item_to_array(str_language);
+						specification.language.push_back(std::move(str_language));
+					} else {
+						throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, lan.c_str());
+					}
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_LANGUAGE);
 				}
@@ -585,40 +583,31 @@ Schema::insert(cJSON* item, cJSON* properties, const std::string &item_name, boo
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_LANGUAGE);
 		}
-		cJSON_AddItemToObject(properties, RESERVED_LANGUAGE, acc_s.release());
-	} else {
-		size_t pfound = item_name.rfind(DB_OFFSPRING_UNION);
+	} catch (const msgpack::type_error&) {
+		size_t pfound = item_key.rfind(DB_OFFSPRING_UNION);
 		if (pfound != std::string::npos) {
-			std::string language(item_name.substr(pfound + strlen(DB_OFFSPRING_UNION)));
-			if (is_language(language)) {
-				unique_cJSON acc_s(cJSON_CreateArray());
+			std::string str_language(item_key.substr(pfound + strlen(DB_OFFSPRING_UNION)));
+			if (is_language(str_language)) {
 				specification.language.clear();
-				specification.language.push_back(language);
-				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(language.c_str()));
-				cJSON_AddItemToObject(properties, RESERVED_LANGUAGE, acc_s.release());
+				properties[RESERVED_LANGUAGE].add_item_to_array(str_language);
+				specification.language.push_back(std::move(str_language));
 			}
 		}
 	}
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_SPELLING))) {
+	try {
+		auto doc_spelling = item_doc.at(RESERVED_SPELLING);
 		specification.spelling.clear();
-		unique_cJSON acc_s(cJSON_CreateArray());
-		if (spc->type == cJSON_False) {
-			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateFalse());
-			specification.spelling.push_back(false);
-		} else if (spc->type == cJSON_True) {
-			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateTrue());
-			specification.spelling.push_back(true);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _spelling = cJSON_GetArrayItem(spc, i);
-				if (_spelling->type == cJSON_False) {
-					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateFalse());
-					specification.spelling.push_back(false);
-				} else if (_spelling->type == cJSON_True) {
-					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateTrue());
-					specification.spelling.push_back(true);
+		if (doc_spelling.obj.type == msgpack::type::BOOLEAN) {
+			properties[RESERVED_SPELLING].add_item_to_array(doc_spelling.obj.via.boolean);
+			specification.spelling.push_back(doc_spelling.obj.via.boolean);
+		} else if (doc_spelling.obj.type == msgpack::type::ARRAY) {
+			auto spelling = properties[RESERVED_SPELLING];
+			for (int i = 0; i < doc_spelling.obj.via.array.size; ++i) {
+				auto _spelling = doc_spelling.at(i);
+				if (_spelling.obj.type == msgpack::type::BOOLEAN) {
+					spelling.add_item_to_array(doc_spelling.obj.via.boolean);
+					specification.spelling.push_back(doc_spelling.obj.via.boolean);
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_SPELLING);
 				}
@@ -626,28 +615,21 @@ Schema::insert(cJSON* item, cJSON* properties, const std::string &item_name, boo
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_SPELLING);
 		}
-		cJSON_AddItemToObject(properties, RESERVED_SPELLING, acc_s.release());
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_POSITIONS))) {
+	try {
+		auto doc_positions = item_doc.at(RESERVED_POSITIONS);
 		specification.positions.clear();
-		unique_cJSON acc_s(cJSON_CreateArray());
-		if (spc->type == cJSON_False) {
-			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateFalse());
-			specification.positions.push_back(false);
-		} else if (spc->type == cJSON_True) {
-			cJSON_AddItemToArray(acc_s.get(), cJSON_CreateTrue());
-			specification.positions.push_back(true);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _positions = cJSON_GetArrayItem(spc, i);
-				if (_positions->type == cJSON_False) {
-					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateFalse());
-					specification.positions.push_back(false);
-				} else if (_positions->type == cJSON_True) {
-					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateTrue());
-					specification.positions.push_back(true);
+		if (doc_positions.obj.type == msgpack::type::BOOLEAN) {
+			properties[RESERVED_POSITIONS].add_item_to_array(doc_positions.obj.via.boolean);
+			specification.positions.push_back(doc_positions.obj.via.boolean);
+		} else if (doc_positions.obj.type == msgpack::type::ARRAY) {
+			auto positions = properties[RESERVED_POSITIONS];
+			for (int i = 0; i < doc_positions.obj.via.array.size; ++i) {
+				auto _positions = doc_positions.at(i);
+				if (_positions.obj.type == msgpack::type::BOOLEAN) {
+					positions.add_item_to_array(doc_positions.obj.via.boolean);
+					specification.positions.push_back(doc_positions.obj.via.boolean);
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_POSITIONS);
 				}
@@ -655,77 +637,77 @@ Schema::insert(cJSON* item, cJSON* properties, const std::string &item_name, boo
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_POSITIONS);
 		}
-		cJSON_AddItemToObject(properties, RESERVED_POSITIONS, acc_s.release());
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_STORE))) {
-		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(properties, RESERVED_STORE);
-			specification.store = false;
-		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(properties, RESERVED_STORE);
-			specification.store = true;
+	try {
+		auto doc_store = item_doc.at(RESERVED_STORE);
+		if (doc_store.obj.type == msgpack::type::BOOLEAN) {
+			properties[RESERVED_STORE] = doc_store.obj.via.boolean;
+			specification.store = doc_store.obj.via.boolean;
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean", RESERVED_STORE);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_INDEX))) {
-		if (spc->type == cJSON_String) {
-			if (strcasecmp(spc->valuestring, str_index[0].c_str()) == 0) {
+	try {
+		auto doc_index = item_doc.at(RESERVED_INDEX);
+		if (doc_index.obj.type == msgpack::type::STR) {
+			std::string _index(upper_string(doc_index.obj.via.str.ptr, doc_index.obj.via.str.size));
+			if (_index == str_index[0]) {
 				specification.index = Index::ALL;
-				cJSON_AddNumberToObject(properties, RESERVED_INDEX, toUType(Index::ALL));
-			} else if (strcasecmp(spc->valuestring, str_index[1].c_str()) == 0) {
+				properties[RESERVED_INDEX] = (unsigned)Index::ALL;
+			} else if (_index == str_index[1]) {
 				specification.index = Index::TERM;
-				cJSON_AddNumberToObject(properties, RESERVED_INDEX, toUType(Index::TERM));
-			} else if (strcasecmp(spc->valuestring, str_index[2].c_str()) == 0) {
+				properties[RESERVED_INDEX] = (unsigned)Index::TERM;
+			} else if (_index == str_index[2]) {
 				specification.index = Index::VALUE;
-				cJSON_AddNumberToObject(properties, RESERVED_INDEX, toUType(Index::VALUE));
+				properties[RESERVED_INDEX] = (unsigned)Index::VALUE;
 			} else {
 				throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
 			}
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string", RESERVED_INDEX);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_ANALYZER))) {
+	try {
+		auto doc_analyzer = item_doc.at(RESERVED_ANALYZER);
 		specification.analyzer.clear();
-		unique_cJSON acc_s(cJSON_CreateArray());
-		if (spc->type == cJSON_String) {
-			if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0) {
+		if (doc_analyzer.obj.type == msgpack::type::STR) {
+			std::string str_analyzer(upper_string(doc_analyzer.obj.via.str.ptr, doc_analyzer.obj.via.str.size));
+			if (str_analyzer == str_analizer[0]) {
 				specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
-				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_SOME));
-			} else if (strcasecmp(spc->valuestring, str_analizer[1].c_str()) == 0) {
+				properties[RESERVED_ANALYZER].add_item_to_array(Xapian::TermGenerator::STEM_SOME);
+			} else if (str_analyzer == str_analizer[1]) {
 				specification.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
-				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_NONE));
-			} else if (strcasecmp(spc->valuestring, str_analizer[2].c_str()) == 0) {
+				properties[RESERVED_ANALYZER].add_item_to_array(Xapian::TermGenerator::STEM_NONE);
+			} else if (str_analyzer == str_analizer[2]) {
 				specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
-				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_ALL));
-			} else if (strcasecmp(spc->valuestring, str_analizer[3].c_str()) == 0) {
+				properties[RESERVED_ANALYZER].add_item_to_array(Xapian::TermGenerator::STEM_ALL);
+			} else if (str_analyzer == str_analizer[3]) {
 				specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
-				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_ALL_Z));
+				properties[RESERVED_ANALYZER].add_item_to_array(Xapian::TermGenerator::STEM_ALL_Z);
 			} else {
 				throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
 			}
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* analyzer = cJSON_GetArrayItem(spc, i);
-				if (spc->type == cJSON_String) {
-					std::string _analyzer = stringtoupper(analyzer->valuestring);
-					if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0) {
+		} else if (doc_analyzer.obj.type == msgpack::type::ARRAY) {
+			auto analyzer = properties[RESERVED_ANALYZER];
+			for (int i = 0; i < doc_analyzer.obj.via.array.size; ++i) {
+				auto _analyzer = doc_analyzer.at(i);
+				if (doc_analyzer.obj.type == msgpack::type::STR) {
+					std::string str_analyzer(upper_string(_analyzer.obj.via.str.ptr, _analyzer.obj.via.str.size));
+					if (str_analyzer == str_analizer[0]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
-						cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_SOME));
-					} else if (strcasecmp(spc->valuestring, str_analizer[1].c_str()) == 0) {
+						analyzer.add_item_to_array(Xapian::TermGenerator::STEM_SOME);
+					} else if (str_analyzer == str_analizer[1]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
-						cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_NONE));
-					} else if (strcasecmp(spc->valuestring, str_analizer[2].c_str()) == 0) {
+						analyzer.add_item_to_array(Xapian::TermGenerator::STEM_NONE);
+					} else if (str_analyzer == str_analizer[2]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
-						cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_ALL));
-					} else if (strcasecmp(spc->valuestring, str_analizer[3].c_str()) == 0) {
+						analyzer.add_item_to_array(Xapian::TermGenerator::STEM_ALL);
+					} else if (str_analyzer == str_analizer[3]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
-						cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(Xapian::TermGenerator::STEM_ALL_Z));
+						analyzer.add_item_to_array(Xapian::TermGenerator::STEM_ALL_Z);
 					} else {
 						throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
 					}
@@ -736,97 +718,104 @@ Schema::insert(cJSON* item, cJSON* properties, const std::string &item_name, boo
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_ANALYZER);
 		}
-		cJSON_AddItemToObject(properties, RESERVED_ANALYZER, acc_s.release());
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_DYNAMIC))) {
-		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(properties, RESERVED_DYNAMIC);
-			specification.dynamic = false;
-		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(properties, RESERVED_DYNAMIC);
-			specification.dynamic = true;
+	try {
+		auto doc_dynamic = item_doc.at(RESERVED_DYNAMIC);
+		if (doc_dynamic.obj.type == msgpack::type::BOOLEAN) {
+			properties[RESERVED_DYNAMIC] = doc_dynamic.obj.via.boolean;
+			specification.dynamic = doc_dynamic.obj.via.boolean;
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean", RESERVED_DYNAMIC);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	if (!root) {
-		insert_inheritable_specifications(item, properties);
+	if (!is_root) {
+		insert_noninheritable_data(properties, item_doc);
 	}
 }
 
 
 void
-Schema::update(cJSON* item, cJSON* properties, bool root)
+Schema::update(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key, bool is_root)
 {
-	cJSON* spc;
-
 	// RESERVED_POSITION is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_POSITION))) {
+	try {
+		auto doc_position = item_doc.at(RESERVED_POSITION);
 		specification.position.clear();
-		if (spc->type == cJSON_Number) {
-			specification.position.push_back(spc->valueint);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _position = cJSON_GetArrayItem(spc, i);
-				if (_position->type == cJSON_Number) {
-					specification.position.push_back(_position->valueint);
+		if (doc_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
+			specification.position.push_back(doc_position.obj.via.u64);
+		} else if (doc_position.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_position.obj.via.array.size; ++i) {
+				auto _position = doc_position.at(i);
+				if (_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
+					specification.position.push_back(_position.obj.via.u64);
 				} else {
-					throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_POSITION);
+					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_POSITION);
 				}
 			}
 		} else {
-			throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_POSITION);
+			throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_POSITION);
 		}
-	} else if ((spc = cJSON_GetObjectItem(properties, RESERVED_POSITION))) {
-		specification.position.clear();
-		int elements = cJSON_GetArraySize(spc);
-		for (int i = 0; i < elements; ++i) {
-			specification.position.push_back(cJSON_GetArrayItem(spc, i)->valueint);
-		}
+	} catch (const msgpack::type_error&) {
+		try {
+			auto position = properties.at(RESERVED_POSITION);
+			specification.position.clear();
+			for (int i = 0; i < position.obj.via.array.size; ++i) {
+				specification.position.push_back(position.at(i).obj.via.u64);
+			}
+		} catch (const msgpack::type_error&);
 	}
 
 	// RESERVED_WEIGHT is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_WEIGHT))) {
+	try {
+		auto doc_weight = item_doc.at(RESERVED_WEIGHT);
 		specification.weight.clear();
-		if (spc->type == cJSON_Number) {
-			specification.weight.push_back(spc->valueint);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _weight = cJSON_GetArrayItem(spc, i);
-				if (_weight->type == cJSON_Number) {
-					specification.weight.push_back(_weight->valueint);
+		if (doc_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
+			specification.weight.push_back(doc_weight.obj.via.u64);
+		} else if (doc_weight.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_weight.obj.via.array.size; ++i) {
+				auto _weight = doc_weight.at(i);
+				if (_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
+					specification.weight.push_back(_weight.obj.via.u64);
 				} else {
-					throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_WEIGHT);
+					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_WEIGHT);
 				}
 			}
 		} else {
-			throw MSG_Error("Data inconsistency, %s should be integer or array of integers", RESERVED_WEIGHT);
+			throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_WEIGHT);
 		}
-	} else if ((spc = cJSON_GetObjectItem(properties, RESERVED_WEIGHT))) {
-		specification.weight.clear();
-		int elements = cJSON_GetArraySize(spc);
-		for (int i = 0; i < elements; ++i) {
-			specification.weight.push_back(cJSON_GetArrayItem(spc, i)->valueint);
-		}
+	} catch (const msgpack::type_error&) {
+		try {
+			auto weight = properties.at(RESERVED_WEIGHT);
+			specification.weight.clear();
+			for (int i = 0; i < weight.obj.via.array.size; ++i) {
+				specification.weight.push_back(weight.at(i).obj.via.u64);
+			}
+		} catch (const msgpack::type_error&);
 	}
 
 	// RESERVED_LANGUAGE is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_LANGUAGE))) {
+	try {
+		auto doc_language = item_doc.at(RESERVED_LANGUAGE);
 		specification.language.clear();
-		if (spc->type == cJSON_String) {
-			std::string lan = is_language(spc->valuestring) ? spc->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, spc->valuestring);
-			specification.language.push_back(lan);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _language = cJSON_GetArrayItem(spc, i);
-				if (_language->type == cJSON_String) {
-					std::string lan = is_language(_language->valuestring) ? _language->valuestring : throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, _language->valuestring);
-					specification.language.push_back(lan.c_str());
+		if (doc_language.obj.type == msgpack::type::STR) {
+			std::string str_language(doc_language.obj.via.str.ptr, doc_language.obj.via.str.size);
+			if (is_language(str_language) {
+				specification.language.push_back(std::move(str_language));
+			} else {
+				throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, lan.c_str());
+			}
+		} else if (doc_language.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_language.obj.via.array.size; ++i) {
+				auto _language = doc_language.at(i);
+				if (_language.obj.type == msgpack::type::STR) {
+					std::string str_language(_language.obj.via.str.ptr, _language.obj.via.str.size);
+					if (is_language(str_language)) {
+						specification.language.push_back(std::move(str_language));
+					} else {
+						throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, lan.c_str());
+					}
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_LANGUAGE);
 				}
@@ -834,25 +823,28 @@ Schema::update(cJSON* item, cJSON* properties, bool root)
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_LANGUAGE);
 		}
-	} else if ((spc = cJSON_GetObjectItem(properties, RESERVED_LANGUAGE))) {
-		specification.language.clear();
-		int elements = cJSON_GetArraySize(spc);
-		for (int i = 0; i < elements; ++i) {
-			specification.language.push_back(cJSON_GetArrayItem(spc, i)->valuestring);
-		}
+	} catch (const msgpack::type_error&) {
+		try {
+			auto language = properties.at(RESERVED_LANGUAGE);
+			specification.language.clear();
+			for (int i = 0; i < language.obj.via.array.size; ++i) {
+				auto _language = language.at(i);
+				specification.language.emplace_back(_language.obj.via.str.ptr, _language.obj.via.str.size);
+			}
+		} catch (const msgpack::type_error&);
 	}
 
 	// RESERVED_SPELLING is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_SPELLING))) {
+	try {
+		auto doc_spelling = item_doc.at(RESERVED_SPELLING);
 		specification.spelling.clear();
-		if (spc->type < cJSON_NULL) {
-			specification.spelling.push_back(spc->type);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _spelling = cJSON_GetArrayItem(spc, i);
-				if (_spelling->type < cJSON_NULL) {
-					specification.spelling.push_back(_spelling->type);
+		if (doc_spelling.obj.type == msgpack::type::BOOLEAN) {
+			specification.spelling.push_back(doc_spelling.obj.via.boolean);
+		} else if (doc_spelling.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_spelling.obj.via.array.size; ++i) {
+				auto _spelling = doc_spelling.at(i);
+				if (_spelling.obj.type == msgpack::type::BOOLEAN) {
+					specification.spelling.push_back(_spelling.obj.via.boolean);
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_SPELLING);
 				}
@@ -860,25 +852,27 @@ Schema::update(cJSON* item, cJSON* properties, bool root)
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_SPELLING);
 		}
-	} else if ((spc = cJSON_GetObjectItem(properties, RESERVED_SPELLING))) {
-		specification.spelling.clear();
-		int elements = cJSON_GetArraySize(spc);
-		for (int i = 0; i < elements; ++i) {
-			specification.spelling.push_back(cJSON_GetArrayItem(spc, i)->type);
-		}
+	} catch (const msgpack::type_error&) {
+		try {
+			auto spelling = properties.at(RESERVED_SPELLING);
+			specification.spelling.clear();
+			for (int i = 0; i < spelling.obj.via.array.size; ++i) {
+				specification.spelling.push_back(spelling.at(i).obj.via.boolean);
+			}
+		} catch (const msgpack::type_error&);
 	}
 
 	// RESERVED_POSITIONS is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_POSITIONS))) {
+	try {
+		auto doc_positions = item_doc.at(RESERVED_POSITIONS);
 		specification.positions.clear();
-		if (spc->type < cJSON_NULL) {
-			specification.positions.push_back(spc->type);
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* _positions = cJSON_GetArrayItem(spc, i);
-				if (_positions->type < cJSON_NULL) {
-					specification.positions.push_back(_positions->type);
+		if (doc_positions.obj.type == msgpack::type::BOOLEAN) {
+			specification.positions.push_back(doc_positions.obj.via.boolean);
+		} else if (doc_positions.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_positions.obj.via.array.size; ++i) {
+				auto _positions = doc_positions.at(i);
+				if (_positions.obj.type == msgpack::type::BOOLEAN) {
+					specification.positions.push_back(_positions.obj.type);
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_POSITIONS);
 				}
@@ -886,36 +880,45 @@ Schema::update(cJSON* item, cJSON* properties, bool root)
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean or array of booleans", RESERVED_POSITIONS);
 		}
-	} else if ((spc = cJSON_GetObjectItem(properties, RESERVED_POSITIONS))) {
-		specification.positions.clear();
-		int elements = cJSON_GetArraySize(spc);
-		for (int i = 0; i < elements; ++i) {
-			specification.positions.push_back(cJSON_GetArrayItem(spc, i)->type);
-		}
+	} catch (const msgpack::type_error&) {
+		try {
+			auto positions = properties.at(RESERVED_POSITIONS);
+			specification.positions.clear();
+			for (int i = 0; i < positions.obj.via.array.size; ++i) {
+				specification.positions.push_back(positions.at(i).obj.via.boolean);
+			}
+		} catch (const msgpack::type_error&);
 	}
 
 	// RESERVED_ANALYZER is heritable and can change between documents.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_ANALYZER))) {
+	try {
+		auto doc_analyzer = item_doc.at(RESERVED_ANALYZER);
 		specification.analyzer.clear();
-		if (spc->type == cJSON_String) {
-			if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0)      specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
-			else if (strcasecmp(spc->valuestring, str_analizer[1].c_str()) == 0) specification.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
-			else if (strcasecmp(spc->valuestring, str_analizer[2].c_str()) == 0) specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
-			else if (strcasecmp(spc->valuestring, str_analizer[3].c_str()) == 0) specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
-			else throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
-		} else if (spc->type == cJSON_Array) {
-			int elements = cJSON_GetArraySize(spc);
-			for (int i = 0; i < elements; ++i) {
-				cJSON* analyzer = cJSON_GetArrayItem(spc, i);
-				if (spc->type == cJSON_String) {
-					std::string _analyzer = stringtoupper(analyzer->valuestring);
-					if (strcasecmp(spc->valuestring, str_analizer[0].c_str()) == 0) {
+		if (doc_analyzer.obj.type == msgpack::type::STR) {
+			std::string str_analyzer(upper_string(doc_analyzer.obj.via.str.ptr, doc_analyzer.obj.via.str.size));
+			if (str_analyzer == str_analizer[0]) {
+				specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
+			} else if (str_analyzer == str_analizer[1]) {
+				specification.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
+			} else if (str_analyzer == str_analizer[2]) {
+				specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
+			} else if (str_analyzer == str_analizer[3]) {
+				specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
+			} else {
+				throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
+			}
+		} else if (doc_analyzer.obj.type == msgpack::type::ARRAY) {
+			for (int i = 0; i < doc_analyzer.obj.via.array.size; ++i) {
+				auto _analyzer = doc_analyzer.at(i);
+				if (doc_analyzer.obj.type == msgpack::type::STR) {
+					std::string str_analyzer(upper_string(_analyzer.obj.via.str.ptr, _analyzer.obj.via.str.size));
+					if (str_analyzer == str_analizer[0]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
-					} else if (strcasecmp(spc->valuestring, str_analizer[1].c_str()) == 0) {
+					} else if (str_analyzer == str_analizer[1]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_NONE);
-					} else if (strcasecmp(spc->valuestring, str_analizer[2].c_str()) == 0) {
+					} else if (str_analyzer == str_analizer[2]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL);
-					} else if (strcasecmp(spc->valuestring, str_analizer[3].c_str()) == 0) {
+					} else if (str_analyzer == str_analizer[3]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
 					} else {
 						throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analizer[0].c_str(), str_analizer[1].c_str(), str_analizer[2].c_str(), str_analizer[3].c_str());
@@ -927,33 +930,41 @@ Schema::update(cJSON* item, cJSON* properties, bool root)
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_ANALYZER);
 		}
-	} else if ((spc = cJSON_GetObjectItem(properties, RESERVED_ANALYZER))) {
-		specification.analyzer.clear();
-		int elements = cJSON_GetArraySize(spc);
-		for (int i = 0; i < elements; ++i) {
-			specification.analyzer.push_back(cJSON_GetArrayItem(spc, i)->valueint);
-		}
+	} catch (const msgpack::type_error&) {
+		try {
+			auto analyzer = properties.at(RESERVED_ANALYZER);
+			specification.analyzer.clear();
+			for (int i = 0; i < analyzer.obj.via.array.size; ++i) {
+				specification.analyzer.push_back(analyzer.at(i).obj.via.u64);
+			}
+		} catch (const msgpack::type_error&);
 	}
 
 	// RESERVED_STORE is heritable and can change.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_STORE))) {
-		if (spc->type < cJSON_NULL) {
-			specification.store = spc->type;
+	try {
+		auto doc_store = item_doc.at(RESERVED_STORE);
+		if (doc_store.obj.type == msgpack::type::BOOLEAN) {
+			specification.store = doc_store.obj.via.boolean;
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be boolean", RESERVED_STORE);
 		}
-	} else if ((spc = cJSON_GetObjectItem(properties, RESERVED_STORE))) {
-		specification.store = spc->type;
+	} catch (const msgpack::type_error&) {
+		try {
+			auto store = properties.at(RESERVED_STORE);
+			specification.store = store.obj.via.boolean;
+		} catch (const msgpack::type_error&);
 	}
 
 	// RESERVED_INDEX is heritable and can change.
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_INDEX))) {
-		if (spc->type == cJSON_String) {
-			if (strcasecmp(spc->valuestring, str_index[0].c_str()) == 0) {
+	try {
+		auto doc_index = item_doc.at(RESERVED_INDEX);
+		if (doc_index.obj.type == msgpack::type::STR) {
+			std::string str_index(upper_string(doc_index.obj.via.str.ptr, doc_index.obj.via.str.size));
+			if (str_index == str_index[0]) {
 				specification.index = Index::ALL;
-			} else if (strcasecmp(spc->valuestring, str_index[1].c_str()) == 0) {
+			} else if (str_index == str_index[1]) {
 				specification.index = Index::TERM;
-			} else if (strcasecmp(spc->valuestring, str_index[2].c_str()) == 0) {
+			} else if (str_index == str_index[2]) {
 				specification.index = Index::VALUE;
 			} else {
 				throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
@@ -961,73 +972,100 @@ Schema::update(cJSON* item, cJSON* properties, bool root)
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string", RESERVED_INDEX);
 		}
-	} else if ((spc = cJSON_GetObjectItem(properties, RESERVED_INDEX))) {
-		specification.index = (Index)spc->valueint;
+	} catch (const msgpack::type_error&) {
+		try {
+			auto index = properties.at(RESERVED_INDEX);
+			specification.index = (Index)index.obj.via.u64;
+		} catch (const msgpack::type_error&);
 	}
 
 	// RESERVED_?_DETECTION is heritable but can't change.
-	if ((spc = cJSON_GetObjectItem(properties, RESERVED_D_DETECTION))) specification.date_detection = spc->type;
-	if ((spc = cJSON_GetObjectItem(properties, RESERVED_N_DETECTION))) specification.numeric_detection = spc->type;
-	if ((spc = cJSON_GetObjectItem(properties, RESERVED_G_DETECTION))) specification.geo_detection = spc->type;
-	if ((spc = cJSON_GetObjectItem(properties, RESERVED_B_DETECTION))) specification.bool_detection = spc->type;
-	if ((spc = cJSON_GetObjectItem(properties, RESERVED_S_DETECTION))) specification.string_detection = spc->type;
+	try {
+		auto d_detection = properties.at(RESERVED_D_DETECTION);
+		specification.date_detection = d_detection.obj.via.boolean;
+	} catch (const msgpack::type_error&);
+
+	try {
+		auto n_detection = properties.at(RESERVED_N_DETECTION);
+		specification.numeric_detection = n_detection.obj.via.boolean;
+	} catch (const msgpack::type_error&);
+
+	try {
+		auto g_detection = properties.at(RESERVED_G_DETECTION);
+		specification.geo_detection = g_detection.obj.via.boolean;
+	} catch (const msgpack::type_error&);
+
+	try {
+		auto b_detection = properties.at(RESERVED_B_DETECTION);
+		specification.bool_detection = b_detection.obj.via.boolean;
+	} catch (const msgpack::type_error&);
+
+	try {
+		auto s_detection = properties.at(RESERVED_S_DETECTION);
+		specification.string_detection = s_detection.obj.via.boolean;
+	} catch (const msgpack::type_error&);
 
 	// RESERVED_DYNAMIC is heritable but can't change.
-	if ((spc = cJSON_GetObjectItem(properties, RESERVED_DYNAMIC))) specification.dynamic = spc->type;
+	try {
+		auto dynamic = properties.at(RESERVED_DYNAMIC);
+		specification.dynamic = dynamic.obj.via.boolean;
+	} catch (const msgpack::type_error&);
 
 	// RESERVED_BOOL_TERM isn't heritable and can't change. It always will be in all fields.
-	if ((spc = cJSON_GetObjectItem(properties, RESERVED_BOOL_TERM))) specification.bool_term = spc->type;
+	try {
+		auto bool_term = properties.at(RESERVED_BOOL_TERM);
+		specification.bool_term = bool_term.obj.via.boolean;
+	} catch (const msgpack::type_error&);
 
 	// RESERVED_TYPE isn't heritable and can't change once fixed the type field value.
-	if (!root) {
-		if ((spc = cJSON_GetObjectItem(properties, RESERVED_TYPE))) {
-			specification.sep_types[0] = cJSON_GetArrayItem(spc, 0)->valueint;
-			specification.sep_types[1] = cJSON_GetArrayItem(spc, 1)->valueint;
-			specification.sep_types[2] = cJSON_GetArrayItem(spc, 2)->valueint;
+	if (!is_root) {
+		try {
+			auto type = properties.at(RESERVED_TYPE);
+			specification.sep_types[0] = type.at(0).obj.via.u64;
+			specification.sep_types[1] = type.at(1).obj.via.u64;
+			specification.sep_types[2] = type.at(2).obj.via.u64;
 			// If the type field value hasn't fixed yet and its specified in the document, properties is updated.
 			if (specification.sep_types[2] == NO_TYPE) {
-				if ((spc = cJSON_GetObjectItem(item, RESERVED_TYPE))) {
+				if (item_doc.find(RESERVED_TYPE)) {
 					// In this point means that terms or values haven't been inserted with this field,
 					// therefore, lets us to change prefix, slot and bool_term in properties.
-					insert_inheritable_specifications(item, properties);
-					update_required_data(item->string, properties);
+					insert_noninheritable_data(properties, item_doc);
+					update_required_data(properties, item_key);
 				}
 			} else {
 				// If type has been defined, the next reserved words have been defined too.
-				spc = cJSON_GetObjectItem(properties, RESERVED_PREFIX);
-				specification.prefix = spc->valuestring;
-				spc = cJSON_GetObjectItem(properties, RESERVED_SLOT);
-				specification.slot = (unsigned int)spc->valuedouble;
-				spc = cJSON_GetObjectItem(properties, RESERVED_BOOL_TERM);
-				specification.bool_term = spc->type;
-				spc = cJSON_GetObjectItem(properties, RESERVED_ACCURACY);
+				auto prefix = properties.at(RESERVED_PREFIX);
+				specification.prefix = std::string(prefix.obj.via.str.ptr, prefix.obj.via.str.size);
+				specification.slot = properties.at(RESERVED_SLOT).obj.via.u64;
+				specification.bool_term = properties.at(RESERVED_BOOL_TERM).obj.via.boolean;
 				specification.accuracy.clear();
 				specification.acc_prefix.clear();
 				if (specification.sep_types[2] != STRING_TYPE && specification.sep_types[2] != BOOLEAN_TYPE) {
-					int elements = cJSON_GetArraySize(spc);
-					for (int i = 0; i < elements; ++i) {
-						cJSON* _acc = cJSON_GetArrayItem(spc, i);
-						specification.accuracy.push_back(_acc->valuedouble);
+					auto accuracy = properties.at(RESERVED_ACCURACY);
+					for (int i = 0; i < accuracy.obj.array.size; ++i) {
+						specification.accuracy.push_back(accuracy.at(i).obj.via.f64);
 					}
-					spc = cJSON_GetObjectItem(properties, RESERVED_ACC_PREFIX);
-					elements = cJSON_GetArraySize(spc);
-					for (int i = 0; i < elements; ++i) {
-						cJSON* _acc_p = cJSON_GetArrayItem(spc, i);
-						specification.acc_prefix.push_back(_acc_p->valuestring);
+					auto acc_prefix = properties.at(RESERVED_ACC_PREFIX);
+					for (int i = 0; i < spc.obj.array.size; ++i) {
+						auto _accuracy = spc.at(i);
+						specification.acc_prefix.emplace_back(_accuracy.obj.via.str.ptr, _accuracy.obj.via.str.size);
 					}
 				}
 			}
-		} else if ((spc = cJSON_GetObjectItem(item, RESERVED_TYPE))) {
-			// If RESERVED_TYPE has not been fixed yet and its specified in the document, properties is updated.
-			insert_inheritable_specifications(item, properties);
-			update_required_data(item->string, properties);
+		} catch (const msgpack::type_error&) {
+			try {
+				specification.index = (Index)item_doc.at(RESERVED_TYPE).obj.via.u64;
+				// If RESERVED_TYPE has not been fixed yet and its specified in the document, properties is updated.
+				insert_noninheritable_data(properties, item_doc);
+				update_required_data(properties, item_key);
+			} catch (const msgpack::type_error&);
 		}
 	}
 }
 
 
 void
-Schema::insert_inheritable_specifications(cJSON* item, cJSON* properties)
+Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 {
 	// Restarting reserved words than which are not inherited.
 	specification.accuracy.clear();
@@ -1039,217 +1077,216 @@ Schema::insert_inheritable_specifications(cJSON* item, cJSON* properties)
 	specification.prefix = default_spc.prefix;
 	specification.slot = default_spc.slot;
 
-	cJSON* spc;
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_TYPE))) {
-		if (spc->type == cJSON_String) {
-			if (set_types(stringtolower(spc->valuestring), specification.sep_types)) {
-				cJSON* type = cJSON_CreateArray(); // Managed by properties
-				cJSON_AddItemToArray(type, cJSON_CreateNumber(specification.sep_types[0]));
-				cJSON_AddItemToArray(type, cJSON_CreateNumber(specification.sep_types[1]));
-				cJSON_AddItemToArray(type, cJSON_CreateNumber(specification.sep_types[2]));
-				cJSON_AddItemToObject(properties, RESERVED_TYPE, type);
+	try {
+		auto doc_type = item_doc.at(RESERVED_TYPE);
+		if (doc_type.obj.type == msgpack::type::STR) {
+			if (set_types(lower_string(doc_type.obj.via.str.ptr, doc_type.obj.via.str.size), specification.sep_types)) {
+				auto type = properties[RESERVED_TYPE];
+				type.add_item_to_array(specification.sep_types[0]);
+				type.add_item_to_array(specification.sep_types[1]);
+				type.add_item_to_array(specification.sep_types[2]);
 				to_store = true;
 			} else {
-				throw MSG_Error("This %s does not exist, it can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, NUMERIC_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
+				throw MSG_Error("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, NUMERIC_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
 			}
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string", RESERVED_TYPE);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	size_t size_acc = 0;
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_ACCURACY))) {
-		if (default_spc.sep_types[2] == NO_TYPE) {
-			throw MSG_Error("You should specify %s, for verify if the accuracy is correct", RESERVED_TYPE);
+	try {
+		size_t size_acc = 0;
+		auto doc_accuracy = item_doc.at(RESERVED_ACCURACY);
+		if (specification.sep_types[2] == NO_TYPE) {
+			throw MSG_Error("You should specify %s, for verify if the %s is correct", RESERVED_TYPE, RESERVED_ACCURACY);
 		}
-		unique_cJSON acc_s(cJSON_CreateArray());
-		if (spc->type == cJSON_Array) {
-			if (default_spc.sep_types[2] == GEO_TYPE) {
-				int elements = cJSON_GetArraySize(spc);
-				cJSON* acc = cJSON_GetArrayItem(spc, 0);
-				double val;
-				if (acc->type == cJSON_Number) {
-					val = acc->valuedouble > 0 ? 1 : 0;
-				} else if (acc->type < cJSON_NULL) {
-					val = acc->type;
-				} else {
-					throw MSG_Error("Data inconsistency, partials in %s should be a number or boolean", GEO_STR);
-				}
-				specification.accuracy.push_back(val);
-				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(val));
-				if (elements > 1) {
-					acc = cJSON_GetArrayItem(spc, 1);
-					if (acc->type == cJSON_Number) {
-						val = acc->valuedouble > HTM_MAX_ERROR ? HTM_MAX_ERROR : acc->valuedouble < HTM_MIN_ERROR ? HTM_MIN_ERROR : acc->valuedouble;
+		if (doc_accuracy.obj.type == msgpack::type::ARRAY) {
+			switch (specification.sep_types[2]) {
+				case GEO_TYPE: {
+					auto _accuracy = doc_accuracy.at(0);
+					if (_accuracy.obj.type == msgpack::type::BOOLEAN) {
+						specification.accuracy.push_back(_accuracy.obj.via.boolean);
 					} else {
-						throw MSG_Error("Data inconsistency, error in %s should be a number", GEO_STR);
+						throw MSG_Error("Data inconsistency, partials value in %s: %s should be boolean", RESERVED_ACCURACY, GEO_STR);
 					}
-					specification.accuracy.push_back(val);
-					cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(val));
-					for (int i = 2; i < elements; ++i) {
-						acc = cJSON_GetArrayItem(spc, i);
-						if (acc->type == cJSON_Number && acc->valueint >= 0 && acc->valueint <= HTM_MAX_LEVEL) {
-							specification.accuracy.push_back(acc->valueint);
+					try {
+						_accuracy = doc_accuracy.at(1);
+						if (_accuracy.obj.type == msgpack::type::POSITIVE_INTEGER) {
+							specification.accuracy.push_back(_accuracy.obj.via.u64 > HTM_MAX_ERROR ? HTM_MAX_ERROR : _accuracy.obj.via.u64 < HTM_MIN_ERROR ? HTM_MIN_ERROR : _accuracy.obj.via.u64);
 						} else {
-							throw MSG_Error("Data inconsistency, level for accuracy in %s should be an number between 0 and %d", GEO_STR, HTM_MAX_LEVEL);
+							throw MSG_Error("Data inconsistency, error value in %s: %s should be positive integer", RESERVED_ACCURACY, GEO_STR);
+						}
+						for (int i = 2; i < doc_accuracy.obj.via.array.size; ++i) {
+							_accuracy = doc_accuracy.at(i);
+							if (_accuracy.obj.type == msgpack::type::POSITIVE_INTEGER && _accuracy.obj.via.u64 <= HTM_MAX_LEVEL) {
+								specification.accuracy.push_back(_accuracy.obj.via.u64);
+							} else {
+								throw MSG_Error("Data inconsistency, level value in %s: %s should be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+							}
+						}
+					} catch (const msgpack::type_error&) {
+						specification.accuracy.push_back(def_accuracy_geo[1]);
+					}
+					std::sort(specification.accuracy.begin() + 2, specification.accuracy.end());
+					std::unique(specification.accuracy.begin() + 2, specification.accuracy.end());
+					size_acc = specification.accuracy.size() - 2;
+				}
+				case DATE_TYPE: {
+					for (int i = 0; i < doc_accuracy.obj.via.array.size; ++i) {
+						auto _accuracy = doc_accuracy.at(i);
+						if (_accuracy.obj.type == msgpack::type::STR) {
+							std::string str_accuracy(upper_string(_accuracy.obj.via.str.ptr, _accuracy.obj.via.str.size));
+							if (str_accuracy == str_time[5]) {
+								specification.accuracy.push_back(toUType(unitTime::YEAR));
+							} else if (str_accuracy == str_time[4]) {
+								specification.accuracy.push_back(toUType(unitTime::MONTH));
+							} else if (str_accuracy == str_time[3]) {
+								specification.accuracy.push_back(toUType(unitTime::DAY));
+							} else if (str_accuracy == str_time[2]) {
+								specification.accuracy.push_back(toUType(unitTime::HOUR));
+							} else if (str_accuracy == str_time[1]) {
+								specification.accuracy.push_back(toUType(unitTime::MINUTE));
+							} else if (str_accuracy == str_time[0]) {
+								specification.accuracy.push_back(toUType(unitTime::SECOND));
+							} else {
+								throw MSG_Error("Data inconsistency, %s: %s should be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+							}
+						} else {
+							throw MSG_Error("Data inconsistency, %s in %s should be subset of {%s, %s, %s, %s, %s, %s]}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
 						}
 					}
-				} else {
-					specification.accuracy.push_back(def_accuracy_geo[1]);
+					std::sort(specification.accuracy.begin(), specification.accuracy.end());
+					std::unique(specification.accuracy.begin(), specification.accuracy.end());
+					size_acc = specification.accuracy.size();
 				}
-				std::sort(specification.accuracy.begin() + 2, specification.accuracy.end());
-				std::unique(specification.accuracy.begin() + 2, specification.accuracy.end());
-				size_acc = specification.accuracy.size() - 2;
-			} else if (default_spc.sep_types[2] == DATE_TYPE) {
-				int elements = cJSON_GetArraySize(spc);
-				for (int i = 0; i < elements; ++i) {
-					cJSON* acc = cJSON_GetArrayItem(spc, i);
-					if (acc->type == cJSON_String) {
-						if (strcasecmp(acc->valuestring, str_time[5].c_str()) == 0)      specification.accuracy.push_back(toUType(unitTime::YEAR));
-						else if (strcasecmp(acc->valuestring, str_time[4].c_str()) == 0) specification.accuracy.push_back(toUType(unitTime::MONTH));
-						else if (strcasecmp(acc->valuestring, str_time[3].c_str()) == 0) specification.accuracy.push_back(toUType(unitTime::DAY));
-						else if (strcasecmp(acc->valuestring, str_time[2].c_str()) == 0) specification.accuracy.push_back(toUType(unitTime::HOUR));
-						else if (strcasecmp(acc->valuestring, str_time[1].c_str()) == 0) specification.accuracy.push_back(toUType(unitTime::MINUTE));
-						else if (strcasecmp(acc->valuestring, str_time[0].c_str()) == 0) specification.accuracy.push_back(toUType(unitTime::SECOND));
-						else throw MSG_Error("Data inconsistency, %s in %s should be a subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
-					} else {
-						throw MSG_Error("Data inconsistency, %s in %s should be a subset of {%s, %s, %s, %s, %s, %s]}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+				case NUMERIC_TYPE: {
+					for (int i = 0; i < doc_accuracy.obj.via.array.size; ++i) {
+						auto _accuracy = doc_accuracy.at(i);
+						if (_accuracy.obj.type == msgpack::type::POSITIVE_INTEGER) {
+							specification.accuracy.push_back(_accuracy.obj.via.u64);
+						} else {
+							throw MSG_Error("Data inconsistency, %s: %s should be an array of positive numbers", RESERVED_ACCURACY, NUMERIC_STR);
+						}
 					}
+					std::sort(specification.accuracy.begin(), specification.accuracy.end());
+					std::unique(specification.accuracy.begin(), specification.accuracy.end());
+					size_acc = specification.accuracy.size();
 				}
-				std::set<double> set_acc(specification.accuracy.begin(), specification.accuracy.end());
-				specification.accuracy.assign(set_acc.begin(), set_acc.end());
-				size_acc = specification.accuracy.size();
-			} else if (default_spc.sep_types[2] == NUMERIC_TYPE) {
-				int elements = cJSON_GetArraySize(spc);
-				for (int i = 0; i < elements; ++i) {
-					cJSON* acc = cJSON_GetArrayItem(spc, i);
-					if (acc->type == cJSON_Number && acc->valuedouble >= 1.0) {
-						specification.accuracy.push_back((uint64_t)(acc->valuedouble));
-					} else {
-						throw MSG_Error("Data inconsistency, accuracy in %s should be an array of positive numbers", NUMERIC_STR);
-					}
-				}
-				std::set<double> set_acc(specification.accuracy.begin(), specification.accuracy.end());
-				specification.accuracy.assign(set_acc.begin(), set_acc.end());
-				size_acc = specification.accuracy.size();
-			} else {
-				throw MSG_Error("%s type does not have accuracy", Serialise::type(default_spc.sep_types[2]).c_str());
+				default:
+					throw MSG_Error("%s type does not have accuracy", Serialise::type(default_spc.sep_types[2]).c_str());
 			}
-			for (auto it = specification.accuracy.begin(); it != specification.accuracy.end(); ++it) {
-				cJSON_AddItemToArray(acc_s.get(), cJSON_CreateNumber(*it));
+
+			auto accuracy = properties[RESERVED_ACCURACY];
+			for (const auto& acc : specification.accuracy.begin()) {
+				accuracy.add_item_to_array(acc);
 			}
-			cJSON_AddItemToObject(properties, RESERVED_ACCURACY, acc_s.release());
 			to_store = true;
 		} else {
-			throw MSG_Error("Data inconsistency, %s should be an array");
+			throw MSG_Error("Data inconsistency, %s should be array", RESERVED_ACCURACY);
 		}
 
 		// Accuracy prefix is taken into account only if accuracy is defined.
-		if ((spc = cJSON_GetObjectItem(item, RESERVED_ACC_PREFIX))) {
-			unique_cJSON acc_s(cJSON_CreateArray());
-			if (spc->type == cJSON_Array) {
-				size_t elements = cJSON_GetArraySize(spc);
-				if (elements != size_acc) {
-					throw "Data inconsistency, there must be a prefix for each accuracy";
+		try {
+			auto doc_acc_prefix = item_doc.at(RESERVED_ACC_PREFIX);
+			if (doc_acc_prefix.obj.type == msgpack::type::ARRAY) {
+				if (doc_acc_prefix.obj.array.size != size_acc) {
+					throw MSG_Error("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
 				}
-				for (size_t i = 0; i < elements; ++i) {
-					cJSON* acc = cJSON_GetArrayItem(spc, (int)i);
-					if (acc->type == cJSON_String) {
-						cJSON_AddItemToArray(acc_s.get(), cJSON_CreateString(acc->valuestring));
-						specification.acc_prefix.push_back(acc->valuestring);
+				for (int i = 0; i < doc_acc_prefix.obj.array.size; ++i) {
+					auto acc_prefix = properties[RESERVED_ACC_PREFIX];
+					auto _acc_prefix = doc_acc_prefix.at(i);
+					if (_acc_prefix.obj.type == msgpack::type::STR) {
+						specification.acc_prefix.emplace_back(_acc_prefix.obj.via.str.ptr, _acc_prefix.obj.via.str.size);
+						acc_prefix.add_item_to_array(specification.acc_prefix.back());
 					} else {
 						throw MSG_Error("Data inconsistency, %s should be an array of strings", RESERVED_ACC_PREFIX);
 					}
 				}
-				cJSON_AddItemToObject(properties, RESERVED_ACCURACY, acc_s.release());
 				to_store = true;
 			} else {
 				throw MSG_Error("Data inconsistency, %s should be an array of strings", RESERVED_ACC_PREFIX);
 			}
-		}
-	}
+		} catch (const msgpack::type_error&);
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_PREFIX))) {
-		if (spc->type == cJSON_String) {
-			cJSON_AddStringToObject(properties, RESERVED_PREFIX, spc->valuestring);
-			specification.prefix = spc->valuestring;
+	try {
+		auto doc_prefix = item_doc.at(RESERVED_PREFIX);
+		if (doc_prefix.obj.type == msgpack::type::STR) {
+			specification.prefix = std::string(spc.obj.via.str.ptr, spc.obj.via.str.size);
+			properties[RESERVED_PREFIX] = specification.prefix;
 			to_store = true;
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string", RESERVED_PREFIX);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_SLOT))) {
-		if (spc->type == cJSON_Number) {
-			unsigned int _slot = (unsigned int)spc->valuedouble;
+	try {
+		auto doc_slot = item_doc.at(RESERVED_SLOT);
+		if (doc_slot.obj.type == msgpack::type::POSITIVE_INTEGER) {
+			unsigned _slot = doc_slot.obj.via.u64;
 			if (_slot < DB_SLOT_RESERVED) {
 				_slot += DB_SLOT_RESERVED;
 			} else if (_slot == Xapian::BAD_VALUENO) {
 				_slot = 0xfffffffe;
 			}
-			cJSON_AddNumberToObject(properties, RESERVED_SLOT, _slot);
+			properties[RESERVED_SLOT] = _slot;
 			specification.slot = _slot;
 			to_store = true;
 		} else {
-			throw MSG_Error("Data inconsistency, %s should be positive integer", RESERVED_SLOT);
+			throw MSG_Error("Data inconsistency, %s should be a positive integer", RESERVED_SLOT);
 		}
-	}
+	} catch (const msgpack::type_error&);
 
-	if ((spc = cJSON_GetObjectItem(item, RESERVED_BOOL_TERM))) {
-		if (spc->type == cJSON_False) {
-			cJSON_AddFalseToObject(properties, RESERVED_BOOL_TERM);
-			specification.bool_term = false;
-			to_store = true;
-		} else if (spc->type == cJSON_True) {
-			cJSON_AddTrueToObject(properties, RESERVED_BOOL_TERM);
-			specification.bool_term = true;
+	try {
+		auto doc_bool_term = item_doc.at(RESERVED_BOOL_TERM);
+		if (doc_bool_term.obj.type == msgpack::type::BOOLEAN) {
+			properties[RESERVED_BOOL_TERM] = doc_bool_term.obj.via.boolean;
+			specification.bool_term = doc_bool_term.obj.via.boolean;
 			to_store = true;
 		} else {
-			throw MSG_Error("Data inconsistency, %s should be boolean", RESERVED_BOOL_TERM);
+			throw MSG_Error("Data inconsistency, %s should be a boolean", RESERVED_BOOL_TERM);
 		}
-	}
+	} catch (const msgpack::type_error&);
 }
 
 
 void
-Schema::update_required_data(const std::string &name, cJSON* properties)
+Schema::update_required_data(MsgPack& properties, const std::string& item_key)
 {
-	// Add type to properties, if this has not been added.
-	if (!cJSON_GetObjectItem(properties, RESERVED_TYPE)) {
-		cJSON* type = cJSON_CreateArray(); // Managed by schema
-		cJSON_AddItemToArray(type, cJSON_CreateNumber(specification.sep_types[0]));
-		cJSON_AddItemToArray(type, cJSON_CreateNumber(specification.sep_types[1]));
-		cJSON_AddItemToArray(type, cJSON_CreateNumber(specification.sep_types[2]));
-		cJSON_AddItemToObject(properties, RESERVED_TYPE, type);
+	// Adds type to properties, if this has not been added.
+	auto type = properties[RESERVED_TYPE];
+	if (!type) {
+		type.add_item_to_array(specification.sep_types[0]);
+		type.add_item_to_array(specification.sep_types[1]);
+		type.add_item_to_array(specification.sep_types[2]);
 		to_store = true;
 	}
 
-	// Insert prefix
-	if (!name.empty()) {
-		if (specification.prefix == default_spc.prefix) {
-			specification.prefix = get_prefix(name, DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]);
-			cJSON_AddStringToObject(properties, RESERVED_PREFIX, specification.prefix.c_str());
-			to_store = true;
-		}
-	} else {
+	// Inserts prefix
+	if (item_key.empty()) {
 		specification.prefix = default_spc.prefix;
-	}
-
-	// Insert slot.
-	if (specification.slot == default_spc.slot) {
-		specification.slot = get_slot(name);
-		cJSON_AddNumberToObject(properties, RESERVED_SLOT, specification.slot);
+	} else if (specification.prefix == default_spc.prefix) {
+		specification.prefix = get_prefix(item_key, DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]);
+		properties[RESERVED_PREFIX] = specification.prefix;
 		to_store = true;
 	}
 
-	if (!name.empty() && !cJSON_GetObjectItem(properties, RESERVED_BOOL_TERM)) {
-		// By default, if the field name has upper characters then it is consider bool term.
-		if (strhasupper(name)) {
-			cJSON_AddTrueToObject(properties, RESERVED_BOOL_TERM);
+	// Inserts slot.
+	if (specification.slot == default_spc.slot) {
+		specification.slot = get_slot(item_key);
+		properties[RESERVED_SLOT] = specification.slot;
+		to_store = true;
+	}
+
+	auto bool_term = properties[RESERVED_BOOL_TERM];
+	if (!item_key.empty() && !bool_term) {
+		// By default, if item_key has upper characters then it is consider bool term.
+		if (strhasupper(item_key)) {
+			bool_term = true;
 			specification.bool_term = true;
 			to_store = true;
 		} else {
-			cJSON_AddFalseToObject(properties, RESERVED_BOOL_TERM);
+			bool_term = false;
 			specification.bool_term = false;
 			to_store = true;
 		}
@@ -1259,54 +1296,48 @@ Schema::update_required_data(const std::string &name, cJSON* properties)
 	switch (specification.sep_types[2]) {
 		case GEO_TYPE: {
 			if (specification.accuracy.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray()), _accuracy(cJSON_CreateArray());
-				cJSON_AddItemToArray(_accuracy.get(), cJSON_CreateNumber(def_accuracy_geo[0]));
-				cJSON_AddItemToArray(_accuracy.get(), cJSON_CreateNumber(def_accuracy_geo[1]));
+				auto accuracy = properties[RESERVED_ACCURACY];
+				accuracy.add_item_to_array(def_accuracy_geo[0]);
+				accuracy.add_item_to_array(def_accuracy_geo[1]);
 				specification.accuracy.push_back(def_accuracy_geo[0]);
 				specification.accuracy.push_back(def_accuracy_geo[1]);
-				for (auto it = def_accuracy_geo.begin() + 2; it != def_accuracy_geo.end(); ++it) {
-					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE);
-					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
-					cJSON_AddItemToArray(_accuracy.get(), cJSON_CreateNumber(*it));
+				auto acc_prefix = properties[RESERVED_ACC_PREFIX];
+				const auto it_e = def_accuracy_geo.end();
+				for (const auto it = def_accuracy_geo.begin() + 2; it != it_e; ++it) {
+					specification.acc_prefix.push_back(get_prefix(item_key + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE));
+					acc_prefix.add_item_to_array(specification.acc_prefix.back());
+					accuracy.add_item_to_array(*it);
 					specification.accuracy.push_back(*it);
-					specification.acc_prefix.push_back(prefix);
 				}
-				cJSON_AddItemToObject(properties, RESERVED_ACCURACY, _accuracy.release());
-				cJSON_AddItemToObject(properties, RESERVED_ACC_PREFIX, _prefix_accuracy.release());
 				to_store = true;
 			} else if (specification.acc_prefix.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray());
-				for (auto it = specification.accuracy.begin() + 2; it != specification.accuracy.end(); ++it) {
-					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE);
-					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
-					specification.acc_prefix.push_back(prefix);
+				auto acc_prefix = properties[RESERVED_ACC_PREFIX];
+				const auto it_e = specification.accuracy.end();
+				for (const auto it = specification.accuracy.begin() + 2; it != it_e; ++it) {
+					specification.acc_prefix.push_back(get_prefix(item_key + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, GEO_TYPE));
+					acc_prefix.add_item_to_array(specification.acc_prefix.back());
 				}
-				cJSON_AddItemToObject(properties, RESERVED_ACC_PREFIX, _prefix_accuracy.release());
 				to_store = true;
 			}
 			break;
 		}
 		case NUMERIC_TYPE: {
 			if (specification.accuracy.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray()), _accuracy(cJSON_CreateArray());
-				for (auto it = def_accuracy_num.begin(); it != def_accuracy_num.end(); ++it) {
-					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, NUMERIC_TYPE);
-					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
-					cJSON_AddItemToArray(_accuracy.get(), cJSON_CreateNumber(*it));
-					specification.accuracy.push_back(*it);
-					specification.acc_prefix.push_back(prefix);
+				auto accuracy = properties[RESERVED_ACCURACY];
+				auto acc_prefix = properties[RESERVED_ACC_PREFIX];
+				for (const auto& acc : def_accuracy_num) {
+					specification.acc_prefix.push_back(get_prefix(name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, NUMERIC_TYPE));
+					pacc_prefix.add_item_to_array(specification.acc_prefix.back());
+					accuracy.add_item_to_array(acc);
+					specification.accuracy.push_back(acc);
 				}
-				cJSON_AddItemToObject(properties, RESERVED_ACCURACY, _accuracy.release());
-				cJSON_AddItemToObject(properties, RESERVED_ACC_PREFIX, _prefix_accuracy.release());
 				to_store = true;
 			} else if (specification.acc_prefix.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray());
-				for (auto it = specification.accuracy.begin(); it != specification.accuracy.end(); ++it) {
-					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, NUMERIC_TYPE);
-					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
-					specification.acc_prefix.push_back(prefix);
+				auto acc_prefix = properties[RESERVED_ACC_PREFIX];
+				for (const auto& acc : specification.accuracy) {
+					specification.acc_prefix.push_back(get_prefix(name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, NUMERIC_TYPE));
+					acc_prefix.add_item_to_array(specification.acc_prefix.back());
 				}
-				cJSON_AddItemToObject(properties, RESERVED_ACC_PREFIX, _prefix_accuracy.release());
 				to_store = true;
 			}
 			break;
@@ -1314,25 +1345,21 @@ Schema::update_required_data(const std::string &name, cJSON* properties)
 		case DATE_TYPE: {
 			// Use default accuracy.
 			if (specification.accuracy.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray()), _accuracy(cJSON_CreateArray());
-				for (auto it = def_acc_date.begin(); it != def_acc_date.end(); ++it) {
-					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE);
-					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
-					cJSON_AddItemToArray(_accuracy.get(), cJSON_CreateNumber(*it));
-					specification.accuracy.push_back(*it);
-					specification.acc_prefix.push_back(prefix);
+				auto accuracy = properties[RESERVED_ACCURACY];
+				auto acc_prefix = properties[RESERVED_ACC_PREFIX];
+				for (const auto& acc : def_acc_date) {
+					specification.acc_prefix.push_back(get_prefix(name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE));
+					acc_prefix.add_item_to_array(specification.acc_prefix.back());
+					accuracy.add_item_to_array(acc);
+					specification.accuracy.push_back(acc);
 				}
-				cJSON_AddItemToObject(properties, RESERVED_ACCURACY, _accuracy.release());
-				cJSON_AddItemToObject(properties, RESERVED_ACC_PREFIX, _prefix_accuracy.release());
 				to_store = true;
 			} else if (specification.acc_prefix.empty()) {
-				unique_cJSON _prefix_accuracy(cJSON_CreateArray());
-				for (auto it = specification.accuracy.begin(); it != specification.accuracy.end(); ++it) {
-					std::string prefix = get_prefix(name + std::to_string(*it), DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE);
-					cJSON_AddItemToArray(_prefix_accuracy.get(), cJSON_CreateString(prefix.c_str()));
-					specification.acc_prefix.push_back(prefix);
+				auto acc_prefix = properties[RESERVED_ACC_PREFIX];
+				for (const auto& acc : specification.accuracy) {
+					specification.acc_prefix.push_back(get_prefix(name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, DATE_TYPE));
+					acc_prefix.add_item_to_array(specification.acc_prefix.back());
 				}
-				cJSON_AddItemToObject(properties, RESERVED_ACC_PREFIX, _prefix_accuracy.release());
 				to_store = true;
 			}
 			break;
@@ -1342,85 +1369,94 @@ Schema::update_required_data(const std::string &name, cJSON* properties)
 
 
 void
-Schema::readable(cJSON* field)
+Schema::readable(MsgPack&& item_schema)
 {
-	// Change this field in readable form.
-	cJSON* item;
-	if ((item = cJSON_GetObjectItem(field, RESERVED_TYPE))) {
-		std::vector<char> sep_types({ (char)(cJSON_GetArrayItem(item, 0)->valueint), (char)(cJSON_GetArrayItem(item, 1)->valueint), (char)(cJSON_GetArrayItem(item, 2)->valueint) });
-		cJSON_ReplaceItemInObject(field, RESERVED_TYPE, cJSON_CreateString(str_type(sep_types).c_str()));
-		item = cJSON_GetObjectItem(field, RESERVED_ACCURACY);
-		if (item && sep_types[2] == DATE_TYPE) {
-			int _size = cJSON_GetArraySize(item);
-			for (int i = 0; i < _size; ++i) {
-				cJSON_ReplaceItemInArray(item, i, cJSON_CreateString(str_time[(cJSON_GetArrayItem(item, i)->valueint)].c_str()));
+	// Change this item of schema in readable form.
+	try {
+		auto type = item_schema.at(RESERVED_TYPE);
+		std::vector<char> sep_types({ type.at(0).obj.via.u64, type.at(1).obj.via.u64, type.at(2).obj.via.u64 });
+		type = str_type(sep_types);
+		try {
+			auto accuracy = item_schema.at(RESERVED_ACCURACY);
+			if (sep_types[2] == DATE_TYPE) {
+				for (int i = 0; i < accuracy.obj.via.array.size; ++i) {
+					auto _accuracy = accuracy.at(i);
+					_accuracy = str_time[_accuracy.obj.via.u64];
+				}
+			} else if (sep_types[2] == GEO_TYPE) {
+				auto _partials = accuracy.at(0);
+				_partials = _partials.obj.via.u64 ? true : false;
 			}
-		} else if (item && sep_types[2] == GEO_TYPE) {
-			cJSON_ReplaceItemInArray(item, 0, cJSON_GetArrayItem(item, 0)->valueint ? cJSON_CreateTrue() : cJSON_CreateFalse());
+		} catch (const msgpack::type_error&);
+	} catch (const msgpack::type_error&);
+
+	try {
+		auto analyzer = item_schema.at(RESERVED_ANALYZER);
+		for (int i = 0; i < analyzer.obj.array.size; ++i) {
+			auto _analyzer = analyzer.at(i);
+			_analyzer = str_analizer[_analyzer.obj.via.u64];
 		}
-	}
-	if ((item = cJSON_GetObjectItem(field, RESERVED_ANALYZER))) {
-		int _size = cJSON_GetArraySize(item);
-		for (int i = 0; i < _size; ++i) {
-			cJSON_ReplaceItemInArray(item, i, cJSON_CreateString(str_analizer[cJSON_GetArrayItem(item, i)->valueint].c_str()));
-		}
-	}
-	if ((item = cJSON_GetObjectItem(field, RESERVED_INDEX))) {
-		cJSON_ReplaceItemInObject(field, RESERVED_INDEX, cJSON_CreateString(str_index[item->valueint].c_str()));
-	}
+	} catch (const msgpack::type_error&);
+
+	try {
+		auto index = item_schema.at(RESERVED_INDEX);
+		index = str_index[index.obj.via.u64];
+	} catch (const msgpack::type_error&);
 
 	// Process its offsprings.
-	int _size = cJSON_GetArraySize(field);
-	for (int i = 0; i < _size; ++i) {
-		item = cJSON_GetArrayItem(field, i);
-		if (!is_reserved(item->string)) {
-			readable(item);
+	for (auto item_key : item_schema) {
+		std::string str_key(item_key.obj.via.str.ptr, item_key.obj.via.str.size);
+		if (!is_reserved(str_key)) {
+			readable(item_schema.at(str_key));
 		}
 	}
 }
 
 
 char
-Schema::get_type(cJSON* _field)
+Schema::get_type(const MsgPack& item_doc)
 {
-	if (_field->type == cJSON_Object) {
-		throw MSG_Error("%s can not be an object", RESERVED_VALUE);
+	if (item_doc.obj.type == msgpack::type::MAP) {
+		throw MSG_Error("%s can not be object", RESERVED_VALUE);
 	}
 
-	cJSON* field;
-	int type = _field->type;
-	if (type == cJSON_Array) {
-		int num_ele = cJSON_GetArraySize(_field);
-		field = cJSON_GetArrayItem(_field, 0);
-		type = field->type;
-		if (type == cJSON_Array) {
+	MsgPack field = item_doc;
+	int type = item_doc.obj.type;
+	if (type == msgpack::type::ARRAY) {
+		field = item_doc.at(0);
+		type = field.obj.type;
+		if (type == msgpack::type::ARRAY) {
 			throw MSG_Error("It can not be indexed array of arrays");
 		}
-		for (int i = 1; i < num_ele; ++i) {
-			field = cJSON_GetArrayItem(_field, i);
-			if (field->type != type && type < 1 && field->type == 4) {
-				throw MSG_Error("Different types of data");
+		for (int i = 1; i < item_doc.obj.via.array.size; ++i) {
+			field = item_doc.at(i);
+			if (field.obj.type != type) {
+				throw MSG_Error("Different types of data in array");
 			}
 		}
 		specification.sep_types[1] = ARRAY_TYPE;
-	} else {
-		field = _field;
 	}
 
 	switch (type) {
-		case cJSON_Number:
-			if (specification.numeric_detection) return NUMERIC_TYPE;
+		case msgpack::type::POSITIVE_INTEGER:
+		case msgpack::type::NEGATIVE_INTEGER:
+		case msgpack::type::FLOAT:
+			if (specification.numeric_detection) {
+				return NUMERIC_TYPE;
+			}
 			break;
-		case cJSON_False:
-		case cJSON_True:
-			if (specification.bool_detection) return BOOLEAN_TYPE;
-			break;
-		case cJSON_String:
-			if (specification.bool_detection && !Serialise::boolean(field->valuestring).empty()) {
+		case msgpack::type::BOOLEAN:
+			if (specification.bool_detection) {
 				return BOOLEAN_TYPE;
-			} else if (specification.date_detection && Datetime::isDate(field->valuestring)) {
+			}
+			break;
+		case msgpack::type::STR:
+			std::string str_value(field.obj.via.str.ptr, field.obj.via.str.size);
+			if (specification.bool_detection && !Serialise::boolean(str_value).empty()) {
+				return BOOLEAN_TYPE;
+			} else if (specification.date_detection && Datetime::isDate(str_value)) {
 				return DATE_TYPE;
-			} else if(specification.geo_detection && EWKT_Parser::isEWKT(field->valuestring)) {
+			} else if (specification.geo_detection && EWKT_Parser::isEWKT(str_value)) {
 				return GEO_TYPE;
 			} else if (specification.string_detection) {
 				return STRING_TYPE;
@@ -1428,6 +1464,5 @@ Schema::get_type(cJSON* _field)
 			break;
 	}
 
-	unique_char_ptr _cprint(cJSON_Print(_field));
-	throw MSG_Error("%s: %s is ambiguous", RESERVED_VALUE, _cprint.get());
+	throw MSG_Error("%s: %s is ambiguous", RESERVED_VALUE, item_doc.to_json_string());
 }
