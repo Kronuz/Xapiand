@@ -33,45 +33,105 @@
 
 
 std::string
-Serialise::serialise(char field_type, const std::string &field_value)
+Serialise::serialise(char field_type, const MsgPack& field_value)
+{
+	switch (field_value.obj.type) {
+		case msgpack::type::NIL:
+			return boolean(field_type);
+		case msgpack::type::BOOLEAN:
+			return boolean(field_type, field_value.obj.via.boolean);
+		case msgpack::type::POSITIVE_INTEGER:
+		case msgpack::type::NEGATIVE_INTEGER:
+		case msgpack::type::FLOAT:
+			return numeric(field_type, field_value.obj.via.f64);
+		case msgpack::type::STR:
+			return string(field_type, std::string(field_value.obj.via.str.ptr, field_value.obj.via.str.size));
+		default:
+			return std::string();
+	}
+}
+
+
+std::string
+Serialise::string(char field_type, const std::string& field_value)
 {
 	switch (field_type) {
-		case NUMERIC_TYPE:
-			return numeric(field_value);
 		case DATE_TYPE:
-			return date(field_value);
+			return date(str_value);
 		case BOOLEAN_TYPE:
-			return boolean(field_value);
+			return boolean(str_value);
 		case STRING_TYPE:
-			return field_value;
+			return str_value;
 		case GEO_TYPE:
-			return ewkt(field_value);
+			return ewkt(str_value);
+		default:
+			return std::string();
 	}
-	return "";
 }
 
 
 std::string
-Serialise::numeric(const std::string &field_value)
+Serialise::numeric(char field_type, double field_value)
 {
-	if (isNumeric(field_value)) {
-		double val = std::stod(field_value);
-		return Xapian::sortable_serialise(val);
+	switch (field_type) {
+		case DATE_TYPE:
+		case NUMERIC_TYPE:
+			return Xapian::sortable_serialise(field_value);
+		case BOOLEAN_TYPE:
+			return field_value ? std::string("t") : std::string("f");
+		default:
+			return std::string();
 	}
-	return "";
 }
 
 
 std::string
-Serialise::date(const std::string &field_value)
+Serialise::date(const std::string& field_value)
 {
 	try {
-		double timestamp = Datetime::timestamp(field_value);
+		double timestamp = Datetime::timestamp(value);
 		return Xapian::sortable_serialise(timestamp);
 	} catch (const std::exception &err) {
 		L_ERR(nullptr, "ERROR: %s", err.what());
+		return std::string();
 	}
-	return "";
+}
+
+
+std::string
+Serialise::ewkt(const std::string& field_value)
+{
+	std::string result;
+
+	EWKT_Parser ewkt(field_value, false, HTM_MIN_ERROR);
+
+	if (ewkt.trixels.empty()) return result;
+
+	for (const auto& trixel : ewkt.trixels) {
+		result += trixel;
+	}
+
+	SHA256 sha256;
+	return sha256(result);
+}
+
+
+std::string
+Serialise::boolean(const std::string& field_value)
+{
+	if (field_value.empty()) {
+		return std::string("f");
+	} else if (strcasecmp(field_value.c_str(), "1") == 0) {
+		return std::string("t");
+	} else if (strcasecmp(field_value.c_str(), "0") == 0) {
+		return std::string("f");
+	} else if (strcasecmp(field_value.c_str(), "true") == 0) {
+		return std::string("t");
+	} else if (strcasecmp(field_value.c_str(), "false") == 0) {
+		return std::string("f");
+	} else {
+		return std::string();
+	}
 }
 
 
@@ -114,43 +174,6 @@ Serialise::trixel_id(uint64_t id)
 
 
 std::string
-Serialise::ewkt(const std::string &field_value)
-{
-	std::string result;
-
-	EWKT_Parser ewkt(field_value, false, HTM_MIN_ERROR);
-
-	if (ewkt.trixels.empty()) return result;
-
-	for (auto it = ewkt.trixels.begin(); it != ewkt.trixels.end(); ++it) {
-		result += *it;
-	}
-
-	SHA256 sha256;
-	return sha256(result);
-}
-
-
-std::string
-Serialise::boolean(const std::string &field_value)
-{
-	if (field_value.empty()) {
-		return "f";
-	} else if (strcasecmp(field_value.c_str(), "true") == 0) {
-		return "t";
-	} else if (strcasecmp(field_value.c_str(), "false") == 0) {
-		return "f";
-	} else if (strcasecmp(field_value.c_str(), "1") == 0) {
-		return "t";
-	} else if (strcasecmp(field_value.c_str(), "0") == 0) {
-		return "f";
-	} else {
-		return "";
-	}
-}
-
-
-std::string
 Serialise::type(char type)
 {
 	switch (type) {
@@ -167,7 +190,7 @@ Serialise::type(char type)
 
 
 std::string
-Unserialise::unserialise(char field_type, const std::string &serialise_val)
+Unserialise::unserialise(char field_type, const std::string& serialise_val)
 {
 	switch (field_type) {
 		case NUMERIC_TYPE:
@@ -178,23 +201,23 @@ Unserialise::unserialise(char field_type, const std::string &serialise_val)
 			return boolean(serialise_val);
 		case STRING_TYPE:
 			return serialise_val;
-		case GEO_TYPE: {
+		case GEO_TYPE:
 			return geo(serialise_val);
-		}
+		default:
+			return std::string();
 	}
-	return "";
 }
 
 
-std::string
-Unserialise::numeric(const std::string &serialise_val)
+double
+Unserialise::numeric(const std::string& serialise_val)
 {
-	return std::to_string(Xapian::sortable_unserialise(serialise_val));
+	return Xapian::sortable_unserialise(serialise_val);
 }
 
 
 std::string
-Unserialise::date(const std::string &serialise_val)
+Unserialise::date(const std::string& serialise_val)
 {
 	static char date[25];
 	double epoch = Xapian::sortable_unserialise(serialise_val);
@@ -209,7 +232,7 @@ Unserialise::date(const std::string &serialise_val)
 
 
 Cartesian
-Unserialise::cartesian(const std::string &str)
+Unserialise::cartesian(const std::string& serialise_val)
 {
 	if (str.size() != SIZE_SERIALISE_CARTESIAN) {
 		throw MSG_Error("Can not unserialise cartesian: [%s] %zu", str.c_str(), str.size());
@@ -222,8 +245,15 @@ Unserialise::cartesian(const std::string &str)
 }
 
 
+boolean
+Unserialise::boolean(const std::string& serialise_val)
+{
+	return serialise_val.at(0) == 't';
+}
+
+
 uint64_t
-Unserialise::trixel_id(const std::string &str)
+Unserialise::trixel_id(const std::string& serialise_val)
 {
 	if (str.size() != SIZE_BYTES_ID) {
 		throw MSG_Error("Can not unserialise trixel_id [%s] %zu", str.c_str(), str.size());
@@ -238,14 +268,7 @@ Unserialise::trixel_id(const std::string &str)
 
 
 std::string
-Unserialise::boolean(const std::string &serialise_val)
-{
-	return serialise_val.at(0) == 'f' ? "false" : "true";
-}
-
-
-std::string
-Unserialise::geo(const std::string &serialise_val)
+Unserialise::geo(const std::string& serialise_val)
 {
 	StringList s_geo;
 	s_geo.unserialise(serialise_val);
@@ -260,8 +283,8 @@ Unserialise::geo(const std::string &serialise_val)
 	CartesianList centroids;
 	centroids.unserialise(s_geo.at(1));
 	res += "  Centroids: { ";
-	for (auto it = centroids.begin(); it != centroids.end(); ++it) {
-		res += "(" + std::to_string(it->x) + ", " + std::to_string(it->y) + ", " + std::to_string(it->z) + ") ";
+	for (const auto& centroid : centroids) {
+		res += "(" + std::to_string(centroid.x) + ", " + std::to_string(centroid.y) + ", " + std::to_string(centroid.z) + ") ";
 	}
 	res += "}";
 
@@ -270,7 +293,7 @@ Unserialise::geo(const std::string &serialise_val)
 
 
 std::string
-Unserialise::type(const std::string &str)
+Unserialise::type(const std::string& str_type)
 {
 	std::string low = lower_string(str);
 	if (low.compare(NUMERIC_STR) == 0 || (low.size() == 1 && low[0] == NUMERIC_TYPE)) {
