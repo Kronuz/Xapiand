@@ -168,7 +168,7 @@ Schema::update_root(MsgPack& properties, const MsgPack& item_doc) const
 
 	auto properties_id = properties[RESERVED_ID];
 	if (properties_id) {
-		update(properties, item_doc, RESERVED_SCHEMA, true);
+		update(properties, RESERVED_SCHEMA, item_doc, true);
 	} else {
 		auto type = properties_id[RESERVED_TYPE];
 		type.add_item_to_array(NO_TYPE);
@@ -180,22 +180,22 @@ Schema::update_root(MsgPack& properties, const MsgPack& item_doc) const
 		properties_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 		properties_id[RESERVED_BOOL_TERM] = true;
 		to_store = true;
-		insert(properties, item_doc, RESERVED_SCHEMA, true);
+		insert(properties, RESERVED_SCHEMA, item_doc, true);
 	}
 }
 
 
 MsgPack
-Schema::get_subproperties(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key)
+Schema::get_subproperties(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc)
 {
 	auto subproperties = properties[item_key];
 	if (subproperties) {
 		found_field = true;
-		update(subproperties, item_doc, item_key);
+		update(subproperties, item_key, item_doc);
 	} else {
 		to_store = true;
 		found_field = false;
-		insert(subproperties, item_doc, item_key);
+		insert(subproperties, item_key, item_doc);
 	}
 
 	return subproperties;
@@ -408,7 +408,7 @@ Schema::update_specification(const MsgPack& item_doc)
 
 
 void
-Schema::set_type(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key)
+Schema::set_type(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc)
 {
 	specification.sep_types[2] = get_type(item_doc);
 	update_required_data(properties, item_key);
@@ -457,7 +457,7 @@ Schema::to_string(bool prettify)
 
 
 void
-Schema::insert(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key, bool is_root)
+Schema::insert(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc, bool is_root)
 {
 	try {
 		auto doc_d_detection = item_doc.at(RESERVED_D_DETECTION);
@@ -737,7 +737,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, const std::string& 
 
 
 void
-Schema::update(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key, bool is_root)
+Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc, bool is_root)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
 	try {

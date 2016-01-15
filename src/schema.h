@@ -113,7 +113,7 @@ public:
 	 * Updates properties of attr using item.
 	 * Returns properties of attr updated.
 	 */
-	MsgPack get_subproperties(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key);
+	MsgPack get_subproperties(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc);
 
 	/*
 	 * Stores schema only if needed.
@@ -128,7 +128,7 @@ public:
 	/*
 	 * Sets the type of field and updates properties.
 	 */
-	void set_type(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key);
+	void set_type(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc);
 
 	/*
 	 * Set type to array in schema.
@@ -168,7 +168,7 @@ public:
 	}
 
 	template<typename... Args>
-	inline void setSchema(Arg&&... args) {
+	inline void setSchema(Args&&... args) {
 		schema = MsgPack(std::forward<Args>(args)...);
 	}
 
@@ -185,14 +185,14 @@ private:
 	/*
 	 * All the reserved word found into item_doc are added in properties.
 	 */
-	void insert(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key, bool is_root=false);
+	void insert(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc, bool is_root=false);
 
 	/*
 	 * Updates properties, first we check whether the document contains reserved words that can be
 	 * modified, otherwise we check in properties and if reserved words do not exist, we take the values
 	 * of the parent if they are inheritable.
 	 */
-	void update(MsgPack& properties, const MsgPack& item_doc, const std::string& item_key, bool is_root=false);
+	void update(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc, bool is_root=false);
 
 	/*
 	 * It inserts properties that are not inheritable. Only it is called when _type has not been fixed.
