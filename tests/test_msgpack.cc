@@ -24,6 +24,7 @@
 
 #include "../src/msgpack_wrapper.h"
 #include "../src/log.h"
+#include "../src/database_utils.h"
 
 #include <fstream>
 #include <sstream>
@@ -71,12 +72,13 @@ int test_pack() {
 	}
 
 	rapidjson::Document doc;
-	if (!MsgPack::json_load(doc, buffer)) {
+	try {
+		json_load(doc, buffer);
+	} catch (const std::exception&) {
 		return 1;
 	}
 
-	msgpack::sbuffer sbuf;
-	MsgPack::to_MsgPack(doc, sbuf);
+	auto obj = MsgPack(doc);
 
 	std::string pack_expected;
 	if (!read_file_contents("examples/msgpack/test1.mpack", &pack_expected)) {
@@ -84,7 +86,7 @@ int test_pack() {
 		return 1;
 	}
 
-	if (pack_expected != std::string(sbuf.data(), sbuf.size())) {
+	if (pack_expected != obj.to_string()) {
 		L_ERR(nullptr, "ERROR: MsgPack::to_MsgPack is no working correctly");
 		return 1;
 	}
@@ -108,10 +110,9 @@ int test_unpack() {
 		return 1;
 	}
 
-	std::stringstream ss;
-	ss << obj;
-	if (expected != ss.str()) {
-		L_ERR(nullptr, "ERROR: Add items with MsgPack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), ss.str().c_str());
+	std::string result = obj.to_string();
+	if (expected != result) {
+		L_ERR(nullptr, "ERROR: Add items with MsgPack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), result.c_str());
 		return 1;
 	}
 
@@ -188,10 +189,9 @@ int test_add_items() {
 	obj["branch"] = "Morelia";
 	obj["country"] = "México";
 
-	std::stringstream ss;
-	ss << obj;
-	if (expected != ss.str()) {
-		L_ERR(nullptr, "ERROR: Add items with MsgPack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), ss.str().c_str());
+	std::string result = obj.to_string();
+	if (expected != result) {
+		L_ERR(nullptr, "ERROR: Add items with MsgPack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), result.c_str());
 		return 1;
 	}
 
