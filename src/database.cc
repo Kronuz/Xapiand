@@ -403,7 +403,7 @@ Database::index_texts(Xapian::Document& doc, const std::string& name, const MsgP
 
 
 void
-Database::index_text(Xapian::Document& doc, std::string&& serialise_val, int pos) const
+Database::index_text(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const
 {
 	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 
@@ -458,7 +458,7 @@ Database::index_terms(Xapian::Document& doc, const std::string& name, const MsgP
 
 
 void
-Database::index_term(Xapian::Document& doc, std::string&& serialise_val, int pos) const
+Database::index_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const
 {
 	if (schema.specification.sep_types[2] == STRING_TYPE && !schema.specification.bool_term) {
 		if (serialise_val.find(' ') != std::string::npos) {
