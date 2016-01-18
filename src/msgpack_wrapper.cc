@@ -312,7 +312,7 @@ void
 MsgPack::expand_map()
 {
 	if (obj.via.map.m_alloc == obj.via.map.size) {
-		size_t nsize = obj.via.map.m_alloc > 0 ? obj.via.map.m_alloc * 2 : MSGPACK_MAP_INIT_SIZE;
+		unsigned nsize = obj.via.map.m_alloc > 0 ? obj.via.map.m_alloc * 2 : MSGPACK_MAP_INIT_SIZE;
 
 		const msgpack::object_kv* p(obj.via.map.ptr);
 		const msgpack::object_kv* pend(obj.via.map.ptr + obj.via.map.size);
@@ -333,7 +333,7 @@ void
 MsgPack::expand_array(size_t r_size)
 {
 	if (obj.via.array.m_alloc < r_size) {
-		size_t nsize = obj.via.array.m_alloc > 0 ? obj.via.array.m_alloc * 2 : MSGPACK_ARRAY_INIT_SIZE;
+		unsigned nsize = obj.via.array.m_alloc > 0 ? obj.via.array.m_alloc * 2 : MSGPACK_ARRAY_INIT_SIZE;
 		while (nsize < r_size) {
 			nsize *= 2;
 		}

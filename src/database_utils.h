@@ -77,7 +77,7 @@ extern const std::regex find_types_re;
 
 
 struct data_field_t {
-	unsigned int slot;
+	unsigned slot;
 	std::string prefix;
 	char type;
 	std::vector<double> accuracy;
@@ -87,9 +87,9 @@ struct data_field_t {
 
 
 struct similar_field_t {
-	unsigned int n_rset;
-	unsigned int n_eset;
-	unsigned int n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
+	unsigned n_rset;
+	unsigned n_eset;
+	unsigned n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
 	std::vector <std::string> field;
 	std::vector <std::string> type;
 
@@ -99,9 +99,9 @@ struct similar_field_t {
 
 
 struct query_field_t {
-	unsigned int offset;
-	unsigned int limit;
-	unsigned int check_at_least;
+	unsigned offset;
+	unsigned limit;
+	unsigned check_at_least;
 	bool spelling;
 	bool synonyms;
 	bool pretty;
@@ -114,7 +114,7 @@ struct query_field_t {
 	bool is_nearest;
 	std::string stats;
 	std::string collapse;
-	unsigned int collapse_max;
+	unsigned collapse_max;
 	std::vector <std::string> language;
 	std::vector <std::string> query;
 	std::vector <std::string> partial;

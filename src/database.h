@@ -132,7 +132,7 @@ public:
 					Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
 					const similar_field_t *nearest, const similar_field_t *fuzzy, const std::vector<std::string> *facets);
 	search_t search(const query_field_t &e);
-	search_t _search(const std::string &query, unsigned int flags, bool text, const std::string &lan);
+	search_t _search(const std::string &query, unsigned flags, bool text, const std::string &lan);
 	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field_t *similar);
 	int get_mset(const query_field_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
 					std::vector<std::string> &suggestions, int offset = 0);

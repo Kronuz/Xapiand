@@ -469,7 +469,7 @@ Database::index_term(Xapian::Document& doc, std::string&& serialise_val, size_t 
 
 	L_DATABASE_WRAP(this, "Term[%d] -> %s: %s", pos, schema.specification.prefix.c_str(), serialise_val.c_str());
 	std::string nameterm(prefixed(serialise_val, schema.specification.prefix));
-	size_t position = schema.specification.position[getPos(pos, schema.specification.position.size())];
+	unsigned position = schema.specification.position[getPos(pos, schema.specification.position.size())];
 	if (position) {
 		if (schema.specification.bool_term) {
 			doc.add_posting(nameterm, position, 0);
@@ -844,7 +844,7 @@ Database::get_data_field(const std::string& field_name)
 			return res;
 		}
 
-		res.slot = properties.at(RESERVED_SLOT).obj.via.u64;
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).obj.via.u64);
 
 		auto prefix = properties.at(RESERVED_PREFIX);
 		res.prefix = std::string(prefix.obj.via.str.ptr, prefix.obj.via.str.size);
@@ -881,7 +881,7 @@ Database::get_slot_field(const std::string& field_name)
 	try {
 		// FIXME: auto properties = schema.getProperties().path(fields, nullptr);
 		auto properties = MsgPack();
-		res.slot = properties.at(RESERVED_SLOT).obj.via.u64;
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).obj.via.u64);
 		res.type = properties.at(RESERVED_TYPE).at(2).obj.via.u64;
 	} catch (const msgpack::type_error&) { }
 
@@ -905,7 +905,7 @@ Database::search(const query_field_t &e)
 	L_DEBUG(this, "e.query size: %d  Spelling: %d Synonyms: %d", e.query.size(), e.spelling, e.synonyms);
 	auto lit = e.language.begin();
 	std::string lan;
-	unsigned int flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
+	unsigned flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
 	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
 	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
 	for (auto qit = e.query.begin(); qit != e.query.end(); ++qit) {
@@ -998,7 +998,7 @@ Database::search(const query_field_t &e)
 
 
 Database::search_t
-Database::_search(const std::string &query, unsigned int flags, bool text, const std::string &lan)
+Database::_search(const std::string &query, unsigned flags, bool text, const std::string &lan)
 {
 	search_t srch;
 
@@ -1332,8 +1332,8 @@ int
 Database::get_mset(const query_field_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
 		std::vector<std::string> &suggestions, int offset)
 {
-	unsigned int doccount = db->get_doccount();
-	unsigned int check_at_least = std::max(std::min(doccount, e.check_at_least), 0u);
+	unsigned doccount = db->get_doccount();
+	unsigned check_at_least = std::max(std::min(doccount, e.check_at_least), 0u);
 	Xapian::valueno collapse_key;
 
 	// Get the collapse key to use for queries.
@@ -1463,8 +1463,8 @@ Database::get_document(const Xapian::docid &did, Xapian::Document &doc)
 void
 Database::get_stats_database(MsgPack& stats)
 {
-	unsigned int doccount = db->get_doccount();
-	unsigned int lastdocid = db->get_lastdocid();
+	unsigned doccount = db->get_doccount();
+	unsigned lastdocid = db->get_lastdocid();
 	stats["uuid"] = db->get_uuid();
 	stats["doc_count"] = doccount;
 	stats["last_id"] = lastdocid;

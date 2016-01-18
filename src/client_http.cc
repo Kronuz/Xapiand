@@ -1207,22 +1207,22 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 
 					q.offset = nullptr;
 					if (url_qs("offset", query_str, query_size, &q) != -1) {
-						e.offset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+						e.offset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 					}
 
 					q.offset = nullptr;
 					if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
-						e.check_at_least = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+						e.check_at_least = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 					}
 
 					q.offset = nullptr;
 					if (url_qs("limit", query_str, query_size, &q) != -1) {
-						e.limit = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+						e.limit = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 					}
 
 					q.offset = nullptr;
 					if (url_qs("collapse_max", query_str, query_size, &q) != -1) {
-						e.collapse_max = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+						e.collapse_max = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 					}
 
 					q.offset = nullptr;
@@ -1289,17 +1289,17 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 					if(e.is_fuzzy) {
 						q.offset = nullptr;
 						if (url_qs("fuzzy.n_rset", query_str, query_size, &q) != -1){
-							e.fuzzy.n_rset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+							e.fuzzy.n_rset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
 						q.offset = nullptr;
 						if (url_qs("fuzzy.n_eset", query_str, query_size, &q) != -1){
-							e.fuzzy.n_eset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+							e.fuzzy.n_eset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
 						q.offset = nullptr;
 						if (url_qs("fuzzy.n_term", query_str, query_size, &q) != -1){
-							e.fuzzy.n_term = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+							e.fuzzy.n_term = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
 						q.offset = nullptr;
@@ -1322,19 +1322,19 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 					if(e.is_nearest) {
 						q.offset = nullptr;
 						if (url_qs("nearest.n_rset", query_str, query_size, &q) != -1){
-							e.nearest.n_rset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+							e.nearest.n_rset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 						} else {
 							e.nearest.n_rset = 5;
 						}
 
 						q.offset = nullptr;
 						if (url_qs("nearest.n_eset", query_str, query_size, &q) != -1){
-							e.nearest.n_eset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+							e.nearest.n_eset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
 						q.offset = nullptr;
 						if (url_qs("nearest.n_term", query_str, query_size, &q) != -1){
-							e.nearest.n_term = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+							e.nearest.n_term = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
 						q.offset = nullptr;
@@ -1359,17 +1359,17 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 					if (isRange(command)) {
 						q.offset = nullptr;
 						if (url_qs("offset", query_str, query_size, &q) != -1) {
-							e.offset = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+							e.offset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
 						q.offset = nullptr;
 						if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
-							e.check_at_least = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+							e.check_at_least = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
 						q.offset = nullptr;
 						if (url_qs("limit", query_str, query_size, &q) != -1) {
-							e.limit = static_cast<unsigned int>(std::stoul(urldecode(q.offset, q.length)));
+							e.limit = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
 						}
 
 						q.offset = nullptr;

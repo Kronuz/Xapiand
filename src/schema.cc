@@ -229,11 +229,11 @@ Schema::update_specification(const MsgPack& item_doc)
 		auto doc_position = item_doc.at(RESERVED_POSITION);
 		specification.position.clear();
 		if (doc_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
-			specification.position.push_back(doc_position.obj.via.u64);
+			specification.position.push_back(static_cast<unsigned>(doc_position.obj.via.u64));
 		} else if (doc_position.obj.type == msgpack::type::ARRAY) {
 			for (const auto _position : doc_position) {
 				if (_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
-					specification.position.push_back(_position.obj.via.u64);
+					specification.position.push_back(static_cast<unsigned>(_position.obj.via.u64));
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_POSITION);
 				}
@@ -248,11 +248,11 @@ Schema::update_specification(const MsgPack& item_doc)
 		auto doc_weight = item_doc.at(RESERVED_WEIGHT);
 		specification.weight.clear();
 		if (doc_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
-			specification.weight.push_back(doc_weight.obj.via.u64);
+			specification.weight.push_back(static_cast<unsigned>(doc_weight.obj.via.u64));
 		} else if (doc_weight.obj.type == msgpack::type::ARRAY) {
 			for (const auto _weight : doc_weight) {
 				if (_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
-					specification.weight.push_back(_weight.obj.via.u64);
+					specification.weight.push_back(static_cast<unsigned>(_weight.obj.via.u64));
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_WEIGHT);
 				}
@@ -507,13 +507,13 @@ Schema::insert(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		auto doc_position = item_doc.at(RESERVED_POSITION);
 		specification.position.clear();
 		if (doc_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
-			specification.position.push_back(doc_position.obj.via.u64);
+			specification.position.push_back(static_cast<unsigned>(doc_position.obj.via.u64));
 			properties[RESERVED_POSITION].add_item_to_array(doc_position.obj.via.u64);
 		} else if (doc_position.obj.type == msgpack::type::ARRAY) {
 			MsgPack position = properties[RESERVED_POSITION];
 			for (const auto _position : doc_position) {
 				if (_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
-					specification.position.push_back(_position.obj.via.u64);
+					specification.position.push_back(static_cast<unsigned>(_position.obj.via.u64));
 					position.add_item_to_array(_position.obj.via.u64);
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_POSITION);
@@ -528,13 +528,13 @@ Schema::insert(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		auto doc_weight = item_doc.at(RESERVED_WEIGHT);
 		specification.weight.clear();
 		if (doc_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
-			specification.weight.push_back(doc_weight.obj.via.u64);
+			specification.weight.push_back(static_cast<unsigned>(doc_weight.obj.via.u64));
 			properties[RESERVED_WEIGHT].add_item_to_array(doc_weight.obj.via.u64);
 		} else if (doc_weight.obj.type == msgpack::type::ARRAY) {
 			auto weight = properties[RESERVED_WEIGHT];
 			for (const auto _weight : doc_weight) {
 				if (_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
-					specification.weight.push_back(_weight.obj.via.u64);
+					specification.weight.push_back(static_cast<unsigned>(_weight.obj.via.u64));
 					weight.add_item_to_array(_weight.obj.via.u64);
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_WEIGHT);
@@ -732,11 +732,11 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		auto doc_position = item_doc.at(RESERVED_POSITION);
 		specification.position.clear();
 		if (doc_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
-			specification.position.push_back(doc_position.obj.via.u64);
+			specification.position.push_back(static_cast<unsigned>(doc_position.obj.via.u64));
 		} else if (doc_position.obj.type == msgpack::type::ARRAY) {
 			for (const auto _position : doc_position) {
 				if (_position.obj.type == msgpack::type::POSITIVE_INTEGER) {
-					specification.position.push_back(_position.obj.via.u64);
+					specification.position.push_back(static_cast<unsigned>(_position.obj.via.u64));
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_POSITION);
 				}
@@ -748,7 +748,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			specification.position.clear();
 			for (const auto _position : properties.at(RESERVED_POSITION)) {
-				specification.position.push_back(_position.obj.via.u64);
+				specification.position.push_back(static_cast<unsigned>(_position.obj.via.u64));
 			}
 		} catch (const msgpack::type_error&) { }
 	}
@@ -758,11 +758,11 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		auto doc_weight = item_doc.at(RESERVED_WEIGHT);
 		specification.weight.clear();
 		if (doc_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
-			specification.weight.push_back(doc_weight.obj.via.u64);
+			specification.weight.push_back(static_cast<unsigned>(doc_weight.obj.via.u64));
 		} else if (doc_weight.obj.type == msgpack::type::ARRAY) {
 			for (const auto _weight : doc_weight) {
 				if (_weight.obj.type == msgpack::type::POSITIVE_INTEGER) {
-					specification.weight.push_back(_weight.obj.via.u64);
+					specification.weight.push_back(static_cast<unsigned>(_weight.obj.via.u64));
 				} else {
 					throw MSG_Error("Data inconsistency, %s should be positive integer or array of positive integers", RESERVED_WEIGHT);
 				}
@@ -774,7 +774,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			specification.weight.clear();
 			for (const auto _weight : properties.at(RESERVED_WEIGHT)) {
-				specification.weight.push_back(_weight.obj.via.u64);
+				specification.weight.push_back(static_cast<unsigned>(_weight.obj.via.u64));
 			}
 		} catch (const msgpack::type_error&) { }
 	}
@@ -910,7 +910,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			specification.analyzer.clear();
 			for (const auto _analyzer : properties.at(RESERVED_ANALYZER)) {
-				specification.analyzer.push_back(_analyzer.obj.via.u64);
+				specification.analyzer.push_back(static_cast<unsigned>(_analyzer.obj.via.u64));
 			}
 		} catch (const msgpack::type_error&) { }
 	}
@@ -1003,7 +1003,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 				// If type has been defined, the next reserved words have been defined too.
 				auto prefix = properties.at(RESERVED_PREFIX);
 				specification.prefix = std::string(prefix.obj.via.str.ptr, prefix.obj.via.str.size);
-				specification.slot = properties.at(RESERVED_SLOT).obj.via.u64;
+				specification.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).obj.via.u64);
 				specification.bool_term = properties.at(RESERVED_BOOL_TERM).obj.via.boolean;
 				specification.accuracy.clear();
 				specification.acc_prefix.clear();
@@ -1097,6 +1097,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 					std::sort(specification.accuracy.begin() + 2, specification.accuracy.end());
 					std::unique(specification.accuracy.begin() + 2, specification.accuracy.end());
 					size_acc = specification.accuracy.size() - 2;
+					break;
 				}
 				case DATE_TYPE: {
 					for (const auto _accuracy : doc_accuracy) {
@@ -1124,6 +1125,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 					std::sort(specification.accuracy.begin(), specification.accuracy.end());
 					std::unique(specification.accuracy.begin(), specification.accuracy.end());
 					size_acc = specification.accuracy.size();
+					break;
 				}
 				case NUMERIC_TYPE: {
 					for (const auto _accuracy : doc_accuracy) {
@@ -1136,6 +1138,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 					std::sort(specification.accuracy.begin(), specification.accuracy.end());
 					std::unique(specification.accuracy.begin(), specification.accuracy.end());
 					size_acc = specification.accuracy.size();
+					break;
 				}
 				default:
 					throw MSG_Error("%s type does not have accuracy", Serialise::type(default_spc.sep_types[2]).c_str());
@@ -1187,7 +1190,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 	try {
 		auto doc_slot = item_doc.at(RESERVED_SLOT);
 		if (doc_slot.obj.type == msgpack::type::POSITIVE_INTEGER) {
-			unsigned _slot = doc_slot.obj.via.u64;
+			unsigned _slot = static_cast<unsigned>(doc_slot.obj.via.u64);
 			if (_slot < DB_SLOT_RESERVED) {
 				_slot += DB_SLOT_RESERVED;
 			} else if (_slot == Xapian::BAD_VALUENO) {
