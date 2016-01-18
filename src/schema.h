@@ -23,8 +23,9 @@
 #pragma once
 
 #include "msgpack_wrapper.h"
-#include "utils.h"
 #include "serialise.h"
+#include "database_utils.h"
+#include "utils.h"
 
 
 enum class unitTime {
@@ -45,7 +46,7 @@ enum class Index {
 
 
 const std::vector<std::string> str_time({ "second", "minute", "hour", "day", "month", "year" });
-const std::vector<std::string> str_analizer({ "STEM_NONE", "STEM_SOME", "STEM_ALL", "STEM_ALL_Z" });
+const std::vector<std::string> str_analyzer({ "STEM_NONE", "STEM_SOME", "STEM_ALL", "STEM_ALL_Z" });
 const std::vector<std::string> str_index({ "ALL", "TERM", "VALUE" });
 
 
@@ -78,7 +79,7 @@ struct specification_t {
 
 	specification_t();
 
-	std::string to_string();
+	std::string to_string() const;
 };
 
 
@@ -151,7 +152,7 @@ public:
 
 	void setDatabase(Database* _db);
 
-	inline MsgPack getProperties_schema() const {
+	inline MsgPack getProperties() const {
 		return schema.at(RESERVED_SCHEMA);
 	}
 
@@ -208,7 +209,7 @@ private:
 	/*
 	 * Recursively transforms item_schema into a readable form.
 	 */
-	MsgPack readable(MsgPack&& item_schema);
+	void readable(MsgPack&& item_schema);
 
 	/*
 	 * Return the item_doc's type
