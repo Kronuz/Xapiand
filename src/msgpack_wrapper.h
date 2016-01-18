@@ -163,7 +163,7 @@ public:
 		}
 
 		if (obj.type == msgpack::type::ARRAY) {
-			if (obj.via.array.size - 1 < offset) {
+			if (static_cast<int>(obj.via.array.size - 1) < offset) {
 				auto r_size = offset + 1;
 				expand_array(r_size);
 
@@ -236,6 +236,17 @@ public:
 		iterator operator++(int) {
 			iterator tmp(*this);
 			++off;
+			return tmp;
+		}
+
+		iterator& operator+=(int pos) {
+			off += pos;
+			return *this;
+		}
+
+		iterator operator+(int pos) const {
+			iterator tmp(*this);
+			tmp.off += pos;
 			return tmp;
 		}
 
