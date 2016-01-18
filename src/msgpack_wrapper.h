@@ -112,10 +112,11 @@ class MsgPack {
 	std::shared_ptr<MsgPack::object_handle> make_handler(const rapidjson::Document& doc);
 
 public:
-	msgpack::object& obj;
+	msgpack::object* parent_obj;
+	msgpack::object* obj;
 
 	MsgPack();
-	MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object& o);
+	MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object* o, msgpack::object* p);
 	MsgPack(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z);
 	MsgPack(msgpack::unpacked& u);
 	MsgPack(const std::string& buffer);
@@ -134,6 +135,7 @@ public:
 	bool find(const MsgPack& o) const;
 	bool find(const std::string& key) const;
 	bool find(uint32_t off) const;
+	MsgPack path(const std::vector<std::string> &path);
 
 	std::string to_json_string(bool prettify=false) const;
 	std::string to_string() const;
@@ -144,48 +146,56 @@ public:
 	bool erase(const std::string& key);
 	MsgPack duplicate() const;
 
-	template<typename T>
-	MsgPack& operator=(T&& v) {
-		msgpack::object o(std::forward<T>(v), handler->zone.get());
-		obj.type = o.type;
-		obj.via = o.via;
+
+	MsgPack& operator=(MsgPack&& v) {
+		handler = std::move(v.handler);
+	  	parent_obj = std::move(v.parent_obj);
+	  	obj = std::move(v.obj);
 		return *this;
 	}
 
 	template<typename T>
-	void insert_item_to_array(int offset, T&& v) {
+	MsgPack& operator=(T&& v) {
+		msgpack::object o(std::forward<T>(v), handler->zone.get());
+		obj->type = o.type;
+		obj->via = o.via;
+		return *this;
+	}
 
-		if (obj.type == msgpack::type::NIL) {
-			obj.type = msgpack::type::ARRAY;
-			obj.via.array.ptr = nullptr;
-			obj.via.array.size = 0;
-			obj.via.array.m_alloc = 0;
+	template<typename T>
+	void insert_item_to_array(unsigned offset, T&& v) {
+
+		if (obj->type == msgpack::type::NIL) {
+			obj->type = msgpack::type::ARRAY;
+			obj->via.array.ptr = nullptr;
+			obj->via.array.size = 0;
+			obj->via.array.m_alloc = 0;
 		}
 
-		if (obj.type == msgpack::type::ARRAY) {
-			if (static_cast<int>(obj.via.array.size - 1) < offset) {
+		if (obj->type == msgpack::type::ARRAY) {
+			if (static_cast<int>(obj->via.array.size - 1) < offset) {
 				auto r_size = offset + 1;
 				expand_array(r_size);
 
-				const msgpack::object* npend(obj.via.array.ptr + r_size - 1);
-				for (auto np = obj.via.array.ptr + obj.via.array.size; np != npend; ++np) {
+				const msgpack::object* npend(obj->via.array.ptr + r_size - 1);
+				for (auto np = obj->via.array.ptr + obj->via.array.size; np != npend; ++np) {
 					msgpack::detail::unpack_nil(*np);
-					msgpack::detail::unpack_array_item(obj, *np);
+					msgpack::detail::unpack_array_item(*obj, *np);
 				}
 
-				msgpack::detail::unpack_array_item(obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
+				msgpack::detail::unpack_array_item(*obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
 			} else {
-				auto new_size = obj.via.array.size + 1;
+				auto new_size = obj->via.array.size + 1;
 				expand_array(new_size);
 
-				auto p = obj.via.array.ptr + offset;
+				auto p = obj->via.array.ptr + offset;
 
 				if (p->type == msgpack::type::NIL) {
 					msgpack::object o(std::forward<T>(v), handler->zone.get());
 					operator[](offset) = o;
 				} else {
-					memcpy(p + 1, p, (obj.via.array.size - offset) * sizeof(msgpack::object));
-					++obj.via.array.size;
+					memcpy(p + 1, p, (obj->via.array.size - offset) * sizeof(msgpack::object));
+					++obj->via.array.size;
 					msgpack::object o(std::forward<T>(v), handler->zone.get());
 					operator[](offset) = o;
 				}
@@ -197,17 +207,17 @@ public:
 
 	template<typename T>
 	void add_item_to_array(T&& v) {
-		if (obj.type == msgpack::type::NIL) {
-			obj.type = msgpack::type::ARRAY;
-			obj.via.array.ptr = nullptr;
-			obj.via.array.size = 0;
-			obj.via.array.m_alloc = 0;
+		if (obj->type == msgpack::type::NIL) {
+			obj->type = msgpack::type::ARRAY;
+			obj->via.array.ptr = nullptr;
+			obj->via.array.size = 0;
+			obj->via.array.m_alloc = 0;
 		}
 
-		if (obj.type == msgpack::type::ARRAY) {
-			auto r_size = obj.via.array.size + 1;
+		if (obj->type == msgpack::type::ARRAY) {
+			auto r_size = obj->via.array.size + 1;
 			expand_array(r_size);
-			msgpack::detail::unpack_array_item(obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
+			msgpack::detail::unpack_array_item(*obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
 		} else {
 			throw msgpack::type_error();
 		}
@@ -257,11 +267,11 @@ public:
 		}
 
 		MsgPack operator*() const {
-			switch (obj->obj.type) {
+			switch (obj->obj->type) {
 				case msgpack::type::MAP:
-					return MsgPack(obj->handler, obj->obj.via.map.ptr[off].key);
+					return MsgPack(obj->handler, &obj->obj->via.map.ptr[off].key, obj->obj);
 				case msgpack::type::ARRAY:
-					return MsgPack(obj->handler, obj->obj.via.array.ptr[off]);
+					return MsgPack(obj->handler, &obj->obj->via.array.ptr[off], obj->obj);
 				default:
 					throw msgpack::type_error();
 			}
@@ -276,11 +286,19 @@ public:
 		}
 
 		explicit operator bool() const {
-			return obj->obj.type == msgpack::type::MAP ? obj->obj.via.map.size != off : obj->obj.via.array.size != off;
+			return obj->obj->type == msgpack::type::MAP ? obj->obj->via.map.size != off : obj->obj->via.array.size != off;
 		}
 	};
 
 	using const_iterator = const iterator;
+
+	MsgPack parent() {
+		if (parent_obj) {
+			return MsgPack(handler, parent_obj, nullptr);
+		} else {
+			return MsgPack();
+		}
+	}
 
 	iterator begin() {
 		return iterator(this, 0);
@@ -290,20 +308,20 @@ public:
 	const_iterator cbegin() const { return begin(); }
 
 	iterator end() {
-		return iterator(this, obj.type == msgpack::type::MAP ? obj.via.map.size : obj.via.array.size);
+		return iterator(this, obj->type == msgpack::type::MAP ? obj->via.map.size : obj->via.array.size);
 	}
 
 	const_iterator end() const { return end(); }
 	const_iterator cend() const { return end(); }
 
 	explicit operator bool() const {
-		return obj.type != msgpack::type::NIL;
+		return obj->type != msgpack::type::NIL;
 	}
 };
 
 
 inline bool operator==(const MsgPack& x, const MsgPack& y) {
-	return x.obj == y.obj;
+	return *x.obj == *y.obj;
 }
 
 
@@ -313,6 +331,6 @@ inline bool operator!=(const MsgPack& x, const MsgPack& y) {
 
 
 inline std::ostream& operator<<(std::ostream& s, const MsgPack& o) {
-	s << o.obj;
+	s << *o.obj;
 	return s;
 }

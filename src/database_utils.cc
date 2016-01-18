@@ -147,9 +147,9 @@ std::string str_type(const std::vector<char>& sep_types) {
 
 
 void clean_reserved(MsgPack& document) {
-	if (document.obj.type == msgpack::type::MAP) {
+	if (document.obj->type == msgpack::type::MAP) {
 		for (auto item_key : document) {
-			std::string str_key(item_key.obj.via.str.ptr, item_key.obj.via.str.size);
+			std::string str_key(item_key.obj->via.str.ptr, item_key.obj->via.str.size);
 			if (is_reserved(str_key) && str_key != RESERVED_VALUE) {
 				document.erase(str_key);
 			} else {
