@@ -1013,7 +1013,7 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 
 				/* Return data in case is not a json type */
 				MsgPack doc_data(data);
-				if (doc_data.obj.type != msgpack::type::MAP) {
+				if (doc_data.obj->type != msgpack::type::MAP) {
 					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, data, ct_type));
 					manager()->database_pool.checkin(database);
 					return;

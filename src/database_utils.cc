@@ -183,7 +183,7 @@ void json_load(rapidjson::Document& doc, const std::string& str) {
 
 
 void apply_patch(const MsgPack& patch, MsgPack& object) {
-	if (patch.obj.type == msgpack::type::ARRAY) {
+	if (patch.obj->type == msgpack::type::ARRAY) {
 		for (const auto elem : patch) {
 			try {
 				MsgPack op = elem.at("op");

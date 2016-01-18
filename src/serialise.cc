@@ -35,19 +35,19 @@
 std::string
 Serialise::serialise(char field_type, const MsgPack& field_value)
 {
-	switch (field_value.obj.type) {
+	switch (field_value.obj->type) {
 		case msgpack::type::NIL:
 			return boolean(field_type, false);
 		case msgpack::type::BOOLEAN:
-			return boolean(field_type, field_value.obj.via.boolean);
+			return boolean(field_type, field_value.obj->via.boolean);
 		case msgpack::type::POSITIVE_INTEGER:
 		case msgpack::type::NEGATIVE_INTEGER:
 		case msgpack::type::FLOAT:
-			return numeric(field_type, field_value.obj.via.f64);
+			return numeric(field_type, field_value.obj->via.f64);
 		case msgpack::type::STR:
-			return string(field_type, std::string(field_value.obj.via.str.ptr, field_value.obj.via.str.size));
+			return string(field_type, std::string(field_value.obj->via.str.ptr, field_value.obj->via.str.size));
 		default:
-			throw MSG_Error("msgpack::type [%d] is not supported", field_value.obj.type);
+			throw MSG_Error("msgpack::type [%d] is not supported", field_value.obj->type);
 	}
 }
 

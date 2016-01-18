@@ -324,10 +324,10 @@ void
 Database::index_items(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value)
 {
 	specification_t spc_bef = schema.specification;
-	if (item_val.obj.type == msgpack::type::MAP) {
+	if (item_val.obj->type == msgpack::type::MAP) {
 		bool offsprings = false;
 		for (auto subitem_key : item_val) {
-			std::string str_subkey(subitem_key.obj.via.str.ptr, subitem_key.obj.via.str.size);
+			std::string str_subkey(subitem_key.obj->via.str.ptr, subitem_key.obj->via.str.size);
 			auto subitem_val = item_val.at(str_subkey);
 			if (!is_reserved(str_subkey)) {
 				if (str_key.empty()) {
@@ -383,18 +383,18 @@ Database::index_texts(Xapian::Document& doc, const std::string& name, const MsgP
 			throw MSG_Error("A boolean term can not be indexed as text");
 		}
 
-		if (texts.obj.type == msgpack::type::ARRAY) {
+		if (texts.obj->type == msgpack::type::ARRAY) {
 			schema.set_type_to_array(properties);
 			size_t pos = 0;
 			for (auto text : texts) {
-				if (text.obj.type == msgpack::type::STR) {
-					index_text(doc, std::string(text.obj.via.str.ptr, text.obj.via.str.size), pos++);
+				if (text.obj->type == msgpack::type::STR) {
+					index_text(doc, std::string(text.obj->via.str.ptr, text.obj->via.str.size), pos++);
 				} else {
 					throw MSG_Error("Texts should be a string or array of strings");
 				}
 			}
-		} else if (texts.obj.type == msgpack::type::STR) {
-			index_text(doc, std::string(texts.obj.via.str.ptr, texts.obj.via.str.size), 0);
+		} else if (texts.obj->type == msgpack::type::STR) {
+			index_text(doc, std::string(texts.obj->via.str.ptr, texts.obj->via.str.size), 0);
 		} else {
 			throw MSG_Error("Texts should be a string or array of strings");
 		}
@@ -443,7 +443,7 @@ Database::index_terms(Xapian::Document& doc, const std::string& name, const MsgP
 	}
 
 	if (schema.specification.store) {
-		if (terms.obj.type == msgpack::type::ARRAY) {
+		if (terms.obj->type == msgpack::type::ARRAY) {
 			schema.set_type_to_array(properties);
 			size_t pos = 0;
 			for (auto term : terms) {
@@ -499,9 +499,9 @@ Database::index_values(Xapian::Document& doc, const std::string& name, const Msg
 	if (schema.specification.store) {
 		StringList s;
 		size_t pos = 0;
-		if (values.obj.type == msgpack::type::ARRAY) {
+		if (values.obj->type == msgpack::type::ARRAY) {
 			schema.set_type_to_array(properties);
-			s.reserve(values.obj.via.array.size);
+			s.reserve(values.obj->via.array.size);
 			for (auto value : values) {
 				index_value(doc, value, s, pos, is_term);
 			}
@@ -523,7 +523,7 @@ Database::index_value(Xapian::Document& doc, const MsgPack& value, StringList& s
 		case NUMERIC_TYPE: {
 			auto it = schema.specification.acc_prefix.begin();
 			for (const auto& acc : schema.specification.accuracy) {
-				std::string term_v = Serialise::numeric(NUMERIC_TYPE, value.obj.via.i64 - value.obj.via.i64 % (uint64_t)acc);
+				std::string term_v = Serialise::numeric(NUMERIC_TYPE, value.obj->via.i64 - value.obj->via.i64 % (uint64_t)acc);
 				doc.add_term(prefixed(term_v, *(it++)));
 			}
 			s.push_back(value_v);
@@ -668,7 +668,7 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 		std::string obj_str = obj.to_string();
 		doc.set_data(encode_length(obj_str.size()) + obj_str + (blob ? body : ""));
 
-		if (obj.obj.type == msgpack::type::MAP) {
+		if (obj.obj->type == msgpack::type::MAP) {
 			// Save a copy of schema for undo changes if there is a exception.
 			auto str_schema = schema.to_string();
 			auto _to_store = schema.getStore();
@@ -679,17 +679,17 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 				specification_t spc_bef = schema.specification;
 
 				for (const auto item_key : obj) {
-					std::string str_key(item_key.obj.via.str.ptr, item_key.obj.via.str.size);
+					std::string str_key(item_key.obj->via.str.ptr, item_key.obj->via.str.size);
 					auto item_val = obj.at(str_key);
 					if (!is_reserved(str_key)) {
 						index_items(doc, str_key, item_val, schema.get_subproperties(properties, str_key, item_val), false);
 					} else if (str_key == RESERVED_VALUES) {
-						if (item_val.obj.type != msgpack::type::MAP) {
+						if (item_val.obj->type != msgpack::type::MAP) {
 							throw MSG_Error("%s must be an object", RESERVED_VALUES);
 						}
 						index_items(doc, "", item_val, schema.getProperties());
 					} else if (str_key == RESERVED_TEXTS) {
-						if (item_val.obj.type != msgpack::type::ARRAY) {
+						if (item_val.obj->type != msgpack::type::ARRAY) {
 							throw MSG_Error("%s must be an array of objects", RESERVED_TEXTS);
 						}
 						for (auto subitem_val : item_val) {
@@ -697,8 +697,8 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 								auto _value = subitem_val.at(RESERVED_VALUE);
 								try {
 									auto _name = subitem_val.at(RESERVED_NAME);
-									if (_name.obj.type == msgpack::type::STR) {
-										std::string name(_name.obj.via.str.ptr, _name.obj.via.str.size);
+									if (_name.obj->type == msgpack::type::STR) {
+										std::string name(_name.obj->via.str.ptr, _name.obj->via.str.size);
 										auto subproperties = schema.get_subproperties(properties, name, subitem_val);
 										if (schema.specification.sep_types[2] == NO_TYPE) {
 											schema.set_type(subproperties, name, _value);
@@ -721,7 +721,7 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 							}
 						}
 					} else if (str_key == RESERVED_TERMS) {
-						if (item_val.obj.type != msgpack::type::ARRAY) {
+						if (item_val.obj->type != msgpack::type::ARRAY) {
 							throw MSG_Error("%s must be an array of objects", RESERVED_VALUES);
 						}
 						for (auto subitem_val : item_val) {
@@ -729,8 +729,8 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 								auto _value = subitem_val.at(RESERVED_VALUE);
 								try {
 									auto _name = subitem_val.at(RESERVED_NAME);
-									if (_name.obj.type == msgpack::type::STR) {
-										std::string name(_name.obj.via.str.ptr, _name.obj.via.str.size);
+									if (_name.obj->type == msgpack::type::STR) {
+										std::string name(_name.obj->via.str.ptr, _name.obj->via.str.size);
 										auto subproperties = schema.get_subproperties(properties, name, subitem_val);
 										if (schema.specification.sep_types[2] == NO_TYPE) {
 											schema.set_type(subproperties, name, _value);
@@ -839,26 +839,26 @@ Database::get_data_field(const std::string& field_name)
 		// FIXME: auto properties = schema.getProperties().path(fields, null
 		auto properties = MsgPack();
 
-		res.type = properties.at(RESERVED_TYPE).at(2).obj.via.u64;
+		res.type = properties.at(RESERVED_TYPE).at(2).obj->via.u64;
 		if (res.type == NO_TYPE) {
 			return res;
 		}
 
-		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).obj.via.u64);
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).obj->via.u64);
 
 		auto prefix = properties.at(RESERVED_PREFIX);
-		res.prefix = std::string(prefix.obj.via.str.ptr, prefix.obj.via.str.size);
+		res.prefix = std::string(prefix.obj->via.str.ptr, prefix.obj->via.str.size);
 
-		res.bool_term = properties.at(RESERVED_BOOL_TERM).obj.via.boolean;
+		res.bool_term = properties.at(RESERVED_BOOL_TERM).obj->via.boolean;
 
 		// Strings and booleans do not have accuracy.
 		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
 			for (const auto acc : properties.at(RESERVED_ACCURACY)) {
-				res.accuracy.push_back(acc.obj.via.f64);
+				res.accuracy.push_back(acc.obj->via.f64);
 			}
 
 			for (const auto acc_p : properties.at(RESERVED_ACC_PREFIX)) {
-				res.acc_prefix.emplace_back(acc_p.obj.via.str.ptr, acc_p.obj.via.str.size);
+				res.acc_prefix.emplace_back(acc_p.obj->via.str.ptr, acc_p.obj->via.str.size);
 			}
 		}
 	} catch (const msgpack::type_error&) { }
@@ -881,8 +881,8 @@ Database::get_slot_field(const std::string& field_name)
 	try {
 		// FIXME: auto properties = schema.getProperties().path(fields, nullptr);
 		auto properties = MsgPack();
-		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).obj.via.u64);
-		res.type = properties.at(RESERVED_TYPE).at(2).obj.via.u64;
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).obj->via.u64);
+		res.type = properties.at(RESERVED_TYPE).at(2).obj->via.u64;
 	} catch (const msgpack::type_error&) { }
 
 	return res;
