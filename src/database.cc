@@ -836,8 +836,7 @@ Database::get_data_field(const std::string& field_name)
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
-		// FIXME: auto properties = schema.getProperties().path(fields, null
-		auto properties = MsgPack();
+		auto properties = schema.getProperties().path(fields);
 
 		res.type = properties.at(RESERVED_TYPE).at(2).obj->via.u64;
 		if (res.type == NO_TYPE) {
@@ -879,8 +878,7 @@ Database::get_slot_field(const std::string& field_name)
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
-		// FIXME: auto properties = schema.getProperties().path(fields, nullptr);
-		auto properties = MsgPack();
+		auto properties = schema.getProperties().path(fields);
 		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).obj->via.u64);
 		res.type = properties.at(RESERVED_TYPE).at(2).obj->via.u64;
 	} catch (const msgpack::type_error&) { }
