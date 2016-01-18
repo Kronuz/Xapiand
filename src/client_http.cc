@@ -910,17 +910,17 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 
 	if (facets) {
 		MsgPack response;
-		for (auto spy = spies.begin(); spy != spies.end(); ++spy) {
-			std::string name_result = (*spy).first;
-			int offset;
+		for (const auto& spy : spies) {
+			std::string name_result = spy.first;
 			MsgPack array;
-			Xapian::TermIterator facet = (*spy).second->values_begin();
-			for (offset=0; facet != (*spy).second->values_end(); ++facet, offset++) {
+			const auto facet_e = spy.second->values_end();
+			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
 				MsgPack value;
-				data_field_t field_t = database->get_data_field((*spy).first);
-				value["value"] = Unserialise::unserialise(field_t.type, *facet);
+				data_field_t field_t = database->get_data_field(spy.first);
+				auto _val = value["value"];
+				Unserialise::unserialise(field_t.type, *facet, _val);
 				value["termfreq"] = facet.get_termfreq();
-				array[offset] = value;
+				array.add_item_to_array(value);
 			}
 			response[name_result] = array;
 		}
