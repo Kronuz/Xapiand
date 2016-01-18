@@ -173,7 +173,7 @@ public:
 		}
 
 		if (obj->type == msgpack::type::ARRAY) {
-			if (static_cast<int>(obj->via.array.size - 1) < offset) {
+			if (static_cast<unsigned>(obj->via.array.size - 1) < offset) {
 				auto r_size = offset + 1;
 				expand_array(r_size);
 
