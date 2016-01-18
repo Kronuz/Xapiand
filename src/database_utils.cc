@@ -146,38 +146,15 @@ std::string str_type(const std::vector<char>& sep_types) {
 }
 
 
-std::vector<std::string> split_fields(const std::string& field_name) {
-	std::vector<std::string> fields;
-	std::string aux(field_name.c_str());
-	size_t pos = 0;
-	while (aux.at(pos) == DB_OFFSPRING_UNION[0]) {
-		++pos;
-	}
-	size_t start = pos;
-	while ((pos = aux.substr(start, aux.size()).find(DB_OFFSPRING_UNION)) != std::string::npos) {
-		std::string token = aux.substr(0, start + pos);
-		fields.push_back(token);
-		aux.assign(aux, start + pos + strlen(DB_OFFSPRING_UNION), aux.size());
-		pos = 0;
-		while (aux.at(pos) == DB_OFFSPRING_UNION[0]) {
-			++pos;
-		}
-		start = pos;
-	}
-	fields.push_back(aux);
-	return fields;
-}
-
-
 void clean_reserved(MsgPack& document) {
-	if (document.obj.type == msgpack::type::MAP) {
+	if (document.obj.type == msgpack::type::MAP) {
 		for (auto item_key : document) {
 			std::string str_key(item_key.obj.via.str.ptr, item_key.obj.via.str.size);
 			if (is_reserved(str_key) && str_key != RESERVED_VALUE) {
 				document.erase(str_key);
 			} else {
 				auto item_doc = document.at(str_key);
-				clean_reserved(item_doc, str_key);
+				clean_reserved(item_doc);
 			}
 		}
 	}

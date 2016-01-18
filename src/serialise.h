@@ -23,6 +23,7 @@
 #pragma once
 
 #include "htm.h"
+#include "msgpack_wrapper.h"
 
 #include "hash/endian.h"
 
@@ -37,6 +38,8 @@
 #define OBJECT_TYPE  'o'
 #define NO_TYPE      ' '
 
+
+#define UNKNOWN_STR "unknown"
 #define NUMERIC_STR "numeric"
 #define STRING_STR  "string"
 #define DATE_STR    "date"
@@ -72,6 +75,7 @@ namespace Serialise {
 	std::string serialise(char field_type, const MsgPack& field_value);
 	std::string string(char field_type, const std::string& field_value);
 	std::string numeric(char field_type, double field_value);
+	std::string boolean(char field_type, double field_value);
 
 
 	// Serialise field_value like date.
@@ -101,8 +105,8 @@ namespace Serialise {
 
 
 namespace Unserialise {
-	// Unserialise serialise_val according to field_type.
-	std::string unserialise(char field_type, const std::string& serialise_val);
+	// Unserialise serialise_val according to field_type and save the value in result.
+	void unserialise(char field_type, const std::string& serialise_val, MsgPack& result);
 
 	// Unserialise a serialise numeric.
 	double numeric(const std::string& serialise_numeric);

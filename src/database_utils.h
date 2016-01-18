@@ -146,7 +146,6 @@ bool is_reserved(const std::string& word);
 bool is_language(const std::string& language);
 bool set_types(const std::string& type, std::vector<char>& sep_types);
 std::string str_type(const std::vector<char>& sep_types);
-std::vector<std::string> split_fields(const std::string& field_name);
 void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);
