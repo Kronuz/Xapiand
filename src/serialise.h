@@ -39,7 +39,6 @@
 #define NO_TYPE      ' '
 
 
-#define UNKNOWN_STR "unknown"
 #define NUMERIC_STR "numeric"
 #define STRING_STR  "string"
 #define DATE_STR    "date"

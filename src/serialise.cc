@@ -37,7 +37,7 @@ Serialise::serialise(char field_type, const MsgPack& field_value)
 {
 	switch (field_value.obj.type) {
 		case msgpack::type::NIL:
-			return boolean(field_type);
+			return boolean(field_type, false);
 		case msgpack::type::BOOLEAN:
 			return boolean(field_type, field_value.obj.via.boolean);
 		case msgpack::type::POSITIVE_INTEGER:
@@ -47,7 +47,7 @@ Serialise::serialise(char field_type, const MsgPack& field_value)
 		case msgpack::type::STR:
 			return string(field_type, std::string(field_value.obj.via.str.ptr, field_value.obj.via.str.size));
 		default:
-			return std::string();
+			throw MSG_Error("msgpack::type [%d] is not supported", field_value.obj.type);
 	}
 }
 
@@ -57,15 +57,18 @@ Serialise::string(char field_type, const std::string& field_value)
 {
 	switch (field_type) {
 		case DATE_TYPE:
-			return date(str_value);
+			return date(field_value);
 		case BOOLEAN_TYPE:
-			return boolean(str_value);
+			return boolean(field_value);
 		case STRING_TYPE:
-			return str_value;
+			if (field_value.empty()) {
+				throw MSG_Error("Empty string");
+			}
+			return field_value;
 		case GEO_TYPE:
-			return ewkt(str_value);
+			return ewkt(field_value);
 		default:
-			return std::string();
+			throw MSG_Error("%s is not string", type(field_type).c_str());
 	}
 }
 
@@ -80,7 +83,18 @@ Serialise::numeric(char field_type, double field_value)
 		case BOOLEAN_TYPE:
 			return field_value ? std::string("t") : std::string("f");
 		default:
-			return std::string();
+			throw MSG_Error("%s is not numeric", type(field_type).c_str());
+	}
+}
+
+
+std::string
+Serialise::boolean(char field_type, double field_value)
+{
+	if (field_type == BOOLEAN_TYPE) {
+		return field_value ? std::string("t") : std::string("f");
+	} else {
+		throw MSG_Error("%s is not boolean", type(field_type).c_str());
 	}
 }
 
@@ -88,13 +102,8 @@ Serialise::numeric(char field_type, double field_value)
 std::string
 Serialise::date(const std::string& field_value)
 {
-	try {
-		double timestamp = Datetime::timestamp(value);
-		return Xapian::sortable_serialise(timestamp);
-	} catch (const std::exception &err) {
-		L_ERR(nullptr, "ERROR: %s", err.what());
-		return std::string();
-	}
+	double timestamp = Datetime::timestamp(field_value);
+	return Xapian::sortable_serialise(timestamp);
 }
 
 
@@ -105,7 +114,9 @@ Serialise::ewkt(const std::string& field_value)
 
 	EWKT_Parser ewkt(field_value, false, HTM_MIN_ERROR);
 
-	if (ewkt.trixels.empty()) return result;
+	if (ewkt.trixels.empty()) {
+		throw MSG_Error("Empty region: %s", field_value.c_str());
+	}
 
 	for (const auto& trixel : ewkt.trixels) {
 		result += trixel;
@@ -130,7 +141,7 @@ Serialise::boolean(const std::string& field_value)
 	} else if (strcasecmp(field_value.c_str(), "false") == 0) {
 		return std::string("f");
 	} else {
-		return std::string();
+		throw MSG_Error("Boolean format is not valid");
 	}
 }
 
@@ -185,26 +196,27 @@ Serialise::type(char type)
 		case OBJECT_TYPE:  return OBJECT_STR;
 		case ARRAY_TYPE:   return ARRAY_STR;
 	}
-	return "";
+
+	throw MSG_Error("'%c' is an unknown type", type);
 }
 
 
-std::string
-Unserialise::unserialise(char field_type, const std::string& serialise_val)
+void
+Unserialise::unserialise(char field_type, const std::string& serialise_val, MsgPack& result)
 {
 	switch (field_type) {
 		case NUMERIC_TYPE:
-			return numeric(serialise_val);
+			result = numeric(serialise_val);
 		case DATE_TYPE:
-			return date(serialise_val);
+			result = date(serialise_val);
 		case BOOLEAN_TYPE:
-			return boolean(serialise_val);
+			result = boolean(serialise_val);
 		case STRING_TYPE:
-			return serialise_val;
+			result = serialise_val;
 		case GEO_TYPE:
-			return geo(serialise_val);
+			result = geo(serialise_val);
 		default:
-			return std::string();
+			throw MSG_Error("type '%c' is not supported", field_type);
 	}
 }
 
@@ -234,18 +246,18 @@ Unserialise::date(const std::string& serialise_val)
 Cartesian
 Unserialise::cartesian(const std::string& serialise_val)
 {
-	if (str.size() != SIZE_SERIALISE_CARTESIAN) {
-		throw MSG_Error("Can not unserialise cartesian: [%s] %zu", str.c_str(), str.size());
+	if (serialise_val.size() != SIZE_SERIALISE_CARTESIAN) {
+		throw MSG_Error("Can not unserialise cartesian: [%s] %zu", serialise_val.c_str(), serialise_val.size());
 	}
 
-	double x = (((unsigned)str[0] << 24) & 0xFF000000) | (((unsigned)str[1] << 16) & 0xFF0000) | (((unsigned)str[2] << 8) & 0xFF00)  | (((unsigned)str[3]) & 0xFF);
-	double y = (((unsigned)str[4] << 24) & 0xFF000000) | (((unsigned)str[5] << 16) & 0xFF0000) | (((unsigned)str[6] << 8) & 0xFF00)  | (((unsigned)str[7]) & 0xFF);
-	double z = (((unsigned)str[8] << 24) & 0xFF000000) | (((unsigned)str[9] << 16) & 0xFF0000) | (((unsigned)str[10] << 8) & 0xFF00) | (((unsigned)str[11]) & 0xFF);
+	double x = (((unsigned)serialise_val[0] << 24) & 0xFF000000) | (((unsigned)serialise_val[1] << 16) & 0xFF0000) | (((unsigned)serialise_val[2] << 8) & 0xFF00)  | (((unsigned)serialise_val[3]) & 0xFF);
+	double y = (((unsigned)serialise_val[4] << 24) & 0xFF000000) | (((unsigned)serialise_val[5] << 16) & 0xFF0000) | (((unsigned)serialise_val[6] << 8) & 0xFF00)  | (((unsigned)serialise_val[7]) & 0xFF);
+	double z = (((unsigned)serialise_val[8] << 24) & 0xFF000000) | (((unsigned)serialise_val[9] << 16) & 0xFF0000) | (((unsigned)serialise_val[10] << 8) & 0xFF00) | (((unsigned)serialise_val[11]) & 0xFF);
 	return Cartesian((x - MAXDOU2INT) / DOUBLE2INT, (y - MAXDOU2INT) / DOUBLE2INT, (z - MAXDOU2INT) / DOUBLE2INT);
 }
 
 
-boolean
+bool
 Unserialise::boolean(const std::string& serialise_val)
 {
 	return serialise_val.at(0) == 't';
@@ -255,14 +267,14 @@ Unserialise::boolean(const std::string& serialise_val)
 uint64_t
 Unserialise::trixel_id(const std::string& serialise_val)
 {
-	if (str.size() != SIZE_BYTES_ID) {
-		throw MSG_Error("Can not unserialise trixel_id [%s] %zu", str.c_str(), str.size());
+	if (serialise_val.size() != SIZE_BYTES_ID) {
+		throw MSG_Error("Can not unserialise trixel_id [%s] %zu", serialise_val.c_str(), serialise_val.size());
 	}
 
-	uint64_t id = (((uint64_t)str[0] << 48) & 0xFF000000000000) | (((uint64_t)str[1] << 40) & 0xFF0000000000) | \
-				  (((uint64_t)str[2] << 32) & 0xFF00000000)     | (((uint64_t)str[3] << 24) & 0xFF000000)     | \
-				  (((uint64_t)str[4] << 16) & 0xFF0000)         | (((uint64_t)str[5] <<  8) & 0xFF00)         | \
-				  (str[6] & 0xFF);
+	uint64_t id = (((uint64_t)serialise_val[0] << 48) & 0xFF000000000000) | (((uint64_t)serialise_val[1] << 40) & 0xFF0000000000) | \
+				  (((uint64_t)serialise_val[2] << 32) & 0xFF00000000)     | (((uint64_t)serialise_val[3] << 24) & 0xFF000000)     | \
+				  (((uint64_t)serialise_val[4] << 16) & 0xFF0000)         | (((uint64_t)serialise_val[5] <<  8) & 0xFF00)         | \
+				  (serialise_val[6] & 0xFF);
 	return id;
 }
 
@@ -295,18 +307,36 @@ Unserialise::geo(const std::string& serialise_val)
 std::string
 Unserialise::type(const std::string& str_type)
 {
-	std::string low = lower_string(str);
-	if (low.compare(NUMERIC_STR) == 0 || (low.size() == 1 && low[0] == NUMERIC_TYPE)) {
+	std::string low = lower_string(str_type);
+	if (low.size() == 1) {
+		switch (low[0]) {
+			case NUMERIC_TYPE:
+				return std::string(1, toupper(NUMERIC_TYPE));
+				break;
+			case GEO_TYPE:
+				return std::string(1, toupper(GEO_TYPE));
+				break;
+			case STRING_TYPE:
+				return std::string(1, toupper(STRING_TYPE));
+				break;
+			case BOOLEAN_TYPE:
+				return std::string(1, toupper(BOOLEAN_TYPE));
+				break;
+			case DATE_TYPE:
+				return std::string(1, toupper(DATE_TYPE));
+				break;
+		}
+	} else if (low.compare(NUMERIC_STR) == 0) {
 		return std::string(1, toupper(NUMERIC_TYPE));
-	} else if (low.compare(GEO_STR) == 0     || (low.size() == 1 && low[0] == GEO_TYPE)) {
+	} else if (low.compare(GEO_STR) == 0) {
 		return std::string(1, toupper(GEO_TYPE));
-	} else if (low.compare(STRING_STR) == 0  || (low.size() == 1 && low[0] == STRING_TYPE)) {
+	} else if (low.compare(STRING_STR) == 0 ) {
 		return std::string(1, toupper(STRING_TYPE));
-	} else if (low.compare(BOOLEAN_STR) == 0 || (low.size() == 1 && low[0] == BOOLEAN_TYPE)) {
+	} else if (low.compare(BOOLEAN_STR) == 0 ) {
 		return std::string(1, toupper(BOOLEAN_TYPE));
-	} else if (low.compare(DATE_STR) == 0    || (low.size() == 1 && low[0] == DATE_TYPE)) {
+	} else if (low.compare(DATE_STR) == 0) {
 		return std::string(1, toupper(DATE_TYPE));
-	} else {
-		return std::string(1, toupper(STRING_TYPE));
 	}
+
+	throw MSG_Error("%s is an unknown type", str_type.c_str());
 }
