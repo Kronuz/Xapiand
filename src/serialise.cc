@@ -221,6 +221,26 @@ Unserialise::unserialise(char field_type, const std::string& serialise_val, MsgP
 }
 
 
+std::string
+Unserialise::unserialise(char field_type, const std::string& serialise_val)
+{
+	switch (field_type) {
+		case NUMERIC_TYPE:
+			return std::to_string(numeric(serialise_val));
+		case DATE_TYPE:
+			return date(serialise_val);
+		case BOOLEAN_TYPE:
+			return std::string(boolean(serialise_val) ? "true" : "false");
+		case STRING_TYPE:
+			return serialise_val;
+		case GEO_TYPE:
+			return geo(serialise_val);
+		default:
+			throw MSG_Error("type '%c' is not supported", field_type);
+	}
+}
+
+
 double
 Unserialise::numeric(const std::string& serialise_val)
 {
