@@ -293,319 +293,7 @@ Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, c
 
 
 void
-Database::index_fields(cJSON *item, const std::string &item_name, Xapian::Document &doc, cJSON *properties, bool is_value)
-{
-	specification_t spc_bef = schema.specification;
-	if (item->type == cJSON_Object) {
-		bool offsprings = false;
-		int elements = cJSON_GetArraySize(item);
-		for (int i = 0; i < elements; ++i) {
-			cJSON *subitem = cJSON_GetArrayItem(item, i);
-			if (!is_reserved(subitem->string)) {
-				std::string subitem_name = !item_name.empty() ? item_name + DB_OFFSPRING_UNION + subitem->string : subitem->string;
-				cJSON *subproperties = schema.get_subproperties(properties, subitem->string, subitem);
-				index_fields(subitem, subitem_name, doc, subproperties, is_value);
-				offsprings = true;
-			} else if (strcmp(subitem->string, RESERVED_VALUE) == 0) {
-				if (schema.specification.sep_types[2] == NO_TYPE) {
-					schema.set_type(subitem, item_name, properties);
-				}
-				if (is_value || schema.specification.index == Index::VALUE) {
-					index_values(doc, subitem, item_name, properties);
-				} else if (schema.specification.index == Index::TERM) {
-					index_terms(doc, subitem, item_name, properties);
-				} else {
-					index_terms(doc, subitem, item_name, properties);
-					index_values(doc, subitem, item_name, properties);
-				}
-			}
-			schema.specification = spc_bef;
-		}
-		if (offsprings) {
-			schema.set_type_to_object(properties);
-		}
-	} else {
-		if (schema.specification.sep_types[2] == NO_TYPE) {
-			schema.set_type(item, item_name, properties);
-		}
-		if (is_value || schema.specification.index == Index::VALUE) {
-			index_values(doc, item, item_name, properties);
-		} else if (schema.specification.index == Index::TERM) {
-			index_terms(doc, item, item_name, properties);
-		} else {
-			index_terms(doc, item, item_name, properties);
-			index_values(doc, item, item_name, properties);
-		}
-		schema.specification = spc_bef;
-	}
-}
-
-
-void
-Database::index_texts(Xapian::Document &doc, cJSON *texts, const std::string &name, cJSON *properties)
-{
-	// L_DATABASE_WRAP(this, "Texts => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
-	if (!(schema.found_field || schema.specification.dynamic)) throw MSG_Error("This object is not dynamic");
-
-	if (!schema.specification.store) return;
-
-	if (schema.specification.bool_term) throw MSG_Error("A boolean term can not be indexed as text");
-
-	size_t elements = 1;
-	if (texts->type == cJSON_Array) {
-		elements = cJSON_GetArraySize(texts);
-		cJSON *value = cJSON_GetArrayItem(texts, 0);
-		if (value->type == cJSON_Array) {
-			throw MSG_Error("It can not be indexed array of arrays");
-		}
-		schema.set_type_to_array(properties);
-	}
-
-	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-	for (size_t j = 0; j < elements; ++j) {
-		cJSON *text = (texts->type == cJSON_Array) ? cJSON_GetArrayItem(texts, (int)j) : texts;
-		if (text->type != cJSON_String) throw MSG_Error("Text should be string or array of strings");
-		Xapian::TermGenerator term_generator;
-		term_generator.set_document(doc);
-		term_generator.set_stemmer(Xapian::Stem(schema.specification.language[getPos(j, schema.specification.language.size())]));
-		if (schema.specification.spelling[getPos(j, schema.specification.spelling.size())]) {
-			term_generator.set_database(*wdb);
-			term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
-			term_generator.set_stemming_strategy((Xapian::TermGenerator::stem_strategy)schema.specification.analyzer[getPos(j, schema.specification.analyzer.size())]);
-		}
-
-		if (schema.specification.positions[getPos(j, schema.specification.positions.size())] > 0) {
-			if (schema.specification.prefix.empty()) {
-				term_generator.index_text_without_positions(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())]);
-			} else {
-				term_generator.index_text_without_positions(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())], schema.specification.prefix);
-			}
-			L_DATABASE_WRAP(this, "Text to Index with positions = %s: %s", name.c_str(), text->valuestring);
-		} else {
-			if (schema.specification.prefix.empty()) {
-				term_generator.index_text(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())]);
-			} else {
-				term_generator.index_text(text->valuestring, schema.specification.weight[getPos(j, schema.specification.weight.size())], schema.specification.prefix);
-			}
-			L_DATABASE_WRAP(this, "Text to Index = %s: %s", name.c_str(), text->valuestring);
-		}
-	}
-}
-
-
-void
-Database::index_terms(Xapian::Document &doc, cJSON *terms, const std::string &name, cJSON *properties)
-{
-	// L_DATABASE_WRAP(this, "Terms => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
-	if (!(schema.found_field || schema.specification.dynamic)) throw MSG_Error("This object is not dynamic");
-
-	if (!schema.specification.store) return;
-
-	size_t elements = 1;
-	if (terms->type == cJSON_Array) {
-		elements = cJSON_GetArraySize(terms);
-		cJSON *value = cJSON_GetArrayItem(terms, 0);
-		if (value->type == cJSON_Array) {
-			throw MSG_Error("It can not be indexed array of arrays");
-		}
-		schema.set_type_to_array(properties);
-	}
-
-	for (size_t j = 0; j < elements; ++j) {
-		cJSON *term = (terms->type == cJSON_Array) ? cJSON_GetArrayItem(terms, (int)j) : terms;
-		unique_char_ptr _cprint(cJSON_Print(term));
-		std::string term_v(_cprint.get());
-		if (term->type == cJSON_String) {
-			term_v.assign(term_v, 1, term_v.size() - 2);
-			if(!schema.specification.bool_term && term_v.find(" ") != std::string::npos && schema.specification.sep_types[2] == STRING_TYPE) {
-				index_texts(doc, term, name, properties);
-				continue;
-			}
-		} else if (term->type == cJSON_Number) {
-			term_v = std::to_string(term->valuedouble);
-		}
-
-		L_DATABASE_WRAP(this, "%d Term -> %s: %s", j, schema.specification.prefix.c_str(), term_v.c_str());
-
-		term_v = Serialise::serialise(schema.specification.sep_types[2], term_v);
-		if (term_v.empty()) throw MSG_Error("%s: %s can not be serialized", name.c_str(), term_v.c_str());
-		if (schema.specification.sep_types[2] == STRING_TYPE && !schema.specification.bool_term) to_lower(term_v);
-
-		if (schema.specification.position[getPos(j, schema.specification.position.size())] >= 0) {
-			std::string nameterm(prefixed(term_v, schema.specification.prefix));
-			if (schema.specification.bool_term) {
-				doc.add_posting(nameterm, schema.specification.position[getPos(j, schema.specification.position.size())], 0);
-			} else {
-				doc.add_posting(nameterm, schema.specification.position[getPos(j, schema.specification.position.size())], schema.specification.weight[getPos(j, schema.specification.weight.size())]);
-			}
-			L_DATABASE_WRAP(this, "Bool: %d  Posting: %s", schema.specification.bool_term, repr(nameterm).c_str());
-		} else {
-			std::string nameterm(prefixed(term_v, schema.specification.prefix));
-			if (schema.specification.bool_term) {
-				doc.add_boolean_term(nameterm);
-			} else {
-				doc.add_term(nameterm, schema.specification.weight[getPos(j, schema.specification.weight.size())]);
-			}
-			L_DATABASE_WRAP(this, "Bool: %d  Term: %s", schema.specification.bool_term, repr(nameterm).c_str());
-		}
-	}
-}
-
-
-void
-Database::index_values(Xapian::Document &doc, cJSON *values, const std::string &name, cJSON *properties)
-{
-	// L_DATABASE_WRAP(this, "Values => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
-	if (!(schema.found_field || schema.specification.dynamic)) throw MSG_Error("This object is not dynamic");
-
-	if (!schema.specification.store) return;
-
-	size_t elements = 1;
-	if (values->type == cJSON_Array) {
-		elements = cJSON_GetArraySize(values);
-		cJSON *value = cJSON_GetArrayItem(values, 0);
-		if (value->type == cJSON_Array) {
-			throw MSG_Error("It can not be indexed array of arrays");
-		}
-		schema.set_type_to_array(properties);
-	}
-
-	StringList s;
-	for (size_t j = 0; j < elements; ++j) {
-		cJSON *value = (values->type == cJSON_Array) ? cJSON_GetArrayItem(values, (int)j) : values;
-		unique_char_ptr _cprint(cJSON_Print(value));
-		std::string value_v(_cprint.get());
-		if (value->type == cJSON_String) {
-			value_v.assign(value_v, 1, value_v.size() - 2);
-		} else if (value->type == cJSON_Number) {
-			value_v = std::to_string(value->valuedouble);
-		}
-
-		L_DATABASE_WRAP(this, "Name: (%s) Value: (%s)", name.c_str(), value_v.c_str());
-
-		if (schema.specification.sep_types[2] == GEO_TYPE) {
-			std::vector<range_t> ranges;
-			CartesianList centroids;
-			uInt64List start_end;
-			EWKT_Parser::getRanges(value_v, schema.specification.accuracy[0], schema.specification.accuracy[1], ranges, centroids);
-			// Index Values and looking for terms generated by accuracy.
-			std::set<std::string> set_terms;
-			for (auto it = ranges.begin(); it != ranges.end(); ++it) {
-				start_end.push_back(it->start);
-				start_end.push_back(it->end);
-				int idx = -1;
-				uint64_t val;
-				if (it->start != it->end) {
-					std::bitset<SIZE_BITS_ID> b1(it->start), b2(it->end), res;
-					for (idx = SIZE_BITS_ID - 1; b1.test(idx) == b2.test(idx); --idx) {
-						res.set(idx, b1.test(idx));
-					}
-					val = res.to_ullong();
-				} else val = it->start;
-				for (size_t i = 2; i < schema.specification.accuracy.size(); ++i) {
-					int pos = START_POS - schema.specification.accuracy[i] * 2;
-					if (idx < pos) {
-						uint64_t vterm = val >> pos;
-						set_terms.insert(prefixed(Serialise::trixel_id(vterm), schema.specification.acc_prefix[i - 2]));
-					} else {
-						break;
-					}
-				}
-			}
-			// Insert terms generated by accuracy.
-			for (auto it = set_terms.begin(); it != set_terms.end(); ++it)
-				doc.add_term(*it);
-			s.push_back(start_end.serialise());
-			s.push_back(centroids.serialise());
-		} else {
-			std::string value_s = Serialise::serialise(schema.specification.sep_types[2], value_v);
-			if (value_s.empty()) {
-				throw MSG_Error("%s: %s can not serialized", name.c_str(), value_v.c_str());
-			}
-			s.push_back(value_s);
-
-			// Index terms generated by accuracy.
-			switch (schema.specification.sep_types[2]) {
-				case NUMERIC_TYPE: {
-					for (size_t len = schema.specification.accuracy.size(), i = 0; i < len; ++i) {
-						long long _v = std::stoll(value_v);
-						std::string term_v = Serialise::numeric(std::to_string(_v - _v % (long long)schema.specification.accuracy[i]));
-						std::string nameterm(prefixed(term_v, schema.specification.acc_prefix[i]));
-						doc.add_term(nameterm);
-					}
-					break;
-				}
-				case DATE_TYPE: {
-					bool findMath = value_v.find("||") != std::string::npos;
-					for (size_t len = schema.specification.accuracy.size(), i = 0; i < len; ++i) {
-						std::string acc(value_v);
-						switch ((unitTime)schema.specification.accuracy[i]) {
-							case unitTime::YEAR:
-								acc += findMath ? "//y" : "||//y";
-								break;
-							case unitTime::MONTH:
-								acc += findMath ? "//M" : "||//M";
-								break;
-							case unitTime::DAY:
-								acc += findMath ? "//d" : "||//d";
-								break;
-							case unitTime::HOUR:
-								acc += findMath ? "//h" : "||//h";
-								break;
-							case unitTime::MINUTE:
-								acc += findMath ? "//m" : "||//m";
-								break;
-							case unitTime::SECOND:
-								acc += findMath ? "//s" : "||//s";
-								break;
-						}
-						acc.assign(Serialise::date(acc));
-						std::string nameterm(prefixed(acc, schema.specification.acc_prefix[i]));
-						doc.add_term(nameterm);
-					}
-					break;
-				}
-			}
-		}
-	}
-
-	doc.add_value(schema.specification.slot, s.serialise());
-	L_DATABASE_WRAP(this, "Slot: %u serialized: %s", schema.specification.slot, repr(s.serialise()).c_str());
-}
-
-
-MsgPack
-Database::getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob)
-{
-	rapidjson::Document rdoc;
-
-	MIMEType t = get_mimetype(ct_type);
-
-	switch (t) {
-		case MIMEType::APPLICATION_JSON:
-			if (json_load(rdoc, body)) {
-				blob = false;
-				return MsgPack(rdoc);
-			}
-			throw MSG_Error("MsgPack::json_load can not do the parser");
-		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
-			if (json_load(rdoc, body)) {
-				doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
-				blob = false;
-				return MsgPack(rdoc);
-			} else {
-				return MsgPack();
-			}
-		case MIMEType::APPLICATION_X_MSGPACK:
-			return MsgPack(body);
-		case MIMEType::UNKNOW:
-			return MsgPack();
-	}
-}
-
-
-void
-Database::index_required_data(Xapian::Document& doc, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
+Database::index_required_data(Xapian::Document& doc, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const
 {
 	std::size_t found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
@@ -632,8 +320,329 @@ Database::index_required_data(Xapian::Document& doc, std::string& term_id, const
 }
 
 
+void
+Database::index_items(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value)
+{
+	specification_t spc_bef = schema.specification;
+	if (item_val.obj.type == msgpack::type::MAP) {
+		bool offsprings = false;
+		for (auto subitem_key : item_val) {
+			std::string str_subkey(subitem_key.obj.via.str.ptr, subitem_key.obj.via.str.size);
+			auto subitem_val = item_val.at(str_subkey);
+			if (!is_reserved(str_subkey)) {
+				if (str_key.empty()) {
+					index_items(doc, str_subkey, subitem_val, schema.get_subproperties(properties, str_subkey, subitem_val), is_value);
+				} else {
+					std::string str_subkey_f(str_key + DB_OFFSPRING_UNION + str_subkey);
+					index_items(doc, str_subkey_f, subitem_val, schema.get_subproperties(properties, str_subkey, subitem_val), is_value);
+				}
+				offsprings = true;
+			} else if (str_subkey.compare(RESERVED_VALUE) == 0) {
+				if (schema.specification.sep_types[2] == NO_TYPE) {
+					schema.set_type(properties, str_key, subitem_val);
+				}
+				if (is_value || schema.specification.index == Index::VALUE) {
+					index_values(doc, str_key, subitem_val, properties);
+				} else if (schema.specification.index == Index::TERM) {
+					index_terms(doc, str_key, subitem_val, properties);
+				} else {
+					index_values(doc, str_key, subitem_val, properties, true);
+				}
+			}
+			schema.specification = spc_bef;
+		}
+		if (offsprings) {
+			schema.set_type_to_object(properties);
+		}
+	} else {
+		if (schema.specification.sep_types[2] == NO_TYPE) {
+			schema.set_type(properties, str_key, item_val);
+		}
+		if (is_value || schema.specification.index == Index::VALUE) {
+			index_values(doc, str_key, item_val, properties);
+		} else if (schema.specification.index == Index::TERM) {
+			index_terms(doc, str_key, item_val, properties);
+		} else {
+			index_values(doc, str_key, item_val, properties, true);
+		}
+		schema.specification = spc_bef;
+	}
+}
+
+
+void
+Database::index_texts(Xapian::Document& doc, const std::string& name, const MsgPack& texts, MsgPack& properties)
+{
+	// L_DATABASE_WRAP(this, "Texts => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
+	if (!(schema.found_field || schema.specification.dynamic)) {
+		throw MSG_Error("%s is not dynamic", name.c_str());
+	}
+
+	if (schema.specification.store) {
+		if (schema.specification.bool_term) {
+			throw MSG_Error("A boolean term can not be indexed as text");
+		}
+
+		if (texts.obj.type == msgpack::type::ARRAY) {
+			schema.set_type_to_array(properties);
+			size_t pos = 0;
+			for (auto text : texts) {
+				if (text.obj.type == msgpack::type::STR) {
+					index_text(doc, std::string(text.obj.via.str.ptr, text.obj.via.str.size), pos++);
+				} else {
+					throw MSG_Error("Texts should be a string or array of strings");
+				}
+			}
+		} else if (texts.obj.type == msgpack::type::STR) {
+			index_text(doc, std::string(texts.obj.via.str.ptr, texts.obj.via.str.size), 0);
+		} else {
+			throw MSG_Error("Texts should be a string or array of strings");
+		}
+	}
+}
+
+
+void
+Database::index_text(Xapian::Document& doc, std::string&& serialise_val, int pos) const
+{
+	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+
+	Xapian::TermGenerator term_generator;
+	term_generator.set_document(doc);
+	term_generator.set_stemmer(Xapian::Stem(schema.specification.language[getPos(pos, schema.specification.language.size())]));
+	if (schema.specification.spelling[getPos(pos, schema.specification.spelling.size())]) {
+		term_generator.set_database(*wdb);
+		term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
+		term_generator.set_stemming_strategy((Xapian::TermGenerator::stem_strategy)schema.specification.analyzer[getPos(pos, schema.specification.analyzer.size())]);
+	}
+
+	if (schema.specification.positions[getPos(pos, schema.specification.positions.size())]) {
+		if (schema.specification.prefix.empty()) {
+			term_generator.index_text_without_positions(serialise_val, schema.specification.weight[getPos(pos, schema.specification.weight.size())]);
+		} else {
+			term_generator.index_text_without_positions(serialise_val, schema.specification.weight[getPos(pos, schema.specification.weight.size())], schema.specification.prefix);
+		}
+		L_DATABASE_WRAP(this, "Text index with positions => %s: %s", schema.specification.prefix.c_str(), serialise_val.c_str());
+	} else {
+		if (schema.specification.prefix.empty()) {
+			term_generator.index_text(serialise_val, schema.specification.weight[getPos(pos, schema.specification.weight.size())]);
+		} else {
+			term_generator.index_text(serialise_val, schema.specification.weight[getPos(pos, schema.specification.weight.size())], schema.specification.prefix);
+		}
+		L_DATABASE_WRAP(this, "Text to Index = %s: %s", schema.specification.prefix.c_str(), serialise_val.c_str());
+	}
+}
+
+
+void
+Database::index_terms(Xapian::Document& doc, const std::string& name, const MsgPack& terms, MsgPack& properties)
+{
+	// L_DATABASE_WRAP(this, "Terms => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
+	if (!(schema.found_field || schema.specification.dynamic)) {
+		throw MSG_Error("%s is not dynamic", name.c_str());
+	}
+
+	if (schema.specification.store) {
+		if (terms.obj.type == msgpack::type::ARRAY) {
+			schema.set_type_to_array(properties);
+			size_t pos = 0;
+			for (auto term : terms) {
+				index_term(doc, Serialise::serialise(schema.specification.sep_types[2], term), pos);
+				++pos;
+			}
+		} else {
+			index_term(doc, Serialise::serialise(schema.specification.sep_types[2], terms), 0);
+		}
+	}
+}
+
+
+void
+Database::index_term(Xapian::Document& doc, std::string&& serialise_val, int pos) const
+{
+	if (schema.specification.sep_types[2] == STRING_TYPE && !schema.specification.bool_term) {
+		if (serialise_val.find(' ') != std::string::npos) {
+			return index_text(doc, std::move(serialise_val), pos);
+		}
+		to_lower(serialise_val);
+	}
+
+	L_DATABASE_WRAP(this, "Term[%d] -> %s: %s", pos, schema.specification.prefix.c_str(), serialise_val.c_str());
+	std::string nameterm(prefixed(serialise_val, schema.specification.prefix));
+	size_t position = schema.specification.position[getPos(pos, schema.specification.position.size())];
+	if (position) {
+		if (schema.specification.bool_term) {
+			doc.add_posting(nameterm, position, 0);
+		} else {
+			doc.add_posting(nameterm, position, schema.specification.weight[getPos(pos, schema.specification.weight.size())]);
+		}
+		L_DATABASE_WRAP(this, "Bool: %s  Posting: %s", schema.specification.bool_term ? "true" : "false", repr(nameterm).c_str());
+	} else {
+		if (schema.specification.bool_term) {
+			doc.add_boolean_term(nameterm);
+		} else {
+			doc.add_term(nameterm, schema.specification.weight[getPos(pos, schema.specification.weight.size())]);
+		}
+		L_DATABASE_WRAP(this, "Bool: %s  Term: %s", schema.specification.bool_term ? "true" : "false", repr(nameterm).c_str());
+	}
+}
+
+
+void
+Database::index_values(Xapian::Document& doc, const std::string& name, const MsgPack& values, MsgPack& properties, bool is_term)
+{
+	// L_DATABASE_WRAP(this, "Values => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
+	if (!(schema.found_field || schema.specification.dynamic)) {
+		throw MSG_Error("%s is not dynamic", name.c_str());
+	}
+
+	if (schema.specification.store) {
+		StringList s;
+		size_t pos = 0;
+		if (values.obj.type == msgpack::type::ARRAY) {
+			schema.set_type_to_array(properties);
+			s.reserve(values.obj.via.array.size);
+			for (auto value : values) {
+				index_value(doc, value, s, pos, is_term);
+			}
+		} else {
+			index_value(doc, values, s, pos, is_term);
+		}
+		doc.add_value(schema.specification.slot, s.serialise());
+		L_DATABASE_WRAP(this, "Slot: %u serialized: %s", schema.specification.slot, repr(s.serialise()).c_str());
+	}
+}
+
+
+void
+Database::index_value(Xapian::Document& doc, const MsgPack& value, StringList& s, size_t& pos, bool is_term) const
+{
+	std::string value_v = Serialise::serialise(schema.specification.sep_types[2], value);
+	// Index terms generated by accuracy.
+	switch (schema.specification.sep_types[2]) {
+		case NUMERIC_TYPE: {
+			auto it = schema.specification.acc_prefix.begin();
+			for (const auto& acc : schema.specification.accuracy) {
+				std::string term_v = Serialise::numeric(NUMERIC_TYPE, value.obj.via.i64 - value.obj.via.i64 % (uint64_t)acc);
+				doc.add_term(prefixed(term_v, *(it++)));
+			}
+			s.push_back(value_v);
+			break;
+		}
+		case DATE_TYPE: {
+			const auto date = Unserialise::date(value_v);
+			auto it = schema.specification.acc_prefix.begin();
+			for (const auto& acc : schema.specification.accuracy) {
+				auto term_acc = date;
+				switch ((unitTime)acc) {
+					case unitTime::YEAR:
+						term_acc.append("||//y");
+						break;
+					case unitTime::MONTH:
+						term_acc.append("||//M");
+						break;
+					case unitTime::DAY:
+						term_acc.append("||//d");
+						break;
+					case unitTime::HOUR:
+						term_acc.append("||//h");
+						break;
+					case unitTime::MINUTE:
+						term_acc.append("||//m");
+						break;
+					case unitTime::SECOND:
+						term_acc.append("||//s");
+						break;
+				}
+				doc.add_term(prefixed(Serialise::date(term_acc), *(it++)));
+			}
+			s.push_back(value_v);
+			break;
+		}
+		case GEO_TYPE: {
+			std::vector<range_t> ranges;
+			CartesianList centroids;
+			uInt64List start_end;
+			EWKT_Parser::getRanges(value_v, schema.specification.accuracy[0], schema.specification.accuracy[1], ranges, centroids);
+			// Index Values and looking for terms generated by accuracy.
+			std::set<std::string> set_terms;
+			for (const auto& range : ranges) {
+				start_end.push_back(range.start);
+				start_end.push_back(range.end);
+				int idx = -1;
+				uint64_t val;
+				if (range.start != range.end) {
+					std::bitset<SIZE_BITS_ID> b1(range.start), b2(range.end), res;
+					for (idx = SIZE_BITS_ID - 1; b1.test(idx) == b2.test(idx); --idx) {
+						res.set(idx, b1.test(idx));
+					}
+					val = res.to_ullong();
+				} else {
+					val = range.start;
+				}
+				for (size_t i = 2; i < schema.specification.accuracy.size(); ++i) {
+					int pos = START_POS - schema.specification.accuracy[i] * 2;
+					if (idx < pos) {
+						uint64_t vterm = val >> pos;
+						set_terms.insert(prefixed(Serialise::trixel_id(vterm), schema.specification.acc_prefix[i - 2]));
+					} else {
+						break;
+					}
+				}
+			}
+			// Insert terms generated by accuracy.
+			for (const auto& term : set_terms) {
+				doc.add_term(term);
+			}
+			s.push_back(start_end.serialise());
+			s.push_back(centroids.serialise());
+			break;
+		}
+		default:
+			s.push_back(value_v);
+			break;
+	}
+
+	// Index like a term.
+	if (is_term) {
+		index_term(doc, std::move(value_v), pos++);
+	}
+}
+
+
+MsgPack
+Database::getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob) const
+{
+	rapidjson::Document rdoc;
+
+	MIMEType t = get_mimetype(ct_type);
+
+	switch (t) {
+		case MIMEType::APPLICATION_JSON:
+			json_load(rdoc, body);
+			blob = false;
+			return MsgPack(rdoc);
+		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
+			try {
+				json_load(rdoc, body);
+				doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
+				blob = false;
+				return MsgPack(rdoc);
+			} catch (const std::exception&) {
+				return MsgPack();
+			}
+		case MIMEType::APPLICATION_X_MSGPACK:
+			doc.add_value(DB_SLOT_TYPE, MSGPACK_TYPE);
+			blob = false;
+			return MsgPack(body);
+		case MIMEType::UNKNOW:
+			return MsgPack();
+	}
+}
+
+
 Xapian::docid
-Database::index(const std::string &body, const std::string &_document_id, bool _commit, const std::string &ct_type, const std::string &ct_length)
+Database::index(const std::string& body, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
 		L_ERR(this, "ERROR: database is read-only");
@@ -651,93 +660,111 @@ Database::index(const std::string &body, const std::string &_document_id, bool _
 	index_required_data(doc, term_id, _document_id, ct_type, ct_length);
 
 	// Create MsgPack object
-	bool blob = true;
-	MsgPack obj = getMsgPack(doc, body, ct_type, blob);
-	std::string obj_str = obj.to_string();
-
-	L_DATABASE_WRAP(this, "Document to index: %s", buffer.data());
-	doc.set_data(encode_length(obj_str.size()) + obj_str + (blob ? body : ""));
-
-	cJSON *json;
-	unique_cJSON document(json);
-
-	// Save a copy of schema for undo changes.
-	auto _schema = schema.getSchema();
-	auto _to_store = schema.getStore();
-
 	try {
-		cJSON *properties = schema.get_properties_schema();
-		cJSON *subproperties = nullptr;
+		bool blob = true;
+		MsgPack obj = getMsgPack(doc, body, ct_type, blob);
 
-		schema.update_root(properties, document.get());
+		L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
+		std::string obj_str = obj.to_string();
+		doc.set_data(encode_length(obj_str.size()) + obj_str + (blob ? body : ""));
 
-		specification_t spc_bef = schema.specification;
+		if (obj.obj.type == msgpack::type::MAP) {
+			// Save a copy of schema for undo changes if there is a exception.
+			auto str_schema = schema.to_string();
+			auto _to_store = schema.getStore();
+			try {
+				auto properties = schema.getProperties();
+				schema.update_root(properties, obj);
 
-		int elements = cJSON_GetArraySize(document.get());
-		for (int i = 0; i < elements; ++i) {
-			cJSON *item = cJSON_GetArrayItem(document.get(), i);
-			if (!is_reserved(item->string)) {
-				subproperties = schema.get_subproperties(properties, item->string, item);
-				index_fields(item, item->string, doc, subproperties, false);
-			} else if (strcmp(item->string, RESERVED_VALUES) == 0) {
-				if (item->type != cJSON_Object) {
-					throw MSG_Error("%s must be an object", RESERVED_VALUES);
-				}
-				index_fields(item, "", doc, properties);
-			} else if (strcmp(item->string, RESERVED_TEXTS) == 0) {
-				for (int _size = cJSON_GetArraySize(item), i = 0; i < _size; ++i) {
-					cJSON *subitem = cJSON_GetArrayItem(item, i);
-					cJSON *name = cJSON_GetObjectItem(subitem, RESERVED_NAME);
-					cJSON *value = cJSON_GetObjectItem(subitem, RESERVED_VALUE);
-					if (value) {
-						std::string name_s = name ? name->type == cJSON_String ? name->valuestring : throw MSG_Error("%s should be string", RESERVED_NAME) : std::string();
-						if (name_s.empty()) {
-							// Only need to update the specifications.
-							schema.update_specification(subitem);
-							subproperties = cJSON_CreateObject();
-						} else {
-							subproperties = schema.get_subproperties(properties, name_s.c_str(), subitem);
+				specification_t spc_bef = schema.specification;
+
+				for (const auto item_key : obj) {
+					std::string str_key(item_key.obj.via.str.ptr, item_key.obj.via.str.size);
+					auto item_val = obj.at(str_key);
+					if (!is_reserved(str_key)) {
+						index_items(doc, str_key, item_val, schema.get_subproperties(properties, str_key, item_val), false);
+					} else if (str_key == RESERVED_VALUES) {
+						if (item_val.obj.type != msgpack::type::MAP) {
+							throw MSG_Error("%s must be an object", RESERVED_VALUES);
 						}
-						if (schema.specification.sep_types[2] == NO_TYPE) {
-							schema.set_type(value, name_s, subproperties);
+						index_items(doc, "", item_val, schema.getProperties());
+					} else if (str_key == RESERVED_TEXTS) {
+						if (item_val.obj.type != msgpack::type::ARRAY) {
+							throw MSG_Error("%s must be an array of objects", RESERVED_TEXTS);
 						}
-						index_texts(doc, value, name_s, subproperties);
-						schema.specification = spc_bef;
-					} else {
-						throw MSG_Error("Value must be defined");
+						for (auto subitem_val : item_val) {
+							try {
+								auto _value = subitem_val.at(RESERVED_VALUE);
+								try {
+									auto _name = subitem_val.at(RESERVED_NAME);
+									if (_name.obj.type == msgpack::type::STR) {
+										std::string name(_name.obj.via.str.ptr, _name.obj.via.str.size);
+										auto subproperties = schema.get_subproperties(properties, name, subitem_val);
+										if (schema.specification.sep_types[2] == NO_TYPE) {
+											schema.set_type(subproperties, name, _value);
+										}
+										index_terms(doc, name, _value, subproperties);
+									} else {
+										throw MSG_Error("%s must be string", RESERVED_NAME);
+									}
+								} catch (const msgpack::type_error&) {
+									schema.update_specification(subitem_val);
+									MsgPack subproperties;
+									if (schema.specification.sep_types[2] == NO_TYPE) {
+										schema.set_type(subproperties, std::string(), _value);
+									}
+									index_terms(doc, std::string(), _value, subproperties);
+								}
+								schema.specification = spc_bef;
+							} catch (const msgpack::type_error&) {
+								throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_TEXTS);
+							}
+						}
+					} else if (str_key == RESERVED_TERMS) {
+						if (item_val.obj.type != msgpack::type::ARRAY) {
+							throw MSG_Error("%s must be an array of objects", RESERVED_VALUES);
+						}
+						for (auto subitem_val : item_val) {
+							try {
+								auto _value = subitem_val.at(RESERVED_VALUE);
+								try {
+									auto _name = subitem_val.at(RESERVED_NAME);
+									if (_name.obj.type == msgpack::type::STR) {
+										std::string name(_name.obj.via.str.ptr, _name.obj.via.str.size);
+										auto subproperties = schema.get_subproperties(properties, name, subitem_val);
+										if (schema.specification.sep_types[2] == NO_TYPE) {
+											schema.set_type(subproperties, name, _value);
+										}
+										index_terms(doc, name, _value, subproperties);
+									} else {
+										throw MSG_Error("%s must be string", RESERVED_NAME);
+									}
+								} catch (const msgpack::type_error&) {
+									schema.update_specification(subitem_val);
+									MsgPack subproperties;
+									if (schema.specification.sep_types[2] == NO_TYPE) {
+										schema.set_type(subproperties, std::string(), _value);
+									}
+									index_terms(doc, std::string(), _value, subproperties);
+								}
+								schema.specification = spc_bef;
+							} catch (const msgpack::type_error&) {
+								throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_VALUES);
+							}
+						}
 					}
 				}
-			} else if (strcmp(item->string, RESERVED_TERMS) == 0) {
-				for (int _size = cJSON_GetArraySize(item), i = 0; i < _size; ++i) {
-					cJSON *subitem = cJSON_GetArrayItem(item, i);
-					cJSON *name = cJSON_GetObjectItem(subitem, RESERVED_NAME);
-					cJSON *value = cJSON_GetObjectItem(subitem, RESERVED_VALUE);
-					if (value) {
-						std::string name_s = name ? name->type == cJSON_String ? name->valuestring : throw MSG_Error("%s should be string", RESERVED_NAME) : std::string();
-						if (name_s.empty()) {
-							// Only need to update the specifications.
-							schema.update_specification(subitem);
-							subproperties = cJSON_CreateObject();
-						} else {
-							subproperties = schema.get_subproperties(properties, name_s.c_str(), subitem);
-						}
-						if (schema.specification.sep_types[2] == NO_TYPE) {
-							schema.set_type(value, name_s, subproperties);
-						}
-						index_terms(doc, value, name_s, subproperties);
-						schema.specification = spc_bef;
-					} else {
-						throw MSG_Error("Value must be defined");
-					}
+			} catch (const std::exception& err) {
+				// Back to the initial schema if there are changes.
+				if (schema.getStore()) {
+					schema.setSchema(str_schema);
+					schema.setStore(_to_store);
 				}
+				L_ERR(this, "ERROR: %s", err.what());
+				return 0;
 			}
 		}
-	} catch (const std::exception &err) {
-		// Back to the initial schema if there are changes.
-		if (schema.getStore()) {
-			schema.setSchema(std::move(_schema));
-			schema.setStore(_to_store);
-		}
+	} catch (const std::exception& err) {
 		L_ERR(this, "ERROR: %s", err.what());
 		return 0;
 	}
@@ -798,7 +825,7 @@ Database::replace(const Xapian::docid &did, const Xapian::Document &doc, bool _c
 
 
 data_field_t
-Database::get_data_field(const std::string &field_name)
+Database::get_data_field(const std::string& field_name)
 {
 	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
 
@@ -806,54 +833,42 @@ Database::get_data_field(const std::string &field_name)
 		return res;
 	}
 
-	cJSON *properties = schema.get_properties_schema();
+	std::vector<std::string> fields;
+	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
+	try {
+		// FIXME: auto properties = schema.getProperties().path(fields, null
+		auto properties = MsgPack();
 
-	auto fields = split_fields(field_name);
-	for (auto it = fields.begin(); it != fields.end(); ++it) {
-		properties = cJSON_GetObjectItem(properties, (*it).c_str());
-		if (!properties) break;
-	}
+		res.type = properties.at(RESERVED_TYPE).at(2).obj.via.u64;
+		if (res.type == NO_TYPE) {
+			return res;
+		}
 
-	// If properties exits then the specifications too.
-	if (properties) {
-		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
-		res.type = cJSON_GetArrayItem(_aux, 2)->valueint;
-		if (res.type == NO_TYPE) return res;
+		res.slot = properties.at(RESERVED_SLOT).obj.via.u64;
 
-		_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
-		unique_char_ptr _cprint(cJSON_Print(_aux));
-		res.slot = static_cast<unsigned int>(std::stoul(_cprint.get()));
+		auto prefix = properties.at(RESERVED_PREFIX);
+		res.prefix = std::string(prefix.obj.via.str.ptr, prefix.obj.via.str.size);
 
-		_aux = cJSON_GetObjectItem(properties, RESERVED_PREFIX);
-		res.prefix = _aux->valuestring;
-
-		_aux = cJSON_GetObjectItem(properties, RESERVED_BOOL_TERM);
-		res.bool_term = _aux->type == cJSON_False ? false : true;
+		res.bool_term = properties.at(RESERVED_BOOL_TERM).obj.via.boolean;
 
 		// Strings and booleans do not have accuracy.
 		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
-			_aux = cJSON_GetObjectItem(properties, RESERVED_ACCURACY);
-			int elements = cJSON_GetArraySize(_aux);
-			for (int i = 0; i < elements; ++i) {
-				cJSON *acc = cJSON_GetArrayItem(_aux, i);
-				res.accuracy.push_back(acc->valuedouble);
+			for (const auto acc : properties.at(RESERVED_ACCURACY)) {
+				res.accuracy.push_back(acc.obj.via.f64);
 			}
 
-			_aux = cJSON_GetObjectItem(properties, RESERVED_ACC_PREFIX);
-			elements = cJSON_GetArraySize(_aux);
-			for (int i = 0; i < elements; ++i) {
-				cJSON *acc = cJSON_GetArrayItem(_aux, i);
-				res.acc_prefix.push_back(acc->valuestring);
+			for (const auto acc_p : properties.at(RESERVED_ACC_PREFIX)) {
+				res.acc_prefix.emplace_back(acc_p.obj.via.str.ptr, acc_p.obj.via.str.size);
 			}
 		}
-	}
+	} catch (const msgpack::type_error&) { }
 
 	return res;
 }
 
 
 data_field_t
-Database::get_slot_field(const std::string &field_name)
+Database::get_slot_field(const std::string& field_name)
 {
 	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
 
@@ -861,22 +876,14 @@ Database::get_slot_field(const std::string &field_name)
 		return res;
 	}
 
-	cJSON *properties = schema.get_properties_schema();
-
-	auto fields = split_fields(field_name);
-	for (auto it = fields.begin(); it != fields.end(); ++it) {
-		properties = cJSON_GetObjectItem(properties, (*it).c_str());
-		if (!properties) break;
-	}
-
-	if (properties) {
-		cJSON *_aux = cJSON_GetObjectItem(properties, RESERVED_SLOT);
-		unique_char_ptr _cprint(cJSON_Print(_aux));
-		res.slot = static_cast<unsigned int>(std::stoul(_cprint.get()));
-
-		_aux = cJSON_GetObjectItem(properties, RESERVED_TYPE);
-		res.type = cJSON_GetArrayItem(_aux, 2)->valueint;
-	}
+	std::vector<std::string> fields;
+	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
+	try {
+		// FIXME: auto properties = schema.getProperties().path(fields, nullptr);
+		auto properties = MsgPack();
+		res.slot = properties.at(RESERVED_SLOT).obj.via.u64;
+		res.type = properties.at(RESERVED_TYPE).at(2).obj.via.u64;
+	} catch (const msgpack::type_error&) { }
 
 	return res;
 }

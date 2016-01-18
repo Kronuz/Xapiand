@@ -77,8 +77,19 @@ class DatabaseQueue;
 
 
 class Database {
-	MsgPack getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob);
-	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
+	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const;
+	void index_items(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value=true);
+
+	void index_texts(Xapian::Document& doc, const std::string& name, const MsgPack& texts, MsgPack& properties);
+	void index_text(Xapian::Document& doc, std::string&& serialise_val, int pos) const;
+
+	void index_terms(Xapian::Document& doc, const std::string& name, const MsgPack& terms, MsgPack& properties);
+	void index_term(Xapian::Document& doc, std::string&& serialise_val, int pos) const;
+
+	void index_values(Xapian::Document& doc, const std::string& name, const MsgPack& values, MsgPack& properties, bool is_term=false);
+	void index_value(Xapian::Document& doc, const MsgPack& value, StringList& s, size_t& pos, bool is_term) const;
+
+	MsgPack getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob) const;
 
 public:
 	Schema schema;
@@ -129,10 +140,6 @@ public:
 	void get_stats_docs(MsgPack& stats, const std::string &document_id);
 	data_field_t get_data_field(const std::string &field_name);
 	data_field_t get_slot_field(const std::string &field_name);
-	void index_fields(cJSON *item, const std::string &item_name, Xapian::Document &doc, cJSON *properties, bool is_value=true);
-	void index_texts(Xapian::Document &doc, cJSON *texts, const std::string &name, cJSON *properties);
-	void index_terms(Xapian::Document &doc, cJSON *terms, const std::string &name, cJSON *properties);
-	void index_values(Xapian::Document &doc, cJSON *values, const std::string &name, cJSON *properties);
 	bool commit();
 };
 
