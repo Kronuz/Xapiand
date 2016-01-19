@@ -132,9 +132,9 @@ Serialise::boolean(const std::string& field_value)
 {
 	if (field_value.empty()) {
 		return std::string("f");
-	} else if (strcasecmp(field_value.c_str(), "1") == 0) {
+	} else if (strcmp(field_value.c_str(), "1") == 0) {
 		return std::string("t");
-	} else if (strcasecmp(field_value.c_str(), "0") == 0) {
+	} else if (strcmp(field_value.c_str(), "0") == 0) {
 		return std::string("f");
 	} else if (strcasecmp(field_value.c_str(), "true") == 0) {
 		return std::string("t");
