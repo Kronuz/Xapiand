@@ -785,11 +785,11 @@ bool buid_path_index(const std::string& path) {
 }
 
 
-int strict_stoi(const std::string &s) {
-	if (s.find_first_not_of("0123456789") != std::string::npos) {
-		throw std::invalid_argument("Cannot convert value");
+int strict_stoi(const std::string& str) {
+	if (str.substr(str.at(0) == '-').find_first_not_of("0123456789") == std::string::npos) {
+		return std::stoi(str, nullptr, 10);
 	}
-	return std::stoi(s, nullptr, 10);
+	throw std::invalid_argument("Cannot convert value");
 }
 
 

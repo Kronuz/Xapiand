@@ -197,7 +197,7 @@ void delete_files(const std::string &path);
 void move_files(const std::string &src, const std::string &dst);
 inline bool exist(const std::string& name);
 bool buid_path_index(const std::string& path);
-int strict_stoi(std::string const &s);
+int strict_stoi(const std::string& str);
 
 void update_pos_time();
 void fill_zeros_stats_min(uint16_t start, uint16_t end);
