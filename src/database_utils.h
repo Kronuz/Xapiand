@@ -24,7 +24,6 @@
 
 #include "msgpack.h"
 #include "rapidjson/document.h"
-#include "msgpack.h"
 
 #include <regex>
 #include <vector>
@@ -149,3 +148,5 @@ std::string str_type(const std::vector<char>& sep_types);
 void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);
+MsgPack get_MsgPack(const Xapian::Document& doc);
+std::string get_blob(const Xapian::Document& doc);
