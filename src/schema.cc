@@ -180,7 +180,7 @@ Schema::update_root(MsgPack& properties, const MsgPack& item_doc)
 		properties_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 		properties_id[RESERVED_BOOL_TERM] = true;
 		to_store = true;
-		insert(properties, RESERVED_SCHEMA, item_doc, true);
+		insert(properties, item_doc, true);
 	}
 }
 
@@ -195,7 +195,7 @@ Schema::get_subproperties(MsgPack& properties, const std::string& item_key, cons
 	} else {
 		to_store = true;
 		found_field = false;
-		insert(subproperties, item_key, item_doc);
+		insert(subproperties, item_doc);
 	}
 
 	return subproperties;
@@ -451,7 +451,7 @@ Schema::to_string(bool prettify)
 
 
 void
-Schema::insert(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc, bool is_root)
+Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 {
 	try {
 		auto doc_d_detection = item_doc.at(RESERVED_D_DETECTION);
@@ -574,17 +574,7 @@ Schema::insert(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		} else {
 			throw MSG_Error("Data inconsistency, %s should be string or array of strings", RESERVED_LANGUAGE);
 		}
-	} catch (const msgpack::type_error&) {
-		size_t pfound = item_key.rfind(DB_OFFSPRING_UNION);
-		if (pfound != std::string::npos) {
-			std::string _str_language(item_key.substr(pfound + strlen(DB_OFFSPRING_UNION)));
-			if (is_language(_str_language)) {
-				specification.language.clear();
-				properties[RESERVED_LANGUAGE].add_item_to_array(_str_language);
-				specification.language.push_back(std::move(_str_language));
-			}
-		}
-	}
+	} catch (const msgpack::type_error&) { }
 
 	try {
 		auto doc_spelling = item_doc.at(RESERVED_SPELLING);

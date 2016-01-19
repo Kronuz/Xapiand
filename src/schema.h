@@ -186,7 +186,7 @@ private:
 	/*
 	 * All the reserved word found into item_doc are added in properties.
 	 */
-	void insert(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc, bool is_root=false);
+	void insert(MsgPack& properties, const MsgPack& item_doc, bool is_root=false);
 
 	/*
 	 * Updates properties, first we check whether the document contains reserved words that can be
