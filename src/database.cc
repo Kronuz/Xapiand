@@ -21,12 +21,12 @@
  */
 
 #include "database.h"
+
 #include "database_autocommit.h"
 #include "multivaluerange.h"
-#include "length.h"
-#include "cJSON_Utils.h"
 #include "log.h"
 #include "generate_terms.h"
+#include "msgpack_patcher.h"
 
 #include <assert.h>
 #include <bitset>
@@ -237,58 +237,6 @@ Database::commit()
 
 	L_ERR(this, "ERROR: Cannot do commit!");
 	return false;
-}
-
-
-Xapian::docid
-Database::patch(cJSON *patches, const std::string &_document_id, bool _commit, const std::string &ct_type, const std::string &ct_length)
-{
-	if (!(flags & DB_WRITABLE)) {
-		L_ERR(this, "ERROR: database is read-only");
-		return 0;
-	}
-
-	Xapian::Document document;
-	Xapian::QueryParser queryparser;
-
-	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
-	if (isupper(_document_id.at(0))) prefix += ":";
-	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-	auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
-
-	Xapian::Enquire enquire(*db);
-	enquire.set_query(query);
-	Xapian::MSet mset = enquire.get_mset(0, 1);
-	Xapian::MSetIterator m = mset.begin();
-
-	for (int t = 3; t >= 0; --t) {
-		try {
-			document = db->get_document(*m);
-			break;
-		} catch (const Xapian::InvalidArgumentError &err) {
-			return 0;
-		} catch (const Xapian::DocNotFoundError &err) {
-			return 0;
-		} catch (const Xapian::Error &err) {
-			reopen();
-			m = mset.begin();
-		}
-	}
-
-	unique_cJSON data_json(cJSON_Parse(document.get_data().c_str()));
-	if (!data_json) {
-		L_ERR(this, "ERROR: JSON Before: [%s]", cJSON_GetErrorPtr());
-		return 0;
-	}
-
-	if (cJSONUtils_ApplyPatches(data_json.get(), patches) == 0) {
-		// Object patched
-		unique_char_ptr _cprint(cJSON_PrintUnformatted(data_json.get()));
-		return index(_cprint.get(), _document_id, _commit, ct_type, ct_length);
-	}
-
-	// Object no patched
-	return 0;
 }
 
 
@@ -610,33 +558,103 @@ Database::index_value(Xapian::Document& doc, const MsgPack& value, StringList& s
 }
 
 
-MsgPack
-Database::getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob) const
+void
+Database::index(Xapian::Document& doc, const MsgPack& obj)
 {
-	rapidjson::Document rdoc;
+	if (obj.obj->type == msgpack::type::MAP) {
+		// Save a copy of schema for undo changes if there is a exception.
+		auto str_schema = schema.to_string();
+		auto _to_store = schema.getStore();
+		try {
+			auto properties = schema.getProperties();
+			schema.update_root(properties, obj);
 
-	MIMEType t = get_mimetype(ct_type);
+			specification_t spc_bef = schema.specification;
 
-	switch (t) {
-		case MIMEType::APPLICATION_JSON:
-			json_load(rdoc, body);
-			blob = false;
-			return MsgPack(rdoc);
-		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
-			try {
-				json_load(rdoc, body);
-				doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
-				blob = false;
-				return MsgPack(rdoc);
-			} catch (const std::exception&) {
-				return MsgPack();
+			for (const auto item_key : obj) {
+				std::string str_key(item_key.obj->via.str.ptr, item_key.obj->via.str.size);
+				auto item_val = obj.at(str_key);
+				if (!is_reserved(str_key)) {
+					index_items(doc, str_key, item_val, schema.get_subproperties(properties, str_key, item_val), false);
+				} else if (str_key == RESERVED_VALUES) {
+					if (item_val.obj->type != msgpack::type::MAP) {
+						throw MSG_Error("%s must be an object", RESERVED_VALUES);
+					}
+					index_items(doc, "", item_val, schema.getProperties());
+				} else if (str_key == RESERVED_TEXTS) {
+					if (item_val.obj->type != msgpack::type::ARRAY) {
+						throw MSG_Error("%s must be an array of objects", RESERVED_TEXTS);
+					}
+					for (auto subitem_val : item_val) {
+						try {
+							auto _value = subitem_val.at(RESERVED_VALUE);
+							try {
+								auto _name = subitem_val.at(RESERVED_NAME);
+								if (_name.obj->type == msgpack::type::STR) {
+									std::string name(_name.obj->via.str.ptr, _name.obj->via.str.size);
+									auto subproperties = schema.get_subproperties(properties, name, subitem_val);
+									if (schema.specification.sep_types[2] == NO_TYPE) {
+										schema.set_type(subproperties, name, _value);
+									}
+									index_terms(doc, name, _value, subproperties);
+								} else {
+									throw MSG_Error("%s must be string", RESERVED_NAME);
+								}
+							} catch (const msgpack::type_error&) {
+								schema.update_specification(subitem_val);
+								MsgPack subproperties;
+								if (schema.specification.sep_types[2] == NO_TYPE) {
+									schema.set_type(subproperties, std::string(), _value);
+								}
+								index_terms(doc, std::string(), _value, subproperties);
+							}
+							schema.specification = spc_bef;
+						} catch (const msgpack::type_error&) {
+							throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_TEXTS);
+						}
+					}
+				} else if (str_key == RESERVED_TERMS) {
+					if (item_val.obj->type != msgpack::type::ARRAY) {
+						throw MSG_Error("%s must be an array of objects", RESERVED_VALUES);
+					}
+					for (auto subitem_val : item_val) {
+						try {
+							auto _value = subitem_val.at(RESERVED_VALUE);
+							try {
+								auto _name = subitem_val.at(RESERVED_NAME);
+								if (_name.obj->type == msgpack::type::STR) {
+									std::string name(_name.obj->via.str.ptr, _name.obj->via.str.size);
+									auto subproperties = schema.get_subproperties(properties, name, subitem_val);
+									if (schema.specification.sep_types[2] == NO_TYPE) {
+										schema.set_type(subproperties, name, _value);
+									}
+									index_terms(doc, name, _value, subproperties);
+								} else {
+									throw MSG_Error("%s must be string", RESERVED_NAME);
+								}
+							} catch (const msgpack::type_error&) {
+								schema.update_specification(subitem_val);
+								MsgPack subproperties;
+								if (schema.specification.sep_types[2] == NO_TYPE) {
+									schema.set_type(subproperties, std::string(), _value);
+								}
+								index_terms(doc, std::string(), _value, subproperties);
+							}
+							schema.specification = spc_bef;
+						} catch (const msgpack::type_error&) {
+							throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_VALUES);
+						}
+					}
+				}
 			}
-		case MIMEType::APPLICATION_X_MSGPACK:
-			doc.add_value(DB_SLOT_TYPE, MSGPACK_TYPE);
-			blob = false;
-			return MsgPack(body);
-		case MIMEType::UNKNOW:
-			return MsgPack();
+		} catch (const std::exception& err) {
+			// Back to the initial schema if there are changes.
+			if (schema.getStore()) {
+				schema.setSchema(str_schema);
+				schema.setStore(_to_store);
+			}
+			throw err;
+		}
 	}
 }
 
@@ -660,116 +678,122 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 	index_required_data(doc, term_id, _document_id, ct_type, ct_length);
 
 	// Create MsgPack object
+	bool blob = true;
+	MsgPack obj;
+	rapidjson::Document rdoc;
 	try {
-		bool blob = true;
-		MsgPack obj = getMsgPack(doc, body, ct_type, blob);
+		switch (get_mimetype(ct_type)) {
+			case MIMEType::APPLICATION_JSON:
+				json_load(rdoc, body);
+				blob = false;
+				obj = MsgPack(rdoc);
+			case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
+				try {
+					json_load(rdoc, body);
+					blob = false;
+					obj = MsgPack(rdoc);
+					doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
+				} catch (const std::exception&) { }
+			case MIMEType::APPLICATION_X_MSGPACK:
+				blob = false;
+				obj = MsgPack(body);
+			case MIMEType::UNKNOW:
+				break;
+		}
 
 		L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
 		std::string obj_str = obj.to_string();
 		doc.set_data(encode_length(obj_str.size()) + obj_str + (blob ? body : ""));
+		index(doc, obj);
+		return replace(term_id, doc, _commit);
+	} catch (const std::exception& err) {
+		L_ERR(this, "ERROR: %s", err.what());
+		return 0;
+	}
+}
 
-		if (obj.obj->type == msgpack::type::MAP) {
-			// Save a copy of schema for undo changes if there is a exception.
-			auto str_schema = schema.to_string();
-			auto _to_store = schema.getStore();
-			try {
-				auto properties = schema.getProperties();
-				schema.update_root(properties, obj);
 
-				specification_t spc_bef = schema.specification;
+Xapian::docid
+Database::patch(const std::string& patches, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length)
+{
+	if (!(flags & DB_WRITABLE)) {
+		L_ERR(this, "ERROR: database is read-only");
+		return 0;
+	}
 
-				for (const auto item_key : obj) {
-					std::string str_key(item_key.obj->via.str.ptr, item_key.obj->via.str.size);
-					auto item_val = obj.at(str_key);
-					if (!is_reserved(str_key)) {
-						index_items(doc, str_key, item_val, schema.get_subproperties(properties, str_key, item_val), false);
-					} else if (str_key == RESERVED_VALUES) {
-						if (item_val.obj->type != msgpack::type::MAP) {
-							throw MSG_Error("%s must be an object", RESERVED_VALUES);
-						}
-						index_items(doc, "", item_val, schema.getProperties());
-					} else if (str_key == RESERVED_TEXTS) {
-						if (item_val.obj->type != msgpack::type::ARRAY) {
-							throw MSG_Error("%s must be an array of objects", RESERVED_TEXTS);
-						}
-						for (auto subitem_val : item_val) {
-							try {
-								auto _value = subitem_val.at(RESERVED_VALUE);
-								try {
-									auto _name = subitem_val.at(RESERVED_NAME);
-									if (_name.obj->type == msgpack::type::STR) {
-										std::string name(_name.obj->via.str.ptr, _name.obj->via.str.size);
-										auto subproperties = schema.get_subproperties(properties, name, subitem_val);
-										if (schema.specification.sep_types[2] == NO_TYPE) {
-											schema.set_type(subproperties, name, _value);
-										}
-										index_terms(doc, name, _value, subproperties);
-									} else {
-										throw MSG_Error("%s must be string", RESERVED_NAME);
-									}
-								} catch (const msgpack::type_error&) {
-									schema.update_specification(subitem_val);
-									MsgPack subproperties;
-									if (schema.specification.sep_types[2] == NO_TYPE) {
-										schema.set_type(subproperties, std::string(), _value);
-									}
-									index_terms(doc, std::string(), _value, subproperties);
-								}
-								schema.specification = spc_bef;
-							} catch (const msgpack::type_error&) {
-								throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_TEXTS);
-							}
-						}
-					} else if (str_key == RESERVED_TERMS) {
-						if (item_val.obj->type != msgpack::type::ARRAY) {
-							throw MSG_Error("%s must be an array of objects", RESERVED_VALUES);
-						}
-						for (auto subitem_val : item_val) {
-							try {
-								auto _value = subitem_val.at(RESERVED_VALUE);
-								try {
-									auto _name = subitem_val.at(RESERVED_NAME);
-									if (_name.obj->type == msgpack::type::STR) {
-										std::string name(_name.obj->via.str.ptr, _name.obj->via.str.size);
-										auto subproperties = schema.get_subproperties(properties, name, subitem_val);
-										if (schema.specification.sep_types[2] == NO_TYPE) {
-											schema.set_type(subproperties, name, _value);
-										}
-										index_terms(doc, name, _value, subproperties);
-									} else {
-										throw MSG_Error("%s must be string", RESERVED_NAME);
-									}
-								} catch (const msgpack::type_error&) {
-									schema.update_specification(subitem_val);
-									MsgPack subproperties;
-									if (schema.specification.sep_types[2] == NO_TYPE) {
-										schema.set_type(subproperties, std::string(), _value);
-									}
-									index_terms(doc, std::string(), _value, subproperties);
-								}
-								schema.specification = spc_bef;
-							} catch (const msgpack::type_error&) {
-								throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_VALUES);
-							}
-						}
-					}
-				}
-			} catch (const std::exception& err) {
-				// Back to the initial schema if there are changes.
-				if (schema.getStore()) {
-					schema.setSchema(str_schema);
-					schema.setStore(_to_store);
-				}
-				L_ERR(this, "ERROR: %s", err.what());
-				return 0;
-			}
+	if (_document_id.empty()) {
+		L_ERR(this, "ERROR: Document must have an 'id'");
+		return 0;
+	}
+
+	rapidjson::Document rdoc_patch;
+	MIMEType t = get_mimetype(ct_type);
+	MsgPack obj_patch;
+	std::string _ct_type(ct_type);
+	try {
+		switch (t) {
+			case MIMEType::APPLICATION_JSON:
+				json_load(rdoc_patch, patches);
+				obj_patch = MsgPack(rdoc_patch);
+			case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
+				json_load(rdoc_patch, patches);
+				obj_patch = MsgPack(rdoc_patch);
+				_ct_type = JSON_TYPE;
+			case MIMEType::APPLICATION_X_MSGPACK:
+				obj_patch = MsgPack(patches);
+			case MIMEType::UNKNOW:
+				throw MSG_Error("Patches must be a json");
 		}
 	} catch (const std::exception& err) {
 		L_ERR(this, "ERROR: %s", err.what());
 		return 0;
 	}
 
-	return replace(term_id, doc, _commit);
+	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
+	if (isupper(_document_id[0])) {
+		prefix.append(":");
+	}
+
+	Xapian::QueryParser queryparser;
+	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
+	auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
+
+	Xapian::Enquire enquire(*db);
+	enquire.set_query(query);
+	Xapian::MSet mset = enquire.get_mset(0, 1);
+	Xapian::MSetIterator m = mset.begin();
+
+	Xapian::Document document;
+	for (int t = 3; t >= 0; --t) {
+		try {
+			document = db->get_document(*m);
+			break;
+		} catch (const Xapian::InvalidArgumentError&) {
+			return 0;
+		} catch (const Xapian::DocNotFoundError&) {
+			return 0;
+		} catch (const Xapian::Error&) {
+			reopen();
+			m = mset.begin();
+		}
+	}
+
+	MsgPack obj_data = get_MsgPack(document);
+	if (apply_patch(obj_patch, obj_data)) {
+		// Index required data for the document
+		Xapian::Document doc;
+		std::string term_id;
+		index_required_data(doc, term_id, _document_id, _ct_type, ct_length);
+
+		L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
+		std::string obj_data_str = obj_data.to_string();
+		doc.set_data(encode_length(obj_data_str.size()) + obj_data_str);
+		index(doc, obj_data);
+		return replace(term_id, doc, _commit);
+	}
+
+	// Object no patched
+	return 0;
 }
 
 

@@ -29,7 +29,6 @@
 
 #include "database_utils.h"
 #include "fields.h"
-#include "msgpack.h"
 #include "multivaluekeymaker.h"
 #include "multivalue.h"
 #include "schema.h"
@@ -89,7 +88,7 @@ class Database {
 	void index_values(Xapian::Document& doc, const std::string& name, const MsgPack& values, MsgPack& properties, bool is_term=false);
 	void index_value(Xapian::Document& doc, const MsgPack& value, StringList& s, size_t& pos, bool is_term) const;
 
-	MsgPack getMsgPack(Xapian::Document& doc, const std::string &body, const std::string& ct_type, bool& blob) const;
+	void index(Xapian::Document& doc, const MsgPack& obj);
 
 public:
 	Schema schema;
@@ -121,8 +120,8 @@ public:
 	long long read_mastery(const std::string &dir);
 	void reopen();
 	bool drop(const std::string &document_id, bool commit_=false);
-	Xapian::docid index(const std::string &body, const std::string &document_id, bool commit_, const std::string &ct_type, const std::string &ct_length);
-	Xapian::docid patch(cJSON *patches, const std::string &_document_id, bool commit_, const std::string &ct_type, const std::string &ct_length);
+	Xapian::docid index(const std::string& body, const std::string& document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
+	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid replace(const std::string &document_id, const Xapian::Document &doc, bool commit_=false);
 	Xapian::docid replace(const Xapian::docid &did, const Xapian::Document &doc, bool commit_=false);
 	bool get_metadata(const std::string &key, std::string &value);
