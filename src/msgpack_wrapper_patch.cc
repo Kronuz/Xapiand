@@ -42,7 +42,6 @@ bool apply_patch(MsgPack& patch, MsgPack& object) {
 		for (auto elem : patch) {
 			try {
 				MsgPack op = elem.at("op");
-				std::cout << op << std::endl;
 				std::string op_tmp = op.to_json_string();
 				std::string op_str = std::string(op_tmp, 1, op_tmp.size()-2);
 
@@ -99,7 +98,13 @@ bool patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 		std::vector<std::string> path_split;
 		stringTokenizer(path_str, "\\/", path_split);
 		MsgPack o = object.path(path_split);
-		o.parent().erase(path_split.back());	//TODO: remove for array
+		MsgPack parent = o.parent();
+
+		if (parent.obj->type == msgpack::type::MAP) {
+			parent.erase(path_split.back());
+		} else if (parent.obj->type == msgpack::type::ARRAY) {
+			parent.erase(strict_stoi(path_split.back()));
+		}
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch remove: %s", e.what());
 		return false;

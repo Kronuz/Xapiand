@@ -143,6 +143,7 @@ public:
 	void expand_array(size_t r_size);
 	size_t capacity() const noexcept;
 	bool erase(const std::string& key);
+	bool erase(uint32_t off);
 	MsgPack duplicate() const;
 	MsgPack path(const std::vector<std::string>& path) const;
 

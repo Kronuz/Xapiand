@@ -401,6 +401,26 @@ MsgPack::erase(const std::string& key)
 }
 
 
+bool
+MsgPack::erase(uint32_t off)
+{
+	if (obj->type == msgpack::type::ARRAY) {
+		auto r_size = off + 1;
+		if (obj->via.array.size >= r_size) {
+			size_t size = obj->via.array.size - off - 1;
+			auto p = obj->via.array.ptr + off;
+			memcpy(p, p + 1, size * sizeof(msgpack::object_kv));
+			--obj->via.array.size;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	throw msgpack::type_error();
+}
+
+
 MsgPack
 MsgPack::duplicate() const
 {
