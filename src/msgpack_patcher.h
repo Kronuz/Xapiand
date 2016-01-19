@@ -36,7 +36,7 @@ bool patch_test(const MsgPack& obj_patch, MsgPack& object);
 MsgPack get_patch_value(const MsgPack& obj_patch);
 
 
-inline void _add(MsgPack o, MsgPack val, std::string target) {
+inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
 	if (o.obj->type == msgpack::type::MAP) {
 		o[target] = val;
 	} else if (o.obj->type == msgpack::type::ARRAY) {
@@ -45,7 +45,8 @@ inline void _add(MsgPack o, MsgPack val, std::string target) {
 	}
 }
 
-inline void _erase(MsgPack o, std::string target) {
+
+inline void _erase(MsgPack&& o, const std::string& target) {
 	if (o.obj->type == msgpack::type::MAP) {
 		o.erase(target);
 	} else if (o.obj->type == msgpack::type::ARRAY) {
@@ -53,9 +54,13 @@ inline void _erase(MsgPack o, std::string target) {
 	}
 }
 
-inline void _path_tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c){
+
+inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c) {
 	MsgPack path = obj.at(path_c);
-	std::string path_str = path.to_json_string();
-	path_str = path_str.substr(1, path_str.size()-2);
-	stringTokenizer(path_str, "\\/", path_split);
+	if (path.obj->type == msgpack::type::STR) {
+		std::string path_str(path.obj->via.str.ptr, path.obj->via.str.size);
+		stringTokenizer(path_str, "\\/", path_split);
+	} else {
+		throw msgpack::type_error();
+	}
 }

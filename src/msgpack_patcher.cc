@@ -46,13 +46,13 @@ bool apply_patch(MsgPack& patch, MsgPack& object) {
 				std::string op_tmp = op.to_json_string();
 				std::string op_str = std::string(op_tmp, 1, op_tmp.size() - 2);
 
-				if      (op_str.compare(PATCH_ADD) == 0) { if (!patch_add(elem, object)) return false; }
-				else if (op_str.compare(PATCH_REM) == 0) { if (!patch_remove(elem, object)) return false; }
+				if      (op_str.compare(PATCH_ADD) == 0) { if (!patch_add(elem, object))     return false; }
+				else if (op_str.compare(PATCH_REM) == 0) { if (!patch_remove(elem, object))  return false; }
 				else if (op_str.compare(PATCH_REP) == 0) { if (!patch_replace(elem, object)) return false; }
-				else if (op_str.compare(PATCH_MOV) == 0) { if (!patch_move(elem, object)) return false; }
-				else if (op_str.compare(PATCH_COP) == 0) { if (!patch_copy(elem, object)) return false; }
-				else if (op_str.compare(PATCH_TES) == 0) { if (!patch_test(elem, object)) return false; }
-			} catch (const std::out_of_range& err) {
+				else if (op_str.compare(PATCH_MOV) == 0) { if (!patch_move(elem, object))    return false; }
+				else if (op_str.compare(PATCH_COP) == 0) { if (!patch_copy(elem, object))    return false; }
+				else if (op_str.compare(PATCH_TES) == 0) { if (!patch_test(elem, object))    return false; }
+			} catch (const std::out_of_range&) {
 				L_ERR(nullptr, "ERROR: Objects MUST have exactly one \"op\" member");
 				return false;
 			}
@@ -66,58 +66,57 @@ bool apply_patch(MsgPack& patch, MsgPack& object) {
 
 
 bool patch_add(const MsgPack& obj_patch, MsgPack& object) {
-	std::string target;
 	try {
 		std::vector<std::string> path_split;
-		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
+		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		std::string target = path_split.back();
 		path_split.pop_back();
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
 		_add(o, val, target);
+		return true;
 	} catch (const std::exception& e) {
-		L_ERR(nullptr, "Error in patch add: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch add: %s", e.what());
 		return false;
-	} catch (const msgpack::type_error e){
-		L_ERR(nullptr, "Error in patch add: %s", e.what());
+	} catch (const msgpack::type_error& e){
+		L_ERR(nullptr, "ERROR: In patch add: %s", e.what());
 		return false;
 	}
-	return true;
 }
 
 
 bool patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
-		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
+		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		MsgPack o = object.path(path_split);
 		_erase(o.parent(), path_split.back());
+		return true;
 	} catch (const std::exception& e) {
-		L_ERR(nullptr, "Error in patch remove: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch remove: %s", e.what());
 		return false;
 	} catch (const msgpack::type_error& e){
-		L_ERR(nullptr, "Error in patch remove: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch remove: %s", e.what());
 		return false;
 	}
-	return true;
 }
 
 
 bool patch_replace(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
-		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
+		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
 		o = val;
+		return true;
 	} catch (const std::exception& e) {
-		L_ERR(nullptr, "Error in patch replace: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch replace: %s", e.what());
 		return false;
 	} catch (const msgpack::type_error& e){
-		L_ERR(nullptr, "Error in patch replace: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch replace: %s", e.what());
 		return false;
 	}
-	return true;
 }
 
 
@@ -125,22 +124,22 @@ bool patch_move(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		std::vector<std::string> from_split;
-		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
-		_path_tokenizer(obj_patch, from_split, PATCH_FROM);
+		_tokenizer(obj_patch, path_split, PATCH_PATH);
+		_tokenizer(obj_patch, from_split, PATCH_FROM);
 		std::string target = path_split.back();
 		path_split.pop_back();
 		MsgPack to = object.path(path_split);
 		MsgPack from = object.path(from_split);
 		_add(to, from, target);
 		_erase(from.parent(), from_split.back());
+		return true;
 	} catch (const std::exception& e) {
-		L_ERR(nullptr, "Error in patch move: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch move: %s", e.what());
 		return false;
 	} catch (const msgpack::type_error& e){
-		L_ERR(nullptr, "Error in patch move: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch move: %s", e.what());
 		return false;
 	}
-	return true;
 }
 
 
@@ -148,41 +147,36 @@ bool patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		std::vector<std::string> from_split;
-		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
-		_path_tokenizer(obj_patch, from_split, PATCH_FROM);
+		_tokenizer(obj_patch, path_split, PATCH_PATH);
+		_tokenizer(obj_patch, from_split, PATCH_FROM);
 		std::string target = path_split.back();
 		path_split.pop_back();
 		MsgPack to = object.path(path_split);
 		MsgPack from = object.path(from_split);
 		_add(to, from, target);
+		return true;
 	} catch (const std::exception& e) {
-		L_ERR(nullptr, "Error in patch copy: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch copy: %s", e.what());
 		return false;
 	} catch (const msgpack::type_error& e){
-		L_ERR(nullptr, "Error in patch copy: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch copy: %s", e.what());
 		return false;
 	}
-	return true;
 }
 
 
 bool patch_test(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
-		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
+		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
-
-		if (val == o) {
-			return true;
-		} else {
-			return false;
-		}
+		return val == o;
 	} catch (const std::exception& e) {
-		L_ERR(nullptr, "Error in patch test: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch test: %s", e.what());
 		return false;
 	} catch (const msgpack::type_error& e){
-		L_ERR(nullptr, "Error in patch test: %s", e.what());
+		L_ERR(nullptr, "ERROR: In patch test: %s", e.what());
 		return false;
 	}
 }
@@ -190,8 +184,7 @@ bool patch_test(const MsgPack& obj_patch, MsgPack& object) {
 
 MsgPack get_patch_value(const MsgPack& obj_patch) {
 	try {
-		MsgPack value = obj_patch.at("value");
-		return value;
+		return obj_patch.at("value");
 	} catch (const std::out_of_range&) {
 		throw MSG_Error("Object MUST have exactly one \"value\" member in \"add\" operation");
 	}

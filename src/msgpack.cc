@@ -20,7 +20,6 @@
  * IN THE SOFTWARE.
  */
 
-#include <sstream>
 #include "msgpack.h"
 
 #include "rapidjson/stringbuffer.h"
