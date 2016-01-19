@@ -45,8 +45,6 @@
 		C365BE441C344D4800F6E3AE /* msgpack.h in Sources */ = {isa = PBXBuildFile; fileRef = C365BE431C344D4800F6E3AE /* msgpack.h */; };
 		C365BE461C3466B900F6E3AE /* msgpack.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE451C3466B900F6E3AE /* msgpack.cc */; };
 		C365BE4F1C4DABBB00F6E3AE /* msgpack_patcher.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */; };
-		C39AE0631B2F627E00203139 /* cJSON_Utils.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0351B2F627E00203139 /* cJSON_Utils.c */; };
-		C39AE0641B2F627E00203139 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0371B2F627E00203139 /* cJSON.c */; };
 		C39AE0651B2F627E00203139 /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0391B2F627E00203139 /* client_base.cc */; };
 		C39AE0661B2F627E00203139 /* client_binary.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE03B1B2F627E00203139 /* client_binary.cc */; };
 		C39AE0671B2F627E00203139 /* client_http.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE03D1B2F627E00203139 /* client_http.cc */; };
@@ -156,10 +154,6 @@
 		C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack_patcher.cc; path = src/msgpack_patcher.cc; sourceTree = "<group>"; };
 		C365BE4E1C4DABBB00F6E3AE /* msgpack_patcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = msgpack_patcher.h; path = src/msgpack_patcher.h; sourceTree = "<group>"; };
 		C37DFFC31C18B3AD0095ADB0 /* forward_list.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = forward_list.h; path = src/forward_list.h; sourceTree = "<group>"; };
-		C39AE0351B2F627E00203139 /* cJSON_Utils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cJSON_Utils.c; path = src/cJSON_Utils.c; sourceTree = "<group>"; };
-		C39AE0361B2F627E00203139 /* cJSON_Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cJSON_Utils.h; path = src/cJSON_Utils.h; sourceTree = "<group>"; };
-		C39AE0371B2F627E00203139 /* cJSON.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cJSON.c; path = src/cJSON.c; sourceTree = "<group>"; };
-		C39AE0381B2F627E00203139 /* cJSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cJSON.h; path = src/cJSON.h; sourceTree = "<group>"; };
 		C39AE0391B2F627E00203139 /* client_base.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = client_base.cc; path = src/client_base.cc; sourceTree = "<group>"; };
 		C39AE03A1B2F627E00203139 /* client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = client_base.h; path = src/client_base.h; sourceTree = "<group>"; };
 		C39AE03B1B2F627E00203139 /* client_binary.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = client_binary.cc; path = src/client_binary.cc; sourceTree = "<group>"; };
@@ -223,10 +217,6 @@
 				46DFA9AA1BC4800E008D8144 /* binary.h */,
 				C39AE0781B2F62D700203139 /* cartesian.cc */,
 				C39AE0791B2F62D700203139 /* cartesian.h */,
-				C39AE0351B2F627E00203139 /* cJSON_Utils.c */,
-				C39AE0361B2F627E00203139 /* cJSON_Utils.h */,
-				C39AE0371B2F627E00203139 /* cJSON.c */,
-				C39AE0381B2F627E00203139 /* cJSON.h */,
 				C39AE0391B2F627E00203139 /* client_base.cc */,
 				C39AE03A1B2F627E00203139 /* client_base.h */,
 				C39AE03B1B2F627E00203139 /* client_binary.cc */,
@@ -430,7 +420,6 @@
 				C39AE07C1B2F62D700203139 /* cartesian.cc in Sources */,
 				C39AE0761B2F627E00203139 /* utils.cc in Sources */,
 				C39AE06D1B2F627E00203139 /* length.cc in Sources */,
-				C39AE0631B2F627E00203139 /* cJSON_Utils.c in Sources */,
 				C39AE06B1B2F627E00203139 /* fields.cc in Sources */,
 				C365BE4F1C4DABBB00F6E3AE /* msgpack_patcher.cc in Sources */,
 				C39AE0681B2F627E00203139 /* database.cc in Sources */,
@@ -459,7 +448,6 @@
 				C365BE3D1C330F5D00F6E3AE /* xapiand.cc in Sources */,
 				C39AE0701B2F627E00203139 /* multivalue.cc in Sources */,
 				46DFA9B41BC4800E008D8144 /* tcp_base.cc in Sources */,
-				C39AE0641B2F627E00203139 /* cJSON.c in Sources */,
 				C35058AD1BA325CC00901B80 /* lz4hc.c in Sources */,
 				46740EEC1B5436120073C5E9 /* datetime.cc in Sources */,
 				C39AE0661B2F627E00203139 /* client_binary.cc in Sources */,
