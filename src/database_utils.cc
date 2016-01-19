@@ -24,6 +24,7 @@
 
 #include "utils.h"
 #include "log.h"
+#include "length.h"
 #include "datetime.h"
 #include "wkt_parser.h"
 #include "serialise.h"
@@ -90,15 +91,15 @@ long long read_mastery(const std::string& dir, bool force) {
 
 
 bool is_reserved(const std::string& word) {
-	return word.at(0) == '_' ? true : false;
+	return word.find('_') == std::string::npos ? false : true;
 }
 
 
 bool is_language(const std::string& language) {
-	if (language.find(" ") != std::string::npos) {
-		return false;
+	if (language.find(" ") == std::string::npos) {
+		return std::string(DB_LANGUAGES).find(language) == std::string::npos ? false : true;
 	}
-	return std::string(DB_LANGUAGES).find(language) != std::string::npos ? true : false;
+	return false;
 }
 
 
