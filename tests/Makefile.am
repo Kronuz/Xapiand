@@ -18,8 +18,6 @@ check_PROGRAMS = set_forward_list_test \
 TESTS = $(check_PROGRAMS)
 
 headers =   $(top_builddir)/src/cartesian.cc \
-			$(top_builddir)/src/cJSON.c \
-			$(top_builddir)/src/cJSON_Utils.c \
 			$(top_builddir)/src/database.cc \
 			$(top_builddir)/src/database_autocommit.cc \
 			$(top_builddir)/src/database_utils.cc \
@@ -38,7 +36,8 @@ headers =   $(top_builddir)/src/cartesian.cc \
 			$(top_builddir)/src/length.cc \
 			$(top_builddir)/src/log.cc \
 			$(top_builddir)/src/lru.h \
-			$(top_builddir)/src/msgpack_wrapper.cc \
+			$(top_builddir)/src/msgpack.cc \
+			$(top_builddir)/src/msgpack_patcher.cc \
 			$(top_builddir)/src/multivalue.cc \
 			$(top_builddir)/src/multivaluekeymaker.cc \
 			$(top_builddir)/src/multivaluerange.cc \
