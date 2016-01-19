@@ -342,7 +342,7 @@ void
 MsgPack::expand_array(size_t r_size)
 {
 	if (obj->via.array.m_alloc < r_size) {
-		size_t nsize = obj->via.array.m_alloc > 0 ? obj->via.array.m_alloc * 2 : MSGPACK_ARRAY_INIT_SIZE;
+		unsigned nsize = obj->via.array.m_alloc > 0 ? obj->via.array.m_alloc * 2 : MSGPACK_ARRAY_INIT_SIZE;
 		while (nsize < r_size) {
 			nsize *= 2;
 		}
@@ -409,7 +409,7 @@ MsgPack::duplicate() const
 
 
 MsgPack
-MsgPack::path(const std::vector<std::string> &path)
+MsgPack::path(const std::vector<std::string>& path) const
 {
 	MsgPack current(*this);
 	for (const auto& s : path) {

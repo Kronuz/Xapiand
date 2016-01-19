@@ -135,7 +135,6 @@ public:
 	bool find(const MsgPack& o) const;
 	bool find(const std::string& key) const;
 	bool find(uint32_t off) const;
-	MsgPack path(const std::vector<std::string> &path);
 
 	std::string to_json_string(bool prettify=false) const;
 	std::string to_string() const;
@@ -145,12 +144,13 @@ public:
 	size_t capacity() const noexcept;
 	bool erase(const std::string& key);
 	MsgPack duplicate() const;
+	MsgPack path(const std::vector<std::string>& path) const;
 
 
 	MsgPack& operator=(MsgPack&& v) {
 		handler = std::move(v.handler);
-	  	parent_obj = std::move(v.parent_obj);
-	  	obj = std::move(v.obj);
+		parent_obj = std::move(v.parent_obj);
+		obj = std::move(v.obj);
 		return *this;
 	}
 

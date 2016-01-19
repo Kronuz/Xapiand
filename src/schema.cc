@@ -748,7 +748,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			specification.position.clear();
 			for (const auto _position : properties.at(RESERVED_POSITION)) {
-				specification.position.push_back(_position.obj->via.u64);
+				specification.position.push_back(static_cast<unsigned>(_position.obj->via.u64));
 			}
 		} catch (const msgpack::type_error&) { }
 	}
@@ -758,7 +758,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		auto doc_weight = item_doc.at(RESERVED_WEIGHT);
 		specification.weight.clear();
 		if (doc_weight.obj->type == msgpack::type::POSITIVE_INTEGER) {
-			specification.weight.push_back(doc_weight.obj->via.u64);
+			specification.weight.push_back(static_cast<unsigned>(doc_weight.obj->via.u64));
 		} else if (doc_weight.obj->type == msgpack::type::ARRAY) {
 			for (const auto _weight : doc_weight) {
 				if (_weight.obj->type == msgpack::type::POSITIVE_INTEGER) {
@@ -774,7 +774,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			specification.weight.clear();
 			for (const auto _weight : properties.at(RESERVED_WEIGHT)) {
-				specification.weight.push_back(_weight.obj->via.u64);
+				specification.weight.push_back(static_cast<unsigned>(_weight.obj->via.u64));
 			}
 		} catch (const msgpack::type_error&) { }
 	}
