@@ -23,6 +23,7 @@
 #pragma once
 
 #include "msgpack_wrapper.h"
+#include "utils.h"
 
 
 bool apply_patch(MsgPack& patch, MsgPack& object);
@@ -33,3 +34,21 @@ bool patch_move(const MsgPack& obj_patch, MsgPack& object);
 bool patch_copy(const MsgPack& obj_patch, MsgPack& object);
 bool patch_test(const MsgPack& obj_patch, MsgPack& object);
 MsgPack get_patch_value(const MsgPack& obj_patch);
+
+
+inline void _add(MsgPack o, MsgPack val, std::string target) {
+	if (o.obj->type == msgpack::type::MAP) {
+		o[target] = val;
+	} else if (o.obj->type == msgpack::type::ARRAY) {
+		int offset = strict_stoi(target);
+		o.insert_item_to_array(offset, val);
+	}
+}
+
+inline void _erase(MsgPack o, std::string target) {
+	if (o.obj->type == msgpack::type::MAP) {
+		o.erase(target);
+	} else if (o.obj->type == msgpack::type::ARRAY) {
+		o.erase(strict_stoi(target));
+	}
+}

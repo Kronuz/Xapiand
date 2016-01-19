@@ -79,12 +79,7 @@ bool patch_add(const MsgPack& obj_patch, MsgPack& object) {
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
 
-		if (o.obj->type == msgpack::type::MAP) {
-			o[target] = val;
-		} else if (o.obj->type == msgpack::type::ARRAY) {
-			int offset = strict_stoi(target);
-			o.insert_item_to_array(offset, val);
-		}
+		_add(o, val, target);
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch add: %s", e.what());
 		return false;
@@ -104,13 +99,8 @@ bool patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 		std::vector<std::string> path_split;
 		stringTokenizer(path_str, "\\/", path_split);
 		MsgPack o = object.path(path_split);
-		MsgPack parent = o.parent();
 
-		if (parent.obj->type == msgpack::type::MAP) {
-			parent.erase(path_split.back());
-		} else if (parent.obj->type == msgpack::type::ARRAY) {
-			parent.erase(strict_stoi(path_split.back()));
-		}
+		_erase(o.parent(), path_split.back());
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch remove: %s", e.what());
 		return false;
@@ -123,8 +113,6 @@ bool patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 
 
 bool patch_replace(const MsgPack& obj_patch, MsgPack& object) {
-	std::string target;
-
 	try {
 		MsgPack path = obj_patch.at(PATCH_PATH);
 		std::string path_str = path.to_json_string();
@@ -158,11 +146,15 @@ bool patch_move(const MsgPack& obj_patch, MsgPack& object) {
 		std::vector<std::string> from_split;
 		stringTokenizer(path_str, "\\/", path_split);
 		stringTokenizer(from_str, "\\/", from_split);
-
+		std::string target = path_split.back();
+		path_split.pop_back();
+		
+		
 		MsgPack to = object.path(path_split);
 		MsgPack from = object.path(from_split);
-		to = from;
-		from.erase(from_split.back());
+		_add(to, from, target);
+		_erase(from.parent(), from_split.back());
+
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch move: %s", e.what());
 		return false;
