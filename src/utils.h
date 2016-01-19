@@ -104,11 +104,11 @@ inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
 double random_real(double initial, double last);
 uint64_t random_int(uint64_t initial, uint64_t last);
 
-void set_thread_name(const std::string &name);
+void set_thread_name(const std::string& name);
 std::string get_thread_name();
 
 std::string repr(const void *p, size_t size, bool friendly=true, size_t max_size=0);
-std::string repr(const std::string &string, bool friendly=true, size_t max_size=0);
+std::string repr(const std::string& string, bool friendly=true, size_t max_size=0);
 
 
 inline bool ignored_errorno(int e, bool udp) {
@@ -183,18 +183,18 @@ int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
 
 // String tokenizer with the delimiter.
-void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens);
+void stringTokenizer(const std::string& str, const std::string& delimiter, std::vector<std::string> &tokens);
 
-unsigned get_slot(const std::string &name);
-std::string prefixed(const std::string &term, const std::string &prefixO);
-std::string get_prefix(const std::string &name, const std::string &prefix, char type);
-std::string get_slot_hex(const std::string &name);
-bool strhasupper(const std::string &str);
-bool isRange(const std::string &str);
-bool isNumeric(const std::string &str);
-bool startswith(const std::string &text, const std::string &token);
-void delete_files(const std::string &path);
-void move_files(const std::string &src, const std::string &dst);
+unsigned get_slot(const std::string& name);
+std::string prefixed(const std::string& term, const std::string& prefixO);
+std::string get_prefix(const std::string& name, const std::string& prefix, char type);
+std::string get_slot_hex(const std::string& name);
+bool strhasupper(const std::string& str);
+bool isRange(const std::string& str);
+bool isNumeric(const std::string& str);
+bool startswith(const std::string& text, const std::string& token);
+void delete_files(const std::string& path);
+void move_files(const std::string& src, const std::string& dst);
 inline bool exist(const std::string& name);
 bool buid_path_index(const std::string& path);
 int strict_stoi(const std::string& str);
@@ -202,12 +202,12 @@ int strict_stoi(const std::string& str);
 void update_pos_time();
 void fill_zeros_stats_min(uint16_t start, uint16_t end);
 void fill_zeros_stats_sec(uint8_t start, uint8_t end);
-void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy);
-void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy);
+void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy);
+void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy);
 
 // Levenshtein distance is a string metric for measuring the difference between two
 // sequences (known as edit distance).
-unsigned int levenshtein_distance(const std::string &str1, const std::string &str2);
+unsigned int levenshtein_distance(const std::string& str1, const std::string& str2);
 
 std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end);
 
