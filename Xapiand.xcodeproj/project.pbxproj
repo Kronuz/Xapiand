@@ -42,9 +42,10 @@
 		C35058AE1BA325CC00901B80 /* xxhash.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A91BA325CC00901B80 /* xxhash.c */; };
 		C365BE3D1C330F5D00F6E3AE /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE3C1C330F5D00F6E3AE /* xapiand.cc */; };
 		C365BE3F1C33150800F6E3AE /* convert.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE3E1C33150800F6E3AE /* convert.cc */; };
-		C365BE441C344D4800F6E3AE /* msgpack_wrapper.h in Sources */ = {isa = PBXBuildFile; fileRef = C365BE431C344D4800F6E3AE /* msgpack_wrapper.h */; };
-		C365BE461C3466B900F6E3AE /* msgpack_wrapper.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE451C3466B900F6E3AE /* msgpack_wrapper.cc */; };
-		C365BE4F1C4DABBB00F6E3AE /* msgpack_wrapper_patch.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE4D1C4DABBB00F6E3AE /* msgpack_wrapper_patch.cc */; };
+		C365BE441C344D4800F6E3AE /* msgpack.h in Sources */ = {isa = PBXBuildFile; fileRef = C365BE431C344D4800F6E3AE /* msgpack.h */; };
+		C365BE461C3466B900F6E3AE /* msgpack.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE451C3466B900F6E3AE /* msgpack.cc */; };
+		C365BE4F1C4DABBB00F6E3AE /* msgpack_patcher.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */; };
+		C365BE511C4E8C8600F6E3AE /* test_converter.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE501C4E8C8600F6E3AE /* test_converter.cc */; };
 		C39AE0631B2F627E00203139 /* cJSON_Utils.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0351B2F627E00203139 /* cJSON_Utils.c */; };
 		C39AE0641B2F627E00203139 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0371B2F627E00203139 /* cJSON.c */; };
 		C39AE0651B2F627E00203139 /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0391B2F627E00203139 /* client_base.cc */; };
@@ -151,10 +152,11 @@
 		C365BE3C1C330F5D00F6E3AE /* xapiand.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = xapiand.cc; path = src/xapiand.cc; sourceTree = "<group>"; };
 		C365BE3E1C33150800F6E3AE /* convert.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = convert.cc; path = src/xchange/convert.cc; sourceTree = "<group>"; };
 		C365BE401C33151200F6E3AE /* convert.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = convert.h; path = src/xchange/convert.h; sourceTree = "<group>"; };
-		C365BE431C344D4800F6E3AE /* msgpack_wrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = msgpack_wrapper.h; path = src/msgpack_wrapper.h; sourceTree = "<group>"; };
-		C365BE451C3466B900F6E3AE /* msgpack_wrapper.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack_wrapper.cc; path = src/msgpack_wrapper.cc; sourceTree = "<group>"; };
-		C365BE4D1C4DABBB00F6E3AE /* msgpack_wrapper_patch.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack_wrapper_patch.cc; path = src/msgpack_wrapper_patch.cc; sourceTree = "<group>"; };
-		C365BE4E1C4DABBB00F6E3AE /* msgpack_wrapper_patch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = msgpack_wrapper_patch.h; path = src/msgpack_wrapper_patch.h; sourceTree = "<group>"; };
+		C365BE431C344D4800F6E3AE /* msgpack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = msgpack.h; path = src/msgpack.h; sourceTree = "<group>"; };
+		C365BE451C3466B900F6E3AE /* msgpack.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack.cc; path = src/msgpack.cc; sourceTree = "<group>"; };
+		C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack_patcher.cc; path = src/msgpack_patcher.cc; sourceTree = "<group>"; };
+		C365BE4E1C4DABBB00F6E3AE /* msgpack_patcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = msgpack_patcher.h; path = src/msgpack_patcher.h; sourceTree = "<group>"; };
+		C365BE501C4E8C8600F6E3AE /* test_converter.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = test_converter.cc; path = src/test_converter.cc; sourceTree = "<group>"; };
 		C37DFFC31C18B3AD0095ADB0 /* forward_list.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = forward_list.h; path = src/forward_list.h; sourceTree = "<group>"; };
 		C39AE0351B2F627E00203139 /* cJSON_Utils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cJSON_Utils.c; path = src/cJSON_Utils.c; sourceTree = "<group>"; };
 		C39AE0361B2F627E00203139 /* cJSON_Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cJSON_Utils.h; path = src/cJSON_Utils.h; sourceTree = "<group>"; };
@@ -218,6 +220,7 @@
 		E5CEBCBD1A99C89000CD151F = {
 			isa = PBXGroup;
 			children = (
+				C365BE501C4E8C8600F6E3AE /* test_converter.cc */,
 				E5CEBCC71A99C89000CD151F /* Products */,
 				46DFA9AD1BC4800E008D8144 /* binary.cc */,
 				46DFA9AA1BC4800E008D8144 /* binary.h */,
@@ -290,10 +293,10 @@
 				462C9EB11C18FC2200BB960E /* md5.cc */,
 				462C9EB31C18FC2200BB960E /* md5.h */,
 				462C9EBD1C3DAD3300BB960E /* msgpack.hpp */,
-				C365BE451C3466B900F6E3AE /* msgpack_wrapper.cc */,
-				C365BE431C344D4800F6E3AE /* msgpack_wrapper.h */,
-				C365BE4D1C4DABBB00F6E3AE /* msgpack_wrapper_patch.cc */,
-				C365BE4E1C4DABBB00F6E3AE /* msgpack_wrapper_patch.h */,
+				C365BE451C3466B900F6E3AE /* msgpack.cc */,
+				C365BE431C344D4800F6E3AE /* msgpack.h */,
+				C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */,
+				C365BE4E1C4DABBB00F6E3AE /* msgpack_patcher.h */,
 				C39AE0511B2F627E00203139 /* multivalue.cc */,
 				C39AE0521B2F627E00203139 /* multivalue.h */,
 				C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */,
@@ -409,7 +412,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				462C9EB61C18FC2200BB960E /* md5.cc in Sources */,
-				C365BE441C344D4800F6E3AE /* msgpack_wrapper.h in Sources */,
+				C365BE441C344D4800F6E3AE /* msgpack.h in Sources */,
 				C350589B1B7BAEE300901B80 /* multivaluekeymaker.cc in Sources */,
 				C39AE07D1B2F62D700203139 /* exception.cc in Sources */,
 				4630BEE51B42E88D00351058 /* htm.cc in Sources */,
@@ -432,8 +435,9 @@
 				C39AE06D1B2F627E00203139 /* length.cc in Sources */,
 				C39AE0631B2F627E00203139 /* cJSON_Utils.c in Sources */,
 				C39AE06B1B2F627E00203139 /* fields.cc in Sources */,
-				C365BE4F1C4DABBB00F6E3AE /* msgpack_wrapper_patch.cc in Sources */,
+				C365BE4F1C4DABBB00F6E3AE /* msgpack_patcher.cc in Sources */,
 				C39AE0681B2F627E00203139 /* database.cc in Sources */,
+				C365BE511C4E8C8600F6E3AE /* test_converter.cc in Sources */,
 				46DFA9A81BC3014E008D8144 /* server.cc in Sources */,
 				C39AE0651B2F627E00203139 /* client_base.cc in Sources */,
 				46DFA9A21BC3014E008D8144 /* raft.cc in Sources */,
@@ -443,7 +447,7 @@
 				C39AE0691B2F627E00203139 /* endpoint_resolver.cc in Sources */,
 				46CAAEC91BFE85DD008F6870 /* log.cc in Sources */,
 				C39AE0751B2F627E00203139 /* times.cc in Sources */,
-				C365BE461C3466B900F6E3AE /* msgpack_wrapper.cc in Sources */,
+				C365BE461C3466B900F6E3AE /* msgpack.cc in Sources */,
 				C35058AE1BA325CC00901B80 /* xxhash.c in Sources */,
 				C35058AC1BA325CC00901B80 /* lz4frame.c in Sources */,
 				46B6B3D31B7E4A1B000FA041 /* multivaluerange.cc in Sources */,

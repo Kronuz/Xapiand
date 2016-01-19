@@ -29,7 +29,7 @@
 
 #include "database_utils.h"
 #include "fields.h"
-#include "msgpack_wrapper.h"
+#include "msgpack.h"
 #include "multivaluekeymaker.h"
 #include "multivalue.h"
 #include "schema.h"

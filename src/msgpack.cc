@@ -21,7 +21,7 @@
  */
 
 #include <sstream>
-#include "msgpack_wrapper.h"
+#include "msgpack.h"
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"

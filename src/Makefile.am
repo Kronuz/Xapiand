@@ -35,8 +35,8 @@ xapiand_SOURCES = \
 	lz4/lz4hc.c \
 	lz4/xxhash.c \
 	manager.cc \
-	msgpack_wrapper.cc \
-	msgpack_wrapper_patch.cc \
+	msgpack.cc \
+	msgpack_patcher.cc \
 	multivalue.cc \
 	multivaluekeymaker.cc \
 	multivaluerange.cc \
@@ -108,8 +108,8 @@ noinst_HEADERS = \
 	lz4/lz4hc.h \
 	lz4/xxhash.h \
 	manager.h \
-	msgpack_wrapper.h \
-	msgpack_wrapper_patch.h \
+	msgpack.h \
+	msgpack_patcher.h \
 	multivalue.h \
 	multivaluekeymaker.h \
 	multivaluerange.h \

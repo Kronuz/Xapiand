@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "msgpack_wrapper_patch.h"
+#include "msgpack_patcher.h"
 
 #include "exception.h"
 #include "log.h"
