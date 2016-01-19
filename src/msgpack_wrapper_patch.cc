@@ -88,6 +88,9 @@ bool patch_add(const MsgPack& obj_patch, MsgPack& object) {
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch add: %s", e.what());
 		return false;
+	} catch (const msgpack::type_error e){
+		L_ERR(nullptr, "Error in patch add: %s", e.what());
+		return false;
 	}
 	return true;
 }
@@ -134,6 +137,9 @@ bool patch_replace(const MsgPack& obj_patch, MsgPack& object) {
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch replace: %s", e.what());
 		return false;
+	} catch (const msgpack::type_error& e){
+		L_ERR(nullptr, "Error in patch replace: %s", e.what());
+		return false;
 	}
 	return true;
 }
@@ -158,6 +164,9 @@ bool patch_move(const MsgPack& obj_patch, MsgPack& object) {
 		to = from;
 		from.erase(from_split.back());
 	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Error in patch move: %s", e.what());
+		return false;
+	} catch (const msgpack::type_error& e){
 		L_ERR(nullptr, "Error in patch move: %s", e.what());
 		return false;
 	}
@@ -185,6 +194,9 @@ bool patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch copy: %s", e.what());
 		return false;
+	} catch (const msgpack::type_error& e){
+		L_ERR(nullptr, "Error in patch copy: %s", e.what());
+		return false;
 	}
 	return true;
 }
@@ -201,6 +213,9 @@ bool patch_test(const MsgPack& obj_patch, MsgPack& object) {
 			return false;
 		}
 	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Error in patch test: %s", e.what());
+		return false;
+	} catch (const msgpack::type_error& e){
 		L_ERR(nullptr, "Error in patch test: %s", e.what());
 		return false;
 	}
