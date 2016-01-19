@@ -52,3 +52,10 @@ inline void _erase(MsgPack o, std::string target) {
 		o.erase(strict_stoi(target));
 	}
 }
+
+inline void _path_tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c){
+	MsgPack path = obj.at(path_c);
+	std::string path_str = path.to_json_string();
+	path_str = path_str.substr(1, path_str.size()-2);
+	stringTokenizer(path_str, "\\/", path_split);
+}

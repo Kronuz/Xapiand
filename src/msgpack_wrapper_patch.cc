@@ -68,17 +68,12 @@ bool apply_patch(MsgPack& patch, MsgPack& object) {
 bool patch_add(const MsgPack& obj_patch, MsgPack& object) {
 	std::string target;
 	try {
-		MsgPack path = obj_patch.at(PATCH_PATH);
-		std::string path_str = path.to_json_string();
-		path_str = path_str.substr(1, path_str.size()-2);
 		std::vector<std::string> path_split;
-		stringTokenizer(path_str, "\\/", path_split);
+		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
 		std::string target = path_split.back();
 		path_split.pop_back();
-
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
-
 		_add(o, val, target);
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch add: %s", e.what());
@@ -93,13 +88,9 @@ bool patch_add(const MsgPack& obj_patch, MsgPack& object) {
 
 bool patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		MsgPack path = obj_patch.at(PATCH_PATH);
-		std::string path_str = path.to_json_string();
-		path_str = path_str.substr(1, path_str.size()-2);
 		std::vector<std::string> path_split;
-		stringTokenizer(path_str, "\\/", path_split);
+		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
 		MsgPack o = object.path(path_split);
-
 		_erase(o.parent(), path_split.back());
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch remove: %s", e.what());
@@ -114,11 +105,8 @@ bool patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 
 bool patch_replace(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		MsgPack path = obj_patch.at(PATCH_PATH);
-		std::string path_str = path.to_json_string();
-		path_str = path_str.substr(1, path_str.size()-2);
 		std::vector<std::string> path_split;
-		stringTokenizer(path_str, "\\/", path_split);
+		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
 		o = val;
@@ -135,26 +123,16 @@ bool patch_replace(const MsgPack& obj_patch, MsgPack& object) {
 
 bool patch_move(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		MsgPack old_path = obj_patch.at(PATCH_PATH);
-		MsgPack new_path = obj_patch.at(PATCH_FROM);
-
-		std::string path_str = old_path.to_json_string();
-		std::string from_str = new_path.to_json_string();
-		path_str = path_str.substr(1, path_str.size()-2);
-		from_str = from_str.substr(1, from_str.size()-2);
 		std::vector<std::string> path_split;
 		std::vector<std::string> from_split;
-		stringTokenizer(path_str, "\\/", path_split);
-		stringTokenizer(from_str, "\\/", from_split);
+		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
+		_path_tokenizer(obj_patch, from_split, PATCH_FROM);
 		std::string target = path_split.back();
 		path_split.pop_back();
-		
-		
 		MsgPack to = object.path(path_split);
 		MsgPack from = object.path(from_split);
 		_add(to, from, target);
 		_erase(from.parent(), from_split.back());
-
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch move: %s", e.what());
 		return false;
@@ -168,21 +146,15 @@ bool patch_move(const MsgPack& obj_patch, MsgPack& object) {
 
 bool patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 	try {
-		MsgPack old_path = obj_patch.at(PATCH_PATH);
-		MsgPack new_path = obj_patch.at(PATCH_FROM);
-
-		std::string path_str = old_path.to_json_string();
-		std::string from_str = new_path.to_json_string();
-		path_str = path_str.substr(1, path_str.size()-2);
-		from_str = from_str.substr(1, from_str.size()-2);
 		std::vector<std::string> path_split;
 		std::vector<std::string> from_split;
-		stringTokenizer(path_str, "\\/", path_split);
-		stringTokenizer(from_str, "\\/", from_split);
-
+		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
+		_path_tokenizer(obj_patch, from_split, PATCH_FROM);
+		std::string target = path_split.back();
+		path_split.pop_back();
 		MsgPack to = object.path(path_split);
 		MsgPack from = object.path(from_split);
-		to = from;
+		_add(to, from, target);
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch copy: %s", e.what());
 		return false;
@@ -195,10 +167,12 @@ bool patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 
 
 bool patch_test(const MsgPack& obj_patch, MsgPack& object) {
-	std::string target;
 	try {
-		MsgPack o = obj_patch.at(PATCH_PATH);
+		std::vector<std::string> path_split;
+		_path_tokenizer(obj_patch, path_split, PATCH_PATH);
+		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
+
 		if (val == o) {
 			return true;
 		} else {
@@ -211,7 +185,6 @@ bool patch_test(const MsgPack& obj_patch, MsgPack& object) {
 		L_ERR(nullptr, "Error in patch test: %s", e.what());
 		return false;
 	}
-	return true;
 }
 
 
