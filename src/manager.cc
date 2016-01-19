@@ -588,16 +588,8 @@ XapiandManager::store(const Endpoints& endpoints, const Xapian::docid& did, cons
 
 
 void
-XapiandManager::server_status(MsgPack& stats)
+XapiandManager::server_status(MsgPack&& stats)
 {
-//	unique_cJSON root_status(cJSON_CreateObject());
-//	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-//	cJSON_AddNumberToObject(root_status.get(), "Connections", XapiandServer::total_clients);
-//	cJSON_AddNumberToObject(root_status.get(), "Http connections", XapiandServer::http_clients);
-//	cJSON_AddNumberToObject(root_status.get(), "Xapian remote connections", XapiandServer::binary_clients);
-//	cJSON_AddNumberToObject(root_status.get(), "Size thread pool", thread_pool.size());
-//	return root_status;
-
 	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 	stats["Connections"] = XapiandServer::total_clients.load();
 	stats["Http connections"] = XapiandServer::http_clients.load();
@@ -607,7 +599,7 @@ XapiandManager::server_status(MsgPack& stats)
 
 
 void
-XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
+XapiandManager::get_stats_time(MsgPack&& stats, const std::string& time_req)
 {
 	std::smatch m;
 	if (std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.size() && m.length(1) != 0) {
@@ -623,18 +615,15 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
 			second_time.minute = 0;
 			second_time.second = 0;
 		}
-		return _get_stats_time(stats, first_time, second_time);
+		return _get_stats_time(std::move(stats), first_time, second_time);
 	}
-
 	stats["Error in time argument"] = "Incorrect input";
 }
 
 
 void
-XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time_t& second_time)
+XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_time_t& second_time)
 {
-	MsgPack time_period;
-
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
 	auto now_time = std::chrono::system_clock::to_time_t(init_time);
@@ -680,10 +669,12 @@ XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time
 			}
 		}
 		auto p_time = now_time - start;
+
+		MsgPack time_period = stats["Time"];
 		time_period["Period start"] = ctime(&p_time);
 		p_time = now_time - end;
 		time_period["Period end"] = ctime(&p_time);
-		stats["Time"] = time_period;
+
 		stats["Docs index"] = cnt[0];
 		stats["Number search"] = cnt[1];
 		stats["Docs deleted"] = cnt[2];
