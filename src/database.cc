@@ -1483,7 +1483,7 @@ Database::get_document(const Xapian::docid &did, Xapian::Document &doc)
 
 
 void
-Database::get_stats_database(MsgPack& stats)
+Database::get_stats_database(MsgPack&& stats)
 {
 	unsigned doccount = db->get_doccount();
 	unsigned lastdocid = db->get_lastdocid();
@@ -1494,18 +1494,19 @@ Database::get_stats_database(MsgPack& stats)
 	stats["av_length"] = db->get_avlength();
 	stats["doc_len_lower"] =  db->get_doclength_lower_bound();
 	stats["doc_len_upper"] = db->get_doclength_upper_bound();
-	db->has_positions() ? stats["has_positions"] = true : stats["has_positions"] = false;
+	stats["has_positions"] = db->has_positions();
 }
 
 
 void
-Database::get_stats_docs(MsgPack& stats, const std::string &document_id)
+Database::get_stats_docs(MsgPack&& stats, const std::string& document_id)
 {
-	Xapian::Document doc;
-	Xapian::QueryParser queryparser;
-
 	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
-	if (isupper(document_id.at(0))) prefix += ":";
+	if (isupper(document_id.at(0))) {
+		prefix += ":";
+	}
+
+	Xapian::QueryParser queryparser;
 	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
 	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + document_id);
 
@@ -1516,42 +1517,51 @@ Database::get_stats_docs(MsgPack& stats, const std::string &document_id)
 
 	stats[RESERVED_ID] = document_id;
 
+	Xapian::Document doc;
 	for (int t = 3; t >= 0; --t) {
 		try {
 			doc = db->get_document(*m);
 			break;
-		} catch (Xapian::InvalidArgumentError &err) {
-			stats["_error"] = "Invalid internal document id";
-		} catch (Xapian::DocNotFoundError &err) {
-			stats["_error"] = "Document not found ";
-		} catch (const Xapian::Error &err) {
+		} catch (Xapian::InvalidArgumentError&) {
+			stats["error"] = "Invalid internal document id";
+			return;
+		} catch (Xapian::DocNotFoundError&) {
+			stats["error"] = "Document not found";
+			return;
+		} catch (const Xapian::Error&) {
 			reopen();
 			m = mset.begin();
 		}
 	}
 
-	std::string data = doc.get_data();
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-	size_t length = decode_length(&p, p_end, true);
-	data = std::string(p, length);
+	MsgPack obj_data = get_MsgPack(doc);
+	try {
+		obj_data = obj_data.at(RESERVED_DATA);
+	} catch (const msgpack::type_error&) {
+		clean_reserved(obj_data);
+		obj_data[RESERVED_ID] = doc.get_value(DB_SLOT_ID);
+	}
 
-	MsgPack data_msgp(data);
-	stats[RESERVED_DATA] = data_msgp.to_json_string();
+	stats[RESERVED_DATA] = std::move(obj_data);
 
-	std::string ct_type = doc.get_value(2);
-	ct_type != JSON_TYPE ? stats["has_blob"] = true : stats["has_blob"] = false;
+	std::string ct_type = doc.get_value(DB_SLOT_TYPE);
+	stats["has_blob"] = ct_type != JSON_TYPE && ct_type != MSGPACK_TYPE;
 
 	stats["number_terms"] = doc.termlist_count();
+
 	std::string terms;
-	for (auto it = doc.termlist_begin(); it != doc.termlist_end(); ++it) {
-		terms = terms + repr(*it) + " ";
+	const auto it_e = doc.termlist_end();
+	for (auto it = doc.termlist_begin(); it != it_e; ++it) {
+		terms += repr(*it) + " ";
 	}
 	stats[RESERVED_TERMS] = terms;
+
 	stats["number_values"] = doc.values_count();
+
 	std::string values;
-	for (auto iv = doc.values_begin(); iv != doc.values_end(); ++iv) {
-		values = values + std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
+	const auto iv_e = doc.values_end();
+	for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
+		values += std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
 	}
 	stats[RESERVED_VALUES] = values;
 }
