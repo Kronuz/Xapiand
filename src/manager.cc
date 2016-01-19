@@ -52,7 +52,7 @@ std::atomic<time_t> XapiandManager::shutdown_asap(0);
 std::atomic<time_t> XapiandManager::shutdown_now(0);
 
 
-XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
+XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	: Worker(nullptr, loop_),
 	  database_pool(o.dbpool_size),
 	  thread_pool("W%02zu", o.threadpool_size),
@@ -118,7 +118,7 @@ XapiandManager::get_node_name()
 
 
 bool
-XapiandManager::set_node_name(const std::string &node_name_, std::unique_lock<std::mutex> &lk)
+XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<std::mutex>& lk)
 {
 	if (node_name_.empty()) {
 		lk.unlock();
@@ -260,7 +260,7 @@ XapiandManager::is_single_node()
 
 
 bool
-XapiandManager::put_node(const Node &node)
+XapiandManager::put_node(const Node& node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string lower_node_name(lower_string(node.name));
@@ -287,7 +287,7 @@ XapiandManager::put_node(const Node &node)
 
 
 bool
-XapiandManager::get_node(const std::string &node_name, const Node **node)
+XapiandManager::get_node(const std::string& node_name, const Node** node)
 {
 	try {
 		const Node &node_ref = nodes.at(lower_string(node_name));
@@ -300,7 +300,7 @@ XapiandManager::get_node(const std::string &node_name, const Node **node)
 
 
 bool
-XapiandManager::touch_node(const std::string &node_name, int region, const Node **node)
+XapiandManager::touch_node(const std::string& node_name, int region, const Node** node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string lower_node_name(lower_string(node_name));
@@ -330,7 +330,7 @@ XapiandManager::touch_node(const std::string &node_name, int region, const Node 
 
 
 void
-XapiandManager::drop_node(const std::string &node_name)
+XapiandManager::drop_node(const std::string& node_name)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	nodes.erase(lower_string(node_name));
@@ -421,7 +421,7 @@ XapiandManager::destroy()
 
 
 void
-XapiandManager::async_shutdown_cb(ev::async &, int)
+XapiandManager::async_shutdown_cb(ev::async&, int)
 {
 	L_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN");
 	L_EV(this, "Async shutdown event received!");
@@ -453,7 +453,7 @@ XapiandManager::shutdown()
 
 
 void
-XapiandManager::run(const opts_t &o)
+XapiandManager::run(const opts_t& o)
 {
 	std::string msg("Listening on ");
 
@@ -503,9 +503,9 @@ XapiandManager::run(const opts_t &o)
 	}
 
 	L_NOTICE(this, "Started %d server%s"
-		     ", %d worker thread%s"
-		     ", %d autocommitter%s"
-		     ", %d replicator%s.",
+			 ", %d worker thread%s"
+			 ", %d autocommitter%s"
+			 ", %d replicator%s.",
 		o.num_servers, (o.num_servers == 1) ? "" : "s",
 		o.threadpool_size, (o.threadpool_size == 1) ? "" : "s",
 		o.num_committers, (o.num_committers == 1) ? "" : "s",
@@ -540,7 +540,7 @@ XapiandManager::run(const opts_t &o)
 
 
 int
-XapiandManager::get_region(const std::string &db_name)
+XapiandManager::get_region(const std::string& db_name)
 {
 	if (local_node.regions.load() == -1) {
 		local_node.regions.store(sqrt(nodes.size()));
@@ -574,13 +574,14 @@ XapiandManager::get_region()
 
 
 std::future<bool>
-XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
 	return binary->trigger_replication(src_endpoint, dst_endpoint);
 }
 
+
 std::future<bool>
-XapiandManager::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename)
+XapiandManager::store(const Endpoints& endpoints, const Xapian::docid& did, const std::string& filename)
 {
 	return binary->store(endpoints, did, filename);
 }
