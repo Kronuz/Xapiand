@@ -24,6 +24,7 @@
 
 #include "msgpack_wrapper.h"
 
+
 bool apply_patch(MsgPack& patch, MsgPack& object);
 bool patch_add(const MsgPack& obj_patch, MsgPack& object);
 bool patch_remove(const MsgPack& obj_patch, MsgPack& object);

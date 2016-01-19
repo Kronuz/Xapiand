@@ -746,7 +746,7 @@ HttpClient::index_document_view(const query_field_t &e)
 
 
 void
-HttpClient::update_document_view(const query_field_t &e)
+HttpClient::update_document_view(const query_field_t& e)
 {
 	std::string response_str;
 

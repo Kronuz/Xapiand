@@ -433,7 +433,7 @@ MsgPack::path(const std::vector<std::string>& path) const
 {
 	MsgPack current(*this);
 	for (const auto& s : path) {
-		try{
+		try {
 			if (current.obj->type == msgpack::type::MAP) {
 				current = current.at(s);
 			} else if (current.obj->type == msgpack::type::ARRAY) {
@@ -441,12 +441,10 @@ MsgPack::path(const std::vector<std::string>& path) const
 			} else {
 				throw msgpack::type_error();
 			}
-		} catch (const std::out_of_range& e) {
-			std::string err_msg =  "The object itself or an array containing it does need to exist in: " + s;
-			throw MSG_Error(err_msg.c_str());
-		} catch (const std::invalid_argument& e) {
-			std::string err_msg =  "The index MUST be numeric in array in: " + s;
-			throw MSG_Error(err_msg.c_str());
+		} catch (const std::out_of_range&) {
+			throw MSG_Error("The object itself or an array containing it does need to exist in: %s", s.c_str());
+		} catch (const std::invalid_argument&) {
+			throw MSG_Error("The index must be numeric in array in: %s", s.c_str());
 		}
 	}
 	return current;

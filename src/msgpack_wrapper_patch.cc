@@ -20,9 +20,10 @@
  * IN THE SOFTWARE.
  */
 
+#include "msgpack_wrapper_patch.h"
+
 #include "exception.h"
 #include "log.h"
-#include "msgpack_wrapper_patch.h"
 #include "utils.h"
 
 
@@ -43,7 +44,7 @@ bool apply_patch(MsgPack& patch, MsgPack& object) {
 			try {
 				MsgPack op = elem.at("op");
 				std::string op_tmp = op.to_json_string();
-				std::string op_str = std::string(op_tmp, 1, op_tmp.size()-2);
+				std::string op_str = std::string(op_tmp, 1, op_tmp.size() - 2);
 
 				if      (op_str.compare(PATCH_ADD) == 0) { if (!patch_add(elem, object)) return false; }
 				else if (op_str.compare(PATCH_REM) == 0) { if (!patch_remove(elem, object)) return false; }
@@ -108,7 +109,7 @@ bool patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch remove: %s", e.what());
 		return false;
-	} catch (msgpack::type_error& e){
+	} catch (const msgpack::type_error& e){
 		L_ERR(nullptr, "Error in patch remove: %s", e.what());
 		return false;
 	}
@@ -209,7 +210,7 @@ MsgPack get_patch_value(const MsgPack& obj_patch) {
 	try {
 		MsgPack value = obj_patch.at("value");
 		return value;
-	} catch(std::out_of_range err) {
+	} catch (const std::out_of_range&) {
 		throw MSG_Error("Object MUST have exactly one \"value\" member in \"add\" operation");
 	}
 }
