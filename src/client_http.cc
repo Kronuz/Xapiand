@@ -26,7 +26,6 @@
 #include "utils.h"
 #include "serialise.h"
 #include "length.h"
-#include "cJSON.h"
 #include "io_utils.h"
 
 #include "rapidjson/stringbuffer.h"
@@ -146,7 +145,7 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 }
 
 
-HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref *loop_, int sock_)
+HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* loop_, int sock_)
 	: BaseClient(std::move(server_), loop_, sock_),
 	  database(nullptr),
 	  body_size(0),
@@ -195,7 +194,7 @@ HttpClient::~HttpClient()
 
 
 void
-HttpClient::on_read(const char *buf, size_t received)
+HttpClient::on_read(const char* buf, size_t received)
 {
 	if (request_begining) {
 		request_begining = false;
@@ -220,7 +219,7 @@ HttpClient::on_read(const char *buf, size_t received)
 
 
 void
-HttpClient::on_read_file(const char *, size_t received)
+HttpClient::on_read_file(const char*, size_t received)
 {
 	L_ERR(this, "Not Implemented: HttpClient::on_read_file: %zu bytes", received);
 }
@@ -280,7 +279,7 @@ HttpClient::on_info(http_parser* p)
 
 
 int
-HttpClient::on_data(http_parser* p, const char *at, size_t length)
+HttpClient::on_data(http_parser* p, const char* at, size_t length)
 {
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
@@ -383,10 +382,9 @@ HttpClient::run()
 {
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
-	// tcp_nopush(sock);
 
 	std::string error;
-	const char *error_str;
+	const char* error_str;
 	bool has_error = false;
 
 	try {
@@ -423,7 +421,7 @@ HttpClient::run()
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 				break;
 		}
-	} catch (const Xapian::Error &err) {
+	} catch (const Xapian::Error& err) {
 		has_error = true;
 		error_str = err.get_error_string();
 		if (error_str) {
@@ -431,7 +429,7 @@ HttpClient::run()
 		} else {
 			error.assign("Unkown Xapian error!");
 		}
-	} catch (const std::exception &err) {
+	} catch (const std::exception& err) {
 		has_error = true;
 		error_str = err.what();
 		if (error_str) {
@@ -600,13 +598,8 @@ HttpClient::_delete()
 
 
 void
-HttpClient::document_info_view(const query_field_t &e)
+HttpClient::document_info_view(const query_field_t& e)
 {
-	bool found = true;
-	std::string response_str;
-	Xapian::docid docid = 0;
-	Xapian::QueryParser queryparser;
-
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
@@ -616,8 +609,13 @@ HttpClient::document_info_view(const query_field_t &e)
 	if (isupper(command.at(0))) {
 		prefix += ":";
 	}
+
+	bool found = true;
+	Xapian::docid docid = 0;
+	Xapian::QueryParser queryparser;
+
 	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-	Xapian::Query query = queryparser.parse_query(std::string(std::string(RESERVED_ID) + ":" + command));
+	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + command);
 	Xapian::Enquire enquire(*database->db);
 	enquire.set_query(query);
 	Xapian::MSet mset = enquire.get_mset(0, 1);
@@ -628,7 +626,7 @@ HttpClient::document_info_view(const query_field_t &e)
 			try {
 				docid = *m;
 				break;
-			} catch (const Xapian::Error &err) {
+			} catch (const Xapian::Error& err) {
 				database->reopen();
 				m = mset.begin();
 			}
@@ -640,13 +638,11 @@ HttpClient::document_info_view(const query_field_t &e)
 	MsgPack response;
 	if (found) {
 		response[RESERVED_ID] = docid;
-		response_str = response.to_json_string(e.pretty);
-		response_str += "\n";
+		std::string response_str(response.to_json_string(e.pretty) + "\n\n");
 		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 	} else {
 		response["Response empty"] = "Document not found";
-		response_str = response.to_json_string(e.pretty);
-		response_str += "\n";
+		std::string response_str(response.to_json_string(e.pretty) + "\n\n");
 		write(http_response(404, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 	}
 
@@ -655,50 +651,48 @@ HttpClient::document_info_view(const query_field_t &e)
 
 
 void
-HttpClient::delete_document_view(const query_field_t &e)
+HttpClient::delete_document_view(const query_field_t& e)
 {
-	std::string response_str;
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE|DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
 	auto tp_start = std::chrono::system_clock::now();
+
 	if (!database->drop(command, e.commit)) {
 		manager()->database_pool.checkin(database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
+
 	auto tp_end = std::chrono::system_clock::now();
 
-	auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
+	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
 		++stats_cnt.del.min[b_time.minute];
 		++stats_cnt.del.sec[b_time.second];
-		stats_cnt.del.tm_min[b_time.minute] += time;
-		stats_cnt.del.tm_sec[b_time.second] += time;
+		stats_cnt.del.tm_min[b_time.minute] += _time;
+		stats_cnt.del.tm_sec[b_time.second] += _time;
 	}
 	L_TIME(this, "Deletion took %s", delta_string(tp_start, tp_end).c_str());
 
 	manager()->database_pool.checkin(database);
 
-	MsgPack response, data;
-	data[RESERVED_ID] = command.c_str();
-	e.commit ? data["commit"] = true : data["commit"] = false;
-	response["delete"] = data;
-	response_str = response.to_json_string(e.pretty);
-	response_str += "\n\n";
+	MsgPack response;
+	auto data = response["delete"];
+	data[RESERVED_ID] = command;
+	data["commit"] = e.commit;
+	std::string response_str(response.to_json_string(e.pretty) + "\n\n");
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
 
 
 void
-HttpClient::index_document_view(const query_field_t &e)
+HttpClient::index_document_view(const query_field_t& e)
 {
-	std::string response_str;
-
 	buid_path_index(index_path);
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE|DB_SPAWN|DB_INIT_REF)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
@@ -717,30 +711,23 @@ HttpClient::index_document_view(const query_field_t &e)
 	}
 	auto tp_end = std::chrono::system_clock::now();
 
-	// did = returned by index() call
-	// filename = Termoprary file
-	// if (manager()->store(endpoints, did, filename)) {
-	// 	L_INFO(this, "Storing %s...", filename.c_str());
-	// }
-
-	auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
+	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
 		++stats_cnt.index.min[b_time.minute];
 		++stats_cnt.index.sec[b_time.second];
-		stats_cnt.index.tm_min[b_time.minute] += time;
-		stats_cnt.index.tm_sec[b_time.second] += time;
+		stats_cnt.index.tm_min[b_time.minute] += _time;
+		stats_cnt.index.tm_sec[b_time.second] += _time;
 	}
 	L_TIME(this, "Indexing took %s", delta_string(tp_start, tp_end).c_str());
 
 	manager()->database_pool.checkin(database);
-	MsgPack response, data;
-	data[RESERVED_ID] = command.c_str();
-	e.commit ? data["commit"] = true : data["commit"] = false;
-	response["index"] = data;
-	response_str = response.to_json_string(e.pretty);
-	response_str += "\n\n";
+	MsgPack response;
+	auto data = response["index"];
+	data[RESERVED_ID] = command;
+	data["commit"] = e.commit;
+	std::string response_str(response.to_json_string(e.pretty) + "\n\n");
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
 
@@ -748,57 +735,42 @@ HttpClient::index_document_view(const query_field_t &e)
 void
 HttpClient::update_document_view(const query_field_t& e)
 {
-	std::string response_str;
-
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
-	unique_cJSON patches(cJSON_Parse(body.c_str()));
-	if (!patches) {
-		L_ERR(this, "ERROR: JSON Before: [%s]", cJSON_GetErrorPtr());
-		manager()->database_pool.checkin(database);
-		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
-	}
-
-	if (!database->patch(patches.get(), command, e.commit, content_type, content_length)) {
+	if (!database->patch(body, command, e.commit, content_type, content_length)) {
 		manager()->database_pool.checkin(database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
 	manager()->database_pool.checkin(database);
-	MsgPack response, data;
-	data[RESERVED_ID] = command.c_str();
-	e.commit ? data["commit"] = true : data["commit"] = false;
-	response["update"] = data;
-	response_str = response.to_json_string(e.pretty);
-	response_str += "\n\n";
+	MsgPack response;
+	auto data = response["update"];
+	data[RESERVED_ID] = command;
+	data["commit"] = e.commit;
+	std::string response_str(response.to_json_string(e.pretty) + "\n\n");
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
 
 
 void
-HttpClient::stats_view(const query_field_t &e)
+HttpClient::stats_view(const query_field_t& e)
 {
-	std::string response_str;
 	MsgPack response;
 
 	if (e.server) {
-		MsgPack server_st;
-		manager()->server_status(server_st);
-		response["Server status"] = server_st;
+		manager()->server_status(response["Server status"]);
 	}
+
 	if (e.database) {
 		if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 			return;
 		}
-		MsgPack database_st;
-		database->get_stats_database(database_st);
-		response["Database status"] = database_st;
+		database->get_stats_database(response["Database status"]);
 		manager()->database_pool.checkin(database);
 	}
 	if (!e.document.empty()) {
@@ -806,47 +778,39 @@ HttpClient::stats_view(const query_field_t &e)
 			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 			return;
 		}
-		MsgPack doc_st;
-		database->get_stats_docs(doc_st, e.document);
-		response["Document status"] = doc_st;
+		database->get_stats_docs(response["Document status"], e.document);
 		manager()->database_pool.checkin(database);
 	}
 	if (!e.stats.empty()) {
-		MsgPack sta_st;
-		manager()->get_stats_time(sta_st, e.stats);
-		response["Stats time"] = sta_st;
+		manager()->get_stats_time(response["Stats time"], e.stats);
 	}
-	response_str = response.to_json_string(e.pretty);
-	response_str += "\n\n";
+	std::string response_str(response.to_json_string(e.pretty) + "\n\n");
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
 
 
 void
-HttpClient::bad_request_view(const query_field_t &e, int cmd)
+HttpClient::bad_request_view(const query_field_t& e, int cmd)
 {
-	std::string response_str;
-
 	MsgPack err_response;
 	switch (cmd) {
 		case CMD_UNKNOWN_HOST:
-			err_response["Error message"] =  std::string("Unknown host " + host).c_str();
+			err_response["Error message"] =  "Unknown host " + host;
 			break;
 		case CMD_UNKNOWN_ENDPOINT:
-			err_response["Error message"] = std::string("Unknown Endpoint - No one knows the index").c_str();
+			err_response["Error message"] = "Unknown Endpoint - No one knows the index";
 			break;
 		default:
 			err_response["Error message"] = "BAD QUERY";
 	}
 
-	response_str = err_response.to_json_string(e.pretty);
-	response_str += "\n";
+	std::string response_str(err_response.to_json_string(e.pretty) + "\n\n");
 	write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
 
 
 void
-HttpClient::upload_view(const query_field_t &)
+HttpClient::upload_view(const query_field_t&)
 {
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
@@ -861,21 +825,16 @@ HttpClient::upload_view(const query_field_t &)
 
 
 void
-HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
+HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 {
-	std::string response_str;
-	std::string result;
-
-	bool json_chunked = true;
-
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
 	if (schema) {
-		std::string result(database->schema.to_string(e.pretty) + "\n\n");
-		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result));
+		std::string response_str(database->schema.to_string(e.pretty) + "\n\n");
+		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 		manager()->database_pool.checkin(database);
 		return;
 	}
@@ -903,10 +862,13 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 	}
 
 
-	L_DEBUG(this, "Suggered querys");
-	for (auto it_s = suggestions.begin(); it_s != suggestions.end(); ++it_s) {
-		L_DEBUG(this, "\t%s", (*it_s).c_str());
-	}
+	L_DEBUG(this, "Suggested querys: %s", [&suggestions]() {
+		std::string res;
+		for (const auto& suggestion : suggestions) {
+			res += "\t" + suggestion + "\n";
+		}
+		return res.c_str();
+	});
 
 	if (facets) {
 		MsgPack response;
@@ -924,22 +886,28 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 			}
 			response[name_result] = array;
 		}
-		response_str = response.to_json_string(e.pretty);
-		response_str += "\n\n";
+		std::string response_str(response.to_json_string(e.pretty) + "\n\n");
 		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 	} else {
 		int rc = 0;
-		if (!mset.empty()) {
 
-			if (e.unique_doc && mset.size() == 1) {
-				json_chunked = false;
+		if (mset.empty()) {
+			int status_code = 200;
+			MsgPack response;
+
+			if (e.unique_doc) {
+				response["Response empty"] = "No document found";
+				status_code = 404;
+			} else {
+				response["Response empty"] = "No match found";
 			}
+			std::string response_str(response.to_json_string(e.pretty) + "\n\n");
+			write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, response_str));
+		} else {
+			bool json_chunked = e.unique_doc && mset.size() == 1 ? false : true;
 
-			for (Xapian::MSetIterator m = mset.begin(); m != mset.end(); ++rc, ++m) {
+			for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
 				Xapian::docid docid = 0;
-				std::string id;
-				std::string data;
-
 				int t = 3;
 				for ( ; t >= 0; --t) {
 					try {
@@ -956,16 +924,15 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 				}
 
 				Xapian::Document document;
-
 				if (t >= 0) {
-					// No errors, now try opening the document
+					// If there are not errors, open the document
 					if (!database->get_document(docid, document)) {
-						t = -1;  // flag as error
+						t = -1;
 					}
 				}
 
 				if (t < 0) {
-					// On errors, abort
+					// If there are errors, abort
 					if (written) {
 						write(http_response(0, HTTP_BODY, 0, 0, 0, "0\r\n\r\n"));
 					} else {
@@ -976,22 +943,19 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 					return;
 				}
 
-				data = document.get_data();
-				const char *p = data.data();
-				const char *p_end = p + data.size();
-				size_t length = decode_length(&p, p_end, true);
-				std::string ct_type = document.get_value(2);
+				MsgPack obj_data;
+				std::string blob_data;
+				std::string ct_type(document.get_value(DB_SLOT_TYPE));
 				bool type_found = false;
-				for (auto it = accept_set.begin(); it != accept_set.end(); ++it) {
-					if (it->second == ct_type || it->second == "*/*") {
-						if (it->second == JSON_TYPE || ct_type == JSON_TYPE) {
-							data = std::string(p, length);
-							ct_type = JSON_TYPE;
+				for (const auto& accept : accept_set) {
+					if (accept.second == ct_type || accept.second == "*/*") {
+						if (accept.second == JSON_TYPE || accept.second == MSGPACK_TYPE || ct_type == JSON_TYPE || ct_type == MSGPACK_TYPE) {
+							obj_data = get_MsgPack(document);
+							ct_type = accept.second;
 							type_found = true;
 							break;
 						} else {
-							p += length;
-							data = std::string(p, p_end - p);
+							blob_data = get_blob(document);
 							type_found = true;
 							break;
 						}
@@ -1001,20 +965,16 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 				if (!type_found) {
 					MsgPack response;
 					response["Error message"] = std::string("Response type " + ct_type + " not provided in the accept header");
-					response_str = response.to_json_string();
-					response_str += "\n\n";
+					std::string response_str(response.to_json_string() + "\n\n");
 					write(http_response(406, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 					manager()->database_pool.checkin(database);
 					L_DEBUG(this, "ABORTED SEARCH");
 					return;
 				}
 
-				id = document.get_value(0);
-
-				/* Return data in case is not a json type */
-				MsgPack doc_data(data);
-				if (doc_data.obj->type != msgpack::type::MAP) {
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, data, ct_type));
+				// Returns blob_data in case that type is different from msgpack::type::MAP
+				if (obj_data.obj->type != msgpack::type::MAP) {
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, blob_data, ct_type));
 					manager()->database_pool.checkin(database);
 					return;
 				}
@@ -1024,52 +984,37 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 				}
 
 				try {
-					doc_data = doc_data.at(RESERVED_DATA);
+					obj_data = obj_data.at(RESERVED_DATA);
 				} catch (const msgpack::type_error&) {
-					clean_reserved(doc_data);
-					doc_data[RESERVED_ID] = id;
+					clean_reserved(obj_data);
+					obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
 				}
 
-				result.assign(doc_data.to_json_string(e.pretty) + "\n\n");
+				std::string result(obj_data.to_json_string(e.pretty) + "\n\n");
 				if (json_chunked) {
 					if (!write(http_response(200, HTTP_BODY | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, result))) {
 						break;
 					}
-				} else {
-					if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result))) {
-						break;
-					}
+				} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result))) {
+					break;
 				}
-
 			}
+
 			if (json_chunked) {
 				write(http_response(0, HTTP_BODY, 0, 0, 0, "0\r\n\r\n"));
 			}
-		} else {
-			int status_code = 200;
-			MsgPack response;
-
-			if (e.unique_doc) {
-				response["Response empty"] = "No document found";
-				status_code = 404;
-			} else {
-				response["Response empty"] = "No match found";
-			}
-			response_str = response.to_json_string(e.pretty);
-			response_str += "\n\n";
-			write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, response_str));
 		}
 	}
-	auto tp_end = std::chrono::system_clock::now();
 
-	auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
+	auto tp_end = std::chrono::system_clock::now();
+	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
 		++stats_cnt.search.min[b_time.minute];
 		++stats_cnt.search.sec[b_time.second];
-		stats_cnt.search.tm_min[b_time.minute] += time;
-		stats_cnt.search.tm_sec[b_time.second] += time;
+		stats_cnt.search.tm_min[b_time.minute] += _time;
+		stats_cnt.search.tm_sec[b_time.second] += _time;
 	}
 	L_TIME(this, "Searching took %s", delta_string(tp_start, tp_end).c_str());
 
@@ -1079,9 +1024,9 @@ HttpClient::search_view(const query_field_t &e, bool facets, bool schema)
 
 
 int
-HttpClient::_endpointgen(query_field_t &e, bool writable)
+HttpClient::_endpointgen(query_field_t& e, bool writable)
 {
-	int cmd, retval;
+	int retval;
 	bool has_node_name = false;
 	struct http_parser_url u;
 	std::string b = repr(path);
@@ -1106,29 +1051,24 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 			}
 
 			while (retval == 0) {
-				command = urldecode(p.off_command, p.len_command);
+				command = lower_string(urldecode(p.off_command, p.len_command));
 				if (command.empty()) {
 					return CMD_BAD_QUERY;
 				}
-				std::transform(command.begin(), command.end(), command.begin(), ::tolower);
 
 				std::string ns;
 				if (p.len_namespace) {
 					ns = urldecode(p.off_namespace, p.len_namespace) + "/";
-				} else {
-					ns = "";
 				}
 
 				std::string path;
 				if (p.len_path) {
 					path = urldecode(p.off_path, p.len_path);
-				} else {
-					path = "";
 				}
 
 				index_path = ns + path;
 				std::string node_name;
-				Endpoint asked_node("xapian://" + node_name + index_path);
+				Endpoint asked_node("xapian://" + index_path);
 				std::vector<Endpoint> asked_nodes;
 
 				if (p.len_host) {
@@ -1139,7 +1079,9 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 					size_t num_endps = 1;
 					if (writable) {
 						timeout = 2s;
-					} else timeout = 1s;
+					} else {
+						timeout = 1s;
+					}
 
 					if (manager()->is_single_node()) {
 						has_node_name = true;
@@ -1168,13 +1110,15 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 						host = node_name;
 						return CMD_UNKNOWN_HOST;
 					}
-					if (!node_port) node_port = node->binary_port;
+					if (!node_port) {
+						node_port = node->binary_port;
+					}
 					inet_ntop(AF_INET, &(node->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
 					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path, nullptr, -1, node_name);
 					endpoints.insert(endpoint);
 				} else {
-					for (auto it_endp = asked_nodes.begin(); it_endp != asked_nodes.end(); ++it_endp) {
-						endpoints.insert(*it_endp);
+					for (const auto& asked_node : asked_nodes) {
+						endpoints.insert(asked_node);
 					}
 				}
 				L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.as_string().c_str());
@@ -1183,11 +1127,12 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 				retval = url_path(path_buf.c_str(), path_size, &p);
 			}
 		}
+
 		if ((parser.method == 4 || parser.method == 24) && endpoints.size() > 1) {
 			return CMD_BAD_ENDPS;
 		}
 
-		cmd = identify_cmd(command);
+		int cmd = identify_cmd(command);
 
 		if (u.field_set & (1 <<  UF_QUERY)) {
 			size_t query_size = u.field_data[4].len;
@@ -1198,13 +1143,12 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 			q.offset = nullptr;
 			if (url_qs("pretty", query_str, query_size, &q) != -1) {
 				std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
-				(pretty.compare("f") == 0) ? e.pretty = false : e.pretty = true;
+				e.pretty = pretty[0] == 't';
 			}
 
 			switch (cmd) {
 				case CMD_SEARCH:
 				case CMD_FACETS:
-
 					q.offset = nullptr;
 					if (url_qs("offset", query_str, query_size, &q) != -1) {
 						e.offset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
@@ -1228,13 +1172,13 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 					q.offset = nullptr;
 					if (url_qs("spelling", query_str, query_size, &q) != -1) {
 						std::string spelling = Serialise::boolean(urldecode(q.offset, q.length));
-						(spelling.compare("f") == 0) ? e.spelling = false : e.spelling = true;
+						e.spelling = spelling[0] == 't';
 					}
 
 					q.offset = nullptr;
 					if (url_qs("synonyms", query_str, query_size, &q) != -1) {
 						std::string synonyms = Serialise::boolean(urldecode(q.offset, q.length));
-						(synonyms.compare("f") == 0) ? e.synonyms = false : e.synonyms = true;
+						e.synonyms = synonyms[0] == 't';
 					}
 
 					q.offset = nullptr;
@@ -1283,7 +1227,7 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 					q.offset = nullptr;
 					if (url_qs("fuzzy", query_str, query_size, &q) != -1) {
 						std::string fuzzy = Serialise::boolean(urldecode(q.offset, q.length));
-						(fuzzy.compare("f") == 0) ? e.is_fuzzy = false : e.is_fuzzy = true;
+						e.is_fuzzy = fuzzy[0] == 't';
 					}
 
 					if(e.is_fuzzy) {
@@ -1316,7 +1260,7 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 					q.offset = nullptr;
 					if (url_qs("nearest", query_str, query_size, &q) != -1) {
 						std::string nearest = Serialise::boolean(urldecode(q.offset, q.length));
-						(nearest.compare("f") == 0) ? e.is_nearest = false : e.is_nearest = true;
+						e.is_nearest = nearest[0] == 't';
 					}
 
 					if(e.is_nearest) {
@@ -1353,7 +1297,7 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 					q.offset = nullptr;
 					if (url_qs("commit", query_str, query_size, &q) != -1) {
 						std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
-						(pretty.compare("f") == 0) ? e.commit = false : e.commit = true;
+						e.commit = pretty[0] == 't';
 					}
 
 					if (isRange(command)) {
@@ -1390,13 +1334,13 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 					q.offset = nullptr;
 					if (url_qs("server", query_str, query_size, &q) != -1) {
 						std::string server = Serialise::boolean(urldecode(q.offset, q.length));
-						(server.compare("f") == 0) ? e.server = false : e.server = true;
+						e.server = server[0] == 't';
 					}
 
 					q.offset = nullptr;
 					if (url_qs("database", query_str, query_size, &q) != -1) {
 						std::string _database = Serialise::boolean(urldecode(q.offset, q.length));
-						(_database.compare("f") == 0) ? e.database = false : e.database = true;
+						e.database = _database[0] == 't';
 					}
 
 					q.offset = nullptr;
@@ -1421,8 +1365,7 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 					e.check_at_least = 0;
 					e.limit = 10;
 					e.sort.push_back(RESERVED_ID);
-					}
-				else {
+				} else {
 					e.limit = 1;
 					e.unique_doc = true;
 					e.offset = 0;
@@ -1430,18 +1373,17 @@ HttpClient::_endpointgen(query_field_t &e, bool writable)
 				}
 			}
 		}
+		return cmd;
 	} else {
-		L_CONN_WIRE(this,"Parsing not done");
-		/* Bad query */
+		L_CONN_WIRE(this, "Parsing not done");
+		// Bad query
 		return CMD_BAD_QUERY;
 	}
-
-	return cmd;
 }
 
 
 int
-HttpClient::identify_cmd(const std::string &commad)
+HttpClient::identify_cmd(const std::string& commad)
 {
 	if (commad.compare(HTTP_SEARCH) == 0) {
 		return CMD_SEARCH;
@@ -1479,27 +1421,9 @@ HttpClient::clean_http_request()
 	host.clear();
 	command.clear();
 
-	// tcp_push(sock);
-
 	response_ends = std::chrono::system_clock::now();
 	request_begining = true;
 	L_TIME(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
 
 	async_read.send();
-}
-
-
-std::string
-HttpClient::json_print(rapidjson::Document& doc, bool pretty)
-{
-	rapidjson::StringBuffer buffer;
-
-	if (pretty) {
-		rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
-		doc.Accept(writer);
-	} else {
-		rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-		doc.Accept(writer);
-	}
-	return std::string(buffer.GetString(), buffer.GetSize());
 }
