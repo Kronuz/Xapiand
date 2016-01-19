@@ -24,10 +24,7 @@
 
 #include "xapiand.h"
 
-#include "cJSON.h"
-
 #include <limits.h>
-
 #include <xapian.h>
 #include <string>
 #include <vector>
@@ -143,23 +140,6 @@ inline bool ignored_errorno(int e, bool udp) {
 
 std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
-
-
-struct char_ptr_deleter {
-	void operator()(char *c) const {
-		free(c);
-	}
-};
-
-
-struct cJSON_Deleter {
-	void operator()(cJSON *j) const {
-		cJSON_Delete(j);
-	}
-};
-
-using unique_cJSON = std::unique_ptr<cJSON, cJSON_Deleter>;
-using unique_char_ptr = std::unique_ptr<char, char_ptr_deleter>;
 
 template<typename... Args>
 std::string upper_string(Args&&... args) {
