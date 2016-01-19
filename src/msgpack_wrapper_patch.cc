@@ -53,13 +53,15 @@ bool apply_patch(MsgPack& patch, MsgPack& object) {
 				else if (op_str.compare(PATCH_COP) == 0) { if (!patch_copy(elem, object)) return false; }
 				else if (op_str.compare(PATCH_TES) == 0) { if (!patch_test(elem, object)) return false; }
 			} catch (const std::out_of_range& err) {
-				L_ERR(nullptr, "Objects MUST have exactly one \"op\" member");
+				L_ERR(nullptr, "ERROR: Objects MUST have exactly one \"op\" member");
+				return false;
 			}
 		}
+		return true;
 	} else {
-		L_ERR(nullptr, "A JSON Patch document MUST be an array of objects");
+		L_ERR(nullptr, "ERROR: A JSON Patch document MUST be an array of objects");
+		return false;
 	}
-	return true;
 }
 
 
