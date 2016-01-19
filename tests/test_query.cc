@@ -22,7 +22,6 @@
 
 #include "test_query.h"
 
-#include "../src/cJSON.h"
 #include "../src/log.h"
 #include "../src/serialise.h"
 #include "../src/database.h"
@@ -265,13 +264,13 @@ int create_test_db() {
 
 	// Index documents in the database.
 	size_t i = 1;
-	for (auto it = _docs.begin(); it != _docs.end(); ++it) {
-		std::ifstream fstream(*it);
+	for (const auto& doc : _docs) {
+		std::ifstream fstream(doc);
 		std::stringstream buffer;
 		buffer << fstream.rdbuf();
 		if (database->index(buffer.str(), std::to_string(i), true, JSON_TYPE, std::to_string(fstream.tellg())) == 0) {
 			++cont;
-			L_ERR(nullptr, "ERROR: File %s can not index", it->c_str());
+			L_ERR(nullptr, "ERROR: File %s can not index", doc.c_str());
 		}
 		fstream.close();
 		++i;
@@ -337,17 +336,20 @@ int make_search(const test_query_t _tests[], int len) {
 				} else {
 					Xapian::MSetIterator m = mset.begin();
 					for (auto it = p.expect_datas.begin(); m != mset.end(); ++it, ++m) {
-						std::string data = m.get_document().get_data().data();
-						const char *p = data.data();
-						const char *p_end = p + data.size();
-						size_t length = decode_length(&p, p_end, true);
-						data = std::string(p, length);
-
-						unique_cJSON object(cJSON_Parse(data.c_str()));
-						cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
-						if (object_data && it->compare(object_data->valuestring) != 0) {
+						auto obj_data = get_MsgPack(m.get_document());
+						try {
+							auto data = obj_data.at(RESERVED_DATA);
+							if (data.obj->type == msgpack::type::STR) {
+								std::string str_data(data.obj->via.str.ptr, data.obj->via.str.size);
+								if (it->compare(str_data) != 0) {
+									++cont;
+									L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
+								}
+							}
+							throw msgpack::type_error();
+						} catch (const msgpack::type_error& err) {
 							++cont;
-							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, data.c_str(), RESERVED_DATA, it->c_str());
+							L_ERR(nullptr, "ERROR: %s", err.what());
 						}
 					}
 				}

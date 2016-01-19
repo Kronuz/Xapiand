@@ -22,7 +22,6 @@
 
 #include "test_msgpack.h"
 
-#include "../src/msgpack_wrapper.h"
 #include "../src/log.h"
 #include "../src/database_utils.h"
 
