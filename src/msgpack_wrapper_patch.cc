@@ -42,22 +42,24 @@ bool apply_patch(MsgPack& patch, MsgPack& object) {
 		for (auto elem : patch) {
 			try {
 				MsgPack op = elem.at("op");
+				std::cout << op << std::endl;
 				std::string op_tmp = op.to_json_string();
 				std::string op_str = std::string(op_tmp, 1, op_tmp.size()-2);
 
-				if      (op_str.compare(PATCH_ADD) == 0) return patch_add(elem, object);
-				else if (op_str.compare(PATCH_REM) == 0) return patch_remove(elem, object);
-				else if (op_str.compare(PATCH_REP) == 0) return patch_replace(elem, object);
-				else if (op_str.compare(PATCH_MOV) == 0) return patch_move(elem, object);
-				else if (op_str.compare(PATCH_COP) == 0) return patch_copy(elem, object);
-				else if (op_str.compare(PATCH_TES) == 0) return patch_test(elem, object);
-				return false;
+				if      (op_str.compare(PATCH_ADD) == 0) { if (!patch_add(elem, object)) return false; }
+				else if (op_str.compare(PATCH_REM) == 0) { if (!patch_remove(elem, object)) return false; }
+				else if (op_str.compare(PATCH_REP) == 0) { if (!patch_replace(elem, object)) return false; }
+				else if (op_str.compare(PATCH_MOV) == 0) { if (!patch_move(elem, object)) return false; }
+				else if (op_str.compare(PATCH_COP) == 0) { if (!patch_copy(elem, object)) return false; }
+				else if (op_str.compare(PATCH_TES) == 0) { if (!patch_test(elem, object)) return false; }
 			} catch (const std::out_of_range& err) {
-				throw MSG_Error("Objects MUST have exactly one \"op\" member");
+				L_ERR(nullptr, "Objects MUST have exactly one \"op\" member");
 			}
 		}
+	} else {
+		L_ERR(nullptr, "A JSON Patch document MUST be an array of objects");
 	}
-	return false;
+	return true;
 }
 
 
@@ -90,7 +92,6 @@ bool patch_add(const MsgPack& obj_patch, MsgPack& object) {
 
 
 bool patch_remove(const MsgPack& obj_patch, MsgPack& object) {
-	std::string target;
 	try {
 		MsgPack path = obj_patch.at(PATCH_PATH);
 		std::string path_str = path.to_json_string();
@@ -98,7 +99,7 @@ bool patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 		std::vector<std::string> path_split;
 		stringTokenizer(path_str, "\\/", path_split);
 		MsgPack o = object.path(path_split);
-		o.parent().erase(target);	//TODO: remove for array
+		o.parent().erase(path_split.back());	//TODO: remove for array
 	} catch (const std::exception& e) {
 		L_ERR(nullptr, "Error in patch remove: %s", e.what());
 		return false;
