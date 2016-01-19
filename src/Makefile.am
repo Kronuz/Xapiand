@@ -4,8 +4,6 @@ bin_PROGRAMS = xapiand
 
 xapiand_SOURCES = \
 	cartesian.cc \
-	cJSON.c \
-	cJSON_Utils.c \
 	client_base.cc \
 	client_binary.cc \
 	client_http.cc \
@@ -64,8 +62,6 @@ xapiand_SOURCES = \
 
 noinst_HEADERS = \
 	cartesian.h \
-	cJSON.h \
-	cJSON_Utils.h \
 	client_base.h \
 	client_binary.h \
 	client_http.h \
