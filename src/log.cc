@@ -77,7 +77,7 @@ Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clo
 
 
 std::string
-Log::str_format(int priority, const char *file, int line, const char *suffix, const char *prefix, void *, const char *format, va_list argptr)
+Log::str_format(int priority, const char *file, int line, const char *suffix, const char *prefix, const void*, const char *format, va_list argptr)
 {
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
@@ -91,7 +91,7 @@ Log::str_format(int priority, const char *file, int line, const char *suffix, co
 
 
 std::shared_ptr<Log>
-Log::log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...)
+Log::log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
@@ -110,7 +110,7 @@ Log::clear()
 
 
 void
-Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...)
+Log::unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	if (finished.exchange(true)) {
 		va_list argptr;

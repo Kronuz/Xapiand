@@ -253,7 +253,7 @@ Database::index_required_data(Xapian::Document& doc, std::string& term_id, const
 	// Document's id is also a boolean term (otherwise it doesn't replace an existing document)
 	term_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
 	doc.add_boolean_term(term_id);
-	L_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s", _document_id.c_str(), document_id.c_str());
+	L_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s", _document_id.c_str(), term_id.c_str());
 
 	// Indexing the content values of data.
 	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
