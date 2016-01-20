@@ -109,9 +109,9 @@ int test_unpack() {
 		return 1;
 	}
 
-	std::string result = obj.to_string();
+	std::string result = obj.to_json_string();
 	if (expected != result) {
-		L_ERR(nullptr, "ERROR: Add items with MsgPack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), result.c_str());
+		L_ERR(nullptr, "ERROR: MsgPack::unpack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), result.c_str());
 		return 1;
 	}
 
@@ -188,7 +188,7 @@ int test_add_items() {
 	obj["branch"] = "Morelia";
 	obj["country"] = "México";
 
-	std::string result = obj.to_string();
+	std::string result = obj.to_json_string();
 	if (expected != result) {
 		L_ERR(nullptr, "ERROR: Add items with MsgPack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), result.c_str());
 		return 1;
