@@ -1,0 +1,20 @@
+[
+	{
+	"op": "add",
+	"path": "/villains/2",
+	"value": {
+		"villain": "Scarecrow",
+		"name": "Dr. Jonathan Crane",
+		"super_power": "Master of psychology and chemistry",
+		"enemy": "Batman",
+		"creation": "1941"
+		}
+	},
+	{ "op": "remove", "path": "/heroes/2" },
+	{ "op": "remove", "path": "/heroes/1/enemy"},
+	{ "op": "replace", "path": "/heroes/0/enemy", "value": "Mr. Freeze"},
+	{ "op": "move", "from": "/villains/0", "path": "/heroes/2"},
+	{ "op": "copy", "from": "/heroes/0", "path": "/villains/2"},
+	{ "op": "test", "path": "/heroes/0/name", "value": "Bruce Wayne"},
+	{ "op": "move", "from": "/villains/1/villain", "path": "/heroes/0/other_enemy"}
+]

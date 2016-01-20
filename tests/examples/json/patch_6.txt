@@ -1,0 +1,3 @@
+[
+	{ "op": "copy", "path": "/heroes/1/other_enemy", "from" : "/heroes/0/enemy" }
+]

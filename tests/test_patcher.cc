@@ -1,0 +1,274 @@
+/*
+ * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+#include "test_patcher.h"
+
+#include "../src/database_utils.h"
+#include "../src/msgpack_patcher.h"
+#include "../src/rapidjson/rapidjson.h"
+#include "../src/rapidjson/document.h"
+
+#include <fstream>
+
+int test_mix()
+{
+	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
+	std::ifstream fstream_patch("examples/json/patch_1.txt",  std::ifstream::in);
+	std::ifstream fstream_result("examples/json/example_4.txt",  std::ifstream::in);
+
+	if (fstream_obj.bad() || fstream_patch.bad() || fstream_result.bad()) {
+		return 1;
+	}
+
+	std::stringstream buffer_obj;
+	std::stringstream buffer_patch;
+	std::stringstream buffer_result;
+	buffer_obj << fstream_obj.rdbuf();
+	buffer_patch << fstream_patch.rdbuf();
+	buffer_result << fstream_result.rdbuf();
+
+	std::string obj_str (buffer_obj.str());
+	std::string patch_str (buffer_patch.str());
+	std::string expected (buffer_result.str());
+
+	rapidjson::Document doc_patch;
+	rapidjson::Document doc_obj;
+	json_load(doc_patch, patch_str);
+	json_load(doc_obj, obj_str);
+
+	MsgPack patch(doc_patch);
+	MsgPack obj(doc_obj);
+
+	if (apply_patch(patch, obj)) {
+		std::string result(obj.to_json_string());
+		if (expected.compare(result) != 0) {
+			return 1;
+		}
+	} else return 1;
+	return 0;
+}
+
+
+int test_add()
+{
+	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
+	std::ifstream fstream_patch("examples/json/patch_2.txt",  std::ifstream::in);
+
+	if (fstream_obj.bad() || fstream_patch.bad()) {
+		return 1;
+	}
+
+	std::stringstream buffer_obj;
+	std::stringstream buffer_patch;
+	buffer_obj << fstream_obj.rdbuf();
+	buffer_patch << fstream_patch.rdbuf();
+
+	std::string obj_str (buffer_obj.str());
+	std::string patch_str (buffer_patch.str());
+	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Joker\", \"creation\":\"1939\", \"partnerships\":\"Robin\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
+
+	rapidjson::Document doc_obj;
+	rapidjson::Document doc_patch;
+	json_load(doc_obj, obj_str);
+	json_load(doc_patch, patch_str);
+	MsgPack obj(doc_obj);
+	MsgPack patch(doc_patch);
+
+	if (apply_patch(patch, obj)) {
+		std::string result(obj.to_json_string());
+		if (expected.compare(result) != 0) {
+			return 1;
+		}
+	} else return 1;
+	return 0;
+}
+
+
+int test_remove()
+{
+	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
+	std::ifstream fstream_patch("examples/json/patch_3.txt",  std::ifstream::in);
+
+	if (fstream_obj.bad() || fstream_patch.bad()) {
+		return 1;
+	}
+
+	std::stringstream buffer_obj;
+	std::stringstream buffer_patch;
+	buffer_obj << fstream_obj.rdbuf();
+	buffer_patch << fstream_patch.rdbuf();
+
+	std::string obj_str (buffer_obj.str());
+	std::string patch_str (buffer_patch.str());
+	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Joker\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
+
+	rapidjson::Document doc_obj;
+	rapidjson::Document doc_patch;
+	json_load(doc_obj, obj_str);
+	json_load(doc_patch, patch_str);
+	MsgPack obj(doc_obj);
+	MsgPack patch(doc_patch);
+
+	if (apply_patch(patch, obj)) {
+		std::string result(obj.to_json_string());
+		if (expected.compare(result) != 0) {
+			return 1;
+		}
+	} else return 1;
+	return 0;
+}
+
+
+int test_replace()
+{
+	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
+	std::ifstream fstream_patch("examples/json/patch_4.txt",  std::ifstream::in);
+
+	if (fstream_obj.bad() || fstream_patch.bad()) {
+		return 1;
+	}
+
+	std::stringstream buffer_obj;
+	std::stringstream buffer_patch;
+	buffer_obj << fstream_obj.rdbuf();
+	buffer_patch << fstream_patch.rdbuf();
+
+	std::string obj_str (buffer_obj.str());
+	std::string patch_str (buffer_patch.str());
+	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Riddler\", \"creation\":\"1939\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
+
+	rapidjson::Document doc_obj;
+	rapidjson::Document doc_patch;
+	json_load(doc_obj, obj_str);
+	json_load(doc_patch, patch_str);
+	MsgPack obj(doc_obj);
+	MsgPack patch(doc_patch);
+
+	if (apply_patch(patch, obj)) {
+		std::string result(obj.to_json_string());
+		if (expected.compare(result) != 0) {
+			return 1;
+		}
+	} else return 1;
+	return 0;
+}
+
+
+int test_move()
+{
+	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
+	std::ifstream fstream_patch("examples/json/patch_5.txt",  std::ifstream::in);
+
+	if (fstream_obj.bad() || fstream_patch.bad()) {
+		return 1;
+	}
+
+	std::stringstream buffer_obj;
+	std::stringstream buffer_patch;
+	buffer_obj << fstream_obj.rdbuf();
+	buffer_patch << fstream_patch.rdbuf();
+
+	std::string obj_str (buffer_obj.str());
+	std::string patch_str (buffer_patch.str());
+	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"creation\":\"1939\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Joker\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
+
+	rapidjson::Document doc_obj;
+	rapidjson::Document doc_patch;
+	json_load(doc_obj, obj_str);
+	json_load(doc_patch, patch_str);
+	MsgPack obj(doc_obj);
+	MsgPack patch(doc_patch);
+
+	if (apply_patch(patch, obj)) {
+		std::string result(obj.to_json_string());
+		if (expected.compare(result) != 0) {
+			return 1;
+		}
+	} else return 1;
+	return 0;
+}
+
+
+int test_copy()
+{
+	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
+	std::ifstream fstream_patch("examples/json/patch_6.txt",  std::ifstream::in);
+
+	if (fstream_obj.bad() || fstream_patch.bad()) {
+		return 1;
+	}
+
+	std::stringstream buffer_obj;
+	std::stringstream buffer_patch;
+	buffer_obj << fstream_obj.rdbuf();
+	buffer_patch << fstream_patch.rdbuf();
+
+	std::string obj_str (buffer_obj.str());
+	std::string patch_str (buffer_patch.str());
+	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Joker\", \"creation\":\"1939\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\", \"other_enemy\":\"Joker\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
+
+	rapidjson::Document doc_obj;
+	rapidjson::Document doc_patch;
+	json_load(doc_obj, obj_str);
+	json_load(doc_patch, patch_str);
+	MsgPack obj(doc_obj);
+	MsgPack patch(doc_patch);
+
+	if (apply_patch(patch, obj)) {
+		std::string result(obj.to_json_string());
+		if (expected.compare(result) != 0) {
+			return 1;
+		}
+	} else return 1;
+	return 0;
+}
+
+
+int test_test()
+{
+	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
+	std::ifstream fstream_patch("examples/json/patch_7.txt",  std::ifstream::in);
+
+	if (fstream_obj.bad() || fstream_patch.bad()) {
+		return 1;
+	}
+
+	std::stringstream buffer_obj;
+	std::stringstream buffer_patch;
+	buffer_obj << fstream_obj.rdbuf();
+	buffer_patch << fstream_patch.rdbuf();
+
+	std::string obj_str (buffer_obj.str());
+	std::string patch_str (buffer_patch.str());
+
+	rapidjson::Document doc_obj;
+	rapidjson::Document doc_patch;
+	json_load(doc_obj, obj_str);
+	json_load(doc_patch, patch_str);
+	MsgPack obj(doc_obj);
+	MsgPack patch(doc_patch);
+
+	if (!apply_patch(patch, obj)) {
+		return 1;
+	}
+	return 0;
+}
