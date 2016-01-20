@@ -250,9 +250,11 @@ HttpClient::on_info(http_parser* p)
 {
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
-	L_HTTP_PROTO_PARSER(self, "%3d. (INFO)", p->state);
+	int state = p->state;
 
-	switch (p->state) {
+	L_HTTP_PROTO_PARSER(self, "%3d. (INFO)", state);
+
+	switch (state) {
 		case 18:  // message_complete
 			break;
 		case 19:  // message_begin
@@ -283,9 +285,9 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 {
 	HttpClient *self = static_cast<HttpClient *>(p->data);
 
-	L_HTTP_PROTO_PARSER(self, "%3d. %s", p->state, repr(at, length).c_str());
-
 	int state = p->state;
+
+	L_HTTP_PROTO_PARSER(self, "%3d. %s", state, repr(at, length).c_str());
 
 	if (state > 26 && state <= 32) {
 		// s_req_path  ->  s_req_http_start
