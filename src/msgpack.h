@@ -149,6 +149,7 @@ public:
 		handler = std::move(v.handler);
 		parent_obj = std::move(v.parent_obj);
 		obj = std::move(v.obj);
+		m_alloc = std::move(v.m_alloc);
 		return *this;
 	}
 
@@ -157,6 +158,7 @@ public:
 		msgpack::object o(std::forward<T>(v), handler->zone.get());
 		obj->type = o.type;
 		obj->via = o.via;
+		m_alloc = size();
 		return *this;
 	}
 
