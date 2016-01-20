@@ -112,6 +112,28 @@ MsgPack::make_handler(const rapidjson::Document& doc)
 }
 
 
+MsgPack&
+MsgPack::operator=(MsgPack&& other) noexcept
+{
+	handler = std::move(other.handler);
+	parent_obj = std::move(other.parent_obj);
+	obj = std::move(other.obj);
+	m_alloc = std::move(other.m_alloc);
+	return *this;
+}
+
+
+MsgPack&
+MsgPack::operator=(const MsgPack& other)
+{
+	handler = other.handler;
+	parent_obj = other.parent_obj;
+	obj = other.obj;
+	m_alloc = other.m_alloc;
+	return *this;
+}
+
+
 MsgPack
 MsgPack::operator[](const MsgPack& o)
 {
