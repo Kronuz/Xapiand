@@ -43,8 +43,7 @@ bool apply_patch(const MsgPack& patch, MsgPack& object) {
 		for (auto elem : patch) {
 			try {
 				MsgPack op = elem.at("op");
-				std::string op_tmp = op.to_json_string();
-				std::string op_str = std::string(op_tmp, 1, op_tmp.size() - 2);
+				std::string op_str = std::string(op.obj->via.str.ptr,op.obj->via.str.size);
 
 				if      (op_str.compare(PATCH_ADD) == 0) { if (!patch_add(elem, object))     return false; }
 				else if (op_str.compare(PATCH_REM) == 0) { if (!patch_remove(elem, object))  return false; }
