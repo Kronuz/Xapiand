@@ -144,7 +144,7 @@ Schema::setDatabase(Database* _db)
 	} else {
 		to_store = false;
 		schema = MsgPack(s_schema);
-		if (schema.obj->type != msgpack::type::MAP) {
+		if (schema.obj->type == msgpack::type::MAP) {
 			try {
 				auto version = schema.at(RESERVED_VERSION);
 				if (version.obj->via.f64 != DB_VERSION_SCHEMA) {
