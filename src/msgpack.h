@@ -173,7 +173,7 @@ public:
 				auto r_size = offset + 1;
 				expand_array(r_size);
 
-				const msgpack::object* npend(obj->via.array.ptr + r_size - 1);
+				const msgpack::object* npend(obj->via.array.ptr + offset);
 				for (auto np = obj->via.array.ptr + obj->via.array.size; np != npend; ++np) {
 					msgpack::detail::unpack_nil(*np);
 					msgpack::detail::unpack_array_item(*obj, *np);
@@ -181,19 +181,16 @@ public:
 
 				msgpack::detail::unpack_array_item(*obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
 			} else {
-				auto new_size = obj->via.array.size + 1;
-				expand_array(new_size);
+				expand_array(obj->via.array.size + 1);
 
 				auto p = obj->via.array.ptr + offset;
 
 				if (p->type == msgpack::type::NIL) {
-					msgpack::object o(std::forward<T>(v), handler->zone.get());
-					operator[](offset) = o;
+					at(offset) = msgpack::object(std::forward<T>(v), handler->zone.get());
 				} else {
-					memcpy(p + 1, p, (obj->via.array.size - offset) * sizeof(msgpack::object));
+					memmove(p + 1, p, (obj->via.array.size - offset) * sizeof(msgpack::object));
 					++obj->via.array.size;
-					msgpack::object o(std::forward<T>(v), handler->zone.get());
-					operator[](offset) = o;
+					at(offset) = msgpack::object(std::forward<T>(v), handler->zone.get());
 				}
 			}
 		} else {
@@ -229,7 +226,7 @@ public:
 	template<typename T, bool is_const_iterator = true>
 	class _iterator : public std::iterator<std::input_iterator_tag, MsgPack> {
 
-		typedef typename std::conditional<is_const_iterator, const T, T>::type MsgPack_type;
+		using MsgPack_type = typename std::conditional<is_const_iterator, const T, T>::type;
 
 		MsgPack_type* obj;
 		uint32_t off;
@@ -239,7 +236,7 @@ public:
 	public:
 		_iterator(T* o, uint32_t _off)
 			: obj(o),
-			off(_off) { }
+			  off(_off) { }
 
 		_iterator(const T* o, uint32_t _off)
 			: obj(o),
@@ -297,23 +294,32 @@ public:
 		}
 	};
 
-
-	typedef _iterator<MsgPack, false> iterator;
-	typedef _iterator<MsgPack, true> const_iterator;
+	using iterator = _iterator<MsgPack, false>;
+	using const_iterator = _iterator<MsgPack, true>;
 
 	iterator begin() {
-		return  iterator(this, 0);
+		return iterator(this, 0);
 	}
 
-	const_iterator begin() const { return const_iterator(this, 0); }
-	const_iterator cbegin() const { return const_iterator(this, 0); }
+	const_iterator begin() const {
+		return const_iterator(this, 0);
+	}
+
+	const_iterator cbegin() const {
+		return const_iterator(this, 0);
+	}
 
 	iterator end() {
-		return iterator(this, obj->type == msgpack::type::MAP ? obj->via.map.size : obj->via.array.size);
+		return iterator(this, size());
 	}
 
-	const_iterator end() const { return const_iterator(this, obj->type == msgpack::type::MAP ? obj->via.map.size : obj->via.array.size); }
-	const_iterator cend() const { return const_iterator(this, obj->type == msgpack::type::MAP ? obj->via.map.size : obj->via.array.size); }
+	const_iterator end() const {
+		return const_iterator(this, size());
+	}
+
+	const_iterator cend() const {
+		return const_iterator(this, size());
+	}
 
 	explicit operator bool() const {
 		return obj->type != msgpack::type::NIL;
