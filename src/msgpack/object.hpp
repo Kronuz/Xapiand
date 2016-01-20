@@ -304,9 +304,8 @@ struct object_with_zone<msgpack::object> {
         }
 
         case msgpack::type::ARRAY:
-            o.via.array.ptr = static_cast<msgpack::object*>(o.zone.allocate_align(sizeof(msgpack::object) * v.via.array.m_alloc));
+            o.via.array.ptr = static_cast<msgpack::object*>(o.zone.allocate_align(sizeof(msgpack::object) * v.via.array.size));
             o.via.array.size = v.via.array.size;
-            o.via.array.m_alloc = v.via.array.m_alloc;
             for (msgpack::object
                      * po(o.via.array.ptr),
                      * pv(v.via.array.ptr),
@@ -318,9 +317,8 @@ struct object_with_zone<msgpack::object> {
             return;
 
         case msgpack::type::MAP:
-            o.via.map.ptr = (msgpack::object_kv*)o.zone.allocate_align(sizeof(msgpack::object_kv) * v.via.map.m_alloc);
+            o.via.map.ptr = (msgpack::object_kv*)o.zone.allocate_align(sizeof(msgpack::object_kv) * v.via.map.size);
             o.via.map.size = v.via.map.size;
-            o.via.map.m_alloc = v.via.map.m_alloc;
             for(msgpack::object_kv
                     * po(o.via.map.ptr),
                     * pv(v.via.map.ptr),
