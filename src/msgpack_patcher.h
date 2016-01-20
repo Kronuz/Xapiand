@@ -26,7 +26,7 @@
 #include "utils.h"
 
 
-bool apply_patch(MsgPack& patch, MsgPack& object);
+bool apply_patch(const MsgPack& patch, MsgPack& object);
 bool patch_add(const MsgPack& obj_patch, MsgPack& object);
 bool patch_remove(const MsgPack& obj_patch, MsgPack& object);
 bool patch_replace(const MsgPack& obj_patch, MsgPack& object);

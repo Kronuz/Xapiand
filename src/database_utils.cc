@@ -22,7 +22,6 @@
 
 #include "database_utils.h"
 
-#include "utils.h"
 #include "log.h"
 #include "length.h"
 #include "datetime.h"

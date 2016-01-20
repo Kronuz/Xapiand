@@ -38,7 +38,7 @@
 #define PATCH_FROM "from"
 
 
-bool apply_patch(MsgPack& patch, MsgPack& object) {
+bool apply_patch(const MsgPack& patch, MsgPack& object) {
 	if (patch.obj->type == msgpack::type::ARRAY) {
 		for (auto elem : patch) {
 			try {

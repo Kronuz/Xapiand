@@ -224,50 +224,66 @@ public:
 		}
 	}
 
-	class iterator {
-		MsgPack* obj;
+	MsgPack parent() {
+		if (parent_obj) {
+			return MsgPack(handler, parent_obj, nullptr);
+		} else {
+			return MsgPack();
+		}
+	}
+
+	template<typename T, bool is_const_iterator = true>
+	class _iterator : public std::iterator<std::input_iterator_tag, MsgPack> {
+
+		typedef typename std::conditional<is_const_iterator, const T, T>::type MsgPack_type;
+
+		MsgPack_type* obj;
 		uint32_t off;
 
 		friend class MsgPack;
 
 	public:
-		iterator(MsgPack* o, uint32_t _off)
+		_iterator(T* o, uint32_t _off)
+			: obj(o),
+			off(_off) { }
+
+		_iterator(const T* o, uint32_t _off)
 			: obj(o),
 			  off(_off) { }
 
-		iterator(const iterator& it)
+		_iterator(const _iterator& it)
 			: obj(it.obj),
 			  off(it.off) { }
 
-		iterator& operator++() {
+		_iterator& operator++() {
 			++off;
 			return *this;
 		}
 
-		iterator operator++(int) {
+		_iterator operator++(int) {
 			iterator tmp(*this);
 			++off;
 			return tmp;
 		}
 
-		iterator& operator+=(int pos) {
+		_iterator& operator+=(int pos) {
 			off += pos;
 			return *this;
 		}
 
-		iterator operator+(int pos) const {
-			iterator tmp(*this);
+		_iterator operator+(int pos) const {
+			_iterator tmp(*this);
 			tmp.off += pos;
 			return tmp;
 		}
 
-		iterator operator=(const iterator& other) {
+		_iterator operator=(const _iterator& other) {
 			obj = other.obj;
 			off = other.off;
 			return *this;
 		}
 
-		MsgPack operator*() const {
+		MsgPack_type operator*() const {
 			switch (obj->obj->type) {
 				case msgpack::type::MAP:
 					return MsgPack(obj->handler, &obj->obj->via.map.ptr[off].key, obj->obj);
@@ -278,42 +294,32 @@ public:
 			}
 		}
 
-		bool operator==(const iterator& other) const {
+		bool operator==(const _iterator& other) const {
 			return *obj == *other.obj && off == other.off;
 		}
 
-		bool operator!=(const iterator& other) const {
+		bool operator!=(const _iterator& other) const {
 			return !operator==(other);
-		}
-
-		explicit operator bool() const {
-			return obj->obj->type == msgpack::type::MAP ? obj->obj->via.map.size != off : obj->obj->via.array.size != off;
 		}
 	};
 
-	using const_iterator = const iterator;
 
-	MsgPack parent() {
-		if (parent_obj) {
-			return MsgPack(handler, parent_obj, nullptr);
-		} else {
-			return MsgPack();
-		}
-	}
+	typedef _iterator<MsgPack, false> iterator;
+	typedef _iterator<MsgPack, true> const_iterator;
 
 	iterator begin() {
-		return iterator(this, 0);
+		return  iterator(this, 0);
 	}
 
-	const_iterator begin() const { return begin(); }
-	const_iterator cbegin() const { return begin(); }
+	const_iterator begin() const { return const_iterator(this, 0); }
+	const_iterator cbegin() const { return const_iterator(this, 0); }
 
 	iterator end() {
 		return iterator(this, obj->type == msgpack::type::MAP ? obj->via.map.size : obj->via.array.size);
 	}
 
-	const_iterator end() const { return end(); }
-	const_iterator cend() const { return end(); }
+	const_iterator end() const { return const_iterator(this, obj->type == msgpack::type::MAP ? obj->via.map.size : obj->via.array.size); }
+	const_iterator cend() const { return const_iterator(this, obj->type == msgpack::type::MAP ? obj->via.map.size : obj->via.array.size); }
 
 	explicit operator bool() const {
 		return obj->type != msgpack::type::NIL;
