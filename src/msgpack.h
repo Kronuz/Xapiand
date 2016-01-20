@@ -306,15 +306,15 @@ public:
 	}
 
 	iterator end() {
-		return iterator(this, size());
+		return iterator(this, static_cast<uint32_t>(size()));
 	}
 
 	const_iterator end() const {
-		return const_iterator(this, size());
+		return const_iterator(this, static_cast<uint32_t>(size()));
 	}
 
 	const_iterator cend() const {
-		return const_iterator(this, size());
+		return const_iterator(this, static_cast<uint32_t>(size()));
 	}
 
 	explicit operator bool() const {

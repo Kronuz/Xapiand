@@ -362,7 +362,7 @@ void
 MsgPack::expand_map(size_t r_size)
 {
 	if (m_alloc == r_size) {
-		unsigned nsize = m_alloc > 0 ? m_alloc * 2 : MSGPACK_MAP_INIT_SIZE;
+		size_t nsize = m_alloc > 0 ? m_alloc * 2 : MSGPACK_MAP_INIT_SIZE;
 		while (nsize < r_size) {
 			nsize *= 2;
 		}
@@ -370,7 +370,7 @@ MsgPack::expand_map(size_t r_size)
 		const msgpack::object_kv* p(obj->via.map.ptr);
 		const msgpack::object_kv* pend(obj->via.map.ptr + obj->via.map.size);
 
-		msgpack::detail::unpack_map()(handler->user, nsize, *obj);
+		msgpack::detail::unpack_map()(handler->user, static_cast<uint32_t>(nsize), *obj);
 
 		// Copy previous memory.
 		for ( ; p != pend; ++p) {
@@ -386,7 +386,7 @@ void
 MsgPack::expand_array(size_t r_size)
 {
 	if (m_alloc < r_size) {
-		unsigned nsize = m_alloc > 0 ? m_alloc * 2 : MSGPACK_ARRAY_INIT_SIZE;
+		size_t nsize = m_alloc > 0 ? m_alloc * 2 : MSGPACK_ARRAY_INIT_SIZE;
 		while (nsize < r_size) {
 			nsize *= 2;
 		}
@@ -394,7 +394,7 @@ MsgPack::expand_array(size_t r_size)
 		const msgpack::object* p(obj->via.array.ptr);
 		const msgpack::object* pend(obj->via.array.ptr + obj->via.array.size);
 
-		msgpack::detail::unpack_array()(handler->user, nsize, *obj);
+		msgpack::detail::unpack_array()(handler->user, static_cast<uint32_t>(nsize), *obj);
 
 		// Copy previous memory.
 		for ( ; p != pend; ++p) {
