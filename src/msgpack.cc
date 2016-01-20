@@ -34,49 +34,57 @@
 MsgPack::MsgPack()
 	: handler(std::make_shared<object_handle>()),
 	  parent_obj(nullptr),
-	  obj(&handler->obj) { }
+	  obj(&handler->obj),
+	  m_alloc(0) { }
 
 
 MsgPack::MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object* o, msgpack::object* p)
 	: handler(unpacked),
 	  parent_obj(p),
-	  obj(o) { }
+	  obj(o),
+	  m_alloc(size()) { }
 
 
 MsgPack::MsgPack(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z)
 	: handler(std::make_shared<object_handle>(o, std::move(z))),
 	  parent_obj(nullptr),
-	  obj(&handler->obj) { }
+	  obj(&handler->obj),
+	  m_alloc(size()) { }
 
 
 MsgPack::MsgPack(msgpack::unpacked& u)
 	: handler(std::make_shared<object_handle>(u.get(), std::move(u.zone()))),
 	  parent_obj(nullptr),
-	  obj(&handler->obj) { }
+	  obj(&handler->obj),
+	  m_alloc(size()) { }
 
 
 MsgPack::MsgPack(const std::string& buffer)
 	: handler(make_handler(buffer)),
 	  parent_obj(nullptr),
-	  obj(&handler->obj) { }
+	  obj(&handler->obj),
+	  m_alloc(size()) { }
 
 
 MsgPack::MsgPack(const rapidjson::Document& doc)
 	: handler(make_handler(doc)),
 	  parent_obj(nullptr),
-	  obj(&handler->obj) { }
+	  obj(&handler->obj),
+	  m_alloc(size()) { }
 
 
 MsgPack::MsgPack(MsgPack&& other) noexcept
 	: handler(std::move(other.handler)),
 	  parent_obj(std::move(other.parent_obj)),
-	  obj(std::move(other.obj)) { }
+	  obj(std::move(other.obj)),
+	  m_alloc(std::move(other.m_alloc)) { }
 
 
 MsgPack::MsgPack(const MsgPack& other)
 	: handler(other.handler),
 	  parent_obj(other.parent_obj),
-	  obj(other.obj) { }
+	  obj(other.obj),
+	  m_alloc(other.m_alloc) { }
 
 
 std::shared_ptr<MsgPack::object_handle>
@@ -124,7 +132,6 @@ MsgPack::operator[](const std::string& key)
 		obj->type = msgpack::type::MAP;
 		obj->via.map.ptr = nullptr;
 		obj->via.map.size = 0;
-		obj->via.map.m_alloc = 0;
 	}
 
 	if (obj->type == msgpack::type::MAP) {
@@ -137,7 +144,7 @@ MsgPack::operator[](const std::string& key)
 			}
 		}
 
-		expand_map();
+		expand_map(obj->via.map.size);
 		msgpack::object_kv* np(obj->via.map.ptr + obj->via.map.size);
 
 		msgpack::detail::unpack_str(handler->user, key.data(), (uint32_t)key.size(), np->key);
@@ -158,7 +165,6 @@ MsgPack::operator[](uint32_t off)
 		obj->type = msgpack::type::ARRAY;
 		obj->via.array.ptr = nullptr;
 		obj->via.array.size = 0;
-		obj->via.array.m_alloc = 0;
 	}
 
 	if (obj->type == msgpack::type::ARRAY) {
@@ -317,10 +323,27 @@ MsgPack::to_string() const
 
 
 void
-MsgPack::expand_map()
+MsgPack::reserve(size_t n)
 {
-	if (obj->via.map.m_alloc == obj->via.map.size) {
-		unsigned nsize = obj->via.map.m_alloc > 0 ? obj->via.map.m_alloc * 2 : MSGPACK_MAP_INIT_SIZE;
+	switch (obj->type) {
+		case msgpack::type::MAP:
+			return expand_map(n);
+		case msgpack::type::ARRAY:
+			return expand_array(n);
+		default:
+			return;
+	}
+}
+
+
+void
+MsgPack::expand_map(size_t r_size)
+{
+	if (m_alloc == r_size) {
+		unsigned nsize = m_alloc > 0 ? m_alloc * 2 : MSGPACK_MAP_INIT_SIZE;
+		while (nsize < r_size) {
+			nsize *= 2;
+		}
 
 		const msgpack::object_kv* p(obj->via.map.ptr);
 		const msgpack::object_kv* pend(obj->via.map.ptr + obj->via.map.size);
@@ -332,16 +355,16 @@ MsgPack::expand_map()
 			msgpack::detail::unpack_map_item(*obj, p->key, p->val);
 		}
 
-		obj->via.map.m_alloc = nsize;
-	}
+		m_alloc = nsize;
+	 }
 }
 
 
 void
 MsgPack::expand_array(size_t r_size)
 {
-	if (obj->via.array.m_alloc < r_size) {
-		unsigned nsize = obj->via.array.m_alloc > 0 ? obj->via.array.m_alloc * 2 : MSGPACK_ARRAY_INIT_SIZE;
+	if (m_alloc < r_size) {
+		unsigned nsize = m_alloc > 0 ? m_alloc * 2 : MSGPACK_ARRAY_INIT_SIZE;
 		while (nsize < r_size) {
 			nsize *= 2;
 		}
@@ -356,7 +379,7 @@ MsgPack::expand_array(size_t r_size)
 			msgpack::detail::unpack_array_item(*obj, *p);
 		}
 
-		obj->via.array.m_alloc = nsize;
+		m_alloc = nsize;
 	}
 }
 
@@ -364,13 +387,18 @@ MsgPack::expand_array(size_t r_size)
 size_t
 MsgPack::capacity() const noexcept
 {
+	return m_alloc;
+}
+
+
+size_t
+MsgPack::size() const noexcept
+{
 	switch (obj->type) {
 		case msgpack::type::MAP:
-			return obj->via.map.m_alloc;
-			break;
+			return obj->via.map.size;
 		case msgpack::type::ARRAY:
-			return obj->via.array.m_alloc;
-			break;
+			return obj->via.array.size;
 		default:
 			return 0;
 	}
@@ -387,7 +415,7 @@ MsgPack::erase(const std::string& key)
 			--size;
 			if (p->key.type == msgpack::type::STR) {
 				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0) {
-					memcpy(p, p + 1, size * sizeof(msgpack::object_kv));
+					memmove(p, p + 1, size * sizeof(msgpack::object_kv));
 					--obj->via.map.size;
 					return true;
 				}
@@ -408,7 +436,7 @@ MsgPack::erase(uint32_t off)
 		if (obj->via.array.size >= r_size) {
 			size_t size = obj->via.array.size - off - 1;
 			auto p = obj->via.array.ptr + off;
-			memcpy(p, p + 1, size * sizeof(msgpack::object_kv));
+			memmove(p, p + 1, size * sizeof(msgpack::object_kv));
 			--obj->via.array.size;
 			return true;
 		} else {

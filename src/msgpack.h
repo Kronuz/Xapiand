@@ -78,16 +78,6 @@ class MsgPack {
 			  zone(std::move(z))
 		{
 			user.set_zone(*zone.get());
-			switch (obj.type) {
-				case msgpack::type::MAP:
-					obj.via.map.m_alloc = obj.via.map.size;
-					break;
-				case msgpack::type::ARRAY:
-					obj.via.array.m_alloc = obj.via.array.size;
-					break;
-				default:
-					break;
-			}
 		}
 
 		object_handle(object_handle&& _handler) noexcept
@@ -111,10 +101,17 @@ class MsgPack {
 	std::shared_ptr<object_handle> make_handler(const std::string& buffer);
 	std::shared_ptr<MsgPack::object_handle> make_handler(const rapidjson::Document& doc);
 
+	void expand_map(size_t r_size);
+	void expand_array(size_t r_size);
+
 public:
 	msgpack::object* parent_obj;
 	msgpack::object* obj;
 
+private:
+	size_t m_alloc;
+
+public:
 	MsgPack();
 	MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object* o, msgpack::object* p);
 	MsgPack(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z);
@@ -139,9 +136,9 @@ public:
 	std::string to_json_string(bool prettify=false) const;
 	std::string to_string() const;
 	rapidjson::Document to_json() const;
-	void expand_map();
-	void expand_array(size_t r_size);
+	void reserve(size_t n);
 	size_t capacity() const noexcept;
+	size_t size() const noexcept;
 	bool erase(const std::string& key);
 	bool erase(uint32_t off);
 	MsgPack duplicate() const;
@@ -165,12 +162,10 @@ public:
 
 	template<typename T>
 	void insert_item_to_array(unsigned offset, T&& v) {
-
 		if (obj->type == msgpack::type::NIL) {
 			obj->type = msgpack::type::ARRAY;
 			obj->via.array.ptr = nullptr;
 			obj->via.array.size = 0;
-			obj->via.array.m_alloc = 0;
 		}
 
 		if (obj->type == msgpack::type::ARRAY) {
@@ -212,7 +207,6 @@ public:
 			obj->type = msgpack::type::ARRAY;
 			obj->via.array.ptr = nullptr;
 			obj->via.array.size = 0;
-			obj->via.array.m_alloc = 0;
 		}
 
 		if (obj->type == msgpack::type::ARRAY) {
