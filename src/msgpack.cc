@@ -73,18 +73,15 @@ MsgPack::MsgPack(const rapidjson::Document& doc)
 	  m_alloc(size()) { }
 
 
-MsgPack::MsgPack(MsgPack&& other) noexcept
-	: handler(std::move(other.handler)),
-	  parent_obj(std::move(other.parent_obj)),
-	  obj(std::move(other.obj)),
-	  m_alloc(std::move(other.m_alloc)) { }
-
-
 MsgPack::MsgPack(const MsgPack& other)
 	: handler(other.handler),
 	  parent_obj(other.parent_obj),
-	  obj(other.obj),
-	  m_alloc(other.m_alloc) { }
+	  m_alloc(other.m_alloc)
+{
+	msgpack::object o(other, other.handler->zone.get());
+	obj->type = o.type;
+	obj->via = o.via;
+}
 
 
 std::shared_ptr<MsgPack::object_handle>
