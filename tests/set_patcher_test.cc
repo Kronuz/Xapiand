@@ -109,6 +109,7 @@ Suite* testPatcher(void) {
 	return s;
 }
 
+
 int main(void) {
 	Suite *test_patcher = testPatcher();
 	SRunner *sr = srunner_create(test_patcher);

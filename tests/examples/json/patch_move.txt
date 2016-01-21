@@ -1,3 +1,7 @@
 [
-	{ "op": "move", "path": "/heroes/1/enemy", "from" : "/heroes/0/enemy" }
+	{
+		"op":"move",
+		"path":"/heroes/1/enemy",
+		"from":"/heroes/0/enemy"
+	}
 ]

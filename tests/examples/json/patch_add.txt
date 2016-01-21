@@ -1,3 +1,7 @@
 [
-	{ "op": "add", "path": "/heroes/0/partnerships", "value" : "Robin" }
+	{
+		"op":"add",
+		"path":"/heroes/0/partnerships",
+		"value":"Robin"
+	}
 ]

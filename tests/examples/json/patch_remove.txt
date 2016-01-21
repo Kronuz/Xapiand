@@ -1,3 +1,6 @@
 [
-	{ "op": "remove", "path": "/heroes/0/creation" }
+	{
+		"op":"remove",
+		"path":"/heroes/0/creation"
+	}
 ]
