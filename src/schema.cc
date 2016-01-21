@@ -435,7 +435,7 @@ Schema::set_type_to_object(MsgPack& properties)
 
 
 std::string
-Schema::to_string(bool prettify)
+Schema::to_json_string(bool prettify)
 {
 	MsgPack schema_readable = schema.duplicate();
 	auto properties = schema_readable.at(RESERVED_SCHEMA);

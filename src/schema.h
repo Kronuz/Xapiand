@@ -142,9 +142,9 @@ public:
 	void set_type_to_object(MsgPack& properties);
 
 	/*
-	 * Transforms schema into string.
+	 * Transforms schema into json string.
 	 */
-	std::string to_string(bool prettify);
+	std::string to_json_string(bool prettify=false);
 
 	/*
 	 * Getters and Setters.

@@ -835,7 +835,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 	}
 
 	if (schema) {
-		std::string response_str(database->schema.to_string(e.pretty) + "\n\n");
+		std::string response_str(database->schema.to_json_string(e.pretty) + "\n\n");
 		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 		manager()->database_pool.checkin(database);
 		return;

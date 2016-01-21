@@ -112,6 +112,19 @@ MsgPack::make_handler(const rapidjson::Document& doc)
 }
 
 
+MsgPack&
+MsgPack::operator=(const MsgPack& other)
+{
+	handler = other.handler;
+	parent_obj = other.parent_obj;
+	msgpack::object o(other, other.handler->zone.get());
+	obj->type = o.type;
+	obj->via = o.via;
+	m_alloc = other.m_alloc;
+	return *this;
+}
+
+
 MsgPack
 MsgPack::operator[](const MsgPack& o)
 {
