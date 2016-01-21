@@ -32,3 +32,5 @@ int test_pack();
 int test_unpack();
 int test_explore_json();
 int test_add_items();
+int test_assigment();
+int test_path();

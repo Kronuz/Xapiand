@@ -25,9 +25,11 @@
 #include "../src/msgpack.h"
 #include "../src/log.h"
 #include "../src/database_utils.h"
+#include "../src/utils.h"
 
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 
 bool write_file_contents(const std::string& filename, const std::string& contents) {
@@ -196,4 +198,64 @@ int test_add_items() {
 	}
 
 	return 0;
+}
+
+
+int test_assigment() {
+	MsgPack o;
+	o["country"] = "México";
+	MsgPack aux = o["country"];
+
+	MsgPack r_assigment = o["country"];
+	MsgPack l_assigment = aux;
+
+	std::string r_str = r_assigment.to_json_string();
+	std::string l_str = l_assigment.to_json_string();
+	if (r_str.compare("\"México\"") != 0) {
+		L_ERR(nullptr, "ERROR: rvalue assigment in MsgPack is not working\n\nExpected: \"México\"\nResult: %s\n", r_str.c_str());
+		return 1;
+	}
+
+	if (l_str.compare("\"México\"") != 0) {
+		L_ERR(nullptr, "ERROR: lvalue assigment in MsgPack is not working\n\nExpected: \"México\\n\nResult: %s\n", l_str.c_str());
+		return 1;
+	}
+	return 0;
+}
+
+
+int test_path() {
+
+	std::string buffer;
+	if (!read_file_contents("examples/json/object_path.txt", &buffer)) {
+		L_ERR(nullptr, "ERROR: Can not read the file [examples/json/object_path.txt]");
+		return 1;
+	}
+
+	rapidjson::Document doc_path;
+	json_load(doc_path, buffer);
+	MsgPack obj(doc_path);
+
+	std::string path_str("/AMERICA/COUNTRY/1");
+	std::vector <std::string> path;
+	stringTokenizer(path_str, "/", path);
+
+	MsgPack path_msgpack = obj.path(path);
+
+	std::string target = path_msgpack.to_json_string();
+	std::string parent = path_msgpack.parent().to_json_string();
+	std::string parent_expected ("[\"EU\", \"MEXICO\", \"CANADA\", \"BRAZIL\"]");
+
+	if (target.compare("\"MEXICO\"") != 0) {
+		L_ERR(nullptr, "ERROR: solve path in MsgPack is not working\n\nExpected: \"MEXICO\"\nResult: %s\n", target.c_str());
+		return 1;
+	}
+
+	if (parent.compare(parent_expected) != 0) {
+		L_ERR(nullptr, "ERROR: solve path in MsgPack is not working\n\nExpected: %s\nResult: %s\n", parent_expected.c_str(), parent.c_str());
+		return 1;
+	}
+
+	return 0;
+
 }
