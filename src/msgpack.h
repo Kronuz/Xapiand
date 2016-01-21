@@ -144,10 +144,7 @@ public:
 	MsgPack duplicate() const;
 	MsgPack path(const std::vector<std::string>& path) const;
 
-	MsgPack& operator=(MsgPack&& other) noexcept;
-	MsgPack& operator=(const MsgPack& other);
-
-	template<typename T, typename = std::enable_if_t<!std::is_same<MsgPack, std::decay_t<T>>::value>>
+	template<typename T>
 	MsgPack& operator=(T&& v) {
 		msgpack::object o(std::forward<T>(v), handler->zone.get());
 		obj->type = o.type;
