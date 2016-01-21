@@ -118,6 +118,7 @@ public:
 	MsgPack(msgpack::unpacked& u);
 	MsgPack(const std::string& buffer);
 	MsgPack(const rapidjson::Document& doc);
+	MsgPack(MsgPack&& other) noexcept;
 	MsgPack(const MsgPack& other);
 
 	MsgPack operator[](const MsgPack& o);
@@ -141,11 +142,11 @@ public:
 	bool erase(const std::string& key);
 	bool erase(uint32_t off);
 	MsgPack duplicate() const;
+	void reset(MsgPack&& other) noexcept;
+	void reset(const MsgPack& other);
 	MsgPack path(const std::vector<std::string>& path) const;
 
-	MsgPack& operator=(const MsgPack& other);
-
-	template<typename T, typename = std::enable_if_t<!std::is_base_of<MsgPack, std::decay_t<T>>::value>>
+	template<typename T>
 	MsgPack& operator=(T&& v) {
 		msgpack::object o(std::forward<T>(v), handler->zone.get());
 		obj->type = o.type;

@@ -73,15 +73,18 @@ MsgPack::MsgPack(const rapidjson::Document& doc)
 	  m_alloc(size()) { }
 
 
+MsgPack::MsgPack(MsgPack&& other) noexcept
+	: handler(std::move(other.handler)),
+	  parent_obj(std::move(other.parent_obj)),
+	  obj(std::move(other.obj)),
+	  m_alloc(std::move(other.m_alloc)) { }
+
+
 MsgPack::MsgPack(const MsgPack& other)
 	: handler(other.handler),
 	  parent_obj(other.parent_obj),
-	  m_alloc(other.m_alloc)
-{
-	msgpack::object o(other, other.handler->zone.get());
-	obj->type = o.type;
-	obj->via = o.via;
-}
+	  obj(other.obj),
+	  m_alloc(other.m_alloc) { }
 
 
 std::shared_ptr<MsgPack::object_handle>
@@ -106,19 +109,6 @@ MsgPack::make_handler(const rapidjson::Document& doc)
 	auto zone(std::make_unique<msgpack::zone>());
 	msgpack::object obj(doc, *zone.get());
 	return std::make_shared<MsgPack::object_handle>(obj, msgpack::move(zone));
-}
-
-
-MsgPack&
-MsgPack::operator=(const MsgPack& other)
-{
-	handler = other.handler;
-	parent_obj = other.parent_obj;
-	msgpack::object o(other, other.handler->zone.get());
-	obj->type = o.type;
-	obj->via = o.via;
-	m_alloc = other.m_alloc;
-	return *this;
 }
 
 
@@ -465,6 +455,26 @@ MsgPack::duplicate() const
 }
 
 
+void
+MsgPack::reset(MsgPack&& other) noexcept
+{
+	handler = std::move(other.handler);
+	parent_obj = std::move(other.parent_obj);
+	obj = std::move(other.obj);
+	m_alloc = std::move(other.m_alloc);
+}
+
+
+void
+MsgPack::reset(const MsgPack& other)
+{
+	handler = other.handler;
+	parent_obj = other.parent_obj;
+	obj = other.obj;
+	m_alloc = other.m_alloc;
+}
+
+
 MsgPack
 MsgPack::path(const std::vector<std::string>& path) const
 {
@@ -472,9 +482,9 @@ MsgPack::path(const std::vector<std::string>& path) const
 	for (const auto& s : path) {
 		try {
 			if (current.obj->type == msgpack::type::MAP) {
-				current = current.at(s);
+				current.reset(current.at(s));
 			} else if (current.obj->type == msgpack::type::ARRAY) {
-				current = current.at(strict_stoi(s));
+				current.reset(current.at(strict_stoi(s)));
 			} else {
 				throw msgpack::type_error();
 			}
