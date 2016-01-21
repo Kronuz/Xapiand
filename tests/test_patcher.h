@@ -20,6 +20,8 @@
  * IN THE SOFTWARE.
  */
 
+#pragma once
+
 
 int test_mix();
 int test_add();

@@ -20,11 +20,11 @@
  * IN THE SOFTWARE.
  */
 
-
 #include "test_patcher.h"
 
 #include <check.h>
 #include <stdlib.h>
+
 
 START_TEST(test_patcher_mix)
 {
@@ -75,7 +75,7 @@ START_TEST(test_patcher_test)
 END_TEST
 
 
-Suite* testMsgPack(void) {
+Suite* testPatcher(void) {
 	Suite *s = suite_create("Test patcher");
 
 	TCase *t_mix = tcase_create("Test patcher miscellaneous");
@@ -106,12 +106,11 @@ Suite* testMsgPack(void) {
 	tcase_add_test(t_test, test_patcher_test);
 	suite_add_tcase(s, t_test);
 
-
 	return s;
 }
 
 int main(void) {
-	Suite *test_patcher = testMsgPack();
+	Suite *test_patcher = testPatcher();
 	SRunner *sr = srunner_create(test_patcher);
 	srunner_run_all(sr, CK_NORMAL);
 	int number_failed = srunner_ntests_failed(sr);

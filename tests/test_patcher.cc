@@ -29,8 +29,8 @@
 
 #include <fstream>
 
-int test_mix()
-{
+
+int test_mix() {
 	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
 	std::ifstream fstream_patch("examples/json/patch_1.txt",  std::ifstream::in);
 	std::ifstream fstream_result("examples/json/example_4.txt",  std::ifstream::in);
@@ -68,8 +68,7 @@ int test_mix()
 }
 
 
-int test_add()
-{
+int test_add() {
 	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
 	std::ifstream fstream_patch("examples/json/patch_2.txt",  std::ifstream::in);
 
@@ -103,8 +102,7 @@ int test_add()
 }
 
 
-int test_remove()
-{
+int test_remove() {
 	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
 	std::ifstream fstream_patch("examples/json/patch_3.txt",  std::ifstream::in);
 
@@ -138,8 +136,7 @@ int test_remove()
 }
 
 
-int test_replace()
-{
+int test_replace() {
 	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
 	std::ifstream fstream_patch("examples/json/patch_4.txt",  std::ifstream::in);
 
@@ -173,8 +170,7 @@ int test_replace()
 }
 
 
-int test_move()
-{
+int test_move() {
 	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
 	std::ifstream fstream_patch("examples/json/patch_5.txt",  std::ifstream::in);
 
@@ -208,8 +204,7 @@ int test_move()
 }
 
 
-int test_copy()
-{
+int test_copy() {
 	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
 	std::ifstream fstream_patch("examples/json/patch_6.txt",  std::ifstream::in);
 
@@ -243,8 +238,7 @@ int test_copy()
 }
 
 
-int test_test()
-{
+int test_test() {
 	std::ifstream fstream_obj("examples/json/example_3.txt",  std::ifstream::in);
 	std::ifstream fstream_patch("examples/json/patch_7.txt",  std::ifstream::in);
 
