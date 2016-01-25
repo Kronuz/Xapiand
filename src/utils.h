@@ -104,7 +104,7 @@ uint64_t random_int(uint64_t initial, uint64_t last);
 void set_thread_name(const std::string& name);
 std::string get_thread_name();
 
-std::string repr(const void *p, size_t size, bool friendly=true, size_t max_size=0);
+std::string repr(const void* p, size_t size, bool friendly=true, size_t max_size=0);
 std::string repr(const std::string& string, bool friendly=true, size_t max_size=0);
 
 

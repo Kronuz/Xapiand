@@ -160,6 +160,11 @@ std::string repr(const void* p, size_t size, bool friendly, size_t max_size) {
 				default:
 					if (c >= ' ' && c <= '~') {
 						*d++ = c;
+					} else {
+						*d++ = '\\';
+						*d++ = 'x';
+						sprintf(d, "%02x", (unsigned char)c);
+						d += 2;
 					}
 					break;
 			}
