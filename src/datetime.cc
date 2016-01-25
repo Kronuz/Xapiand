@@ -105,7 +105,7 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
 		return;
 	}
 
-	throw MSG_Error("In dateTimeParser, format is incorrect.");
+	throw MSG_Error("In dateTimeParser, format %s is incorrect.", date.c_str());
 }
 
 
