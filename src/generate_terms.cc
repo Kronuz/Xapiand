@@ -21,19 +21,19 @@
  */
 
 #include "generate_terms.h"
+
 #include "serialise.h"
 #include "datetime.h"
 #include "utils.h"
 #include "database.h"
 
-#include "generate_terms.h"
 #include <algorithm>
 #include <bitset>
 #include <map>
 #include <limits.h>
 
 
-static bool isnotSubtrixel(std::string &last_valid, const uint64_t &id_trixel) {
+static bool isnotSubtrixel(std::string& last_valid, const uint64_t& id_trixel) {
 	std::string res(std::bitset<SIZE_BITS_ID>(id_trixel).to_string());
 	res = res.substr(res.find("1"));
 	if (res.find(last_valid) == 0) {
@@ -46,8 +46,8 @@ static bool isnotSubtrixel(std::string &last_valid, const uint64_t &id_trixel) {
 
 
 void
-GenerateTerms::numeric(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy,
-		const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes)
+GenerateTerms::numeric(::std::string& result_terms, const ::std::string& start_, const ::std::string& end_,
+		const ::std::vector<double>& accuracy, const ::std::vector<::std::string>& acc_prefix, ::std::vector<::std::string>& prefixes)
 {
 	if (!start_.empty() && !end_.empty() && !accuracy.empty()) {
 		double d_start = std::stod(start_);
@@ -63,19 +63,21 @@ GenerateTerms::numeric(::std::string &result_terms, const ::std::string &start_,
 
 		// Find the upper or equal accuracy.
 		int pos = 0, len = (int)accuracy.size();
-		while (pos < len && accuracy[pos] < size_r) pos++;
+		while (pos < len && accuracy[pos] < size_r) ++pos;
+
 		// If there is a upper accuracy.
 		bool up_acc = false;
 		if (pos < len) {
 			long long _acc = static_cast<long long>(accuracy[pos]);
-			std::string prefix(acc_prefix[pos] + ":");
+			std::string prefix_dot(acc_prefix[pos] + ":");
 			prefixes.push_back(acc_prefix[pos]);
 			long long aux = start - (start % _acc);
 			long long aux2 = end - (end % _acc);
-			result_terms = prefix + ::std::to_string(aux);
-			if (aux != aux2) result_terms += " OR " + prefix + ::std::to_string(aux2);
+			result_terms = prefix_dot + query_string(::std::to_string(aux));
+			if (aux != aux2) result_terms += " OR " + prefix_dot + query_string(::std::to_string(aux2));
 			up_acc = true;
 		}
+
 		// If there is a lower accuracy.
 		if (--pos >= 0) {
 			long long _acc = static_cast<long long>(accuracy[pos]);
@@ -84,26 +86,24 @@ GenerateTerms::numeric(::std::string &result_terms, const ::std::string &start_,
 			long long aux = (end - start) / _acc;
 			// If terms are not too many.
 			if (aux < MAX_TERMS) {
-				std::string prefix(acc_prefix[pos] + ":");
+				std::string prefix_dot(acc_prefix[pos] + ":");
 				prefixes.push_back(acc_prefix[pos]);
-				::std::string or_terms(prefix + ::std::to_string(start));
-				for (int i = 1; i < aux; i++) {
+				::std::string or_terms(prefix_dot + query_string(::std::to_string(start)));
+				for (int i = 1; i < aux; ++i) {
 					long long aux2 = start + accuracy[pos] * i;
-					or_terms += " OR " + prefix + ::std::to_string(aux2);
+					or_terms += " OR " + prefix_dot + query_string(::std::to_string(aux2));
 				}
-				if (start != end) or_terms += " OR " + prefix + ::std::to_string(end);
+				if (start != end) or_terms += " OR " + prefix_dot + query_string(::std::to_string(end));
 				result_terms = up_acc ? "(" + result_terms + ") AND (" + or_terms + ")" : or_terms;
 			}
 		}
-
-		::std::transform(result_terms.begin(), result_terms.end(), result_terms.begin(), TRANSFORM());
 	}
 }
 
 
 void
-GenerateTerms::date(::std::string &result_terms, const ::std::string &start_, const ::std::string &end_, const ::std::vector<double> &accuracy,
-		const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes)
+GenerateTerms::date(::std::string& result_terms, const ::std::string& start_, const ::std::string& end_,
+		const ::std::vector<double>& accuracy, const ::std::vector<::std::string>& acc_prefix, ::std::vector<::std::string>& prefixes)
 {
 	if (!start_.empty() && !end_.empty() && !accuracy.empty()) {
 		try {
@@ -122,79 +122,79 @@ GenerateTerms::date(::std::string &result_terms, const ::std::string &start_, co
 
 			// Find the accuracy needed.
 			int acc = toUType(unitTime::YEAR);
-			while (acc >= toUType(unitTime::SECOND) && (tm_e[acc] - tm_s[acc]) == 0) acc--;
+			while (acc >= toUType(unitTime::SECOND) && (tm_e[acc] - tm_s[acc]) == 0) --acc;
 
 			// Find the upper or equal accuracy.
 			size_t pos = 0;
-			while (accuracy[pos] < acc) pos++;
+			while (accuracy[pos] < acc) ++pos;
+
 			// If the accuracy needed is in accuracy.
 			if (acc == accuracy[pos]) {
 				switch ((unitTime)accuracy[pos]) {
 					case unitTime::YEAR:
 						if ((tm_e[5] - tm_s[5]) > MAX_TERMS) return;
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = year(tm_s, tm_e, prefixes.back());
+						result_terms = year(tm_s, tm_e, acc_prefix[pos]);
 						break;
 					case unitTime::MONTH:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = month(tm_s, tm_e, prefixes.back());
+						result_terms = month(tm_s, tm_e, acc_prefix[pos]);
 						break;
 					case unitTime::DAY:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = day(tm_s, tm_e, prefixes.back());
+						result_terms = day(tm_s, tm_e, acc_prefix[pos]);
 						break;
 					case unitTime::HOUR:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = hour(tm_s, tm_e, prefixes.back());
+						result_terms = hour(tm_s, tm_e, acc_prefix[pos]);
 						break;
 					case unitTime::MINUTE:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = minute(tm_s, tm_e, prefixes.back());
+						result_terms = minute(tm_s, tm_e, acc_prefix[pos]);
 						break;
 					case unitTime::SECOND:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = second(tm_s, tm_e, prefixes.back());
+						result_terms = second(tm_s, tm_e, acc_prefix[pos]);
 						break;
 				}
 			}
+
 			// If there is an upper accuracy
 			if (accuracy[pos] != acc || ++pos < accuracy.size()) {
 				switch ((unitTime)accuracy[pos]) {
 					case unitTime::YEAR:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? year(tm_s, tm_e, prefixes.back()) :
-									   year(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
+						result_terms = result_terms.empty() ? year(tm_s, tm_e, acc_prefix[pos]) :
+									   year(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
 						break;
 					case unitTime::MONTH:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? month(tm_s, tm_e, prefixes.back()) :
-									   month(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
+						result_terms = result_terms.empty() ? month(tm_s, tm_e, acc_prefix[pos]) :
+									   month(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
 						break;
 					case unitTime::DAY:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? day(tm_s, tm_e, prefixes.back()) :
-									   day(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
+						result_terms = result_terms.empty() ? day(tm_s, tm_e, acc_prefix[pos]) :
+									   day(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
 						break;
 					case unitTime::HOUR:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? hour(tm_s, tm_e, prefixes.back()) :
-									   hour(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
+						result_terms = result_terms.empty() ? hour(tm_s, tm_e, acc_prefix[pos]) :
+									   hour(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
 						break;
 					case unitTime::MINUTE:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? minute(tm_s, tm_e, prefixes.back()) :
-									   minute(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
+						result_terms = result_terms.empty() ? minute(tm_s, tm_e, acc_prefix[pos]) :
+									   minute(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
 						break;
 					case unitTime::SECOND:
 						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? second(tm_s, tm_e, prefixes.back()) :
-									   second(tm_s, tm_e, prefixes.back()) + " AND (" + result_terms + ")";
+						result_terms = result_terms.empty() ? second(tm_s, tm_e, acc_prefix[pos]) :
+									   second(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
 						break;
 				}
 			}
-
-			::std::transform(result_terms.begin(), result_terms.end(), result_terms.begin(), TRANSFORM());
-		} catch (const ::std::exception &ex) {
+		} catch (const ::std::exception& ex) {
 			throw Xapian::QueryParserError("Didn't understand date specification");
 		}
 	}
@@ -202,113 +202,117 @@ GenerateTerms::date(::std::string &result_terms, const ::std::string &start_, co
 
 
 ::std::string
-GenerateTerms::year(int tm_s[], int tm_e[], const ::std::string &prefix)
+GenerateTerms::year(int tm_s[], int tm_e[], const ::std::string& prefix)
 {
 	::std::string prefix_dot = prefix + ":";
 	::std::string res;
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_s[4] = tm_e[0] = tm_e[1] = tm_e[2] = tm_e[4] = 0;
 	tm_s[3] = tm_e[3] = 1;
 	while (tm_s[5] != tm_e[5]) {
-		res += prefix_dot + Serialise::date(tm_s) + " OR ";
-		tm_s[5]++;
+		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		++tm_s[5];
 	}
-	res += prefix_dot + Serialise::date(tm_e);
+	res += prefix_dot + query_string(Serialise::date(tm_e));
 	return res;
 }
 
 
 ::std::string
-GenerateTerms::month(int tm_s[], int tm_e[], const ::std::string &prefix)
+GenerateTerms::month(int tm_s[], int tm_e[], const ::std::string& prefix)
 {
 	::std::string prefix_dot = prefix + ":";
 	::std::string res;
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_e[1] = tm_e[2] = tm_e[3] = 0;
 	tm_s[3] = tm_e[3] = 1;
 	while (tm_s[4] != tm_e[4]) {
-		res += prefix_dot + Serialise::date(tm_s) + " OR ";
-		tm_s[4]++;
+		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		++tm_s[4];
 	}
-	res += prefix_dot + Serialise::date(tm_e);
+	res += prefix_dot + query_string(Serialise::date(tm_e));
 	return res;
 }
 
 
 ::std::string
-GenerateTerms::day(int tm_s[], int tm_e[], const ::std::string &prefix)
+GenerateTerms::day(int tm_s[], int tm_e[], const ::std::string& prefix)
 {
 	::std::string prefix_dot = prefix + ":";
 	::std::string res;
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_e[0] = tm_e[1] = tm_e[2] = 0;
 	while (tm_s[3] != tm_e[3]) {
-		res += prefix_dot + Serialise::date(tm_s) + " OR ";
-		tm_s[3]++;
+		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		++tm_s[3];
 	}
-	res += prefix_dot + Serialise::date(tm_e);
+	res += prefix_dot + query_string(Serialise::date(tm_e));
 	return res;
 }
 
 
 ::std::string
-GenerateTerms::hour(int tm_s[], int tm_e[], const ::std::string &prefix)
+GenerateTerms::hour(int tm_s[], int tm_e[], const ::std::string& prefix)
 {
 	::std::string prefix_dot = prefix + ":";
 	::std::string res;
 	tm_s[0] = tm_s[1] = tm_e[0] = tm_e[1] = 0;
 	while (tm_s[2] != tm_e[2]) {
-		res += prefix_dot + Serialise::date(tm_s) + " OR ";
-		tm_s[2]++;
+		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		++tm_s[2];
 	}
-	res += prefix_dot + Serialise::date(tm_e);
+	res += prefix_dot + query_string(Serialise::date(tm_e));
 	return res;
 }
 
 
 ::std::string
-GenerateTerms::minute(int tm_s[], int tm_e[], const ::std::string &prefix)
+GenerateTerms::minute(int tm_s[], int tm_e[], const ::std::string& prefix)
 {
 	::std::string prefix_dot = prefix + ":";
 	::std::string res;
 	tm_s[0] = tm_e[0] = 0;
 	while (tm_s[1] != tm_e[1]) {
-		res += prefix_dot + Serialise::date(tm_s) + " OR ";
-		tm_s[1]++;
+		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		++tm_s[1];
 	}
-	res += prefix_dot + Serialise::date(tm_e);
+	res += prefix_dot + query_string(Serialise::date(tm_e));
 	return res;
 }
 
 
 ::std::string
-GenerateTerms::second(int tm_s[], int tm_e[], const ::std::string &prefix)
+GenerateTerms::second(int tm_s[], int tm_e[], const ::std::string& prefix)
 {
 	::std::string prefix_dot = prefix + ":";
 	::std::string res;
 	while (tm_s[0] != tm_e[0]) {
-		res += prefix_dot + Serialise::date(tm_s) + " OR ";
-		tm_s[0]++;
+		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		++tm_s[0];
 	}
-	res += prefix_dot + Serialise::date(tm_e);
+	res += prefix_dot + query_string(Serialise::date(tm_e));
 	return res;
 }
 
 
 void
-GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ranges,  const ::std::vector<double> &accuracy,
-		const ::std::vector<::std::string> &acc_prefix, ::std::vector<::std::string> &prefixes)
+GenerateTerms::geo(::std::string& result_terms, const ::std::vector<range_t>& ranges,  const ::std::vector<double>& accuracy,
+		const ::std::vector<::std::string>& acc_prefix, ::std::vector<::std::string>& prefixes)
 {
 	// The user does not specify the accuracy.
 	if (acc_prefix.empty()) return;
 
 	::std::map<uint64_t, ::std::string> result;
 	::std::set<::std::string> aux_p;
-	for (auto rit = ranges.begin(); rit != ranges.end(); ++rit) {
-		::std::bitset<SIZE_BITS_ID> b1(rit->start), b2(rit->end), res;
+	for (const auto& range : ranges) {
+		::std::bitset<SIZE_BITS_ID> b1(range.start), b2(range.end), res;
 		int idx = -1;
 		uint64_t val;
-		if (rit->start != rit->end) {
-			for (idx = SIZE_BITS_ID - 1; idx > 0 && b1.test(idx) == b2.test(idx); --idx) res.set(idx, b1.test(idx));
+		if (range.start != range.end) {
+			for (idx = SIZE_BITS_ID - 1; idx > 0 && b1.test(idx) == b2.test(idx); --idx) {
+				res.set(idx, b1.test(idx));
+			}
 			val = res.to_ullong();
-		} else val = rit->start;
+		} else {
+			val = range.start;
+		}
 
 		int posF = -1, j = 0;
 		for (int i = (int)(accuracy.size() - 1); i > 1; --i) {
@@ -318,7 +322,10 @@ GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ra
 				break;
 			}
 		}
-		if (posF != -1) result.insert(::std::pair<uint64_t, ::std::string>(val >> posF, acc_prefix[j]));
+
+		if (posF != -1) {
+			result.insert(::std::pair<uint64_t, ::std::string>(val >> posF, acc_prefix[j]));
+		}
 	}
 
 	// The search have trixels more big that the biggest trixel in accuracy.
@@ -336,5 +343,5 @@ GenerateTerms::geo(::std::string &result_terms, const ::std::vector<range_t> &ra
 			aux_p.insert(it->second);
 		}
 	}
-	prefixes.assign(aux_p.begin(), aux_p.end());
+	prefixes.insert(prefixes.end(), aux_p.begin(), aux_p.end());
 }
