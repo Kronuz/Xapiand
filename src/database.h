@@ -76,20 +76,6 @@ class DatabaseQueue;
 
 
 class Database {
-	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const;
-	void index_items(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value=true);
-
-	void index_texts(Xapian::Document& doc, const std::string& name, const MsgPack& texts, MsgPack& properties);
-	void index_text(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-
-	void index_terms(Xapian::Document& doc, const std::string& name, const MsgPack& terms, MsgPack& properties);
-	void index_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-
-	void index_values(Xapian::Document& doc, const std::string& name, const MsgPack& values, MsgPack& properties, bool is_term=false);
-	void index_value(Xapian::Document& doc, const MsgPack& value, StringList& s, size_t& pos, bool is_term) const;
-
-	void index(Xapian::Document& doc, const MsgPack& obj);
-
 public:
 	Schema schema;
 
@@ -114,32 +100,52 @@ public:
 		std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
 	};
 
-	Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endpoints, int flags);
+	Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints, int flags);
 	~Database();
 
-	long long read_mastery(const std::string &dir);
+	long long read_mastery(const std::string& dir);
 	void reopen();
-	bool drop(const std::string &document_id, bool commit_=false);
+	bool commit();
+
+	bool drop(const std::string& document_id, bool commit_=false);
 	Xapian::docid index(const std::string& body, const std::string& document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length);
-	Xapian::docid replace(const std::string &document_id, const Xapian::Document &doc, bool commit_=false);
-	Xapian::docid replace(const Xapian::docid &did, const Xapian::Document &doc, bool commit_=false);
-	bool get_metadata(const std::string &key, std::string &value);
-	bool set_metadata(const std::string &key, const std::string &value, bool commit_=false);
-	bool get_document(const Xapian::docid &did, Xapian::Document &doc);
-	Xapian::Enquire get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
-					Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
-					const similar_field_t *nearest, const similar_field_t *fuzzy, const std::vector<std::string> *facets);
-	search_t search(const query_field_t &e);
-	search_t _search(const std::string &query, unsigned flags, bool text, const std::string &lan);
-	void get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field_t *similar);
-	int get_mset(const query_field_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
-					std::vector<std::string> &suggestions, int offset = 0);
+	Xapian::docid replace(const std::string& document_id, const Xapian::Document& doc, bool commit_=false);
+	Xapian::docid replace(const Xapian::docid& did, const Xapian::Document& doc, bool commit_=false);
+
+	data_field_t get_data_field(const std::string& field_name);
+	data_field_t get_slot_field(const std::string& field_name);
+
+	int get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
+			std::vector<std::string>& suggestions, int offset=0);
+	bool get_metadata(const std::string& key, std::string& value);
+	bool set_metadata(const std::string& key, const std::string& value, bool commit_=false);
+	bool get_document(const Xapian::docid& did, Xapian::Document& doc);
+
 	void get_stats_database(MsgPack&& stats);
 	void get_stats_docs(MsgPack&& stats, const std::string& document_id);
-	data_field_t get_data_field(const std::string &field_name);
-	data_field_t get_slot_field(const std::string &field_name);
-	bool commit();
+
+private:
+	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const;
+	void index_object(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value=true);
+
+	void index_texts(Xapian::Document& doc, const std::string& name, const MsgPack& texts, MsgPack& properties);
+	void index_text(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
+
+	void index_terms(Xapian::Document& doc, const std::string& name, const MsgPack& terms, MsgPack& properties);
+	void index_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
+
+	void index_values(Xapian::Document& doc, const std::string& name, const MsgPack& values, MsgPack& properties, bool is_term=false);
+	void index_value(Xapian::Document& doc, const MsgPack& value, StringList& s, size_t& pos, bool is_term) const;
+
+	void _index(Xapian::Document& doc, const MsgPack& obj);
+
+	search_t _search(const std::string& query, unsigned flags, bool text, const std::string& lan);
+	search_t search(const query_field_t& e);
+
+	void get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar);
+	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t *e, Multi_MultiValueKeyMaker *sorter,
+		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies);
 };
 
 
@@ -217,20 +223,20 @@ private:
 
 	std::condition_variable checkin_cond;
 
-	void init_ref(const Endpoints &endpoints);
-	void inc_ref(const Endpoints &endpoints);
-	void dec_ref(const Endpoints &endpoints);
+	void init_ref(const Endpoints& endpoints);
+	void inc_ref(const Endpoints& endpoints);
+	void dec_ref(const Endpoints& endpoints);
 	int get_master_count();
 
 	void add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
 	void drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue);
-	bool _switch_db(const Endpoint &endpoint);
+	bool _switch_db(const Endpoint& endpoint);
 
 public:
 	DatabasePool(size_t max_size);
 	~DatabasePool();
 
-	long long get_mastery_level(const std::string &dir);
+	long long get_mastery_level(const std::string& dir);
 
 	void finish();
 
@@ -268,8 +274,8 @@ class ExpandDeciderFilterPrefixes : public Xapian::ExpandDecider {
 	std::vector<std::string> prefixes;
 
 public:
-	ExpandDeciderFilterPrefixes(const std::vector<std::string> &prefixes_)
+	ExpandDeciderFilterPrefixes(const std::vector<std::string>& prefixes_)
 		: prefixes(prefixes_) { }
 
-	virtual bool operator() (const std::string &term) const override;
+	virtual bool operator() (const std::string& term) const override;
 };

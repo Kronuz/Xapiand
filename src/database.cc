@@ -46,7 +46,7 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 };
 
 
-Database::Database(std::shared_ptr<DatabaseQueue> &queue_, const Endpoints &endpoints_, int flags_)
+Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_)
 	: weak_queue(queue_),
 	  endpoints(endpoints_),
 	  flags(flags_),
@@ -71,7 +71,7 @@ Database::~Database()
 
 
 long long
-Database::read_mastery(const std::string &dir)
+Database::read_mastery(const std::string& dir)
 {
 	if (!local) return -1;
 	if (mastery_level != -1) return mastery_level;
@@ -93,7 +93,7 @@ Database::reopen()
 			db->reopen();
 			schema.setDatabase(this);
 			return;
-		} catch (const Xapian::Error &err) {
+		} catch (const Xapian::Error& err) {
 			L_ERR(this, "ERROR: %s", err.get_msg().c_str());
 			db->close();
 			db.reset();
@@ -137,7 +137,7 @@ Database::reopen()
 				try {
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
-				} catch (const Xapian::DatabaseOpeningError &err) {
+				} catch (const Xapian::DatabaseOpeningError& err) {
 					if (!(flags & DB_SPAWN))  {
 						db.reset();
 						throw;
@@ -162,7 +162,7 @@ Database::reopen()
 						local = true;
 						if (endpoints_size == 1) read_mastery(e->path);
 					}
-				} catch (const Xapian::DatabaseOpeningError &err) { }
+				} catch (const Xapian::DatabaseOpeningError& err) { }
 # else
 				rdb = Xapian::Remote::open(e->host, port, 0, 10000, e->path);
 # endif
@@ -177,65 +177,67 @@ Database::reopen()
 
 
 bool
-Database::drop(const std::string &doc_id, bool _commit)
+Database::commit()
+{
+	schema.store();
+
+	for (int t = 3; t >= 0; --t) {
+		L_DATABASE_WRAP(this, "Commit: t: %d", t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			wdb->commit();
+		} catch (const Xapian::Error& e) {
+			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+			if (t) reopen();
+			continue;
+		}
+		L_DATABASE_WRAP(this, "Commit made");
+		modified = false;
+		return true;
+	}
+
+	L_ERR(this, "ERROR: Not can do commit!");
+	return false;
+}
+
+
+bool
+Database::drop(const std::string& doc_id, bool _commit)
 {
 	if (!(flags & DB_WRITABLE)) {
 		L_ERR(this, "ERROR: database is read-only");
-		return false;
+		return 0;
 	}
 
 	std::string document_id = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
 
 	for (int t = 3; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Deleting: -%s- t:%d", document_id.c_str(), t);
+		L_DATABASE_WRAP(this, "Deleting doc_id: %s  t: %d", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(document_id);
-		} catch (const Xapian::DatabaseCorruptError &e) {
+		} catch (const Xapian::DatabaseCorruptError& e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			return false;
-		} catch (const Xapian::DatabaseError &e) {
+		} catch (const Xapian::DatabaseError& e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			return false;
-		} catch (const Xapian::Error &e) {
+		} catch (const Xapian::Error& e) {
 			L_DEBUG(this, "Inside catch drop");
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
 		L_DATABASE_WRAP(this, "Document deleted");
-		if (_commit) return commit();
-		else {
+		if (_commit) {
+			return commit();
+		} else {
 			modified = true;
 			return true;
 		}
 	}
 
-	L_ERR(this, "ERROR: Cannot delete document: %s!", document_id.c_str());
-	return false;
-}
-
-
-bool
-Database::commit()
-{
-	schema.store();
-
-	for (int t = 3; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Commit: t%d", t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			wdb->commit();
-		} catch (const Xapian::Error &e) {
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
-			if (t) reopen();
-			continue;
-		}
-		L_DATABASE_WRAP(this, "Commit made");
-		return true;
-	}
-
-	L_ERR(this, "ERROR: Cannot do commit!");
+	L_ERR(this, "ERROR: Not can delete document: %s!", document_id.c_str());
 	return false;
 }
 
@@ -269,21 +271,17 @@ Database::index_required_data(Xapian::Document& doc, std::string& term_id, const
 
 
 void
-Database::index_items(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value)
+Database::index_object(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value)
 {
-	specification_t spc_bef = schema.specification;
+	const specification_t spc_bef = schema.specification;
 	if (item_val.obj->type == msgpack::type::MAP) {
 		bool offsprings = false;
 		for (auto subitem_key : item_val) {
 			std::string str_subkey(subitem_key.obj->via.str.ptr, subitem_key.obj->via.str.size);
 			auto subitem_val = item_val.at(str_subkey);
 			if (!is_reserved(str_subkey)) {
-				if (str_key.empty()) {
-					index_items(doc, str_subkey, subitem_val, schema.get_subproperties(properties, str_subkey, subitem_val), is_value);
-				} else {
-					std::string str_subkey_f(str_key + DB_OFFSPRING_UNION + str_subkey);
-					index_items(doc, str_subkey_f, subitem_val, schema.get_subproperties(properties, str_subkey, subitem_val), is_value);
-				}
+				std::string full_subkey(str_key.empty() ? str_subkey : str_key + DB_OFFSPRING_UNION + str_subkey);
+				index_object(doc, full_subkey, subitem_val, schema.get_subproperties(properties, str_subkey, subitem_val), is_value);
 				offsprings = true;
 			} else if (str_subkey.compare(RESERVED_VALUE) == 0) {
 				if (schema.specification.sep_types[2] == NO_TYPE) {
@@ -395,8 +393,7 @@ Database::index_terms(Xapian::Document& doc, const std::string& name, const MsgP
 			schema.set_type_to_array(properties);
 			size_t pos = 0;
 			for (auto term : terms) {
-				index_term(doc, Serialise::serialise(schema.specification.sep_types[2], term), pos);
-				++pos;
+				index_term(doc, Serialise::serialise(schema.specification.sep_types[2], term), pos++);
 			}
 		} else {
 			index_term(doc, Serialise::serialise(schema.specification.sep_types[2], terms), 0);
@@ -511,7 +508,7 @@ Database::index_value(Xapian::Document& doc, const MsgPack& value, StringList& s
 			std::vector<range_t> ranges;
 			CartesianList centroids;
 			uInt64List start_end;
-			EWKT_Parser::getRanges(value_v, schema.specification.accuracy[0], schema.specification.accuracy[1], ranges, centroids);
+			EWKT_Parser::getRanges(std::string(value.obj->via.str.ptr, value.obj->via.str.size), schema.specification.accuracy[0], schema.specification.accuracy[1], ranges, centroids);
 			// Index Values and looking for terms generated by accuracy.
 			std::set<std::string> set_terms;
 			for (const auto& range : ranges) {
@@ -559,7 +556,7 @@ Database::index_value(Xapian::Document& doc, const MsgPack& value, StringList& s
 
 
 void
-Database::index(Xapian::Document& doc, const MsgPack& obj)
+Database::_index(Xapian::Document& doc, const MsgPack& obj)
 {
 	if (obj.obj->type == msgpack::type::MAP) {
 		// Save a copy of schema for undo changes if there is a exception.
@@ -569,81 +566,88 @@ Database::index(Xapian::Document& doc, const MsgPack& obj)
 			auto properties = schema.getProperties();
 			schema.update_root(properties, obj);
 
-			specification_t spc_bef = schema.specification;
+			const specification_t spc_bef = schema.specification;
 
 			for (const auto item_key : obj) {
 				std::string str_key(item_key.obj->via.str.ptr, item_key.obj->via.str.size);
 				auto item_val = obj.at(str_key);
 				if (!is_reserved(str_key)) {
-					index_items(doc, str_key, item_val, schema.get_subproperties(properties, str_key, item_val), false);
+					index_object(doc, str_key, item_val, schema.get_subproperties(properties, str_key, item_val), false);
 				} else if (str_key == RESERVED_VALUES) {
-					if (item_val.obj->type != msgpack::type::MAP) {
+					if (item_val.obj->type == msgpack::type::MAP) {
+						index_object(doc, "", item_val, schema.getProperties());
+					} else {
 						throw MSG_Error("%s must be an object", RESERVED_VALUES);
 					}
-					index_items(doc, "", item_val, schema.getProperties());
 				} else if (str_key == RESERVED_TEXTS) {
-					if (item_val.obj->type != msgpack::type::ARRAY) {
+					if (item_val.obj->type == msgpack::type::ARRAY) {
+						for (auto subitem_val : item_val) {
+							try {
+								auto _value = subitem_val.at(RESERVED_VALUE);
+								try {
+									auto _name = subitem_val.at(RESERVED_NAME);
+									if (_name.obj->type == msgpack::type::STR) {
+										std::string name(_name.obj->via.str.ptr, _name.obj->via.str.size);
+										auto subproperties = schema.get_subproperties(properties, name, subitem_val);
+										if (schema.specification.sep_types[2] == NO_TYPE) {
+											schema.set_type(subproperties, name, _value);
+										}
+										index_texts(doc, name, _value, subproperties);
+									} else {
+										throw MSG_Error("%s must be string", RESERVED_NAME);
+									}
+								} catch (const std::out_of_range&) {
+									schema.update_specification(subitem_val);
+									MsgPack subproperties;
+									if (schema.specification.sep_types[2] == NO_TYPE) {
+										schema.set_type(subproperties, std::string(), _value);
+									}
+									index_texts(doc, std::string(), _value, subproperties);
+								}
+								schema.specification = spc_bef;
+							} catch (const std::out_of_range&) {
+								throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_TEXTS);
+							} catch (const msgpack::type_error&) {
+								throw MSG_Error("%s must be an array of objects", RESERVED_TEXTS);
+							}
+						}
+					} else {
 						throw MSG_Error("%s must be an array of objects", RESERVED_TEXTS);
 					}
-					for (auto subitem_val : item_val) {
-						try {
-							auto _value = subitem_val.at(RESERVED_VALUE);
-							try {
-								auto _name = subitem_val.at(RESERVED_NAME);
-								if (_name.obj->type == msgpack::type::STR) {
-									std::string name(_name.obj->via.str.ptr, _name.obj->via.str.size);
-									auto subproperties = schema.get_subproperties(properties, name, subitem_val);
-									if (schema.specification.sep_types[2] == NO_TYPE) {
-										schema.set_type(subproperties, name, _value);
-									}
-									index_terms(doc, name, _value, subproperties);
-								} else {
-									throw MSG_Error("%s must be string", RESERVED_NAME);
-								}
-							} catch (const msgpack::type_error&) {
-								schema.update_specification(subitem_val);
-								MsgPack subproperties;
-								if (schema.specification.sep_types[2] == NO_TYPE) {
-									schema.set_type(subproperties, std::string(), _value);
-								}
-								index_terms(doc, std::string(), _value, subproperties);
-							}
-							schema.specification = spc_bef;
-						} catch (const msgpack::type_error&) {
-							throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_TEXTS);
-						}
-					}
 				} else if (str_key == RESERVED_TERMS) {
-					if (item_val.obj->type != msgpack::type::ARRAY) {
-						throw MSG_Error("%s must be an array of objects", RESERVED_VALUES);
-					}
-					for (auto subitem_val : item_val) {
-						try {
-							auto _value = subitem_val.at(RESERVED_VALUE);
+					if (item_val.obj->type == msgpack::type::ARRAY) {
+						for (auto subitem_val : item_val) {
 							try {
-								auto _name = subitem_val.at(RESERVED_NAME);
-								if (_name.obj->type == msgpack::type::STR) {
-									std::string name(_name.obj->via.str.ptr, _name.obj->via.str.size);
-									auto subproperties = schema.get_subproperties(properties, name, subitem_val);
-									if (schema.specification.sep_types[2] == NO_TYPE) {
-										schema.set_type(subproperties, name, _value);
+								auto _value = subitem_val.at(RESERVED_VALUE);
+								try {
+									auto _name = subitem_val.at(RESERVED_NAME);
+									if (_name.obj->type == msgpack::type::STR) {
+										std::string name(_name.obj->via.str.ptr, _name.obj->via.str.size);
+										auto subproperties = schema.get_subproperties(properties, name, subitem_val);
+										if (schema.specification.sep_types[2] == NO_TYPE) {
+											schema.set_type(subproperties, name, _value);
+										}
+										index_terms(doc, name, _value, subproperties);
+									} else {
+										throw MSG_Error("%s must be string", RESERVED_NAME);
 									}
-									index_terms(doc, name, _value, subproperties);
-								} else {
-									throw MSG_Error("%s must be string", RESERVED_NAME);
+								} catch (const std::out_of_range&) {
+									schema.update_specification(subitem_val);
+									MsgPack subproperties;
+									if (schema.specification.sep_types[2] == NO_TYPE) {
+										schema.set_type(subproperties, std::string(), _value);
+									}
+									index_terms(doc, std::string(), _value, subproperties);
 								}
+								schema.specification = spc_bef;
+							} catch (const std::out_of_range&) {
+								throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_VALUES);
 							} catch (const msgpack::type_error&) {
-								schema.update_specification(subitem_val);
-								MsgPack subproperties;
-								if (schema.specification.sep_types[2] == NO_TYPE) {
-									schema.set_type(subproperties, std::string(), _value);
-								}
-								index_terms(doc, std::string(), _value, subproperties);
+								throw MSG_Error("%s must be an array of objects", RESERVED_VALUES);
 							}
-							schema.specification = spc_bef;
-						} catch (const msgpack::type_error&) {
-							throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_VALUES);
 						}
+					} else {
+						throw MSG_Error("%s must be an array of objects", RESERVED_VALUES);
 					}
 				}
 			}
@@ -653,7 +657,7 @@ Database::index(Xapian::Document& doc, const MsgPack& obj)
 				schema.setSchema(str_schema);
 				schema.setStore(_to_store);
 			}
-			throw err;
+			throw MSG_Error("%s", err.what());
 		}
 	}
 }
@@ -687,6 +691,7 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 				json_load(rdoc, body);
 				blob = false;
 				obj = MsgPack(rdoc);
+				break;
 			case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
 				try {
 					json_load(rdoc, body);
@@ -694,17 +699,20 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 					obj = MsgPack(rdoc);
 					doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
 				} catch (const std::exception&) { }
+				break;
 			case MIMEType::APPLICATION_X_MSGPACK:
 				blob = false;
 				obj = MsgPack(body);
-			case MIMEType::UNKNOW:
+				break;
+			default:
 				break;
 		}
 
 		L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
 		std::string obj_str = obj.to_string();
 		doc.set_data(encode_length(obj_str.size()) + obj_str + (blob ? body : ""));
-		index(doc, obj);
+		_index(doc, obj);
+		L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 		return replace(term_id, doc, _commit);
 	} catch (const std::exception& err) {
 		L_ERR(this, "ERROR: %s", err.what());
@@ -735,85 +743,88 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 			case MIMEType::APPLICATION_JSON:
 				json_load(rdoc_patch, patches);
 				obj_patch = MsgPack(rdoc_patch);
+				break;
 			case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
 				json_load(rdoc_patch, patches);
 				obj_patch = MsgPack(rdoc_patch);
 				_ct_type = JSON_TYPE;
+				break;
 			case MIMEType::APPLICATION_X_MSGPACK:
 				obj_patch = MsgPack(patches);
-			case MIMEType::UNKNOW:
-				throw MSG_Error("Patches must be a json");
+				break;
+			default:
+				throw MSG_Error("Patches must be a JSON or MsgPack");
+		}
+
+		std::string prefix(DOCUMENT_ID_TERM_PREFIX);
+		if (isupper(_document_id[0])) {
+			prefix.append(":");
+		}
+
+		Xapian::QueryParser queryparser;
+		queryparser.add_boolean_prefix(RESERVED_ID, prefix);
+		auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
+
+		Xapian::Enquire enquire(*db);
+		enquire.set_query(query);
+		Xapian::MSet mset = enquire.get_mset(0, 1);
+		Xapian::MSetIterator m = mset.begin();
+
+		Xapian::Document document;
+		for (int t = 3; t >= 0; --t) {
+			try {
+				document = db->get_document(*m);
+				break;
+			} catch (const Xapian::InvalidArgumentError&) {
+				return 0;
+			} catch (const Xapian::DocNotFoundError&) {
+				return 0;
+			} catch (const Xapian::Error&) {
+				reopen();
+				m = mset.begin();
+			}
+		}
+
+		MsgPack obj_data = get_MsgPack(document);
+		if (apply_patch(obj_patch, obj_data)) {
+			Xapian::Document doc;
+			std::string term_id;
+
+			// Index required data for the document
+			index_required_data(doc, term_id, _document_id, _ct_type, ct_length);
+
+			L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
+			std::string obj_data_str = obj_data.to_string();
+			doc.set_data(encode_length(obj_data_str.size()) + obj_data_str + get_blob(document));
+			_index(doc, obj_data);
+			L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
+			return replace(term_id, doc, _commit);
+		} else {
+			// Object no patched
+			return 0;
 		}
 	} catch (const std::exception& err) {
 		L_ERR(this, "ERROR: %s", err.what());
 		return 0;
 	}
-
-	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
-	if (isupper(_document_id[0])) {
-		prefix.append(":");
-	}
-
-	Xapian::QueryParser queryparser;
-	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-	auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
-
-	Xapian::Enquire enquire(*db);
-	enquire.set_query(query);
-	Xapian::MSet mset = enquire.get_mset(0, 1);
-	Xapian::MSetIterator m = mset.begin();
-
-	Xapian::Document document;
-	for (int t = 3; t >= 0; --t) {
-		try {
-			document = db->get_document(*m);
-			break;
-		} catch (const Xapian::InvalidArgumentError&) {
-			return 0;
-		} catch (const Xapian::DocNotFoundError&) {
-			return 0;
-		} catch (const Xapian::Error&) {
-			reopen();
-			m = mset.begin();
-		}
-	}
-
-	MsgPack obj_data = get_MsgPack(document);
-	if (apply_patch(obj_patch, obj_data)) {
-		// Index required data for the document
-		Xapian::Document doc;
-		std::string term_id;
-		index_required_data(doc, term_id, _document_id, _ct_type, ct_length);
-
-		L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
-		std::string obj_data_str = obj_data.to_string();
-		doc.set_data(encode_length(obj_data_str.size()) + obj_data_str);
-		index(doc, obj_data);
-		return replace(term_id, doc, _commit);
-	}
-
-	// Object no patched
-	return 0;
 }
 
 
 Xapian::docid
-Database::replace(const std::string &document_id, const Xapian::Document &doc, bool _commit)
+Database::replace(const std::string& document_id, const Xapian::Document& doc, bool _commit)
 {
 	Xapian::docid did;
 	for (int t = 3; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Inserting: -%s- t:%d", document_id.c_str(), t);
+		L_DATABASE_WRAP(this, "Replacing: %s  t: %d", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			L_DATABASE_WRAP(this, "Doing replace_document.");
 			did = wdb->replace_document(document_id, doc);
-			L_DATABASE_WRAP(this, "Replace_document was done.");
-		} catch (const Xapian::Error &e) {
+		} catch (const Xapian::Error& e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
-		L_DATABASE_WRAP(this, "Document inserted");
+		L_DATABASE_WRAP(this, "Document replaced");
 		if (_commit) commit();
 		else modified = true;
 		return did;
@@ -824,21 +835,19 @@ Database::replace(const std::string &document_id, const Xapian::Document &doc, b
 
 
 Xapian::docid
-Database::replace(const Xapian::docid &did, const Xapian::Document &doc, bool _commit)
+Database::replace(const Xapian::docid& did, const Xapian::Document& doc, bool _commit)
 {
 	for (int t = 3; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Inserting: -did:%u- t:%d", did, t);
+		L_DATABASE_WRAP(this, "Replacing did: %u t:%d", did, t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			L_DATABASE_WRAP(this, "Doing replace_document.");
 			wdb->replace_document(did, doc);
-			L_DATABASE_WRAP(this, "Replace_document was done.");
-		} catch (const Xapian::Error &e) {
+		} catch (const Xapian::Error& e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
-		L_DATABASE_WRAP(this, "Document inserted");
+		L_DATABASE_WRAP(this, "Document replaced");
 		if (_commit) commit();
 		else modified = true;
 		return did;
@@ -884,7 +893,7 @@ Database::get_data_field(const std::string& field_name)
 				res.acc_prefix.emplace_back(acc_p.obj->via.str.ptr, acc_p.obj->via.str.size);
 			}
 		}
-	} catch (const msgpack::type_error&) { }
+	} catch (const std::exception&) { }
 
 	return res;
 }
@@ -905,122 +914,14 @@ Database::get_slot_field(const std::string& field_name)
 		auto properties = schema.getProperties().path(fields);
 		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).obj->via.u64);
 		res.type = properties.at(RESERVED_TYPE).at(2).obj->via.u64;
-	} catch (const msgpack::type_error&) { }
+	} catch (const std::exception&) { }
 
 	return res;
 }
 
 
 Database::search_t
-Database::search(const query_field_t &e)
-{
-	search_t srch_resul;
-
-	Xapian::Query queryQ;
-	Xapian::Query queryP;
-	Xapian::Query queryT;
-	Xapian::Query queryF;
-	std::vector<std::string> sug_query;
-	search_t srch;
-	bool first = true;
-
-	L_DEBUG(this, "e.query size: %d  Spelling: %d Synonyms: %d", e.query.size(), e.spelling, e.synonyms);
-	auto lit = e.language.begin();
-	std::string lan;
-	unsigned flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
-	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
-	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
-	for (auto qit = e.query.begin(); qit != e.query.end(); ++qit) {
-		if (lit != e.language.end()) {
-			lan = *lit++;
-		}
-		srch = _search(*qit, flags, true, lan);
-		if (first) {
-			queryQ = srch.query;
-			first = false;
-		} else {
-			queryQ =  Xapian::Query(Xapian::Query::OP_AND, queryQ, srch.query);
-		}
-		sug_query.push_back(srch.suggested_query.back());
-		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
-		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
-		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
-		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-	}
-	L_DEBUG(this, "e.query: %s", queryQ.get_description().c_str());
-
-	L_DEBUG(this, "e.partial size: %d", e.partial.size());
-	flags = Xapian::QueryParser::FLAG_PARTIAL;
-	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
-	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
-	first = true;
-	for (auto pit = e.partial.begin(); pit != e.partial.end(); ++pit) {
-		srch = _search(*pit, flags, false, "");
-		if (first) {
-			queryP = srch.query;
-			first = false;
-		} else {
-			queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, srch.query);
-		}
-		sug_query.push_back(srch.suggested_query.back());
-		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
-		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
-		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
-		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-	}
-	L_DEBUG(this, "e.partial: %s", queryP.get_description().c_str());
-
-
-	L_DEBUG(this, "e.terms size: %d", e.terms.size());
-	flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
-	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
-	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
-	first = true;
-	for (auto tit = e.terms.begin(); tit != e.terms.end(); ++tit) {
-		srch = _search(*tit, flags, false, "");
-		if (first) {
-			queryT = srch.query;
-			first = false;
-		} else {
-			queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, srch.query);
-		}
-		sug_query.push_back(srch.suggested_query.back());
-		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
-		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
-		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
-		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-	}
-	L_DEBUG(this, "e.terms: %s", repr(queryT.get_description()).c_str());
-
-	first = true;
-	if (!e.query.empty()) {
-		queryF = queryQ;
-		first = false;
-	}
-	if (!e.partial.empty()) {
-		if (first) {
-			queryF = queryP;
-			first = false;
-		} else {
-			queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryP);
-		}
-	}
-	if (!e.terms.empty()) {
-		if (first) {
-			queryF = queryT;
-		} else {
-			queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryT);
-		}
-	}
-	srch_resul.query = queryF;
-	srch_resul.suggested_query = sug_query;
-
-	return srch_resul;
-}
-
-
-Database::search_t
-Database::_search(const std::string &query, unsigned flags, bool text, const std::string &lan)
+Database::_search(const std::string& query, unsigned flags, bool text, const std::string& lan)
 {
 	search_t srch;
 
@@ -1058,14 +959,6 @@ Database::_search(const std::string &query, unsigned flags, bool text, const std
 		std::string field_value(next->str(3));
 		data_field_t field_t = get_data_field(field_name);
 
-		// Auxiliary variables.
-		std::vector<std::string> prefixes;
-		std::vector<std::string>::const_iterator it;
-		std::vector<range_t> ranges;
-		std::vector<range_t>::const_iterator rit;
-		CartesianList centroids;
-		std::string filter_term, start, end, prefix;
-
 		std::smatch m;
 		if (std::regex_match(field_value, m, find_range_re)) {
 			// If this field is not indexed as value, not process this query.
@@ -1075,46 +968,45 @@ Database::_search(const std::string &query, unsigned flags, bool text, const std
 			}
 
 			switch (field_t.type) {
-				case NUMERIC_TYPE:
-					start = m.str(1);
-					end = m.str(2);
+				case NUMERIC_TYPE: {
+					std::string filter_term, start(m.str(1)), end(m.str(2));
+					std::vector<std::string> prefixes;
 					GenerateTerms::numeric(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, NUMERIC_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
-						for (it = prefixes.begin(); it != prefixes.end(); ++it) {
+						for (const auto& prefix : prefixes) {
 							// Xapian does not allow repeat prefixes.
-							if (added_prefixes.insert(*it).second) {
-								nfp = std::make_unique<NumericFieldProcessor>(*it);
-								queryparser.add_prefix(*it, nfp.get());
+							if (added_prefixes.insert(prefix).second) {
+								nfp = std::make_unique<NumericFieldProcessor>(prefix);
+								queryparser.add_prefix(prefix, nfp.get());
 								srch.nfps.push_back(std::move(nfp));
 							}
 						}
 						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), queryRange);
 					}
 					break;
-				case STRING_TYPE:
-					start = m.str(1);
-					end = m.str(2);
+				} case STRING_TYPE: {
+					std::string start(m.str(1)), end(m.str(2));
 					queryRange = MultipleValueRange::getQuery(field_t.slot, STRING_TYPE, start, end, field_name);
 					break;
-				case DATE_TYPE:
-					start = m.str(1);
-					end = m.str(2);
+				} case DATE_TYPE: {
+					std::string filter_term, start(m.str(1)), end(m.str(2));
+					std::vector<std::string> prefixes;
 					GenerateTerms::date(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
 					if (!filter_term.empty()) {
-						for (it = prefixes.begin(); it != prefixes.end(); ++it) {
+						for (const auto& prefix : prefixes) {
 							// Xapian does not allow repeat prefixes.
-							if (added_prefixes.insert(*it).second) {
-								dfp = std::make_unique<DateFieldProcessor>(*it);
-								queryparser.add_prefix(*it, dfp.get());
+							if (added_prefixes.insert(prefix).second) {
+								dfp = std::make_unique<DateFieldProcessor>(prefix);
+								queryparser.add_prefix(prefix, dfp.get());
 								srch.dfps.push_back(std::move(dfp));
 							}
 						}
 						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), queryRange);
 					}
 					break;
-				case GEO_TYPE:
+				} case GEO_TYPE: {
 					// Validate special case.
 					if (field_value.compare("..") == 0) {
 						queryRange = Xapian::Query::MatchAll;
@@ -1123,30 +1015,38 @@ Database::_search(const std::string &query, unsigned flags, bool text, const std
 
 					// The format is: "..EWKT". We always delete double quotes and .. -> EWKT
 					field_value.assign(field_value.c_str(), 3, field_value.size() - 4);
+					std::vector<range_t> ranges;
+					CartesianList centroids;
 					EWKT_Parser::getRanges(field_value, field_t.accuracy[0], field_t.accuracy[1], ranges, centroids);
 
 					queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges, centroids);
+
+					std::string filter_term;
+					std::vector<std::string> prefixes;
 					GenerateTerms::geo(filter_term, ranges, field_t.accuracy, field_t.acc_prefix, prefixes);
 					if (!filter_term.empty()) {
 						// Xapian does not allow repeat prefixes.
-						for (it = prefixes.begin(); it != prefixes.end(); ++it) {
+						for (const auto& prefix : prefixes) {
 							// Xapian does not allow repeat prefixes.
-							if (added_prefixes.insert(*it).second) {
-								gfp = std::make_unique<GeoFieldProcessor>(*it);
-								queryparser.add_prefix(*it, gfp.get());
+							if (added_prefixes.insert(prefix).second) {
+								gfp = std::make_unique<GeoFieldProcessor>(prefix);
+								queryparser.add_prefix(prefix, gfp.get());
 								srch.gfps.push_back(std::move(gfp));
 							}
 						}
 						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), queryRange);
 					}
 					break;
+				}
 			}
 
 			// Concatenate with OR all the ranges queries.
 			if (first_timeR) {
 				srch.query = queryRange;
 				first_timeR = false;
-			} else srch.query = Xapian::Query(Xapian::Query::OP_OR, srch.query, queryRange);
+			} else {
+				srch.query = Xapian::Query(Xapian::Query::OP_OR, srch.query, queryRange);
+			}
 		} else {
 			// If the field has not been indexed as a term, not process this query.
 			if (!field_name.empty() && field_t.prefix.empty()) {
@@ -1162,10 +1062,7 @@ Database::_search(const std::string &query, unsigned flags, bool text, const std
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, nfp.get()) : queryparser.add_prefix(field_name, nfp.get());
 						srch.nfps.push_back(std::move(nfp));
 					}
-					if (field_value.at(0) == '-') {
-						field_value.at(0) = '_';
-						field = field_name_dot + field_value;
-					}
+					field = field_name_dot + query_string(field_value);
 					break;
 				case STRING_TYPE:
 					// Xapian does not allow repeat prefixes.
@@ -1175,20 +1072,16 @@ Database::_search(const std::string &query, unsigned flags, bool text, const std
 					break;
 				case DATE_TYPE:
 					// If there are double quotes, they are deleted: "date" -> date
-					if (field_value.at(0) == '"') field_value.assign(field_value, 1, field_value.size() - 2);
-					try {
-						// Always pass to timestamp.
-						field_value = std::to_string(Datetime::timestamp(field_value));
-						// Xapian does not allow repeat prefixes.
-						if (added_prefixes.insert(field_t.prefix).second) {
-							dfp = std::make_unique<DateFieldProcessor>(field_t.prefix);
-							field_t.bool_term ? queryparser.add_boolean_prefix(field_name, dfp.get()) : queryparser.add_prefix(field_name, dfp.get());
-							srch.dfps.push_back(std::move(dfp));
-						}
-						if (field_value.at(0) == '-') field_value.at(0) = '_';
-						field = field_name_dot + field_value;
-					} catch (const std::exception &ex) {
-						throw Xapian::QueryParserError("Didn't understand date field name's specification: '" + field_name + "'");
+					if (field_value.at(0) == '"') {
+						field_value.assign(field_value, 1, field_value.size() - 2);
+					}
+
+					field = field_name_dot + query_string(std::to_string(Datetime::timestamp(field_value)));
+					// Xapian does not allow repeat prefixes.
+					if (added_prefixes.insert(field_t.prefix).second) {
+						dfp = std::make_unique<DateFieldProcessor>(field_t.prefix);
+						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, dfp.get()) : queryparser.add_prefix(field_name, dfp.get());
+						srch.dfps.push_back(std::move(dfp));
 					}
 					break;
 				case GEO_TYPE:
@@ -1223,7 +1116,9 @@ Database::_search(const std::string &query, unsigned flags, bool text, const std
 			if (first_time) {
 				querystring = field;
 				first_time = false;
-			} else querystring += " OR " + field;
+			} else {
+				querystring += " OR " + field;
+			}
 		}
 
 		++next;
@@ -1238,7 +1133,7 @@ Database::_search(const std::string &query, unsigned flags, bool text, const std
 			try {
 				srch.query = Xapian::Query(Xapian::Query::OP_OR, queryparser.parse_query(querystring, flags), srch.query);
 				srch.suggested_query.push_back(queryparser.get_corrected_query_string());
-			} catch (const Xapian::QueryParserError &er) {
+			} catch (const Xapian::QueryParserError& er) {
 				L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 				reopen();
 				srch.query = Xapian::Query(Xapian::Query::OP_OR, queryparser.parse_query(querystring, flags), srch.query);
@@ -1249,7 +1144,7 @@ Database::_search(const std::string &query, unsigned flags, bool text, const std
 			try {
 				srch.query = queryparser.parse_query(querystring, flags);
 				srch.suggested_query.push_back(queryparser.get_corrected_query_string());
-			} catch (const Xapian::QueryParserError &er) {
+			} catch (const Xapian::QueryParserError& er) {
 				L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 				reopen();
 				queryparser.set_database(*db);
@@ -1270,80 +1165,191 @@ Database::_search(const std::string &query, unsigned flags, bool text, const std
 }
 
 
+Database::search_t
+Database::search(const query_field_t& e)
+{
+	search_t srch_resul;
+	std::vector<std::string> sug_query;
+	bool first = true;
+
+	L_DEBUG(this, "e.query size: %d  Spelling: %d Synonyms: %d", e.query.size(), e.spelling, e.synonyms);
+	auto lit = e.language.begin();
+	std::string lan;
+	unsigned flags = Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD | Xapian::QueryParser::FLAG_PURE_NOT;
+	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
+	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
+	Xapian::Query queryQ;
+	for (const auto& query : e.query) {
+		if (lit != e.language.end()) {
+			lan = *lit++;
+		}
+		search_t srch = _search(query, flags, true, lan);
+		if (first) {
+			queryQ = srch.query;
+			first = false;
+		} else {
+			queryQ =  Xapian::Query(Xapian::Query::OP_AND, queryQ, srch.query);
+		}
+		sug_query.push_back(srch.suggested_query.back());
+		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
+		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
+		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
+	}
+	L_DEBUG(this, "e.query: %s", queryQ.get_description().c_str());
+
+	L_DEBUG(this, "e.partial size: %d", e.partial.size());
+	flags = Xapian::QueryParser::FLAG_PARTIAL;
+	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
+	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
+	first = true;
+	Xapian::Query queryP;
+	for (const auto& partial : e.partial) {
+		search_t srch = _search(partial, flags, false, "");
+		if (first) {
+			queryP = srch.query;
+			first = false;
+		} else {
+			queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, srch.query);
+		}
+		sug_query.push_back(srch.suggested_query.back());
+		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
+		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
+		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
+	}
+	L_DEBUG(this, "e.partial: %s", queryP.get_description().c_str());
+
+	L_DEBUG(this, "e.terms size: %d", e.terms.size());
+	flags = Xapian::QueryParser::FLAG_BOOLEAN | Xapian::QueryParser::FLAG_PURE_NOT;
+	if (e.spelling) flags |= Xapian::QueryParser::FLAG_SPELLING_CORRECTION;
+	if (e.synonyms) flags |= Xapian::QueryParser::FLAG_SYNONYM;
+	first = true;
+	Xapian::Query queryT;
+	for (const auto& terms : e.terms) {
+		search_t srch = _search(terms, flags, false, "");
+		if (first) {
+			queryT = srch.query;
+			first = false;
+		} else {
+			queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, srch.query);
+		}
+		sug_query.push_back(srch.suggested_query.back());
+		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
+		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
+		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
+		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
+	}
+	L_DEBUG(this, "e.terms: %s", repr(queryT.get_description()).c_str());
+
+	first = true;
+	Xapian::Query queryF;
+	if (!e.query.empty()) {
+		queryF = queryQ;
+		first = false;
+	}
+	if (!e.partial.empty()) {
+		if (first) {
+			queryF = queryP;
+			first = false;
+		} else {
+			queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryP);
+		}
+	}
+	if (!e.terms.empty()) {
+		if (first) {
+			queryF = queryT;
+		} else {
+			queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryT);
+		}
+	}
+	srch_resul.query = queryF;
+	srch_resul.suggested_query = sug_query;
+
+	return srch_resul;
+}
+
+
 void
-Database::get_similar(bool is_fuzzy, Xapian::Enquire &enquire, Xapian::Query &query, const similar_field_t *similar)
+Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar)
 {
 	Xapian::RSet rset;
 
 	for (int t = 3; t >= 0; --t) {
 		try {
-			Xapian::Enquire renquire = get_enquire(query, Xapian::BAD_VALUENO, 1, nullptr, nullptr, nullptr, nullptr, nullptr);
-			Xapian::MSet mset = renquire.get_mset(0, similar->n_rset);
-			for (auto m = mset.begin(); m != mset.end(); ++m) {
-				rset.add_document(*m);
+			Xapian::Enquire renquire = get_enquire(query, Xapian::BAD_VALUENO, nullptr, nullptr, nullptr);
+			Xapian::MSet mset = renquire.get_mset(0, similar.n_rset);
+			for (const auto& doc : mset) {
+				rset.add_document(doc);
 			}
-		} catch (const Xapian::Error &er) {
+		} catch (const Xapian::Error& er) {
 			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			if (t) reopen();
 			continue;
 		}
 
 		std::vector<std::string> prefixes;
-		for (auto it = similar->type.begin(); it != similar->type.end(); ++it) {
-			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + Unserialise::type(*it));
+		prefixes.reserve(similar.type.size() + similar.field.size());
+		for (const auto& sim_type : similar.type) {
+			prefixes.push_back(DOCUMENT_CUSTOM_TERM_PREFIX + Unserialise::type(sim_type));
 		}
 
-		for(auto it = similar->field.begin(); it != similar->field.end(); ++it) {
-			data_field_t field_t = get_data_field(*it);
+		for (const auto& sim_field : similar.field) {
+			data_field_t field_t = get_data_field(sim_field);
 			prefixes.push_back(field_t.prefix);
 		}
 
 		ExpandDeciderFilterPrefixes efp(prefixes);
-		Xapian::ESet eset = enquire.get_eset(similar->n_eset, rset, &efp);
+		Xapian::ESet eset = enquire.get_eset(similar.n_eset, rset, &efp);
 
 		if (is_fuzzy) {
-			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), similar->n_term));
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), similar.n_term));
 		} else {
-			query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), similar->n_term);
+			query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), similar.n_term);
 		}
+
 		return;
 	}
 }
 
 
 Xapian::Enquire
-Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key, const Xapian::valueno &collapse_max,
-		Multi_MultiValueKeyMaker *sorter, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies,
-		const similar_field_t *nearest, const similar_field_t *fuzzy, const std::vector<std::string> *facets)
+Database::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t *e, Multi_MultiValueKeyMaker *sorter,
+		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies)
 {
-	std::string field;
-	std::unique_ptr<MultiValueCountMatchSpy> spy;
 	Xapian::Enquire enquire(*db);
-
-	if (nearest) get_similar(false, enquire, query, nearest);
-
-	if (fuzzy) get_similar(true, enquire, query, fuzzy);
 
 	enquire.set_query(query);
 
-	if (sorter) enquire.set_sort_by_key_then_relevance(sorter, false);
+	if (sorter) {
+		enquire.set_sort_by_key_then_relevance(sorter, false);
+	}
 
-	if (spies) {
-		if (!facets->empty()) {
-			for (auto fit = facets->begin(); fit != facets->end(); ++fit) {
-				data_field_t field_t = get_slot_field(*fit);
-				if (field_t.type != NO_TYPE) {
-					spy = std::make_unique<MultiValueCountMatchSpy>(get_slot(*fit), field_t.type == GEO_TYPE);
-					enquire.add_matchspy(spy.get());
-					L_ERR(this, "added spy de -%s-", (*fit).c_str());
-					spies->push_back(std::make_pair(*fit, std::move(spy)));
-				}
+	int collapse_max = 1;
+	if (e) {
+		if (e->is_nearest) {
+			get_similar(false, enquire, query, e->nearest);
+		}
+
+		if (e->is_fuzzy) {
+			get_similar(true, enquire, query, e->fuzzy);
+		}
+
+		for (const auto& facet : e->facets) {
+			data_field_t field_t = get_slot_field(facet);
+			if (field_t.type != NO_TYPE) {
+				std::unique_ptr<MultiValueCountMatchSpy> spy = std::make_unique<MultiValueCountMatchSpy>(get_slot(facet), field_t.type == GEO_TYPE);
+				enquire.add_matchspy(spy.get());
+				L_ERR(this, "added spy de -%s-", (facet).c_str());
+				spies->push_back(std::make_pair(facet, std::move(spy)));
 			}
 		}
+
+		collapse_max = e->collapse_max;
 	}
 
 	if (collapse_key != Xapian::BAD_VALUENO) {
-		enquire.set_collapse_key(collapse_key, collapse_max);
+		enquire.set_collapse_key(collapse_max);
 	}
 
 	return enquire;
@@ -1351,11 +1357,11 @@ Database::get_enquire(Xapian::Query &query, const Xapian::valueno &collapse_key,
 
 
 int
-Database::get_mset(const query_field_t &e, Xapian::MSet &mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> &spies,
-		std::vector<std::string> &suggestions, int offset)
+Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
+		std::vector<std::string>& suggestions, int offset)
 {
-	unsigned doccount = db->get_doccount();
-	unsigned check_at_least = std::max(std::min(doccount, e.check_at_least), 0u);
+	auto doccount = db->get_doccount();
+	auto check_at_least = std::max(std::min(doccount, e.check_at_least), 0u);
 	Xapian::valueno collapse_key;
 
 	// Get the collapse key to use for queries.
@@ -1370,25 +1376,33 @@ Database::get_mset(const query_field_t &e, Xapian::MSet &mset, std::vector<std::
 	Multi_MultiValueKeyMaker *sorter = nullptr;
 	if (!e.sort.empty()) {
 		sorter = &sorter_obj;
-		for (auto oit = e.sort.begin(); oit != e.sort.end(); ++oit) {
+		for (const auto& sort : e.sort) {
 			std::string field, value;
-			size_t pos = oit->find(":");
+			size_t pos = sort.find(":");
 			if (pos != std::string::npos) {
-				field = oit->substr(0, pos);
-				value = oit->substr(pos + 1);
-			} else field = *oit;
+				field = sort.substr(0, pos);
+				value = sort.substr(pos + 1);
+			} else {
+				field = sort;
+			}
 
-			if (startswith(field, "-")) {
+			if (field.at(0) == '-') {
 				field.assign(field, 1, field.size() - 1);
 				data_field_t field_t = get_slot_field(field);
-				if (field_t.type != NO_TYPE) sorter->add_value(field_t.slot, field_t.type, value, true);
-			} else if (startswith(field, "+")) {
+				if (field_t.type != NO_TYPE) {
+					sorter->add_value(field_t.slot, field_t.type, value, true);
+				}
+			} else if (field.at(0) == '+') {
 				field.assign(field, 1, field.size() - 1);
 				data_field_t field_t = get_slot_field(field);
-				if (field_t.type != NO_TYPE) sorter->add_value(field_t.slot, field_t.type, value);
+				if (field_t.type != NO_TYPE) {
+					sorter->add_value(field_t.slot, field_t.type, value);
+				}
 			} else {
 				data_field_t field_t = get_slot_field(field);
-				if (field_t.type != NO_TYPE) sorter->add_value(field_t.slot, field_t.type, value);
+				if (field_t.type != NO_TYPE) {
+					sorter->add_value(field_t.slot, field_t.type, value);
+				}
 			}
 		}
 	}
@@ -1396,21 +1410,21 @@ Database::get_mset(const query_field_t &e, Xapian::MSet &mset, std::vector<std::
 	for (int t = 3; t >= 0; --t) {
 		try {
 			search_t srch = search(e);
-			Xapian::Enquire enquire = get_enquire(srch.query, collapse_key, e.collapse_max, sorter, &spies, e.is_nearest ? &e.nearest : nullptr, e.is_fuzzy ? &e.fuzzy : nullptr, &e.facets);
+			Xapian::Enquire enquire = get_enquire(srch.query, collapse_key, &e, sorter, &spies);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
-		} catch (const Xapian::DatabaseModifiedError &er) {
+		} catch (const Xapian::DatabaseModifiedError& er) {
 			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			if (t) reopen();
 			continue;
-		} catch (const Xapian::NetworkError &er) {
+		} catch (const Xapian::NetworkError& er) {
 			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			if (t) reopen();
 			continue;
-		} catch (const Xapian::Error &er) {
+		} catch (const Xapian::Error& er) {
 			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			return 2;
-		} catch (const std::exception &er) {
+		} catch (const std::exception& er) {
 			L_DATABASE_WRAP(this, "ERROR: %s", er.what());
 			return 1;
 		}
@@ -1424,12 +1438,12 @@ Database::get_mset(const query_field_t &e, Xapian::MSet &mset, std::vector<std::
 
 
 bool
-Database::get_metadata(const std::string &key, std::string &value)
+Database::get_metadata(const std::string& key, std::string& value)
 {
 	for (int t = 3; t >= 0; --t) {
 		try {
 			value = db->get_metadata(key);
-		} catch (const Xapian::Error &e) {
+		} catch (const Xapian::Error& e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
@@ -1444,13 +1458,13 @@ Database::get_metadata(const std::string &key, std::string &value)
 
 
 bool
-Database::set_metadata(const std::string &key, const std::string &value, bool _commit)
+Database::set_metadata(const std::string& key, const std::string& value, bool _commit)
 {
 	for (int t = 3; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->set_metadata(key, value);
-		} catch (const Xapian::Error &e) {
+		} catch (const Xapian::Error& e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
@@ -1465,12 +1479,12 @@ Database::set_metadata(const std::string &key, const std::string &value, bool _c
 
 
 bool
-Database::get_document(const Xapian::docid &did, Xapian::Document &doc)
+Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 {
 	for (int t = 3; t >= 0; --t) {
 		try {
 			doc = db->get_document(did);
-		} catch (const Xapian::Error &e) {
+		} catch (const Xapian::Error& e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
 			if (t) reopen();
 			continue;
@@ -1537,7 +1551,7 @@ Database::get_stats_docs(MsgPack&& stats, const std::string& document_id)
 	MsgPack obj_data = get_MsgPack(doc);
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
-	} catch (const msgpack::type_error&) {
+	} catch (const std::out_of_range&) {
 		clean_reserved(obj_data);
 		obj_data[RESERVED_ID] = doc.get_value(DB_SLOT_ID);
 	}
@@ -1670,7 +1684,7 @@ DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_pt
 
 
 long long
-DatabasePool::get_mastery_level(const std::string &dir)
+DatabasePool::get_mastery_level(const std::string& dir)
 {
 	Endpoints endpoints;
 	endpoints.insert(Endpoint(dir));
@@ -1749,8 +1763,8 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 						init_ref(endpoints);
 					}
 
-				} catch (const Xapian::DatabaseOpeningError &err) {
-				} catch (const Xapian::Error &err) {
+				} catch (const Xapian::DatabaseOpeningError& err) {
+				} catch (const Xapian::Error& err) {
 					L_ERR(this, "ERROR: %s", err.get_msg().c_str());
 				}
 				lk.lock();
@@ -1872,7 +1886,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 
 bool
-DatabasePool::_switch_db(const Endpoint &endpoint)
+DatabasePool::_switch_db(const Endpoint& endpoint)
 {
 	auto queues_set = queues[endpoint.hash()];
 
@@ -1901,7 +1915,7 @@ DatabasePool::_switch_db(const Endpoint &endpoint)
 
 
 bool
-DatabasePool::switch_db(const Endpoint &endpoint)
+DatabasePool::switch_db(const Endpoint& endpoint)
 {
 	std::lock_guard<std::mutex> lk(qmtx);
 	return _switch_db(endpoint);
@@ -1909,7 +1923,7 @@ DatabasePool::switch_db(const Endpoint &endpoint)
 
 
 void
-DatabasePool::init_ref(const Endpoints &endpoints)
+DatabasePool::init_ref(const Endpoints& endpoints)
 {
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
@@ -1938,7 +1952,7 @@ DatabasePool::init_ref(const Endpoints &endpoints)
 
 
 void
-DatabasePool::inc_ref(const Endpoints &endpoints)
+DatabasePool::inc_ref(const Endpoints& endpoints)
 {
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
@@ -1974,7 +1988,7 @@ DatabasePool::inc_ref(const Endpoints &endpoints)
 
 
 void
-DatabasePool::dec_ref(const Endpoints &endpoints)
+DatabasePool::dec_ref(const Endpoints& endpoints)
 {
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
@@ -2031,10 +2045,12 @@ DatabasePool::get_master_count()
 
 
 bool
-ExpandDeciderFilterPrefixes::operator()(const std::string &term) const
+ExpandDeciderFilterPrefixes::operator()(const std::string& term) const
 {
-	for (auto i = prefixes.cbegin(); i != prefixes.cend(); ++i) {
-		if (startswith(term, *i)) return true;
+	for (const auto& prefix : prefixes) {
+		if (startswith(term, prefix)) {
+			return true;
+		}
 	}
 
 	return prefixes.empty();
