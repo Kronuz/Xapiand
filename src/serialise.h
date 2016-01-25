@@ -74,7 +74,7 @@ namespace Serialise {
 	std::string serialise(char field_type, const MsgPack& field_value);
 	std::string string(char field_type, const std::string& field_value);
 	std::string numeric(char field_type, double field_value);
-	std::string boolean(char field_type, double field_value);
+	std::string boolean(char field_type, bool field_value);
 
 
 	// Serialise field_value like date.
@@ -93,7 +93,7 @@ namespace Serialise {
 	std::string date(int timeinfo_[]);
 
 	// Serialise a normalize cartesian coordinate in SIZE_SERIALISE_CARTESIAN bytes.
-	std::string cartesian(const Cartesian &norm_cartesian);
+	std::string cartesian(const Cartesian& norm_cartesian);
 
 	// Serialise a trixel's id (HTM).
 	std::string trixel_id(uint64_t id);

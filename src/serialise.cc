@@ -41,7 +41,9 @@ Serialise::serialise(char field_type, const MsgPack& field_value)
 		case msgpack::type::BOOLEAN:
 			return boolean(field_type, field_value.obj->via.boolean);
 		case msgpack::type::POSITIVE_INTEGER:
+			return numeric(field_type, field_value.obj->via.u64);
 		case msgpack::type::NEGATIVE_INTEGER:
+			return numeric(field_type, field_value.obj->via.i64);
 		case msgpack::type::FLOAT:
 			return numeric(field_type, field_value.obj->via.f64);
 		case msgpack::type::STR:
@@ -89,7 +91,7 @@ Serialise::numeric(char field_type, double field_value)
 
 
 std::string
-Serialise::boolean(char field_type, double field_value)
+Serialise::boolean(char field_type, bool field_value)
 {
 	if (field_type == BOOLEAN_TYPE) {
 		return field_value ? std::string("t") : std::string("f");
@@ -162,7 +164,7 @@ Serialise::date(int timeinfo_[])
 
 
 std::string
-Serialise::cartesian(const Cartesian &norm_cartesian)
+Serialise::cartesian(const Cartesian& norm_cartesian)
 {
 	unsigned int x = Swap4Bytes(((unsigned int)(norm_cartesian.x * DOUBLE2INT) + MAXDOU2INT));
 	unsigned int y = Swap4Bytes(((unsigned int)(norm_cartesian.y * DOUBLE2INT) + MAXDOU2INT));
@@ -207,14 +209,19 @@ Unserialise::unserialise(char field_type, const std::string& serialise_val, MsgP
 	switch (field_type) {
 		case NUMERIC_TYPE:
 			result = numeric(serialise_val);
+			return;
 		case DATE_TYPE:
 			result = date(serialise_val);
+			return;
 		case BOOLEAN_TYPE:
 			result = boolean(serialise_val);
+			return;
 		case STRING_TYPE:
 			result = serialise_val;
+			return;
 		case GEO_TYPE:
 			result = geo(serialise_val);
+			return;
 		default:
 			throw MSG_Error("type '%c' is not supported", field_type);
 	}
