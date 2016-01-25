@@ -25,6 +25,8 @@
 #include "utils.h"
 #include "datetime.h"
 
+#include <stdarg.h>
+
 #define BUFFER_SIZE (10 * 1024)
 
 
