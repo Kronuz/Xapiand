@@ -146,6 +146,12 @@ public:
 	void reset(const MsgPack& other);
 	MsgPack path(const std::vector<std::string>& path) const;
 
+	uint64_t get_u64() const;
+	int64_t get_i64() const;
+	double get_f64() const;
+	std::string get_str() const;
+	bool get_boolean() const;
+
 	template<typename T>
 	MsgPack& operator=(T&& v) {
 		msgpack::object o(std::forward<T>(v), handler->zone.get());

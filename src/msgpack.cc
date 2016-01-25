@@ -497,6 +497,72 @@ MsgPack::path(const std::vector<std::string>& path) const
 }
 
 
+uint64_t
+MsgPack::get_u64() const
+{
+	switch (obj->type) {
+		case msgpack::type::POSITIVE_INTEGER:
+			return obj->via.u64;
+		case msgpack::type::NEGATIVE_INTEGER:
+			return obj->via.i64;
+		default:
+			throw msgpack::type_error();
+	}
+}
+
+
+int64_t
+MsgPack::get_i64() const
+{
+	switch (obj->type) {
+		case msgpack::type::POSITIVE_INTEGER:
+			return obj->via.u64;
+		case msgpack::type::NEGATIVE_INTEGER:
+			return obj->via.i64;
+		default:
+			throw msgpack::type_error();
+	}
+}
+
+
+double
+MsgPack::get_f64() const
+{
+	switch (obj->type) {
+		case msgpack::type::POSITIVE_INTEGER:
+			return obj->via.u64;
+		case msgpack::type::NEGATIVE_INTEGER:
+			return obj->via.i64;
+		case msgpack::type::FLOAT:
+			return obj->via.f64;
+		default:
+			throw msgpack::type_error();
+	}
+}
+
+
+std::string
+MsgPack::get_str() const
+{
+	if (obj->type == msgpack::type::STR) {
+		return std::string(obj->via.str.ptr, obj->via.str.size);
+	}
+
+	throw msgpack::type_error();
+}
+
+
+bool
+MsgPack::get_boolean() const
+{
+	if (obj->type == msgpack::type::BOOLEAN) {
+		return obj->via.boolean;
+	}
+
+	throw msgpack::type_error();
+}
+
+
 namespace msgpack {
 	MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
 		namespace adaptor {
