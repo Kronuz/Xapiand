@@ -150,3 +150,4 @@ MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);
 MsgPack get_MsgPack(const Xapian::Document& doc);
 std::string get_blob(const Xapian::Document& doc);
+std::string query_string(std::string str);

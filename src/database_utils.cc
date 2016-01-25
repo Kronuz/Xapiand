@@ -187,3 +187,12 @@ std::string get_blob(const Xapian::Document& doc) {
 	p += length;
 	return std::string(p, p_end - p);
 }
+
+
+std::string query_string(std::string str) {
+	// '-'' in not accepted by the field processors.
+	if (str.at(0) == '-') {
+		str[0] = '_';
+	}
+	return str;
+}
