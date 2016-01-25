@@ -83,7 +83,7 @@ Serialise::numeric(char field_type, double field_value)
 		case BOOLEAN_TYPE:
 			return field_value ? std::string("t") : std::string("f");
 		default:
-			throw MSG_Error("%s is not numeric", type(field_type).c_str());
+			throw MSG_Error("%s is not numeric %d", type(field_type).c_str(), field_value);
 	}
 }
 
@@ -115,7 +115,7 @@ Serialise::ewkt(const std::string& field_value)
 	EWKT_Parser ewkt(field_value, false, HTM_MIN_ERROR);
 
 	if (ewkt.trixels.empty()) {
-		throw MSG_Error("Empty region: %s", field_value.c_str());
+		return std::string();
 	}
 
 	for (const auto& trixel : ewkt.trixels) {

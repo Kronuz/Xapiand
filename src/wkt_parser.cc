@@ -107,7 +107,7 @@ EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error)
 			}
 		}
 	} else {
-		throw MSG_Error("Syntax error in EWKT format or geometry object not supported");
+		throw MSG_Error("Syntax error in %s, format or geometry object not supported", EWKT.c_str());
 	}
 }
 
