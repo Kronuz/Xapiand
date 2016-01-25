@@ -133,7 +133,7 @@ Log::add(const std::string& str, std::chrono::time_point<std::chrono::system_clo
 	auto l_ptr = std::make_shared<Log>(str, wakeup, priority);
 	thread.log_list.push_front(l_ptr->shared_from_this());
 
-	if (thread.wakeup.load() > l_ptr->wakeup) {
+	if (std::chrono::system_clock::from_time_t(thread.wakeup.load()) > l_ptr->wakeup) {
 		thread.wakeup_signal.notify_one();
 	}
 
@@ -204,7 +204,7 @@ LogThread::thread_function()
 		if (next_wakeup < now + 100ms) {
 			next_wakeup = now + 100ms;
 		}
-		wakeup.store(next_wakeup);
+		wakeup.store(std::chrono::system_clock::to_time_t(next_wakeup));
 		wakeup_signal.wait_until(lk, next_wakeup);
 	}
 }

@@ -125,7 +125,7 @@ class LogThread {
 	friend Log;
 
 	std::condition_variable wakeup_signal;
-	std::atomic<std::chrono::time_point<std::chrono::system_clock>> wakeup;
+	std::atomic<std::time_t> wakeup;
 
 	std::atomic_bool running;
 	std::thread inner_thread;
