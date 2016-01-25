@@ -880,7 +880,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 			const auto facet_e = spy.second->values_end();
 			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
 				MsgPack value;
-				data_field_t field_t = database->get_data_field(spy.first);
+				data_field_t field_t = database->get_slot_field(spy.first);
 				auto _val = value["value"];
 				Unserialise::unserialise(field_t.type, *facet, _val);
 				value["termfreq"] = facet.get_termfreq();
