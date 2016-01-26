@@ -339,14 +339,11 @@ int make_search(const test_query_t _tests[], int len) {
 						auto obj_data = get_MsgPack(m.get_document());
 						try {
 							auto data = obj_data.at(RESERVED_DATA);
-							if (data.obj->type == msgpack::type::STR) {
-								std::string str_data(data.obj->via.str.ptr, data.obj->via.str.size);
-								if (it->compare(str_data) != 0) {
-									++cont;
-									L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
-								}
+							std::string str_data(data.get_str());
+							if (it->compare(str_data) != 0) {
+								++cont;
+								L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
 							}
-							throw msgpack::type_error();
 						} catch (const msgpack::type_error& err) {
 							++cont;
 							L_ERR(nullptr, "ERROR: %s", err.what());
