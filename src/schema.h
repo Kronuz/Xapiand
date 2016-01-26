@@ -65,7 +65,7 @@ struct specification_t {
 	std::vector<double> accuracy;
 	std::vector<std::string> acc_prefix;
 	unsigned slot;
-	std::vector<char> sep_types;
+	std::vector<unsigned> sep_types;
 	std::string prefix;
 	Index index;
 	bool store;
