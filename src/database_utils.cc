@@ -102,7 +102,7 @@ bool is_language(const std::string& language) {
 }
 
 
-bool set_types(const std::string& type, std::vector<char>& sep_types) {
+bool set_types(const std::string& type, std::vector<unsigned>& sep_types) {
 	std::smatch m;
 	if (std::regex_match(type, m, find_types_re) && static_cast<size_t>(m.length(0)) == type.size()) {
 		if (m.length(4) != 0) {
@@ -125,7 +125,7 @@ bool set_types(const std::string& type, std::vector<char>& sep_types) {
 }
 
 
-std::string str_type(const std::vector<char>& sep_types) {
+std::string str_type(const std::vector<unsigned>& sep_types) {
 	std::stringstream str;
 	if (sep_types[0] == OBJECT_TYPE) str << OBJECT_STR << "/";
 	if (sep_types[1] == ARRAY_TYPE) str << ARRAY_STR << "/";
@@ -137,7 +137,7 @@ std::string str_type(const std::vector<char>& sep_types) {
 void clean_reserved(MsgPack& document) {
 	if (document.obj->type == msgpack::type::MAP) {
 		for (auto item_key : document) {
-			std::string str_key(item_key.obj->via.str.ptr, item_key.obj->via.str.size);
+			std::string str_key(item_key.get_str());
 			if (is_reserved(str_key) && str_key != RESERVED_VALUE) {
 				document.erase(str_key);
 			} else {

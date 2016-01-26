@@ -143,8 +143,8 @@ long long read_mastery(const std::string& dir, bool force);
 // All the field that start with '_' are considered reserved word.
 bool is_reserved(const std::string& word);
 bool is_language(const std::string& language);
-bool set_types(const std::string& type, std::vector<char>& sep_types);
-std::string str_type(const std::vector<char>& sep_types);
+bool set_types(const std::string& type, std::vector<unsigned>& sep_types);
+std::string str_type(const std::vector<unsigned>& sep_types);
 void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);
