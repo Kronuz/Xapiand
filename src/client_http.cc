@@ -987,7 +987,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 
 				try {
 					obj_data = obj_data.at(RESERVED_DATA);
-				} catch (const msgpack::type_error&) {
+				} catch (const std::out_of_range&) {
 					clean_reserved(obj_data);
 					obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
 				}
