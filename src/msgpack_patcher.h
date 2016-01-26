@@ -57,10 +57,6 @@ inline void _erase(MsgPack&& o, const std::string& target) {
 
 inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c) {
 	MsgPack path = obj.at(path_c);
-	if (path.obj->type == msgpack::type::STR) {
-		std::string path_str(path.obj->via.str.ptr, path.obj->via.str.size);
-		stringTokenizer(path_str, "/", path_split);
-	} else {
-		throw msgpack::type_error();
-	}
+	std::string path_str(path.get_str());
+	stringTokenizer(path_str, "/", path_split);
 }

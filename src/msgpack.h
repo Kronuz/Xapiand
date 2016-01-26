@@ -150,7 +150,7 @@ public:
 	int64_t get_i64() const;
 	double get_f64() const;
 	std::string get_str() const;
-	bool get_boolean() const;
+	bool get_bool() const;
 
 	template<typename T>
 	MsgPack& operator=(T&& v) {

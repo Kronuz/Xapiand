@@ -553,7 +553,7 @@ MsgPack::get_str() const
 
 
 bool
-MsgPack::get_boolean() const
+MsgPack::get_bool() const
 {
 	if (obj->type == msgpack::type::BOOLEAN) {
 		return obj->via.boolean;
