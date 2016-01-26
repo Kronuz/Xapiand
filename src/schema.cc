@@ -408,6 +408,15 @@ Schema::to_json_string(bool prettify)
 void
 Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 {
+	// Restarting reserved words than are not inherited.
+	specification.accuracy.clear();
+	specification.acc_prefix.clear();
+	specification.sep_types = default_spc.sep_types;
+	specification.bool_term = default_spc.bool_term;
+	specification.prefix = default_spc.prefix;
+	specification.slot = default_spc.slot;
+
+	// If item_doc is not a MAP, there are not properties to insert
 	if (item_doc.obj->type != msgpack::type::MAP) {
 		return;
 	}
@@ -608,6 +617,14 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 void
 Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& item_doc, bool is_root)
 {
+	// Restarting reserved words than are not inherited.
+	specification.accuracy.clear();
+	specification.acc_prefix.clear();
+	specification.sep_types = default_spc.sep_types;
+	specification.bool_term = default_spc.bool_term;
+	specification.prefix = default_spc.prefix;
+	specification.slot = default_spc.slot;
+
 	if (item_doc.obj->type == msgpack::type::MAP) {
 		// RESERVED_POSITION is heritable and can change between documents.
 		try {
@@ -943,14 +960,6 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 void
 Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 {
-	// Restarting reserved words than which are not inherited.
-	specification.accuracy.clear();
-	specification.acc_prefix.clear();
-	specification.sep_types = default_spc.sep_types;
-	specification.bool_term = default_spc.bool_term;
-	specification.prefix = default_spc.prefix;
-	specification.slot = default_spc.slot;
-
 	try {
 		if (set_types(lower_string(item_doc.at(RESERVED_TYPE).get_str()), specification.sep_types)) {
 			properties[RESERVED_TYPE] = specification.sep_types;
