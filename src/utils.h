@@ -203,7 +203,7 @@ inline void tcp_push(int sock) {
 
 namespace epoch {
 	template<typename Period = std::chrono::seconds>
-	auto now = []() noexcept {
+	inline auto now() noexcept {
 		return std::chrono::duration_cast<Period>(std::chrono::system_clock::now().time_since_epoch()).count();
-	};
+	}
 }
