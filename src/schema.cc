@@ -209,6 +209,18 @@ Schema::store()
 void
 Schema::update_specification(const MsgPack& item_doc)
 {
+	/*
+	 * This function is called by RESERVED_TERMS or RESERVED_TEXTS.
+	 * When RESERVED_NAME is not defined.
+	 */
+
+	specification.accuracy.clear();
+	specification.acc_prefix.clear();
+	specification.sep_types = default_spc.sep_types;
+	specification.bool_term = default_spc.bool_term;
+	specification.prefix = default_spc.prefix;
+	specification.slot = default_spc.slot;
+
 	// RESERVED_POSITION is heritable and can change between documents.
 	try {
 		auto doc_position = item_doc.at(RESERVED_POSITION);
@@ -352,6 +364,15 @@ Schema::update_specification(const MsgPack& item_doc)
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_Error("Data inconsistency, %s must be string", RESERVED_INDEX);
+	} catch (const std::out_of_range&) { }
+
+	// Check RESERVED_TYPE.
+	try {
+		if (!set_types(lower_string(item_doc.at(RESERVED_TYPE).get_str()), specification.sep_types)) {
+			throw MSG_Error("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, NUMERIC_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
+		}
+	} catch (const msgpack::type_error&) {
+		throw MSG_Error("Data inconsistency, %s must be string", RESERVED_TYPE);
 	} catch (const std::out_of_range&) { }
 }
 
