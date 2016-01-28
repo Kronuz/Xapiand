@@ -90,7 +90,7 @@ long long read_mastery(const std::string& dir, bool force) {
 
 
 bool is_reserved(const std::string& word) {
-	return word.find("_") == std::string::npos ? false : true;
+	return word.front() == '_' || word.back() == '_' || word.find(DB_OFFSPRING_UNION) != std::string::npos;
 }
 
 
