@@ -187,7 +187,7 @@ int make_search(const test_geo_t _tests[], int len) {
 			L_ERR(nullptr, "ERROR: Failed in get_mset");
 		} else if (mset.size() != p.expect_datas.size()) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Different number of documents obtained %zu  %zu", mset.size(), p.expect_datas.size());
+			L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.\n %s", mset.size(), p.expect_datas.size(), query.terms.back().c_str());
 		} else {
 			auto it = p.expect_datas.begin();
 			for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {

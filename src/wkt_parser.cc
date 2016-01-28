@@ -638,28 +638,3 @@ EWKT_Parser::getRanges(const std::string &field_value, bool partials, double err
 	HTM::mergeRanges(ranges);
 	centroids = std::move(ewkt.centroids);
 }
-
-
-
-void
-EWKT_Parser::getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids, std::string& serialise_val)
-{
-	EWKT_Parser ewkt(field_value, partials, error);
-
-	std::string _serialise_val;
-	if (ewkt.trixels.empty()) {
-		serialise_val = _serialise_val;
-		return;
-	}
-
-	for (const auto& trixel : ewkt.trixels) {
-		HTM::insertRange(trixel, ranges, HTM_MAX_LEVEL);
-		_serialise_val += trixel;
-	}
-
-	HTM::mergeRanges(ranges);
-	centroids = std::move(ewkt.centroids);
-
-	SHA256 sha256;
-	serialise_val = sha256(_serialise_val);
-}

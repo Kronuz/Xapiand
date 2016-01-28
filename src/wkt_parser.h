@@ -69,5 +69,4 @@ public:
 	static void and_trixels(std::vector<std::string> &txs1, std::vector<std::string>&& txs2);
 	static bool isEWKT(const std::string &str);
 	static void getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids);
-	static void getRanges(const std::string &field_value, bool partials, double error, std::vector<range_t> &ranges, CartesianList &centroids, std::string& serialise_val);
 };
