@@ -26,6 +26,7 @@
 #include "../src/htm.h"
 
 #include <algorithm>
+#include <string.h>
 
 
 // Testing the transformation of coordinates between CRS.

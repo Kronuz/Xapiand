@@ -24,6 +24,7 @@
 
 #include "../src/log.h"
 
+#include <algorithm>
 #include <string>
 #include <thread>
 #include <vector>

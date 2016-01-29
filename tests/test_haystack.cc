@@ -26,6 +26,7 @@
 #include "../src/log.h"
 
 #include <fcntl.h>
+#include <string.h>
 
 
 int test_haystack() {
