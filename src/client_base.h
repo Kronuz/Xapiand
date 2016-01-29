@@ -89,6 +89,8 @@ public:
 
 	void close();
 
+	void destructor_body();
+
 	bool write(const char *buf, size_t buf_size);
 
 	inline bool write(const char *buf) {

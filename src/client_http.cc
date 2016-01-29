@@ -388,6 +388,7 @@ HttpClient::run()
 	std::string error;
 	const char* error_str;
 	bool has_error = false;
+	bool detach_needed = false;
 
 	try {
 		if (path == "/quit") {
@@ -431,6 +432,9 @@ HttpClient::run()
 		} else {
 			error.assign("Unkown Xapian error!");
 		}
+	} catch (const WorkerException& err) {
+		has_error = true;
+		detach_needed = true;
 	} catch (const std::exception& err) {
 		has_error = true;
 		error_str = err.what();
@@ -448,8 +452,18 @@ HttpClient::run()
 		if (database) {
 			manager()->database_pool.checkin(database);
 		}
+
+		if (detach_needed) {
+			detach();
+			return;
+		}
+
 		if (written) {
-			destroy();
+			try {
+				destroy();
+			} catch (const WorkerException& e) {
+				detach();
+			}
 		} else {
 			write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		}

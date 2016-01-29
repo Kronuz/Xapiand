@@ -517,6 +517,10 @@ BinaryClient::run()
 				repl_database.reset();
 			}
 			shutdown();
+		} catch (const WorkerException& e) {
+			--running;
+			L_OBJ_END(this, "BinaryClient::run:END");
+			detach();
 		} catch (...) {
 			L_ERR(this, "ERROR!");
 			if (repl_database) {
