@@ -22,7 +22,6 @@
 
 #include "generate_terms.h"
 
-#include "serialise.h"
 #include "datetime.h"
 #include "utils.h"
 #include "database.h"
@@ -42,6 +41,19 @@ static bool isnotSubtrixel(std::string& last_valid, const uint64_t& id_trixel) {
 		last_valid = res;
 		return true;
 	}
+}
+
+
+static std::string transform_to_string(int _timeinfo[]) {
+	time_t tt = 0;
+	struct tm *timeinfo = gmtime(&tt);
+	timeinfo->tm_year   = _timeinfo[5];
+	timeinfo->tm_mon    = _timeinfo[4];
+	timeinfo->tm_mday   = _timeinfo[3];
+	timeinfo->tm_hour   = _timeinfo[2];
+	timeinfo->tm_min    = _timeinfo[1];
+	timeinfo->tm_sec    = _timeinfo[0];
+	return std::to_string(Datetime::timegm(timeinfo));
 }
 
 
@@ -209,10 +221,10 @@ GenerateTerms::year(int tm_s[], int tm_e[], const ::std::string& prefix)
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_s[4] = tm_e[0] = tm_e[1] = tm_e[2] = tm_e[4] = 0;
 	tm_s[3] = tm_e[3] = 1;
 	while (tm_s[5] != tm_e[5]) {
-		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[5];
 	}
-	res += prefix_dot + query_string(Serialise::date(tm_e));
+	res += prefix_dot + query_string(transform_to_string(tm_e));
 	return res;
 }
 
@@ -225,10 +237,10 @@ GenerateTerms::month(int tm_s[], int tm_e[], const ::std::string& prefix)
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_e[1] = tm_e[2] = tm_e[3] = 0;
 	tm_s[3] = tm_e[3] = 1;
 	while (tm_s[4] != tm_e[4]) {
-		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[4];
 	}
-	res += prefix_dot + query_string(Serialise::date(tm_e));
+	res += prefix_dot + query_string(transform_to_string(tm_e));
 	return res;
 }
 
@@ -240,10 +252,10 @@ GenerateTerms::day(int tm_s[], int tm_e[], const ::std::string& prefix)
 	::std::string res;
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_e[0] = tm_e[1] = tm_e[2] = 0;
 	while (tm_s[3] != tm_e[3]) {
-		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[3];
 	}
-	res += prefix_dot + query_string(Serialise::date(tm_e));
+	res += prefix_dot + query_string(transform_to_string(tm_e));
 	return res;
 }
 
@@ -255,10 +267,10 @@ GenerateTerms::hour(int tm_s[], int tm_e[], const ::std::string& prefix)
 	::std::string res;
 	tm_s[0] = tm_s[1] = tm_e[0] = tm_e[1] = 0;
 	while (tm_s[2] != tm_e[2]) {
-		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[2];
 	}
-	res += prefix_dot + query_string(Serialise::date(tm_e));
+	res += prefix_dot + query_string(transform_to_string(tm_e));
 	return res;
 }
 
@@ -270,10 +282,10 @@ GenerateTerms::minute(int tm_s[], int tm_e[], const ::std::string& prefix)
 	::std::string res;
 	tm_s[0] = tm_e[0] = 0;
 	while (tm_s[1] != tm_e[1]) {
-		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[1];
 	}
-	res += prefix_dot + query_string(Serialise::date(tm_e));
+	res += prefix_dot + query_string(transform_to_string(tm_e));
 	return res;
 }
 
@@ -284,10 +296,10 @@ GenerateTerms::second(int tm_s[], int tm_e[], const ::std::string& prefix)
 	::std::string prefix_dot = prefix + ":";
 	::std::string res;
 	while (tm_s[0] != tm_e[0]) {
-		res += prefix_dot + query_string(Serialise::date(tm_s)) + " OR ";
+		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[0];
 	}
-	res += prefix_dot + query_string(Serialise::date(tm_e));
+	res += prefix_dot + query_string(transform_to_string(tm_e));
 	return res;
 }
 
