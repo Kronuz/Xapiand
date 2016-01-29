@@ -134,7 +134,7 @@ static const datum_t datums[17] = {
 };
 
 
-static const std::map<int, int> SRIDS_DATUMS({
+static const std::unordered_map<int, int> SRIDS_DATUMS({
 	std::pair<int, int>(WGS84,    0),
 	std::pair<int, int>(WGS72,    1),
 	std::pair<int, int>(NAD83,    2),
