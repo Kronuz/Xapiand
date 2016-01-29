@@ -22,7 +22,6 @@
 
 #include "serialise.h"
 
-#include "datetime.h"
 #include "wkt_parser.h"
 #include "utils.h"
 #include "log.h"
@@ -110,6 +109,40 @@ Serialise::date(const std::string& field_value)
 
 
 std::string
+Serialise::date(const MsgPack& value, Datetime::tm_t& tm)
+{
+	double timestamp;
+	switch (value.obj->type) {
+		case msgpack::type::POSITIVE_INTEGER:
+			timestamp = value.obj->via.u64;
+			tm = Datetime::to_tm_t(timestamp);
+			return Xapian::sortable_serialise(timestamp);
+		case msgpack::type::NEGATIVE_INTEGER:
+			timestamp = value.obj->via.i64;
+			tm = Datetime::to_tm_t(timestamp);
+			return Xapian::sortable_serialise(timestamp);
+		case msgpack::type::FLOAT:
+			timestamp = value.obj->via.f64;
+			tm = Datetime::to_tm_t(timestamp);
+			return Xapian::sortable_serialise(timestamp);
+		case msgpack::type::STR:
+			timestamp = Datetime::timestamp(std::string(value.obj->via.str.ptr, value.obj->via.str.size), tm);
+			return Xapian::sortable_serialise(timestamp);
+		default:
+			throw MSG_Error("date value must be numeric or string");
+	}
+}
+
+
+std::string
+Serialise::date_with_math(Datetime::tm_t tm, const std::string& op, const std::string& units)
+{
+	Datetime::computeDateMath(tm, op, units);
+	return Xapian::sortable_serialise(Datetime::mtimegm(tm));
+}
+
+
+std::string
 Serialise::ewkt(const std::string& field_value)
 {
 	std::string result;
@@ -145,21 +178,6 @@ Serialise::boolean(const std::string& field_value)
 	} else {
 		throw MSG_Error("Boolean format is not valid");
 	}
-}
-
-
-std::string
-Serialise::date(int timeinfo_[])
-{
-	time_t tt = 0;
-	struct tm *timeinfo = gmtime(&tt);
-	timeinfo->tm_year   = timeinfo_[5];
-	timeinfo->tm_mon    = timeinfo_[4];
-	timeinfo->tm_mday   = timeinfo_[3];
-	timeinfo->tm_hour   = timeinfo_[2];
-	timeinfo->tm_min    = timeinfo_[1];
-	timeinfo->tm_sec    = timeinfo_[0];
-	return std::to_string(Datetime::timegm(timeinfo));
 }
 
 

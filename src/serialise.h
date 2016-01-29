@@ -24,6 +24,7 @@
 
 #include "htm.h"
 #include "msgpack.h"
+#include "datetime.h"
 
 #include "hash/endian.h"
 
@@ -80,17 +81,17 @@ namespace Serialise {
 	// Serialise field_value like date.
 	std::string date(const std::string& field_value);
 
+	// Serialise value like date and fill tm.
+	std::string date(const MsgPack& value, Datetime::tm_t& tm);
+
+	// Serialise struct tm with math like date.
+	std::string date_with_math(Datetime::tm_t tm, const std::string& op, const std::string& units);
+
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value);
 
 	// Serialise field_value like boolean.
 	std::string boolean(const std::string& field_value);
-
-	/*
-	 * Serialise timeinfo_ like date. timeinfo_ format is:
-	 * { tm->tm_sec, tm->tm_min, tm->tm_hour, tm->tm_mday, tm->tm_mon, tm->tm_year }
-	 */
-	std::string date(int timeinfo_[]);
 
 	// Serialise a normalize cartesian coordinate in SIZE_SERIALISE_CARTESIAN bytes.
 	std::string cartesian(const Cartesian& norm_cartesian);
