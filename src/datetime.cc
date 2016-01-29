@@ -49,7 +49,7 @@ static constexpr int cumdays[2][12] = {
  * Full struct tm according to the date specified by "date".
  */
 void
-Datetime::dateTimeParser(const std::string &date, tm_t &tm)
+Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 {
 	std::string oph, opm;
 	std::smatch m;
@@ -115,7 +115,7 @@ Datetime::dateTimeParser(const std::string &date, tm_t &tm)
  * units can be y, M, w, d, h, m, s
  */
 void
-Datetime::computeDateMath(tm_t &tm, const std::string &op, const std::string &units)
+Datetime::computeDateMath(tm_t& tm, const std::string& op, const std::string& units)
 {
 	time_t dateGMT;
 	struct tm *timeinfo;
@@ -228,7 +228,7 @@ Datetime::computeDateMath(tm_t &tm, const std::string &op, const std::string &un
 
 
 /*
- * Return if a year is leap.
+ * Returns if a year is leap.
  */
 bool
 Datetime::isleapYear(int year)
@@ -238,7 +238,7 @@ Datetime::isleapYear(int year)
 
 
 /*
- * Return if a tm_year is leap.
+ * Returns if a tm_year is leap.
  */
 bool
 Datetime::isleapRef_year(int tm_year)
@@ -249,7 +249,7 @@ Datetime::isleapRef_year(int tm_year)
 
 
 /*
- * Return number of days in month, given the year.
+ * Returns number of days in month, given the year.
  */
 int
 Datetime::getDays_month(int year, int month)
@@ -262,7 +262,7 @@ Datetime::getDays_month(int year, int month)
 
 
 /*
- * Return the proleptic Gregorian ordinal of the date,
+ * Returns the proleptic Gregorian ordinal of the date,
  * where January 1 of year 1 has ordinal 1 (reference date).
  * year -> Any positive number except zero.
  * month -> Between 1 and 12 inclusive.
@@ -307,7 +307,7 @@ Datetime::timegm(struct tm *tm)
  * Only for year greater than 0.
  */
 time_t
-Datetime::timegm(tm_t &tm)
+Datetime::timegm(tm_t& tm)
 {
 	normalizeMonths(tm.year, tm.mon);
 	time_t result = toordinal(tm.year, tm.mon, 1) - _EPOCH_ORD + tm.day - 1;
@@ -325,10 +325,10 @@ Datetime::timegm(tm_t &tm)
 /*
  * Function to calculate Unix timestamp from Coordinated Universal Time (UTC).
  * Only for year greater than 0.
- * Return Timestamp with milliseconds as the decimal part.
+ * Returns Timestamp with milliseconds as the decimal part.
  */
 double
-Datetime::mtimegm(tm_t &tm)
+Datetime::mtimegm(tm_t& tm)
 {
 	normalizeMonths(tm.year, tm.mon);
 	double result = (double)toordinal(tm.year, tm.mon, 1) - _EPOCH_ORD + tm.day - 1;
@@ -345,22 +345,66 @@ Datetime::mtimegm(tm_t &tm)
 
 
 /*
- * Return the timestamp of date.
+ * Returns the timestamp of date.
  */
 double
-Datetime::timestamp(const std::string &date)
+Datetime::timestamp(const std::string& date)
 {
-	if (!isNumeric(date)) {
-		tm_t tm;
-		dateTimeParser(date, tm);
-		return mtimegm(tm);
-	} else {
+	if (isNumeric(date)) {
 		double timestamp;
 		std::stringstream ss;
 		ss << std::dec << date;
 		ss >> timestamp;
 		ss.flush();
 		return timestamp;
+	} else {
+		tm_t tm;
+		dateTimeParser(date, tm);
+		return mtimegm(tm);
+	}
+}
+
+
+/*
+ * Transforms timestamp to a struct tm_t.
+ */
+Datetime::tm_t
+Datetime::to_tm_t(double timestamp)
+{
+	time_t _time = static_cast<time_t>(timestamp);
+	struct tm *timeinfo = gmtime(&_time);
+	tm_t tm;
+	tm.year = timeinfo->tm_year + _START_YEAR;
+	tm.mon = timeinfo->tm_mon + 1;
+	tm.day = timeinfo->tm_mday;
+	tm.hour = timeinfo->tm_hour;
+	tm.min = timeinfo->tm_min;
+	tm.sec = timeinfo->tm_sec;
+	tm.msec = (timestamp - _time) * 1000;
+
+	return tm;
+}
+
+
+/*
+ * Returns the timestamp of date and fill tm.
+ */
+double
+Datetime::timestamp(const std::string& date, tm_t& tm)
+{
+	if (isNumeric(date)) {
+		double timestamp;
+		std::stringstream ss;
+		ss << std::dec << date;
+		ss >> timestamp;
+		ss.flush();
+
+		tm = to_tm_t(timestamp);
+
+		return timestamp;
+	} else {
+		dateTimeParser(date, tm);
+		return mtimegm(tm);
 	}
 }
 
@@ -410,7 +454,7 @@ Datetime::isotime(const struct tm *tm, int microseconds)
  * If epoch does not numeric, return epoch.
  */
 ::std::string
-Datetime::ctime(const ::std::string &epoch)
+Datetime::ctime(const ::std::string& epoch)
 {
 	if (isNumeric(epoch)) {
 		double utimestamp = std::stod(epoch);
@@ -442,7 +486,7 @@ Datetime::ctime(double epoch)
  * Normalize months between -11 and 11
  */
 void
-Datetime::normalizeMonths(int &year, int &mon)
+Datetime::normalizeMonths(int& year, int& mon)
 {
 	if (mon > 12) {
 		year += mon / 12;
@@ -455,7 +499,7 @@ Datetime::normalizeMonths(int &year, int &mon)
 
 
 bool
-Datetime::isDate(const std::string &date)
+Datetime::isDate(const std::string& date)
 {
 	std::smatch m;
 	return std::regex_match(date, m, date_re) && static_cast<size_t>(m.length(0)) == date.size();
@@ -463,7 +507,7 @@ Datetime::isDate(const std::string &date)
 
 
 std::string
-Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock> &tp)
+Datetime::to_string(const std::chrono::time_point<std::chrono::system_clock>& tp)
 {
 	return ctime(std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() * MICROSEC);
 }
