@@ -587,7 +587,11 @@ BaseClient::shutdown()
 
 	if (XapiandManager::shutdown_now) {
 		L_EV(this, "Signaled destroy!!");
-		destroy();
+		try {
+			destroy();
+		} catch (const WorkerException& e) {
+			detach();
+		}
 	}
 }
 
