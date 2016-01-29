@@ -40,8 +40,12 @@ inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
 	if (o.obj->type == msgpack::type::MAP) {
 		o[target] = val;
 	} else if (o.obj->type == msgpack::type::ARRAY) {
-		int offset = strict_stoi(target);
-		o.insert_item_to_array(offset, val);
+		if (target.compare("-") == 0) {
+			o.insert_item_to_array(o.obj->via.array.size, val);
+		} else {
+			int offset = strict_stoi(target);
+			o.insert_item_to_array(offset, val);
+		}
 	}
 }
 
