@@ -172,85 +172,85 @@ const test_t numeric[] {
 const test_t date[] {
 	// There is not a upper accuracy
 	{
-		"2010-10-10", "2011-12-15", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10", "2011-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D6:1262304000 OR D6:1293840000", { "D6" }
 	},
 	// Do not find a upper accuracy
 	{
-		"2011-10-10", "2011-12-15", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT },
+		"2011-10-10", "2011-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH) },
 		{ "D1", "D2", "D3", "D4", "D5" }, "D5:1317427200 OR D5:1320105600 OR D5:1322697600", { "D5" }
 	},
 	// Find upper and lower accuracy
 	{
-		"2010-01-10", "2010-04-10", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-01-10", "2010-04-10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D6:1262304000 AND (D5:1262304000 OR D5:1264982400 OR D5:1267401600 OR D5:1270080000)", { "D5", "D6" }
 	},
 	{
-		"2010-10-10", "2010-10-15", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10", "2010-10-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D5:1285891200 AND (D4:1286668800 OR D4:1286755200 OR D4:1286841600 OR D4:1286928000 OR D4:1287014400 OR D4:1287100800)", { "D4", "D5" }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T12:10:10", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10T10:10:10", "2010-10-10T12:10:10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D4:1286668800 AND (D3:1286704800 OR D3:1286708400 OR D3:1286712000)", { "D3", "D4" }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T10:12:10", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10T10:10:10", "2010-10-10T10:12:10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D3:1286704800 AND (D2:1286705400 OR D2:1286705460 OR D2:1286705520)", { "D2", "D3" }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T10:10:12", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10T10:10:10", "2010-10-10T10:10:12", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D2:1286705400 AND (D1:1286705410 OR D1:1286705411 OR D1:1286705412)", { "D1", "D2" }
 	},
 	// There is not a lower accuracy.
 	{
-		"2010-10-10T10:10:10.100", "2010-10-10T10:10:10.900", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10T10:10:10.100", "2010-10-10T10:10:10.900", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D1:1286705410", { "D1" }
 	},
 	{
-		"2010-01-10", "2010-04-10", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_YEAR2INT },
+		"2010-01-10", "2010-04-10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::YEAR) },
 		{ "D1", "D2", "D3", "D4", "D6" }, "D6:1262304000", { "D6" }
 	},
 	{
-		"2010-10-10", "2010-10-15", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10", "2010-10-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D2", "D3", "D5", "D6" }, "D5:1285891200", { "D5" }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T12:10:10", { DB_SECOND2INT, DB_MINUTE2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10T10:10:10", "2010-10-10T12:10:10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D2",  "D4", "D5", "D6" }, "D4:1286668800", { "D4" }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T10:12:10", { DB_SECOND2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10T10:10:10", "2010-10-10T10:12:10", { toUType(unitTime::SECOND), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D3", "D4", "D5", "D6" }, "D3:1286704800", { "D3" }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T10:10:12", { DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10T10:10:10", "2010-10-10T10:10:12", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D2", "D3", "D4", "D5", "D6" }, "D2:1286705400", { "D2" }
 	},
 
 	// Special cases.
 	// When the range is type GE.
 	{
-		"2010-10-10T10:10:10", "", { DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10T10:10:10", "", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D2", "D3", "D4", "D5", "D6" }, "", { }
 	},
 	// When the range is type LE.
 	{
-		"", "2010-10-10T10:10:12", { DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"", "2010-10-10T10:10:12", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D2", "D3", "D4", "D5", "D6" }, "", { }
 	},
 	// When the range is negative.
 	{
-		"2010-10-10T10:10:12.100", "2010-10-10T10:10:12", { DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"2010-10-10T10:10:12.100", "2010-10-10T10:10:12", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D2", "D3", "D4", "D5", "D6" }, "", { }
 	},
 
 	// Testing negative timestamps.
 	{
-		"1800-01-10", "1802-04-10", { DB_SECOND2INT, DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"1800-01-10", "1802-04-10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D6:_5364662400 OR D6:_5333126400 OR D6:_5301590400", { "D6" }
 	},
 	{
-		"1810-10-10T10:11:10", "1810-10-10T10:12:15", { DB_MINUTE2INT, DB_HOUR2INT, DB_DAY2INT, DB_MONTH2INT, DB_YEAR2INT },
+		"1810-10-10T10:11:10", "1810-10-10T10:12:15", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
 		{ "D2", "D3", "D4", "D5", "D6" }, "D3:_5024728800 AND (D2:_5024728140 OR D2:_5024728080)", { "D2", "D3" }
 	}
 };

@@ -32,7 +32,6 @@
 extern const std::regex find_geometry_re;
 extern const std::regex find_circle_re;
 extern const std::regex find_subpolygon_re;
-extern const std::regex find_polygon_re;
 extern const std::regex find_collection_re;
 
 

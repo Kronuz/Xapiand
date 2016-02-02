@@ -63,8 +63,8 @@ class HttpClient : public BaseClient {
 	struct http_parser parser;
 	std::shared_ptr<Database> database;
 
-	void on_read(const char *buf, size_t received) override;
-	void on_read_file(const char *buf, size_t received) override;
+	void on_read(const char* buf, size_t received) override;
+	void on_read_file(const char* buf, size_t received) override;
 	void on_read_file_done() override;
 
 	static const http_parser_settings settings;
@@ -99,16 +99,16 @@ class HttpClient : public BaseClient {
 	std::chrono::time_point<std::chrono::system_clock> response_ends;
 
 	static int on_info(http_parser* p);
-	static int on_data(http_parser* p, const char *at, size_t length);
+	static int on_data(http_parser* p, const char* at, size_t length);
 
-	void stats_view(const query_field_t &e);
-	void delete_document_view(const query_field_t &e);
-	void index_document_view(const query_field_t &e);
-	void document_info_view(const query_field_t &e);
-	void update_document_view(const query_field_t &e);
-	void upload_view(const query_field_t &e);
-	void search_view(const query_field_t &e, bool facets, bool schema);
-	void bad_request_view(const query_field_t &e, int cmd);
+	void stats_view(const query_field_t& e);
+	void delete_document_view(const query_field_t& e);
+	void index_document_view(const query_field_t& e);
+	void document_info_view(const query_field_t& e);
+	void update_document_view(const query_field_t& e);
+	void upload_view(const query_field_t& e);
+	void search_view(const query_field_t& e, bool facets, bool schema);
+	void bad_request_view(const query_field_t& e, int cmd);
 
 	void _options();
 	void _head();
@@ -118,8 +118,8 @@ class HttpClient : public BaseClient {
 	void _patch();
 	void _delete();
 
-	int _endpointgen(query_field_t &e, bool writable);
-	static int identify_cmd(const std::string &commad);
+	int _endpointgen(query_field_t& e, bool writable);
+	static int identify_cmd(const std::string& commad);
 
 	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string body=std::string(""), std::string ct_type=std::string("application/json; charset=UTF-8"));
 	void clean_http_request();

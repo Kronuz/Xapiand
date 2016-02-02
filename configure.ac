@@ -132,7 +132,7 @@ LIBS="$save_LIBS"
 ########################################################################
 
 AC_MSG_CHECKING(["whether compiler understands -Wall -Wextra"])
-save_CXXFLAGS="$CFLAGS"
+save_CXXFLAGS="$CXXFLAGS"
 CXXFLAGS="$CXXFLAGS -Wall -Wextra"
 AC_TRY_COMPILE([],[],
   AC_MSG_RESULT(yes),

@@ -1,0 +1,5 @@
+{
+	"AMERICA": {
+		"COUNTRY": ["EU", "MEXICO", "CANADA", "BRAZIL"]
+	}
+}

@@ -52,7 +52,7 @@ std::atomic<time_t> XapiandManager::shutdown_asap(0);
 std::atomic<time_t> XapiandManager::shutdown_now(0);
 
 
-XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
+XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	: Worker(nullptr, loop_),
 	  database_pool(o.dbpool_size),
 	  thread_pool("W%02zu", o.threadpool_size),
@@ -65,7 +65,7 @@ XapiandManager::XapiandManager(ev::loop_ref *loop_, const opts_t &o)
 	// Setup node from node database directory
 	std::string node_name_(get_node_name());
 	if (!node_name_.empty()) {
-		if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
+		if (!node_name.empty() && lower_string(node_name) != lower_string(node_name_)) {
 			L_ERR(this, "Node name %s doesn't match with the one in the cluster's database: %s!", node_name.c_str(), node_name_.c_str());
 			assert(false);
 		}
@@ -118,7 +118,7 @@ XapiandManager::get_node_name()
 
 
 bool
-XapiandManager::set_node_name(const std::string &node_name_, std::unique_lock<std::mutex> &lk)
+XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<std::mutex>& lk)
 {
 	if (node_name_.empty()) {
 		lk.unlock();
@@ -126,12 +126,16 @@ XapiandManager::set_node_name(const std::string &node_name_, std::unique_lock<st
 	}
 
 	node_name = get_node_name();
-	if (!node_name.empty() && stringtolower(node_name) != stringtolower(node_name_)) {
+
+	std::string lower_node_name = lower_string(node_name);
+	std::string _lower_node_name = lower_string(node_name_);
+
+	if (!node_name.empty() && lower_node_name != _lower_node_name) {
 		lk.unlock();
 		return false;
 	}
 
-	if (stringtolower(node_name) != stringtolower(node_name_)) {
+	if (lower_node_name != _lower_node_name) {
 		node_name = node_name_;
 
 		int fd = open("nodename", O_WRONLY | O_CREAT, 0644);
@@ -256,21 +260,21 @@ XapiandManager::is_single_node()
 
 
 bool
-XapiandManager::put_node(const Node &node)
+XapiandManager::put_node(const Node& node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	std::string node_name_lower(stringtolower(node.name));
-	if (node_name_lower == stringtolower(local_node.name)) {
+	std::string lower_node_name(lower_string(node.name));
+	if (lower_node_name == lower_string(local_node.name)) {
 		local_node.touched = epoch::now<>();
 		return false;
 	} else {
 		try {
-			Node &node_ref = nodes.at(node_name_lower);
+			Node &node_ref = nodes.at(lower_node_name);
 			if (node == node_ref) {
 				node_ref.touched = epoch::now<>();
 			}
 		} catch (const std::out_of_range &err) {
-			Node &node_ref = nodes[node_name_lower];
+			Node &node_ref = nodes[lower_node_name];
 			node_ref = node;
 			node_ref.touched = epoch::now<>();
 			return true;
@@ -283,11 +287,10 @@ XapiandManager::put_node(const Node &node)
 
 
 bool
-XapiandManager::get_node(const std::string &node_name, const Node **node)
+XapiandManager::get_node(const std::string& node_name, const Node** node)
 {
 	try {
-		std::string node_name_lower(stringtolower(node_name));
-		const Node &node_ref = nodes.at(node_name_lower);
+		const Node &node_ref = nodes.at(lower_string(node_name));
 		*node = &node_ref;
 		return true;
 	} catch (const std::out_of_range &err) {
@@ -297,11 +300,11 @@ XapiandManager::get_node(const std::string &node_name, const Node **node)
 
 
 bool
-XapiandManager::touch_node(const std::string &node_name, int region, const Node **node)
+XapiandManager::touch_node(const std::string& node_name, int region, const Node** node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	std::string node_name_lower(stringtolower(node_name));
-	if (node_name_lower == stringtolower(local_node.name)) {
+	std::string lower_node_name(lower_string(node_name));
+	if (lower_node_name == lower_string(local_node.name)) {
 		local_node.touched = epoch::now<>();
 		if (region != UNKNOWN_REGION) {
 			local_node.region.store(region);
@@ -310,7 +313,7 @@ XapiandManager::touch_node(const std::string &node_name, int region, const Node 
 		return true;
 	} else {
 		try {
-			Node &node_ref = nodes.at(node_name_lower);
+			Node &node_ref = nodes.at(lower_node_name);
 			node_ref.touched = epoch::now<>();
 			if (region != UNKNOWN_REGION) {
 				node_ref.region.store(region);
@@ -327,10 +330,10 @@ XapiandManager::touch_node(const std::string &node_name, int region, const Node 
 
 
 void
-XapiandManager::drop_node(const std::string &node_name)
+XapiandManager::drop_node(const std::string& node_name)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	nodes.erase(stringtolower(node_name));
+	nodes.erase(lower_string(node_name));
 }
 
 
@@ -418,7 +421,7 @@ XapiandManager::destroy()
 
 
 void
-XapiandManager::async_shutdown_cb(ev::async &, int)
+XapiandManager::async_shutdown_cb(ev::async&, int)
 {
 	L_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN");
 	L_EV(this, "Async shutdown event received!");
@@ -450,7 +453,7 @@ XapiandManager::shutdown()
 
 
 void
-XapiandManager::run(const opts_t &o)
+XapiandManager::run(const opts_t& o)
 {
 	std::string msg("Listening on ");
 
@@ -500,9 +503,9 @@ XapiandManager::run(const opts_t &o)
 	}
 
 	L_NOTICE(this, "Started %d server%s"
-		     ", %d worker thread%s"
-		     ", %d autocommitter%s"
-		     ", %d replicator%s.",
+			 ", %d worker thread%s"
+			 ", %d autocommitter%s"
+			 ", %d replicator%s.",
 		o.num_servers, (o.num_servers == 1) ? "" : "s",
 		o.threadpool_size, (o.threadpool_size == 1) ? "" : "s",
 		o.num_committers, (o.num_committers == 1) ? "" : "s",
@@ -537,7 +540,7 @@ XapiandManager::run(const opts_t &o)
 
 
 int
-XapiandManager::get_region(const std::string &db_name)
+XapiandManager::get_region(const std::string& db_name)
 {
 	if (local_node.regions.load() == -1) {
 		local_node.regions.store(sqrt(nodes.size()));
@@ -571,33 +574,32 @@ XapiandManager::get_region()
 
 
 std::future<bool>
-XapiandManager::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
 	return binary->trigger_replication(src_endpoint, dst_endpoint);
 }
 
+
 std::future<bool>
-XapiandManager::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename)
+XapiandManager::store(const Endpoints& endpoints, const Xapian::docid& did, const std::string& filename)
 {
 	return binary->store(endpoints, did, filename);
 }
 
 
-unique_cJSON
-XapiandManager::server_status()
+void
+XapiandManager::server_status(MsgPack&& stats)
 {
-	unique_cJSON root_status(cJSON_CreateObject());
 	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-	cJSON_AddNumberToObject(root_status.get(), "Connections", XapiandServer::total_clients);
-	cJSON_AddNumberToObject(root_status.get(), "Http connections", XapiandServer::http_clients);
-	cJSON_AddNumberToObject(root_status.get(), "Xapian remote connections", XapiandServer::binary_clients);
-	cJSON_AddNumberToObject(root_status.get(), "Size thread pool", thread_pool.size());
-	return root_status;
+	stats["Connections"] = XapiandServer::total_clients.load();
+	stats["Http connections"] = XapiandServer::http_clients.load();
+	stats["Xapian remote connections"] = XapiandServer::binary_clients.load();
+	stats["Size thread pool"] = thread_pool.size();
 }
 
 
-unique_cJSON
-XapiandManager::get_stats_time(const std::string &time_req)
+void
+XapiandManager::get_stats_time(MsgPack&& stats, const std::string& time_req)
 {
 	std::smatch m;
 	if (std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.size() && m.length(1) != 0) {
@@ -613,21 +615,15 @@ XapiandManager::get_stats_time(const std::string &time_req)
 			second_time.minute = 0;
 			second_time.second = 0;
 		}
-		return get_stats_json(first_time, second_time);
+		return _get_stats_time(std::move(stats), first_time, second_time);
 	}
-
-	unique_cJSON root_stats(cJSON_CreateObject());
-	cJSON_AddStringToObject(root_stats.get(), "Error in time argument input", "Incorrect input.");
-	return root_stats;
+	stats["Error in time argument"] = "Incorrect input";
 }
 
 
-unique_cJSON
-XapiandManager::get_stats_json(pos_time_t &first_time, pos_time_t &second_time)
+void
+XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_time_t& second_time)
 {
-	unique_cJSON root_stats(cJSON_CreateObject());
-	unique_cJSON time_period(cJSON_CreateObject());
-
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
 	auto now_time = std::chrono::system_clock::to_time_t(init_time);
@@ -650,11 +646,11 @@ XapiandManager::get_stats_json(pos_time_t &first_time, pos_time_t &second_time)
 	}
 
 	if (end > start) {
-		cJSON_AddStringToObject(root_stats.get(), "Error in time argument input", "First argument must be less or equal than the second.");
+		stats["Error in time argument"] = "First argument must be less or equal than the second";
 	} else {
 		std::vector<uint64_t> cnt{0, 0, 0};
 		std::vector<double> tm_cnt{0.0, 0.0, 0.0};
-		cJSON_AddStringToObject(time_period.get(), "System time", ctime(&now_time));
+		stats["System time"] = ctime(&now_time);
 		if (seconds) {
 			auto aux = first_time.second + start - end;
 			if (aux < SLOT_TIME_SECOND) {
@@ -673,17 +669,17 @@ XapiandManager::get_stats_json(pos_time_t &first_time, pos_time_t &second_time)
 			}
 		}
 		auto p_time = now_time - start;
-		cJSON_AddStringToObject(time_period.get(), "Period start", ctime(&p_time));
-		p_time = now_time - end;
-		cJSON_AddStringToObject(time_period.get(), "Period end", ctime(&p_time));
-		cJSON_AddItemToObject(root_stats.get(), "Time", time_period.release());
-		cJSON_AddNumberToObject(root_stats.get(), "Docs index", cnt[0]);
-		cJSON_AddNumberToObject(root_stats.get(), "Number searches", cnt[1]);
-		cJSON_AddNumberToObject(root_stats.get(), "Docs deleted", cnt[2]);
-		cJSON_AddNumberToObject(root_stats.get(), "Average time indexing (secs)", cnt[0] == 0 ? 0 : (tm_cnt[0] / cnt[0]) * NANOSEC);
-		cJSON_AddNumberToObject(root_stats.get(), "Average search time (secs)", cnt[1] == 0 ? 0 :  (tm_cnt[1] / cnt[1]) * NANOSEC);
-		cJSON_AddNumberToObject(root_stats.get(), "Average deletion time (secs)", cnt[2] == 0 ? 0 : (tm_cnt[2] / cnt[2]) * NANOSEC);
-	}
 
-	return root_stats;
+		MsgPack time_period = stats["Time"];
+		time_period["Period start"] = ctime(&p_time);
+		p_time = now_time - end;
+		time_period["Period end"] = ctime(&p_time);
+
+		stats["Docs index"] = cnt[0];
+		stats["Number search"] = cnt[1];
+		stats["Docs deleted"] = cnt[2];
+		cnt[0] == 0 ? stats["Average time indexing (secs)"] = 0 : stats["Average time indexing (secs)"] = (tm_cnt[0] / cnt[0]) * NANOSEC;
+		cnt[1] == 0 ? stats["Average search time (secs)"] = 0 : stats["Average search time (secs))"] = (tm_cnt[1] / cnt[1]) * NANOSEC;
+		cnt[2] == 0 ? stats["Average deletion time (secs)"] = 0 : stats["Average deletion time (secs)"] = (tm_cnt[2] / cnt[2]) * NANOSEC;
+	}
 }

@@ -21,7 +21,9 @@
  */
 
 #include "utils.h"
+
 #include "log.h"
+#include "database.h"
 #include "namegen.h"
 #include "hash/md5.h"
 #include "xapiand.h"
@@ -79,7 +81,7 @@ static std::random_device rd;  // Random device engine, usually based on /dev/ra
 static std::mt19937_64 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
 
-void set_thread_name(const std::string &name) {
+void set_thread_name(const std::string& name) {
 #if defined(HAVE_PTHREAD_SETNAME_NP_1)
 	pthread_setname_np(name.c_str());
 #elif defined(HAVE_PTHREAD_SETNAME_NP_2)
@@ -137,20 +139,35 @@ std::string repr(const void* p, size_t size, bool friendly, size_t max_size) {
 			}
 			continue;
 		}
-		if (friendly && c == 9) {
-			*d++ = '\\';
-			*d++ = 't';
-		} else if (friendly && c == 10) {
-			*d++ = '\\';
-			*d++ = 'n';
-		} else if (friendly && c == 13) {
-			*d++ = '\\';
-			*d++ = 'r';
-		} else if (friendly && c == '\'') {
-			*d++ = '\\';
-			*d++ = '\'';
-		} else if (friendly && c >= ' ' && c <= '~') {
-			*d++ = c;
+		if (friendly) {
+			switch (c) {
+				case 9:
+					*d++ = '\\';
+					*d++ = 't';
+					break;
+				case 10:
+					*d++ = '\\';
+					*d++ = 'n';
+					break;
+				case 13:
+					*d++ = '\\';
+					*d++ = 'r';
+					break;
+				case '\'':
+					*d++ = '\\';
+					*d++ = '\'';
+					break;
+				default:
+					if (c >= ' ' && c <= '~') {
+						*d++ = c;
+					} else {
+						*d++ = '\\';
+						*d++ = 'x';
+						sprintf(d, "%02x", (unsigned char)c);
+						d += 2;
+					}
+					break;
+			}
 		} else {
 			*d++ = '\\';
 			*d++ = 'x';
@@ -166,7 +183,7 @@ std::string repr(const void* p, size_t size, bool friendly, size_t max_size) {
 }
 
 
-std::string repr(const std::string &string, bool friendly, size_t max_size) {
+std::string repr(const std::string& string, bool friendly, size_t max_size) {
 	return repr(string.c_str(), string.size(), friendly, max_size);
 }
 
@@ -243,8 +260,9 @@ std::string urldecode(const char *src, size_t size) {
 	}
 
 	// the last 2- chars
-	while (src < SRC_END)
+	while (src < SRC_END) {
 		*pEnd++ = *src++;
+	}
 
 	std::string sResult(pStart, pEnd);
 	delete [] pStart;
@@ -264,7 +282,7 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 		n0 = n1 = par->offset + par->length;
 	}
 
-	while (1) {
+	while (true) {
 		char cn = *n1;
 		if (n1 == nf) {
 			cn = '\0';
@@ -505,21 +523,17 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 }
 
 
-std::string stringtoupper(const std::string &str) {
-	std::string tmp = str;
-	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM_UPPER());
-	return tmp;
+void to_upper(std::string& str) {
+	for (auto& c : str) c = toupper(c);
 }
 
 
-std::string stringtolower(const std::string &str) {
-	std::string tmp = str;
-	std::transform(tmp.begin(), tmp.end(), tmp.begin(), TRANSFORM_LOWER());
-	return tmp;
+void to_lower(std::string& str) {
+	for (auto& c : str) c = tolower(c);
 }
 
 
-std::string prefixed(const std::string &term, const std::string &prefix) {
+std::string prefixed(const std::string& term, const std::string& prefix) {
 	if (isupper(term.at(0))) {
 		return (prefix.empty()) ? term : prefix + ":" + term;
 	}
@@ -528,13 +542,13 @@ std::string prefixed(const std::string &term, const std::string &prefix) {
 }
 
 
-unsigned int get_slot(const std::string &name) {
+unsigned get_slot(const std::string& name) {
 	MD5 md5;
 	// We are left with the last 8 characters.
-	std::string _md5(md5(strhasupper(name) ? stringtoupper(name) : name), 24, 8);
-	unsigned int slot = static_cast<unsigned int>(std::stoul(_md5, nullptr, 16));
-	if (slot == 0x00000000) {
-		slot = 0x00000001; // 0->id
+	std::string _md5(md5(strhasupper(name) ? upper_string(name) : name), 24, 8);
+	unsigned slot = static_cast<unsigned int>(std::stoul(_md5, nullptr, 16));
+	if (slot < DB_SLOT_RESERVED) {
+		slot += DB_SLOT_RESERVED;
 	} else if (slot == Xapian::BAD_VALUENO) {
 		slot = 0xfffffffe;
 	}
@@ -542,48 +556,55 @@ unsigned int get_slot(const std::string &name) {
 }
 
 
-std::string get_prefix(const std::string &name, const std::string &prefix, char type) {
+std::string get_prefix(const std::string& name, const std::string& prefix, char type) {
 	std::string slot(get_slot_hex(name));
-	std::transform(slot.begin(), slot.end(), slot.begin(), TRANSFORM_MAP());
+	// Mapped [0-9] -> [A-J] and [A-F] -> [R-W]
+	for (auto& c : slot) c += 17;
+
 	std::string res(prefix);
 	res.append(1, toupper(type));
 	return res + slot;
 }
 
 
-std::string get_slot_hex(const std::string &name) {
+std::string get_slot_hex(const std::string& name) {
 	MD5 md5;
 	// We are left with the last 8 characters.
-	std::string _md5(md5(strhasupper(name) ? stringtoupper(name): name), 24, 8);
-	return stringtoupper(_md5);
+	std::string _md5(upper_string(md5(strhasupper(name) ? upper_string(name): name), 24, 8));
+
+	return _md5;
 }
 
 
-bool strhasupper(const std::string &str) {
-	for (auto it = str.begin(); it != str.end(); ++it) {
-		if (isupper(*it)) return true;
+bool strhasupper(const std::string& str) {
+	for (const auto& c : str) {
+		if (isupper(c)) {
+			return true;
+		}
 	}
 
 	return false;
 }
 
 
-bool isRange(const std::string &str) {
+bool isRange(const std::string& str) {
 	std::smatch m;
 	return std::regex_match(str, m, find_range_re);
 }
 
 
-bool isNumeric(const std::string &str) {
+bool isNumeric(const std::string& str) {
 	std::smatch m;
 	return std::regex_match(str, m, numeric_re) && static_cast<size_t>(m.length(0)) == str.size();
 }
 
 
-bool startswith(const std::string &text, const std::string &token) {
-	if (text.length() < token.length())
+bool startswith(const std::string& text, const std::string& token) {
+	if (text.length() < token.length()) {
 		return false;
-	return (text.compare(0, token.length(), token) == 0);
+	}
+
+	return text.compare(0, token.length(), token) == 0;
 }
 
 
@@ -649,7 +670,7 @@ void fill_zeros_stats_sec(uint8_t start, uint8_t end) {
 }
 
 
-void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy) {
+void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy) {
 	for (auto i = start; i <= end; ++i) {
 		cnt[0] += stats_cnt_cpy.index.min[i];
 		cnt[1] += stats_cnt_cpy.search.min[i];
@@ -661,7 +682,7 @@ void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t> &cnt, std
 }
 
 
-void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy) {
+void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy) {
 	for (auto i = start; i <= end; ++i) {
 		cnt[0] += stats_cnt_cpy.index.sec[i];
 		cnt[1] += stats_cnt_cpy.search.sec[i];
@@ -673,7 +694,7 @@ void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::
 }
 
 
-void delete_files(const std::string &path) {
+void delete_files(const std::string& path) {
 	unsigned char isFile = 0x8;
 	unsigned char isFolder = 0x4;
 
@@ -712,7 +733,7 @@ void delete_files(const std::string &path) {
 }
 
 
-void move_files(const std::string &src, const std::string &dst) {
+void move_files(const std::string& src, const std::string& dst) {
 	unsigned char isFile = 0x8;
 
 	DIR *Dir;
@@ -743,7 +764,7 @@ void move_files(const std::string &src, const std::string &dst) {
 
 inline bool exist(const std::string& path) {
 	struct stat buffer;
-	return (stat (path.c_str(), &buffer) == 0);
+	return stat(path.c_str(), &buffer) == 0;
 }
 
 
@@ -757,8 +778,8 @@ bool buid_path_index(const std::string& path) {
 		std::vector<std::string> directories;
 		stringTokenizer(dir, "/", directories);
 		dir.clear();
-		for (auto it = directories.begin(); it != directories.end(); ++it) {
-			dir = dir + *it + "/";
+		for (const auto& _dir : directories) {
+			dir = dir + _dir + "/";
 			if (mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
 				continue;
 			} else {
@@ -770,7 +791,15 @@ bool buid_path_index(const std::string& path) {
 }
 
 
-void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens) {
+int strict_stoi(const std::string& str) {
+	if (str.substr(str.at(0) == '-').find_first_not_of("0123456789") == std::string::npos) {
+		return std::stoi(str, nullptr, 10);
+	}
+	throw std::invalid_argument("Cannot convert value");
+}
+
+
+void stringTokenizer(const std::string& str, const std::string& delimiter, std::vector<std::string>& tokens) {
 	size_t prev = 0, next = 0, len;
 
 	while ((next = str.find(delimiter, prev)) != std::string::npos) {
@@ -787,16 +816,19 @@ void stringTokenizer(const std::string &str, const std::string &delimiter, std::
 }
 
 
-unsigned int levenshtein_distance(const std::string &str1, const std::string &str2) {
+unsigned levenshtein_distance(const std::string& str1, const std::string& str2) {
 	const size_t len1 = str1.size(), len2 = str2.size();
-	std::vector<unsigned int> col(len2 + 1), prev_col(len2 + 1);
+	std::vector<unsigned> col(len2 + 1), prev_col(len2 + 1);
 
-	for (unsigned int i = 0; i < prev_col.size(); ++i) prev_col[i] = i;
+	for (unsigned i = 0; i < prev_col.size(); ++i) {
+		prev_col[i] = i;
+	}
 
-	for (unsigned int i = 0; i < len1; ++i) {
+	for (unsigned i = 0; i < len1; ++i) {
 		col[0] = i + 1;
-		for (unsigned int j = 0; j < len2; ++j)
+		for (unsigned j = 0; j < len2; ++j) {
 			col[j + 1] = std::min(std::min(prev_col[j + 1] + 1, col[j] + 1), prev_col[j] + (str1[i] == str2[j] ? 0 : 1));
+		}
 		col.swap(prev_col);
 	}
 
@@ -804,11 +836,9 @@ unsigned int levenshtein_distance(const std::string &str1, const std::string &st
 }
 
 
-std::string
-delta_string(std::chrono::time_point<std::chrono::system_clock> start, std::chrono::time_point<std::chrono::system_clock> end)
-{
-	static const char *units[] = {"s", "ms", "\xc2\xb5s", "ns"};
-	static const long double scaling[] = {1, 1e3, 1e6, 1e9};
+std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end) {
+	static const char *units[] = { "s", "ms", "\xc2\xb5s", "ns" };
+	static const long double scaling[] = { 1, 1e3, 1e6, 1e9 };
 
 	long double delta = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 

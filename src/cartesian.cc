@@ -134,24 +134,24 @@ static const datum_t datums[17] = {
 };
 
 
-static const std::map<int, int> SRIDS_DATUMS({
-	std::pair<int, int>(WGS84,    0),
-	std::pair<int, int>(WGS72,    1),
-	std::pair<int, int>(NAD83,    2),
-	std::pair<int, int>(NAD27,    3),
-	std::pair<int, int>(OSGB36,   4),
-	std::pair<int, int>(TM75,     5),
-	std::pair<int, int>(TM65,     6),
-	std::pair<int, int>(ED79,     7),
-	std::pair<int, int>(ED50,     8),
-	std::pair<int, int>(TOYA,     9),
-	std::pair<int, int>(DHDN,    10),
-	std::pair<int, int>(OEG,     11),
-	std::pair<int, int>(AGD84,   12),
-	std::pair<int, int>(SAD69,   13),
-	std::pair<int, int>(PUL42,   14),
-	std::pair<int, int>(MGI1901, 15),
-	std::pair<int, int>(GGRS87,  16)
+static const std::unordered_map<int, int> SRIDS_DATUMS({
+	{ WGS84,    0 },
+	{ WGS72,    1 },
+	{ NAD83,    2 },
+	{ NAD27,    3 },
+	{ OSGB36,   4 },
+	{ TM75,     5 },
+	{ TM65,     6 },
+	{ ED79,     7 },
+	{ ED50,     8 },
+	{ TOYA,     9 },
+	{ DHDN,    10 },
+	{ OEG,     11 },
+	{ AGD84,   12 },
+	{ SAD69,   13 },
+	{ PUL42,   14 },
+	{ MGI1901, 15 },
+	{ GGRS87,  16 }
 });
 
 

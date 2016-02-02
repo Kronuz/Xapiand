@@ -1,6 +1,0 @@
-0.2 1 10 10 20000 examples/Circle1_expect_HTM.txt examples/Circle1_HTM.py
-0.2 1 40 -30 30000 examples/Circle2_expect_HTM.txt examples/Circle2_HTM.py
-0.2 1 -10 0 20003917.491659265 examples/Circle3_expect_HTM.txt examples/Circle3_HTM.py
-0.2 1 -10 0 15003917.491659265 examples/Circle4_expect_HTM.txt examples/Circle4_HTM.py
-0.2 1 10 0.00005 0.1 examples/Circle5_expect_HTM.txt examples/Circle5_HTM.py
-0.2 1 10 -10 1 examples/Circle6_expect_HTM.txt examples/Circle6_HTM.py

@@ -22,7 +22,6 @@
 
 #include "test_sort.h"
 
-#include "../src/cJSON.h"
 #include "../src/log.h"
 #include "../src/database.h"
 #include "../src/endpoint.h"
@@ -275,13 +274,13 @@ int create_test_db() {
 
 	// Index documents in the database.
 	size_t i = 1;
-	for (auto it = _docs.begin(); it != _docs.end(); ++it) {
-		std::ifstream fstream(*it);
+	for (const auto& doc : _docs) {
+		std::ifstream fstream(doc);
 		std::stringstream buffer;
 		buffer << fstream.rdbuf();
-		if (database->index(buffer.str(), std::to_string(i), true, "application/json", std::to_string(fstream.tellg())) == 0) {
+		if (database->index(buffer.str(), std::to_string(i), true, JSON_TYPE, std::to_string(fstream.tellg())) == 0) {
 			++cont;
-			L_ERR(nullptr, "ERROR: File %s can not index", it->c_str());
+			L_ERR(nullptr, "ERROR: File %s can not index", doc.c_str());
 		}
 		fstream.close();
 		++i;

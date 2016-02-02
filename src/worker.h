@@ -25,6 +25,7 @@
 #include "log.h"
 
 #include "ev/ev++.h"
+#include "exception.h"
 
 #include <list>
 #include <mutex>
@@ -99,7 +100,11 @@ public:
 		for (auto it = _children.begin(); it != _children.end();) {
 			auto child = *it++;
 			lk.unlock();
-			child->shutdown();
+			try {
+				child->shutdown();
+			} catch (const WorkerException& e) {
+				child->detach();
+			}
 			lk.lock();
 		}
 	}

@@ -194,14 +194,26 @@ BaseClient::BaseClient(std::shared_ptr<BaseServer> server_, ev::loop_ref *loop_,
 
 BaseClient::~BaseClient()
 {
-	destroy();
+	try {
+		destroy();
+		destructor_body();
+	} catch (const WorkerException& e) {
+		destructor_body();
+		detach();
+	}
+}
 
+
+void
+BaseClient::destructor_body()
+{
 	delete []read_buffer;
 
 	int total_clients = --XapiandServer::total_clients;
 	assert(total_clients >= 0);
 
 	L_OBJ(this, "DELETED CLIENT! (%d clients left) [%llx]", total_clients, this);
+
 }
 
 
@@ -231,7 +243,7 @@ BaseClient::destroy()
 
 	L_OBJ(this, "DESTROYED CLIENT! [%llx]", this);
 
-	detach();
+	throw WorkerException::detach_object();
 }
 
 
@@ -269,28 +281,37 @@ BaseClient::io_cb_update()
 void
 BaseClient::io_cb(ev::io &watcher, int revents)
 {
-	L_EV_BEGIN(this, "BaseClient::io_cb:BEGIN");
-	L_EV(this, "%s (sock=%d) %x", (revents & EV_ERROR) ? "EV_ERROR" : (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
+	try {
+		L_EV_BEGIN(this, "BaseClient::io_cb:BEGIN");
+		L_EV(this, "%s (sock=%d) %x", (revents & EV_ERROR) ? "EV_ERROR" : (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
 
-	if (revents & EV_ERROR) {
-		L_ERR(this, "ERROR: got invalid event (sock=%d): %s", sock, strerror(errno));
-		destroy();
+		if (revents & EV_ERROR) {
+			L_ERR(this, "ERROR: got invalid event (sock=%d): %s", sock, strerror(errno));
+			try {
+				destroy();
+			} catch (const WorkerException& e) {
+				L_EV_END(this, "BaseClient::io_cb:END");
+				detach();
+			}
+			return;
+		}
+
+		assert(sock == watcher.fd || sock == -1);
+
+		if (revents & EV_WRITE) {
+			io_cb_write(watcher.fd);
+		}
+
+		if (revents & EV_READ) {
+			io_cb_read(watcher.fd);
+		}
+
+		io_cb_update();
 		L_EV_END(this, "BaseClient::io_cb:END");
-		return;
+	} catch (const WorkerException& e) {
+		L_EV_END(this, "BaseClient::io_cb:END");
+		detach();
 	}
-
-	assert(sock == watcher.fd || sock == -1);
-
-	if (revents & EV_WRITE) {
-		io_cb_write(watcher.fd);
-	}
-
-	if (revents & EV_READ) {
-		io_cb_read(watcher.fd);
-	}
-
-	io_cb_update();
-	L_EV_END(this, "BaseClient::io_cb:END");
 }
 
 
@@ -566,7 +587,11 @@ BaseClient::shutdown()
 
 	if (XapiandManager::shutdown_now) {
 		L_EV(this, "Signaled destroy!!");
-		destroy();
+		try {
+			destroy();
+		} catch (const WorkerException& e) {
+			detach();
+		}
 	}
 }
 

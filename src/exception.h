@@ -45,3 +45,12 @@ public:
 
 	const char* what() const noexcept;
 };
+
+
+class WorkerException : public std::runtime_error {
+
+	WorkerException();
+
+public:
+	static WorkerException detach_object();
+};

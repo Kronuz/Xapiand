@@ -22,6 +22,9 @@ version in the *compile_from_git.txt* file.
 
 Once installed Xapian, install Xapiand.
 
+Xapiand is builded under c++14 standard to compile you need clang 3.7 or higher.
+If you use GCC need 5.1 or higher.
+
 From repository:
 """"""""""""""""
 

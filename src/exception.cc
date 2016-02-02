@@ -40,3 +40,15 @@ Exception::what() const noexcept
 {
 	return msg;
 }
+
+
+WorkerException::WorkerException()
+	: std::runtime_error("detach needed") {}
+
+
+WorkerException
+WorkerException::detach_object()
+{
+	return WorkerException();
+}
+

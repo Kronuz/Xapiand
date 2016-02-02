@@ -135,7 +135,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 							raft->reset();
 						}
 
-						raft->votedFor = stringtolower(remote_node.name);
+						raft->votedFor = lower_string(remote_node.name);
 						raft->term = remote_term;
 
 						L_RAFT(this, "It Vote for %s", raft->votedFor.c_str());
@@ -154,7 +154,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 							raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 								serialise_string("0") + serialise_string(std::to_string(raft->term)));
 						} else if (raft->votedFor.empty()) {
-							raft->votedFor = stringtolower(remote_node.name);
+							raft->votedFor = lower_string(remote_node.name);
 							L_RAFT(this, "Vote for %s", raft->votedFor.c_str());
 							raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 								serialise_string("1") + serialise_string(std::to_string(raft->term)));
@@ -227,7 +227,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 					}
 					raft->term = std::stoull(str_remote_term);
 
-					raft->leader = stringtolower(remote_node.name);
+					raft->leader = lower_string(remote_node.name);
 					raft->state = Raft::State::FOLLOWER;
 					break;
 
@@ -270,12 +270,12 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 					}
 					raft->term = std::stoull(str_remote_term);
 
-					raft->leader = stringtolower(remote_node.name);
+					raft->leader = lower_string(remote_node.name);
 					break;
 
 				case toUType(Raft::Message::HEARTBEAT_LEADER):
 					raft->register_activity();
-					if (raft->leader != stringtolower(remote_node.name)) {
+					if (raft->leader != lower_string(remote_node.name)) {
 						L_RAFT(this, "Request the raft server's configuration!");
 						raft->send_message(Raft::Message::REQUEST_DATA, local_node.serialise());
 					}

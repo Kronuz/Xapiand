@@ -1,0 +1,7 @@
+[
+	{
+		"op":"test",
+		"path":"/heroes/0/hero",
+		"value":"Batman"
+	}
+]

@@ -23,6 +23,8 @@
 #pragma once
 
 #include "htm.h"
+#include "msgpack.h"
+#include "datetime.h"
 
 #include "hash/endian.h"
 
@@ -36,6 +38,7 @@
 #define ARRAY_TYPE   'a'
 #define OBJECT_TYPE  'o'
 #define NO_TYPE      ' '
+
 
 #define NUMERIC_STR "numeric"
 #define STRING_STR  "string"
@@ -66,33 +69,66 @@ constexpr uint32_t MAXDOU2INT =  999999999;
 
 
 namespace Serialise {
-	std::string serialise(char field_type, const std::string &field_value);
-	std::string numeric(const std::string &field_value);
-	// Serialise a date timestamp.
-	std::string date(const std::string &field_value);
-	// Serialise a date in format:
-	// { tm->tm_sec, tm->tm_min, tm->tm_hour, tm->tm_mday, tm->tm_mon, tm->tm_year }
-	std::string date(int timeinfo_[]);
+	/*
+	 * Serialise field_value according to field_type.
+	 */
+	std::string serialise(char field_type, const MsgPack& field_value);
+	std::string string(char field_type, const std::string& field_value);
+	std::string numeric(char field_type, double field_value);
+	std::string boolean(char field_type, bool field_value);
+
+
+	// Serialise field_value like date.
+	std::string date(const std::string& field_value);
+
+	// Serialise value like date and fill tm.
+	std::string date(const MsgPack& value, Datetime::tm_t& tm);
+
+	// Serialise struct tm with math like date.
+	std::string date_with_math(Datetime::tm_t tm, const std::string& op, const std::string& units);
+
+	// Serialise field_value like EWKT.
+	std::string ewkt(const std::string& field_value);
+
+	// Serialise field_value like boolean.
+	std::string boolean(const std::string& field_value);
+
 	// Serialise a normalize cartesian coordinate in SIZE_SERIALISE_CARTESIAN bytes.
-	std::string cartesian(const Cartesian &norm_cartesian);
+	std::string cartesian(const Cartesian& norm_cartesian);
+
 	// Serialise a trixel's id (HTM).
 	std::string trixel_id(uint64_t id);
-	// Serialise an EWKT string.
-	std::string ewkt(const std::string &field_value);
-	std::string boolean(const std::string &field_value);
+
+	// Serialise type to its string representation.
 	std::string type(char type);
 };
 
 
 namespace Unserialise {
-	std::string unserialise(char field_type, const std::string &serialise_val);
-	std::string numeric(const std::string &serialise_val);
-	std::string date(const std::string &serialise_val);
+	// Unserialise serialise_val according to field_type and save the value in result.
+	void unserialise(char field_type, const std::string& serialise_val, MsgPack& result);
+
+	// Unserialise serialise_val according to field_type.
+	std::string unserialise(char field_type, const std::string& serialise_val);
+
+	// Unserialise a serialise numeric.
+	double numeric(const std::string& serialise_numeric);
+
+	// Unserialise a serialise date.
+	std::string date(const std::string& serialise_date);
+
+	// Unserialise a serialise boolean.
+	bool boolean(const std::string& serialise_boolean);
+
 	// Unserialise a serialise cartesian coordinate.
-	Cartesian cartesian(const std::string &str);
-	// Unserialise a trixel's id (HTM).
-	uint64_t trixel_id(const std::string &str);
-	std::string boolean(const std::string &serialise_val);
-	std::string geo(const std::string &serialise_val);
-	std::string type(const std::string &str);
+	Cartesian cartesian(const std::string& serialise_cartesian);
+
+	// Unserialise a serialise trixel's id (HTM).
+	uint64_t trixel_id(const std::string& serialise_trixel_id);
+
+	// Unserialise a serialise EWKT (Save as a Value).
+	std::string geo(const std::string& serialise_ewkt);
+
+	// Unserialise str_type to its char representation.
+	std::string type(const std::string& str_type);
 };

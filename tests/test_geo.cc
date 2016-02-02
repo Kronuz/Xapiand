@@ -22,7 +22,6 @@
 
 #include "test_geo.h"
 
-#include "../src/cJSON.h"
 #include "../src/log.h"
 #include "../src/database.h"
 #include "../src/endpoint.h"
@@ -132,25 +131,25 @@ int create_test_db() {
 	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN);
 
 	std::vector<std::string> _docs({
-		"examples/geo_search/Json_geo_1.txt",
-		"examples/geo_search/Json_geo_2.txt",
-		"examples/geo_search/Json_geo_3.txt",
-		"examples/geo_search/Json_geo_4.txt",
-		"examples/geo_search/Json_geo_5.txt",
-		"examples/geo_search/Json_geo_6.txt",
-		"examples/geo_search/Json_geo_7.txt",
-		"examples/geo_search/Json_geo_8.txt"
+		"examples/json/geo_1.txt",
+		"examples/json/geo_2.txt",
+		"examples/json/geo_3.txt",
+		"examples/json/geo_4.txt",
+		"examples/json/geo_5.txt",
+		"examples/json/geo_6.txt",
+		"examples/json/geo_7.txt",
+		"examples/json/geo_8.txt"
 	});
 
 	// Index documents in the database.
 	size_t i = 1;
-	for (auto it = _docs.begin(); it != _docs.end(); ++it) {
-		std::ifstream fstream(*it);
+	for (const auto& doc : _docs) {
+		std::ifstream fstream(doc);
 		std::stringstream buffer;
 		buffer << fstream.rdbuf();
-		if (database->index(buffer.str(), std::to_string(i), true, "application/json", std::to_string(fstream.tellg())) == 0) {
+		if (database->index(buffer.str(), std::to_string(i), true, JSON_TYPE, std::to_string(fstream.tellg())) == 0) {
 			++cont;
-			L_ERR(nullptr, "ERROR: File %s can not index", it->c_str());
+			L_ERR(nullptr, "ERROR: File %s can not index", doc.c_str());
 		}
 		fstream.close();
 		++i;
@@ -188,22 +187,20 @@ int make_search(const test_geo_t _tests[], int len) {
 			L_ERR(nullptr, "ERROR: Failed in get_mset");
 		} else if (mset.size() != p.expect_datas.size()) {
 			++cont;
-			L_ERR(nullptr, "ERROR: Different number of documents obtained %zu  %zu", mset.size(), p.expect_datas.size());
+			L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.\n %s", mset.size(), p.expect_datas.size(), query.terms.back().c_str());
 		} else {
-			std::vector<std::string>::const_iterator it(p.expect_datas.begin());
-			Xapian::MSetIterator m = mset.begin();
-			for ( ; m != mset.end(); ++it, ++m) {
-				std::string data = m.get_document().get_data().data();
-				const char *p = data.data();
-				const char *p_end = p + data.size();
-				size_t length = decode_length(&p, p_end, true);
-				data = std::string(p, length);
-
-				unique_cJSON object(cJSON_Parse(data.c_str()));
-				cJSON* object_data = cJSON_GetObjectItem(object.get(), RESERVED_DATA);
-				if (object_data && it->compare(object_data->valuestring) != 0) {
+			auto it = p.expect_datas.begin();
+			for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {
+				auto obj_data = get_MsgPack(m.get_document());
+				try {
+					std::string str_data(obj_data.at(RESERVED_DATA).get_str());
+					if (it->compare(str_data) != 0) {
+						++cont;
+						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
+					}
+				} catch (const msgpack::type_error& err) {
 					++cont;
-					L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, data.c_str(), RESERVED_DATA, it->c_str());
+					L_ERR(nullptr, "ERROR: %s", err.what());
 				}
 			}
 		}

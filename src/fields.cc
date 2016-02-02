@@ -37,7 +37,7 @@ NumericFieldProcessor::operator()(const std::string &str)
 	// For negative number, we receive _# and we serialise -#.
 	std::string serialise(str.c_str());
 	if (serialise[0] == '_') serialise[0] = '-';
-	serialise = Serialise::numeric(serialise);
+	serialise = Serialise::numeric(NUMERIC_TYPE, std::stod(serialise));
 	if (serialise.empty()) {
 		throw Xapian::QueryParserError("Didn't understand numeric specification '" + str + "'");
 	}

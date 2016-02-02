@@ -22,10 +22,13 @@
 
 #include "wkt_parser.h"
 
+#include "log.h"
+#include "hash/sha256.h"
+
 
 const std::regex find_geometry_re("(SRID[\\s]*=[\\s]*([0-9]{4})[\\s]*\\;[\\s]*)?(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIRCLE|POINT|MULTIPOINT|CHULL|MULTICHULL)[\\s]*\\(([()0-9.\\s,-]*)\\)|(GEOMETRYCOLLECTION|GEOMETRYINTERSECTION)[\\s]*\\(([()0-9.\\s,A-Z-]*)\\)", std::regex::optimize);
 const std::regex find_circle_re("(\\-?\\d*\\.\\d+|\\-?\\d+)\\s(\\-?\\d*\\.\\d+|\\-?\\d+)(\\s(\\-?\\d*\\.\\d+|\\-?\\d+))?[\\s]*\\,[\\s]*(\\d*\\.\\d+|\\d+)", std::regex::optimize);
-const std::regex find_subpolygon_re("[\\s]*(\\(([\\-?\\d*\\.\\d+|\\-?\\d+\\s,]*)\\))[\\s]*(\\,)?", std::regex::optimize);
+const std::regex find_subpolygon_re("[\\s]*(\\(([\\-?\\d*\\.\\d+\\s,]*|[\\-?\\d+\\s,]*)\\))[\\s]*(\\,)?", std::regex::optimize);
 const std::regex find_multi_poly_re("[\\s]*[\\s]*\\((.*?\\))\\)[\\s]*(,)?", std::regex::optimize);
 const std::regex find_multi_circle_re("[\\s]*[\\s]*\\((.*?)\\)[\\s]*(,)?", std::regex::optimize);
 const std::regex find_collection_re("[\\s]*(POLYGON|MULTIPOLYGON|CIRCLE|MULTICIRCLE|POINT|MULTIPOINT|CHULL|MULTICHULL)[\\s]*\\(([()0-9.\\s,-]*)\\)([\\s]*\\,[\\s]*)?", std::regex::optimize);
@@ -107,7 +110,7 @@ EWKT_Parser::EWKT_Parser(const std::string &EWKT, bool _partials, double _error)
 			}
 		}
 	} else {
-		throw MSG_Error("Syntax error in EWKT format or geometry object not supported");
+		throw MSG_Error("Syntax error in %s, format or geometry object not supported", EWKT.c_str());
 	}
 }
 
@@ -628,8 +631,8 @@ EWKT_Parser::getRanges(const std::string &field_value, bool partials, double err
 {
 	EWKT_Parser ewkt(field_value, partials, error);
 
-	for (auto it = ewkt.trixels.begin(); it != ewkt.trixels.end(); ++it) {
-		HTM::insertRange(*it, ranges, HTM_MAX_LEVEL);
+	for (const auto& trixel : ewkt.trixels) {
+		HTM::insertRange(trixel, ranges, HTM_MAX_LEVEL);
 	}
 
 	HTM::mergeRanges(ranges);

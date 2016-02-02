@@ -22,7 +22,8 @@
 
 #pragma once
 
-#include "cJSON.h"
+#include "msgpack.h"
+#include "rapidjson/document.h"
 
 #include <regex>
 #include <vector>
@@ -66,12 +67,16 @@
 #define DOCUMENT_ID_TERM_PREFIX "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
+#define JSON_TYPE "application/json"
+#define FORM_URLENCODED_TYPE "application/x-www-form-urlencoded"
+#define MSGPACK_TYPE "application/x-msgpack"
+
 
 extern const std::regex find_types_re;
 
 
 struct data_field_t {
-	unsigned int slot;
+	unsigned slot;
 	std::string prefix;
 	char type;
 	std::vector<double> accuracy;
@@ -81,9 +86,9 @@ struct data_field_t {
 
 
 struct similar_field_t {
-	unsigned int n_rset;
-	unsigned int n_eset;
-	unsigned int n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
+	unsigned n_rset;
+	unsigned n_eset;
+	unsigned n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
 	std::vector <std::string> field;
 	std::vector <std::string> type;
 
@@ -93,9 +98,9 @@ struct similar_field_t {
 
 
 struct query_field_t {
-	unsigned int offset;
-	unsigned int limit;
-	unsigned int check_at_least;
+	unsigned offset;
+	unsigned limit;
+	unsigned check_at_least;
 	bool spelling;
 	bool synonyms;
 	bool pretty;
@@ -108,7 +113,7 @@ struct query_field_t {
 	bool is_nearest;
 	std::string stats;
 	std::string collapse;
-	unsigned int collapse_max;
+	unsigned collapse_max;
 	std::vector <std::string> language;
 	std::vector <std::string> query;
 	std::vector <std::string> partial;
@@ -126,12 +131,23 @@ struct query_field_t {
 };
 
 
-long long read_mastery(const std::string &dir, bool force);
+enum class MIMEType {
+	APPLICATION_JSON,
+	APPLICATION_XWWW_FORM_URLENCODED,
+	APPLICATION_X_MSGPACK,
+	UNKNOW
+};
+
+
+long long read_mastery(const std::string& dir, bool force);
 // All the field that start with '_' are considered reserved word.
-bool is_reserved(const std::string &word);
-bool is_language(const std::string &language);
-bool set_types(const std::string &type, std::vector<char> &sep_types);
-std::string str_type(const std::vector<char> &sep_types);
-std::vector<std::string> split_fields(const std::string &field_name);
-void clean_reserved(cJSON *root);
-void clean_reserved(cJSON *root, cJSON *item);
+bool is_reserved(const std::string& word);
+bool is_language(const std::string& language);
+bool set_types(const std::string& type, std::vector<unsigned>& sep_types);
+std::string str_type(const std::vector<unsigned>& sep_types);
+void clean_reserved(MsgPack& document);
+MIMEType get_mimetype(const std::string& type);
+void json_load(rapidjson::Document& doc, const std::string& str);
+MsgPack get_MsgPack(const Xapian::Document& doc);
+std::string get_blob(const Xapian::Document& doc);
+std::string query_string(std::string str);

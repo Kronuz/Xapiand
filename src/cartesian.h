@@ -26,7 +26,7 @@
 
 #include <cstdio>
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 // Code of ellipsoids were obtained of

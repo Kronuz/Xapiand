@@ -37,6 +37,7 @@
 
 #define UNKNOWN_REGION -1
 
+
 using opts_t = struct opts_s {
 	int verbosity;
 	bool detach;
@@ -80,9 +81,9 @@ class XapiandManager : public Worker  {
 
 	Endpoints cluster_endpoints;
 
-	XapiandManager(ev::loop_ref *loop_, const opts_t &o);
+	XapiandManager(ev::loop_ref* loop_, const opts_t& o);
 
-	void async_shutdown_cb(ev::async &watcher, int revents);
+	void async_shutdown_cb(ev::async& watcher, int revents);
 	struct sockaddr_in host_address();
 	void destroy();
 
@@ -93,7 +94,7 @@ protected:
 	nodes_map_t nodes;
 
 	std::string get_node_name();
-	bool set_node_name(const std::string &node_name_, std::unique_lock<std::mutex> &lk);
+	bool set_node_name(const std::string& node_name_, std::unique_lock<std::mutex>& lk);
 	uint64_t get_node_id();
 	bool set_node_id();
 
@@ -131,30 +132,30 @@ public:
 
 	void setup_node(std::shared_ptr<XapiandServer>&& server);
 
-	void run(const opts_t &o);
+	void run(const opts_t& o);
 	void sig_shutdown_handler(int sig);
 	void shutdown();
 
 	void reset_state();
 	bool is_single_node();
 
-	bool put_node(const Node &node);
-	bool get_node(const std::string &node_name, const Node **node);
-	bool touch_node(const std::string &node_name, int region, const Node **node=nullptr);
-	void drop_node(const std::string &node_name);
+	bool put_node(const Node& node);
+	bool get_node(const std::string& node_name, const Node** node);
+	bool touch_node(const std::string& node_name, int region, const Node** node=nullptr);
+	void drop_node(const std::string& node_name);
 	size_t get_nodes_by_region(int region);
 
 	// Return the region to which db name belongs
-	int get_region(const std::string &db_name);
+	int get_region(const std::string& db_name);
 	// Return the region to which local_node belongs
 	int get_region();
 
-	std::future<bool> trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
-	std::future<bool> store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename);
+	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
+	std::future<bool> store(const Endpoints& endpoints, const Xapian::docid& did, const std::string& filename);
 
-	unique_cJSON server_status();
-	unique_cJSON get_stats_time(const std::string &time_req);
-	unique_cJSON get_stats_json(pos_time_t &first_time, pos_time_t &second_time);
+	void server_status(MsgPack&& stats);
+	void get_stats_time(MsgPack&& stats, const std::string& time_req);
+	void _get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_time_t& second_time);
 
 	inline decltype(auto) get_lock() noexcept {
 		return std::unique_lock<std::mutex>(qmtx);

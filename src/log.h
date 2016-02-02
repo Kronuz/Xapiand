@@ -36,11 +36,11 @@
 #include <fstream>
 #include <condition_variable>
 
-using namespace std::literals;
-
-
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
 #define LOCATION_LOG_LEVEL LOG_DEBUG  // The minumum log_level that prints file:line
+
+
+using namespace std::chrono_literals;
 
 
 class Logger {
@@ -51,8 +51,11 @@ public:
 
 class StreamLogger : public Logger {
 	std::ofstream ofs;
+
 public:
-	StreamLogger(const char* filename) : ofs(std::ofstream(filename, std::ofstream::out)) {}
+	StreamLogger(const char* filename)
+		: ofs(std::ofstream(filename, std::ofstream::out)) { }
+
 	void log(int priority, const std::string& str);
 };
 
@@ -72,10 +75,13 @@ public:
 };
 
 
+class LogThread;
+
+
 class Log : public std::enable_shared_from_this<Log> {
 	friend class LogThread;
 
-	static std::string str_format(int priority, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, va_list argptr);
+	static std::string str_format(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 	static std::shared_ptr<Log> add(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
 
 	std::chrono::time_point<std::chrono::system_clock> wakeup;
@@ -108,9 +114,9 @@ public:
 		return print(str, std::chrono::system_clock::now() + std::chrono::milliseconds(timeout), priority);
 	}
 
-	static std::shared_ptr<Log> log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
+	static std::shared_ptr<Log> log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 	static std::shared_ptr<Log> print(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
-	void unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, void *obj, const char *format, ...);
+	void unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 	void clear();
 };
 
@@ -119,7 +125,7 @@ class LogThread {
 	friend Log;
 
 	std::condition_variable wakeup_signal;
-	std::atomic<std::chrono::time_point<std::chrono::system_clock>> wakeup;
+	std::atomic<std::time_t> wakeup;
 
 	std::atomic_bool running;
 	std::thread inner_thread;

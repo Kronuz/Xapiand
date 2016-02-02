@@ -24,10 +24,7 @@
 
 #include "xapiand.h"
 
-#include "cJSON.h"
-
 #include <limits.h>
-
 #include <xapian.h>
 #include <string>
 #include <vector>
@@ -104,11 +101,11 @@ inline constexpr std::size_t arraySize(T (&)[N]) noexcept {
 double random_real(double initial, double last);
 uint64_t random_int(uint64_t initial, uint64_t last);
 
-void set_thread_name(const std::string &name);
+void set_thread_name(const std::string& name);
 std::string get_thread_name();
 
-std::string repr(const void *p, size_t size, bool friendly=true, size_t max_size=0);
-std::string repr(const std::string &string, bool friendly=true, size_t max_size=0);
+std::string repr(const void* p, size_t size, bool friendly=true, size_t max_size=0);
+std::string repr(const std::string& string, bool friendly=true, size_t max_size=0);
 
 
 inline bool ignored_errorno(int e, bool udp) {
@@ -144,76 +141,55 @@ inline bool ignored_errorno(int e, bool udp) {
 std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
-struct char_ptr_deleter {
-	void operator()(char *c) const {
-		free(c);
-	}
-};
+template<typename... Args>
+std::string upper_string(Args&&... args) {
+	std::string tmp(std::forward<Args>(args)...);
+	for (auto& c : tmp) c = toupper(c);
+	return tmp;
+}
 
+template<typename... Args>
+std::string lower_string(Args&&... args) {
+	std::string tmp(std::forward<Args>(args)...);
+	for (auto& c : tmp) c = tolower(c);
+	return tmp;
+}
 
-struct cJSON_Deleter {
-	void operator()(cJSON *j) const {
-		cJSON_Delete(j);
-	}
-};
-
-
-struct TRANSFORM_UPPER {
-	char operator() (char c) { return  toupper(c);}
-};
-
-struct TRANSFORM_LOWER {
-	char operator() (char c) { return  tolower(c);}
-};
-
-// Mapped [0-9] -> [A-J] and  [A-F] -> [R-W]
-struct TRANSFORM_MAP {
-	char operator() (char c) { return  c + 17;}
-};
-
-typedef std::unique_ptr<cJSON, cJSON_Deleter> unique_cJSON;
-typedef std::unique_ptr<char, char_ptr_deleter> unique_char_ptr;
+void to_upper(std::string& str);
+void to_lower(std::string& str);
 
 int url_path(const char* n1, size_t size, parser_url_path_t *par);
 int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
-std::string stringtolower(const std::string &str);
-std::string stringtoupper(const std::string &str);
-// String tokenizer with the delimiter.
-void stringTokenizer(const std::string &str, const std::string &delimiter, std::vector<std::string> &tokens);
 
-unsigned int get_slot(const std::string &name);
-std::string prefixed(const std::string &term, const std::string &prefixO);
-std::string get_prefix(const std::string &name, const std::string &prefix, char type);
-std::string get_slot_hex(const std::string &name);
-bool strhasupper(const std::string &str);
-bool isRange(const std::string &str);
-bool isNumeric(const std::string &str);
-bool startswith(const std::string &text, const std::string &token);
-void delete_files(const std::string &path);
-void move_files(const std::string &src, const std::string &dst);
+// String tokenizer with the delimiter.
+void stringTokenizer(const std::string& str, const std::string& delimiter, std::vector<std::string> &tokens);
+
+unsigned get_slot(const std::string& name);
+std::string prefixed(const std::string& term, const std::string& prefixO);
+std::string get_prefix(const std::string& name, const std::string& prefix, char type);
+std::string get_slot_hex(const std::string& name);
+bool strhasupper(const std::string& str);
+bool isRange(const std::string& str);
+bool isNumeric(const std::string& str);
+bool startswith(const std::string& text, const std::string& token);
+void delete_files(const std::string& path);
+void move_files(const std::string& src, const std::string& dst);
 inline bool exist(const std::string& name);
 bool buid_path_index(const std::string& path);
+int strict_stoi(const std::string& str);
 
 void update_pos_time();
 void fill_zeros_stats_min(uint16_t start, uint16_t end);
 void fill_zeros_stats_sec(uint8_t start, uint8_t end);
-void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy);
-void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t> &cnt, std::vector<double> &tm_cnt, times_row_t &stats_cnt_cpy);
+void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy);
+void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy);
 
 // Levenshtein distance is a string metric for measuring the difference between two
 // sequences (known as edit distance).
-unsigned int levenshtein_distance(const std::string &str1, const std::string &str2);
+unsigned int levenshtein_distance(const std::string& str1, const std::string& str2);
 
-namespace epoch {
-	template<typename Period = std::chrono::seconds>
-	auto now = []() noexcept {
-		return std::chrono::duration_cast<Period>(std::chrono::system_clock::now().time_since_epoch()).count();
-	};
-}
-
-std::string delta_string(std::chrono::time_point<std::chrono::system_clock> start, std::chrono::time_point<std::chrono::system_clock> end);
-
+std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end);
 
 void _tcp_nopush(int sock, int optval);
 
@@ -223,4 +199,11 @@ inline void tcp_nopush(int sock) {
 
 inline void tcp_push(int sock) {
 	_tcp_nopush(sock, 0);
+}
+
+namespace epoch {
+	template<typename Period = std::chrono::seconds>
+	inline auto now() noexcept {
+		return std::chrono::duration_cast<Period>(std::chrono::system_clock::now().time_since_epoch()).count();
+	}
 }

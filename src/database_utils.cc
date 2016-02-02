@@ -22,11 +22,13 @@
 
 #include "database_utils.h"
 
-#include "utils.h"
 #include "log.h"
+#include "length.h"
 #include "datetime.h"
 #include "wkt_parser.h"
 #include "serialise.h"
+
+#include "rapidjson/error/en.h"
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -37,7 +39,7 @@
 const std::regex find_types_re("(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" NUMERIC_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")", std::regex::icase | std::regex::optimize);
 
 
-long long save_mastery(const std::string &dir) {
+long long save_mastery(const std::string& dir) {
 	char buf[20];
 	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 16;
 	mastery_level |= static_cast<int>(random_int(0, 0xffff));
@@ -51,7 +53,7 @@ long long save_mastery(const std::string &dir) {
 }
 
 
-long long read_mastery(const std::string &dir, bool force) {
+long long read_mastery(const std::string& dir, bool force) {
 	L_DATABASE(nullptr, "+ READING MASTERY OF INDEX '%s'...", dir.c_str());
 
 	struct stat info;
@@ -87,20 +89,20 @@ long long read_mastery(const std::string &dir, bool force) {
 }
 
 
-bool is_reserved(const std::string &word) {
-	return word.at(0) == '_' ? true : false;
+bool is_reserved(const std::string& word) {
+	return word.front() == '_' || word.back() == '_' || word.find(DB_OFFSPRING_UNION) != std::string::npos;
 }
 
 
-bool is_language(const std::string &language) {
-	if (language.find(" ") != std::string::npos) {
-		return false;
+bool is_language(const std::string& language) {
+	if (language.find(" ") == std::string::npos) {
+		return std::string(DB_LANGUAGES).find(language) == std::string::npos ? false : true;
 	}
-	return (std::string(DB_LANGUAGES).find(language) != std::string::npos) ? true : false;
+	return false;
 }
 
 
-bool set_types(const std::string &type, std::vector<char> &sep_types) {
+bool set_types(const std::string& type, std::vector<unsigned>& sep_types) {
 	std::smatch m;
 	if (std::regex_match(type, m, find_types_re) && static_cast<size_t>(m.length(0)) == type.size()) {
 		if (m.length(4) != 0) {
@@ -123,72 +125,74 @@ bool set_types(const std::string &type, std::vector<char> &sep_types) {
 }
 
 
-std::string str_type(const std::vector<char> &sep_types) {
+std::string str_type(const std::vector<unsigned>& sep_types) {
 	std::stringstream str;
-	if (sep_types[0] == OBJECT_TYPE) str << "object/";
-	if (sep_types[1] == ARRAY_TYPE) str << "array/";
+	if (sep_types[0] == OBJECT_TYPE) str << OBJECT_STR << "/";
+	if (sep_types[1] == ARRAY_TYPE) str << ARRAY_STR << "/";
 	str << Serialise::type(sep_types[2]);
 	return str.str();
 }
 
 
-std::vector<std::string> split_fields(const std::string &field_name) {
-	std::vector<std::string> fields;
-	std::string aux(field_name.c_str());
-	size_t pos = 0;
-	while (aux.at(pos) == DB_OFFSPRING_UNION[0]) {
-		++pos;
-	}
-	size_t start = pos;
-	while ((pos = aux.substr(start, aux.size()).find(DB_OFFSPRING_UNION)) != std::string::npos) {
-		std::string token = aux.substr(0, start + pos);
-		fields.push_back(token);
-		aux.assign(aux, start + pos + strlen(DB_OFFSPRING_UNION), aux.size());
-		pos = 0;
-		while (aux.at(pos) == DB_OFFSPRING_UNION[0]) {
-			++pos;
-		}
-		start = pos;
-	}
-	fields.push_back(aux);
-	return fields;
-}
-
-
-void clean_reserved(cJSON *root) {
-	int elements = cJSON_GetArraySize(root);
-	for (int i = 0; i < elements; ) {
-		cJSON *item = cJSON_GetArrayItem(root, i);
-		if (is_reserved(item->string)) {
-			cJSON_DeleteItemFromObject(root, item->string);
-		} else {
-			clean_reserved(root, item);
-		}
-		if (elements > cJSON_GetArraySize(root)) {
-			elements = cJSON_GetArraySize(root);
-		} else {
-			++i;
-		}
-	}
-}
-
-
-void clean_reserved(cJSON *root, cJSON *item) {
-	if (is_reserved(item->string) && strcmp(item->string, RESERVED_VALUE) != 0) {
-		cJSON_DeleteItemFromObject(root, item->string);
-		return;
-	}
-
-	if (item->type == cJSON_Object) {
-		int elements = cJSON_GetArraySize(item);
-		for (int i = 0; i < elements; ) {
-			cJSON *subitem = cJSON_GetArrayItem(item, i);
-			clean_reserved(item, subitem);
-			if (elements > cJSON_GetArraySize(item)) {
-				elements = cJSON_GetArraySize(item);
+void clean_reserved(MsgPack& document) {
+	if (document.obj->type == msgpack::type::MAP) {
+		for (auto item_key : document) {
+			std::string str_key(item_key.get_str());
+			if (is_reserved(str_key) && str_key != RESERVED_VALUE) {
+				document.erase(str_key);
 			} else {
-				++i;
+				auto item_doc = document.at(str_key);
+				clean_reserved(item_doc);
 			}
 		}
 	}
+}
+
+
+MIMEType get_mimetype(const std::string& type) {
+	if (type == JSON_TYPE) {
+		return MIMEType::APPLICATION_JSON;
+	} else if (type == FORM_URLENCODED_TYPE) {
+		return MIMEType::APPLICATION_XWWW_FORM_URLENCODED;
+	} else if (type == MSGPACK_TYPE) {
+		return MIMEType::APPLICATION_X_MSGPACK;
+	} else {
+		return MIMEType::UNKNOW;
+	}
+}
+
+
+void json_load(rapidjson::Document& doc, const std::string& str) {
+	rapidjson::ParseResult parse_done = doc.Parse(str.data());
+	if (!parse_done) {
+		throw MSG_Error("JSON parse error: %s (%u)\n", GetParseError_En(parse_done.Code()), parse_done.Offset());
+	}
+}
+
+
+MsgPack get_MsgPack(const Xapian::Document& doc) {
+	std::string data = doc.get_data();
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	size_t length = decode_length(&p, p_end, true);
+	return MsgPack(std::string(p, length));
+}
+
+
+std::string get_blob(const Xapian::Document& doc) {
+	std::string data = doc.get_data();
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	size_t length = decode_length(&p, p_end, true);
+	p += length;
+	return std::string(p, p_end - p);
+}
+
+
+std::string query_string(std::string str) {
+	// '-'' in not accepted by the field processors.
+	if (str.at(0) == '-') {
+		str[0] = '_';
+	}
+	return str;
 }
