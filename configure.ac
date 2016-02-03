@@ -167,5 +167,6 @@ AC_ARG_WITH(binary-proxy,
 
 ########################################################################
 
+CXXFLAGS="$CXXFLAGS -fcolor-diagnostics"
 
 AC_OUTPUT
