@@ -480,7 +480,7 @@ struct signalfd_siginfo
  * This value is good at least till the year 4000.
  */
 #define MIN_INTERVAL  0.0001220703125 /* 1/2**13, good till 4000 */
-#define COMMENTED_MIN_INTERVAL  0.00000095367431640625 /* 1/2**20, good till 2200 */
+/*#define MIN_INTERVAL  0.00000095367431640625 /* 1/2**20, good till 2200 */
 
 #define MIN_TIMEJUMP  1. /* minimum timejump that gets detected (if monotonic clock available) */
 #define MAX_BLOCKTIME 59.743 /* never wait longer than this time (to detect time jumps) */
@@ -534,7 +534,7 @@ struct signalfd_siginfo
 #define ECB_H
 
 /* 16 bits major, 16 bits minor */
-#define ECB_VERSION 0x00010004
+#define ECB_VERSION 0x00010005
 
 #ifdef _WIN32
   typedef   signed char   int8_t;
@@ -561,7 +561,7 @@ struct signalfd_siginfo
   #endif
 #else
   #include <inttypes.h>
-  #if UINTMAX_MAX > 0xffffffffU
+  #if (defined INTPTR_MAX ? INTPTR_MAX : ULONG_MAX) > 0xffffffffU
     #define ECB_PTRSIZE 8
   #else
     #define ECB_PTRSIZE 4
@@ -649,6 +649,10 @@ struct signalfd_siginfo
   #include <builtins.h>
 #endif
 
+#if 1400 <= _MSC_VER
+  #include <intrin.h> /* fence functions _ReadBarrier, also bit search functions _BitScanReverse */
+#endif
+
 #ifndef ECB_MEMORY_FENCE
   #if ECB_GCC_VERSION(2,5) || defined __INTEL_COMPILER || (__llvm__ && __GNUC__) || __SUNPRO_C >= 0x5110 || __SUNPRO_CC >= 0x5110
     #if __i386 || __i386__
@@ -661,15 +665,23 @@ struct signalfd_siginfo
       #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("")
     #elif __powerpc__ || __ppc__ || __powerpc64__ || __ppc64__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync"     : : : "memory")
+    #elif defined __ARM_ARCH_2__ \
+      || defined __ARM_ARCH_3__  || defined __ARM_ARCH_3M__  \
+      || defined __ARM_ARCH_4__  || defined __ARM_ARCH_4T__  \
+      || defined __ARM_ARCH_5__  || defined __ARM_ARCH_5E__  \
+      || defined __ARM_ARCH_5T__ || defined __ARM_ARCH_5TE__ \
+      || defined __ARM_ARCH_5TEJ__
+      /* should not need any, unless running old code on newer cpu - arm doesn't support that */
     #elif defined __ARM_ARCH_6__  || defined __ARM_ARCH_6J__  \
-       || defined __ARM_ARCH_6K__ || defined __ARM_ARCH_6ZK__
+       || defined __ARM_ARCH_6K__ || defined __ARM_ARCH_6ZK__ \
+       || defined __ARM_ARCH_6T2__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mcr p15,0,%0,c7,c10,5" : : "r" (0) : "memory")
     #elif defined __ARM_ARCH_7__  || defined __ARM_ARCH_7A__  \
-       || defined __ARM_ARCH_7M__ || defined __ARM_ARCH_7R__
+       || defined __ARM_ARCH_7R__ || defined __ARM_ARCH_7M__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb"      : : : "memory")
     #elif __aarch64__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb ish"  : : : "memory")
-    #elif (__sparc || __sparc__) && !__sparcv8
+    #elif (__sparc || __sparc__) && !(__sparc_v8__ || defined __sparcv8)
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("membar #LoadStore | #LoadLoad | #StoreStore | #StoreLoad" : : : "memory")
       #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("membar #LoadStore | #LoadLoad"                            : : : "memory")
       #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("membar #LoadStore             | #StoreStore")
@@ -917,6 +929,11 @@ typedef int ecb_bool;
   ecb_function_ ecb_const int
   ecb_ctz32 (uint32_t x)
   {
+#if 1400 <= _MSC_VER && (_M_IX86 || _M_X64 || _M_IA64 || _M_ARM)
+    unsigned long r;
+    _BitScanForward (&r, x);
+    return (int)r;
+#else
     int r = 0;
 
     x &= ~x + 1; /* this isolates the lowest bit */
@@ -936,14 +953,21 @@ typedef int ecb_bool;
 #endif
 
     return r;
+#endif
   }
 
   ecb_function_ ecb_const int ecb_ctz64 (uint64_t x);
   ecb_function_ ecb_const int
   ecb_ctz64 (uint64_t x)
   {
-    int shift = x & 0xffffffffU ? 0 : 32;
+#if 1400 <= _MSC_VER && (_M_X64 || _M_IA64 || _M_ARM)
+    unsigned long r;
+    _BitScanForward64 (&r, x);
+    return (int)r;
+#else
+    int shift = x & 0xffffffff ? 0 : 32;
     return ecb_ctz32 (x >> shift) + shift;
+#endif
   }
 
   ecb_function_ ecb_const int ecb_popcount32 (uint32_t x);
@@ -961,6 +985,11 @@ typedef int ecb_bool;
   ecb_function_ ecb_const int ecb_ld32 (uint32_t x);
   ecb_function_ ecb_const int ecb_ld32 (uint32_t x)
   {
+#if 1400 <= _MSC_VER && (_M_IX86 || _M_X64 || _M_IA64 || _M_ARM)
+    unsigned long r;
+    _BitScanReverse (&r, x);
+    return (int)r;
+#else
     int r = 0;
 
     if (x >> 16) { x >>= 16; r += 16; }
@@ -970,16 +999,23 @@ typedef int ecb_bool;
     if (x >>  1) {           r +=  1; }
 
     return r;
+#endif
   }
 
   ecb_function_ ecb_const int ecb_ld64 (uint64_t x);
   ecb_function_ ecb_const int ecb_ld64 (uint64_t x)
   {
+#if 1400 <= _MSC_VER && (_M_X64 || _M_IA64 || _M_ARM)
+    unsigned long r;
+    _BitScanReverse64 (&r, x);
+    return (int)r;
+#else
     int r = 0;
 
     if (x >> 32) { x >>= 32; r += 32; }
 
     return r + ecb_ld32 (x);
+#endif
   }
 #endif
 
@@ -1092,8 +1128,8 @@ ecb_inline ecb_const uint64_t ecb_rotr64 (uint64_t x, unsigned int count) { retu
 /* try to tell the compiler that some condition is definitely true */
 #define ecb_assume(cond) if (!(cond)) ecb_unreachable (); else 0
 
-ecb_inline ecb_const unsigned char ecb_byteorder_helper (void);
-ecb_inline ecb_const unsigned char
+ecb_inline ecb_const uint32_t ecb_byteorder_helper (void);
+ecb_inline ecb_const uint32_t
 ecb_byteorder_helper (void)
 {
   /* the union code still generates code under pressure in gcc, */
@@ -1102,26 +1138,28 @@ ecb_byteorder_helper (void)
   /* the reason why we have this horrible preprocessor mess */
   /* is to avoid it in all cases, at least on common architectures */
   /* or when using a recent enough gcc version (>= 4.6) */
-#if ((__i386 || __i386__) && !__VOS__) || _M_IX86 || ECB_GCC_AMD64 || ECB_MSVC_AMD64
-  return 0x44;
-#elif __BYTE_ORDER__ && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  return 0x44;
-#elif __BYTE_ORDER__ && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  return 0x11;
+#if (defined __BYTE_ORDER__ && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) \
+    || ((__i386 || __i386__ || _M_IX86 || ECB_GCC_AMD64 || ECB_MSVC_AMD64) && !__VOS__)
+  #define ECB_LITTLE_ENDIAN 1
+  return 0x44332211;
+#elif (defined __BYTE_ORDER__ && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) \
+      || ((__AARCH64EB__ || __MIPSEB__ || __ARMEB__) && !__VOS__)
+  #define ECB_BIG_ENDIAN 1
+  return 0x11223344;
 #else
   union
   {
-    uint32_t i;
-    uint8_t c;
-  } u = { 0x11223344 };
-  return u.c;
+    uint8_t c[4];
+    uint32_t u;
+  } u = { 0x11, 0x22, 0x33, 0x44 };
+  return u.u;
 #endif
 }
 
 ecb_inline ecb_const ecb_bool ecb_big_endian    (void);
-ecb_inline ecb_const ecb_bool ecb_big_endian    (void) { return ecb_byteorder_helper () == 0x11; }
+ecb_inline ecb_const ecb_bool ecb_big_endian    (void) { return ecb_byteorder_helper () == 0x11223344; }
 ecb_inline ecb_const ecb_bool ecb_little_endian (void);
-ecb_inline ecb_const ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () == 0x44; }
+ecb_inline ecb_const ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () == 0x44332211; }
 
 #if ECB_GCC_VERSION(3,0) || ECB_C99
   #define ecb_mod(m,n) ((m) % (n) + ((m) % (n) < 0 ? (n) : 0))
@@ -1155,6 +1193,102 @@ ecb_inline ecb_const ecb_bool ecb_little_endian (void) { return ecb_byteorder_he
 #else
   #define ecb_array_length(name) (sizeof (name) / sizeof (name [0]))
 #endif
+
+ecb_function_ ecb_const uint32_t ecb_binary16_to_binary32 (uint32_t x);
+ecb_function_ ecb_const uint32_t
+ecb_binary16_to_binary32 (uint32_t x)
+{
+  unsigned int s = (x & 0x8000) << (31 - 15);
+  int          e = (x >> 10) & 0x001f;
+  unsigned int m =  x        & 0x03ff;
+
+  if (ecb_expect_false (e == 31))
+    /* infinity or NaN */
+    e = 255 - (127 - 15);
+  else if (ecb_expect_false (!e))
+    {
+      if (ecb_expect_true (!m))
+        /* zero, handled by code below by forcing e to 0 */
+        e = 0 - (127 - 15);
+      else
+        {
+          /* subnormal, renormalise */
+          unsigned int s = 10 - ecb_ld32 (m);
+
+          m = (m << s) & 0x3ff; /* mask implicit bit */
+          e -= s - 1;
+        }
+    }
+
+  /* e and m now are normalised, or zero, (or inf or nan) */
+  e += 127 - 15;
+
+  return s | (e << 23) | (m << (23 - 10));
+}
+
+ecb_function_ ecb_const uint16_t ecb_binary32_to_binary16 (uint32_t x);
+ecb_function_ ecb_const uint16_t
+ecb_binary32_to_binary16 (uint32_t x)
+{
+  unsigned int s =  (x >> 16) & 0x00008000; /* sign bit, the easy part */
+  unsigned int e = ((x >> 23) & 0x000000ff) - (127 - 15); /* the desired exponent */
+  unsigned int m =   x        & 0x007fffff;
+
+  x &= 0x7fffffff;
+
+  /* if it's within range of binary16 normals, use fast path */
+  if (ecb_expect_true (0x38800000 <= x && x <= 0x477fefff))
+    {
+      /* mantissa round-to-even */
+      m += 0x00000fff + ((m >> (23 - 10)) & 1);
+
+      /* handle overflow */
+      if (ecb_expect_false (m >= 0x00800000))
+        {
+          m >>= 1;
+          e +=  1;
+        }
+
+      return s | (e << 10) | (m >> (23 - 10));
+    }
+
+  /* handle large numbers and infinity */
+  if (ecb_expect_true (0x477fefff < x && x <= 0x7f800000))
+    return s | 0x7c00;
+
+  /* handle zero, subnormals and small numbers */
+  if (ecb_expect_true (x < 0x38800000))
+    {
+      /* zero */
+      if (ecb_expect_true (!x))
+        return s;
+
+      /* handle subnormals */
+
+      /* too small, will be zero */
+      if (e < (14 - 24)) /* might not be sharp, but is good enough */
+        return s;
+
+      m |= 0x00800000; /* make implicit bit explicit */
+
+      /* very tricky - we need to round to the nearest e (+10) bit value */
+      {
+        unsigned int bits = 14 - e;
+        unsigned int half = (1 << (bits - 1)) - 1;
+        unsigned int even = (m >> bits) & 1;
+
+        /* if this overflows, we will end up with a normalised number */
+        m = (m + half + even) >> bits;
+      }
+
+      return s | m;
+    }
+
+  /* handle NaNs, preserve leftmost nan bits, but make sure we don't turn them into infinities */
+  m >>= 13;
+
+  return s | 0x7c00 | m | !m;
+}
 
 /*******************************************************************************/
 /* floating point stuff, can be disabled by defining ECB_NO_LIBM */
@@ -1206,23 +1340,6 @@ ecb_inline ecb_const ecb_bool ecb_little_endian (void) { return ecb_byteorder_he
     #define ecb_ldexpf(x,e) (float) ldexp ((double) (x), (e))
     #define ecb_frexpf(x,e) (float) frexp ((double) (x), (e))
   #endif
-
-  /* converts an ieee half/binary16 to a float */
-  ecb_function_ ecb_const float ecb_binary16_to_float (uint16_t x);
-  ecb_function_ ecb_const float
-  ecb_binary16_to_float (uint16_t x)
-  {
-    int e = (x >> 10) & 0x1f;
-    int m = x & 0x3ff;
-    float r;
-
-    if      (!e     ) r = ecb_ldexpf (m        ,    -24);
-    else if (e != 31) r = ecb_ldexpf (m + 0x400, e - 25);
-    else if (m      ) r = ECB_NAN;
-    else              r = ECB_INFINITY;
-
-    return x & 0x8000 ? -r : r;
-  }
 
   /* convert a float to ieee single/binary32 */
   ecb_function_ ecb_const uint32_t ecb_float_to_binary32 (float x);
@@ -1362,6 +1479,22 @@ ecb_inline ecb_const ecb_bool ecb_little_endian (void) { return ecb_byteorder_he
     #endif
 
     return r;
+  }
+
+  /* convert a float to ieee half/binary16 */
+  ecb_function_ ecb_const uint16_t ecb_float_to_binary16 (float x);
+  ecb_function_ ecb_const uint16_t
+  ecb_float_to_binary16 (float x)
+  {
+    return ecb_binary32_to_binary16 (ecb_float_to_binary32 (x));
+  }
+
+  /* convert an ieee half/binary16 to float */
+  ecb_function_ ecb_const float ecb_binary16_to_float (uint16_t x);
+  ecb_function_ ecb_const float
+  ecb_binary16_to_float (uint16_t x)
+  {
+    return ecb_binary32_to_float (ecb_binary16_to_binary32 (x));
   }
 
 #endif
@@ -1689,11 +1822,11 @@ typedef struct
   #include "ev_wrap.h"
 
   static struct ev_loop default_loop_struct;
-  EV_API_DEF struct ev_loop *ev_default_loop_ptr = 0; /* needs to be initialised to make it a definition despite extern */
+  EV_API_DECL struct ev_loop *ev_default_loop_ptr = 0; /* needs to be initialised to make it a definition despite extern */
 
 #else
 
-  EV_API_DEF ev_tstamp ev_rt_now = 0; /* needs to be initialised to make it a definition despite extern */
+  EV_API_DECL ev_tstamp ev_rt_now = 0; /* needs to be initialised to make it a definition despite extern */
   #define VAR(name,decl) static decl;
     #include "ev_vars.h"
   #undef VAR
@@ -1948,7 +2081,7 @@ fd_reify (EV_P)
             {
               unsigned long arg;
 
-              assert (((void)"libev: only socket fds supported in this configuration", ioctlsocket (handle, FIONREAD, &arg) == 0));
+              assert (("libev: only socket fds supported in this configuration", ioctlsocket (handle, FIONREAD, &arg) == 0));
 
               /* handle changed, but fd didn't - we need to do it in two steps */
               backend_modify (EV_A_ fd, anfd->events, 0);
@@ -2918,7 +3051,7 @@ loop_fork (EV_P)
 #endif
 
 #if EV_SIGNAL_ENABLE || EV_ASYNC_ENABLE
-  if (ev_is_active (&pipe_w))
+  if (ev_is_active (&pipe_w) && postfork != 2)
     {
       /* pipe_write_wanted must be false now, so modifying fd vars should be safe */
 
@@ -2960,10 +3093,10 @@ ev_loop_new (unsigned int flags) EV_THROW
 static void noinline ecb_cold
 verify_watcher (EV_P_ W w)
 {
-  assert (((void)"libev: watcher has invalid priority", ABSPRI (w) >= 0 && ABSPRI (w) < NUMPRI));
+  assert (("libev: watcher has invalid priority", ABSPRI (w) >= 0 && ABSPRI (w) < NUMPRI));
 
   if (w->pending)
-    assert (((void)"libev: pending watcher not on pending queue", pendings [ABSPRI (w)][w->pending - 1].w == w));
+    assert (("libev: pending watcher not on pending queue", pendings [ABSPRI (w)][w->pending - 1].w == w));
 }
 
 static void noinline ecb_cold
@@ -2973,9 +3106,9 @@ verify_heap (EV_P_ ANHE *heap, int N)
 
   for (i = HEAP0; i < N + HEAP0; ++i)
     {
-      assert (((void)"libev: active index mismatch in heap", ev_active (ANHE_w (heap [i])) == i));
-      assert (((void)"libev: heap condition violated", i == HEAP0 || ANHE_at (heap [HPARENT (i)]) <= ANHE_at (heap [i])));
-      assert (((void)"libev: heap at cache mismatch", ANHE_at (heap [i]) == ev_at (ANHE_w (heap [i]))));
+      assert (("libev: active index mismatch in heap", ev_active (ANHE_w (heap [i])) == i));
+      assert (("libev: heap condition violated", i == HEAP0 || ANHE_at (heap [HPARENT (i)]) <= ANHE_at (heap [i])));
+      assert (("libev: heap at cache mismatch", ANHE_at (heap [i]) == ev_at (ANHE_w (heap [i]))));
 
       verify_watcher (EV_A_ (W)ANHE_w (heap [i]));
     }
@@ -2986,7 +3119,7 @@ array_verify (EV_P_ W *ws, int cnt)
 {
   while (cnt--)
     {
-      assert (((void)"libev: active index mismatch", ev_active (ws [cnt]) == cnt + 1));
+      assert (("libev: active index mismatch", ev_active (ws [cnt]) == cnt + 1));
       verify_watcher (EV_A_ ws [cnt]);
     }
 }
@@ -3004,7 +3137,7 @@ ev_verify (EV_P) EV_THROW
 
   assert (fdchangemax >= fdchangecnt);
   for (i = 0; i < fdchangecnt; ++i)
-    assert (((void)"libev: negative fd in fdchanges", fdchanges [i] >= 0));
+    assert (("libev: negative fd in fdchanges", fdchanges [i] >= 0));
 
   assert (anfdmax >= 0);
   for (i = 0; i < anfdmax; ++i)
@@ -3017,12 +3150,12 @@ ev_verify (EV_P) EV_THROW
 
           if (j++ & 1)
             {
-              assert (((void)"libev: io watcher list contains a loop", w != w2));
+              assert (("libev: io watcher list contains a loop", w != w2));
               w2 = w2->next;
             }
 
-          assert (((void)"libev: inactive fd watcher on anfd list", ev_active (w) == 1));
-          assert (((void)"libev: fd mismatch between watcher and anfd", ((ev_io *)w)->fd == i));
+          assert (("libev: inactive fd watcher on anfd list", ev_active (w) == 1));
+          assert (("libev: fd mismatch between watcher and anfd", ((ev_io *)w)->fd == i));
         }
     }
 
@@ -3195,7 +3328,7 @@ timers_reify (EV_P)
         {
           ev_timer *w = (ev_timer *)ANHE_w (timers [HEAP0]);
 
-          /*assert (((void)"libev: inactive timer on timer heap detected", ev_is_active (w)));*/
+          /*assert (("libev: inactive timer on timer heap detected", ev_is_active (w)));*/
 
           /* first reschedule or stop timer */
           if (w->repeat)
@@ -3204,7 +3337,7 @@ timers_reify (EV_P)
               if (ev_at (w) < mn_now)
                 ev_at (w) = mn_now;
 
-              assert (((void)"libev: negative ev_timer repeat value found while processing timers", w->repeat > 0.));
+              assert (("libev: negative ev_timer repeat value found while processing timers", w->repeat > 0.));
 
               ANHE_at_cache (timers [HEAP0]);
               downheap (timers, timercnt, HEAP0);
@@ -3259,14 +3392,14 @@ periodics_reify (EV_P)
         {
           ev_periodic *w = (ev_periodic *)ANHE_w (periodics [HEAP0]);
 
-          /*assert (((void)"libev: inactive timer on periodic heap detected", ev_is_active (w)));*/
+          /*assert (("libev: inactive timer on periodic heap detected", ev_is_active (w)));*/
 
           /* first reschedule or stop timer */
           if (w->reschedule_cb)
             {
               ev_at (w) = w->reschedule_cb (w, ev_rt_now);
 
-              assert (((void)"libev: ev_periodic reschedule callback returned time in the past", ev_at (w) >= ev_rt_now));
+              assert (("libev: ev_periodic reschedule callback returned time in the past", ev_at (w) >= ev_rt_now));
 
               ANHE_at_cache (periodics [HEAP0]);
               downheap (periodics, periodiccnt, HEAP0);
@@ -3405,7 +3538,7 @@ ev_run (EV_P_ int flags)
   ++loop_depth;
 #endif
 
-  assert (((void)"libev: ev_loop recursion during release detected", loop_done != EVBREAK_RECURSE));
+  assert (("libev: ev_loop recursion during release detected", loop_done != EVBREAK_RECURSE));
 
   loop_done = EVBREAK_CANCEL;
 
@@ -3526,7 +3659,7 @@ ev_run (EV_P_ int flags)
         ECB_MEMORY_FENCE_ACQUIRE;
         if (pipe_write_skipped)
           {
-            assert (((void)"libev: pipe_w not active, but pipe not written", ev_is_active (&pipe_w)));
+            assert (("libev: pipe_w not active, but pipe not written", ev_is_active (&pipe_w)));
             ev_feed_event (EV_A_ &pipe_w, EV_CUSTOM);
           }
 
@@ -3700,8 +3833,8 @@ ev_io_start (EV_P_ ev_io *w) EV_THROW
   if (expect_false (ev_is_active (w)))
     return;
 
-  assert (((void)"libev: ev_io_start called with negative fd", fd >= 0));
-  assert (((void)"libev: ev_io_start called with illegal event mask", !(w->events & ~(EV__IOFDSET | EV_READ | EV_WRITE))));
+  assert (("libev: ev_io_start called with negative fd", fd >= 0));
+  assert (("libev: ev_io_start called with illegal event mask", !(w->events & ~(EV__IOFDSET | EV_READ | EV_WRITE))));
 
   EV_FREQUENT_CHECK;
 
@@ -3710,9 +3843,9 @@ ev_io_start (EV_P_ ev_io *w) EV_THROW
   wlist_add (&anfds[fd].head, (WL)w);
 
   /* common bug, apparently */
-  assert (((void)"libev: ev_io_start called with corrupted watcher", ((WL)w)->next != (WL)w));
+  assert (("libev: ev_io_start called with corrupted watcher", ((WL)w)->next != (WL)w));
 
-  fd_change (EV_A_ fd, (w->events & EV__IOFDSET) | EV_ANFD_REIFY);
+  fd_change (EV_A_ fd, w->events & EV__IOFDSET | EV_ANFD_REIFY);
   w->events &= ~EV__IOFDSET;
 
   EV_FREQUENT_CHECK;
@@ -3725,7 +3858,7 @@ ev_io_stop (EV_P_ ev_io *w) EV_THROW
   if (expect_false (!ev_is_active (w)))
     return;
 
-  assert (((void)"libev: ev_io_stop called with illegal fd (must stay constant after start!)", w->fd >= 0 && w->fd < anfdmax));
+  assert (("libev: ev_io_stop called with illegal fd (must stay constant after start!)", w->fd >= 0 && w->fd < anfdmax));
 
   EV_FREQUENT_CHECK;
 
@@ -3745,7 +3878,7 @@ ev_timer_start (EV_P_ ev_timer *w) EV_THROW
 
   ev_at (w) += mn_now;
 
-  assert (((void)"libev: ev_timer_start called with negative timer repeat value", w->repeat >= 0.));
+  assert (("libev: ev_timer_start called with negative timer repeat value", w->repeat >= 0.));
 
   EV_FREQUENT_CHECK;
 
@@ -3758,7 +3891,7 @@ ev_timer_start (EV_P_ ev_timer *w) EV_THROW
 
   EV_FREQUENT_CHECK;
 
-  /*assert (((void)"libev: internal timer heap corruption", timers [ev_active (w)] == (WT)w));*/
+  /*assert (("libev: internal timer heap corruption", timers [ev_active (w)] == (WT)w));*/
 }
 
 void noinline
@@ -3773,7 +3906,7 @@ ev_timer_stop (EV_P_ ev_timer *w) EV_THROW
   {
     int active = ev_active (w);
 
-    assert (((void)"libev: internal timer heap corruption", ANHE_w (timers [active]) == (WT)w));
+    assert (("libev: internal timer heap corruption", ANHE_w (timers [active]) == (WT)w));
 
     --timercnt;
 
@@ -3835,7 +3968,7 @@ ev_periodic_start (EV_P_ ev_periodic *w) EV_THROW
     ev_at (w) = w->reschedule_cb (w, ev_rt_now);
   else if (w->interval)
     {
-      assert (((void)"libev: ev_periodic_start called with negative interval value", w->interval >= 0.));
+      assert (("libev: ev_periodic_start called with negative interval value", w->interval >= 0.));
       periodic_recalc (EV_A_ w);
     }
   else
@@ -3852,7 +3985,7 @@ ev_periodic_start (EV_P_ ev_periodic *w) EV_THROW
 
   EV_FREQUENT_CHECK;
 
-  /*assert (((void)"libev: internal periodic heap corruption", ANHE_w (periodics [ev_active (w)]) == (WT)w));*/
+  /*assert (("libev: internal periodic heap corruption", ANHE_w (periodics [ev_active (w)]) == (WT)w));*/
 }
 
 void noinline
@@ -3867,7 +4000,7 @@ ev_periodic_stop (EV_P_ ev_periodic *w) EV_THROW
   {
     int active = ev_active (w);
 
-    assert (((void)"libev: internal periodic heap corruption", ANHE_w (periodics [active]) == (WT)w));
+    assert (("libev: internal periodic heap corruption", ANHE_w (periodics [active]) == (WT)w));
 
     --periodiccnt;
 
@@ -3904,10 +4037,10 @@ ev_signal_start (EV_P_ ev_signal *w) EV_THROW
   if (expect_false (ev_is_active (w)))
     return;
 
-  assert (((void)"libev: ev_signal_start called with illegal signal number", w->signum > 0 && w->signum < EV_NSIG));
+  assert (("libev: ev_signal_start called with illegal signal number", w->signum > 0 && w->signum < EV_NSIG));
 
 #if EV_MULTIPLICITY
-  assert (((void)"libev: a signal must not be attached to two different loops",
+  assert (("libev: a signal must not be attached to two different loops",
            !signals [w->signum - 1].loop || signals [w->signum - 1].loop == loop));
 
   signals [w->signum - 1].loop = EV_A;
@@ -4025,7 +4158,7 @@ void
 ev_child_start (EV_P_ ev_child *w) EV_THROW
 {
 #if EV_MULTIPLICITY
-  assert (((void)"libev: child watchers are only supported in the default loop", loop == ev_default_loop_ptr));
+  assert (("libev: child watchers are only supported in the default loop", loop == ev_default_loop_ptr));
 #endif
   if (expect_false (ev_is_active (w)))
     return;
@@ -4604,7 +4737,7 @@ ev_embed_start (EV_P_ ev_embed *w) EV_THROW
 
   {
     EV_P = w->other;
-    assert (((void)"libev: loop to be embedded is not embeddable", backend & ev_embeddable_backends ()));
+    assert (("libev: loop to be embedded is not embeddable", backend & ev_embeddable_backends ()));
     ev_io_init (&w->io, embed_io_cb, backend_fd, EV_READ);
   }
 

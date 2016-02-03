@@ -298,7 +298,7 @@ namespace ev {
     }
 
     template<class K, void (K::*method)()>
-    static void method_noargs_thunk (int, void *arg)
+    static void method_noargs_thunk (int revents, void *arg)
     {
       (static_cast<K *>(arg)->*method)
         ();
@@ -312,7 +312,7 @@ namespace ev {
     }
 
     template<void (*cb)(int)>
-    static void simpler_func_thunk (int revents, void *)
+    static void simpler_func_thunk (int revents, void *arg)
     {
       (*cb)
         (revents);
@@ -326,7 +326,7 @@ namespace ev {
     }
 
     template<void (*cb)()>
-    static void simplest_func_thunk (int, void *)
+    static void simplest_func_thunk (int revents, void *arg)
     {
       (*cb)
         ();
@@ -453,7 +453,7 @@ namespace ev {
     }
 
     template<void (*function)(watcher &w, int)>
-    static void function_thunk (EV_P_WN_ ev_watcher *w, int revents)
+    static void function_thunk (EV_P_ ev_watcher *w, int revents)
     {
       function
         (*static_cast<watcher *>(w), revents);
@@ -474,7 +474,7 @@ namespace ev {
     }
 
     template<class K, void (K::*method)(watcher &w, int)>
-    static void method_thunk (EV_P_WN_ ev_watcher *w, int revents)
+    static void method_thunk (EV_P_ ev_watcher *w, int revents)
     {
       (static_cast<K *>(w->data)->*method)
         (*static_cast<watcher *>(w), revents);
@@ -488,7 +488,7 @@ namespace ev {
     }
 
     template<class K, void (K::*method)()>
-    static void method_noargs_thunk (EV_P_WN_ ev_watcher *w, int)
+    static void method_noargs_thunk (EV_P_ ev_watcher *w, int revents)
     {
       (static_cast<K *>(w->data)->*method)
         ();
@@ -575,7 +575,7 @@ namespace ev {
       }
   #endif
 
-  /* using a template here would require quite a bit more lines,
+  /* using a template here would require quite a few more lines,
    * so a macro solution was chosen */
   #define EV_BEGIN_WATCHER(cppstem,cstem)	                                        \
                                                                                         \

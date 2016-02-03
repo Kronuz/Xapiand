@@ -172,7 +172,6 @@ typedef double ev_tstamp;
 struct ev_loop;
 # define EV_P  struct ev_loop *loop               /* a loop as sole parameter in a declaration */
 # define EV_P_ EV_P,                              /* a loop as first of multiple parameters */
-# define EV_P_WN_ struct ev_loop *,               /* a loop as first of multiple parameters, but this is not used*/
 # define EV_A  loop                               /* a loop as sole argument to a function call */
 # define EV_A_ EV_A,                              /* a loop as first of multiple arguments */
 # define EV_DEFAULT_UC  ev_default_loop_uc_ ()    /* the default loop, if initialised, as sole arg */
@@ -200,10 +199,8 @@ struct ev_loop;
 
 #ifdef EV_API_STATIC
 # define EV_API_DECL static
-# define EV_API_DEF static
 #else
 # define EV_API_DECL extern
-# define EV_API_DEF
 #endif
 
 /* EV_PROTOTYPES can be used to switch of prototype declarations */
@@ -214,7 +211,7 @@ struct ev_loop;
 /*****************************************************************************/
 
 #define EV_VERSION_MAJOR 4
-#define EV_VERSION_MINOR 20
+#define EV_VERSION_MINOR 22
 
 /* eventmask, revents, events... */
 enum {
