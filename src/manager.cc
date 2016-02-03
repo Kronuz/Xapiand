@@ -573,6 +573,7 @@ XapiandManager::get_region()
 }
 
 
+#ifdef HAVE_REMOTE_PROTOCOL
 std::future<bool>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
@@ -585,6 +586,7 @@ XapiandManager::store(const Endpoints& endpoints, const Xapian::docid& did, cons
 {
 	return binary->store(endpoints, did, filename);
 }
+#endif
 
 
 void

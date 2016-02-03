@@ -150,8 +150,10 @@ public:
 	// Return the region to which local_node belongs
 	int get_region();
 
+#ifdef HAVE_REMOTE_PROTOCOL
 	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 	std::future<bool> store(const Endpoints& endpoints, const Xapian::docid& did, const std::string& filename);
+#endif
 
 	void server_status(MsgPack&& stats);
 	void get_stats_time(MsgPack&& stats, const std::string& time_req);
