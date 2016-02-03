@@ -37,6 +37,12 @@
  * either the BSD or the GPL.
  */
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcomment"
+#pragma clang diagnostic ignored "-Wunused-value"
+#pragma clang diagnostic ignored "-Wextern-initializer"
+#pragma clang diagnostic ignored "-Wbitwise-op-parentheses"
+
 /* this big block deduces configuration from config.h */
 #ifndef EV_STANDALONE
 # ifdef EV_CONFIG_H
@@ -5094,4 +5100,5 @@ ev_walk (EV_P_ int types, void (*cb)(EV_P_ int type, void *w)) EV_THROW
 #if EV_MULTIPLICITY
   #include "ev_wrap.h"
 #endif
+#pragma clang diagnostic pop
 
