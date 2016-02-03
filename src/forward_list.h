@@ -27,7 +27,6 @@
 #include <memory>
 
 
-
 /*
  * Lock Free Single-Linked List Using Compare and Swap.
  * The algorithm is based in the article:
