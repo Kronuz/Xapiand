@@ -387,8 +387,8 @@ HttpClient::run()
 
 	std::string error;
 	const char* error_str;
-	bool has_error = false;
 	bool detach_needed = false;
+	int error_code = 0;
 
 	try {
 		if (path == "/quit") {
@@ -425,7 +425,7 @@ HttpClient::run()
 				break;
 		}
 	} catch (const Xapian::Error& err) {
-		has_error = true;
+		error_code = 500;
 		error_str = err.get_error_string();
 		if (error_str) {
 			error.assign(error_str);
@@ -433,10 +433,13 @@ HttpClient::run()
 			error.assign("Unkown Xapian error!");
 		}
 	} catch (const WorkerException& err) {
-		has_error = true;
+		error_code = 500;
 		detach_needed = true;
+	} catch (const ClientError& err) {
+		error_code = 400;
+		error.assign(err.what());
 	} catch (const std::exception& err) {
-		has_error = true;
+		error_code = 500;
 		error_str = err.what();
 		if (error_str) {
 			error.assign(error_str);
@@ -444,11 +447,13 @@ HttpClient::run()
 			error.assign("Unkown exception!");
 		}
 	} catch (...) {
-		has_error = true;
+		error_code = 500;
 		error.assign("Unkown error!");
 	}
-	if (has_error) {
-		L_ERR(this, "ERROR: %s", error.c_str());
+	if (error_code) {
+		if (error_code >= 500 && error_code <= 599) {
+			L_ERR(this, "ERROR: %s", error.c_str());
+		}
 		if (database) {
 			manager()->database_pool.checkin(database);
 		}
@@ -465,7 +470,7 @@ HttpClient::run()
 				detach();
 			}
 		} else {
-			write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+			write(http_response(error_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor, 0, error));
 		}
 	}
 
