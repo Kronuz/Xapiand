@@ -735,6 +735,8 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 		_index(doc, obj);
 		L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 		return replace(term_id, doc, _commit);
+	} catch (const ClientError& err) {
+		throw;
 	} catch (const std::exception& err) {
 		L_ERR(this, "ERROR: %s", err.what());
 		return 0;
@@ -836,6 +838,8 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 			// Object no patched
 			return 0;
 		}
+	} catch (const ClientError& err) {
+		throw;
 	} catch (const std::exception& err) {
 		L_ERR(this, "ERROR: %s", err.what());
 		return 0;

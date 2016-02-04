@@ -22,23 +22,23 @@
 
 #include "exception.h"
 
+#include <stdarg.h>
 
-Exception::Exception(const char *file, int line, const char *format, ...)
+#define BUFFER_SIZE 1024
+
+Exception::Exception(const char *filename, int line, const char *format, ...)
 	: std::runtime_error("")
 {
+	char buffer[BUFFER_SIZE];
+
 	va_list argptr;
 	va_start(argptr, format);
-	char buffer[SIZE_BUFFER];
-	vsnprintf(buffer, SIZE_BUFFER, format, argptr);
-	snprintf(msg, SIZE_BUFFER, "%s:%d:%s", file, line, buffer);
+	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	va_end(argptr);
-}
+	msg = buffer;
 
-
-const char*
-Exception::what() const noexcept
-{
-	return msg;
+	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
+	file = buffer;
 }
 
 
@@ -51,4 +51,3 @@ WorkerException::detach_object()
 {
 	return WorkerException();
 }
-
