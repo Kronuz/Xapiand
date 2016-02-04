@@ -10,9 +10,7 @@ if [ -z "$endpoint" ]; then
 fi
 
 for id in $(seq $start $end); do
-	message="$(fortune | sed 's/\([\"\\]\)/\\\1/g' | tr '\n' $'\x01' | sed -e $'s/\x01/''\\n/g')"
+	message="$(fortune | tr '\n' $'\x01' | sed -e 's/\([\"\\]\)/\\\1/g' -e $'s/\x01/\\\\n/g' -e $'s/\b/\\\\b/g' -e $'s/\f/\\\\f/g' -e $'s/\r/\\\\r/g' -e $'s/\t/\\\\t/g')"
 	data="{\"user\" : \"$USER\", \"postDate\" : \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\", \"message\" : \"$message\"}"
-	# echo
-	# echo $data
 	curl -H "Content-Type: application/json" -XPUT "$endpoint/$id" -d "$data" $4 $5 $6 $7 $8 $9
 done
