@@ -793,15 +793,13 @@ BinaryClient::repl_get_changesets(const std::string &message)
 	int fd = mkstemp(path);
 	try {
 		std::string to_revision = databases[db_]->checkout_revision;
-		bool need_whole_db = (uuid != db_->get_uuid());
 		L_REPLICATION(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
 
 		if (fd < 0) {
 			L_ERR(this, "Cannot write to %s (1)", path);
 			return;
 		}
-
-		// db_->write_changesets_to_fd(fd, from_revision, need_whole_db);  // FIXME: Implement Replication
+		// db_->write_changesets_to_fd(fd, from_revision, uuid != db_->get_uuid());  // FIXME: Implement Replication
 	} catch (...) {
 		release_db(db_);
 		::close(fd);
