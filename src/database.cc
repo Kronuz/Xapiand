@@ -1807,9 +1807,7 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 
 	lk.unlock();
 
-	if (database) {
-		database->modified = false;
-	} else {
+	if (!database) {
 		L_DATABASE_END(this, "!! FAILED CHECKOUT DB (%s)!", endpoints.as_string().c_str());
 		return false;
 	}
