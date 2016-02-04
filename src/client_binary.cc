@@ -419,7 +419,7 @@ BinaryClient::shutdown()
 
 
 Xapian::Database*
-BinaryClient::get_db(bool writable_)
+BinaryClient::_get_db(bool writable_)
 {
 	std::unique_lock<std::mutex> lk(qmtx);
 	if (endpoints.empty()) {
@@ -439,6 +439,17 @@ BinaryClient::get_db(bool writable_)
 	return database->db.get();
 }
 
+Xapian::Database*
+BinaryClient::get_db()
+{
+	return _get_db(false);
+}
+
+Xapian::WritableDatabase*
+BinaryClient::get_wdb()
+{
+	return static_cast<Xapian::WritableDatabase*>(_get_db(true));
+}
 
 void
 BinaryClient::release_db(Xapian::Database *db_)
@@ -462,7 +473,7 @@ BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool, int)
 	for (auto i = dbpaths_.begin(); i != dbpaths_.end(); ++i) {
 		endpoints.insert(Endpoint(*i));
 	}
-	dbpaths = dbpaths_;
+	set_dbpaths(dbpaths_);
 }
 
 
@@ -482,7 +493,7 @@ BinaryClient::run()
 
 	if (state == State::INIT_REMOTEPROTOCOL) {
 		state = State::REMOTEPROTOCOL;
-		msg_update(std::string());
+		send_greeting();
 	}
 
 	while (!messages_queue.empty()) {
@@ -771,7 +782,7 @@ BinaryClient::repl_get_changesets(const std::string &message)
 		endpoints.clear();
 		Endpoint endpoint(index_path);
 		endpoints.insert(endpoint);
-		db_ = get_db(false);
+		db_ = get_db();
 		if (!db_)
 			throw Xapian::InvalidOperationError("Server has no open database");
 	} catch (...) {

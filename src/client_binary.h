@@ -131,28 +131,26 @@ class BinaryClient : public BaseClient, public RemoteProtocol {
 
 	friend Worker;
 
+	Xapian::Database* _get_db(bool writable);
+
 public:
 	~BinaryClient();
 
 	inline ReplicateType get_message(double timeout, std::string & result, ReplicateType required_type) {
-		return (ReplicateType)get_message(timeout, result, static_cast<message_type>(required_type));
+		return (ReplicateType)get_message(timeout, result, static_cast<int>(required_type));
 	}
 
 	inline StoringType get_message(double timeout, std::string & result, StoringType required_type) {
-		return (StoringType)get_message(timeout, result, static_cast<message_type>(required_type));
+		return (StoringType)get_message(timeout, result, static_cast<int>(required_type));
 	}
 
-	inline message_type get_message(double timeout, std::string &result, message_type) override {
-		return static_cast<message_type>(get_message(timeout, result));
+	inline int get_message(double timeout, std::string &result, int) override {
+		return static_cast<int>(get_message(timeout, result));
 	}
 
 	char get_message(double timeout, std::string &result);
 
-	inline void send_message(reply_type type, const std::string &message) override {
-		send_message(static_cast<char>(type), message, 0.0);
-	}
-
-	inline void send_message(reply_type type, const std::string &message, double end_time) override {
+	inline void send_message(int type, const std::string &message, double end_time=0.0) override {
 		send_message(static_cast<char>(type), message, end_time);
 	}
 
@@ -174,7 +172,8 @@ public:
 
 	void send_message(char type_as_char, const std::string &message, double end_time=0.0);
 
-	Xapian::Database* get_db(bool) override;
+	Xapian::Database* get_db() override;
+	Xapian::WritableDatabase* get_wdb() override;
 	void release_db(Xapian::Database *) override;
 	void select_db(const std::vector<std::string> &dbpaths_, bool, int) override;
 	void shutdown() override;
