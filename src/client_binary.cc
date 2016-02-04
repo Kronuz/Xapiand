@@ -724,7 +724,7 @@ BinaryClient::repl_changeset(const std::string &message)
 	::lseek(fd, 0, SEEK_SET);
 
 	try {
-		wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);
+		// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
 		repl_just_switched_db = false;
 	} catch(const Xapian::NetworkError &e) {
 		L_ERR(this, "ERROR: %s", e.get_msg().c_str());
@@ -790,7 +790,7 @@ BinaryClient::repl_get_changesets(const std::string &message)
 			return;
 		}
 
-		db_->write_changesets_to_fd(fd, from_revision, need_whole_db);
+		// db_->write_changesets_to_fd(fd, from_revision, need_whole_db);  // FIXME: Implement Replication
 	} catch (...) {
 		release_db(db_);
 		::close(fd);
