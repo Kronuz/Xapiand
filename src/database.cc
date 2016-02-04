@@ -37,6 +37,7 @@
 
 #define DEFAULT_OFFSET "0" /* Replace for the real offset */
 
+#define DB_RETRIES 3
 
 static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
 
@@ -181,7 +182,7 @@ Database::commit()
 {
 	schema.store();
 
-	for (int t = 3; t >= 0; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Commit: t: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
@@ -218,7 +219,7 @@ Database::drop(const std::string& doc_id, bool _commit)
 
 	std::string document_id = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
 
-	for (int t = 3; t >= 0; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Deleting doc_id: %s  t: %d", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
@@ -791,7 +792,7 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 		Xapian::MSetIterator m = mset.begin();
 
 		Xapian::Document document;
-		for (int t = 3; t >= 0; --t) {
+		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
 				document = db->get_document(*m);
 				break;
@@ -846,7 +847,7 @@ Xapian::docid
 Database::replace(const std::string& document_id, const Xapian::Document& doc, bool _commit)
 {
 	Xapian::docid did;
-	for (int t = 3; t >= 0; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: %s  t: %d", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
@@ -876,7 +877,7 @@ Database::replace(const std::string& document_id, const Xapian::Document& doc, b
 Xapian::docid
 Database::replace(const Xapian::docid& did, const Xapian::Document& doc, bool _commit)
 {
-	for (int t = 3; t >= 0; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing did: %u t:%d", did, t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
@@ -1324,7 +1325,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& qu
 {
 	Xapian::RSet rset;
 
-	for (int t = 3; t >= 0; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			Xapian::Enquire renquire = get_enquire(query, Xapian::BAD_VALUENO, nullptr, nullptr, nullptr);
 			Xapian::MSet mset = renquire.get_mset(0, similar.n_rset);
@@ -1463,7 +1464,7 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 		}
 	}
 
-	for (int t = 3; t >= 0; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			search_t srch = search(e);
 			Xapian::Enquire enquire = get_enquire(srch.query, collapse_key, &e, sorter, &spies);
@@ -1496,7 +1497,7 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 bool
 Database::get_metadata(const std::string& key, std::string& value)
 {
-	for (int t = 3; t >= 0; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			value = db->get_metadata(key);
 		} catch (const Xapian::DatabaseModifiedError& er) {
@@ -1523,7 +1524,7 @@ Database::get_metadata(const std::string& key, std::string& value)
 bool
 Database::set_metadata(const std::string& key, const std::string& value, bool _commit)
 {
-	for (int t = 3; t >= 0; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->set_metadata(key, value);
@@ -1551,7 +1552,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool _c
 bool
 Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 {
-	for (int t = 3; t >= 0; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			doc = db->get_document(did);
 		} catch (const Xapian::DatabaseModifiedError& er) {
@@ -1609,7 +1610,7 @@ Database::get_stats_docs(MsgPack&& stats, const std::string& document_id)
 	stats[RESERVED_ID] = document_id;
 
 	Xapian::Document doc;
-	for (int t = 3; t >= 0; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			doc = db->get_document(*m);
 			break;
