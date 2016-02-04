@@ -105,6 +105,9 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 	}
 
 	if (mode & HTTP_HEADER) {
+
+		response += "Server: " + std::string(PACKAGE_NAME) + "/" + std::string(VERSION) + eol;
+
 		if (mode & HTTP_CONTENT_TYPE) {
 			response += "Content-Type: "+ ct_type + eol;
 		}
