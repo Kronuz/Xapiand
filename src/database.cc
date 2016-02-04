@@ -186,10 +186,17 @@ Database::commit()
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->commit();
-		} catch (const Xapian::Error& e) {
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			continue;
+		} catch (const Xapian::NetworkError& er) {
+			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& er) {
+			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			return false;
 		}
 		L_DATABASE_WRAP(this, "Commit made");
 		modified = false;
@@ -216,17 +223,17 @@ Database::drop(const std::string& doc_id, bool _commit)
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(document_id);
-		} catch (const Xapian::DatabaseCorruptError& e) {
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
-			return false;
-		} catch (const Xapian::DatabaseError& e) {
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
-			return false;
-		} catch (const Xapian::Error& e) {
-			L_DEBUG(this, "Inside catch drop");
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			continue;
+		} catch (const Xapian::NetworkError& er) {
+			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& er) {
+			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			return false;
 		}
 		L_DATABASE_WRAP(this, "Document deleted");
 		if (_commit) {
@@ -788,13 +795,25 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 			try {
 				document = db->get_document(*m);
 				break;
+			} catch (const Xapian::DatabaseModifiedError& er) {
+				if (t) {
+					reopen();
+					m = mset.begin();
+				} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+				continue;
+			} catch (const Xapian::NetworkError& er) {
+				if (t) {
+					reopen();
+					m = mset.begin();
+				} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+				continue;
 			} catch (const Xapian::InvalidArgumentError&) {
 				return 0;
 			} catch (const Xapian::DocNotFoundError&) {
 				return 0;
-			} catch (const Xapian::Error&) {
-				reopen();
-				m = mset.begin();
+			} catch (const Xapian::Error& er) {
+				L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+				return 0;
 			}
 		}
 
@@ -832,10 +851,17 @@ Database::replace(const std::string& document_id, const Xapian::Document& doc, b
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			did = wdb->replace_document(document_id, doc);
-		} catch (const Xapian::Error& e) {
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			continue;
+		} catch (const Xapian::NetworkError& er) {
+			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& er) {
+			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			return 0;
 		}
 		L_DATABASE_WRAP(this, "Document replaced");
 		if (_commit) commit();
@@ -855,10 +881,17 @@ Database::replace(const Xapian::docid& did, const Xapian::Document& doc, bool _c
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->replace_document(did, doc);
-		} catch (const Xapian::Error& e) {
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			continue;
+		} catch (const Xapian::NetworkError& er) {
+			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& er) {
+			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			return 0;
 		}
 		L_DATABASE_WRAP(this, "Document replaced");
 		if (_commit) commit();
@@ -1298,10 +1331,17 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& qu
 			for (const auto& doc : mset) {
 				rset.add_document(doc);
 			}
+		} catch (const Xapian::DatabaseModifiedError& er) {
+			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::NetworkError& er) {
+			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
 		} catch (const Xapian::Error& er) {
 			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			if (t) reopen();
-			continue;
+			return;
 		}
 
 		std::vector<std::string> prefixes;
@@ -1430,12 +1470,12 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
 		} catch (const Xapian::DatabaseModifiedError& er) {
-			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			continue;
 		} catch (const Xapian::NetworkError& er) {
-			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			continue;
 		} catch (const Xapian::Error& er) {
 			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
@@ -1459,10 +1499,17 @@ Database::get_metadata(const std::string& key, std::string& value)
 	for (int t = 3; t >= 0; --t) {
 		try {
 			value = db->get_metadata(key);
-		} catch (const Xapian::Error& e) {
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			continue;
+		} catch (const Xapian::NetworkError& er) {
+			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& er) {
+			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			return false;
 		}
 		L_DATABASE_WRAP(this, "get_metadata was done");
 		return value.empty() ? false : true;
@@ -1480,10 +1527,17 @@ Database::set_metadata(const std::string& key, const std::string& value, bool _c
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->set_metadata(key, value);
-		} catch (const Xapian::Error& e) {
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			continue;
+		} catch (const Xapian::NetworkError& er) {
+			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& er) {
+			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			return false;
 		}
 		L_DATABASE_WRAP(this, "set_metadata was done");
 		return (_commit) ? commit() : true;
@@ -1500,10 +1554,17 @@ Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 	for (int t = 3; t >= 0; --t) {
 		try {
 			doc = db->get_document(did);
-		} catch (const Xapian::Error& e) {
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			continue;
+		} catch (const Xapian::NetworkError& er) {
+			if (t) reopen();
+			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& er) {
+			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			return false;
 		}
 		return true;
 	}
@@ -1552,15 +1613,27 @@ Database::get_stats_docs(MsgPack&& stats, const std::string& document_id)
 		try {
 			doc = db->get_document(*m);
 			break;
-		} catch (Xapian::InvalidArgumentError&) {
+		} catch (const Xapian::DatabaseModifiedError& er) {
+			if (t) {
+				reopen();
+				m = mset.begin();
+			} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::NetworkError& er) {
+			if (t) {
+				reopen();
+				m = mset.begin();
+			} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::InvalidArgumentError&) {
 			stats["error"] = "Invalid internal document id";
 			return;
-		} catch (Xapian::DocNotFoundError&) {
+		} catch (const Xapian::DocNotFoundError&) {
 			stats["error"] = "Document not found";
 			return;
-		} catch (const Xapian::Error&) {
-			reopen();
-			m = mset.begin();
+		} catch (const Xapian::Error& er) {
+			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			return;
 		}
 	}
 
