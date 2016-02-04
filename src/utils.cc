@@ -157,6 +157,10 @@ std::string repr(const void* p, size_t size, bool friendly, size_t max_size) {
 					*d++ = '\\';
 					*d++ = '\'';
 					break;
+				case '\\':
+					*d++ = '\\';
+					*d++ = '\\';
+					break;
 				default:
 					if (c >= ' ' && c <= '~') {
 						*d++ = c;
