@@ -1169,8 +1169,12 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 
 			q.offset = nullptr;
 			if (url_qs("pretty", query_str, query_size, &q) != -1) {
-				std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
-				e.pretty = pretty[0] == 't';
+				e.pretty = true;
+				if (q.length) {
+					try {
+						e.pretty = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+					} catch (Exception) {}
+				}
 			}
 
 			switch (cmd) {
@@ -1198,14 +1202,22 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 
 					q.offset = nullptr;
 					if (url_qs("spelling", query_str, query_size, &q) != -1) {
-						std::string spelling = Serialise::boolean(urldecode(q.offset, q.length));
-						e.spelling = spelling[0] == 't';
+						e.spelling = true;
+						if (q.length) {
+							try {
+								e.spelling = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+							} catch (Exception) {}
+						}
 					}
 
 					q.offset = nullptr;
 					if (url_qs("synonyms", query_str, query_size, &q) != -1) {
-						std::string synonyms = Serialise::boolean(urldecode(q.offset, q.length));
-						e.synonyms = synonyms[0] == 't';
+						e.synonyms = true;
+						if (q.length) {
+							try {
+								e.synonyms = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+							} catch (Exception) {}
+						}
 					}
 
 					q.offset = nullptr;
@@ -1253,8 +1265,12 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 
 					q.offset = nullptr;
 					if (url_qs("fuzzy", query_str, query_size, &q) != -1) {
-						std::string fuzzy = Serialise::boolean(urldecode(q.offset, q.length));
-						e.is_fuzzy = fuzzy[0] == 't';
+						e.is_fuzzy = true;
+						if (q.length) {
+							try {
+								e.is_fuzzy = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+							} catch (Exception) {}
+						}
 					}
 
 					if(e.is_fuzzy) {
@@ -1286,8 +1302,12 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 
 					q.offset = nullptr;
 					if (url_qs("nearest", query_str, query_size, &q) != -1) {
-						std::string nearest = Serialise::boolean(urldecode(q.offset, q.length));
-						e.is_nearest = nearest[0] == 't';
+						e.is_nearest = true;
+						if (q.length) {
+							try {
+								e.is_nearest = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+							} catch (Exception) {}
+						}
 					}
 
 					if(e.is_nearest) {
@@ -1323,8 +1343,12 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 				case CMD_ID:
 					q.offset = nullptr;
 					if (url_qs("commit", query_str, query_size, &q) != -1) {
-						std::string pretty = Serialise::boolean(urldecode(q.offset, q.length));
-						e.commit = pretty[0] == 't';
+						e.commit = true;
+						if (q.length) {
+							try {
+								e.commit = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+							} catch (Exception) {}
+						}
 					}
 
 					if (isRange(command)) {
@@ -1360,14 +1384,22 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 				case CMD_STATS:
 					q.offset = nullptr;
 					if (url_qs("server", query_str, query_size, &q) != -1) {
-						std::string server = Serialise::boolean(urldecode(q.offset, q.length));
-						e.server = server[0] == 't';
+						e.server = true;
+						if (q.length) {
+							try {
+								e.server = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+							} catch (Exception) {}
+						}
 					}
 
 					q.offset = nullptr;
 					if (url_qs("database", query_str, query_size, &q) != -1) {
-						std::string _database = Serialise::boolean(urldecode(q.offset, q.length));
-						e.database = _database[0] == 't';
+						e.database = true;
+						if (q.length) {
+							try {
+								e.database = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+							} catch (Exception) {}
+						}
 					}
 
 					q.offset = nullptr;
