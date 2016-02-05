@@ -353,6 +353,10 @@ Database::commit()
 {
 	schema.store();
 
+	if (!modified) {
+		return false;
+	}
+
 	if (local) Database::WAL.write_commit(*this);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
