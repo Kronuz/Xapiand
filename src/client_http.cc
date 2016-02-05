@@ -74,7 +74,7 @@ static const char* status_code[6][14] = {
 		"Not Acceptable",           // 406
 		nullptr,                    // 407
 		nullptr,                    // 408
-		nullptr,                    // 409
+		"Conflict",                 // 409
 		nullptr,                    // 410
 		nullptr,                    // 411
 		nullptr,                    // 412
@@ -1062,7 +1062,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 	if (http_parser_parse_url(b.c_str(), b.size(), 0, &u) == 0) {
 		L_HTTP_PROTO_PARSER(this, "HTTP parsing done!");
 
-		if (u.field_set & (1 <<  UF_PATH )) {
+		if (u.field_set & (1 << UF_PATH )) {
 			size_t path_size = u.field_data[3].len;
 			std::string path_buf(b.c_str() + u.field_data[3].off, u.field_data[3].len);
 
