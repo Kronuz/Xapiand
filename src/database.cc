@@ -241,12 +241,8 @@ Database::drop(const std::string& doc_id, bool _commit)
 			return false;
 		}
 		L_DATABASE_WRAP(this, "Document deleted");
-		if (_commit) {
-			return commit();
-		} else {
-			modified = true;
-			return true;
-		}
+		if (!_commit || !commit()) modified = true;
+		return true;
 	}
 
 	L_ERR(this, "ERROR: Not can delete document: %s!", document_id.c_str());
@@ -858,8 +854,7 @@ Database::replace(const std::string& document_id, const Xapian::Document& doc, b
 			return 0;
 		}
 		L_DATABASE_WRAP(this, "Document replaced");
-		if (_commit) commit();
-		else modified = true;
+		if (!_commit || !commit()) modified = true;
 		return did;
 	}
 
