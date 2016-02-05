@@ -165,19 +165,38 @@ Serialise::ewkt(const std::string& field_value)
 std::string
 Serialise::boolean(const std::string& field_value)
 {
-	if (field_value.empty()) {
-		return std::string("f");
-	} else if (strcmp(field_value.c_str(), "1") == 0) {
-		return std::string("t");
-	} else if (strcmp(field_value.c_str(), "0") == 0) {
-		return std::string("f");
-	} else if (strcasecmp(field_value.c_str(), "true") == 0) {
-		return std::string("t");
-	} else if (strcasecmp(field_value.c_str(), "false") == 0) {
-		return std::string("f");
-	} else {
-		throw MSG_Error("Boolean format is not valid");
+	const char *value = field_value.c_str();
+	switch (value[0]) {
+		case '\0':
+			return std::string("f");
+
+		case '1':
+		case 't':
+		case 'T':
+			if (value[1] == '\0') {
+				return std::string("t");
+			}
+			if (strcasecmp(value, "true") == 0) {
+				return std::string("t");
+			}
+			break;
+
+		case '0':
+		case 'f':
+		case 'F':
+			if (value[1] == '\0') {
+				return std::string("f");
+			}
+			if (strcasecmp(value, "false") == 0) {
+				return std::string("f");
+			}
+			break;
+
+		default:
+			break;
 	}
+
+	throw MSG_Error("Boolean format is not valid");
 }
 
 
