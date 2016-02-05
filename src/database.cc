@@ -1501,7 +1501,8 @@ Database::set_metadata(const std::string& key, const std::string& value, bool _c
 			return false;
 		}
 		L_DATABASE_WRAP(this, "set_metadata was done");
-		return (_commit) ? commit() : true;
+		if (!_commit || !commit()) modified = true;
+		return true;
 	}
 
 	L_ERR(this, "ERROR: set_metadata can not be done!");
