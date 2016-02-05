@@ -860,36 +860,6 @@ Database::replace(const std::string& document_id, const Xapian::Document& doc, b
 }
 
 
-Xapian::docid
-Database::replace(const Xapian::docid& did, const Xapian::Document& doc, bool _commit)
-{
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Replacing did: %u t:%d", did, t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			wdb->replace_document(did, doc);
-		} catch (const Xapian::DatabaseModifiedError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
-		} catch (const Xapian::NetworkError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
-		} catch (const Xapian::Error& er) {
-			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			return 0;
-		}
-		L_DATABASE_WRAP(this, "Document replaced");
-		if (_commit) commit();
-		else modified = true;
-		return did;
-	}
-
-	return 0;
-}
-
-
 data_field_t
 Database::get_data_field(const std::string& field_name)
 {

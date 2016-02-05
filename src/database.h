@@ -111,7 +111,6 @@ public:
 	Xapian::docid index(const std::string& body, const std::string& document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid replace(const std::string& document_id, const Xapian::Document& doc, bool commit_=false);
-	Xapian::docid replace(const Xapian::docid& did, const Xapian::Document& doc, bool commit_=false);
 
 	data_field_t get_data_field(const std::string& field_name);
 	data_field_t get_slot_field(const std::string& field_name);
