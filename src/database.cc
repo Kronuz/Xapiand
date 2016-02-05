@@ -688,13 +688,11 @@ Xapian::docid
 Database::index(const std::string& body, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
-		L_ERR(this, "ERROR: database is read-only");
-		return 0;
+		throw MSG_Error("database is read-only");
 	}
 
 	if (_document_id.empty()) {
-		L_ERR(this, "ERROR: Document must have an 'id'");
-		return 0;
+		throw MSG_Error("Document must have an 'id'");
 	}
 
 	// Index required data for the document
@@ -706,41 +704,34 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 	bool blob = true;
 	MsgPack obj;
 	rapidjson::Document rdoc;
-	try {
-		switch (get_mimetype(ct_type)) {
-			case MIMEType::APPLICATION_JSON:
+	switch (get_mimetype(ct_type)) {
+		case MIMEType::APPLICATION_JSON:
+			json_load(rdoc, body);
+			blob = false;
+			obj = MsgPack(rdoc);
+			break;
+		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
+			try {
 				json_load(rdoc, body);
 				blob = false;
 				obj = MsgPack(rdoc);
-				break;
-			case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
-				try {
-					json_load(rdoc, body);
-					blob = false;
-					obj = MsgPack(rdoc);
-					doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
-				} catch (const std::exception&) { }
-				break;
-			case MIMEType::APPLICATION_X_MSGPACK:
-				blob = false;
-				obj = MsgPack(body);
-				break;
-			default:
-				break;
-		}
-
-		L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
-		std::string obj_str = obj.to_string();
-		doc.set_data(encode_length(obj_str.size()) + obj_str + (blob ? body : ""));
-		_index(doc, obj);
-		L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
-		return replace(term_id, doc, _commit);
-	} catch (const ClientError& err) {
-		throw;
-	} catch (const std::exception& err) {
-		L_ERR(this, "ERROR: %s", err.what());
-		return 0;
+				doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
+			} catch (const std::exception&) { }
+			break;
+		case MIMEType::APPLICATION_X_MSGPACK:
+			blob = false;
+			obj = MsgPack(body);
+			break;
+		default:
+			break;
 	}
+
+	L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
+	std::string obj_str = obj.to_string();
+	doc.set_data(encode_length(obj_str.size()) + obj_str + (blob ? body : ""));
+	_index(doc, obj);
+	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
+	return replace(term_id, doc, _commit);
 }
 
 
@@ -748,100 +739,91 @@ Xapian::docid
 Database::patch(const std::string& patches, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
-		L_ERR(this, "ERROR: database is read-only");
-		return 0;
+		throw MSG_Error("database is read-only");
 	}
 
 	if (_document_id.empty()) {
-		L_ERR(this, "ERROR: Document must have an 'id'");
-		return 0;
+		throw MSG_ClientError("Document must have an 'id'");
 	}
 
 	rapidjson::Document rdoc_patch;
 	MIMEType t = get_mimetype(ct_type);
 	MsgPack obj_patch;
 	std::string _ct_type(ct_type);
-	try {
-		switch (t) {
-			case MIMEType::APPLICATION_JSON:
-				json_load(rdoc_patch, patches);
-				obj_patch = MsgPack(rdoc_patch);
-				break;
-			case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
-				json_load(rdoc_patch, patches);
-				obj_patch = MsgPack(rdoc_patch);
-				_ct_type = JSON_TYPE;
-				break;
-			case MIMEType::APPLICATION_X_MSGPACK:
-				obj_patch = MsgPack(patches);
-				break;
-			default:
-				throw MSG_Error("Patches must be a JSON or MsgPack");
-		}
+	switch (t) {
+		case MIMEType::APPLICATION_JSON:
+			json_load(rdoc_patch, patches);
+			obj_patch = MsgPack(rdoc_patch);
+			break;
+		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
+			json_load(rdoc_patch, patches);
+			obj_patch = MsgPack(rdoc_patch);
+			_ct_type = JSON_TYPE;
+			break;
+		case MIMEType::APPLICATION_X_MSGPACK:
+			obj_patch = MsgPack(patches);
+			break;
+		default:
+			throw MSG_ClientError("Patches must be a JSON or MsgPack");
+	}
 
-		std::string prefix(DOCUMENT_ID_TERM_PREFIX);
-		if (isupper(_document_id[0])) {
-			prefix.append(":");
-		}
+	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
+	if (isupper(_document_id[0])) {
+		prefix.append(":");
+	}
 
-		Xapian::QueryParser queryparser;
-		queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-		auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
+	Xapian::QueryParser queryparser;
+	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
+	auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
 
-		Xapian::Enquire enquire(*db);
-		enquire.set_query(query);
-		Xapian::MSet mset = enquire.get_mset(0, 1);
-		Xapian::MSetIterator m = mset.begin();
+	Xapian::Enquire enquire(*db);
+	enquire.set_query(query);
+	Xapian::MSet mset = enquire.get_mset(0, 1);
+	Xapian::MSetIterator m = mset.begin();
 
-		Xapian::Document document;
-		for (int t = DB_RETRIES; t >= 0; --t) {
-			try {
-				document = db->get_document(*m);
-				break;
-			} catch (const Xapian::DatabaseModifiedError& er) {
-				if (t) {
-					reopen();
-					m = mset.begin();
-				} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-				continue;
-			} catch (const Xapian::NetworkError& er) {
-				if (t) {
-					reopen();
-					m = mset.begin();
-				} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-				continue;
-			} catch (const Xapian::InvalidArgumentError&) {
-				return 0;
-			} catch (const Xapian::DocNotFoundError&) {
-				return 0;
-			} catch (const Xapian::Error& er) {
-				L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-				return 0;
-			}
-		}
-
-		MsgPack obj_data = get_MsgPack(document);
-		if (apply_patch(obj_patch, obj_data)) {
-			Xapian::Document doc;
-			std::string term_id;
-
-			// Index required data for the document
-			index_required_data(doc, term_id, _document_id, _ct_type, ct_length);
-
-			L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
-			std::string obj_data_str = obj_data.to_string();
-			doc.set_data(encode_length(obj_data_str.size()) + obj_data_str + get_blob(document));
-			_index(doc, obj_data);
-			L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
-			return replace(term_id, doc, _commit);
-		} else {
-			// Object no patched
+	Xapian::Document document;
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			document = db->get_document(*m);
+			break;
+		} catch (const Xapian::DatabaseModifiedError& er) {
+			if (t) {
+				reopen();
+				m = mset.begin();
+			} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::NetworkError& er) {
+			if (t) {
+				reopen();
+				m = mset.begin();
+			} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			continue;
+		} catch (const Xapian::InvalidArgumentError&) {
+			return 0;
+		} catch (const Xapian::DocNotFoundError&) {
+			return 0;
+		} catch (const Xapian::Error& er) {
+			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
 			return 0;
 		}
-	} catch (const ClientError& err) {
-		throw;
-	} catch (const std::exception& err) {
-		L_ERR(this, "ERROR: %s", err.what());
+	}
+
+	MsgPack obj_data = get_MsgPack(document);
+	if (apply_patch(obj_patch, obj_data)) {
+		Xapian::Document doc;
+		std::string term_id;
+
+		// Index required data for the document
+		index_required_data(doc, term_id, _document_id, _ct_type, ct_length);
+
+		L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
+		std::string obj_data_str = obj_data.to_string();
+		doc.set_data(encode_length(obj_data_str.size()) + obj_data_str + get_blob(document));
+		_index(doc, obj_data);
+		L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
+		return replace(term_id, doc, _commit);
+	} else {
+		// Object no patched
 		return 0;
 	}
 }
