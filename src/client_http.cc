@@ -475,6 +475,7 @@ HttpClient::run()
 			}
 		} else {
 			err_response["error"] = error;
+			err_response["status"] = error_code;
 			error = err_response.to_json_string();
 			write(http_response(error_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor, 0, error));
 		}
@@ -829,6 +830,7 @@ HttpClient::bad_request_view(const query_field_t& e, int cmd)
 			err_response["error"] = "BAD QUERY";
 	}
 
+	err_response["status"] = 400;
 	std::string response_str(err_response.to_json_string(e.pretty) + "\n\n");
 	write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
