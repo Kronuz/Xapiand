@@ -388,6 +388,7 @@ HttpClient::run()
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
 
+	MsgPack err_response;
 	std::string error;
 	const char* error_str;
 	bool detach_needed = false;
@@ -473,6 +474,8 @@ HttpClient::run()
 				detach();
 			}
 		} else {
+			err_response["error"] = error;
+			error = err_response.to_json_string();
 			write(http_response(error_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor, 0, error));
 		}
 	}
@@ -817,13 +820,13 @@ HttpClient::bad_request_view(const query_field_t& e, int cmd)
 	MsgPack err_response;
 	switch (cmd) {
 		case CMD_UNKNOWN_HOST:
-			err_response["Error message"] =  "Unknown host " + host;
+			err_response["error"] = "Unknown host " + host;
 			break;
 		case CMD_UNKNOWN_ENDPOINT:
-			err_response["Error message"] = "Unknown Endpoint - No one knows the index";
+			err_response["error"] = "Unknown Endpoint - No one knows the index";
 			break;
 		default:
-			err_response["Error message"] = "BAD QUERY";
+			err_response["error"] = "BAD QUERY";
 	}
 
 	std::string response_str(err_response.to_json_string(e.pretty) + "\n\n");
