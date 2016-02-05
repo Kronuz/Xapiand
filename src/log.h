@@ -211,6 +211,7 @@ class LogThread {
 #define L_REPLICATION _
 #define L_OBJ _
 #define L_DATABASE _
+#define L_DATABASE_WAL _
 #define L_HTTP _
 #define L_BINARY _
 #define L_HTTP_PROTO_PARSER _

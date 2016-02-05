@@ -182,6 +182,8 @@ Database::commit()
 {
 	schema.store();
 
+	L_DATABASE_WAL(this, "COMMIT '%s'", repr(db->get_revision_info()).c_str());
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Commit: t: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -218,6 +220,8 @@ Database::drop(const std::string& doc_id, bool _commit)
 	}
 
 	std::string document_id = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
+
+	L_DATABASE_WAL(this, "DELETE '%s', '%s'", repr(db->get_revision_info()).c_str(), repr(document_id).c_str());
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Deleting doc_id: %s  t: %d", document_id.c_str(), t);
@@ -833,6 +837,9 @@ Xapian::docid
 Database::replace(const std::string& document_id, const Xapian::Document& doc, bool _commit)
 {
 	Xapian::docid did;
+
+	L_DATABASE_WAL(this, "REPLACE '%s', '%s', '%s'", repr(db->get_revision_info()).c_str(), repr(document_id).c_str(), repr(doc.serialise()).c_str());
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: %s  t: %d", document_id.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -1480,6 +1487,8 @@ Database::get_metadata(const std::string& key, std::string& value)
 bool
 Database::set_metadata(const std::string& key, const std::string& value, bool _commit)
 {
+	L_DATABASE_WAL(this, "META '%s', '%s', '%s'", repr(db->get_revision_info()).c_str(), repr(key).c_str(), repr(value).c_str());
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
