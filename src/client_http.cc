@@ -925,7 +925,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 			std::string response_str(response.to_json_string(e.pretty) + "\n\n");
 			write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, response_str));
 		} else {
-			bool json_chunked = e.unique_doc && mset.size() == 1 ? false : true;
+			bool chunked = e.unique_doc && mset.size() == 1 ? false : true;
 
 			for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
 				Xapian::docid docid = 0;
@@ -964,28 +964,20 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 					return;
 				}
 
-				MsgPack obj_data;
-				std::string blob_data;
-				std::string ct_type(document.get_value(DB_SLOT_TYPE));
-				bool type_found = false;
-				for (const auto& accept : accept_set) {
-					if (accept.second == ct_type || accept.second == "*/*") {
-						if (accept.second == JSON_TYPE || accept.second == MSGPACK_TYPE || ct_type == JSON_TYPE || ct_type == MSGPACK_TYPE) {
-							obj_data = get_MsgPack(document);
-							ct_type = accept.second;
-							type_found = true;
-							break;
-						} else {
-							blob_data = get_blob(document);
-							type_found = true;
-							break;
-						}
+				auto ct_type_str = document.get_value(DB_SLOT_TYPE);
+				if (ct_type_str == JSON_TYPE || ct_type_str == MSGPACK_TYPE) {
+					if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
+						ct_type_str = JSON_TYPE;
+					} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
+						ct_type_str = MSGPACK_TYPE;
 					}
 				}
 
-				if (!type_found) {
+				auto ct_type = content_type_pair(ct_type_str);
+				const auto& accepted_type = get_acceptable_type(ct_type);
+				if (!is_acceptable_type(accepted_type, ct_type)) {
 					MsgPack response;
-					response["Error message"] = std::string("Response type " + ct_type + " not provided in the accept header");
+					response["Error message"] = std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header");
 					std::string response_str(response.to_json_string() + "\n\n");
 					write(http_response(406, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 					manager()->database_pool.checkin(database);
@@ -993,15 +985,23 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 					return;
 				}
 
-				// Returns blob_data in case that type is different from msgpack::type::MAP
-				if (obj_data.obj->type != msgpack::type::MAP) {
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, blob_data, ct_type));
+				MsgPack obj_data;
+				std::string chunk_separator;
+				if (is_acceptable_type(json_type, ct_type)) {
+					obj_data = get_MsgPack(document);
+					chunk_separator = "\n\n";
+				} else if (is_acceptable_type(msgpack_type, ct_type)) {
+					obj_data = get_MsgPack(document);
+				} else {
+					// Returns blob_data in case that type is unkown
+					auto blob_data = get_blob(document);
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, blob_data, ct_type_str));
 					manager()->database_pool.checkin(database);
 					return;
 				}
 
-				if (rc == 0 && json_chunked) {
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, cout_matched));
+				if (rc == 0 && chunked) {
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, cout_matched, "", ct_type_str));
 				}
 
 				try {
@@ -1011,17 +1011,18 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 					obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
 				}
 
-				std::string result(obj_data.to_json_string(e.pretty) + "\n\n");
-				if (json_chunked) {
-					if (!write(http_response(200, HTTP_BODY | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, result))) {
+				std::string result = serialize_response(obj_data, ct_type, e.pretty);
+
+				if (chunked) {
+					if (!write(http_response(200, HTTP_BODY | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, result + chunk_separator))) {
 						break;
 					}
-				} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result))) {
+				} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result, ct_type_str))) {
 					break;
 				}
 			}
 
-			if (json_chunked) {
+			if (chunked) {
 				write(http_response(0, HTTP_BODY, 0, 0, 0, "0\r\n\r\n"));
 			}
 		}
@@ -1479,4 +1480,52 @@ HttpClient::clean_http_request()
 	L_TIME(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
 
 	async_read.send();
+}
+
+
+std::pair<std::string, std::string>
+HttpClient::content_type_pair(const std::string& ct_type) {
+	std::size_t found = ct_type.find_last_of("/");
+	const char* content_type_str = ct_type.c_str();
+	return make_pair(std::string(content_type_str, found), std::string(content_type_str, found + 1, ct_type.size()));
+}
+
+bool
+HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::pair<std::string, std::string>& ct_type) {
+	bool type_ok = false, subtype_ok = false;
+	if (ct_type_pattern.first == "*") {
+		type_ok = true;
+	} else {
+		type_ok = ct_type_pattern.first == ct_type.first;
+	}
+	if (ct_type_pattern.second == "*") {
+		subtype_ok = true;
+	} else {
+		subtype_ok = ct_type_pattern.second == ct_type.second;
+	}
+	return type_ok && subtype_ok;
+}
+
+const std::pair<std::string, std::string>&
+HttpClient::get_acceptable_type(const std::pair<std::string, std::string>& ct_type) {
+	if (accept_set.empty()) {
+		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, std::pair<std::string, std::string>>(1, 0, content_type_pair(content_type)));
+		accept_set.insert(std::tuple<double, int, std::pair<std::string, std::string>>(1, 1, std::make_pair(std::string("*"), std::string("*"))));
+	}
+	for (const auto& accept : accept_set) {
+		if (is_acceptable_type(std::get<2>(accept), ct_type)) {
+			return std::get<2>(accept);
+		}
+	}
+	return std::get<2>(*accept_set.begin());
+}
+
+std::string
+HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty) {
+	if (is_acceptable_type(json_type, ct_type)) {
+		return obj.to_json_string(pretty);
+	} else if (is_acceptable_type(msgpack_type, ct_type)) {
+		return obj.to_string();
+	}
+	return "";
 }

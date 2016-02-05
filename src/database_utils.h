@@ -71,6 +71,10 @@
 #define FORM_URLENCODED_TYPE "application/x-www-form-urlencoded"
 #define MSGPACK_TYPE "application/x-msgpack"
 
+const auto any_type = std::make_pair(std::string("*"), std::string("*"));
+const auto json_type = std::make_pair(std::string("application"), std::string("json"));
+const auto msgpack_type = std::make_pair(std::string("application"), std::string("x-msgpack"));
+
 
 extern const std::regex find_types_re;
 
