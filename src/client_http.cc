@@ -750,7 +750,6 @@ HttpClient::index_document_view(const query_field_t& e)
 	MsgPack response;
 	auto data = response["index"];
 	data[RESERVED_ID] = command;
-	data["commit"] = e.commit;
 	std::string response_str(response.to_json_string(e.pretty) + "\n\n");
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
@@ -774,7 +773,6 @@ HttpClient::update_document_view(const query_field_t& e)
 	MsgPack response;
 	auto data = response["update"];
 	data[RESERVED_ID] = command;
-	data["commit"] = e.commit;
 	std::string response_str(response.to_json_string(e.pretty) + "\n\n");
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
