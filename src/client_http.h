@@ -70,8 +70,8 @@ class HttpClient : public BaseClient {
 	static const http_parser_settings settings;
 
 	struct accept_preference_comp {
-		constexpr bool operator()(const std::pair<double, std::string>& l, const std::pair<double, std::string>& r) const noexcept {
-			return l.first == r.first ? l.second < r.second : l.first < r.first;
+		constexpr bool operator()(const std::tuple<double, int, std::pair<std::string, std::string>>& l, const std::tuple<double, int, std::pair<std::string, std::string>>& r) const noexcept {
+			return (std::get<0>(l) == std::get<0>(r)) ? std::get<1>(l) < std::get<1>(r) : std::get<0>(l) > std::get<0>(r);
 		}
 	};
 
@@ -87,7 +87,7 @@ class HttpClient : public BaseClient {
 
 	std::string content_type;
 	std::string content_length;
-	std::set<std::pair<double, std::string>, accept_preference_comp> accept_set;
+	std::set<std::tuple<double, int, std::pair<std::string, std::string>>, accept_preference_comp> accept_set;
 	bool expect_100 = false;
 
 	std::string host;

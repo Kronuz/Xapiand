@@ -51,7 +51,7 @@
 #define METHOD_PATCH   24
 
 
-static const std::regex header_accept_re("([a-z*+]+/[a-z*+]+)(?:;?(q=(?:\\d*\\.)?\\d+)?),?");
+static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;q=(\\d+(?:\\.\\d+)?))?");
 
 
 static const char* status_code[6][14] = {
@@ -323,20 +323,14 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 			} else if (name.compare("content-length") == 0) {
 				self->content_length = value;
 			} else if (name.compare("accept") == 0) {
-				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_continuous);
+				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
 				std::sregex_iterator end;
-				size_t size_match = 0;
+				int i = 0;
 				while (next != end) {
-					size_match += next->length(0);
-					next->length(2) != 0 ? self->accept_set.insert(std::make_pair(std::stod(std::string(next->str(2), 2)), next->str(1)))
-										 : self->accept_set.insert(std::make_pair(1, next->str(1)));
+					next->length(3) != 0 ? self->accept_set.insert(std::make_tuple(std::stod(next->str(3)), i, std::make_pair(next->str(1), next->str(2))))
+					: self->accept_set.insert(std::make_tuple(1, i, std::make_pair(next->str(1), next->str(2))));
 					++next;
-				}
-
-				if (size_match != value.size()) {
-					self->write(self->http_response(400, HTTP_STATUS, p->http_major, p->http_minor)); // <-- remove leater!
-					self->close();
-					return 0;
+					++i;
 				}
 			}
 			self->header_name.clear();
