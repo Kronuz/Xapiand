@@ -157,10 +157,12 @@ public:
 	std::string get_uuid() const;
 	std::string get_revision_info() const;
 
-	bool drop(const std::string& document_id, bool commit_=false);
+	bool delete_document(const std::string& document_id, bool commit_=false);
+	bool delete_document_term(const std::string& term, bool commit_=false);
 	Xapian::docid index(const std::string& body, const std::string& document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length);
-	Xapian::docid replace(const std::string& document_id, const Xapian::Document& doc, bool commit_=false);
+	Xapian::docid replace_document(const std::string& document_id, const Xapian::Document& doc, bool commit_=false);
+	Xapian::docid replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_=false);
 
 	data_field_t get_data_field(const std::string& field_name);
 	data_field_t get_slot_field(const std::string& field_name);

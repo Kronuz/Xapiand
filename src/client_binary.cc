@@ -305,7 +305,7 @@ BinaryClient::storing_file_done()
 
 	Xapian::Document doc;
 	doc.add_value(1, encode_length(haystack_offset));
-	storing_database->replace(encode_length(storing_id), doc, true);
+	storing_database->replace_document(encode_length(storing_id), doc, true);
 
 	manager()->database_pool.checkin(storing_database);
 	storing_database.reset();

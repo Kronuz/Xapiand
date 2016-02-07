@@ -682,7 +682,7 @@ HttpClient::delete_document_view(const query_field_t& e)
 
 	auto tp_start = std::chrono::system_clock::now();
 
-	if (!database->drop(command, e.commit)) {
+	if (!database->delete_document(command, e.commit)) {
 		manager()->database_pool.checkin(database);
 		write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;

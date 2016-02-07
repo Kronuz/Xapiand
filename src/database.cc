@@ -383,22 +383,27 @@ Database::commit()
 
 
 bool
-Database::drop(const std::string& doc_id, bool _commit)
+Database::delete_document(const std::string& doc_id, bool _commit)
+{
+	return delete_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), _commit);
+}
+
+
+bool
+Database::delete_document_term(const std::string& term, bool _commit)
 {
 	if (!(flags & DB_WRITABLE)) {
 		L_ERR(this, "ERROR: database is read-only");
 		return 0;
 	}
 
-	std::string document_id = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
-
-	if (local) Database::WAL.write_delete_document_term(*this, document_id);
+	if (local) Database::WAL.write_delete_document_term(*this, term);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Deleting doc_id: %s  t: %d", document_id.c_str(), t);
+		L_DATABASE_WRAP(this, "Deleting document: %s  t: %d", term.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			wdb->delete_document(document_id);
+			wdb->delete_document(term);
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) reopen();
 			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
@@ -416,7 +421,7 @@ Database::drop(const std::string& doc_id, bool _commit)
 		return true;
 	}
 
-	L_ERR(this, "ERROR: Not can delete document: %s!", document_id.c_str());
+	L_ERR(this, "ERROR: Not can delete document: %s!", term.c_str());
 	return false;
 }
 
@@ -902,7 +907,7 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 	doc.set_data(encode_length(obj_str.size()) + obj_str + (blob ? body : ""));
 	_index(doc, obj);
 	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
-	return replace(term_id, doc, _commit);
+	return replace_document_term(term_id, doc, _commit);
 }
 
 
@@ -992,7 +997,7 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 		doc.set_data(encode_length(obj_data_str.size()) + obj_data_str + get_blob(document));
 		_index(doc, obj_data);
 		L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
-		return replace(term_id, doc, _commit);
+		return replace_document_term(term_id, doc, _commit);
 	} else {
 		// Object no patched
 		return 0;
@@ -1001,17 +1006,25 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 
 
 Xapian::docid
-Database::replace(const std::string& document_id, const Xapian::Document& doc, bool _commit)
+Database::replace_document(const std::string& doc_id, const Xapian::Document& doc, bool _commit)
+{
+	return replace_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), doc, _commit);
+}
+
+
+
+Xapian::docid
+Database::replace_document_term(const std::string& term, const Xapian::Document& doc, bool _commit)
 {
 	Xapian::docid did;
 
-	if (local) Database::WAL.write_replace_document_term(*this, document_id, doc);
+	if (local) Database::WAL.write_replace_document_term(*this, term, doc);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Replacing: %s  t: %d", document_id.c_str(), t);
+		L_DATABASE_WRAP(this, "Replacing: %s  t: %d", term.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			did = wdb->replace_document(document_id, doc);
+			did = wdb->replace_document(term, doc);
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) reopen();
 			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
@@ -2163,7 +2176,7 @@ DatabasePool::init_ref(const Endpoints& endpoints)
 			// Start values for the DB.
 			doc.add_boolean_term(prefixed(DB_MASTER, get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE)));
 			doc.add_value(DB_SLOT_CREF, "0");
-			ref_database->replace(unique_id, doc, true);
+			ref_database->replace_document_term(unique_id, doc, true);
 		}
 	}
 
@@ -2192,14 +2205,14 @@ DatabasePool::inc_ref(const Endpoints& endpoints)
 			// QUESTION: This case could happen?
 			doc.add_boolean_term(unique_id);
 			doc.add_value(0, "0");
-			ref_database->replace(unique_id, doc, true);
+			ref_database->replace_document_term(unique_id, doc, true);
 		} else {
 			// Document found - reference increased
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
 			int nref = std::stoi(doc.get_value(0));
 			doc.add_value(0, std::to_string(nref + 1));
-			ref_database->replace(unique_id, doc, true);
+			ref_database->replace_document_term(unique_id, doc, true);
 		}
 	}
 
@@ -2228,7 +2241,7 @@ DatabasePool::dec_ref(const Endpoints& endpoints)
 			doc.add_boolean_term(unique_id);
 			int nref = std::stoi(doc.get_value(0)) - 1;
 			doc.add_value(0, std::to_string(nref));
-			ref_database->replace(unique_id, doc, true);
+			ref_database->replace_document_term(unique_id, doc, true);
 			if (nref == 0) {
 				// qmtx need a lock
 				delete_files(endp_it->path);
