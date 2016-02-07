@@ -409,6 +409,55 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 }
 
 
+int
+BinaryClient::get_message(double timeout, std::string &result, int)
+{
+	int message_type = static_cast<int>(get_message(timeout, result));
+
+	DatabaseWAL::wal_type wal_type = DatabaseWAL::MAX;
+	switch (message_type) {
+		case 14:  // MSG_ADDDOCUMENT
+			wal_type = DatabaseWAL::ADD_DOCUMENT;
+			break;
+		case 15:  // MSG_CANCEL
+			wal_type = DatabaseWAL::CANCEL;
+			break;
+		case 16:  // MSG_DELETEDOCUMENTTERM
+			wal_type = DatabaseWAL::DELETE_DOCUMENT_TERM;
+			break;
+		case 17:  // MSG_COMMIT
+			wal_type = DatabaseWAL::COMMIT;
+			break;
+		case 18:  // MSG_REPLACEDOCUMENT
+			wal_type = DatabaseWAL::REPLACE_DOCUMENT;
+			break;
+		case 19:  // MSG_REPLACEDOCUMENTTERM
+			wal_type = DatabaseWAL::REPLACE_DOCUMENT_TERM;
+			break;
+		case 20:  // MSG_DELETEDOCUMENT
+			wal_type = DatabaseWAL::DELETE_DOCUMENT;
+			break;
+		case 23:  // MSG_SETMETADATA
+			wal_type = DatabaseWAL::SET_METADATA;
+			break;
+		case 24:  // MSG_ADDSPELLING
+			wal_type = DatabaseWAL::ADD_SPELLING;
+			break;
+		case 25:  // MSG_REMOVESPELLING
+			wal_type = DatabaseWAL::REMOVE_SPELLING;
+			break;
+	}
+
+	if (wal_type != DatabaseWAL::MAX) {
+		Xapian::WritableDatabase* wdb = get_wdb();
+		Database::WAL.write(*databases.at(wdb), wal_type, result);
+		release_db(wdb);
+	}
+
+	return message_type;
+}
+
+
 void
 BinaryClient::shutdown()
 {

@@ -47,6 +47,165 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 };
 
 
+constexpr const char* const DatabaseWAL::names[];
+
+
+bool DatabaseWAL::execute(Database& database, const std::string& line)
+{
+	const char *p = line.data();
+	const char *p_end = p + line.size();
+
+	if (!(database.flags & DB_WRITABLE)) {
+		throw MSG_Error("Database is read-only");
+	}
+
+	if (!database.local) {
+		throw MSG_Error("Cannot execute WAL on a remote database!");
+	}
+
+	std::string uuid(p, 36);
+	p += 36;
+
+	if (uuid != database.get_uuid()) {
+		return false;
+	}
+
+	size_t size = decode_length(&p, p_end, true);
+	std::string revision(p, size);
+	p += size;
+
+	if (revision != database.get_revision_info()) {
+		return false;
+	}
+
+	wal_type type = static_cast<wal_type>(decode_length(&p, p_end));
+
+	size = decode_length(&p, p_end, true);
+	std::string data(p, size);
+
+	Xapian::docid did;
+	Xapian::termcount freq;
+
+	p = data.data();
+	p_end = p + data.size();
+
+	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database.db.get());
+	switch (type) {
+		case ADD_DOCUMENT:
+			wdb->add_document(Xapian::Document::unserialise(data));
+			break;
+		case CANCEL:
+			wdb->begin_transaction(false);
+			wdb->cancel_transaction();
+			break;
+		case DELETE_DOCUMENT_TERM:
+			wdb->delete_document(data);
+			break;
+		case COMMIT:
+			wdb->commit();
+			break;
+		case REPLACE_DOCUMENT:
+			did = decode_length(&p, p_end);
+			wdb->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end - p)));
+			break;
+		case REPLACE_DOCUMENT_TERM:
+			size = decode_length(&p, p_end, true);
+			wdb->replace_document(std::string(p, size), Xapian::Document::unserialise(std::string(p + size, p_end - p - size)));
+			break;
+		case DELETE_DOCUMENT:
+			did = decode_length(&p, p_end);
+			wdb->delete_document(did);
+			break;
+		case SET_METADATA:
+			size = decode_length(&p, p_end, true);
+			wdb->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size));
+			break;
+		case ADD_SPELLING:
+			freq = decode_length(&p, p_end);
+			wdb->add_spelling(std::string(p, p_end - p), freq);
+			break;
+		case REMOVE_SPELLING:
+			freq = decode_length(&p, p_end);
+			wdb->remove_spelling(std::string(p, p_end - p), freq);
+			break;
+		default:
+			throw MSG_Error("Invalid WAL message!");
+	}
+
+	return true;
+}
+
+void DatabaseWAL::write(const Database& database, wal_type type, const std::string& data)
+{
+	if (!(database.flags & DB_WRITABLE)) {
+		throw MSG_Error("Database is read-only");
+	}
+
+	if (!database.local) {
+		throw MSG_Error("Cannot execute WAL on a remote database!");
+	}
+
+	auto endpoint = database.endpoints.cbegin();
+	std::string revision = database.get_revision_info();
+	std::string line = database.get_uuid() + encode_length(revision.size()) + revision + encode_length(type) + encode_length(data.size()) + data;
+
+	L_DATABASE_WAL(this, "%s on %s: '%s'", names[type], endpoint->path.c_str(), repr(line).c_str());
+}
+
+void DatabaseWAL::write_add_document(const Database& database, const Xapian::Document& doc)
+{
+	write(database, ADD_DOCUMENT, doc.serialise());
+}
+
+void DatabaseWAL::write_cancel(const Database& database)
+{
+	write(database, CANCEL, "");
+}
+
+void DatabaseWAL::write_delete_document_term(const Database& database, const std::string& document_id)
+{
+	write(database, DELETE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id);
+}
+
+void DatabaseWAL::write_commit(const Database& database)
+{
+	write(database, COMMIT, "");
+}
+
+void DatabaseWAL::write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document& doc)
+{
+	write(database, REPLACE_DOCUMENT, encode_length(did) + doc.serialise());
+}
+
+void DatabaseWAL::write_replace_document_term(const Database& database, const std::string& document_id, const Xapian::Document& doc)
+{
+	write(database, REPLACE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id + doc.serialise());
+}
+
+void DatabaseWAL::write_delete_document(const Database& database, Xapian::docid did)
+{
+	write(database, DELETE_DOCUMENT, encode_length(did));
+}
+
+void DatabaseWAL::write_set_metadata(const Database& database, const std::string& key, const std::string& val)
+{
+	write(database, SET_METADATA, encode_length(key.size()) + key + val);
+}
+
+void DatabaseWAL::write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc)
+{
+	write(database, ADD_SPELLING, encode_length(freqinc) + word);
+}
+
+void DatabaseWAL::write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec)
+{
+	write(database, REMOVE_SPELLING, encode_length(freqdec) + word);
+}
+
+
+DatabaseWAL Database::WAL;
+
+
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_)
 	: weak_queue(queue_),
 	  endpoints(endpoints_),
@@ -177,12 +336,24 @@ Database::reopen()
 }
 
 
+std::string Database::get_uuid() const
+{
+	return db->get_uuid();
+}
+
+
+std::string Database::get_revision_info() const
+{
+	return db->get_revision_info();
+}
+
+
 bool
 Database::commit()
 {
 	schema.store();
 
-	L_DATABASE_WAL(this, "COMMIT '%s'", repr(db->get_revision_info()).c_str());
+	if (local) Database::WAL.write_commit(*this);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Commit: t: %d", t);
@@ -221,7 +392,7 @@ Database::drop(const std::string& doc_id, bool _commit)
 
 	std::string document_id = prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX);
 
-	L_DATABASE_WAL(this, "DELETE '%s', '%s'", repr(db->get_revision_info()).c_str(), repr(document_id).c_str());
+	if (local) Database::WAL.write_delete_document_term(*this, document_id);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Deleting doc_id: %s  t: %d", document_id.c_str(), t);
@@ -834,7 +1005,7 @@ Database::replace(const std::string& document_id, const Xapian::Document& doc, b
 {
 	Xapian::docid did;
 
-	L_DATABASE_WAL(this, "REPLACE '%s', '%s', '%s'", repr(db->get_revision_info()).c_str(), repr(document_id).c_str(), repr(doc.serialise()).c_str());
+	if (local) Database::WAL.write_replace_document_term(*this, document_id, doc);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: %s  t: %d", document_id.c_str(), t);
@@ -1482,7 +1653,7 @@ Database::get_metadata(const std::string& key, std::string& value)
 bool
 Database::set_metadata(const std::string& key, const std::string& value, bool _commit)
 {
-	L_DATABASE_WAL(this, "META '%s', '%s', '%s'", repr(db->get_revision_info()).c_str(), repr(key).c_str(), repr(value).c_str());
+	if (local) Database::WAL.write_set_metadata(*this, key, value);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());

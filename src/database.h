@@ -75,8 +75,55 @@ class DatabasesLRU;
 class DatabaseQueue;
 
 
+class DatabaseWAL {
+	static const constexpr char* const names[] = {
+		"ADD_DOCUMENT",
+		"CANCEL",
+		"DELETE_DOCUMENT_TERM",
+		"COMMIT",
+		"REPLACE_DOCUMENT",
+		"REPLACE_DOCUMENT_TERM",
+		"DELETE_DOCUMENT",
+		"SET_METADATA",
+		"ADD_SPELLING",
+		"REMOVE_SPELLING",
+	};
+
+public:
+	enum wal_type {
+		ADD_DOCUMENT,
+		CANCEL,
+		DELETE_DOCUMENT_TERM,
+		COMMIT,
+		REPLACE_DOCUMENT,
+		REPLACE_DOCUMENT_TERM,
+		DELETE_DOCUMENT,
+		SET_METADATA,
+		ADD_SPELLING,
+		REMOVE_SPELLING,
+		MAX
+	};
+
+	bool execute(Database& database, const std::string& line);
+
+	void write(const Database& database, wal_type type, const std::string& data);
+	void write_add_document(const Database& database, const Xapian::Document& doc);
+	void write_cancel(const Database& database);
+	void write_delete_document_term(const Database& database, const std::string& document_id);
+	void write_commit(const Database& database);
+	void write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document& doc);
+	void write_replace_document_term(const Database& database, const std::string& document_id, const Xapian::Document& doc);
+	void write_delete_document(const Database& database, Xapian::docid did);
+	void write_set_metadata(const Database& database, const std::string& key, const std::string& val);
+	void write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc);
+	void write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec);
+};
+
+
 class Database {
 public:
+	static DatabaseWAL WAL;
+
 	Schema schema;
 
 	std::weak_ptr<DatabaseQueue> weak_queue;
@@ -106,6 +153,9 @@ public:
 	long long read_mastery(const std::string& dir);
 	void reopen();
 	bool commit();
+
+	std::string get_uuid() const;
+	std::string get_revision_info() const;
 
 	bool drop(const std::string& document_id, bool commit_=false);
 	Xapian::docid index(const std::string& body, const std::string& document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);

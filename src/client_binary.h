@@ -144,9 +144,7 @@ public:
 		return (StoringType)get_message(timeout, result, static_cast<int>(required_type));
 	}
 
-	inline int get_message(double timeout, std::string &result, int) override {
-		return static_cast<int>(get_message(timeout, result));
-	}
+	int get_message(double timeout, std::string &result, int) override;
 
 	char get_message(double timeout, std::string &result);
 
