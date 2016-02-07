@@ -529,10 +529,10 @@ XapiandManager::run(const opts_t& o)
 	replicator_pool.join();
 
 	L_DEBUG(this, "Waiting for committers...");
+	autocommit_pool.finish();
 	for (auto& commiter: committers) {
 		commiter->shutdown();
 	}
-	autocommit_pool.finish();
 	autocommit_pool.join();
 
 	L_DEBUG(this, "Server ended!");

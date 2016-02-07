@@ -56,6 +56,7 @@ DatabaseAutocommit::shutdown()
 {
 	running.store(false);
 	wakeup_signal.notify_all();
+	L_DEBUG(this , "SHUTDOWN DATABASE AUTOCOMMIT! [%llx]", this);
 }
 
 
