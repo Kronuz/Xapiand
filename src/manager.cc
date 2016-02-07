@@ -473,7 +473,7 @@ XapiandManager::run(const opts_t& o)
 	raft = std::make_shared<Raft>(manager, loop, o.raft_port, o.raft_group);
 	msg += raft->getDescription() + ", ";
 
-	msg += "at pid:" + std::to_string(getpid()) + "...";
+	msg += "at pid:" + std::to_string(getpid()) + " ...";
 
 	L_NOTICE(this, msg.c_str());
 
