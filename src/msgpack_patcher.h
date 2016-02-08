@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "exception.h"
 #include "msgpack.h"
 #include "utils.h"
 
@@ -33,7 +34,10 @@ bool patch_replace(const MsgPack& obj_patch, MsgPack& object);
 bool patch_move(const MsgPack& obj_patch, MsgPack& object);
 bool patch_copy(const MsgPack& obj_patch, MsgPack& object);
 bool patch_test(const MsgPack& obj_patch, MsgPack& object);
+bool patch_incr(const MsgPack& obj_patch, MsgPack& object);
+bool patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr=false);
 MsgPack get_patch_value(const MsgPack& obj_patch);
+bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch);
 
 
 inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
@@ -55,6 +59,47 @@ inline void _erase(MsgPack&& o, const std::string& target) {
 		o.erase(target);
 	} else if (o.obj->type == msgpack::type::ARRAY) {
 		o.erase(strict_stoi(target));
+	}
+}
+
+
+inline void _incr_decr(MsgPack& o, int val) {
+	if (o.obj->type == msgpack::type::POSITIVE_INTEGER) {
+		o.obj->via.u64 += val;
+	} else if (o.obj->type == msgpack::type::NEGATIVE_INTEGER) {
+		o.obj->via.i64 += val;
+	} else {
+		throw msgpack::type_error();
+	}
+}
+
+
+inline void _incr_decr(MsgPack& o, int val, int limit)
+{
+	if (o.obj->type == msgpack::type::POSITIVE_INTEGER) {
+		o.obj->via.u64 += val;
+		if (val < 0) {
+			if (o.obj->via.u64 <= limit) {
+				throw MSG_limitError("limit exceeded");
+			}
+		} else {
+			if (o.obj->via.u64 >= limit) {
+				throw MSG_limitError("limit exceeded");
+			}
+		}
+	} else if (o.obj->type == msgpack::type::NEGATIVE_INTEGER) {
+		o.obj->via.i64 += val;
+		if (val < 0) {
+			if (o.obj->via.i64 <= limit) {
+				throw MSG_limitError("limit exceeded");
+			}
+		} else {
+			if (o.obj->via.i64 >= limit) {
+				throw MSG_limitError("limit exceeded");
+			}
+		}
+	} else {
+		throw msgpack::type_error();
 	}
 }
 

@@ -64,6 +64,17 @@ public:
 };
 
 
+class LimitError : public Exception {
+public:
+	template<typename... Args>
+	LimitError(Args&&... args) : Exception(std::forward<Args>(args)...) {};
+	
+	const char* what() const noexcept {
+		return msg.c_str();
+	}
+};
+
+
 class WorkerException : public std::runtime_error {
 
 	WorkerException();
@@ -74,3 +85,4 @@ public:
 
 #define MSG_Error(...) Error(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_limitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
