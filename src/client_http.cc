@@ -888,6 +888,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 	});
 
 	if (facets) {
+		int status_code = 200;
 		MsgPack response;
 		for (const auto& spy : spies) {
 			std::string name_result = spy.first;
@@ -903,8 +904,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 			}
 			response[name_result] = array;
 		}
-		std::string response_str(response.to_json_string(e.pretty) + "\n\n");
-		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
+		writte_http_response(response, status_code, e.pretty);
 	} else {
 		int rc = 0;
 
