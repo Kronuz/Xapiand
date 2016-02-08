@@ -809,7 +809,7 @@ void
 HttpClient::bad_request_view(const query_field_t& e, int cmd)
 {
 	MsgPack err_response;
-	int status_code;
+	int status_code = 400;
 	switch (cmd) {
 		case CMD_UNKNOWN_HOST:
 			err_response["error"] = "Unknown host " + host;
@@ -821,7 +821,7 @@ HttpClient::bad_request_view(const query_field_t& e, int cmd)
 			err_response["error"] = "BAD QUERY";
 	}
 
-	err_response["status"] = 400;
+	err_response["status"] = status_code;
 	writte_http_response(err_response, status_code, e.pretty);
 }
 
