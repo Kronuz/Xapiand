@@ -632,7 +632,6 @@ HttpClient::document_info_view(const query_field_t& e)
 		prefix += ":";
 	}
 
-	bool found = true;
 	Xapian::docid docid = 0;
 	Xapian::QueryParser queryparser;
 
@@ -653,22 +652,18 @@ HttpClient::document_info_view(const query_field_t& e)
 				m = mset.begin();
 			}
 		}
-	} else {
-		found = false;
 	}
+	manager()->database_pool.checkin(database);
 
 	MsgPack response;
-	if (found) {
+	int status_code = 200;
+	if (docid) {
 		response[RESERVED_ID] = docid;
-		std::string response_str(response.to_json_string(e.pretty) + "\n\n");
-		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 	} else {
 		response["Response empty"] = "Document not found";
-		std::string response_str(response.to_json_string(e.pretty) + "\n\n");
-		write(http_response(404, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
+		status_code = 404;
 	}
-
-	manager()->database_pool.checkin(database);
+	writte_http_response(response, status_code, e.pretty);
 }
 
 
@@ -704,11 +699,12 @@ HttpClient::delete_document_view(const query_field_t& e)
 	manager()->database_pool.checkin(database);
 
 	MsgPack response;
+	int status_code = 200;
 	auto data = response["delete"];
 	data[RESERVED_ID] = command;
 	data["commit"] = e.commit;
-	std::string response_str(response.to_json_string(e.pretty) + "\n\n");
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
+
+	writte_http_response(response, status_code, e.pretty);
 }
 
 
@@ -746,10 +742,10 @@ HttpClient::index_document_view(const query_field_t& e)
 
 	manager()->database_pool.checkin(database);
 	MsgPack response;
+	int status_code = 200;
 	auto data = response["index"];
 	data[RESERVED_ID] = command;
-	std::string response_str(response.to_json_string(e.pretty) + "\n\n");
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
+	writte_http_response(response, status_code, e.pretty);
 }
 
 
@@ -769,10 +765,10 @@ HttpClient::update_document_view(const query_field_t& e)
 
 	manager()->database_pool.checkin(database);
 	MsgPack response;
+	int status_code = 200;
 	auto data = response["update"];
 	data[RESERVED_ID] = command;
-	std::string response_str(response.to_json_string(e.pretty) + "\n\n");
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
+	writte_http_response(response, status_code, e.pretty);
 }
 
 
@@ -780,6 +776,7 @@ void
 HttpClient::stats_view(const query_field_t& e)
 {
 	MsgPack response;
+	int status_code = 200;
 
 	if (e.server) {
 		manager()->server_status(response["Server status"]);
@@ -804,8 +801,7 @@ HttpClient::stats_view(const query_field_t& e)
 	if (!e.stats.empty()) {
 		manager()->get_stats_time(response["Stats time"], e.stats);
 	}
-	std::string response_str(response.to_json_string(e.pretty) + "\n\n");
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
+	writte_http_response(response, status_code, e.pretty);
 }
 
 
@@ -813,6 +809,7 @@ void
 HttpClient::bad_request_view(const query_field_t& e, int cmd)
 {
 	MsgPack err_response;
+	int status_code;
 	switch (cmd) {
 		case CMD_UNKNOWN_HOST:
 			err_response["error"] = "Unknown host " + host;
@@ -825,8 +822,7 @@ HttpClient::bad_request_view(const query_field_t& e, int cmd)
 	}
 
 	err_response["status"] = 400;
-	std::string response_str(err_response.to_json_string(e.pretty) + "\n\n");
-	write(http_response(400, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
+	writte_http_response(err_response, status_code, e.pretty);
 }
 
 
@@ -1486,9 +1482,13 @@ HttpClient::clean_http_request()
 std::pair<std::string, std::string>
 HttpClient::content_type_pair(const std::string& ct_type) {
 	std::size_t found = ct_type.find_last_of("/");
+	if (found == std::string::npos) {
+		return  make_pair(std::string(), std::string());
+	}
 	const char* content_type_str = ct_type.c_str();
 	return make_pair(std::string(content_type_str, found), std::string(content_type_str, found + 1, ct_type.size()));
 }
+
 
 bool
 HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::pair<std::string, std::string>& ct_type) {
@@ -1506,11 +1506,12 @@ HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_typ
 	return type_ok && subtype_ok;
 }
 
+
 const std::pair<std::string, std::string>&
 HttpClient::get_acceptable_type(const std::pair<std::string, std::string>& ct_type) {
 	if (accept_set.empty()) {
 		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, std::pair<std::string, std::string>>(1, 0, content_type_pair(content_type)));
-		accept_set.insert(std::tuple<double, int, std::pair<std::string, std::string>>(1, 1, std::make_pair(std::string("*"), std::string("*"))));
+		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string("*"), std::string("*"))));
 	}
 	for (const auto& accept : accept_set) {
 		if (is_acceptable_type(std::get<2>(accept), ct_type)) {
@@ -1520,12 +1521,33 @@ HttpClient::get_acceptable_type(const std::pair<std::string, std::string>& ct_ty
 	return std::get<2>(*accept_set.begin());
 }
 
+
+//TODO: Add HTML serialization
 std::string
 HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty) {
-	if (is_acceptable_type(json_type, ct_type)) {
+	if (is_acceptable_type(ct_type, json_type)) {
 		return obj.to_json_string(pretty);
-	} else if (is_acceptable_type(msgpack_type, ct_type)) {
+	} else if (is_acceptable_type(ct_type, msgpack_type)) {
 		return obj.to_string();
 	}
-	return "";
+	throw MSG_SerializationError("not serializable");
+}
+
+
+void
+HttpClient::writte_http_response(const MsgPack& response,  int status_code, bool pretty) {
+	std::string response_str;
+	const auto& accepted_type = get_acceptable_type(content_type_pair(content_type));
+	try {
+		response_str = serialize_response(response, accepted_type, pretty);
+	} catch (const SerializationError&e ) {
+		status_code = 406;
+		MsgPack response_err;
+		response_err["status"] = status_code;
+		response_err["error"] = std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + e.what());
+		response_str = response_err.to_json_string();
+		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
+		return;
+	}
+	write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 }
