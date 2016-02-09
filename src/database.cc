@@ -235,6 +235,7 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 	  flags(flags_),
 	  hash(endpoints.hash()),
 	  access_time(system_clock::now()),
+	  modified(false),
 	  mastery_level(-1)
 {
 	reopen();
