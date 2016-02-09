@@ -814,9 +814,6 @@ HttpClient::bad_request_view(const query_field_t& e, int cmd)
 		case CMD_UNKNOWN_HOST:
 			err_response["error"] = "Unknown host " + host;
 			break;
-		case CMD_UNKNOWN_ENDPOINT:
-			err_response["error"] = "Unknown Endpoint - No one knows the index";
-			break;
 		default:
 			err_response["error"] = "BAD QUERY";
 	}
@@ -1146,7 +1143,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 			}
 		}
 
-		if ((parser.method == 4 || parser.method == 24) && endpoints.size() > 1) {
+		if ((parser.method == METHOD_PUT || parser.method == METHOD_PATCH) && endpoints.size() > 1) {
 			return CMD_BAD_ENDPS;
 		}
 
