@@ -90,7 +90,7 @@ class DatabaseWAL {
 	};
 
 public:
-	enum wal_type {
+	enum class Type {
 		ADD_DOCUMENT,
 		CANCEL,
 		DELETE_DOCUMENT_TERM,
@@ -106,7 +106,7 @@ public:
 
 	bool execute(Database& database, const std::string& line);
 
-	void write(const Database& database, wal_type type, const std::string& data);
+	void write(const Database& database, Type type, const std::string& data);
 	void write_add_document(const Database& database, const Xapian::Document& doc);
 	void write_cancel(const Database& database);
 	void write_delete_document_term(const Database& database, const std::string& document_id);

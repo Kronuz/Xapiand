@@ -50,7 +50,8 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 constexpr const char* const DatabaseWAL::names[];
 
 
-bool DatabaseWAL::execute(Database& database, const std::string& line)
+bool
+DatabaseWAL::execute(Database& database, const std::string& line)
 {
 	const char *p = line.data();
 	const char *p_end = p + line.size();
@@ -78,7 +79,7 @@ bool DatabaseWAL::execute(Database& database, const std::string& line)
 		return false;
 	}
 
-	wal_type type = static_cast<wal_type>(decode_length(&p, p_end));
+	Type type = static_cast<Type>(decode_length(&p, p_end));
 
 	size = decode_length(&p, p_end, true);
 	std::string data(p, size);
@@ -91,40 +92,40 @@ bool DatabaseWAL::execute(Database& database, const std::string& line)
 
 	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database.db.get());
 	switch (type) {
-		case ADD_DOCUMENT:
+		case Type::ADD_DOCUMENT:
 			wdb->add_document(Xapian::Document::unserialise(data));
 			break;
-		case CANCEL:
+		case Type::CANCEL:
 			wdb->begin_transaction(false);
 			wdb->cancel_transaction();
 			break;
-		case DELETE_DOCUMENT_TERM:
+		case Type::DELETE_DOCUMENT_TERM:
 			wdb->delete_document(data);
 			break;
-		case COMMIT:
+		case Type::COMMIT:
 			wdb->commit();
 			break;
-		case REPLACE_DOCUMENT:
+		case Type::REPLACE_DOCUMENT:
 			did = decode_length(&p, p_end);
 			wdb->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end - p)));
 			break;
-		case REPLACE_DOCUMENT_TERM:
+		case Type::REPLACE_DOCUMENT_TERM:
 			size = decode_length(&p, p_end, true);
 			wdb->replace_document(std::string(p, size), Xapian::Document::unserialise(std::string(p + size, p_end - p - size)));
 			break;
-		case DELETE_DOCUMENT:
+		case Type::DELETE_DOCUMENT:
 			did = decode_length(&p, p_end);
 			wdb->delete_document(did);
 			break;
-		case SET_METADATA:
+		case Type::SET_METADATA:
 			size = decode_length(&p, p_end, true);
 			wdb->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size));
 			break;
-		case ADD_SPELLING:
+		case Type::ADD_SPELLING:
 			freq = decode_length(&p, p_end);
 			wdb->add_spelling(std::string(p, p_end - p), freq);
 			break;
-		case REMOVE_SPELLING:
+		case Type::REMOVE_SPELLING:
 			freq = decode_length(&p, p_end);
 			wdb->remove_spelling(std::string(p, p_end - p), freq);
 			break;
@@ -135,7 +136,9 @@ bool DatabaseWAL::execute(Database& database, const std::string& line)
 	return true;
 }
 
-void DatabaseWAL::write(const Database& database, wal_type type, const std::string& data)
+
+void
+DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 {
 	if (!(database.flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
@@ -147,59 +150,79 @@ void DatabaseWAL::write(const Database& database, wal_type type, const std::stri
 
 	auto endpoint = database.endpoints.cbegin();
 	std::string revision = database.get_revision_info();
-	std::string line = database.get_uuid() + encode_length(revision.size()) + revision + encode_length(type) + encode_length(data.size()) + data;
+	std::string line = database.get_uuid() + encode_length(revision.size()) + revision + encode_length(toUType(type)) + encode_length(data.size()) + data;
 
-	L_DATABASE_WAL(this, "%s on %s: '%s'", names[type], endpoint->path.c_str(), repr(line).c_str());
+	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint->path.c_str(), repr(line).c_str());
 }
 
-void DatabaseWAL::write_add_document(const Database& database, const Xapian::Document& doc)
+
+void
+DatabaseWAL::write_add_document(const Database& database, const Xapian::Document& doc)
 {
-	write(database, ADD_DOCUMENT, doc.serialise());
+	write(database, Type::ADD_DOCUMENT, doc.serialise());
 }
 
-void DatabaseWAL::write_cancel(const Database& database)
+
+void
+DatabaseWAL::write_cancel(const Database& database)
 {
-	write(database, CANCEL, "");
+	write(database, Type::CANCEL, "");
 }
 
-void DatabaseWAL::write_delete_document_term(const Database& database, const std::string& document_id)
+
+void
+DatabaseWAL::write_delete_document_term(const Database& database, const std::string& document_id)
 {
-	write(database, DELETE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id);
+	write(database, Type::DELETE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id);
 }
 
-void DatabaseWAL::write_commit(const Database& database)
+
+void
+DatabaseWAL::write_commit(const Database& database)
 {
-	write(database, COMMIT, "");
+	write(database, Type::COMMIT, "");
 }
 
-void DatabaseWAL::write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document& doc)
+
+void
+DatabaseWAL::write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document& doc)
 {
-	write(database, REPLACE_DOCUMENT, encode_length(did) + doc.serialise());
+	write(database, Type::REPLACE_DOCUMENT, encode_length(did) + doc.serialise());
 }
 
-void DatabaseWAL::write_replace_document_term(const Database& database, const std::string& document_id, const Xapian::Document& doc)
+
+void
+DatabaseWAL::write_replace_document_term(const Database& database, const std::string& document_id, const Xapian::Document& doc)
 {
-	write(database, REPLACE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id + doc.serialise());
+	write(database, Type::REPLACE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id + doc.serialise());
 }
 
-void DatabaseWAL::write_delete_document(const Database& database, Xapian::docid did)
+
+void
+DatabaseWAL::write_delete_document(const Database& database, Xapian::docid did)
 {
-	write(database, DELETE_DOCUMENT, encode_length(did));
+	write(database, Type::DELETE_DOCUMENT, encode_length(did));
 }
 
-void DatabaseWAL::write_set_metadata(const Database& database, const std::string& key, const std::string& val)
+
+void
+DatabaseWAL::write_set_metadata(const Database& database, const std::string& key, const std::string& val)
 {
-	write(database, SET_METADATA, encode_length(key.size()) + key + val);
+	write(database, Type::SET_METADATA, encode_length(key.size()) + key + val);
 }
 
-void DatabaseWAL::write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc)
+
+void
+DatabaseWAL::write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc)
 {
-	write(database, ADD_SPELLING, encode_length(freqinc) + word);
+	write(database, Type::ADD_SPELLING, encode_length(freqinc) + word);
 }
 
-void DatabaseWAL::write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec)
+
+void
+DatabaseWAL::write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec)
 {
-	write(database, REMOVE_SPELLING, encode_length(freqdec) + word);
+	write(database, Type::REMOVE_SPELLING, encode_length(freqdec) + word);
 }
 
 
