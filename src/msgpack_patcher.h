@@ -64,9 +64,7 @@ inline void _erase(MsgPack&& o, const std::string& target) {
 
 
 inline void _incr_decr(MsgPack& o, int val) {
-	if (o.obj->type == msgpack::type::POSITIVE_INTEGER) {
-		o.obj->via.u64 += val;
-	} else if (o.obj->type == msgpack::type::NEGATIVE_INTEGER) {
+	if (o.obj->type == msgpack::type::NEGATIVE_INTEGER) {
 		o.obj->via.i64 += val;
 	} else {
 		throw msgpack::type_error();
@@ -74,29 +72,15 @@ inline void _incr_decr(MsgPack& o, int val) {
 }
 
 
-inline void _incr_decr(MsgPack& o, int val, int limit)
-{
-	if (o.obj->type == msgpack::type::POSITIVE_INTEGER) {
-		o.obj->via.u64 += val;
-		if (val < 0) {
-			if (o.obj->via.u64 <= limit) {
-				throw MSG_limitError("limit exceeded");
-			}
-		} else {
-			if (o.obj->via.u64 >= limit) {
-				throw MSG_limitError("limit exceeded");
-			}
-		}
-	} else if (o.obj->type == msgpack::type::NEGATIVE_INTEGER) {
+inline void _incr_decr(MsgPack& o, int val, int limit) {
+	if (o.obj->type == msgpack::type::NEGATIVE_INTEGER) {
 		o.obj->via.i64 += val;
 		if (val < 0) {
-			if (o.obj->via.i64 <= limit) {
+			if (static_cast<int>(o.obj->via.i64) <= limit) {
 				throw MSG_limitError("limit exceeded");
 			}
-		} else {
-			if (o.obj->via.i64 >= limit) {
-				throw MSG_limitError("limit exceeded");
-			}
+		} else if (static_cast<int>(o.obj->via.i64) >= limit) {
+			throw MSG_limitError("limit exceeded");
 		}
 	} else {
 		throw msgpack::type_error();
