@@ -106,7 +106,7 @@ DatabaseWAL::execute(Database& database, const std::string& line)
 			wdb->commit();
 			break;
 		case Type::REPLACE_DOCUMENT:
-			did = decode_length(&p, p_end);
+			did = static_cast<Xapian::docid>(decode_length(&p, p_end));
 			wdb->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end - p)));
 			break;
 		case Type::REPLACE_DOCUMENT_TERM:
@@ -114,7 +114,7 @@ DatabaseWAL::execute(Database& database, const std::string& line)
 			wdb->replace_document(std::string(p, size), Xapian::Document::unserialise(std::string(p + size, p_end - p - size)));
 			break;
 		case Type::DELETE_DOCUMENT:
-			did = decode_length(&p, p_end);
+			did = static_cast<Xapian::docid>(decode_length(&p, p_end));
 			wdb->delete_document(did);
 			break;
 		case Type::SET_METADATA:
@@ -122,11 +122,11 @@ DatabaseWAL::execute(Database& database, const std::string& line)
 			wdb->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size));
 			break;
 		case Type::ADD_SPELLING:
-			freq = decode_length(&p, p_end);
+			freq = static_cast<Xapian::termcount>(decode_length(&p, p_end));
 			wdb->add_spelling(std::string(p, p_end - p), freq);
 			break;
 		case Type::REMOVE_SPELLING:
-			freq = decode_length(&p, p_end);
+			freq = static_cast<Xapian::termcount>(decode_length(&p, p_end));
 			wdb->remove_spelling(std::string(p, p_end - p), freq);
 			break;
 		default:
