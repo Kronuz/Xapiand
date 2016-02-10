@@ -37,11 +37,11 @@ protected:
 	std::string msg;
 
 public:
-	Error(const char *file, int line, const char *format, ...);
+	Error(const char *filename, int line, const char *format, ...);
 	~Error() = default;
 
-	const char* what() const noexcept {
-		return (file + ": " + msg).c_str();
+	const char* what() const noexcept override {
+		return msg.c_str();
 	}
 };
 
@@ -50,30 +50,32 @@ class ClientError : public Error {
 public:
 	template<typename... Args>
 	ClientError(Args&&... args) : Error(std::forward<Args>(args)...) { }
-
-	const char* what() const noexcept override {
-		return msg.c_str();
-	}
 };
 
 
 class LimitError : public Error {
 public:
 	template<typename... Args>
-	LimitError(Args&&... args) : Error(std::forward<Args>(args)...) { }
+	LimitError(Args&&... args) : Error(std::forward<Args>(args)...) {
+		msg.assign(file + ": " + msg);
+	}
 };
 
 
 class SerializationError : public Error {
 public:
 	template<typename... Args>
-	SerializationError(Args&&... args) : Error(std::forward<Args>(args)...) { }
+	SerializationError(Args&&... args) : Error(std::forward<Args>(args)...) {
+		msg.assign(file + ": " + msg);
+	}
 };
 
 
 class WorkerDetachObject : public Error {
 public:
-	WorkerDetachObject(const char *file, int line) : Error(file, line, "Detach is needed") { }
+	WorkerDetachObject(const char *filename, int line) : Error(filename, line, "Detach is needed") {
+		msg.assign(file + ": " + msg);
+	}
 };
 
 

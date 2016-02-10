@@ -36,8 +36,8 @@ Error::Error(const char *filename, int line, const char *format, ...)
 	va_start(argptr, format);
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
 	va_end(argptr);
-	msg = buffer;
+	msg.assign(buffer);
 
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
-	file = buffer;
+	file.assign(buffer);
 }
