@@ -31,14 +31,14 @@
 #include <string>
 
 
-class Exception : public std::runtime_error {
+class Error : public std::runtime_error {
 protected:
 	std::string file;
 	std::string msg;
 
 public:
-	Exception(const char *file, int line, const char *format, ...);
-	~Exception() = default;
+	Error(const char *file, int line, const char *format, ...);
+	~Error() = default;
 
 	const char* what() const noexcept {
 		return (file + ": " + msg).c_str();
@@ -46,55 +46,39 @@ public:
 };
 
 
-class Error : public Exception {
+class ClientError : public Error {
 public:
 	template<typename... Args>
-	Error(Args&&... args) : Exception(std::forward<Args>(args)...) {};
-};
+	ClientError(Args&&... args) : Error(std::forward<Args>(args)...) { }
 
-
-class ClientError : public Exception {
-public:
-	template<typename... Args>
-	ClientError(Args&&... args) : Exception(std::forward<Args>(args)...) {};
-
-	const char* what() const noexcept {
+	const char* what() const noexcept override {
 		return msg.c_str();
 	}
 };
 
 
-class LimitError : public Exception {
+class LimitError : public Error {
 public:
 	template<typename... Args>
-	LimitError(Args&&... args) : Exception(std::forward<Args>(args)...) {};
-	
-	const char* what() const noexcept {
-		return msg.c_str();
-	}
+	LimitError(Args&&... args) : Error(std::forward<Args>(args)...) { }
 };
 
 
-class SerializationError : public Exception {
+class SerializationError : public Error {
 public:
 	template<typename... Args>
-	SerializationError(Args&&... args) : Exception(std::forward<Args>(args)...) {};
-
-	const char* what() const noexcept {
-		return msg.c_str();
-	}
+	SerializationError(Args&&... args) : Error(std::forward<Args>(args)...) { }
 };
 
 
-class WorkerException : public std::runtime_error {
-
-	WorkerException();
-
+class WorkerDetachObject : public Error {
 public:
-	static WorkerException detach_object();
+	WorkerDetachObject(const char *file, int line) : Error(file, line, "Detach is needed") { }
 };
+
 
 #define MSG_Error(...) Error(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_SerializationError(...) SerializationError(__FILE__, __LINE__, __VA_ARGS__)
-#define MSG_limitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_WorkerDetachObject() WorkerDetachObject(__FILE__, __LINE__)

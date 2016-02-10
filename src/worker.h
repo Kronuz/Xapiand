@@ -102,7 +102,7 @@ public:
 			lk.unlock();
 			try {
 				child->shutdown();
-			} catch (const WorkerException& e) {
+			} catch (const WorkerDetachObject& e) {
 				child->detach();
 			}
 			lk.lock();

@@ -77,10 +77,10 @@ inline void _incr_decr(MsgPack& o, int val, int limit) {
 		o.obj->via.i64 += val;
 		if (val < 0) {
 			if (static_cast<int>(o.obj->via.i64) <= limit) {
-				throw MSG_limitError("limit exceeded");
+				throw MSG_LimitError("limit exceeded");
 			}
 		} else if (static_cast<int>(o.obj->via.i64) >= limit) {
-			throw MSG_limitError("limit exceeded");
+			throw MSG_LimitError("limit exceeded");
 		}
 	} else {
 		throw msgpack::type_error();

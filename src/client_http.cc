@@ -430,9 +430,10 @@ HttpClient::run()
 		} else {
 			error.assign("Unkown Xapian error!");
 		}
-	} catch (const WorkerException& err) {
+	} catch (const WorkerDetachObject& err) {
 		error_code = 500;
 		detach_needed = true;
+		error.assign(err.what());
 	} catch (const ClientError& err) {
 		error_code = 400;
 		error.assign(err.what());
@@ -464,7 +465,7 @@ HttpClient::run()
 		if (written) {
 			try {
 				destroy();
-			} catch (const WorkerException& e) {
+			} catch (const WorkerDetachObject& e) {
 				detach();
 			}
 		} else {
@@ -1161,7 +1162,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 				if (q.length) {
 					try {
 						e.pretty = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-					} catch (Exception) {}
+					} catch (const Error&) { }
 				}
 			}
 
@@ -1194,7 +1195,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.spelling = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (Exception) {}
+							} catch (const Error&) { }
 						}
 					}
 
@@ -1204,7 +1205,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.synonyms = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (Exception) {}
+							} catch (const Error&) { }
 						}
 					}
 
@@ -1257,7 +1258,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.is_fuzzy = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (Exception) {}
+							} catch (const Error&) { }
 						}
 					}
 
@@ -1294,7 +1295,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.is_nearest = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (Exception) {}
+							} catch (const Error&) { }
 						}
 					}
 
@@ -1335,7 +1336,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.commit = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (Exception) {}
+							} catch (const Error&) { }
 						}
 					}
 
@@ -1376,7 +1377,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.server = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (Exception) {}
+							} catch (const Error&) { }
 						}
 					}
 
@@ -1386,7 +1387,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.database = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (Exception) {}
+							} catch (const Error&) { }
 						}
 					}
 
@@ -1537,7 +1538,7 @@ HttpClient::writte_http_response(const MsgPack& response,  int status_code, bool
 	const auto& accepted_type = get_acceptable_type(content_type_pair(content_type));
 	try {
 		response_str = serialize_response(response, accepted_type, pretty);
-	} catch (const SerializationError&e ) {
+	} catch (const SerializationError& e) {
 		status_code = 406;
 		MsgPack response_err;
 		response_err["status"] = status_code;

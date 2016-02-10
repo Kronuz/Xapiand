@@ -26,7 +26,8 @@
 
 #define BUFFER_SIZE 1024
 
-Exception::Exception(const char *filename, int line, const char *format, ...)
+
+Error::Error(const char *filename, int line, const char *format, ...)
 	: std::runtime_error("")
 {
 	char buffer[BUFFER_SIZE];
@@ -39,15 +40,4 @@ Exception::Exception(const char *filename, int line, const char *format, ...)
 
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
 	file = buffer;
-}
-
-
-WorkerException::WorkerException()
-	: std::runtime_error("detach needed") {}
-
-
-WorkerException
-WorkerException::detach_object()
-{
-	return WorkerException();
 }
