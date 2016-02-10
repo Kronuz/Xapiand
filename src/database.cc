@@ -164,7 +164,9 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint->path.c_str(), repr(line).c_str());
 }
 
-void DatabaseWAL::open(std::string rev, std::string path, std::string uuid)
+
+void
+DatabaseWAL::open(std::string rev, std::string path, std::string uuid)
 {
 	uint64_t revision = 0;
 	memcpy(&revision, rev.data(), rev.size());
@@ -190,7 +192,7 @@ void DatabaseWAL::open(std::string rev, std::string path, std::string uuid)
 	struct dirent *Subdir;
 	Subdir = readdir(dir);
 
-	uint64_t file_revison = std::numeric_limits<uint64_t>::max(); //aux
+	uint64_t file_revison = std::numeric_limits<uint64_t>::max();
 	uint64_t target_rev;
 
 	while (Subdir) {
