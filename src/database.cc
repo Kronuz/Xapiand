@@ -232,10 +232,12 @@ DatabaseWAL::open(std::string rev, std::string path)
 	}
 
 	int fd;
-	std::string file_rev = path + PATH_WAL + FILE_WAL + std::to_string(revision);
+	std::string file_rev;
 	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_HEADER_SIZE) <= revision) {
+		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(revision);
 		fd = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
 	} else {
+		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(file_revison);
 		fd = ::open(file_rev.c_str(), O_RDWR, 0644);
 	}
 
