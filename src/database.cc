@@ -166,7 +166,7 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 
 
 void
-DatabaseWAL::open(std::string rev, std::string path, std::string uuid)
+DatabaseWAL::open(std::string rev, std::string path)
 {
 	uint64_t revision = 0;
 	memcpy(&revision, rev.data(), rev.size());
@@ -225,7 +225,7 @@ DatabaseWAL::open(std::string rev, std::string path, std::string uuid)
 		Subdir = readdir(dir);
 	}
 
-	std::string file_rev = path + "/" + PATH_WAL + FILE_WAL + uuid + "." + std::to_string(revision);
+	std::string file_rev = path + PATH_WAL + FILE_WAL + std::to_string(revision);
 	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_HEADER_SIZE) <= revision) {
 		fd_rev = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
 	} else {
@@ -395,7 +395,7 @@ Database::reopen()
 				local = true;
 				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
-				WAL.open(db->get_revision_info(), e->path, db->get_uuid());
+				WAL.open(db->get_revision_info(), e->path);
 			}
 #ifdef HAVE_REMOTE_PROTOCOL
 			else {

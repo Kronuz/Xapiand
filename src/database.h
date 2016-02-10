@@ -107,7 +107,7 @@ public:
 	};
 
 	bool execute(Database& database, const std::string& line);
-	void open(std::string rev, std::string path, std::string uuid);
+	void open(std::string rev, std::string path);
 	uint64_t fget_revision(std::string filename);
 
 	void write(const Database& database, Type type, const std::string& data);
