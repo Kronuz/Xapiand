@@ -395,7 +395,7 @@ Database::reopen()
 				local = true;
 				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
-				WAL.open(db->get_revision_info(), e->path);
+				//WAL.open(db->get_revision_info(), e->path);
 			}
 #ifdef HAVE_REMOTE_PROTOCOL
 			else {
