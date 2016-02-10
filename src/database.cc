@@ -404,7 +404,9 @@ Database::reopen()
 				local = true;
 				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
-				fd_rev = WAL.open(wdb.get_revision_info(), e->path);
+				if (!(flags & DB_NOWAL)) {
+					fd_rev = WAL.open(wdb.get_revision_info(), e->path);
+				}
 			}
 #ifdef HAVE_REMOTE_PROTOCOL
 			else {
@@ -2292,7 +2294,7 @@ DatabasePool::init_ref(const Endpoints& endpoints)
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
-	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
 		L_ERR(this, "Database refs it could not be checkout.");
 		assert(false);
 	}
@@ -2321,7 +2323,7 @@ DatabasePool::inc_ref(const Endpoints& endpoints)
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
-	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
 		L_ERR(this, "Database refs it could not be checkout.");
 		assert(false);
 	}
@@ -2357,7 +2359,7 @@ DatabasePool::dec_ref(const Endpoints& endpoints)
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
-	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
 		L_ERR(this, "Database refs it could not be checkout.");
 		assert(false);
 	}
@@ -2390,7 +2392,7 @@ DatabasePool::get_master_count()
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
-	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
 		L_ERR(this, "Database refs it could not be checkout.");
 		assert(false);
 	}

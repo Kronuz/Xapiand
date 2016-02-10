@@ -51,6 +51,7 @@
 #define DB_INIT_REF     8 // Initializes the writable index in the database .refs
 #define DB_VOLATILE    16 // Always drop the database from the database pool as soon as possible
 #define DB_REPLICATION 32 // Use conditional pop in the queue, only pop when replication is done
+#define DB_NOWAL       64 // Disable open wal file
 
 #define DB_MASTER "M"
 #define DB_SLAVE  "S"
