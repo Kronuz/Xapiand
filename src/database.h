@@ -89,6 +89,8 @@ class DatabaseWAL {
 		"REMOVE_SPELLING",
 	};
 
+	int fd_rev;
+
 public:
 	enum class Type {
 		ADD_DOCUMENT,
@@ -105,6 +107,8 @@ public:
 	};
 
 	bool execute(Database& database, const std::string& line);
+	void open(std::string rev, std::string path, std::string uuid);
+	uint64_t fget_revision(std::string filename);
 
 	void write(const Database& database, Type type, const std::string& data);
 	void write_add_document(const Database& database, const Xapian::Document& doc);

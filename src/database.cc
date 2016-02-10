@@ -30,6 +30,9 @@
 
 #include <assert.h>
 #include <bitset>
+#include <dirent.h>
+#include <fcntl.h>
+#include <limits>
 
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
@@ -38,6 +41,12 @@
 #define DEFAULT_OFFSET "0" /* Replace for the real offset */
 
 #define DB_RETRIES 3
+
+#define WAL_HEADER_SIZE 1000 /* Max commit number for file */
+
+#define PATH_WAL "/.wal/"
+
+#define FILE_WAL "wal."
 
 static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
 
@@ -155,6 +164,88 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint->path.c_str(), repr(line).c_str());
 }
 
+void DatabaseWAL::open(std::string rev, std::string path, std::string uuid)
+{
+	uint64_t revision = 0;
+	memcpy(&revision, rev.data(), rev.size());
+
+	std::string wal_dir = path + "/" + PATH_WAL;
+
+	DIR *dir;
+	dir = opendir(wal_dir.c_str());
+
+	if (!dir) {
+		if (errno == ENOENT) {
+			if(::mkdir(wal_dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+				L_ERR(this, "ERROR: could not open the wal dir (%s)", strerror(errno));
+				return;
+			}
+		} else {
+			L_ERR(this, "ERROR: could not open the wal dir (%s)", strerror(errno));
+			return;
+		}
+	}
+
+	unsigned char isFile = 0x8;
+	struct dirent *Subdir;
+	Subdir = readdir(dir);
+
+	uint64_t file_revison = std::numeric_limits<uint64_t>::max(); //aux
+	uint64_t target_rev;
+
+	while (Subdir) {
+
+		if (Subdir->d_type == isFile) {
+			std::string filename(Subdir->d_name);
+			if (startswith(filename, FILE_WAL)) {
+				try {
+					target_rev = fget_revision(filename);
+				} catch(const std::invalid_argument& e) {
+					L_ERR(this, "ERROR: in filename wal (%s)", strerror(errno));
+					return;
+				} catch(const std::out_of_range& e) {
+					L_ERR(this, "ERROR: in filename wal (%s)", strerror(errno));
+					return;
+				}
+
+				if (revision < target_rev) {
+					file_revison = (target_rev < file_revison) ? target_rev : file_revison;
+				} else {
+					if (revision < file_revison) {
+							file_revison = (target_rev < file_revison) ? target_rev : file_revison;
+					} else {
+						file_revison = (target_rev < file_revison) ? file_revison : target_rev;
+					}
+				}
+			}
+		}
+
+		Subdir = readdir(dir);
+	}
+
+	std::string file_rev = path + "/" + PATH_WAL + FILE_WAL + uuid + "." + std::to_string(revision);
+	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_HEADER_SIZE) <= revision) {
+		fd_rev = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
+	} else {
+		fd_rev = ::open(file_rev.c_str(), O_RDWR, 0644);
+	}
+
+	if (fd_rev < 0) {
+		L_ERR(this, "ERROR: could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
+		return;
+	}
+}
+
+
+uint64_t
+DatabaseWAL::fget_revision(std::string filename)
+{
+	std::size_t found = filename.find_last_of(".");
+	if (found == std::string::npos) {
+		throw std::invalid_argument("Revision not found in filename");
+	}
+	return stoul(filename.substr(found+1));
+}
 
 void
 DatabaseWAL::write_add_document(const Database& database, const Xapian::Document& doc)
@@ -302,6 +393,7 @@ Database::reopen()
 				local = true;
 				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
+				WAL.open(db->get_revision_info(), e->path, db->get_uuid());
 			}
 #ifdef HAVE_REMOTE_PROTOCOL
 			else {
