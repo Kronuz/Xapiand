@@ -89,8 +89,6 @@ class DatabaseWAL {
 		"REMOVE_SPELLING",
 	};
 
-	int fd_rev;
-
 public:
 	enum class Type {
 		ADD_DOCUMENT,
@@ -107,7 +105,7 @@ public:
 	};
 
 	bool execute(Database& database, const std::string& line);
-	void open(std::string rev, std::string path);
+	int open(std::string rev, std::string path);
 	uint64_t fget_revision(std::string filename);
 
 	void write(const Database& database, Type type, const std::string& data);
@@ -181,6 +179,9 @@ public:
 	void get_stats_docs(MsgPack&& stats, const std::string& document_id);
 
 private:
+
+	int fd_rev;
+	
 	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const;
 	void index_object(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value=true);
 

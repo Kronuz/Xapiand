@@ -165,7 +165,7 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 }
 
 
-void
+int
 DatabaseWAL::open(std::string rev, std::string path)
 {
 	uint64_t revision = 0;
@@ -180,11 +180,17 @@ DatabaseWAL::open(std::string rev, std::string path)
 		if (errno == ENOENT) {
 			if(::mkdir(wal_dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
 				L_ERR(this, "ERROR: could not open the wal dir (%s)", strerror(errno));
-				return;
+				return -1;
+			} else {
+				dir = opendir(wal_dir.c_str());
+				if (!dir) {
+					L_ERR(this, "ERROR: could not open the wal dir (%s)", strerror(errno));
+					return -1;
+				}
 			}
 		} else {
 			L_ERR(this, "ERROR: could not open the wal dir (%s)", strerror(errno));
-			return;
+			return -1;
 		}
 	}
 
@@ -204,10 +210,10 @@ DatabaseWAL::open(std::string rev, std::string path)
 					target_rev = fget_revision(filename);
 				} catch(const std::invalid_argument& e) {
 					L_ERR(this, "ERROR: in filename wal (%s)", strerror(errno));
-					return;
+					return -1;
 				} catch(const std::out_of_range& e) {
 					L_ERR(this, "ERROR: in filename wal (%s)", strerror(errno));
-					return;
+					return -1;
 				}
 
 				if (revision < target_rev) {
@@ -225,17 +231,20 @@ DatabaseWAL::open(std::string rev, std::string path)
 		Subdir = readdir(dir);
 	}
 
+	int fd;
 	std::string file_rev = path + PATH_WAL + FILE_WAL + std::to_string(revision);
+	L_ERR(this, "PATH OF WAL: %s\n", file_rev.c_str());
 	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_HEADER_SIZE) <= revision) {
-		fd_rev = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
+		fd = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
 	} else {
-		fd_rev = ::open(file_rev.c_str(), O_RDWR, 0644);
+		fd = ::open(file_rev.c_str(), O_RDWR, 0644);
 	}
 
-	if (fd_rev < 0) {
+	if (fd < 0) {
 		L_ERR(this, "ERROR: could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
-		return;
+		return -1;
 	}
+	return fd;
 }
 
 
@@ -395,7 +404,7 @@ Database::reopen()
 				local = true;
 				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
-				//WAL.open(db->get_revision_info(), e->path);
+				fd_rev = WAL.open(wdb.get_revision_info(), e->path);
 			}
 #ifdef HAVE_REMOTE_PROTOCOL
 			else {
