@@ -5,7 +5,7 @@
 # brew install automake autoconf libtools pkg-config
 
 AC_PREREQ([2.69])
-AC_INIT([Xapiand], [3.0.0-alpha], [https://github.com/Kronuz/Xapiand])
+AC_INIT([Xapiand], [3.0.0-alpha1], [https://github.com/Kronuz/Xapiand])
 AC_CONFIG_SRCDIR([src/xapiand.cc])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIRS([m4])
