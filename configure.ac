@@ -129,6 +129,19 @@ CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
 
 
+# Check for xapian's get_revision_info
+save_LIBS="$LIBS"
+LIBS="$LIBS $XAPIAN_LIBS"
+save_CXXFLAGS="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS $XAPIAN_CXXFLAGS"
+AC_LINK_IFELSE(
+  [AC_LANG_PROGRAM([#include "xapian.h"], [&Xapian::Database::get_revision_info])],
+  [AC_DEFINE([HAVE_DATABASE_REVISION_INFO], 1, [Define to 1 if Xapian has Database::get_revision_info() available.])],
+  [AC_MSG_WARN(["Xapian's Database::get_revision_info() is not available!"])])
+CXXFLAGS="$save_CXXFLAGS"
+LIBS="$save_LIBS"
+
+
 ########################################################################
 
 AC_MSG_CHECKING(["whether compiler understands -Wall -Wextra"])

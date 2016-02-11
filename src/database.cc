@@ -405,9 +405,6 @@ Database::reopen()
 				local = true;
 				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
-				if (!(flags & DB_NOWAL)) {
-					fd_rev = WAL.open(wdb.get_revision_info(), e->path);
-				}
 			}
 #ifdef HAVE_REMOTE_PROTOCOL
 			else {
@@ -418,6 +415,10 @@ Database::reopen()
 			}
 #endif
 			db->add_database(wdb);
+			if (local && !(flags & DB_NOWAL)) {
+				// WAL required on a local database, open it.
+				fd_rev = WAL.open(get_revision_info(), e->path);
+			}
 		}
 	} else {
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.end(); ++i) {
@@ -440,7 +441,7 @@ Database::reopen()
 #ifdef HAVE_REMOTE_PROTOCOL
 			else {
 				local = false;
-# ifdef XAPIAN_LOCAL_DB_FALLBACK
+#ifdef XAPIAN_LOCAL_DB_FALLBACK
 				int port = (e->port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e->port;
 				rdb = Xapian::Remote::open(e->host, port, 0, 10000, e->path);
 				try {
@@ -474,7 +475,11 @@ std::string Database::get_uuid() const
 
 std::string Database::get_revision_info() const
 {
+#if HAVE_DATABASE_REVISION_INFO
 	return db->get_revision_info();
+#else
+	return "";
+#endif
 }
 
 
@@ -2170,11 +2175,9 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 		L_DATABASE(this, "== REOPEN DB %s(%s) [%lx]", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 	}
 
-#ifdef HAVE_REMOTE_PROTOCOL
 	if (database->local) {
-		database->checkout_revision = database->db->get_revision_info();
+		database->checkout_revision = database->get_revision_info();
 	}
-#endif
 	L_DATABASE_END(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx", writable ? "w" : "r", endpoints.as_string().c_str(), database->local ? "local" : "remote", repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
 	return true;
 }
@@ -2193,16 +2196,14 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	if (database->flags & DB_WRITABLE) {
 		queue = writable_databases[database->hash];
-#ifdef HAVE_REMOTE_PROTOCOL
 		if (database->local && database->mastery_level != -1) {
-			std::string new_revision = database->db->get_revision_info();
+			std::string new_revision = database->get_revision_info();
 			if (new_revision != database->checkout_revision) {
 				Endpoint endpoint = *database->endpoints.begin();
 				endpoint.mastery_level = database->mastery_level;
 				updated_databases.push(endpoint);
 			}
 		}
-#endif
 	} else {
 		queue = databases[database->hash];
 	}

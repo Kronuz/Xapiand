@@ -22,7 +22,7 @@
 
 #include "client_binary.h"
 
-#ifdef HAVE_REMOTE_PROTOCOL
+#if defined(HAVE_REMOTE_PROTOCOL) && defined(HAVE_DATABASE_REVISION_INFO)
 
 #include "servers/server.h"
 #include "servers/tcp_base.h"
