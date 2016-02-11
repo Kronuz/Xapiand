@@ -352,7 +352,25 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 				}
 				args.push_back(a);
 			} else {
-				args.push_back(argv[i]);
+				// Split arguments when possible (e.g. -Dnode, --verbosity=3)
+				const char* arg = argv[i];
+				if (arg[0] == '-') {
+					if (arg[1] == '-') {
+					} else {
+						std::string tmp(arg, 2);
+						args.push_back(tmp);
+						arg += 2;
+					}
+				}
+				const char* a = strchr(arg, '=');
+				if (a) {
+					if (a - arg) {
+						std::string tmp(arg, a - arg);
+						args.push_back(tmp);
+					}
+					arg = a + 1;
+				}
+				args.push_back(arg);
 			}
 		}
 		cmd.parse(args);
