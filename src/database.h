@@ -138,6 +138,8 @@ public:
 	bool modified;
 	long long mastery_level;
 	std::string checkout_revision;
+	std::string current_file_rev;
+	int fd_rev;
 
 	std::unique_ptr<Xapian::Database> db;
 
@@ -180,8 +182,6 @@ public:
 	void get_stats_docs(MsgPack&& stats, const std::string& document_id);
 
 private:
-
-	int fd_rev;
 	
 	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const;
 	void index_object(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value=true);

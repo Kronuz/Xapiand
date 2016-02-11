@@ -48,6 +48,8 @@
 
 #define FILE_WAL "wal."
 
+#define MAGIC 0xC0DE
+
 static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
 
 
@@ -159,9 +161,111 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 
 	auto endpoint = database.endpoints.cbegin();
 	std::string revision = database.get_revision_info();
-	std::string line = database.get_uuid() + encode_length(revision.size()) + revision + encode_length(toUType(type)) + encode_length(data.size()) + data;
+	std::string uuid = database.get_uuid();
+	std::string line = encode_length(revision.size()) + revision + encode_length(toUType(type)) + encode_length(data.size()) + data;
 
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint->path.c_str(), repr(line).c_str());
+
+	uint64_t file_rev = 0, rev = 0;
+	memcpy(&file_rev, database.current_file_rev.data(), database.current_file_rev.size());
+	memcpy(&rev, revision.data(), revision.size());
+	if (file_rev + WAL_HEADER_SIZE <= rev) {
+		close(database.fd_rev);
+		const_cast<Database&>(database).fd_rev = open(revision, endpoint->path);
+		const_cast<Database&>(database).current_file_rev = revision;
+	}
+
+	uint64_t rev_num = 0;
+	memcpy(&rev_num, revision.data(), revision.size());
+
+	off_t file_size = ::lseek(database.fd_rev, 0, SEEK_END);
+	::lseek(database.fd_rev, 0, SEEK_SET);
+
+	int magic;
+	off_t off_buff;
+	off_t off_head = sizeof(int) + uuid.size() + sizeof(uint64_t) + (sizeof(off_t)*rev_num);
+	off_t line_size = line.size();
+
+	if (file_size == 0) {
+		magic = MAGIC;
+		off_buff = sizeof(int) + uuid.size() + sizeof(uint64_t) + (sizeof(off_t) * WAL_HEADER_SIZE);
+
+		ftruncate(database.fd_rev, off_buff);
+
+		::write(database.fd_rev, &magic, sizeof(int));
+		off_t w = ::write(database.fd_rev, uuid.data(), uuid.size());
+		fprintf(stderr, "Writend bytes %lld\n", w);
+		::write(database.fd_rev, &rev_num, sizeof(uint64_t));
+
+		//Writing line
+		lseek(database.fd_rev, off_buff, SEEK_SET);
+		::write(database.fd_rev, line.data(), line.size());
+
+		//Writing offset line
+		lseek(database.fd_rev, off_head, SEEK_SET);
+		::write(database.fd_rev, &off_buff, sizeof(off_t));
+
+		//Writing LUL (Limit of Uncommitted Lines)
+		::write(database.fd_rev, &line_size, sizeof(off_t));
+
+	} else {
+		::read(database.fd_rev, &magic, sizeof(int));
+		if (magic != MAGIC) {
+			L_ERR(this, "ERROR: file wal with wrong format\n");
+			return;
+		}
+
+		char f_uuid[37];
+		::read(database.fd_rev, f_uuid, sizeof(char)*36);
+		*(f_uuid + 36) = '\0';
+		if (strcmp(f_uuid, uuid.data()) != 0) {
+			L_ERR(this, "ERROR: file wal with wrong format\n");
+			return;
+		}
+
+		uint64_t f_rev = 0;
+		::read(database.fd_rev, &f_rev, sizeof(uint64_t));
+		if (f_rev != file_rev) {
+			L_ERR(this, "ERROR: file wal with wrong format\n");
+			return;
+		}
+
+		off_t offp = 0;
+		while (true) {
+			off_buff = offp;
+			::read(database.fd_rev, &offp, sizeof(off_t));
+			if (!offp) {
+				break;
+			}
+		}
+
+		if (!off_buff) {
+			L_ERR(this, "ERROR: file wal with wrong format\n");
+			return;
+		}
+
+		//Writing line
+		lseek(database.fd_rev, off_buff, SEEK_SET);
+		::write(database.fd_rev, line.data(), line.size());
+
+		off_t new_off = rev_num - f_rev;
+		assert(new_off >= 0);
+
+		if (new_off) {
+			//Move LUL (Limit of Uncommitted Lines)
+			lseek(database.fd_rev, off_head + new_off + sizeof(off_t), SEEK_SET);
+			::write(database.fd_rev, &line_size, sizeof(off_t));
+
+		} else {
+			//Updating LUL (Limit of Uncommitted Lines)
+			off_t lul;
+			lseek(database.fd_rev, off_head + sizeof(off_t), SEEK_SET);
+			::read(database.fd_rev, &lul, sizeof(off_t));
+			lul+=line.size();
+			lseek(database.fd_rev, off_head + sizeof(off_t), SEEK_SET);
+			::write(database.fd_rev, &lul, sizeof(off_t));
+		}
+	}
 }
 
 
@@ -339,7 +443,9 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 	  hash(endpoints.hash()),
 	  access_time(system_clock::now()),
 	  modified(false),
-	  mastery_level(-1)
+	  mastery_level(-1),
+	  current_file_rev(""),
+	  fd_rev(-1)
 {
 	reopen();
 
@@ -417,7 +523,8 @@ Database::reopen()
 			db->add_database(wdb);
 			if (local && !(flags & DB_NOWAL)) {
 				// WAL required on a local database, open it.
-				fd_rev = WAL.open(get_revision_info(), e->path);
+				current_file_rev = get_revision_info();
+				fd_rev = WAL.open(current_file_rev, e->path);
 			}
 		}
 	} else {
