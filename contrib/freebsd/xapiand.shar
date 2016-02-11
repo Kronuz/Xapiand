@@ -1,0 +1,109 @@
+# This is a shell archive.  Save it in a file, remove anything before
+# this line, and then unpack it by entering "sh file".  Note, it may
+# create directories; files and directories will be owned by you and
+# have default permissions.
+#
+# This archive contains:
+#
+#	xapiand
+#	xapiand/Makefile
+#	xapiand/pkg-descr
+#	xapiand/distinfo
+#	xapiand/files
+#	xapiand/files/xapiand.in
+#
+echo c - xapiand
+mkdir -p xapiand > /dev/null 2>&1
+echo x - xapiand/Makefile
+sed 's/^X//' >xapiand/Makefile << '3997054dfe7508cbb1bb8208e4df68ad'
+X# $FreeBSD$
+X
+XPORTNAME=	xapiand
+XPORTVERSION=	3.0.0.alpha1
+XDISTVERSION=    v3.0.0-alpha1
+XCATEGORIES=	textproc devel
+X
+XMAINTAINER=	kronuz@gmail.com
+XCOMMENT=	A Multi-Partitioning RESTful Search Engine
+X
+XLICENSE=        MIT
+XLICENSE_FILE=	${WRKSRC}/LICENSE
+X
+XUSES=		autoreconf libtool
+XUSE_GITHUB=     yes
+XGH_ACCOUNT=     Kronuz
+XGH_PROJECT=     Xapiand
+X
+XSEARCHUSER?=	nobody
+XSEARCHGROUP?=	nogroup
+XUSERS=		${SEARCHUSER}
+XGROUPS=		${SEARCHGROUP}
+X
+XSUB_LIST=	SEARCHUSER=${SEARCHUSER} \
+X		SEARCHGROUP=${SEARCHGROUP}
+X
+XUSE_RC_SUBR=	${PORTNAME}
+X
+XACLOCAL_ARGS=	-I ${WRKSRC}/m4 --install
+XAUTOCONF_ARGS=	--force --install --verbose
+XGNU_CONFIGURE=  yes
+X
+XPLIST_FILES=	bin/xapiand
+X
+X
+X.include <bsd.port.mk>
+3997054dfe7508cbb1bb8208e4df68ad
+echo x - xapiand/pkg-descr
+sed 's/^X//' >xapiand/pkg-descr << '053b0f60c7ba6d94ca0751bec472bd9b'
+XXapiand aims to be a Distributed, RESTful, Search Engine built on top of Xapian.
+X
+XWWW: https://github.com/Kronuz/Xapiand
+053b0f60c7ba6d94ca0751bec472bd9b
+echo x - xapiand/distinfo
+sed 's/^X//' >xapiand/distinfo << 'd7f15fdb8f6b96ee96cd306cab4210a3'
+XSHA256 (Kronuz-Xapiand-v3.0.0-alpha1_GH0.tar.gz) = 7d6e3b0e551ed0e0aef4a45e91d1f2dc293b37d444d43841822eb52234e44cc0
+XSIZE (Kronuz-Xapiand-v3.0.0-alpha1_GH0.tar.gz) = 916057
+d7f15fdb8f6b96ee96cd306cab4210a3
+echo c - xapiand/files
+mkdir -p xapiand/files > /dev/null 2>&1
+echo x - xapiand/files/xapiand.in
+sed 's/^X//' >xapiand/files/xapiand.in << '0dccf3a387c3588de14214fc8fd91659'
+X#!/bin/sh
+X#
+X# PROVIDE: xapiand
+X# REQUIRE: NETWORKING SERVERS
+X# BEFORE:  DAEMON
+X# KEYWORD: shutdown
+X#
+X# Add the following lines to /etc/rc.conf to enable `xapiand':
+X#
+X# xapiand_enable="YES"
+X# xapiand_verbosity=1
+X# xapiand_database=/var/db/xapiand
+X# xapiand_flags="<set as needed>"
+X#
+X
+X. /etc/rc.subr
+X
+Xname="xapiand"
+Xrcvar=xapiand_enable
+X
+Xcommand="%%PREFIX%%/bin/xapiand"
+X
+Xload_rc_config $name
+X: ${xapiand_enable="NO"}
+X: ${xapiand_verbosity="1"}
+X: ${xapiand_database="/var/db/xapiand"}
+X: ${xapiand_logfile="/var/log/xapiand.log"}
+X: ${xapiand_pidfile="/var/run/xapiand.pid"}
+X: ${xapiand_uid="%%SEARCHUSER%%"}
+X: ${xapiand_gid="%%SEARCHGROUP%%"}
+X: ${xapiand_flags=""}
+X
+Xcommand_args="--detach --database=${xapiand_database} --pidfile=${xapiand_pidfile} --logfile=${xapiand_logfile} --verbosity=${xapiand_verbosity} --uid=${xapiand_uid} --gid=${xapiand_gid} ${xapiand_flags}"
+X
+Xpidfile=${xapiand_pidfile}
+X
+Xrun_rc_command "$1"
+0dccf3a387c3588de14214fc8fd91659
+exit
