@@ -34,13 +34,20 @@ XUSE_GITHUB=     yes
 XGH_ACCOUNT=     Kronuz
 XGH_PROJECT=     Xapiand
 X
-XSEARCHUSER?=	nobody
-XSEARCHGROUP?=	nogroup
-XUSERS=		${SEARCHUSER}
-XGROUPS=		${SEARCHGROUP}
+XXAPIAND_USER?=	nobody
+XXAPIAND_GROUP?=	nogroup
+XXAPIAND_DBDIR=	/var/db/${PORTNAME}/
+XXAPIAND_LOGDIR=	/var/log/${PORTNAME}/
+XXAPIAND_PIDDIR=	/var/run/${PORTNAME}/
 X
-XSUB_LIST=	SEARCHUSER=${SEARCHUSER} \
-X		SEARCHGROUP=${SEARCHGROUP}
+XSUB_LIST=	XAPIAND_USER=${XAPIAND_USER} \
+X		XAPIAND_GROUP=${XAPIAND_GROUP} \
+X		XAPIAND_DBDIR=${XAPIAND_DBDIR} \
+X		XAPIAND_LOGDIR=${XAPIAND_LOGDIR} \
+X		XAPIAND_PIDDIR=${XAPIAND_PIDDIR}
+X
+XUSERS=		${XAPIAND_USER}
+XGROUPS=		${XAPIAND_GROUP}
 X
 XUSE_RC_SUBR=	${PORTNAME}
 X
@@ -50,6 +57,10 @@ XGNU_CONFIGURE=  yes
 X
 XPLIST_FILES=	bin/xapiand
 X
+Xdo-install:
+X		${MKDIR} ${STAGEDIR}${XAPIAND_DBDIR} \
+X		${STAGEDIR}${XAPIAND_LOGDIR} \
+X		${STAGEDIR}${XAPIAND_PIDDIR}
 X
 X.include <bsd.port.mk>
 3997054dfe7508cbb1bb8208e4df68ad
@@ -93,11 +104,11 @@ X
 Xload_rc_config $name
 X: ${xapiand_enable="NO"}
 X: ${xapiand_verbosity="1"}
-X: ${xapiand_database="/var/db/xapiand"}
-X: ${xapiand_logfile="/var/log/xapiand.log"}
-X: ${xapiand_pidfile="/var/run/xapiand.pid"}
-X: ${xapiand_uid="%%SEARCHUSER%%"}
-X: ${xapiand_gid="%%SEARCHGROUP%%"}
+X: ${xapiand_database="%%XAPIAND_DBDIR%%"}
+X: ${xapiand_logfile="%%XAPIAND_LOGDIR%%/xapiand.log"}
+X: ${xapiand_pidfile="%%XAPIAND_PIDDIR%%/xapiand.pid"}
+X: ${xapiand_uid="%%XAPIAND_USER%%"}
+X: ${xapiand_gid="%%XAPIAND_GROUP%%"}
 X: ${xapiand_flags=""}
 X
 Xcommand_args="--detach --database=${xapiand_database} --pidfile=${xapiand_pidfile} --logfile=${xapiand_logfile} --verbosity=${xapiand_verbosity} --uid=${xapiand_uid} --gid=${xapiand_gid} ${xapiand_flags}"
