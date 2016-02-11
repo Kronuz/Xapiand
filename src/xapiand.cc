@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <sys/param.h>  // for MAXPATHLEN
 #include <fcntl.h>
+#include <dirent.h>
 
 #define LINE_LENGTH 78
 
@@ -411,6 +412,28 @@ void detach(void) {
 }
 
 
+bool approve_wd(const std::string& wd){
+
+	DIR *dir;
+	unsigned char isFile = 0x8;
+	bool empty = true;
+	dir = opendir(wd.c_str());
+	struct dirent *Subdir;
+
+	Subdir = readdir(dir);
+	while (Subdir) {
+		if (Subdir->d_type == isFile and (strcmp(Subdir->d_name, "flintlock") == 0)) {
+			return true;
+		}
+		if (empty) {
+			empty = false;
+		}
+		Subdir = readdir(dir);
+	}
+	return empty;
+}
+
+
 void banner() {
 	set_thread_name("===");
 	L_INFO(nullptr,
@@ -473,6 +496,8 @@ int main(int argc, char **argv) {
 	}
 
 	assert(!chdir(opts.database.c_str()));
+	assert(approve_wd(opts.database) && "Working directory must be empty or an xapian database");
+
 	char buffer[MAXPATHLEN];
 	L_NOTICE(nullptr, "Changed current working directory to %s", getcwd(buffer, sizeof(buffer)));
 
