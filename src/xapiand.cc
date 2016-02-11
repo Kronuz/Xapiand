@@ -434,21 +434,23 @@ bool approve_wd(const std::string& wd){
 
 	DIR *dir;
 	unsigned char isFile = 0x8;
-	bool empty = true;
 	dir = opendir(wd.c_str());
 	struct dirent *Subdir;
+	int n = 0;
 
-	Subdir = readdir(dir);
-	while (Subdir) {
+	while ((Subdir = readdir(dir)) != nullptr) {
 		if (Subdir->d_type == isFile and (strcmp(Subdir->d_name, "flintlock") == 0)) {
 			return true;
 		}
-		if (empty) {
-			empty = false;
+		if(++n > 2) { //readdir will stop after the entries '.' and '..'
+			break;
 		}
-		Subdir = readdir(dir);
 	}
-	return empty;
+	closedir(dir);
+	if (n <= 2) //Directory Empty
+		return true;
+	else
+		return false;
 }
 
 
