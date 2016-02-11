@@ -124,7 +124,7 @@ CXXFLAGS="$CXXFLAGS $XAPIAN_CXXFLAGS"
 AC_LINK_IFELSE(
   [AC_LANG_PROGRAM([#include "xapian.h"], [class RemoteClient : public RemoteProtocol {}])],
   [AC_DEFINE([HAVE_REMOTE_PROTOCOL], 1, [Define to 1 if Xapian has RemoteProtocol available.])],
-  [AC_MSG_WARN(["Xapian's RemoteProtocol is not available!"])])
+  [AC_MSG_WARN([Xapian's RemoteProtocol is not available!])])
 CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
 
@@ -137,7 +137,7 @@ CXXFLAGS="$CXXFLAGS $XAPIAN_CXXFLAGS"
 AC_LINK_IFELSE(
   [AC_LANG_PROGRAM([#include "xapian.h"], [&Xapian::Database::get_revision_info])],
   [AC_DEFINE([HAVE_DATABASE_REVISION_INFO], 1, [Define to 1 if Xapian has Database::get_revision_info() available.])],
-  [AC_MSG_WARN(["Xapian's Database::get_revision_info() is not available!"])])
+  [AC_MSG_WARN([Xapian's Database::get_revision_info() is not available!])])
 CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
 
