@@ -658,6 +658,8 @@ void fill_zeros_stats_min(uint16_t start, uint16_t end) {
 		stats_cnt.search.tm_min[i] = 0;
 		stats_cnt.del.min[i] = 0;
 		stats_cnt.del.tm_min[i] = 0;
+		stats_cnt.patch.min[i] = 0;
+		stats_cnt.patch.tm_min[i] = 0;
 	}
 }
 
@@ -670,6 +672,8 @@ void fill_zeros_stats_sec(uint8_t start, uint8_t end) {
 		stats_cnt.search.tm_sec[i] = 0;
 		stats_cnt.del.sec[i] = 0;
 		stats_cnt.del.tm_sec[i] = 0;
+		stats_cnt.patch.sec[i] = 0;
+		stats_cnt.patch.tm_sec[i] = 0;
 	}
 }
 
@@ -679,9 +683,11 @@ void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std
 		cnt[0] += stats_cnt_cpy.index.min[i];
 		cnt[1] += stats_cnt_cpy.search.min[i];
 		cnt[2] += stats_cnt_cpy.del.min[i];
+		cnt[3] += stats_cnt_cpy.patch.min[i];
 		tm_cnt[0] += stats_cnt_cpy.index.tm_min[i];
 		tm_cnt[1] += stats_cnt_cpy.search.tm_min[i];
 		tm_cnt[2] += stats_cnt_cpy.del.tm_min[i];
+		tm_cnt[3] += stats_cnt_cpy.patch.tm_min[i];
 	}
 }
 
@@ -691,9 +697,11 @@ void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::
 		cnt[0] += stats_cnt_cpy.index.sec[i];
 		cnt[1] += stats_cnt_cpy.search.sec[i];
 		cnt[2] += stats_cnt_cpy.del.sec[i];
+		cnt[3] += stats_cnt_cpy.patch.sec[i];
 		tm_cnt[0] += stats_cnt_cpy.index.tm_sec[i];
 		tm_cnt[1] += stats_cnt_cpy.search.tm_sec[i];
 		tm_cnt[2] += stats_cnt_cpy.del.tm_sec[i];
+		tm_cnt[3] += stats_cnt_cpy.patch.tm_sec[i];
 	}
 }
 
@@ -799,7 +807,7 @@ int strict_stoi(const std::string& str) {
 	if (str.substr(str.at(0) == '-').find_first_not_of("0123456789") == std::string::npos) {
 		return std::stoi(str, nullptr, 10);
 	}
-	throw std::invalid_argument("Cannot convert value");
+	throw std::invalid_argument("Can not convert value: " + str);
 }
 
 

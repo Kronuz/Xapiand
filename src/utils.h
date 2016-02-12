@@ -53,6 +53,7 @@ struct times_row_t {
 	cont_time_t index;
 	cont_time_t search;
 	cont_time_t del;
+	cont_time_t patch;
 };
 
 struct pos_time_t {
