@@ -64,6 +64,8 @@
 
 #define DB_SLOT_RESERVED 10 // Reserved slots by special data
 
+#define DB_RETRIES 3 // Number of tries to do an operation on a Xapian::Database
+
 
 constexpr size_t START_POS = SIZE_BITS_ID - 4;
 
@@ -162,8 +164,8 @@ public:
 	std::string get_uuid() const;
 	std::string get_revision_info() const;
 
-	bool delete_document(const std::string& document_id, bool commit_=false);
-	bool delete_document_term(const std::string& term, bool commit_=false);
+	void delete_document(const std::string& document_id, bool commit_=false);
+	void delete_document_term(const std::string& term, bool commit_=false);
 	Xapian::docid index(const std::string& body, const std::string& document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid replace_document(const std::string& document_id, const Xapian::Document& doc, bool commit_=false);
@@ -172,17 +174,16 @@ public:
 	data_field_t get_data_field(const std::string& field_name);
 	data_field_t get_slot_field(const std::string& field_name);
 
-	int get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
+	void get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
 			std::vector<std::string>& suggestions, int offset=0);
 	bool get_metadata(const std::string& key, std::string& value);
 	bool set_metadata(const std::string& key, const std::string& value, bool commit_=false);
 	bool get_document(const Xapian::docid& did, Xapian::Document& doc);
 
 	void get_stats_database(MsgPack&& stats);
-	void get_stats_docs(MsgPack&& stats, const std::string& document_id);
+	void get_stats_doc(MsgPack&& stats, const std::string& document_id);
 
 private:
-	
 	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const;
 	void index_object(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value=true);
 
@@ -203,6 +204,7 @@ private:
 	void get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar);
 	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t *e, Multi_MultiValueKeyMaker *sorter,
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies);
+	bool _get_document(const Xapian::MSet& mset, Xapian::Document& doc);
 };
 
 
@@ -244,7 +246,6 @@ public:
 
 
 class DatabasesLRU : public lru::LRU<size_t, std::shared_ptr<DatabaseQueue>> {
-
 public:
 	DatabasesLRU(ssize_t max_size) : LRU(max_size) { }
 

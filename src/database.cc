@@ -40,8 +40,6 @@
 
 #define DEFAULT_OFFSET "0" /* Replace for the real offset */
 
-#define DB_RETRIES 3
-
 #define WAL_HEADER_SIZE 1000 /* Max commit number for file */
 
 #define PATH_WAL "/.wal/"
@@ -49,6 +47,7 @@
 #define FILE_WAL "wal."
 
 #define MAGIC 0xC0DE
+
 
 static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
 
@@ -72,7 +71,7 @@ DatabaseWAL::execute(Database& database, const std::string& line)
 	}
 
 	if (!database.local) {
-		throw MSG_Error("Cannot execute WAL on a remote database!");
+		throw MSG_Error("Can not execute WAL on a remote database!");
 	}
 
 	std::string uuid(p, 36);
@@ -156,7 +155,7 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 	}
 
 	if (!database.local) {
-		throw MSG_Error("Cannot execute WAL on a remote database!");
+		throw MSG_Error("Can not execute WAL on a remote database!");
 	}
 
 	auto endpoint = database.endpoints.cbegin();
@@ -194,24 +193,24 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 
 		::write(database.fd_rev, &magic, sizeof(int));
 		off_t w = ::write(database.fd_rev, uuid.data(), uuid.size());
-		fprintf(stderr, "Writend bytes %lld\n", w);
+		L_DATABASE_WAL(this, "Written bytes %lld\n", w);
 		::write(database.fd_rev, &rev_num, sizeof(uint64_t));
 
-		//Writing line
+		// Writing line
 		lseek(database.fd_rev, off_buff, SEEK_SET);
 		::write(database.fd_rev, line.data(), line.size());
 
-		//Writing offset line
+		// Writing offset line
 		lseek(database.fd_rev, off_head, SEEK_SET);
 		::write(database.fd_rev, &off_buff, sizeof(off_t));
 
-		//Writing LUL (Limit of Uncommitted Lines)
+		// Writing LUL (Limit of Uncommitted Lines)
 		::write(database.fd_rev, &line_size, sizeof(off_t));
 
 	} else {
 		::read(database.fd_rev, &magic, sizeof(int));
 		if (magic != MAGIC) {
-			L_ERR(this, "ERROR: file wal with wrong format\n");
+			L_ERR(this, "ERROR: File wal with wrong format\n");
 			return;
 		}
 
@@ -219,14 +218,14 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 		::read(database.fd_rev, f_uuid, sizeof(char)*36);
 		*(f_uuid + 36) = '\0';
 		if (strcmp(f_uuid, uuid.data()) != 0) {
-			L_ERR(this, "ERROR: file wal with wrong format\n");
+			L_ERR(this, "ERROR: File wal with wrong format\n");
 			return;
 		}
 
 		uint64_t f_rev = 0;
 		::read(database.fd_rev, &f_rev, sizeof(uint64_t));
 		if (f_rev != file_rev) {
-			L_ERR(this, "ERROR: file wal with wrong format\n");
+			L_ERR(this, "ERROR: File wal with wrong format\n");
 			return;
 		}
 
@@ -240,11 +239,11 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 		}
 
 		if (!off_buff) {
-			L_ERR(this, "ERROR: file wal with wrong format\n");
+			L_ERR(this, "ERROR: File wal with wrong format\n");
 			return;
 		}
 
-		//Writing line
+		// Writing line
 		lseek(database.fd_rev, off_buff, SEEK_SET);
 		::write(database.fd_rev, line.data(), line.size());
 
@@ -252,16 +251,16 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 		assert(new_off >= 0);
 
 		if (new_off) {
-			//Move LUL (Limit of Uncommitted Lines)
+			// Move LUL (Limit of Uncommitted Lines)
 			lseek(database.fd_rev, off_head + new_off + sizeof(off_t), SEEK_SET);
 			::write(database.fd_rev, &line_size, sizeof(off_t));
 
 		} else {
-			//Updating LUL (Limit of Uncommitted Lines)
+			// Updating LUL (Limit of Uncommitted Lines)
 			off_t lul;
 			lseek(database.fd_rev, off_head + sizeof(off_t), SEEK_SET);
 			::read(database.fd_rev, &lul, sizeof(off_t));
-			lul+=line.size();
+			lul += line.size();
 			lseek(database.fd_rev, off_head + sizeof(off_t), SEEK_SET);
 			::write(database.fd_rev, &lul, sizeof(off_t));
 		}
@@ -282,18 +281,18 @@ DatabaseWAL::open(std::string rev, std::string path)
 
 	if (!dir) {
 		if (errno == ENOENT) {
-			if(::mkdir(wal_dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				L_ERR(this, "ERROR: could not open the wal dir (%s)", strerror(errno));
+			if (::mkdir(wal_dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+				L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
 				return -1;
 			} else {
 				dir = opendir(wal_dir.c_str());
 				if (!dir) {
-					L_ERR(this, "ERROR: could not open the wal dir (%s)", strerror(errno));
+					L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
 					return -1;
 				}
 			}
 		} else {
-			L_ERR(this, "ERROR: could not open the wal dir (%s)", strerror(errno));
+			L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
 			return -1;
 		}
 	}
@@ -306,17 +305,16 @@ DatabaseWAL::open(std::string rev, std::string path)
 	uint64_t target_rev;
 
 	while (Subdir) {
-
 		if (Subdir->d_type == isFile) {
 			std::string filename(Subdir->d_name);
 			if (startswith(filename, FILE_WAL)) {
 				try {
 					target_rev = fget_revision(filename);
-				} catch(const std::invalid_argument& e) {
-					L_ERR(this, "ERROR: in filename wal (%s)", strerror(errno));
+				} catch (const std::invalid_argument&) {
+					L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
 					return -1;
-				} catch(const std::out_of_range& e) {
-					L_ERR(this, "ERROR: in filename wal (%s)", strerror(errno));
+				} catch (const std::out_of_range&) {
+					L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
 					return -1;
 				}
 
@@ -324,7 +322,7 @@ DatabaseWAL::open(std::string rev, std::string path)
 					file_revison = (target_rev < file_revison) ? target_rev : file_revison;
 				} else {
 					if (revision < file_revison) {
-							file_revison = (target_rev < file_revison) ? target_rev : file_revison;
+						file_revison = (target_rev < file_revison) ? target_rev : file_revison;
 					} else {
 						file_revison = (target_rev < file_revison) ? file_revison : target_rev;
 					}
@@ -349,6 +347,7 @@ DatabaseWAL::open(std::string rev, std::string path)
 		L_ERR(this, "ERROR: could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
 		return -1;
 	}
+
 	return fd;
 }
 
@@ -362,6 +361,7 @@ DatabaseWAL::fget_revision(std::string filename)
 	}
 	return stoul(filename.substr(found+1));
 }
+
 
 void
 DatabaseWAL::write_add_document(const Database& database, const Xapian::Document& doc)
@@ -444,7 +444,6 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 	  access_time(system_clock::now()),
 	  modified(false),
 	  mastery_level(-1),
-	  current_file_rev(""),
 	  fd_rev(-1)
 {
 	reopen();
@@ -574,18 +573,20 @@ Database::reopen()
 }
 
 
-std::string Database::get_uuid() const
+std::string
+Database::get_uuid() const
 {
 	return db->get_uuid();
 }
 
 
-std::string Database::get_revision_info() const
+std::string
+Database::get_revision_info() const
 {
 #if HAVE_DATABASE_REVISION_INFO
 	return db->get_revision_info();
 #else
-	return "";
+	return std::string();
 #endif
 }
 
@@ -628,19 +629,18 @@ Database::commit()
 }
 
 
-bool
+void
 Database::delete_document(const std::string& doc_id, bool _commit)
 {
 	return delete_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), _commit);
 }
 
 
-bool
+void
 Database::delete_document_term(const std::string& term, bool _commit)
 {
 	if (!(flags & DB_WRITABLE)) {
-		L_ERR(this, "ERROR: database is read-only");
-		return 0;
+		throw MSG_Error("database is read-only");
 	}
 
 	if (local) Database::WAL.write_delete_document_term(*this, term);
@@ -651,24 +651,23 @@ Database::delete_document_term(const std::string& term, bool _commit)
 		try {
 			wdb->delete_document(term);
 		} catch (const Xapian::DatabaseModifiedError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Database was modified, try again");
+			}
 		} catch (const Xapian::NetworkError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Problem communicating with the remote database");
+			}
 		} catch (const Xapian::Error& er) {
-			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			return false;
+			throw MSG_Error(er.get_error_string());
 		}
 		L_DATABASE_WRAP(this, "Document deleted");
 		if (!_commit || !commit()) modified = true;
-		return true;
 	}
-
-	L_ERR(this, "ERROR: Not can delete document: %s!", term.c_str());
-	return false;
 }
 
 
@@ -751,12 +750,12 @@ Database::index_texts(Xapian::Document& doc, const std::string& name, const MsgP
 {
 	// L_DATABASE_WRAP(this, "Texts => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
 	if (!(schema.found_field || schema.specification.dynamic)) {
-		throw MSG_Error("%s is not dynamic", name.c_str());
+		throw MSG_ClientError("%s is not dynamic", name.c_str());
 	}
 
 	if (schema.specification.store) {
 		if (schema.specification.bool_term) {
-			throw MSG_Error("A boolean term can not be indexed as text");
+			throw MSG_ClientError("A boolean term can not be indexed as text");
 		}
 
 		try {
@@ -770,7 +769,7 @@ Database::index_texts(Xapian::Document& doc, const std::string& name, const MsgP
 				index_text(doc, texts.get_str(), 0);
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Texts should be a string or array of strings");
+			throw MSG_ClientError("Texts should be a string or array of strings");
 		}
 	}
 }
@@ -813,7 +812,7 @@ Database::index_terms(Xapian::Document& doc, const std::string& name, const MsgP
 {
 	// L_DATABASE_WRAP(this, "Terms => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
 	if (!(schema.found_field || schema.specification.dynamic)) {
-		throw MSG_Error("%s is not dynamic", name.c_str());
+		throw MSG_ClientError("%s is not dynamic", name.c_str());
 	}
 
 	if (schema.specification.store) {
@@ -866,7 +865,7 @@ Database::index_values(Xapian::Document& doc, const std::string& name, const Msg
 {
 	// L_DATABASE_WRAP(this, "Values => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
 	if (!(schema.found_field || schema.specification.dynamic)) {
-		throw MSG_Error("%s is not dynamic", name.c_str());
+		throw MSG_ClientError("%s is not dynamic", name.c_str());
 	}
 
 	if (schema.specification.store) {
@@ -907,7 +906,7 @@ Database::index_value(Xapian::Document& doc, const MsgPack& value, StringList& s
 				s.push_back(value_v);
 				break;
 			} catch (const msgpack::type_error&) {
-				throw MSG_Error("Format invalid for numeric");
+				throw MSG_ClientError("Format invalid for numeric");
 			}
 		}
 		case DATE_TYPE: {
@@ -1020,7 +1019,7 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 					if (item_val.obj->type == msgpack::type::MAP) {
 						index_object(doc, "", item_val, schema.getProperties());
 					} else {
-						throw MSG_Error("%s must be an object", RESERVED_VALUES);
+						throw MSG_ClientError("%s must be an object", RESERVED_VALUES);
 					}
 				} else if (str_key == RESERVED_TEXTS) {
 					if (item_val.obj->type == msgpack::type::ARRAY) {
@@ -1037,7 +1036,7 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 										}
 										index_texts(doc, name, _value, subproperties);
 									} catch (const msgpack::type_error&) {
-										throw MSG_Error("%s must be string", RESERVED_NAME);
+										throw MSG_ClientError("%s must be string", RESERVED_NAME);
 									}
 								} catch (const std::out_of_range&) {
 									schema.update_specification(subitem_val);
@@ -1049,13 +1048,13 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 								}
 								schema.specification = spc_bef;
 							} catch (const std::out_of_range&) {
-								throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_TEXTS);
+								throw MSG_ClientError("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_TEXTS);
 							} catch (const msgpack::type_error&) {
-								throw MSG_Error("%s must be an array of objects", RESERVED_TEXTS);
+								throw MSG_ClientError("%s must be an array of objects", RESERVED_TEXTS);
 							}
 						}
 					} else {
-						throw MSG_Error("%s must be an array of objects", RESERVED_TEXTS);
+						throw MSG_ClientError("%s must be an array of objects", RESERVED_TEXTS);
 					}
 				} else if (str_key == RESERVED_TERMS) {
 					if (item_val.obj->type == msgpack::type::ARRAY) {
@@ -1072,7 +1071,7 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 										}
 										index_terms(doc, name, _value, subproperties);
 									} catch (const msgpack::type_error&) {
-										throw MSG_Error("%s must be string", RESERVED_NAME);
+										throw MSG_ClientError("%s must be string", RESERVED_NAME);
 									}
 								} catch (const std::out_of_range&) {
 									schema.update_specification(subitem_val);
@@ -1084,13 +1083,13 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 								}
 								schema.specification = spc_bef;
 							} catch (const std::out_of_range&) {
-								throw MSG_Error("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_VALUES);
+								throw MSG_ClientError("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_VALUES);
 							} catch (const msgpack::type_error&) {
-								throw MSG_Error("%s must be an array of objects", RESERVED_VALUES);
+								throw MSG_ClientError("%s must be an array of objects", RESERVED_VALUES);
 							}
 						}
 					} else {
-						throw MSG_Error("%s must be an array of objects", RESERVED_VALUES);
+						throw MSG_ClientError("%s must be an array of objects", RESERVED_VALUES);
 					}
 				}
 			}
@@ -1100,7 +1099,7 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 				schema.setSchema(str_schema);
 				schema.setStore(_to_store);
 			}
-			throw MSG_Error("%s", err.what());
+			throw err;
 		}
 	}
 }
@@ -1110,7 +1109,7 @@ Xapian::docid
 Database::index(const std::string& body, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length)
 {
 	if (!(flags & DB_WRITABLE)) {
-		throw MSG_Error("database is read-only");
+		throw MSG_Error("Database is read-only");
 	}
 
 	if (_document_id.empty()) {
@@ -1201,37 +1200,11 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
 	Xapian::MSet mset = enquire.get_mset(0, 1);
-	Xapian::MSetIterator m = mset.begin();
 
 	Xapian::Document document;
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			document = db->get_document(*m);
-			break;
-		} catch (const Xapian::DatabaseModifiedError& er) {
-			if (t) {
-				reopen();
-				m = mset.begin();
-			} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
-		} catch (const Xapian::NetworkError& er) {
-			if (t) {
-				reopen();
-				m = mset.begin();
-			} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
-		} catch (const Xapian::InvalidArgumentError&) {
-			return 0;
-		} catch (const Xapian::DocNotFoundError&) {
-			return 0;
-		} catch (const Xapian::Error& er) {
-			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			return 0;
-		}
-	}
-
-	MsgPack obj_data = get_MsgPack(document);
-	if (apply_patch(obj_patch, obj_data)) {
+	if (_get_document(mset, document)) {
+		MsgPack obj_data = get_MsgPack(document);
+		apply_patch(obj_patch, obj_data);
 		Xapian::Document doc;
 		std::string term_id;
 
@@ -1245,8 +1218,7 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 		L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 		return replace_document_term(term_id, doc, _commit);
 	} else {
-		// Object no patched
-		return 0;
+		throw MSG_ClientError("Document id: %s not found", _document_id.c_str());
 	}
 }
 
@@ -1258,11 +1230,10 @@ Database::replace_document(const std::string& doc_id, const Xapian::Document& do
 }
 
 
-
 Xapian::docid
 Database::replace_document_term(const std::string& term, const Xapian::Document& doc, bool _commit)
 {
-	Xapian::docid did;
+	Xapian::docid did = 0;
 
 	if (local) Database::WAL.write_replace_document_term(*this, term, doc);
 
@@ -1272,23 +1243,29 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		try {
 			did = wdb->replace_document(term, doc);
 		} catch (const Xapian::DatabaseModifiedError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Database was modified, try again");
+			}
 		} catch (const Xapian::NetworkError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Problem communicating with the remote database");
+			}
 		} catch (const Xapian::Error& er) {
-			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			return 0;
+			throw MSG_Error(er.get_error_string());
 		}
+
 		L_DATABASE_WRAP(this, "Document replaced");
 		if (!_commit || !commit()) modified = true;
 		return did;
 	}
 
-	return 0;
+	throw MSG_Error("Unexpected error!");
 }
 
 
@@ -1500,7 +1477,7 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, nfp.get()) : queryparser.add_prefix(field_name, nfp.get());
 						srch.nfps.push_back(std::move(nfp));
 					}
-					field = field_name_dot + query_string(field_value);
+					field = field_name_dot + to_query_string(field_value);
 					break;
 				case STRING_TYPE:
 					// Xapian does not allow repeat prefixes.
@@ -1514,7 +1491,7 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 						field_value.assign(field_value, 1, field_value.size() - 2);
 					}
 
-					field = field_name_dot + query_string(std::to_string(Datetime::timestamp(field_value)));
+					field = field_name_dot + to_query_string(std::to_string(Datetime::timestamp(field_value)));
 					// Xapian does not allow repeat prefixes.
 					if (added_prefixes.insert(field_t.prefix).second) {
 						dfp = std::make_unique<DateFieldProcessor>(field_t.prefix);
@@ -1686,6 +1663,7 @@ Database::search(const query_field_t& e)
 		queryF = queryQ;
 		first = false;
 	}
+
 	if (!e.partial.empty()) {
 		if (first) {
 			queryF = queryP;
@@ -1694,6 +1672,7 @@ Database::search(const query_field_t& e)
 			queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryP);
 		}
 	}
+
 	if (!e.terms.empty()) {
 		if (first) {
 			queryF = queryT;
@@ -1801,7 +1780,7 @@ Database::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key,
 }
 
 
-int
+void
 Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
 		std::vector<std::string>& suggestions, int offset)
 {
@@ -1858,27 +1837,24 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 			Xapian::Enquire enquire = get_enquire(srch.query, collapse_key, &e, sorter, &spies);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
-		} catch (const Xapian::DatabaseModifiedError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
-		} catch (const Xapian::NetworkError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
+		} catch (const Xapian::DatabaseModifiedError&) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Database was modified, try again");
+			}
+		} catch (const Xapian::NetworkError&) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Problem communicating with the remote database");
+			}
 		} catch (const Xapian::Error& er) {
-			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			return 2;
-		} catch (const std::exception& er) {
-			L_DATABASE_WRAP(this, "ERROR: %s", er.what());
-			return 1;
+			throw MSG_Error("%s", er.get_error_string());
+		} catch (const std::exception&) {
+			throw MSG_ClientError("The search was not performed");
 		}
-
-		return 0;
 	}
-
-	L_ERR(this, "ERROR: The search was not performed!");
-	return 2;
 }
 
 
@@ -1941,24 +1917,65 @@ Database::set_metadata(const std::string& key, const std::string& value, bool _c
 
 
 bool
+Database::_get_document(const Xapian::MSet& mset, Xapian::Document& doc)
+{
+	if (mset.empty()) {
+		return false;
+	}
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			doc = db->get_document(*mset.begin());
+			return true;
+		} catch (const Xapian::DatabaseModifiedError&) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Database was modified, try again");
+			}
+		} catch (const Xapian::NetworkError&) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Problem communicating with the remote database");
+			}
+		} catch (const Xapian::InvalidArgumentError&) {
+			throw MSG_Error("Document id is not valid");
+		} catch (const Xapian::DocNotFoundError&) {
+			return false;
+		} catch (const Xapian::Error& er) {
+			throw MSG_Error(er.get_error_string());
+		}
+	}
+
+	return false;
+}
+
+
+bool
 Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 {
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			doc = db->get_document(did);
-		} catch (const Xapian::DatabaseModifiedError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
-		} catch (const Xapian::NetworkError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
-		} catch (const Xapian::Error& er) {
-			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
+			return true;
+		} catch (const Xapian::DatabaseModifiedError&) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Database was modified, try again");
+			}
+		} catch (const Xapian::NetworkError&) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Problem communicating with the remote database");
+			}
+		} catch (const Xapian::DocNotFoundError&) {
 			return false;
+		} catch (const Xapian::InvalidArgumentError&) {
+			throw MSG_Error("Document id is not valid");
 		}
-		return true;
 	}
 
 	return false;
@@ -1982,7 +1999,7 @@ Database::get_stats_database(MsgPack&& stats)
 
 
 void
-Database::get_stats_docs(MsgPack&& stats, const std::string& document_id)
+Database::get_stats_doc(MsgPack&& stats, const std::string& document_id)
 {
 	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
 	if (isupper(document_id.at(0))) {
@@ -1991,74 +2008,49 @@ Database::get_stats_docs(MsgPack&& stats, const std::string& document_id)
 
 	Xapian::QueryParser queryparser;
 	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + document_id);
+	auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + document_id);
 
 	Xapian::Enquire enquire(*db);
 	enquire.set_query(query);
-	Xapian::MSet mset = enquire.get_mset(0, 1);
-	Xapian::MSetIterator m = mset.begin();
-
-	stats[RESERVED_ID] = document_id;
+	auto mset = enquire.get_mset(0, 1);
 
 	Xapian::Document doc;
-	for (int t = DB_RETRIES; t >= 0; --t) {
+	if (_get_document(mset, doc)) {
+		stats[RESERVED_ID] = document_id;
+
+		MsgPack obj_data = get_MsgPack(doc);
 		try {
-			doc = db->get_document(*m);
-			break;
-		} catch (const Xapian::DatabaseModifiedError& er) {
-			if (t) {
-				reopen();
-				m = mset.begin();
-			} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
-		} catch (const Xapian::NetworkError& er) {
-			if (t) {
-				reopen();
-				m = mset.begin();
-			} else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
-		} catch (const Xapian::InvalidArgumentError&) {
-			stats["error"] = "Invalid internal document id";
-			return;
-		} catch (const Xapian::DocNotFoundError&) {
-			stats["error"] = "Document not found";
-			return;
-		} catch (const Xapian::Error& er) {
-			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			return;
+			obj_data = obj_data.at(RESERVED_DATA);
+		} catch (const std::out_of_range&) {
+			clean_reserved(obj_data);
 		}
+
+		stats[RESERVED_DATA] = std::move(obj_data);
+
+		std::string ct_type = doc.get_value(DB_SLOT_TYPE);
+		stats["blob"] = ct_type != JSON_TYPE && ct_type != MSGPACK_TYPE;
+
+		stats["number_terms"] = doc.termlist_count();
+
+		std::string terms;
+		const auto it_e = doc.termlist_end();
+		for (auto it = doc.termlist_begin(); it != it_e; ++it) {
+			terms += repr(*it) + " ";
+		}
+		stats[RESERVED_TERMS] = terms;
+
+		stats["number_values"] = doc.values_count();
+
+		std::string values;
+		const auto iv_e = doc.values_end();
+		for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
+			values += std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
+		}
+		stats[RESERVED_VALUES] = values;
+	} else {
+		stats["response"] = "Document not found";
+		return;
 	}
-
-	MsgPack obj_data = get_MsgPack(doc);
-	try {
-		obj_data = obj_data.at(RESERVED_DATA);
-	} catch (const std::out_of_range&) {
-		clean_reserved(obj_data);
-		obj_data[RESERVED_ID] = doc.get_value(DB_SLOT_ID);
-	}
-
-	stats[RESERVED_DATA] = std::move(obj_data);
-
-	std::string ct_type = doc.get_value(DB_SLOT_TYPE);
-	stats["has_blob"] = ct_type != JSON_TYPE && ct_type != MSGPACK_TYPE;
-
-	stats["number_terms"] = doc.termlist_count();
-
-	std::string terms;
-	const auto it_e = doc.termlist_end();
-	for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-		terms += repr(*it) + " ";
-	}
-	stats[RESERVED_TERMS] = terms;
-
-	stats["number_values"] = doc.values_count();
-
-	std::string values;
-	const auto iv_e = doc.values_end();
-	for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
-		values += std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
-	}
-	stats[RESERVED_VALUES] = values;
 }
 
 
@@ -2188,7 +2180,8 @@ DatabasePool::finish()
 }
 
 
-bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
+bool
+DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {
 	bool writable = flags & DB_WRITABLE;
 	bool persistent = flags & DB_PERSISTENT;
@@ -2285,6 +2278,7 @@ bool DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints
 	if (database->local) {
 		database->checkout_revision = database->get_revision_info();
 	}
+
 	L_DATABASE_END(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx", writable ? "w" : "r", endpoints.as_string().c_str(), database->local ? "local" : "remote", repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
 	return true;
 }
@@ -2418,7 +2412,11 @@ DatabasePool::init_ref(const Endpoints& endpoints)
 			// Start values for the DB.
 			doc.add_boolean_term(prefixed(DB_MASTER, get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE)));
 			doc.add_value(DB_SLOT_CREF, "0");
-			ref_database->replace_document_term(unique_id, doc, true);
+			try {
+				ref_database->replace_document_term(unique_id, doc, true);
+			} catch (const Error& e) {
+				L_ERR(this, "ERROR: %s", e.get_context());
+			}
 		}
 	}
 
@@ -2447,14 +2445,22 @@ DatabasePool::inc_ref(const Endpoints& endpoints)
 			// QUESTION: This case could happen?
 			doc.add_boolean_term(unique_id);
 			doc.add_value(0, "0");
-			ref_database->replace_document_term(unique_id, doc, true);
+			try {
+				ref_database->replace_document_term(unique_id, doc, true);
+			} catch (const Error& e) {
+				L_ERR(this, "ERROR: %s", e.get_context());
+			}
 		} else {
 			// Document found - reference increased
 			doc = ref_database->db->get_document(*p);
 			doc.add_boolean_term(unique_id);
 			int nref = std::stoi(doc.get_value(0));
 			doc.add_value(0, std::to_string(nref + 1));
-			ref_database->replace_document_term(unique_id, doc, true);
+			try {
+				ref_database->replace_document_term(unique_id, doc, true);
+			} catch (const Error& e) {
+				L_ERR(this, "ERROR: %s", e.get_context());
+			}
 		}
 	}
 
@@ -2483,7 +2489,11 @@ DatabasePool::dec_ref(const Endpoints& endpoints)
 			doc.add_boolean_term(unique_id);
 			int nref = std::stoi(doc.get_value(0)) - 1;
 			doc.add_value(0, std::to_string(nref));
-			ref_database->replace_document_term(unique_id, doc, true);
+			try {
+				ref_database->replace_document_term(unique_id, doc, true);
+			} catch (const Error& e) {
+				L_ERR(this, "ERROR: %s", e.get_context());
+			}
 			if (nref == 0) {
 				// qmtx need a lock
 				delete_files(endp_it->path);
