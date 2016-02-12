@@ -181,28 +181,30 @@ int make_search(const test_geo_t _tests[], int len) {
 		std::vector<std::string> suggestions;
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 
-		int rmset = database->get_mset(query, mset, spies, suggestions);
-		if (rmset != 0) {
-			++cont;
-			L_ERR(nullptr, "ERROR: Failed in get_mset");
-		} else if (mset.size() != p.expect_datas.size()) {
-			++cont;
-			L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.\n %s", mset.size(), p.expect_datas.size(), query.terms.back().c_str());
-		} else {
-			auto it = p.expect_datas.begin();
-			for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {
-				auto obj_data = get_MsgPack(m.get_document());
-				try {
-					std::string str_data(obj_data.at(RESERVED_DATA).get_str());
-					if (it->compare(str_data) != 0) {
+		try {
+			database->get_mset(query, mset, spies, suggestions);
+			if (mset.size() != p.expect_datas.size()) {
+				++cont;
+				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.\n %s", mset.size(), p.expect_datas.size(), query.terms.back().c_str());
+			} else {
+				auto it = p.expect_datas.begin();
+				for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {
+					auto obj_data = get_MsgPack(m.get_document());
+					try {
+						std::string str_data(obj_data.at(RESERVED_DATA).get_str());
+						if (it->compare(str_data) != 0) {
+							++cont;
+							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
+						}
+					} catch (const msgpack::type_error& err) {
 						++cont;
-						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
+						L_ERR(nullptr, "ERROR: %s", err.what());
 					}
-				} catch (const msgpack::type_error& err) {
-					++cont;
-					L_ERR(nullptr, "ERROR: %s", err.what());
 				}
 			}
+		} catch (const std::exception& e) {
+			L_ERR(nullptr, "ERROR: %s\n", e.what());
+			++cont;
 		}
 	}
 

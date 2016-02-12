@@ -55,19 +55,40 @@ END_TEST
 
 
 Suite* test_query(void) {
-	Suite *s = suite_create("Search Test");
+	Suite *s = suite_create("Search Query Test");
 
 	TCase *q = tcase_create("Test for query");
 	tcase_add_test(q, test_query_search);
 	suite_add_tcase(s, q);
 
+	return s;
+}
+
+
+Suite* test_terms(void) {
+	Suite *s = suite_create("Search Terms Test");
+
 	TCase *t = tcase_create("Test for terms");
 	tcase_add_test(t, test_terms_search);
 	suite_add_tcase(s, t);
 
+	return s;
+}
+
+
+Suite* test_partial(void) {
+	Suite *s = suite_create("Search Partial Test");
+
 	TCase *p = tcase_create("Test for partials");
 	tcase_add_test(p, test_partials_search);
 	suite_add_tcase(s, p);
+
+	return s;
+}
+
+
+Suite* test_facets(void) {
+	Suite *s = suite_create("Search Facets Test");
 
 	TCase *f = tcase_create("Test for facets");
 	tcase_add_test(f, test_facets_search);
@@ -82,6 +103,22 @@ int main(void) {
 	SRunner *sr = srunner_create(query);
 	srunner_run_all(sr, CK_NORMAL);
 	int number_failed = srunner_ntests_failed(sr);
+
+	Suite *terms = test_terms();
+	sr = srunner_create(terms);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
+
+	Suite *partial = test_partial();
+	sr = srunner_create(partial);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
+
+	Suite *facets = test_facets();
+	sr = srunner_create(facets);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
+
 	srunner_free(sr);
 
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;

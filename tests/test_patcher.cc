@@ -60,7 +60,8 @@ int test_mix() {
 	MsgPack patch(doc_patch);
 	MsgPack obj(doc_obj);
 
-	if (apply_patch(patch, obj)) {
+	try {
+		apply_patch(patch, obj);
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
@@ -68,8 +69,8 @@ int test_mix() {
 		} else {
 			return 0;
 		}
-	} else {
-		L_ERR(nullptr, "ERROR: It can not apply the patch");
+	} catch (const Error& e) {
+		L_ERR(nullptr, "ERROR: %s", e.get_context());
 		return 1;
 	}
 }
@@ -100,7 +101,8 @@ int test_add() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
-	if (apply_patch(patch, obj)) {
+	try {
+		apply_patch(patch, obj);
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
@@ -108,8 +110,8 @@ int test_add() {
 		} else {
 			return 0;
 		}
-	} else {
-		L_ERR(nullptr, "ERROR: It can not apply the patch");
+	} catch (const Error& e) {
+		L_ERR(nullptr, "ERROR: %s", e.get_context());
 		return 1;
 	}
 }
@@ -140,7 +142,8 @@ int test_remove() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
-	if (apply_patch(patch, obj)) {
+	try {
+		apply_patch(patch, obj);
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
@@ -148,8 +151,8 @@ int test_remove() {
 		} else {
 			return 0;
 		}
-	} else {
-		L_ERR(nullptr, "ERROR: It can not apply the patch");
+	} catch (const Error& e) {
+		L_ERR(nullptr, "ERROR: %s", e.get_context());
 		return 1;
 	}
 }
@@ -180,7 +183,8 @@ int test_replace() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
-	if (apply_patch(patch, obj)) {
+	try {
+		apply_patch(patch, obj);
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
@@ -188,8 +192,8 @@ int test_replace() {
 		} else {
 			return 0;
 		}
-	} else {
-		L_ERR(nullptr, "ERROR: It can not apply the patch");
+	} catch (const Error& e) {
+		L_ERR(nullptr, "ERROR: %s", e.get_context());
 		return 1;
 	}
 }
@@ -220,7 +224,8 @@ int test_move() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
-	if (apply_patch(patch, obj)) {
+	try {
+		apply_patch(patch, obj);
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
@@ -228,8 +233,8 @@ int test_move() {
 		} else {
 			return 0;
 		}
-	} else {
-		L_ERR(nullptr, "ERROR: It can not apply the patch");
+	} catch (const Error& e) {
+		L_ERR(nullptr, "ERROR: %s", e.get_context());
 		return 1;
 	}
 }
@@ -260,7 +265,8 @@ int test_copy() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
-	if (apply_patch(patch, obj)) {
+	try {
+		apply_patch(patch, obj);
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
@@ -268,8 +274,8 @@ int test_copy() {
 		} else {
 			return 0;
 		}
-	} else {
-		L_ERR(nullptr, "ERROR: It can not apply the patch");
+	} catch (const Error& e) {
+		L_ERR(nullptr, "ERROR: %s", e.get_context());
 		return 1;
 	}
 }
@@ -299,10 +305,11 @@ int test_test() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
-	if (apply_patch(patch, obj)) {
+	try {
+		apply_patch(patch, obj);
 		return 0;
-	} else {
-		L_ERR(nullptr, "ERROR: It can not apply the patch");
+	} catch (const Error& e) {
+		L_ERR(nullptr, "ERROR: %s", e.get_context());
 		return 1;
 	}
 }

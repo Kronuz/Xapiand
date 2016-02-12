@@ -315,22 +315,24 @@ int make_search(const sort_t _tests[], int len) {
 		std::vector<std::string> suggestions;
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 
-		int rmset = database->get_mset(query, mset, spies, suggestions);
-		if (rmset != 0) {
-			++cont;
-			L_ERR(nullptr, "ERROR: Failed in get_mset");
-		} else if (mset.size() != p.expect_result.size()) {
-			++cont;
-			L_ERR(nullptr, "ERROR: Different number of documents obtained");
-		} else {
-			Xapian::MSetIterator m = mset.begin();
-			for (auto it = p.expect_result.begin(); m != mset.end(); ++it, ++m) {
-				std::string d_id(m.get_document().get_value(0));
-				if (it->compare(d_id) != 0) {
-					++cont;
-					L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_ID, d_id.c_str(), RESERVED_ID, it->c_str());
+		try {
+			database->get_mset(query, mset, spies, suggestions);
+			if (mset.size() != p.expect_result.size()) {
+				++cont;
+				L_ERR(nullptr, "ERROR: Different number of documents obtained");
+			} else {
+				Xapian::MSetIterator m = mset.begin();
+				for (auto it = p.expect_result.begin(); m != mset.end(); ++it, ++m) {
+					std::string d_id(m.get_document().get_value(0));
+					if (it->compare(d_id) != 0) {
+						++cont;
+						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_ID, d_id.c_str(), RESERVED_ID, it->c_str());
+					}
 				}
 			}
+		} catch (const std::exception &e) {
+			L_ERR(nullptr, "ERROR: %s\n", e.what());
+			++cont;
 		}
 	}
 
