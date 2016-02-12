@@ -27,15 +27,15 @@
 #include "utils.h"
 
 
-bool apply_patch(const MsgPack& patch, MsgPack& object);
-bool patch_add(const MsgPack& obj_patch, MsgPack& object);
-bool patch_remove(const MsgPack& obj_patch, MsgPack& object);
-bool patch_replace(const MsgPack& obj_patch, MsgPack& object);
-bool patch_move(const MsgPack& obj_patch, MsgPack& object);
-bool patch_copy(const MsgPack& obj_patch, MsgPack& object);
-bool patch_test(const MsgPack& obj_patch, MsgPack& object);
-bool patch_incr(const MsgPack& obj_patch, MsgPack& object);
-bool patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr=false);
+void apply_patch(const MsgPack& patch, MsgPack& object);
+void patch_add(const MsgPack& obj_patch, MsgPack& object);
+void patch_remove(const MsgPack& obj_patch, MsgPack& object);
+void patch_replace(const MsgPack& obj_patch, MsgPack& object);
+void patch_move(const MsgPack& obj_patch, MsgPack& object);
+void patch_copy(const MsgPack& obj_patch, MsgPack& object);
+void patch_test(const MsgPack& obj_patch, MsgPack& object);
+void patch_incr(const MsgPack& obj_patch, MsgPack& object);
+void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr=false);
 MsgPack get_patch_value(const MsgPack& obj_patch);
 bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch);
 
@@ -50,15 +50,21 @@ inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
 			int offset = strict_stoi(target);
 			o.insert_item_to_array(offset, val);
 		}
+	} else {
+		throw MSG_ClientError("Object is not array or map");
 	}
 }
 
 
 inline void _erase(MsgPack&& o, const std::string& target) {
-	if (o.obj->type == msgpack::type::MAP) {
-		o.erase(target);
-	} else if (o.obj->type == msgpack::type::ARRAY) {
-		o.erase(strict_stoi(target));
+	try {
+		if (o.obj->type == msgpack::type::ARRAY) {
+			o.erase(strict_stoi(target));
+		} else {
+			o.erase(target);
+		}
+	} catch (const msgpack::type_error&) {
+		throw MSG_ClientError("Object is not array or map");
 	}
 }
 
@@ -67,7 +73,7 @@ inline void _incr_decr(MsgPack& o, int val) {
 	if (o.obj->type == msgpack::type::NEGATIVE_INTEGER) {
 		o.obj->via.i64 += val;
 	} else {
-		throw msgpack::type_error();
+		throw MSG_ClientError("Object is not integer");
 	}
 }
 
@@ -77,13 +83,13 @@ inline void _incr_decr(MsgPack& o, int val, int limit) {
 		o.obj->via.i64 += val;
 		if (val < 0) {
 			if (static_cast<int>(o.obj->via.i64) <= limit) {
-				throw MSG_LimitError("limit exceeded");
+				throw MSG_LimitError("Limit exceeded");
 			}
 		} else if (static_cast<int>(o.obj->via.i64) >= limit) {
-			throw MSG_LimitError("limit exceeded");
+			throw MSG_LimitError("Limit exceeded");
 		}
 	} else {
-		throw msgpack::type_error();
+		throw MSG_ClientError("Object is not integer");
 	}
 }
 
