@@ -233,7 +233,7 @@ Schema::update_specification(const MsgPack& item_doc)
 			specification.position.push_back(static_cast<unsigned>(doc_position.get_u64()));
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_POSITION);
+		throw MSG_ClientError("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_POSITION);
 	} catch (const std::out_of_range&) { }
 
 	// RESERVED_WEIGHT is heritable and can change between documents.
@@ -248,7 +248,7 @@ Schema::update_specification(const MsgPack& item_doc)
 			specification.weight.push_back(static_cast<unsigned>(doc_weight.get_u64()));
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_WEIGHT);
+		throw MSG_ClientError("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_WEIGHT);
 	} catch (const std::out_of_range&) { }
 
 	// RESERVED_LANGUAGE is heritable and can change between documents.
@@ -261,7 +261,7 @@ Schema::update_specification(const MsgPack& item_doc)
 				if (is_language(_str_language)) {
 					specification.language.push_back(std::move(_str_language));
 				} else {
-					throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
+					throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
 				}
 			}
 		} else {
@@ -269,11 +269,11 @@ Schema::update_specification(const MsgPack& item_doc)
 			if (is_language(_str_language)) {
 				specification.language.push_back(std::move(_str_language));
 			} else {
-				throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
+				throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
 			}
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be string or array of strings", RESERVED_LANGUAGE);
+		throw MSG_ClientError("Data inconsistency, %s must be string or array of strings", RESERVED_LANGUAGE);
 	} catch (const std::out_of_range&) { }
 
 	// RESERVED_SPELLING is heritable and can change between documents.
@@ -288,7 +288,7 @@ Schema::update_specification(const MsgPack& item_doc)
 			specification.spelling.push_back(doc_spelling.get_bool());
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean or array of booleans", RESERVED_SPELLING);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean or array of booleans", RESERVED_SPELLING);
 	} catch (const std::out_of_range&) { }
 
 	// RESERVED_POSITIONS is heritable and can change between documents.
@@ -303,7 +303,7 @@ Schema::update_specification(const MsgPack& item_doc)
 			specification.positions.push_back(doc_positions.get_bool());
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean or array of booleans", RESERVED_POSITIONS);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean or array of booleans", RESERVED_POSITIONS);
 	} catch (const std::out_of_range&) { }
 
 	// RESERVED_ANALYZER is heritable and can change between documents.
@@ -322,7 +322,7 @@ Schema::update_specification(const MsgPack& item_doc)
 				} else if (_analyzer == str_analyzer[3]) {
 					specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
 				} else {
-					throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
+					throw MSG_ClientError("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
 				}
 			}
 		} else {
@@ -336,18 +336,18 @@ Schema::update_specification(const MsgPack& item_doc)
 			} else if (_analyzer == str_analyzer[3]) {
 				specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
 			} else {
-				throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
+				throw MSG_ClientError("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
 			}
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be string or array of strings", RESERVED_ANALYZER);
+		throw MSG_ClientError("Data inconsistency, %s must be string or array of strings", RESERVED_ANALYZER);
 	} catch (const std::out_of_range&) { }
 
 	// RESERVED_STORE is heritable and can change.
 	try {
 		specification.store = item_doc.at(RESERVED_STORE).get_bool();
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean", RESERVED_STORE);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_STORE);
 	} catch (const std::out_of_range&) { }
 
 	// RESERVED_INDEX is heritable and can change.
@@ -360,19 +360,19 @@ Schema::update_specification(const MsgPack& item_doc)
 		} else if (_index == str_index[2]) {
 			specification.index = Index::VALUE;
 		} else {
-			throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
+			throw MSG_ClientError("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be string", RESERVED_INDEX);
+		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_INDEX);
 	} catch (const std::out_of_range&) { }
 
 	// Check RESERVED_TYPE.
 	try {
 		if (!set_types(lower_string(item_doc.at(RESERVED_TYPE).get_str()), specification.sep_types)) {
-			throw MSG_Error("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, NUMERIC_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
+			throw MSG_ClientError("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, NUMERIC_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be string", RESERVED_TYPE);
+		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_TYPE);
 	} catch (const std::out_of_range&) { }
 }
 
@@ -446,35 +446,35 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 		specification.date_detection = item_doc.at(RESERVED_D_DETECTION).get_bool();
 		properties[RESERVED_D_DETECTION] = specification.date_detection;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean", RESERVED_D_DETECTION);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_D_DETECTION);
 	} catch (const std::out_of_range&) { }
 
 	try {
 		specification.numeric_detection = item_doc.at(RESERVED_N_DETECTION).get_bool();
 		properties[RESERVED_N_DETECTION] = specification.numeric_detection;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean", RESERVED_N_DETECTION);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_N_DETECTION);
 	} catch (const std::out_of_range&) { }
 
 	try {
 		specification.geo_detection = item_doc.at(RESERVED_G_DETECTION).get_bool();
 		properties[RESERVED_G_DETECTION] = specification.geo_detection;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean", RESERVED_G_DETECTION);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_G_DETECTION);
 	} catch (const std::out_of_range&) { }
 
 	try {
 		specification.bool_detection = item_doc.at(RESERVED_B_DETECTION).get_bool();
 		properties[RESERVED_B_DETECTION] = specification.bool_detection;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean", RESERVED_B_DETECTION);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_B_DETECTION);
 	} catch (const std::out_of_range&) { }
 
 	try {
 		specification.string_detection = item_doc.at(RESERVED_S_DETECTION).get_bool();
 		properties[RESERVED_S_DETECTION] = specification.string_detection;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean", RESERVED_S_DETECTION);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_S_DETECTION);
 	} catch (const std::out_of_range&) { }
 
 	try {
@@ -489,7 +489,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 		}
 		properties[RESERVED_POSITION] = specification.position;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_POSITION);
+		throw MSG_ClientError("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_POSITION);
 	} catch (const std::out_of_range&) { }
 
 	try {
@@ -504,7 +504,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 		}
 		properties[RESERVED_WEIGHT] = specification.weight;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_WEIGHT);
+		throw MSG_ClientError("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_WEIGHT);
 	} catch (const std::out_of_range&) { }
 
 	try {
@@ -516,7 +516,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 				if (is_language(_str_language)) {
 					specification.language.push_back(std::move(_str_language));
 				} else {
-					throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
+					throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
 				}
 			}
 		} else {
@@ -527,7 +527,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 		}
 		properties[RESERVED_LANGUAGE] = specification.language;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be string or array of strings", RESERVED_LANGUAGE);
+		throw MSG_ClientError("Data inconsistency, %s must be string or array of strings", RESERVED_LANGUAGE);
 	} catch (const std::out_of_range&) { }
 
 	try {
@@ -542,7 +542,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 		}
 		properties[RESERVED_SPELLING] = specification.spelling;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean or array of booleans", RESERVED_SPELLING);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean or array of booleans", RESERVED_SPELLING);
 	} catch (const std::out_of_range&) { }
 
 	try {
@@ -557,14 +557,14 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 		}
 		properties[RESERVED_POSITIONS] = specification.positions;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean or array of booleans", RESERVED_POSITIONS);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean or array of booleans", RESERVED_POSITIONS);
 	} catch (const std::out_of_range&) { }
 
 	try {
 		specification.store = item_doc.at(RESERVED_STORE).get_bool();
 		properties[RESERVED_STORE] = specification.store;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean", RESERVED_STORE);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_STORE);
 	} catch (const std::out_of_range&) { }
 
 	try {
@@ -579,10 +579,10 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 			specification.index = Index::VALUE;
 			properties[RESERVED_INDEX] = (unsigned)Index::VALUE;
 		} else {
-			throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
+			throw MSG_ClientError("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be string", RESERVED_INDEX);
+		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_INDEX);
 	} catch (const std::out_of_range&) { }
 
 	try {
@@ -600,7 +600,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 				} else if (_str_analyzer == str_analyzer[3]) {
 					specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
 				} else {
-					throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
+					throw MSG_ClientError("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
 				}
 			}
 		} else {
@@ -614,19 +614,19 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 			} else if (_str_analyzer == str_analyzer[3]) {
 				specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
 			} else {
-				throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
+				throw MSG_ClientError("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
 			}
 		}
 		properties[RESERVED_ANALYZER] = specification.analyzer;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be string or array of strings", RESERVED_ANALYZER);
+		throw MSG_ClientError("Data inconsistency, %s must be string or array of strings", RESERVED_ANALYZER);
 	} catch (const std::out_of_range&) { }
 
 	try {
 		specification.dynamic = item_doc.at(RESERVED_DYNAMIC).get_bool();
 		properties[RESERVED_DYNAMIC] = specification.dynamic;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be boolean", RESERVED_DYNAMIC);
+		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_DYNAMIC);
 	} catch (const std::out_of_range&) { }
 
 	if (!is_root) {
@@ -659,7 +659,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 				specification.position.push_back(static_cast<unsigned>(doc_position.get_u64()));
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Data inconsistency, %s must be positive integer or array of positive NEGAgers", RESERVED_POSITION);
+			throw MSG_ClientError("Data inconsistency, %s must be positive integer or array of positive NEGAgers", RESERVED_POSITION);
 		} catch (const std::out_of_range&) {
 			try {
 				auto position = properties.at(RESERVED_POSITION);
@@ -682,7 +682,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 				specification.weight.push_back(static_cast<unsigned>(doc_weight.get_u64()));
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_WEIGHT);
+			throw MSG_ClientError("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_WEIGHT);
 		} catch (const std::out_of_range&) {
 			try {
 				auto weight = properties.at(RESERVED_WEIGHT);
@@ -703,7 +703,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 					if (is_language(_str_language)) {
 						specification.language.push_back(std::move(_str_language));
 					} else {
-						throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
+						throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
 					}
 				}
 			} else {
@@ -711,11 +711,11 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 				if (is_language(_str_language)) {
 					specification.language.push_back(std::move(_str_language));
 				} else {
-					throw MSG_Error("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
+					throw MSG_ClientError("%s: %s is not supported", RESERVED_LANGUAGE, _str_language.c_str());
 				}
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Data inconsistency, %s must be string or array of strings", RESERVED_LANGUAGE);
+			throw MSG_ClientError("Data inconsistency, %s must be string or array of strings", RESERVED_LANGUAGE);
 		} catch (const std::out_of_range&) {
 			try {
 				auto language = properties.at(RESERVED_LANGUAGE);
@@ -738,7 +738,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 				specification.spelling.push_back(doc_spelling.get_bool());
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Data inconsistency, %s must be boolean or array of booleans", RESERVED_SPELLING);
+			throw MSG_ClientError("Data inconsistency, %s must be boolean or array of booleans", RESERVED_SPELLING);
 		} catch (const std::out_of_range&) {
 			try {
 				auto spelling = properties.at(RESERVED_SPELLING);
@@ -761,7 +761,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 				specification.positions.push_back(doc_positions.get_bool());
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Data inconsistency, %s must be boolean or array of booleans", RESERVED_POSITIONS);
+			throw MSG_ClientError("Data inconsistency, %s must be boolean or array of booleans", RESERVED_POSITIONS);
 		} catch (const std::out_of_range&) {
 			try {
 				auto positions = properties.at(RESERVED_POSITIONS);
@@ -788,7 +788,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 					} else if (_str_analyzer == str_analyzer[3]) {
 						specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
 					} else {
-						throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
+						throw MSG_ClientError("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
 					}
 				}
 			} else {
@@ -802,11 +802,11 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 				} else if (_str_analyzer == str_analyzer[3]) {
 					specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
 				} else {
-					throw MSG_Error("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
+					throw MSG_ClientError("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
 				}
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Data inconsistency, %s must be string or array of strings", RESERVED_ANALYZER);
+			throw MSG_ClientError("Data inconsistency, %s must be string or array of strings", RESERVED_ANALYZER);
 		} catch (const std::out_of_range&) {
 			try {
 				auto analyzer = properties.at(RESERVED_ANALYZER);
@@ -821,7 +821,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			specification.store = item_doc.at(RESERVED_STORE).get_bool();
 		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Data inconsistency, %s must be boolean", RESERVED_STORE);
+			throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_STORE);
 		} catch (const std::out_of_range&) {
 			try {
 				specification.store = properties.at(RESERVED_STORE).get_bool();
@@ -838,10 +838,10 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 			} else if (_str_index == str_index[2]) {
 				specification.index = Index::VALUE;
 			} else {
-				throw MSG_Error("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
+				throw MSG_ClientError("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Data inconsistency, %s must be string", RESERVED_INDEX);
+			throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_INDEX);
 		} catch (const std::out_of_range&) {
 			try {
 				specification.index = (Index)properties.at(RESERVED_INDEX).get_u64();
@@ -986,17 +986,17 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 			properties[RESERVED_TYPE] = specification.sep_types;
 			to_store = true;
 		} else {
-			throw MSG_Error("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, NUMERIC_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
+			throw MSG_ClientError("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, NUMERIC_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
 		}
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be string", RESERVED_TYPE);
+		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_TYPE);
 	} catch (const std::out_of_range&) { }
 
 	try {
 		size_t size_acc = 0;
 		auto doc_accuracy = item_doc.at(RESERVED_ACCURACY);
 		if (specification.sep_types[2] == NO_TYPE) {
-			throw MSG_Error("You must specify %s, for verify if the %s is correct", RESERVED_TYPE, RESERVED_ACCURACY);
+			throw MSG_ClientError("You must specify %s, for verify if the %s is correct", RESERVED_TYPE, RESERVED_ACCURACY);
 		}
 		if (doc_accuracy.obj->type == msgpack::type::ARRAY) {
 			switch (specification.sep_types[2]) {
@@ -1004,14 +1004,14 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 					try {
 						specification.accuracy.push_back(doc_accuracy.at(0).get_bool());
 					} catch (const msgpack::type_error&) {
-						throw MSG_Error("Data inconsistency, partials value in %s: %s must be boolean", RESERVED_ACCURACY, GEO_STR);
+						throw MSG_ClientError("Data inconsistency, partials value in %s: %s must be boolean", RESERVED_ACCURACY, GEO_STR);
 					}
 					try {
 						auto error = doc_accuracy.at(1);
 						try {
 							specification.accuracy.push_back(error.get_u64() > HTM_MAX_ERROR ? HTM_MAX_ERROR : error.get_u64() < HTM_MIN_ERROR ? HTM_MIN_ERROR : error.get_u64());
 						} catch (const msgpack::type_error&) {
-							throw MSG_Error("Data inconsistency, error value in %s: %s must be positive integer", RESERVED_ACCURACY, GEO_STR);
+							throw MSG_ClientError("Data inconsistency, error value in %s: %s must be positive integer", RESERVED_ACCURACY, GEO_STR);
 						}
 						try {
 							const auto it_e = doc_accuracy.end();
@@ -1020,11 +1020,11 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 								if (val_acc <= HTM_MAX_LEVEL) {
 									specification.accuracy.push_back(val_acc);
 								} else {
-									throw MSG_Error("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+									throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 								}
 							}
 						} catch (const msgpack::type_error&) {
-							throw MSG_Error("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+							throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 						}
 						std::sort(specification.accuracy.begin() + 2, specification.accuracy.end());
 						std::unique(specification.accuracy.begin() + 2, specification.accuracy.end());
@@ -1051,7 +1051,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 							} else if (str_accuracy == str_time[0]) {
 								specification.accuracy.push_back(toUType(unitTime::SECOND));
 							} else {
-								throw MSG_Error("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+								throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
 							}
 						}
 						std::sort(specification.accuracy.begin(), specification.accuracy.end());
@@ -1059,7 +1059,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 						size_acc = specification.accuracy.size();
 						break;
 					} catch (const msgpack::type_error&) {
-						throw MSG_Error("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s]}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+						throw MSG_ClientError("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s]}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
 					}
 				}
 				case NUMERIC_TYPE: {
@@ -1072,17 +1072,17 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 						size_acc = specification.accuracy.size();
 						break;
 					} catch (const msgpack::type_error&) {
-						throw MSG_Error("Data inconsistency, %s: %s must be an array of positive numbers", RESERVED_ACCURACY, NUMERIC_STR);
+						throw MSG_ClientError("Data inconsistency, %s: %s must be an array of positive numbers", RESERVED_ACCURACY, NUMERIC_STR);
 					}
 				}
 				default:
-					throw MSG_Error("%s type does not have accuracy", Serialise::type(default_spc.sep_types[2]).c_str());
+					throw MSG_ClientError("%s type does not have accuracy", Serialise::type(default_spc.sep_types[2]).c_str());
 			}
 
 			properties[RESERVED_ACCURACY] = specification.accuracy;
 			to_store = true;
 		} else {
-			throw MSG_Error("Data inconsistency, %s must be array", RESERVED_ACCURACY);
+			throw MSG_ClientError("Data inconsistency, %s must be array", RESERVED_ACCURACY);
 		}
 
 		// Accuracy prefix is taken into account only if accuracy is defined.
@@ -1090,7 +1090,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 			auto doc_acc_prefix = item_doc.at(RESERVED_ACC_PREFIX);
 			if (doc_acc_prefix.obj->type == msgpack::type::ARRAY) {
 				if (doc_acc_prefix.obj->via.array.size != size_acc) {
-					throw MSG_Error("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+					throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
 				}
 				try {
 					for (const auto _acc_prefix : doc_acc_prefix) {
@@ -1099,10 +1099,10 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 					to_store = true;
 					properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
 				} catch (const msgpack::type_error&) {
-					throw MSG_Error("Data inconsistency, %s must be an array of strings", RESERVED_ACC_PREFIX);
+					throw MSG_ClientError("Data inconsistency, %s must be an array of strings", RESERVED_ACC_PREFIX);
 				}
 			} else {
-				throw MSG_Error("Data inconsistency, %s must be an array of strings", RESERVED_ACC_PREFIX);
+				throw MSG_ClientError("Data inconsistency, %s must be an array of strings", RESERVED_ACC_PREFIX);
 			}
 		} catch (const std::out_of_range&) { }
 	} catch (const std::out_of_range&) { }
@@ -1112,7 +1112,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 		properties[RESERVED_PREFIX] = specification.prefix;
 		to_store = true;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be string", RESERVED_PREFIX);
+		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_PREFIX);
 	} catch (const std::out_of_range&) { }
 
 	try {
@@ -1126,7 +1126,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 		specification.slot = _slot;
 		to_store = true;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be a positive integer", RESERVED_SLOT);
+		throw MSG_ClientError("Data inconsistency, %s must be a positive integer", RESERVED_SLOT);
 	} catch (const std::out_of_range&) { }
 
 	try {
@@ -1134,7 +1134,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 		properties[RESERVED_BOOL_TERM] = specification.bool_term;
 		to_store = true;
 	} catch (const msgpack::type_error&) {
-		throw MSG_Error("Data inconsistency, %s must be a boolean", RESERVED_BOOL_TERM);
+		throw MSG_ClientError("Data inconsistency, %s must be a boolean", RESERVED_BOOL_TERM);
 	} catch (const std::out_of_range&) { }
 }
 
@@ -1296,7 +1296,7 @@ char
 Schema::get_type(const MsgPack& item_doc)
 {
 	if (item_doc.obj->type == msgpack::type::MAP) {
-		throw MSG_Error("%s can not be object", RESERVED_VALUE);
+		throw MSG_ClientError("%s can not be object", RESERVED_VALUE);
 	}
 
 	MsgPack field = item_doc.obj->type == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
@@ -1305,7 +1305,7 @@ Schema::get_type(const MsgPack& item_doc)
 		const auto it_e = item_doc.end();
 		for (auto it = item_doc.begin() + 1; it != it_e; ++it) {
 			if ((*it).obj->type != type) {
-				throw MSG_Error("Different types of data in array");
+				throw MSG_ClientError("Different types of data in array");
 			}
 		}
 		specification.sep_types[1] = ARRAY_TYPE;
@@ -1341,5 +1341,5 @@ Schema::get_type(const MsgPack& item_doc)
 			break;
 	}
 
-	throw MSG_Error("%s: %s is ambiguous", RESERVED_VALUE, item_doc.to_json_string().c_str());
+	throw MSG_ClientError("%s: %s is ambiguous", RESERVED_VALUE, item_doc.to_json_string().c_str());
 }
