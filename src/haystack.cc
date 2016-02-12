@@ -21,10 +21,10 @@
  */
 
 #include "haystack.h"
+#include "utils.h"
 
 #include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <string.h>
 
 #define ALIGNMENT 8
@@ -36,23 +36,6 @@
 #define MAGIC_FOOTER 0x4859534b
 
 #define FLAG_DELETED (1 << 0)
-
-
-#ifndef HAVE_PREAD
-ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
-	lseek(fd, offset, SEEK_SET);
-	ssize_t ret = read(fd, buf, nbyte);
-	return ret;
-}
-#endif
-
-#ifndef HAVE_PWRITE
-ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
-	lseek(fd, offset, SEEK_SET);
-	ssize_t ret = write(fd, buf, nbyte);
-	return ret;
-}
-#endif
 
 
 HaystackVolume::HaystackVolume(const std::string& path_, bool writable)

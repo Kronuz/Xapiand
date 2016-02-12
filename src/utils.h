@@ -37,6 +37,7 @@
 #include <chrono>
 #include <regex>
 #include <thread>
+#include <unistd.h>
 
 
 constexpr uint16_t SLOT_TIME_MINUTE = 1440;
@@ -137,6 +138,23 @@ inline bool ignored_errorno(int e, bool udp) {
 			return false;  // Do not ignore error
 	}
 }
+
+
+#ifndef HAVE_PREAD
+ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
+	lseek(fd, offset, SEEK_SET);
+	ssize_t ret = read(fd, buf, nbyte);
+	return ret;
+}
+#endif
+
+#ifndef HAVE_PWRITE
+ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
+	lseek(fd, offset, SEEK_SET);
+	ssize_t ret = write(fd, buf, nbyte);
+	return ret;
+}
+#endif
 
 
 std::string name_generator();
