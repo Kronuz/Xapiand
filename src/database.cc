@@ -181,7 +181,7 @@ DatabaseWAL::write(Type type, const std::string& data)
 	uint64_t file_rev = 0, rev = 0;
 	memcpy(&file_rev, current_file_rev.data(), current_file_rev.size());
 	memcpy(&rev, revision.data(), revision.size());
-	if (file_rev + WAL_HEADER_SIZE <= rev) {
+	if (file_rev + WAL_HEADER_SIZE <= rev or fd_revision == -1) {
 		close(fd_revision);
 		open(revision, endpoint->path);
 	}
