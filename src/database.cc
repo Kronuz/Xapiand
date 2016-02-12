@@ -183,7 +183,6 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 	int magic;
 	off_t off_buff;
 	off_t off_head = sizeof(int) + uuid.size() + sizeof(uint64_t) + (sizeof(off_t)*rev_num);
-	off_t line_size = line.size();
 
 	if (file_size == 0) {
 		magic = MAGIC;
@@ -192,20 +191,15 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 		ftruncate(database.fd_rev, off_buff);
 
 		::write(database.fd_rev, &magic, sizeof(int));
-		off_t w = ::write(database.fd_rev, uuid.data(), uuid.size());
-		L_DATABASE_WAL(this, "Written bytes %lld\n", w);
+		::write(database.fd_rev, uuid.data(), uuid.size());
 		::write(database.fd_rev, &rev_num, sizeof(uint64_t));
 
 		// Writing line
-		lseek(database.fd_rev, off_buff, SEEK_SET);
+		lseek(database.fd_rev, 0, SEEK_END);
 		::write(database.fd_rev, line.data(), line.size());
 
 		// Writing offset line
-		lseek(database.fd_rev, off_head, SEEK_SET);
-		::write(database.fd_rev, &off_buff, sizeof(off_t));
-
-		// Writing LUL (Limit of Uncommitted Lines)
-		::write(database.fd_rev, &line_size, sizeof(off_t));
+		pwrite(database.fd_rev, &off_buff, sizeof(off_t), off_head);
 
 	} else {
 		::read(database.fd_rev, &magic, sizeof(int));
@@ -230,12 +224,14 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 		}
 
 		off_t offp = 0;
+		unsigned c_rev = -1;
 		while (true) {
 			off_buff = offp;
 			::read(database.fd_rev, &offp, sizeof(off_t));
 			if (!offp) {
 				break;
 			}
+			++c_rev;
 		}
 
 		if (!off_buff) {
@@ -244,25 +240,22 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 		}
 
 		// Writing line
-		lseek(database.fd_rev, off_buff, SEEK_SET);
+		off_t off_line = lseek(database.fd_rev, 0, SEEK_END);
 		::write(database.fd_rev, line.data(), line.size());
 
-		off_t new_off = rev_num - f_rev;
+		off_t new_off = rev_num - (f_rev + c_rev);
 		assert(new_off >= 0);
 
 		if (new_off) {
-			// Move LUL (Limit of Uncommitted Lines)
-			lseek(database.fd_rev, off_head + new_off + sizeof(off_t), SEEK_SET);
-			::write(database.fd_rev, &line_size, sizeof(off_t));
+			// Add LUL (Limit of Uncommitted Lines) or Add new revision
+			pwrite(database.fd_rev, &off_line,  sizeof(off_t), off_head);
 
 		} else {
 			// Updating LUL (Limit of Uncommitted Lines)
 			off_t lul;
-			lseek(database.fd_rev, off_head + sizeof(off_t), SEEK_SET);
-			::read(database.fd_rev, &lul, sizeof(off_t));
+			pread(database.fd_rev, &lul, sizeof(off_t), off_head);
 			lul += line.size();
-			lseek(database.fd_rev, off_head + sizeof(off_t), SEEK_SET);
-			::write(database.fd_rev, &lul, sizeof(off_t));
+			pwrite(database.fd_rev, &lul, sizeof(off_t), off_head);
 		}
 	}
 }
