@@ -85,8 +85,8 @@ GenerateTerms::numeric(::std::string& result_terms, const ::std::string& start_,
 			prefixes.push_back(acc_prefix[pos]);
 			long long aux = start - (start % _acc);
 			long long aux2 = end - (end % _acc);
-			result_terms = prefix_dot + query_string(::std::to_string(aux));
-			if (aux != aux2) result_terms += " OR " + prefix_dot + query_string(::std::to_string(aux2));
+			result_terms = prefix_dot + to_query_string(::std::to_string(aux));
+			if (aux != aux2) result_terms += " OR " + prefix_dot + to_query_string(::std::to_string(aux2));
 			up_acc = true;
 		}
 
@@ -100,12 +100,12 @@ GenerateTerms::numeric(::std::string& result_terms, const ::std::string& start_,
 			if (aux < MAX_TERMS) {
 				std::string prefix_dot(acc_prefix[pos] + ":");
 				prefixes.push_back(acc_prefix[pos]);
-				::std::string or_terms(prefix_dot + query_string(::std::to_string(start)));
+				::std::string or_terms(prefix_dot + to_query_string(::std::to_string(start)));
 				for (int i = 1; i < aux; ++i) {
 					long long aux2 = start + accuracy[pos] * i;
-					or_terms += " OR " + prefix_dot + query_string(::std::to_string(aux2));
+					or_terms += " OR " + prefix_dot + to_query_string(::std::to_string(aux2));
 				}
-				if (start != end) or_terms += " OR " + prefix_dot + query_string(::std::to_string(end));
+				if (start != end) or_terms += " OR " + prefix_dot + to_query_string(::std::to_string(end));
 				result_terms = up_acc ? "(" + result_terms + ") AND (" + or_terms + ")" : or_terms;
 			}
 		}
@@ -221,10 +221,10 @@ GenerateTerms::year(int tm_s[], int tm_e[], const ::std::string& prefix)
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_s[4] = tm_e[0] = tm_e[1] = tm_e[2] = tm_e[4] = 0;
 	tm_s[3] = tm_e[3] = 1;
 	while (tm_s[5] != tm_e[5]) {
-		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
+		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[5];
 	}
-	res += prefix_dot + query_string(transform_to_string(tm_e));
+	res += prefix_dot + to_query_string(transform_to_string(tm_e));
 	return res;
 }
 
@@ -237,10 +237,10 @@ GenerateTerms::month(int tm_s[], int tm_e[], const ::std::string& prefix)
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_e[1] = tm_e[2] = tm_e[3] = 0;
 	tm_s[3] = tm_e[3] = 1;
 	while (tm_s[4] != tm_e[4]) {
-		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
+		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[4];
 	}
-	res += prefix_dot + query_string(transform_to_string(tm_e));
+	res += prefix_dot + to_query_string(transform_to_string(tm_e));
 	return res;
 }
 
@@ -252,10 +252,10 @@ GenerateTerms::day(int tm_s[], int tm_e[], const ::std::string& prefix)
 	::std::string res;
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_e[0] = tm_e[1] = tm_e[2] = 0;
 	while (tm_s[3] != tm_e[3]) {
-		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
+		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[3];
 	}
-	res += prefix_dot + query_string(transform_to_string(tm_e));
+	res += prefix_dot + to_query_string(transform_to_string(tm_e));
 	return res;
 }
 
@@ -267,10 +267,10 @@ GenerateTerms::hour(int tm_s[], int tm_e[], const ::std::string& prefix)
 	::std::string res;
 	tm_s[0] = tm_s[1] = tm_e[0] = tm_e[1] = 0;
 	while (tm_s[2] != tm_e[2]) {
-		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
+		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[2];
 	}
-	res += prefix_dot + query_string(transform_to_string(tm_e));
+	res += prefix_dot + to_query_string(transform_to_string(tm_e));
 	return res;
 }
 
@@ -282,10 +282,10 @@ GenerateTerms::minute(int tm_s[], int tm_e[], const ::std::string& prefix)
 	::std::string res;
 	tm_s[0] = tm_e[0] = 0;
 	while (tm_s[1] != tm_e[1]) {
-		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
+		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[1];
 	}
-	res += prefix_dot + query_string(transform_to_string(tm_e));
+	res += prefix_dot + to_query_string(transform_to_string(tm_e));
 	return res;
 }
 
@@ -296,10 +296,10 @@ GenerateTerms::second(int tm_s[], int tm_e[], const ::std::string& prefix)
 	::std::string prefix_dot = prefix + ":";
 	::std::string res;
 	while (tm_s[0] != tm_e[0]) {
-		res += prefix_dot + query_string(transform_to_string(tm_s)) + " OR ";
+		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
 		++tm_s[0];
 	}
-	res += prefix_dot + query_string(transform_to_string(tm_e));
+	res += prefix_dot + to_query_string(transform_to_string(tm_e));
 	return res;
 }
 

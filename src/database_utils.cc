@@ -189,7 +189,7 @@ std::string get_blob(const Xapian::Document& doc) {
 }
 
 
-std::string query_string(std::string str) {
+std::string to_query_string(std::string str) {
 	// '-'' in not accepted by the field processors.
 	if (str.at(0) == '-') {
 		str[0] = '_';
