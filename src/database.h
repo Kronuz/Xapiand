@@ -92,6 +92,10 @@ class DatabaseWAL {
 		"REMOVE_SPELLING",
 	};
 
+	std::string current_file_rev;
+	int fd_revision;
+	std::shared_ptr<Database> database;
+
 public:
 	enum class Type {
 		ADD_DOCUMENT,
@@ -107,27 +111,30 @@ public:
 		MAX
 	};
 
+	DatabaseWAL(std::shared_ptr<Database> database);
+	~DatabaseWAL();
+
 	bool execute(Database& database, const std::string& line);
-	int open(std::string rev, std::string path);
+	void open(std::string rev, std::string path);
 	uint64_t fget_revision(std::string filename);
 
-	void write(const Database& database, Type type, const std::string& data);
-	void write_add_document(const Database& database, const Xapian::Document& doc);
-	void write_cancel(const Database& database);
-	void write_delete_document_term(const Database& database, const std::string& document_id);
-	void write_commit(const Database& database);
-	void write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document& doc);
-	void write_replace_document_term(const Database& database, const std::string& document_id, const Xapian::Document& doc);
-	void write_delete_document(const Database& database, Xapian::docid did);
-	void write_set_metadata(const Database& database, const std::string& key, const std::string& val);
-	void write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc);
-	void write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec);
+	void write(Type type, const std::string& data);
+	void write_add_document(const Xapian::Document& doc);
+	void write_cancel();
+	void write_delete_document_term(const std::string& document_id);
+	void write_commit();
+	void write_replace_document(Xapian::docid did, const Xapian::Document& doc);
+	void write_replace_document_term(const std::string& document_id, const Xapian::Document& doc);
+	void write_delete_document(Xapian::docid did);
+	void write_set_metadata(const std::string& key, const std::string& val);
+	void write_add_spelling(const std::string& word, Xapian::termcount freqinc);
+	void write_remove_spelling(const std::string& word, Xapian::termcount freqdec);
 };
 
 
 class Database {
 public:
-	static DatabaseWAL WAL;
+	DatabaseWAL wal;
 
 	Schema schema;
 
@@ -140,8 +147,6 @@ public:
 	bool modified;
 	long long mastery_level;
 	std::string checkout_revision;
-	std::string current_file_rev;
-	int fd_rev;
 
 	std::unique_ptr<Xapian::Database> db;
 

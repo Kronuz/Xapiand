@@ -60,6 +60,19 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 constexpr const char* const DatabaseWAL::names[];
 
 
+DatabaseWAL::DatabaseWAL(std::shared_ptr<Database> database)
+	: fd_revision(-1),
+	  database(database) { }
+
+
+DatabaseWAL::~DatabaseWAL()
+{
+	if (fd_revision != -1) {
+		close(fd_revision);
+	}
+}
+
+
 bool
 DatabaseWAL::execute(Database& database, const std::string& line)
 {
@@ -148,37 +161,36 @@ DatabaseWAL::execute(Database& database, const std::string& line)
 
 
 void
-DatabaseWAL::write(const Database& database, Type type, const std::string& data)
+DatabaseWAL::write(Type type, const std::string& data)
 {
-	if (!(database.flags & DB_WRITABLE)) {
+	if (!(database->flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
 	}
 
-	if (!database.local) {
+	if (!database->local) {
 		throw MSG_Error("Can not execute WAL on a remote database!");
 	}
 
-	auto endpoint = database.endpoints.cbegin();
-	std::string revision = database.get_revision_info();
-	std::string uuid = database.get_uuid();
+	auto endpoint = database->endpoints.cbegin();
+	std::string revision = database->get_revision_info();
+	std::string uuid = database->get_uuid();
 	std::string line = encode_length(revision.size()) + revision + encode_length(toUType(type)) + encode_length(data.size()) + data;
 
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint->path.c_str(), repr(line).c_str());
 
 	uint64_t file_rev = 0, rev = 0;
-	memcpy(&file_rev, database.current_file_rev.data(), database.current_file_rev.size());
+	memcpy(&file_rev, current_file_rev.data(), current_file_rev.size());
 	memcpy(&rev, revision.data(), revision.size());
 	if (file_rev + WAL_HEADER_SIZE <= rev) {
-		close(database.fd_rev);
-		const_cast<Database&>(database).fd_rev = open(revision, endpoint->path);
-		const_cast<Database&>(database).current_file_rev = revision;
+		close(fd_revision);
+		open(revision, endpoint->path);
 	}
 
 	uint64_t rev_num = 0;
 	memcpy(&rev_num, revision.data(), revision.size());
 
-	off_t file_size = ::lseek(database.fd_rev, 0, SEEK_END);
-	::lseek(database.fd_rev, 0, SEEK_SET);
+	off_t file_size = ::lseek(fd_revision, 0, SEEK_END);
+	::lseek(fd_revision, 0, SEEK_SET);
 
 	int magic;
 	off_t off_buff;
@@ -188,28 +200,28 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 		magic = MAGIC;
 		off_buff = sizeof(int) + uuid.size() + sizeof(uint64_t) + (sizeof(off_t) * WAL_HEADER_SIZE);
 
-		ftruncate(database.fd_rev, off_buff);
+		ftruncate(fd_revision, off_buff);
 
-		::write(database.fd_rev, &magic, sizeof(int));
-		::write(database.fd_rev, uuid.data(), uuid.size());
-		::write(database.fd_rev, &rev_num, sizeof(uint64_t));
+		::write(fd_revision, &magic, sizeof(int));
+		::write(fd_revision, uuid.data(), uuid.size());
+		::write(fd_revision, &rev_num, sizeof(uint64_t));
 
 		// Writing line
-		lseek(database.fd_rev, 0, SEEK_END);
-		::write(database.fd_rev, line.data(), line.size());
+		lseek(fd_revision, 0, SEEK_END);
+		::write(fd_revision, line.data(), line.size());
 
 		// Writing offset line
-		pwrite(database.fd_rev, &off_buff, sizeof(off_t), off_head);
+		pwrite(fd_revision, &off_buff, sizeof(off_t), off_head);
 
 	} else {
-		::read(database.fd_rev, &magic, sizeof(int));
+		::read(fd_revision, &magic, sizeof(int));
 		if (magic != MAGIC) {
 			L_ERR(this, "ERROR: File wal with wrong format\n");
 			return;
 		}
 
 		char f_uuid[37];
-		::read(database.fd_rev, f_uuid, sizeof(char)*36);
+		::read(fd_revision, f_uuid, sizeof(char)*36);
 		*(f_uuid + 36) = '\0';
 		if (strcmp(f_uuid, uuid.data()) != 0) {
 			L_ERR(this, "ERROR: File wal with wrong format\n");
@@ -217,7 +229,7 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 		}
 
 		uint64_t f_rev = 0;
-		::read(database.fd_rev, &f_rev, sizeof(uint64_t));
+		::read(fd_revision, &f_rev, sizeof(uint64_t));
 		if (f_rev != file_rev) {
 			L_ERR(this, "ERROR: File wal with wrong format\n");
 			return;
@@ -227,7 +239,7 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 		unsigned c_rev = -1;
 		while (true) {
 			off_buff = offp;
-			::read(database.fd_rev, &offp, sizeof(off_t));
+			::read(fd_revision, &offp, sizeof(off_t));
 			if (!offp) {
 				break;
 			}
@@ -240,30 +252,31 @@ DatabaseWAL::write(const Database& database, Type type, const std::string& data)
 		}
 
 		// Writing line
-		off_t off_line = lseek(database.fd_rev, 0, SEEK_END);
-		::write(database.fd_rev, line.data(), line.size());
+		off_t off_line = lseek(fd_revision, 0, SEEK_END);
+		::write(fd_revision, line.data(), line.size());
 
 		off_t new_off = rev_num - (f_rev + c_rev);
 		assert(new_off >= 0);
 
 		if (new_off) {
 			// Add LUL (Limit of Uncommitted Lines) or Add new revision
-			pwrite(database.fd_rev, &off_line,  sizeof(off_t), off_head);
+			pwrite(fd_revision, &off_line,  sizeof(off_t), off_head);
 
 		} else {
 			// Updating LUL (Limit of Uncommitted Lines)
 			off_t lul;
-			pread(database.fd_rev, &lul, sizeof(off_t), off_head);
+			pread(fd_revision, &lul, sizeof(off_t), off_head);
 			lul += line.size();
-			pwrite(database.fd_rev, &lul, sizeof(off_t), off_head);
+			pwrite(fd_revision, &lul, sizeof(off_t), off_head);
 		}
 	}
 }
 
 
-int
+void
 DatabaseWAL::open(std::string rev, std::string path)
 {
+	current_file_rev = rev;
 	uint64_t revision = 0;
 	memcpy(&revision, rev.data(), rev.size());
 
@@ -276,17 +289,20 @@ DatabaseWAL::open(std::string rev, std::string path)
 		if (errno == ENOENT) {
 			if (::mkdir(wal_dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
 				L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
-				return -1;
+				fd_revision = -1;
+				return;
 			} else {
 				dir = opendir(wal_dir.c_str());
 				if (!dir) {
 					L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
-					return -1;
+					fd_revision = -1;
+					return;
 				}
 			}
 		} else {
 			L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
-			return -1;
+			fd_revision = -1;
+			return;
 		}
 	}
 
@@ -305,10 +321,12 @@ DatabaseWAL::open(std::string rev, std::string path)
 					target_rev = fget_revision(filename);
 				} catch (const std::invalid_argument&) {
 					L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
-					return -1;
+					fd_revision = -1;
+					return;
 				} catch (const std::out_of_range&) {
 					L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
-					return -1;
+					fd_revision = -1;
+					return;
 				}
 
 				if (revision < target_rev) {
@@ -326,22 +344,19 @@ DatabaseWAL::open(std::string rev, std::string path)
 		Subdir = readdir(dir);
 	}
 
-	int fd;
 	std::string file_rev;
 	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_HEADER_SIZE) <= revision) {
 		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(revision);
-		fd = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
+		fd_revision = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
 	} else {
 		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(file_revison);
-		fd = ::open(file_rev.c_str(), O_RDWR, 0644);
+		fd_revision = ::open(file_rev.c_str(), O_RDWR, 0644);
 	}
 
-	if (fd < 0) {
+	if (fd_revision < 0) {
 		L_ERR(this, "ERROR: could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
-		return -1;
+		return;
 	}
-
-	return fd;
 }
 
 
@@ -357,87 +372,84 @@ DatabaseWAL::fget_revision(std::string filename)
 
 
 void
-DatabaseWAL::write_add_document(const Database& database, const Xapian::Document& doc)
+DatabaseWAL::write_add_document( const Xapian::Document& doc)
 {
-	write(database, Type::ADD_DOCUMENT, doc.serialise());
+	write(Type::ADD_DOCUMENT, doc.serialise());
 }
 
 
 void
-DatabaseWAL::write_cancel(const Database& database)
+DatabaseWAL::write_cancel()
 {
-	write(database, Type::CANCEL, "");
+	write(Type::CANCEL, "");
 }
 
 
 void
-DatabaseWAL::write_delete_document_term(const Database& database, const std::string& document_id)
+DatabaseWAL::write_delete_document_term( const std::string& document_id)
 {
-	write(database, Type::DELETE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id);
+	write(Type::DELETE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id);
 }
 
 
 void
-DatabaseWAL::write_commit(const Database& database)
+DatabaseWAL::write_commit()
 {
-	write(database, Type::COMMIT, "");
+	write(Type::COMMIT, "");
 }
 
 
 void
-DatabaseWAL::write_replace_document(const Database& database, Xapian::docid did, const Xapian::Document& doc)
+DatabaseWAL::write_replace_document( Xapian::docid did, const Xapian::Document& doc)
 {
-	write(database, Type::REPLACE_DOCUMENT, encode_length(did) + doc.serialise());
+	write(Type::REPLACE_DOCUMENT, encode_length(did) + doc.serialise());
 }
 
 
 void
-DatabaseWAL::write_replace_document_term(const Database& database, const std::string& document_id, const Xapian::Document& doc)
+DatabaseWAL::write_replace_document_term( const std::string& document_id, const Xapian::Document& doc)
 {
-	write(database, Type::REPLACE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id + doc.serialise());
+	write(Type::REPLACE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id + doc.serialise());
 }
 
 
 void
-DatabaseWAL::write_delete_document(const Database& database, Xapian::docid did)
+DatabaseWAL::write_delete_document( Xapian::docid did)
 {
-	write(database, Type::DELETE_DOCUMENT, encode_length(did));
+	write(Type::DELETE_DOCUMENT, encode_length(did));
 }
 
 
 void
-DatabaseWAL::write_set_metadata(const Database& database, const std::string& key, const std::string& val)
+DatabaseWAL::write_set_metadata( const std::string& key, const std::string& val)
 {
-	write(database, Type::SET_METADATA, encode_length(key.size()) + key + val);
+	write(Type::SET_METADATA, encode_length(key.size()) + key + val);
 }
 
 
 void
-DatabaseWAL::write_add_spelling(const Database& database, const std::string& word, Xapian::termcount freqinc)
+DatabaseWAL::write_add_spelling( const std::string& word, Xapian::termcount freqinc)
 {
-	write(database, Type::ADD_SPELLING, encode_length(freqinc) + word);
+	write(Type::ADD_SPELLING, encode_length(freqinc) + word);
 }
 
 
 void
-DatabaseWAL::write_remove_spelling(const Database& database, const std::string& word, Xapian::termcount freqdec)
+DatabaseWAL::write_remove_spelling( const std::string& word, Xapian::termcount freqdec)
 {
-	write(database, Type::REMOVE_SPELLING, encode_length(freqdec) + word);
+	write(Type::REMOVE_SPELLING, encode_length(freqdec) + word);
 }
-
-
-DatabaseWAL Database::WAL;
 
 
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_)
-	: weak_queue(queue_),
+	: wal(std::shared_ptr<Database>(this)),
+	  weak_queue(queue_),
 	  endpoints(endpoints_),
 	  flags(flags_),
 	  hash(endpoints.hash()),
 	  access_time(system_clock::now()),
 	  modified(false),
-	  mastery_level(-1),
-	  fd_rev(-1)
+	  mastery_level(-1)
 {
 	reopen();
 
@@ -515,8 +527,7 @@ Database::reopen()
 			db->add_database(wdb);
 			if (local && !(flags & DB_NOWAL)) {
 				// WAL required on a local database, open it.
-				current_file_rev = get_revision_info();
-				fd_rev = WAL.open(current_file_rev, e->path);
+				wal.open(get_revision_info(), e->path);
 			}
 		}
 	} else {
@@ -593,7 +604,7 @@ Database::commit()
 		return false;
 	}
 
-	if (local) Database::WAL.write_commit(*this);
+	if (local) wal.write_commit();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Commit: t: %d", t);
@@ -636,7 +647,7 @@ Database::delete_document_term(const std::string& term, bool _commit)
 		throw MSG_Error("database is read-only");
 	}
 
-	if (local) Database::WAL.write_delete_document_term(*this, term);
+	if (local) wal.write_delete_document_term(term);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Deleting document: %s  t: %d", term.c_str(), t);
@@ -1228,7 +1239,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 {
 	Xapian::docid did = 0;
 
-	if (local) Database::WAL.write_replace_document_term(*this, term, doc);
+	if (local) wal.write_replace_document_term(term, doc);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: %s  t: %d", term.c_str(), t);
@@ -1881,7 +1892,7 @@ Database::get_metadata(const std::string& key, std::string& value)
 bool
 Database::set_metadata(const std::string& key, const std::string& value, bool _commit)
 {
-	if (local) Database::WAL.write_set_metadata(*this, key, value);
+	if (local) wal.write_set_metadata(key, value);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
