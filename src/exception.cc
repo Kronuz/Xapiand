@@ -39,5 +39,5 @@ Error::Error(const char *filename, int line, const char *format, ...)
 	msg.assign(buffer);
 
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
-	file.assign(buffer);
+	context.assign(std::string(buffer) + ": " + msg);
 }

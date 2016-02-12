@@ -33,8 +33,8 @@
 
 class Error : public std::runtime_error {
 protected:
-	std::string file;
 	std::string msg;
+	std::string context;
 
 public:
 	Error(const char *filename, int line, const char *format, ...);
@@ -42,6 +42,10 @@ public:
 
 	const char* what() const noexcept override {
 		return msg.c_str();
+	}
+
+	const char* get_context() const noexcept {
+		return context.c_str();
 	}
 };
 
@@ -56,26 +60,20 @@ public:
 class LimitError : public Error {
 public:
 	template<typename... Args>
-	LimitError(Args&&... args) : Error(std::forward<Args>(args)...) {
-		msg.assign(file + ": " + msg);
-	}
+	LimitError(Args&&... args) : Error(std::forward<Args>(args)...) { }
 };
 
 
 class SerializationError : public Error {
 public:
 	template<typename... Args>
-	SerializationError(Args&&... args) : Error(std::forward<Args>(args)...) {
-		msg.assign(file + ": " + msg);
-	}
+	SerializationError(Args&&... args) : Error(std::forward<Args>(args)...) { }
 };
 
 
 class WorkerDetachObject : public Error {
 public:
-	WorkerDetachObject(const char *filename, int line) : Error(filename, line, "Detach is needed") {
-		msg.assign(file + ": " + msg);
-	}
+	WorkerDetachObject(const char *filename, int line) : Error(filename, line, "Detach is needed") { }
 };
 
 
