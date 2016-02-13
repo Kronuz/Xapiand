@@ -306,7 +306,6 @@ DatabaseWAL::open(std::string rev, std::string path)
 		}
 	}
 
-	unsigned char isFile = 0x8;
 	struct dirent *Subdir;
 	Subdir = readdir(dir);
 
@@ -314,7 +313,7 @@ DatabaseWAL::open(std::string rev, std::string path)
 	uint64_t target_rev;
 
 	while (Subdir) {
-		if (Subdir->d_type == isFile) {
+		if (Subdir->d_type == ISFILE) {
 			std::string filename(Subdir->d_name);
 			if (startswith(filename, FILE_WAL)) {
 				try {
@@ -347,10 +346,10 @@ DatabaseWAL::open(std::string rev, std::string path)
 	std::string file_rev;
 	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_HEADER_SIZE) <= revision) {
 		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(revision);
-		fd_revision = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
+		fd_revision = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
 	} else {
 		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(file_revison);
-		fd_revision = ::open(file_rev.c_str(), O_RDWR, 0644);
+		fd_revision = ::open(file_rev.c_str(), O_RDWR | O_CLOEXEC, 0644);
 	}
 
 	if (fd_revision < 0) {

@@ -707,8 +707,6 @@ void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::
 
 
 void delete_files(const std::string& path) {
-	unsigned char isFile = 0x8;
-	unsigned char isFolder = 0x4;
 
 	bool contains_folder = false;
 	DIR *Dir;
@@ -722,13 +720,13 @@ void delete_files(const std::string& path) {
 
 	Subdir = readdir(Dir);
 	while (Subdir) {
-		if (Subdir->d_type == isFolder) {
+		if (Subdir->d_type == ISFOLDER) {
 			if (strcmp(Subdir->d_name, ".") != 0 && strcmp(Subdir->d_name, "..") != 0) {
 				contains_folder = true;
 			}
 		}
 
-		if (Subdir->d_type == isFile) {
+		if (Subdir->d_type == ISFILE) {
 			std::string file = path + "/" + std::string(Subdir->d_name);
 			if (remove(file.c_str()) != 0) {
 				L_ERR(nullptr, "File %s could not be deleted", Subdir->d_name);
@@ -746,7 +744,6 @@ void delete_files(const std::string& path) {
 
 
 void move_files(const std::string& src, const std::string& dst) {
-	unsigned char isFile = 0x8;
 
 	DIR *Dir;
 	struct dirent *Subdir;
@@ -758,7 +755,7 @@ void move_files(const std::string& src, const std::string& dst) {
 
 	Subdir = readdir(Dir);
 	while (Subdir) {
-		if (Subdir->d_type == isFile) {
+		if (Subdir->d_type == ISFILE) {
 			std::string old_name = src + "/" + Subdir->d_name;
 			std::string new_name = dst + "/" + Subdir->d_name;
 			if (::rename(old_name.c_str(), new_name.c_str()) != 0) {
