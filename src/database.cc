@@ -30,7 +30,6 @@
 
 #include <assert.h>
 #include <bitset>
-#include <dirent.h>
 #include <fcntl.h>
 #include <limits>
 
