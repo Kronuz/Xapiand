@@ -805,6 +805,46 @@ bool buid_path_index(const std::string& path) {
 }
 
 
+int open_directory(DIR** dir, std::string dir_path, bool create)
+{
+	*dir = opendir(dir_path.c_str());
+	if (!*dir) {
+		if (errno == ENOENT && create) {
+			if (::mkdir(dir_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+				return -1;
+			} else {
+				*dir = opendir(dir_path.c_str());
+				if (!*dir) {
+					return -1;
+				}
+			}
+		} else {
+			return -1;
+		}
+	}
+	return 0;
+}
+
+
+void find_file_dir(DIR* dir, File_ptr& fptr, std::string pattern, bool pre_suf_fix)
+{
+	std::function<bool(const std::string&, const std::string&)> match_pattern = pre_suf_fix ? startswith : endswith;
+	
+	if (fptr.Subdir) {
+		seekdir(dir, fptr.Subdir->d_seekoff);
+	}
+	
+	while ((fptr.Subdir = readdir(dir)) != nullptr) {
+		if (fptr.Subdir->d_type == ISFILE) {
+			std::string filename(fptr.Subdir->d_name);
+			if (match_pattern(filename, pattern)) {
+				return;
+			}
+		}
+	}
+}
+
+
 int strict_stoi(const std::string& str) {
 	if (str.substr(str.at(0) == '-').find_first_not_of("0123456789") == std::string::npos) {
 		return std::stoi(str, nullptr, 10);

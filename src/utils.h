@@ -30,6 +30,7 @@
 #include <vector>
 #include <locale>
 #include <algorithm>
+#include <dirent.h>
 #include <memory>
 #include <sstream>
 #include <random>
@@ -79,6 +80,13 @@ struct parser_url_path_t {
 	const char *off_command;
 	size_t len_upload;
 	const char *off_upload;
+};
+
+struct File_ptr {
+	struct dirent *Subdir;
+
+	File_ptr()
+	: Subdir(nullptr) { }
 };
 
 extern const std::regex numeric_re;
@@ -197,6 +205,8 @@ void move_files(const std::string& src, const std::string& dst);
 inline bool exist(const std::string& name);
 bool buid_path_index(const std::string& path);
 int strict_stoi(const std::string& str);
+int open_directory(DIR** dir, std::string dir_path, bool create=false);
+void find_file_dir(DIR* dir, File_ptr& fptr, std::string pattern, bool pre_suf_fix);
 
 void update_pos_time();
 void fill_zeros_stats_min(uint16_t start, uint16_t end);
