@@ -612,6 +612,11 @@ bool startswith(const std::string& text, const std::string& token) {
 }
 
 
+bool endswith(const std::string& text, const std::string& token) {
+	if (token.size() > text.size()) return false;
+	return std::equal(text.begin() + text.size() - token.size(), text.end(), token.begin());
+}
+
 void update_pos_time() {
 	auto b_time_second = b_time.second;
 	auto b_time_minute = b_time.minute;
