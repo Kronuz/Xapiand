@@ -272,6 +272,72 @@ DatabaseWAL::write(Type type, const std::string& data)
 }
 
 
+int DatabaseWAL::_open(const std::string& rev, const std::string& path)
+{
+	uint64_t revision = 0;
+	memcpy(&revision, rev.data(), rev.size());
+
+	std::string wal_dir = path + "/" + PATH_WAL;
+
+	DIR *dir;
+	File_ptr fptr;
+	if (open_directory(&dir, wal_dir, true) == -1) {
+		L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
+		return -1;
+	}
+
+	uint64_t file_revison = std::numeric_limits<uint64_t>::max();
+	uint64_t target_rev;
+
+	find_file_dir(dir, fptr, FILE_WAL, true);
+
+	if (fptr.Subdir) {
+		do {
+			try {
+				target_rev = fget_revision(std::string(fptr.Subdir->d_name));
+			} catch (const std::invalid_argument&) {
+				L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
+				return -1;
+			} catch (const std::out_of_range&) {
+				L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
+				return -1;
+			}
+
+			if (revision < target_rev) {
+				file_revison = (target_rev < file_revison) ? target_rev : file_revison;
+			} else {
+				if (revision < file_revison) {
+					file_revison = (target_rev < file_revison) ? target_rev : file_revison;
+				} else {
+					file_revison = (target_rev < file_revison) ? file_revison : target_rev;
+				}
+			}
+
+			find_file_dir(dir, fptr, FILE_WAL, true);
+		} while (fptr.Subdir);
+
+	}
+
+	int fd;
+	std::string file_rev;
+	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_HEADER_SIZE) <= revision) {
+		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(revision);
+		fd = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
+		//llenar y caminar hasta la revision
+	} else {
+		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(file_revison);
+		fd = ::open(file_rev.c_str(), O_RDWR | O_CLOEXEC, 0644);
+		//caminar hasta la revision
+	}
+
+	if (fd < 0) {
+		L_ERR(this, "ERROR: could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
+		return -1;
+	}
+	return fd;
+}
+
+
 void
 DatabaseWAL::open(std::string rev, std::string path)
 {
