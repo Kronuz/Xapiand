@@ -86,7 +86,7 @@ struct File_ptr {
 	struct dirent *Subdir;
 
 	File_ptr()
-	: Subdir(nullptr) { }
+		: Subdir(nullptr) { }
 };
 
 extern const std::regex numeric_re;

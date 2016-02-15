@@ -617,6 +617,7 @@ bool endswith(const std::string& text, const std::string& token) {
 	return std::equal(text.begin() + text.size() - token.size(), text.end(), token.begin());
 }
 
+
 void update_pos_time() {
 	auto b_time_second = b_time.second;
 	auto b_time_minute = b_time.minute;
@@ -712,7 +713,6 @@ void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::
 
 
 void delete_files(const std::string& path) {
-
 	bool contains_folder = false;
 	DIR *Dir;
 
@@ -749,7 +749,6 @@ void delete_files(const std::string& path) {
 
 
 void move_files(const std::string& src, const std::string& dst) {
-
 	DIR *Dir;
 	struct dirent *Subdir;
 	Dir = opendir(src.c_str());
@@ -805,8 +804,7 @@ bool buid_path_index(const std::string& path) {
 }
 
 
-int open_directory(DIR** dir, std::string dir_path, bool create)
-{
+int open_directory(DIR** dir, std::string dir_path, bool create) {
 	*dir = opendir(dir_path.c_str());
 	if (!*dir) {
 		if (errno == ENOENT && create) {
@@ -826,14 +824,13 @@ int open_directory(DIR** dir, std::string dir_path, bool create)
 }
 
 
-void find_file_dir(DIR* dir, File_ptr& fptr, std::string pattern, bool pre_suf_fix)
-{
+void find_file_dir(DIR* dir, File_ptr& fptr, std::string pattern, bool pre_suf_fix) {
 	std::function<bool(const std::string&, const std::string&)> match_pattern = pre_suf_fix ? startswith : endswith;
-	
+
 	if (fptr.Subdir) {
 		seekdir(dir, fptr.Subdir->d_seekoff);
 	}
-	
+
 	while ((fptr.Subdir = readdir(dir)) != nullptr) {
 		if (fptr.Subdir->d_type == ISFILE) {
 			std::string filename(fptr.Subdir->d_name);

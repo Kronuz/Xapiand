@@ -272,7 +272,8 @@ DatabaseWAL::write(Type type, const std::string& data)
 }
 
 
-int DatabaseWAL::_open(const std::string& rev, const std::string& path)
+int
+DatabaseWAL::_open(const std::string& rev, const std::string& path)
 {
 	uint64_t revision = 0;
 	memcpy(&revision, rev.data(), rev.size());
