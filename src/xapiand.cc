@@ -526,8 +526,8 @@ void usedir(const char* path) {
 #else
 			if (strcmp(s, "flintlock") == 0) {
 #endif
-				closedir(dirp);
-				return;
+				empty = true;
+				break;
 			}
 		}
 		empty = false;
@@ -543,6 +543,9 @@ void usedir(const char* path) {
 		L_CRIT(nullptr, "Cannot change current working directory to %s", path);
 		exit(EX_OSFILE);
 	}
+
+	char buffer[MAXPATHLEN];
+	L_NOTICE(nullptr, "Changed current working directory to %s", getcwd(buffer, sizeof(buffer)));
 }
 
 
@@ -611,9 +614,6 @@ int main(int argc, char **argv) {
 	}
 
 	usedir(opts.database.c_str());
-
-	char buffer[MAXPATHLEN];
-	L_NOTICE(nullptr, "Changed current working directory to %s", getcwd(buffer, sizeof(buffer)));
 
 	demote(opts.uid.c_str(), opts.gid.c_str());
 
