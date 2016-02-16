@@ -446,7 +446,11 @@ int approve_wd(const char* wd) {
 			}
 		}
 		if (ent->d_type == DT_REG) {
+#if defined(__APPLE__) && defined(__MACH__)
 			if (ent->d_namlen == 9 && strcmp(s, "flintlock") == 0) {
+#else
+			if (strcmp(s, "flintlock") == 0) {
+#endif
 				closedir(dirp);
 				return 0;
 			}
