@@ -92,7 +92,7 @@ class DatabaseWAL {
 		"REMOVE_SPELLING",
 	};
 
-	std::string current_file_rev;
+	uint64_t current_file_rev;
 	int fd_revision;
 	std::shared_ptr<Database> database;
 

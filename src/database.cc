@@ -61,7 +61,8 @@ constexpr const char* const DatabaseWAL::names[];
 
 DatabaseWAL::DatabaseWAL(std::shared_ptr<Database> database)
 	: fd_revision(-1),
-	  database(database) { }
+	  database(database),
+	  current_file_rev(0) { }
 
 
 DatabaseWAL::~DatabaseWAL()
@@ -177,98 +178,24 @@ DatabaseWAL::write(Type type, const std::string& data)
 
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint->path.c_str(), repr(line).c_str());
 
-	uint64_t file_rev = 0, rev = 0;
-	memcpy(&file_rev, current_file_rev.data(), current_file_rev.size());
+	uint64_t rev = 0;
 	memcpy(&rev, revision.data(), revision.size());
-	if (file_rev + WAL_HEADER_SIZE <= rev or fd_revision == -1) {
+	if (current_file_rev + WAL_HEADER_SIZE < rev or fd_revision == -1) {
 		close(fd_revision);
 		open(revision, endpoint->path);
 	}
 
-	uint64_t rev_num = 0;
-	memcpy(&rev_num, revision.data(), revision.size());
+	::write(fd_revision, line.data(), line.size());
+	assert((rev - current_file_rev) > 0); //Replace for FATAL LOG
+	off_t off_slot = (rev - current_file_rev) + 1;
 
-	off_t file_size = ::lseek(fd_revision, 0, SEEK_END);
-	::lseek(fd_revision, 0, SEEK_SET);
+	++off_slot; //offset start in 0 for revision 1, increase +1 to fix it
+	off_t update_slot;
+	pread(fd_revision, &update_slot, sizeof(off_t), off_slot);
+	update_slot += line.size();
+	pwrite(fd_revision, &update_slot, sizeof(off_t), off_slot);
 
-	int magic;
-	off_t off_buff;
-	off_t off_head = sizeof(int) + uuid.size() + sizeof(uint64_t) + (sizeof(off_t)*rev_num);
-
-	if (file_size == 0) {
-		magic = MAGIC;
-		off_buff = sizeof(int) + uuid.size() + sizeof(uint64_t) + (sizeof(off_t) * WAL_HEADER_SIZE);
-
-		ftruncate(fd_revision, off_buff);
-
-		::write(fd_revision, &magic, sizeof(int));
-		::write(fd_revision, uuid.data(), uuid.size());
-		::write(fd_revision, &rev_num, sizeof(uint64_t));
-
-		// Writing line
-		lseek(fd_revision, 0, SEEK_END);
-		::write(fd_revision, line.data(), line.size());
-
-		// Writing offset line
-		pwrite(fd_revision, &off_buff, sizeof(off_t), off_head);
-
-	} else {
-		::read(fd_revision, &magic, sizeof(int));
-		if (magic != MAGIC) {
-			L_ERR(this, "ERROR: File wal with wrong format\n");
-			return;
-		}
-
-		char f_uuid[37];
-		::read(fd_revision, f_uuid, sizeof(char)*36);
-		*(f_uuid + 36) = '\0';
-		if (strcmp(f_uuid, uuid.data()) != 0) {
-			L_ERR(this, "ERROR: File wal with wrong format\n");
-			return;
-		}
-
-		uint64_t f_rev = 0;
-		::read(fd_revision, &f_rev, sizeof(uint64_t));
-		if (f_rev != file_rev) {
-			L_ERR(this, "ERROR: File wal with wrong format\n");
-			return;
-		}
-
-		off_t offp = 0;
-		unsigned c_rev = -1;
-		while (true) {
-			off_buff = offp;
-			::read(fd_revision, &offp, sizeof(off_t));
-			if (!offp) {
-				break;
-			}
-			++c_rev;
-		}
-
-		if (!off_buff) {
-			L_ERR(this, "ERROR: File wal with wrong format\n");
-			return;
-		}
-
-		// Writing line
-		off_t off_line = lseek(fd_revision, 0, SEEK_END);
-		::write(fd_revision, line.data(), line.size());
-
-		off_t new_off = rev_num - (f_rev + c_rev);
-		assert(new_off >= 0);
-
-		if (new_off) {
-			// Add LUL (Limit of Uncommitted Lines) or Add new revision
-			pwrite(fd_revision, &off_line,  sizeof(off_t), off_head);
-
-		} else {
-			// Updating LUL (Limit of Uncommitted Lines)
-			off_t lul;
-			pread(fd_revision, &lul, sizeof(off_t), off_head);
-			lul += line.size();
-			pwrite(fd_revision, &lul, sizeof(off_t), off_head);
-		}
-	}
+	fsync(fd_revision);
 }
 
 
