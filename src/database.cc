@@ -208,9 +208,8 @@ DatabaseWAL::_open(const std::string& rev, const std::string& path)
 
 	std::string wal_dir = path + "/" + PATH_WAL;
 
-	DIR *dir;
-	File_ptr fptr;
-	if (open_directory(&dir, wal_dir, true) == -1) {
+	DIR *dir = opendir(wal_dir.c_str(), true);
+	if (!dir) {
 		L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
 		return -1;
 	}
@@ -218,12 +217,13 @@ DatabaseWAL::_open(const std::string& rev, const std::string& path)
 	uint64_t file_revison = std::numeric_limits<uint64_t>::max();
 	uint64_t target_rev;
 
+	File_ptr fptr;
 	find_file_dir(dir, fptr, FILE_WAL, true);
 
-	if (fptr.Subdir) {
+	if (fptr.ent) {
 		do {
 			try {
-				target_rev = fget_revision(std::string(fptr.Subdir->d_name));
+				target_rev = fget_revision(std::string(fptr.ent->d_name));
 			} catch (const std::invalid_argument&) {
 				L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
 				return -1;
@@ -243,7 +243,7 @@ DatabaseWAL::_open(const std::string& rev, const std::string& path)
 			}
 
 			find_file_dir(dir, fptr, FILE_WAL, true);
-		} while (fptr.Subdir);
+		} while (fptr.ent);
 
 	}
 

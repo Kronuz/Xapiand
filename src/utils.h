@@ -83,10 +83,10 @@ struct parser_url_path_t {
 };
 
 struct File_ptr {
-	struct dirent *Subdir;
+	struct dirent *ent;
 
 	File_ptr()
-		: Subdir(nullptr) { }
+		: ent(nullptr) { }
 };
 
 extern const std::regex numeric_re;
@@ -209,8 +209,8 @@ void move_files(const std::string& src, const std::string& dst);
 inline bool exist(const std::string& name);
 bool buid_path_index(const std::string& path);
 int strict_stoi(const std::string& str);
-int open_directory(DIR** dir, std::string dir_path, bool create=false);
-void find_file_dir(DIR* dir, File_ptr& fptr, std::string pattern, bool pre_suf_fix);
+void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pre_suf_fix);
+DIR* opendir(const char* filename, bool create);
 
 void update_pos_time();
 void fill_zeros_stats_min(uint16_t start, uint16_t end);

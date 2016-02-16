@@ -32,6 +32,7 @@
 #include <clocale>
 #include <stdlib.h>
 #include <unistd.h>
+#include <dirent.h>    // opendir, readdir, DIR, struct dirent
 #include <sys/param.h>  // for MAXPATHLEN
 #include <fcntl.h>
 
@@ -429,22 +430,31 @@ void detach(void) {
 }
 
 
-bool approve_wd(const std::string& wd) {
-	DIR *dir;
-	bool empty = true;
-	dir = opendir(wd.c_str());
-	struct dirent *Subdir;
-	int n = 0;
-
-	while ((Subdir = readdir(dir)) != nullptr) {
-		if (Subdir->d_type == ISFILE and (strcmp(Subdir->d_name, "flintlock") == 0)) {
-			return true;
-		}
-		if (++n > 2) { //readdir will point to entries '.' and '..'
-			empty = false;
-		}
+int approve_wd(const char* wd) {
+	DIR *dirp;
+	dirp = opendir(wd, true);
+	if (!dirp) {
+		return -1;
 	}
-	closedir(dir);
+
+	int empty = 0;
+	struct dirent *ent;
+	while ((ent = readdir(dirp)) != nullptr) {
+		const char *s = ent->d_name;
+		if (ent->d_type == DT_DIR) {
+			if (s[0] == '.' && (s[1] == '\0' || (s[1] == '.' && s[2] == '\0'))) {
+				continue;
+			}
+		}
+		if (ent->d_type == DT_REG) {
+			if (ent->d_namlen == 9 && strcmp(s, "flintlock") == 0) {
+				closedir(dirp);
+				return 0;
+			}
+		}
+		empty = -2;
+	}
+	closedir(dirp);
 	return empty;
 }
 
@@ -510,8 +520,18 @@ int main(int argc, char **argv) {
 		L_INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).", flush_threshold);
 	}
 
-	assert(!chdir(opts.database.c_str()));
-	assert(approve_wd(opts.database) && "Working directory must be empty or an xapian database");
+	int approved = approve_wd(opts.database.c_str());
+	if (approved == -1) {
+		L_CRIT(nullptr, "Cannot open working directory: %s", opts.database.c_str());
+		return 1;
+	} else if (approved == -2) {
+		L_CRIT(nullptr, "Working directory must be empty or a valid xapian database: %s", opts.database.c_str());
+		return 1;
+	}
+	if (chdir(opts.database.c_str()) == -1) {
+		L_CRIT(nullptr, "Cannot change current working directory to %s", opts.database.c_str());
+		return 1;
+	}
 
 	char buffer[MAXPATHLEN];
 	L_NOTICE(nullptr, "Changed current working directory to %s", getcwd(buffer, sizeof(buffer)));

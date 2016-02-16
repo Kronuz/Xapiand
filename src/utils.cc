@@ -712,31 +712,27 @@ void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::
 
 
 void delete_files(const std::string& path) {
-	bool contains_folder = false;
-	DIR *Dir;
-
-	struct dirent *Subdir;
-	Dir = opendir(path.c_str());
-
-	if (!Dir) {
+	DIR *dirp = opendir(path.c_str());
+	if (!dirp) {
 		return;
 	}
 
-	Subdir = readdir(Dir);
-	while (Subdir) {
-		if (Subdir->d_type == ISFOLDER) {
-			if (strcmp(Subdir->d_name, ".") != 0 && strcmp(Subdir->d_name, "..") != 0) {
-				contains_folder = true;
+	bool contains_folder = false;
+	struct dirent *ent;
+	while ((ent = readdir(dirp)) != nullptr) {
+		const char *s = ent->d_name;
+		if (ent->d_type == DT_DIR) {
+			if (s[0] == '.' && (s[1] == '\0' || (s[1] == '.' && s[2] == '\0'))) {
+				continue;
 			}
+			contains_folder = true;
 		}
-
-		if (Subdir->d_type == ISFILE) {
-			std::string file = path + "/" + std::string(Subdir->d_name);
+		if (ent->d_type == DT_REG) {
+			std::string file = path + "/" + std::string(ent->d_name);
 			if (remove(file.c_str()) != 0) {
-				L_ERR(nullptr, "File %s could not be deleted", Subdir->d_name);
+				L_ERR(nullptr, "File %s could not be deleted", ent->d_name);
 			}
 		}
-		Subdir = readdir(Dir);
 	}
 
 	if (!contains_folder) {
@@ -748,24 +744,20 @@ void delete_files(const std::string& path) {
 
 
 void move_files(const std::string& src, const std::string& dst) {
-	DIR *Dir;
-	struct dirent *Subdir;
-	Dir = opendir(src.c_str());
-
-	if (!Dir) {
+	DIR *dirp = opendir(src.c_str());
+	if (!dirp) {
 		return;
 	}
 
-	Subdir = readdir(Dir);
-	while (Subdir) {
-		if (Subdir->d_type == ISFILE) {
-			std::string old_name = src + "/" + Subdir->d_name;
-			std::string new_name = dst + "/" + Subdir->d_name;
+	struct dirent *ent;
+	while ((ent = readdir(dirp)) != nullptr) {
+		if (ent->d_type == DT_REG) {
+			std::string old_name = src + "/" + ent->d_name;
+			std::string new_name = dst + "/" + ent->d_name;
 			if (::rename(old_name.c_str(), new_name.c_str()) != 0) {
 				L_ERR(nullptr, "Couldn't rename %s to %s", old_name.c_str(), new_name.c_str());
 			}
 		}
-		Subdir = readdir(Dir);
 	}
 
 	if (rmdir(src.c_str()) != 0) {
@@ -803,40 +795,40 @@ bool buid_path_index(const std::string& path) {
 }
 
 
-int open_directory(DIR** dir, std::string dir_path, bool create) {
-	*dir = opendir(dir_path.c_str());
-	if (!*dir) {
+DIR* opendir(const char* filename, bool create) {
+	DIR* dirp = opendir(filename);
+	if (!dirp) {
 		if (errno == ENOENT && create) {
-			if (::mkdir(dir_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				return -1;
+			if (::mkdir(filename, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+				return nullptr;
 			} else {
-				*dir = opendir(dir_path.c_str());
-				if (!*dir) {
-					return -1;
+				dirp = opendir(filename);
+				if (!dirp) {
+					return nullptr;
 				}
 			}
 		} else {
-			return -1;
+			return nullptr;
 		}
 	}
-	return 0;
+	return dirp;
 }
 
 
-void find_file_dir(DIR* dir, File_ptr& fptr, std::string pattern, bool pre_suf_fix) {
+void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pre_suf_fix) {
 	std::function<bool(const std::string&, const std::string&)> match_pattern = pre_suf_fix ? startswith : endswith;
 
-	if (fptr.Subdir) {
+	if (fptr.ent) {
 #if defined(__APPLE__) && defined(__MACH__)
-		seekdir(dir, fptr.Subdir->d_seekoff);
+		seekdir(dir, fptr.ent->d_seekoff);
 #else
-		seekdir(dir, fptr.Subdir->d_off);
+		seekdir(dir, fptr.ent->d_off);
 #endif
 	}
 
-	while ((fptr.Subdir = readdir(dir)) != nullptr) {
-		if (fptr.Subdir->d_type == ISFILE) {
-			std::string filename(fptr.Subdir->d_name);
+	while ((fptr.ent = readdir(dir)) != nullptr) {
+		if (fptr.ent->d_type == DT_REG) {
+			std::string filename(fptr.ent->d_name);
 			if (match_pattern(filename, pattern)) {
 				return;
 			}

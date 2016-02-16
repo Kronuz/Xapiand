@@ -52,10 +52,6 @@
 #define XAPIAND_TCP_BACKLOG       511     /* TCP listen backlog */
 #endif
 
-
-#define ISFILE	 0x8
-#define ISFOLDER 0x4
-
 /*
  *	RapidJSON uses 32-bit array/string indices even on 64-bit platforms,
  *	instead of using \c size_t. Users may override the SizeType by defining
