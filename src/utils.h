@@ -150,16 +150,20 @@ inline bool ignored_errorno(int e, bool udp) {
 
 #ifndef HAVE_PREAD
 ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
+	cur_pos = lseek(fd, 0, SEEK_CUR);
 	lseek(fd, offset, SEEK_SET);
 	ssize_t ret = read(fd, buf, nbyte);
+	lseek(fd, cur_pos, SEEK_SET);
 	return ret;
 }
 #endif
 
 #ifndef HAVE_PWRITE
 ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
+	cur_pos = lseek(fd, 0, SEEK_CUR);
 	lseek(fd, offset, SEEK_SET);
 	ssize_t ret = write(fd, buf, nbyte);
+	lseek(fd, cur_pos, SEEK_SET);
 	return ret;
 }
 #endif
