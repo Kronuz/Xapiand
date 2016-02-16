@@ -827,7 +827,11 @@ void find_file_dir(DIR* dir, File_ptr& fptr, std::string pattern, bool pre_suf_f
 	std::function<bool(const std::string&, const std::string&)> match_pattern = pre_suf_fix ? startswith : endswith;
 
 	if (fptr.Subdir) {
+#if defined(__APPLE__) && defined(__MACH__)
 		seekdir(dir, fptr.Subdir->d_seekoff);
+#elif
+		seekdir(dir, fptr.Subdir->d_off);
+#endif
 	}
 
 	while ((fptr.Subdir = readdir(dir)) != nullptr) {
