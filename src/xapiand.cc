@@ -504,13 +504,6 @@ int main(int argc, char **argv) {
 		L_INFO(nullptr, "Using Glass databases by default.");
 	}
 
-	if (!opts.solo) {
-		// Enable changesets
-		if (setenv("XAPIAN_MAX_CHANGESETS", "20", false) == 0) {
-			L_INFO(nullptr, "Database changesets set to 20.");
-		}
-	}
-
 	// Flush threshold increased
 	int flush_threshold = 10000;  // Default is 10000 (if no set)
 	const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
