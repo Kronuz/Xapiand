@@ -297,87 +297,12 @@ DatabaseWAL::_open(const std::string& rev, const std::string& path)
 
 
 void
-DatabaseWAL::open(std::string rev, std::string path)
+DatabaseWAL::open(const std::string& rev, const std::string& path)
 {
-	current_file_rev = rev;
-	uint64_t revision = 0;
-	memcpy(&revision, rev.data(), rev.size());
+	fd_revision = _open(rev, path);
 
-	std::string wal_dir = path + "/" + PATH_WAL;
-
-	DIR *dir;
-	dir = opendir(wal_dir.c_str());
-
-	if (!dir) {
-		if (errno == ENOENT) {
-			if (::mkdir(wal_dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
-				fd_revision = -1;
-				return;
-			} else {
-				dir = opendir(wal_dir.c_str());
-				if (!dir) {
-					L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
-					fd_revision = -1;
-					return;
-				}
-			}
-		} else {
-			L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
-			fd_revision = -1;
-			return;
-		}
-	}
-
-	struct dirent *Subdir;
-	Subdir = readdir(dir);
-
-	uint64_t file_revison = std::numeric_limits<uint64_t>::max();
-	uint64_t target_rev;
-
-	while (Subdir) {
-		if (Subdir->d_type == ISFILE) {
-			std::string filename(Subdir->d_name);
-			if (startswith(filename, FILE_WAL)) {
-				try {
-					target_rev = fget_revision(filename);
-				} catch (const std::invalid_argument&) {
-					L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
-					fd_revision = -1;
-					return;
-				} catch (const std::out_of_range&) {
-					L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
-					fd_revision = -1;
-					return;
-				}
-
-				if (revision < target_rev) {
-					file_revison = (target_rev < file_revison) ? target_rev : file_revison;
-				} else {
-					if (revision < file_revison) {
-						file_revison = (target_rev < file_revison) ? target_rev : file_revison;
-					} else {
-						file_revison = (target_rev < file_revison) ? file_revison : target_rev;
-					}
-				}
-			}
-		}
-
-		Subdir = readdir(dir);
-	}
-
-	std::string file_rev;
-	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_HEADER_SIZE) <= revision) {
-		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(revision);
-		fd_revision = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
-	} else {
-		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(file_revison);
-		fd_revision = ::open(file_rev.c_str(), O_RDWR | O_CLOEXEC, 0644);
-	}
-
-	if (fd_revision < 0) {
-		L_ERR(this, "ERROR: could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
-		return;
+	if (fd_revision != -1) {
+		// Execute operations in case
 	}
 }
 
