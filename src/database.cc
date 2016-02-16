@@ -60,9 +60,9 @@ constexpr const char* const DatabaseWAL::names[];
 
 
 DatabaseWAL::DatabaseWAL(std::shared_ptr<Database> database)
-	: fd_revision(-1),
-	  database(database),
-	  current_file_rev(0) { }
+	: current_file_rev(0),
+	  fd_revision(-1),
+	  database(database) { }
 
 
 DatabaseWAL::~DatabaseWAL()
