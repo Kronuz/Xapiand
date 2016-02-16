@@ -355,8 +355,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 				// Split arguments when possible (e.g. -Dnode, --verbosity=3)
 				const char* arg = argv[i];
 				if (arg[0] == '-') {
-					if (arg[1] == '-') {
-					} else {
+					if (arg[1] != '-' && arg[1] != 'v') {  // skip long arguments (e.g. --verbosity) or multiswitch (e.g. -vvv)
 						std::string tmp(arg, 2);
 						args.push_back(tmp);
 						arg += 2;
