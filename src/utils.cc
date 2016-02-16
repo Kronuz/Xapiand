@@ -40,7 +40,6 @@
 #include <string.h>
 #include <algorithm>
 #include <xapian.h>
-#include <dirent.h>
 #include <unistd.h>
 #include <sys/stat.h>
 

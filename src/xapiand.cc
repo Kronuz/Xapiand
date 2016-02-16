@@ -34,7 +34,6 @@
 #include <unistd.h>
 #include <sys/param.h>  // for MAXPATHLEN
 #include <fcntl.h>
-#include <dirent.h>
 
 #define LINE_LENGTH 78
 
