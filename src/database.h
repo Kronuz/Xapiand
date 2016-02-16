@@ -94,7 +94,7 @@ class DatabaseWAL {
 
 	uint64_t current_file_rev;
 	int fd_revision;
-	std::shared_ptr<Database> database;
+	Database* database;
 
 public:
 	enum class Type {
@@ -111,7 +111,7 @@ public:
 		MAX
 	};
 
-	DatabaseWAL(std::shared_ptr<Database> database);
+	DatabaseWAL(Database* _database);
 	~DatabaseWAL();
 
 	bool execute(Database& database, const std::string& line);

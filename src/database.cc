@@ -59,10 +59,10 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 constexpr const char* const DatabaseWAL::names[];
 
 
-DatabaseWAL::DatabaseWAL(std::shared_ptr<Database> database)
+DatabaseWAL::DatabaseWAL(Database* _database)
 	: current_file_rev(0),
 	  fd_revision(-1),
-	  database(database) { }
+	  database(_database) { }
 
 
 DatabaseWAL::~DatabaseWAL()
@@ -389,7 +389,7 @@ DatabaseWAL::write_remove_spelling( const std::string& word, Xapian::termcount f
 
 
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_)
-	: wal(std::shared_ptr<Database>(this)),
+	: wal(this),
 	  weak_queue(queue_),
 	  endpoints(endpoints_),
 	  flags(flags_),
