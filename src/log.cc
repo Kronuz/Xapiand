@@ -26,9 +26,12 @@
 #include "datetime.h"
 
 #include <stdarg.h>
+#include <unistd.h>
+#include <stdio.h>
 
 #define BUFFER_SIZE (10 * 1024)
 
+const std::regex filter_re("\033\\[[;\\d]*m");
 
 const char *priorities[] = {
 	EMERG_COL "█" NO_COL,	// LOG_EMERG    0 = System is unusable
@@ -43,12 +46,16 @@ const char *priorities[] = {
 
 
 void StreamLogger::log(int priority, const std::string& str) {
-	ofs << priorities[priority] << str << std::endl;
+	ofs << std::regex_replace(priorities[priority] + str, filter_re, "") << std::endl;
 }
 
 
 void StderrLogger::log(int priority, const std::string& str) {
-	std::cerr << priorities[priority] << str << std::endl;
+	if (isatty(fileno(stderr))) {
+		std::cerr << priorities[priority] + str << std::endl;
+	} else {
+		std::cerr << std::regex_replace(priorities[priority] + str, filter_re, "") << std::endl;
+	}
 }
 
 
@@ -63,7 +70,7 @@ SysLog::~SysLog() {
 
 
 void SysLog::log(int priority, const std::string& str) {
-	syslog(priority, "%s", str.c_str());
+	syslog(priority, "%s", std::regex_replace(priorities[priority] + str, filter_re, "").c_str());
 }
 
 

@@ -334,8 +334,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		ValueArg<unsigned int> raft_port("", "raft", "Raft UDP port number to listen on.", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
 		ValueArg<std::string> raft_group("", "rgroup", "Raft UDP group name.", false, XAPIAND_RAFT_GROUP, "group", cmd);
 
-		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, XAPIAND_PID_FILE, "file", cmd);
-		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, XAPIAND_LOG_FILE, "file", cmd);
+		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "", "file", cmd);
+		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "", "file", cmd);
 		ValueArg<std::string> uid("", "uid", "User ID.", false, "", "uid", cmd);
 		ValueArg<std::string> gid("", "gid", "Group ID.", false, "", "gid", cmd);
 
@@ -406,6 +406,14 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		opts.num_committers = num_committers.getValue();
 		opts.threadpool_size = THEADPOOL_SIZE;
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
+		if (opts.detach) {
+			if (opts.logfile.empty()) {
+				opts.logfile = XAPIAND_LOG_FILE;
+			}
+			if (opts.pidfile.empty()) {
+				opts.pidfile = XAPIAND_PID_FILE;
+			}
+		}
 	} catch (const ArgException &e) { // catch any exceptions
 		std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
 	}
@@ -482,13 +490,15 @@ void detach() {
 
 
 void writepid(const char* pidfile) {
-	/* Try to write the pid file in a best-effort way. */
-	int fd = open(pidfile, O_RDWR | O_CREAT, 0644);
-	if (fd > 0) {
-		char buffer[100];
-		snprintf(buffer, sizeof(buffer), "%lu\n", (unsigned long)getpid());
-		write(fd, buffer, strlen(buffer));
-		close(fd);
+	if (pidfile != nullptr && *pidfile != '\0') {
+		/* Try to write the pid file in a best-effort way. */
+		int fd = open(pidfile, O_RDWR | O_CREAT, 0644);
+		if (fd > 0) {
+			char buffer[100];
+			snprintf(buffer, sizeof(buffer), "%lu\n", (unsigned long)getpid());
+			write(fd, buffer, strlen(buffer));
+			close(fd);
+		}
 	}
 }
 
@@ -558,14 +568,21 @@ int main(int argc, char **argv) {
 
 	std::setlocale(LC_CTYPE, "");
 
+	if (opts.logfile.compare("syslog") == 0) {
+		Log::handlers.push_back(std::make_unique<SysLog>());
+	} else if (!opts.logfile.empty()) {
+		Log::handlers.push_back(std::make_unique<StreamLogger>(opts.logfile.c_str()));
+	}
+	if (!opts.detach) {
+		Log::handlers.push_back(std::make_unique<StderrLogger>());
+	}
+
 	Log::log_level += opts.verbosity;
 
 	banner();
 	if (opts.detach) {
 		detach();
-		if (!opts.pidfile.empty()) {
-			writepid(opts.pidfile.c_str());
-		}
+		writepid(opts.pidfile.c_str());
 		banner();
 	}
 	L_NOTICE(nullptr, "Xapiand started.");
