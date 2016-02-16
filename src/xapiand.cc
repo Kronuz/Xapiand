@@ -32,6 +32,9 @@
 #include <clocale>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pwd.h>
+#include <grp.h>
+#include <sysexits.h>  // EX_*
 #include <dirent.h>    // opendir, readdir, DIR, struct dirent
 #include <sys/param.h>  // for MAXPATHLEN
 #include <fcntl.h>
@@ -271,7 +274,7 @@ public:
 			usage(_cmd);
 		}
 
-		throw ExitException(1);
+		throw ExitException(EX_USAGE);
 	}
 
 	virtual void usage(CmdLineInterface& _cmd) {
@@ -331,10 +334,10 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 		ValueArg<unsigned int> raft_port("", "raft", "Raft UDP port number to listen on.", false, XAPIAND_RAFT_SERVERPORT, "port", cmd);
 		ValueArg<std::string> raft_group("", "rgroup", "Raft UDP group name.", false, XAPIAND_RAFT_GROUP, "group", cmd);
 
-		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "xapiand.pid", "file", cmd);
-		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "xapiand.log", "file", cmd);
-		ValueArg<std::string> uid("", "uid", "User ID.", false, "xapiand", "uid", cmd);
-		ValueArg<std::string> gid("", "gid", "Group ID.", false, "xapiand", "uid", cmd);
+		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, XAPIAND_PID_FILE, "file", cmd);
+		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, XAPIAND_LOG_FILE, "file", cmd);
+		ValueArg<std::string> uid("", "uid", "User ID.", false, "", "uid", cmd);
+		ValueArg<std::string> gid("", "gid", "Group ID.", false, "", "gid", cmd);
 
 		ValueArg<size_t> num_servers("", "workers", "Number of worker servers.", false, nthreads, "threads", cmd);
 		ValueArg<size_t> dbpool_size("", "dbpool", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
@@ -409,17 +412,66 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 }
 
 
-void detach(void) {
-	int fd;
+bool demote(const char* username, const char* group) {
+	/* lose root privileges if we have them */
+	uid_t uid = getuid();
+	if (uid == 0 || geteuid() == 0) {
+		gid_t gid = getgid();
+		if (username == nullptr || *username == '\0') {
+			L_CRIT(nullptr, "Can't run as root without the --uid switch");
+			exit(EX_USAGE);
+		}
 
+		struct passwd *pw;
+		struct group *gr;
+
+		if ((pw = getpwnam(username)) == nullptr) {
+			uid = atoi(username);
+			if (!uid || (pw = getpwuid(uid)) == nullptr) {
+				L_CRIT(nullptr, "Can't find the user %s to switch to", username);
+				exit(EX_NOUSER);
+			}
+		}
+		uid = pw->pw_uid;
+		gid = pw->pw_gid;
+		username = pw->pw_name;
+
+		if (group && *group) {
+			if ((gr = getgrnam(group)) == nullptr) {
+				gid = atoi(group);
+				if (!gid || (gr = getgrgid(gid)) == nullptr) {
+					L_CRIT(nullptr, "Can't find the group %s to switch to", group);
+					exit(EX_NOUSER);
+				}
+			}
+			gid = gr->gr_gid;
+			group = gr->gr_name;
+		} else {
+			if ((gr = getgrgid(gid)) == nullptr) {
+				L_CRIT(nullptr, "Can't find the group id %d", gid);
+				exit(EX_NOUSER);
+			}
+			group = gr->gr_name;
+		}
+		if (setgid(gid) < 0 || setuid(uid) < 0) {
+			L_CRIT(nullptr, "Failed to assume identity of %s:%s", username, group);
+			exit(EX_OSERR);
+		}
+		L_NOTICE(nullptr, "Running as %s:%s", username, group);
+	}
+}
+
+
+void detach() {
 	pid_t pid = fork();
 	if (pid != 0) {
 		L_NOTICE(nullptr, "Xapiand is done with all work here. Daemon on process ID [%d] taking over!", pid);
-		exit(0); /* parent exits */
+		exit(EX_OK); /* parent exits */
 	}
 	setsid(); /* create a new session */
 
 	/* Every output goes to /dev/null */
+	int fd;
 	if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
 		dup2(fd, STDIN_FILENO);
 		dup2(fd, STDOUT_FILENO);
@@ -429,14 +481,27 @@ void detach(void) {
 }
 
 
-int approve_wd(const char* wd) {
+void writepid(const char* pidfile) {
+	/* Try to write the pid file in a best-effort way. */
+	int fd = open(pidfile, O_RDWR | O_CREAT, 0644);
+	if (fd > 0) {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "%lu\n", (unsigned long)getpid());
+		write(fd, buffer, strlen(buffer));
+		close(fd);
+	}
+}
+
+
+void usedir(const char* path) {
 	DIR *dirp;
-	dirp = opendir(wd, true);
+	dirp = opendir(path, true);
 	if (!dirp) {
-		return -1;
+		L_CRIT(nullptr, "Cannot open working directory: %s", path);
+		exit(EX_OSFILE);
 	}
 
-	int empty = 0;
+	bool empty = true;
 	struct dirent *ent;
 	while ((ent = readdir(dirp)) != nullptr) {
 		const char *s = ent->d_name;
@@ -452,13 +517,22 @@ int approve_wd(const char* wd) {
 			if (strcmp(s, "flintlock") == 0) {
 #endif
 				closedir(dirp);
-				return 0;
+				return;
 			}
 		}
-		empty = -2;
+		empty = false;
 	}
 	closedir(dirp);
-	return empty;
+
+	if (!empty) {
+		L_CRIT(nullptr, "Working directory must be empty or a valid xapian database: %s", path);
+		exit(EX_DATAERR);
+	}
+
+	if (chdir(path) == -1) {
+		L_CRIT(nullptr, "Cannot change current working directory to %s", path);
+		exit(EX_OSFILE);
+	}
 }
 
 
@@ -489,6 +563,9 @@ int main(int argc, char **argv) {
 	banner();
 	if (opts.detach) {
 		detach();
+		if (!opts.pidfile.empty()) {
+			writepid(opts.pidfile.c_str());
+		}
 		banner();
 	}
 	L_NOTICE(nullptr, "Xapiand started.");
@@ -516,21 +593,12 @@ int main(int argc, char **argv) {
 		L_INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).", flush_threshold);
 	}
 
-	int approved = approve_wd(opts.database.c_str());
-	if (approved == -1) {
-		L_CRIT(nullptr, "Cannot open working directory: %s", opts.database.c_str());
-		return 1;
-	} else if (approved == -2) {
-		L_CRIT(nullptr, "Working directory must be empty or a valid xapian database: %s", opts.database.c_str());
-		return 1;
-	}
-	if (chdir(opts.database.c_str()) == -1) {
-		L_CRIT(nullptr, "Cannot change current working directory to %s", opts.database.c_str());
-		return 1;
-	}
+	usedir(opts.database.c_str());
 
 	char buffer[MAXPATHLEN];
 	L_NOTICE(nullptr, "Changed current working directory to %s", getcwd(buffer, sizeof(buffer)));
+
+	demote(opts.uid.c_str(), opts.gid.c_str());
 
 	init_time = std::chrono::system_clock::now();
 	time_t epoch = std::chrono::system_clock::to_time_t(init_time);
@@ -544,6 +612,10 @@ int main(int argc, char **argv) {
 
 	run(opts);
 
+	if (opts.detach && !opts.pidfile.empty()) {
+		L_INFO(nullptr, "Removing the pid file.");
+		unlink(opts.pidfile.c_str());
+	}
 	L_NOTICE(nullptr, "Xapiand is done with all work!");
 	return 0;
 }

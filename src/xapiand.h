@@ -37,6 +37,9 @@
 #define XAPIAND_BINARY_PROXY         XAPIAND_BINARY_SERVERPORT
 #endif
 
+#define XAPIAND_PID_FILE             "xapiand.pid"
+#define XAPIAND_LOG_FILE             "xapiand.log"
+
 #define DBPOOL_SIZE          1000    /* Maximum number of database endpoints in database pool */
 #define NUM_REPLICATORS      10      /* Number of replicators */
 #define NUM_COMMITTERS       10      /* Number of threads handling the commits*/
