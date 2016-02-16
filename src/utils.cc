@@ -829,7 +829,7 @@ void find_file_dir(DIR* dir, File_ptr& fptr, std::string pattern, bool pre_suf_f
 	if (fptr.Subdir) {
 #if defined(__APPLE__) && defined(__MACH__)
 		seekdir(dir, fptr.Subdir->d_seekoff);
-#elif
+#else
 		seekdir(dir, fptr.Subdir->d_off);
 #endif
 	}
