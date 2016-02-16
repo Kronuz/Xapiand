@@ -412,7 +412,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 }
 
 
-bool demote(const char* username, const char* group) {
+void demote(const char* username, const char* group) {
 	/* lose root privileges if we have them */
 	uid_t uid = getuid();
 	if (uid == 0 || geteuid() == 0) {
