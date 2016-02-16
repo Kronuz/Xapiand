@@ -429,8 +429,7 @@ void detach(void) {
 }
 
 
-bool approve_wd(const std::string& wd){
-
+bool approve_wd(const std::string& wd) {
 	DIR *dir;
 	bool empty = true;
 	dir = opendir(wd.c_str());
@@ -441,7 +440,7 @@ bool approve_wd(const std::string& wd){
 		if (Subdir->d_type == ISFILE and (strcmp(Subdir->d_name, "flintlock") == 0)) {
 			return true;
 		}
-		if(++n > 2) { //readdir will point to entries '.' and '..'
+		if (++n > 2) { //readdir will point to entries '.' and '..'
 			empty = false;
 		}
 	}
