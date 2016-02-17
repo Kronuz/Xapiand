@@ -287,7 +287,7 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 
 		highest_revision(dir, path, h);
 
-		if (revision <= (h.highest_rev_file + h.highest_rev)) {
+		if (revision <= (h.highest_rev_file + h.highest_rev - 1)) {
 			//revision is +1 that the current db revision, so in equal case the exe ops is needed
 			exe_op = true;
 		}
@@ -400,8 +400,7 @@ DatabaseWAL::highest_revision(DIR *dir, const std::string& path, struct highest_
 		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(h.highest_rev);
 		int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
 
-		// Offset start in second slot to be able to add the revision file
-		off_t off_header = sizeof(int) + 36 + sizeof(uint64_t) + sizeof(off_t);
+		off_t off_header = sizeof(int) + 36 + sizeof(uint64_t);
 		lseek(fd, off_header, SEEK_SET);
 
 		off_t slot = 0;
