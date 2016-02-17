@@ -209,7 +209,7 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 
 	DIR *dir = opendir(wal_dir.c_str(), true);
 	if (!dir) {
-		throw MSG_Error("ERROR: Could not open the wal dir (%s)", strerror(errno));
+		throw MSG_Error("Could not open the wal dir (%s)", strerror(errno));
 	}
 
 	uint64_t file_revison = std::numeric_limits<uint64_t>::max();
@@ -223,9 +223,9 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 			try {
 				target_rev = fget_revision(std::string(fptr.ent->d_name));
 			} catch (const std::invalid_argument&) {
-				throw MSG_Error("ERROR: In filename wal (%s)", strerror(errno));
+				throw MSG_Error("In filename wal (%s)", strerror(errno));
 			} catch (const std::out_of_range&) {
-				throw MSG_Error("ERROR: In filename wal (%s)", strerror(errno));
+				throw MSG_Error("In filename wal (%s)", strerror(errno));
 			}
 
 			if (revision < target_rev) {
@@ -269,14 +269,14 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 		int magic;
 		::read(fd_revision, &magic, sizeof(int));
 		if (magic != MAGIC) {
-			MSG_Error("ERROR: File wal with wrong format");
+			MSG_Error("File wal with wrong format");
 		}
 
 		char uuid[37];
 		::read(fd_revision, uuid, sizeof(char)*36);
 		*(uuid + 36) = '\0';
 		if (strcmp(uuid, database->get_uuid().data()) != 0) {
-		MSG_Error("ERROR: File wal with wrong format");
+			MSG_Error("File wal with wrong format");
 		}
 
 		highest_revision(dir, path, h);
@@ -288,7 +288,7 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 	}
 
 	if (fd_revision < 0) {
-		MSG_Error("ERROR: could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
+		MSG_Error("Could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
 	}
 
 	return exe_op;
@@ -315,7 +315,8 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 		}
 
 	} catch (const Error& e) {
-		//handle open error or propagate to up
+		L_ERR(this, "ERROR: %s", e.get_context());
+		// Handle open error or propagate to up
 	}
 }
 
@@ -333,9 +334,9 @@ DatabaseWAL::highest_revision(DIR *dir, const std::string& path, struct highest_
 			try {
 				target_rev = fget_revision(std::string(fptr.ent->d_name));
 			} catch (const std::invalid_argument&) {
-				throw MSG_Error("ERROR: In filename wal (%s)", strerror(errno));
+				throw MSG_Error("In filename wal (%s)", strerror(errno));
 			} catch (const std::out_of_range&) {
-				throw MSG_Error("ERROR: In filename wal (%s)", strerror(errno));
+				throw MSG_Error("In filename wal (%s)", strerror(errno));
 			}
 
 			if (h.highest_rev_file < target_rev) {
