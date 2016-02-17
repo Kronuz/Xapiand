@@ -270,6 +270,7 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 		if (fd_revision < 0) {
 			throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
 		}
+		tuning(fd_revision);
 		current_file_rev = file_revison;
 
 		int magic;
@@ -285,7 +286,7 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 			MSG_Error("File wal with wrong format");
 		}
 
-		highest_revision(dir, path, h);
+		highest_revision_file(dir, path, h);
 
 		if (revision <= (h.highest_rev_file + h.highest_rev - 1)) {
 			//revision is +1 that the current db revision, so in equal case the exe ops is needed
@@ -316,6 +317,7 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 
 				std::string file = path + PATH_WAL + FILE_WAL + std::to_string(i);
 				int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
+				tuning(fd);
 
 				off_t off_start;
 				if (i == current_file_rev) {
@@ -361,6 +363,7 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 						off_start = lseek(fd, 0, SEEK_CUR);
 					}
 				}
+				close(fd);
 			}
 		}
 	} catch (const Error& e) {
@@ -371,7 +374,7 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 
 
 void
-DatabaseWAL::highest_revision(DIR *dir, const std::string& path, struct highest_revision& h)
+DatabaseWAL::highest_revision_file(DIR *dir, const std::string& path, struct highest_revision& h)
 {
 	File_ptr fptr;
 	find_file_dir(dir, fptr, FILE_WAL, true);
@@ -399,21 +402,54 @@ DatabaseWAL::highest_revision(DIR *dir, const std::string& path, struct highest_
 	if (h.highest_rev_file) {
 		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(h.highest_rev);
 		int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
-
-		off_t off_header = sizeof(int) + 36 + sizeof(uint64_t);
-		lseek(fd, off_header, SEEK_SET);
-
-		off_t slot = 0;
-		uint64_t slot_c = 0;
-		while (true) {
-			::read(fd, &slot, sizeof(off_t));
-			if (!slot) {
-				break;
-			}
-			++slot_c;
-		}
-		h.highest_rev = slot_c;
+		h.highest_rev = highest_revision(fd);
+		close(fd);
 	}
+}
+
+
+uint64_t
+DatabaseWAL::highest_revision(int fd)
+{
+	off_t save_off = lseek(fd, 0, SEEK_CUR);
+	off_t header = sizeof(int) + 36 + sizeof(uint64_t);
+	lseek(fd, header, SEEK_SET);
+
+	off_t slot = 0;
+	uint64_t slot_c = 0;
+	while (true) {
+		::read(fd, &slot, sizeof(off_t));
+		if (!slot) {
+			break;
+		}
+		++slot_c;
+	}
+	lseek(fd, save_off, SEEK_SET);
+	return slot_c;
+}
+
+
+void
+DatabaseWAL::tuning(int fd)
+{
+	// Clean the remaining garbage in the wal
+
+	uint64_t high_rev = highest_revision(fd);
+
+	if (high_rev != WAL_MAX_SLOT) {
+
+		off_t off = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t)*high_rev);
+		off_t max_off;
+
+		::pread(fd, &max_off, sizeof(off_t), off);
+		off_t file_size = lseek(fd, 0, SEEK_END);
+
+		if (max_off != file_size) {
+			ftruncate(fd, max_off);
+		}
+	}
+
+	lseek(fd, 0, SEEK_SET);
 }
 
 
