@@ -200,7 +200,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 	if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL)) {
 		new_cluster = 1;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
-		if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
+		if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
 			L_CRIT(nullptr, "Cannot generate cluster database");
 			exit(EX_CANTCREAT);
 		}
