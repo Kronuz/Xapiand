@@ -28,10 +28,10 @@
 #include "generate_terms.h"
 #include "msgpack_patcher.h"
 
-#include <assert.h>
 #include <bitset>
 #include <fcntl.h>
 #include <limits>
+#include <sysexits.h>
 
 #define XAPIAN_LOCAL_DB_FALLBACK 1
 
@@ -2082,7 +2082,10 @@ DatabaseQueue::DatabaseQueue(DatabaseQueue&& q)
 
 DatabaseQueue::~DatabaseQueue()
 {
-	assert(size() == count);
+	if (size() != count) {
+		L_CRIT(this, "DatabaseQueue size is inconsistent with the DatabaseQueue counter");
+		exit(EX_SOFTWARE);
+	}
 }
 
 
@@ -2113,7 +2116,10 @@ DatabaseQueue::dec_count()
 {
 	std::unique_lock<std::mutex> lk(_mutex);
 
-	assert(count > 0);
+	if (count <= 0) {
+		L_CRIT(this, "Inconsistency with the DatabaseQueue counter");
+		exit(EX_SOFTWARE);
+	}
 
 	if (count > 0) {
 		--count;
@@ -2198,7 +2204,10 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 
 	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB %s(%s) [%lx]...", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 
-	assert(!database);
+	if (database) {
+		L_CRIT(this, "Trying to checkout a database with a not null pointer");
+		exit(EX_SOFTWARE);
+	}
 
 	std::unique_lock<std::mutex> lk(qmtx);
 
@@ -2297,7 +2306,10 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
 	L_DATABASE_BEGIN(this, "-- CHECKING IN DB %s(%s) [%lx]...", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 
-	assert(database);
+	if (!database) {
+		L_CRIT(this, "Trying to checkin a database with a null pointer");
+		exit(EX_SOFTWARE);
+	}
 
 	std::unique_lock<std::mutex> lk(qmtx);
 
@@ -2317,7 +2329,10 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		queue = databases[database->hash];
 	}
 
-	assert(database->weak_queue.lock() == queue);
+	if (database->weak_queue.lock() != queue) {
+		L_CRIT(this, "DatabaseQueue must be the same object");
+		exit(EX_SOFTWARE);
+	}
 
 	int flags = database->flags;
 	Endpoints &endpoints = database->endpoints;
@@ -2348,7 +2363,10 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 			break;
 	}
 
-	assert(queue->count >= queue->size());
+	if (queue->count < queue->size()) {
+		L_CRIT(this, "DatabaseQueue size is inconsistent with the DatabaseQueue counter");
+		exit(EX_SOFTWARE);
+	}
 
 	L_DATABASE_END(this, "-- CHECKED IN DB %s(%s) [%lx]", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 
@@ -2406,8 +2424,8 @@ DatabasePool::init_ref(const Endpoints& endpoints)
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_ERR(this, "Database refs it could not be checkout.");
-		assert(false);
+		L_CRIT(this, "Database refs it could not be checkout.");
+		exit(EX_SOFTWARE);
 	}
 
 	for (auto endp_it = endpoints.begin(); endp_it != endpoints.end(); ++endp_it) {
@@ -2439,8 +2457,8 @@ DatabasePool::inc_ref(const Endpoints& endpoints)
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_ERR(this, "Database refs it could not be checkout.");
-		assert(false);
+		L_CRIT(this, "Database refs it could not be checkout.");
+		exit(EX_SOFTWARE);
 	}
 
 	Xapian::Document doc;
@@ -2483,8 +2501,8 @@ DatabasePool::dec_ref(const Endpoints& endpoints)
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_ERR(this, "Database refs it could not be checkout.");
-		assert(false);
+		L_CRIT(this, "Database refs it could not be checkout.");
+		exit(EX_SOFTWARE);
 	}
 
 	Xapian::Document doc;
@@ -2520,8 +2538,8 @@ DatabasePool::get_master_count()
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_ERR(this, "Database refs it could not be checkout.");
-		assert(false);
+		L_CRIT(this, "Database refs it could not be checkout.");
+		exit(EX_SOFTWARE);
 	}
 
 	int count = 0;
