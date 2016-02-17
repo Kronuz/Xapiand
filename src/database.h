@@ -78,6 +78,18 @@ class DatabasesLRU;
 class DatabaseQueue;
 
 
+struct highest_revision {
+	uint64_t highest_rev_file;
+	uint64_t highest_rev;
+	off_t highest_rev_off;
+
+	highest_revision()
+		: highest_rev_file(0),
+		  highest_rev(0),
+		  highest_rev_off(0) { }
+};
+
+
 class DatabaseWAL {
 	static const constexpr char* const names[] = {
 		"ADD_DOCUMENT",
@@ -115,9 +127,10 @@ public:
 	~DatabaseWAL();
 
 	bool execute(Database& database, const std::string& line);
-	int _open(const std::string& rev, const std::string& path);
+	bool _open(const std::string& rev, const std::string& path);
 	void open(const std::string& rev, const std::string& path);
 	uint64_t fget_revision(std::string filename);
+	void highest_revision(DIR *dir, const std::string& path, highest_revision& h);
 
 	void write(Type type, const std::string& data);
 	void write_add_document(const Xapian::Document& doc);

@@ -200,9 +200,10 @@ DatabaseWAL::write(Type type, const std::string& data)
 }
 
 
-int
+bool
 DatabaseWAL::_open(const std::string& rev, const std::string& path)
 {
+	bool exe_op = false;
 	uint64_t revision = 0;
 	memcpy(&revision, rev.data(), rev.size());
 	++revision;
@@ -211,8 +212,7 @@ DatabaseWAL::_open(const std::string& rev, const std::string& path)
 
 	DIR *dir = opendir(wal_dir.c_str(), true);
 	if (!dir) {
-		L_ERR(this, "ERROR: Could not open the wal dir (%s)", strerror(errno));
-		return -1;
+		throw MSG_Error("ERROR: Could not open the wal dir (%s)", strerror(errno));
 	}
 
 	uint64_t file_revison = std::numeric_limits<uint64_t>::max();
@@ -226,11 +226,9 @@ DatabaseWAL::_open(const std::string& rev, const std::string& path)
 			try {
 				target_rev = fget_revision(std::string(fptr.ent->d_name));
 			} catch (const std::invalid_argument&) {
-				L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
-				return -1;
+				throw MSG_Error("ERROR: In filename wal (%s)", strerror(errno));
 			} catch (const std::out_of_range&) {
-				L_ERR(this, "ERROR: In filename wal (%s)", strerror(errno));
-				return -1;
+				throw MSG_Error("ERROR: In filename wal (%s)", strerror(errno));
 			}
 
 			if (revision < target_rev) {
@@ -248,62 +246,120 @@ DatabaseWAL::_open(const std::string& rev, const std::string& path)
 
 	}
 
-	int fd;
 	std::string file_rev;
-	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_HEADER_SIZE) < revision) {
+	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_MAX_SLOT) < revision) {
 		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(revision);
-		fd = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
+		fd_revision = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
+		current_file_rev = revision;
 
 		int magic = MAGIC;
 		std::string uuid = database->get_uuid();
-		off_t first_slot = sizeof(int) + uuid.size() + sizeof(uint64_t) + (sizeof(off_t) * WAL_HEADER_SIZE);
+		off_t first_slot = sizeof(int) + uuid.size() + sizeof(uint64_t) + (sizeof(off_t) * WAL_MAX_SLOT);
 
-		::write(fd, &magic, sizeof(int));
-		::write(fd, uuid.data(), uuid.size());
-		::write(fd, &revision, sizeof(uint64_t));
-		::write(fd, &first_slot, sizeof(off_t));
+		::write(fd_revision, &magic, sizeof(int));
+		::write(fd_revision, uuid.data(), uuid.size());
+		::write(fd_revision, &revision, sizeof(uint64_t));
+		::write(fd_revision, &first_slot, sizeof(off_t));
 
-		ftruncate(fd, first_slot);
-		lseek(fd, 0, SEEK_END);
+		ftruncate(fd_revision, first_slot);
+		lseek(fd_revision, 0, SEEK_END);
 
 	} else {
 		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(file_revison);
-		fd = ::open(file_rev.c_str(), O_RDWR | O_CLOEXEC, 0644);
+		fd_revision = ::open(file_rev.c_str(), O_RDWR | O_CLOEXEC, 0644);
+		current_file_rev = file_revison;
 
 		int magic;
-		::read(fd, &magic, sizeof(int));
+		::read(fd_revision, &magic, sizeof(int));
 		if (magic != MAGIC) {
-			L_ERR(this, "ERROR: File wal with wrong format\n");
-			return -1;
+			MSG_Error("ERROR: File wal with wrong format");
 		}
 
 		char uuid[37];
 		::read(fd_revision, uuid, sizeof(char)*36);
 		*(uuid + 36) = '\0';
 		if (strcmp(uuid, database->get_uuid().data()) != 0) {
-			L_ERR(this, "ERROR: File wal with wrong format\n");
-			return -1;
+		MSG_Error("ERROR: File wal with wrong format");
 		}
-		lseek(fd, 0, SEEK_END);
+
+		struct highest_revision h;
+		highest_revision(dir, path, h);
+
+		if (revision < h.highest_rev) {
+			exe_op = true;
+		}
+		lseek(fd_revision, 0, SEEK_END);
 	}
 
-	if (fd < 0) {
-		L_ERR(this, "ERROR: could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
-		return -1;
+	if (fd_revision < 0) {
+		MSG_Error("ERROR: could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
 	}
 
-	current_file_rev = revision;
-	return fd;
+	return exe_op;
 }
 
 
 void
 DatabaseWAL::open(const std::string& rev, const std::string& path)
 {
-	fd_revision = _open(rev, path);
+	try {
+		bool need_exe_op = _open(rev, path);
 
-	if (fd_revision != -1) {
-		// Execute operations in case
+		if (need_exe_op) {
+			//execute op
+		}
+
+	} catch (const Error& e) {
+		//handle open error or propagate to up
+	}
+}
+
+
+void
+DatabaseWAL::highest_revision(DIR *dir, const std::string& path, struct highest_revision& h)
+{
+	File_ptr fptr;
+	find_file_dir(dir, fptr, FILE_WAL, true);
+
+	uint64_t target_rev;
+
+	if (fptr.ent) {
+		do {
+			try {
+				target_rev = fget_revision(std::string(fptr.ent->d_name));
+			} catch (const std::invalid_argument&) {
+				throw MSG_Error("ERROR: In filename wal (%s)", strerror(errno));
+			} catch (const std::out_of_range&) {
+				throw MSG_Error("ERROR: In filename wal (%s)", strerror(errno));
+			}
+
+			if (h.highest_rev_file < target_rev) {
+				h.highest_rev_file = target_rev;
+			}
+
+			find_file_dir(dir, fptr, FILE_WAL, true);
+		} while (fptr.ent);
+	}
+
+	if (h.highest_rev_file) {
+		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(h.highest_rev);
+		int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
+
+		// Offset start in second slot to be able to add the revision file
+		off_t off_header = sizeof(int) + 36 + sizeof(uint64_t) + sizeof(off_t);
+		lseek(fd, off_header, SEEK_SET);
+
+		off_t slot = 0;
+		uint64_t slot_c = 0;
+		while (true) {
+			h.highest_rev_off = slot;
+			::read(fd, &slot, sizeof(off_t));
+			if (!slot) {
+				break;
+			}
+			++slot_c;
+		}
+		h.highest_rev = h.highest_rev_file + slot_c;
 	}
 }
 
