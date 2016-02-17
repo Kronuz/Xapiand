@@ -694,6 +694,7 @@ Database::commit()
 	schema.store();
 
 	if (!modified) {
+		L_DATABASE_WRAP(this, "Do not commit, because there are not changes");
 		return false;
 	}
 
@@ -747,6 +748,7 @@ Database::delete_document_term(const std::string& term, bool _commit)
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(term);
+			modified = true;
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) {
 				reopen();
@@ -764,7 +766,7 @@ Database::delete_document_term(const std::string& term, bool _commit)
 		}
 
 		L_DATABASE_WRAP(this, "Document deleted");
-		if (!_commit || !commit()) modified = true;
+		if (_commit) commit();
 		return;
 	}
 }
@@ -1341,6 +1343,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			did = wdb->replace_document(term, doc);
+			modified = true;
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) {
 				reopen();
@@ -1360,7 +1363,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		}
 
 		L_DATABASE_WRAP(this, "Document replaced");
-		if (!_commit || !commit()) modified = true;
+		if (_commit) commit();
 		return did;
 	}
 
@@ -1994,6 +1997,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool _c
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->set_metadata(key, value);
+			modified = true;
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) reopen();
 			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
@@ -2007,7 +2011,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool _c
 			return false;
 		}
 		L_DATABASE_WRAP(this, "set_metadata was done");
-		if (!_commit || !commit()) modified = true;
+		if (_commit) commit();
 		return true;
 	}
 

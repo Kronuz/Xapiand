@@ -92,7 +92,7 @@ struct data_field_t {
 struct similar_field_t {
 	unsigned n_rset;
 	unsigned n_eset;
-	unsigned n_term; //If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
+	unsigned n_term; // If the number of subqueries is less than this threshold, OP_ELITE_SET behaves identically to OP_OR
 	std::vector <std::string> field;
 	std::vector <std::string> type;
 
