@@ -1894,7 +1894,7 @@ Database::get_metadata(const std::string& key, std::string& value)
 			return false;
 		}
 		L_DATABASE_WRAP(this, "get_metadata was done");
-		return value.empty() ? false : true;
+		return !value.empty();
 	}
 
 	L_ERR(this, "ERROR: get_metadata can not be done!");

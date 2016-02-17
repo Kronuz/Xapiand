@@ -876,13 +876,13 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 	auto tp_start = std::chrono::system_clock::now();
 	database->get_mset(e, mset, spies, suggestions);
 
-	L_DEBUG(this, "Suggested querys: %s", [&suggestions]() {
+	L_DEBUG(this, "Suggested queries:\n%s", [&suggestions]() {
 		std::string res;
 		for (const auto& suggestion : suggestions) {
-			res += "\t" + suggestion + "\n";
+			res += "\t+ " + suggestion + "\n";
 		}
 		return res.c_str();
-	});
+	}());
 
 	if (facets) {
 		MsgPack response;
