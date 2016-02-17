@@ -113,7 +113,7 @@ DatabaseWAL::execute(const std::string& line)
 	p = data.data();
 	p_end = p + data.size();
 
-	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database.db.get());
+	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
 	switch (type) {
 		case Type::ADD_DOCUMENT:
 			wdb->add_document(Xapian::Document::unserialise(data));
@@ -281,7 +281,8 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 
 		highest_revision(dir, path, h);
 
-		if (revision < h.highest_rev) {
+		if (revision <= (h.highest_rev_file + h.highest_rev)) {
+			//revision is +1 that the current db revision, so in equal case the exe ops is needed
 			exe_op = true;
 		}
 		lseek(fd_revision, 0, SEEK_END);
@@ -307,13 +308,59 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 		bool need_exe_op = _open(++revision, path, h);
 
 		if (need_exe_op) {
-			//execute op
 
-			int num_file = h.highest_rev_file - current_file_rev;
+			off_t header = sizeof(int) + 36 + sizeof(uint64_t);
+			for (uint64_t i = current_file_rev; i <= h.highest_rev_file; i++) {
 
+				std::string file = path + PATH_WAL + FILE_WAL + std::to_string(i);
+				int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
 
+				off_t off_start;
+				if (i == current_file_rev) {
+					off_start = header + (sizeof(off_t)*i);
+				} else {
+					off_start = header  + sizeof(off_t);
+				}
+
+				off_t off_end;
+				if (i == h.highest_rev_file) {
+					off_end = header + (sizeof(off_t)*h.highest_rev);
+				} else {
+					off_end = header + (sizeof(off_t)*WAL_MAX_SLOT);
+				}
+
+				lseek(fd, off_start, SEEK_SET);
+				while (true) {
+
+					if (off_start == off_end) {
+						off_t start_line;
+						::read(fd, &start_line, sizeof(off_t));
+						off_t end_line = lseek(fd, 0, SEEK_END);
+
+						size_t size_line = end_line - start_line;
+						char *buff_line = (char*) malloc(sizeof(char)*(size_line + 1));
+						pread(fd, buff_line, size_line, start_line);
+						std::string line (buff_line);
+						free(buff_line);
+						execute(line);
+						break;
+					} else {
+						off_t start_line;
+						::read(fd, &start_line, sizeof(off_t));
+						off_t end_line;
+						::read(fd, &end_line, sizeof(off_t));
+
+						size_t size_line = end_line - start_line;
+						char *buff_line = (char*) malloc(sizeof(char)*(size_line + 1));
+						pread(fd, buff_line, size_line, start_line);
+						std::string line (buff_line);
+						free(buff_line);
+						execute(line);
+						off_start = lseek(fd, 0, SEEK_CUR);
+					}
+				}
+			}
 		}
-
 	} catch (const Error& e) {
 		L_ERR(this, "ERROR: %s", e.get_context());
 		// Handle open error or propagate to up
@@ -358,14 +405,13 @@ DatabaseWAL::highest_revision(DIR *dir, const std::string& path, struct highest_
 		off_t slot = 0;
 		uint64_t slot_c = 0;
 		while (true) {
-			h.highest_rev_off = slot;
 			::read(fd, &slot, sizeof(off_t));
 			if (!slot) {
 				break;
 			}
 			++slot_c;
 		}
-		h.highest_rev = h.highest_rev_file + slot_c;
+		h.highest_rev = slot_c;
 	}
 }
 

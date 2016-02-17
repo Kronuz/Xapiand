@@ -81,12 +81,10 @@ class DatabaseQueue;
 struct highest_revision {
 	uint64_t highest_rev_file;
 	uint64_t highest_rev;
-	off_t highest_rev_off;
 
 	highest_revision()
 		: highest_rev_file(0),
-		  highest_rev(0),
-		  highest_rev_off(0) { }
+		  highest_rev(0) { }
 };
 
 
