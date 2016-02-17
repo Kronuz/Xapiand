@@ -257,7 +257,7 @@ int create_test_db() {
 	endpoints.insert(e);
 
 	// There are delete in the make_search.
-	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN);
+	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 	std::vector<std::string> _docs({
 		"examples/sort/doc1.txt",

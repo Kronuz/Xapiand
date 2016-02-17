@@ -128,7 +128,7 @@ int create_test_db() {
 	e.host.assign("0.0.0.0");
 	endpoints.insert(e);
 
-	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN);
+	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 	std::vector<std::string> _docs({
 		"examples/json/geo_1.txt",
