@@ -430,7 +430,7 @@ DatabaseWAL::fget_revision(std::string filename)
 
 
 void
-DatabaseWAL::write_add_document( const Xapian::Document& doc)
+DatabaseWAL::write_add_document(const Xapian::Document& doc)
 {
 	write(Type::ADD_DOCUMENT, doc.serialise());
 }
@@ -444,7 +444,7 @@ DatabaseWAL::write_cancel()
 
 
 void
-DatabaseWAL::write_delete_document_term( const std::string& document_id)
+DatabaseWAL::write_delete_document_term(const std::string& document_id)
 {
 	write(Type::DELETE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id);
 }
@@ -458,42 +458,42 @@ DatabaseWAL::write_commit()
 
 
 void
-DatabaseWAL::write_replace_document( Xapian::docid did, const Xapian::Document& doc)
+DatabaseWAL::write_replace_document(Xapian::docid did, const Xapian::Document& doc)
 {
 	write(Type::REPLACE_DOCUMENT, encode_length(did) + doc.serialise());
 }
 
 
 void
-DatabaseWAL::write_replace_document_term( const std::string& document_id, const Xapian::Document& doc)
+DatabaseWAL::write_replace_document_term(const std::string& document_id, const Xapian::Document& doc)
 {
 	write(Type::REPLACE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id + doc.serialise());
 }
 
 
 void
-DatabaseWAL::write_delete_document( Xapian::docid did)
+DatabaseWAL::write_delete_document(Xapian::docid did)
 {
 	write(Type::DELETE_DOCUMENT, encode_length(did));
 }
 
 
 void
-DatabaseWAL::write_set_metadata( const std::string& key, const std::string& val)
+DatabaseWAL::write_set_metadata(const std::string& key, const std::string& val)
 {
 	write(Type::SET_METADATA, encode_length(key.size()) + key + val);
 }
 
 
 void
-DatabaseWAL::write_add_spelling( const std::string& word, Xapian::termcount freqinc)
+DatabaseWAL::write_add_spelling(const std::string& word, Xapian::termcount freqinc)
 {
 	write(Type::ADD_SPELLING, encode_length(freqinc) + word);
 }
 
 
 void
-DatabaseWAL::write_remove_spelling( const std::string& word, Xapian::termcount freqdec)
+DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount freqdec)
 {
 	write(Type::REMOVE_SPELLING, encode_length(freqdec) + word);
 }
