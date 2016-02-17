@@ -22,28 +22,28 @@
 
 #pragma once
 
-#include "endpoint.h"
-#include "queue.h"
-#include "lru.h"
-#include "threadpool.h"
-
 #include "database_utils.h"
+#include "endpoint.h"
 #include "fields.h"
+#include "lru.h"
 #include "multivaluekeymaker.h"
 #include "multivalue.h"
+#include "queue.h"
+#include "threadpool.h"
 #include "schema.h"
 
 #include <xapian/matchspy.h>
 
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <regex>
-#include <atomic>
-#include <condition_variable>
-#include <algorithm>
-#include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include <chrono>
+
 
 #define DB_WRITABLE     1 // Opens as writable
 #define DB_SPAWN        2 // Automatically creates the database if it doesn't exist

@@ -23,10 +23,10 @@
 #include "database.h"
 
 #include "database_autocommit.h"
-#include "multivaluerange.h"
-#include "log.h"
 #include "generate_terms.h"
+#include "log.h"
 #include "msgpack_patcher.h"
+#include "multivaluerange.h"
 
 #include <bitset>
 #include <fcntl.h>
