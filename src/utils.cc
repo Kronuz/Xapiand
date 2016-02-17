@@ -772,7 +772,7 @@ inline bool exist(const std::string& path) {
 }
 
 
-bool buid_path_index(const std::string& path) {
+bool build_path_index(const std::string& path) {
 	std::string dir = path;
 	std::size_t found = dir.find_last_of("/\\");
 	dir.resize(found);

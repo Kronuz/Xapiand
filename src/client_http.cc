@@ -720,7 +720,7 @@ HttpClient::delete_document_view(const query_field_t& e)
 void
 HttpClient::index_document_view(const query_field_t& e)
 {
-	buid_path_index(index_path);
+	build_path_index(index_path);
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF)) {
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
