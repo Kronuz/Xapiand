@@ -243,10 +243,13 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 
 	}
 
-	std::string file_rev;
+	std::string file;
 	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_MAX_SLOT) < revision) {
-		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(revision);
-		fd_revision = ::open(file_rev.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
+		file = path + PATH_WAL + FILE_WAL + std::to_string(revision);
+		fd_revision = ::open(file.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
+		if (fd_revision < 0) {
+			throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
+		}
 		current_file_rev = revision;
 
 		int magic = MAGIC;
@@ -262,8 +265,11 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 		lseek(fd_revision, 0, SEEK_END);
 
 	} else {
-		file_rev = path + PATH_WAL + FILE_WAL + std::to_string(file_revison);
-		fd_revision = ::open(file_rev.c_str(), O_RDWR | O_CLOEXEC, 0644);
+		file = path + PATH_WAL + FILE_WAL + std::to_string(file_revison);
+		fd_revision = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
+		if (fd_revision < 0) {
+			throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
+		}
 		current_file_rev = file_revison;
 
 		int magic;
@@ -286,10 +292,6 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 			exe_op = true;
 		}
 		lseek(fd_revision, 0, SEEK_END);
-	}
-
-	if (fd_revision < 0) {
-		MSG_Error("Could not open the wal file %s (%s)", file_rev.c_str(), strerror(errno));
 	}
 
 	return exe_op;
