@@ -201,12 +201,9 @@ DatabaseWAL::write(Type type, const std::string& data)
 
 
 bool
-DatabaseWAL::_open(const std::string& rev, const std::string& path, struct highest_revision& h)
+DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct highest_revision& h)
 {
 	bool exe_op = false;
-	uint64_t revision = 0;
-	memcpy(&revision, rev.data(), rev.size());
-	++revision;
 
 	std::string wal_dir = path + "/" + PATH_WAL;
 
@@ -302,11 +299,19 @@ void
 DatabaseWAL::open(const std::string& rev, const std::string& path)
 {
 	try {
+
+		uint64_t revision = 0;
+		memcpy(&revision, rev.data(), rev.size());
+
 		struct highest_revision h;
-		bool need_exe_op = _open(rev, path, h);
+		bool need_exe_op = _open(++revision, path, h);
 
 		if (need_exe_op) {
 			//execute op
+
+			int num_file = h.highest_rev_file - current_file_rev;
+
+
 		}
 
 	} catch (const Error& e) {
