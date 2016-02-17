@@ -127,7 +127,7 @@ public:
 	~DatabaseWAL();
 
 	bool execute(Database& database, const std::string& line);
-	bool _open(const std::string& rev, const std::string& path);
+	bool _open(const std::string& rev, const std::string& path, highest_revision& h);
 	void open(const std::string& rev, const std::string& path);
 	uint64_t fget_revision(std::string filename);
 	void highest_revision(DIR *dir, const std::string& path, highest_revision& h);

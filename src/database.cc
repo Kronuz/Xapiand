@@ -201,7 +201,7 @@ DatabaseWAL::write(Type type, const std::string& data)
 
 
 bool
-DatabaseWAL::_open(const std::string& rev, const std::string& path)
+DatabaseWAL::_open(const std::string& rev, const std::string& path, struct highest_revision& h)
 {
 	bool exe_op = false;
 	uint64_t revision = 0;
@@ -282,7 +282,6 @@ DatabaseWAL::_open(const std::string& rev, const std::string& path)
 		MSG_Error("ERROR: File wal with wrong format");
 		}
 
-		struct highest_revision h;
 		highest_revision(dir, path, h);
 
 		if (revision < h.highest_rev) {
@@ -303,7 +302,8 @@ void
 DatabaseWAL::open(const std::string& rev, const std::string& path)
 {
 	try {
-		bool need_exe_op = _open(rev, path);
+		struct highest_revision h;
+		bool need_exe_op = _open(rev, path, h);
 
 		if (need_exe_op) {
 			//execute op
