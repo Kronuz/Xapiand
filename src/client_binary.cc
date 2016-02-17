@@ -59,7 +59,6 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *
 {
 	int binary_clients = ++XapiandServer::binary_clients;
 	int total_clients = XapiandServer::total_clients;
-	assert(binary_clients <= total_clients);
 	if (binary_clients > total_clients) {
 		L_CRIT(this, "Inconsistency in number of binary clients");
 		exit(EX_SOFTWARE);

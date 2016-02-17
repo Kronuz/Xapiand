@@ -25,7 +25,7 @@
 #include "../utils.h"
 #include "../manager.h"
 
-#include <assert.h>
+#include <sysexits.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -62,8 +62,8 @@ BaseTCP::bind(int tries)
 	int optval = 1;
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		L_ERR(nullptr, "ERROR: %s socket: [%d] %s", description.c_str(), errno, strerror(errno));
-		assert(false);
+		L_CRIT(nullptr, "ERROR: %s socket: [%d] %s", description.c_str(), errno, strerror(errno));
+		exit(EX_IOERR);
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same address
@@ -133,9 +133,9 @@ BaseTCP::bind(int tries)
 		return;
 	}
 
-	L_ERR(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
+	L_CRIT(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	close(sock);
-	assert(false);
+	exit(EX_CONFIG);
 }
 
 
