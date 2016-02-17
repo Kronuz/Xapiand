@@ -679,8 +679,10 @@ Database::delete_document_term(const std::string& term, bool _commit)
 		} catch (const Xapian::Error& er) {
 			throw MSG_Error(er.get_error_string());
 		}
+
 		L_DATABASE_WRAP(this, "Document deleted");
 		if (!_commit || !commit()) modified = true;
+		return;
 	}
 }
 
@@ -1868,6 +1870,7 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 		} catch (const std::exception&) {
 			throw MSG_ClientError("The search was not performed");
 		}
+		return;
 	}
 }
 
