@@ -74,31 +74,31 @@ DatabaseWAL::~DatabaseWAL()
 
 
 bool
-DatabaseWAL::execute(Database& database, const std::string& line)
+DatabaseWAL::execute(const std::string& line)
 {
 	const char *p = line.data();
 	const char *p_end = p + line.size();
 
-	if (!(database.flags & DB_WRITABLE)) {
+	if (!(database->flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
 	}
 
-	if (!database.local) {
+	if (!database->local) {
 		throw MSG_Error("Can not execute WAL on a remote database!");
 	}
 
-	std::string uuid(p, 36);
-	p += 36;
-
-	if (uuid != database.get_uuid()) {
-		return false;
-	}
+//	std::string uuid(p, 36);
+//	p += 36;
+//
+//	if (uuid != database->get_uuid()) {
+//		return false;
+//	}
 
 	size_t size = decode_length(&p, p_end, true);
 	std::string revision(p, size);
 	p += size;
 
-	if (revision != database.get_revision_info()) {
+	if (revision != database->get_revision_info()) {
 		return false;
 	}
 
