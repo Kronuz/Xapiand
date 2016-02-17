@@ -187,9 +187,10 @@ DatabaseWAL::write(Type type, const std::string& data)
 
 	::write(fd_revision, line.data(), line.size());
 	assert((rev - current_file_rev) > 0); //Replace for FATAL LOG
-	off_t off_slot = (rev - current_file_rev) + 1;
+	uint64_t slot = (rev - current_file_rev) + 1;
+	++slot; //offset start in 0 for revision 1, increase +1 to fix it
 
-	++off_slot; //offset start in 0 for revision 1, increase +1 to fix it
+	off_t off_slot = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t)*slot);
 	off_t update_slot;
 	pread(fd_revision, &update_slot, sizeof(off_t), off_slot);
 	update_slot += line.size();
