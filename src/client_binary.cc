@@ -30,7 +30,7 @@
 #include "length.h"
 #include "io_utils.h"
 
-#include <assert.h>
+#include <sysexits.h>
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -60,6 +60,10 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *
 	int binary_clients = ++XapiandServer::binary_clients;
 	int total_clients = XapiandServer::total_clients;
 	assert(binary_clients <= total_clients);
+	if (binary_clients > total_clients) {
+		L_CRIT(this, "Inconsistency in number of binary clients");
+		exit(EX_SOFTWARE);
+	}
 
 	L_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.", sock, binary_clients, total_clients);
 
@@ -88,7 +92,10 @@ BinaryClient::~BinaryClient()
 	int binary_clients = --XapiandServer::binary_clients;
 
 	L_OBJ(this, "DELETED BINARY CLIENT! (%d clients left) [%llx]", binary_clients, this);
-	assert(binary_clients >= 0);
+	if (binary_clients < 0) {
+		L_CRIT(this, "Inconsistency in number of binary clients");
+		exit(EX_SOFTWARE);
+	}
 }
 
 

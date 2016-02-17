@@ -36,6 +36,7 @@
 #include <list>
 #include <stdlib.h>
 #include <assert.h>
+#include <sysexits.h>
 #include <sys/sysctl.h>
 #include <fcntl.h>
 #include <net/if.h> /* for IFF_LOOPBACK */
@@ -66,8 +67,8 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	std::string node_name_(get_node_name());
 	if (!node_name_.empty()) {
 		if (!node_name.empty() && lower_string(node_name) != lower_string(node_name_)) {
-			L_ERR(this, "Node name %s doesn't match with the one in the cluster's database: %s!", node_name.c_str(), node_name_.c_str());
-			assert(false);
+			L_CRIT(this, "Node name %s doesn't match with the one in the cluster's database: %s!", node_name.c_str(), node_name_.c_str());
+			exit(EX_CONFIG);
 		}
 		node_name = node_name_;
 	}
@@ -141,11 +142,13 @@ XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<st
 		int fd = open("nodename", O_WRONLY | O_CREAT, 0644);
 		if (fd >= 0) {
 			if (write(fd, node_name.c_str(), node_name.size()) != static_cast<ssize_t>(node_name.size())) {
-				assert(false);
+				L_CRIT(nullptr, "Cannot write in nodename file");
+				exit(EX_IOERR);
 			}
 			close(fd);
 		} else {
-			assert(false);
+			L_CRIT(nullptr, "Cannot open or create the nodename file");
+			exit(EX_NOINPUT);
 		}
 	}
 
@@ -198,7 +201,8 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 		new_cluster = 1;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT)) {
-			assert(false);
+			L_CRIT(nullptr, "Cannot generate cluster database");
+			exit(EX_CANTCREAT);
 		}
 	}
 	database_pool.checkin(cluster_database);

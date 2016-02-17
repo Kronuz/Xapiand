@@ -24,8 +24,8 @@
 
 #include "utils.h"
 
-#include <cassert>
 #include <sys/socket.h>
+#include <sysexits.h>
 #include <unistd.h>
 #include <memory>
 
@@ -94,7 +94,10 @@ ClientCompressorReader::begin()
 ssize_t
 ClientCompressorReader::read(char **buf, size_t size)
 {
-	assert(*buf);
+	if (!*buf) {
+		L_CRIT(this, "Segmentation fault in compressor reader");
+		exit(EX_SOFTWARE);
+	}
 	return ::read(fd, *buf, size);
 }
 
@@ -210,7 +213,10 @@ BaseClient::destructor_body()
 	delete []read_buffer;
 
 	int total_clients = --XapiandServer::total_clients;
-	assert(total_clients >= 0);
+	if (total_clients < 0) {
+		L_CRIT(this, "Inconsistency in number of clients, end up with negative number");
+		exit(EX_SOFTWARE);
+	}
 
 	L_OBJ(this, "DELETED CLIENT! (%d clients left) [%llx]", total_clients, this);
 
@@ -296,7 +302,10 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 			return;
 		}
 
-		assert(sock == watcher.fd || sock == -1);
+		if (sock != watcher.fd && sock != -1) {
+			L_CRIT(this, "The socket is invalid");
+			exit(EX_SOFTWARE);
+		}
 
 		if (revents & EV_WRITE) {
 			io_cb_write(watcher.fd);
