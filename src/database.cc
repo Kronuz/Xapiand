@@ -39,7 +39,7 @@
 
 #define DEFAULT_OFFSET "0" /* Replace for the real offset */
 
-#define WAL_HEADER_SIZE 1000 /* Max commit number for file */
+#define WAL_MAX_SLOT 1000 /* Max commit number for file */
 
 #define PATH_WAL "/.wal/"
 
@@ -180,7 +180,7 @@ DatabaseWAL::write(Type type, const std::string& data)
 
 	uint64_t rev = 0;
 	memcpy(&rev, revision.data(), revision.size());
-	if (current_file_rev + WAL_HEADER_SIZE < rev or fd_revision == -1) {
+	if (current_file_rev + WAL_MAX_SLOT < rev or fd_revision == -1) {
 		close(fd_revision);
 		open(revision, endpoint->path);
 	}
@@ -190,12 +190,13 @@ DatabaseWAL::write(Type type, const std::string& data)
 	uint64_t slot = (rev - current_file_rev) + 1;
 	++slot; //offset start in 0 for revision 1, increase +1 to fix it
 
-	off_t off_slot = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t)*slot);
-	off_t update_slot;
-	pread(fd_revision, &update_slot, sizeof(off_t), off_slot);
-	update_slot += line.size();
-	pwrite(fd_revision, &update_slot, sizeof(off_t), off_slot);
-
+	if (slot <= WAL_MAX_SLOT) {
+		off_t off_slot = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t)*slot);
+		off_t update_slot;
+		pread(fd_revision, &update_slot, sizeof(off_t), off_slot);
+		update_slot += line.size();
+		pwrite(fd_revision, &update_slot, sizeof(off_t), off_slot);
+	}
 	fsync(fd_revision);
 }
 
