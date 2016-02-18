@@ -364,6 +364,12 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 void
 DatabaseWAL::highest_revision_file(DIR *dir, const std::string& path, struct highest_revision& h)
 {
+	std::string dir_wal = path + PATH_WAL;
+	dir = opendir(dir_wal.c_str(), true);
+	if (!dir) {
+		throw MSG_Error("Could not open the wal dir (%s)", strerror(errno));
+	}
+
 	File_ptr fptr;
 	find_file_dir(dir, fptr, FILE_WAL, true);
 
@@ -383,7 +389,7 @@ DatabaseWAL::highest_revision_file(DIR *dir, const std::string& path, struct hig
 	}
 
 	if (h.highest_rev_file) {
-		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(h.highest_rev);
+		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(h.highest_rev_file);
 		int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
 		if (fd < 0) {
 			throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
@@ -421,7 +427,7 @@ DatabaseWAL::tuning(int fd)
 
 	uint64_t last_pos = pos_highest_revision(fd);
 
-	off_t off = SIZE_WAL_HEADER + (sizeof(off_t) * last_pos);
+	off_t off = SIZE_WAL_HEADER + (sizeof(off_t) * (last_pos-1));
 
 	off_t max_off = 0;
 	::pread(fd, &max_off, sizeof(off_t), off);
