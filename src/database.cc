@@ -1813,7 +1813,9 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& qu
 
 		for (const auto& sim_field : similar.field) {
 			data_field_t field_t = get_data_field(sim_field);
-			prefixes.push_back(field_t.prefix);
+			if (field_t.type != NO_TYPE) {
+				prefixes.push_back(field_t.prefix);
+			}
 		}
 
 		ExpandDeciderFilterPrefixes efp(prefixes);
