@@ -1783,17 +1783,20 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& qu
 			for (const auto& doc : mset) {
 				rset.add_document(doc);
 			}
-		} catch (const Xapian::DatabaseModifiedError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
-		} catch (const Xapian::NetworkError& er) {
-			if (t) reopen();
-			else L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			continue;
+		} catch (const Xapian::DatabaseModifiedError&) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Database was modified, try again");
+			}
+		} catch (const Xapian::NetworkError&) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Problem communicating with the remote database");
+			}
 		} catch (const Xapian::Error& er) {
-			L_ERR(this, "ERROR: %s", er.get_msg().c_str());
-			return;
+			throw MSG_Error("%s", er.get_error_string());
 		}
 
 		std::vector<std::string> prefixes;
