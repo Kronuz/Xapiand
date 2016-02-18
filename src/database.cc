@@ -47,6 +47,8 @@
 
 #define MAGIC 0xC0DE
 
+#define SIZE_UUID 36
+
 
 static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
 
@@ -224,34 +226,30 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 	File_ptr fptr;
 	find_file_dir(dir, fptr, FILE_WAL, true);
 
-	if (fptr.ent) {
-		do {
-			try {
-				target_rev = fget_revision(std::string(fptr.ent->d_name));
-			} catch (const std::invalid_argument&) {
-				throw MSG_Error("In filename wal (%s)", strerror(errno));
-			} catch (const std::out_of_range&) {
-				throw MSG_Error("In filename wal (%s)", strerror(errno));
-			}
+	while (fptr.ent) {
+		try {
+			target_rev = fget_revision(std::string(fptr.ent->d_name));
+		} catch (const std::invalid_argument&) {
+			throw MSG_Error("In filename wal (%s)", strerror(errno));
+		} catch (const std::out_of_range&) {
+			throw MSG_Error("In filename wal (%s)", strerror(errno));
+		}
 
-			if (revision < target_rev) {
+		if (revision < target_rev) {
+			file_revison = (target_rev < file_revison) ? target_rev : file_revison;
+		} else {
+			if (revision < file_revison) {
 				file_revison = (target_rev < file_revison) ? target_rev : file_revison;
 			} else {
-				if (revision < file_revison) {
-					file_revison = (target_rev < file_revison) ? target_rev : file_revison;
-				} else {
-					file_revison = (target_rev < file_revison) ? file_revison : target_rev;
-				}
+				file_revison = (target_rev < file_revison) ? file_revison : target_rev;
 			}
+		}
 
-			find_file_dir(dir, fptr, FILE_WAL, true);
-		} while (fptr.ent);
-
+		find_file_dir(dir, fptr, FILE_WAL, true);
 	}
 
-	std::string file;
 	if (file_revison == std::numeric_limits<uint64_t>::max() or (file_revison + WAL_MAX_SLOT) < revision) {
-		file = path + PATH_WAL + FILE_WAL + std::to_string(revision);
+		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(revision);
 		fd_revision = ::open(file.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
 		if (fd_revision < 0) {
 			throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
@@ -271,7 +269,7 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 		lseek(fd_revision, 0, SEEK_END);
 
 	} else {
-		file = path + PATH_WAL + FILE_WAL + std::to_string(file_revison);
+		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(file_revison);
 		fd_revision = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
 		if (fd_revision < 0) {
 			throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
@@ -285,9 +283,9 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 			MSG_Error("File wal with wrong format");
 		}
 
-		char uuid[37];
-		::read(fd_revision, uuid, sizeof(char) * 36);
-		*(uuid + 36) = '\0';
+		char uuid[SIZE_UUID + 1];
+		::read(fd_revision, uuid, SIZE_UUID);
+		uuid[SIZE_UUID] = '\0';
 		if (strcmp(uuid, database->get_uuid().data()) != 0) {
 			MSG_Error("File wal with wrong format");
 		}
@@ -309,7 +307,6 @@ void
 DatabaseWAL::open(const std::string& rev, const std::string& path)
 {
 	try {
-
 		uint64_t revision = 0;
 		memcpy(&revision, rev.data(), rev.size());
 
@@ -317,10 +314,8 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 		bool need_exe_op = _open(++revision, path, h);
 
 		if (need_exe_op) {
-
-			off_t header = sizeof(int) + 36 + sizeof(uint64_t);
-			for (uint64_t i = current_file_rev; i <= h.highest_rev_file; i++) {
-
+			off_t header = sizeof(int) + SIZE_UUID + sizeof(uint64_t);
+			for (uint64_t i = current_file_rev; i <= h.highest_rev_file; ++i) {
 				std::string file = path + PATH_WAL + FILE_WAL + std::to_string(i);
 				int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
 				tuning(fd);
@@ -341,29 +336,28 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 
 				lseek(fd, off_start, SEEK_SET);
 				while (true) {
-
 					if (off_start == off_end) {
-						off_t start_line;
+						off_t start_line = 0;
 						::read(fd, &start_line, sizeof(off_t));
 						off_t end_line = lseek(fd, 0, SEEK_END);
 
 						size_t size_line = end_line - start_line;
 						char *buff_line = (char*) malloc(sizeof(char) * (size_line + 1));
 						pread(fd, buff_line, size_line, start_line);
-						std::string line (buff_line);
+						std::string line(buff_line);
 						free(buff_line);
 						execute(line);
 						break;
 					} else {
-						off_t start_line;
+						off_t start_line = 0;
 						::read(fd, &start_line, sizeof(off_t));
-						off_t end_line;
+						off_t end_line = 0;
 						::read(fd, &end_line, sizeof(off_t));
 
 						size_t size_line = end_line - start_line;
 						char *buff_line = (char*) malloc(sizeof(char) * (size_line + 1));
 						pread(fd, buff_line, size_line, start_line);
-						std::string line (buff_line);
+						std::string line(buff_line);
 						free(buff_line);
 						execute(line);
 						off_start = lseek(fd, 0, SEEK_CUR);
@@ -408,17 +402,17 @@ DatabaseWAL::highest_revision_file(DIR *dir, const std::string& path, struct hig
 	if (h.highest_rev_file) {
 		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(h.highest_rev);
 		int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
-		h.highest_rev = highest_revision(fd);
+		h.highest_rev = pos_highest_revision(fd);
 		close(fd);
 	}
 }
 
 
 uint64_t
-DatabaseWAL::highest_revision(int fd)
+DatabaseWAL::pos_highest_revision(int fd)
 {
 	off_t save_off = lseek(fd, 0, SEEK_CUR);
-	off_t header = sizeof(int) + 36 + sizeof(uint64_t);
+	off_t header = sizeof(int) + SIZE_UUID + sizeof(uint64_t);
 	lseek(fd, header, SEEK_SET);
 
 	off_t slot = 0;
@@ -431,7 +425,7 @@ DatabaseWAL::highest_revision(int fd)
 		++slot_c;
 	}
 	lseek(fd, save_off, SEEK_SET);
-	return slot_c;
+	return;
 }
 
 
@@ -440,19 +434,16 @@ DatabaseWAL::tuning(int fd)
 {
 	// Clean the remaining garbage in the wal
 
-	uint64_t high_rev = highest_revision(fd);
+	uint64_t last_pos = pos_highest_revision(fd);
 
-	if (high_rev != WAL_MAX_SLOT) {
+	off_t off = sizeof(int) + SIZE_UUID + sizeof(uint64_t) + (sizeof(off_t) * last_pos);
 
-		off_t off = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t) * high_rev);
+	off_t max_off = 0;
+	::pread(fd, &max_off, sizeof(off_t), off);
+	off_t file_size = lseek(fd, 0, SEEK_END);
 
-		off_t max_off = 0;
-		::pread(fd, &max_off, sizeof(off_t), off);
-		off_t file_size = lseek(fd, 0, SEEK_END);
-
-		if (max_off != file_size) {
-			ftruncate(fd, max_off);
-		}
+	if (max_off != file_size) {
+		ftruncate(fd, max_off);
 	}
 
 	lseek(fd, 0, SEEK_SET);
@@ -466,7 +457,7 @@ DatabaseWAL::fget_revision(std::string filename)
 	if (found == std::string::npos) {
 		throw std::invalid_argument("Revision not found in filename");
 	}
-	return stoul(filename.substr(found+1));
+	return stoul(filename.substr(found + 1));
 }
 
 
