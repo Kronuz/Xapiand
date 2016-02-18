@@ -427,7 +427,7 @@ DatabaseWAL::tuning(int fd)
 
 	uint64_t last_pos = pos_highest_revision(fd);
 
-	off_t off = SIZE_WAL_HEADER + (sizeof(off_t) * (last_pos-1));
+	off_t off = SIZE_WAL_HEADER + (sizeof(off_t) * (last_pos - 1));
 
 	off_t max_off = 0;
 	::pread(fd, &max_off, sizeof(off_t), off);
