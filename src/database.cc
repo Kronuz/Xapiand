@@ -425,7 +425,7 @@ DatabaseWAL::pos_highest_revision(int fd)
 		++slot_c;
 	}
 	lseek(fd, save_off, SEEK_SET);
-	return;
+	return slot_c;
 }
 
 

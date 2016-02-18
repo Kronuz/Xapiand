@@ -129,7 +129,7 @@ public:
 	void open(const std::string& rev, const std::string& path);
 	uint64_t fget_revision(std::string filename);
 	void highest_revision_file(DIR *dir, const std::string& path, highest_revision& h);
-	uint64_t highest_revision(int fd);
+	uint64_t pos_highest_revision(int fd);
 	void tuning(int fd);
 
 	void write(Type type, const std::string& data);
