@@ -257,7 +257,8 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 			throw MSG_Error("Different sizes in database UUID, size: %zu expected: %d", uuid.size(), SIZE_UUID);
 		}
 
-		off_t first_slot = SIZE_WAL_HEADER + (sizeof(off_t) * WAL_MAX_SLOT);
+		// Slots in header are WAL_MAX_SLOT + 1 due the last slot tell us the size of the last write
+		off_t first_slot = SIZE_WAL_HEADER + (sizeof(off_t) * (WAL_MAX_SLOT + 1));
 
 		::write(fd_revision, &magic, sizeof(int));
 		::write(fd_revision, uuid.data(), SIZE_UUID);
