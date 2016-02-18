@@ -273,14 +273,14 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 		tuning(fd_revision);
 		current_file_rev = file_revison;
 
-		int magic;
+		int magic = 0;
 		::read(fd_revision, &magic, sizeof(int));
 		if (magic != MAGIC) {
 			MSG_Error("File wal with wrong format");
 		}
 
 		char uuid[37];
-		::read(fd_revision, uuid, sizeof(char)*36);
+		::read(fd_revision, uuid, sizeof(char) * 36);
 		*(uuid + 36) = '\0';
 		if (strcmp(uuid, database->get_uuid().data()) != 0) {
 			MSG_Error("File wal with wrong format");
@@ -321,16 +321,16 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 
 				off_t off_start;
 				if (i == current_file_rev) {
-					off_start = header + (sizeof(off_t)*i);
+					off_start = header + (sizeof(off_t) * i);
 				} else {
 					off_start = header  + sizeof(off_t);
 				}
 
 				off_t off_end;
 				if (i == h.highest_rev_file) {
-					off_end = header + (sizeof(off_t)*h.highest_rev);
+					off_end = header + (sizeof(off_t) * h.highest_rev);
 				} else {
-					off_end = header + (sizeof(off_t)*WAL_MAX_SLOT);
+					off_end = header + (sizeof(off_t) * WAL_MAX_SLOT);
 				}
 
 				lseek(fd, off_start, SEEK_SET);
@@ -342,7 +342,7 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 						off_t end_line = lseek(fd, 0, SEEK_END);
 
 						size_t size_line = end_line - start_line;
-						char *buff_line = (char*) malloc(sizeof(char)*(size_line + 1));
+						char *buff_line = (char*) malloc(sizeof(char) * (size_line + 1));
 						pread(fd, buff_line, size_line, start_line);
 						std::string line (buff_line);
 						free(buff_line);
@@ -355,7 +355,7 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 						::read(fd, &end_line, sizeof(off_t));
 
 						size_t size_line = end_line - start_line;
-						char *buff_line = (char*) malloc(sizeof(char)*(size_line + 1));
+						char *buff_line = (char*) malloc(sizeof(char) * (size_line + 1));
 						pread(fd, buff_line, size_line, start_line);
 						std::string line (buff_line);
 						free(buff_line);
@@ -438,9 +438,9 @@ DatabaseWAL::tuning(int fd)
 
 	if (high_rev != WAL_MAX_SLOT) {
 
-		off_t off = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t)*high_rev);
-		off_t max_off;
+		off_t off = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t) * high_rev);
 
+		off_t max_off = 0;
 		::pread(fd, &max_off, sizeof(off_t), off);
 		off_t file_size = lseek(fd, 0, SEEK_END);
 
