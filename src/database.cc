@@ -194,16 +194,14 @@ DatabaseWAL::write(Type type, const std::string& data)
 	uint64_t slot = (rev - current_file_rev) + 1;
 	++slot; //Starting to write the next slot with the size of the written
 
-	if (slot <= WAL_MAX_SLOT + 1) {
-		off_t off_slot = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t)*slot);
-		off_t update_slot;
-		pread(fd_revision, &update_slot, sizeof(off_t), off_slot);
-		if (update_slot == 0) {
-			update_slot = last_write_off;
-		}
-		update_slot += line.size();
-		pwrite(fd_revision, &update_slot, sizeof(off_t), off_slot);
+	off_t off_slot = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t)*slot);
+	off_t update_slot;
+	pread(fd_revision, &update_slot, sizeof(off_t), off_slot);
+	if (update_slot == 0) {
+		update_slot = last_write_off;
 	}
+	update_slot += line.size();
+	pwrite(fd_revision, &update_slot, sizeof(off_t), off_slot);
 	fsync(fd_revision);
 }
 
