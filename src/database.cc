@@ -167,6 +167,10 @@ DatabaseWAL::write(Type type, const std::string& data)
 		throw MSG_Error("Can not execute WAL on a remote database!");
 	}
 
+	if (database->flags & DB_NOWAL) {
+		throw MSG_Error("Can not execute WAL on a database with DB_NOWAL flag");
+	}
+
 	auto endpoint = database->endpoints.cbegin();
 	std::string revision = database->get_revision_info();
 	std::string uuid = database->get_uuid();
@@ -178,7 +182,7 @@ DatabaseWAL::write(Type type, const std::string& data)
 	memcpy(&rev, revision.data(), revision.size());
 	++rev; //Revision of the operation
 
-	if (current_file_rev + WAL_MAX_SLOT <= rev or fd_revision == -1) {
+	if (current_file_rev + WAL_MAX_SLOT <= rev) {
 		close(fd_revision);
 		open(revision, endpoint->path);
 	}
@@ -313,13 +317,17 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 			for (uint64_t i = current_file_rev; i <= h.highest_rev_file; ++i) {
 				std::string file = path + PATH_WAL + FILE_WAL + std::to_string(i);
 				int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
+				if (fd < 0) {
+					throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
+				}
+
 				tuning(fd);
 
 				off_t off_start;
 				if (i == current_file_rev) {
-					off_start = SIZE_WAL_HEADER + (sizeof(off_t) * i);
+					off_start = SIZE_WAL_HEADER + (sizeof(off_t) * revision);
 				} else {
-					off_start = SIZE_WAL_HEADER  + sizeof(off_t);
+					off_start = SIZE_WAL_HEADER + sizeof(off_t);
 				}
 
 				off_t off_end;
@@ -337,9 +345,9 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 					::read(fd, &end_line, sizeof(off_t));
 
 					size_t size_line = end_line - start_line;
-					char *buff_line = (char*) malloc(sizeof(char) * (size_line + 1));
+					char *buff_line = (char*) malloc(sizeof(char) * size_line);
 					pread(fd, buff_line, size_line, start_line);
-					std::string line(buff_line);
+					std::string line(buff_line, size_line);
 					free(buff_line);
 					execute(line);
 					off_start = lseek(fd, 0, SEEK_CUR);
@@ -349,7 +357,6 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 		}
 	} catch (const Error& e) {
 		L_ERR(this, "ERROR: %s", e.get_context());
-		// Handle open error or propagate to up
 	}
 }
 
@@ -360,29 +367,27 @@ DatabaseWAL::highest_revision_file(DIR *dir, const std::string& path, struct hig
 	File_ptr fptr;
 	find_file_dir(dir, fptr, FILE_WAL, true);
 
-	uint64_t target_rev;
-
-	if (fptr.ent) {
-		do {
-			try {
-				target_rev = fget_revision(std::string(fptr.ent->d_name));
-			} catch (const std::invalid_argument&) {
-				throw MSG_Error("In filename wal (%s)", strerror(errno));
-			} catch (const std::out_of_range&) {
-				throw MSG_Error("In filename wal (%s)", strerror(errno));
-			}
-
+	while (fptr.ent) {
+		try {
+			uint64_t target_rev = fget_revision(std::string(fptr.ent->d_name));
 			if (h.highest_rev_file < target_rev) {
 				h.highest_rev_file = target_rev;
 			}
 
 			find_file_dir(dir, fptr, FILE_WAL, true);
-		} while (fptr.ent);
+		} catch (const std::invalid_argument&) {
+			throw MSG_Error("In filename wal (%s)", strerror(errno));
+		} catch (const std::out_of_range&) {
+			throw MSG_Error("In filename wal (%s)", strerror(errno));
+		}
 	}
 
 	if (h.highest_rev_file) {
 		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(h.highest_rev);
 		int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
+		if (fd < 0) {
+			throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
+		}
 		h.highest_rev = pos_highest_revision(fd);
 		close(fd);
 	}
@@ -431,13 +436,13 @@ DatabaseWAL::tuning(int fd)
 
 
 uint64_t
-DatabaseWAL::fget_revision(std::string filename)
+DatabaseWAL::fget_revision(const std::string& filename)
 {
 	std::size_t found = filename.find_last_of(".");
 	if (found == std::string::npos) {
-		throw std::invalid_argument("Revision not found in filename");
+		throw std::invalid_argument("Revision not found in " + filename);
 	}
-	return stoul(filename.substr(found + 1));
+	return std::stoul(filename.substr(found + 1));
 }
 
 

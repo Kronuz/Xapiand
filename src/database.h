@@ -106,6 +106,13 @@ class DatabaseWAL {
 	int fd_revision;
 	Database* database;
 
+	bool execute(const std::string& line);
+	bool _open(const uint64_t rev, const std::string& path, highest_revision& h);
+	void highest_revision_file(DIR *dir, const std::string& path, highest_revision& h);
+	uint64_t pos_highest_revision(int fd);
+	void tuning(int fd);
+	uint64_t fget_revision(const std::string& filename);
+
 public:
 	enum class Type {
 		ADD_DOCUMENT,
@@ -124,13 +131,7 @@ public:
 	DatabaseWAL(Database* _database);
 	~DatabaseWAL();
 
-	bool execute(const std::string& line);
-	bool _open(const uint64_t rev, const std::string& path, highest_revision& h);
 	void open(const std::string& rev, const std::string& path);
-	uint64_t fget_revision(std::string filename);
-	void highest_revision_file(DIR *dir, const std::string& path, highest_revision& h);
-	uint64_t pos_highest_revision(int fd);
-	void tuning(int fd);
 
 	void write(Type type, const std::string& data);
 	void write_add_document(const Xapian::Document& doc);
