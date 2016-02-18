@@ -256,7 +256,7 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 
 		int magic = MAGIC;
 		std::string uuid = database->get_uuid();
-		off_t first_slot = sizeof(int) + uuid.size() + sizeof(uint64_t) + (sizeof(off_t) * WAL_MAX_SLOT);
+		off_t first_slot = sizeof(int) + uuid.size() + sizeof(uint64_t) + (sizeof(off_t) * (WAL_MAX_SLOT + 1));
 
 		::write(fd_revision, &magic, sizeof(int));
 		::write(fd_revision, uuid.data(), uuid.size());
@@ -291,7 +291,7 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 		highest_revision_file(dir, path, h);
 
 		if (revision <= (h.highest_rev_file + h.highest_rev - 1)) {
-			//revision is +1 that the current db revision, so in equal case the exe ops is needed
+			//revision is +1 that the current db revision, so in equal case the execute operations is needed
 			exe_op = true;
 		}
 		lseek(fd_revision, 0, SEEK_END);
@@ -307,9 +307,10 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 	try {
 		uint64_t revision = 0;
 		memcpy(&revision, rev.data(), rev.size());
+		++revision;
 
 		struct highest_revision h;
-		bool need_exe_op = _open(++revision, path, h);
+		bool need_exe_op = _open(revision, path, h);
 
 		if (need_exe_op) {
 			off_t header = sizeof(int) + SIZE_UUID + sizeof(uint64_t);
@@ -320,9 +321,9 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 
 				off_t off_start;
 				if (i == current_file_rev) {
-					off_start = header + (sizeof(off_t) * i);
+					off_start = header + (sizeof(off_t) * revision);
 				} else {
-					off_start = header  + sizeof(off_t);
+					off_start = header + sizeof(off_t);
 				}
 
 				off_t off_end;
@@ -333,33 +334,19 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 				}
 
 				lseek(fd, off_start, SEEK_SET);
-				while (true) {
-					if (off_start == off_end) {
-						off_t start_line = 0;
-						::read(fd, &start_line, sizeof(off_t));
-						off_t end_line = lseek(fd, 0, SEEK_END);
+				while (off_start < off_end) {
+					off_t start_line = 0;
+					::read(fd, &start_line, sizeof(off_t));
+					off_t end_line = 0;
+					::read(fd, &end_line, sizeof(off_t));
 
-						size_t size_line = end_line - start_line;
-						char *buff_line = (char*) malloc(sizeof(char) * (size_line + 1));
-						pread(fd, buff_line, size_line, start_line);
-						std::string line(buff_line);
-						free(buff_line);
-						execute(line);
-						break;
-					} else {
-						off_t start_line = 0;
-						::read(fd, &start_line, sizeof(off_t));
-						off_t end_line = 0;
-						::read(fd, &end_line, sizeof(off_t));
-
-						size_t size_line = end_line - start_line;
-						char *buff_line = (char*) malloc(sizeof(char) * (size_line + 1));
-						pread(fd, buff_line, size_line, start_line);
-						std::string line(buff_line);
-						free(buff_line);
-						execute(line);
-						off_start = lseek(fd, 0, SEEK_CUR);
-					}
+					size_t size_line = end_line - start_line;
+					char *buff_line = (char*) malloc(sizeof(char) * (size_line + 1));
+					pread(fd, buff_line, size_line, start_line);
+					std::string line(buff_line);
+					free(buff_line);
+					execute(line);
+					off_start = lseek(fd, 0, SEEK_CUR);
 				}
 				close(fd);
 			}
