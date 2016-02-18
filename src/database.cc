@@ -325,20 +325,25 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 
 				off_t off_start;
 				if (i == current_file_rev) {
-					off_start = SIZE_WAL_HEADER + (sizeof(off_t) * revision);
+					off_start = SIZE_WAL_HEADER + (sizeof(off_t) * (revision - 1));
 				} else {
 					off_start = SIZE_WAL_HEADER + sizeof(off_t);
 				}
 
 				off_t off_end;
-				if (i == h.highest_rev_file) {
-					off_end = SIZE_WAL_HEADER + (sizeof(off_t) * h.highest_rev);
+				if (i == h.highest_rev_file && i != (WAL_MAX_SLOT + 1)) {
+					off_end = SIZE_WAL_HEADER + (sizeof(off_t) * (h.highest_rev - 1));
 				} else {
 					off_end = SIZE_WAL_HEADER + (sizeof(off_t) * WAL_MAX_SLOT);
 				}
 
+				off_t begin;
+				pread(fd, &begin, sizeof(off_t), off_start);
+				off_t end;
+				pread(fd, &end, sizeof(off_t), off_end);
+
 				lseek(fd, off_start, SEEK_SET);
-				while (off_start < off_end) {
+				while (begin < end) {
 					off_t start_line = 0;
 					::read(fd, &start_line, sizeof(off_t));
 					off_t end_line = 0;
@@ -349,7 +354,7 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 					pread(fd, buff_line, size_line, start_line);
 					std::string line(buff_line, size_line);
 					free(buff_line);
-					execute(line);
+					execute(line); //split the line
 					off_start = lseek(fd, 0, SEEK_CUR);
 				}
 				close(fd);
