@@ -792,9 +792,11 @@ void
 HttpClient::stats_view(const query_field_t& e)
 {
 	MsgPack response;
+	bool res_stats = false;
 
 	if (e.server) {
 		manager()->server_status(response["server_status"]);
+		res_stats = true;
 	}
 
 	if (e.database) {
@@ -804,6 +806,7 @@ HttpClient::stats_view(const query_field_t& e)
 		}
 		database->get_stats_database(response["database_status"]);
 		manager()->database_pool.checkin(database);
+		res_stats = true;
 	}
 
 	if (!e.document.empty()) {
@@ -813,10 +816,16 @@ HttpClient::stats_view(const query_field_t& e)
 		}
 		database->get_stats_doc(response["document_status"], e.document);
 		manager()->database_pool.checkin(database);
+		res_stats = true;
 	}
 
 	if (!e.stats.empty()) {
 		manager()->get_stats_time(response["stats_time"], e.stats);
+		res_stats = true;
+	}
+
+	if (!res_stats) {
+		response["response"] = "Empty statistics";
 	}
 
 	writte_http_response(response, 200, e.pretty);
