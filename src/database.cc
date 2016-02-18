@@ -180,24 +180,24 @@ DatabaseWAL::write(Type type, const std::string& data)
 
 	uint64_t rev = 0;
 	memcpy(&rev, revision.data(), revision.size());
-	if (current_file_rev + WAL_MAX_SLOT < rev or fd_revision == -1) {
+	++rev; //Revision of the operation
+
+	if (current_file_rev + WAL_MAX_SLOT <= rev or fd_revision == -1) {
 		close(fd_revision);
 		open(revision, endpoint->path);
 	}
 
-	off_t last_write = lseek(fd_revision, 0, SEEK_CUR);
-
-	++rev; //Revision of the operation
+	off_t last_write_off = lseek(fd_revision, 0, SEEK_CUR);
 	::write(fd_revision, line.data(), line.size());
 	uint64_t slot = (rev - current_file_rev) + 1;
 	++slot; //Starting to write the next slot with the size of the written
 
-	if (slot <= WAL_MAX_SLOT) {
+	if (slot <= WAL_MAX_SLOT + 1) {
 		off_t off_slot = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t)*slot);
 		off_t update_slot;
 		pread(fd_revision, &update_slot, sizeof(off_t), off_slot);
 		if (update_slot == 0) {
-			update_slot = last_write;
+			update_slot = last_write_off;
 		}
 		update_slot += line.size();
 		pwrite(fd_revision, &update_slot, sizeof(off_t), off_slot);
