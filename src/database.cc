@@ -185,9 +185,10 @@ DatabaseWAL::write(Type type, const std::string& data)
 		open(revision, endpoint->path);
 	}
 
+	++rev; //Revision of the operation
 	::write(fd_revision, line.data(), line.size());
 	uint64_t slot = (rev - current_file_rev) + 1;
-	++slot; //offset start in 0 for revision 1, increase +1 to fix it
+	++slot; //Starting to write the next slot with the size of the written
 
 	if (slot <= WAL_MAX_SLOT) {
 		off_t off_slot = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t)*slot);
@@ -205,7 +206,7 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 {
 	bool exe_op = false;
 
-	std::string wal_dir = path + "/" + PATH_WAL;
+	std::string wal_dir = path + PATH_WAL;
 
 	DIR *dir = opendir(wal_dir.c_str(), true);
 	if (!dir) {
