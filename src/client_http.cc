@@ -886,19 +886,23 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 
 	if (facets) {
 		MsgPack response;
-		for (const auto& spy : spies) {
-			std::string name_result = spy.first;
-			MsgPack array;
-			const auto facet_e = spy.second->values_end();
-			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
-				MsgPack value;
-				data_field_t field_t = database->get_slot_field(spy.first);
-				auto _val = value["value"];
-				Unserialise::unserialise(field_t.type, *facet, _val);
-				value["termfreq"] = facet.get_termfreq();
-				array.add_item_to_array(value);
+		if (spies.empty()) {
+			response["response"] = "Not found documents tallied";
+		} else {
+			for (const auto& spy : spies) {
+				std::string name_result = spy.first;
+				MsgPack array;
+				const auto facet_e = spy.second->values_end();
+				for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
+					MsgPack value;
+					data_field_t field_t = database->get_slot_field(spy.first);
+					auto _val = value["value"];
+					Unserialise::unserialise(field_t.type, *facet, _val);
+					value["termfreq"] = facet.get_termfreq();
+					array.add_item_to_array(value);
+				}
+				response[name_result] = array;
 			}
-			response[name_result] = array;
 		}
 		writte_http_response(response, 200, e.pretty);
 	} else {
