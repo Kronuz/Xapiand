@@ -1248,7 +1248,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						}
 					}
 
-					if(e.is_fuzzy) {
+					if (e.is_fuzzy) {
 						q.offset = nullptr;
 						if (url_qs("fuzzy.n_rset", query_str, query_size, &q) != -1){
 							e.fuzzy.n_rset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
@@ -1285,7 +1285,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						}
 					}
 
-					if(e.is_nearest) {
+					if (e.is_nearest) {
 						q.offset = nullptr;
 						if (url_qs("nearest.n_rset", query_str, query_size, &q) != -1){
 							e.nearest.n_rset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
