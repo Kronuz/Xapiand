@@ -190,7 +190,6 @@ DatabaseWAL::write(Type type, const std::string& data)
 	off_t last_write_off = lseek(fd_revision, 0, SEEK_CUR);
 	::write(fd_revision, line.data(), line.size());
 	uint64_t slot = (rev - current_file_rev) + 1;
-	++slot; //Starting to write the next slot with the size of the written
 
 	off_t off_slot = SIZE_WAL_HEADER + (sizeof(off_t) * slot);
 	off_t update_slot;
