@@ -185,6 +185,8 @@ DatabaseWAL::write(Type type, const std::string& data)
 		open(revision, endpoint->path);
 	}
 
+	off_t last_write = lseek(fd_revision, 0, SEEK_CUR);
+
 	++rev; //Revision of the operation
 	::write(fd_revision, line.data(), line.size());
 	uint64_t slot = (rev - current_file_rev) + 1;
@@ -194,6 +196,9 @@ DatabaseWAL::write(Type type, const std::string& data)
 		off_t off_slot = sizeof(int) + 36 + sizeof(uint64_t) + (sizeof(off_t)*slot);
 		off_t update_slot;
 		pread(fd_revision, &update_slot, sizeof(off_t), off_slot);
+		if (update_slot == 0) {
+			update_slot = last_write;
+		}
 		update_slot += line.size();
 		pwrite(fd_revision, &update_slot, sizeof(off_t), off_slot);
 	}
