@@ -58,7 +58,7 @@ Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 		tm.mon = std::stoi(m.str(3));
 		tm.day = std::stoi(m.str(4));
 		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
-			throw MSG_Error("Date is out of range");
+			throw MSG_DatetimeError("Date is out of range");
 		}
 
 		if (m.length(5) > 0) {
@@ -98,14 +98,14 @@ Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 			}
 
 			if (m.length(16) != size_match) {
-				throw MSG_Error("Date Math (%s) is used incorrectly.\n", m.str(16).c_str());
+				throw MSG_DatetimeError("Date Math (%s) is used incorrectly.\n", m.str(16).c_str());
 			}
 		}
 
 		return;
 	}
 
-	throw MSG_Error("In dateTimeParser, format %s is incorrect.", date.c_str());
+	throw MSG_DatetimeError("In dateTimeParser, format %s is incorrect.", date.c_str());
 }
 
 
@@ -254,7 +254,7 @@ Datetime::isleapRef_year(int tm_year)
 int
 Datetime::getDays_month(int year, int month)
 {
-	if (month < 1 || month > 12) throw MSG_Error("Month must be in 1..12");
+	if (month < 1 || month > 12) throw MSG_DatetimeError("Month must be in 1..12");
 
 	int leap = isleapYear(year);
 	return days[leap][month - 1];
@@ -271,8 +271,8 @@ Datetime::getDays_month(int year, int month)
 time_t
 Datetime::toordinal(int year, int month, int day)
 {
-	if (year < 1) throw MSG_Error("Year is out of range");
-	if (day < 1 || day > getDays_month(year, month)) throw MSG_Error("Day is out of range for month");
+	if (year < 1) throw MSG_DatetimeError("Year is out of range");
+	if (day < 1 || day > getDays_month(year, month)) throw MSG_DatetimeError("Day is out of range for month");
 
 	int leap = isleapYear(year);
 	size_t result = 365 * (year - 1) + (year - 1) / 4 - (year - 1) / 100 + (year - 1) / 400 + cumdays[leap][month - 1] + day;
