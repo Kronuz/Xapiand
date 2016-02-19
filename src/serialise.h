@@ -73,6 +73,7 @@ namespace Serialise {
 	 * Serialise field_value according to field_type.
 	 */
 	std::string serialise(char field_type, const MsgPack& field_value);
+	std::string serialise(char field_type, const std::string& field_value);
 	std::string string(char field_type, const std::string& field_value);
 	std::string numeric(char field_type, double field_value);
 	std::string boolean(char field_type, bool field_value);
@@ -86,6 +87,9 @@ namespace Serialise {
 
 	// Serialise struct tm with math like date.
 	std::string date_with_math(Datetime::tm_t tm, const std::string& op, const std::string& units);
+
+	// Serialise field_value like numeric.
+	std::string numeric(const std::string& field_value);
 
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value);
