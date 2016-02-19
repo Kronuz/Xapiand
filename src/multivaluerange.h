@@ -45,7 +45,7 @@ public:
 	 *  @param start_  range's start.
 	 *  @param end_ range's end.
 	*/
-	MultipleValueRange(Xapian::valueno slot_, const std::string &start_, const std::string &end_);
+	MultipleValueRange(Xapian::valueno slot_, const std::string& start_, const std::string& end_);
 
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;
@@ -54,12 +54,12 @@ public:
 	MultipleValueRange* clone() const override;
 	std::string name() const override;
 	std::string serialise() const override;
-	MultipleValueRange* unserialise_with_registry(const std::string &serialised, const Xapian::Registry &) const override;
-	void init(const Xapian::Database &db_) override;
+	MultipleValueRange* unserialise_with_registry(const std::string& serialised, const Xapian::Registry&) const override;
+	void init(const Xapian::Database& db_) override;
 	std::string get_description() const override;
 
 	// Call this function for create a new Query based in ranges.
-	static Xapian::Query getQuery(Xapian::valueno slot_, char field_type, std::string &start_, std::string &end_, const std::string &field_name);
+	static Xapian::Query getQuery(Xapian::valueno slot_, char field_type, std::string& start_, std::string& end_, const std::string& field_name);
 };
 
 
@@ -79,7 +79,7 @@ public:
 	 *  @param slot_ The value slot to read values from.
 	 *  @param start_  range's start.
 	*/
-	MultipleValueGE(Xapian::valueno slot_, const std::string &start_);
+	MultipleValueGE(Xapian::valueno slot_, const std::string& start_);
 
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;
@@ -88,8 +88,8 @@ public:
 	MultipleValueGE* clone() const override;
 	std::string name() const override;
 	std::string serialise() const override;
-	MultipleValueGE* unserialise_with_registry(const std::string &serialised, const Xapian::Registry &) const override;
-	void init(const Xapian::Database &db_) override;
+	MultipleValueGE* unserialise_with_registry(const std::string& serialised, const Xapian::Registry&) const override;
+	void init(const Xapian::Database& db_) override;
 	std::string get_description() const override;
 };
 
@@ -110,7 +110,7 @@ public:
 	 *  @param slot_ The value slot to read values from.
 	 *  @param end_  range's end.
 	*/
-	MultipleValueLE(Xapian::valueno slot_, const std::string &end_);
+	MultipleValueLE(Xapian::valueno slot_, const std::string& end_);
 
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;
@@ -119,7 +119,7 @@ public:
 	MultipleValueLE* clone() const override;
 	std::string name() const override;
 	std::string serialise() const override;
-	MultipleValueLE* unserialise_with_registry(const std::string &serialised, const Xapian::Registry &) const override;
-	void init(const Xapian::Database &db_) override;
+	MultipleValueLE* unserialise_with_registry(const std::string& serialised, const Xapian::Registry&) const override;
+	void init(const Xapian::Database& db_) override;
 	std::string get_description() const override;
 };

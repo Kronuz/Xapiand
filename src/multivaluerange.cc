@@ -27,7 +27,7 @@
 #include "serialise.h"
 
 
-MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string &start_, const std::string &end_)
+MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string& start_, const std::string& end_)
 	: ValuePostingSource(slot_), start(start_), end(end_), slot(slot_)
 {
 	set_maxweight(1.0);
@@ -36,27 +36,36 @@ MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string 
 
 // Receive start and end did not serialize.
 Xapian::Query
-MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string &start_, std::string &end_, const std::string &field_name)
+MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string& start_, std::string& end_, const std::string& field_name)
 {
-	if (start_.empty() && end_.empty()){
-		return Xapian::Query::MatchAll;
-	} else if (start_.empty()) {
-		end_ = Serialise::serialise(field_type, end_);
-		if (end_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
+	if (start_.empty()) {
+		if (end_.empty()){
+			return Xapian::Query::MatchAll;
+		}
+		try {
+			end_ = Serialise::serialise(field_type, end_);
+		} catch (const Error& e) {
+			throw Xapian::QueryParserError("Failed to serialize: '" + field_name + "' like '" + Serialise::type(field_type) + "' (%s)", e.what());
+		}
 		MultipleValueLE mvle(slot_, end_);
 		return Xapian::Query(&mvle);
 	} else if (end_.empty()) {
-		start_ = Serialise::serialise(field_type, start_);
-		if (start_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
+		try {
+			start_ = Serialise::serialise(field_type, start_);
+		} catch (const Error& e) {
+			throw Xapian::QueryParserError("Failed to serialize: '" + field_name + "' like '" + Serialise::type(field_type) + "' (%s)", e.what());
+		}
 		MultipleValueGE mvge(slot_, start_);
 		return Xapian::Query(&mvge);
 	}
 
 	// Multiple Value Range
-	start_ = Serialise::serialise(field_type, start_);
-	if (start_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
-	end_ = Serialise::serialise(field_type, end_);
-	if (end_.empty()) throw Xapian::QueryParserError("Failed to serialize '" + field_name + "'");
+	try {
+		start_ = Serialise::serialise(field_type, start_);
+		end_ = Serialise::serialise(field_type, end_);
+	} catch (const Error& e) {
+		throw Xapian::QueryParserError("Failed to serialize: '" + field_name + "' like '" + Serialise::type(field_type) + "' (%s)", e.what());
+	}
 	if (start_ > end_) return Xapian::Query::MatchNothing;
 	MultipleValueRange mvr(slot_, start_, end_);
 	return Xapian::Query(&mvr);
@@ -68,8 +77,8 @@ MultipleValueRange::insideRange()  const noexcept
 {
 	StringList list;
 	list.unserialise(*value_it);
-	for (auto i = list.begin(); i != list.end(); ++i) {
-		if (*i >= start && *i <= end) {
+	for (const auto& value_ : list) {
+		if (value_ >= start && value_ <= end) {
 			return true;
 		}
 	}
@@ -154,7 +163,7 @@ MultipleValueRange::serialise() const
 
 
 MultipleValueRange*
-MultipleValueRange::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const
+MultipleValueRange::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
 	StringList data;
 	data.unserialise(s);
@@ -163,7 +172,7 @@ MultipleValueRange::unserialise_with_registry(const std::string &s, const Xapian
 
 
 void
-MultipleValueRange::init(const Xapian::Database &db_)
+MultipleValueRange::init(const Xapian::Database& db_)
 {
 	Xapian::ValuePostingSource::init(db_);
 
@@ -182,7 +191,7 @@ MultipleValueRange::get_description() const
 }
 
 
-MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, const std::string &start_)
+MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, const std::string& start_)
 	: ValuePostingSource(slot_), start(start_), slot(slot_)
 {
 	set_maxweight(1.0);
@@ -194,8 +203,8 @@ MultipleValueGE::insideRange() const noexcept
 {
 	StringList list;
 	list.unserialise(*value_it);
-	for (auto i = list.begin(); i != list.end(); ++i) {
-		if (*i >= start) {
+	for (const auto& value_ : list) {
+		if (value_ >= start) {
 			return true;
 		}
 	}
@@ -278,7 +287,7 @@ MultipleValueGE::serialise() const
 
 
 MultipleValueGE*
-MultipleValueGE::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const
+MultipleValueGE::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
 	StringList data;
 	data.unserialise(s);
@@ -287,7 +296,7 @@ MultipleValueGE::unserialise_with_registry(const std::string &s, const Xapian::R
 
 
 void
-MultipleValueGE::init(const Xapian::Database &db_)
+MultipleValueGE::init(const Xapian::Database& db_)
 {
 	Xapian::ValuePostingSource::init(db_);
 
@@ -305,7 +314,7 @@ MultipleValueGE::get_description() const
 }
 
 
-MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, const std::string &end_)
+MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, const std::string& end_)
 	: ValuePostingSource(slot_), end(end_), slot(slot_)
 {
 	set_maxweight(1.0);
@@ -317,8 +326,8 @@ MultipleValueLE::insideRange() const noexcept
 {
 	StringList list;
 	list.unserialise(*value_it);
-	for (auto i = list.begin(); i != list.end(); ++i) {
-		if (*i <= end) {
+	for (const auto& value_ : list) {
+		if (value_ <= end) {
 			return true;
 		}
 	}
@@ -401,7 +410,7 @@ MultipleValueLE::serialise() const
 
 
 MultipleValueLE*
-MultipleValueLE::unserialise_with_registry(const std::string &s, const Xapian::Registry &) const
+MultipleValueLE::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
 	StringList data;
 	data.unserialise(s);
@@ -410,7 +419,7 @@ MultipleValueLE::unserialise_with_registry(const std::string &s, const Xapian::R
 
 
 void
-MultipleValueLE::init(const Xapian::Database &db_)
+MultipleValueLE::init(const Xapian::Database& db_)
 {
 	Xapian::ValuePostingSource::init(db_);
 
