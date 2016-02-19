@@ -384,15 +384,15 @@ Unserialise::geo(const std::string& serialise_val)
 {
 	StringList s_geo;
 	s_geo.unserialise(serialise_val);
-	uInt64List ranges;
+	RangeList ranges;
 	ranges.unserialise(s_geo.at(0));
 	std::string res("Ranges: { ");
-	for (auto it = ranges.begin(); it != ranges.end(); ++it) {
-		res += "[" + std::to_string(*it) + ", " + std::to_string(*(++it)) + "] ";
+	for (const auto& range : ranges) {
+		res += "[" + std::to_string(range.start) + ", " + std::to_string(range.end) + "] ";
 	}
 	res += "}";
 
-	CartesianList centroids;
+	CartesianUSet centroids;
 	centroids.unserialise(s_geo.at(1));
 	res += "  Centroids: { ";
 	for (const auto& centroid : centroids) {
