@@ -64,16 +64,16 @@ public:
 };
 
 
-class SerializationError : public Error {
-public:
-	template<typename... Args>
-	SerializationError(Args&&... args) : Error(std::forward<Args>(args)...) { }
-};
-
-
 class WorkerDetachObject : public Error {
 public:
 	WorkerDetachObject(const char *filename, int line) : Error(filename, line, "Detach is needed") { }
+};
+
+
+class SerializationError : public ClientError {
+public:
+	template<typename... Args>
+	SerializationError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
 

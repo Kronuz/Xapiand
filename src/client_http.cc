@@ -1518,7 +1518,7 @@ HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, 
 	} else if (is_acceptable_type(ct_type, msgpack_type)) {
 		return obj.to_string();
 	}
-	throw MSG_SerializationError("not serializable");
+	throw MSG_SerializationError("Type is not serializable");
 }
 
 
