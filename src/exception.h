@@ -77,8 +77,16 @@ public:
 };
 
 
+class DatetimeError : public ClientError {
+public:
+	template<typename... Args>
+	DatetimeError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
 #define MSG_Error(...) Error(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
-#define MSG_SerializationError(...) SerializationError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_WorkerDetachObject() WorkerDetachObject(__FILE__, __LINE__)
+#define MSG_SerializationError(...) SerializationError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_DatetimeError(...) DatetimeError(__FILE__, __LINE__, __VA_ARGS__)
