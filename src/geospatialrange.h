@@ -26,19 +26,20 @@
 
 #include <xapian.h>
 
-#include <string.h>
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 
 /*
- * This class serializes a Cartesian vector.
+ * This class serializes a unordered set of Cartesian.
  * i.e
- * StringList = {a, ..., b}
+ * CartesianUSet = {a, ..., b}
  * serialise = serialise_cartesian(a) + ... + serialise_cartesian(b)
  * symbol '+' means concatenate.
  * It is not necessary to save the size because it's SIZE_SERIALISE_CARTESIAN for all.
  */
-class CartesianList : public std::vector<Cartesian> {
+class CartesianUSet : public std::unordered_set<Cartesian> {
 public:
 	void unserialise(const std::string& serialised);
 	std::string serialise() const;
@@ -46,14 +47,14 @@ public:
 
 
 /*
- * This class serializes a uint64_t vector.
+ * This class serializes a vector of range_t.
  * i.e
- * StringList = {a, ..., b}
- * serialise = serialise_geo(a) + ... + serialise_geo(b)
+ * RangeList = {{a,b}, ..., {c,d}}
+ * serialise = serialise_geo(a) + serialise_geo(b) ... + serialise_geo(d)
  * symbol '+' means concatenate.
  * It is not necessary to save the size because it's SIZE_BYTES_ID for all.
  */
-class uInt64List : public std::vector<uint64_t> {
+class RangeList : public std::vector<range_t> {
 public:
 	void unserialise(const std::string& serialised);
 	std::string serialise() const;
@@ -63,13 +64,13 @@ public:
 // New Match Decider for GeoSpatial value range.
 class GeoSpatialRange : public Xapian::ValuePostingSource {
 	// Ranges for the search.
-	std::vector<range_t> ranges;
-	CartesianList centroids;
+	RangeList ranges;
+	CartesianUSet centroids;
 	Xapian::valueno slot;
 	double angle;
 
 	// Calculates the smallest angle between its centroids  and search centroids.
-	void calc_angle(const CartesianList& _centroids);
+	void calc_angle(const CartesianUSet& centroids_);
 	// Calculates if some their values is inside ranges.
 	bool insideRanges();
 
@@ -80,7 +81,7 @@ public:
 	 *  @param slot_ The value slot to read values from.
 	 *  @param ranges
 	*/
-	GeoSpatialRange(Xapian::valueno slot_, const std::vector<range_t>& ranges_, const CartesianList& centroids_);
+	GeoSpatialRange(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_);
 
 	void next(double min_wt) override;
 	void skip_to(Xapian::docid min_docid, double min_wt) override;
@@ -94,5 +95,5 @@ public:
 	std::string get_description() const override;
 
 	// Call this function for create a new Query based in ranges.
-	static Xapian::Query getQuery(Xapian::valueno slot_, const std::vector<range_t>& ranges_, const CartesianList& centroids_);
+	static Xapian::Query getQuery(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_);
 };
