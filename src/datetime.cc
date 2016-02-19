@@ -98,14 +98,14 @@ Datetime::dateTimeParser(const std::string& date, tm_t& tm)
 			}
 
 			if (m.length(16) != size_match) {
-				throw MSG_DatetimeError("Date Math (%s) is used incorrectly.\n", m.str(16).c_str());
+				throw MSG_DatetimeError("Date Math (%s) is used incorrectly", m.str(16).c_str());
 			}
 		}
 
 		return;
 	}
 
-	throw MSG_DatetimeError("In dateTimeParser, format %s is incorrect.", date.c_str());
+	throw MSG_DatetimeError("In dateTimeParser, format %s is incorrect", date.c_str());
 }
 
 

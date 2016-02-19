@@ -31,8 +31,8 @@ class NumericFieldProcessor : public Xapian::FieldProcessor {
 	std::string prefix;
 
 	public:
-		NumericFieldProcessor(const std::string &prefix);
-		Xapian::Query operator()(const std::string &str) override;
+		NumericFieldProcessor(const std::string& prefix);
+		Xapian::Query operator()(const std::string& str) override;
 };
 
 
@@ -40,8 +40,8 @@ class BooleanFieldProcessor : public Xapian::FieldProcessor {
 	std::string prefix;
 
 	public:
-		BooleanFieldProcessor(const std::string &prefix);
-		Xapian::Query operator()(const std::string &str) override;
+		BooleanFieldProcessor(const std::string& prefix);
+		Xapian::Query operator()(const std::string& str) override;
 };
 
 
@@ -49,8 +49,8 @@ class DateFieldProcessor : public Xapian::FieldProcessor {
 	std::string prefix;
 
 	public:
-		DateFieldProcessor(const std::string &prefix);
-		Xapian::Query operator()(const std::string &str) override;
+		DateFieldProcessor(const std::string& prefix);
+		Xapian::Query operator()(const std::string& str) override;
 };
 
 
@@ -58,6 +58,6 @@ class GeoFieldProcessor : public Xapian::FieldProcessor {
 	std::string prefix;
 
 	public:
-		GeoFieldProcessor(const std::string &prefix);
-		Xapian::Query operator()(const std::string &str) override;
+		GeoFieldProcessor(const std::string& prefix);
+		Xapian::Query operator()(const std::string& str) override;
 };

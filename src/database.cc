@@ -1632,7 +1632,7 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 	}
 
 	if (size_match != query.size()) {
-		throw Xapian::QueryParserError("Query '" + query + "' contains errors.\n" );
+		throw Xapian::QueryParserError("Query '" + query + "' contains errors" );
 	}
 
 	switch (first_time << 1 | first_timeR) {
@@ -1946,10 +1946,12 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 			} else {
 				throw MSG_Error("Problem communicating with the remote database");
 			}
+		} catch (const Xapian::QueryParserError& er) {
+			throw MSG_ClientError("%s", er.get_error_string());
 		} catch (const Xapian::Error& er) {
 			throw MSG_Error("%s", er.get_error_string());
-		} catch (const std::exception&) {
-			throw MSG_ClientError("The search was not performed");
+		} catch (const std::exception& e) {
+			throw MSG_ClientError("The search was not performed (%s)", e.what());
 		}
 		return;
 	}

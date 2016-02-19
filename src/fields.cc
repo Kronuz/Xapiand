@@ -28,58 +28,61 @@
 #include <xapian/query.h>
 
 
-NumericFieldProcessor::NumericFieldProcessor(const std::string &prefix_) : prefix(prefix_) { }
+NumericFieldProcessor::NumericFieldProcessor(const std::string& prefix_) : prefix(prefix_) { }
 
 
 Xapian::Query
-NumericFieldProcessor::operator()(const std::string &str)
+NumericFieldProcessor::operator()(const std::string& str)
 {
 	// For negative number, we receive _# and we serialise -#.
+	std::string serialise(str);
+	if (serialise[0] == '_') serialise[0] = '-';
+	try {
+		serialise = Serialise::numeric(NUMERIC_TYPE, std::stod(serialise));
+		return Xapian::Query(prefix + serialise);
+	} catch (const SerializationError& e) {
+		throw Xapian::QueryParserError(std::string(e.what()) + " (" + str + ")");
+	}
+}
+
+
+BooleanFieldProcessor::BooleanFieldProcessor(const std::string& prefix_) : prefix(prefix_) { }
+
+
+Xapian::Query
+BooleanFieldProcessor::operator()(const std::string& str)
+{
+	try {
+		std::string serialise = Serialise::boolean(str);
+		return Xapian::Query(prefix + serialise);
+	} catch (const SerializationError& e) {
+		throw Xapian::QueryParserError(std::string(e.what()) + " (" + str + ")");
+	}
+}
+
+
+DateFieldProcessor::DateFieldProcessor(const std::string& prefix_) : prefix(prefix_) { }
+
+
+Xapian::Query
+DateFieldProcessor::operator()(const std::string& str)
+{
 	std::string serialise(str.c_str());
 	if (serialise[0] == '_') serialise[0] = '-';
-	serialise = Serialise::numeric(NUMERIC_TYPE, std::stod(serialise));
-	if (serialise.empty()) {
-		throw Xapian::QueryParserError("Didn't understand numeric specification '" + str + "'");
+	try {
+		serialise = Serialise::date(serialise);
+		return Xapian::Query(prefix + serialise);
+	} catch (const DatetimeError& e) {
+		throw Xapian::QueryParserError("Format date is not valid (" + str + "). " + std::string(e.what()));
 	}
-	return Xapian::Query(prefix + serialise);
 }
 
 
-BooleanFieldProcessor::BooleanFieldProcessor(const std::string &prefix_) : prefix(prefix_) { }
+GeoFieldProcessor::GeoFieldProcessor(const std::string& prefix_) : prefix(prefix_) { }
 
 
 Xapian::Query
-BooleanFieldProcessor::operator()(const std::string &str)
-{
-	std::string serialise = Serialise::boolean(str);
-	if (serialise.empty()) {
-		throw Xapian::QueryParserError("Didn't understand bool specification '" + str + "'");
-	}
-	return Xapian::Query(prefix + serialise);
-}
-
-
-DateFieldProcessor::DateFieldProcessor(const std::string &prefix_): prefix(prefix_) { }
-
-
-Xapian::Query
-DateFieldProcessor::operator()(const std::string &str)
-{
-	std::string serialise(str.c_str());
-	if (serialise[0] == '_') serialise[0] = '-';
-	serialise = Serialise::date(serialise);
-	if (serialise.empty()) {
-		throw Xapian::QueryParserError("Didn't understand date specification '" + str + "'");
-	}
-	return Xapian::Query(prefix + serialise);
-}
-
-
-GeoFieldProcessor::GeoFieldProcessor(const std::string &prefix_): prefix(prefix_) { }
-
-
-Xapian::Query
-GeoFieldProcessor::operator()(const std::string &str)
+GeoFieldProcessor::operator()(const std::string& str)
 {
 	std::string serialise(Serialise::trixel_id(std::stoull(str)));
 	return Xapian::Query(prefix + serialise);
