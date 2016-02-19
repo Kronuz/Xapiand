@@ -23,6 +23,8 @@
 #include "cartesian.h"
 
 #include <cmath>
+#include <unordered_map>
+#include <vector>
 
 // Datum for WGS84
 #define DATUM_WGS84 0
@@ -167,11 +169,11 @@ Cartesian::Cartesian()
  * Constructor receives latitude, longitude and their units on specific CRS
  * which are converted to cartesian coordinates, and then they are converted to CRS WGS84.
  */
-Cartesian::Cartesian(double lat, double lon, double height, const CartesianUnits &units, int _SRID)
+Cartesian::Cartesian(double lat, double lon, double height, CartesianUnits units, int _SRID)
 {
 	auto it = SRIDS_DATUMS.find(_SRID);
 	if (it == SRIDS_DATUMS.end()) {
-		throw MSG_Error("SRID = %d is not supported", _SRID);
+		throw MSG_CartesianError("SRID = %d is not supported", _SRID);
 	}
 
 	datum = it->second;
@@ -186,7 +188,7 @@ Cartesian::Cartesian(double lat, double lon, double height, const CartesianUnits
  * Constructor receives latitude, longitude and their units on WGS84 CRS.
  * which are converted to cartesian coordinates.
  */
-Cartesian::Cartesian(double lat, double lon, double height, const CartesianUnits &units)
+Cartesian::Cartesian(double lat, double lon, double height, CartesianUnits units)
 	: SRID(WGS84),
 	  datum(DATUM_WGS84)
 {
@@ -234,7 +236,7 @@ Cartesian::transform2WGS84() noexcept
  * Function receives latitude, longitude, ellipsoid height and their units.
  */
 void
-Cartesian::toCartesian(double lat, double lon, double height, const CartesianUnits &units)
+Cartesian::toCartesian(double lat, double lon, double height, CartesianUnits units)
 {
 	// If lat and lon are in degrees convert to radians.
 	if (units == CartesianUnits::DEGREES) {
@@ -243,7 +245,7 @@ Cartesian::toCartesian(double lat, double lon, double height, const CartesianUni
 	}
 
 	if (lat < -PI_HALF || lat > PI_HALF) {
-		throw MSG_Error("Latitude out-of-range");
+		throw MSG_CartesianError("Latitude out-of-range");
 	}
 
 	auto ellipsoid = ellipsoids[datums[datum].ellipsoid];
@@ -262,35 +264,35 @@ Cartesian::toCartesian(double lat, double lon, double height, const CartesianUni
 
 
 bool
-Cartesian::operator==(const Cartesian &p) const noexcept
+Cartesian::operator==(const Cartesian& p) const noexcept
 {
 	return x == p.x && y == p.y && z == p.z && SRID == p.SRID;
 }
 
 
 bool
-Cartesian::operator!=(const Cartesian &p) const noexcept
+Cartesian::operator!=(const Cartesian& p) const noexcept
 {
 	return x != p.x || y != p.y || z != p.z || SRID != p.SRID;
 }
 
 
 double
-Cartesian::operator*(const Cartesian &p) const noexcept
+Cartesian::operator*(const Cartesian& p) const noexcept
 {
 	return x * p.x + y * p.y + z * p.z;
 }
 
 
 Cartesian
-Cartesian::operator^(const Cartesian &p) const noexcept
+Cartesian::operator^(const Cartesian& p) const noexcept
 {
 	return Cartesian(y * p.z - p.y * z, z * p.x - p.z * x, x * p.y - p.x * y);
 }
 
 
 Cartesian&
-Cartesian::operator^=(const Cartesian &p) noexcept
+Cartesian::operator^=(const Cartesian& p) noexcept
 {
 	double x2 = y * p.z - p.y * z;
 	double y2 = z * p.x - p.z * x;
@@ -303,14 +305,14 @@ Cartesian::operator^=(const Cartesian &p) noexcept
 
 
 Cartesian
-Cartesian::operator+(const Cartesian &p) const noexcept
+Cartesian::operator+(const Cartesian& p) const noexcept
 {
 	return Cartesian(x + p.x, y + p.y, z + p.z);
 }
 
 
 Cartesian&
-Cartesian::operator+=(const Cartesian &p) noexcept
+Cartesian::operator+=(const Cartesian& p) noexcept
 {
 	x += p.x;
 	y += p.y;
@@ -320,14 +322,14 @@ Cartesian::operator+=(const Cartesian &p) noexcept
 
 
 Cartesian
-Cartesian::operator-(const Cartesian &p) const noexcept
+Cartesian::operator-(const Cartesian& p) const noexcept
 {
 	return Cartesian(x - p.x, y - p.y, z - p.z);
 }
 
 
 Cartesian&
-Cartesian::operator-=(const Cartesian &p) noexcept
+Cartesian::operator-=(const Cartesian& p) noexcept
 {
 	x -= p.x;
 	y -= p.y;
@@ -382,7 +384,7 @@ Cartesian::Decimal2Degrees() const
  * Modified lat and lon in degrees, height in meters.
  */
 void
-Cartesian::toGeodetic(double &lat, double &lon, double &height) const
+Cartesian::toGeodetic(double& lat, double& lon, double& height) const
 {
 	lon = std::atan2(y, x);
 	double p = std::sqrt(x * x + y * y);

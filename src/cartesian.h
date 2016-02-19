@@ -25,9 +25,8 @@
 #include "exception.h"
 
 #include <cstdio>
+#include <functional>
 #include <string>
-#include <unordered_map>
-#include <vector>
 
 // Code of ellipsoids were obtained of
 // http://earth-info.nga.mil/GandG/coordsys/datums/ellips.txt
@@ -117,7 +116,7 @@ class Cartesian {
 	int datum;
 
 	void transform2WGS84() noexcept;
-	void toCartesian(double lat, double lon, double height, const CartesianUnits &units);
+	void toCartesian(double lat, double lon, double height, CartesianUnits units);
 
 public:
 	double x;
@@ -125,8 +124,8 @@ public:
 	double z;
 
 	Cartesian();
-	Cartesian(double lat, double lon, double height, const CartesianUnits &units, int SRID);
-	Cartesian(double lat, double lon, double height, const CartesianUnits &units);
+	Cartesian(double lat, double lon, double height, CartesianUnits units, int SRID);
+	Cartesian(double lat, double lon, double height, CartesianUnits units);
 	Cartesian(double x, double y, double z);
 	// Move constructor
 	Cartesian(Cartesian&& p) = default;
@@ -136,21 +135,21 @@ public:
 	// Move assignment
 	Cartesian& operator=(Cartesian&& p) = default;
 	// Copy assignment
-	Cartesian& operator=(const Cartesian &p) = default;
-	bool operator==(const Cartesian &p) const noexcept;
-	bool operator!=(const Cartesian &p) const noexcept;
+	Cartesian& operator=(const Cartesian& p) = default;
+	bool operator==(const Cartesian& p) const noexcept;
+	bool operator!=(const Cartesian& p) const noexcept;
 	// Dot product
-	double operator*(const Cartesian &p) const noexcept;
+	double operator*(const Cartesian& p) const noexcept;
 	// Vector product
-	Cartesian operator^(const Cartesian &p) const noexcept;
-	Cartesian& operator^=(const Cartesian &p) noexcept;
-	Cartesian operator+(const Cartesian &p) const noexcept;
-	Cartesian& operator+=(const Cartesian &p) noexcept;
-	Cartesian operator-(const Cartesian &p) const noexcept;
-	Cartesian& operator-=(const Cartesian &p) noexcept;
+	Cartesian operator^(const Cartesian& p) const noexcept;
+	Cartesian& operator^=(const Cartesian& p) noexcept;
+	Cartesian operator+(const Cartesian& p) const noexcept;
+	Cartesian& operator+=(const Cartesian& p) noexcept;
+	Cartesian operator-(const Cartesian& p) const noexcept;
+	Cartesian& operator-=(const Cartesian& p) noexcept;
 
 	std::string Decimal2Degrees() const;
-	void toGeodetic(double &lat, double &lon, double &height) const;
+	void toGeodetic(double& lat, double& lon, double& height) const;
 	void normalize();
 	void inverse() noexcept;
 	double norm() const;
