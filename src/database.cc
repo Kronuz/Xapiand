@@ -48,7 +48,7 @@
 #define MAGIC 0xC0DE
 
 #define SIZE_UUID 36
-#define SIZE_WAL_HEADER sizeof(int) + SIZE_UUID + sizeof(uint64_t)
+#define SIZE_WAL_HEADER (sizeof(int) + SIZE_UUID + sizeof(uint64_t))
 
 
 static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
@@ -611,7 +611,7 @@ Database::reopen()
 			}
 #endif
 			db->add_database(wdb);
-			if (local && !(flags & DB_NOWAL)) {
+			if (local && (~flags & DB_NOWAL)) {
 				// WAL required on a local database, open it.
 				wal.open(get_revision_info(), e->path);
 			}
@@ -691,7 +691,7 @@ Database::commit()
 		return false;
 	}
 
-	if (local && !(flags & DB_NOWAL)) wal.write_commit();
+	if (local && (~flags & DB_NOWAL)) wal.write_commit();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Commit: t: %d", t);
@@ -734,7 +734,7 @@ Database::delete_document_term(const std::string& term, bool _commit)
 		throw MSG_Error("database is read-only");
 	}
 
-	if (local && !(flags & DB_NOWAL)) wal.write_delete_document_term(term);
+	if (local && (~flags & DB_NOWAL)) wal.write_delete_document_term(term);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Deleting document: %s  t: %d", term.c_str(), t);
@@ -1329,7 +1329,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 {
 	Xapian::docid did = 0;
 
-	if (local && !(flags & DB_NOWAL)) wal.write_replace_document_term(term, doc);
+	if (local && (~flags & DB_NOWAL)) wal.write_replace_document_term(term, doc);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: %s  t: %d", term.c_str(), t);
@@ -1989,7 +1989,7 @@ Database::get_metadata(const std::string& key, std::string& value)
 bool
 Database::set_metadata(const std::string& key, const std::string& value, bool _commit)
 {
-	if (local && !(flags & DB_NOWAL)) wal.write_set_metadata(key, value);
+	if (local && (~flags & DB_NOWAL)) wal.write_set_metadata(key, value);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
