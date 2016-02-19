@@ -488,9 +488,9 @@ MsgPack::path(const std::vector<std::string>& path) const
 				throw msgpack::type_error();
 			}
 		} catch (const std::out_of_range&) {
-			throw MSG_Error("The object itself or an array containing it does need to exist in: %s", s.c_str());
+			throw MSG_ClientError("The object itself or an array containing it need to exist in: %s", s.c_str());
 		} catch (const std::invalid_argument&) {
-			throw MSG_Error("The index must be numeric in array in: %s", s.c_str());
+			throw MSG_ClientError("The index must be numeric in array in: %s", s.c_str());
 		}
 	}
 	return current;
