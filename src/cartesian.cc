@@ -450,3 +450,11 @@ Cartesian::is_SRID_supported(int _SRID)
 {
 	return SRIDS_DATUMS.find(_SRID) != SRIDS_DATUMS.end();
 }
+
+
+size_t
+std::hash<Cartesian>::operator()(const Cartesian& p) const
+{
+	std::hash<std::string> hash_fn;
+	return hash_fn(p.as_string());
+}

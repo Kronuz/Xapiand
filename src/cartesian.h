@@ -165,3 +165,11 @@ public:
 		return datum;
 	}
 };
+
+
+namespace std {
+	template<>
+	struct hash<Cartesian> {
+		size_t operator()(const Cartesian& p) const;
+	};
+}
