@@ -1464,7 +1464,8 @@ HttpClient::clean_http_request()
 
 
 std::pair<std::string, std::string>
-HttpClient::content_type_pair(const std::string& ct_type) {
+HttpClient::content_type_pair(const std::string& ct_type)
+{
 	std::size_t found = ct_type.find_last_of("/");
 	if (found == std::string::npos) {
 		return  make_pair(std::string(), std::string());
@@ -1475,7 +1476,8 @@ HttpClient::content_type_pair(const std::string& ct_type) {
 
 
 bool
-HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::pair<std::string, std::string>& ct_type) {
+HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::pair<std::string, std::string>& ct_type)
+{
 	bool type_ok = false, subtype_ok = false;
 	if (ct_type_pattern.first == "*") {
 		type_ok = true;
@@ -1492,7 +1494,8 @@ HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_typ
 
 
 const std::pair<std::string, std::string>&
-HttpClient::get_acceptable_type(const std::pair<std::string, std::string>& ct_type) {
+HttpClient::get_acceptable_type(const std::pair<std::string, std::string>& ct_type)
+{
 	if (accept_set.empty()) {
 		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, std::pair<std::string, std::string>>(1, 0, content_type_pair(content_type)));
 		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string("*"), std::string("*"))));
@@ -1508,7 +1511,8 @@ HttpClient::get_acceptable_type(const std::pair<std::string, std::string>& ct_ty
 
 //TODO: Add HTML serialization
 std::string
-HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty) {
+HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty)
+{
 	if (is_acceptable_type(ct_type, json_type)) {
 		return obj.to_json_string(pretty);
 	} else if (is_acceptable_type(ct_type, msgpack_type)) {
@@ -1519,7 +1523,8 @@ HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, 
 
 
 void
-HttpClient::writte_http_response(const MsgPack& response,  int status_code, bool pretty) {
+HttpClient::writte_http_response(const MsgPack& response,  int status_code, bool pretty)
+{
 	std::string response_str;
 	const auto& accepted_type = get_acceptable_type(content_type_pair(content_type));
 	try {
