@@ -38,7 +38,7 @@ NumericFieldProcessor::operator()(const std::string& str)
 	std::string serialise(str);
 	if (serialise[0] == '_') serialise[0] = '-';
 	try {
-		serialise = Serialise::numeric(NUMERIC_TYPE, std::stod(serialise));
+		serialise = Serialise::numeric(serialise);
 		return Xapian::Query(prefix + serialise);
 	} catch (const SerializationError& e) {
 		throw Xapian::QueryParserError(std::string(e.what()) + " (" + str + ")");
@@ -69,7 +69,7 @@ DateFieldProcessor::operator()(const std::string& str)
 {
 	std::string serialise(str.c_str());
 	if (serialise[0] == '_') serialise[0] = '-';
-	try {
+	try {
 		serialise = Serialise::date(serialise);
 		return Xapian::Query(prefix + serialise);
 	} catch (const DatetimeError& e) {

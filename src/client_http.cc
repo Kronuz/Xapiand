@@ -427,7 +427,7 @@ HttpClient::run()
 		}
 	} catch (const Xapian::Error& err) {
 		error_code = 500;
-		error_str = err.get_error_string();
+		error_str = err.get_msg().c_str();
 		if (error_str) {
 			error.assign(error_str);
 		} else {
@@ -671,7 +671,7 @@ HttpClient::document_info_view(const query_field_t& e)
 					throw MSG_Error("Problem communicating with the remote database");
 				}
 			} catch (const Xapian::Error& er) {
-				throw MSG_Error(er.get_error_string());
+				throw MSG_Error(er.get_msg().c_str());
 			}
 		}
 	}

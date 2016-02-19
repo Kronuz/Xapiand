@@ -62,52 +62,57 @@ GenerateTerms::numeric(::std::string& result_terms, const ::std::string& start_,
 		const ::std::vector<double>& accuracy, const ::std::vector<::std::string>& acc_prefix, ::std::vector<::std::string>& prefixes)
 {
 	if (!start_.empty() && !end_.empty() && !accuracy.empty()) {
-		double d_start = std::stod(start_);
-		double d_end = std::stod(end_);
-		double size_r = d_end - d_start;
+		try {
+			double d_start = std::stod(start_);
+			double d_end = std::stod(end_);
 
-		// If the range is negative or its values are outside of range of a long long,
-		// return empty terms because these won't be generated correctly.
-		if (size_r < 0.0 || d_start <= LLONG_MIN || d_end >= LLONG_MAX) return;
+			double size_r = d_end - d_start;
 
-		long long start = static_cast<long long>(d_start);
-		long long end = static_cast<long long>(d_end);
+			// If the range is negative or its values are outside of range of a long long,
+			// return empty terms because these won't be generated correctly.
+			if (size_r < 0.0 || d_start <= LLONG_MIN || d_end >= LLONG_MAX) return;
 
-		// Find the upper or equal accuracy.
-		int pos = 0, len = (int)accuracy.size();
-		while (pos < len && accuracy[pos] < size_r) ++pos;
+			long long start = static_cast<long long>(d_start);
+			long long end = static_cast<long long>(d_end);
 
-		// If there is a upper accuracy.
-		bool up_acc = false;
-		if (pos < len) {
-			long long _acc = static_cast<long long>(accuracy[pos]);
-			std::string prefix_dot(acc_prefix[pos] + ":");
-			prefixes.push_back(acc_prefix[pos]);
-			long long aux = start - (start % _acc);
-			long long aux2 = end - (end % _acc);
-			result_terms = prefix_dot + to_query_string(::std::to_string(aux));
-			if (aux != aux2) result_terms += " OR " + prefix_dot + to_query_string(::std::to_string(aux2));
-			up_acc = true;
-		}
+			// Find the upper or equal accuracy.
+			int pos = 0, len = (int)accuracy.size();
+			while (pos < len && accuracy[pos] < size_r) ++pos;
 
-		// If there is a lower accuracy.
-		if (--pos >= 0) {
-			long long _acc = static_cast<long long>(accuracy[pos]);
-			start = start - (start % _acc);
-			end = end - (end % _acc);
-			long long aux = (end - start) / _acc;
-			// If terms are not too many.
-			if (aux < MAX_TERMS) {
+			// If there is a upper accuracy.
+			bool up_acc = false;
+			if (pos < len) {
+				long long _acc = static_cast<long long>(accuracy[pos]);
 				std::string prefix_dot(acc_prefix[pos] + ":");
 				prefixes.push_back(acc_prefix[pos]);
-				::std::string or_terms(prefix_dot + to_query_string(::std::to_string(start)));
-				for (int i = 1; i < aux; ++i) {
-					long long aux2 = start + accuracy[pos] * i;
-					or_terms += " OR " + prefix_dot + to_query_string(::std::to_string(aux2));
-				}
-				if (start != end) or_terms += " OR " + prefix_dot + to_query_string(::std::to_string(end));
-				result_terms = up_acc ? "(" + result_terms + ") AND (" + or_terms + ")" : or_terms;
+				long long aux = start - (start % _acc);
+				long long aux2 = end - (end % _acc);
+				result_terms = prefix_dot + to_query_string(::std::to_string(aux));
+				if (aux != aux2) result_terms += " OR " + prefix_dot + to_query_string(::std::to_string(aux2));
+				up_acc = true;
 			}
+
+			// If there is a lower accuracy.
+			if (--pos >= 0) {
+				long long _acc = static_cast<long long>(accuracy[pos]);
+				start = start - (start % _acc);
+				end = end - (end % _acc);
+				long long aux = (end - start) / _acc;
+				// If terms are not too many.
+				if (aux < MAX_TERMS) {
+					std::string prefix_dot(acc_prefix[pos] + ":");
+					prefixes.push_back(acc_prefix[pos]);
+					::std::string or_terms(prefix_dot + to_query_string(::std::to_string(start)));
+					for (int i = 1; i < aux; ++i) {
+						long long aux2 = start + accuracy[pos] * i;
+						or_terms += " OR " + prefix_dot + to_query_string(::std::to_string(aux2));
+					}
+					if (start != end) or_terms += " OR " + prefix_dot + to_query_string(::std::to_string(end));
+					result_terms = up_acc ? "(" + result_terms + ") AND (" + or_terms + ")" : or_terms;
+				}
+			}
+		} catch (const ::std::exception&) {
+			throw MSG_ClientError("Didn't understand numeric format: %s..%s", start_.c_str(), end_.c_str());
 		}
 	}
 }
@@ -206,8 +211,8 @@ GenerateTerms::date(::std::string& result_terms, const ::std::string& start_, co
 						break;
 				}
 			}
-		} catch (const ::std::exception& ex) {
-			throw Xapian::QueryParserError("Didn't understand date specification");
+		} catch (const ::std::exception&) {
+			throw MSG_ClientError("Didn't understand date format: %s..%s", start_.c_str(), end_.c_str());
 		}
 	}
 }
