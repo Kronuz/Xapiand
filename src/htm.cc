@@ -84,7 +84,7 @@ HTM::HTM(bool _partials, double error, Geometry&& _region)
 
 
 std::string
-HTM::startTrixel(Cartesian &v0, Cartesian &v1, Cartesian &v2, const Cartesian &coord) noexcept
+HTM::startTrixel(Cartesian& v0, Cartesian& v1, Cartesian& v2, const Cartesian& coord) noexcept
 {
 	size_t num = (coord.x > 0 ? 4 : 0) + (coord.y > 0 ? 2 : 0) + (coord.z > 0 ? 1 : 0);
 	v0 = start_vertices[start_trixels[num].v0];
@@ -95,7 +95,7 @@ HTM::startTrixel(Cartesian &v0, Cartesian &v1, Cartesian &v2, const Cartesian &c
 
 
 void
-HTM::midPoint(const Cartesian &v0, const Cartesian &v1, Cartesian &w)
+HTM::midPoint(const Cartesian& v0, const Cartesian& v1, Cartesian& w)
 {
 	w = v0 + v1;
 	w.normalize();
@@ -103,7 +103,7 @@ HTM::midPoint(const Cartesian &v0, const Cartesian &v1, Cartesian &w)
 
 
 std::string
-HTM::cartesian2name(const Cartesian &coord)
+HTM::cartesian2name(const Cartesian& coord)
 {
 	Cartesian v0, v1, v2;
 	Cartesian w0, w1, w2;
@@ -143,7 +143,7 @@ HTM::cartesian2name(const Cartesian &coord)
 
 
 uint64_t
-HTM::name2id(const std::string &name)
+HTM::name2id(const std::string& name)
 {
 	size_t _size = name.size();
 
@@ -159,10 +159,10 @@ HTM::name2id(const std::string &name)
 
 
 int
-HTM::insideVertex(const Cartesian &v) const noexcept
+HTM::insideVertex(const Cartesian& v) const noexcept
 {
-	for (auto it = region.constraints.begin(); it != region.constraints.end(); ++it) {
-		if ((*it).center * v <= (*it).distance) return 0;
+	for (const auto& constraint : region.constraints) {
+		if (constraint.center * v <= constraint.distance) return 0;
 	}
 
 	return 1;
@@ -170,7 +170,7 @@ HTM::insideVertex(const Cartesian &v) const noexcept
 
 
 int
-HTM::verifyTrixel(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) const
+HTM::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
 {
 	int sum = insideVertex(v0) + insideVertex(v1) + insideVertex(v2);
 
@@ -218,7 +218,7 @@ HTM::verifyTrixel(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2)
 
 
 bool
-HTM::testEdgePolygon(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) const
+HTM::testEdgePolygon(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
 {
 	/*
 	 * We need to check each polygon's side against the 3 triangle edges.
@@ -286,7 +286,7 @@ HTM::testEdgePolygon(const Cartesian &v0, const Cartesian &v1, const Cartesian &
 
 
 bool
-HTM::thereisHole(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) const noexcept
+HTM::thereisHole(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
 {
 	if (((v0 ^ v1) * region.boundingCircle.center) >= 0.0 ||
 		((v1 ^ v2) * region.boundingCircle.center) >= 0.0 ||
@@ -297,7 +297,7 @@ HTM::thereisHole(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) 
 
 
 bool
-HTM::insideVector(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2, const Cartesian &v) noexcept
+HTM::insideVector(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, const Cartesian& v)
 {
 	if (((v0 ^ v1) * v) < 0 ||
 		((v1 ^ v2) * v) < 0 ||
@@ -308,7 +308,7 @@ HTM::insideVector(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2,
 
 
 bool
-HTM::intersectEdge(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) const
+HTM::intersectEdge(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
 {
 	if (intersection(v0, v1, region.boundingCircle) ||
 		intersection(v1, v2, region.boundingCircle) ||
@@ -318,7 +318,7 @@ HTM::intersectEdge(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2
 
 
 bool
-HTM::intersection(const Cartesian &v1, const Cartesian &v2, const Constraint &c)
+HTM::intersection(const Cartesian& v1, const Cartesian& v2, const Constraint& c)
 {
 	double gamma1 = v1 * c.center;
 	double gamma2 = v2 * c.center;
@@ -346,7 +346,7 @@ HTM::intersection(const Cartesian &v1, const Cartesian &v2, const Constraint &c)
 
 
 bool
-HTM::boundingCircle(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) const
+HTM::boundingCircle(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const
 {
 	Cartesian vb = (v1 - v0) ^ (v2 - v1);
 	vb.normalize();
@@ -359,7 +359,7 @@ HTM::boundingCircle(const Cartesian &v0, const Cartesian &v1, const Cartesian &v
 
 
 void
-HTM::lookupTrixels(int8_t level, std::string name, const Cartesian &v0, const Cartesian &v1, const Cartesian &v2)
+HTM::lookupTrixels(int8_t level, std::string name, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2)
 {
 	// Finish the recursion.
 	if (--level < 0) {
@@ -465,7 +465,7 @@ HTM::simplifyTrixels()
 
 
 void
-HTM::insertRange(const std::string &name, std::vector<range_t> &ranges, int8_t _max_level)
+HTM::insertRange(const std::string& name, std::vector<range_t>& ranges, int8_t _max_level)
 {
 	int8_t mask;
 	uint64_t start, end;
@@ -485,7 +485,7 @@ HTM::insertRange(const std::string &name, std::vector<range_t> &ranges, int8_t _
 
 
 void
-HTM::mergeRanges(std::vector<range_t> &ranges)
+HTM::mergeRanges(std::vector<range_t>& ranges)
 {
 	if (ranges.size() == 0) return;
 
@@ -512,7 +512,7 @@ HTM::mergeRanges(std::vector<range_t> &ranges)
 
 
 void
-HTM::getCorners(const std::string &name, Cartesian &v0, Cartesian &v1, Cartesian &v2) noexcept
+HTM::getCorners(const std::string& name, Cartesian& v0, Cartesian& v1, Cartesian& v2)
 {
 	Cartesian w0, w1, w2;
 	size_t trixel = name[1] - '0';
@@ -555,7 +555,6 @@ HTM::getCorners(const std::string &name, Cartesian &v0, Cartesian &v1, Cartesian
 		}
 		++i;
 	}
-
 }
 
 
@@ -615,7 +614,7 @@ HTM::getCircle3D(size_t points) const
 
 
 std::string
-HTM::getCircle3D(const Constraint &bCircle, size_t points)
+HTM::getCircle3D(const Constraint& bCircle, size_t points)
 {
 	double inc = RAD_PER_CIRCUMFERENCE / points;
 	char x0s[DIGITS];
@@ -670,7 +669,7 @@ HTM::getCircle3D(const Constraint &bCircle, size_t points)
 
 
 void
-HTM::writePython3D(const std::string &file) const
+HTM::writePython3D(const std::string& file) const
 {
 	std::ofstream fs(file);
 	std::string x("x = ["), y("y = ["), z("z = [");
@@ -748,7 +747,7 @@ HTM::writePython3D(const std::string &file) const
 
 
 void
-HTM::writePython3D(const std::string &file, const std::vector<Geometry> &g, const std::vector<std::string> &names_f)
+HTM::writePython3D(const std::string& file, const std::vector<Geometry>& g, const std::vector<std::string>& names_f)
 {
 	std::ofstream fs(file);
 
@@ -829,13 +828,13 @@ HTM::writePython3D(const std::string &file, const std::vector<Geometry> &g, cons
 
 
 Cartesian
-HTM::getCentroid(const std::vector<std::string> &trixel_names) noexcept
+HTM::getCentroid(const std::vector<std::string>& trixel_names)
 {
 	Cartesian w0, w1, w2, v0, v1, v2, centroid(0, 0, 0);
 
-	for (auto it = trixel_names.begin(); it != trixel_names.end(); ++it) {
-		size_t trixel = it->at(1) - '0';
-		if (it->at(0) == 's') {
+	for (const auto& trixel_name : trixel_names) {
+		size_t trixel = trixel_name.at(1) - '0';
+		if (trixel_name.at(0) == 's') {
 			v0 = start_vertices[S[trixel].v0];
 			v1 = start_vertices[S[trixel].v1];
 			v2 = start_vertices[S[trixel].v2];
@@ -845,12 +844,12 @@ HTM::getCentroid(const std::vector<std::string> &trixel_names) noexcept
 			v2 = start_vertices[N[trixel].v2];
 		}
 
-		size_t i = 2, len = it->size();
+		size_t i = 2, len = trixel_name.size();
 		while (i < len) {
 			midPoint(v0, v1, w2);
 			midPoint(v1, v2, w0);
 			midPoint(v2, v0, w1);
-			switch (it->at(i)) {
+			switch (trixel_name.at(i)) {
 				case '0':
 					v1 = w2;
 					v2 = w1;

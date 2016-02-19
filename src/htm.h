@@ -92,39 +92,39 @@ class HTM {
 	bool partials;
 	std::vector<std::string> partial_names;
 
-	void lookupTrixels(int8_t level, std::string name, const Cartesian &v0, const Cartesian &v1, const Cartesian &v2);
+	void lookupTrixels(int8_t level, std::string name, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2);
 	// Returns 1 if trixel's vertex are inside, otherwise return 0.
-	int insideVertex(const Cartesian &v) const noexcept;
+	int insideVertex(const Cartesian& v) const noexcept;
 	// Verifies if a trixel is inside, outside or partial of the convex.
-	int verifyTrixel(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) const;
+	int verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
 	// Returns if a trixel is intersecting or inside of a polygon.
-	bool testEdgePolygon(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) const;
+	bool testEdgePolygon(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
 	// Return whether there is a hole inside the triangle.
-	bool thereisHole(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) const noexcept;
+	bool thereisHole(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
 
 	/*
 	 * Test whether one of the halfspace’s boundary circles intersects with
 	 * one of the edges of the triangle.
 	 */
-	bool intersectEdge(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) const;
+	bool intersectEdge(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
 
 	// Returns if there is an overlap between trixel and convex, calculating the bounding circle of the trixel.
-	bool boundingCircle(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2) const;
+	bool boundingCircle(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
 	std::string getCircle3D(size_t points) const;
 	void simplifyTrixels();
 
 	// Finds the start trixel containing the coord.
-	static std::string startTrixel(Cartesian &v0, Cartesian &v1, Cartesian &v2, const Cartesian &coord) noexcept;
+	static std::string startTrixel(Cartesian& v0, Cartesian& v1, Cartesian& v2, const Cartesian& coord) noexcept;
 	// Finds the midpoint of two edges.
-	static void midPoint(const Cartesian &v0, const Cartesian &v1, Cartesian &w);
+	static void midPoint(const Cartesian& v0, const Cartesian& v1, Cartesian& w);
 	// Receives a name of a trixel and calculates its id.
-	static uint64_t name2id(const std::string &name);
+	static uint64_t name2id(const std::string& name);
 	// Returns if v is inside of a trixel.
-	static bool insideVector(const Cartesian &v0, const Cartesian &v1, const Cartesian &v2, const Cartesian &v) noexcept;
+	static bool insideVector(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2, const Cartesian& v);
 	// Returns true if there is a intersection between trixel and convex.
-	static bool intersection(const Cartesian &v1, const Cartesian &v2, const Constraint &c);
-	static void getCorners(const std::string &name, Cartesian &v0, Cartesian &v1, Cartesian &v2) noexcept;
-	static std::string getCircle3D(const Constraint &bCircle, size_t points);
+	static bool intersection(const Cartesian& v1, const Cartesian& v2, const Constraint& c);
+	static void getCorners(const std::string& name, Cartesian& v0, Cartesian& v1, Cartesian& v2);
+	static std::string getCircle3D(const Constraint& bCircle, size_t points);
 
 public:
 	Geometry region;
@@ -150,12 +150,12 @@ public:
 	HTM& operator=(const HTM&) = delete;
 
 	void run();
-	void writePython3D(const std::string &file) const;
+	void writePython3D(const std::string& file) const;
 
 	// Given a coord, calculates its HTM name.
-	static std::string cartesian2name(const Cartesian &coord);
-	static Cartesian getCentroid(const std::vector<std::string> &trixel_names) noexcept;
-	static void insertRange(const std::string &name, std::vector<range_t> &ranges, int8_t _max_level);
-	static void mergeRanges(std::vector<range_t> &ranges);
-	static void writePython3D(const std::string &file, const std::vector<Geometry> &g, const std::vector<std::string> &names_f);
+	static std::string cartesian2name(const Cartesian& coord);
+	static Cartesian getCentroid(const std::vector<std::string>& trixel_names);
+	static void insertRange(const std::string& name, std::vector<range_t>& ranges, int8_t _max_level);
+	static void mergeRanges(std::vector<range_t>& ranges);
+	static void writePython3D(const std::string& file, const std::vector<Geometry>& g, const std::vector<std::string>& names_f);
 };
