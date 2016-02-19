@@ -35,12 +35,12 @@ const std::string MAX_CMPVALUE(Xapian::sortable_serialise(DBL_MAX));
 const std::string STR_FOR_EMPTY("\xff");
 
 // Vector of slots
-struct keys_values_t {
+struct key_values_t {
 	Xapian::valueno slot;
 	char type;
 	double valuenumeric;
 	std::string valuestring;
-	CartesianList valuegeo;
+	CartesianUSet valuegeo;
 	bool reverse;
 	bool hasValue;
 };
@@ -56,7 +56,7 @@ struct keys_values_t {
  */
 class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
 	// Vector of slots
-	std::vector<keys_values_t> slots;
+	std::vector<key_values_t> slots;
 
 public:
 	Multi_MultiValueKeyMaker() = default;
@@ -66,11 +66,11 @@ public:
 		while (begin != end) add_value(*begin++);
 	}
 
-	virtual std::string operator()(const Xapian::Document & doc) const override;
+	virtual std::string operator()(const Xapian::Document& doc) const override;
 
-	void add_value(Xapian::valueno slot, char type, const std::string &value, bool reverse = false) {
+	void add_value(Xapian::valueno slot, char type, const std::string& value, bool reverse = false) {
 		if (!value.empty()) {
-			keys_values_t ins_key = { slot, type, 0, "", CartesianList(), reverse, true };
+			key_values_t ins_key = { slot, type, 0, "", CartesianUSet(), reverse, true };
 			switch (type) {
 				case NUMERIC_TYPE:
 					ins_key.valuenumeric = std::stod(value);
@@ -85,13 +85,13 @@ public:
 					ins_key.valuestring = value;
 					break;
 				case GEO_TYPE:
-					std::vector<range_t> ranges;
+					RangeList ranges;
 					EWKT_Parser::getRanges(value, true, HTM_MIN_ERROR, ranges, ins_key.valuegeo);
 					break;
 			}
 			slots.push_back(std::move(ins_key));
 		} else if (type != GEO_TYPE) {
-			slots.push_back({ slot, type, 0, value, CartesianList(), reverse, false });
+			slots.push_back({ slot, type, 0, value, CartesianUSet(), reverse, false });
 		}
 	}
 };

@@ -27,33 +27,36 @@
 #include <cmath>
 
 
-static std::string findSmallest(const std::string &multiValues) {
+static std::string findSmallest(const std::string& multiValues) {
 	if (multiValues.empty()) return STR_FOR_EMPTY;
 	StringList s;
 	s.unserialise(multiValues);
 	StringList::const_iterator it(s.begin());
 	std::string smallest(*it);
-	for (++it; it != s.end(); ++it) {
+	const auto it_e = s.end();
+	for (++it; it != it_e; ++it) {
 		if (smallest > *it) smallest = *it;
 	}
 	return smallest;
 }
 
 
-static std::string findLargest(const std::string &multiValues) {
+static std::string findLargest(const std::string& multiValues) {
 	if (multiValues.empty()) return STR_FOR_EMPTY;
 	StringList s;
 	s.unserialise(multiValues);
 	StringList::const_iterator it(s.begin());
 	std::string largest(*it);
-	for (++it; it != s.end(); ++it) {
+	const auto it_e = s.end();
+	for (++it; it != it_e; ++it) {
 		if (*it > largest) largest = *it;
 	}
 	return largest;
 }
 
+
 template <class Iterator>
-static std::string get_cmpvalue(Iterator &v_it, const keys_values_t &sort_value) {
+static std::string get_cmpvalue(Iterator& v_it, const key_values_t& sort_value) {
 	switch (sort_value.type) {
 		case NUMERIC_TYPE:
 		case DATE_TYPE: {
@@ -65,13 +68,13 @@ static std::string get_cmpvalue(Iterator &v_it, const keys_values_t &sort_value)
 		case STRING_TYPE:
 			return Xapian::sortable_serialise(levenshtein_distance(*v_it, sort_value.valuestring));
 		case GEO_TYPE: {
-			CartesianList centroids;
+			CartesianUSet centroids;
 			centroids.unserialise(*(++v_it));
 			double angle = M_PI;
-			for (auto c_it = sort_value.valuegeo.begin(); c_it != sort_value.valuegeo.end(); ++c_it) {
+			for (const auto& centroid_ : sort_value.valuegeo) {
 				double aux = M_PI;
-				for (auto itl = centroids.begin(); itl != centroids.end(); ++itl) {
-					double rad_angle = acos(*c_it * *itl);
+				for (const auto& centroid : centroids) {
+					double rad_angle = acos(centroid_ * centroid);
 					if (rad_angle < aux) aux = rad_angle;
 				}
 				if (aux < angle) angle = aux;
@@ -83,13 +86,14 @@ static std::string get_cmpvalue(Iterator &v_it, const keys_values_t &sort_value)
 }
 
 
-static std::string findSmallest(const std::string &multiValues, const keys_values_t &sort_value) {
+static std::string findSmallest(const std::string& multiValues, const key_values_t& sort_value) {
 	if (multiValues.empty()) return MAX_CMPVALUE;
 	StringList s;
 	s.unserialise(multiValues);
 	StringList::const_iterator it(s.begin());
 	std::string smallest(get_cmpvalue(it, sort_value));
-	for (++it; it != s.end(); ++it) {
+	const auto it_e = s.end();
+	for (++it; it != it_e; ++it) {
 		std::string aux(get_cmpvalue(it, sort_value));
 		if (smallest > aux) smallest = aux;
 	}
@@ -97,13 +101,14 @@ static std::string findSmallest(const std::string &multiValues, const keys_value
 }
 
 
-static std::string findLargest(const std::string &multiValues, const keys_values_t &sort_value) {
+static std::string findLargest(const std::string& multiValues, const key_values_t& sort_value) {
 	if (multiValues.empty()) return MAX_CMPVALUE;
 	StringList s;
 	s.unserialise(multiValues);
 	StringList::const_iterator it(s.begin());
 	std::string largest(get_cmpvalue(it, sort_value));
-	for (++it; it != s.end(); ++it) {
+	const auto it_e = s.end();
+	for (++it; it != it_e; ++it) {
 		std::string aux(get_cmpvalue(it, sort_value));
 		if (aux > largest) largest = aux;
 	}
@@ -112,7 +117,7 @@ static std::string findLargest(const std::string &multiValues, const keys_values
 
 
 std::string
-Multi_MultiValueKeyMaker::operator()(const Xapian::Document & doc) const
+Multi_MultiValueKeyMaker::operator()(const Xapian::Document& doc) const
 {
 	std::string result;
 
@@ -139,8 +144,8 @@ Multi_MultiValueKeyMaker::operator()(const Xapian::Document & doc) const
 			// For a reverse ordered value, we subtract each byte from '\xff',
 			// except for '\0' which we convert to "\xff\0".  We insert
 			// "\xff\xff" after the encoded value.
-			for (std::string::const_iterator j = v.begin(); j != v.end(); ++j) {
-				unsigned char ch = static_cast<unsigned char>(*j);
+			for (const auto& ch_ : v) {
+				unsigned char ch = static_cast<unsigned char>(ch_);
 				result += char(255 - ch);
 				if (ch == 0) result += '\0';
 			}
