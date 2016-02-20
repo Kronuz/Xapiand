@@ -1000,7 +1000,7 @@ Database::index_value(Xapian::Document& doc, const MsgPack& value, StringList& s
 				s.push_back(value_v);
 				break;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for numeric");
+				throw MSG_ClientError("Format invalid for numeric: %s", value.to_json_string().c_str());
 			}
 		}
 		case DATE_TYPE: {

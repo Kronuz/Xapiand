@@ -167,7 +167,7 @@ void patch_test(const MsgPack& obj_patch, MsgPack& object) {
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
 		if (val != o) {
-			throw MSG_ClientError("In patch test: Objects are not equals");
+			throw MSG_ClientError("In patch test: Objects are not equals. Expected: %s Result: %s", val.to_json_string().c_str(), o.to_json_string().c_str());
 		}
 	} catch (const ClientError& e) {
 		throw MSG_ClientError("In patch test: %s", e.what());
