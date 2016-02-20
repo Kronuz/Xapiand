@@ -656,19 +656,19 @@ HttpClient::document_info_view(const query_field_t& e)
 	} else {
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
-				response[RESERVED_ID] = *mset.begin();
+				response["doc_id"] = *mset.begin();
 				break;
-			}  catch (const Xapian::DatabaseModifiedError&) {
+			}  catch (const Xapian::DatabaseModifiedError& er) {
 				if (t) {
 					database->reopen();
 				} else {
-					throw MSG_Error("Database was modified, try again");
+					throw MSG_Error("Database was modified, try again (%s)", er.get_msg().c_str());
 				}
-			} catch (const Xapian::NetworkError&) {
+			} catch (const Xapian::NetworkError& er) {
 				if (t) {
 					database->reopen();
 				} else {
-					throw MSG_Error("Problem communicating with the remote database");
+					throw MSG_Error("Problem communicating with the remote database (%s)", er.get_msg().c_str());
 				}
 			} catch (const Xapian::Error& er) {
 				throw MSG_Error(er.get_msg().c_str());
