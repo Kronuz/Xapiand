@@ -1187,30 +1187,13 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 					}
 				}
 			}
-		} catch (const ClientError& err) {
+		} catch (...) {
 			// Back to the initial schema if there are changes.
 			if (schema.getStore()) {
 				schema.setSchema(str_schema);
 				schema.setStore(_to_store);
 			}
-			L_ERR(this, "%s", err.get_context());
-			throw err;
-		} catch (const Error& err) {
-			// Back to the initial schema if there are changes.
-			if (schema.getStore()) {
-				schema.setSchema(str_schema);
-				schema.setStore(_to_store);
-			}
-			L_ERR(this, "%s", err.get_context());
-			throw err;
-		} catch (const std::exception& err) {
-			// Back to the initial schema if there are changes.
-			if (schema.getStore()) {
-				schema.setSchema(str_schema);
-				schema.setStore(_to_store);
-			}
-			L_ERR(this, "%s", err.what());
-			throw MSG_Error("%s", err.what());
+			throw;
 		}
 	}
 }
