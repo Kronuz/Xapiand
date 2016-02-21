@@ -56,7 +56,7 @@ Serialise::serialise(char field_type, const MsgPack& field_value)
 std::string
 Serialise::serialise(char field_type, const std::string& field_value)
 {
-	if (field_value.empty()) {
+	if (field_value.empty() && field_type != STRING_TYPE) {
 		throw MSG_SerializationError("Field value must be defined");
 	}
 
@@ -80,7 +80,7 @@ Serialise::serialise(char field_type, const std::string& field_value)
 std::string
 Serialise::string(char field_type, const std::string& field_value)
 {
-	if (field_value.empty()) {
+	if (field_value.empty() && field_type != STRING_TYPE) {
 		throw MSG_SerializationError("Field value must be defined");
 	}
 
