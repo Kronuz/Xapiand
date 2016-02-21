@@ -119,12 +119,13 @@ class Xapiand(object):
         patch=(session.patch, False, 'result'),
     )
 
-    def __init__(self, ip='127.0.0.1', port=8880, commit=False):
+    def __init__(self, ip='127.0.0.1', port=8880, commit=None, pretty=None):
         if ip and ':' in ip:
             ip, _, port = ip.partition(':')
         self.ip = ip
         self.port = port
         self.commit = commit
+        self.pretty = pretty
 
     def build_url(self, action_request, index, doc_type, ip, port, nodename, id, body):
         if ip and ':' in ip:
@@ -170,7 +171,7 @@ class Xapiand(object):
 
         params = kwargs.pop('params', None)
         if params is not None:
-            kwargs['params'] = dict((k.replace('__', '.'), (v and 1 or 0) if isinstance(v, bool) else v) for k, v in params.items())
+            kwargs['params'] = dict((k.replace('__', '.'), (v and 1 or 0) if isinstance(v, bool) else v) for k, v in params.items() if v is not None)
 
         stream = kwargs.pop('stream', stream)
         if stream is not None:
@@ -213,11 +214,11 @@ class Xapiand(object):
 
         return XapiandResponse(res, **kwargs)
 
-    def search(self, index, doc_type=None, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
+    def search(self, index, doc_type=None, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=None, kwargs=None, **kw):
         kwargs = kwargs or {}
         kwargs.update(kw)
         kwargs['params'] = dict(
-            pretty=pretty,
+            pretty=self.pretty if pretty is None else pretty,
         )
         if query is None:
             kwargs['params']['query'] = query
@@ -237,11 +238,11 @@ class Xapiand(object):
             kwargs['params']['language'] = language
         return self._send_request('search', index, doc_type, **kwargs)
 
-    def facets(self, index, doc_type=None, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=False, kwargs=None, **kw):
+    def facets(self, index, doc_type=None, query=None, partial=None, terms=None, offset=None, limit=None, sort=None, facets=None, language=None, pretty=None, kwargs=None, **kw):
         kwargs = kwargs or {}
         kwargs.update(kw)
         kwargs['params'] = dict(
-            pretty=pretty,
+            pretty=self.pretty if pretty is None else pretty,
         )
         if query is None:
             kwargs['params']['query'] = query
@@ -261,54 +262,54 @@ class Xapiand(object):
             kwargs['params']['language'] = language
         return self._send_request('facets', index, doc_type, **kwargs)
 
-    def stats(self, index, doc_type=None, pretty=False, kwargs=None):
+    def stats(self, index, doc_type=None, pretty=None, kwargs=None):
         kwargs = kwargs or {}
         kwargs['params'] = dict(
-            pretty=pretty,
+            pretty=self.pretty if pretty is None else pretty,
         )
         return self._send_request('stats', index, doc_type, **kwargs)
 
-    def head(self, index, doc_type, id, pretty=False, kwargs=None):
+    def head(self, index, doc_type, id, pretty=None, kwargs=None):
         kwargs = kwargs or {}
         kwargs['id'] = id
         kwargs['params'] = dict(
-            pretty=pretty,
+            pretty=self.pretty if pretty is None else pretty,
         )
         return self._send_request('head', index, doc_type, **kwargs)
 
-    def get(self, index, doc_type, id, pretty=False, kwargs=None):
+    def get(self, index, doc_type, id, pretty=None, kwargs=None):
         kwargs = kwargs or {}
         kwargs['id'] = id
         kwargs['params'] = dict(
-            pretty=pretty,
+            pretty=self.pretty if pretty is None else pretty,
         )
         return self._send_request('get', index, doc_type, **kwargs)
 
-    def delete(self, index, doc_type, id, commit=None, pretty=False, kwargs=None):
+    def delete(self, index, doc_type, id, commit=None, pretty=None, kwargs=None):
         kwargs = kwargs or {}
         kwargs['id'] = id
         kwargs['params'] = dict(
             commit=self.commit if commit is None else commit,
-            pretty=pretty,
+            pretty=self.pretty if pretty is None else pretty,
         )
         return self._send_request('delete', index, doc_type, **kwargs)
 
-    def index(self, index, doc_type, body, id, commit=None, pretty=False, kwargs=None):
+    def index(self, index, doc_type, body, id, commit=None, pretty=None, kwargs=None):
         kwargs = kwargs or {}
         kwargs['id'] = id
         kwargs['body'] = body
         kwargs['params'] = dict(
             commit=self.commit if commit is None else commit,
-            pretty=pretty,
+            pretty=self.pretty if pretty is None else pretty,
         )
         return self._send_request('index', index, doc_type, **kwargs)
 
-    def patch(self, index, doc_type, body, id, commit=None, pretty=False, kwargs=None):
+    def patch(self, index, doc_type, body, id, commit=None, pretty=None, kwargs=None):
         kwargs = kwargs or {}
         kwargs['id'] = id
         kwargs['body'] = body
         kwargs['params'] = dict(
             commit=self.commit if commit is None else commit,
-            pretty=pretty,
+            pretty=self.pretty if pretty is None else pretty,
         )
         return self._send_request('patch', index, doc_type, **kwargs)
