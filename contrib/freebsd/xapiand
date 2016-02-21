@@ -1,0 +1,34 @@
+#!/bin/sh
+#
+# PROVIDE: xapiand
+# REQUIRE: LOGIN
+# BEFORE:  securelevel
+# KEYWORD: shutdown
+#
+# Add the following lines to /etc/rc.conf to enable `xapiand':
+#
+# xapiand_enable="YES"
+# xapiand_flags="<set as needed>"
+#
+
+. /etc/rc.subr
+
+name="xapiand"
+rcvar=${name}_enable
+
+command="/usr/local/bin/xapiand"
+
+load_rc_config $name
+: ${xapiand_enable="NO"}
+: ${xapiand_verbosity="1"}
+: ${xapiand_logfile="/var/log/${name}/${name}.log"}
+: ${xapiand_pidfile="/var/run/${name}/${name}.pid"}
+: ${xapiand_uid="nobody"}
+: ${xapiand_gid="nobody"}
+: ${xapiand_flags=""}
+
+command_args="--detach --pidfile=${xapiand_pidfile} --logfile=${xapiand_logfile} --verbosity=${xapiand_verbosity} --uid=${xapiand_uid} --gid=${xapiand_gid} ${xapiand_flags}"
+
+pidfile=${xapiand_pidfile}
+
+run_rc_command "$1"
