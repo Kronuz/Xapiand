@@ -22,6 +22,8 @@
 
 #include "exception.h"
 
+#include "log.h"
+
 #include <string.h>
 #include <execinfo.h>
 #include <cxxabi.h>
@@ -30,7 +32,7 @@
 #define BUFFER_SIZE 1024
 
 
-void Error::init_traceback()
+const char* Error::init_traceback()
 {
 	void* callstack[128];
 
@@ -41,7 +43,7 @@ void Error::init_traceback()
 
 	if (frames == 0) {
 		traceback += "\n    <empty, possibly corrupt>";
-		return;
+		return traceback.c_str();
 	}
 
 	// resolve addresses into strings containing "filename(function+address)"
@@ -70,6 +72,8 @@ void Error::init_traceback()
 	}
 
 	free(strs);
+
+	return traceback.c_str();
 }
 
 Error::Error(const char *filename, int line, const char *format, ...)
@@ -85,4 +89,6 @@ Error::Error(const char *filename, int line, const char *format, ...)
 
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
 	context.assign(std::string(buffer) + ": " + msg);
+
+	L_TRACEBACK("%s\n", init_traceback());
 }

@@ -37,7 +37,7 @@ protected:
 	std::string context;
 	std::string traceback;
 
-	void init_traceback();
+	const char* init_traceback();
 
 public:
 	Error(const char *filename, int line, const char *format, ...);
