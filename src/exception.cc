@@ -22,10 +22,55 @@
 
 #include "exception.h"
 
+#include <string.h>
+#include <execinfo.h>
+#include <cxxabi.h>
 #include <stdarg.h>
 
 #define BUFFER_SIZE 1024
 
+
+void Error::init_traceback()
+{
+	void* callstack[128];
+
+	// retrieve current stack addresses
+	int frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
+
+	traceback = "Traceback:";
+
+	if (frames == 0) {
+		traceback += "\n    <empty, possibly corrupt>";
+		return;
+	}
+
+	// resolve addresses into strings containing "filename(function+address)"
+	char** strs = backtrace_symbols(callstack, frames);
+
+	// iterate over the returned symbol lines. skip the first, it is the
+	// address of this function.
+	for (int i = 0; i < frames; i++) {
+		int status = 0;
+		const char *sep = "\t ";
+		char *mangled, *lasts;
+		std::string result;
+		for (mangled = strtok_r(strs[i], sep, &lasts); mangled; mangled = strtok_r(nullptr, sep, &lasts)) {
+			char* unmangled = abi::__cxa_demangle(mangled, NULL, 0, &status);
+			if (!result.empty()) {
+				result += " ";
+			}
+			if (status == 0) {
+				result += unmangled;
+			} else {
+				result += mangled;
+			}
+			free(unmangled);
+		}
+		traceback += "\n    " + result;
+	}
+
+	free(strs);
+}
 
 Error::Error(const char *filename, int line, const char *format, ...)
 	: std::runtime_error("")

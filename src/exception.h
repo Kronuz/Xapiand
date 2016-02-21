@@ -35,6 +35,9 @@ class Error : public std::runtime_error {
 protected:
 	std::string msg;
 	std::string context;
+	std::string traceback;
+
+	void init_traceback();
 
 public:
 	Error(const char *filename, int line, const char *format, ...);
