@@ -1962,7 +1962,6 @@ Database::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key,
 		enquire.set_sort_by_key_then_relevance(sorter, false);
 	}
 
-	int collapse_max = 1;
 	if (e) {
 		if (e->is_nearest) {
 			get_similar(false, enquire, query, e->nearest);
@@ -1981,13 +1980,9 @@ Database::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key,
 				spies->push_back(std::make_pair(facet, std::move(spy)));
 			}
 		}
-
-		collapse_max = e->collapse_max;
 	}
 
-	if (collapse_key != Xapian::BAD_VALUENO) {
-		enquire.set_collapse_key(collapse_max);
-	}
+	enquire.set_collapse_key(collapse_key, e->collapse_max);
 
 	return enquire;
 }
