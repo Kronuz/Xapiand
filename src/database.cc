@@ -376,7 +376,16 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 			}
 		}
 	} catch (const Error& e) {
-		L_ERR(this, "ERROR: %s", e.get_context());
+		L_CRIT(this, "WAL ERROR: %s", e.get_context());
+	} catch (const std::exception& err) {
+		const char* error_str = err.what();
+		if (error_str) {
+			L_CRIT(this, "WAL ERROR: %s", error_str);
+		} else {
+			L_CRIT(this, "WAL ERROR: Unkown exception!");
+		}
+	} catch (...) {
+		L_CRIT(this, "WAL ERROR: Unkown error!");
 	}
 }
 
