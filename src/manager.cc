@@ -610,16 +610,19 @@ XapiandManager::get_stats_time(MsgPack&& stats, const std::string& time_req)
 	std::smatch m;
 	if (std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.size() && m.length(1) != 0) {
 		pos_time_t first_time, second_time;
-		first_time.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? std::stoi(m.str(3)) : 0);
-		first_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
-		first_time.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
 		if (m.length(8) != 0) {
+			first_time.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? std::stoi(m.str(3)) : 0);
+			first_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
+			first_time.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
 			second_time.minute = SLOT_TIME_SECOND * (m.length(10) != 0 ? std::stoi(m.str(10)) : 0);
 			second_time.minute += m.length(12) != 0 ? std::stoi(m.str(12)) : 0;
 			second_time.second = m.length(14) != 0 ? std::stoi(m.str(14)) : 0;
 		} else {
-			second_time.minute = 0;
-			second_time.second = 0;
+			first_time.minute = 0;
+			first_time.second = 0;
+			second_time.minute = SLOT_TIME_SECOND * (m.length(3) != 0 ? std::stoi(m.str(3)) : 0);
+			second_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
+			second_time.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
 		}
 		return _get_stats_time(std::move(stats), first_time, second_time);
 	}
@@ -637,17 +640,17 @@ XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_tim
 	auto stats_cnt_cpy = stats_cnt;
 	lk.unlock();
 
-	uint16_t start, end;
-	if (second_time.minute == 0 && second_time.second == 0) {
-		start = first_time.minute * SLOT_TIME_SECOND + first_time.second;
+	unsigned end, start;
+	if (first_time.minute == 0 && first_time.second == 0) {
+		start = second_time.minute * SLOT_TIME_SECOND + second_time.second;
 		end = 0;
-		first_time.minute = (first_time.minute > b_time_cpy.minute ? SLOT_TIME_MINUTE + b_time_cpy.minute : b_time_cpy.minute) - first_time.minute;
-		first_time.second = (first_time.second > b_time_cpy.second ? SLOT_TIME_SECOND + b_time_cpy.second : b_time_cpy.second) - first_time.second;
+		second_time.minute = (second_time.minute > b_time_cpy.minute ? SLOT_TIME_MINUTE + b_time_cpy.minute : b_time_cpy.minute) - second_time.minute;
+		second_time.second = (second_time.second > b_time_cpy.second ? SLOT_TIME_SECOND + b_time_cpy.second : b_time_cpy.second) - second_time.second;
 	} else {
 		start = second_time.minute * SLOT_TIME_SECOND + second_time.second;
 		end = first_time.minute * SLOT_TIME_SECOND + first_time.second;
-		first_time.minute = (second_time.minute > b_time_cpy.minute ? SLOT_TIME_MINUTE + b_time_cpy.minute : b_time_cpy.minute) - second_time.minute;
-		first_time.second = (second_time.second > b_time_cpy.second ? SLOT_TIME_SECOND + b_time_cpy.second : b_time_cpy.second) - second_time.second;
+		second_time.minute = (second_time.minute > b_time_cpy.minute ? SLOT_TIME_MINUTE + b_time_cpy.minute : b_time_cpy.minute) - second_time.minute;
+		second_time.second = (second_time.second > b_time_cpy.second ? SLOT_TIME_SECOND + b_time_cpy.second : b_time_cpy.second) - second_time.second;
 	}
 
 	if (end > start) {
@@ -655,26 +658,26 @@ XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_tim
 	} else {
 		std::vector<uint64_t> cnt{ 0, 0, 0, 0 };
 		std::vector<double> tm_cnt{ 0.0, 0.0, 0.0, 0.0 };
-		stats["system_time"] = ctime(&now_time);
 		if (start < SLOT_TIME_SECOND) {
-			auto aux = first_time.second + start - end;
+			auto aux = second_time.second + start - end;
 			if (aux < SLOT_TIME_SECOND) {
-				add_stats_sec(first_time.second, aux, cnt, tm_cnt, stats_cnt_cpy);
+				add_stats_sec(second_time.second, aux, cnt, tm_cnt, stats_cnt_cpy);
 			} else {
-				add_stats_sec(first_time.second, SLOT_TIME_SECOND - 1, cnt, tm_cnt, stats_cnt_cpy);
+				add_stats_sec(second_time.second, SLOT_TIME_SECOND - 1, cnt, tm_cnt, stats_cnt_cpy);
 				add_stats_sec(0, aux % SLOT_TIME_SECOND, cnt, tm_cnt, stats_cnt_cpy);
 			}
 		} else {
-			auto aux = first_time.minute + (start - end) / SLOT_TIME_SECOND;
+			auto aux = second_time.minute + (start - end) / SLOT_TIME_SECOND;
 			if (aux < SLOT_TIME_MINUTE) {
-				add_stats_min(first_time.minute, aux, cnt, tm_cnt, stats_cnt_cpy);
+				add_stats_min(second_time.minute, aux, cnt, tm_cnt, stats_cnt_cpy);
 			} else {
-				add_stats_min(first_time.second, SLOT_TIME_MINUTE - 1, cnt, tm_cnt, stats_cnt_cpy);
+				add_stats_min(second_time.minute, SLOT_TIME_MINUTE - 1, cnt, tm_cnt, stats_cnt_cpy);
 				add_stats_min(0, aux % SLOT_TIME_MINUTE, cnt, tm_cnt, stats_cnt_cpy);
 			}
 		}
-		auto p_time = now_time - start;
 
+		stats["system_time"] = ctime(&now_time);
+		auto p_time = now_time - start;
 		MsgPack time_period = stats["period"];
 		time_period["start"] = ctime(&p_time);
 		p_time = now_time - end;
