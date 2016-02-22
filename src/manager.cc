@@ -637,7 +637,6 @@ XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_tim
 	auto stats_cnt_cpy = stats_cnt;
 	lk.unlock();
 
-	auto seconds = first_time.minute == 0 ? true : false;
 	uint16_t start, end;
 	if (second_time.minute == 0 && second_time.second == 0) {
 		start = first_time.minute * SLOT_TIME_SECOND + first_time.second;
@@ -654,10 +653,10 @@ XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_tim
 	if (end > start) {
 		throw MSG_ClientError("First argument must be less or equal than the second");
 	} else {
-		std::vector<uint64_t> cnt{0, 0, 0, 0};
-		std::vector<double> tm_cnt{0.0, 0.0, 0.0, 0.0};
+		std::vector<uint64_t> cnt{ 0, 0, 0, 0 };
+		std::vector<double> tm_cnt{ 0.0, 0.0, 0.0, 0.0 };
 		stats["system_time"] = ctime(&now_time);
-		if (seconds) {
+		if (start < SLOT_TIME_SECOND) {
 			auto aux = first_time.second + start - end;
 			if (aux < SLOT_TIME_SECOND) {
 				add_stats_sec(first_time.second, aux, cnt, tm_cnt, stats_cnt_cpy);
