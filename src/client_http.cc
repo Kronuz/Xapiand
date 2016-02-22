@@ -90,6 +90,8 @@ static const char* status_code[6][14] = {
 
 std::string
 HttpClient::http_response(int status, int mode, unsigned short http_major, unsigned short http_minor, int matched_count, std::string body, std::string ct_type) {
+	L_CALL(this, "HttpClient::http_response()");
+
 	char buffer[20];
 	std::string response;
 	const std::string eol("\r\n");
@@ -382,6 +384,8 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 void
 HttpClient::run()
 {
+	L_CALL(this, "HttpClient::run()");
+
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
 
@@ -491,6 +495,8 @@ HttpClient::run()
 void
 HttpClient::_options()
 {
+	L_CALL(this, "HttpClient::_options()");
+
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS, parser.http_major, parser.http_minor));
 }
 
@@ -498,6 +504,8 @@ HttpClient::_options()
 void
 HttpClient::_head()
 {
+	L_CALL(this, "HttpClient::_head()");
+
 	query_field_t e;
 	int cmd = _endpointgen(e, false);
 
@@ -515,6 +523,8 @@ HttpClient::_head()
 void
 HttpClient::_get()
 {
+	L_CALL(this, "HttpClient::_get()");
+
 	query_field_t e;
 	int cmd = _endpointgen(e, false);
 
@@ -546,6 +556,8 @@ HttpClient::_get()
 void
 HttpClient::_put()
 {
+	L_CALL(this, "HttpClient::_put()");
+
 	query_field_t e;
 	int cmd = _endpointgen(e, true);
 
@@ -563,6 +575,8 @@ HttpClient::_put()
 void
 HttpClient::_post()
 {
+	L_CALL(this, "HttpClient::_post()");
+
 	query_field_t e;
 	int cmd = _endpointgen(e, false);
 
@@ -597,6 +611,8 @@ HttpClient::_post()
 void
 HttpClient::_patch()
 {
+	L_CALL(this, "HttpClient::_patch()");
+
 	query_field_t e;
 	int cmd = _endpointgen(e, true);
 
@@ -614,6 +630,8 @@ HttpClient::_patch()
 void
 HttpClient::_delete()
 {
+	L_CALL(this, "HttpClient::_delete()");
+
 	query_field_t e;
 	int cmd = _endpointgen(e, true);
 
@@ -631,7 +649,10 @@ HttpClient::_delete()
 void
 HttpClient::document_info_view(const query_field_t& e)
 {
+	L_CALL(this, "HttpClient::document_info_view()");
+
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
+		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -677,14 +698,17 @@ HttpClient::document_info_view(const query_field_t& e)
 	}
 
 	manager()->database_pool.checkin(database);
-	writte_http_response(response, status_code, e.pretty);
+	write_http_response(response, status_code, e.pretty);
 }
 
 
 void
 HttpClient::delete_document_view(const query_field_t& e)
 {
+	L_CALL(this, "HttpClient::delete_document_view()");
+
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE|DB_SPAWN)) {
+		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -713,15 +737,19 @@ HttpClient::delete_document_view(const query_field_t& e)
 	data[RESERVED_ID] = command;
 	data["commit"] = e.commit;
 
-	writte_http_response(response, 200, e.pretty);
+	write_http_response(response, 200, e.pretty);
 }
 
 
 void
 HttpClient::index_document_view(const query_field_t& e)
 {
+	L_CALL(this, "HttpClient::index_document_view()");
+
 	build_path_index(index_path);
+
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF)) {
+		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -751,14 +779,17 @@ HttpClient::index_document_view(const query_field_t& e)
 	MsgPack response;
 	auto data = response["index"];
 	data[RESERVED_ID] = command;
-	writte_http_response(response, 200, e.pretty);
+	write_http_response(response, 200, e.pretty);
 }
 
 
 void
 HttpClient::update_document_view(const query_field_t& e)
 {
+	L_CALL(this, "HttpClient::update_document_view()");
+
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN)) {
+		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -784,13 +815,15 @@ HttpClient::update_document_view(const query_field_t& e)
 	MsgPack response;
 	auto data = response["update"];
 	data[RESERVED_ID] = command;
-	writte_http_response(response, 200, e.pretty);
+	write_http_response(response, 200, e.pretty);
 }
 
 
 void
 HttpClient::stats_view(const query_field_t& e)
 {
+	L_CALL(this, "HttpClient::stats_view()");
+
 	MsgPack response;
 	bool res_stats = false;
 
@@ -801,6 +834,7 @@ HttpClient::stats_view(const query_field_t& e)
 
 	if (e.database) {
 		if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
+			L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 			return;
 		}
@@ -811,6 +845,7 @@ HttpClient::stats_view(const query_field_t& e)
 
 	if (!e.document.empty()) {
 		if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
+			L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 			return;
 		}
@@ -828,13 +863,15 @@ HttpClient::stats_view(const query_field_t& e)
 		response["response"] = "Empty statistics";
 	}
 
-	writte_http_response(response, 200, e.pretty);
+	write_http_response(response, 200, e.pretty);
 }
 
 
 void
 HttpClient::bad_request_view(const query_field_t& e, int cmd)
 {
+	L_CALL(this, "HttpClient::bad_request_view()");
+
 	MsgPack err_response;
 	switch (cmd) {
 		case CMD_UNKNOWN_HOST:
@@ -845,14 +882,17 @@ HttpClient::bad_request_view(const query_field_t& e, int cmd)
 	}
 
 	err_response["status"] = 400;
-	writte_http_response(err_response, 400, e.pretty);
+	write_http_response(err_response, 400, e.pretty);
 }
 
 
 void
 HttpClient::upload_view(const query_field_t&)
 {
+	L_CALL(this, "HttpClient::upload_view()");
+
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
+		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -867,7 +907,10 @@ HttpClient::upload_view(const query_field_t&)
 void
 HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 {
+	L_CALL(this, "HttpClient::search_view()");
+
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
+		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -913,7 +956,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 				response[name_result] = array;
 			}
 		}
-		writte_http_response(response, 200, e.pretty);
+		write_http_response(response, 200, e.pretty);
 	} else {
 		int rc = 0;
 
@@ -1028,6 +1071,8 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 int
 HttpClient::_endpointgen(query_field_t& e, bool writable)
 {
+	L_CALL(this, "HttpClient::_endpointgen()");
+
 	int retval;
 	bool has_node_name = false;
 	struct http_parser_url u;
@@ -1446,6 +1491,8 @@ HttpClient::identify_cmd(const std::string& commad)
 void
 HttpClient::clean_http_request()
 {
+	L_CALL(this, "HttpClient::clean_http_request()");
+
 	path.clear();
 	body.clear();
 	header_name.clear();
@@ -1466,6 +1513,8 @@ HttpClient::clean_http_request()
 std::pair<std::string, std::string>
 HttpClient::content_type_pair(const std::string& ct_type)
 {
+	L_CALL(this, "HttpClient::content_type_pair()");
+
 	std::size_t found = ct_type.find_last_of("/");
 	if (found == std::string::npos) {
 		return  make_pair(std::string(), std::string());
@@ -1478,6 +1527,8 @@ HttpClient::content_type_pair(const std::string& ct_type)
 bool
 HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::pair<std::string, std::string>& ct_type)
 {
+	L_CALL(this, "HttpClient::is_acceptable_type()");
+
 	bool type_ok = false, subtype_ok = false;
 	if (ct_type_pattern.first == "*") {
 		type_ok = true;
@@ -1496,6 +1547,8 @@ HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_typ
 const std::pair<std::string, std::string>&
 HttpClient::get_acceptable_type(const std::pair<std::string, std::string>& ct_type)
 {
+	L_CALL(this, "HttpClient::get_acceptable_type()");
+
 	if (accept_set.empty()) {
 		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, std::pair<std::string, std::string>>(1, 0, content_type_pair(content_type)));
 		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string("*"), std::string("*"))));
@@ -1513,6 +1566,8 @@ HttpClient::get_acceptable_type(const std::pair<std::string, std::string>& ct_ty
 std::string
 HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty)
 {
+	L_CALL(this, "HttpClient::serialize_response()");
+
 	if (is_acceptable_type(ct_type, json_type)) {
 		return obj.to_json_string(pretty);
 	} else if (is_acceptable_type(ct_type, msgpack_type)) {
@@ -1523,8 +1578,10 @@ HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, 
 
 
 void
-HttpClient::writte_http_response(const MsgPack& response,  int status_code, bool pretty)
+HttpClient::write_http_response(const MsgPack& response,  int status_code, bool pretty)
 {
+	L_CALL(this, "HttpClient::write_http_response()");
+
 	std::string response_str;
 	const auto& accepted_type = get_acceptable_type(content_type_pair(content_type));
 	try {

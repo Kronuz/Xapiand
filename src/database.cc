@@ -65,11 +65,16 @@ constexpr const char* const DatabaseWAL::names[];
 DatabaseWAL::DatabaseWAL(Database* _database)
 	: current_file_rev(0),
 	  fd_revision(-1),
-	  database(_database) { }
+	  database(_database)
+{
+	L_CALL(this, "DatabaseWAL::DatabaseWAL()");
+}
 
 
 DatabaseWAL::~DatabaseWAL()
 {
+	L_CALL(this, "DatabaseWAL::~DatabaseWAL()");
+
 	if (fd_revision != -1) {
 		close(fd_revision);
 	}
@@ -79,6 +84,8 @@ DatabaseWAL::~DatabaseWAL()
 bool
 DatabaseWAL::execute(const std::string& line)
 {
+	L_CALL(this, "DatabaseWAL::execute()");
+
 	const char *p = line.data();
 	const char *p_end = p + line.size();
 
@@ -159,6 +166,8 @@ DatabaseWAL::execute(const std::string& line)
 void
 DatabaseWAL::write(Type type, const std::string& data)
 {
+	L_CALL(this, "DatabaseWAL::write()");
+
 	if (!(database->flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
 	}
@@ -206,6 +215,8 @@ DatabaseWAL::write(Type type, const std::string& data)
 bool
 DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct highest_revision& h)
 {
+	L_CALL(this, "DatabaseWAL::_open()");
+
 	bool exe_op = false;
 
 	std::string wal_dir = path + PATH_WAL;
@@ -305,6 +316,8 @@ DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct high
 void
 DatabaseWAL::open(const std::string& rev, const std::string& path)
 {
+	L_CALL(this, "DatabaseWAL::open()");
+
 	try {
 		uint64_t revision = 0;
 		memcpy(&revision, rev.data(), rev.size());
@@ -369,6 +382,8 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 void
 DatabaseWAL::highest_revision_file(DIR *dir, const std::string& path, struct highest_revision& h)
 {
+	L_CALL(this, "DatabaseWAL::highest_revision_file()");
+
 	std::string dir_wal = path + PATH_WAL;
 	dir = opendir(dir_wal.c_str(), true);
 	if (!dir) {
@@ -408,6 +423,8 @@ DatabaseWAL::highest_revision_file(DIR *dir, const std::string& path, struct hig
 uint64_t
 DatabaseWAL::pos_highest_revision(int fd)
 {
+	L_CALL(this, "DatabaseWAL::pos_highest_revision()");
+
 	off_t save_off = lseek(fd, 0, SEEK_CUR);
 	lseek(fd, SIZE_WAL_HEADER, SEEK_SET);
 
@@ -428,6 +445,8 @@ DatabaseWAL::pos_highest_revision(int fd)
 void
 DatabaseWAL::tuning(int fd)
 {
+	L_CALL(this, "DatabaseWAL::tuning()");
+
 	// Clean the remaining garbage in the wal
 
 	uint64_t last_pos = pos_highest_revision(fd);
@@ -449,6 +468,8 @@ DatabaseWAL::tuning(int fd)
 uint64_t
 DatabaseWAL::fget_revision(const std::string& filename)
 {
+	L_CALL(this, "DatabaseWAL::fget_revision()");
+
 	std::size_t found = filename.find_last_of(".");
 	if (found == std::string::npos) {
 		throw std::invalid_argument("Revision not found in " + filename);
@@ -460,6 +481,8 @@ DatabaseWAL::fget_revision(const std::string& filename)
 void
 DatabaseWAL::write_add_document(const Xapian::Document& doc)
 {
+	L_CALL(this, "DatabaseWAL::write_add_document()");
+
 	write(Type::ADD_DOCUMENT, doc.serialise());
 }
 
@@ -467,6 +490,8 @@ DatabaseWAL::write_add_document(const Xapian::Document& doc)
 void
 DatabaseWAL::write_cancel()
 {
+	L_CALL(this, "DatabaseWAL::write_cancel()");
+
 	write(Type::CANCEL, "");
 }
 
@@ -474,6 +499,8 @@ DatabaseWAL::write_cancel()
 void
 DatabaseWAL::write_delete_document_term(const std::string& document_id)
 {
+	L_CALL(this, "DatabaseWAL::write_delete_document_term()");
+
 	write(Type::DELETE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id);
 }
 
@@ -481,6 +508,8 @@ DatabaseWAL::write_delete_document_term(const std::string& document_id)
 void
 DatabaseWAL::write_commit()
 {
+	L_CALL(this, "DatabaseWAL::write_commit()");
+
 	write(Type::COMMIT, "");
 }
 
@@ -488,6 +517,8 @@ DatabaseWAL::write_commit()
 void
 DatabaseWAL::write_replace_document(Xapian::docid did, const Xapian::Document& doc)
 {
+	L_CALL(this, "DatabaseWAL::write_replace_document()");
+
 	write(Type::REPLACE_DOCUMENT, encode_length(did) + doc.serialise());
 }
 
@@ -495,6 +526,8 @@ DatabaseWAL::write_replace_document(Xapian::docid did, const Xapian::Document& d
 void
 DatabaseWAL::write_replace_document_term(const std::string& document_id, const Xapian::Document& doc)
 {
+	L_CALL(this, "DatabaseWAL::write_replace_document_term()");
+
 	write(Type::REPLACE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id + doc.serialise());
 }
 
@@ -502,6 +535,8 @@ DatabaseWAL::write_replace_document_term(const std::string& document_id, const X
 void
 DatabaseWAL::write_delete_document(Xapian::docid did)
 {
+	L_CALL(this, "DatabaseWAL::write_delete_document()");
+
 	write(Type::DELETE_DOCUMENT, encode_length(did));
 }
 
@@ -509,6 +544,8 @@ DatabaseWAL::write_delete_document(Xapian::docid did)
 void
 DatabaseWAL::write_set_metadata(const std::string& key, const std::string& val)
 {
+	L_CALL(this, "DatabaseWAL::write_set_metadata()");
+
 	write(Type::SET_METADATA, encode_length(key.size()) + key + val);
 }
 
@@ -516,6 +553,8 @@ DatabaseWAL::write_set_metadata(const std::string& key, const std::string& val)
 void
 DatabaseWAL::write_add_spelling(const std::string& word, Xapian::termcount freqinc)
 {
+	L_CALL(this, "DatabaseWAL::write_add_spelling()");
+
 	write(Type::ADD_SPELLING, encode_length(freqinc) + word);
 }
 
@@ -523,6 +562,8 @@ DatabaseWAL::write_add_spelling(const std::string& word, Xapian::termcount freqi
 void
 DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount freqdec)
 {
+	L_CALL(this, "DatabaseWAL::write_remove_spelling()");
+
 	write(Type::REMOVE_SPELLING, encode_length(freqdec) + word);
 }
 
@@ -537,6 +578,8 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 	  modified(false),
 	  mastery_level(-1)
 {
+	L_CALL(this, "Database::Database()");
+
 	reopen();
 
 	if (auto queue = weak_queue.lock()) {
@@ -547,6 +590,8 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 
 Database::~Database()
 {
+	L_CALL(this, "Database::~Database()");
+
 	if (auto queue = weak_queue.lock()) {
 		queue->dec_count();
 	}
@@ -556,6 +601,8 @@ Database::~Database()
 long long
 Database::read_mastery(const std::string& dir)
 {
+	L_CALL(this, "Database::read_mastery()");
+
 	if (!local) return -1;
 	if (mastery_level != -1) return mastery_level;
 
@@ -568,6 +615,8 @@ Database::read_mastery(const std::string& dir)
 void
 Database::reopen()
 {
+	L_CALL(this, "Database::reopen()");
+
 	access_time = system_clock::now();
 
 	if (db) {
@@ -666,6 +715,8 @@ Database::reopen()
 std::string
 Database::get_uuid() const
 {
+	L_CALL(this, "Database::get_uuid");
+
 	return db->get_uuid();
 }
 
@@ -673,6 +724,8 @@ Database::get_uuid() const
 std::string
 Database::get_revision_info() const
 {
+	L_CALL(this, "Database::get_revision_info");
+
 #if HAVE_DATABASE_REVISION_INFO
 	return db->get_revision_info();
 #else
@@ -684,6 +737,8 @@ Database::get_revision_info() const
 bool
 Database::commit()
 {
+	L_CALL(this, "Database::commit()");
+
 	schema.store();
 
 	if (!modified) {
@@ -723,6 +778,7 @@ Database::commit()
 void
 Database::delete_document(const std::string& doc_id, bool _commit)
 {
+	L_CALL(this, "Database::delete_document()");
 	return delete_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), _commit);
 }
 
@@ -730,6 +786,8 @@ Database::delete_document(const std::string& doc_id, bool _commit)
 void
 Database::delete_document_term(const std::string& term, bool _commit)
 {
+	L_CALL(this, "Database::delete_document_term()");
+
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("database is read-only");
 	}
@@ -768,6 +826,8 @@ Database::delete_document_term(const std::string& term, bool _commit)
 void
 Database::index_required_data(Xapian::Document& doc, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const
 {
+	L_CALL(this, "Database::index_required_data()");
+
 	std::size_t found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
 	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
@@ -796,6 +856,8 @@ Database::index_required_data(Xapian::Document& doc, std::string& term_id, const
 void
 Database::index_object(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value)
 {
+	L_CALL(this, "Database::index_object()");
+
 	const specification_t spc_bef = schema.specification;
 	if (item_val.obj->type == msgpack::type::MAP) {
 		bool offsprings = false;
@@ -842,6 +904,8 @@ Database::index_object(Xapian::Document& doc, const std::string& str_key, const 
 void
 Database::index_texts(Xapian::Document& doc, const std::string& name, const MsgPack& texts, MsgPack& properties)
 {
+	L_CALL(this, "Database::index_texts()");
+
 	// L_DATABASE_WRAP(this, "Texts => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
 	if (!(schema.found_field || schema.specification.dynamic)) {
 		throw MSG_ClientError("%s is not dynamic", name.c_str());
@@ -872,6 +936,8 @@ Database::index_texts(Xapian::Document& doc, const std::string& name, const MsgP
 void
 Database::index_text(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const
 {
+	L_CALL(this, "Database::index_text()");
+
 	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 
 	Xapian::TermGenerator term_generator;
@@ -904,6 +970,8 @@ Database::index_text(Xapian::Document& doc, std::string&& serialise_val, size_t 
 void
 Database::index_terms(Xapian::Document& doc, const std::string& name, const MsgPack& terms, MsgPack& properties)
 {
+	L_CALL(this, "Database::index_terms()");
+
 	// L_DATABASE_WRAP(this, "Terms => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
 	if (!(schema.found_field || schema.specification.dynamic)) {
 		throw MSG_ClientError("%s is not dynamic", name.c_str());
@@ -926,6 +994,8 @@ Database::index_terms(Xapian::Document& doc, const std::string& name, const MsgP
 void
 Database::index_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const
 {
+	L_CALL(this, "Database::index_term()");
+
 	if (serialise_val.empty()) {
 		return;
 	}
@@ -960,6 +1030,8 @@ Database::index_term(Xapian::Document& doc, std::string&& serialise_val, size_t 
 void
 Database::index_values(Xapian::Document& doc, const std::string& name, const MsgPack& values, MsgPack& properties, bool is_term)
 {
+	L_CALL(this, "Database::index_values()");
+
 	// L_DATABASE_WRAP(this, "Values => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
 	if (!(schema.found_field || schema.specification.dynamic)) {
 		throw MSG_ClientError("%s is not dynamic", name.c_str());
@@ -986,6 +1058,8 @@ Database::index_values(Xapian::Document& doc, const std::string& name, const Msg
 void
 Database::index_value(Xapian::Document& doc, const MsgPack& value, StringList& s, size_t& pos, bool is_term) const
 {
+	L_CALL(this, "Database::index_value()");
+
 	std::string value_v;
 
 	// Index terms generated by accuracy.
@@ -1094,6 +1168,8 @@ Database::index_value(Xapian::Document& doc, const MsgPack& value, StringList& s
 void
 Database::_index(Xapian::Document& doc, const MsgPack& obj)
 {
+	L_CALL(this, "Database::_index()");
+
 	if (obj.obj->type == msgpack::type::MAP) {
 		// Save a copy of schema for undo changes if there is a exception.
 		auto str_schema = schema.to_string();
@@ -1202,6 +1278,8 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 Xapian::docid
 Database::index(const std::string& body, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length)
 {
+	L_CALL(this, "Database::index()");
+
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
 	}
@@ -1253,6 +1331,8 @@ Database::index(const std::string& body, const std::string& _document_id, bool _
 Xapian::docid
 Database::patch(const std::string& patches, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length)
 {
+	L_CALL(this, "Database::patch()");
+
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("database is read-only");
 	}
@@ -1320,6 +1400,7 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 Xapian::docid
 Database::replace_document(const std::string& doc_id, const Xapian::Document& doc, bool _commit)
 {
+	L_CALL(this, "Database::replace_document()");
 	return replace_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), doc, _commit);
 }
 
@@ -1327,6 +1408,8 @@ Database::replace_document(const std::string& doc_id, const Xapian::Document& do
 Xapian::docid
 Database::replace_document_term(const std::string& term, const Xapian::Document& doc, bool _commit)
 {
+	L_CALL(this, "Database::replace_document_term()");
+
 	Xapian::docid did = 0;
 
 	if (local && (~flags & DB_NOWAL)) wal.write_replace_document_term(term, doc);
@@ -1367,6 +1450,8 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 data_field_t
 Database::get_data_field(const std::string& field_name)
 {
+	L_CALL(this, "Database::get_data_field()");
+
 	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
 
 	if (field_name.empty()) {
@@ -1409,6 +1494,8 @@ Database::get_data_field(const std::string& field_name)
 data_field_t
 Database::get_slot_field(const std::string& field_name)
 {
+	L_CALL(this, "Database::get_slot_field()");
+
 	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
 
 	if (field_name.empty()) {
@@ -1430,6 +1517,8 @@ Database::get_slot_field(const std::string& field_name)
 Database::search_t
 Database::_search(const std::string& query, unsigned flags, bool text, const std::string& lan)
 {
+	L_CALL(this, "Database::_search()");
+
 	search_t srch;
 
 	if (query.compare("*") == 0) {
@@ -1678,6 +1767,8 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 Database::search_t
 Database::search(const query_field_t& e)
 {
+	L_CALL(this, "Database::search()");
+
 	search_t srch_resul;
 	std::vector<std::string> sug_query;
 	bool first = true;
@@ -1785,6 +1876,8 @@ Database::search(const query_field_t& e)
 void
 Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar)
 {
+	L_CALL(this, "Database::get_similar()");
+
 	Xapian::RSet rset;
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1841,6 +1934,8 @@ Xapian::Enquire
 Database::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t *e, Multi_MultiValueKeyMaker *sorter,
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies)
 {
+	L_CALL(this, "Database::get_enquire()");
+
 	Xapian::Enquire enquire(*db);
 
 	enquire.set_query(query);
@@ -1884,6 +1979,8 @@ void
 Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
 		std::vector<std::string>& suggestions, int offset)
 {
+	L_CALL(this, "Database::get_mset()");
+
 	auto doccount = db->get_doccount();
 	auto check_at_least = std::max(std::min(doccount, e.check_at_least), 0u);
 	Xapian::valueno collapse_key;
@@ -1964,6 +2061,8 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 bool
 Database::get_metadata(const std::string& key, std::string& value)
 {
+	L_CALL(this, "Database::get_metadata()");
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			value = db->get_metadata(key);
@@ -1991,6 +2090,8 @@ Database::get_metadata(const std::string& key, std::string& value)
 bool
 Database::set_metadata(const std::string& key, const std::string& value, bool _commit)
 {
+	L_CALL(this, "Database::set_metadata()");
+
 	if (local && (~flags & DB_NOWAL)) wal.write_set_metadata(key, value);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -2023,6 +2124,8 @@ Database::set_metadata(const std::string& key, const std::string& value, bool _c
 bool
 Database::_get_document(const Xapian::MSet& mset, Xapian::Document& doc)
 {
+	L_CALL(this, "Database::_get_document()");
+
 	if (mset.empty()) {
 		return false;
 	}
@@ -2059,6 +2162,8 @@ Database::_get_document(const Xapian::MSet& mset, Xapian::Document& doc)
 bool
 Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 {
+	L_CALL(this, "Database::get_document()");
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			doc = db->get_document(did);
@@ -2089,6 +2194,8 @@ Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 void
 Database::get_stats_database(MsgPack&& stats)
 {
+	L_CALL(this, "Database::get_stats_database()");
+
 	unsigned doccount = db->get_doccount();
 	unsigned lastdocid = db->get_lastdocid();
 	stats["uuid"] = db->get_uuid();
@@ -2105,6 +2212,8 @@ Database::get_stats_database(MsgPack&& stats)
 void
 Database::get_stats_doc(MsgPack&& stats, const std::string& document_id)
 {
+	L_CALL(this, "Database::get_stats_doc()");
+
 	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
 	if (isupper(document_id.at(0))) {
 		prefix += ":";
@@ -2293,6 +2402,8 @@ DatabasePool::finish()
 bool
 DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags)
 {
+	L_CALL(this, "DatabasePool::checkout()");
+
 	bool writable = flags & DB_WRITABLE;
 	bool persistent = flags & DB_PERSISTENT;
 	bool initref = flags & DB_INIT_REF;
@@ -2400,6 +2511,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 void
 DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
+	L_CALL(this, "DatabasePool::checkin()");
+
 	L_DATABASE_BEGIN(this, "-- CHECKING IN DB %s(%s) [%lx]...", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 
 	if (!database) {
@@ -2630,6 +2743,8 @@ DatabasePool::dec_ref(const Endpoints& endpoints)
 int
 DatabasePool::get_master_count()
 {
+	L_CALL(this, "DatabasePool::get_master_count()");
+
 	Endpoints ref_endpoints;
 	ref_endpoints.insert(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
