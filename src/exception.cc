@@ -53,7 +53,7 @@ const char* Error::init_traceback()
 	// address of this function.
 	for (int i = 0; i < frames; i++) {
 		int status = 0;
-		const char *sep = "\t ";
+		const char *sep = "\t ()+";
 		char *mangled, *lasts;
 		std::string result;
 		for (mangled = strtok_r(strs[i], sep, &lasts); mangled; mangled = strtok_r(nullptr, sep, &lasts)) {

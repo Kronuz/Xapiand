@@ -192,7 +192,6 @@ class LogThread {
 #define L_BEGIN _LOG_TIMED
 #define L_END _LOG_TIMED_CLEAR
 
-
 #define L_DEBUG _LOG_DEBUG_ENABLED
 #define L_INFO _LOG_INFO_ENABLED
 #define L_NOTICE _LOG_NOTICE_ENABLED
