@@ -817,12 +817,14 @@ Database::delete_document_term(const std::string& term, bool _commit)
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) {
 				reopen();
+				continue;
 			} else {
 				throw MSG_Error("Database was modified, try again (%s)", er.get_msg().c_str());
 			}
 		} catch (const Xapian::NetworkError& er) {
 			if (t) {
 				reopen();
+				continue;
 			} else {
 				throw MSG_Error("Problem communicating with the remote database (%s)", er.get_msg().c_str());
 			}
@@ -1904,12 +1906,14 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& qu
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) {
 				reopen();
+				continue;
 			} else {
 				throw MSG_Error("Database was modified, try again (%s)", er.get_msg().c_str());
 			}
 		} catch (const Xapian::NetworkError& er) {
 			if (t) {
 				reopen();
+				continue;
 			} else {
 				throw MSG_Error("Problem communicating with the remote database (%s)", er.get_msg().c_str());
 			}
@@ -2051,12 +2055,14 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) {
 				reopen();
+				continue;
 			} else {
 				throw MSG_Error("Database was modified, try again (%s)", er.get_msg().c_str());
 			}
 		} catch (const Xapian::NetworkError& er) {
 			if (t) {
 				reopen();
+				continue;
 			} else {
 				throw MSG_Error("Problem communicating with the remote database (%s)", er.get_msg().c_str());
 			}
