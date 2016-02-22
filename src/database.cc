@@ -363,11 +363,13 @@ DatabaseWAL::open(const std::string& rev, const std::string& path)
 					::read(fd, &end_line, sizeof(off_t));
 
 					size_t size_line = end_line - start_line;
-					char *buff_line = (char*) malloc(sizeof(char) * size_line);
-					pread(fd, buff_line, size_line, start_line);
-					std::string line(buff_line, size_line);
-					free(buff_line);
-					execute(line); //split the line
+					if (size_line) {
+						char *buff_line = (char*) malloc(sizeof(char) * size_line);
+						pread(fd, buff_line, size_line, start_line);
+						std::string line(buff_line, size_line);
+						free(buff_line);
+						execute(line); //split the line
+					}
 					off_start = lseek(fd, 0, SEEK_CUR);
 				}
 				close(fd);
