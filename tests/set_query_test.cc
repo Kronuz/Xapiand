@@ -103,22 +103,24 @@ int main(void) {
 	SRunner *sr = srunner_create(query);
 	srunner_run_all(sr, CK_NORMAL);
 	int number_failed = srunner_ntests_failed(sr);
+	srunner_free(sr);
 
 	Suite *terms = test_terms();
 	sr = srunner_create(terms);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed += srunner_ntests_failed(sr);
+	srunner_free(sr);
 
 	Suite *partial = test_partial();
 	sr = srunner_create(partial);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed += srunner_ntests_failed(sr);
+	srunner_free(sr);
 
 	Suite *facets = test_facets();
 	sr = srunner_create(facets);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed += srunner_ntests_failed(sr);
-
 	srunner_free(sr);
 
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
