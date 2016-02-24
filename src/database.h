@@ -78,6 +78,8 @@ class DatabasesLRU;
 class DatabaseQueue;
 
 
+#if XAPIAND_DATABASE_WAL
+
 struct highest_revision {
 	uint64_t highest_rev_file;
 	uint64_t highest_rev;
@@ -145,11 +147,14 @@ public:
 	void write_add_spelling(const std::string& word, Xapian::termcount freqinc);
 	void write_remove_spelling(const std::string& word, Xapian::termcount freqdec);
 };
+#endif
 
 
 class Database {
 public:
+#if XAPIAND_DATABASE_WAL
 	DatabaseWAL wal;
+#endif
 
 	Schema schema;
 

@@ -71,41 +71,41 @@ AC_CHECK_HEADERS([sys/inotify.h sys/epoll.h sys/event.h port.h poll.h sys/select
 AC_CHECK_FUNCS([inotify_init epoll_ctl kqueue port_create poll select eventfd signalfd])
 
 AC_CHECK_FUNCS(clock_gettime, [], [
-	if test $(uname) = Linux; then
-		# Un Linux, try syscall wrapper first
-		AC_MSG_CHECKING(for clock_gettime syscall)
-		AC_LINK_IFELSE(
-			[
-				AC_LANG_PROGRAM(
-					[
-						#include <unistd.h>
-						#include <sys/syscall.h>
-						#include <time.h>
-					],
-					[struct timespec ts; int status = syscall(SYS_clock_gettime, CLOCK_REALTIME, &ts)]
-				)
-			],
-			[
-				ac_have_clock_syscall=1
-				AC_DEFINE(HAVE_CLOCK_SYSCALL, 1, Define to 1 to use the syscall interface for clock_gettime)
-				AC_MSG_RESULT(yes)
-			],
-			[
-				AC_MSG_RESULT(no)
-			]
-		)
-	fi
-	if test -z "$ac_have_clock_syscall"; then
-		AC_CHECK_LIB(rt, clock_gettime)
-		unset ac_cv_func_clock_gettime
-		AC_CHECK_FUNCS(clock_gettime)
-	fi
+  if test $(uname) = Linux; then
+    # Un Linux, try syscall wrapper first
+    AC_MSG_CHECKING(for clock_gettime syscall)
+    AC_LINK_IFELSE(
+      [
+        AC_LANG_PROGRAM(
+          [
+            #include <unistd.h>
+            #include <sys/syscall.h>
+            #include <time.h>
+          ],
+          [struct timespec ts; int status = syscall(SYS_clock_gettime, CLOCK_REALTIME, &ts)]
+        )
+      ],
+      [
+        ac_have_clock_syscall=1
+        AC_DEFINE(HAVE_CLOCK_SYSCALL, 1, Define to 1 to use the syscall interface for clock_gettime)
+        AC_MSG_RESULT(yes)
+      ],
+      [
+        AC_MSG_RESULT(no)
+      ]
+    )
+  fi
+  if test -z "$ac_have_clock_syscall"; then
+    AC_CHECK_LIB(rt, clock_gettime)
+    unset ac_cv_func_clock_gettime
+    AC_CHECK_FUNCS(clock_gettime)
+  fi
 ])
 
 AC_CHECK_FUNCS(nanosleep, [], [
-	AC_CHECK_LIB(rt, nanosleep)
-	unset ac_cv_func_nanosleep
-	AC_CHECK_FUNCS(nanosleep)
+  AC_CHECK_LIB(rt, nanosleep)
+  unset ac_cv_func_nanosleep
+  AC_CHECK_FUNCS(nanosleep)
 ])
 
 
@@ -155,9 +155,9 @@ AC_TRY_COMPILE([],[],
 PKG_CHECK_MODULES(CHECK, [check >= 0.9.4],,[AC_MSG_RESULT([no, testing is disabled])])
 
 AC_CONFIG_FILES([
-	Makefile
-	src/Makefile
-	tests/Makefile
+  Makefile
+  src/Makefile
+  tests/Makefile
 ])
 
 
@@ -168,14 +168,36 @@ AC_CONFIG_FILES([
 
 AC_MSG_CHECKING([whether to use a proxy for binary protocol])
 AC_ARG_WITH(binary-proxy,
-  [AS_HELP_STRING([--with-binary-proxy@<:@=8860@:>@],
-    [use proxy to send binary traffic from 8890->8860])],
+  [AS_HELP_STRING([--with-binary-proxy@<:@=8860@:>@], [use proxy to send binary traffic from 8890->8860])],
   [
     if test "$withval" = "yes"; then withval="8860"; fi
     AC_DEFINE_UNQUOTED([XAPIAND_BINARY_PROXY], [$withval], [Define to what port binary traffic will be redirected to.])
     AC_MSG_RESULT([yes (8890->$withval)])
   ],
   [AC_MSG_RESULT(no)])
+
+
+
+AC_MSG_CHECKING([whether to enable write ahead log (WAL)])
+AC_ARG_ENABLE(database-wal,
+  [AS_HELP_STRING([--enable-database-wal], [use database write ahead log (WAL)])],
+  [
+    case "${enableval}" in
+      yes)
+        AC_DEFINE([XAPIAND_DATABASE_WAL], [1], [Enable database write ahead log (WAL).])
+        AC_MSG_RESULT(yes)
+        ;;
+      no)
+        AC_MSG_RESULT(no)
+        ;;
+      *)
+        AC_MSG_ERROR([bad value ${enableval} for --enable-database-wal])
+        ;;
+    esac
+  ],
+  [
+    AC_MSG_RESULT(no)
+  ])
 
 
 ########################################################################

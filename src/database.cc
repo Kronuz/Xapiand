@@ -59,6 +59,8 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 };
 
 
+#if XAPIAND_DATABASE_WAL
+
 constexpr const char* const DatabaseWAL::names[];
 
 
@@ -168,17 +170,9 @@ DatabaseWAL::write(Type type, const std::string& data)
 {
 	L_CALL(this, "DatabaseWAL::write()");
 
-	if (!(database->flags & DB_WRITABLE)) {
-		throw MSG_Error("Database is read-only");
-	}
-
-	if (!database->local) {
-		throw MSG_Error("Can not execute WAL on a remote database!");
-	}
-
-	if (database->flags & DB_NOWAL) {
-		throw MSG_Error("Can not execute WAL on a database with DB_NOWAL flag");
-	}
+	assert(database->local);
+	assert(database->flags & DB_WRITABLE);
+	assert(!(database->flags & DB_NOWAL));
 
 	auto endpoint = database->endpoints.cbegin();
 	std::string revision = database->get_revision_info();
@@ -581,6 +575,8 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 	write(Type::REMOVE_SPELLING, encode_length(freqdec) + word);
 }
 
+#endif
+
 
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_)
 	: wal(this),
@@ -674,10 +670,12 @@ Database::reopen()
 			}
 #endif
 			db->add_database(wdb);
+#if XAPIAND_DATABASE_WAL
 			if (local && !(flags & DB_NOWAL)) {
 				// WAL required on a local database, open it.
 				wal.open(get_revision_info(), e->path);
 			}
+#endif
 		}
 	} else {
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.end(); ++i) {
@@ -760,7 +758,9 @@ Database::commit()
 		return false;
 	}
 
+#if XAPIAND_DATABASE_WAL
 	if (local && !(flags & DB_NOWAL)) wal.write_commit();
+#endif
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Commit: t: %d", t);
@@ -806,7 +806,9 @@ Database::delete_document_term(const std::string& term, bool _commit)
 		throw MSG_Error("database is read-only");
 	}
 
+#if XAPIAND_DATABASE_WAL
 	if (local && !(flags & DB_NOWAL)) wal.write_delete_document_term(term);
+#endif
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Deleting document: %s  t: %d", term.c_str(), t);
@@ -1428,7 +1430,9 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 	Xapian::docid did = 0;
 
+#if XAPIAND_DATABASE_WAL
 	if (local && !(flags & DB_NOWAL)) wal.write_replace_document_term(term, doc);
+#endif
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: %s  t: %d", term.c_str(), t);
@@ -2110,7 +2114,9 @@ Database::set_metadata(const std::string& key, const std::string& value, bool _c
 {
 	L_CALL(this, "Database::set_metadata()");
 
+#if XAPIAND_DATABASE_WAL
 	if (local && !(flags & DB_NOWAL)) wal.write_set_metadata(key, value);
+#endif
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
