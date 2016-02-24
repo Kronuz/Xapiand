@@ -28,23 +28,11 @@
 
 #include "client_base.h"
 #include "servers/server_binary.h"
-#include "haystack.h"
 
 #include <xapian.h>
 
 #include <unordered_map>
 
-
-enum class StoringType {
-	REPLY_READY,   // 0 - OK, begin sending
-	REPLY_DONE,
-	REPLY_FILE,
-	REPLY_DATA,
-	MSG_CREATE,
-	MSG_OPEN,
-	MSG_READ,
-	MAX,
-};
 
 enum class ReplicateType {
 	REPLY_END_OF_CHANGES,  // 0 - No more changes to transfer.
@@ -64,9 +52,6 @@ enum class State {
 
 	REPLICATIONPROTOCOL_SLAVE,
 	REPLICATIONPROTOCOL_MASTER,
-
-	STORINGPROTOCOL_SENDER,
-	STORINGPROTOCOL_RECEIVER,
 };
 
 
@@ -94,15 +79,6 @@ class BinaryClient : public BaseClient, public RemoteProtocol {
 	bool repl_switched_db;
 	bool repl_just_switched_db;
 
-	Xapian::docid storing_id;
-	std::shared_ptr<Database> storing_database;
-	std::string storing_filename;
-	Endpoint storing_endpoint;
-	offset_t storing_offset;
-	cookie_t storing_cookie;
-	std::shared_ptr<HaystackVolume> storing_volume;
-	std::unique_ptr<HaystackFile> storing_file;
-
 	BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *loop_, int sock_, double active_timeout_, double idle_timeout_);
 
 	void on_read(const char *buf, size_t received) override;
@@ -121,14 +97,6 @@ class BinaryClient : public BaseClient, public RemoteProtocol {
 	void repl_get_changesets(const std::string & message);
 	void receive_repl();
 
-	void storing_file_done();
-	void storing_apply(StoringType type, const std::string & message);
-	void storing_send(const std::string & message);
-	void storing_done(const std::string & message);
-	void storing_open(const std::string & message);
-	void storing_read(const std::string & message);
-	void storing_create(const std::string & message);
-
 	friend Worker;
 
 	Xapian::Database* _get_db(bool writable);
@@ -138,10 +106,6 @@ public:
 
 	inline ReplicateType get_message(double timeout, std::string & result, ReplicateType required_type) {
 		return (ReplicateType)get_message(timeout, result, static_cast<int>(required_type));
-	}
-
-	inline StoringType get_message(double timeout, std::string & result, StoringType required_type) {
-		return (StoringType)get_message(timeout, result, static_cast<int>(required_type));
 	}
 
 	int get_message(double timeout, std::string &result, int) override;
@@ -160,14 +124,6 @@ public:
 		send_message(static_cast<char>(type), message, end_time);
 	}
 
-	inline void send_message(StoringType type, const std::string &message) {
-		send_message(static_cast<char>(type), message);
-	}
-
-	inline void send_message(StoringType type, const std::string &message, double end_time) {
-		send_message(static_cast<char>(type), message, end_time);
-	}
-
 	void send_message(char type_as_char, const std::string &message, double end_time=0.0);
 
 	Xapian::Database* get_db() override;
@@ -178,7 +134,6 @@ public:
 
 	bool init_remote();
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
-	bool init_storing(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename);
 
 	void run() override;
 };

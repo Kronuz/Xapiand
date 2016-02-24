@@ -583,13 +583,6 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 {
 	return binary->trigger_replication(src_endpoint, dst_endpoint);
 }
-
-
-std::future<bool>
-XapiandManager::store(const Endpoints& endpoints, const Xapian::docid& did, const std::string& filename)
-{
-	return binary->store(endpoints, did, filename);
-}
 #endif
 
 

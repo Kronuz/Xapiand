@@ -4,7 +4,6 @@ check_PROGRAMS = set_forward_list_test \
                  set_generate_terms_test \
                  set_geo_test \
                  set_hash_test \
-                 set_haystack_test \
                  set_htm_test \
                  set_lru_test \
                  set_msgpack_test \
@@ -32,7 +31,6 @@ common_files =  $(top_builddir)/src/cartesian.cc \
                 $(top_builddir)/src/geospatialrange.cc \
                 $(top_builddir)/src/hash/md5.cc \
                 $(top_builddir)/src/hash/sha256.cc \
-                $(top_builddir)/src/haystack.cc \
                 $(top_builddir)/src/htm.cc \
                 $(top_builddir)/src/length.cc \
                 $(top_builddir)/src/log.cc \
@@ -63,9 +61,6 @@ set_geo_test_LDADD = @CHECK_LIBS@
 
 set_hash_test_SOURCES = $(common_files) set_hash_test.cc test_hash.cc
 set_hash_test_LDADD = @CHECK_LIBS@
-
-set_haystack_test_SOURCES = $(common_files) set_haystack_test.cc test_haystack.cc
-set_haystack_test_LDADD = @CHECK_LIBS@
 
 set_htm_test_SOURCES = $(common_files) set_htm_test.cc test_htm.cc
 set_htm_test_LDADD = @CHECK_LIBS@

@@ -51,7 +51,6 @@ public:
 	void io_accept_cb(ev::io &watcher, int revents) override;
 
 	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
-	bool store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename);
 };
 
 

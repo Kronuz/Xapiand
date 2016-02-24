@@ -22,7 +22,6 @@ xapiand_SOURCES = \
 	geospatialrange.cc \
 	hash/md5.cc \
 	hash/sha256.cc \
-	haystack.cc \
 	htm.cc \
 	http_parser.c \
 	io_utils.cc \
@@ -91,7 +90,6 @@ noinst_HEADERS = \
 	geospatialrange.h \
 	hash/md5.h \
 	hash/sha256.h \
-	haystack.h \
 	htm.h \
 	http_parser.h \
 	io_utils.h \

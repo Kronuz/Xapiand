@@ -52,7 +52,6 @@ public:
 	void add_server(const std::shared_ptr<BinaryServer> &server);
 
 	std::future<bool> trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
-	std::future<bool> store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename);
 };
 
 

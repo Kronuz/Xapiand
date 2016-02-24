@@ -117,25 +117,4 @@ BinaryServer::trigger_replication(const Endpoint &src_endpoint, const Endpoint &
 	return true;
 }
 
-
-bool
-BinaryServer::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename)
-{
-	int client_sock = binary->connection_socket();
-	if (client_sock < 0) {
-		return false;
-	}
-
-	auto client = Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
-
-	if (!client->init_storing(endpoints, did, filename)) {
-		client->destroy();
-		return false;
-	}
-
-	L_INFO(this, "Storing %s in %s...", filename.c_str(), endpoints.as_string().c_str());
-
-	return true;
-}
-
 #endif /* HAVE_REMOTE_PROTOCOL */

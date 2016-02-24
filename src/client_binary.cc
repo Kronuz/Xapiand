@@ -38,7 +38,6 @@
 
 
 #define SWITCH_TO_REPL '\xfe'
-#define SWITCH_TO_STORING '\xfd'
 
 
 //
@@ -52,10 +51,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *
 	  state(State::INIT_REMOTEPROTOCOL),
 	  repl_database(nullptr),
 	  repl_database_tmp(nullptr),
-	  repl_switched_db(false),
-	  storing_database(NULL),
-	  storing_offset(0),
-	  storing_cookie(0)
+	  repl_switched_db(false)
 {
 	int binary_clients = ++XapiandServer::binary_clients;
 	int total_clients = XapiandServer::total_clients;
@@ -82,10 +78,6 @@ BinaryClient::~BinaryClient()
 
 	if (repl_database_tmp) {
 		manager()->database_pool.checkin(repl_database_tmp);
-	}
-
-	if (storing_database) {
-		manager()->database_pool.checkin(storing_database);
 	}
 
 	int binary_clients = --XapiandServer::binary_clients;
@@ -145,29 +137,6 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 }
 
 
-bool
-BinaryClient::init_storing(const Endpoints &endpoints_, const Xapian::docid &did, const std::string &filename)
-{
-	L_DEBUG(this, "init_storing: %s  -->  %s", filename.c_str(), endpoints_.as_string().c_str());
-	state = State::STORINGPROTOCOL_SENDER;
-
-	storing_id = did;
-	storing_filename = filename;
-	storing_endpoint = *endpoints_.begin();
-
-	int port = (storing_endpoint.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : storing_endpoint.port;
-
-	if ((sock = BaseTCP::connect(sock, storing_endpoint.host.c_str(), std::to_string(port).c_str())) < 0) {
-		L_ERR(this, "Cannot connect to %s", storing_endpoint.host.c_str(), std::to_string(port).c_str());
-		return false;
-	}
-	L_CONN(this, "Connected to %s (sock=%d)!", storing_endpoint.as_string().c_str(), sock);
-
-	manager()->thread_pool.enqueue(share_this<BinaryClient>());
-	return true;
-}
-
-
 void
 BinaryClient::on_read_file_done()
 {
@@ -179,9 +148,6 @@ BinaryClient::on_read_file_done()
 		switch (state) {
 			case State::REPLICATIONPROTOCOL_SLAVE:
 				repl_file_done();
-				break;
-			case State::STORINGPROTOCOL_RECEIVER:
-				storing_file_done();
 				break;
 			default:
 				L_ERR(this, "ERROR: Invalid on_read_file_done for state: %d", state);
@@ -278,52 +244,6 @@ BinaryClient::repl_file_done()
 
 
 void
-BinaryClient::storing_file_done()
-{
-	L_DEBUG(this, "BinaryClient::storing_file_done");
-
-	cookie_t haystack_cookie = random_int(0, 0xffff);
-
-	// The following should be from a pool of Haystack storage (single writable)
-	std::shared_ptr<HaystackVolume> volume = std::make_shared<HaystackVolume>(storing_endpoint.path, true);
-
-	HaystackFile haystack_file(volume, storing_id, haystack_cookie);
-
-	char buf[8 * 1024];
-	ssize_t size;
-	while ((size = ::read(file_descriptor, buf, sizeof(buf))) > 0) {
-		L_DEBUG(this, "Store %zd bytes from buf in the Haystack storage!", size);
-		if (haystack_file.write(buf, size) != size) {
-			haystack_file.rewind();
-			throw MSG_Error("Storage failure (1)!");
-		}
-	}
-
-	Endpoints endpoints;
-	endpoints.insert(storing_endpoint);
-	if (!manager()->database_pool.checkout(storing_database, endpoints, DB_WRITABLE|DB_SPAWN)) {
-		L_ERR(this, "Cannot checkout %s", endpoints.as_string().c_str());
-		haystack_file.rewind();
-		throw MSG_Error("Storage failure (2)!");
-	}
-
-	offset_t haystack_offset = haystack_file.commit();
-
-	Xapian::Document doc;
-	doc.add_value(1, encode_length(haystack_offset));
-	storing_database->replace_document(encode_length(storing_id), doc, true);
-
-	manager()->database_pool.checkin(storing_database);
-	storing_database.reset();
-
-	std::string msg;
-	msg.append(encode_length(haystack_offset));
-	msg.append(encode_length(haystack_cookie));
-	send_message(StoringType::REPLY_DONE, msg);
-}
-
-
-void
 BinaryClient::on_read_file(const char *buf, size_t received)
 {
 	L_CONN_WIRE(this, "BinaryClient::on_read_file: %zu bytes", received);
@@ -355,11 +275,6 @@ BinaryClient::on_read(const char *buf, size_t received)
 				state = State::REPLICATIONPROTOCOL_MASTER;  // Switch to replication protocol
 				type = toUType(ReplicateType::MSG_GET_CHANGESETS);
 				L_BINARY(this, "Switched to replication protocol");
-				break;
-			case SWITCH_TO_STORING:
-				state = State::STORINGPROTOCOL_RECEIVER;  // Switch to file storing
-				type = toUType(StoringType::MSG_CREATE);
-				L_BINARY(this, "Switched to file storing");
 				break;
 		}
 
@@ -544,7 +459,6 @@ BinaryClient::run()
 
 	std::string message;
 	ReplicateType repl_type;
-	StoringType storing_type;
 
 	if (state == State::INIT_REMOTEPROTOCOL) {
 		state = State::REMOTEPROTOCOL;
@@ -568,12 +482,6 @@ BinaryClient::run()
 				case State::REPLICATIONPROTOCOL_MASTER:
 					repl_type = get_message(idle_timeout, message, ReplicateType::MAX);
 					repl_apply(repl_type, message);
-					break;
-
-				case State::STORINGPROTOCOL_SENDER:
-				case State::STORINGPROTOCOL_RECEIVER:
-					storing_type = get_message(idle_timeout, message, StoringType::MAX);
-					storing_apply(storing_type, message);
 					break;
 			}
 		} catch (const Xapian::NetworkError &e) {
@@ -901,130 +809,6 @@ BinaryClient::receive_repl()
 	msg.append(endpoint.path);
 
 	send_message(SWITCH_TO_REPL, msg);
-}
-
-
-void
-BinaryClient::storing_apply(StoringType type, const std::string & message)
-{
-	switch (type) {
-		case StoringType::REPLY_READY:
-			if (state == State::STORINGPROTOCOL_SENDER) {
-				storing_send(message);
-			}
-			break;
-		case StoringType::REPLY_DONE:
-			storing_done(message);
-			break;
-		case StoringType::MSG_CREATE:
-			storing_create(message);
-			break;
-		case StoringType::MSG_READ:
-			storing_read(message);
-		case StoringType::MSG_OPEN:
-			storing_open(message);
-			break;
-		case StoringType::REPLY_FILE:
-			break;
-		case StoringType::REPLY_DATA:
-			break;
-		case StoringType::MAX:
-			break;
-	}
-}
-
-
-void
-BinaryClient::storing_send(const std::string &)
-{
-	L_DEBUG(this, "BinaryClient::storing_send (init)");
-
-	std::string msg;
-	msg.append(encode_length(storing_id));
-	msg.append(storing_endpoint.as_string());
-	send_message(SWITCH_TO_STORING, msg);
-
-	int fd = ::open(storing_filename.c_str(), O_RDONLY | O_CLOEXEC);
-	if (fd >= 0) {
-		send_file(fd);
-		::close(fd);
-	}
-
-	::unlink(storing_filename.c_str());
-}
-
-
-void
-BinaryClient::storing_done(const std::string & message)
-{
-	L_DEBUG(this, "BinaryClient::storing_done");
-
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-	storing_offset = static_cast<offset_t>(decode_length(&p, p_end, false));
-	storing_cookie = decode_length(&p, p_end, false);
-}
-
-
-void
-BinaryClient::storing_open(const std::string & message)
-{
-	L_DEBUG(this, "BinaryClient::storing_open");
-
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-	storing_id = static_cast<Xapian::docid>(decode_length(&p, p_end, false));
-	storing_offset = static_cast<offset_t>(decode_length(&p, p_end, false));
-	storing_cookie = decode_length(&p, p_end, false);
-
-	// The following should be from a pool of Haystack storage (single writable)
-	storing_volume = std::make_shared<HaystackVolume>(storing_endpoint.path, false);
-
-	storing_file = std::make_unique<HaystackFile>(storing_volume, storing_id, storing_cookie);
-	storing_file->seek(storing_offset);
-
-	std::string msg;
-	msg.append(encode_length(storing_file->size()));
-	send_message(StoringType::REPLY_FILE, msg);
-
-	storing_read(message);
-}
-
-
-void
-BinaryClient::storing_read(const std::string &)
-{
-	L_DEBUG(this, "BinaryClient::storing_read");
-
-	char buffer[8192];
-	size_t size = storing_file->read(buffer, sizeof(buffer));
-
-	std::string msg;
-	msg.append(encode_length(size));
-	msg.append(buffer, size);
-
-	send_message(StoringType::REPLY_DATA, msg);
-}
-
-
-void
-BinaryClient::storing_create(const std::string & message)
-{
-	L_DEBUG(this, "BinaryClient::storing_create");
-
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-	storing_id = static_cast<Xapian::docid>(decode_length(&p, p_end, false));
-	storing_endpoint = Endpoint(std::string(p, p_end - p));
-
-	strcpy(file_path, "/tmp/xapian_storing.XXXXXX");
-	file_descriptor = mkstemp(file_path);
-	if (file_descriptor < 0) {
-		L_ERR(this, "Cannot write to %s (1)", file_path);
-		return;
-	}
-
-	read_file();
 }
 
 #endif  /* HAVE_REMOTE_PROTOCOL */

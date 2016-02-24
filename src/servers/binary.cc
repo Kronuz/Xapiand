@@ -126,16 +126,4 @@ Binary::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_en
 }
 
 
-std::future<bool>
-Binary::store(const Endpoints &endpoints, const Xapian::docid &did, const std::string &filename)
-{
-	auto future = tasks.enqueue([endpoints, did, filename] (const std::shared_ptr<BinaryServer> &server) {
-		return server->store(endpoints, did, filename);
-	});
-
-	async_signal_send();
-
-	return future;
-}
-
 #endif  /* HAVE_REMOTE_PROTOCOL */
