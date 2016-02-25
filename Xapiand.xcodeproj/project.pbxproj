@@ -40,7 +40,6 @@
 		C35058AD1BA325CC00901B80 /* lz4hc.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A71BA325CC00901B80 /* lz4hc.c */; };
 		C35058AE1BA325CC00901B80 /* xxhash.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A91BA325CC00901B80 /* xxhash.c */; };
 		C365BE3D1C330F5D00F6E3AE /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE3C1C330F5D00F6E3AE /* xapiand.cc */; };
-		C365BE3F1C33150800F6E3AE /* convert.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE3E1C33150800F6E3AE /* convert.cc */; };
 		C365BE461C3466B900F6E3AE /* msgpack.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE451C3466B900F6E3AE /* msgpack.cc */; };
 		C365BE4F1C4DABBB00F6E3AE /* msgpack_patcher.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */; };
 		C39AE0651B2F627E00203139 /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0391B2F627E00203139 /* client_base.cc */; };
@@ -144,8 +143,6 @@
 		C35058A91BA325CC00901B80 /* xxhash.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = xxhash.c; path = src/lz4/xxhash.c; sourceTree = "<group>"; };
 		C35058AA1BA325CC00901B80 /* xxhash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = xxhash.h; path = src/lz4/xxhash.h; sourceTree = "<group>"; };
 		C365BE3C1C330F5D00F6E3AE /* xapiand.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = xapiand.cc; path = src/xapiand.cc; sourceTree = "<group>"; };
-		C365BE3E1C33150800F6E3AE /* convert.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = convert.cc; path = src/xchange/convert.cc; sourceTree = "<group>"; };
-		C365BE401C33151200F6E3AE /* convert.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = convert.h; path = src/xchange/convert.h; sourceTree = "<group>"; };
 		C365BE451C3466B900F6E3AE /* msgpack.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack.cc; path = src/msgpack.cc; sourceTree = "<group>"; };
 		C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack_patcher.cc; path = src/msgpack_patcher.cc; sourceTree = "<group>"; };
 		C365BE4E1C4DABBB00F6E3AE /* msgpack_patcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = msgpack_patcher.h; path = src/msgpack_patcher.h; sourceTree = "<group>"; };
@@ -220,8 +217,6 @@
 				C39AE03C1B2F627E00203139 /* client_binary.h */,
 				C39AE03D1B2F627E00203139 /* client_http.cc */,
 				C39AE03E1B2F627E00203139 /* client_http.h */,
-				C365BE3E1C33150800F6E3AE /* convert.cc */,
-				C365BE401C33151200F6E3AE /* convert.h */,
 				C3C37DB81BAF2EA900F99A84 /* compressor.h */,
 				C39AE03F1B2F627E00203139 /* config.h */,
 				C39AE0401B2F627E00203139 /* database.cc */,
@@ -399,7 +394,6 @@
 				C39AE07D1B2F62D700203139 /* exception.cc in Sources */,
 				4630BEE51B42E88D00351058 /* htm.cc in Sources */,
 				46B6B3CD1B7E3CEF000FA041 /* serialise.cc in Sources */,
-				C365BE3F1C33150800F6E3AE /* convert.cc in Sources */,
 				C350589F1B99E75500901B80 /* io_utils.cc in Sources */,
 				C39AE0711B2F627E00203139 /* replicator.cc in Sources */,
 				C39AE06A1B2F627E00203139 /* endpoint.cc in Sources */,
