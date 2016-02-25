@@ -24,7 +24,7 @@
 
 #include "tcp_base.h"
 
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 
 #include "server_binary.h"
 #include "../endpoint.h"
@@ -55,4 +55,4 @@ public:
 };
 
 
-#endif  /* HAVE_REMOTE_PROTOCOL */
+#endif  /* XAPIAND_CLUSTERING */

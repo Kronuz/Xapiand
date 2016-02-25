@@ -661,7 +661,7 @@ Database::reopen()
 				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 				if (endpoints_size == 1) read_mastery(e->path);
 			}
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 			else {
 				local = false;
 				// Writable remote databases do not have a local fallback
@@ -695,7 +695,7 @@ Database::reopen()
 					if (endpoints_size == 1) read_mastery(e->path);
 				}
 			}
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 			else {
 				local = false;
 #ifdef XAPIAN_LOCAL_DB_FALLBACK

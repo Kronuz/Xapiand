@@ -150,7 +150,7 @@ public:
 	// Return the region to which local_node belongs
 	int get_region();
 
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif
 

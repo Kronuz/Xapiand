@@ -320,7 +320,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 
 							Endpoint local_endpoint(index_path);
 							Endpoint remote_endpoint(index_path, &remote_node);
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 							// Replicate database from the other node
 							L_INFO(this, "Request syncing database from %s...", remote_node.name.c_str());
 							auto ret = manager()->trigger_replication(remote_endpoint, local_endpoint);

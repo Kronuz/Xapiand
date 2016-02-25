@@ -123,8 +123,9 @@ save_CXXFLAGS="$CXXFLAGS"
 CXXFLAGS="$CXXFLAGS $XAPIAN_CXXFLAGS"
 AC_LINK_IFELSE(
   [AC_LANG_PROGRAM([#include "xapian.h"], [class RemoteClient : public RemoteProtocol {}])],
-  [AC_DEFINE([HAVE_REMOTE_PROTOCOL], 1, [Define to 1 if Xapian has RemoteProtocol available.])],
-  [AC_MSG_WARN([Xapian's RemoteProtocol is not available!])])
+  [AC_DEFINE([HAVE_REMOTE_PROTOCOL], [1], [Define to 1 if Xapian has RemoteProtocol available.])
+  have_remote_protocol=yes],
+  [])
 CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
 
@@ -136,8 +137,9 @@ save_CXXFLAGS="$CXXFLAGS"
 CXXFLAGS="$CXXFLAGS $XAPIAN_CXXFLAGS"
 AC_LINK_IFELSE(
   [AC_LANG_PROGRAM([#include "xapian.h"], [&Xapian::Database::get_revision_info])],
-  [AC_DEFINE([HAVE_DATABASE_REVISION_INFO], 1, [Define to 1 if Xapian has Database::get_revision_info() available.])],
-  [AC_MSG_WARN([Xapian's Database::get_revision_info() is not available!])])
+  [AC_DEFINE([HAVE_DATABASE_REVISION_INFO], [1], [Define to 1 if Xapian has Database::get_revision_info() available.])
+  have_database_revision_info=yes],
+  [])
 CXXFLAGS="$save_CXXFLAGS"
 LIBS="$save_LIBS"
 
@@ -148,9 +150,9 @@ AC_MSG_CHECKING(["whether compiler understands -Wall -Wextra"])
 save_CXXFLAGS="$CXXFLAGS"
 CXXFLAGS="$CXXFLAGS -Wall -Wextra"
 AC_TRY_COMPILE([],[],
-  AC_MSG_RESULT(yes),
-  AC_MSG_RESULT(no)
-  CXXFLAGS="$save_CXXFLAGS")
+  [AC_MSG_RESULT(yes)],
+  [AC_MSG_RESULT(no)]
+  [CXXFLAGS="$save_CXXFLAGS"])
 
 PKG_CHECK_MODULES(CHECK, [check >= 0.9.4],,[AC_MSG_RESULT([no, testing is disabled])])
 
@@ -177,27 +179,59 @@ AC_ARG_WITH(binary-proxy,
   [AC_MSG_RESULT(no)])
 
 
-
-AC_MSG_CHECKING([whether to enable write ahead log (WAL)])
 AC_ARG_ENABLE(database-wal,
   [AS_HELP_STRING([--enable-database-wal], [use database write ahead log (WAL)])],
-  [
-    case "${enableval}" in
-      yes)
-        AC_DEFINE([XAPIAND_DATABASE_WAL], [1], [Enable database write ahead log (WAL).])
-        AC_MSG_RESULT(yes)
-        ;;
-      no)
-        AC_MSG_RESULT(no)
-        ;;
-      *)
-        AC_MSG_ERROR([bad value ${enableval} for --enable-database-wal])
-        ;;
-    esac
-  ],
-  [
+  [enable_database_wal="$enableval"],
+  [enable_database_wal=no])
+AC_MSG_CHECKING([whether to enable write ahead log (WAL)])
+case "$enable_database_wal" in
+  y*)
+    AC_DEFINE([XAPIAND_DATABASE_WAL], [1], [Enable database write ahead log (WAL).])
+    AC_MSG_RESULT(yes)
+    ;;
+  n*)
     AC_MSG_RESULT(no)
-  ])
+    ;;
+  *)
+    AC_MSG_RESULT(no)
+    AC_MSG_ERROR([bad value $enable_database_wal for --enable-database-wal])
+    ;;
+esac
+
+
+AC_ARG_ENABLE(clustering,
+  [AS_HELP_STRING([--disable-clustering], [allow remote clustering])],
+  [enable_clustering="$enableval"],
+  [enable_clustering=yep])
+AC_MSG_CHECKING([whether to enable remote clustering])
+case "$enable_clustering" in
+  y*)
+    if ! test "$have_remote_protocol" = "yes"; then
+      AC_MSG_RESULT(no)
+      if test "$enable_clustering" = "yes"; then
+        AC_MSG_ERROR([Xapian's RemoteProtocol is not available!])
+      else
+        AC_MSG_WARN([Xapian's RemoteProtocol is not available!])
+      fi
+    elif ! test "$have_database_revision_info" = "yes"; then
+      AC_MSG_RESULT(no)
+      if test "$enable_clustering" = "yes"; then
+        AC_MSG_ERROR([Xapian's Database::get_revision_info() is not available!])
+      else
+        AC_MSG_WARN([Xapian's Database::get_revision_info() is not available!])
+      fi
+    else
+      AC_DEFINE([XAPIAND_CLUSTERING], [1], [Enable remote clustering.])
+      AC_MSG_RESULT(yes)
+    fi
+    ;;
+  n*)
+    AC_MSG_RESULT(no)
+    ;;
+  *)
+    AC_MSG_ERROR([bad value $enable_clustering for --enable-clustering])
+    ;;
+esac
 
 
 ########################################################################

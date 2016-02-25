@@ -214,7 +214,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 		const Node &node = it->second;
 		Endpoint remote_endpoint(".", &node);
 		// Replicate database from the other node
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 		L_INFO(this, "Syncing cluster data from %s...", node.name.c_str());
 
 		auto ret = trigger_replication(remote_endpoint, *cluster_endpoints.begin());
@@ -466,7 +466,7 @@ XapiandManager::run(const opts_t& o)
 	auto http = std::make_shared<Http>(manager, o.http_port);
 	msg += http->getDescription() + ", ";
 
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 	binary = std::make_shared<Binary>(manager, o.binary_port);
 	msg += binary->getDescription() + ", ";
 #endif
@@ -485,7 +485,7 @@ XapiandManager::run(const opts_t& o)
 	for (size_t i = 0; i < o.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(manager, nullptr);
 		Worker::create<HttpServer>(server, server->loop, http);
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 		binary->add_server(Worker::create<BinaryServer>(server, server->loop, binary));
 #endif
 		Worker::create<DiscoveryServer>(server, server->loop, discovery);
@@ -577,7 +577,7 @@ XapiandManager::get_region()
 }
 
 
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 std::future<bool>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {

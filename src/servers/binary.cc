@@ -22,7 +22,7 @@
 
 #include "binary.h"
 
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 
 #include "../client_binary.h"
 
@@ -126,4 +126,4 @@ Binary::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_en
 }
 
 
-#endif  /* HAVE_REMOTE_PROTOCOL */
+#endif  /* XAPIAND_CLUSTERING */

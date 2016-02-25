@@ -24,7 +24,7 @@
 
 #include "xapiand.h"
 
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 
 #include "client_base.h"
 #include "servers/server_binary.h"
@@ -138,4 +138,4 @@ public:
 	void run() override;
 };
 
-#endif  /* HAVE_REMOTE_PROTOCOL */
+#endif  /* XAPIAND_CLUSTERING */

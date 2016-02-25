@@ -28,7 +28,7 @@
 #include "../database.h"
 #include "../threadpool.h"
 
-#ifdef HAVE_REMOTE_PROTOCOL
+#ifdef XAPIAND_CLUSTERING
 
 class Binary;
 
@@ -54,4 +54,4 @@ public:
 };
 
 
-#endif /* HAVE_REMOTE_PROTOCOL */
+#endif /* XAPIAND_CLUSTERING */

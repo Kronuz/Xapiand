@@ -22,7 +22,7 @@
 
 #include "client_binary.h"
 
-#if defined(HAVE_REMOTE_PROTOCOL) && defined(HAVE_DATABASE_REVISION_INFO)
+#ifdef XAPIAND_CLUSTERING
 
 #include "servers/server.h"
 #include "servers/tcp_base.h"
@@ -811,4 +811,4 @@ BinaryClient::receive_repl()
 	send_message(SWITCH_TO_REPL, msg);
 }
 
-#endif  /* HAVE_REMOTE_PROTOCOL */
+#endif  /* XAPIAND_CLUSTERING */
