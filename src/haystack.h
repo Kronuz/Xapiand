@@ -231,6 +231,10 @@ public:
 		ssize_t r;
 
 		if (!needle_header.size) {
+			if (::lseek(fd, 0, SEEK_CUR) >= header.head.offset * HAYSTACK_ALIGNMENT) {
+				throw std::exception(/* EOF */);
+			}
+
 			r = ::read(fd,  &needle_header, sizeof(HaystackNeedleHeader));
 			if (r == -1) {
 				throw std::exception(/* Cannot read from volume */);
