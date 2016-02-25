@@ -131,7 +131,13 @@ class Storage {
 			}
 			free_blocks = (file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE;
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
-				fallocate(fd, 0, file_size, STORAGE_BLOCK_SIZE * STORAGE_BLOCKS_GROW);
+				size_t new_size = file_size + STORAGE_BLOCKS_GROW * STORAGE_BLOCK_SIZE;
+				if (new_size > STORAGE_LAST_BLOCK_OFFSET) {
+					new_size = STORAGE_LAST_BLOCK_OFFSET;
+				}
+				if (new_size > file_size) {
+					fallocate(fd, 0, file_size, new_size - file_size);
+				}
 			}
 		}
 	}
