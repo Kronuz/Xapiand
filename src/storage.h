@@ -153,10 +153,12 @@ public:
 		}
 	}
 
-	void write(const char *data, size_t data_size) {
+	uint32_t write(const char *data, size_t data_size) {
 		// FIXME: Compress data here!
 
 		size_t data_size_orig = data_size;
+
+		uint32_t current_offset = header.head.offset;
 
 		StorageBinHeader bin_header(data_size);
 		const StorageBinHeader* bin_header_data = &bin_header;
@@ -165,7 +167,7 @@ public:
 		StorageBinFooter bin_footer;
 		const StorageBinFooter* bin_footer_data = &bin_footer;
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
-		off_t block_offset = ((header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
+		off_t block_offset = ((current_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 
 		while (bin_header_data_size || data_size || bin_footer_data_size) {
 			if (bin_header_data_size) {
@@ -232,6 +234,7 @@ public:
 		seek(STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT);
 
 		header.head.offset += (((sizeof(StorageBinHeader) + data_size_orig + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
+		return current_offset;
 	}
 
 	size_t read(char *buf, size_t buf_size) {
@@ -292,8 +295,8 @@ public:
 		}
 	}
 
-	void write(const std::string& data) {
-		write(data.data(), data.size());
+	uint32_t write(const std::string& data) {
+		return write(data.data(), data.size());
 
 	}
 
