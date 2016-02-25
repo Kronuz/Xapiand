@@ -39,7 +39,10 @@
 #define STORAGE_ALIGNMENT 8
 
 #define STORAGE_BUFFER_CLEAR 1
-#define STORAGE_BUFFER_CLEAR_CHAR '='
+#define STORAGE_BUFFER_CLEAR_CHAR '\0'
+
+#define STORAGE_BLOCKS_GROW 10
+#define STORAGE_BLOCKS_MIN_FREE 3
 
 #define STORAGE_LAST_BLOCK_OFFSET (static_cast<off_t>(std::numeric_limits<uint32_t>::max()) * STORAGE_ALIGNMENT)
 
@@ -106,10 +109,11 @@ struct StorageBinFooter {
 
 template <typename StorageHeader, typename StorageBinHeader, typename StorageBinFooter>
 class Storage {
-
 	std::string path;
 	bool writable;
 	int fd;
+
+	int free_blocks;
 
 	char buffer[STORAGE_BLOCK_SIZE];
 	uint32_t buffer_offset;
@@ -119,12 +123,26 @@ class Storage {
 	StorageBinHeader bin_header;
 	StorageBinFooter bin_footer;
 
+	inline void growfile() {
+		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
+			off_t file_size = ::lseek(fd, 0, SEEK_END);
+			if (file_size == -1) {
+				throw StorageIOError();
+			}
+			free_blocks = (file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE;
+			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
+				fallocate(fd, 0, file_size, STORAGE_BLOCK_SIZE * STORAGE_BLOCKS_GROW);
+			}
+		}
+	}
+
 protected:
 	StorageHeader header;
 
 public:
 	Storage()
 		: fd(0),
+		  free_blocks(0),
 		  buffer_offset(0),
 		  bin_size(0),
 		  bin_offset(0),
@@ -139,12 +157,6 @@ public:
 
 		path = path_;
 		writable = writable_;
-
-#if STORAGE_BUFFER_CLEAR
-		if (writable) {
-			memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
-		}
-#endif
 
 		fd = ::open(path.c_str(), writable ? O_RDWR | O_DSYNC : O_RDONLY, 0644);
 		if (fd == -1) {
@@ -179,6 +191,11 @@ public:
 				}
 			}
 		}
+
+		if (writable) {
+			growfile();
+		}
+
 		seek(STORAGE_START_BLOCK_OFFSET);
 	}
 
@@ -187,6 +204,21 @@ public:
 			flush();
 			::close(fd);
 		}
+
+		fd = 0;
+
+		free_blocks = 0;
+
+		bin_size = 0;
+		bin_offset = 0;
+		bin_header.size = 0;
+
+#if STORAGE_BUFFER_CLEAR
+		if (writable) {
+			memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
+		}
+#endif
+		buffer_offset = 0;
 	}
 
 	void seek(uint32_t offset) {
@@ -272,6 +304,7 @@ public:
 				if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
 					throw StorageEOF();
 				}
+				--free_blocks;
 #if STORAGE_BUFFER_CLEAR
 				memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
 #endif
@@ -354,14 +387,15 @@ public:
 		if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 			throw StorageIOError();
 		}
+		growfile();
 	}
 
-	uint32_t write(const std::string& data) {
+	inline uint32_t write(const std::string& data) {
 		return write(data.data(), data.size());
 
 	}
 
-	std::string read() {
+	inline std::string read() {
 		std::string ret;
 
 		ssize_t r;
