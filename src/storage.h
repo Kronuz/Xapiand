@@ -31,7 +31,9 @@
 #include <limits>
 
 
-#define STORAGE_MAGIC 0x123456
+#define STORAGE_MAGIC 0x12345678
+#define STORAGE_BIN_HEADER_MAGIC (STORAGE_MAGIC >> 24)
+#define STORAGE_BIN_FOOTER_MAGIC (STORAGE_MAGIC & 0xff)
 
 #define STORAGE_BLOCK_SIZE (1024 * 4)
 #define STORAGE_ALIGNMENT 8
@@ -42,22 +44,50 @@
 #define STORAGE_LAST_BLOCK_OFFSET (static_cast<off_t>(std::numeric_limits<uint32_t>::max()) * STORAGE_ALIGNMENT)
 
 
+class StorageException {};
+
+class StorageIOError : public StorageException {};
+
+class StorageEOF : public StorageException {};
+
+class StorageNoFile : public StorageException {};
+
+class StorageCorruptVolume : public StorageException {};
+class StorageUUIDMismatch : public StorageCorruptVolume {};
+class StorageBadMagicNumber : public StorageCorruptVolume {};
+class StorageBadHeaderMagicNumber : public StorageBadMagicNumber {};
+class StorageBadBinHeaderMagicNumber : public StorageBadMagicNumber {};
+class StorageBadBinFooterMagicNumber : public StorageBadMagicNumber {};
+class StorageBadBinChecksum : public StorageCorruptVolume {};
+class StorageIncomplete : public StorageCorruptVolume {};
+class StorageIncompleteBinHeader : public StorageIncomplete {};
+class StorageIncompleteBinData : public StorageIncomplete {};
+class StorageIncompleteBinFooter : public StorageIncomplete {};
+
+
 struct StorageHeader {
-	struct head_t {
+	struct StorageHeaderHead {
 		uint32_t magic;
 		uint16_t offset;
 		char uuid[36];
+		StorageHeaderHead() : magic(STORAGE_MAGIC), offset(STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT) {}
 	} head;
-	char padding[(STORAGE_BLOCK_SIZE - sizeof(head_t)) / sizeof(char)];
+	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeaderHead)) / sizeof(char)];
 };
+
+#pragma pack(push, 1)
 struct StorageBinHeader {
+	char magic;
 	uint32_t size;
-	StorageBinHeader(uint32_t size_) : size(size_) { };
+	StorageBinHeader(uint32_t size_) : magic(STORAGE_BIN_HEADER_MAGIC), size(size_) { };
 };
+
 struct StorageBinFooter {
 	uint32_t crc32;
-	StorageBinFooter() : crc32(0) { };
+	char magic;
+	StorageBinFooter() : magic(STORAGE_BIN_FOOTER_MAGIC), crc32(0) { };
 };
+#pragma pack(pop)
 
 
 template <typename StorageHeader, typename StorageBinHeader, typename StorageBinFooter>
@@ -104,34 +134,32 @@ public:
 		if (fd == -1) {
 			fd = ::open((path + std::to_string(volume)).c_str(), writable ? O_RDWR | O_CREAT | O_DSYNC : O_RDONLY, 0644);
 			if (fd == -1) {
-				throw std::exception();
+				throw StorageIOError();
 			}
-			memset(&header, 0, sizeof(header));
-			header.head.magic = STORAGE_MAGIC;
-			header.head.offset = STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT;
-			strcpy(header.head.uuid, uuid);  // FIXME
+			memset(&header + sizeof(StorageHeaderHead), 0, sizeof(header) - sizeof(StorageHeaderHead));
+			strncpy(header.head.uuid, uuid, sizeof(header.head.uuid));
 			if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
-				throw std::exception(/* Cannot write to volume */);
+				throw StorageIOError();
 			}
 		} else {
 			ssize_t r = ::pread(fd, &header, sizeof(header), 0);
 			if (r == -1) {
-				throw std::exception(/* Cannot read from volume */);
+				throw StorageIOError();
 			} else if (r != sizeof(header)) {
-				throw std::exception(/* Corrupt File: Cannot read data */);
+				throw StorageIncompleteBinData();
 			}
 			if (header.head.magic != STORAGE_MAGIC) {
-				throw std::exception(/* Corrupt file: Invalid magic number */);
+				throw StorageBadHeaderMagicNumber();
 			}
 			if (strncasecmp(header.head.uuid, uuid, sizeof(header.head.uuid))) {
-				throw std::exception(/* Corrupt file: UUID mismatch */);
+				throw StorageUUIDMismatch();
 			}
 			if (writable) {
 				buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
 				size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 				buffer_offset -= offset;
 				if (::pread(fd, buffer, sizeof(buffer), offset) == -1) {
-					throw std::exception(/* Cannot read from volume */);
+					throw StorageIOError();
 				}
 			}
 		}
@@ -146,10 +174,10 @@ public:
 
 	void seek(uint32_t offset) {
 		if (offset > header.head.offset) {
-			throw std::exception(/* Beyond EOF */);
+			throw StorageEOF();
 		}
 		if (::lseek(fd, offset * STORAGE_ALIGNMENT, SEEK_SET) == -1) {
-			throw std::exception(/* No open file */);
+			throw StorageNoFile();
 		}
 	}
 
@@ -217,13 +245,13 @@ public:
 
 		do_write:
 			if (::pwrite(fd, buffer, sizeof(buffer), block_offset) != sizeof(buffer)) {
-				throw std::exception(/* Cannot write to volume */);
+				throw StorageIOError();
 			}
 
 			if (buffer_offset == 0) {
 				block_offset += STORAGE_BLOCK_SIZE;
 				if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
-					throw std::exception(/* EOF */);
+					throw StorageEOF();
 				}
 #if STORAGE_BUFFER_CLEAR
 				memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
@@ -246,14 +274,18 @@ public:
 
 		if (!bin_header.size) {
 			if (::lseek(fd, 0, SEEK_CUR) >= header.head.offset * STORAGE_ALIGNMENT) {
-				throw std::exception(/* EOF */);
+				throw StorageEOF();
 			}
 
 			r = ::read(fd,  &bin_header, sizeof(StorageBinHeader));
 			if (r == -1) {
-				throw std::exception(/* Cannot read from volume */);
+				throw StorageIOError();
 			} else if (r != sizeof(StorageBinHeader)) {
-				throw std::exception(/* Corrupt File: Cannot read bin header */);
+				throw StorageIncompleteBinHeader();
+			}
+
+			if (bin_header.magic != STORAGE_BIN_HEADER_MAGIC) {
+				throw StorageBadBinHeaderMagicNumber();
 			}
 		}
 
@@ -264,9 +296,9 @@ public:
 		if (buf_size) {
 			r = ::read(fd, buf, buf_size);
 			if (r == -1) {
-				throw std::exception(/* Cannot read from volume */);
+				throw StorageIOError();
 			} else if (r != buf_size) {
-				throw std::exception(/* Corrupt File: Cannot read data */);
+				throw StorageIncompleteBinData();
 			}
 
 			bin_size += r;
@@ -275,12 +307,17 @@ public:
 		} else {
 			r = ::read(fd, &bin_footer, sizeof(StorageBinFooter));
 			if (r == -1) {
-				throw std::exception(/* Cannot read from volume */);
+				throw StorageIOError();
 			} else if (r != sizeof(StorageBinFooter)) {
-				throw std::exception(/* Corrupt File: Cannot read bin footer */);
+				throw StorageIncompleteBinFooter();
+			}
+
+			if (bin_footer.magic != STORAGE_BIN_FOOTER_MAGIC) {
+				throw StorageBadBinFooterMagicNumber();
 			}
 
 			// FIXME: Verify whole read bin checksum here
+			// throw StorageBadBinChecksum();
 
 			bin_header.size = 0;
 			bin_size = 0;
@@ -291,7 +328,7 @@ public:
 
 	void flush() {
 		if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
-			throw std::exception(/* Cannot write to volume */);
+			throw StorageIOError();
 		}
 	}
 
@@ -310,7 +347,7 @@ public:
 		}
 
 		if (r == -1) {
-			throw std::exception(/* Cannot read from volume */);
+			throw StorageIOError();
 		}
 		return ret;
 	}
