@@ -115,6 +115,7 @@ class Storage {
 	uint32_t buffer_offset;
 
 	size_t bin_size;
+	off_t bin_offset;
 	StorageBinHeader bin_header;
 	StorageBinFooter bin_footer;
 
@@ -126,6 +127,7 @@ public:
 		: fd(0),
 		  buffer_offset(0),
 		  bin_size(0),
+		  bin_offset(0),
 		  bin_header(0) { }
 
 	~Storage() {
@@ -190,9 +192,7 @@ public:
 		if (offset > header.head.offset) {
 			throw StorageEOF();
 		}
-		if (::lseek(fd, offset * STORAGE_ALIGNMENT, SEEK_SET) == -1) {
-			throw StorageNoFile();
-		}
+		bin_offset = offset * STORAGE_ALIGNMENT;
 	}
 
 	uint32_t write(const char *data, size_t data_size) {
@@ -287,7 +287,7 @@ public:
 		ssize_t r;
 
 		if (!bin_header.size) {
-			if (::lseek(fd, 0, SEEK_CUR) >= header.head.offset * STORAGE_ALIGNMENT) {
+			if (::lseek(fd, bin_offset, SEEK_SET) >= header.head.offset * STORAGE_ALIGNMENT) {
 				throw StorageEOF();
 			}
 
@@ -297,6 +297,7 @@ public:
 			} else if (r != sizeof(StorageBinHeader)) {
 				throw StorageIncompleteBinHeader();
 			}
+			bin_offset += r;
 
 			if (bin_header.magic != STORAGE_BIN_HEADER_MAGIC) {
 				throw StorageBadBinHeaderMagicNumber();
@@ -314,6 +315,7 @@ public:
 			} else if (static_cast<size_t>(r) != buf_size) {
 				throw StorageIncompleteBinData();
 			}
+			bin_offset += r;
 
 			bin_size += r;
 			// FIXME: bin_checksum update
@@ -329,6 +331,7 @@ public:
 			if (bin_footer.magic != STORAGE_BIN_FOOTER_MAGIC) {
 				throw StorageBadBinFooterMagicNumber();
 			}
+			bin_offset += r;
 
 			// FIXME: Verify whole read bin checksum here
 			// throw StorageBadBinChecksum();
