@@ -72,8 +72,9 @@ struct StorageHeader {
 		uint32_t magic;
 		uint16_t offset;
 		char uuid[36];
-		StorageHeaderHead() : magic(STORAGE_MAGIC), offset(STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT) {}
+		StorageHeaderHead() : magic(STORAGE_MAGIC), offset(STORAGE_START_BLOCK_OFFSET) { }
 	} head;
+
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
 };
 
@@ -299,7 +300,7 @@ public:
 			r = ::read(fd, buf, buf_size);
 			if (r == -1) {
 				throw StorageIOError();
-			} else if (r != buf_size) {
+			} else if (static_cast<size_t>(r) != buf_size) {
 				throw StorageIncompleteBinData();
 			}
 
