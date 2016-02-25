@@ -28,19 +28,20 @@
 #include "hash/md5.h"
 #include "xapiand.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <string>
 #include <thread>
 #include <mutex>
+#include <fcntl.h>
 
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <algorithm>
 #include <xapian.h>
-#include <unistd.h>
+#include <sys/attr.h>
 #include <sys/stat.h>
 
 #include <sys/socket.h>
@@ -917,3 +918,76 @@ void _tcp_nopush(int sock, int optval) {
 	}
 #endif
 }
+
+
+#ifndef HAVE_PREAD
+ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
+	lseek(fd, offset, SEEK_SET);
+	ssize_t ret = read(fd, buf, nbyte);
+	return ret;
+}
+#endif
+
+
+#ifndef HAVE_PWRITE
+ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
+	lseek(fd, offset, SEEK_SET);
+	ssize_t ret = write(fd, buf, nbyte);
+	return ret;
+}
+#endif
+
+
+#ifndef HAVE_FALLOCATE
+int fallocate(int fd, int mode, off_t offset, off_t len)
+{
+#if defined(HAVE_POSIX_FALLOCATE)
+	return posix_fallocate(fd, offset, len);
+#elif defined(__APPLE__) && defined(__MACH__)
+	// Try to get a continous chunk of disk space
+	fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, offset, len, 0};
+	int ret = fcntl(fd, F_PREALLOCATE, &store);
+	if(ret < 0){
+		// OK, perhaps we are too fragmented, allocate non-continuous
+		store.fst_flags = F_ALLOCATEALL;
+		ret = fcntl(fd, F_PREALLOCATE, &store);
+	}
+	ftruncate(fd, len);
+	return ret;
+#else
+	// The following is copied from fcntlSizeHint in sqlite
+	/* If the OS does not have posix_fallocate(), fake it. First use
+	 ** ftruncate() to set the file size, then write a single byte to
+	 ** the last byte in each block within the extended region. This
+	 ** is the same technique used by glibc to implement posix_fallocate()
+	 ** on systems that do not have a real fallocate() system call.
+	 */
+
+	struct stat buf;
+	if (fstat(fd, &buf))
+		return -1;
+
+	if (buf.st_size >= len)
+		return -1;
+
+	const int nBlk = buf.st_blksize;
+
+	if (!nBlk)
+		return -1;
+
+	if (ftruncate(fd, len))
+		return -1;
+
+	int nWrite;
+	off_t iWrite = ((buf.st_size + 2 * nBlk - 1) / nBlk) * nBlk - 1; // Next offset to write to
+	do {
+		nWrite = 0;
+		if (lseek(fd, iWrite, SEEK_SET) == iWrite) {
+			nWrite = ::write(fd, "", 1);
+		}
+		iWrite += nBlk;
+	} while (nWrite == 1 && iWrite < len);
+	return 0;
+#endif
+}
+#endif

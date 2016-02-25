@@ -42,7 +42,7 @@ AX_PTHREAD_GET_NAME
 AC_CHECK_HEADERS([pthread.h fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
 
 # Checks for library functions.
-AC_CHECK_FUNCS([getcwd gettimeofday socket pread pwrite])
+AC_CHECK_FUNCS([getcwd gettimeofday socket pread pwrite fallocate posix_fallocate])
 
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [], [-lpthread])

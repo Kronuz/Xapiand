@@ -148,27 +148,6 @@ inline bool ignored_errorno(int e, bool udp) {
 }
 
 
-#ifndef HAVE_PREAD
-ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
-	cur_pos = lseek(fd, 0, SEEK_CUR);
-	lseek(fd, offset, SEEK_SET);
-	ssize_t ret = read(fd, buf, nbyte);
-	lseek(fd, cur_pos, SEEK_SET);
-	return ret;
-}
-#endif
-
-#ifndef HAVE_PWRITE
-ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
-	cur_pos = lseek(fd, 0, SEEK_CUR);
-	lseek(fd, offset, SEEK_SET);
-	ssize_t ret = write(fd, buf, nbyte);
-	lseek(fd, cur_pos, SEEK_SET);
-	return ret;
-}
-#endif
-
-
 std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
@@ -217,6 +196,19 @@ void fill_zeros_stats_min(uint16_t start, uint16_t end);
 void fill_zeros_stats_sec(uint8_t start, uint8_t end);
 void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy);
 void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy);
+
+#ifndef HAVE_PREAD
+ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
+#endif
+
+#ifndef HAVE_PWRITE
+ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset);
+#endif
+
+#ifndef HAVE_FALLOCATE
+int fallocate(int fd, int mode, off_t offset, off_t len);
+#endif
+
 
 // Levenshtein distance is a string metric for measuring the difference between two
 // sequences (known as edit distance).
