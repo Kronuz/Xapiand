@@ -100,7 +100,6 @@ class Storage {
 	std::string path;
 	bool writable;
 	int fd;
-	uint8_t volume;
 
 	char buffer[STORAGE_BLOCK_SIZE];
 	uint32_t buffer_offset;
@@ -110,11 +109,8 @@ class Storage {
 	StorageBinFooter bin_footer;
 
 public:
-	Storage(const std::string& path_, bool writable_)
-		: path(path_),
-		  writable(writable_),
-		  fd(0),
-		  volume(0),
+	Storage()
+		: fd(0),
 		  buffer_offset(0),
 		  bin_size(0),
 		  bin_header(0) { }
@@ -123,8 +119,11 @@ public:
 		close();
 	}
 
-	void open(uint8_t volume_, const char* uuid) {
+	void open(const std::string& path_, bool writable_, const char* uuid) {
 		close();
+
+		path = path_;
+		writable = writable_;
 
 #if STORAGE_BUFFER_CLEAR
 		if (writable) {
@@ -132,10 +131,9 @@ public:
 		}
 #endif
 
-		volume = volume_;
-		fd = ::open((path + std::to_string(volume)).c_str(), writable ? O_RDWR | O_DSYNC : O_RDONLY, 0644);
+		fd = ::open(path.c_str(), writable ? O_RDWR | O_DSYNC : O_RDONLY, 0644);
 		if (fd == -1) {
-			fd = ::open((path + std::to_string(volume)).c_str(), writable ? O_RDWR | O_CREAT | O_DSYNC : O_RDONLY, 0644);
+			fd = ::open(path.c_str(), writable ? O_RDWR | O_CREAT | O_DSYNC : O_RDONLY, 0644);
 			if (fd == -1) {
 				throw StorageIOError();
 			}
