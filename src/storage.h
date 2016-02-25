@@ -119,7 +119,7 @@ public:
 		close();
 	}
 
-	void open(const std::string& path_, bool writable_, const char* uuid) {
+	void open(const std::string& path_, const std::string& uuid, bool writable_) {
 		close();
 
 		path = path_;
@@ -138,7 +138,7 @@ public:
 				throw StorageIOError();
 			}
 			memset(reinterpret_cast<char*>(&header) + sizeof(header.head), 0, sizeof(header) - sizeof(header.head));
-			strncpy(header.head.uuid, uuid, sizeof(header.head.uuid));
+			strncpy(header.head.uuid, uuid.c_str(), sizeof(header.head.uuid));
 			if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 				throw StorageIOError();
 			}
@@ -152,7 +152,7 @@ public:
 			if (header.head.magic != STORAGE_MAGIC) {
 				throw StorageBadHeaderMagicNumber();
 			}
-			if (strncasecmp(header.head.uuid, uuid, sizeof(header.head.uuid))) {
+			if (strncasecmp(header.head.uuid, uuid.c_str(), sizeof(header.head.uuid))) {
 				throw StorageUUIDMismatch();
 			}
 			if (writable) {
