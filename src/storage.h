@@ -154,11 +154,11 @@ public:
 			}
 			memset(reinterpret_cast<char*>(&header) + sizeof(header.head), 0, sizeof(header) - sizeof(header.head));
 			strncpy(header.head.uuid, uuid.c_str(), sizeof(header.head.uuid));
-			if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
+			if (::write(fd, &header, sizeof(header)) != sizeof(header)) {
 				throw StorageIOError();
 			}
 		} else {
-			ssize_t r = ::pread(fd, &header, sizeof(header), 0);
+			ssize_t r = ::read(fd, &header, sizeof(header));
 			if (r == -1) {
 				throw StorageIOError();
 			} else if (r != sizeof(header)) {
