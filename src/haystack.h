@@ -105,11 +105,11 @@ public:
 			header.head.magic = HAYSTACK_MAGIC;
 			header.head.offset = HAYSTACK_BLOCK_SIZE / HAYSTACK_ALIGNMENT;
 			strcpy(header.head.uuid, uuid);  // FIXME
-			if (pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
+			if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 				throw std::exception(/* Cannot write to volume */);
 			}
 		} else {
-			ssize_t r = pread(fd, &header, sizeof(header), 0);
+			ssize_t r = ::pread(fd, &header, sizeof(header), 0);
 			if (r == -1) {
 				throw std::exception(/* Cannot read from volume */);
 			} else if (r != sizeof(header)) {
@@ -125,7 +125,7 @@ public:
 				buffer_offset = header.head.offset * HAYSTACK_ALIGNMENT;
 				size_t offset = (buffer_offset / HAYSTACK_BLOCK_SIZE) * HAYSTACK_BLOCK_SIZE;
 				buffer_offset -= offset;
-				if (pread(fd, buffer, sizeof(buffer), offset) == -1) {
+				if (::pread(fd, buffer, sizeof(buffer), offset) == -1) {
 					throw std::exception(/* Cannot read from volume */);
 				}
 			}
@@ -143,7 +143,7 @@ public:
 		if (offset > header.head.offset) {
 			throw std::exception(/* Beyond EOF */);
 		}
-		if (lseek(fd, offset * HAYSTACK_ALIGNMENT, SEEK_SET) == -1) {
+		if (::lseek(fd, offset * HAYSTACK_ALIGNMENT, SEEK_SET) == -1) {
 			throw std::exception(/* No open file */);
 		}
 	}
@@ -207,7 +207,7 @@ public:
 			}
 
 		do_write:
-			if (pwrite(fd, buffer, sizeof(buffer), block_offset) != sizeof(buffer)) {
+			if (::pwrite(fd, buffer, sizeof(buffer), block_offset) != sizeof(buffer)) {
 				throw std::exception(/* Cannot write to volume */);
 			}
 
@@ -272,7 +272,7 @@ public:
 	}
 
 	void flush() {
-		if (pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
+		if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 			throw std::exception(/* Cannot write to volume */);
 		}
 	}
