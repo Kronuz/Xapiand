@@ -252,6 +252,10 @@ public:
 				bin_footer_data_size -= size;
 				bin_footer_data += size;
 				buffer_offset += size;
+
+				// Align the buffer_offset to the next storage alignment
+				buffer_offset = ((block_offset + buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset;
+
 				if (buffer_offset == sizeof(buffer)) {
 					buffer_offset = 0;
 					goto do_write;
@@ -332,6 +336,9 @@ public:
 				throw StorageBadBinFooterMagicNumber();
 			}
 			bin_offset += r;
+
+			// Align the bin_offset to the next storage alignment
+			bin_offset = ((bin_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT;
 
 			// FIXME: Verify whole read bin checksum here
 			// throw StorageBadBinChecksum();
