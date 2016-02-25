@@ -179,6 +179,7 @@ public:
 				}
 			}
 		}
+		seek(STORAGE_START_BLOCK_OFFSET);
 	}
 
 	void close() {
@@ -273,9 +274,8 @@ public:
 			}
 		}
 
-		seek(STORAGE_START_BLOCK_OFFSET);
-
 		header.head.offset += (((sizeof(StorageBinHeader) + data_size_orig + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
+
 		return current_offset;
 	}
 
