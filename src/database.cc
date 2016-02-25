@@ -578,15 +578,17 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 #endif
 
 
-Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_)
-	: wal(this),
-	  weak_queue(queue_),
-	  endpoints(endpoints_),
-	  flags(flags_),
-	  hash(endpoints.hash()),
-	  access_time(system_clock::now()),
-	  modified(false),
-	  mastery_level(-1)
+Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_) :
+#ifdef XAPIAND_DATABASE_WAL
+	wal(this),
+#endif
+	weak_queue(queue_),
+	endpoints(endpoints_),
+	flags(flags_),
+	hash(endpoints.hash()),
+	access_time(system_clock::now()),
+	modified(false),
+	mastery_level(-1)
 {
 	L_CALL(this, "Database::Database()");
 

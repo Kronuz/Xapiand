@@ -335,6 +335,7 @@ BinaryClient::get_message(double timeout, std::string &result, int)
 {
 	int message_type = static_cast<int>(get_message(timeout, result));
 
+#ifdef XAPIAND_DATABASE_WAL
 	DatabaseWAL::Type wal_type = DatabaseWAL::Type::MAX;
 	switch (message_type) {
 		case 14:  // MSG_ADDDOCUMENT
@@ -374,6 +375,7 @@ BinaryClient::get_message(double timeout, std::string &result, int)
 		databases.at(wdb)->wal.write(wal_type, result);
 		release_db(wdb);
 	}
+#endif
 
 	return message_type;
 }
