@@ -72,7 +72,11 @@ struct StorageHeader {
 		uint32_t magic;
 		uint16_t offset;
 		char uuid[36];
-		StorageHeaderHead() : magic(STORAGE_MAGIC), offset(STORAGE_START_BLOCK_OFFSET) { }
+		StorageHeaderHead() {
+			memset(this, 0, sizeof(*this));
+			magic = STORAGE_MAGIC;
+			offset = STORAGE_START_BLOCK_OFFSET;
+		}
 	} head;
 
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
@@ -82,13 +86,20 @@ struct StorageHeader {
 struct StorageBinHeader {
 	char magic;
 	uint32_t size;
-	StorageBinHeader(uint32_t size_) : magic(STORAGE_BIN_HEADER_MAGIC), size(size_) { };
+	StorageBinHeader(uint32_t size_) {
+		memset(this, 0, sizeof(*this));
+		magic = STORAGE_BIN_HEADER_MAGIC;
+		size = size_;
+	};
 };
 
 struct StorageBinFooter {
 	uint32_t crc32;
 	char magic;
-	StorageBinFooter() : crc32(0), magic(STORAGE_BIN_FOOTER_MAGIC) { };
+	StorageBinFooter() {
+		memset(this, 0, sizeof(*this));
+		magic = STORAGE_BIN_FOOTER_MAGIC;
+	};
 };
 #pragma pack(pop)
 
