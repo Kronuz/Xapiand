@@ -95,7 +95,6 @@ struct StorageBinFooter {
 
 template <typename StorageHeader, typename StorageBinHeader, typename StorageBinFooter>
 class Storage {
-	StorageHeader header;
 
 	std::string path;
 	bool writable;
@@ -107,6 +106,9 @@ class Storage {
 	size_t bin_size;
 	StorageBinHeader bin_header;
 	StorageBinFooter bin_footer;
+
+protected:
+	StorageHeader header;
 
 public:
 	Storage()
