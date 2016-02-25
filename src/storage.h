@@ -43,26 +43,28 @@
 
 #define STORAGE_LAST_BLOCK_OFFSET (static_cast<off_t>(std::numeric_limits<uint32_t>::max()) * STORAGE_ALIGNMENT)
 
+#define STORAGE_START_BLOCK_OFFSET (STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT)
 
-class StorageException {};
 
-class StorageIOError : public StorageException {};
+class StorageException { };
 
-class StorageEOF : public StorageException {};
+class StorageIOError : public StorageException { };
 
-class StorageNoFile : public StorageException {};
+class StorageEOF : public StorageException { };
 
-class StorageCorruptVolume : public StorageException {};
-class StorageUUIDMismatch : public StorageCorruptVolume {};
-class StorageBadMagicNumber : public StorageCorruptVolume {};
-class StorageBadHeaderMagicNumber : public StorageBadMagicNumber {};
-class StorageBadBinHeaderMagicNumber : public StorageBadMagicNumber {};
-class StorageBadBinFooterMagicNumber : public StorageBadMagicNumber {};
-class StorageBadBinChecksum : public StorageCorruptVolume {};
-class StorageIncomplete : public StorageCorruptVolume {};
-class StorageIncompleteBinHeader : public StorageIncomplete {};
-class StorageIncompleteBinData : public StorageIncomplete {};
-class StorageIncompleteBinFooter : public StorageIncomplete {};
+class StorageNoFile : public StorageException { };
+
+class StorageCorruptVolume : public StorageException { };
+class StorageUUIDMismatch : public StorageCorruptVolume { };
+class StorageBadMagicNumber : public StorageCorruptVolume { };
+class StorageBadHeaderMagicNumber : public StorageBadMagicNumber { };
+class StorageBadBinHeaderMagicNumber : public StorageBadMagicNumber { };
+class StorageBadBinFooterMagicNumber : public StorageBadMagicNumber { };
+class StorageBadBinChecksum : public StorageCorruptVolume { };
+class StorageIncomplete : public StorageCorruptVolume { };
+class StorageIncompleteBinHeader : public StorageIncomplete { };
+class StorageIncompleteBinData : public StorageIncomplete { };
+class StorageIncompleteBinFooter : public StorageIncomplete { };
 
 
 struct StorageHeader {
@@ -108,13 +110,13 @@ class Storage {
 
 public:
 	Storage(const std::string& path_, bool writable_)
-	: path(path_),
-	  writable(writable_),
-	  fd(0),
-	  volume(0),
-	  buffer_offset(0),
-	  bin_size(0),
-	  bin_header(0) { }
+		: path(path_),
+		  writable(writable_),
+		  fd(0),
+		  volume(0),
+		  buffer_offset(0),
+		  bin_size(0),
+		  bin_header(0) { }
 
 	~Storage() {
 		close();
@@ -259,7 +261,7 @@ public:
 			}
 		}
 
-		seek(STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT);
+		seek(STORAGE_START_BLOCK_OFFSET);
 
 		header.head.offset += (((sizeof(StorageBinHeader) + data_size_orig + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 		return current_offset;
