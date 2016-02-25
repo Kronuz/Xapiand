@@ -22,9 +22,13 @@
 
 #pragma once
 
+#include "xapiand.h"
+
 #include <fcntl.h>
 #include <string>
 #include <unistd.h>
+
+#include <limits>
 
 
 #define HAYSTACK_MAGIC 0x123456
@@ -35,14 +39,16 @@
 #define HAYSTACK_BUFFER_CLEAR 1
 #define HAYSTACK_BUFFER_CLEAR_CHAR '='
 
-#pragma pack(push, 1)
+#define HAYSTACK_LAST_BLOCK_OFFSET (static_cast<off_t>(std::numeric_limits<uint32_t>::max()) * HAYSTACK_ALIGNMENT)
+
+
 struct HaystackHeader {
 	struct head_t {
 		uint32_t magic;
 		uint16_t offset;
 		char uuid[36];
 	} head;
-	char padding[HAYSTACK_BLOCK_SIZE - sizeof(head_t)];
+	char padding[(HAYSTACK_BLOCK_SIZE - sizeof(head_t)) / sizeof(char)];
 };
 struct HaystackNeedleHeader {
 	uint32_t size;
@@ -52,7 +58,6 @@ struct HaystackNeedleFooter {
 	uint32_t crc32;
 	HaystackNeedleFooter() : crc32(0) { };
 };
-#pragma pack(pop)
 
 
 template <typename HaystackHeader, typename HaystackNeedleHeader, typename HaystackNeedleFooter>
@@ -215,11 +220,15 @@ public:
 
 			if (buffer_offset == 0) {
 				block_offset += HAYSTACK_BLOCK_SIZE;
+				if (block_offset >= HAYSTACK_LAST_BLOCK_OFFSET) {
+					throw std::exception(/* EOF */);
+				}
 #if HAYSTACK_BUFFER_CLEAR
 				memset(buffer, HAYSTACK_BUFFER_CLEAR_CHAR, sizeof(buffer));
 #endif
 			}
 		}
+
 		seek(HAYSTACK_BLOCK_SIZE / HAYSTACK_ALIGNMENT);
 
 		header.head.offset += (((sizeof(HaystackNeedleHeader) + data_size_orig + sizeof(HaystackNeedleFooter)) + HAYSTACK_ALIGNMENT - 1) / HAYSTACK_ALIGNMENT);
