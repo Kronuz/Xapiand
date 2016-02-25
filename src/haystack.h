@@ -151,6 +151,8 @@ public:
 	void write(const char *data, size_t data_size) {
 		// FIXME: Compress data here!
 
+		size_t data_size_orig = data_size;
+
 		HaystackNeedleHeader needle_header(data_size);
 		const HaystackNeedleHeader* needle_header_data = &needle_header;
 		size_t needle_header_data_size = sizeof(HaystackNeedleHeader);
@@ -220,7 +222,7 @@ public:
 		}
 		seek(HAYSTACK_BLOCK_SIZE / HAYSTACK_ALIGNMENT);
 
-		header.head.offset += (((sizeof(HaystackNeedleHeader) + data_size + sizeof(HaystackNeedleFooter)) + HAYSTACK_ALIGNMENT - 1) / HAYSTACK_ALIGNMENT);
+		header.head.offset += (((sizeof(HaystackNeedleHeader) + data_size_orig + sizeof(HaystackNeedleFooter)) + HAYSTACK_ALIGNMENT - 1) / HAYSTACK_ALIGNMENT);
 	}
 
 	size_t read(char *buf, size_t buf_size) {
