@@ -72,7 +72,7 @@ struct StorageHeader {
 		char uuid[36];
 		StorageHeaderHead() : magic(STORAGE_MAGIC), offset(STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT) {}
 	} head;
-	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeaderHead)) / sizeof(char)];
+	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
 };
 
 #pragma pack(push, 1)
@@ -85,7 +85,7 @@ struct StorageBinHeader {
 struct StorageBinFooter {
 	uint32_t crc32;
 	char magic;
-	StorageBinFooter() : magic(STORAGE_BIN_FOOTER_MAGIC), crc32(0) { };
+	StorageBinFooter() : crc32(0), magic(STORAGE_BIN_FOOTER_MAGIC) { };
 };
 #pragma pack(pop)
 
@@ -136,7 +136,7 @@ public:
 			if (fd == -1) {
 				throw StorageIOError();
 			}
-			memset(&header + sizeof(StorageHeaderHead), 0, sizeof(header) - sizeof(StorageHeaderHead));
+			memset(&header + sizeof(StorageHeader::StorageHeaderHead), 0, sizeof(header) - sizeof(StorageHeader::StorageHeaderHead));
 			strncpy(header.head.uuid, uuid, sizeof(header.head.uuid));
 			if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 				throw StorageIOError();
