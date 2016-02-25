@@ -138,7 +138,7 @@ public:
 			if (fd == -1) {
 				throw StorageIOError();
 			}
-			memset(&header + sizeof(header.head), 0, sizeof(header) - sizeof(header.head));
+			memset(reinterpret_cast<char*>(&header) + sizeof(header.head), 0, sizeof(header) - sizeof(header.head));
 			strncpy(header.head.uuid, uuid, sizeof(header.head.uuid));
 			if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 				throw StorageIOError();
