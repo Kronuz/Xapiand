@@ -149,7 +149,7 @@
 		C365BE451C3466B900F6E3AE /* msgpack.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack.cc; path = src/msgpack.cc; sourceTree = "<group>"; };
 		C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack_patcher.cc; path = src/msgpack_patcher.cc; sourceTree = "<group>"; };
 		C365BE4E1C4DABBB00F6E3AE /* msgpack_patcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = msgpack_patcher.h; path = src/msgpack_patcher.h; sourceTree = "<group>"; };
-		C36A3EB01C7E71EB00B226D6 /* haystack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = haystack.h; path = src/haystack.h; sourceTree = "<group>"; };
+		C36A3EB21C7F5D0B00B226D6 /* storage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = storage.h; path = src/storage.h; sourceTree = "<group>"; };
 		C37DFFC31C18B3AD0095ADB0 /* forward_list.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = forward_list.h; path = src/forward_list.h; sourceTree = "<group>"; };
 		C39AE0391B2F627E00203139 /* client_base.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = client_base.cc; path = src/client_base.cc; sourceTree = "<group>"; };
 		C39AE03A1B2F627E00203139 /* client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = client_base.h; path = src/client_base.h; sourceTree = "<group>"; };
@@ -250,7 +250,6 @@
 				4630BEDF1B42E88D00351058 /* geometry.h */,
 				46B6B3CF1B7E4A1B000FA041 /* geospatialrange.cc */,
 				46B6B3CE1B7E4A1B000FA041 /* geospatialrange.h */,
-				C36A3EB01C7E71EB00B226D6 /* haystack.h */,
 				4630BEE01B42E88D00351058 /* htm.cc */,
 				4630BEE11B42E88D00351058 /* htm.h */,
 				46DFA9AF1BC4800E008D8144 /* http.cc */,
@@ -311,6 +310,7 @@
 				46DFA9971BC3014E008D8144 /* server_raft.h */,
 				462C9EB01C18FC2200BB960E /* sha256.cc */,
 				462C9EB41C18FC2200BB960E /* sha256.h */,
+				C36A3EB21C7F5D0B00B226D6 /* storage.h */,
 				46DFA9B01BC4800E008D8144 /* tcp_base.cc */,
 				46DFA9AC1BC4800E008D8144 /* tcp_base.h */,
 				C39AE05B1B2F627E00203139 /* threadpool.h */,

@@ -165,6 +165,7 @@ noinst_HEADERS = \
 	sparsehash/sparsetable \
 	sparsehash/template_util.h \
 	sparsehash/type_traits.h \
+	storage.h \
 	tclap/Arg.h \
 	tclap/ArgException.h \
 	tclap/ArgTraits.h \

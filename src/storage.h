@@ -31,71 +31,71 @@
 #include <limits>
 
 
-#define HAYSTACK_MAGIC 0x123456
+#define STORAGE_MAGIC 0x123456
 
-#define HAYSTACK_BLOCK_SIZE (1024 * 4)
-#define HAYSTACK_ALIGNMENT 8
+#define STORAGE_BLOCK_SIZE (1024 * 4)
+#define STORAGE_ALIGNMENT 8
 
-#define HAYSTACK_BUFFER_CLEAR 1
-#define HAYSTACK_BUFFER_CLEAR_CHAR '='
+#define STORAGE_BUFFER_CLEAR 1
+#define STORAGE_BUFFER_CLEAR_CHAR '='
 
-#define HAYSTACK_LAST_BLOCK_OFFSET (static_cast<off_t>(std::numeric_limits<uint32_t>::max()) * HAYSTACK_ALIGNMENT)
+#define STORAGE_LAST_BLOCK_OFFSET (static_cast<off_t>(std::numeric_limits<uint32_t>::max()) * STORAGE_ALIGNMENT)
 
 
-struct HaystackHeader {
+struct StorageHeader {
 	struct head_t {
 		uint32_t magic;
 		uint16_t offset;
 		char uuid[36];
 	} head;
-	char padding[(HAYSTACK_BLOCK_SIZE - sizeof(head_t)) / sizeof(char)];
+	char padding[(STORAGE_BLOCK_SIZE - sizeof(head_t)) / sizeof(char)];
 };
-struct HaystackNeedleHeader {
+struct StorageBinHeader {
 	uint32_t size;
-	HaystackNeedleHeader(uint32_t size_) : size(size_) { };
+	StorageBinHeader(uint32_t size_) : size(size_) { };
 };
-struct HaystackNeedleFooter {
+struct StorageBinFooter {
 	uint32_t crc32;
-	HaystackNeedleFooter() : crc32(0) { };
+	StorageBinFooter() : crc32(0) { };
 };
 
 
-template <typename HaystackHeader, typename HaystackNeedleHeader, typename HaystackNeedleFooter>
-class Haystack {
-	HaystackHeader header;
+template <typename StorageHeader, typename StorageBinHeader, typename StorageBinFooter>
+class Storage {
+	StorageHeader header;
 
 	std::string path;
 	bool writable;
 	int fd;
 	uint8_t volume;
 
-	char buffer[HAYSTACK_BLOCK_SIZE];
+	char buffer[STORAGE_BLOCK_SIZE];
 	uint32_t buffer_offset;
 
-	size_t needle_total;
-	HaystackNeedleHeader needle_header;
-	HaystackNeedleFooter needle_footer;
+	size_t bin_size;
+	StorageBinHeader bin_header;
+	StorageBinFooter bin_footer;
 
 public:
-	Haystack(const std::string& path_, bool writable_)
+	Storage(const std::string& path_, bool writable_)
 	: path(path_),
 	  writable(writable_),
 	  fd(0),
 	  volume(0),
 	  buffer_offset(0),
-	  needle_total(0),
-	  needle_header(0) { }
+	  bin_size(0),
+	  bin_header(0) { }
 
-	~Haystack() {
+	~Storage() {
 		close();
 	}
 
 	void open(uint8_t volume_, const char* uuid) {
 		close();
 
-#if HAYSTACK_BUFFER_CLEAR
+#if STORAGE_BUFFER_CLEAR
 		if (writable) {
-			memset(buffer, HAYSTACK_BUFFER_CLEAR_CHAR, sizeof(buffer));
+			memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
 		}
 #endif
 
@@ -107,8 +107,8 @@ public:
 				throw std::exception();
 			}
 			memset(&header, 0, sizeof(header));
-			header.head.magic = HAYSTACK_MAGIC;
-			header.head.offset = HAYSTACK_BLOCK_SIZE / HAYSTACK_ALIGNMENT;
+			header.head.magic = STORAGE_MAGIC;
+			header.head.offset = STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT;
 			strcpy(header.head.uuid, uuid);  // FIXME
 			if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 				throw std::exception(/* Cannot write to volume */);
@@ -120,15 +120,15 @@ public:
 			} else if (r != sizeof(header)) {
 				throw std::exception(/* Corrupt File: Cannot read data */);
 			}
-			if (header.head.magic != HAYSTACK_MAGIC) {
+			if (header.head.magic != STORAGE_MAGIC) {
 				throw std::exception(/* Corrupt file: Invalid magic number */);
 			}
 			if (strncasecmp(header.head.uuid, uuid, sizeof(header.head.uuid))) {
 				throw std::exception(/* Corrupt file: UUID mismatch */);
 			}
 			if (writable) {
-				buffer_offset = header.head.offset * HAYSTACK_ALIGNMENT;
-				size_t offset = (buffer_offset / HAYSTACK_BLOCK_SIZE) * HAYSTACK_BLOCK_SIZE;
+				buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
+				size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 				buffer_offset -= offset;
 				if (::pread(fd, buffer, sizeof(buffer), offset) == -1) {
 					throw std::exception(/* Cannot read from volume */);
@@ -148,7 +148,7 @@ public:
 		if (offset > header.head.offset) {
 			throw std::exception(/* Beyond EOF */);
 		}
-		if (::lseek(fd, offset * HAYSTACK_ALIGNMENT, SEEK_SET) == -1) {
+		if (::lseek(fd, offset * STORAGE_ALIGNMENT, SEEK_SET) == -1) {
 			throw std::exception(/* No open file */);
 		}
 	}
@@ -158,24 +158,24 @@ public:
 
 		size_t data_size_orig = data_size;
 
-		HaystackNeedleHeader needle_header(data_size);
-		const HaystackNeedleHeader* needle_header_data = &needle_header;
-		size_t needle_header_data_size = sizeof(HaystackNeedleHeader);
+		StorageBinHeader bin_header(data_size);
+		const StorageBinHeader* bin_header_data = &bin_header;
+		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
-		HaystackNeedleFooter needle_footer;
-		const HaystackNeedleFooter* needle_footer_data = &needle_footer;
-		size_t needle_footer_data_size = sizeof(HaystackNeedleFooter);
-		off_t block_offset = ((header.head.offset * HAYSTACK_ALIGNMENT) / HAYSTACK_BLOCK_SIZE) * HAYSTACK_BLOCK_SIZE;
+		StorageBinFooter bin_footer;
+		const StorageBinFooter* bin_footer_data = &bin_footer;
+		size_t bin_footer_data_size = sizeof(StorageBinFooter);
+		off_t block_offset = ((header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 
-		while (needle_header_data_size || data_size || needle_footer_data_size) {
-			if (needle_header_data_size) {
-				size_t size = HAYSTACK_BLOCK_SIZE - buffer_offset;
-				if (size > needle_header_data_size) {
-					size = needle_header_data_size;
+		while (bin_header_data_size || data_size || bin_footer_data_size) {
+			if (bin_header_data_size) {
+				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
+				if (size > bin_header_data_size) {
+					size = bin_header_data_size;
 				}
-				memcpy(buffer + buffer_offset, needle_header_data, size);
-				needle_header_data_size -= size;
-				needle_header_data += size;
+				memcpy(buffer + buffer_offset, bin_header_data, size);
+				bin_header_data_size -= size;
+				bin_header_data += size;
 				buffer_offset += size;
 				if (buffer_offset == sizeof(buffer)) {
 					buffer_offset = 0;
@@ -184,7 +184,7 @@ public:
 			}
 
 			if (data_size) {
-				size_t size = HAYSTACK_BLOCK_SIZE - buffer_offset;
+				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
 				if (size > data_size) {
 					size = data_size;
 				}
@@ -198,14 +198,14 @@ public:
 				}
 			}
 
-			if (needle_footer_data_size) {
-				size_t size = HAYSTACK_BLOCK_SIZE - buffer_offset;
-				if (size > needle_footer_data_size) {
-					size = needle_footer_data_size;
+			if (bin_footer_data_size) {
+				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
+				if (size > bin_footer_data_size) {
+					size = bin_footer_data_size;
 				}
-				memcpy(buffer + buffer_offset, needle_footer_data, size);
-				needle_footer_data_size -= size;
-				needle_footer_data += size;
+				memcpy(buffer + buffer_offset, bin_footer_data, size);
+				bin_footer_data_size -= size;
+				bin_footer_data += size;
 				buffer_offset += size;
 				if (buffer_offset == sizeof(buffer)) {
 					buffer_offset = 0;
@@ -219,19 +219,19 @@ public:
 			}
 
 			if (buffer_offset == 0) {
-				block_offset += HAYSTACK_BLOCK_SIZE;
-				if (block_offset >= HAYSTACK_LAST_BLOCK_OFFSET) {
+				block_offset += STORAGE_BLOCK_SIZE;
+				if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
 					throw std::exception(/* EOF */);
 				}
-#if HAYSTACK_BUFFER_CLEAR
-				memset(buffer, HAYSTACK_BUFFER_CLEAR_CHAR, sizeof(buffer));
+#if STORAGE_BUFFER_CLEAR
+				memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
 #endif
 			}
 		}
 
-		seek(HAYSTACK_BLOCK_SIZE / HAYSTACK_ALIGNMENT);
+		seek(STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT);
 
-		header.head.offset += (((sizeof(HaystackNeedleHeader) + data_size_orig + sizeof(HaystackNeedleFooter)) + HAYSTACK_ALIGNMENT - 1) / HAYSTACK_ALIGNMENT);
+		header.head.offset += (((sizeof(StorageBinHeader) + data_size_orig + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 	}
 
 	size_t read(char *buf, size_t buf_size) {
@@ -241,21 +241,21 @@ public:
 
 		ssize_t r;
 
-		if (!needle_header.size) {
-			if (::lseek(fd, 0, SEEK_CUR) >= header.head.offset * HAYSTACK_ALIGNMENT) {
+		if (!bin_header.size) {
+			if (::lseek(fd, 0, SEEK_CUR) >= header.head.offset * STORAGE_ALIGNMENT) {
 				throw std::exception(/* EOF */);
 			}
 
-			r = ::read(fd,  &needle_header, sizeof(HaystackNeedleHeader));
+			r = ::read(fd,  &bin_header, sizeof(StorageBinHeader));
 			if (r == -1) {
 				throw std::exception(/* Cannot read from volume */);
-			} else if (r != sizeof(HaystackNeedleHeader)) {
-				throw std::exception(/* Corrupt File: Cannot read needle header */);
+			} else if (r != sizeof(StorageBinHeader)) {
+				throw std::exception(/* Corrupt File: Cannot read bin header */);
 			}
 		}
 
-		if (buf_size > needle_header.size - needle_total) {
-			buf_size = needle_header.size - needle_total;
+		if (buf_size > bin_header.size - bin_size) {
+			buf_size = bin_header.size - bin_size;
 		}
 
 		if (buf_size) {
@@ -266,24 +266,24 @@ public:
 				throw std::exception(/* Corrupt File: Cannot read data */);
 			}
 
-			needle_total += r;
-			// FIXME: needle_checksum update
+			bin_size += r;
+			// FIXME: bin_checksum update
 
 		} else {
-			r = ::read(fd, &needle_footer, sizeof(HaystackNeedleFooter));
+			r = ::read(fd, &bin_footer, sizeof(StorageBinFooter));
 			if (r == -1) {
 				throw std::exception(/* Cannot read from volume */);
-			} else if (r != sizeof(HaystackNeedleFooter)) {
-				throw std::exception(/* Corrupt File: Cannot read needle footer */);
+			} else if (r != sizeof(StorageBinFooter)) {
+				throw std::exception(/* Corrupt File: Cannot read bin footer */);
 			}
 
-			// FIXME: Verify whole read needle checksum here
+			// FIXME: Verify whole read bin checksum here
 
-			needle_header.size = 0;
-			needle_total = 0;
+			bin_header.size = 0;
+			bin_size = 0;
 		}
 
-		return needle_total;
+		return bin_size;
 	}
 
 	void flush() {
