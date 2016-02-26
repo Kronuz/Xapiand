@@ -180,9 +180,9 @@ AC_ARG_WITH(binary-proxy,
 
 
 AC_ARG_ENABLE(database-wal,
-  [AS_HELP_STRING([--enable-database-wal], [use database write ahead log (WAL)])],
+  [AS_HELP_STRING([--disable-database-wal], [use database write ahead log (WAL)])],
   [enable_database_wal="$enableval"],
-  [enable_database_wal=no])
+  [enable_database_wal=yep])
 AC_MSG_CHECKING([whether to enable write ahead log (WAL)])
 case "$enable_database_wal" in
   y*)
