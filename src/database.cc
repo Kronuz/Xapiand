@@ -39,16 +39,11 @@
 
 #define DEFAULT_OFFSET "0" /* Replace for the real offset */
 
-#define WAL_MAX_SLOT 1000 /* Max commit number for file */
-
-#define PATH_WAL "/.wal/"
-
 #define FILE_WAL "wal."
 
 #define MAGIC 0xC0DE
 
 #define SIZE_UUID 36
-#define SIZE_WAL_HEADER (sizeof(int) + SIZE_UUID + sizeof(uint64_t))
 
 
 static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
@@ -64,22 +59,162 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 constexpr const char* const DatabaseWAL::names[];
 
 
-DatabaseWAL::DatabaseWAL(Database* _database)
-	: current_file_rev(0),
-	  fd_revision(-1),
-	  database(_database)
+void WalHeader::init(const void* storage)
 {
-	L_CALL(this, "DatabaseWAL::DatabaseWAL()");
+	const DatabaseWAL* s = static_cast<const DatabaseWAL*>(storage);
+
+	head.magic = MAGIC;
+	head.offset = STORAGE_START_BLOCK_OFFSET;
+	strncpy(head.uuid, s->database->get_uuid().c_str(), sizeof(head.uuid));
+	uint32_t revision = 0;
+	memcpy(&revision, s->database->get_revision_info().data(), s->database->get_revision_info().size());
+	head.revision = revision;
 }
 
 
-DatabaseWAL::~DatabaseWAL()
+void WalHeader::validate(const void* storage)
 {
-	L_CALL(this, "DatabaseWAL::~DatabaseWAL()");
+	const DatabaseWAL* s = static_cast<const DatabaseWAL*>(storage);
 
-	if (fd_revision != -1) {
-		close(fd_revision);
+	 if (head.magic != MAGIC) {
+		 throw StorageBadHeaderMagicNumber();
+	 }
+	 if (strncasecmp(head.uuid, s->database->get_uuid().c_str(), sizeof(head.uuid))) {
+		 throw StorageUUIDMismatch();
+	 }
+}
+
+
+void
+DatabaseWAL::open_current(const std::string& path, bool complete) //FIXME: write the revision in header
+{
+	L_CALL(this, "DatabaseWAL::open()");
+
+	uint64_t revision = 0;
+	revision = 0;
+	memcpy(&revision, database->get_revision_info().data(), database->get_revision_info().size());
+
+	DIR *dir = opendir(path.c_str(), true);
+	if (!dir) {
+		throw MSG_Error("Could not open the wal dir (%s)", strerror(errno));
 	}
+
+	uint64_t highest_revision = 0;
+	uint64_t lowest_revision = std::numeric_limits<uint64_t>::max();
+
+	File_ptr fptr;
+	find_file_dir(dir, fptr, FILE_WAL, true);
+
+	while (fptr.ent) {
+		try {
+			uint64_t file_revision = fget_revision(std::string(fptr.ent->d_name));
+			if (static_cast<long>(file_revision) >= static_cast<long>(revision - WAL_SLOTS)) {
+				if (file_revision < lowest_revision) {
+					lowest_revision = file_revision;
+				}
+
+				if (file_revision > highest_revision) {
+					highest_revision = file_revision;
+				}
+			}
+		} catch (const std::invalid_argument&) {
+			throw MSG_Error("In filename wal (%s)", strerror(errno));
+		} catch (const std::out_of_range&) {
+			throw MSG_Error("In filename wal (%s)", strerror(errno));
+		}
+
+		find_file_dir(dir, fptr, FILE_WAL, true);
+	}
+
+
+	//FIXME: handle exceptions
+	if (lowest_revision > revision) {
+		std::string file = path + "/" + FILE_WAL + std::to_string(revision);
+		open(file, true);
+	} else {
+		std::string file = path + "/" + FILE_WAL + std::to_string(highest_revision);
+		open(file, true);
+
+		long high_slot = highest_valid_slot(header.slot);
+
+		uint16_t start_off, end_off;
+		for (auto i = lowest_revision; i <= highest_revision; i++){
+
+			file = path + "/" + FILE_WAL + std::to_string(lowest_revision);
+			open(file, true);
+
+			if (i == lowest_revision) {
+				start_off = header.WalHeader::head.offset;;
+			} else {
+				start_off = STORAGE_START_BLOCK_OFFSET;
+			}
+			seek(start_off);
+
+			if (i == highest_revision) {
+				if (!complete) {
+					--high_slot;
+				}
+				end_off =  header.slot[high_slot];
+			} else {
+				end_off = std::numeric_limits<uint16_t>::max();
+			}
+
+			try {
+				while (start_off < end_off) {
+					std::string line = read_checked(start_off);
+					execute(line);
+				}
+			} catch (const StorageEOF& e){ }
+		}
+	}
+}
+
+
+std::string
+DatabaseWAL::read_checked(uint16_t& off_readed){
+	std::string ret;
+
+	ssize_t r;
+	char buf[1024];
+	while ((r = read(buf, sizeof(buf)))) {
+		off_readed += r;
+		ret += std::string(buf, r);
+	}
+
+	if (r == -1) {
+		throw StorageIOError();
+	}
+	return ret;
+}
+
+
+long
+DatabaseWAL::highest_valid_slot(const uint32_t slots[])
+{
+	L_CALL(this, "DatabaseWAL::highest_valid_slot()");
+
+	long slot = -1;
+	long wal_slots = static_cast<long> (WAL_SLOTS);
+	for (auto i = 0; i < wal_slots; i++) {
+		if (slots[i] == 0) {
+			break;
+		}
+		slot = i;
+	}
+	return slot;
+}
+
+
+uint64_t
+DatabaseWAL::fget_revision(const std::string& filename)
+{
+	L_CALL(this, "DatabaseWAL::fget_revision()");
+
+	std::size_t found = filename.find_last_of(".");
+	if (found == std::string::npos) {
+		throw std::invalid_argument("Revision not found in " + filename);
+	}
+	return std::stoul(filename.substr(found + 1));
 }
 
 
@@ -165,8 +300,9 @@ DatabaseWAL::execute(const std::string& line)
 }
 
 
+//FIXME: handle exception
 void
-DatabaseWAL::write(Type type, const std::string& data)
+DatabaseWAL::write_line(Type type, const std::string& data, bool commit)
 {
 	L_CALL(this, "DatabaseWAL::write()");
 
@@ -177,312 +313,34 @@ DatabaseWAL::write(Type type, const std::string& data)
 	auto endpoint = database->endpoints.cbegin();
 	std::string revision = database->get_revision_info();
 	std::string uuid = database->get_uuid();
-	std::string line = encode_length(revision.size()) + revision + encode_length(toUType(type)) + encode_length(data.size()) + data;
+	std::string line = encode_length(revision.size()) + revision + encode_length(toUType(type)) + data;
 
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint->path.c_str(), repr(line).c_str());
 
 	uint64_t rev = 0;
 	memcpy(&rev, revision.data(), revision.size());
-	++rev; //Revision of the operation
+	uint64_t slot = rev - header.head.revision;
 
-	if (current_file_rev + WAL_MAX_SLOT <= rev) {
-		close(fd_revision);
-		open(revision, endpoint->path);
+	if (slot >= WAL_SLOTS) {
+		close();
+		std::string file = endpoint->path + "/" + FILE_WAL + std::to_string(rev);
+		open(file, true);
 	}
 
-	off_t last_write_off = lseek(fd_revision, 0, SEEK_CUR);
-	::write(fd_revision, line.data(), line.size());
-	uint64_t slot = (rev - current_file_rev) + 1;
+	uint32_t new_off = write(line.data(), line.size());
+	header.slot[slot] = new_off;
 
-	off_t off_slot = SIZE_WAL_HEADER + (sizeof(off_t) * slot);
-	off_t update_slot;
-	pread(fd_revision, &update_slot, sizeof(off_t), off_slot);
-	if (update_slot == 0) {
-		update_slot = last_write_off;
-	}
-	update_slot += line.size();
-	pwrite(fd_revision, &update_slot, sizeof(off_t), off_slot);
-	fsync(fd_revision);
-}
-
-
-bool
-DatabaseWAL::_open(const uint64_t revision, const std::string& path, struct highest_revision& h)
-{
-	L_CALL(this, "DatabaseWAL::_open()");
-
-	bool exe_op = false;
-
-	std::string wal_dir = path + PATH_WAL;
-
-	DIR *dir = opendir(wal_dir.c_str(), true);
-	if (!dir) {
-		throw MSG_Error("Could not open the wal dir (%s)", strerror(errno));
-	}
-
-	uint64_t file_revision = std::numeric_limits<uint64_t>::max();
-	uint64_t target_rev;
-
-	File_ptr fptr;
-	find_file_dir(dir, fptr, FILE_WAL, true);
-
-	while (fptr.ent) {
-		try {
-			target_rev = fget_revision(std::string(fptr.ent->d_name));
-		} catch (const std::invalid_argument&) {
-			throw MSG_Error("In filename wal (%s)", strerror(errno));
-		} catch (const std::out_of_range&) {
-			throw MSG_Error("In filename wal (%s)", strerror(errno));
-		}
-
-		if (revision < target_rev) {
-			file_revision = (target_rev < file_revision) ? target_rev : file_revision;
+	if(commit) {
+		if (slot + 1 >= WAL_SLOTS) {
+			close();
+			std::string file = endpoint->path + "/" + FILE_WAL + std::to_string(rev);
+			open(file, true);
 		} else {
-			if (revision < file_revision) {
-				file_revision = (target_rev < file_revision) ? target_rev : file_revision;
-			} else {
-				file_revision = (target_rev < file_revision) ? file_revision : target_rev;
-			}
-		}
-
-		find_file_dir(dir, fptr, FILE_WAL, true);
-	}
-
-	if (file_revision == std::numeric_limits<uint64_t>::max() or (file_revision + WAL_MAX_SLOT) < revision) {
-		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(revision);
-		fd_revision = ::open(file.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
-		if (fd_revision < 0) {
-			throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
-		}
-		current_file_rev = revision;
-
-		int magic = MAGIC;
-		std::string uuid = database->get_uuid();
-		if (uuid.size() != SIZE_UUID) {
-			throw MSG_Error("Different sizes in database UUID, size: %zu expected: %d", uuid.size(), SIZE_UUID);
-		}
-
-		// Slots in header are WAL_MAX_SLOT + 1 due the last slot tell us the size of the last write
-		off_t first_slot = SIZE_WAL_HEADER + (sizeof(off_t) * (WAL_MAX_SLOT + 1));
-
-		::write(fd_revision, &magic, sizeof(int));
-		::write(fd_revision, uuid.data(), SIZE_UUID);
-		::write(fd_revision, &revision, sizeof(uint64_t));
-		::write(fd_revision, &first_slot, sizeof(off_t));
-
-		ftruncate(fd_revision, first_slot);
-		lseek(fd_revision, 0, SEEK_END);
-	} else {
-		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(file_revision);
-		fd_revision = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
-		if (fd_revision < 0) {
-			throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
-		}
-		tuning(fd_revision);
-		current_file_rev = file_revision;
-
-		int magic = 0;
-		::read(fd_revision, &magic, sizeof(int));
-		if (magic != MAGIC) {
-			throw MSG_Error("File wal with wrong format");
-		}
-
-		char uuid[SIZE_UUID + 1];
-		::read(fd_revision, uuid, SIZE_UUID);
-		uuid[SIZE_UUID] = '\0';
-		if (strcmp(uuid, database->get_uuid().data()) != 0) {
-			throw MSG_Error("File wal with wrong format");
-		}
-
-		highest_revision_file(dir, path, h);
-
-		if (revision <= (h.highest_rev_file + h.highest_rev - 1)) {
-			//revision is +1 that the current db revision, so in equal case the execute operations is needed
-			exe_op = true;
-		}
-		lseek(fd_revision, 0, SEEK_END);
-	}
-
-	return exe_op;
-}
-
-
-void
-DatabaseWAL::open(const std::string& rev, const std::string& path)
-{
-	L_CALL(this, "DatabaseWAL::open()");
-
-	try {
-		uint64_t revision = 0;
-		memcpy(&revision, rev.data(), rev.size());
-		++revision;
-
-		struct highest_revision h;
-		bool need_exe_op = _open(revision, path, h);
-
-		if (need_exe_op) {
-			for (uint64_t i = current_file_rev; i <= h.highest_rev_file; ++i) {
-				std::string file = path + PATH_WAL + FILE_WAL + std::to_string(i);
-				int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
-				if (fd < 0) {
-					throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
-				}
-
-				tuning(fd);
-
-				off_t off_start;
-				if (i == current_file_rev) {
-					off_start = SIZE_WAL_HEADER + (sizeof(off_t) * (revision - 1));
-				} else {
-					off_start = SIZE_WAL_HEADER + sizeof(off_t);
-				}
-
-				off_t off_end;
-				if (i == h.highest_rev_file && i != (WAL_MAX_SLOT + 1)) {
-					off_end = SIZE_WAL_HEADER + (sizeof(off_t) * (h.highest_rev - 1));
-				} else {
-					off_end = SIZE_WAL_HEADER + (sizeof(off_t) * WAL_MAX_SLOT);
-				}
-
-				off_t begin;
-				pread(fd, &begin, sizeof(off_t), off_start);
-				off_t end;
-				pread(fd, &end, sizeof(off_t), off_end);
-
-				lseek(fd, off_start, SEEK_SET);
-				while (begin < end) {
-					off_t start_line = 0;
-					::read(fd, &start_line, sizeof(off_t));
-					off_t end_line = 0;
-					::read(fd, &end_line, sizeof(off_t));
-
-					size_t size_line = end_line - start_line;
-					if (size_line) {
-						char *buff_line = (char*) malloc(sizeof(char) * size_line);
-						pread(fd, buff_line, size_line, start_line);
-						std::string line(buff_line, size_line);
-						free(buff_line);
-						execute(line); //split the line
-					}
-					off_start = lseek(fd, 0, SEEK_CUR);
-				}
-				close(fd);
-			}
-		}
-	} catch (const Error& e) {
-		L_CRIT(this, "WAL ERROR: %s", e.get_context());
-		exit(EX_SOFTWARE);
-	} catch (const std::exception& err) {
-		const char* error_str = err.what();
-		if (error_str) {
-			L_CRIT(this, "WAL ERROR: %s", error_str);
-		} else {
-			L_CRIT(this, "WAL ERROR: Unkown exception!");
-		}
-		exit(EX_SOFTWARE);
-	} catch (...) {
-		L_CRIT(this, "WAL ERROR: Unkown error!");
-		exit(EX_SOFTWARE);
-	}
-}
-
-
-void
-DatabaseWAL::highest_revision_file(DIR *dir, const std::string& path, struct highest_revision& h)
-{
-	L_CALL(this, "DatabaseWAL::highest_revision_file()");
-
-	std::string dir_wal = path + PATH_WAL;
-	dir = opendir(dir_wal.c_str(), true);
-	if (!dir) {
-		throw MSG_Error("Could not open the wal dir (%s)", strerror(errno));
-	}
-
-	File_ptr fptr;
-	find_file_dir(dir, fptr, FILE_WAL, true);
-
-	while (fptr.ent) {
-		try {
-			uint64_t target_rev = fget_revision(std::string(fptr.ent->d_name));
-			if (h.highest_rev_file < target_rev) {
-				h.highest_rev_file = target_rev;
-			}
-
-			find_file_dir(dir, fptr, FILE_WAL, true);
-		} catch (const std::invalid_argument&) {
-			throw MSG_Error("In filename wal (%s)", strerror(errno));
-		} catch (const std::out_of_range&) {
-			throw MSG_Error("In filename wal (%s)", strerror(errno));
+			header.slot[slot + 1] = header.slot[slot];
 		}
 	}
 
-	if (h.highest_rev_file) {
-		std::string file = path + PATH_WAL + FILE_WAL + std::to_string(h.highest_rev_file);
-		int fd = ::open(file.c_str(), O_RDWR | O_CLOEXEC, 0644);
-		if (fd < 0) {
-			throw MSG_Error("Cannot open %s (%s)", file.c_str(), strerror(errno));
-		}
-		h.highest_rev = pos_highest_revision(fd);
-		close(fd);
-	}
-}
-
-
-uint64_t
-DatabaseWAL::pos_highest_revision(int fd)
-{
-	L_CALL(this, "DatabaseWAL::pos_highest_revision()");
-
-	off_t save_off = lseek(fd, 0, SEEK_CUR);
-	lseek(fd, SIZE_WAL_HEADER, SEEK_SET);
-
-	off_t slot = 0;
-	uint64_t slot_c = 0;
-	while (true) {
-		::read(fd, &slot, sizeof(off_t));
-		if (!slot) {
-			break;
-		}
-		++slot_c;
-	}
-	lseek(fd, save_off, SEEK_SET);
-	return slot_c;
-}
-
-
-void
-DatabaseWAL::tuning(int fd)
-{
-	L_CALL(this, "DatabaseWAL::tuning()");
-
-	// Clean the remaining garbage in the wal
-
-	uint64_t last_pos = pos_highest_revision(fd);
-
-	off_t off = SIZE_WAL_HEADER + (sizeof(off_t) * (last_pos - 1));
-
-	off_t max_off = 0;
-	::pread(fd, &max_off, sizeof(off_t), off);
-	off_t file_size = lseek(fd, 0, SEEK_END);
-
-	if (max_off != file_size) {
-		ftruncate(fd, max_off);
-	}
-
-	lseek(fd, 0, SEEK_SET);
-}
-
-
-uint64_t
-DatabaseWAL::fget_revision(const std::string& filename)
-{
-	L_CALL(this, "DatabaseWAL::fget_revision()");
-
-	std::size_t found = filename.find_last_of(".");
-	if (found == std::string::npos) {
-		throw std::invalid_argument("Revision not found in " + filename);
-	}
-	return std::stoul(filename.substr(found + 1));
+	flush();
 }
 
 
@@ -491,7 +349,7 @@ DatabaseWAL::write_add_document(const Xapian::Document& doc)
 {
 	L_CALL(this, "DatabaseWAL::write_add_document()");
 
-	write(Type::ADD_DOCUMENT, doc.serialise());
+	write_line(Type::ADD_DOCUMENT, doc.serialise());
 }
 
 
@@ -500,7 +358,7 @@ DatabaseWAL::write_cancel()
 {
 	L_CALL(this, "DatabaseWAL::write_cancel()");
 
-	write(Type::CANCEL, "");
+	write_line(Type::CANCEL, "");
 }
 
 
@@ -509,7 +367,7 @@ DatabaseWAL::write_delete_document_term(const std::string& document_id)
 {
 	L_CALL(this, "DatabaseWAL::write_delete_document_term()");
 
-	write(Type::DELETE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id);
+	write_line(Type::DELETE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id);
 }
 
 
@@ -518,7 +376,7 @@ DatabaseWAL::write_commit()
 {
 	L_CALL(this, "DatabaseWAL::write_commit()");
 
-	write(Type::COMMIT, "");
+	write_line(Type::COMMIT, "", true);
 }
 
 
@@ -527,7 +385,7 @@ DatabaseWAL::write_replace_document(Xapian::docid did, const Xapian::Document& d
 {
 	L_CALL(this, "DatabaseWAL::write_replace_document()");
 
-	write(Type::REPLACE_DOCUMENT, encode_length(did) + doc.serialise());
+	write_line(Type::REPLACE_DOCUMENT, encode_length(did) + doc.serialise());
 }
 
 
@@ -536,7 +394,7 @@ DatabaseWAL::write_replace_document_term(const std::string& document_id, const X
 {
 	L_CALL(this, "DatabaseWAL::write_replace_document_term()");
 
-	write(Type::REPLACE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id + doc.serialise());
+	write_line(Type::REPLACE_DOCUMENT_TERM, encode_length(document_id.size()) + document_id + doc.serialise());
 }
 
 
@@ -545,7 +403,7 @@ DatabaseWAL::write_delete_document(Xapian::docid did)
 {
 	L_CALL(this, "DatabaseWAL::write_delete_document()");
 
-	write(Type::DELETE_DOCUMENT, encode_length(did));
+	write_line(Type::DELETE_DOCUMENT, encode_length(did));
 }
 
 
@@ -554,7 +412,7 @@ DatabaseWAL::write_set_metadata(const std::string& key, const std::string& val)
 {
 	L_CALL(this, "DatabaseWAL::write_set_metadata()");
 
-	write(Type::SET_METADATA, encode_length(key.size()) + key + val);
+	write_line(Type::SET_METADATA, encode_length(key.size()) + key + val);
 }
 
 
@@ -563,7 +421,7 @@ DatabaseWAL::write_add_spelling(const std::string& word, Xapian::termcount freqi
 {
 	L_CALL(this, "DatabaseWAL::write_add_spelling()");
 
-	write(Type::ADD_SPELLING, encode_length(freqinc) + word);
+	write_line(Type::ADD_SPELLING, encode_length(freqinc) + word);
 }
 
 
@@ -572,7 +430,7 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 {
 	L_CALL(this, "DatabaseWAL::write_remove_spelling()");
 
-	write(Type::REMOVE_SPELLING, encode_length(freqdec) + word);
+	write_line(Type::REMOVE_SPELLING, encode_length(freqdec) + word);
 }
 
 #endif
@@ -675,7 +533,7 @@ Database::reopen()
 #if XAPIAND_DATABASE_WAL
 			if (local && !(flags & DB_NOWAL)) {
 				// WAL required on a local database, open it.
-				wal.open(get_revision_info(), e->path);
+				wal.open_current(e->path, true);
 			}
 #endif
 		}

@@ -31,6 +31,7 @@
 #include "queue.h"
 #include "threadpool.h"
 #include "schema.h"
+#include "storage.h"
 
 #include <xapian/matchspy.h>
 
@@ -66,31 +67,79 @@
 
 #define DB_RETRIES 3 // Number of tries to do an operation on a Xapian::Database
 
+#define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))
 
 constexpr size_t START_POS = SIZE_BITS_ID - 4;
 
 
 using namespace std::chrono;
 
+struct WalHeader;
 
 class DatabasePool;
 class DatabasesLRU;
 class DatabaseQueue;
-
+class DatabaseWAL;
 
 #if XAPIAND_DATABASE_WAL
 
-struct highest_revision {
-	uint64_t highest_rev_file;
-	uint64_t highest_rev;
+struct WalHeader {
+	struct StorageHeaderHead {
+		uint32_t magic;
+		uint16_t offset;
+		char uuid[36];
+		uint32_t revision;
+		StorageHeaderHead() {
+			memset(this, 0, sizeof(*this));
+			magic = STORAGE_MAGIC;
+			offset = STORAGE_START_BLOCK_OFFSET;
+		}
+	} head;
+	uint32_t slot[WAL_SLOTS];
 
-	highest_revision()
-		: highest_rev_file(0),
-		  highest_rev(0) { }
+	void init(const void* storage);
+	void validate(const void* storage);
 };
 
+#pragma pack(push, 1)
+struct WalBinHeader {
+	char magic;
+	uint32_t size;  // required
 
-class DatabaseWAL {
+	inline void init(const void*, uint32_t size_) {
+		 magic = STORAGE_BIN_HEADER_MAGIC;
+		size = size_;
+	}
+
+	inline void validate(const void*) {
+		 if (magic != STORAGE_BIN_HEADER_MAGIC) {
+			 throw StorageBadBinHeaderMagicNumber();
+		 }
+	}
+};
+
+struct WalBinFooter {
+	 uint32_t checksum;
+	 char magic;
+
+	inline void init(const void*, uint32_t checksum_) {
+		 magic = STORAGE_BIN_FOOTER_MAGIC;
+		 checksum = checksum_;
+	}
+
+	inline void validate(const void*, uint32_t checksum_) {
+		 if (magic != STORAGE_BIN_FOOTER_MAGIC) {
+			 throw StorageBadBinFooterMagicNumber();
+		 }
+		 if (checksum != checksum_) {
+			 throw StorageBadBinChecksum();
+		 }
+	}
+};
+#pragma pack(pop)
+
+
+class DatabaseWAL: Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	static const constexpr char* const names[] = {
 		"ADD_DOCUMENT",
 		"CANCEL",
@@ -104,16 +153,14 @@ class DatabaseWAL {
 		"REMOVE_SPELLING",
 	};
 
-	uint64_t current_file_rev;
-	int fd_revision;
-	Database* database;
-
 	bool execute(const std::string& line);
-	bool _open(const uint64_t rev, const std::string& path, highest_revision& h);
-	void highest_revision_file(DIR *dir, const std::string& path, highest_revision& h);
-	uint64_t pos_highest_revision(int fd);
-	void tuning(int fd);
+	long highest_valid_slot(const uint32_t slots[]);
 	uint64_t fget_revision(const std::string& filename);
+
+	std::string read_checked(uint16_t& off_readed);
+	inline void open(const std::string& path, bool writable) {
+		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, writable);
+	}
 
 public:
 	enum class Type {
@@ -130,12 +177,16 @@ public:
 		MAX
 	};
 
-	DatabaseWAL(Database* _database);
-	~DatabaseWAL();
+	Database* database;
 
-	void open(const std::string& rev, const std::string& path);
+	DatabaseWAL (Database* _database)
+	: Storage(), database(_database) { }
 
-	void write(Type type, const std::string& data);
+	~DatabaseWAL() {}
+
+	void open_current(const std::string& path, bool current);
+
+	void write_line(Type type, const std::string& data, bool commit=false);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();
 	void write_delete_document_term(const std::string& document_id);
