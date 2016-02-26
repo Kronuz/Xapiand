@@ -61,6 +61,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 	if (revents & EV_READ) {
 		char buf[1024];
 		struct sockaddr_in addr;
+		char inet_addr[INET_ADDRSTRLEN];
 		socklen_t addrlen = sizeof(addr);
 
 		ssize_t received = ::recvfrom(watcher.fd, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
@@ -179,7 +180,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 								discovery->manager->drop_node(remote_node.name);
 								L_INFO(this, "Stalled node %s left the party!", remote_node.name.c_str());
 								if (discovery->manager->put_node(remote_node)) {
-									L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+									L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 									local_node.regions.store(-1);
 									discovery->manager->get_region();
 								} else {
@@ -189,7 +190,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 						}
 					} else {
 						if (discovery->manager->put_node(remote_node)) {
-							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 							local_node.regions.store(-1);
 							discovery->manager->get_region();
 						} else {
@@ -269,7 +270,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							return;
 						}
 						if (discovery->manager->put_node(remote_node)) {
-							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 						}
 
 						L_DISCOVERY(this, "Node %s has '%s' with a mastery of %llx!", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
@@ -315,7 +316,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 								return;
 							}
 							if (discovery->manager->put_node(remote_node)) {
-								L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)", remote_node.name.c_str(), inet_ntoa(remote_node.addr.sin_addr), remote_node.http_port, remote_node.binary_port);
+								L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 							}
 
 							Endpoint local_endpoint(index_path);
