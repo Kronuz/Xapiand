@@ -78,13 +78,13 @@ struct StorageHeader {
 	} head;
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
 
-	inline void init() {
+	inline void init(const void* storage) {
 		head.offset = STORAGE_START_BLOCK_OFFSET;
 		// head.magic = STORAGE_MAGIC;
 		// strncpy(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid));
 	}
 
-	inline void validate() {
+	inline void validate(const void* storage) {
 		// if (head.magic != STORAGE_MAGIC) {
 		// 	throw StorageBadHeaderMagicNumber();
 		// }
@@ -99,12 +99,12 @@ struct StorageBinHeader {
 	// char magic;
 	uint32_t size;  // required
 
-	inline void init(uint32_t size_) {
+	inline void init(const void* storage, uint32_t size_) {
 		// magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 	}
 
-	inline void validate() {
+	inline void validate(const void* storage) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
 		// 	throw StorageBadBinHeaderMagicNumber();
 		// }
@@ -115,12 +115,12 @@ struct StorageBinFooter {
 	// uint32_t checksum;
 	// char magic;
 
-	inline void init(uint32_t checksum_) {
+	inline void init(const void* storage, uint32_t checksum_) {
 		// magic = STORAGE_BIN_FOOTER_MAGIC;
 		// checksum = checksum_;
 	}
 
-	inline void validate(uint32_t checksum_) {
+	inline void validate(const void* storage, uint32_t checksum_) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 		// 	throw StorageBadBinFooterMagicNumber();
 		// }
@@ -203,7 +203,7 @@ public:
 			}
 
 			memset(&header, 0, sizeof(header));
-			header.init();
+			header.init(this);
 
 			if (::write(fd, &header, sizeof(header)) != sizeof(header)) {
 				throw StorageIOError();
@@ -215,7 +215,7 @@ public:
 			} else if (r != sizeof(header)) {
 				throw StorageIncompleteBinData();
 			}
-			header.validate();
+			header.validate(this);
 
 			if (writable) {
 				buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
@@ -266,7 +266,7 @@ public:
 
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
-		bin_header.init(data_size);
+		bin_header.init(this, data_size);
 		const StorageBinHeader* bin_header_data = &bin_header;
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
@@ -308,7 +308,7 @@ public:
 			}
 
 			if (bin_footer_data_size) {
-				bin_footer.init(checksum);
+				bin_footer.init(this, checksum);
 
 				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
 				if (size > bin_footer_data_size) {
@@ -370,7 +370,7 @@ public:
 				throw StorageIncompleteBinHeader();
 			}
 			bin_offset += r;
-			bin_header.validate();
+			bin_header.validate(this);
 		}
 
 		if (buf_size > bin_header.size - bin_size) {
@@ -398,7 +398,7 @@ public:
 				throw StorageIncompleteBinFooter();
 			}
 			bin_offset += r;
-			bin_footer.validate(checksum);
+			bin_footer.validate(this, checksum);
 
 			// Align the bin_offset to the next storage alignment
 			bin_offset = ((bin_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT;
