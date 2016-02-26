@@ -78,13 +78,13 @@ struct StorageHeader {
 	} head;
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
 
-	inline void init(const void* storage) {
+	inline void init(const void* /* storage */) {
 		head.offset = STORAGE_START_BLOCK_OFFSET;
 		// head.magic = STORAGE_MAGIC;
 		// strncpy(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid));
 	}
 
-	inline void validate(const void* storage) {
+	inline void validate(const void* /* storage */) {
 		// if (head.magic != STORAGE_MAGIC) {
 		// 	throw StorageBadHeaderMagicNumber();
 		// }
@@ -99,12 +99,12 @@ struct StorageBinHeader {
 	// char magic;
 	uint32_t size;  // required
 
-	inline void init(const void* storage, uint32_t size_) {
+	inline void init(const void* /* storage */, uint32_t size_) {
 		// magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 	}
 
-	inline void validate(const void* storage) {
+	inline void validate(const void* /* storage */) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
 		// 	throw StorageBadBinHeaderMagicNumber();
 		// }
@@ -115,12 +115,12 @@ struct StorageBinFooter {
 	// uint32_t checksum;
 	// char magic;
 
-	inline void init(const void* storage, uint32_t checksum_) {
+	inline void init(const void* /* storage */, uint32_t /* checksum_ */) {
 		// magic = STORAGE_BIN_FOOTER_MAGIC;
 		// checksum = checksum_;
 	}
 
-	inline void validate(const void* storage, uint32_t checksum_) {
+	inline void validate(const void* /* storage */, uint32_t /* checksum_ */) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 		// 	throw StorageBadBinFooterMagicNumber();
 		// }
@@ -156,7 +156,7 @@ class Storage {
 			}
 			free_blocks = (file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE;
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
-				size_t new_size = file_size + STORAGE_BLOCKS_GROW * STORAGE_BLOCK_SIZE;
+				off_t new_size = file_size + STORAGE_BLOCKS_GROW * STORAGE_BLOCK_SIZE;
 				if (new_size > STORAGE_LAST_BLOCK_OFFSET) {
 					new_size = STORAGE_LAST_BLOCK_OFFSET;
 				}

@@ -939,7 +939,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 
 
 #ifndef HAVE_FALLOCATE
-int fallocate(int fd, int mode, off_t offset, off_t len)
+int fallocate(int fd, int /* mode */, off_t offset, off_t len)
 {
 #if defined(HAVE_POSIX_FALLOCATE)
 	return posix_fallocate(fd, offset, len);
