@@ -72,37 +72,62 @@ class StorageIncompleteBinFooter : public StorageIncomplete { };
 
 struct StorageHeader {
 	struct StorageHeaderHead {
-		uint32_t magic;
-		uint16_t offset;
-		char uuid[36];
-		StorageHeaderHead() {
-			memset(this, 0, sizeof(*this));
-			magic = STORAGE_MAGIC;
-			offset = STORAGE_START_BLOCK_OFFSET;
-		}
+		// uint32_t magic;
+		uint16_t offset;  // required
+		// char uuid[36];
 	} head;
-
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
+
+	inline void init() {
+		head.offset = STORAGE_START_BLOCK_OFFSET;
+		// head.magic = STORAGE_MAGIC;
+		// strncpy(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid));
+	}
+
+	inline void validate() {
+		// if (head.magic != STORAGE_MAGIC) {
+		// 	throw StorageBadHeaderMagicNumber();
+		// }
+		// if (strncasecmp(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid))) {
+		// 	throw StorageUUIDMismatch();
+		// }
+	}
 };
 
 #pragma pack(push, 1)
 struct StorageBinHeader {
-	char magic;
-	uint32_t size;
-	StorageBinHeader(uint32_t size_) {
-		memset(this, 0, sizeof(*this));
-		magic = STORAGE_BIN_HEADER_MAGIC;
+	// char magic;
+	uint32_t size;  // required
+
+	inline void init(uint32_t size_) {
+		// magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
-	};
+	}
+
+	inline void validate() {
+		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
+		// 	throw StorageBadBinHeaderMagicNumber();
+		// }
+	}
 };
 
 struct StorageBinFooter {
-	uint32_t crc32;
-	char magic;
-	StorageBinFooter() {
-		memset(this, 0, sizeof(*this));
-		magic = STORAGE_BIN_FOOTER_MAGIC;
-	};
+	// uint32_t checksum;
+	// char magic;
+
+	inline void init(uint32_t checksum_) {
+		// magic = STORAGE_BIN_FOOTER_MAGIC;
+		// checksum = checksum_;
+	}
+
+	inline void validate(uint32_t checksum_) {
+		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
+		// 	throw StorageBadBinFooterMagicNumber();
+		// }
+		// if (checksum != checksum_) {
+		// 	throw StorageBadBinChecksum();
+		// }
+	}
 };
 #pragma pack(pop)
 
@@ -147,22 +172,28 @@ protected:
 
 public:
 	Storage()
-		: fd(0),
+		: writable(false),
+		  fd(0),
 		  free_blocks(0),
 		  buffer_offset(0),
 		  bin_size(0),
-		  bin_offset(0),
-		  bin_header(0) { }
+		  bin_offset(0) { }
 
 	~Storage() {
 		close();
 	}
 
-	void open(const std::string& path_, const std::string& uuid, bool writable_) {
+	void open(const std::string& path_, bool writable_) {
 		close();
 
 		path = path_;
 		writable = writable_;
+
+#if STORAGE_BUFFER_CLEAR
+		if (writable) {
+			memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
+		}
+#endif
 
 		fd = ::open(path.c_str(), writable ? O_RDWR | O_DSYNC : O_RDONLY, 0644);
 		if (fd == -1) {
@@ -170,8 +201,10 @@ public:
 			if (fd == -1) {
 				throw StorageIOError();
 			}
-			memset(reinterpret_cast<char*>(&header) + sizeof(header.head), 0, sizeof(header) - sizeof(header.head));
-			strncpy(header.head.uuid, uuid.c_str(), sizeof(header.head.uuid));
+
+			memset(&header, 0, sizeof(header));
+			header.init();
+
 			if (::write(fd, &header, sizeof(header)) != sizeof(header)) {
 				throw StorageIOError();
 			}
@@ -182,12 +215,8 @@ public:
 			} else if (r != sizeof(header)) {
 				throw StorageIncompleteBinData();
 			}
-			if (header.head.magic != STORAGE_MAGIC) {
-				throw StorageBadHeaderMagicNumber();
-			}
-			if (strncasecmp(header.head.uuid, uuid.c_str(), sizeof(header.head.uuid))) {
-				throw StorageUUIDMismatch();
-			}
+			header.validate();
+
 			if (writable) {
 				buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
 				size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
@@ -212,18 +241,10 @@ public:
 		}
 
 		fd = 0;
-
 		free_blocks = 0;
-
 		bin_size = 0;
 		bin_offset = 0;
 		bin_header.size = 0;
-
-#if STORAGE_BUFFER_CLEAR
-		if (writable) {
-			memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
-		}
-#endif
 		buffer_offset = 0;
 	}
 
@@ -241,11 +262,16 @@ public:
 
 		uint32_t current_offset = header.head.offset;
 
-		StorageBinHeader bin_header(data_size);
+		uint32_t checksum = 0;
+
+		StorageBinHeader bin_header;
+		memset(&bin_header, 0, sizeof(bin_header));
+		bin_header.init(data_size);
 		const StorageBinHeader* bin_header_data = &bin_header;
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
 		StorageBinFooter bin_footer;
+		memset(&bin_footer, 0, sizeof(bin_footer));
 		const StorageBinFooter* bin_footer_data = &bin_footer;
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 		off_t block_offset = ((current_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
@@ -282,6 +308,8 @@ public:
 			}
 
 			if (bin_footer_data_size) {
+				bin_footer.init(checksum);
+
 				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
 				if (size > bin_footer_data_size) {
 					size = bin_footer_data_size;
@@ -328,6 +356,7 @@ public:
 		}
 
 		ssize_t r;
+		uint32_t checksum = 0;
 
 		if (!bin_header.size) {
 			if (::lseek(fd, bin_offset, SEEK_SET) >= header.head.offset * STORAGE_ALIGNMENT) {
@@ -341,10 +370,7 @@ public:
 				throw StorageIncompleteBinHeader();
 			}
 			bin_offset += r;
-
-			if (bin_header.magic != STORAGE_BIN_HEADER_MAGIC) {
-				throw StorageBadBinHeaderMagicNumber();
-			}
+			bin_header.validate();
 		}
 
 		if (buf_size > bin_header.size - bin_size) {
@@ -361,7 +387,8 @@ public:
 			bin_offset += r;
 
 			bin_size += r;
-			// FIXME: bin_checksum update
+
+			checksum = 0;  // FIXME: bin_checksum update
 
 		} else {
 			r = ::read(fd, &bin_footer, sizeof(StorageBinFooter));
@@ -370,17 +397,11 @@ public:
 			} else if (r != sizeof(StorageBinFooter)) {
 				throw StorageIncompleteBinFooter();
 			}
-
-			if (bin_footer.magic != STORAGE_BIN_FOOTER_MAGIC) {
-				throw StorageBadBinFooterMagicNumber();
-			}
 			bin_offset += r;
+			bin_footer.validate(checksum);
 
 			// Align the bin_offset to the next storage alignment
 			bin_offset = ((bin_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT;
-
-			// FIXME: Verify whole read bin checksum here
-			// throw StorageBadBinChecksum();
 
 			bin_header.size = 0;
 			bin_size = 0;
