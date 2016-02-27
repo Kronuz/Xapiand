@@ -197,19 +197,6 @@ void fill_zeros_stats_sec(uint8_t start, uint8_t end);
 void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy);
 void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy);
 
-#ifndef HAVE_PREAD
-ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
-#endif
-
-#ifndef HAVE_PWRITE
-ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset);
-#endif
-
-#ifndef HAVE_FALLOCATE
-int fallocate(int fd, int mode, off_t offset, off_t len);
-#endif
-
-
 // Levenshtein distance is a string metric for measuring the difference between two
 // sequences (known as edit distance).
 unsigned int levenshtein_distance(const std::string& str1, const std::string& str2);

@@ -98,7 +98,7 @@ ClientCompressorReader::read(char **buf, size_t size)
 		L_CRIT(this, "Segmentation fault in compressor reader");
 		exit(EX_SOFTWARE);
 	}
-	return ::read(fd, *buf, size);
+	return io::read(fd, *buf, size);
 }
 
 
@@ -240,7 +240,7 @@ BaseClient::destroy()
 	io_write.stop();
 	L_EV(this, "Stop write event (sock=%d)", sock);
 
-	::close(sock);
+	io::close(sock);
 	sock = -1;
 	lk.unlock();
 
@@ -340,7 +340,7 @@ BaseClient::write_directly(int fd)
 #ifdef MSG_NOSIGNAL
 		ssize_t written = ::send(fd, buf_data, buf_size, MSG_NOSIGNAL);
 #else
-		ssize_t written = ::write(fd, buf_data, buf_size);
+		ssize_t written = io::write(fd, buf_data, buf_size);
 #endif
 
 		if (written < 0) {
@@ -447,7 +447,7 @@ void
 BaseClient::io_cb_read(int fd)
 {
 	if (!closed) {
-		ssize_t received = ::read(fd, read_buffer, BUF_SIZE);
+		ssize_t received = io::read(fd, read_buffer, BUF_SIZE);
 		const char *buf_end = read_buffer + received;
 		const char *buf_data = read_buffer;
 
@@ -616,8 +616,8 @@ BaseClient::read_file()
 bool
 BaseClient::send_file(int fd)
 {
-	ssize_t file_size = ::lseek(fd, 0, SEEK_END);
-	::lseek(fd, 0, SEEK_SET);
+	ssize_t file_size = io::lseek(fd, 0, SEEK_END);
+	io::lseek(fd, 0, SEEK_SET);
 
 	switch (*TYPE_COMPRESSOR) {
 		case *NO_COMPRESSOR:

@@ -142,7 +142,7 @@ BinaryClient::on_read_file_done()
 {
 	L_CONN_WIRE(this, "BinaryClient::on_read_file_done");
 
-	::lseek(file_descriptor, 0, SEEK_SET);
+	io::lseek(file_descriptor, 0, SEEK_SET);
 
 	try {
 		switch (state) {
@@ -196,7 +196,7 @@ BinaryClient::on_read_file_done()
 		shutdown();
 	}
 
-	::unlink(file_path);
+	io::unlink(file_path);
 }
 
 
@@ -210,7 +210,7 @@ BinaryClient::repl_file_done()
 	const char *p_end;
 	std::string buffer;
 
-	ssize_t size = ::read(file_descriptor, buf, sizeof(buf));
+	ssize_t size = io::read(file_descriptor, buf, sizeof(buf));
 	buffer.append(buf, size);
 	p = buffer.data();
 	p_end = p + buffer.size();
@@ -221,7 +221,7 @@ BinaryClient::repl_file_done()
 		ssize_t len = decode_length(&p, p_end);
 		size_t pos = p - s;
 		while (p_end - p < len || static_cast<size_t>(p_end - p) < sizeof(buf) / 2) {
-			size = ::read(file_descriptor, buf, sizeof(buf));
+			size = io::read(file_descriptor, buf, sizeof(buf));
 			if (!size) break;
 			buffer.append(buf, size);
 			s = p = buffer.data();
@@ -247,7 +247,7 @@ void
 BinaryClient::on_read_file(const char *buf, size_t received)
 {
 	L_CONN_WIRE(this, "BinaryClient::on_read_file: %zu bytes", received);
-	::io_write(file_descriptor, buf, received);
+	io::write(file_descriptor, buf, received);
 }
 
 
@@ -628,14 +628,14 @@ BinaryClient::repl_set_db_filedata(const std::string &message)
 	std::string path = endpoint.path + "/.tmp/";
 	std::string path_filename = path + repl_db_filename;
 
-	int fd = ::open(path_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
+	int fd = io::open(path_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
 	if (fd >= 0) {
 		L_REPLICATION(this, "path_filename %s", path_filename.c_str());
-		if (::write(fd, p, p_end - p) != p_end - p) {
+		if (io::write(fd, p, p_end - p) != p_end - p) {
 			L_ERR(this, "Cannot write to %s", repl_db_filename.c_str());
 			return;
 		}
-		::close(fd);
+		io::close(fd);
 	}
 }
 
@@ -687,39 +687,39 @@ BinaryClient::repl_changeset(const std::string &message)
 	header += toUType(ReplicateType::REPLY_CHANGESET);
 	header += encode_length(message.size());
 
-	if (::write(fd, header.data(), header.size()) != static_cast<ssize_t>(header.size())) {
+	if (io::write(fd, header.data(), header.size()) != static_cast<ssize_t>(header.size())) {
 		L_ERR(this, "Cannot write to %s (2)", path);
 		return;
 	}
 
-	if (::write(fd, message.data(), message.size()) != static_cast<ssize_t>(message.size())) {
+	if (io::write(fd, message.data(), message.size()) != static_cast<ssize_t>(message.size())) {
 		L_ERR(this, "Cannot write to %s (3)", path);
 		return;
 	}
 
-	::lseek(fd, 0, SEEK_SET);
+	io::lseek(fd, 0, SEEK_SET);
 
 	try {
 		// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
 		repl_just_switched_db = false;
 	} catch(const Xapian::NetworkError &e) {
 		L_ERR(this, "ERROR: %s", e.get_msg().c_str());
-		::close(fd);
-		::unlink(path);
+		io::close(fd);
+		io::unlink(path);
 		throw;
 	} catch (const Xapian::DatabaseError &e) {
 		L_ERR(this, "ERROR: %s", e.get_msg().c_str());
-		::close(fd);
-		::unlink(path);
+		io::close(fd);
+		io::unlink(path);
 		throw;
 	} catch (...) {
-		::close(fd);
-		::unlink(path);
+		io::close(fd);
+		io::unlink(path);
 		throw;
 	}
 
-	::close(fd);
-	::unlink(path);
+	io::close(fd);
+	io::unlink(path);
 }
 
 
@@ -767,16 +767,16 @@ BinaryClient::repl_get_changesets(const std::string &message)
 		// db_->write_changesets_to_fd(fd, from_revision, uuid != db_->get_uuid());  // FIXME: Implement Replication
 	} catch (...) {
 		release_db(db_);
-		::close(fd);
-		::unlink(path);
+		io::close(fd);
+		io::unlink(path);
 		throw;
 	}
 	release_db(db_);
 
 	send_file(fd);
 
-	::close(fd);
-	::unlink(path);
+	io::close(fd);
+	io::unlink(path);
 }
 
 

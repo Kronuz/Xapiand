@@ -186,11 +186,11 @@ HttpClient::~HttpClient()
 	}
 
 	if (body_descriptor) {
-		if (::close(body_descriptor) < 0) {
+		if (io::close(body_descriptor) < 0) {
 			L_ERR(this, "ERROR: Cannot close temporary file '%s': %s", body_path, strerror(errno));
 		}
 
-		if (::unlink(body_path) < 0) {
+		if (io::unlink(body_path) < 0) {
 			L_ERR(this, "ERROR: Cannot delete temporary file '%s': %s", body_path, strerror(errno));
 		}
 	}
@@ -274,7 +274,7 @@ HttpClient::on_info(http_parser* p)
 			self->body_size = 0;
 			self->header_name.clear();
 			self->header_value.clear();
-			if (self->body_descriptor && ::close(self->body_descriptor) < 0) {
+			if (self->body_descriptor && io::close(self->body_descriptor) < 0) {
 				L_ERR(self, "ERROR: Cannot close temporary file '%s': %s", self->body_path, strerror(errno));
 			} else {
 				self->body_descriptor = 0;
@@ -361,12 +361,12 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 					L_ERR(self, "Cannot write to %s (1)", self->body_path);
 					return 0;
 				}
-				::io_write(self->body_descriptor, self->body.data(), self->body.size());
+				io::write(self->body_descriptor, self->body.data(), self->body.size());
 				self->body.clear();
 			}
-			::io_write(self->body_descriptor, at, length);
+			io::write(self->body_descriptor, at, length);
 			if (state == 62) {
-				if (self->body_descriptor && ::close(self->body_descriptor) < 0) {
+				if (self->body_descriptor && io::close(self->body_descriptor) < 0) {
 					L_ERR(self, "ERROR: Cannot close temporary file '%s': %s", self->body_path, strerror(errno));
 				} else {
 					self->body_descriptor = 0;

@@ -41,12 +41,24 @@ AX_PTHREAD_GET_NAME
 # Checks for header files.
 AC_CHECK_HEADERS([pthread.h fcntl.h limits.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h unistd.h])
 
-# Checks for library functions.
-AC_CHECK_FUNCS([getcwd gettimeofday socket pread pwrite fallocate posix_fallocate])
-
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, [], [], [-lpthread])
 
+# Checks for library functions.
+AC_CHECK_FUNCS([getcwd gettimeofday socket pread pwrite fallocate posix_fallocate posix_fadvise __builtin_expect fsync])
+
+# See if we have fdatasync, and what libraries are needed for it.
+# We need to actually check for a declaration as OS X has a dummy
+# implementation in the library which is not prototyped in any header.
+AC_CHECK_DECL([fdatasync(int)], [
+    SAVE_LIBS=$LIBS
+    AC_SEARCH_LIBS([fdatasync], [rt], [])
+    LIBS=$SAVE_LIBS
+    AC_CHECK_FUNCS([fdatasync])
+  ],
+  [ac_cv_func_fdatasync=no],
+  [#include <unistd.h>]
+)
 
 ########################################################################
 # sparsehash

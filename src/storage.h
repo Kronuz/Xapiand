@@ -24,6 +24,8 @@
 
 #include "xapiand.h"
 
+#include "io_utils.h"
+
 #include <fcntl.h>
 #include <string>
 #include <unistd.h>
@@ -150,7 +152,7 @@ class Storage {
 
 	inline void growfile() {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
-			off_t file_size = ::lseek(fd, 0, SEEK_END);
+			off_t file_size = io::lseek(fd, 0, SEEK_END);
 			if (file_size == -1) {
 				throw StorageIOError();
 			}
@@ -161,7 +163,7 @@ class Storage {
 					new_size = STORAGE_LAST_BLOCK_OFFSET;
 				}
 				if (new_size > file_size) {
-					fallocate(fd, 0, file_size, new_size - file_size);
+					io::fallocate(fd, 0, file_size, new_size - file_size);
 				}
 			}
 		}
@@ -205,11 +207,11 @@ public:
 			memset(&header, 0, sizeof(header));
 			header.init(this);
 
-			if (::write(fd, &header, sizeof(header)) != sizeof(header)) {
+			if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
 				throw StorageIOError();
 			}
 		} else {
-			ssize_t r = ::read(fd, &header, sizeof(header));
+			ssize_t r = io::read(fd, &header, sizeof(header));
 			if (r == -1) {
 				throw StorageIOError();
 			} else if (r != sizeof(header)) {
@@ -221,7 +223,7 @@ public:
 				buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
 				size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 				buffer_offset -= offset;
-				if (::pread(fd, buffer, sizeof(buffer), offset) == -1) {
+				if (io::pread(fd, buffer, sizeof(buffer), offset) == -1) {
 					throw StorageIOError();
 				}
 			}
@@ -329,7 +331,7 @@ public:
 			}
 
 		do_write:
-			if (::pwrite(fd, buffer, sizeof(buffer), block_offset) != sizeof(buffer)) {
+			if (io::pwrite(fd, buffer, sizeof(buffer), block_offset) != sizeof(buffer)) {
 				throw StorageIOError();
 			}
 
@@ -359,11 +361,11 @@ public:
 		uint32_t checksum = 0;
 
 		if (!bin_header.size) {
-			if (::lseek(fd, bin_offset, SEEK_SET) >= header.head.offset * STORAGE_ALIGNMENT) {
+			if (io::lseek(fd, bin_offset, SEEK_SET) >= header.head.offset * STORAGE_ALIGNMENT) {
 				throw StorageEOF();
 			}
 
-			r = ::read(fd,  &bin_header, sizeof(StorageBinHeader));
+			r = io::read(fd,  &bin_header, sizeof(StorageBinHeader));
 			if (r == -1) {
 				throw StorageIOError();
 			} else if (r != sizeof(StorageBinHeader)) {
@@ -378,7 +380,7 @@ public:
 		}
 
 		if (buf_size) {
-			r = ::read(fd, buf, buf_size);
+			r = io::read(fd, buf, buf_size);
 			if (r == -1) {
 				throw StorageIOError();
 			} else if (static_cast<size_t>(r) != buf_size) {
@@ -391,7 +393,7 @@ public:
 			checksum = 0;  // FIXME: bin_checksum update
 
 		} else {
-			r = ::read(fd, &bin_footer, sizeof(StorageBinFooter));
+			r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
 			if (r == -1) {
 				throw StorageIOError();
 			} else if (r != sizeof(StorageBinFooter)) {
@@ -411,7 +413,7 @@ public:
 	}
 
 	void flush() {
-		if (::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
+		if (io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 			throw StorageIOError();
 		}
 		growfile();
