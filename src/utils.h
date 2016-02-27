@@ -120,6 +120,7 @@ std::string repr(const std::string& string, bool friendly=true, size_t max_size=
 
 inline bool ignored_errorno(int e, bool udp) {
 	switch(e) {
+		case EINTR:
 		case EAGAIN:
 #if EAGAIN != EWOULDBLOCK
 		case EWOULDBLOCK:
@@ -138,7 +139,6 @@ inline bool ignored_errorno(int e, bool udp) {
 		case EHOSTUNREACH:
 		case EOPNOTSUPP:
 		case ENETUNREACH:
-		case EINTR:
 		case ECONNRESET:
 			return udp;  //  Ignore error on UDP sockets
 
