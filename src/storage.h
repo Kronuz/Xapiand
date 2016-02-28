@@ -169,7 +169,7 @@ class Storage {
 	inline void growfile() {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
-			if (file_size == -1) {
+			if unlikely(file_size < 0) {
 				throw MSG_StorageIOError("IO Error");
 			}
 			free_blocks = (file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE;
@@ -219,9 +219,9 @@ public:
 #endif
 
 		fd = ::open(path.c_str(), writable ? O_RDWR | O_DSYNC : O_RDONLY, 0644);
-		if (fd == -1) {
+		if unlikely(fd < 0) {
 			fd = ::open(path.c_str(), writable ? O_RDWR | O_CREAT | O_DSYNC : O_RDONLY, 0644);
-			if (fd == -1) {
+			if unlikely(fd < 0) {
 				throw MSG_StorageIOError("IO Error");
 			}
 
@@ -233,9 +233,9 @@ public:
 			}
 		} else {
 			ssize_t r = io::read(fd, &header, sizeof(header));
-			if (r == -1) {
+			if unlikely(r < 0) {
 				throw MSG_StorageIOError("IO Error");
-			} else if (r != sizeof(header)) {
+			} else if unlikely(r != sizeof(header)) {
 				throw MSG_StorageCorruptVolume("Incomplete Bin Data");
 			}
 			header.validate(this);
@@ -244,7 +244,7 @@ public:
 				buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
 				size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 				buffer_offset -= offset;
-				if (io::pread(fd, buffer, sizeof(buffer), offset) == -1) {
+				if unlikely(io::pread(fd, buffer, sizeof(buffer), offset) < 0) {
 					throw MSG_StorageIOError("IO Error");
 				}
 			}
@@ -383,9 +383,9 @@ public:
 			}
 
 			r = io::read(fd,  &bin_header, sizeof(StorageBinHeader));
-			if (r == -1) {
+			if unlikely(r < 0) {
 				throw MSG_StorageIOError("IO Error");
-			} else if (r != sizeof(StorageBinHeader)) {
+			} else if unlikely(r != sizeof(StorageBinHeader)) {
 				throw MSG_StorageCorruptVolume("Incomplete Bin Header");
 			}
 			bin_offset += r;
@@ -398,9 +398,9 @@ public:
 
 		if (buf_size) {
 			r = io::read(fd, buf, buf_size);
-			if (r == -1) {
+			if unlikely(r < 0) {
 				throw MSG_StorageIOError("IO Error");
-			} else if (static_cast<size_t>(r) != buf_size) {
+			} else if unlikely(static_cast<size_t>(r) != buf_size) {
 				throw MSG_StorageCorruptVolume("Incomplete Bin Data");
 			}
 			bin_offset += r;
@@ -411,9 +411,9 @@ public:
 
 		} else {
 			r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
-			if (r == -1) {
+			if unlikely(r < 0) {
 				throw MSG_StorageIOError("IO Error");
-			} else if (r != sizeof(StorageBinFooter)) {
+			} else if unlikely(r != sizeof(StorageBinFooter)) {
 				throw MSG_StorageCorruptVolume("Incomplete Bin Footer");
 			}
 			bin_offset += r;
@@ -450,7 +450,7 @@ public:
 			ret += std::string(buf, r);
 		}
 
-		if (r == -1) {
+		if unlikely(r < 0) {
 			throw MSG_StorageIOError("IO Error");
 		}
 		return ret;
