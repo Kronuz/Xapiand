@@ -2027,32 +2027,7 @@ Database::_get_document(const Xapian::MSet& mset, Xapian::Document& doc)
 		return false;
 	}
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			doc = db->get_document(*mset.begin());
-			return true;
-		} catch (const Xapian::DatabaseModifiedError& er) {
-			if (t) {
-				reopen();
-			} else {
-				throw MSG_Error("Database was modified, try again (%s)", er.get_msg().c_str());
-			}
-		} catch (const Xapian::NetworkError& er) {
-			if (t) {
-				reopen();
-			} else {
-				throw MSG_Error("Problem communicating with the remote database (%s)", er.get_msg().c_str());
-			}
-		} catch (const Xapian::InvalidArgumentError&) {
-			throw MSG_Error("Document id is not valid");
-		} catch (const Xapian::DocNotFoundError&) {
-			return false;
-		} catch (const Xapian::Error& er) {
-			throw MSG_Error(er.get_msg().c_str());
-		}
-	}
-
-	return false;
+	return get_document(*mset.begin(), doc);
 }
 
 
