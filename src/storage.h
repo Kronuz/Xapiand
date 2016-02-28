@@ -25,6 +25,7 @@
 #include "xapiand.h"
 
 #include "io_utils.h"
+#include "exception.h"
 
 #include <fcntl.h>
 #include <string>
@@ -51,31 +52,46 @@
 #define STORAGE_START_BLOCK_OFFSET (STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT)
 
 
-class StorageException { };
+class StorageException : public Error {
+public:
+	template<typename... Args>
+	StorageException(Args&&... args) : Error(std::forward<Args>(args)...) { }
+};
+#define MSG_StorageException(...) StorageException(__FILE__, __LINE__, __VA_ARGS__)
 
-class StorageIOError : public StorageException { };
+class StorageIOError : public StorageException {
+public:
+	template<typename... Args>
+	StorageIOError(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
+};
+#define MSG_StorageIOError(...) StorageIOError(__FILE__, __LINE__, __VA_ARGS__)
 
-class StorageEOF : public StorageException { };
+class StorageEOF : public StorageException {
+public:
+	template<typename... Args>
+	StorageEOF(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
+};
+#define MSG_StorageEOF(...) StorageEOF(__FILE__, __LINE__, __VA_ARGS__)
 
-class StorageNoFile : public StorageException { };
+class StorageNoFile : public StorageException {
+public:
+	template<typename... Args>
+	StorageNoFile(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
+};
+#define MSG_StorageNoFile(...) StorageNoFile(__FILE__, __LINE__, __VA_ARGS__)
 
-class StorageCorruptVolume : public StorageException { };
-class StorageUUIDMismatch : public StorageCorruptVolume { };
-class StorageBadMagicNumber : public StorageCorruptVolume { };
-class StorageBadHeaderMagicNumber : public StorageBadMagicNumber { };
-class StorageBadBinHeaderMagicNumber : public StorageBadMagicNumber { };
-class StorageBadBinFooterMagicNumber : public StorageBadMagicNumber { };
-class StorageBadBinChecksum : public StorageCorruptVolume { };
-class StorageIncomplete : public StorageCorruptVolume { };
-class StorageIncompleteBinHeader : public StorageIncomplete { };
-class StorageIncompleteBinData : public StorageIncomplete { };
-class StorageIncompleteBinFooter : public StorageIncomplete { };
+class StorageCorruptVolume : public StorageException {
+public:
+	template<typename... Args>
+	StorageCorruptVolume(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
+};
+#define MSG_StorageCorruptVolume(...) StorageCorruptVolume(__FILE__, __LINE__, __VA_ARGS__)
 
 
 struct StorageHeader {
 	struct StorageHeaderHead {
 		// uint32_t magic;
-		uint16_t offset;  // required
+		uint32_t offset;  // required
 		// char uuid[36];
 	} head;
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
@@ -88,10 +104,10 @@ struct StorageHeader {
 
 	inline void validate(const void* /* storage */) {
 		// if (head.magic != STORAGE_MAGIC) {
-		// 	throw StorageBadHeaderMagicNumber();
+		// 	throw MSG_StorageCorruptVolume("Bad Header Magic Number");
 		// }
 		// if (strncasecmp(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid))) {
-		// 	throw StorageUUIDMismatch();
+		// 	throw MSG_StorageCorruptVolume("UUID Mismatch");
 		// }
 	}
 };
@@ -108,7 +124,7 @@ struct StorageBinHeader {
 
 	inline void validate(const void* /* storage */) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
-		// 	throw StorageBadBinHeaderMagicNumber();
+		// 	throw MSG_StorageCorruptVolume("Bad Bin Header Magic Number");
 		// }
 	}
 };
@@ -124,10 +140,10 @@ struct StorageBinFooter {
 
 	inline void validate(const void* /* storage */, uint32_t /* checksum_ */) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-		// 	throw StorageBadBinFooterMagicNumber();
+		// 	throw MSG_StorageCorruptVolume("Bad Bin Footer Magic Number");
 		// }
 		// if (checksum != checksum_) {
-		// 	throw StorageBadBinChecksum();
+		// 	throw MSG_StorageCorruptVolume("Bad Bin Checksum");
 		// }
 	}
 };
@@ -154,7 +170,7 @@ class Storage {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
 			if (file_size == -1) {
-				throw StorageIOError();
+				throw MSG_StorageIOError("IO Error");
 			}
 			free_blocks = (file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE;
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
@@ -201,21 +217,21 @@ public:
 		if (fd == -1) {
 			fd = ::open(path.c_str(), writable ? O_RDWR | O_CREAT | O_DSYNC : O_RDONLY, 0644);
 			if (fd == -1) {
-				throw StorageIOError();
+				throw MSG_StorageIOError("IO Error");
 			}
 
 			memset(&header, 0, sizeof(header));
 			header.init(this);
 
 			if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
-				throw StorageIOError();
+				throw MSG_StorageIOError("IO Error");
 			}
 		} else {
 			ssize_t r = io::read(fd, &header, sizeof(header));
 			if (r == -1) {
-				throw StorageIOError();
+				throw MSG_StorageIOError("IO Error");
 			} else if (r != sizeof(header)) {
-				throw StorageIncompleteBinData();
+				throw MSG_StorageCorruptVolume("Incomplete Bin Data");
 			}
 			header.validate(this);
 
@@ -224,7 +240,7 @@ public:
 				size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 				buffer_offset -= offset;
 				if (io::pread(fd, buffer, sizeof(buffer), offset) == -1) {
-					throw StorageIOError();
+					throw MSG_StorageIOError("IO Error");
 				}
 			}
 		}
@@ -252,7 +268,7 @@ public:
 
 	void seek(uint32_t offset) {
 		if (offset > header.head.offset) {
-			throw StorageEOF();
+			throw MSG_StorageEOF("EOF");
 		}
 		bin_offset = offset * STORAGE_ALIGNMENT;
 	}
@@ -332,13 +348,13 @@ public:
 
 		do_write:
 			if (io::pwrite(fd, buffer, sizeof(buffer), block_offset) != sizeof(buffer)) {
-				throw StorageIOError();
+				throw MSG_StorageIOError("IO Error");
 			}
 
 			if (buffer_offset == 0) {
 				block_offset += STORAGE_BLOCK_SIZE;
 				if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
-					throw StorageEOF();
+					throw MSG_StorageEOF("EOF");
 				}
 				--free_blocks;
 #if STORAGE_BUFFER_CLEAR
@@ -362,14 +378,14 @@ public:
 
 		if (!bin_header.size) {
 			if (io::lseek(fd, bin_offset, SEEK_SET) >= header.head.offset * STORAGE_ALIGNMENT) {
-				throw StorageEOF();
+				throw MSG_StorageEOF("EOF");
 			}
 
 			r = io::read(fd,  &bin_header, sizeof(StorageBinHeader));
 			if (r == -1) {
-				throw StorageIOError();
+				throw MSG_StorageIOError("IO Error");
 			} else if (r != sizeof(StorageBinHeader)) {
-				throw StorageIncompleteBinHeader();
+				throw MSG_StorageCorruptVolume("Incomplete Bin Header");
 			}
 			bin_offset += r;
 			bin_header.validate(this);
@@ -382,9 +398,9 @@ public:
 		if (buf_size) {
 			r = io::read(fd, buf, buf_size);
 			if (r == -1) {
-				throw StorageIOError();
+				throw MSG_StorageIOError("IO Error");
 			} else if (static_cast<size_t>(r) != buf_size) {
-				throw StorageIncompleteBinData();
+				throw MSG_StorageCorruptVolume("Incomplete Bin Data");
 			}
 			bin_offset += r;
 
@@ -395,9 +411,9 @@ public:
 		} else {
 			r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
 			if (r == -1) {
-				throw StorageIOError();
+				throw MSG_StorageIOError("IO Error");
 			} else if (r != sizeof(StorageBinFooter)) {
-				throw StorageIncompleteBinFooter();
+				throw MSG_StorageCorruptVolume("Incomplete Bin Footer");
 			}
 			bin_offset += r;
 			bin_footer.validate(this, checksum);
@@ -414,7 +430,7 @@ public:
 
 	void flush() {
 		if (io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
-			throw StorageIOError();
+			throw MSG_StorageIOError("IO Error");
 		}
 		growfile();
 	}
@@ -434,7 +450,7 @@ public:
 		}
 
 		if (r == -1) {
-			throw StorageIOError();
+			throw MSG_StorageIOError("IO Error");
 		}
 		return ret;
 	}

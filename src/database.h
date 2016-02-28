@@ -85,7 +85,7 @@ class DatabaseQueue;
 struct WalHeader {
 	struct StorageHeaderHead {
 		uint32_t magic;
-		uint16_t offset;
+		uint32_t offset;
 		char uuid[36];
 		uint32_t revision;
 	} head;
@@ -107,7 +107,7 @@ struct WalBinHeader {
 
 	inline void validate(const void*) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
-			throw StorageBadBinHeaderMagicNumber();
+			throw MSG_StorageCorruptVolume("Bad Bin Header Magic Number");
 		}
 	}
 };
@@ -123,10 +123,10 @@ struct WalBinFooter {
 
 	inline void validate(const void*, uint32_t checksum_) {
 		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-			throw StorageBadBinFooterMagicNumber();
+			throw MSG_StorageCorruptVolume("Bad Bin Footer Magic Number");
 		}
 		if (checksum != checksum_) {
-			throw StorageBadBinChecksum();
+			throw MSG_StorageCorruptVolume("Bad Bin Checksum");
 		}
 	}
 };

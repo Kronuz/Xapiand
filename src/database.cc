@@ -77,10 +77,10 @@ void WalHeader::validate(const void* storage)
 	const DatabaseWAL* s = static_cast<const DatabaseWAL*>(storage);
 
 	 if (head.magic != MAGIC) {
-		 throw StorageBadHeaderMagicNumber();
+		 throw MSG_StorageCorruptVolume("Bad Header Magic Number");
 	 }
 	 if (strncasecmp(head.uuid, s->database->get_uuid().c_str(), sizeof(head.uuid))) {
-		 throw StorageUUIDMismatch();
+		 throw MSG_StorageCorruptVolume("UUID Mismatch");
 	 }
 }
 
@@ -197,7 +197,7 @@ DatabaseWAL::read_checked(uint16_t& off_readed){
 	}
 
 	if (r == -1) {
-		throw StorageIOError();
+		throw MSG_StorageIOError("IO Error");
 	}
 	return ret;
 }
