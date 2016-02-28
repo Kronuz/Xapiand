@@ -284,7 +284,7 @@ public:
 #endif
 
 #if XAPIAND_DATABASE_WAL
-	DatabaseWAL wal;
+	std::unique_ptr<DatabaseWAL> wal;
 #endif
 
 	struct search_t {

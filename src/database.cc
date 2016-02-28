@@ -477,9 +477,6 @@ void DataHeader::validate(void* param) {
 
 
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_) :
-#ifdef XAPIAND_DATABASE_WAL
-	wal(this),
-#endif
 	weak_queue(queue_),
 	endpoints(endpoints_),
 	flags(flags_),
@@ -570,12 +567,6 @@ Database::reopen()
 			}
 #endif
 			db->add_database(wdb);
-#if XAPIAND_DATABASE_WAL
-			if (local && !(flags & DB_NOWAL)) {
-				// WAL required on a local database, open it.
-				wal.open_current(e->path, true);
-			}
-#endif
 		}
 	} else {
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.end(); ++i) {
@@ -622,14 +613,25 @@ Database::reopen()
 
 	schema.setDatabase(this);
 
+
 #ifdef XAPIAND_DATABASE_WAL
-	if (local) {
+	if (!storage && local) {
+		assert(endpoints_size == 1);  // FIXME: Storage only working for single local databases
+		// WAL required on a local database, open it.
 		storage = std::make_unique<DataStorage>();
 		storage->volume = 0;
 		if (flags & DB_WRITABLE) {
 			// FIXME: Find last available storage volume
 			// storage->volume = x;
 		}
+	}
+#endif
+
+#ifdef XAPIAND_DATABASE_WAL
+	if (!wal && local && (flags & DB_WRITABLE) && !(flags & DB_NOWAL)) {
+		// WAL required on a local writable database, open it.
+		wal = std::make_unique<DatabaseWAL>(this);
+		wal->open_current(e->path, true);
 	}
 #endif
 }
@@ -670,7 +672,7 @@ Database::commit(bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_, local && !(flags & DB_NOWAL)) wal.write_commit();
+	if (wal_ && wal) wal->write_commit();
 #else
 	(void)wal_;
 #endif
@@ -712,7 +714,7 @@ Database::cancel(bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && local && !(flags & DB_NOWAL)) wal.write_cancel();
+	if (wal_ && wal) wal->write_cancel();
 #else
 	(void)wal_;
 #endif
@@ -754,7 +756,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && local && !(flags & DB_NOWAL)) wal.write_delete_document(did);
+	if (wal_ && wal) wal->write_delete_document(did);
 #else
 	(void)wal_;
 #endif
@@ -811,7 +813,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && local && !(flags & DB_NOWAL)) wal.write_delete_document_term(term);
+	if (wal_ && wal) wal->write_delete_document_term(term);
 #else
 	(void)wal_;
 #endif
@@ -1483,7 +1485,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 	Xapian::docid did = 0;
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_, local && !(flags & DB_NOWAL)) wal.write_add_document(doc);
+	if (wal_ && wal) wal->write_add_document(doc);
 #else
 	(void)wal_;
 #endif
@@ -1530,7 +1532,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 	L_CALL(this, "Database::replace_document()");
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_, local && !(flags & DB_NOWAL)) wal.write_replace_document(did, doc);
+	if (wal_ && wal) wal->write_replace_document(did, doc);
 #else
 	(void)wal_;
 #endif
@@ -1587,7 +1589,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 	Xapian::docid did = 0;
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && local && !(flags & DB_NOWAL)) wal.write_replace_document_term(term, doc);
+	if (wal_ && wal) wal->write_replace_document_term(term, doc);
 #else
 	(void)wal_;
 #endif
@@ -1634,7 +1636,7 @@ Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool
 	L_CALL(this, "Database::add_spelling()");
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_, local && !(flags & DB_NOWAL)) wal.write_add_spelling(word, freqinc);
+	if (wal_ && wal) wal->write_add_spelling(word, freqinc);
 #else
 	(void)wal_;
 #endif
@@ -1672,7 +1674,7 @@ Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, b
 	L_CALL(this, "Database::remove_spelling()");
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_, local && !(flags & DB_NOWAL)) wal.write_remove_spelling(word, freqdec);
+	if (wal_ && wal) wal->write_remove_spelling(word, freqdec);
 #else
 	(void)wal_;
 #endif
@@ -2352,7 +2354,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	L_CALL(this, "Database::set_metadata()");
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_, local && !(flags & DB_NOWAL)) wal.write_set_metadata(key, value);
+	if (wal_ && wal) wal->write_set_metadata(key, value);
 #else
 	(void)wal_;
 #endif
