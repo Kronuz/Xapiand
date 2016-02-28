@@ -453,6 +453,27 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 #endif
 
 
+void DataHeader::init(const void* storage) {
+	const Database* s = static_cast<const Database*>(storage);
+
+	head.offset = STORAGE_START_BLOCK_OFFSET;
+	head.magic = STORAGE_MAGIC;
+	strncpy(head.uuid, s->get_uuid().c_str(), sizeof(head.uuid));
+}
+
+
+void DataHeader::validate(const void* storage) {
+	const Database* s = static_cast<const Database*>(storage);
+
+	if (head.magic != STORAGE_MAGIC) {
+		throw MSG_StorageCorruptVolume("Bad Header Magic Number");
+	}
+	if (strncasecmp(head.uuid, s->get_uuid().c_str(), sizeof(head.uuid))) {
+		throw MSG_StorageCorruptVolume("UUID Mismatch");
+	}
+}
+
+
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_) :
 #ifdef XAPIAND_DATABASE_WAL
 	wal(this),
@@ -1392,6 +1413,41 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 }
 
 
+void
+Database::pull_data(Xapian::Document& doc)
+{
+	if (!local) {
+		return;
+	}
+
+	std::string data = doc.get_data();
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	uint32_t vol = decode_length(&p, p_end);
+	uint32_t offset = decode_length(&p, p_end);
+	open(endpoints.begin()->path + "/storage.v" + std::to_string(vol), false);
+	seek(offset);
+	data = read();
+	doc.set_data(data);
+}
+
+
+void
+Database::push_data(Xapian::Document& doc)
+{
+	if (!local) {
+		return;
+	}
+
+	std::string data = doc.get_data();
+	uint32_t vol = 0;
+	open(endpoints.begin()->path + "/storage.v" + std::to_string(vol), true);
+	uint32_t off = write(data);
+	flush();
+	doc.set_data(encode_length(vol) + encode_length(off));
+}
+
+
 Xapian::docid
 Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 {
@@ -1405,11 +1461,14 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 	(void)wal_;
 #endif
 
+	Xapian::Document doc_ = doc;
+	push_data(doc_);
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Adding new document.  t: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			did = wdb->add_document(doc);
+			did = wdb->add_document(doc_);
 			modified = true;
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) {
@@ -1449,11 +1508,14 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 	(void)wal_;
 #endif
 
+	Xapian::Document doc_ = doc;
+	push_data(doc_);
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: %d  t: %d", did, t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			wdb->replace_document(did, doc);
+			wdb->replace_document(did, doc_);
 			modified = true;
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) {
@@ -1503,11 +1565,14 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 	(void)wal_;
 #endif
 
+	Xapian::Document doc_ = doc;
+	push_data(doc_);
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: '%s'  t: %d", term.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			did = wdb->replace_document(term, doc);
+			did = wdb->replace_document(term, doc_);
 			modified = true;
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) {
@@ -2313,6 +2378,7 @@ Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			doc = db->get_document(did);
+			pull_data(doc);
 			return true;
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) {

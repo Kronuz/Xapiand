@@ -195,7 +195,57 @@ public:
 #endif
 
 
-class Database {
+struct DataHeader {
+	struct DataHeaderHead {
+		uint32_t magic;
+		uint32_t offset;  // required
+		char uuid[36];
+	} head;
+	char padding[(STORAGE_BLOCK_SIZE - sizeof(DataHeader::DataHeaderHead)) / sizeof(char)];
+
+	void init(const void* storage);
+	void validate(const void* storage);
+};
+
+#pragma pack(push, 1)
+struct DataBinHeader {
+	char magic;
+	uint32_t size;  // required
+
+	inline void init(const void* /* storage */, uint32_t size_) {
+		magic = STORAGE_BIN_HEADER_MAGIC;
+		size = size_;
+	}
+
+	inline void validate(const void* /* storage */) {
+		if (magic != STORAGE_BIN_HEADER_MAGIC) {
+			throw MSG_StorageCorruptVolume("Bad Bin Header Magic Number");
+		}
+	}
+};
+
+struct DataBinFooter {
+	uint32_t checksum;
+	char magic;
+
+	inline void init(const void* /* storage */, uint32_t checksum_) {
+		magic = STORAGE_BIN_FOOTER_MAGIC;
+		checksum = checksum_;
+	}
+
+	inline void validate(const void* /* storage */, uint32_t checksum_) {
+		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
+			throw MSG_StorageCorruptVolume("Bad Bin Footer Magic Number");
+		}
+		if (checksum != checksum_) {
+			throw MSG_StorageCorruptVolume("Bad Bin Checksum");
+		}
+	}
+};
+#pragma pack(pop)
+
+
+class Database : public Storage<DataHeader, DataBinHeader, DataBinFooter> {
 public:
 #if XAPIAND_DATABASE_WAL
 	DatabaseWAL wal;
@@ -229,6 +279,9 @@ public:
 
 	long long read_mastery(const std::string& dir);
 	void reopen();
+
+	void pull_data(Xapian::Document& doc);
+	void push_data(Xapian::Document& doc);
 
 	bool commit(bool wal_=true);
 	bool cancel(bool wal_=true);

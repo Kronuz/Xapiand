@@ -377,6 +377,49 @@ BinaryClient::get_message(double timeout, std::string &result, int)
 	}
 #endif
 
+	switch (message_type) {
+		case 14:  // MSG_ADDDOCUMENT
+			{
+				Xapian::Document doc = Xapian::Document::unserialise(result);
+
+				Xapian::WritableDatabase* wdb = get_wdb();
+				databases.at(wdb)->push_data(doc);
+				release_db(wdb);
+
+				result = doc.serialise();
+			}
+			break;
+		case 18:  // MSG_REPLACEDOCUMENT
+			{
+				const char *p = result.data();
+				const char *p_end = p + result.size();
+				Xapian::docid did = static_cast<Xapian::docid>(decode_length(&p, p_end));
+				Xapian::Document doc = Xapian::Document::unserialise(std::string(p, p_end - p));
+
+				Xapian::WritableDatabase* wdb = get_wdb();
+				databases.at(wdb)->push_data(doc);
+				release_db(wdb);
+
+				result = encode_length(did) + doc.serialise();
+			}
+			break;
+		case 19:  // MSG_REPLACEDOCUMENTTERM
+			{
+				const char *p = result.data();
+				const char *p_end = p + result.size();
+				size_t size = decode_length(&p, p_end, true);
+				std::string term(p, size);
+				Xapian::Document doc = Xapian::Document::unserialise(std::string(p + size, p_end - p - size));
+
+				Xapian::WritableDatabase* wdb = get_wdb();
+				databases.at(wdb)->push_data(doc);
+				release_db(wdb);
+
+				result = encode_length(term.size()) + term + doc.serialise();
+			}
+			break;
+	}
+
 	return message_type;
 }
 
