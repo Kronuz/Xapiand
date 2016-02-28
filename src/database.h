@@ -183,10 +183,10 @@ public:
 	void write_line(Type type, const std::string& data, bool commit=false);
 	void write_add_document(const Xapian::Document& doc);
 	void write_cancel();
-	void write_delete_document_term(const std::string& document_id);
+	void write_delete_document_term(const std::string& term);
 	void write_commit();
 	void write_replace_document(Xapian::docid did, const Xapian::Document& doc);
-	void write_replace_document_term(const std::string& document_id, const Xapian::Document& doc);
+	void write_replace_document_term(const std::string& term, const Xapian::Document& doc);
 	void write_delete_document(Xapian::docid did);
 	void write_set_metadata(const std::string& key, const std::string& val);
 	void write_add_spelling(const std::string& word, Xapian::termcount freqinc);
@@ -229,17 +229,25 @@ public:
 
 	long long read_mastery(const std::string& dir);
 	void reopen();
-	bool commit();
+
+	bool commit(bool wal_=true);
+	bool cancel(bool wal_=true);
 
 	std::string get_uuid() const;
 	std::string get_revision_info() const;
 
-	void delete_document(const std::string& document_id, bool commit_=false);
-	void delete_document_term(const std::string& term, bool commit_=false);
+	bool delete_document(Xapian::docid did, bool commit_=false, bool wal_=true);
+	bool delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
+	bool delete_document_term(const std::string& term, bool commit_=false, bool wal_=true);
 	Xapian::docid index(const std::string& body, const std::string& document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
-	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool _commit, const std::string& ct_type, const std::string& ct_length);
-	Xapian::docid replace_document(const std::string& document_id, const Xapian::Document& doc, bool commit_=false);
-	Xapian::docid replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_=false);
+	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
+	Xapian::docid add_document(const Xapian::Document& doc, bool commit_=false, bool wal_=true);
+	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
+	Xapian::docid replace_document(const std::string& doc_id, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
+	Xapian::docid replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
+
+	bool add_spelling(const std::string & word, Xapian::termcount freqinc, bool commit_=false, bool wal_=true);
+	bool remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
 
 	data_field_t get_data_field(const std::string& field_name);
 	data_field_t get_slot_field(const std::string& field_name);
@@ -247,7 +255,7 @@ public:
 	void get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
 			std::vector<std::string>& suggestions, int offset=0);
 	bool get_metadata(const std::string& key, std::string& value);
-	bool set_metadata(const std::string& key, const std::string& value, bool commit_=false);
+	bool set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
 	bool get_document(const Xapian::docid& did, Xapian::Document& doc);
 
 	void get_stats_database(MsgPack&& stats);
