@@ -453,6 +453,7 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 #endif
 
 
+#ifdef XAPIAND_DATA_STORAGE
 void DataHeader::init(const void* storage) {
 	const Database* s = static_cast<const Database*>(storage);
 
@@ -472,6 +473,7 @@ void DataHeader::validate(const void* storage) {
 		throw MSG_StorageCorruptVolume("UUID Mismatch");
 	}
 }
+#endif
 
 
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_) :
@@ -1412,7 +1414,7 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 	}
 }
 
-
+#ifdef XAPIAND_DATA_STORAGE
 void
 Database::pull_data(Xapian::Document& doc)
 {
@@ -1446,6 +1448,7 @@ Database::push_data(Xapian::Document& doc)
 	flush();
 	doc.set_data(encode_length(vol) + encode_length(off));
 }
+#endif
 
 
 Xapian::docid

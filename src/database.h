@@ -195,6 +195,7 @@ public:
 #endif
 
 
+#ifdef XAPIAND_DATA_STORAGE
 struct DataHeader {
 	struct DataHeaderHead {
 		uint32_t magic;
@@ -243,9 +244,14 @@ struct DataBinFooter {
 	}
 };
 #pragma pack(pop)
+#endif
 
 
-class Database : public Storage<DataHeader, DataBinHeader, DataBinFooter> {
+class Database
+#ifdef XAPIAND_DATA_STORAGE
+    : public Storage<DataHeader, DataBinHeader, DataBinFooter>
+#endif
+{
 public:
 #if XAPIAND_DATABASE_WAL
 	DatabaseWAL wal;
@@ -280,8 +286,13 @@ public:
 	long long read_mastery(const std::string& dir);
 	void reopen();
 
+#ifdef XAPIAND_DATA_STORAGE
 	void pull_data(Xapian::Document& doc);
 	void push_data(Xapian::Document& doc);
+#else
+	inline void pull_data(Xapian::Document&) {}
+	inline void push_data(Xapian::Document&) {}
+#endif
 
 	bool commit(bool wal_=true);
 	bool cancel(bool wal_=true);
