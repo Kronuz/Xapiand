@@ -245,10 +245,6 @@ public:
 			}
 		}
 
-		if (writable) {
-			growfile();
-		}
-
 		seek(STORAGE_START_BLOCK_OFFSET);
 	}
 
