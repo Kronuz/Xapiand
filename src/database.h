@@ -253,20 +253,18 @@ struct DataBinFooter {
 #endif
 
 
-class Database
 #ifdef XAPIAND_DATA_STORAGE
-    : public Storage<DataHeader, DataBinHeader, DataBinFooter>
-#endif
+class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter>
 {
 public:
-#if XAPIAND_DATABASE_WAL
-	DatabaseWAL wal;
-#endif
-
-#ifdef XAPIAND_DATA_STORAGE
 	uint32_t volume;
+};
 #endif
 
+
+class Database
+{
+public:
 	Schema schema;
 
 	std::weak_ptr<DatabaseQueue> weak_queue;
@@ -280,6 +278,14 @@ public:
 	std::string checkout_revision;
 
 	std::unique_ptr<Xapian::Database> db;
+
+#ifdef XAPIAND_DATA_STORAGE
+	std::unique_ptr<DataStorage> storage;
+#endif
+
+#if XAPIAND_DATABASE_WAL
+	DatabaseWAL wal;
+#endif
 
 	struct search_t {
 		Xapian::Query query;
@@ -297,12 +303,11 @@ public:
 	void reopen();
 
 #ifdef XAPIAND_DATA_STORAGE
-	void find_storage_volume();
-	void pull_storage_data(Xapian::Document& doc);
-	void push_storage_data(Xapian::Document& doc);
+	void storage_pull_data(Xapian::Document& doc);
+	void storage_push_data(Xapian::Document& doc);
 #else
-	inline void pull_storage_data(Xapian::Document&) {}
-	inline void push_storage_data(Xapian::Document&) {}
+	inline void storage_pull_data(Xapian::Document&) {}
+	inline void storage_push_data(Xapian::Document&) {}
 #endif
 
 	bool commit(bool wal_=true);
