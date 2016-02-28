@@ -90,7 +90,7 @@ DatabaseWAL::open_current(const std::string& path, bool complete) //FIXME: write
 {
 	L_CALL(this, "DatabaseWAL::open()");
 
-	uint64_t revision = 0;
+	uint32_t revision = 0;
 	revision = 0;
 	memcpy(&revision, database->get_revision_info().data(), database->get_revision_info().size());
 
@@ -135,36 +135,51 @@ DatabaseWAL::open_current(const std::string& path, bool complete) //FIXME: write
 		std::string file = path + "/" + FILE_WAL + std::to_string(highest_revision);
 		open(file, true);
 
-		long high_slot = highest_valid_slot(header.slot);
 
 		uint16_t start_off, end_off;
-		for (auto i = lowest_revision; i <= highest_revision; i++){
-
-			file = path + "/" + FILE_WAL + std::to_string(lowest_revision);
+		for (auto i = lowest_revision; i <= highest_revision; i++) {
+			file = path + "/" + FILE_WAL + std::to_string(i);
 			open(file, true);
 
-			if (i == lowest_revision) {
-				start_off = header.WalHeader::head.offset;;
-			} else {
-				start_off = STORAGE_START_BLOCK_OFFSET;
-			}
-			seek(start_off);
+			uint32_t high_slot = highest_valid_slot();
 
-			if (i == highest_revision) {
-				if (!complete) {
-					--high_slot;
+			if (high_slot != static_cast<uint32_t>(-1)) {
+				if (i == lowest_revision) {
+					L_INFO(nullptr, "Read execute operations in WAL files (%u..%u)", lowest_revision, highest_revision + high_slot);
+
+					int32_t slot = revision - header.head.revision - 1;
+					if (slot == -1) {
+						/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
+						 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
+						 */
+						start_off = STORAGE_START_BLOCK_OFFSET;
+					}
+
+					start_off = header.slot[slot];
+					if (start_off == 0) {
+//						throw
+					}
+
+				} else {
+					start_off = STORAGE_START_BLOCK_OFFSET;
+				}
+
+				seek(start_off);
+
+				if (i == highest_revision) {
+					if (!complete) {
+						--high_slot;
+					}
 				}
 				end_off =  header.slot[high_slot];
-			} else {
-				end_off = std::numeric_limits<uint16_t>::max();
-			}
 
-			try {
-				while (start_off < end_off) {
-					std::string line = read_checked(start_off);
-					execute(line);
-				}
-			} catch (const StorageEOF& e){ }
+				try {
+					while (start_off < end_off) {
+						std::string line = read_checked(start_off);
+						execute(line);
+					}
+				} catch (const StorageEOF& e) { }
+			}
 		}
 	}
 }
@@ -188,15 +203,14 @@ DatabaseWAL::read_checked(uint16_t& off_readed){
 }
 
 
-long
-DatabaseWAL::highest_valid_slot(const uint32_t slots[])
+uint32_t
+DatabaseWAL::highest_valid_slot()
 {
 	L_CALL(this, "DatabaseWAL::highest_valid_slot()");
 
-	long slot = -1;
-	long wal_slots = static_cast<long> (WAL_SLOTS);
-	for (auto i = 0; i < wal_slots; i++) {
-		if (slots[i] == 0) {
+	uint32_t slot = -1;
+	for (uint32_t i = 0; i < WAL_SLOTS; i++) {
+		if (header.slot[i] == 0) {
 			break;
 		}
 		slot = i;
@@ -244,8 +258,7 @@ DatabaseWAL::execute(const std::string& line)
 
 	Type type = static_cast<Type>(decode_length(&p, p_end));
 
-	size = decode_length(&p, p_end, true);
-	std::string data(p, size);
+	std::string data(p, p_end);
 
 	Xapian::docid did;
 	Xapian::termcount freq;
@@ -327,8 +340,8 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit)
 		open(file, true);
 	}
 
-	uint32_t new_off = write(line.data(), line.size());
-	header.slot[slot] = new_off;
+	write(line.data(), line.size());
+	header.slot[slot] = header.head.offset; /* Beginning of the next revision */
 
 	if(commit) {
 		if (slot + 1 >= WAL_SLOTS) {
