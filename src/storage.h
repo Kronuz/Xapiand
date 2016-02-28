@@ -202,6 +202,11 @@ public:
 	}
 
 	void open(const std::string& path_, bool writable_) {
+		if (path == path_ && writable == writable_) {
+			seek(STORAGE_START_BLOCK_OFFSET);
+			return;
+		}
+
 		close();
 
 		path = path_;
