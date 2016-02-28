@@ -59,27 +59,27 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 constexpr const char* const DatabaseWAL::names[];
 
 
-void WalHeader::init(const void* storage)
+void WalHeader::init(void* param)
 {
-	const DatabaseWAL* s = static_cast<const DatabaseWAL*>(storage);
+	const DatabaseWAL* storage = static_cast<const DatabaseWAL*>(param);
 
 	head.magic = MAGIC;
 	head.offset = STORAGE_START_BLOCK_OFFSET;
-	strncpy(head.uuid, s->database->get_uuid().c_str(), sizeof(head.uuid));
+	strncpy(head.uuid, param->database->get_uuid().c_str(), sizeof(head.uuid));
 	uint32_t revision = 0;
-	memcpy(&revision, s->database->get_revision_info().data(), s->database->get_revision_info().size());
+	memcpy(&revision, param->database->get_revision_info().data(), param->database->get_revision_info().size());
 	head.revision = revision;
 }
 
 
-void WalHeader::validate(const void* storage)
+void WalHeader::validate(void* param)
 {
-	const DatabaseWAL* s = static_cast<const DatabaseWAL*>(storage);
+	const DatabaseWAL* storage = static_cast<const DatabaseWAL*>(param);
 
 	 if (head.magic != MAGIC) {
 		 throw MSG_StorageCorruptVolume("Bad header magic number");
 	 }
-	 if (strncasecmp(head.uuid, s->database->get_uuid().c_str(), sizeof(head.uuid))) {
+	 if (strncasecmp(head.uuid, storage->database->get_uuid().c_str(), sizeof(head.uuid))) {
 		 throw MSG_StorageCorruptVolume("UUID mismatch");
 	 }
 }
@@ -454,22 +454,22 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 
 
 #ifdef XAPIAND_DATA_STORAGE
-void DataHeader::init(const void* storage) {
-	const Database* s = static_cast<const Database*>(storage);
+void DataHeader::init(void* param) {
+	const Database* storage = static_cast<const Database*>(param);
 
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 	head.magic = STORAGE_MAGIC;
-	strncpy(head.uuid, s->get_uuid().c_str(), sizeof(head.uuid));
+	strncpy(head.uuid, storage->get_uuid().c_str(), sizeof(head.uuid));
 }
 
 
-void DataHeader::validate(const void* storage) {
-	const Database* s = static_cast<const Database*>(storage);
+void DataHeader::validate(void* param) {
+	const Database* storage = static_cast<const Database*>(param);
 
 	if (head.magic != STORAGE_MAGIC) {
 		throw MSG_StorageCorruptVolume("Bad header magic number");
 	}
-	if (strncasecmp(head.uuid, s->get_uuid().c_str(), sizeof(head.uuid))) {
+	if (strncasecmp(head.uuid, storage->get_uuid().c_str(), sizeof(head.uuid))) {
 		throw MSG_StorageCorruptVolume("UUID mismatch");
 	}
 }
@@ -1420,10 +1420,11 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 #ifdef XAPIAND_DATA_STORAGE
 
 void
-Database::find_volume()
+Database::find_storage_volume()
 {
 	volume = 0;
 }
+
 void
 Database::pull_storage_data(Xapian::Document& doc)
 {
@@ -1440,7 +1441,7 @@ Database::pull_storage_data(Xapian::Document& doc)
 	ssize_t offset = decode_length(&p, p_end);
 	if (offset == -1) throw MSG_StorageCorruptVolume("Invalid storage data offset");
 	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data footer magic number");
-	open(endpoints.begin()->path + DATA_STORAGE_PATH + std::to_string(volume), false);
+	open(endpoints.begin()->path + DATA_STORAGE_PATH + std::to_string(volume), false, this);
 	seek(offset);
 	data = read();
 	doc.set_data(data);
@@ -1456,7 +1457,7 @@ Database::push_storage_data(Xapian::Document& doc)
 	std::string data = doc.get_data();
 	uint32_t offset;
 	while(true) {
-		open(endpoints.begin()->path + DATA_STORAGE_PATH + std::to_string(volume), true);
+		open(endpoints.begin()->path + DATA_STORAGE_PATH + std::to_string(volume), true, this);
 		try {
 			offset = write(data);
 			break;

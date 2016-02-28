@@ -93,8 +93,8 @@ struct WalHeader {
 	} head;
 	uint32_t slot[WAL_SLOTS];
 
-	void init(const void* storage);
-	void validate(const void* storage);
+	void init(void* param);
+	void validate(void* param);
 };
 
 #pragma pack(push, 1)
@@ -102,12 +102,12 @@ struct WalBinHeader {
 	uint8_t magic;
 	uint32_t size;  // required
 
-	inline void init(const void*, uint32_t size_) {
+	inline void init(void*, uint32_t size_) {
 		magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 	}
 
-	inline void validate(const void*) {
+	inline void validate(void*) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
 			throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		}
@@ -118,12 +118,12 @@ struct WalBinFooter {
 	 uint32_t checksum;
 	 uint8_t magic;
 
-	inline void init(const void*, uint32_t checksum_) {
+	inline void init(void*, uint32_t checksum_) {
 		magic = STORAGE_BIN_FOOTER_MAGIC;
 		checksum = checksum_;
 	}
 
-	inline void validate(const void*, uint32_t checksum_) {
+	inline void validate(void*, uint32_t checksum_) {
 		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 			throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		}
@@ -206,8 +206,8 @@ struct DataHeader {
 	} head;
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(DataHeader::DataHeaderHead)) / sizeof(char)];
 
-	void init(const void* storage);
-	void validate(const void* storage);
+	void init(void* param);
+	void validate(void* param);
 };
 
 #pragma pack(push, 1)
@@ -216,17 +216,17 @@ struct DataBinHeader {
 	uint8_t flags;
 	uint32_t size;  // required
 
-	inline void init(const void* /* storage */, uint32_t size_) {
+	inline void init(void*, uint32_t size_) {
 		magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 	}
 
-	inline void validate(const void* /* storage */) {
+	inline void validate(void*) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
 			throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		}
 		if ((flags & 1) != 0) {
-			throw MSG_StorageNotFound("Deleted file");
+			throw MSG_StorageNotFound("Data Storage document deleted");
 		}
 	}
 };
@@ -235,12 +235,12 @@ struct DataBinFooter {
 	uint32_t checksum;
 	uint8_t magic;
 
-	inline void init(const void* /* storage */, uint32_t checksum_) {
+	inline void init(void* /* param */, uint32_t checksum_) {
 		magic = STORAGE_BIN_FOOTER_MAGIC;
 		checksum = checksum_;
 	}
 
-	inline void validate(const void* /* storage */, uint32_t checksum_) {
+	inline void validate(void* /* param */, uint32_t checksum_) {
 		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 			throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		}
@@ -297,7 +297,7 @@ public:
 	void reopen();
 
 #ifdef XAPIAND_DATA_STORAGE
-	void find_volume();
+	void find_storage_volume();
 	void pull_storage_data(Xapian::Document& doc);
 	void push_storage_data(Xapian::Document& doc);
 #else

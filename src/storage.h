@@ -103,13 +103,13 @@ struct StorageHeader {
 	} head;
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
 
-	inline void init(const void* /* storage */) {
+	inline void init(void* /* param */) {
 		head.offset = STORAGE_START_BLOCK_OFFSET;
 		// head.magic = STORAGE_MAGIC;
 		// strncpy(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid));
 	}
 
-	inline void validate(const void* /* storage */) {
+	inline void validate(void* /* param */) {
 		// if (head.magic != STORAGE_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad header magic number");
 		// }
@@ -125,12 +125,12 @@ struct StorageBinHeader {
 	// uint8_t flags;
 	uint32_t size;  // required
 
-	inline void init(const void* /* storage */, uint32_t size_) {
+	inline void init(void* /* param */, uint32_t size_) {
 		// magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 	}
 
-	inline void validate(const void* /* storage */) {
+	inline void validate(void* /* param */) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		// }
@@ -141,12 +141,12 @@ struct StorageBinFooter {
 	// uint32_t checksum;
 	// uint8_t magic;
 
-	inline void init(const void* /* storage */, uint32_t /* checksum_ */) {
+	inline void init(void* /* param */, uint32_t /* checksum_ */) {
 		// magic = STORAGE_BIN_FOOTER_MAGIC;
 		// checksum = checksum_;
 	}
 
-	inline void validate(const void* /* storage */, uint32_t /* checksum_ */) {
+	inline void validate(void* /* param */, uint32_t /* checksum_ */) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		// }
@@ -209,7 +209,7 @@ public:
 		close();
 	}
 
-	void open(const std::string& path_, bool writable_) {
+	void open(const std::string& path_, bool writable_, void* param=nullptr) {
 		if (path == path_ && writable == writable_) {
 			seek(STORAGE_START_BLOCK_OFFSET);
 			return;
@@ -234,7 +234,7 @@ public:
 			}
 
 			memset(&header, 0, sizeof(header));
-			header.init(this);
+			header.init(param);
 
 			if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
 				throw MSG_StorageIOError("IO error");
@@ -246,7 +246,7 @@ public:
 			} else if unlikely(r != sizeof(header)) {
 				throw MSG_StorageCorruptVolume("Incomplete bin data");
 			}
-			header.validate(this);
+			header.validate(param);
 
 			if (writable) {
 				buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
@@ -282,7 +282,7 @@ public:
 		bin_offset = offset * STORAGE_ALIGNMENT;
 	}
 
-	uint32_t write(const char *data, size_t data_size) {
+	uint32_t write(const char *data, size_t data_size, void* param=nullptr) {
 		// FIXME: Compress data here!
 
 		size_t data_size_orig = data_size;
@@ -293,7 +293,7 @@ public:
 
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
-		bin_header.init(this, data_size);
+		bin_header.init(param, data_size);
 		const StorageBinHeader* bin_header_data = &bin_header;
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
@@ -335,7 +335,7 @@ public:
 			}
 
 			if (bin_footer_data_size) {
-				bin_footer.init(this, checksum);
+				bin_footer.init(param, checksum);
 
 				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
 				if (size > bin_footer_data_size) {
@@ -377,7 +377,7 @@ public:
 		return current_offset;
 	}
 
-	size_t read(char *buf, size_t buf_size) {
+	size_t read(char *buf, size_t buf_size, void* param=nullptr) {
 		if (!buf_size) {
 			return 0;
 		}
@@ -397,7 +397,7 @@ public:
 				throw MSG_StorageCorruptVolume("Incomplete bin header");
 			}
 			bin_offset += r;
-			bin_header.validate(this);
+			bin_header.validate(param);
 		}
 
 		if (buf_size > bin_header.size - bin_size) {
@@ -425,7 +425,7 @@ public:
 				throw MSG_StorageCorruptVolume("Incomplete bin footer");
 			}
 			bin_offset += r;
-			bin_footer.validate(this, checksum);
+			bin_footer.validate(param, checksum);
 
 			// Align the bin_offset to the next storage alignment
 			bin_offset = ((bin_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT;
@@ -444,17 +444,17 @@ public:
 		growfile();
 	}
 
-	inline uint32_t write(const std::string& data) {
-		return write(data.data(), data.size());
+	inline uint32_t write(const std::string& data, void* param=nullptr) {
+		return write(data.data(), data.size(), param);
 
 	}
 
-	inline std::string read() {
+	inline std::string read(void* param=nullptr) {
 		std::string ret;
 
 		ssize_t r;
 		char buf[1024];
-		while ((r = read(buf, sizeof(buf)))) {
+		while ((r = read(buf, sizeof(buf), param))) {
 			ret += std::string(buf, r);
 		}
 
