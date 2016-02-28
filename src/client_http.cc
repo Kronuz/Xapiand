@@ -110,6 +110,12 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 
 		response += "Server: " + std::string(PACKAGE_NAME) + "/" + std::string(VERSION) + eol;
 
+		response_ends = std::chrono::system_clock::now();
+		response += "Response-Time: " + delta_string(request_begins, response_ends) + eol;
+		if (operation_ends >= operation_begins) {
+			response += "Operation-Time: " + delta_string(operation_begins, operation_ends) + eol;
+		}
+
 		if (mode & HTTP_CONTENT_TYPE) {
 			response += "Content-Type: " + ct_type + eol;
 		}
@@ -713,13 +719,13 @@ HttpClient::delete_document_view(const query_field_t& e)
 		return;
 	}
 
-	auto tp_start = std::chrono::system_clock::now();
+	operation_begins = std::chrono::system_clock::now();
 
 	database->delete_document(command, e.commit);
 
-	auto tp_end = std::chrono::system_clock::now();
+	operation_ends = std::chrono::system_clock::now();
 
-	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
+	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
@@ -728,7 +734,7 @@ HttpClient::delete_document_view(const query_field_t& e)
 		stats_cnt.del.tm_min[b_time.minute] += _time;
 		stats_cnt.del.tm_sec[b_time.second] += _time;
 	}
-	L_TIME(this, "Deletion took %s", delta_string(tp_start, tp_end).c_str());
+	L_TIME(this, "Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	manager()->database_pool.checkin(database);
 
@@ -758,13 +764,13 @@ HttpClient::index_document_view(const query_field_t& e)
 		content_type = JSON_TYPE;
 	}
 
-	auto tp_start = std::chrono::system_clock::now();
+	operation_begins = std::chrono::system_clock::now();
 
 	database->index(body, command, e.commit, content_type, content_length);
 
-	auto tp_end = std::chrono::system_clock::now();
+	operation_ends = std::chrono::system_clock::now();
 
-	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
+	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
@@ -773,7 +779,7 @@ HttpClient::index_document_view(const query_field_t& e)
 		stats_cnt.index.tm_min[b_time.minute] += _time;
 		stats_cnt.index.tm_sec[b_time.second] += _time;
 	}
-	L_TIME(this, "Indexing took %s", delta_string(tp_start, tp_end).c_str());
+	L_TIME(this, "Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	manager()->database_pool.checkin(database);
 	MsgPack response;
@@ -794,13 +800,13 @@ HttpClient::update_document_view(const query_field_t& e)
 		return;
 	}
 
-	auto tp_start = std::chrono::system_clock::now();
+	operation_begins = std::chrono::system_clock::now();
 
 	database->patch(body, command, e.commit, content_type, content_length);
 
-	auto tp_end = std::chrono::system_clock::now();
+	operation_ends = std::chrono::system_clock::now();
 
-	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
+	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
@@ -809,7 +815,7 @@ HttpClient::update_document_view(const query_field_t& e)
 		stats_cnt.patch.tm_min[b_time.minute] += _time;
 		stats_cnt.patch.tm_sec[b_time.second] += _time;
 	}
-	L_TIME(this, "Updating took %s", delta_string(tp_start, tp_end).c_str());
+	L_TIME(this, "Updating took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	manager()->database_pool.checkin(database);
 	MsgPack response;
@@ -925,7 +931,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 	std::vector<std::string> suggestions;
 	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 
-	auto tp_start = std::chrono::system_clock::now();
+	operation_begins = std::chrono::system_clock::now();
 	database->get_mset(e, mset, spies, suggestions);
 
 	L_DEBUG(this, "Suggested queries:\n%s", [&suggestions]() {
@@ -956,6 +962,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 				response[name_result] = array;
 			}
 		}
+		operation_ends = std::chrono::system_clock::now();
 		write_http_response(response, 200, e.pretty);
 	} else {
 		int rc = 0;
@@ -989,6 +996,8 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 				if (!database->get_document(docid, document)) {
 					continue;
 				}
+
+				operation_ends = std::chrono::system_clock::now();
 
 				auto ct_type_str = document.get_value(DB_SLOT_TYPE);
 				if (ct_type_str == JSON_TYPE || ct_type_str == MSGPACK_TYPE) {
@@ -1051,8 +1060,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 		}
 	}
 
-	auto tp_end = std::chrono::system_clock::now();
-	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(tp_end - tp_start).count();
+	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
 	{
 		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 		update_pos_time();
@@ -1061,7 +1069,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 		stats_cnt.search.tm_min[b_time.minute] += _time;
 		stats_cnt.search.tm_sec[b_time.second] += _time;
 	}
-	L_TIME(this, "Searching took %s", delta_string(tp_start, tp_end).c_str());
+	L_TIME(this, "Searching took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	manager()->database_pool.checkin(database);
 	L_DEBUG(this, "FINISH SEARCH");

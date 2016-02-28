@@ -96,6 +96,8 @@ class HttpClient : public BaseClient {
 	bool request_begining;
 	std::chrono::time_point<std::chrono::system_clock> request_begins;
 	std::chrono::time_point<std::chrono::system_clock> response_begins;
+	std::chrono::time_point<std::chrono::system_clock> operation_begins;
+	std::chrono::time_point<std::chrono::system_clock> operation_ends;
 	std::chrono::time_point<std::chrono::system_clock> response_ends;
 
 	static int on_info(http_parser* p);
