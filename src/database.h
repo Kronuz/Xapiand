@@ -79,7 +79,6 @@ struct WalHeader;
 class DatabasePool;
 class DatabasesLRU;
 class DatabaseQueue;
-class DatabaseWAL;
 
 #if XAPIAND_DATABASE_WAL
 
@@ -89,11 +88,6 @@ struct WalHeader {
 		uint16_t offset;
 		char uuid[36];
 		uint32_t revision;
-		StorageHeaderHead() {
-			memset(this, 0, sizeof(*this));
-			magic = STORAGE_MAGIC;
-			offset = STORAGE_START_BLOCK_OFFSET;
-		}
 	} head;
 	uint32_t slot[WAL_SLOTS];
 
@@ -107,14 +101,14 @@ struct WalBinHeader {
 	uint32_t size;  // required
 
 	inline void init(const void*, uint32_t size_) {
-		 magic = STORAGE_BIN_HEADER_MAGIC;
+		magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 	}
 
 	inline void validate(const void*) {
-		 if (magic != STORAGE_BIN_HEADER_MAGIC) {
-			 throw StorageBadBinHeaderMagicNumber();
-		 }
+		if (magic != STORAGE_BIN_HEADER_MAGIC) {
+			throw StorageBadBinHeaderMagicNumber();
+		}
 	}
 };
 
@@ -123,23 +117,23 @@ struct WalBinFooter {
 	 char magic;
 
 	inline void init(const void*, uint32_t checksum_) {
-		 magic = STORAGE_BIN_FOOTER_MAGIC;
-		 checksum = checksum_;
+		magic = STORAGE_BIN_FOOTER_MAGIC;
+		checksum = checksum_;
 	}
 
 	inline void validate(const void*, uint32_t checksum_) {
-		 if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-			 throw StorageBadBinFooterMagicNumber();
-		 }
-		 if (checksum != checksum_) {
-			 throw StorageBadBinChecksum();
-		 }
+		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
+			throw StorageBadBinFooterMagicNumber();
+		}
+		if (checksum != checksum_) {
+			throw StorageBadBinChecksum();
+		}
 	}
 };
 #pragma pack(pop)
 
 
-class DatabaseWAL: Storage<WalHeader, WalBinHeader, WalBinFooter> {
+class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	static const constexpr char* const names[] = {
 		"ADD_DOCUMENT",
 		"CANCEL",
