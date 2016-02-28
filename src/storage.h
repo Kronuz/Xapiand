@@ -66,6 +66,13 @@ public:
 };
 #define MSG_StorageIOError(...) StorageIOError(__FILE__, __LINE__, __VA_ARGS__)
 
+class StorageNotFound : public StorageException {
+public:
+	template<typename... Args>
+	StorageNotFound(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
+};
+#define MSG_StorageNotFound(...) StorageNotFound(__FILE__, __LINE__, __VA_ARGS__)
+
 class StorageEOF : public StorageException {
 public:
 	template<typename... Args>
@@ -104,17 +111,18 @@ struct StorageHeader {
 
 	inline void validate(const void* /* storage */) {
 		// if (head.magic != STORAGE_MAGIC) {
-		// 	throw MSG_StorageCorruptVolume("Bad Header Magic Number");
+		// 	throw MSG_StorageCorruptVolume("Bad header magic number");
 		// }
 		// if (strncasecmp(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid))) {
-		// 	throw MSG_StorageCorruptVolume("UUID Mismatch");
+		// 	throw MSG_StorageCorruptVolume("UUID mismatch");
 		// }
 	}
 };
 
 #pragma pack(push, 1)
 struct StorageBinHeader {
-	// char magic;
+	// uint8_t magic;
+	// uint8_t flags;
 	uint32_t size;  // required
 
 	inline void init(const void* /* storage */, uint32_t size_) {
@@ -124,14 +132,14 @@ struct StorageBinHeader {
 
 	inline void validate(const void* /* storage */) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
-		// 	throw MSG_StorageCorruptVolume("Bad Bin Header Magic Number");
+		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		// }
 	}
 };
 
 struct StorageBinFooter {
 	// uint32_t checksum;
-	// char magic;
+	// uint8_t magic;
 
 	inline void init(const void* /* storage */, uint32_t /* checksum_ */) {
 		// magic = STORAGE_BIN_FOOTER_MAGIC;
@@ -140,10 +148,10 @@ struct StorageBinFooter {
 
 	inline void validate(const void* /* storage */, uint32_t /* checksum_ */) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-		// 	throw MSG_StorageCorruptVolume("Bad Bin Footer Magic Number");
+		// 	throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		// }
 		// if (checksum != checksum_) {
-		// 	throw MSG_StorageCorruptVolume("Bad Bin Checksum");
+		// 	throw MSG_StorageCorruptVolume("Bad bin checksum");
 		// }
 	}
 };
@@ -170,7 +178,7 @@ class Storage {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
 			if unlikely(file_size < 0) {
-				throw MSG_StorageIOError("IO Error");
+				throw MSG_StorageIOError("IO error");
 			}
 			free_blocks = (file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE;
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
@@ -222,21 +230,21 @@ public:
 		if unlikely(fd < 0) {
 			fd = ::open(path.c_str(), writable ? O_RDWR | O_CREAT | O_DSYNC : O_RDONLY, 0644);
 			if unlikely(fd < 0) {
-				throw MSG_StorageIOError("IO Error");
+				throw MSG_StorageIOError("IO error");
 			}
 
 			memset(&header, 0, sizeof(header));
 			header.init(this);
 
 			if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
-				throw MSG_StorageIOError("IO Error");
+				throw MSG_StorageIOError("IO error");
 			}
 		} else {
 			ssize_t r = io::read(fd, &header, sizeof(header));
 			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO Error");
+				throw MSG_StorageIOError("IO error");
 			} else if unlikely(r != sizeof(header)) {
-				throw MSG_StorageCorruptVolume("Incomplete Bin Data");
+				throw MSG_StorageCorruptVolume("Incomplete bin data");
 			}
 			header.validate(this);
 
@@ -245,7 +253,7 @@ public:
 				size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 				buffer_offset -= offset;
 				if unlikely(io::pread(fd, buffer, sizeof(buffer), offset) < 0) {
-					throw MSG_StorageIOError("IO Error");
+					throw MSG_StorageIOError("IO error");
 				}
 			}
 		}
@@ -269,7 +277,7 @@ public:
 
 	void seek(uint32_t offset) {
 		if (offset > header.head.offset) {
-			throw MSG_StorageEOF("EOF");
+			throw MSG_StorageEOF("Storage EOF");
 		}
 		bin_offset = offset * STORAGE_ALIGNMENT;
 	}
@@ -349,13 +357,13 @@ public:
 
 		do_write:
 			if (io::pwrite(fd, buffer, sizeof(buffer), block_offset) != sizeof(buffer)) {
-				throw MSG_StorageIOError("IO Error");
+				throw MSG_StorageIOError("IO error");
 			}
 
 			if (buffer_offset == 0) {
 				block_offset += STORAGE_BLOCK_SIZE;
 				if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
-					throw MSG_StorageEOF("EOF");
+					throw MSG_StorageEOF("Storage EOF");
 				}
 				--free_blocks;
 #if STORAGE_BUFFER_CLEAR
@@ -379,14 +387,14 @@ public:
 
 		if (!bin_header.size) {
 			if (io::lseek(fd, bin_offset, SEEK_SET) >= header.head.offset * STORAGE_ALIGNMENT) {
-				throw MSG_StorageEOF("EOF");
+				throw MSG_StorageEOF("Storage EOF");
 			}
 
 			r = io::read(fd,  &bin_header, sizeof(StorageBinHeader));
 			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO Error");
+				throw MSG_StorageIOError("IO error");
 			} else if unlikely(r != sizeof(StorageBinHeader)) {
-				throw MSG_StorageCorruptVolume("Incomplete Bin Header");
+				throw MSG_StorageCorruptVolume("Incomplete bin header");
 			}
 			bin_offset += r;
 			bin_header.validate(this);
@@ -399,9 +407,9 @@ public:
 		if (buf_size) {
 			r = io::read(fd, buf, buf_size);
 			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO Error");
+				throw MSG_StorageIOError("IO error");
 			} else if unlikely(static_cast<size_t>(r) != buf_size) {
-				throw MSG_StorageCorruptVolume("Incomplete Bin Data");
+				throw MSG_StorageCorruptVolume("Incomplete bin data");
 			}
 			bin_offset += r;
 
@@ -412,9 +420,9 @@ public:
 		} else {
 			r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
 			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO Error");
+				throw MSG_StorageIOError("IO error");
 			} else if unlikely(r != sizeof(StorageBinFooter)) {
-				throw MSG_StorageCorruptVolume("Incomplete Bin Footer");
+				throw MSG_StorageCorruptVolume("Incomplete bin footer");
 			}
 			bin_offset += r;
 			bin_footer.validate(this, checksum);
@@ -431,7 +439,7 @@ public:
 
 	void flush() {
 		if (io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
-			throw MSG_StorageIOError("IO Error");
+			throw MSG_StorageIOError("IO error");
 		}
 		growfile();
 	}
@@ -451,7 +459,7 @@ public:
 		}
 
 		if unlikely(r < 0) {
-			throw MSG_StorageIOError("IO Error");
+			throw MSG_StorageIOError("IO error");
 		}
 		return ret;
 	}

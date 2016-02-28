@@ -46,6 +46,8 @@
 #include <unordered_set>
 
 
+#define DATA_STORAGE_PATH "/storage.v"
+
 #define DB_WRITABLE     1 // Opens as writable
 #define DB_SPAWN        2 // Automatically creates the database if it doesn't exist
 #define DB_PERSISTENT   4 // Always try keeping the database in the database pool
@@ -97,7 +99,7 @@ struct WalHeader {
 
 #pragma pack(push, 1)
 struct WalBinHeader {
-	char magic;
+	uint8_t magic;
 	uint32_t size;  // required
 
 	inline void init(const void*, uint32_t size_) {
@@ -107,14 +109,14 @@ struct WalBinHeader {
 
 	inline void validate(const void*) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
-			throw MSG_StorageCorruptVolume("Bad Bin Header Magic Number");
+			throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		}
 	}
 };
 
 struct WalBinFooter {
 	 uint32_t checksum;
-	 char magic;
+	 uint8_t magic;
 
 	inline void init(const void*, uint32_t checksum_) {
 		magic = STORAGE_BIN_FOOTER_MAGIC;
@@ -123,10 +125,10 @@ struct WalBinFooter {
 
 	inline void validate(const void*, uint32_t checksum_) {
 		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-			throw MSG_StorageCorruptVolume("Bad Bin Footer Magic Number");
+			throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		}
 		if (checksum != checksum_) {
-			throw MSG_StorageCorruptVolume("Bad Bin Checksum");
+			throw MSG_StorageCorruptVolume("Bad bin checksum");
 		}
 	}
 };
@@ -210,7 +212,8 @@ struct DataHeader {
 
 #pragma pack(push, 1)
 struct DataBinHeader {
-	char magic;
+	uint8_t magic;
+	uint8_t flags;
 	uint32_t size;  // required
 
 	inline void init(const void* /* storage */, uint32_t size_) {
@@ -220,14 +223,17 @@ struct DataBinHeader {
 
 	inline void validate(const void* /* storage */) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
-			throw MSG_StorageCorruptVolume("Bad Bin Header Magic Number");
+			throw MSG_StorageCorruptVolume("Bad bin header magic number");
+		}
+		if ((flags & 1) != 0) {
+			throw MSG_StorageNotFound("Deleted file");
 		}
 	}
 };
 
 struct DataBinFooter {
 	uint32_t checksum;
-	char magic;
+	uint8_t magic;
 
 	inline void init(const void* /* storage */, uint32_t checksum_) {
 		magic = STORAGE_BIN_FOOTER_MAGIC;
@@ -236,10 +242,10 @@ struct DataBinFooter {
 
 	inline void validate(const void* /* storage */, uint32_t checksum_) {
 		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-			throw MSG_StorageCorruptVolume("Bad Bin Footer Magic Number");
+			throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		}
 		if (checksum != checksum_) {
-			throw MSG_StorageCorruptVolume("Bad Bin Checksum");
+			throw MSG_StorageCorruptVolume("Bad bin checksum");
 		}
 	}
 };
@@ -255,6 +261,10 @@ class Database
 public:
 #if XAPIAND_DATABASE_WAL
 	DatabaseWAL wal;
+#endif
+
+#ifdef XAPIAND_DATA_STORAGE
+	uint32_t volume;
 #endif
 
 	Schema schema;
@@ -287,11 +297,12 @@ public:
 	void reopen();
 
 #ifdef XAPIAND_DATA_STORAGE
-	void pull_data(Xapian::Document& doc);
-	void push_data(Xapian::Document& doc);
+	void find_volume();
+	void pull_storage_data(Xapian::Document& doc);
+	void push_storage_data(Xapian::Document& doc);
 #else
-	inline void pull_data(Xapian::Document&) {}
-	inline void push_data(Xapian::Document&) {}
+	inline void pull_storage_data(Xapian::Document&) {}
+	inline void push_storage_data(Xapian::Document&) {}
 #endif
 
 	bool commit(bool wal_=true);

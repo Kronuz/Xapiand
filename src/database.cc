@@ -77,10 +77,10 @@ void WalHeader::validate(const void* storage)
 	const DatabaseWAL* s = static_cast<const DatabaseWAL*>(storage);
 
 	 if (head.magic != MAGIC) {
-		 throw MSG_StorageCorruptVolume("Bad Header Magic Number");
+		 throw MSG_StorageCorruptVolume("Bad header magic number");
 	 }
 	 if (strncasecmp(head.uuid, s->database->get_uuid().c_str(), sizeof(head.uuid))) {
-		 throw MSG_StorageCorruptVolume("UUID Mismatch");
+		 throw MSG_StorageCorruptVolume("UUID mismatch");
 	 }
 }
 
@@ -197,7 +197,7 @@ DatabaseWAL::read_checked(uint16_t& off_readed){
 	}
 
 	if (r == -1) {
-		throw MSG_StorageIOError("IO Error");
+		throw MSG_StorageIOError("IO error");
 	}
 	return ret;
 }
@@ -467,10 +467,10 @@ void DataHeader::validate(const void* storage) {
 	const Database* s = static_cast<const Database*>(storage);
 
 	if (head.magic != STORAGE_MAGIC) {
-		throw MSG_StorageCorruptVolume("Bad Header Magic Number");
+		throw MSG_StorageCorruptVolume("Bad header magic number");
 	}
 	if (strncasecmp(head.uuid, s->get_uuid().c_str(), sizeof(head.uuid))) {
-		throw MSG_StorageCorruptVolume("UUID Mismatch");
+		throw MSG_StorageCorruptVolume("UUID mismatch");
 	}
 }
 #endif
@@ -479,6 +479,9 @@ void DataHeader::validate(const void* storage) {
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_) :
 #ifdef XAPIAND_DATABASE_WAL
 	wal(this),
+#endif
+#ifdef XAPIAND_DATA_STORAGE
+	volume(0),
 #endif
 	weak_queue(queue_),
 	endpoints(endpoints_),
@@ -1415,8 +1418,14 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 }
 
 #ifdef XAPIAND_DATA_STORAGE
+
 void
-Database::pull_data(Xapian::Document& doc)
+Database::find_volume()
+{
+	volume = 0;
+}
+void
+Database::pull_storage_data(Xapian::Document& doc)
 {
 	if (!local) {
 		return;
@@ -1425,28 +1434,40 @@ Database::pull_data(Xapian::Document& doc)
 	std::string data = doc.get_data();
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	uint32_t vol = decode_length(&p, p_end);
-	uint32_t offset = decode_length(&p, p_end);
-	open(endpoints.begin()->path + "/storage.v" + std::to_string(vol), false);
+	if (*p++ != STORAGE_BIN_HEADER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data header magic number");
+	ssize_t volume = decode_length(&p, p_end);
+	if (volume == -1) throw MSG_StorageCorruptVolume("Invalid storage data volume");
+	ssize_t offset = decode_length(&p, p_end);
+	if (offset == -1) throw MSG_StorageCorruptVolume("Invalid storage data offset");
+	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data footer magic number");
+	open(endpoints.begin()->path + DATA_STORAGE_PATH + std::to_string(volume), false);
 	seek(offset);
 	data = read();
 	doc.set_data(data);
 }
 
-
 void
-Database::push_data(Xapian::Document& doc)
+Database::push_storage_data(Xapian::Document& doc)
 {
 	if (!local) {
 		return;
 	}
 
 	std::string data = doc.get_data();
-	uint32_t vol = 0;
-	open(endpoints.begin()->path + "/storage.v" + std::to_string(vol), true);
-	uint32_t off = write(data);
+	uint32_t offset;
+	while(true) {
+		open(endpoints.begin()->path + DATA_STORAGE_PATH + std::to_string(volume), true);
+		try {
+			offset = write(data);
+			break;
+		} catch(StorageEOF) {
+			++volume;
+		}
+	}
 	flush();
-	doc.set_data(encode_length(vol) + encode_length(off));
+	char h = STORAGE_BIN_HEADER_MAGIC;
+	char f = STORAGE_BIN_FOOTER_MAGIC;
+	doc.set_data(std::string(&h, 1) + encode_length(volume) + encode_length(offset) + std::string(&f, 1));
 }
 #endif
 
@@ -1465,7 +1486,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 #endif
 
 	Xapian::Document doc_ = doc;
-	push_data(doc_);
+	push_storage_data(doc_);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Adding new document.  t: %d", t);
@@ -1512,7 +1533,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 #endif
 
 	Xapian::Document doc_ = doc;
-	push_data(doc_);
+	push_storage_data(doc_);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: %d  t: %d", did, t);
@@ -1569,7 +1590,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 #endif
 
 	Xapian::Document doc_ = doc;
-	push_data(doc_);
+	push_storage_data(doc_);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: '%s'  t: %d", term.c_str(), t);
@@ -2381,7 +2402,7 @@ Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			doc = db->get_document(did);
-			pull_data(doc);
+			pull_storage_data(doc);
 			return true;
 		} catch (const Xapian::DatabaseModifiedError& er) {
 			if (t) {

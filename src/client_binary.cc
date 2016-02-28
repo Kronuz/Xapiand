@@ -383,7 +383,7 @@ BinaryClient::get_message(double timeout, std::string &result, int)
 				Xapian::Document doc = Xapian::Document::unserialise(result);
 
 				Xapian::WritableDatabase* wdb = get_wdb();
-				databases.at(wdb)->push_data(doc);
+				databases.at(wdb)->push_storage_data(doc);
 				release_db(wdb);
 
 				result = doc.serialise();
@@ -397,7 +397,7 @@ BinaryClient::get_message(double timeout, std::string &result, int)
 				Xapian::Document doc = Xapian::Document::unserialise(std::string(p, p_end - p));
 
 				Xapian::WritableDatabase* wdb = get_wdb();
-				databases.at(wdb)->push_data(doc);
+				databases.at(wdb)->push_storage_data(doc);
 				release_db(wdb);
 
 				result = encode_length(did) + doc.serialise();
@@ -412,7 +412,7 @@ BinaryClient::get_message(double timeout, std::string &result, int)
 				Xapian::Document doc = Xapian::Document::unserialise(std::string(p + size, p_end - p - size));
 
 				Xapian::WritableDatabase* wdb = get_wdb();
-				databases.at(wdb)->push_data(doc);
+				databases.at(wdb)->push_storage_data(doc);
 				release_db(wdb);
 
 				result = encode_length(term.size()) + term + doc.serialise();
