@@ -2054,8 +2054,8 @@ Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 			}
 		} catch (const Xapian::DocNotFoundError&) {
 			return false;
-		} catch (const Xapian::InvalidArgumentError&) {
-			throw MSG_Error("Document id is not valid");
+		} catch (const Xapian::Error& er) {
+			throw MSG_Error(er.get_msg().c_str());
 		}
 	}
 
