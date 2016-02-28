@@ -261,49 +261,53 @@ DatabaseWAL::execute(const std::string& line)
 	std::string data(p, p_end);
 
 	Xapian::docid did;
+	Xapian::Document doc;
 	Xapian::termcount freq;
+	std::string term;
 
 	p = data.data();
 	p_end = p + data.size();
 
-	Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
 	switch (type) {
 		case Type::ADD_DOCUMENT:
-			wdb->add_document(Xapian::Document::unserialise(data));
+			doc = Xapian::Document::unserialise(data);
+			database->add_document(doc, false, false);
 			break;
 		case Type::CANCEL:
-			wdb->begin_transaction(false);
-			wdb->cancel_transaction();
+			database->cancel(false);
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
-			wdb->delete_document(data);
+			database->delete_document(data, false, false);
 			break;
 		case Type::COMMIT:
-			wdb->commit();
+			database->commit(false);
 			break;
 		case Type::REPLACE_DOCUMENT:
 			did = static_cast<Xapian::docid>(decode_length(&p, p_end));
-			wdb->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end - p)));
+			doc = Xapian::Document::unserialise(std::string(p, p_end - p));
+			database->replace_document(did, doc, false, false);
 			break;
 		case Type::REPLACE_DOCUMENT_TERM:
 			size = decode_length(&p, p_end, true);
-			wdb->replace_document(std::string(p, size), Xapian::Document::unserialise(std::string(p + size, p_end - p - size)));
+			term = std::string(p, size);
+			doc = Xapian::Document::unserialise(std::string(p + size, p_end - p - size));
+			database->replace_document_term(term, doc, false, false);
 			break;
 		case Type::DELETE_DOCUMENT:
 			did = static_cast<Xapian::docid>(decode_length(&p, p_end));
-			wdb->delete_document(did);
+			database->delete_document(did, false, false);
 			break;
 		case Type::SET_METADATA:
 			size = decode_length(&p, p_end, true);
-			wdb->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size));
+			database->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, false);
 			break;
 		case Type::ADD_SPELLING:
 			freq = static_cast<Xapian::termcount>(decode_length(&p, p_end));
-			wdb->add_spelling(std::string(p, p_end - p), freq);
+			database->add_spelling(std::string(p, p_end - p), freq, false, false);
 			break;
 		case Type::REMOVE_SPELLING:
 			freq = static_cast<Xapian::termcount>(decode_length(&p, p_end));
-			wdb->remove_spelling(std::string(p, p_end - p), freq);
+			database->remove_spelling(std::string(p, p_end - p), freq, false, false);
 			break;
 		default:
 			throw MSG_Error("Invalid WAL message!");
