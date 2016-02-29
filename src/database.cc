@@ -275,7 +275,9 @@ DatabaseWAL::execute(const std::string& line)
 			database->cancel(false);
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
-			database->delete_document(data, false, false);
+			size = decode_length(&p, p_end, true);
+			term = std::string(p, size);
+			database->delete_document_term(term, false, false);
 			break;
 		case Type::COMMIT:
 			database->commit(false);
@@ -315,7 +317,6 @@ DatabaseWAL::execute(const std::string& line)
 }
 
 
-//FIXME: handle exception
 void
 DatabaseWAL::write_line(Type type, const std::string& data, bool commit)
 {
