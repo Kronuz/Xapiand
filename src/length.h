@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "xapian.h"
+
 #include <string>
 
 /** Serialise a length as a variable-length string.
@@ -52,5 +54,6 @@ std::string serialise_string(const std::string &input);
 ssize_t unserialise_string(std::string &output, const char **p, const char *end);
 
 
-#define encode_length serialise_length
-#define decode_length unserialise_length
+std::string serialise_double(double v);
+
+double unserialise_double(const char ** p, const char *end);

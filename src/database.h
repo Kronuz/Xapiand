@@ -299,7 +299,7 @@ public:
 	~Database();
 
 	long long read_mastery(const std::string& dir);
-	void reopen();
+	bool reopen();
 
 #ifdef XAPIAND_DATA_STORAGE
 	void storage_pull_data(Xapian::Document& doc);

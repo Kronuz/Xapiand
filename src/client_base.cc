@@ -105,7 +105,7 @@ ClientCompressorReader::read(char **buf, size_t size)
 ssize_t
 ClientCompressorReader::write(const char *buf, size_t size)
 {
-	std::string length(encode_length(size));
+	std::string length(serialise_length(size));
 	if (!client->write(length) || !client->write(buf, size)) {
 		return -1;
 	}
@@ -116,7 +116,7 @@ ClientCompressorReader::write(const char *buf, size_t size)
 ssize_t
 ClientCompressorReader::done()
 {
-	std::string length(encode_length(0));
+	std::string length(serialise_length(0));
 	if (!client->write(length)) {
 		return -1;
 	}
@@ -499,9 +499,9 @@ BaseClient::io_cb_read(int fd)
 						buf_data = length_buffer.data();
 
 						buf_end = buf_data + length_buffer.size();
-						file_size = decode_length(&buf_data, buf_end, false);
-
-						if (file_size == -1) {
+						try {
+						    file_size = unserialise_length(&buf_data, buf_end, false);
+						} catch (Xapian::SerialisationError) {
 							return;
 						}
 						block_size = file_size;

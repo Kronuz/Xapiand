@@ -174,7 +174,7 @@ MsgPack get_MsgPack(const Xapian::Document& doc) {
 	std::string data = doc.get_data();
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	size_t length = decode_length(&p, p_end, true);
+	size_t length = unserialise_length(&p, p_end, true);
 	return MsgPack(std::string(p, length));
 }
 
@@ -183,7 +183,7 @@ std::string get_blob(const Xapian::Document& doc) {
 	std::string data = doc.get_data();
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	size_t length = decode_length(&p, p_end, true);
+	size_t length = unserialise_length(&p, p_end, true);
 	p += length;
 	return std::string(p, p_end - p);
 }

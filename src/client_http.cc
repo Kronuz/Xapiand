@@ -1581,7 +1581,7 @@ HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, 
 	} else if (is_acceptable_type(ct_type, msgpack_type)) {
 		return obj.to_string();
 	}
-	throw MSG_SerializationError("Type is not serializable");
+	throw MSG_SerialisationError("Type is not serializable");
 }
 
 
@@ -1594,7 +1594,7 @@ HttpClient::write_http_response(const MsgPack& response,  int status_code, bool 
 	const auto& accepted_type = get_acceptable_type(content_type_pair(content_type));
 	try {
 		response_str = serialize_response(response, accepted_type, pretty);
-	} catch (const SerializationError& e) {
+	} catch (const SerialisationError& e) {
 		status_code = 406;
 		MsgPack response_err;
 		response_err["status"] = status_code;

@@ -48,7 +48,7 @@ Serialise::serialise(char field_type, const MsgPack& field_value)
 		case msgpack::type::STR:
 			return string(field_type, std::string(field_value.obj->via.str.ptr, field_value.obj->via.str.size));
 		default:
-			throw MSG_SerializationError("msgpack::type [%d] is not supported", field_value.obj->type);
+			throw MSG_SerialisationError("msgpack::type [%d] is not supported", field_value.obj->type);
 	}
 }
 
@@ -57,7 +57,7 @@ std::string
 Serialise::serialise(char field_type, const std::string& field_value)
 {
 	if (field_value.empty() && field_type != STRING_TYPE) {
-		throw MSG_SerializationError("Field value must be defined");
+		throw MSG_SerialisationError("Field value must be defined");
 	}
 
 	switch (field_type) {
@@ -72,7 +72,7 @@ Serialise::serialise(char field_type, const std::string& field_value)
 		case GEO_TYPE:
 			return ewkt(field_value);
 		default:
-			throw MSG_SerializationError("Type: '%c' is an unknown type", type);
+			throw MSG_SerialisationError("Type: '%c' is an unknown type", type);
 	}
 }
 
@@ -81,7 +81,7 @@ std::string
 Serialise::string(char field_type, const std::string& field_value)
 {
 	if (field_value.empty() && field_type != STRING_TYPE) {
-		throw MSG_SerializationError("Field value must be defined");
+		throw MSG_SerialisationError("Field value must be defined");
 	}
 
 	switch (field_type) {
@@ -94,7 +94,7 @@ Serialise::string(char field_type, const std::string& field_value)
 		case GEO_TYPE:
 			return ewkt(field_value);
 		default:
-			throw MSG_SerializationError("%s is not string", type(field_type).c_str());
+			throw MSG_SerialisationError("%s is not string", type(field_type).c_str());
 	}
 }
 
@@ -109,7 +109,7 @@ Serialise::numeric(char field_type, double field_value)
 		case BOOLEAN_TYPE:
 			return field_value ? std::string("t") : std::string("f");
 		default:
-			throw MSG_SerializationError("%s is not numeric", type(field_type).c_str());
+			throw MSG_SerialisationError("%s is not numeric", type(field_type).c_str());
 	}
 }
 
@@ -120,7 +120,7 @@ Serialise::boolean(char field_type, bool field_value)
 	if (field_type == BOOLEAN_TYPE) {
 		return field_value ? std::string("t") : std::string("f");
 	} else {
-		throw MSG_SerializationError("%s is not boolean", type(field_type).c_str());
+		throw MSG_SerialisationError("%s is not boolean", type(field_type).c_str());
 	}
 }
 
@@ -154,7 +154,7 @@ Serialise::date(const MsgPack& value, Datetime::tm_t& tm)
 			timestamp = Datetime::timestamp(std::string(value.obj->via.str.ptr, value.obj->via.str.size), tm);
 			return Xapian::sortable_serialise(timestamp);
 		default:
-			throw MSG_SerializationError("Date value must be numeric or string");
+			throw MSG_SerialisationError("Date value must be numeric or string");
 	}
 }
 
@@ -174,7 +174,7 @@ Serialise::numeric(const std::string& field_value)
 		return Xapian::sortable_serialise(std::stod(field_value));
 	}
 
-	throw MSG_SerializationError("Invalid numeric format");
+	throw MSG_SerialisationError("Invalid numeric format");
 }
 
 
@@ -232,7 +232,7 @@ Serialise::boolean(const std::string& field_value)
 			break;
 	}
 
-	throw MSG_SerializationError("Boolean format is not valid");
+	throw MSG_SerialisationError("Boolean format is not valid");
 }
 
 
@@ -272,7 +272,7 @@ Serialise::type(char type)
 		case ARRAY_TYPE:   return ARRAY_STR;
 	}
 
-	throw MSG_SerializationError("Type: '%c' is an unknown type", type);
+	throw MSG_SerialisationError("Type: '%c' is an unknown type", type);
 }
 
 
@@ -296,7 +296,7 @@ Unserialise::unserialise(char field_type, const std::string& serialise_val, MsgP
 			result = geo(serialise_val);
 			return;
 		default:
-			throw MSG_SerializationError("Type: '%c' is an unknown type", field_type);
+			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
 	}
 }
 
@@ -316,7 +316,7 @@ Unserialise::unserialise(char field_type, const std::string& serialise_val)
 		case GEO_TYPE:
 			return geo(serialise_val);
 		default:
-			throw MSG_SerializationError("Type: '%c' is an unknown type", field_type);
+			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
 	}
 }
 
@@ -347,7 +347,7 @@ Cartesian
 Unserialise::cartesian(const std::string& serialise_val)
 {
 	if (serialise_val.size() != SIZE_SERIALISE_CARTESIAN) {
-		throw MSG_SerializationError("Can not unserialise cartesian: %s [%zu]", serialise_val.c_str(), serialise_val.size());
+		throw MSG_SerialisationError("Can not unserialise cartesian: %s [%zu]", serialise_val.c_str(), serialise_val.size());
 	}
 
 	double x = (((unsigned)serialise_val[0] << 24) & 0xFF000000) | (((unsigned)serialise_val[1] << 16) & 0xFF0000) | (((unsigned)serialise_val[2] << 8) & 0xFF00)  | (((unsigned)serialise_val[3]) & 0xFF);
@@ -368,7 +368,7 @@ uint64_t
 Unserialise::trixel_id(const std::string& serialise_val)
 {
 	if (serialise_val.size() != SIZE_BYTES_ID) {
-		throw MSG_SerializationError("Can not unserialise trixel_id: %s [%zu]", serialise_val.c_str(), serialise_val.size());
+		throw MSG_SerialisationError("Can not unserialise trixel_id: %s [%zu]", serialise_val.c_str(), serialise_val.size());
 	}
 
 	uint64_t id = (((uint64_t)serialise_val[0] << 48) & 0xFF000000000000) | (((uint64_t)serialise_val[1] << 40) & 0xFF0000000000) | \
@@ -433,5 +433,5 @@ Unserialise::type(const std::string& str_type)
 		return std::string(1, toupper(DATE_TYPE));
 	}
 
-	throw MSG_SerializationError("Type: %s is an unknown type", str_type.c_str());
+	throw MSG_SerialisationError("Type: %s is an unknown type", str_type.c_str());
 }

@@ -22,7 +22,9 @@
 
 #pragma once
 
-#include "config.h"
+#include "xapiand.h"
+
+#include <xapian.h>
 
 #include <iostream>
 #include <exception>
@@ -73,10 +75,10 @@ public:
 };
 
 
-class SerializationError : public ClientError {
+class SerialisationError : public ClientError, public Xapian::SerialisationError {
 public:
 	template<typename... Args>
-	SerializationError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+	SerialisationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::SerialisationError("") { }
 };
 
 
@@ -105,7 +107,7 @@ public:
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_WorkerDetachObject() WorkerDetachObject(__FILE__, __LINE__)
-#define MSG_SerializationError(...) SerializationError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_SerialisationError(...) SerialisationError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_DatetimeError(...) DatetimeError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_CartesianError(...) CartesianError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_EWKTError(...) EWKTError(__FILE__, __LINE__, __VA_ARGS__)

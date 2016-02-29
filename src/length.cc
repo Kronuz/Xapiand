@@ -22,6 +22,187 @@
 
 #include "length.h"
 
+#include "exception.h"
+
+#include <algorithm>  // for std::min()
+#include <cfloat>
+#include <cmath>
+#include <cassert>
+
+// The serialisation we use for doubles is inspired by a comp.lang.c post
+// by Jens Moeller:
+//
+// http://groups.google.com/group/comp.lang.c/browse_thread/thread/6558d4653f6dea8b/75a529ec03148c98
+//
+// The clever part is that the mantissa is encoded as a base-256 number which
+// means there's no rounding error provided both ends have FLT_RADIX as some
+// power of two.
+//
+// FLT_RADIX == 2 seems to be ubiquitous on modern UNIX platforms, while
+// some older platforms used FLT_RADIX == 16 (IBM machines for example).
+// FLT_RADIX == 10 seems to be very rare (the only instance Google finds
+// is for a cross-compiler to some TI calculators).
+
+#if FLT_RADIX == 2
+# define MAX_MANTISSA_BYTES ((DBL_MANT_DIG + 7 + 7) / 8)
+# define MAX_EXP ((DBL_MAX_EXP + 1) / 8)
+# define MAX_MANTISSA (1 << (DBL_MAX_EXP & 7))
+#elif FLT_RADIX == 16
+# define MAX_MANTISSA_BYTES ((DBL_MANT_DIG + 1 + 1) / 2)
+# define MAX_EXP ((DBL_MAX_EXP + 1) / 2)
+# define MAX_MANTISSA (1 << ((DBL_MAX_EXP & 1) * 4))
+#else
+# error FLT_RADIX is a value not currently handled (not 2 or 16)
+// # define MAX_MANTISSA_BYTES (sizeof(double) + 1)
+#endif
+
+static int base256ify_double(double &v) {
+	int exp;
+	v = frexp(v, &exp);
+	// v is now in the range [0.5, 1.0)
+	--exp;
+#if FLT_RADIX == 2
+	v = scalbn(v, (exp & 7) + 1);
+#else
+	v = ldexp(v, (exp & 7) + 1);
+#endif
+	// v is now in the range [1.0, 256.0)
+	exp >>= 3;
+	return exp;
+}
+
+std::string serialise_double(double v)
+{
+	/* First byte:
+	 *  bit 7 Negative flag
+	 *  bit 4..6 Mantissa length - 1
+	 *  bit 0..3 --- 0-13 -> Exponent + 7
+	 *            \- 14 -> Exponent given by next byte
+	 *             - 15 -> Exponent given by next 2 bytes
+	 *
+	 * Then optional medium (1 byte) or large exponent (2 bytes, lsb first)
+	 *
+	 * Then mantissa (0 iff value is 0)
+	 */
+
+	bool negative = (v < 0.0);
+
+	if (negative) v = -v;
+
+	int exp = base256ify_double(v);
+
+	std::string result;
+
+	if (exp <= 6 && exp >= -7) {
+		unsigned char b = static_cast<unsigned char>(exp + 7);
+		if (negative) b |= static_cast<unsigned char>(0x80);
+		result += char(b);
+	} else {
+		if (exp >= -128 && exp < 127) {
+			result += negative ? char(0x8e) : char(0x0e);
+			result += char(exp + 128);
+		} else {
+			if (exp < -32768 || exp > 32767) {
+				throw Xapian::InternalError("Insane exponent in floating point number");
+			}
+			result += negative ? char(0x8f) : char(0x0f);
+			result += char(unsigned(exp + 32768) & 0xff);
+			result += char(unsigned(exp + 32768) >> 8);
+		}
+	}
+
+	int maxbytes = std::min(MAX_MANTISSA_BYTES, 8);
+
+	size_t n = result.size();
+	do {
+		unsigned char byte = static_cast<unsigned char>(v);
+		result += char(byte);
+		v -= double(byte);
+		v *= 256.0;
+	} while (v != 0.0 && --maxbytes);
+
+	n = result.size() - n;
+	if (n > 1) {
+		assert(n <= 8);
+		result[0] = static_cast<unsigned char>(result[0] | ((n - 1) << 4));
+	}
+
+	return result;
+}
+
+double unserialise_double(const char ** p, const char *end)
+{
+	if (end - *p < 2) {
+		throw MSG_SerialisationError("Bad encoded double: insufficient data");
+	}
+	unsigned char first = *(*p)++;
+	if (first == 0 && *(*p) == 0) {
+		++*p;
+		return 0.0;
+	}
+
+	bool negative = (first & 0x80) != 0;
+	size_t mantissa_len = ((first >> 4) & 0x07) + 1;
+
+	int exp = first & 0x0f;
+	if (exp >= 14) {
+		int bigexp = static_cast<unsigned char>(*(*p)++);
+		if (exp == 15) {
+			if (*p == end) {
+				throw MSG_SerialisationError("Bad encoded double: short large exponent");
+			}
+			exp = bigexp | (static_cast<unsigned char>(*(*p)++) << 8);
+			exp -= 32768;
+		} else {
+			exp = bigexp - 128;
+		}
+	} else {
+		exp -= 7;
+	}
+
+	if (size_t(end - *p) < mantissa_len) {
+		throw MSG_SerialisationError("Bad encoded double: short mantissa");
+	}
+
+	double v = 0.0;
+
+	static double dbl_max_mantissa = DBL_MAX;
+	static int dbl_max_exp = base256ify_double(dbl_max_mantissa);
+	*p += mantissa_len;
+	if (exp > dbl_max_exp ||
+		(exp == dbl_max_exp &&
+		 double(static_cast<unsigned char>((*p)[-1])) > dbl_max_mantissa)) {
+		// The mantissa check should be precise provided that FLT_RADIX
+		// is a power of 2.
+		v = HUGE_VAL;
+	} else {
+		const char *q = *p;
+		while (mantissa_len--) {
+			v *= 0.00390625; // 1/256
+			v += double(static_cast<unsigned char>(*--q));
+		}
+
+#if FLT_RADIX == 2
+		if (exp) v = scalbn(v, exp * 8);
+#elif FLT_RADIX == 16
+		if (exp) v = scalbn(v, exp * 2);
+#else
+		if (exp) v = ldexp(v, exp * 8);
+#endif
+
+#if 0
+		if (v == 0.0) {
+			// FIXME: handle underflow
+		}
+#endif
+	}
+
+	if (negative) v = -v;
+
+	return v;
+}
+
+
 std::string
 serialise_length(size_t len)
 {
@@ -49,16 +230,17 @@ unserialise_length(const char **p, const char *end, bool check_remaining)
 {
 	const char *pos = *p;
 	if (pos == end) {
-		return -1;
+		throw MSG_SerialisationError("Bad encoded length: no data");
 	}
 	size_t len = static_cast<unsigned char>(*pos++);
 	if (len == 0xff) {
 		len = 0;
 		unsigned char ch;
-		int shift = 0;
+		unsigned shift = 0;
 		do {
-			if (pos == end || shift > 28)
-				return -1;
+			if (pos == end || shift > (sizeof(ssize_t) * 8 / 7 * 7)) {
+				throw MSG_SerialisationError("Bad encoded length: insufficient data");
+			}
 			ch = *pos++;
 			len |= size_t(ch & 0x7f) << shift;
 			shift += 7;
@@ -66,16 +248,17 @@ unserialise_length(const char **p, const char *end, bool check_remaining)
 		len += 255;
 	}
 	if (check_remaining && len > size_t(end - pos)) {
-		return -1;
+		throw MSG_SerialisationError("Bad encoded length: length greater than data");
 	}
 	*p = pos;
 	return len;
 }
 
+
 std::string
 serialise_string(const std::string &input) {
 	std::string output;
-	output.append(encode_length(input.size()));
+	output.append(serialise_length(input.size()));
 	output.append(input);
 	return output;
 }
@@ -83,7 +266,7 @@ serialise_string(const std::string &input) {
 
 ssize_t
 unserialise_string(std::string &output, const char **p, const char *end) {
-	ssize_t length = decode_length(p, end, true);
+	ssize_t length = unserialise_length(p, end, true);
 	if (length != -1) {
 		output.append(std::string(*p, length));
 		*p += length;

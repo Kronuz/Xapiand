@@ -134,7 +134,7 @@ LIBS="$LIBS $XAPIAN_LIBS"
 save_CXXFLAGS="$CXXFLAGS"
 CXXFLAGS="$CXXFLAGS $XAPIAN_CXXFLAGS"
 AC_LINK_IFELSE(
-  [AC_LANG_PROGRAM([#include "xapian.h"], [class RemoteClient : public RemoteProtocol {}])],
+  [AC_LANG_PROGRAM([#include "xapian.h"], [&Xapian::MSet::serialise])],
   [AC_DEFINE([HAVE_REMOTE_PROTOCOL], [1], [Define to 1 if Xapian has RemoteProtocol available.])
   have_remote_protocol=yes],
   [])

@@ -228,7 +228,7 @@ DatabaseWAL::execute(const std::string& line)
 		throw MSG_Error("Can not execute WAL on a remote database!");
 	}
 
-	size_t size = decode_length(&p, p_end, true);
+	size_t size = unserialise_length(&p, p_end, true);
 	std::string revision(p, size);
 	p += size;
 
@@ -236,7 +236,7 @@ DatabaseWAL::execute(const std::string& line)
 		return false;
 	}
 
-	Type type = static_cast<Type>(decode_length(&p, p_end));
+	Type type = static_cast<Type>(unserialise_length(&p, p_end));
 
 	std::string data(p, p_end);
 
@@ -257,7 +257,7 @@ DatabaseWAL::execute(const std::string& line)
 			database->cancel(false);
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
-			size = decode_length(&p, p_end, true);
+			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
 			database->delete_document_term(term, false, false);
 			break;
@@ -265,30 +265,30 @@ DatabaseWAL::execute(const std::string& line)
 			database->commit(false);
 			break;
 		case Type::REPLACE_DOCUMENT:
-			did = static_cast<Xapian::docid>(decode_length(&p, p_end));
+			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 			doc = Xapian::Document::unserialise(std::string(p, p_end - p));
 			database->replace_document(did, doc, false, false);
 			break;
 		case Type::REPLACE_DOCUMENT_TERM:
-			size = decode_length(&p, p_end, true);
+			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
 			doc = Xapian::Document::unserialise(std::string(p + size, p_end - p - size));
 			database->replace_document_term(term, doc, false, false);
 			break;
 		case Type::DELETE_DOCUMENT:
-			did = static_cast<Xapian::docid>(decode_length(&p, p_end));
+			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 			database->delete_document(did, false, false);
 			break;
 		case Type::SET_METADATA:
-			size = decode_length(&p, p_end, true);
+			size = unserialise_length(&p, p_end, true);
 			database->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, false);
 			break;
 		case Type::ADD_SPELLING:
-			freq = static_cast<Xapian::termcount>(decode_length(&p, p_end));
+			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 			database->add_spelling(std::string(p, p_end - p), freq, false, false);
 			break;
 		case Type::REMOVE_SPELLING:
-			freq = static_cast<Xapian::termcount>(decode_length(&p, p_end));
+			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 			database->remove_spelling(std::string(p, p_end - p), freq, false, false);
 			break;
 		default:
@@ -311,7 +311,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit)
 	auto endpoint = database->endpoints.cbegin();
 	std::string revision = database->get_revision_info();
 	std::string uuid = database->get_uuid();
-	std::string line = encode_length(revision.size()) + revision + encode_length(toUType(type)) + data;
+	std::string line = serialise_length(revision.size()) + revision + serialise_length(toUType(type)) + data;
 
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint->path.c_str(), repr(line).c_str());
 
@@ -365,7 +365,7 @@ DatabaseWAL::write_delete_document_term(const std::string& term)
 {
 	L_CALL(this, "DatabaseWAL::write_delete_document_term()");
 
-	write_line(Type::DELETE_DOCUMENT_TERM, encode_length(term.size()) + term);
+	write_line(Type::DELETE_DOCUMENT_TERM, serialise_length(term.size()) + term);
 }
 
 
@@ -383,7 +383,7 @@ DatabaseWAL::write_replace_document(Xapian::docid did, const Xapian::Document& d
 {
 	L_CALL(this, "DatabaseWAL::write_replace_document()");
 
-	write_line(Type::REPLACE_DOCUMENT, encode_length(did) + doc.serialise());
+	write_line(Type::REPLACE_DOCUMENT, serialise_length(did) + doc.serialise());
 }
 
 
@@ -392,7 +392,7 @@ DatabaseWAL::write_replace_document_term(const std::string& term, const Xapian::
 {
 	L_CALL(this, "DatabaseWAL::write_replace_document_term()");
 
-	write_line(Type::REPLACE_DOCUMENT_TERM, encode_length(term.size()) + term + doc.serialise());
+	write_line(Type::REPLACE_DOCUMENT_TERM, serialise_length(term.size()) + term + doc.serialise());
 }
 
 
@@ -401,7 +401,7 @@ DatabaseWAL::write_delete_document(Xapian::docid did)
 {
 	L_CALL(this, "DatabaseWAL::write_delete_document()");
 
-	write_line(Type::DELETE_DOCUMENT, encode_length(did));
+	write_line(Type::DELETE_DOCUMENT, serialise_length(did));
 }
 
 
@@ -410,7 +410,7 @@ DatabaseWAL::write_set_metadata(const std::string& key, const std::string& val)
 {
 	L_CALL(this, "DatabaseWAL::write_set_metadata()");
 
-	write_line(Type::SET_METADATA, encode_length(key.size()) + key + val);
+	write_line(Type::SET_METADATA, serialise_length(key.size()) + key + val);
 }
 
 
@@ -419,7 +419,7 @@ DatabaseWAL::write_add_spelling(const std::string& word, Xapian::termcount freqi
 {
 	L_CALL(this, "DatabaseWAL::write_add_spelling()");
 
-	write_line(Type::ADD_SPELLING, encode_length(freqinc) + word);
+	write_line(Type::ADD_SPELLING, serialise_length(freqinc) + word);
 }
 
 
@@ -428,7 +428,7 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 {
 	L_CALL(this, "DatabaseWAL::write_remove_spelling()");
 
-	write_line(Type::REMOVE_SPELLING, encode_length(freqdec) + word);
+	write_line(Type::REMOVE_SPELLING, serialise_length(freqdec) + word);
 }
 
 #endif
@@ -500,7 +500,7 @@ Database::read_mastery(const std::string& dir)
 }
 
 
-void
+bool
 Database::reopen()
 {
 	L_CALL(this, "Database::reopen()");
@@ -510,9 +510,9 @@ Database::reopen()
 	if (db) {
 		// Try to reopen
 		try {
-			db->reopen();
+			bool ret = db->reopen();
 			schema.setDatabase(this);
-			return;
+			return ret;
 		} catch (const Xapian::Error& err) {
 			L_ERR(this, "ERROR: %s", err.get_msg().c_str());
 			db->close();
@@ -615,6 +615,8 @@ Database::reopen()
 		wal->open_current(e->path, true);
 	}
 #endif
+
+	return true;
 }
 
 
@@ -1331,7 +1333,7 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 
 	L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
 	std::string obj_data_str = obj.to_string();
-	std::string data = encode_length(obj_data_str.size()) + obj_data_str + (blob ? body : "");
+	std::string data = serialise_length(obj_data_str.size()) + obj_data_str + (blob ? body : "");
 	doc.set_data(data);
 	_index(doc, obj);
 	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
@@ -1398,7 +1400,7 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 
 		L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
 		std::string obj_data_str = obj_data.to_string();
-		std::string data = encode_length(obj_data_str.size()) + obj_data_str + get_blob(document);
+		std::string data = serialise_length(obj_data_str.size()) + obj_data_str + get_blob(document);
 		doc.set_data(data);
 		_index(doc, obj_data);
 		L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
@@ -1417,14 +1419,21 @@ Database::storage_pull_data(Xapian::Document& doc)
 		return;
 	}
 
+	ssize_t volume, offset;
 	std::string data = doc.get_data();
 	const char *p = data.data();
 	const char *p_end = p + data.size();
 	if (*p++ != STORAGE_BIN_HEADER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data header magic number");
-	ssize_t volume = decode_length(&p, p_end);
-	if (volume == -1) throw MSG_StorageCorruptVolume("Invalid storage data volume");
-	ssize_t offset = decode_length(&p, p_end);
-	if (offset == -1) throw MSG_StorageCorruptVolume("Invalid storage data offset");
+	try {
+		volume = unserialise_length(&p, p_end);
+	} catch (Xapian::SerialisationError) {
+		throw MSG_StorageCorruptVolume("Invalid storage data volume");
+	}
+	try {
+		offset = unserialise_length(&p, p_end);
+	} catch (Xapian::SerialisationError) {
+		throw MSG_StorageCorruptVolume("Invalid storage data offset");
+	}
 	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data footer magic number");
 	storage->open(endpoints.begin()->path + DATA_STORAGE_PATH + std::to_string(volume), false, this);
 	storage->seek(offset);
@@ -1453,7 +1462,7 @@ Database::storage_push_data(Xapian::Document& doc)
 	storage->flush();
 	char h = STORAGE_BIN_HEADER_MAGIC;
 	char f = STORAGE_BIN_FOOTER_MAGIC;
-	doc.set_data(std::string(&h, 1) + encode_length(storage->volume) + encode_length(offset) + std::string(&f, 1));
+	doc.set_data(std::string(&h, 1) + serialise_length(storage->volume) + serialise_length(offset) + std::string(&f, 1));
 }
 #endif
 

@@ -32,9 +32,9 @@
  * This class serializes a string vector.
  * i.e
  * StringList = {a, ..., b}
- * values = encode_length(a.size()) + a + ... + encode_length(b.size()) + b
+ * values = serialise_length(a.size()) + a + ... + serialise_length(b.size()) + b
  * symbol '+' means concatenate
- * serialise = encode_length(values.size())values
+ * serialise = serialise_length(values.size())values
  */
 class StringList : public std::vector<std::string> {
 public:

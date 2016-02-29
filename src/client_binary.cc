@@ -37,6 +37,19 @@
 #include <sys/stat.h>
 
 
+
+inline std::string::size_type
+common_prefix_length(const std::string &a, const std::string &b)
+{
+	std::string::size_type minlen = std::min(a.size(), b.size());
+	std::string::size_type common;
+	for (common = 0; common < minlen; ++common) {
+		if (a[common] != b[common]) break;
+	}
+	return common;
+}
+
+
 #define SWITCH_TO_REPL '\xfe'
 
 
@@ -44,14 +57,12 @@
 // Xapian binary client
 //
 
-BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *loop_, int sock_, double active_timeout_, double idle_timeout_)
+BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *loop_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/)
 	: BaseClient(std::move(server_), loop_, sock_),
-	  RemoteProtocol(std::vector<std::string>(), active_timeout_, idle_timeout_, true),
 	  running(0),
-	  state(State::INIT_REMOTEPROTOCOL),
-	  repl_database(nullptr),
-	  repl_database_tmp(nullptr),
-	  repl_switched_db(false)
+	  state(State::REMOTEPROTOCOL_SERVER),
+	  writable(false),
+	  database(nullptr)
 {
 	int binary_clients = ++XapiandServer::binary_clients;
 	int total_clients = XapiandServer::total_clients;
@@ -68,17 +79,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *
 
 BinaryClient::~BinaryClient()
 {
-	for (auto& database : databases) {
-		manager()->database_pool.checkin(database.second);
-	}
-
-	if (repl_database) {
-		manager()->database_pool.checkin(repl_database);
-	}
-
-	if (repl_database_tmp) {
-		manager()->database_pool.checkin(repl_database_tmp);
-	}
+	checkin_database();
 
 	int binary_clients = --XapiandServer::binary_clients;
 
@@ -94,7 +95,7 @@ bool
 BinaryClient::init_remote()
 {
 	L_DEBUG(this, "init_remote");
-	state = State::INIT_REMOTEPROTOCOL;
+	state = State::REMOTEPROTOCOL_SERVER;
 
 	manager()->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
@@ -105,12 +106,14 @@ bool
 BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
 {
 	L_REPLICATION(this, "init_replication: %s  -->  %s", src_endpoint.as_string().c_str(), dst_endpoint.as_string().c_str());
-	state = State::REPLICATIONPROTOCOL_SLAVE;
+	state = State::REPLICATIONPROTOCOL_CLIENT;
 
 	repl_endpoints.insert(src_endpoint);
 	endpoints.insert(dst_endpoint);
 
-	if (!manager()->database_pool.checkout(repl_database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
+	writable = true;
+
+	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
 		manager=manager(),
 		src_endpoint,
 		dst_endpoint
@@ -126,8 +129,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) < 0) {
 		L_ERR(this, "Cannot connect to %s", src_endpoint.host.c_str(), std::to_string(port).c_str());
-		manager()->database_pool.checkin(repl_database);
-		repl_database.reset();
+		checkin_database();
 		return false;
 	}
 	L_CONN(this, "Connected to %s (sock=%d)!", src_endpoint.as_string().c_str(), sock);
@@ -146,53 +148,25 @@ BinaryClient::on_read_file_done()
 
 	try {
 		switch (state) {
-			case State::REPLICATIONPROTOCOL_SLAVE:
-				repl_file_done();
+			case State::REPLICATIONPROTOCOL_CLIENT:
+				replication_client_file_done();
 				break;
 			default:
 				L_ERR(this, "ERROR: Invalid on_read_file_done for state: %d", state);
-				if (repl_database) {
-					manager()->database_pool.checkin(repl_database);
-					repl_database.reset();
-				}
-				if (repl_database_tmp) {
-					manager()->database_pool.checkin(repl_database_tmp);
-					repl_database_tmp.reset();
-				}
+				checkin_database();
 				shutdown();
 		};
 	} catch (const Xapian::NetworkError &e) {
 		L_ERR(this, "ERROR: %s", e.get_msg().c_str());
-		if (repl_database) {
-			manager()->database_pool.checkin(repl_database);
-			repl_database.reset();
-		}
-		if (repl_database_tmp) {
-			manager()->database_pool.checkin(repl_database_tmp);
-			repl_database_tmp.reset();
-		}
+		checkin_database();
 		shutdown();
 	} catch (const std::exception &err) {
 		L_ERR(this, "ERROR: %s", err.what());
-		if (repl_database) {
-			manager()->database_pool.checkin(repl_database);
-			repl_database.reset();
-		}
-		if (repl_database_tmp) {
-			manager()->database_pool.checkin(repl_database_tmp);
-			repl_database_tmp.reset();
-		}
+		checkin_database();
 		shutdown();
 	} catch (...) {
 		L_ERR(this, "ERROR: Unkown exception!");
-		if (repl_database) {
-			manager()->database_pool.checkin(repl_database);
-			repl_database.reset();
-		}
-		if (repl_database_tmp) {
-			manager()->database_pool.checkin(repl_database_tmp);
-			repl_database_tmp.reset();
-		}
+		checkin_database();
 		shutdown();
 	}
 
@@ -201,9 +175,9 @@ BinaryClient::on_read_file_done()
 
 
 void
-BinaryClient::repl_file_done()
+BinaryClient::replication_client_file_done()
 {
-	L_REPLICATION(this, "BinaryClient::repl_file_done");
+	L_REPLICATION(this, "BinaryClient::replication_client_file_done");
 
 	char buf[1024];
 	const char *p;
@@ -217,8 +191,8 @@ BinaryClient::repl_file_done()
 	const char *s = p;
 
 	while (p != p_end) {
-		char type_as_char = *p++;
-		ssize_t len = decode_length(&p, p_end);
+		ReplicationReplyType type = static_cast<ReplicationReplyType>(*p++);
+		ssize_t len = unserialise_length(&p, p_end);
 		size_t pos = p - s;
 		while (p_end - p < len || static_cast<size_t>(p_end - p) < sizeof(buf) / 2) {
 			size = io::read(file_descriptor, buf, sizeof(buf));
@@ -234,7 +208,7 @@ BinaryClient::repl_file_done()
 		std::string msg(p, len);
 		p += len;
 
-		repl_apply((ReplicateType)type_as_char, msg);
+		replication_client(type, msg);
 
 		buffer.erase(0, p - s);
 		s = p = buffer.data();
@@ -262,8 +236,11 @@ BinaryClient::on_read(const char *buf, size_t received)
 		const char *p_end = p + buffer.size();
 
 		char type = *p++;
-		ssize_t len = decode_length(&p, p_end, true);
-		if (len == -1) {
+
+		ssize_t len;
+		try {
+			len = unserialise_length(&p, p_end, true);
+		} catch (Xapian::SerialisationError) {
 			return;
 		}
 		std::string data = std::string(p, len);
@@ -272,8 +249,8 @@ BinaryClient::on_read(const char *buf, size_t received)
 		L_BINARY(this, "on_read message: '\\%02x' (state=0x%x)", type, state);
 		switch (type) {
 			case SWITCH_TO_REPL:
-				state = State::REPLICATIONPROTOCOL_MASTER;  // Switch to replication protocol
-				type = toUType(ReplicateType::MSG_GET_CHANGESETS);
+				state = State::REPLICATIONPROTOCOL_SERVER;  // Switch to replication protocol
+				type = toUType(ReplicationMessageType::MSG_GET_CHANGESETS);
 				L_BINARY(this, "Switched to replication protocol");
 				break;
 		}
@@ -290,28 +267,34 @@ BinaryClient::on_read(const char *buf, size_t received)
 
 
 char
-BinaryClient::get_message(double, std::string &result)
+BinaryClient::get_message(std::string &result, char max_type)
 {
 	std::unique_ptr<Buffer> msg;
 	if (!messages_queue.pop(msg)) {
 		throw Xapian::NetworkError("No message available");
 	}
 
+	char type = msg->type;
+
+	if (type >= max_type) {
+		std::string errmsg("Invalid message type ");
+		errmsg += std::to_string(int(type));
+		throw Xapian::InvalidArgumentError(errmsg);
+	}
+
 	const char *msg_str = msg->dpos();
 	size_t msg_size = msg->nbytes();
-	char type_as_char = msg->type;
-
 	result.assign(msg_str, msg_size);
 
 	std::string buf;
-	buf += type_as_char;
+	buf += type;
 	L_BINARY(this, "get_message: '%s'", repr(buf, false).c_str());
 
-	buf += encode_length(msg_size);
+	buf += serialise_length(msg_size);
 	buf += result;
 	L_BINARY_PROTO(this, "msg = '%s'", repr(buf).c_str());
 
-	return type_as_char;
+	return type;
 }
 
 
@@ -322,105 +305,11 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 	buf += type_as_char;
 	L_BINARY(this, "send_message: '%s'", repr(buf, false).c_str());
 
-	buf += encode_length(message.size());
+	buf += serialise_length(message.size());
 	buf += message;
 	L_BINARY_PROTO(this, "msg = '%s'", repr(buf).c_str());
 
 	write(buf);
-}
-
-
-int
-BinaryClient::get_message(double timeout, std::string &result, int)
-{
-	int message_type = static_cast<int>(get_message(timeout, result));
-
-#ifdef XAPIAND_DATABASE_WAL
-	DatabaseWAL::Type wal_type = DatabaseWAL::Type::MAX;
-	switch (message_type) {
-		case 14:  // MSG_ADDDOCUMENT
-			wal_type = DatabaseWAL::Type::ADD_DOCUMENT;
-			break;
-		case 15:  // MSG_CANCEL
-			wal_type = DatabaseWAL::Type::CANCEL;
-			break;
-		case 16:  // MSG_DELETEDOCUMENTTERM
-			wal_type = DatabaseWAL::Type::DELETE_DOCUMENT_TERM;
-			break;
-		case 17:  // MSG_COMMIT
-			wal_type = DatabaseWAL::Type::COMMIT;
-			break;
-		case 18:  // MSG_REPLACEDOCUMENT
-			wal_type = DatabaseWAL::Type::REPLACE_DOCUMENT;
-			break;
-		case 19:  // MSG_REPLACEDOCUMENTTERM
-			wal_type = DatabaseWAL::Type::REPLACE_DOCUMENT_TERM;
-			break;
-		case 20:  // MSG_DELETEDOCUMENT
-			wal_type = DatabaseWAL::Type::DELETE_DOCUMENT;
-			break;
-		case 23:  // MSG_SETMETADATA
-			wal_type = DatabaseWAL::Type::SET_METADATA;
-			break;
-		case 24:  // MSG_ADDSPELLING
-			wal_type = DatabaseWAL::Type::ADD_SPELLING;
-			break;
-		case 25:  // MSG_REMOVESPELLING
-			wal_type = DatabaseWAL::Type::REMOVE_SPELLING;
-			break;
-	}
-
-	if (wal_type != DatabaseWAL::Type::MAX) {
-		Xapian::WritableDatabase* wdb = get_wdb();
-		databases.at(wdb)->wal->write_line(wal_type, result);
-		release_db(wdb);
-	}
-#endif
-
-	switch (message_type) {
-		case 14:  // MSG_ADDDOCUMENT
-			{
-				Xapian::Document doc = Xapian::Document::unserialise(result);
-
-				Xapian::WritableDatabase* wdb = get_wdb();
-				databases.at(wdb)->storage_push_data(doc);
-				release_db(wdb);
-
-				result = doc.serialise();
-			}
-			break;
-		case 18:  // MSG_REPLACEDOCUMENT
-			{
-				const char *p = result.data();
-				const char *p_end = p + result.size();
-				Xapian::docid did = static_cast<Xapian::docid>(decode_length(&p, p_end));
-				Xapian::Document doc = Xapian::Document::unserialise(std::string(p, p_end - p));
-
-				Xapian::WritableDatabase* wdb = get_wdb();
-				databases.at(wdb)->storage_push_data(doc);
-				release_db(wdb);
-
-				result = encode_length(did) + doc.serialise();
-			}
-			break;
-		case 19:  // MSG_REPLACEDOCUMENTTERM
-			{
-				const char *p = result.data();
-				const char *p_end = p + result.size();
-				size_t size = decode_length(&p, p_end, true);
-				std::string term(p, size);
-				Xapian::Document doc = Xapian::Document::unserialise(std::string(p + size, p_end - p - size));
-
-				Xapian::WritableDatabase* wdb = get_wdb();
-				databases.at(wdb)->storage_push_data(doc);
-				release_db(wdb);
-
-				result = encode_length(term.size()) + term + doc.serialise();
-			}
-			break;
-	}
-
-	return message_type;
 }
 
 
@@ -433,62 +322,27 @@ BinaryClient::shutdown()
 }
 
 
-Xapian::Database*
-BinaryClient::_get_db(bool writable_)
-{
-	std::unique_lock<std::mutex> lk(qmtx);
-	if (endpoints.empty()) {
-		return nullptr;
-	}
-	Endpoints endpoints_ = endpoints;
-	lk.unlock();
-
-	std::shared_ptr<Database> database;
-	if (!manager()->database_pool.checkout(database, endpoints_, (writable_ ? DB_WRITABLE : 0) | DB_SPAWN)) {
-		return nullptr;
-	}
-
-	lk.lock();
-	databases[database->db.get()] = database;
-
-	return database->db.get();
-}
-
-Xapian::Database*
-BinaryClient::get_db()
-{
-	return _get_db(false);
-}
-
-Xapian::WritableDatabase*
-BinaryClient::get_wdb()
-{
-	return static_cast<Xapian::WritableDatabase*>(_get_db(true));
-}
 
 void
-BinaryClient::release_db(Xapian::Database *db_)
+BinaryClient::checkout_database()
 {
-	if (db_) {
-		std::unique_lock<std::mutex> lk(qmtx);
-		std::shared_ptr<Database> database = databases[db_];
-		databases.erase(db_);
-		lk.unlock();
+	if (!database) {
+		if (!manager()->database_pool.checkout(database, endpoints, (writable ? DB_WRITABLE : 0) | DB_SPAWN)) {
+			throw Xapian::InvalidOperationError("Server has no open database");
+		}
+	}
+}
 
+
+void
+BinaryClient::checkin_database()
+{
+	if (database) {
 		manager()->database_pool.checkin(database);
+		database.reset();
 	}
-}
-
-
-void
-BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool, int)
-{
-	std::lock_guard<std::mutex> lk(qmtx);
-	endpoints.clear();
-	for (auto i = dbpaths_.begin(); i != dbpaths_.end(); ++i) {
-		endpoints.insert(Endpoint(*i));
-	}
-	set_dbpaths(dbpaths_);
+	enquire.reset();
+	matchspies.clear();
 }
 
 
@@ -502,46 +356,37 @@ BinaryClient::run()
 		return;
 	}
 
-	std::string message;
-	ReplicateType repl_type;
-
-	if (state == State::INIT_REMOTEPROTOCOL) {
-		state = State::REMOTEPROTOCOL;
-		send_greeting();
-	}
-
 	while (!messages_queue.empty()) {
 		try {
 			switch (state) {
-				case State::INIT_REMOTEPROTOCOL:
-					L_ERR(this, "Unexpected INIT_REMOTEPROTOCOL!");
-				case State::REMOTEPROTOCOL:
-					run_one();
+				case State::REMOTEPROTOCOL_SERVER: {
+					std::string message;
+					RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
+					remote_server(type, message);
 					break;
+				}
 
-				case State::REPLICATIONPROTOCOL_SLAVE:
-					get_message(idle_timeout, message, ReplicateType::MAX);
-					receive_repl();
+				case State::REPLICATIONPROTOCOL_SERVER: {
+					std::string message;
+					ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
+					replication_server(type, message);
 					break;
+				}
 
-				case State::REPLICATIONPROTOCOL_MASTER:
-					repl_type = get_message(idle_timeout, message, ReplicateType::MAX);
-					repl_apply(repl_type, message);
+				case State::REPLICATIONPROTOCOL_CLIENT: {
+					std::string message;
+					ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
+					replication_client(type, message);
 					break;
+				}
 			}
 		} catch (const Xapian::NetworkError &e) {
 			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
-			if (repl_database) {
-				manager()->database_pool.checkin(repl_database);
-				repl_database.reset();
-			}
+			checkin_database();
 			shutdown();
 		} catch (...) {
 			L_ERR(this, "ERROR!");
-			if (repl_database) {
-				manager()->database_pool.checkin(repl_database);
-				repl_database.reset();
-			}
+			checkin_database();
 			shutdown();
 		}
 	}
@@ -551,309 +396,1070 @@ BinaryClient::run()
 }
 
 
+//  ____                      _       ____            _                  _
+// |  _ \ ___ _ __ ___   ___ | |_ ___|  _ \ _ __ ___ | |_ ___   ___ ___ | |
+// | |_) / _ \ '_ ` _ \ / _ \| __/ _ \ |_) | '__/ _ \| __/ _ \ / __/ _ \| |
+// |  _ <  __/ | | | | | (_) | ||  __/  __/| | | (_) | || (_) | (_| (_) | |
+// |_| \_\___|_| |_| |_|\___/ \__\___|_|   |_|  \___/ \__\___/ \___\___/|_|
+//
+////////////////////////////////////////////////////////////////////////////////
 void
-BinaryClient::repl_apply(ReplicateType type, const std::string &message)
+BinaryClient::remote_server(RemoteMessageType type, const std::string &message)
 {
+
+	static const dispatch_func dispatch[] = {
+		&BinaryClient::msg_allterms,
+		&BinaryClient::msg_collfreq,
+		&BinaryClient::msg_document,
+		&BinaryClient::msg_termexists,
+		&BinaryClient::msg_termfreq,
+		&BinaryClient::msg_valuestats,
+		&BinaryClient::msg_keepalive,
+		&BinaryClient::msg_doclength,
+		&BinaryClient::msg_query,
+		&BinaryClient::msg_termlist,
+		&BinaryClient::msg_positionlist,
+		&BinaryClient::msg_postlist,
+		&BinaryClient::msg_reopen,
+		&BinaryClient::msg_update,
+		&BinaryClient::msg_adddocument,
+		&BinaryClient::msg_cancel,
+		&BinaryClient::msg_deletedocumentterm,
+		&BinaryClient::msg_commit,
+		&BinaryClient::msg_replacedocument,
+		&BinaryClient::msg_replacedocumentterm,
+		&BinaryClient::msg_deletedocument,
+		&BinaryClient::msg_writeaccess,
+		&BinaryClient::msg_getmetadata,
+		&BinaryClient::msg_setmetadata,
+		&BinaryClient::msg_addspelling,
+		&BinaryClient::msg_removespelling,
+		&BinaryClient::msg_getmset,
+		&BinaryClient::msg_shutdown,
+		&BinaryClient::msg_openmetadatakeylist,
+		&BinaryClient::msg_freqs,
+		&BinaryClient::msg_uniqueterms,
+		&BinaryClient::msg_select,
+	};
 	try {
-		switch (type) {
-			case ReplicateType::REPLY_END_OF_CHANGES: repl_end_of_changes();         return;
-			case ReplicateType::REPLY_FAIL:           repl_fail();                   return;
-			case ReplicateType::REPLY_DB_HEADER:      repl_set_db_header(message);   return;
-			case ReplicateType::REPLY_DB_FILENAME:    repl_set_db_filename(message); return;
-			case ReplicateType::REPLY_DB_FILEDATA:    repl_set_db_filedata(message); return;
-			case ReplicateType::REPLY_DB_FOOTER:      repl_set_db_footer();          return;
-			case ReplicateType::REPLY_CHANGESET:      repl_changeset(message);       return;
-			case ReplicateType::MSG_GET_CHANGESETS:   repl_get_changesets(message);  return;
-			default:
-				std::string errmsg("Unexpected message type ");
-				errmsg += std::to_string(toUType(type));
-				throw Xapian::InvalidArgumentError(errmsg);
+		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
+			std::string errmsg("Unexpected message type ");
+			errmsg += std::to_string(toUType(type));
+			throw Xapian::InvalidArgumentError(errmsg);
 		}
-	} catch (ConnectionClosed &) {
-		return;
+	    (this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
+		checkin_database();
 		throw;
 	}
 }
 
-
 void
-BinaryClient::repl_end_of_changes()
+BinaryClient::msg_allterms(const std::string &message)
 {
-	L_REPLICATION(this, "BinaryClient::repl_end_of_changes");
+	checkout_database();
+	Xapian::Database* db = database->db.get();
 
-	if (repl_switched_db) {
-		manager()->database_pool.switch_db(*endpoints.cbegin());
+	std::string prev = message;
+	std::string reply;
+
+	const std::string & prefix = message;
+	const Xapian::TermIterator end = db->allterms_end(prefix);
+	for (Xapian::TermIterator t = db->allterms_begin(prefix); t != end; ++t) {
+		if unlikely(prev.size() > 255)
+			prev.resize(255);
+		const std::string & v = *t;
+		size_t reuse = common_prefix_length(prev, v);
+		reply = serialise_length(t.get_termfreq());
+		reply.append(1, char(reuse));
+		reply.append(v, reuse, std::string::npos);
+		send_message(RemoteReplyType::REPLY_ALLTERMS, reply);
+		prev = v;
 	}
 
-	if (repl_database) {
-		manager()->database_pool.checkin(repl_database);
-		repl_database.reset();
-	}
+	checkin_database();
 
-	if (repl_database_tmp) {
-		manager()->database_pool.checkin(repl_database_tmp);
-		repl_database_tmp.reset();
-	}
-
-	shutdown();
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
-
 void
-BinaryClient::repl_fail()
+BinaryClient::msg_termlist(const std::string &message)
 {
-	L_REPLICATION(this, "BinaryClient::repl_fail");
-	L_ERR(this, "Replication failure!");
-	if (repl_database) {
-		manager()->database_pool.checkin(repl_database);
-		repl_database.reset();
-	}
-	if (repl_database_tmp) {
-		manager()->database_pool.checkin(repl_database_tmp);
-		repl_database_tmp.reset();
-	}
-
-	shutdown();
-}
-
-
-void
-BinaryClient::repl_set_db_header(const std::string &message)
-{
-	L_REPLICATION(this, "BinaryClient::repl_set_db_header");
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-	size_t length = decode_length(&p, p_end, true);
-	repl_db_uuid.assign(p, length);
-	p += length;
-	repl_db_revision = decode_length(&p, p_end);
-	repl_db_filename.clear();
-
-	Endpoint endpoint = *endpoints.begin();
-	std::string path_tmp = endpoint.path + "/.tmp";
-
-	int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	if (dir == 0) {
-		L_DEBUG(this, "Directory %s created", path_tmp.c_str());
-	} else if (errno == EEXIST) {
-		delete_files(path_tmp.c_str());
-		dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-		if (dir == 0) {
-			L_DEBUG(this, "Directory %s created", path_tmp.c_str());
-		}
-	} else {
-		L_ERR(this, "Directory %s not created (%s)", path_tmp.c_str(), strerror(errno));
-	}
-}
-
-
-void
-BinaryClient::repl_set_db_filename(const std::string &message)
-{
-	L_REPLICATION(this, "BinaryClient::repl_set_db_filename");
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-	repl_db_filename.assign(p, p_end - p);
-}
-
-
-void
-BinaryClient::repl_set_db_filedata(const std::string &message)
-{
-	L_REPLICATION(this, "BinaryClient::repl_set_db_filedata");
+	checkout_database();
+	Xapian::Database* db = database->db.get();
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
+	Xapian::docid did = unserialise_length(&p, p_end);
 
-	const Endpoint &endpoint = *endpoints.begin();
-
-	std::string path = endpoint.path + "/.tmp/";
-	std::string path_filename = path + repl_db_filename;
-
-	int fd = io::open(path_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
-	if (fd >= 0) {
-		L_REPLICATION(this, "path_filename %s", path_filename.c_str());
-		if (io::write(fd, p, p_end - p) != p_end - p) {
-			L_ERR(this, "Cannot write to %s", repl_db_filename.c_str());
-			return;
-		}
-		io::close(fd);
+	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db->get_doclength(did)));
+	std::string prev;
+	const Xapian::TermIterator end = db->termlist_end(did);
+	for (Xapian::TermIterator t = db->termlist_begin(did); t != end; ++t) {
+		if unlikely(prev.size() > 255)
+			prev.resize(255);
+		const std::string & v = *t;
+		size_t reuse = common_prefix_length(prev, v);
+		std::string reply = serialise_length(t.get_wdf());
+		reply += serialise_length(t.get_termfreq());
+		reply.append(1, char(reuse));
+		reply.append(v, reuse, std::string::npos);
+		send_message(RemoteReplyType::REPLY_TERMLIST, reply);
+		prev = v;
 	}
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
+}
+
+void
+BinaryClient::msg_positionlist(const std::string &message)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	Xapian::docid did = unserialise_length(&p, p_end);
+	std::string term(p, p_end - p);
+
+	Xapian::termpos lastpos = static_cast<Xapian::termpos>(-1);
+	const Xapian::PositionIterator end = db->positionlist_end(did, term);
+	for (Xapian::PositionIterator i = db->positionlist_begin(did, term);
+		 i != end; ++i) {
+		Xapian::termpos pos = *i;
+		send_message(RemoteReplyType::REPLY_POSITIONLIST, serialise_length(pos - lastpos - 1));
+		lastpos = pos;
+	}
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
 
 void
-BinaryClient::repl_set_db_footer()
+BinaryClient::msg_select(const std::string &message)
 {
-	L_REPLICATION(this, "BinaryClient::repl_set_db_footer");
-	// const char *p = message.data();
-	// const char *p_end = p + message.size();
-	// size_t revision = decode_length(&p, p_end);
-	// Indicates the end of a DB copy operation, signal switch
-
-	Endpoints endpoints_tmp;
-	Endpoint endpoint_tmp = *endpoints.begin();
-	endpoint_tmp.path.append("/.tmp");
-	endpoints_tmp.insert(endpoint_tmp);
-
-	if (!repl_database_tmp) {
-		if (!manager()->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
-			L_ERR(this, "Cannot checkout tmp %s", endpoint_tmp.path.c_str());
-		}
-	}
-
-	repl_switched_db = true;
-	repl_just_switched_db = true;
-}
-
-
-void
-BinaryClient::repl_changeset(const std::string &message)
-{
-	L_REPLICATION(this, "BinaryClient::repl_changeset");
-	Xapian::WritableDatabase *wdb_;
-	if (repl_database_tmp) {
-		wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database_tmp->db.get());
-	} else {
-		wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database->db.get());
-	}
-
-	char path[] = "/tmp/xapian_changes.XXXXXX";
-	int fd = mkstemp(path);
-	if (fd < 0) {
-		L_ERR(this, "Cannot write to %s (1)", path);
-		return;
-	}
-
-	std::string header;
-	header += toUType(ReplicateType::REPLY_CHANGESET);
-	header += encode_length(message.size());
-
-	if (io::write(fd, header.data(), header.size()) != static_cast<ssize_t>(header.size())) {
-		L_ERR(this, "Cannot write to %s (2)", path);
-		return;
-	}
-
-	if (io::write(fd, message.data(), message.size()) != static_cast<ssize_t>(message.size())) {
-		L_ERR(this, "Cannot write to %s (3)", path);
-		return;
-	}
-
-	io::lseek(fd, 0, SEEK_SET);
-
-	try {
-		// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
-		repl_just_switched_db = false;
-	} catch(const Xapian::NetworkError &e) {
-		L_ERR(this, "ERROR: %s", e.get_msg().c_str());
-		io::close(fd);
-		io::unlink(path);
-		throw;
-	} catch (const Xapian::DatabaseError &e) {
-		L_ERR(this, "ERROR: %s", e.get_msg().c_str());
-		io::close(fd);
-		io::unlink(path);
-		throw;
-	} catch (...) {
-		io::close(fd);
-		io::unlink(path);
-		throw;
-	}
-
-	io::close(fd);
-	io::unlink(path);
-}
-
-
-void
-BinaryClient::repl_get_changesets(const std::string &message)
-{
-	Xapian::Database *db_;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
 
-	size_t len = decode_length(&p, p_end, true);
-	std::string uuid(p, len);
-	p += len;
-
-	len = decode_length(&p, p_end, true);
-	std::string from_revision(p, len);
-	p += len;
-
-	len = decode_length(&p, p_end, true);
-	std::string index_path(p, len);
-	p += len;
-
-	// Select endpoints and get database
-	try {
-		endpoints.clear();
-		Endpoint endpoint(index_path);
-		endpoints.insert(endpoint);
-		db_ = get_db();
-		if (!db_)
-			throw Xapian::InvalidOperationError("Server has no open database");
-	} catch (...) {
-		throw;
+	writable = false;
+	endpoints.clear();
+	while (p != p_end) {
+		size_t len = unserialise_length(&p, p_end, true);
+		endpoints.insert(Endpoint(std::string(p, len)));
+		p += len;
 	}
 
-	char path[] = "/tmp/xapian_changesets_sent.XXXXXX";
-	int fd = mkstemp(path);
-	try {
-		std::string to_revision = databases[db_]->checkout_revision;
-		L_REPLICATION(this, "BinaryClient::repl_get_changesets for %s (%s) from rev:%s to rev:%s [%d]", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
-
-		if (fd < 0) {
-			L_ERR(this, "Cannot write to %s (1)", path);
-			return;
-		}
-		// db_->write_changesets_to_fd(fd, from_revision, uuid != db_->get_uuid());  // FIXME: Implement Replication
-	} catch (...) {
-		release_db(db_);
-		io::close(fd);
-		io::unlink(path);
-		throw;
-	}
-	release_db(db_);
-
-	send_file(fd);
-
-	io::close(fd);
-	io::unlink(path);
+	msg_update(message);
 }
 
 
 void
-BinaryClient::receive_repl()
+BinaryClient::msg_postlist(const std::string &message)
 {
-	L_REPLICATION(this, "BinaryClient::receive_repl (init)");
+	checkout_database();
+	Xapian::Database* db = database->db.get();
 
-	strcpy(file_path, "/tmp/xapian_changesets_received.XXXXXX");
-	file_descriptor = mkstemp(file_path);
-	if (file_descriptor < 0) {
-		L_ERR(this, "Cannot write to %s (1)", file_path);
-		return;
+	const std::string & term = message;
+
+	Xapian::doccount termfreq = db->get_termfreq(term);
+	Xapian::termcount collfreq = db->get_collection_freq(term);
+	send_message(RemoteReplyType::REPLY_POSTLISTSTART, serialise_length(termfreq) + serialise_length(collfreq));
+
+	Xapian::docid lastdocid = 0;
+	const Xapian::PostingIterator end = db->postlist_end(term);
+	for (Xapian::PostingIterator i = db->postlist_begin(term);
+		 i != end; ++i) {
+
+		Xapian::docid newdocid = *i;
+		std::string reply = serialise_length(newdocid - lastdocid - 1);
+		reply += serialise_length(i.get_wdf());
+
+		send_message(RemoteReplyType::REPLY_POSTLISTITEM, reply);
+		lastdocid = newdocid;
 	}
 
-	read_file();
+	checkin_database();
 
-	Xapian::Database *db_ = repl_database->db.get();
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
+}
 
-	std::string msg;
+void
+BinaryClient::msg_writeaccess(const std::string & msg)
+{
+	writable = true;
 
-	std::string uuid = db_->get_uuid();
-	msg.append(encode_length(uuid.size()));
-	msg.append(uuid);
+	int flags = Xapian::DB_OPEN;
+	const char *p = msg.c_str();
+	const char *p_end = p + msg.size();
+	if (p != p_end) {
+		unsigned flag_bits = unserialise_length(&p, p_end);
+		flags |= flag_bits;
+		if (p != p_end) {
+			throw Xapian::NetworkError("Junk at end of MSG_WRITEACCESS");
+		}
+	}
+	// flags &= ~Xapian::DB_ACTION_MASK_;
 
-	std::string revision = db_->get_revision_info();
-	msg.append(encode_length(revision.size()));
-	msg.append(revision);
+	msg_update(msg);
+}
 
-	const Endpoint &endpoint = *endpoints.begin();
-	msg.append(encode_length(endpoint.path.size()));
-	msg.append(endpoint.path);
 
-	send_message(SWITCH_TO_REPL, msg);
+void
+BinaryClient::msg_reopen(const std::string & msg)
+{
+	checkout_database();
+
+	if (!database->reopen()) {
+
+		checkin_database();
+
+		send_message(RemoteReplyType::REPLY_DONE, std::string());
+	} else {
+
+		checkin_database();
+
+		msg_update(msg);
+	}
+}
+
+void
+BinaryClient::msg_update(const std::string &)
+{
+	static const char protocol[2] = {
+		char(XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION),
+		char(XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION)
+	};
+
+	std::string message(protocol, 2);
+
+	if (!endpoints.empty()) {
+		checkout_database();
+
+		Xapian::Database* db = database->db.get();
+
+		Xapian::doccount num_docs = db->get_doccount();
+		message += serialise_length(num_docs);
+		message += serialise_length(db->get_lastdocid() - num_docs);
+		Xapian::termcount doclen_lb = db->get_doclength_lower_bound();
+		message += serialise_length(doclen_lb);
+		message += serialise_length(db->get_doclength_upper_bound() - doclen_lb);
+		message += (db->has_positions() ? '1' : '0');
+		// FIXME: clumsy to reverse calculate total_len like this:
+		message += serialise_length(db->get_avlength() * db->get_doccount() + .5);
+		//message += serialise_length(db->get_total_length());
+		std::string uuid = db->get_uuid();
+		message += uuid;
+
+		checkin_database();
+	}
+
+	send_message(RemoteReplyType::REPLY_UPDATE, message);
+}
+
+void
+BinaryClient::msg_query(const std::string &message_in)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	const char *p = message_in.c_str();
+	const char *p_end = p + message_in.size();
+
+	enquire = std::make_unique<Xapian::Enquire>(*db);
+
+	////////////////////////////////////////////////////////////////////////////
+	// Unserialise the Query.
+	size_t len = unserialise_length(&p, p_end, true);
+	Xapian::Query query(Xapian::Query::unserialise(std::string(p, len), reg));
+	p += len;
+
+	// Unserialise assorted Enquire settings.
+	Xapian::termcount qlen = unserialise_length(&p, p_end);
+
+	enquire->set_query(query, qlen);
+
+	////////////////////////////////////////////////////////////////////////////
+	// Collapse key
+	Xapian::valueno collapse_max = unserialise_length(&p, p_end);
+
+	Xapian::valueno collapse_key = Xapian::BAD_VALUENO;
+	if (collapse_max) {
+		collapse_key = unserialise_length(&p, p_end);
+	}
+
+	enquire->set_collapse_key(collapse_key, collapse_max);
+
+	////////////////////////////////////////////////////////////////////////////
+	// docid order
+
+	if (p_end - p < 4 || *p < '0' || *p > '2') {
+		throw Xapian::NetworkError("bad message (docid_order)");
+	}
+	Xapian::Enquire::docid_order order;
+	order = static_cast<Xapian::Enquire::docid_order>(*p++ - '0');
+
+	enquire->set_docid_order(order);
+
+	////////////////////////////////////////////////////////////////////////////
+	// Sort by
+	typedef enum { REL, VAL, VAL_REL, REL_VAL } sort_setting;
+
+	Xapian::valueno sort_key = unserialise_length(&p, p_end);
+
+	if (*p < '0' || *p > '3') {
+		throw Xapian::NetworkError("bad message (sort_by)");
+	}
+	sort_setting sort_by;
+	sort_by = static_cast<sort_setting>(*p++ - '0');
+
+	if (*p < '0' || *p > '1') {
+		throw Xapian::NetworkError("bad message (sort_value_forward)");
+	}
+	bool sort_value_forward(*p++ != '0');
+
+	switch(sort_by) {
+		case REL:
+			enquire->set_sort_by_relevance();
+			break;
+		case VAL:
+			enquire->set_sort_by_value(sort_key, sort_value_forward);
+			break;
+		case VAL_REL:
+			enquire->set_sort_by_value_then_relevance(sort_key, sort_value_forward);
+			break;
+		case REL_VAL:
+			enquire->set_sort_by_relevance_then_value(sort_key, sort_value_forward);
+			break;
+	}
+
+	////////////////////////////////////////////////////////////////////////////
+	// Time limit
+
+	double time_limit = unserialise_double(&p, p_end);
+
+	enquire->set_time_limit(time_limit);
+
+	////////////////////////////////////////////////////////////////////////////
+	// cutoff
+
+	int percent_cutoff = *p++;
+	if (percent_cutoff < 0 || percent_cutoff > 100) {
+		throw Xapian::NetworkError("bad message (percent_cutoff)");
+	}
+
+	double weight_cutoff = unserialise_double(&p, p_end);
+	if (weight_cutoff < 0) {
+		throw Xapian::NetworkError("bad message (weight_cutoff)");
+	}
+
+	enquire->set_cutoff(percent_cutoff, weight_cutoff);
+
+	////////////////////////////////////////////////////////////////////////////
+	// Unserialise the Weight object.
+	len = unserialise_length(&p, p_end, true);
+	std::string wtname(p, len);
+	p += len;
+
+	const Xapian::Weight * wttype = reg.get_weighting_scheme(wtname);
+	if (wttype == nullptr) {
+		// Note: user weighting schemes should be registered by adding them to
+		// a Registry, and setting the context using
+		// RemoteServer::set_registry().
+		throw Xapian::InvalidArgumentError("Weighting scheme " +
+										   wtname + " not registered");
+	}
+
+	len = unserialise_length(&p, p_end, true);
+	wttype = wttype->unserialise(std::string(p, len));
+
+	enquire->set_weighting_scheme(*wttype);
+	p += len;
+
+	////////////////////////////////////////////////////////////////////////////
+	// Unserialise the RSet object.
+	len = unserialise_length(&p, p_end, true);
+	Xapian::RSet rset = Xapian::RSet::unserialise(std::string(p, len));
+	p += len;
+
+	////////////////////////////////////////////////////////////////////////////
+	// Unserialise any MatchSpy objects.
+	matchspies.clear();
+	while (p != p_end) {
+		len = unserialise_length(&p, p_end, true);
+		std::string spytype(p, len);
+		const Xapian::MatchSpy * spyclass = reg.get_match_spy(spytype);
+		if (spyclass == nullptr) {
+			throw Xapian::InvalidArgumentError("Match spy " + spytype +
+											   " not registered");
+		}
+		p += len;
+
+		len = unserialise_length(&p, p_end, true);
+		Xapian::MatchSpy *spy = spyclass->unserialise(std::string(p, len), reg);
+		matchspies.push_back(std::unique_ptr<Xapian::MatchSpy>(spy));
+		enquire->add_matchspy(spy);
+		p += len;
+	}
+
+	////////////////////////////////////////////////////////////////////////////
+	enquire->prepare_mset(&rset, nullptr);
+
+	send_message(RemoteReplyType::REPLY_STATS, enquire->get_stats());
+
+	// No checkout for database (it'll still be needed by msg_getmset)
+}
+
+void
+BinaryClient::msg_getmset(const std::string & msg)
+{
+	if (!enquire) {
+		throw Xapian::NetworkError("Unexpected MSG_GETMSET");
+	}
+
+	const char *p = msg.c_str();
+	const char *p_end = p + msg.size();
+
+	Xapian::termcount first = unserialise_length(&p, p_end);
+	Xapian::termcount maxitems = unserialise_length(&p, p_end);
+
+	Xapian::termcount check_at_least = unserialise_length(&p, p_end);
+
+	enquire->set_stats(std::string(p, p_end));
+
+	Xapian::MSet mset = enquire->get_mset(first, maxitems, check_at_least);
+
+	std::string message;
+	for (auto& i : matchspies) {
+		std::string spy_results = i->serialise_results();
+		message += serialise_length(spy_results.size());
+		message += spy_results;
+	}
+	message += mset.serialise();
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_RESULTS, message);
+}
+
+void
+BinaryClient::msg_document(const std::string &message)
+{
+	checkout_database();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	Xapian::docid did = unserialise_length(&p, p_end);
+
+	Xapian::Document doc;
+	if (!database->get_document(did, doc)) {
+		throw Xapian::NetworkError("Cannot get document");
+	}
+
+	database->storage_pull_data(doc);
+
+	send_message(RemoteReplyType::REPLY_DOCDATA, doc.get_data());
+
+	Xapian::ValueIterator i;
+	for (i = doc.values_begin(); i != doc.values_end(); ++i) {
+		std::string item = serialise_length(i.get_valueno());
+		item += *i;
+		send_message(RemoteReplyType::REPLY_VALUE, item);
+	}
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
+}
+
+void
+BinaryClient::msg_keepalive(const std::string &)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	// Ensure *our* database stays alive, as it may contain remote databases!
+	db->keep_alive();
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
+}
+
+void
+BinaryClient::msg_termexists(const std::string &term)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	checkin_database();
+
+	send_message((db->term_exists(term) ? RemoteReplyType::REPLY_TERMEXISTS : RemoteReplyType::REPLY_TERMDOESNTEXIST), std::string());
+}
+
+void
+BinaryClient::msg_collfreq(const std::string &term)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_COLLFREQ, serialise_length(db->get_collection_freq(term)));
+}
+
+void
+BinaryClient::msg_termfreq(const std::string &term)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_TERMFREQ, serialise_length(db->get_termfreq(term)));
+}
+
+void
+BinaryClient::msg_freqs(const std::string &term)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	std::string msg = serialise_length(db->get_termfreq(term));
+	msg += serialise_length(db->get_collection_freq(term));
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_FREQS, msg);
+}
+
+void
+BinaryClient::msg_valuestats(const std::string & message)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	while (p != p_end) {
+		Xapian::valueno slot = unserialise_length(&p, p_end);
+		std::string message_out;
+		message_out += serialise_length(db->get_value_freq(slot));
+		std::string bound = db->get_value_lower_bound(slot);
+		message_out += serialise_length(bound.size());
+		message_out += bound;
+		bound = db->get_value_upper_bound(slot);
+		message_out += serialise_length(bound.size());
+		message_out += bound;
+
+		send_message(RemoteReplyType::REPLY_VALUESTATS, message_out);
+	}
+
+	checkin_database();
+}
+
+void
+BinaryClient::msg_doclength(const std::string &message)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	Xapian::docid did = unserialise_length(&p, p_end);
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db->get_doclength(did)));
+}
+
+void
+BinaryClient::msg_uniqueterms(const std::string &message)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	Xapian::docid did = unserialise_length(&p, p_end);
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_UNIQUETERMS, serialise_length(db->get_unique_terms(did)));
+}
+
+void
+BinaryClient::msg_commit(const std::string &)
+{
+	checkout_database();
+
+	database->commit();
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
+}
+
+void
+BinaryClient::msg_cancel(const std::string &)
+{
+	checkout_database();
+
+	database->cancel();
+
+	checkin_database();
+}
+
+void
+BinaryClient::msg_adddocument(const std::string & message)
+{
+	checkout_database();
+
+	Xapian::docid did = database->add_document(Xapian::Document::unserialise(message));
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
+}
+
+void
+BinaryClient::msg_deletedocument(const std::string & message)
+{
+	checkout_database();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	Xapian::docid did = unserialise_length(&p, p_end);
+
+	database->delete_document(did);
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
+}
+
+void
+BinaryClient::msg_deletedocumentterm(const std::string & message)
+{
+	checkout_database();
+
+	database->delete_document_term(message);
+
+	checkin_database();
+}
+
+void
+BinaryClient::msg_replacedocument(const std::string & message)
+{
+	checkout_database();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	Xapian::docid did = unserialise_length(&p, p_end);
+
+	database->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end)));
+
+	checkin_database();
+}
+
+void
+BinaryClient::msg_replacedocumentterm(const std::string & message)
+{
+	checkout_database();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	size_t len = unserialise_length(&p, p_end, true);
+	std::string unique_term(p, len);
+	p += len;
+
+	Xapian::docid did = database->replace_document_term(unique_term, Xapian::Document::unserialise(std::string(p, p_end)));
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
+}
+
+void
+BinaryClient::msg_getmetadata(const std::string & message)
+{
+	checkout_database();
+
+	std::string value;
+	database->get_metadata(message, value);
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_METADATA, value);
+}
+
+void
+BinaryClient::msg_openmetadatakeylist(const std::string & message)
+{
+	checkout_database();
+	Xapian::Database* db = database->db.get();
+
+	std::string prev = message;
+	std::string reply;
+
+	const std::string & prefix = message;
+	const Xapian::TermIterator end = db->metadata_keys_end(prefix);
+	Xapian::TermIterator t = db->metadata_keys_begin(prefix);
+	for (; t != end; ++t) {
+		if unlikely(prev.size() > 255)
+			prev.resize(255);
+		const std::string & v = *t;
+		size_t reuse = common_prefix_length(prev, v);
+		reply.assign(1, char(reuse));
+		reply.append(v, reuse, std::string::npos);
+		send_message(RemoteReplyType::REPLY_METADATAKEYLIST, reply);
+		prev = v;
+	}
+
+	checkin_database();
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
+}
+
+void
+BinaryClient::msg_setmetadata(const std::string & message)
+{
+	checkout_database();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	size_t keylen = unserialise_length(&p, p_end, true);
+	std::string key(p, keylen);
+	p += keylen;
+	std::string val(p, p_end - p);
+	database->set_metadata(key, val);
+
+	checkin_database();
+}
+
+void
+BinaryClient::msg_addspelling(const std::string & message)
+{
+	checkout_database();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	Xapian::termcount freqinc = unserialise_length(&p, p_end);
+	database->add_spelling(std::string(p, p_end - p), freqinc);
+
+	checkin_database();
+}
+
+void
+BinaryClient::msg_removespelling(const std::string & message)
+{
+	checkout_database();
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+	Xapian::termcount freqdec = unserialise_length(&p, p_end);
+	database->remove_spelling(std::string(p, p_end - p), freqdec);
+
+	checkin_database();
+}
+
+void
+BinaryClient::msg_shutdown(const std::string &)
+{
+	shutdown();
+}
+
+
+//  ____            _ _           _   _
+// |  _ \ ___ _ __ | (_) ___ __ _| |_(_) ___  _ __
+// | |_) / _ \ '_ \| | |/ __/ _` | __| |/ _ \| '_ \
+// |  _ <  __/ |_) | | | (_| (_| | |_| | (_) | | | |
+// |_| \_\___| .__/|_|_|\___\__,_|\__|_|\___/|_| |_|
+//           |_|
+////////////////////////////////////////////////////////////////////////////////
+
+void
+BinaryClient::replication_server(ReplicationMessageType type, const std::string &message)
+{
+	static const dispatch_func dispatch[] = {
+		&BinaryClient::msg_get_changesets,
+	};
+	try {
+		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
+			std::string errmsg("Unexpected message type ");
+			errmsg += std::to_string(toUType(type));
+			throw Xapian::InvalidArgumentError(errmsg);
+		}
+	    (this->*(dispatch[static_cast<int>(type)]))(message);
+	} catch (...) {
+		checkin_database();
+		throw;
+	}
+}
+
+void
+BinaryClient::msg_get_changesets(const std::string &)
+{
+	L_REPLICATION(this, "BinaryClient::msg_get_changesets");
+
+	// Xapian::Database *db_;
+	// const char *p = message.c_str();
+	// const char *p_end = p + message.size();
+
+	// size_t len = unserialise_length(&p, p_end, true);
+	// std::string uuid(p, len);
+	// p += len;
+
+	// len = unserialise_length(&p, p_end, true);
+	// std::string from_revision(p, len);
+	// p += len;
+
+	// len = unserialise_length(&p, p_end, true);
+	// std::string index_path(p, len);
+	// p += len;
+
+	// // Select endpoints and get database
+	// try {
+	// 	endpoints.clear();
+	// 	Endpoint endpoint(index_path);
+	// 	endpoints.insert(endpoint);
+	// 	db_ = get_db();
+	// 	if (!db_)
+	// 		throw Xapian::InvalidOperationError("Server has no open database");
+	// } catch (...) {
+	// 	throw;
+	// }
+
+	// char path[] = "/tmp/xapian_changesets_sent.XXXXXX";
+	// int fd = mkstemp(path);
+	// try {
+	// 	std::string to_revision = databases[db_]->checkout_revision;
+	// 	L_REPLICATION(this, "BinaryClient::msg_get_changesets for %s (%s) from rev:%s to rev:%s [%d]", endpoints.as_string().c_str(), uuid.c_str(), repr(from_revision, false).c_str(), repr(to_revision, false).c_str(), need_whole_db);
+
+	// 	if (fd < 0) {
+	// 		L_ERR(this, "Cannot write to %s (1)", path);
+	// 		return;
+	// 	}
+	// 	// db_->write_changesets_to_fd(fd, from_revision, uuid != db_->get_uuid());  // FIXME: Implement Replication
+	// } catch (...) {
+	// 	release_db(db_);
+	// 	io::close(fd);
+	// 	io::unlink(path);
+	// 	throw;
+	// }
+	// release_db(db_);
+
+	// send_file(fd);
+
+	// io::close(fd);
+	// io::unlink(path);
+}
+
+
+void
+BinaryClient::replication_client(ReplicationReplyType type, const std::string &message)
+{
+	static const dispatch_func dispatch[] = {
+		&BinaryClient::reply_end_of_changes,
+		&BinaryClient::reply_fail,
+		&BinaryClient::reply_db_header,
+		&BinaryClient::reply_db_filename,
+		&BinaryClient::reply_db_filedata,
+		&BinaryClient::reply_db_footer,
+		&BinaryClient::reply_changeset,
+	};
+	try {
+		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
+			std::string errmsg("Unexpected message type ");
+			errmsg += std::to_string(toUType(type));
+			throw Xapian::InvalidArgumentError(errmsg);
+		}
+	    (this->*(dispatch[static_cast<int>(type)]))(message);
+	} catch (...) {
+		checkin_database();
+		throw;
+	}
+}
+
+
+void
+BinaryClient::reply_end_of_changes(const std::string &)
+{
+	L_REPLICATION(this, "BinaryClient::reply_end_of_changes");
+
+	// if (repl_switched_db) {
+	// 	manager()->database_pool.switch_db(*endpoints.cbegin());
+	// }
+
+	// checkin_database();
+
+	// shutdown();
+}
+
+
+void
+BinaryClient::reply_fail(const std::string &)
+{
+	L_REPLICATION(this, "BinaryClient::reply_fail");
+
+	// L_ERR(this, "Replication failure!");
+	// checkin_database();
+
+	// shutdown();
+}
+
+
+void
+BinaryClient::reply_db_header(const std::string &)
+{
+	L_REPLICATION(this, "BinaryClient::reply_db_header");
+
+	// const char *p = message.data();
+	// const char *p_end = p + message.size();
+	// size_t length = unserialise_length(&p, p_end, true);
+	// repl_db_uuid.assign(p, length);
+	// p += length;
+	// repl_db_revision = unserialise_length(&p, p_end);
+	// repl_db_filename.clear();
+
+	// Endpoint endpoint = *endpoints.begin();
+	// std::string path_tmp = endpoint.path + "/.tmp";
+
+	// int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	// if (dir == 0) {
+	// 	L_DEBUG(this, "Directory %s created", path_tmp.c_str());
+	// } else if (errno == EEXIST) {
+	// 	delete_files(path_tmp.c_str());
+	// 	dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	// 	if (dir == 0) {
+	// 		L_DEBUG(this, "Directory %s created", path_tmp.c_str());
+	// 	}
+	// } else {
+	// 	L_ERR(this, "Directory %s not created (%s)", path_tmp.c_str(), strerror(errno));
+	// }
+}
+
+
+void
+BinaryClient::reply_db_filename(const std::string &)
+{
+	L_REPLICATION(this, "BinaryClient::reply_db_filename");
+
+	// const char *p = message.data();
+	// const char *p_end = p + message.size();
+	// repl_db_filename.assign(p, p_end - p);
+}
+
+
+void
+BinaryClient::reply_db_filedata(const std::string &)
+{
+	L_REPLICATION(this, "BinaryClient::reply_db_filedata");
+
+	// const char *p = message.data();
+	// const char *p_end = p + message.size();
+
+	// const Endpoint &endpoint = *endpoints.begin();
+
+	// std::string path = endpoint.path + "/.tmp/";
+	// std::string path_filename = path + repl_db_filename;
+
+	// int fd = io::open(path_filename.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
+	// if (fd >= 0) {
+	// 	L_REPLICATION(this, "path_filename %s", path_filename.c_str());
+	// 	if (io::write(fd, p, p_end - p) != p_end - p) {
+	// 		L_ERR(this, "Cannot write to %s", repl_db_filename.c_str());
+	// 		return;
+	// 	}
+	// 	io::close(fd);
+	// }
+}
+
+
+void
+BinaryClient::reply_db_footer(const std::string &)
+{
+	L_REPLICATION(this, "BinaryClient::reply_db_footer");
+
+	// // const char *p = message.data();
+	// // const char *p_end = p + message.size();
+	// // size_t revision = unserialise_length(&p, p_end);
+	// // Indicates the end of a DB copy operation, signal switch
+
+	// Endpoints endpoints_tmp;
+	// Endpoint endpoint_tmp = *endpoints.begin();
+	// endpoint_tmp.path.append("/.tmp");
+	// endpoints_tmp.insert(endpoint_tmp);
+
+	// if (!repl_database_tmp) {
+	// 	if (!manager()->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
+	// 		L_ERR(this, "Cannot checkout tmp %s", endpoint_tmp.path.c_str());
+	// 	}
+	// }
+
+	// repl_switched_db = true;
+	// repl_just_switched_db = true;
+}
+
+
+void
+BinaryClient::reply_changeset(const std::string &)
+{
+	L_REPLICATION(this, "BinaryClient::reply_changeset");
+
+	// Xapian::WritableDatabase *wdb_;
+	// if (repl_database_tmp) {
+	// 	wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database_tmp->db.get());
+	// } else {
+	// 	wdb_ = static_cast<Xapian::WritableDatabase *>(database->db.get());
+	// }
+
+	// char path[] = "/tmp/xapian_changes.XXXXXX";
+	// int fd = mkstemp(path);
+	// if (fd < 0) {
+	// 	L_ERR(this, "Cannot write to %s (1)", path);
+	// 	return;
+	// }
+
+	// std::string header;
+	// header += toUType(ReplicationMessageType::REPLY_CHANGESET);
+	// header += serialise_length(message.size());
+
+	// if (io::write(fd, header.data(), header.size()) != static_cast<ssize_t>(header.size())) {
+	// 	L_ERR(this, "Cannot write to %s (2)", path);
+	// 	return;
+	// }
+
+	// if (io::write(fd, message.data(), message.size()) != static_cast<ssize_t>(message.size())) {
+	// 	L_ERR(this, "Cannot write to %s (3)", path);
+	// 	return;
+	// }
+
+	// io::lseek(fd, 0, SEEK_SET);
+
+	// try {
+	// 	// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
+	// 	repl_just_switched_db = false;
+	// } catch(const Xapian::NetworkError &e) {
+	// 	L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+	// 	io::close(fd);
+	// 	io::unlink(path);
+	// 	throw;
+	// } catch (const Xapian::DatabaseError &e) {
+	// 	L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+	// 	io::close(fd);
+	// 	io::unlink(path);
+	// 	throw;
+	// } catch (...) {
+	// 	io::close(fd);
+	// 	io::unlink(path);
+	// 	throw;
+	// }
+
+	// io::close(fd);
+	// io::unlink(path);
 }
 
 #endif  /* XAPIAND_CLUSTERING */

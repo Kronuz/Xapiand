@@ -209,15 +209,15 @@ std::string
 GeoSpatialRange::serialise() const
 {
 	std::string serialised, values, aux(Xapian::sortable_serialise(slot));
-	values.append(encode_length(aux.size()));
+	values.append(serialise_length(aux.size()));
 	values.append(aux);
 	aux = ranges.serialise();
-	values.append(encode_length(aux.size()));
+	values.append(serialise_length(aux.size()));
 	values.append(aux);
 	aux = centroids.serialise();
-	values.append(encode_length(aux.size()));
+	values.append(serialise_length(aux.size()));
 	values.append(aux);
-	serialised.append(encode_length(values.size()));
+	serialised.append(serialise_length(values.size()));
 	serialised.append(values);
 	return serialised;
 }

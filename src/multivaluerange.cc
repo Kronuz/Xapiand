@@ -150,13 +150,13 @@ std::string
 MultipleValueRange::serialise() const
 {
 	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
-	values.append(encode_length(s_slot.size()));
+	values.append(serialise_length(s_slot.size()));
 	values.append(s_slot);
-	values.append(encode_length(start.size()));
+	values.append(serialise_length(start.size()));
 	values.append(start);
-	values.append(encode_length(end.size()));
+	values.append(serialise_length(end.size()));
 	values.append(end);
-	serialised.append(encode_length(values.size()));
+	serialised.append(serialise_length(values.size()));
 	serialised.append(values);
 	return serialised;
 }
@@ -276,11 +276,11 @@ std::string
 MultipleValueGE::serialise() const
 {
 	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
-	values.append(encode_length(s_slot.size()));
+	values.append(serialise_length(s_slot.size()));
 	values.append(s_slot);
-	values.append(encode_length(start.size()));
+	values.append(serialise_length(start.size()));
 	values.append(start);
-	serialised.append(encode_length(values.size()));
+	serialised.append(serialise_length(values.size()));
 	serialised.append(values);
 	return serialised;
 }
@@ -399,11 +399,11 @@ std::string
 MultipleValueLE::serialise() const
 {
 	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
-	values.append(encode_length(s_slot.size()));
+	values.append(serialise_length(s_slot.size()));
 	values.append(s_slot);
-	values.append(encode_length(end.size()));
+	values.append(serialise_length(end.size()));
 	values.append(end);
-	serialised.append(encode_length(values.size()));
+	serialised.append(serialise_length(values.size()));
 	serialised.append(values);
 	return serialised;
 }

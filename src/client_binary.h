@@ -33,109 +33,203 @@
 
 #include <unordered_map>
 
+#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 39
+#define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 0
 
-enum class ReplicateType {
-	REPLY_END_OF_CHANGES,  // 0 - No more changes to transfer.
-	REPLY_FAIL,            // 1 - Couldn't generate full set of changes.
-	REPLY_DB_HEADER,       // 2 - The start of a whole DB copy.
-	REPLY_DB_FILENAME,     // 3 - The name of a file in a DB copy.
-	REPLY_DB_FILEDATA,     // 4 - Contents of a file in a DB copy.
-	REPLY_DB_FOOTER,       // 5 - End of a whole DB copy.
-	REPLY_CHANGESET,       // 6 - A changeset file is being sent.
-	MSG_GET_CHANGESETS,
-	MAX,
+
+enum class RemoteMessageType {
+	MSG_ALLTERMS,               // All Terms
+	MSG_COLLFREQ,               // Get Collection Frequency
+	MSG_DOCUMENT,               // Get Document
+	MSG_TERMEXISTS,             // Term Exists?
+	MSG_TERMFREQ,               // Get Term Frequency
+	MSG_VALUESTATS,             // Get value statistics
+	MSG_KEEPALIVE,              // Keep-alive
+	MSG_DOCLENGTH,              // Get Doc Length
+	MSG_QUERY,                  // Run Query
+	MSG_TERMLIST,               // Get TermList
+	MSG_POSITIONLIST,           // Get PositionList
+	MSG_POSTLIST,               // Get PostList
+	MSG_REOPEN,                 // Reopen
+	MSG_UPDATE,                 // Get Updated DocCount and AvLength
+	MSG_ADDDOCUMENT,            // Add Document
+	MSG_CANCEL,                 // Cancel
+	MSG_DELETEDOCUMENTTERM,     // Delete Document by term
+	MSG_COMMIT,                 // Commit
+	MSG_REPLACEDOCUMENT,        // Replace Document
+	MSG_REPLACEDOCUMENTTERM,    // Replace Document by term
+	MSG_DELETEDOCUMENT,         // Delete Document
+	MSG_WRITEACCESS,            // Upgrade to WritableDatabase
+	MSG_GETMETADATA,            // Get metadata
+	MSG_SETMETADATA,            // Set metadata
+	MSG_ADDSPELLING,            // Add a spelling
+	MSG_REMOVESPELLING,         // Remove a spelling
+	MSG_GETMSET,                // Get MSet
+	MSG_SHUTDOWN,               // Shutdown
+	MSG_METADATAKEYLIST,        // Iterator for metadata keys
+	MSG_FREQS,                  // Get termfreq and collfreq
+	MSG_UNIQUETERMS,            // Get number of unique terms in doc
+	MSG_SELECT,                 // Select current database
+	MSG_MAX
 };
 
-enum class State {
-	INIT_REMOTEPROTOCOL,
-	REMOTEPROTOCOL,
+enum class RemoteReplyType {
+	REPLY_UPDATE,               // Updated database stats
+	REPLY_EXCEPTION,            // Exception
+	REPLY_DONE,                 // Done sending list
+	REPLY_ALLTERMS,             // All Terms
+	REPLY_COLLFREQ,             // Get Collection Frequency
+	REPLY_DOCDATA,              // Get Document
+	REPLY_TERMDOESNTEXIST,      // Term Doesn't Exist
+	REPLY_TERMEXISTS,           // Term Exists
+	REPLY_TERMFREQ,             // Get Term Frequency
+	REPLY_VALUESTATS,           // Value statistics
+	REPLY_DOCLENGTH,            // Get Doc Length
+	REPLY_STATS,                // Stats
+	REPLY_TERMLIST,             // Get Termlist
+	REPLY_POSITIONLIST,         // Get PositionList
+	REPLY_POSTLISTSTART,        // Start of a postlist
+	REPLY_POSTLISTITEM,         // Item in body of a postlist
+	REPLY_VALUE,                // Document Value
+	REPLY_ADDDOCUMENT,          // Add Document
+	REPLY_RESULTS,              // Results (MSet)
+	REPLY_METADATA,             // Metadata
+	REPLY_METADATAKEYLIST,      // Iterator for metadata keys
+	REPLY_FREQS,                // Get termfreq and collfreq
+	REPLY_UNIQUETERMS,          // Get number of unique terms in doc
+	REPLY_MAX
+};
 
-	REPLICATIONPROTOCOL_SLAVE,
-	REPLICATIONPROTOCOL_MASTER,
+
+enum class ReplicationMessageType {
+	MSG_GET_CHANGESETS,
+	MSG_MAX,
+};
+
+enum class ReplicationReplyType {
+	REPLY_END_OF_CHANGES,       // No more changes to transfer.
+	REPLY_FAIL,                 // Couldn't generate full set of changes.
+	REPLY_DB_HEADER,            // The start of a whole DB copy.
+	REPLY_DB_FILENAME,          // The name of a file in a DB copy.
+	REPLY_DB_FILEDATA,          // Contents of a file in a DB copy.
+	REPLY_DB_FOOTER,            // End of a whole DB copy.
+	REPLY_CHANGESET,            // A changeset file is being sent.
+	REPLY_MAX,
+};
+
+
+enum class State {
+	REMOTEPROTOCOL_SERVER,
+	REPLICATIONPROTOCOL_CLIENT,
+	REPLICATIONPROTOCOL_SERVER,
 };
 
 
 // A single instance of a non-blocking Xapiand binary protocol handler
-class BinaryClient : public BaseClient, public RemoteProtocol {
+class BinaryClient : public BaseClient {
 	std::atomic_int running;
 
 	State state;
-	int file_descriptor;
-	char file_path[PATH_MAX];
 
-	std::unordered_map<Xapian::Database *, std::shared_ptr<Database>> databases;
+	char file_path[PATH_MAX];
+	int file_descriptor;
+
+	bool writable;
+	std::shared_ptr<Database> database;
 
 	// Buffers that are pending write
 	std::string buffer;
 	queue::Queue<std::unique_ptr<Buffer>> messages_queue;
 
-	std::shared_ptr<Database> repl_database;
-	std::shared_ptr<Database> repl_database_tmp;
-	std::string repl_uuid;
 	Endpoints repl_endpoints;
-	std::string repl_db_filename;
-	std::string repl_db_uuid;
-	size_t repl_db_revision;
-	bool repl_switched_db;
-	bool repl_just_switched_db;
 
 	BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *loop_, int sock_, double active_timeout_, double idle_timeout_);
+
+	void shutdown() override;
 
 	void on_read(const char *buf, size_t received) override;
 	void on_read_file(const char *buf, size_t received) override;
 	void on_read_file_done() override;
 
-	void repl_file_done();
-	void repl_apply(ReplicateType type, const std::string & message);
-	void repl_end_of_changes();
-	void repl_fail();
-	void repl_set_db_header(const std::string & message);
-	void repl_set_db_filename(const std::string & message);
-	void repl_set_db_filedata(const std::string & message);
-	void repl_set_db_footer();
-	void repl_changeset(const std::string & message);
-	void repl_get_changesets(const std::string & message);
-	void receive_repl();
+	void checkout_database();
+	void checkin_database();
+
+	// Remote protocol:
+
+	// For msg_query and msg_mset:
+	Xapian::Registry reg;
+	std::unique_ptr<Xapian::Enquire> enquire;
+	std::vector<std::unique_ptr<Xapian::MatchSpy>> matchspies;
+
+	void remote_server(RemoteMessageType type, const std::string& message);
+	void msg_allterms(const std::string& message);
+	void msg_termlist(const std::string& message);
+	void msg_positionlist(const std::string& message);
+	void msg_select(const std::string& message);
+	void msg_postlist(const std::string& message);
+	void msg_writeaccess(const std::string& message);
+	void msg_reopen(const std::string& message);
+	void msg_update(const std::string& message);
+	void msg_query(const std::string& message);
+	void msg_getmset(const std::string& message);
+	void msg_document(const std::string& message);
+	void msg_keepalive(const std::string& message);
+	void msg_termexists(const std::string& message);
+	void msg_collfreq(const std::string& message);
+	void msg_termfreq(const std::string& message);
+	void msg_freqs(const std::string& message);
+	void msg_valuestats(const std::string& message);
+	void msg_doclength(const std::string& message);
+	void msg_uniqueterms(const std::string& message);
+	void msg_commit(const std::string& message);
+	void msg_cancel(const std::string& message);
+	void msg_adddocument(const std::string& message);
+	void msg_deletedocument(const std::string& message);
+	void msg_deletedocumentterm(const std::string& message);
+	void msg_replacedocument(const std::string& message);
+	void msg_replacedocumentterm(const std::string& message);
+	void msg_getmetadata(const std::string& message);
+	void msg_openmetadatakeylist(const std::string& message);
+	void msg_setmetadata(const std::string& message);
+	void msg_addspelling(const std::string& message);
+	void msg_removespelling(const std::string& message);
+	void msg_shutdown(const std::string& message);
+
+	// Replication protocol:
+	void replication_server(ReplicationMessageType type, const std::string& message);
+	void replication_client(ReplicationReplyType type, const std::string& message);
+	void replication_client_file_done();
+
+	void msg_get_changesets(const std::string& message);
+	void reply_end_of_changes(const std::string& message);
+	void reply_fail(const std::string& message);
+	void reply_db_header(const std::string& message);
+	void reply_db_filename(const std::string& message);
+	void reply_db_filedata(const std::string& message);
+	void reply_db_footer(const std::string& message);
+	void reply_changeset(const std::string& message);
 
 	friend Worker;
-
-	Xapian::Database* _get_db(bool writable);
 
 public:
 	~BinaryClient();
 
-	inline ReplicateType get_message(double timeout, std::string & result, ReplicateType required_type) {
-		return (ReplicateType)get_message(timeout, result, static_cast<int>(required_type));
-	}
+	char get_message(std::string &result, char max_type);
 
-	int get_message(double timeout, std::string &result, int) override;
-
-	char get_message(double timeout, std::string &result);
-
-	inline void send_message(int type, const std::string &message, double end_time=0.0) override {
+	inline void send_message(RemoteReplyType type, const std::string& message, double end_time=0.0) {
 		send_message(static_cast<char>(type), message, end_time);
 	}
-
-	inline void send_message(ReplicateType type, const std::string &message) {
-		send_message(static_cast<char>(type), message);
-	}
-
-	inline void send_message(ReplicateType type, const std::string &message, double end_time) {
+	inline void send_message(ReplicationReplyType type, const std::string& message, double end_time=0.0) {
 		send_message(static_cast<char>(type), message, end_time);
 	}
-
-	void send_message(char type_as_char, const std::string &message, double end_time=0.0);
-
-	Xapian::Database* get_db() override;
-	Xapian::WritableDatabase* get_wdb() override;
-	void release_db(Xapian::Database *) override;
-	void select_db(const std::vector<std::string> &dbpaths_, bool, int) override;
-	void shutdown() override;
+	void send_message(char type_as_char, const std::string& message, double end_time=0.0);
 
 	bool init_remote();
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
 	void run() override;
 };
+
+typedef void (BinaryClient::* dispatch_func)(const std::string &);
 
 #endif  /* XAPIAND_CLUSTERING */

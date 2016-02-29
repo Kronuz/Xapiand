@@ -40,7 +40,7 @@ NumericFieldProcessor::operator()(const std::string& str)
 	try {
 		serialise = Serialise::numeric(serialise);
 		return Xapian::Query(prefix + serialise);
-	} catch (const SerializationError& e) {
+	} catch (const SerialisationError& e) {
 		throw Xapian::QueryParserError(std::string(e.what()) + " (" + str + ")");
 	}
 }
@@ -55,7 +55,7 @@ BooleanFieldProcessor::operator()(const std::string& str)
 	try {
 		std::string serialise = Serialise::boolean(str);
 		return Xapian::Query(prefix + serialise);
-	} catch (const SerializationError& e) {
+	} catch (const SerialisationError& e) {
 		throw Xapian::QueryParserError(std::string(e.what()) + " (" + str + ")");
 	}
 }

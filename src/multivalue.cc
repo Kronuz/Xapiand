@@ -39,23 +39,26 @@ StringList::unserialise(const std::string& serialised)
 void
 StringList::unserialise(const char** ptr, const char* end)
 {
+	ssize_t length;
 	const char* pos = *ptr;
+
 	clear();
-	ssize_t length = decode_length(&pos, end, true);
+
+	try {
+		length = unserialise_length(&pos, end, true);
+	} catch(Xapian::SerialisationError) {
+		length = -1;
+	}
 	if (length == -1 || length != end - pos) {
 		push_back(std::string(pos, end - pos));
 	} else {
-		ssize_t currlen;
 		while (pos != end) {
-			currlen = decode_length(&pos, end, true);
-			if (currlen == -1) {
-				// FIXME: throwing a NetworkError if the length is too long - should be a more appropriate error.
-				throw Xapian::NetworkError("Decoding error of serialised MultiValueCountMatchSpy");
-			}
-			push_back(std::string(pos, currlen));
-			pos += currlen;
+			length = unserialise_length(&pos, end, true);
+			push_back(std::string(pos, length));
+			pos += length;
 		}
 	}
+
 	*ptr = pos;
 }
 
@@ -67,10 +70,10 @@ StringList::serialise() const
 	StringList::const_iterator i(begin());
 	if (size() > 1) {
 		for ( ; i != end(); ++i) {
-			values.append(encode_length((*i).size()));
+			values.append(serialise_length((*i).size()));
 			values.append(*i);
 		}
-		serialised.append(encode_length(values.size()));
+		serialised.append(serialise_length(values.size()));
 	} else if (i != end()) {
 		values.assign(*i);
 	}
@@ -123,7 +126,7 @@ MultiValueCountMatchSpy::serialise() const
 {
 	assert(internal.get());
 	std::string result;
-	result += encode_length(internal->slot);
+	result += serialise_length(internal->slot);
 	return result;
 }
 
@@ -134,7 +137,7 @@ MultiValueCountMatchSpy::unserialise(const std::string& s, const Xapian::Registr
 	const char* p = s.data();
 	const char* end = p + s.size();
 
-	Xapian::valueno new_slot = (Xapian::valueno)decode_length(&p, end, false);
+	Xapian::valueno new_slot = (Xapian::valueno)unserialise_length(&p, end, false);
 	if (new_slot == Xapian::BAD_VALUENO) {
 		throw Xapian::NetworkError("Decoding error of serialised MultiValueCountMatchSpy");
 	}
