@@ -191,7 +191,7 @@ DatabaseWAL::read_checked(uint16_t& off_readed){
 
 	ssize_t r;
 	char buf[1024];
-	while ((r = read(buf, sizeof(buf)))) {
+	while ((r = read(buf, sizeof(buf), this))) {
 		off_readed += r;
 		ret += std::string(buf, r);
 	}
@@ -344,7 +344,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit)
 		open(file, true);
 	}
 
-	write(line.data(), line.size());
+	write(line.data(), line.size(), this);
 	header.slot[slot] = header.head.offset; /* Beginning of the next revision */
 
 	if(commit) {

@@ -155,7 +155,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 
 	std::string read_checked(uint16_t& off_readed);
 	inline void open(const std::string& path, bool writable) {
-		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, writable);
+		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, writable, this);
 	}
 
 public:
