@@ -377,7 +377,7 @@ public:
 		return current_offset;
 	}
 
-	size_t read(char *buf, size_t buf_size, void* param=nullptr) {
+	size_t read(char *buf, size_t buf_size, uint32_t limit=-1, void* param=nullptr) {
 		if (!buf_size) {
 			return 0;
 		}
@@ -386,7 +386,8 @@ public:
 		uint32_t checksum = 0;
 
 		if (!bin_header.size) {
-			if (io::lseek(fd, bin_offset, SEEK_SET) >= header.head.offset * STORAGE_ALIGNMENT) {
+			off_t offset = io::lseek(fd, bin_offset, SEEK_SET);
+			if (offset >= header.head.offset * STORAGE_ALIGNMENT || offset >= limit * STORAGE_ALIGNMENT) {
 				throw MSG_StorageEOF("Storage EOF");
 			}
 
@@ -449,29 +450,12 @@ public:
 
 	}
 
-	inline std::string read(void* param=nullptr) {
+	inline std::string read(uint32_t limit=-1, void* param=nullptr) {
 		std::string ret;
 
 		ssize_t r;
 		char buf[1024];
-		while ((r = read(buf, sizeof(buf), param))) {
-			ret += std::string(buf, r);
-		}
-
-		if unlikely(r < 0) {
-			throw MSG_StorageIOError("IO error");
-		}
-		return ret;
-	}
-
-	inline std::string read(int off_limit, void* param=nullptr) {
-
-		off_t real_off = off_limit * STORAGE_ALIGNMENT;
-		std::string ret;
-
-		ssize_t r;
-		char buf[1024];
-		while ((r = read(buf, sizeof(buf), param)) && (lseek(fd, 0, SEEK_CUR) < real_off)) {
+		while ((r = read(buf, sizeof(buf), limit, param))) {
 			ret += std::string(buf, r);
 		}
 

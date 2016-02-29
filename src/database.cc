@@ -143,8 +143,6 @@ DatabaseWAL::open_current(const std::string& path, bool complete)
 
 			if (high_slot != static_cast<uint32_t>(-1)) {
 				if (i == lowest_revision) {
-					L_INFO(nullptr, "Read execute operations in WAL files (%u..%u)", lowest_revision, highest_revision + high_slot);
-
 					int32_t slot = revision - header.head.revision - 1;
 					if (slot == -1) {
 						/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
@@ -171,8 +169,12 @@ DatabaseWAL::open_current(const std::string& path, bool complete)
 				}
 				end_off =  header.slot[high_slot];
 
+				if (start_off < end_off) {
+					L_INFO(nullptr, "Read execute operations in WAL files (%u..%u)", lowest_revision, highest_revision + high_slot);
+				}
+
 				try {
-					while (start_off < end_off) {
+					while (true) {
 						std::string line = read(end_off, this);
 						execute(line);
 					}
