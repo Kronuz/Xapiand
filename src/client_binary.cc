@@ -49,6 +49,21 @@ common_prefix_length(const std::string &a, const std::string &b)
 	return common;
 }
 
+std::string
+serialise_error(const Xapian::Error &e)
+{
+	// The byte before the type name is the type code.
+	std::string result(1, (e.get_type())[-1]);
+	result += serialise_length(e.get_context().length());
+	result += e.get_context();
+	result += serialise_length(e.get_msg().length());
+	result += e.get_msg();
+	// The "error string" goes last so we don't need to store its length.
+	const char * err = e.get_error_string();
+	if (err) result += err;
+	return result;
+}
+
 
 #define SWITCH_TO_REPL '\xfe'
 
@@ -389,12 +404,37 @@ BinaryClient::run()
 					break;
 				}
 			}
-		} catch (const Xapian::NetworkError &e) {
-			L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+		} catch (const Xapian::NetworkTimeoutError& err) {
+			try {
+				// We've had a timeout, so the client may not be listening, so
+				// set the end_time to 1 and if we can't send the message right
+				// away, just exit and the client will cope.
+				send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(err), 1.0);
+			} catch (...) {}
+			checkin_database();
+			shutdown();
+		} catch (const Xapian::NetworkError& err) {
+			L_ERR(this, "ERROR: %s", err.get_msg().empty() ? "Unkown Xapian error!" : err.get_msg().c_str());
+			checkin_database();
+			shutdown();
+		} catch (const Xapian::Error& err) {
+	    	// Propagate the exception to the client, then return to the main
+	    	// message handling loop.
+	    	send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(err));
+			checkin_database();
+		} catch (const Error& err) {
+			L_ERR(this, "ERROR: %s", err.get_context());
+	    	send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+			checkin_database();
+			shutdown();
+		} catch (const std::exception& err) {
+			L_ERR(this, "ERROR: %s", *err.what() ? "Unkown exception!" : err.what());
+	    	send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
 		} catch (...) {
-			L_ERR(this, "ERROR!");
+			L_ERR(this, "ERROR: %s", "Unkown error!");
+	    	send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
 		}
