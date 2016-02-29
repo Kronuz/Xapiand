@@ -868,8 +868,6 @@ BinaryClient::msg_document(const std::string &message)
 		throw Xapian::NetworkError("Cannot get document");
 	}
 
-	database->storage_pull_data(doc);
-
 	send_message(RemoteReplyType::REPLY_DOCDATA, doc.get_data());
 
 	Xapian::ValueIterator i;
