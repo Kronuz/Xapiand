@@ -173,31 +173,13 @@ DatabaseWAL::open_current(const std::string& path, bool complete)
 
 				try {
 					while (start_off < end_off) {
-						std::string line = read_checked(start_off);
+						std::string line = read(end_off, this);
 						execute(line);
 					}
 				} catch (const StorageEOF& e) { }
 			}
 		}
 	}
-}
-
-
-std::string
-DatabaseWAL::read_checked(uint16_t& off_readed){
-	std::string ret;
-
-	ssize_t r;
-	char buf[1024];
-	while ((r = read(buf, sizeof(buf), this))) {
-		off_readed += r;
-		ret += std::string(buf, r);
-	}
-
-	if (r == -1) {
-		throw MSG_StorageIOError("IO error");
-	}
-	return ret;
 }
 
 

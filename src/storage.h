@@ -463,4 +463,21 @@ public:
 		}
 		return ret;
 	}
+
+	inline std::string read(int off_limit, void* param=nullptr) {
+
+		off_t real_off = off_limit * STORAGE_ALIGNMENT;
+		std::string ret;
+
+		ssize_t r;
+		char buf[1024];
+		while ((r = read(buf, sizeof(buf), param)) && (lseek(fd, 0, SEEK_CUR) < real_off)) {
+			ret += std::string(buf, r);
+		}
+
+		if unlikely(r < 0) {
+			throw MSG_StorageIOError("IO error");
+		}
+		return ret;
+	}
 };
