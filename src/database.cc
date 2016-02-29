@@ -86,7 +86,7 @@ void WalHeader::validate(void* param)
 
 
 void
-DatabaseWAL::open_current(const std::string& path, bool complete) //FIXME: write the revision in header
+DatabaseWAL::open_current(const std::string& path, bool complete)
 {
 	L_CALL(this, "DatabaseWAL::open()");
 
@@ -126,8 +126,6 @@ DatabaseWAL::open_current(const std::string& path, bool complete) //FIXME: write
 		find_file_dir(dir, fptr, FILE_WAL, true);
 	}
 
-
-	//FIXME: handle exceptions
 	if (lowest_revision > revision) {
 		std::string file = path + "/" + FILE_WAL + std::to_string(revision);
 		open(file, true);
@@ -157,7 +155,7 @@ DatabaseWAL::open_current(const std::string& path, bool complete) //FIXME: write
 
 					start_off = header.slot[slot];
 					if (start_off == 0) {
-//						throw
+						throw MSG_StorageCorruptVolume("Bad offset");
 					}
 
 				} else {
