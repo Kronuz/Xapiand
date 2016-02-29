@@ -597,7 +597,7 @@ Database::reopen()
 	schema.setDatabase(this);
 
 
-#ifdef XAPIAND_DATABASE_WAL
+#ifdef XAPIAND_DATA_STORAGE
 	if (!storage && local) {
 		assert(endpoints_size == 1);  // FIXME: Storage only working for single local databases
 		// WAL required on a local database, open it.
