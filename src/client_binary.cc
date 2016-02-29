@@ -60,7 +60,7 @@ common_prefix_length(const std::string &a, const std::string &b)
 BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *loop_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/)
 	: BaseClient(std::move(server_), loop_, sock_),
 	  running(0),
-	  state(State::REMOTEPROTOCOL_SERVER),
+	  state(State::INIT),
 	  writable(false),
 	  database(nullptr)
 {
@@ -95,7 +95,7 @@ bool
 BinaryClient::init_remote()
 {
 	L_DEBUG(this, "init_remote");
-	state = State::REMOTEPROTOCOL_SERVER;
+	state = State::INIT;
 
 	manager()->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
@@ -356,9 +356,16 @@ BinaryClient::run()
 		return;
 	}
 
+	if (state == State::INIT) {
+		state = State::REMOTEPROTOCOL_SERVER;
+		msg_update(std::string());
+	}
+
 	while (!messages_queue.empty()) {
 		try {
 			switch (state) {
+				case State::INIT:
+					L_ERR(this, "Unexpected INIT!");
 				case State::REMOTEPROTOCOL_SERVER: {
 					std::string message;
 					RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
