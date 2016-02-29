@@ -288,11 +288,9 @@ BinaryClient::get_message(std::string &result, char max_type)
 
 	std::string buf;
 	buf += type;
-	L_BINARY(this, "get_message: '%s'", repr(buf, false).c_str());
 
 	buf += serialise_length(msg_size);
 	buf += result;
-	L_BINARY_PROTO(this, "msg = '%s'", repr(buf).c_str());
 
 	return type;
 }
@@ -303,11 +301,9 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 {
 	std::string buf;
 	buf += type_as_char;
-	L_BINARY(this, "send_message: '%s'", repr(buf, false).c_str());
 
 	buf += serialise_length(message.size());
 	buf += message;
-	L_BINARY_PROTO(this, "msg = '%s'", repr(buf).c_str());
 
 	write(buf);
 }
@@ -369,6 +365,8 @@ BinaryClient::run()
 				case State::REMOTEPROTOCOL_SERVER: {
 					std::string message;
 					RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
+					L_BINARY(this, ">> get_message(%s)", RemoteMessageTypeNames[static_cast<int>(type)]);
+					L_BINARY_PROTO(this, "message: '%s'", repr(message).c_str());
 					remote_server(type, message);
 					break;
 				}
@@ -376,6 +374,8 @@ BinaryClient::run()
 				case State::REPLICATIONPROTOCOL_SERVER: {
 					std::string message;
 					ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
+					L_BINARY(this, ">> get_message(%s)", ReplicationMessageTypeNames[static_cast<int>(type)]);
+					L_BINARY_PROTO(this, "message: '%s'", repr(message).c_str());
 					replication_server(type, message);
 					break;
 				}
@@ -383,6 +383,8 @@ BinaryClient::run()
 				case State::REPLICATIONPROTOCOL_CLIENT: {
 					std::string message;
 					ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
+					L_BINARY(this, ">> get_message(%s)", ReplicationReplyTypeNames[static_cast<int>(type)]);
+					L_BINARY_PROTO(this, "message: '%s'", repr(message).c_str());
 					replication_client(type, message);
 					break;
 				}

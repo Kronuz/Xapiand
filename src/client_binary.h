@@ -72,6 +72,17 @@ enum class RemoteMessageType {
 	MSG_SELECT,                 // Select current database
 	MSG_MAX
 };
+static const char* RemoteMessageTypeNames[] = {
+	"MSG_ALLTERMS", "MSG_COLLFREQ", "MSG_DOCUMENT", "MSG_TERMEXISTS",
+	"MSG_TERMFREQ", "MSG_VALUESTATS", "MSG_KEEPALIVE", "MSG_DOCLENGTH",
+	"MSG_QUERY", "MSG_TERMLIST", "MSG_POSITIONLIST", "MSG_POSTLIST",
+	"MSG_REOPEN", "MSG_UPDATE", "MSG_ADDDOCUMENT", "MSG_CANCEL",
+	"MSG_DELETEDOCUMENTTERM", "MSG_COMMIT", "MSG_REPLACEDOCUMENT",
+	"MSG_REPLACEDOCUMENTTERM", "MSG_DELETEDOCUMENT", "MSG_WRITEACCESS",
+	"MSG_GETMETADATA", "MSG_SETMETADATA", "MSG_ADDSPELLING",
+	"MSG_REMOVESPELLING", "MSG_GETMSET", "MSG_SHUTDOWN",
+	"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS", "MSG_SELECT",
+};
 
 enum class RemoteReplyType {
 	REPLY_UPDATE,               // Updated database stats
@@ -99,11 +110,21 @@ enum class RemoteReplyType {
 	REPLY_UNIQUETERMS,          // Get number of unique terms in doc
 	REPLY_MAX
 };
-
+static const char* RemoteReplyTypeNames[] = {
+    "REPLY_UPDATE", "REPLY_EXCEPTION", "REPLY_DONE", "REPLY_ALLTERMS",
+    "REPLY_COLLFREQ", "REPLY_DOCDATA", "REPLY_TERMDOESNTEXIST",
+    "REPLY_TERMEXISTS", "REPLY_TERMFREQ", "REPLY_VALUESTATS", "REPLY_DOCLENGTH",
+    "REPLY_STATS", "REPLY_TERMLIST", "REPLY_POSITIONLIST", "REPLY_POSTLISTSTART",
+    "REPLY_POSTLISTITEM", "REPLY_VALUE", "REPLY_ADDDOCUMENT", "REPLY_RESULTS",
+    "REPLY_METADATA", "REPLY_METADATAKEYLIST", "REPLY_FREQS", "REPLY_UNIQUETERMS",
+};
 
 enum class ReplicationMessageType {
 	MSG_GET_CHANGESETS,
 	MSG_MAX,
+};
+static const char* ReplicationMessageTypeNames[] = {
+    "MSG_GET_CHANGESETS",
 };
 
 enum class ReplicationReplyType {
@@ -116,7 +137,10 @@ enum class ReplicationReplyType {
 	REPLY_CHANGESET,            // A changeset file is being sent.
 	REPLY_MAX,
 };
-
+static const char* ReplicationReplyTypeNames[] = {
+    "REPLY_END_OF_CHANGES", "REPLY_FAIL", "REPLY_DB_HEADER", "REPLY_DB_FILENAME",
+    "REPLY_DB_FILEDATA", "REPLY_DB_FOOTER", "REPLY_CHANGESET",
+};
 
 enum class State {
 	INIT,
@@ -218,9 +242,13 @@ public:
 	char get_message(std::string &result, char max_type);
 
 	inline void send_message(RemoteReplyType type, const std::string& message, double end_time=0.0) {
+		L_BINARY(this, "<< send_message(%s)", RemoteReplyTypeNames[static_cast<int>(type)]);
+		L_BINARY_PROTO(this, "message: '%s'", repr(message).c_str());
 		send_message(static_cast<char>(type), message, end_time);
 	}
 	inline void send_message(ReplicationReplyType type, const std::string& message, double end_time=0.0) {
+		L_BINARY(this, "<< send_message(%s)", ReplicationReplyTypeNames[static_cast<int>(type)]);
+		L_BINARY_PROTO(this, "message: '%s'", repr(message).c_str());
 		send_message(static_cast<char>(type), message, end_time);
 	}
 	void send_message(char type_as_char, const std::string& message, double end_time=0.0);
