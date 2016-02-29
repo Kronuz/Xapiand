@@ -372,7 +372,7 @@ BinaryClient::get_message(double timeout, std::string &result, int)
 
 	if (wal_type != DatabaseWAL::Type::MAX) {
 		Xapian::WritableDatabase* wdb = get_wdb();
-		databases.at(wdb)->wal.write_line(wal_type, result);
+		databases.at(wdb)->wal->write_line(wal_type, result);
 		release_db(wdb);
 	}
 #endif

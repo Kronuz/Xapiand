@@ -65,9 +65,9 @@ void WalHeader::init(void* param)
 
 	head.magic = MAGIC;
 	head.offset = STORAGE_START_BLOCK_OFFSET;
-	strncpy(head.uuid, param->database->get_uuid().c_str(), sizeof(head.uuid));
+	strncpy(head.uuid, storage->database->get_uuid().c_str(), sizeof(head.uuid));
 	uint32_t revision = 0;
-	memcpy(&revision, param->database->get_revision_info().data(), param->database->get_revision_info().size());
+	memcpy(&revision, storage->database->get_revision_info().data(), storage->database->get_revision_info().size());
 	head.revision = revision;
 }
 
