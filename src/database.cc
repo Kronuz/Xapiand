@@ -1438,7 +1438,7 @@ Database::storage_pull_data(Xapian::Document& doc)
 	}
 	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data footer magic number");
 	storage->open(endpoints.begin()->path + DATA_STORAGE_PATH + std::to_string(volume), false, this);
-	storage->seek(offset);
+	storage->seek(static_cast<uint32_t>(offset));
 	data = storage->read();
 	doc.set_data(data);
 }

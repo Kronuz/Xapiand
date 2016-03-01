@@ -180,7 +180,7 @@ class Storage {
 			if unlikely(file_size < 0) {
 				throw MSG_StorageIOError("IO error");
 			}
-			free_blocks = (file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE;
+			free_blocks = static_cast<int>((file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE);
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
 				off_t new_size = file_size + STORAGE_BLOCKS_GROW * STORAGE_BLOCK_SIZE;
 				if (new_size > STORAGE_LAST_BLOCK_OFFSET) {
@@ -293,7 +293,7 @@ public:
 
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
-		bin_header.init(param, data_size);
+		bin_header.init(param, static_cast<uint32_t>(data_size));
 		const StorageBinHeader* bin_header_data = &bin_header;
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
@@ -347,7 +347,7 @@ public:
 				buffer_offset += size;
 
 				// Align the buffer_offset to the next storage alignment
-				buffer_offset = ((block_offset + buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset;
+				buffer_offset = static_cast<uint32_t>(((block_offset + buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
 
 				if (buffer_offset == sizeof(buffer)) {
 					buffer_offset = 0;
