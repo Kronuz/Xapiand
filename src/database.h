@@ -46,8 +46,6 @@
 #include <unordered_set>
 
 
-#define DATA_STORAGE_PATH "/storage.v"
-
 #define DB_WRITABLE     1 // Opens as writable
 #define DB_SPAWN        2 // Automatically creates the database if it doesn't exist
 #define DB_PERSISTENT   4 // Always try keeping the database in the database pool

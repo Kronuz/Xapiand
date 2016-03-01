@@ -39,7 +39,9 @@
 
 #define DEFAULT_OFFSET "0" /* Replace for the real offset */
 
-#define FILE_WAL "wal."
+#define DATA_STORAGE_PATH "docdata."
+
+#define WAL_STORAGE_PATH "wal."
 
 #define MAGIC 0xC0DE
 
@@ -103,7 +105,7 @@ DatabaseWAL::open_current(const std::string& path, bool complete)
 	uint64_t lowest_revision = std::numeric_limits<uint64_t>::max();
 
 	File_ptr fptr;
-	find_file_dir(dir, fptr, FILE_WAL, true);
+	find_file_dir(dir, fptr, WAL_STORAGE_PATH, true);
 
 	while (fptr.ent) {
 		try {
@@ -123,21 +125,15 @@ DatabaseWAL::open_current(const std::string& path, bool complete)
 			throw MSG_Error("In filename wal (%s)", strerror(errno));
 		}
 
-		find_file_dir(dir, fptr, FILE_WAL, true);
+		find_file_dir(dir, fptr, WAL_STORAGE_PATH, true);
 	}
 
 	if (lowest_revision > revision) {
-		std::string file = path + "/" + FILE_WAL + std::to_string(revision);
-		open(file, true);
+		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
 	} else {
-		std::string file = path + "/" + FILE_WAL + std::to_string(highest_revision);
-		open(file, true);
-
-
 		uint16_t start_off, end_off;
 		for (auto i = lowest_revision; i <= highest_revision; i++) {
-			file = path + "/" + FILE_WAL + std::to_string(i);
-			open(file, true);
+			open(path + "/" + WAL_STORAGE_PATH + std::to_string(i), STORAGE_OPEN);
 
 			uint32_t high_slot = highest_valid_slot();
 
@@ -181,6 +177,8 @@ DatabaseWAL::open_current(const std::string& path, bool complete)
 				} catch (const StorageEOF& e) { }
 			}
 		}
+
+		open(path + "/" + WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
 	}
 }
 
@@ -302,7 +300,7 @@ DatabaseWAL::execute(const std::string& line)
 
 
 void
-DatabaseWAL::write_line(Type type, const std::string& data, bool commit)
+DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 {
 	L_CALL(this, "DatabaseWAL::write()");
 
@@ -323,24 +321,22 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit)
 
 	if (slot >= WAL_SLOTS) {
 		close();
-		std::string file = endpoint->path + "/" + FILE_WAL + std::to_string(rev);
-		open(file, true);
+		open(endpoint->path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
 	}
 
 	write(line.data(), line.size(), this);
 	header.slot[slot] = header.head.offset; /* Beginning of the next revision */
 
-	if(commit) {
+	if(commit_) {
 		if (slot + 1 >= WAL_SLOTS) {
 			close();
-			std::string file = endpoint->path + "/" + FILE_WAL + std::to_string(rev);
-			open(file, true);
+			open(endpoint->path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
 		} else {
 			header.slot[slot + 1] = header.slot[slot];
 		}
 	}
 
-	flush();
+	commit();
 }
 
 
@@ -1437,7 +1433,7 @@ Database::storage_pull_data(Xapian::Document& doc)
 		throw MSG_StorageCorruptVolume("Invalid storage data offset");
 	}
 	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data footer magic number");
-	storage->open(endpoints.begin()->path + DATA_STORAGE_PATH + std::to_string(volume), false, this);
+	storage->open(endpoints.begin()->path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN, this);
 	storage->seek(static_cast<uint32_t>(offset));
 	data = storage->read();
 	doc.set_data(data);
@@ -1453,7 +1449,7 @@ Database::storage_push_data(Xapian::Document& doc)
 	std::string data = doc.get_data();
 	uint32_t offset;
 	while(true) {
-		storage->open(endpoints.begin()->path + DATA_STORAGE_PATH + std::to_string(storage->volume), true, this);
+		storage->open(endpoints.begin()->path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_WRITABLE, this);
 		try {
 			offset = storage->write(data);
 			break;
@@ -1461,7 +1457,7 @@ Database::storage_push_data(Xapian::Document& doc)
 			++storage->volume;
 		}
 	}
-	storage->flush();
+	storage->commit();
 	char h = STORAGE_BIN_HEADER_MAGIC;
 	char f = STORAGE_BIN_FOOTER_MAGIC;
 	doc.set_data(std::string(&h, 1) + serialise_length(storage->volume) + serialise_length(offset) + std::string(&f, 1));
