@@ -57,41 +57,52 @@ public:
 	template<typename... Args>
 	StorageException(Args&&... args) : Error(std::forward<Args>(args)...) { }
 };
+
 #define MSG_StorageException(...) StorageException(__FILE__, __LINE__, __VA_ARGS__)
+
 
 class StorageIOError : public StorageException {
 public:
 	template<typename... Args>
 	StorageIOError(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
+
 #define MSG_StorageIOError(...) StorageIOError(__FILE__, __LINE__, __VA_ARGS__)
+
 
 class StorageNotFound : public StorageException {
 public:
 	template<typename... Args>
 	StorageNotFound(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
+
 #define MSG_StorageNotFound(...) StorageNotFound(__FILE__, __LINE__, __VA_ARGS__)
+
 
 class StorageEOF : public StorageException {
 public:
 	template<typename... Args>
 	StorageEOF(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
+
 #define MSG_StorageEOF(...) StorageEOF(__FILE__, __LINE__, __VA_ARGS__)
+
 
 class StorageNoFile : public StorageException {
 public:
 	template<typename... Args>
 	StorageNoFile(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
+
 #define MSG_StorageNoFile(...) StorageNoFile(__FILE__, __LINE__, __VA_ARGS__)
+
 
 class StorageCorruptVolume : public StorageException {
 public:
 	template<typename... Args>
 	StorageCorruptVolume(Args&&... args) : StorageException(std::forward<Args>(args)...) { }
 };
+
 #define MSG_StorageCorruptVolume(...) StorageCorruptVolume(__FILE__, __LINE__, __VA_ARGS__)
 
 
@@ -101,6 +112,7 @@ struct StorageHeader {
 		uint32_t offset;  // required
 		// char uuid[36];
 	} head;
+
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
 
 	inline void init(void* /* param */) {
@@ -119,6 +131,7 @@ struct StorageHeader {
 	}
 };
 
+
 #pragma pack(push, 1)
 struct StorageBinHeader {
 	// uint8_t magic;
@@ -136,6 +149,7 @@ struct StorageBinHeader {
 		// }
 	}
 };
+
 
 struct StorageBinFooter {
 	// uint32_t checksum;
