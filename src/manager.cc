@@ -192,7 +192,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 	std::unique_lock<std::mutex> lk(qmtx);
 
 	// Open cluster database
-	cluster_endpoints.clear();
+	cluster_endpoints.clear_all();
 	Endpoint cluster_endpoint(".");
 	cluster_endpoints.add(cluster_endpoint);
 

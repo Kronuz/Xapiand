@@ -153,10 +153,11 @@ public:
 	size_t hash() const;
 	std::string as_string() const;
 
-	void clear() {
+	void clear_all() {
 		endpoints.clear();
 		clear();
 	}
+
 	void add(const Endpoint& endpoint) {
 		auto p = endpoints.insert(endpoint);
 		if (p.second) {
