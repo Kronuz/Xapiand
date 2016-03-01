@@ -372,7 +372,9 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 					}
 					arg = a + 1;
 				}
-				args.push_back(arg);
+				if (*arg) {
+					args.push_back(arg);
+				}
 			}
 		}
 		cmd.parse(args);
