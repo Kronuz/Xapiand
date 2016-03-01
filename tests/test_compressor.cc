@@ -141,11 +141,11 @@ int test_Compress_Decompress_Data(const std::string& orig_file, const std::strin
 		}
 
 		return compare(orig_file, dec_file);
-	} catch (const Error& er) {
-		L_ERR(nullptr, "%s\n", er.get_context());
+	} catch (const Error& exc) {
+		L_EXC(nullptr, "%s\n", exc.get_context());
 		return 1;
-	} catch (const std::exception& er) {
-		L_ERR(nullptr, "%s\n", er.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "%s\n", exc.what());
 		return 1;
 	}
 }
@@ -192,11 +192,11 @@ int test_Compress_Decompress_File(const std::string& orig_file, const std::strin
 		}
 
 		return compare(orig_file, dec_file);
-	} catch (const Error& er) {
-		L_ERR(nullptr, "%s\n", er.get_context());
+	} catch (const Error& exc) {
+		L_EXC(nullptr, "%s\n", exc.get_context());
 		return 1;
-	} catch (const std::exception& er) {
-		L_ERR(nullptr, "%s\n", er.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "%s\n", exc.what());
 		return 1;
 	}
 }

@@ -50,16 +50,16 @@ common_prefix_length(const std::string &a, const std::string &b)
 }
 
 std::string
-serialise_error(const Xapian::Error &e)
+serialise_error(const Xapian::Error &exc)
 {
 	// The byte before the type name is the type code.
-	std::string result(1, (e.get_type())[-1]);
-	result += serialise_length(e.get_context().length());
-	result += e.get_context();
-	result += serialise_length(e.get_msg().length());
-	result += e.get_msg();
+	std::string result(1, (exc.get_type())[-1]);
+	result += serialise_length(exc.get_context().length());
+	result += exc.get_context();
+	result += serialise_length(exc.get_msg().length());
+	result += exc.get_msg();
 	// The "error string" goes last so we don't need to store its length.
-	const char * err = e.get_error_string();
+	const char * err = exc.get_error_string();
 	if (err) result += err;
 	return result;
 }
