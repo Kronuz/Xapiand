@@ -528,7 +528,7 @@ Database::reopen()
 
 	auto endpoints_size = endpoints.size();
 
-	const Endpoint *e;
+	const Endpoint *e = nullptr;
 	auto i = endpoints.begin();
 	if (flags & DB_WRITABLE) {
 		db = std::make_unique<Xapian::WritableDatabase>();
@@ -611,7 +611,7 @@ Database::reopen()
 #endif
 
 #ifdef XAPIAND_DATABASE_WAL
-	if (!wal && local && (flags & DB_WRITABLE) && !(flags & DB_NOWAL)) {
+	if (e && !wal && local && (flags & DB_WRITABLE) && !(flags & DB_NOWAL)) {
 		// WAL required on a local writable database, open it.
 		wal = std::make_unique<DatabaseWAL>(this);
 		wal->open_current(e->path, true);
