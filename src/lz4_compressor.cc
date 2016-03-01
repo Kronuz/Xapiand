@@ -102,8 +102,7 @@ LZ4CompressData::next()
 
 	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, cmpBuf, inpBytes, cmpBuf_size, 1);
 	if (cmpBytes <= 0) {
-		_finish = true;
-		return std::string();
+		throw MSG_LZ4Exception("LZ4_compress_fast_continue failed!");
 	}
 
 	size_t blockBytes = sizeof(uint16_t) + cmpBytes;
@@ -132,7 +131,7 @@ LZ4CompressFile::LZ4CompressFile(const std::string& filename)
 {
 	fd = io::open(filename.c_str(), O_RDONLY, 0644);
 	if unlikely(fd < 0) {
-		throw std::exception(/* StorageIOError */);
+		throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
 	}
 }
 
@@ -148,7 +147,7 @@ std::string
 LZ4CompressFile::init()
 {
 	if (io::lseek(fd, 0, SEEK_SET) != 0) {
-		throw std::exception(/*Can not read the volume*/);
+		throw MSG_LZ4IOError("IO error: lseek");
 	}
 
 	_size = 0;
@@ -172,8 +171,7 @@ LZ4CompressFile::next()
 
 	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, cmpBuf, inpBytes, cmpBuf_size, 1);
 	if (cmpBytes <= 0) {
-		_finish = true;
-		return std::string();
+		throw MSG_LZ4Exception("LZ4_compress_fast_continue failed!");
 	}
 
 	size_t blockBytes = sizeof(uint16_t) + cmpBytes;
@@ -229,7 +227,7 @@ LZ4DecompressData::next()
 	}
 
 	if (sizeof(uint16_t) > (data_size - data_offset)) {
-		throw std::exception(/*File is corrupt*/);
+		throw MSG_LZ4CorruptVolume("Data is corrupt");
 	}
 
 	uint16_t cmpBytes = 0;
@@ -237,7 +235,7 @@ LZ4DecompressData::next()
 	data_offset += sizeof(uint16_t);
 
 	if (cmpBytes > (data_size - data_offset)) {
-		throw std::exception(/*File is corrupt*/);
+		throw MSG_LZ4CorruptVolume("Data is corrupt");
 	}
 
 	read_bin(data + data_offset, cmpBuf, cmpBytes);
@@ -247,8 +245,7 @@ LZ4DecompressData::next()
 	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, cmpBuf, decPtr, cmpBytes, (int)block_size);
 
 	if (decBytes <= 0) {
-		_finish = true;
-		return std::string();
+		throw MSG_LZ4Exception("LZ4_decompress_safe_continue failed!");
 	}
 
 	char* const blockStream = (char*)malloc(decBytes);
@@ -275,7 +272,7 @@ LZ4DecompressFile::LZ4DecompressFile(const std::string& filename)
 {
 	fd = io::open(filename.c_str(), O_RDONLY, 0644);
 	if unlikely(fd < 0) {
-		throw std::exception(/* StorageIOError */);
+		throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
 	}
 }
 
@@ -292,11 +289,16 @@ std::string
 LZ4DecompressFile::init()
 {
 	if (io::lseek(fd, 0, SEEK_SET) != 0) {
-		throw std::exception(/*Can not read the volume*/);
+		throw MSG_LZ4IOError("IO error: lseek");
 	}
 
-	if ((data_size = io::read(fd, data, LZ4_FILE_READ_SIZE)) <= 0) {
-		throw std::exception(/*File is corrupt*/);
+	if unlikely((data_size = io::read(fd, data, LZ4_FILE_READ_SIZE)) < 0) {
+		throw MSG_LZ4IOError("IO error: read");
+	}
+
+	if (data_size == 0) {
+		_finish = true;
+		return std::string();
 	}
 
 	_size = 0;
@@ -311,7 +313,10 @@ std::string
 LZ4DecompressFile::next()
 {
 	if (data_offset == static_cast<size_t>(data_size)) {
-		if ((data_size = io::read(fd, data, LZ4_FILE_READ_SIZE)) <= 0) {
+		if unlikely((data_size = io::read(fd, data, LZ4_FILE_READ_SIZE)) < 0) {
+			throw MSG_LZ4IOError("IO error: read");
+		}
+		if (data_size == 0) {
 			_finish = true;
 			return std::string();
 		}
@@ -324,7 +329,7 @@ LZ4DecompressFile::next()
 		read_partial_uint16(data + data_offset, &cmpBytes, res_size);
 		data_offset = sizeof(uint16_t) - res_size;
 		if ((data_size = io::read(fd, data, LZ4_FILE_READ_SIZE)) < static_cast<ssize_t>(data_offset)) {
-			throw std::exception(/*File is corrupt*/);
+			throw MSG_LZ4CorruptVolume("File is corrupt");
 		}
 		read_partial_uint16(data, &cmpBytes, data_offset, res_size);
 	} else {
@@ -337,7 +342,7 @@ LZ4DecompressFile::next()
 		read_partial_bin(data + data_offset, cmpBuf, res_size);
 		data_offset = cmpBytes - res_size;
 		if ((data_size = io::read(fd, data, LZ4_FILE_READ_SIZE)) < static_cast<ssize_t>(data_offset)) {
-			throw std::exception(/*File is corrupt*/);
+			throw MSG_LZ4CorruptVolume("File is corrupt");
 		}
 		read_partial_bin(data, cmpBuf, data_offset, res_size);
 	} else {
@@ -349,8 +354,7 @@ LZ4DecompressFile::next()
 	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, cmpBuf, decPtr, cmpBytes, (int)block_size);
 
 	if (decBytes <= 0) {
-		_finish = true;
-		return std::string();
+		throw MSG_LZ4Exception("LZ4_decompress_safe_continue failed!");
 	}
 
 	char* const blockStream = (char*)malloc(decBytes);

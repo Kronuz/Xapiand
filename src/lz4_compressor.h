@@ -24,6 +24,7 @@
 
 #include "lz4/lz4.h"
 #include "xapiand.h"
+#include "exception.h"
 
 #include <fcntl.h>
 #include <iostream>
@@ -35,6 +36,33 @@
 #define LZ4_BLOCK_SIZE (1024 * 2)
 #define LZ4_FILE_READ_SIZE (LZ4_BLOCK_SIZE * 2)	// it must be greater than or equal to LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE).
 #define LZ4_RING_BUFFER_BYTES (1024 * 256 + LZ4_BLOCK_SIZE)
+
+
+class LZ4Exception : public Error {
+public:
+	template<typename... Args>
+	LZ4Exception(Args&&... args) : Error(std::forward<Args>(args)...) { }
+};
+
+#define MSG_LZ4Exception(...) LZ4Exception(__FILE__, __LINE__, __VA_ARGS__)
+
+
+class LZ4IOError : public LZ4Exception {
+public:
+	template<typename... Args>
+	LZ4IOError(Args&&... args) : LZ4Exception(std::forward<Args>(args)...) { }
+};
+
+#define MSG_LZ4IOError(...) LZ4IOError(__FILE__, __LINE__, __VA_ARGS__)
+
+
+class LZ4CorruptVolume : public LZ4Exception {
+public:
+	template<typename... Args>
+	LZ4CorruptVolume(Args&&... args) : LZ4Exception(std::forward<Args>(args)...) { }
+};
+
+#define MSG_LZ4CorruptVolume(...) LZ4CorruptVolume(__FILE__, __LINE__, __VA_ARGS__)
 
 
 template<typename Impl>
