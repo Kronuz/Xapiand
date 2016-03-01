@@ -53,7 +53,7 @@ ssize_t read(int fd, void* buf, size_t nbyte);
 ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
 
 int fsync(int fd);
-int ffsync(int fd);
+int full_fsync(int fd);
 
 #ifdef HAVE_FALLOCATE
 inline int fallocate(int fd, int mode, off_t offset, off_t len) {

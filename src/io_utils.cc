@@ -128,7 +128,7 @@ int fsync(int fd) {
 }
 
 
-int ffsync(int fd) {
+int full_fsync(int fd) {
 #ifdef F_FULLFSYNC
 	while (true) {
 		int r = fcntl(fd, F_FULLFSYNC, 0);
