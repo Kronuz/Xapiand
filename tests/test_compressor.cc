@@ -224,6 +224,9 @@ static const std::vector<std::string> big_files({
 
 
 int test_small_datas() {
+	unlink(cmp.c_str());
+	unlink(dec.c_str());
+
 	int res = 0;
 	for (const auto& file : small_files) {
 		res += test_Compress_Decompress_Data(file, cmp, dec);
@@ -235,6 +238,9 @@ int test_small_datas() {
 
 
 int test_big_datas() {
+	unlink(cmp.c_str());
+	unlink(dec.c_str());
+
 	int res = 0;
 	for (const auto& file : big_files) {
 		res += test_Compress_Decompress_Data(file, cmp, dec);
@@ -246,6 +252,9 @@ int test_big_datas() {
 
 
 int test_small_files() {
+	unlink(cmp.c_str());
+	unlink(dec.c_str());
+
 	int res = 0;
 	for (const auto& file : small_files) {
 		res += test_Compress_Decompress_File(file, cmp, dec);
@@ -257,6 +266,9 @@ int test_small_files() {
 
 
 int test_big_files() {
+	unlink(cmp.c_str());
+	unlink(dec.c_str());
+
 	int res = 0;
 	for (const auto& file : big_files) {
 		res += test_Compress_Decompress_File(file, cmp, dec);
