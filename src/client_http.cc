@@ -435,7 +435,11 @@ HttpClient::run()
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 				break;
 		}
-	} catch (const Xapian::Error& err) {
+	} catch (const ClientError& err) {
+		error_code = 400;
+		error.assign(err.what());
+		L_ERR(this, "ERROR: %s", err.get_context());
+	}  catch (const Xapian::Error& err) {
 		error_code = 500;
 		error_str = err.get_msg().c_str();
 		if (error_str) {
@@ -447,10 +451,6 @@ HttpClient::run()
 	} catch (const WorkerDetachObject& err) {
 		error_code = 500;
 		detach_needed = true;
-		error.assign(err.what());
-		L_ERR(this, "ERROR: %s", err.get_context());
-	} catch (const ClientError& err) {
-		error_code = 400;
 		error.assign(err.what());
 		L_ERR(this, "ERROR: %s", err.get_context());
 	} catch (const Error& err) {
