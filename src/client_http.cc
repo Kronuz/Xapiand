@@ -438,7 +438,7 @@ HttpClient::run()
 	} catch (const Xapian::Error& exc) {
 		error_code = 500;
 		error_str = exc.get_msg().c_str();
-		if (error_str) {
+		if (*error_str) {
 			error.assign(error_str);
 		} else {
 			error.assign("Unkown Xapian error!");
