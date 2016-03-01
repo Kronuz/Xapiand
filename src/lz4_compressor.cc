@@ -114,7 +114,7 @@ LZ4CompressData::next()
 
 	// Add and wraparound the ringbuffer offset
 	_offset += inpBytes;
-	if (_offset >= (LZ4_RING_BUFFER_BYTES - block_size)) {
+	if (_offset >= static_cast<size_t>(LZ4_RING_BUFFER_BYTES - block_size)) {
 		_offset = 0;
 	}
 
@@ -184,7 +184,7 @@ LZ4CompressFile::next()
 
 	// Add and wraparound the ringbuffer offset
 	_offset += inpBytes;
-	if (_offset >= (LZ4_RING_BUFFER_BYTES - block_size)) {
+	if (_offset >= static_cast<size_t>(LZ4_RING_BUFFER_BYTES - block_size)) {
 		_offset = 0;
 	}
 
@@ -256,7 +256,7 @@ LZ4DecompressData::next()
 
 	// Add and wraparound the ringbuffer offset
 	_offset += decBytes;
-	if (_offset >= (LZ4_RING_BUFFER_BYTES - block_size)) {
+	if (_offset >= static_cast<size_t>(LZ4_RING_BUFFER_BYTES - block_size)) {
 		_offset = 0;
 	}
 
@@ -358,7 +358,7 @@ LZ4DecompressFile::next()
 
 	// Add and wraparound the ringbuffer offset
 	_offset += decBytes;
-	if (_offset >= (LZ4_RING_BUFFER_BYTES - block_size)) {
+	if (_offset >= static_cast<size_t>(LZ4_RING_BUFFER_BYTES - block_size)) {
 		_offset = 0;
 	}
 
