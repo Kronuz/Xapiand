@@ -129,7 +129,7 @@ DatabaseWAL::open_current(const std::string& path, bool complete)
 	}
 
 	if (lowest_revision > revision) {
-		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
+		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
 	} else {
 		uint16_t start_off, end_off;
 		for (auto i = lowest_revision; i <= highest_revision; i++) {
@@ -178,7 +178,7 @@ DatabaseWAL::open_current(const std::string& path, bool complete)
 			}
 		}
 
-		open(path + "/" + WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
+		open(path + "/" + WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
 	}
 }
 
@@ -322,7 +322,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 
 	if (slot >= WAL_SLOTS) {
 		close();
-		open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
+		open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
 	}
 
 	write(line.data(), line.size(), this);
@@ -331,7 +331,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 	if(commit_) {
 		if (slot + 1 >= WAL_SLOTS) {
 			close();
-			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
+			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
 		} else {
 			header.slot[slot + 1] = header.slot[slot];
 		}
