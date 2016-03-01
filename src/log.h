@@ -122,11 +122,11 @@ public:
 	static std::shared_ptr<Log> log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 	template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Exception, std::decay_t<T>>::value>>
 	static std::shared_ptr<Log> log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const T* exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args) {
-		return log(wakeup, priority, exc->get_traceback(), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
+		return log(wakeup, priority, std::string(exc->get_traceback()), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
 	}
 	template <typename... Args>
 	static std::shared_ptr<Log> log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const void*, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, Args&&... args) {
-		return log(wakeup, priority, "", file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
+		return log(wakeup, priority, std::string(), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
 	}
 
 	static std::shared_ptr<Log> print(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
