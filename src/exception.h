@@ -33,7 +33,7 @@
 #include <string>
 
 
-class Error : public std::runtime_error {
+class Exception : public std::runtime_error {
 protected:
 	std::string msg;
 	std::string context;
@@ -42,8 +42,8 @@ protected:
 	const char* init_traceback();
 
 public:
-	Error(const char *filename, int line, const char *format, ...);
-	~Error() = default;
+	Exception(const char *filename, int line, const char *format, ...);
+	~Exception() = default;
 
 	const char* what() const noexcept override {
 		return msg.c_str();
@@ -52,26 +52,37 @@ public:
 	const char* get_context() const noexcept {
 		return context.c_str();
 	}
+
+	const char* get_traceback() const noexcept {
+		return traceback.c_str();
+	}
 };
 
 
-class ClientError : public Error {
+class Error : public Exception {
 public:
 	template<typename... Args>
-	ClientError(Args&&... args) : Error(std::forward<Args>(args)...) { }
+	Error(Args&&... args) : Exception(std::forward<Args>(args)...) { }
 };
 
 
-class LimitError : public Error {
+class ClientError : public Exception {
 public:
 	template<typename... Args>
-	LimitError(Args&&... args) : Error(std::forward<Args>(args)...) { }
+	ClientError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
 };
 
 
-class WorkerDetachObject : public Error {
+class LimitError : public Exception {
 public:
-	WorkerDetachObject(const char *filename, int line) : Error(filename, line, "Detach is needed") { }
+	template<typename... Args>
+	LimitError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
+};
+
+
+class WorkerDetachObject : public Exception {
+public:
+	WorkerDetachObject(const char *filename, int line) : Exception(filename, line, "Detach is needed") { }
 };
 
 

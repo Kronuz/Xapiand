@@ -33,7 +33,7 @@
 
 
 const char*
-Error::init_traceback()
+Exception::init_traceback()
 {
 	void* callstack[128];
 
@@ -78,7 +78,7 @@ Error::init_traceback()
 }
 
 
-Error::Error(const char *filename, int line, const char *format, ...)
+Exception::Exception(const char *filename, int line, const char *format, ...)
 	: std::runtime_error("")
 {
 	char buffer[BUFFER_SIZE];
@@ -92,5 +92,7 @@ Error::Error(const char *filename, int line, const char *format, ...)
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
 	context.assign(std::string(buffer) + ": " + msg);
 
-	L_TRACEBACK("%s\n", init_traceback());
+#ifdef TRACEBACKS
+	init_traceback();
+#endif
 }
