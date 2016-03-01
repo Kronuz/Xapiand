@@ -1,0 +1,1 @@
+For the purposes of these operations, a hole is a sequence of zeros that (normally) has not been allocated in the underlying file storage. However, a file system is not obliged to report holes, so these operations are not a guaranteed mechanism for mapping the storage space actually allocated to a file.
