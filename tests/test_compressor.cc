@@ -195,17 +195,17 @@ int test_small_datas() {
 	std::string cmp = "compress.lz4";
 	std::string dec = "decompress.dec";
 
-	std::string orig = "examples/compress/Small_File1.txt";
+	std::string orig = "examples/compressor/Small_File1.txt";
 	int res = test_Compress_Decompress_Data(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
 
-	orig = "examples/compress/Small_File2.txt";
+	orig = "examples/compressor/Small_File2.txt";
 	res += test_Compress_Decompress_Data(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
 
-	orig = "examples/compress/Small_File3.txt";
+	orig = "examples/compressor/Small_File3.txt";
 	res += test_Compress_Decompress_Data(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
@@ -218,17 +218,27 @@ int test_big_datas() {
 	std::string cmp = "compress.lz4";
 	std::string dec = "decompress.dec";
 
-	std::string orig = "examples/compress/Big_File1.jpg";
+	std::string orig = "examples/compressor/Big_File1.jpg";
 	int res = test_Compress_Decompress_Data(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
 
-	orig = "examples/compress/Big_File2.pdf";
+	orig = "examples/compressor/Big_File2.pdf";
 	res += test_Compress_Decompress_Data(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
 
-	orig = "examples/compress/Big_File3.pdf";
+	orig = "examples/compressor/Big_File3.pdf";
+	res += test_Compress_Decompress_Data(orig, cmp, dec);
+	unlink(cmp.c_str());
+	unlink(dec.c_str());
+
+	orig = "examples/compressor/Big_File4.pdf";
+	res += test_Compress_Decompress_Data(orig, cmp, dec);
+	unlink(cmp.c_str());
+	unlink(dec.c_str());
+
+	orig = "examples/compressor/Big_File5.pdf";
 	res += test_Compress_Decompress_Data(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
@@ -241,17 +251,17 @@ int test_small_files() {
 	std::string cmp = "compress.lz4";
 	std::string dec = "decompress.dec";
 
-	std::string orig = "examples/compress/Small_File1.txt";
+	std::string orig = "examples/compressor/Small_File1.txt";
 	int res = test_Compress_Decompress_File(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
 
-	orig = "examples/compress/Small_File2.txt";
+	orig = "examples/compressor/Small_File2.txt";
 	res += test_Compress_Decompress_File(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
 
-	orig = "examples/compress/Small_File3.txt";
+	orig = "examples/compressor/Small_File3.txt";
 	res += test_Compress_Decompress_File(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
@@ -264,17 +274,27 @@ int test_big_files() {
 	std::string cmp = "compress.lz4";
 	std::string dec = "decompress.dec";
 
-	std::string orig = "examples/compress/Big_File1.jpg";
+	std::string orig = "examples/compressor/Big_File1.jpg";
 	int res = test_Compress_Decompress_File(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
 
-	orig = "examples/compress/Big_File2.pdf";
+	orig = "examples/compressor/Big_File2.pdf";
 	res += test_Compress_Decompress_File(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
 
-	orig = "examples/compress/Big_File3.pdf";
+	orig = "examples/compressor/Big_File3.pdf";
+	res += test_Compress_Decompress_File(orig, cmp, dec);
+	unlink(cmp.c_str());
+	unlink(dec.c_str());
+
+	orig = "examples/compressor/Big_File4.pdf";
+	res += test_Compress_Decompress_File(orig, cmp, dec);
+	unlink(cmp.c_str());
+	unlink(dec.c_str());
+
+	orig = "examples/compressor/Big_File5.pdf";
 	res += test_Compress_Decompress_File(orig, cmp, dec);
 	unlink(cmp.c_str());
 	unlink(dec.c_str());
