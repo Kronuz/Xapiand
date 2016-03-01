@@ -131,6 +131,7 @@ LZ4CompressFile::LZ4CompressFile(const std::string& filename)
 {
 	fd = io::open(filename.c_str(), O_RDONLY, 0644);
 	if unlikely(fd < 0) {
+		LZ4_freeStream(lz4Stream);
 		throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
 	}
 }
@@ -272,6 +273,8 @@ LZ4DecompressFile::LZ4DecompressFile(const std::string& filename)
 {
 	fd = io::open(filename.c_str(), O_RDONLY, 0644);
 	if unlikely(fd < 0) {
+		free(data);
+		LZ4_freeStreamDecode(lz4StreamDecode);
 		throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
 	}
 }
@@ -294,11 +297,6 @@ LZ4DecompressFile::init()
 
 	if unlikely((data_size = io::read(fd, data, LZ4_FILE_READ_SIZE)) < 0) {
 		throw MSG_LZ4IOError("IO error: read");
-	}
-
-	if (data_size == 0) {
-		_finish = true;
-		return std::string();
 	}
 
 	_size = 0;
