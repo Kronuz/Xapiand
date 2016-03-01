@@ -31,6 +31,7 @@ xapiand_SOURCES = \
 	lz4/lz4frame.c \
 	lz4/lz4hc.c \
 	lz4/xxhash.c \
+	lz4_compressor.cc \
 	manager.cc \
 	msgpack.cc \
 	msgpack_patcher.cc \
@@ -101,6 +102,7 @@ noinst_HEADERS = \
 	lz4/lz4frame.h \
 	lz4/lz4hc.h \
 	lz4/xxhash.h \
+	lz4_compressor.h \
 	manager.h \
 	msgpack.h \
 	msgpack_patcher.h \
