@@ -24,6 +24,7 @@
 
 #include "utils.h"
 #include "datetime.h"
+#include "exception.h"
 
 #include <stdarg.h>
 #include <unistd.h>
@@ -46,15 +47,15 @@ const char *priorities[] = {
 
 
 void StreamLogger::log(int priority, const std::string& str) {
-	ofs << std::regex_replace(priorities[priority] + str, filter_re, "") << std::endl;
+	ofs << std::regex_replace(priorities[priority < 0 ? -priority : priority] + str, filter_re, "") << std::endl;
 }
 
 
 void StderrLogger::log(int priority, const std::string& str) {
 	if (isatty(fileno(stderr))) {
-		std::cerr << priorities[priority] + str << std::endl;
+		std::cerr << priorities[priority < 0 ? -priority : priority] + str << std::endl;
 	} else {
-		std::cerr << std::regex_replace(priorities[priority] + str, filter_re, "") << std::endl;
+		std::cerr << std::regex_replace(priorities[priority < 0 ? -priority : priority] + str, filter_re, "") << std::endl;
 	}
 }
 
@@ -70,7 +71,7 @@ SysLog::~SysLog() {
 
 
 void SysLog::log(int priority, const std::string& str) {
-	syslog(priority, "%s", std::regex_replace(priorities[priority] + str, filter_re, "").c_str());
+	syslog(priority, "%s", std::regex_replace(priorities[priority < 0 ? -priority : priority] + str, filter_re, "").c_str());
 }
 
 
@@ -86,7 +87,7 @@ Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clo
 
 
 std::string
-Log::str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void*, const char *format, va_list argptr)
+Log::str_format(int priority, const char *file, int line, const char *suffix, const char *prefix, const void*, const char *format, va_list argptr)
 {
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
@@ -94,20 +95,20 @@ Log::str_format(int priority, const std::string& exc, const char *file, int line
 	auto tid = " (" + get_thread_name() + ")";
 	auto location = (priority >= LOCATION_LOG_LEVEL) ? " " + std::string(file) + ":" + std::to_string(line) : std::string();
 	std::string result = iso8601 + tid + location + ": " + prefix + buffer + suffix;
-	delete []buffer;
-	if (!exc.empty()) {
-		result += "\n" + exc;
+	if (priority < 0) {
+	    result += traceback(file, line);
 	}
+	delete []buffer;
 	return result;
 }
 
 
 std::shared_ptr<Log>
-Log::log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+Log::log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	std::string str(str_format(priority, exc, file, line, suffix, prefix, obj, format, argptr));
+	std::string str(str_format(priority, file, line, suffix, prefix, obj, format, argptr));
 	va_end(argptr);
 
 	return print(str, wakeup, priority);
@@ -127,7 +128,7 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 	if (finished.exchange(true)) {
 		va_list argptr;
 		va_start(argptr, format);
-		std::string str(str_format(priority, nullptr, file, line, suffix, prefix, obj, format, argptr));
+		std::string str(str_format(priority, file, line, suffix, prefix, obj, format, argptr));
 		va_end(argptr);
 
 		print(str, 0, priority);

@@ -32,19 +32,21 @@
 #define BUFFER_SIZE 1024
 
 
-const char*
-Exception::init_traceback()
+std::string
+traceback(const char *filename, int line)
 {
+	std::string t;
+#ifdef TRACEBACKS
 	void* callstack[128];
 
 	// retrieve current stack addresses
 	int frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
 
-	traceback = "Traceback:";
+	t = "\nTraceback (" + std::string(filename) + ":" + std::to_string(line) + "):";
 
 	if (frames == 0) {
-		traceback += "\n    <empty, possibly corrupt>";
-		return traceback.c_str();
+		t += "\n    <empty, possibly corrupt>";
+		return t.c_str();
 	}
 
 	// resolve addresses into strings containing "filename(function+address)"
@@ -69,12 +71,12 @@ Exception::init_traceback()
 			}
 			free(unmangled);
 		}
-		traceback += "\n    " + result;
+		t += "\n    " + result;
 	}
 
 	free(strs);
-
-	return traceback.c_str();
+#endif
+	return t;
 }
 
 
@@ -94,7 +96,5 @@ Exception::Exception(const char *filename, int line, const char *format, ...)
 
 #ifdef TRACEBACKS
 	msg.assign(std::string(buffer) + ": " + msg);
-
-	init_traceback();
 #endif
 }
