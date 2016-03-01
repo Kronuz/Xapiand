@@ -192,8 +192,8 @@ int test_Compress_Decompress_File(const std::string& orig_file, const std::strin
 
 
 int test_small_datas() {
-	std::string cmp = "compress.lz4";
-	std::string dec = "decompress.dec";
+	std::string cmp = "examples/compressor/compress.lz4";
+	std::string dec = "examples/compressor/decompress.dec";
 
 	std::string orig = "examples/compressor/Small_File1.txt";
 	int res = test_Compress_Decompress_Data(orig, cmp, dec);
@@ -215,8 +215,8 @@ int test_small_datas() {
 
 
 int test_big_datas() {
-	std::string cmp = "compress.lz4";
-	std::string dec = "decompress.dec";
+	std::string cmp = "examples/compressor/compress.lz4";
+	std::string dec = "examples/compressor/decompress.dec";
 
 	std::string orig = "examples/compressor/Big_File1.jpg";
 	int res = test_Compress_Decompress_Data(orig, cmp, dec);
@@ -248,8 +248,8 @@ int test_big_datas() {
 
 
 int test_small_files() {
-	std::string cmp = "compress.lz4";
-	std::string dec = "decompress.dec";
+	std::string cmp = "examples/compressor/compress.lz4";
+	std::string dec = "examples/compressor/decompress.dec";
 
 	std::string orig = "examples/compressor/Small_File1.txt";
 	int res = test_Compress_Decompress_File(orig, cmp, dec);
@@ -271,8 +271,8 @@ int test_small_files() {
 
 
 int test_big_files() {
-	std::string cmp = "compress.lz4";
-	std::string dec = "decompress.dec";
+	std::string cmp = "examples/compressor/compress.lz4";
+	std::string dec = "examples/compressor/decompress.dec";
 
 	std::string orig = "examples/compressor/Big_File1.jpg";
 	int res = test_Compress_Decompress_File(orig, cmp, dec);
