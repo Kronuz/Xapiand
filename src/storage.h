@@ -285,7 +285,9 @@ public:
 
 	void close() {
 		if (fd) {
-			commit();
+			if (flags & STORAGE_WRITABLE) {
+				commit();
+			}
 			::close(fd);
 		}
 

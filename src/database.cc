@@ -566,11 +566,8 @@ Database::reopen()
 			if (local) {
 				// WAL required on a local database, open it.
 				auto storage = std::make_unique<DataStorage>();
+				// FIXME: Find last available storage volume
 				storage->volume = 0;
-				if (flags & DB_WRITABLE) {
-					// FIXME: Find last available storage volume
-					// storage->volume = x;
-				}
 				storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
 			} else {
 				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
@@ -632,13 +629,7 @@ Database::reopen()
 #ifdef XAPIAND_DATA_STORAGE
 			if (local) {
 				// WAL required on a local database, open it.
-				auto storage = std::make_unique<DataStorage>();
-				storage->volume = 0;
-				if (flags & DB_WRITABLE) {
-					// FIXME: Find last available storage volume
-					// storage->volume = x;
-				}
-				storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
+				storages.push_back(std::make_unique<DataStorage>());
 			} else {
 				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 			}
@@ -1491,9 +1482,9 @@ Database::storage_push_data(Xapian::Document& doc)
 	auto& endpoint = endpoints[subdatabase];
 	while(true) {
 #ifdef XAPIAND_DATABASE_WAL
-		storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_NO_SYNC, this);
+		storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_NO_SYNC, this);
 #else
-		storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE, this);
+		storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE, this);
 #endif
 		try {
 			offset = storage->write(data);
@@ -2727,6 +2718,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		if (!queue->pop(database, 0)) {
 			// Increment so other threads don't delete the queue
 			if (queue->inc_count(writable ? 1 : -1)) {
+				bool count = queue->count;
 				lk.unlock();
 				try {
 					database = std::make_shared<Database>(queue, endpoints, flags);
@@ -2739,6 +2731,25 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				} catch (const Xapian::Error& err) {
 					L_ERR(this, "ERROR: %s", err.get_msg().c_str());
 				}
+#ifdef XAPIAND_DATABASE_WAL
+				if (count == 1 && !writable) {
+					bool reopen = false;
+					for (auto& endpoint : database->endpoints) {
+						if (endpoint.is_local()) {
+							Endpoints e;
+							e.add(endpoint);
+							std::shared_ptr<Database> d;
+							checkout(d, e, DB_WRITABLE | DB_VOLATILE);
+							// Checkout executes any commands from the WAL
+							reopen = true;
+							checkin(d);
+						}
+					}
+					if (reopen) {
+						database->reopen();
+					}
+				}
+#endif
 				lk.lock();
 				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
 			} else {
