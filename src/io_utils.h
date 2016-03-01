@@ -55,9 +55,9 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
 int fsync(int fd);
 int ffsync(int fd);
 
-#ifdef HAVE_FALLOCATE
+#ifndef HAVE_FALLOCATE
 inline int fallocate(int fd, int mode, off_t offset, off_t len) {
-	return fallocate(int fd, int mode, off_t offset, off_t len);
+	return ::fallocate(fd, mode, offset, len);
 }
 #else
 int fallocate(int fd, int mode, off_t offset, off_t len);
@@ -69,7 +69,9 @@ inline int fadvise(int fd, off_t offset, off_t len, int advice) {
 	return posix_fadvise(fd, offset, len, advice) == 0;
 }
 #else
-inline int fadvise(int, off_t, off_t, int) { return 0; }
+inline int fadvise(int, off_t, off_t, int) {
+	return 0;
+}
 #endif
 
 } /* namespace io */
