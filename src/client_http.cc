@@ -980,20 +980,11 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 			bool chunked = e.unique_doc && mset.size() == 1 ? false : true;
 
 			for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
-				Xapian::docid docid = 0;
-				for (int t = DB_RETRIES; t >= 0; --t) {
-					try {
-						docid = *m;
-						break;
-					} catch (const Xapian::Error& err) {
-						database->reopen();
-						database->get_mset(e, mset, spies, suggestions, rc);
-						m = mset.begin();
-					}
-				}
-
 				Xapian::Document document;
-				if (!database->get_document(docid, document)) {
+				if (!database->get_document(m, document)) {
+					database->reopen();
+					database->get_mset(e, mset, spies, suggestions, rc);
+					m = mset.begin();
 					continue;
 				}
 

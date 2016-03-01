@@ -1413,7 +1413,7 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 	Xapian::MSet mset = enquire.get_mset(0, 1);
 
 	Xapian::Document document;
-	if (_get_document(mset, document)) {
+	if (!mset.empty() && get_document(mset.begin(), document)) {
 		MsgPack obj_data = get_MsgPack(document);
 		apply_patch(obj_patch, obj_data);
 		Xapian::Document doc;
@@ -2411,15 +2411,39 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 
 
 bool
-Database::_get_document(const Xapian::MSet& mset, Xapian::Document& doc)
+Database::get_document(const Xapian::MSet::iterator& m, Xapian::Document& doc)
 {
-	L_CALL(this, "Database::_get_document()");
+	L_CALL(this, "Database::get_document()");
 
-	if (mset.empty()) {
-		return false;
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			if (t == DB_RETRIES) {
+				doc = m.get_document();
+				return true;
+			} else {
+				return get_document(*m, doc);
+			}
+		} catch (const Xapian::DatabaseModifiedError& er) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Database was modified, try again (%s)", er.get_msg().c_str());
+			}
+		} catch (const Xapian::NetworkError& er) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Problem communicating with the remote database (%s)", er.get_msg().c_str());
+			}
+		} catch (const Xapian::DocNotFoundError&) {
+			return false;
+		} catch (const Xapian::Error& er) {
+			throw MSG_Error(er.get_msg().c_str());
+		}
 	}
 
-	return get_document(*mset.begin(), doc);
+	L_ERR(this, "ERROR: get_document can not be done!");
+	return false;
 }
 
 
@@ -2452,6 +2476,7 @@ Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 		}
 	}
 
+	L_ERR(this, "ERROR: get_document can not be done!");
 	return false;
 }
 
@@ -2493,7 +2518,8 @@ Database::get_stats_doc(MsgPack&& stats, const std::string& document_id)
 	auto mset = enquire.get_mset(0, 1);
 
 	Xapian::Document doc;
-	if (_get_document(mset, doc)) {
+	
+	if (!mset.empty() && get_document(mset.begin(), doc)) {
 		stats[RESERVED_ID] = document_id;
 
 		MsgPack obj_data = get_MsgPack(doc);

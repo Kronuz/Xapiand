@@ -334,6 +334,7 @@ public:
 	bool get_metadata(const std::string& key, std::string& value);
 	bool set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
 	bool get_document(const Xapian::docid& did, Xapian::Document& doc);
+	bool get_document(const Xapian::MSet::iterator& m, Xapian::Document& doc);
 
 	void get_stats_database(MsgPack&& stats);
 	void get_stats_doc(MsgPack&& stats, const std::string& document_id);
@@ -359,7 +360,6 @@ private:
 	void get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar);
 	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t *e, Multi_MultiValueKeyMaker *sorter,
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies);
-	bool _get_document(const Xapian::MSet& mset, Xapian::Document& doc);
 };
 
 
