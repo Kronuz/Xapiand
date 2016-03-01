@@ -51,6 +51,12 @@
 
 #define STORAGE_START_BLOCK_OFFSET (STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT)
 
+#define STORAGE_OPEN           0x00  // Open an existing database.
+#define STORAGE_WRITABLE       0x01  // Opens as writable.
+#define STORAGE_CREATE         0x02  // Automatically creates the database if it doesn't exist
+#define STORAGE_CREATE_OR_OPEN 0x03  // Create database if it doesn't already exist.
+#define STORAGE_NO_SYNC        0x04  // Don't attempt to ensure changes have hit disk.
+#define STORAGE_FULL_SYNC      0x08  // Try to ensure changes are really written to disk.
 
 class StorageException : public Error {
 public:
@@ -175,7 +181,7 @@ struct StorageBinFooter {
 template <typename StorageHeader, typename StorageBinHeader, typename StorageBinFooter>
 class Storage {
 	std::string path;
-	bool writable;
+	int flags;
 	int fd;
 
 	int free_blocks;
@@ -192,7 +198,7 @@ class Storage {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
 			if unlikely(file_size < 0) {
-				throw MSG_StorageIOError("IO error");
+				throw MSG_StorageIOError("IO error: lseek");
 			}
 			free_blocks = static_cast<int>((file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE);
 			if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
@@ -212,7 +218,7 @@ protected:
 
 public:
 	Storage()
-		: writable(false),
+		: flags(0),
 		  fd(0),
 		  free_blocks(0),
 		  buffer_offset(0),
@@ -223,8 +229,8 @@ public:
 		close();
 	}
 
-	void open(const std::string& path_, bool writable_, void* param=nullptr) {
-		if (path == path_ && writable == writable_) {
+	void open(const std::string& path_, int flags_=STORAGE_CREATE_OR_OPEN, void* param=nullptr) {
+		if (path == path_ && flags == flags_) {
 			seek(STORAGE_START_BLOCK_OFFSET);
 			return;
 		}
@@ -232,42 +238,44 @@ public:
 		close();
 
 		path = path_;
-		writable = writable_;
+		flags = flags_;
 
 #if STORAGE_BUFFER_CLEAR
-		if (writable) {
+		if (flags & STORAGE_WRITABLE) {
 			memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
 		}
 #endif
 
-		fd = ::open(path.c_str(), writable ? O_RDWR | O_DSYNC : O_RDONLY, 0644);
+		fd = ::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR : O_RDONLY, 0644);
 		if unlikely(fd < 0) {
-			fd = ::open(path.c_str(), writable ? O_RDWR | O_CREAT | O_DSYNC : O_RDONLY, 0644);
+			if (flags & STORAGE_CREATE) {
+				fd = ::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR | O_CREAT : O_RDONLY | O_CREAT, 0644);
+			}
 			if unlikely(fd < 0) {
-				throw MSG_StorageIOError("IO error");
+				throw MSG_StorageIOError("Cannot open storage file");
 			}
 
 			memset(&header, 0, sizeof(header));
 			header.init(param);
 
 			if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
-				throw MSG_StorageIOError("IO error");
+				throw MSG_StorageIOError("IO error: write");
 			}
 		} else {
 			ssize_t r = io::read(fd, &header, sizeof(header));
 			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO error");
+				throw MSG_StorageIOError("IO error: read");
 			} else if unlikely(r != sizeof(header)) {
 				throw MSG_StorageCorruptVolume("Incomplete bin data");
 			}
 			header.validate(param);
 
-			if (writable) {
+			if (flags & STORAGE_WRITABLE) {
 				buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
 				size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 				buffer_offset -= offset;
 				if unlikely(io::pread(fd, buffer, sizeof(buffer), offset) < 0) {
-					throw MSG_StorageIOError("IO error");
+					throw MSG_StorageIOError("IO error: pread");
 				}
 			}
 		}
@@ -277,7 +285,7 @@ public:
 
 	void close() {
 		if (fd) {
-			flush();
+			commit();
 			::close(fd);
 		}
 
@@ -371,7 +379,7 @@ public:
 
 		do_write:
 			if (io::pwrite(fd, buffer, sizeof(buffer), block_offset) != sizeof(buffer)) {
-				throw MSG_StorageIOError("IO error");
+				throw MSG_StorageIOError("IO error: pwrite");
 			}
 
 			if (buffer_offset == 0) {
@@ -407,7 +415,7 @@ public:
 
 			r = io::read(fd,  &bin_header, sizeof(StorageBinHeader));
 			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO error");
+				throw MSG_StorageIOError("IO error: read");
 			} else if unlikely(r != sizeof(StorageBinHeader)) {
 				throw MSG_StorageCorruptVolume("Incomplete bin header");
 			}
@@ -422,7 +430,7 @@ public:
 		if (buf_size) {
 			r = io::read(fd, buf, buf_size);
 			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO error");
+				throw MSG_StorageIOError("IO error: read");
 			} else if unlikely(static_cast<size_t>(r) != buf_size) {
 				throw MSG_StorageCorruptVolume("Incomplete bin data");
 			}
@@ -435,7 +443,7 @@ public:
 		} else {
 			r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
 			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO error");
+				throw MSG_StorageIOError("IO error: read");
 			} else if unlikely(r != sizeof(StorageBinFooter)) {
 				throw MSG_StorageCorruptVolume("Incomplete bin footer");
 			}
@@ -452,9 +460,20 @@ public:
 		return bin_size;
 	}
 
-	void flush() {
-		if (io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
-			throw MSG_StorageIOError("IO error");
+	void commit() {
+		if unlikely(io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
+			throw MSG_StorageIOError("IO error: pwrite");
+		}
+		if (!(flags & STORAGE_NO_SYNC)) {
+			if (flags & STORAGE_FULL_SYNC) {
+				if unlikely(io::full_fsync(fd) < 0) {
+					throw MSG_StorageIOError("IO error: full_fsync");
+				}
+			} else {
+				if unlikely(io::fsync(fd) < 0) {
+					throw MSG_StorageIOError("IO error: fsync");
+				}
+			}
 		}
 		growfile();
 	}
