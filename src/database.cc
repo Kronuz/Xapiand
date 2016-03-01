@@ -534,7 +534,12 @@ Database::reopen()
 			e = &*i;
 			if (e->is_local()) {
 				local = true;
+#ifdef XAPIAND_DATABASE_WAL
+				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC : Xapian::DB_OPEN | Xapian::DB_NO_SYNC);
+#else
 				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
+#endif
+
 				if (endpoints_size == 1) read_mastery(e->path);
 			}
 #ifdef XAPIAND_CLUSTERING
@@ -542,7 +547,11 @@ Database::reopen()
 				local = false;
 				// Writable remote databases do not have a local fallback
 				int port = (e->port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e->port;
-				wdb = Xapian::Remote::open_writable(e->host, port, 0, 10000, e->path);
+#ifdef XAPIAND_DATABASE_WAL
+				wdb = Xapian::Remote::open_writable(e->host, port, 0, 10000, e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC : Xapian::DB_OPEN | Xapian::DB_NO_SYNC);
+#else
+				wdb = Xapian::Remote::open_writable(e->host, port, 0, 10000, e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
+#endif
 			}
 #endif
 			db->add_database(wdb);
@@ -560,7 +569,11 @@ Database::reopen()
 						db.reset();
 						throw;
 					}
+#ifdef XAPIAND_DATABASE_WAL
+					wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC);
+#else
 					wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
+#endif
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
 				}
@@ -1449,7 +1462,11 @@ Database::storage_push_data(Xapian::Document& doc)
 	std::string data = doc.get_data();
 	uint32_t offset;
 	while(true) {
-		storage->open(endpoints.begin()->path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_WRITABLE, this);
+#ifdef XAPIAND_DATABASE_WAL
+		storage->open(endpoints.begin()->path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_NO_SYNC, this);
+#else
+		storage->open(endpoints.begin()->path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE, this);
+#endif
 		try {
 			offset = storage->write(data);
 			break;
