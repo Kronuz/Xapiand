@@ -123,8 +123,8 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 	L_REPLICATION(this, "init_replication: %s  -->  %s", src_endpoint.as_string().c_str(), dst_endpoint.as_string().c_str());
 	state = State::REPLICATIONPROTOCOL_CLIENT;
 
-	repl_endpoints.insert(src_endpoint);
-	endpoints.insert(dst_endpoint);
+	repl_endpoints.add(src_endpoint);
+	endpoints.add(dst_endpoint);
 
 	writable = true;
 
@@ -598,7 +598,7 @@ BinaryClient::msg_select(const std::string &message)
 	endpoints.clear();
 	while (p != p_end) {
 		size_t len = unserialise_length(&p, p_end, true);
-		endpoints.insert(Endpoint(std::string(p, len)));
+		endpoints.add(Endpoint(std::string(p, len)));
 		p += len;
 	}
 
@@ -1271,7 +1271,7 @@ BinaryClient::msg_get_changesets(const std::string &)
 	// try {
 	// 	endpoints.clear();
 	// 	Endpoint endpoint(index_path);
-	// 	endpoints.insert(endpoint);
+	// 	endpoints.add(endpoint);
 	// 	db_ = get_db();
 	// 	if (!db_)
 	// 		throw Xapian::InvalidOperationError("Server has no open database");
@@ -1371,7 +1371,7 @@ BinaryClient::reply_db_header(const std::string &)
 	// repl_db_revision = unserialise_length(&p, p_end);
 	// repl_db_filename.clear();
 
-	// Endpoint endpoint = *endpoints.begin();
+	// Endpoint& endpoint = endpoints[0];
 	// std::string path_tmp = endpoint.path + "/.tmp";
 
 	// int dir = ::mkdir(path_tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -1408,7 +1408,7 @@ BinaryClient::reply_db_filedata(const std::string &)
 	// const char *p = message.data();
 	// const char *p_end = p + message.size();
 
-	// const Endpoint &endpoint = *endpoints.begin();
+	// const Endpoint& endpoint = endpoints[0];
 
 	// std::string path = endpoint.path + "/.tmp/";
 	// std::string path_filename = path + repl_db_filename;
@@ -1436,7 +1436,7 @@ BinaryClient::reply_db_footer(const std::string &)
 	// // Indicates the end of a DB copy operation, signal switch
 
 	// Endpoints endpoints_tmp;
-	// Endpoint endpoint_tmp = *endpoints.begin();
+	// Endpoint& endpoint_tmp = endpoints[0];
 	// endpoint_tmp.path.append("/.tmp");
 	// endpoints_tmp.insert(endpoint_tmp);
 

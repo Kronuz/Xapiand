@@ -194,7 +194,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 	// Open cluster database
 	cluster_endpoints.clear();
 	Endpoint cluster_endpoint(".");
-	cluster_endpoints.insert(cluster_endpoint);
+	cluster_endpoints.add(cluster_endpoint);
 
 	std::shared_ptr<Database> cluster_database;
 	if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL)) {
@@ -217,7 +217,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 #ifdef XAPIAND_CLUSTERING
 		L_INFO(this, "Syncing cluster data from %s...", node.name.c_str());
 
-		auto ret = trigger_replication(remote_endpoint, *cluster_endpoints.begin());
+		auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
 		if (ret.get()) {
 			L_INFO(this, "Cluster data being synchronized from %s...", node.name.c_str());
 			new_cluster = 2;

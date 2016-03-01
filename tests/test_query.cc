@@ -231,7 +231,7 @@ int create_test_db() {
 	e.port = XAPIAND_BINARY_SERVERPORT;
 	e.path.assign(name_database);
 	e.host.assign("0.0.0.0");
-	endpoints.insert(e);
+	endpoints.add(e);
 
 	// There are delete in the make_search.
 	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);

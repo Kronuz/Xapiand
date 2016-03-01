@@ -84,10 +84,8 @@ class Endpoint;
 class Endpoints;
 
 
+#include <vector>
 #include <unordered_set>
-
-using endpoints_set_t = std::unordered_set<Endpoint>;
-
 
 inline char *normalize_path(const char * src, char * dst);
 
@@ -137,12 +135,32 @@ public:
 			return b.mastery_level > a.mastery_level;
 		}
 	};
-
 };
 
 
-class Endpoints : public endpoints_set_t {
+class Endpoints : private std::vector<Endpoint> {
+	std::unordered_set<Endpoint> endpoints;
+
 public:
+	using std::vector<Endpoint>::empty;
+	using std::vector<Endpoint>::size;
+	using std::vector<Endpoint>::operator[];
+	using std::vector<Endpoint>::begin;
+	using std::vector<Endpoint>::end;
+	using std::vector<Endpoint>::cbegin;
+	using std::vector<Endpoint>::cend;
+
 	size_t hash() const;
 	std::string as_string() const;
+
+	void clear() {
+		endpoints.clear();
+		clear();
+	}
+	void add(const Endpoint& endpoint) {
+		auto p = endpoints.insert(endpoint);
+		if (p.second) {
+			push_back(endpoint);
+		}
+	}
 };

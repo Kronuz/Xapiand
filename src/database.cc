@@ -224,7 +224,7 @@ DatabaseWAL::execute(const std::string& line)
 		throw MSG_Error("Database is read-only");
 	}
 
-	if (!database->local) {
+	if (!database->endpoints[0].is_local()) {
 		throw MSG_Error("Can not execute WAL on a remote database!");
 	}
 
@@ -304,16 +304,17 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 {
 	L_CALL(this, "DatabaseWAL::write()");
 
-	assert(database->local);
 	assert(database->flags & DB_WRITABLE);
 	assert(!(database->flags & DB_NOWAL));
 
-	auto endpoint = database->endpoints.cbegin();
+	auto endpoint = database->endpoints[0];
+	assert(endpoint.is_local());
+
 	std::string revision = database->get_revision_info();
 	std::string uuid = database->get_uuid();
 	std::string line = serialise_length(revision.size()) + revision + serialise_length(toUType(type)) + data;
 
-	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint->path.c_str(), repr(line).c_str());
+	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint.path.c_str(), repr(line).c_str());
 
 	uint64_t rev = 0;
 	memcpy(&rev, revision.data(), revision.size());
@@ -321,7 +322,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 
 	if (slot >= WAL_SLOTS) {
 		close();
-		open(endpoint->path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
+		open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
 	}
 
 	write(line.data(), line.size(), this);
@@ -330,7 +331,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 	if(commit_) {
 		if (slot + 1 >= WAL_SLOTS) {
 			close();
-			open(endpoint->path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
+			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE);
 		} else {
 			header.slot[slot + 1] = header.slot[slot];
 		}
@@ -522,16 +523,19 @@ Database::reopen()
 	Xapian::WritableDatabase wdb;
 	Xapian::Database ldb;
 
-	auto endpoints_size = endpoints.size();
+#ifdef XAPIAND_DATA_STORAGE
+	storages.clear();
+#endif
 
-	const Endpoint *e = nullptr;
-	auto i = endpoints.begin();
+	auto endpoints_size = endpoints.size();
+	auto i = endpoints.cbegin();
 	if (flags & DB_WRITABLE) {
 		db = std::make_unique<Xapian::WritableDatabase>();
 		if (endpoints_size != 1) {
 			L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints_size, endpoints.as_string().c_str());
 		} else {
-			e = &*i;
+			auto e = &*i;
+			bool local = false;
 			if (e->is_local()) {
 				local = true;
 #ifdef XAPIAND_DATABASE_WAL
@@ -544,7 +548,6 @@ Database::reopen()
 			}
 #ifdef XAPIAND_CLUSTERING
 			else {
-				local = false;
 				// Writable remote databases do not have a local fallback
 				int port = (e->port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e->port;
 #ifdef XAPIAND_DATABASE_WAL
@@ -554,11 +557,33 @@ Database::reopen()
 #endif
 			}
 #endif
+#ifdef XAPIAND_DATA_STORAGE
+			if (local) {
+				// WAL required on a local database, open it.
+				auto storage = std::make_unique<DataStorage>();
+				storage->volume = 0;
+				if (flags & DB_WRITABLE) {
+					// FIXME: Find last available storage volume
+					// storage->volume = x;
+				}
+				storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
+			} else {
+				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
+			}
+#endif
 			db->add_database(wdb);
+#ifdef XAPIAND_DATABASE_WAL
+			if (local && !(flags & DB_NOWAL)) {
+				// WAL required on a local writable database, open it.
+				wal = std::make_unique<DatabaseWAL>(this);
+				wal->open_current(e->path, true);
+			}
+#endif
 		}
 	} else {
-		for (db = std::make_unique<Xapian::Database>(); i != endpoints.end(); ++i) {
-			e = &*i;
+		for (db = std::make_unique<Xapian::Database>(); i != endpoints.cend(); ++i) {
+			auto e = &*i;
+			bool local = false;
 			if (e->is_local()) {
 				local = true;
 				try {
@@ -580,7 +605,6 @@ Database::reopen()
 			}
 #ifdef XAPIAND_CLUSTERING
 			else {
-				local = false;
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 				int port = (e->port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e->port;
 				rdb = Xapian::Remote::open(e->host, port, 0, 10000, e->path);
@@ -599,33 +623,26 @@ Database::reopen()
 # endif
 			}
 #endif
+
+#ifdef XAPIAND_DATA_STORAGE
+			if (local) {
+				// WAL required on a local database, open it.
+				auto storage = std::make_unique<DataStorage>();
+				storage->volume = 0;
+				if (flags & DB_WRITABLE) {
+					// FIXME: Find last available storage volume
+					// storage->volume = x;
+				}
+				storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
+			} else {
+				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
+			}
+#endif
 			db->add_database(rdb);
 		}
 	}
 
 	schema.setDatabase(this);
-
-
-#ifdef XAPIAND_DATA_STORAGE
-	if (!storage && local) {
-		assert(endpoints_size == 1);  // FIXME: Storage only working for single local databases
-		// WAL required on a local database, open it.
-		storage = std::make_unique<DataStorage>();
-		storage->volume = 0;
-		if (flags & DB_WRITABLE) {
-			// FIXME: Find last available storage volume
-			// storage->volume = x;
-		}
-	}
-#endif
-
-#ifdef XAPIAND_DATABASE_WAL
-	if (e && !wal && local && (flags & DB_WRITABLE) && !(flags & DB_NOWAL)) {
-		// WAL required on a local writable database, open it.
-		wal = std::make_unique<DatabaseWAL>(this);
-		wal->open_current(e->path, true);
-	}
-#endif
 
 	return true;
 }
@@ -1426,6 +1443,8 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 void
 Database::storage_pull_data(Xapian::Document& doc)
 {
+	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+	auto& storage = storages[subdatabase];
 	if (!storage) {
 		return;
 	}
@@ -1446,8 +1465,8 @@ Database::storage_pull_data(Xapian::Document& doc)
 		throw MSG_StorageCorruptVolume("Invalid storage data offset");
 	}
 	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data footer magic number");
-	auto endpoint = database->endpoints[(doc.get_docid() - 1) % endpoints.size()];
-	storage->open(endpoint->path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN, this);
+	auto& endpoint = endpoints[subdatabase];
+	storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN, this);
 	storage->seek(static_cast<uint32_t>(offset));
 	data = storage->read();
 	doc.set_data(data);
@@ -1456,18 +1475,20 @@ Database::storage_pull_data(Xapian::Document& doc)
 void
 Database::storage_push_data(Xapian::Document& doc)
 {
+	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
+	auto& storage = storages[subdatabase];
 	if (!storage) {
 		return;
 	}
 
 	std::string data = doc.get_data();
 	uint32_t offset;
-	auto endpoint = database->endpoints[(doc.get_docid() - 1) % endpoints.size()];
+	auto& endpoint = endpoints[subdatabase];
 	while(true) {
 #ifdef XAPIAND_DATABASE_WAL
-		storage->open(endpoint->path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_NO_SYNC, this);
+		storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_NO_SYNC, this);
 #else
-		storage->open(endpoint->path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE, this);
+		storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE, this);
 #endif
 		try {
 			offset = storage->write(data);
@@ -2627,7 +2648,7 @@ long long
 DatabasePool::get_mastery_level(const std::string& dir)
 {
 	Endpoints endpoints;
-	endpoints.insert(Endpoint(dir));
+	endpoints.add(Endpoint(dir));
 
 	std::shared_ptr<Database> database;
 	if (checkout(database, endpoints, 0)) {
@@ -2747,11 +2768,9 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		L_DATABASE(this, "== REOPEN DB %s(%s) [%lx]", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 	}
 
-	if (database->local) {
-		database->checkout_revision = database->get_revision_info();
-	}
+	database->checkout_revision = database->get_revision_info();
 
-	L_DATABASE_END(this, "++ CHECKED OUT DB %s(%s), %s at rev:%s %lx", writable ? "w" : "r", endpoints.as_string().c_str(), database->local ? "local" : "remote", repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
+	L_DATABASE_END(this, "++ CHECKED OUT DB %s, %s at rev:%s %lx", writable ? "w" : "r", endpoints.as_string().c_str(), repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
 	return true;
 }
 
@@ -2774,10 +2793,10 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	if (database->flags & DB_WRITABLE) {
 		queue = writable_databases[database->hash];
-		if (database->local && database->mastery_level != -1) {
+		if (database->endpoints[0].is_local() && database->mastery_level != -1) {
 			std::string new_revision = database->get_revision_info();
 			if (new_revision != database->checkout_revision) {
-				Endpoint endpoint = *database->endpoints.begin();
+				Endpoint endpoint = database->endpoints[0];
 				endpoint.mastery_level = database->mastery_level;
 				updated_databases.push(endpoint);
 			}
@@ -2878,14 +2897,14 @@ void
 DatabasePool::init_ref(const Endpoints& endpoints)
 {
 	Endpoints ref_endpoints;
-	ref_endpoints.insert(Endpoint(".refs"));
+	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
 		L_CRIT(this, "Database refs it could not be checkout.");
 		exit(EX_SOFTWARE);
 	}
 
-	for (auto endp_it = endpoints.begin(); endp_it != endpoints.end(); ++endp_it) {
+	for (auto endp_it = endpoints.cbegin(); endp_it != endpoints.cend(); ++endp_it) {
 		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
 		Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
 		if (p == ref_database->db->postlist_end(unique_id)) {
@@ -2911,7 +2930,7 @@ void
 DatabasePool::inc_ref(const Endpoints& endpoints)
 {
 	Endpoints ref_endpoints;
-	ref_endpoints.insert(Endpoint(".refs"));
+	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
 		L_CRIT(this, "Database refs it could not be checkout.");
@@ -2920,7 +2939,7 @@ DatabasePool::inc_ref(const Endpoints& endpoints)
 
 	Xapian::Document doc;
 
-	for (auto endp_it = endpoints.begin(); endp_it != endpoints.end(); ++endp_it) {
+	for (auto endp_it = endpoints.cbegin(); endp_it != endpoints.cend(); ++endp_it) {
 		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
 		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 		if (p == ref_database->db->postlist_end(unique_id)) {
@@ -2955,7 +2974,7 @@ void
 DatabasePool::dec_ref(const Endpoints& endpoints)
 {
 	Endpoints ref_endpoints;
-	ref_endpoints.insert(Endpoint(".refs"));
+	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
 		L_CRIT(this, "Database refs it could not be checkout.");
@@ -2964,7 +2983,7 @@ DatabasePool::dec_ref(const Endpoints& endpoints)
 
 	Xapian::Document doc;
 
-	for (auto endp_it = endpoints.begin(); endp_it != endpoints.end(); ++endp_it) {
+	for (auto endp_it = endpoints.cbegin(); endp_it != endpoints.cend(); ++endp_it) {
 		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
 		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
 		if (p != ref_database->db->postlist_end(unique_id)) {
@@ -2994,7 +3013,7 @@ DatabasePool::get_master_count()
 	L_CALL(this, "DatabasePool::get_master_count()");
 
 	Endpoints ref_endpoints;
-	ref_endpoints.insert(Endpoint(".refs"));
+	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
 		L_CRIT(this, "Database refs it could not be checkout.");

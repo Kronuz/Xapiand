@@ -1170,10 +1170,10 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 					}
 					inet_ntop(AF_INET, &(node->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
 					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path, nullptr, -1, node_name);
-					endpoints.insert(endpoint);
+					endpoints.add(endpoint);
 				} else {
 					for (const auto& asked_node : asked_nodes) {
-						endpoints.insert(asked_node);
+						endpoints.add(asked_node);
 					}
 				}
 				L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.as_string().c_str());

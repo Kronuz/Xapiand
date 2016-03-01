@@ -277,7 +277,7 @@ public:
 	std::unique_ptr<Xapian::Database> db;
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::unique_ptr<DataStorage> storage;
+	std::vector<std::unique_ptr<DataStorage>> storages;
 #endif
 
 #if XAPIAND_DATABASE_WAL

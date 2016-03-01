@@ -229,15 +229,15 @@ bool Endpoint::operator<(const Endpoint & other) const
 
 
 size_t Endpoint::hash() const {
-	std::hash<Endpoint> hash_fn;
-	return hash_fn(*this);
+	std::hash<std::string> hash_fn;
+	return hash_fn(as_string());
 }
 
 
 std::string Endpoints::as_string() const {
 	std::string ret;
-	endpoints_set_t::const_iterator j(cbegin());
-	for (int i=0; j != cend(); j++, i++) {
+	auto j = endpoints.cbegin();
+	for (int i=0; j != endpoints.cend(); j++, i++) {
 		if (i) ret += ";";
 		ret += (*j).as_string();
 	}
@@ -246,8 +246,13 @@ std::string Endpoints::as_string() const {
 
 
 size_t Endpoints::hash() const {
-	std::hash<Endpoints> hash_fn;
-	return hash_fn(*this);
+	size_t hash = 0;
+	std::hash<Endpoint> hash_fn;
+	auto j = endpoints.cbegin();
+	for (int i = 0; j != endpoints.cend(); j++, i++) {
+		hash ^= hash_fn(*j);
+	}
+	return hash;
 }
 
 
@@ -267,18 +272,11 @@ bool operator == (Endpoints const& le, Endpoints const& re)
 
 size_t std::hash<Endpoint>::operator()(const Endpoint &e) const
 {
-	std::hash<std::string> hash_fn;
-	return hash_fn(e.as_string());
+	return e.hash();
 }
 
 
 size_t std::hash<Endpoints>::operator()(const Endpoints &e) const
 {
-	size_t hash = 0;
-	std::hash<Endpoint> hash_fn;
-	endpoints_set_t::const_iterator j(e.cbegin());
-	for (int i = 0; j != e.cend(); j++, i++) {
-		hash ^= hash_fn(*j);
-	}
-	return hash;
+	return e.hash();
 }
