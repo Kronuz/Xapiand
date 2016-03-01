@@ -88,7 +88,7 @@ void WalHeader::validate(void* param)
 
 
 void
-DatabaseWAL::open_current(const std::string& path, bool complete)
+DatabaseWAL::open_current(const std::string& path, bool commited)
 {
 	L_CALL(this, "DatabaseWAL::open()");
 
@@ -101,15 +101,15 @@ DatabaseWAL::open_current(const std::string& path, bool complete)
 		throw MSG_Error("Could not open the wal dir (%s)", strerror(errno));
 	}
 
-	uint64_t highest_revision = 0;
-	uint64_t lowest_revision = std::numeric_limits<uint64_t>::max();
+	uint32_t highest_revision = 0;
+	uint32_t lowest_revision = std::numeric_limits<uint32_t>::max();
 
 	File_ptr fptr;
 	find_file_dir(dir, fptr, WAL_STORAGE_PATH, true);
 
 	while (fptr.ent) {
 		try {
-			uint64_t file_revision = fget_revision(std::string(fptr.ent->d_name));
+			uint32_t file_revision = fget_revision(std::string(fptr.ent->d_name));
 			if (static_cast<long>(file_revision) >= static_cast<long>(revision - WAL_SLOTS)) {
 				if (file_revision < lowest_revision) {
 					lowest_revision = file_revision;
@@ -132,50 +132,55 @@ DatabaseWAL::open_current(const std::string& path, bool complete)
 		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
 	} else {
 		uint16_t start_off, end_off;
-		for (auto i = lowest_revision; i <= highest_revision; i++) {
-			open(path + "/" + WAL_STORAGE_PATH + std::to_string(i), STORAGE_OPEN);
+		for (auto slot = lowest_revision; slot <= highest_revision; ++slot) {
+			open(path + "/" + WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN);
 
 			uint32_t high_slot = highest_valid_slot();
+			if (high_slot == static_cast<uint32_t>(-1)) {
+				continue;
+			}
 
-			if (high_slot != static_cast<uint32_t>(-1)) {
-				if (i == lowest_revision) {
-					int32_t slot = revision - header.head.revision - 1;
-					if (slot == -1) {
-						/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
-						 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
-						 */
-						start_off = STORAGE_START_BLOCK_OFFSET;
-					}
-
+			if (slot == highest_revision) {
+				if (!commited) {
+					--high_slot;
+				}
+			}
+			
+			if (slot == lowest_revision) {
+				slot = revision - header.head.revision - 1;
+				if (slot == static_cast<uint32_t>(-1)) {
+					/* The offset saved in slot 0 is the beginning of the revision 1 to reach 2
+					 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
+					 */
+					start_off = STORAGE_START_BLOCK_OFFSET;
+				} else {
 					start_off = header.slot[slot];
 					if (start_off == 0) {
 						throw MSG_StorageCorruptVolume("Bad offset");
 					}
-
-				} else {
-					start_off = STORAGE_START_BLOCK_OFFSET;
 				}
-
-				seek(start_off);
-
-				if (i == highest_revision) {
-					if (!complete) {
-						--high_slot;
-					}
-				}
-				end_off =  header.slot[high_slot];
-
-				if (start_off < end_off) {
-					L_INFO(nullptr, "Read execute operations in WAL files (%u..%u)", lowest_revision, highest_revision + high_slot);
-				}
-
-				try {
-					while (true) {
-						std::string line = read(end_off, this);
-						execute(line);
-					}
-				} catch (const StorageEOF& e) { }
+			} else {
+				start_off = STORAGE_START_BLOCK_OFFSET;
 			}
+			
+			seek(start_off);
+			
+			end_off =  header.slot[high_slot];
+			
+			if (start_off < end_off) {
+				L_INFO(nullptr, "Read execute operations in WAL files (%u..%u)", lowest_revision, highest_revision + high_slot);
+			}
+			
+			try {
+				while (true) {
+					std::string line = read(end_off, this);
+					if (!execute(line)) {
+						throw MSG_Error("WAL revision mismatch!");
+					}
+				}
+			} catch (const StorageEOF& e) { }
+
+			slot = high_slot;
 		}
 
 		open(path + "/" + WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
@@ -199,7 +204,7 @@ DatabaseWAL::highest_valid_slot()
 }
 
 
-uint64_t
+uint32_t
 DatabaseWAL::fget_revision(const std::string& filename)
 {
 	L_CALL(this, "DatabaseWAL::fget_revision()");
@@ -208,7 +213,7 @@ DatabaseWAL::fget_revision(const std::string& filename)
 	if (found == std::string::npos) {
 		throw std::invalid_argument("Revision not found in " + filename);
 	}
-	return std::stoul(filename.substr(found + 1));
+	return static_cast<uint32_t>(std::stoul(filename.substr(found + 1)));
 }
 
 

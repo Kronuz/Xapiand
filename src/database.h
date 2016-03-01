@@ -149,10 +149,10 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 
 	bool execute(const std::string& line);
 	uint32_t highest_valid_slot();
-	uint64_t fget_revision(const std::string& filename);
+	uint32_t fget_revision(const std::string& filename);
 
-	inline void open(const std::string& path, bool writable) {
-		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, writable, this);
+	inline void open(const std::string& path, int flags) {
+		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, flags, this);
 	}
 
 public:

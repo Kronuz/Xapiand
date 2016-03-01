@@ -225,7 +225,7 @@ public:
 		  bin_size(0),
 		  bin_offset(0) { }
 
-	~Storage() {
+	virtual ~Storage() {
 		close();
 	}
 
