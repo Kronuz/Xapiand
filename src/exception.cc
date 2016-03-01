@@ -93,6 +93,8 @@ Exception::Exception(const char *filename, int line, const char *format, ...)
 	context.assign(std::string(buffer) + ": " + msg);
 
 #ifdef TRACEBACKS
+	msg.assign(std::string(buffer) + ": " + msg);
+
 	init_traceback();
 #endif
 }
