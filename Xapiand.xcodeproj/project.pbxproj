@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		461882351C8513DA001066E9 /* lz4_compressor.cc in Sources */ = {isa = PBXBuildFile; fileRef = 461882331C8513DA001066E9 /* lz4_compressor.cc */; };
 		462C9EB51C18FC2200BB960E /* sha256.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB01C18FC2200BB960E /* sha256.cc */; };
 		462C9EB61C18FC2200BB960E /* md5.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB11C18FC2200BB960E /* md5.cc */; };
 		462C9EB91C20D39400BB960E /* schema.cc in Sources */ = {isa = PBXBuildFile; fileRef = 462C9EB71C20D39400BB960E /* schema.cc */; };
@@ -74,6 +75,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		461882331C8513DA001066E9 /* lz4_compressor.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = lz4_compressor.cc; path = src/lz4_compressor.cc; sourceTree = "<group>"; };
+		461882341C8513DA001066E9 /* lz4_compressor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lz4_compressor.h; path = src/lz4_compressor.h; sourceTree = "<group>"; };
 		462C9EB01C18FC2200BB960E /* sha256.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = sha256.cc; path = src/hash/sha256.cc; sourceTree = "<group>"; };
 		462C9EB11C18FC2200BB960E /* md5.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = md5.cc; path = src/hash/md5.cc; sourceTree = "<group>"; };
 		462C9EB21C18FC2200BB960E /* endian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = endian.h; path = src/hash/endian.h; sourceTree = "<group>"; };
@@ -260,6 +263,8 @@
 				C39AE04C1B2F627E00203139 /* lru.h */,
 				C35058A21BA325CC00901B80 /* lz4.c */,
 				C35058A31BA325CC00901B80 /* lz4.h */,
+				461882331C8513DA001066E9 /* lz4_compressor.cc */,
+				461882341C8513DA001066E9 /* lz4_compressor.h */,
 				C35058A41BA325CC00901B80 /* lz4frame_static.h */,
 				C35058A51BA325CC00901B80 /* lz4frame.c */,
 				C35058A61BA325CC00901B80 /* lz4frame.h */,
@@ -394,6 +399,7 @@
 				C39AE07D1B2F62D700203139 /* exception.cc in Sources */,
 				4630BEE51B42E88D00351058 /* htm.cc in Sources */,
 				46B6B3CD1B7E3CEF000FA041 /* serialise.cc in Sources */,
+				461882351C8513DA001066E9 /* lz4_compressor.cc in Sources */,
 				C350589F1B99E75500901B80 /* io_utils.cc in Sources */,
 				C39AE0711B2F627E00203139 /* replicator.cc in Sources */,
 				C39AE06A1B2F627E00203139 /* endpoint.cc in Sources */,
