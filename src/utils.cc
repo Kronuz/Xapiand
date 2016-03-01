@@ -40,7 +40,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <xapian.h>
-#include <sys/attr.h>
 #include <sys/stat.h>
 
 #include <sys/socket.h>

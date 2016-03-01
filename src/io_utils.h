@@ -55,7 +55,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
 int fsync(int fd);
 int ffsync(int fd);
 
-#ifndef HAVE_FALLOCATE
+#ifdef HAVE_FALLOCATE
 inline int fallocate(int fd, int mode, off_t offset, off_t len) {
 	return ::fallocate(fd, mode, offset, len);
 }
