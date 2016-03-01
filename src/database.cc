@@ -1446,7 +1446,8 @@ Database::storage_pull_data(Xapian::Document& doc)
 		throw MSG_StorageCorruptVolume("Invalid storage data offset");
 	}
 	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data footer magic number");
-	storage->open(endpoints.begin()->path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN, this);
+	auto endpoint = database->endpoints[(doc.get_docid() - 1) % endpoints.size()];
+	storage->open(endpoint->path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN, this);
 	storage->seek(static_cast<uint32_t>(offset));
 	data = storage->read();
 	doc.set_data(data);
@@ -1461,11 +1462,12 @@ Database::storage_push_data(Xapian::Document& doc)
 
 	std::string data = doc.get_data();
 	uint32_t offset;
+	auto endpoint = database->endpoints[(doc.get_docid() - 1) % endpoints.size()];
 	while(true) {
 #ifdef XAPIAND_DATABASE_WAL
-		storage->open(endpoints.begin()->path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_NO_SYNC, this);
+		storage->open(endpoint->path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_NO_SYNC, this);
 #else
-		storage->open(endpoints.begin()->path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE, this);
+		storage->open(endpoint->path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_WRITABLE, this);
 #endif
 		try {
 			offset = storage->write(data);
