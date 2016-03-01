@@ -42,7 +42,7 @@ protected:
 	const char* init_traceback();
 
 public:
-	Exception(const char *filename, int line, const char *format, ...);
+	Exception(const char *filename, int line, const char *format="", ...);
 	~Exception() = default;
 
 	const char* what() const noexcept override {
