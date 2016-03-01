@@ -45,8 +45,8 @@ protected:
 	bool _finish;
 	size_t _offset;
 
-	const size_t block_size;
-	const size_t cmpBuf_size;
+	const int block_size;
+	const int cmpBuf_size;
 
 	char* const cmpBuf;
 	char* const buffer;
@@ -60,7 +60,7 @@ protected:
 	}
 
 public:
-	LZ4BlockStreaming(size_t block_size_)
+	LZ4BlockStreaming(int block_size_)
 		: block_size(block_size_),
 		  cmpBuf_size(LZ4_COMPRESSBOUND(block_size)),
 		  cmpBuf((char*)malloc(cmpBuf_size)),

@@ -50,13 +50,13 @@ static void read_bin(const void* blockStream, void* array, int arrayBytes) {
 }
 
 
-static void read_partial_bin(const void* blockStream, void* array, int arrayBytes, size_t offset=0) {
+static void read_partial_bin(const void* blockStream, void* array, size_t arrayBytes, size_t offset=0) {
 	memcpy(reinterpret_cast<char*>(array) + offset, blockStream, arrayBytes);
 }
 
 
 LZ4CompressData::LZ4CompressData(const char* data_, size_t data_size_)
-	: LZ4BlockStreaming(data_size_ > LZ4_BLOCK_SIZE ? LZ4_BLOCK_SIZE : data_size_),
+	: LZ4BlockStreaming(data_size_ > LZ4_BLOCK_SIZE ? LZ4_BLOCK_SIZE : static_cast<int>(data_size_)),
 	  lz4Stream(LZ4_createStream()),
 	  data(data_),
 	  data_size(data_size_) { }
@@ -92,7 +92,7 @@ LZ4CompressData::next()
 	// Read line to the ring buffer.
 	int inpBytes = 0;
 	if ((data_offset + block_size) > data_size) {
-		inpBytes = data_size - data_offset;
+		inpBytes = static_cast<int>(data_size - data_offset);
 	} else {
 		inpBytes = block_size;
 	}
@@ -164,7 +164,7 @@ LZ4CompressFile::next()
 	char* const inpPtr = &buffer[_offset];
 
 	// Read line to the ring buffer.
-	int inpBytes = io::read(fd, inpPtr, block_size);
+	int inpBytes = static_cast<int>(io::read(fd, inpPtr, block_size));
 	if (inpBytes <= 0) {
 		_finish = true;
 		return std::string();
