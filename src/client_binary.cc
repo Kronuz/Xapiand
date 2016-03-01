@@ -176,11 +176,11 @@ BinaryClient::on_read_file_done()
 		checkin_database();
 		shutdown();
 	} catch (const std::exception& exc) {
-		L_ERR(this, "ERROR: %s", exc.what());
+		L_ERR(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
 		checkin_database();
 		shutdown();
 	} catch (...) {
-		L_ERR(this, "ERROR: Unkown exception!");
+		L_ERR(this, "ERROR: Unkown error!");
 		checkin_database();
 		shutdown();
 	}
@@ -423,7 +423,7 @@ BinaryClient::run()
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 			checkin_database();
 		} catch (const Error& exc) {
-			L_EXC(this, "ERROR: %s", exc.get_context());
+			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
 			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();

@@ -33,6 +33,9 @@
 #include <string>
 
 
+#define TRACEBACKS 1
+
+
 class Exception : public std::runtime_error {
 protected:
 	std::string msg;

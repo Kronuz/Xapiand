@@ -39,7 +39,6 @@
 #include <fstream>
 #include <condition_variable>
 
-#define TRACEBACKS traceback
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
 #define LOCATION_LOG_LEVEL LOG_DEBUG  // The minumum log_level that prints file:line

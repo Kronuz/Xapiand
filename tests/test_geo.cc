@@ -198,12 +198,12 @@ int make_search(const test_geo_t _tests[], int len) {
 						}
 					} catch (const msgpack::type_error& exc) {
 						++cont;
-						L_EXC(nullptr, "ERROR: %s", exc.what());
+						L_EXC(nullptr, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
 					}
 				}
 			}
-		} catch (const std::exception& e) {
-			L_ERR(nullptr, "ERROR: %s\n", e.what());
+		} catch (const std::exception& exc) {
+			L_EXC(nullptr, "ERROR: %s\n", exc.what());
 			++cont;
 		}
 	}

@@ -426,7 +426,7 @@ Datetime::isvalidDate(int year, int month, int day)
 			return false;
 		}
 	} catch (const std::exception &ex) {
-		L_ERR(nullptr, "ERROR: %s.", ex.what());
+		L_ERR(nullptr, "ERROR: %s.", *ex.what() ? ex.what() : "Unkown exception!");
 		return false;
 	}
 
