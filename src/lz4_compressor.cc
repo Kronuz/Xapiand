@@ -114,7 +114,7 @@ LZ4CompressData::next()
 
 	// Add and wraparound the ringbuffer offset
 	_offset += inpBytes;
-	if ((static_cast<size_t>(_offset) + block_size) >= LZ4_RING_BUFFER_BYTES) {
+	if (_offset >= (LZ4_RING_BUFFER_BYTES - block_size)) {
 		_offset = 0;
 	}
 
@@ -184,7 +184,7 @@ LZ4CompressFile::next()
 
 	// Add and wraparound the ringbuffer offset
 	_offset += inpBytes;
-	if ((size_t)_offset >= LZ4_RING_BUFFER_BYTES - block_size) {
+	if (_offset >= (LZ4_RING_BUFFER_BYTES - block_size)) {
 		_offset = 0;
 	}
 
@@ -256,7 +256,9 @@ LZ4DecompressData::next()
 
 	// Add and wraparound the ringbuffer offset
 	_offset += decBytes;
-	if ((size_t)_offset >= LZ4_RING_BUFFER_BYTES - block_size) _offset = 0;
+	if (_offset >= (LZ4_RING_BUFFER_BYTES - block_size)) {
+		_offset = 0;
+	}
 
 	_size += decBytes;
 	std::string result(blockStream, decBytes);
@@ -355,7 +357,7 @@ LZ4DecompressFile::next()
 
 	// Add and wraparound the ringbuffer offset
 	_offset += decBytes;
-	if ((size_t)_offset >= LZ4_RING_BUFFER_BYTES - block_size) {
+	if (_offset >= (LZ4_RING_BUFFER_BYTES - block_size)) {
 		_offset = 0;
 	}
 
