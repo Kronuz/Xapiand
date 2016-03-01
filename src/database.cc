@@ -2419,6 +2419,7 @@ Database::get_document(const Xapian::MSet::iterator& m, Xapian::Document& doc)
 		try {
 			if (t == DB_RETRIES) {
 				doc = m.get_document();
+				storage_pull_data(doc);
 				return true;
 			} else {
 				return get_document(*m, doc);
