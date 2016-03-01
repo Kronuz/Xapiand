@@ -467,15 +467,12 @@ public:
 	inline std::string read(uint32_t limit=-1, void* param=nullptr) {
 		std::string ret;
 
-		ssize_t r;
+		size_t r;
 		char buf[1024];
 		while ((r = read(buf, sizeof(buf), limit, param))) {
 			ret += std::string(buf, r);
 		}
 
-		if unlikely(r < 0) {
-			throw MSG_StorageIOError("IO error");
-		}
 		return ret;
 	}
 };
