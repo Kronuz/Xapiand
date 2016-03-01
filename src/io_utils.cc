@@ -22,6 +22,7 @@
 
 #include "io_utils.h"
 
+
 namespace io {
 
 #if defined HAVE_FDATASYNC
@@ -34,8 +35,7 @@ inline int __fsync(int fd) { return 0; }
 #endif
 
 
-ssize_t write(int fd, const void* buf, size_t nbyte)
-{
+ssize_t write(int fd, const void* buf, size_t nbyte) {
 	const char* p = static_cast<const char*>(buf);
 	while (nbyte) {
 		ssize_t c = ::write(fd, p, nbyte);
@@ -52,8 +52,8 @@ ssize_t write(int fd, const void* buf, size_t nbyte)
 	return p - static_cast<const char*>(buf);
 }
 
-ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset)
-{
+
+ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 	const char* p = static_cast<const char*>(buf);
 #ifndef HAVE_PWRITE
 	if unlikely(io::lseek(fd, offset, SEEK_SET) == -1) {
@@ -81,10 +81,9 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset)
 }
 
 
-ssize_t read(int fd, void* buf, size_t nbyte)
-{
+ssize_t read(int fd, void* buf, size_t nbyte) {
 	char* p = static_cast<char*>(buf);
-	while(true) {
+	while (true) {
 		ssize_t c = ::read(fd, p, nbyte);
 		if unlikely(c < 0) {
 			if (errno == EINTR) continue;
@@ -94,15 +93,15 @@ ssize_t read(int fd, void* buf, size_t nbyte)
 	}
 }
 
-ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset)
-{
+
+ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 	char* p = static_cast<char*>(buf);
 #ifndef HAVE_PWRITE
 	if unlikely(io::lseek(fd, offset, SEEK_SET) == -1) {
 		return -1;
 	}
 #endif
-	while(true) {
+	while (true) {
 #ifndef HAVE_PWRITE
 		ssize_t c = ::read(fd, p, nbyte);
 #else
@@ -118,7 +117,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset)
 
 
 int fsync(int fd) {
-	while(true) {
+	while (true) {
 		int r = __FSYNC(fd);
 		if unlikely(r < 0) {
 			if (errno == EINTR) continue;
@@ -131,7 +130,7 @@ int fsync(int fd) {
 
 int ffsync(int fd) {
 #ifdef F_FULLFSYNC
-	while(true) {
+	while (true) {
 		int r = fcntl(fd, F_FULLFSYNC, 0);
 		if unlikely(r < 0) {
 			if (errno == EINTR) continue;
@@ -146,19 +145,19 @@ int ffsync(int fd) {
 
 
 #ifndef HAVE_FALLOCATE
-int fallocate(int fd, int /* mode */, off_t offset, off_t len)
-{
+int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 #if defined(HAVE_POSIX_FALLOCATE)
 	return posix_fallocate(fd, offset, len);
 #elif defined(F_PREALLOCATE)
 	// Try to get a continous chunk of disk space
 	fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, offset, len, 0};
 	int ret = fcntl(fd, F_PREALLOCATE, &store);
-	if(ret < 0){
+	if (ret < 0) {
 		// OK, perhaps we are too fragmented, allocate non-continuous
 		store.fst_flags = F_ALLOCATEALL;
 		ret = fcntl(fd, F_PREALLOCATE, &store);
 	}
+
 	ftruncate(fd, len);
 	return ret;
 #else
