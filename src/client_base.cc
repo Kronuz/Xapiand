@@ -249,7 +249,7 @@ BaseClient::destroy()
 
 	L_OBJ(this, "DESTROYED CLIENT! [%llx]", this);
 
-	throw MSG_WorkerDetachObject();
+	throw MSG_WorkerDetachObject("Detach is needed");
 }
 
 

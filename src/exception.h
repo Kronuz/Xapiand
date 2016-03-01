@@ -82,7 +82,8 @@ public:
 
 class WorkerDetachObject : public Exception {
 public:
-	WorkerDetachObject(const char *filename, int line) : Exception(filename, line, "Detach is needed") { }
+	template<typename... Args>
+	WorkerDetachObject(Args&&... args) : Exception(std::forward<Args>(args)...) { }
 };
 
 
@@ -117,7 +118,7 @@ public:
 #define MSG_Error(...) Error(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
-#define MSG_WorkerDetachObject() WorkerDetachObject(__FILE__, __LINE__)
+#define MSG_WorkerDetachObject(...) WorkerDetachObject(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_SerialisationError(...) SerialisationError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_DatetimeError(...) DatetimeError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_CartesianError(...) CartesianError(__FILE__, __LINE__, __VA_ARGS__)
