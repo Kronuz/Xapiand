@@ -192,7 +192,7 @@ LZ4CompressFile::next()
 	std::string res(blockStream, blockBytes);
 	free(blockStream);
 
-	return std::string(blockStream, blockBytes);
+	return res;
 }
 
 
@@ -315,6 +315,7 @@ LZ4DecompressFile::next()
 			_finish = true;
 			return std::string();
 		}
+		data_offset = 0;
 	}
 
 	uint16_t cmpBytes = 0;
