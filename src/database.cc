@@ -178,7 +178,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 						throw MSG_Error("WAL revision mismatch!");
 					}
 				}
-			} catch (const StorageEOF& e) { }
+			} catch (const StorageEOF& exc) { }
 
 			slot = high_slot;
 		}
@@ -517,8 +517,8 @@ Database::reopen()
 			bool ret = db->reopen();
 			schema.setDatabase(this);
 			return ret;
-		} catch (const Xapian::Error& err) {
-			L_ERR(this, "ERROR: %s", err.get_msg().c_str());
+		} catch (const Xapian::Error& exc) {
+			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 			db->close();
 			db.reset();
 		}
@@ -591,7 +591,7 @@ Database::reopen()
 				try {
 					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e->path);
-				} catch (const Xapian::DatabaseOpeningError& err) {
+				} catch (const Xapian::DatabaseOpeningError& exc) {
 					if (!(flags & DB_SPAWN))  {
 						db.reset();
 						throw;
@@ -619,7 +619,7 @@ Database::reopen()
 						local = true;
 						if (endpoints_size == 1) read_mastery(e->path);
 					}
-				} catch (const Xapian::DatabaseOpeningError& err) { }
+				} catch (const Xapian::DatabaseOpeningError& exc) { }
 # else
 				rdb = Xapian::Remote::open(e->host, port, 0, 10000, e->path);
 # endif
@@ -2335,8 +2335,8 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 			throw MSG_ClientError("%s", er.get_msg().c_str());
 		} catch (const Xapian::Error& er) {
 			throw MSG_Error("%s", er.get_msg().c_str());
-		} catch (const std::exception& e) {
-			throw MSG_ClientError("The search was not performed (%s)", e.what());
+		} catch (const std::exception& exc) {
+			throw MSG_ClientError("The search was not performed (%s)", exc.what());
 		}
 		return;
 	}
@@ -2754,9 +2754,9 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 						init_ref(endpoints);
 					}
 
-				} catch (const Xapian::DatabaseOpeningError& err) {
-				} catch (const Xapian::Error& err) {
-					L_ERR(this, "ERROR: %s", err.get_msg().c_str());
+				} catch (const Xapian::DatabaseOpeningError& exc) {
+				} catch (const Xapian::Error& exc) {
+					L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 				}
 #ifdef XAPIAND_DATABASE_WAL
 				if (count == 1 && !writable) {
@@ -2959,8 +2959,8 @@ DatabasePool::init_ref(const Endpoints& endpoints)
 			doc.add_value(DB_SLOT_CREF, "0");
 			try {
 				ref_database->replace_document_term(unique_id, doc, true);
-			} catch (const Error& e) {
-				L_ERR(this, "ERROR: %s", e.get_context());
+			} catch (const Error& exc) {
+				L_EXC(this, "ERROR: %s", exc.get_context());
 			}
 		}
 	}
@@ -2992,8 +2992,8 @@ DatabasePool::inc_ref(const Endpoints& endpoints)
 			doc.add_value(0, "0");
 			try {
 				ref_database->replace_document_term(unique_id, doc, true);
-			} catch (const Error& e) {
-				L_ERR(this, "ERROR: %s", e.get_context());
+			} catch (const Error& exc) {
+				L_EXC(this, "ERROR: %s", exc.get_context());
 			}
 		} else {
 			// Document found - reference increased
@@ -3003,8 +3003,8 @@ DatabasePool::inc_ref(const Endpoints& endpoints)
 			doc.add_value(0, std::to_string(nref + 1));
 			try {
 				ref_database->replace_document_term(unique_id, doc, true);
-			} catch (const Error& e) {
-				L_ERR(this, "ERROR: %s", e.get_context());
+			} catch (const Error& exc) {
+				L_EXC(this, "ERROR: %s", exc.get_context());
 			}
 		}
 	}
@@ -3036,8 +3036,8 @@ DatabasePool::dec_ref(const Endpoints& endpoints)
 			doc.add_value(0, std::to_string(nref));
 			try {
 				ref_database->replace_document_term(unique_id, doc, true);
-			} catch (const Error& e) {
-				L_ERR(this, "ERROR: %s", e.get_context());
+			} catch (const Error& exc) {
+				L_EXC(this, "ERROR: %s", exc.get_context());
 			}
 			if (nref == 0) {
 				// qmtx need a lock

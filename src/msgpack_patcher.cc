@@ -74,12 +74,12 @@ void patch_add(const MsgPack& obj_patch, MsgPack& object) {
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
 		_add(o, val, target);
-	} catch (const ClientError& e) {
-		throw MSG_ClientError("In patch add: %s", e.what());
+	} catch (const ClientError& exc) {
+		throw MSG_ClientError("In patch add: %s", exc.what());
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch add: Inconsistent data");
-	} catch (const std::exception& e) {
-		throw MSG_Error("In patch add: %s", e.what());
+	} catch (const std::exception& exc) {
+		throw MSG_Error("In patch add: %s", exc.what());
 	}
 }
 
@@ -90,12 +90,12 @@ void patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		MsgPack o = object.path(path_split);
 		_erase(o.parent(), path_split.back());
-	} catch (const ClientError& e) {
-		throw MSG_ClientError("In patch remove: %s", e.what());
+	} catch (const ClientError& exc) {
+		throw MSG_ClientError("In patch remove: %s", exc.what());
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch remove: Inconsistent data");
-	} catch (const std::exception& e) {
-		throw MSG_Error("In patch remove: %s", e.what());
+	} catch (const std::exception& exc) {
+		throw MSG_Error("In patch remove: %s", exc.what());
 	}
 }
 
@@ -107,12 +107,12 @@ void patch_replace(const MsgPack& obj_patch, MsgPack& object) {
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
 		o = val;
-	} catch (const ClientError& e) {
-		throw MSG_ClientError("In patch replace: %s", e.what());
+	} catch (const ClientError& exc) {
+		throw MSG_ClientError("In patch replace: %s", exc.what());
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch replace: Inconsistent data");
-	} catch (const std::exception& e) {
-		throw MSG_Error("In patch replace: %s", e.what());
+	} catch (const std::exception& exc) {
+		throw MSG_Error("In patch replace: %s", exc.what());
 	}
 }
 
@@ -129,12 +129,12 @@ void patch_move(const MsgPack& obj_patch, MsgPack& object) {
 		MsgPack from = object.path(from_split);
 		_add(to, from, target);
 		_erase(from.parent(), from_split.back());
-	} catch (const ClientError& e) {
-		throw MSG_ClientError("In patch move: %s", e.what());
+	} catch (const ClientError& exc) {
+		throw MSG_ClientError("In patch move: %s", exc.what());
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch move: Inconsistent data");
-	} catch (const std::exception& e) {
-		throw MSG_Error("In patch move: %s", e.what());
+	} catch (const std::exception& exc) {
+		throw MSG_Error("In patch move: %s", exc.what());
 	}
 }
 
@@ -150,12 +150,12 @@ void patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 		MsgPack to = object.path(path_split);
 		MsgPack from = object.path(from_split);
 		_add(to, from, target);
-	} catch (const ClientError& e) {
-		throw MSG_ClientError("In patch copy: %s", e.what());
+	} catch (const ClientError& exc) {
+		throw MSG_ClientError("In patch copy: %s", exc.what());
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch copy: Inconsistent data");
-	} catch (const std::exception& e) {
-		throw MSG_Error("In patch copy: %s", e.what());
+	} catch (const std::exception& exc) {
+		throw MSG_Error("In patch copy: %s", exc.what());
 	}
 }
 
@@ -169,12 +169,12 @@ void patch_test(const MsgPack& obj_patch, MsgPack& object) {
 		if (val != o) {
 			throw MSG_ClientError("In patch test: Objects are not equals. Expected: %s Result: %s", val.to_json_string().c_str(), o.to_json_string().c_str());
 		}
-	} catch (const ClientError& e) {
-		throw MSG_ClientError("In patch test: %s", e.what());
+	} catch (const ClientError& exc) {
+		throw MSG_ClientError("In patch test: %s", exc.what());
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch test: Inconsistent data");
-	} catch (const std::exception& e) {
-		throw MSG_Error("In patch test: %s", e.what());
+	} catch (const std::exception& exc) {
+		throw MSG_Error("In patch test: %s", exc.what());
 	}
 }
 
@@ -192,14 +192,14 @@ void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr) {
 		} else {
 			_incr_decr(o, decr ? -val_num : val_num, val_num);
 		}
-	} catch (const LimitError& e){
-		throw MSG_ClientError("In patch increment: %s\n", e.what());
-	} catch (const ClientError& e) {
-		throw MSG_ClientError("In patch increment: %s", e.what());
+	} catch (const LimitError& exc){
+		throw MSG_ClientError("In patch increment: %s\n", exc.what());
+	} catch (const ClientError& exc) {
+		throw MSG_ClientError("In patch increment: %s", exc.what());
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch increment: Inconsistent data");
-	} catch (const std::exception& e) {
-		throw MSG_Error("In patch increment: %s", e.what());
+	} catch (const std::exception& exc) {
+		throw MSG_Error("In patch increment: %s", exc.what());
 	}
 }
 

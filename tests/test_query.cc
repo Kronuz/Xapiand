@@ -340,9 +340,9 @@ int make_search(const test_query_t _tests[], int len) {
 							++cont;
 							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
 						}
-					} catch (const msgpack::type_error& err) {
+					} catch (const msgpack::type_error& exc) {
 						++cont;
-						L_ERR(nullptr, "ERROR: %s", err.what());
+						L_EXC(nullptr, "ERROR: %s", exc.what());
 					}
 				}
 			}
@@ -365,8 +365,8 @@ int make_search(const test_query_t _tests[], int len) {
 				}
 			}
 		}
-	} catch (const std::exception &e) {
-		L_ERR(nullptr, "ERROR: %s\n", e.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "ERROR: %s\n", exc.what());
 		++cont;
 	}
 
@@ -387,11 +387,11 @@ int test_query_search() {
 			L_ERR(nullptr, "ERROR: Testing search using query has mistakes.");
 			return 1;
 		}
-	} catch (const Xapian::Error &err) {
-		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+	} catch (const Xapian::Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
 		return 1;
-	} catch (const std::exception &err) {
-		L_ERR(nullptr, "ERROR: %s", err.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.what());
 		return 1;
 	}
 }
@@ -407,11 +407,11 @@ int test_terms_search() {
 			L_ERR(nullptr, "ERROR: Testing search using terms has mistakes.");
 			return 1;
 		}
-	} catch (const Xapian::Error &err) {
-		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+	} catch (const Xapian::Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
 		return 1;
-	} catch (const std::exception &err) {
-		L_ERR(nullptr, "ERROR: %s", err.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.what());
 		return 1;
 	}
 }
@@ -427,11 +427,11 @@ int test_partials_search() {
 			L_ERR(nullptr, "ERROR: Testing search using partials has mistakes.");
 			return 1;
 		}
-	} catch (const Xapian::Error &err) {
-		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+	} catch (const Xapian::Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
 		return 1;
-	} catch (const std::exception &err) {
-		L_ERR(nullptr, "ERROR: %s", err.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.what());
 		return 1;
 	}
 }
@@ -447,11 +447,11 @@ int test_facets_search() {
 			L_ERR(nullptr, "ERROR: Testing facets has mistakes.");
 			return 1;
 		}
-	} catch (const Xapian::Error &err) {
-		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+	} catch (const Xapian::Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
 		return 1;
-	} catch (const std::exception &err) {
-		L_ERR(nullptr, "ERROR: %s", err.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.what());
 		return 1;
 	}
 }

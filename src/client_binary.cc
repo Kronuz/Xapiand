@@ -171,12 +171,12 @@ BinaryClient::on_read_file_done()
 				checkin_database();
 				shutdown();
 		};
-	} catch (const Xapian::NetworkError &e) {
-		L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+	} catch (const Xapian::NetworkError& exc) {
+		L_ERR(this, "ERROR: %s", exc.get_msg().c_str());
 		checkin_database();
 		shutdown();
-	} catch (const std::exception &err) {
-		L_ERR(this, "ERROR: %s", err.what());
+	} catch (const std::exception& exc) {
+		L_ERR(this, "ERROR: %s", exc.what());
 		checkin_database();
 		shutdown();
 	} catch (...) {
@@ -404,37 +404,37 @@ BinaryClient::run()
 					break;
 				}
 			}
-		} catch (const Xapian::NetworkTimeoutError& err) {
+		} catch (const Xapian::NetworkTimeoutError& exc) {
 			try {
 				// We've had a timeout, so the client may not be listening, so
 				// set the end_time to 1 and if we can't send the message right
 				// away, just exit and the client will cope.
-				send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(err), 1.0);
+				send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc), 1.0);
 			} catch (...) {}
 			checkin_database();
 			shutdown();
-		} catch (const Xapian::NetworkError& err) {
-			L_ERR(this, "ERROR: %s", err.get_msg().empty() ? "Unkown Xapian error!" : err.get_msg().c_str());
+		} catch (const Xapian::NetworkError& exc) {
+			L_EXC(this, "ERROR: %s", exc.get_msg().empty() ? "Unkown Xapian error!" : exc.get_msg().c_str());
 			checkin_database();
 			shutdown();
-		} catch (const Xapian::Error& err) {
-	    	// Propagate the exception to the client, then return to the main
-	    	// message handling loop.
-	    	send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(err));
+		} catch (const Xapian::Error& exc) {
+			// Propagate the exception to the client, then return to the main
+			// message handling loop.
+			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 			checkin_database();
-		} catch (const Error& err) {
-			L_ERR(this, "ERROR: %s", err.get_context());
-	    	send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+		} catch (const Error& exc) {
+			L_EXC(this, "ERROR: %s", exc.get_context());
+			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
-		} catch (const std::exception& err) {
-			L_ERR(this, "ERROR: %s", *err.what() ? "Unkown exception!" : err.what());
-	    	send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+		} catch (const std::exception& exc) {
+			L_EXC(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
+			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
 		} catch (...) {
 			L_ERR(this, "ERROR: %s", "Unkown error!");
-	    	send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
 		}
@@ -496,7 +496,7 @@ BinaryClient::remote_server(RemoteMessageType type, const std::string &message)
 			errmsg += std::to_string(toUType(type));
 			throw Xapian::InvalidArgumentError(errmsg);
 		}
-	    (this->*(dispatch[static_cast<int>(type)]))(message);
+		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
 		checkin_database();
 		throw;
@@ -1239,7 +1239,7 @@ BinaryClient::replication_server(ReplicationMessageType type, const std::string 
 			errmsg += std::to_string(toUType(type));
 			throw Xapian::InvalidArgumentError(errmsg);
 		}
-	    (this->*(dispatch[static_cast<int>(type)]))(message);
+		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
 		checkin_database();
 		throw;
@@ -1323,7 +1323,7 @@ BinaryClient::replication_client(ReplicationReplyType type, const std::string &m
 			errmsg += std::to_string(toUType(type));
 			throw Xapian::InvalidArgumentError(errmsg);
 		}
-	    (this->*(dispatch[static_cast<int>(type)]))(message);
+		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
 		checkin_database();
 		throw;
@@ -1489,13 +1489,13 @@ BinaryClient::reply_changeset(const std::string &)
 	// try {
 	// 	// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
 	// 	repl_just_switched_db = false;
-	// } catch(const Xapian::NetworkError &e) {
-	// 	L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+	// } catch(const Xapian::NetworkError& exc) {
+	// 	L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 	// 	io::close(fd);
 	// 	io::unlink(path);
 	// 	throw;
-	// } catch (const Xapian::DatabaseError &e) {
-	// 	L_ERR(this, "ERROR: %s", e.get_msg().c_str());
+	// } catch (const Xapian::DatabaseError& exc) {
+	// 	L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 	// 	io::close(fd);
 	// 	io::unlink(path);
 	// 	throw;

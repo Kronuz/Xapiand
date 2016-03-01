@@ -252,12 +252,12 @@ class CmdOutput : public StdOutput {
 	}
 
 public:
-	virtual void failure(CmdLineInterface& _cmd, ArgException& e) {
+	virtual void failure(CmdLineInterface& _cmd, ArgException& exc) {
 		std::string progName = _cmd.getProgramName();
 
-		std::cerr << "Error: " << e.argId() << std::endl;
+		std::cerr << "Error: " << exc.argId() << std::endl;
 
-		spacePrint(std::cerr, e.error(), LINE_LENGTH, 3, 0);
+		spacePrint(std::cerr, exc.error(), LINE_LENGTH, 3, 0);
 
 		std::cerr << std::endl;
 
@@ -414,8 +414,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 				opts.pidfile = XAPIAND_PID_FILE;
 			}
 		}
-	} catch (const ArgException &e) { // catch any exceptions
-		std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
+	} catch (const ArgException& exc) { // catch any exceptions
+		std::cerr << "error: " << exc.error() << " for arg " << exc.argId() << std::endl;
 	}
 }
 

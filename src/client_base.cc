@@ -200,7 +200,7 @@ BaseClient::~BaseClient()
 	try {
 		destroy();
 		destructor_body();
-	} catch (const WorkerDetachObject& e) {
+	} catch (const WorkerDetachObject& exc) {
 		destructor_body();
 		detach();
 	}
@@ -295,7 +295,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 			L_ERR(this, "ERROR: got invalid event (sock=%d): %s", sock, strerror(errno));
 			try {
 				destroy();
-			} catch (const WorkerDetachObject& e) {
+			} catch (const WorkerDetachObject& exc) {
 				L_EV_END(this, "BaseClient::io_cb:END");
 				detach();
 			}
@@ -317,7 +317,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 
 		io_cb_update();
 		L_EV_END(this, "BaseClient::io_cb:END");
-	} catch (const WorkerDetachObject& e) {
+	} catch (const WorkerDetachObject& exc) {
 		L_EV_END(this, "BaseClient::io_cb:END");
 		detach();
 	}
@@ -598,7 +598,7 @@ BaseClient::shutdown()
 		L_EV(this, "Signaled destroy!!");
 		try {
 			destroy();
-		} catch (const WorkerDetachObject& e) {
+		} catch (const WorkerDetachObject& exc) {
 			detach();
 		}
 	}

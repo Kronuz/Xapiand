@@ -330,8 +330,8 @@ int make_search(const sort_t _tests[], int len) {
 					}
 				}
 			}
-		} catch (const std::exception &e) {
-			L_ERR(nullptr, "ERROR: %s\n", e.what());
+		} catch (const std::exception& exc) {
+			L_EXC(nullptr, "ERROR: %s\n", exc.what());
 			++cont;
 		}
 	}

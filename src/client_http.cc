@@ -435,37 +435,37 @@ HttpClient::run()
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 				break;
 		}
-	} catch (const ClientError& err) {
-		error_code = 400;
-		error.assign(err.what());
-		L_ERR(this, "ERROR: %s", err.get_context());
-	}  catch (const Xapian::Error& err) {
+	} catch (const Xapian::Error& exc) {
 		error_code = 500;
-		error_str = err.get_msg().c_str();
+		error_str = exc.get_msg().c_str();
 		if (error_str) {
 			error.assign(error_str);
 		} else {
 			error.assign("Unkown Xapian error!");
 		}
-		L_ERR(this, "ERROR: %s", error.c_str());
-	} catch (const WorkerDetachObject& err) {
+		L_EXC(this, "ERROR: %s", error.c_str());
+	} catch (const WorkerDetachObject& exc) {
 		error_code = 500;
 		detach_needed = true;
-		error.assign(err.what());
-		L_ERR(this, "ERROR: %s", err.get_context());
-	} catch (const Error& err) {
+		error.assign(exc.what());
+		L_EXC(this, "ERROR: %s", exc.get_context());
+	} catch (const ClientError& exc) {
+		error_code = 400;
+		error.assign(exc.what());
+		L_EXC(this, "ERROR: %s", exc.get_context());
+	} catch (const Error& exc) {
 		error_code = 500;
-		error.assign(err.what());
-		L_ERR(this, "ERROR: %s", err.get_context());
-	} catch (const std::exception& err) {
+		error.assign(exc.what());
+		L_EXC(this, "ERROR: %s", exc.get_context());
+	} catch (const std::exception& exc) {
 		error_code = 500;
-		error_str = err.what();
+		error_str = exc.what();
 		if (error_str) {
 			error.assign(error_str);
 		} else {
 			error.assign("Unkown exception!");
 		}
-		L_ERR(this, "ERROR: %s", error.c_str());
+		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (...) {
 		error_code = 500;
 		error.assign("Unkown error!");
@@ -484,7 +484,7 @@ HttpClient::run()
 		if (written) {
 			try {
 				destroy();
-			} catch (const WorkerDetachObject& e) {
+			} catch (const WorkerDetachObject& exc) {
 				detach();
 			}
 		} else {
@@ -1585,11 +1585,11 @@ HttpClient::write_http_response(const MsgPack& response,  int status_code, bool 
 	const auto& accepted_type = get_acceptable_type(content_type_pair(content_type));
 	try {
 		response_str = serialize_response(response, accepted_type, pretty);
-	} catch (const SerialisationError& e) {
+	} catch (const SerialisationError& exc) {
 		status_code = 406;
 		MsgPack response_err;
 		response_err["status"] = status_code;
-		response_err["error"] = std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + e.what());
+		response_err["error"] = std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what());
 		response_str = response_err.to_json_string();
 		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 		return;

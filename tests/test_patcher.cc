@@ -69,8 +69,8 @@ int test_mix() {
 		} else {
 			return 0;
 		}
-	} catch (const Error& e) {
-		L_ERR(nullptr, "ERROR: %s", e.get_context());
+	} catch (const Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		return 1;
 	}
 }
@@ -110,8 +110,8 @@ int test_add() {
 		} else {
 			return 0;
 		}
-	} catch (const Error& e) {
-		L_ERR(nullptr, "ERROR: %s", e.get_context());
+	} catch (const Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		return 1;
 	}
 }
@@ -151,8 +151,8 @@ int test_remove() {
 		} else {
 			return 0;
 		}
-	} catch (const Error& e) {
-		L_ERR(nullptr, "ERROR: %s", e.get_context());
+	} catch (const Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		return 1;
 	}
 }
@@ -192,8 +192,8 @@ int test_replace() {
 		} else {
 			return 0;
 		}
-	} catch (const Error& e) {
-		L_ERR(nullptr, "ERROR: %s", e.get_context());
+	} catch (const Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		return 1;
 	}
 }
@@ -233,8 +233,8 @@ int test_move() {
 		} else {
 			return 0;
 		}
-	} catch (const Error& e) {
-		L_ERR(nullptr, "ERROR: %s", e.get_context());
+	} catch (const Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		return 1;
 	}
 }
@@ -274,8 +274,8 @@ int test_copy() {
 		} else {
 			return 0;
 		}
-	} catch (const Error& e) {
-		L_ERR(nullptr, "ERROR: %s", e.get_context());
+	} catch (const Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		return 1;
 	}
 }
@@ -308,8 +308,8 @@ int test_test() {
 	try {
 		apply_patch(patch, obj);
 		return 0;
-	} catch (const Error& e) {
-		L_ERR(nullptr, "ERROR: %s", e.get_context());
+	} catch (const Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
 		return 1;
 	}
 }

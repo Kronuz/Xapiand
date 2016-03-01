@@ -157,8 +157,8 @@ int test_cartesian_transforms() {
 				L_ERR(nullptr, "ERROR: Resul: %s  Expected: %s", get.c_str(), it->res.c_str());
 			}
 		}
-	} catch (const std::exception &e) {
-		L_ERR(nullptr, "ERROR: %s", e.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.what());
 		++cont;
 	}
 
@@ -293,8 +293,8 @@ int test_hullConvex() {
 
 				fs << "ax.set_xlabel('x')\nax.set_ylabel('y')\nax.set_zlabel('z')\n";
 				fs << "plt.show()\nplt.ion()\n";
-			} catch(const std::exception &e) {
-				L_ERR(nullptr, "ERROR: (%s) %s", it_f->c_str(), e.what());
+			} catch(const std::exception& exc) {
+				L_EXC(nullptr, "ERROR: (%s) %s", it_f->c_str(), exc.what());
 				++cont;
 			}
 		} else {
@@ -417,8 +417,8 @@ int test_HTM_chull() {
 				}
 
 				_htm.writePython3D(*it_r);
-			} catch(const std::exception &e) {
-				L_ERR(nullptr, "ERROR: (%s) %s", it_f->c_str(), e.what());
+			} catch(const std::exception& exc) {
+				L_EXC(nullptr, "ERROR: (%s) %s", it_f->c_str(), exc.what());
 				++cont;
 			}
 		} else {
@@ -494,8 +494,8 @@ int test_HTM_circle() {
 					}
 
 					_htm.writePython3D(file_result);
-				} catch(const std::exception &e) {
-					L_ERR(nullptr, "ERROR: %s", e.what());
+				} catch(const std::exception& exc) {
+					L_EXC(nullptr, "ERROR: %s", exc.what());
 					++cont;
 				}
 				readEFile.close();

@@ -196,9 +196,9 @@ int make_search(const test_geo_t _tests[], int len) {
 							++cont;
 							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
 						}
-					} catch (const msgpack::type_error& err) {
+					} catch (const msgpack::type_error& exc) {
 						++cont;
-						L_ERR(nullptr, "ERROR: %s", err.what());
+						L_EXC(nullptr, "ERROR: %s", exc.what());
 					}
 				}
 			}
@@ -225,11 +225,11 @@ int geo_range_test() {
 			L_ERR(nullptr, "ERROR: Testing search range geospatials has mistakes.");
 			return 1;
 		}
-	} catch (const Xapian::Error &err) {
-		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+	} catch (const Xapian::Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
 		return 1;
-	} catch (const std::exception &err) {
-		L_ERR(nullptr, "ERROR: %s", err.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.what());
 		return 1;
 	}
 }
@@ -245,11 +245,11 @@ int geo_terms_test() {
 			L_ERR(nullptr, "ERROR: Testing search by geospatial terms has mistakes.");
 			return 1;
 		}
-	} catch (const Xapian::Error &err) {
-		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+	} catch (const Xapian::Error& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
 		return 1;
-	} catch (const std::exception &err) {
-		L_ERR(nullptr, "ERROR: %s", err.what());
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.what());
 		return 1;
 	}
 }

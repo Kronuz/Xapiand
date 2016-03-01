@@ -44,16 +44,16 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 		}
 		try {
 			end_ = Serialise::serialise(field_type, end_);
-		} catch (const Error& e) {
-			throw Xapian::QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + e.what() +")");
+		} catch (const Error& exc) {
+			throw Xapian::QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + exc.what() +")");
 		}
 		MultipleValueLE mvle(slot_, end_);
 		return Xapian::Query(&mvle);
 	} else if (end_.empty()) {
 		try {
 			start_ = Serialise::serialise(field_type, start_);
-		} catch (const Error& e) {
-			throw Xapian::QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + e.what() +")");
+		} catch (const Error& exc) {
+			throw Xapian::QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + exc.what() +")");
 		}
 		MultipleValueGE mvge(slot_, start_);
 		return Xapian::Query(&mvge);
@@ -63,8 +63,8 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 	try {
 		start_ = Serialise::serialise(field_type, start_);
 		end_ = Serialise::serialise(field_type, end_);
-	} catch (const Error& e) {
-			throw Xapian::QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + e.what() +")");
+	} catch (const Error& exc) {
+			throw Xapian::QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + exc.what() +")");
 	}
 	if (start_ > end_) return Xapian::Query::MatchNothing;
 	MultipleValueRange mvr(slot_, start_, end_);
