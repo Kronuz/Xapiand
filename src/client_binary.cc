@@ -539,7 +539,7 @@ BinaryClient::msg_termlist(const std::string &message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = unserialise_length(&p, p_end);
+	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db->get_doclength(did)));
 	std::string prev;
@@ -570,7 +570,7 @@ BinaryClient::msg_positionlist(const std::string &message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = unserialise_length(&p, p_end);
+	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 	std::string term(p, p_end - p);
 
 	Xapian::termpos lastpos = static_cast<Xapian::termpos>(-1);
@@ -645,7 +645,7 @@ BinaryClient::msg_writeaccess(const std::string & msg)
 	const char *p = msg.c_str();
 	const char *p_end = p + msg.size();
 	if (p != p_end) {
-		unsigned flag_bits = unserialise_length(&p, p_end);
+		unsigned flag_bits = static_cast<unsigned>(unserialise_length(&p, p_end));
 		flags |= flag_bits;
 		if (p != p_end) {
 			throw Xapian::NetworkError("Junk at end of MSG_WRITEACCESS");
@@ -727,17 +727,17 @@ BinaryClient::msg_query(const std::string &message_in)
 	p += len;
 
 	// Unserialise assorted Enquire settings.
-	Xapian::termcount qlen = unserialise_length(&p, p_end);
+	Xapian::termcount qlen = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
 	enquire->set_query(query, qlen);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Collapse key
-	Xapian::valueno collapse_max = unserialise_length(&p, p_end);
+	Xapian::valueno collapse_max = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
 
 	Xapian::valueno collapse_key = Xapian::BAD_VALUENO;
 	if (collapse_max) {
-		collapse_key = unserialise_length(&p, p_end);
+		collapse_key = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
 	}
 
 	enquire->set_collapse_key(collapse_key, collapse_max);
@@ -757,7 +757,7 @@ BinaryClient::msg_query(const std::string &message_in)
 	// Sort by
 	typedef enum { REL, VAL, VAL_REL, REL_VAL } sort_setting;
 
-	Xapian::valueno sort_key = unserialise_length(&p, p_end);
+	Xapian::valueno sort_key = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
 
 	if (*p < '0' || *p > '3') {
 		throw Xapian::NetworkError("bad message (sort_by)");
@@ -872,10 +872,10 @@ BinaryClient::msg_getmset(const std::string & msg)
 	const char *p = msg.c_str();
 	const char *p_end = p + msg.size();
 
-	Xapian::termcount first = unserialise_length(&p, p_end);
-	Xapian::termcount maxitems = unserialise_length(&p, p_end);
+	Xapian::termcount first = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
+	Xapian::termcount maxitems = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
-	Xapian::termcount check_at_least = unserialise_length(&p, p_end);
+	Xapian::termcount check_at_least = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
 	enquire->set_stats(std::string(p, p_end));
 
@@ -901,7 +901,7 @@ BinaryClient::msg_document(const std::string &message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = unserialise_length(&p, p_end);
+	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	Xapian::Document doc;
 	if (!database->get_document(did, doc)) {
@@ -991,7 +991,7 @@ BinaryClient::msg_valuestats(const std::string & message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	while (p != p_end) {
-		Xapian::valueno slot = unserialise_length(&p, p_end);
+		Xapian::valueno slot = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
 		std::string message_out;
 		message_out += serialise_length(db->get_value_freq(slot));
 		std::string bound = db->get_value_lower_bound(slot);
@@ -1015,7 +1015,7 @@ BinaryClient::msg_doclength(const std::string &message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = unserialise_length(&p, p_end);
+	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	checkin_database();
 
@@ -1030,7 +1030,7 @@ BinaryClient::msg_uniqueterms(const std::string &message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = unserialise_length(&p, p_end);
+	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	checkin_database();
 
@@ -1078,7 +1078,7 @@ BinaryClient::msg_deletedocument(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = unserialise_length(&p, p_end);
+	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	database->delete_document(did);
 
@@ -1104,7 +1104,7 @@ BinaryClient::msg_replacedocument(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = unserialise_length(&p, p_end);
+	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	database->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end)));
 
@@ -1193,7 +1193,7 @@ BinaryClient::msg_addspelling(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::termcount freqinc = unserialise_length(&p, p_end);
+	Xapian::termcount freqinc = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 	database->add_spelling(std::string(p, p_end - p), freqinc);
 
 	checkin_database();
@@ -1206,7 +1206,7 @@ BinaryClient::msg_removespelling(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::termcount freqdec = unserialise_length(&p, p_end);
+	Xapian::termcount freqdec = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 	database->remove_spelling(std::string(p, p_end - p), freqdec);
 
 	checkin_database();
