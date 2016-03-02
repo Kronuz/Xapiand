@@ -145,7 +145,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 					--high_slot;
 				}
 			}
-			
+
 			if (slot == lowest_revision) {
 				slot = revision - header.head.revision - 1;
 				if (slot == static_cast<uint32_t>(-1)) {
@@ -162,15 +162,15 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 			} else {
 				start_off = STORAGE_START_BLOCK_OFFSET;
 			}
-			
+
 			seek(start_off);
-			
+
 			end_off =  header.slot[high_slot];
-			
+
 			if (start_off < end_off) {
 				L_INFO(nullptr, "Read execute operations in WAL files (%u..%u)", lowest_revision, highest_revision + high_slot);
 			}
-			
+
 			try {
 				while (true) {
 					std::string line = read(end_off, this);
@@ -2519,7 +2519,7 @@ Database::get_stats_doc(MsgPack&& stats, const std::string& document_id)
 	auto mset = enquire.get_mset(0, 1);
 
 	Xapian::Document doc;
-	
+
 	if (!mset.empty() && get_document(mset.begin(), doc)) {
 		stats[RESERVED_ID] = document_id;
 
