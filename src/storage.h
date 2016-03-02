@@ -408,6 +408,7 @@ public:
 
 		ssize_t r;
 		uint32_t checksum = 0;
+		size_t bin_read;
 
 		if (!bin_header.size) {
 			off_t offset = io::lseek(fd, bin_offset, SEEK_SET);
@@ -439,6 +440,7 @@ public:
 			bin_offset += r;
 
 			bin_size += r;
+			bin_read = r;
 
 			checksum = 0;  // FIXME: bin_checksum update
 
@@ -457,9 +459,10 @@ public:
 
 			bin_header.size = 0;
 			bin_size = 0;
+			bin_read = 0;
 		}
 
-		return bin_size;
+		return bin_read;
 	}
 
 	void commit() {
