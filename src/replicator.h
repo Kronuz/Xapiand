@@ -42,7 +42,7 @@ class XapiandReplicator : public Task<>, public Worker {
 	friend Worker;
 
 public:
-	~XapiandReplicator() = default;
+	~XapiandReplicator();
 
 	inline decltype(auto) manager() const noexcept {
 		return std::static_pointer_cast<XapiandManager>(_parent);

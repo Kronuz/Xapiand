@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "log.h"
 #include "database_utils.h"
 #include "endpoint.h"
 #include "fields.h"
@@ -173,9 +174,13 @@ public:
 	Database* database;
 
 	DatabaseWAL (Database* _database)
-	: Storage(), modified(false), database(_database) { }
+	: Storage(), modified(false), database(_database) {
+		L_OBJ(this, "CREATED DATABASE WAL! [%llx]", this);
+	}
 
-	~DatabaseWAL() {}
+	~DatabaseWAL() {
+		L_OBJ(this, "DELETED DATABASE WAL! [%llx]", this);
+	}
 
 	bool open_current(const std::string& path, bool current);
 

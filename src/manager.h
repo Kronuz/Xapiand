@@ -134,7 +134,7 @@ public:
 
 	void run(const opts_t& o);
 	void sig_shutdown_handler(int sig);
-	void shutdown();
+	void shutdown() override;
 
 	void reset_state();
 	bool is_single_node();

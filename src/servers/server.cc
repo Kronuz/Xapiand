@@ -91,7 +91,7 @@ XapiandServer::destroy()
 void
 XapiandServer::shutdown()
 {
-	L_CALL(this, "XapiandServer::shutdown()");
+	L_OBJ(this , "SHUTDOWN XAPIAN SERVER! [%llx]", this);
 
 	Worker::shutdown();
 

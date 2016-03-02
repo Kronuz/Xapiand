@@ -59,6 +59,7 @@ protected:
 	{
 		_async_break_loop.set<Worker, &Worker::_async_break_loop_cb>(this);
 		_async_break_loop.start();
+		L_OBJ(this, "CREATED WORKER! [%llx]", this);
 	}
 
 	void _create() {
@@ -93,9 +94,13 @@ protected:
 public:
 	virtual ~Worker() {
 		_async_break_loop.stop();
+
+		L_OBJ(this, "DELETED WORKER! [%llx]", this);
 	}
 
 	virtual void shutdown() {
+		L_OBJ(this , "SHUTDOWN WORKER! [%llx]", this);
+
 		std::unique_lock<std::mutex> lk(_mtx);
 		for (auto it = _children.begin(); it != _children.end();) {
 			auto child = *it++;

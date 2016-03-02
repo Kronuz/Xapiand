@@ -24,7 +24,6 @@
 
 #include "database_autocommit.h"
 #include "generate_terms.h"
-#include "log.h"
 #include "msgpack_patcher.h"
 #include "multivaluerange.h"
 
@@ -494,23 +493,23 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 	modified(false),
 	mastery_level(-1)
 {
-	L_CALL(this, "Database::Database()");
-
 	reopen();
 
 	if (auto queue = weak_queue.lock()) {
 		queue->inc_count();
 	}
+
+	L_OBJ(this, "CREATED DATABASE! [%llx]", this);
 }
 
 
 Database::~Database()
 {
-	L_CALL(this, "Database::~Database()");
-
 	if (auto queue = weak_queue.lock()) {
 		queue->dec_count();
 	}
+
+	L_OBJ(this, "DELETED DATABASE! [%llx]", this);
 }
 
 
@@ -2585,7 +2584,9 @@ Database::get_stats_doc(MsgPack&& stats, const std::string& document_id)
 DatabaseQueue::DatabaseQueue()
 	: state(replica_state::REPLICA_FREE),
 	  persistent(false),
-	  count(0) { }
+	  count(0) {
+	L_OBJ(this, "CREATED DATABASE QUEUE! [%llx]", this);
+}
 
 
 DatabaseQueue::DatabaseQueue(DatabaseQueue&& q)
@@ -2597,6 +2598,8 @@ DatabaseQueue::DatabaseQueue(DatabaseQueue&& q)
 	persistent = std::move(q.persistent);
 	count = std::move(q.count);
 	weak_database_pool = std::move(q.weak_database_pool);
+
+	L_OBJ(this, "CREATED DATABASE QUEUE! [%llx]", this);
 }
 
 
@@ -2606,6 +2609,8 @@ DatabaseQueue::~DatabaseQueue()
 		L_CRIT(this, "DatabaseQueue size is inconsistent with the DatabaseQueue counter");
 		exit(EX_SOFTWARE);
 	}
+
+	L_OBJ(this, "DELETED DATABASE QUEUE! [%llx]", this);
 }
 
 
@@ -2663,12 +2668,16 @@ DatabaseQueue::dec_count()
 DatabasePool::DatabasePool(size_t max_size)
 	: finished(false),
 	  databases(max_size),
-	  writable_databases(max_size) { }
+	  writable_databases(max_size) {
+	L_OBJ(this, "CREATED DATABASE POLL! [%llx]", this);
+}
 
 
 DatabasePool::~DatabasePool()
 {
 	finish();
+
+	L_OBJ(this, "DELETED DATABASE POOL! [%llx]", this);
 }
 
 
@@ -2721,6 +2730,8 @@ void
 DatabasePool::finish()
 {
 	finished = true;
+
+	L_OBJ(this, "FINISH DATABASE! [%llx]", this);
 }
 
 

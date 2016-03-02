@@ -26,8 +26,15 @@
 
 
 XapiandReplicator::XapiandReplicator(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_)
-	: Worker(std::move(manager_), loop_) { }
+	: Worker(std::move(manager_), loop_) {
 
+	L_OBJ(this, "CREATED XAPIAN REPLICATOR! [%llx]", this);
+}
+
+XapiandReplicator::~XapiandReplicator()
+{
+	L_OBJ(this, "DESTROYED XAPIAN REPLICATOR! [%llx]", this);
+}
 
 void
 XapiandReplicator::on_commit(const Endpoint &endpoint)
@@ -57,7 +64,7 @@ XapiandReplicator::run()
 void
 XapiandReplicator::shutdown()
 {
-	L_CALL(this, "XapiandReplicator::shutdown()");
+	L_OBJ(this , "SHUTDOWN XAPIAN REPLICATOR! [%llx]", this);
 
 	manager()->database_pool.updated_databases.finish();
 }
