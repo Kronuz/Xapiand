@@ -133,9 +133,10 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 		manager=manager(),
 		src_endpoint,
 		dst_endpoint
-	] {
+	] () mutable {
 		L_DEBUG(manager.get(), "Triggering replication for %s after checkin!", dst_endpoint.as_string().c_str());
 		manager->trigger_replication(src_endpoint, dst_endpoint);
+		manager.reset();
 	})) {
 		L_ERR(this, "Cannot checkout %s", endpoints.as_string().c_str());
 		return false;
