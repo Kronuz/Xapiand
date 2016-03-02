@@ -150,7 +150,6 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 
 	bool execute(const std::string& line);
 	uint32_t highest_valid_slot();
-	uint32_t fget_revision(const std::string& filename);
 
 	inline void open(const std::string& path, int flags) {
 		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, flags, this);

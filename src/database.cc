@@ -109,7 +109,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 
 	while (fptr.ent) {
 		try {
-			uint32_t file_revision = fget_revision(std::string(fptr.ent->d_name));
+			uint32_t file_revision = get_volume(std::string(fptr.ent->d_name));
 			if (static_cast<long>(file_revision) >= static_cast<long>(revision - WAL_SLOTS)) {
 				if (file_revision < lowest_revision) {
 					lowest_revision = file_revision;
@@ -203,19 +203,6 @@ DatabaseWAL::highest_valid_slot()
 		slot = i;
 	}
 	return slot;
-}
-
-
-uint32_t
-DatabaseWAL::fget_revision(const std::string& filename)
-{
-	L_CALL(this, "DatabaseWAL::fget_revision()");
-
-	std::size_t found = filename.find_last_of(".");
-	if (found == std::string::npos) {
-		throw std::invalid_argument("Revision not found in " + filename);
-	}
-	return static_cast<uint32_t>(std::stoul(filename.substr(found + 1)));
 }
 
 
