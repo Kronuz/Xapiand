@@ -77,6 +77,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *
 	  running(0),
 	  state(State::INIT),
 	  writable(false),
+	  flags(0),
 	  database(nullptr)
 {
 	int binary_clients = ++XapiandServer::binary_clients;
@@ -338,7 +339,16 @@ void
 BinaryClient::checkout_database()
 {
 	if (!database) {
-		if (!manager()->database_pool.checkout(database, endpoints, (writable ? DB_WRITABLE : 0) | DB_SPAWN)) {
+		int _flags = writable ? DB_WRITABLE : DB_OPEN;
+		if ((flags & Xapian::DB_CREATE_OR_OPEN) == Xapian::DB_CREATE_OR_OPEN) {
+			_flags |= DB_SPAWN;
+		} else if ((flags & Xapian::DB_CREATE_OR_OVERWRITE) == Xapian::DB_CREATE_OR_OVERWRITE) {
+			_flags |= DB_SPAWN;
+		} else if ((flags & Xapian::DB_CREATE) == Xapian::DB_CREATE) {
+			_flags |= DB_SPAWN;
+		} else if ((flags & Xapian::DB_OPEN) == Xapian::DB_OPEN) {
+		}
+		if (!manager()->database_pool.checkout(database, endpoints, _flags)) {
 			throw Xapian::InvalidOperationError("Server has no open database");
 		}
 	}
@@ -488,7 +498,7 @@ BinaryClient::remote_server(RemoteMessageType type, const std::string &message)
 		&BinaryClient::msg_openmetadatakeylist,
 		&BinaryClient::msg_freqs,
 		&BinaryClient::msg_uniqueterms,
-		&BinaryClient::msg_select,
+		&BinaryClient::msg_readaccess,
 	};
 	try {
 		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
@@ -587,25 +597,6 @@ BinaryClient::msg_positionlist(const std::string &message)
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
-
-void
-BinaryClient::msg_select(const std::string &message)
-{
-	const char *p = message.c_str();
-	const char *p_end = p + message.size();
-
-	writable = false;
-	endpoints.clear();
-	while (p != p_end) {
-		size_t len = unserialise_length(&p, p_end, true);
-		endpoints.add(Endpoint(std::string(p, len)));
-		p += len;
-	}
-
-	msg_update(message);
-}
-
-
 void
 BinaryClient::msg_postlist(const std::string &message)
 {
@@ -637,28 +628,62 @@ BinaryClient::msg_postlist(const std::string &message)
 }
 
 void
-BinaryClient::msg_writeaccess(const std::string & msg)
+BinaryClient::msg_readaccess(const std::string &message)
 {
-	writable = true;
-
 	int flags = Xapian::DB_OPEN;
-	const char *p = msg.c_str();
-	const char *p_end = p + msg.size();
+	const char *p = message.c_str();
+	const char *p_end = p + message.size();
 	if (p != p_end) {
-		unsigned flag_bits = static_cast<unsigned>(unserialise_length(&p, p_end));
-		flags |= flag_bits;
-		if (p != p_end) {
-			throw Xapian::NetworkError("Junk at end of MSG_WRITEACCESS");
+		unsigned flag_bits;
+		flag_bits = unserialise_length(&p, p_end);
+		// flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
+	}
+
+	std::vector<std::string> dbpaths_;
+	if (p != p_end) {
+		while (p != p_end) {
+			size_t len;
+			len = unserialise_length(&p, p_end, true);
+			std::string dbpath(p, len);
+			dbpaths_.push_back(dbpath);
+			p += len;
 		}
 	}
-	// flags &= ~Xapian::DB_ACTION_MASK_;
+	select_db(dbpaths_, false, flags);
 
-	msg_update(msg);
+	msg_update(message);
 }
 
+void
+BinaryClient::msg_writeaccess(const std::string & message)
+{
+	int flags = Xapian::DB_OPEN;
+	const char *p = message.c_str();
+	const char *p_end = p + message.size();
+	if (p != p_end) {
+		unsigned flag_bits;
+		flag_bits = unserialise_length(&p, p_end);
+		// flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
+	}
+
+	std::vector<std::string> dbpaths_;
+	if (p != p_end) {
+		size_t len;
+		len = unserialise_length(&p, p_end, true);
+		std::string dbpath(p, len);
+		dbpaths_.push_back(dbpath);
+		p += len;
+		if (p != p_end) {
+			throw Xapian::NetworkError("only one database directory allowed on writable databases");
+		}
+	}
+	select_db(dbpaths_, true, flags);
+
+	msg_update(message);
+}
 
 void
-BinaryClient::msg_reopen(const std::string & msg)
+BinaryClient::msg_reopen(const std::string & message)
 {
 	checkout_database();
 
@@ -671,7 +696,7 @@ BinaryClient::msg_reopen(const std::string & msg)
 
 		checkin_database();
 
-		msg_update(msg);
+		msg_update(message);
 	}
 }
 
@@ -857,41 +882,41 @@ BinaryClient::msg_query(const std::string &message_in)
 	////////////////////////////////////////////////////////////////////////////
 	enquire->prepare_mset(&rset, nullptr);
 
-	send_message(RemoteReplyType::REPLY_STATS, enquire->get_stats());
+	send_message(RemoteReplyType::REPLY_STATS, enquire->serialise_stats());
 
 	// No checkout for database (it'll still be needed by msg_getmset)
 }
 
 void
-BinaryClient::msg_getmset(const std::string & msg)
+BinaryClient::msg_getmset(const std::string & message)
 {
 	if (!enquire) {
 		throw Xapian::NetworkError("Unexpected MSG_GETMSET");
 	}
 
-	const char *p = msg.c_str();
-	const char *p_end = p + msg.size();
+	const char *p = message.c_str();
+	const char *p_end = p + message.size();
 
 	Xapian::termcount first = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 	Xapian::termcount maxitems = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
 	Xapian::termcount check_at_least = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
-	enquire->set_stats(std::string(p, p_end));
+	enquire->unserialise_stats(std::string(p, p_end));
 
 	Xapian::MSet mset = enquire->get_mset(first, maxitems, check_at_least);
 
-	std::string message;
+	std::string msg;
 	for (auto& i : matchspies) {
 		std::string spy_results = i->serialise_results();
-		message += serialise_length(spy_results.size());
-		message += spy_results;
+		msg += serialise_length(spy_results.size());
+		msg += spy_results;
 	}
-	message += mset.serialise();
+	msg += mset.serialise();
 
 	checkin_database();
 
-	send_message(RemoteReplyType::REPLY_RESULTS, message);
+	send_message(RemoteReplyType::REPLY_RESULTS, msg);
 }
 
 void
@@ -1216,6 +1241,28 @@ void
 BinaryClient::msg_shutdown(const std::string &)
 {
 	shutdown();
+}
+
+void
+BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags_)
+{
+	endpoints.clear();
+
+	checkin_database();
+
+	writable = writable_;
+	flags = flags_;
+
+	if (!dbpaths_.empty()) {
+		if (writable) {
+			assert(dbpaths_.size() == 1); // Expecting exactly one database.
+			endpoints.add(Endpoint(dbpaths_[0]));
+		} else {
+			for (auto& path : dbpaths_) {
+				endpoints.add(Endpoint(path));
+			}
+		}
+	}
 }
 
 

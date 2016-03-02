@@ -160,6 +160,7 @@ class BinaryClient : public BaseClient {
 	int file_descriptor;
 
 	bool writable;
+	int flags;
 	std::shared_ptr<Database> database;
 
 	// Buffers that are pending write
@@ -190,8 +191,8 @@ class BinaryClient : public BaseClient {
 	void msg_allterms(const std::string& message);
 	void msg_termlist(const std::string& message);
 	void msg_positionlist(const std::string& message);
-	void msg_select(const std::string& message);
 	void msg_postlist(const std::string& message);
+	void msg_readaccess(const std::string& message);
 	void msg_writeaccess(const std::string& message);
 	void msg_reopen(const std::string& message);
 	void msg_update(const std::string& message);
@@ -219,6 +220,7 @@ class BinaryClient : public BaseClient {
 	void msg_addspelling(const std::string& message);
 	void msg_removespelling(const std::string& message);
 	void msg_shutdown(const std::string& message);
+	void select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags_);
 
 	// Replication protocol:
 	void replication_server(ReplicationMessageType type, const std::string& message);
