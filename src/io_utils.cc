@@ -26,9 +26,9 @@
 namespace io {
 
 #if defined HAVE_FDATASYNC
-#define __FSYNC fdatasync
+#define __FSYNC ::fdatasync
 #elif defined HAVE_FSYNC
-#define __FSYNC fsync
+#define __FSYNC ::fsync
 #else
 inline int __fsync(int fd) { return 0; }
 #define __FSYNC __fsync
