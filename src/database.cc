@@ -98,7 +98,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 
 	DIR *dir = opendir(path.c_str(), true);
 	if (!dir) {
-		throw MSG_Error("Could not open the wal dir (%s)", strerror(errno));
+		throw MSG_Error("Could not open the dir (%s)", strerror(errno));
 	}
 
 	uint32_t highest_revision = 0;
@@ -120,9 +120,9 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 				}
 			}
 		} catch (const std::invalid_argument&) {
-			throw MSG_Error("In filename wal (%s)", strerror(errno));
+			throw MSG_Error("In wal file %s (%s)", std::string(fptr.ent->d_name).c_str(), strerror(errno));
 		} catch (const std::out_of_range&) {
-			throw MSG_Error("In filename wal (%s)", strerror(errno));
+			throw MSG_Error("In wal file %s (%s)", std::string(fptr.ent->d_name).c_str(), strerror(errno));
 		}
 
 		find_file_dir(dir, fptr, WAL_STORAGE_PATH, true);
