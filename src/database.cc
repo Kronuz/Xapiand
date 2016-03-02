@@ -589,6 +589,11 @@ Database::reopen()
 		}
 #endif
 		db->add_database(wdb);
+
+		if (local) {
+			checkout_revision = get_revision_info();
+		}
+
 #ifdef XAPIAND_DATABASE_WAL
 		if (local && !(flags & DB_NOWAL)) {
 			// WAL required on a local writable database, open it.
@@ -2843,8 +2848,6 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 		database->reopen();
 		L_DATABASE(this, "== REOPEN DB %s(%s) [%lx]", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 	}
-
-	database->checkout_revision = database->get_revision_info();
 
 	L_DATABASE_END(this, "++ CHECKED OUT DB %s, %s at rev:%s %lx", writable ? "w" : "r", endpoints.as_string().c_str(), repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
 	return true;
