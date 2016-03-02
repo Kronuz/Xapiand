@@ -579,14 +579,14 @@ Database::reopen()
 		}
 #endif
 #ifdef XAPIAND_DATA_STORAGE
-			if (local) {
-				// WAL required on a local database, open it.
-				auto storage = std::make_unique<DataStorage>();
-				storage->volume = storage->highest_volume(e.path);
-				storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
-			} else {
-				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-			}
+		if (local) {
+			// WAL required on a local database, open it.
+			auto storage = std::make_unique<DataStorage>();
+			storage->volume = storage->highest_volume(e.path);
+			storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
+		} else {
+			storages.push_back(std::unique_ptr<DataStorage>(nullptr));
+		}
 #endif
 		db->add_database(wdb);
 #ifdef XAPIAND_DATABASE_WAL
