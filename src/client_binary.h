@@ -69,7 +69,7 @@ enum class RemoteMessageType {
 	MSG_METADATAKEYLIST,        // Iterator for metadata keys
 	MSG_FREQS,                  // Get termfreq and collfreq
 	MSG_UNIQUETERMS,            // Get number of unique terms in doc
-	MSG_SELECT,                 // Select current database
+	MSG_READACCESS,             // Select current database
 	MSG_MAX
 };
 static const char* RemoteMessageTypeNames[] = {
@@ -81,7 +81,7 @@ static const char* RemoteMessageTypeNames[] = {
 	"MSG_REPLACEDOCUMENTTERM", "MSG_DELETEDOCUMENT", "MSG_WRITEACCESS",
 	"MSG_GETMETADATA", "MSG_SETMETADATA", "MSG_ADDSPELLING",
 	"MSG_REMOVESPELLING", "MSG_GETMSET", "MSG_SHUTDOWN",
-	"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS", "MSG_SELECT",
+	"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS", "MSG_READACCESS",
 };
 
 enum class RemoteReplyType {
