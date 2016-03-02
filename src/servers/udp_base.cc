@@ -35,9 +35,7 @@ BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *
 	  description(description_),
 	  loop(loop_)
 {
-	L_DEBUG(this, "Num of share UDP: %d", manager.use_count());
 	bind(tries_, group_);
-	L_DEBUG(this, "Listening sock=%d", sock);
 }
 
 

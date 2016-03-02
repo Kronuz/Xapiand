@@ -75,8 +75,9 @@ void run(const opts_t &opts) {
 	setup_signal_handlers();
 	ev::default_loop default_loop;
 	manager = Worker::create<XapiandManager>(&default_loop, opts);
-	L_DEBUG(nullptr, "Call run, Num of share: %d", manager.use_count());
 	manager->run(opts);
+	L_DEBUG(nullptr, "Manager use count = %d", manager.use_count());
+	manager.reset();
 }
 
 
