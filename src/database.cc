@@ -536,53 +536,50 @@ Database::reopen()
 	auto endpoints_size = endpoints.size();
 	auto i = endpoints.cbegin();
 	if (flags & DB_WRITABLE) {
+		assert(endpoints_size == 1);
 		db = std::make_unique<Xapian::WritableDatabase>();
-		if (endpoints_size != 1) {
-			L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints_size, endpoints.as_string().c_str());
-		} else {
-			auto& e = *i;
-			Xapian::WritableDatabase wdb;
-			bool local = false;
+		auto& e = *i;
+		Xapian::WritableDatabase wdb;
+		bool local = false;
 #ifdef XAPIAND_DATABASE_WAL
-			int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC : Xapian::DB_OPEN | Xapian::DB_NO_SYNC;
+		int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC : Xapian::DB_OPEN | Xapian::DB_NO_SYNC;
 #else
-			int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN;
+		int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN;
 #endif
-			if (e.is_local()) {
-				local = true;
-				wdb = Xapian::WritableDatabase(e.path, _flags);
+		if (e.is_local()) {
+			local = true;
+			wdb = Xapian::WritableDatabase(e.path, _flags);
 
-				if (endpoints_size == 1) read_mastery(e);
-			}
+			if (endpoints_size == 1) read_mastery(e);
+		}
 #ifdef XAPIAND_CLUSTERING
-			else {
-				// Writable remote databases do not have a local fallback
-				int port = (e.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e.port;
-				wdb = Xapian::Remote::open_writable(e.host, port, 0, 10000, _flags, e.path);
-			}
+		else {
+			// Writable remote databases do not have a local fallback
+			int port = (e.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e.port;
+			wdb = Xapian::Remote::open_writable(e.host, port, 0, 10000, _flags, e.path);
+		}
 #endif
 #ifdef XAPIAND_DATA_STORAGE
-			if (local) {
-				// WAL required on a local database, open it.
-				auto storage = std::make_unique<DataStorage>();
-				// FIXME: Find last available storage volume
-				storage->volume = 0;
-				storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
-			} else {
-				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-			}
-#endif
-			db->add_database(wdb);
-#ifdef XAPIAND_DATABASE_WAL
-			if (local && !(flags & DB_NOWAL)) {
-				// WAL required on a local writable database, open it.
-				wal = std::make_unique<DatabaseWAL>(this);
-				if (wal->open_current(e.path, true)) {
-					modified = true;
-				}
-			}
-#endif
+		if (local) {
+			// WAL required on a local database, open it.
+			auto storage = std::make_unique<DataStorage>();
+			// FIXME: Find last available storage volume
+			storage->volume = 0;
+			storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
+		} else {
+			storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 		}
+#endif
+		db->add_database(wdb);
+#ifdef XAPIAND_DATABASE_WAL
+		if (local && !(flags & DB_NOWAL)) {
+			// WAL required on a local writable database, open it.
+			wal = std::make_unique<DatabaseWAL>(this);
+			if (wal->open_current(e.path, true)) {
+				modified = true;
+			}
+		}
+#endif
 	} else {
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.cend(); ++i) {
 			auto& e = *i;
@@ -2705,8 +2702,12 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB %s(%s) [%lx]...", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
 
 	if (database) {
-		L_CRIT(this, "Trying to checkout a database with a not null pointer");
-		exit(EX_SOFTWARE);
+		L_ERR(this, "Trying to checkout a database with a not null pointer");
+		return false;
+	}
+	if (writable && endpoints.size() != 1) {
+		L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), endpoints.as_string().c_str());
+		return false;
 	}
 
 	std::unique_lock<std::mutex> lk(qmtx);
@@ -2751,33 +2752,34 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				try {
 					database = std::make_shared<Database>(queue, endpoints, flags);
 
-					if (writable && initref && endpoints.size() == 1) {
-						init_ref(endpoints);
+					if (writable && initref) {
+						init_ref(endpoints[0]);
 					}
+
+#ifdef XAPIAND_DATABASE_WAL
+					if (!writable && count == 1) {
+						bool reopen = false;
+						for (auto& endpoint : database->endpoints) {
+							if (endpoint.is_local()) {
+								Endpoints e;
+								e.add(endpoint);
+								std::shared_ptr<Database> d;
+								checkout(d, e, DB_WRITABLE | DB_VOLATILE | DB_NOWAL);
+								// Checkout executes any commands from the WAL
+								reopen = true;
+								checkin(d);
+							}
+						}
+						if (reopen) {
+							database->reopen();
+						}
+					}
+#endif
 				} catch (const Xapian::DatabaseOpeningError& exc) {
 					L_DEBUG(this, "DEBUG: %s", exc.get_msg().c_str());
 				} catch (const Xapian::Error& exc) {
 					L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 				}
-#ifdef XAPIAND_DATABASE_WAL
-				if (count == 1 && !writable) {
-					bool reopen = false;
-					for (auto& endpoint : database->endpoints) {
-						if (endpoint.is_local()) {
-							Endpoints e;
-							e.add(endpoint);
-							std::shared_ptr<Database> d;
-							checkout(d, e, DB_WRITABLE | DB_VOLATILE | DB_NOWAL);
-							// Checkout executes any commands from the WAL
-							reopen = true;
-							checkin(d);
-						}
-					}
-					if (reopen) {
-						database->reopen();
-					}
-				}
-#endif
 				lk.lock();
 				queue->dec_count();  // Decrement, count should have been already incremented if Database was created
 			} else {
@@ -2938,7 +2940,7 @@ DatabasePool::switch_db(const Endpoint& endpoint)
 
 
 void
-DatabasePool::init_ref(const Endpoints& endpoints)
+DatabasePool::init_ref(const Endpoint& endpoint)
 {
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
@@ -2948,21 +2950,19 @@ DatabasePool::init_ref(const Endpoints& endpoints)
 		exit(EX_SOFTWARE);
 	}
 
-	for (auto endp_it = endpoints.cbegin(); endp_it != endpoints.cend(); ++endp_it) {
-		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
-		Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
-		if (p == ref_database->db->postlist_end(unique_id)) {
-			Xapian::Document doc;
-			// Boolean term for the node.
-			doc.add_boolean_term(unique_id);
-			// Start values for the DB.
-			doc.add_boolean_term(prefixed(DB_MASTER, get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE)));
-			doc.add_value(DB_SLOT_CREF, "0");
-			try {
-				ref_database->replace_document_term(unique_id, doc, true);
-			} catch (const Error& exc) {
-				L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
-			}
+	std::string unique_id(prefixed(get_slot_hex(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
+	Xapian::PostingIterator p(ref_database->db->postlist_begin(unique_id));
+	if (p == ref_database->db->postlist_end(unique_id)) {
+		Xapian::Document doc;
+		// Boolean term for the node.
+		doc.add_boolean_term(unique_id);
+		// Start values for the DB.
+		doc.add_boolean_term(prefixed(DB_MASTER, get_prefix("master", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE)));
+		doc.add_value(DB_SLOT_CREF, "0");
+		try {
+			ref_database->replace_document_term(unique_id, doc, true);
+		} catch (const Error& exc) {
+			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
 		}
 	}
 
@@ -2971,7 +2971,7 @@ DatabasePool::init_ref(const Endpoints& endpoints)
 
 
 void
-DatabasePool::inc_ref(const Endpoints& endpoints)
+DatabasePool::inc_ref(const Endpoint& endpoint)
 {
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
@@ -2983,30 +2983,28 @@ DatabasePool::inc_ref(const Endpoints& endpoints)
 
 	Xapian::Document doc;
 
-	for (auto endp_it = endpoints.cbegin(); endp_it != endpoints.cend(); ++endp_it) {
-		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
-		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
-		if (p == ref_database->db->postlist_end(unique_id)) {
-			// QUESTION: Document not found - should add?
-			// QUESTION: This case could happen?
-			doc.add_boolean_term(unique_id);
-			doc.add_value(0, "0");
-			try {
-				ref_database->replace_document_term(unique_id, doc, true);
-			} catch (const Error& exc) {
-				L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
-			}
-		} else {
-			// Document found - reference increased
-			doc = ref_database->db->get_document(*p);
-			doc.add_boolean_term(unique_id);
-			int nref = std::stoi(doc.get_value(0));
-			doc.add_value(0, std::to_string(nref + 1));
-			try {
-				ref_database->replace_document_term(unique_id, doc, true);
-			} catch (const Error& exc) {
-				L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
-			}
+	std::string unique_id(prefixed(get_slot_hex(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
+	Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
+	if (p == ref_database->db->postlist_end(unique_id)) {
+		// QUESTION: Document not found - should add?
+		// QUESTION: This case could happen?
+		doc.add_boolean_term(unique_id);
+		doc.add_value(0, "0");
+		try {
+			ref_database->replace_document_term(unique_id, doc, true);
+		} catch (const Error& exc) {
+			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
+		}
+	} else {
+		// Document found - reference increased
+		doc = ref_database->db->get_document(*p);
+		doc.add_boolean_term(unique_id);
+		int nref = std::stoi(doc.get_value(0));
+		doc.add_value(0, std::to_string(nref + 1));
+		try {
+			ref_database->replace_document_term(unique_id, doc, true);
+		} catch (const Error& exc) {
+			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
 		}
 	}
 
@@ -3015,7 +3013,7 @@ DatabasePool::inc_ref(const Endpoints& endpoints)
 
 
 void
-DatabasePool::dec_ref(const Endpoints& endpoints)
+DatabasePool::dec_ref(const Endpoint& endpoint)
 {
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
@@ -3027,23 +3025,21 @@ DatabasePool::dec_ref(const Endpoints& endpoints)
 
 	Xapian::Document doc;
 
-	for (auto endp_it = endpoints.cbegin(); endp_it != endpoints.cend(); ++endp_it) {
-		std::string unique_id(prefixed(get_slot_hex(endp_it->path), DOCUMENT_ID_TERM_PREFIX));
-		Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
-		if (p != ref_database->db->postlist_end(unique_id)) {
-			doc = ref_database->db->get_document(*p);
-			doc.add_boolean_term(unique_id);
-			int nref = std::stoi(doc.get_value(0)) - 1;
-			doc.add_value(0, std::to_string(nref));
-			try {
-				ref_database->replace_document_term(unique_id, doc, true);
-			} catch (const Error& exc) {
-				L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
-			}
-			if (nref == 0) {
-				// qmtx need a lock
-				delete_files(endp_it->path);
-			}
+	std::string unique_id(prefixed(get_slot_hex(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
+	Xapian::PostingIterator p = ref_database->db->postlist_begin(unique_id);
+	if (p != ref_database->db->postlist_end(unique_id)) {
+		doc = ref_database->db->get_document(*p);
+		doc.add_boolean_term(unique_id);
+		int nref = std::stoi(doc.get_value(0)) - 1;
+		doc.add_value(0, std::to_string(nref));
+		try {
+			ref_database->replace_document_term(unique_id, doc, true);
+		} catch (const Error& exc) {
+			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
+		}
+		if (nref == 0) {
+			// qmtx need a lock
+			delete_files(endpoint.path);
 		}
 	}
 
