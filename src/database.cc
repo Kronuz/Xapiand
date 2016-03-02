@@ -431,7 +431,8 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 
 
 #ifdef XAPIAND_DATA_STORAGE
-void DataHeader::init(void* param) {
+void
+DataHeader::init(void* param) {
 	const Database* storage = static_cast<const Database*>(param);
 
 	head.offset = STORAGE_START_BLOCK_OFFSET;
@@ -440,7 +441,8 @@ void DataHeader::init(void* param) {
 }
 
 
-void DataHeader::validate(void* param) {
+void
+DataHeader::validate(void* param) {
 	const Database* storage = static_cast<const Database*>(param);
 
 	if (head.magic != STORAGE_MAGIC) {
@@ -449,6 +451,36 @@ void DataHeader::validate(void* param) {
 	if (strncasecmp(head.uuid, storage->get_uuid().c_str(), sizeof(head.uuid))) {
 		throw MSG_StorageCorruptVolume("UUID mismatch");
 	}
+}
+
+
+uint32_t
+DataStorage::highest_volume(const std::string& path) {
+
+	L_CALL(this, "DataStorage::highest_volume()");
+
+	DIR *dir = opendir(path.c_str(), true);
+	if (!dir) {
+		throw MSG_Error("Could not open dir (%s)", strerror(errno));
+	}
+
+	uint32_t highest_revision = 0;
+
+	File_ptr fptr;
+	find_file_dir(dir, fptr, DATA_STORAGE_PATH, true);
+
+	while (fptr.ent) {
+		try {
+			uint32_t file_revision = get_volume(std::string(fptr.ent->d_name));
+			if (file_revision > highest_revision) {
+					highest_revision = file_revision;
+			}
+		} catch (const std::invalid_argument&) { }
+		  catch (const std::out_of_range&) { }
+
+		find_file_dir(dir, fptr, DATA_STORAGE_PATH, true);
+	}
+	return highest_revision;
 }
 #endif
 
@@ -547,15 +579,14 @@ Database::reopen()
 		}
 #endif
 #ifdef XAPIAND_DATA_STORAGE
-		if (local) {
-			// WAL required on a local database, open it.
-			auto storage = std::make_unique<DataStorage>();
-			// FIXME: Find last available storage volume
-			storage->volume = 0;
-			storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
-		} else {
-			storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-		}
+			if (local) {
+				// WAL required on a local database, open it.
+				auto storage = std::make_unique<DataStorage>();
+				storage->volume = storage->highest_volume(e.path);
+				storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
+			} else {
+				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
+			}
 #endif
 		db->add_database(wdb);
 #ifdef XAPIAND_DATABASE_WAL

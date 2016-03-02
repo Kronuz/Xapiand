@@ -255,6 +255,7 @@ class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter>
 {
 public:
 	uint32_t volume;
+	uint32_t highest_volume(const std::string& path);
 };
 #endif
 
