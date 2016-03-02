@@ -2669,6 +2669,8 @@ DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_pt
 long long
 DatabasePool::get_mastery_level(const std::string& dir)
 {
+	L_CALL(this, "DatabasePool::get_mastery_level()");
+
 	Endpoints endpoints;
 	endpoints.add(Endpoint(dir));
 
@@ -2752,8 +2754,8 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 					if (writable && initref && endpoints.size() == 1) {
 						init_ref(endpoints);
 					}
-
 				} catch (const Xapian::DatabaseOpeningError& exc) {
+					L_DEBUG(this, "DEBUG: %s", exc.get_msg().c_str());
 				} catch (const Xapian::Error& exc) {
 					L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 				}
