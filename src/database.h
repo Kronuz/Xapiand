@@ -45,14 +45,14 @@
 #include <unordered_map>
 #include <unordered_set>
 
-
-#define DB_WRITABLE     1 // Opens as writable
-#define DB_SPAWN        2 // Automatically creates the database if it doesn't exist
-#define DB_PERSISTENT   4 // Always try keeping the database in the database pool
-#define DB_INIT_REF     8 // Initializes the writable index in the database .refs
-#define DB_VOLATILE    16 // Always drop the database from the database pool as soon as possible
-#define DB_REPLICATION 32 // Use conditional pop in the queue, only pop when replication is done
-#define DB_NOWAL       64 // Disable open wal file
+const int DB_OPEN        = 0x00; // Opens a database
+const int DB_WRITABLE    = 0x01; // Opens as writable
+const int DB_SPAWN       = 0x02; // Automatically creates the database if it doesn't exist
+const int DB_PERSISTENT  = 0x04; // Always try keeping the database in the database pool
+const int DB_INIT_REF    = 0x08; // Initializes the writable index in the database .refs
+const int DB_VOLATILE    = 0x10; // Always drop the database from the database pool as soon as possible
+const int DB_REPLICATION = 0x20; // Use conditional pop in the queue, only pop when replication is done
+const int DB_NOWAL       = 0x40; // Disable open wal file
 
 #define DB_MASTER "M"
 #define DB_SLAVE  "S"
