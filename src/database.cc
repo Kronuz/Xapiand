@@ -87,7 +87,7 @@ void WalHeader::validate(void* param)
 }
 
 
-void
+bool
 DatabaseWAL::open_current(const std::string& path, bool commited)
 {
 	L_CALL(this, "DatabaseWAL::open()");
@@ -131,6 +131,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 	if (lowest_revision > revision) {
 		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
 	} else {
+		modified = false;
 		uint16_t start_off, end_off;
 		for (auto slot = lowest_revision; slot <= highest_revision; ++slot) {
 			open(path + "/" + WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN);
@@ -185,6 +186,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 
 		open(path + "/" + WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
 	}
+	return modified;
 }
 
 
@@ -253,6 +255,8 @@ DatabaseWAL::execute(const std::string& line)
 	p = data.data();
 	p_end = p + data.size();
 
+	modified = true;
+
 	switch (type) {
 		case Type::ADD_DOCUMENT:
 			doc = Xapian::Document::unserialise(data);
@@ -268,6 +272,7 @@ DatabaseWAL::execute(const std::string& line)
 			break;
 		case Type::COMMIT:
 			database->commit(false);
+			modified = false;
 			break;
 		case Type::REPLACE_DOCUMENT:
 			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
@@ -2766,7 +2771,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 							Endpoints e;
 							e.add(endpoint);
 							std::shared_ptr<Database> d;
-							checkout(d, e, DB_WRITABLE | DB_VOLATILE);
+							checkout(d, e, DB_WRITABLE | DB_VOLATILE | DB_NOWAL);
 							// Checkout executes any commands from the WAL
 							reopen = true;
 							checkin(d);

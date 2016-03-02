@@ -146,6 +146,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 		"ADD_SPELLING",
 		"REMOVE_SPELLING",
 	};
+	bool modified;
 
 	bool execute(const std::string& line);
 	uint32_t highest_valid_slot();
@@ -173,11 +174,11 @@ public:
 	Database* database;
 
 	DatabaseWAL (Database* _database)
-	: Storage(), database(_database) { }
+	: Storage(), modified(false), database(_database) { }
 
 	~DatabaseWAL() {}
 
-	void open_current(const std::string& path, bool current);
+	bool open_current(const std::string& path, bool current);
 
 	void write_line(Type type, const std::string& data, bool commit=false);
 	void write_add_document(const Xapian::Document& doc);
