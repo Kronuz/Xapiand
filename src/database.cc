@@ -496,14 +496,14 @@ Database::~Database()
 
 
 long long
-Database::read_mastery(const std::string& dir)
+Database::read_mastery(const Endpoint& endpoint)
 {
 	L_CALL(this, "Database::read_mastery()");
 
-	if (!local) return -1;
 	if (mastery_level != -1) return mastery_level;
+	if (!endpoint.is_local()) return -1;
 
-	mastery_level = ::read_mastery(dir, true);
+	mastery_level = ::read_mastery(endpoint.path, true);
 
 	return mastery_level;
 }
@@ -544,26 +544,26 @@ Database::reopen()
 		if (endpoints_size != 1) {
 			L_ERR(this, "ERROR: Expecting exactly one database, %d requested: %s", endpoints_size, endpoints.as_string().c_str());
 		} else {
-			auto e = &*i;
+			auto& e = *i;
 			bool local = false;
-			if (e->is_local()) {
+			if (e.is_local()) {
 				local = true;
 #ifdef XAPIAND_DATABASE_WAL
-				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC : Xapian::DB_OPEN | Xapian::DB_NO_SYNC);
+				wdb = Xapian::WritableDatabase(e.path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC : Xapian::DB_OPEN | Xapian::DB_NO_SYNC);
 #else
-				wdb = Xapian::WritableDatabase(e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
+				wdb = Xapian::WritableDatabase(e.path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 #endif
 
-				if (endpoints_size == 1) read_mastery(e->path);
+				if (endpoints_size == 1) read_mastery(e);
 			}
 #ifdef XAPIAND_CLUSTERING
 			else {
 				// Writable remote databases do not have a local fallback
-				int port = (e->port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e->port;
+				int port = (e.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e.port;
 #ifdef XAPIAND_DATABASE_WAL
-				wdb = Xapian::Remote::open_writable(e->host, port, 0, 10000, e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC : Xapian::DB_OPEN | Xapian::DB_NO_SYNC);
+				wdb = Xapian::Remote::open_writable(e.host, port, 0, 10000, e.path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC : Xapian::DB_OPEN | Xapian::DB_NO_SYNC);
 #else
-				wdb = Xapian::Remote::open_writable(e->host, port, 0, 10000, e->path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
+				wdb = Xapian::Remote::open_writable(e->host, port, 0, 10000, e.path, (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN);
 #endif
 			}
 #endif
@@ -583,46 +583,48 @@ Database::reopen()
 			if (local && !(flags & DB_NOWAL)) {
 				// WAL required on a local writable database, open it.
 				wal = std::make_unique<DatabaseWAL>(this);
-				wal->open_current(e->path, true);
+				if (wal->open_current(e.path, true)) {
+					modified = true;
+				}
 			}
 #endif
 		}
 	} else {
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.cend(); ++i) {
-			auto e = &*i;
+			auto& e = *i;
 			bool local = false;
-			if (e->is_local()) {
+			if (e.is_local()) {
 				local = true;
 				try {
-					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
-					if (endpoints_size == 1) read_mastery(e->path);
+					rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
+					if (endpoints_size == 1) read_mastery(e);
 				} catch (const Xapian::DatabaseOpeningError& exc) {
 					if (!(flags & DB_SPAWN))  {
 						db.reset();
 						throw;
 					}
 #ifdef XAPIAND_DATABASE_WAL
-					wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC);
+					wdb = Xapian::WritableDatabase(e.path, Xapian::DB_CREATE_OR_OPEN | Xapian::DB_NO_SYNC);
 #else
 					wdb = Xapian::WritableDatabase(e->path, Xapian::DB_CREATE_OR_OPEN);
 #endif
-					rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
-					if (endpoints_size == 1) read_mastery(e->path);
+					rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
+					if (endpoints_size == 1) read_mastery(e);
 				}
 			}
 #ifdef XAPIAND_CLUSTERING
 			else {
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
-				int port = (e->port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e->port;
-				rdb = Xapian::Remote::open(e->host, port, 0, 10000, e->path);
+				int port = (e.port == XAPIAND_BINARY_SERVERPORT) ? XAPIAND_BINARY_PROXY : e.port;
+				rdb = Xapian::Remote::open(e.host, port, 0, 10000, e.path);
 				try {
-					ldb = Xapian::Database(e->path, Xapian::DB_OPEN);
+					ldb = Xapian::Database(e.path, Xapian::DB_OPEN);
 					if (ldb.get_uuid() == rdb.get_uuid()) {
 						L_DATABASE(this, "Endpoint %s fallback to local database!", e->as_string().c_str());
 						// Handle remote endpoints and figure out if the endpoint is a local database
-						rdb = Xapian::Database(e->path, Xapian::DB_OPEN);
+						rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
 						local = true;
-						if (endpoints_size == 1) read_mastery(e->path);
+						if (endpoints_size == 1) read_mastery(e);
 					}
 				} catch (const Xapian::DatabaseOpeningError& exc) { }
 # else

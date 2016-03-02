@@ -268,7 +268,6 @@ public:
 	std::weak_ptr<DatabaseQueue> weak_queue;
 	Endpoints endpoints;
 	int flags;
-	bool local;
 	size_t hash;
 	system_clock::time_point access_time;
 	bool modified;
@@ -297,7 +296,7 @@ public:
 	Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints, int flags);
 	~Database();
 
-	long long read_mastery(const std::string& dir);
+	long long read_mastery(const Endpoint& endpoint);
 	bool reopen();
 
 #ifdef XAPIAND_DATA_STORAGE
