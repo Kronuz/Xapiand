@@ -43,7 +43,7 @@ class Exception : public std::runtime_error {
 protected:
 	std::string msg;
 	std::string context;
-
+	std::string traceback;
 
 public:
 	Exception(const char *filename, int line, const char *format="", ...);
@@ -55,6 +55,10 @@ public:
 
 	const char* get_context() const noexcept {
 		return context.c_str();
+	}
+
+	const char* get_traceback() const noexcept {
+		return traceback.c_str();
 	}
 };
 
