@@ -90,7 +90,7 @@ void WalHeader::validate(void* param)
 bool
 DatabaseWAL::open_current(const std::string& path, bool commited)
 {
-	L_CALL(this, "DatabaseWAL::open()");
+	L_CALL(this, "DatabaseWAL::open_current()");
 
 	uint32_t revision = 0;
 	revision = 0;
@@ -670,7 +670,7 @@ Database::get_uuid() const
 std::string
 Database::get_revision_info() const
 {
-	L_CALL(this, "Database::get_revision_info");
+	L_CALL(this, "Database::get_revision_info()");
 
 #if HAVE_DATABASE_REVISION_INFO
 	return db->get_revision_info();
@@ -1453,6 +1453,8 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 void
 Database::storage_pull_data(Xapian::Document& doc)
 {
+	L_CALL(this, "Database::storage_pull_data()");
+
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
 	auto& storage = storages[subdatabase];
 	if (!storage) {
@@ -1485,6 +1487,8 @@ Database::storage_pull_data(Xapian::Document& doc)
 void
 Database::storage_push_data(Xapian::Document& doc)
 {
+	L_CALL(this, "Database::storage_push_data()");
+
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
 	auto& storage = storages[subdatabase];
 	if (!storage) {
@@ -2603,6 +2607,8 @@ DatabaseQueue::~DatabaseQueue()
 bool
 DatabaseQueue::inc_count(int max)
 {
+	L_CALL(this, "DatabaseQueue::inc_count()");
+
 	std::unique_lock<std::mutex> lk(_mutex);
 
 	if (count == 0) {
@@ -2625,6 +2631,8 @@ DatabaseQueue::inc_count(int max)
 bool
 DatabaseQueue::dec_count()
 {
+	L_CALL(this, "DatabaseQueue::dec_count()");
+
 	std::unique_lock<std::mutex> lk(_mutex);
 
 	if (count <= 0) {
@@ -2662,6 +2670,8 @@ DatabasePool::~DatabasePool()
 void
 DatabasePool::add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
+	L_CALL(this, "DatabasePool::add_endpoint_queue()");
+
 	size_t hash = endpoint.hash();
 	auto& queues_set = queues[hash];
 	queues_set.insert(queue);
@@ -2671,6 +2681,8 @@ DatabasePool::add_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr
 void
 DatabasePool::drop_endpoint_queue(const Endpoint& endpoint, const std::shared_ptr<DatabaseQueue>& queue)
 {
+	L_CALL(this, "DatabasePool::drop_endpoint_queue()");
+
 	size_t hash = endpoint.hash();
 	auto& queues_set = queues[hash];
 	queues_set.erase(queue);
@@ -2923,6 +2935,8 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 bool
 DatabasePool::_switch_db(const Endpoint& endpoint)
 {
+	L_CALL(this, "DatabasePool::_switch_db()");
+
 	auto queues_set = queues[endpoint.hash()];
 
 	bool switched = true;
@@ -2952,6 +2966,8 @@ DatabasePool::_switch_db(const Endpoint& endpoint)
 bool
 DatabasePool::switch_db(const Endpoint& endpoint)
 {
+	L_CALL(this, "DatabasePool::switch_db()");
+
 	std::lock_guard<std::mutex> lk(qmtx);
 	return _switch_db(endpoint);
 }
@@ -2960,6 +2976,8 @@ DatabasePool::switch_db(const Endpoint& endpoint)
 void
 DatabasePool::init_ref(const Endpoint& endpoint)
 {
+	L_CALL(this, "DatabasePool::init_ref()");
+
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
@@ -2991,6 +3009,8 @@ DatabasePool::init_ref(const Endpoint& endpoint)
 void
 DatabasePool::inc_ref(const Endpoint& endpoint)
 {
+	L_CALL(this, "DatabasePool::inc_ref()");
+
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
@@ -3033,6 +3053,8 @@ DatabasePool::inc_ref(const Endpoint& endpoint)
 void
 DatabasePool::dec_ref(const Endpoint& endpoint)
 {
+	L_CALL(this, "DatabasePool::dec_ref()");
+
 	Endpoints ref_endpoints;
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
