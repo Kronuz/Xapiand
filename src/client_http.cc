@@ -1080,7 +1080,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 			size_t path_size = u.field_data[3].len;
 			std::string path_buf(b.c_str() + u.field_data[3].off, u.field_data[3].len);
 
-			endpoints.clear_all();
+			endpoints.clear();
 
 			parser_url_path_t p;
 			memset(&p, 0, sizeof(p));

@@ -153,9 +153,9 @@ public:
 	size_t hash() const;
 	std::string as_string() const;
 
-	void clear_all() {
+	void clear() {
 		endpoints.clear();
-		clear();
+		std::vector<Endpoint>::clear();
 	}
 
 	void add(const Endpoint& endpoint) {

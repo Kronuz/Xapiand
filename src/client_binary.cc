@@ -595,7 +595,7 @@ BinaryClient::msg_select(const std::string &message)
 	const char *p_end = p + message.size();
 
 	writable = false;
-	endpoints.clear_all();
+	endpoints.clear();
 	while (p != p_end) {
 		size_t len = unserialise_length(&p, p_end, true);
 		endpoints.add(Endpoint(std::string(p, len)));
@@ -1269,7 +1269,7 @@ BinaryClient::msg_get_changesets(const std::string &)
 
 	// // Select endpoints and get database
 	// try {
-	// 	endpoints.clear_all();
+	// 	endpoints.clear();
 	// 	Endpoint endpoint(index_path);
 	// 	endpoints.add(endpoint);
 	// 	db_ = get_db();
