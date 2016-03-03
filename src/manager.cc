@@ -523,6 +523,10 @@ XapiandManager::run(const opts_t& o)
 
 	discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 
+	thread_pool.finish();
+	L_DEBUG(this, "Waiting for worker threads (%zu)...", thread_pool.size());
+	thread_pool.join();
+
 	server_pool.finish();
 	L_DEBUG(this, "Waiting for servers (%zu)...", server_pool.size());
 	server_pool.join();
