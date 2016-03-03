@@ -419,6 +419,10 @@ XapiandManager::sig_shutdown_handler(int sig)
 		XapiandManager::shutdown_asap = now;
 	}
 
+	if (XapiandServer::http_clients <= 0) {
+		XapiandManager::shutdown_now = now;
+	}
+
 	bool shutdown_asap = bool(XapiandManager::shutdown_asap);
 	bool shutdown_now = bool(XapiandManager::shutdown_now);
 

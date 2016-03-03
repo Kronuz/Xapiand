@@ -98,9 +98,6 @@ XapiandServer::shutdown(bool asap, bool now)
 	Worker::shutdown(asap, now);
 
 	if (asap) {
-		if (http_clients <= 0) {
-			now = true;
-		}
 		destroy();
 	}
 
