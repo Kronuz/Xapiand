@@ -49,6 +49,7 @@
 static const std::regex time_re("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
 
 
+std::atomic<time_t> XapiandManager::initialized(0);
 std::atomic<time_t> XapiandManager::shutdown_asap(0);
 std::atomic<time_t> XapiandManager::shutdown_now(0);
 
@@ -386,6 +387,10 @@ XapiandManager::host_address()
 void
 XapiandManager::sig_shutdown_handler(int sig)
 {
+	if (!XapiandManager::initialized) {
+		return;
+	}
+
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
 	 * the user really wanting to quit ASAP without waiting to persist
@@ -540,6 +545,8 @@ XapiandManager::run(const opts_t& o)
 		o.num_committers, (o.num_committers == 1) ? "" : "s",
 		o.num_replicators, (o.num_replicators == 1) ? "" : "s"
 	);
+
+	XapiandManager::initialized = epoch::now<>();
 
 	L_INFO(this, "Joining cluster %s...", cluster_name.c_str());
 

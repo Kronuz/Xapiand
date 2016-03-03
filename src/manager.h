@@ -119,6 +119,7 @@ public:
 	ThreadPool<> replicator_pool;
 	ThreadPool<> autocommit_pool;
 
+	static std::atomic<time_t> initialized;
 	static std::atomic<time_t> shutdown_asap;
 	static std::atomic<time_t> shutdown_now;
 
