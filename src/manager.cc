@@ -411,7 +411,11 @@ XapiandManager::sig_shutdown_handler(int sig)
 	if (now > XapiandManager::shutdown_asap + 1) {
 		XapiandManager::shutdown_asap = now;
 	}
-	shutdown();
+
+	bool shutdown_asap = bool(XapiandManager::shutdown_asap);
+	bool shutdown_now = bool(XapiandManager::shutdown_now);
+
+	shutdown(shutdown_asap, shutdown_now);
 }
 
 
@@ -434,19 +438,21 @@ XapiandManager::async_shutdown_cb(ev::async&, int)
 
 
 void
-XapiandManager::shutdown()
+XapiandManager::shutdown(bool asap, bool now)
 {
-	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER ! [%p]", this);
+	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER! (%d %d) [%p]", asap, now, this);
 
-	Worker::shutdown();
+	Worker::shutdown(asap, now);
 
-	if (XapiandManager::shutdown_asap) {
-		destroy();
-		L_OBJ(this, "Finishing thread pool!");
-		thread_pool.finish();
+	for (auto& commiter: committers) {
+		commiter->shutdown(asap, now);
 	}
 
-	if (XapiandManager::shutdown_now) {
+	if (asap) {
+		destroy();
+	}
+
+	if (now) {
 		L_EV(this, "Breaking Manager loop!");
 		break_loop();
 	}
@@ -496,7 +502,6 @@ XapiandManager::run(const opts_t& o)
 	}
 
 	ThreadPool<> autocommit_pool("C%02zu", o.num_committers);
-	std::vector<std::shared_ptr<DatabaseAutocommit>> committers;
 	for (size_t i = 0; i < o.num_committers; ++i) {
 		auto dbcommit = std::make_shared<DatabaseAutocommit>(manager);
 		autocommit_pool.enqueue(dbcommit);
@@ -523,24 +528,25 @@ XapiandManager::run(const opts_t& o)
 
 	discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 
-	thread_pool.finish();
-	L_DEBUG(this, "Waiting for worker threads (%zu)...", thread_pool.size());
-	thread_pool.join();
-
+	L_OBJ(this, "Finishing servers pool!");
 	server_pool.finish();
 	L_DEBUG(this, "Waiting for servers (%zu)...", server_pool.size());
 	server_pool.join();
 
+	L_OBJ(this, "Finishing replicators pool!");
 	replicator_pool.finish();
 	L_DEBUG(this, "Waiting for replicators (%zu)...", replicator_pool.size());
 	replicator_pool.join();
 
+	L_OBJ(this, "Finishing commiters pool!");
 	autocommit_pool.finish();
-	for (auto& commiter: committers) {
-		commiter->shutdown();
-	}
 	L_DEBUG(this, "Waiting for committers (%zu)...", autocommit_pool.size());
 	autocommit_pool.join();
+
+	L_OBJ(this, "Finishing worker threads pool!");
+	thread_pool.finish();
+	L_DEBUG(this, "Waiting for worker threads (%zu)...", thread_pool.size());
+	thread_pool.join();
 
 	http.reset();
 	binary.reset();

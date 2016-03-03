@@ -62,9 +62,11 @@ XapiandReplicator::run()
 
 
 void
-XapiandReplicator::shutdown()
+XapiandReplicator::shutdown(bool asap, bool now)
 {
-	L_OBJ(this , "SHUTDOWN XAPIAN REPLICATOR! [%p]", this);
+	L_OBJ(this , "SHUTDOWN XAPIAN REPLICATOR! (%d %d) [%p]", asap, now, this);
 
 	manager()->database_pool.updated_databases.finish();
+
+	Worker::shutdown(asap, now);
 }

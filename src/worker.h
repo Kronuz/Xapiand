@@ -101,14 +101,14 @@ public:
 		L_OBJ(this, "DELETED WORKER! [%p]", this);
 	}
 
-	virtual void shutdown() {
+	virtual void shutdown(bool asap=true, bool now=true) {
 		L_OBJ(this , "SHUTDOWN WORKER! [%p]", this);
 
 		std::unique_lock<std::mutex> lk(_mtx);
 		for (auto it = _children.begin(); it != _children.end();) {
 			auto child = *it++;
 			lk.unlock();
-			child->shutdown();
+			child->shutdown(asap, now);
 			child->detach();
 			lk.lock();
 		}

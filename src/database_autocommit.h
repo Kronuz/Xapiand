@@ -59,7 +59,7 @@ public:
 	~DatabaseAutocommit();
 
 	static void signal_changed(const std::shared_ptr<Database>& database);
-	void shutdown();
+	void shutdown(bool asap=true, bool now=true);
 
 	void run() override;
 };

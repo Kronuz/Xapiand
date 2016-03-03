@@ -327,11 +327,11 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 
 
 void
-BinaryClient::shutdown()
+BinaryClient::shutdown(bool asap, bool now)
 {
-	L_OBJ(this , "SHUTDOWN BINARY CLIENT! [%p]", this);
+	L_OBJ(this , "SHUTDOWN BINARY CLIENT! (%d %d) [%p]", asap, now, this);
 
-	BaseClient::shutdown();
+	BaseClient::shutdown(asap, now);
 }
 
 

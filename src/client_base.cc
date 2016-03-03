@@ -566,15 +566,15 @@ BaseClient::async_read_cb(ev::async &, int)
 
 
 void
-BaseClient::shutdown()
+BaseClient::shutdown(bool asap, bool now)
 {
-	L_OBJ(this , "SHUTDOWN BASE CLIENT! [%p]", this);
+	L_OBJ(this , "SHUTDOWN BASE CLIENT! (%d %d) [%p]", asap, now, this);
 
 	::shutdown(sock, SHUT_RDWR);
 
-	Worker::shutdown();
+	Worker::shutdown(asap, now);
 
-	if (XapiandManager::shutdown_now) {
+	if (now) {
 		L_EV(this, "Signaled destroy!!");
 		destroy();
 	}

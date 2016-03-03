@@ -58,5 +58,5 @@ public:
 	}
 
 	void run() override;
-	void shutdown() override;
+	void shutdown(bool asap=true, bool now=true) override;
 };

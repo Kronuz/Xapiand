@@ -148,6 +148,6 @@ protected:
 
 
 public:
-	void shutdown() override;
+	void shutdown(bool asap=true, bool now=true) override;
 	void destroy();
 };

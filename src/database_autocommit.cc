@@ -52,9 +52,9 @@ DatabaseAutocommit::~DatabaseAutocommit()
 
 
 void
-DatabaseAutocommit::shutdown()
+DatabaseAutocommit::shutdown(bool asap, bool now)
 {
-	L_OBJ(this , "SHUTDOWN AUTOCOMMIT! [%p]", this);
+	L_OBJ(this , "SHUTDOWN AUTOCOMMIT! (%d %d) [%p]", asap, now, this);
 
 	running.store(false);
 	wakeup_signal.notify_all();

@@ -89,22 +89,20 @@ XapiandServer::destroy()
 
 
 void
-XapiandServer::shutdown()
+XapiandServer::shutdown(bool asap, bool now)
 {
-	L_OBJ(this , "SHUTDOWN XAPIAN SERVER! [%p]", this);
+	L_OBJ(this , "SHUTDOWN XAPIAN SERVER! (%d %d) [%p]", asap, now, this);
 
-	Worker::shutdown();
+	Worker::shutdown(asap, now);
 
-	time_t shutdown_asap = XapiandManager::shutdown_asap;
-	if (shutdown_asap) {
+	if (asap) {
 		if (http_clients <= 0) {
-			XapiandManager::shutdown_now.store(shutdown_asap);
+			now = true;
 		}
 		destroy();
 	}
 
-	time_t shutdown_now = XapiandManager::shutdown_now;
-	if (shutdown_now) {
+	if (now) {
 		L_EV(this, "Breaking Server loop!");
 		break_loop();
 	}

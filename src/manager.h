@@ -70,6 +70,7 @@ class Binary;
 class Discovery;
 class Raft;
 class XapiandServer;
+class DatabaseAutocommit;
 
 
 class XapiandManager : public Worker  {
@@ -120,6 +121,7 @@ public:
 	std::shared_ptr<Binary> binary;
 	std::shared_ptr<Discovery> discovery;
 	std::shared_ptr<Raft> raft;
+	std::vector<std::shared_ptr<DatabaseAutocommit>> committers;
 
 	State state;
 	std::string cluster_name;
@@ -133,7 +135,7 @@ public:
 
 	void run(const opts_t& o);
 	void sig_shutdown_handler(int sig);
-	void shutdown() override;
+	void shutdown(bool asap=true, bool now=true) override;
 
 	void reset_state();
 	bool is_single_node();
