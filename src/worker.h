@@ -33,7 +33,8 @@
 
 
 class Worker : public std::enable_shared_from_this<Worker> {
-	using WorkerList = std::list<std::shared_ptr<Worker>>;
+	using WorkerShared = std::shared_ptr<Worker>;
+	using WorkerList = std::list<WorkerShared>;
 
 protected:
 	ev::loop_ref *loop;
@@ -44,7 +45,7 @@ protected:
 
 	std::mutex _mtx;
 
-	const std::shared_ptr<Worker> _parent;
+	const WorkerShared _parent;
 	WorkerList _children;
 
 	// _iterator should be const_iterator but in linux, std::list member functions
