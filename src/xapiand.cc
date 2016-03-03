@@ -76,7 +76,11 @@ void run(const opts_t &opts) {
 	ev::default_loop default_loop;
 	manager = Worker::make_shared<XapiandManager>(&default_loop, opts);
 	manager->run(opts);
-	L_DEBUG(nullptr, "Manager use count = %d", manager.use_count());
+	if (manager.use_count() == 1) {
+		L_NOTICE(nullptr, "Xapiand is cleanly done with all work!");
+	} else {
+		L_WARNING(nullptr, "Xapiand is uncleanly done with all work!");
+	}
 	manager.reset();
 }
 
@@ -636,6 +640,5 @@ int main(int argc, char **argv) {
 		L_INFO(nullptr, "Removing the pid file.");
 		unlink(opts.pidfile.c_str());
 	}
-	L_NOTICE(nullptr, "Xapiand is done with all work!");
 	return 0;
 }
