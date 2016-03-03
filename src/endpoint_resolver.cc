@@ -90,7 +90,9 @@ bool EndpointList::resolve_endpoint(const std::string &path, std::shared_ptr<Xap
 			initial_status = State::NEW;
 			elapsed = timeout;
 		} else if (elapsed > 1h) {
-			manager->discovery->send_message(Discovery::Message::DB, serialise_string(path));
+			if (auto discovery = manager->proto_discovery.lock()) {
+				discovery->send_message(Discovery::Message::DB, serialise_string(path));
+			}
 		}
 	}
 
@@ -99,7 +101,9 @@ bool EndpointList::resolve_endpoint(const std::string &path, std::shared_ptr<Xap
 			case State::NEW:
 				init_time = system_clock::now();
 
-				manager->discovery->send_message(Discovery::Message::DB, serialise_string(path));
+				if (auto discovery = manager->proto_discovery.lock()) {
+					discovery->send_message(Discovery::Message::DB, serialise_string(path));
+				}
 
 				next_wake = init_time + init_timeout;
 

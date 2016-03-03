@@ -108,6 +108,10 @@ public:
 	};
 
 	std::vector<std::weak_ptr<XapiandServer>> servers;
+	std::weak_ptr<Http> proto_http;
+	std::weak_ptr<Binary> proto_binary;
+	std::weak_ptr<Discovery> proto_discovery;
+	std::weak_ptr<Raft> proto_raft;
 
 	DatabasePool database_pool;
 	ThreadPool<> thread_pool;
@@ -121,11 +125,6 @@ public:
 	ev::async async_shutdown;
 
 	EndpointResolver endp_r;
-
-	std::shared_ptr<Http> http;
-	std::shared_ptr<Binary> binary;
-	std::shared_ptr<Discovery> discovery;
-	std::shared_ptr<Raft> raft;
 
 	State state;
 	std::string cluster_name;

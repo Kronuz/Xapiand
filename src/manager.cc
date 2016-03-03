@@ -256,7 +256,9 @@ XapiandManager::reset_state()
 {
 	if (state != State::RESET) {
 		state = State::RESET;
-		discovery->start();
+		if (auto discovery = proto_discovery.lock()) {
+			discovery->start();
+		}
 	}
 }
 
@@ -484,18 +486,18 @@ XapiandManager::run(const opts_t& o)
 
 	auto manager = share_this<XapiandManager>();
 
-	http = Worker::make_shared<Http>(manager, loop, o.http_port);
+	auto http = Worker::make_shared<Http>(manager, loop, o.http_port);
 	msg += http->getDescription() + ", ";
 
 #ifdef XAPIAND_CLUSTERING
-	binary = Worker::make_shared<Binary>(manager, loop, o.binary_port);
+	auto binary = Worker::make_shared<Binary>(manager, loop, o.binary_port);
 	msg += binary->getDescription() + ", ";
 #endif
 
-	discovery = Worker::make_shared<Discovery>(manager, loop, o.discovery_port, o.discovery_group);
+	auto discovery = Worker::make_shared<Discovery>(manager, loop, o.discovery_port, o.discovery_group);
 	msg += discovery->getDescription() + ", ";
 
-	raft = Worker::make_shared<Raft>(manager, loop, o.raft_port, o.raft_group);
+	auto raft = Worker::make_shared<Raft>(manager, loop, o.raft_port, o.raft_group);
 	msg += raft->getDescription() + ", ";
 
 	msg += "at pid:" + std::to_string(getpid()) + " ...";
@@ -523,6 +525,12 @@ XapiandManager::run(const opts_t& o)
 		autocommit_pool.enqueue(dbcommit);
 	}
 
+	// Make server protocols weak:
+	proto_http = std::move(http);
+	proto_binary = std::move(binary);
+	proto_discovery = discovery; // keep discover (it'll be used below)
+	proto_raft = std::move(raft);
+
 	L_NOTICE(this, "Started %d server%s"
 			 ", %d worker thread%s"
 			 ", %d autocommitter%s"
@@ -542,6 +550,7 @@ XapiandManager::run(const opts_t& o)
 	L_EV(this, "Manager loop ended!");
 
 	discovery->send_message(Discovery::Message::BYE, local_node.serialise());
+	discovery.reset(); // release discovery
 
 	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.size(), (server_pool.size() == 1) ? "" : "s");
 	server_pool.join();
@@ -556,11 +565,6 @@ XapiandManager::run(const opts_t& o)
 	thread_pool.finish();
 	L_DEBUG(this, "Waiting for %zu worker thread%s...", thread_pool.size(), (thread_pool.size() == 1) ? "" : "s");
 	thread_pool.join();
-
-	http.reset();
-	binary.reset();
-	discovery.reset();
-	raft.reset();
 
 	L_DEBUG(this, "Server ended!");
 }
@@ -580,21 +584,23 @@ XapiandManager::get_region(const std::string& db_name)
 int
 XapiandManager::get_region()
 {
-	if (local_node.regions.load() == -1) {
-		if (is_single_node()) {
-			local_node.regions.store(1);
-			local_node.region.store(0);
-			raft->stop();
-		} else {
-			raft->start();
-			local_node.regions.store(sqrt(nodes.size() + 1));
-			int region = jump_consistent_hash(local_node.id, local_node.regions.load());
-			if (local_node.region.load() != region) {
-				local_node.region.store(region);
-				raft->reset();
+	if (auto raft = proto_raft.lock()) {
+		if (local_node.regions.load() == -1) {
+			if (is_single_node()) {
+				local_node.regions.store(1);
+				local_node.region.store(0);
+				raft->stop();
+			} else {
+				raft->start();
+				local_node.regions.store(sqrt(nodes.size() + 1));
+				int region = jump_consistent_hash(local_node.id, local_node.regions.load());
+				if (local_node.region.load() != region) {
+					local_node.region.store(region);
+					raft->reset();
+				}
 			}
+			L_RAFT(this, "Regions: %d Region: %d", local_node.regions.load(), local_node.region.load());
 		}
-		L_RAFT(this, "Regions: %d Region: %d", local_node.regions.load(), local_node.region.load());
 	}
 	return local_node.region.load();
 }
@@ -604,7 +610,10 @@ XapiandManager::get_region()
 std::future<bool>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
-	return binary->trigger_replication(src_endpoint, dst_endpoint);
+	if (auto binary = proto_binary.lock()) {
+		return binary->trigger_replication(src_endpoint, dst_endpoint);
+	}
+	return std::future<bool>();
 }
 #endif
 
