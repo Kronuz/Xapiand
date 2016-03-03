@@ -36,8 +36,8 @@
 #include <netdb.h> /* for getaddrinfo */
 
 
-BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, const std::string &description_, int tries_, int flags_)
-	: manager(manager_),
+BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, int tries_, int flags_)
+	: Worker(manager_, loop_),
 	  port(port_),
 	  flags(flags_),
 	  description(description_)

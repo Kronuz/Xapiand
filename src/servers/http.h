@@ -32,7 +32,7 @@ class Http : public BaseTCP {
 	friend HttpServer;
 
 public:
-	Http(const std::shared_ptr<XapiandManager>& manager_, int port_);
+	Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_);
 	~Http();
 
 	std::string getDescription() const noexcept override;

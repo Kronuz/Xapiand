@@ -95,7 +95,7 @@ public:
 			election_leader.start();
 			L_RAFT(this, "Raft was started!");
 		}
-		number_servers.store(manager->get_nodes_by_region(local_node.region.load()) + 1);
+		number_servers.store(manager()->get_nodes_by_region(local_node.region.load()) + 1);
 	}
 
 	inline void stop() {
@@ -108,6 +108,6 @@ public:
 			number_servers.store(1);
 			L_RAFT(this, "Raft was stopped!");
 		}
-		number_servers.store(manager->get_nodes_by_region(local_node.region.load()) + 1);
+		number_servers.store(manager()->get_nodes_by_region(local_node.region.load()) + 1);
 	}
 };

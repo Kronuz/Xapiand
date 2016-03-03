@@ -58,6 +58,8 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 
 	assert(discovery->sock == watcher.fd || discovery->sock == -1);
 
+	auto m = manager();
+
 	if (revents & EV_READ) {
 		char buf[1024];
 		struct sockaddr_in addr;
@@ -69,12 +71,12 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 		if (received < 0) {
 			if (!ignored_errorno(errno, true)) {
 				L_ERR(this, "ERROR: read error (sock=%d): %s", discovery->sock, strerror(errno));
-				manager()->shutdown();
+				m->shutdown();
 			}
 		} else if (received == 0) {
 			// If no messages are available to be received and the peer has performed an orderly shutdown.
 			L_CONN(this, "Received EOF (sock=%d)!", discovery->sock);
-			manager()->shutdown();
+			m->shutdown();
 		} else {
 			L_UDP_WIRE(this, "Discovery: (sock=%d) -->> '%s'", discovery->sock, repr(buf, received).c_str());
 
@@ -100,7 +102,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 				return;
 			}
-			if (remote_cluster_name != manager()->cluster_name) {
+			if (remote_cluster_name != m->cluster_name) {
 				L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 				return;
 			}
@@ -126,7 +128,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 						// It's me! ...wave hello!
 						discovery->send_message(Discovery::Message::WAVE, local_node.serialise());
 					} else {
-						if (manager()->touch_node(remote_node.name, remote_node.region.load(), &node)) {
+						if (m->touch_node(remote_node.name, remote_node.region.load(), &node)) {
 							if (remote_node == *node) {
 								discovery->send_message(Discovery::Message::WAVE, local_node.serialise());
 							} else {
@@ -139,22 +141,22 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 					break;
 
 				case toUType(Discovery::Message::SNEER):
-					if (manager()->state != XapiandManager::State::READY) {
+					if (m->state != XapiandManager::State::READY) {
 						if (remote_node.unserialise(&ptr, end) == -1) {
 							L_DISCOVERY(this, "Badly formed message: No proper node!");
 							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 						if (remote_node == local_node) {
-							if (manager()->node_name.empty()) {
+							if (m->node_name.empty()) {
 								L_DISCOVERY(this, "Node name %s already taken. Retrying other name...", local_node.name.c_str());
-								manager()->reset_state();
+								m->reset_state();
 							} else {
 								L_ERR(this, "Cannot join the party. Node name %s already taken!", local_node.name.c_str());
-								manager()->state = XapiandManager::State::BAD;
+								m->state = XapiandManager::State::BAD;
 								local_node.name.clear();
-								manager()->shutdown_asap = now;
-								manager()->async_shutdown.send();
+								m->shutdown_asap = now;
+								m->async_shutdown.send();
 							}
 						}
 					}
@@ -174,25 +176,25 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 						region = remote_node.region.load();
 					}
 
-					if (manager()->touch_node(remote_node.name, region, &node)) {
+					if (m->touch_node(remote_node.name, region, &node)) {
 						if (remote_node != *node && remote_node.name != local_node.name) {
 							if (cmd == toUType(Discovery::Message::HEARTBEAT) || node->touched < now - HEARTBEAT_MAX) {
-								manager()->drop_node(remote_node.name);
+								m->drop_node(remote_node.name);
 								L_INFO(this, "Stalled node %s left the party!", remote_node.name.c_str());
-								if (manager()->put_node(remote_node)) {
+								if (m->put_node(remote_node)) {
 									L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 									local_node.regions.store(-1);
-									manager()->get_region();
+									m->get_region();
 								} else {
 									L_ERR(this, "ERROR: Cannot register remote node (1): %s", remote_node.name.c_str());
 								}
 							}
 						}
 					} else {
-						if (manager()->put_node(remote_node)) {
+						if (m->put_node(remote_node)) {
 							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 							local_node.regions.store(-1);
-							manager()->get_region();
+							m->get_region();
 						} else {
 							L_ERR(this, "ERROR: Cannot register remote node (2): %s", remote_node.name.c_str());
 						}
@@ -200,29 +202,29 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 					break;
 
 				case toUType(Discovery::Message::BYE):
-					if (manager()->state == XapiandManager::State::READY) {
+					if (m->state == XapiandManager::State::READY) {
 						if (remote_node.unserialise(&ptr, end) == -1) {
 							L_DISCOVERY(this, "Badly formed message: No proper node!");
 							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
-						manager()->drop_node(remote_node.name);
+						m->drop_node(remote_node.name);
 						L_INFO(this, "Node %s left the party!", remote_node.name.c_str());
 						local_node.regions.store(-1);
-						manager()->get_region();
+						m->get_region();
 					}
 					break;
 
 				case toUType(Discovery::Message::DB):
-					if (manager()->state == XapiandManager::State::READY) {
+					if (m->state == XapiandManager::State::READY) {
 						if (unserialise_string(index_path, &ptr, end) == -1) {
 							L_DISCOVERY(this, "Badly formed message: No index path!");
 							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
 
-						if (manager()->get_region() == manager()->get_region(index_path) /* FIXME: missing leader check */) {
-							if (manager()->endp_r.get_master_node(index_path, &node, manager())) {
+						if (m->get_region() == m->get_region(index_path) /* FIXME: missing leader check */) {
+							if (m->endp_r.get_master_node(index_path, &node, m)) {
 								discovery->send_message(
 												Discovery::Message::BOSSY_DB_WAVE,
 												serialise_string(mastery_str) +  // The mastery level of the database
@@ -234,7 +236,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							}
 						}
 
-						mastery_level = manager()->database_pool.get_mastery_level(index_path);
+						mastery_level = m->database_pool.get_mastery_level(index_path);
 						if (mastery_level != -1) {
 								L_DISCOVERY(this, "Found local database '%s' with m:%llx!", index_path.c_str(), mastery_level);
 								mastery_str = std::to_string(mastery_level);
@@ -250,7 +252,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 
 				case toUType(Discovery::Message::DB_WAVE):
 				case toUType(Discovery::Message::BOSSY_DB_WAVE):
-					if (manager()->state == XapiandManager::State::READY) {
+					if (m->state == XapiandManager::State::READY) {
 						if (unserialise_string(mastery_str, &ptr, end) == -1) {
 							L_DISCOVERY(this, "Badly formed message: No proper mastery!");
 							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
@@ -269,26 +271,26 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
 						}
-						if (manager()->put_node(remote_node)) {
+						if (m->put_node(remote_node)) {
 							L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 						}
 
 						L_DISCOVERY(this, "Node %s has '%s' with a mastery of %llx!", remote_node.name.c_str(), index_path.c_str(), remote_mastery_level);
 
-						if (manager()->get_region() == manager()->get_region(index_path)) {
+						if (m->get_region() == m->get_region(index_path)) {
 							L_DEBUG(this, "The DB is in the same region that this cluster!");
 							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
-							manager()->endp_r.add_index_endpoint(index, true, cmd == toUType(Discovery::Message::BOSSY_DB_WAVE));
-						} else if (manager()->endp_r.exists(index_path)) {
+							m->endp_r.add_index_endpoint(index, true, cmd == toUType(Discovery::Message::BOSSY_DB_WAVE));
+						} else if (m->endp_r.exists(index_path)) {
 							L_DEBUG(this, "The DB is in the LRU of this node!");
 							Endpoint index(index_path, &remote_node, remote_mastery_level, remote_node.name);
-							manager()->endp_r.add_index_endpoint(index, false, cmd == toUType(Discovery::Message::BOSSY_DB_WAVE));
+							m->endp_r.add_index_endpoint(index, false, cmd == toUType(Discovery::Message::BOSSY_DB_WAVE));
 						}
 					}
 					break;
 
 				case toUType(Discovery::Message::DB_UPDATED):
-					if (manager()->state == XapiandManager::State::READY) {
+					if (m->state == XapiandManager::State::READY) {
 						if (unserialise_string(mastery_str, &ptr, end) == -1) {
 							L_DISCOVERY(this, "Badly formed message: No proper mastery!");
 							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
@@ -302,7 +304,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 							return;
 						}
 
-						mastery_level = manager()->database_pool.get_mastery_level(index_path);
+						mastery_level = m->database_pool.get_mastery_level(index_path);
 						if (mastery_level == -1) {
 							L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 							return;
@@ -315,7 +317,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 								L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 								return;
 							}
-							if (manager()->put_node(remote_node)) {
+							if (m->put_node(remote_node)) {
 								L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 							}
 
@@ -324,7 +326,7 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 #ifdef XAPIAND_CLUSTERING
 							// Replicate database from the other node
 							L_INFO(this, "Request syncing database from %s...", remote_node.name.c_str());
-							auto ret = manager()->trigger_replication(remote_endpoint, local_endpoint);
+							auto ret = m->trigger_replication(remote_endpoint, local_endpoint);
 							if (ret.get()) {
 								L_INFO(this, "Replication triggered!");
 							}

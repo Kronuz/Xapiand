@@ -57,6 +57,8 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 	assert(raft->sock == watcher.fd || raft->sock == -1);
 
+	auto m = manager();
+
 	if (revents & EV_READ) {
 		char buf[1024];
 		struct sockaddr_in addr;
@@ -67,12 +69,12 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 		if (received < 0) {
 			if (!ignored_errorno(errno, true)) {
 				L_ERR(this, "ERROR: read error (sock=%d): %s", raft->sock, strerror(errno));
-				manager()->shutdown();
+				m->shutdown();
 			}
 		} else if (received == 0) {
 			// If no messages are available to be received and the peer has performed an orderly shutdown.
 			L_CONN(this, "Received EOF (sock=%d)!", raft->sock);
-			manager()->shutdown();
+			m->shutdown();
 		} else {
 			L_UDP_WIRE(this, "Raft: (sock=%d) -->> '%s'", raft->sock, repr(buf, received).c_str());
 
@@ -106,7 +108,7 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 				return;
 			}
 
-			if (remote_cluster_name != manager()->cluster_name || local_node.region.load() != remote_node.region.load()) {
+			if (remote_cluster_name != m->cluster_name || local_node.region.load() != remote_node.region.load()) {
 				L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 				return;
 			}

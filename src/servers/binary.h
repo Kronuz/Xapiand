@@ -42,7 +42,7 @@ class Binary : public BaseTCP {
 	TaskQueue<const std::shared_ptr<BinaryServer>&> tasks;
 
 public:
-	Binary(const std::shared_ptr<XapiandManager>& manager_, int port_);
+	Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_);
 	~Binary();
 
 	std::string getDescription() const noexcept override;

@@ -40,14 +40,12 @@ constexpr double active_timeout = 15;
 
 
 // Base class for configuration data for TCP.
-class BaseTCP {
+class BaseTCP : public Worker {
 private:
 	void bind(int tries);
 	void check_backlog(int backlog);
 
 protected:
-	std::shared_ptr<XapiandManager> manager;
-
 	int port;
 	int sock;
 
@@ -56,7 +54,7 @@ protected:
 	std::string description;
 
 public:
-	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, int port_, const std::string &description_, int tries_, int flags_);
+	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, int tries_, int flags_);
 	virtual ~BaseTCP();
 
 	virtual std::string getDescription() const noexcept = 0;
@@ -64,4 +62,8 @@ public:
 	int accept();
 
 	static int connect(int sock_, const std::string &hostname, const std::string &servname);
+
+	inline decltype(auto) manager() noexcept {
+		return std::static_pointer_cast<XapiandManager>(_parent);
+	}
 };

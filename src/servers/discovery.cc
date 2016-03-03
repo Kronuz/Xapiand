@@ -49,31 +49,34 @@ void
 Discovery::heartbeat_cb(ev::timer &, int)
 {
 	L_EV_BEGIN(this, "Discovery::heartbeat_cb:BEGIN");
-	switch (manager->state) {
+
+	auto m = manager();
+
+	switch (m->state) {
 		case XapiandManager::State::RESET:
 			if (!local_node.name.empty()) {
-				manager->drop_node(local_node.name);
+				m->drop_node(local_node.name);
 			}
-			if (manager->node_name.empty()) {
+			if (m->node_name.empty()) {
 				local_node.name = name_generator();
 			} else {
-				local_node.name = manager->node_name;
+				local_node.name = m->node_name;
 			}
 			L_INFO(this, "Advertising as %s (id: %016llX)...", local_node.name.c_str(), local_node.id);
 			send_message(Message::HELLO, local_node.serialise());
-			manager->state = XapiandManager::State::WAITING;
+			m->state = XapiandManager::State::WAITING;
 			break;
 
 		case XapiandManager::State::WAITING:
-			manager->state = XapiandManager::State::WAITING_;
+			m->state = XapiandManager::State::WAITING_;
 			break;
 
 		case XapiandManager::State::WAITING_:
-			manager->state = XapiandManager::State::SETUP;
+			m->state = XapiandManager::State::SETUP;
 			break;
 
 		case XapiandManager::State::SETUP:
-			manager->setup_node();
+			m->setup_node();
 			break;
 
 		case XapiandManager::State::READY:
@@ -94,7 +97,7 @@ Discovery::send_message(Message type, const std::string &content)
 	if (!content.empty()) {
 		std::string message(1, toUType(type));
 		message.append(std::string((const char *)&XAPIAND_DISCOVERY_PROTOCOL_VERSION, sizeof(uint16_t)));
-		message.append(serialise_string(manager->cluster_name));
+		message.append(serialise_string(manager()->cluster_name));
 		message.append(content);
 		sending_message(message);
 	}

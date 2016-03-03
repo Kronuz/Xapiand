@@ -30,18 +30,14 @@
 
 
 // Base class for UDP messages configuration
-class BaseUDP {
+class BaseUDP : public Worker {
 protected:
-	std::shared_ptr<XapiandManager> manager;
-
 	struct sockaddr_in addr;
 
 	int port;
 	int sock;
 
 	std::string description;
-
-	ev::loop_ref *loop;
 
 	void sending_message(const std::string &message);
 
@@ -52,4 +48,8 @@ public:
 	virtual std::string getDescription() const noexcept = 0;
 
 	void bind(int tries, const std::string &group);
+
+	inline decltype(auto) manager() noexcept {
+		return std::static_pointer_cast<XapiandManager>(_parent);
+	}
 };

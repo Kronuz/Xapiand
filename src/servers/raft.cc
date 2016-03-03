@@ -77,7 +77,10 @@ void
 Raft::leader_election_cb(ev::timer &, int)
 {
 	L_EV_BEGIN(this, "Raft::leader_election_cb:BEGIN");
-	if (manager->state == XapiandManager::State::READY) {
+
+	auto m = manager();
+
+	if (m->state == XapiandManager::State::READY) {
 		// calculate when the timeout would happen
 		ev::tstamp remaining_time = last_activity + election_timeout - ev::now(*loop);
 		L_RAFT(this, "Raft { Reg: %d; State: %d; Rem_t: %f; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
@@ -132,7 +135,7 @@ Raft::send_message(Message type, const std::string &content)
 	if (!content.empty()) {
 		std::string message(1, toUType(type));
 		message.append(std::string((const char *)&XAPIAND_RAFT_PROTOCOL_VERSION, sizeof(uint16_t)));
-		message.append(serialise_string(manager->cluster_name));
+		message.append(serialise_string(manager()->cluster_name));
 		message.append(content);
 		sending_message(message);
 	}
