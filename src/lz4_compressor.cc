@@ -201,6 +201,82 @@ LZ4CompressFile::next()
 }
 
 
+LZ4CompressDescriptor::LZ4CompressDescriptor(int& fildes, int seed)
+	: LZ4BlockStreaming(LZ4_BLOCK_SIZE, seed),
+	  lz4Stream(LZ4_createStream()),
+	  fd(fildes) { }
+
+
+LZ4CompressDescriptor::~LZ4CompressDescriptor()
+{
+	LZ4_freeStream(lz4Stream);
+	XXH32_freeState(xxh_state);
+}
+
+
+std::string
+LZ4CompressDescriptor::init()
+{
+	if (io::lseek(fd, 0, SEEK_SET) != 0) {
+		throw MSG_LZ4IOError("IO error: lseek");
+	}
+
+	if unlikely((data_size = io::read(fd, data, LZ4_FILE_READ_SIZE)) < 0) {
+		throw MSG_LZ4IOError("IO error: read");
+	}
+
+	_size = 0;
+	_finish = false;
+	_offset = 0;
+	return next();
+}
+
+
+std::string
+LZ4CompressDescriptor::next()
+{
+	if (read_bytes == 0) {
+		_finish = true;
+		return std::string();
+	}
+
+	char* const inpPtr = &buffer[_offset];
+
+	// Read line to the ring buffer.
+	int inpBytes = static_cast<int>(io::read(fd, inpPtr, block_size > read_bytes ? read_bytes : block_size));
+	if (inpBytes <= 0) {
+		_finish = true;
+		return std::string();
+	}
+	read_size -= inpBytes;
+
+	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, cmpBuf, inpBytes, cmpBuf_size, 1);
+	if (cmpBytes <= 0) {
+		throw MSG_LZ4Exception("LZ4_compress_fast_continue failed!");
+	}
+
+	size_t blockBytes = sizeof(uint16_t) + cmpBytes;
+	char* const blockStream = (char*)malloc(blockBytes);
+
+	write_uint16(blockStream, (uint16_t)cmpBytes);
+	write_bin(blockStream + sizeof(uint16_t), cmpBuf, cmpBytes);
+
+	// Add and wraparound the ringbuffer offset
+	_offset += inpBytes;
+	if (_offset >= static_cast<size_t>(LZ4_RING_BUFFER_BYTES - block_size)) {
+		_offset = 0;
+	}
+
+	XXH32_update(xxh_state, inpPtr, inpBytes);
+
+	_size += blockBytes;
+	std::string res(blockStream, blockBytes);
+	free(blockStream);
+
+	return res;
+}
+
+
 LZ4DecompressData::LZ4DecompressData(const char* data_, size_t data_size_, int seed)
 	: LZ4BlockStreaming(LZ4_BLOCK_SIZE, seed),
 	  lz4StreamDecode(LZ4_createStreamDecode()),

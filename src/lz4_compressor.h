@@ -250,6 +250,33 @@ public:
 
 
 /*
+ * Compress read_bytes of the descriptor file (fd) from the current position.
+ * Each time that call begin(), compress read_bytes from the current position.
+ */
+class LZ4CompressDescriptor : public LZ4BlockStreaming<LZ4CompressDescriptor> {
+	LZ4_stream_t* const lz4Stream;
+
+	int& fd;
+	ssize_t read_bytes;
+
+	std::string init();
+	std::string next();
+
+	friend class LZ4BlockStreaming<LZ4CompressDescriptor>;
+
+public:
+	LZ4CompressDescriptor(const std::string& filename, int seed=0);
+
+	~LZ4CompressDescriptor();
+
+	inline void reset(size_t read_bytes_, int seed=0) noexcept {
+		read_bytes = read_bytes_;
+		XXH32_reset(xxh_state, seed);
+	}
+};
+
+
+/*
  * Decompress Data.
  */
 class LZ4DecompressData : public LZ4BlockStreaming<LZ4DecompressData> {
