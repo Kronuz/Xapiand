@@ -422,6 +422,7 @@ XapiandManager::sig_shutdown_handler(int sig)
 void
 XapiandManager::destroy()
 {
+	L_OBJ(this, "DESTROYING XAPIAN MANAGER! [%p]", this);
 	L_OBJ(this, "DESTROYED XAPIAN MANAGER! [%p]", this);
 }
 

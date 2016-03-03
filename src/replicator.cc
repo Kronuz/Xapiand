@@ -33,6 +33,7 @@ XapiandReplicator::XapiandReplicator(std::shared_ptr<XapiandManager> manager_, e
 
 XapiandReplicator::~XapiandReplicator()
 {
+	L_OBJ(this, "DESTROYING XAPIAN REPLICATOR! [%p]", this);
 	L_OBJ(this, "DESTROYED XAPIAN REPLICATOR! [%p]", this);
 }
 

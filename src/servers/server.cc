@@ -79,6 +79,8 @@ XapiandServer::async_setup_node_cb(ev::async &, int)
 void
 XapiandServer::destroy()
 {
+	L_OBJ(this, "DESTROYING XAPIAN SERVER! [%p]", this);
+
 	std::lock_guard<std::mutex> lk(qmtx);
 
 	async_setup_node.stop();

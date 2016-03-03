@@ -214,6 +214,7 @@ BaseClient::~BaseClient()
 void
 BaseClient::destroy()
 {
+	L_OBJ(this, "DESTROYING BASE CLIENT! [%p]", this);
 	close();
 
 	std::unique_lock<std::mutex> lk(qmtx);
@@ -575,7 +576,6 @@ BaseClient::shutdown(bool asap, bool now)
 	Worker::shutdown(asap, now);
 
 	if (now) {
-		L_EV(this, "Signaled destroy!!");
 		destroy();
 	}
 }

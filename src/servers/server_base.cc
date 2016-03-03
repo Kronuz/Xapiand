@@ -47,6 +47,8 @@ BaseServer::~BaseServer()
 void
 BaseServer::destroy()
 {
+	L_OBJ(this, "DESTROYING BASE SERVER! [%p]", this);
+
 	io.stop();
 
 	L_OBJ(this, "DESTROYED BASE SERVER! [%p]", this);
