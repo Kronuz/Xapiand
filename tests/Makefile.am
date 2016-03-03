@@ -40,6 +40,7 @@ common_files = \
 	$(top_builddir)/src/log.cc \
 	$(top_builddir)/src/lru.h \
 	$(top_builddir)/src/lz4/lz4.c \
+	$(top_builddir)/src/lz4/xxhash.c \
 	$(top_builddir)/src/lz4_compressor.cc \
 	$(top_builddir)/src/msgpack.cc \
 	$(top_builddir)/src/msgpack_patcher.cc \
