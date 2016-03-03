@@ -80,13 +80,16 @@ protected:
 	}
 
 	template<typename T>
-	void _detach(T&& child) {
+	decltype(auto) _detach(T&& child) {
 		std::lock_guard<std::mutex> lk(_mtx);
 		if (child->_parent && child->_iterator != _children.end()) {
-			_children.erase(child->_iterator);
+			auto it = _children.erase(child->_iterator);
 			child->_iterator = _children.end();
+			L_OBJ(this, "Worker child [%p] detached from [%p]", child.get(), this);
+			return it;
+		} {
+			return _children.end();
 		}
-		L_OBJ(this, "Worker child [%p] detached from [%p]", child.get(), this);
 	}
 
 	inline void _async_break_loop_cb(ev::async &, int) {
@@ -111,10 +114,10 @@ public:
 			auto child = *it++;
 			lk.unlock();
 			child->shutdown(asap, now);
-			if (now) {
-				child->detach();
-			}
 			lk.lock();
+			if (now) {
+				it = _detach(child);
+			}
 		}
 	}
 
