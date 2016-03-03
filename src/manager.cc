@@ -89,8 +89,6 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 
 XapiandManager::~XapiandManager()
 {
-	discovery->send_message(Discovery::Message::BYE, local_node.serialise());
-
 	destroy();
 
 	async_shutdown.stop();
@@ -443,7 +441,6 @@ XapiandManager::shutdown()
 	Worker::shutdown();
 
 	if (XapiandManager::shutdown_asap) {
-		discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 		destroy();
 		L_OBJ(this, "Finishing thread pool!");
 		thread_pool.finish();
@@ -523,6 +520,8 @@ XapiandManager::run(const opts_t& o)
 	L_EV(this, "Starting manager loop...");
 	loop->run();
 	L_EV(this, "Manager loop ended!");
+
+	discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 
 	L_DEBUG(this, "Waiting for servers...");
 	server_pool.finish();
