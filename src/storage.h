@@ -25,10 +25,8 @@
 #include "xapiand.h"
 
 #include "io_utils.h"
-#include "exception.h"
+#include "lz4_compressor.h"
 
-#include <fcntl.h>
-#include <string>
 #include <unistd.h>
 
 #include <limits>
@@ -51,12 +49,15 @@
 
 #define STORAGE_START_BLOCK_OFFSET (STORAGE_BLOCK_SIZE / STORAGE_ALIGNMENT)
 
-#define STORAGE_OPEN           0x00  // Open an existing database.
-#define STORAGE_WRITABLE       0x01  // Opens as writable.
-#define STORAGE_CREATE         0x02  // Automatically creates the database if it doesn't exist
-#define STORAGE_CREATE_OR_OPEN 0x03  // Create database if it doesn't already exist.
-#define STORAGE_NO_SYNC        0x04  // Don't attempt to ensure changes have hit disk.
-#define STORAGE_FULL_SYNC      0x08  // Try to ensure changes are really written to disk.
+
+constexpr int STORAGE_OPEN           = 0x00;  // Open an existing database.
+constexpr int STORAGE_WRITABLE       = 0x01;  // Opens as writable.
+constexpr int STORAGE_CREATE         = 0x02;  // Automatically creates the database if it doesn't exist
+constexpr int STORAGE_CREATE_OR_OPEN = 0x03;  // Create database if it doesn't already exist.
+constexpr int STORAGE_NO_SYNC        = 0x04;  // Don't attempt to ensure changes have hit disk.
+constexpr int STORAGE_FULL_SYNC      = 0x08;  // Try to ensure changes are really written to disk.
+constexpr int STORAGE_COMPRESS       = 0x10;  // Compress data in storage.
+
 
 class StorageException : public Error {
 public:
