@@ -166,6 +166,9 @@ public:
 };
 
 
+/*
+ * Compress Data.
+ */
 class LZ4CompressData : public LZ4BlockStreaming<LZ4CompressData> {
 	LZ4_stream_t* const lz4Stream;
 
@@ -185,6 +188,9 @@ public:
 };
 
 
+/*
+ * Compress a file.
+ */
 class LZ4CompressFile : public LZ4BlockStreaming<LZ4CompressFile> {
 	LZ4_stream_t* const lz4Stream;
 
@@ -202,6 +208,9 @@ public:
 };
 
 
+/*
+ * Decompress Data.
+ */
 class LZ4DecompressData : public LZ4BlockStreaming<LZ4DecompressData> {
 	LZ4_streamDecode_t* const lz4StreamDecode;
 
@@ -221,6 +230,9 @@ public:
 };
 
 
+/*
+ * Decompress a file.
+ */
 class LZ4DecompressFile : public LZ4BlockStreaming<LZ4DecompressFile> {
 	LZ4_streamDecode_t* const lz4StreamDecode;
 
@@ -239,4 +251,35 @@ public:
 	LZ4DecompressFile(const std::string& filename);
 
 	~LZ4DecompressFile();
+};
+
+
+/*
+ * Decompress read_bytes of the descriptor file (fd) from the current position.
+ * Each time that call begin(), decompress read_bytes from the current position.
+ * For update read_bytes call set_read_bytes.
+ */
+class LZ4DecompressDescriptor : public LZ4BlockStreaming<LZ4DecompressDescriptor> {
+	LZ4_streamDecode_t* const lz4StreamDecode;
+
+	int& fd;
+	ssize_t read_bytes;
+
+	char* const data;
+	ssize_t data_size;
+	size_t data_offset;
+
+	std::string init();
+	std::string next();
+
+	friend class LZ4BlockStreaming<LZ4DecompressDescriptor>;
+
+public:
+	LZ4DecompressDescriptor(int& fildes);
+
+	~LZ4DecompressDescriptor();
+
+	inline void set_read_bytes(size_t read_bytes_) noexcept {
+		read_bytes = read_bytes_;
+	}
 };
