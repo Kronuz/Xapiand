@@ -84,13 +84,6 @@ public:
 };
 
 
-class WorkerDetachObject : public Exception {
-public:
-	template<typename... Args>
-	WorkerDetachObject(Args&&... args) : Exception(std::forward<Args>(args)...) { }
-};
-
-
 class SerialisationError : public ClientError, public Xapian::SerialisationError {
 public:
 	template<typename... Args>
@@ -122,7 +115,6 @@ public:
 #define MSG_Error(...) Error(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
-#define MSG_WorkerDetachObject(...) WorkerDetachObject(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_SerialisationError(...) SerialisationError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_DatetimeError(...) DatetimeError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_CartesianError(...) CartesianError(__FILE__, __LINE__, __VA_ARGS__)

@@ -105,11 +105,8 @@ public:
 		for (auto it = _children.begin(); it != _children.end();) {
 			auto child = *it++;
 			lk.unlock();
-			try {
-				child->shutdown();
-			} catch (const WorkerDetachObject& exc) {
-				child->detach();
-			}
+			child->shutdown();
+			child->detach();
 			lk.lock();
 		}
 	}

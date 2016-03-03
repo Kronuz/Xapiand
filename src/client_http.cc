@@ -398,7 +398,6 @@ HttpClient::run()
 	MsgPack err_response;
 	std::string error;
 	const char* error_str;
-	bool detach_needed = false;
 	int error_code = 0;
 
 	try {
@@ -444,11 +443,6 @@ HttpClient::run()
 			error.assign("Unkown Xapian error!");
 		}
 		L_EXC(this, "ERROR: %s", error.c_str());
-	} catch (const WorkerDetachObject& exc) {
-		error_code = 500;
-		detach_needed = true;
-		error.assign(exc.what());
-		L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
 	} catch (const ClientError& exc) {
 		error_code = 400;
 		error.assign(exc.what());
@@ -470,18 +464,8 @@ HttpClient::run()
 		if (database) {
 			manager()->database_pool.checkin(database);
 		}
-
-		if (detach_needed) {
-			detach();
-			return;
-		}
-
 		if (written) {
-			try {
-				destroy();
-			} catch (const WorkerDetachObject& exc) {
-				detach();
-			}
+			destroy();
 		} else {
 			err_response["error"] = error;
 			err_response["status"] = error_code;
