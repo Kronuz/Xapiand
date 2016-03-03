@@ -519,8 +519,7 @@ public:
 		return ret;
 	}
 
-	uint32_t get_volume(const std::string& filename)
-	{
+	uint32_t get_volume(const std::string& filename) {
 		std::size_t found = filename.find_last_of(".");
 		if (found == std::string::npos) {
 			throw std::invalid_argument("Volume not found in " + filename);
