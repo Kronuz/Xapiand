@@ -468,9 +468,7 @@ XapiandManager::shutdown(bool asap, bool now)
 
 	Worker::shutdown(asap, now);
 
-	if (asap) {
-		destroy();
-	}
+	destroy();
 
 	if (now) {
 		L_EV(this, "Breaking Manager loop!");

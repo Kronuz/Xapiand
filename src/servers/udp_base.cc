@@ -71,9 +71,7 @@ BaseUDP::shutdown(bool asap, bool now)
 
 	::shutdown(sock, SHUT_RDWR);
 
-	if (now) {
-		destroy();
-	}
+	destroy();
 }
 
 void
