@@ -105,7 +105,7 @@ BaseUDP::bind(int tries, const std::string &group)
 	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
 		L_CRIT(this, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
-		close(sock);
+		io::close(sock);
 		exit(EX_CONFIG);
 	}
 
@@ -133,7 +133,7 @@ BaseUDP::bind(int tries, const std::string &group)
 	}
 
 	L_CRIT(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
-	close(sock);
+	io::close(sock);
 	exit(EX_CONFIG);
 }
 

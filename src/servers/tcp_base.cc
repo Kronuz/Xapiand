@@ -162,7 +162,7 @@ BaseTCP::bind(int tries)
 	}
 
 	L_CRIT(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
-	close(sock);
+	io::close(sock);
 	exit(EX_CONFIG);
 }
 
@@ -258,7 +258,7 @@ int BaseTCP::connect(int sock_, const std::string &hostname, const std::string &
 	struct addrinfo *result;
 	if (getaddrinfo(hostname.c_str(), servname.c_str(), &hints, &result) < 0) {
 		L_ERR(nullptr, "Couldn't resolve host %s:%s", hostname.c_str(), servname.c_str());
-		close(sock_);
+		io::close(sock_);
 		return -1;
 	}
 
@@ -266,7 +266,7 @@ int BaseTCP::connect(int sock_, const std::string &hostname, const std::string &
 		if (!ignored_errorno(errno, true)) {
 			L_ERR(nullptr, "ERROR: connect error to %s:%s (sock=%d): [%d] %s", hostname.c_str(), servname.c_str(), sock_, errno, strerror(errno));
 			freeaddrinfo(result);
-			close(sock_);
+			io::close(sock_);
 			return -1;
 		}
 	}
