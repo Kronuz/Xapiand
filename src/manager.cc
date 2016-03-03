@@ -57,6 +57,9 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	: Worker(nullptr, loop_),
 	  database_pool(o.dbpool_size),
 	  thread_pool("W%02zu", o.threadpool_size),
+	  server_pool("S%02zu", o.num_servers),
+	  replicator_pool("R%02zu", o.num_replicators),
+	  autocommit_pool("C%02zu", o.num_committers),
 	  async_shutdown(*loop),
 	  endp_r(o.endpoints_list_size),
 	  state(State::RESET),
@@ -445,6 +448,18 @@ XapiandManager::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER! (%d %d)", asap, now);
 
+	L_DEBUG(this, "Finishing servers pool!");
+	server_pool.finish();
+
+	L_DEBUG(this, "Finishing replicators pool!");
+	replicator_pool.finish();
+
+	L_DEBUG(this, "Finishing commiters pool!");
+	autocommit_pool.finish();
+
+	L_DEBUG(this, "Finishing worker threads pool!");
+	thread_pool.finish();
+
 	Worker::shutdown(asap, now);
 
 	if (now) {
@@ -483,7 +498,6 @@ XapiandManager::run(const opts_t& o)
 
 	L_NOTICE(this, msg.c_str());
 
-	ThreadPool<> server_pool("S%02zu", o.num_servers);
 	for (size_t i = 0; i < o.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr);
 		Worker::make_shared<HttpServer>(server, server->loop, http);
@@ -495,12 +509,10 @@ XapiandManager::run(const opts_t& o)
 		server_pool.enqueue(std::move(server));
 	}
 
-	ThreadPool<> replicator_pool("R%02zu", o.num_replicators);
 	for (size_t i = 0; i < o.num_replicators; ++i) {
 		replicator_pool.enqueue(Worker::make_shared<XapiandReplicator>(manager, nullptr));
 	}
 
-	ThreadPool<> autocommit_pool("C%02zu", o.num_committers);
 	for (size_t i = 0; i < o.num_committers; ++i) {
 		auto dbcommit = Worker::make_shared<DatabaseAutocommit>(manager, nullptr);
 		autocommit_pool.enqueue(dbcommit);
@@ -605,7 +617,10 @@ XapiandManager::server_status(MsgPack&& stats)
 	stats["connections"] = XapiandServer::total_clients.load();
 	stats["http_connections"] = XapiandServer::http_clients.load();
 	stats["binary_connections"] = XapiandServer::binary_clients.load();
-	stats["size_threadpool"] = thread_pool.size();
+	stats["workers_pool_size"] = thread_pool.size();
+	stats["servers_pool_size"] = server_pool.size();
+	stats["replicators_pool_size"] = replicator_pool.size();
+	stats["committers_pool_size"] = autocommit_pool.size();
 }
 
 

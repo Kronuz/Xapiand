@@ -109,6 +109,9 @@ public:
 
 	DatabasePool database_pool;
 	ThreadPool<> thread_pool;
+	ThreadPool<> server_pool;
+	ThreadPool<> replicator_pool;
+	ThreadPool<> autocommit_pool;
 
 	static std::atomic<time_t> shutdown_asap;
 	static std::atomic<time_t> shutdown_now;
