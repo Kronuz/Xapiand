@@ -54,7 +54,7 @@ public:
 	~XapiandServer();
 
 	inline decltype(auto) manager() noexcept {
-		return std::static_pointer_cast<XapiandManager>(_parent);
+		return share_parent<XapiandManager>();
 	}
 
 	void run() override;

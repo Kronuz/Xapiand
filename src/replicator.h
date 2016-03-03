@@ -44,7 +44,7 @@ class XapiandReplicator : public Task<>, public Worker {
 public:
 	~XapiandReplicator();
 
-	inline decltype(auto) manager() const noexcept {
-		return std::static_pointer_cast<XapiandManager>(_parent);
+	inline decltype(auto) manager() noexcept {
+		return share_parent<XapiandManager>();
 	}
 };

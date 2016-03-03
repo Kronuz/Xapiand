@@ -45,6 +45,6 @@ public:
 	void shutdown(bool asap, bool now) override;
 
 	inline decltype(auto) manager() noexcept {
-		return std::static_pointer_cast<XapiandServer>(_parent)->manager();
+		return share_parent<XapiandServer>()->manager();
 	}
 };

@@ -100,7 +100,7 @@ public:
 	}
 
 	inline decltype(auto) manager() noexcept {
-		return std::static_pointer_cast<BaseServer>(_parent)->manager();
+		return share_parent<BaseServer>()->manager();
 	}
 
 protected:
