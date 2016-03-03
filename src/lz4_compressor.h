@@ -257,7 +257,7 @@ class LZ4CompressDescriptor : public LZ4BlockStreaming<LZ4CompressDescriptor> {
 	LZ4_stream_t* const lz4Stream;
 
 	int& fd;
-	ssize_t read_bytes;
+	size_t read_bytes;
 
 	std::string init();
 	std::string next();
@@ -330,7 +330,7 @@ class LZ4DecompressDescriptor : public LZ4BlockStreaming<LZ4DecompressDescriptor
 	LZ4_streamDecode_t* const lz4StreamDecode;
 
 	int& fd;
-	ssize_t read_bytes;
+	size_t read_bytes;
 
 	char* const data;
 	ssize_t data_size;
