@@ -109,7 +109,9 @@ public:
 			auto child = *it++;
 			lk.unlock();
 			child->shutdown(asap, now);
-			child->detach();
+			if (now) {
+				child->detach();
+			}
 			lk.lock();
 		}
 	}
