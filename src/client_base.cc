@@ -161,7 +161,7 @@ public:
 };
 
 
-BaseClient::BaseClient(std::shared_ptr<BaseServer> server_, ev::loop_ref *loop_, int sock_)
+BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref *loop_, int sock_)
 	: Worker(std::move(server_), loop_),
 	  io_read(*loop),
 	  io_write(*loop),

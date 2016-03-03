@@ -36,7 +36,7 @@ class XapiandServer : public Task<>, public Worker {
 
 	ev::async async_setup_node;
 
-	XapiandServer(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_);
+	XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
 
 	void destroy();
 

@@ -35,7 +35,7 @@ std::atomic_int XapiandServer::http_clients(0);
 std::atomic_int XapiandServer::binary_clients(0);
 
 
-XapiandServer::XapiandServer(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_)
+XapiandServer::XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_)
 	: Worker(std::move(manager_), loop_),
 	  async_setup_node(*loop)
 {

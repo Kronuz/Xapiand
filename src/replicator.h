@@ -32,7 +32,7 @@
 
 
 class XapiandReplicator : public Task<>, public Worker {
-	XapiandReplicator(std::shared_ptr<XapiandManager> manager_, ev::loop_ref *loop_);
+	XapiandReplicator(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
 
 	void run() override;
 	void shutdown(bool asap=true, bool now=true) override;
