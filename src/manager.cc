@@ -463,7 +463,7 @@ XapiandManager::run(const opts_t& o)
 
 	auto manager = share_this<XapiandManager>();
 
-	auto http = std::make_shared<Http>(manager, o.http_port);
+	http = std::make_shared<Http>(manager, o.http_port);
 	msg += http->getDescription() + ", ";
 
 #ifdef XAPIAND_CLUSTERING
@@ -538,6 +538,11 @@ XapiandManager::run(const opts_t& o)
 		commiter->shutdown();
 	}
 	autocommit_pool.join();
+
+	http.reset();
+	binary.reset();
+	discovery.reset();
+	raft.reset();
 
 	L_DEBUG(this, "Server ended!");
 }

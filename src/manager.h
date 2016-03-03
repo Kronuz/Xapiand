@@ -65,11 +65,9 @@ using opts_t = struct opts_s {
 };
 
 
-class BaseUDP;
+class Http;
 class Binary;
 class Discovery;
-class Http;
-class HttpClient;
 class Raft;
 class XapiandServer;
 
@@ -118,9 +116,10 @@ public:
 
 	EndpointResolver endp_r;
 
-	std::shared_ptr<Raft> raft;
-	std::shared_ptr<Discovery> discovery;
+	std::shared_ptr<Http> http;
 	std::shared_ptr<Binary> binary;
+	std::shared_ptr<Discovery> discovery;
+	std::shared_ptr<Raft> raft;
 
 	State state;
 	std::string cluster_name;
