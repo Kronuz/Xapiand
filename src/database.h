@@ -119,8 +119,8 @@ struct WalBinHeader {
 };
 
 struct WalBinFooter {
-	 uint32_t checksum;
-	 uint8_t magic;
+	uint32_t checksum; // required
+	uint8_t magic;
 
 	inline void init(void*, uint32_t checksum_) {
 		magic = STORAGE_BIN_FOOTER_MAGIC;
@@ -240,7 +240,7 @@ struct DataBinHeader {
 };
 
 struct DataBinFooter {
-	uint32_t checksum;
+	uint32_t checksum; // required
 	uint8_t magic;
 
 	inline void init(void* /* param */, uint32_t checksum_) {
