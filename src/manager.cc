@@ -434,6 +434,16 @@ void
 XapiandManager::destroy()
 {
 	L_OBJ(this, "DESTROYING XAPIAN MANAGER!");
+
+	L_DEBUG(this, "Finishing servers pool!");
+	server_pool.finish();
+
+	L_DEBUG(this, "Finishing replicators pool!");
+	replicator_pool.finish();
+
+	L_DEBUG(this, "Finishing commiters pool!");
+	autocommit_pool.finish();
+
 	L_OBJ(this, "DESTROYED XAPIAN MANAGER!");
 }
 
@@ -455,18 +465,6 @@ void
 XapiandManager::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER! (%d %d)", asap, now);
-
-	L_DEBUG(this, "Finishing servers pool!");
-	server_pool.finish();
-
-	L_DEBUG(this, "Finishing replicators pool!");
-	replicator_pool.finish();
-
-	L_DEBUG(this, "Finishing commiters pool!");
-	autocommit_pool.finish();
-
-	L_DEBUG(this, "Finishing worker threads pool!");
-	thread_pool.finish();
 
 	Worker::shutdown(asap, now);
 
@@ -556,6 +554,8 @@ XapiandManager::run(const opts_t& o)
 	L_DEBUG(this, "Waiting for %zu committer%s...", autocommit_pool.size(), (autocommit_pool.size() == 1) ? "" : "s");
 	autocommit_pool.join();
 
+	L_DEBUG(this, "Finishing worker threads pool!");
+	thread_pool.finish();
 	L_DEBUG(this, "Waiting for %zu worker thread%s...", thread_pool.size(), (thread_pool.size() == 1) ? "" : "s");
 	thread_pool.join();
 
