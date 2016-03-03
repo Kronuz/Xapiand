@@ -175,11 +175,11 @@ public:
 
 	DatabaseWAL (Database* _database)
 	: Storage(), modified(false), database(_database) {
-		L_OBJ(this, "CREATED DATABASE WAL! [%p]", this);
+		L_OBJ(this, "CREATED DATABASE WAL!");
 	}
 
 	~DatabaseWAL() {
-		L_OBJ(this, "DELETED DATABASE WAL! [%p]", this);
+		L_OBJ(this, "DELETED DATABASE WAL!");
 	}
 
 	bool open_current(const std::string& path, bool current);

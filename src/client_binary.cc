@@ -89,7 +89,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *
 
 	L_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.", sock, binary_clients, total_clients);
 
-	L_OBJ(this, "CREATED BINARY CLIENT! (%d clients) [%p]", binary_clients, this);
+	L_OBJ(this, "CREATED BINARY CLIENT! (%d clients)", binary_clients);
 }
 
 
@@ -99,7 +99,7 @@ BinaryClient::~BinaryClient()
 
 	int binary_clients = --XapiandServer::binary_clients;
 
-	L_OBJ(this, "DELETED BINARY CLIENT! (%d clients left) [%p]", binary_clients, this);
+	L_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)", binary_clients);
 	if (binary_clients < 0) {
 		L_CRIT(this, "Inconsistency in number of binary clients");
 		exit(EX_SOFTWARE);
@@ -329,7 +329,7 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 void
 BinaryClient::shutdown(bool asap, bool now)
 {
-	L_OBJ(this , "SHUTDOWN BINARY CLIENT! (%d %d) [%p]", asap, now, this);
+	L_OBJ(this , "SHUTDOWN BINARY CLIENT! (%d %d)", asap, now);
 
 	BaseClient::shutdown(asap, now);
 }

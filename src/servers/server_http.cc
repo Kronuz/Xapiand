@@ -33,13 +33,13 @@ HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	// accept event actually started in BaseServer::BaseServer
 	L_EV(this, "Start http's server accept event (sock=%d)", http->sock);
 
-	L_OBJ(this, "CREATED HTTP SERVER! [%p]", this);
+	L_OBJ(this, "CREATED HTTP SERVER!");
 }
 
 
 HttpServer::~HttpServer()
 {
-	L_OBJ(this, "DELETED HTTP SERVER! [%p]", this);
+	L_OBJ(this, "DELETED HTTP SERVER!");
 }
 
 

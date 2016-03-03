@@ -40,13 +40,13 @@ BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::lo
 	async_signal.start();
 	L_EV(this, "Start binary's async signal event");
 
-	L_OBJ(this, "CREATED BINARY SERVER! [%p]", this);
+	L_OBJ(this, "CREATED BINARY SERVER!");
 }
 
 
 BinaryServer::~BinaryServer()
 {
-	L_OBJ(this, "DELETED BINARY SERVER! [%p]", this);
+	L_OBJ(this, "DELETED BINARY SERVER!");
 }
 
 

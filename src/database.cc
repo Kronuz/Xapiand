@@ -499,7 +499,7 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 		queue->inc_count();
 	}
 
-	L_OBJ(this, "CREATED DATABASE! [%p]", this);
+	L_OBJ(this, "CREATED DATABASE!");
 }
 
 
@@ -509,7 +509,7 @@ Database::~Database()
 		queue->dec_count();
 	}
 
-	L_OBJ(this, "DELETED DATABASE! [%p]", this);
+	L_OBJ(this, "DELETED DATABASE!");
 }
 
 
@@ -2585,7 +2585,7 @@ DatabaseQueue::DatabaseQueue()
 	: state(replica_state::REPLICA_FREE),
 	  persistent(false),
 	  count(0) {
-	L_OBJ(this, "CREATED DATABASE QUEUE! [%p]", this);
+	L_OBJ(this, "CREATED DATABASE QUEUE!");
 }
 
 
@@ -2599,7 +2599,7 @@ DatabaseQueue::DatabaseQueue(DatabaseQueue&& q)
 	count = std::move(q.count);
 	weak_database_pool = std::move(q.weak_database_pool);
 
-	L_OBJ(this, "CREATED DATABASE QUEUE! [%p]", this);
+	L_OBJ(this, "CREATED DATABASE QUEUE!");
 }
 
 
@@ -2610,7 +2610,7 @@ DatabaseQueue::~DatabaseQueue()
 		exit(EX_SOFTWARE);
 	}
 
-	L_OBJ(this, "DELETED DATABASE QUEUE! [%p]", this);
+	L_OBJ(this, "DELETED DATABASE QUEUE!");
 }
 
 
@@ -2669,7 +2669,7 @@ DatabasePool::DatabasePool(size_t max_size)
 	: finished(false),
 	  databases(max_size),
 	  writable_databases(max_size) {
-	L_OBJ(this, "CREATED DATABASE POLL! [%p]", this);
+	L_OBJ(this, "CREATED DATABASE POLL!");
 }
 
 
@@ -2677,7 +2677,7 @@ DatabasePool::~DatabasePool()
 {
 	finish();
 
-	L_OBJ(this, "DELETED DATABASE POOL! [%p]", this);
+	L_OBJ(this, "DELETED DATABASE POOL!");
 }
 
 
@@ -2731,7 +2731,7 @@ DatabasePool::finish()
 {
 	finished = true;
 
-	L_OBJ(this, "FINISH DATABASE! [%p]", this);
+	L_OBJ(this, "FINISH DATABASE!");
 }
 
 

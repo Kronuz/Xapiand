@@ -32,7 +32,7 @@ BaseServer::BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	io.set<BaseServer, &BaseServer::io_accept_cb>(this);
 	io.start(sock_, ev::READ);
 
-	L_OBJ(this, "CREATED BASE SERVER! [%p]", this);
+	L_OBJ(this, "CREATED BASE SERVER!");
 }
 
 
@@ -40,16 +40,16 @@ BaseServer::~BaseServer()
 {
 	destroy();
 
-	L_OBJ(this, "DELETED BASE SERVER! [%p]", this);
+	L_OBJ(this, "DELETED BASE SERVER!");
 }
 
 
 void
 BaseServer::destroy()
 {
-	L_OBJ(this, "DESTROYING BASE SERVER! [%p]", this);
+	L_OBJ(this, "DESTROYING BASE SERVER!");
 
 	io.stop();
 
-	L_OBJ(this, "DESTROYED BASE SERVER! [%p]", this);
+	L_OBJ(this, "DESTROYED BASE SERVER!");
 }

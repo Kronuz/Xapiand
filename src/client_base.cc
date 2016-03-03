@@ -191,7 +191,7 @@ BaseClient::BaseClient(std::shared_ptr<BaseServer> server_, ev::loop_ref *loop_,
 	L_EV(this, "Setup write event (sock=%d)", sock);
 
 	int total_clients = ++XapiandServer::total_clients;
-	L_OBJ(this, "CREATED BASE CLIENT! (%d clients) [%p]", total_clients, this);
+	L_OBJ(this, "CREATED BASE CLIENT! (%d clients)", total_clients);
 }
 
 
@@ -207,14 +207,14 @@ BaseClient::~BaseClient()
 		exit(EX_SOFTWARE);
 	}
 
-	L_OBJ(this, "DELETED BASE CLIENT! (%d clients left) [%p]", total_clients, this);
+	L_OBJ(this, "DELETED BASE CLIENT! (%d clients left)", total_clients);
 }
 
 
 void
 BaseClient::destroy()
 {
-	L_OBJ(this, "DESTROYING BASE CLIENT! [%p]", this);
+	L_OBJ(this, "DESTROYING BASE CLIENT!");
 	close();
 
 	std::unique_lock<std::mutex> lk(qmtx);
@@ -236,7 +236,7 @@ BaseClient::destroy()
 	write_queue.finish();
 	write_queue.clear();
 
-	L_OBJ(this, "DESTROYED BASE CLIENT! [%p]", this);
+	L_OBJ(this, "DESTROYED BASE CLIENT!");
 }
 
 
@@ -248,7 +248,7 @@ BaseClient::close()
 	}
 
 	closed = true;
-	L_OBJ(this, "CLOSED BASE CLIENT! [%p]", this);
+	L_OBJ(this, "CLOSED BASE CLIENT!");
 }
 
 
@@ -569,7 +569,7 @@ BaseClient::async_read_cb(ev::async &, int)
 void
 BaseClient::shutdown(bool asap, bool now)
 {
-	L_OBJ(this , "SHUTDOWN BASE CLIENT! (%d %d) [%p]", asap, now, this);
+	L_OBJ(this , "SHUTDOWN BASE CLIENT! (%d %d)", asap, now);
 
 	::shutdown(sock, SHUT_RDWR);
 
