@@ -57,6 +57,9 @@ protected:
 		  _async_break_loop(*loop),
 		  _parent(std::forward<T>(parent))
 	{
+		if (_parent) {
+			_iterator = _parent->_children.end();
+		}
 		_async_break_loop.set<Worker, &Worker::_async_break_loop_cb>(this);
 		_async_break_loop.start();
 		L_OBJ(this, "CREATED WORKER! [%llx]", this);
@@ -78,7 +81,7 @@ protected:
 	template<typename T>
 	void _detach(T&& child) {
 		std::lock_guard<std::mutex> lk(_mtx);
-		if (child->_iterator != _children.end()) {
+		if (child->_parent && child->_iterator != _children.end()) {
 			_children.erase(child->_iterator);
 			child->_iterator = _children.end();
 		}
