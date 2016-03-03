@@ -36,7 +36,7 @@ std::string
 traceback(const char *filename, int line)
 {
 	std::string t;
-#ifdef TRACEBACKS
+#ifdef TRACEBACK
 	void* callstack[128];
 
 	// retrieve current stack addresses
@@ -94,7 +94,7 @@ Exception::Exception(const char *filename, int line, const char *format, ...)
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
 	context.assign(std::string(buffer) + ": " + msg);
 
-#ifdef TRACEBACKS
+#ifdef TRACEBACK
 	msg.assign(std::string(buffer) + ": " + msg);
 
 	traceback = ::traceback(filename, line);

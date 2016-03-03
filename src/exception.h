@@ -33,7 +33,7 @@
 #include <string>
 
 
-#define TRACEBACKS 1
+#define TRACEBACK (traceback(__FILE__, __LINE__).c_str())
 
 
 std::string traceback(const char *filename, int line);
