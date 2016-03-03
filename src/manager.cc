@@ -450,6 +450,9 @@ XapiandManager::shutdown(bool asap, bool now)
 	for (auto& commiter: committers) {
 		commiter->shutdown(asap, now);
 	}
+	if (now) {
+		committers.clear();
+	}
 
 	if (asap) {
 		destroy();
