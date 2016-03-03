@@ -128,12 +128,12 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 	}
 
 	if (lowest_revision > revision) {
-		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
+		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC | STORAGE_COMPRESS);
 	} else {
 		modified = false;
 		uint16_t start_off, end_off;
 		for (auto slot = lowest_revision; slot <= highest_revision; ++slot) {
-			open(path + "/" + WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN);
+			open(path + "/" + WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN | STORAGE_COMPRESS);
 
 			uint32_t high_slot = highest_valid_slot();
 			if (high_slot == static_cast<uint32_t>(-1)) {
@@ -183,7 +183,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 			slot = high_slot;
 		}
 
-		open(path + "/" + WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
+		open(path + "/" + WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC | STORAGE_COMPRESS);
 	}
 	return modified;
 }
