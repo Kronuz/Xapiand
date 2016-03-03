@@ -55,8 +55,8 @@ static void read_partial_bin(const void* blockStream, void* array, size_t arrayB
 }
 
 
-LZ4CompressData::LZ4CompressData(const char* data_, size_t data_size_)
-	: LZ4BlockStreaming(data_size_ > LZ4_BLOCK_SIZE ? LZ4_BLOCK_SIZE : static_cast<int>(data_size_)),
+LZ4CompressData::LZ4CompressData(const char* data_, size_t data_size_, int seed)
+	: LZ4BlockStreaming(data_size_ > LZ4_BLOCK_SIZE ? LZ4_BLOCK_SIZE : static_cast<int>(data_size_), seed),
 	  lz4Stream(LZ4_createStream()),
 	  data(data_),
 	  data_size(data_size_) { }
@@ -65,6 +65,7 @@ LZ4CompressData::LZ4CompressData(const char* data_, size_t data_size_)
 LZ4CompressData::~LZ4CompressData()
 {
 	LZ4_freeStream(lz4Stream);
+	XXH32_freeState(xxh_state);
 }
 
 
@@ -117,6 +118,8 @@ LZ4CompressData::next()
 		_offset = 0;
 	}
 
+	XXH32_update(xxh_state, inpPtr, inpBytes);
+
 	_size += blockBytes;
 	std::string result(blockStream, blockBytes);
 	free(blockStream);
@@ -125,8 +128,8 @@ LZ4CompressData::next()
 }
 
 
-LZ4CompressFile::LZ4CompressFile(const std::string& filename)
-	: LZ4BlockStreaming(LZ4_BLOCK_SIZE),
+LZ4CompressFile::LZ4CompressFile(const std::string& filename, int seed)
+	: LZ4BlockStreaming(LZ4_BLOCK_SIZE, seed),
 	  lz4Stream(LZ4_createStream())
 {
 	fd = io::open(filename.c_str(), O_RDONLY, 0644);
@@ -141,6 +144,7 @@ LZ4CompressFile::~LZ4CompressFile()
 {
 	io::close(fd);
 	LZ4_freeStream(lz4Stream);
+	XXH32_freeState(xxh_state);
 }
 
 
@@ -187,6 +191,8 @@ LZ4CompressFile::next()
 		_offset = 0;
 	}
 
+	XXH32_update(xxh_state, inpPtr, inpBytes);
+
 	_size += blockBytes;
 	std::string res(blockStream, blockBytes);
 	free(blockStream);
@@ -195,8 +201,8 @@ LZ4CompressFile::next()
 }
 
 
-LZ4DecompressData::LZ4DecompressData(const char* data_, size_t data_size_)
-	: LZ4BlockStreaming(LZ4_BLOCK_SIZE),
+LZ4DecompressData::LZ4DecompressData(const char* data_, size_t data_size_, int seed)
+	: LZ4BlockStreaming(LZ4_BLOCK_SIZE, seed),
 	  lz4StreamDecode(LZ4_createStreamDecode()),
 	  data(data_),
 	  data_size(data_size_) { }
@@ -205,6 +211,7 @@ LZ4DecompressData::LZ4DecompressData(const char* data_, size_t data_size_)
 LZ4DecompressData::~LZ4DecompressData()
 {
 	LZ4_freeStreamDecode(lz4StreamDecode);
+	XXH32_freeState(xxh_state);
 }
 
 
@@ -258,6 +265,8 @@ LZ4DecompressData::next()
 		_offset = 0;
 	}
 
+	XXH32_update(xxh_state, blockStream, decBytes);
+
 	_size += decBytes;
 	std::string result(blockStream, decBytes);
 	free(blockStream);
@@ -266,8 +275,8 @@ LZ4DecompressData::next()
 }
 
 
-LZ4DecompressFile::LZ4DecompressFile(const std::string& filename)
-	: LZ4BlockStreaming(LZ4_BLOCK_SIZE),
+LZ4DecompressFile::LZ4DecompressFile(const std::string& filename, int seed)
+	: LZ4BlockStreaming(LZ4_BLOCK_SIZE, seed),
 	  lz4StreamDecode(LZ4_createStreamDecode()),
 	  data((char*)malloc(LZ4_FILE_READ_SIZE))
 {
@@ -285,6 +294,7 @@ LZ4DecompressFile::~LZ4DecompressFile()
 	io::close(fd);
 	free(data);
 	LZ4_freeStreamDecode(lz4StreamDecode);
+	XXH32_freeState(xxh_state);
 }
 
 
@@ -364,6 +374,8 @@ LZ4DecompressFile::next()
 		_offset = 0;
 	}
 
+	XXH32_update(xxh_state, blockStream, decBytes);
+
 	_size += decBytes;
 	std::string result(blockStream, decBytes);
 	free(blockStream);
@@ -372,8 +384,8 @@ LZ4DecompressFile::next()
 }
 
 
-LZ4DecompressDescriptor::LZ4DecompressDescriptor(int& fildes)
-	: LZ4BlockStreaming(LZ4_BLOCK_SIZE),
+LZ4DecompressDescriptor::LZ4DecompressDescriptor(int& fildes, int seed)
+	: LZ4BlockStreaming(LZ4_BLOCK_SIZE, seed),
 	  lz4StreamDecode(LZ4_createStreamDecode()),
 	  fd(fildes),
 	  read_bytes(LZ4_FILE_READ_SIZE),
@@ -384,6 +396,7 @@ LZ4DecompressDescriptor::~LZ4DecompressDescriptor()
 {
 	free(data);
 	LZ4_freeStreamDecode(lz4StreamDecode);
+	XXH32_freeState(xxh_state);
 }
 
 
@@ -473,6 +486,8 @@ LZ4DecompressDescriptor::next()
 	if (_offset >= static_cast<size_t>(LZ4_RING_BUFFER_BYTES - block_size)) {
 		_offset = 0;
 	}
+
+	XXH32_update(xxh_state, blockStream, decBytes);
 
 	_size += decBytes;
 	std::string result(blockStream, decBytes);
