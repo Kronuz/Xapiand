@@ -107,6 +107,8 @@ public:
 		RESET
 	};
 
+	std::vector<std::weak_ptr<XapiandServer>> servers;
+
 	DatabasePool database_pool;
 	ThreadPool<> thread_pool;
 	ThreadPool<> server_pool;

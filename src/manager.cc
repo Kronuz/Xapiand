@@ -180,8 +180,12 @@ XapiandManager::set_node_id()
 void
 XapiandManager::setup_node()
 {
-	std::shared_ptr<XapiandServer> server = std::static_pointer_cast<XapiandServer>(*_children.begin());
-	server->async_setup_node.send();
+	for (auto& s : servers) {
+		if (auto server = s.lock()) {
+			server->async_setup_node.send();
+			return;
+		}
+	}
 }
 
 
@@ -500,6 +504,7 @@ XapiandManager::run(const opts_t& o)
 
 	for (size_t i = 0; i < o.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr);
+		servers.push_back(server);
 		Worker::make_shared<HttpServer>(server, server->loop, http);
 #ifdef XAPIAND_CLUSTERING
 		binary->add_server(Worker::make_shared<BinaryServer>(server, server->loop, binary));
