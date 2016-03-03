@@ -511,7 +511,7 @@ public:
 		std::string ret;
 
 		size_t r;
-		char buf[1024];
+		char buf[LZ4_BLOCK_SIZE];
 		while ((r = read(buf, sizeof(buf), limit, param))) {
 			ret += std::string(buf, r);
 		}
