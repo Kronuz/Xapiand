@@ -121,7 +121,6 @@ public:
 	std::shared_ptr<Binary> binary;
 	std::shared_ptr<Discovery> discovery;
 	std::shared_ptr<Raft> raft;
-	std::vector<std::shared_ptr<DatabaseAutocommit>> committers;
 
 	State state;
 	std::string cluster_name;

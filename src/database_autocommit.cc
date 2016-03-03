@@ -36,9 +36,9 @@ DatabaseCommitStatus::next_wakeup_time()
 }
 
 
-DatabaseAutocommit::DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_)
-	: running(true),
-	  manager(manager_)
+DatabaseAutocommit::DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_)
+	: Worker(std::move(manager_), loop_),
+	  running(true)
 {
 	L_OBJ(this, "CREATED AUTOCOMMIT!");
 }
@@ -55,6 +55,8 @@ void
 DatabaseAutocommit::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN AUTOCOMMIT! (%d %d)", asap, now);
+
+	Worker::shutdown(asap, now);
 
 	running.store(false);
 	wakeup_signal.notify_all();
@@ -101,11 +103,11 @@ DatabaseAutocommit::run()
 					DatabaseAutocommit::databases.erase(it);
 					lk.unlock();
 					std::shared_ptr<Database> database;
-					if (manager->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
+					if (manager()->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
 						if (database->commit()) {
 							L_DEBUG(this, "Autocommit: %s%s", endpoints.as_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "");
 						}
-						manager->database_pool.checkin(database);
+						manager()->database_pool.checkin(database);
 					}
 					lk.lock();
 					it = DatabaseAutocommit::databases.begin();

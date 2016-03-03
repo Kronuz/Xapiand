@@ -45,21 +45,24 @@ struct DatabaseCommitStatus {
 };
 
 
-class DatabaseAutocommit : public Task<> {
+class DatabaseAutocommit : public Task<>, public Worker {
 	static std::mutex mtx;
 	static std::condition_variable wakeup_signal;
 	static std::unordered_map<Endpoints, DatabaseCommitStatus> databases;
 	static std::chrono::time_point<std::chrono::system_clock> next_wakeup_time;
 
 	std::atomic_bool running;
-	std::shared_ptr<XapiandManager> manager;
 
 public:
-	DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_);
+	DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
 	~DatabaseAutocommit();
 
 	static void signal_changed(const std::shared_ptr<Database>& database);
-	void shutdown(bool asap=true, bool now=true);
+	void shutdown(bool asap=true, bool now=true) override;
 
 	void run() override;
+
+	inline decltype(auto) manager() noexcept {
+		return std::static_pointer_cast<XapiandManager>(_parent);
+	}
 };
