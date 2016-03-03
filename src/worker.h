@@ -44,7 +44,7 @@ protected:
 
 	std::mutex _mtx;
 
-	std::shared_ptr<Worker> _parent;
+	const std::shared_ptr<Worker> _parent;
 	WorkerList _children;
 
 	// _iterator should be const_iterator but in linux, std::list member functions
