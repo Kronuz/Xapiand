@@ -110,16 +110,16 @@ struct WalBinHeader {
 
 	inline void validate(void*) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
-			throw MSG_StorageCorruptVolume("Bad bin header magic number");
+			throw MSG_StorageCorruptVolume("Bad line header magic number");
 		}
 		if (flags & STORAGE_FLAG_DELETED) {
-			throw MSG_StorageNotFound("Data Storage document deleted");
+			throw MSG_StorageNotFound("Line deleted");
 		}
 	}
 };
 
 struct WalBinFooter {
-	uint32_t checksum; // required
+	uint32_t checksum;
 	uint8_t magic;
 
 	inline void init(void*, uint32_t checksum_) {
@@ -129,10 +129,10 @@ struct WalBinFooter {
 
 	inline void validate(void*, uint32_t checksum_) {
 		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-			throw MSG_StorageCorruptVolume("Bad bin footer magic number");
+			throw MSG_StorageCorruptVolume("Bad line footer magic number");
 		}
 		if (checksum != checksum_) {
-			throw MSG_StorageCorruptVolume("Bad bin checksum");
+			throw MSG_StorageCorruptVolume("Bad line checksum");
 		}
 	}
 };
@@ -231,7 +231,7 @@ struct DataBinHeader {
 
 	inline void validate(void*) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
-			throw MSG_StorageCorruptVolume("Bad bin header magic number");
+			throw MSG_StorageCorruptVolume("Bad document header magic number");
 		}
 		if (flags & STORAGE_FLAG_DELETED) {
 			throw MSG_StorageNotFound("Data Storage document deleted");
@@ -240,7 +240,7 @@ struct DataBinHeader {
 };
 
 struct DataBinFooter {
-	uint32_t checksum; // required
+	uint32_t checksum;
 	uint8_t magic;
 
 	inline void init(void* /* param */, uint32_t checksum_) {
@@ -250,10 +250,10 @@ struct DataBinFooter {
 
 	inline void validate(void* /* param */, uint32_t checksum_) {
 		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
-			throw MSG_StorageCorruptVolume("Bad bin footer magic number");
+			throw MSG_StorageCorruptVolume("Bad document footer magic number");
 		}
 		if (checksum != checksum_) {
-			throw MSG_StorageCorruptVolume("Bad bin checksum");
+			throw MSG_StorageCorruptVolume("Bad document checksum");
 		}
 	}
 };
