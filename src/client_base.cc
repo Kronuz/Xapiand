@@ -571,11 +571,10 @@ BaseClient::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE CLIENT! (%d %d)", asap, now);
 
-	::shutdown(sock, SHUT_RDWR);
-
 	Worker::shutdown(asap, now);
 
 	if (now) {
+		::shutdown(sock, SHUT_RDWR);
 		destroy();
 	}
 }
