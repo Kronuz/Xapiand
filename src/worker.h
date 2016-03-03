@@ -102,9 +102,10 @@ public:
 	}
 
 	virtual void shutdown(bool asap=true, bool now=true) {
-		L_OBJ(this , "SHUTDOWN WORKER! [%p]", this);
-
 		std::unique_lock<std::mutex> lk(_mtx);
+
+		L_OBJ(this , "SHUTDOWN WORKER! (%d %d) to %zu children [%p]", asap, now, _children.size(), this);
+
 		for (auto it = _children.begin(); it != _children.end();) {
 			auto child = *it++;
 			lk.unlock();
