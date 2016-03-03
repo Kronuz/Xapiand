@@ -106,36 +106,51 @@ public:
 	class iterator : public std::iterator<std::input_iterator_tag, LZ4BlockStreaming> {
 		LZ4BlockStreaming* obj;
 		std::string current_str;
+		size_t offset;
 
 		friend class LZ4BlockStreaming;
 
 	public:
+		iterator()
+			: obj(nullptr),
+			  offset(0) { }
+
 		iterator(LZ4BlockStreaming* o, std::string&& str)
 			: obj(o),
-			  current_str(std::move(str)) { }
+			  current_str(std::move(str)),
+			  offset(0) { }
 
 		iterator(iterator&& it)
 			: obj(std::move(it.obj)),
-			  current_str(std::move(it.current_str)) { }
+			  current_str(std::move(it.current_str)),
+			  offset(std::move(it.offset)) { }
 
-		// iterator is not CopyConstructible or CopyAssignable.
-		iterator(const iterator&) = delete;
-		iterator operator=(const iterator&) = delete;
-
-		iterator& operator++() {
-			current_str = obj->_next();
+		iterator& operator=(iterator&& it) {
+			obj = std::move(it.obj);
+			current_str = std::move(it.current_str);
+			offset = std::move(it.offset);
 			return *this;
 		}
 
-		std::string operator*() const {
+		// iterator is not CopyConstructible or CopyAssignable.
+		iterator(const iterator&) = delete;
+		iterator& operator=(const iterator&) = delete;
+
+		iterator& operator++() {
+			current_str = obj->_next();
+			offset = 0;
+			return *this;
+		}
+
+		inline std::string operator*() const {
 			return current_str;
 		}
 
-		const std::string* operator->() const {
+		inline const std::string* operator->() const {
 			return &current_str;
 		}
 
-		size_t size() const noexcept {
+		inline size_t size() const noexcept {
 			return current_str.size();
 		}
 
@@ -147,8 +162,24 @@ public:
 			return !operator==(other);
 		}
 
-		explicit operator bool() const {
+		inline explicit operator bool() const {
 			return !current_str.empty();
+		}
+
+		inline size_t read(char* buf, size_t buf_size) {
+			size_t res_size = current_str.size() - offset;
+			if (!res_size) {
+				current_str = obj->_next();
+				offset = 0;
+				res_size = current_str.size();
+			}
+
+			if (res_size < buf_size) {
+				buf_size = res_size;
+			}
+			memcpy(buf, current_str.c_str() + offset, buf_size);
+			offset += buf_size;
+			return buf_size;
 		}
 	};
 
@@ -160,7 +191,7 @@ public:
 		return iterator(this, std::string());
 	}
 
-	size_t size() const noexcept {
+	inline size_t size() const noexcept {
 		return _size;
 	}
 };
