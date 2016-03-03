@@ -523,19 +523,19 @@ XapiandManager::run(const opts_t& o)
 
 	discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 
-	L_DEBUG(this, "Waiting for servers...");
 	server_pool.finish();
+	L_DEBUG(this, "Waiting for servers (%zu)...", server_pool.size());
 	server_pool.join();
 
-	L_DEBUG(this, "Waiting for replicators...");
 	replicator_pool.finish();
+	L_DEBUG(this, "Waiting for replicators (%zu)...", replicator_pool.size());
 	replicator_pool.join();
 
-	L_DEBUG(this, "Waiting for committers...");
 	autocommit_pool.finish();
 	for (auto& commiter: committers) {
 		commiter->shutdown();
 	}
+	L_DEBUG(this, "Waiting for committers (%zu)...", autocommit_pool.size());
 	autocommit_pool.join();
 
 	http.reset();
