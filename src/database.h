@@ -243,12 +243,12 @@ struct DataBinFooter {
 	uint32_t checksum;
 	uint8_t magic;
 
-	inline void init(void* /* param */, uint32_t checksum_) {
+	inline void init(void* /*param*/, uint32_t checksum_) {
 		magic = STORAGE_BIN_FOOTER_MAGIC;
 		checksum = checksum_;
 	}
 
-	inline void validate(void* /* param */, uint32_t checksum_) {
+	inline void validate(void* /*param*/, uint32_t checksum_) {
 		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 			throw MSG_StorageCorruptVolume("Bad document footer magic number");
 		}

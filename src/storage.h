@@ -127,13 +127,13 @@ struct StorageHeader {
 
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
 
-	inline void init(void* /* param */) {
+	inline void init(void* /*param*/) {
 		head.offset = STORAGE_START_BLOCK_OFFSET;
 		// head.magic = STORAGE_MAGIC;
 		// strncpy(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid));
 	}
 
-	inline void validate(void* /* param */) {
+	inline void validate(void* /*param*/) {
 		// if (head.magic != STORAGE_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad header magic number");
 		// }
@@ -150,39 +150,39 @@ struct StorageBinHeader {
 	uint8_t flags;  // required
 	uint32_t size;  // required
 
-	inline void init(void* /* param */, uint32_t size_, uint8_t flags_) {
+	inline void init(void* /*param*/, uint32_t size_, uint8_t flags_) {
 		// magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
 	}
 
-	inline void validate(void* /* param */) {
+	inline void validate(void* /*param*/) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		// }
 		if (flags & STORAGE_FLAG_DELETED) {
-			throw MSG_StorageNotFound("Data Storage document deleted");
+			throw MSG_StorageNotFound("Bin deleted");
 		}
 	}
 };
 
 
 struct StorageBinFooter {
-	uint32_t checksum; // required.
+	// uint32_t checksum;
 	// uint8_t magic;
 
-	inline void init(void* /* param */, uint32_t  checksum_) {
+	inline void init(void* /*param*/, uint32_t  /*checksum_*/) {
 		// magic = STORAGE_BIN_FOOTER_MAGIC;
-		checksum = checksum_;
+		// checksum = checksum_;
 	}
 
-	inline void validate(void* /* param */, uint32_t checksum_) {
+	inline void validate(void* /*param*/, uint32_t /*checksum_*/) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		// }
-		if (checksum != checksum_) {
-			throw MSG_StorageCorruptVolume("Bad bin checksum");
-		}
+		// if (checksum != checksum_) {
+		// 	throw MSG_StorageCorruptVolume("Bad bin checksum");
+		// }
 	}
 };
 #pragma pack(pop)
