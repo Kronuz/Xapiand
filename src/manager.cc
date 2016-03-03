@@ -470,7 +470,7 @@ XapiandManager::shutdown(bool asap, bool now)
 
 	Worker::shutdown(asap, now);
 
-	if (now) {
+	if (asap) {
 		destroy();
 	}
 
