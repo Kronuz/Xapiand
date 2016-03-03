@@ -99,16 +99,21 @@ struct WalHeader {
 #pragma pack(push, 1)
 struct WalBinHeader {
 	uint8_t magic;
+	uint8_t flags;  // required
 	uint32_t size;  // required
 
-	inline void init(void*, uint32_t size_) {
+	inline void init(void*, uint32_t size_, uint8_t flags_) {
 		magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
+		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
 	}
 
 	inline void validate(void*) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
 			throw MSG_StorageCorruptVolume("Bad bin header magic number");
+		}
+		if (flags & STORAGE_FLAG_DELETED) {
+			throw MSG_StorageNotFound("Data Storage document deleted");
 		}
 	}
 };
@@ -215,19 +220,20 @@ struct DataHeader {
 #pragma pack(push, 1)
 struct DataBinHeader {
 	uint8_t magic;
-	uint8_t flags;
+	uint8_t flags;  // required
 	uint32_t size;  // required
 
-	inline void init(void*, uint32_t size_) {
+	inline void init(void*, uint32_t size_, uint8_t flags_) {
 		magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
+		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
 	}
 
 	inline void validate(void*) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
 			throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		}
-		if ((flags & 1) != 0) {
+		if (flags & STORAGE_FLAG_DELETED) {
 			throw MSG_StorageNotFound("Data Storage document deleted");
 		}
 	}
