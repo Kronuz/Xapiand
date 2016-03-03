@@ -41,7 +41,7 @@ protected:
 
 	std::string description;
 
-	std::shared_ptr<ev::loop_ref> loop;
+	ev::loop_ref *loop;
 
 	void sending_message(const std::string &message);
 
