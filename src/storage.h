@@ -168,21 +168,21 @@ struct StorageBinHeader {
 
 
 struct StorageBinFooter {
-	// uint32_t checksum;
+	uint32_t checksum; // required.
 	// uint8_t magic;
 
-	inline void init(void* /* param */, uint32_t /* checksum_ */) {
+	inline void init(void* /* param */, uint32_t  checksum_) {
 		// magic = STORAGE_BIN_FOOTER_MAGIC;
-		// checksum = checksum_;
+		checksum = checksum_;
 	}
 
-	inline void validate(void* /* param */, uint32_t /* checksum_ */) {
+	inline void validate(void* /* param */, uint32_t checksum_) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		// }
-		// if (checksum != checksum_) {
-		// 	throw MSG_StorageCorruptVolume("Bad bin checksum");
-		// }
+		if (checksum != checksum_) {
+			throw MSG_StorageCorruptVolume("Bad bin checksum");
+		}
 	}
 };
 #pragma pack(pop)
@@ -210,6 +210,9 @@ class Storage {
 	LZ4DecompressDescriptor dec_lz4;
 	LZ4DecompressDescriptor::iterator dec_it;
 
+	XXH32_state_t* xxhash;
+	uint32_t bin_hash;
+
 	inline void growfile() {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
@@ -230,8 +233,6 @@ class Storage {
 	}
 
 	uint32_t _write_compress(const char *data, size_t data_size, void* param=nullptr) {
-		uint32_t checksum = 0;
-
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
 		bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
@@ -244,7 +245,7 @@ class Storage {
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 		off_t block_offset = ((header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 
-		LZ4CompressData lz4(data, data_size);
+		LZ4CompressData lz4(data, data_size, STORAGE_MAGIC);
 		auto it = lz4.begin();
 		size_t it_offset = 0;
 
@@ -298,7 +299,7 @@ class Storage {
 				bin_header.size = lz4.size();
 				memcpy(buffer0 + tmp_buffer_offset + offset_bin_header, &bin_header.size, sizeof(bin_header.size));
 
-				bin_footer.init(param, checksum);
+				bin_footer.init(param, lz4.get_digest());
 
 				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
 				if (size > bin_footer_data_size) {
@@ -355,8 +356,7 @@ class Storage {
 
 	uint32_t _write(const char *data, size_t data_size, void* param=nullptr) {
 		size_t data_size_orig = data_size;
-		uint32_t current_offset = header.head.offset;
-		uint32_t checksum = 0;
+		const char* orig_data = data;
 
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
@@ -368,7 +368,7 @@ class Storage {
 		memset(&bin_footer, 0, sizeof(bin_footer));
 		const StorageBinFooter* bin_footer_data = &bin_footer;
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
-		off_t block_offset = ((current_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
+		off_t block_offset = ((header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 
 		while (bin_header_data_size || data_size || bin_footer_data_size) {
 			if (bin_header_data_size) {
@@ -402,7 +402,7 @@ class Storage {
 			}
 
 			if (bin_footer_data_size) {
-				bin_footer.init(param, checksum);
+				bin_footer.init(param, XXH32(orig_data, data_size_orig, STORAGE_MAGIC));
 
 				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
 				if (size > bin_footer_data_size) {
@@ -441,7 +441,7 @@ class Storage {
 
 		header.head.offset += (((sizeof(StorageBinHeader) + data_size_orig + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 
-		return current_offset;
+		return header.head.offset;
 	}
 
 protected:
@@ -456,12 +456,15 @@ public:
 		  bin_offset(0),
 		  offset_bin_header(reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header)),
 		  bin_size(0),
-		  dec_lz4(fd) {
+		  dec_lz4(fd, STORAGE_MAGIC),
+		  xxhash(XXH32_createState()),
+		  bin_hash(0) {
 		assert(offset_bin_header + sizeof(bin_header.size) <= STORAGE_ALIGNMENT);
 	}
 
 	virtual ~Storage() {
 		close();
+		XXH32_freeState(xxhash);
 	}
 
 	void open(const std::string& path_, int flags_=STORAGE_CREATE_OR_OPEN, void* param=nullptr) {
@@ -555,7 +558,6 @@ public:
 		}
 
 		ssize_t r;
-		uint32_t checksum = 0;
 
 		if (!bin_header.size) {
 			off_t offset = io::lseek(fd, bin_offset, SEEK_SET);
@@ -575,9 +577,11 @@ public:
 			io::fadvise(fd, bin_offset, bin_header.size, POSIX_FADV_WILLNEED);
 
 			if (bin_header.flags & STORAGE_FLAG_COMPRESSED) {
-				dec_lz4.set_read_bytes(bin_header.size);
+				dec_lz4.reset(bin_header.size, STORAGE_MAGIC);
 				dec_it = dec_lz4.begin();
 				bin_offset += bin_header.size;
+			} else {
+				XXH32_reset(xxhash, STORAGE_MAGIC);
 			}
 		}
 
@@ -586,6 +590,7 @@ public:
 			if (_size) {
 				return _size;
 			}
+			bin_hash = dec_lz4.get_digest();
 		} else {
 			if (buf_size > bin_header.size - bin_size) {
 				buf_size = bin_header.size - bin_size;
@@ -600,8 +605,10 @@ public:
 				}
 				bin_offset += r;
 				bin_size += r;
+				XXH32_update(xxhash, buf, r);
 				return r;
 			}
+			bin_hash = XXH32_digest(xxhash);
 		}
 
 		r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
@@ -611,7 +618,7 @@ public:
 			throw MSG_StorageCorruptVolume("Incomplete bin footer");
 		}
 		bin_offset += r;
-		bin_footer.validate(param, checksum);
+		bin_footer.validate(param, bin_hash);
 
 		// Align the bin_offset to the next storage alignment
 		bin_offset = ((bin_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT;
