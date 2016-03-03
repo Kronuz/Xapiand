@@ -187,13 +187,16 @@ class Storage {
 
 	int free_blocks;
 
-	char buffer[STORAGE_BLOCK_SIZE];
+	char buffer0[STORAGE_BLOCK_SIZE];
+	char buffer1[STORAGE_BLOCK_SIZE];
 	uint32_t buffer_offset;
 
-	size_t bin_size;
 	off_t bin_offset;
 	StorageBinHeader bin_header;
 	StorageBinFooter bin_footer;
+
+	LZ4DecompressDescriptor dec_lz4;
+	LZ4DecompressDescriptor::iterator dec_it;
 
 	inline void growfile() {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
@@ -223,8 +226,8 @@ public:
 		  fd(0),
 		  free_blocks(0),
 		  buffer_offset(0),
-		  bin_size(0),
-		  bin_offset(0) { }
+		  bin_offset(0),
+		  dec_lz4(fd) { }
 
 	virtual ~Storage() {
 		close();
@@ -243,7 +246,7 @@ public:
 
 #if STORAGE_BUFFER_CLEAR
 		if (flags & STORAGE_WRITABLE) {
-			memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
+			memset(buffer0, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
 		}
 #endif
 
@@ -275,7 +278,7 @@ public:
 				buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
 				size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 				buffer_offset -= offset;
-				if unlikely(io::pread(fd, buffer, sizeof(buffer), offset) < 0) {
+				if unlikely(io::pread(fd, buffer0, STORAGE_BLOCK_SIZE, offset) < 0) {
 					throw MSG_StorageIOError("IO error: pread");
 				}
 			}
@@ -294,7 +297,6 @@ public:
 
 		fd = 0;
 		free_blocks = 0;
-		bin_size = 0;
 		bin_offset = 0;
 		bin_header.size = 0;
 		buffer_offset = 0;
@@ -308,17 +310,11 @@ public:
 	}
 
 	uint32_t write(const char *data, size_t data_size, void* param=nullptr) {
-		// FIXME: Compress data here!
-
-		size_t data_size_orig = data_size;
-
-		uint32_t current_offset = header.head.offset;
-
 		uint32_t checksum = 0;
 
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
-		bin_header.init(param, static_cast<uint32_t>(data_size));
+		bin_header.init(param, 0);
 		const StorageBinHeader* bin_header_data = &bin_header;
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
@@ -326,9 +322,17 @@ public:
 		memset(&bin_footer, 0, sizeof(bin_footer));
 		const StorageBinFooter* bin_footer_data = &bin_footer;
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
-		off_t block_offset = ((current_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
+		off_t block_offset = ((header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 
-		while (bin_header_data_size || data_size || bin_footer_data_size) {
+		LZ4CompressData lz4(data, data_size);
+		auto it = lz4.begin();
+		size_t it_offset = 0;
+
+		char* buffer = buffer0;
+		off_t tmp_block_offset = block_offset;
+		uint32_t tmp_buffer_offset = buffer_offset;
+
+		while (bin_header_data_size || it || bin_footer_data_size) {
 			if (bin_header_data_size) {
 				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
 				if (size > bin_header_data_size) {
@@ -338,28 +342,42 @@ public:
 				bin_header_data_size -= size;
 				bin_header_data += size;
 				buffer_offset += size;
-				if (buffer_offset == sizeof(buffer)) {
+				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
-					goto do_write;
+					if (buffer == buffer1) {
+						goto do_write;
+					} else {
+						buffer = buffer1;
+						goto do_update;
+					}
 				}
 			}
 
-			if (data_size) {
+			while (it) {
 				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
-				if (size > data_size) {
-					size = data_size;
+				if (size > it->size() - it_offset) {
+					size = it->size() - it_offset;
 				}
-				memcpy(buffer + buffer_offset, data, size);
-				data_size -= size;
-				data += size;
+				memcpy(buffer + buffer_offset, it->c_str() + it_offset, size);
 				buffer_offset += size;
-				if (buffer_offset == sizeof(buffer)) {
+				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
-					goto do_write;
+					if (buffer == buffer1) {
+						goto do_write;
+					} else {
+						buffer = buffer1;
+						goto do_update;
+					}
 				}
+				++it;
+				it_offset = 0;
 			}
 
 			if (bin_footer_data_size) {
+				// Update Header.
+				bin_header.size = lz4.size();
+				memcpy(buffer0 + tmp_buffer_offset, &bin_header.size, sizeof(bin_header.size));
+
 				bin_footer.init(param, checksum);
 
 				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
@@ -374,17 +392,23 @@ public:
 				// Align the buffer_offset to the next storage alignment
 				buffer_offset = static_cast<uint32_t>(((block_offset + buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
 
-				if (buffer_offset == sizeof(buffer)) {
+				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
-					goto do_write;
+					if (buffer == buffer1) {
+						goto do_write;
+					} else {
+						buffer = buffer1;
+						goto do_update;
+					}
 				}
 			}
 
 		do_write:
-			if (io::pwrite(fd, buffer, sizeof(buffer), block_offset) != sizeof(buffer)) {
+			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
 				throw MSG_StorageIOError("IO error: pwrite");
 			}
 
+		do_update:
 			if (buffer_offset == 0) {
 				block_offset += STORAGE_BLOCK_SIZE;
 				if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
@@ -392,24 +416,30 @@ public:
 				}
 				--free_blocks;
 #if STORAGE_BUFFER_CLEAR
-				memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, sizeof(buffer));
+				memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
 #endif
 			}
 		}
 
-		header.head.offset += (((sizeof(StorageBinHeader) + data_size_orig + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
+		// Write the first used buffer.
+		if (buffer == buffer1) {
+			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
+				throw MSG_StorageIOError("IO error: pwrite");
+			}
+		}
 
-		return current_offset;
+		header.head.offset += (((sizeof(StorageBinHeader) + bin_header.size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
+
+		return header.head.offset;
 	}
 
-	size_t read(char *buf, size_t buf_size, uint32_t limit=-1, void* param=nullptr) {
+	size_t read(char* buf, size_t buf_size, uint32_t limit=-1, void* param=nullptr) {
 		if (!buf_size) {
 			return 0;
 		}
 
 		ssize_t r;
 		uint32_t checksum = 0;
-		size_t bin_read;
 
 		if (!bin_header.size) {
 			off_t offset = io::lseek(fd, bin_offset, SEEK_SET);
@@ -417,7 +447,7 @@ public:
 				throw MSG_StorageEOF("Storage EOF");
 			}
 
-			r = io::read(fd,  &bin_header, sizeof(StorageBinHeader));
+			r = io::read(fd, &bin_header, sizeof(StorageBinHeader));
 			if unlikely(r < 0) {
 				throw MSG_StorageIOError("IO error: read");
 			} else if unlikely(r != sizeof(StorageBinHeader)) {
@@ -425,45 +455,33 @@ public:
 			}
 			bin_offset += r;
 			bin_header.validate(param);
+
+			io::fadvise(fd, bin_offset, bin_header.size, POSIX_FADV_WILLNEED);
+
+			dec_lz4.set_read_bytes(bin_header.size);
+			dec_it = dec_lz4.begin();
+			bin_offset += bin_header.size;
 		}
 
-		if (buf_size > bin_header.size - bin_size) {
-			buf_size = bin_header.size - bin_size;
+		size_t _size = dec_it.read(buf, buf_size);
+		if (_size) {
+			return _size;
 		}
 
-		if (buf_size) {
-			r = io::read(fd, buf, buf_size);
-			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO error: read");
-			} else if unlikely(static_cast<size_t>(r) != buf_size) {
-				throw MSG_StorageCorruptVolume("Incomplete bin data");
-			}
-			bin_offset += r;
-
-			bin_size += r;
-			bin_read = r;
-
-			checksum = 0;  // FIXME: bin_checksum update
-
-		} else {
-			r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
-			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO error: read");
-			} else if unlikely(r != sizeof(StorageBinFooter)) {
-				throw MSG_StorageCorruptVolume("Incomplete bin footer");
-			}
-			bin_offset += r;
-			bin_footer.validate(param, checksum);
-
-			// Align the bin_offset to the next storage alignment
-			bin_offset = ((bin_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT;
-
-			bin_header.size = 0;
-			bin_size = 0;
-			bin_read = 0;
+		r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
+		if unlikely(r < 0) {
+			throw MSG_StorageIOError("IO error: read");
+		} else if unlikely(r != sizeof(StorageBinFooter)) {
+			throw MSG_StorageCorruptVolume("Incomplete bin footer");
 		}
+		bin_offset += r;
+		bin_footer.validate(param, checksum);
 
-		return bin_read;
+		// Align the bin_offset to the next storage alignment
+		bin_offset = ((bin_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT;
+
+		bin_header.size = 0;
+		return 0;
 	}
 
 	void commit() {
