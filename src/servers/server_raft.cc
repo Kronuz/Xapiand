@@ -35,13 +35,13 @@ RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	// accept event actually started in BaseServer::BaseServer
 	L_EV(this, "Start raft's server accept event (sock=%d)", raft->sock);
 
-	L_OBJ(this, "CREATED RAFT SERVER! [%llx]", this);
+	L_OBJ(this, "CREATED RAFT SERVER! [%p]", this);
 }
 
 
 RaftServer::~RaftServer()
 {
-	L_OBJ(this, "DELETED RAFT SERVER! [%llx]", this);
+	L_OBJ(this, "DELETED RAFT SERVER! [%p]", this);
 }
 
 

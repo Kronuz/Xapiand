@@ -40,21 +40,21 @@ DatabaseAutocommit::DatabaseAutocommit(const std::shared_ptr<XapiandManager>& ma
 	: running(true),
 	  manager(manager_)
 {
-	L_OBJ(this, "CREATED AUTOCOMMIT! [%llx]", this);
+	L_OBJ(this, "CREATED AUTOCOMMIT! [%p]", this);
 }
 
 
 DatabaseAutocommit::~DatabaseAutocommit()
 {
 	running.store(false);
-	L_OBJ(this , "DELETED AUTOCOMMIT! [%llx]", this);
+	L_OBJ(this , "DELETED AUTOCOMMIT! [%p]", this);
 }
 
 
 void
 DatabaseAutocommit::shutdown()
 {
-	L_OBJ(this , "SHUTDOWN AUTOCOMMIT! [%llx]", this);
+	L_OBJ(this , "SHUTDOWN AUTOCOMMIT! [%p]", this);
 
 	running.store(false);
 	wakeup_signal.notify_all();

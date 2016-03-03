@@ -175,7 +175,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* loop_,
 
 	L_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.", sock, http_clients, total_clients);
 
-	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients) [%llx]", http_clients, this);
+	L_OBJ(this, "CREATED HTTP CLIENT! (%d clients) [%p]", http_clients, this);
 }
 
 
@@ -201,7 +201,7 @@ HttpClient::~HttpClient()
 		}
 	}
 
-	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left) [%llx]", http_clients, this);
+	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left) [%p]", http_clients, this);
 	if (http_clients < 0) {
 		L_CRIT(this, "Inconsistency in number of http clients");
 		exit(EX_SOFTWARE);

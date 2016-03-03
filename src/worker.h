@@ -62,7 +62,7 @@ protected:
 		}
 		_async_break_loop.set<Worker, &Worker::_async_break_loop_cb>(this);
 		_async_break_loop.start();
-		L_OBJ(this, "CREATED WORKER! [%llx]", this);
+		L_OBJ(this, "CREATED WORKER! [%p]", this);
 	}
 
 	void _create() {
@@ -73,7 +73,7 @@ protected:
 
 	template<typename T>
 	WorkerList::iterator _attach(T&& child) {
-		L_OBJ(this, "Worker child [%llx] attached to [%llx]", child.get(), this);
+		L_OBJ(this, "Worker child [%p] attached to [%p]", child.get(), this);
 		std::lock_guard<std::mutex> lk(_mtx);
 		return _children.insert(_children.end(), std::forward<T>(child));
 	}
@@ -85,7 +85,7 @@ protected:
 			_children.erase(child->_iterator);
 			child->_iterator = _children.end();
 		}
-		L_OBJ(this, "Worker child [%llx] detached from [%llx]", child.get(), this);
+		L_OBJ(this, "Worker child [%p] detached from [%p]", child.get(), this);
 	}
 
 	void _async_break_loop_cb(ev::async &, int) {
@@ -98,11 +98,11 @@ public:
 	virtual ~Worker() {
 		_async_break_loop.stop();
 
-		L_OBJ(this, "DELETED WORKER! [%llx]", this);
+		L_OBJ(this, "DELETED WORKER! [%p]", this);
 	}
 
 	virtual void shutdown() {
-		L_OBJ(this , "SHUTDOWN WORKER! [%llx]", this);
+		L_OBJ(this , "SHUTDOWN WORKER! [%p]", this);
 
 		std::unique_lock<std::mutex> lk(_mtx);
 		for (auto it = _children.begin(); it != _children.end();) {

@@ -83,7 +83,7 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	async_shutdown.start();
 	L_EV(this, "Start manager's async shutdown event");
 
-	L_OBJ(this, "CREATED XAPIAN MANAGER! [%llx]", this);
+	L_OBJ(this, "CREATED XAPIAN MANAGER! [%p]", this);
 }
 
 
@@ -96,7 +96,7 @@ XapiandManager::~XapiandManager()
 	async_shutdown.stop();
 	L_EV(this, "Stop async shutdown event");
 
-	L_OBJ(this, "DELETED XAPIAN MANAGER! [%llx]", this);
+	L_OBJ(this, "DELETED XAPIAN MANAGER! [%p]", this);
 }
 
 
@@ -420,7 +420,7 @@ XapiandManager::sig_shutdown_handler(int sig)
 void
 XapiandManager::destroy()
 {
-	L_OBJ(this, "DESTROYED XAPIAN MANAGER! [%llx]", this);
+	L_OBJ(this, "DESTROYED XAPIAN MANAGER! [%p]", this);
 }
 
 
@@ -438,7 +438,7 @@ XapiandManager::async_shutdown_cb(ev::async&, int)
 void
 XapiandManager::shutdown()
 {
-	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER ! [%llx]", this);
+	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER ! [%p]", this);
 
 	Worker::shutdown();
 

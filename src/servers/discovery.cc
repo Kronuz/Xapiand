@@ -33,7 +33,7 @@ Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_r
 	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
 	L_DISCOVERY(this, "\tSet heartbeat timeout event %f", heartbeat.repeat);
 
-	L_OBJ(this, "CREATED DISCOVERY [%llx]", this);
+	L_OBJ(this, "CREATED DISCOVERY [%p]", this);
 }
 
 
@@ -41,7 +41,7 @@ Discovery::~Discovery()
 {
 	heartbeat.stop();
 
-	L_OBJ(this, "DELETED DISCOVERY [%llx]", this);
+	L_OBJ(this, "DELETED DISCOVERY [%p]", this);
 }
 
 
