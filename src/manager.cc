@@ -89,10 +89,10 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 
 XapiandManager::~XapiandManager()
 {
-	destroy();
-
 	async_shutdown.stop();
 	L_EV(this, "Stop async shutdown event");
+
+	destroy();
 
 	L_OBJ(this, "DELETED XAPIAN MANAGER!");
 }
