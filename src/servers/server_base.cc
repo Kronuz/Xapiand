@@ -45,6 +45,16 @@ BaseServer::~BaseServer()
 
 
 void
+BaseServer::shutdown(bool asap, bool now)
+{
+	L_OBJ(this , "SHUTDOWN BASE SERVER! (%d %d)", asap, now);
+
+	Worker::shutdown(asap, now);
+
+	destroy();
+}
+
+void
 BaseServer::destroy()
 {
 	L_OBJ(this, "DESTROYING BASE SERVER!");

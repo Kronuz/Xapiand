@@ -35,15 +35,46 @@ BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *
 	  description(description_)
 {
 	bind(tries_, group_);
+
+	L_OBJ(this, "CREATED BASE UDP!");
 }
 
 
 BaseUDP::~BaseUDP()
 {
-	close(sock);
-	sock = -1;
+	destroy();
+
+	L_OBJ(this, "DELETED BASE UDP!");
 }
 
+void
+BaseUDP::destroy()
+{
+	L_OBJ(this, "DESTROYING BASE UDP!");
+
+	if (sock == -1) {
+		return;
+	}
+
+	io::close(sock);
+	sock = -1;
+
+	L_OBJ(this, "DESTROYED BASE UDP!");
+}
+
+void
+BaseUDP::shutdown(bool asap, bool now)
+{
+	L_OBJ(this , "SHUTDOWN BASE UDP! (%d %d)", asap, now);
+
+	Worker::shutdown(asap, now);
+
+	::shutdown(sock, SHUT_RDWR);
+
+	if (now) {
+		destroy();
+	}
+}
 
 void
 BaseUDP::bind(int tries, const std::string &group)

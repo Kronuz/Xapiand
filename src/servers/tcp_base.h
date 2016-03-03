@@ -55,7 +55,10 @@ protected:
 
 public:
 	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, int tries_, int flags_);
-	virtual ~BaseTCP();
+	~BaseTCP();
+
+	void shutdown(bool asap, bool now);
+	void destroy();
 
 	virtual std::string getDescription() const noexcept = 0;
 

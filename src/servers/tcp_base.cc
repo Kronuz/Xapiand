@@ -44,15 +44,46 @@ BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *
 {
 	bind(tries_);
 	L_DEBUG(this, "Listening sock=%d", sock);
+
+	L_OBJ(this, "CREATED BASE TCP!");
 }
 
 
 BaseTCP::~BaseTCP()
 {
-	close(sock);
-	sock = -1;
+	destroy();
+
+	L_OBJ(this, "DELETED BASE TCP!");
 }
 
+void
+BaseTCP::destroy()
+{
+	L_OBJ(this, "DESTROYING BASE TCP!");
+
+	if (sock == -1) {
+		return;
+	}
+
+	io::close(sock);
+	sock = -1;
+
+	L_OBJ(this, "DESTROYED BASE TCP!");
+}
+
+void
+BaseTCP::shutdown(bool asap, bool now)
+{
+	L_OBJ(this , "SHUTDOWN BASE TCP! (%d %d)", asap, now);
+
+	Worker::shutdown(asap, now);
+
+	::shutdown(sock, SHUT_RDWR);
+
+	if (now) {
+		destroy();
+	}
+}
 
 void
 BaseTCP::bind(int tries)

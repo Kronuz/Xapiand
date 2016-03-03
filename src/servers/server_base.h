@@ -42,6 +42,7 @@ public:
 	virtual ~BaseServer();
 
 	virtual void io_accept_cb(ev::io &watcher, int revents) = 0;
+	void shutdown(bool asap, bool now) override;
 
 	inline decltype(auto) manager() noexcept {
 		return std::static_pointer_cast<XapiandServer>(_parent)->manager();
