@@ -69,6 +69,13 @@ inline int fadvise(int fd, off_t offset, off_t len, int advice) {
 	return posix_fadvise(fd, offset, len, advice) == 0;
 }
 #else
+#define POSIX_FADV_NORMAL     0
+#define POSIX_FADV_SEQUENTIAL 1
+#define POSIX_FADV_RANDOM     2
+#define POSIX_FADV_WILLNEED   3
+#define POSIX_FADV_DONTNEED   4
+#define POSIX_FADV_NOREUSE    5
+
 inline int fadvise(int, off_t, off_t, int) {
 	return 0;
 }
