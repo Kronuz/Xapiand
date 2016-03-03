@@ -390,6 +390,7 @@ XapiandManager::sig_shutdown_handler(int sig)
 	if (!XapiandManager::initialized) {
 		return;
 	}
+	XapiandManager::initialized = 0;
 
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
@@ -434,6 +435,8 @@ XapiandManager::sig_shutdown_handler(int sig)
 	bool shutdown_now = bool(XapiandManager::shutdown_now);
 
 	shutdown(shutdown_asap, shutdown_now);
+
+	XapiandManager::initialized = now;
 }
 
 
