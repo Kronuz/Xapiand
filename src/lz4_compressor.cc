@@ -370,3 +370,113 @@ LZ4DecompressFile::next()
 
 	return result;
 }
+
+
+LZ4DecompressDescriptor::LZ4DecompressDescriptor(int& fildes)
+	: LZ4BlockStreaming(LZ4_BLOCK_SIZE),
+	  lz4StreamDecode(LZ4_createStreamDecode()),
+	  fd(fildes),
+	  read_bytes(LZ4_FILE_READ_SIZE),
+	  data((char*)malloc(LZ4_FILE_READ_SIZE)) { }
+
+
+LZ4DecompressDescriptor::~LZ4DecompressDescriptor()
+{
+	free(data);
+	LZ4_freeStreamDecode(lz4StreamDecode);
+}
+
+
+std::string
+LZ4DecompressDescriptor::init()
+{
+	if unlikely(fd <= 0) {
+		MSG_LZ4Exception("Incorrect descriptor file: %d", fd);
+	}
+
+	if unlikely((data_size = io::read(fd, data, read_bytes > LZ4_FILE_READ_SIZE ? LZ4_FILE_READ_SIZE : read_bytes)) < 0) {
+		throw MSG_LZ4IOError("IO error: read");
+	}
+
+	_size = 0;
+	_finish = false;
+	_offset = 0;
+	data_offset = 0;
+	return next();
+}
+
+
+std::string
+LZ4DecompressDescriptor::next()
+{
+	if (read_bytes == 0) {
+		_finish = true;
+		return std::string();
+	}
+
+	if unlikely(read_bytes < 0) {
+		throw MSG_LZ4CorruptVolume("Data in descriptor file is corrupt");
+	}
+
+	if (data_offset == static_cast<size_t>(data_size)) {
+		if unlikely((data_size = io::read(fd, data, read_bytes > LZ4_FILE_READ_SIZE ? LZ4_FILE_READ_SIZE : read_bytes)) < 0) {
+			throw MSG_LZ4IOError("IO error: read");
+		}
+		if (data_size == 0) {
+			_finish = true;
+			return std::string();
+		}
+		data_offset = 0;
+	}
+
+	uint16_t cmpBytes = 0;
+	size_t res_size = data_size - data_offset;
+	if (sizeof(uint16_t) > res_size) {
+		read_partial_uint16(data + data_offset, &cmpBytes, res_size);
+		data_offset = sizeof(uint16_t) - res_size;
+		if ((data_size = io::read(fd, data, read_bytes > LZ4_FILE_READ_SIZE ? LZ4_FILE_READ_SIZE : read_bytes)) < static_cast<ssize_t>(data_offset)) {
+			throw MSG_LZ4CorruptVolume("File is corrupt");
+		}
+		read_partial_uint16(data, &cmpBytes, data_offset, res_size);
+	} else {
+		read_uint16(data + data_offset, &cmpBytes);
+		data_offset += sizeof(uint16_t);
+	}
+	read_bytes -= sizeof(uint16_t);
+
+	res_size = data_size - data_offset;
+	if (cmpBytes > res_size) {
+		read_partial_bin(data + data_offset, cmpBuf, res_size);
+		data_offset = cmpBytes - res_size;
+		if ((data_size = io::read(fd, data, read_bytes > LZ4_FILE_READ_SIZE ? LZ4_FILE_READ_SIZE : read_bytes)) < static_cast<ssize_t>(data_offset)) {
+			throw MSG_LZ4CorruptVolume("File is corrupt");
+		}
+		read_partial_bin(data, cmpBuf, data_offset, res_size);
+	} else {
+		read_bin(data + data_offset, cmpBuf, cmpBytes);
+		data_offset += cmpBytes;
+	}
+	read_bytes -= cmpBytes;
+
+	char* const decPtr = &buffer[_offset];
+	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, cmpBuf, decPtr, cmpBytes, (int)block_size);
+
+	if (decBytes <= 0) {
+		throw MSG_LZ4Exception("LZ4_decompress_safe_continue failed!");
+	}
+
+	char* const blockStream = (char*)malloc(decBytes);
+	write_bin(blockStream, decPtr, decBytes);
+
+	// Add and wraparound the ringbuffer offset
+	_offset += decBytes;
+	if (_offset >= static_cast<size_t>(LZ4_RING_BUFFER_BYTES - block_size)) {
+		_offset = 0;
+	}
+
+	_size += decBytes;
+	std::string result(blockStream, decBytes);
+	free(blockStream);
+
+	return result;
+}
