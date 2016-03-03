@@ -39,19 +39,6 @@ class Worker : public std::enable_shared_from_this<Worker> {
 protected:
 	ev::loop_ref *loop;
 
-	ev::dynamic_loop _dynamic_loop;
-
-	ev::async _async_break_loop;
-
-	std::mutex _mtx;
-
-	const WorkerShared _parent;
-	WorkerList _children;
-
-	// _iterator should be const_iterator but in linux, std::list member functions
-	// use a standard iterator and not const_iterator.
-	WorkerList::iterator _iterator;
-
 	template<typename T, typename L>
 	Worker(T&& parent, L&& loop_)
 		: loop(loop_ ? std::forward<L>(loop_) : &_dynamic_loop),
@@ -66,6 +53,21 @@ protected:
 		L_OBJ(this, "CREATED WORKER!");
 	}
 
+private:
+
+	ev::dynamic_loop _dynamic_loop;
+
+	ev::async _async_break_loop;
+
+	std::mutex _mtx;
+
+	const WorkerShared _parent;
+	WorkerList _children;
+
+	// _iterator should be const_iterator but in linux, std::list member functions
+	// use a standard iterator and not const_iterator.
+	WorkerList::iterator _iterator;
+
 	inline void _create() {
 		if (_parent) {
 			_iterator = _parent->_attach(shared_from_this());
@@ -75,13 +77,11 @@ protected:
 	template<typename T>
 	inline WorkerList::iterator _attach(T&& child) {
 		L_OBJ(this, "Worker child [%p] attached to [%p]", child.get(), this);
-		std::lock_guard<std::mutex> lk(_mtx);
 		return _children.insert(_children.end(), std::forward<T>(child));
 	}
 
 	template<typename T>
 	decltype(auto) _detach(T&& child) {
-		std::lock_guard<std::mutex> lk(_mtx);
 		if (child->_parent && child->_iterator != _children.end()) {
 			auto it = _children.erase(child->_iterator);
 			child->_iterator = _children.end();
@@ -116,7 +116,7 @@ public:
 			child->shutdown(asap, now);
 			lk.lock();
 			if (now) {
-				it = _detach(child);
+				_detach(child);
 			}
 		}
 	}
@@ -135,13 +135,14 @@ public:
 			enable_make_shared(Args&&... args) : T(std::forward<Args>(args)...) { }
 		};
 		auto worker = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
-
+		std::lock_guard<std::mutex> lk(worker->_mtx);
 		worker->_create();
 		return worker;
 	}
 
 	inline void detach() {
 		if (_parent) {
+			std::lock_guard<std::mutex> lk(_mtx);
 			_parent->_detach(shared_from_this());
 		}
 	}
