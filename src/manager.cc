@@ -547,16 +547,16 @@ XapiandManager::run(const opts_t& o)
 
 	discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 
-	L_DEBUG(this, "Waiting for servers (%zu)...", server_pool.size());
+	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.size(), (server_pool.size() == 1) ? "" : "s");
 	server_pool.join();
 
-	L_DEBUG(this, "Waiting for replicators (%zu)...", replicator_pool.size());
+	L_DEBUG(this, "Waiting for %zu replicator%s...", replicator_pool.size(), (replicator_pool.size() == 1) ? "" : "s");
 	replicator_pool.join();
 
-	L_DEBUG(this, "Waiting for committers (%zu)...", autocommit_pool.size());
+	L_DEBUG(this, "Waiting for %zu committer%s...", autocommit_pool.size(), (autocommit_pool.size() == 1) ? "" : "s");
 	autocommit_pool.join();
 
-	L_DEBUG(this, "Waiting for worker threads (%zu)...", thread_pool.size());
+	L_DEBUG(this, "Waiting for %zu worker thread%s...", thread_pool.size(), (thread_pool.size() == 1) ? "" : "s");
 	thread_pool.join();
 
 	http.reset();
