@@ -83,7 +83,7 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 		return;
 	}
 
-	auto client = Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
+	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
 
 	if (!client->init_remote()) {
 		client->destroy();
@@ -105,7 +105,7 @@ BinaryServer::trigger_replication(const Endpoint &src_endpoint, const Endpoint &
 		return false;
 	}
 
-	auto client = Worker::create<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
+	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
 
 	if (!client->init_replication(src_endpoint, dst_endpoint)) {
 		client->destroy();

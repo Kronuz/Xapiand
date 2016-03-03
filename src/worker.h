@@ -122,7 +122,7 @@ public:
 	}
 
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
-	static inline decltype(auto) create(Args&&... args) {
+	static inline decltype(auto) make_shared(Args&&... args) {
 		/*
 		 * std::make_shared only can call a public constructor, for this reason
 		 * it is neccesary wrap the constructor in a struct.

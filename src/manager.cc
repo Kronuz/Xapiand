@@ -485,26 +485,25 @@ XapiandManager::run(const opts_t& o)
 
 	ThreadPool<> server_pool("S%02zu", o.num_servers);
 	for (size_t i = 0; i < o.num_servers; ++i) {
-		std::shared_ptr<XapiandServer> server = Worker::create<XapiandServer>(manager, nullptr);
-		Worker::create<HttpServer>(server, server->loop, http);
+		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr);
+		Worker::make_shared<HttpServer>(server, server->loop, http);
 #ifdef XAPIAND_CLUSTERING
-		binary->add_server(Worker::create<BinaryServer>(server, server->loop, binary));
+		binary->add_server(Worker::make_shared<BinaryServer>(server, server->loop, binary));
 #endif
-		Worker::create<DiscoveryServer>(server, server->loop, discovery);
-		Worker::create<RaftServer>(server, server->loop, raft);
+		Worker::make_shared<DiscoveryServer>(server, server->loop, discovery);
+		Worker::make_shared<RaftServer>(server, server->loop, raft);
 		server_pool.enqueue(std::move(server));
 	}
 
 	ThreadPool<> replicator_pool("R%02zu", o.num_replicators);
 	for (size_t i = 0; i < o.num_replicators; ++i) {
-		replicator_pool.enqueue(Worker::create<XapiandReplicator>(manager, nullptr));
+		replicator_pool.enqueue(Worker::make_shared<XapiandReplicator>(manager, nullptr));
 	}
 
 	ThreadPool<> autocommit_pool("C%02zu", o.num_committers);
 	for (size_t i = 0; i < o.num_committers; ++i) {
-		auto dbcommit = std::make_shared<DatabaseAutocommit>(manager);
+		auto dbcommit = Worker::make_shared<DatabaseAutocommit>(manager, nullptr);
 		autocommit_pool.enqueue(dbcommit);
-		committers.push_back(dbcommit);
 	}
 
 	L_NOTICE(this, "Started %d server%s"

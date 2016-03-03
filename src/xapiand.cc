@@ -74,7 +74,7 @@ void setup_signal_handlers(void) {
 void run(const opts_t &opts) {
 	setup_signal_handlers();
 	ev::default_loop default_loop;
-	manager = Worker::create<XapiandManager>(&default_loop, opts);
+	manager = Worker::make_shared<XapiandManager>(&default_loop, opts);
 	manager->run(opts);
 	L_DEBUG(nullptr, "Manager use count = %d", manager.use_count());
 	manager.reset();
