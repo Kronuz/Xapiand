@@ -133,8 +133,9 @@ public:
 			}
 		 );
 		auto res = task.get_future();
-		bool pushed = tasks.push(std::move(task));
-		assert(pushed);
+		if (!tasks.push(std::move(task))) {
+			throw std::logic_error("Unable to enqueue task");
+		}
 		return res;
 	}
 

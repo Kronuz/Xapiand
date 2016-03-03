@@ -83,7 +83,7 @@ namespace queue {
 			}
 
 			if (_finished || _ending) {
-				return true;
+				return false;
 			}
 
 			return true;
