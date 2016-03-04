@@ -25,8 +25,8 @@
 #include "../manager.h"
 
 // Values in seconds
-#define HEARTBEAT_MIN 1//0.250
-#define HEARTBEAT_MAX 2//0.500
+#define HEARTBEAT_MIN 1 // 0.250
+#define HEARTBEAT_MAX 2 // 0.500
 
 
 // Base class for UDP messages configuration
@@ -39,10 +39,10 @@ protected:
 
 	std::string description;
 
-	void sending_message(const std::string &message);
+	void sending_message(const std::string& message);
 
 public:
-	BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, const std::string &group_, int tries_ = 1);
+	BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, const std::string& group_, int tries_=1);
 	~BaseUDP();
 
 	void shutdown(bool asap, bool now);
@@ -50,7 +50,7 @@ public:
 
 	virtual std::string getDescription() const noexcept = 0;
 
-	void bind(int tries, const std::string &group);
+	void bind(int tries, const std::string& group);
 
 	inline decltype(auto) manager() noexcept {
 		return share_parent<XapiandManager>();

@@ -29,7 +29,7 @@
 #include <fcntl.h>
 
 
-BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, const std::string &group_, int tries_)
+BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, const std::string& group_, int tries_)
 	: Worker(manager_, loop_),
 	  port(port_),
 	  description(description_)
@@ -47,6 +47,7 @@ BaseUDP::~BaseUDP()
 	L_OBJ(this, "DELETED BASE UDP!");
 }
 
+
 void
 BaseUDP::destroy()
 {
@@ -62,6 +63,7 @@ BaseUDP::destroy()
 	L_OBJ(this, "DESTROYED BASE UDP!");
 }
 
+
 void
 BaseUDP::shutdown(bool asap, bool now)
 {
@@ -73,8 +75,9 @@ BaseUDP::shutdown(bool asap, bool now)
 	Worker::shutdown(asap, now);
 }
 
+
 void
-BaseUDP::bind(int tries, const std::string &group)
+BaseUDP::bind(int tries, const std::string& group)
 {
 	int optval = 1;
 	unsigned char ttl = 3;
@@ -138,7 +141,7 @@ BaseUDP::bind(int tries, const std::string &group)
 
 
 void
-BaseUDP::sending_message(const std::string &message)
+BaseUDP::sending_message(const std::string& message)
 {
 	auto m = manager();
 
