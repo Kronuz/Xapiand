@@ -159,7 +159,12 @@ void RaftServer::response_vote(const std::string& message)
 			L_RAFT(this, "Number of servers: %d;  Votos received: %d", raft->number_servers.load(), raft->votes);
 			if (raft->votes > raft->number_servers / 2) {
 				L_RAFT(this, "It becomes the leader for region: %d", local_node.region.load());
+
 				raft->state = Raft::State::LEADER;
+				raft->leader = lower_string(local_node.name);
+
+				L_INFO(this, "Raft: New leader is %s (1)", raft->leader.c_str());
+
 				raft->start_heartbeat();
 			}
 			return;
@@ -238,6 +243,8 @@ void RaftServer::leader(const std::string& message)
 
 	raft->leader = lower_string(remote_node.name);
 	raft->state = Raft::State::FOLLOWER;
+
+	L_INFO(this, "Raft: New leader is %s (2)", raft->leader.c_str());
 }
 
 void RaftServer::request_data(const std::string& message)
@@ -300,7 +307,7 @@ void RaftServer::response_data(const std::string& message)
 
 	raft->leader = lower_string(remote_node.name);
 
-	L_INFO(this, "Raft: New leader is %s", raft->leader.c_str());
+	L_INFO(this, "Raft: New leader is %s (3)", raft->leader.c_str());
 }
 
 void RaftServer::reset(const std::string& message)
