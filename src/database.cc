@@ -2823,7 +2823,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 								Endpoints e;
 								e.add(endpoint);
 								std::shared_ptr<Database> d;
-								checkout(d, e, DB_WRITABLE | DB_VOLATILE | DB_NOWAL);
+								checkout(d, e, DB_WRITABLE | DB_VOLATILE);
 								// Checkout executes any commands from the WAL
 								reopen = true;
 								checkin(d);
