@@ -29,11 +29,8 @@
 #include "udp_base.h"
 
 // Values in seconds
-#define HEARTBEAT_LEADER_MIN 0.150
-#define HEARTBEAT_LEADER_MAX 0.300
-
-#define ELECTION_LEADER_MIN	4.0 * HEARTBEAT_LEADER_MIN
-#define ELECTION_LEADER_MAX	4.5 * HEARTBEAT_LEADER_MAX
+#define ELECTION_LEADER_MIN	(4.0 * 0.150)
+#define ELECTION_LEADER_MAX	(4.5 * 0.300)
 
 #define XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION 1
 #define XAPIAND_RAFT_PROTOCOL_MINOR_VERSION 0
@@ -49,6 +46,7 @@ private:
 		FOLLOWER,
 		CANDIDATE,
 	};
+
 	static constexpr const char* const StateNames[] = {
 		"LEADER", "FOLLOWER", "CANDIDATE",
 	};
@@ -63,6 +61,7 @@ private:
 		RESET,              // Force reset a node
 		MAX,
 	};
+
 	static constexpr const char* const MessageNames[] = {
 		"HEARTBEAT_LEADER", "REQUEST_VOTE", "RESPONSE_VOTE", "LEADER",
 		"REQUEST_DATA", "RESPONSE_DATA", "RESET",
@@ -85,25 +84,25 @@ private:
 	State state;
 	std::atomic_size_t number_servers;
 
-	void leader_election_cb(ev::timer &watcher, int revents);
-	void heartbeat_cb(ev::timer &watcher, int revents);
+	void leader_election_cb(ev::timer& watcher, int revents);
+	void heartbeat_cb(ev::timer& watcher, int revents);
 
 	void start_heartbeat();
 
 	friend class RaftServer;
 
 public:
-	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_);
+	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
 	~Raft();
 
 	void reset();
 
-	inline void send_message(Message type, const std::string &message) {
+	inline void send_message(Message type, const std::string& message) {
 		if (type != Raft::Message::HEARTBEAT_LEADER) {
 			L_RAFT(this, "<< send_message(%s)", MessageNames[static_cast<int>(type)]);
 		}
 		L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
-		BaseUDP::send_message(static_cast<char>(type), message);
+		BaseUDP::send_message(toUType(type)), message);
 	}
 
 	void register_activity();

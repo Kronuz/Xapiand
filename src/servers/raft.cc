@@ -33,7 +33,7 @@ constexpr const char* const Raft::MessageNames[];
 constexpr const char* const Raft::StateNames[];
 
 
-Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_)
+Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_)
 	: BaseUDP(manager_, loop_, port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
 	  term(0),
 	  running(false),
@@ -81,7 +81,7 @@ Raft::reset()
 
 
 void
-Raft::leader_election_cb(ev::timer &, int)
+Raft::leader_election_cb(ev::timer&, int)
 {
 	L_EV_BEGIN(this, "Raft::leader_election_cb:BEGIN");
 
@@ -113,7 +113,7 @@ Raft::leader_election_cb(ev::timer &, int)
 
 
 void
-Raft::heartbeat_cb(ev::timer &, int)
+Raft::heartbeat_cb(ev::timer&, int)
 {
 	L_EV_BEGIN(this, "Raft::heartbeat_cb:BEGIN");
 	send_message(Message::HEARTBEAT_LEADER, local_node.serialise());
