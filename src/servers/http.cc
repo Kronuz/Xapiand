@@ -28,7 +28,7 @@
 
 
 Http::Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_)
-	: BaseTCP(manager_, loop_, port_, "Http", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY | CONN_TCP_DEFER_ACCEPT)
+	: BaseTCP(manager_, loop_, port_, "HTTP", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY | CONN_TCP_DEFER_ACCEPT)
 {
 	local_node.http_port = port;
 
@@ -45,5 +45,5 @@ Http::~Http()
 std::string
 Http::getDescription() const noexcept
 {
-	return "TCP:" + std::to_string(port) + " (" + description + ")";
+	return "TCP:" + std::to_string(port) + " (" + description + " v1.1)";
 }
