@@ -28,8 +28,6 @@
 
 #include "udp_base.h"
 
-#include "server_raft.h"
-
 
 #define ELECTION_LEADER_MIN	4.0 * HEARTBEAT_MAX
 #define ELECTION_LEADER_MAX	4.5 * HEARTBEAT_MAX
@@ -90,7 +88,7 @@ private:
 
 	void start_heartbeat();
 
-	friend RaftServer;
+	friend class RaftServer;
 
 public:
 	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_);
@@ -98,7 +96,11 @@ public:
 
 	void reset();
 
-	void send_message(Message type, const std::string &content);
+	inline void send_message(Message type, const std::string &message) {
+		L_RAFT(this, "<< send_message(%s)", MessageNames[static_cast<int>(type)]);
+		L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
+		BaseUDP::send_message(static_cast<char>(type), message);
+	}
 
 	void register_activity();
 

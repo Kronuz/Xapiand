@@ -28,8 +28,6 @@
 
 #include "udp_base.h"
 
-#include "server_discovery.h"
-
 #define XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION 1
 #define XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION 0
 
@@ -43,7 +41,7 @@ private:
 
 	void heartbeat_cb(ev::timer &watcher, int revents);
 
-	friend DiscoveryServer;
+	friend class DiscoveryServer;
 
 public:
 	enum class Message {
@@ -66,7 +64,11 @@ public:
 	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_);
 	~Discovery();
 
-	void send_message(Message type, const std::string &content);
+	inline void send_message(Message type, const std::string &message) {
+		L_DISCOVERY(this, "<< send_message(%s)", MessageNames[static_cast<int>(type)]);
+		L_DISCOVERY_PROTO(this, "message: '%s'", repr(message).c_str());
+		BaseUDP::send_message(static_cast<char>(type), message);
+	}
 
 	std::string getDescription() const noexcept override;
 

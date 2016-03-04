@@ -41,6 +41,8 @@ protected:
 public:
 	virtual ~BaseServer();
 
+	char get_message(int fd, std::string &result, char max_type, uint16_t version, Node* node);
+
 	virtual void io_accept_cb(ev::io &watcher, int revents) = 0;
 	void shutdown(bool asap, bool now) override;
 

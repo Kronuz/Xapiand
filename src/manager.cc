@@ -30,8 +30,8 @@
 #include "client_binary.h"
 #include "servers/http.h"
 #include "servers/binary.h"
-#include "servers/discovery.h"
-#include "servers/raft.h"
+#include "servers/server_discovery.h"
+#include "servers/server_raft.h"
 
 #include <list>
 #include <stdlib.h>

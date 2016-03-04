@@ -27,8 +27,11 @@
 #include <assert.h>
 
 
+constexpr const char* const Discovery::MessageNames[];
+
+
 Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_)
-	: BaseUDP(manager_, loop_, port_, "Discovery", group_),
+	: BaseUDP(manager_, loop_, port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
 	  heartbeat(*loop)
 {
 	heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
@@ -90,19 +93,6 @@ Discovery::heartbeat_cb(ev::timer &, int)
 			break;
 	}
 	L_EV_END(this, "Discovery::heartbeat_cb:END");
-}
-
-
-void
-Discovery::send_message(Message type, const std::string &content)
-{
-	if (!content.empty()) {
-		std::string message(1, toUType(type));
-		message.append(std::string((const char *)&XAPIAND_DISCOVERY_PROTOCOL_VERSION, sizeof(uint16_t)));
-		message.append(serialise_string(manager()->cluster_name));
-		message.append(content);
-		sending_message(message);
-	}
 }
 
 

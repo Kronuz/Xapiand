@@ -29,10 +29,11 @@
 #include <fcntl.h>
 
 
-BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, const std::string& group_, int tries_)
+BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, uint16_t version_, const std::string& group_, int tries_)
 	: Worker(manager_, loop_),
 	  port(port_),
-	  description(description_)
+	  description(description_),
+	  version(version_)
 {
 	bind(tries_, group_);
 
@@ -162,4 +163,69 @@ BaseUDP::sending_message(const std::string& message)
 			}
 		}
 	}
+}
+
+
+void
+BaseUDP::send_message(char type, const std::string &content)
+{
+	if (!content.empty()) {
+		std::string message(1, type);
+		message.append(std::string((const char *)&version, sizeof(uint16_t)));
+		message.append(serialise_string(manager()->cluster_name));
+		message.append(content);
+		sending_message(message);
+	}
+}
+
+char
+BaseUDP::get_message(std::string &result, char max_type)
+{
+	char buf[1024];
+	struct sockaddr_in addr;
+	socklen_t addrlen = sizeof(addr);
+	ssize_t received = ::recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *)&addr, &addrlen);
+	if (received < 0) {
+		if (!ignored_errorno(errno, true)) {
+			L_ERR(this, "ERROR: read error (sock=%d): %s", sock, strerror(errno));
+			throw MSG_NetworkError(strerror(errno));
+		}
+		L_CONN(this, "Received EOF (sock=%d)!", sock);
+		throw MSG_NetworkError("No message received!");
+	} else if (received == 0) {
+		// If no messages are available to be received and the peer has performed an orderly shutdown.
+		L_CONN(this, "Received EOF (sock=%d)!", sock);
+		throw MSG_NetworkError("No message received!");
+	} else if (received < 4) {
+		throw MSG_NetworkError("Badly formed message: Incomplete!");
+	}
+
+	L_UDP_WIRE(this, "(sock=%d) -->> '%s'", sock, repr(buf, received).c_str());
+
+	const char *p = buf;
+	const char *p_end = p + received;
+
+	char type = *p++;
+	if (type >= max_type) {
+		throw MSG_NetworkError("Invalid message type %u", unsigned(type));
+	}
+
+	uint16_t remote_protocol_version = *(uint16_t *)p;
+	if ((remote_protocol_version & 0xff) > version) {
+		throw MSG_NetworkError("Badly formed message: Protocol version mismatch!");
+	}
+	p += sizeof(uint16_t);
+
+	std::string remote_cluster_name;
+	if (unserialise_string(remote_cluster_name, &p, p_end) == -1 || remote_cluster_name.empty()) {
+		throw MSG_NetworkError("Badly formed message: No cluster name!");
+	}
+
+	if (remote_cluster_name != manager()->cluster_name) {
+		throw MSG_NetworkError("Badly formed message: No cluster name!");
+	}
+
+	result = std::string(p, p_end - p);
+	return type;
+
 }

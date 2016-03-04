@@ -29,8 +29,12 @@
 #include <assert.h>
 
 
+constexpr const char* const Raft::MessageNames[];
+constexpr const char* const Raft::StateNames[];
+
+
 Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_)
-	: BaseUDP(manager_, loop_, port_, "Raft", group_),
+	: BaseUDP(manager_, loop_, port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
 	  term(0),
 	  running(false),
 	  election_leader(*loop),
@@ -129,19 +133,6 @@ Raft::start_heartbeat()
 	L_RAFT(this, "\tSet heartbeat timeout event %f", heartbeat.repeat);
 
 	leader = lower_string(local_node.name);
-}
-
-
-void
-Raft::send_message(Message type, const std::string &content)
-{
-	if (!content.empty()) {
-		std::string message(1, toUType(type));
-		message.append(std::string((const char *)&XAPIAND_RAFT_PROTOCOL_VERSION, sizeof(uint16_t)));
-		message.append(serialise_string(manager()->cluster_name));
-		message.append(content);
-		sending_message(message);
-	}
 }
 
 

@@ -54,6 +54,7 @@ BaseServer::shutdown(bool asap, bool now)
 	Worker::shutdown(asap, now);
 }
 
+
 void
 BaseServer::destroy()
 {

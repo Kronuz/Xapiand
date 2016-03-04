@@ -26,7 +26,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-class Raft;
+#include "raft.h"
 
 
 // Raft Server
@@ -34,6 +34,18 @@ class RaftServer : public BaseServer {
 	friend Raft;
 
 	std::shared_ptr<Raft> raft;
+
+	Node unserialise_remote_node(const char **p, const char *p_end);
+
+	void raft_server(Raft::Message type, const std::string &message);
+
+	void request_vote(const std::string& message);
+	void response_vote(const std::string& message);
+	void heartbeat_leader(const std::string& message);
+	void leader(const std::string& message);
+	void request_data(const std::string& message);
+	void response_data(const std::string& message);
+	void reset(const std::string& message);
 
 public:
 	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft> &raft_);

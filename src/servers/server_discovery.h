@@ -26,7 +26,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-class Discovery;
+#include "discovery.h"
 
 
 // Discovery Server
@@ -34,6 +34,21 @@ class DiscoveryServer : public BaseServer {
 	friend Discovery;
 
 	std::shared_ptr<Discovery> discovery;
+
+	void _wave(bool heartbeat, const std::string& message);
+	void _db_wave(bool bossy, const std::string& message);
+
+	void discovery_server(Discovery::Message type, const std::string &message);
+
+	void hello(const std::string& message);
+	void wave(const std::string& message);
+	void sneer(const std::string& message);
+	void heartbeat(const std::string& message);
+	void bye(const std::string& message);
+	void db(const std::string& message);
+	void db_wave(const std::string& message);
+	void bossy_db_wave(const std::string& message);
+	void db_updated(const std::string& message);
 
 public:
 	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery> &discovery_);
