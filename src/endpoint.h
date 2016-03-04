@@ -123,7 +123,9 @@ public:
 	Endpoint(const std::string &path_, const Node *	node_=nullptr, long long mastery_level_=-1, std::string node_name="");
 
 	bool is_local() const {
-		return host == local_node.host() && port == local_node.binary_port;
+		int binary_port = local_node.binary_port;
+		if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
+		return host == local_node.host() && port == binary_port;
 	}
 
 	size_t hash() const;
