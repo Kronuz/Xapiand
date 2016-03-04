@@ -233,6 +233,8 @@ class Storage {
 	}
 
 	uint32_t _write_compress(const char *data, size_t data_size, void* param=nullptr) {
+		uint32_t curr_offset = header.head.offset;
+
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
 		bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
@@ -243,7 +245,7 @@ class Storage {
 		memset(&bin_footer, 0, sizeof(bin_footer));
 		const StorageBinFooter* bin_footer_data = &bin_footer;
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
-		off_t block_offset = ((header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
+		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 
 		LZ4CompressData lz4(data, data_size, STORAGE_MAGIC);
 		auto it = lz4.begin();
@@ -351,12 +353,14 @@ class Storage {
 
 		header.head.offset += (((sizeof(StorageBinHeader) + bin_header.size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 
-		return header.head.offset;
+		return curr_offset;
 	}
 
 	uint32_t _write(const char *data, size_t data_size, void* param=nullptr) {
 		size_t data_size_orig = data_size;
 		const char* orig_data = data;
+
+		uint32_t curr_offset = header.head.offset;
 
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
@@ -368,7 +372,7 @@ class Storage {
 		memset(&bin_footer, 0, sizeof(bin_footer));
 		const StorageBinFooter* bin_footer_data = &bin_footer;
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
-		off_t block_offset = ((header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
+		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 
 		while (bin_header_data_size || data_size || bin_footer_data_size) {
 			if (bin_header_data_size) {
@@ -441,7 +445,7 @@ class Storage {
 
 		header.head.offset += (((sizeof(StorageBinHeader) + data_size_orig + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 
-		return header.head.offset;
+		return curr_offset;
 	}
 
 protected:
