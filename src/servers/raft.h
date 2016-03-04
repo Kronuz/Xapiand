@@ -48,9 +48,9 @@ private:
 		FOLLOWER,
 		CANDIDATE,
 	};
-	static const char* StateNames[] = {
+	static constexpr const char* const StateNames[] = {
 		"LEADER", "FOLLOWER", "CANDIDATE",
-	}
+	};
 
 	enum class Message {
 		REQUEST_VOTE,       // Invoked by candidates to gather votes
@@ -63,7 +63,7 @@ private:
 		MAX,
 	};
 
-	static const char* MessageNames[] = {
+	static constexpr const char* const MessageNames[] = {
 		"REQUEST_VOTE", "RESPONSE_VOTE", "HEARTBEAT_LEADER", "LEADER",
 		"REQUEST_DATA", "RESPONSE_DATA", "RESET",
 	};

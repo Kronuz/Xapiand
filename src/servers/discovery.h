@@ -58,7 +58,7 @@ public:
 		DB_UPDATED,    //
 		MAX,           //
 	};
-	static const char* MessageNames[] = {
+	static constexpr const char* const MessageNames[] = {
 		"HELLO", "WAVE", "SNEER", "HEARTBEAT", "BYE", "DB", "DB_WAVE",
 		"BOSSY_DB_WAVE", "DB_UPDATED",
 	};

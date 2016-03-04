@@ -140,7 +140,7 @@ struct WalBinFooter {
 
 
 class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
-	static const constexpr char* const names[] = {
+	static constexpr const char* const names[] = {
 		"ADD_DOCUMENT",
 		"CANCEL",
 		"DELETE_DOCUMENT_TERM",
