@@ -41,16 +41,16 @@ class BinaryServer : public BaseServer {
 
 	ev::async async_signal;
 
-	void async_signal_cb(ev::async &watcher, int revents);
+	void async_signal_cb(ev::async& watcher, int revents);
 
 public:
-	BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Binary> &binary_);
+	BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Binary>& binary_);
 
 	~BinaryServer();
 
-	void io_accept_cb(ev::io &watcher, int revents) override;
+	void io_accept_cb(ev::io& watcher, int revents) override;
 
-	bool trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
+	bool trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 };
 
 

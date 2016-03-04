@@ -28,7 +28,7 @@
 #include "client_binary.h"
 
 
-BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Binary> &binary_)
+BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Binary>& binary_)
 	: BaseServer(server_, loop_, binary_->sock),
 	  binary(binary_),
 	  async_signal(*loop_)
@@ -51,7 +51,7 @@ BinaryServer::~BinaryServer()
 
 
 void
-BinaryServer::async_signal_cb(ev::async &, int)
+BinaryServer::async_signal_cb(ev::async&, int)
 {
 	L_EV_BEGIN(this, "BinaryServer::async_signal_cb:BEGIN");
 
@@ -62,7 +62,7 @@ BinaryServer::async_signal_cb(ev::async &, int)
 
 
 void
-BinaryServer::io_accept_cb(ev::io &watcher, int revents)
+BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	L_EV_BEGIN(this, "BinaryServer::io_accept_cb:BEGIN");
 
@@ -98,7 +98,7 @@ BinaryServer::io_accept_cb(ev::io &watcher, int revents)
 
 
 bool
-BinaryServer::trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint)
+BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
 	int client_sock = binary->connection_socket();
 	if (client_sock < 0) {
