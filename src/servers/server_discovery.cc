@@ -415,6 +415,8 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 			}
 			L_DISCOVERY_PROTO(this, "message: '%s'", repr(message).c_str());
 			discovery_server(type, message);
+		} catch (DummyException) {
+			/* ignore */
 		} catch (...) {
 			L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 			throw;

@@ -369,6 +369,8 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 			L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
 
 			raft_server(type, message);
+		} catch (DummyException) {
+			/* ignore */
 		} catch (...) {
 			L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 			throw;
