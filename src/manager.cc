@@ -191,12 +191,15 @@ XapiandManager::setup_node()
 			return;
 		}
 	}
+	L_WARNING(this, "Cannot setup node: No servers!");
 }
 
 
 void
 XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 {
+	L_DISCOVERY(this, "Setup Node!");
+
 	int new_cluster = 0;
 
 	std::unique_lock<std::mutex> lk(qmtx);
