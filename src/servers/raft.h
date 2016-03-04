@@ -46,8 +46,11 @@ private:
 	enum class State {
 		LEADER,
 		FOLLOWER,
-		CANDIDATE
+		CANDIDATE,
 	};
+	static const char* StateNames[] = {
+		"LEADER", "FOLLOWER", "CANDIDATE",
+	}
 
 	enum class Message {
 		REQUEST_VOTE,       // Invoked by candidates to gather votes
@@ -57,6 +60,12 @@ private:
 		REQUEST_DATA,       // Request information from leader
 		RESPONSE_DATA,      // Receive information from leader
 		RESET,              // Force reset a node
+		MAX,
+	};
+
+	static const char* MessageNames[] = {
+		"REQUEST_VOTE", "RESPONSE_VOTE", "HEARTBEAT_LEADER", "LEADER",
+		"REQUEST_DATA", "RESPONSE_DATA", "RESET",
 	};
 
 	uint64_t term;

@@ -42,6 +42,7 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_,
 	election_leader.set<Raft, &Raft::leader_election_cb>(this);
 	election_leader.set(election_timeout, 0.);
 	L_EV(this, "Start raft's election leader event");
+
 	last_activity = ev::now(*loop);
 
 	heartbeat.set<Raft, &Raft::heartbeat_cb>(this);

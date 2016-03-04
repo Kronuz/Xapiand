@@ -28,6 +28,9 @@
 
 #include "server_http.h"
 
+#define XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION 1
+#define XAPIAND_HTTP_PROTOCOL_MINOR_VERSION 1
+
 
 // Configuration data for Http
 class Http : public BaseTCP {

@@ -45,5 +45,5 @@ Http::~Http()
 std::string
 Http::getDescription() const noexcept
 {
-	return "TCP:" + std::to_string(port) + " (" + description + " v1.1)";
+	return "TCP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_HTTP_PROTOCOL_MINOR_VERSION) + ")";
 }

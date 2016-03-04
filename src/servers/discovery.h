@@ -56,7 +56,11 @@ public:
 		DB_WAVE,       //
 		BOSSY_DB_WAVE, //
 		DB_UPDATED,    //
-		MAX            //
+		MAX,           //
+	};
+	static const char* MessageNames[] = {
+		"HELLO", "WAVE", "SNEER", "HEARTBEAT", "BYE", "DB", "DB_WAVE",
+		"BOSSY_DB_WAVE", "DB_UPDATED",
 	};
 
 	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_);
@@ -68,10 +72,12 @@ public:
 
 	inline void start() {
 		heartbeat.again();
+		L_DISCOVERY(this, "Discovery was started!");
 	}
 
 	inline void stop() {
 		send_message(Message::BYE, local_node.serialise());
+		L_DISCOVERY(this, "Discovery was stopped!");
 	}
 };
 
