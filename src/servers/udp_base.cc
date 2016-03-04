@@ -167,7 +167,7 @@ BaseUDP::sending_message(const std::string& message)
 
 
 void
-BaseUDP::send_message(char type, const std::string &content)
+BaseUDP::send_message(char type, const std::string& content)
 {
 	if (!content.empty()) {
 		std::string message(1, type);
@@ -178,8 +178,9 @@ BaseUDP::send_message(char type, const std::string &content)
 	}
 }
 
+
 char
-BaseUDP::get_message(std::string &result, char max_type)
+BaseUDP::get_message(std::string& result, char max_type)
 {
 	char buf[1024];
 	struct sockaddr_in addr;
@@ -227,5 +228,4 @@ BaseUDP::get_message(std::string &result, char max_type)
 
 	result = std::string(p, p_end - p);
 	return type;
-
 }
