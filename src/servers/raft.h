@@ -51,9 +51,9 @@ private:
 	};
 
 	enum class Message {
+		HEARTBEAT_LEADER,   // Only leader send heartbeats to its follower servers
 		REQUEST_VOTE,       // Invoked by candidates to gather votes
 		RESPONSE_VOTE,      // Gather votes
-		HEARTBEAT_LEADER,   // Only leader send heartbeats to its follower servers
 		LEADER,             // Node saying hello when it become leader
 		REQUEST_DATA,       // Request information from leader
 		RESPONSE_DATA,      // Receive information from leader
@@ -62,7 +62,7 @@ private:
 	};
 
 	static constexpr const char* const MessageNames[] = {
-		"REQUEST_VOTE", "RESPONSE_VOTE", "HEARTBEAT_LEADER", "LEADER",
+		"HEARTBEAT_LEADER", "REQUEST_VOTE", "RESPONSE_VOTE", "LEADER",
 		"REQUEST_DATA", "RESPONSE_DATA", "RESET",
 	};
 
@@ -97,7 +97,9 @@ public:
 	void reset();
 
 	inline void send_message(Message type, const std::string &message) {
-		L_RAFT(this, "<< send_message(%s)", MessageNames[static_cast<int>(type)]);
+		if (type != Raft::Message::HEARTBEAT_LEADER) {
+			L_RAFT(this, "<< send_message(%s)", MessageNames[static_cast<int>(type)]);
+		}
 		L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
 		BaseUDP::send_message(static_cast<char>(type), message);
 	}

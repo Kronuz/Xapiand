@@ -53,9 +53,9 @@ void
 RaftServer::raft_server(Raft::Message type, const std::string &message)
 {
 	static const dispatch_func dispatch[] = {
+		&RaftServer::heartbeat_leader,
 		&RaftServer::request_vote,
 		&RaftServer::response_vote,
-		&RaftServer::heartbeat_leader,
 		&RaftServer::leader,
 		&RaftServer::request_data,
 		&RaftServer::response_data,
@@ -338,7 +338,9 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 		try {
 			std::string message;
 			Raft::Message type = static_cast<Raft::Message>(raft->get_message(message, static_cast<char>(Raft::Message::MAX)));
-			L_RAFT(this, ">> get_message(%s)", Raft::MessageNames[static_cast<int>(type)]);
+			if (type != Raft::Message::HEARTBEAT_LEADER) {
+				L_RAFT(this, ">> get_message(%s)", Raft::MessageNames[static_cast<int>(type)]);
+			}
 			L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
 
 			raft_server(type, message);

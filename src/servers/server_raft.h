@@ -39,9 +39,9 @@ class RaftServer : public BaseServer {
 
 	void raft_server(Raft::Message type, const std::string &message);
 
+	void heartbeat_leader(const std::string& message);
 	void request_vote(const std::string& message);
 	void response_vote(const std::string& message);
-	void heartbeat_leader(const std::string& message);
 	void leader(const std::string& message);
 	void request_data(const std::string& message);
 	void response_data(const std::string& message);

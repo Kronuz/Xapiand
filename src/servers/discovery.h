@@ -45,10 +45,10 @@ private:
 
 public:
 	enum class Message {
+		HEARTBEAT,     // Heartbeat
 		HELLO,         // New node saying hello
 		WAVE,          // Nodes waving hello to the new node
 		SNEER,         // Nodes telling the client they don't agree on the new node's name
-		HEARTBEAT,     // Heartbeat
 		BYE,           // Node says goodbye
 		DB,            //
 		DB_WAVE,       //
@@ -57,7 +57,7 @@ public:
 		MAX,           //
 	};
 	static constexpr const char* const MessageNames[] = {
-		"HELLO", "WAVE", "SNEER", "HEARTBEAT", "BYE", "DB", "DB_WAVE",
+		"HEARTBEAT", "HELLO", "WAVE", "SNEER", "BYE", "DB", "DB_WAVE",
 		"BOSSY_DB_WAVE", "DB_UPDATED",
 	};
 
@@ -65,7 +65,9 @@ public:
 	~Discovery();
 
 	inline void send_message(Message type, const std::string &message) {
-		L_DISCOVERY(this, "<< send_message(%s)", MessageNames[static_cast<int>(type)]);
+		if (type != Discovery::Message::HEARTBEAT) {
+			L_DISCOVERY(this, "<< send_message(%s)", MessageNames[static_cast<int>(type)]);
+		}
 		L_DISCOVERY_PROTO(this, "message: '%s'", repr(message).c_str());
 		BaseUDP::send_message(static_cast<char>(type), message);
 	}

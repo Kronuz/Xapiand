@@ -40,10 +40,10 @@ class DiscoveryServer : public BaseServer {
 
 	void discovery_server(Discovery::Message type, const std::string &message);
 
+	void heartbeat(const std::string& message);
 	void hello(const std::string& message);
 	void wave(const std::string& message);
 	void sneer(const std::string& message);
-	void heartbeat(const std::string& message);
 	void bye(const std::string& message);
 	void db(const std::string& message);
 	void db_wave(const std::string& message);

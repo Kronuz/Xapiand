@@ -55,10 +55,10 @@ void
 DiscoveryServer::discovery_server(Discovery::Message type, const std::string &message)
 {
 	static const dispatch_func dispatch[] = {
+		&DiscoveryServer::heartbeat,
 		&DiscoveryServer::hello,
 		&DiscoveryServer::wave,
 		&DiscoveryServer::sneer,
-		&DiscoveryServer::heartbeat,
 		&DiscoveryServer::bye,
 		&DiscoveryServer::db,
 		&DiscoveryServer::db_wave,
@@ -395,9 +395,10 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 		try {
 			std::string message;
 			Discovery::Message type = static_cast<Discovery::Message>(discovery->get_message(message, static_cast<char>(Discovery::Message::MAX)));
-			L_DISCOVERY(this, ">> get_message(%s)", Discovery::MessageNames[static_cast<int>(type)]);
+			if (type != Discovery::Message::HEARTBEAT) {
+				L_DISCOVERY(this, ">> get_message(%s)", Discovery::MessageNames[static_cast<int>(type)]);
+			}
 			L_DISCOVERY_PROTO(this, "message: '%s'", repr(message).c_str());
-
 			discovery_server(type, message);
 		} catch (...) {
 			L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
