@@ -194,7 +194,7 @@ class LogThread {
 #define _LOG_EMERG_ENABLED(args...) Log::log(0ms, LOG_EMERG, nullptr, __FILE__, __LINE__, NO_COL, EMERG_COL, args)
 #define _LOG_EXC_ENABLED(args...) Log::log(0ms, -LOG_ERR, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
-#define _LOG_MARKED_ENABLED(args...) Log::log(0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔸 " DEBUG_COL, args)
+#define _LOG_MARKED_ENABLED(args...) Log::log(0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥 " DEBUG_COL, args)
 
 #define _LOG_TIMED_100(args...) auto __timed_log = Log::log(100ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 #define _LOG_TIMED_500(args...) auto __timed_log = Log::log(500ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
@@ -202,6 +202,9 @@ class LogThread {
 #define _LOG_TIMED_N_CLEAR(args...) __timed_log->unlog(LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 
 #define L _LOG_ENABLED
+#define L_LOG _LOG_LOG_ENABLED
+#define L_MARK _LOG_MARKED_ENABLED
+
 #define L_BEGIN _LOG_TIMED
 #define L_END _LOG_TIMED_CLEAR
 
