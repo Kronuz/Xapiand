@@ -90,7 +90,7 @@ Raft::leader_election_cb(ev::timer &, int)
 	if (m->state == XapiandManager::State::READY) {
 		// calculate when the timeout would happen
 		ev::tstamp remaining_time = last_activity + election_timeout - ev::now(*loop);
-		L_RAFT(this, "Raft { Reg: %d; State: %d; Rem_t: %f; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
+		L_RAFT_PROTO(this, "Raft { Reg: %d; State: %d; Rem_t: %f; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
 			local_node.region.load(), state, remaining_time, election_timeout, term, number_servers.load(), leader.c_str());
 
 		if (remaining_time < 0. && state != State::LEADER) {

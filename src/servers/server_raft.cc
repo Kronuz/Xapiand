@@ -80,7 +80,7 @@ void RaftServer::request_vote(const std::string& message)
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
 	if (local_node.region.load() != remote_node.region.load()) {
-		throw MSG_NetworkError("Badly formed message: Wrong node!");
+		return;
 	}
 
 	raft->register_activity();
@@ -88,7 +88,6 @@ void RaftServer::request_vote(const std::string& message)
 	std::string str_remote_term;
 	if (unserialise_string(str_remote_term, &p, p_end) == -1) {
 		L_RAFT(this, "Badly formed message: No proper term!");
-		L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 		return;
 	}
 
@@ -112,7 +111,6 @@ void RaftServer::request_vote(const std::string& message)
 		if (raft->state == Raft::State::LEADER && remote_node != local_node) {
 			L_ERR(this, "ERROR: Remote node %s does not recognize this node (with highest term) as a leader. Therefore, remote node will reset!", remote_node.name.c_str());
 			raft->send_message(Raft::Message::RESET, remote_node.serialise());
-			L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 			return;
 		}
 
@@ -143,7 +141,7 @@ void RaftServer::response_vote(const std::string& message)
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
 	if (local_node.region.load() != remote_node.region.load()) {
-		throw MSG_NetworkError("Badly formed message: Wrong node!");
+		return;
 	}
 
 	raft->register_activity();
@@ -153,7 +151,6 @@ void RaftServer::response_vote(const std::string& message)
 
 		if (unserialise_string(vote, &p, p_end) == -1) {
 			L_RAFT(this, "Badly formed message: No proper vote!");
-			L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 			return;
 		}
 
@@ -165,14 +162,12 @@ void RaftServer::response_vote(const std::string& message)
 				raft->state = Raft::State::LEADER;
 				raft->start_heartbeat();
 			}
-			L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 			return;
 		}
 
 		std::string str_remote_term;
 		if (unserialise_string(str_remote_term, &p, p_end) == -1) {
 			L_RAFT(this, "Badly formed message: No proper term!");
-			L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 			return;
 		}
 		uint64_t remote_term = std::stoull(str_remote_term);
@@ -180,7 +175,6 @@ void RaftServer::response_vote(const std::string& message)
 		if (raft->term < remote_term) {
 			raft->term = remote_term;
 			raft->state = Raft::State::FOLLOWER;
-			L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 			return;
 		}
 	}
@@ -196,7 +190,7 @@ void RaftServer::heartbeat_leader(const std::string& message)
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
 	if (local_node.region.load() != remote_node.region.load()) {
-		throw MSG_NetworkError("Badly formed message: Wrong node!");
+		return;
 	}
 
 	raft->register_activity();
@@ -205,7 +199,7 @@ void RaftServer::heartbeat_leader(const std::string& message)
 		L_RAFT(this, "Request the raft server's configuration!");
 		raft->send_message(Raft::Message::REQUEST_DATA, local_node.serialise());
 	}
-	// L_RAFT(this, "Listening %s's heartbeat in timestamp: %f!", remote_node.name.c_str(), raft->last_activity);
+	L_RAFT_PROTO(this, "Listening %s's heartbeat in timestamp: %f!", remote_node.name.c_str(), raft->last_activity);
 }
 
 void RaftServer::leader(const std::string& message)
@@ -218,21 +212,19 @@ void RaftServer::leader(const std::string& message)
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
 	if (local_node.region.load() != remote_node.region.load()) {
-		throw MSG_NetworkError("Badly formed message: Wrong node!");
+		return;
 	}
 
 	raft->register_activity();
 
 	if (raft->state == Raft::State::LEADER) {
 		assert(remote_node == local_node);
-		L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 		return;
 	}
 
 	std::string str_servers;
 	if (unserialise_string(str_servers, &p, p_end) == -1) {
 		L_RAFT(this, "Badly formed message: No proper number of servers!");
-		L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 		return;
 	}
 	raft->number_servers.store(std::stoull(str_servers));
@@ -240,7 +232,6 @@ void RaftServer::leader(const std::string& message)
 	std::string str_remote_term;
 	if (unserialise_string(str_remote_term, &p, p_end) == -1) {
 		L_RAFT(this, "Badly formed message: No proper term!");
-		L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 		return;
 	}
 	raft->term = std::stoull(str_remote_term);
@@ -259,7 +250,7 @@ void RaftServer::request_data(const std::string& message)
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
 	if (local_node.region.load() != remote_node.region.load()) {
-		throw MSG_NetworkError("Badly formed message: Wrong node!");
+		return;
 	}
 
 	if (raft->state == Raft::State::LEADER) {
@@ -280,14 +271,14 @@ void RaftServer::response_data(const std::string& message)
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
 	if (local_node.region.load() != remote_node.region.load()) {
-		throw MSG_NetworkError("Badly formed message: Wrong node!");
+		return;
 	}
 
 	raft->register_activity();
 
 	if (raft->state == Raft::State::LEADER) {
-		assert(remote_node == local_node);
-		L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
+		L_CRIT(this, "I'm leader, other responded as leader!");
+		raft->reset();
 		return;
 	}
 
@@ -296,7 +287,6 @@ void RaftServer::response_data(const std::string& message)
 	std::string str_servers;
 	if (unserialise_string(str_servers, &p, p_end) == -1) {
 		L_RAFT(this, "Badly formed message: No proper number of servers!");
-		L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 		return;
 	}
 	raft->number_servers.store(std::stoull(str_servers));
@@ -304,12 +294,13 @@ void RaftServer::response_data(const std::string& message)
 	std::string str_remote_term;
 	if (unserialise_string(str_remote_term, &p, p_end) == -1) {
 		L_RAFT(this, "Badly formed message: No proper term!");
-		L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 		return;
 	}
 	raft->term = std::stoull(str_remote_term);
 
 	raft->leader = lower_string(remote_node.name);
+
+	L_INFO(this, "Raft: New leader is %s", raft->leader.c_str());
 }
 
 void RaftServer::reset(const std::string& message)
@@ -322,7 +313,7 @@ void RaftServer::reset(const std::string& message)
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
 	if (local_node.region.load() != remote_node.region.load()) {
-		throw MSG_NetworkError("Badly formed message: Wrong node!");
+		return;
 	}
 
 	if (local_node == remote_node) {
