@@ -245,7 +245,7 @@ LZ4CompressDescriptor::next()
 		_finish = true;
 		return std::string();
 	}
-	read_size -= inpBytes;
+	read_bytes -= inpBytes;
 
 	const int cmpBytes = LZ4_compress_fast_continue(lz4Stream, inpPtr, cmpBuf, inpBytes, cmpBuf_size, 1);
 	if (cmpBytes <= 0) {
