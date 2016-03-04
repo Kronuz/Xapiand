@@ -29,7 +29,7 @@
 #include <assert.h>
 
 
-typedef void (RaftServer::* dispatch_func)(const std::string &);
+using dispatch_func = void (RaftServer::*)(const std::string&);
 
 
 RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft> &raft_)
