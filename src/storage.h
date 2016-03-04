@@ -476,53 +476,58 @@ public:
 	}
 
 	void open(const std::string& path_, int flags_=STORAGE_CREATE_OR_OPEN, void* param=nullptr) {
-		if (path == path_ && flags == flags_) {
-			seek(STORAGE_START_BLOCK_OFFSET);
-			return;
-		}
+		if (path != path_ || flags != flags_) {
+			close();
 
-		close();
-
-		path = path_;
-		flags = flags_;
+			path = path_;
+			flags = flags_;
 
 #if STORAGE_BUFFER_CLEAR
-		if (flags & STORAGE_WRITABLE) {
-			memset(buffer0, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
-		}
+			if (flags & STORAGE_WRITABLE) {
+				memset(buffer0, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
+			}
 #endif
 
-		fd = ::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR : O_RDONLY, 0644);
-		if unlikely(fd < 0) {
-			if (flags & STORAGE_CREATE) {
-				fd = ::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR | O_CREAT : O_RDONLY | O_CREAT, 0644);
-			}
+			fd = ::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR : O_RDONLY, 0644);
 			if unlikely(fd < 0) {
-				throw MSG_StorageIOError("Cannot open storage file");
-			}
-
-			memset(&header, 0, sizeof(header));
-			header.init(param);
-
-			if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
-				throw MSG_StorageIOError("IO error: write");
-			}
-		} else {
-			ssize_t r = io::read(fd, &header, sizeof(header));
-			if unlikely(r < 0) {
-				throw MSG_StorageIOError("IO error: read");
-			} else if unlikely(r != sizeof(header)) {
-				throw MSG_StorageCorruptVolume("Incomplete bin data");
-			}
-			header.validate(param);
-
-			if (flags & STORAGE_WRITABLE) {
-				buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
-				size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
-				buffer_offset -= offset;
-				if unlikely(io::pread(fd, buffer0, STORAGE_BLOCK_SIZE, offset) < 0) {
-					throw MSG_StorageIOError("IO error: pread");
+				if (flags & STORAGE_CREATE) {
+					fd = ::open(path.c_str(), (flags & STORAGE_WRITABLE) ? O_RDWR | O_CREAT : O_RDONLY | O_CREAT, 0644);
 				}
+				if unlikely(fd < 0) {
+					close();
+					throw MSG_StorageIOError("Cannot open storage file");
+				}
+
+				memset(&header, 0, sizeof(header));
+				header.init(param);
+
+				if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
+					close();
+					throw MSG_StorageIOError("IO error: write");
+				}
+				_LOG_WARNING_ENABLED(this, "Header writted");
+
+				seek(STORAGE_START_BLOCK_OFFSET);
+				return;
+			}
+		}
+
+		ssize_t r = io::pread(fd, &header, sizeof(header), 0);
+		if unlikely(r < 0) {
+			close();
+			throw MSG_StorageIOError("IO error: read");
+		} else if unlikely(r != sizeof(header)) {
+			throw MSG_StorageCorruptVolume("Incomplete bin data");
+		}
+		header.validate(param);
+
+		if (flags & STORAGE_WRITABLE) {
+			buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
+			size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
+			buffer_offset -= offset;
+			if unlikely(io::pread(fd, buffer0, STORAGE_BLOCK_SIZE, offset) < 0) {
+				close();
+				throw MSG_StorageIOError("IO error: pread");
 			}
 		}
 
