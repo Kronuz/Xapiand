@@ -338,6 +338,11 @@ XapiandManager::destroy()
 {
 	L_OBJ(this, "DESTROYING XAPIAN MANAGER!");
 
+	if (auto discovery = proto_discovery.lock()) {
+		L_INFO(this, "Waving goodbye to cluster %s!", cluster_name.c_str());
+		discovery->stop();
+	}
+
 	L_DEBUG(this, "Finishing servers pool!");
 	server_pool.finish();
 
@@ -371,9 +376,9 @@ XapiandManager::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER! (%d %d)", asap, now);
 
-	Worker::shutdown(asap, now);
-
 	destroy();
+
+	Worker::shutdown(asap, now);
 
 	if (now) {
 		L_EV(this, "Breaking Manager loop!");
@@ -443,8 +448,11 @@ XapiandManager::run(const opts_t& o)
 	proto_http = std::move(http);
 #ifdef XAPIAND_CLUSTERING
 	if (!solo) {
+		L_INFO(this, "Joining cluster %s...", cluster_name.c_str());
+		discovery->start();
+
 		proto_binary = std::move(binary);
-		proto_discovery = discovery; // keep discover (it'll be used below)
+		proto_discovery = std::move(discovery);
 		proto_raft = std::move(raft);
 	}
 #endif
@@ -461,23 +469,9 @@ XapiandManager::run(const opts_t& o)
 
 	XapiandManager::initialized = epoch::now<>();
 
-#ifdef XAPIAND_CLUSTERING
-	if (!solo) {
-		L_INFO(this, "Joining cluster %s...", cluster_name.c_str());
-		discovery->start();
-	}
-#endif
-
 	L_EV(this, "Starting manager loop...");
 	loop->run();
 	L_EV(this, "Manager loop ended!");
-
-#ifdef XAPIAND_CLUSTERING
-	if (!solo) {
-		discovery->send_message(Discovery::Message::BYE, local_node.serialise());
-		discovery.reset(); // release discovery
-	}
-#endif
 
 	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.size(), (server_pool.size() == 1) ? "" : "s");
 	server_pool.join();

@@ -69,6 +69,10 @@ public:
 	inline void start() {
 		heartbeat.again();
 	}
+
+	inline void stop() {
+		send_message(Message::BYE, local_node.serialise());
+	}
 };
 
 #endif
