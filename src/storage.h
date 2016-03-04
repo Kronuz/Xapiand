@@ -505,7 +505,6 @@ public:
 					close();
 					throw MSG_StorageIOError("IO error: write");
 				}
-				_LOG_WARNING_ENABLED(this, "Header writted");
 
 				seek(STORAGE_START_BLOCK_OFFSET);
 				return;
