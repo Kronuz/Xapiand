@@ -407,21 +407,24 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 	assert(discovery->sock == watcher.fd || discovery->sock == -1);
 
 	if (revents & EV_READ) {
-		try {
-			std::string message;
-			Discovery::Message type = static_cast<Discovery::Message>(discovery->get_message(message, static_cast<char>(Discovery::Message::MAX)));
-			if (type != Discovery::Message::HEARTBEAT) {
-				L_DISCOVERY(this, ">> get_message(%s)", Discovery::MessageNames[static_cast<int>(type)]);
+		while (true) {
+			try {
+				std::string message;
+				Discovery::Message type = static_cast<Discovery::Message>(discovery->get_message(message, static_cast<char>(Discovery::Message::MAX)));
+				if (type != Discovery::Message::HEARTBEAT) {
+					L_DISCOVERY(this, ">> get_message(%s)", Discovery::MessageNames[static_cast<int>(type)]);
+				}
+				L_DISCOVERY_PROTO(this, "message: '%s'", repr(message).c_str());
+				discovery_server(type, message);
+			} catch (DummyException) {
+				break;  // no message
+			} catch (const Exception& exc) {
+				L_WARNING(this, "WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+				break;
+			} catch (...) {
+				L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
+				throw;
 			}
-			L_DISCOVERY_PROTO(this, "message: '%s'", repr(message).c_str());
-			discovery_server(type, message);
-		} catch (DummyException) {
-			/* ignore */
-		} catch (const Exception& exc) {
-			L_WARNING(this, "WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
-		} catch (...) {
-			L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
-			throw;
 		}
 	}
 

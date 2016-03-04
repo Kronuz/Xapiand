@@ -360,22 +360,25 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 	assert(raft->sock == watcher.fd || raft->sock == -1);
 
 	if (revents & EV_READ) {
-		try {
-			std::string message;
-			Raft::Message type = static_cast<Raft::Message>(raft->get_message(message, static_cast<char>(Raft::Message::MAX)));
-			if (type != Raft::Message::HEARTBEAT_LEADER) {
-				L_RAFT(this, ">> get_message(%s)", Raft::MessageNames[static_cast<int>(type)]);
-			}
-			L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
+		while (true) {
+			try {
+				std::string message;
+				Raft::Message type = static_cast<Raft::Message>(raft->get_message(message, static_cast<char>(Raft::Message::MAX)));
+				if (type != Raft::Message::HEARTBEAT_LEADER) {
+					L_RAFT(this, ">> get_message(%s)", Raft::MessageNames[static_cast<int>(type)]);
+				}
+				L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
 
-			raft_server(type, message);
-		} catch (DummyException) {
-			/* ignore */
-		} catch (const Exception& exc) {
-			L_WARNING(this, "WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
-		} catch (...) {
-			L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
-			throw;
+				raft_server(type, message);
+			} catch (DummyException) {
+				break;  // no message
+			} catch (const Exception& exc) {
+				L_WARNING(this, "WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+				break;
+			} catch (...) {
+				L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
+				throw;
+			}
 		}
 	}
 
