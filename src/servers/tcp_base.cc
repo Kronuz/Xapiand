@@ -76,10 +76,10 @@ BaseTCP::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE TCP! (%d %d)", asap, now);
 
-	Worker::shutdown(asap, now);
-
 	::shutdown(sock, SHUT_RDWR);
 	destroy();
+
+	Worker::shutdown(asap, now);
 }
 
 void

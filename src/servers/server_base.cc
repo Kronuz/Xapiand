@@ -49,9 +49,9 @@ BaseServer::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE SERVER! (%d %d)", asap, now);
 
-	Worker::shutdown(asap, now);
-
 	destroy();
+
+	Worker::shutdown(asap, now);
 }
 
 void
