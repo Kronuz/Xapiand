@@ -217,6 +217,7 @@ class Storage {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
 			off_t file_size = io::lseek(fd, 0, SEEK_END);
 			if unlikely(file_size < 0) {
+				close();
 				throw MSG_StorageIOError("IO error: lseek");
 			}
 			free_blocks = static_cast<int>((file_size - header.head.offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE);
@@ -328,6 +329,7 @@ class Storage {
 
 		do_write:
 			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
+				close();
 				throw MSG_StorageIOError("IO error: pwrite");
 			}
 
@@ -347,6 +349,7 @@ class Storage {
 		// Write the first used buffer.
 		if (buffer == buffer1) {
 			if (io::pwrite(fd, buffer0, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
+				close();
 				throw MSG_StorageIOError("IO error: pwrite");
 			}
 		}
@@ -428,6 +431,7 @@ class Storage {
 
 		do_write:
 			if (io::pwrite(fd, buffer0, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
+				close();
 				throw MSG_StorageIOError("IO error: pwrite");
 			}
 
@@ -571,6 +575,7 @@ public:
 
 			r = io::read(fd, &bin_header, sizeof(StorageBinHeader));
 			if unlikely(r < 0) {
+				close();
 				throw MSG_StorageIOError("IO error: read");
 			} else if unlikely(r != sizeof(StorageBinHeader)) {
 				throw MSG_StorageCorruptVolume("Incomplete bin header");
@@ -603,6 +608,7 @@ public:
 			if (buf_size) {
 				r = io::read(fd, buf, buf_size);
 				if unlikely(r < 0) {
+					close();
 					throw MSG_StorageIOError("IO error: read");
 				} else if unlikely(static_cast<size_t>(r) != buf_size) {
 					throw MSG_StorageCorruptVolume("Incomplete bin data");
@@ -617,6 +623,7 @@ public:
 
 		r = io::read(fd, &bin_footer, sizeof(StorageBinFooter));
 		if unlikely(r < 0) {
+			close();
 			throw MSG_StorageIOError("IO error: read");
 		} else if unlikely(r != sizeof(StorageBinFooter)) {
 			throw MSG_StorageCorruptVolume("Incomplete bin footer");
@@ -635,15 +642,18 @@ public:
 
 	void commit() {
 		if unlikely(io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
+			close();
 			throw MSG_StorageIOError("IO error: pwrite");
 		}
 		if (!(flags & STORAGE_NO_SYNC)) {
 			if (flags & STORAGE_FULL_SYNC) {
 				if unlikely(io::full_fsync(fd) < 0) {
+					close();
 					throw MSG_StorageIOError("IO error: full_fsync");
 				}
 			} else {
 				if unlikely(io::fsync(fd) < 0) {
+					close();
 					throw MSG_StorageIOError("IO error: fsync");
 				}
 			}
