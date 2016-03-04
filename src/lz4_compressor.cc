@@ -240,7 +240,7 @@ LZ4CompressDescriptor::next()
 	char* const inpPtr = &buffer[_offset];
 
 	// Read line to the ring buffer.
-	int inpBytes = static_cast<int>(io::read(fd, inpPtr, block_size > read_bytes ? read_bytes : block_size));
+	int inpBytes = static_cast<int>(io::read(fd, inpPtr, static_cast<size_t>(block_size) > read_bytes ? read_bytes : block_size));
 	if (inpBytes <= 0) {
 		_finish = true;
 		return std::string();
