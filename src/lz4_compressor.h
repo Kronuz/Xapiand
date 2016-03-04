@@ -265,7 +265,7 @@ class LZ4CompressDescriptor : public LZ4BlockStreaming<LZ4CompressDescriptor> {
 	friend class LZ4BlockStreaming<LZ4CompressDescriptor>;
 
 public:
-	LZ4CompressDescriptor(const std::string& filename, int seed=0);
+	LZ4CompressDescriptor(int& fildes, int seed=0);
 
 	~LZ4CompressDescriptor();
 
