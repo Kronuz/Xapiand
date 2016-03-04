@@ -297,7 +297,7 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 	assert(raft->sock == watcher.fd || raft->sock == -1);
 
 	if (revents & EV_READ) {
-		while (true) {
+		while (manager()->state == XapiandManager::State::READY) {
 			try {
 				std::string message;
 				Raft::Message type = static_cast<Raft::Message>(raft->get_message(message, static_cast<char>(Raft::Message::MAX)));
