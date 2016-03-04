@@ -500,10 +500,6 @@ LZ4DecompressDescriptor::next()
 		return std::string();
 	}
 
-	if unlikely(read_bytes < 0) {
-		throw MSG_LZ4CorruptVolume("Data in descriptor file is corrupt");
-	}
-
 	if (data_offset == static_cast<size_t>(data_size)) {
 		if unlikely((data_size = io::read(fd, data, read_bytes > LZ4_FILE_READ_SIZE ? LZ4_FILE_READ_SIZE : read_bytes)) < 0) {
 			throw MSG_LZ4IOError("IO error: read");
