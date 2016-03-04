@@ -139,7 +139,7 @@ Raft::start_heartbeat()
 void
 Raft::register_activity()
 {
-	L_RAFT(this, "Register activity");
+	L_RAFT_PROTO(this, "Register activity");
 	last_activity = ev::now(*loop);
 }
 
