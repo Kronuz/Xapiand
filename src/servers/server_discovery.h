@@ -24,6 +24,8 @@
 
 #include "server_base.h"
 
+#ifdef XAPIAND_CLUSTERING
+
 class Discovery;
 
 
@@ -39,3 +41,5 @@ public:
 
 	void io_accept_cb(ev::io &watcher, int revents) override;
 };
+
+#endif

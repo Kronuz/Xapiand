@@ -1094,6 +1094,8 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 				index_path = ns + path;
 				std::string node_name;
 				Endpoint asked_node("xapian://" + index_path);
+
+#ifdef XAPIAND_CLUSTERING
 				std::vector<Endpoint> asked_nodes;
 
 				if (p.len_host) {
@@ -1146,6 +1148,9 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						endpoints.add(asked_node);
 					}
 				}
+#else
+				endpoints.add(asked_node);
+#endif
 				L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.as_string().c_str());
 
 				p.len_host = 0; //Clean the host, so you not stay with the previous host in case doesn't come new one

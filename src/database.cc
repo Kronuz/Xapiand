@@ -26,6 +26,7 @@
 #include "generate_terms.h"
 #include "msgpack_patcher.h"
 #include "multivaluerange.h"
+#include "length.h"
 
 #include <bitset>
 #include <fcntl.h>

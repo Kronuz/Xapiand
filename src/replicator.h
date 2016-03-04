@@ -22,6 +22,10 @@
 
 #pragma once
 
+#include "xapiand.h"
+
+#ifdef XAPIAND_CLUSTERING
+
 #include "database.h"
 #include "threadpool.h"
 #include "worker.h"
@@ -48,3 +52,5 @@ public:
 		return share_parent<XapiandManager>();
 	}
 };
+
+#endif

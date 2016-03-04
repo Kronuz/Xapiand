@@ -22,6 +22,8 @@
 
 #include "discovery.h"
 
+#ifdef XAPIAND_CLUSTERING
+
 #include <assert.h>
 
 
@@ -109,3 +111,5 @@ Discovery::getDescription() const noexcept
 {
 	return "UDP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION) + ")";
 }
+
+#endif

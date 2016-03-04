@@ -22,9 +22,14 @@
 
 #pragma once
 
+#include "xapiand.h"
+
+#ifdef XAPIAND_CLUSTERING
+
 #include "udp_base.h"
 
 #include "server_raft.h"
+
 
 #define ELECTION_LEADER_MIN	4.0 * HEARTBEAT_MAX
 #define ELECTION_LEADER_MAX	4.5 * HEARTBEAT_MAX
@@ -111,3 +116,5 @@ public:
 		number_servers.store(manager()->get_nodes_by_region(local_node.region.load()) + 1);
 	}
 };
+
+#endif

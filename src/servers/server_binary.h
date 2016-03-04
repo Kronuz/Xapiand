@@ -24,11 +24,11 @@
 
 #include "server_base.h"
 
+#ifdef XAPIAND_CLUSTERING
+
 #include "../config.h"
 #include "../database.h"
 #include "../threadpool.h"
-
-#ifdef XAPIAND_CLUSTERING
 
 class Binary;
 

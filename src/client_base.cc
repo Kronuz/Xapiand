@@ -23,6 +23,7 @@
 #include "client_base.h"
 
 #include "utils.h"
+#include "length.h"
 
 #include <sys/socket.h>
 #include <sysexits.h>

@@ -22,6 +22,8 @@
 
 #include "server_discovery.h"
 
+#ifdef XAPIAND_CLUSTERING
+
 #include "binary.h"
 #include "discovery.h"
 #include "server.h"
@@ -342,3 +344,5 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 
 	L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 }
+
+#endif

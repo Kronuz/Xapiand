@@ -22,6 +22,8 @@
 
 #include "endpoint_resolver.h"
 
+#ifdef XAPIAND_CLUSTERING
+
 #include "client_http.h"
 #include "servers/discovery.h"
 
@@ -241,3 +243,5 @@ bool EndpointResolver::get_master_node(const std::string &index, const Node **no
 
 	return enl.get_endpoints(std::move(manager), 1, nullptr, node);
 }
+
+#endif

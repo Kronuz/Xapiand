@@ -59,10 +59,12 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	  database_pool(o.dbpool_size),
 	  thread_pool("W%02zu", o.threadpool_size),
 	  server_pool("S%02zu", o.num_servers),
-	  replicator_pool("R%02zu", o.num_replicators),
 	  autocommit_pool("C%02zu", o.num_committers),
-	  async_shutdown(*loop),
+#ifdef XAPIAND_CLUSTERING
+	  replicator_pool("R%02zu", o.num_replicators),
 	  endp_r(o.endpoints_list_size),
+#endif
+	  async_shutdown(*loop),
 	  state(State::RESET),
 	  cluster_name(o.cluster_name),
 	  node_name(o.node_name)
@@ -251,6 +253,254 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 	}
 }
 
+struct sockaddr_in
+XapiandManager::host_address()
+{
+	struct sockaddr_in addr;
+	struct ifaddrs *if_addr_struct;
+	if (getifaddrs(&if_addr_struct) < 0) {
+		L_ERR(this, "ERROR: getifaddrs: %s", strerror(errno));
+	} else {
+		for (struct ifaddrs *ifa = if_addr_struct; ifa != NULL; ifa = ifa->ifa_next) {
+			if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET && !(ifa->ifa_flags & IFF_LOOPBACK)) { // check it is IP4
+				char ip[INET_ADDRSTRLEN];
+				addr = *(struct sockaddr_in *)ifa->ifa_addr;
+				inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
+				L_NOTICE(this, "Node IP address is %s on interface %s", ip, ifa->ifa_name);
+				break;
+			}
+		}
+		freeifaddrs(if_addr_struct);
+	}
+	return addr;
+}
+
+
+void
+XapiandManager::sig_shutdown_handler(int sig)
+{
+	if (!XapiandManager::initialized) {
+		return;
+	}
+	XapiandManager::initialized = 0;
+
+	/* SIGINT is often delivered via Ctrl+C in an interactive session.
+	 * If we receive the signal the second time, we interpret this as
+	 * the user really wanting to quit ASAP without waiting to persist
+	 * on disk. */
+	auto now = epoch::now<>();
+
+	if (XapiandManager::shutdown_now && sig != SIGTERM) {
+		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
+			L_WARNING(this, "You insisted... Xapiand exiting now!");
+			exit(1); /* Exit with an error since this was not a clean shutdown. */
+		}
+	} else if (XapiandManager::shutdown_asap && sig != SIGTERM) {
+		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
+			XapiandManager::shutdown_now = now;
+			L_INFO(this, "Trying immediate shutdown.");
+		} else if (sig == 0) {
+			XapiandManager::shutdown_now = now;
+		}
+	} else {
+		switch (sig) {
+			case SIGINT:
+				L_INFO(this, "Received SIGINT scheduling shutdown...");
+				break;
+			case SIGTERM:
+				L_INFO(this, "Received SIGTERM scheduling shutdown...");
+				break;
+			default:
+				L_INFO(this, "Received shutdown signal, scheduling shutdown...");
+		};
+	}
+
+	if (now > XapiandManager::shutdown_asap + 1) {
+		XapiandManager::shutdown_asap = now;
+	}
+
+	if (XapiandServer::http_clients <= 0) {
+		XapiandManager::shutdown_now = now;
+	}
+
+	bool shutdown_asap = bool(XapiandManager::shutdown_asap);
+	bool shutdown_now = bool(XapiandManager::shutdown_now);
+
+	shutdown(shutdown_asap, shutdown_now);
+
+	XapiandManager::initialized = now;
+}
+
+
+void
+XapiandManager::destroy()
+{
+	L_OBJ(this, "DESTROYING XAPIAN MANAGER!");
+
+	L_DEBUG(this, "Finishing servers pool!");
+	server_pool.finish();
+
+#ifdef XAPIAND_CLUSTERING
+	L_DEBUG(this, "Finishing replicators pool!");
+	replicator_pool.finish();
+#endif
+
+	L_DEBUG(this, "Finishing commiters pool!");
+	autocommit_pool.finish();
+
+	L_OBJ(this, "DESTROYED XAPIAN MANAGER!");
+}
+
+
+void
+XapiandManager::async_shutdown_cb(ev::async&, int)
+{
+	L_OBJ(this , "ASYNC SHUTDOWN XAPIAN MANAGER!");
+
+	L_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN");
+	L_EV(this, "Async shutdown event received!");
+
+	sig_shutdown_handler(0);
+	L_EV_END(this, "XapiandManager::async_shutdown_cb:END");
+}
+
+
+void
+XapiandManager::shutdown(bool asap, bool now)
+{
+	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER! (%d %d)", asap, now);
+
+	Worker::shutdown(asap, now);
+
+	destroy();
+
+	if (now) {
+		L_EV(this, "Breaking Manager loop!");
+		break_loop();
+	}
+}
+
+
+void
+XapiandManager::run(const opts_t& o)
+{
+	std::string msg("Listening on ");
+
+	auto manager = share_this<XapiandManager>();
+
+	auto http = Worker::make_shared<Http>(manager, loop, o.http_port);
+	msg += http->getDescription() + ", ";
+
+#ifdef XAPIAND_CLUSTERING
+	std::shared_ptr<Binary> binary;
+	std::shared_ptr<Discovery> discovery;
+	std::shared_ptr<Raft> raft;
+	if (!o.solo) {
+		binary = Worker::make_shared<Binary>(manager, loop, o.binary_port);
+		msg += binary->getDescription() + ", ";
+
+		discovery = Worker::make_shared<Discovery>(manager, loop, o.discovery_port, o.discovery_group);
+		msg += discovery->getDescription() + ", ";
+
+		raft = Worker::make_shared<Raft>(manager, loop, o.raft_port, o.raft_group);
+		msg += raft->getDescription() + ", ";
+	}
+#endif
+
+	msg += "at pid:" + std::to_string(getpid()) + " ...";
+
+	L_NOTICE(this, msg.c_str());
+
+	for (size_t i = 0; i < o.num_servers; ++i) {
+		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr);
+		servers.push_back(server);
+		Worker::make_shared<HttpServer>(server, server->loop, http);
+#ifdef XAPIAND_CLUSTERING
+		if (!o.solo) {
+			binary->add_server(Worker::make_shared<BinaryServer>(server, server->loop, binary));
+			Worker::make_shared<DiscoveryServer>(server, server->loop, discovery);
+			Worker::make_shared<RaftServer>(server, server->loop, raft);
+		}
+#endif
+		server_pool.enqueue(std::move(server));
+	}
+
+#ifdef XAPIAND_CLUSTERING
+	if (!o.solo) {
+		for (size_t i = 0; i < o.num_replicators; ++i) {
+			replicator_pool.enqueue(Worker::make_shared<XapiandReplicator>(manager, nullptr));
+		}
+	}
+#endif
+
+	for (size_t i = 0; i < o.num_committers; ++i) {
+		auto dbcommit = Worker::make_shared<DatabaseAutocommit>(manager, nullptr);
+		autocommit_pool.enqueue(dbcommit);
+	}
+
+	// Make server protocols weak:
+	proto_http = std::move(http);
+#ifdef XAPIAND_CLUSTERING
+	if (!o.solo) {
+		proto_binary = std::move(binary);
+		proto_discovery = discovery; // keep discover (it'll be used below)
+		proto_raft = std::move(raft);
+	}
+#endif
+
+	msg = "Started " + std::to_string(o.num_servers) + ((o.num_servers == 1) ? " server" : " servers");
+	msg += ", " + std::to_string(o.threadpool_size) +( (o.threadpool_size == 1) ? " worker thread" : " worker threads");
+#ifdef XAPIAND_CLUSTERING
+	if (!o.solo) {
+		msg += ", " + std::to_string(o.num_replicators) + ((o.num_replicators == 1) ? " replicator" : " replicators");
+	}
+#endif
+	msg += ", " + std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters");
+	L_NOTICE(this, msg.c_str());
+
+	XapiandManager::initialized = epoch::now<>();
+
+#ifdef XAPIAND_CLUSTERING
+	if (!o.solo) {
+		L_INFO(this, "Joining cluster %s...", cluster_name.c_str());
+		discovery->start();
+	}
+#endif
+
+	L_EV(this, "Starting manager loop...");
+	loop->run();
+	L_EV(this, "Manager loop ended!");
+
+#ifdef XAPIAND_CLUSTERING
+	if (!o.solo) {
+		discovery->send_message(Discovery::Message::BYE, local_node.serialise());
+		discovery.reset(); // release discovery
+	}
+#endif
+
+	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.size(), (server_pool.size() == 1) ? "" : "s");
+	server_pool.join();
+
+#ifdef XAPIAND_CLUSTERING
+	if (!o.solo) {
+		L_DEBUG(this, "Waiting for %zu replicator%s...", replicator_pool.size(), (replicator_pool.size() == 1) ? "" : "s");
+		replicator_pool.join();
+	}
+#endif
+
+	L_DEBUG(this, "Waiting for %zu committer%s...", autocommit_pool.size(), (autocommit_pool.size() == 1) ? "" : "s");
+	autocommit_pool.join();
+
+	L_DEBUG(this, "Finishing worker threads pool!");
+	thread_pool.finish();
+	L_DEBUG(this, "Waiting for %zu worker thread%s...", thread_pool.size(), (thread_pool.size() == 1) ? "" : "s");
+	thread_pool.join();
+
+	L_DEBUG(this, "Server ended!");
+}
+
+
+#ifdef XAPIAND_CLUSTERING
 
 void
 XapiandManager::reset_state()
@@ -361,225 +611,6 @@ XapiandManager::get_nodes_by_region(int region)
 }
 
 
-struct sockaddr_in
-XapiandManager::host_address()
-{
-	struct sockaddr_in addr;
-	struct ifaddrs *if_addr_struct;
-	if (getifaddrs(&if_addr_struct) < 0) {
-		L_ERR(this, "ERROR: getifaddrs: %s", strerror(errno));
-	} else {
-		for (struct ifaddrs *ifa = if_addr_struct; ifa != NULL; ifa = ifa->ifa_next) {
-			if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET && !(ifa->ifa_flags & IFF_LOOPBACK)) { // check it is IP4
-				char ip[INET_ADDRSTRLEN];
-				addr = *(struct sockaddr_in *)ifa->ifa_addr;
-				inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN);
-				L_NOTICE(this, "Node IP address is %s on interface %s", ip, ifa->ifa_name);
-				break;
-			}
-		}
-		freeifaddrs(if_addr_struct);
-	}
-	return addr;
-}
-
-
-void
-XapiandManager::sig_shutdown_handler(int sig)
-{
-	if (!XapiandManager::initialized) {
-		return;
-	}
-	XapiandManager::initialized = 0;
-
-	/* SIGINT is often delivered via Ctrl+C in an interactive session.
-	 * If we receive the signal the second time, we interpret this as
-	 * the user really wanting to quit ASAP without waiting to persist
-	 * on disk. */
-	auto now = epoch::now<>();
-
-	if (XapiandManager::shutdown_now && sig != SIGTERM) {
-		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
-			L_WARNING(this, "You insisted... Xapiand exiting now!");
-			exit(1); /* Exit with an error since this was not a clean shutdown. */
-		}
-	} else if (XapiandManager::shutdown_asap && sig != SIGTERM) {
-		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
-			XapiandManager::shutdown_now = now;
-			L_INFO(this, "Trying immediate shutdown.");
-		} else if (sig == 0) {
-			XapiandManager::shutdown_now = now;
-		}
-	} else {
-		switch (sig) {
-			case SIGINT:
-				L_INFO(this, "Received SIGINT scheduling shutdown...");
-				break;
-			case SIGTERM:
-				L_INFO(this, "Received SIGTERM scheduling shutdown...");
-				break;
-			default:
-				L_INFO(this, "Received shutdown signal, scheduling shutdown...");
-		};
-	}
-
-	if (now > XapiandManager::shutdown_asap + 1) {
-		XapiandManager::shutdown_asap = now;
-	}
-
-	if (XapiandServer::http_clients <= 0) {
-		XapiandManager::shutdown_now = now;
-	}
-
-	bool shutdown_asap = bool(XapiandManager::shutdown_asap);
-	bool shutdown_now = bool(XapiandManager::shutdown_now);
-
-	shutdown(shutdown_asap, shutdown_now);
-
-	XapiandManager::initialized = now;
-}
-
-
-void
-XapiandManager::destroy()
-{
-	L_OBJ(this, "DESTROYING XAPIAN MANAGER!");
-
-	L_DEBUG(this, "Finishing servers pool!");
-	server_pool.finish();
-
-	L_DEBUG(this, "Finishing replicators pool!");
-	replicator_pool.finish();
-
-	L_DEBUG(this, "Finishing commiters pool!");
-	autocommit_pool.finish();
-
-	L_OBJ(this, "DESTROYED XAPIAN MANAGER!");
-}
-
-
-void
-XapiandManager::async_shutdown_cb(ev::async&, int)
-{
-	L_OBJ(this , "ASYNC SHUTDOWN XAPIAN MANAGER!");
-
-	L_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN");
-	L_EV(this, "Async shutdown event received!");
-
-	sig_shutdown_handler(0);
-	L_EV_END(this, "XapiandManager::async_shutdown_cb:END");
-}
-
-
-void
-XapiandManager::shutdown(bool asap, bool now)
-{
-	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER! (%d %d)", asap, now);
-
-	Worker::shutdown(asap, now);
-
-	destroy();
-
-	if (now) {
-		L_EV(this, "Breaking Manager loop!");
-		break_loop();
-	}
-}
-
-
-void
-XapiandManager::run(const opts_t& o)
-{
-	std::string msg("Listening on ");
-
-	auto manager = share_this<XapiandManager>();
-
-	auto http = Worker::make_shared<Http>(manager, loop, o.http_port);
-	msg += http->getDescription() + ", ";
-
-#ifdef XAPIAND_CLUSTERING
-	auto binary = Worker::make_shared<Binary>(manager, loop, o.binary_port);
-	msg += binary->getDescription() + ", ";
-#endif
-
-	auto discovery = Worker::make_shared<Discovery>(manager, loop, o.discovery_port, o.discovery_group);
-	msg += discovery->getDescription() + ", ";
-
-	auto raft = Worker::make_shared<Raft>(manager, loop, o.raft_port, o.raft_group);
-	msg += raft->getDescription() + ", ";
-
-	msg += "at pid:" + std::to_string(getpid()) + " ...";
-
-	L_NOTICE(this, msg.c_str());
-
-	for (size_t i = 0; i < o.num_servers; ++i) {
-		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr);
-		servers.push_back(server);
-		Worker::make_shared<HttpServer>(server, server->loop, http);
-#ifdef XAPIAND_CLUSTERING
-		binary->add_server(Worker::make_shared<BinaryServer>(server, server->loop, binary));
-#endif
-		Worker::make_shared<DiscoveryServer>(server, server->loop, discovery);
-		Worker::make_shared<RaftServer>(server, server->loop, raft);
-		server_pool.enqueue(std::move(server));
-	}
-
-	for (size_t i = 0; i < o.num_replicators; ++i) {
-		replicator_pool.enqueue(Worker::make_shared<XapiandReplicator>(manager, nullptr));
-	}
-
-	for (size_t i = 0; i < o.num_committers; ++i) {
-		auto dbcommit = Worker::make_shared<DatabaseAutocommit>(manager, nullptr);
-		autocommit_pool.enqueue(dbcommit);
-	}
-
-	// Make server protocols weak:
-	proto_http = std::move(http);
-	proto_binary = std::move(binary);
-	proto_discovery = discovery; // keep discover (it'll be used below)
-	proto_raft = std::move(raft);
-
-	L_NOTICE(this, "Started %d server%s"
-			 ", %d worker thread%s"
-			 ", %d autocommitter%s"
-			 ", %d replicator%s.",
-		o.num_servers, (o.num_servers == 1) ? "" : "s",
-		o.threadpool_size, (o.threadpool_size == 1) ? "" : "s",
-		o.num_committers, (o.num_committers == 1) ? "" : "s",
-		o.num_replicators, (o.num_replicators == 1) ? "" : "s"
-	);
-
-	XapiandManager::initialized = epoch::now<>();
-
-	L_INFO(this, "Joining cluster %s...", cluster_name.c_str());
-
-	discovery->start();
-
-	L_EV(this, "Starting manager loop...");
-	loop->run();
-	L_EV(this, "Manager loop ended!");
-
-	discovery->send_message(Discovery::Message::BYE, local_node.serialise());
-	discovery.reset(); // release discovery
-
-	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.size(), (server_pool.size() == 1) ? "" : "s");
-	server_pool.join();
-
-	L_DEBUG(this, "Waiting for %zu replicator%s...", replicator_pool.size(), (replicator_pool.size() == 1) ? "" : "s");
-	replicator_pool.join();
-
-	L_DEBUG(this, "Waiting for %zu committer%s...", autocommit_pool.size(), (autocommit_pool.size() == 1) ? "" : "s");
-	autocommit_pool.join();
-
-	L_DEBUG(this, "Finishing worker threads pool!");
-	thread_pool.finish();
-	L_DEBUG(this, "Waiting for %zu worker thread%s...", thread_pool.size(), (thread_pool.size() == 1) ? "" : "s");
-	thread_pool.join();
-
-	L_DEBUG(this, "Server ended!");
-}
-
-
 int
 XapiandManager::get_region(const std::string& db_name)
 {
@@ -616,7 +647,6 @@ XapiandManager::get_region()
 }
 
 
-#ifdef XAPIAND_CLUSTERING
 std::future<bool>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
@@ -634,11 +664,13 @@ XapiandManager::server_status(MsgPack&& stats)
 	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 	stats["connections"] = XapiandServer::total_clients.load();
 	stats["http_connections"] = XapiandServer::http_clients.load();
-	stats["binary_connections"] = XapiandServer::binary_clients.load();
 	stats["workers_pool_size"] = thread_pool.size();
 	stats["servers_pool_size"] = server_pool.size();
-	stats["replicators_pool_size"] = replicator_pool.size();
 	stats["committers_pool_size"] = autocommit_pool.size();
+#ifdef XAPIAND_CLUSTERING
+	stats["binary_connections"] = XapiandServer::binary_clients.load();
+	stats["replicators_pool_size"] = replicator_pool.size();
+#endif
 }
 
 

@@ -66,9 +66,11 @@ using opts_t = struct opts_s {
 
 
 class Http;
+#ifdef XAPIAND_CLUSTERING
 class Binary;
 class Discovery;
 class Raft;
+#endif
 class XapiandServer;
 class DatabaseAutocommit;
 
@@ -109,23 +111,28 @@ public:
 
 	std::vector<std::weak_ptr<XapiandServer>> servers;
 	std::weak_ptr<Http> proto_http;
+#ifdef XAPIAND_CLUSTERING
 	std::weak_ptr<Binary> proto_binary;
 	std::weak_ptr<Discovery> proto_discovery;
 	std::weak_ptr<Raft> proto_raft;
+#endif
 
 	DatabasePool database_pool;
 	ThreadPool<> thread_pool;
 	ThreadPool<> server_pool;
-	ThreadPool<> replicator_pool;
 	ThreadPool<> autocommit_pool;
+#ifdef XAPIAND_CLUSTERING
+	ThreadPool<> replicator_pool;
+#endif
+#ifdef XAPIAND_CLUSTERING
+	EndpointResolver endp_r;
+#endif
 
 	static std::atomic<time_t> initialized;
 	static std::atomic<time_t> shutdown_asap;
 	static std::atomic<time_t> shutdown_now;
 
 	ev::async async_shutdown;
-
-	EndpointResolver endp_r;
 
 	State state;
 	std::string cluster_name;
@@ -141,13 +148,16 @@ public:
 	void sig_shutdown_handler(int sig);
 	void shutdown(bool asap=true, bool now=true) override;
 
+#ifdef XAPIAND_CLUSTERING
 	void reset_state();
+
 	bool is_single_node();
 
 	bool put_node(const Node& node);
 	bool get_node(const std::string& node_name, const Node** node);
 	bool touch_node(const std::string& node_name, int region, const Node** node=nullptr);
 	void drop_node(const std::string& node_name);
+
 	size_t get_nodes_by_region(int region);
 
 	// Return the region to which db name belongs
@@ -155,7 +165,6 @@ public:
 	// Return the region to which local_node belongs
 	int get_region();
 
-#ifdef XAPIAND_CLUSTERING
 	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif
 

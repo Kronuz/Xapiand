@@ -22,6 +22,10 @@
 
 #pragma once
 
+#include "xapiand.h"
+
+#ifdef XAPIAND_CLUSTERING
+
 #include "udp_base.h"
 
 #include "server_discovery.h"
@@ -66,3 +70,5 @@ public:
 		heartbeat.again();
 	}
 };
+
+#endif

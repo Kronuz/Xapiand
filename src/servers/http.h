@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "xapiand.h"
+
 #include "tcp_base.h"
 
 #include "server_http.h"

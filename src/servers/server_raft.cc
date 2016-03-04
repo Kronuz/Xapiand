@@ -22,6 +22,8 @@
 
 #include "server_raft.h"
 
+#ifdef XAPIAND_CLUSTERING
+
 #include "raft.h"
 #include "server.h"
 
@@ -289,3 +291,5 @@ RaftServer::io_accept_cb(ev::io &watcher, int revents)
 
 	L_EV_END(this, "RaftServer::io_accept_cb:END %lld", now);
 }
+
+#endif

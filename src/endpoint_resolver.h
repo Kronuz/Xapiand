@@ -22,6 +22,10 @@
 
 #pragma once
 
+#include "xapiand.h"
+
+#ifdef XAPIAND_CLUSTERING
+
 #include "endpoint.h"
 #include "lru.h"
 #include "length.h"
@@ -110,3 +114,5 @@ public:
 
 	~EndpointResolver() = default;
 };
+
+#endif

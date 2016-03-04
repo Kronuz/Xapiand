@@ -22,6 +22,8 @@
 
 #include "raft.h"
 
+#ifdef XAPIAND_CLUSTERING
+
 #include "../endpoint.h"
 
 #include <assert.h>
@@ -154,3 +156,5 @@ Raft::getDescription() const noexcept
 {
 	return "UDP:" + std::to_string(port) + " (" + description + " v" + std::to_string(XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION) + "." + std::to_string(XAPIAND_RAFT_PROTOCOL_MINOR_VERSION) + ")";
 }
+
+#endif

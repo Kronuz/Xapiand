@@ -22,6 +22,8 @@
 
 #include "replicator.h"
 
+#ifdef XAPIAND_CLUSTERING
+
 #include "servers/discovery.h"
 
 
@@ -73,3 +75,5 @@ XapiandReplicator::shutdown(bool asap, bool now)
 
 	manager()->database_pool.updated_databases.finish();
 }
+
+#endif

@@ -22,9 +22,11 @@
 
 #pragma once
 
-#include "tcp_base.h"
+#include "xapiand.h"
 
 #ifdef XAPIAND_CLUSTERING
+
+#include "tcp_base.h"
 
 #include "server_binary.h"
 #include "../endpoint.h"
