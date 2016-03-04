@@ -543,6 +543,8 @@ public:
 		bin_size = 0;
 		bin_header.size = 0;
 		buffer_offset = 0;
+		flags = 0;
+		path.clear();
 	}
 
 	void seek(uint32_t offset) {
