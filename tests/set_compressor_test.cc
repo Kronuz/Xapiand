@@ -54,6 +54,20 @@ START_TEST(test_big_files)
 END_TEST
 
 
+START_TEST(test_small_descriptor)
+{
+	ck_assert_int_eq(test_small_descriptor(), 0);
+}
+END_TEST
+
+
+START_TEST(test_big_descriptor)
+{
+	ck_assert_int_eq(test_big_descriptor(), 0);
+}
+END_TEST
+
+
 Suite* compress_data(void) {
 	Suite *s = suite_create("Testing LZ4CompressData");
 
@@ -84,6 +98,21 @@ Suite* compress_file(void) {
 }
 
 
+Suite* compress_descriptor(void) {
+	Suite *s = suite_create("Testing LZ4CompressDescriptor");
+
+	TCase *small = tcase_create("Small datas");
+	tcase_add_test(small, test_small_descriptor);
+	suite_add_tcase(s, small);
+
+	TCase *big = tcase_create("Big datas");
+	tcase_add_test(big, test_big_descriptor);
+	suite_add_tcase(s, big);
+
+	return s;
+}
+
+
 int main(void) {
 	Suite *cmp_data = compress_data();
 	SRunner *sr = srunner_create(cmp_data);
@@ -93,6 +122,12 @@ int main(void) {
 
 	Suite *cmp_file = compress_file();
 	sr = srunner_create(cmp_file);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
+	srunner_free(sr);
+
+	Suite *cmp_descriptor = compress_descriptor();
+	sr = srunner_create(cmp_descriptor);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed += srunner_ntests_failed(sr);
 	srunner_free(sr);

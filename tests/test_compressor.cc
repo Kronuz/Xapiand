@@ -28,6 +28,12 @@
 #include "../src/lz4_compressor.h"
 
 
+const std::string cmp_file = "examples/compressor/compress.lz4";
+
+char buffer[1024 * 4];
+size_t buffer_offset = 0;
+
+
 std::string read_file(const std::string& filename) {
 	int fd = io::open(filename.c_str(), O_RDONLY, 0644);
 	if unlikely(fd < 0) {
@@ -37,7 +43,7 @@ std::string read_file(const std::string& filename) {
 	std::string ret;
 
 	ssize_t r;
-	char buf[1024];
+	char buf[LZ4_BLOCK_SIZE];
 	while ((r = io::read(fd, buf, sizeof(buf))) > 0) {
 		ret += std::string(buf, r);
 	}
@@ -52,158 +58,171 @@ std::string read_file(const std::string& filename) {
 }
 
 
-int compare(const std::string& filename1, const std::string& filename2) {
-	int fd1 = io::open(filename1.c_str(), O_RDONLY, 0644);
-	if unlikely(fd1 < 0) {
-		throw MSG_Error("Cannot open file: %s", filename1.c_str());
-	}
-
-	int fd2 = io::open(filename2.c_str(), O_RDONLY, 0644);
-	if unlikely(fd2 < 0) {
-		io::close(fd1);
-		throw MSG_Error("Cannot open file: %s", filename2.c_str());
-	}
-
-	if (lseek(fd1, 0, SEEK_END) != lseek(fd2, 0, SEEK_END)) {
-		io::close(fd1);
-		io::close(fd2);
-		L_ERR(nullptr, "%s and %s are not equal (different sizes)\n", filename1.c_str(), filename2.c_str());
-		return 1;
-	}
-
-	if (lseek(fd1, 0, SEEK_SET) != 0 && lseek(fd2, 0, SEEK_SET) != 0) {
-		io::close(fd1);
-		io::close(fd2);
-		throw MSG_Error("IO error: lseek");
-	}
-
-	size_t r1 = 0, r2 = 0;
-	char buf1[1024];
-	char buf2[1024];
-	while ((r1 = io::read(fd1, buf1, sizeof(buf1))) > 0 && (r2 = io::read(fd2, buf2, sizeof(buf2))) > 0) {
-		if (r1 != r2 || std::string(buf1, r1) != std::string(buf2, r2)) {
-			io::close(fd1);
-			io::close(fd2);
-			L_ERR(nullptr, "%s and %s are not equal\n", filename1.c_str(), filename2.c_str());
-			return 1;
+void _write(int fildes, const char* data, size_t size) {
+	if ((buffer_offset + size) > STORAGE_BLOCK_SIZE) {
+		size_t res_size = STORAGE_BLOCK_SIZE - buffer_offset;
+		memcpy(buffer + buffer_offset, data, res_size);
+		if (io::write(fildes, buffer, sizeof(buffer)) != static_cast<ssize_t>(sizeof(buffer))) {
+			throw MSG_Error("IO error: write");
 		}
+		buffer_offset = size - res_size;
+		memcpy(buffer, data + res_size, buffer_offset);
+	} else {
+		memcpy(buffer + buffer_offset, data, size);
+		buffer_offset += size;
 	}
-
-	io::close(fd1);
-	io::close(fd2);
-
-	return 0;
 }
 
 
-int test_Compress_Decompress_Data(const std::string& orig_file, const std::string& cmp_file, const std::string& dec_file) {
+int test_Compress_Decompress_Data(const std::string& orig_file) {
 	try {
+		uint32_t cmp_checksum, dec_checksum;
+
 		// Compress Data
-		{
-			std::string _data = read_file(orig_file);
-			L_ERR(nullptr, "Original Data Size: %zu\n", _data.size());
+		std::string _data = read_file(orig_file);
+		L_ERR(nullptr, "Original Data Size: %zu\n", _data.size());
 
-			int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
-			if unlikely(fd < 0) {
-				throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
-			}
-
-			LZ4CompressData lz4(_data.c_str(), _data.size());
-			auto it = lz4.begin();
-			while (it) {
-				if (io::write(fd, it->c_str(), it.size()) != static_cast<ssize_t>(it.size())) {
-					throw MSG_Error("IO error: write");
-				}
-				++it;
-			}
-			L_ERR(nullptr, "Size compress: %zu\n", lz4.size());
-			io::close(fd);
+		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
+		if unlikely(fd < 0) {
+			throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
 		}
+
+		LZ4CompressData lz4(_data.c_str(), _data.size());
+		auto it = lz4.begin();
+		while (it) {
+			_write(fd, it->c_str(), it.size());
+			++it;
+		}
+		cmp_checksum = lz4.get_digest();
+		L_ERR(nullptr, "Size compress: %zu (checksum: %u)\n", lz4.size(), cmp_checksum);
+		io::close(fd);
 
 		// Decompress Data
-		{
-			std::string cmp_data = read_file(cmp_file.c_str());
-			int fd = io::open(dec_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
-			if unlikely(fd < 0) {
-				throw MSG_Error("Cannot open file: %s", dec_file.c_str());
-			}
+		std::string cmp_data = read_file(cmp_file.c_str());
 
-			LZ4DecompressData dec_lz4(cmp_data.data(), cmp_data.size());
-			auto dec_it = dec_lz4.begin();
-			while (dec_it) {
-				if (io::write(fd, dec_it->c_str(), dec_it.size()) != static_cast<ssize_t>(dec_it.size())) {
-					throw MSG_Error("IO error: write");
-				}
-				++dec_it;
-			}
-			L_ERR(nullptr, "Size decompress: %zu\n", dec_lz4.size());
-			io::close(fd);
+		LZ4DecompressData dec_lz4(cmp_data.data(), cmp_data.size());
+		auto dec_it = dec_lz4.begin();
+		while (dec_it) {
+			++dec_it;
 		}
+		dec_checksum = dec_lz4.get_digest();
+		L_ERR(nullptr, "Size decompress: %zu (checksum: %u)\n", dec_lz4.size(), dec_checksum);
 
-		return compare(orig_file, dec_file);
-	} catch (const Error& exc) {
-		L_EXC(nullptr, "%s\n", exc.get_context());
+		return cmp_checksum != dec_checksum;
+	} catch (const Error& err) {
+		L_ERR(nullptr, "%s\n", err.get_context());
 		return 1;
-	} catch (const std::exception& exc) {
-		L_EXC(nullptr, "%s\n", exc.what());
+	} catch (const std::exception& err) {
+		L_ERR(nullptr, "%s\n", err.what());
 		return 1;
 	}
 }
 
 
-int test_Compress_Decompress_File(const std::string& orig_file, const std::string& cmp_file, const std::string& dec_file) {
+int test_Compress_Decompress_File(const std::string& orig_file) {
 	try {
-		// Compress File
-		{
-			int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
-			if unlikely(fd < 0) {
-				throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
-			}
+		uint32_t cmp_checksum, dec_checksum;
 
-			LZ4CompressFile lz4(orig_file);
-			auto it = lz4.begin();
-			while (it) {
-				if (io::write(fd, it->c_str(), it.size()) != static_cast<ssize_t>(it.size())) {
-					throw MSG_Error("IO error: write");
-				}
-				++it;
-			}
-			L_ERR(nullptr, "Size compress: %zu\n", lz4.size());
-			io::close(fd);
+		// Compress File
+		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
+		if unlikely(fd < 0) {
+			throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
 		}
+
+		LZ4CompressFile lz4(orig_file);
+		auto it = lz4.begin();
+		while (it) {
+			_write(fd, it->c_str(), it.size());
+			++it;
+		}
+		cmp_checksum = lz4.get_digest();
+		L_ERR(nullptr, "Size compress: %zu (checksum: %u)\n", lz4.size(), cmp_checksum);
+		io::close(fd);
+
 
 		// Decompress File
-		{
-			int fd = io::open(dec_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
-			if unlikely(fd < 0) {
-				throw MSG_Error("Cannot open file: %s", dec_file.c_str());
-			}
-
-			LZ4DecompressFile dec_lz4(cmp_file);
-			auto dec_it = dec_lz4.begin();
-			while (dec_it) {
-				if (io::write(fd, dec_it->c_str(), dec_it.size()) != static_cast<ssize_t>(dec_it.size())) {
-					throw MSG_Error("IO error: write");
-				}
-				++dec_it;
-			}
-			L_ERR(nullptr, "Size decompress: %zu\n", dec_lz4.size());
-			io::close(fd);
+		LZ4DecompressFile dec_lz4(cmp_file);
+		auto dec_it = dec_lz4.begin();
+		while (dec_it) {
+			++dec_it;
 		}
+		dec_checksum = dec_lz4.get_digest();
+		L_ERR(nullptr, "Size decompress: %zu (checksum: %u)\n", dec_lz4.size(), dec_checksum);
 
-		return compare(orig_file, dec_file);
-	} catch (const Error& exc) {
-		L_EXC(nullptr, "%s\n", exc.get_context());
+		return cmp_checksum != dec_checksum;
+	} catch (const Error& err) {
+		L_ERR(nullptr, "%s\n", err.get_context());
 		return 1;
-	} catch (const std::exception& exc) {
-		L_EXC(nullptr, "%s\n", exc.what());
+	} catch (const std::exception& err) {
+		L_ERR(nullptr, "%s\n", err.what());
 		return 1;
 	}
 }
 
 
-static const std::string cmp = "examples/compressor/compress.lz4";
-static const std::string dec = "examples/compressor/decompress.dec";
+int test_Compress_Decompress_Descriptor(const std::string& orig_file, size_t numBytes) {
+	try {
+		std::vector<size_t> read_bytes;
+		std::vector<uint32_t> cmp_checksums, dec_checksums;
+
+		// Compress File
+		int orig_fd = io::open(orig_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
+		if unlikely(orig_fd < 0) {
+			throw MSG_Error("Cannot open file: %s", orig_file.c_str());
+		}
+
+		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
+		if unlikely(fd < 0) {
+			throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
+		}
+
+		LZ4CompressDescriptor lz4(orig_fd);
+		LZ4CompressDescriptor::iterator cmp_it;
+
+		bool more_data = false;
+		do {
+			lz4.reset(numBytes);
+			auto it = lz4.begin();
+			while (it) {
+				_write(fd, it->c_str(), it.size());
+				++it;
+				more_data = true;
+			}
+			read_bytes.push_back(lz4.size());
+			cmp_checksums.push_back(lz4.get_digest());
+		} while (more_data);
+
+		io::close(orig_fd);
+
+		// Decompress File
+		io::lseek(fd, 0, SEEK_SET);
+
+		LZ4DecompressDescriptor dec_lz4(fd);
+		LZ4DecompressDescriptor::iterator dec_it;
+
+		auto it_checksum = cmp_checksums.begin();
+		for (const auto& _bytes : read_bytes) {
+			dec_lz4.reset(_bytes);
+			dec_it = dec_lz4.begin();
+			while (dec_it) {
+				++dec_it;
+			}
+			if (*it_checksum != dec_lz4.get_digest()) {
+				L_ERR(nullptr, "Different checksums");
+				return 1;
+			}
+			++it_checksum;
+		}
+
+		return 0;
+	} catch (const Error& err) {
+		L_ERR(nullptr, "%s\n", err.get_context());
+		return 1;
+	} catch (const std::exception& err) {
+		L_ERR(nullptr, "%s\n", err.what());
+		return 1;
+	}
+}
 
 
 static const std::vector<std::string> small_files({
@@ -224,56 +243,74 @@ static const std::vector<std::string> big_files({
 
 
 int test_small_datas() {
-	unlink(cmp.c_str());
-	unlink(dec.c_str());
+	unlink(cmp_file.c_str());
 
 	int res = 0;
 	for (const auto& file : small_files) {
-		res += test_Compress_Decompress_Data(file, cmp, dec);
-		unlink(cmp.c_str());
-		unlink(dec.c_str());
+		res += test_Compress_Decompress_Data(file);
+		unlink(cmp_file.c_str());
 	}
 	return res;
 }
 
 
 int test_big_datas() {
-	unlink(cmp.c_str());
-	unlink(dec.c_str());
+	unlink(cmp_file.c_str());
 
 	int res = 0;
 	for (const auto& file : big_files) {
-		res += test_Compress_Decompress_Data(file, cmp, dec);
-		unlink(cmp.c_str());
-		unlink(dec.c_str());
+		res += test_Compress_Decompress_Data(file);
+		unlink(cmp_file.c_str());
 	}
 	return res;
 }
 
 
 int test_small_files() {
-	unlink(cmp.c_str());
-	unlink(dec.c_str());
+	unlink(cmp_file.c_str());
 
 	int res = 0;
 	for (const auto& file : small_files) {
-		res += test_Compress_Decompress_File(file, cmp, dec);
-		unlink(cmp.c_str());
-		unlink(dec.c_str());
+		res += test_Compress_Decompress_File(file);
+		unlink(cmp_file.c_str());
 	}
 	return res;
 }
 
 
 int test_big_files() {
-	unlink(cmp.c_str());
-	unlink(dec.c_str());
+	unlink(cmp_file.c_str());
 
 	int res = 0;
 	for (const auto& file : big_files) {
-		res += test_Compress_Decompress_File(file, cmp, dec);
-		unlink(cmp.c_str());
-		unlink(dec.c_str());
+		res += test_Compress_Decompress_File(file);
+		unlink(cmp_file.c_str());
+	}
+	return res;
+}
+
+
+int test_small_descriptor() {
+	unlink(cmp_file.c_str());
+
+	int res = 0;
+	size_t numBytes = 50;
+	for (const auto& file : small_files) {
+		res += test_Compress_Decompress_Descriptor(file, numBytes);
+		unlink(cmp_file.c_str());
+	}
+	return res;
+}
+
+
+int test_big_descriptor() {
+	unlink(cmp_file.c_str());
+
+	int res = 0;
+	size_t numBytes = 2000 * 1024;
+	for (const auto& file : big_files) {
+		res += test_Compress_Decompress_Descriptor(file, numBytes);
+		unlink(cmp_file.c_str());
 	}
 	return res;
 }

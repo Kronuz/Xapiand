@@ -26,11 +26,13 @@
 
 
 std::string read_file(const std::string& filename);
-int compare(const std::string& filename1, const std::string& filename2);
-int test_Compress_Decompress_Data(const std::string& orig_file, const std::string& cmp_file, const std::string& dec_file);
-int test_Compress_Decompress_File(const std::string& orig_file, const std::string& cmp_file, const std::string& dec_file);
+int test_Compress_Decompress_Data(const std::string& orig_file);
+int test_Compress_Decompress_File(const std::string& orig_file);
+int test_Compress_Decompress_Descriptor(const std::string& orig_file, size_t numBytes);
 
 int test_small_datas();
 int test_big_datas();
 int test_small_files();
 int test_big_files();
+int test_small_descriptor();
+int test_big_descriptor();
