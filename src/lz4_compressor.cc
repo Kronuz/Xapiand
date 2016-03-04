@@ -222,10 +222,6 @@ LZ4CompressDescriptor::init()
 		throw MSG_LZ4IOError("IO error: lseek");
 	}
 
-	if unlikely((data_size = io::read(fd, data, LZ4_FILE_READ_SIZE)) < 0) {
-		throw MSG_LZ4IOError("IO error: read");
-	}
-
 	_size = 0;
 	_finish = false;
 	_offset = 0;
