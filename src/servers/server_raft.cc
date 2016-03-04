@@ -66,6 +66,9 @@ RaftServer::raft_server(Raft::Message type, const std::string& message)
 		errmsg += std::to_string(toUType(type));
 		throw MSG_InvalidArgumentError(errmsg);
 	}
+
+	raft->register_activity();
+
 	(this->*(dispatch[toUType(type)]))(message);
 }
 
@@ -84,8 +87,6 @@ RaftServer::request_vote(const std::string& message)
 	if (local_node.region.load() != remote_node.region.load()) {
 		return;
 	}
-
-	raft->register_activity();
 
 	std::string str_remote_term;
 	if (unserialise_string(str_remote_term, &p, p_end) == -1) {
@@ -149,8 +150,6 @@ RaftServer::response_vote(const std::string& message)
 		return;
 	}
 
-	raft->register_activity();
-
 	if (remote_node == local_node && raft->state == Raft::State::CANDIDATE) {
 		std::string vote;
 
@@ -206,8 +205,6 @@ RaftServer::heartbeat_leader(const std::string& message)
 		return;
 	}
 
-	raft->register_activity();
-
 	if (raft->leader != lower_string(remote_node.name)) {
 		L_RAFT(this, "Request the raft server's configuration!");
 		raft->send_message(Raft::Message::REQUEST_DATA, local_node.serialise());
@@ -230,8 +227,6 @@ RaftServer::leader(const std::string& message)
 	if (local_node.region.load() != remote_node.region.load()) {
 		return;
 	}
-
-	raft->register_activity();
 
 	if (raft->state == Raft::State::LEADER) {
 		assert(remote_node == local_node);
@@ -274,8 +269,6 @@ RaftServer::request_data(const std::string& message)
 		return;
 	}
 
-	raft->register_activity();
-
 	if (raft->state == Raft::State::LEADER) {
 		L_DEBUG(this, "Sending Data!");
 		raft->send_message(Raft::Message::RESPONSE_DATA, local_node.serialise() +
@@ -299,8 +292,6 @@ RaftServer::response_data(const std::string& message)
 	if (local_node.region.load() != remote_node.region.load()) {
 		return;
 	}
-
-	raft->register_activity();
 
 	if (raft->state == Raft::State::LEADER) {
 		L_CRIT(this, "I'm leader, other responded as leader!");
