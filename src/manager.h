@@ -106,7 +106,10 @@ public:
 		SETUP,
 		WAITING_,
 		WAITING,
-		RESET
+		RESET,
+	};
+	static constexpr const char* const StateNames[] = {
+		"BAD", "READY", "SETUP", "WAITING_", "WAITING", "RESET",
 	};
 
 	std::vector<std::weak_ptr<XapiandServer>> servers;

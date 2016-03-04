@@ -102,7 +102,7 @@ Raft::leader_election_cb(ev::timer &, int)
 			election_timeout = random_real(ELECTION_LEADER_MIN, ELECTION_LEADER_MAX);
 		}
 	} else {
-		L_RAFT(this, "Waiting manager get ready!!");
+		L_RAFT(this, "Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(m->state)]);
 	}
 
 	// Start the timer again.

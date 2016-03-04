@@ -60,7 +60,6 @@ private:
 		RESET,              // Force reset a node
 		MAX,
 	};
-
 	static constexpr const char* const MessageNames[] = {
 		"HEARTBEAT_LEADER", "REQUEST_VOTE", "RESPONSE_VOTE", "LEADER",
 		"REQUEST_DATA", "RESPONSE_DATA", "RESET",
