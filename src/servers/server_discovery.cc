@@ -417,6 +417,8 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 			discovery_server(type, message);
 		} catch (DummyException) {
 			/* ignore */
+		} catch (const Exception& exc) {
+			L_WARNING(this, "WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 		} catch (...) {
 			L_EV_END(this, "DiscoveryServer::io_accept_cb:END %lld", now);
 			throw;
