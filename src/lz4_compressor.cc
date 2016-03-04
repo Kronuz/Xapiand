@@ -204,7 +204,8 @@ LZ4CompressFile::next()
 LZ4CompressDescriptor::LZ4CompressDescriptor(int& fildes, int seed)
 	: LZ4BlockStreaming(LZ4_BLOCK_SIZE, seed),
 	  lz4Stream(LZ4_createStream()),
-	  fd(fildes) { }
+	  fd(fildes),
+	  read_bytes(LZ4_BLOCK_SIZE) { }
 
 
 LZ4CompressDescriptor::~LZ4CompressDescriptor()
