@@ -57,6 +57,10 @@ Discovery::heartbeat_cb(ev::timer &, int)
 
 	auto m = manager();
 
+	if (m->state != XapiandManager::State::READY) {
+		L_DISCOVERY(this, "Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(m->state)]);
+	}
+
 	switch (m->state) {
 		case XapiandManager::State::RESET:
 			if (!local_node.name.empty()) {
@@ -92,6 +96,7 @@ Discovery::heartbeat_cb(ev::timer &, int)
 			L_ERR(this, "ERROR: Manager is in BAD state!!");
 			break;
 	}
+
 	L_EV_END(this, "Discovery::heartbeat_cb:END");
 }
 
