@@ -42,11 +42,10 @@ XapiandReplicator::~XapiandReplicator()
 void
 XapiandReplicator::on_commit(const Endpoint &endpoint)
 {
-	std::string endpoint_mastery(std::to_string(endpoint.mastery_level));
 	if (auto discovery = manager()->proto_discovery.lock()) {
 		discovery->send_message(
         	Discovery::Message::DB_UPDATED,
-			serialise_string(endpoint_mastery) +  // The mastery level of the database
+			serialise_length(endpoint.mastery_level) +  // The mastery level of the database
 			serialise_string(endpoint.path) +  // The path of the index
 			local_node.serialise()   // The node where the index is at
 		);

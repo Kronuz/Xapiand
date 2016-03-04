@@ -34,7 +34,7 @@
  *
  *  @return	The encoded length.
  */
-std::string serialise_length(size_t len);
+std::string serialise_length(unsigned long long len);
 
 /** Unserialise a length encoded by serialise_length.
  *
@@ -46,14 +46,12 @@ std::string serialise_length(size_t len);
  *
  *  @return	The decoded length.
  */
-ssize_t unserialise_length(const char **p, const char *end, bool check_remaining=false);
+unsigned long long unserialise_length(const char** p, const char* end, bool check_remaining=false);
 
 
 std::string serialise_string(const std::string &input);
-
-ssize_t unserialise_string(std::string &output, const char **p, const char *end);
+std::string unserialise_string(const char** p, const char* end);
 
 
 std::string serialise_double(double v);
-
-double unserialise_double(const char ** p, const char *end);
+double unserialise_double(const char** p, const char* end);

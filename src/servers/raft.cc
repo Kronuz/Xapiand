@@ -44,7 +44,7 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_,
 {
 	election_timeout = random_real(ELECTION_LEADER_MIN, ELECTION_LEADER_MAX);
 	election_leader.set<Raft, &Raft::leader_election_cb>(this);
-	election_leader.set(election_timeout, 0.);
+	election_leader.set(election_timeout, 0.0);
 	L_EV(this, "Start raft's election leader event");
 
 	last_activity = ev::now(*loop);
@@ -98,15 +98,13 @@ Raft::leader_election_cb(ev::timer&, int)
 			++term;
 			votes = 0;
 			votedFor.clear();
-			send_message(Message::REQUEST_VOTE, local_node.serialise() + serialise_string(std::to_string(term)));
+			send_message(Message::REQUEST_VOTE, local_node.serialise() + serialise_length(term));
 			election_timeout = random_real(ELECTION_LEADER_MIN, ELECTION_LEADER_MAX);
 		}
-	} else {
-		L_RAFT(this, "Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(m->state)]);
 	}
 
 	// Start the timer again.
-	election_leader.set(election_timeout, 0.);
+	election_leader.set(election_timeout, 0.0);
 	election_leader.start();
 	L_EV_END(this, "Raft::leader_election_cb:END");
 }
@@ -125,8 +123,8 @@ void
 Raft::start_heartbeat()
 {
 	send_message(Message::LEADER, local_node.serialise() +
-		serialise_string(std::to_string(number_servers.load())) +
-		serialise_string(std::to_string(term)));
+		serialise_length(number_servers.load()) +
+		serialise_length(term));
 
 	heartbeat.repeat = random_real(HEARTBEAT_LEADER_MIN, HEARTBEAT_LEADER_MAX);
 	heartbeat.again();

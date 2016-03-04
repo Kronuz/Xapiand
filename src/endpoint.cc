@@ -58,7 +58,8 @@ char *normalize_path(const char * src, char * dst)
 }
 
 
-std::string Node::serialise() const
+std::string
+Node::serialise() const
 {
 	std::string node_str;
 	if (!name.empty()) {
@@ -72,30 +73,26 @@ std::string Node::serialise() const
 }
 
 
-ssize_t Node::unserialise(const char **p, const char *end)
+Node
+Node::unserialise(const char **p, const char *end)
 {
 	const char *ptr = *p;
 
-	addr.sin_addr.s_addr = static_cast<int>(unserialise_length(&ptr, end, false));
-	http_port = static_cast<int>(unserialise_length(&ptr, end, false));
-	binary_port = static_cast<int>(unserialise_length(&ptr, end, false));
-	region.store(static_cast<int>(unserialise_length(&ptr, end, false)));
+	Node node;
 
-	name.clear();
-	unserialise_string(name, &ptr, end);
-	if (name.empty()) {
+	node.addr.sin_addr.s_addr = static_cast<int>(unserialise_length(&ptr, end, false));
+	node.http_port = static_cast<int>(unserialise_length(&ptr, end, false));
+	node.binary_port = static_cast<int>(unserialise_length(&ptr, end, false));
+	node.region.store(static_cast<int>(unserialise_length(&ptr, end, false)));
+
+	node.name = unserialise_string(&ptr, end);
+	if (node.name.empty()) {
 		throw Xapian::SerialisationError("Bad Node: No name");
 	}
 
 	*p = ptr;
-	return end - ptr;
-}
 
-
-ssize_t Node::unserialise(const std::string &s)
-{
-	const char *ptr = s.data();
-	return unserialise(&ptr, ptr + s.size());
+	return node;
 }
 
 

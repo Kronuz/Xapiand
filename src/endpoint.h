@@ -43,21 +43,45 @@ struct Node {
 
 	Node() : regions(1), region(0) { }
 
-	Node& operator =(const Node& node) {
-		name = node.name;
-		id = node.id;
-		regions.store(node.regions.load());
-		region.store(node.region.load());
-		addr = node.addr;
-		http_port = node.http_port;
-		binary_port = node.binary_port;
-		touched = node.touched;
+	// move constructor, takes a rvalue reference &&
+	Node(Node&& other) {
+		name = std::move(other.name);
+		id = std::move(other.id);
+		regions.store(other.regions.load());
+		region.store(other.region.load());
+		addr = std::move(other.addr);
+		http_port = std::move(other.http_port);
+		binary_port = std::move(other.binary_port);
+		touched = std::move(other.touched);
+	}
+
+	// move assignment, takes a rvalue reference &&
+	Node& operator=(Node&& other) {
+		name = std::move(other.name);
+		id = std::move(other.id);
+		regions.store(other.regions.load());
+		region.store(other.region.load());
+		addr = std::move(other.addr);
+		http_port = std::move(other.http_port);
+		binary_port = std::move(other.binary_port);
+		touched = std::move(other.touched);
+		return *this;
+	}
+
+	Node& operator=(const Node& other) {
+		name = other.name;
+		id = other.id;
+		regions.store(other.regions.load());
+		region.store(other.region.load());
+		addr = other.addr;
+		http_port = other.http_port;
+		binary_port = other.binary_port;
+		touched = other.touched;
 		return *this;
 	}
 
 	std::string serialise() const;
-	ssize_t unserialise(const char **p, const char *end);
-	ssize_t unserialise(const std::string &s);
+	static Node unserialise(const char **p, const char *end);
 
 	std::string host() const {
 		char ip[INET_ADDRSTRLEN];
@@ -65,7 +89,7 @@ struct Node {
 		return std::string(ip);
 	}
 
-	inline bool operator ==(const Node& other) const {
+	inline bool operator==(const Node& other) const {
 		return
 			lower_string(name) == lower_string(other.name) &&
 			addr.sin_addr.s_addr == other.addr.sin_addr.s_addr &&
@@ -73,7 +97,7 @@ struct Node {
 			binary_port == other.binary_port;
 	}
 
-	inline bool operator !=(const Node& other) const {
+	inline bool operator!=(const Node& other) const {
 		return !operator==(other);
 	}
 };

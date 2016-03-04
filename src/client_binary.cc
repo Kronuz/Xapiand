@@ -521,16 +521,14 @@ BinaryClient::msg_allterms(const std::string &message)
 	Xapian::Database* db = database->db.get();
 
 	std::string prev = message;
-	std::string reply;
-
-	const std::string & prefix = message;
+	const std::string& prefix = message;
 	const Xapian::TermIterator end = db->allterms_end(prefix);
 	for (Xapian::TermIterator t = db->allterms_begin(prefix); t != end; ++t) {
 		if unlikely(prev.size() > 255)
 			prev.resize(255);
 		const std::string & v = *t;
 		size_t reuse = common_prefix_length(prev, v);
-		reply = serialise_length(t.get_termfreq());
+		std::string reply(serialise_length(t.get_termfreq()));
 		reply.append(1, char(reuse));
 		reply.append(v, reuse, std::string::npos);
 		send_message(RemoteReplyType::REPLY_ALLTERMS, reply);
@@ -560,7 +558,7 @@ BinaryClient::msg_termlist(const std::string &message)
 			prev.resize(255);
 		const std::string & v = *t;
 		size_t reuse = common_prefix_length(prev, v);
-		std::string reply = serialise_length(t.get_wdf());
+		std::string reply(serialise_length(t.get_wdf()));
 		reply += serialise_length(t.get_termfreq());
 		reply.append(1, char(reuse));
 		reply.append(v, reuse, std::string::npos);
@@ -616,7 +614,7 @@ BinaryClient::msg_postlist(const std::string &message)
 		 i != end; ++i) {
 
 		Xapian::docid newdocid = *i;
-		std::string reply = serialise_length(newdocid - lastdocid - 1);
+		std::string reply(serialise_length(newdocid - lastdocid - 1));
 		reply += serialise_length(i.get_wdf());
 
 		send_message(RemoteReplyType::REPLY_POSTLISTITEM, reply);
@@ -938,7 +936,7 @@ BinaryClient::msg_document(const std::string &message)
 
 	Xapian::ValueIterator i;
 	for (i = doc.values_begin(); i != doc.values_end(); ++i) {
-		std::string item = serialise_length(i.get_valueno());
+		std::string item(serialise_length(i.get_valueno()));
 		item += *i;
 		send_message(RemoteReplyType::REPLY_VALUE, item);
 	}
@@ -1000,7 +998,7 @@ BinaryClient::msg_freqs(const std::string &term)
 	checkout_database();
 	Xapian::Database* db = database->db.get();
 
-	std::string msg = serialise_length(db->get_termfreq(term));
+	std::string msg(serialise_length(db->get_termfreq(term)));
 	msg += serialise_length(db->get_collection_freq(term));
 
 	checkin_database();

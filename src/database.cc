@@ -309,7 +309,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 
 	std::string revision = database->get_revision_info();
 	std::string uuid = database->get_uuid();
-	std::string line = serialise_length(revision.size()) + revision + serialise_length(toUType(type)) + data;
+	std::string line(serialise_length(revision.size()) + revision + serialise_length(toUType(type)) + data);
 
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint.path.c_str(), repr(line).c_str());
 
@@ -1388,7 +1388,7 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 
 	L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
 	std::string obj_data_str = obj.to_string();
-	std::string data = serialise_length(obj_data_str.size()) + obj_data_str + (blob ? body : "");
+	std::string data(serialise_length(obj_data_str.size()) + obj_data_str + (blob ? body : ""));
 	doc.set_data(data);
 	_index(doc, obj);
 	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
@@ -1455,7 +1455,7 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 
 		L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
 		std::string obj_data_str = obj_data.to_string();
-		std::string data = serialise_length(obj_data_str.size()) + obj_data_str + get_blob(document);
+		std::string data(serialise_length(obj_data_str.size()) + obj_data_str + get_blob(document));
 		doc.set_data(data);
 		_index(doc, obj_data);
 		L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());

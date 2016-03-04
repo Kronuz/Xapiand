@@ -81,11 +81,7 @@ DiscoveryServer::hello(const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node;
-	if (remote_node.unserialise(&p, p_end) == -1) {
-		L_DISCOVERY(this, "Badly formed message: No proper node!");
-		return;
-	}
+	Node remote_node = Node::unserialise(&p, p_end);
 
 	if (remote_node == local_node) {
 		// It's me! ...wave hello!
@@ -111,11 +107,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node;
-	if (remote_node.unserialise(&p, p_end) == -1) {
-		L_DISCOVERY(this, "Badly formed message: No proper node!");
-		return;
-	}
+	Node remote_node = Node::unserialise(&p, p_end);
 
 	int region;
 	if (remote_node == local_node) {
@@ -173,11 +165,7 @@ DiscoveryServer::sneer(const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node;
-	if (remote_node.unserialise(&p, p_end) == -1) {
-		L_DISCOVERY(this, "Badly formed message: No proper node!");
-		return;
-	}
+	Node remote_node = Node::unserialise(&p, p_end);
 
 	if (remote_node == local_node) {
 		if (m->node_name.empty()) {
@@ -213,11 +201,7 @@ DiscoveryServer::bye(const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	Node remote_node;
-	if (remote_node.unserialise(&p, p_end) == -1) {
-		L_DISCOVERY(this, "Badly formed message: No proper node!");
-		return;
-	}
+	Node remote_node = Node::unserialise(&p, p_end);
 
 	m->drop_node(remote_node.name);
 	L_INFO(this, "Node %s left the party!", remote_node.name.c_str());
@@ -238,11 +222,7 @@ DiscoveryServer::db(const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	std::string index_path;
-	if (unserialise_string(index_path, &p, p_end) == -1) {
-		L_DISCOVERY(this, "Badly formed message: No index path!");
-		return;
-	}
+	std::string index_path = unserialise_string(&p, p_end);
 
 	long long mastery_level = m->database_pool.get_mastery_level(index_path);
 
@@ -251,7 +231,7 @@ DiscoveryServer::db(const std::string& message)
 		if (m->endp_r.get_master_node(index_path, &node, m)) {
 			discovery->send_message(
 				Discovery::Message::BOSSY_DB_WAVE,
-				serialise_string(std::to_string(mastery_level)) +  // The mastery level of the database
+				serialise_length(mastery_level) +  // The mastery level of the database
 				serialise_string(index_path) +  // The path of the index
 				node->serialise()				// The node where the index master is at
 			);
@@ -263,7 +243,7 @@ DiscoveryServer::db(const std::string& message)
 			L_DISCOVERY(this, "Found local database '%s' with m:%llx!", index_path.c_str(), mastery_level);
 			discovery->send_message(
 				Discovery::Message::DB_WAVE,
-				serialise_string(std::to_string(mastery_level)) +  // The mastery level of the database
+				serialise_length(mastery_level) +  // The mastery level of the database
 				serialise_string(index_path) +  // The path of the index
 				local_node.serialise()  // The node where the index is at
 			);
@@ -285,24 +265,11 @@ DiscoveryServer::_db_wave(bool bossy, const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	std::string mastery_str;
-	if (unserialise_string(mastery_str, &p, p_end) == -1) {
-		L_DISCOVERY(this, "Badly formed message: No proper mastery!");
-		return;
-	}
-	long long remote_mastery_level = std::stoll(mastery_str);
+	long long remote_mastery_level = unserialise_length(&p, p_end);
 
-	std::string index_path;
-	if (unserialise_string(index_path, &p, p_end) == -1) {
-		L_DISCOVERY(this, "Badly formed message: No index path!");
-		return;
-	}
+	std::string index_path = unserialise_string(&p, p_end);
 
-	Node remote_node;
-	if (remote_node.unserialise(&p, p_end) == -1) {
-		L_DISCOVERY(this, "Badly formed message: No proper node!");
-		return;
-	}
+	Node remote_node = Node::unserialise(&p, p_end);
 
 	if (m->put_node(remote_node)) {
 		L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
@@ -350,18 +317,8 @@ DiscoveryServer::db_updated(const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	std::string mastery_str;
-	if (unserialise_string(mastery_str, &p, p_end) == -1) {
-		L_DISCOVERY(this, "Badly formed message: No proper mastery!");
-		return;
-	}
-	long long remote_mastery_level = std::stoll(mastery_str);
-
-	std::string index_path;
-	if (unserialise_string(index_path, &p, p_end) == -1) {
-		L_DISCOVERY(this, "Badly formed message: No index path!");
-		return;
-	}
+	long long remote_mastery_level = unserialise_length(&p, p_end);
+	std::string index_path = unserialise_string(&p, p_end);
 
 	long long mastery_level = m->database_pool.get_mastery_level(index_path);
 	if (mastery_level == -1) {
@@ -370,11 +327,7 @@ DiscoveryServer::db_updated(const std::string& message)
 
 	if (mastery_level > remote_mastery_level) {
 		L_DISCOVERY(this, "Mastery of remote's %s wins! (local:%llx > remote:%llx) - Updating!", index_path.c_str(), mastery_level, remote_mastery_level);
-		Node remote_node;
-		if (remote_node.unserialise(&p, p_end) == -1) {
-			L_DISCOVERY(this, "Badly formed message: No proper node!");
-			return;
-		}
+		Node remote_node = Node::unserialise(&p, p_end);
 		if (m->put_node(remote_node)) {
 			L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (4)", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 		}

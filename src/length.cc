@@ -71,7 +71,8 @@ static int base256ify_double(double &v) {
 	return exp;
 }
 
-std::string serialise_double(double v)
+std::string
+serialise_double(double v)
 {
 	/* First byte:
 	 *  bit 7 Negative flag
@@ -130,7 +131,8 @@ std::string serialise_double(double v)
 	return result;
 }
 
-double unserialise_double(const char ** p, const char *end)
+double
+unserialise_double(const char** p, const char* end)
 {
 	if (end - *p < 2) {
 		throw MSG_SerialisationError("Bad encoded double: insufficient data");
@@ -204,7 +206,7 @@ double unserialise_double(const char ** p, const char *end)
 
 
 std::string
-serialise_length(size_t len)
+serialise_length(unsigned long long len)
 {
 	std::string result;
 	if (len < 255) {
@@ -225,29 +227,29 @@ serialise_length(size_t len)
 	return result;
 }
 
-ssize_t
-unserialise_length(const char **p, const char *end, bool check_remaining)
+unsigned long long
+unserialise_length(const char** p, const char* end, bool check_remaining)
 {
 	const char *pos = *p;
 	if (pos == end) {
 		throw MSG_SerialisationError("Bad encoded length: no data");
 	}
-	size_t len = static_cast<unsigned char>(*pos++);
+	unsigned long long len = static_cast<unsigned char>(*pos++);
 	if (len == 0xff) {
 		len = 0;
 		unsigned char ch;
 		unsigned shift = 0;
 		do {
-			if (pos == end || shift > (sizeof(ssize_t) * 8 / 7 * 7)) {
+			if (pos == end || shift > (sizeof(unsigned long long) * 8 / 7 * 7)) {
 				throw MSG_SerialisationError("Bad encoded length: insufficient data");
 			}
 			ch = *pos++;
-			len |= size_t(ch & 0x7f) << shift;
+			len |= static_cast<unsigned long long>(ch & 0x7f) << shift;
 			shift += 7;
 		} while ((ch & 0x80) == 0);
 		len += 255;
 	}
-	if (check_remaining && len > size_t(end - pos)) {
+	if (check_remaining && len > static_cast<unsigned long long>(end - pos)) {
 		throw MSG_SerialisationError("Bad encoded length: length greater than data");
 	}
 	*p = pos;
@@ -264,12 +266,17 @@ serialise_string(const std::string &input) {
 }
 
 
-ssize_t
-unserialise_string(std::string &output, const char **p, const char *end) {
-	ssize_t length = unserialise_length(p, end, true);
-	if (length != -1) {
-		output.append(std::string(*p, length));
-		*p += length;
-	}
-	return length;
+std::string
+unserialise_string(const char** p, const char* end) {
+	const char *ptr = *p;
+
+	std::string string;
+
+	unsigned long long length = unserialise_length(&ptr, end, true);
+	string.append(std::string(ptr, length));
+	ptr += length;
+
+	*p = ptr;
+
+	return string;
 }
