@@ -23,6 +23,7 @@
 #pragma once
 
 #include "queue.h"
+#include "exception.h"
 #include "utils.h"
 
 #include <iostream>
@@ -145,6 +146,9 @@ public:
 			try {
 				nt->run(std::move(params)...);
 				nt.reset();
+			} catch(const Exception& exc) {
+				L_EXC(nt.get(), "Task died with an unhandled exception!");
+				throw;
 			} catch(const std::exception& exc) {
 				L_EXC(nt.get(), "Task died with an unhandled exception!");
 				throw;
