@@ -28,6 +28,10 @@
 
 #include "udp_base.h"
 
+// Values in seconds
+#define HEARTBEAT_MIN 1
+#define HEARTBEAT_MAX 2
+
 #define XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION 1
 #define XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION 0
 

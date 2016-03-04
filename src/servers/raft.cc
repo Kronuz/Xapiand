@@ -128,7 +128,7 @@ Raft::start_heartbeat()
 		serialise_string(std::to_string(number_servers.load())) +
 		serialise_string(std::to_string(term)));
 
-	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
+	heartbeat.repeat = random_real(HEARTBEAT_LEADER_MIN, HEARTBEAT_LEADER_MAX);
 	heartbeat.again();
 	L_RAFT(this, "\tSet heartbeat timeout event %f", heartbeat.repeat);
 

@@ -24,10 +24,6 @@
 
 #include "../manager.h"
 
-// Values in seconds
-#define HEARTBEAT_MIN 1 // 0.250
-#define HEARTBEAT_MAX 2 // 0.500
-
 
 // Base class for UDP messages configuration
 class BaseUDP : public Worker {
