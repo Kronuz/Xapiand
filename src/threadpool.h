@@ -131,7 +131,7 @@ public:
 			[f = std::forward<F>(f), t = std::move(t)] (Params... params) mutable {
 				return apply(std::move(f), std::tuple_cat(std::make_tuple(std::move(params)...), std::move(t)));
 			}
-		 );
+		);
 		auto res = task.get_future();
 		if (!tasks.push(std::move(task))) {
 			throw std::logic_error("Unable to enqueue task");
@@ -142,8 +142,13 @@ public:
 	// Enqueues a Task object to be executed
 	decltype(auto) enqueue(std::shared_ptr<Task<Params...>> nt) {
 		return enqueue([nt = std::move(nt)](Params... params) mutable {
-			nt->run(std::move(params)...);
-			nt.reset();
+			try {
+				nt->run(std::move(params)...);
+				nt.reset();
+			} catch(...) {
+				L_ALERT(nt.get(), "Task died with an unhandled exception!");
+				throw;
+			}
 		});
 	}
 
