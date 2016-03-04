@@ -30,6 +30,7 @@
 #include <list>
 #include <mutex>
 #include <memory>
+#include <cassert>
 
 
 class Worker : public std::enable_shared_from_this<Worker> {
@@ -76,6 +77,7 @@ private:
 
 	template<typename T>
 	inline WorkerList::iterator _attach(T&& child) {
+		assert(child);
 		L_OBJ(this, "Worker child [%p] attached to [%p]", child.get(), this);
 		return _children.insert(_children.end(), std::forward<T>(child));
 	}
@@ -112,10 +114,14 @@ public:
 
 		for (auto it = _children.begin(); it != _children.end();) {
 			auto child = *it++;
-			lk.unlock();
-			child->shutdown(asap, now);
-			lk.lock();
-			if (now) {
+			if (child) {
+				lk.unlock();
+				child->shutdown(asap, now);
+				lk.lock();
+				if (now) {
+					_detach(child);
+				}
+			} else {
 				_detach(child);
 			}
 		}
