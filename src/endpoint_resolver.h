@@ -42,6 +42,8 @@ using namespace std::literals;
 
 
 class EndpointList {
+	friend class EndpointResolver;
+
 	enum class State {
 		NEW,
 		READY,
@@ -65,13 +67,6 @@ class EndpointList {
 	duration<double, std::milli> init_timeout;
 	bool stop_wait;
 
-public:
-	EndpointList();
-
-	EndpointList(EndpointList&& other);
-
-	~EndpointList() = default;
-
 	bool get_endpoints(std::shared_ptr<XapiandManager> manager, size_t n_endps, std::vector<Endpoint> *endpv, const Node **last_node);
 
 	bool resolve_endpoint(const std::string &path, std::shared_ptr<XapiandManager> manager, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout);
@@ -82,6 +77,11 @@ public:
 	size_t size();
 	bool empty();
 	void show_list();
+
+public:
+	EndpointList();
+	EndpointList(EndpointList&& other);
+	~EndpointList() = default;
 };
 
 
