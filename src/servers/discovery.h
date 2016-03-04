@@ -43,7 +43,7 @@ class Discovery : public BaseUDP {
 private:
 	ev::timer heartbeat;
 
-	void heartbeat_cb(ev::timer &watcher, int revents);
+	void heartbeat_cb(ev::timer& watcher, int revents);
 
 	friend class DiscoveryServer;
 
@@ -60,20 +60,21 @@ public:
 		DB_UPDATED,    //
 		MAX,           //
 	};
+
 	static constexpr const char* const MessageNames[] = {
 		"HEARTBEAT", "HELLO", "WAVE", "SNEER", "BYE", "DB", "DB_WAVE",
 		"BOSSY_DB_WAVE", "DB_UPDATED",
 	};
 
-	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &group_);
+	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
 	~Discovery();
 
-	inline void send_message(Message type, const std::string &message) {
+	inline void send_message(Message type, const std::string& message) {
 		if (type != Discovery::Message::HEARTBEAT) {
-			L_DISCOVERY(this, "<< send_message(%s)", MessageNames[static_cast<int>(type)]);
+			L_DISCOVERY(this, "<< send_message(%s)", MessageNames[toUType(type)]);
 		}
 		L_DISCOVERY_PROTO(this, "message: '%s'", repr(message).c_str());
-		BaseUDP::send_message(static_cast<char>(type), message);
+		BaseUDP::send_message(toUType(type), message);
 	}
 
 	std::string getDescription() const noexcept override;
