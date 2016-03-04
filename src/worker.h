@@ -89,12 +89,11 @@ private:
 			child->_iterator = _children.end();
 			L_OBJ(this, "Worker child [%p] detached from [%p]", child.get(), this);
 			return it;
-		} {
-			return _children.end();
 		}
+		return _children.end();
 	}
 
-	inline void _async_break_loop_cb(ev::async &, int) {
+	inline void _async_break_loop_cb(ev::async&, int) {
 		L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
 		loop->break_loop();
 		L_EV_END(this, "Worker::_async_break_loop_cb:END");
