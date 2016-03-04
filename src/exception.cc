@@ -32,9 +32,7 @@
 #define BUFFER_SIZE 1024
 
 
-std::string
-traceback(const char *filename, int line)
-{
+std::string traceback(const char *filename, int line) {
 	std::string t;
 #ifdef TRACEBACK
 	void* callstack[128];

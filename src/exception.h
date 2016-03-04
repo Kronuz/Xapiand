@@ -48,7 +48,8 @@ protected:
 public:
 	Exception(const char *filename, int line, const char *format="", ...);
 	Exception(const char *filename, int line, const std::string& message)
-		: Exception(filename, line, message.c_str()) {}
+		: Exception(filename, line, message.c_str()) { }
+
 	~Exception() = default;
 
 	const char* what() const noexcept override {
