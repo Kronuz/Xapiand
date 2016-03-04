@@ -115,6 +115,7 @@ public:
 	inline void start() {
 		if (!running.exchange(true)) {
 			election_leader.start();
+			L_EV(this, "Start raft's election leader event (%g)", election_timeout);
 			L_RAFT(this, "Raft was started!");
 		}
 		number_servers.store(manager()->get_nodes_by_region(local_node.region.load()) + 1);
@@ -123,8 +124,10 @@ public:
 	inline void stop() {
 		if (running.exchange(false)) {
 			election_leader.stop();
+			L_EV(this, "Stop raft's election leader event");
 			if (state == State::LEADER) {
 				heartbeat.stop();
+				L_EV(this, "Stop raft's heartbeat event");
 			}
 			state = State::FOLLOWER;
 			number_servers.store(1);
