@@ -102,7 +102,7 @@ public:
 			L_RAFT(this, "<< send_message(%s)", MessageNames[static_cast<int>(type)]);
 		}
 		L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
-		BaseUDP::send_message(toUType(type)), message);
+		BaseUDP::send_message(toUType(type), message);
 	}
 
 	void register_activity();
