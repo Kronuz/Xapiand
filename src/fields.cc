@@ -41,7 +41,7 @@ NumericFieldProcessor::operator()(const std::string& str)
 		serialise = Serialise::numeric(serialise);
 		return Xapian::Query(prefix + serialise);
 	} catch (const SerialisationError& exc) {
-		throw Xapian::QueryParserError(std::string(exc.what()) + " (" + str + ")");
+		throw MSG_QueryParserError(std::string(exc.what()) + " (" + str + ")");
 	}
 }
 
@@ -56,7 +56,7 @@ BooleanFieldProcessor::operator()(const std::string& str)
 		std::string serialise = Serialise::boolean(str);
 		return Xapian::Query(prefix + serialise);
 	} catch (const SerialisationError& exc) {
-		throw Xapian::QueryParserError(std::string(exc.what()) + " (" + str + ")");
+		throw MSG_QueryParserError(std::string(exc.what()) + " (" + str + ")");
 	}
 }
 
@@ -73,7 +73,7 @@ DateFieldProcessor::operator()(const std::string& str)
 		serialise = Serialise::date(serialise);
 		return Xapian::Query(prefix + serialise);
 	} catch (const DatetimeError& exc) {
-		throw Xapian::QueryParserError("Format date is not valid (" + str + "). " + std::string(exc.what()));
+		throw MSG_QueryParserError("Format date is not valid (" + str + "). " + std::string(exc.what()));
 	}
 }
 

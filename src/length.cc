@@ -103,7 +103,7 @@ std::string serialise_double(double v)
 			result += char(exp + 128);
 		} else {
 			if (exp < -32768 || exp > 32767) {
-				throw Xapian::InternalError("Insane exponent in floating point number");
+				throw MSG_InternalError("Insane exponent in floating point number");
 			}
 			result += negative ? char(0x8f) : char(0x0f);
 			result += char(unsigned(exp + 32768) & 0xff);

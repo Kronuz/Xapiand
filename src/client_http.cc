@@ -447,7 +447,7 @@ HttpClient::run()
 		error_code = 400;
 		error.assign(exc.what());
 		L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
-	} catch (const Error& exc) {
+	} catch (const Exception& exc) {
 		error_code = 500;
 		error.assign(exc.what());
 		L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
@@ -1172,7 +1172,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 				if (q.length) {
 					try {
 						e.pretty = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-					} catch (const Error&) { }
+					} catch (const Exception&) { }
 				}
 			}
 
@@ -1205,7 +1205,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.spelling = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Error&) { }
+							} catch (const Exception&) { }
 						}
 					}
 
@@ -1215,7 +1215,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.synonyms = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Error&) { }
+							} catch (const Exception&) { }
 						}
 					}
 
@@ -1268,7 +1268,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.is_fuzzy = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Error&) { }
+							} catch (const Exception&) { }
 						}
 					}
 
@@ -1305,7 +1305,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.is_nearest = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Error&) { }
+							} catch (const Exception&) { }
 						}
 					}
 
@@ -1346,7 +1346,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.commit = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Error&) { }
+							} catch (const Exception&) { }
 						}
 					}
 
@@ -1387,7 +1387,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.server = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Error&) { }
+							} catch (const Exception&) { }
 						}
 					}
 
@@ -1397,7 +1397,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 						if (q.length) {
 							try {
 								e.database = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Error&) { }
+							} catch (const Exception&) { }
 						}
 					}
 

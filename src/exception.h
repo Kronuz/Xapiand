@@ -47,6 +47,8 @@ protected:
 
 public:
 	Exception(const char *filename, int line, const char *format="", ...);
+	Exception(const char *filename, int line, const std::string& message)
+		: Exception(filename, line, message.c_str()) {}
 	~Exception() = default;
 
 	const char* what() const noexcept override {
@@ -77,27 +79,6 @@ public:
 };
 
 
-class LimitError : public Exception {
-public:
-	template<typename... Args>
-	LimitError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
-};
-
-
-class SerialisationError : public ClientError, public Xapian::SerialisationError {
-public:
-	template<typename... Args>
-	SerialisationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::SerialisationError("") { }
-};
-
-
-class NetworkError : public ClientError, public Xapian::NetworkError {
-public:
-	template<typename... Args>
-	NetworkError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::NetworkError("") { }
-};
-
-
 class DatetimeError : public ClientError {
 public:
 	template<typename... Args>
@@ -119,11 +100,64 @@ public:
 };
 
 
+class LimitError : public Exception {
+public:
+	template<typename... Args>
+	LimitError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
+};
+
+
+class SerialisationError : public ClientError, public Xapian::SerialisationError {
+public:
+	template<typename... Args>
+	SerialisationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::SerialisationError("") { }
+};
+
+
+class NetworkError : public ClientError, public Xapian::NetworkError {
+public:
+	template<typename... Args>
+	NetworkError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::NetworkError("") { }
+};
+
+
+class InvalidArgumentError : public ClientError, public Xapian::InvalidArgumentError {
+public:
+	template<typename... Args>
+	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidArgumentError("") { }
+};
+
+
+class InvalidOperationError : public ClientError, public Xapian::InvalidOperationError {
+public:
+	template<typename... Args>
+	InvalidOperationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidOperationError("") { }
+};
+
+
+class QueryParserError : public ClientError, public Xapian::QueryParserError {
+public:
+	template<typename... Args>
+	QueryParserError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::QueryParserError("") { }
+};
+
+
+class InternalError : public ClientError, public Xapian::InternalError {
+public:
+	template<typename... Args>
+	InternalError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InternalError("") { }
+};
+
+
 #define MSG_Error(...) Error(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
-#define MSG_SerialisationError(...) SerialisationError(__FILE__, __LINE__, __VA_ARGS__)
-#define MSG_NetworkError(...) NetworkError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_DatetimeError(...) DatetimeError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_CartesianError(...) CartesianError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_EWKTError(...) EWKTError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_SerialisationError(...) SerialisationError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_NetworkError(...) NetworkError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_InvalidArgumentError(...) InvalidArgumentError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_InvalidOperationError(...) InvalidOperationError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_QueryParserError(...) QueryParserError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_InternalError(...) InternalError(__FILE__, __LINE__, __VA_ARGS__)

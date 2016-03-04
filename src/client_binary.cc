@@ -288,7 +288,7 @@ BinaryClient::get_message(std::string &result, char max_type)
 {
 	std::unique_ptr<Buffer> msg;
 	if (!messages_queue.pop(msg)) {
-		throw Xapian::NetworkError("No message available");
+		throw MSG_NetworkError("No message available");
 	}
 
 	char type = msg->type;
@@ -296,7 +296,7 @@ BinaryClient::get_message(std::string &result, char max_type)
 	if (type >= max_type) {
 		std::string errmsg("Invalid message type ");
 		errmsg += std::to_string(int(type));
-		throw Xapian::InvalidArgumentError(errmsg);
+		throw MSG_InvalidArgumentError(errmsg);
 	}
 
 	const char *msg_str = msg->dpos();
@@ -350,7 +350,7 @@ BinaryClient::checkout_database()
 		} else if ((flags & Xapian::DB_OPEN) == Xapian::DB_OPEN) {
 		}
 		if (!manager()->database_pool.checkout(database, endpoints, _flags)) {
-			throw Xapian::InvalidOperationError("Server has no open database");
+			throw MSG_InvalidOperationError("Server has no open database");
 		}
 	}
 }
@@ -433,7 +433,7 @@ BinaryClient::run()
 			// message handling loop.
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 			checkin_database();
-		} catch (const Error& exc) {
+		} catch (const Exception& exc) {
 			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
 			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
@@ -505,7 +505,7 @@ BinaryClient::remote_server(RemoteMessageType type, const std::string &message)
 		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(toUType(type));
-			throw Xapian::InvalidArgumentError(errmsg);
+			throw MSG_InvalidArgumentError(errmsg);
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
@@ -675,7 +675,7 @@ BinaryClient::msg_writeaccess(const std::string & message)
 		dbpaths_.push_back(dbpath);
 		p += len;
 		if (p != p_end) {
-			throw Xapian::NetworkError("only one database directory allowed on writable databases");
+			throw MSG_NetworkError("only one database directory allowed on writable databases");
 		}
 	}
 	select_db(dbpaths_, true, flags);
@@ -772,7 +772,7 @@ BinaryClient::msg_query(const std::string &message_in)
 	// docid order
 
 	if (p_end - p < 4 || *p < '0' || *p > '2') {
-		throw Xapian::NetworkError("bad message (docid_order)");
+		throw MSG_NetworkError("bad message (docid_order)");
 	}
 	Xapian::Enquire::docid_order order;
 	order = static_cast<Xapian::Enquire::docid_order>(*p++ - '0');
@@ -786,13 +786,13 @@ BinaryClient::msg_query(const std::string &message_in)
 	Xapian::valueno sort_key = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
 
 	if (*p < '0' || *p > '3') {
-		throw Xapian::NetworkError("bad message (sort_by)");
+		throw MSG_NetworkError("bad message (sort_by)");
 	}
 	sort_setting sort_by;
 	sort_by = static_cast<sort_setting>(*p++ - '0');
 
 	if (*p < '0' || *p > '1') {
-		throw Xapian::NetworkError("bad message (sort_value_forward)");
+		throw MSG_NetworkError("bad message (sort_value_forward)");
 	}
 	bool sort_value_forward(*p++ != '0');
 
@@ -823,12 +823,12 @@ BinaryClient::msg_query(const std::string &message_in)
 
 	int percent_cutoff = *p++;
 	if (percent_cutoff < 0 || percent_cutoff > 100) {
-		throw Xapian::NetworkError("bad message (percent_cutoff)");
+		throw MSG_NetworkError("bad message (percent_cutoff)");
 	}
 
 	double weight_cutoff = unserialise_double(&p, p_end);
 	if (weight_cutoff < 0) {
-		throw Xapian::NetworkError("bad message (weight_cutoff)");
+		throw MSG_NetworkError("bad message (weight_cutoff)");
 	}
 
 	enquire->set_cutoff(percent_cutoff, weight_cutoff);
@@ -844,7 +844,7 @@ BinaryClient::msg_query(const std::string &message_in)
 		// Note: user weighting schemes should be registered by adding them to
 		// a Registry, and setting the context using
 		// RemoteServer::set_registry().
-		throw Xapian::InvalidArgumentError("Weighting scheme " +
+		throw MSG_InvalidArgumentError("Weighting scheme " +
 										   wtname + " not registered");
 	}
 
@@ -868,7 +868,7 @@ BinaryClient::msg_query(const std::string &message_in)
 		std::string spytype(p, len);
 		const Xapian::MatchSpy * spyclass = reg.get_match_spy(spytype);
 		if (spyclass == nullptr) {
-			throw Xapian::InvalidArgumentError("Match spy " + spytype +
+			throw MSG_InvalidArgumentError("Match spy " + spytype +
 											   " not registered");
 		}
 		p += len;
@@ -892,7 +892,7 @@ void
 BinaryClient::msg_getmset(const std::string & message)
 {
 	if (!enquire) {
-		throw Xapian::NetworkError("Unexpected MSG_GETMSET");
+		throw MSG_NetworkError("Unexpected MSG_GETMSET");
 	}
 
 	const char *p = message.c_str();
@@ -931,7 +931,7 @@ BinaryClient::msg_document(const std::string &message)
 
 	Xapian::Document doc;
 	if (!database->get_document(did, doc)) {
-		throw Xapian::NetworkError("Cannot get document");
+		throw MSG_NetworkError("Cannot get document");
 	}
 
 	send_message(RemoteReplyType::REPLY_DOCDATA, doc.get_data());
@@ -1285,7 +1285,7 @@ BinaryClient::replication_server(ReplicationMessageType type, const std::string 
 		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(toUType(type));
-			throw Xapian::InvalidArgumentError(errmsg);
+			throw MSG_InvalidArgumentError(errmsg);
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
@@ -1322,7 +1322,7 @@ BinaryClient::msg_get_changesets(const std::string &)
 	// 	endpoints.add(endpoint);
 	// 	db_ = get_db();
 	// 	if (!db_)
-	// 		throw Xapian::InvalidOperationError("Server has no open database");
+	// 		throw MSG_InvalidOperationError("Server has no open database");
 	// } catch (...) {
 	// 	throw;
 	// }
@@ -1369,7 +1369,7 @@ BinaryClient::replication_client(ReplicationReplyType type, const std::string &m
 		if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(toUType(type));
-			throw Xapian::InvalidArgumentError(errmsg);
+			throw MSG_InvalidArgumentError(errmsg);
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
@@ -1537,7 +1537,7 @@ BinaryClient::reply_changeset(const std::string &)
 	// try {
 	// 	// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
 	// 	repl_just_switched_db = false;
-	// } catch(const Xapian::NetworkError& exc) {
+	// } catch(const MSG_NetworkError& exc) {
 	// 	L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 	// 	io::close(fd);
 	// 	io::unlink(path);

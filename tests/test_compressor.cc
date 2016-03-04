@@ -110,7 +110,7 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 		L_ERR(nullptr, "Size decompress: %zu (checksum: %u)\n", dec_lz4.size(), dec_checksum);
 
 		return cmp_checksum != dec_checksum;
-	} catch (const Error& err) {
+	} catch (const Exception& err) {
 		L_ERR(nullptr, "%s\n", err.get_context());
 		return 1;
 	} catch (const std::exception& err) {
@@ -151,7 +151,7 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 		L_ERR(nullptr, "Size decompress: %zu (checksum: %u)\n", dec_lz4.size(), dec_checksum);
 
 		return cmp_checksum != dec_checksum;
-	} catch (const Error& err) {
+	} catch (const Exception& err) {
 		L_ERR(nullptr, "%s\n", err.get_context());
 		return 1;
 	} catch (const std::exception& err) {
@@ -216,7 +216,7 @@ int test_Compress_Decompress_Descriptor(const std::string& orig_file, size_t num
 		}
 
 		return 0;
-	} catch (const Error& err) {
+	} catch (const Exception& err) {
 		L_ERR(nullptr, "%s\n", err.get_context());
 		return 1;
 	} catch (const std::exception& err) {

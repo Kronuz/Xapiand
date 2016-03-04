@@ -2042,7 +2042,7 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 	}
 
 	if (size_match != query.size()) {
-		throw Xapian::QueryParserError("Query '" + query + "' contains errors" );
+		throw MSG_QueryParserError("Query '" + query + "' contains errors");
 	}
 
 	switch (first_time << 1 | first_timeR) {
@@ -3024,7 +3024,7 @@ DatabasePool::init_ref(const Endpoint& endpoint)
 		doc.add_value(DB_SLOT_CREF, "0");
 		try {
 			ref_database->replace_document_term(unique_id, doc, true);
-		} catch (const Error& exc) {
+		} catch (const Exception& exc) {
 			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
 		}
 	}
@@ -3057,7 +3057,7 @@ DatabasePool::inc_ref(const Endpoint& endpoint)
 		doc.add_value(0, "0");
 		try {
 			ref_database->replace_document_term(unique_id, doc, true);
-		} catch (const Error& exc) {
+		} catch (const Exception& exc) {
 			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
 		}
 	} else {
@@ -3068,7 +3068,7 @@ DatabasePool::inc_ref(const Endpoint& endpoint)
 		doc.add_value(0, std::to_string(nref + 1));
 		try {
 			ref_database->replace_document_term(unique_id, doc, true);
-		} catch (const Error& exc) {
+		} catch (const Exception& exc) {
 			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
 		}
 	}
@@ -3101,7 +3101,7 @@ DatabasePool::dec_ref(const Endpoint& endpoint)
 		doc.add_value(0, std::to_string(nref));
 		try {
 			ref_database->replace_document_term(unique_id, doc, true);
-		} catch (const Error& exc) {
+		} catch (const Exception& exc) {
 			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
 		}
 		if (nref == 0) {
