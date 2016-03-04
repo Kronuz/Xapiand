@@ -31,8 +31,8 @@
 #include <assert.h>
 #include <arpa/inet.h>
 
-typedef void (DiscoveryServer::* dispatch_func)(const std::string &);
 
+using dispatch_func = void (DiscoveryServer::*)(const std::string&);
 
 DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery> &discovery_)
 	: BaseServer(server_, loop_, discovery_->sock),
