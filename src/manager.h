@@ -137,6 +137,7 @@ public:
 	State state;
 	std::string cluster_name;
 	std::string node_name;
+	bool solo;
 
 	~XapiandManager();
 
@@ -148,10 +149,10 @@ public:
 	void sig_shutdown_handler(int sig);
 	void shutdown(bool asap=true, bool now=true) override;
 
+	bool is_single_node();
+
 #ifdef XAPIAND_CLUSTERING
 	void reset_state();
-
-	bool is_single_node();
 
 	bool put_node(const Node& node);
 	bool get_node(const std::string& node_name, const Node** node);
@@ -167,6 +168,8 @@ public:
 
 	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 #endif
+
+	bool resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps=1, duration<double, std::milli> timeout=1s);
 
 	void server_status(MsgPack&& stats);
 	void get_stats_time(MsgPack&& stats, const std::string& time_req);

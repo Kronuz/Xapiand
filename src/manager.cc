@@ -67,7 +67,8 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	  async_shutdown(*loop),
 	  state(State::RESET),
 	  cluster_name(o.cluster_name),
-	  node_name(o.node_name)
+	  node_name(o.node_name),
+	  solo(o.solo)
 {
 	// Setup node from node database directory
 	std::string node_name_(get_node_name());
@@ -395,7 +396,7 @@ XapiandManager::run(const opts_t& o)
 	std::shared_ptr<Binary> binary;
 	std::shared_ptr<Discovery> discovery;
 	std::shared_ptr<Raft> raft;
-	if (!o.solo) {
+	if (!solo) {
 		binary = Worker::make_shared<Binary>(manager, loop, o.binary_port);
 		msg += binary->getDescription() + ", ";
 
@@ -416,7 +417,7 @@ XapiandManager::run(const opts_t& o)
 		servers.push_back(server);
 		Worker::make_shared<HttpServer>(server, server->loop, http);
 #ifdef XAPIAND_CLUSTERING
-		if (!o.solo) {
+		if (!solo) {
 			binary->add_server(Worker::make_shared<BinaryServer>(server, server->loop, binary));
 			Worker::make_shared<DiscoveryServer>(server, server->loop, discovery);
 			Worker::make_shared<RaftServer>(server, server->loop, raft);
@@ -426,7 +427,7 @@ XapiandManager::run(const opts_t& o)
 	}
 
 #ifdef XAPIAND_CLUSTERING
-	if (!o.solo) {
+	if (!solo) {
 		for (size_t i = 0; i < o.num_replicators; ++i) {
 			replicator_pool.enqueue(Worker::make_shared<XapiandReplicator>(manager, nullptr));
 		}
@@ -441,7 +442,7 @@ XapiandManager::run(const opts_t& o)
 	// Make server protocols weak:
 	proto_http = std::move(http);
 #ifdef XAPIAND_CLUSTERING
-	if (!o.solo) {
+	if (!solo) {
 		proto_binary = std::move(binary);
 		proto_discovery = discovery; // keep discover (it'll be used below)
 		proto_raft = std::move(raft);
@@ -451,7 +452,7 @@ XapiandManager::run(const opts_t& o)
 	msg = "Started " + std::to_string(o.num_servers) + ((o.num_servers == 1) ? " server" : " servers");
 	msg += ", " + std::to_string(o.threadpool_size) +( (o.threadpool_size == 1) ? " worker thread" : " worker threads");
 #ifdef XAPIAND_CLUSTERING
-	if (!o.solo) {
+	if (!solo) {
 		msg += ", " + std::to_string(o.num_replicators) + ((o.num_replicators == 1) ? " replicator" : " replicators");
 	}
 #endif
@@ -461,7 +462,7 @@ XapiandManager::run(const opts_t& o)
 	XapiandManager::initialized = epoch::now<>();
 
 #ifdef XAPIAND_CLUSTERING
-	if (!o.solo) {
+	if (!solo) {
 		L_INFO(this, "Joining cluster %s...", cluster_name.c_str());
 		discovery->start();
 	}
@@ -472,7 +473,7 @@ XapiandManager::run(const opts_t& o)
 	L_EV(this, "Manager loop ended!");
 
 #ifdef XAPIAND_CLUSTERING
-	if (!o.solo) {
+	if (!solo) {
 		discovery->send_message(Discovery::Message::BYE, local_node.serialise());
 		discovery.reset(); // release discovery
 	}
@@ -482,7 +483,7 @@ XapiandManager::run(const opts_t& o)
 	server_pool.join();
 
 #ifdef XAPIAND_CLUSTERING
-	if (!o.solo) {
+	if (!solo) {
 		L_DEBUG(this, "Waiting for %zu replicator%s...", replicator_pool.size(), (replicator_pool.size() == 1) ? "" : "s");
 		replicator_pool.join();
 	}
@@ -500,6 +501,13 @@ XapiandManager::run(const opts_t& o)
 }
 
 
+bool
+XapiandManager::is_single_node()
+{
+	return solo || (nodes.size() == 0);
+}
+
+
 #ifdef XAPIAND_CLUSTERING
 
 void
@@ -511,13 +519,6 @@ XapiandManager::reset_state()
 			discovery->start();
 		}
 	}
-}
-
-
-bool
-XapiandManager::is_single_node()
-{
-	return nodes.size() == 0;
 }
 
 
@@ -655,7 +656,23 @@ XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint
 	}
 	return std::future<bool>();
 }
+
 #endif
+
+bool
+XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout)
+{
+#ifdef XAPIAND_CLUSTERING
+	if (!solo) {
+		return endp_r.resolve_index_endpoint(path, share_this<XapiandManager>(), endpv, n_endps, timeout);
+	}
+	else
+#endif
+	{
+		endpv.push_back(Endpoint(path));
+		return true;
+	}
+}
 
 
 void
@@ -668,8 +685,10 @@ XapiandManager::server_status(MsgPack&& stats)
 	stats["servers_pool_size"] = server_pool.size();
 	stats["committers_pool_size"] = autocommit_pool.size();
 #ifdef XAPIAND_CLUSTERING
-	stats["binary_connections"] = XapiandServer::binary_clients.load();
-	stats["replicators_pool_size"] = replicator_pool.size();
+	if(!solo) {
+		stats["binary_connections"] = XapiandServer::binary_clients.load();
+		stats["replicators_pool_size"] = replicator_pool.size();
+	}
 #endif
 }
 
