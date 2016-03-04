@@ -51,9 +51,9 @@ public:
 
 	int connection_socket();
 
-	void add_server(const std::shared_ptr<BinaryServer> &server);
+	void add_server(const std::shared_ptr<BinaryServer>& server);
 
-	std::future<bool> trigger_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
+	std::future<bool> trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint);
 };
 
 
