@@ -106,9 +106,9 @@ Log::str_format(int priority, const std::string& exc, const char *file, int line
 	delete []buffer;
 	if (priority < 0) {
 		if (exc.empty()) {
-			result += traceback(file, line);
+			result += DARK_GREY + traceback(file, line) + NO_COL;
 		} else {
-			result += exc;
+			result += NO_COL + exc + NO_COL;
 		}
 	}
 	return result;
