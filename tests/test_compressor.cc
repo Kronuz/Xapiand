@@ -30,7 +30,8 @@
 
 const std::string cmp_file = "examples/compressor/compress.lz4";
 
-char buffer[1024 * 4];
+constexpr int BLOCK_SIZE = 1024 * 4;
+char buffer[BLOCK_SIZE];
 size_t buffer_offset = 0;
 
 
@@ -59,8 +60,8 @@ std::string read_file(const std::string& filename) {
 
 
 void _write(int fildes, const char* data, size_t size) {
-	if ((buffer_offset + size) > STORAGE_BLOCK_SIZE) {
-		size_t res_size = STORAGE_BLOCK_SIZE - buffer_offset;
+	if ((buffer_offset + size) > BLOCK_SIZE) {
+		size_t res_size = BLOCK_SIZE - buffer_offset;
 		memcpy(buffer + buffer_offset, data, res_size);
 		if (io::write(fildes, buffer, sizeof(buffer)) != static_cast<ssize_t>(sizeof(buffer))) {
 			throw MSG_Error("IO error: write");
