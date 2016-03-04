@@ -91,6 +91,13 @@ public:
 };
 
 
+class NetworkError : public ClientError, public Xapian::NetworkError {
+public:
+	template<typename... Args>
+	NetworkError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::NetworkError("") { }
+};
+
+
 class DatetimeError : public ClientError {
 public:
 	template<typename... Args>
@@ -116,6 +123,7 @@ public:
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_SerialisationError(...) SerialisationError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_NetworkError(...) NetworkError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_DatetimeError(...) DatetimeError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_CartesianError(...) CartesianError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_EWKTError(...) EWKTError(__FILE__, __LINE__, __VA_ARGS__)
