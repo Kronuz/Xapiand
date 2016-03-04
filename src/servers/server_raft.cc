@@ -32,9 +32,9 @@
 using dispatch_func = void (RaftServer::*)(const std::string&);
 
 
-RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft> &raft_)
+RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft>& raft_)
 	: BaseServer(server_, loop_, raft_->sock),
-	raft(raft_)
+	  raft(raft_)
 {
 	// accept event actually started in BaseServer::BaseServer
 	L_EV(this, "Start raft's server accept event (sock=%d)", raft->sock);
@@ -50,7 +50,7 @@ RaftServer::~RaftServer()
 
 
 void
-RaftServer::raft_server(Raft::Message type, const std::string &message)
+RaftServer::raft_server(Raft::Message type, const std::string& message)
 {
 	static const dispatch_func dispatch[] = {
 		&RaftServer::heartbeat_leader,
@@ -66,11 +66,12 @@ RaftServer::raft_server(Raft::Message type, const std::string &message)
 		errmsg += std::to_string(toUType(type));
 		throw Xapian::InvalidArgumentError(errmsg);
 	}
-	(this->*(dispatch[static_cast<int>(type)]))(message);
+	(this->*(dispatch[toUType(type)]))(message);
 }
 
 
-void RaftServer::request_vote(const std::string& message)
+void
+RaftServer::request_vote(const std::string& message)
 {
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -79,6 +80,7 @@ void RaftServer::request_vote(const std::string& message)
 	if (remote_node.unserialise(&p, p_end) == -1) {
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
+
 	if (local_node.region.load() != remote_node.region.load()) {
 		return;
 	}
@@ -131,7 +133,9 @@ void RaftServer::request_vote(const std::string& message)
 	}
 }
 
-void RaftServer::response_vote(const std::string& message)
+
+void
+RaftServer::response_vote(const std::string& message)
 {
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -140,6 +144,7 @@ void RaftServer::response_vote(const std::string& message)
 	if (remote_node.unserialise(&p, p_end) == -1) {
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
+
 	if (local_node.region.load() != remote_node.region.load()) {
 		return;
 	}
@@ -154,7 +159,7 @@ void RaftServer::response_vote(const std::string& message)
 			return;
 		}
 
-		if (vote == "1") {
+		if (vote.at(0) == '1') {
 			++raft->votes;
 			L_RAFT(this, "Number of servers: %d;  Votos received: %d", raft->number_servers.load(), raft->votes);
 			if (raft->votes > raft->number_servers / 2) {
@@ -185,7 +190,9 @@ void RaftServer::response_vote(const std::string& message)
 	}
 }
 
-void RaftServer::heartbeat_leader(const std::string& message)
+
+void
+RaftServer::heartbeat_leader(const std::string& message)
 {
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -194,6 +201,7 @@ void RaftServer::heartbeat_leader(const std::string& message)
 	if (remote_node.unserialise(&p, p_end) == -1) {
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
+
 	if (local_node.region.load() != remote_node.region.load()) {
 		return;
 	}
@@ -207,7 +215,9 @@ void RaftServer::heartbeat_leader(const std::string& message)
 	L_RAFT_PROTO(this, "Listening %s's heartbeat in timestamp: %f!", remote_node.name.c_str(), raft->last_activity);
 }
 
-void RaftServer::leader(const std::string& message)
+
+void
+RaftServer::leader(const std::string& message)
 {
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -216,6 +226,7 @@ void RaftServer::leader(const std::string& message)
 	if (remote_node.unserialise(&p, p_end) == -1) {
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
+
 	if (local_node.region.load() != remote_node.region.load()) {
 		return;
 	}
@@ -247,7 +258,9 @@ void RaftServer::leader(const std::string& message)
 	L_INFO(this, "Raft: New leader is %s (2)", raft->leader.c_str());
 }
 
-void RaftServer::request_data(const std::string& message)
+
+void
+RaftServer::request_data(const std::string& message)
 {
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -256,6 +269,7 @@ void RaftServer::request_data(const std::string& message)
 	if (remote_node.unserialise(&p, p_end) == -1) {
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
+
 	if (local_node.region.load() != remote_node.region.load()) {
 		return;
 	}
@@ -268,7 +282,9 @@ void RaftServer::request_data(const std::string& message)
 	}
 }
 
-void RaftServer::response_data(const std::string& message)
+
+void
+RaftServer::response_data(const std::string& message)
 {
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -310,7 +326,9 @@ void RaftServer::response_data(const std::string& message)
 	L_INFO(this, "Raft: New leader is %s (3)", raft->leader.c_str());
 }
 
-void RaftServer::reset(const std::string& message)
+
+void
+RaftServer::reset(const std::string& message)
 {
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -330,7 +348,7 @@ void RaftServer::reset(const std::string& message)
 
 
 void
-RaftServer::io_accept_cb(ev::io &watcher, int revents)
+RaftServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN");
 	if (EV_ERROR & revents) {

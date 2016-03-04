@@ -37,7 +37,7 @@ class RaftServer : public BaseServer {
 
 	Node unserialise_remote_node(const char **p, const char *p_end);
 
-	void raft_server(Raft::Message type, const std::string &message);
+	void raft_server(Raft::Message type, const std::string& message);
 
 	void heartbeat_leader(const std::string& message);
 	void request_vote(const std::string& message);
@@ -48,10 +48,10 @@ class RaftServer : public BaseServer {
 	void reset(const std::string& message);
 
 public:
-	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft> &raft_);
+	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft>& raft_);
 	~RaftServer();
 
-	void io_accept_cb(ev::io &watcher, int revents) override;
+	void io_accept_cb(ev::io& watcher, int revents) override;
 };
 
 #endif
