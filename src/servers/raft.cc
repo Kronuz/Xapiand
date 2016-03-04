@@ -93,7 +93,7 @@ Raft::leader_election_cb(ev::timer&, int)
 		L_RAFT_PROTO(this, "Raft { Reg: %d; State: %d; Rem_t: %f; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
 			local_node.region.load(), state, remaining_time, election_timeout, term, number_servers.load(), leader.c_str());
 
-		if (remaining_time < 0. && state != State::LEADER) {
+		if (remaining_time < 0.0 && state != State::LEADER) {
 			state = State::CANDIDATE;
 			++term;
 			votes = 0;
@@ -139,6 +139,7 @@ Raft::start_heartbeat()
 void
 Raft::register_activity()
 {
+	L_RAFT(this, "Register activity");
 	last_activity = ev::now(*loop);
 }
 

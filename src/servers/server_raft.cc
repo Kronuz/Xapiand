@@ -99,7 +99,7 @@ RaftServer::request_vote(const std::string& message)
 
 	if (remote_term > raft->term) {
 		if (raft->state == Raft::State::LEADER && remote_node != local_node) {
-			L_ERR(this, "ERROR: Node %s (with highest term) does not receive this node as a leader. Therefore, this node will reset!", remote_node.name.c_str());
+			L_ERR(this, "ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, this node will reset!", remote_node.name.c_str(), remote_term, raft->term);
 			raft->reset();
 		}
 
@@ -111,7 +111,7 @@ RaftServer::request_vote(const std::string& message)
 			serialise_string("1") + serialise_string(str_remote_term));
 	} else {
 		if (raft->state == Raft::State::LEADER && remote_node != local_node) {
-			L_ERR(this, "ERROR: Remote node %s does not recognize this node (with highest term) as a leader. Therefore, remote node will reset!", remote_node.name.c_str());
+			L_ERR(this, "ERROR: Remote node %s with term: %llu does not recognize this node with term: %llu as a leader. Therefore, remote node will reset!", remote_node.name.c_str(), remote_term, raft->term);
 			raft->send_message(Raft::Message::RESET, remote_node.serialise());
 			return;
 		}
@@ -274,6 +274,8 @@ RaftServer::request_data(const std::string& message)
 		return;
 	}
 
+	raft->register_activity();
+
 	if (raft->state == Raft::State::LEADER) {
 		L_DEBUG(this, "Sending Data!");
 		raft->send_message(Raft::Message::RESPONSE_DATA, local_node.serialise() +
@@ -293,6 +295,7 @@ RaftServer::response_data(const std::string& message)
 	if (remote_node.unserialise(&p, p_end) == -1) {
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
+
 	if (local_node.region.load() != remote_node.region.load()) {
 		return;
 	}
@@ -337,9 +340,12 @@ RaftServer::reset(const std::string& message)
 	if (remote_node.unserialise(&p, p_end) == -1) {
 		throw MSG_NetworkError("Badly formed message: No proper node!");
 	}
+
 	if (local_node.region.load() != remote_node.region.load()) {
 		return;
 	}
+
+	raft->register_activity();
 
 	if (local_node == remote_node) {
 		raft->reset();
