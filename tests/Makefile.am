@@ -26,6 +26,7 @@ common_files = \
 	$(top_builddir)/src/database_utils.cc \
 	$(top_builddir)/src/datetime.cc \
 	$(top_builddir)/src/endpoint.cc \
+	$(top_builddir)/src/ev/ev.c \
 	$(top_builddir)/src/exception.cc \
 	$(top_builddir)/src/io_utils.cc \
 	$(top_builddir)/src/fields.cc \
