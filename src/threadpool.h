@@ -145,8 +145,12 @@ public:
 			try {
 				nt->run(std::move(params)...);
 				nt.reset();
+			} catch(const std::exception& exc) {
+				L_EXC(nt.get(), "Task died with an unhandled exception!");
+				throw;
 			} catch(...) {
-				L_ALERT(nt.get(), "Task died with an unhandled exception!");
+				std::exception exc;
+				L_EXC(nt.get(), "Task died with an unhandled exception!");
 				throw;
 			}
 		});
