@@ -487,11 +487,11 @@ void detach() {
 
 	/* Every output goes to /dev/null */
 	int fd;
-	if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
+	if ((fd = io::open("/dev/null", O_RDWR, 0)) != -1) {
 		dup2(fd, STDIN_FILENO);
 		dup2(fd, STDOUT_FILENO);
 		dup2(fd, STDERR_FILENO);
-		if (fd > STDERR_FILENO) close(fd);
+		if (fd > STDERR_FILENO) io::close(fd);
 	}
 }
 
@@ -499,12 +499,12 @@ void detach() {
 void writepid(const char* pidfile) {
 	if (pidfile != nullptr && *pidfile != '\0') {
 		/* Try to write the pid file in a best-effort way. */
-		int fd = open(pidfile, O_RDWR | O_CREAT, 0644);
+		int fd = io::open(pidfile, O_RDWR | O_CREAT, 0644);
 		if (fd > 0) {
 			char buffer[100];
 			snprintf(buffer, sizeof(buffer), "%lu\n", (unsigned long)getpid());
-			write(fd, buffer, strlen(buffer));
-			close(fd);
+			io::write(fd, buffer, strlen(buffer));
+			io::close(fd);
 		}
 	}
 }

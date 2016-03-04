@@ -27,6 +27,7 @@
 #include "datetime.h"
 #include "wkt_parser.h"
 #include "serialise.h"
+#include "io_utils.h"
 
 #include "rapidjson/error/en.h"
 
@@ -43,11 +44,11 @@ long long save_mastery(const std::string& dir) {
 	char buf[20];
 	long long mastery_level = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << 16;
 	mastery_level |= static_cast<int>(random_int(0, 0xffff));
-	int fd = open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
+	int fd = io::open((dir + "/mastery").c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd >= 0) {
 		snprintf(buf, sizeof(buf), "%llx", mastery_level);
-		write(fd, buf, strlen(buf));
-		close(fd);
+		io::write(fd, buf, strlen(buf));
+		io::close(fd);
 	}
 	return mastery_level;
 }
@@ -64,7 +65,7 @@ long long read_mastery(const std::string& dir, bool force) {
 
 	long long mastery_level = -1;
 
-	int fd = open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC);
+	int fd = io::open((dir + "/mastery").c_str(), O_RDONLY | O_CLOEXEC, 0644);
 	if (fd < 0) {
 		if (force) {
 			mastery_level = save_mastery(dir);
@@ -72,12 +73,12 @@ long long read_mastery(const std::string& dir, bool force) {
 	} else {
 		char buf[20];
 		mastery_level = 0;
-		size_t length = read(fd, buf, sizeof(buf) - 1);
+		size_t length = io::read(fd, buf, sizeof(buf) - 1);
 		if (length > 0) {
 			buf[length] = '\0';
 			mastery_level = std::stoll(buf, nullptr, 16);
 		}
-		close(fd);
+		io::close(fd);
 		if (!mastery_level) {
 			mastery_level = save_mastery(dir);
 		}

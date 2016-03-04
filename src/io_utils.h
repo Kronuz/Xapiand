@@ -38,7 +38,7 @@ inline int close(int fd) {
 	return ::close(fd);
 }
 
-inline int open(const char *path, int oflag, int mode) {
+inline int open(const char *path, int oflag=O_RDONLY, int mode=0644) {
 	return ::open(path, oflag, mode);
 }
 

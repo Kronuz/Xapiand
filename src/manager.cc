@@ -110,14 +110,14 @@ XapiandManager::get_node_name()
 {
 	size_t length = 0;
 	unsigned char buf[512];
-	int fd = open("nodename", O_RDONLY | O_CLOEXEC);
+	int fd = io::open("nodename", O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
-		length = read(fd, (char *)buf, sizeof(buf) - 1);
+		length = io::read(fd, (char *)buf, sizeof(buf) - 1);
 		if (length > 0) {
 			buf[length] = '\0';
 			for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
 		}
-		close(fd);
+		io::close(fd);
 	}
 	return std::string((const char *)buf, length);
 }
@@ -144,13 +144,13 @@ XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<st
 	if (lower_node_name != _lower_node_name) {
 		node_name = node_name_;
 
-		int fd = open("nodename", O_WRONLY | O_CREAT, 0644);
+		int fd = io::open("nodename", O_WRONLY | O_CREAT, 0644);
 		if (fd >= 0) {
-			if (write(fd, node_name.c_str(), node_name.size()) != static_cast<ssize_t>(node_name.size())) {
+			if (io::write(fd, node_name.c_str(), node_name.size()) != static_cast<ssize_t>(node_name.size())) {
 				L_CRIT(nullptr, "Cannot write in nodename file");
 				exit(EX_IOERR);
 			}
-			close(fd);
+			io::close(fd);
 		} else {
 			L_CRIT(nullptr, "Cannot open or create the nodename file");
 			exit(EX_NOINPUT);
