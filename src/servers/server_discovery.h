@@ -38,7 +38,7 @@ class DiscoveryServer : public BaseServer {
 	void _wave(bool heartbeat, const std::string& message);
 	void _db_wave(bool bossy, const std::string& message);
 
-	void discovery_server(Discovery::Message type, const std::string &message);
+	void discovery_server(Discovery::Message type, const std::string& message);
 
 	void heartbeat(const std::string& message);
 	void hello(const std::string& message);
@@ -51,10 +51,10 @@ class DiscoveryServer : public BaseServer {
 	void db_updated(const std::string& message);
 
 public:
-	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery> &discovery_);
+	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery>& discovery_);
 	~DiscoveryServer();
 
-	void io_accept_cb(ev::io &watcher, int revents) override;
+	void io_accept_cb(ev::io& watcher, int revents) override;
 };
 
 #endif

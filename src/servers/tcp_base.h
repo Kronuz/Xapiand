@@ -54,7 +54,7 @@ protected:
 	std::string description;
 
 public:
-	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, int tries_, int flags_);
+	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, int tries_, int flags_);
 	~BaseTCP();
 
 	void shutdown(bool asap, bool now);
@@ -64,7 +64,7 @@ public:
 
 	int accept();
 
-	static int connect(int sock_, const std::string &hostname, const std::string &servname);
+	static int connect(int sock_, const std::string& hostname, const std::string& servname);
 
 	inline decltype(auto) manager() noexcept {
 		return share_parent<XapiandManager>();

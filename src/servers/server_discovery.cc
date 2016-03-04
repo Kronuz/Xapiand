@@ -34,9 +34,10 @@
 
 using dispatch_func = void (DiscoveryServer::*)(const std::string&);
 
-DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery> &discovery_)
+
+DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery>& discovery_)
 	: BaseServer(server_, loop_, discovery_->sock),
-	discovery(discovery_)
+	  discovery(discovery_)
 {
 	// accept event actually started in BaseServer::BaseServer
 	L_EV(this, "Start discovery's server accept event (sock=%d)", discovery->sock);
@@ -52,7 +53,7 @@ DiscoveryServer::~DiscoveryServer()
 
 
 void
-DiscoveryServer::discovery_server(Discovery::Message type, const std::string &message)
+DiscoveryServer::discovery_server(Discovery::Message type, const std::string& message)
 {
 	static const dispatch_func dispatch[] = {
 		&DiscoveryServer::heartbeat,
@@ -70,7 +71,7 @@ DiscoveryServer::discovery_server(Discovery::Message type, const std::string &me
 		errmsg += std::to_string(toUType(type));
 		throw Xapian::InvalidArgumentError(errmsg);
 	}
-	(this->*(dispatch[static_cast<int>(type)]))(message);
+	(this->*(dispatch[toUType(type)]))(message);
 }
 
 
@@ -85,6 +86,7 @@ DiscoveryServer::hello(const std::string& message)
 		L_DISCOVERY(this, "Badly formed message: No proper node!");
 		return;
 	}
+
 	if (remote_node == local_node) {
 		// It's me! ...wave hello!
 		discovery->send_message(Discovery::Message::WAVE, local_node.serialise());
@@ -101,6 +103,7 @@ DiscoveryServer::hello(const std::string& message)
 		}
 	}
 }
+
 
 void
 DiscoveryServer::_wave(bool heartbeat, const std::string& message)
@@ -150,11 +153,13 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 	}
 }
 
+
 void
 DiscoveryServer::wave(const std::string& message)
 {
 	_wave(false, message);
 }
+
 
 void
 DiscoveryServer::sneer(const std::string& message)
@@ -173,6 +178,7 @@ DiscoveryServer::sneer(const std::string& message)
 		L_DISCOVERY(this, "Badly formed message: No proper node!");
 		return;
 	}
+
 	if (remote_node == local_node) {
 		if (m->node_name.empty()) {
 			L_DISCOVERY(this, "Node name %s already taken. Retrying other name...", local_node.name.c_str());
@@ -187,11 +193,13 @@ DiscoveryServer::sneer(const std::string& message)
 	}
 }
 
+
 void
 DiscoveryServer::heartbeat(const std::string& message)
 {
 	_wave(true, message);
 }
+
 
 void
 DiscoveryServer::bye(const std::string& message)
@@ -210,11 +218,13 @@ DiscoveryServer::bye(const std::string& message)
 		L_DISCOVERY(this, "Badly formed message: No proper node!");
 		return;
 	}
+
 	m->drop_node(remote_node.name);
 	L_INFO(this, "Node %s left the party!", remote_node.name.c_str());
 	local_node.regions.store(-1);
 	m->get_region();
 }
+
 
 void
 DiscoveryServer::db(const std::string& message)
@@ -260,6 +270,7 @@ DiscoveryServer::db(const std::string& message)
 	}
 }
 
+
 void
 DiscoveryServer::_db_wave(bool bossy, const std::string& message)
 {
@@ -292,6 +303,7 @@ DiscoveryServer::_db_wave(bool bossy, const std::string& message)
 		L_DISCOVERY(this, "Badly formed message: No proper node!");
 		return;
 	}
+
 	if (m->put_node(remote_node)) {
 		L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (3)", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 	}
@@ -309,17 +321,20 @@ DiscoveryServer::_db_wave(bool bossy, const std::string& message)
 	}
 }
 
+
 void
 DiscoveryServer::db_wave(const std::string& message)
 {
 	_db_wave(false, message);
 }
 
+
 void
 DiscoveryServer::bossy_db_wave(const std::string& message)
 {
 	_db_wave(true, message);
 }
+
 
 void
 DiscoveryServer::db_updated(const std::string& message)

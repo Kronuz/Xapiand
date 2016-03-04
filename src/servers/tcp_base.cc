@@ -36,7 +36,7 @@
 #include <netdb.h> /* for getaddrinfo */
 
 
-BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string &description_, int tries_, int flags_)
+BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, int tries_, int flags_)
 	: Worker(manager_, loop_),
 	  port(port_),
 	  flags(flags_),
@@ -56,6 +56,7 @@ BaseTCP::~BaseTCP()
 	L_OBJ(this, "DELETED BASE TCP!");
 }
 
+
 void
 BaseTCP::destroy()
 {
@@ -71,6 +72,7 @@ BaseTCP::destroy()
 	L_OBJ(this, "DESTROYED BASE TCP!");
 }
 
+
 void
 BaseTCP::shutdown(bool asap, bool now)
 {
@@ -81,6 +83,7 @@ BaseTCP::shutdown(bool asap, bool now)
 
 	Worker::shutdown(asap, now);
 }
+
 
 void
 BaseTCP::bind(int tries)
@@ -246,7 +249,8 @@ BaseTCP::check_backlog(int)
 }
 
 
-int BaseTCP::connect(int sock_, const std::string &hostname, const std::string &servname)
+int
+BaseTCP::connect(int sock_, const std::string& hostname, const std::string& servname)
 {
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(struct addrinfo));
