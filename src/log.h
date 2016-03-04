@@ -222,7 +222,9 @@ class LogThread {
 #define L_TIME _
 #define L_CONN _
 #define L_RAFT _
+#define L_RAFT_PROTO _
 #define L_DISCOVERY _
+#define L_DISCOVERY_PROTO _
 #define L_REPLICATION _
 #define L_OBJ _
 #define L_DATABASE _
