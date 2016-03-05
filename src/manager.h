@@ -85,6 +85,8 @@ class XapiandManager : public Worker  {
 	XapiandManager(ev::loop_ref* loop_, const opts_t& o);
 
 	void async_shutdown_cb(ev::async& watcher, int revents);
+	void sig_shutdown_handler();
+
 	struct sockaddr_in host_address();
 	void destroy();
 
@@ -131,9 +133,9 @@ public:
 	EndpointResolver endp_r;
 #endif
 
-	static std::atomic<time_t> initialized;
-	static std::atomic<time_t> shutdown_asap;
-	static std::atomic<time_t> shutdown_now;
+	int shutdown_sig;
+	std::atomic<time_t> shutdown_asap;
+	std::atomic<time_t> shutdown_now;
 
 	ev::async async_shutdown;
 
@@ -149,7 +151,6 @@ public:
 	void setup_node(std::shared_ptr<XapiandServer>&& server);
 
 	void run(const opts_t& o);
-	void sig_shutdown_handler(int sig);
 	void shutdown(bool asap=true, bool now=true) override;
 
 	bool is_single_node();

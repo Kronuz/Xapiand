@@ -49,7 +49,8 @@ std::shared_ptr<XapiandManager> manager;
 
 static void sig_shutdown_handler(int sig) {
 	if (manager) {
-		manager->sig_shutdown_handler(sig);
+		manager->shutdown_sig = sig;
+		manager->async_shutdown.send();
 	}
 }
 

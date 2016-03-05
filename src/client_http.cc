@@ -185,9 +185,7 @@ HttpClient::~HttpClient()
 {
 	int http_clients = --XapiandServer::http_clients;
 
-	time_t shutdown_asap = XapiandManager::shutdown_asap;
-
-	if (shutdown_asap) {
+	if (manager()->shutdown_asap.load()) {
 		if (http_clients <= 0) {
 			manager()->async_shutdown.send();
 		}
@@ -411,7 +409,7 @@ HttpClient::run()
 	try {
 		if (path == "/quit") {
 			time_t now = epoch::now<>();
-			XapiandManager::shutdown_asap = now;
+			manager()->shutdown_asap.store(now);
 			manager()->async_shutdown.send();
 			L_OBJ_END(this, "HttpClient::run:END");
 			return;

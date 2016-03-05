@@ -175,7 +175,7 @@ DiscoveryServer::sneer(const std::string& message)
 			L_ERR(this, "Cannot join the party. Node name %s already taken!", local_node.name.c_str());
 			m->state = XapiandManager::State::BAD;
 			local_node.name.clear();
-			m->shutdown_asap = epoch::now<>();
+			m->shutdown_asap.store(epoch::now<>());
 			m->async_shutdown.send();
 		}
 	}

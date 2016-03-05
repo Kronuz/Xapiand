@@ -50,10 +50,6 @@ static const std::regex time_re("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5
 
 constexpr const char* const XapiandManager::StateNames[];
 
-std::atomic<time_t> XapiandManager::initialized(0);
-std::atomic<time_t> XapiandManager::shutdown_asap(0);
-std::atomic<time_t> XapiandManager::shutdown_now(0);
-
 
 XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	: Worker(nullptr, loop_),
@@ -65,6 +61,9 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	  replicator_pool("R%02zu", o.num_replicators),
 	  endp_r(o.endpoints_list_size),
 #endif
+	  shutdown_sig(0),
+	  shutdown_asap(0),
+	  shutdown_now(0),
 	  async_shutdown(*loop),
 	  state(State::RESET),
 	  cluster_name(o.cluster_name),
@@ -282,33 +281,28 @@ XapiandManager::host_address()
 
 
 void
-XapiandManager::sig_shutdown_handler(int sig)
+XapiandManager::sig_shutdown_handler()
 {
-	if (!XapiandManager::initialized) {
-		return;
-	}
-	XapiandManager::initialized = 0;
-
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
 	 * the user really wanting to quit ASAP without waiting to persist
 	 * on disk. */
 	auto now = epoch::now<>();
 
-	if (XapiandManager::shutdown_now && sig != SIGTERM) {
-		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
+	if (shutdown_now && shutdown_sig != SIGTERM) {
+		if (shutdown_sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			L_WARNING(this, "You insisted... Xapiand exiting now!");
 			exit(1); /* Exit with an error since this was not a clean shutdown. */
 		}
-	} else if (XapiandManager::shutdown_asap && sig != SIGTERM) {
-		if (sig && now > XapiandManager::shutdown_asap + 1 && now < XapiandManager::shutdown_asap + 4) {
-			XapiandManager::shutdown_now = now;
+	} else if (shutdown_asap && shutdown_sig != SIGTERM) {
+		if (shutdown_sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
+			shutdown_now = now;
 			L_INFO(this, "Trying immediate shutdown.");
-		} else if (sig == 0) {
-			XapiandManager::shutdown_now = now;
+		} else if (shutdown_sig == 0) {
+			shutdown_now = now;
 		}
 	} else {
-		switch (sig) {
+		switch (shutdown_sig) {
 			case SIGINT:
 				L_INFO(this, "Received SIGINT scheduling shutdown...");
 				break;
@@ -320,20 +314,15 @@ XapiandManager::sig_shutdown_handler(int sig)
 		};
 	}
 
-	if (now > XapiandManager::shutdown_asap + 1) {
-		XapiandManager::shutdown_asap = now;
+	if (now > shutdown_asap + 1) {
+		shutdown_asap = now;
 	}
 
 	if (XapiandServer::http_clients <= 0) {
-		XapiandManager::shutdown_now = now;
+		shutdown_now = now;
 	}
 
-	bool shutdown_asap = bool(XapiandManager::shutdown_asap);
-	bool shutdown_now = bool(XapiandManager::shutdown_now);
-
-	shutdown(shutdown_asap, shutdown_now);
-
-	XapiandManager::initialized = now;
+	shutdown(bool(shutdown_asap), bool(shutdown_now));
 }
 
 
@@ -365,12 +354,12 @@ XapiandManager::destroy()
 void
 XapiandManager::async_shutdown_cb(ev::async&, int)
 {
-	L_OBJ(this , "ASYNC SHUTDOWN XAPIAN MANAGER!");
+	L_OBJ(this , "ASYNC SHUTDOWN XAPIAN MANAGER! (%d)", sig);
 
-	L_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN");
 	L_EV(this, "Async shutdown event received!");
 
-	sig_shutdown_handler(0);
+	L_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN");
+	sig_shutdown_handler();
 	L_EV_END(this, "XapiandManager::async_shutdown_cb:END");
 }
 
@@ -470,8 +459,6 @@ XapiandManager::run(const opts_t& o)
 #endif
 	msg += ", " + std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters");
 	L_NOTICE(this, msg.c_str());
-
-	XapiandManager::initialized = epoch::now<>();
 
 	L_EV(this, "Starting manager loop...");
 	loop->run();
