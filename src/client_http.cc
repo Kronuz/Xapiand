@@ -1494,6 +1494,7 @@ HttpClient::clean_http_request()
 	L_TIME(this, "Full request took %s, response took %s", delta_string(request_begins, response_ends).c_str(), delta_string(response_begins, response_ends).c_str());
 
 	async_read.send();
+	http_parser_init(&parser, HTTP_REQUEST);
 }
 
 
