@@ -129,6 +129,8 @@ Raft::heartbeat_cb(ev::timer&, int)
 void
 Raft::start_heartbeat()
 {
+	assert(leader == lower_string(local_node.name));
+
 	send_message(Message::LEADER, local_node.serialise() +
 		serialise_length(number_servers.load()) +
 		serialise_length(term));
@@ -138,8 +140,6 @@ Raft::start_heartbeat()
 	L_EV(this, "Start raft's heartbeat event (%g)", heartbeat.repeat);
 
 	L_RAFT(this, "\tSet raft's heartbeat timeout event %f", heartbeat.repeat);
-
-	leader = lower_string(local_node.name);
 }
 
 
