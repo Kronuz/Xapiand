@@ -36,7 +36,7 @@ Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_r
 {
 	heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
 	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
-	L_DISCOVERY(this, "\tSet heartbeat timeout event %f", heartbeat.repeat);
+	L_DISCOVERY(this, "\tSet discovery heartbeat timeout event %f", heartbeat.repeat);
 
 	L_OBJ(this, "CREATED DISCOVERY");
 }

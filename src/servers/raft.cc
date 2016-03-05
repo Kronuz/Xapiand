@@ -137,7 +137,7 @@ Raft::start_heartbeat()
 	heartbeat.again();
 	L_EV(this, "Start raft's heartbeat event (%g)", heartbeat.repeat);
 
-	L_RAFT(this, "\tSet heartbeat timeout event %f", heartbeat.repeat);
+	L_RAFT(this, "\tSet raft's heartbeat timeout event %f", heartbeat.repeat);
 
 	leader = lower_string(local_node.name);
 }
