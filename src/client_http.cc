@@ -236,6 +236,7 @@ HttpClient::on_read(const char* buf, size_t received)
 			}
 		}
 	} else {
+		write(http_response(400, HTTP_STATUS | HTTP_HEADER, parser.http_major, parser.http_minor));
 		L_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? http_errno_description(HTTP_PARSER_ERRNO(&parser)) : "incomplete request");
 		destroy();  // Handle error. Just close the connection.
 	}
