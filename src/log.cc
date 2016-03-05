@@ -78,12 +78,18 @@ int Log::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Log::handlers;
 
 
-Log::Log(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_)
-	: wakeup(wakeup_),
+Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_)
+	: cleanup(cleanup_),
+	  wakeup(wakeup_),
 	  str_start(str),
 	  priority(priority_),
 	  finished(false) { }
 
+Log::~Log()
+{
+	bool f = false;
+	finished.compare_exchange_strong(f, cleanup);
+}
 
 std::string
 Log::str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void* obj, const char *format, va_list argptr)
@@ -116,14 +122,14 @@ Log::str_format(int priority, const std::string& exc, const char *file, int line
 
 
 std::shared_ptr<Log>
-Log::log(std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
+Log::log(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
 	std::string str(str_format(priority, exc, file, line, suffix, prefix, obj, format, argptr));
 	va_end(argptr);
 
-	return print(str, wakeup, priority);
+	return print(str, cleanup, wakeup, priority);
 }
 
 
@@ -143,17 +149,17 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 		std::string str(str_format(priority, nullptr, file, line, suffix, prefix, obj, format, argptr));
 		va_end(argptr);
 
-		print(str, 0, priority);
+		print(str, false, 0, priority);
 	}
 }
 
 
 std::shared_ptr<Log>
-Log::add(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
+Log::add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
 {
 	static LogThread thread;
 
-	auto l_ptr = std::make_shared<Log>(str, wakeup, priority);
+	auto l_ptr = std::make_shared<Log>(str, cleanup, wakeup, priority);
 	thread.log_list.push_front(l_ptr->shared_from_this());
 
 	if (std::chrono::system_clock::from_time_t(thread.wakeup.load()) > l_ptr->wakeup) {
@@ -165,24 +171,24 @@ Log::add(const std::string& str, std::chrono::time_point<std::chrono::system_clo
 
 
 std::shared_ptr<Log>
-Log::print(const std::string& str, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
+Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
 {
 	if (priority > Log::log_level) {
-		return std::make_shared<Log>(str, wakeup, priority);
+		return std::make_shared<Log>(str, cleanup, wakeup, priority);
 	}
 
 	if (!Log::handlers.size()) {
 		Log::handlers.push_back(std::make_unique<StderrLogger>());
 	}
 	if (wakeup > std::chrono::system_clock::now()) {
-		return add(str, wakeup, priority);
+		return add(str, cleanup, wakeup, priority);
 	} else {
 		static std::mutex log_mutex;
 		std::lock_guard<std::mutex> lk(log_mutex);
 		for (auto& handler : Log::handlers) {
 			handler->log(priority, str);
 		}
-		return std::make_shared<Log>(str, wakeup, priority);
+		return std::make_shared<Log>(str, cleanup, wakeup, priority);
 	}
 }
 
@@ -212,12 +218,12 @@ LogThread::thread_function()
 		auto now = std::chrono::system_clock::now();
 		auto next_wakeup = now + 3s;
 		for (auto it = log_list.begin(); it != log_list.end(); ) {
-			auto l_ptr = it->lock();
+			auto& l_ptr = *it;
 			if (!l_ptr || l_ptr->finished.load()) {
 				it = log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished.store(true);
-				Log::print(l_ptr->str_start, 0, l_ptr->priority);
+				Log::print(l_ptr->str_start, false, 0, l_ptr->priority);
 				it = log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;
