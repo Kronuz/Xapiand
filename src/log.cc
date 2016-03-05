@@ -228,6 +228,8 @@ LogThread::thread_function()
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;
 				++it;
+			} else {
+				++it;
 			}
 		}
 		if (next_wakeup < now + 100ms) {
