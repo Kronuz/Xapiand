@@ -50,6 +50,8 @@
 #define METHOD_OPTIONS 6
 #define METHOD_PATCH   24
 
+#define START_REQUEST  18
+
 
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;q=(\\d+(?:\\.\\d+)?))?");
 
@@ -218,9 +220,14 @@ HttpClient::on_read(const char* buf, size_t received)
 		request_begins = std::chrono::system_clock::now();
 	}
 	L_CONN_WIRE(this, "HttpClient::on_read: %zu bytes", received);
+	unsigned init_state = parser.state;
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
-		if (parser.state == 1 || parser.state == 18) { // dead or message_complete
+		unsigned final_state = parser.state;
+		if (init_state == START_REQUEST && final_state == START_REQUEST && parser.method == 0) { // Ignore '\n' request
+			return;
+		}
+		if (final_state == 1 || final_state == 18) { // dead or message_complete
 			L_EV(this, "Disable read event (sock=%d)", sock);
 			io_read.stop();
 			written = 0;
