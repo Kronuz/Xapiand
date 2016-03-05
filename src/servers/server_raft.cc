@@ -143,7 +143,7 @@ RaftServer::response_vote(const std::string& message)
 
 		if (vote) {
 			++raft->votes;
-			L_RAFT(this, "Number of servers: %d;  Votos received: %d", raft->number_servers.load(), raft->votes);
+			L_RAFT(this, "Number of servers: %d;  Votes received: %d", raft->number_servers.load(), raft->votes);
 			if (raft->votes > raft->number_servers / 2) {
 				L_RAFT(this, "It becomes the leader for region: %d", local_node.region.load());
 
