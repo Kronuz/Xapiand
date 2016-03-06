@@ -33,7 +33,7 @@ BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::lo
 	  binary(binary_),
 	  async_signal(*loop_)
 {
-	// accept event actually started in BaseServer::BaseServer
+	io.start(binary->sock, ev::READ);
 	L_EV(this, "Start binary's server accept event (sock=%d)", binary->sock);
 
 	async_signal.set<BinaryServer, &BinaryServer::async_signal_cb>(this);

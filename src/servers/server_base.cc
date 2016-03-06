@@ -30,7 +30,6 @@ BaseServer::BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 	  io(*loop)
 {
 	io.set<BaseServer, &BaseServer::io_accept_cb>(this);
-	io.start(sock_, ev::READ);
 
 	L_OBJ(this, "CREATED BASE SERVER!");
 }

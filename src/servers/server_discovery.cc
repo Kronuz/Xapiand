@@ -39,7 +39,7 @@ DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, 
 	: BaseServer(server_, loop_, discovery_->get_socket()),
 	  discovery(discovery_)
 {
-	// accept event actually started in BaseServer::BaseServer
+	io.start(discovery->get_socket(), ev::READ);
 	L_EV(this, "Start discovery's server accept event (sock=%d)", discovery->get_socket());
 
 	L_OBJ(this, "CREATED DISCOVERY SERVER!");
