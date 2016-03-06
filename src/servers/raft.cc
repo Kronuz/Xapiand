@@ -37,17 +37,12 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_,
 	: BaseUDP(manager_, loop_, port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
 	  term(0),
 	  running(false),
-	  election_leader(*loop),
+	  leader_election(*loop),
 	  heartbeat(*loop),
 	  state(State::FOLLOWER),
 	  number_servers(0)
 {
-	election_leader.set<Raft, &Raft::leader_election_cb>(this);
-	election_timeout = random_real(ELECTION_LEADER_MIN, ELECTION_LEADER_MAX);
-	election_leader.set(election_timeout, 0.0);
-	L_EV(this, "Set raft's election leader event (%g)", election_timeout);
-
-	last_activity = ev::now(*loop);
+	leader_election.set<Raft, &Raft::leader_election_cb>(this);
 
 	heartbeat.set<Raft, &Raft::heartbeat_cb>(this);
 
@@ -57,27 +52,55 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_,
 
 Raft::~Raft()
 {
-	election_leader.stop();
+	leader_election.stop();
 	L_EV(this, "Stop raft's election leader event");
 
-	if (state == State::LEADER) {
-		heartbeat.stop();
-		L_EV(this, "Stop raft's heartbeat event");
-	}
+	heartbeat.stop();
+	L_EV(this, "Stop raft's heartbeat event");
 
 	L_OBJ(this, "DELETED RAFT CONSENSUS");
 }
 
 
 void
-Raft::reset()
+Raft::start()
 {
-	if (state == State::LEADER) {
+	if (!running.exchange(true)) {
+		reset_leader_election_timeout();
+		L_RAFT(this, "Raft was started!");
+	}
+	number_servers.store(manager()->get_nodes_by_region(local_node.region) + 1);
+}
+
+
+void
+Raft::stop()
+{
+	if (running.exchange(false)) {
+		leader_election.stop();
+		L_EV(this, "Stop raft's election leader event");
+
 		heartbeat.stop();
 		L_EV(this, "Stop raft's heartbeat event");
+
+		state = State::FOLLOWER;
+		number_servers.store(1);
+
+		L_RAFT(this, "Raft was stopped!");
 	}
+	number_servers.store(manager()->get_nodes_by_region(local_node.region) + 1);
+}
+
+
+void
+Raft::reset()
+{
+	heartbeat.stop();
+	L_EV(this, "Stop raft's heartbeat event");
 
 	state = State::FOLLOWER;
+
+	reset_leader_election_timeout();
 
 	L_RAFT(this, "Raft was restarted!");
 }
@@ -86,39 +109,53 @@ Raft::reset()
 void
 Raft::leader_election_cb(ev::timer&, int)
 {
+	L_EV(this, "Raft::leader_election_cb");
+
 	L_EV_BEGIN(this, "Raft::leader_election_cb:BEGIN");
 
-	auto m = manager();
-
-	if (m->state == XapiandManager::State::READY) {
-		// calculate when the timeout would happen
-		ev::tstamp remaining_time = last_activity + election_timeout - ev::now(*loop);
-		L_RAFT_PROTO(this, "Raft { Reg: %d; State: %d; Rem_t: %f; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
-			local_node.region.load(), state, remaining_time, election_timeout, term, number_servers.load(), leader.c_str());
-
-		if (remaining_time < 0.0 && state != State::LEADER) {
-			state = State::CANDIDATE;
-			++term;
-			votes = 0;
-			votedFor.clear();
-			send_message(Message::REQUEST_VOTE, local_node.serialise() + serialise_length(term));
-			election_timeout = random_real(ELECTION_LEADER_MIN, ELECTION_LEADER_MAX);
-		}
+	if (manager()->state != XapiandManager::State::READY) {
+		L_EV_END(this, "Raft::leader_election_cb:END");
+		return;
 	}
 
-	// Start the timer again.
-	election_leader.start(election_timeout, 0.0);
-	L_EV(this, "Start raft's election leader event (%g)", election_timeout);
+	L_RAFT_PROTO(this, "Raft { Reg: %d; State: %d; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
+		local_node.region.load(), state, leader_election.repeat, term, number_servers.load(), leader.c_str());
+
+	if (state != State::LEADER) {
+		state = State::CANDIDATE;
+		++term;
+		votes = 0;
+		votedFor.clear();
+		send_message(Message::REQUEST_VOTE, local_node.serialise() + serialise_length(term));
+	}
+
+	reset_leader_election_timeout();
 
 	L_EV_END(this, "Raft::leader_election_cb:END");
 }
 
+void
+Raft::reset_leader_election_timeout()
+{
+	leader_election.repeat = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
+	leader_election.again();
+	L_EV(this, "Restart raft's election leader event (%g)", leader_election.repeat);
+}
 
 void
 Raft::heartbeat_cb(ev::timer&, int)
 {
+	L_EV(this, "Raft::heartbeat_cb");
+
 	L_EV_BEGIN(this, "Raft::heartbeat_cb:BEGIN");
+
+	if (manager()->state != XapiandManager::State::READY) {
+		L_EV_END(this, "Raft::heartbeat_cb:END");
+		return;
+	}
+
 	send_message(Message::HEARTBEAT_LEADER, local_node.serialise());
+
 	L_EV_END(this, "Raft::heartbeat_cb:END");
 }
 
@@ -129,22 +166,14 @@ Raft::start_heartbeat()
 	assert(leader == lower_string(local_node.name));
 
 	send_message(Message::LEADER, local_node.serialise() +
-		serialise_length(number_servers.load()) +
+		serialise_length(number_servers) +
 		serialise_length(term));
 
 	heartbeat.repeat = random_real(HEARTBEAT_LEADER_MIN, HEARTBEAT_LEADER_MAX);
 	heartbeat.again();
-	L_EV(this, "Start raft's heartbeat event (%g)", heartbeat.repeat);
+	L_EV(this, "Restart raft's heartbeat event (%g)", heartbeat.repeat);
 
 	L_RAFT(this, "\tSet raft's heartbeat timeout event %f", heartbeat.repeat);
-}
-
-
-void
-Raft::register_activity()
-{
-	L_RAFT_PROTO(this, "Register activity");
-	last_activity = ev::now(*loop);
 }
 
 

@@ -57,8 +57,7 @@ RaftServer::raft_server(Raft::Message type, const std::string& message)
 		&RaftServer::request_vote,
 		&RaftServer::response_vote,
 		&RaftServer::leader,
-		&RaftServer::request_data,
-		&RaftServer::response_data,
+		&RaftServer::leadership,
 		&RaftServer::reset,
 	};
 	if (static_cast<size_t>(type) >= sizeof(dispatch) / sizeof(dispatch[0])) {
@@ -66,9 +65,6 @@ RaftServer::raft_server(Raft::Message type, const std::string& message)
 		errmsg += std::to_string(toUType(type));
 		throw MSG_InvalidArgumentError(errmsg);
 	}
-
-	raft->register_activity();
-
 	(this->*(dispatch[toUType(type)]))(message);
 }
 
@@ -81,13 +77,15 @@ RaftServer::heartbeat_leader(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node.region.load() != remote_node.region.load()) {
+	if (local_node.region != remote_node.region) {
 		return;
 	}
 
+	raft->reset_leader_election_timeout();
+
 	if (raft->leader != lower_string(remote_node.name)) {
 		L_RAFT(this, "Request the raft server's configuration!");
-		raft->send_message(Raft::Message::REQUEST_DATA, local_node.serialise());
+		raft->send_message(Raft::Message::LEADERSHIP, local_node.serialise());
 	}
 	L_RAFT_PROTO(this, "Listening %s's heartbeat in timestamp: %f!", remote_node.name.c_str(), raft->last_activity);
 }
@@ -101,7 +99,7 @@ RaftServer::request_vote(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node.region.load() != remote_node.region.load()) {
+	if (local_node.region != remote_node.region) {
 		return;
 	}
 
@@ -154,7 +152,7 @@ RaftServer::response_vote(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node.region.load() != remote_node.region.load()) {
+	if (local_node.region != remote_node.region) {
 		return;
 	}
 
@@ -170,9 +168,9 @@ RaftServer::response_vote(const std::string& message)
 				raft->state = Raft::State::LEADER;
 				raft->leader = lower_string(local_node.name);
 
-				L_INFO(this, "Raft: New leader is %s (1)", raft->leader.c_str());
-
 				raft->start_heartbeat();
+
+				L_INFO(this, "Raft: New leader is %s (1)", raft->leader.c_str());
 			}
 			return;
 		}
@@ -195,12 +193,15 @@ RaftServer::leader(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node.region.load() != remote_node.region.load()) {
+	if (local_node.region != remote_node.region) {
 		return;
 	}
 
 	if (raft->state == Raft::State::LEADER) {
-		assert(remote_node == local_node);
+		if (remote_node != local_node) {
+			L_CRIT(this, "I'm leader, other responded as leader!");
+			raft->reset();
+		}
 		return;
 	}
 
@@ -210,57 +211,30 @@ RaftServer::leader(const std::string& message)
 	raft->leader = lower_string(remote_node.name);
 	raft->state = Raft::State::FOLLOWER;
 
+	raft->reset_leader_election_timeout();
+
 	L_INFO(this, "Raft: New leader is %s (2)", raft->leader.c_str());
 }
 
 
 void
-RaftServer::request_data(const std::string& message)
+RaftServer::leadership(const std::string& message)
 {
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node.region.load() != remote_node.region.load()) {
+	if (local_node.region != remote_node.region) {
 		return;
 	}
 
 	if (raft->state == Raft::State::LEADER) {
 		L_DEBUG(this, "Sending Data!");
-		raft->send_message(Raft::Message::RESPONSE_DATA, local_node.serialise() +
+		raft->send_message(Raft::Message::LEADER, local_node.serialise() +
 			serialise_length(raft->number_servers) +
 			serialise_length(raft->term));
 	}
-}
-
-
-void
-RaftServer::response_data(const std::string& message)
-{
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-
-	Node remote_node = Node::unserialise(&p, p_end);
-
-	if (local_node.region.load() != remote_node.region.load()) {
-		return;
-	}
-
-	if (raft->state == Raft::State::LEADER) {
-		L_CRIT(this, "I'm leader, other responded as leader!");
-		raft->reset();
-		return;
-	}
-
-	L_DEBUG(this, "Receiving Data!");
-
-	raft->number_servers.store(unserialise_length(&p, p_end));
-	raft->term = unserialise_length(&p, p_end);
-
-	raft->leader = lower_string(remote_node.name);
-
-	L_INFO(this, "Raft: New leader is %s (3)", raft->leader.c_str());
 }
 
 
@@ -272,11 +246,9 @@ RaftServer::reset(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node.region.load() != remote_node.region.load()) {
+	if (local_node.region != remote_node.region) {
 		return;
 	}
-
-	raft->register_activity();
 
 	if (local_node == remote_node) {
 		raft->reset();

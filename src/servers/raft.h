@@ -32,8 +32,8 @@
 #define HEARTBEAT_LEADER_MIN 0.150
 #define HEARTBEAT_LEADER_MAX 0.300
 
-#define ELECTION_LEADER_MIN (5.0 * HEARTBEAT_LEADER_MAX)
-#define ELECTION_LEADER_MAX (6.0 * HEARTBEAT_LEADER_MAX)
+#define LEADER_ELECTION_MIN (2.5 * HEARTBEAT_LEADER_MAX)
+#define LEADER_ELECTION_MAX (5.0 * HEARTBEAT_LEADER_MAX)
 
 #define XAPIAND_RAFT_PROTOCOL_MAJOR_VERSION 1
 #define XAPIAND_RAFT_PROTOCOL_MINOR_VERSION 0
@@ -59,15 +59,14 @@ private:
 		REQUEST_VOTE,       // Invoked by candidates to gather votes
 		RESPONSE_VOTE,      // Gather votes
 		LEADER,             // Node saying hello when it become leader
-		REQUEST_DATA,       // Request information from leader
-		RESPONSE_DATA,      // Receive information from leader
+		LEADERSHIP,         // Request information from leader
 		RESET,              // Force reset a node
 		MAX,
 	};
 
 	static constexpr const char* const MessageNames[] = {
 		"HEARTBEAT_LEADER", "REQUEST_VOTE", "RESPONSE_VOTE", "LEADER",
-		"REQUEST_DATA", "RESPONSE_DATA", "RESET",
+		"LEADERSHIP", "RESET",
 	};
 
 	uint64_t term;
@@ -75,11 +74,9 @@ private:
 
 	std::atomic_bool running;
 
-	ev::timer election_leader;
-	ev::tstamp election_timeout;
+	ev::timer leader_election;
 
 	ev::timer heartbeat;
-	ev::tstamp last_activity;
 
 	std::string votedFor;
 	std::string leader;
@@ -98,6 +95,8 @@ public:
 	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
 	~Raft();
 
+	void start();
+	void stop();
 	void reset();
 
 	inline void send_message(Message type, const std::string& message) {
@@ -108,33 +107,9 @@ public:
 		BaseUDP::send_message(toUType(type), message);
 	}
 
-	void register_activity();
+	void reset_leader_election_timeout();
 
 	std::string getDescription() const noexcept override;
-
-	inline void start() {
-		if (!running.exchange(true)) {
-			election_leader.start();
-			L_EV(this, "Start raft's election leader event (%g)", election_timeout);
-			L_RAFT(this, "Raft was started!");
-		}
-		number_servers.store(manager()->get_nodes_by_region(local_node.region.load()) + 1);
-	}
-
-	inline void stop() {
-		if (running.exchange(false)) {
-			election_leader.stop();
-			L_EV(this, "Stop raft's election leader event");
-			if (state == State::LEADER) {
-				heartbeat.stop();
-				L_EV(this, "Stop raft's heartbeat event");
-			}
-			state = State::FOLLOWER;
-			number_servers.store(1);
-			L_RAFT(this, "Raft was stopped!");
-		}
-		number_servers.store(manager()->get_nodes_by_region(local_node.region.load()) + 1);
-	}
 };
 
 #endif

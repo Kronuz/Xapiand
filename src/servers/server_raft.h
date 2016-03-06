@@ -43,8 +43,7 @@ class RaftServer : public BaseServer {
 	void request_vote(const std::string& message);
 	void response_vote(const std::string& message);
 	void leader(const std::string& message);
-	void request_data(const std::string& message);
-	void response_data(const std::string& message);
+	void leadership(const std::string& message);
 	void reset(const std::string& message);
 
 public:
