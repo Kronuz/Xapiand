@@ -231,7 +231,7 @@ void
 LogThread::add(const std::shared_ptr<Log>& l_ptr)
 {
 	if (running.load()) {
-		log_list.push_front(l_ptr->shared_from_this());
+		log_list.push_back(l_ptr->shared_from_this());
 
 		if (std::chrono::system_clock::from_time_t(wakeup.load()) >= l_ptr->wakeup) {
 			wakeup_signal.notify_all();
@@ -256,14 +256,13 @@ LogThread::thread_function()
 		now = std::chrono::system_clock::now();
 		next_wakeup = now + 3s;
 
-		std::vector<std::pair<int, std::string>> reversed; // shouldn't be needed had log_list had push_back()
 		for (auto it = log_list.begin(); it != log_list.end(); ) {
 			auto& l_ptr = *it;
 			if (!l_ptr || l_ptr->finished.load()) {
 				it = log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished.store(true);
-				reversed.push_back(std::make_pair(l_ptr->priority, l_ptr->str_start));
+				Log::log(l_ptr->priority, l_ptr->str_start);
 				it = log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;
@@ -271,9 +270,6 @@ LogThread::thread_function()
 			} else {
 				++it;
 			}
-		}
-		for (auto it = reversed.crbegin(); it != reversed.crend(); ++it) {
-			Log::log(it->first, it->second);
 		}
 		if (next_wakeup < now + 100ms) {
 			next_wakeup = now + 100ms;
