@@ -255,7 +255,12 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 			L_NOTICE(this, "Joined cluster %s: It was already online!", cluster_name.c_str());
 			break;
 	}
+
+	if (auto discovery = proto_discovery.lock()) {
+		discovery->reset();
+	}
 }
+
 
 struct sockaddr_in
 XapiandManager::host_address()

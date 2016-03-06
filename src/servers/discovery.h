@@ -29,8 +29,9 @@
 #include "udp_base.h"
 
 // Values in seconds
-#define HEARTBEAT_MIN 1
-#define HEARTBEAT_MAX 2
+#define HEARTBEAT_EXPLORE 0.100
+#define HEARTBEAT_MIN 1.0
+#define HEARTBEAT_MAX 2.0
 
 #define XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION 1
 #define XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION 0
@@ -42,8 +43,12 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOC
 class Discovery : public BaseUDP {
 private:
 	ev::timer heartbeat;
+	ev::async async_reset;
 
 	void heartbeat_cb(ev::timer& watcher, int revents);
+	void async_reset_cb(ev::async &watcher, int revents);
+
+	void _reset();
 
 public:
 	enum class Message {
@@ -67,6 +72,9 @@ public:
 	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
 	~Discovery();
 
+	inline void reset() {
+		async_reset.send();
+	}
 	void start();
 	void stop();
 
