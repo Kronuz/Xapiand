@@ -202,21 +202,21 @@ public:
 
 private:
 	auto try_insert(iterator& it, std::shared_ptr<Node>& q, std::shared_ptr<Node>& a) {
-		std::atomic_store(&a->next, it.target);
-		std::atomic_store(&q->next, a);
 		auto d = it.target;
+		std::atomic_store(&q->next, a);
+		std::atomic_store(&a->next, d);
 		return std::atomic_compare_exchange_strong(&it.pre_aux->next, &d, q);
 	}
 
 	auto try_delete(iterator& it) {
 		auto d = it.target;
-		auto n = it.target->next;
+		auto n = d->next;
 		if (!std::atomic_compare_exchange_strong(&it.pre_aux->next, &d, n)) {
 			return false;
 		}
 
-		std::atomic_store(&d->previous, it.pre_cell);
 		auto p = it.pre_cell;
+		std::atomic_store(&d->previous, p);
 		while (p->previous) {
 			p = std::atomic_load(&p->previous);
 		}
