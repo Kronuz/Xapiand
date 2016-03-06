@@ -32,11 +32,19 @@ constexpr const char* const Discovery::MessageNames[];
 
 Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_)
 	: BaseUDP(manager_, loop_, port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
-	  heartbeat(*loop)
+	  heartbeat(*loop),
+	  async_start(*loop),
+	  async_stop(*loop)
 {
 	heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
-	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
-	L_DISCOVERY(this, "\tSet discovery heartbeat timeout event %f", heartbeat.repeat);
+
+	async_start.set<Discovery, &Discovery::async_start_cb>(this);
+	async_start.start();
+	L_EV(this, "Start discovery's async start event");
+
+	async_stop.set<Discovery, &Discovery::async_stop_cb>(this);
+	async_stop.start();
+	L_EV(this, "Start discovery's async stop event");
 
 	L_OBJ(this, "CREATED DISCOVERY");
 }
@@ -45,14 +53,50 @@ Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_r
 Discovery::~Discovery()
 {
 	heartbeat.stop();
+	L_EV(this, "Stop discovery's heartbeat event");
 
 	L_OBJ(this, "DELETED DISCOVERY");
 }
 
 
 void
+Discovery::async_start_cb(ev::async &, int)
+{
+	_start();
+}
+
+
+void
+Discovery::async_stop_cb(ev::async &, int)
+{
+	_stop();
+}
+
+
+void
+Discovery::_start() {
+	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
+	heartbeat.again();
+	L_EV(this, "Start discovery's heartbeat event (%f)", heartbeat.repeat);
+
+	L_DISCOVERY(this, "Discovery was started!");
+}
+
+void
+Discovery::_stop() {
+	heartbeat.stop();
+	L_EV(this, "Stop discovery's heartbeat event");
+
+	send_message(Message::BYE, local_node.serialise());
+
+	L_DISCOVERY(this, "Discovery was stopped!");
+}
+
+void
 Discovery::heartbeat_cb(ev::timer&, int)
 {
+	L_EV(this, "Discovery::heartbeat_cb");
+
 	L_EV_BEGIN(this, "Discovery::heartbeat_cb:BEGIN");
 
 	auto m = manager();

@@ -36,11 +36,11 @@ using dispatch_func = void (DiscoveryServer::*)(const std::string&);
 
 
 DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery>& discovery_)
-	: BaseServer(server_, loop_, discovery_->sock),
+	: BaseServer(server_, loop_, discovery_->get_socket()),
 	  discovery(discovery_)
 {
 	// accept event actually started in BaseServer::BaseServer
-	L_EV(this, "Start discovery's server accept event (sock=%d)", discovery->sock);
+	L_EV(this, "Start discovery's server accept event (sock=%d)", discovery->get_socket());
 
 	L_OBJ(this, "CREATED DISCOVERY SERVER!");
 }
@@ -353,11 +353,11 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
 	L_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN");
 	if (EV_ERROR & revents) {
-		L_EV(this, "ERROR: got invalid discovery event (sock=%d): %s", discovery->sock, strerror(errno));
+		L_EV(this, "ERROR: got invalid discovery event (sock=%d): %s", discovery->get_socket(), strerror(errno));
 		return;
 	}
 
-	assert(discovery->sock == watcher.fd || discovery->sock == -1);
+	assert(discovery->get_socket() == watcher.fd || discovery->get_socket() == -1);
 
 	if (revents & EV_READ) {
 		while (true) {
