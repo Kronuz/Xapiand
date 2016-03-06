@@ -57,6 +57,10 @@ public:
 	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, int tries_, int flags_);
 	~BaseTCP();
 
+	inline int get_socket() {
+		return sock;
+	}
+
 	void shutdown(bool asap, bool now);
 	void destroy();
 

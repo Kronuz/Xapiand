@@ -33,11 +33,11 @@ using dispatch_func = void (RaftServer::*)(const std::string&);
 
 
 RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft>& raft_)
-	: BaseServer(server_, loop_, raft_->sock),
+	: BaseServer(server_, loop_, raft_->get_socket()),
 	  raft(raft_)
 {
 	// accept event actually started in BaseServer::BaseServer
-	L_EV(this, "Start raft's server accept event (sock=%d)", raft->sock);
+	L_EV(this, "Start raft's server accept event (sock=%d)", raft->get_socket());
 
 	L_OBJ(this, "CREATED RAFT SERVER!");
 }
@@ -262,12 +262,12 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 {
 	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN");
 	if (EV_ERROR & revents) {
-		L_EV(this, "ERROR: got invalid raft event (sock=%d): %s", raft->sock, strerror(errno));
+		L_EV(this, "ERROR: got invalid raft event (sock=%d): %s", raft->get_socket(), strerror(errno));
 		L_EV_END(this, "RaftServer::io_accept_cb:END");
 		return;
 	}
 
-	assert(raft->sock == watcher.fd || raft->sock == -1);
+	assert(raft->get_socket() == watcher.fd || raft->get_socket() == -1);
 
 	if (revents & EV_READ) {
 		while (manager()->state == XapiandManager::State::READY) {

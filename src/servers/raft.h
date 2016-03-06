@@ -43,7 +43,7 @@ constexpr uint16_t XAPIAND_RAFT_PROTOCOL_VERSION = XAPIAND_RAFT_PROTOCOL_MAJOR_V
 
 // The Raft consensus algorithm
 class Raft : public BaseUDP {
-private:
+public:
 	enum class State {
 		LEADER,
 		FOLLOWER,
@@ -72,6 +72,12 @@ private:
 	uint64_t term;
 	size_t votes;
 
+	Node votedFor;
+	Node leader;
+
+	State state;
+	std::atomic_size_t number_servers;
+
 private:
 
 	ev::timer leader_election_timeout;
@@ -80,12 +86,6 @@ private:
 	ev::async async_reset_leader_election_timeout;
 	ev::async async_reset;
 	ev::async async_stop;
-
-	Node votedFor;
-	Node leader;
-
-	State state;
-	size_t number_servers;
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void leader_heartbeat_cb(ev::timer& watcher, int revents);
@@ -98,8 +98,6 @@ private:
 	void _reset_leader_election_timeout();
 	void _reset();
 	void _stop();
-
-	friend class RaftServer;
 
 public:
 	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
