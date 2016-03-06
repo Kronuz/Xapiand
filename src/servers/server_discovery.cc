@@ -76,32 +76,6 @@ DiscoveryServer::discovery_server(Discovery::Message type, const std::string& me
 
 
 void
-DiscoveryServer::hello(const std::string& message)
-{
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-
-	Node remote_node = Node::unserialise(&p, p_end);
-
-	if (remote_node == local_node) {
-		// It's me! ...wave hello!
-		discovery->send_message(Discovery::Message::WAVE, local_node.serialise());
-	} else {
-		const Node *node = nullptr;
-		if (manager()->touch_node(remote_node.name, remote_node.region.load(), &node)) {
-			if (remote_node == *node) {
-				discovery->send_message(Discovery::Message::WAVE, local_node.serialise());
-			} else {
-				discovery->send_message(Discovery::Message::SNEER, remote_node.serialise());
-			}
-		} else {
-			discovery->send_message(Discovery::Message::WAVE, local_node.serialise());
-		}
-	}
-}
-
-
-void
 DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 {
 	const char *p = message.data();
@@ -147,6 +121,39 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 
 
 void
+DiscoveryServer::heartbeat(const std::string& message)
+{
+	_wave(true, message);
+}
+
+
+void
+DiscoveryServer::hello(const std::string& message)
+{
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Node remote_node = Node::unserialise(&p, p_end);
+
+	if (remote_node == local_node) {
+		// It's me! ...wave hello!
+		discovery->send_message(Discovery::Message::WAVE, local_node.serialise());
+	} else {
+		const Node *node = nullptr;
+		if (manager()->touch_node(remote_node.name, remote_node.region.load(), &node)) {
+			if (remote_node == *node) {
+				discovery->send_message(Discovery::Message::WAVE, local_node.serialise());
+			} else {
+				discovery->send_message(Discovery::Message::SNEER, remote_node.serialise());
+			}
+		} else {
+			discovery->send_message(Discovery::Message::WAVE, local_node.serialise());
+		}
+	}
+}
+
+
+void
 DiscoveryServer::wave(const std::string& message)
 {
 	_wave(false, message);
@@ -179,13 +186,6 @@ DiscoveryServer::sneer(const std::string& message)
 			m->async_shutdown.send();
 		}
 	}
-}
-
-
-void
-DiscoveryServer::heartbeat(const std::string& message)
-{
-	_wave(true, message);
 }
 
 

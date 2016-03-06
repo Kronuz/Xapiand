@@ -74,6 +74,26 @@ RaftServer::raft_server(Raft::Message type, const std::string& message)
 
 
 void
+RaftServer::heartbeat_leader(const std::string& message)
+{
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Node remote_node = Node::unserialise(&p, p_end);
+
+	if (local_node.region.load() != remote_node.region.load()) {
+		return;
+	}
+
+	if (raft->leader != lower_string(remote_node.name)) {
+		L_RAFT(this, "Request the raft server's configuration!");
+		raft->send_message(Raft::Message::REQUEST_DATA, local_node.serialise());
+	}
+	L_RAFT_PROTO(this, "Listening %s's heartbeat in timestamp: %f!", remote_node.name.c_str(), raft->last_activity);
+}
+
+
+void
 RaftServer::request_vote(const std::string& message)
 {
 	const char *p = message.data();
@@ -164,26 +184,6 @@ RaftServer::response_vote(const std::string& message)
 			return;
 		}
 	}
-}
-
-
-void
-RaftServer::heartbeat_leader(const std::string& message)
-{
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-
-	Node remote_node = Node::unserialise(&p, p_end);
-
-	if (local_node.region.load() != remote_node.region.load()) {
-		return;
-	}
-
-	if (raft->leader != lower_string(remote_node.name)) {
-		L_RAFT(this, "Request the raft server's configuration!");
-		raft->send_message(Raft::Message::REQUEST_DATA, local_node.serialise());
-	}
-	L_RAFT_PROTO(this, "Listening %s's heartbeat in timestamp: %f!", remote_node.name.c_str(), raft->last_activity);
 }
 
 
