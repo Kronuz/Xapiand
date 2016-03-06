@@ -224,13 +224,14 @@ LogThread::thread_function()
 	while (running.load()) {
 		auto now = std::chrono::system_clock::now();
 		auto next_wakeup = now + 3s;
+		std::vector<std::pair<int, std::string>> reversed; // shouldn't be needed had log_list had push_back()
 		for (auto it = log_list.begin(); it != log_list.end(); ) {
 			auto& l_ptr = *it;
 			if (!l_ptr || l_ptr->finished.load()) {
 				it = log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished.store(true);
-				Log::log(l_ptr->priority, l_ptr->str_start);
+				reversed.push_back(std::make_pair(l_ptr->priority, l_ptr->str_start));
 				it = log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;
@@ -238,6 +239,9 @@ LogThread::thread_function()
 			} else {
 				++it;
 			}
+		}
+		for (auto it = reversed.crbegin(); it != reversed.crend(); ++it) {
+			Log::log(it->first, it->second);
 		}
 		if (next_wakeup < now + 100ms) {
 			next_wakeup = now + 100ms;
