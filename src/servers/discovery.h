@@ -42,15 +42,8 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOC
 class Discovery : public BaseUDP {
 private:
 	ev::timer heartbeat;
-	ev::async async_start;
-	ev::async async_stop;
 
 	void heartbeat_cb(ev::timer& watcher, int revents);
-	void async_start_cb(ev::async &watcher, int revents);
-	void async_stop_cb(ev::async &watcher, int revents);
-
-	void _start();
-	void _stop();
 
 public:
 	enum class Message {
@@ -74,13 +67,8 @@ public:
 	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
 	~Discovery();
 
-	inline void start() {
-		async_start.send();
-	}
-
-	inline void stop() {
-		async_stop.send();
-	}
+	void start();
+	void stop();
 
 	inline void send_message(Message type, const std::string& message) {
 		if (type != Discovery::Message::HEARTBEAT) {
