@@ -107,10 +107,7 @@ Raft::leader_election_cb(ev::timer&, int)
 	}
 
 	// Start the timer again.
-	election_leader.set(election_timeout, 0.0);
-	L_EV(this, "Set raft's election leader event (%g)", election_timeout);
-
-	election_leader.start();
+	election_leader.start(election_timeout, 0.0);
 	L_EV(this, "Start raft's election leader event (%g)", election_timeout);
 
 	L_EV_END(this, "Raft::leader_election_cb:END");
