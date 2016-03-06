@@ -83,7 +83,7 @@ RaftServer::heartbeat_leader(const std::string& message)
 
 	raft->reset_leader_election_timeout();
 
-	if (raft->leader != lower_string(remote_node.name)) {
+	if (raft->leader != remote_node) {
 		L_RAFT(this, "Request the raft server's configuration!");
 		raft->send_message(Raft::Message::LEADERSHIP, local_node.serialise());
 	}
@@ -113,10 +113,10 @@ RaftServer::request_vote(const std::string& message)
 			raft->reset();
 		}
 
-		raft->votedFor = lower_string(remote_node.name);
+		raft->votedFor = remote_node;
 		raft->term = remote_term;
 
-		L_RAFT(this, "It Vote for %s", raft->votedFor.c_str());
+		L_RAFT(this, "It Vote for %s", raft->votedFor.name.c_str());
 		raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 			serialise_length(true) + serialise_length(remote_term));
 	} else {
@@ -127,16 +127,16 @@ RaftServer::request_vote(const std::string& message)
 		}
 
 		if (remote_term < raft->term) {
-			L_RAFT(this, "Vote for %s", raft->votedFor.c_str());
+			L_RAFT(this, "Vote for %s", raft->votedFor.name.c_str());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 				serialise_length(false) + serialise_length(raft->term));
 		} else if (raft->votedFor.empty()) {
-			raft->votedFor = lower_string(remote_node.name);
-			L_RAFT(this, "Vote for %s", raft->votedFor.c_str());
+			raft->votedFor = remote_node;
+			L_RAFT(this, "Vote for %s", raft->votedFor.name.c_str());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 				serialise_length(true) + serialise_length(raft->term));
 		} else {
-			L_RAFT(this, "Vote for %s", raft->votedFor.c_str());
+			L_RAFT(this, "Vote for %s", raft->votedFor.name.c_str());
 			raft->send_message(Raft::Message::RESPONSE_VOTE, remote_node.serialise() +
 				serialise_length(false) + serialise_length(raft->term));
 		}
@@ -165,9 +165,9 @@ RaftServer::response_vote(const std::string& message)
 			if (raft->votes > raft->number_servers / 2) {
 				raft->state = Raft::State::LEADER;
 
-				if (raft->leader != lower_string(local_node.name)) {
-					raft->leader = lower_string(local_node.name);
-					L_INFO(this, "Raft: New leader is %s (1)", raft->leader.c_str());
+				if (raft->leader != local_node) {
+					raft->leader = local_node;
+					L_INFO(this, "Raft: New leader is %s (1)", raft->leader.name.c_str());
 				}
 
 				raft->start_leader_heartbeat();
@@ -209,9 +209,9 @@ RaftServer::leader(const std::string& message)
 	raft->number_servers.store(unserialise_length(&p, p_end));
 	raft->term = unserialise_length(&p, p_end);
 
-	if (raft->leader != lower_string(remote_node.name)) {
-		raft->leader = lower_string(remote_node.name);
-		L_INFO(this, "Raft: New leader is %s (2)", raft->leader.c_str());
+	if (raft->leader != remote_node) {
+		raft->leader = remote_node;
+		L_INFO(this, "Raft: New leader is %s (2)", raft->leader.name.c_str());
 	}
 
 	raft->reset_leader_election_timeout();

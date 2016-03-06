@@ -199,7 +199,7 @@ Raft::leader_heartbeat_cb(ev::timer&, int)
 void
 Raft::_start_leader_heartbeat()
 {
-	assert(leader == lower_string(local_node.name));
+	assert(leader == local_node);
 
 	leader_heartbeat.repeat = random_real(HEARTBEAT_LEADER_MIN, HEARTBEAT_LEADER_MAX);
 	leader_heartbeat.again();

@@ -80,8 +80,8 @@ private:
 	ev::async async_reset_leader_election_timeout;
 	ev::async async_reset;
 
-	std::string votedFor;
-	std::string leader;
+	Node votedFor;
+	Node leader;
 
 	State state;
 	std::atomic_size_t number_servers;
