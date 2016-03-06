@@ -76,6 +76,7 @@ void SysLog::log(int priority, const std::string& str) {
 
 int Log::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Log::handlers;
+LogThread Log::thread;
 
 
 Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_)
@@ -157,14 +158,9 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 std::shared_ptr<Log>
 Log::add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
 {
-	static LogThread thread;
-
 	auto l_ptr = std::make_shared<Log>(str, cleanup, wakeup, priority);
-	thread.log_list.push_front(l_ptr->shared_from_this());
 
-	if (std::chrono::system_clock::from_time_t(thread.wakeup.load()) > l_ptr->wakeup) {
-		thread.wakeup_signal.notify_one();
-	}
+	thread.add(l_ptr);
 
 	return l_ptr;
 }
@@ -200,6 +196,13 @@ Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::ch
 }
 
 
+void
+Log::finish(bool wait)
+{
+	thread.finish(wait);
+}
+
+
 LogThread::LogThread()
 	: running(true),
 	  inner_thread(&LogThread::thread_function, this) { }
@@ -207,11 +210,32 @@ LogThread::LogThread()
 
 LogThread::~LogThread()
 {
+	finish(true);
+}
+
+
+void
+LogThread::finish(bool wait)
+{
 	running.store(false);
-	wakeup_signal.notify_one();
-	try {
-		inner_thread.join();
-	} catch (const std::system_error&) {
+	wakeup_signal.notify_all();
+	if (wait) {
+		try {
+			inner_thread.join();
+		} catch (const std::system_error&) {}
+	}
+}
+
+
+void
+LogThread::add(const std::shared_ptr<Log>& l_ptr)
+{
+	if (running.load()) {
+		log_list.push_front(l_ptr->shared_from_this());
+
+		if (std::chrono::system_clock::from_time_t(wakeup.load()) >= l_ptr->wakeup) {
+			wakeup_signal.notify_all();
+		}
 	}
 }
 
@@ -221,9 +245,17 @@ LogThread::thread_function()
 {
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
+
+	auto now = std::chrono::system_clock::now();
+	auto next_wakeup = now + 3s;
+
 	while (running.load()) {
-		auto now = std::chrono::system_clock::now();
-		auto next_wakeup = now + 3s;
+		wakeup.store(std::chrono::system_clock::to_time_t(next_wakeup));
+		wakeup_signal.wait_until(lk, next_wakeup);
+
+		now = std::chrono::system_clock::now();
+		next_wakeup = now + 3s;
+
 		std::vector<std::pair<int, std::string>> reversed; // shouldn't be needed had log_list had push_back()
 		for (auto it = log_list.begin(); it != log_list.end(); ) {
 			auto& l_ptr = *it;
@@ -246,7 +278,5 @@ LogThread::thread_function()
 		if (next_wakeup < now + 100ms) {
 			next_wakeup = now + 100ms;
 		}
-		wakeup.store(std::chrono::system_clock::to_time_t(next_wakeup));
-		wakeup_signal.wait_until(lk, next_wakeup);
 	}
 }

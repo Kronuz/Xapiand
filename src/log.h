@@ -85,6 +85,8 @@ class LogThread;
 class Log : public std::enable_shared_from_this<Log> {
 	friend class LogThread;
 
+	static LogThread thread;
+
 	static std::string str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 	static std::shared_ptr<Log> add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
 	static void log(int priority, const std::string& str);
@@ -134,12 +136,12 @@ public:
 	static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
 	void unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 	void clear();
+
+	static void finish(bool wait=false);
 };
 
 
 class LogThread {
-	friend Log;
-
 	std::condition_variable wakeup_signal;
 	std::atomic<std::time_t> wakeup;
 
@@ -149,8 +151,12 @@ class LogThread {
 
 	void thread_function();
 
+public:
 	LogThread();
 	~LogThread();
+
+	void finish(bool wait=false);
+	void add(const std::shared_ptr<Log>& l_ptr);
 };
 
 

@@ -641,5 +641,8 @@ int main(int argc, char **argv) {
 		L_INFO(nullptr, "Removing the pid file.");
 		unlink(opts.pidfile.c_str());
 	}
+
+	Log::finish(true);
+
 	return 0;
 }
