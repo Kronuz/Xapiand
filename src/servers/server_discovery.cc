@@ -86,7 +86,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	int region;
+	int32_t region;
 	if (remote_node == local_node) {
 		region = local_node.region.load();
 	} else {

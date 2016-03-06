@@ -554,7 +554,7 @@ XapiandManager::get_node(const std::string& node_name, const Node** node)
 
 
 bool
-XapiandManager::touch_node(const std::string& node_name, int region, const Node** node)
+XapiandManager::touch_node(const std::string& node_name, int32_t region, const Node** node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string lower_node_name(lower_string(node_name));
@@ -592,7 +592,7 @@ XapiandManager::drop_node(const std::string& node_name)
 
 
 size_t
-XapiandManager::get_nodes_by_region(int region)
+XapiandManager::get_nodes_by_region(int32_t region)
 {
 	size_t cont = 0;
 	std::lock_guard<std::mutex> lk(nodes_mtx);
@@ -603,7 +603,7 @@ XapiandManager::get_nodes_by_region(int region)
 }
 
 
-int
+int32_t
 XapiandManager::get_region(const std::string& db_name)
 {
 	if (local_node.regions.load() == -1) {
@@ -614,7 +614,7 @@ XapiandManager::get_region(const std::string& db_name)
 }
 
 
-int
+int32_t
 XapiandManager::get_region()
 {
 	if (auto raft = proto_raft.lock()) {
@@ -626,7 +626,7 @@ XapiandManager::get_region()
 			} else {
 				raft->start();
 				local_node.regions.store(sqrt(nodes.size() + 1));
-				int region = jump_consistent_hash(local_node.id, local_node.regions.load());
+				int32_t region = jump_consistent_hash(local_node.id, local_node.regions.load());
 				if (local_node.region.load() != region) {
 					local_node.region.store(region);
 					raft->reset();

@@ -167,7 +167,7 @@ RaftServer::response_vote(const std::string& message)
 
 				if (raft->leader != local_node) {
 					raft->leader = local_node;
-					L_NOTICE(this, "Raft: New leader is %s (1)", raft->leader.name.c_str());
+					L_NOTICE(this, "Raft: New leader for region %d is %s (1)", local_node.region.load(), raft->leader.name.c_str());
 				}
 
 				raft->start_leader_heartbeat();
@@ -211,7 +211,7 @@ RaftServer::leader(const std::string& message)
 
 	if (raft->leader != remote_node) {
 		raft->leader = remote_node;
-		L_NOTICE(this, "Raft: New leader is %s (2)", raft->leader.name.c_str());
+		L_NOTICE(this, "Raft: New leader for region %d is %s (2)", local_node.region.load(), raft->leader.name.c_str());
 	}
 
 	raft->reset_leader_election_timeout();
