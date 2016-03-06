@@ -168,7 +168,7 @@ RaftServer::response_vote(const std::string& message)
 				raft->state = Raft::State::LEADER;
 				raft->leader = lower_string(local_node.name);
 
-				raft->start_heartbeat();
+				raft->start_leader_heartbeat();
 
 				L_INFO(this, "Raft: New leader is %s (1)", raft->leader.c_str());
 			}

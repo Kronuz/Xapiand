@@ -74,9 +74,11 @@ private:
 
 	std::atomic_bool running;
 
-	ev::timer leader_election;
-
-	ev::timer heartbeat;
+	ev::timer leader_election_timeout;
+	ev::timer leader_heartbeat;
+	ev::async async_start_leader_heartbeat;
+	ev::async async_reset_leader_election_timeout;
+	ev::async async_reset;
 
 	std::string votedFor;
 	std::string leader;
@@ -84,10 +86,15 @@ private:
 	State state;
 	std::atomic_size_t number_servers;
 
-	void leader_election_cb(ev::timer& watcher, int revents);
-	void heartbeat_cb(ev::timer& watcher, int revents);
+	void leader_election_timeout_cb(ev::timer& watcher, int revents);
+	void leader_heartbeat_cb(ev::timer& watcher, int revents);
+	void async_start_leader_heartbeat_cb(ev::async &watcher, int revents);
+	void async_reset_leader_election_timeout_cb(ev::async &watcher, int revents);
+	void async_reset_cb(ev::async &watcher, int revents);
 
-	void start_heartbeat();
+	void _start_leader_heartbeat();
+	void _reset_leader_election_timeout();
+	void _reset();
 
 	friend class RaftServer;
 
@@ -97,7 +104,16 @@ public:
 
 	void start();
 	void stop();
-	void reset();
+
+	void start_leader_heartbeat() {
+		async_start_leader_heartbeat.send();
+	}
+	void reset_leader_election_timeout() {
+		async_reset_leader_election_timeout.send();
+	}
+	void reset() {
+		async_reset.send();
+	}
 
 	inline void send_message(Message type, const std::string& message) {
 		if (type != Raft::Message::HEARTBEAT_LEADER) {
@@ -106,8 +122,6 @@ public:
 		L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
 		BaseUDP::send_message(toUType(type), message);
 	}
-
-	void reset_leader_election_timeout();
 
 	std::string getDescription() const noexcept override;
 };
