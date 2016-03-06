@@ -85,7 +85,7 @@ private:
 	Node leader;
 
 	State state;
-	std::atomic_size_t number_servers;
+	size_t number_servers;
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void leader_heartbeat_cb(ev::timer& watcher, int revents);

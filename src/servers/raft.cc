@@ -82,7 +82,7 @@ Raft::~Raft()
 void
 Raft::start()
 {
-	number_servers.store(manager()->get_nodes_by_region(local_node.region) + 1);
+	number_servers = manager()->get_nodes_by_region(local_node.region) + 1;
 
 	reset_leader_election_timeout();
 	L_RAFT(this, "Raft was started!");
@@ -106,7 +106,7 @@ Raft::_stop()
 	L_EV(this, "Stop raft's leader heartbeat event");
 
 	state = State::FOLLOWER;
-	number_servers.store(1);
+	number_servers = 1;
 
 	L_RAFT(this, "Raft was stopped!");
 }
@@ -160,7 +160,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int)
 	}
 
 	L_RAFT_PROTO(this, "Raft { Reg: %d; State: %d; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
-		local_node.region.load(), state, leader_election_timeout.repeat, term, number_servers.load(), leader.c_str());
+		local_node.region.load(), state, leader_election_timeout.repeat, term, number_servers, leader.c_str());
 
 	if (state != State::LEADER) {
 		state = State::CANDIDATE;
