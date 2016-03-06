@@ -85,6 +85,7 @@ private:
 	ev::async async_start_leader_heartbeat;
 	ev::async async_reset_leader_election_timeout;
 	ev::async async_reset;
+	ev::async async_start;
 	ev::async async_stop;
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
@@ -92,28 +93,32 @@ private:
 	void async_start_leader_heartbeat_cb(ev::async &watcher, int revents);
 	void async_reset_leader_election_timeout_cb(ev::async &watcher, int revents);
 	void async_reset_cb(ev::async &watcher, int revents);
+	void async_start_cb(ev::async &watcher, int revents);
 	void async_stop_cb(ev::async &watcher, int revents);
 
 	void _start_leader_heartbeat();
 	void _reset_leader_election_timeout();
 	void _reset();
+	void _start();
 	void _stop();
 
 public:
 	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
 	~Raft();
 
-	void start_leader_heartbeat() {
+	inline void start_leader_heartbeat() {
 		async_start_leader_heartbeat.send();
 	}
-	void reset_leader_election_timeout() {
+	inline void reset_leader_election_timeout() {
 		async_reset_leader_election_timeout.send();
 	}
-	void reset() {
+	inline void reset() {
 		async_reset.send();
 	}
-	void start();
-	void stop() {
+	inline void start() {
+		async_start.send();
+	}
+	inline void stop() {
 		async_stop.send();
 	}
 

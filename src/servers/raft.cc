@@ -43,6 +43,7 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_,
 	  leader_heartbeat(*loop),
 	  async_reset_leader_election_timeout(*loop),
 	  async_reset(*loop),
+	  async_start(*loop),
 	  async_stop(*loop)
 {
 	leader_election_timeout.set<Raft, &Raft::leader_election_timeout_cb>(this);
@@ -51,19 +52,23 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_,
 
 	async_start_leader_heartbeat.set<Raft, &Raft::async_start_leader_heartbeat_cb>(this);
 	async_start_leader_heartbeat.start();
-	L_EV(this, "Start manager's async start leader heartbeat event");
+	L_EV(this, "Start raft's async start leader heartbeat event");
 
 	async_reset_leader_election_timeout.set<Raft, &Raft::async_reset_leader_election_timeout_cb>(this);
 	async_reset_leader_election_timeout.start();
-	L_EV(this, "Start manager's async reset leader election timeout event");
+	L_EV(this, "Start raft's async reset leader election timeout event");
 
 	async_reset.set<Raft, &Raft::async_reset_cb>(this);
 	async_reset.start();
-	L_EV(this, "Start manager's async reset event");
+	L_EV(this, "Start raft's async reset event");
+
+	async_start.set<Raft, &Raft::async_start_cb>(this);
+	async_start.start();
+	L_EV(this, "Start raft's async start event");
 
 	async_stop.set<Raft, &Raft::async_stop_cb>(this);
 	async_stop.start();
-	L_EV(this, "Start manager's async stop event");
+	L_EV(this, "Start raft's async stop event");
 
 	L_OBJ(this, "CREATED RAFT CONSENSUS");
 }
@@ -81,12 +86,9 @@ Raft::~Raft()
 
 
 void
-Raft::start()
+Raft::async_start_cb(ev::async &, int)
 {
-	number_servers = manager()->get_nodes_by_region(local_node.region) + 1;
-
-	reset_leader_election_timeout();
-	L_RAFT(this, "Raft was started!");
+	_start();
 }
 
 
@@ -94,6 +96,17 @@ void
 Raft::async_stop_cb(ev::async &, int)
 {
 	_stop();
+}
+
+
+void
+Raft::_start()
+{
+	number_servers = manager()->get_nodes_by_region(local_node.region) + 1;
+
+	_reset_leader_election_timeout();
+
+	L_RAFT(this, "Raft was started!");
 }
 
 
