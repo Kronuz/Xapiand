@@ -33,13 +33,13 @@ constexpr const char* const Discovery::MessageNames[];
 Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_)
 	: BaseUDP(manager_, loop_, port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
 	  heartbeat(*loop),
-	  async_reset(*loop)
+	  async_enter(*loop)
 {
 	heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
 
-	async_reset.set<Discovery, &Discovery::async_reset_cb>(this);
-	async_reset.start();
-	L_EV(this, "Start discovery's async reset event");
+	async_enter.set<Discovery, &Discovery::async_enter_cb>(this);
+	async_enter.start();
+	L_EV(this, "Start discovery's async enter event");
 
 	L_OBJ(this, "CREATED DISCOVERY");
 }
@@ -76,15 +76,17 @@ Discovery::stop() {
 
 
 void
-Discovery::async_reset_cb(ev::async &, int)
+Discovery::async_enter_cb(ev::async &, int)
 {
-	_reset();
+	_enter();
 }
 
 
 void
-Discovery::_reset()
+Discovery::_enter()
 {
+	send_message(Message::ENTER, local_node.serialise());
+
 	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
 	heartbeat.again();
 	L_EV(this, "Reset discovery's heartbeat event (%f)", heartbeat.repeat);

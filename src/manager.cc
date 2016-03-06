@@ -157,7 +157,12 @@ XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<st
 		}
 	}
 
-	L_NOTICE(this, "Node %s accepted to the party!", node_name.c_str());
+	L_INFO(this, "Node %s accepted to the party!", node_name.c_str());
+
+	if (auto discovery = proto_discovery.lock()) {
+		discovery->enter();
+	}
+
 	return true;
 }
 
@@ -254,10 +259,6 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 		case 2:
 			L_NOTICE(this, "Joined cluster %s: It was already online!", cluster_name.c_str());
 			break;
-	}
-
-	if (auto discovery = proto_discovery.lock()) {
-		discovery->reset();
 	}
 }
 

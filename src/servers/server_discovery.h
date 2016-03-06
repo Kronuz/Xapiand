@@ -44,6 +44,7 @@ class DiscoveryServer : public BaseServer {
 	void hello(const std::string& message);
 	void wave(const std::string& message);
 	void sneer(const std::string& message);
+	void enter(const std::string& message);
 	void bye(const std::string& message);
 	void db(const std::string& message);
 	void db_wave(const std::string& message);

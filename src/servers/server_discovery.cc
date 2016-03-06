@@ -60,6 +60,7 @@ DiscoveryServer::discovery_server(Discovery::Message type, const std::string& me
 		&DiscoveryServer::hello,
 		&DiscoveryServer::wave,
 		&DiscoveryServer::sneer,
+		&DiscoveryServer::enter,
 		&DiscoveryServer::bye,
 		&DiscoveryServer::db,
 		&DiscoveryServer::db_wave,
@@ -78,6 +79,8 @@ DiscoveryServer::discovery_server(Discovery::Message type, const std::string& me
 void
 DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 {
+	char inet_addr[INET_ADDRSTRLEN];
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -91,7 +94,6 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 	}
 
 	auto m = manager();
-	char inet_addr[INET_ADDRSTRLEN];
 
 	const Node *node = nullptr;
 	if (m->touch_node(remote_node.name, region, &node)) {
@@ -100,7 +102,11 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 				m->drop_node(remote_node.name);
 				L_INFO(this, "Stalled node %s left the party!", remote_node.name.c_str());
 				if (m->put_node(remote_node)) {
-					L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (2)!", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
+					if (heartbeat) {
+						L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
+					} else {
+						L_DISCOVERY(this, "Node %s joining the party (1)...", remote_node.name.c_str());
+					}
 					local_node.regions.store(-1);
 					m->get_region();
 				} else {
@@ -110,7 +116,11 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 		}
 	} else {
 		if (m->put_node(remote_node)) {
-			L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian) (1)!", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
+			if (heartbeat) {
+				L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (2)", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
+			} else {
+				L_DISCOVERY(this, "Node %s joining the party (2)...", remote_node.name.c_str());
+			}
 			local_node.regions.store(-1);
 			m->get_region();
 		} else {
@@ -179,13 +189,35 @@ DiscoveryServer::sneer(const std::string& message)
 			L_DISCOVERY(this, "Node name %s already taken. Retrying other name...", local_node.name.c_str());
 			m->reset_state();
 		} else {
-			L_ERR(this, "Cannot join the party. Node name %s already taken!", local_node.name.c_str());
+			L_WARNING(this, "Cannot join the party. Node name %s already taken!", local_node.name.c_str());
 			m->state = XapiandManager::State::BAD;
 			local_node.name.clear();
 			m->shutdown_asap.store(epoch::now<>());
 			m->async_shutdown.send();
 		}
 	}
+}
+
+
+void
+DiscoveryServer::enter(const std::string& message)
+{
+	auto m = manager();
+
+	if (m->state != XapiandManager::State::READY) {
+		return;
+	}
+
+	char inet_addr[INET_ADDRSTRLEN];
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Node remote_node = Node::unserialise(&p, p_end);
+
+	m->put_node(remote_node);
+
+	L_INFO(this, "Node %s joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)! (1)", remote_node.name.c_str(), inet_ntop(AF_INET, &remote_node.addr.sin_addr, inet_addr, sizeof(inet_addr)), remote_node.http_port, remote_node.binary_port);
 }
 
 

@@ -43,12 +43,12 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_VERSION = XAPIAND_DISCOVERY_PROTOC
 class Discovery : public BaseUDP {
 private:
 	ev::timer heartbeat;
-	ev::async async_reset;
+	ev::async async_enter;
 
 	void heartbeat_cb(ev::timer& watcher, int revents);
-	void async_reset_cb(ev::async &watcher, int revents);
+	void async_enter_cb(ev::async &watcher, int revents);
 
-	void _reset();
+	void _enter();
 
 public:
 	enum class Message {
@@ -56,6 +56,7 @@ public:
 		HELLO,         // New node saying hello
 		WAVE,          // Nodes waving hello to the new node
 		SNEER,         // Nodes telling the client they don't agree on the new node's name
+		ENTER,         // Node enters the room
 		BYE,           // Node says goodbye
 		DB,            //
 		DB_WAVE,       //
@@ -65,15 +66,15 @@ public:
 	};
 
 	static constexpr const char* const MessageNames[] = {
-		"HEARTBEAT", "HELLO", "WAVE", "SNEER", "BYE", "DB", "DB_WAVE",
+		"HEARTBEAT", "HELLO", "WAVE", "SNEER", "ENTER", "BYE", "DB", "DB_WAVE",
 		"BOSSY_DB_WAVE", "DB_UPDATED",
 	};
 
 	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
 	~Discovery();
 
-	inline void reset() {
-		async_reset.send();
+	inline void enter() {
+		async_enter.send();
 	}
 	void start();
 	void stop();
