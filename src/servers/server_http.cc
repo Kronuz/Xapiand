@@ -27,7 +27,7 @@
 
 
 HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Http>& http_)
-	: BaseServer(server_, loop_, http_->sock),
+	: BaseServer(server_, loop_),
 	  http(http_)
 {
 	io.start(http->sock, ev::READ);

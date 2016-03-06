@@ -29,7 +29,7 @@
 
 
 BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Binary>& binary_)
-	: BaseServer(server_, loop_, binary_->sock),
+	: BaseServer(server_, loop_),
 	  binary(binary_),
 	  async_signal(*loop_)
 {

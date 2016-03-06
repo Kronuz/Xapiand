@@ -33,7 +33,7 @@ using dispatch_func = void (RaftServer::*)(const std::string&);
 
 
 RaftServer::RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft>& raft_)
-	: BaseServer(server_, loop_, raft_->get_socket()),
+	: BaseServer(server_, loop_),
 	  raft(raft_)
 {
 	io.start(raft->get_socket(), ev::READ);
