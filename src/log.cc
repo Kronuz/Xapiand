@@ -170,6 +170,16 @@ Log::add(const std::string& str, bool cleanup, std::chrono::time_point<std::chro
 }
 
 
+void
+Log::log(int priority, const std::string& str)
+{
+	static std::mutex log_mutex;
+	std::lock_guard<std::mutex> lk(log_mutex);
+	for (auto& handler : Log::handlers) {
+		handler->log(priority, str);
+	}
+}
+
 std::shared_ptr<Log>
 Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
 {
@@ -180,14 +190,11 @@ Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::ch
 	if (!Log::handlers.size()) {
 		Log::handlers.push_back(std::make_unique<StderrLogger>());
 	}
-	if (wakeup > std::chrono::system_clock::now()) {
+
+	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {
 		return add(str, cleanup, wakeup, priority);
 	} else {
-		static std::mutex log_mutex;
-		std::lock_guard<std::mutex> lk(log_mutex);
-		for (auto& handler : Log::handlers) {
-			handler->log(priority, str);
-		}
+		log(priority, str);
 		return std::make_shared<Log>(str, cleanup, wakeup, priority);
 	}
 }
@@ -223,7 +230,7 @@ LogThread::thread_function()
 				it = log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished.store(true);
-				Log::print(l_ptr->str_start, false, 0, l_ptr->priority);
+				Log::log(l_ptr->priority, l_ptr->str_start);
 				it = log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;

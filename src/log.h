@@ -40,7 +40,8 @@
 
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
-#define LOCATION_LOG_LEVEL LOG_DEBUG  // The minumum log_level that prints file:line
+#define LOCATION_LOG_LEVEL LOG_DEBUG  // The minimum log_level that prints file:line
+#define ASYNC_LOG_LEVEL LOG_INFO  // The minimum log_level that is asynchronous
 
 
 using namespace std::chrono_literals;
@@ -86,6 +87,7 @@ class Log : public std::enable_shared_from_this<Log> {
 
 	static std::string str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 	static std::shared_ptr<Log> add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
+	static void log(int priority, const std::string& str);
 
 	bool cleanup;
 	std::chrono::time_point<std::chrono::system_clock> wakeup;
@@ -181,12 +183,12 @@ class LogThread {
 #define EMERG_COL BRIGHT_RED
 
 #define _(args...)
-#define _LOG_ENABLED(args...) Log::log(false, 1ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
+#define _LOG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
 #define _LOG_TIMED(t, args...) auto __log_timed = Log::log(true, t, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
 #define _LOG_TIMED_CLEAR(args...) __log_timed->unlog(LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
 
-#define _LOG_LOG_ENABLED(args...) Log::log(false, 1ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, LOG_COL, args)
-#define _LOG_DEBUG_ENABLED(args...) Log::log(false, 1ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
+#define _LOG_LOG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, LOG_COL, args)
+#define _LOG_DEBUG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
 #define _LOG_INFO_ENABLED(args...) Log::log(false, 0ms, LOG_INFO, nullptr, __FILE__, __LINE__, NO_COL, INFO_COL, args)
 #define _LOG_NOTICE_ENABLED(args...) Log::log(false, 0ms, LOG_NOTICE, nullptr, __FILE__, __LINE__, NO_COL, NOTICE_COL, args)
 #define _LOG_WARNING_ENABLED(args...) Log::log(false, 0ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, WARNING_COL, args)
@@ -196,7 +198,7 @@ class LogThread {
 #define _LOG_EMERG_ENABLED(args...) Log::log(false, 0ms, -LOG_EMERG, nullptr, __FILE__, __LINE__, NO_COL, EMERG_COL, args)
 #define _LOG_EXC_ENABLED(args...) Log::log(false, 0ms, -LOG_ERR, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
-#define _LOG_MARKED_ENABLED(args...) Log::log(false, 1ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥  " DEBUG_COL, args)
+#define _LOG_MARKED_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥  " DEBUG_COL, args)
 
 #define _LOG_TIMED_100(args...) auto __log_timed = Log::log(true, 100ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 #define _LOG_TIMED_500(args...) auto __log_timed = Log::log(true, 500ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
