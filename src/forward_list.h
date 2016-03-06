@@ -320,6 +320,20 @@ public:
 	}
 
 	/*
+	 * Inserts a new node at the end of the Forward List.
+	 * The content of data is copied (or moved) to the inserted node.
+	 */
+	template<typename Data>
+	auto push_back(Data&& data) {
+		auto position = before_begin();
+		auto aux = ++position;
+		while (aux != end()) {
+			position = aux++;
+		}
+		_insert_after(position, std::forward<Data>(data));
+	}
+
+	/*
 	 * Inserts new node after the position.
 	 * Return: an iterator that points to the new inserted element.
 	 */
