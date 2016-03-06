@@ -41,7 +41,9 @@ struct Node {
 	int binary_port;
 	time_t touched;
 
-	Node() : regions(1), region(0) { }
+	Node() : id(0), regions(1), region(0), http_port(0), binary_port(0), touched(0) {
+		memset(&addr, 0, sizeof(addr));
+	}
 
 	// move constructor, takes a rvalue reference &&
 	Node(Node&& other) {
@@ -78,6 +80,21 @@ struct Node {
 		binary_port = other.binary_port;
 		touched = other.touched;
 		return *this;
+	}
+
+	void clear() {
+		name.clear();
+		id = 0;
+		regions.store(1);
+		region.store(0);
+		memset(&addr, 0, sizeof(addr));
+		http_port = 0;
+		binary_port = 0;
+		touched = 0;
+	}
+
+	bool empty() {
+		return name.empty();
 	}
 
 	std::string serialise() const;
