@@ -72,13 +72,14 @@ private:
 	uint64_t term;
 	size_t votes;
 
-	std::atomic_bool running;
+private:
 
 	ev::timer leader_election_timeout;
 	ev::timer leader_heartbeat;
 	ev::async async_start_leader_heartbeat;
 	ev::async async_reset_leader_election_timeout;
 	ev::async async_reset;
+	ev::async async_stop;
 
 	Node votedFor;
 	Node leader;
@@ -91,19 +92,18 @@ private:
 	void async_start_leader_heartbeat_cb(ev::async &watcher, int revents);
 	void async_reset_leader_election_timeout_cb(ev::async &watcher, int revents);
 	void async_reset_cb(ev::async &watcher, int revents);
+	void async_stop_cb(ev::async &watcher, int revents);
 
 	void _start_leader_heartbeat();
 	void _reset_leader_election_timeout();
 	void _reset();
+	void _stop();
 
 	friend class RaftServer;
 
 public:
 	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
 	~Raft();
-
-	void start();
-	void stop();
 
 	void start_leader_heartbeat() {
 		async_start_leader_heartbeat.send();
@@ -113,6 +113,10 @@ public:
 	}
 	void reset() {
 		async_reset.send();
+	}
+	void start();
+	void stop() {
+		async_stop.send();
 	}
 
 	inline void send_message(Message type, const std::string& message) {

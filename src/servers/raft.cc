@@ -36,11 +36,11 @@ constexpr const char* const Raft::StateNames[];
 Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_)
 	: BaseUDP(manager_, loop_, port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
 	  term(0),
-	  running(false),
 	  leader_election_timeout(*loop),
 	  leader_heartbeat(*loop),
 	  async_reset_leader_election_timeout(*loop),
 	  async_reset(*loop),
+	  async_stop(*loop),
 	  state(State::FOLLOWER),
 	  number_servers(0)
 {
@@ -60,6 +60,10 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_,
 	async_reset.start();
 	L_EV(this, "Start manager's async reset event");
 
+	async_stop.set<Raft, &Raft::async_stop_cb>(this);
+	async_stop.start();
+	L_EV(this, "Start manager's async stop event");
+
 	L_OBJ(this, "CREATED RAFT CONSENSUS");
 }
 
@@ -78,30 +82,33 @@ Raft::~Raft()
 void
 Raft::start()
 {
-	if (!running.exchange(true)) {
-		reset_leader_election_timeout();
-		L_RAFT(this, "Raft was started!");
-	}
 	number_servers.store(manager()->get_nodes_by_region(local_node.region) + 1);
+
+	reset_leader_election_timeout();
+	L_RAFT(this, "Raft was started!");
 }
 
 
 void
-Raft::stop()
+Raft::async_stop_cb(ev::async &, int)
 {
-	if (running.exchange(false)) {
-		leader_election_timeout.stop();
-		L_EV(this, "Stop raft's leader election event");
+	_stop();
+}
 
-		leader_heartbeat.stop();
-		L_EV(this, "Stop raft's leader heartbeat event");
 
-		state = State::FOLLOWER;
-		number_servers.store(1);
+void
+Raft::_stop()
+{
+	leader_election_timeout.stop();
+	L_EV(this, "Stop raft's leader election event");
 
-		L_RAFT(this, "Raft was stopped!");
-	}
-	number_servers.store(manager()->get_nodes_by_region(local_node.region) + 1);
+	leader_heartbeat.stop();
+	L_EV(this, "Stop raft's leader heartbeat event");
+
+	state = State::FOLLOWER;
+	number_servers.store(1);
+
+	L_RAFT(this, "Raft was stopped!");
 }
 
 
