@@ -250,13 +250,13 @@ class Storage {
 
 		LZ4CompressData lz4(data, data_size, STORAGE_MAGIC);
 		auto it = lz4.begin();
-		size_t it_offset = 0;
+		size_t it_offset = 0, it_size = it->size();
 
 		char* buffer = buffer0;
 		off_t tmp_block_offset = block_offset;
 		uint32_t tmp_buffer_offset = buffer_offset;
 
-		while (bin_header_data_size || it || bin_footer_data_size) {
+		while (bin_header_data_size || it_size || bin_footer_data_size) {
 			if (bin_header_data_size) {
 				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
 				if (size > bin_header_data_size) {
@@ -277,12 +277,18 @@ class Storage {
 				}
 			}
 
-			while (it) {
+			while (it_size) {
 				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
-				if (size > it->size() - it_offset) {
-					size = it->size() - it_offset;
+				if (size > (it_size - it_offset)) {
+					size = it_size - it_offset;
 				}
 				memcpy(buffer + buffer_offset, it->c_str() + it_offset, size);
+				it_offset += size;
+				if (it_offset == it_size) {
+					++it;
+					it_offset = 0;
+					it_size = it.size();
+				}
 				buffer_offset += size;
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
@@ -293,8 +299,6 @@ class Storage {
 						goto do_update;
 					}
 				}
-				++it;
-				it_offset = 0;
 			}
 
 			if (bin_footer_data_size) {
