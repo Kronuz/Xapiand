@@ -193,7 +193,7 @@ DiscoveryServer::sneer(const std::string& message)
 			m->state = XapiandManager::State::BAD;
 			local_node.name.clear();
 			m->shutdown_asap.store(epoch::now<>());
-			m->async_shutdown.send();
+			m->shutdown_sig(0);
 		}
 	}
 }

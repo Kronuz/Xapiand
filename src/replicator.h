@@ -41,11 +41,11 @@ class XapiandReplicator : public Task<>, public Worker {
 	XapiandReplicator(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
 
 	void run() override;
-	void shutdown(bool asap=true, bool now=true) override;
 
 	void on_commit(const Endpoint &endpoint);
 
 	void destroy_impl() override;
+	void shutdown_impl(bool asap, bool now) override;
 
 public:
 	~XapiandReplicator();

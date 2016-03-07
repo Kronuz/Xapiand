@@ -187,7 +187,7 @@ HttpClient::~HttpClient()
 
 	if (manager()->shutdown_asap.load()) {
 		if (http_clients <= 0) {
-			manager()->async_shutdown.send();
+			manager()->shutdown_sig(0);
 		}
 	}
 
@@ -410,7 +410,7 @@ HttpClient::run()
 		if (path == "/quit") {
 			time_t now = epoch::now<>();
 			manager()->shutdown_asap.store(now);
-			manager()->async_shutdown.send();
+			manager()->shutdown_sig(0);
 			L_OBJ_END(this, "HttpClient::run:END");
 			return;
 		}

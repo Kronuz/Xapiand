@@ -147,7 +147,5 @@ protected:
 	bool send_file(int fd);
 
 	void destroy_impl() override;
-
-public:
-	void shutdown(bool asap=true, bool now=true) override;
+	void shutdown_impl(bool asap, bool now) override;
 };

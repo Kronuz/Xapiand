@@ -91,11 +91,11 @@ XapiandServer::destroy_impl()
 
 
 void
-XapiandServer::shutdown(bool asap, bool now)
+XapiandServer::shutdown_impl(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN XAPIAN SERVER! (%d %d)", asap, now);
 
-	Worker::shutdown(asap, now);
+	Worker::shutdown_impl(asap, now);
 
 	destroy();
 

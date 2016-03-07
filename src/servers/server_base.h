@@ -37,12 +37,12 @@ protected:
 	BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_);
 
 	void destroy_impl() override;
+	void shutdown_impl(bool asap, bool now) override;
 
 public:
 	virtual ~BaseServer();
 
 	virtual void io_accept_cb(ev::io& watcher, int revents) = 0;
-	void shutdown(bool asap, bool now) override;
 
 	inline decltype(auto) manager() noexcept {
 		return share_parent<XapiandServer>()->manager();

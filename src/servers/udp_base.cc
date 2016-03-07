@@ -68,11 +68,11 @@ BaseUDP::destroy_impl()
 
 
 void
-BaseUDP::shutdown(bool asap, bool now)
+BaseUDP::shutdown_impl(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE UDP! (%d %d)", asap, now);
 
-	Worker::shutdown(asap, now);
+	Worker::shutdown_impl(asap, now);
 
 	destroy();
 

@@ -43,6 +43,7 @@ protected:
 	template<typename T, typename L>
 	Worker(T&& parent, L&& loop_)
 		: loop(loop_ ? std::forward<L>(loop_) : &_dynamic_loop),
+		  _async_shutdown(*loop),
 		  _async_break_loop(*loop),
 		  _async_destroy(*loop),
 		  _async_detach(*loop),
@@ -51,6 +52,9 @@ protected:
 		if (_parent) {
 			_iterator = _parent->_children.end();
 		}
+		_async_shutdown.set<Worker, &Worker::_async_shutdown_cb>(this);
+		_async_shutdown.start();
+
 		_async_break_loop.set<Worker, &Worker::_async_break_loop_cb>(this);
 		_async_break_loop.start();
 
@@ -63,10 +67,32 @@ protected:
 		L_OBJ(this, "CREATED WORKER!");
 	}
 
+	virtual void shutdown_impl(bool asap, bool now) {
+		std::unique_lock<std::mutex> lk(_mtx);
+
+		L_OBJ(this , "SHUTDOWN WORKER! (%d %d): %zu children", asap, now, _children.size());
+
+		for (auto it = _children.begin(); it != _children.end();) {
+			auto child = *it++;
+			if (child) {
+				lk.unlock();
+				child->shutdown_impl(asap, now);
+				lk.lock();
+			} else {
+				it = _children.erase(it);
+			}
+		}
+	}
+
+	virtual void destroy_impl() = 0;
+
 private:
+	bool _asap;
+	bool _now;
 
 	ev::dynamic_loop _dynamic_loop;
 
+	ev::async _async_shutdown;
 	ev::async _async_break_loop;
 	ev::async _async_destroy;
 	ev::async _async_detach;
@@ -98,7 +124,11 @@ private:
 		return _children.end();
 	}
 
-	inline void _async_break_loop_cb(ev::async&, int) {
+	void _async_shutdown_cb() {
+		shutdown_impl(_asap, _now);
+	}
+
+	void _async_break_loop_cb(ev::async&, int) {
 		L_EV(this, "Worker::_async_break_loop_cb");
 
 		L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
@@ -106,11 +136,11 @@ private:
 		L_EV_END(this, "Worker::_async_break_loop_cb:END");
 	}
 
-	inline void _async_destroy_cb(ev::async&, int) {
+	void _async_destroy_cb(ev::async&, int) {
 		destroy_impl();
 	}
 
-	inline void _async_detach_cb(ev::async&, int) {
+	void _async_detach_cb(ev::async&, int) {
 		L_EV(this, "Worker::_async_detach_cb");
 
 		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
@@ -121,8 +151,6 @@ private:
 		L_EV_END(this, "Worker::_async_detach_cb:END");
 	}
 
-	virtual void destroy_impl() = 0;
-
 public:
 	virtual ~Worker() {
 		_async_break_loop.stop();
@@ -132,21 +160,11 @@ public:
 		L_OBJ(this, "DELETED WORKER!");
 	}
 
-	virtual void shutdown(bool asap=true, bool now=true) {
-		std::unique_lock<std::mutex> lk(_mtx);
 
-		L_OBJ(this , "SHUTDOWN WORKER! (%d %d): %zu children", asap, now, _children.size());
-
-		for (auto it = _children.begin(); it != _children.end();) {
-			auto child = *it++;
-			if (child) {
-				lk.unlock();
-				child->shutdown(asap, now);
-				lk.lock();
-			} else {
-				it = _children.erase(it);
-			}
-		}
+	inline void shutdown(bool asap=true, bool now=true) {
+		_asap = asap;
+		_now = now;
+		_async_shutdown.send();
 	}
 
 	inline void break_loop() {

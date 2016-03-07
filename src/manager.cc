@@ -61,10 +61,8 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	  replicator_pool("R%02zu", o.num_replicators),
 	  endp_r(o.endpoints_list_size),
 #endif
-	  shutdown_sig(0),
 	  shutdown_asap(0),
 	  shutdown_now(0),
-	  async_shutdown(*loop),
 	  state(State::RESET),
 	  cluster_name(o.cluster_name),
 	  node_name(o.node_name),
@@ -86,19 +84,12 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	// Set addr in local node
 	local_node.addr = host_address();
 
-	async_shutdown.set<XapiandManager, &XapiandManager::async_shutdown_cb>(this);
-	async_shutdown.start();
-	L_EV(this, "Start manager's async shutdown event");
-
 	L_OBJ(this, "CREATED XAPIAN MANAGER!");
 }
 
 
 XapiandManager::~XapiandManager()
 {
-	async_shutdown.stop();
-	L_EV(this, "Stop async shutdown event");
-
 	destroy_impl();
 
 	L_OBJ(this, "DELETED XAPIAN MANAGER!");
@@ -293,7 +284,7 @@ XapiandManager::host_address()
 
 
 void
-XapiandManager::sig_shutdown_handler()
+XapiandManager::shutdown_sig(int sig)
 {
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
@@ -301,20 +292,20 @@ XapiandManager::sig_shutdown_handler()
 	 * on disk. */
 	auto now = epoch::now<>();
 
-	if (shutdown_now && shutdown_sig != SIGTERM) {
-		if (shutdown_sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
+	if (shutdown_now && sig != SIGTERM) {
+		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			L_WARNING(this, "You insisted... Xapiand exiting now!");
 			exit(1); /* Exit with an error since this was not a clean shutdown. */
 		}
-	} else if (shutdown_asap && shutdown_sig != SIGTERM) {
-		if (shutdown_sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
+	} else if (shutdown_asap && sig != SIGTERM) {
+		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			shutdown_now = now;
 			L_INFO(this, "Trying immediate shutdown.");
-		} else if (shutdown_sig == 0) {
+		} else if (sig == 0) {
 			shutdown_now = now;
 		}
 	} else {
-		switch (shutdown_sig) {
+		switch (sig) {
 			case SIGINT:
 				L_INFO(this, "Received SIGINT scheduling shutdown...");
 				break;
@@ -366,24 +357,11 @@ XapiandManager::destroy_impl()
 
 
 void
-XapiandManager::async_shutdown_cb(ev::async&, int)
-{
-	L_OBJ(this , "ASYNC SHUTDOWN XAPIAN MANAGER! (%d)", shutdown_sig);
-
-	L_EV(this, "Async shutdown event received!");
-
-	L_EV_BEGIN(this, "XapiandManager::async_shutdown_cb:BEGIN");
-	sig_shutdown_handler();
-	L_EV_END(this, "XapiandManager::async_shutdown_cb:END");
-}
-
-
-void
-XapiandManager::shutdown(bool asap, bool now)
+XapiandManager::shutdown_impl(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER! (%d %d)", asap, now);
 
-	Worker::shutdown(asap, now);
+	Worker::shutdown_impl(asap, now);
 
 	destroy();
 

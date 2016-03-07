@@ -44,11 +44,11 @@ BaseServer::~BaseServer()
 
 
 void
-BaseServer::shutdown(bool asap, bool now)
+BaseServer::shutdown_impl(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE SERVER! (%d %d)", asap, now);
 
-	Worker::shutdown(asap, now);
+	Worker::shutdown_impl(asap, now);
 
 	destroy();
 

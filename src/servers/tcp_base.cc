@@ -75,11 +75,11 @@ BaseTCP::destroy_impl()
 
 
 void
-BaseTCP::shutdown(bool asap, bool now)
+BaseTCP::shutdown_impl(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE TCP! (%d %d)", asap, now);
 
-	Worker::shutdown(asap, now);
+	Worker::shutdown_impl(asap, now);
 
 	destroy();
 
