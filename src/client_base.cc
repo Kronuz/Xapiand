@@ -275,25 +275,27 @@ BaseClient::io_cb_update()
 void
 BaseClient::io_cb(ev::io &watcher, int revents)
 {
+	int fd = watcher.fd;
+
 	L_EV_BEGIN(this, "BaseClient::io_cb:BEGIN");
-	L_EV(this, "%s (sock=%d) %x", (revents & EV_ERROR) ? "EV_ERROR" : (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, revents);
+	L_EV(this, "%s (sock=%d, fd=%d) %x", (revents & EV_ERROR) ? "EV_ERROR" : (revents & EV_WRITE & EV_READ) ? "IO_CB" : (revents & EV_WRITE) ? "WRITE_CB" : (revents & EV_READ) ? "READ_CB" : "IO_CB", sock, fd, revents);
 
 	if (revents & EV_ERROR) {
-		L_ERR(this, "ERROR: got invalid event (sock=%d): %s", sock, strerror(errno));
+		L_ERR(this, "ERROR: got invalid event (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 		destroy();
 	}
 
-	if (sock != watcher.fd && sock != -1) {
+	if (sock != fd && sock != -1) {
 		L_CRIT(this, "The socket is invalid");
 		exit(EX_SOFTWARE);
 	}
 
 	if (revents & EV_WRITE) {
-		io_cb_write(watcher.fd);
+		io_cb_write(fd);
 	}
 
 	if (revents & EV_READ) {
-		io_cb_read(watcher.fd);
+		io_cb_read(fd);
 	}
 
 	io_cb_update();
@@ -310,8 +312,8 @@ WR
 BaseClient::write_directly(int fd)
 {
 	if (fd == -1) {
-		L_ERR(this, "ERROR: write error (sock=%d): Socket already closed!", sock);
-		L_CONN(this, "WR:ERR.1: (sock=%d)", sock);
+		L_ERR(this, "ERROR: write error (sock=%d, fd=%d): Socket already closed!", sock, fd);
+		L_CONN(this, "WR:ERR.1: (sock=%d, fd=%d)", sock, fd);
 		return WR::ERR;
 	} else if (!write_queue.empty()) {
 		std::shared_ptr<Buffer> buffer = write_queue.front();
@@ -327,37 +329,37 @@ BaseClient::write_directly(int fd)
 
 		if (written < 0) {
 			if (ignored_errorno(errno, false)) {
-				L_CONN(this, "WR:RETRY: (sock=%d)", sock);
+				L_CONN(this, "WR:RETRY: (sock=%d, fd=%d)", sock, fd);
 				return WR::RETRY;
 			} else {
-				L_ERR(this, "ERROR: write error (sock=%d): %s", sock, strerror(errno));
-				L_CONN(this, "WR:ERR.2: (sock=%d)", sock);
+				L_ERR(this, "ERROR: write error (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
+				L_CONN(this, "WR:ERR.2: (sock=%d, fd=%d)", sock, fd);
 				return WR::ERR;
 			}
 		} else if (written == 0) {
-			L_CONN(this, "WR:CLOSED: (sock=%d)", sock);
+			L_CONN(this, "WR:CLOSED: (sock=%d, fd=%d)", sock, fd);
 			return WR::CLOSED;
 		} else {
 			auto str(repr(buf_data, written, true, 500));
-			L_CONN_WIRE(this, "(sock=%d) <<-- '%s' [%zu] (%zu bytes)", sock, str.c_str(), str.size(), written);
+			L_CONN_WIRE(this, "(sock=%d, fd=%d) <<-- '%s' [%zu] (%zu bytes)", sock, fd, str.c_str(), str.size(), written);
 			buffer->pos += written;
 			if (buffer->nbytes() == 0) {
 				if (write_queue.pop(buffer)) {
 					if (write_queue.empty()) {
-						L_CONN(this, "WR:OK.1: (sock=%d)", sock);
+						L_CONN(this, "WR:OK.1: (sock=%d, fd=%d)", sock, fd);
 						return WR::OK;
 					} else {
-						L_CONN(this, "WR:PENDING.1: (sock=%d)", sock);
+						L_CONN(this, "WR:PENDING.1: (sock=%d, fd=%d)", sock, fd);
 						return WR::PENDING;
 					}
 				}
 			} else {
-				L_CONN(this, "WR:PENDING.2: (sock=%d)", sock);
+				L_CONN(this, "WR:PENDING.2: (sock=%d, fd=%d)", sock, fd);
 				return WR::PENDING;
 			}
 		}
 	}
-	L_CONN(this, "WR:OK.2: (sock=%d)", sock);
+	L_CONN(this, "WR:OK.2: (sock=%d, fd=%d)", sock, fd);
 	return WR::OK;
 }
 
@@ -377,14 +379,14 @@ BaseClient::_write(int fd, bool async)
 			case WR::CLOSED:
 				if (!async) {
 					io_write.stop();
-					L_EV(this, "Disable write event (sock=%d)", sock);
+					L_EV(this, "Disable write event (sock=%d, fd=%d)", sock, fd);
 				}
 				destroy();
 				return false;
 			case WR::RETRY:
 				if (!async) {
 					io_write.start();
-					L_EV(this, "Enable write event (sock=%d)", sock);
+					L_EV(this, "Enable write event (sock=%d, fd=%d)", sock, fd);
 				} else {
 					async_write.send();
 				}
@@ -396,7 +398,7 @@ BaseClient::_write(int fd, bool async)
 
 	if (!async) {
 		io_write.stop();
-		L_EV(this, "Disable write event (sock=%d)", sock);
+		L_EV(this, "Disable write event (sock=%d, fd=%d)", sock, fd);
 	}
 
 	return true;
@@ -436,34 +438,34 @@ BaseClient::io_cb_read(int fd)
 		if (received < 0) {
 			if (!ignored_errorno(errno, false)) {
 				if (errno == ECONNRESET) {
-					L_WARNING(this, "WARNING: read error (sock=%d): %s", sock, strerror(errno));
+					L_WARNING(this, "WARNING: read error (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 				} else {
-					L_ERR(this, "ERROR: read error (sock=%d): %s", sock, strerror(errno));
+					L_ERR(this, "ERROR: read error (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 				}
 				destroy();
 				return;
 			}
 		} else if (received == 0) {
 			// The peer has closed its half side of the connection.
-			L_CONN(this, "Received EOF (sock=%d)!", sock);
+			L_CONN(this, "Received EOF (sock=%d, fd=%d)!", sock, fd);
 			destroy();
 			return;
 		} else {
 			auto str(repr(buf_data, received, true, 500));
-			L_CONN_WIRE(this, "(sock=%d) -->> '%s' [%zu] (%zu bytes)", sock, str.c_str(), str.size(), received);
+			L_CONN_WIRE(this, "(sock=%d, fd=%d) -->> '%s' [%zu] (%zu bytes)", sock, fd, str.c_str(), str.size(), received);
 
 			if (mode == MODE::READ_FILE_TYPE) {
 				switch (*buf_data++) {
 					case *NO_COMPRESSOR:
-						L_CONN(this, "Receiving uncompressed file (sock=%d)...", sock);
+						L_CONN(this, "Receiving uncompressed file (sock=%d, fd=%d)...", sock, fd);
 						compressor = std::make_unique<ClientNoCompressor>(this);
 						break;
 					case *LZ4_COMPRESSOR:
-						L_CONN(this, "Receiving LZ4 compressed file (sock=%d)...", sock);
+						L_CONN(this, "Receiving LZ4 compressed file (sock=%d, fd=%d)...", sock, fd);
 						compressor = std::make_unique<ClientLZ4Compressor>(this);
 						break;
 					default:
-						L_CONN(this, "Received wrong file mode (sock=%d)!", sock);
+						L_CONN(this, "Received wrong file mode (sock=%d, fd=%d)!", sock, fd);
 						destroy();
 						return;
 				}

@@ -260,14 +260,17 @@ RaftServer::reset(const std::string& message)
 void
 RaftServer::io_accept_cb(ev::io& watcher, int revents)
 {
+	int fd = watcher.fd;
+	int sock = raft->get_socket();
+
 	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN");
 	if (EV_ERROR & revents) {
-		L_EV(this, "ERROR: got invalid raft event (sock=%d): %s", raft->get_socket(), strerror(errno));
+		L_EV(this, "ERROR: got invalid raft event (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 		L_EV_END(this, "RaftServer::io_accept_cb:END");
 		return;
 	}
 
-	assert(raft->get_socket() == watcher.fd || raft->get_socket() == -1);
+	assert(sock == fd || sock == -1);
 
 	if (revents & EV_READ) {
 		while (manager()->state == XapiandManager::State::READY) {

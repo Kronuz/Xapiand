@@ -182,7 +182,7 @@ BaseTCP::accept()
 
 	if ((client_sock = ::accept(sock, (struct sockaddr *)&addr, &addrlen)) < 0) {
 		if (!ignored_errorno(errno, true)) {
-			L_ERR(nullptr, "ERROR: accept error (client_sock=%d): [%d] %s", client_sock, errno, strerror(errno));
+			L_ERR(nullptr, "ERROR: accept error (sock=%d): [%d] %s", sock, errno, strerror(errno));
 		}
 		return -1;
 	}

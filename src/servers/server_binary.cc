@@ -64,20 +64,23 @@ BinaryServer::async_signal_cb(ev::async&, int)
 void
 BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 {
+	int fd = watcher.fd;
+	int sock = binary->sock;
+
 	L_EV_BEGIN(this, "BinaryServer::io_accept_cb:BEGIN");
 
 	if (EV_ERROR & revents) {
-		L_EV(this, "ERROR: got invalid binary event (sock=%d): %s", binary->sock, strerror(errno));
+		L_EV(this, "ERROR: got invalid binary event (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 		L_EV_END(this, "BinaryServer::io_accept_cb:END");
 		return;
 	}
 
-	assert(binary->sock == watcher.fd || binary->sock == -1);
+	assert(sock == fd || sock == -1);
 
 	int client_sock = binary->accept();
 	if (client_sock < 0) {
 		if (!ignored_errorno(errno, false)) {
-			L_ERR(this, "ERROR: accept binary error (sock=%d): %s", binary->sock, strerror(errno));
+			L_ERR(this, "ERROR: accept binary error (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 		}
 		L_EV_END(this, "BinaryServer::io_accept_cb:END");
 		return;
@@ -91,7 +94,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 		return;
 	}
 
-	L_INFO(this, "Accepted new client! (sock=%d)", client_sock);
+	L_INFO(this, "Accepted new client! (client_sock=%d)", client_sock);
 
 	L_EV_END(this, "BinaryServer::io_accept_cb:END");
 }

@@ -46,19 +46,22 @@ HttpServer::~HttpServer()
 void
 HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
+	int fd = watcher.fd;
+	int sock = http->sock;
+
 	L_EV_BEGIN(this, "HttpServer::io_accept_cb:BEGIN");
 	if (EV_ERROR & revents) {
-		L_EV(this, "ERROR: got invalid http event (sock=%d): %s", http->sock, strerror(errno));
+		L_EV(this, "ERROR: got invalid http event (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 		L_EV_END(this, "HttpServer::io_accept_cb:END");
 		return;
 	}
 
-	assert(http->sock == watcher.fd || http->sock == -1);
+	assert(sock == fd || sock == -1);
 
 	int client_sock;
 	if ((client_sock = http->accept()) < 0) {
 		if (!ignored_errorno(errno, false)) {
-			L_ERR(this, "ERROR: accept http error (sock=%d): %s", http->sock, strerror(errno));
+			L_ERR(this, "ERROR: accept http error (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 		}
 	} else {
 		Worker::make_shared<HttpClient>(share_this<HttpServer>(), loop, client_sock);
