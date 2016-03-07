@@ -268,6 +268,6 @@ esac
 
 ########################################################################
 
-CXXFLAGS="$CXXFLAGS -fcolor-diagnostics"
+CXXFLAGS="$CXXFLAGS -fcolor-diagnostics -fsanitize=address"
 
 AC_OUTPUT
