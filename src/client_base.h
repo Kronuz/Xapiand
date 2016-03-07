@@ -146,8 +146,8 @@ protected:
 	void read_file();
 	bool send_file(int fd);
 
+	void destroy_impl() override;
 
 public:
 	void shutdown(bool asap=true, bool now=true) override;
-	void destroy();
 };

@@ -36,6 +36,8 @@
 
 
 class XapiandReplicator : public Task<>, public Worker {
+	friend Worker;
+
 	XapiandReplicator(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
 
 	void run() override;
@@ -43,7 +45,7 @@ class XapiandReplicator : public Task<>, public Worker {
 
 	void on_commit(const Endpoint &endpoint);
 
-	friend Worker;
+	void destroy_impl() override;
 
 public:
 	~XapiandReplicator();

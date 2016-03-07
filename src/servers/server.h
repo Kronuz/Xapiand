@@ -32,18 +32,18 @@ class RaftServer;
 
 
 class XapiandServer : public Task<>, public Worker {
+	friend Worker;
+	friend XapiandManager;
+
 	std::mutex qmtx;
 
 	ev::async async_setup_node;
 
 	XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
 
-	void destroy();
+	void destroy_impl() override;
 
 	void async_setup_node_cb(ev::async& watcher, int revents);
-
-	friend XapiandManager;
-	friend Worker;
 
 public:
 	static std::mutex static_mutex;

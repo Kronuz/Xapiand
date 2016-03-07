@@ -46,8 +46,17 @@ DatabaseAutocommit::DatabaseAutocommit(const std::shared_ptr<XapiandManager>& ma
 
 DatabaseAutocommit::~DatabaseAutocommit()
 {
-	running.store(false);
+	destroy_impl();
+
 	L_OBJ(this , "DELETED AUTOCOMMIT!");
+}
+
+
+void
+DatabaseAutocommit::destroy_impl()
+{
+	running.store(false);
+	wakeup_signal.notify_all();
 }
 
 
@@ -58,8 +67,11 @@ DatabaseAutocommit::shutdown(bool asap, bool now)
 
 	Worker::shutdown(asap, now);
 
-	running.store(false);
-	wakeup_signal.notify_all();
+	destroy();
+
+	if (now) {
+		detach();
+	}
 }
 
 

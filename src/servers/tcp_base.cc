@@ -51,14 +51,14 @@ BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *
 
 BaseTCP::~BaseTCP()
 {
-	destroy();
+	destroy_impl();
 
 	L_OBJ(this, "DELETED BASE TCP!");
 }
 
 
 void
-BaseTCP::destroy()
+BaseTCP::destroy_impl()
 {
 	L_OBJ(this, "DESTROYING BASE TCP!");
 
@@ -79,9 +79,13 @@ BaseTCP::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE TCP! (%d %d)", asap, now);
 
+	Worker::shutdown(asap, now);
+
 	destroy();
 
-	Worker::shutdown(asap, now);
+	if (now) {
+		detach();
+	}
 }
 
 

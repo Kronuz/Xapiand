@@ -44,6 +44,7 @@ protected:
 	Worker(T&& parent, L&& loop_)
 		: loop(loop_ ? std::forward<L>(loop_) : &_dynamic_loop),
 		  _async_break_loop(*loop),
+		  _async_destroy(*loop),
 		  _async_detach(*loop),
 		  _parent(std::forward<T>(parent))
 	{
@@ -52,6 +53,9 @@ protected:
 		}
 		_async_break_loop.set<Worker, &Worker::_async_break_loop_cb>(this);
 		_async_break_loop.start();
+
+		_async_destroy.set<Worker, &Worker::_async_destroy_cb>(this);
+		_async_destroy.start();
 
 		_async_detach.set<Worker, &Worker::_async_detach_cb>(this);
 		_async_detach.start();
@@ -64,7 +68,7 @@ private:
 	ev::dynamic_loop _dynamic_loop;
 
 	ev::async _async_break_loop;
-
+	ev::async _async_destroy;
 	ev::async _async_detach;
 
 	std::mutex _mtx;
@@ -102,6 +106,10 @@ private:
 		L_EV_END(this, "Worker::_async_break_loop_cb:END");
 	}
 
+	inline void _async_destroy_cb(ev::async&, int) {
+		destroy_impl();
+	}
+
 	inline void _async_detach_cb(ev::async&, int) {
 		L_EV(this, "Worker::_async_detach_cb");
 
@@ -113,10 +121,12 @@ private:
 		L_EV_END(this, "Worker::_async_detach_cb:END");
 	}
 
+	virtual void destroy_impl() = 0;
+
 public:
 	virtual ~Worker() {
 		_async_break_loop.stop();
-
+		_async_destroy.stop();
 		_async_detach.stop();
 
 		L_OBJ(this, "DELETED WORKER!");
@@ -132,9 +142,6 @@ public:
 			if (child) {
 				lk.unlock();
 				child->shutdown(asap, now);
-				if (now) {
-					child->detach();
-				}
 				lk.lock();
 			} else {
 				it = _children.erase(it);
@@ -144,6 +151,10 @@ public:
 
 	inline void break_loop() {
 		_async_break_loop.send();
+	}
+
+	inline void destroy() {
+		_async_destroy.send();
 	}
 
 	inline void detach() {

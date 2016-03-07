@@ -76,6 +76,8 @@ class DatabaseAutocommit;
 
 
 class XapiandManager : public Worker  {
+	friend Worker;
+
 	using nodes_map_t = std::unordered_map<std::string, Node>;
 
 	std::mutex qmtx;
@@ -88,9 +90,8 @@ class XapiandManager : public Worker  {
 	void sig_shutdown_handler();
 
 	struct sockaddr_in host_address();
-	void destroy();
 
-	friend Worker;
+	void destroy_impl() override;
 
 protected:
 	std::mutex nodes_mtx;

@@ -38,6 +38,8 @@ protected:
 
 	void sending_message(const std::string& message);
 
+	void destroy_impl() override;
+
 public:
 	BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, uint16_t version_, const std::string& group_, int tries_=1);
 	~BaseUDP();
@@ -49,8 +51,7 @@ public:
 	void send_message(char type, const std::string& content);
 	char get_message(std::string& result, char max_type);
 
-	void shutdown(bool asap, bool now);
-	void destroy();
+	void shutdown(bool asap, bool now) override;
 
 	virtual std::string getDescription() const noexcept = 0;
 

@@ -53,6 +53,8 @@ protected:
 
 	std::string description;
 
+	void destroy_impl() override;
+
 public:
 	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, int tries_, int flags_);
 	~BaseTCP();
@@ -61,8 +63,7 @@ public:
 		return sock;
 	}
 
-	void shutdown(bool asap, bool now);
-	void destroy();
+	void shutdown(bool asap, bool now) override;
 
 	virtual std::string getDescription() const noexcept = 0;
 

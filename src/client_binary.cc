@@ -327,16 +327,6 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 
 
 void
-BinaryClient::shutdown(bool asap, bool now)
-{
-	L_OBJ(this , "SHUTDOWN BINARY CLIENT! (%d %d)", asap, now);
-
-	BaseClient::shutdown(asap, now);
-}
-
-
-
-void
 BinaryClient::checkout_database()
 {
 	if (!database) {

@@ -37,7 +37,7 @@ BaseServer::BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_r
 
 BaseServer::~BaseServer()
 {
-	destroy();
+	destroy_impl();
 
 	L_OBJ(this, "DELETED BASE SERVER!");
 }
@@ -48,14 +48,18 @@ BaseServer::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE SERVER! (%d %d)", asap, now);
 
+	Worker::shutdown(asap, now);
+
 	destroy();
 
-	Worker::shutdown(asap, now);
+	if (now) {
+		detach();
+	}
 }
 
 
 void
-BaseServer::destroy()
+BaseServer::destroy_impl()
 {
 	L_OBJ(this, "DESTROYING BASE SERVER!");
 

@@ -171,8 +171,6 @@ class BinaryClient : public BaseClient {
 
 	BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *loop_, int sock_, double active_timeout_, double idle_timeout_);
 
-	void shutdown(bool asap=true, bool now=true) override;
-
 	void on_read(const char *buf, size_t received) override;
 	void on_read_file(const char *buf, size_t received) override;
 	void on_read_file_done() override;

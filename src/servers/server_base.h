@@ -36,7 +36,7 @@ protected:
 
 	BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_);
 
-	void destroy();
+	void destroy_impl() override;
 
 public:
 	virtual ~BaseServer();

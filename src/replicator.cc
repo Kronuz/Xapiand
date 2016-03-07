@@ -36,6 +36,9 @@ XapiandReplicator::XapiandReplicator(const std::shared_ptr<XapiandManager>& mana
 XapiandReplicator::~XapiandReplicator()
 {
 	L_OBJ(this, "DESTROYING XAPIAN REPLICATOR!");
+
+	destroy_impl();
+
 	L_OBJ(this, "DESTROYED XAPIAN REPLICATOR!");
 }
 
@@ -66,13 +69,24 @@ XapiandReplicator::run()
 
 
 void
+XapiandReplicator::destroy_impl()
+{
+	manager()->database_pool.updated_databases.finish();
+}
+
+
+void
 XapiandReplicator::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN XAPIAN REPLICATOR! (%d %d)", asap, now);
 
 	Worker::shutdown(asap, now);
 
-	manager()->database_pool.updated_databases.finish();
+	destroy();
+
+	if (now) {
+		detach();
+	}
 }
 
 #endif

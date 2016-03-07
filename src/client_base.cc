@@ -198,7 +198,7 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref 
 
 BaseClient::~BaseClient()
 {
-	destroy();
+	destroy_impl();
 
 	delete []read_buffer;
 
@@ -213,7 +213,7 @@ BaseClient::~BaseClient()
 
 
 void
-BaseClient::destroy()
+BaseClient::destroy_impl()
 {
 	L_OBJ(this, "DESTROYING BASE CLIENT!");
 	close();
@@ -576,11 +576,12 @@ BaseClient::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE CLIENT! (%d %d)", asap, now);
 
+	Worker::shutdown(asap, now);
+
 	if (now) {
 		destroy();
+		detach();
 	}
-
-	Worker::shutdown(asap, now);
 }
 
 

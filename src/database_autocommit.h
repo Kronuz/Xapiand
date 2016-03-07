@@ -53,6 +53,8 @@ class DatabaseAutocommit : public Task<>, public Worker {
 
 	std::atomic_bool running;
 
+	void destroy_impl() override;
+
 public:
 	DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
 	~DatabaseAutocommit();
