@@ -248,7 +248,9 @@ BaseClient::close()
 		return;
 	}
 
+	::shutdown(sock, SHUT_RDWR);
 	closed = true;
+
 	L_OBJ(this, "CLOSED BASE CLIENT!");
 }
 
@@ -575,7 +577,6 @@ BaseClient::shutdown(bool asap, bool now)
 	L_OBJ(this , "SHUTDOWN BASE CLIENT! (%d %d)", asap, now);
 
 	if (now) {
-		::shutdown(sock, SHUT_RDWR);
 		destroy();
 	}
 

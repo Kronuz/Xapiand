@@ -66,6 +66,7 @@ BaseTCP::destroy()
 		return;
 	}
 
+	::shutdown(sock, SHUT_RDWR);
 	io::close(sock);
 	sock = -1;
 
@@ -78,7 +79,6 @@ BaseTCP::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE TCP! (%d %d)", asap, now);
 
-	::shutdown(sock, SHUT_RDWR);
 	destroy();
 
 	Worker::shutdown(asap, now);

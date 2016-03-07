@@ -59,6 +59,7 @@ BaseUDP::destroy()
 		return;
 	}
 
+	::shutdown(sock, SHUT_RDWR);
 	io::close(sock);
 	sock = -1;
 
@@ -71,7 +72,6 @@ BaseUDP::shutdown(bool asap, bool now)
 {
 	L_OBJ(this , "SHUTDOWN BASE UDP! (%d %d)", asap, now);
 
-	::shutdown(sock, SHUT_RDWR);
 	destroy();
 
 	Worker::shutdown(asap, now);
