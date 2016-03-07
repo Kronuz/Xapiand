@@ -172,6 +172,7 @@ private:
 
 public:
 	virtual ~Worker() {
+		_async_shutdown.stop();
 		_async_break_loop.stop();
 		_async_destroy.stop();
 		_async_detach.stop();
