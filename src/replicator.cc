@@ -82,10 +82,10 @@ XapiandReplicator::shutdown_impl(time_t asap, time_t now)
 
 	Worker::shutdown_impl(asap, now);
 
-	destroy();
+	destroy_impl(); // Call implementation directly, as we don't use a loop
 
 	if (now) {
-		detach();
+		detach_impl(); // Call implementation directly, as we don't use a loop
 	}
 }
 
