@@ -67,32 +67,10 @@ DatabaseAutocommit::shutdown_impl(time_t asap, time_t now)
 
 	Worker::shutdown_impl(asap, now);
 
-	destroy_impl(); // Call implementation directly, as we don't use a loop
+	// Call implementation directly, as we don't use a loop. Object gets
+	// detached when run() ends:
 
-	if (now) {
-		detach_impl(); // Call implementation directly, as we don't use a loop
-	}
-}
-
-
-void
-DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
-{
-	// Window open perhaps
-	// std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx, std::defer_lock);
-
-	DatabaseCommitStatus& status = DatabaseAutocommit::databases[database->endpoints];
-
-	auto now = std::chrono::system_clock::now();
-	if (!status.weak_database.lock()) {
-		status.weak_database = database;
-		status.max_commit_time = now + 9s;
-	}
-	status.commit_time = now + 3s;
-
-	if (DatabaseAutocommit::next_wakeup_time > status.next_wakeup_time()) {
-		DatabaseAutocommit::wakeup_signal.notify_one();
-	}
+	destroy_impl();
 }
 
 
@@ -133,5 +111,28 @@ DatabaseAutocommit::run()
 				it = DatabaseAutocommit::databases.erase(it);
 			}
 		}
+	}
+
+	detach_impl();
+}
+
+
+void
+DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
+{
+	// Window open perhaps
+	// std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx, std::defer_lock);
+
+	DatabaseCommitStatus& status = DatabaseAutocommit::databases[database->endpoints];
+
+	auto now = std::chrono::system_clock::now();
+	if (!status.weak_database.lock()) {
+		status.weak_database = database;
+		status.max_commit_time = now + 9s;
+	}
+	status.commit_time = now + 3s;
+
+	if (DatabaseAutocommit::next_wakeup_time > status.next_wakeup_time()) {
+		DatabaseAutocommit::wakeup_signal.notify_one();
 	}
 }

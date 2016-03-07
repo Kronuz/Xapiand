@@ -42,31 +42,6 @@ XapiandReplicator::~XapiandReplicator()
 	L_OBJ(this, "DESTROYED XAPIAN REPLICATOR!");
 }
 
-void
-XapiandReplicator::on_commit(const Endpoint &endpoint)
-{
-	if (auto discovery = manager()->weak_discovery.lock()) {
-		discovery->send_message(
-        	Discovery::Message::DB_UPDATED,
-			serialise_length(endpoint.mastery_level) +  // The mastery level of the database
-			serialise_string(endpoint.path) +  // The path of the index
-			local_node.serialise()   // The node where the index is at
-		);
-	}
-}
-
-
-void
-XapiandReplicator::run()
-{
-	// Function that retrieves a task from a queue, runs it and deletes it
-	Endpoint endpoint;
-	while (manager()->database_pool.updated_databases.pop(endpoint)) {
-		L_DEBUG(this, "Replicator was informed database was updated: %s", endpoint.as_string().c_str());
-		on_commit(endpoint);
-	}
-}
-
 
 void
 XapiandReplicator::destroy_impl()
@@ -83,9 +58,36 @@ XapiandReplicator::shutdown_impl(time_t asap, time_t now)
 	Worker::shutdown_impl(asap, now);
 
 	destroy_impl(); // Call implementation directly, as we don't use a loop
+}
 
-	if (now) {
-		detach_impl(); // Call implementation directly, as we don't use a loop
+
+void
+XapiandReplicator::run()
+{
+	// Function that retrieves a task from a queue, runs it and deletes it
+	Endpoint endpoint;
+	while (manager()->database_pool.updated_databases.pop(endpoint)) {
+		L_DEBUG(this, "Replicator was informed database was updated: %s", endpoint.as_string().c_str());
+		on_commit(endpoint);
+	}
+
+	// Call implementation directly, as we don't use a loop. Object gets
+	// detached when run() ends:
+
+	detach_impl();
+}
+
+
+void
+XapiandReplicator::on_commit(const Endpoint &endpoint)
+{
+	if (auto discovery = manager()->weak_discovery.lock()) {
+		discovery->send_message(
+        	Discovery::Message::DB_UPDATED,
+			serialise_length(endpoint.mastery_level) +  // The mastery level of the database
+			serialise_string(endpoint.path) +  // The path of the index
+			local_node.serialise()   // The node where the index is at
+		);
 	}
 }
 
