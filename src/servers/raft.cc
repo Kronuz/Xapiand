@@ -78,8 +78,6 @@ Raft::~Raft()
 void
 Raft::start()
 {
-	number_servers = manager()->get_nodes_by_region(local_node.region) + 1;
-
 	_reset_leader_election_timeout();
 
 	L_RAFT(this, "Raft was started!");
@@ -169,6 +167,8 @@ Raft::leader_election_timeout_cb(ev::timer&, int)
 void
 Raft::_reset_leader_election_timeout()
 {
+	number_servers = manager()->get_nodes_by_region(local_node.region) + 1;
+
 	leader_election_timeout.repeat = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
 	leader_election_timeout.again();
 	L_EV(this, "Restart raft's leader election event (%g)", leader_election_timeout.repeat);

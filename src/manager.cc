@@ -594,8 +594,8 @@ XapiandManager::drop_node(const std::string& node_name)
 size_t
 XapiandManager::get_nodes_by_region(int32_t region)
 {
-	size_t cont = 0;
 	std::lock_guard<std::mutex> lk(nodes_mtx);
+	size_t cont = 0;
 	for (auto it(nodes.begin()); it != nodes.end(); ++it) {
 		if (it->second.region.load() == region) ++cont;
 	}
