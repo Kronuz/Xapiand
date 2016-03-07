@@ -300,10 +300,6 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 	io_cb_update();
 
 	L_EV_END(this, "BaseClient::io_cb:END");
-
-	if (closed) {
-		detach();
-	}
 }
 
 
@@ -577,7 +573,6 @@ BaseClient::shutdown_impl(time_t asap, time_t now)
 
 	if (now) {
 		destroy();
-		detach();
 	}
 }
 
