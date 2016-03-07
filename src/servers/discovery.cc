@@ -76,7 +76,7 @@ Discovery::stop() {
 
 
 void
-Discovery::async_enter_cb(ev::async &, int)
+Discovery::async_enter_cb(ev::async&, int)
 {
 	_enter();
 }

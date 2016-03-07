@@ -46,7 +46,7 @@ private:
 	ev::async async_enter;
 
 	void heartbeat_cb(ev::timer& watcher, int revents);
-	void async_enter_cb(ev::async &watcher, int revents);
+	void async_enter_cb(ev::async& watcher, int revents);
 
 	void _enter();
 
@@ -76,6 +76,7 @@ public:
 	inline void enter() {
 		async_enter.send();
 	}
+
 	void start();
 	void stop();
 

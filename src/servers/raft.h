@@ -88,9 +88,9 @@ private:
 
 	void leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void leader_heartbeat_cb(ev::timer& watcher, int revents);
-	void async_start_leader_heartbeat_cb(ev::async &watcher, int revents);
-	void async_reset_leader_election_timeout_cb(ev::async &watcher, int revents);
-	void async_reset_cb(ev::async &watcher, int revents);
+	void async_start_leader_heartbeat_cb(ev::async& watcher, int revents);
+	void async_reset_leader_election_timeout_cb(ev::async& watcher, int revents);
+	void async_reset_cb(ev::async& watcher, int revents);
 
 	void _start_leader_heartbeat();
 	void _reset_leader_election_timeout();
@@ -103,12 +103,15 @@ public:
 	inline void start_leader_heartbeat() {
 		async_start_leader_heartbeat.send();
 	}
+
 	inline void reset_leader_election_timeout() {
 		async_reset_leader_election_timeout.send();
 	}
+
 	inline void reset() {
 		async_reset.send();
 	}
+
 	void start();
 	void stop();
 

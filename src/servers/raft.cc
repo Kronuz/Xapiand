@@ -63,6 +63,7 @@ Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_,
 	L_OBJ(this, "CREATED RAFT CONSENSUS");
 }
 
+
 Raft::~Raft()
 {
 	leader_election_timeout.stop();
@@ -101,21 +102,21 @@ Raft::stop()
 
 
 void
-Raft::async_start_leader_heartbeat_cb(ev::async &, int)
+Raft::async_start_leader_heartbeat_cb(ev::async&, int)
 {
 	_start_leader_heartbeat();
 }
 
 
 void
-Raft::async_reset_leader_election_timeout_cb(ev::async &, int)
+Raft::async_reset_leader_election_timeout_cb(ev::async&, int)
 {
 	_reset_leader_election_timeout();
 }
 
 
 void
-Raft::async_reset_cb(ev::async &, int)
+Raft::async_reset_cb(ev::async&, int)
 {
 	_reset();
 }
