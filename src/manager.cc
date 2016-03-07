@@ -159,9 +159,11 @@ XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<st
 
 	L_INFO(this, "Node %s accepted to the party!", node_name.c_str());
 
+#ifdef XAPIAND_CLUSTERING
 	if (auto discovery = weak_discovery.lock()) {
 		discovery->enter();
 	}
+#endif
 
 	return true;
 }
@@ -337,10 +339,12 @@ XapiandManager::destroy()
 {
 	L_OBJ(this, "DESTROYING XAPIAN MANAGER!");
 
+#ifdef XAPIAND_CLUSTERING
 	if (auto discovery = weak_discovery.lock()) {
 		L_INFO(this, "Waving goodbye to cluster %s!", cluster_name.c_str());
 		discovery->stop();
 	}
+#endif
 
 	L_DEBUG(this, "Finishing servers pool!");
 	server_pool.finish();

@@ -23,6 +23,7 @@
 #include "udp_base.h"
 
 #include "server.h"
+#include "length.h"
 
 #include <sysexits.h>
 #include <unistd.h>

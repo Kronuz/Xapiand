@@ -1130,6 +1130,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 					if (index_path.at(0) != '/') {
 						index_path = '/' + index_path;
 					}
+#ifdef XAPIAND_CLUSTERING
 					Endpoint index("xapian://" + node_name + index_path);
 					int node_port = (index.port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.port;
 					node_name = index.host.empty() ? node_name : index.host;
@@ -1147,6 +1148,9 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 					}
 					inet_ntop(AF_INET, &(node->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
 					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + index_path, nullptr, -1, node_name);
+#else
+					Endpoint endpoint(index_path);
+#endif
 					endpoints.add(endpoint);
 				} else {
 					for (const auto& asked_node : asked_nodes) {
