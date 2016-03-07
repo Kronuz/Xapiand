@@ -42,7 +42,7 @@ XapiandReplicator::~XapiandReplicator()
 void
 XapiandReplicator::on_commit(const Endpoint &endpoint)
 {
-	if (auto discovery = manager()->proto_discovery.lock()) {
+	if (auto discovery = manager()->weak_discovery.lock()) {
 		discovery->send_message(
         	Discovery::Message::DB_UPDATED,
 			serialise_length(endpoint.mastery_level) +  // The mastery level of the database

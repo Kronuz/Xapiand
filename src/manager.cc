@@ -159,7 +159,7 @@ XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<st
 
 	L_INFO(this, "Node %s accepted to the party!", node_name.c_str());
 
-	if (auto discovery = proto_discovery.lock()) {
+	if (auto discovery = weak_discovery.lock()) {
 		discovery->enter();
 	}
 
@@ -189,8 +189,8 @@ XapiandManager::set_node_id()
 void
 XapiandManager::setup_node()
 {
-	for (auto& s : servers) {
-		if (auto server = s.lock()) {
+	for (auto& weak_server : servers_weak) {
+		if (auto server = weak_server.lock()) {
 			server->async_setup_node.send();
 			return;
 		}
@@ -337,7 +337,7 @@ XapiandManager::destroy()
 {
 	L_OBJ(this, "DESTROYING XAPIAN MANAGER!");
 
-	if (auto discovery = proto_discovery.lock()) {
+	if (auto discovery = weak_discovery.lock()) {
 		L_INFO(this, "Waving goodbye to cluster %s!", cluster_name.c_str());
 		discovery->stop();
 	}
@@ -418,7 +418,7 @@ XapiandManager::run(const opts_t& o)
 
 	for (size_t i = 0; i < o.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr);
-		servers.push_back(server);
+		servers_weak.push_back(server);
 		Worker::make_shared<HttpServer>(server, server->loop, http);
 #ifdef XAPIAND_CLUSTERING
 		if (!solo) {
@@ -444,15 +444,15 @@ XapiandManager::run(const opts_t& o)
 	}
 
 	// Make server protocols weak:
-	proto_http = std::move(http);
+	weak_http = std::move(http);
 #ifdef XAPIAND_CLUSTERING
 	if (!solo) {
 		L_INFO(this, "Joining cluster %s...", cluster_name.c_str());
 		discovery->start();
 
-		proto_binary = std::move(binary);
-		proto_discovery = std::move(discovery);
-		proto_raft = std::move(raft);
+		weak_binary = std::move(binary);
+		weak_discovery = std::move(discovery);
+		weak_raft = std::move(raft);
 	}
 #endif
 
@@ -506,7 +506,7 @@ XapiandManager::reset_state()
 {
 	if (state != State::RESET) {
 		state = State::RESET;
-		if (auto discovery = proto_discovery.lock()) {
+		if (auto discovery = weak_discovery.lock()) {
 			discovery->start();
 		}
 	}
@@ -617,7 +617,7 @@ XapiandManager::get_region(const std::string& db_name)
 int32_t
 XapiandManager::get_region()
 {
-	if (auto raft = proto_raft.lock()) {
+	if (auto raft = weak_raft.lock()) {
 		if (local_node.regions.load() == -1) {
 			if (is_single_node()) {
 				local_node.regions.store(1);
@@ -642,7 +642,7 @@ XapiandManager::get_region()
 std::future<bool>
 XapiandManager::trigger_replication(const Endpoint& src_endpoint, const Endpoint& dst_endpoint)
 {
-	if (auto binary = proto_binary.lock()) {
+	if (auto binary = weak_binary.lock()) {
 		return binary->trigger_replication(src_endpoint, dst_endpoint);
 	}
 	return std::future<bool>();

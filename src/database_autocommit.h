@@ -37,7 +37,7 @@
 
 
 struct DatabaseCommitStatus {
-	std::weak_ptr<const Database> database;
+	std::weak_ptr<const Database> weak_database;
 	std::chrono::time_point<std::chrono::system_clock> max_commit_time;
 	std::chrono::time_point<std::chrono::system_clock> commit_time;
 

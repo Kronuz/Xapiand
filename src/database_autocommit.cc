@@ -72,8 +72,8 @@ DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
 	DatabaseCommitStatus& status = DatabaseAutocommit::databases[database->endpoints];
 
 	auto now = std::chrono::system_clock::now();
-	if (!status.database.lock()) {
-		status.database = database;
+	if (!status.weak_database.lock()) {
+		status.weak_database = database;
 		status.max_commit_time = now + 9s;
 	}
 	status.commit_time = now + 3s;
@@ -97,7 +97,7 @@ DatabaseAutocommit::run()
 		for (auto it = DatabaseAutocommit::databases.begin(); it != DatabaseAutocommit::databases.end(); ) {
 			auto endpoints = it->first;
 			auto status = it->second;
-			if (status.database.lock()) {
+			if (status.weak_database.lock()) {
 				auto next_wakeup_time = status.next_wakeup_time();
 				if (next_wakeup_time <= now) {
 					DatabaseAutocommit::databases.erase(it);

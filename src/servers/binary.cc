@@ -93,7 +93,7 @@ void
 Binary::add_server(const std::shared_ptr<BinaryServer>& server)
 {
 	std::lock_guard<std::mutex> lk(bsmtx);
-	servers.push_back(server);
+	servers_weak.push_back(server);
 }
 
 
@@ -101,13 +101,13 @@ void
 Binary::async_signal_send()
 {
 	std::lock_guard<std::mutex> lk(bsmtx);
-	for (auto it = servers.begin(); it != servers.end(); ) {
+	for (auto it = servers_weak.begin(); it != servers_weak.end(); ) {
 		auto server = (*it).lock();
 		if (server) {
 			server->async_signal.send();
 			++it;
 		} else {
-			it = servers.erase(it);
+			it = servers_weak.erase(it);
 		}
 	}
 }

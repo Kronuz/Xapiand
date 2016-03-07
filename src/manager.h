@@ -114,12 +114,12 @@ public:
 		"BAD", "READY", "SETUP", "WAITING_", "WAITING", "RESET",
 	};
 
-	std::vector<std::weak_ptr<XapiandServer>> servers;
-	std::weak_ptr<Http> proto_http;
+	std::vector<std::weak_ptr<XapiandServer>> servers_weak;
+	std::weak_ptr<Http> weak_http;
 #ifdef XAPIAND_CLUSTERING
-	std::weak_ptr<Binary> proto_binary;
-	std::weak_ptr<Discovery> proto_discovery;
-	std::weak_ptr<Raft> proto_raft;
+	std::weak_ptr<Binary> weak_binary;
+	std::weak_ptr<Discovery> weak_discovery;
+	std::weak_ptr<Raft> weak_raft;
 #endif
 
 	DatabasePool database_pool;

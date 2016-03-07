@@ -40,7 +40,7 @@ class Binary : public BaseTCP {
 	std::mutex bsmtx;
 	void async_signal_send();
 
-	std::vector<std::weak_ptr<BinaryServer>> servers;
+	std::vector<std::weak_ptr<BinaryServer>> servers_weak;
 	TaskQueue<const std::shared_ptr<BinaryServer>&> tasks;
 
 public:
