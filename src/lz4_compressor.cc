@@ -65,7 +65,6 @@ LZ4CompressData::LZ4CompressData(const char* data_, size_t data_size_, int seed)
 LZ4CompressData::~LZ4CompressData()
 {
 	LZ4_freeStream(lz4Stream);
-	XXH32_freeState(xxh_state);
 }
 
 
@@ -144,7 +143,6 @@ LZ4CompressFile::~LZ4CompressFile()
 {
 	io::close(fd);
 	LZ4_freeStream(lz4Stream);
-	XXH32_freeState(xxh_state);
 }
 
 
@@ -211,7 +209,6 @@ LZ4CompressDescriptor::LZ4CompressDescriptor(int& fildes, int seed)
 LZ4CompressDescriptor::~LZ4CompressDescriptor()
 {
 	LZ4_freeStream(lz4Stream);
-	XXH32_freeState(xxh_state);
 }
 
 
@@ -284,7 +281,6 @@ LZ4DecompressData::LZ4DecompressData(const char* data_, size_t data_size_, int s
 LZ4DecompressData::~LZ4DecompressData()
 {
 	LZ4_freeStreamDecode(lz4StreamDecode);
-	XXH32_freeState(xxh_state);
 }
 
 
@@ -367,7 +363,6 @@ LZ4DecompressFile::~LZ4DecompressFile()
 	io::close(fd);
 	free(data);
 	LZ4_freeStreamDecode(lz4StreamDecode);
-	XXH32_freeState(xxh_state);
 }
 
 
@@ -469,7 +464,6 @@ LZ4DecompressDescriptor::~LZ4DecompressDescriptor()
 {
 	free(data);
 	LZ4_freeStreamDecode(lz4StreamDecode);
-	XXH32_freeState(xxh_state);
 }
 
 
@@ -544,7 +538,7 @@ LZ4DecompressDescriptor::next()
 	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, cmpBuf, decPtr, cmpBytes, (int)block_size);
 
 	if (decBytes <= 0) {
-		throw MSG_LZ4Exception("LZ4_decompress_safe_continue failed!");
+		throw MSG_LZ4Exception("LZ4_decompress_safe_continue failed! [decBytes: %d]\n", decBytes);
 	}
 
 	char* const blockStream = (char*)malloc(decBytes);

@@ -107,6 +107,7 @@ public:
 	~LZ4BlockStreaming() {
 		free(cmpBuf);
 		free(buffer);
+		XXH32_freeState(xxh_state);
 	}
 
 	class iterator : public std::iterator<std::input_iterator_tag, LZ4BlockStreaming> {
