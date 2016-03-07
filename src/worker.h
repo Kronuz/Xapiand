@@ -95,12 +95,16 @@ private:
 	}
 
 	inline void _async_break_loop_cb(ev::async&, int) {
+		L_EV(this, "Worker::_async_break_loop_cb");
+
 		L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
 		loop->break_loop();
 		L_EV_END(this, "Worker::_async_break_loop_cb:END");
 	}
 
 	inline void _async_detach_cb(ev::async&, int) {
+		L_EV(this, "Worker::_async_detach_cb");
+
 		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
 		if (_parent) {
 			std::lock_guard<std::mutex> lk(_parent->_mtx);
@@ -142,6 +146,10 @@ public:
 		_async_break_loop.send();
 	}
 
+	inline void detach() {
+		_async_detach.send();
+	}
+
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
 	static inline decltype(auto) make_shared(Args&&... args) {
 		/*
@@ -158,10 +166,6 @@ public:
 		}
 
 		return worker;
-	}
-
-	inline void detach() {
-		_async_detach.send();
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
