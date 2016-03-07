@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "log.h"
 #include "queue.h"
 #include "exception.h"
 #include "utils.h"
