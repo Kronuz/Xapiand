@@ -367,7 +367,6 @@ XapiandManager::shutdown_impl(time_t asap, time_t now)
 
 	if (now) {
 		break_loop();
-		detach();
 	}
 }
 
@@ -475,6 +474,8 @@ XapiandManager::run(const opts_t& o)
 	thread_pool.join();
 
 	L_DEBUG(this, "Server ended!");
+
+	detach_impl();  // manager has no parent, so this isn't really needed
 }
 
 

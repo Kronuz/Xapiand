@@ -61,6 +61,8 @@ XapiandServer::run()
 	L_EV(this, "Starting server loop...");
 	loop->run();
 	L_EV(this, "Server loop ended!");
+
+	detach_impl();
 }
 
 
@@ -101,6 +103,5 @@ XapiandServer::shutdown_impl(time_t asap, time_t now)
 
 	if (now) {
 		break_loop();
-		detach();
 	}
 }
