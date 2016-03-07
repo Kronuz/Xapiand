@@ -272,13 +272,13 @@ DiscoveryServer::db(const std::string& message)
 	}
 
 	if (mastery_level != -1) {
-			L_DISCOVERY(this, "Found local database '%s' with m:%llx!", index_path.c_str(), mastery_level);
-			discovery->send_message(
-				Discovery::Message::DB_WAVE,
-				serialise_length(mastery_level) +  // The mastery level of the database
-				serialise_string(index_path) +  // The path of the index
-				local_node.serialise()  // The node where the index is at
-			);
+		L_DISCOVERY(this, "Found local database '%s' with m:%llx!", index_path.c_str(), mastery_level);
+		discovery->send_message(
+			Discovery::Message::DB_WAVE,
+			serialise_length(mastery_level) +  // The mastery level of the database
+			serialise_string(index_path) +  // The path of the index
+			local_node.serialise()  // The node where the index is at
+		);
 	}
 }
 

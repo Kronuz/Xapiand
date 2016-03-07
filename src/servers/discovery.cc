@@ -60,7 +60,7 @@ Discovery::start() {
 	heartbeat.again();
 	L_EV(this, "Start discovery's heartbeat exploring event (%f)", heartbeat.repeat);
 
-	L_DISCOVERY(this, "Discovery was started!");
+	L_DISCOVERY(this, "Discovery was started! (exploring)");
 }
 
 
@@ -91,7 +91,7 @@ Discovery::_enter()
 	heartbeat.again();
 	L_EV(this, "Reset discovery's heartbeat event (%f)", heartbeat.repeat);
 
-	L_DISCOVERY(this, "Discovery was started!");
+	L_DISCOVERY(this, "Discovery was started! (heartbeat)");
 }
 
 

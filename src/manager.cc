@@ -159,12 +159,6 @@ XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<st
 
 	L_INFO(this, "Node %s accepted to the party!", node_name.c_str());
 
-#ifdef XAPIAND_CLUSTERING
-	if (auto discovery = weak_discovery.lock()) {
-		discovery->enter();
-	}
-#endif
-
 	return true;
 }
 
@@ -262,6 +256,16 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 			L_NOTICE(this, "Joined cluster %s: It was already online!", cluster_name.c_str());
 			break;
 	}
+
+#ifdef XAPIAND_CLUSTERING
+	if (auto raft = weak_raft.lock()) {
+		raft->start();
+	}
+
+	if (auto discovery = weak_discovery.lock()) {
+		discovery->enter();
+	}
+#endif
 }
 
 
@@ -600,8 +604,8 @@ XapiandManager::get_nodes_by_region(int32_t region)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	size_t cont = 0;
-	for (auto it(nodes.begin()); it != nodes.end(); ++it) {
-		if (it->second.region.load() == region) ++cont;
+	for (const auto& node : nodes) {
+		if (node.second.region.load() == region) ++cont;
 	}
 	return cont;
 }
@@ -627,7 +631,7 @@ XapiandManager::get_region()
 				local_node.regions.store(1);
 				local_node.region.store(0);
 				raft->stop();
-			} else {
+			} else if (state == State::READY) {
 				raft->start();
 				local_node.regions.store(sqrt(nodes.size() + 1));
 				int32_t region = jump_consistent_hash(local_node.id, local_node.regions.load());
