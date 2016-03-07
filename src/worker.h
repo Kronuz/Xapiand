@@ -41,6 +41,45 @@ class Worker : public std::enable_shared_from_this<Worker> {
 protected:
 	ev::loop_ref *loop;
 
+private:
+	time_t _asap;
+	time_t _now;
+
+	ev::dynamic_loop _dynamic_loop;
+
+	ev::async _async_shutdown;
+	ev::async _async_break_loop;
+	ev::async _async_destroy;
+	ev::async _async_detach;
+
+	std::mutex _mtx;
+
+	const WorkerShared _parent;
+	WorkerList _children;
+
+	// _iterator should be const_iterator but in linux, std::list member functions
+	// use a standard iterator and not const_iterator.
+	WorkerList::iterator _iterator;
+
+	template<typename T>
+	inline WorkerList::iterator _attach(T&& child) {
+		assert(child);
+		L_OBJ(this, "Worker child [%p] attached to [%p]", child.get(), this);
+		return _children.insert(_children.end(), std::forward<T>(child));
+	}
+
+	template<typename T>
+	decltype(auto) _detach(T&& child) {
+		if (child->_parent && child->_iterator != _children.end()) {
+			auto it = _children.erase(child->_iterator);
+			child->_iterator = _children.end();
+			L_OBJ(this, "Worker child [%p] detached from [%p]", child.get(), this);
+			return it;
+		}
+		return _children.end();
+	}
+
+protected:
 	template<typename T, typename L>
 	Worker(T&& parent, L&& loop_)
 		: loop(loop_ ? std::forward<L>(loop_) : &_dynamic_loop),
@@ -85,70 +124,49 @@ protected:
 		}
 	}
 
+	virtual void break_loop_impl() {
+		loop->break_loop();
+	}
+
 	virtual void destroy_impl() = 0;
 
-private:
-	time_t _asap;
-	time_t _now;
-
-	ev::dynamic_loop _dynamic_loop;
-
-	ev::async _async_shutdown;
-	ev::async _async_break_loop;
-	ev::async _async_destroy;
-	ev::async _async_detach;
-
-	std::mutex _mtx;
-
-	const WorkerShared _parent;
-	WorkerList _children;
-
-	// _iterator should be const_iterator but in linux, std::list member functions
-	// use a standard iterator and not const_iterator.
-	WorkerList::iterator _iterator;
-
-	template<typename T>
-	inline WorkerList::iterator _attach(T&& child) {
-		assert(child);
-		L_OBJ(this, "Worker child [%p] attached to [%p]", child.get(), this);
-		return _children.insert(_children.end(), std::forward<T>(child));
-	}
-
-	template<typename T>
-	decltype(auto) _detach(T&& child) {
-		if (child->_parent && child->_iterator != _children.end()) {
-			auto it = _children.erase(child->_iterator);
-			child->_iterator = _children.end();
-			L_OBJ(this, "Worker child [%p] detached from [%p]", child.get(), this);
-			return it;
+	virtual void detach_impl() {
+		if (_parent) {
+			std::lock_guard<std::mutex> lk(_parent->_mtx);
+			_parent->_detach(shared_from_this());
 		}
-		return _children.end();
 	}
 
+private:
 	void _async_shutdown_cb() {
+		L_EV(this, "Worker::_async_shutdown_cb");
+
+		L_EV_BEGIN(this, "Worker::_async_shutdown_cb:BEGIN");
 		shutdown_impl(_asap, _now);
+		L_EV_END(this, "Worker::_async_shutdown_cb:END");
 	}
 
 	void _async_break_loop_cb(ev::async&, int) {
 		L_EV(this, "Worker::_async_break_loop_cb");
 
 		L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
-		loop->break_loop();
+		break_loop_impl();
 		L_EV_END(this, "Worker::_async_break_loop_cb:END");
 	}
 
 	void _async_destroy_cb(ev::async&, int) {
+		L_EV(this, "Worker::_async_destroy_cb");
+
+		L_EV_BEGIN(this, "Worker::_async_destroy_cb:BEGIN");
 		destroy_impl();
+		L_EV_END(this, "Worker::_async_destroy_cb:END");
 	}
 
 	void _async_detach_cb(ev::async&, int) {
 		L_EV(this, "Worker::_async_detach_cb");
 
 		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
-		if (_parent) {
-			std::lock_guard<std::mutex> lk(_parent->_mtx);
-			_parent->_detach(shared_from_this());
-		}
+		detach_impl();
 		L_EV_END(this, "Worker::_async_detach_cb:END");
 	}
 
