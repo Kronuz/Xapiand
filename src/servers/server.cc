@@ -91,7 +91,7 @@ XapiandServer::destroy_impl()
 
 
 void
-XapiandServer::shutdown_impl(bool asap, bool now)
+XapiandServer::shutdown_impl(time_t asap, time_t now)
 {
 	L_OBJ(this , "SHUTDOWN XAPIAN SERVER! (%d %d)", asap, now);
 

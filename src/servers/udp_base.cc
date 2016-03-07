@@ -68,7 +68,7 @@ BaseUDP::destroy_impl()
 
 
 void
-BaseUDP::shutdown_impl(bool asap, bool now)
+BaseUDP::shutdown_impl(time_t asap, time_t now)
 {
 	L_OBJ(this , "SHUTDOWN BASE UDP! (%d %d)", asap, now);
 

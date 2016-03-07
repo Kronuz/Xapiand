@@ -54,7 +54,7 @@ protected:
 	std::string description;
 
 	void destroy_impl() override;
-	void shutdown_impl(bool asap, bool now) override;
+	void shutdown_impl(time_t asap, time_t now) override;
 
 public:
 	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, int tries_, int flags_);

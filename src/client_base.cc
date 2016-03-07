@@ -572,7 +572,7 @@ BaseClient::async_read_cb(ev::async &, int)
 
 
 void
-BaseClient::shutdown_impl(bool asap, bool now)
+BaseClient::shutdown_impl(time_t asap, time_t now)
 {
 	L_OBJ(this , "SHUTDOWN BASE CLIENT! (%d %d)", asap, now);
 

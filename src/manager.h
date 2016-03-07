@@ -88,7 +88,7 @@ class XapiandManager : public Worker  {
 
 	struct sockaddr_in host_address();
 
-	void shutdown_impl(bool asap, bool now) override;
+	void shutdown_impl(time_t asap, time_t now) override;
 	void destroy_impl() override;
 
 protected:

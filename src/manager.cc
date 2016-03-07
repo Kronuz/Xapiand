@@ -357,7 +357,7 @@ XapiandManager::destroy_impl()
 
 
 void
-XapiandManager::shutdown_impl(bool asap, bool now)
+XapiandManager::shutdown_impl(time_t asap, time_t now)
 {
 	L_OBJ(this , "SHUTDOWN XAPIAN MANAGER! (%d %d)", asap, now);
 

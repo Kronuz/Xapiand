@@ -23,6 +23,7 @@
 #pragma once
 
 #include "log.h"
+#include "utils.h"
 
 #include "ev/ev++.h"
 #include "exception.h"
@@ -67,7 +68,7 @@ protected:
 		L_OBJ(this, "CREATED WORKER!");
 	}
 
-	virtual void shutdown_impl(bool asap, bool now) {
+	virtual void shutdown_impl(time_t asap, time_t now) {
 		std::unique_lock<std::mutex> lk(_mtx);
 
 		L_OBJ(this , "SHUTDOWN WORKER! (%d %d): %zu children", asap, now, _children.size());
@@ -87,8 +88,8 @@ protected:
 	virtual void destroy_impl() = 0;
 
 private:
-	bool _asap;
-	bool _now;
+	time_t _asap;
+	time_t _now;
 
 	ev::dynamic_loop _dynamic_loop;
 
@@ -161,8 +162,15 @@ public:
 	}
 
 
-	inline void shutdown(bool asap=true, bool now=true) {
+	inline void shutdown(time_t asap, time_t now) {
 		_asap = asap;
+		_now = now;
+		_async_shutdown.send();
+	}
+
+	inline void shutdown() {
+		auto now = epoch::now<>();
+		_asap = now;
 		_now = now;
 		_async_shutdown.send();
 	}

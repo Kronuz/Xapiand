@@ -75,7 +75,7 @@ BaseTCP::destroy_impl()
 
 
 void
-BaseTCP::shutdown_impl(bool asap, bool now)
+BaseTCP::shutdown_impl(time_t asap, time_t now)
 {
 	L_OBJ(this , "SHUTDOWN BASE TCP! (%d %d)", asap, now);
 

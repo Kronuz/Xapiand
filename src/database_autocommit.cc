@@ -61,7 +61,7 @@ DatabaseAutocommit::destroy_impl()
 
 
 void
-DatabaseAutocommit::shutdown_impl(bool asap, bool now)
+DatabaseAutocommit::shutdown_impl(time_t asap, time_t now)
 {
 	L_OBJ(this , "SHUTDOWN AUTOCOMMIT! (%d %d)", asap, now);
 

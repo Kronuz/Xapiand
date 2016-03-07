@@ -76,7 +76,7 @@ XapiandReplicator::destroy_impl()
 
 
 void
-XapiandReplicator::shutdown_impl(bool asap, bool now)
+XapiandReplicator::shutdown_impl(time_t asap, time_t now)
 {
 	L_OBJ(this , "SHUTDOWN XAPIAN REPLICATOR! (%d %d)", asap, now);
 
