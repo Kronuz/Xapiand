@@ -108,16 +108,14 @@ protected:
 	}
 
 	virtual void shutdown_impl(time_t asap, time_t now) {
-		std::unique_lock<std::mutex> lk(_mtx);
+		std::lock_guard<std::mutex> lk(_mtx);
 
 		L_OBJ(this , "SHUTDOWN WORKER! (%d %d): %zu children", asap, now, _children.size());
 
 		for (auto it = _children.begin(); it != _children.end();) {
 			auto child = *it++;
 			if (child) {
-				lk.unlock();
 				child->shutdown_impl(asap, now);
-				lk.lock();
 			} else {
 				it = _children.erase(it);
 			}
