@@ -76,12 +76,6 @@ private:
 	// use a standard iterator and not const_iterator.
 	WorkerList::iterator _iterator;
 
-	inline void _create() {
-		if (_parent) {
-			_iterator = _parent->_attach(shared_from_this());
-		}
-	}
-
 	template<typename T>
 	inline WorkerList::iterator _attach(T&& child) {
 		assert(child);
@@ -109,7 +103,7 @@ private:
 	inline void _async_detach_cb(ev::async&, int) {
 		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
 		if (_parent) {
-			std::lock_guard<std::mutex> lk(_mtx);
+			std::lock_guard<std::mutex> lk(_parent->_mtx);
 			_parent->_detach(shared_from_this());
 		}
 		L_EV_END(this, "Worker::_async_detach_cb:END");
@@ -158,8 +152,11 @@ public:
 			enable_make_shared(Args&&... args) : T(std::forward<Args>(args)...) { }
 		};
 		auto worker = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
-		std::lock_guard<std::mutex> lk(worker->_mtx);
-		worker->_create();
+		if (worker->_parent) {
+			std::lock_guard<std::mutex> lk(worker->_parent->_mtx);
+			worker->_iterator = worker->_parent->_attach(worker);
+		}
+
 		return worker;
 	}
 
