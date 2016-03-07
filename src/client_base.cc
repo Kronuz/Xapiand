@@ -287,10 +287,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 		destroy();
 	}
 
-	if (sock != fd && sock != -1) {
-		L_CRIT(this, "The socket is invalid");
-		exit(EX_SOFTWARE);
-	}
+	assert(sock == fd || sock == -1);
 
 	if (revents & EV_WRITE) {
 		io_cb_write(fd);
