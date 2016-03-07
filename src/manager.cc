@@ -360,7 +360,7 @@ XapiandManager::destroy()
 void
 XapiandManager::async_shutdown_cb(ev::async&, int)
 {
-	L_OBJ(this , "ASYNC SHUTDOWN XAPIAN MANAGER! (%d)", sig);
+	L_OBJ(this , "ASYNC SHUTDOWN XAPIAN MANAGER! (%d)", shutdown_sig);
 
 	L_EV(this, "Async shutdown event received!");
 
