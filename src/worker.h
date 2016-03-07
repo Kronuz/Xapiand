@@ -44,6 +44,7 @@ protected:
 	Worker(T&& parent, L&& loop_)
 		: loop(loop_ ? std::forward<L>(loop_) : &_dynamic_loop),
 		  _async_break_loop(*loop),
+		  _async_detach(*loop),
 		  _parent(std::forward<T>(parent))
 	{
 		if (_parent) {
@@ -51,6 +52,10 @@ protected:
 		}
 		_async_break_loop.set<Worker, &Worker::_async_break_loop_cb>(this);
 		_async_break_loop.start();
+
+		_async_detach.set<Worker, &Worker::_async_detach_cb>(this);
+		_async_detach.start();
+
 		L_OBJ(this, "CREATED WORKER!");
 	}
 
@@ -59,6 +64,8 @@ private:
 	ev::dynamic_loop _dynamic_loop;
 
 	ev::async _async_break_loop;
+
+	ev::async _async_detach;
 
 	std::mutex _mtx;
 
@@ -99,9 +106,20 @@ private:
 		L_EV_END(this, "Worker::_async_break_loop_cb:END");
 	}
 
+	inline void _async_detach_cb(ev::async&, int) {
+		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
+		if (_parent) {
+			std::lock_guard<std::mutex> lk(_mtx);
+			_parent->_detach(shared_from_this());
+		}
+		L_EV_END(this, "Worker::_async_detach_cb:END");
+	}
+
 public:
 	virtual ~Worker() {
 		_async_break_loop.stop();
+
+		_async_detach.stop();
 
 		L_OBJ(this, "DELETED WORKER!");
 	}
@@ -116,12 +134,12 @@ public:
 			if (child) {
 				lk.unlock();
 				child->shutdown(asap, now);
-				lk.lock();
 				if (now) {
-					_detach(child);
+					child->detach();
 				}
+				lk.lock();
 			} else {
-				_detach(child);
+				it = _children.erase(it);
 			}
 		}
 	}
@@ -146,10 +164,7 @@ public:
 	}
 
 	inline void detach() {
-		if (_parent) {
-			std::lock_guard<std::mutex> lk(_mtx);
-			_parent->_detach(shared_from_this());
-		}
+		_async_detach.send();
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
