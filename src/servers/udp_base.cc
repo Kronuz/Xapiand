@@ -144,9 +144,6 @@ BaseUDP::bind(int tries, const std::string& group)
 void
 BaseUDP::sending_message(const std::string& message)
 {
-	auto m = manager();
-
-	std::unique_lock<std::mutex> lk(m->get_lock());
 	if (sock != -1) {
 		L_UDP_WIRE(this, "(sock=%d) <<-- '%s'", sock, repr(message).c_str());
 
@@ -159,7 +156,7 @@ BaseUDP::sending_message(const std::string& message)
 		if (written < 0) {
 			if (sock != -1 && !ignored_errorno(errno, true)) {
 				L_ERR(this, "ERROR: sendto error (sock=%d): %s", sock, strerror(errno));
-				m->shutdown();
+				manager()->shutdown();
 			}
 		}
 	}
