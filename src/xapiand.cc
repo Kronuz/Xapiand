@@ -76,10 +76,11 @@ void run(const opts_t &opts) {
 	ev::default_loop default_loop;
 	manager = Worker::make_shared<XapiandManager>(&default_loop, opts);
 	manager->run(opts);
-	if (manager.use_count() == 1) {
+	int managers = manager.use_count();
+	if (managers == 1) {
 		L_NOTICE(nullptr, "Xapiand is cleanly done with all work!");
 	} else {
-		L_WARNING(nullptr, "Xapiand is uncleanly done with all work!");
+		L_WARNING(nullptr, "Xapiand is uncleanly done with all work (%d)!", managers);
 	}
 	manager.reset();
 }
