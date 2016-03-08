@@ -193,7 +193,7 @@ void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr) {
 			_incr_decr(o, decr ? -val_num : val_num, val_num);
 		}
 	} catch (const LimitError& exc){
-		throw MSG_ClientError("In patch increment: %s\n", exc.what());
+		throw MSG_ClientError("In patch increment: %s", exc.what());
 	} catch (const ClientError& exc) {
 		throw MSG_ClientError("In patch increment: %s", exc.what());
 	} catch (const msgpack::type_error&) {

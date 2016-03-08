@@ -538,7 +538,7 @@ LZ4DecompressDescriptor::next()
 	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, cmpBuf, decPtr, cmpBytes, (int)block_size);
 
 	if (decBytes <= 0) {
-		throw MSG_LZ4Exception("LZ4_decompress_safe_continue failed! [decBytes: %d]\n", decBytes);
+		throw MSG_LZ4Exception("LZ4_decompress_safe_continue failed! [decBytes: %d]", decBytes);
 	}
 
 	char* const blockStream = (char*)malloc(decBytes);
