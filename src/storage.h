@@ -239,12 +239,12 @@ class Storage {
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
 		bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
-		const StorageBinHeader* bin_header_data = &bin_header;
+		const char* bin_header_data = reinterpret_cast<const char*>(&bin_header);
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
 		StorageBinFooter bin_footer;
 		memset(&bin_footer, 0, sizeof(bin_footer));
-		const StorageBinFooter* bin_footer_data = &bin_footer;
+		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 
@@ -372,12 +372,12 @@ class Storage {
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
 		bin_header.init(param, static_cast<uint32_t>(data_size), 0);
-		const StorageBinHeader* bin_header_data = &bin_header;
+		const char* bin_header_data = reinterpret_cast<const char*>(&bin_header);
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
 		StorageBinFooter bin_footer;
 		memset(&bin_footer, 0, sizeof(bin_footer));
-		const StorageBinFooter* bin_footer_data = &bin_footer;
+		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 
