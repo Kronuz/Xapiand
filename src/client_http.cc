@@ -440,15 +440,6 @@ HttpClient::run()
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 				break;
 		}
-	} catch (const Xapian::Error& exc) {
-		error_code = 500;
-		error_str = exc.get_msg().c_str();
-		if (*error_str) {
-			error.assign(error_str);
-		} else {
-			error.assign("Unkown Xapian error!");
-		}
-		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (const ClientError& exc) {
 		error_code = 400;
 		error.assign(exc.what());
@@ -460,6 +451,15 @@ HttpClient::run()
 	} catch (const std::exception& exc) {
 		error_code = 500;
 		error.assign(*exc.what() ? exc.what() : "Unkown exception!");
+		L_EXC(this, "ERROR: %s", error.c_str());
+	} catch (const Xapian::Error& exc) {
+		error_code = 500;
+		error_str = exc.get_msg().c_str();
+		if (*error_str) {
+			error.assign(error_str);
+		} else {
+			error.assign("Unkown Xapian error!");
+		}
 		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (...) {
 		error_code = 500;
