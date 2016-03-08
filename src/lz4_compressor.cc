@@ -495,12 +495,8 @@ LZ4DecompressDescriptor::next()
 	}
 
 	if (data_offset == static_cast<size_t>(data_size)) {
-		if unlikely((data_size = io::read(fd, data, read_bytes > LZ4_FILE_READ_SIZE ? LZ4_FILE_READ_SIZE : read_bytes)) < 0) {
+		if unlikely((data_size = io::read(fd, data, read_bytes > LZ4_FILE_READ_SIZE ? LZ4_FILE_READ_SIZE : read_bytes)) <= 0) {
 			throw MSG_LZ4IOError("IO error: read");
-		}
-		if (data_size == 0) {
-			_finish = true;
-			return std::string();
 		}
 		data_offset = 0;
 	}
@@ -510,29 +506,33 @@ LZ4DecompressDescriptor::next()
 	if (sizeof(uint16_t) > res_size) {
 		read_partial_uint16(data + data_offset, &cmpBytes, res_size);
 		data_offset = sizeof(uint16_t) - res_size;
+		read_bytes -= res_size;
 		if ((data_size = io::read(fd, data, read_bytes > LZ4_FILE_READ_SIZE ? LZ4_FILE_READ_SIZE : read_bytes)) < static_cast<ssize_t>(data_offset)) {
 			throw MSG_LZ4CorruptVolume("File is corrupt");
 		}
 		read_partial_uint16(data, &cmpBytes, data_offset, res_size);
+		read_bytes -= data_offset;
 	} else {
 		read_uint16(data + data_offset, &cmpBytes);
 		data_offset += sizeof(uint16_t);
+		read_bytes -= sizeof(uint16_t);
 	}
-	read_bytes -= sizeof(uint16_t);
 
 	res_size = data_size - data_offset;
 	if (cmpBytes > res_size) {
 		read_partial_bin(data + data_offset, cmpBuf, res_size);
 		data_offset = cmpBytes - res_size;
+		read_bytes -= res_size;
 		if ((data_size = io::read(fd, data, read_bytes > LZ4_FILE_READ_SIZE ? LZ4_FILE_READ_SIZE : read_bytes)) < static_cast<ssize_t>(data_offset)) {
 			throw MSG_LZ4CorruptVolume("File is corrupt");
 		}
 		read_partial_bin(data, cmpBuf, data_offset, res_size);
+		read_bytes -= data_offset;
 	} else {
 		read_bin(data + data_offset, cmpBuf, cmpBytes);
 		data_offset += cmpBytes;
+		read_bytes -= cmpBytes;
 	}
-	read_bytes -= cmpBytes;
 
 	char* const decPtr = &buffer[_offset];
 	const int decBytes = LZ4_decompress_safe_continue(lz4StreamDecode, cmpBuf, decPtr, cmpBytes, (int)block_size);
