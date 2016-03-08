@@ -14,6 +14,7 @@ check_PROGRAMS = \
 	set_queue_test \
 	set_serialise_unserialise_test \
 	set_sort_test \
+	set_storage_test \
 	set_threadpool_test \
 	set_wkt_test
 
@@ -52,6 +53,7 @@ common_files = \
 	$(top_builddir)/src/queue.h \
 	$(top_builddir)/src/schema.cc \
 	$(top_builddir)/src/serialise.cc \
+	$(top_builddir)/src/storage.h \
 	$(top_builddir)/src/threadpool.h \
 	$(top_builddir)/src/times.cc \
 	$(top_builddir)/src/utils.cc \
@@ -96,6 +98,9 @@ set_serialise_unserialise_test_LDADD = @CHECK_LIBS@
 
 set_sort_test_SOURCES = $(common_files) set_sort_test.cc test_sort.cc
 set_sort_test_LDADD = @CHECK_LIBS@
+
+set_storage_test_SOURCES = $(common_files) set_storage_test.cc test_storage.cc
+set_storage_test_LDADD = @CHECK_LIBS@
 
 set_threadpool_test_SOURCES = $(common_files) set_threadpool_test.cc test_threadpool.cc
 set_threadpool_test_LDADD = @CHECK_LIBS@
