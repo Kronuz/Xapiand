@@ -10,11 +10,11 @@ if [ -z "$endpoint" ]; then
 fi
 
 function json_escape() {
-	tr '\n' $'\x01' | sed -e 's/\([\"\\]\)/\\\1/g' -e $'s/\x01/\\\\n/g' -e $'s/\b/\\\\b/g' -e $'s/\f/\\\\f/g' -e $'s/\r/\\\\r/g' -e $'s/\t/\\\\t/g'
+	python -c 'import sys, json; print json.dumps(sys.stdin.read())'
 }
 
 for id in $(seq $start $end); do
 	message="$(fortune | json_escape)"
-	data="{\"user\" : \"$USER\", \"postDate\" : \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\", \"message\" : \"$message\"}"
+	data="{\"user\" : \"$USER\", \"postDate\" : \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\", \"message\" : $message}"
 	curl -H "Content-Type: application/json" -XPUT "$endpoint/$id" -d "$data" $4 $5 $6 $7 $8 $9
 done
