@@ -235,7 +235,7 @@ class Storage {
 	}
 
 	uint32_t _write_compress(const char *data, size_t data_size, void* param=nullptr) {
-		uint32_t tmp_flags = flags | STORAGE_FLAG_COMPRESSED;
+		uint32_t tmp_flags = STORAGE_FLAG_COMPRESSED;
 
 		uint32_t curr_offset = header.head.offset;
 
@@ -371,7 +371,7 @@ class Storage {
 	}
 
 	uint32_t _write(const char *data, size_t data_size, void* param=nullptr) {
-		uint32_t tmp_flags = flags;
+		uint32_t tmp_flags = 0;
 
 		const char* orig_data = data;
 
