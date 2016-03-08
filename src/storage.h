@@ -273,10 +273,9 @@ class Storage {
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
 					if (buffer == buffer_curr) {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
 						goto do_update;
 					} else {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_write;
 					}
 				}
@@ -298,10 +297,9 @@ class Storage {
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
 					if (buffer == buffer_curr) {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
 						goto do_update;
 					} else {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_write;
 					}
 				}
@@ -328,10 +326,9 @@ class Storage {
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
 					if (buffer == buffer_curr) {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
 						goto do_update;
 					} else {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_write;
 					}
 				}
@@ -362,10 +359,10 @@ class Storage {
 				close();
 				throw MSG_StorageIOError("IO error: pwrite");
 			}
+			buffer_curr = buffer;
 		}
 
 		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
-		buffer_curr = buffer;
 
 		return curr_offset;
 	}
@@ -409,10 +406,9 @@ class Storage {
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
 					if (buffer == buffer_curr) {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
 						goto do_update;
 					} else {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_write;
 					}
 				}
@@ -430,10 +426,9 @@ class Storage {
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
 					if (buffer == buffer_curr) {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
 						goto do_update;
 					} else {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_write;
 					}
 				}
@@ -460,10 +455,9 @@ class Storage {
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
 					if (buffer == buffer_curr) {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
 						goto do_update;
 					} else {
-						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_write;
 					}
 				}
@@ -489,15 +483,15 @@ class Storage {
 		}
 
 		// Write the first used buffer.
-		if (buffer == buffer_curr) {
+		if (buffer != buffer_curr) {
 			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
 				throw MSG_StorageIOError("IO error: pwrite");
 			}
+			buffer_curr = buffer;
 		}
 
 		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
-		buffer_curr = buffer;
 
 		return curr_offset;
 	}
