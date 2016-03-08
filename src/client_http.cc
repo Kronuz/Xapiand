@@ -403,7 +403,6 @@ HttpClient::run()
 
 	MsgPack err_response;
 	std::string error;
-	const char* error_str;
 	int error_code = 0;
 
 	try {
@@ -445,26 +444,24 @@ HttpClient::run()
 		error.assign(exc.what());
 	} catch (const Exception& exc) {
 		error_code = 500;
-		error.assign(exc.what());
-		L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
-	} catch (const std::exception& exc) {
-		error_code = 500;
-		error.assign(*exc.what() ? exc.what() : "Unkown exception!");
-		L_EXC(this, "ERROR: %s", error.c_str());
+		error.assign(*exc.what() ? exc.what() : "Unkown Exception!");
+		L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 	} catch (const Xapian::Error& exc) {
 		error_code = 500;
-		error_str = exc.get_msg().c_str();
-		if (*error_str) {
-			error.assign(error_str);
-		} else {
-			error.assign("Unkown Xapian error!");
-		}
+		auto exc_msg = exc.get_msg().c_str();
+		error.assign(*exc_msg ? exc_msg : "Unkown Xapian::Error!");
+		L_EXC(this, "ERROR: %s", error.c_str());
+	} catch (const std::exception& exc) {
+		error_code = 500;
+		error.assign(*exc.what() ? exc.what() : "Unkown std::exception!");
 		L_EXC(this, "ERROR: %s", error.c_str());
 	} catch (...) {
 		error_code = 500;
-		error.assign("Unkown error!");
-		L_ERR(this, "ERROR: %s", error.c_str());
+		error.assign("Unknown exception!");
+		std::exception exc;
+		L_EXC(this, "ERROR: %s", error.c_str());
 	}
+
 	if (error_code) {
 		if (database) {
 			manager()->database_pool.checkin(database);

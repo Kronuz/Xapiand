@@ -151,7 +151,8 @@ public:
 				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 				throw;
 			} catch (const Xapian::Error& exc) {
-				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc.get_msg().c_str() ? exc.get_msg().c_str() : "Unkown Xapian::Exception!");
+				auto exc_msg = exc.get_msg().c_str();
+				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown Xapian::Error!");
 				throw;
 			} catch(const std::exception& exc) {
 				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc.what() ? exc.what() : "Unkown std::exception!");

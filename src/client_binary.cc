@@ -415,7 +415,8 @@ BinaryClient::run()
 			checkin_database();
 			shutdown();
 		} catch (const Xapian::NetworkError& exc) {
-			L_EXC(this, "ERROR: %s", exc.get_msg().empty() ? "Unkown Xapian error!" : exc.get_msg().c_str());
+			auto exc_msg = exc.get_msg().c_str();
+			L_EXC(this, "ERROR: %s", *exc_msg ? exc_msg : "Unkown Xapian::NetworkError!");
 			checkin_database();
 			shutdown();
 		} catch (const Xapian::Error& exc) {
@@ -424,17 +425,18 @@ BinaryClient::run()
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 			checkin_database();
 		} catch (const Exception& exc) {
-			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
+			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
 		} catch (const std::exception& exc) {
-			L_EXC(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
+			L_EXC(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
 			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
 		} catch (...) {
-			L_ERR(this, "ERROR: %s", "Unkown error!");
+			std::exception exc;
+			L_EXC(this, "ERROR: %s", "Unkown exception!");
 			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
 			checkin_database();
 			shutdown();
