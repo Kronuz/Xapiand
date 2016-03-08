@@ -443,7 +443,6 @@ HttpClient::run()
 	} catch (const ClientError& exc) {
 		error_code = 400;
 		error.assign(exc.what());
-		L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown exception!");
 	} catch (const Exception& exc) {
 		error_code = 500;
 		error.assign(exc.what());
