@@ -198,6 +198,7 @@ class Storage {
 
 	char buffer0[STORAGE_BLOCK_SIZE];
 	char buffer1[STORAGE_BLOCK_SIZE];
+	char* buffer_curr;
 	uint32_t buffer_offset;
 
 	off_t bin_offset;
@@ -254,7 +255,7 @@ class Storage {
 		auto it = lz4.begin();
 		size_t it_offset = 0, it_size = it->size();
 
-		char* buffer = buffer0;
+		char* buffer = buffer_curr;
 		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + buffer_offset);
 
 		off_t tmp_block_offset = block_offset;
@@ -271,11 +272,12 @@ class Storage {
 				buffer_offset += size;
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
-					if (buffer == buffer1) {
-						goto do_write;
-					} else {
-						buffer = buffer1;
+					if (buffer == buffer_curr) {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_update;
+					} else {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						goto do_write;
 					}
 				}
 			}
@@ -295,11 +297,12 @@ class Storage {
 				buffer_offset += size;
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
-					if (buffer == buffer1) {
-						goto do_write;
-					} else {
-						buffer = buffer1;
+					if (buffer == buffer_curr) {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_update;
+					} else {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						goto do_write;
 					}
 				}
 			}
@@ -324,11 +327,12 @@ class Storage {
 
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
-					if (buffer == buffer1) {
-						goto do_write;
-					} else {
-						buffer = buffer1;
+					if (buffer == buffer_curr) {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_update;
+					} else {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						goto do_write;
 					}
 				}
 			}
@@ -353,14 +357,15 @@ class Storage {
 		}
 
 		// Write the first used buffer.
-		if (buffer == buffer1) {
-			if (io::pwrite(fd, buffer0, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
+		if (buffer != buffer_curr) {
+			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
 				throw MSG_StorageIOError("IO error: pwrite");
 			}
 		}
 
 		header.head.offset += (((sizeof(StorageBinHeader) + bin_header.size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
+		buffer_curr = buffer;
 
 		return curr_offset;
 	}
@@ -386,7 +391,7 @@ class Storage {
 
 		size_t it_offset = 0, it_size = data_size;
 
-		char* buffer = buffer0;
+		char* buffer = buffer_curr;
 		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + buffer_offset);
 
 		off_t tmp_block_offset = block_offset;
@@ -403,11 +408,12 @@ class Storage {
 				buffer_offset += size;
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
-					if (buffer == buffer1) {
-						goto do_write;
-					} else {
-						buffer = buffer1;
+					if (buffer == buffer_curr) {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_update;
+					} else {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						goto do_write;
 					}
 				}
 			}
@@ -423,11 +429,12 @@ class Storage {
 				buffer_offset += size;
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
-					if (buffer == buffer1) {
-						goto do_write;
-					} else {
-						buffer = buffer1;
+					if (buffer == buffer_curr) {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_update;
+					} else {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						goto do_write;
 					}
 				}
 			}
@@ -452,11 +459,12 @@ class Storage {
 
 				if (buffer_offset == STORAGE_BLOCK_SIZE) {
 					buffer_offset = 0;
-					if (buffer == buffer1) {
-						goto do_write;
-					} else {
-						buffer = buffer1;
+					if (buffer == buffer_curr) {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
 						goto do_update;
+					} else {
+						buffer = buffer == buffer0 ? buffer1 : buffer0;
+						goto do_write;
 					}
 				}
 			}
@@ -481,14 +489,15 @@ class Storage {
 		}
 
 		// Write the first used buffer.
-		if (buffer == buffer1) {
-			if (io::pwrite(fd, buffer0, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
+		if (buffer == buffer_curr) {
+			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
 				close();
 				throw MSG_StorageIOError("IO error: pwrite");
 			}
 		}
 
 		header.head.offset += (((sizeof(StorageBinHeader) + bin_header.size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
+		buffer_curr = buffer;
 
 		return curr_offset;
 	}
@@ -501,6 +510,7 @@ public:
 		: flags(0),
 		  fd(0),
 		  free_blocks(0),
+		  buffer_curr(buffer0),
 		  buffer_offset(0),
 		  bin_offset(0),
 		  offset_bin_header(reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header)),
@@ -525,7 +535,7 @@ public:
 
 #if STORAGE_BUFFER_CLEAR
 			if (flags & STORAGE_WRITABLE) {
-				memset(buffer0, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
+				memset(buffer_curr, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
 			}
 #endif
 
@@ -565,7 +575,7 @@ public:
 			buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
 			size_t offset = (buffer_offset / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 			buffer_offset -= offset;
-			if unlikely(io::pread(fd, buffer0, STORAGE_BLOCK_SIZE, offset) < 0) {
+			if unlikely(io::pread(fd, buffer_curr, STORAGE_BLOCK_SIZE, offset) < 0) {
 				close();
 				throw MSG_StorageIOError("IO error: pread");
 			}
