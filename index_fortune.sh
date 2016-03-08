@@ -9,8 +9,12 @@ if [ -z "$endpoint" ]; then
 	exit 64
 fi
 
+function json_escape() {
+	tr '\n' $'\x01' | sed -e 's/\([\"\\]\)/\\\1/g' -e $'s/\x01/\\\\n/g' -e $'s/\b/\\\\b/g' -e $'s/\f/\\\\f/g' -e $'s/\r/\\\\r/g' -e $'s/\t/\\\\t/g'
+}
+
 for id in $(seq $start $end); do
-	message="$(fortune | tr '\n' $'\x01' | sed -e 's/\([\"\\]\)/\\\1/g' -e $'s/\x01/\\\\n/g' -e $'s/\b/\\\\b/g' -e $'s/\f/\\\\f/g' -e $'s/\r/\\\\r/g' -e $'s/\t/\\\\t/g')"
+	message="$(fortune | json_escape)"
 	data="{\"user\" : \"$USER\", \"postDate\" : \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\", \"message\" : \"$message\"}"
 	curl -H "Content-Type: application/json" -XPUT "$endpoint/$id" -d "$data" $4 $5 $6 $7 $8 $9
 done
