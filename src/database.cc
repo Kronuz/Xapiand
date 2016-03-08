@@ -2897,15 +2897,18 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	std::shared_ptr<DatabaseQueue> queue;
 
 	if (database->flags & DB_WRITABLE) {
-		queue = writable_databases[database->hash];
-		if (database->endpoints[0].is_local() && database->mastery_level != -1) {
+		Endpoint& endpoint = database->endpoints[0];
+		if (endpoint.is_local()) {
 			std::string new_revision = database->get_revision_info();
-			if (new_revision != database->checkout_revision) {
-				Endpoint endpoint = database->endpoints[0];
-				endpoint.mastery_level = database->mastery_level;
-				updated_databases.push(endpoint);
+			if (database->checkout_revision != new_revision) {
+				database->checkout_revision = new_revision;
+				if (database->mastery_level != -1) {
+					endpoint.mastery_level = database->mastery_level;
+					updated_databases.push(endpoint);
+				}
 			}
 		}
+		queue = writable_databases[database->hash];
 	} else {
 		queue = databases[database->hash];
 	}
@@ -2916,7 +2919,6 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	}
 
 	int flags = database->flags;
-	Endpoints &endpoints = database->endpoints;
 
 	if (database->modified) {
 		DatabaseAutocommit::signal_changed(database);
@@ -2926,6 +2928,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		queue->push(database);
 	}
 
+	Endpoints& endpoints = database->endpoints;
 	bool signal_checkins = false;
 	switch (queue->state) {
 		case DatabaseQueue::replica_state::REPLICA_SWITCH:
