@@ -303,7 +303,7 @@ class Storage {
 
 			if (bin_footer_data_size) {
 				// Update Header.
-				bin_header.size = lz4.size();
+				bin_header.size = static_cast<uint32_t>(lz4.size());
 				memcpy(buffer0 + tmp_buffer_offset + offset_bin_header, &bin_header.size, sizeof(bin_header.size));
 
 				bin_footer.init(param, lz4.get_digest());
