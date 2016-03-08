@@ -235,13 +235,13 @@ class Storage {
 	}
 
 	uint32_t _write_compress(const char *data, size_t data_size, void* param=nullptr) {
-		flags = STORAGE_FLAG_COMPRESSED;
+		uint32_t tmp_flags = flags | STORAGE_FLAG_COMPRESSED;
 
 		uint32_t curr_offset = header.head.offset;
 
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
-		bin_header.init(param, 0, flags);
+		bin_header.init(param, 0, tmp_flags);
 		const char* bin_header_data = reinterpret_cast<const char*>(&bin_header);
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
@@ -364,14 +364,14 @@ class Storage {
 			}
 		}
 
-		header.head.offset += (((sizeof(StorageBinHeader) + bin_header.size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
+		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 		buffer_curr = buffer;
 
 		return curr_offset;
 	}
 
 	uint32_t _write(const char *data, size_t data_size, void* param=nullptr) {
-		flags = 0;
+		uint32_t tmp_flags = flags;
 
 		const char* orig_data = data;
 
@@ -379,7 +379,7 @@ class Storage {
 
 		StorageBinHeader bin_header;
 		memset(&bin_header, 0, sizeof(bin_header));
-		bin_header.init(param, 0, flags);
+		bin_header.init(param, 0, tmp_flags);
 		const char* bin_header_data = reinterpret_cast<const char*>(&bin_header);
 		size_t bin_header_data_size = sizeof(StorageBinHeader);
 
@@ -496,7 +496,7 @@ class Storage {
 			}
 		}
 
-		header.head.offset += (((sizeof(StorageBinHeader) + bin_header.size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
+		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 		buffer_curr = buffer;
 
 		return curr_offset;
