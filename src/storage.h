@@ -356,7 +356,7 @@ public:
 			if (flags & STORAGE_WRITABLE) {
 				commit();
 			}
-			::close(fd);
+			io::close(fd);
 		}
 
 		fd = 0;
