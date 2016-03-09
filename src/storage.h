@@ -234,268 +234,6 @@ class Storage {
 		}
 	}
 
-	uint32_t _write_compress(const char *data, size_t data_size, void* param=nullptr) {
-		uint32_t tmp_flags = STORAGE_FLAG_COMPRESSED;
-
-		uint32_t curr_offset = header.head.offset;
-
-		StorageBinHeader bin_header;
-		memset(&bin_header, 0, sizeof(bin_header));
-		bin_header.init(param, 0, tmp_flags);
-		const char* bin_header_data = reinterpret_cast<const char*>(&bin_header);
-		size_t bin_header_data_size = sizeof(StorageBinHeader);
-
-		StorageBinFooter bin_footer;
-		memset(&bin_footer, 0, sizeof(bin_footer));
-		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
-		size_t bin_footer_data_size = sizeof(StorageBinFooter);
-		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
-
-		LZ4CompressData lz4(data, data_size, STORAGE_MAGIC);
-		auto it = lz4.begin();
-		size_t it_offset = 0, it_size = it->size();
-
-		char* buffer = buffer_curr;
-		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + buffer_offset);
-
-		off_t tmp_block_offset = block_offset;
-
-		while (bin_header_data_size || it_size || bin_footer_data_size) {
-			if (bin_header_data_size) {
-				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
-				if (size > bin_header_data_size) {
-					size = bin_header_data_size;
-				}
-				memcpy(buffer + buffer_offset, bin_header_data, size);
-				bin_header_data_size -= size;
-				bin_header_data += size;
-				buffer_offset += size;
-				if (buffer_offset == STORAGE_BLOCK_SIZE) {
-					buffer_offset = 0;
-					if (buffer == buffer_curr) {
-						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
-						goto do_update;
-					} else {
-						goto do_write;
-					}
-				}
-			}
-
-			while (it_size) {
-				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
-				if (size > (it_size - it_offset)) {
-					size = it_size - it_offset;
-				}
-				memcpy(buffer + buffer_offset, it->c_str() + it_offset, size);
-				it_offset += size;
-				if (it_offset == it_size) {
-					++it;
-					it_offset = 0;
-					it_size = it.size();
-				}
-				buffer_offset += size;
-				if (buffer_offset == STORAGE_BLOCK_SIZE) {
-					buffer_offset = 0;
-					if (buffer == buffer_curr) {
-						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
-						goto do_update;
-					} else {
-						goto do_write;
-					}
-				}
-			}
-
-			if (bin_footer_data_size) {
-				// Update header size in buffer.
-				buffer_header->size = static_cast<uint32_t>(lz4.size());
-
-				bin_footer.init(param, lz4.get_digest());
-
-				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
-				if (size > bin_footer_data_size) {
-					size = bin_footer_data_size;
-				}
-				memcpy(buffer + buffer_offset, bin_footer_data, size);
-				bin_footer_data_size -= size;
-				bin_footer_data += size;
-				buffer_offset += size;
-
-				// Align the buffer_offset to the next storage alignment
-				buffer_offset = static_cast<uint32_t>(((block_offset + buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
-
-				if (buffer_offset == STORAGE_BLOCK_SIZE) {
-					buffer_offset = 0;
-					if (buffer == buffer_curr) {
-						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
-						goto do_update;
-					} else {
-						goto do_write;
-					}
-				}
-			}
-
-		do_write:
-			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
-				close();
-				throw MSG_StorageIOError("IO error: pwrite");
-			}
-
-		do_update:
-			if (buffer_offset == 0) {
-				block_offset += STORAGE_BLOCK_SIZE;
-				if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
-					throw MSG_StorageEOF("Storage EOF");
-				}
-				--free_blocks;
-#if STORAGE_BUFFER_CLEAR
-				memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
-#endif
-			}
-		}
-
-		// Write the first used buffer.
-		if (buffer != buffer_curr) {
-			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
-				close();
-				throw MSG_StorageIOError("IO error: pwrite");
-			}
-			buffer_curr = buffer;
-		}
-
-		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
-
-		return curr_offset;
-	}
-
-	uint32_t _write(const char *data, size_t data_size, void* param=nullptr) {
-		uint32_t tmp_flags = 0;
-
-		const char* orig_data = data;
-
-		uint32_t curr_offset = header.head.offset;
-
-		StorageBinHeader bin_header;
-		memset(&bin_header, 0, sizeof(bin_header));
-		bin_header.init(param, 0, tmp_flags);
-		const char* bin_header_data = reinterpret_cast<const char*>(&bin_header);
-		size_t bin_header_data_size = sizeof(StorageBinHeader);
-
-		StorageBinFooter bin_footer;
-		memset(&bin_footer, 0, sizeof(bin_footer));
-		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
-		size_t bin_footer_data_size = sizeof(StorageBinFooter);
-		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
-
-		size_t it_offset = 0, it_size = data_size;
-
-		char* buffer = buffer_curr;
-		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + buffer_offset);
-
-		off_t tmp_block_offset = block_offset;
-
-		while (bin_header_data_size || it_size || bin_footer_data_size) {
-			if (bin_header_data_size) {
-				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
-				if (size > bin_header_data_size) {
-					size = bin_header_data_size;
-				}
-				memcpy(buffer + buffer_offset, bin_header_data, size);
-				bin_header_data_size -= size;
-				bin_header_data += size;
-				buffer_offset += size;
-				if (buffer_offset == STORAGE_BLOCK_SIZE) {
-					buffer_offset = 0;
-					if (buffer == buffer_curr) {
-						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
-						goto do_update;
-					} else {
-						goto do_write;
-					}
-				}
-			}
-
-			while (it_size) {
-				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
-				if (size > (it_size - it_offset)) {
-					size = it_size - it_offset;
-				}
-				memcpy(buffer + buffer_offset, data, size);
-				it_size -= size;
-				data += size;
-				buffer_offset += size;
-				if (buffer_offset == STORAGE_BLOCK_SIZE) {
-					buffer_offset = 0;
-					if (buffer == buffer_curr) {
-						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
-						goto do_update;
-					} else {
-						goto do_write;
-					}
-				}
-			}
-
-			if (bin_footer_data_size) {
-				// Update header size in buffer.
-				buffer_header->size = data_size;
-
-				bin_footer.init(param, XXH32(orig_data, data_size, STORAGE_MAGIC));
-
-				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
-				if (size > bin_footer_data_size) {
-					size = bin_footer_data_size;
-				}
-				memcpy(buffer + buffer_offset, bin_footer_data, size);
-				bin_footer_data_size -= size;
-				bin_footer_data += size;
-				buffer_offset += size;
-
-				// Align the buffer_offset to the next storage alignment
-				buffer_offset = static_cast<uint32_t>(((block_offset + buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
-
-				if (buffer_offset == STORAGE_BLOCK_SIZE) {
-					buffer_offset = 0;
-					if (buffer == buffer_curr) {
-						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
-						goto do_update;
-					} else {
-						goto do_write;
-					}
-				}
-			}
-
-		do_write:
-			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
-				close();
-				throw MSG_StorageIOError("IO error: pwrite");
-			}
-
-		do_update:
-			if (buffer_offset == 0) {
-				block_offset += STORAGE_BLOCK_SIZE;
-				if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
-					throw MSG_StorageEOF("Storage EOF");
-				}
-				--free_blocks;
-#if STORAGE_BUFFER_CLEAR
-				memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
-#endif
-			}
-		}
-
-		// Write the first used buffer.
-		if (buffer != buffer_curr) {
-			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
-				close();
-				throw MSG_StorageIOError("IO error: pwrite");
-			}
-			buffer_curr = buffer;
-		}
-
-		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
-
-		return curr_offset;
-	}
-
 protected:
 	StorageHeader header;
 
@@ -603,12 +341,151 @@ public:
 		bin_offset = offset * STORAGE_ALIGNMENT;
 	}
 
-	inline uint32_t write(const char *data, size_t data_size, void* param=nullptr) {
-		if ((flags & STORAGE_COMPRESS) && data_size > STORAGE_MIN_COMPRESS_SIZE) {
-			return _write_compress(data, data_size, param);
+	uint32_t write(const char *data, size_t data_size, void* param=nullptr) {
+		uint32_t curr_offset = header.head.offset;
+		const char* orig_data = data;
+
+		StorageBinHeader bin_header;
+		memset(&bin_header, 0, sizeof(bin_header));
+		const char* bin_header_data = reinterpret_cast<const char*>(&bin_header);
+		size_t bin_header_data_size = sizeof(StorageBinHeader);
+
+		StorageBinFooter bin_footer;
+		memset(&bin_footer, 0, sizeof(bin_footer));
+		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
+		size_t bin_footer_data_size = sizeof(StorageBinFooter);
+
+		std::shared_ptr<LZ4CompressData> lz4;
+		LZ4CompressData::iterator it;
+		size_t it_size;
+		bool compress = (flags & STORAGE_COMPRESS) && data_size > STORAGE_MIN_COMPRESS_SIZE;
+		if (compress) {
+			bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
+			lz4 = std::make_shared<LZ4CompressData>(data, data_size, STORAGE_MAGIC);
+			it = lz4->begin();
+			it_size = it.size();
+			data = it->c_str();
 		} else {
-			return _write(data, data_size, param);
+			bin_header.init(param, data_size, 0);
+			it_size = data_size;
 		}
+
+		char* buffer = buffer_curr;
+		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + buffer_offset);
+
+		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
+		off_t tmp_block_offset = block_offset;
+
+		while (bin_header_data_size || it_size || bin_footer_data_size) {
+			if (bin_header_data_size) {
+				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
+				if (size > bin_header_data_size) {
+					size = bin_header_data_size;
+				}
+				memcpy(buffer + buffer_offset, bin_header_data, size);
+				bin_header_data_size -= size;
+				bin_header_data += size;
+				buffer_offset += size;
+				if (buffer_offset == STORAGE_BLOCK_SIZE) {
+					buffer_offset = 0;
+					if (buffer == buffer_curr) {
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
+						goto do_update;
+					} else {
+						goto do_write;
+					}
+				}
+			}
+
+			while (it_size) {
+				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
+				if (size > it_size) {
+					size = it_size;
+				}
+				memcpy(buffer + buffer_offset, data, size);
+				it_size -= size;
+				if (compress && !it_size) {
+					++it;
+					data = it->c_str();
+					it_size = it.size();
+				} else {
+					data += size;
+				}
+				buffer_offset += size;
+				if (buffer_offset == STORAGE_BLOCK_SIZE) {
+					buffer_offset = 0;
+					if (buffer == buffer_curr) {
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
+						goto do_update;
+					} else {
+						goto do_write;
+					}
+				}
+			}
+
+			if (bin_footer_data_size) {
+				// Update header size in buffer.
+				if (compress) {
+					buffer_header->size = static_cast<uint32_t>(lz4->size());
+					bin_footer.init(param, lz4->get_digest());
+				} else {
+					bin_footer.init(param, XXH32(orig_data, data_size, STORAGE_MAGIC));
+				}
+
+				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
+				if (size > bin_footer_data_size) {
+					size = bin_footer_data_size;
+				}
+				memcpy(buffer + buffer_offset, bin_footer_data, size);
+				bin_footer_data_size -= size;
+				bin_footer_data += size;
+				buffer_offset += size;
+
+				// Align the buffer_offset to the next storage alignment
+				buffer_offset = static_cast<uint32_t>(((block_offset + buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
+
+				if (buffer_offset == STORAGE_BLOCK_SIZE) {
+					buffer_offset = 0;
+					if (buffer == buffer_curr) {
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
+						goto do_update;
+					} else {
+						goto do_write;
+					}
+				}
+			}
+
+		do_write:
+			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
+				close();
+				throw MSG_StorageIOError("IO error: pwrite");
+			}
+
+		do_update:
+			if (buffer_offset == 0) {
+				block_offset += STORAGE_BLOCK_SIZE;
+				if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
+					throw MSG_StorageEOF("Storage EOF");
+				}
+				--free_blocks;
+#if STORAGE_BUFFER_CLEAR
+				memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
+#endif
+			}
+		}
+
+		// Write the first used buffer.
+		if (buffer != buffer_curr) {
+			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
+				close();
+				throw MSG_StorageIOError("IO error: pwrite");
+			}
+			buffer_curr = buffer;
+		}
+
+		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
+
+		return curr_offset;
 	}
 
 	size_t read(char* buf, size_t buf_size, uint32_t limit=-1, void* param=nullptr) {
