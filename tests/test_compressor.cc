@@ -28,11 +28,24 @@
 #include "../src/lz4_compressor.h"
 
 
-const std::string cmp_file = "examples/compressor/compress.lz4";
+static const std::string cmp_file = "examples/compressor/compress.lz4";
 
-constexpr int BLOCK_SIZE = 1024 * 4;
-char buffer[BLOCK_SIZE];
-size_t buffer_offset = 0;
+
+static const std::vector<std::string> small_files({
+	"examples/compressor/Small_File1.txt",
+	"examples/compressor/Small_File2.txt",
+	"examples/compressor/Small_File3.txt",
+	"examples/compressor/Small_File4.txt"
+});
+
+
+static const std::vector<std::string> big_files({
+	"examples/compressor/Big_File1.jpg",
+	"examples/compressor/Big_File2.pdf",
+	"examples/compressor/Big_File3.pdf",
+	"examples/compressor/Big_File4.pdf",
+	"examples/compressor/Big_File5.pdf"
+});
 
 
 std::string read_file(const std::string& filename) {
@@ -59,22 +72,6 @@ std::string read_file(const std::string& filename) {
 }
 
 
-void _write(int fildes, const char* data, size_t size) {
-	if ((buffer_offset + size) > BLOCK_SIZE) {
-		size_t res_size = BLOCK_SIZE - buffer_offset;
-		memcpy(buffer + buffer_offset, data, res_size);
-		if (io::write(fildes, buffer, sizeof(buffer)) != static_cast<ssize_t>(sizeof(buffer))) {
-			throw MSG_Error("IO error: write");
-		}
-		buffer_offset = size - res_size;
-		memcpy(buffer, data + res_size, buffer_offset);
-	} else {
-		memcpy(buffer + buffer_offset, data, size);
-		buffer_offset += size;
-	}
-}
-
-
 int test_Compress_Decompress_Data(const std::string& orig_file) {
 	try {
 		uint32_t cmp_checksum, dec_checksum;
@@ -91,12 +88,15 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 		LZ4CompressData lz4(_data.c_str(), _data.size());
 		auto it = lz4.begin();
 		while (it) {
-			_write(fd, it->c_str(), it.size());
+			if (io::write(fd, it->c_str(), it.size()) != static_cast<ssize_t>(it.size())) {
+				throw MSG_Error("IO error: write");
+			}
 			++it;
 		}
 		cmp_checksum = lz4.get_digest();
 		L_ERR(nullptr, "Size compress: %zu (checksum: %u)\n", lz4.size(), cmp_checksum);
 		io::close(fd);
+
 
 		// Decompress Data
 		std::string cmp_data = read_file(cmp_file.c_str());
@@ -133,7 +133,9 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 		LZ4CompressFile lz4(orig_file);
 		auto it = lz4.begin();
 		while (it) {
-			_write(fd, it->c_str(), it.size());
+			if (io::write(fd, it->c_str(), it.size()) != static_cast<ssize_t>(it.size())) {
+				throw MSG_Error("IO error: write");
+			}
 			++it;
 		}
 		cmp_checksum = lz4.get_digest();
@@ -163,6 +165,7 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 
 int test_Compress_Decompress_Descriptor(const std::string& orig_file, size_t numBytes) {
 	try {
+		size_t total_size = 0;
 		std::vector<size_t> read_bytes;
 		std::vector<uint32_t> cmp_checksums, dec_checksums;
 
@@ -178,22 +181,28 @@ int test_Compress_Decompress_Descriptor(const std::string& orig_file, size_t num
 		}
 
 		LZ4CompressDescriptor lz4(orig_fd);
-		LZ4CompressDescriptor::iterator cmp_it;
-
-		bool more_data = false;
-		do {
+		while (true) {
+			bool more_data = false;
 			lz4.reset(numBytes);
 			auto it = lz4.begin();
 			while (it) {
-				_write(fd, it->c_str(), it.size());
+				if (io::write(fd, it->c_str(), it.size()) != static_cast<ssize_t>(it.size())) {
+					throw MSG_Error("IO error: write");
+				}
 				++it;
 				more_data = true;
 			}
-			read_bytes.push_back(lz4.size());
-			cmp_checksums.push_back(lz4.get_digest());
-		} while (more_data);
-
+			if (more_data) {
+				total_size += lz4.size();
+				read_bytes.push_back(lz4.size());
+				cmp_checksums.push_back(lz4.get_digest());
+				continue;
+			}
+			break;
+		}
+		L_ERR(nullptr, "Size compress: %zu\n", total_size);
 		io::close(orig_fd);
+
 
 		// Decompress File
 		io::lseek(fd, 0, SEEK_SET);
@@ -224,23 +233,6 @@ int test_Compress_Decompress_Descriptor(const std::string& orig_file, size_t num
 		return 1;
 	}
 }
-
-
-static const std::vector<std::string> small_files({
-	"examples/compressor/Small_File1.txt",
-	"examples/compressor/Small_File2.txt",
-	"examples/compressor/Small_File3.txt",
-	"examples/compressor/Small_File4.txt"
-});
-
-
-static const std::vector<std::string> big_files({
-	"examples/compressor/Big_File1.jpg",
-	"examples/compressor/Big_File2.pdf",
-	"examples/compressor/Big_File3.pdf",
-	"examples/compressor/Big_File4.pdf",
-	"examples/compressor/Big_File5.pdf"
-});
 
 
 int test_small_datas() {
