@@ -205,7 +205,6 @@ class Storage {
 	StorageBinHeader bin_header;
 	StorageBinFooter bin_footer;
 
-	size_t offset_bin_header;
 	size_t bin_size;
 
 	LZ4DecompressDescriptor dec_lz4;
@@ -245,12 +244,11 @@ public:
 		  buffer_curr(buffer0),
 		  buffer_offset(0),
 		  bin_offset(0),
-		  offset_bin_header(reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header)),
 		  bin_size(0),
 		  dec_lz4(fd, STORAGE_MAGIC),
 		  xxhash(XXH32_createState()),
 		  bin_hash(0) {
-		assert(offset_bin_header + sizeof(bin_header.size) <= STORAGE_ALIGNMENT);
+		assert((reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header)) + sizeof(bin_header.size) <= STORAGE_ALIGNMENT);
 	}
 
 	virtual ~Storage() {
