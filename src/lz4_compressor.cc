@@ -71,9 +71,6 @@ LZ4CompressData::~LZ4CompressData()
 std::string
 LZ4CompressData::init()
 {
-	_size = 0;
-	_finish = false;
-	_offset = 0;
 	data_offset = 0;
 	return next();
 }
@@ -83,7 +80,6 @@ std::string
 LZ4CompressData::next()
 {
 	if (data_offset == data_size) {
-		_finish = true;
 		return std::string();
 	}
 
@@ -153,9 +149,6 @@ LZ4CompressFile::init()
 		throw MSG_LZ4IOError("IO error: lseek");
 	}
 
-	_size = 0;
-	_finish = false;
-	_offset = 0;
 	return next();
 }
 
@@ -168,7 +161,6 @@ LZ4CompressFile::next()
 	// Read line to the ring buffer.
 	int inpBytes = static_cast<int>(io::read(fd, inpPtr, block_size));
 	if (inpBytes <= 0) {
-		_finish = true;
 		return std::string();
 	}
 
@@ -219,9 +211,6 @@ LZ4CompressDescriptor::init()
 		throw MSG_LZ4IOError("IO error: lseek");
 	}
 
-	_size = 0;
-	_finish = false;
-	_offset = 0;
 	return next();
 }
 
@@ -230,7 +219,6 @@ std::string
 LZ4CompressDescriptor::next()
 {
 	if (read_bytes == 0) {
-		_finish = true;
 		return std::string();
 	}
 
@@ -239,7 +227,6 @@ LZ4CompressDescriptor::next()
 	// Read line to the ring buffer.
 	int inpBytes = static_cast<int>(io::read(fd, inpPtr, static_cast<size_t>(block_size) > read_bytes ? read_bytes : block_size));
 	if (inpBytes <= 0) {
-		_finish = true;
 		return std::string();
 	}
 	read_bytes -= inpBytes;
@@ -287,9 +274,6 @@ LZ4DecompressData::~LZ4DecompressData()
 std::string
 LZ4DecompressData::init()
 {
-	_size = 0;
-	_finish = false;
-	_offset = 0;
 	data_offset = 0;
 	return next();
 }
@@ -299,7 +283,6 @@ std::string
 LZ4DecompressData::next()
 {
 	if (data_size == data_offset) {
-		_finish = true;
 		return std::string();
 	}
 
@@ -377,9 +360,6 @@ LZ4DecompressFile::init()
 		throw MSG_LZ4IOError("IO error: read");
 	}
 
-	_size = 0;
-	_finish = false;
-	_offset = 0;
 	data_offset = 0;
 	return next();
 }
@@ -393,7 +373,6 @@ LZ4DecompressFile::next()
 			throw MSG_LZ4IOError("IO error: read");
 		}
 		if (data_size == 0) {
-			_finish = true;
 			return std::string();
 		}
 		data_offset = 0;
@@ -478,9 +457,6 @@ LZ4DecompressDescriptor::init()
 		throw MSG_LZ4IOError("IO error: read");
 	}
 
-	_size = 0;
-	_finish = false;
-	_offset = 0;
 	data_offset = 0;
 	return next();
 }
@@ -490,7 +466,6 @@ std::string
 LZ4DecompressDescriptor::next()
 {
 	if (read_bytes == 0) {
-		_finish = true;
 		return std::string();
 	}
 

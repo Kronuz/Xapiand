@@ -71,7 +71,6 @@ class LZ4BlockStreaming {
 protected:
 	// These variables must be defined in init function.
 	size_t _size;
-	bool _finish;
 	size_t _offset;
 
 	const int block_size;
@@ -81,8 +80,12 @@ protected:
 	char* const buffer;
 
 	XXH32_state_t* xxh_state;
+	int xxh_seed;
 
 	inline std::string _init() {
+		_size = 0;
+		_offset = 0;
+		XXH32_reset(xxh_state, xxh_seed);
 		return static_cast<Impl*>(this)->init();
 	}
 
@@ -96,9 +99,8 @@ public:
 		  cmpBuf_size(LZ4_COMPRESSBOUND(block_size)),
 		  cmpBuf((char*)malloc(cmpBuf_size)),
 		  buffer((char*)malloc(LZ4_RING_BUFFER_BYTES)),
-		  xxh_state(XXH32_createState()) {
-		XXH32_reset(xxh_state, seed);
-	}
+		  xxh_state(XXH32_createState()),
+		  xxh_seed(seed) { }
 
 	// This class is not CopyConstructible or CopyAssignable.
 	LZ4BlockStreaming(const LZ4BlockStreaming&) = delete;
@@ -272,7 +274,7 @@ public:
 
 	inline void reset(size_t read_bytes_, int seed=0) noexcept {
 		read_bytes = read_bytes_;
-		XXH32_reset(xxh_state, seed);
+		xxh_seed = seed;
 	}
 };
 
@@ -349,6 +351,6 @@ public:
 
 	inline void reset(size_t read_bytes_, int seed=0) noexcept {
 		read_bytes = read_bytes_;
-		XXH32_reset(xxh_state, seed);
+		xxh_seed = seed;
 	}
 };
