@@ -406,7 +406,7 @@ public:
 		}
 
 		char* buffer = buffer_curr;
-		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer_curr + buffer_offset);
+		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + buffer_offset);
 
 		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 		off_t tmp_block_offset = block_offset;
