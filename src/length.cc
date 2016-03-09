@@ -22,8 +22,6 @@
 
 #include "length.h"
 
-#include "exception.h"
-
 #include <algorithm>  // for std::min()
 #include <cfloat>
 #include <cmath>

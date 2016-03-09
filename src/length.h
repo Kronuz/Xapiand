@@ -24,6 +24,10 @@
 
 #include "xapian.h"
 
+#include "exception.h"
+#include "xapiand.h"
+
+#include <assert.h>
 #include <string>
 
 /** Serialise a length as a variable-length string.
@@ -48,10 +52,96 @@ std::string serialise_length(unsigned long long len);
  */
 unsigned long long unserialise_length(const char** p, const char* end, bool check_remaining=false);
 
-
 std::string serialise_string(const std::string &input);
+
 std::string unserialise_string(const char** p, const char* end);
 
-
 std::string serialise_double(double v);
+
 double unserialise_double(const char** p, const char* end);
+
+/** Append an encoded unsigned integer to a string.
+ *
+ *  @param s		The string to append to.
+ *  @param value	The unsigned integer to encode.
+ */
+template<class U>
+inline void
+serialise_unsigned(std::string & s, U value)
+{
+	// Check U is an unsigned type.
+	static_assert(static_cast<U>(-1) > 0, "Type not unsigned");
+	
+	while (value >= 128) {
+		s += static_cast<char>(static_cast<unsigned char>(value) | 0x80);
+		value >>= 7;
+	}
+	s += static_cast<char>(value);
+}
+
+/** Decode an unsigned integer from a string.
+ *
+ *  @param p	    Pointer to pointer to the current position in the string.
+ *  @param end	    Pointer to the end of the string.
+ *  @param result   Where to store the result (or NULL to just skip it).
+ */
+template<class U>
+inline void
+unserialise_unsigned(const char ** p, const char * end, U * result)
+{
+	// Check U is an unsigned type.
+	static_assert(static_cast<U>(-1) > 0, "Type not unsigned");
+
+	const char * ptr = *p;
+	assert(ptr);
+	const char * start = ptr;
+
+	// Check the length of the encoded integer first.
+	do {
+		if unlikely(ptr == end) {
+			// Out of data.
+			*p = NULL;
+			throw MSG_SerialisationError("Bad encoded unsigned: no data");
+		}
+	} while (static_cast<unsigned char>(*ptr++) >= 128);
+
+	*p = ptr;
+
+	if (!result) return;
+
+	*result = U(*--ptr);
+	if (ptr == start) {
+		// Special case for small values.
+		return;
+	}
+
+	size_t maxbits = size_t(ptr - start) * 7;
+	if (maxbits <= sizeof(U) * 8) {
+		// No possibility of overflow.
+		do {
+			unsigned char chunk = static_cast<unsigned char>(*--ptr) & 0x7f;
+			*result = (*result << 7) | U(chunk);
+		} while (ptr != start);
+		return;
+	}
+
+	size_t minbits = maxbits - 6;
+	if unlikely(minbits > sizeof(U) * 8) {
+		// Overflow.
+		throw MSG_SerialisationError("Bad encoded unsigned: overflow");
+	}
+
+	while (--ptr != start) {
+		unsigned char chunk = static_cast<unsigned char>(*--ptr) & 0x7f;
+		*result = (*result << 7) | U(chunk);
+	}
+
+	U tmp = *result;
+	*result <<= 7;
+	if unlikely(*result < tmp) {
+		// Overflow.
+		throw MSG_SerialisationError("Bad encoded unsigned: overflow");;
+	}
+	*result |= U(static_cast<unsigned char>(*ptr) & 0x7f);
+	return;
+}
