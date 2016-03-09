@@ -486,6 +486,173 @@ public:
 		return curr_offset;
 	}
 
+	uint32_t write_file(const std::string& filename, void* param=nullptr) {
+		uint32_t curr_offset = header.head.offset;
+
+		StorageBinHeader bin_header;
+		memset(&bin_header, 0, sizeof(bin_header));
+		const char* bin_header_data = reinterpret_cast<const char*>(&bin_header);
+		size_t bin_header_data_size = sizeof(StorageBinHeader);
+
+		StorageBinFooter bin_footer;
+		memset(&bin_footer, 0, sizeof(bin_footer));
+		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
+		size_t bin_footer_data_size = sizeof(StorageBinFooter);
+
+		std::shared_ptr<LZ4CompressFile> lz4;
+		LZ4CompressFile::iterator it;
+		size_t it_size, file_size = 0;
+		int fd_write = 0;
+		char buf_read[STORAGE_BLOCK_SIZE];
+		const char* data;
+
+		bool compress = (flags & STORAGE_COMPRESS);
+		if (compress) {
+			bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
+			lz4 = std::make_shared<LZ4CompressFile>(filename, STORAGE_MAGIC);
+			it = lz4->begin();
+			it_size = it.size();
+			data = it->c_str();
+		} else {
+			fd_write = io::open(filename.c_str(), O_RDONLY, 0644);
+			if unlikely(fd_write < 0) {
+				throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
+			}
+			bin_header.init(param, 0, 0);
+			it_size = io::read(fd_write, buf_read, sizeof(buf_read));
+			data = buf_read;
+			file_size += it_size;
+			XXH32_reset(xxhash, STORAGE_MAGIC);
+			XXH32_update(xxhash, data, it_size);
+		}
+
+		char* buffer = buffer_curr;
+		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + buffer_offset);
+
+		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
+		off_t tmp_block_offset = block_offset;
+
+		while (bin_header_data_size || it_size || bin_footer_data_size) {
+			if (bin_header_data_size) {
+				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
+				if (size > bin_header_data_size) {
+					size = bin_header_data_size;
+				}
+				memcpy(buffer + buffer_offset, bin_header_data, size);
+				bin_header_data_size -= size;
+				bin_header_data += size;
+				buffer_offset += size;
+				if (buffer_offset == STORAGE_BLOCK_SIZE) {
+					buffer_offset = 0;
+					if (buffer == buffer_curr) {
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
+						goto do_update;
+					} else {
+						goto do_write;
+					}
+				}
+			}
+
+			while (it_size) {
+				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
+				if (size > it_size) {
+					size = it_size;
+				}
+				memcpy(buffer + buffer_offset, data, size);
+				it_size -= size;
+				if (!it_size) {
+					if (compress) {
+						++it;
+						it_size = it.size();
+						data = it->c_str();
+					} else {
+						it_size = io::read(fd_write, buf_read, sizeof(buf_read));
+						data = buf_read;
+						file_size += it_size;
+						XXH32_update(xxhash, data, it_size);
+					}
+				} else {
+					data += size;
+				}
+				buffer_offset += size;
+				if (buffer_offset == STORAGE_BLOCK_SIZE) {
+					buffer_offset = 0;
+					if (buffer == buffer_curr) {
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
+						goto do_update;
+					} else {
+						goto do_write;
+					}
+				}
+			}
+
+			if (bin_footer_data_size) {
+				// Update header size in buffer.
+				if (compress) {
+					buffer_header->size = static_cast<uint32_t>(lz4->size());
+					bin_footer.init(param, lz4->get_digest());
+				} else {
+					buffer_header->size = static_cast<uint32_t>(file_size);
+					bin_footer.init(param, XXH32_digest(xxhash));
+					io::close(fd_write);
+				}
+
+				size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
+				if (size > bin_footer_data_size) {
+					size = bin_footer_data_size;
+				}
+				memcpy(buffer + buffer_offset, bin_footer_data, size);
+				bin_footer_data_size -= size;
+				bin_footer_data += size;
+				buffer_offset += size;
+
+				// Align the buffer_offset to the next storage alignment
+				buffer_offset = static_cast<uint32_t>(((block_offset + buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
+
+				if (buffer_offset == STORAGE_BLOCK_SIZE) {
+					buffer_offset = 0;
+					if (buffer == buffer_curr) {
+						buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
+						goto do_update;
+					} else {
+						goto do_write;
+					}
+				}
+			}
+
+		do_write:
+			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
+				close();
+				throw MSG_StorageIOError("IO error: pwrite");
+			}
+
+		do_update:
+			if (buffer_offset == 0) {
+				block_offset += STORAGE_BLOCK_SIZE;
+				if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
+					throw MSG_StorageEOF("Storage EOF");
+				}
+				--free_blocks;
+#if STORAGE_BUFFER_CLEAR
+				memset(buffer, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
+#endif
+			}
+		}
+
+		// Write the first used buffer.
+		if (buffer != buffer_curr) {
+			if (io::pwrite(fd, buffer_curr, STORAGE_BLOCK_SIZE, tmp_block_offset) != STORAGE_BLOCK_SIZE) {
+				close();
+				throw MSG_StorageIOError("IO error: pwrite");
+			}
+			buffer_curr = buffer;
+		}
+
+		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
+
+		return curr_offset;
+	}
+
 	size_t read(char* buf, size_t buf_size, uint32_t limit=-1, void* param=nullptr) {
 		if (!buf_size) {
 			return 0;
