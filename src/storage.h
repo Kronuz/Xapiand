@@ -233,6 +233,43 @@ class Storage {
 		}
 	}
 
+	inline void write_buffer(char** buffer, uint32_t& buffer_offset, off_t& block_offset) {
+		buffer_offset = 0;
+		if (*buffer == buffer_curr) {
+			*buffer = buffer_curr == buffer0 ? buffer1 : buffer0;
+			goto do_update;
+		} else {
+			goto do_write;
+		}
+
+	do_write:
+		if (io::pwrite(fd, *buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
+			close();
+			throw MSG_StorageIOError("IO error: pwrite");
+		}
+
+	do_update:
+		block_offset += STORAGE_BLOCK_SIZE;
+		if (block_offset >= STORAGE_LAST_BLOCK_OFFSET) {
+			throw MSG_StorageEOF("Storage EOF");
+		}
+		--free_blocks;
+#if STORAGE_BUFFER_CLEAR
+		memset(*buffer, STORAGE_BUFFER_CLEAR_CHAR, STORAGE_BLOCK_SIZE);
+#endif
+	}
+
+	inline void write_bin(char** buffer, uint32_t& buffer_offset, const char** data_bin_, size_t& size_bin_) {
+		size_t size = STORAGE_BLOCK_SIZE - buffer_offset;
+		if (size > size_bin_) {
+			size = size_bin_;
+		}
+		memcpy(*buffer + buffer_offset, *data_bin_, size);
+		size_bin_ -= size;
+		*data_bin_ += size;
+		buffer_offset += size;
+	}
+
 protected:
 	StorageHeader header;
 
