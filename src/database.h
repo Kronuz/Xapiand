@@ -176,10 +176,11 @@ public:
 		MAX
 	};
 
+	bool commit_eof;
 	Database* database;
 
 	DatabaseWAL (Database* _database)
-	: Storage(), modified(false), database(_database) {
+	: Storage(), modified(false), commit_eof(false), database(_database) {
 		L_OBJ(this, "CREATED DATABASE WAL!");
 	}
 

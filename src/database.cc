@@ -67,9 +67,15 @@ void WalHeader::init(void* param)
 
 	head.magic = MAGIC;
 	head.offset = STORAGE_START_BLOCK_OFFSET;
-	strncpy(head.uuid, storage->database->get_uuid().c_str(), sizeof(head.uuid));
-	uint32_t revision = 0;
-	memcpy(&revision, storage->database->get_revision_info().data(), storage->database->get_revision_info().size());
+	uint32_t revision;
+	const char *r = storage->database->get_revision_info().data();
+	const char *r_end = r + storage->database->get_revision_info().size();
+	unserialise_unsigned(&r, r_end, &revision);
+
+	if (storage->commit_eof) {
+		++revision;
+	}
+
 	head.revision = revision;
 }
 
@@ -92,9 +98,11 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 {
 	L_CALL(this, "DatabaseWAL::open_current()");
 
-	uint32_t revision = 0;
-	revision = 0;
-	memcpy(&revision, database->get_revision_info().data(), database->get_revision_info().size());
+	uint32_t revision;
+	const char *r = database->get_revision_info().data();
+	const char *r_end = r + database->get_revision_info().size();
+	unserialise_unsigned(&r, r_end, &revision);
+
 
 	DIR *dir = opendir(path.c_str(), true);
 	if (!dir) {
@@ -313,9 +321,12 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint.path.c_str(), repr(line).c_str());
 
-	uint64_t rev = 0;
-	memcpy(&rev, revision.data(), revision.size());
-	uint64_t slot = rev - header.head.revision;
+	uint32_t rev;
+	const char *r = revision.data();
+	const char *r_end = r + revision.size();
+	unserialise_unsigned(&r, r_end, &rev);
+
+	uint32_t slot = rev - header.head.revision;
 
 	if (slot >= WAL_SLOTS) {
 		close();
@@ -329,8 +340,10 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 	if(commit_) {
 		if (slot + 1 >= WAL_SLOTS) {
 			close();
-			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
+			commit_eof = true;
+			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev+1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
 			slot = rev - header.head.revision;
+			commit_eof = false;
 		} else {
 			header.slot[slot + 1] = header.slot[slot];
 		}
