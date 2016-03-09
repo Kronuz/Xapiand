@@ -207,8 +207,8 @@ LZ4CompressDescriptor::~LZ4CompressDescriptor()
 std::string
 LZ4CompressDescriptor::init()
 {
-	if (io::lseek(fd, 0, SEEK_SET) != 0) {
-		throw MSG_LZ4IOError("IO error: lseek");
+	if unlikely(fd <= 0) {
+		MSG_LZ4Exception("Incorrect descriptor file: %d", fd);
 	}
 
 	return next();
