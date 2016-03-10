@@ -42,6 +42,20 @@ START_TEST(test_storage_datas_cmp)
 END_TEST
 
 
+START_TEST(test_storage_files)
+{
+	ck_assert_int_eq(test_storage_file(), 0);
+}
+END_TEST
+
+
+START_TEST(test_storage_files_cmp)
+{
+	ck_assert_int_eq(test_storage_file(STORAGE_COMPRESS), 0);
+}
+END_TEST
+
+
 Suite* storage_datas(void) {
 	Suite *s = suite_create("Testing Storage for datas");
 
@@ -52,6 +66,21 @@ Suite* storage_datas(void) {
 	TCase *cmp_datas = tcase_create("Storage::write(const std::string& data, void* param=nullptr) with compress");
 	tcase_add_test(cmp_datas, test_storage_datas_cmp);
 	suite_add_tcase(s, cmp_datas);
+
+	return s;
+}
+
+
+Suite* storage_files(void) {
+	Suite *s = suite_create("Testing Storage for files");
+
+	TCase *files = tcase_create("Storage::write_file(const std::string& filename, void* param=nullptr) without compress");
+	tcase_add_test(files, test_storage_files);
+	suite_add_tcase(s, files);
+
+	TCase *cmp_files = tcase_create("Storage::write_file(const std::string& filename, void* param=nullptr) with compress");
+	tcase_add_test(cmp_files, test_storage_files_cmp);
+	suite_add_tcase(s, cmp_files);
 
 	return s;
 }
