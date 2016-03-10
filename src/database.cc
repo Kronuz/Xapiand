@@ -61,16 +61,18 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 constexpr const char* const DatabaseWAL::names[];
 
 
-void WalHeader::init(void* param)
+void
+WalHeader::init(void* param)
 {
 	const DatabaseWAL* storage = static_cast<const DatabaseWAL*>(param);
 
 	head.magic = MAGIC;
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 	strncpy(head.uuid, storage->database->get_uuid().c_str(), sizeof(head.uuid));
-	uint32_t revision;
+
 	const char *r = storage->database->get_revision_info().data();
 	const char *r_end = r + storage->database->get_revision_info().size();
+	uint32_t revision;
 	unserialise_unsigned(&r, r_end, &revision);
 
 	if (storage->commit_eof) {
@@ -81,16 +83,17 @@ void WalHeader::init(void* param)
 }
 
 
-void WalHeader::validate(void* param)
+void
+WalHeader::validate(void* param)
 {
-	const DatabaseWAL* storage = static_cast<const DatabaseWAL*>(param);
+	if (head.magic != MAGIC) {
+		throw MSG_StorageCorruptVolume("Bad header magic number");
+	}
 
-	 if (head.magic != MAGIC) {
-		 throw MSG_StorageCorruptVolume("Bad header magic number");
-	 }
-	 if (strncasecmp(head.uuid, storage->database->get_uuid().c_str(), sizeof(head.uuid))) {
-		 throw MSG_StorageCorruptVolume("UUID mismatch");
-	 }
+	const DatabaseWAL* storage = static_cast<const DatabaseWAL*>(param);
+	if (strncasecmp(head.uuid, storage->database->get_uuid().c_str(), sizeof(head.uuid))) {
+		throw MSG_StorageCorruptVolume("UUID mismatch");
+	}
 }
 
 
@@ -205,7 +208,7 @@ DatabaseWAL::highest_valid_slot()
 	L_CALL(this, "DatabaseWAL::highest_valid_slot()");
 
 	uint32_t slot = -1;
-	for (uint32_t i = 0; i < WAL_SLOTS; i++) {
+	for (uint32_t i = 0; i < WAL_SLOTS; ++i) {
 		if (header.slot[i] == 0) {
 			break;
 		}
@@ -338,7 +341,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 	write(line.data(), line.size(), this);
 	header.slot[slot] = header.head.offset; /* Beginning of the next revision */
 
-	if(commit_) {
+	if (commit_) {
 		if (slot + 1 >= WAL_SLOTS) {
 			close();
 			commit_eof = true;
@@ -448,7 +451,8 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 
 #ifdef XAPIAND_DATA_STORAGE
 void
-DataHeader::init(void* param) {
+DataHeader::init(void* param)
+{
 	const Database* storage = static_cast<const Database*>(param);
 
 	head.offset = STORAGE_START_BLOCK_OFFSET;
@@ -458,12 +462,13 @@ DataHeader::init(void* param) {
 
 
 void
-DataHeader::validate(void* param) {
-	const Database* storage = static_cast<const Database*>(param);
-
+DataHeader::validate(void* param)
+{
 	if (head.magic != STORAGE_MAGIC) {
 		throw MSG_StorageCorruptVolume("Bad header magic number");
 	}
+
+	const Database* storage = static_cast<const Database*>(param);
 	if (strncasecmp(head.uuid, storage->get_uuid().c_str(), sizeof(head.uuid))) {
 		throw MSG_StorageCorruptVolume("UUID mismatch");
 	}
@@ -471,8 +476,8 @@ DataHeader::validate(void* param) {
 
 
 uint32_t
-DataStorage::highest_volume(const std::string& path) {
-
+DataStorage::highest_volume(const std::string& path)
+{
 	L_CALL(this, "DataStorage::highest_volume()");
 
 	DIR *dir = opendir(path.c_str(), true);
@@ -489,10 +494,10 @@ DataStorage::highest_volume(const std::string& path) {
 		try {
 			uint32_t file_revision = get_volume(std::string(fptr.ent->d_name));
 			if (file_revision > highest_revision) {
-					highest_revision = file_revision;
+				highest_revision = file_revision;
 			}
-		} catch (const std::invalid_argument&) { }
-		  catch (const std::out_of_range&) { }
+		} catch (const std::invalid_argument&) {
+		} catch (const std::out_of_range&) { }
 
 		find_file_dir(dir, fptr, DATA_STORAGE_PATH, true);
 	}
