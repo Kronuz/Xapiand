@@ -409,29 +409,30 @@ public:
 		}
 
 		char* buffer = buffer_curr;
-		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + buffer_offset);
+		uint32_t tmp_buffer_offset = buffer_offset;
+		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + tmp_buffer_offset);
 
 		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 		off_t tmp_block_offset = block_offset;
 
 		while (bin_header_data_size) {
-			write_bin(&buffer, buffer_offset, &bin_header_data, bin_header_data_size);
-			if (buffer_offset == STORAGE_BLOCK_SIZE) {
-				write_buffer(&buffer, buffer_offset, block_offset);
+			write_bin(&buffer, tmp_buffer_offset, &bin_header_data, bin_header_data_size);
+			if (tmp_buffer_offset == STORAGE_BLOCK_SIZE) {
+				write_buffer(&buffer, tmp_buffer_offset, block_offset);
 				continue;
 			}
 			break;
 		}
 
 		while (it_size) {
-			write_bin(&buffer, buffer_offset, &data, it_size);
+			write_bin(&buffer, tmp_buffer_offset, &data, it_size);
 			if (compress && !it_size) {
 				++it;
 				data = it->data();
 				it_size = it.size();
 			}
-			if (buffer_offset == STORAGE_BLOCK_SIZE) {
-				write_buffer(&buffer, buffer_offset, block_offset);
+			if (tmp_buffer_offset == STORAGE_BLOCK_SIZE) {
+				write_buffer(&buffer, tmp_buffer_offset, block_offset);
 			}
 		}
 
@@ -444,12 +445,12 @@ public:
 				bin_footer.init(param, XXH32(orig_data, data_size, STORAGE_MAGIC));
 			}
 
-			write_bin(&buffer, buffer_offset, &bin_footer_data, bin_footer_data_size);
+			write_bin(&buffer, tmp_buffer_offset, &bin_footer_data, bin_footer_data_size);
 
-			// Align the buffer_offset to the next storage alignment
-			buffer_offset = static_cast<uint32_t>(((block_offset + buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
-			if (buffer_offset == STORAGE_BLOCK_SIZE) {
-				write_buffer(&buffer, buffer_offset, block_offset);
+			// Align the tmp_buffer_offset to the next storage alignment
+			tmp_buffer_offset = static_cast<uint32_t>(((block_offset + tmp_buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
+			if (tmp_buffer_offset == STORAGE_BLOCK_SIZE) {
+				write_buffer(&buffer, tmp_buffer_offset, block_offset);
 				continue;
 			}
 			if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
@@ -468,6 +469,7 @@ public:
 			buffer_curr = buffer;
 		}
 
+		buffer_offset = tmp_buffer_offset;
 		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 
 		return curr_offset;
@@ -514,22 +516,23 @@ public:
 		}
 
 		char* buffer = buffer_curr;
-		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + buffer_offset);
+		uint32_t tmp_buffer_offset = buffer_offset;
+		StorageBinHeader* buffer_header = reinterpret_cast<StorageBinHeader*>(buffer + tmp_buffer_offset);
 
 		off_t block_offset = ((curr_offset * STORAGE_ALIGNMENT) / STORAGE_BLOCK_SIZE) * STORAGE_BLOCK_SIZE;
 		off_t tmp_block_offset = block_offset;
 
 		while (bin_header_data_size) {
-			write_bin(&buffer, buffer_offset, &bin_header_data, bin_header_data_size);
-			if (buffer_offset == STORAGE_BLOCK_SIZE) {
-				write_buffer(&buffer, buffer_offset, block_offset);
+			write_bin(&buffer, tmp_buffer_offset, &bin_header_data, bin_header_data_size);
+			if (tmp_buffer_offset == STORAGE_BLOCK_SIZE) {
+				write_buffer(&buffer, tmp_buffer_offset, block_offset);
 				continue;
 			}
 			break;
 		}
 
 		while (it_size) {
-			write_bin(&buffer, buffer_offset, &data, it_size);
+			write_bin(&buffer, tmp_buffer_offset, &data, it_size);
 			if (!it_size) {
 				if (compress) {
 					++it;
@@ -542,8 +545,8 @@ public:
 					XXH32_update(xxhash, data, it_size);
 				}
 			}
-			if (buffer_offset == STORAGE_BLOCK_SIZE) {
-				write_buffer(&buffer, buffer_offset, block_offset);
+			if (tmp_buffer_offset == STORAGE_BLOCK_SIZE) {
+				write_buffer(&buffer, tmp_buffer_offset, block_offset);
 			}
 		}
 
@@ -558,12 +561,12 @@ public:
 				io::close(fd_write);
 			}
 
-			write_bin(&buffer, buffer_offset, &bin_footer_data, bin_footer_data_size);
+			write_bin(&buffer, tmp_buffer_offset, &bin_footer_data, bin_footer_data_size);
 
-			// Align the buffer_offset to the next storage alignment
-			buffer_offset = static_cast<uint32_t>(((block_offset + buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
-			if (buffer_offset == STORAGE_BLOCK_SIZE) {
-				write_buffer(&buffer, buffer_offset, block_offset);
+			// Align the tmp_buffer_offset to the next storage alignment
+			tmp_buffer_offset = static_cast<uint32_t>(((block_offset + tmp_buffer_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT - block_offset);
+			if (tmp_buffer_offset == STORAGE_BLOCK_SIZE) {
+				write_buffer(&buffer, tmp_buffer_offset, block_offset);
 				continue;
 			} else {
 				if (io::pwrite(fd, buffer, STORAGE_BLOCK_SIZE, block_offset) != STORAGE_BLOCK_SIZE) {
@@ -583,6 +586,7 @@ public:
 			buffer_curr = buffer;
 		}
 
+		buffer_offset = tmp_buffer_offset;
 		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 
 		return curr_offset;
