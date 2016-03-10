@@ -285,7 +285,10 @@ public:
 		  dec_lz4(fd, STORAGE_MAGIC),
 		  xxhash(XXH32_createState()),
 		  bin_hash(0) {
-		assert((reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header)) + sizeof(bin_header.size) <= STORAGE_ALIGNMENT);
+		if ((reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header) + sizeof(bin_header.size)) > STORAGE_ALIGNMENT) {
+			XXH32_freeState(xxhash);
+			throw MSG_StorageException("StorageBinHeader's size must be in the first %d bites", STORAGE_ALIGNMENT - sizeof(bin_header.size));
+		}
 	}
 
 	virtual ~Storage() {
