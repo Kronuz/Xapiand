@@ -129,6 +129,9 @@ LZ4CompressFile::LZ4CompressFile(const std::string& filename, int seed)
 {
 	fd = io::open(filename.c_str(), O_RDONLY, 0644);
 	if unlikely(fd < 0) {
+		free(cmpBuf);
+		free(buffer);
+		XXH32_freeState(xxh_state);
 		LZ4_freeStream(lz4Stream);
 		throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
 	}
@@ -334,6 +337,9 @@ LZ4DecompressFile::LZ4DecompressFile(const std::string& filename, int seed)
 {
 	fd = io::open(filename.c_str(), O_RDONLY, 0644);
 	if unlikely(fd < 0) {
+		free(cmpBuf);
+		free(buffer);
+		XXH32_freeState(xxh_state);
 		free(data);
 		LZ4_freeStreamDecode(lz4StreamDecode);
 		throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
