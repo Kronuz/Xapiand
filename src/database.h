@@ -82,7 +82,6 @@ class DatabasesLRU;
 class DatabaseQueue;
 
 #if XAPIAND_DATABASE_WAL
-
 struct WalHeader {
 	struct StorageHeaderHead {
 		uint32_t magic;
@@ -90,6 +89,7 @@ struct WalHeader {
 		char uuid[36];
 		uint32_t revision;
 	} head;
+
 	uint32_t slot[WAL_SLOTS];
 
 	void init(void* param);
@@ -180,7 +180,9 @@ public:
 	Database* database;
 
 	DatabaseWAL (Database* _database)
-	: Storage(), modified(false), commit_eof(false), database(_database) {
+		: modified(false),
+		  commit_eof(false),
+		  database(_database) {
 		L_OBJ(this, "CREATED DATABASE WAL!");
 	}
 
@@ -212,6 +214,7 @@ struct DataHeader {
 		uint32_t offset;  // required
 		char uuid[36];
 	} head;
+
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(DataHeader::DataHeaderHead)) / sizeof(char)];
 
 	void init(void* param);
@@ -259,12 +262,9 @@ struct DataBinFooter {
 	}
 };
 #pragma pack(pop)
-#endif
 
 
-#ifdef XAPIAND_DATA_STORAGE
-class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter>
-{
+class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter> {
 public:
 	uint32_t volume;
 	uint32_t highest_volume(const std::string& path);
@@ -272,8 +272,7 @@ public:
 #endif
 
 
-class Database
-{
+class Database {
 public:
 	Schema schema;
 
@@ -315,8 +314,8 @@ public:
 	void storage_pull_data(Xapian::Document& doc);
 	void storage_push_data(Xapian::Document& doc);
 #else
-	inline void storage_pull_data(Xapian::Document&) {}
-	inline void storage_push_data(Xapian::Document&) {}
+	inline void storage_pull_data(Xapian::Document&) { }
+	inline void storage_push_data(Xapian::Document&) { }
 #endif
 
 	bool commit(bool wal_=true);
@@ -466,8 +465,7 @@ public:
 	void finish();
 
 	template<typename F, typename... Args>
-	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args)
-	{
+	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args) {
 		bool ret = checkout(database, endpoints, flags);
 		if (!ret) {
 			std::unique_lock<std::mutex> lk(qmtx);
