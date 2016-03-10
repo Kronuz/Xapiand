@@ -186,7 +186,7 @@ public:
 			if (res_size < buf_size) {
 				buf_size = res_size;
 			}
-			memcpy(buf, current_str.c_str() + offset, buf_size);
+			memcpy(buf, current_str.data() + offset, buf_size);
 			offset += buf_size;
 			return buf_size;
 		}

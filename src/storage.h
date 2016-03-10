@@ -399,7 +399,7 @@ public:
 			lz4 = std::make_shared<LZ4CompressData>(data, data_size, STORAGE_MAGIC);
 			it = lz4->begin();
 			it_size = it.size();
-			data = it->c_str();
+			data = it->data();
 		} else {
 			bin_header.init(param, data_size, 0);
 			it_size = data_size;
@@ -424,7 +424,7 @@ public:
 			write_bin(&buffer, buffer_offset, &data, it_size);
 			if (compress && !it_size) {
 				++it;
-				data = it->c_str();
+				data = it->data();
 				it_size = it.size();
 			}
 			if (buffer_offset == STORAGE_BLOCK_SIZE) {
@@ -496,7 +496,7 @@ public:
 			lz4 = std::make_shared<LZ4CompressFile>(filename, STORAGE_MAGIC);
 			it = lz4->begin();
 			it_size = it.size();
-			data = it->c_str();
+			data = it->data();
 		} else {
 			fd_write = io::open(filename.c_str(), O_RDONLY, 0644);
 			if unlikely(fd_write < 0) {
@@ -531,7 +531,7 @@ public:
 				if (compress) {
 					++it;
 					it_size = it.size();
-					data = it->c_str();
+					data = it->data();
 				} else {
 					it_size = io::read(fd_write, buf_read, sizeof(buf_read));
 					data = buf_read;
