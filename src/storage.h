@@ -297,6 +297,8 @@ public:
 	}
 
 	void open(const std::string& path_, int flags_=STORAGE_CREATE_OR_OPEN, void* param=nullptr) {
+		L_CALL(this, "Storage::open()");
+
 		if (path != path_ || flags != flags_) {
 			close();
 
@@ -355,6 +357,8 @@ public:
 	}
 
 	void close() {
+		L_CALL(this, "Storage::close()");
+
 		if (fd) {
 			if (flags & STORAGE_WRITABLE) {
 				commit();
@@ -373,6 +377,8 @@ public:
 	}
 
 	void seek(uint32_t offset) {
+		L_CALL(this, "Storage::seek()");
+
 		if (offset > header.head.offset) {
 			throw MSG_StorageEOF("Storage EOF");
 		}
@@ -380,6 +386,8 @@ public:
 	}
 
 	uint32_t write(const char *data, size_t data_size, void* param=nullptr) {
+		L_CALL(this, "Storage::write(1)");
+
 		uint32_t curr_offset = header.head.offset;
 		const char* orig_data = data;
 
@@ -476,6 +484,8 @@ public:
 	}
 
 	uint32_t write_file(const std::string& filename, void* param=nullptr) {
+		L_CALL(this, "Storage::write_file()");
+
 		uint32_t curr_offset = header.head.offset;
 
 		StorageBinHeader bin_header;
@@ -593,6 +603,8 @@ public:
 	}
 
 	size_t read(char* buf, size_t buf_size, uint32_t limit=-1, void* param=nullptr) {
+		L_CALL(this, "Storage::read(1)");
+
 		if (!buf_size) {
 			return 0;
 		}
@@ -673,6 +685,8 @@ public:
 	}
 
 	void commit() {
+		L_CALL(this, "Storage::commit()");
+
 		if unlikely(io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 			close();
 			throw MSG_StorageIOError("IO error: pwrite");
@@ -694,10 +708,14 @@ public:
 	}
 
 	inline uint32_t write(const std::string& data, void* param=nullptr) {
+		L_CALL(this, "Storage::write(2)");
+
 		return write(data.data(), data.size(), param);
 	}
 
 	inline std::string read(uint32_t limit=-1, void* param=nullptr) {
+		L_CALL(this, "Storage::read(2)");
+
 		std::string ret;
 
 		size_t r;
@@ -710,6 +728,8 @@ public:
 	}
 
 	uint32_t get_volume(const std::string& filename) {
+		L_CALL(this, "Storage::get_volume()");
+
 		std::size_t found = filename.find_last_of(".");
 		if (found == std::string::npos) {
 			throw std::invalid_argument("Volume not found in " + filename);
