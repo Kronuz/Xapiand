@@ -158,7 +158,7 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 		ret = fcntl(fd, F_PREALLOCATE, &store);
 	}
 
-	ftruncate(fd, len);
+	ftruncate(fd, offset + len);
 	return ret;
 #else
 	// The following is copied from fcntlSizeHint in sqlite
