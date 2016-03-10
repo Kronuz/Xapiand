@@ -390,13 +390,13 @@ public:
 		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 
-		std::shared_ptr<LZ4CompressData> lz4;
+		std::unique_ptr<LZ4CompressData> lz4;
 		LZ4CompressData::iterator it;
 		size_t it_size;
 		bool compress = (flags & STORAGE_COMPRESS) && data_size > STORAGE_MIN_COMPRESS_SIZE;
 		if (compress) {
 			bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
-			lz4 = std::make_shared<LZ4CompressData>(data, data_size, STORAGE_MAGIC);
+			lz4 = std::make_unique<LZ4CompressData>(data, data_size, STORAGE_MAGIC);
 			it = lz4->begin();
 			it_size = it.size();
 			data = it->data();
@@ -483,7 +483,7 @@ public:
 		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 
-		std::shared_ptr<LZ4CompressFile> lz4;
+		std::unique_ptr<LZ4CompressFile> lz4;
 		LZ4CompressFile::iterator it;
 		size_t it_size, file_size = 0;
 		int fd_write = 0;
@@ -493,7 +493,7 @@ public:
 		bool compress = (flags & STORAGE_COMPRESS);
 		if (compress) {
 			bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
-			lz4 = std::make_shared<LZ4CompressFile>(filename, STORAGE_MAGIC);
+			lz4 = std::make_unique<LZ4CompressFile>(filename, STORAGE_MAGIC);
 			it = lz4->begin();
 			it_size = it.size();
 			data = it->data();
