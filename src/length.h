@@ -71,7 +71,7 @@ serialise_unsigned(std::string & s, U value)
 {
 	// Check U is an unsigned type.
 	static_assert(static_cast<U>(-1) > 0, "Type not unsigned");
-	
+
 	while (value >= 128) {
 		s += static_cast<char>(static_cast<unsigned char>(value) | 0x80);
 		value >>= 7;
