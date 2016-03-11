@@ -145,7 +145,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 	} else {
 		modified = false;
 
-		uint16_t start_off, end_off;
+		uint32_t start_off, end_off;
 		uint32_t file_rev, begin_rev, end_rev;
 		for (auto slot = lowest_revision; slot <= highest_revision; ++slot) {
 			file_rev = begin_rev = slot;
