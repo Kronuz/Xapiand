@@ -144,8 +144,11 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC | STORAGE_COMPRESS);
 	} else {
 		modified = false;
+
 		uint16_t start_off, end_off;
+		uint32_t file_rev, begin_rev, end_rev;
 		for (auto slot = lowest_revision; slot <= highest_revision; ++slot) {
+			file_rev = begin_rev = slot;
 			open(path + "/" + WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN | STORAGE_COMPRESS);
 
 			uint32_t high_slot = highest_valid_slot();
@@ -155,6 +158,8 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 
 			if (slot == highest_revision) {
 				if (!commited) {
+					/* last slot contain offset at the end of file */
+					/* In case not "commited" not execute the high slot avaible because are operations without commit */
 					--high_slot;
 				}
 			}
@@ -166,11 +171,13 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 					 * for that reason the revision 0 to reach 1 start in STORAGE_START_BLOCK_OFFSET
 					 */
 					start_off = STORAGE_START_BLOCK_OFFSET;
+					begin_rev = 0;
 				} else {
 					start_off = header.slot[slot];
 					if (start_off == 0) {
 						throw MSG_StorageCorruptVolume("Bad offset");
 					}
+					begin_rev = slot;
 				}
 			} else {
 				start_off = STORAGE_START_BLOCK_OFFSET;
@@ -181,7 +188,8 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 			end_off =  header.slot[high_slot];
 
 			if (start_off < end_off) {
-				L_INFO(nullptr, "Read execute operations in WAL files (%u..%u)", lowest_revision, highest_revision + high_slot);
+				end_rev =  header.head.revision + high_slot;
+				L_INFO(nullptr, "Read and execute operations WAL file [wal.%u] from (%u..%u) revision", file_rev, begin_rev, end_rev);
 			}
 
 			try {
