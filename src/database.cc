@@ -145,9 +145,10 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 	} else {
 		modified = false;
 
+		bool reach_end = false;
 		uint32_t start_off, end_off;
 		uint32_t file_rev, begin_rev, end_rev;
-		for (auto slot = lowest_revision; slot <= highest_revision; ++slot) {
+		for (auto slot = lowest_revision; slot <= highest_revision && not reach_end; ++slot) {
 			file_rev = begin_rev = slot;
 			open(path + "/" + WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN | STORAGE_COMPRESS);
 
@@ -157,6 +158,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 			}
 
 			if (slot == highest_revision) {
+				reach_end = true; /* Avoid reenter to the loop with the high valid slot of the highest revision */
 				if (!commited) {
 					/* last slot contain offset at the end of file */
 					/* In case not "commited" not execute the high slot avaible because are operations without commit */
