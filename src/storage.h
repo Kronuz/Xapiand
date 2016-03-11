@@ -28,8 +28,9 @@
 #include "lz4_compressor.h"
 
 #include <cassert>
-#include <unistd.h>
 #include <limits>
+#include <memory>
+#include <unistd.h>
 
 #define STORAGE_MAGIC 0x02DEBC47
 #define STORAGE_BIN_HEADER_MAGIC 0x2A
