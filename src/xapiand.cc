@@ -76,7 +76,7 @@ void run(const opts_t &opts) {
 	ev::default_loop default_loop;
 	manager = Worker::make_shared<XapiandManager>(&default_loop, opts);
 	manager->run(opts);
-	int managers = manager.use_count();
+	int managers = static_cast<int>(manager.use_count());
 	if (managers == 1) {
 		L_NOTICE(nullptr, "Xapiand is cleanly done with all work!");
 	} else {

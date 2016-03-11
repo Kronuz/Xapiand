@@ -413,7 +413,7 @@ public:
 			it_size = it.size();
 			data = it->data();
 		} else {
-			bin_header.init(param, data_size, 0);
+			bin_header.init(param, static_cast<uint32_t>(data_size), 0);
 			it_size = data_size;
 		}
 
