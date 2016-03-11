@@ -321,7 +321,7 @@ DatabaseWAL::execute(const std::string& line)
 void
 DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 {
-	L_CALL(this, "DatabaseWAL::write()");
+	L_CALL(this, "DatabaseWAL::write_line()");
 
 	assert(database->flags & DB_WRITABLE);
 	assert(!(database->flags & DB_NOWAL));
