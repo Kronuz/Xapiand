@@ -22,8 +22,8 @@
 
 #include "log.h"
 
-#include "utils.h"
 #include "datetime.h"
+#include "utils.h"
 
 #include <stdarg.h>
 #include <unistd.h>
@@ -45,12 +45,16 @@ const char *priorities[] = {
 };
 
 
-void StreamLogger::log(int priority, const std::string& str) {
+void
+StreamLogger::log(int priority, const std::string& str)
+{
 	ofs << std::regex_replace(priorities[priority < 0 ? -priority : priority] + str, filter_re, "") << std::endl;
 }
 
 
-void StderrLogger::log(int priority, const std::string& str) {
+void
+StderrLogger::log(int priority, const std::string& str)
+{
 	if (isatty(fileno(stderr))) {
 		std::cerr << priorities[priority < 0 ? -priority : priority] + str << std::endl;
 	} else {
@@ -59,17 +63,21 @@ void StderrLogger::log(int priority, const std::string& str) {
 }
 
 
-SysLog::SysLog(const char *ident, int option, int facility) {
+SysLog::SysLog(const char *ident, int option, int facility)
+{
 	openlog(ident, option, facility);
 }
 
 
-SysLog::~SysLog() {
+SysLog::~SysLog()
+{
 	closelog();
 }
 
 
-void SysLog::log(int priority, const std::string& str) {
+void
+SysLog::log(int priority, const std::string& str)
+{
 	syslog(priority, "%s", std::regex_replace(priorities[priority < 0 ? -priority : priority] + str, filter_re, "").c_str());
 }
 
@@ -222,7 +230,7 @@ LogThread::finish(bool wait)
 	if (wait) {
 		try {
 			inner_thread.join();
-		} catch (const std::system_error&) {}
+		} catch (const std::system_error&) { }
 	}
 }
 
