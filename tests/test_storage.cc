@@ -114,7 +114,7 @@ struct StorageBinFooterChecksum {
 #pragma pack(pop)
 
 
-const std::string volumen_name("examples/volume0");
+const std::string volume_name("examples/volume0");
 
 
 static const std::vector<std::string> small_files({
@@ -136,7 +136,7 @@ static const std::vector<std::string> big_files({
 
 int test_storage_data(int flags) {
 	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage;
-	_storage.open(volumen_name, STORAGE_CREATE_OR_OPEN | flags);
+	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 
 	std::string data;
 	int cont_write = 0;
@@ -147,7 +147,7 @@ int test_storage_data(int flags) {
 	}
 	_storage.close();
 
-	_storage.open(volumen_name, STORAGE_CREATE_OR_OPEN | flags);
+	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 	for (int i = 5120; i < 10240; ++i) {
 		_storage.write(data);
 		data.append(1, random_int('\x00', '\xff'));
@@ -170,7 +170,7 @@ int test_storage_data(int flags) {
 		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.what());
 	}
 
-	unlink(volumen_name.c_str());
+	unlink(volume_name.c_str());
 
 	return cont_read != cont_write;
 }
@@ -178,7 +178,7 @@ int test_storage_data(int flags) {
 
 int test_storage_file(int flags) {
 	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage;
-	_storage.open(volumen_name, STORAGE_CREATE_OR_OPEN | flags);
+	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 
 	int cont_write = 0;
 	for (const auto& filename : small_files) {
@@ -192,7 +192,7 @@ int test_storage_file(int flags) {
 	}
 	_storage.close();
 
-	_storage.open(volumen_name, STORAGE_CREATE_OR_OPEN | flags);
+	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 	for (const auto& filename : small_files) {
 		_storage.write_file(filename);
 		++cont_write;
@@ -219,7 +219,7 @@ int test_storage_file(int flags) {
 		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.what());
 	}
 
-	unlink(volumen_name.c_str());
+	unlink(volume_name.c_str());
 
 	return cont_read != cont_write;
 }
@@ -250,4 +250,129 @@ int test_storage_bad_headers() {
 	}
 
 	return res;
+}
+
+
+int test_storage_exception_write(int flags) {
+	std::atomic_bool finish(false);
+	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage;
+
+	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+
+	auto write_storage = std::thread([&]() {
+		std::string data;
+		for (int i = 0; i < 5120; ++i) {
+			try {
+				_storage.write(data);
+			} catch (const StorageException& er) {
+				_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+			}
+			data.append(1, random_int(0, 255));
+		}
+		finish.store(true);
+	});
+
+	auto interrupt_storage = std::thread([&]() {
+		while (true) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(random_int(10, 20)));
+			if (!finish.load()) {
+				_storage.close();
+			} else {
+				return;
+			}
+		}
+	});
+
+	write_storage.detach();
+	interrupt_storage.join();
+
+	_storage.close();
+	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+	int cont_read = 0;
+	try {
+		while (true) {
+			size_t r;
+			char buf[LZ4_BLOCK_SIZE];
+			while ((r = _storage.read(buf, sizeof(buf))));
+			++cont_read;
+		}
+	} catch (const StorageEOF& er) {
+		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.get_context());
+		unlink(volume_name.c_str());
+		return 0;
+	} catch (const std::exception& er) {
+		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.what());
+		unlink(volume_name.c_str());
+		return 1;
+	}
+}
+
+
+int test_storage_exception_write_file(int flags) {
+	std::atomic_bool finish(false);
+	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage;
+
+	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+
+	auto write_storage = std::thread([&]() {
+		for (const auto& filename : small_files) {
+			try {
+				_storage.write_file(filename);
+			} catch (const StorageException& er) {
+				_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+			}
+		}
+
+		for (const auto& filename : big_files) {
+			try {
+				_storage.write_file(filename);
+			} catch (const StorageException& er) {
+				_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+			}
+		}
+
+		for (const auto& filename : small_files) {
+			try {
+				_storage.write_file(filename);
+			} catch (const StorageException& er) {
+				_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+			}
+		}
+
+		finish.store(true);
+	});
+
+	auto interrupt_storage = std::thread([&]() {
+		while (true) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(random_int(10, 20)));
+			if (!finish.load()) {
+				_storage.close();
+			} else {
+				return;
+			}
+		}
+	});
+
+	write_storage.detach();
+	interrupt_storage.join();
+
+	_storage.close();
+	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+	int cont_read = 0;
+	try {
+		while (true) {
+			size_t r;
+			char buf[LZ4_BLOCK_SIZE];
+			while ((r = _storage.read(buf, sizeof(buf))));
+			++cont_read;
+		}
+	} catch (const StorageEOF& er) {
+		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.get_context());
+		unlink(volume_name.c_str());
+		return 0;
+	} catch (const std::exception& er) {
+		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.what());
+		unlink(volume_name.c_str());
+		return 1;
+	}
 }

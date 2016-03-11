@@ -63,6 +63,34 @@ START_TEST(test_StorageBadHeader)
 END_TEST
 
 
+START_TEST(test_StorageExceptionWrite)
+{
+	ck_assert_int_eq(test_storage_exception_write(), 0);
+}
+END_TEST
+
+
+START_TEST(test_StorageExceptionWrite_cmp)
+{
+	ck_assert_int_eq(test_storage_exception_write(STORAGE_COMPRESS), 0);
+}
+END_TEST
+
+
+START_TEST(test_StorageExceptionWriteFile)
+{
+	ck_assert_int_eq(test_storage_exception_write_file(), 0);
+}
+END_TEST
+
+
+START_TEST(test_StorageExceptionWriteFile_cmp)
+{
+	ck_assert_int_eq(test_storage_exception_write_file(STORAGE_COMPRESS), 0);
+}
+END_TEST
+
+
 Suite* storage_datas(void) {
 	Suite *s = suite_create("Testing Storage for datas");
 
@@ -104,6 +132,36 @@ Suite* storage_bad_header(void) {
 }
 
 
+Suite* storage_exception_write(void) {
+	Suite *s = suite_create("Testing Storage::write with exceptions");
+
+	TCase *datas = tcase_create("Exceptions when Storage::write(const std::string& data, void* param=nullptr) is running");
+	tcase_add_test(datas, test_StorageExceptionWrite);
+	suite_add_tcase(s, datas);
+
+	TCase *cmp_datas = tcase_create("Exceptions when Storage::write(const std::string& data, void* param=nullptr) with compress is running");
+	tcase_add_test(cmp_datas, test_StorageExceptionWrite_cmp);
+	suite_add_tcase(s, cmp_datas);
+
+	return s;
+}
+
+
+Suite* storage_exception_write_file(void) {
+	Suite *s = suite_create("Testing Storage::write_file with exceptions");
+
+	TCase *files = tcase_create("Exceptions when Storage::write_file(const std::string& filename, void* param=nullptr) is running");
+	tcase_add_test(files, test_StorageExceptionWriteFile);
+	suite_add_tcase(s, files);
+
+	TCase *cmp_files = tcase_create("Exceptions when Storage::write(const std::string& filename, void* param=nullptr) with compress is running");
+	tcase_add_test(cmp_files, test_StorageExceptionWriteFile_cmp);
+	suite_add_tcase(s, cmp_files);
+
+	return s;
+}
+
+
 int main(void) {
 	Suite *sto_data = storage_datas();
 	SRunner *sr = srunner_create(sto_data);
@@ -119,6 +177,12 @@ int main(void) {
 
 	Suite *sto_bad_header = storage_bad_header();
 	sr = srunner_create(sto_bad_header);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
+	srunner_free(sr);
+
+	Suite *sto_exceptions = storage_exception_write();
+	sr = srunner_create(sto_exceptions);
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed += srunner_ntests_failed(sr);
 	srunner_free(sr);
