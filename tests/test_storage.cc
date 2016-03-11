@@ -28,6 +28,71 @@
 
 
 #pragma pack(push, 1)
+struct StorageBinBadHeader1 {
+	// uint8_t magic;
+	uint32_t aux;
+	uint8_t flags;  // required
+	uint32_t size;  // required
+
+	inline void init(void* /*param*/, uint32_t size_, uint8_t flags_) {
+		// magic = STORAGE_BIN_HEADER_MAGIC;
+		size = size_;
+		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
+	}
+
+	inline void validate(void* /*param*/) {
+		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
+		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
+		// }
+		if (flags & STORAGE_FLAG_DELETED) {
+			throw MSG_StorageNotFound("Bin deleted");
+		}
+	}
+};
+
+struct StorageBinBadHeader2 {
+	// uint8_t magic;
+	uint8_t flags;  // required
+	uint64_t size;  // required
+
+	inline void init(void* /*param*/, uint32_t size_, uint8_t flags_) {
+		// magic = STORAGE_BIN_HEADER_MAGIC;
+		size = size_;
+		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
+	}
+
+	inline void validate(void* /*param*/) {
+		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
+		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
+		// }
+		if (flags & STORAGE_FLAG_DELETED) {
+			throw MSG_StorageNotFound("Bin deleted");
+		}
+	}
+};
+
+struct StorageBinBadHeader3 {
+	// uint8_t magic;
+	char aux[16];
+	uint8_t flags;  // required
+	uint32_t size;  // required
+
+	inline void init(void* /*param*/, uint32_t size_, uint8_t flags_) {
+		// magic = STORAGE_BIN_HEADER_MAGIC;
+		size = size_;
+		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
+	}
+
+	inline void validate(void* /*param*/) {
+		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
+		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
+		// }
+		if (flags & STORAGE_FLAG_DELETED) {
+			throw MSG_StorageNotFound("Bin deleted");
+		}
+	}
+};
+
 struct StorageBinFooterChecksum {
 	uint32_t checksum;
 	// uint8_t magic;
@@ -49,7 +114,7 @@ struct StorageBinFooterChecksum {
 #pragma pack(pop)
 
 
-const std::string volumen_name("examples/volumen0");
+const std::string volumen_name("examples/volume0");
 
 
 static const std::vector<std::string> small_files({
@@ -77,7 +142,7 @@ int test_storage_data(int flags) {
 	int cont_write = 0;
 	for (int i = 0; i < 5120; ++i) {
 		_storage.write(data);
-		data.append(1, random_int('0', 'z'));
+		data.append(1, random_int('\x00', '\xff'));
 		++cont_write;
 	}
 	_storage.close();
@@ -85,7 +150,7 @@ int test_storage_data(int flags) {
 	_storage.open(volumen_name, STORAGE_CREATE_OR_OPEN | flags);
 	for (int i = 5120; i < 10240; ++i) {
 		_storage.write(data);
-		data.append(1, random_int('0', 'z'));
+		data.append(1, random_int('\x00', '\xff'));
 		++cont_write;
 	}
 
@@ -157,4 +222,32 @@ int test_storage_file(int flags) {
 	unlink(volumen_name.c_str());
 
 	return cont_read != cont_write;
+}
+
+
+int test_storage_bad_headers() {
+	int res = 0;
+
+	try {
+		Storage<StorageHeader, StorageBinBadHeader1, StorageBinFooterChecksum> _storage;
+		res = 1;
+	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Bad header (1): %s", e.what());
+	}
+
+	try {
+		Storage<StorageHeader, StorageBinBadHeader2, StorageBinFooterChecksum> _storage;
+		res = 1;
+	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Bad header (2): %s", e.what());
+	}
+
+	try {
+		Storage<StorageHeader, StorageBinBadHeader3, StorageBinFooterChecksum> _storage;
+		res = 1;
+	} catch (const std::exception& e) {
+		L_ERR(nullptr, "Bad header (3): %s", e.what());
+	}
+
+	return res;
 }

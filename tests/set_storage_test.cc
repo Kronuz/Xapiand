@@ -56,6 +56,13 @@ START_TEST(test_storage_files_cmp)
 END_TEST
 
 
+START_TEST(test_StorageBadHeader)
+{
+	ck_assert_int_eq(test_storage_bad_headers(), 0);
+}
+END_TEST
+
+
 Suite* storage_datas(void) {
 	Suite *s = suite_create("Testing Storage for datas");
 
@@ -86,11 +93,34 @@ Suite* storage_files(void) {
 }
 
 
+Suite* storage_bad_header(void) {
+	Suite *s = suite_create("Testing Storage for bad headers");
+
+	TCase *bad_header = tcase_create("Storage bad headers");
+	tcase_add_test(bad_header, test_StorageBadHeader);
+	suite_add_tcase(s, bad_header);
+
+	return s;
+}
+
+
 int main(void) {
 	Suite *sto_data = storage_datas();
 	SRunner *sr = srunner_create(sto_data);
 	srunner_run_all(sr, CK_NORMAL);
 	int number_failed = srunner_ntests_failed(sr);
+	srunner_free(sr);
+
+	Suite *sto_file = storage_files();
+	sr = srunner_create(sto_file);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
+	srunner_free(sr);
+
+	Suite *sto_bad_header = storage_bad_header();
+	sr = srunner_create(sto_bad_header);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
 	srunner_free(sr);
 
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;

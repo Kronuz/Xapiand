@@ -27,3 +27,4 @@
 
 int test_storage_data(int flags=0);
 int test_storage_file(int flags=0);
+int test_storage_bad_headers();
