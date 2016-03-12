@@ -105,7 +105,7 @@ Log::~Log()
  * Avoid the "static initialization order fiasco"
  */
 LogThread&
-Log::thread()
+Log::_thread()
 {
 	static LogThread* thread_ = new LogThread();
 	return *thread_;
@@ -180,7 +180,8 @@ Log::add(const std::string& str, bool cleanup, std::chrono::time_point<std::chro
 {
 	auto l_ptr = std::make_shared<Log>(str, cleanup, wakeup, priority);
 
-	thread().add(l_ptr);
+	static LogThread& thread = _thread();
+	thread.add(l_ptr);
 
 	return l_ptr;
 }
@@ -219,7 +220,8 @@ Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::ch
 void
 Log::finish(bool wait)
 {
-	thread().finish(wait);
+	static LogThread& thread = _thread();
+	_thread().finish(wait);
 }
 
 
