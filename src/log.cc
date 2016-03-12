@@ -84,7 +84,6 @@ SysLog::log(int priority, const std::string& str)
 
 int Log::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Log::handlers;
-LogThread Log::thread;
 
 
 Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_)
@@ -99,6 +98,19 @@ Log::~Log()
 	bool f = false;
 	finished.compare_exchange_strong(f, cleanup);
 }
+
+
+/*
+ * https://isocpp.org/wiki/faq/ctors#static-init-order
+ * Avoid the "static initialization order fiasco"
+ */
+LogThread&
+Log::thread()
+{
+	static LogThread* thread_ = new LogThread();
+	return *thread_;
+}
+
 
 std::string
 Log::str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void* obj, const char *format, va_list argptr)
@@ -168,7 +180,7 @@ Log::add(const std::string& str, bool cleanup, std::chrono::time_point<std::chro
 {
 	auto l_ptr = std::make_shared<Log>(str, cleanup, wakeup, priority);
 
-	thread.add(l_ptr);
+	thread().add(l_ptr);
 
 	return l_ptr;
 }
@@ -207,7 +219,7 @@ Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::ch
 void
 Log::finish(bool wait)
 {
-	thread.finish(wait);
+	thread().finish(wait);
 }
 
 

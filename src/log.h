@@ -85,7 +85,7 @@ class LogThread;
 class Log : public std::enable_shared_from_this<Log> {
 	friend class LogThread;
 
-	static LogThread thread;
+	static LogThread& thread();
 
 	static std::string str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
 	static std::shared_ptr<Log> add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
