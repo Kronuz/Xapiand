@@ -221,7 +221,7 @@ void
 Log::finish(bool wait)
 {
 	static LogThread& thread = _thread();
-	_thread().finish(wait);
+	thread.finish(wait);
 }
 
 
