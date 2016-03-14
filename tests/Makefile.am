@@ -16,6 +16,7 @@ check_PROGRAMS = \
 	set_sort_test \
 	set_storage_test \
 	set_threadpool_test \
+	set_wal_test \
 	set_wkt_test
 
 TESTS = $(check_PROGRAMS)
@@ -107,6 +108,9 @@ set_threadpool_test_LDADD = @CHECK_LIBS@
 
 set_wkt_test_SOURCES = $(common_files) set_wkt_test.cc test_wkt_parser.cc
 set_wkt_test_LDADD = @CHECK_LIBS@
+
+set_wal_test_SOURCES = $(common_files) set_wal_test.cc test_wal.cc
+set_wal_test_LDADD = @CHECK_LIBS@
 
 AM_LDFLAGS = $(XAPIAN_LIBS)
 AM_CXXFLAGS = $(XAPIAN_CXXFLAGS)
