@@ -189,7 +189,9 @@ int make_search(const test_geo_t _tests[], int len) {
 			} else {
 				auto it = p.expect_datas.begin();
 				for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {
-					auto obj_data = get_MsgPack(m.get_document());
+					auto doc = m.get_document();
+					database->storage_pull_data(doc);
+					auto obj_data = get_MsgPack(doc);
 					try {
 						std::string str_data(obj_data.at(RESERVED_DATA).get_str());
 						if (it->compare(str_data) != 0) {

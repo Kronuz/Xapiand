@@ -332,7 +332,9 @@ int make_search(const test_query_t _tests[], int len) {
 			} else {
 				Xapian::MSetIterator m = mset.begin();
 				for (auto it = p.expect_datas.begin(); m != mset.end(); ++it, ++m) {
-					auto obj_data = get_MsgPack(m.get_document());
+					auto doc = m.get_document();
+					database->storage_pull_data(doc);
+					auto obj_data = get_MsgPack(doc);
 					try {
 						auto data = obj_data.at(RESERVED_DATA);
 						std::string str_data(data.get_str());
