@@ -836,6 +836,82 @@ void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pr
 }
 
 
+int copy_file(const std::string& src, const std::string& dst, bool create, const std::string& file_name, const std::string& new_name) {
+	DIR* dir_src = opendir(src.c_str());
+	if (!dir_src) {
+		L_ERR(nullptr, "ERROR: %s", strerror(errno));
+		return -1;
+	}
+
+	struct stat s;
+	int err = stat(dst.c_str(), &s);
+
+	if(-1 == err) {
+		if(ENOENT == errno && create) {
+			if (::mkdir(dst.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
+				L_ERR(nullptr, "ERROR: couldn't create directory %s (%s)", dst.c_str(), strerror(errno));
+				return -1;
+			}
+		} else {
+			L_ERR(nullptr, "ERROR: couldn't obtain directory information %s (%s)", dst.c_str(), strerror(errno));
+			return -1;
+		}
+	}
+
+	bool ended = false;
+	struct dirent *ent;
+	unsigned char buffer[4096];
+
+	while ((ent = readdir(dir_src)) != nullptr and not ended) {
+		if (ent->d_type == DT_REG) {
+
+			if (not file_name.empty()) {
+				if (strcmp(ent->d_name, file_name.c_str()) != 0) {
+					continue;
+				} else {
+					ended = true;
+				}
+			}
+
+			std::string src_path (src + "/" + std::string(ent->d_name));
+			std::string dst_path (dst + "/" + (new_name.empty() ? std::string(ent->d_name) : new_name));
+
+			int src_fd = open(src_path.c_str(), O_RDONLY);
+			if (-1 == src_fd) {
+				L_ERR(nullptr, "ERROR: opening file. %s\n", src_path.c_str());
+				return -1;
+			}
+
+			int dst_fd = open(dst_path.c_str(), O_CREAT | O_WRONLY, 0644);
+			if (-1 == src_fd) {
+				L_ERR(nullptr, "ERROR: opening file. %s\n", dst_path.c_str());
+				return -1;
+			}
+
+			while (1) {
+				ssize_t bytes = read(src_fd, buffer, 4096);
+				if (-1 == bytes) {
+					L_ERR(nullptr, "ERROR: reading file. %s (%s)\n", src_path.c_str(), strerror(errno));
+					return -1;
+				}
+
+				if (0 == bytes) break;
+
+				bytes = write(dst_fd, buffer, bytes);
+				if (-1 == bytes) {
+					L_ERR(nullptr, "ERROR: writing file. %s (%s)\n", dst_path.c_str(), strerror(errno));
+					return -1;
+				}
+			}
+			close(src_fd);
+			close(dst_fd);
+		}
+	}
+	closedir(dir_src);
+	return 0;
+}
+
+
 int strict_stoi(const std::string& str) {
 	if (str.substr(str.at(0) == '-').find_first_not_of("0123456789") == std::string::npos) {
 		return std::stoi(str, nullptr, 10);
