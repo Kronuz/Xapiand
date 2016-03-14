@@ -107,8 +107,8 @@ Log::~Log()
 LogThread&
 Log::_thread()
 {
-	static LogThread* thread_ = new LogThread();
-	return *thread_;
+	static LogThread* thread = new LogThread();
+	return *thread;
 }
 
 
