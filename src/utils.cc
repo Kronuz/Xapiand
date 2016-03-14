@@ -846,8 +846,8 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 	struct stat s;
 	int err = stat(dst.c_str(), &s);
 
-	if(-1 == err) {
-		if(ENOENT == errno && create) {
+	if (-1 == err) {
+		if (ENOENT == errno && create) {
 			if (::mkdir(dst.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
 				L_ERR(nullptr, "ERROR: couldn't create directory %s (%s)", dst.c_str(), strerror(errno));
 				return -1;

@@ -191,7 +191,7 @@ int strict_stoi(const std::string& str);
 void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pre_suf_fix);
 DIR* opendir(const char* filename, bool create);
 // Copy all directory if file_name and new_name are empty
-int copy_file(const std::string& src, const std::string& dst, bool create=true, const std::string& file_name=std::string(""), const std::string& new_name=std::string(""));
+int copy_file(const std::string& src, const std::string& dst, bool create=true, const std::string& file_name=std::string(), const std::string& new_name=std::string());
 
 void update_pos_time();
 void fill_zeros_stats_min(uint16_t start, uint16_t end);

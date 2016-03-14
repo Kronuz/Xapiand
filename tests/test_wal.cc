@@ -34,7 +34,7 @@ static std::shared_ptr<Database> database;
 static std::shared_ptr<Database> res_database;
 static std::string test_db(".test_wal.db");
 static std::string restored_db(".backup_wal.db");
-const int seed = 0;
+constexpr int seed = 0;
 
 
 uint32_t get_checksum(int fd) {
@@ -44,11 +44,10 @@ uint32_t get_checksum(int fd) {
 	XXH32_state_t* xxhash = XXH32_createState();
 	XXH32_reset(xxhash, seed);
 
-	while (true) {
-		bytes = io::read(fd, buf, sizeof(buf));
-		if (bytes == 0) break;
+	while ((bytes = io::read(fd, buf, sizeof(buf))) > 0) {
 		XXH32_update(xxhash, buf, bytes);
 	}
+
 	uint32_t checksum = XXH32_digest(xxhash);
 	XXH32_freeState(xxhash);
 	return checksum;
@@ -56,7 +55,6 @@ uint32_t get_checksum(int fd) {
 
 
 bool dir_compare(const std::string& dir1, const std::string& dir2) {
-
 	bool same_file = true;
 	DIR* d1 = opendir(dir1.c_str());
 	if (!d1) {
@@ -109,7 +107,6 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 
 
 int create_db() {
-
 	int num_documents = 1020;
 
 	std::string document("{ \"message\" : \"Hello world\"}");
@@ -131,7 +128,7 @@ int create_db() {
 		return 1;
 	}
 
-	for (int i = 2; i <= num_documents; i++) {
+	for (int i = 2; i <= num_documents; ++i) {
 		database->index(document, std:: to_string(i), true, JSON_TYPE, std::to_string(document.size()));
 	}
 
@@ -150,7 +147,6 @@ int create_db() {
 int restore_database() {
 	int result = 0;
 	try {
-
 		result = create_db();
 		Endpoints endpoints;
 		Endpoint e;
