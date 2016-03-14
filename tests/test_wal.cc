@@ -151,7 +151,7 @@ int restore_database() {
 	int result = 0;
 	try {
 
-		create_db();
+		result = create_db();
 		Endpoints endpoints;
 		Endpoint e;
 		e.node_name.assign("node_test");

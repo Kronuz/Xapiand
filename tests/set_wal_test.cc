@@ -37,7 +37,7 @@ Suite* testWal(void) {
 	Suite *s = suite_create("Test wal");
 
 	TCase *t_restore = tcase_create("Test to prove wal");
-	tcase_set_timeout(t_restore, 30);
+	tcase_set_timeout(t_restore, 35);
 	tcase_add_test(t_restore, test_restore_database);
 	suite_add_tcase(s, t_restore);
 
