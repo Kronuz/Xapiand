@@ -283,7 +283,7 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 				L_RAFT_PROTO(this, "message: '%s'", repr(message).c_str());
 
 				raft_server(type, message);
-			} catch (DummyException) {
+			} catch (const DummyException&) {
 				break;  // no message
 			} catch (const Exception& exc) {
 				L_WARNING(this, "WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");

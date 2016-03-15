@@ -66,6 +66,12 @@ public:
 };
 
 
+class DummyException : std::runtime_error {
+public:
+	DummyException() : std::runtime_error("") { }
+};
+
+
 class Error : public Exception {
 public:
 	template<typename... Args>
@@ -105,13 +111,6 @@ class LimitError : public Exception {
 public:
 	template<typename... Args>
 	LimitError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
-};
-
-
-class DummyException : public Exception {
-public:
-	template<typename... Args>
-	DummyException(Args&&... args) : Exception(std::forward<Args>(args)...) { }
 };
 
 
@@ -164,7 +163,7 @@ public:
 #define MSG_CartesianError(...) CartesianError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_EWKTError(...) EWKTError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_SerialisationError(...) SerialisationError(__FILE__, __LINE__, __VA_ARGS__)
-#define MSG_DummyException(...) DummyException(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_DummyException() DummyException()
 #define MSG_NetworkError(...) NetworkError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_InvalidArgumentError(...) InvalidArgumentError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_InvalidOperationError(...) InvalidOperationError(__FILE__, __LINE__, __VA_ARGS__)

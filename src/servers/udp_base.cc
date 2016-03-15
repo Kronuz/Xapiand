@@ -194,11 +194,11 @@ BaseUDP::get_message(std::string& result, char max_type)
 			throw MSG_NetworkError(strerror(errno));
 		}
 		L_CONN(this, "Received EOF (sock=%d)!", sock);
-		throw MSG_DummyException("No message received!");
+		throw MSG_DummyException();
 	} else if (received == 0) {
 		// If no messages are available to be received and the peer has performed an orderly shutdown.
 		L_CONN(this, "Received EOF (sock=%d)!", sock);
-		throw MSG_DummyException("No message received!");
+		throw MSG_DummyException();
 	} else if (received < 4) {
 		throw MSG_NetworkError("Badly formed message: Incomplete!");
 	}

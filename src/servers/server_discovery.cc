@@ -404,8 +404,8 @@ DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 				}
 				L_DISCOVERY_PROTO(this, "message: '%s'", repr(message).c_str());
 				discovery_server(type, message);
-			} catch (DummyException) {
-				break;  // no message
+			} catch (const DummyException&) {
+				break;  // No message.
 			} catch (const Exception& exc) {
 				L_WARNING(this, "WARNING: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 				break;

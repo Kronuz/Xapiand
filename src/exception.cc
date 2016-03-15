@@ -35,7 +35,7 @@
 std::string traceback(const char *filename, int line) {
 	std::string t;
 #ifdef TRACEBACK
-	void* callstack[128];
+	static void* callstack[128];
 
 	// retrieve current stack addresses
 	int frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
@@ -81,7 +81,7 @@ std::string traceback(const char *filename, int line) {
 Exception::Exception(const char *filename, int line, const char *format, ...)
 	: std::runtime_error("")
 {
-	char buffer[BUFFER_SIZE];
+	static char buffer[BUFFER_SIZE];
 
 	va_list argptr;
 	va_start(argptr, format);
