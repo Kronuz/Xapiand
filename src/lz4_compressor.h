@@ -239,6 +239,8 @@ class LZ4CompressFile : public LZ4BlockStreaming<LZ4CompressFile> {
 	LZ4_stream_t* const lz4Stream;
 
 	int fd;
+	size_t fd_offset;
+	bool fd_internal;
 
 	std::string init();
 	std::string next();
@@ -247,6 +249,8 @@ class LZ4CompressFile : public LZ4BlockStreaming<LZ4CompressFile> {
 
 public:
 	LZ4CompressFile(const std::string& filename, int seed=0);
+
+	LZ4CompressFile(int fd_, size_t fd_offset_=0, int seed=0);
 
 	~LZ4CompressFile();
 };
@@ -286,7 +290,7 @@ class LZ4DecompressData : public LZ4BlockStreaming<LZ4DecompressData> {
 	LZ4_streamDecode_t* const lz4StreamDecode;
 
 	const char* data;
-	const size_t data_size;
+	size_t data_size;
 	size_t data_offset;
 
 	std::string init();
@@ -297,7 +301,14 @@ class LZ4DecompressData : public LZ4BlockStreaming<LZ4DecompressData> {
 public:
 	LZ4DecompressData(const char* data_, size_t data_size_, int seed=0);
 
+	LZ4DecompressData(int seed=0);
+
 	~LZ4DecompressData();
+
+	inline void add_data(const char* data_, size_t data_size_) {
+		data = data_;
+		data_size =  data_size_;
+	}
 };
 
 

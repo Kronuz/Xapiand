@@ -125,7 +125,9 @@ LZ4CompressData::next()
 
 LZ4CompressFile::LZ4CompressFile(const std::string& filename, int seed)
 	: LZ4BlockStreaming(LZ4_BLOCK_SIZE, seed),
-	  lz4Stream(LZ4_createStream())
+	  lz4Stream(LZ4_createStream()),
+	  fd_offset(0),
+	  fd_internal(true)
 {
 	fd = io::open(filename.c_str(), O_RDONLY, 0644);
 	if unlikely(fd < 0) {
@@ -138,9 +140,19 @@ LZ4CompressFile::LZ4CompressFile(const std::string& filename, int seed)
 }
 
 
+LZ4CompressFile::LZ4CompressFile(int fd_, size_t fd_offset_, int seed)
+	: LZ4BlockStreaming(LZ4_BLOCK_SIZE, seed),
+	  lz4Stream(LZ4_createStream()),
+	  fd(fd_),
+	  fd_offset(fd_offset_),
+	  fd_internal(false) { }
+
+
 LZ4CompressFile::~LZ4CompressFile()
 {
-	io::close(fd);
+	if (fd_internal) {
+		io::close(fd);
+	}
 	LZ4_freeStream(lz4Stream);
 }
 
@@ -148,7 +160,7 @@ LZ4CompressFile::~LZ4CompressFile()
 std::string
 LZ4CompressFile::init()
 {
-	if (io::lseek(fd, 0, SEEK_SET) != 0) {
+	if (io::lseek(fd, fd_offset, SEEK_SET) != static_cast<off_t>(fd_offset)) {
 		throw MSG_LZ4IOError("IO error: lseek");
 	}
 
@@ -211,7 +223,7 @@ std::string
 LZ4CompressDescriptor::init()
 {
 	if unlikely(fd <= 0) {
-		MSG_LZ4Exception("Incorrect descriptor file: %d", fd);
+		throw MSG_LZ4Exception("Incorrect descriptor file: %d", fd);
 	}
 
 	return next();
@@ -266,6 +278,13 @@ LZ4DecompressData::LZ4DecompressData(const char* data_, size_t data_size_, int s
 	  lz4StreamDecode(LZ4_createStreamDecode()),
 	  data(data_),
 	  data_size(data_size_) { }
+
+
+LZ4DecompressData::LZ4DecompressData(int seed)
+	: LZ4BlockStreaming(LZ4_BLOCK_SIZE, seed),
+	  lz4StreamDecode(LZ4_createStreamDecode()),
+	  data(nullptr),
+	  data_size(0) { }
 
 
 LZ4DecompressData::~LZ4DecompressData()
@@ -456,7 +475,7 @@ std::string
 LZ4DecompressDescriptor::init()
 {
 	if unlikely(fd <= 0) {
-		MSG_LZ4Exception("Incorrect descriptor file: %d", fd);
+		throw MSG_LZ4Exception("Incorrect descriptor file: %d", fd);
 	}
 
 	if unlikely((data_size = io::read(fd, data, read_bytes > LZ4_FILE_READ_SIZE ? LZ4_FILE_READ_SIZE : read_bytes)) < 0) {
