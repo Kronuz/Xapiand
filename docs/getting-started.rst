@@ -9,7 +9,7 @@ Xapiand is a Highly Available Distributed RESTful Storage and Search Engine
 built for the cloud and with Data Locality. Built on top of Xapian.
 
 This document aims to be a guide to getting up and running with your first
-indexing and searching document.
+indexing and searching document also a brief introduction to Xapiand.
 
 
 Installation
@@ -266,8 +266,7 @@ simple, just send a GET request to the endpoint with a query:
 
 ::
 
-   curl -XGET
-  'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty=true'
+    curl -XGET 'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty=true'
 
 Note the endpoint is still the same, but the ``_search`` replace the ``1`` in
 the above request, well this part can be essentially an identifier or an
@@ -290,7 +289,7 @@ And there you have it:
 
 Delete document
 ^^^^^^^^^^^^^^^
-For delete a document just send a DELETE request with the endpoint and de
+For delete a document just send a DELETE request with the endpoint and the
 document id:
 
 ::
@@ -308,7 +307,8 @@ request API format to communicate with Xapiand:
 Modifying/Replacing Documents
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you are following the above request reindex the document that just deleted,
-now for modify data is enough with reindex the document with the updated field:
+now for modify data is enough with reindex the document with the updated field
+in this example we modify the field "user" for the document with the id 1:
 
 ::
 
@@ -320,5 +320,71 @@ now for modify data is enough with reindex the document with the updated field:
       }'
 
 
-Note that only are updating fields, if you need replace the field for other, you
-need use a patch request:
+Note that only are updating fields, but what if you want to remove a field or
+add a new one or even both things and update a field value as well, in this
+case you need use a patch request, this is how to modify a document without
+reindex the document:
+
+
+First write the patch in a file (tweet_patch) the patch format is in JavaScript Object Notation (JSON) Patch described in
+`RFC 6902 <https://tools.ietf.org/html/rfc6902>`_
+
+::
+
+   [
+        { "op": "remove", "path": "postDate" },
+        { "op": "replace", "path": "user", "value": "Chema" },
+        { "op": "add", "path": "followers", "value": "150" }
+   ]
+
+In the above patch we are saying that we want to remove the field "postDate",
+replace the field value of "user" for *chema* and add the field "followers" with
+a value of *150*
+
+Once the patch is ready, send the patch to Xapiand with a PATCH request
+
+::
+
+    curl -X 'PATCH' -H 'Content-Type: application/json' -d @/path/to/tweet_patch 'http://127.0.0.1:8880/twitter/tweet/1?pretty'
+
+the Xapiand response show the document updated
+
+::
+
+    {
+        "update": {
+            "_id": "1"
+        }
+    }
+
+In order to see the document uptaded retrieve it with a GET request
+
+::
+
+    curl -XGET 'http://localhost:8880/twitter/tweet/1?pretty'
+
+Note this GET is slightly different to the previous, the last time to
+retrieve the document we do a search with the command ``_search`` instead of the
+``1`` after the index part in the url, also contains a query to match with
+the "user"*Kronuz* just for recall this is the previous request
+
+::
+
+    curl -XGET 'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty=true'
+
+Now you can see the difference, in the request with the ``1`` we are telling to
+Xapiand to return the document with the id equals to ``1`` and in other we are
+telling to do a **search** in the documents with contains a field *user* with the
+value of *Kronuz*
+
+Getting back to the patch businesses, this is the document returned after the
+patch
+
+::
+
+    {
+        "user": "Chema",
+        "message": "Trying out Xapiand, so far so good?",
+        "followers": "150",
+        "_id": "1"
+    }
