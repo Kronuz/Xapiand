@@ -26,7 +26,7 @@
 
 #include "servers/server_base.h"
 
-#include "compressor.h"
+#include "lz4_compressor.h"
 
 #include "ev/ev++.h"
 
@@ -70,8 +70,11 @@ enum class MODE;
 enum class WR;
 
 
+class ClientDecompressor;
+
+
 class BaseClient : public Task<>, public Worker {
-	friend Compressor;
+	friend LZ4CompressFile;
 
 	bool _write(int fd, bool async);
 
@@ -121,12 +124,13 @@ protected:
 	int written;
 	std::string length_buffer;
 
-	std::unique_ptr<Compressor> compressor;
+	std::unique_ptr<ClientDecompressor> decompressor;
 	char *read_buffer;
 
 	MODE mode;
 	ssize_t file_size;
 	size_t block_size;
+	bool receive_checksum;
 
 	Endpoints endpoints;
 
@@ -149,7 +153,7 @@ protected:
 	WR write_directly(int fd);
 
 	void read_file();
-	bool send_file(int fd);
+	bool send_file(int fd, size_t offset=0);
 
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;

@@ -36,6 +36,9 @@
 #define LZ4_COMPRESSOR "\02"
 #define TYPE_COMPRESSOR LZ4_COMPRESSOR
 
+#define CMP_SEED 0xCEED
+
+
 constexpr int WRITE_QUEUE_SIZE = 10;
 
 enum class WR {
@@ -53,113 +56,194 @@ enum class MODE {
 };
 
 
-class ClientReader : public CompressorBufferReader {
-protected:
-	int fd;
-	size_t file_size;
+class ClientLZ4Compressor : public LZ4CompressFile {
 	BaseClient *client;
-	std::string header;
 
 public:
-	ClientReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_)
-		: fd(fd_),
-		  file_size(file_size_),
-		  client(client_),
-		  header(header_) { }
-};
+	ClientLZ4Compressor(BaseClient *client_, int fd, size_t offset=0)
+		: LZ4CompressFile(fd, offset, CMP_SEED),
+		  client(client_) { }
 
-
-class ClientCompressorReader : public ClientReader {
-protected:
-	ssize_t begin();
-	ssize_t read(char **buf, size_t size);
-	ssize_t write(const char *buf, size_t size);
-	ssize_t done();
-
-public:
-	ClientCompressorReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_)
-		: ClientReader(client_, fd_, file_size_, header_) { }
+	ssize_t compress();
 };
 
 
 ssize_t
-ClientCompressorReader::begin()
+ClientLZ4Compressor::compress()
 {
-	if (!client->write(header)) {
+	if (!client->write(LZ4_COMPRESSOR)) {
+		L_ERR(this, "Write Header failed!");
 		return -1;
 	}
-	return 1;
-}
 
-
-ssize_t
-ClientCompressorReader::read(char **buf, size_t size)
-{
-	if (!*buf) {
-		L_CRIT(this, "Segmentation fault in compressor reader");
-		exit(EX_SOFTWARE);
-	}
-	return io::read(fd, *buf, size);
-}
-
-
-ssize_t
-ClientCompressorReader::write(const char *buf, size_t size)
-{
-	std::string length(serialise_length(size));
-	if (!client->write(length) || !client->write(buf, size)) {
+	try {
+		auto it = begin();
+		while (it) {
+			std::string length(serialise_length(it.size()));
+			if (!client->write(length) || !client->write(it->data(), it.size())) {
+				L_ERR(this, "Write failed!");
+				return -1;
+			}
+			++it;
+		}
+	} catch (const std::exception& e) {
+		L_ERR(this, "%s", e.what());
 		return -1;
 	}
-	return length.size() + size;
-}
 
-
-ssize_t
-ClientCompressorReader::done()
-{
-	std::string length(serialise_length(0));
-	if (!client->write(length)) {
+	if (!client->write(serialise_length(0)) || !client->write(serialise_length(get_digest()))) {
+		L_ERR(this, "Write Footer failed!");
 		return -1;
 	}
-	return length.size();
+
+	return size();
 }
 
 
-class ClientDecompressorReader : public ClientReader {
-protected:
-	ssize_t write(const char *buf, size_t size);
+class ClientNoCompressor {
+	BaseClient *client;
+	int fd;
+	size_t offset;
+	XXH32_state_t* xxh_state;
+
 public:
-	ClientDecompressorReader(BaseClient *client_, int fd_, size_t file_size_, const std::string &header_)
-		: ClientReader(client_, fd_, file_size_, header_) { }
+	ClientNoCompressor(BaseClient *client_, int fd_, size_t offset_=0)
+		: client(client_),
+		  fd(fd_),
+		  offset(offset_),
+		  xxh_state(XXH32_createState()) { }
+
+	~ClientNoCompressor() {
+		XXH32_freeState(xxh_state);
+	}
+
+	ssize_t compress();
 };
 
 
 ssize_t
-ClientDecompressorReader::write(const char *buf, size_t size)
+ClientNoCompressor::compress()
 {
-	client->on_read_file(buf, size);
+	if (!client->write(NO_COMPRESSOR)) {
+		L_ERR(this, "Write Header failed!");
+		return -1;
+	}
+
+	if unlikely(io::lseek(fd, offset, SEEK_SET) != static_cast<off_t>(offset)) {
+		L_ERR(this, "IO error: lseek");
+		return -1;
+	}
+
+	char buffer[LZ4_BLOCK_SIZE];
+	XXH32_reset(xxh_state, CMP_SEED);
+
+	size_t size = 0;
+	ssize_t r;
+	while ((r = io::read(fd, buffer, sizeof(buffer))) > 0) {
+		std::string length(serialise_length(r));
+		if (!client->write(length) || !client->write(buffer, r)) {
+			L_ERR(this, "Write failed!");
+			return -1;
+		}
+		size += r;
+		XXH32_update(xxh_state, buffer, r);
+	}
+
+	if (r < 0) {
+		L_ERR(this, "IO error: read");
+		return -1;
+	}
+
+	if (!client->write(serialise_length(0)) || !client->write(serialise_length(XXH32_digest(xxh_state)))) {
+		L_ERR(this, "Write Footer failed!");
+		return -1;
+	}
+
 	return size;
 }
 
 
-class ClientNoCompressor : public NoCompressor {
+class ClientDecompressor {
+protected:
+	BaseClient *client;
+	std::string input;
+
 public:
-	ClientNoCompressor(BaseClient *client_, int fd_=0, size_t file_size_=0) :
-		NoCompressor(
-			std::make_unique<ClientDecompressorReader>(client_, fd_, file_size_, NO_COMPRESSOR),
-			std::make_unique<ClientCompressorReader>(client_, fd_, file_size_, NO_COMPRESSOR)
-		) { }
+	ClientDecompressor(BaseClient *client_)
+		: client(client_) { }
+
+	inline void clear() noexcept {
+		input.clear();
+	}
+
+	inline void append(const char *buf, size_t size) {
+		input.append(buf, size);
+	}
+
+	virtual ssize_t decompress() = 0;
+	virtual inline bool verify(uint32_t checksum_) noexcept = 0;
 };
 
 
-class ClientLZ4Compressor : public LZ4Compressor {
+class ClientLZ4Decompressor : public ClientDecompressor, LZ4DecompressData {
 public:
-	ClientLZ4Compressor(BaseClient *client_, int fd_=0, size_t file_size_=0) :
-		LZ4Compressor(
-			std::make_unique<ClientDecompressorReader>(client_, fd_, file_size_, LZ4_COMPRESSOR),
-			std::make_unique<ClientCompressorReader>(client_, fd_, file_size_, LZ4_COMPRESSOR)
-		) { }
+	ClientLZ4Decompressor(BaseClient *client_)
+		: ClientDecompressor(client_),
+		  LZ4DecompressData(CMP_SEED) { }
+
+	ssize_t decompress() override;
+
+	inline bool verify(uint32_t checksum_) noexcept override {
+		return get_digest() == checksum_;
+	}
 };
+
+
+ssize_t
+ClientLZ4Decompressor::decompress()
+{
+	add_data(input.data(), input.size());
+	auto it = begin();
+	while (it) {
+		client->on_read_file(it->data(), it.size());
+		++it;
+	}
+	return size();
+}
+
+
+class ClientNoDecompressor : public ClientDecompressor {
+	XXH32_state_t* xxh_state;
+
+public:
+	ClientNoDecompressor(BaseClient *client_)
+		: ClientDecompressor(client_),
+		  xxh_state(XXH32_createState()) {
+		XXH32_reset(xxh_state, CMP_SEED);
+	}
+
+	~ClientNoDecompressor() {
+		XXH32_freeState(xxh_state);
+	}
+
+	ssize_t decompress() override;
+
+	inline bool verify(uint32_t checksum_) noexcept override {
+		return XXH32_digest(xxh_state) == checksum_;
+	}
+};
+
+
+ssize_t
+ClientNoDecompressor::decompress()
+{
+	size_t size = input.size();
+	const char* data = input.data();
+	client->on_read_file(data, size);
+	XXH32_update(xxh_state, data, size);
+
+	return size;
+}
 
 
 BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref *loop_, int sock_)
@@ -453,11 +537,11 @@ BaseClient::io_cb_read(int fd)
 				switch (*buf_data++) {
 					case *NO_COMPRESSOR:
 						L_CONN(this, "Receiving uncompressed file (sock=%d, fd=%d)...", sock, fd);
-						compressor = std::make_unique<ClientNoCompressor>(this);
+						decompressor = std::make_unique<ClientNoDecompressor>(this);
 						break;
 					case *LZ4_COMPRESSOR:
 						L_CONN(this, "Receiving LZ4 compressed file (sock=%d, fd=%d)...", sock, fd);
-						compressor = std::make_unique<ClientLZ4Compressor>(this);
+						decompressor = std::make_unique<ClientLZ4Decompressor>(this);
 						break;
 					default:
 						L_CONN(this, "Received wrong file mode (sock=%d, fd=%d)!", sock, fd);
@@ -479,12 +563,26 @@ BaseClient::io_cb_read(int fd)
 
 						buf_end = buf_data + length_buffer.size();
 						try {
-						    file_size = unserialise_length(&buf_data, buf_end, false);
+							file_size = unserialise_length(&buf_data, buf_end, false);
 						} catch (Xapian::SerialisationError) {
 							return;
 						}
+
+						if (receive_checksum) {
+							receive_checksum = false;
+							if (decompressor->verify(file_size)) {
+								on_read_file_done();
+								mode = MODE::READ_BUF;
+								decompressor.reset();
+								break;
+							} else {
+								L_ERR(this, "Data is corrupt!");
+								return;
+							}
+						}
+
 						block_size = file_size;
-						compressor->decompressor->clear();
+						decompressor->clear();
 					}
 
 					const char *file_buf_to_write;
@@ -503,19 +601,16 @@ BaseClient::io_cb_read(int fd)
 					}
 
 					if (block_size_to_write) {
-						compressor->decompressor->append(file_buf_to_write, block_size_to_write);
+						decompressor->append(file_buf_to_write, block_size_to_write);
 						block_size -= block_size_to_write;
 					}
+
 					if (file_size == 0) {
-						compressor->decompressor->clear();
-						compressor->decompress();
-
-						on_read_file_done();
-						mode = MODE::READ_BUF;
-						compressor.reset();
+						decompressor->clear();
+						decompressor->decompress();
+						receive_checksum = true;
 					} else if (block_size == 0) {
-						compressor->decompress();
-
+						decompressor->decompress();
 						if (buf_data) {
 							length_buffer = std::string(buf_data, received);
 							buf_data = nullptr;
@@ -523,9 +618,8 @@ BaseClient::io_cb_read(int fd)
 						} else {
 							length_buffer.clear();
 						}
-
-						file_size = -1;
 					}
+					file_size = -1;
 				} while (file_size == -1);
 			}
 
@@ -582,27 +676,26 @@ BaseClient::read_file()
 {
 	mode = MODE::READ_FILE_TYPE;
 	file_size = -1;
+	receive_checksum = false;
 }
 
 
 bool
-BaseClient::send_file(int fd)
+BaseClient::send_file(int fd, size_t offset)
 {
-	ssize_t file_size = io::lseek(fd, 0, SEEK_END);
-	io::lseek(fd, 0, SEEK_SET);
-
+	ssize_t compressed = -1;
 	switch (*TYPE_COMPRESSOR) {
-		case *NO_COMPRESSOR:
-			compressor = std::make_unique<ClientNoCompressor>(this, fd, file_size);
+		case *NO_COMPRESSOR: {
+			ClientNoCompressor compressor(this, fd, offset);
+			compressed = compressor.compress();
 			break;
-		case *LZ4_COMPRESSOR:
-			compressor = std::make_unique<ClientLZ4Compressor>(this, fd, file_size);
+		}
+		case *LZ4_COMPRESSOR: {
+			ClientLZ4Compressor compressor(this, fd, offset);
+			compressed = compressor.compress();
 			break;
+		}
 	}
 
-	ssize_t compressed = compressor->compress();
-
-	compressor.reset();
-
-	return (compressed == file_size);
+	return compressed != -1;
 }
