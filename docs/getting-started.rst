@@ -167,39 +167,55 @@ Xapiand provides several command line options
 Options
 """""""
 
-=========================== =======================================
-``-d, --daemonize``         daemonize (run in background)
+==================================  =======================================
 
-``--chert``                 Use chert databases
+``--chert``                         Use chert databases
 
-``--cluster``               Cluster name to join
+``--committers <committers>``       Number of committers.
 
-``-D, --database <path>``   Node database path
+``--cluster <cluster>``             Cluster name to join
 
-``-n, --name <name>``       Node name
+``-d,  --detach``                   Detach process. (run in background)
 
-``-p, --pid <pidfile>``     Write PID
+``-D <path>,  --database <path>``   Path to the root of the node
 
-``-u, --uid <id>``          User ID
+``--dbpool <size>``                 Maximum number of databases in database pool
 
-``-g, --gid <id>``          Group ID
+``--discovery <port>``              Discovery UDP port number to listen on
 
-``--workers <int>``         Number of worker servers
+``--dgroup <group>``                Discovery UDP group name
 
-``--replicators <int>``     Number of replicators
+``--gid <gid>``                     Group ID
 
-``--committers <int>``      Number of committers
+``--http <port>``                   TCP HTTP port number to listen on for
 
-``--dbpool <int>``          Maximum of endpoints in database pool
+``-h,  --help``                     Displays usage information and exits
 
-``--http <int>``            HTTP REST API port
+``-L <file>,  --logfile <file>``    Save logs in <file>
 
-``--xapian <int>``          Xapian binary protocol port
+``--name <node>``                   Node name
 
-``--discovery <int>``       Discovery UDP port
+``-P <file>,  --pidfile <file>``    Save PID in <file>
 
-``--raft <int>``            Raft UDP port
-=========================== =======================================
+``--raft <port>``                   Raft UDP port number to listen on
+
+``--rgroup <group>``                Raft UDP group name.
+
+``--replicators <replicators>``     Number of replicators
+
+``--solo``                          Run solo indexer. (no replication or discovery)
+
+``-v,  --verbose``                  Increase verbosity. (accepted multiple times)
+
+``--verbosity <verbosity>``         Set verbosity.
+
+``--version``                       Displays version information and exits
+
+``--workers <threads>``             Number of worker servers
+
+``--xapian <port>``                 Xapian binary protocol TCP port number to listen on
+
+==================================  =======================================
 
 
 REST API
