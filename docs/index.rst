@@ -12,11 +12,7 @@ Contents:
    :maxdepth: 2
 
    getting-started
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   indexing
+   searching
+   how_to
 
