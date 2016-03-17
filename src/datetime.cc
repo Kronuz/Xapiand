@@ -118,7 +118,7 @@ void
 Datetime::computeDateMath(tm_t& tm, const std::string& op, const std::string& units)
 {
 	time_t dateGMT;
-	struct tm *timeinfo;
+	struct tm timeinfo;
 	if (op[0] == '+' || op[0] == '-') {
 		int max_days, num = std::stoi(std::string(op.c_str() + 1, op.size()));
 		switch (units[0]) {
@@ -169,14 +169,14 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, const std::string& un
 				break;
 			case 'w':
 				dateGMT = timegm(tm);
-				timeinfo = gmtime(&dateGMT);
+				gmtime_r(&dateGMT, &timeinfo);
 				if (op.compare("/") == 0) {
-					tm.day += 6 - timeinfo->tm_wday;
+					tm.day += 6 - timeinfo.tm_wday;
 					tm.hour = 23;
 					tm.min = tm.sec = 59;
 					tm.msec = 999;
 				} else {
-					tm.day -= timeinfo->tm_wday;
+					tm.day -= timeinfo.tm_wday;
 					tm.hour = tm.min = tm.sec = tm.msec = 0;
 				}
 				break;
@@ -217,13 +217,13 @@ Datetime::computeDateMath(tm_t& tm, const std::string& op, const std::string& un
 
 	// Update date
 	dateGMT = timegm(tm);
-	timeinfo = gmtime(&dateGMT);
-	tm.year = timeinfo->tm_year + _START_YEAR;
-	tm.mon = timeinfo->tm_mon + 1;
-	tm.day = timeinfo->tm_mday;
-	tm.hour = timeinfo->tm_hour;
-	tm.min = timeinfo->tm_min;
-	tm.sec = timeinfo->tm_sec;
+	gmtime_r(&dateGMT, &timeinfo);
+	tm.year = timeinfo.tm_year + _START_YEAR;
+	tm.mon = timeinfo.tm_mon + 1;
+	tm.day = timeinfo.tm_mday;
+	tm.hour = timeinfo.tm_hour;
+	tm.min = timeinfo.tm_min;
+	tm.sec = timeinfo.tm_sec;
 }
 
 
@@ -372,14 +372,15 @@ Datetime::tm_t
 Datetime::to_tm_t(double timestamp)
 {
 	time_t _time = static_cast<time_t>(timestamp);
-	struct tm *timeinfo = gmtime(&_time);
+	struct tm timeinfo;
+	gmtime_r(&_time, &timeinfo);
 	tm_t tm;
-	tm.year = timeinfo->tm_year + _START_YEAR;
-	tm.mon = timeinfo->tm_mon + 1;
-	tm.day = timeinfo->tm_mday;
-	tm.hour = timeinfo->tm_hour;
-	tm.min = timeinfo->tm_min;
-	tm.sec = timeinfo->tm_sec;
+	tm.year = timeinfo.tm_year + _START_YEAR;
+	tm.mon = timeinfo.tm_mon + 1;
+	tm.day = timeinfo.tm_mday;
+	tm.hour = timeinfo.tm_hour;
+	tm.min = timeinfo.tm_min;
+	tm.sec = timeinfo.tm_sec;
 	tm.msec = (timestamp - _time) * 1000;
 
 	return tm;
@@ -460,8 +461,9 @@ Datetime::ctime(const ::std::string& epoch)
 		double utimestamp = std::stod(epoch);
 		time_t timestamp = (time_t) utimestamp;
 		std::string microseconds = epoch;
-		struct tm *timeinfo = gmtime(&timestamp);
-		return isotime(timeinfo, std::stod(std::string(microseconds.c_str() + microseconds.find("."), 7)) / MICROSEC);
+		struct tm timeinfo;
+		gmtime_r(&timestamp, &timeinfo);
+		return isotime(&timeinfo, std::stod(std::string(microseconds.c_str() + microseconds.find("."), 7)) / MICROSEC);
 	} else {
 		return epoch;
 	}
@@ -477,8 +479,9 @@ Datetime::ctime(double epoch)
 {
 	time_t timestamp = (time_t) epoch;
 	int microseconds = (epoch - timestamp) / MICROSEC;
-	struct tm *timeinfo = gmtime(&timestamp);
-	return isotime(timeinfo, microseconds);
+	struct tm timeinfo;
+	gmtime_r(&timestamp, &timeinfo);
+	return isotime(&timeinfo, microseconds);
 }
 
 
