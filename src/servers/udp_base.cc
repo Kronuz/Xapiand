@@ -46,6 +46,9 @@ BaseUDP::~BaseUDP()
 {
 	destroy_impl();
 
+	io::close(sock);
+	sock = -1;
+
 	L_OBJ(this, "DELETED BASE UDP!");
 }
 
@@ -60,8 +63,6 @@ BaseUDP::destroy_impl()
 	}
 
 	::shutdown(sock, SHUT_RDWR);
-	io::close(sock);
-	sock = -1;
 
 	L_OBJ(this, "DESTROYED BASE UDP!");
 }

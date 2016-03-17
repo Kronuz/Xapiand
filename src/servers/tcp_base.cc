@@ -53,6 +53,9 @@ BaseTCP::~BaseTCP()
 {
 	destroy_impl();
 
+	io::close(sock);
+	sock = -1;
+
 	L_OBJ(this, "DELETED BASE TCP!");
 }
 
@@ -67,8 +70,6 @@ BaseTCP::destroy_impl()
 	}
 
 	::shutdown(sock, SHUT_RDWR);
-	io::close(sock);
-	sock = -1;
 
 	L_OBJ(this, "DESTROYED BASE TCP!");
 }
