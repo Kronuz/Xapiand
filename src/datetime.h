@@ -59,7 +59,7 @@ namespace Datetime {
 	tm_t to_tm_t(double timestamp);
 	double timestamp(const std::string& date, tm_t& tm);
 	bool isvalidDate(int year, int month, int day);
-	char* isotime(const struct tm *timep, int microseconds=0);
+	::std::string isotime(const struct tm *timep, int microseconds=0);
 	::std::string ctime(const ::std::string& epoch);
 	::std::string ctime(double epoch);
 	void normalizeMonths(int& year, int& mon);

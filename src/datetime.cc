@@ -438,14 +438,14 @@ Datetime::isvalidDate(int year, int month, int day)
 /*
  * Return a string with the date in ISO 8601 Format.
  */
-char*
+std::string
 Datetime::isotime(const struct tm *tm, int microseconds)
 {
-	static char result[30];
+	char result[30];
 	sprintf(result, "%2.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d.%2.6d",
 		_START_YEAR + tm->tm_year, tm->tm_mon + 1, tm->tm_mday,
 		tm->tm_hour, tm->tm_min, tm->tm_sec, microseconds);
-	return result;
+	return std::string(result);
 }
 
 
