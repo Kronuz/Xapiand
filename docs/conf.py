@@ -49,7 +49,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Xapiand'
-copyright = u'2015, deipi.com LLC and contributors'
+copyright = u'2016 deipi.com LLC and contributors'
 author = u'deipi.com LLC and contributors'
 
 # The version info for the project you're documenting, acts as replacement for
