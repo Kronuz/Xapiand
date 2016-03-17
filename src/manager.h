@@ -140,6 +140,11 @@ public:
 	std::string node_name;
 	bool solo;
 
+	ev::async async_shutdown_sig;
+	std::atomic_int shutdown_sig_sig;
+	void shutdown_sig(int sig);
+	void async_shutdown_sig_cb(ev::async&, int);
+
 	~XapiandManager();
 
 	void setup_node();
@@ -147,7 +152,6 @@ public:
 	void setup_node(std::shared_ptr<XapiandServer>&& server);
 
 	void run(const opts_t& o);
-	void shutdown_sig(int sig);
 
 	bool is_single_node();
 

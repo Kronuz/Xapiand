@@ -66,7 +66,10 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	  state(State::RESET),
 	  cluster_name(o.cluster_name),
 	  node_name(o.node_name),
-	  solo(o.solo)
+	  solo(o.solo),
+	  async_shutdown_sig(*loop),
+	  shutdown_sig_sig(0)
+
 {
 	// Setup node from node database directory
 	std::string node_name_(get_node_name());
@@ -83,6 +86,9 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 
 	// Set addr in local node
 	local_node.addr = host_address();
+
+	async_shutdown_sig.set<XapiandManager, &XapiandManager::async_shutdown_sig_cb>(this);
+	async_shutdown_sig.start();
 
 	L_OBJ(this, "CREATED XAPIAN MANAGER!");
 }
@@ -284,14 +290,23 @@ XapiandManager::host_address()
 }
 
 
+ void
+ XapiandManager::shutdown_sig(int sig)
+ {
+	   shutdown_sig_sig = sig;
+	   async_shutdown_sig.send();
+}
+
+
 void
-XapiandManager::shutdown_sig(int sig)
+XapiandManager::async_shutdown_sig_cb(ev::async&, int)
 {
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
 	 * the user really wanting to quit ASAP without waiting to persist
 	 * on disk. */
 	auto now = epoch::now<>();
+	int sig = shutdown_sig_sig;
 
 	if (shutdown_now && sig != SIGTERM) {
 		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
