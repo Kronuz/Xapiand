@@ -141,6 +141,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 		find_file_dir(dir, fptr, WAL_STORAGE_PATH, true);
 	}
 
+	closedir(dir);
 	if (lowest_revision > revision) {
 		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC | STORAGE_COMPRESS);
 	} else {
@@ -512,6 +513,7 @@ DataStorage::highest_volume(const std::string& path)
 
 		find_file_dir(dir, fptr, DATA_STORAGE_PATH, true);
 	}
+	closedir(dir);
 	return highest_revision;
 }
 #endif

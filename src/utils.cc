@@ -734,6 +734,7 @@ void delete_files(const std::string& path) {
 		}
 	}
 
+	closedir(dirp);
 	if (!contains_folder) {
 		if (rmdir(path.c_str()) != 0) {
 			L_ERR(nullptr, "Directory %s could not be deleted", path.c_str());
@@ -759,6 +760,7 @@ void move_files(const std::string& src, const std::string& dst) {
 		}
 	}
 
+	closedir(dirp);
 	if (rmdir(src.c_str()) != 0) {
 		L_ERR(nullptr, "Directory %s could not be deleted", src.c_str());
 	}
