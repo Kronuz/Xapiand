@@ -26,7 +26,7 @@
 std::mutex DatabaseAutocommit::mtx;
 std::condition_variable DatabaseAutocommit::wakeup_signal;
 std::unordered_map<Endpoints, DatabaseCommitStatus> DatabaseAutocommit::databases;
-std::chrono::time_point<std::chrono::system_clock> DatabaseAutocommit::next_wakeup_time(std::chrono::system_clock::now() + 10s);
+std::atomic<std::time_t> DatabaseAutocommit::next_wakeup_time(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now() + 10s));
 
 
 std::chrono::time_point<std::chrono::system_clock>
@@ -79,10 +79,10 @@ DatabaseAutocommit::run()
 {
 	while (running) {
 		std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx);
-		DatabaseAutocommit::wakeup_signal.wait_until(lk, DatabaseAutocommit::next_wakeup_time);
+		DatabaseAutocommit::wakeup_signal.wait_until(lk, std::chrono::system_clock::from_time_t(DatabaseAutocommit::next_wakeup_time.load()));
 
 		auto now = std::chrono::system_clock::now();
-		DatabaseAutocommit::next_wakeup_time = now + 20s;
+		DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + 20s));
 
 		for (auto it = DatabaseAutocommit::databases.begin(); it != DatabaseAutocommit::databases.end(); ) {
 			auto endpoints = it->first;
@@ -101,8 +101,8 @@ DatabaseAutocommit::run()
 					}
 					lk.lock();
 					it = DatabaseAutocommit::databases.begin();
-				} else if (DatabaseAutocommit::next_wakeup_time > next_wakeup_time) {
-					DatabaseAutocommit::next_wakeup_time = next_wakeup_time;
+				} else if (std::chrono::system_clock::from_time_t(DatabaseAutocommit::next_wakeup_time.load()) > next_wakeup_time) {
+					DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(next_wakeup_time));
 					++it;
 				} else {
 					++it;
@@ -132,7 +132,7 @@ DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
 	}
 	status.commit_time = now + 3s;
 
-	if (DatabaseAutocommit::next_wakeup_time > status.next_wakeup_time()) {
+	if (std::chrono::system_clock::from_time_t(DatabaseAutocommit::next_wakeup_time.load()) > status.next_wakeup_time()) {
 		DatabaseAutocommit::wakeup_signal.notify_one();
 	}
 }

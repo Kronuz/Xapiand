@@ -49,7 +49,7 @@ class DatabaseAutocommit : public Task<>, public Worker {
 	static std::mutex mtx;
 	static std::condition_variable wakeup_signal;
 	static std::unordered_map<Endpoints, DatabaseCommitStatus> databases;
-	static std::chrono::time_point<std::chrono::system_clock> next_wakeup_time;
+	static std::atomic<std::time_t> next_wakeup_time;
 
 	std::atomic_bool running;
 
