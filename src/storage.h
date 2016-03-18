@@ -208,8 +208,14 @@ class Storage {
 
 	size_t bin_size;
 
-	LZ4DecompressDescriptor dec_lz4;
-	LZ4DecompressDescriptor::iterator dec_it;
+	LZ4CompressData cmpData;
+	LZ4CompressData::iterator cmpData_it;
+
+	LZ4CompressFile cmpFile;
+	LZ4CompressFile::iterator cmpFile_it;
+
+	LZ4DecompressFile decFile;
+	LZ4DecompressFile::iterator decFile_it;
 
 	XXH32_state_t* xxhash;
 	uint32_t bin_hash;
@@ -283,7 +289,6 @@ public:
 		  buffer_offset(0),
 		  bin_offset(0),
 		  bin_size(0),
-		  dec_lz4(fd, STORAGE_MAGIC),
 		  xxhash(XXH32_createState()),
 		  bin_hash(0) {
 		if ((reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header) + sizeof(bin_header.size)) > STORAGE_ALIGNMENT) {
@@ -402,16 +407,14 @@ public:
 		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 
-		std::unique_ptr<LZ4CompressData> lz4;
-		LZ4CompressData::iterator it;
 		size_t it_size;
 		bool compress = (flags & STORAGE_COMPRESS) && data_size > STORAGE_MIN_COMPRESS_SIZE;
 		if (compress) {
 			bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
-			lz4 = std::make_unique<LZ4CompressData>(data, data_size, STORAGE_MAGIC);
-			it = lz4->begin();
-			it_size = it.size();
-			data = it->data();
+			cmpData.reset(data, data_size, STORAGE_MAGIC);
+			cmpData_it = cmpData.begin();
+			it_size = cmpData_it.size();
+			data = cmpData_it->data();
 		} else {
 			bin_header.init(param, static_cast<uint32_t>(data_size), 0);
 			it_size = data_size;
@@ -436,9 +439,9 @@ public:
 		while (it_size) {
 			write_bin(&buffer, tmp_buffer_offset, &data, it_size);
 			if (compress && !it_size) {
-				++it;
-				data = it->data();
-				it_size = it.size();
+				++cmpData_it;
+				data = cmpData_it->data();
+				it_size = cmpData_it.size();
 			}
 			if (tmp_buffer_offset == STORAGE_BLOCK_SIZE) {
 				write_buffer(&buffer, tmp_buffer_offset, block_offset);
@@ -448,8 +451,8 @@ public:
 		while (bin_footer_data_size) {
 			// Update header size in buffer.
 			if (compress) {
-				buffer_header->size = static_cast<uint32_t>(lz4->size());
-				bin_footer.init(param, lz4->get_digest());
+				buffer_header->size = static_cast<uint32_t>(cmpData.size());
+				bin_footer.init(param, cmpData.get_digest());
 			} else {
 				bin_footer.init(param, XXH32(orig_data, data_size, STORAGE_MAGIC));
 			}
@@ -499,8 +502,6 @@ public:
 		const char* bin_footer_data = reinterpret_cast<const char*>(&bin_footer);
 		size_t bin_footer_data_size = sizeof(StorageBinFooter);
 
-		std::unique_ptr<LZ4CompressFile> lz4;
-		LZ4CompressFile::iterator it;
 		size_t it_size, file_size = 0;
 		int fd_write = 0;
 		char buf_read[STORAGE_BLOCK_SIZE];
@@ -509,10 +510,10 @@ public:
 		bool compress = (flags & STORAGE_COMPRESS);
 		if (compress) {
 			bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
-			lz4 = std::make_unique<LZ4CompressFile>(filename, STORAGE_MAGIC);
-			it = lz4->begin();
-			it_size = it.size();
-			data = it->data();
+			cmpFile.reset(filename, STORAGE_MAGIC);
+			cmpFile_it = cmpFile.begin();
+			it_size = cmpFile_it.size();
+			data = cmpFile_it->data();
 		} else {
 			fd_write = io::open(filename.c_str(), O_RDONLY, 0644);
 			if unlikely(fd_write < 0) {
@@ -546,9 +547,9 @@ public:
 			write_bin(&buffer, tmp_buffer_offset, &data, it_size);
 			if (!it_size) {
 				if (compress) {
-					++it;
-					it_size = it.size();
-					data = it->data();
+					++cmpFile_it;
+					it_size = cmpFile_it.size();
+					data = cmpFile_it->data();
 				} else {
 					it_size = io::read(fd_write, buf_read, sizeof(buf_read));
 					data = buf_read;
@@ -564,8 +565,8 @@ public:
 		while (bin_footer_data_size) {
 			// Update header size in buffer.
 			if (compress) {
-				buffer_header->size = static_cast<uint32_t>(lz4->size());
-				bin_footer.init(param, lz4->get_digest());
+				buffer_header->size = static_cast<uint32_t>(cmpFile.size());
+				bin_footer.init(param, cmpFile.get_digest());
 			} else {
 				buffer_header->size = static_cast<uint32_t>(file_size);
 				bin_footer.init(param, XXH32_digest(xxhash));
@@ -631,8 +632,8 @@ public:
 			io::fadvise(fd, bin_offset, bin_header.size, POSIX_FADV_WILLNEED);
 
 			if (bin_header.flags & STORAGE_FLAG_COMPRESSED) {
-				dec_lz4.reset(bin_header.size, STORAGE_MAGIC);
-				dec_it = dec_lz4.begin();
+				decFile.reset(fd, -1, bin_header.size, STORAGE_MAGIC);
+				decFile_it = decFile.begin();
 				bin_offset += bin_header.size;
 			} else {
 				XXH32_reset(xxhash, STORAGE_MAGIC);
@@ -640,11 +641,11 @@ public:
 		}
 
 		if (bin_header.flags & STORAGE_FLAG_COMPRESSED) {
-			size_t _size = dec_it.read(buf, buf_size);
+			size_t _size = decFile_it.read(buf, buf_size);
 			if (_size) {
 				return _size;
 			}
-			bin_hash = dec_lz4.get_digest();
+			bin_hash = decFile.get_digest();
 		} else {
 			if (buf_size > bin_header.size - bin_size) {
 				buf_size = bin_header.size - bin_size;
