@@ -95,8 +95,8 @@ DatabaseAutocommit::run()
 					auto next_wakeup_time = status.next_wakeup_time();
 					if (next_wakeup_time <= now) {
 						DatabaseAutocommit::databases.erase(it);
-						lk.unlock();
 						db_lk.unlock();
+						lk.unlock();
 						std::shared_ptr<Database> database;
 						if (manager()->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
 							if (database->commit()) {
@@ -104,8 +104,8 @@ DatabaseAutocommit::run()
 							}
 							manager()->database_pool.checkin(database);
 						}
-						db_lk.lock();
 						lk.lock();
+						db_lk.lock();
 						it = DatabaseAutocommit::databases.begin();
 					} else if (std::chrono::system_clock::from_time_t(DatabaseAutocommit::next_wakeup_time.load()) > next_wakeup_time) {
 						DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(next_wakeup_time));
