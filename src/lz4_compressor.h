@@ -23,9 +23,9 @@
 #pragma once
 
 #include "exception.h"
+#include "io_utils.h"
 #include "lz4/lz4.h"
 #include "lz4/xxhash.h"
-#include "xapiand.h"
 
 #include <fcntl.h>
 #include <iostream>
@@ -34,8 +34,8 @@
 #include <sys/types.h>
 
 
-#define LZ4_BLOCK_SIZE (1024 * 2)
-#define LZ4_FILE_READ_SIZE (LZ4_BLOCK_SIZE * 2)	// it must be greater than or equal to LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE).
+#define LZ4_BLOCK_SIZE        (1024 * 2)
+#define LZ4_MAX_CMP_SIZE      (sizeof(uint16_t) + LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE))
 #define LZ4_RING_BUFFER_BYTES (1024 * 256 + LZ4_BLOCK_SIZE)
 
 
@@ -73,19 +73,14 @@ protected:
 	size_t _size;
 	size_t _offset;
 
-	const int block_size;
 	const int cmpBuf_size;
 
 	char* const cmpBuf;
 	char* const buffer;
 
 	XXH32_state_t* xxh_state;
-	int xxh_seed;
 
 	inline std::string _init() {
-		_size = 0;
-		_offset = 0;
-		XXH32_reset(xxh_state, xxh_seed);
 		return static_cast<Impl*>(this)->init();
 	}
 
@@ -93,14 +88,23 @@ protected:
 		return static_cast<Impl*>(this)->next();
 	}
 
+	inline void _reset(int seed) {
+		_size = 0;
+		_offset = 0;
+		XXH32_reset(xxh_state, seed);
+	}
+
 public:
-	LZ4BlockStreaming(int block_size_, int seed)
-		: block_size(block_size_),
-		  cmpBuf_size(LZ4_COMPRESSBOUND(block_size)),
+	LZ4BlockStreaming(int seed)
+		: _size(0),
+		  _offset(0),
+		  cmpBuf_size(LZ4_COMPRESSBOUND(LZ4_BLOCK_SIZE)),
 		  cmpBuf((char*)malloc(cmpBuf_size)),
 		  buffer((char*)malloc(LZ4_RING_BUFFER_BYTES)),
-		  xxh_state(XXH32_createState()),
-		  xxh_seed(seed) { }
+		  xxh_state(XXH32_createState())
+	{
+		XXH32_reset(xxh_state, seed);
+	}
 
 	// This class is not CopyConstructible or CopyAssignable.
 	LZ4BlockStreaming(const LZ4BlockStreaming&) = delete;
@@ -210,15 +214,32 @@ public:
 };
 
 
+class LZ4Data {
+protected:
+	const char* data;
+	size_t data_size;
+	size_t data_offset;
+
+	LZ4Data(const char* data_, size_t data_size_)
+		: data(data_),
+		  data_size(data_size_),
+		  data_offset(0) { }
+
+	~LZ4Data() = default;
+
+public:
+	inline void add_data(const char* data_, size_t data_size_) {
+		data = data_;
+		data_size = data_size_;
+	}
+};
+
+
 /*
  * Compress Data.
  */
-class LZ4CompressData : public LZ4BlockStreaming<LZ4CompressData> {
+class LZ4CompressData : public LZ4Data, public LZ4BlockStreaming<LZ4CompressData> {
 	LZ4_stream_t* const lz4Stream;
-
-	const char* data;
-	const size_t data_size;
-	size_t data_offset;
 
 	std::string init();
 	std::string next();
@@ -226,21 +247,107 @@ class LZ4CompressData : public LZ4BlockStreaming<LZ4CompressData> {
 	friend class LZ4BlockStreaming<LZ4CompressData>;
 
 public:
-	LZ4CompressData(const char* data_, size_t data_size_, int seed=0);
-
+	LZ4CompressData(const char* data_=nullptr, size_t data_size_=0, int seed_=0);
 	~LZ4CompressData();
+
+	inline void reset(const char* data_, size_t data_size_, int seed=0) {
+		_reset(seed);
+		add_data(data_, data_size_);
+		LZ4_resetStream(lz4Stream);
+	}
+};
+
+
+/*
+ * Decompress Data.
+ */
+class LZ4DecompressData : public LZ4Data, public LZ4BlockStreaming<LZ4DecompressData> {
+	LZ4_streamDecode_t* const lz4StreamDecode;
+
+	std::string init();
+	std::string next();
+
+	friend class LZ4BlockStreaming<LZ4DecompressData>;
+
+public:
+	LZ4DecompressData(const char* data_=nullptr, size_t data_size_=0, int seed=0);
+	~LZ4DecompressData();
+
+	inline void reset(const char* data_, size_t data_size_, int seed=0) {
+		_reset(seed);
+		add_data(data_, data_size_);
+	}
+};
+
+
+class LZ4File {
+protected:
+	int fd;
+	off_t fd_offset;
+	off_t fd_nbytes;
+	bool fd_internal;
+
+	size_t block_size;
+
+	std::function<size_t()> get_read_size;
+
+	LZ4File(size_t block_size_, const std::string& filename)
+		: block_size(block_size_)
+	{
+		open(filename);
+	}
+
+	LZ4File(size_t block_size_, int fd_, off_t fd_offset_, off_t fd_nbytes_)
+		: block_size(block_size_)
+	{
+		add_fildes(fd_, fd_offset_, fd_nbytes_);
+	}
+
+	~LZ4File() {
+		if (fd_internal) {
+			io::close(fd);
+		}
+	}
+
+public:
+	inline void open(const std::string& filename) {
+		fd = io::open(filename.c_str(), O_RDONLY, 0644);
+		if unlikely(fd < 0) {
+			throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
+		}
+		fd_offset = 0;
+		fd_internal = true;
+		fd_nbytes = -1;
+		get_read_size = [this]() { return block_size; };
+	}
+
+	inline void add_fildes(int fd_, size_t fd_offset_, size_t fd_nbytes_) {
+		fd = fd_;
+		fd_offset = fd_offset_;
+		fd_nbytes = fd_nbytes_;
+		fd_internal = false;
+		if (fd_nbytes == -1) {
+			get_read_size = [this]() { return block_size; };
+		} else {
+			get_read_size = [this]() {
+				size_t size = fd_nbytes > static_cast<off_t>(block_size) ? block_size : fd_nbytes;
+				fd_nbytes -= size;
+				return size;
+			};
+		}
+	}
+
+	inline void add_file(const std::string& filename) {
+		open(filename);
+	}
 };
 
 
 /*
  * Compress a file.
  */
-class LZ4CompressFile : public LZ4BlockStreaming<LZ4CompressFile> {
+class LZ4CompressFile : public LZ4File, public LZ4BlockStreaming<LZ4CompressFile> {
 	LZ4_stream_t* const lz4Stream;
-
-	int fd;
-	size_t fd_offset;
-	bool fd_internal;
 
 	std::string init();
 	std::string next();
@@ -249,65 +356,19 @@ class LZ4CompressFile : public LZ4BlockStreaming<LZ4CompressFile> {
 
 public:
 	LZ4CompressFile(const std::string& filename, int seed=0);
-
-	LZ4CompressFile(int fd_, size_t fd_offset_=0, int seed=0);
-
+	LZ4CompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, int seed=0);
 	~LZ4CompressFile();
-};
 
-
-/*
- * Compress read_bytes of the descriptor file (fd) from the current position.
- * Each time that call begin(), compress read_bytes from the current position.
- */
-class LZ4CompressDescriptor : public LZ4BlockStreaming<LZ4CompressDescriptor> {
-	LZ4_stream_t* const lz4Stream;
-
-	int& fd;
-	size_t read_bytes;
-
-	std::string init();
-	std::string next();
-
-	friend class LZ4BlockStreaming<LZ4CompressDescriptor>;
-
-public:
-	LZ4CompressDescriptor(int& fildes, int seed=0);
-
-	~LZ4CompressDescriptor();
-
-	inline void reset(size_t read_bytes_, int seed=0) noexcept {
-		read_bytes = read_bytes_;
-		xxh_seed = seed;
+	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, int seed=0) {
+		_reset(seed);
+		add_fildes(fd_, fd_offset_, fd_nbytes_);
+		LZ4_resetStream(lz4Stream);
 	}
-};
 
-
-/*
- * Decompress Data.
- */
-class LZ4DecompressData : public LZ4BlockStreaming<LZ4DecompressData> {
-	LZ4_streamDecode_t* const lz4StreamDecode;
-
-	const char* data;
-	size_t data_size;
-	size_t data_offset;
-
-	std::string init();
-	std::string next();
-
-	friend class LZ4BlockStreaming<LZ4DecompressData>;
-
-public:
-	LZ4DecompressData(const char* data_, size_t data_size_, int seed=0);
-
-	LZ4DecompressData(int seed=0);
-
-	~LZ4DecompressData();
-
-	inline void add_data(const char* data_, size_t data_size_) {
-		data = data_;
-		data_size =  data_size_;
+	inline void reset(const std::string& filename, int seed=0) {
+		_reset(seed);
+		open(filename);
+		LZ4_resetStream(lz4Stream);
 	}
 };
 
@@ -315,10 +376,8 @@ public:
 /*
  * Decompress a file.
  */
-class LZ4DecompressFile : public LZ4BlockStreaming<LZ4DecompressFile> {
+class LZ4DecompressFile : public LZ4File, public LZ4BlockStreaming<LZ4DecompressFile> {
 	LZ4_streamDecode_t* const lz4StreamDecode;
-
-	int fd;
 
 	char* const data;
 	ssize_t data_size;
@@ -331,37 +390,16 @@ class LZ4DecompressFile : public LZ4BlockStreaming<LZ4DecompressFile> {
 
 public:
 	LZ4DecompressFile(const std::string& filename, int seed=0);
-
+	LZ4DecompressFile(int fd_=0, off_t fd_offset_=-1, off_t fd_nbytes_=-1, int seed=0);
 	~LZ4DecompressFile();
-};
 
+	inline void reset(int fd_, size_t fd_offset_, size_t fd_nbytes_, int seed=0) {
+		_reset(seed);
+		add_fildes(fd_, fd_offset_, fd_nbytes_);
+	}
 
-/*
- * Decompress read_bytes of the descriptor file (fd) from the current position.
- * Each time that call begin(), decompress read_bytes from the current position.
- */
-class LZ4DecompressDescriptor : public LZ4BlockStreaming<LZ4DecompressDescriptor> {
-	LZ4_streamDecode_t* const lz4StreamDecode;
-
-	int& fd;
-	size_t read_bytes;
-
-	char* const data;
-	ssize_t data_size;
-	size_t data_offset;
-
-	std::string init();
-	std::string next();
-
-	friend class LZ4BlockStreaming<LZ4DecompressDescriptor>;
-
-public:
-	LZ4DecompressDescriptor(int& fildes, int seed=0);
-
-	~LZ4DecompressDescriptor();
-
-	inline void reset(size_t read_bytes_, int seed=0) noexcept {
-		read_bytes = read_bytes_;
-		xxh_seed = seed;
+	inline void reset(const std::string& filename, int seed=0) {
+		_reset(seed);
+		open(filename);
 	}
 };
