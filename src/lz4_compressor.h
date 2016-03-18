@@ -28,6 +28,7 @@
 #include "lz4/xxhash.h"
 
 #include <fcntl.h>
+#include <functional>
 #include <iostream>
 #include <string.h>
 #include <sys/stat.h>
