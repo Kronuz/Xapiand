@@ -61,7 +61,7 @@ class ClientLZ4Compressor : public LZ4CompressFile {
 
 public:
 	ClientLZ4Compressor(BaseClient *client_, int fd, size_t offset=0)
-		: LZ4CompressFile(fd, offset, CMP_SEED),
+		: LZ4CompressFile(fd, offset, -1, CMP_SEED),
 		  client(client_) { }
 
 	ssize_t compress();
@@ -181,19 +181,19 @@ public:
 	}
 
 	virtual ssize_t decompress() = 0;
-	virtual inline bool verify(uint32_t checksum_) noexcept = 0;
+	virtual bool verify(uint32_t checksum_) noexcept = 0;
 };
 
 
-class ClientLZ4Decompressor : public ClientDecompressor, LZ4DecompressData {
+class ClientLZ4Decompressor : public ClientDecompressor, public LZ4DecompressData {
 public:
 	ClientLZ4Decompressor(BaseClient *client_)
 		: ClientDecompressor(client_),
-		  LZ4DecompressData(CMP_SEED) { }
+		  LZ4DecompressData(nullptr, 0, CMP_SEED) { }
 
 	ssize_t decompress() override;
 
-	inline bool verify(uint32_t checksum_) noexcept override {
+	bool verify(uint32_t checksum_) noexcept override {
 		return get_digest() == checksum_;
 	}
 };
@@ -228,7 +228,7 @@ public:
 
 	ssize_t decompress() override;
 
-	inline bool verify(uint32_t checksum_) noexcept override {
+	bool verify(uint32_t checksum_) noexcept override {
 		return XXH32_digest(xxh_state) == checksum_;
 	}
 };
@@ -570,7 +570,7 @@ BaseClient::io_cb_read(int fd)
 
 						if (receive_checksum) {
 							receive_checksum = false;
-							if (decompressor->verify(file_size)) {
+							if (decompressor->verify(static_cast<uint32_t>(file_size))) {
 								on_read_file_done();
 								mode = MODE::READ_BUF;
 								decompressor.reset();
