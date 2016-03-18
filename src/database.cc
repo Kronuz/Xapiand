@@ -70,8 +70,9 @@ WalHeader::init(void* param)
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 	strncpy(head.uuid, storage->database->get_uuid().c_str(), sizeof(head.uuid));
 
-	const char *r = storage->database->get_revision_info().data();
-	const char *r_end = r + storage->database->get_revision_info().size();
+	std::string rev_str = storage->database->get_revision_info();
+	const char *r = rev_str.data();
+	const char *r_end = r + rev_str.size();
 	uint32_t revision;
 	unserialise_unsigned(&r, r_end, &revision);
 
@@ -103,8 +104,8 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 	L_CALL(this, "DatabaseWAL::open_current()");
 
 	uint32_t revision;
-	const char *r = database->get_revision_info().data();
-	const char *r_end = r + database->get_revision_info().size();
+	const char *r = database->checkout_revision.data();
+	const char *r_end = r + database->checkout_revision.size();
 	unserialise_unsigned(&r, r_end, &revision);
 
 
