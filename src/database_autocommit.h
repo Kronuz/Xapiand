@@ -47,6 +47,7 @@ struct DatabaseCommitStatus {
 
 class DatabaseAutocommit : public Task<>, public Worker {
 	static std::mutex mtx;
+	static std::mutex db_mtx;
 	static std::condition_variable wakeup_signal;
 	static std::unordered_map<Endpoints, DatabaseCommitStatus> databases;
 	static std::atomic<std::time_t> next_wakeup_time;

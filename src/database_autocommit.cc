@@ -24,6 +24,7 @@
 
 
 std::mutex DatabaseAutocommit::mtx;
+std::mutex DatabaseAutocommit::db_mtx;
 std::condition_variable DatabaseAutocommit::wakeup_signal;
 std::unordered_map<Endpoints, DatabaseCommitStatus> DatabaseAutocommit::databases;
 std::atomic<std::time_t> DatabaseAutocommit::next_wakeup_time(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now() + 10s));
@@ -81,34 +82,40 @@ DatabaseAutocommit::run()
 		std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx);
 		DatabaseAutocommit::wakeup_signal.wait_until(lk, std::chrono::system_clock::from_time_t(DatabaseAutocommit::next_wakeup_time.load()));
 
-		auto now = std::chrono::system_clock::now();
-		DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + 20s));
+		{
+			std::unique_lock<std::mutex> db_lk(DatabaseAutocommit::db_mtx);
 
-		for (auto it = DatabaseAutocommit::databases.begin(); it != DatabaseAutocommit::databases.end(); ) {
-			auto endpoints = it->first;
-			auto status = it->second;
-			if (status.weak_database.lock()) {
-				auto next_wakeup_time = status.next_wakeup_time();
-				if (next_wakeup_time <= now) {
-					DatabaseAutocommit::databases.erase(it);
-					lk.unlock();
-					std::shared_ptr<Database> database;
-					if (manager()->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
-						if (database->commit()) {
-							L_DEBUG(this, "Autocommit: %s%s", endpoints.as_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "");
+			auto now = std::chrono::system_clock::now();
+			DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(now + 20s));
+
+			for (auto it = DatabaseAutocommit::databases.begin(); it != DatabaseAutocommit::databases.end(); ) {
+				auto endpoints = it->first;
+				auto status = it->second;
+				if (status.weak_database.lock()) {
+					auto next_wakeup_time = status.next_wakeup_time();
+					if (next_wakeup_time <= now) {
+						DatabaseAutocommit::databases.erase(it);
+						lk.unlock();
+						db_lk.unlock();
+						std::shared_ptr<Database> database;
+						if (manager()->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
+							if (database->commit()) {
+								L_DEBUG(this, "Autocommit: %s%s", endpoints.as_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "");
+							}
+							manager()->database_pool.checkin(database);
 						}
-						manager()->database_pool.checkin(database);
+						db_lk.lock();
+						lk.lock();
+						it = DatabaseAutocommit::databases.begin();
+					} else if (std::chrono::system_clock::from_time_t(DatabaseAutocommit::next_wakeup_time.load()) > next_wakeup_time) {
+						DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(next_wakeup_time));
+						++it;
+					} else {
+						++it;
 					}
-					lk.lock();
-					it = DatabaseAutocommit::databases.begin();
-				} else if (std::chrono::system_clock::from_time_t(DatabaseAutocommit::next_wakeup_time.load()) > next_wakeup_time) {
-					DatabaseAutocommit::next_wakeup_time.store(std::chrono::system_clock::to_time_t(next_wakeup_time));
-					++it;
 				} else {
-					++it;
+					it = DatabaseAutocommit::databases.erase(it);
 				}
-			} else {
-				it = DatabaseAutocommit::databases.erase(it);
 			}
 		}
 	}
@@ -120,9 +127,7 @@ DatabaseAutocommit::run()
 void
 DatabaseAutocommit::signal_changed(const std::shared_ptr<Database>& database)
 {
-	// Window open perhaps
-	// std::unique_lock<std::mutex> lk(DatabaseAutocommit::mtx, std::defer_lock);
-
+	std::lock_guard<std::mutex> lk(DatabaseAutocommit::db_mtx);
 	DatabaseCommitStatus& status = DatabaseAutocommit::databases[database->endpoints];
 
 	auto now = std::chrono::system_clock::now();
