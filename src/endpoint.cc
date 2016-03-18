@@ -98,16 +98,6 @@ Node::unserialise(const char **p, const char *end)
 
 std::string Endpoint::cwd;
 
-std::string&
-Endpoint::getcwd()
-{
-	if (Endpoint::cwd.empty()) {
-		char buffer[PATH_MAX + 1];
-		Endpoint::cwd = normalize_path(::getcwd(buffer, PATH_MAX), buffer);
-	}
-	return Endpoint::cwd;
-}
-
 
 Endpoint::Endpoint()
 	: mastery_level(-1) { }
@@ -144,11 +134,14 @@ Endpoint::Endpoint(const std::string &uri_, const Node *node_, long long mastery
 		host = uri;
 		if (!port) port = XAPIAND_BINARY_SERVERPORT;
 	}
-	path = getcwd() + path;
+	if (!path.empty() && path.at(0) != '/') {
+		path = '/' + path;
+	}
+	path = Endpoint::cwd + path;
 	normalize_path(path.c_str(), buffer);
 	path = buffer;
-	if (path.substr(0, getcwd().size()) == getcwd()) {
-		path.erase(0, getcwd().size());
+	if (path.substr(0, Endpoint::cwd.size()) == Endpoint::cwd) {
+		path.erase(0, Endpoint::cwd.size());
 	} else {
 		path = "";
 	}

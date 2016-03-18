@@ -36,7 +36,6 @@
 #include <grp.h>
 #include <sysexits.h>  // EX_*
 #include <dirent.h>    // opendir, readdir, DIR, struct dirent
-#include <sys/param.h>  // for MAXPATHLEN
 #include <fcntl.h>
 
 #define LINE_LENGTH 78
@@ -552,8 +551,10 @@ void usedir(const char* path) {
 		exit(EX_OSFILE);
 	}
 
-	char buffer[MAXPATHLEN];
-	L_NOTICE(nullptr, "Changed current working directory to %s", getcwd(buffer, sizeof(buffer)));
+	char buffer[PATH_MAX];
+	getcwd(buffer, sizeof(buffer));
+	Endpoint::cwd = normalize_path(buffer, buffer);
+	L_NOTICE(nullptr, "Changed current working directory to %s", Endpoint::cwd.c_str());
 }
 
 

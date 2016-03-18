@@ -128,7 +128,7 @@ class Endpoints;
 #include <vector>
 #include <unordered_set>
 
-inline char *normalize_path(const char * src, char * dst);
+char *normalize_path(const char * src, char * dst);
 
 namespace std {
 	template<>
@@ -148,14 +148,12 @@ bool operator == (Endpoints const& le, Endpoints const& re);
 
 
 class Endpoint {
-	static std::string cwd;
-
-	std::string& getcwd();
-
 	inline std::string slice_after(std::string &subject, std::string delimiter);
 	inline std::string slice_before(std::string &subject, std::string delimiter);
 
 public:
+	static std::string cwd;
+
 	int port;
 	std::string user, password, host, path, search, node_name;
 	long long mastery_level;
