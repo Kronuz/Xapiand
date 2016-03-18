@@ -626,7 +626,7 @@ BinaryClient::msg_readaccess(const std::string &message)
 	const char *p_end = p + message.size();
 	if (p != p_end) {
 		unsigned flag_bits;
-		flag_bits = unserialise_length(&p, p_end);
+		flag_bits = static_cast<unsigned>(unserialise_length(&p, p_end));
 		// flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
 	}
 
@@ -653,7 +653,7 @@ BinaryClient::msg_writeaccess(const std::string & message)
 	const char *p_end = p + message.size();
 	if (p != p_end) {
 		unsigned flag_bits;
-		flag_bits = unserialise_length(&p, p_end);
+		flag_bits = static_cast<unsigned>(unserialise_length(&p, p_end));
 		// flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
 	}
 
