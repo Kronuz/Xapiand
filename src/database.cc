@@ -3043,8 +3043,8 @@ DatabasePool::init_ref(const Endpoint& endpoint)
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Database refs it could not be checkout.");
-		exit(EX_SOFTWARE);
+		L_CRIT(this, "Cannot open %s database.", ref_endpoints.as_string().c_str());
+		return;
 	}
 
 	std::string unique_id(prefixed(get_slot_hex(endpoint.path), DOCUMENT_ID_TERM_PREFIX));
@@ -3076,8 +3076,8 @@ DatabasePool::inc_ref(const Endpoint& endpoint)
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Database refs it could not be checkout.");
-		exit(EX_SOFTWARE);
+		L_CRIT(this, "Cannot open %s database.", ref_endpoints.as_string().c_str());
+		return;
 	}
 
 	Xapian::Document doc;
@@ -3120,8 +3120,8 @@ DatabasePool::dec_ref(const Endpoint& endpoint)
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Database refs it could not be checkout.");
-		exit(EX_SOFTWARE);
+		L_CRIT(this, "Cannot open %s database.", ref_endpoints.as_string().c_str());
+		return;
 	}
 
 	Xapian::Document doc;
@@ -3157,8 +3157,8 @@ DatabasePool::get_master_count()
 	ref_endpoints.add(Endpoint(".refs"));
 	std::shared_ptr<Database> ref_database;
 	if (!checkout(ref_database, ref_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-		L_CRIT(this, "Database refs it could not be checkout.");
-		exit(EX_SOFTWARE);
+		L_CRIT(this, "Cannot open %s database.", ref_endpoints.as_string().c_str());
+		return -1;
 	}
 
 	int count = 0;
