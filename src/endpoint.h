@@ -164,7 +164,7 @@ public:
 	bool is_local() const {
 		int binary_port = local_node.binary_port;
 		if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
-		return host == local_node.host() && port == binary_port;
+		return (host == local_node.host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
 	}
 
 	size_t hash() const;

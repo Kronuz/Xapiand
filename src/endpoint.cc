@@ -149,6 +149,7 @@ Endpoint::Endpoint(const std::string &uri_, const Node *node_, long long mastery
 		protocol = "xapian";
 		host = node_->host();
 		port = node_->binary_port;
+		if (!port) port = XAPIAND_BINARY_SERVERPORT;
 	}
 }
 
