@@ -56,14 +56,14 @@ END_TEST
 
 START_TEST(test_small_descriptor)
 {
-	ck_assert_int_eq(test_small_descriptor(), 0);
+	ck_assert_int_eq(test_small_blockFile(), 0);
 }
 END_TEST
 
 
 START_TEST(test_big_descriptor)
 {
-	ck_assert_int_eq(test_big_descriptor(), 0);
+	ck_assert_int_eq(test_big_blockFile(), 0);
 }
 END_TEST
 

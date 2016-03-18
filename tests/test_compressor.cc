@@ -163,7 +163,7 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 }
 
 
-int test_Compress_Decompress_Descriptor(const std::string& orig_file, size_t numBytes) {
+int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numBytes) {
 	try {
 		size_t total_size = 0;
 		std::vector<size_t> read_bytes;
@@ -180,10 +180,10 @@ int test_Compress_Decompress_Descriptor(const std::string& orig_file, size_t num
 			throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
 		}
 
-		LZ4CompressDescriptor lz4(orig_fd);
+		LZ4CompressFile lz4;
 		while (true) {
 			bool more_data = false;
-			lz4.reset(numBytes);
+			lz4.reset(fd, -1, numBytes);
 			auto it = lz4.begin();
 			while (it) {
 				if (io::write(fd, it->c_str(), it.size()) != static_cast<ssize_t>(it.size())) {
@@ -207,12 +207,12 @@ int test_Compress_Decompress_Descriptor(const std::string& orig_file, size_t num
 		// Decompress File
 		io::lseek(fd, 0, SEEK_SET);
 
-		LZ4DecompressDescriptor dec_lz4(fd);
-		LZ4DecompressDescriptor::iterator dec_it;
+		LZ4DecompressFile dec_lz4;
+		LZ4DecompressFile::iterator dec_it;
 
 		auto it_checksum = cmp_checksums.begin();
 		for (const auto& _bytes : read_bytes) {
-			dec_lz4.reset(_bytes);
+			dec_lz4.reset(fd, -1, _bytes);
 			dec_it = dec_lz4.begin();
 			while (dec_it) {
 				++dec_it;
@@ -283,26 +283,26 @@ int test_big_files() {
 }
 
 
-int test_small_descriptor() {
+int test_small_blockFile() {
 	unlink(cmp_file.c_str());
 
 	int res = 0;
 	size_t numBytes = 50;
 	for (const auto& file : small_files) {
-		res += test_Compress_Decompress_Descriptor(file, numBytes);
+		res += test_Compress_Decompress_BlockFile(file, numBytes);
 		unlink(cmp_file.c_str());
 	}
 	return res;
 }
 
 
-int test_big_descriptor() {
+int test_big_blockFile() {
 	unlink(cmp_file.c_str());
 
 	int res = 0;
 	size_t numBytes = 2000 * 1024;
 	for (const auto& file : big_files) {
-		res += test_Compress_Decompress_Descriptor(file, numBytes);
+		res += test_Compress_Decompress_BlockFile(file, numBytes);
 		unlink(cmp_file.c_str());
 	}
 	return res;

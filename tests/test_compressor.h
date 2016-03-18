@@ -28,11 +28,11 @@
 std::string read_file(const std::string& filename);
 int test_Compress_Decompress_Data(const std::string& orig_file);
 int test_Compress_Decompress_File(const std::string& orig_file);
-int test_Compress_Decompress_Descriptor(const std::string& orig_file, size_t numBytes);
+int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numBytes);
 
 int test_small_datas();
 int test_big_datas();
 int test_small_files();
 int test_big_files();
-int test_small_descriptor();
-int test_big_descriptor();
+int test_small_blockFile();
+int test_big_blockFile();
