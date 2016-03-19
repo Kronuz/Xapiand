@@ -92,12 +92,12 @@ void
 WalHeader::validate(void* param)
 {
 	if (head.magic != MAGIC) {
-		throw MSG_StorageCorruptVolume("Bad header magic number");
+		throw MSG_StorageCorruptVolume("Bad WAL header magic number");
 	}
 
 	const DatabaseWAL* storage = static_cast<const DatabaseWAL*>(param);
 	if (strncasecmp(head.uuid, storage->database->get_uuid().c_str(), sizeof(head.uuid))) {
-		throw MSG_StorageCorruptVolume("UUID mismatch");
+		throw MSG_StorageCorruptVolume("WAL UUID mismatch");
 	}
 }
 
@@ -481,12 +481,12 @@ void
 DataHeader::validate(void* param)
 {
 	if (head.magic != STORAGE_MAGIC) {
-		throw MSG_StorageCorruptVolume("Bad header magic number");
+		throw MSG_StorageCorruptVolume("Bad data storage header magic number");
 	}
 
 	const Database* storage = static_cast<const Database*>(param);
 	if (strncasecmp(head.uuid, storage->get_uuid().c_str(), sizeof(head.uuid))) {
-		throw MSG_StorageCorruptVolume("UUID mismatch");
+		throw MSG_StorageCorruptVolume("Data storage UUID mismatch");
 	}
 }
 
@@ -1522,18 +1522,18 @@ Database::storage_pull_data(Xapian::Document& doc)
 	std::string data = doc.get_data();
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	if (*p++ != STORAGE_BIN_HEADER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data header magic number");
+	if (*p++ != STORAGE_BIN_HEADER_MAGIC) throw MSG_StorageCorruptVolume("Invalid data storage header magic number");
 	try {
 		volume = unserialise_length(&p, p_end);
 	} catch (Xapian::SerialisationError) {
-		throw MSG_StorageCorruptVolume("Invalid storage data volume");
+		throw MSG_StorageCorruptVolume("Invalid data storage volume");
 	}
 	try {
 		offset = unserialise_length(&p, p_end);
 	} catch (Xapian::SerialisationError) {
-		throw MSG_StorageCorruptVolume("Invalid storage data offset");
+		throw MSG_StorageCorruptVolume("Invalid data storage offset");
 	}
-	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data footer magic number");
+	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid data storage footer magic number");
 	auto& endpoint = endpoints[subdatabase];
 	storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN);
 	storage->seek(static_cast<uint32_t>(offset));
