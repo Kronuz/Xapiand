@@ -761,6 +761,7 @@ Database::commit(bool wal_)
 		L_DATABASE_WRAP(this, "Commit: t: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
+			storage_commit();
 			wdb->commit();
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (t) reopen();
@@ -1566,11 +1567,21 @@ Database::storage_push_data(Xapian::Document& doc)
 			++storage->volume;
 		}
 	}
-	storage->commit();
 	char h = STORAGE_BIN_HEADER_MAGIC;
 	char f = STORAGE_BIN_FOOTER_MAGIC;
 	doc.set_data(std::string(&h, 1) + serialise_length(storage->volume) + serialise_length(offset) + std::string(&f, 1));
 }
+
+void
+Database::storage_commit()
+{
+	for (auto& storage : storages) {
+		if (storage) {
+			storage->commit();
+		}
+	}
+}
+
 #endif
 
 

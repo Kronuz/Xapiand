@@ -313,9 +313,11 @@ public:
 #ifdef XAPIAND_DATA_STORAGE
 	void storage_pull_data(Xapian::Document& doc);
 	void storage_push_data(Xapian::Document& doc);
+	void storage_commit();
 #else
 	inline void storage_pull_data(Xapian::Document&) { }
 	inline void storage_push_data(Xapian::Document&) { }
+	inline void storage_commit() { }
 #endif
 
 	bool commit(bool wal_=true);
