@@ -340,6 +340,17 @@ public:
 			}
 		}
 
+		reopen(param);
+	}
+
+	void reopen(void* param=nullptr) {
+		L_CALL(this, "Storage::reopen()");
+
+		if unlikely(fd <= 0) {
+			close();
+			throw MSG_StorageIOError("Cannot open storage file");
+		}
+
 		ssize_t r = io::pread(fd, &header, sizeof(header), 0);
 		if unlikely(r < 0) {
 			close();
