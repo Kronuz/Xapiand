@@ -152,6 +152,7 @@ std::string str_type(const std::vector<unsigned>& sep_types);
 void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);
+void set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str);
 MsgPack get_MsgPack(const Xapian::Document& doc);
 std::string get_blob(const Xapian::Document& doc);
 std::string to_query_string(std::string str);

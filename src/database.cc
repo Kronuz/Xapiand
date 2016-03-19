@@ -1427,9 +1427,7 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 	}
 
 	L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
-	std::string obj_data_str = obj.to_string();
-	std::string data(serialise_length(obj_data_str.size()) + obj_data_str + (blob ? body : ""));
-	doc.set_data(data);
+	set_data(doc, obj.to_string(), blob ? body : "");
 	_index(doc, obj);
 	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 	return replace_document_term(term_id, doc, commit_);
@@ -1494,9 +1492,7 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 		index_required_data(doc, term_id, _document_id, _ct_type, ct_length);
 
 		L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
-		std::string obj_data_str = obj_data.to_string();
-		std::string data(serialise_length(obj_data_str.size()) + obj_data_str + get_blob(document));
-		doc.set_data(data);
+		set_data(doc, obj_data.to_string(), get_blob(document));
 		_index(doc, obj_data);
 		L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 		return replace_document_term(term_id, doc, commit_);

@@ -36,6 +36,9 @@
 #include <unistd.h>
 #include <random>
 
+#define DATABASE_DATA_HEADER_MAGIC 0x42
+#define DATABASE_DATA_FOOTER_MAGIC 0x2A
+
 
 const std::regex find_types_re("(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" NUMERIC_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")", std::regex::icase | std::regex::optimize);
 
@@ -171,21 +174,49 @@ void json_load(rapidjson::Document& doc, const std::string& str) {
 }
 
 
-MsgPack get_MsgPack(const Xapian::Document& doc) {
+void
+set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str)
+{
+	char h = DATABASE_DATA_HEADER_MAGIC;
+	char f = DATABASE_DATA_FOOTER_MAGIC;
+	doc.set_data(std::string(&h, 1) + serialise_length(obj_data_str.size()) + obj_data_str + std::string(&f, 1) + blob_str);
+}
+
+MsgPack
+get_MsgPack(const Xapian::Document& doc)
+{
 	std::string data = doc.get_data();
+
+	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	size_t length = unserialise_length(&p, p_end, true);
+	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return MsgPack();
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (Xapian::SerialisationError) {
+		return MsgPack();
+	}
+	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) return MsgPack();
 	return MsgPack(std::string(p, length));
 }
 
 
-std::string get_blob(const Xapian::Document& doc) {
+std::string
+get_blob(const Xapian::Document& doc)
+{
 	std::string data = doc.get_data();
+
+	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	size_t length = unserialise_length(&p, p_end, true);
+	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return std::move(data);
+	try {
+		length = unserialise_length(&p, p_end, true);
+	} catch (Xapian::SerialisationError) {
+		return std::move(data);
+	}
 	p += length;
+	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) return std::move(data);
 	return std::string(p, p_end - p);
 }
 
