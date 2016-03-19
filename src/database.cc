@@ -1522,18 +1522,18 @@ Database::storage_pull_data(Xapian::Document& doc)
 	std::string data = doc.get_data();
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	if (*p++ != STORAGE_BIN_HEADER_MAGIC) throw MSG_StorageCorruptVolume("Invalid data storage header magic number");
+	if (*p++ != STORAGE_BIN_HEADER_MAGIC) return;
 	try {
 		volume = unserialise_length(&p, p_end);
 	} catch (Xapian::SerialisationError) {
-		throw MSG_StorageCorruptVolume("Invalid data storage volume");
+		return;
 	}
 	try {
 		offset = unserialise_length(&p, p_end);
 	} catch (Xapian::SerialisationError) {
-		throw MSG_StorageCorruptVolume("Invalid data storage offset");
+		return;
 	}
-	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid data storage footer magic number");
+	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) return;
 	auto& endpoint = endpoints[subdatabase];
 	storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN);
 	storage->seek(static_cast<uint32_t>(offset));
