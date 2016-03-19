@@ -192,6 +192,7 @@ struct StorageBinFooter {
 template <typename StorageHeader, typename StorageBinHeader, typename StorageBinFooter>
 class Storage {
 	void* param;
+
 	std::string path;
 	int flags;
 	int fd;
@@ -220,6 +221,8 @@ class Storage {
 
 	XXH32_state_t* xxhash;
 	uint32_t bin_hash;
+
+	bool changed;
 
 	inline void growfile() {
 		if (free_blocks <= STORAGE_BLOCKS_MIN_FREE) {
@@ -292,7 +295,8 @@ public:
 		  bin_offset(0),
 		  bin_size(0),
 		  xxhash(XXH32_createState()),
-		  bin_hash(0) {
+		  bin_hash(0),
+		  changed(false) {
 		if ((reinterpret_cast<char*>(&bin_header.size) - reinterpret_cast<char*>(&bin_header) + sizeof(bin_header.size)) > STORAGE_ALIGNMENT) {
 			XXH32_freeState(xxhash);
 			throw MSG_StorageException("StorageBinHeader's size must be in the first %d bites", STORAGE_ALIGNMENT - sizeof(bin_header.size));
@@ -497,6 +501,8 @@ public:
 		buffer_offset = tmp_buffer_offset;
 		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 
+		changed = true;
+
 		return curr_offset;
 	}
 
@@ -614,6 +620,8 @@ public:
 		buffer_offset = tmp_buffer_offset;
 		header.head.offset += (((sizeof(StorageBinHeader) + buffer_header->size + sizeof(StorageBinFooter)) + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT);
 
+		changed = true;
+
 		return curr_offset;
 	}
 
@@ -701,6 +709,12 @@ public:
 
 	void commit() {
 		L_CALL(this, "Storage::commit()");
+
+		if (!changed) {
+			return;
+		}
+
+		changed = false;
 
 		if unlikely(io::pwrite(fd, &header, sizeof(header), 0) != sizeof(header)) {
 			close();
