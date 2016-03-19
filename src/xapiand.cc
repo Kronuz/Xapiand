@@ -66,25 +66,9 @@ void setup_signal_handlers(void) {
 	 * Otherwise, sa_handler is used. */
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = 0;
-	act.sa_handler = sig_shutdown_handler;
+	act.sa_handler = sig_exit;
 	sigaction(SIGTERM, &act, nullptr);
 	sigaction(SIGINT, &act, nullptr);
-}
-
-
-// int num_servers, const char *cluster_name_, const char *node_name_, const char *discovery_group, int discovery_port, const char *raft_group, int raft_port, int http_port, int binary_port, size_t dbpool_size
-void run(const opts_t &opts) {
-	setup_signal_handlers();
-	ev::default_loop default_loop;
-	manager = Worker::make_shared<XapiandManager>(&default_loop, opts);
-	manager->run(opts);
-	int managers = static_cast<int>(manager.use_count());
-	if (managers == 1) {
-		L_NOTICE(nullptr, "Xapiand is cleanly done with all work!");
-	} else {
-		L_WARNING(nullptr, "Xapiand is uncleanly done with all work (%d)!", managers);
-	}
-	manager.reset();
 }
 
 
@@ -437,7 +421,8 @@ void demote(const char* username, const char* group) {
 		gid_t gid = getgid();
 		if (username == nullptr || *username == '\0') {
 			L_CRIT(nullptr, "Can't run as root without the --uid switch");
-			exit(EX_USAGE);
+			throw Exit(EX_USAGE);
+
 		}
 
 		struct passwd *pw;
@@ -447,7 +432,7 @@ void demote(const char* username, const char* group) {
 			uid = atoi(username);
 			if (!uid || (pw = getpwuid(uid)) == nullptr) {
 				L_CRIT(nullptr, "Can't find the user %s to switch to", username);
-				exit(EX_NOUSER);
+				throw Exit(EX_NOUSER);
 			}
 		}
 		uid = pw->pw_uid;
@@ -459,7 +444,7 @@ void demote(const char* username, const char* group) {
 				gid = atoi(group);
 				if (!gid || (gr = getgrgid(gid)) == nullptr) {
 					L_CRIT(nullptr, "Can't find the group %s to switch to", group);
-					exit(EX_NOUSER);
+					throw Exit(EX_NOUSER);
 				}
 			}
 			gid = gr->gr_gid;
@@ -467,13 +452,13 @@ void demote(const char* username, const char* group) {
 		} else {
 			if ((gr = getgrgid(gid)) == nullptr) {
 				L_CRIT(nullptr, "Can't find the group id %d", gid);
-				exit(EX_NOUSER);
+				throw Exit(EX_NOUSER);
 			}
 			group = gr->gr_name;
 		}
 		if (setgid(gid) < 0 || setuid(uid) < 0) {
 			L_CRIT(nullptr, "Failed to assume identity of %s:%s", username, group);
-			exit(EX_OSERR);
+			throw Exit(EX_OSERR);
 		}
 		L_NOTICE(nullptr, "Running as %s:%s", username, group);
 	}
@@ -518,7 +503,7 @@ void usedir(const char* path) {
 	dirp = opendir(path, true);
 	if (!dirp) {
 		L_CRIT(nullptr, "Cannot open working directory: %s", path);
-		exit(EX_OSFILE);
+		throw Exit(EX_OSFILE);
 	}
 
 	bool empty = true;
@@ -546,12 +531,12 @@ void usedir(const char* path) {
 
 	if (!empty) {
 		L_CRIT(nullptr, "Working directory must be empty or a valid xapian database: %s", path);
-		exit(EX_DATAERR);
+		throw Exit(EX_DATAERR);
 	}
 
 	if (chdir(path) == -1) {
 		L_CRIT(nullptr, "Cannot change current working directory to %s", path);
-		exit(EX_OSFILE);
+		throw Exit(EX_OSFILE);
 	}
 
 	char buffer[PATH_MAX];
@@ -574,6 +559,42 @@ void banner() {
 		"            |_|  " BRIGHT_GREEN "v%s\n" GREEN
 		"   [%s]\n"
 		"          Using Xapian v%s\n\n", PACKAGE_VERSION, PACKAGE_BUGREPORT, XAPIAN_VERSION);
+}
+
+
+void run(const opts_t &opts) {
+	usedir(opts.database.c_str());
+	
+	demote(opts.uid.c_str(), opts.gid.c_str());
+	
+	init_time = std::chrono::system_clock::now();
+	time_t epoch = std::chrono::system_clock::to_time_t(init_time);
+	struct tm *timeinfo = localtime(&epoch);
+	timeinfo->tm_hour   = 0;
+	timeinfo->tm_min    = 0;
+	timeinfo->tm_sec    = 0;
+	auto diff_t = epoch - mktime(timeinfo);
+	b_time.minute = diff_t / SLOT_TIME_SECOND;
+	b_time.second =  diff_t % SLOT_TIME_SECOND;
+	
+	setup_signal_handlers();
+	ev::default_loop default_loop;
+	manager = Worker::make_shared<XapiandManager>(&default_loop, opts);
+
+	try {
+		manager->run(opts);
+	} catch (...) {
+		manager.reset();
+		throw;
+	}
+
+	int managers = static_cast<int>(manager.use_count());
+	if (managers == 1) {
+		L_NOTICE(nullptr, "Xapiand is cleanly done with all work!");
+	} else {
+		L_WARNING(nullptr, "Xapiand is uncleanly done with all work (%d)!", managers);
+	}
+	manager.reset();
 }
 
 
@@ -626,21 +647,17 @@ int main(int argc, char **argv) {
 		L_INFO(nullptr, "Increased flush threshold to 100000 (it was originally set to %d).", flush_threshold);
 	}
 
-	usedir(opts.database.c_str());
-
-	demote(opts.uid.c_str(), opts.gid.c_str());
-
-	init_time = std::chrono::system_clock::now();
-	time_t epoch = std::chrono::system_clock::to_time_t(init_time);
-	struct tm *timeinfo = localtime(&epoch);
-	timeinfo->tm_hour   = 0;
-	timeinfo->tm_min    = 0;
-	timeinfo->tm_sec    = 0;
-	auto diff_t = epoch - mktime(timeinfo);
-	b_time.minute = diff_t / SLOT_TIME_SECOND;
-	b_time.second =  diff_t % SLOT_TIME_SECOND;
-
-	run(opts);
+	try {
+		run(opts);
+	} catch (const Exit& exc) {
+		if (opts.detach && !opts.pidfile.empty()) {
+			L_INFO(nullptr, "Removing the pid file.");
+			unlink(opts.pidfile.c_str());
+		}
+		
+		Log::finish(true);
+		return exc.code;
+	}
 
 	if (opts.detach && !opts.pidfile.empty()) {
 		L_INFO(nullptr, "Removing the pid file.");

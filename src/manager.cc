@@ -309,10 +309,13 @@ XapiandManager::async_shutdown_sig_cb(ev::async&, int)
 	auto now = epoch::now<>();
 	int sig = shutdown_sig_sig;
 
+	if (sig < 0) {
+		throw Exit(-sig);
+	}
 	if (shutdown_now && sig != SIGTERM) {
 		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
 			L_WARNING(this, "You insisted... Xapiand exiting now!");
-			exit(1); /* Exit with an error since this was not a clean shutdown. */
+			throw Exit(1);
 		}
 	} else if (shutdown_asap && sig != SIGTERM) {
 		if (sig && now > shutdown_asap + 1 && now < shutdown_asap + 4) {
