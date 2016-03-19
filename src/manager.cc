@@ -361,16 +361,7 @@ XapiandManager::destroy_impl()
 	}
 #endif
 
-	L_DEBUG(this, "Finishing servers pool!");
-	server_pool.finish();
-
-#ifdef XAPIAND_CLUSTERING
-	L_DEBUG(this, "Finishing replicators pool!");
-	replicator_pool.finish();
-#endif
-
-	L_DEBUG(this, "Finishing commiters pool!");
-	autocommit_pool.finish();
+	finish();
 
 	L_OBJ(this, "DESTROYED XAPIAN MANAGER!");
 }
@@ -476,10 +467,39 @@ XapiandManager::run(const opts_t& o)
 	msg += ", " + std::to_string(o.num_committers) + ((o.num_committers == 1) ? " autocommitter" : " autocommitters");
 	L_NOTICE(this, msg.c_str());
 
-	L_EV(this, "Starting manager loop...");
-	loop->run();
-	L_EV(this, "Manager loop ended!");
+	try {
+		L_EV(this, "Starting manager loop...");
+		loop->run();
+		L_EV(this, "Manager loop ended!");
+	} catch (...) {
+		finish();
+		join();
+		throw;
+	}
 
+	join();
+}
+
+
+void
+XapiandManager::finish()
+{
+	L_DEBUG(this, "Finishing servers pool!");
+	server_pool.finish();
+
+#ifdef XAPIAND_CLUSTERING
+	L_DEBUG(this, "Finishing replicators pool!");
+	replicator_pool.finish();
+#endif
+
+	L_DEBUG(this, "Finishing commiters pool!");
+	autocommit_pool.finish();
+}
+
+
+void
+XapiandManager::join()
+{
 	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.size(), (server_pool.size() == 1) ? "" : "s");
 	server_pool.join();
 
