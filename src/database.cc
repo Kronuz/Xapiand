@@ -2919,10 +2919,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	L_DATABASE_BEGIN(this, "-- CHECKING IN DB %s(%s) [%lx]...", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
 
-	if (!database) {
-		L_CRIT(this, "Trying to checkin a database with a null pointer");
-		exit(EX_SOFTWARE);
-	}
+	assert(database);
 
 	std::unique_lock<std::mutex> lk(qmtx);
 
@@ -2945,10 +2942,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		queue = databases[database->hash];
 	}
 
-	if (database->weak_queue.lock() != queue) {
-		L_CRIT(this, "DatabaseQueue must be the same object");
-		exit(EX_SOFTWARE);
-	}
+	assert(database->weak_queue.lock() == queue);
 
 	int flags = database->flags;
 
