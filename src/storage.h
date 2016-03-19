@@ -191,6 +191,7 @@ struct StorageBinFooter {
 
 template <typename StorageHeader, typename StorageBinHeader, typename StorageBinFooter>
 class Storage {
+	void* param;
 	std::string path;
 	int flags;
 	int fd;
@@ -281,8 +282,9 @@ protected:
 	StorageHeader header;
 
 public:
-	Storage()
-		: flags(0),
+	Storage(void* param_)
+		: param(param_),
+		  flags(0),
 		  fd(0),
 		  free_blocks(0),
 		  buffer_curr(buffer0),
@@ -302,7 +304,7 @@ public:
 		XXH32_freeState(xxhash);
 	}
 
-	void open(const std::string& path_, int flags_=STORAGE_CREATE_OR_OPEN, void* param=nullptr) {
+	void open(const std::string& path_, int flags_=STORAGE_CREATE_OR_OPEN) {
 		L_CALL(this, "Storage::open()");
 
 		if (path != path_ || flags != flags_) {
@@ -340,10 +342,10 @@ public:
 			}
 		}
 
-		reopen(param);
+		reopen();
 	}
 
-	void reopen(void* param=nullptr) {
+	void reopen() {
 		L_CALL(this, "Storage::reopen()");
 
 		if unlikely(fd <= 0) {
@@ -402,7 +404,7 @@ public:
 		bin_offset = offset * STORAGE_ALIGNMENT;
 	}
 
-	uint32_t write(const char *data, size_t data_size, void* param=nullptr) {
+	uint32_t write(const char *data, size_t data_size) {
 		L_CALL(this, "Storage::write(1)");
 
 		uint32_t curr_offset = header.head.offset;
@@ -498,7 +500,7 @@ public:
 		return curr_offset;
 	}
 
-	uint32_t write_file(const std::string& filename, void* param=nullptr) {
+	uint32_t write_file(const std::string& filename) {
 		L_CALL(this, "Storage::write_file()");
 
 		uint32_t curr_offset = header.head.offset;
@@ -615,7 +617,7 @@ public:
 		return curr_offset;
 	}
 
-	size_t read(char* buf, size_t buf_size, uint32_t limit=-1, void* param=nullptr) {
+	size_t read(char* buf, size_t buf_size, uint32_t limit=-1) {
 		L_CALL(this, "Storage::read(1)");
 
 		if (!buf_size) {
@@ -720,20 +722,20 @@ public:
 		growfile();
 	}
 
-	inline uint32_t write(const std::string& data, void* param=nullptr) {
+	inline uint32_t write(const std::string& data) {
 		L_CALL(this, "Storage::write(2)");
 
-		return write(data.data(), data.size(), param);
+		return write(data.data(), data.size());
 	}
 
-	inline std::string read(uint32_t limit=-1, void* param=nullptr) {
+	inline std::string read(uint32_t limit=-1) {
 		L_CALL(this, "Storage::read(2)");
 
 		std::string ret;
 
 		size_t r;
 		char buf[LZ4_BLOCK_SIZE];
-		while ((r = read(buf, sizeof(buf), limit, param))) {
+		while ((r = read(buf, sizeof(buf), limit))) {
 			ret += std::string(buf, r);
 		}
 

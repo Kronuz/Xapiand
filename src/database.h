@@ -158,7 +158,7 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	uint32_t highest_valid_slot();
 
 	inline void open(const std::string& path, int flags) {
-		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, flags, this);
+		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, flags);
 	}
 
 public:
@@ -179,10 +179,11 @@ public:
 	bool commit_eof;
 	Database* database;
 
-	DatabaseWAL (Database* _database)
-		: modified(false),
+	DatabaseWAL(Database* database_)
+		: Storage<WalHeader, WalBinHeader, WalBinFooter>(this),
+		  modified(false),
 		  commit_eof(false),
-		  database(_database) {
+		  database(database_) {
 		L_OBJ(this, "CREATED DATABASE WAL!");
 	}
 
@@ -267,6 +268,16 @@ struct DataBinFooter {
 class DataStorage : public Storage<DataHeader, DataBinHeader, DataBinFooter> {
 public:
 	uint32_t volume;
+
+	DataStorage(void* param_)
+		: Storage<DataHeader, DataBinHeader, DataBinFooter>(param_) {
+		L_OBJ(this, "CREATED DATABASE DATA STORAGE!");
+	}
+
+	~DataStorage() {
+		L_OBJ(this, "DELETED DATABASE DATA STORAGE!");
+	}
+
 	uint32_t highest_volume(const std::string& path);
 };
 #endif

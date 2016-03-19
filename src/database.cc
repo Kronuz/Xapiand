@@ -202,7 +202,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 
 			try {
 				while (true) {
-					std::string line = read(end_off, this);
+					std::string line = read(end_off);
 					if (!execute(line)) {
 						throw MSG_Error("WAL revision mismatch!");
 					}
@@ -354,7 +354,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 		slot = rev - header.head.revision;
 	}
 
-	write(line.data(), line.size(), this);
+	write(line.data(), line.size());
 	header.slot[slot] = header.head.offset; /* Beginning of the next revision */
 
 	if (commit_) {
@@ -630,11 +630,11 @@ Database::reopen()
 #ifdef XAPIAND_DATA_STORAGE
 		if (local) {
 			// WAL required on a local database, open it.
-			auto storage = std::make_unique<DataStorage>();
+			auto storage = std::make_unique<DataStorage>(this);
 			storage->volume = storage->highest_volume(e.path);
-			storage->open(e.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE, this);
+			storage->open(e.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
 			writable_storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
-			storages.push_back(std::make_unique<DataStorage>());
+			storages.push_back(std::make_unique<DataStorage>(this));
 		} else {
 			writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 			storages.push_back(std::unique_ptr<DataStorage>(nullptr));
@@ -699,7 +699,7 @@ Database::reopen()
 #ifdef XAPIAND_DATA_STORAGE
 			if (local) {
 				// WAL required on a local database, open it.
-				storages.push_back(std::make_unique<DataStorage>());
+				storages.push_back(std::make_unique<DataStorage>(this));
 			} else {
 				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 			}
@@ -1535,7 +1535,7 @@ Database::storage_pull_data(Xapian::Document& doc)
 	}
 	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) throw MSG_StorageCorruptVolume("Invalid storage data footer magic number");
 	auto& endpoint = endpoints[subdatabase];
-	storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN, this);
+	storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN);
 	storage->seek(static_cast<uint32_t>(offset));
 	data = storage->read();
 	doc.set_data(data);
@@ -1561,7 +1561,7 @@ Database::storage_push_data(Xapian::Document& doc)
 		} catch (StorageEOF) {
 			++storage->volume;
 			auto& endpoint = endpoints[subdatabase];
-			storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE, this);
+			storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
 		}
 	}
 	char h = STORAGE_BIN_HEADER_MAGIC;
