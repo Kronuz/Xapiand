@@ -72,6 +72,13 @@ public:
 };
 
 
+class Exit : std::runtime_error {
+public:
+	int code;
+	Exit(int code_) : std::runtime_error(""), code(code_) { }
+};
+
+
 class Error : public Exception {
 public:
 	template<typename... Args>
