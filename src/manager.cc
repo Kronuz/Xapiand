@@ -74,11 +74,10 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	// Setup node from node database directory
 	std::string node_name_(get_node_name());
 	if (!node_name_.empty()) {
-		if (node_name.empty()) {
+		if (!node_name.empty() && lower_string(node_name) != lower_string(node_name_)) {
+			node_name = "~";
+		} else {
 			node_name = node_name_;
-		}
-		if (lower_string(node_name) != lower_string(node_name_)) {
-			node_name.clear();
 		}
 	}
 
@@ -385,7 +384,7 @@ XapiandManager::shutdown_impl(time_t asap, time_t now)
 void
 XapiandManager::run(const opts_t& o)
 {
-	if (node_name.empty()) {
+	if (node_name.compare("~") == 0) {
 		L_CRIT(this, "Node name %s doesn't match with the one in the cluster's database!", o.node_name.c_str());
 		throw Exit(EX_CONFIG);
 	}
