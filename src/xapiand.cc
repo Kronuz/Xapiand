@@ -517,10 +517,11 @@ void usedir(const char* path) {
 		}
 		if (ent->d_type == DT_REG) {
 #if defined(__APPLE__) && defined(__MACH__)
-			if (ent->d_namlen == 9 && strcmp(s, "flintlock") == 0) {
+			if (ent->d_namlen == 9 && strcmp(s, "flintlock") == 0)
 #else
-			if (strcmp(s, "flintlock") == 0) {
+			if (strcmp(s, "flintlock") == 0)
 #endif
+			{
 				empty = true;
 				break;
 			}
@@ -665,6 +666,5 @@ int main(int argc, char **argv) {
 	}
 
 	Log::finish(true);
-
-	return 0;
+	return EX_OK;
 }
