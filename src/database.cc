@@ -48,6 +48,17 @@
 #define SIZE_UUID 36
 
 
+#ifdef XAPIAND_DATABASE_WAL
+#  define WAL_SYNC_MODE STORAGE_FULL_SYNC  /* STORAGE_NO_SYNC or STORAGE_FULL_SYNC or 0 */
+#  define XAPIAN_SYNC_MODE Xapian::DB_NO_SYNC
+#  define STORAGE_SYNC_MODE STORAGE_NO_SYNC
+#else
+#  define WAL_SYNC_MODE STORAGE_NO_SYNC
+#  define XAPIAN_SYNC_MODE 0
+#  define STORAGE_SYNC_MODE 0
+#endif
+
+
 static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
 
 
@@ -143,7 +154,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 
 	closedir(dir);
 	if (lowest_revision > revision) {
-		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC | STORAGE_COMPRESS);
+		open(path + "/" + WAL_STORAGE_PATH + std::to_string(revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 	} else {
 		modified = false;
 
@@ -152,7 +163,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 		uint32_t file_rev, begin_rev, end_rev;
 		for (auto slot = lowest_revision; slot <= highest_revision && not reach_end; ++slot) {
 			file_rev = begin_rev = slot;
-			open(path + "/" + WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN | STORAGE_COMPRESS);
+			open(path + "/" + WAL_STORAGE_PATH + std::to_string(slot), STORAGE_OPEN);
 
 			uint32_t high_slot = highest_valid_slot();
 			if (high_slot == static_cast<uint32_t>(-1)) {
@@ -208,7 +219,7 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 			slot = high_slot;
 		}
 
-		open(path + "/" + WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC | STORAGE_COMPRESS);
+		open(path + "/" + WAL_STORAGE_PATH + std::to_string(highest_revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 	}
 	return modified;
 }
@@ -346,7 +357,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 
 	if (slot >= WAL_SLOTS) {
 		close();
-		open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
+		open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 		slot = rev - header.head.revision;
 	}
 
@@ -357,7 +368,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 		if (slot + 1 >= WAL_SLOTS) {
 			close();
 			commit_eof = true;
-			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev+1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_FULL_SYNC);
+			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
 			slot = rev - header.head.revision;
 			commit_eof = false;
 		} else {
@@ -594,10 +605,7 @@ Database::reopen()
 		auto& e = *i;
 		Xapian::WritableDatabase wdb;
 		bool local = false;
-		int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN;
-#ifdef XAPIAND_DATABASE_WAL
-		_flags |= Xapian::DB_NO_SYNC;
-#endif
+		int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN | XAPIAN_SYNC_MODE : Xapian::DB_OPEN | XAPIAN_SYNC_MODE;
 #ifdef XAPIAND_CLUSTERING
 		if (!e.is_local()) {
 			// Writable remote databases do not have a local fallback
@@ -1550,11 +1558,7 @@ Database::storage_push_data(Xapian::Document& doc)
 	uint32_t offset;
 	auto& endpoint = endpoints[subdatabase];
 	while(true) {
-#ifdef XAPIAND_DATABASE_WAL
-		storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_NO_SYNC, this);
-#else
-		storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE, this);
-#endif
+		storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE, this);
 		try {
 			offset = storage->write(data);
 			break;
