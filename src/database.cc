@@ -47,16 +47,9 @@
 
 #define SIZE_UUID 36
 
-
-#ifdef XAPIAND_DATABASE_WAL
-#  define WAL_SYNC_MODE STORAGE_FULL_SYNC  /* STORAGE_NO_SYNC or STORAGE_FULL_SYNC or 0 */
-#  define XAPIAN_SYNC_MODE Xapian::DB_NO_SYNC
-#  define STORAGE_SYNC_MODE STORAGE_NO_SYNC
-#else
-#  define WAL_SYNC_MODE STORAGE_NO_SYNC
-#  define XAPIAN_SYNC_MODE 0
-#  define STORAGE_SYNC_MODE 0
-#endif
+#define WAL_SYNC_MODE 0
+#define XAPIAN_SYNC_MODE Xapian::DB_FULL_SYNC
+#define STORAGE_SYNC_MODE STORAGE_FULL_SYNC
 
 
 static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
