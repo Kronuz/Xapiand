@@ -588,6 +588,7 @@ Database::reopen()
 
 #ifdef XAPIAND_DATA_STORAGE
 	storages.clear();
+	writable_storages.clear();
 #endif
 
 	auto endpoints_size = endpoints.size();
@@ -631,8 +632,11 @@ Database::reopen()
 			// WAL required on a local database, open it.
 			auto storage = std::make_unique<DataStorage>();
 			storage->volume = storage->highest_volume(e.path);
-			storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
+			storage->open(e.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE, this);
+			writable_storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
+			storages.push_back(std::make_unique<DataStorage>());
 		} else {
+			writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 			storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 		}
 #endif
@@ -1543,21 +1547,21 @@ Database::storage_push_data(Xapian::Document& doc)
 	L_CALL(this, "Database::storage_push_data()");
 
 	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-	auto& storage = storages[subdatabase];
+	auto& storage = writable_storages[subdatabase];
 	if (!storage) {
 		return;
 	}
 
-	std::string data = doc.get_data();
 	uint32_t offset;
-	auto& endpoint = endpoints[subdatabase];
+	std::string data = doc.get_data();
 	while(true) {
-		storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE, this);
 		try {
 			offset = storage->write(data);
 			break;
-		} catch(StorageEOF) {
+		} catch (StorageEOF) {
 			++storage->volume;
+			auto& endpoint = endpoints[subdatabase];
+			storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE, this);
 		}
 	}
 	char h = STORAGE_BIN_HEADER_MAGIC;
@@ -1568,7 +1572,7 @@ Database::storage_push_data(Xapian::Document& doc)
 void
 Database::storage_commit()
 {
-	for (auto& storage : storages) {
+	for (auto& storage : writable_storages) {
 		if (storage) {
 			storage->commit();
 		}

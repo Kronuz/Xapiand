@@ -288,6 +288,7 @@ public:
 	std::unique_ptr<Xapian::Database> db;
 
 #ifdef XAPIAND_DATA_STORAGE
+	std::vector<std::unique_ptr<DataStorage>> writable_storages;
 	std::vector<std::unique_ptr<DataStorage>> storages;
 #endif
 
