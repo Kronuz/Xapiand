@@ -84,7 +84,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *
 	int total_clients = XapiandServer::total_clients;
 	if (binary_clients > total_clients) {
 		L_CRIT(this, "Inconsistency in number of binary clients");
-		exit(EX_SOFTWARE);
+		sig_exit(-EX_SOFTWARE);
 	}
 
 	L_CONN(this, "New Binary Client (sock=%d), %d client(s) of a total of %d connected.", sock, binary_clients, total_clients);
@@ -102,7 +102,7 @@ BinaryClient::~BinaryClient()
 	L_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)", binary_clients);
 	if (binary_clients < 0) {
 		L_CRIT(this, "Inconsistency in number of binary clients");
-		exit(EX_SOFTWARE);
+		sig_exit(-EX_SOFTWARE);
 	}
 }
 

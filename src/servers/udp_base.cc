@@ -92,7 +92,7 @@ BaseUDP::bind(int tries, const std::string& group)
 
 	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
 		L_CRIT(this, "ERROR: %s socket: [%d] %s", description.c_str(), errno, strerror(errno));
-		exit(EX_CONFIG);
+		sig_exit(-EX_CONFIG);
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same port
@@ -115,7 +115,7 @@ BaseUDP::bind(int tries, const std::string& group)
 	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
 		L_CRIT(this, "ERROR: %s setsockopt IP_ADD_MEMBERSHIP (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 		io::close(sock);
-		exit(EX_CONFIG);
+		sig_exit(-EX_CONFIG);
 	}
 
 	memset(&addr, 0, sizeof(addr));
@@ -143,7 +143,7 @@ BaseUDP::bind(int tries, const std::string& group)
 
 	L_CRIT(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	io::close(sock);
-	exit(EX_CONFIG);
+	sig_exit(-EX_CONFIG);
 }
 
 

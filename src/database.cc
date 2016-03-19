@@ -2654,7 +2654,7 @@ DatabaseQueue::~DatabaseQueue()
 {
 	if (size() != count) {
 		L_CRIT(this, "DatabaseQueue size is inconsistent with the DatabaseQueue counter");
-		exit(EX_SOFTWARE);
+		sig_exit(-EX_SOFTWARE);
 	}
 
 	L_OBJ(this, "DELETED DATABASE QUEUE!");
@@ -2694,7 +2694,7 @@ DatabaseQueue::dec_count()
 
 	if (count <= 0) {
 		L_CRIT(this, "Inconsistency with the DatabaseQueue counter");
-		exit(EX_SOFTWARE);
+		sig_exit(-EX_SOFTWARE);
 	}
 
 	if (count > 0) {
@@ -2975,7 +2975,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 
 	if (queue->count < queue->size()) {
 		L_CRIT(this, "DatabaseQueue size is inconsistent with the DatabaseQueue counter");
-		exit(EX_SOFTWARE);
+		sig_exit(-EX_SOFTWARE);
 	}
 
 	L_DATABASE_END(this, "-- CHECKED IN DB %s(%s) [%lx]", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());

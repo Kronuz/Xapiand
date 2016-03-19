@@ -172,7 +172,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* loop_,
 	int total_clients = XapiandServer::total_clients;
 	if (http_clients > total_clients) {
 		L_CRIT(this, "Inconsistency in number of http clients");
-		exit(EX_SOFTWARE);
+		sig_exit(-EX_SOFTWARE);
 	}
 
 	L_CONN(this, "New Http Client (sock=%d), %d client(s) of a total of %d connected.", sock, http_clients, total_clients);
@@ -204,7 +204,7 @@ HttpClient::~HttpClient()
 	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)", http_clients);
 	if (http_clients < 0) {
 		L_CRIT(this, "Inconsistency in number of http clients");
-		exit(EX_SOFTWARE);
+		sig_exit(-EX_SOFTWARE);
 	}
 
 }

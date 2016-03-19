@@ -99,7 +99,7 @@ BaseTCP::bind(int tries)
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		L_CRIT(nullptr, "ERROR: %s socket: [%d] %s", description.c_str(), errno, strerror(errno));
-		exit(EX_IOERR);
+		sig_exit(-EX_IOERR);
 	}
 
 	// use setsockopt() to allow multiple listeners connected to the same address
@@ -171,7 +171,7 @@ BaseTCP::bind(int tries)
 
 	L_CRIT(nullptr, "ERROR: %s bind error (sock=%d): [%d] %s", description.c_str(), sock, errno, strerror(errno));
 	io::close(sock);
-	exit(EX_CONFIG);
+	sig_exit(-EX_CONFIG);
 }
 
 

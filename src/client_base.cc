@@ -289,7 +289,7 @@ BaseClient::~BaseClient()
 	int total_clients = --XapiandServer::total_clients;
 	if (total_clients < 0) {
 		L_CRIT(this, "Inconsistency in number of clients, end up with negative number");
-		exit(EX_SOFTWARE);
+		sig_exit(-EX_SOFTWARE);
 	}
 
 	L_OBJ(this, "DELETED BASE CLIENT! (%d clients left)", total_clients);

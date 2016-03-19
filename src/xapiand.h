@@ -69,3 +69,5 @@
 #define likely(x) (x)
 #define unlikely(x) (x)
 #endif
+
+void sig_exit(int sig);

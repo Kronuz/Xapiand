@@ -145,12 +145,12 @@ XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<st
 		if (fd >= 0) {
 			if (io::write(fd, node_name.c_str(), node_name.size()) != static_cast<ssize_t>(node_name.size())) {
 				L_CRIT(nullptr, "Cannot write in nodename file");
-				exit(EX_IOERR);
+				sig_exit(-EX_IOERR);
 			}
 			io::close(fd);
 		} else {
 			L_CRIT(nullptr, "Cannot open or create the nodename file");
-			exit(EX_NOINPUT);
+			sig_exit(-EX_NOINPUT);
 		}
 	}
 
@@ -212,7 +212,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
 			L_CRIT(nullptr, "Cannot generate cluster database");
-			exit(EX_CANTCREAT);
+			sig_exit(-EX_CANTCREAT);
 		}
 	}
 	database_pool.checkin(cluster_database);
