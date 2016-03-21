@@ -90,7 +90,7 @@ void
 MultipleValueRange::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
-	while (value_it != db.valuestream_end(slot)) {
+	while (value_it != get_database().valuestream_end(slot)) {
 		if (insideRange()) break;
 		++value_it;
 	}
@@ -101,7 +101,7 @@ void
 MultipleValueRange::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (value_it != db.valuestream_end(slot)) {
+	while (value_it != get_database().valuestream_end(slot)) {
 		if (insideRange()) break;
 		++value_it;
 	}
@@ -116,7 +116,7 @@ MultipleValueRange::check(Xapian::docid min_docid, double min_wt)
 		return false;
 	}
 
-	if (value_it == db.valuestream_end(slot)) {
+	if (value_it == get_database().valuestream_end(slot)) {
 		// return true, since we're definitely at the end of the list.
 		return true;
 	}
@@ -216,7 +216,7 @@ void
 MultipleValueGE::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
-	while (value_it != db.valuestream_end(slot)) {
+	while (value_it != get_database().valuestream_end(slot)) {
 		if (insideRange()) break;
 		++value_it;
 	}
@@ -227,7 +227,7 @@ void
 MultipleValueGE::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (value_it != db.valuestream_end(slot)) {
+	while (value_it != get_database().valuestream_end(slot)) {
 		if (insideRange()) break;
 		++value_it;
 	}
@@ -242,7 +242,7 @@ MultipleValueGE::check(Xapian::docid min_docid, double min_wt)
 		return false;
 	}
 
-	if (value_it == db.valuestream_end(slot)) {
+	if (value_it == get_database().valuestream_end(slot)) {
 		// return true, since we're definitely at the end of the list.
 		return true;
 	}
@@ -339,7 +339,7 @@ void
 MultipleValueLE::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
-	while (value_it != db.valuestream_end(slot)) {
+	while (value_it != get_database().valuestream_end(slot)) {
 		if (insideRange()) break;
 		++value_it;
 	}
@@ -350,7 +350,7 @@ void
 MultipleValueLE::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (value_it != db.valuestream_end(slot)) {
+	while (value_it != get_database().valuestream_end(slot)) {
 		if (insideRange()) break;
 		++value_it;
 	}
@@ -365,7 +365,7 @@ MultipleValueLE::check(Xapian::docid min_docid, double min_wt)
 		return false;
 	}
 
-	if (value_it == db.valuestream_end(slot)) {
+	if (value_it == get_database().valuestream_end(slot)) {
 		// return true, since we're definitely at the end of the list.
 		return true;
 	}
