@@ -920,8 +920,8 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 		for (const auto& suggestion : suggestions) {
 			res += "\t+ " + suggestion + "\n";
 		}
-		return res.c_str();
-	}());
+		return res;
+	}().c_str());
 
 	if (facets) {
 		MsgPack response;
