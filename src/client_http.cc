@@ -50,8 +50,6 @@
 #define METHOD_OPTIONS 6
 #define METHOD_PATCH   24
 
-#define START_REQUEST  18
-
 
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;q=(\\d+(?:\\.\\d+)?))?");
 
@@ -222,7 +220,7 @@ HttpClient::on_read(const char* buf, size_t received)
 	size_t parsed = http_parser_execute(&parser, &settings, buf, received);
 	if (parsed == received) {
 		unsigned final_state = parser.state;
-		if (init_state == START_REQUEST && final_state == START_REQUEST && parser.method == 0) { // Ignore '\n' request
+		if (final_state == init_state and received == 1 and (strncmp(buf, "\n", received) == 0)) { //ignore '\n' request
 			return;
 		}
 		if (final_state == 1 || final_state == 18) { // dead or message_complete
