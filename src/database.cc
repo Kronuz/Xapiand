@@ -68,19 +68,19 @@ constexpr const char* const DatabaseWAL::names[];
 void
 WalHeader::init(void* param)
 {
-	const DatabaseWAL* storage = static_cast<const DatabaseWAL*>(param);
+	const DatabaseWAL* wal = static_cast<const DatabaseWAL*>(param);
 
 	head.magic = MAGIC;
 	head.offset = STORAGE_START_BLOCK_OFFSET;
-	strncpy(head.uuid, storage->database->get_uuid().c_str(), sizeof(head.uuid));
+	strncpy(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid));
 
-	std::string rev_str = storage->database->get_revision_info();
+	std::string rev_str = wal->database->get_revision_info();
 	const char *r = rev_str.data();
 	const char *r_end = r + rev_str.size();
 	uint32_t revision;
 	unserialise_unsigned(&r, r_end, &revision);
 
-	if (storage->commit_eof) {
+	if (wal->commit_eof) {
 		++revision;
 	}
 
@@ -95,8 +95,8 @@ WalHeader::validate(void* param)
 		throw MSG_StorageCorruptVolume("Bad WAL header magic number");
 	}
 
-	const DatabaseWAL* storage = static_cast<const DatabaseWAL*>(param);
-	if (strncasecmp(head.uuid, storage->database->get_uuid().c_str(), sizeof(head.uuid))) {
+	const DatabaseWAL* wal = static_cast<const DatabaseWAL*>(param);
+	if (strncasecmp(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid))) {
 		throw MSG_StorageCorruptVolume("WAL UUID mismatch");
 	}
 }
@@ -469,11 +469,11 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 void
 DataHeader::init(void* param)
 {
-	const Database* storage = static_cast<const Database*>(param);
+	const Database* database = static_cast<const Database*>(param);
 
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 	head.magic = STORAGE_MAGIC;
-	strncpy(head.uuid, storage->get_uuid().c_str(), sizeof(head.uuid));
+	strncpy(head.uuid, database->get_uuid().c_str(), sizeof(head.uuid));
 }
 
 
@@ -484,8 +484,8 @@ DataHeader::validate(void* param)
 		throw MSG_StorageCorruptVolume("Bad data storage header magic number");
 	}
 
-	const Database* storage = static_cast<const Database*>(param);
-	if (strncasecmp(head.uuid, storage->get_uuid().c_str(), sizeof(head.uuid))) {
+	const Database* database = static_cast<const Database*>(param);
+	if (strncasecmp(head.uuid, database->get_uuid().c_str(), sizeof(head.uuid))) {
 		throw MSG_StorageCorruptVolume("Data storage UUID mismatch");
 	}
 }
