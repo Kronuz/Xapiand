@@ -211,13 +211,21 @@ std::string Endpoint::as_string() const {
 
 bool Endpoint::operator<(const Endpoint & other) const
 {
-	return as_string() < other.as_string();
+	return hash() < other.hash();
 }
 
 
 size_t Endpoint::hash() const {
-	std::hash<std::string> hash_fn;
-	return hash_fn(as_string());
+	std::hash<std::string> hash_fn_string;
+	std::hash<int> hash_fn_int;
+	return (
+		hash_fn_string(path) ^
+		hash_fn_string(user) ^
+		hash_fn_string(password) ^
+		hash_fn_string(host) ^
+		hash_fn_int(port) ^
+		hash_fn_string(search)
+	);
 }
 
 

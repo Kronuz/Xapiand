@@ -155,7 +155,9 @@ public:
 	static std::string cwd;
 
 	int port;
-	std::string user, password, host, path, search, node_name;
+	std::string user, password, host, path, search;
+
+	std::string node_name;
 	long long mastery_level;
 
 	Endpoint();
