@@ -455,6 +455,7 @@ BinaryClient::run()
 // |_| \_\___|_| |_| |_|\___/ \__\___|_|   |_|  \___/ \__\___/ \___\___/|_|
 //
 ////////////////////////////////////////////////////////////////////////////////
+// Based on xapian/xapian-core/net/remoteserver.cc @ 6a76cee
 void
 BinaryClient::remote_server(RemoteMessageType type, const std::string &message)
 {
