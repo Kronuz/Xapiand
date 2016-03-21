@@ -386,6 +386,8 @@ XapiandManager::run(const opts_t& o)
 {
 	if (node_name.compare("~") == 0) {
 		L_CRIT(this, "Node name %s doesn't match with the one in the cluster's database!", o.node_name.c_str());
+		finish();
+		join();
 		throw Exit(EX_CONFIG);
 	}
 
