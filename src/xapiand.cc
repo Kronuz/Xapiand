@@ -511,9 +511,7 @@ void usedir(const char* path) {
 	while ((ent = readdir(dirp)) != nullptr) {
 		const char *s = ent->d_name;
 		if (ent->d_type == DT_DIR) {
-			if (s[0] == '.' && (s[1] == '\0' || (s[1] == '.' && s[2] == '\0'))) {
-				continue;
-			}
+			continue;
 		}
 		if (ent->d_type == DT_REG) {
 #if defined(__APPLE__) && defined(__MACH__)
