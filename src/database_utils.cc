@@ -209,14 +209,14 @@ get_blob(const Xapian::Document& doc)
 	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return std::move(data);
+	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return data;
 	try {
 		length = unserialise_length(&p, p_end, true);
 	} catch (Xapian::SerialisationError) {
-		return std::move(data);
+		return data;
 	}
 	p += length;
-	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) return std::move(data);
+	if (*p++ != DATABASE_DATA_FOOTER_MAGIC) return data;
 	return std::string(p, p_end - p);
 }
 
