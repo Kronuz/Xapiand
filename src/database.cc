@@ -627,6 +627,12 @@ Database::reopen()
 			if (endpoints_size == 1) read_mastery(e);
 		}
 
+		db->add_database(wdb);
+
+		if (local) {
+			checkout_revision = get_revision_info();
+		}
+
 #ifdef XAPIAND_DATA_STORAGE
 		if (local) {
 			// WAL required on a local database, open it.
@@ -640,11 +646,6 @@ Database::reopen()
 			storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 		}
 #endif
-		db->add_database(wdb);
-
-		if (local) {
-			checkout_revision = get_revision_info();
-		}
 
 #ifdef XAPIAND_DATABASE_WAL
 		if (local && !(flags & DB_NOWAL)) {
@@ -696,6 +697,8 @@ Database::reopen()
 				local = true;
 			}
 
+			db->add_database(rdb);
+
 #ifdef XAPIAND_DATA_STORAGE
 			if (local) {
 				// WAL required on a local database, open it.
@@ -704,7 +707,6 @@ Database::reopen()
 				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 			}
 #endif
-			db->add_database(rdb);
 		}
 	}
 
