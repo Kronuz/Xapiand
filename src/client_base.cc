@@ -314,6 +314,9 @@ BaseClient::destroy_impl()
 	io_write.stop();
 	L_EV(this, "Stop write event (sock=%d)", sock);
 
+	async_read.stop();
+	async_write.stop();
+
 	io::close(sock);
 	sock = -1;
 	lk.unlock();
