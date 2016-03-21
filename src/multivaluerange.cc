@@ -177,7 +177,7 @@ MultipleValueRange::init(const Xapian::Database& db_)
 	Xapian::ValuePostingSource::init(db_);
 
 	// Possible that no documents are in range.
-	termfreq_min = 0;
+	set_termfreq_min(0);
 }
 
 
@@ -301,7 +301,7 @@ MultipleValueGE::init(const Xapian::Database& db_)
 	Xapian::ValuePostingSource::init(db_);
 
 	// Possible that no documents are in range.
-	termfreq_min = 0;
+	set_termfreq_min(0);
 }
 
 
@@ -424,7 +424,7 @@ MultipleValueLE::init(const Xapian::Database& db_)
 	Xapian::ValuePostingSource::init(db_);
 
 	// Possible that no documents are in range.
-	termfreq_min = 0;
+	set_termfreq_min(0);
 }
 
 
