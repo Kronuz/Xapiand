@@ -122,7 +122,7 @@ bool
 GeoSpatialRange::insideRanges()
 {
 	StringList list;
-	list.unserialise(*value_it);
+	list.unserialise(get_value());
 	RangeList ranges_;
 	CartesianUSet centroids_;
 	const auto it_e = list.end();
@@ -149,9 +149,9 @@ void
 GeoSpatialRange::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
-	while (value_it != db.valuestream_end(slot)) {
+	while (!at_end()) {
 		if (insideRanges()) break;
-		++value_it;
+		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
 
@@ -160,9 +160,9 @@ void
 GeoSpatialRange::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (value_it != db.valuestream_end(slot)) {
+	while (!at_end()) {
 		if (insideRanges()) break;
-		++value_it;
+		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
 
@@ -175,7 +175,7 @@ GeoSpatialRange::check(Xapian::docid min_docid, double min_wt)
 		return false;
 	}
 
-	if (value_it == db.valuestream_end(slot)) {
+	if (at_end()) {
 		// return true, since we're definitely at the end of the list.
 		return true;
 	}

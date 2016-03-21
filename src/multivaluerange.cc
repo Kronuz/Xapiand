@@ -76,7 +76,7 @@ bool
 MultipleValueRange::insideRange()  const noexcept
 {
 	StringList list;
-	list.unserialise(*value_it);
+	list.unserialise(get_value());
 	for (const auto& value_ : list) {
 		if (value_ >= start && value_ <= end) {
 			return true;
@@ -90,9 +90,9 @@ void
 MultipleValueRange::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
-	while (value_it != get_database().valuestream_end(slot)) {
+	while (!at_end()) {
 		if (insideRange()) break;
-		++value_it;
+		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
 
@@ -101,9 +101,9 @@ void
 MultipleValueRange::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (value_it != get_database().valuestream_end(slot)) {
+	while (!at_end()) {
 		if (insideRange()) break;
-		++value_it;
+		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
 
@@ -116,7 +116,7 @@ MultipleValueRange::check(Xapian::docid min_docid, double min_wt)
 		return false;
 	}
 
-	if (value_it == get_database().valuestream_end(slot)) {
+	if (at_end()) {
 		// return true, since we're definitely at the end of the list.
 		return true;
 	}
@@ -202,7 +202,7 @@ bool
 MultipleValueGE::insideRange() const noexcept
 {
 	StringList list;
-	list.unserialise(*value_it);
+	list.unserialise(get_value());
 	for (const auto& value_ : list) {
 		if (value_ >= start) {
 			return true;
@@ -216,9 +216,9 @@ void
 MultipleValueGE::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
-	while (value_it != get_database().valuestream_end(slot)) {
+	while (!at_end()) {
 		if (insideRange()) break;
-		++value_it;
+		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
 
@@ -227,9 +227,9 @@ void
 MultipleValueGE::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (value_it != get_database().valuestream_end(slot)) {
+	while (!at_end()) {
 		if (insideRange()) break;
-		++value_it;
+		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
 
@@ -242,7 +242,7 @@ MultipleValueGE::check(Xapian::docid min_docid, double min_wt)
 		return false;
 	}
 
-	if (value_it == get_database().valuestream_end(slot)) {
+	if (at_end()) {
 		// return true, since we're definitely at the end of the list.
 		return true;
 	}
@@ -325,7 +325,7 @@ bool
 MultipleValueLE::insideRange() const noexcept
 {
 	StringList list;
-	list.unserialise(*value_it);
+	list.unserialise(get_value());
 	for (const auto& value_ : list) {
 		if (value_ <= end) {
 			return true;
@@ -339,9 +339,9 @@ void
 MultipleValueLE::next(double min_wt)
 {
 	Xapian::ValuePostingSource::next(min_wt);
-	while (value_it != get_database().valuestream_end(slot)) {
+	while (!at_end()) {
 		if (insideRange()) break;
-		++value_it;
+		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
 
@@ -350,9 +350,9 @@ void
 MultipleValueLE::skip_to(Xapian::docid min_docid, double min_wt)
 {
 	Xapian::ValuePostingSource::skip_to(min_docid, min_wt);
-	while (value_it != get_database().valuestream_end(slot)) {
+	while (!at_end()) {
 		if (insideRange()) break;
-		++value_it;
+		Xapian::ValuePostingSource::next(min_wt);
 	}
 }
 
@@ -365,7 +365,7 @@ MultipleValueLE::check(Xapian::docid min_docid, double min_wt)
 		return false;
 	}
 
-	if (value_it == get_database().valuestream_end(slot)) {
+	if (at_end()) {
 		// return true, since we're definitely at the end of the list.
 		return true;
 	}
