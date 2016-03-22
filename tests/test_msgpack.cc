@@ -225,7 +225,6 @@ int test_assigment() {
 
 
 int test_path() {
-
 	std::string buffer;
 	if (!read_file_contents("examples/json/object_path.txt", &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file [examples/json/object_path.txt]");
@@ -257,5 +256,4 @@ int test_path() {
 	}
 
 	return 0;
-
 }
