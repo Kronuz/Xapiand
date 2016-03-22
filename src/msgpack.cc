@@ -231,8 +231,10 @@ MsgPack::at(const MsgPack& o) const
 MsgPack
 MsgPack::at(const std::string& key) const
 {
-	if (body->obj->type == msgpack::type::NIL || body->obj->type == msgpack::type::MAP) {
+	if (body->obj->type == msgpack::type::MAP) {
 		return MsgPack(handler, body->map.at(key), body);
+	} else if (body->obj->type == msgpack::type::NIL) {
+		throw std::out_of_range(key);
 	}
 
 	throw msgpack::type_error();
