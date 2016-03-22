@@ -32,58 +32,65 @@
 
 MsgPack::MsgPack()
 	: handler(std::make_shared<object_handle>()),
-	  parent_obj(nullptr),
-	  obj(&handler->obj),
-	  m_alloc(0) { }
+	  parent_body(nullptr),
+	  body(std::make_shared<MsgPackBody>(0, &handler->obj, MapPack(), 0)) { }
 
 
-MsgPack::MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object* o, msgpack::object* p)
-	: handler(unpacked),
-	  parent_obj(p),
-	  obj(o),
-	  m_alloc(size()) { }
+MsgPack::MsgPack(const std::shared_ptr<object_handle>& handler_, const std::shared_ptr<MsgPackBody>& body_, const std::shared_ptr<MsgPackBody>& p_body_)
+	: handler(handler_),
+	  parent_body(p_body_),
+	  body(body_)
+{
+	init();
+}
 
 
-MsgPack::MsgPack(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z)
-	: handler(std::make_shared<object_handle>(o, std::move(z))),
-	  parent_obj(nullptr),
-	  obj(&handler->obj),
-	  m_alloc(size()) { }
+MsgPack::MsgPack(const std::shared_ptr<MsgPackBody>& body_, std::unique_ptr<msgpack::zone>&& z)
+	: handler(std::make_shared<object_handle>(*body_->obj, std::move(z))),
+	  parent_body(nullptr),
+	  body(std::make_shared<MsgPackBody>(0, &handler->obj, body_->map, body_->m_alloc))
+{
+	init();
+}
 
 
 MsgPack::MsgPack(msgpack::unpacked& u)
 	: handler(std::make_shared<object_handle>(u.get(), std::move(u.zone()))),
-	  parent_obj(nullptr),
-	  obj(&handler->obj),
-	  m_alloc(size()) { }
+	  parent_body(nullptr),
+	  body(std::make_shared<MsgPackBody>(0, &handler->obj))
+{
+	init();
+}
 
 
 MsgPack::MsgPack(const std::string& buffer)
 	: handler(make_handler(buffer)),
-	  parent_obj(nullptr),
-	  obj(&handler->obj),
-	  m_alloc(size()) { }
+	  parent_body(nullptr),
+	  body(std::make_shared<MsgPackBody>(0, &handler->obj))
+{
+	init();
+}
 
 
 MsgPack::MsgPack(const rapidjson::Document& doc)
 	: handler(make_handler(doc)),
-	  parent_obj(nullptr),
-	  obj(&handler->obj),
-	  m_alloc(size()) { }
+	  parent_body(nullptr),
+	  body(std::make_shared<MsgPackBody>(0, &handler->obj))
+{
+	init();
+}
 
 
 MsgPack::MsgPack(MsgPack&& other) noexcept
 	: handler(std::move(other.handler)),
-	  parent_obj(std::move(other.parent_obj)),
-	  obj(std::move(other.obj)),
-	  m_alloc(std::move(other.m_alloc)) { }
+	  parent_body(std::move(other.parent_body)),
+	  body(std::move(other.body)) { }
 
 
 MsgPack::MsgPack(const MsgPack& other)
 	: handler(other.handler),
-	  parent_obj(other.parent_obj),
-	  obj(other.obj),
-	  m_alloc(other.m_alloc) { }
+	  parent_body(other.parent_body),
+	  body(other.body) { }
 
 
 std::shared_ptr<MsgPack::object_handle>
@@ -111,46 +118,65 @@ MsgPack::make_handler(const rapidjson::Document& doc)
 }
 
 
+void
+MsgPack::init()
+{
+	if (body->m_alloc == -1 && body->obj->type == msgpack::type::MAP) {
+		body->map.reserve(body->obj->via.map.size);
+		body->m_alloc = body->obj->via.map.size;
+		uint32_t pos = 0;
+		const msgpack::object_kv* pend(body->obj->via.map.ptr + body->obj->via.map.size);
+		for (auto p = body->obj->via.map.ptr; p != pend; ++p, ++pos) {
+			if (p->key.type == msgpack::type::STR) {
+				body->map.insert(std::make_pair(std::string(p->key.via.str.ptr, p->key.via.str.size), std::make_shared<MsgPackBody>(pos, &p->val)));
+			}
+		}
+	} else {
+		body->m_alloc = body->obj->type == msgpack::type::ARRAY ? body->obj->via.array.size : 0;
+	}
+}
+
+
 MsgPack
 MsgPack::operator[](const MsgPack& o)
 {
-	if (o.obj->type == msgpack::type::STR) {
-		return operator[](std::string(o.obj->via.str.ptr, o.obj->via.str.size));
+	switch (o.body->obj->type) {
+		case msgpack::type::STR:
+			return operator[](std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+		case msgpack::type::POSITIVE_INTEGER:
+			return operator[](static_cast<uint32_t>(o.body->obj->via.u64));
+		case msgpack::type::NEGATIVE_INTEGER:
+			return operator[](static_cast<uint32_t>(o.body->obj->via.i64));
+		default:
+			throw msgpack::type_error();
 	}
-	if (o.obj->type == msgpack::type::POSITIVE_INTEGER) {
-		return operator[](static_cast<uint32_t>(o.obj->via.u64));
-	}
-	throw msgpack::type_error();
 }
 
 
 MsgPack
 MsgPack::operator[](const std::string& key)
 {
-	if (obj->type == msgpack::type::NIL) {
-		obj->type = msgpack::type::MAP;
-		obj->via.map.ptr = nullptr;
-		obj->via.map.size = 0;
+	auto it = body->map.find(key);
+	if (it != body->map.end()) {
+		return MsgPack(handler, it->second, body);
 	}
 
-	if (obj->type == msgpack::type::MAP) {
-		const msgpack::object_kv* pend(obj->via.map.ptr + obj->via.map.size);
-		for (auto p = obj->via.map.ptr; p != pend; ++p) {
-			if (p->key.type == msgpack::type::STR) {
-				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0) {
-					return MsgPack(handler, &p->val, obj);
-				}
-			}
-		}
+	if (body->obj->type == msgpack::type::NIL) {
+		body->obj->type = msgpack::type::MAP;
+		body->obj->via.map.ptr = nullptr;
+		body->obj->via.map.size = 0;
+	}
 
-		expand_map(obj->via.map.size);
-		msgpack::object_kv* np(obj->via.map.ptr + obj->via.map.size);
+	if (body->obj->type == msgpack::type::MAP) {
+		expand_map(body->obj->via.map.size);
+		msgpack::object_kv* np(body->obj->via.map.ptr + body->obj->via.map.size);
 
 		msgpack::detail::unpack_str(handler->user, key.data(), (uint32_t)key.size(), np->key);
 		msgpack::detail::unpack_nil(np->val);
-		msgpack::detail::unpack_map_item(*obj, np->key, np->val);
+		msgpack::detail::unpack_map_item(*body->obj, np->key, np->val);
+		auto ins_it = body->map.insert(std::make_pair(key, std::make_shared<MsgPackBody>(body->obj->via.map.size, &np->val)));
 
-		return MsgPack(handler, &np->val, obj);
+		return MsgPack(handler, ins_it.first->second, body);
 	}
 
 	throw msgpack::type_error();
@@ -160,26 +186,26 @@ MsgPack::operator[](const std::string& key)
 MsgPack
 MsgPack::operator[](uint32_t off)
 {
-	if (obj->type == msgpack::type::NIL) {
-		obj->type = msgpack::type::ARRAY;
-		obj->via.array.ptr = nullptr;
-		obj->via.array.size = 0;
+	if (body->obj->type == msgpack::type::NIL) {
+		body->obj->type = msgpack::type::ARRAY;
+		body->obj->via.array.ptr = nullptr;
+		body->obj->via.array.size = 0;
 	}
 
-	if (obj->type == msgpack::type::ARRAY) {
+	if (body->obj->type == msgpack::type::ARRAY) {
 		auto r_size = off + 1;
-		if (obj->via.array.size < r_size) {
+		if (body->obj->via.array.size < r_size) {
 			expand_array(r_size);
 
 			// Initialize new elements.
-			const msgpack::object* npend(obj->via.array.ptr + r_size);
-			for (auto np = obj->via.array.ptr + obj->via.array.size; np != npend; ++np) {
+			const msgpack::object* npend(body->obj->via.array.ptr + r_size);
+			for (auto np = body->obj->via.array.ptr + body->obj->via.array.size; np != npend; ++np) {
 				msgpack::detail::unpack_nil(*np);
-				msgpack::detail::unpack_array_item(*obj, *np);
+				msgpack::detail::unpack_array_item(*body->obj, *np);
 			}
 		}
 
-		return MsgPack(handler, &obj->via.array.ptr[off], obj);
+		return MsgPack(handler, std::make_shared<MsgPackBody>(off, &body->obj->via.array.ptr[off]), body);
 	}
 
 	throw msgpack::type_error();
@@ -189,34 +215,24 @@ MsgPack::operator[](uint32_t off)
 MsgPack
 MsgPack::at(const MsgPack& o) const
 {
-	if (o.obj->type == msgpack::type::STR) {
-		return at(std::string(o.obj->via.str.ptr, o.obj->via.str.size));
+	switch (o.body->obj->type) {
+		case msgpack::type::STR:
+			return at(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+		case msgpack::type::POSITIVE_INTEGER:
+			return at(static_cast<uint32_t>(o.body->obj->via.u64));
+		case msgpack::type::NEGATIVE_INTEGER:
+			return at(static_cast<uint32_t>(o.body->obj->via.i64));
+		default:
+			throw msgpack::type_error();
 	}
-	if (o.obj->type == msgpack::type::POSITIVE_INTEGER) {
-		return at(static_cast<uint32_t>(o.obj->via.u64));
-	}
-	throw msgpack::type_error();
 }
 
 
 MsgPack
 MsgPack::at(const std::string& key) const
 {
-	if (obj->type == msgpack::type::NIL) {
-		throw std::out_of_range(key);
-	}
-
-	if (obj->type == msgpack::type::MAP) {
-		const msgpack::object_kv* pend(obj->via.map.ptr + obj->via.map.size);
-		for (auto p = obj->via.map.ptr; p != pend; ++p) {
-			if (p->key.type == msgpack::type::STR) {
-				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0)  {
-					return MsgPack(handler, &p->val, obj);
-				}
-			}
-		}
-
-		throw std::out_of_range(key);
+	if (body->obj->type == msgpack::type::NIL || body->obj->type == msgpack::type::MAP) {
+		return MsgPack(handler, body->map.at(key), body);
 	}
 
 	throw msgpack::type_error();
@@ -226,15 +242,12 @@ MsgPack::at(const std::string& key) const
 MsgPack
 MsgPack::at(uint32_t off) const
 {
-	if (obj->type == msgpack::type::NIL) {
-		throw std::out_of_range(std::to_string(off));
-	}
-
-	if (obj->type == msgpack::type::ARRAY) {
-		if (off < obj->via.array.size) {
-			return MsgPack(handler, &obj->via.array.ptr[off], obj);
+	if (body->obj->type == msgpack::type::ARRAY) {
+		if (off < body->obj->via.array.size) {
+			return MsgPack(handler, std::make_shared<MsgPackBody>(off, &body->obj->via.array.ptr[off]), body);
 		}
-
+		throw std::out_of_range(std::to_string(off));
+	} else if (body->obj->type == msgpack::type::NIL) {
 		throw std::out_of_range(std::to_string(off));
 	}
 
@@ -245,44 +258,85 @@ MsgPack::at(uint32_t off) const
 bool
 MsgPack::find(const MsgPack& o) const
 {
-	if (o.obj->type == msgpack::type::STR) {
-		return find(std::string(o.obj->via.str.ptr, o.obj->via.str.size));
+	switch (o.body->obj->type) {
+		case msgpack::type::STR:
+			return find(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+		case msgpack::type::POSITIVE_INTEGER:
+			return find(static_cast<uint32_t>(o.body->obj->via.u64));
+		case msgpack::type::NEGATIVE_INTEGER:
+			return find(static_cast<uint32_t>(o.body->obj->via.i64));
+		default:
+			return false;
 	}
-
-	if (o.obj->type == msgpack::type::POSITIVE_INTEGER) {
-		return find(static_cast<uint32_t>(o.obj->via.u64));
-	}
-
-	return false;
 }
 
 
 bool
 MsgPack::find(const std::string& key) const
 {
-	if (obj->type == msgpack::type::MAP) {
-		const msgpack::object_kv* pend(obj->via.map.ptr + obj->via.map.size);
-		for (auto p = obj->via.map.ptr; p != pend; ++p) {
-			if (p->key.type == msgpack::type::STR) {
-				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0)  {
-					return true;
-				}
-			}
-		}
-	}
-
-	return false;
+	return body->map.find(key) != body->map.end();
 }
 
 
 bool
 MsgPack::find(uint32_t off) const
 {
-	if (obj->type == msgpack::type::ARRAY && off < obj->via.array.size) {
-		return true;
+	return body->obj->type == msgpack::type::ARRAY && off < body->obj->via.array.size;
+}
+
+
+bool
+MsgPack::erase(const MsgPack& o)
+{
+	switch (o.body->obj->type) {
+		case msgpack::type::STR:
+			return erase(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+		case msgpack::type::POSITIVE_INTEGER:
+			return erase(static_cast<uint32_t>(o.body->obj->via.u64));
+		case msgpack::type::NEGATIVE_INTEGER:
+			return erase(static_cast<uint32_t>(o.body->obj->via.i64));
+		default:
+			return false;
+	}
+}
+
+
+bool
+MsgPack::erase(const std::string& key)
+{
+	if (body->obj->type == msgpack::type::MAP) {
+		auto it = body->map.find(key);
+		if (it != body->map.end()) {
+			auto p = body->obj->via.map.ptr + it->second->pos;
+			memmove(p, p + 1, (body->obj->via.map.size - it->second->pos - 1) * sizeof(msgpack::object_kv));
+			--body->obj->via.map.size;
+			body->map.erase(key);
+			return true;
+		} else {
+			return false;
+		}
 	}
 
-	return false;
+	throw msgpack::type_error();
+}
+
+
+bool
+MsgPack::erase(uint32_t off)
+{
+	if (body->obj->type == msgpack::type::ARRAY) {
+		auto r_size = off + 1;
+		if (body->obj->via.array.size >= r_size) {
+			auto p = body->obj->via.array.ptr + off;
+			memmove(p, p + 1, (body->obj->via.array.size - off - 1) * sizeof(msgpack::object));
+			--body->obj->via.array.size;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	throw msgpack::type_error();
 }
 
 
@@ -297,7 +351,7 @@ MsgPack::to_json_string(bool prettify) const
 		return std::string(buffer.GetString(), buffer.GetSize());
 	} else {
 		std::ostringstream oss;
-		oss << *obj;
+		oss << *body->obj;
 		return oss.str();
 	}
 }
@@ -307,7 +361,7 @@ rapidjson::Document
 MsgPack::to_json() const
 {
 	rapidjson::Document doc;
-	obj->convert(&doc);
+	body->obj->convert(&doc);
 	return doc;
 }
 
@@ -316,134 +370,57 @@ std::string
 MsgPack::to_string() const
 {
 	msgpack::sbuffer sbuf;
-	msgpack::pack(&sbuf, *obj);
+	msgpack::pack(&sbuf, *body->obj);
 	return std::string(sbuf.data(), sbuf.size());
-}
-
-
-void
-MsgPack::reserve(size_t n)
-{
-	switch (obj->type) {
-		case msgpack::type::MAP:
-			return expand_map(n);
-		case msgpack::type::ARRAY:
-			return expand_array(n);
-		default:
-			return;
-	}
 }
 
 
 void
 MsgPack::expand_map(size_t r_size)
 {
-	if (m_alloc == r_size) {
-		size_t nsize = m_alloc > 0 ? m_alloc * 2 : MSGPACK_MAP_INIT_SIZE;
+	if (body->m_alloc == static_cast<ssize_t>(r_size)) {
+		size_t nsize = body->m_alloc > 0 ? body->m_alloc * 2 : MSGPACK_MAP_INIT_SIZE;
 		while (nsize < r_size) {
 			nsize *= 2;
 		}
 
-		const msgpack::object_kv* p(obj->via.map.ptr);
-		const msgpack::object_kv* pend(obj->via.map.ptr + obj->via.map.size);
+		const msgpack::object_kv* p(body->obj->via.map.ptr);
+		const msgpack::object_kv* pend(body->obj->via.map.ptr + body->obj->via.map.size);
 
-		msgpack::detail::unpack_map()(handler->user, static_cast<uint32_t>(nsize), *obj);
+		msgpack::detail::unpack_map()(handler->user, static_cast<uint32_t>(nsize), *body->obj);
 
 		// Copy previous memory.
 		for ( ; p != pend; ++p) {
-			msgpack::detail::unpack_map_item(*obj, p->key, p->val);
+			msgpack::detail::unpack_map_item(*body->obj, p->key, p->val);
 		}
 
-		m_alloc = nsize;
-	 }
+		body->map.reserve(nsize);
+		body->m_alloc = nsize;
+	}
 }
 
 
 void
 MsgPack::expand_array(size_t r_size)
 {
-	if (m_alloc < r_size) {
-		size_t nsize = m_alloc > 0 ? m_alloc * 2 : MSGPACK_ARRAY_INIT_SIZE;
+	if (body->m_alloc < static_cast<ssize_t>(r_size)) {
+		size_t nsize = body->m_alloc > 0 ? body->m_alloc * 2 : MSGPACK_ARRAY_INIT_SIZE;
 		while (nsize < r_size) {
 			nsize *= 2;
 		}
 
-		const msgpack::object* p(obj->via.array.ptr);
-		const msgpack::object* pend(obj->via.array.ptr + obj->via.array.size);
+		const msgpack::object* p(body->obj->via.array.ptr);
+		const msgpack::object* pend(body->obj->via.array.ptr + body->obj->via.array.size);
 
-		msgpack::detail::unpack_array()(handler->user, static_cast<uint32_t>(nsize), *obj);
+		msgpack::detail::unpack_array()(handler->user, static_cast<uint32_t>(nsize), *body->obj);
 
 		// Copy previous memory.
 		for ( ; p != pend; ++p) {
-			msgpack::detail::unpack_array_item(*obj, *p);
+			msgpack::detail::unpack_array_item(*body->obj, *p);
 		}
 
-		m_alloc = nsize;
+		body->m_alloc = nsize;
 	}
-}
-
-
-size_t
-MsgPack::capacity() const noexcept
-{
-	return m_alloc;
-}
-
-
-size_t
-MsgPack::size() const noexcept
-{
-	switch (obj->type) {
-		case msgpack::type::MAP:
-			return obj->via.map.size;
-		case msgpack::type::ARRAY:
-			return obj->via.array.size;
-		default:
-			return 0;
-	}
-}
-
-
-bool
-MsgPack::erase(const std::string& key)
-{
-	if (obj->type == msgpack::type::MAP) {
-		size_t size = obj->via.map.size;
-		const msgpack::object_kv* pend(obj->via.map.ptr + obj->via.map.size);
-		for (auto p = obj->via.map.ptr; p != pend; ++p) {
-			--size;
-			if (p->key.type == msgpack::type::STR) {
-				if (key.compare(std::string(p->key.via.str.ptr, p->key.via.str.size)) == 0) {
-					memmove(p, p + 1, size * sizeof(msgpack::object_kv));
-					--obj->via.map.size;
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	throw msgpack::type_error();
-}
-
-
-bool
-MsgPack::erase(uint32_t off)
-{
-	if (obj->type == msgpack::type::ARRAY) {
-		auto r_size = off + 1;
-		if (obj->via.array.size >= r_size) {
-			size_t size = obj->via.array.size - off - 1;
-			auto p = obj->via.array.ptr + off;
-			memmove(p, p + 1, size * sizeof(msgpack::object_kv));
-			--obj->via.array.size;
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	throw msgpack::type_error();
 }
 
 
@@ -458,9 +435,8 @@ void
 MsgPack::reset(MsgPack&& other) noexcept
 {
 	handler = std::move(other.handler);
-	parent_obj = std::move(other.parent_obj);
-	obj = std::move(other.obj);
-	m_alloc = std::move(other.m_alloc);
+	parent_body = std::move(other.parent_body);
+	body = std::move(other.body);
 }
 
 
@@ -468,9 +444,8 @@ void
 MsgPack::reset(const MsgPack& other)
 {
 	handler = other.handler;
-	parent_obj = other.parent_obj;
-	obj = other.obj;
-	m_alloc = other.m_alloc;
+	parent_body = other.parent_body;
+	body = other.body;
 }
 
 
@@ -480,9 +455,9 @@ MsgPack::path(const std::vector<std::string>& path) const
 	MsgPack current(*this);
 	for (const auto& s : path) {
 		try {
-			if (current.obj->type == msgpack::type::MAP) {
+			if (current.body->obj->type == msgpack::type::MAP) {
 				current.reset(current.at(s));
-			} else if (current.obj->type == msgpack::type::ARRAY) {
+			} else if (current.body->obj->type == msgpack::type::ARRAY) {
 				current.reset(current.at(strict_stoi(s)));
 			} else {
 				throw msgpack::type_error();
@@ -493,73 +468,8 @@ MsgPack::path(const std::vector<std::string>& path) const
 			throw MSG_ClientError("The index must be numeric in array in: %s", s.c_str());
 		}
 	}
+
 	return current;
-}
-
-
-uint64_t
-MsgPack::get_u64() const
-{
-	switch (obj->type) {
-		case msgpack::type::POSITIVE_INTEGER:
-			return obj->via.u64;
-		case msgpack::type::NEGATIVE_INTEGER:
-			return obj->via.i64;
-		default:
-			throw msgpack::type_error();
-	}
-}
-
-
-int64_t
-MsgPack::get_i64() const
-{
-	switch (obj->type) {
-		case msgpack::type::POSITIVE_INTEGER:
-			return obj->via.u64;
-		case msgpack::type::NEGATIVE_INTEGER:
-			return obj->via.i64;
-		default:
-			throw msgpack::type_error();
-	}
-}
-
-
-double
-MsgPack::get_f64() const
-{
-	switch (obj->type) {
-		case msgpack::type::POSITIVE_INTEGER:
-			return obj->via.u64;
-		case msgpack::type::NEGATIVE_INTEGER:
-			return obj->via.i64;
-		case msgpack::type::FLOAT:
-			return obj->via.f64;
-		default:
-			throw msgpack::type_error();
-	}
-}
-
-
-std::string
-MsgPack::get_str() const
-{
-	if (obj->type == msgpack::type::STR) {
-		return std::string(obj->via.str.ptr, obj->via.str.size);
-	}
-
-	throw msgpack::type_error();
-}
-
-
-bool
-MsgPack::get_bool() const
-{
-	if (obj->type == msgpack::type::BOOLEAN) {
-		return obj->via.boolean;
-	}
-
-	throw msgpack::type_error();
 }
 
 
@@ -567,7 +477,7 @@ namespace msgpack {
 	MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
 		namespace adaptor {
 			const msgpack::object& convert<MsgPack>::operator()(const msgpack::object& o, MsgPack& v) const {
-				v = MsgPack(o, std::make_unique<msgpack::zone>());
+				v = MsgPack(v.body, std::make_unique<msgpack::zone>());
 				return o;
 			}
 
@@ -578,13 +488,13 @@ namespace msgpack {
 			}
 
 			void object<MsgPack>::operator()(msgpack::object& o, const MsgPack& v) const {
-				msgpack::object obj(*v.obj);
+				msgpack::object obj(*v.body->obj);
 				o.type = obj.type;
 				o.via = obj.via;
 			}
 
 			void object_with_zone<MsgPack>::operator()(msgpack::object::with_zone& o, const MsgPack& v) const {
-				msgpack::object obj(*v.obj, o.zone);
+				msgpack::object obj(*v.body->obj, o.zone);
 				o.type = obj.type;
 				o.via = obj.via;
 			}

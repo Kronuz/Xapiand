@@ -26,11 +26,32 @@
 
 #include "rapidjson/document.h"
 
+#include <unordered_map>
+
 #define MSGPACK_MAP_INIT_SIZE 64
 #define MSGPACK_ARRAY_INIT_SIZE 64
 
 
 class MsgPack;
+
+struct MsgPackBody;
+
+
+using MapPack = std::unordered_map<std::string, std::shared_ptr<MsgPackBody>>;
+
+
+struct MsgPackBody {
+	uint32_t pos;
+	msgpack::object* obj;
+	MapPack map;
+	ssize_t m_alloc;
+
+	MsgPackBody(uint32_t pos_, msgpack::object* obj_, const MapPack& map_=MapPack(), ssize_t malloc_=-1)
+		: pos(pos_),
+		  obj(obj_),
+		  map(map_),
+		  m_alloc(malloc_) { }
+};
 
 
 namespace msgpack {
@@ -96,25 +117,24 @@ class MsgPack {
 	};
 
 	std::shared_ptr<object_handle> handler;
+	std::shared_ptr<MsgPackBody> parent_body;
 
-	std::shared_ptr<MsgPack::object_handle> make_handler();
+	std::shared_ptr<object_handle> make_handler();
 	std::shared_ptr<object_handle> make_handler(const std::string& buffer);
-	std::shared_ptr<MsgPack::object_handle> make_handler(const rapidjson::Document& doc);
+	std::shared_ptr<object_handle> make_handler(const rapidjson::Document& doc);
 
+	void init();
 	void expand_map(size_t r_size);
 	void expand_array(size_t r_size);
 
-public:
-	msgpack::object* parent_obj;
-	msgpack::object* obj;
-
-private:
-	size_t m_alloc;
+	friend msgpack::adaptor::convert<MsgPack>;
 
 public:
+	std::shared_ptr<MsgPackBody> body;
+
 	MsgPack();
-	MsgPack(const std::shared_ptr<object_handle>& unpacked, msgpack::object* o, msgpack::object* p);
-	MsgPack(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z);
+	MsgPack(const std::shared_ptr<object_handle>& handler_, const std::shared_ptr<MsgPackBody>& body_, const std::shared_ptr<MsgPackBody>& p_body_);
+	MsgPack(const std::shared_ptr<MsgPackBody>& body_, std::unique_ptr<msgpack::zone>&& z);
 	MsgPack(msgpack::unpacked& u);
 	MsgPack(const std::string& buffer);
 	MsgPack(const rapidjson::Document& doc);
@@ -133,64 +153,69 @@ public:
 	bool find(const std::string& key) const;
 	bool find(uint32_t off) const;
 
+	bool erase(const MsgPack& o);
+	bool erase(const std::string& key);
+	bool erase(uint32_t off);
+
 	std::string to_json_string(bool prettify=false) const;
 	std::string to_string() const;
 	rapidjson::Document to_json() const;
-	void reserve(size_t n);
-	size_t capacity() const noexcept;
-	size_t size() const noexcept;
-	bool erase(const std::string& key);
-	bool erase(uint32_t off);
+
 	MsgPack duplicate() const;
 	void reset(MsgPack&& other) noexcept;
 	void reset(const MsgPack& other);
 	MsgPack path(const std::vector<std::string>& path) const;
 
-	uint64_t get_u64() const;
-	int64_t get_i64() const;
-	double get_f64() const;
-	std::string get_str() const;
-	bool get_bool() const;
+	template<typename M, typename std::enable_if_t<std::is_base_of<MsgPack, std::decay_t<M>>::value>* = nullptr>
+	MsgPack& operator=(M&& v) {
+		msgpack::object o(std::forward<M>(v), handler->zone.get());
+		body->obj->type = o.type;
+		body->obj->via = o.via;
+		body->m_alloc = -1;
+		init();
+		return *this;
+	}
 
-	template<typename T>
+	template<typename T, typename std::enable_if_t<!std::is_base_of<MsgPack, std::decay_t<T>>::value>* = nullptr>
 	MsgPack& operator=(T&& v) {
 		msgpack::object o(std::forward<T>(v), handler->zone.get());
-		obj->type = o.type;
-		obj->via = o.via;
-		m_alloc = size();
+		body->obj->type = o.type;
+		body->obj->via = o.via;
+		body->m_alloc = -1;
+		init();
 		return *this;
 	}
 
 	template<typename T>
-	void insert_item_to_array(unsigned offset, T&& v) {
-		if (obj->type == msgpack::type::NIL) {
-			obj->type = msgpack::type::ARRAY;
-			obj->via.array.ptr = nullptr;
-			obj->via.array.size = 0;
+	void insert_item_to_array(uint32_t offset, T&& v) {
+		if (body->obj->type == msgpack::type::NIL) {
+			body->obj->type = msgpack::type::ARRAY;
+			body->obj->via.array.ptr = nullptr;
+			body->obj->via.array.size = 0;
 		}
 
-		if (obj->type == msgpack::type::ARRAY) {
-			if (static_cast<unsigned>(obj->via.array.size - 1) < offset) {
+		if (body->obj->type == msgpack::type::ARRAY) {
+			if (body->obj->via.array.size < offset + 1) {
 				auto r_size = offset + 1;
 				expand_array(r_size);
 
-				const msgpack::object* npend(obj->via.array.ptr + offset);
-				for (auto np = obj->via.array.ptr + obj->via.array.size; np != npend; ++np) {
+				const msgpack::object* npend(body->obj->via.array.ptr + offset);
+				for (auto np = body->obj->via.array.ptr + body->obj->via.array.size; np != npend; ++np) {
 					msgpack::detail::unpack_nil(*np);
-					msgpack::detail::unpack_array_item(*obj, *np);
+					msgpack::detail::unpack_array_item(*body->obj, *np);
 				}
 
-				msgpack::detail::unpack_array_item(*obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
+				msgpack::detail::unpack_array_item(*body->obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
 			} else {
-				expand_array(obj->via.array.size + 1);
+				expand_array(body->obj->via.array.size + 1);
 
-				auto p = obj->via.array.ptr + offset;
+				auto p = body->obj->via.array.ptr + offset;
 
 				if (p->type == msgpack::type::NIL) {
 					at(offset) = msgpack::object(std::forward<T>(v), handler->zone.get());
 				} else {
-					memmove(p + 1, p, (obj->via.array.size - offset) * sizeof(msgpack::object));
-					++obj->via.array.size;
+					memmove(p + 1, p, (body->obj->via.array.size - offset) * sizeof(msgpack::object));
+					++body->obj->via.array.size;
 					at(offset) = msgpack::object(std::forward<T>(v), handler->zone.get());
 				}
 			}
@@ -201,24 +226,24 @@ public:
 
 	template<typename T>
 	void add_item_to_array(T&& v) {
-		if (obj->type == msgpack::type::NIL) {
-			obj->type = msgpack::type::ARRAY;
-			obj->via.array.ptr = nullptr;
-			obj->via.array.size = 0;
+		if (body->obj->type == msgpack::type::NIL) {
+			body->obj->type = msgpack::type::ARRAY;
+			body->obj->via.array.ptr = nullptr;
+			body->obj->via.array.size = 0;
 		}
 
-		if (obj->type == msgpack::type::ARRAY) {
-			auto r_size = obj->via.array.size + 1;
+		if (body->obj->type == msgpack::type::ARRAY) {
+			auto r_size = body->obj->via.array.size + 1;
 			expand_array(r_size);
-			msgpack::detail::unpack_array_item(*obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
+			msgpack::detail::unpack_array_item(*body->obj, msgpack::object(std::forward<T>(v), handler->zone.get()));
 		} else {
 			throw msgpack::type_error();
 		}
 	}
 
 	MsgPack parent() {
-		if (parent_obj) {
-			return MsgPack(handler, parent_obj, nullptr);
+		if (parent_body) {
+			return MsgPack(handler, parent_body, nullptr);
 		} else {
 			return MsgPack();
 		}
@@ -229,22 +254,22 @@ public:
 
 		using MsgPack_type = typename std::conditional<is_const_iterator, const T, T>::type;
 
-		MsgPack_type* obj;
+		MsgPack_type* pack_obj;
 		uint32_t off;
 
 		friend class MsgPack;
 
 	public:
 		_iterator(T* o, uint32_t _off)
-			: obj(o),
+			: pack_obj(o),
 			  off(_off) { }
 
 		_iterator(const T* o, uint32_t _off)
-			: obj(o),
+			: pack_obj(o),
 			  off(_off) { }
 
 		_iterator(const _iterator& it)
-			: obj(it.obj),
+			: pack_obj(it.pack_obj),
 			  off(it.off) { }
 
 		_iterator& operator++() {
@@ -270,24 +295,24 @@ public:
 		}
 
 		_iterator operator=(const _iterator& other) {
-			obj = other.obj;
+			pack_obj = other.pack_obj;
 			off = other.off;
 			return *this;
 		}
 
 		MsgPack_type operator*() const {
-			switch (obj->obj->type) {
+			switch (pack_obj->body->obj->type) {
 				case msgpack::type::MAP:
-					return MsgPack(obj->handler, &obj->obj->via.map.ptr[off].key, obj->obj);
+					return MsgPack(pack_obj->handler, std::make_shared<MsgPackBody>(off, &pack_obj->body->obj->via.map.ptr[off].key), pack_obj->body);
 				case msgpack::type::ARRAY:
-					return MsgPack(obj->handler, &obj->obj->via.array.ptr[off], obj->obj);
+					return MsgPack(pack_obj->handler, std::make_shared<MsgPackBody>(off, &pack_obj->body->obj->via.array.ptr[off]), pack_obj->body);
 				default:
 					throw msgpack::type_error();
 			}
 		}
 
 		bool operator==(const _iterator& other) const {
-			return *obj == *other.obj && off == other.off;
+			return *pack_obj == *other.pack_obj && off == other.off;
 		}
 
 		bool operator!=(const _iterator& other) const {
@@ -323,13 +348,92 @@ public:
 	}
 
 	explicit operator bool() const {
-		return obj->type != msgpack::type::NIL;
+		return body->obj->type != msgpack::type::NIL;
+	}
+
+	inline void reserve(size_t n) {
+		switch (body->obj->type) {
+			case msgpack::type::MAP:
+				return expand_map(n);
+			case msgpack::type::ARRAY:
+				return expand_array(n);
+			default:
+				return;
+		}
+	}
+
+	inline size_t capacity() const noexcept {
+		return body->m_alloc;
+	}
+
+	inline size_t size() const noexcept {
+		switch (body->obj->type) {
+			case msgpack::type::MAP:
+				return body->obj->via.map.size;
+			case msgpack::type::ARRAY:
+				return body->obj->via.array.size;
+			default:
+				return 0;
+		}
+	}
+
+	inline uint64_t get_u64() const {
+		switch (body->obj->type) {
+			case msgpack::type::POSITIVE_INTEGER:
+				return body->obj->via.u64;
+			case msgpack::type::NEGATIVE_INTEGER:
+				return body->obj->via.i64;
+			default:
+				throw msgpack::type_error();
+		}
+	}
+
+	inline int64_t get_i64() const {
+		switch (body->obj->type) {
+			case msgpack::type::POSITIVE_INTEGER:
+				return body->obj->via.u64;
+			case msgpack::type::NEGATIVE_INTEGER:
+				return body->obj->via.i64;
+			default:
+				throw msgpack::type_error();
+		}
+	}
+
+	inline double get_f64() const {
+		switch (body->obj->type) {
+			case msgpack::type::POSITIVE_INTEGER:
+				return body->obj->via.u64;
+			case msgpack::type::NEGATIVE_INTEGER:
+				return body->obj->via.i64;
+			case msgpack::type::FLOAT:
+				return body->obj->via.f64;
+			default:
+				throw msgpack::type_error();
+		}
+	}
+
+	inline std::string get_str() const {
+		if (body->obj->type == msgpack::type::STR) {
+			return std::string(body->obj->via.str.ptr, body->obj->via.str.size);
+		}
+		throw msgpack::type_error();
+	}
+
+	inline bool get_bool() const {
+		if (body->obj->type == msgpack::type::BOOLEAN) {
+			return body->obj->via.boolean;
+		}
+		throw msgpack::type_error();
+	}
+
+	inline msgpack::type::object_type get_type() const {
+		return body->obj->type;
 	}
 };
 
 
 inline bool operator==(const MsgPack& x, const MsgPack& y) {
-	return *x.obj == *y.obj;
+	return *x.body->obj == *y.body->obj;
 }
 
 
@@ -339,6 +443,6 @@ inline bool operator!=(const MsgPack& x, const MsgPack& y) {
 
 
 inline std::ostream& operator<<(std::ostream& s, const MsgPack& o) {
-	s << *o.obj;
+	s << *o.body->obj;
 	return s;
 }
