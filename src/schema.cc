@@ -225,7 +225,7 @@ Schema::update_specification(const MsgPack& item_doc)
 	try {
 		auto doc_position = item_doc.at(RESERVED_POSITION);
 		specification.position.clear();
-		if (doc_position.obj->type == msgpack::type::ARRAY) {
+		if (doc_position.get_type() == msgpack::type::ARRAY) {
 			for (const auto _position : doc_position) {
 				specification.position.push_back(static_cast<unsigned>(_position.get_u64()));
 			}
@@ -240,7 +240,7 @@ Schema::update_specification(const MsgPack& item_doc)
 	try {
 		auto doc_weight = item_doc.at(RESERVED_WEIGHT);
 		specification.weight.clear();
-		if (doc_weight.obj->type == msgpack::type::ARRAY) {
+		if (doc_weight.get_type() == msgpack::type::ARRAY) {
 			for (const auto _weight : doc_weight) {
 				specification.weight.push_back(static_cast<unsigned>(_weight.get_u64()));
 			}
@@ -255,7 +255,7 @@ Schema::update_specification(const MsgPack& item_doc)
 	try {
 		auto doc_language = item_doc.at(RESERVED_LANGUAGE);
 		specification.language.clear();
-		if (doc_language.obj->type == msgpack::type::ARRAY) {
+		if (doc_language.get_type() == msgpack::type::ARRAY) {
 			for (const auto _language : doc_language) {
 				std::string _str_language(_language.get_str());
 				if (is_language(_str_language)) {
@@ -280,7 +280,7 @@ Schema::update_specification(const MsgPack& item_doc)
 	try {
 		auto doc_spelling = item_doc.at(RESERVED_SPELLING);
 		specification.spelling.clear();
-		if (doc_spelling.obj->type == msgpack::type::ARRAY) {
+		if (doc_spelling.get_type() == msgpack::type::ARRAY) {
 			for (const auto _spelling : doc_spelling) {
 				specification.spelling.push_back(_spelling.get_bool());
 			}
@@ -295,7 +295,7 @@ Schema::update_specification(const MsgPack& item_doc)
 	try {
 		auto doc_positions = item_doc.at(RESERVED_POSITIONS);
 		specification.positions.clear();
-		if (doc_positions.obj->type == msgpack::type::ARRAY) {
+		if (doc_positions.get_type() == msgpack::type::ARRAY) {
 			for (const auto _positions : doc_positions) {
 				specification.positions.push_back(_positions.get_bool());
 			}
@@ -310,7 +310,7 @@ Schema::update_specification(const MsgPack& item_doc)
 	try {
 		auto doc_analyzer = item_doc.at(RESERVED_ANALYZER);
 		specification.analyzer.clear();
-		if (doc_analyzer.obj->type == msgpack::type::ARRAY) {
+		if (doc_analyzer.get_type() == msgpack::type::ARRAY) {
 			for (const auto analyzer : doc_analyzer) {
 				std::string _analyzer(upper_string(analyzer.get_str()));
 				if (_analyzer == str_analyzer[0]) {
@@ -438,7 +438,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 	specification.slot = default_spc.slot;
 
 	// If item_doc is not a MAP, there are not properties to insert
-	if (item_doc.obj->type != msgpack::type::MAP) {
+	if (item_doc.get_type() != msgpack::type::MAP) {
 		return;
 	}
 
@@ -480,7 +480,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 	try {
 		auto doc_position = item_doc.at(RESERVED_POSITION);
 		specification.position.clear();
-		if (doc_position.obj->type == msgpack::type::ARRAY) {
+		if (doc_position.get_type() == msgpack::type::ARRAY) {
 			for (const auto _position : doc_position) {
 				specification.position.push_back(static_cast<unsigned>(_position.get_u64()));
 			}
@@ -495,7 +495,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 	try {
 		auto doc_weight = item_doc.at(RESERVED_WEIGHT);
 		specification.weight.clear();
-		if (doc_weight.obj->type == msgpack::type::ARRAY) {
+		if (doc_weight.get_type() == msgpack::type::ARRAY) {
 			for (const auto _weight : doc_weight) {
 				specification.weight.push_back(static_cast<unsigned>(_weight.get_u64()));
 			}
@@ -510,7 +510,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 	try {
 		auto doc_language = item_doc.at(RESERVED_LANGUAGE);
 		specification.language.clear();
-		if (doc_language.obj->type == msgpack::type::ARRAY) {
+		if (doc_language.get_type() == msgpack::type::ARRAY) {
 			for (const auto _language : doc_language) {
 				std::string _str_language(_language.get_str());
 				if (is_language(_str_language)) {
@@ -533,7 +533,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 	try {
 		auto doc_spelling = item_doc.at(RESERVED_SPELLING);
 		specification.spelling.clear();
-		if (doc_spelling.obj->type == msgpack::type::ARRAY) {
+		if (doc_spelling.get_type() == msgpack::type::ARRAY) {
 			for (const auto _spelling : doc_spelling) {
 				specification.spelling.push_back(_spelling.get_bool());
 			}
@@ -548,7 +548,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 	try {
 		auto doc_positions = item_doc.at(RESERVED_POSITIONS);
 		specification.positions.clear();
-		if (doc_positions.obj->type == msgpack::type::ARRAY) {
+		if (doc_positions.get_type() == msgpack::type::ARRAY) {
 			for (const auto _positions : doc_positions) {
 				specification.positions.push_back(_positions.get_bool());
 			}
@@ -588,7 +588,7 @@ Schema::insert(MsgPack& properties, const MsgPack& item_doc, bool is_root)
 	try {
 		auto doc_analyzer = item_doc.at(RESERVED_ANALYZER);
 		specification.analyzer.clear();
-		if (doc_analyzer.obj->type == msgpack::type::ARRAY) {
+		if (doc_analyzer.get_type() == msgpack::type::ARRAY) {
 			for (const auto _analyzer : doc_analyzer) {
 				std::string _str_analyzer(upper_string(_analyzer.get_str()));
 				if (_str_analyzer == str_analyzer[0]) {
@@ -646,12 +646,12 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 	specification.prefix = default_spc.prefix;
 	specification.slot = default_spc.slot;
 
-	if (item_doc.obj->type == msgpack::type::MAP) {
+	if (item_doc.get_type() == msgpack::type::MAP) {
 		// RESERVED_POSITION is heritable and can change between documents.
 		try {
 			auto doc_position = item_doc.at(RESERVED_POSITION);
 			specification.position.clear();
-			if (doc_position.obj->type == msgpack::type::ARRAY) {
+			if (doc_position.get_type() == msgpack::type::ARRAY) {
 				for (const auto _position : doc_position) {
 					specification.position.push_back(static_cast<unsigned>(_position.get_u64()));
 				}
@@ -674,7 +674,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			auto doc_weight = item_doc.at(RESERVED_WEIGHT);
 			specification.weight.clear();
-			if (doc_weight.obj->type == msgpack::type::ARRAY) {
+			if (doc_weight.get_type() == msgpack::type::ARRAY) {
 				for (const auto _weight : doc_weight) {
 					specification.weight.push_back(static_cast<unsigned>(_weight.get_u64()));
 				}
@@ -697,7 +697,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			auto doc_language = item_doc.at(RESERVED_LANGUAGE);
 			specification.language.clear();
-			if (doc_language.obj->type == msgpack::type::ARRAY) {
+			if (doc_language.get_type() == msgpack::type::ARRAY) {
 				for (const auto _language : doc_language) {
 					std::string _str_language(_language.get_str());
 					if (is_language(_str_language)) {
@@ -730,7 +730,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			auto doc_spelling = item_doc.at(RESERVED_SPELLING);
 			specification.spelling.clear();
-			if (doc_spelling.obj->type == msgpack::type::ARRAY) {
+			if (doc_spelling.get_type() == msgpack::type::ARRAY) {
 				for (const auto _spelling : doc_spelling) {
 					specification.spelling.push_back(_spelling.get_bool());
 				}
@@ -753,9 +753,9 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			auto doc_positions = item_doc.at(RESERVED_POSITIONS);
 			specification.positions.clear();
-			if (doc_positions.obj->type == msgpack::type::ARRAY) {
+			if (doc_positions.get_type() == msgpack::type::ARRAY) {
 				for (const auto _positions : doc_positions) {
-					specification.positions.push_back(_positions.obj->type);
+					specification.positions.push_back(_positions.body->obj->type);
 				}
 			} else {
 				specification.positions.push_back(doc_positions.get_bool());
@@ -776,7 +776,7 @@ Schema::update(MsgPack& properties, const std::string& item_key, const MsgPack& 
 		try {
 			auto doc_analyzer = item_doc.at(RESERVED_ANALYZER);
 			specification.analyzer.clear();
-			if (doc_analyzer.obj->type == msgpack::type::ARRAY) {
+			if (doc_analyzer.get_type() == msgpack::type::ARRAY) {
 				for (const auto _analyzer : doc_analyzer) {
 					std::string _str_analyzer(upper_string(_analyzer.get_str()));
 					if (_str_analyzer == str_analyzer[0]) {
@@ -998,7 +998,7 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 		if (specification.sep_types[2] == NO_TYPE) {
 			throw MSG_ClientError("You must specify %s, for verify if the %s is correct", RESERVED_TYPE, RESERVED_ACCURACY);
 		}
-		if (doc_accuracy.obj->type == msgpack::type::ARRAY) {
+		if (doc_accuracy.get_type() == msgpack::type::ARRAY) {
 			switch (specification.sep_types[2]) {
 				case GEO_TYPE: {
 					try {
@@ -1088,8 +1088,8 @@ Schema::insert_noninheritable_data(MsgPack& properties, const MsgPack& item_doc)
 		// Accuracy prefix is taken into account only if accuracy is defined.
 		try {
 			auto doc_acc_prefix = item_doc.at(RESERVED_ACC_PREFIX);
-			if (doc_acc_prefix.obj->type == msgpack::type::ARRAY) {
-				if (doc_acc_prefix.obj->via.array.size != size_acc) {
+			if (doc_acc_prefix.get_type() == msgpack::type::ARRAY) {
+				if (doc_acc_prefix.body->obj->via.array.size != size_acc) {
 					throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
 				}
 				try {
@@ -1249,7 +1249,7 @@ void
 Schema::readable(MsgPack&& item_schema)
 {
 	// Change this item of schema in readable form.
-	if (item_schema.obj->type == msgpack::type::MAP) {
+	if (item_schema.get_type() == msgpack::type::MAP) {
 		try {
 			auto type = item_schema.at(RESERVED_TYPE);
 			std::vector<unsigned> sep_types({
@@ -1295,16 +1295,16 @@ Schema::readable(MsgPack&& item_schema)
 char
 Schema::get_type(const MsgPack& item_doc)
 {
-	if (item_doc.obj->type == msgpack::type::MAP) {
+	if (item_doc.get_type() == msgpack::type::MAP) {
 		throw MSG_ClientError("%s can not be object", RESERVED_VALUE);
 	}
 
-	MsgPack field = item_doc.obj->type == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
-	int type = field.obj->type;
+	MsgPack field = item_doc.get_type() == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
+	msgpack::type::object_type type = field.get_type();
 	if (type == msgpack::type::ARRAY) {
 		const auto it_e = item_doc.end();
 		for (auto it = item_doc.begin() + 1; it != it_e; ++it) {
-			if ((*it).obj->type != type) {
+			if ((*it).get_type() != type) {
 				throw MSG_ClientError("Different types of data in array");
 			}
 		}
@@ -1324,7 +1324,7 @@ Schema::get_type(const MsgPack& item_doc)
 				return BOOLEAN_TYPE;
 			}
 			break;
-		case msgpack::type::STR:
+		case msgpack::type::STR: {
 			std::string str_value(field.get_str());
 			if (specification.date_detection && Datetime::isDate(str_value)) {
 				return DATE_TYPE;
@@ -1338,6 +1338,9 @@ Schema::get_type(const MsgPack& item_doc)
 					return BOOLEAN_TYPE;
 				} catch (const std::exception&) { }
 			}
+			break;
+		}
+		default:
 			break;
 	}
 
