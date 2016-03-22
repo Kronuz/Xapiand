@@ -46,8 +46,7 @@ using namespace TCLAP;
 std::shared_ptr<XapiandManager> manager;
 
 
-void sig_exit(int sig)
-{
+void sig_exit(int sig) {
 	if (manager) {
 		manager->shutdown_sig(sig);
 	} else if (sig < 0) {
