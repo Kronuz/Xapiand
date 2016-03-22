@@ -1,5 +1,5 @@
 # Compile from Git
-# Needs: swig automake
+# Needs: swig automake libtool tcl86
 
 VERSION="HEAD"
 CC="gcc"
@@ -12,28 +12,25 @@ else
 fi
 
 if [ ! -d xapian ]; then
-	git clone git@github.com:xapian/xapian.git
+	git clone https://github.com/xapian/xapian.git
 fi
-
-ln -s xapian/xapian-core
-ln -s xapian/xapian-bindings
 
 
 # Build xapian-core
 ######################################
-cd xapian-core
+cd xapian/xapian-core
 # Autoconf, configure and make:
 ./preautoreconf
 autoreconf --force --install -Im4 -I/usr/local/share/aclocal
 ./configure --enable-maintainer-mode --disable-documentation --disable-dependency-tracking --prefix="$PREFIX"
 make
 make install
-cd ..
+cd ../..
 
 
 # Build Python xapian-bindings
 ######################################
-cd xapian-bindings
+cd xapian/xapian-bindings
 
 cd python
 # Generate except.i
@@ -48,7 +45,7 @@ touch doccomments.i
 # Build bindings
 swig -I../../xapian-core/include -c++ -python -threads -shadow -modern -O -o xapian_wrap.cc python.i
 
-cd ..
+cd ../..
 
 # Autoconf, configure and make:
 autoreconf --force --install -Im4 -I/usr/local/share/aclocal
