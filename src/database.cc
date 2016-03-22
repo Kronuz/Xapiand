@@ -968,10 +968,10 @@ Database::index_object(Xapian::Document& doc, const std::string& str_key, const 
 	L_CALL(this, "Database::index_object()");
 
 	const specification_t spc_bef = schema.specification;
-	if (item_val.obj->type == msgpack::type::MAP) {
+	if (item_val.get_type() == msgpack::type::MAP) {
 		bool offsprings = false;
 		for (auto subitem_key : item_val) {
-			std::string str_subkey(subitem_key.obj->via.str.ptr, subitem_key.obj->via.str.size);
+			std::string str_subkey(subitem_key.body->obj->via.str.ptr, subitem_key.body->obj->via.str.size);
 			auto subitem_val = item_val.at(str_subkey);
 			if (!is_reserved(str_subkey)) {
 				std::string full_subkey(str_key.empty() ? str_subkey : str_key + DB_OFFSPRING_UNION + str_subkey);
@@ -1026,7 +1026,7 @@ Database::index_texts(Xapian::Document& doc, const std::string& name, const MsgP
 		}
 
 		try {
-			if (texts.obj->type == msgpack::type::ARRAY) {
+			if (texts.get_type() == msgpack::type::ARRAY) {
 				schema.set_type_to_array(properties);
 				size_t pos = 0;
 				for (auto text : texts) {
@@ -1087,7 +1087,7 @@ Database::index_terms(Xapian::Document& doc, const std::string& name, const MsgP
 	}
 
 	if (schema.specification.store) {
-		if (terms.obj->type == msgpack::type::ARRAY) {
+		if (terms.get_type() == msgpack::type::ARRAY) {
 			schema.set_type_to_array(properties);
 			size_t pos = 0;
 			for (auto term : terms) {
@@ -1149,9 +1149,9 @@ Database::index_values(Xapian::Document& doc, const std::string& name, const Msg
 	if (schema.specification.store) {
 		StringList s;
 		size_t pos = 0;
-		if (values.obj->type == msgpack::type::ARRAY) {
+		if (values.get_type() == msgpack::type::ARRAY) {
 			schema.set_type_to_array(properties);
-			s.reserve(values.obj->via.array.size);
+			s.reserve(values.body->obj->via.array.size);
 			for (auto value : values) {
 				index_value(doc, value, s, pos, is_term);
 			}
@@ -1279,7 +1279,7 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 {
 	L_CALL(this, "Database::_index()");
 
-	if (obj.obj->type == msgpack::type::MAP) {
+	if (obj.get_type() == msgpack::type::MAP) {
 		// Save a copy of schema for undo changes if there is a exception.
 		auto str_schema = schema.to_string();
 		auto _to_store = schema.getStore();
@@ -1295,13 +1295,13 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 				if (!is_reserved(str_key)) {
 					index_object(doc, str_key, item_val, schema.get_subproperties(properties, str_key, item_val), false);
 				} else if (str_key == RESERVED_VALUES) {
-					if (item_val.obj->type == msgpack::type::MAP) {
+					if (item_val.get_type() == msgpack::type::MAP) {
 						index_object(doc, "", item_val, schema.getProperties());
 					} else {
 						throw MSG_ClientError("%s must be an object", RESERVED_VALUES);
 					}
 				} else if (str_key == RESERVED_TEXTS) {
-					if (item_val.obj->type == msgpack::type::ARRAY) {
+					if (item_val.get_type() == msgpack::type::ARRAY) {
 						for (auto subitem_val : item_val) {
 							try {
 								auto _value = subitem_val.at(RESERVED_VALUE);
@@ -1336,7 +1336,7 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 						throw MSG_ClientError("%s must be an array of objects", RESERVED_TEXTS);
 					}
 				} else if (str_key == RESERVED_TERMS) {
-					if (item_val.obj->type == msgpack::type::ARRAY) {
+					if (item_val.get_type() == msgpack::type::ARRAY) {
 						for (auto subitem_val : item_val) {
 							try {
 								auto _value = subitem_val.at(RESERVED_VALUE);
