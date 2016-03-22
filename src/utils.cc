@@ -54,7 +54,19 @@
 #endif
 #endif
 
-#define STATE_ERR -1
+#define STATE_ERR_UNEXPECTED_SLASH_UPL -10
+#define STATE_ERR_UNEXPECTED_SLASH_CMD -9
+#define STATE_ERR_UNEXPECTED_AT -8
+#define STATE_ERR_UNEXPECTED_AT_NSP -7
+#define STATE_ERR_UNEXPECTED_COLON -6
+#define STATE_ERR_UNEXPECTED_COLON_NSP -5
+#define STATE_ERR_UNEXPECTED_COMMA_UPL -4
+#define STATE_ERR_UNEXPECTED_END_UPL -4
+#define STATE_ERR_UNEXPECTED_COMMA_HST -3
+#define STATE_ERR_UNEXPECTED_END_HST -3
+#define STATE_ERR_UNEXPECTED_COMMA_PTH -2
+#define STATE_ERR_UNEXPECTED_END_PTH -2
+#define STATE_ERR_NO_SLASH -1
 #define STATE_CM0 0
 #define STATE_CMD 1
 #define STATE_UPL 2 /* case _upload */
@@ -352,9 +364,9 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 		direction = 1;
 	}
 
-	while (state != STATE_ERR) {
+	while (state >= 0) {
 		if (!(n1 >= ni && n1 <= nf)) {
-			/*In case direction is backwards and not find any this [/ , @ :] */
+			/* In case direction is backwards and not find any this [/ , @ :] */
 			if (state == STATE_UPL) {
 				state = STATE_NSP;
 				nf = n0;
@@ -362,15 +374,13 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 				direction = 1;
 				par->offset = n0;
 			} else {
-				return -1;
+				return STATE_ERR_NO_SLASH;
 			}
 		}
 
 		char cn = (n1 >= nf) ? '\0' : *n1;
-		switch(cn) {
+		switch (cn) {
 			case '\0':
-				if (n0 == n1) return -1;
-
 			case ',':
 				switch (state) {
 					case STATE_CM0:
@@ -384,15 +394,15 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						length = n1 - n0;
 						par->off_path = n0;
 						par->len_path = length;
-						state = length ? 0 : STATE_ERR;
 						if (cn) ++n1;
+						state = length ? STATE_CM0 : cn ? STATE_ERR_UNEXPECTED_COMMA_PTH : STATE_ERR_UNEXPECTED_END_PTH;
 						par->offset = n1;
 						return state;
 					case STATE_HST:
 						length = n1 - n0;
 						par->off_host = n0;
 						par->len_host = length;
-						state = length ? 0 : STATE_ERR;
+						state = length ? STATE_CM0 : cn ? STATE_ERR_UNEXPECTED_COMMA_HST : STATE_ERR_UNEXPECTED_END_HST;
 						if (cn) ++n1;
 						par->offset = n1;
 						return state;
@@ -401,7 +411,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						if (length == HTTP_UPLOAD_SIZE && strncmp(n1 + 1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) {
 							par->off_upload = n1 + 1;
 							par->len_upload = length;
-							state = length ? STATE_NSP : STATE_ERR;
+							state = length ? STATE_NSP : cn ? STATE_ERR_UNEXPECTED_COMMA_UPL : STATE_ERR_UNEXPECTED_END_UPL;
 							nf = n1;
 							n0 = n1 = n2 = ni;
 							direction = 1;
@@ -435,13 +445,13 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						length = n1 - n0;
 						par->off_namespace = n0;
 						par->len_namespace = length;
-						state = length ? STATE_PTH : STATE_ERR;
+						state = length ? STATE_PTH : STATE_ERR_UNEXPECTED_COLON_NSP;
 						n0 = n1 + 1;
 						break;
 					case STATE_HST:
 						break;
 					default:
-						state = STATE_ERR;
+						state = STATE_ERR_UNEXPECTED_COLON;
 				}
 				break;
 
@@ -464,7 +474,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						length = n1 - n0;
 						par->off_path = n0;
 						par->len_path = length;
-						state = length ? STATE_HST : STATE_ERR;
+						state = length ? STATE_HST : STATE_ERR_UNEXPECTED_AT_NSP;
 						n0 = n1 + 1;
 						break;
 					case STATE_PTH:
@@ -474,7 +484,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						n0 = n1 + 1;
 						break;
 					default:
-						state = STATE_ERR;
+						state = STATE_ERR_UNEXPECTED_AT;
 				}
 				break;
 
@@ -486,7 +496,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						length = n0 - n1;
 						par->off_command = n1 + 1;
 						par->len_command = length;
-						state = length ? STATE_UPL : STATE_ERR;
+						state = length ? STATE_UPL : STATE_ERR_UNEXPECTED_SLASH_CMD;
 						n0 = n1;
 						break;
 					case STATE_UPL:
@@ -494,7 +504,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						if (length == HTTP_UPLOAD_SIZE && strncmp(n1 + 1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) {
 							par->off_upload = n1 + 1;
 							par->len_upload = length;
-							state = length ? STATE_NSP : STATE_ERR;
+							state = length ? STATE_NSP : STATE_ERR_UNEXPECTED_SLASH_UPL;
 							nf = n1;
 							n0 = n1 = n2 = ni;
 							direction = 1;
@@ -521,7 +531,8 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 		}
 		n1 += direction;
 	}
-	return -1;
+
+	return state;
 }
 
 

@@ -1074,7 +1074,7 @@ HttpClient::_endpointgen(query_field_t& e, bool writable)
 
 			retval = url_path(path_buf.c_str(), path_size, &p);
 
-			if (retval == -1) {
+			if (retval < 0) {
 				return CMD_BAD_QUERY;
 			}
 
