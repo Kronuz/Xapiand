@@ -167,6 +167,9 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* loop_,
 	http_parser_init(&parser, HTTP_REQUEST);
 
 	int http_clients = ++XapiandServer::http_clients;
+	if (http_clients > XapiandServer::max_http_clients) {
+		XapiandServer::max_http_clients = http_clients;
+	}
 	int total_clients = XapiandServer::total_clients;
 	if (http_clients > total_clients) {
 		L_CRIT(this, "Inconsistency in number of http clients");

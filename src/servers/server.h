@@ -51,6 +51,9 @@ public:
 	static std::atomic_int total_clients;
 	static std::atomic_int http_clients;
 	static std::atomic_int binary_clients;
+	static std::atomic_int max_total_clients;
+	static std::atomic_int max_http_clients;
+	static std::atomic_int max_binary_clients;
 
 	~XapiandServer();
 

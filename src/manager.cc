@@ -705,12 +705,15 @@ XapiandManager::server_status(MsgPack&& stats)
 	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 	stats["connections"] = XapiandServer::total_clients.load();
 	stats["http_connections"] = XapiandServer::http_clients.load();
+	stats["max_connections"] = XapiandServer::max_total_clients.load();
+	stats["max_http_connections"] = XapiandServer::max_http_clients.load();
 	stats["workers_pool_size"] = thread_pool.size();
 	stats["servers_pool_size"] = server_pool.size();
 	stats["committers_pool_size"] = autocommit_pool.size();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
 		stats["binary_connections"] = XapiandServer::binary_clients.load();
+		stats["max_binary_connections"] = XapiandServer::max_binary_clients.load();
 		stats["replicators_pool_size"] = replicator_pool.size();
 	}
 #endif

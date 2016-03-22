@@ -276,6 +276,9 @@ BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref 
 	L_EV(this, "Setup write event (sock=%d)", sock);
 
 	int total_clients = ++XapiandServer::total_clients;
+	if (total_clients > XapiandServer::max_total_clients) {
+		XapiandServer::max_total_clients = total_clients;
+	}
 
 	L_OBJ(this, "CREATED BASE CLIENT! (%d clients)", total_clients);
 }
