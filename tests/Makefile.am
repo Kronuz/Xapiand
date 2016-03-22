@@ -16,6 +16,7 @@ check_PROGRAMS = \
 	set_sort_test \
 	set_storage_test \
 	set_threadpool_test \
+	set_utils_test \
 	set_wal_test \
 	set_wkt_test
 
@@ -105,6 +106,9 @@ set_storage_test_LDADD = @CHECK_LIBS@
 
 set_threadpool_test_SOURCES = $(common_files) set_threadpool_test.cc test_threadpool.cc
 set_threadpool_test_LDADD = @CHECK_LIBS@
+
+set_utils_test_SOURCES = $(common_files) set_utils_test.cc test_utils.cc
+set_utils_test_LDADD = @CHECK_LIBS@
 
 set_wkt_test_SOURCES = $(common_files) set_wkt_test.cc test_wkt_parser.cc
 set_wkt_test_LDADD = @CHECK_LIBS@
