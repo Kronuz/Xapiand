@@ -41,7 +41,7 @@
 
 
 void apply_patch(const MsgPack& patch, MsgPack& object) {
-	if (patch.obj->type == msgpack::type::ARRAY) {
+	if (patch.get_type() == msgpack::type::ARRAY) {
 		for (auto elem : patch) {
 			try {
 				MsgPack op = elem.at("op");
@@ -186,7 +186,7 @@ void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr) {
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
-		int val_num = strict_stoi(std::string(val.obj->via.str.ptr, val.obj->via.str.size));
+		int val_num = strict_stoi(std::string(val.body->obj->via.str.ptr, val.body->obj->via.str.size));
 		if(get_patch_custom_limit(limit, obj_patch)) {
 			_incr_decr(o, decr ? -val_num : val_num, limit);
 		} else {
@@ -216,8 +216,8 @@ MsgPack get_patch_value(const MsgPack& obj_patch) {
 bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch) {
 	try {
 		MsgPack o = obj_patch.at("limit");
-		if (o.obj->type == msgpack::type::STR) {
-			limit = strict_stoi(std::string(o.obj->via.str.ptr, o.obj->via.str.size));
+		if (o.get_type() == msgpack::type::STR) {
+			limit = strict_stoi(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
 			return true;
 		} else {
 			throw MSG_ClientError("\"limit\" must be string");

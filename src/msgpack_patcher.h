@@ -41,11 +41,11 @@ bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch);
 
 
 inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
-	if (o.obj->type == msgpack::type::MAP) {
+	if (o.get_type() == msgpack::type::MAP) {
 		o[target] = val;
-	} else if (o.obj->type == msgpack::type::ARRAY) {
+	} else if (o.get_type() == msgpack::type::ARRAY) {
 		if (target.compare("-") == 0) {
-			o.insert_item_to_array(o.obj->via.array.size, val);
+			o.insert_item_to_array(o.body->obj->via.array.size, val);
 		} else {
 			int offset = strict_stoi(target);
 			o.insert_item_to_array(offset, val);
@@ -58,7 +58,7 @@ inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
 
 inline void _erase(MsgPack&& o, const std::string& target) {
 	try {
-		if (o.obj->type == msgpack::type::ARRAY) {
+		if (o.get_type() == msgpack::type::ARRAY) {
 			o.erase(strict_stoi(target));
 		} else {
 			o.erase(target);
@@ -70,8 +70,8 @@ inline void _erase(MsgPack&& o, const std::string& target) {
 
 
 inline void _incr_decr(MsgPack& o, int val) {
-	if (o.obj->type == msgpack::type::NEGATIVE_INTEGER) {
-		o.obj->via.i64 += val;
+	if (o.get_type() == msgpack::type::NEGATIVE_INTEGER) {
+		o.body->obj->via.i64 += val;
 	} else {
 		throw MSG_ClientError("Object is not integer");
 	}
@@ -79,13 +79,13 @@ inline void _incr_decr(MsgPack& o, int val) {
 
 
 inline void _incr_decr(MsgPack& o, int val, int limit) {
-	if (o.obj->type == msgpack::type::NEGATIVE_INTEGER) {
-		o.obj->via.i64 += val;
+	if (o.get_type() == msgpack::type::NEGATIVE_INTEGER) {
+		o.body->obj->via.i64 += val;
 		if (val < 0) {
-			if (static_cast<int>(o.obj->via.i64) <= limit) {
+			if (static_cast<int>(o.body->obj->via.i64) <= limit) {
 				throw MSG_LimitError("Limit exceeded");
 			}
-		} else if (static_cast<int>(o.obj->via.i64) >= limit) {
+		} else if (static_cast<int>(o.body->obj->via.i64) >= limit) {
 			throw MSG_LimitError("Limit exceeded");
 		}
 	} else {
