@@ -182,6 +182,11 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* loop_,
 HttpClient::~HttpClient()
 {
 	int http_clients = --XapiandServer::http_clients;
+	int total_clients = XapiandServer::total_clients;
+	if (http_clients < 0 || http_clients > total_clients) {
+		L_CRIT(this, "Inconsistency in number of http clients");
+		sig_exit(-EX_SOFTWARE);
+	}
 
 	if (manager()->shutdown_asap.load()) {
 		if (http_clients <= 0) {
@@ -200,11 +205,6 @@ HttpClient::~HttpClient()
 	}
 
 	L_OBJ(this, "DELETED HTTP CLIENT! (%d clients left)", http_clients);
-	if (http_clients < 0) {
-		L_CRIT(this, "Inconsistency in number of http clients");
-		sig_exit(-EX_SOFTWARE);
-	}
-
 }
 
 

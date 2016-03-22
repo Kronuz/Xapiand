@@ -98,12 +98,13 @@ BinaryClient::~BinaryClient()
 	checkin_database();
 
 	int binary_clients = --XapiandServer::binary_clients;
-
-	L_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)", binary_clients);
-	if (binary_clients < 0) {
+	int total_clients = XapiandServer::total_clients;
+	if (binary_clients < 0 || binary_clients > total_clients) {
 		L_CRIT(this, "Inconsistency in number of binary clients");
 		sig_exit(-EX_SOFTWARE);
 	}
+
+	L_OBJ(this, "DELETED BINARY CLIENT! (%d clients left)", binary_clients);
 }
 
 

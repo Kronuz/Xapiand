@@ -2663,7 +2663,7 @@ DatabaseQueue::DatabaseQueue(DatabaseQueue&& q)
 DatabaseQueue::~DatabaseQueue()
 {
 	if (size() != count) {
-		L_CRIT(this, "DatabaseQueue size is inconsistent with the DatabaseQueue counter");
+		L_CRIT(this, "Inconsistency in the number of databases in queue");
 		sig_exit(-EX_SOFTWARE);
 	}
 
@@ -2703,7 +2703,7 @@ DatabaseQueue::dec_count()
 	std::unique_lock<std::mutex> lk(_mutex);
 
 	if (count <= 0) {
-		L_CRIT(this, "Inconsistency with the DatabaseQueue counter");
+		L_CRIT(this, "Inconsistency in the number of databases in queue");
 		sig_exit(-EX_SOFTWARE);
 	}
 
@@ -2984,7 +2984,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	}
 
 	if (queue->count < queue->size()) {
-		L_CRIT(this, "DatabaseQueue size is inconsistent with the DatabaseQueue counter");
+		L_CRIT(this, "Inconsistency in the number of databases in queue");
 		sig_exit(-EX_SOFTWARE);
 	}
 
