@@ -386,7 +386,6 @@ XapiandManager::run(const opts_t& o)
 {
 	if (node_name.compare("~") == 0) {
 		L_CRIT(this, "Node name %s doesn't match with the one in the cluster's database!", o.node_name.c_str());
-		finish();
 		join();
 		throw Exit(EX_CONFIG);
 	}
@@ -473,7 +472,6 @@ XapiandManager::run(const opts_t& o)
 		loop->run();
 		L_EV(this, "Manager loop ended!");
 	} catch (...) {
-		finish();
 		join();
 		throw;
 	}
@@ -501,6 +499,8 @@ XapiandManager::finish()
 void
 XapiandManager::join()
 {
+	finish();
+
 	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.size(), (server_pool.size() == 1) ? "" : "s");
 	server_pool.join();
 
@@ -516,6 +516,10 @@ XapiandManager::join()
 
 	L_DEBUG(this, "Finishing worker threads pool!");
 	thread_pool.finish();
+
+	L_DEBUG(this, "Finishing database pool!");
+	database_pool.finish();
+
 	L_DEBUG(this, "Waiting for %zu worker thread%s...", thread_pool.size(), (thread_pool.size() == 1) ? "" : "s");
 	thread_pool.join();
 

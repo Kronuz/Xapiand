@@ -90,7 +90,7 @@ class XapiandManager : public Worker  {
 
 	void shutdown_impl(time_t asap, time_t now) override;
 	void destroy_impl() override;
-	
+
 	void finish();
 	void join();
 
