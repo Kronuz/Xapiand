@@ -57,9 +57,10 @@ constexpr int STORAGE_OPEN           = 0x00;  // Open an existing database.
 constexpr int STORAGE_WRITABLE       = 0x01;  // Opens as writable.
 constexpr int STORAGE_CREATE         = 0x02;  // Automatically creates the database if it doesn't exist
 constexpr int STORAGE_CREATE_OR_OPEN = 0x03;  // Create database if it doesn't already exist.
-constexpr int STORAGE_NO_SYNC        = 0x04;  // Don't attempt to ensure changes have hit disk.
+constexpr int STORAGE_ASYNC_SYNC     = 0x04;  // fsync (or full_fsync) is async
 constexpr int STORAGE_FULL_SYNC      = 0x08;  // Try to ensure changes are really written to disk.
-constexpr int STORAGE_COMPRESS       = 0x10;  // Compress data in storage.
+constexpr int STORAGE_NO_SYNC        = 0x10;  // Don't attempt to ensure changes have hit disk.
+constexpr int STORAGE_COMPRESS       = 0x20;  // Compress data in storage.
 
 constexpr int STORAGE_FLAG_COMPRESSED  = 0x01;
 constexpr int STORAGE_FLAG_DELETED     = 0x02;
@@ -721,19 +722,35 @@ public:
 			close();
 			throw MSG_StorageIOError("IO error: pwrite");
 		}
+
 		if (!(flags & STORAGE_NO_SYNC)) {
-			if (flags & STORAGE_FULL_SYNC) {
-				if unlikely(io::full_fsync(fd) < 0) {
-					close();
-					throw MSG_StorageIOError("IO error: full_fsync");
+			if (flags & STORAGE_ASYNC_SYNC) {
+				if (flags & STORAGE_FULL_SYNC) {
+					if unlikely(AsyncFsync::full_fsync(fd) < 0) {
+						close();
+						throw MSG_StorageIOError("IO error: full_fsync");
+					}
+				} else {
+					if unlikely(AsyncFsync::fsync(fd) < 0) {
+						close();
+						throw MSG_StorageIOError("IO error: fsync");
+					}
 				}
 			} else {
-				if unlikely(io::fsync(fd) < 0) {
-					close();
-					throw MSG_StorageIOError("IO error: fsync");
+				if (flags & STORAGE_FULL_SYNC) {
+					if unlikely(io::full_fsync(fd) < 0) {
+						close();
+						throw MSG_StorageIOError("IO error: full_fsync");
+					}
+				} else {
+					if unlikely(io::fsync(fd) < 0) {
+						close();
+						throw MSG_StorageIOError("IO error: fsync");
+					}
 				}
 			}
 		}
+
 		growfile();
 	}
 
