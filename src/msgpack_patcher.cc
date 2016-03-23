@@ -186,7 +186,14 @@ void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr) {
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
-		int val_num = strict_stoi(std::string(val.body->obj->via.str.ptr, val.body->obj->via.str.size));
+		int val_num;
+		if (val.get_type() == msgpack::type::STR) {
+			val_num = strict_stoi(std::string(val.body->obj->via.str.ptr, val.body->obj->via.str.size));
+		} else if (val.get_type() == msgpack::type::NEGATIVE_INTEGER) {
+			val_num = static_cast<int>(val.body->obj->via.i64);
+		} else {
+			throw  MSG_ClientError("\"value\" must be string or integer");
+		}
 		if(get_patch_custom_limit(limit, obj_patch)) {
 			_incr_decr(o, decr ? -val_num : val_num, limit);
 		} else {
@@ -219,8 +226,11 @@ bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch) {
 		if (o.get_type() == msgpack::type::STR) {
 			limit = strict_stoi(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
 			return true;
+		} else if (o.get_type() == msgpack::type::NEGATIVE_INTEGER) {
+			limit = static_cast<int>(o.body->obj->via.i64);
+			return true;
 		} else {
-			throw MSG_ClientError("\"limit\" must be string");
+			throw MSG_ClientError("\"limit\" must be string or integer");
 		}
 	} catch (const std::out_of_range&) {
 		return false;
