@@ -357,8 +357,8 @@ BinaryClient::checkin_database()
 		manager()->database_pool.checkin(database);
 		database.reset();
 	}
-	enquire.reset();
 	matchspies.clear();
+	enquire.reset();
 }
 
 
@@ -739,6 +739,7 @@ BinaryClient::msg_query(const std::string &message_in)
 	const char *p = message_in.c_str();
 	const char *p_end = p + message_in.size();
 
+	matchspies.clear();
 	enquire = std::make_unique<Xapian::Enquire>(*db);
 
 	////////////////////////////////////////////////////////////////////////////
@@ -839,15 +840,13 @@ BinaryClient::msg_query(const std::string &message_in)
 		// Note: user weighting schemes should be registered by adding them to
 		// a Registry, and setting the context using
 		// RemoteServer::set_registry().
-		throw MSG_InvalidArgumentError("Weighting scheme " +
-										   wtname + " not registered");
+		throw MSG_InvalidArgumentError("Weighting scheme " + wtname + " not registered");
 	}
 
 	len = unserialise_length(&p, p_end, true);
-	wttype = wttype->unserialise(std::string(p, len));
-
-	enquire->set_weighting_scheme(*wttype);
-	p += len;
+    std::unique_ptr<Xapian::Weight> wt(wttype->unserialise(std::string(p, len)));
+    enquire->set_weighting_scheme(*wt);
+    p += len;
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the RSet object.
@@ -857,21 +856,19 @@ BinaryClient::msg_query(const std::string &message_in)
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise any MatchSpy objects.
-	matchspies.clear();
 	while (p != p_end) {
 		len = unserialise_length(&p, p_end, true);
 		std::string spytype(p, len);
 		const Xapian::MatchSpy * spyclass = reg.get_match_spy(spytype);
 		if (spyclass == nullptr) {
-			throw MSG_InvalidArgumentError("Match spy " + spytype +
-											   " not registered");
+			throw MSG_InvalidArgumentError("Match spy " + spytype + " not registered");
 		}
 		p += len;
 
 		len = unserialise_length(&p, p_end, true);
 		Xapian::MatchSpy *spy = spyclass->unserialise(std::string(p, len), reg);
-		matchspies.push_back(std::unique_ptr<Xapian::MatchSpy>(spy));
-		enquire->add_matchspy(spy);
+		matchspies.push_back(spy);
+		enquire->add_matchspy(spy->release());
 		p += len;
 	}
 

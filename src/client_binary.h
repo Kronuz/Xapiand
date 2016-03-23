@@ -183,7 +183,7 @@ class BinaryClient : public BaseClient {
 	// For msg_query and msg_mset:
 	Xapian::Registry reg;
 	std::unique_ptr<Xapian::Enquire> enquire;
-	std::vector<std::unique_ptr<Xapian::MatchSpy>> matchspies;
+	std::vector<Xapian::MatchSpy*> matchspies;
 
 	void remote_server(RemoteMessageType type, const std::string& message);
 	void msg_allterms(const std::string& message);
