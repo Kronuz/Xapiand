@@ -74,11 +74,14 @@ WalHeader::init(void* param)
 	head.offset = STORAGE_START_BLOCK_OFFSET;
 	strncpy(head.uuid, wal->database->get_uuid().c_str(), sizeof(head.uuid));
 
-	std::string rev_str = wal->database->get_revision_info();
-	const char *r = rev_str.data();
-	const char *r_end = r + rev_str.size();
+	std::string rev_serialised = wal->database->get_revision_info();
+	const char *p = rev_serialised.data();
+	const char *p_end = p + rev_serialised.size();
+
+	size_t length = unserialise_length(&p, p_end);
+	const char *r_end = p + length;
 	uint32_t revision;
-	unserialise_unsigned(&r, r_end, &revision);
+	unserialise_unsigned(&p, r_end, &revision);
 
 	if (wal->commit_eof) {
 		++revision;
@@ -107,11 +110,13 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 {
 	L_CALL(this, "DatabaseWAL::open_current()");
 
-	uint32_t revision;
-	const char *r = database->checkout_revision.data();
-	const char *r_end = r + database->checkout_revision.size();
-	unserialise_unsigned(&r, r_end, &revision);
+	const char *p = database->checkout_revision.data();
+	const char *p_end = p + database->checkout_revision.size();
 
+	uint32_t revision;
+	size_t length = unserialise_length(&p, p_end);
+	const char *r_end = p + length;
+	unserialise_unsigned(&p, r_end, &revision);
 
 	DIR *dir = opendir(path.c_str(), true);
 	if (!dir) {
@@ -337,7 +342,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 
 	std::string revision = database->get_revision_info();
 	std::string uuid = database->get_uuid();
-	std::string line(serialise_length(revision.size()) + revision + serialise_length(toUType(type)) + data);
+	std::string line(revision + serialise_length(toUType(type)) + data);
 
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint.path.c_str(), repr(line).c_str());
 
