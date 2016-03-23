@@ -75,6 +75,20 @@ START_TEST(test_patcher_test)
 END_TEST
 
 
+START_TEST(test_patcher_incr)
+{
+	ck_assert_int_eq(test_incr(), 0);
+}
+END_TEST
+
+
+START_TEST(test_patcher_decr)
+{
+	ck_assert_int_eq(test_decr(), 0);
+}
+END_TEST
+
+
 Suite* testPatcher(void) {
 	Suite *s = suite_create("Test patcher");
 
@@ -105,6 +119,14 @@ Suite* testPatcher(void) {
 	TCase *t_test = tcase_create("Test patcher test");
 	tcase_add_test(t_test, test_patcher_test);
 	suite_add_tcase(s, t_test);
+
+	TCase *t_incr = tcase_create("Test patcher increment");
+	tcase_add_test(t_incr, test_patcher_incr);
+	suite_add_tcase(s, t_incr);
+
+	TCase *t_decr = tcase_create("Test patcher decrement");
+	tcase_add_test(t_incr, test_patcher_decr);
+	suite_add_tcase(s, t_decr);
 
 	return s;
 }

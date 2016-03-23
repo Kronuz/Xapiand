@@ -313,3 +313,64 @@ int test_test() {
 		return 1;
 	}
 }
+
+
+int test_incr() {
+	std::string obj_str("{ \"age\" : 24 }");
+	std::string patch_str("[ { \"op\":\"incr\", \"path\":\"/age\", \"value\": \"1\", \"limit\": \"26\"} ]");
+	std::string expected("{\"age\":25}");
+
+	rapidjson::Document doc_obj;
+	rapidjson::Document doc_patch;
+	json_load(doc_obj, obj_str);
+	json_load(doc_patch, patch_str);
+
+	MsgPack obj(doc_obj);
+	MsgPack patch(doc_patch);
+
+	try {
+		apply_patch(patch, obj);
+		std::string result(obj.to_json_string());
+		L(nullptr, "RESULT FOR TEST_INCR %s", result.c_str());
+		if (expected.compare(result) != 0) {
+			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
+			return 1;
+		} else {
+			return 0;
+		}
+		return 0;
+	} catch (const Exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
+		return 1;
+	}
+}
+
+
+int test_decr() {
+	std::string obj_str("{ \"age\" : 24 }");
+	std::string patch_str("[ { \"op\":\"decr\", \"path\":\"/age\", \"value\": 1, \"limit\": 22} ]");
+	std::string expected("{\"age\":23}");
+
+	rapidjson::Document doc_obj;
+	rapidjson::Document doc_patch;
+	json_load(doc_obj, obj_str);
+	json_load(doc_patch, patch_str);
+
+	MsgPack obj(doc_obj);
+	MsgPack patch(doc_patch);
+
+	try {
+		apply_patch(patch, obj);
+		std::string result(obj.to_json_string());
+		if (expected.compare(result) != 0) {
+			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
+			return 1;
+		} else {
+			return 0;
+		}
+		return 0;
+	} catch (const Exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
+		return 1;
+	}
+}
