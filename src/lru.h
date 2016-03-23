@@ -47,11 +47,32 @@ class LRU {
 public:
 
 protected:
-	std::list<std::pair<const Key, T>> _items_list;
-	std::unordered_map<Key, typename std::list<std::pair<const Key, T>>::iterator> _items_map;
+	using list_t = std::list<std::pair<const Key, T>>;
+	using map_t = std::unordered_map<Key, typename std::list<std::pair<const Key, T>>::iterator>;
+
+	list_t _items_list;
+	map_t _items_map;
 	ssize_t _max_size;
 
 public:
+	using iterator = typename list_t::iterator;
+	using const_iterator = typename list_t::const_iterator;
+
+	decltype(auto) begin() {
+		return _items_list.begin();
+	}
+
+	decltype(auto) cbegin() const {
+		return _items_list.cbegin();
+	}
+
+	decltype(auto) end() {
+		return _items_list.end();
+	}
+	decltype(auto) cend() const {
+		return _items_list.cend();
+	}
+
 	LRU(ssize_t max_size=-1) : _max_size(max_size) { }
 
 	size_t erase(const Key& key) {
