@@ -72,7 +72,6 @@ class Discovery;
 class Raft;
 #endif
 class XapiandServer;
-class DatabaseAutocommit;
 
 
 class XapiandManager : public Worker  {

@@ -24,8 +24,9 @@
 
 #include "xapiand.h"
 
+#include "worker.h"
 #include "threadpool.h"
-#include "database.h"
+
 #include "manager.h"
 
 #include <atomic>
@@ -36,20 +37,21 @@
 #include <condition_variable>
 
 
-struct DatabaseCommitStatus {
-	std::weak_ptr<const Database> weak_database;
-	std::chrono::time_point<std::chrono::system_clock> max_commit_time;
-	std::chrono::time_point<std::chrono::system_clock> commit_time;
-
-	std::chrono::time_point<std::chrono::system_clock> next_wakeup_time();
-};
+class Database;
 
 
 class DatabaseAutocommit : public Task<>, public Worker {
+	struct Status {
+		std::weak_ptr<const Database> weak_database;
+		std::chrono::time_point<std::chrono::system_clock> max_commit_time;
+		std::chrono::time_point<std::chrono::system_clock> commit_time;
+		std::chrono::time_point<std::chrono::system_clock> next_wakeup_time();
+	};
+
 	static std::mutex mtx;
-	static std::mutex db_mtx;
+	static std::mutex statuses_mtx;
 	static std::condition_variable wakeup_signal;
-	static std::unordered_map<Endpoints, DatabaseCommitStatus> databases;
+	static std::unordered_map<Endpoints, Status> statuses;
 	static std::atomic<std::time_t> next_wakeup_time;
 
 	std::atomic_bool running;
@@ -61,11 +63,11 @@ public:
 	DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
 	~DatabaseAutocommit();
 
-	static void signal_changed(const std::shared_ptr<Database>& database);
-
 	void run() override;
 
 	inline decltype(auto) manager() noexcept {
 		return share_parent<XapiandManager>();
 	}
+
+	static void commit(const std::shared_ptr<Database>& database);
 };

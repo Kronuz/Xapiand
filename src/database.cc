@@ -2960,7 +2960,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	int flags = database->flags;
 
 	if (database->modified) {
-		DatabaseAutocommit::signal_changed(database);
+		DatabaseAutocommit::commit(database);
 	}
 
 	if (!(flags & DB_VOLATILE)) {
