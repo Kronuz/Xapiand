@@ -24,6 +24,7 @@
 
 #include "xapiand.h"
 
+#include "async_fsync.h"
 #include "io_utils.h"
 #include "lz4_compressor.h"
 

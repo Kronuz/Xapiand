@@ -3,6 +3,7 @@ ACLOCAL_AMFLAGS = -I ../m4
 bin_PROGRAMS = xapiand
 
 xapiand_SOURCES = \
+	async_fsync.cc \
 	cartesian.cc \
 	client_base.cc \
 	client_binary.cc \
@@ -61,6 +62,7 @@ xapiand_SOURCES = \
 	xchange/convert.cc
 
 noinst_HEADERS = \
+	async_fsync.h \
 	cartesian.h \
 	client_base.h \
 	client_binary.h \

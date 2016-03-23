@@ -24,6 +24,7 @@
 
 #include "utils.h"
 #include "replicator.h"
+#include "async_fsync.h"
 #include "database_autocommit.h"
 #include "endpoint.h"
 #include "servers/server.h"
@@ -57,6 +58,7 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	  thread_pool("W%02zu", o.threadpool_size),
 	  server_pool("S%02zu", o.num_servers),
 	  autocommit_pool("C%02zu", o.num_committers),
+	  asyncfsync_pool("F%02zu", o.num_committers),
 #ifdef XAPIAND_CLUSTERING
 	  replicator_pool("R%02zu", o.num_replicators),
 	  endp_r(o.endpoints_list_size),
@@ -440,8 +442,11 @@ XapiandManager::run(const opts_t& o)
 #endif
 
 	for (size_t i = 0; i < o.num_committers; ++i) {
-		auto dbcommit = Worker::make_shared<DatabaseAutocommit>(manager, nullptr);
-		autocommit_pool.enqueue(dbcommit);
+		autocommit_pool.enqueue(Worker::make_shared<DatabaseAutocommit>(manager, nullptr));
+	}
+
+	for (size_t i = 0; i < o.num_committers; ++i) {
+		asyncfsync_pool.enqueue(Worker::make_shared<AsyncFsync>(manager, nullptr));
 	}
 
 	// Make server protocols weak:
@@ -493,6 +498,9 @@ XapiandManager::finish()
 
 	L_DEBUG(this, "Finishing commiters pool!");
 	autocommit_pool.finish();
+
+	L_DEBUG(this, "Finishing async fsync pool!");
+	asyncfsync_pool.finish();
 }
 
 
@@ -513,6 +521,9 @@ XapiandManager::join()
 
 	L_DEBUG(this, "Waiting for %zu committer%s...", autocommit_pool.size(), (autocommit_pool.size() == 1) ? "" : "s");
 	autocommit_pool.join();
+
+	L_DEBUG(this, "Waiting for %zu async fsync%s...", asyncfsync_pool.size(), (asyncfsync_pool.size() == 1) ? "" : "s");
+	asyncfsync_pool.join();
 
 	L_DEBUG(this, "Finishing worker threads pool!");
 	thread_pool.finish();
@@ -714,6 +725,7 @@ XapiandManager::server_status(MsgPack&& stats)
 	stats["workers_pool_size"] = thread_pool.size();
 	stats["servers_pool_size"] = server_pool.size();
 	stats["committers_pool_size"] = autocommit_pool.size();
+	stats["fsync_pool_size"] = asyncfsync_pool.size();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
 		stats["binary_connections"] = XapiandServer::binary_clients.load();

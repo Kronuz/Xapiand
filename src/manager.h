@@ -127,6 +127,7 @@ public:
 	ThreadPool<> thread_pool;
 	ThreadPool<> server_pool;
 	ThreadPool<> autocommit_pool;
+	ThreadPool<> asyncfsync_pool;
 #ifdef XAPIAND_CLUSTERING
 	ThreadPool<> replicator_pool;
 #endif
