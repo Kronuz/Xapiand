@@ -112,10 +112,10 @@ DatabaseWAL::open_current(const std::string& path, bool commited)
 
 	const char *p = database->checkout_revision.data();
 	const char *p_end = p + database->checkout_revision.size();
-
-	uint32_t revision;
 	size_t length = unserialise_length(&p, p_end);
 	const char *r_end = p + length;
+
+	uint32_t revision;
 	unserialise_unsigned(&p, r_end, &revision);
 
 	DIR *dir = opendir(path.c_str(), true);
@@ -259,7 +259,12 @@ DatabaseWAL::execute(const std::string& line)
 	std::string revision(p, size);
 	p += size;
 
-	if (revision != database->get_revision_info()) {
+	std::string encoded_db_rev = database->get_revision_info();
+	const char* r = encoded_db_rev.data();
+	const char* r_end = r + encoded_db_rev.size();
+	std::string db_revision = unserialise_string(&r, r_end);
+
+	if (revision != db_revision) {
 		return false;
 	}
 
@@ -340,15 +345,19 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 	auto endpoint = database->endpoints[0];
 	assert(endpoint.is_local());
 
-	std::string revision = database->get_revision_info();
+	std::string revision_encode = database->get_revision_info();
 	std::string uuid = database->get_uuid();
-	std::string line(revision + serialise_length(toUType(type)) + data);
+	std::string line(revision_encode + serialise_length(toUType(type)) + data);
 
 	L_DATABASE_WAL(this, "%s on %s: '%s'", names[toUType(type)], endpoint.path.c_str(), repr(line).c_str());
 
+	const char* p = revision_encode.data();
+	const char* p_end = p + revision_encode.size();
+	std::string revision = unserialise_string(&p, p_end);
+
 	uint32_t rev;
-	const char *r = revision.data();
-	const char *r_end = r + revision.size();
+	const char* r = revision.data();
+	const char* r_end = r + revision.size();
 	unserialise_unsigned(&r, r_end, &rev);
 
 	uint32_t slot = rev - header.head.revision;
