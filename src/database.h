@@ -442,6 +442,12 @@ public:
 			}, std::make_pair(key, std::make_shared<DatabaseQueue>()));
 		}
 	}
+
+	void finish() {
+		for (iterator it = begin(); it != end(); ++it) {
+			it->second->finish();
+		}
+	}
 };
 
 

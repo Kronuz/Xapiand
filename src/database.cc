@@ -2788,6 +2788,9 @@ DatabasePool::finish()
 {
 	finished = true;
 
+	writable_databases.finish();
+	databases.finish();
+
 	L_OBJ(this, "FINISH DATABASE!");
 }
 
