@@ -25,9 +25,49 @@
 #include "log.h"
 
 
+//TESTS CASES
 const struct test_url_path urls[] {
 	{
-		"db_new.db,db_new.db/_search", {"db_new.db", "db_new.db"}, {""}, "", "_search", ""
+		"db_new.db,db_new.db/_search", {"db_new.db", "db_new.db"}, {""}, "", "_search", "", 0
+	},
+	{
+		"/AQjN/BVf/78w/QjNBVfWKH78w/clients/clients.client.cd7ec34a-5d4a-11e5-b0b2-34363bc9ddd6/", {"/AQjN/BVf/78w/QjNBVfWKH78w/clients"}, {""}, "", "clients.client.cd7ec34a-5d4a-11e5-b0b2-34363bc9ddd6", "", 0
+	},
+	{
+		"/favicon.ico", {""}, {""}, "", "", "", -2
+	},
+	{
+		"//patt/to:namespace1/index1@host1,//namespace2/index2@host2,namespace3/index3@host3/type/search////", {"namespace1/index1", "//namespace2/index2", "namespace3/index3"}, {"host1", "host2", "host3/type"}, "", "search", "//patt/to", 0
+	},
+	{
+		"/patt/to:namespace1/index1@host1,@host2,namespace3/index3/search", {"namespace1/index1"}, {"host1"}, "", "search", "/patt/to", 0
+	},
+	{
+		"/database/", {""}, {""}, "", "", "", -2
+	},
+	{
+		"path/1", {"path"}, {""}, "", "1", "", 0
+	},
+	{
+		"/db_titles/localhost/_upload/", {"/db_titles/localhost"}, {""}, "", "_upload", "", 0
+	},
+	{
+		"delete", {""}, {""}, "", "", "", -1
+	},
+	{
+		"//patt/to:namespace1/index1@host1,//namespace2/index2@host2:8890,namespace3/index3@host3/type1,type2/search////", {"namespace1/index1", "//namespace2/index2", "namespace3/index3", "type2"}, {"host1", "host2:8890", "host3/type1", "host3/type1"}, "", "search", "//patt/to", 0
+	},
+	{
+		"/patt/to:namespace1/index1@host1,/namespace2/index2@host2,namespace3/index3@host3/t1/_upload/search/", {"namespace1/index1", "/namespace2/index2", "namespace3/index3"}, {"host1", "host2", "host3/t1"}, "_upload", "search", "/patt/to", 0
+	},
+	{
+		"/database.db/subdir/_upload/3/", {"/database.db/subdir"}, {""}, "_upload", "3", "", 0
+	},
+	{
+		"usr/dir:subdir,_upload/1", {"subdir"}, {""}, "_upload", "1", "usr/dir", 0
+	},
+	{
+		"/database.db/_upload/_search/", {"/database.db"}, {""}, "_upload", "_search", "", 0
 	}
 };
 
@@ -93,7 +133,8 @@ int run_url_path(const struct test_url_path& u) {
 int test_url_path() {
 
 	int count = 0;
-	for (int i = 0; i < static_cast<int>(arraySize(urls)); i++) {
+	size_t array_size = arraySize(urls);
+	for (int i = 0; i < static_cast<int>(array_size); i++) {
 		if (run_url_path(urls[i]) != 0) {
 			++count;
 		}

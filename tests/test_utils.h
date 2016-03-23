@@ -24,12 +24,13 @@
 
 
 struct test_url_path {
-	std::string url;
-	std::vector<std::string> path;
-	std::vector<std::string> host;
-	std::string upload;
-	std::string command;
-	std::string nspace;
+	std::string url;                    /* the url to process */
+	std::vector<std::string> path;      /* the paths that should be resolved */
+	std::vector<std::string> host;      /* the hosts that should be resolved */
+	std::string upload;                 /* the upload if exist*/
+	std::string command;                /* the command or the id */
+	std::string nspace;                 /* the namespace if it exist */
+	int reval;                          /* the error if it exist */
 };
 
 int test_url_path();
