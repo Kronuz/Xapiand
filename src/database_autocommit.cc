@@ -93,11 +93,11 @@ DatabaseAutocommit::run()
 				if (status.weak_database.lock()) {
 					auto next_wakeup_time = status.next_wakeup_time();
 					if (next_wakeup_time <= now) {
+						auto endpoints = it->first;
 						DatabaseAutocommit::statuses.erase(it);
 						statuses_lk.unlock();
 						lk.unlock();
 
-						auto endpoints = it->first;
 						std::shared_ptr<Database> database;
 						if (manager()->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
 							if (database->commit()) {
