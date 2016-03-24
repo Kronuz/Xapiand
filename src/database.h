@@ -46,14 +46,15 @@
 #include <unordered_map>
 #include <unordered_set>
 
-constexpr int DB_OPEN        = 0x00; // Opens a database
-constexpr int DB_WRITABLE    = 0x01; // Opens as writable
-constexpr int DB_SPAWN       = 0x02; // Automatically creates the database if it doesn't exist
-constexpr int DB_PERSISTENT  = 0x04; // Always try keeping the database in the database pool
-constexpr int DB_INIT_REF    = 0x08; // Initializes the writable index in the database .refs
-constexpr int DB_VOLATILE    = 0x10; // Always drop the database from the database pool as soon as possible
-constexpr int DB_REPLICATION = 0x20; // Use conditional pop in the queue, only pop when replication is done
-constexpr int DB_NOWAL       = 0x40; // Disable open wal file
+constexpr int DB_OPEN         = 0x00; // Opens a database
+constexpr int DB_WRITABLE     = 0x01; // Opens as writable
+constexpr int DB_SPAWN        = 0x02; // Automatically creates the database if it doesn't exist
+constexpr int DB_PERSISTENT   = 0x04; // Always try keeping the database in the database pool
+constexpr int DB_INIT_REF     = 0x08; // Initializes the writable index in the database .refs
+constexpr int DB_VOLATILE     = 0x10; // Always drop the database from the database pool as soon as possible
+constexpr int DB_REPLICATION  = 0x20; // Use conditional pop in the queue, only pop when replication is done
+constexpr int DB_NOWAL        = 0x40; // Disable open wal file
+constexpr int DB_DATA_STORAGE = 0x80; // Enable separate data storage file for the database
 
 #define DB_MASTER "M"
 #define DB_SLAVE  "S"

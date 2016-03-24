@@ -649,12 +649,17 @@ Database::reopen()
 
 #ifdef XAPIAND_DATA_STORAGE
 		if (local) {
-			// WAL required on a local database, open it.
-			auto storage = std::make_unique<DataStorage>(this);
-			storage->volume = storage->highest_volume(e.path);
-			storage->open(e.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
-			writable_storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
-			storages.push_back(std::make_unique<DataStorage>(this));
+			if (flags & DB_DATA_STORAGE) {
+				// WAL required on a local database, open it.
+				auto storage = std::make_unique<DataStorage>(this);
+				storage->volume = storage->highest_volume(e.path);
+				storage->open(e.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
+				writable_storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
+				storages.push_back(std::make_unique<DataStorage>(this));
+			} else {
+				writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
+				storages.push_back(std::make_unique<DataStorage>(this));
+			}
 		} else {
 			writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
 			storages.push_back(std::unique_ptr<DataStorage>(nullptr));
