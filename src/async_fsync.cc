@@ -139,9 +139,9 @@ AsyncFsync::_fsync(int fd, bool full_fsync)
 	auto now = std::chrono::system_clock::now();
 	if (!status.mode) {
 		status.mode = full_fsync ? 1 : 2;
-		status.max_commit_time = now + 5s;
+		status.max_commit_time = now + 3s;
 	}
-	status.commit_time = now + 1s;
+	status.commit_time = now + 500ms;
 
 	if (std::chrono::system_clock::from_time_t(AsyncFsync::next_wakeup_time.load()) > status.next_wakeup_time()) {
 		AsyncFsync::wakeup_signal.notify_one();
