@@ -212,9 +212,9 @@ esac
 
 
 AC_ARG_ENABLE(data-storage,
-  [AS_HELP_STRING([--disable-data-storage], [use custom database data storage volumes])],
+  [AS_HELP_STRING([--enable-data-storage], [use custom database data storage volumes (experimental)])],
   [enable_data_storage="$enableval"],
-  [enable_data_storage=yep])
+  [enable_data_storage=no])
 AC_MSG_CHECKING([whether to enable custom database data storage volumes])
 case "$enable_data_storage" in
   y*)
