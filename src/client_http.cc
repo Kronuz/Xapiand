@@ -825,36 +825,36 @@ HttpClient::stats_view(const query_field_t& e, int mode)
 	MsgPack response;
 	bool res_stats = false;
 
-	if (e.server) {
+	if (endpoints.size() == 0) {	/* Server stats */
 		manager()->server_status(response["server_status"]);
 		res_stats = true;
-	}
-
-	if (e.database) {
-		if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-			L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-			return;
-		}
-		database->get_stats_database(response["database_status"]);
-		manager()->database_pool.checkin(database);
-		res_stats = true;
-	}
-
-	if (!e.document.empty()) {
-		if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-			L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-			write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-			return;
-		}
-		database->get_stats_doc(response["document_status"], e.document);
-		manager()->database_pool.checkin(database);
-		res_stats = true;
-	}
-
-	if (!e.stats.empty()) {
-		manager()->get_stats_time(response["stats_time"], e.stats);
-		res_stats = true;
+	} else if (endpoints.size() == 1) {
+		 if (mode == CMD_UNKNOWN) {		/* Database stats */
+			 if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
+				 L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
+				 write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+				 return;
+			 }
+			 database->get_stats_database(response["database_status"]);
+			 manager()->database_pool.checkin(database);
+			 res_stats = true;
+		 } else if (mode == CMD_STATS) {	/* Document stats */
+			 L(this, "Mode for stats %s", command.c_str());
+			 if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
+				 L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
+				 write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+				 return;
+			 }
+			 database->get_stats_doc(response["document_status"], command);
+			 manager()->database_pool.checkin(database);
+			 res_stats = true;
+		 } else {
+			//It is not expected to enter here
+			 assert(false);
+		 }
+	} else {
+		response["error"] = "Expecting exactly one database for stats operation";
+		write_http_response(response, 400, e.pretty);
 	}
 
 	if (!res_stats) {
@@ -1449,35 +1449,6 @@ HttpClient::query_maker(const char* query_str, size_t query_size, int cmd, query
 			break;
 
 		case CMD_STATS:
-			q.offset = nullptr;
-			if (url_qs("server", query_str, query_size, &q) != -1) {
-				e.server = true;
-				if (q.length) {
-					try {
-						e.server = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-					} catch (const Exception&) { }
-				}
-			}
-
-			q.offset = nullptr;
-			if (url_qs("database", query_str, query_size, &q) != -1) {
-				e.database = true;
-				if (q.length) {
-					try {
-						e.database = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-					} catch (const Exception&) { }
-				}
-			}
-
-			q.offset = nullptr;
-			if (url_qs("document", query_str, query_size, &q) != -1) {
-				e.document = urldecode(q.offset, q.length);
-			}
-
-			q.offset = nullptr;
-			if (url_qs("stats", query_str, query_size, &q) != -1) {
-				e.stats = urldecode(q.offset, q.length);
-			}
 			break;
 
 		case CMD_UPLOAD:

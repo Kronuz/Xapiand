@@ -109,13 +109,9 @@ struct query_field_t {
 	bool synonyms;
 	bool pretty;
 	bool commit;
-	bool server;
-	bool database;
-	std::string document;
 	bool unique_doc;
 	bool is_fuzzy;
 	bool is_nearest;
-	std::string stats;
 	std::string collapse;
 	unsigned collapse_max;
 	std::vector <std::string> language;
@@ -129,8 +125,8 @@ struct query_field_t {
 
 	query_field_t()
 		: offset(0), limit(10), check_at_least(0), spelling(true), synonyms(false), pretty(false),
-		  commit(false), server(false), database(false), document(""), unique_doc(false), is_fuzzy(false),
-		  is_nearest(false), stats(""), collapse(""), collapse_max(1), fuzzy(), nearest() { }
+		  commit(false), unique_doc(false), is_fuzzy(false),
+		  is_nearest(false), collapse(""), collapse_max(1), fuzzy(), nearest() { }
 
 };
 
