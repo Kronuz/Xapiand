@@ -92,6 +92,7 @@ class HttpClient : public BaseClient {
 
 	std::string host;
 	std::string command;  //command or ID
+	std::string mode; //parameter optional in url
 
 	bool request_begining;
 	std::chrono::time_point<std::chrono::system_clock> request_begins;
@@ -103,7 +104,7 @@ class HttpClient : public BaseClient {
 	static int on_info(http_parser* p);
 	static int on_data(http_parser* p, const char* at, size_t length);
 
-	void stats_view(const query_field_t& e);
+	void stats_view(const query_field_t& e, int mode);
 	void delete_document_view(const query_field_t& e);
 	void index_document_view(const query_field_t& e);
 	void document_info_view(const query_field_t& e);
@@ -124,6 +125,7 @@ class HttpClient : public BaseClient {
 	int endpoint_maker(parser_url_path_t& p, bool writable);
 	void query_maker(const char* query_str, size_t query_size, int cmd, query_field_t& e, parser_query_t& q);
 	static int identify_cmd(const std::string& commad);
+	int identify_mode(const std::string &mode);
 
 	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string body=std::string(""), std::string ct_type=std::string("application/json; charset=UTF-8"));
 	void clean_http_request();

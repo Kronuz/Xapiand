@@ -515,6 +515,11 @@ HttpClient::_get()
 
 	query_field_t e;
 	int cmd = url_resolve(e, false);
+	int mode = identify_mode(HttpClient::mode);
+
+	if (mode != CMD_UNKNOWN) {
+		cmd = mode; /* Left the cmd as the mode */
+	}
 
 	switch (cmd) {
 		case CMD_ID:
@@ -529,7 +534,7 @@ HttpClient::_get()
 			search_view(e, true, false);
 			break;
 		case CMD_STATS:
-			stats_view(e);
+			stats_view(e, mode);
 			break;
 		case CMD_SCHEMA:
 			search_view(e, false, true);
@@ -567,6 +572,11 @@ HttpClient::_post()
 
 	query_field_t e;
 	int cmd = url_resolve(e, false);
+	int mode = identify_mode(HttpClient::mode);
+
+	if (mode != CMD_UNKNOWN) {
+		cmd = mode; /* Left the cmd as the mode */
+	}
 
 	switch (cmd) {
 		case CMD_ID:
@@ -581,7 +591,7 @@ HttpClient::_post()
 			search_view(e, true, false);
 			break;
 		case CMD_STATS:
-			stats_view(e);
+			stats_view(e, mode);
 			break;
 		case CMD_SCHEMA:
 			search_view(e, false, true);
@@ -808,7 +818,7 @@ HttpClient::update_document_view(const query_field_t& e)
 
 
 void
-HttpClient::stats_view(const query_field_t& e)
+HttpClient::stats_view(const query_field_t& e, int mode)
 {
 	L_CALL(this, "HttpClient::stats_view()");
 
@@ -1487,6 +1497,20 @@ HttpClient::identify_cmd(const std::string& commad)
 	}
 
 	return CMD_ID;
+}
+
+
+int
+HttpClient::identify_mode(const std::string& mode)
+{
+	if (mode.compare(HTTP_STATS) == 0) {
+		return CMD_STATS;
+	}
+
+	if (mode.compare(HTTP_UPLOAD) == 0) {
+		return CMD_UPLOAD;
+	}
+	return CMD_UNKNOWN;
 }
 
 
