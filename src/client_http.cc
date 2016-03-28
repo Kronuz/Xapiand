@@ -1101,7 +1101,9 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 				}
 			}
 
-			mode = lower_string(urldecode(p.off_parameter, p.len_parameter));
+			if (p.len_parameter) {
+				mode = lower_string(urldecode(p.off_parameter, p.len_parameter));
+			}
 		}
 
 		if ((parser.method == METHOD_PUT || parser.method == METHOD_PATCH) && endpoints.size() > 1) {
@@ -1152,9 +1154,11 @@ HttpClient::endpoint_maker(parser_url_path_t& p, bool writable)
 {
 	bool has_node_name = false;
 
-	command = lower_string(urldecode(p.off_command, p.len_command));
-	if (command.empty()) {
-		return CMD_BAD_QUERY;
+	if (p.len_command) {
+		command = lower_string(urldecode(p.off_command, p.len_command));
+		if (command.empty()) {
+			return CMD_BAD_QUERY;
+		}
 	}
 
 	std::string ns;
