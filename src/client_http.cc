@@ -495,7 +495,7 @@ HttpClient::_head()
 	L_CALL(this, "HttpClient::_head()");
 
 	query_field_t e;
-	int cmd = _endpointgen(e, false);
+	int cmd = url_resolve(e, false);
 
 	switch (cmd) {
 		case CMD_ID:
@@ -514,7 +514,7 @@ HttpClient::_get()
 	L_CALL(this, "HttpClient::_get()");
 
 	query_field_t e;
-	int cmd = _endpointgen(e, false);
+	int cmd = url_resolve(e, false);
 
 	switch (cmd) {
 		case CMD_ID:
@@ -547,7 +547,7 @@ HttpClient::_put()
 	L_CALL(this, "HttpClient::_put()");
 
 	query_field_t e;
-	int cmd = _endpointgen(e, true);
+	int cmd = url_resolve(e, true);
 
 	switch (cmd) {
 		case CMD_ID:
@@ -566,7 +566,7 @@ HttpClient::_post()
 	L_CALL(this, "HttpClient::_post()");
 
 	query_field_t e;
-	int cmd = _endpointgen(e, false);
+	int cmd = url_resolve(e, false);
 
 	switch (cmd) {
 		case CMD_ID:
@@ -602,7 +602,7 @@ HttpClient::_patch()
 	L_CALL(this, "HttpClient::_patch()");
 
 	query_field_t e;
-	int cmd = _endpointgen(e, true);
+	int cmd = url_resolve(e, true);
 
 	switch (cmd) {
 		case CMD_ID:
@@ -621,7 +621,7 @@ HttpClient::_delete()
 	L_CALL(this, "HttpClient::_delete()");
 
 	query_field_t e;
-	int cmd = _endpointgen(e, true);
+	int cmd = url_resolve(e, true);
 
 	switch (cmd) {
 		case CMD_ID:
@@ -1050,12 +1050,11 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 
 
 int
-HttpClient::_endpointgen(query_field_t& e, bool writable)
+HttpClient::url_resolve(query_field_t& e, bool writable)
 {
-	L_CALL(this, "HttpClient::_endpointgen()");
+	L_CALL(this, "HttpClient::url_resolve()");
 
 	int retval;
-	bool has_node_name = false;
 	struct http_parser_url u;
 	std::string b = repr(path);
 
