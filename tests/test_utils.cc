@@ -69,15 +69,15 @@ const struct test_url_path urls[] {
 	{
 		"/database.db/_upload/_search/", {"/database.db"}, {""}, "_upload", "_search", "", 0
 	},
-    {
-        "/_stats/", {""}, {""}, "", "_stats", "", 10
-    },
-    {
-        "/index/_stats", {"/index"}, {""}, "", "_stats", "", 0
-    },
-    {
-        "/index/_stats/1", {"/index"}, {""}, "_stats", "1", "", 0
-    }
+	{
+		"/_stats/", {""}, {""}, "", "_stats", "", 10
+	},
+	{
+		"/index/_stats", {"/index"}, {""}, "", "_stats", "", 0
+	},
+	{
+		"/index/_stats/1", {"/index"}, {""}, "_stats", "1", "", 0
+	}
 };
 
 
@@ -90,60 +90,60 @@ int run_url_path(const struct test_url_path& u) {
 		return 1;
 	}
 
-    if (rval != u.reval) {
-        return 1;
-    }
+	if (rval != u.reval) {
+		return 1;
+	}
 
 	int pos = 0;
-    if (rval == 0) {
-        while (rval == 0) {
-        	if (p.len_path == u.path[pos].size()) {
-        		if (strncmp(p.off_path, u.path[pos].c_str(), p.len_path) != 0) {
-        			print_error_url(u.path[pos], std::string(p.off_path, p.len_path));
-        			return 1;
-        		}
-        	} else {
-        		print_error_url(u.path[pos], std::string(p.off_path, p.len_path));
-        		return 1;
-        	}
+	if (rval == 0) {
+		while (rval == 0) {
+			if (p.len_path == u.path[pos].size()) {
+				if (strncmp(p.off_path, u.path[pos].c_str(), p.len_path) != 0) {
+					print_error_url(u.path[pos], std::string(p.off_path, p.len_path));
+					return 1;
+				}
+			} else {
+				print_error_url(u.path[pos], std::string(p.off_path, p.len_path));
+				return 1;
+			}
 
-       		if (p.len_host == u.host[pos].size()) {
-       			if (strncmp(p.off_host, u.host[pos].c_str(), p.len_host) != 0) {
-       				print_error_url(u.host[pos], std::string(p.off_host, p.len_host));
-       				return 1;
-       			}
-       		} else {
-       			print_error_url(u.host[pos], std::string(p.off_host, p.len_host));
-        		return 1;
-        	}
+			if (p.len_host == u.host[pos].size()) {
+				if (strncmp(p.off_host, u.host[pos].c_str(), p.len_host) != 0) {
+					print_error_url(u.host[pos], std::string(p.off_host, p.len_host));
+					return 1;
+				}
+			} else {
+				print_error_url(u.host[pos], std::string(p.off_host, p.len_host));
+				return 1;
+			}
 
-       		if (p.len_command == u.command.size()) {
-        		if (strncmp(p.off_command, u.command.c_str(), p.len_command) != 0) {
-        			print_error_url(u.command, std::string(p.off_command, p.len_command));
-        		 	return 1;
-        		}
-        	} else {
-        		print_error_url(u.command, std::string(p.off_command, p.len_command));
-        		return 1;
-        	}
+			if (p.len_command == u.command.size()) {
+				if (strncmp(p.off_command, u.command.c_str(), p.len_command) != 0) {
+					print_error_url(u.command, std::string(p.off_command, p.len_command));
+					return 1;
+				}
+			} else {
+				print_error_url(u.command, std::string(p.off_command, p.len_command));
+				return 1;
+			}
 
-            if (p.len_parameter == u.parameter.size()) {
-        		if (strncmp(p.off_parameter, u.parameter.c_str(), p.len_parameter) != 0) {
-        			print_error_url(u.parameter, std::string(p.off_parameter, p.len_parameter));
-        			return 1;
-        		}
-        	} else {
-        		print_error_url(u.parameter, std::string(p.off_parameter, p.len_parameter));
-        		return 1;
-       	    }
-            rval = url_path(u.url.c_str(), u.url.size(), &p);
-            ++rval;
-        }
-    } else {
-        if (strncmp(p.off_command, u.command.c_str(), p.len_command) != 0) {
-            return 1;
-        }
-    }
+			if (p.len_parameter == u.parameter.size()) {
+				if (strncmp(p.off_parameter, u.parameter.c_str(), p.len_parameter) != 0) {
+					print_error_url(u.parameter, std::string(p.off_parameter, p.len_parameter));
+					return 1;
+				}
+			} else {
+				print_error_url(u.parameter, std::string(p.off_parameter, p.len_parameter));
+				return 1;
+			}
+			rval = url_path(u.url.c_str(), u.url.size(), &p);
+			++rval;
+		}
+	} else {
+		if (strncmp(p.off_command, u.command.c_str(), p.len_command) != 0) {
+			return 1;
+		}
+	}
 	return 0;
 }
 
