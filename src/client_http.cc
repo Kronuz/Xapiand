@@ -1078,81 +1078,10 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 			}
 
 			while (retval == 0) {
-				command = lower_string(urldecode(p.off_command, p.len_command));
-				if (command.empty()) {
-					return CMD_BAD_QUERY;
+				int endp_err = endpoint_maker(p, writable);
+				if (endp_err != 0) {
+					return endp_err;
 				}
-
-				std::string ns;
-				if (p.len_namespace) {
-					ns = urldecode(p.off_namespace, p.len_namespace) + "/";
-				}
-
-				std::string path;
-				if (p.len_path) {
-					path = urldecode(p.off_path, p.len_path);
-				}
-
-				index_path = ns + path;
-				std::string node_name;
-				Endpoint asked_node("xapian://" + index_path);
-
-				std::vector<Endpoint> asked_nodes;
-
-				if (p.len_host) {
-					node_name = urldecode(p.off_host, p.len_host);
-					has_node_name = true;
-				} else {
-					duration<double, std::milli> timeout;
-					size_t num_endps = 1;
-					if (writable) {
-						timeout = 2s;
-					} else {
-						timeout = 1s;
-					}
-
-					if (manager()->is_single_node()) {
-						has_node_name = true;
-						node_name = local_node.name;
-					} else {
-						if (!manager()->resolve_index_endpoint(asked_node.path, asked_nodes, num_endps, timeout)) {
-							has_node_name = true;
-							node_name = local_node.name;
-						}
-					}
-				}
-
-				if (has_node_name) {
-#ifdef XAPIAND_CLUSTERING
-					Endpoint index("xapian://" + node_name + "/" + index_path);
-					int node_port = (index.port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.port;
-					node_name = index.host.empty() ? node_name : index.host;
-
-					// Convert node to endpoint:
-					char node_ip[INET_ADDRSTRLEN];
-					const Node *node = nullptr;
-					if (!manager()->touch_node(node_name, UNKNOWN_REGION, &node)) {
-						L_DEBUG(this, "Node %s not found", node_name.c_str());
-						host = node_name;
-						return CMD_UNKNOWN_HOST;
-					}
-					if (!node_port) {
-						node_port = node->binary_port;
-					}
-					inet_ntop(AF_INET, &(node->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
-					Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + "/" + index_path, nullptr, -1, node_name);
-#else
-					Endpoint endpoint(index_path);
-#endif
-					endpoints.add(endpoint);
-				} else {
-					for (const auto& asked_node : asked_nodes) {
-						endpoints.add(asked_node);
-					}
-				}
-				L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.as_string().c_str());
-
-				p.len_host = 0; //Clean the host, so you not stay with the previous host in case doesn't come new one
 				retval = url_path(path_buf.c_str(), path_size, &p);
 			}
 		}
@@ -1168,256 +1097,7 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 			const char *query_str = b.data() + u.field_data[4].off;
 
 			parser_query_t q;
-
-			q.offset = nullptr;
-			if (url_qs("pretty", query_str, query_size, &q) != -1) {
-				e.pretty = true;
-				if (q.length) {
-					try {
-						e.pretty = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-					} catch (const Exception&) { }
-				}
-			}
-
-			switch (cmd) {
-				case CMD_SEARCH:
-				case CMD_FACETS:
-					q.offset = nullptr;
-					if (url_qs("offset", query_str, query_size, &q) != -1) {
-						e.offset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-					}
-
-					q.offset = nullptr;
-					if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
-						e.check_at_least = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-					}
-
-					q.offset = nullptr;
-					if (url_qs("limit", query_str, query_size, &q) != -1) {
-						e.limit = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-					}
-
-					q.offset = nullptr;
-					if (url_qs("collapse_max", query_str, query_size, &q) != -1) {
-						e.collapse_max = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-					}
-
-					q.offset = nullptr;
-					if (url_qs("spelling", query_str, query_size, &q) != -1) {
-						e.spelling = true;
-						if (q.length) {
-							try {
-								e.spelling = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Exception&) { }
-						}
-					}
-
-					q.offset = nullptr;
-					if (url_qs("synonyms", query_str, query_size, &q) != -1) {
-						e.synonyms = true;
-						if (q.length) {
-							try {
-								e.synonyms = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Exception&) { }
-						}
-					}
-
-					q.offset = nullptr;
-					L_DEBUG(this, "Buffer: %s", query_str);
-					while (url_qs("query", query_str, query_size, &q) != -1) {
-						L_DEBUG(this, "%s", urldecode(q.offset, q.length).c_str());
-						e.query.push_back(urldecode(q.offset, q.length));
-					}
-
-					q.offset = nullptr;
-					while (url_qs("q", query_str, query_size, &q) != -1) {
-						L_DEBUG(this, "%s", urldecode(q.offset, q.length).c_str());
-						e.query.push_back(urldecode(q.offset, q.length));
-					}
-
-					q.offset = nullptr;
-					while (url_qs("partial", query_str, query_size, &q) != -1) {
-						e.partial.push_back(urldecode(q.offset, q.length));
-					}
-
-					q.offset = nullptr;
-					while (url_qs("terms", query_str, query_size, &q) != -1) {
-						e.terms.push_back(urldecode(q.offset, q.length));
-					}
-
-					q.offset = nullptr;
-					while (url_qs("sort", query_str, query_size, &q) != -1) {
-						e.sort.push_back(urldecode(q.offset, q.length));
-					}
-
-					q.offset = nullptr;
-					while (url_qs("facets", query_str, query_size, &q) != -1) {
-						e.facets.push_back(urldecode(q.offset, q.length));
-					}
-
-					q.offset = nullptr;
-					while (url_qs("language", query_str, query_size, &q) != -1) {
-						e.language.push_back(urldecode(q.offset, q.length));
-					}
-
-					q.offset = nullptr;
-					if (url_qs("collapse", query_str, query_size, &q) != -1) {
-						e.collapse = urldecode(q.offset, q.length);
-					}
-
-					q.offset = nullptr;
-					if (url_qs("fuzzy", query_str, query_size, &q) != -1) {
-						e.is_fuzzy = true;
-						if (q.length) {
-							try {
-								e.is_fuzzy = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Exception&) { }
-						}
-					}
-
-					if (e.is_fuzzy) {
-						q.offset = nullptr;
-						if (url_qs("fuzzy.n_rset", query_str, query_size, &q) != -1){
-							e.fuzzy.n_rset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-						}
-
-						q.offset = nullptr;
-						if (url_qs("fuzzy.n_eset", query_str, query_size, &q) != -1){
-							e.fuzzy.n_eset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-						}
-
-						q.offset = nullptr;
-						if (url_qs("fuzzy.n_term", query_str, query_size, &q) != -1){
-							e.fuzzy.n_term = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-						}
-
-						q.offset = nullptr;
-						while (url_qs("fuzzy.field", query_str, query_size, &q) != -1){
-							e.fuzzy.field.push_back(urldecode(q.offset, q.length));
-						}
-
-						q.offset = nullptr;
-						while (url_qs("fuzzy.type", query_str, query_size, &q) != -1){
-							e.fuzzy.type.push_back(urldecode(q.offset, q.length));
-						}
-					}
-
-					q.offset = nullptr;
-					if (url_qs("nearest", query_str, query_size, &q) != -1) {
-						e.is_nearest = true;
-						if (q.length) {
-							try {
-								e.is_nearest = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Exception&) { }
-						}
-					}
-
-					if (e.is_nearest) {
-						q.offset = nullptr;
-						if (url_qs("nearest.n_rset", query_str, query_size, &q) != -1){
-							e.nearest.n_rset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-						} else {
-							e.nearest.n_rset = 5;
-						}
-
-						q.offset = nullptr;
-						if (url_qs("nearest.n_eset", query_str, query_size, &q) != -1){
-							e.nearest.n_eset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-						}
-
-						q.offset = nullptr;
-						if (url_qs("nearest.n_term", query_str, query_size, &q) != -1){
-							e.nearest.n_term = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-						}
-
-						q.offset = nullptr;
-						while (url_qs("nearest.field", query_str, query_size, &q) != -1){
-							e.nearest.field.push_back(urldecode(q.offset, q.length));
-						}
-
-						q.offset = nullptr;
-						while (url_qs("nearest.type", query_str, query_size, &q) != -1){
-							e.nearest.type.push_back(urldecode(q.offset, q.length));
-						}
-					}
-					break;
-
-				case CMD_ID:
-					q.offset = nullptr;
-					if (url_qs("commit", query_str, query_size, &q) != -1) {
-						e.commit = true;
-						if (q.length) {
-							try {
-								e.commit = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Exception&) { }
-						}
-					}
-
-					if (isRange(command)) {
-						q.offset = nullptr;
-						if (url_qs("offset", query_str, query_size, &q) != -1) {
-							e.offset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-						}
-
-						q.offset = nullptr;
-						if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
-							e.check_at_least = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-						}
-
-						q.offset = nullptr;
-						if (url_qs("limit", query_str, query_size, &q) != -1) {
-							e.limit = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-						}
-
-						q.offset = nullptr;
-						if (url_qs("sort", query_str, query_size, &q) != -1) {
-							e.sort.push_back(urldecode(q.offset, q.length));
-						} else {
-							e.sort.push_back(RESERVED_ID);
-						}
-					} else {
-						e.limit = 1;
-						e.unique_doc = true;
-						e.offset = 0;
-						e.check_at_least = 0;
-					}
-					break;
-
-				case CMD_STATS:
-					q.offset = nullptr;
-					if (url_qs("server", query_str, query_size, &q) != -1) {
-						e.server = true;
-						if (q.length) {
-							try {
-								e.server = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Exception&) { }
-						}
-					}
-
-					q.offset = nullptr;
-					if (url_qs("database", query_str, query_size, &q) != -1) {
-						e.database = true;
-						if (q.length) {
-							try {
-								e.database = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-							} catch (const Exception&) { }
-						}
-					}
-
-					q.offset = nullptr;
-					if (url_qs("document", query_str, query_size, &q) != -1) {
-						e.document = urldecode(q.offset, q.length);
-					}
-
-					q.offset = nullptr;
-					if (url_qs("stats", query_str, query_size, &q) != -1) {
-						e.stats = urldecode(q.offset, q.length);
-					}
-					break;
-
-				case CMD_UPLOAD:
-					break;
-			}
+			query_maker(query_str, query_size, cmd, e, q);
 		} else {
 			//Especial case (search ID and empty query in the url)
 			if (cmd == CMD_ID) {
@@ -1439,6 +1119,346 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 		L_CONN_WIRE(this, "Parsing not done");
 		// Bad query
 		return CMD_BAD_QUERY;
+	}
+}
+
+
+
+int
+HttpClient::endpoint_maker(parser_url_path_t& p, bool writable)
+{
+	bool has_node_name = false;
+
+	command = lower_string(urldecode(p.off_command, p.len_command));
+	if (command.empty()) {
+		return CMD_BAD_QUERY;
+	}
+
+	std::string ns;
+	if (p.len_namespace) {
+		ns = urldecode(p.off_namespace, p.len_namespace) + "/";
+	}
+
+	std::string path;
+	if (p.len_path) {
+		path = urldecode(p.off_path, p.len_path);
+	}
+
+	index_path = ns + path;
+	std::string node_name;
+	Endpoint asked_node("xapian://" + index_path);
+
+	std::vector<Endpoint> asked_nodes;
+
+	if (p.len_host) {
+		node_name = urldecode(p.off_host, p.len_host);
+		has_node_name = true;
+	} else {
+		duration<double, std::milli> timeout;
+		size_t num_endps = 1;
+		if (writable) {
+			timeout = 2s;
+		} else {
+			timeout = 1s;
+		}
+
+		if (manager()->is_single_node()) {
+			has_node_name = true;
+			node_name = local_node.name;
+		} else {
+			if (!manager()->resolve_index_endpoint(asked_node.path, asked_nodes, num_endps, timeout)) {
+				has_node_name = true;
+				node_name = local_node.name;
+			}
+		}
+	}
+
+	if (has_node_name) {
+#ifdef XAPIAND_CLUSTERING
+		Endpoint index("xapian://" + node_name + "/" + index_path);
+		int node_port = (index.port == XAPIAND_BINARY_SERVERPORT) ? 0 : index.port;
+		node_name = index.host.empty() ? node_name : index.host;
+
+		// Convert node to endpoint:
+		char node_ip[INET_ADDRSTRLEN];
+		const Node *node = nullptr;
+		if (!manager()->touch_node(node_name, UNKNOWN_REGION, &node)) {
+			L_DEBUG(this, "Node %s not found", node_name.c_str());
+			host = node_name;
+			return CMD_UNKNOWN_HOST;
+		}
+		if (!node_port) {
+			node_port = node->binary_port;
+		}
+		inet_ntop(AF_INET, &(node->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
+		Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + "/" + index_path, nullptr, -1, node_name);
+#else
+		Endpoint endpoint(index_path);
+#endif
+		endpoints.add(endpoint);
+	} else {
+		for (const auto& asked_node : asked_nodes) {
+			endpoints.add(asked_node);
+		}
+	}
+	L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.as_string().c_str());
+
+	p.len_host = 0; //Clean the host, so you not stay with the previous host in case doesn't come new one
+	return 0;
+}
+
+
+void
+HttpClient::query_maker(const char* query_str, size_t query_size, int cmd, query_field_t& e, parser_query_t& q)
+{
+	q.offset = nullptr;
+	if (url_qs("pretty", query_str, query_size, &q) != -1) {
+		e.pretty = true;
+		if (q.length) {
+			try {
+				e.pretty = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+			} catch (const Exception&) { }
+		}
+	}
+
+	switch (cmd) {
+		case CMD_SEARCH:
+		case CMD_FACETS:
+			q.offset = nullptr;
+			if (url_qs("offset", query_str, query_size, &q) != -1) {
+				e.offset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+			}
+
+			q.offset = nullptr;
+			if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
+				e.check_at_least = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+			}
+
+			q.offset = nullptr;
+			if (url_qs("limit", query_str, query_size, &q) != -1) {
+				e.limit = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+			}
+
+			q.offset = nullptr;
+			if (url_qs("collapse_max", query_str, query_size, &q) != -1) {
+				e.collapse_max = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+			}
+
+			q.offset = nullptr;
+			if (url_qs("spelling", query_str, query_size, &q) != -1) {
+				e.spelling = true;
+				if (q.length) {
+					try {
+						e.spelling = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+					} catch (const Exception&) { }
+				}
+			}
+
+			q.offset = nullptr;
+			if (url_qs("synonyms", query_str, query_size, &q) != -1) {
+				e.synonyms = true;
+				if (q.length) {
+					try {
+						e.synonyms = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+					} catch (const Exception&) { }
+				}
+			}
+
+			q.offset = nullptr;
+			L_DEBUG(this, "Buffer: %s", query_str);
+			while (url_qs("query", query_str, query_size, &q) != -1) {
+				L_DEBUG(this, "%s", urldecode(q.offset, q.length).c_str());
+				e.query.push_back(urldecode(q.offset, q.length));
+			}
+
+			q.offset = nullptr;
+			while (url_qs("q", query_str, query_size, &q) != -1) {
+				L_DEBUG(this, "%s", urldecode(q.offset, q.length).c_str());
+				e.query.push_back(urldecode(q.offset, q.length));
+			}
+
+			q.offset = nullptr;
+			while (url_qs("partial", query_str, query_size, &q) != -1) {
+				e.partial.push_back(urldecode(q.offset, q.length));
+			}
+
+			q.offset = nullptr;
+			while (url_qs("terms", query_str, query_size, &q) != -1) {
+				e.terms.push_back(urldecode(q.offset, q.length));
+			}
+
+			q.offset = nullptr;
+			while (url_qs("sort", query_str, query_size, &q) != -1) {
+				e.sort.push_back(urldecode(q.offset, q.length));
+			}
+
+			q.offset = nullptr;
+			while (url_qs("facets", query_str, query_size, &q) != -1) {
+				e.facets.push_back(urldecode(q.offset, q.length));
+			}
+
+			q.offset = nullptr;
+			while (url_qs("language", query_str, query_size, &q) != -1) {
+				e.language.push_back(urldecode(q.offset, q.length));
+			}
+
+			q.offset = nullptr;
+			if (url_qs("collapse", query_str, query_size, &q) != -1) {
+				e.collapse = urldecode(q.offset, q.length);
+			}
+
+			q.offset = nullptr;
+			if (url_qs("fuzzy", query_str, query_size, &q) != -1) {
+				e.is_fuzzy = true;
+				if (q.length) {
+					try {
+						e.is_fuzzy = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+					} catch (const Exception&) { }
+				}
+			}
+
+			if (e.is_fuzzy) {
+				q.offset = nullptr;
+				if (url_qs("fuzzy.n_rset", query_str, query_size, &q) != -1){
+					e.fuzzy.n_rset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+				}
+
+				q.offset = nullptr;
+				if (url_qs("fuzzy.n_eset", query_str, query_size, &q) != -1){
+					e.fuzzy.n_eset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+				}
+
+				q.offset = nullptr;
+				if (url_qs("fuzzy.n_term", query_str, query_size, &q) != -1){
+					e.fuzzy.n_term = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+				}
+
+				q.offset = nullptr;
+				while (url_qs("fuzzy.field", query_str, query_size, &q) != -1){
+					e.fuzzy.field.push_back(urldecode(q.offset, q.length));
+				}
+
+				q.offset = nullptr;
+				while (url_qs("fuzzy.type", query_str, query_size, &q) != -1){
+					e.fuzzy.type.push_back(urldecode(q.offset, q.length));
+				}
+			}
+
+			q.offset = nullptr;
+			if (url_qs("nearest", query_str, query_size, &q) != -1) {
+				e.is_nearest = true;
+				if (q.length) {
+					try {
+						e.is_nearest = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+					} catch (const Exception&) { }
+				}
+			}
+
+			if (e.is_nearest) {
+				q.offset = nullptr;
+				if (url_qs("nearest.n_rset", query_str, query_size, &q) != -1){
+					e.nearest.n_rset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+				} else {
+					e.nearest.n_rset = 5;
+				}
+
+				q.offset = nullptr;
+				if (url_qs("nearest.n_eset", query_str, query_size, &q) != -1){
+					e.nearest.n_eset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+				}
+
+				q.offset = nullptr;
+				if (url_qs("nearest.n_term", query_str, query_size, &q) != -1){
+					e.nearest.n_term = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+				}
+
+				q.offset = nullptr;
+				while (url_qs("nearest.field", query_str, query_size, &q) != -1){
+					e.nearest.field.push_back(urldecode(q.offset, q.length));
+				}
+
+				q.offset = nullptr;
+				while (url_qs("nearest.type", query_str, query_size, &q) != -1){
+					e.nearest.type.push_back(urldecode(q.offset, q.length));
+				}
+			}
+			break;
+
+		case CMD_ID:
+			q.offset = nullptr;
+			if (url_qs("commit", query_str, query_size, &q) != -1) {
+				e.commit = true;
+				if (q.length) {
+					try {
+						e.commit = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+					} catch (const Exception&) { }
+				}
+			}
+
+			if (isRange(command)) {
+				q.offset = nullptr;
+				if (url_qs("offset", query_str, query_size, &q) != -1) {
+					e.offset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+				}
+
+				q.offset = nullptr;
+				if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
+					e.check_at_least = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+				}
+
+				q.offset = nullptr;
+				if (url_qs("limit", query_str, query_size, &q) != -1) {
+					e.limit = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
+				}
+
+				q.offset = nullptr;
+				if (url_qs("sort", query_str, query_size, &q) != -1) {
+					e.sort.push_back(urldecode(q.offset, q.length));
+				} else {
+					e.sort.push_back(RESERVED_ID);
+				}
+			} else {
+				e.limit = 1;
+				e.unique_doc = true;
+				e.offset = 0;
+				e.check_at_least = 0;
+			}
+			break;
+
+		case CMD_STATS:
+			q.offset = nullptr;
+			if (url_qs("server", query_str, query_size, &q) != -1) {
+				e.server = true;
+				if (q.length) {
+					try {
+						e.server = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+					} catch (const Exception&) { }
+				}
+			}
+
+			q.offset = nullptr;
+			if (url_qs("database", query_str, query_size, &q) != -1) {
+				e.database = true;
+				if (q.length) {
+					try {
+						e.database = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
+					} catch (const Exception&) { }
+				}
+			}
+
+			q.offset = nullptr;
+			if (url_qs("document", query_str, query_size, &q) != -1) {
+				e.document = urldecode(q.offset, q.length);
+			}
+
+			q.offset = nullptr;
+			if (url_qs("stats", query_str, query_size, &q) != -1) {
+				e.stats = urldecode(q.offset, q.length);
+			}
+			break;
+
+		case CMD_UPLOAD:
+			break;
 	}
 }
 

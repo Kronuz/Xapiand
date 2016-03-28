@@ -121,6 +121,8 @@ class HttpClient : public BaseClient {
 	void _delete();
 
 	int url_resolve(query_field_t& e, bool writable);
+	int endpoint_maker(parser_url_path_t& p, bool writable);
+	void query_maker(const char* query_str, size_t query_size, int cmd, query_field_t& e, parser_query_t& q);
 	static int identify_cmd(const std::string& commad);
 
 	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string body=std::string(""), std::string ct_type=std::string("application/json; charset=UTF-8"));
