@@ -27,7 +27,7 @@ struct test_url_path {
 	std::string url;                    /* the url to process */
 	std::vector<std::string> path;      /* the paths that should be resolved */
 	std::vector<std::string> host;      /* the hosts that should be resolved */
-	std::string upload;                 /* the upload if exist*/
+	std::string parameter;              /* the upload if exist or the stats (the optional parameter) */
 	std::string command;                /* the command or the id */
 	std::string nspace;                 /* the namespace if it exist */
 	int reval;                          /* the error if it exist */

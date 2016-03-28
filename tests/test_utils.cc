@@ -34,7 +34,7 @@ const struct test_url_path urls[] {
 		"/AQjN/BVf/78w/QjNBVfWKH78w/clients/clients.client.cd7ec34a-5d4a-11e5-b0b2-34363bc9ddd6/", {"/AQjN/BVf/78w/QjNBVfWKH78w/clients"}, {""}, "", "clients.client.cd7ec34a-5d4a-11e5-b0b2-34363bc9ddd6", "", 0
 	},
 	{
-		"/favicon.ico", {""}, {""}, "", "", "", -2
+		"/favicon.ico", {""}, {""}, "", "favicon.ico", "", -2
 	},
 	{
 		"//patt/to:namespace1/index1@host1,//namespace2/index2@host2,namespace3/index3@host3/type/search////", {"namespace1/index1", "//namespace2/index2", "namespace3/index3"}, {"host1", "host2", "host3/type"}, "", "search", "//patt/to", 0
@@ -43,7 +43,7 @@ const struct test_url_path urls[] {
 		"/patt/to:namespace1/index1@host1,@host2,namespace3/index3/search", {"namespace1/index1"}, {"host1"}, "", "search", "/patt/to", 0
 	},
 	{
-		"/database/", {""}, {""}, "", "", "", -2
+		"/database/", {""}, {""}, "", "database", "", -2
 	},
 	{
 		"path/1", {"path"}, {""}, "", "1", "", 0
@@ -52,7 +52,7 @@ const struct test_url_path urls[] {
 		"/db_titles/localhost/_upload/", {"/db_titles/localhost"}, {""}, "", "_upload", "", 0
 	},
 	{
-		"delete", {""}, {""}, "", "", "", -1
+		"delete", {""}, {""}, "", "delete", "", -1
 	},
 	{
 		"//patt/to:namespace1/index1@host1,//namespace2/index2@host2:8890,namespace3/index3@host3/type1,type2/search////", {"namespace1/index1", "//namespace2/index2", "namespace3/index3", "type2"}, {"host1", "host2:8890", "host3/type1", "host3/type1"}, "", "search", "//patt/to", 0
@@ -68,7 +68,16 @@ const struct test_url_path urls[] {
 	},
 	{
 		"/database.db/_upload/_search/", {"/database.db"}, {""}, "_upload", "_search", "", 0
-	}
+	},
+    {
+        "/_stats/", {""}, {""}, "", "_stats", "", 10
+    },
+    {
+        "/index/_stats", {"/index"}, {""}, "", "_stats", "", 0
+    },
+    {
+        "/index/_stats/1", {"/index"}, {""}, "_stats", "1", "", 0
+    }
 };
 
 
@@ -80,9 +89,14 @@ int run_url_path(const struct test_url_path& u) {
 	 if (strncmp(p.off_namespace, u.nspace.c_str(), p.len_namespace) != 0) {
 		return 1;
 	}
+
+    if (rval != u.reval) {
+        return 1;
+    }
+
 	int pos = 0;
-	 while (rval == 0)
-        {
+    if (rval == 0) {
+        while (rval == 0) {
         	if (p.len_path == u.path[pos].size()) {
         		if (strncmp(p.off_path, u.path[pos].c_str(), p.len_path) != 0) {
         			print_error_url(u.path[pos], std::string(p.off_path, p.len_path));
@@ -113,18 +127,23 @@ int run_url_path(const struct test_url_path& u) {
         		return 1;
         	}
 
-        	if (p.len_upload == u.upload.size()) {
-        		if (strncmp(p.off_upload, u.upload.c_str(), p.len_upload) != 0) {
-        			print_error_url(u.upload, std::string(p.off_upload, p.len_upload));
+            if (p.len_parameter == u.parameter.size()) {
+        		if (strncmp(p.off_parameter, u.parameter.c_str(), p.len_parameter) != 0) {
+        			print_error_url(u.parameter, std::string(p.off_parameter, p.len_parameter));
         			return 1;
         		}
         	} else {
-        		print_error_url(u.upload, std::string(p.off_upload, p.len_upload));
+        		print_error_url(u.parameter, std::string(p.off_parameter, p.len_parameter));
         		return 1;
-        	}
-			rval = url_path(u.url.c_str(), u.url.size(), &p);
-			++rval;
-		}
+       	    }
+            rval = url_path(u.url.c_str(), u.url.size(), &p);
+            ++rval;
+        }
+    } else {
+        if (strncmp(p.off_command, u.command.c_str(), p.len_command) != 0) {
+            return 1;
+        }
+    }
 	return 0;
 }
 
