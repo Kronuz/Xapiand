@@ -69,13 +69,17 @@
 #define STATE_ERR_NO_SLASH -1
 #define STATE_CM0 0
 #define STATE_CMD 1
-#define STATE_UPL 2 /* case _upload */
+#define STATE_PMT 2 /* case parameter operation if exist could be _upload or _stats */
 #define STATE_NSP 3
 #define STATE_PTH 4
 #define STATE_HST 5
 
+#define STATE_UNIQUE_CMD_STAT 10
+
 #define HTTP_UPLOAD "_upload"
 #define HTTP_UPLOAD_SIZE 7
+#define HTTP_STATS "_stats"
+#define HTTP_STATS_SIZE 6
 
 
 const std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
@@ -348,6 +352,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 	const char *n0, *n1, *n2 = nullptr;
 	int state, direction;
 	size_t length;
+	bool unique_cmd = false;
 
 	if (par->offset == nullptr) {
 		state = STATE_CM0;
@@ -356,8 +361,8 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 	} else {
 		state = STATE_NSP;
 		n0 = n1 = n2 = par->offset;
-		if (par->off_upload) {
-			nf = par->off_upload - 1;
+		if (par->off_parameter) {
+			nf = par->off_parameter - 1;
 		} else {
 			nf = par->off_command - 1;
 		}
@@ -367,7 +372,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 	while (state >= 0) {
 		if (!(n1 >= ni && n1 <= nf)) {
 			/* In case direction is backwards and not find any this [/ , @ :] */
-			if (state == STATE_UPL) {
+			if (state == STATE_PMT) {
 				state = STATE_NSP;
 				nf = n0;
 				n0 = n1 = n2 = ni;
@@ -395,7 +400,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						par->off_path = n0;
 						par->len_path = length;
 						if (cn) ++n1;
-						state = length ? STATE_CM0 : cn ? STATE_ERR_UNEXPECTED_COMMA_PTH : STATE_ERR_UNEXPECTED_END_PTH;
+						state = length ? STATE_CM0 : cn ? STATE_ERR_UNEXPECTED_COMMA_PTH : unique_cmd ? STATE_UNIQUE_CMD_STAT : STATE_ERR_UNEXPECTED_END_PTH;
 						par->offset = n1;
 						return state;
 					case STATE_HST:
@@ -406,11 +411,12 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						if (cn) ++n1;
 						par->offset = n1;
 						return state;
-					case STATE_UPL:
+					case STATE_PMT:
 						length = n0 - n1 - 1;
-						if (length == HTTP_UPLOAD_SIZE && strncmp(n1 + 1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) {
-							par->off_upload = n1 + 1;
-							par->len_upload = length;
+						if ((length == HTTP_UPLOAD_SIZE && strncmp(n1 + 1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) or
+							(length == HTTP_STATS_SIZE && strncmp(n1 + 1, HTTP_STATS, HTTP_STATS_SIZE) == 0)) {
+							par->off_parameter = n1 + 1;
+							par->len_parameter = length;
 							state = length ? STATE_NSP : cn ? STATE_ERR_UNEXPECTED_COMMA_UPL : STATE_ERR_UNEXPECTED_END_UPL;
 							nf = n1;
 							n0 = n1 = n2 = ni;
@@ -434,7 +440,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						break;
 					case STATE_CMD:
 						break;
-					case STATE_UPL:
+					case STATE_PMT:
 						state = STATE_NSP;
 						nf = n0;
 						n0 = n1 = n2 = ni;
@@ -463,7 +469,7 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						break;
 					case STATE_CMD:
 						break;
-					case STATE_UPL:
+					case STATE_PMT:
 						state = STATE_NSP;
 						nf = n0;
 						n0 = n1 = n2 = ni;
@@ -496,14 +502,18 @@ int url_path(const char* ni, size_t size, parser_url_path_t *par) {
 						length = n0 - n1;
 						par->off_command = n1 + 1;
 						par->len_command = length;
-						state = length ? STATE_UPL : STATE_ERR_UNEXPECTED_SLASH_CMD;
+						state = length ? STATE_PMT : STATE_ERR_UNEXPECTED_SLASH_CMD;
 						n0 = n1;
+						if (length == HTTP_STATS_SIZE && strncmp(n1 + 1, HTTP_STATS ,HTTP_STATS_SIZE) == 0) {
+							unique_cmd = true;	//In case whe the url path only have a command
+						}
 						break;
-					case STATE_UPL:
+					case STATE_PMT:
 						length = n0 - n1 - 1;
-						if (length == HTTP_UPLOAD_SIZE && strncmp(n1 + 1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) {
-							par->off_upload = n1 + 1;
-							par->len_upload = length;
+						if ((length == HTTP_UPLOAD_SIZE && strncmp(n1 + 1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) or
+							(length == HTTP_STATS_SIZE && strncmp(n1 + 1, HTTP_STATS, HTTP_STATS_SIZE) == 0)) {
+							par->off_parameter = n1 + 1;
+							par->len_parameter = length;
 							state = length ? STATE_NSP : STATE_ERR_UNEXPECTED_SLASH_UPL;
 							nf = n1;
 							n0 = n1 = n2 = ni;
