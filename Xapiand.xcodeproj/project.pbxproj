@@ -59,6 +59,7 @@
 		C39AE0761B2F627E00203139 /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE05E1B2F627E00203139 /* utils.cc */; };
 		C39AE07C1B2F62D700203139 /* cartesian.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0781B2F62D700203139 /* cartesian.cc */; };
 		C39AE07D1B2F62D700203139 /* exception.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE07A1B2F62D700203139 /* exception.cc */; };
+		C3A4B9671CA989A100239DC8 /* async_fsync.cc in Sources */ = {isa = PBXBuildFile; fileRef = C3A4B9661CA989A100239DC8 /* async_fsync.cc */; };
 		C3C37DBB1BB05C6900F99A84 /* namegen.cc in Sources */ = {isa = PBXBuildFile; fileRef = C3C37DBA1BB05C6900F99A84 /* namegen.cc */; };
 /* End PBXBuildFile section */
 
@@ -189,6 +190,8 @@
 		C39AE0791B2F62D700203139 /* cartesian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cartesian.h; path = src/cartesian.h; sourceTree = "<group>"; };
 		C39AE07A1B2F62D700203139 /* exception.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = exception.cc; path = src/exception.cc; sourceTree = "<group>"; };
 		C39AE07B1B2F62D700203139 /* exception.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = exception.h; path = src/exception.h; sourceTree = "<group>"; };
+		C3A4B9661CA989A100239DC8 /* async_fsync.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = async_fsync.cc; path = src/async_fsync.cc; sourceTree = "<group>"; };
+		C3A4B9681CA989AC00239DC8 /* async_fsync.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = async_fsync.h; path = src/async_fsync.h; sourceTree = "<group>"; };
 		C3C37DBA1BB05C6900F99A84 /* namegen.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = namegen.cc; path = src/namegen.cc; sourceTree = "<group>"; };
 		C3C37DBC1BB05C8700F99A84 /* namegen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = namegen.h; path = src/namegen.h; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -209,6 +212,8 @@
 			isa = PBXGroup;
 			children = (
 				E5CEBCC71A99C89000CD151F /* Products */,
+				C3A4B9661CA989A100239DC8 /* async_fsync.cc */,
+				C3A4B9681CA989AC00239DC8 /* async_fsync.h */,
 				46DFA9AD1BC4800E008D8144 /* binary.cc */,
 				46DFA9AA1BC4800E008D8144 /* binary.h */,
 				C39AE0781B2F62D700203139 /* cartesian.cc */,
@@ -440,6 +445,7 @@
 				C365BE3D1C330F5D00F6E3AE /* xapiand.cc in Sources */,
 				C39AE0701B2F627E00203139 /* multivalue.cc in Sources */,
 				46DFA9B41BC4800E008D8144 /* tcp_base.cc in Sources */,
+				C3A4B9671CA989A100239DC8 /* async_fsync.cc in Sources */,
 				C35058AD1BA325CC00901B80 /* lz4hc.c in Sources */,
 				46740EEC1B5436120073C5E9 /* datetime.cc in Sources */,
 				C39AE0661B2F627E00203139 /* client_binary.cc in Sources */,
