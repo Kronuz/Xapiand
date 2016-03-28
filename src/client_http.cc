@@ -1065,6 +1065,7 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 	L_CALL(this, "HttpClient::url_resolve()");
 
 	int retval;
+	bool solo_command = false;
 	struct http_parser_url u;
 	std::string b = repr(path);
 
@@ -1087,13 +1088,20 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 				return CMD_BAD_QUERY;
 			}
 
-			while (retval == 0) {
-				int endp_err = endpoint_maker(p, writable);
-				if (endp_err != 0) {
-					return endp_err;
+			if (retval == 10) { /* Solo command case (without index part) */
+				solo_command = true;
+				command = lower_string(urldecode(p.off_command, p.len_command));
+			} else {
+				while (retval == 0) {
+					int endp_err = endpoint_maker(p, writable);
+					if (endp_err != 0) {
+						return endp_err;
+					}
+					retval = url_path(path_buf.c_str(), path_size, &p);
 				}
-				retval = url_path(path_buf.c_str(), path_size, &p);
 			}
+
+			mode = lower_string(urldecode(p.off_parameter, p.len_parameter));
 		}
 
 		if ((parser.method == METHOD_PUT || parser.method == METHOD_PATCH) && endpoints.size() > 1) {
@@ -1111,6 +1119,11 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 		} else {
 			//Especial case (search ID and empty query in the url)
 			if (cmd == CMD_ID) {
+
+				if (solo_command) {
+					return CMD_BAD_QUERY;
+				}
+
 				if (isRange(command)) {
 					e.offset = 0;
 					e.check_at_least = 0;
