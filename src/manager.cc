@@ -722,15 +722,15 @@ XapiandManager::server_status(MsgPack&& stats)
 	stats["http_connections"] = XapiandServer::http_clients.load();
 	stats["max_connections"] = XapiandServer::max_total_clients.load();
 	stats["max_http_connections"] = XapiandServer::max_http_clients.load();
-	stats["workers_pool_size"] = thread_pool.size();
-	stats["servers_pool_size"] = server_pool.size();
-	stats["committers_pool_size"] = autocommit_pool.size();
-	stats["fsync_pool_size"] = asyncfsync_pool.size();
+	stats["workers_pool_size"] = thread_pool.threadpool_size();
+	stats["servers_pool_size"] = server_pool.threadpool_size();
+	stats["committers_pool_size"] = autocommit_pool.threadpool_size();
+	stats["fsync_pool_size"] = asyncfsync_pool.threadpool_size();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
 		stats["binary_connections"] = XapiandServer::binary_clients.load();
 		stats["max_binary_connections"] = XapiandServer::max_binary_clients.load();
-		stats["replicators_pool_size"] = replicator_pool.size();
+		stats["replicators_pool_size"] = replicator_pool.threadpool_size();
 	}
 #endif
 }
