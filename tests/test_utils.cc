@@ -28,55 +28,58 @@
 //TESTS CASES
 const struct test_url_path urls[] {
 	{
-		"db_new.db,db_new.db/_search", {"db_new.db", "db_new.db"}, {""}, "", "_search", "", 0
+		"db_new.db,db_new.db/_search", {"db_new.db", "db_new.db"}, {""}, "", "_search", "", 0, true
 	},
 	{
-		"/AQjN/BVf/78w/QjNBVfWKH78w/clients/clients.client.cd7ec34a-5d4a-11e5-b0b2-34363bc9ddd6/", {"/AQjN/BVf/78w/QjNBVfWKH78w/clients"}, {""}, "", "clients.client.cd7ec34a-5d4a-11e5-b0b2-34363bc9ddd6", "", 0
+		"/AQjN/BVf/78w/QjNBVfWKH78w/clients/clients.client.cd7ec34a-5d4a-11e5-b0b2-34363bc9ddd6/", {"/AQjN/BVf/78w/QjNBVfWKH78w/clients"}, {""}, "", "clients.client.cd7ec34a-5d4a-11e5-b0b2-34363bc9ddd6", "", 0, true
 	},
 	{
-		"/favicon.ico", {""}, {""}, "", "favicon.ico", "", -2
+		"/favicon.ico", {""}, {""}, "", "favicon.ico", "", -2, true
 	},
 	{
-		"//patt/to:namespace1/index1@host1,//namespace2/index2@host2,namespace3/index3@host3/type/search////", {"namespace1/index1", "//namespace2/index2", "namespace3/index3"}, {"host1", "host2", "host3/type"}, "", "search", "//patt/to", 0
+		"//patt/to:namespace1/index1@host1,//namespace2/index2@host2,namespace3/index3@host3/type/search////", {"namespace1/index1", "//namespace2/index2", "namespace3/index3"}, {"host1", "host2", "host3/type"}, "", "search", "//patt/to", 0, true
 	},
 	{
-		"/patt/to:namespace1/index1@host1,@host2,namespace3/index3/search", {"namespace1/index1"}, {"host1"}, "", "search", "/patt/to", 0
+		"/patt/to:namespace1/index1@host1,@host2,namespace3/index3/search", {"namespace1/index1"}, {"host1"}, "", "search", "/patt/to", 0, true
 	},
 	{
-		"/database/", {""}, {""}, "", "database", "", -2
+		"/database/", {""}, {""}, "", "database", "", -2, true
 	},
 	{
-		"path/1", {"path"}, {""}, "", "1", "", 0
+		"path/1", {"path"}, {""}, "", "1", "", 0, true
 	},
 	{
-		"/db_titles/localhost/_upload/", {"/db_titles/localhost"}, {""}, "", "_upload", "", 0
+		"/db_titles/localhost/_upload/", {"/db_titles/localhost"}, {""}, "", "_upload", "", 0, true
 	},
 	{
-		"delete", {""}, {""}, "", "delete", "", -1
+		"delete", {""}, {""}, "", "delete", "", -1, true
 	},
 	{
-		"//patt/to:namespace1/index1@host1,//namespace2/index2@host2:8890,namespace3/index3@host3/type1,type2/search////", {"namespace1/index1", "//namespace2/index2", "namespace3/index3", "type2"}, {"host1", "host2:8890", "host3/type1", "host3/type1"}, "", "search", "//patt/to", 0
+		"//patt/to:namespace1/index1@host1,//namespace2/index2@host2:8890,namespace3/index3@host3/type1,type2/search////", {"namespace1/index1", "//namespace2/index2", "namespace3/index3", "type2"}, {"host1", "host2:8890", "host3/type1", "host3/type1"}, "", "search", "//patt/to", 0, true
 	},
 	{
-		"/patt/to:namespace1/index1@host1,/namespace2/index2@host2,namespace3/index3@host3/t1/_upload/search/", {"namespace1/index1", "/namespace2/index2", "namespace3/index3"}, {"host1", "host2", "host3/t1"}, "_upload", "search", "/patt/to", 0
+		"/patt/to:namespace1/index1@host1,/namespace2/index2@host2,namespace3/index3@host3/t1/_upload/search/", {"namespace1/index1", "/namespace2/index2", "namespace3/index3"}, {"host1", "host2", "host3/t1"}, "_upload", "search", "/patt/to", 0, true
 	},
 	{
-		"/database.db/subdir/_upload/3/", {"/database.db/subdir"}, {""}, "_upload", "3", "", 0
+		"/database.db/subdir/_upload/3/", {"/database.db/subdir"}, {""}, "_upload", "3", "", 0, true
 	},
 	{
-		"usr/dir:subdir,_upload/1", {"subdir"}, {""}, "_upload", "1", "usr/dir", 0
+		"usr/dir:subdir,_upload/1", {"subdir"}, {""}, "_upload", "1", "usr/dir", 0, true
 	},
 	{
-		"/database.db/_upload/_search/", {"/database.db"}, {""}, "_upload", "_search", "", 0
+		"/database.db/_upload/_search/", {"/database.db"}, {""}, "_upload", "_search", "", 0, true
 	},
 	{
-		"/_stats/", {""}, {""}, "", "_stats", "", 10
+		"/_stats/", {""}, {""}, "", "_stats", "", 10, true
 	},
 	{
-		"/index/_stats", {"/index"}, {""}, "", "_stats", "", 0
+		"/index/_stats", {"/index"}, {""}, "", "_stats", "", 0, true
 	},
 	{
-		"/index/_stats/1", {"/index"}, {""}, "_stats", "1", "", 0
+		"/index/_stats/1", {"/index"}, {""}, "_stats", "1", "", 0, true
+	},
+	{
+		"/index/_stats/1", {"/index/_stats/1"}, {""}, "", "", "", 0, false
 	}
 };
 
@@ -85,7 +88,7 @@ int run_url_path(const struct test_url_path& u) {
 	 struct parser_url_path_t p;
 	 memset(&p, 0, sizeof(p));
 
-	 int rval = url_path(u.url.c_str(), u.url.size(), &p);
+	 int rval = url_path(u.url.c_str(), u.url.size(), &p, u.find_id);
 	 if (strncmp(p.off_namespace, u.nspace.c_str(), p.len_namespace) != 0) {
 		return 1;
 	}

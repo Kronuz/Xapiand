@@ -31,6 +31,7 @@ struct test_url_path {
 	std::string command;                /* the command or the id */
 	std::string nspace;                 /* the namespace if it exist */
 	int reval;                          /* the error if it exist */
+	bool find_id;                       /* the flag to find the id or the command */
 };
 
 int test_url_path();
