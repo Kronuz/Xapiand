@@ -347,23 +347,23 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 }
 
 
-int url_path(const char* ni, size_t size, parser_url_path_t *par) {
+int url_path(const char* ni, size_t size, parser_url_path_t *par, bool find_id) {
 	const char *nf = ni + size;
 	const char *n0, *n1, *n2 = nullptr;
 	int state, direction;
 	size_t length;
 	bool unique_cmd = false;
 
-	if (par->offset == nullptr) {
+	if (par->offset == nullptr and find_id) {
 		state = STATE_CM0;
 		n0 = n1 = n2 = nf - 1;
 		direction = -1;
 	} else {
 		state = STATE_NSP;
-		n0 = n1 = n2 = par->offset;
+		n0 = n1 = n2 = find_id ? par->offset : ni;
 		if (par->off_parameter) {
 			nf = par->off_parameter - 1;
-		} else {
+		} else if (par->off_command) {
 			nf = par->off_command - 1;
 		}
 		direction = 1;
