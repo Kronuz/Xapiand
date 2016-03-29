@@ -839,7 +839,6 @@ HttpClient::stats_view(const query_field_t& e, int mode)
 			 manager()->database_pool.checkin(database);
 			 res_stats = true;
 		 } else if (mode == CMD_STATS) {	/* Document stats */
-			 L(this, "Mode for stats %s", command.c_str());
 			 if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 				 L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 				 write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
