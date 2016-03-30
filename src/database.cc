@@ -55,11 +55,6 @@
 static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
 
 
-static auto getPos = [](size_t pos, size_t size) noexcept {
-	return pos < size ? pos : size - 1;
-};
-
-
 #if XAPIAND_DATABASE_WAL
 
 constexpr const char* const DatabaseWAL::names[];
@@ -591,7 +586,7 @@ Database::reopen()
 		// Try to reopen
 		try {
 			bool ret = db->reopen();
-			schema.setDatabase(this);
+			schema.set_database(this);
 			return ret;
 		} catch (const Xapian::Error& exc) {
 			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
@@ -729,7 +724,7 @@ Database::reopen()
 		}
 	}
 
-	schema.setDatabase(this);
+	schema.set_database(this);
 
 	return true;
 }
@@ -982,318 +977,6 @@ Database::index_required_data(Xapian::Document& doc, std::string& term_id, const
 
 
 void
-Database::index_object(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value)
-{
-	L_CALL(this, "Database::index_object()");
-
-	const specification_t spc_bef = schema.specification;
-	if (item_val.get_type() == msgpack::type::MAP) {
-		bool offsprings = false;
-		for (auto subitem_key : item_val) {
-			std::string str_subkey(subitem_key.body->obj->via.str.ptr, subitem_key.body->obj->via.str.size);
-			auto subitem_val = item_val.at(str_subkey);
-			if (!is_reserved(str_subkey)) {
-				std::string full_subkey(str_key.empty() ? str_subkey : str_key + DB_OFFSPRING_UNION + str_subkey);
-				index_object(doc, full_subkey, subitem_val, schema.get_subproperties(properties, str_subkey, subitem_val), is_value);
-				offsprings = true;
-			} else if (str_subkey.compare(RESERVED_VALUE) == 0) {
-				if (schema.specification.sep_types[2] == NO_TYPE) {
-					schema.set_type(properties, str_key, subitem_val);
-				}
-				if (is_value || schema.specification.index == Index::VALUE) {
-					index_values(doc, str_key, subitem_val, properties);
-				} else if (schema.specification.index == Index::TERM) {
-					index_terms(doc, str_key, subitem_val, properties);
-				} else {
-					index_values(doc, str_key, subitem_val, properties, true);
-				}
-			}
-			schema.specification = spc_bef;
-		}
-		if (offsprings) {
-			schema.set_type_to_object(properties);
-		}
-	} else {
-		if (schema.specification.sep_types[2] == NO_TYPE) {
-			schema.set_type(properties, str_key, item_val);
-		}
-		if (is_value || schema.specification.index == Index::VALUE) {
-			index_values(doc, str_key, item_val, properties);
-		} else if (schema.specification.index == Index::TERM) {
-			index_terms(doc, str_key, item_val, properties);
-		} else {
-			index_values(doc, str_key, item_val, properties, true);
-		}
-		schema.specification = spc_bef;
-	}
-}
-
-
-void
-Database::index_texts(Xapian::Document& doc, const std::string& name, const MsgPack& texts, MsgPack& properties)
-{
-	L_CALL(this, "Database::index_texts()");
-
-	// L_DATABASE_WRAP(this, "Texts => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
-	if (!(schema.found_field || schema.specification.dynamic)) {
-		throw MSG_ClientError("%s is not dynamic", name.c_str());
-	}
-
-	if (schema.specification.store) {
-		if (schema.specification.bool_term) {
-			throw MSG_ClientError("A boolean term can not be indexed as text");
-		}
-
-		try {
-			if (texts.get_type() == msgpack::type::ARRAY) {
-				schema.set_type_to_array(properties);
-				size_t pos = 0;
-				for (auto text : texts) {
-					index_text(doc, text.get_str(), pos++);
-				}
-			} else {
-				index_text(doc, texts.get_str(), 0);
-			}
-		} catch (const msgpack::type_error&) {
-			throw MSG_ClientError("Texts should be a string or array of strings");
-		}
-	}
-}
-
-
-void
-Database::index_text(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const
-{
-	L_CALL(this, "Database::index_text()");
-
-	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-
-	Xapian::TermGenerator term_generator;
-	term_generator.set_document(doc);
-	term_generator.set_stemmer(Xapian::Stem(schema.specification.language[getPos(pos, schema.specification.language.size())]));
-	if (schema.specification.spelling[getPos(pos, schema.specification.spelling.size())]) {
-		term_generator.set_database(*wdb);
-		term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
-		term_generator.set_stemming_strategy((Xapian::TermGenerator::stem_strategy)schema.specification.analyzer[getPos(pos, schema.specification.analyzer.size())]);
-	}
-
-	if (schema.specification.positions[getPos(pos, schema.specification.positions.size())]) {
-		if (schema.specification.prefix.empty()) {
-			term_generator.index_text_without_positions(serialise_val, schema.specification.weight[getPos(pos, schema.specification.weight.size())]);
-		} else {
-			term_generator.index_text_without_positions(serialise_val, schema.specification.weight[getPos(pos, schema.specification.weight.size())], schema.specification.prefix);
-		}
-		L_DATABASE_WRAP(this, "Text index with positions => %s: %s", schema.specification.prefix.c_str(), serialise_val.c_str());
-	} else {
-		if (schema.specification.prefix.empty()) {
-			term_generator.index_text(serialise_val, schema.specification.weight[getPos(pos, schema.specification.weight.size())]);
-		} else {
-			term_generator.index_text(serialise_val, schema.specification.weight[getPos(pos, schema.specification.weight.size())], schema.specification.prefix);
-		}
-		L_DATABASE_WRAP(this, "Text to Index = %s: %s", schema.specification.prefix.c_str(), serialise_val.c_str());
-	}
-}
-
-
-void
-Database::index_terms(Xapian::Document& doc, const std::string& name, const MsgPack& terms, MsgPack& properties)
-{
-	L_CALL(this, "Database::index_terms()");
-
-	// L_DATABASE_WRAP(this, "Terms => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
-	if (!(schema.found_field || schema.specification.dynamic)) {
-		throw MSG_ClientError("%s is not dynamic", name.c_str());
-	}
-
-	if (schema.specification.store) {
-		if (terms.get_type() == msgpack::type::ARRAY) {
-			schema.set_type_to_array(properties);
-			size_t pos = 0;
-			for (auto term : terms) {
-				index_term(doc, Serialise::serialise(schema.specification.sep_types[2], term), pos++);
-			}
-		} else {
-			index_term(doc, Serialise::serialise(schema.specification.sep_types[2], terms), 0);
-		}
-	}
-}
-
-
-void
-Database::index_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const
-{
-	L_CALL(this, "Database::index_term()");
-
-	if (serialise_val.empty()) {
-		return;
-	}
-	if (schema.specification.sep_types[2] == STRING_TYPE && !schema.specification.bool_term) {
-		if (serialise_val.find(" ") != std::string::npos) {
-			return index_text(doc, std::move(serialise_val), pos);
-		}
-		to_lower(serialise_val);
-	}
-
-	L_DATABASE_WRAP(this, "Term[%d] -> %s: %s", pos, schema.specification.prefix.c_str(), serialise_val.c_str());
-	std::string nameterm(prefixed(serialise_val, schema.specification.prefix));
-	unsigned position = schema.specification.position[getPos(pos, schema.specification.position.size())];
-	if (position) {
-		if (schema.specification.bool_term) {
-			doc.add_posting(nameterm, position, 0);
-		} else {
-			doc.add_posting(nameterm, position, schema.specification.weight[getPos(pos, schema.specification.weight.size())]);
-		}
-		L_DATABASE_WRAP(this, "Bool: %s  Posting: %s", schema.specification.bool_term ? "true" : "false", repr(nameterm).c_str());
-	} else {
-		if (schema.specification.bool_term) {
-			doc.add_boolean_term(nameterm);
-		} else {
-			doc.add_term(nameterm, schema.specification.weight[getPos(pos, schema.specification.weight.size())]);
-		}
-		L_DATABASE_WRAP(this, "Bool: %s  Term: %s", schema.specification.bool_term ? "true" : "false", repr(nameterm).c_str());
-	}
-}
-
-
-void
-Database::index_values(Xapian::Document& doc, const std::string& name, const MsgPack& values, MsgPack& properties, bool is_term)
-{
-	L_CALL(this, "Database::index_values()");
-
-	// L_DATABASE_WRAP(this, "Values => Field: %s\nSpecifications: %s", name.c_str(), schema.specification.to_string().c_str());
-	if (!(schema.found_field || schema.specification.dynamic)) {
-		throw MSG_ClientError("%s is not dynamic", name.c_str());
-	}
-
-	if (schema.specification.store) {
-		StringList s;
-		size_t pos = 0;
-		if (values.get_type() == msgpack::type::ARRAY) {
-			schema.set_type_to_array(properties);
-			s.reserve(values.body->obj->via.array.size);
-			for (auto value : values) {
-				index_value(doc, value, s, pos, is_term);
-			}
-		} else {
-			index_value(doc, values, s, pos, is_term);
-		}
-		doc.add_value(schema.specification.slot, s.serialise());
-		L_DATABASE_WRAP(this, "Slot: %u serialized: %s", schema.specification.slot, repr(s.serialise()).c_str());
-	}
-}
-
-
-void
-Database::index_value(Xapian::Document& doc, const MsgPack& value, StringList& s, size_t& pos, bool is_term) const
-{
-	L_CALL(this, "Database::index_value()");
-
-	std::string value_v;
-
-	// Index terms generated by accuracy.
-	switch (schema.specification.sep_types[2]) {
-		case NUMERIC_TYPE: {
-			try {
-				double _value = value.get_f64();
-				value_v = Serialise::numeric(NUMERIC_TYPE, _value);
-				int64_t int_value = static_cast<int64_t>(_value);
-				auto it = schema.specification.acc_prefix.begin();
-				for (const auto& acc : schema.specification.accuracy) {
-					std::string term_v = Serialise::numeric(NUMERIC_TYPE, int_value - int_value % (uint64_t)acc);
-					doc.add_term(prefixed(term_v, *(it++)));
-				}
-				s.push_back(value_v);
-				break;
-			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for numeric: %s", value.to_json_string().c_str());
-			}
-		}
-		case DATE_TYPE: {
-			Datetime::tm_t tm;
-			value_v = Serialise::date(value, tm);
-			auto it = schema.specification.acc_prefix.begin();
-			for (const auto& acc : schema.specification.accuracy) {
-				switch ((unitTime)acc) {
-					case unitTime::YEAR:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "y"), *it++));
-						break;
-					case unitTime::MONTH:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "M"), *it++));
-						break;
-					case unitTime::DAY:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "d"), *it++));
-						break;
-					case unitTime::HOUR:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "h"), *it++));
-						break;
-					case unitTime::MINUTE:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "m"), *it++));
-						break;
-					case unitTime::SECOND:
-						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "s"), *it++));
-						break;
-				}
-			}
-			s.push_back(value_v);
-			break;
-		}
-		case GEO_TYPE: {
-			std::string ewkt(value.get_str());
-			if (is_term) {
-				value_v = Serialise::ewkt(ewkt);
-			}
-
-			RangeList ranges;
-			CartesianUSet centroids;
-
-			EWKT_Parser::getRanges(ewkt, schema.specification.accuracy[0], schema.specification.accuracy[1], ranges, centroids);
-
-			// Index Values and looking for terms generated by accuracy.
-			std::unordered_set<std::string> set_terms;
-			for (const auto& range : ranges) {
-				int idx = -1;
-				uint64_t val;
-				if (range.start != range.end) {
-					std::bitset<SIZE_BITS_ID> b1(range.start), b2(range.end), res;
-					for (idx = SIZE_BITS_ID - 1; b1.test(idx) == b2.test(idx); --idx) {
-						res.set(idx, b1.test(idx));
-					}
-					val = res.to_ullong();
-				} else {
-					val = range.start;
-				}
-				for (size_t i = 2; i < schema.specification.accuracy.size(); ++i) {
-					int pos = START_POS - schema.specification.accuracy[i] * 2;
-					if (idx < pos) {
-						uint64_t vterm = val >> pos;
-						set_terms.insert(prefixed(Serialise::trixel_id(vterm), schema.specification.acc_prefix[i - 2]));
-					} else {
-						break;
-					}
-				}
-			}
-			// Insert terms generated by accuracy.
-			for (const auto& term : set_terms) {
-				doc.add_term(term);
-			}
-			s.push_back(ranges.serialise());
-			s.push_back(centroids.serialise());
-			break;
-		}
-		default:
-			value_v = Serialise::serialise(schema.specification.sep_types[2], value);
-			s.push_back(value_v);
-			break;
-	}
-
-	// Index like a term.
-	if (is_term) {
-		index_term(doc, std::move(value_v), pos++);
-	}
-}
-
-
-void
 Database::_index(Xapian::Document& doc, const MsgPack& obj)
 {
 	L_CALL(this, "Database::_index()");
@@ -1301,101 +984,34 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 	if (obj.get_type() == msgpack::type::MAP) {
 		// Save a copy of schema for undo changes if there is a exception.
 		auto str_schema = schema.to_string();
-		auto _to_store = schema.getStore();
+		auto _to_store = schema.get_store();
+
 		try {
-			auto properties = schema.getProperties();
-			schema.update_root(properties, obj);
+			specification_t specification;
+			auto properties = schema.get_properties(specification);
 
-			const specification_t spc_bef = schema.specification;
+			const specification_t spc_bef = specification;
 
+			schema.set_properties(properties, obj, specification);
 			for (const auto item_key : obj) {
-				std::string str_key(item_key.get_str());
+				auto str_key = item_key.get_str();
 				auto item_val = obj.at(str_key);
-				if (!is_reserved(str_key)) {
-					index_object(doc, str_key, item_val, schema.get_subproperties(properties, str_key, item_val), false);
-				} else if (str_key == RESERVED_VALUES) {
-					if (item_val.get_type() == msgpack::type::MAP) {
-						index_object(doc, "", item_val, schema.getProperties());
-					} else {
-						throw MSG_ClientError("%s must be an object", RESERVED_VALUES);
-					}
-				} else if (str_key == RESERVED_TEXTS) {
-					if (item_val.get_type() == msgpack::type::ARRAY) {
-						for (auto subitem_val : item_val) {
-							try {
-								auto _value = subitem_val.at(RESERVED_VALUE);
-								try {
-									auto _name = subitem_val.at(RESERVED_NAME);
-									try {
-										std::string name(_name.get_str());
-										auto subproperties = schema.get_subproperties(properties, name, subitem_val);
-										if (schema.specification.sep_types[2] == NO_TYPE) {
-											schema.set_type(subproperties, name, _value);
-										}
-										index_texts(doc, name, _value, subproperties);
-									} catch (const msgpack::type_error&) {
-										throw MSG_ClientError("%s must be string", RESERVED_NAME);
-									}
-								} catch (const std::out_of_range&) {
-									schema.update_specification(subitem_val);
-									MsgPack subproperties;
-									if (schema.specification.sep_types[2] == NO_TYPE) {
-										schema.set_type(subproperties, std::string(), _value);
-									}
-									index_texts(doc, std::string(), _value, subproperties);
-								}
-								schema.specification = spc_bef;
-							} catch (const std::out_of_range&) {
-								throw MSG_ClientError("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_TEXTS);
-							} catch (const msgpack::type_error&) {
-								throw MSG_ClientError("%s must be an array of objects", RESERVED_TEXTS);
-							}
-						}
-					} else {
-						throw MSG_ClientError("%s must be an array of objects", RESERVED_TEXTS);
-					}
-				} else if (str_key == RESERVED_TERMS) {
-					if (item_val.get_type() == msgpack::type::ARRAY) {
-						for (auto subitem_val : item_val) {
-							try {
-								auto _value = subitem_val.at(RESERVED_VALUE);
-								try {
-									auto _name = subitem_val.at(RESERVED_NAME);
-									try {
-										std::string name(_name.get_str());
-										auto subproperties = schema.get_subproperties(properties, name, subitem_val);
-										if (schema.specification.sep_types[2] == NO_TYPE) {
-											schema.set_type(subproperties, name, _value);
-										}
-										index_terms(doc, name, _value, subproperties);
-									} catch (const msgpack::type_error&) {
-										throw MSG_ClientError("%s must be string", RESERVED_NAME);
-									}
-								} catch (const std::out_of_range&) {
-									schema.update_specification(subitem_val);
-									MsgPack subproperties;
-									if (schema.specification.sep_types[2] == NO_TYPE) {
-										schema.set_type(subproperties, std::string(), _value);
-									}
-									index_terms(doc, std::string(), _value, subproperties);
-								}
-								schema.specification = spc_bef;
-							} catch (const std::out_of_range&) {
-								throw MSG_ClientError("%s must be defined in objects of %s", RESERVED_VALUE, RESERVED_VALUES);
-							} catch (const msgpack::type_error&) {
-								throw MSG_ClientError("%s must be an array of objects", RESERVED_VALUES);
-							}
-						}
-					} else {
-						throw MSG_ClientError("%s must be an array of objects", RESERVED_VALUES);
+				try {
+					auto func = map_dispatch_root.at(str_key);
+					(schema.*func)(properties, item_val, specification, doc);
+				} catch (const std::out_of_range&) {
+					if (is_valid(str_key)) {
+						auto subproperties = schema.get_subproperties(properties, str_key, specification);
+						schema.index_object(subproperties, item_val, specification, doc, str_key, false);
 					}
 				}
+				specification = spc_bef;
 			}
 		} catch (...) {
 			// Back to the initial schema if there are changes.
-			if (schema.getStore()) {
-				schema.setSchema(str_schema);
-				schema.setStore(_to_store);
+			if (schema.get_store()) {
+				schema.set_schema(str_schema);
+				schema.set_store(_to_store);
 			}
 			throw;
 		}
@@ -1842,7 +1458,8 @@ Database::get_data_field(const std::string& field_name)
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
-		auto properties = schema.getProperties().path(fields);
+		specification_t specification;
+		auto properties = schema.get_properties(specification).path(fields);
 
 		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
 		if (res.type == NO_TYPE) {
@@ -1886,7 +1503,8 @@ Database::get_slot_field(const std::string& field_name)
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
-		auto properties = schema.getProperties().path(fields);
+		specification_t specification;
+		auto properties = schema.get_properties(specification).path(fields);
 		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
 		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
 	} catch (const std::exception&) { }

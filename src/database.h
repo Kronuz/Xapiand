@@ -367,17 +367,6 @@ public:
 
 private:
 	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const;
-	void index_object(Xapian::Document& doc, const std::string& str_key, const MsgPack& item_val, MsgPack&& properties, bool is_value=true);
-
-	void index_texts(Xapian::Document& doc, const std::string& name, const MsgPack& texts, MsgPack& properties);
-	void index_text(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-
-	void index_terms(Xapian::Document& doc, const std::string& name, const MsgPack& terms, MsgPack& properties);
-	void index_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-
-	void index_values(Xapian::Document& doc, const std::string& name, const MsgPack& values, MsgPack& properties, bool is_term=false);
-	void index_value(Xapian::Document& doc, const MsgPack& value, StringList& s, size_t& pos, bool is_term) const;
-
 	void _index(Xapian::Document& doc, const MsgPack& obj);
 
 	search_t _search(const std::string& query, unsigned flags, bool text, const std::string& lan);
