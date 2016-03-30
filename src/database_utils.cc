@@ -181,17 +181,14 @@ rapidjson::Document to_json(const std::string& str) {
 }
 
 
-void
-set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str)
-{
+void set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str) {
 	char h = DATABASE_DATA_HEADER_MAGIC;
 	char f = DATABASE_DATA_FOOTER_MAGIC;
 	doc.set_data(std::string(&h, 1) + serialise_length(obj_data_str.size()) + obj_data_str + std::string(&f, 1) + blob_str);
 }
 
-MsgPack
-get_MsgPack(const Xapian::Document& doc)
-{
+
+MsgPack get_MsgPack(const Xapian::Document& doc) {
 	std::string data = doc.get_data();
 
 	size_t length;
@@ -208,9 +205,7 @@ get_MsgPack(const Xapian::Document& doc)
 }
 
 
-std::string
-get_blob(const Xapian::Document& doc)
-{
+std::string get_blob(const Xapian::Document& doc) {
 	std::string data = doc.get_data();
 
 	size_t length;
