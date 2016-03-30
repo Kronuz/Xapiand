@@ -777,7 +777,7 @@ BinaryClient::msg_query(const std::string &message_in)
 
 	////////////////////////////////////////////////////////////////////////////
 	// Sort by
-	typedef enum { REL, VAL, VAL_REL, REL_VAL } sort_setting;
+	using sort_setting = enum { REL, VAL, VAL_REL, REL_VAL };
 
 	Xapian::valueno sort_key = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
 
