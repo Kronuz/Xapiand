@@ -174,6 +174,13 @@ void json_load(rapidjson::Document& doc, const std::string& str) {
 }
 
 
+rapidjson::Document to_json(const std::string& str) {
+	rapidjson::Document doc;
+	json_load(doc, str);
+	return doc;
+}
+
+
 void
 set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str)
 {
