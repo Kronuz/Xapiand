@@ -1052,7 +1052,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, const 
 
 				try {
 					for (const auto _accuracy : *specification.doc_acc) {
-						std::string str_accuracy(upper_string(_accuracy.get_str()));
+						std::string str_accuracy(lower_string(_accuracy.get_str()));
 						if (str_accuracy == str_time[5]) {
 							set_acc.insert(toUType(unitTime::YEAR));
 						} else if (str_accuracy == str_time[4]) {
@@ -1066,12 +1066,12 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, const 
 						} else if (str_accuracy == str_time[0]) {
 							set_acc.insert(toUType(unitTime::SECOND));
 						} else {
-							throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+							throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
 						}
 					}
 					break;
 				} catch (const msgpack::type_error&) {
-					throw MSG_ClientError("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s]}", RESERVED_ACCURACY, DATE_STR, str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+					throw MSG_ClientError("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s]}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
 				}
 			}
 			case NUMERIC_TYPE: {
