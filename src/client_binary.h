@@ -259,6 +259,6 @@ public:
 	void run() override;
 };
 
-typedef void (BinaryClient::* dispatch_func)(const std::string &);
+using dispatch_func = void (BinaryClient::*)(const std::string&);
 
 #endif  /* XAPIAND_CLUSTERING */
