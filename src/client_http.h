@@ -122,7 +122,7 @@ class HttpClient : public BaseClient {
 	void _delete();
 
 	int url_resolve(query_field_t& e, bool writable);
-	int endpoint_maker(parser_url_path_t& p, bool writable);
+	int endpoint_maker(parser_url_path_t& p, bool writable, bool require);
 	void query_maker(const char* query_str, size_t query_size, int cmd, query_field_t& e, parser_query_t& q);
 	static int identify_cmd(const std::string& commad);
 	int identify_mode(const std::string &mode);

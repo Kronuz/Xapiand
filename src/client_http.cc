@@ -1081,7 +1081,8 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 			parser_url_path_t p;
 			memset(&p, 0, sizeof(p));
 
-			retval = url_path(path_buf.c_str(), path_size, &p);
+			bool find_id = parser.method == METHOD_POST ? false : true;
+			retval = url_path(path_buf.c_str(), path_size, &p, find_id);
 
 			if (retval < 0) {
 				return CMD_BAD_QUERY;
@@ -1092,7 +1093,7 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 				command = lower_string(urldecode(p.off_command, p.len_command));
 			} else {
 				while (retval == 0) {
-					int endp_err = endpoint_maker(p, writable);
+					int endp_err = endpoint_maker(p, writable, find_id);
 					if (endp_err != 0) {
 						return endp_err;
 					}
@@ -1149,11 +1150,11 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 
 
 int
-HttpClient::endpoint_maker(parser_url_path_t& p, bool writable)
+HttpClient::endpoint_maker(parser_url_path_t& p, bool writable, bool require_id)
 {
 	bool has_node_name = false;
 
-	if (p.len_command) {
+	if (p.len_command and require_id) {
 		command = lower_string(urldecode(p.off_command, p.len_command));
 		if (command.empty()) {
 			return CMD_BAD_QUERY;
