@@ -94,6 +94,8 @@ class HttpClient : public BaseClient {
 	std::string command;  //command or ID
 	std::string mode; //parameter optional in url
 
+	unsigned long post_id; /* only usend for method POST to generate id */
+
 	bool request_begining;
 	std::chrono::time_point<std::chrono::system_clock> request_begins;
 	std::chrono::time_point<std::chrono::system_clock> response_begins;
@@ -106,7 +108,7 @@ class HttpClient : public BaseClient {
 
 	void stats_view(const query_field_t& e, int mode);
 	void delete_document_view(const query_field_t& e);
-	void index_document_view(const query_field_t& e);
+	void index_document_view(const query_field_t& e, bool gen_id=false);
 	void document_info_view(const query_field_t& e);
 	void update_document_view(const query_field_t& e);
 	void upload_view(const query_field_t& e);

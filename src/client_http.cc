@@ -41,6 +41,8 @@
 #define MAX_BODY_SIZE (250 * 1024 * 1024)
 #define MAX_BODY_MEM (5 * 1024 * 1024)
 
+#define def_36e6 2176782336
+
 // Xapian http client
 #define METHOD_DELETE  0
 #define METHOD_HEAD    2
@@ -161,6 +163,7 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* loop_,
 	  database(nullptr),
 	  body_size(0),
 	  body_descriptor(0),
+	  post_id(0),
 	  request_begining(true)
 {
 	parser.data = this;
@@ -572,32 +575,10 @@ HttpClient::_post()
 
 	query_field_t e;
 	int cmd = url_resolve(e, false);
-	int mode = identify_mode(HttpClient::mode);
-
-	if (mode != CMD_UNKNOWN) {
-		cmd = mode; /* Left the cmd as the mode */
-	}
-
+	
 	switch (cmd) {
-		case CMD_ID:
-			e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
-			search_view(e, false, false);
-			break;
-		case CMD_SEARCH:
-			e.check_at_least = 0;
-			search_view(e, false, false);
-			break;
-		case CMD_FACETS:
-			search_view(e, true, false);
-			break;
-		case CMD_STATS:
-			stats_view(e, mode);
-			break;
-		case CMD_SCHEMA:
-			search_view(e, false, true);
-			break;
-		case CMD_UPLOAD:
-			upload_view(e);
+		case CMD_ID: /* by default will be set as a command id */
+			index_document_view(e, true);
 			break;
 		default:
 			bad_request_view(e, cmd);
@@ -740,7 +721,7 @@ HttpClient::delete_document_view(const query_field_t& e)
 
 
 void
-HttpClient::index_document_view(const query_field_t& e)
+HttpClient::index_document_view(const query_field_t& e, bool gen_id)
 {
 	L_CALL(this, "HttpClient::index_document_view()");
 
@@ -750,6 +731,11 @@ HttpClient::index_document_view(const query_field_t& e)
 		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
+	}
+
+	if (gen_id) {
+		unsigned long mangled = std::fmod(++post_id * 1679979167, def_36e6);
+		command = baseN(mangled, 36);
 	}
 
 	if (content_type.empty()) {
