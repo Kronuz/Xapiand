@@ -226,7 +226,7 @@ BaseUDP::get_message(std::string& result, char max_type)
 	}
 
 	if (remote_cluster_name != manager()->cluster_name) {
-		throw MSG_NetworkError("Badly formed message: No cluster name!");
+		throw MSG_DummyException();
 	}
 
 	result = std::string(p, p_end - p);
