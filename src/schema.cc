@@ -955,45 +955,6 @@ Schema::process_terms(MsgPack& properties, const MsgPack& doc_terms, specificati
 
 
 void
-Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc, const char* reserved_word, dispatch_index func)
-{
-	L_CALL(this, "Schema::index_array()");
-
-	const specification_t spc_bef = specification;
-	if (array.get_type() == msgpack::type::ARRAY) {
-		for (auto item : array) {
-			try {
-				auto _value = item.at(RESERVED_VALUE);
-				std::string name;
-				MsgPack subproperties;
-				try {
-					auto _name = item.at(RESERVED_NAME);
-					try {
-						name = _name.get_str();
-						subproperties = get_subproperties(properties, name, specification);
-					} catch (const msgpack::type_error&) {
-						throw MSG_ClientError("%s must be string", RESERVED_NAME);
-					}
-				} catch (const std::out_of_range&) { }
-
-				set_properties(subproperties, item, specification);
-				validate_required_data(subproperties, _value, name, specification);
-
-				(this->*func)(properties, item, specification, doc, name);
-				specification = spc_bef;
-			} catch (const std::out_of_range&) {
-				throw MSG_ClientError("%s must be defined in objects of %s", RESERVED_VALUE, reserved_word);
-			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("%s must be an array of objects", reserved_word);
-			}
-		}
-	} else {
-		throw MSG_ClientError("%s must be an array of objects", reserved_word);
-	}
-}
-
-
-void
 Schema::validate_required_data(MsgPack& properties, const MsgPack& value, const std::string& name, specification_t& specification)
 {
 	L_CALL(this, "Schema::validate_required_data()");
@@ -1128,6 +1089,47 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, const 
 
 
 void
+Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc, const char* reserved_word, dispatch_index func)
+{
+	L_CALL(this, "Schema::index_array()");
+
+	const specification_t spc_bef = specification;
+	if (array.get_type() == msgpack::type::ARRAY) {
+		for (auto item : array) {
+			try {
+				auto _value = item.at(RESERVED_VALUE);
+				std::string name;
+				MsgPack subproperties;
+				try {
+					auto _name = item.at(RESERVED_NAME);
+					try {
+						name = _name.get_str();
+						subproperties = get_subproperties(properties, name, specification);
+					} catch (const msgpack::type_error&) {
+						throw MSG_ClientError("%s must be string", RESERVED_NAME);
+					}
+				} catch (const std::out_of_range&) {
+					specification.set_type = false;
+				}
+
+				set_properties(subproperties, item, specification);
+				validate_required_data(subproperties, _value, name, specification);
+
+				(this->*func)(properties, _value, specification, doc, name);
+				specification = spc_bef;
+			} catch (const std::out_of_range&) {
+				throw MSG_ClientError("%s must be defined in objects of %s", RESERVED_VALUE, reserved_word);
+			} catch (const msgpack::type_error&) {
+				throw MSG_ClientError("%s must be an array of objects", reserved_word);
+			}
+		}
+	} else {
+		throw MSG_ClientError("%s must be an array of objects", reserved_word);
+	}
+}
+
+
+void
 Schema::index_object(MsgPack& properties, const MsgPack& object, specification_t& specification, Xapian::Document& doc, const std::string& name, bool is_value)
 {
 	L_CALL(this, "Schema::index_object()");
@@ -1197,7 +1199,7 @@ Schema::index_texts(MsgPack& properties, const MsgPack& texts, const specificati
 				index_text(specification, doc, texts.get_str(), 0);
 			}
 		} catch (const msgpack::type_error&) {
-			throw MSG_ClientError("Texts should be a string or array of strings");
+			throw MSG_ClientError("%s should be a string or array of strings", RESERVED_TEXTS);
 		}
 	}
 }
