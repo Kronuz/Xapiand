@@ -254,6 +254,7 @@ public:
 #define L_HTTP_PROTO _
 #define L_BINARY_PROTO _
 #define L_DATABASE_WRAP _
+#define L_INDEX _
 
 // #define L_BEGIN_END
 #ifdef L_BEGIN_END
