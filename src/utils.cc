@@ -980,6 +980,29 @@ unsigned levenshtein_distance(const std::string& str1, const std::string& str2) 
 }
 
 
+/* http://stackoverflow.com/questions/19203877/good-algorithm-for-unique-random-generation-of-ids */
+std::string baseN(unsigned long num, int base, std::string symbols) {
+	if (num == 0) {
+		return std::string(1, symbols[0]);
+	} else {
+		return lstrip(baseN(num/base, base, symbols), symbols[0]) + symbols[num % base];
+	}
+}
+
+
+std::string lstrip(const std::string& str, char c) {
+	std::string _str(str);
+	for ( std::string::iterator it=_str.begin(); it!=_str.end();) {
+		if (*it == c) {
+			it = _str.erase(it);
+		} else {
+			return _str;
+		}
+	}
+	return _str;
+}
+
+
 std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end) {
 	static const char *units[] = { "s", "ms", "\xc2\xb5s", "ns" };
 	static const long double scaling[] = { 1, 1e3, 1e6, 1e9 };

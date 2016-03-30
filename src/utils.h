@@ -202,6 +202,10 @@ void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::
 // Levenshtein distance is a string metric for measuring the difference between two
 // sequences (known as edit distance).
 unsigned int levenshtein_distance(const std::string& str1, const std::string& str2);
+/* convert the num to a string in a given numeric base */
+std::string baseN(unsigned long num, int base, std::string symbols= std::string("0123456789abcdefghijklmnopqrstuvwxyz"));
+/* strip a string from the left size */
+std::string lstrip(const std::string& str, char c);
 
 std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end);
 
