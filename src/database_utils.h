@@ -29,50 +29,51 @@
 #include <vector>
 #include <xapian.h>
 
-#define RESERVED_WEIGHT "_weight"
-#define RESERVED_POSITION "_position"
-#define RESERVED_LANGUAGE "_language"
-#define RESERVED_SPELLING "_spelling"
-#define RESERVED_POSITIONS "_positions"
-#define RESERVED_TEXTS "_texts"
-#define RESERVED_VALUES "_values"
-#define RESERVED_TERMS "_terms"
-#define RESERVED_DATA "_data"
-#define RESERVED_ACCURACY "_accuracy"
-#define RESERVED_ACC_PREFIX "_acc_prefix"
-#define RESERVED_STORE "_store"
-#define RESERVED_TYPE "_type"
-#define RESERVED_ANALYZER "_analyzer"
-#define RESERVED_DYNAMIC "_dynamic"
+#define RESERVED_WEIGHT      "_weight"
+#define RESERVED_POSITION    "_position"
+#define RESERVED_LANGUAGE    "_language"
+#define RESERVED_SPELLING    "_spelling"
+#define RESERVED_POSITIONS   "_positions"
+#define RESERVED_TEXTS       "_texts"
+#define RESERVED_VALUES      "_values"
+#define RESERVED_TERMS       "_terms"
+#define RESERVED_DATA        "_data"
+#define RESERVED_ACCURACY    "_accuracy"
+#define RESERVED_ACC_PREFIX  "_acc_prefix"
+#define RESERVED_STORE       "_store"
+#define RESERVED_TYPE        "_type"
+#define RESERVED_ANALYZER    "_analyzer"
+#define RESERVED_DYNAMIC     "_dynamic"
 #define RESERVED_D_DETECTION "_date_detection"
 #define RESERVED_N_DETECTION "_numeric_detection"
 #define RESERVED_G_DETECTION "_geo_detection"
 #define RESERVED_B_DETECTION "_bool_detection"
 #define RESERVED_S_DETECTION "_string_detection"
-#define RESERVED_BOOL_TERM "_bool_term"
-#define RESERVED_VALUE "_value"
-#define RESERVED_NAME "_name"
-#define RESERVED_SLOT "_slot"
-#define RESERVED_INDEX "_index"
-#define RESERVED_PREFIX "_prefix"
-#define RESERVED_ID "_id"
-#define RESERVED_SCHEMA "_schema"
-#define RESERVED_VERSION "_version"
+#define RESERVED_BOOL_TERM   "_bool_term"
+#define RESERVED_VALUE       "_value"
+#define RESERVED_NAME        "_name"
+#define RESERVED_SLOT        "_slot"
+#define RESERVED_INDEX       "_index"
+#define RESERVED_PREFIX      "_prefix"
+#define RESERVED_ID          "_id"
+#define RESERVED_SCHEMA      "_schema"
+#define RESERVED_VERSION     "_version"
 
 #define DB_OFFSPRING_UNION "__"
-#define DB_LANGUAGES "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
-#define DB_VERSION_SCHEMA 2.0
+#define DB_LANGUAGES       "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
+#define DB_VERSION_SCHEMA  2.0
 
 // Default prefixes
-#define DOCUMENT_ID_TERM_PREFIX "Q"
+#define DOCUMENT_ID_TERM_PREFIX     "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
-#define JSON_TYPE "application/json"
+#define JSON_TYPE            "application/json"
 #define FORM_URLENCODED_TYPE "application/x-www-form-urlencoded"
-#define MSGPACK_TYPE "application/x-msgpack"
+#define MSGPACK_TYPE         "application/x-msgpack"
 
-const auto any_type = std::make_pair(std::string("*"), std::string("*"));
-const auto json_type = std::make_pair(std::string("application"), std::string("json"));
+
+const auto any_type     = std::make_pair(std::string("*"), std::string("*"));
+const auto json_type    = std::make_pair(std::string("application"), std::string("json"));
 const auto msgpack_type = std::make_pair(std::string("application"), std::string("x-msgpack"));
 
 
@@ -140,14 +141,15 @@ enum class MIMEType {
 
 
 long long read_mastery(const std::string& dir, bool force);
-// All the field that start with '_' are considered reserved word.
-bool is_reserved(const std::string& word);
+// All the field names that start or end with '_', or contains DB_OFFSPRING_UNION are not valid field names.
+bool is_valid(const std::string& word);
 bool is_language(const std::string& language);
 bool set_types(const std::string& type, std::vector<unsigned>& sep_types);
 std::string str_type(const std::vector<unsigned>& sep_types);
 void clean_reserved(MsgPack& document);
 MIMEType get_mimetype(const std::string& type);
 void json_load(rapidjson::Document& doc, const std::string& str);
+rapidjson::Document to_json(const std::string& str);
 void set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str);
 MsgPack get_MsgPack(const Xapian::Document& doc);
 std::string get_blob(const Xapian::Document& doc);
