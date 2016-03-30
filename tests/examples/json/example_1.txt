@@ -22,10 +22,6 @@
 		"Back to the Future III"
 	],
 	"directed_by": "Robert Zemeckis",
-	"description": {
-		"_value": "Marty McFly, a typical American teenager of the Eighties, is accidentally sent back to 1955 in a plutonium-powered DeLorean \"timemachine\" invented by slightly mad scientist. During his often hysterical, always amazing trip back in time, Marty must make certain his teenage parents-to-be meet and fall in love - so he can get back to the future.",
-		"_weight": 0
-	},
 	"_values": {
 		"year": 1985,
 		"views": 200000,
@@ -36,6 +32,21 @@
 	"_texts": [
 		{
 			"_value": "Marty McFly, a typical American teenager of the Eighties, is accidentally sent back to 1955 in a plutonium-powered DeLorean \"timemachine\" invented by slightly mad scientist. During his often hysterical, always amazing trip back in time, Marty must make certain his teenage parents-to-be meet and fall in love - so he can get back to the future"
+		},
+		{
+			"_name": "description",
+			"_value": "Marty McFly, a typical American teenager of the Eighties, is accidentally sent back to 1955 in a plutonium-powered DeLorean \"timemachine\" invented by slightly mad scientist. During his often hysterical, always amazing trip back in time, Marty must make certain his teenage parents-to-be meet and fall in love - so he can get back to the future.",
+			"_weight": 0
+		}
+	],
+	"_terms": [
+		{
+			"_value": "Marty McFly, a typical American teenager of the Eighties, is accidentally sent back to 1955 in a plutonium-powered DeLorean \"timemachine\" invented by slightly mad scientist. During his often hysterical, always amazing trip back in time, Marty must make certain his teenage parents-to-be meet and fall in love - so he can get back to the future"
+		},
+		{
+			"_name": "description",
+			"_value": "Marty McFly, a typical American teenager of the Eighties, is accidentally sent back to 1955 in a plutonium-powered DeLorean \"timemachine\" invented by slightly mad scientist. During his often hysterical, always amazing trip back in time, Marty must make certain his teenage parents-to-be meet and fall in love - so he can get back to the future.",
+			"_weight": 0
 		}
 	]
 }
