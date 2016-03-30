@@ -15,7 +15,7 @@ xapiand_SOURCES = \
 	endpoint.cc \
 	endpoint_resolver.cc \
 	ev/ev.c \
-	ev/event.c	 \
+	ev/event.c \
 	exception.cc \
 	fields.cc \
 	generate_terms.cc \
