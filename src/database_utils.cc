@@ -142,11 +142,11 @@ void clean_reserved(MsgPack& document) {
 	if (document.get_type() == msgpack::type::MAP) {
 		for (auto item_key : document) {
 			std::string str_key(item_key.get_str());
-			if (is_reserved(str_key) && str_key != RESERVED_VALUE) {
-				document.erase(str_key);
-			} else {
+			if (is_valid(str_key) || str_key == RESERVED_VALUE) {
 				auto item_doc = document.at(str_key);
 				clean_reserved(item_doc);
+			} else {
+				document.erase(str_key);
 			}
 		}
 	}
