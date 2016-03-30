@@ -426,13 +426,6 @@ MsgPack::expand_array(size_t r_size)
 }
 
 
-MsgPack
-MsgPack::duplicate() const
-{
-	return MsgPack(to_string());
-}
-
-
 void
 MsgPack::reset(MsgPack&& other) noexcept
 {

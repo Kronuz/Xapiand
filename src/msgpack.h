@@ -161,7 +161,6 @@ public:
 	std::string to_string() const;
 	rapidjson::Document to_json() const;
 
-	MsgPack duplicate() const;
 	void reset(MsgPack&& other) noexcept;
 	void reset(const MsgPack& other);
 	MsgPack path(const std::vector<std::string>& path) const;
@@ -375,6 +374,10 @@ public:
 			default:
 				return 0;
 		}
+	}
+
+	inline MsgPack duplicate() const {
+		return MsgPack(to_string());
 	}
 
 	inline uint64_t get_u64() const {
