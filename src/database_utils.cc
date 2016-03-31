@@ -230,3 +230,110 @@ std::string to_query_string(std::string str) {
 	}
 	return str;
 }
+
+
+std::string msgpack_to_html(const msgpack::object& o) {
+	std::string tag_head, tag_tail, html;
+	if (o.type == msgpack::type::MAP) {
+		tag_head = "<dl>";
+		tag_tail = "</dl>";
+
+		std::string key_tag_head = "<dt>";
+		std::string key_tag_tail = "</dt>";
+
+		html += tag_head;
+		const msgpack::object_kv* pend(o.via.map.ptr + o.via.map.size);
+		for (auto p = o.via.map.ptr; p != pend; ++p) {
+			if (p->key.type == msgpack::type::STR) { /* check if it is valid numeric as a key */
+				html += key_tag_head + std::string(p->key.via.str.ptr, p->key.via.str.size) + key_tag_tail;
+				html += msgpack_map_value_to_html(p->val);
+			} else if (p->key.type == msgpack::type::POSITIVE_INTEGER) {
+				html += key_tag_head + std::to_string(p->key.via.u64) + key_tag_tail;
+				html += msgpack_map_value_to_html(p->val);
+			} else if (p->key.type == msgpack::type::NEGATIVE_INTEGER) {
+				html += key_tag_head + std::to_string(p->key.via.i64) + key_tag_tail;
+				html += msgpack_map_value_to_html(p->val);
+			} else if (p->key.type == msgpack::type::FLOAT) {
+				html += key_tag_head + std::to_string(p->key.via.f64) + key_tag_tail;
+				html += msgpack_map_value_to_html(p->val);
+			}
+			 /* other types are ignored (boolean included)*/
+		}
+		html += tag_tail;
+	} else if (o.type == msgpack::type::ARRAY) {
+		tag_head = "<ol>";
+		tag_tail = "</ol>";
+
+		std::string term_tag_head = "<li>";
+		std::string term_tag_tail = "</li>";
+
+		html += tag_head;
+		const msgpack::object* pend(o.via.array.ptr + o.via.array.size);
+		for (auto p = o.via.array.ptr; p != pend; ++p) {
+			if (p->type == msgpack::type::STR) {
+				html += term_tag_head + std::string(p->via.str.ptr, p->via.str.size) + term_tag_tail;
+			} else if(p->type == msgpack::type::POSITIVE_INTEGER) {
+				html += term_tag_head + std::to_string(p->via.u64) + term_tag_tail;
+			} else if (p->type == msgpack::type::NEGATIVE_INTEGER) {
+				html += term_tag_head + std::to_string(p->via.i64) + term_tag_tail;
+			} else if (p->type == msgpack::type::FLOAT) {
+				html += term_tag_head + std::to_string(p->via.f64) + term_tag_tail;
+			} else if (p->type == msgpack::type::BOOLEAN) {
+				std::string boolean_str;
+				if (p->via.boolean) {
+					boolean_str = "True";
+				} else {
+					boolean_str = "False";
+				}
+				html += term_tag_head + boolean_str + term_tag_head;
+			} else if (p->type == msgpack::type::MAP or p->type == msgpack::type::ARRAY) {
+				html += term_tag_head + msgpack_to_html(*p) + term_tag_head;
+			}
+		}
+		html += tag_tail;
+	} else if (o.type == msgpack::type::STR) {
+		return std::string(o.via.str.ptr, o.via.str.size);
+	} else if (o.type == msgpack::type::POSITIVE_INTEGER) {
+		return std::to_string(o.via.u64);
+	} else if (o.type == msgpack::type::NEGATIVE_INTEGER) {
+		return std::to_string(o.via.i64);
+	} else if (o.type == msgpack::type::FLOAT) {
+		return std::to_string(o.via.f64);
+	} else if (o.type == msgpack::type::BOOLEAN) {
+		std::string boolean_str;
+		if (o.via.boolean) {
+			boolean_str = "True";
+		} else {
+			boolean_str = "False";
+		}
+		return boolean_str;
+	}
+	return html;
+}
+
+
+std::string msgpack_map_value_to_html(const msgpack::object& o) {
+	std::string tag_head = "<dd>";
+	std::string tag_tail = "</dd>";
+
+	if (o.type == msgpack::type::STR) {
+		return tag_head + std::string(o.via.str.ptr, o.via.str.size) + tag_tail;
+	} else if (o.type == msgpack::type::POSITIVE_INTEGER) {
+		return tag_head + std::to_string(o.via.u64) + tag_tail;
+	} else if (o.type == msgpack::type::NEGATIVE_INTEGER) {
+		return tag_head + std::to_string(o.via.i64) + tag_tail;
+	} else if (o.type == msgpack::type::FLOAT) {
+		return tag_head + std::to_string(o.via.f64) + tag_tail;
+	} else if (o.type == msgpack::type::BOOLEAN) {
+		std::string boolean_str;
+		if (o.via.boolean) {
+			boolean_str = "True";
+		} else {
+			boolean_str = "False";
+		}
+		return tag_head + boolean_str + tag_tail;
+	} else if (o.type == msgpack::type::MAP or o.type == msgpack::type::ARRAY) {
+		return tag_head + msgpack_to_html(o) + tag_tail;
+	}
+	return std::string();
+}
