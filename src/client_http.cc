@@ -111,7 +111,7 @@ static const char* status_code[6][14] = {
 
 
 std::string
-HttpClient::http_response(int status, int mode, unsigned short http_major, unsigned short http_minor, int matched_count, std::string body, std::string ct_type) {
+HttpClient::http_response(int status, int mode, unsigned short http_major, unsigned short http_minor, int matched_count, const std::string& body, const std::string& ct_type, const std::string& ct_encoding) {
 	L_CALL(this, "HttpClient::http_response()");
 
 	char buffer[20];
@@ -140,6 +140,10 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 
 		if (mode & HTTP_CONTENT_TYPE) {
 			response += "Content-Type: " + ct_type + eol;
+		}
+
+		if (mode & HTTP_CONTENT_ENCODING) {
+			response += "Content-Encoding: " + ct_encoding + eol;
 		}
 
 		if (mode & HTTP_OPTIONS) {

@@ -29,15 +29,16 @@
 
 #include <memory>
 
-#define HTTP_STATUS         (1 << 0)
-#define HTTP_HEADER         (1 << 1)
-#define HTTP_ACCEPT         (1 << 2)
-#define HTTP_BODY           (1 << 3)
-#define HTTP_CONTENT_TYPE   (1 << 4)
-#define HTTP_CHUNKED        (1 << 5)
-#define HTTP_OPTIONS        (1 << 6)
-#define HTTP_MATCHED_COUNT  (1 << 7)
-#define HTTP_EXPECTED100    (1 << 8)
+#define HTTP_STATUS           (1 << 0)
+#define HTTP_HEADER           (1 << 1)
+#define HTTP_ACCEPT           (1 << 2)
+#define HTTP_BODY             (1 << 3)
+#define HTTP_CONTENT_TYPE     (1 << 4)
+#define HTTP_CONTENT_ENCODING (1 << 5)
+#define HTTP_CHUNKED          (1 << 6)
+#define HTTP_OPTIONS          (1 << 7)
+#define HTTP_MATCHED_COUNT    (1 << 8)
+#define HTTP_EXPECTED100      (1 << 9)
 
 #define CMD_ID     0
 #define CMD_SEARCH 1
@@ -129,7 +130,7 @@ class HttpClient : public BaseClient {
 	static int identify_cmd(const std::string& commad);
 	int identify_mode(const std::string &mode);
 
-	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, std::string body=std::string(""), std::string ct_type=std::string("application/json; charset=UTF-8"));
+	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
 	void clean_http_request();
 	std::string serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty);
 	const std::pair<std::string, std::string>& get_acceptable_type(const std::pair<std::string, std::string>& ct_type);
