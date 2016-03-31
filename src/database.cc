@@ -981,40 +981,45 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 {
 	L_CALL(this, "Database::_index()");
 
-	if (obj.get_type() == msgpack::type::MAP) {
-		// Save a copy of schema for undo changes if there is a exception.
-		auto str_schema = schema.to_string();
-		auto _to_store = schema.get_store();
+	// Save a copy of schema for undo changes if there is a exception.
+	auto str_schema = schema.to_string();
+	auto _to_store = schema.get_store();
 
-		try {
-			specification_t specification;
-			auto properties = schema.get_properties(specification);
-
-			const specification_t spc_bef = specification;
-
-			schema.set_properties(properties, obj, specification);
-			for (const auto item_key : obj) {
-				auto str_key = item_key.get_str();
-				auto item_val = obj.at(str_key);
+	try {
+		specification_t specification;
+		auto properties = schema.get_properties(specification);
+		IndexVector fields;
+		fields.reserve(obj.size());
+		for (const auto item_key : obj) {
+			const auto str_key = item_key.get_str();
+			const auto item_val = obj.at(str_key);
+			try {
+				auto func = map_dispatch_reserved.at(str_key);
+				(schema.*func)(properties, item_val, specification);
+			} catch (const std::out_of_range&) {
 				try {
 					auto func = map_dispatch_root.at(str_key);
-					(schema.*func)(properties, item_val, specification, doc);
+					fields.push_back(std::async(std::launch::deferred, func, &schema, properties, item_val, std::ref(specification), std::ref(doc)));
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_key)) {
-						auto subproperties = schema.get_subproperties(properties, str_key, specification);
-						schema.index_object(subproperties, item_val, specification, doc, str_key, false);
+						fields.push_back(std::async(std::launch::deferred, &Schema::index_object, &schema, schema.get_subproperties(properties, str_key, specification), item_val, std::ref(specification), std::ref(doc), str_key, false));
 					}
 				}
-				specification = spc_bef;
 			}
-		} catch (...) {
-			// Back to the initial schema if there are changes.
-			if (schema.get_store()) {
-				schema.set_schema(str_schema);
-				schema.set_store(_to_store);
-			}
-			throw;
 		}
+
+		const specification_t spc_bef = specification;
+		for (auto& field : fields) {
+			field.get();
+			specification = spc_bef;
+		}
+	} catch (...) {
+		// Back to the initial schema if there are changes.
+		if (schema.get_store()) {
+			schema.set_schema(str_schema);
+			schema.set_store(_to_store);
+		}
+		throw;
 	}
 }
 
@@ -1044,19 +1049,16 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 	switch (get_mimetype(ct_type)) {
 		case MIMEType::APPLICATION_JSON:
 			json_load(rdoc, body);
-			blob = false;
 			obj = MsgPack(rdoc);
 			break;
 		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
 			try {
 				json_load(rdoc, body);
-				blob = false;
 				obj = MsgPack(rdoc);
 				doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
 			} catch (const std::exception&) { }
 			break;
 		case MIMEType::APPLICATION_X_MSGPACK:
-			blob = false;
 			obj = MsgPack(body);
 			break;
 		default:
@@ -1064,8 +1066,11 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 	}
 
 	L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
+	if (obj.get_type() == msgpack::type::MAP) {
+		blob = false;
+		_index(doc, obj);
+	}
 	set_data(doc, obj.to_string(), blob ? body : "");
-	_index(doc, obj);
 	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 	return replace_document_term(term_id, doc, commit_);
 }
