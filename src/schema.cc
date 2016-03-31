@@ -57,6 +57,8 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_reserved({
 	{ RESERVED_B_DETECTION,  &Schema::process_b_detection },
 	{ RESERVED_S_DETECTION,  &Schema::process_s_detection },
 	{ RESERVED_BOOL_TERM,    &Schema::process_bool_term   },
+	{ RESERVED_VALUE,        &Schema::process_value       },
+	{ RESERVED_NAME,         &Schema::process_name        },
 	{ RESERVED_SLOT,         &Schema::process_slot        },
 	{ RESERVED_INDEX,        &Schema::process_index       },
 	{ RESERVED_PREFIX,       &Schema::process_prefix      },
@@ -124,7 +126,9 @@ specification_t::specification_t()
 		  bool_detection(true),
 		  string_detection(true),
 		  bool_term(false),
-		  doc_acc(nullptr) { }
+		  found_field(true),
+		  set_type(true),
+		  set_bool_term(false) { }
 
 
 std::string
@@ -132,6 +136,7 @@ specification_t::to_string() const
 {
 	std::stringstream str;
 	str << "\n{\n";
+	str << "\t" << RESERVED_NAME << ": " << name << "\n";
 	str << "\t" << RESERVED_POSITION << ": [ ";
 	for (const auto& _position : position) {
 		str << _position << " ";
@@ -248,14 +253,11 @@ Schema::get_properties(specification_t& specification)
 
 	auto prop_schema = schema.at(RESERVED_SCHEMA);
 	if (exist.load()) {
-		specification.found_field = true;
-		specification.set_type = true;
 		update_specification(prop_schema, specification);
 	} else {
 		to_store.store(true);
 		exist.store(true);
 		specification.found_field = false;
-		specification.set_type = true;
 	}
 
 	return prop_schema;
@@ -274,6 +276,8 @@ Schema::update_specification(const MsgPack& properties, specification_t& specifi
 	specification.prefix = default_spc.prefix;
 	specification.slot = default_spc.slot;
 	specification.bool_term = default_spc.bool_term;
+	specification.value = default_spc.value;
+	specification.name = default_spc.name;
 
 	for (const auto property : properties) {
 		auto prop_str = property.get_str();
