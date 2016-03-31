@@ -23,15 +23,20 @@ check_PROGRAMS = \
 TESTS = $(check_PROGRAMS)
 
 common_files = \
+	$(top_builddir)/src/async_fsync.cc \
 	$(top_builddir)/src/cartesian.cc \
+	$(top_builddir)/src/client_base.cc \
+	$(top_builddir)/src/client_binary.cc \
+	$(top_builddir)/src/client_http.cc \
 	$(top_builddir)/src/database.cc \
 	$(top_builddir)/src/database_autocommit.cc \
 	$(top_builddir)/src/database_utils.cc \
 	$(top_builddir)/src/datetime.cc \
 	$(top_builddir)/src/endpoint.cc \
+	$(top_builddir)/src/endpoint_resolver.cc \
 	$(top_builddir)/src/ev/ev.c \
+	$(top_builddir)/src/ev/event.c \
 	$(top_builddir)/src/exception.cc \
-	$(top_builddir)/src/io_utils.cc \
 	$(top_builddir)/src/fields.cc \
 	$(top_builddir)/src/forward_list.h \
 	$(top_builddir)/src/generate_terms.cc \
@@ -40,12 +45,17 @@ common_files = \
 	$(top_builddir)/src/hash/md5.cc \
 	$(top_builddir)/src/hash/sha256.cc \
 	$(top_builddir)/src/htm.cc \
+	$(top_builddir)/src/http_parser.c \
+	$(top_builddir)/src/io_utils.cc \
 	$(top_builddir)/src/length.cc \
 	$(top_builddir)/src/log.cc \
 	$(top_builddir)/src/lru.h \
 	$(top_builddir)/src/lz4/lz4.c \
+	$(top_builddir)/src/lz4/lz4frame.c \
+	$(top_builddir)/src/lz4/lz4hc.c \
 	$(top_builddir)/src/lz4/xxhash.c \
 	$(top_builddir)/src/lz4_compressor.cc \
+	$(top_builddir)/src/manager.cc \
 	$(top_builddir)/src/msgpack.cc \
 	$(top_builddir)/src/msgpack_patcher.cc \
 	$(top_builddir)/src/multivalue.cc \
@@ -53,13 +63,27 @@ common_files = \
 	$(top_builddir)/src/multivaluerange.cc \
 	$(top_builddir)/src/namegen.cc \
 	$(top_builddir)/src/queue.h \
+	$(top_builddir)/src/replicator.cc \
 	$(top_builddir)/src/schema.cc \
 	$(top_builddir)/src/serialise.cc \
 	$(top_builddir)/src/storage.h \
 	$(top_builddir)/src/threadpool.h \
+	$(top_builddir)/src/servers/binary.cc \
+	$(top_builddir)/src/servers/discovery.cc \
+	$(top_builddir)/src/servers/http.cc \
+	$(top_builddir)/src/servers/raft.cc \
+	$(top_builddir)/src/servers/server.cc \
+	$(top_builddir)/src/servers/server_base.cc \
+	$(top_builddir)/src/servers/server_binary.cc \
+	$(top_builddir)/src/servers/server_discovery.cc \
+	$(top_builddir)/src/servers/server_http.cc \
+	$(top_builddir)/src/servers/server_raft.cc \
+	$(top_builddir)/src/servers/tcp_base.cc \
+	$(top_builddir)/src/servers/udp_base.cc \
 	$(top_builddir)/src/times.cc \
 	$(top_builddir)/src/utils.cc \
-	$(top_builddir)/src/wkt_parser.cc
+	$(top_builddir)/src/wkt_parser.cc \
+	$(top_builddir)/src/xchange/convert.cc
 
 
 set_compressor_test_SOURCES = $(common_files) set_compressor_test.cc test_compressor.cc
