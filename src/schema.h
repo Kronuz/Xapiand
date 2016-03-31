@@ -87,8 +87,8 @@ class Schema;
 
 
 using dispatch_reserved = void (Schema::*)(MsgPack&, const MsgPack&, specification_t&);
-using dispatch_root = void (Schema::*)(MsgPack&, const MsgPack&, specification_t&, Xapian::Document&);
-using dispatch_index = void (Schema::*)(MsgPack&, const MsgPack&, const specification_t&, Xapian::Document&, const std::string&);
+using dispatch_root     = void (Schema::*)(MsgPack&, const MsgPack&, specification_t&, Xapian::Document&);
+using dispatch_index    = void (Schema::*)(MsgPack&, const MsgPack&, const specification_t&, Xapian::Document&, const std::string&);
 using dispatch_property = void (*)(MsgPack&&, specification_t&);
 using dispatch_readable = void (*)(MsgPack&&, const MsgPack&);
 
