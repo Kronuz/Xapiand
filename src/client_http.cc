@@ -605,7 +605,7 @@ HttpClient::_post()
 
 	query_field_t e;
 	int cmd = url_resolve(e, false);
-	
+
 	switch (cmd) {
 		case CMD_ID: /* by default will be set as a command id */
 			index_document_view(e, true);
