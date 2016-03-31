@@ -24,7 +24,6 @@
 
 #include "config.h"
 
-//#include <cstdio>
 
 #define XAPIAND_CLUSTER_NAME         "Xapiand"
 #define XAPIAND_DISCOVERY_GROUP      "224.2.2.88"   /* Gossip group */
@@ -69,5 +68,3 @@
 #define likely(x) (x)
 #define unlikely(x) (x)
 #endif
-
-void sig_exit(int sig);

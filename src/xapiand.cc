@@ -40,19 +40,8 @@
 
 #define LINE_LENGTH 78
 
+
 using namespace TCLAP;
-
-
-std::shared_ptr<XapiandManager> manager;
-
-
-void sig_exit(int sig) {
-	if (manager) {
-		manager->shutdown_sig(sig);
-	} else if (sig < 0) {
-		exit(-sig);
-	}
-}
 
 
 void setup_signal_handlers(void) {
@@ -577,22 +566,22 @@ void run(const opts_t &opts) {
 
 	setup_signal_handlers();
 	ev::default_loop default_loop;
-	manager = Worker::make_shared<XapiandManager>(&default_loop, opts);
 
+	XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts);
 	try {
-		manager->run(opts);
+		XapiandManager::manager->run(opts);
 	} catch (...) {
-		manager.reset();
+		XapiandManager::manager.reset();
 		throw;
 	}
 
-	int managers = static_cast<int>(manager.use_count());
+	int managers = static_cast<int>(XapiandManager::manager.use_count());
 	if (managers == 1) {
 		L_NOTICE(nullptr, "Xapiand is cleanly done with all work!");
 	} else {
 		L_WARNING(nullptr, "Xapiand is uncleanly done with all work (%d)!", managers);
 	}
-	manager.reset();
+	XapiandManager::manager.reset();
 }
 
 
