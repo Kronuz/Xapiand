@@ -67,14 +67,12 @@
 #define DOCUMENT_ID_TERM_PREFIX     "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
 
+#define ANY_TYPE             "*/*"
 #define JSON_TYPE            "application/json"
 #define FORM_URLENCODED_TYPE "application/x-www-form-urlencoded"
 #define MSGPACK_TYPE         "application/x-msgpack"
-
-
-const auto any_type     = std::make_pair(std::string("*"), std::string("*"));
-const auto json_type    = std::make_pair(std::string("application"), std::string("json"));
-const auto msgpack_type = std::make_pair(std::string("application"), std::string("x-msgpack"));
+#define HTML_TYPE            "text/html"
+#define TEXT_TYPE            "text/plain"
 
 
 extern const std::regex find_types_re;

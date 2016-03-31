@@ -134,7 +134,6 @@ class HttpClient : public BaseClient {
 	std::string serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty);
 	const std::pair<std::string, std::string>& get_acceptable_type(const std::pair<std::string, std::string>& ct_type);
 	bool is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::pair<std::string, std::string>& ct_type);
-	std::pair<std::string, std::string> content_type_pair(const std::string& ct_type);
 	void write_http_response(const MsgPack& response,  int st_code, bool pretty);
 
 	friend Worker;

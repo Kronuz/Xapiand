@@ -56,6 +56,23 @@
 #define METHOD_PATCH   24
 
 
+std::pair<std::string, std::string>
+content_type_pair(const std::string& ct_type)
+{
+	std::size_t found = ct_type.find_last_of("/");
+	if (found == std::string::npos) {
+		return  make_pair(std::string(), std::string());
+	}
+	const char* content_type_str = ct_type.c_str();
+	return make_pair(std::string(content_type_str, found), std::string(content_type_str, found + 1, ct_type.size()));
+}
+
+static const auto any_type     = content_type_pair(ANY_TYPE);
+static const auto json_type    = content_type_pair(JSON_TYPE);
+static const auto msgpack_type = content_type_pair(MSGPACK_TYPE);
+static const auto html_type    = content_type_pair(HTML_TYPE);
+static const auto text_type    = content_type_pair(TEXT_TYPE);
+
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;q=(\\d+(?:\\.\\d+)?))?");
 
 
@@ -1521,20 +1538,6 @@ HttpClient::clean_http_request()
 
 	async_read.send();
 	http_parser_init(&parser, HTTP_REQUEST);
-}
-
-
-std::pair<std::string, std::string>
-HttpClient::content_type_pair(const std::string& ct_type)
-{
-	L_CALL(this, "HttpClient::content_type_pair()");
-
-	std::size_t found = ct_type.find_last_of("/");
-	if (found == std::string::npos) {
-		return  make_pair(std::string(), std::string());
-	}
-	const char* content_type_str = ct_type.c_str();
-	return make_pair(std::string(content_type_str, found), std::string(content_type_str, found + 1, ct_type.size()));
 }
 
 
