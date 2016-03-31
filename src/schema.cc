@@ -924,7 +924,7 @@ Schema::process_bool_term(MsgPack&, const MsgPack& doc_bool_term, specification_
 
 
 void
-Schema::process_values(MsgPack& properties, const MsgPack& doc_values, specification_t& specification, Xapian::Document& doc)
+Schema::process_values(MsgPack properties, const MsgPack doc_values, specification_t& specification, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_values()");
 
@@ -937,7 +937,7 @@ Schema::process_values(MsgPack& properties, const MsgPack& doc_values, specifica
 
 
 void
-Schema::process_texts(MsgPack& properties, const MsgPack& doc_texts, specification_t& specification, Xapian::Document& doc)
+Schema::process_texts(MsgPack properties, const MsgPack doc_texts, specification_t& specification, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_texts()");
 
@@ -946,7 +946,7 @@ Schema::process_texts(MsgPack& properties, const MsgPack& doc_texts, specificati
 
 
 void
-Schema::process_terms(MsgPack& properties, const MsgPack& doc_terms, specification_t& specification, Xapian::Document& doc)
+Schema::process_terms(MsgPack properties, const MsgPack doc_terms, specification_t& specification, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_terms()");
 
@@ -1089,12 +1089,66 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, const 
 
 
 void
+Schema::index_object(MsgPack properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value)
+{
+	L_CALL(this, "Schema::index_object()");
+
+	if (object.get_type() == msgpack::type::MAP) {
+		bool offsprings = false;
+		IndexVector fields;
+		fields.reserve(object.size());
+		for (const auto item_key : object) {
+			const auto str_key = item_key.get_str();
+			try {
+				auto func = map_dispatch_reserved.at(str_key);
+				(this->*func)(properties, object.at(str_key), specification);
+			} catch (const std::out_of_range&) {
+				if (is_valid(str_key)) {
+					const std::string full_subkey(name.empty() ? str_key : name + DB_OFFSPRING_UNION + str_key);
+					fields.push_back(std::async(std::launch::deferred, &Schema::index_object, this, get_subproperties(properties, str_key, specification), object.at(str_key), std::ref(specification), std::ref(doc), full_subkey, is_value));
+					offsprings = true;
+				} else if (str_key == RESERVED_VALUE) {
+					fields.push_back(std::async(std::launch::deferred, &Schema::index_item, this, properties, object.at(str_key), std::ref(specification), std::ref(doc), name, is_value));
+				}
+			}
+		}
+
+		const specification_t spc_bef = specification;
+		for (auto& field : fields) {
+			field.get();
+			specification = spc_bef;
+		}
+
+		if (offsprings) {
+			set_type_to_object(properties);
+		}
+	} else {
+		index_item(properties, object, specification, doc, name, is_value);
+	}
+}
+
+
+void
+Schema::index_item(MsgPack properties, const MsgPack value, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value)
+{
+	validate_required_data(properties, value, name, specification);
+	if (is_value || specification.index == Index::VALUE) {
+		index_values(properties, value, specification, doc, name);
+	} else if (specification.index == Index::TERM) {
+		index_terms(properties, value, specification, doc, name);
+	} else {
+		index_values(properties, value, specification, doc, name, true);
+	}
+}
+
+
+void
 Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc, const char* reserved_word, dispatch_index func)
 {
 	L_CALL(this, "Schema::index_array()");
 
-	const specification_t spc_bef = specification;
 	if (array.get_type() == msgpack::type::ARRAY) {
+		const specification_t spc_bef = specification;
 		for (auto item : array) {
 			try {
 				auto _value = item.at(RESERVED_VALUE);
@@ -1125,50 +1179,6 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& 
 		}
 	} else {
 		throw MSG_ClientError("%s must be an array of objects", reserved_word);
-	}
-}
-
-
-void
-Schema::index_object(MsgPack& properties, const MsgPack& object, specification_t& specification, Xapian::Document& doc, const std::string& name, bool is_value)
-{
-	L_CALL(this, "Schema::index_object()");
-	if (object.get_type() == msgpack::type::MAP) {
-		bool offsprings = false;
-		set_properties(properties, object, specification);
-		const auto spc_bef = specification;
-		for (auto item_key : object) {
-			auto str_key = item_key.get_str();
-			if (is_valid(str_key)) {
-				std::string full_subkey(name.empty() ? str_key : name + DB_OFFSPRING_UNION + str_key);
-				auto subproperties = get_subproperties(properties, str_key, specification);
-				index_object(subproperties, object.at(str_key), specification, doc, full_subkey, is_value);
-				offsprings = true;
-			} else if (str_key == RESERVED_VALUE) {
-				auto _value = object.at(str_key);
-				validate_required_data(properties, _value, name, specification);
-				if (is_value || specification.index == Index::VALUE) {
-					index_values(properties, _value, specification, doc, name);
-				} else if (specification.index == Index::TERM) {
-					index_terms(properties, _value, specification, doc, name);
-				} else {
-					index_values(properties, _value, specification, doc, name, true);
-				}
-			}
-			specification = spc_bef;
-		}
-		if (offsprings) {
-			set_type_to_object(properties);
-		}
-	} else {
-		validate_required_data(properties, object, name, specification);
-		if (is_value || specification.index == Index::VALUE) {
-			index_values(properties, object, specification, doc, name);
-		} else if (specification.index == Index::TERM) {
-			index_terms(properties, object, specification, doc, name);
-		} else {
-			index_values(properties, object, specification, doc, name, true);
-		}
 	}
 }
 

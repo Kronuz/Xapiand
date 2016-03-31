@@ -23,6 +23,7 @@
 #pragma once
 
 #include "database_utils.h"
+#include <future>
 #include "msgpack.h"
 #include "multivalue.h"
 #include "serialise.h"
@@ -87,7 +88,7 @@ class Schema;
 
 
 using dispatch_reserved = void (Schema::*)(MsgPack&, const MsgPack&, specification_t&);
-using dispatch_root     = void (Schema::*)(MsgPack&, const MsgPack&, specification_t&, Xapian::Document&);
+using dispatch_root     = void (Schema::*)(MsgPack, const MsgPack, specification_t&, Xapian::Document&);
 using dispatch_index    = void (Schema::*)(MsgPack&, const MsgPack&, const specification_t&, Xapian::Document&, const std::string&);
 using dispatch_property = void (*)(MsgPack&&, specification_t&);
 using dispatch_readable = void (*)(MsgPack&&, const MsgPack&);
@@ -97,6 +98,9 @@ extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_res
 extern const std::unordered_map<std::string, dispatch_root> map_dispatch_root;
 extern const std::unordered_map<std::string, dispatch_property> map_dispatch_properties;
 extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
+
+
+using IndexVector = std::vector<std::future<void>>;
 
 
 class Schema {
@@ -236,17 +240,18 @@ public:
 	 * Functions for reserved words that are only in json's root.
 	 */
 
-	inline void process_values(MsgPack& properties, const MsgPack& doc_values, specification_t& specification, Xapian::Document& doc);
-	inline void process_texts(MsgPack& properties, const MsgPack& doc_texts, specification_t& specification, Xapian::Document& doc);
-	inline void process_terms(MsgPack& properties, const MsgPack& doc_terms, specification_t& specification, Xapian::Document& doc);
+	inline void process_values(MsgPack properties, const MsgPack doc_values, specification_t& specification, Xapian::Document& doc);
+	inline void process_texts(MsgPack properties, const MsgPack doc_texts, specification_t& specification, Xapian::Document& doc);
+	inline void process_terms(MsgPack properties, const MsgPack doc_terms, specification_t& specification, Xapian::Document& doc);
 
 
 	/*
 	 * Functions for indexing elements in a Xapian::document.
 	 */
 
+	void index_object(MsgPack properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value=true);
+	void index_item(MsgPack properties, const MsgPack value, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value);
 	void index_array(MsgPack& properties, const MsgPack& doc_terms, specification_t& specification, Xapian::Document& doc, const char* reserved_word, dispatch_index func);
-	void index_object(MsgPack& properties, const MsgPack& object, specification_t& specification, Xapian::Document& doc, const std::string& name, bool is_value=true);
 	void index_texts(MsgPack& properties, const MsgPack& texts, const specification_t& specification, Xapian::Document& doc, const std::string& name);
 	void index_text(const specification_t& specification, Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
 	void index_terms(MsgPack& properties, const MsgPack& terms, const specification_t& specification, Xapian::Document& doc, const std::string& name);
