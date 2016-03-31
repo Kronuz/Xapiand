@@ -1593,7 +1593,7 @@ template <typename T>
 const std::pair<std::string, std::string>&
 HttpClient::get_acceptable_type(const T& ct)
 {
-	L(this, "HttpClient::get_acceptable_type()");
+	L_CALL(this, "HttpClient::get_acceptable_type()");
 
 	if (accept_set.empty()) {
 		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, std::pair<std::string, std::string>>(1, 0, content_type_pair(content_type)));
