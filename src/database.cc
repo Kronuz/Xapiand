@@ -997,13 +997,13 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 				auto func = map_dispatch_reserved.at(str_key);
 				(schema.*func)(properties, item_val, specification);
 			} catch (const std::out_of_range&) {
-				try {
-					auto func = map_dispatch_root.at(str_key);
-					fields.push_back(std::async(std::launch::deferred, func, &schema, properties, item_val, std::ref(specification), std::ref(doc)));
-				} catch (const std::out_of_range&) {
-					if (is_valid(str_key)) {
-						fields.push_back(std::async(std::launch::deferred, &Schema::index_object, &schema, schema.get_subproperties(properties, str_key, specification), item_val, std::ref(specification), std::ref(doc), str_key, false));
-					}
+				if (is_valid(str_key)) {
+					fields.push_back(std::async(std::launch::deferred, &Schema::index_object, &schema, schema.get_subproperties(properties, str_key, specification), item_val, std::ref(specification), std::ref(doc), str_key, false));
+				} else {
+					try {
+						auto func = map_dispatch_root.at(str_key);
+						fields.push_back(std::async(std::launch::deferred, func, &schema, properties, item_val, std::ref(specification), std::ref(doc)));
+					} catch (const std::out_of_range&) { }
 				}
 			}
 		}
