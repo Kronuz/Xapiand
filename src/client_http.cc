@@ -38,6 +38,9 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#define RESPONSE_MESSAGE "message"
+#define RESPONSE_STATUS  "status"
+
 #define MAX_BODY_SIZE (250 * 1024 * 1024)
 #define MAX_BODY_MEM (5 * 1024 * 1024)
 
@@ -238,8 +241,13 @@ HttpClient::on_read(const char* buf, size_t received)
 			}
 		}
 	} else {
-		write(http_response(400, HTTP_STATUS | HTTP_HEADER, parser.http_major, parser.http_minor));
-		L_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? http_errno_description(HTTP_PARSER_ERRNO(&parser)) : "incomplete request");
+		int error_code = 400;
+		std::string message(http_errno_description(HTTP_PARSER_ERRNO(&parser)));
+		MsgPack err_response;
+		err_response[RESPONSE_STATUS] = error_code;
+		err_response[RESPONSE_MESSAGE] = message;
+		write_http_response(err_response, error_code, false);
+		L_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message : "incomplete request");
 		destroy();  // Handle error. Just close the connection.
 	}
 }
@@ -473,9 +481,9 @@ HttpClient::run()
 		if (written) {
 			destroy();
 		} else {
-			err_response["error"] = error;
-			err_response["status"] = error_code;
-			write(http_response(error_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor, 0, err_response.to_json_string()));
+			err_response[RESPONSE_STATUS] = error_code;
+			err_response[RESPONSE_MESSAGE] = error;
+			write_http_response(err_response, error_code, false);
 		}
 	}
 
@@ -651,8 +659,9 @@ HttpClient::document_info_view(const query_field_t& e)
 	MsgPack response;
 	int status_code = 200;
 	if (mset.empty()) {
-		response["response"] = "Document not found";
 		status_code = 404;
+		response[RESPONSE_STATUS] = status_code;
+		response[RESPONSE_MESSAGE] = "Document not found";
 	} else {
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
@@ -809,6 +818,7 @@ HttpClient::stats_view(const query_field_t& e, int mode)
 	L_CALL(this, "HttpClient::stats_view()");
 
 	MsgPack response;
+	int response_status = 200;
 	bool res_stats = false;
 
 	if (endpoints.size() == 0) {	/* Server stats */
@@ -838,15 +848,17 @@ HttpClient::stats_view(const query_field_t& e, int mode)
 			 assert(false);
 		 }
 	} else {
-		response["error"] = "Expecting exactly one database for stats operation";
+		response_status = 400;
+		response[RESPONSE_STATUS] = response_status;
+		response[RESPONSE_MESSAGE] = "Expecting exactly one database for stats operation";
 		write_http_response(response, 400, e.pretty);
 	}
 
 	if (!res_stats) {
-		response["response"] = "Empty statistics";
+		response[RESPONSE_MESSAGE] = "Empty statistics";
 	}
 
-	write_http_response(response, 200, e.pretty);
+	write_http_response(response, response_status, e.pretty);
 }
 
 
@@ -856,15 +868,14 @@ HttpClient::bad_request_view(const query_field_t& e, int cmd)
 	L_CALL(this, "HttpClient::bad_request_view()");
 
 	MsgPack err_response;
+	err_response[RESPONSE_STATUS] = 400;
 	switch (cmd) {
 		case CMD_UNKNOWN_HOST:
-			err_response["error"] = "Unknown host " + host;
+			err_response[RESPONSE_MESSAGE] = "Unknown host " + host;
 			break;
 		default:
-			err_response["error"] = "BAD QUERY";
+			err_response[RESPONSE_MESSAGE] = "BAD QUERY";
 	}
-
-	err_response["status"] = 400;
 	write_http_response(err_response, 400, e.pretty);
 }
 
@@ -922,7 +933,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 	if (facets) {
 		MsgPack response;
 		if (spies.empty()) {
-			response["response"] = "Not found documents tallied";
+			response[RESPONSE_MESSAGE] = "Not found documents tallied";
 		} else {
 			for (const auto& spy : spies) {
 				std::string name_result = spy.first;
@@ -945,14 +956,15 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 		int rc = 0;
 
 		if (mset.empty()) {
-			MsgPack response;
-
+			MsgPack err_response;
+			int error_code = 404;
+			err_response[RESPONSE_STATUS] = error_code;
 			if (e.unique_doc) {
-				response["response"] = "No document found";
+				err_response[RESPONSE_MESSAGE] = "No document found";
 			} else {
-				response["response"] = "No match found";
+				err_response[RESPONSE_MESSAGE] = "No match found";
 			}
-			write(http_response(404, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, 0, response.to_json_string(e.pretty)));
+			write_http_response(err_response, error_code, e.pretty);
 		} else {
 			bool chunked = e.unique_doc && mset.size() == 1 ? false : true;
 
@@ -979,10 +991,11 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 				auto ct_type = content_type_pair(ct_type_str);
 				const auto& accepted_type = get_acceptable_type(ct_type);
 				if (!is_acceptable_type(accepted_type, ct_type)) {
-					MsgPack response;
-					response["error"] = std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header");
-					std::string response_str(response.to_json_string() + "\n\n");
-					write(http_response(406, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
+					MsgPack err_response;
+					int error_code = 406;
+					err_response[RESPONSE_STATUS] = error_code;
+					err_response[RESPONSE_MESSAGE] = std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header");
+					write_http_response(err_response, error_code, e.pretty);
 					manager()->database_pool.checkin(database);
 					L_DEBUG(this, "ABORTED SEARCH");
 					return;
@@ -1590,8 +1603,8 @@ HttpClient::write_http_response(const MsgPack& response,  int status_code, bool 
 	} catch (const SerialisationError& exc) {
 		status_code = 406;
 		MsgPack response_err;
-		response_err["status"] = status_code;
-		response_err["error"] = std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what());
+		response_err[RESPONSE_STATUS] = status_code;
+		response_err[RESPONSE_MESSAGE] = std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what());
 		response_str = response_err.to_json_string();
 		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, response_str));
 		return;
