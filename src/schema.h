@@ -48,6 +48,7 @@ enum class Index {
 
 
 struct specification_t {
+	// Reserved values.
 	std::vector<unsigned> position;
 	std::vector<unsigned> weight;
 	std::vector<std::string> language;
@@ -68,11 +69,14 @@ struct specification_t {
 	bool bool_detection;
 	bool string_detection;
 	bool bool_term;
+	std::shared_ptr<const MsgPack> value;
+	std::string name;
 
+	// Auxiliar variables.
 	bool found_field;
 	bool set_type;
 	bool set_bool_term;
-	std::shared_ptr<MsgPack> doc_acc;
+	std::shared_ptr<const MsgPack> doc_acc;
 
 	specification_t();
 
@@ -89,7 +93,7 @@ class Schema;
 
 using dispatch_reserved = void (Schema::*)(MsgPack&, const MsgPack&, specification_t&);
 using dispatch_root     = void (Schema::*)(MsgPack, const MsgPack, specification_t&, Xapian::Document&);
-using dispatch_index    = void (Schema::*)(MsgPack&, const MsgPack&, const specification_t&, Xapian::Document&, const std::string&);
+using dispatch_index    = void (Schema::*)(MsgPack&, const MsgPack&, const specification_t&, Xapian::Document&);
 using dispatch_property = void (*)(MsgPack&&, specification_t&);
 using dispatch_readable = void (*)(MsgPack&&, const MsgPack&);
 
@@ -139,7 +143,7 @@ class Schema {
 	 * Validates data when RESERVED_TYPE has not been save in schema.
 	 * Insert into properties all required data.
 	 */
-	void validate_required_data(MsgPack& properties, const MsgPack& value, const std::string& name, specification_t& specification);
+	void validate_required_data(MsgPack& properties, const MsgPack& value, specification_t& specification);
 
 
 public:
@@ -234,6 +238,8 @@ public:
 	void process_b_detection(MsgPack& properties, const MsgPack& doc_b_detection, specification_t& specification);
 	void process_s_detection(MsgPack& properties, const MsgPack& doc_s_detection, specification_t& specification);
 	void process_bool_term(MsgPack& properties, const MsgPack& doc_bool_term, specification_t& specification);
+	void process_value(MsgPack& properties, const MsgPack& doc_value, specification_t& specification);
+	void process_name(MsgPack& properties, const MsgPack& doc_name, specification_t& specification);
 
 
 	/*
@@ -250,13 +256,13 @@ public:
 	 */
 
 	void index_object(MsgPack properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value=true);
-	void index_item(MsgPack properties, const MsgPack value, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value);
-	void index_array(MsgPack& properties, const MsgPack& doc_terms, specification_t& specification, Xapian::Document& doc, const char* reserved_word, dispatch_index func);
-	void index_texts(MsgPack& properties, const MsgPack& texts, const specification_t& specification, Xapian::Document& doc, const std::string& name);
+	inline void index_item(MsgPack& properties, const MsgPack& value, specification_t& specification, Xapian::Document& doc, bool is_value);
+	void index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc, const char* reserved_word, dispatch_index func);
+	void index_texts(MsgPack& properties, const MsgPack& texts, const specification_t& specification, Xapian::Document& doc);
 	void index_text(const specification_t& specification, Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-	void index_terms(MsgPack& properties, const MsgPack& terms, const specification_t& specification, Xapian::Document& doc, const std::string& name);
+	void index_terms(MsgPack& properties, const MsgPack& terms, const specification_t& specification, Xapian::Document& doc);
 	void index_term(const specification_t& specification, Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-	void index_values(MsgPack& properties, const MsgPack& values, const specification_t& specification, Xapian::Document& doc, const std::string& name, bool is_term=false);
+	void index_values(MsgPack& properties, const MsgPack& values, const specification_t& specification, Xapian::Document& doc, bool is_term=false);
 	void index_value(const MsgPack& value, const specification_t& specification, Xapian::Document& doc, StringList& s, size_t& pos, bool is_term) const;
 
 
