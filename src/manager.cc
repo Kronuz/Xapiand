@@ -49,7 +49,20 @@
 
 static const std::regex time_re("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
 
+
 constexpr const char* const XapiandManager::StateNames[];
+
+
+std::shared_ptr<XapiandManager> XapiandManager::manager;
+
+
+void sig_exit(int sig) {
+	if (XapiandManager::manager) {
+		XapiandManager::manager->shutdown_sig(sig);
+	} else if (sig < 0) {
+		exit(-sig);
+	}
+}
 
 
 XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)

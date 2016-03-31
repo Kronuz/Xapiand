@@ -74,6 +74,9 @@ class Raft;
 class XapiandServer;
 
 
+extern void sig_exit(int sig);
+
+
 class XapiandManager : public Worker  {
 	friend Worker;
 
@@ -111,9 +114,12 @@ public:
 		WAITING,
 		RESET,
 	};
+
 	static constexpr const char* const StateNames[] = {
 		"BAD", "READY", "SETUP", "WAITING_", "WAITING", "RESET",
 	};
+
+	static std::shared_ptr<XapiandManager> manager;
 
 	std::vector<std::weak_ptr<XapiandServer>> servers_weak;
 	std::weak_ptr<Http> weak_http;
