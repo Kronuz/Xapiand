@@ -233,15 +233,11 @@ std::string to_query_string(std::string str) {
 
 
 std::string msgpack_to_html(const msgpack::object& o) {
-	std::string tag_head, tag_tail, html;
 	if (o.type == msgpack::type::MAP) {
-		tag_head = "<dl>";
-		tag_tail = "</dl>";
-
 		std::string key_tag_head = "<dt>";
 		std::string key_tag_tail = "</dt>";
 
-		html += tag_head;
+		std::string html = "<dl>";
 		const msgpack::object_kv* pend(o.via.map.ptr + o.via.map.size);
 		for (auto p = o.via.map.ptr; p != pend; ++p) {
 			if (p->key.type == msgpack::type::STR) { /* check if it is valid numeric as a key */
@@ -259,15 +255,13 @@ std::string msgpack_to_html(const msgpack::object& o) {
 			}
 			 /* other types are ignored (boolean included)*/
 		}
-		html += tag_tail;
+		html += "</dl>";
+		return html;
 	} else if (o.type == msgpack::type::ARRAY) {
-		tag_head = "<ol>";
-		tag_tail = "</ol>";
-
 		std::string term_tag_head = "<li>";
 		std::string term_tag_tail = "</li>";
 
-		html += tag_head;
+		std::string html = "<ol>";
 		const msgpack::object* pend(o.via.array.ptr + o.via.array.size);
 		for (auto p = o.via.array.ptr; p != pend; ++p) {
 			if (p->type == msgpack::type::STR) {
@@ -290,7 +284,7 @@ std::string msgpack_to_html(const msgpack::object& o) {
 				html += term_tag_head + msgpack_to_html(*p) + term_tag_head;
 			}
 		}
-		html += tag_tail;
+		html += "</ol>";
 	} else if (o.type == msgpack::type::STR) {
 		return std::string(o.via.str.ptr, o.via.str.size);
 	} else if (o.type == msgpack::type::POSITIVE_INTEGER) {
@@ -300,15 +294,10 @@ std::string msgpack_to_html(const msgpack::object& o) {
 	} else if (o.type == msgpack::type::FLOAT) {
 		return std::to_string(o.via.f64);
 	} else if (o.type == msgpack::type::BOOLEAN) {
-		std::string boolean_str;
-		if (o.via.boolean) {
-			boolean_str = "True";
-		} else {
-			boolean_str = "False";
-		}
-		return boolean_str;
+		return o.via.boolean ? "True" : "False";
 	}
-	return html;
+
+	return std::string();
 }
 
 
@@ -325,15 +314,10 @@ std::string msgpack_map_value_to_html(const msgpack::object& o) {
 	} else if (o.type == msgpack::type::FLOAT) {
 		return tag_head + std::to_string(o.via.f64) + tag_tail;
 	} else if (o.type == msgpack::type::BOOLEAN) {
-		std::string boolean_str;
-		if (o.via.boolean) {
-			boolean_str = "True";
-		} else {
-			boolean_str = "False";
-		}
-		return tag_head + boolean_str + tag_tail;
+		return o.via.boolean ? tag_head + "True" +  tag_tail : tag_head + "False" + tag_tail;
 	} else if (o.type == msgpack::type::MAP or o.type == msgpack::type::ARRAY) {
 		return tag_head + msgpack_to_html(o) + tag_tail;
 	}
+
 	return std::string();
 }
