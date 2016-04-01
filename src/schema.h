@@ -92,7 +92,7 @@ class Schema;
 
 
 using dispatch_reserved = void (Schema::*)(MsgPack&, const MsgPack&, specification_t&);
-using dispatch_root     = void (Schema::*)(MsgPack, const MsgPack, specification_t&, Xapian::Document&);
+using dispatch_root     = void (Schema::*)(MsgPack&, const MsgPack, specification_t&, Xapian::Document&);
 using dispatch_index    = void (Schema::*)(MsgPack&, const MsgPack&, const specification_t&, Xapian::Document&);
 using dispatch_property = void (*)(MsgPack&&, specification_t&);
 using dispatch_readable = void (*)(MsgPack&&, const MsgPack&);
@@ -246,9 +246,9 @@ public:
 	 * Functions for reserved words that are only in json's root.
 	 */
 
-	inline void process_values(MsgPack properties, const MsgPack doc_values, specification_t& specification, Xapian::Document& doc);
-	inline void process_texts(MsgPack properties, const MsgPack doc_texts, specification_t& specification, Xapian::Document& doc);
-	inline void process_terms(MsgPack properties, const MsgPack doc_terms, specification_t& specification, Xapian::Document& doc);
+	inline void process_values(MsgPack& properties, const MsgPack doc_values, specification_t& specification, Xapian::Document& doc);
+	inline void process_texts(MsgPack& properties, const MsgPack doc_texts, specification_t& specification, Xapian::Document& doc);
+	inline void process_terms(MsgPack& properties, const MsgPack doc_terms, specification_t& specification, Xapian::Document& doc);
 
 
 	/*

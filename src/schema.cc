@@ -933,7 +933,7 @@ Schema::process_name(MsgPack&, const MsgPack& doc_name, specification_t& specifi
 
 
 void
-Schema::process_values(MsgPack properties, const MsgPack doc_values, specification_t& specification, Xapian::Document& doc)
+Schema::process_values(MsgPack& properties, const MsgPack doc_values, specification_t& specification, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_values()");
 
@@ -946,7 +946,7 @@ Schema::process_values(MsgPack properties, const MsgPack doc_values, specificati
 
 
 void
-Schema::process_texts(MsgPack properties, const MsgPack doc_texts, specification_t& specification, Xapian::Document& doc)
+Schema::process_texts(MsgPack& properties, const MsgPack doc_texts, specification_t& specification, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_texts()");
 
@@ -955,7 +955,7 @@ Schema::process_texts(MsgPack properties, const MsgPack doc_texts, specification
 
 
 void
-Schema::process_terms(MsgPack properties, const MsgPack doc_terms, specification_t& specification, Xapian::Document& doc)
+Schema::process_terms(MsgPack& properties, const MsgPack doc_terms, specification_t& specification, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_terms()");
 
@@ -1115,7 +1115,7 @@ Schema::index_object(MsgPack properties, const MsgPack object, specification_t& 
 			} catch (const std::out_of_range&) {
 				if (is_valid(str_key)) {
 					const auto str_fullkey = specification.name.empty() ? str_key : specification.name + DB_OFFSPRING_UNION + str_key;
-					fields.push_back(std::async(std::launch::deferred, &Schema::index_object, this, get_subproperties(properties, str_key, specification), object.at(str_key), std::ref(specification), std::ref(doc), str_fullkey, is_value));
+					fields.push_back(std::async(std::launch::deferred, &Schema::index_object, this, get_subproperties(properties, str_key, specification), object.at(str_key), std::ref(specification), std::ref(doc), std::move(str_fullkey), is_value));
 					offsprings = true;
 				}
 			}
