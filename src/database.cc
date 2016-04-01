@@ -2220,6 +2220,42 @@ Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 }
 
 
+bool
+Database::get_document(const std::string& doc_id, Xapian::Document& doc)
+{
+	L_CALL(this, "Database::get_document()");
+	Xapian::Query query(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX));
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			Xapian::Enquire enquire(*db);
+			enquire.set_query(query);
+			auto mset = enquire.get_mset(0, 1);
+			return !mset.empty() && get_document(mset.begin(), doc);
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) {
+				reopen();
+			} else {
+				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::DocNotFoundError&) {
+			return false;
+		} catch (const Xapian::Error& exc) {
+			throw MSG_Error(exc.get_msg().c_str());
+		}
+	}
+
+	L_ERR(this, "ERROR: get_document can not be done!");
+	return false;
+}
+
+
 void
 Database::get_stats_database(MsgPack&& stats)
 {

@@ -360,6 +360,7 @@ public:
 			std::vector<std::string>& suggestions, int offset=0);
 	bool get_metadata(const std::string& key, std::string& value);
 	bool set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
+	bool get_document(const std::string& doc_id, Xapian::Document& doc);
 	bool get_document(const Xapian::docid& did, Xapian::Document& doc);
 	bool get_document(const Xapian::MSet::iterator& m, Xapian::Document& doc);
 
