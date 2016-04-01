@@ -107,6 +107,10 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 
 
 int create_db() {
+	// Delete databases to create.
+	delete_files(test_db);
+	delete_files(restored_db);
+
 	int num_documents = 1020;
 
 	std::string document("{ \"message\" : \"Hello world\"}");
@@ -168,6 +172,7 @@ int restore_database() {
 		return 1;
 	}
 
+	// Delete databases created.
 	delete_files(test_db);
 	delete_files(restored_db);
 	return result;

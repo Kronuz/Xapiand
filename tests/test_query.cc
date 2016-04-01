@@ -221,6 +221,9 @@ const test_query_t test_facets[] {
 
 
 int create_test_db() {
+	// Delete database to create.
+	delete_files(name_database);
+
 	int cont = 0;
 	local_node.name.assign("node_test");
 	local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
@@ -372,7 +375,7 @@ int make_search(const test_query_t _tests[], int len) {
 		++cont;
 	}
 
-	// Delete the files created.
+	// Delete database created.
 	delete_files(name_database);
 
 	return cont;

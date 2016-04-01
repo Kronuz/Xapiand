@@ -111,6 +111,9 @@ const test_geo_t geo_terms_tests[] {
 
 
 int create_test_db() {
+	// Delete database to create.
+	delete_files(name_database);
+
 	/*
 	 *	The database used in the test is local
 	 *	so the Endpoints and local_node are manipulated.
@@ -210,7 +213,7 @@ int make_search(const test_geo_t _tests[], int len) {
 		}
 	}
 
-	// Delete the files created.
+	// Delete database created.
 	delete_files(name_database);
 
 	return cont;

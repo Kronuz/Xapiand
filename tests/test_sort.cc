@@ -244,6 +244,9 @@ const sort_t geo_tests[] {
 
 
 int create_test_db() {
+	// Delete database to create.
+	delete_files(name_database);
+
 	int cont = 0;
 	local_node.name.assign("node_test");
 	local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
@@ -336,7 +339,7 @@ int make_search(const sort_t _tests[], int len) {
 		}
 	}
 
-	// Delete the files created.
+	// Delete database created.
 	delete_files(name_database);
 
 	return cont;
