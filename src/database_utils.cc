@@ -322,6 +322,7 @@ std::string msgpack_map_value_to_html(const msgpack::object& o) {
 	return std::string();
 }
 
+
 std::string msgpack_to_html_error(const msgpack::object& o) {
 	std::string html;
 	if (o.type == msgpack::type::MAP) {
@@ -347,6 +348,6 @@ std::string msgpack_to_html_error(const msgpack::object& o) {
 		}
 		html += "</h1>";
 	}
-	L(nullptr, "HTML [%s]", html.c_str());
+
 	return html;
 }
