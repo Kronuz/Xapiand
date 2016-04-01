@@ -1686,7 +1686,7 @@ HttpClient::write_http_response(const MsgPack& response,  int status_code, bool 
 
 	auto ct_type = content_type_pair(content_type);
 	std::vector<std::pair<std::string, std::string>> ct_types;
-	if (ct_type == json_type || ct_type == msgpack_type) {
+	if (ct_type == json_type || ct_type == msgpack_type || content_type.empty()) {
 		ct_types = msgpack_serializers;
 	} else {
 		ct_types.push_back(ct_type);
