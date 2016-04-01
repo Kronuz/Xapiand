@@ -192,6 +192,11 @@ public:
 	using std::vector<Endpoint>::cbegin;
 	using std::vector<Endpoint>::cend;
 
+	Endpoints() {}
+	Endpoints(const Endpoint &endpoint) {
+		add(endpoint);
+	}
+
 	size_t hash() const;
 	std::string as_string() const;
 
