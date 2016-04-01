@@ -208,7 +208,7 @@ XapiandManager::setup_node()
 
 
 void
-XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& server)
+XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 {
 	L_DISCOVERY(this, "Setup Node!");
 
