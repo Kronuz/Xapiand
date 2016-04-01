@@ -154,3 +154,4 @@ std::string get_blob(const Xapian::Document& doc);
 std::string to_query_string(std::string str);
 std::string msgpack_to_html(const msgpack::object& o);
 std::string msgpack_map_value_to_html(const msgpack::object& o);
+std::string msgpack_to_html_error(const msgpack::object& o);

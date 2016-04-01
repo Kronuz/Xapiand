@@ -321,3 +321,32 @@ std::string msgpack_map_value_to_html(const msgpack::object& o) {
 
 	return std::string();
 }
+
+std::string msgpack_to_html_error(const msgpack::object& o) {
+	std::string html;
+	if (o.type == msgpack::type::MAP) {
+		const msgpack::object_kv* pend(o.via.map.ptr + o.via.map.size);
+		int c = 0;
+		html += "<h1>";
+		for (auto p = o.via.map.ptr; p != pend; ++p, ++c) {
+			if (p->key.type == msgpack::type::STR) {
+				if (p->val.type == msgpack::type::STR) {
+					if (c) { html += " - "; }
+					html += std::string(p->val.via.str.ptr, p->val.via.str.size);
+				} else if (p->val.type == msgpack::type::POSITIVE_INTEGER) {
+					if (c) { html += " - "; }
+					html += std::to_string(p->val.via.u64);
+				} else if (p->val.type == msgpack::type::NEGATIVE_INTEGER) {
+					if (c) { html += " - "; }
+					html += std::to_string(p->val.via.i64);
+				} else if (p->val.type == msgpack::type::FLOAT) {
+					if (c) { html += " - "; }
+					html += std::to_string(p->val.via.f64);
+				}
+			}
+		}
+		html += "</h1>";
+	}
+	L(nullptr, "HTML [%s]", html.c_str());
+	return html;
+}
