@@ -270,6 +270,7 @@ Serialise::type(char type)
 		case DATE_TYPE:    return DATE_STR;
 		case OBJECT_TYPE:  return OBJECT_STR;
 		case ARRAY_TYPE:   return ARRAY_STR;
+		case NO_TYPE:      return std::string();
 	}
 
 	throw MSG_SerialisationError("Type: '%c' is an unknown type", type);
