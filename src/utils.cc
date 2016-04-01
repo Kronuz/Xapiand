@@ -347,15 +347,14 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 }
 
 
-char *normalize_path(const char * src, char * dst)
-{
+char *normalize_path(const char * src, char * dst) {
 	int levels = 0;
 	char * ret = dst;
-	for (int i = 0; *src && i < PATH_MAX; i++) {
+	for (int i = 0; *src && i < PATH_MAX; ++i) {
 		char ch = *src++;
 		if (ch == '.' && (levels || dst == ret || *(dst - 1) == '/' )) {
 			*dst++ = ch;
-			levels++;
+			++levels;
 		} else if (ch == '/') {
 			while (levels && dst > ret) {
 				if (*--dst == '/') levels -= 1;
