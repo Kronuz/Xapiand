@@ -101,7 +101,7 @@ protected:
 	std::string get_node_name();
 	bool set_node_name(const std::string& node_name_, std::unique_lock<std::mutex>& lk);
 	uint64_t get_node_id();
-	bool set_node_id();
+	bool set_node_id(uint64_t node_name_, std::unique_lock<std::mutex>& lk);
 
 public:
 	enum class State {

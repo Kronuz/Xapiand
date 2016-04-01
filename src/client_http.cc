@@ -910,25 +910,38 @@ HttpClient::home_view(const query_field_t& e)
 {
 	L_CALL(this, "HttpClient::home_view()");
 
-	MsgPack response;
-	int response_status = 200;
+	if (!manager()->database_pool.checkout(database, Endpoints(Endpoint(".")), DB_SPAWN)) {
+		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
+		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+		return;
+	}
+	Xapian::Document document;
+	if (!database->get_document(std::to_string(local_node.id), document)) {
+		L_WARNING(this, "Corrupt node: %s", local_node.id);
+		write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+		return;
+	}
 
-	response["name"] = local_node.name;
-	// response["address"] = local_node.addr;
+	manager()->database_pool.checkin(database);
+
+	MsgPack obj_data = get_MsgPack(document);
+	try {
+		obj_data = obj_data.at(RESERVED_DATA);
+	} catch (const std::out_of_range&) {
+		clean_reserved(obj_data);
+		obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
+	}
+
 #ifdef XAPIAND_CLUSTERING
-	response["cluster_name"] = manager()->cluster_name;
+	obj_data["cluster_name"] = manager()->cluster_name;
 #endif
 	MsgPack version;
+	version["mastery"] = PACKAGE_VERSION;
 	version["number"] = PACKAGE_VERSION;
-	// build_hash
-	// build_timestamp
-	// build_snapshot
 	version["xapian_version"] = Xapian::version_string();
-	response["version"] = version;
-	response["tagline"] = XAPIAND_TAGLINE;
-	response["_id"] = local_node.id;
+	obj_data["version"] = version;
 
-	write_http_response(response, response_status, e.pretty);
+	write_http_response(obj_data, 200, e.pretty);
 }
 
 

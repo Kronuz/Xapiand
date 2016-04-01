@@ -86,6 +86,14 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	  shutdown_sig_sig(0)
 
 {
+	// Set the id in local node.
+	local_node.id = get_node_id();
+	if (local_node.empty()) {
+		std::unique_lock<std::mutex> lk(qmtx);
+		set_node_id(random_int(1, UINT64_MAX - 1), lk);
+		local_node.id = get_node_id();
+	}
+
 	// Setup node from node database directory
 	std::string node_name_(get_node_name());
 	if (!node_name_.empty()) {
@@ -95,9 +103,6 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 			node_name = node_name_;
 		}
 	}
-
-	// Set the id in local node.
-	local_node.id = get_node_id();
 
 	// Set addr in local node
 	local_node.addr = host_address();
@@ -178,16 +183,57 @@ XapiandManager::set_node_name(const std::string& node_name_, std::unique_lock<st
 uint64_t
 XapiandManager::get_node_id()
 {
-	return random_int(0, UINT64_MAX);
+	size_t length = 0;
+	unsigned char buf[512];
+	int fd = io::open("node", O_RDONLY | O_CLOEXEC);
+	if (fd >= 0) {
+		length = io::read(fd, (char *)buf, sizeof(buf) - 1);
+		if (length > 0) {
+			buf[length] = '\0';
+			for (size_t i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
+		}
+		io::close(fd);
+	}
+	try {
+		return std::stoull(std::string((const char *)buf, length));
+	} catch (std::invalid_argument) {
+		return 0;
+	}
 }
 
 
 bool
-XapiandManager::set_node_id()
+XapiandManager::set_node_id(uint64_t node_id_, std::unique_lock<std::mutex>& lk)
 {
-	if (random_real(0, 1.0) < 0.5) return false;
+	if (!node_id_) {
+		lk.unlock();
+		return false;
+	}
 
-	// std::lock_guard<std::mutex> lk(qmtx);
+	uint64_t node_id = get_node_id();
+
+	if (node_id && node_id != node_id_) {
+		lk.unlock();
+		return false;
+	}
+
+	if (node_id != node_id_) {
+		node_id = node_id_;
+
+		int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
+		if (fd >= 0) {
+			auto node_id_str = std::to_string(node_id);
+			if (io::write(fd, node_id_str.c_str(), node_id_str.size()) != static_cast<ssize_t>(node_id_str.size())) {
+				L_CRIT(nullptr, "Cannot write in node file");
+				sig_exit(-EX_IOERR);
+			}
+			io::close(fd);
+		} else {
+			L_CRIT(nullptr, "Cannot open or create the node file");
+			sig_exit(-EX_NOINPUT);
+		}
+	}
+
 	local_node.id = get_node_id();
 
 	return true;
@@ -227,7 +273,25 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 			sig_exit(-EX_CANTCREAT);
 		}
 	}
+
+	// Set node as ready!
+	set_node_name(local_node.name, lk);
+
+	Xapian::Document document;
+	if (!cluster_database->get_document(std::to_string(local_node.id), document)) {
+		MsgPack obj;
+		obj["name"] = local_node.name;
+		obj["tagline"] = XAPIAND_TAGLINE;
+		cluster_database->index(obj, std::to_string(local_node.id), true, MSGPACK_TYPE, "");
+	}
+
+	MsgPack obj_data = get_MsgPack(document);
+
 	database_pool.checkin(cluster_database);
+	// if (obj_data["name"] != local_node.name) {
+	// 	L_CRIT(nullptr, "Node name mismatch!");
+	// 	sig_exit(-EX_CANTCREAT);
+	// }
 
 	// Get a node (any node)
 	std::unique_lock<std::mutex> lk_n(nodes_mtx);
@@ -250,8 +314,6 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 
 	lk_n.unlock();
 
-	// Set node as ready!
-	set_node_name(local_node.name, lk);
 	state = State::READY;
 
 	switch (new_cluster) {
