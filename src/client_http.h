@@ -40,14 +40,15 @@
 #define HTTP_MATCHED_COUNT    (1 << 8)
 #define HTTP_EXPECTED100      (1 << 9)
 
-#define CMD_ID     0
-#define CMD_SEARCH 1
-#define CMD_FACETS 2
-#define CMD_STATS  3
-#define CMD_SCHEMA 4
-#define CMD_UPLOAD 5
-#define CMD_UNKNOWN_HOST     6
-#define CMD_UNKNOWN_ENDPOINT 7
+#define CMD_HOME   0
+#define CMD_ID     1
+#define CMD_SEARCH 2
+#define CMD_FACETS 3
+#define CMD_STATS  4
+#define CMD_SCHEMA 5
+#define CMD_UPLOAD 6
+#define CMD_UNKNOWN_HOST     7
+#define CMD_UNKNOWN_ENDPOINT 8
 #define CMD_UNKNOWN   -1
 #define CMD_BAD_QUERY -2
 #define CMD_BAD_ENDPS -3

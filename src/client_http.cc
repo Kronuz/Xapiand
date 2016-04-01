@@ -1111,6 +1111,10 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 			char* path_buf_str = unique_path_buf.get();
 			normalize_path(path_buf.c_str(), path_buf_str);
 
+			if (*path_buf_str == '/' && *(path_buf_str + 1) == '/0') {
+				return CMD_HOME;
+			}
+
 			endpoints.clear();
 
 			parser_url_path_t p;
@@ -1123,7 +1127,7 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 				return CMD_BAD_QUERY;
 			}
 
-			if (retval == 10) { /* Solo command case (without index part) */
+			if (retval == 10 /*STATE_UNIQUE_CMD_STAT*/) { /* Solo command case (without index part) */
 				solo_command = true;
 				command = lower_string(urldecode(p.off_command, p.len_command));
 			} else {
