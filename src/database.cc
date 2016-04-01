@@ -997,7 +997,7 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 				(schema.*func)(properties, obj.at(str_key), specification);
 			} catch (const std::out_of_range&) {
 				if (is_valid(str_key)) {
-					fields.push_back(std::async(std::launch::deferred, &Schema::index_object, &schema, schema.get_subproperties(properties, str_key, specification), obj.at(str_key), std::ref(specification), std::ref(doc), std::move(str_key), false));
+					fields.push_back(std::async(std::launch::deferred, &Schema::index_object, &schema, std::ref(properties), obj.at(str_key), std::ref(specification), std::ref(doc), std::move(str_key), false));
 				} else {
 					try {
 						auto func = map_dispatch_root.at(str_key);

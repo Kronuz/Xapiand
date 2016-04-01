@@ -255,7 +255,7 @@ public:
 	 * Functions for indexing elements in a Xapian::document.
 	 */
 
-	void index_object(MsgPack properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value=true);
+	void index_object(MsgPack& global_properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value=true);
 	inline void index_item(MsgPack& properties, const MsgPack& value, specification_t& specification, Xapian::Document& doc, bool is_value);
 	void index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc, const char* reserved_word, dispatch_index func);
 	void index_texts(MsgPack& properties, const MsgPack& texts, const specification_t& specification, Xapian::Document& doc);

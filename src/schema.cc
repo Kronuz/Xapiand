@@ -276,8 +276,6 @@ Schema::update_specification(const MsgPack& properties, specification_t& specifi
 	specification.prefix = default_spc.prefix;
 	specification.slot = default_spc.slot;
 	specification.bool_term = default_spc.bool_term;
-	specification.value = default_spc.value;
-	specification.name = default_spc.name;
 
 	for (const auto property : properties) {
 		auto prop_str = property.get_str();
@@ -1098,15 +1096,18 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, specif
 
 
 void
-Schema::index_object(MsgPack properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value)
+Schema::index_object(MsgPack& global_properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value)
 {
 	L_CALL(this, "Schema::index_object()");
+
+	auto properties = get_subproperties(global_properties, name, specification);
 
 	specification.name = name;
 	if (object.get_type() == msgpack::type::MAP) {
 		bool offsprings = false;
 		IndexVector fields;
 		fields.reserve(object.size());
+		specification.value = default_spc.value;
 		for (const auto item_key : object) {
 			const auto str_key = item_key.get_str();
 			try {
@@ -1115,7 +1116,7 @@ Schema::index_object(MsgPack properties, const MsgPack object, specification_t& 
 			} catch (const std::out_of_range&) {
 				if (is_valid(str_key)) {
 					const auto str_fullkey = specification.name.empty() ? str_key : specification.name + DB_OFFSPRING_UNION + str_key;
-					fields.push_back(std::async(std::launch::deferred, &Schema::index_object, this, get_subproperties(properties, str_key, specification), object.at(str_key), std::ref(specification), std::ref(doc), std::move(str_fullkey), is_value));
+					fields.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), object.at(str_key), std::ref(specification), std::ref(doc), std::move(str_fullkey), is_value));
 					offsprings = true;
 				}
 			}
@@ -1160,6 +1161,8 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& 
 	L_CALL(this, "Schema::index_array()");
 
 	if (array.get_type() == msgpack::type::ARRAY) {
+		specification.name = default_spc.name;
+		specification.value = default_spc.value;
 		const specification_t spc_bef = specification;
 		for (auto item : array) {
 			for (const auto property : item) {
