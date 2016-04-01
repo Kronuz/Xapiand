@@ -1180,7 +1180,7 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& 
 					subproperties.reset(get_subproperties(properties, specification.name, specification));
 				}
 				validate_required_data(subproperties, *specification.value, specification);
-				(this->*func)(properties, *specification.value, specification, doc);
+				(this->*func)(subproperties, *specification.value, specification, doc);
 				specification = spc_bef;
 			} else {
 				throw MSG_ClientError("%s must be defined in objects of %s", RESERVED_VALUE, reserved_word);
