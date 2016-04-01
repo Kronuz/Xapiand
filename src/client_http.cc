@@ -1125,7 +1125,6 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 {
 	L_CALL(this, "HttpClient::url_resolve()");
 
-	int retval;
 	bool solo_command = false;
 	struct http_parser_url u;
 	std::string b = repr(path);
@@ -1150,22 +1149,22 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 				memset(&p, 0, sizeof(p));
 
 				bool find_id = parser.method == METHOD_POST ? false : true;
-				retval = url_path(path_buf_str, path_size, &p, find_id);
+				int state = url_path(path_buf_str, path_size, &p, find_id);
 
-				if (retval < 0) {
+				if (state < 0) {
 					return CMD_BAD_QUERY;
 				}
 
-				if (retval == 10 /*STATE_UNIQUE_CMD_STAT*/) { /* Solo command case (without index part) */
+				if (state == 10 /*STATE_UNIQUE_CMD_STAT*/) { /* Solo command case (without index part) */
 					solo_command = true;
 					command = lower_string(urldecode(p.off_command, p.len_command));
 				} else {
-					while (retval == 0) {
+					while (state == 0) {
 						int endp_err = endpoint_maker(p, writable, find_id);
 						if (endp_err != 0) {
 							return endp_err;
 						}
-						retval = url_path(path_buf_str, path_size, &p);
+						state = url_path(path_buf_str, path_size, &p);
 					}
 				}
 
