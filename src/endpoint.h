@@ -128,7 +128,6 @@ class Endpoints;
 #include <vector>
 #include <unordered_set>
 
-char *normalize_path(const char * src, char * dst);
 
 namespace std {
 	template<>

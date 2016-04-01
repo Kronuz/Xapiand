@@ -168,6 +168,7 @@ std::string lower_string(Args&&... args) {
 void to_upper(std::string& str);
 void to_lower(std::string& str);
 
+char *normalize_path(const char * src, char * dst);
 int url_path(const char* n1, size_t size, parser_url_path_t *par, bool find_id=true);
 int url_qs(const char *, const char *, size_t, parser_query_t *);
 std::string urldecode(const char *, size_t);
