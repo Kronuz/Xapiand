@@ -1650,7 +1650,7 @@ HttpClient::get_acceptable_type(const T& ct)
 
 
 std::pair<std::string, std::string>
-HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty)
+HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty, bool serialize_error)
 {
 	L_CALL(this, "HttpClient::serialize_response()");
 
@@ -1659,8 +1659,8 @@ HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, 
 	} else if (is_acceptable_type(ct_type, msgpack_type)) {
 		return std::make_pair(obj.to_string(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, html_type)) {
-		//TODO add error especial case
-		return std::make_pair(msgpack_to_html(*(obj.body->obj)), html_type.first + "/" + html_type.second + "; charset=utf-8");
+		std::function<std::string(const msgpack::object&)> html_serialize = serialize_error ? msgpack_to_html_error : msgpack_to_html;
+		return std::make_pair(html_serialize(*(obj.body->obj)), html_type.first + "/" + html_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, text_type)) {
 		/*
 		 error:
@@ -1694,7 +1694,7 @@ HttpClient::write_http_response(const MsgPack& response,  int status_code, bool 
 
 	const auto& accepted_type = get_acceptable_type(ct_types);
 	try {
-		auto result = serialize_response(response, accepted_type, pretty);
+		auto result = serialize_response(response, accepted_type, pretty,  status_code >= 400);
 		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result.first, result.second));
 	} catch (const SerialisationError& exc) {
 		status_code = 406;

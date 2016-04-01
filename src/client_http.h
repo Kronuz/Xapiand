@@ -134,7 +134,7 @@ class HttpClient : public BaseClient {
 
 	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
 	void clean_http_request();
-	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty);
+	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty, bool serialize_error=false);
 	template <typename T>
 	const std::pair<std::string, std::string>& get_acceptable_type(const T& ct_types);
 	const std::pair<std::string, std::string>* is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::pair<std::string, std::string>& ct_type);
