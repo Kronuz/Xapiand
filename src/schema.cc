@@ -1174,13 +1174,16 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& 
 			}
 
 			if (specification.value) {
-				MsgPack subproperties;
 				specification.set_type = false;
 				if (!specification.name.empty()) {
-					subproperties.reset(get_subproperties(properties, specification.name, specification));
+					auto subproperties = get_subproperties(properties, specification.name, specification);
+					validate_required_data(subproperties, *specification.value, specification);
+					(this->*func)(subproperties, *specification.value, specification, doc);
+				} else {
+					MsgPack subproperties;
+					validate_required_data(subproperties, *specification.value, specification);
+					(this->*func)(subproperties, *specification.value, specification, doc);
 				}
-				validate_required_data(subproperties, *specification.value, specification);
-				(this->*func)(subproperties, *specification.value, specification, doc);
 				specification = spc_bef;
 			} else {
 				throw MSG_ClientError("%s must be defined in objects of %s", RESERVED_VALUE, reserved_word);
