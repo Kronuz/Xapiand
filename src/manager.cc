@@ -217,10 +217,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	std::unique_lock<std::mutex> lk(qmtx);
 
 	// Open cluster database
-	cluster_endpoints.clear();
-	Endpoint cluster_endpoint(".");
-	cluster_endpoints.add(cluster_endpoint);
-
+	Endpoints cluster_endpoints(Endpoint("."));
 	std::shared_ptr<Database> cluster_database;
 	if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL)) {
 		new_cluster = 1;

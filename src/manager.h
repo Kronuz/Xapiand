@@ -84,8 +84,6 @@ class XapiandManager : public Worker  {
 
 	std::mutex qmtx;
 
-	Endpoints cluster_endpoints;
-
 	XapiandManager(ev::loop_ref* loop_, const opts_t& o);
 
 	struct sockaddr_in host_address();
