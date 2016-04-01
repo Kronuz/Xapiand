@@ -190,7 +190,10 @@ public:
 template<typename... Params>
 class ThreadPool : public TaskQueue<Params...> {
 	std::vector<std::thread> threads;
+public:
+	std::atomic_int running_task;
 
+private:
 	// Function that retrieves a task from a fifo queue, runs it and deletes it
 	template<typename... Params_>
 	void worker(const std::string& format, size_t idx, Params_&&... params) {
@@ -199,7 +202,9 @@ class ThreadPool : public TaskQueue<Params...> {
 		set_thread_name(std::string(name));
 		function_mo<void(Params...)> task;
 		while (TaskQueue<Params...>::tasks.pop(task)) {
+			++running_task;
 			task(std::forward<Params_>(params)...);
+			--running_task;
 		}
 	}
 
@@ -207,6 +212,7 @@ public:
 	// Allocate a thread pool and set them to work trying to get tasks
 	template<typename... Params_>
 	ThreadPool(const std::string& format, size_t num_threads, Params_&&... params) {
+		running_task = 0;
 		threads.reserve(num_threads);
 		for (size_t idx = 0; idx < num_threads; ++idx) {
 			threads.emplace_back(&ThreadPool::worker<Params_...>, this, format, idx, std::forward<Params_>(params)...);

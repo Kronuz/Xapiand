@@ -735,15 +735,29 @@ XapiandManager::server_status(MsgPack&& stats)
 	stats["http_connections"] = XapiandServer::http_clients.load();
 	stats["max_connections"] = XapiandServer::max_total_clients.load();
 	stats["max_http_connections"] = XapiandServer::max_http_clients.load();
+
 	stats["workers_pool_size"] = thread_pool.threadpool_size();
+	stats["workers_enqueued_tasks"] = thread_pool.size();
+	stats["workers_tasks_running"] = thread_pool.running_task.load();
+
 	stats["servers_pool_size"] = server_pool.threadpool_size();
+	stats["servers_enqueued_tasks"] = server_pool.size();
+	stats["servers_tasks_running"] = server_pool.running_task.load();
+
 	stats["committers_pool_size"] = autocommit_pool.threadpool_size();
+	stats["committers_enqueued_tasks"] = autocommit_pool.size();
+	stats["committers_tasks_running"] = autocommit_pool.running_task.load();
+
 	stats["fsync_pool_size"] = asyncfsync_pool.threadpool_size();
+	stats["fsync_enqueued_tasks"] = asyncfsync_pool.size();
+	stats["fsync_tasks_running"] = asyncfsync_pool.running_task.load();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
 		stats["binary_connections"] = XapiandServer::binary_clients.load();
 		stats["max_binary_connections"] = XapiandServer::max_binary_clients.load();
 		stats["replicators_pool_size"] = replicator_pool.threadpool_size();
+		stats["replicators_enqueued_tasks"] = replicator_pool.size();
+		stats["replicators_tasks_running"] = replicator_pool.running_task.load();
 	}
 #endif
 }
