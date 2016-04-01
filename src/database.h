@@ -343,6 +343,7 @@ public:
 	bool delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 	bool delete_document_term(const std::string& term, bool commit_=false, bool wal_=true);
 	Xapian::docid index(const std::string& body, const std::string& document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
+	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid add_document(const Xapian::Document& doc, bool commit_=false, bool wal_=true);
 	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_=false, bool wal_=true);

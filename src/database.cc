@@ -1076,6 +1076,24 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 
 
 Xapian::docid
+Database::index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
+{
+	// Index required data for the document
+	Xapian::Document doc;
+	std::string term_id;
+	index_required_data(doc, term_id, _document_id, ct_type, ct_length);
+
+	L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
+	if (obj.get_type() == msgpack::type::MAP) {
+		_index(doc, obj);
+	}
+	set_data(doc, obj.to_string(), "");
+	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
+	return replace_document_term(term_id, doc, commit_);
+}
+
+
+Xapian::docid
 Database::patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
 {
 	L_CALL(this, "Database::patch()");
