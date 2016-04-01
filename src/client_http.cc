@@ -1107,6 +1107,9 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 		if (u.field_set & (1 << UF_PATH )) {
 			size_t path_size = u.field_data[3].len;
 			std::string path_buf(b.c_str() + u.field_data[3].off, u.field_data[3].len);
+			auto unique_path_buf = std::make_unique<char[]>(path_buf.size() + 1);
+			char* path_buf_str = unique_path_buf.get();
+			normalize_path(path_buf.c_str(), path_buf_str);
 
 			endpoints.clear();
 
@@ -1114,7 +1117,7 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 			memset(&p, 0, sizeof(p));
 
 			bool find_id = parser.method == METHOD_POST ? false : true;
-			retval = url_path(path_buf.c_str(), path_size, &p, find_id);
+			retval = url_path(path_buf_str, path_size, &p, find_id);
 
 			if (retval < 0) {
 				return CMD_BAD_QUERY;
@@ -1129,7 +1132,7 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 					if (endp_err != 0) {
 						return endp_err;
 					}
-					retval = url_path(path_buf.c_str(), path_size, &p);
+					retval = url_path(path_buf_str, path_size, &p);
 				}
 			}
 
