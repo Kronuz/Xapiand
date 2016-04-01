@@ -108,6 +108,7 @@ class HttpClient : public BaseClient {
 	static int on_info(http_parser* p);
 	static int on_data(http_parser* p, const char* at, size_t length);
 
+	void home_view(const query_field_t& e);
 	void stats_view(const query_field_t& e, int mode);
 	void delete_document_view(const query_field_t& e);
 	void index_document_view(const query_field_t& e, bool gen_id=false);

@@ -555,6 +555,9 @@ HttpClient::_get()
 	}
 
 	switch (cmd) {
+		case CMD_HOME:
+			home_view(e);
+			break;
 		case CMD_ID:
 			e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
 			search_view(e, false, false);
@@ -903,6 +906,33 @@ HttpClient::bad_request_view(const query_field_t& e, int cmd)
 
 
 void
+HttpClient::home_view(const query_field_t& e)
+{
+	L_CALL(this, "HttpClient::home_view()");
+
+	MsgPack response;
+	int response_status = 200;
+
+	response["name"] = local_node.name;
+	// response["address"] = local_node.addr;
+#ifdef XAPIAND_CLUSTERING
+	response["cluster_name"] = manager()->cluster_name;
+#endif
+	MsgPack version;
+	version["number"] = PACKAGE_VERSION;
+	// build_hash
+	// build_timestamp
+	// build_snapshot
+	version["xapian_version"] = Xapian::version_string();
+	response["version"] = version;
+	response["tagline"] = XAPIAND_TAGLINE;
+	response["_id"] = local_node.id;
+
+	write_http_response(response, response_status, e.pretty);
+}
+
+
+void
 HttpClient::upload_view(const query_field_t&)
 {
 	L_CALL(this, "HttpClient::upload_view()");
@@ -1111,37 +1141,37 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 			char* path_buf_str = unique_path_buf.get();
 			normalize_path(path_buf.c_str(), path_buf_str);
 
-			if (*path_buf_str == '/' && *(path_buf_str + 1) == '/0') {
-				return CMD_HOME;
-			}
-
-			endpoints.clear();
-
-			parser_url_path_t p;
-			memset(&p, 0, sizeof(p));
-
-			bool find_id = parser.method == METHOD_POST ? false : true;
-			retval = url_path(path_buf_str, path_size, &p, find_id);
-
-			if (retval < 0) {
-				return CMD_BAD_QUERY;
-			}
-
-			if (retval == 10 /*STATE_UNIQUE_CMD_STAT*/) { /* Solo command case (without index part) */
-				solo_command = true;
-				command = lower_string(urldecode(p.off_command, p.len_command));
+			if (*path_buf_str == '/' && *(path_buf_str + 1) == '\0') {
+				command.clear();
 			} else {
-				while (retval == 0) {
-					int endp_err = endpoint_maker(p, writable, find_id);
-					if (endp_err != 0) {
-						return endp_err;
-					}
-					retval = url_path(path_buf_str, path_size, &p);
-				}
-			}
+				endpoints.clear();
 
-			if (p.len_parameter) {
-				mode = lower_string(urldecode(p.off_parameter, p.len_parameter));
+				parser_url_path_t p;
+				memset(&p, 0, sizeof(p));
+
+				bool find_id = parser.method == METHOD_POST ? false : true;
+				retval = url_path(path_buf_str, path_size, &p, find_id);
+
+				if (retval < 0) {
+					return CMD_BAD_QUERY;
+				}
+
+				if (retval == 10 /*STATE_UNIQUE_CMD_STAT*/) { /* Solo command case (without index part) */
+					solo_command = true;
+					command = lower_string(urldecode(p.off_command, p.len_command));
+				} else {
+					while (retval == 0) {
+						int endp_err = endpoint_maker(p, writable, find_id);
+						if (endp_err != 0) {
+							return endp_err;
+						}
+						retval = url_path(path_buf_str, path_size, &p);
+					}
+				}
+
+				if (p.len_parameter) {
+					mode = lower_string(urldecode(p.off_parameter, p.len_parameter));
+				}
 			}
 		}
 
@@ -1501,25 +1531,29 @@ HttpClient::query_maker(const char* query_str, size_t query_size, int cmd, query
 
 
 int
-HttpClient::identify_cmd(const std::string& commad)
+HttpClient::identify_cmd(const std::string& command)
 {
-	if (commad.compare(HTTP_SEARCH) == 0) {
+	if (command.empty()) {
+		return CMD_HOME;
+	}
+
+	if (command.compare(HTTP_SEARCH) == 0) {
 		return CMD_SEARCH;
 	}
 
-	if (commad.compare(HTTP_FACETS) == 0) {
+	if (command.compare(HTTP_FACETS) == 0) {
 		return CMD_FACETS;
 	}
 
-	if (commad.compare(HTTP_STATS) == 0) {
+	if (command.compare(HTTP_STATS) == 0) {
 		return CMD_STATS;
 	}
 
-	if (commad.compare(HTTP_SCHEMA) == 0) {
+	if (command.compare(HTTP_SCHEMA) == 0) {
 		return CMD_SCHEMA;
 	}
 
-	if (commad.compare(HTTP_UPLOAD) == 0) {
+	if (command.compare(HTTP_UPLOAD) == 0) {
 		return CMD_UPLOAD;
 	}
 
