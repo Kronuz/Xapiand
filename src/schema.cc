@@ -1239,18 +1239,18 @@ Schema::index_text(const specification_t& specification, Xapian::Document& doc, 
 
 	if (specification.positions[getPos(pos, specification.positions.size())]) {
 		if (specification.prefix.empty()) {
-			term_generator.index_text_without_positions(serialise_val, specification.weight[getPos(pos, specification.weight.size())]);
-		} else {
-			term_generator.index_text_without_positions(serialise_val, specification.weight[getPos(pos, specification.weight.size())], specification.prefix);
-		}
-		L_INDEX(this, "Text index with positions => %s: %s", specification.prefix.c_str(), serialise_val.c_str());
-	} else {
-		if (specification.prefix.empty()) {
 			term_generator.index_text(serialise_val, specification.weight[getPos(pos, specification.weight.size())]);
 		} else {
 			term_generator.index_text(serialise_val, specification.weight[getPos(pos, specification.weight.size())], specification.prefix);
 		}
 		L_INDEX(this, "Text to Index = %s: %s", specification.prefix.c_str(), serialise_val.c_str());
+	} else {
+		if (specification.prefix.empty()) {
+			term_generator.index_text_without_positions(serialise_val, specification.weight[getPos(pos, specification.weight.size())]);
+		} else {
+			term_generator.index_text_without_positions(serialise_val, specification.weight[getPos(pos, specification.weight.size())], specification.prefix);
+		}
+		L_INDEX(this, "Text index with positions => %s: %s", specification.prefix.c_str(), serialise_val.c_str());
 	}
 }
 
