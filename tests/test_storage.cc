@@ -255,6 +255,7 @@ int test_storage_bad_headers() {
 
 int test_storage_exception_write(int flags) {
 	std::atomic_bool finish(false);
+	std::mutex mtx;
 	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage(nullptr);
 
 	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
@@ -262,21 +263,31 @@ int test_storage_exception_write(int flags) {
 	auto write_storage = std::thread([&]() {
 		std::string data;
 		for (int i = 0; i < 5120; ++i) {
+			std::unique_lock<std::mutex> lk(mtx);
 			try {
 				_storage.write(data);
+				lk.unlock();
 			} catch (const StorageException& er) {
 				_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+				lk.unlock();
 			}
+			lk.lock();
 			data.append(1, random_int(0, 255));
+			lk.unlock();
 		}
 		finish.store(true);
 	});
 
 	auto interrupt_storage = std::thread([&]() {
 		while (true) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(random_int(10, 20)));
+			std::unique_lock<std::mutex> lk(mtx);
+			uint64_t ran = random_int(10, 20);
+			lk.unlock();
+			std::this_thread::sleep_for(std::chrono::milliseconds(ran));
 			if (!finish.load()) {
+				std::unique_lock<std::mutex> lk(mtx);
 				_storage.close();
+				lk.unlock();
 			} else {
 				return;
 			}
@@ -310,32 +321,42 @@ int test_storage_exception_write(int flags) {
 
 int test_storage_exception_write_file(int flags) {
 	std::atomic_bool finish(false);
+	std::mutex mtx;
 	Storage<StorageHeader, StorageBinHeader, StorageBinFooterChecksum> _storage(nullptr);
 
 	_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
 
 	auto write_storage = std::thread([&]() {
 		for (const auto& filename : small_files) {
+			std::unique_lock<std::mutex> lk(mtx);
 			try {
 				_storage.write_file(filename);
+				lk.unlock();
 			} catch (const StorageException& er) {
 				_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+				lk.unlock();
 			}
 		}
 
 		for (const auto& filename : big_files) {
+			std::unique_lock<std::mutex> lk(mtx);
 			try {
 				_storage.write_file(filename);
+				lk.unlock();
 			} catch (const StorageException& er) {
 				_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+				lk.unlock();
 			}
 		}
 
 		for (const auto& filename : small_files) {
+			std::unique_lock<std::mutex> lk(mtx);
 			try {
 				_storage.write_file(filename);
+				lk.unlock();
 			} catch (const StorageException& er) {
 				_storage.open(volume_name, STORAGE_CREATE_OR_OPEN | flags);
+				lk.unlock();
 			}
 		}
 
@@ -344,9 +365,14 @@ int test_storage_exception_write_file(int flags) {
 
 	auto interrupt_storage = std::thread([&]() {
 		while (true) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(random_int(10, 20)));
+			std::unique_lock<std::mutex> lk(mtx);
+			uint64_t ran = random_int(10, 20);
+			lk.unlock();
+			std::this_thread::sleep_for(std::chrono::milliseconds(ran));
 			if (!finish.load()) {
+				std::unique_lock<std::mutex> lk(mtx);
 				_storage.close();
+				lk.unlock();
 			} else {
 				return;
 			}
