@@ -70,7 +70,7 @@ struct specification_t {
 	bool bool_detection;
 	bool string_detection;
 	bool bool_term;
-	std::shared_ptr<const MsgPack> value;
+	std::unique_ptr<const MsgPack> value;
 	std::string name;
 
 	// Auxiliar variables.
@@ -78,9 +78,13 @@ struct specification_t {
 	bool set_type;
 	bool set_bool_term;
 	bool fixed_index;
-	std::shared_ptr<const MsgPack> doc_acc;
+	std::unique_ptr<const MsgPack> doc_acc;
+	std::string full_name;
 
 	specification_t();
+	specification_t(const specification_t& o);
+
+	specification_t& operator=(const specification_t& o);
 
 	std::string to_string() const;
 };
@@ -144,7 +148,7 @@ class Schema {
 	 * Validates data when RESERVED_TYPE has not been save in schema.
 	 * Insert into properties all required data.
 	 */
-	void validate_required_data(MsgPack& properties, const MsgPack& value, specification_t& specification);
+	void validate_required_data(MsgPack& properties, const MsgPack* value, specification_t& specification);
 
 
 public:
@@ -182,6 +186,11 @@ public:
 	 * Returns the properties of schema.
 	 */
 	MsgPack get_properties(specification_t& specification);
+
+	/*
+	 * Restarting reserved words than are not inherited.
+	 */
+	void restart_specification(specification_t& specification);
 
 	/*
 	 * Gets the properties of item_key and specification is updated.
@@ -257,7 +266,7 @@ public:
 	 */
 
 	inline void fixed_index(MsgPack& properties, const MsgPack& object, specification_t& specifications, Xapian::Document& doc);
-	void index_object(MsgPack& global_properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name);
+	void index_object(MsgPack& global_properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name=std::string());
 	void index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc);
 	inline void index_item(MsgPack& properties, const MsgPack& value, specification_t& specification, Xapian::Document& doc);
 	void index_texts(MsgPack& properties, const MsgPack& texts, const specification_t& specification, Xapian::Document& doc);

@@ -109,27 +109,87 @@ static auto getPos = [](size_t pos, size_t size) noexcept {
 
 
 specification_t::specification_t()
-		: position({ 0 }),
-		  weight({ 1 }),
-		  language({ "en" }),
-		  spelling({ false }),
-		  positions({ false }),
-		  analyzer({ Xapian::TermGenerator::STEM_SOME }),
-		  sep_types({ NO_TYPE, NO_TYPE, NO_TYPE }),
-		  slot(0),
-		  index(Index::ALL),
-		  store(true),
-		  dynamic(true),
-		  date_detection(true),
-		  numeric_detection(true),
-		  geo_detection(true),
-		  bool_detection(true),
-		  string_detection(true),
-		  bool_term(false),
-		  found_field(true),
-		  set_type(true),
-		  set_bool_term(false),
-		  fixed_index(false) { }
+	: position({ 0 }),
+	  weight({ 1 }),
+	  language({ "en" }),
+	  spelling({ false }),
+	  positions({ false }),
+	  analyzer({ Xapian::TermGenerator::STEM_SOME }),
+	  sep_types({ NO_TYPE, NO_TYPE, NO_TYPE }),
+	  slot(0),
+	  index(Index::ALL),
+	  store(true),
+	  dynamic(true),
+	  date_detection(true),
+	  numeric_detection(true),
+	  geo_detection(true),
+	  bool_detection(true),
+	  string_detection(true),
+	  bool_term(false),
+	  found_field(true),
+	  set_type(false),
+	  set_bool_term(false),
+	  fixed_index(false) { }
+
+
+specification_t::specification_t(const specification_t& o)
+	: position(o.position),
+	  weight(o.weight),
+	  language(o.language),
+	  spelling(o.spelling),
+	  positions(o.positions),
+	  analyzer(o.analyzer),
+	  sep_types(o.sep_types),
+	  accuracy(o.accuracy),
+	  acc_prefix(o.acc_prefix),
+	  prefix(o.prefix),
+	  slot(o.slot),
+	  index(o.index),
+	  store(o.store),
+	  dynamic(o.dynamic),
+	  date_detection(o.date_detection),
+	  numeric_detection(o.numeric_detection),
+	  geo_detection(o.geo_detection),
+	  bool_detection(o.bool_detection),
+	  string_detection(o.string_detection),
+	  bool_term(o.bool_term),
+	  found_field(o.found_field),
+	  set_type(o.set_type),
+	  set_bool_term(o.bool_term),
+	  fixed_index(o.fixed_index),
+	  full_name(o.full_name) { }
+
+
+specification_t&
+specification_t::operator=(const specification_t& o)
+{
+	position = o.position;
+	weight = o.weight;
+	language = o.language;
+	spelling = o.spelling;
+	positions = o.positions;
+	analyzer = o.analyzer;
+	sep_types = o.sep_types;
+	accuracy = o.accuracy;
+	acc_prefix = o.acc_prefix;
+	prefix = o.prefix;
+	slot = o.slot;
+	index = o.index;
+	store = o.store;
+	dynamic = o.dynamic;
+	date_detection = o.date_detection;
+	numeric_detection = o.numeric_detection;
+	geo_detection = o.geo_detection;
+	bool_detection = o.bool_detection;
+	string_detection = o.string_detection;
+	bool_term = o.bool_term;
+	found_field = o.found_field;
+	set_type = o.set_type;
+	set_bool_term = o.bool_term;
+	fixed_index = o.fixed_index;
+	full_name = o.full_name;
+	return *this;
+}
 
 
 std::string
@@ -260,6 +320,7 @@ Schema::get_properties(specification_t& specification)
 		exist.store(true);
 		specification.found_field = false;
 	}
+	specification.set_type = true;
 
 	return prop_schema;
 }
@@ -269,14 +330,6 @@ void
 Schema::update_specification(const MsgPack& properties, specification_t& specification)
 {
 	L_CALL(nullptr, "Schema::update_specification()");
-
-	// Restarting reserved words than are not inherited.
-	specification.sep_types = default_spc.sep_types;
-	specification.accuracy.clear();
-	specification.acc_prefix.clear();
-	specification.prefix = default_spc.prefix;
-	specification.slot = default_spc.slot;
-	specification.bool_term = default_spc.bool_term;
 
 	for (const auto property : properties) {
 		auto str_prop = property.get_str();
@@ -288,22 +341,33 @@ Schema::update_specification(const MsgPack& properties, specification_t& specifi
 }
 
 
+void
+Schema::restart_specification(specification_t& specification)
+{
+	specification.sep_types = default_spc.sep_types;
+	specification.accuracy.clear();
+	specification.acc_prefix.clear();
+	specification.prefix = default_spc.prefix;
+	specification.slot = default_spc.slot;
+	specification.bool_term = default_spc.bool_term;
+	specification.set_type = default_spc.set_type;
+	specification.name = default_spc.name;
+}
+
+
 MsgPack
 Schema::get_subproperties(MsgPack& properties, const std::string& item_key, specification_t& specification)
 {
 	L_CALL(this, "Schema::get_subproperties()");
 
 	auto subproperties = properties[item_key];
+	restart_specification(specification);
 	if (subproperties) {
 		specification.found_field = true;
-		specification.set_type = false;
-		specification.set_bool_term = false;
 		update_specification(subproperties, specification);
 	} else {
 		to_store = true;
 		specification.found_field = false;
-		specification.set_type = false;
-		specification.set_bool_term = false;
 	}
 
 	return subproperties;
@@ -674,7 +738,7 @@ Schema::process_accuracy(MsgPack&, const MsgPack& doc_accuracy, specification_t&
 
 	if (doc_accuracy.get_type() == msgpack::type::ARRAY) {
 		try {
-			specification.doc_acc = std::make_shared<const MsgPack>(doc_accuracy);
+			specification.doc_acc = std::make_unique<const MsgPack>(doc_accuracy);
 		} catch (const msgpack::type_error&) {
 			throw MSG_ClientError("Data inconsistency, %s: %s must be an array of doubles", RESERVED_ACCURACY, NUMERIC_STR);
 		}
@@ -916,7 +980,7 @@ void
 Schema::process_value(MsgPack&, const MsgPack& doc_value, specification_t& specification)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
-	specification.value = std::make_shared<const MsgPack>(doc_value);
+	specification.value = std::make_unique<const MsgPack>(doc_value);
 }
 
 
@@ -925,7 +989,7 @@ Schema::process_name(MsgPack&, const MsgPack& doc_name, specification_t& specifi
 {
 	// RESERVED_NAME isn't heritable and is not saved in schema.
 	try {
-		specification.name = specification.name.empty() ? doc_name.get_str() : specification.name + DB_OFFSPRING_UNION + doc_name.get_str();
+		specification.name = doc_name.get_str();
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_NAME);
 	}
@@ -966,12 +1030,10 @@ void
 Schema::fixed_index(MsgPack& properties, const MsgPack& object, specification_t& specification, Xapian::Document& doc)
 {
 	specification.fixed_index = true;
-	specification.set_type = false;
 	switch (object.get_type()) {
 		case msgpack::type::MAP:
-			return index_object(properties, object, specification, doc, std::string());
+			return index_object(properties, object, specification, doc);
 		case msgpack::type::ARRAY:
-			specification.name = std::string();
 			return index_array(properties, object, specification, doc);
 		default:
 			throw MSG_ClientError("%s must be an object or an array of objects", RESERVED_VALUES);
@@ -984,14 +1046,21 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, specifica
 {
 	L_CALL(this, "Schema::index_object()");
 
-	auto properties = get_subproperties(global_properties, name, specification);
-	specification.name = name;
+	MsgPack properties;
+	if (name.empty()) {
+		properties.reset(global_properties);
+		specification.found_field = true;
+	} else {
+		specification.full_name = specification.full_name.empty() ? name : specification.full_name + DB_OFFSPRING_UNION + name;
+		properties.reset(get_subproperties(global_properties, name, specification));
+	}
+
 	switch (object.get_type()) {
 		case msgpack::type::MAP: {
 			bool offsprings = false;
 			TaskVector tasks;
 			tasks.reserve(object.size());
-			specification.value = default_spc.value;
+			specification.value = nullptr;
 			for (const auto item_key : object) {
 				const auto str_key = item_key.get_str();
 				try {
@@ -999,18 +1068,26 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, specifica
 					(this->*func)(properties, object.at(str_key), specification);
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_key)) {
-						const auto str_fullkey = specification.name.empty() ? str_key : specification.name + DB_OFFSPRING_UNION + str_key;
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), object.at(str_key), std::ref(specification), std::ref(doc), std::move(str_fullkey)));
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), object.at(str_key), std::ref(specification), std::ref(doc), std::move(str_key)));
 						offsprings = true;
 					}
 				}
 			}
 
-			if (specification.value) {
-				if (specification.name.empty()) {
-					MsgPack subproperties;
-					index_item(subproperties, *specification.value, specification, doc);
-				} else {
+			if unlikely(!specification.found_field && specification.sep_types[2] != NO_TYPE) {
+				validate_required_data(properties, specification.value.get(), specification);
+				specification.set_type = true;
+			}
+
+			const specification_t spc_bef = specification;
+
+			if (specification.name.empty()) {
+				if (specification.value) {
+					index_item(properties, *specification.value, specification, doc);
+				}
+			} else {
+				specification.full_name = specification.full_name.empty() ? specification.name : specification.full_name + DB_OFFSPRING_UNION + specification.name;
+				if (specification.value) {
 					auto subproperties = get_subproperties(properties, specification.name, specification);
 					index_item(subproperties, *specification.value, specification, doc);
 				}
@@ -1020,10 +1097,9 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, specifica
 				set_type_to_object(properties);
 			}
 
-			const specification_t spc_bef = specification;
 			for (auto& task : tasks) {
-				task.get();
 				specification = spc_bef;
+				task.get();
 			}
 			break;
 		}
@@ -1044,10 +1120,9 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& 
 	bool offsprings = false;
 	for (auto item : array) {
 		if (item.get_type() == msgpack::type::MAP) {
-			specification.value = default_spc.value;
 			TaskVector tasks;
 			tasks.reserve(item.size());
-			specification.value = default_spc.value;
+			specification.value = nullptr;
 			for (const auto property : item) {
 				auto str_prop = property.get_str();
 				try {
@@ -1055,27 +1130,30 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& 
 					(this->*func)(properties, item.at(str_prop), specification);
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_prop)) {
-						const auto str_fullkey = specification.name.empty() ? str_prop : specification.name + DB_OFFSPRING_UNION + str_prop;
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), item.at(str_prop), std::ref(specification), std::ref(doc), std::move(str_fullkey)));
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), item.at(str_prop), std::ref(specification), std::ref(doc), std::move(str_prop)));
 						offsprings = true;
 					}
 				}
 			}
 
-			if (specification.value) {
-				if (specification.name.empty()) {
-					MsgPack subproperties;
-					index_item(subproperties, *specification.value, specification, doc);
-				} else {
+			const specification_t spc_bef = specification;
+
+			if (specification.name.empty()) {
+				specification.found_field = true;
+				if (specification.value) {
+					index_item(properties, *specification.value, specification, doc);
+				}
+			} else {
+				specification.full_name = specification.full_name.empty() ? specification.name : specification.full_name + DB_OFFSPRING_UNION + specification.name;
+				if (specification.value) {
 					auto subproperties = get_subproperties(properties, specification.name, specification);
 					index_item(subproperties, *specification.value, specification, doc);
 				}
 			}
 
-			const specification_t spc_bef = specification;
 			for (auto& task : tasks) {
-				task.get();
 				specification = spc_bef;
+				task.get();
 			}
 		} else {
 			index_item(properties, item, specification, doc);
@@ -1093,7 +1171,7 @@ Schema::index_item(MsgPack& properties, const MsgPack& value, specification_t& s
 {
 	try {
 		if unlikely(!specification.set_type) {
-			validate_required_data(properties, value, specification);
+			validate_required_data(properties, &value, specification);
 		}
 
 		switch (specification.index) {
@@ -1111,12 +1189,12 @@ Schema::index_item(MsgPack& properties, const MsgPack& value, specification_t& s
 
 
 void
-Schema::validate_required_data(MsgPack& properties, const MsgPack& value, specification_t& specification)
+Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specification_t& specification)
 {
 	L_CALL(this, "Schema::validate_required_data()");
 
-	if (specification.sep_types[2] == NO_TYPE) {
-		set_type(value, specification);
+	if (specification.sep_types[2] == NO_TYPE && value) {
+		set_type(*value, specification);
 	}
 
 	// Process RESERVED_TYPE
@@ -1128,7 +1206,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, specif
 	switch (specification.sep_types[2]) {
 		case GEO_TYPE: {
 			if (!specification.doc_acc) {
-				specification.doc_acc = std::make_shared<const MsgPack>(def_accuracy_geo);
+				specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_geo);
 			}
 
 			try {
@@ -1163,7 +1241,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, specif
 		}
 		case DATE_TYPE: {
 			if (!specification.doc_acc) {
-				specification.doc_acc = std::make_shared<const MsgPack>(def_accuracy_date);
+				specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_date);
 			}
 
 			try {
@@ -1192,7 +1270,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, specif
 		}
 		case NUMERIC_TYPE: {
 			if (!specification.doc_acc) {
-				specification.doc_acc = std::make_shared<const MsgPack>(def_accuracy_num);
+				specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_num);
 			}
 
 			try {
@@ -1210,7 +1288,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, specif
 	if (size_acc) {
 		if (specification.acc_prefix.empty()) {
 			for (const auto& acc : set_acc) {
-				specification.acc_prefix.push_back(get_prefix(specification.name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]));
+				specification.acc_prefix.push_back(get_prefix(specification.full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]));
 			}
 		} else if (specification.acc_prefix.size() != size_acc) {
 			throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
@@ -1223,20 +1301,20 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, specif
 
 	// Process RESERVED_PREFIX
 	if (specification.prefix.empty()) {
-		specification.prefix = get_prefix(specification.name, DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]);
+		specification.prefix = get_prefix(specification.full_name, DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]);
 	}
 	properties[RESERVED_PREFIX] = specification.prefix;
 
 	// Process RESERVED_SLOT
 	if (!specification.slot) {
-		specification.slot = get_slot(specification.name);
+		specification.slot = get_slot(specification.full_name);
 	}
 	properties[RESERVED_SLOT] = specification.slot;
 
 	// Process RESERVED_BOOL_TERM
 	if (!specification.set_bool_term) {
 		// By default, if field name has upper characters then it is consider bool term.
-		specification.bool_term = strhasupper(specification.name);
+		specification.bool_term = strhasupper(specification.full_name);
 	}
 	properties[RESERVED_BOOL_TERM] = specification.bool_term;
 }
@@ -1249,7 +1327,7 @@ Schema::index_texts(MsgPack& properties, const MsgPack& texts, const specificati
 
 	// L_INDEX(this, "Texts => Specifications: %s", specification.to_string().c_str());
 	if (!specification.found_field && !specification.dynamic) {
-		throw MSG_ClientError("%s is not dynamic", specification.name.c_str());
+		throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
 	}
 
 	if (specification.store) {
@@ -1315,7 +1393,7 @@ Schema::index_terms(MsgPack& properties, const MsgPack& terms, const specificati
 
 	// L_INDEX(this, "Terms => Specifications: %s", specification.to_string().c_str());
 	if (!specification.found_field && !specification.dynamic) {
-		throw MSG_ClientError("%s is not dynamic", specification.name.c_str());
+		throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
 	}
 
 	if (specification.store) {
@@ -1376,7 +1454,7 @@ Schema::index_values(MsgPack& properties, const MsgPack& values, const specifica
 
 	// L_INDEX(this, "Values => Specifications: %s", specification.to_string().c_str());
 	if (!(specification.found_field || specification.dynamic)) {
-		throw MSG_ClientError("%s is not dynamic", specification.name.c_str());
+		throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
 	}
 
 	if (specification.store) {

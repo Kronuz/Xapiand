@@ -1007,6 +1007,7 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 			}
 		}
 
+		schema.restart_specification(specification);
 		const specification_t spc_start = specification;
 		for (auto& task : tasks) {
 			task.get();
