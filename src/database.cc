@@ -947,21 +947,27 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 
 void
-Database::index_required_data(Xapian::Document& doc, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const
+Database::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
 {
-	L_CALL(this, "Database::index_required_data()");
+	L_CALL(this, "Database::_index()");
+
+	auto properties = schema.getPropertiesSchema();
+	specification_t specification;
+
+	// Index Required Data.
+	term_id = schema.serialise_id(properties, specification, _document_id);
 
 	std::size_t found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
 	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
 
 	// Saves document's id in DB_SLOT_ID
-	doc.add_value(DB_SLOT_ID, _document_id);
+	doc.add_value(DB_SLOT_ID, term_id);
 
 	// Document's id is also a boolean term (otherwise it doesn't replace an existing document)
-	term_id = prefixed(_document_id, DOCUMENT_ID_TERM_PREFIX);
+	term_id = prefixed(term_id, DOCUMENT_ID_TERM_PREFIX);
 	doc.add_boolean_term(term_id);
-	L_DATABASE_WRAP(this, "Slot: 0 _id: %s  term: %s", _document_id.c_str(), term_id.c_str());
+	L_DATABASE_WRAP(this, "Slot: %d _id: %s (%s)", DB_SLOT_ID, _document_id.c_str(), term_id.c_str());
 
 	// Indexing the content values of data.
 	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
@@ -973,21 +979,13 @@ Database::index_required_data(Xapian::Document& doc, std::string& term_id, const
 	doc.add_term(prefixed(ct_type, term_prefix));
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
-}
 
-
-void
-Database::_index(Xapian::Document& doc, const MsgPack& obj)
-{
-	L_CALL(this, "Database::_index()");
-
+	// Index obj.
 	// Save a copy of schema for undo changes if there is a exception.
 	auto str_schema = schema.to_string();
 	auto _to_store = schema.get_store();
 
 	try {
-		specification_t specification;
-		auto properties = schema.get_properties(specification);
 		TaskVector tasks;
 		tasks.reserve(obj.size());
 		for (const auto item_key : obj) {
@@ -1037,16 +1035,12 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 		throw MSG_Error("Document must have an 'id'");
 	}
 
-	// Index required data for the document
-	Xapian::Document doc;
-	std::string term_id;
-	index_required_data(doc, term_id, _document_id, ct_type, ct_length);
-
 	// Create MsgPack object
 	bool blob = true;
+	std::string ct_type_ = ct_type;
 	MsgPack obj;
 	rapidjson::Document rdoc;
-	switch (get_mimetype(ct_type)) {
+	switch (get_mimetype(ct_type_)) {
 		case MIMEType::APPLICATION_JSON:
 			json_load(rdoc, body);
 			obj = MsgPack(rdoc);
@@ -1055,7 +1049,7 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 			try {
 				json_load(rdoc, body);
 				obj = MsgPack(rdoc);
-				doc.add_value(DB_SLOT_TYPE, JSON_TYPE);
+				ct_type_ = JSON_TYPE;
 			} catch (const std::exception&) { }
 			break;
 		case MIMEType::APPLICATION_X_MSGPACK:
@@ -1066,10 +1060,13 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 	}
 
 	L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
+	Xapian::Document doc;
+	std::string term_id;
 	if (obj.get_type() == msgpack::type::MAP) {
 		blob = false;
-		_index(doc, obj);
+		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
 	}
+
 	set_data(doc, obj.to_string(), blob ? body : "");
 	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 	return replace_document_term(term_id, doc, commit_);
@@ -1079,15 +1076,13 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 Xapian::docid
 Database::index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
 {
-	// Index required data for the document
+	L_DATABASE_WRAP(this, "Document to index: %s", obj.to_string().c_str());
 	Xapian::Document doc;
 	std::string term_id;
-	index_required_data(doc, term_id, _document_id, ct_type, ct_length);
-
-	L_DATABASE_WRAP(this, "Document to index: %s", obj.to_string().c_str());
 	if (obj.get_type() == msgpack::type::MAP) {
-		_index(doc, obj);
+		_index(doc, obj, term_id, _document_id, ct_type, ct_length);
 	}
+
 	set_data(doc, obj.to_string(), "");
 	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 	return replace_document_term(term_id, doc, commit_);
@@ -1145,15 +1140,13 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 	if (!mset.empty() && get_document(mset.begin(), document)) {
 		MsgPack obj_data = get_MsgPack(document);
 		apply_patch(obj_patch, obj_data);
-		Xapian::Document doc;
-		std::string term_id;
-
-		// Index required data for the document
-		index_required_data(doc, term_id, _document_id, _ct_type, ct_length);
 
 		L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
+		Xapian::Document doc;
+		std::string term_id;
+		_index(doc, obj_data, term_id, _document_id, _ct_type, ct_length);
+
 		set_data(doc, obj_data.to_string(), get_blob(document));
-		_index(doc, obj_data);
 		L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 		return replace_document_term(term_id, doc, commit_);
 	} else {
@@ -1481,8 +1474,7 @@ Database::get_data_field(const std::string& field_name)
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
-		specification_t specification;
-		auto properties = schema.get_properties(specification).path(fields);
+		auto properties = schema.getPropertiesSchema().path(fields);
 
 		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
 		if (res.type == NO_TYPE) {
@@ -1526,8 +1518,7 @@ Database::get_slot_field(const std::string& field_name)
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
-		specification_t specification;
-		auto properties = schema.get_properties(specification).path(fields);
+		auto properties = schema.getPropertiesSchema().path(fields);
 		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
 		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
 	} catch (const std::exception&) { }

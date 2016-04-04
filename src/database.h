@@ -342,7 +342,7 @@ public:
 	bool delete_document(Xapian::docid did, bool commit_=false, bool wal_=true);
 	bool delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 	bool delete_document_term(const std::string& term, bool commit_=false, bool wal_=true);
-	Xapian::docid index(const std::string& body, const std::string& document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
+	Xapian::docid index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid add_document(const Xapian::Document& doc, bool commit_=false, bool wal_=true);
@@ -368,8 +368,7 @@ public:
 	void get_stats_doc(MsgPack&& stats, const std::string& document_id);
 
 private:
-	void index_required_data(Xapian::Document& doc, std::string& unique_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length) const;
-	void _index(Xapian::Document& doc, const MsgPack& obj);
+	void _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
 
 	search_t _search(const std::string& query, unsigned flags, bool text, const std::string& lan);
 	search_t search(const query_field_t& e);
