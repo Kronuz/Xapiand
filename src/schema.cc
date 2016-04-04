@@ -28,7 +28,7 @@
 
 static const std::vector<std::string> str_time     { "second", "minute", "hour", "day", "month", "year" };
 static const std::vector<std::string> str_analyzer { "STEM_NONE", "STEM_SOME", "STEM_ALL", "STEM_ALL_Z" };
-static const std::vector<std::string> str_index    { "ALL", "TERM", "VALUE" };
+static const std::vector<std::string> str_index    { "ALL", "TERM", "VALUE", "TEXT" };
 
 
 static const MsgPack def_accuracy_geo(to_json("[true, 0.2, 0, 5, 10, 15, 20, 25]"));
@@ -128,7 +128,8 @@ specification_t::specification_t()
 		  bool_term(false),
 		  found_field(true),
 		  set_type(true),
-		  set_bool_term(false) { }
+		  set_bool_term(false),
+		  fixed_index(false) { }
 
 
 std::string
@@ -278,10 +279,10 @@ Schema::update_specification(const MsgPack& properties, specification_t& specifi
 	specification.bool_term = default_spc.bool_term;
 
 	for (const auto property : properties) {
-		auto prop_str = property.get_str();
+		auto str_prop = property.get_str();
 		try {
-			auto func = map_dispatch_properties.at(prop_str);
-			(*func)(properties.at(prop_str), specification);
+			auto func = map_dispatch_properties.at(str_prop);
+			(*func)(properties.at(str_prop), specification);
 		} catch (const std::out_of_range&) { }
 	}
 }
@@ -753,7 +754,11 @@ Schema::process_slot(MsgPack&, const MsgPack& doc_slot, specification_t& specifi
 void
 Schema::process_index(MsgPack& properties, const MsgPack& doc_index, specification_t& specification)
 {
-	// RESERVED_INDEX is heritable and can change.
+	// RESERVED_INDEX is heritable and can change if fixed_index is false.
+	if unlikely(specification.fixed_index) {
+		return;
+	}
+
 	try {
 		std::string _index(upper_string(doc_index.get_str()));
 		if (_index == str_index[0]) {
@@ -762,8 +767,10 @@ Schema::process_index(MsgPack& properties, const MsgPack& doc_index, specificati
 			specification.index = Index::TERM;
 		} else if (_index == str_index[2]) {
 			specification.index = Index::VALUE;
+		} else if (_index == str_index[3]) {
+			specification.index = Index::TEXT;
 		} else {
-			throw MSG_ClientError("%s can be in {%s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str());
+			throw MSG_ClientError("%s can be in {%s, %s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str(), str_index[3].c_str());
 		}
 
 		if unlikely(!specification.found_field) {
@@ -935,11 +942,8 @@ Schema::process_values(MsgPack& properties, const MsgPack doc_values, specificat
 {
 	L_CALL(this, "Schema::process_values()");
 
-	if (doc_values.get_type() == msgpack::type::MAP) {
-		index_object(properties, doc_values, specification, doc, std::string());
-	} else {
-		throw MSG_ClientError("%s must be an object", RESERVED_VALUES);
-	}
+	specification.index = Index::VALUE;
+	fixed_index(properties, doc_values, specification, doc);
 }
 
 
@@ -948,7 +952,8 @@ Schema::process_texts(MsgPack& properties, const MsgPack doc_texts, specificatio
 {
 	L_CALL(this, "Schema::process_texts()");
 
-	index_array(properties, doc_texts, specification, doc, RESERVED_TEXTS, &Schema::index_texts);
+	specification.index = Index::TEXT;
+	fixed_index(properties, doc_texts, specification, doc);
 }
 
 
@@ -957,7 +962,156 @@ Schema::process_terms(MsgPack& properties, const MsgPack doc_terms, specificatio
 {
 	L_CALL(this, "Schema::process_terms()");
 
-	index_array(properties, doc_terms, specification, doc, RESERVED_TERMS, &Schema::index_terms);
+	specification.index = Index::TERM;
+	fixed_index(properties, doc_terms, specification, doc);
+}
+
+
+void
+Schema::fixed_index(MsgPack& properties, const MsgPack& object, specification_t& specification, Xapian::Document& doc)
+{
+	specification.fixed_index = true;
+	specification.set_type = false;
+	switch (object.get_type()) {
+		case msgpack::type::MAP:
+			return index_object(properties, object, specification, doc, std::string());
+		case msgpack::type::ARRAY:
+			specification.name = std::string();
+			return index_array(properties, object, specification, doc);
+		default:
+			throw MSG_ClientError("%s must be an object or an array of objects", RESERVED_VALUES);
+	}
+}
+
+
+void
+Schema::index_object(MsgPack& global_properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name)
+{
+	L_CALL(this, "Schema::index_object()");
+
+	auto properties = get_subproperties(global_properties, name, specification);
+	specification.name = name;
+	switch (object.get_type()) {
+		case msgpack::type::MAP: {
+			bool offsprings = false;
+			TaskVector tasks;
+			tasks.reserve(object.size());
+			specification.value = default_spc.value;
+			for (const auto item_key : object) {
+				const auto str_key = item_key.get_str();
+				try {
+					auto func = map_dispatch_reserved.at(str_key);
+					(this->*func)(properties, object.at(str_key), specification);
+				} catch (const std::out_of_range&) {
+					if (is_valid(str_key)) {
+						const auto str_fullkey = specification.name.empty() ? str_key : specification.name + DB_OFFSPRING_UNION + str_key;
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), object.at(str_key), std::ref(specification), std::ref(doc), std::move(str_fullkey)));
+						offsprings = true;
+					}
+				}
+			}
+
+			if (specification.value) {
+				if (specification.name.empty()) {
+					MsgPack subproperties;
+					index_item(subproperties, *specification.value, specification, doc);
+				} else {
+					auto subproperties = get_subproperties(properties, specification.name, specification);
+					index_item(subproperties, *specification.value, specification, doc);
+				}
+			}
+
+			if (offsprings) {
+				set_type_to_object(properties);
+			}
+
+			const specification_t spc_bef = specification;
+			for (auto& task : tasks) {
+				task.get();
+				specification = spc_bef;
+			}
+			break;
+		}
+		case msgpack::type::ARRAY:
+			set_type_to_array(properties);
+			return index_array(properties, object, specification, doc);
+		default:
+			return index_item(properties, object, specification, doc);
+	}
+}
+
+
+void
+Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc)
+{
+	L_CALL(this, "Schema::index_array()");
+
+	bool offsprings = false;
+	for (auto item : array) {
+		if (item.get_type() == msgpack::type::MAP) {
+			specification.value = default_spc.value;
+			TaskVector tasks;
+			tasks.reserve(item.size());
+			specification.value = default_spc.value;
+			for (const auto property : item) {
+				auto str_prop = property.get_str();
+				try {
+					auto func = map_dispatch_reserved.at(str_prop);
+					(this->*func)(properties, item.at(str_prop), specification);
+				} catch (const std::out_of_range&) {
+					if (is_valid(str_prop)) {
+						const auto str_fullkey = specification.name.empty() ? str_prop : specification.name + DB_OFFSPRING_UNION + str_prop;
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), item.at(str_prop), std::ref(specification), std::ref(doc), std::move(str_fullkey)));
+						offsprings = true;
+					}
+				}
+			}
+
+			if (specification.value) {
+				if (specification.name.empty()) {
+					MsgPack subproperties;
+					index_item(subproperties, *specification.value, specification, doc);
+				} else {
+					auto subproperties = get_subproperties(properties, specification.name, specification);
+					index_item(subproperties, *specification.value, specification, doc);
+				}
+			}
+
+			const specification_t spc_bef = specification;
+			for (auto& task : tasks) {
+				task.get();
+				specification = spc_bef;
+			}
+		} else {
+			index_item(properties, item, specification, doc);
+		}
+	}
+
+	if (offsprings) {
+		set_type_to_object(properties);
+	}
+}
+
+
+void
+Schema::index_item(MsgPack& properties, const MsgPack& value, specification_t& specification, Xapian::Document& doc)
+{
+	try {
+		if unlikely(!specification.set_type) {
+			validate_required_data(properties, value, specification);
+		}
+
+		switch (specification.index) {
+			case Index::VALUE:
+				return index_values(properties, value, specification, doc);
+			case Index::TERM:
+				return index_terms(properties, value, specification, doc);
+			case Index::TEXT:
+				return index_texts(properties, value, specification, doc);
+			case Index::ALL:
+				return index_values(properties, value, specification, doc, true);
+		}
+	} catch (const DummyException&) { }
 }
 
 
@@ -966,232 +1120,130 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack& value, specif
 {
 	L_CALL(this, "Schema::validate_required_data()");
 
-	if unlikely(!specification.set_type) {
-		if (specification.sep_types[2] == NO_TYPE) {
-			set_type(value, specification);
-		}
+	if (specification.sep_types[2] == NO_TYPE) {
+		set_type(value, specification);
+	}
 
-		// Process RESERVED_TYPE
-		properties[RESERVED_TYPE] = specification.sep_types;
-		to_store.store(true);
+	// Process RESERVED_TYPE
+	properties[RESERVED_TYPE] = specification.sep_types;
+	to_store.store(true);
 
-		// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
-		std::set<double> set_acc;
-		switch (specification.sep_types[2]) {
-			case GEO_TYPE: {
-				if (!specification.doc_acc) {
-					specification.doc_acc = std::make_shared<const MsgPack>(def_accuracy_geo);
-				}
+	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
+	std::set<double> set_acc;
+	switch (specification.sep_types[2]) {
+		case GEO_TYPE: {
+			if (!specification.doc_acc) {
+				specification.doc_acc = std::make_shared<const MsgPack>(def_accuracy_geo);
+			}
 
-				try {
-					specification.accuracy.push_back(specification.doc_acc->at(0).get_bool());
-				} catch (const msgpack::type_error&) {
-					throw MSG_ClientError("Data inconsistency, partials value in %s: %s must be boolean", RESERVED_ACCURACY, GEO_STR);
-				}
+			try {
+				specification.accuracy.push_back(specification.doc_acc->at(0).get_bool());
+			} catch (const msgpack::type_error&) {
+				throw MSG_ClientError("Data inconsistency, partials value in %s: %s must be boolean", RESERVED_ACCURACY, GEO_STR);
+			}
 
-				try {
-					auto error = specification.doc_acc->at(1).get_f64();
-					specification.accuracy.push_back(error > HTM_MAX_ERROR ? HTM_MAX_ERROR : error < HTM_MIN_ERROR ? HTM_MIN_ERROR : error);
-				} catch (const msgpack::type_error&) {
-					throw MSG_ClientError("Data inconsistency, error value in %s: %s must be positive integer", RESERVED_ACCURACY, GEO_STR);
-				} catch (const std::out_of_range&) {
-					specification.accuracy.push_back(def_accuracy_geo.at(1).get_f64());
-				}
+			try {
+				auto error = specification.doc_acc->at(1).get_f64();
+				specification.accuracy.push_back(error > HTM_MAX_ERROR ? HTM_MAX_ERROR : error < HTM_MIN_ERROR ? HTM_MIN_ERROR : error);
+			} catch (const msgpack::type_error&) {
+				throw MSG_ClientError("Data inconsistency, error value in %s: %s must be positive integer", RESERVED_ACCURACY, GEO_STR);
+			} catch (const std::out_of_range&) {
+				specification.accuracy.push_back(def_accuracy_geo.at(1).get_f64());
+			}
 
-				try {
-					const auto it_e = specification.doc_acc->end();
-					for (auto it = specification.doc_acc->begin() + 2; it != it_e; ++it) {
-						uint64_t val_acc = (*it).get_u64();
-						if (val_acc <= HTM_MAX_LEVEL) {
-							set_acc.insert(val_acc);
-						} else {
-							throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
-						}
+			try {
+				const auto it_e = specification.doc_acc->end();
+				for (auto it = specification.doc_acc->begin() + 2; it != it_e; ++it) {
+					uint64_t val_acc = (*it).get_u64();
+					if (val_acc <= HTM_MAX_LEVEL) {
+						set_acc.insert(val_acc);
+					} else {
+						throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
 					}
-				} catch (const msgpack::type_error&) {
-					throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+				}
+			} catch (const msgpack::type_error&) {
+				throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+			}
+			break;
+		}
+		case DATE_TYPE: {
+			if (!specification.doc_acc) {
+				specification.doc_acc = std::make_shared<const MsgPack>(def_accuracy_date);
+			}
+
+			try {
+				for (const auto _accuracy : *specification.doc_acc) {
+					std::string str_accuracy(lower_string(_accuracy.get_str()));
+					if (str_accuracy == str_time[5]) {
+						set_acc.insert(toUType(unitTime::YEAR));
+					} else if (str_accuracy == str_time[4]) {
+						set_acc.insert(toUType(unitTime::MONTH));
+					} else if (str_accuracy == str_time[3]) {
+						set_acc.insert(toUType(unitTime::DAY));
+					} else if (str_accuracy == str_time[2]) {
+						set_acc.insert(toUType(unitTime::HOUR));
+					} else if (str_accuracy == str_time[1]) {
+						set_acc.insert(toUType(unitTime::MINUTE));
+					} else if (str_accuracy == str_time[0]) {
+						set_acc.insert(toUType(unitTime::SECOND));
+					} else {
+						throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+					}
 				}
 				break;
-			}
-			case DATE_TYPE: {
-				if (!specification.doc_acc) {
-					specification.doc_acc = std::make_shared<const MsgPack>(def_accuracy_date);
-				}
-
-				try {
-					for (const auto _accuracy : *specification.doc_acc) {
-						std::string str_accuracy(lower_string(_accuracy.get_str()));
-						if (str_accuracy == str_time[5]) {
-							set_acc.insert(toUType(unitTime::YEAR));
-						} else if (str_accuracy == str_time[4]) {
-							set_acc.insert(toUType(unitTime::MONTH));
-						} else if (str_accuracy == str_time[3]) {
-							set_acc.insert(toUType(unitTime::DAY));
-						} else if (str_accuracy == str_time[2]) {
-							set_acc.insert(toUType(unitTime::HOUR));
-						} else if (str_accuracy == str_time[1]) {
-							set_acc.insert(toUType(unitTime::MINUTE));
-						} else if (str_accuracy == str_time[0]) {
-							set_acc.insert(toUType(unitTime::SECOND));
-						} else {
-							throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
-						}
-					}
-					break;
-				} catch (const msgpack::type_error&) {
-					throw MSG_ClientError("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s]}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
-				}
-			}
-			case NUMERIC_TYPE: {
-				if (!specification.doc_acc) {
-					specification.doc_acc = std::make_shared<const MsgPack>(def_accuracy_num);
-				}
-
-				try {
-					for (const auto _accuracy : *specification.doc_acc) {
-						set_acc.insert(_accuracy.get_u64());
-					}
-					break;
-				} catch (const msgpack::type_error&) {
-					throw MSG_ClientError("Data inconsistency, %s: %s must be an array of positive numbers", RESERVED_ACCURACY, NUMERIC_STR);
-				}
+			} catch (const msgpack::type_error&) {
+				throw MSG_ClientError("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s]}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
 			}
 		}
-
-		size_t size_acc = set_acc.size();
-		if (size_acc) {
-			if (specification.acc_prefix.empty()) {
-				for (const auto& acc : set_acc) {
-					specification.acc_prefix.push_back(get_prefix(specification.name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]));
-				}
-			} else if (specification.acc_prefix.size() != size_acc) {
-				throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+		case NUMERIC_TYPE: {
+			if (!specification.doc_acc) {
+				specification.doc_acc = std::make_shared<const MsgPack>(def_accuracy_num);
 			}
 
-			specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-			properties[RESERVED_ACCURACY] = specification.accuracy;
-			properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
-		}
-
-		// Process RESERVED_PREFIX
-		if (specification.prefix.empty()) {
-			specification.prefix = get_prefix(specification.name, DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]);
-		}
-		properties[RESERVED_PREFIX] = specification.prefix;
-
-		// Process RESERVED_SLOT
-		if (!specification.slot) {
-			specification.slot = get_slot(specification.name);
-		}
-		properties[RESERVED_SLOT] = specification.slot;
-
-		// Process RESERVED_BOOL_TERM
-		if (!specification.set_bool_term) {
-			// By default, if field name has upper characters then it is consider bool term.
-			specification.bool_term = strhasupper(specification.name);
-		}
-		properties[RESERVED_BOOL_TERM] = specification.bool_term;
-	}
-}
-
-
-void
-Schema::index_object(MsgPack& global_properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value)
-{
-	L_CALL(this, "Schema::index_object()");
-
-	auto properties = get_subproperties(global_properties, name, specification);
-
-	specification.name = name;
-	if (object.get_type() == msgpack::type::MAP) {
-		bool offsprings = false;
-		IndexVector fields;
-		fields.reserve(object.size());
-		specification.value = default_spc.value;
-		for (const auto item_key : object) {
-			const auto str_key = item_key.get_str();
 			try {
-				auto func = map_dispatch_reserved.at(str_key);
-				(this->*func)(properties, object.at(str_key), specification);
-			} catch (const std::out_of_range&) {
-				if (is_valid(str_key)) {
-					const auto str_fullkey = specification.name.empty() ? str_key : specification.name + DB_OFFSPRING_UNION + str_key;
-					fields.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), object.at(str_key), std::ref(specification), std::ref(doc), std::move(str_fullkey), is_value));
-					offsprings = true;
+				for (const auto _accuracy : *specification.doc_acc) {
+					set_acc.insert(_accuracy.get_u64());
 				}
+				break;
+			} catch (const msgpack::type_error&) {
+				throw MSG_ClientError("Data inconsistency, %s: %s must be an array of positive numbers", RESERVED_ACCURACY, NUMERIC_STR);
 			}
 		}
-
-		if (specification.value) {
-			index_item(properties, *specification.value, specification, doc, is_value);
-		}
-
-		const specification_t spc_bef = specification;
-		for (auto& field : fields) {
-			field.get();
-			specification = spc_bef;
-		}
-
-		if (offsprings) {
-			set_type_to_object(properties);
-		}
-	} else {
-		index_item(properties, object, specification, doc, is_value);
 	}
-}
 
-
-void
-Schema::index_item(MsgPack& properties, const MsgPack& value, specification_t& specification, Xapian::Document& doc, bool is_value)
-{
-	validate_required_data(properties, value, specification);
-	if (is_value || specification.index == Index::VALUE) {
-		return index_values(properties, value, specification, doc);
-	} else if (specification.index == Index::TERM) {
-		return index_terms(properties, value, specification, doc);
-	} else {
-		return index_values(properties, value, specification, doc, true);
-	}
-}
-
-
-void
-Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc, const char* reserved_word, dispatch_index func)
-{
-	L_CALL(this, "Schema::index_array()");
-
-	if (array.get_type() == msgpack::type::ARRAY) {
-		specification.name = default_spc.name;
-		specification.value = default_spc.value;
-		const specification_t spc_bef = specification;
-		for (auto item : array) {
-			for (const auto property : item) {
-				auto prop_str = property.get_str();
-				try {
-					auto func = map_dispatch_reserved.at(prop_str);
-					(this->*func)(properties, item.at(prop_str), specification);
-				} catch (const std::out_of_range&) { }
+	size_t size_acc = set_acc.size();
+	if (size_acc) {
+		if (specification.acc_prefix.empty()) {
+			for (const auto& acc : set_acc) {
+				specification.acc_prefix.push_back(get_prefix(specification.name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]));
 			}
-
-			if (specification.value) {
-				specification.set_type = false;
-				if (!specification.name.empty()) {
-					auto subproperties = get_subproperties(properties, specification.name, specification);
-					validate_required_data(subproperties, *specification.value, specification);
-					(this->*func)(subproperties, *specification.value, specification, doc);
-				} else {
-					MsgPack subproperties;
-					validate_required_data(subproperties, *specification.value, specification);
-					(this->*func)(subproperties, *specification.value, specification, doc);
-				}
-				specification = spc_bef;
-			} else {
-				throw MSG_ClientError("%s must be defined in objects of %s", RESERVED_VALUE, reserved_word);
-			}
+		} else if (specification.acc_prefix.size() != size_acc) {
+			throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
 		}
-	} else {
-		throw MSG_ClientError("%s must be an array of objects", reserved_word);
+
+		specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+		properties[RESERVED_ACCURACY] = specification.accuracy;
+		properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
 	}
+
+	// Process RESERVED_PREFIX
+	if (specification.prefix.empty()) {
+		specification.prefix = get_prefix(specification.name, DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]);
+	}
+	properties[RESERVED_PREFIX] = specification.prefix;
+
+	// Process RESERVED_SLOT
+	if (!specification.slot) {
+		specification.slot = get_slot(specification.name);
+	}
+	properties[RESERVED_SLOT] = specification.slot;
+
+	// Process RESERVED_BOOL_TERM
+	if (!specification.set_bool_term) {
+		// By default, if field name has upper characters then it is consider bool term.
+		specification.bool_term = strhasupper(specification.name);
+	}
+	properties[RESERVED_BOOL_TERM] = specification.bool_term;
 }
 
 

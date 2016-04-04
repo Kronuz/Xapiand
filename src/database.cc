@@ -988,8 +988,8 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 	try {
 		specification_t specification;
 		auto properties = schema.get_properties(specification);
-		IndexVector fields;
-		fields.reserve(obj.size());
+		TaskVector tasks;
+		tasks.reserve(obj.size());
 		for (const auto item_key : obj) {
 			const auto str_key = item_key.get_str();
 			try {
@@ -997,20 +997,20 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj)
 				(schema.*func)(properties, obj.at(str_key), specification);
 			} catch (const std::out_of_range&) {
 				if (is_valid(str_key)) {
-					fields.push_back(std::async(std::launch::deferred, &Schema::index_object, &schema, std::ref(properties), obj.at(str_key), std::ref(specification), std::ref(doc), std::move(str_key), false));
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, &schema, std::ref(properties), obj.at(str_key), std::ref(specification), std::ref(doc), std::move(str_key)));
 				} else {
 					try {
 						auto func = map_dispatch_root.at(str_key);
-						fields.push_back(std::async(std::launch::deferred, func, &schema, std::ref(properties), obj.at(str_key), std::ref(specification), std::ref(doc)));
+						tasks.push_back(std::async(std::launch::deferred, func, &schema, std::ref(properties), obj.at(str_key), std::ref(specification), std::ref(doc)));
 					} catch (const std::out_of_range&) { }
 				}
 			}
 		}
 
-		const specification_t spc_bef = specification;
-		for (auto& field : fields) {
-			field.get();
-			specification = spc_bef;
+		const specification_t spc_start = specification;
+		for (auto& task : tasks) {
+			task.get();
+			specification = spc_start;
 		}
 	} catch (...) {
 		// Back to the initial schema if there are changes.

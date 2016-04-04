@@ -43,7 +43,8 @@ enum class unitTime {
 enum class Index {
 	ALL,
 	TERM,
-	VALUE
+	VALUE,
+	TEXT
 };
 
 
@@ -76,6 +77,7 @@ struct specification_t {
 	bool found_field;
 	bool set_type;
 	bool set_bool_term;
+	bool fixed_index;
 	std::shared_ptr<const MsgPack> doc_acc;
 
 	specification_t();
@@ -104,8 +106,7 @@ extern const std::unordered_map<std::string, dispatch_property> map_dispatch_pro
 extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
 
 
-using IndexVector = std::vector<std::future<void>>;
-
+using TaskVector = std::vector<std::future<void>>;
 
 class Schema {
 	Database* database;
@@ -215,7 +216,7 @@ public:
 
 
 	/*
-	 * Functions for updating the schema and specification.
+	 * Functions for indexing elements in a Xapian::document.
 	 */
 
 	void process_weight(MsgPack& properties, const MsgPack& doc_weight, specification_t& specification);
@@ -252,12 +253,13 @@ public:
 
 
 	/*
-	 * Functions for indexing elements in a Xapian::document.
+	 * Functions for adding fields to index in FieldMap.
 	 */
 
-	void index_object(MsgPack& global_properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name, bool is_value=true);
-	inline void index_item(MsgPack& properties, const MsgPack& value, specification_t& specification, Xapian::Document& doc, bool is_value);
-	void index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc, const char* reserved_word, dispatch_index func);
+	inline void fixed_index(MsgPack& properties, const MsgPack& object, specification_t& specifications, Xapian::Document& doc);
+	void index_object(MsgPack& global_properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name);
+	void index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc);
+	inline void index_item(MsgPack& properties, const MsgPack& value, specification_t& specification, Xapian::Document& doc);
 	void index_texts(MsgPack& properties, const MsgPack& texts, const specification_t& specification, Xapian::Document& doc);
 	void index_text(const specification_t& specification, Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
 	void index_terms(MsgPack& properties, const MsgPack& terms, const specification_t& specification, Xapian::Document& doc);
