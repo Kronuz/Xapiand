@@ -106,7 +106,6 @@ struct query_field_t {
 	unsigned check_at_least;
 	bool spelling;
 	bool synonyms;
-	bool pretty;
 	bool commit;
 	bool unique_doc;
 	bool is_fuzzy;
@@ -123,7 +122,7 @@ struct query_field_t {
 	similar_field_t nearest;
 
 	query_field_t()
-		: offset(0), limit(10), check_at_least(0), spelling(true), synonyms(false), pretty(false),
+		: offset(0), limit(10), check_at_least(0), spelling(true), synonyms(false),
 		  commit(false), unique_doc(false), is_fuzzy(false),
 		  is_nearest(false), collapse(""), collapse_max(1), fuzzy(), nearest() { }
 

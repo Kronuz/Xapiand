@@ -74,14 +74,6 @@
 #define STATE_PTH 4
 #define STATE_HST 5
 
-#define STATE_UNIQUE_CMD_STAT 10
-
-#define HTTP_UPLOAD "_upload"
-#define HTTP_UPLOAD_SIZE 7
-#define HTTP_STATS "_stats"
-#define HTTP_STATS_SIZE 6
-
-
 const std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
 const std::regex find_range_re("(.*)\\.\\.(.*)", std::regex::optimize);
 
@@ -289,15 +281,77 @@ std::string urldecode(const char *src, size_t size) {
 }
 
 
-int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
-	const char *nf = qs + size;
-	const char *n1, *n0;
+char* normalize_path(const char* src, const char* end, char* dst) {
+	int levels = 0;
+	char* ret = dst;
+	while (*src && src < end) {
+		char ch = *src++;
+		if (ch == '.' && (levels || dst == ret || *(dst - 1) == '/' )) {
+			*dst++ = ch;
+			++levels;
+		} else if (ch == '/') {
+			while (levels && dst > ret) {
+				if (*--dst == '/') levels -= 1;
+			}
+			if (dst == ret || *(dst - 1) != '/') {
+				*dst++ = ch;
+			}
+		} else {
+			*dst++ = ch;
+			levels = 0;
+		}
+	}
+	*dst++ = '\0';
+	return ret;
+}
+
+char* normalize_path(const std::string& src, char* dst)
+{
+	const char* src_str = src.data();
+	return normalize_path(src_str, src_str + src.size(), dst);
+}
+
+
+
+QueryParser::QueryParser() :
+	len(0),
+	off(nullptr)
+{}
+
+void
+QueryParser::clear()
+{
+	rewind();
+	query.clear();
+}
+
+void
+QueryParser::rewind()
+{
+	len = 0;
+	off = nullptr;
+}
+
+int
+QueryParser::init(const std::string& q)
+{
+	clear();
+	query = q;
+	return 0;
+}
+
+int
+QueryParser::next(const char *name)
+{
+	const char *ni = query.data();
+	const char *nf = ni + query.size();
+	const char *n0, *n1 = nullptr;
 	const char *v0 = nullptr;
 
-	if (par->offset == nullptr) {
-		n0 = n1 = qs;
+	if (off == nullptr) {
+		n0 = n1 = ni;
 	} else {
-		n0 = n1 = par->offset + par->length;
+		n0 = n1 = off + len;
 	}
 
 	while (true) {
@@ -323,15 +377,15 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 								case '\0':
 								case '&' :
 								case ';' :
-								par->offset = v0 + 1;
-								par->length = v1 - v0 - 1;
+								off = v0 + 1;
+								len = v1 - v0 - 1;
 								return 0;
 							}
 							++v1;
 						}
 					} else {
-						par->offset = n1 + 1;
-						par->length = 0;
+						off = n1 + 1;
+						len = 0;
 						return 0;
 					}
 				} else if (!cn) {
@@ -346,228 +400,285 @@ int url_qs(const char *name, const char *qs, size_t size, parser_query_t *par) {
 	return -1;
 }
 
-
-char *normalize_path(const char * src, char * dst) {
-	int levels = 0;
-	char * ret = dst;
-	for (int i = 0; *src && i < PATH_MAX; ++i) {
-		char ch = *src++;
-		if (ch == '.' && (levels || dst == ret || *(dst - 1) == '/' )) {
-			*dst++ = ch;
-			++levels;
-		} else if (ch == '/') {
-			while (levels && dst > ret) {
-				if (*--dst == '/') levels -= 1;
-			}
-			if (dst == ret || *(dst - 1) != '/') {
-				*dst++ = ch;
-			}
-		} else {
-			*dst++ = ch;
-			levels = 0;
-		}
-	}
-	*dst++ = '\0';
-	return ret;
+std::string
+QueryParser::get()
+{
+	if (!off) return "";
+	return urldecode(off, len);
 }
 
 
-int url_path(const char* ni, size_t size, parser_url_path_t *par, bool find_id) {
-	const char *nf = ni + size;
-	const char *n0, *n1, *n2 = nullptr;
-	int state, direction;
+PathParser::PathParser() :
+	len_pth(0), off_pth(nullptr),
+	len_hst(0), off_hst(nullptr),
+	len_nsp(0), off_nsp(nullptr),
+	len_pmt(0), off_pmt(nullptr),
+	len_cmd(0), off_cmd(nullptr),
+	len_id(0), off_id(nullptr)
+{}
+
+void
+PathParser::clear()
+{
+	rewind();
+	path.clear();
+}
+
+void
+PathParser::rewind()
+{
+	off = path.data();
+	len_pth = 0;
+	off_pth = nullptr;
+	len_hst = 0;
+	off_hst = nullptr;
+	len_nsp = 0;
+	off_nsp = nullptr;
+	len_pmt = 0;
+	off_pmt = nullptr;
+	len_cmd = 0;
+	off_cmd = nullptr;
+	len_id = 0;
+	off_id = nullptr;
+}
+
+PathParser::State
+PathParser::init(const std::string& p)
+{
+	clear();
+	path = p;
+
 	size_t length;
-	bool unique_cmd = false;
+	const char *ni = path.data();
+	const char *nf = ni + path.size();
+	const char *n0, *n1 = nullptr;
+	PathParser::State state;
 
-	if (par->offset == nullptr and find_id) {
-		state = STATE_CM0;
-		n0 = n1 = n2 = nf - 1;
-		direction = -1;
-	} else {
-		state = STATE_NSP;
-		n0 = n1 = n2 = find_id ? par->offset : ni;
-		if (par->off_parameter) {
-			nf = par->off_parameter - 1;
-		} else if (par->off_command) {
-			nf = par->off_command - 1;
-		}
-		direction = 1;
-	}
-
+	// This first goes backwards, looking for pmt, cmd and id
+	// id is filled only if there's no pmt already:
+	state = start;
+	n0 = n1 = nf - 1;
 	while (state >= 0) {
-		if (!(n1 >= ni && n1 <= nf)) {
-			/* In case direction is backwards and not find any this [/ , @ :] */
-			if (state == STATE_PMT) {
-				state = STATE_NSP;
-				nf = n0;
-				n0 = n1 = n2 = ni;
-				direction = 1;
-				par->offset = n0;
-			} else {
-				return STATE_ERR_NO_SLASH;
-			}
-		}
-
-		char cn = (n1 >= nf) ? '\0' : *n1;
+		char cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		switch (cn) {
 			case '\0':
-			case ',':
-				switch (state) {
-					case STATE_CM0:
-						++state;
-						n0 = n1;
-						break;
-					case STATE_CMD:
-						break;
-					case STATE_NSP:
-					case STATE_PTH:
-						length = n1 - n0;
-						par->off_path = n0;
-						par->len_path = length;
-						if (cn) ++n1;
-						state = length ? STATE_CM0 : cn ? STATE_ERR_UNEXPECTED_COMMA_PTH : unique_cmd ? STATE_UNIQUE_CMD_STAT : STATE_ERR_UNEXPECTED_END_PTH;
-						par->offset = n1;
-						return state;
-					case STATE_HST:
-						length = n1 - n0;
-						par->off_host = n0;
-						par->len_host = length;
-						state = length ? STATE_CM0 : cn ? STATE_ERR_UNEXPECTED_COMMA_HST : STATE_ERR_UNEXPECTED_END_HST;
-						if (cn) ++n1;
-						par->offset = n1;
-						return state;
-					case STATE_PMT:
-						length = n0 - n1 - 1;
-						if ((length == HTTP_UPLOAD_SIZE && strncmp(n1 + 1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) or
-							(length == HTTP_STATS_SIZE && strncmp(n1 + 1, HTTP_STATS, HTTP_STATS_SIZE) == 0)) {
-							par->off_parameter = n1 + 1;
-							par->len_parameter = length;
-							state = length ? STATE_NSP : cn ? STATE_ERR_UNEXPECTED_COMMA_UPL : STATE_ERR_UNEXPECTED_END_UPL;
-							nf = n1;
-							n0 = n1 = n2 = ni;
-							direction = 1;
-							par->offset = n0;
-						} else {
-							state = STATE_NSP;
-							nf = n0;
-							n0 = n1 = n2 = ni;
-							direction = 1;
-							par->offset = n0;
-						}
-				}
-				break;
-
-			case ':':
-				switch (state) {
-					case STATE_CM0:
-						++state;
-						n0 = n1;
-						break;
-					case STATE_CMD:
-						break;
-					case STATE_PMT:
-						state = STATE_NSP;
-						nf = n0;
-						n0 = n1 = n2 = ni;
-						direction = 1;
-						par->offset = n0;
-						break;
-					case STATE_NSP:
-						length = n1 - n0;
-						par->off_namespace = n0;
-						par->len_namespace = length;
-						state = length ? STATE_PTH : STATE_ERR_UNEXPECTED_COLON_NSP;
-						n0 = n1 + 1;
-						break;
-					case STATE_HST:
-						break;
-					default:
-						state = STATE_ERR_UNEXPECTED_COLON;
-				}
-				break;
-
-			case '@':
-				switch (state) {
-					case STATE_CM0:
-						++state;
-						n0 = n1;
-						break;
-					case STATE_CMD:
-						break;
-					case STATE_PMT:
-						state = STATE_NSP;
-						nf = n0;
-						n0 = n1 = n2 = ni;
-						direction = 1;
-						par->offset = n0;
-						break;
-					case STATE_NSP:
-						length = n1 - n0;
-						par->off_path = n0;
-						par->len_path = length;
-						state = length ? STATE_HST : STATE_ERR_UNEXPECTED_AT_NSP;
-						n0 = n1 + 1;
-						break;
-					case STATE_PTH:
-						par->off_path = n0;
-						par->len_path = n1 - n0;
-						state = STATE_HST;
-						n0 = n1 + 1;
-						break;
-					default:
-						state = STATE_ERR_UNEXPECTED_AT;
-				}
-				break;
-
 			case '/':
 				switch (state) {
-					case STATE_CM0:
+					case start:
+						if (!cn) {
+							n0 = n1;
+							state = pmt;
+						}
 						break;
-					case STATE_CMD:
+					case pmt:
+						assert(n0 >= n1);
 						length = n0 - n1;
-						par->off_command = n1 + 1;
-						par->len_command = length;
-						state = length ? STATE_PMT : STATE_ERR_UNEXPECTED_SLASH_CMD;
-						n0 = n1;
-						if (length == HTTP_STATS_SIZE && strncmp(n1 + 1, HTTP_STATS ,HTTP_STATS_SIZE) == 0) {
-							unique_cmd = true;	//In case whe the url path only have a command
+						if (length && *(n1 + 1) != '_') {
+							off_id = n1 + 1;
+							len_id = length;
+							n0 = n1 - 1;
+							state = cmd;
+							break;
 						}
+					case cmd:
+						assert(n0 >= n1);
+						length = n0 - n1;
+						if (length && *(n1 + 1) == '_') {
+							off_pmt = off_id;
+							len_pmt = len_id;
+							off_id = nullptr;
+							len_id = 0;
+							off_cmd = n1 + 1;
+							len_cmd = length;
+							n0 = n1 - 1;
+							state = id;
+							break;
+						}
+					case id:
+						if (!off_id) {
+							assert(n0 >= n1);
+							length = n0 - n1;
+							if (length) {
+								off_id = n1 + 1;
+								len_id = length;
+							}
+						}
+						off = ni;
+						return state;
+					default:
 						break;
-					case STATE_PMT:
-						length = n0 - n1 - 1;
-						if ((length == HTTP_UPLOAD_SIZE && strncmp(n1 + 1, HTTP_UPLOAD, HTTP_UPLOAD_SIZE) == 0) or
-							(length == HTTP_STATS_SIZE && strncmp(n1 + 1, HTTP_STATS, HTTP_STATS_SIZE) == 0)) {
-							par->off_parameter = n1 + 1;
-							par->len_parameter = length;
-							state = length ? STATE_NSP : STATE_ERR_UNEXPECTED_SLASH_UPL;
-							nf = n1;
-							n0 = n1 = n2 = ni;
-							direction = 1;
-							par->offset = n0;
-						} else {
-							state = STATE_NSP;
-							nf = n0;
-							n0 = n1 = n2 = ni;
-							direction = 1;
-							par->offset = n0;
-						}
+				}
+				break;
+
+			case ',':
+			case ':':
+			case '@':
+				switch (state) {
+					case start:
+						n0 = n1;
+						state = pmt;
+						break;
+					case id:
+						off = ni;
+						return state;
+					default:
 						break;
 				}
 				break;
 
 			default:
 				switch (state) {
-					case STATE_CM0:
-						++state;
+					case start:
 						n0 = n1;
+						state = pmt;
+						break;
+					default:
 						break;
 				}
 				break;
 		}
-		n1 += direction;
+		--n1;
 	}
 
 	return state;
+}
+
+PathParser::State
+PathParser::next()
+{
+	size_t length;
+	const char *ni = path.data();
+	const char *nf = ni + path.size();
+	const char *n0, *n1 = nullptr;
+	PathParser::State state;
+
+	// Then goes forward, looking for endpoints:
+	state = nsp;
+	off_hst = nullptr;
+	n0 = n1 = off;
+	if (off_pmt && off_pmt < nf) {
+		nf = off_pmt - 1;
+	}
+	if (off_cmd && off_cmd < nf) {
+		nf = off_cmd - 1;
+	}
+	if (off_id && off_id < nf) {
+		nf = off_id - 1;
+	}
+	if (nf < ni) {
+		nf = ni;
+	}
+	if (n1 > nf) {
+		return end;
+	}
+	while (state >= 0) {
+		char cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
+		switch (cn) {
+			case '\0':
+			case ',':
+				switch (state) {
+					case nsp:
+					case pth:
+						assert(n1 >= n0);
+						length = n1 - n0;
+						off_pth = n0;
+						len_pth = length;
+						off = ++n1;
+						return state;
+					case hst:
+						assert(n1 >= n0);
+						length = n1 - n0;
+						if (!length) return INVALID_HST;
+						off_hst = n0;
+						len_hst = length;
+						off = ++n1;
+						return state;
+					default:
+						break;
+				}
+				break;
+
+			case ':':
+				switch (state) {
+					case nsp:
+						assert(n1 >= n0);
+						length = n1 - n0;
+						if (!length) return INVALID_NSP;
+						off_nsp = n0;
+						len_nsp = length;
+						n0 = n1 + 1;
+						state = pth;
+						break;
+					default:
+						break;
+				}
+				break;
+
+			case '@':
+				switch (state) {
+					case nsp:
+					case pth:
+						assert(n1 >= n0);
+						length = n1 - n0;
+						off_pth = n0;
+						len_pth = length;
+						n0 = n1 + 1;
+						state = hst;
+						break;
+					default:
+						break;
+				}
+				break;
+
+			default:
+				break;
+		}
+		++n1;
+	}
+
+	return state;
+}
+
+std::string
+PathParser::get_pth()
+{
+	if (!off_pth) return "";
+	return urldecode(off_pth, len_pth);
+}
+
+std::string
+PathParser::get_hst()
+{
+	if (!off_hst) return "";
+	return urldecode(off_hst, len_hst);
+}
+
+std::string
+PathParser::get_nsp()
+{
+	if (!off_nsp) return "";
+	return urldecode(off_nsp, len_nsp);
+}
+
+std::string
+PathParser::get_pmt()
+{
+	if (!off_pmt) return "";
+	return urldecode(off_pmt, len_pmt);
+}
+
+std::string
+PathParser::get_cmd()
+{
+	if (!off_cmd) return "";
+	return urldecode(off_cmd, len_cmd);
+}
+
+std::string
+PathParser::get_id()
+{
+	if (!off_id) return "";
+	return urldecode(off_id, len_id);
 }
 
 

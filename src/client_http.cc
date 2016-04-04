@@ -56,6 +56,12 @@
 #define METHOD_PATCH   24
 
 
+
+#define QUERY_FIELD_COMMIT (1 << 0)
+#define QUERY_FIELD_SEARCH (1 << 1)
+#define QUERY_FIELD_RANGE  (1 << 2)
+
+
 std::pair<std::string, std::string>
 content_type_pair(const std::string& ct_type)
 {
@@ -186,6 +192,8 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* loop_, int sock_)
 	: BaseClient(std::move(server_), loop_, sock_),
 	  database(nullptr),
+	  cmd(-1),
+	  pretty(false),
 	  body_size(0),
 	  body_descriptor(0),
 	  post_id(0),
@@ -527,15 +535,18 @@ HttpClient::_head()
 {
 	L_CALL(this, "HttpClient::_head()");
 
-	query_field_t e;
-	int cmd = url_resolve(e, false);
+	int cmd = url_resolve();
 
 	switch (cmd) {
-		case CMD_ID:
-			document_info_view(e);
+		case CMD_NO_CMD:
+			if (path_parser.off_id) {
+				document_info_view();
+			} else {
+				bad_request_view();
+			}
 			break;
 		default:
-			bad_request_view(e, cmd);
+			bad_request_view();
 			break;
 	}
 }
@@ -546,37 +557,31 @@ HttpClient::_get()
 {
 	L_CALL(this, "HttpClient::_get()");
 
-	query_field_t e;
-	int cmd = url_resolve(e, false);
-	int mode = identify_mode(HttpClient::mode);
-
-	if (mode != CMD_UNKNOWN) {
-		cmd = mode; /* Left the cmd as the mode */
-	}
+	int cmd = url_resolve();
 
 	switch (cmd) {
-		case CMD_HOME:
-			home_view(e);
-			break;
-		case CMD_ID:
-			e.query.push_back(std::string(RESERVED_ID)  + ":" +  command);
-			search_view(e, false, false);
+		case CMD_NO_CMD:
+			if (path_parser.off_id) {
+				search_view();
+			} else {
+				home_view();
+			}
 			break;
 		case CMD_SEARCH:
-			e.check_at_least = 0;
-			search_view(e, false, false);
+			path_parser.off_id = nullptr;
+			search_view();
 			break;
 		case CMD_FACETS:
-			search_view(e, true, false);
-			break;
-		case CMD_STATS:
-			stats_view(e, mode);
+			facets_view();
 			break;
 		case CMD_SCHEMA:
-			search_view(e, false, true);
+			schema_view();
+			break;
+		case CMD_STATS:
+			stats_view();
 			break;
 		default:
-			bad_request_view(e, cmd);
+			bad_request_view();
 			break;
 	}
 }
@@ -587,15 +592,18 @@ HttpClient::_put()
 {
 	L_CALL(this, "HttpClient::_put()");
 
-	query_field_t e;
-	int cmd = url_resolve(e, true);
+	int cmd = url_resolve();
 
 	switch (cmd) {
-		case CMD_ID:
-			index_document_view(e);
+		case CMD_NO_CMD:
+			if (path_parser.off_id) {
+				index_document_view(false);
+			} else {
+				bad_request_view();
+			}
 			break;
 		default:
-			bad_request_view(e, cmd);
+			bad_request_view();
 			break;
 	}
 }
@@ -606,15 +614,14 @@ HttpClient::_post()
 {
 	L_CALL(this, "HttpClient::_post()");
 
-	query_field_t e;
-	int cmd = url_resolve(e, false);
+	int cmd = url_resolve();
 
 	switch (cmd) {
-		case CMD_ID: /* by default will be set as a command id */
-			index_document_view(e, true);
+		case CMD_NO_CMD:
+			index_document_view(true);
 			break;
 		default:
-			bad_request_view(e, cmd);
+			bad_request_view();
 			break;
 	}
 }
@@ -625,15 +632,18 @@ HttpClient::_patch()
 {
 	L_CALL(this, "HttpClient::_patch()");
 
-	query_field_t e;
-	int cmd = url_resolve(e, true);
+	int cmd = url_resolve();
 
 	switch (cmd) {
-		case CMD_ID:
-			update_document_view(e);
+		case CMD_NO_CMD:
+			if (path_parser.off_id) {
+				update_document_view();
+			} else {
+				bad_request_view();
+			}
 			break;
 		default:
-			bad_request_view(e, cmd);
+			bad_request_view();
 			break;
 	}
 }
@@ -644,24 +654,71 @@ HttpClient::_delete()
 {
 	L_CALL(this, "HttpClient::_delete()");
 
-	query_field_t e;
-	int cmd = url_resolve(e, true);
+	int cmd = url_resolve();
 
 	switch (cmd) {
-		case CMD_ID:
-			delete_document_view(e);
+		case CMD_NO_CMD:
+			if (path_parser.off_id) {
+				delete_document_view();
+			} else {
+				bad_request_view();
+			}
 			break;
 		default:
-			bad_request_view(e, cmd);
+			bad_request_view();
 			break;
 	}
 }
 
 
 void
-HttpClient::document_info_view(const query_field_t& e)
+HttpClient::home_view()
+{
+	L_CALL(this, "HttpClient::home_view()");
+
+	endpoints_maker(1s);
+
+	if (!manager()->database_pool.checkout(database, Endpoints(Endpoint(".")), DB_SPAWN)) {
+		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
+		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+		return;
+	}
+	Xapian::Document document;
+	if (!database->get_document(std::to_string(local_node.id), document)) {
+		L_WARNING(this, "Corrupt node: %s", local_node.id);
+		write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+		return;
+	}
+
+	manager()->database_pool.checkin(database);
+
+	MsgPack obj_data = get_MsgPack(document);
+	try {
+		obj_data = obj_data.at(RESERVED_DATA);
+	} catch (const std::out_of_range&) {
+		clean_reserved(obj_data);
+		obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
+	}
+
+#ifdef XAPIAND_CLUSTERING
+	obj_data["cluster_name"] = manager()->cluster_name;
+#endif
+	MsgPack version;
+	version["mastery"] = PACKAGE_VERSION;
+	version["number"] = PACKAGE_VERSION;
+	version["xapian_version"] = Xapian::version_string();
+	obj_data["version"] = version;
+
+	write_http_response(obj_data, 200, pretty);
+}
+
+
+void
+HttpClient::document_info_view()
 {
 	L_CALL(this, "HttpClient::document_info_view()");
+
+	endpoints_maker(1s);
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
@@ -669,14 +726,16 @@ HttpClient::document_info_view(const query_field_t& e)
 		return;
 	}
 
+	std::string doc_id(path_parser.get_id());
+
 	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
-	if (isupper(command.at(0))) {
+	if (isupper(doc_id.at(0))) {
 		prefix += ":";
 	}
 
 	Xapian::QueryParser queryparser;
 	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + command);
+	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + doc_id);
 	Xapian::Enquire enquire(*database->db);
 	enquire.set_query(query);
 	Xapian::MSet mset = enquire.get_mset(0, 1);
@@ -711,24 +770,29 @@ HttpClient::document_info_view(const query_field_t& e)
 	}
 
 	manager()->database_pool.checkin(database);
-	write_http_response(response, status_code, e.pretty);
+	write_http_response(response, status_code, pretty);
 }
 
 
 void
-HttpClient::delete_document_view(const query_field_t& e)
+HttpClient::delete_document_view()
 {
 	L_CALL(this, "HttpClient::delete_document_view()");
 
-	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE|DB_SPAWN)) {
+	endpoints_maker(2s);
+	query_field_maker(QUERY_FIELD_COMMIT);
+
+	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN)) {
 		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
 
+	std::string doc_id(path_parser.get_id());
+
 	operation_begins = std::chrono::system_clock::now();
 
-	database->delete_document(command, e.commit);
+	database->delete_document(doc_id, query_field->commit);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -747,17 +811,30 @@ HttpClient::delete_document_view(const query_field_t& e)
 
 	MsgPack response;
 	auto data = response["delete"];
-	data[RESERVED_ID] = command;
-	data["commit"] = e.commit;
+	data[RESERVED_ID] = doc_id;
+	data["commit"] = query_field->commit;
 
-	write_http_response(response, 200, e.pretty);
+	write_http_response(response, 200, pretty);
 }
 
 
 void
-HttpClient::index_document_view(const query_field_t& e, bool gen_id)
+HttpClient::index_document_view(bool gen_id)
 {
 	L_CALL(this, "HttpClient::index_document_view()");
+
+	std::string doc_id;
+
+	if (gen_id) {
+		path_parser.off_id = nullptr;
+		unsigned long mangled = std::fmod(++post_id * 1679979167, def_36e6);
+		doc_id = baseN(mangled, 36);
+	} else {
+		doc_id = path_parser.get_id();
+	}
+
+	endpoints_maker(2s);
+	query_field_maker(QUERY_FIELD_COMMIT);
 
 	build_path_index(index_path);
 
@@ -767,18 +844,13 @@ HttpClient::index_document_view(const query_field_t& e, bool gen_id)
 		return;
 	}
 
-	if (gen_id) {
-		unsigned long mangled = std::fmod(++post_id * 1679979167, def_36e6);
-		command = baseN(mangled, 36);
-	}
-
 	if (content_type.empty()) {
 		content_type = JSON_TYPE;
 	}
 
 	operation_begins = std::chrono::system_clock::now();
 
-	database->index(body, command, e.commit, content_type, content_length);
+	database->index(body, doc_id, query_field->commit, content_type, content_length);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -796,15 +868,18 @@ HttpClient::index_document_view(const query_field_t& e, bool gen_id)
 	manager()->database_pool.checkin(database);
 	MsgPack response;
 	auto data = response["index"];
-	data[RESERVED_ID] = command;
-	write_http_response(response, 200, e.pretty);
+	data[RESERVED_ID] = doc_id;
+	write_http_response(response, 200, pretty);
 }
 
 
 void
-HttpClient::update_document_view(const query_field_t& e)
+HttpClient::update_document_view()
 {
 	L_CALL(this, "HttpClient::update_document_view()");
+
+	endpoints_maker(2s);
+	query_field_maker(QUERY_FIELD_COMMIT);
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN)) {
 		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
@@ -814,7 +889,9 @@ HttpClient::update_document_view(const query_field_t& e)
 
 	operation_begins = std::chrono::system_clock::now();
 
-	database->patch(body, command, e.commit, content_type, content_length);
+	std::string doc_id(path_parser.get_id());
+
+	database->patch(body, doc_id, query_field->commit, content_type, content_length);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -832,123 +909,61 @@ HttpClient::update_document_view(const query_field_t& e)
 	manager()->database_pool.checkin(database);
 	MsgPack response;
 	auto data = response["update"];
-	data[RESERVED_ID] = command;
-	write_http_response(response, 200, e.pretty);
+	data[RESERVED_ID] = doc_id;
+	write_http_response(response, 200, pretty);
 }
 
 
 void
-HttpClient::stats_view(const query_field_t& e, int mode)
+HttpClient::stats_view()
 {
 	L_CALL(this, "HttpClient::stats_view()");
 
 	MsgPack response;
-	int response_status = 200;
 	bool res_stats = false;
 
-	if (endpoints.size() == 0) {	/* Server stats */
+	if (!path_parser.off_id) {
 		manager()->server_status(response["server_status"]);
 		res_stats = true;
-	} else if (endpoints.size() == 1) {
-		 if (mode == CMD_UNKNOWN) {		/* Database stats */
-			 if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-				 L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-				 write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-				 return;
-			 }
-			 database->get_stats_database(response["database_status"]);
-			 manager()->database_pool.checkin(database);
-			 res_stats = true;
-		 } else if (mode == CMD_STATS) {	/* Document stats */
-			 if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-				 L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-				 write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-				 return;
-			 }
-			 database->get_stats_doc(response["document_status"], command);
-			 manager()->database_pool.checkin(database);
-			 res_stats = true;
-		 } else {
-			//It is not expected to enter here
-			 assert(false);
-		 }
 	} else {
-		response_status = 400;
+		endpoints_maker(1s);
+
+		if (manager()->database_pool.checkout(database, endpoints, DB_OPEN)) {
+			database->get_stats_doc(response["document_status"], path_parser.get_id());
+			manager()->database_pool.checkin(database);
+			res_stats = true;
+		}
+
+		path_parser.rewind();
+		path_parser.off_id = nullptr;
+		endpoints_maker(1s);
+
+		if (manager()->database_pool.checkout(database, endpoints, DB_OPEN)) {
+			database->get_stats_database(response["database_status"]);
+			manager()->database_pool.checkin(database);
+			res_stats = true;
+		}
+	}
+
+	int response_status = 200;
+	if (res_stats) {
+		write_http_response(response, response_status, pretty);
+	} else {
+		response_status = 404;
 		response[RESPONSE_STATUS] = response_status;
-		response[RESPONSE_MESSAGE] = "Expecting exactly one database for stats operation";
-		write_http_response(response, 400, e.pretty);
+		response[RESPONSE_MESSAGE] = "Not found";
+		write_http_response(response, 404, pretty);
 	}
-
-	if (!res_stats) {
-		response[RESPONSE_MESSAGE] = "Empty statistics";
-	}
-
-	write_http_response(response, response_status, e.pretty);
 }
 
 
 void
-HttpClient::bad_request_view(const query_field_t& e, int cmd)
+HttpClient::schema_view()
 {
-	L_CALL(this, "HttpClient::bad_request_view()");
+	L_CALL(this, "HttpClient::schema_view()");
 
-	MsgPack err_response;
-	err_response[RESPONSE_STATUS] = 400;
-	switch (cmd) {
-		case CMD_UNKNOWN_HOST:
-			err_response[RESPONSE_MESSAGE] = "Unknown host " + host;
-			break;
-		default:
-			err_response[RESPONSE_MESSAGE] = "BAD QUERY";
-	}
-	write_http_response(err_response, 400, e.pretty);
-}
-
-
-void
-HttpClient::home_view(const query_field_t& e)
-{
-	L_CALL(this, "HttpClient::home_view()");
-
-	if (!manager()->database_pool.checkout(database, Endpoints(Endpoint(".")), DB_SPAWN)) {
-		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
-	}
-	Xapian::Document document;
-	if (!database->get_document(std::to_string(local_node.id), document)) {
-		L_WARNING(this, "Corrupt node: %s", local_node.id);
-		write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
-	}
-
-	manager()->database_pool.checkin(database);
-
-	MsgPack obj_data = get_MsgPack(document);
-	try {
-		obj_data = obj_data.at(RESERVED_DATA);
-	} catch (const std::out_of_range&) {
-		clean_reserved(obj_data);
-		obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
-	}
-
-#ifdef XAPIAND_CLUSTERING
-	obj_data["cluster_name"] = manager()->cluster_name;
-#endif
-	MsgPack version;
-	version["mastery"] = PACKAGE_VERSION;
-	version["number"] = PACKAGE_VERSION;
-	version["xapian_version"] = Xapian::version_string();
-	obj_data["version"] = version;
-
-	write_http_response(obj_data, 200, e.pretty);
-}
-
-
-void
-HttpClient::upload_view(const query_field_t&)
-{
-	L_CALL(this, "HttpClient::upload_view()");
+	path_parser.off_id = nullptr;
+	endpoints_maker(1s);
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
@@ -956,27 +971,23 @@ HttpClient::upload_view(const query_field_t&)
 		return;
 	}
 
-	L_DEBUG(this, "Uploaded %s (%zu)", body_path, body_size);
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, database->schema.to_json_string(pretty)));
 	manager()->database_pool.checkin(database);
+	return;
 }
 
-
 void
-HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
+HttpClient::facets_view()
 {
-	L_CALL(this, "HttpClient::search_view()");
+	L_CALL(this, "HttpClient::schema_view()");
+
+	path_parser.off_id = nullptr;
+	endpoints_maker(1s);
+	query_field_maker(QUERY_FIELD_SEARCH | QUERY_FIELD_RANGE);
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
 		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
 		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
-	}
-
-	if (schema) {
-		write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, database->schema.to_json_string(e.pretty)));
-		manager()->database_pool.checkin(database);
 		return;
 	}
 
@@ -985,7 +996,7 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 
 	operation_begins = std::chrono::system_clock::now();
-	database->get_mset(e, mset, spies, suggestions);
+	database->get_mset(*query_field, mset, spies, suggestions);
 
 	L_DEBUG(this, "Suggested queries:\n%s", [&suggestions]() {
 		std::string res;
@@ -995,125 +1006,185 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 		return res;
 	}().c_str());
 
-	if (facets) {
-		MsgPack response;
-		if (spies.empty()) {
-			response[RESPONSE_MESSAGE] = "Not found documents tallied";
-		} else {
-			for (const auto& spy : spies) {
-				std::string name_result = spy.first;
-				MsgPack array;
-				const auto facet_e = spy.second->values_end();
-				for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
-					MsgPack value;
-					data_field_t field_t = database->get_slot_field(spy.first);
-					auto _val = value["value"];
-					Unserialise::unserialise(field_t.type, *facet, _val);
-					value["termfreq"] = facet.get_termfreq();
-					array.add_item_to_array(value);
-				}
-				response[name_result] = array;
-			}
-		}
-		operation_ends = std::chrono::system_clock::now();
-		write_http_response(response, 200, e.pretty);
+	MsgPack response;
+	if (spies.empty()) {
+		response[RESPONSE_MESSAGE] = "Not found documents tallied";
 	} else {
-		int rc = 0;
+		for (const auto& spy : spies) {
+			std::string name_result = spy.first;
+			MsgPack array;
+			const auto facet_e = spy.second->values_end();
+			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
+				MsgPack value;
+				data_field_t field_t = database->get_slot_field(spy.first);
+				auto _val = value["value"];
+				Unserialise::unserialise(field_t.type, *facet, _val);
+				value["termfreq"] = facet.get_termfreq();
+				array.add_item_to_array(value);
+			}
+			response[name_result] = array;
+		}
+	}
+	operation_ends = std::chrono::system_clock::now();
+	write_http_response(response, 200, pretty);
 
-		if (mset.empty()) {
+	auto _time = std::chrono::duration_cast<std::chrono::nanoseconds>(operation_ends - operation_begins).count();
+	{
+		std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
+		update_pos_time();
+		++stats_cnt.search.min[b_time.minute];
+		++stats_cnt.search.sec[b_time.second];
+		stats_cnt.search.tm_min[b_time.minute] += _time;
+		stats_cnt.search.tm_sec[b_time.second] += _time;
+	}
+	L_TIME(this, "Searching took %s", delta_string(operation_begins, operation_ends).c_str());
+
+	manager()->database_pool.checkin(database);
+	L_DEBUG(this, "FINISH SEARCH");
+}
+
+void
+HttpClient::search_view()
+{
+	L_CALL(this, "HttpClient::search_view()");
+
+	bool chunked = !path_parser.off_id || isRange(path_parser.get_id());
+
+	int query_field_flags = 0;
+
+	if (!path_parser.off_id) {
+		query_field_flags |= QUERY_FIELD_SEARCH;
+	}
+
+	if (chunked) {
+		query_field_flags |= QUERY_FIELD_RANGE;
+	}
+
+	endpoints_maker(1s);
+	query_field_maker(query_field_flags);
+
+	if (path_parser.off_id) {
+		query_field->query.push_back(std::string(RESERVED_ID)  + ":" +  path_parser.get_id());
+	}
+
+	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
+		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
+		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
+		return;
+	}
+
+	Xapian::MSet mset;
+	std::vector<std::string> suggestions;
+	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
+
+	operation_begins = std::chrono::system_clock::now();
+	database->get_mset(*query_field, mset, spies, suggestions);
+
+	L_DEBUG(this, "Suggested queries:\n%s", [&suggestions]() {
+		std::string res;
+		for (const auto& suggestion : suggestions) {
+			res += "\t+ " + suggestion + "\n";
+		}
+		return res;
+	}().c_str());
+
+	int rc = 0;
+
+	if (mset.empty()) {
+		if (chunked) {
+			MsgPack err_response;
+			int error_code = 200;
+			err_response[RESPONSE_STATUS] = error_code;
+			err_response[RESPONSE_MESSAGE] = "No match found";
+			write_http_response(err_response, error_code, pretty);
+		} else {
 			MsgPack err_response;
 			int error_code = 404;
 			err_response[RESPONSE_STATUS] = error_code;
-			if (e.unique_doc) {
-				err_response[RESPONSE_MESSAGE] = "No document found";
-			} else {
-				err_response[RESPONSE_MESSAGE] = "No match found";
+			err_response[RESPONSE_MESSAGE] = "No document found";
+			write_http_response(err_response, error_code, pretty);
+		}
+	} else {
+		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
+			Xapian::Document document;
+			if (!database->get_document(m, document)) {
+				database->reopen();
+				database->get_mset(*query_field, mset, spies, suggestions, rc);
+				m = mset.begin();
+				continue;
 			}
-			write_http_response(err_response, error_code, e.pretty);
-		} else {
-			bool chunked = e.unique_doc && mset.size() == 1 ? false : true;
 
-			for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
-				Xapian::Document document;
-				if (!database->get_document(m, document)) {
-					database->reopen();
-					database->get_mset(e, mset, spies, suggestions, rc);
-					m = mset.begin();
-					continue;
+			operation_ends = std::chrono::system_clock::now();
+
+			auto ct_type_str = document.get_value(DB_SLOT_TYPE);
+			if (ct_type_str == JSON_TYPE || ct_type_str == MSGPACK_TYPE) {
+				if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
+					ct_type_str = JSON_TYPE;
+				} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
+					ct_type_str = MSGPACK_TYPE;
 				}
+			}
+			auto ct_type = content_type_pair(ct_type_str);
 
-				operation_ends = std::chrono::system_clock::now();
+			std::vector<std::pair<std::string, std::string>> ct_types;
+			if (ct_type == json_type || ct_type == msgpack_type) {
+				ct_types = msgpack_serializers;
+			} else {
+				ct_types.push_back(ct_type);
+			}
 
-				auto ct_type_str = document.get_value(DB_SLOT_TYPE);
-				if (ct_type_str == JSON_TYPE || ct_type_str == MSGPACK_TYPE) {
-					if (is_acceptable_type(get_acceptable_type(json_type), json_type)) {
-						ct_type_str = JSON_TYPE;
-					} else if (is_acceptable_type(get_acceptable_type(msgpack_type), msgpack_type)) {
-						ct_type_str = MSGPACK_TYPE;
-					}
-				}
-				auto ct_type = content_type_pair(ct_type_str);
+			const auto& accepted_type = get_acceptable_type(ct_types);
+			const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
+			if (!accepted_ct_type) {
+				MsgPack err_response;
+				int error_code = 406;
+				err_response[RESPONSE_STATUS] = error_code;
+				err_response[RESPONSE_MESSAGE] = std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header");
+				write_http_response(err_response, error_code, pretty);
+				manager()->database_pool.checkin(database);
+				L_DEBUG(this, "ABORTED SEARCH");
+				return;
+			}
 
-				std::vector<std::pair<std::string, std::string>> ct_types;
-				if (ct_type == json_type || ct_type == msgpack_type) {
-					ct_types = msgpack_serializers;
-				} else {
-					ct_types.push_back(ct_type);
-				}
+			MsgPack obj_data;
+			if (is_acceptable_type(json_type, ct_type)) {
+				obj_data = get_MsgPack(document);
+			} else if (is_acceptable_type(msgpack_type, ct_type)) {
+				obj_data = get_MsgPack(document);
+			} else {
+				// Returns blob_data in case that type is unkown
+				auto blob_data = get_blob(document);
+				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, blob_data, ct_type_str));
+				manager()->database_pool.checkin(database);
+				return;
+			}
 
-				const auto& accepted_type = get_acceptable_type(ct_types);
-				const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
-				if (!accepted_ct_type) {
-					MsgPack err_response;
-					int error_code = 406;
-					err_response[RESPONSE_STATUS] = error_code;
-					err_response[RESPONSE_MESSAGE] = std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header");
-					write_http_response(err_response, error_code, e.pretty);
-					manager()->database_pool.checkin(database);
-					L_DEBUG(this, "ABORTED SEARCH");
-					return;
-				}
+			ct_type = *accepted_ct_type;
+			ct_type_str = ct_type.first + "/" + ct_type.second;
 
-				MsgPack obj_data;
-				if (is_acceptable_type(json_type, ct_type)) {
-					obj_data = get_MsgPack(document);
-				} else if (is_acceptable_type(msgpack_type, ct_type)) {
-					obj_data = get_MsgPack(document);
-				} else {
-					// Returns blob_data in case that type is unkown
-					auto blob_data = get_blob(document);
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, blob_data, ct_type_str));
-					manager()->database_pool.checkin(database);
-					return;
-				}
+			if (rc == 0 && chunked) {
+				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, mset.size(), "", ct_type_str));
+			}
 
-				ct_type = *accepted_ct_type;
-				ct_type_str = ct_type.first + "/" + ct_type.second;
+			try {
+				obj_data = obj_data.at(RESERVED_DATA);
+			} catch (const std::out_of_range&) {
+				clean_reserved(obj_data);
+				obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
+			}
 
-				if (rc == 0 && chunked) {
-					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_MATCHED_COUNT, parser.http_major, parser.http_minor, mset.size(), "", ct_type_str));
-				}
-
-				try {
-					obj_data = obj_data.at(RESERVED_DATA);
-				} catch (const std::out_of_range&) {
-					clean_reserved(obj_data);
-					obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
-				}
-
-				auto result = serialize_response(obj_data, ct_type, e.pretty);
-				if (chunked) {
-					if (!write(http_response(200, HTTP_BODY | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, result.first + "\n\n"))) {
-						break;
-					}
-				} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result.first, result.second))) {
+			auto result = serialize_response(obj_data, ct_type, pretty);
+			if (chunked) {
+				if (!write(http_response(200, HTTP_BODY | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, result.first + "\n\n"))) {
 					break;
 				}
+			} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result.first, result.second))) {
+				break;
 			}
+		}
 
-			if (chunked) {
-				write(http_response(0, HTTP_BODY, 0, 0, 0, "0\r\n\r\n"));
-			}
+		if (chunked) {
+			write(http_response(0, HTTP_BODY, 0, 0, 0, "0\r\n\r\n"));
 		}
 	}
 
@@ -1132,94 +1203,103 @@ HttpClient::search_view(const query_field_t& e, bool facets, bool schema)
 	L_DEBUG(this, "FINISH SEARCH");
 }
 
+void
+HttpClient::bad_request_view()
+{
+	L_CALL(this, "HttpClient::bad_request_view()");
+
+	MsgPack err_response;
+	err_response[RESPONSE_STATUS] = 400;
+
+	/*
+	 REMOVE THIS
+	 switch (cmd) {
+		case CMD_UNKNOWN_HOST:
+			err_response[RESPONSE_MESSAGE] = "Unknown host " + host;
+			break;
+		default:
+			err_response[RESPONSE_MESSAGE] = "BAD QUERY";
+	}*/
+	err_response[RESPONSE_MESSAGE] = "BAD QUERY";
+	write_http_response(err_response, 400, pretty);
+}
+
+
+size_t constexpr const_hash(char const *input) {
+	return *input ? static_cast<size_t>(*input) + 33 * const_hash(input + 1) : 5381;
+}
+
+static constexpr auto http_search = const_hash("_search");
+static constexpr auto http_facets = const_hash("_facets");
+static constexpr auto http_stats = const_hash("_stats");
+static constexpr auto http_schema = const_hash("_schema");
+
+void
+HttpClient::identify_cmd()
+{
+	if (!path_parser.off_cmd) {
+		cmd = CMD_NO_CMD;
+	} else {
+		switch (const_hash(lower_string(path_parser.get_cmd()).c_str())) {
+			case http_search:
+				cmd = CMD_SEARCH;
+				break;
+			case http_facets:
+				cmd = CMD_FACETS;
+				break;
+			case http_stats:
+				cmd = CMD_STATS;
+				break;
+			case http_schema:
+				cmd = CMD_SCHEMA;
+				break;
+			default:
+				cmd = CMD_UNKNOWN;
+				break;
+		}
+	}
+}
 
 int
-HttpClient::url_resolve(query_field_t& e, bool writable)
+HttpClient::url_resolve()
 {
 	L_CALL(this, "HttpClient::url_resolve()");
 
-	bool solo_command = false;
 	struct http_parser_url u;
 	std::string b = repr(path);
 
 	L_HTTP_PROTO_PARSER(this, "URL: %s", b.c_str());
-	if (http_parser_parse_url(b.c_str(), b.size(), 0, &u) == 0) {
+	if (http_parser_parse_url(path.c_str(), path.size(), 0, &u) == 0) {
 		L_HTTP_PROTO_PARSER(this, "HTTP parsing done!");
 
 		if (u.field_set & (1 << UF_PATH )) {
 			size_t path_size = u.field_data[3].len;
-			std::string path_buf(b.c_str() + u.field_data[3].off, u.field_data[3].len);
-			auto unique_path_buf = std::make_unique<char[]>(path_buf.size() + 1);
-			char* path_buf_str = unique_path_buf.get();
-			normalize_path(path_buf.c_str(), path_buf_str);
-
-			if (*path_buf_str == '/' && *(path_buf_str + 1) == '\0') {
-				command.clear();
-			} else {
-				endpoints.clear();
-
-				parser_url_path_t p;
-				memset(&p, 0, sizeof(p));
-
-				bool find_id = parser.method == METHOD_POST ? false : true;
-				int state = url_path(path_buf_str, path_size, &p, find_id);
-
-				if (state < 0) {
-					return CMD_BAD_QUERY;
-				}
-
-				if (state == 10 /*STATE_UNIQUE_CMD_STAT*/) { /* Solo command case (without index part) */
-					solo_command = true;
-					command = lower_string(urldecode(p.off_command, p.len_command));
-				} else {
-					while (state == 0) {
-						int endp_err = endpoint_maker(p, writable, find_id);
-						if (endp_err != 0) {
-							return endp_err;
-						}
-						state = url_path(path_buf_str, path_size, &p);
-					}
-				}
-
-				if (p.len_parameter) {
-					mode = lower_string(urldecode(p.off_parameter, p.len_parameter));
-				}
+			char path_buf_str[path_size + 1];
+			const char* path_str = path.data() + u.field_data[3].off;
+			normalize_path(path_str, path_str + path_size, path_buf_str);
+			if (path_parser.init(path_buf_str) >= PathParser::end) {
+				return CMD_BAD_QUERY;
 			}
 		}
-
-		if ((parser.method == METHOD_PUT || parser.method == METHOD_PATCH) && endpoints.size() > 1) {
-			return CMD_BAD_ENDPS;
-		}
-
-		int cmd = identify_cmd(command);
 
 		if (u.field_set & (1 <<  UF_QUERY)) {
-			size_t query_size = u.field_data[4].len;
-			const char *query_str = b.data() + u.field_data[4].off;
-
-			parser_query_t q;
-			query_maker(query_str, query_size, cmd, e, q);
-		} else {
-			//Especial case (search ID and empty query in the url)
-			if (cmd == CMD_ID) {
-
-				if (solo_command) {
-					return CMD_BAD_QUERY;
-				}
-
-				if (isRange(command)) {
-					e.offset = 0;
-					e.check_at_least = 0;
-					e.limit = 10;
-					e.sort.push_back(RESERVED_ID);
-				} else {
-					e.limit = 1;
-					e.unique_doc = true;
-					e.offset = 0;
-					e.check_at_least = 0;
-				}
+			if (query_parser.init(std::string(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
+				return CMD_BAD_QUERY;
 			}
 		}
+
+		identify_cmd();
+
+		if (query_parser.next("pretty") != -1) {
+			pretty = true;
+			if (query_parser.len) {
+				try {
+					pretty = Serialise::boolean(query_parser.get()) == "t";
+				} catch (const Exception&) { }
+			}
+		}
+		query_parser.rewind();
+
 		return cmd;
 	} else {
 		L_CONN_WIRE(this, "Parsing not done");
@@ -1228,28 +1308,36 @@ HttpClient::url_resolve(query_field_t& e, bool writable)
 	}
 }
 
-
-
 int
-HttpClient::endpoint_maker(parser_url_path_t& p, bool writable, bool require_id)
+HttpClient::endpoints_maker(duration<double, std::milli> timeout)
 {
-	bool has_node_name = false;
+	endpoints.clear();
 
-	if (p.len_command and require_id) {
-		command = lower_string(urldecode(p.off_command, p.len_command));
-		if (command.empty()) {
-			return CMD_BAD_QUERY;
+	PathParser::State state;
+	while ((state = path_parser.next()) < PathParser::end) {
+		int endp_err = _endpoint_maker(timeout);
+		if (endp_err != 0) {
+			return endp_err;
 		}
 	}
 
+	return 0;
+}
+
+
+int
+HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
+{
+	bool has_node_name = false;
+
 	std::string ns;
-	if (p.len_namespace) {
-		ns = urldecode(p.off_namespace, p.len_namespace) + "/";
+	if (path_parser.off_nsp) {
+		ns = path_parser.get_nsp() + "/";
 	}
 
 	std::string path;
-	if (p.len_path) {
-		path = urldecode(p.off_path, p.len_path);
+	if (path_parser.off_pth) {
+		path = path_parser.get_pth();
 	}
 
 	index_path = ns + path;
@@ -1258,18 +1346,11 @@ HttpClient::endpoint_maker(parser_url_path_t& p, bool writable, bool require_id)
 
 	std::vector<Endpoint> asked_nodes;
 
-	if (p.len_host) {
-		node_name = urldecode(p.off_host, p.len_host);
+	if (path_parser.off_hst) {
+		node_name = path_parser.get_hst();
 		has_node_name = true;
 	} else {
-		duration<double, std::milli> timeout;
 		size_t num_endps = 1;
-		if (writable) {
-			timeout = 2s;
-		} else {
-			timeout = 1s;
-		}
-
 		if (manager()->is_single_node()) {
 			has_node_name = true;
 			node_name = local_node.name;
@@ -1293,7 +1374,7 @@ HttpClient::endpoint_maker(parser_url_path_t& p, bool writable, bool require_id)
 		if (!manager()->touch_node(node_name, UNKNOWN_REGION, &node)) {
 			L_DEBUG(this, "Node %s not found", node_name.c_str());
 			host = node_name;
-			return CMD_UNKNOWN_HOST;
+			return -1;
 		}
 		if (!node_port) {
 			node_port = node->binary_port;
@@ -1311,279 +1392,200 @@ HttpClient::endpoint_maker(parser_url_path_t& p, bool writable, bool require_id)
 	}
 	L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.as_string().c_str());
 
-	p.len_host = 0; //Clean the host, so you not stay with the previous host in case doesn't come new one
 	return 0;
 }
 
 
 void
-HttpClient::query_maker(const char* query_str, size_t query_size, int cmd, query_field_t& e, parser_query_t& q)
+HttpClient::query_field_maker(int flag)
 {
-	q.offset = nullptr;
-	if (url_qs("pretty", query_str, query_size, &q) != -1) {
-		e.pretty = true;
-		if (q.length) {
-			try {
-				e.pretty = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-			} catch (const Exception&) { }
+	if (!query_field) query_field = std::make_unique<query_field_t>();
+
+	if (flag & QUERY_FIELD_COMMIT) {
+		if (query_parser.next("commit") != -1) {
+			query_field->commit = true;
+			if (query_parser.len) {
+				try {
+					query_field->commit = Serialise::boolean(query_parser.get()) == "t";
+				} catch (const Exception&) { }
+			}
+		}
+		query_parser.rewind();
+	}
+
+	if (flag & QUERY_FIELD_SEARCH) {
+		if (query_parser.next("spelling") != -1) {
+			query_field->spelling = true;
+			if (query_parser.len) {
+				try {
+					query_field->spelling = Serialise::boolean(query_parser.get()) == "t";
+				} catch (const Exception&) { }
+			}
+		}
+		query_parser.rewind();
+
+		if (query_parser.next("synonyms") != -1) {
+			query_field->synonyms = true;
+			if (query_parser.len) {
+				try {
+					query_field->synonyms = Serialise::boolean(query_parser.get()) == "t";
+				} catch (const Exception&) { }
+			}
+		}
+		query_parser.rewind();
+
+		while (query_parser.next("query") != -1) {
+			L_DEBUG(this, "%s", query_parser.get().c_str());
+			query_field->query.push_back(query_parser.get());
+		}
+		query_parser.rewind();
+
+		while (query_parser.next("q") != -1) {
+			L_DEBUG(this, "%s", query_parser.get().c_str());
+			query_field->query.push_back(query_parser.get());
+		}
+		query_parser.rewind();
+
+		while (query_parser.next("partial") != -1) {
+			query_field->partial.push_back(query_parser.get());
+		}
+		query_parser.rewind();
+
+		while (query_parser.next("terms") != -1) {
+			query_field->terms.push_back(query_parser.get());
+		}
+		query_parser.rewind();
+
+		while (query_parser.next("language") != -1) {
+			query_field->language.push_back(query_parser.get());
+		}
+		query_parser.rewind();
+	}
+
+	if (flag & QUERY_FIELD_RANGE) {
+		if (!query_field) query_field = std::make_unique<query_field_t>();
+
+		if (query_parser.next("offset") != -1) {
+			query_field->offset = static_cast<unsigned>(std::stoul(query_parser.get()));
+		} else {
+			query_field->offset = 0;
+		}
+		query_parser.rewind();
+
+		if (query_parser.next("check_at_least") != -1) {
+			query_field->check_at_least = static_cast<unsigned>(std::stoul(query_parser.get()));
+		} else {
+			query_field->check_at_least = 0;
+		}
+		query_parser.rewind();
+
+		if (query_parser.next("limit") != -1) {
+			query_field->limit = static_cast<unsigned>(std::stoul(query_parser.get()));
+		} else {
+			query_field->limit = 10;
+		}
+		query_parser.rewind();
+
+		if (query_parser.next("sort") != -1) {
+			query_field->sort.push_back(query_parser.get());
+		} else {
+			query_field->sort.push_back(RESERVED_ID);
+		}
+		query_parser.rewind();
+
+		if (query_parser.next("collapse_max") != -1) {
+			query_field->collapse_max = static_cast<unsigned>(std::stoul(query_parser.get()));
+		} else {
+			query_field->collapse_max = 1;
+		}
+		query_parser.rewind();
+
+		if (query_parser.next("collapse") != -1) {
+			query_field->collapse = query_parser.get();
+		}
+		query_parser.rewind();
+
+		while (query_parser.next("facets") != -1) {
+			query_field->facets.push_back(query_parser.get());
+		}
+		query_parser.rewind();
+
+		if (query_parser.next("fuzzy") != -1) {
+			query_field->is_fuzzy = true;
+			if (query_parser.len) {
+				try {
+					query_field->is_fuzzy = Serialise::boolean(query_parser.get()) == "t";
+				} catch (const Exception&) { }
+			}
+		}
+		query_parser.rewind();
+
+		if (query_field->is_fuzzy) {
+			if (query_parser.next("fuzzy.n_rset") != -1) {
+				query_field->fuzzy.n_rset = static_cast<unsigned>(std::stoul(query_parser.get()));
+			}
+			query_parser.rewind();
+
+			if (query_parser.next("fuzzy.n_eset") != -1) {
+				query_field->fuzzy.n_eset = static_cast<unsigned>(std::stoul(query_parser.get()));
+			}
+			query_parser.rewind();
+
+			if (query_parser.next("fuzzy.n_term") != -1) {
+				query_field->fuzzy.n_term = static_cast<unsigned>(std::stoul(query_parser.get()));
+			}
+			query_parser.rewind();
+
+			while (query_parser.next("fuzzy.field") != -1) {
+				query_field->fuzzy.field.push_back(query_parser.get());
+			}
+			query_parser.rewind();
+
+			while (query_parser.next("fuzzy.type") != -1) {
+				query_field->fuzzy.type.push_back(query_parser.get());
+			}
+			query_parser.rewind();
+		}
+
+		if (query_parser.next("nearest") != -1) {
+			query_field->is_nearest = true;
+			if (query_parser.len) {
+				try {
+					query_field->is_nearest = Serialise::boolean(query_parser.get()) == "t";
+				} catch (const Exception&) { }
+			}
+		}
+		query_parser.rewind();
+
+		if (query_field->is_nearest) {
+			if (query_parser.next("nearest.n_rset") != -1) {
+				query_field->nearest.n_rset = static_cast<unsigned>(std::stoul(query_parser.get()));
+			} else {
+				query_field->nearest.n_rset = 5;
+			}
+			query_parser.rewind();
+
+			if (query_parser.next("nearest.n_eset") != -1) {
+				query_field->nearest.n_eset = static_cast<unsigned>(std::stoul(query_parser.get()));
+			}
+			query_parser.rewind();
+
+			if (query_parser.next("nearest.n_term") != -1) {
+				query_field->nearest.n_term = static_cast<unsigned>(std::stoul(query_parser.get()));
+			}
+			query_parser.rewind();
+
+			while (query_parser.next("nearest.field") != -1) {
+				query_field->nearest.field.push_back(query_parser.get());
+			}
+			query_parser.rewind();
+
+			while (query_parser.next("nearest.type") != -1) {
+				query_field->nearest.type.push_back(query_parser.get());
+			}
+			query_parser.rewind();
 		}
 	}
-
-	switch (cmd) {
-		case CMD_SEARCH:
-		case CMD_FACETS:
-			q.offset = nullptr;
-			if (url_qs("offset", query_str, query_size, &q) != -1) {
-				e.offset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-			}
-
-			q.offset = nullptr;
-			if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
-				e.check_at_least = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-			}
-
-			q.offset = nullptr;
-			if (url_qs("limit", query_str, query_size, &q) != -1) {
-				e.limit = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-			}
-
-			q.offset = nullptr;
-			if (url_qs("collapse_max", query_str, query_size, &q) != -1) {
-				e.collapse_max = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-			}
-
-			q.offset = nullptr;
-			if (url_qs("spelling", query_str, query_size, &q) != -1) {
-				e.spelling = true;
-				if (q.length) {
-					try {
-						e.spelling = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-					} catch (const Exception&) { }
-				}
-			}
-
-			q.offset = nullptr;
-			if (url_qs("synonyms", query_str, query_size, &q) != -1) {
-				e.synonyms = true;
-				if (q.length) {
-					try {
-						e.synonyms = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-					} catch (const Exception&) { }
-				}
-			}
-
-			q.offset = nullptr;
-			L_DEBUG(this, "Buffer: %s", query_str);
-			while (url_qs("query", query_str, query_size, &q) != -1) {
-				L_DEBUG(this, "%s", urldecode(q.offset, q.length).c_str());
-				e.query.push_back(urldecode(q.offset, q.length));
-			}
-
-			q.offset = nullptr;
-			while (url_qs("q", query_str, query_size, &q) != -1) {
-				L_DEBUG(this, "%s", urldecode(q.offset, q.length).c_str());
-				e.query.push_back(urldecode(q.offset, q.length));
-			}
-
-			q.offset = nullptr;
-			while (url_qs("partial", query_str, query_size, &q) != -1) {
-				e.partial.push_back(urldecode(q.offset, q.length));
-			}
-
-			q.offset = nullptr;
-			while (url_qs("terms", query_str, query_size, &q) != -1) {
-				e.terms.push_back(urldecode(q.offset, q.length));
-			}
-
-			q.offset = nullptr;
-			while (url_qs("sort", query_str, query_size, &q) != -1) {
-				e.sort.push_back(urldecode(q.offset, q.length));
-			}
-
-			q.offset = nullptr;
-			while (url_qs("facets", query_str, query_size, &q) != -1) {
-				e.facets.push_back(urldecode(q.offset, q.length));
-			}
-
-			q.offset = nullptr;
-			while (url_qs("language", query_str, query_size, &q) != -1) {
-				e.language.push_back(urldecode(q.offset, q.length));
-			}
-
-			q.offset = nullptr;
-			if (url_qs("collapse", query_str, query_size, &q) != -1) {
-				e.collapse = urldecode(q.offset, q.length);
-			}
-
-			q.offset = nullptr;
-			if (url_qs("fuzzy", query_str, query_size, &q) != -1) {
-				e.is_fuzzy = true;
-				if (q.length) {
-					try {
-						e.is_fuzzy = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-					} catch (const Exception&) { }
-				}
-			}
-
-			if (e.is_fuzzy) {
-				q.offset = nullptr;
-				if (url_qs("fuzzy.n_rset", query_str, query_size, &q) != -1){
-					e.fuzzy.n_rset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-				}
-
-				q.offset = nullptr;
-				if (url_qs("fuzzy.n_eset", query_str, query_size, &q) != -1){
-					e.fuzzy.n_eset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-				}
-
-				q.offset = nullptr;
-				if (url_qs("fuzzy.n_term", query_str, query_size, &q) != -1){
-					e.fuzzy.n_term = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-				}
-
-				q.offset = nullptr;
-				while (url_qs("fuzzy.field", query_str, query_size, &q) != -1){
-					e.fuzzy.field.push_back(urldecode(q.offset, q.length));
-				}
-
-				q.offset = nullptr;
-				while (url_qs("fuzzy.type", query_str, query_size, &q) != -1){
-					e.fuzzy.type.push_back(urldecode(q.offset, q.length));
-				}
-			}
-
-			q.offset = nullptr;
-			if (url_qs("nearest", query_str, query_size, &q) != -1) {
-				e.is_nearest = true;
-				if (q.length) {
-					try {
-						e.is_nearest = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-					} catch (const Exception&) { }
-				}
-			}
-
-			if (e.is_nearest) {
-				q.offset = nullptr;
-				if (url_qs("nearest.n_rset", query_str, query_size, &q) != -1){
-					e.nearest.n_rset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-				} else {
-					e.nearest.n_rset = 5;
-				}
-
-				q.offset = nullptr;
-				if (url_qs("nearest.n_eset", query_str, query_size, &q) != -1){
-					e.nearest.n_eset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-				}
-
-				q.offset = nullptr;
-				if (url_qs("nearest.n_term", query_str, query_size, &q) != -1){
-					e.nearest.n_term = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-				}
-
-				q.offset = nullptr;
-				while (url_qs("nearest.field", query_str, query_size, &q) != -1){
-					e.nearest.field.push_back(urldecode(q.offset, q.length));
-				}
-
-				q.offset = nullptr;
-				while (url_qs("nearest.type", query_str, query_size, &q) != -1){
-					e.nearest.type.push_back(urldecode(q.offset, q.length));
-				}
-			}
-			break;
-
-		case CMD_ID:
-			q.offset = nullptr;
-			if (url_qs("commit", query_str, query_size, &q) != -1) {
-				e.commit = true;
-				if (q.length) {
-					try {
-						e.commit = Serialise::boolean(urldecode(q.offset, q.length)) == "t";
-					} catch (const Exception&) { }
-				}
-			}
-
-			if (isRange(command)) {
-				q.offset = nullptr;
-				if (url_qs("offset", query_str, query_size, &q) != -1) {
-					e.offset = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-				}
-
-				q.offset = nullptr;
-				if (url_qs("check_at_least", query_str, query_size, &q) != -1) {
-					e.check_at_least = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-				}
-
-				q.offset = nullptr;
-				if (url_qs("limit", query_str, query_size, &q) != -1) {
-					e.limit = static_cast<unsigned>(std::stoul(urldecode(q.offset, q.length)));
-				}
-
-				q.offset = nullptr;
-				if (url_qs("sort", query_str, query_size, &q) != -1) {
-					e.sort.push_back(urldecode(q.offset, q.length));
-				} else {
-					e.sort.push_back(RESERVED_ID);
-				}
-			} else {
-				e.limit = 1;
-				e.unique_doc = true;
-				e.offset = 0;
-				e.check_at_least = 0;
-			}
-			break;
-
-		case CMD_STATS:
-			break;
-
-		case CMD_UPLOAD:
-			break;
-	}
-}
-
-
-int
-HttpClient::identify_cmd(const std::string& command)
-{
-	if (command.empty()) {
-		return CMD_HOME;
-	}
-
-	if (command.compare(HTTP_SEARCH) == 0) {
-		return CMD_SEARCH;
-	}
-
-	if (command.compare(HTTP_FACETS) == 0) {
-		return CMD_FACETS;
-	}
-
-	if (command.compare(HTTP_STATS) == 0) {
-		return CMD_STATS;
-	}
-
-	if (command.compare(HTTP_SCHEMA) == 0) {
-		return CMD_SCHEMA;
-	}
-
-	if (command.compare(HTTP_UPLOAD) == 0) {
-		return CMD_UPLOAD;
-	}
-
-	return CMD_ID;
-}
-
-
-int
-HttpClient::identify_mode(const std::string& mode)
-{
-	if (mode.compare(HTTP_STATS) == 0) {
-		return CMD_STATS;
-	}
-
-	if (mode.compare(HTTP_UPLOAD) == 0) {
-		return CMD_UPLOAD;
-	}
-	return CMD_UNKNOWN;
 }
 
 
@@ -1599,7 +1601,12 @@ HttpClient::clean_http_request()
 	content_type.clear();
 	content_length.clear();
 	host.clear();
-	command.clear();
+
+	cmd = -1;
+	pretty = false;
+	query_field.reset();
+	path_parser.clear();
+	query_parser.clear();
 
 	response_ends = std::chrono::system_clock::now();
 	request_begining = true;

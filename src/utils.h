@@ -41,6 +41,15 @@
 #include <unistd.h>
 
 
+#define CMD_NO_CMD 0
+#define CMD_SEARCH 1
+#define CMD_FACETS 2
+#define CMD_STATS  3
+#define CMD_SCHEMA 4
+#define CMD_UNKNOWN   -1
+#define CMD_BAD_QUERY -2
+
+
 constexpr uint16_t SLOT_TIME_MINUTE = 1440;
 constexpr uint8_t SLOT_TIME_SECOND = 60;
 
@@ -63,24 +72,65 @@ struct pos_time_t {
 	uint8_t second;
 };
 
-struct parser_query_t {
-	size_t length;
-	const char *offset;
+
+struct QueryParser {
+	std::string query;
+
+public:
+	size_t len;
+	const char *off;
+
+	QueryParser();
+
+	void clear();
+	void rewind();
+	int init(const std::string& q);
+	int next(const char *name);
+
+	std::string get();
 };
 
-struct parser_url_path_t {
-	const char *offset;
-	size_t len_path;
-	const char *off_path;
-	size_t len_host;
-	const char *off_host;
-	size_t len_namespace;
-	const char *off_namespace;
-	size_t len_parameter;
-	const char *off_parameter;
-	size_t len_command;
-	const char *off_command;
+
+class PathParser {
+	std::string path;
+	const char *off;
+
+public:
+	enum State {
+		start, pmt, cmd, id, nsp, pth, hst, end,
+		INVALID_STATE,
+		INVALID_NSP,
+		INVALID_HST,
+	};
+
+	size_t len_pth;
+	const char *off_pth;
+	size_t len_hst;
+	const char *off_hst;
+	size_t len_nsp;
+	const char *off_nsp;
+	size_t len_pmt;
+	const char *off_pmt;
+	size_t len_cmd;
+	const char *off_cmd;
+	size_t len_id;
+	const char *off_id;
+
+	PathParser();
+
+	void clear();
+	void rewind();
+	State init(const std::string& p);
+	State next();
+
+	std::string get_pth();
+	std::string get_hst();
+	std::string get_nsp();
+	std::string get_pmt();
+	std::string get_cmd();
+	std::string get_id();
 };
+
 
 struct File_ptr {
 	struct dirent *ent;
@@ -168,9 +218,9 @@ std::string lower_string(Args&&... args) {
 void to_upper(std::string& str);
 void to_lower(std::string& str);
 
-char *normalize_path(const char * src, char * dst);
-int url_path(const char* n1, size_t size, parser_url_path_t *par, bool find_id=true);
-int url_qs(const char *, const char *, size_t, parser_query_t *);
+char* normalize_path(const char* src, const char* end, char* dst);
+char* normalize_path(const std::string& src, char* dst);
+int url_qs(const char *, const char *, size_t);
 std::string urldecode(const char *, size_t);
 
 // String tokenizer with the delimiter.

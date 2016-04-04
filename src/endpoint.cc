@@ -109,7 +109,7 @@ Endpoint::Endpoint(const std::string &uri_, const Node *node_, long long mastery
 		if (!port) port = XAPIAND_BINARY_SERVERPORT;
 	}
 	path = Endpoint::cwd + path;
-	path = normalize_path(path.c_str(), buffer);
+	path = normalize_path(path, buffer);
 	if (path.substr(0, Endpoint::cwd.size()) == Endpoint::cwd) {
 		path.erase(0, Endpoint::cwd.size());
 	} else {

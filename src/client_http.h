@@ -40,25 +40,6 @@
 #define HTTP_MATCHED_COUNT    (1 << 8)
 #define HTTP_EXPECTED100      (1 << 9)
 
-#define CMD_HOME   0
-#define CMD_ID     1
-#define CMD_SEARCH 2
-#define CMD_FACETS 3
-#define CMD_STATS  4
-#define CMD_SCHEMA 5
-#define CMD_UPLOAD 6
-#define CMD_UNKNOWN_HOST     7
-#define CMD_UNKNOWN_ENDPOINT 8
-#define CMD_UNKNOWN   -1
-#define CMD_BAD_QUERY -2
-#define CMD_BAD_ENDPS -3
-
-#define HTTP_SEARCH "_search"
-#define HTTP_FACETS "_facets"
-#define HTTP_STATS  "_stats"
-#define HTTP_SCHEMA "_schema"
-#define HTTP_UPLOAD "_upload"
-
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
@@ -77,6 +58,13 @@ class HttpClient : public BaseClient {
 		}
 	};
 
+	PathParser path_parser;
+	QueryParser query_parser;
+
+	int cmd;
+	bool pretty;
+	std::unique_ptr<query_field_t> query_field;
+
 	std::string path;
 	std::string body;
 	std::string header_name;
@@ -93,8 +81,6 @@ class HttpClient : public BaseClient {
 	bool expect_100 = false;
 
 	std::string host;
-	std::string command;  //command or ID
-	std::string mode; //parameter optional in url
 
 	unsigned long post_id; /* only usend for method POST to generate id */
 
@@ -108,15 +94,16 @@ class HttpClient : public BaseClient {
 	static int on_info(http_parser* p);
 	static int on_data(http_parser* p, const char* at, size_t length);
 
-	void home_view(const query_field_t& e);
-	void stats_view(const query_field_t& e, int mode);
-	void delete_document_view(const query_field_t& e);
-	void index_document_view(const query_field_t& e, bool gen_id=false);
-	void document_info_view(const query_field_t& e);
-	void update_document_view(const query_field_t& e);
-	void upload_view(const query_field_t& e);
-	void search_view(const query_field_t& e, bool facets, bool schema);
-	void bad_request_view(const query_field_t& e, int cmd);
+	void home_view();
+	void stats_view();
+	void delete_document_view();
+	void index_document_view(bool gen_id);
+	void document_info_view();
+	void update_document_view();
+	void search_view();
+	void schema_view();
+	void facets_view();
+	void bad_request_view();
 
 	void _options();
 	void _head();
@@ -126,11 +113,11 @@ class HttpClient : public BaseClient {
 	void _patch();
 	void _delete();
 
-	int url_resolve(query_field_t& e, bool writable);
-	int endpoint_maker(parser_url_path_t& p, bool writable, bool require);
-	void query_maker(const char* query_str, size_t query_size, int cmd, query_field_t& e, parser_query_t& q);
-	static int identify_cmd(const std::string& commad);
-	int identify_mode(const std::string &mode);
+	void identify_cmd();
+	int url_resolve();
+	int _endpoint_maker(duration<double, std::milli> timeout);
+	int endpoints_maker(duration<double, std::milli> timeout);
+	void query_field_maker(int flags);
 
 	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
 	void clean_http_request();
