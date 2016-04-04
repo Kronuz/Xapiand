@@ -138,7 +138,7 @@ class Schema {
 	/*
 	 * Recursively transforms item_schema into a readable form.
 	 */
-	static void readable(MsgPack&& item_schema);
+	static void readable(MsgPack&& item_schema, bool is_root=false);
 
 	/*
 	 * Validates data when RESERVED_TYPE has not been save in schema.

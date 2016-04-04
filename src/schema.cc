@@ -408,30 +408,13 @@ std::string
 Schema::to_json_string(bool prettify)
 {
 	MsgPack schema_readable = schema.duplicate();
-	auto properties = schema_readable.at(RESERVED_SCHEMA);
-	for (const auto item_key : properties) {
-		std::string str_key(item_key.get_str());
-		try {
-			auto func = map_dispatch_readable.at(str_key);
-			(*func)(properties.at(str_key), properties);
-		} catch (const std::out_of_range&) {
-			if (is_valid(str_key) || str_key == RESERVED_ID) {
-				auto item = properties.at(str_key);
-				if unlikely(item.get_type() == msgpack::type::NIL) {
-					properties.erase(str_key);
-					continue;
-				}
-				readable(std::move(item));
-			}
-		}
-	}
-
+	readable(schema_readable.at(RESERVED_SCHEMA), true);
 	return schema_readable.to_json_string(prettify);
 }
 
 
 void
-Schema::readable(MsgPack&& item_schema)
+Schema::readable(MsgPack&& item_schema, bool is_root)
 {
 	// Change this item of schema in readable form.
 	for (const auto item_key : item_schema) {
@@ -440,7 +423,7 @@ Schema::readable(MsgPack&& item_schema)
 			auto func = map_dispatch_readable.at(str_key);
 			(*func)(item_schema.at(str_key), item_schema);
 		} catch (const std::out_of_range&) {
-			if (is_valid(str_key)) {
+			if (is_valid(str_key) || (is_root && str_key == RESERVED_ID)) {
 				auto sub_item = item_schema.at(str_key);
 				if unlikely(sub_item.get_type() == msgpack::type::NIL) {
 					item_schema.erase(str_key);
