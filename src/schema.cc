@@ -416,7 +416,12 @@ Schema::to_json_string(bool prettify)
 			(*func)(properties.at(str_key), properties);
 		} catch (const std::out_of_range&) {
 			if (is_valid(str_key) || str_key == RESERVED_ID) {
-				readable(properties.at(str_key));
+				auto item = properties.at(str_key);
+				if unlikely(item.get_type() == msgpack::type::NIL) {
+					properties.erase(str_key);
+					continue;
+				}
+				readable(std::move(item));
 			}
 		}
 	}
@@ -436,7 +441,12 @@ Schema::readable(MsgPack&& item_schema)
 			(*func)(item_schema.at(str_key), item_schema);
 		} catch (const std::out_of_range&) {
 			if (is_valid(str_key)) {
-				readable(item_schema.at(str_key));
+				auto sub_item = item_schema.at(str_key);
+				if unlikely(sub_item.get_type() == msgpack::type::NIL) {
+					item_schema.erase(str_key);
+					continue;
+				}
+				readable(std::move(sub_item));
 			}
 		}
 	}
