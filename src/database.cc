@@ -1083,7 +1083,7 @@ Database::index(const MsgPack& obj, const std::string& _document_id, bool commit
 	std::string term_id;
 	index_required_data(doc, term_id, _document_id, ct_type, ct_length);
 
-	L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
+	L_DATABASE_WRAP(this, "Document to index: %s", obj.to_string().c_str());
 	if (obj.get_type() == msgpack::type::MAP) {
 		_index(doc, obj);
 	}
