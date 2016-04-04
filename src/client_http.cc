@@ -192,7 +192,6 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* loop_, int sock_)
 	: BaseClient(std::move(server_), loop_, sock_),
 	  database(nullptr),
-	  cmd(-1),
 	  pretty(false),
 	  body_size(0),
 	  body_descriptor(0),
@@ -1234,27 +1233,27 @@ static constexpr auto http_facets = const_hash("_facets");
 static constexpr auto http_stats = const_hash("_stats");
 static constexpr auto http_schema = const_hash("_schema");
 
-void
+int
 HttpClient::identify_cmd()
 {
 	if (!path_parser.off_cmd) {
-		cmd = CMD_NO_CMD;
+		return CMD_NO_CMD;
 	} else {
 		switch (const_hash(lower_string(path_parser.get_cmd()).c_str())) {
 			case http_search:
-				cmd = CMD_SEARCH;
+				return CMD_SEARCH;
 				break;
 			case http_facets:
-				cmd = CMD_FACETS;
+				return CMD_FACETS;
 				break;
 			case http_stats:
-				cmd = CMD_STATS;
+				return CMD_STATS;
 				break;
 			case http_schema:
-				cmd = CMD_SCHEMA;
+				return CMD_SCHEMA;
 				break;
 			default:
-				cmd = CMD_UNKNOWN;
+				return CMD_UNKNOWN;
 				break;
 		}
 	}
@@ -1288,8 +1287,6 @@ HttpClient::url_resolve()
 			}
 		}
 
-		identify_cmd();
-
 		if (query_parser.next("pretty") != -1) {
 			pretty = true;
 			if (query_parser.len) {
@@ -1300,7 +1297,7 @@ HttpClient::url_resolve()
 		}
 		query_parser.rewind();
 
-		return cmd;
+		return identify_cmd();
 	} else {
 		L_CONN_WIRE(this, "Parsing not done");
 		// Bad query
@@ -1602,7 +1599,6 @@ HttpClient::clean_http_request()
 	content_length.clear();
 	host.clear();
 
-	cmd = -1;
 	pretty = false;
 	query_field.reset();
 	path_parser.clear();

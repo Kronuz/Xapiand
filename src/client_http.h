@@ -61,7 +61,6 @@ class HttpClient : public BaseClient {
 	PathParser path_parser;
 	QueryParser query_parser;
 
-	int cmd;
 	bool pretty;
 	std::unique_ptr<query_field_t> query_field;
 
@@ -113,7 +112,7 @@ class HttpClient : public BaseClient {
 	void _patch();
 	void _delete();
 
-	void identify_cmd();
+	int identify_cmd();
 	int url_resolve();
 	int _endpoint_maker(duration<double, std::milli> timeout);
 	int endpoints_maker(duration<double, std::milli> timeout);
