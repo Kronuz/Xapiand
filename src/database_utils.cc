@@ -94,7 +94,7 @@ long long read_mastery(const std::string& dir, bool force) {
 
 
 bool is_valid(const std::string& word) {
-	return word.front() != '_' && word.back() != '_' && word.find(DB_OFFSPRING_UNION) == std::string::npos;
+	return word.front() != '_' && word.back() != '_';
 }
 
 
