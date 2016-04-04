@@ -104,13 +104,13 @@ class HttpClient : public BaseClient {
 	void facets_view();
 	void bad_request_view();
 
-	void _options();
-	void _head();
-	void _get();
-	void _put();
-	void _post();
-	void _patch();
-	void _delete();
+	void _options(int cmd);
+	void _head(int cmd);
+	void _get(int cmd);
+	void _put(int cmd);
+	void _post(int cmd);
+	void _patch(int cmd);
+	void _delete(int cmd);
 
 	int identify_cmd();
 	int url_resolve();

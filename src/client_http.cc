@@ -455,27 +455,29 @@ HttpClient::run()
 			return;
 		}
 
+		int cmd = url_resolve();
+
 		switch (parser.method) {
 			case METHOD_DELETE:
-				_delete();
+				_delete(cmd);
 				break;
 			case METHOD_GET:
-				_get();
+				_get(cmd);
 				break;
 			case METHOD_POST:
-				_post();
+				_post(cmd);
 				break;
 			case METHOD_HEAD:
-				_head();
+				_head(cmd);
 				break;
 			case METHOD_PUT:
-				_put();
+				_put(cmd);
 				break;
 			case METHOD_OPTIONS:
-				_options();
+				_options(cmd);
 				break;
 			case METHOD_PATCH:
-				_patch();
+				_patch(cmd);
 			default:
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 				break;
@@ -521,20 +523,18 @@ HttpClient::run()
 
 
 void
-HttpClient::_options()
+HttpClient::_options(int cmd)
 {
-	L_CALL(this, "HttpClient::_options()");
+	L_CALL(this, "HttpClient::_options(%d)", cmd);
 
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS, parser.http_major, parser.http_minor));
 }
 
 
 void
-HttpClient::_head()
+HttpClient::_head(int cmd)
 {
-	L_CALL(this, "HttpClient::_head()");
-
-	int cmd = url_resolve();
+	L_CALL(this, "HttpClient::_head(%d)", cmd);
 
 	switch (cmd) {
 		case CMD_NO_CMD:
@@ -552,11 +552,9 @@ HttpClient::_head()
 
 
 void
-HttpClient::_get()
+HttpClient::_get(int cmd)
 {
-	L_CALL(this, "HttpClient::_get()");
-
-	int cmd = url_resolve();
+	L_CALL(this, "HttpClient::_get(%d)", cmd);
 
 	switch (cmd) {
 		case CMD_NO_CMD:
@@ -587,11 +585,9 @@ HttpClient::_get()
 
 
 void
-HttpClient::_put()
+HttpClient::_put(int cmd)
 {
-	L_CALL(this, "HttpClient::_put()");
-
-	int cmd = url_resolve();
+	L_CALL(this, "HttpClient::_put(%d)", cmd);
 
 	switch (cmd) {
 		case CMD_NO_CMD:
@@ -609,11 +605,9 @@ HttpClient::_put()
 
 
 void
-HttpClient::_post()
+HttpClient::_post(int cmd)
 {
-	L_CALL(this, "HttpClient::_post()");
-
-	int cmd = url_resolve();
+	L_CALL(this, "HttpClient::_post(%d)", cmd);
 
 	switch (cmd) {
 		case CMD_NO_CMD:
@@ -627,11 +621,9 @@ HttpClient::_post()
 
 
 void
-HttpClient::_patch()
+HttpClient::_patch(int cmd)
 {
-	L_CALL(this, "HttpClient::_patch()");
-
-	int cmd = url_resolve();
+	L_CALL(this, "HttpClient::_patch(%d)", cmd);
 
 	switch (cmd) {
 		case CMD_NO_CMD:
@@ -649,11 +641,9 @@ HttpClient::_patch()
 
 
 void
-HttpClient::_delete()
+HttpClient::_delete(int cmd)
 {
-	L_CALL(this, "HttpClient::_delete()");
-
-	int cmd = url_resolve();
+	L_CALL(this, "HttpClient::_delete(%d)", cmd);
 
 	switch (cmd) {
 		case CMD_NO_CMD:
