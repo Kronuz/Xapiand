@@ -104,11 +104,11 @@ Discovery::heartbeat_cb(ev::timer&, int)
 
 	auto m = manager();
 
-	if (m->state != XapiandManager::State::READY) {
-		L_DISCOVERY(this, "Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(m->state)]);
+	if (m->state.load() != XapiandManager::State::READY) {
+		L_DISCOVERY(this, "Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(m->state.load())]);
 	}
 
-	switch (m->state) {
+	switch (m->state.load()) {
 		case XapiandManager::State::RESET:
 			if (!local_node.name.empty()) {
 				m->drop_node(local_node.name);
@@ -120,15 +120,15 @@ Discovery::heartbeat_cb(ev::timer&, int)
 			}
 			L_INFO(this, "Advertising as %s (id: %016llX)...", local_node.name.c_str(), local_node.id);
 			send_message(Message::HELLO, local_node.serialise());
-			m->state = XapiandManager::State::WAITING;
+			m->state.store(XapiandManager::State::WAITING);
 			break;
 
 		case XapiandManager::State::WAITING:
-			m->state = XapiandManager::State::WAITING_;
+			m->state.store(XapiandManager::State::WAITING_);
 			break;
 
 		case XapiandManager::State::WAITING_:
-			m->state = XapiandManager::State::SETUP;
+			m->state.store(XapiandManager::State::SETUP);
 			break;
 
 		case XapiandManager::State::SETUP:

@@ -142,7 +142,7 @@ public:
 	std::atomic<time_t> shutdown_asap;
 	std::atomic<time_t> shutdown_now;
 
-	State state;
+	std::atomic<State> state;
 	std::string cluster_name;
 	std::string node_name;
 	bool solo;

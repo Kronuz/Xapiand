@@ -175,7 +175,7 @@ DiscoveryServer::sneer(const std::string& message)
 {
 	auto m = manager();
 
-	if (m->state != XapiandManager::State::READY) {
+	if (m->state.load() != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -190,7 +190,7 @@ DiscoveryServer::sneer(const std::string& message)
 			m->reset_state();
 		} else {
 			L_WARNING(this, "Cannot join the party. Node name %s already taken!", local_node.name.c_str());
-			m->state = XapiandManager::State::BAD;
+			m->state.store(XapiandManager::State::BAD);
 			local_node.name.clear();
 			m->shutdown_asap.store(epoch::now<>());
 			m->shutdown_sig(0);
@@ -204,7 +204,7 @@ DiscoveryServer::enter(const std::string& message)
 {
 	auto m = manager();
 
-	if (m->state != XapiandManager::State::READY) {
+	if (m->state.load() != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -226,7 +226,7 @@ DiscoveryServer::bye(const std::string& message)
 {
 	auto m = manager();
 
-	if (m->state != XapiandManager::State::READY) {
+	if (m->state.load() != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -247,7 +247,7 @@ DiscoveryServer::db(const std::string& message)
 {
 	auto m = manager();
 
-	if (m->state != XapiandManager::State::READY) {
+	if (m->state.load() != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -288,7 +288,7 @@ DiscoveryServer::_db_wave(bool bossy, const std::string& message)
 {
 	auto m = manager();
 
-	if (m->state != XapiandManager::State::READY) {
+	if (m->state.load() != XapiandManager::State::READY) {
 		return;
 	}
 
@@ -340,7 +340,7 @@ DiscoveryServer::db_updated(const std::string& message)
 {
 	auto m = manager();
 
-	if (m->state != XapiandManager::State::READY) {
+	if (m->state.load() != XapiandManager::State::READY) {
 		return;
 	}
 
