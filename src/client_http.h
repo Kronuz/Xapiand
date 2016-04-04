@@ -41,6 +41,19 @@
 #define HTTP_EXPECTED100      (1 << 9)
 
 
+struct accept_preference_comp {
+	constexpr bool operator()(const std::tuple<double, int, std::pair<std::string, std::string>>& l, const std::tuple<double, int, std::pair<std::string, std::string>>& r) const noexcept {
+		return (std::get<0>(l) == std::get<0>(r)) ? std::get<1>(l) < std::get<1>(r) : std::get<0>(l) > std::get<0>(r);
+	}
+};
+using accept_set_t = std::set<std::tuple<double, int, std::pair<std::string, std::string>>, accept_preference_comp>;
+
+
+class AcceptLRU : public lru::LRU<std::string, accept_set_t> {
+public:
+	AcceptLRU() : LRU<std::string, accept_set_t>(100) {}
+};
+
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	struct http_parser parser;
@@ -52,11 +65,8 @@ class HttpClient : public BaseClient {
 
 	static const http_parser_settings settings;
 
-	struct accept_preference_comp {
-		constexpr bool operator()(const std::tuple<double, int, std::pair<std::string, std::string>>& l, const std::tuple<double, int, std::pair<std::string, std::string>>& r) const noexcept {
-			return (std::get<0>(l) == std::get<0>(r)) ? std::get<1>(l) < std::get<1>(r) : std::get<0>(l) > std::get<0>(r);
-		}
-	};
+	static AcceptLRU accept_sets;
+	accept_set_t accept_set;
 
 	PathParser path_parser;
 	QueryParser query_parser;
@@ -76,8 +86,8 @@ class HttpClient : public BaseClient {
 
 	std::string content_type;
 	std::string content_length;
-	std::set<std::tuple<double, int, std::pair<std::string, std::string>>, accept_preference_comp> accept_set;
 	bool expect_100 = false;
+
 
 	std::string host;
 

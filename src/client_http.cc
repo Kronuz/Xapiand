@@ -117,6 +117,8 @@ static const char* status_code[6][14] = {
 };
 
 
+AcceptLRU HttpClient::accept_sets;
+
 std::string
 HttpClient::http_response(int status, int mode, unsigned short http_major, unsigned short http_minor, int matched_count, const std::string& body, const std::string& ct_type, const std::string& ct_encoding) {
 	L_CALL(this, "HttpClient::http_response()");
@@ -381,14 +383,19 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 			} else if (name.compare("content-length") == 0) {
 				self->content_length = value;
 			} else if (name.compare("accept") == 0) {
-				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
-				std::sregex_iterator end;
-				int i = 0;
-				while (next != end) {
-					next->length(3) != 0 ? self->accept_set.insert(std::make_tuple(std::stod(next->str(3)), i, std::make_pair(next->str(1), next->str(2))))
-						: self->accept_set.insert(std::make_tuple(1, i, std::make_pair(next->str(1), next->str(2))));
-					++next;
-					++i;
+				try {
+					self->accept_set = accept_sets.at(value);
+				} catch (std::range_error) {
+					std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
+					std::sregex_iterator end;
+					int i = 0;
+					while (next != end) {
+						next->length(3) != 0 ? self->accept_set.insert(std::make_tuple(std::stod(next->str(3)), i, std::make_pair(next->str(1), next->str(2))))
+							: self->accept_set.insert(std::make_tuple(1, i, std::make_pair(next->str(1), next->str(2))));
+						++next;
+						++i;
+					}
+					accept_sets.insert(std::make_pair(value, self->accept_set));
 				}
 			}
 			self->header_name.clear();
@@ -1593,6 +1600,7 @@ HttpClient::clean_http_request()
 	query_field.reset();
 	path_parser.clear();
 	query_parser.clear();
+	accept_set.clear();
 
 	response_ends = std::chrono::system_clock::now();
 	request_begining = true;
