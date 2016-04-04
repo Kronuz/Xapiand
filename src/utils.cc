@@ -421,6 +421,12 @@ void
 PathParser::clear()
 {
 	rewind();
+	len_pmt = 0;
+	off_pmt = nullptr;
+	len_cmd = 0;
+	off_cmd = nullptr;
+	len_id = 0;
+	off_id = nullptr;
 	path.clear();
 }
 
@@ -434,12 +440,6 @@ PathParser::rewind()
 	off_hst = nullptr;
 	len_nsp = 0;
 	off_nsp = nullptr;
-	len_pmt = 0;
-	off_pmt = nullptr;
-	len_cmd = 0;
-	off_cmd = nullptr;
-	len_id = 0;
-	off_id = nullptr;
 }
 
 PathParser::State
