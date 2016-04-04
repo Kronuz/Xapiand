@@ -29,7 +29,9 @@
 #include <vector>
 #include <xapian.h>
 
+#define RESERVED_RANK        "_rank"
 #define RESERVED_WEIGHT      "_weight"
+#define RESERVED_PERCENT     "_percent"
 #define RESERVED_POSITION    "_position"
 #define RESERVED_LANGUAGE    "_language"
 #define RESERVED_SPELLING    "_spelling"

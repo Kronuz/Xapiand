@@ -1167,6 +1167,13 @@ HttpClient::search_view()
 			} catch (const std::out_of_range&) {
 				clean_reserved(obj_data);
 				obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
+				// Detailed info about the document:
+				obj_data[RESERVED_RANK] = m.get_rank();
+				obj_data[RESERVED_WEIGHT] = m.get_weight();
+				obj_data[RESERVED_PERCENT] = m.get_percent();
+				int subdatabase = (document.get_docid() - 1) % endpoints.size();
+				auto endpont = endpoints[subdatabase];
+				obj_data[RESERVED_INDEX] = endpont.as_string();
 			}
 
 			auto result = serialize_response(obj_data, ct_type, pretty);
