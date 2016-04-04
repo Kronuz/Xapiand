@@ -49,9 +49,21 @@ struct accept_preference_comp {
 using accept_set_t = std::set<std::tuple<double, int, std::pair<std::string, std::string>>, accept_preference_comp>;
 
 
-class AcceptLRU : public lru::LRU<std::string, accept_set_t> {
+class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
+	std::mutex qmtx;
 public:
 	AcceptLRU() : LRU<std::string, accept_set_t>(100) {}
+
+	accept_set_t& at(std::string key) {
+		std::lock_guard<std::mutex> lk(qmtx);
+		return LRU::at(key);
+	}
+
+	accept_set_t& insert(std::pair<std::string, accept_set_t> pair) {
+		std::lock_guard<std::mutex> lk(qmtx);
+		return LRU::insert(pair);
+	}
+
 };
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
