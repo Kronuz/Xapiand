@@ -29,6 +29,7 @@
 #include <vector>
 #include <xapian.h>
 
+#define RESERVED_ENDPOINT    "_endpoint"
 #define RESERVED_RANK        "_rank"
 #define RESERVED_WEIGHT      "_weight"
 #define RESERVED_PERCENT     "_percent"
