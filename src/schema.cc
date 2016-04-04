@@ -368,6 +368,8 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 			throw MSG_ClientError("%s can not be array of arrays", RESERVED_VALUE);
 		case msgpack::type::MAP:
 			throw MSG_ClientError("%s can not be object", RESERVED_VALUE);
+		case msgpack::type::NIL:
+			throw MSG_DummyException();
 		default:
 			break;
 	}

@@ -36,7 +36,7 @@ Serialise::serialise(char field_type, const MsgPack& field_value)
 {
 	switch (field_value.get_type()) {
 		case msgpack::type::NIL:
-			return boolean(field_type, false);
+			throw MSG_DummyException();
 		case msgpack::type::BOOLEAN:
 			return boolean(field_type, field_value.body->obj->via.boolean);
 		case msgpack::type::POSITIVE_INTEGER:
