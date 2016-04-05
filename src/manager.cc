@@ -85,11 +85,13 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 
 {
 	// Set the id in local node.
-	local_node.id = get_node_id();
-	if (local_node.empty()) {
+	auto node = new Node(*local_node);
+	node->id = get_node_id();
+
+	if (node->empty()) {
 		std::unique_lock<std::mutex> lk(qmtx);
 		set_node_id(random_int(1, UINT64_MAX - 1), lk);
-		local_node.id = get_node_id();
+		node->id = get_node_id();
 	}
 
 	// Setup node from node database directory
@@ -103,7 +105,9 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	}
 
 	// Set addr in local node
-	local_node.addr = host_address();
+	node->addr = host_address();
+
+	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
 
 	async_shutdown_sig.set<XapiandManager, &XapiandManager::async_shutdown_sig_cb>(this);
 	async_shutdown_sig.start();
@@ -232,7 +236,9 @@ XapiandManager::set_node_id(uint64_t node_id_, std::unique_lock<std::mutex>& lk)
 		}
 	}
 
-	local_node.id = get_node_id();
+	auto node = new Node(*local_node);
+	node->id = get_node_id();
+	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
 
 	return true;
 }
@@ -273,14 +279,14 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 
 	// Set node as ready!
-	set_node_name(local_node.name, lk);
+	set_node_name(local_node->name, lk);
 
 	Xapian::Document document;
-	if (!cluster_database->get_document(std::to_string(local_node.id), document)) {
+	if (!cluster_database->get_document(std::to_string(local_node->id), document)) {
 		MsgPack obj;
-		obj["name"] = local_node.name;
+		obj["name"] = local_node->name;
 		obj["tagline"] = XAPIAND_TAGLINE;
-		cluster_database->index(obj, std::to_string(local_node.id), true, MSGPACK_TYPE, "");
+		cluster_database->index(obj, std::to_string(local_node->id), true, MSGPACK_TYPE, "");
 	}
 
 	MsgPack obj_data = get_MsgPack(document);
@@ -295,15 +301,15 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	std::unique_lock<std::mutex> lk_n(nodes_mtx);
 
 	for (auto it = nodes.cbegin(); it != nodes.cend(); ++it) {
-		const Node &node = it->second;
-		Endpoint remote_endpoint(".", &node);
+		auto node = it->second;
+		Endpoint remote_endpoint(".", node.get());
 		// Replicate database from the other node
 #ifdef XAPIAND_CLUSTERING
-		L_INFO(this, "Syncing cluster data from %s...", node.name.c_str());
+		L_INFO(this, "Syncing cluster data from %s...", node->name.c_str());
 
 		auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
 		if (ret.get()) {
-			L_INFO(this, "Cluster data being synchronized from %s...", node.name.c_str());
+			L_INFO(this, "Cluster data being synchronized from %s...", node->name.c_str());
 			new_cluster = 2;
 			break;
 		}
@@ -632,23 +638,22 @@ XapiandManager::reset_state()
 
 
 bool
-XapiandManager::put_node(const Node& node)
+XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	std::string lower_node_name(lower_string(node.name));
-	if (lower_node_name == lower_string(local_node.name)) {
-		local_node.touched = epoch::now<>();
+	std::string lower_node_name(lower_string(node->name));
+	if (lower_node_name == lower_string(local_node->name)) {
+		local_node->touched = epoch::now<>();
 		return false;
 	} else {
 		try {
-			Node &node_ref = nodes.at(lower_node_name);
-			if (node == node_ref) {
-				node_ref.touched = epoch::now<>();
+			auto node_ref = nodes.at(lower_node_name);
+			if (*node == *node_ref) {
+				node_ref->touched = epoch::now<>();
 			}
 		} catch (const std::out_of_range &err) {
-			Node &node_ref = nodes[lower_node_name];
-			node_ref = node;
-			node_ref.touched = epoch::now<>();
+			nodes[lower_node_name] = node;
+			node->touched = epoch::now<>();
 			return true;
 		} catch (...) {
 			throw;
@@ -658,46 +663,43 @@ XapiandManager::put_node(const Node& node)
 }
 
 
-bool
-XapiandManager::get_node(const std::string& node_name, const Node** node)
+std::shared_ptr<const Node>
+XapiandManager::get_node(const std::string& node_name)
 {
 	try {
-		const Node &node_ref = nodes.at(lower_string(node_name));
-		*node = &node_ref;
-		return true;
+		auto node_ref = nodes.at(lower_string(node_name));
+		return node_ref;
 	} catch (const std::out_of_range &err) {
-		return false;
+		return nullptr;
 	}
 }
 
 
-bool
-XapiandManager::touch_node(const std::string& node_name, int32_t region, const Node** node)
+std::shared_ptr<const Node>
+XapiandManager::touch_node(const std::string& node_name, int32_t region)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string lower_node_name(lower_string(node_name));
-	if (lower_node_name == lower_string(local_node.name)) {
-		local_node.touched = epoch::now<>();
+	if (lower_node_name == lower_string(local_node->name)) {
+		local_node->touched = epoch::now<>();
 		if (region != UNKNOWN_REGION) {
-			local_node.region.store(region);
+			local_node->region.store(region);
 		}
-		if (node) *node = &local_node;
-		return true;
+		return local_node;
 	} else {
 		try {
-			Node &node_ref = nodes.at(lower_node_name);
-			node_ref.touched = epoch::now<>();
+			auto node_ref = nodes.at(lower_node_name);
+			node_ref->touched = epoch::now<>();
 			if (region != UNKNOWN_REGION) {
-				node_ref.region.store(region);
+				node_ref->region.store(region);
 			}
-			if (node) *node = &node_ref;
-			return true;
+			return node_ref;
 		} catch (const std::out_of_range &err) {
 		} catch (...) {
 			throw;
 		}
 	}
-	return false;
+	return nullptr;
 }
 
 
@@ -715,7 +717,7 @@ XapiandManager::get_nodes_by_region(int32_t region)
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	size_t cont = 0;
 	for (const auto& node : nodes) {
-		if (node.second.region.load() == region) ++cont;
+		if (node.second->region.load() == region) ++cont;
 	}
 	return cont;
 }
@@ -724,11 +726,11 @@ XapiandManager::get_nodes_by_region(int32_t region)
 int32_t
 XapiandManager::get_region(const std::string& db_name)
 {
-	if (local_node.regions.load() == -1) {
-		local_node.regions.store(sqrt(nodes.size()));
+	if (local_node->regions.load() == -1) {
+		local_node->regions.store(sqrt(nodes.size()));
 	}
 	std::hash<std::string> hash_fn;
-	return jump_consistent_hash(hash_fn(db_name), local_node.regions.load());
+	return jump_consistent_hash(hash_fn(db_name), local_node->regions.load());
 }
 
 
@@ -736,24 +738,24 @@ int32_t
 XapiandManager::get_region()
 {
 	if (auto raft = weak_raft.lock()) {
-		if (local_node.regions.load() == -1) {
+		if (local_node->regions.load() == -1) {
 			if (is_single_node()) {
-				local_node.regions.store(1);
-				local_node.region.store(0);
+				local_node->regions.store(1);
+				local_node->region.store(0);
 				raft->stop();
 			} else if (state == State::READY) {
 				raft->start();
-				local_node.regions.store(sqrt(nodes.size() + 1));
-				int32_t region = jump_consistent_hash(local_node.id, local_node.regions.load());
-				if (local_node.region.load() != region) {
-					local_node.region.store(region);
+				local_node->regions.store(sqrt(nodes.size() + 1));
+				int32_t region = jump_consistent_hash(local_node->id, local_node->regions.load());
+				if (local_node->region.load() != region) {
+					local_node->region.store(region);
 					raft->reset();
 				}
 			}
 			L_RAFT(this, "Regions: %d Region: %d", local_node.regions.load(), local_node.region.load());
 		}
 	}
-	return local_node.region.load();
+	return local_node->region.load();
 }
 
 

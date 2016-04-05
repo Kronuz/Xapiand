@@ -69,7 +69,7 @@ Discovery::stop() {
 	heartbeat.stop();
 	L_EV(this, "Stop discovery's heartbeat event");
 
-	send_message(Message::BYE, local_node.serialise());
+	send_message(Message::BYE, local_node->serialise());
 
 	L_DISCOVERY(this, "Discovery was stopped!");
 }
@@ -85,7 +85,7 @@ Discovery::async_enter_cb(ev::async&, int)
 void
 Discovery::_enter()
 {
-	send_message(Message::ENTER, local_node.serialise());
+	send_message(Message::ENTER, local_node->serialise());
 
 	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
 	heartbeat.again();
@@ -109,19 +109,27 @@ Discovery::heartbeat_cb(ev::timer&, int)
 	}
 
 	switch (m->state.load()) {
-		case XapiandManager::State::RESET:
-			if (!local_node.name.empty()) {
-				m->drop_node(local_node.name);
-			}
-			if (m->node_name.empty()) { //TODO: Whe this State is used fix the possible race condition in local_node.name
-				local_node.name = name_generator();
+		case XapiandManager::State::RESET: {
+			
+			Node* node = new Node(*local_node);
+			std::string drop = local_node->name;
+
+			if (m->node_name.empty()) {
+				node->name = name_generator();
 			} else {
-				local_node.name = m->node_name;
+				node->name = m->node_name;
 			}
-			L_INFO(this, "Advertising as %s (id: %016llX)...", local_node.name.c_str(), local_node.id);
-			send_message(Message::HELLO, local_node.serialise());
+			std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
+
+			if (!drop.empty()) {
+				m->drop_node(drop);
+			}
+
+			L_INFO(this, "Advertising as %s (id: %016llX)...", local_node->name.c_str(), local_node->id);
+			send_message(Message::HELLO, local_node->serialise());
 			m->state.store(XapiandManager::State::WAITING);
 			break;
+		}
 
 		case XapiandManager::State::WAITING:
 			m->state.store(XapiandManager::State::WAITING_);
@@ -136,7 +144,7 @@ Discovery::heartbeat_cb(ev::timer&, int)
 			break;
 
 		case XapiandManager::State::READY:
-			send_message(Message::HEARTBEAT, local_node.serialise());
+			send_message(Message::HEARTBEAT, local_node->serialise());
 			break;
 
 		case XapiandManager::State::BAD:

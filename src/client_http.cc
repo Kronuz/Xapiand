@@ -680,8 +680,8 @@ HttpClient::home_view()
 		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 	Xapian::Document document;
-	if (!database->get_document(std::to_string(local_node.id), document)) {
-		L_WARNING(this, "Corrupt node: %s", local_node.id);
+	if (!database->get_document(std::to_string(local_node->id), document)) {
+		L_WARNING(this, "Corrupt node: %s", local_node->id);
 		write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 		return;
 	}
@@ -1345,11 +1345,11 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		size_t num_endps = 1;
 		if (manager()->is_single_node()) {
 			has_node_name = true;
-			node_name = local_node.name;
+			node_name = local_node->name;
 		} else {
 			if (!manager()->resolve_index_endpoint(asked_node.path, asked_nodes, num_endps, timeout)) {
 				has_node_name = true;
-				node_name = local_node.name;
+				node_name = local_node->name;
 			}
 		}
 	}
@@ -1362,8 +1362,8 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 
 		// Convert node to endpoint:
 		char node_ip[INET_ADDRSTRLEN];
-		const Node *node = nullptr;
-		if (!manager()->touch_node(node_name, UNKNOWN_REGION, &node)) {
+		auto node = manager()->touch_node(node_name, UNKNOWN_REGION);
+		if (node) {
 			L_DEBUG(this, "Node %s not found", node_name.c_str());
 			host = node_name;
 			return -1;

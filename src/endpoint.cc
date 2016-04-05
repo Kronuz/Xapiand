@@ -28,8 +28,7 @@
 #include <limits.h>
 #include <unistd.h>
 
-
-Node local_node;
+std::shared_ptr<const Node> local_node(std::make_shared<const Node>());
 
 
 std::string
@@ -77,7 +76,7 @@ Endpoint::Endpoint()
 	: mastery_level(-1) { }
 
 
-Endpoint::Endpoint(const std::string &uri_, const Node *node_, long long mastery_level_, std::string node_name_)
+Endpoint::Endpoint(const std::string &uri_, const Node* node_, long long mastery_level_, const std::string& node_name_)
 	: node_name(node_name_),
 	  mastery_level(mastery_level_)
 {
@@ -116,8 +115,9 @@ Endpoint::Endpoint(const std::string &uri_, const Node *node_, long long mastery
 		path = "";
 	}
 	if (protocol == "file") {
+		auto local_node_ = local_node;
 		if (!node_) {
-			node_ = &local_node;
+			node_ = local_node_.get();
 		}
 		protocol = "xapian";
 		host = node_->host();

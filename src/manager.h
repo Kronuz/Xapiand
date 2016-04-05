@@ -81,7 +81,7 @@ extern void sig_exit(int sig);
 class XapiandManager : public Worker  {
 	friend Worker;
 
-	using nodes_map_t = std::unordered_map<std::string, Node>;
+	using nodes_map_t = std::unordered_map<std::string, std::shared_ptr<const Node>>;
 
 	std::mutex qmtx;
 
@@ -166,9 +166,9 @@ public:
 #ifdef XAPIAND_CLUSTERING
 	void reset_state();
 
-	bool put_node(const Node& node);
-	bool get_node(const std::string& node_name, const Node** node);
-	bool touch_node(const std::string& node_name, int32_t region, const Node** node=nullptr);
+	bool put_node(std::shared_ptr<const Node> node);
+	std::shared_ptr<const Node> get_node(const std::string& node_name);
+	std::shared_ptr<const Node> touch_node(const std::string& node_name, int32_t region);
 	void drop_node(const std::string& node_name);
 
 	size_t get_nodes_by_region(int32_t region);

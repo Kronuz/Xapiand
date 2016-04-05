@@ -150,15 +150,15 @@ bool EndpointList::resolve_endpoint(const std::string &path, std::shared_ptr<Xap
 }
 
 
-bool EndpointList::get_endpoints(std::shared_ptr<XapiandManager> manager, size_t n_endps, std::vector<Endpoint> *endpv, const Node **last_node)
+bool EndpointList::get_endpoints(std::shared_ptr<XapiandManager> manager, size_t n_endps, std::vector<Endpoint> *endpv, std::shared_ptr<const Node>* last_node)
 {
 	bool find_endpoints = false;
 	if (endpv) endpv->clear();
 	std::set<Endpoint, Endpoint::compare>::const_iterator it_endp(endp_set.cbegin());
 	for (size_t c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
 		try {
-			const Node *node = nullptr;
-			if (!manager->get_node((*it_endp).node_name, &node)) {
+			auto node = manager->get_node((*it_endp).node_name);
+			if (!node) {
 				return false;
 			}
 			if (node->touched > epoch::now<>() + HEARTBEAT_MAX) {
@@ -235,7 +235,7 @@ bool EndpointResolver::resolve_index_endpoint(const std::string &path, std::shar
 }
 
 
-bool EndpointResolver::get_master_node(const std::string &index, const Node **node, std::shared_ptr<XapiandManager> manager)
+bool EndpointResolver::get_master_node(const std::string &index, std::shared_ptr<const Node>* node, std::shared_ptr<XapiandManager> manager)
 {
 	std::unique_lock<std::mutex> lk(re_qmtx);
 	EndpointList &enl = (*this)[index];

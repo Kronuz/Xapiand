@@ -32,53 +32,65 @@
 #include <atomic>
 
 struct Node {
-	std::string name;
 	uint64_t id;
-	std::atomic<int32_t> regions;
-	std::atomic<int32_t> region;
+	std::string name;
 	struct sockaddr_in addr;
 	int http_port;
 	int binary_port;
-	time_t touched;
 
-	Node() : id(0), regions(1), region(0), http_port(0), binary_port(0), touched(0) {
+	mutable std::atomic<int32_t> regions;
+	mutable std::atomic<int32_t> region;
+	mutable std::atomic<time_t> touched;
+
+	Node() : id(0), http_port(0), binary_port(0), regions(1), region(0), touched(0) {
 		memset(&addr, 0, sizeof(addr));
 	}
 
 	// move constructor, takes a rvalue reference &&
-	Node(Node&& other) {
-		name = std::move(other.name);
+	Node(const Node&& other) {
 		id = std::move(other.id);
-		regions.store(other.regions.load());
-		region.store(other.region.load());
+		name = std::move(other.name);
 		addr = std::move(other.addr);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
-		touched = std::move(other.touched);
+		regions = other.regions.load();   /* should be exist move a copy constructor? */
+		region = other.region.load();
+		touched = other.touched.load();
+	}
+
+	Node(const Node& other) {
+		id = other.id;
+		name = other.name;
+		addr = other.addr;
+		http_port = other.http_port;
+		binary_port = other.binary_port;
+		regions = other.regions.load();
+		region = other.region.load();
+		touched = other.touched.load();
 	}
 
 	// move assignment, takes a rvalue reference &&
-	Node& operator=(Node&& other) {
-		name = std::move(other.name);
+	Node& operator=(const Node&& other) {
 		id = std::move(other.id);
-		regions.store(other.regions.load());
-		region.store(other.region.load());
+		name = std::move(other.name);
 		addr = std::move(other.addr);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
-		touched = std::move(other.touched);
+		regions = other.regions.load();
+		region = other.region.load();
+		touched = other.touched.load();
 		return *this;
 	}
 
 	Node& operator=(const Node& other) {
-		name = other.name;
 		id = other.id;
-		regions.store(other.regions.load());
-		region.store(other.region.load());
+		name = other.name;
 		addr = other.addr;
 		http_port = other.http_port;
 		binary_port = other.binary_port;
-		touched = other.touched;
+		regions = other.regions.load();
+		region = other.region.load();
+		touched = other.touched.load();
 		return *this;
 	}
 
@@ -93,7 +105,7 @@ struct Node {
 		touched = 0;
 	}
 
-	bool empty() {
+	bool empty() const {
 		return name.empty();
 	}
 
@@ -119,7 +131,7 @@ struct Node {
 	}
 };
 
-extern Node local_node;
+extern std::shared_ptr<const Node> local_node;
 
 class Endpoint;
 class Endpoints;
@@ -160,12 +172,12 @@ public:
 	long long mastery_level;
 
 	Endpoint();
-	Endpoint(const std::string &path_, const Node *	node_=nullptr, long long mastery_level_=-1, std::string node_name="");
+	Endpoint(const std::string &path_, const Node* node_=nullptr, long long mastery_level_=-1, const std::string& node_name="");
 
 	bool is_local() const {
-		int binary_port = local_node.binary_port;
+		int binary_port = local_node->binary_port;
 		if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
-		return (host == local_node.host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
+		return (host == local_node->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
 	}
 
 	size_t hash() const;
