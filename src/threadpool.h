@@ -232,7 +232,7 @@ public:
 			}
 		}
 	}
-	
+
 	size_t threadpool_size() {
 		return threads.size();
 	}

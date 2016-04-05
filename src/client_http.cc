@@ -55,8 +55,6 @@
 #define METHOD_OPTIONS 6
 #define METHOD_PATCH   24
 
-
-
 #define QUERY_FIELD_COMMIT (1 << 0)
 #define QUERY_FIELD_SEARCH (1 << 1)
 #define QUERY_FIELD_RANGE  (1 << 2)
