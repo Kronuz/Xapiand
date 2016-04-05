@@ -73,6 +73,9 @@ std::string traceback(const char *filename, int line) {
 	}
 
 	free(strs);
+#else
+	(void)filename;
+	(void)line;
 #endif
 	return t;
 }
@@ -97,6 +100,8 @@ Exception::Exception(const char *filename, int line, const char *format, ...)
 	traceback = ::traceback(filename, line);
 #endif
 #else
+	(void)filename;
+	(void)line;
 	context = msg;
 #endif
 }

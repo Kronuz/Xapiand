@@ -532,7 +532,7 @@ HttpClient::run()
 void
 HttpClient::_options(int cmd)
 {
-	L_CALL(this, "HttpClient::_options(%d)", cmd);
+	L_CALL(this, "HttpClient::_options(%d)", cmd); (void)cmd;
 
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_OPTIONS, parser.http_major, parser.http_minor));
 }
