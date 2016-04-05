@@ -3,9 +3,9 @@
 	"actors": {
 		"male": {
 			"_value": [
-			 "Michael J. Fox",
-			 "Christopher Lloyd",
-			 "Thomas F. Wilson"
+				"Michael J. Fox",
+				"Christopher Lloyd",
+				"Thomas F. Wilson"
 			],
 			"_weight": 1,
 			"_bool_term": true
