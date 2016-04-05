@@ -58,6 +58,7 @@
 #define QUERY_FIELD_COMMIT (1 << 0)
 #define QUERY_FIELD_SEARCH (1 << 1)
 #define QUERY_FIELD_RANGE  (1 << 2)
+#define QUERY_FIELD_TIME   (1 << 3)
 
 
 type_t
@@ -910,7 +911,9 @@ HttpClient::stats_view()
 	bool res_stats = false;
 
 	if (!path_parser.off_id) {
+		query_field_maker(QUERY_FIELD_TIME);
 		manager()->server_status(response["server_status"]);
+		manager()->get_stats_time(response["stats_time"], query_field->time);
 		res_stats = true;
 	} else {
 		endpoints_maker(1s);
@@ -1574,6 +1577,15 @@ HttpClient::query_field_maker(int flag)
 			}
 			query_parser.rewind();
 		}
+	}
+	
+	if (flag & QUERY_FIELD_TIME) {
+		if (query_parser.next("time") != -1) {
+			query_field->time = query_parser.get();
+		} else {
+			query_field->time = "1h";
+		}
+		query_parser.rewind();
 	}
 }
 
