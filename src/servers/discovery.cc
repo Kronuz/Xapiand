@@ -113,7 +113,7 @@ Discovery::heartbeat_cb(ev::timer&, int)
 			if (!local_node.name.empty()) {
 				m->drop_node(local_node.name);
 			}
-			if (m->node_name.empty()) {
+			if (m->node_name.empty()) { //TODO: Whe this State is used fix the possible race condition in local_node.name
 				local_node.name = name_generator();
 			} else {
 				local_node.name = m->node_name;
