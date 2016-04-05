@@ -1043,6 +1043,7 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, specifica
 {
 	L_CALL(this, "Schema::index_object()");
 
+	const auto spc_start = specification;
 	MsgPack properties;
 	if (name.empty()) {
 		properties.reset(global_properties);
@@ -1057,7 +1058,6 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, specifica
 			bool offsprings = false;
 			TaskVector tasks;
 			tasks.reserve(object.size());
-			specification.value = nullptr;
 			for (const auto item_key : object) {
 				const auto str_key = item_key.get_str();
 				try {
@@ -1071,11 +1071,11 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, specifica
 				}
 			}
 
+			const auto spc_object = specification;
+
 			if unlikely(!specification.found_field && specification.sep_types[2] != NO_TYPE) {
 				validate_required_data(properties, specification.value.get(), specification);
 			}
-
-			const specification_t spc_bef = specification;
 
 			if (specification.name.empty()) {
 				if (specification.value) {
@@ -1094,17 +1094,21 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, specifica
 			}
 
 			for (auto& task : tasks) {
-				specification = spc_bef;
+				specification = spc_object;
 				task.get();
 			}
 			break;
 		}
 		case msgpack::type::ARRAY:
 			set_type_to_array(properties);
-			return index_array(properties, object, specification, doc);
+			index_array(properties, object, specification, doc);
+			break;
 		default:
-			return index_item(properties, object, specification, doc);
+			index_item(properties, object, specification, doc);
+			break;
 	}
+
+	specification = spc_start;
 }
 
 
@@ -1113,6 +1117,7 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& 
 {
 	L_CALL(this, "Schema::index_array()");
 
+	const auto spc_start = specification;
 	bool offsprings = false;
 	for (auto item : array) {
 		if (item.get_type() == msgpack::type::MAP) {
@@ -1132,7 +1137,7 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& 
 				}
 			}
 
-			const specification_t spc_bef = specification;
+			const auto spc_item = specification;
 
 			if (specification.name.empty()) {
 				specification.found_field = true;
@@ -1148,7 +1153,7 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& 
 			}
 
 			for (auto& task : tasks) {
-				specification = spc_bef;
+				specification = spc_item;
 				task.get();
 			}
 		} else {
@@ -1159,6 +1164,8 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, specification_t& 
 	if (offsprings) {
 		set_type_to_object(properties);
 	}
+
+	specification = spc_start;
 }
 
 
