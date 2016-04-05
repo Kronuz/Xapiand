@@ -188,6 +188,8 @@ specification_t::operator=(const specification_t& o)
 	set_bool_term = o.bool_term;
 	fixed_index = o.fixed_index;
 	full_name = o.full_name;
+	doc_acc.reset();
+	value.reset();
 	return *this;
 }
 
