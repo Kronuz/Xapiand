@@ -41,11 +41,10 @@ void
 StringList::unserialise(const char** ptr, const char* end)
 {
 	ssize_t length = -1;
+
 	const char* pos = *ptr;
-
-	clear();
-
-	if (!*pos++) {
+	if (*pos++ == '\0' && pos != end) {
+		clear();
 		try {
 			length = unserialise_length(&pos, end, true);
 			reserve(length);
@@ -60,6 +59,7 @@ StringList::unserialise(const char** ptr, const char* end)
 	}
 
 	if (length == -1) {
+		clear();
 		pos = *ptr;
 		push_back(std::string(pos, end - pos));
 	}
