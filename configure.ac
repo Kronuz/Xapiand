@@ -158,7 +158,7 @@ LIBS="$save_LIBS"
 
 ########################################################################
 
-AC_MSG_CHECKING(["whether compiler understands -Wall -Wextra"])
+AC_MSG_CHECKING([whether compiler understands -Wall -Wextra])
 save_CXXFLAGS="$CXXFLAGS"
 CXXFLAGS="$CXXFLAGS -Wall -Wextra"
 AC_TRY_COMPILE([],[],
@@ -286,8 +286,25 @@ case "$enable_tracebacks" in
 esac
 
 
+AC_ARG_ENABLE(sanitizer,
+  [AS_HELP_STRING([--enable-sanitizer], [enable address sanitizer (can be slow)])],
+  [enable_sanitizer="$enableval"],
+  [enable_sanitizer=no])
+case "$enable_sanitizer" in
+  y*)
+    AC_MSG_CHECKING([whether compiler understands -fsanitize=address])
+    save_CXXFLAGS="$CXXFLAGS"
+    CXXFLAGS="$CXXFLAGS -fsanitize=address"
+    AC_TRY_COMPILE([],[],
+      [AC_MSG_RESULT(yes)],
+      [AC_MSG_RESULT(no)]
+      [CXXFLAGS="$save_CXXFLAGS"])
+    ;;
+esac
+
+
 ########################################################################
 
-CXXFLAGS="$CXXFLAGS -fcolor-diagnostics -fsanitize=address"
+CXXFLAGS="$CXXFLAGS -fcolor-diagnostics"
 
 AC_OUTPUT
