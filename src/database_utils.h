@@ -42,7 +42,7 @@
 #define RESERVED_TERMS       "_terms"
 #define RESERVED_DATA        "_data"
 #define RESERVED_ACCURACY    "_accuracy"
-#define RESERVED_ACC_PREFIX  "_acc_prefix"
+#define RESERVED_ACC_PREFIX  "_accuracy_prefix"
 #define RESERVED_STORE       "_store"
 #define RESERVED_TYPE        "_type"
 #define RESERVED_ANALYZER    "_analyzer"
