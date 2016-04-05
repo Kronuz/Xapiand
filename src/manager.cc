@@ -790,7 +790,7 @@ void
 XapiandManager::server_status(MsgPack&& stats)
 {
 	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-	stats["connections"] = XapiandServer::total_clients.load();
+	// stats["connections"] = XapiandServer::total_clients.load();
 	stats["http_connections"] = XapiandServer::http_clients.load();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
@@ -798,7 +798,7 @@ XapiandManager::server_status(MsgPack&& stats)
 	}
 #endif
 
-	stats["max_connections"] = XapiandServer::max_total_clients.load();
+	// stats["max_connections"] = XapiandServer::max_total_clients.load();
 	stats["max_http_connections"] = XapiandServer::max_http_clients.load();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
