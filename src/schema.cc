@@ -677,7 +677,7 @@ Schema::process_analyzer(MsgPack& properties, const MsgPack& doc_analyzer, speci
 				} else if (_analyzer == str_analyzer[3]) {
 					specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
 				} else {
-					throw MSG_ClientError("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
+					throw MSG_ClientError("%s can be  {%s, %s, %s, %s} (%s not supported)", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str(), _analyzer.c_str());
 				}
 			}
 		} else {
@@ -691,7 +691,7 @@ Schema::process_analyzer(MsgPack& properties, const MsgPack& doc_analyzer, speci
 			} else if (_analyzer == str_analyzer[3]) {
 				specification.analyzer.push_back(Xapian::TermGenerator::STEM_ALL_Z);
 			} else {
-				throw MSG_ClientError("%s can be  {%s, %s, %s, %s}", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str());
+				throw MSG_ClientError("%s can be  {%s, %s, %s, %s} (%s not supported)", RESERVED_ANALYZER, str_analyzer[0].c_str(), str_analyzer[1].c_str(), str_analyzer[2].c_str(), str_analyzer[3].c_str(), _analyzer.c_str());
 			}
 		}
 
@@ -823,7 +823,7 @@ Schema::process_index(MsgPack& properties, const MsgPack& doc_index, specificati
 		} else if (_index == str_index[3]) {
 			specification.index = Index::TEXT;
 		} else {
-			throw MSG_ClientError("%s can be in {%s, %s, %s, %s}", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str(), str_index[3].c_str());
+			throw MSG_ClientError("%s can be in {%s, %s, %s, %s} (%s not supported)", RESERVED_INDEX, str_index[0].c_str(), str_index[1].c_str(), str_index[2].c_str(), str_index[3].c_str(), _index.c_str());
 		}
 
 		if unlikely(!specification.found_field) {
@@ -1225,7 +1225,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 					if (val_acc <= HTM_MAX_LEVEL) {
 						set_acc.insert(val_acc);
 					} else {
-						throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+						throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
 					}
 				}
 			} catch (const msgpack::type_error&) {
@@ -1254,13 +1254,13 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 					} else if (str_accuracy == str_time[0]) {
 						set_acc.insert(toUType(unitTime::SECOND));
 					} else {
-						throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+						throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s} (%s not supported)", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str(), str_accuracy.c_str());
 					}
 				}
-				break;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
 			}
+			break;
 		}
 		case NUMERIC_TYPE: {
 			if (!specification.doc_acc) {
