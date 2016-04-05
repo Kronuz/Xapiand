@@ -1166,7 +1166,10 @@ HttpClient::search_view()
 				obj_data = obj_data.at(RESERVED_DATA);
 			} catch (const std::out_of_range&) {
 				clean_reserved(obj_data);
-				obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
+				auto id = obj_data[RESERVED_ID];
+				if (!database->get_value(document, RESERVED_ID, id)) {
+					L_ERR(this, "Error getting document ID!");
+				}
 				// Detailed info about the document:
 				obj_data[RESERVED_RANK] = m.get_rank();
 				obj_data[RESERVED_WEIGHT] = m.get_weight();

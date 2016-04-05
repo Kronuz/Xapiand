@@ -2325,6 +2325,67 @@ Database::get_stats_doc(MsgPack&& stats, const std::string& document_id)
 }
 
 
+bool
+Database::get_value(const Xapian::Document& document, Xapian::valueno slot, std::string& value)
+{
+	L_CALL(this, "Database::get_value()");
+
+	Xapian::Document doc = document;
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			value = doc.get_value(slot);
+			return true;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) {
+				reopen();
+				if (!get_document(document.get_docid(), doc)) {
+					return false;
+				}
+			} else {
+				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) {
+				reopen();
+				if (!get_document(document.get_docid(), doc)) {
+					return false;
+				}
+			} else {
+				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::DocNotFoundError&) {
+			return false;
+		} catch (const Xapian::Error& exc) {
+			throw MSG_Error(exc.get_msg().c_str());
+		}
+	}
+
+	L_ERR(this, "ERROR: get_value can not be done!");
+	return false;
+}
+
+
+bool
+Database::get_value(const Xapian::Document& document, const std::string& slot_name, MsgPack& result)
+{
+	std::string value;
+
+	auto slot_field = get_slot_field(slot_name);
+	if (!get_value(document, slot_field.slot, value)) {
+		return false;
+	}
+
+	try {
+		Unserialise::unserialise(slot_field.type, value, result);
+	} catch (const SerialisationError&) {
+		return false;
+	}
+
+	return true;
+}
+
+
 DatabaseQueue::DatabaseQueue()
 	: state(replica_state::REPLICA_FREE),
 	  persistent(false),
