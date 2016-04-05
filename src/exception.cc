@@ -89,10 +89,14 @@ Exception::Exception(const char *filename, int line, const char *format, ...)
 	va_end(argptr);
 	msg.assign(buffer);
 
+#ifdef XAPIAND_TRACEBACKS
 	snprintf(buffer, BUFFER_SIZE, "%s:%d", filename, line);
 	context.assign(std::string(buffer) + ": " + msg);
 
 #ifdef TRACEBACK
 	traceback = ::traceback(filename, line);
+#endif
+#else
+	context = msg;
 #endif
 }

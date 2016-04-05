@@ -33,7 +33,9 @@
 #include <string>
 
 
+#ifdef XAPIAND_TRACEBACKS
 #define TRACEBACK (traceback(__FILE__, __LINE__).c_str())
+#endif
 
 
 std::string traceback(const char *filename, int line);

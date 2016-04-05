@@ -266,6 +266,26 @@ case "$enable_clustering" in
 esac
 
 
+AC_ARG_ENABLE(tracebacks,
+  [AS_HELP_STRING([--enable-tracebacks], [enable tracebacks for exceptions (can be slow)])],
+  [enable_tracebacks="$enableval"],
+  [enable_tracebacks=no])
+AC_MSG_CHECKING([whether to enable tracebacks for exceptions])
+case "$enable_tracebacks" in
+  y*)
+    AC_DEFINE([XAPIAND_TRACEBACKS], [1], [Enable tracebacks for exceptions.])
+    AC_MSG_RESULT(yes)
+    ;;
+  n*)
+    AC_MSG_RESULT(no)
+    ;;
+  *)
+    AC_MSG_RESULT(no)
+    AC_MSG_ERROR([bad value $enable_tracebacks for --enable-tracebacks])
+    ;;
+esac
+
+
 ########################################################################
 
 CXXFLAGS="$CXXFLAGS -fcolor-diagnostics -fsanitize=address"
