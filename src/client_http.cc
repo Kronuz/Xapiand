@@ -490,6 +490,9 @@ HttpClient::run()
 	} catch (const ClientError& exc) {
 		error_code = 400;
 		error.assign(exc.what());
+	} catch (const CheckoutError& exc) {
+		error_code = 502;
+		error.assign(exc.what());
 	} catch (const Exception& exc) {
 		error_code = 500;
 		error.assign(*exc.what() ? exc.what() : "Unkown Exception!");
@@ -673,9 +676,7 @@ HttpClient::home_view()
 	endpoints_maker(1s);
 
 	if (!manager()->database_pool.checkout(database, Endpoints(Endpoint(".")), DB_SPAWN)) {
-		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 	Xapian::Document document;
 	if (!database->get_document(std::to_string(local_node.id), document)) {
@@ -715,9 +716,7 @@ HttpClient::document_info_view()
 	endpoints_maker(1s);
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 
 	std::string doc_id(path_parser.get_id());
@@ -777,9 +776,7 @@ HttpClient::delete_document_view()
 	query_field_maker(QUERY_FIELD_COMMIT);
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN)) {
-		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 
 	std::string doc_id(path_parser.get_id());
@@ -833,9 +830,7 @@ HttpClient::index_document_view(bool gen_id)
 	build_path_index(index_path);
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF)) {
-		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 
 	if (content_type.empty()) {
@@ -876,9 +871,7 @@ HttpClient::update_document_view()
 	query_field_maker(QUERY_FIELD_COMMIT);
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN)) {
-		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 
 	operation_begins = std::chrono::system_clock::now();
@@ -960,9 +953,7 @@ HttpClient::schema_view()
 	endpoints_maker(1s);
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 
 	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, database->schema.to_json_string(pretty)));
@@ -980,9 +971,7 @@ HttpClient::facets_view()
 	query_field_maker(QUERY_FIELD_SEARCH | QUERY_FIELD_RANGE);
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 
 	Xapian::MSet mset;
@@ -1062,9 +1051,7 @@ HttpClient::search_view()
 	}
 
 	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-		L_WARNING(this, "Cannot checkout database: %s", endpoints.as_string().c_str());
-		write(http_response(502, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 
 	Xapian::MSet mset;

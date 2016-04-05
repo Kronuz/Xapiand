@@ -73,6 +73,11 @@ public:
 	DummyException() : std::runtime_error("") { }
 };
 
+class CheckoutError : public Exception {
+public:
+	template<typename... Args>
+	CheckoutError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
+};
 
 class Exit : std::runtime_error {
 public:
@@ -178,3 +183,4 @@ public:
 #define MSG_InvalidOperationError(...) InvalidOperationError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_QueryParserError(...) QueryParserError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_InternalError(...) InternalError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_CheckoutError(...) CheckoutError(__FILE__, __LINE__, __VA_ARGS__)
