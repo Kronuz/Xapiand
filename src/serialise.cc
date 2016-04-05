@@ -77,6 +77,25 @@ Serialise::serialise(char field_type, const std::string& field_value)
 }
 
 
+std::pair<char, std::string>
+Serialise::serialise(const std::string& field_value)
+{
+	if (isNumeric(field_value)) {
+		return std::make_pair(NUMERIC_TYPE, Xapian::sortable_serialise(std::stod(field_value)));
+	} else {
+		try {
+			return std::make_pair(DATE_TYPE, date(field_value));
+		} catch (const DatetimeError&) {
+			try {
+				return std::make_pair(GEO_TYPE, ewkt(field_value));
+			} catch (const EWKTError&) {
+				return std::make_pair(STRING_TYPE, field_value);
+			}
+		}
+	}
+}
+
+
 std::string
 Serialise::string(char field_type, const std::string& field_value)
 {
@@ -174,7 +193,7 @@ Serialise::numeric(const std::string& field_value)
 		return Xapian::sortable_serialise(std::stod(field_value));
 	}
 
-	throw MSG_SerialisationError("Invalid numeric format");
+	throw MSG_SerialisationError("Invalid numeric format: %s", field_value.c_str());
 }
 
 

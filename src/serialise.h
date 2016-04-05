@@ -78,6 +78,12 @@ namespace Serialise {
 	std::string numeric(char field_type, double field_value);
 	std::string boolean(char field_type, bool field_value);
 
+	/*
+	 * Given a field_value, it gets the type.
+	 * returns the type and the serialise value.
+	 */
+	std::pair<char, std::string> serialise(const std::string& field_value);
+
 
 	// Serialise field_value like date.
 	std::string date(const std::string& field_value);
