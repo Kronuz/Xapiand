@@ -28,6 +28,9 @@
 #include <assert.h>
 
 
+constexpr char SL_MAGIC = '\0';
+
+
 void
 StringList::unserialise(const std::string& serialised)
 {
@@ -42,9 +45,10 @@ StringList::unserialise(const char** ptr, const char* end)
 {
 	ssize_t length = -1;
 
+	clear();
+
 	const char* pos = *ptr;
-	if (*pos++ == '\0' && pos != end) {
-		clear();
+	if (*pos++ == SL_MAGIC && pos != end) {
 		try {
 			length = unserialise_length(&pos, end, true);
 			reserve(length);
@@ -53,13 +57,12 @@ StringList::unserialise(const char** ptr, const char* end)
 				push_back(std::string(pos, length));
 				pos += length;
 			}
-		} catch(Xapian::SerialisationError) {
+		} catch (const Xapian::SerialisationError&) {
 			length = -1;
 		}
 	}
 
 	if (length == -1) {
-		clear();
 		pos = *ptr;
 		push_back(std::string(pos, end - pos));
 	}
@@ -71,19 +74,19 @@ StringList::unserialise(const char** ptr, const char* end)
 std::string
 StringList::serialise() const
 {
-	std::string serialised, values("\0");
-	values.append(serialise_length(size()));
-	StringList::const_iterator i(begin());
-	if (size() > 1) {
-		for ( ; i != end(); ++i) {
-			values.append(serialise_length((*i).size()));
-			values.append(*i);
+	std::string serialised;
+	auto _size = size();
+	if (_size > 1) {
+		serialised.assign(1, SL_MAGIC);
+		serialised.append(serialise_length(_size));
+		for (const auto& str : *this) {
+			serialised.append(serialise_length(str.size()));
+			serialised.append(str);
 		}
-		serialised.append(serialise_length(values.size()));
-	} else if (i != end()) {
-		values.assign(*i);
+	} else if (_size == 1) {
+		serialised.assign(front());
 	}
-	serialised.append(values);
+
 	return serialised;
 }
 
