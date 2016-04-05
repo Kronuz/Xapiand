@@ -40,13 +40,15 @@
 #define HTTP_MATCHED_COUNT    (1 << 8)
 #define HTTP_EXPECTED100      (1 << 9)
 
+using type_t = std::pair<std::string, std::string>;
 
 struct accept_preference_comp {
-	constexpr bool operator()(const std::tuple<double, int, std::pair<std::string, std::string>>& l, const std::tuple<double, int, std::pair<std::string, std::string>>& r) const noexcept {
+	constexpr bool operator()(const std::tuple<double, int, type_t>& l, const std::tuple<double, int, type_t>& r) const noexcept {
 		return (std::get<0>(l) == std::get<0>(r)) ? std::get<1>(l) < std::get<1>(r) : std::get<0>(l) > std::get<0>(r);
 	}
 };
-using accept_set_t = std::set<std::tuple<double, int, std::pair<std::string, std::string>>, accept_preference_comp>;
+
+using accept_set_t = std::set<std::tuple<double, int, type_t>, accept_preference_comp>;
 
 
 class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
@@ -142,11 +144,11 @@ class HttpClient : public BaseClient {
 
 	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
 	void clean_http_request();
-	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty, bool serialize_error=false);
+	type_t serialize_response(const MsgPack& obj, const type_t& ct_type, bool pretty, bool serialize_error=false);
 	template <typename T>
-	const std::pair<std::string, std::string>& get_acceptable_type(const T& ct_types);
-	const std::pair<std::string, std::string>* is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::pair<std::string, std::string>& ct_type);
-	const std::pair<std::string, std::string>* is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::vector<std::pair<std::string, std::string>>& ct_types);
+	const type_t& get_acceptable_type(const T& ct_types);
+	const type_t* is_acceptable_type(const type_t& ct_type_pattern, const type_t& ct_type);
+	const type_t* is_acceptable_type(const type_t& ct_type_pattern, const std::vector<type_t>& ct_types);
 	void write_http_response(const MsgPack& response,  int st_code, bool pretty);
 
 	friend Worker;

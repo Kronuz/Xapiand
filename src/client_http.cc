@@ -62,7 +62,7 @@
 #define QUERY_FIELD_RANGE  (1 << 2)
 
 
-std::pair<std::string, std::string>
+type_t
 content_type_pair(const std::string& ct_type)
 {
 	std::size_t found = ct_type.find_last_of("/");
@@ -78,7 +78,7 @@ static const auto json_type    = content_type_pair(JSON_TYPE);
 static const auto msgpack_type = content_type_pair(MSGPACK_TYPE);
 static const auto html_type    = content_type_pair(HTML_TYPE);
 static const auto text_type    = content_type_pair(TEXT_TYPE);
-static const auto msgpack_serializers = std::vector<std::pair<std::string, std::string>>({json_type, msgpack_type, html_type, text_type});
+static const auto msgpack_serializers = std::vector<type_t>({json_type, msgpack_type, html_type, text_type});
 
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;q=(\\d+(?:\\.\\d+)?))?");
 
@@ -1122,7 +1122,7 @@ HttpClient::search_view()
 			}
 			auto ct_type = content_type_pair(ct_type_str);
 
-			std::vector<std::pair<std::string, std::string>> ct_types;
+			std::vector<type_t> ct_types;
 			if (ct_type == json_type || ct_type == msgpack_type) {
 				ct_types = msgpack_serializers;
 			} else {
@@ -1620,8 +1620,8 @@ HttpClient::clean_http_request()
 	http_parser_init(&parser, HTTP_REQUEST);
 }
 
-const std::pair<std::string, std::string>*
-HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::pair<std::string, std::string>& ct_type)
+const type_t*
+HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const type_t& ct_type)
 {
 	L_CALL(this, "HttpClient::is_acceptable_type()");
 
@@ -1642,8 +1642,8 @@ HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_typ
 	return nullptr;
 }
 
-const std::pair<std::string, std::string>*
-HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_type_pattern, const std::vector<std::pair<std::string, std::string>>& ct_types)
+const type_t*
+HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const std::vector<type_t>& ct_types)
 {
 	for (auto& ct_type : ct_types) {
 		if (is_acceptable_type(ct_type_pattern, ct_type)) {
@@ -1654,13 +1654,13 @@ HttpClient::is_acceptable_type(const std::pair<std::string, std::string>& ct_typ
 }
 
 template <typename T>
-const std::pair<std::string, std::string>&
+const type_t&
 HttpClient::get_acceptable_type(const T& ct)
 {
 	L_CALL(this, "HttpClient::get_acceptable_type()");
 
 	if (accept_set.empty()) {
-		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, std::pair<std::string, std::string>>(1, 0, content_type_pair(content_type)));
+		if (!content_type.empty()) accept_set.insert(std::tuple<double, int, type_t>(1, 0, content_type_pair(content_type)));
 		accept_set.insert(std::make_tuple(1, 1, std::make_pair(std::string("*"), std::string("*"))));
 	}
 	for (const auto& accept : accept_set) {
@@ -1672,8 +1672,8 @@ HttpClient::get_acceptable_type(const T& ct)
 }
 
 
-std::pair<std::string, std::string>
-HttpClient::serialize_response(const MsgPack& obj, const std::pair<std::string, std::string>& ct_type, bool pretty, bool serialize_error)
+type_t
+HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, bool pretty, bool serialize_error)
 {
 	L_CALL(this, "HttpClient::serialize_response()");
 
@@ -1708,7 +1708,7 @@ HttpClient::write_http_response(const MsgPack& response,  int status_code, bool 
 	L_CALL(this, "HttpClient::write_http_response()");
 
 	auto ct_type = content_type_pair(content_type);
-	std::vector<std::pair<std::string, std::string>> ct_types;
+	std::vector<type_t> ct_types;
 	if (ct_type == json_type || ct_type == msgpack_type || content_type.empty()) {
 		ct_types = msgpack_serializers;
 	} else {
