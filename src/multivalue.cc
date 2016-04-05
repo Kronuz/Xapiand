@@ -99,7 +99,8 @@ MultiValueCountMatchSpy::operator()(const Xapian::Document &doc, double)
 	StringList list;
 	list.unserialise(doc.get_value(internal->slot));
 	if (is_geo) {
-		for (auto i = list.begin(); i != list.end(); ++i) {
+		const auto it_e = list.end();
+		for (auto i = list.begin(); i != it_e; ++i) {
 			if (!i->empty()) {
 				StringList s;
 				s.push_back(*i);
@@ -108,8 +109,8 @@ MultiValueCountMatchSpy::operator()(const Xapian::Document &doc, double)
 			}
 		}
 	} else {
-		for (auto i = list.begin(); i != list.end(); ++i) {
-			if (!i->empty()) ++(internal->values[*i]);
+		for (const auto& val : list) {
+			if (!val.empty()) ++(internal->values[val]);
 		}
 	}
 }
