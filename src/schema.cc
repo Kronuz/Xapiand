@@ -200,7 +200,7 @@ specification_t::to_string() const
 {
 	std::stringstream str;
 	str << "\n{\n";
-	str << "\t" << RESERVED_NAME << ": " << name << "\n";
+	str << "\t" << RESERVED_NAME << ": " << full_name << "\n";
 	str << "\t" << RESERVED_POSITION << ": [ ";
 	for (const auto& _position : position) {
 		str << _position << " ";
@@ -1073,7 +1073,6 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, specifica
 
 			if unlikely(!specification.found_field && specification.sep_types[2] != NO_TYPE) {
 				validate_required_data(properties, specification.value.get(), specification);
-				specification.set_type = true;
 			}
 
 			const specification_t spc_bef = specification;
@@ -1314,6 +1313,8 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 		specification.bool_term = strhasupper(specification.full_name);
 	}
 	properties[RESERVED_BOOL_TERM] = specification.bool_term;
+
+	specification.set_type = true;
 }
 
 
