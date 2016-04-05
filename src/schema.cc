@@ -183,13 +183,14 @@ specification_t::operator=(const specification_t& o)
 	bool_detection = o.bool_detection;
 	string_detection = o.string_detection;
 	bool_term = o.bool_term;
+	value.reset();
+	name = o.name;
 	found_field = o.found_field;
 	set_type = o.set_type;
 	set_bool_term = o.bool_term;
 	fixed_index = o.fixed_index;
-	full_name = o.full_name;
 	doc_acc.reset();
-	value.reset();
+	full_name = o.full_name;
 	return *this;
 }
 
