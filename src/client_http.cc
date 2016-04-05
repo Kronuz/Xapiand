@@ -1053,7 +1053,7 @@ HttpClient::search_view()
 		query_field->query.push_back(std::string(RESERVED_ID)  + ":" +  path_parser.get_id());
 	}
 
-	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) { /* The SPAWN should be the flag here? */
+	if (!manager()->database_pool.checkout(database, endpoints, DB_SPAWN)) { /* TODO: The SPAWN should be the flag here? */
 		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 
