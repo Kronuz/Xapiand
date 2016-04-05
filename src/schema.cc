@@ -1200,128 +1200,136 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 		set_type(*value, specification);
 	}
 
-	// Process RESERVED_TYPE
-	properties[RESERVED_TYPE] = specification.sep_types;
-	to_store.store(true);
-
-	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
-	std::set<double> set_acc;
-	switch (specification.sep_types[2]) {
-		case GEO_TYPE: {
-			if (!specification.doc_acc) {
-				specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_geo);
-			}
-
-			try {
-				specification.accuracy.push_back(specification.doc_acc->at(0).get_bool());
-			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Data inconsistency, partials value in %s: %s must be boolean", RESERVED_ACCURACY, GEO_STR);
-			}
-
-			try {
-				auto error = specification.doc_acc->at(1).get_f64();
-				specification.accuracy.push_back(error > HTM_MAX_ERROR ? HTM_MAX_ERROR : error < HTM_MIN_ERROR ? HTM_MIN_ERROR : error);
-			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Data inconsistency, error value in %s: %s must be positive integer", RESERVED_ACCURACY, GEO_STR);
-			} catch (const std::out_of_range&) {
-				specification.accuracy.push_back(def_accuracy_geo.at(1).get_f64());
-			}
-
-			try {
-				const auto it_e = specification.doc_acc->end();
-				for (auto it = specification.doc_acc->begin() + 2; it != it_e; ++it) {
-					uint64_t val_acc = (*it).get_u64();
-					if (val_acc <= HTM_MAX_LEVEL) {
-						set_acc.insert(val_acc);
-					} else {
-						throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
-					}
+	if (!specification.full_name.empty()) {
+		// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
+		std::set<double> set_acc;
+		switch (specification.sep_types[2]) {
+			case GEO_TYPE: {
+				if (!specification.doc_acc) {
+					specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_geo);
 				}
-			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
-			}
-			break;
-		}
-		case DATE_TYPE: {
-			if (!specification.doc_acc) {
-				specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_date);
-			}
 
-			try {
-				for (const auto _accuracy : *specification.doc_acc) {
-					std::string str_accuracy(lower_string(_accuracy.get_str()));
-					if (str_accuracy == str_time[5]) {
-						set_acc.insert(toUType(unitTime::YEAR));
-					} else if (str_accuracy == str_time[4]) {
-						set_acc.insert(toUType(unitTime::MONTH));
-					} else if (str_accuracy == str_time[3]) {
-						set_acc.insert(toUType(unitTime::DAY));
-					} else if (str_accuracy == str_time[2]) {
-						set_acc.insert(toUType(unitTime::HOUR));
-					} else if (str_accuracy == str_time[1]) {
-						set_acc.insert(toUType(unitTime::MINUTE));
-					} else if (str_accuracy == str_time[0]) {
-						set_acc.insert(toUType(unitTime::SECOND));
-					} else {
-						throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s} (%s not supported)", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str(), str_accuracy.c_str());
-					}
+				try {
+					specification.accuracy.push_back(specification.doc_acc->at(0).get_bool());
+				} catch (const msgpack::type_error&) {
+					throw MSG_ClientError("Data inconsistency, partials value in %s: %s must be boolean", RESERVED_ACCURACY, GEO_STR);
 				}
-			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
-			}
-			break;
-		}
-		case NUMERIC_TYPE: {
-			if (!specification.doc_acc) {
-				specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_num);
-			}
 
-			try {
-				for (const auto _accuracy : *specification.doc_acc) {
-					set_acc.insert(_accuracy.get_u64());
+				try {
+					auto error = specification.doc_acc->at(1).get_f64();
+					specification.accuracy.push_back(error > HTM_MAX_ERROR ? HTM_MAX_ERROR : error < HTM_MIN_ERROR ? HTM_MIN_ERROR : error);
+				} catch (const msgpack::type_error&) {
+					throw MSG_ClientError("Data inconsistency, error value in %s: %s must be positive integer", RESERVED_ACCURACY, GEO_STR);
+				} catch (const std::out_of_range&) {
+					specification.accuracy.push_back(def_accuracy_geo.at(1).get_f64());
+				}
+
+				try {
+					const auto it_e = specification.doc_acc->end();
+					for (auto it = specification.doc_acc->begin() + 2; it != it_e; ++it) {
+						uint64_t val_acc = (*it).get_u64();
+						if (val_acc <= HTM_MAX_LEVEL) {
+							set_acc.insert(val_acc);
+						} else {
+							throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+						}
+					}
+				} catch (const msgpack::type_error&) {
+					throw MSG_ClientError("Data inconsistency, level value in %s: %s must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 				}
 				break;
-			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Data inconsistency, %s: %s must be an array of positive numbers", RESERVED_ACCURACY, NUMERIC_STR);
 			}
-		}
-	}
+			case DATE_TYPE: {
+				if (!specification.doc_acc) {
+					specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_date);
+				}
 
-	size_t size_acc = set_acc.size();
-	if (size_acc) {
-		if (specification.acc_prefix.empty()) {
-			for (const auto& acc : set_acc) {
-				specification.acc_prefix.push_back(get_prefix(specification.full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]));
+				try {
+					for (const auto _accuracy : *specification.doc_acc) {
+						std::string str_accuracy(lower_string(_accuracy.get_str()));
+						if (str_accuracy == str_time[5]) {
+							set_acc.insert(toUType(unitTime::YEAR));
+						} else if (str_accuracy == str_time[4]) {
+							set_acc.insert(toUType(unitTime::MONTH));
+						} else if (str_accuracy == str_time[3]) {
+							set_acc.insert(toUType(unitTime::DAY));
+						} else if (str_accuracy == str_time[2]) {
+							set_acc.insert(toUType(unitTime::HOUR));
+						} else if (str_accuracy == str_time[1]) {
+							set_acc.insert(toUType(unitTime::MINUTE));
+						} else if (str_accuracy == str_time[0]) {
+							set_acc.insert(toUType(unitTime::SECOND));
+						} else {
+							throw MSG_ClientError("Data inconsistency, %s: %s must be subset of {%s, %s, %s, %s, %s, %s} (%s not supported)", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str(), str_accuracy.c_str());
+						}
+					}
+				} catch (const msgpack::type_error&) {
+					throw MSG_ClientError("Data inconsistency, %s in %s must be subset of {%s, %s, %s, %s, %s, %s}", RESERVED_ACCURACY, DATE_STR, str_time[0].c_str(), str_time[1].c_str(), str_time[2].c_str(), str_time[3].c_str(), str_time[4].c_str(), str_time[5].c_str());
+				}
+				break;
 			}
-		} else if (specification.acc_prefix.size() != size_acc) {
-			throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+			case NUMERIC_TYPE: {
+				if (!specification.doc_acc) {
+					specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_num);
+				}
+
+				try {
+					for (const auto _accuracy : *specification.doc_acc) {
+						set_acc.insert(_accuracy.get_u64());
+					}
+					break;
+				} catch (const msgpack::type_error&) {
+					throw MSG_ClientError("Data inconsistency, %s: %s must be an array of positive numbers", RESERVED_ACCURACY, NUMERIC_STR);
+				}
+			}
+			case NO_TYPE:
+				throw MSG_Error("%s must be defined for validate data to index", RESERVED_TYPE);
 		}
 
-		specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
-		properties[RESERVED_ACCURACY] = specification.accuracy;
-		properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
-	}
+		size_t size_acc = set_acc.size();
+		if (size_acc) {
+			if (specification.acc_prefix.empty()) {
+				for (const auto& acc : set_acc) {
+					specification.acc_prefix.push_back(get_prefix(specification.full_name + std::to_string(acc), DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]));
+				}
+			} else if (specification.acc_prefix.size() != size_acc) {
+				throw MSG_ClientError("Data inconsistency, there must be a prefix for each unique value in %s", RESERVED_ACCURACY);
+			}
 
-	// Process RESERVED_PREFIX
-	if (specification.prefix.empty()) {
-		specification.prefix = get_prefix(specification.full_name, DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]);
-	}
-	properties[RESERVED_PREFIX] = specification.prefix;
+			specification.accuracy.insert(specification.accuracy.end(), set_acc.begin(), set_acc.end());
+			properties[RESERVED_ACCURACY] = specification.accuracy;
+			properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
+		}
 
-	// Process RESERVED_SLOT
-	if (!specification.slot) {
-		specification.slot = get_slot(specification.full_name);
-	}
-	properties[RESERVED_SLOT] = specification.slot;
+		to_store.store(true);
 
-	// Process RESERVED_BOOL_TERM
-	if (!specification.set_bool_term) {
-		// By default, if field name has upper characters then it is consider bool term.
-		specification.bool_term = strhasupper(specification.full_name);
-	}
-	properties[RESERVED_BOOL_TERM] = specification.bool_term;
+		// Process RESERVED_TYPE
+		properties[RESERVED_TYPE] = specification.sep_types;
 
-	specification.set_type = true;
+		// Process RESERVED_PREFIX
+		if (specification.prefix.empty()) {
+			specification.prefix = get_prefix(specification.full_name, DOCUMENT_CUSTOM_TERM_PREFIX, specification.sep_types[2]);
+		}
+		properties[RESERVED_PREFIX] = specification.prefix;
+
+		// Process RESERVED_SLOT
+		if (!specification.slot) {
+			specification.slot = get_slot(specification.full_name);
+		}
+		properties[RESERVED_SLOT] = specification.slot;
+
+		// Process RESERVED_BOOL_TERM
+		if (!specification.set_bool_term) {
+			// By default, if field name has upper characters then it is consider bool term.
+			specification.bool_term = strhasupper(specification.full_name);
+		}
+		properties[RESERVED_BOOL_TERM] = specification.bool_term;
+
+		specification.set_type = true;
+	} else if (specification.index == Index::VALUE) {
+		// For index::VALUE is neccesary the field_name.
+		throw MSG_DummyException();
+	}
 }
 
 
