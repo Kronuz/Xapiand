@@ -40,24 +40,28 @@ StringList::unserialise(const std::string& serialised)
 void
 StringList::unserialise(const char** ptr, const char* end)
 {
-	ssize_t length;
+	ssize_t length = -1;
 	const char* pos = *ptr;
 
 	clear();
 
-	try {
-		length = unserialise_length(&pos, end, true);
-	} catch(Xapian::SerialisationError) {
-		length = -1;
-	}
-	if (length == -1 || length != end - pos) {
-		push_back(std::string(pos, end - pos));
-	} else {
-		while (pos != end) {
+	if (!*pos++) {
+		try {
 			length = unserialise_length(&pos, end, true);
-			push_back(std::string(pos, length));
-			pos += length;
+			reserve(length);
+			while (pos != end) {
+				length = unserialise_length(&pos, end, true);
+				push_back(std::string(pos, length));
+				pos += length;
+			}
+		} catch(Xapian::SerialisationError) {
+			length = -1;
 		}
+	}
+
+	if (length == -1) {
+		pos = *ptr;
+		push_back(std::string(pos, end - pos));
 	}
 
 	*ptr = pos;
@@ -67,7 +71,8 @@ StringList::unserialise(const char** ptr, const char* end)
 std::string
 StringList::serialise() const
 {
-	std::string serialised, values;
+	std::string serialised, values("\0");
+	values.append(serialise_length(size()));
 	StringList::const_iterator i(begin());
 	if (size() > 1) {
 		for ( ; i != end(); ++i) {
