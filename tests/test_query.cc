@@ -103,14 +103,14 @@ const test_query_t test_terms[] {
 		{ }, { "released:1985-07-03" }, { }, { }, { "Back to the Future" }, { }
 	},
 	{
-		{ }, { "date:2011-01-01||+1y-1y+3M-3M" }, { }, { }, { "10", "1" }, { }
+		{ }, { "date:2011-01-01||+1y-1y+3M-3M" }, { }, { }, { "1", "10" }, { }
 	},
 	{
 		{ }, { "date:2011-01-01||+4y" }, { }, { }, { "5", "6" }, { }
 	},
 	// OR
 	{
-		{ }, { "date:2011-01-01||+1y-1y+3M-3M date:2011-01-01||+4y" }, { }, { }, { "5", "6", "10", "1" }, { }
+		{ }, { "date:2011-01-01||+1y-1y+3M-3M date:2011-01-01||+4y" }, { }, { }, { "1", "5", "6", "10" }, { }
 	},
 	// AND
 	{
@@ -133,18 +133,18 @@ const test_query_t test_terms[] {
 	},
 	// Testing boolean terms
 	{
-		{ }, { "there:true" }, { }, { }, { "3", "4", "7", "8", "10", "1" }, { }
+		{ }, { "there:true" }, { }, { }, { "1", "3", "4", "7", "8", "10" }, { }
 	},
 	{
-		{ }, { "there:false" }, { }, { }, { "2", "5", "6", "9", "10", "1" }, { }
+		{ }, { "there:false" }, { }, { }, { "1", "2", "5", "6", "9", "10" }, { }
 	},
 	// OR
 	{
-		{ }, { "there:true there:false" }, { }, { }, { "2", "3", "4", "5", "6", "7", "8", "9", "10", "1" }, { }
+		{ }, { "there:true there:false" }, { }, { }, { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" }, { }
 	},
 	// AND
 	{
-		{ }, { "there:true", "there:false" }, { }, { }, { "10", "1" }, { }
+		{ }, { "there:true", "there:false" }, { }, { }, { "1", "10" }, { }
 	}
 	// Testing geospatials is in test_geo.cc.
 };
@@ -163,7 +163,7 @@ const test_query_t test_partials[] {
 		{ }, { }, { "description:Dak" }, { }, { "North Dakota", "Bismarck", "Minot", "Rapid City", "North Dakota and South Dakota" }, { }
 	},
 	{
-		{ }, { }, { "description:t" }, { }, { "North Dakota", "Back to the Future", "Planet Apes", "Utah", "Wyoming", "Mountain View, Wyoming" }, { }
+		{ }, { }, { "description:t" }, { }, { "North Dakota", "Utah", "Wyoming", "Mountain View, Wyoming", "Back to the Future", "Planet Apes" }, { }
 	},
 	{
 		{ }, { }, { "description:south dak" }, { }, { "Rapid City", "Utah", "North Dakota and South Dakota" }, { }
@@ -184,12 +184,12 @@ const test_query_t test_facets[] {
 	},
 	// Test numerical value
 	{
-		{ "there:true" }, { }, { }, { "year" }, { "3", "4", "7", "8", "10", "1" },
+		{ "there:true" }, { }, { }, { "year" }, { "1", "3", "4", "7", "8", "10" },
 		{ "-10000.000000", "0.000000", "100.000000", "2010.000000", "2015.000000", "2020.000000"  }
 	},
 	// Test date value
 	{
-		{ "there:false" }, { }, { }, { "date" }, { "2", "5", "6", "9", "10", "1" },
+		{ "there:false" }, { }, { }, { "date" }, { "1", "2", "5", "6", "9", "10" },
 		{ "1810-01-01T00:00:00.000", "1910-01-01T00:00:00.000", "2010-10-21T00:00:00.000", "2011-01-01T00:00:00.000", "2015-01-01T00:00:00.000" }
 	},
 	// Test bool value
