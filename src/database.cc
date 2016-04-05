@@ -1011,6 +1011,10 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id
 			task.get();
 			specification = spc_start;
 		}
+
+		for (const auto& elem : schema.map_values) {
+			doc.add_value(elem.first, elem.second.serialise());
+		}
 	} catch (...) {
 		// Back to the initial schema if there are changes.
 		if (schema.get_store()) {

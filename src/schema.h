@@ -152,6 +152,8 @@ class Schema {
 
 
 public:
+	std::unordered_map<Xapian::valueno, StringList> map_values;
+
 	Schema() = default;
 
 	Schema(Schema&& schema) = delete;
@@ -186,6 +188,7 @@ public:
 	 * Returns the properties of schema.
 	 */
 	inline MsgPack getPropertiesSchema() {
+		map_values.clear();
 		return schema.at(RESERVED_SCHEMA);
 	}
 

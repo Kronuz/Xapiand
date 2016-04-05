@@ -1465,13 +1465,13 @@ Schema::index_values(MsgPack& properties, const MsgPack& values, const specifica
 {
 	L_CALL(this, "Schema::index_values()");
 
-	// L_INDEX(this, "Values => Specifications: %s", specification.to_string().c_str());
+	L_INDEX(this, "Values => Specifications: %s", specification.to_string().c_str());
 	if (!(specification.found_field || specification.dynamic)) {
 		throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
 	}
 
 	if (specification.store) {
-		StringList s;
+		StringList& s = map_values[specification.slot];
 		size_t pos = 0;
 		if (values.get_type() == msgpack::type::ARRAY) {
 			set_type_to_array(properties);
@@ -1482,7 +1482,6 @@ Schema::index_values(MsgPack& properties, const MsgPack& values, const specifica
 		} else {
 			index_value(values, specification, doc, s, pos, is_term);
 		}
-		doc.add_value(specification.slot, s.serialise());
 		L_INDEX(this, "Slot: %u serialized: %s", specification.slot, repr(s.serialise()).c_str());
 	}
 }
