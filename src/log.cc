@@ -129,6 +129,7 @@ Log::str_format(int priority, const std::string& exc, const char *file, int line
 	auto location = (priority >= LOCATION_LOG_LEVEL) ? " " + std::string(file) + ":" + std::to_string(line) : std::string();
 	result += location + ": ";
 #else
+	result += " ";
 	(void)obj;
 #endif
 	result += prefix + msg + suffix;
