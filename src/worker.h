@@ -38,14 +38,16 @@ class Worker : public std::enable_shared_from_this<Worker> {
 	using WorkerShared = std::shared_ptr<Worker>;
 	using WorkerList = std::list<WorkerShared>;
 
+	ev::dynamic_loop _dynamic_ev_loop;
+
 protected:
-	ev::loop_ref *loop;
+	unsigned int ev_flags;
+	ev::loop_ref *ev_loop;
 
 private:
 	time_t _asap;
 	time_t _now;
 
-	ev::dynamic_loop _dynamic_loop;
 
 	ev::async _async_shutdown;
 	ev::async _async_break_loop;
@@ -81,12 +83,14 @@ private:
 
 protected:
 	template<typename T, typename L>
-	Worker(T&& parent, L&& loop_)
-		: loop(loop_ ? std::forward<L>(loop_) : &_dynamic_loop),
-		  _async_shutdown(*loop),
-		  _async_break_loop(*loop),
-		  _async_destroy(*loop),
-		  _async_detach(*loop),
+	Worker(T&& parent, L&& ev_loop_, unsigned int ev_flags_)
+		: _dynamic_ev_loop(ev_flags_),
+		  ev_flags(ev_flags_),
+		  ev_loop(ev_loop_ ? std::forward<L>(ev_loop_) : &_dynamic_ev_loop),
+		  _async_shutdown(*ev_loop),
+		  _async_break_loop(*ev_loop),
+		  _async_destroy(*ev_loop),
+		  _async_detach(*ev_loop),
 		  _parent(std::forward<T>(parent))
 	{
 		if (_parent) {
@@ -123,7 +127,7 @@ protected:
 	}
 
 	virtual void break_loop_impl() {
-		loop->break_loop();
+		ev_loop->break_loop();
 	}
 
 	virtual void destroy_impl() = 0;

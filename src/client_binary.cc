@@ -72,8 +72,8 @@ serialise_error(const Xapian::Error &exc)
 // Xapian binary client
 //
 
-BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *loop_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/)
-	: BaseClient(std::move(server_), loop_, sock_),
+BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/)
+	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
 	  running(0),
 	  state(State::INIT),
 	  writable(false),

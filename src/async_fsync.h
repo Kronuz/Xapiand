@@ -61,7 +61,7 @@ class AsyncFsync : public Task<>, public Worker {
 	static int _fsync(int fd, bool full_fsync);
 
 public:
-	AsyncFsync(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
+	AsyncFsync(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 	~AsyncFsync();
 
 	void run() override;

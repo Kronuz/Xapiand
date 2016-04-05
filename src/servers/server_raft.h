@@ -47,7 +47,7 @@ class RaftServer : public BaseServer {
 	void reset(const std::string& message);
 
 public:
-	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Raft>& raft_);
+	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Raft>& raft_);
 	~RaftServer();
 
 	void io_accept_cb(ev::io& watcher, int revents) override;

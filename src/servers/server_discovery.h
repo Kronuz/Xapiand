@@ -52,7 +52,7 @@ class DiscoveryServer : public BaseServer {
 	void db_updated(const std::string& message);
 
 public:
-	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery>& discovery_);
+	DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Discovery>& discovery_);
 	~DiscoveryServer();
 
 	void io_accept_cb(ev::io& watcher, int revents) override;

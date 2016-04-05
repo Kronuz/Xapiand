@@ -30,10 +30,10 @@
 constexpr const char* const Discovery::MessageNames[];
 
 
-Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_)
-	: BaseUDP(manager_, loop_, port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
-	  heartbeat(*loop),
-	  async_enter(*loop)
+Discovery::Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
+	: BaseUDP(manager_, ev_loop_, ev_flags_, port_, "Discovery", XAPIAND_DISCOVERY_PROTOCOL_VERSION, group_),
+	  heartbeat(*ev_loop),
+	  async_enter(*ev_loop)
 {
 	heartbeat.set<Discovery, &Discovery::heartbeat_cb>(this);
 

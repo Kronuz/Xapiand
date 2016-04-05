@@ -57,7 +57,7 @@ protected:
 	void shutdown_impl(time_t asap, time_t now) override;
 
 public:
-	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, int tries_, int flags_);
+	BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& description_, int tries_, int flags_);
 	~BaseTCP();
 
 	inline int get_socket() {

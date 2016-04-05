@@ -42,7 +42,7 @@ protected:
 	void shutdown_impl(time_t asap, time_t now) override;
 
 public:
-	BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, uint16_t version_, const std::string& group_, int tries_=1);
+	BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& description_, uint16_t version_, const std::string& group_, int tries_=1);
 	~BaseUDP();
 
 	inline int get_socket() {

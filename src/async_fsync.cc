@@ -40,8 +40,8 @@ AsyncFsync::Status::next_wakeup_time()
 }
 
 
-AsyncFsync::AsyncFsync(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_)
-	: Worker(std::move(manager_), loop_),
+AsyncFsync::AsyncFsync(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
+	: Worker(std::move(manager_), ev_loop_, ev_flags_),
 	  running(true)
 {
 	L_OBJ(this, "CREATED AUTOCOMMIT!");

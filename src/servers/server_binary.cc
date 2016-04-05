@@ -28,10 +28,10 @@
 #include "client_binary.h"
 
 
-BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Binary>& binary_)
-	: BaseServer(server_, loop_),
+BinaryServer::BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_)
+	: BaseServer(server_, ev_loop_, ev_flags_),
 	  binary(binary_),
-	  async_signal(*loop_)
+	  async_signal(*ev_loop)
 {
 	io.start(binary->sock, ev::READ);
 	L_EV(this, "Start binary's server accept event (sock=%d)", binary->sock);
@@ -86,7 +86,7 @@ BinaryServer::io_accept_cb(ev::io& watcher, int revents)
 		return;
 	}
 
-	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
+	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
 
 	if (!client->init_remote()) {
 		client->destroy();
@@ -108,7 +108,7 @@ BinaryServer::trigger_replication(const Endpoint& src_endpoint, const Endpoint& 
 		return false;
 	}
 
-	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), loop, client_sock, active_timeout, idle_timeout);
+	auto client = Worker::make_shared<BinaryClient>(share_this<BinaryServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
 
 	if (!client->init_replication(src_endpoint, dst_endpoint)) {
 		client->destroy();

@@ -26,8 +26,8 @@
 #include "http.h"
 
 
-HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Http>& http_)
-	: BaseServer(server_, loop_),
+HttpServer::HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http_)
+	: BaseServer(server_, ev_loop_, ev_flags_),
 	  http(http_)
 {
 	io.start(http->sock, ev::READ);
@@ -64,7 +64,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 			L_ERR(this, "ERROR: accept http error (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 		}
 	} else {
-		Worker::make_shared<HttpClient>(share_this<HttpServer>(), loop, client_sock);
+		Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags, client_sock);
 	}
 	L_EV_END(this, "HttpServer::io_accept_cb:END");
 }

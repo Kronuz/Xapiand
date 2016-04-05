@@ -38,9 +38,9 @@ std::atomic_int XapiandServer::max_http_clients(0);
 std::atomic_int XapiandServer::max_binary_clients(0);
 
 
-XapiandServer::XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_)
-	: Worker(std::move(manager_), loop_),
-	  async_setup_node(*loop)
+XapiandServer::XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
+	: Worker(std::move(manager_), ev_loop_, ev_flags_),
+	  async_setup_node(*ev_loop)
 {
 	async_setup_node.set<XapiandServer, &XapiandServer::async_setup_node_cb>(this);
 	async_setup_node.start();
@@ -62,7 +62,7 @@ void
 XapiandServer::run()
 {
 	L_EV(this, "Starting server loop...");
-	loop->run();
+	ev_loop->run();
 	L_EV(this, "Server loop ended!");
 
 	detach_impl();

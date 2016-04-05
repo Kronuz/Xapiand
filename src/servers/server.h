@@ -39,7 +39,7 @@ class XapiandServer : public Task<>, public Worker {
 
 	ev::async async_setup_node;
 
-	XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
+	XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;

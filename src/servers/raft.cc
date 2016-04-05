@@ -33,16 +33,16 @@ constexpr const char* const Raft::MessageNames[];
 constexpr const char* const Raft::StateNames[];
 
 
-Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_)
-	: BaseUDP(manager_, loop_, port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
+Raft::Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_)
+	: BaseUDP(manager_, ev_loop_, ev_flags_, port_, "Raft", XAPIAND_RAFT_PROTOCOL_VERSION, group_),
 	  term(0),
 	  votes(0),
 	  state(State::FOLLOWER),
 	  number_servers(1),
-	  leader_election_timeout(*loop),
-	  leader_heartbeat(*loop),
-	  async_reset_leader_election_timeout(*loop),
-	  async_reset(*loop)
+	  leader_election_timeout(*ev_loop),
+	  leader_heartbeat(*ev_loop),
+	  async_reset_leader_election_timeout(*ev_loop),
+	  async_reset(*ev_loop)
 {
 	leader_election_timeout.set<Raft, &Raft::leader_election_timeout_cb>(this);
 

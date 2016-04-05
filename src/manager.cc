@@ -65,8 +65,8 @@ void sig_exit(int sig) {
 }
 
 
-XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
-	: Worker(nullptr, loop_),
+XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, const opts_t& o)
+	: Worker(nullptr, ev_loop_, ev_flags_),
 	  database_pool(o.dbpool_size),
 	  thread_pool("W%02zu", o.threadpool_size),
 	  server_pool("S%02zu", o.num_servers),
@@ -82,7 +82,7 @@ XapiandManager::XapiandManager(ev::loop_ref* loop_, const opts_t& o)
 	  cluster_name(o.cluster_name),
 	  node_name(o.node_name),
 	  solo(o.solo),
-	  async_shutdown_sig(*loop),
+	  async_shutdown_sig(*ev_loop),
 	  shutdown_sig_sig(0)
 
 {
@@ -468,7 +468,7 @@ XapiandManager::run(const opts_t& o)
 
 	auto manager = share_this<XapiandManager>();
 
-	auto http = Worker::make_shared<Http>(manager, loop, o.http_port);
+	auto http = Worker::make_shared<Http>(manager, ev_loop, ev_flags, o.http_port);
 	msg += http->getDescription() + ", ";
 
 #ifdef XAPIAND_CLUSTERING
@@ -476,13 +476,13 @@ XapiandManager::run(const opts_t& o)
 	std::shared_ptr<Discovery> discovery;
 	std::shared_ptr<Raft> raft;
 	if (!solo) {
-		binary = Worker::make_shared<Binary>(manager, loop, o.binary_port);
+		binary = Worker::make_shared<Binary>(manager, ev_loop, ev_flags, o.binary_port);
 		msg += binary->getDescription() + ", ";
 
-		discovery = Worker::make_shared<Discovery>(manager, loop, o.discovery_port, o.discovery_group);
+		discovery = Worker::make_shared<Discovery>(manager, ev_loop, ev_flags, o.discovery_port, o.discovery_group);
 		msg += discovery->getDescription() + ", ";
 
-		raft = Worker::make_shared<Raft>(manager, loop, o.raft_port, o.raft_group);
+		raft = Worker::make_shared<Raft>(manager, ev_loop, ev_flags, o.raft_port, o.raft_group);
 		msg += raft->getDescription() + ", ";
 	}
 #endif
@@ -492,14 +492,14 @@ XapiandManager::run(const opts_t& o)
 	L_NOTICE(this, msg.c_str());
 
 	for (size_t i = 0; i < o.num_servers; ++i) {
-		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr);
+		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr, ev_flags);
 		servers_weak.push_back(server);
-		Worker::make_shared<HttpServer>(server, server->loop, http);
+		Worker::make_shared<HttpServer>(server, server->ev_loop, ev_flags, http);
 #ifdef XAPIAND_CLUSTERING
 		if (!solo) {
-			binary->add_server(Worker::make_shared<BinaryServer>(server, server->loop, binary));
-			Worker::make_shared<DiscoveryServer>(server, server->loop, discovery);
-			Worker::make_shared<RaftServer>(server, server->loop, raft);
+			binary->add_server(Worker::make_shared<BinaryServer>(server, server->ev_loop, ev_flags, binary));
+			Worker::make_shared<DiscoveryServer>(server, server->ev_loop, ev_flags, discovery);
+			Worker::make_shared<RaftServer>(server, server->ev_loop, ev_flags, raft);
 		}
 #endif
 		server_pool.enqueue(std::move(server));
@@ -508,17 +508,17 @@ XapiandManager::run(const opts_t& o)
 #ifdef XAPIAND_CLUSTERING
 	if (!solo) {
 		for (size_t i = 0; i < o.num_replicators; ++i) {
-			replicator_pool.enqueue(Worker::make_shared<XapiandReplicator>(manager, nullptr));
+			replicator_pool.enqueue(Worker::make_shared<XapiandReplicator>(manager, nullptr, ev_flags));
 		}
 	}
 #endif
 
 	for (size_t i = 0; i < o.num_committers; ++i) {
-		autocommit_pool.enqueue(Worker::make_shared<DatabaseAutocommit>(manager, nullptr));
+		autocommit_pool.enqueue(Worker::make_shared<DatabaseAutocommit>(manager, nullptr, ev_flags));
 	}
 
 	for (size_t i = 0; i < o.num_committers; ++i) {
-		asyncfsync_pool.enqueue(Worker::make_shared<AsyncFsync>(manager, nullptr));
+		asyncfsync_pool.enqueue(Worker::make_shared<AsyncFsync>(manager, nullptr, ev_flags));
 	}
 
 	// Make server protocols weak:
@@ -546,7 +546,7 @@ XapiandManager::run(const opts_t& o)
 
 	try {
 		L_EV(this, "Starting manager loop...");
-		loop->run();
+		ev_loop->run();
 		L_EV(this, "Manager loop ended!");
 	} catch (...) {
 		join();

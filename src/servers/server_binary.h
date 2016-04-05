@@ -44,7 +44,7 @@ class BinaryServer : public BaseServer {
 	void async_signal_cb(ev::async& watcher, int revents);
 
 public:
-	BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Binary>& binary_);
+	BinaryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Binary>& binary_);
 
 	~BinaryServer();
 

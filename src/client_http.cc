@@ -189,8 +189,8 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 }
 
 
-HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* loop_, int sock_)
-	: BaseClient(std::move(server_), loop_, sock_),
+HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
+	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
 	  database(nullptr),
 	  pretty(false),
 	  body_size(0),

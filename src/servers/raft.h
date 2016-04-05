@@ -97,7 +97,7 @@ private:
 	void _reset();
 
 public:
-	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
+	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Raft();
 
 	inline void start_leader_heartbeat() {

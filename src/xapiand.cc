@@ -396,6 +396,8 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 				opts.pidfile = XAPIAND_PID_FILE;
 			}
 		}
+		opts.ev_flags = ev::AUTO;
+
 	} catch (const ArgException& exc) { // catch any exceptions
 		std::cerr << "error: " << exc.error() << " for arg " << exc.argId() << std::endl;
 	}
@@ -549,6 +551,53 @@ void banner() {
 }
 
 
+#define EV_SELECT_NAME  "select"
+#define EV_POLL_NAME    "poll"
+#define EV_EPOLL_NAME   "epoll"
+#define EV_KQUEUE_NAME  "kqueue"
+#define EV_DEVPOLL_NAME "devpoll"
+#define EV_PORT_NAME    "port"
+
+const char*
+ev_backend(unsigned int backend)
+{
+	switch(backend) {
+		case ev::SELECT:
+			return EV_SELECT_NAME;
+		case ev::POLL:
+			return EV_POLL_NAME;
+		case ev::EPOLL:
+			return EV_EPOLL_NAME;
+		case ev::KQUEUE:
+			return EV_KQUEUE_NAME;
+		case ev::DEVPOLL:
+			return EV_DEVPOLL_NAME;
+		case ev::PORT:
+			return EV_PORT_NAME;
+	}
+	return "unknown";
+}
+
+std::string
+ev_supported()
+{
+	std::string backends;
+	unsigned int supported = ev::supported_backends();
+	if (supported & ev::SELECT) backends += std::string(", ") + EV_SELECT_NAME;
+	if (supported & ev::POLL) backends += std::string(", ") + EV_POLL_NAME;
+	if (supported & ev::EPOLL) backends += std::string(", ") + EV_EPOLL_NAME;
+	if (supported & ev::KQUEUE) backends += std::string(", ") + EV_KQUEUE_NAME;
+	if (supported & ev::DEVPOLL) backends += std::string(", ") + EV_DEVPOLL_NAME;
+	if (supported & ev::PORT) backends += std::string(", ") + EV_PORT_NAME;
+	if (backends.empty()) {
+		return "unknown";
+	} else {
+		backends.erase(0, 2);
+	}
+	return backends;
+}
+
+
 void run(const opts_t &opts) {
 	usedir(opts.database.c_str());
 
@@ -565,9 +614,11 @@ void run(const opts_t &opts) {
 	b_time.second =  diff_t % SLOT_TIME_SECOND;
 
 	setup_signal_handlers();
-	ev::default_loop default_loop;
+	ev::default_loop default_loop(opts.ev_flags);
 
-	XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts);
+	L_INFO(nullptr, "libev backend: %s (available: %s)", ev_backend(default_loop.backend()), ev_supported().c_str());
+
+	XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
 	try {
 		XapiandManager::manager->run(opts);
 	} catch (...) {

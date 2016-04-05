@@ -169,7 +169,7 @@ class BinaryClient : public BaseClient {
 
 	Endpoints repl_endpoints;
 
-	BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref *loop_, int sock_, double active_timeout_, double idle_timeout_);
+	BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_);
 
 	void on_read(const char *buf, size_t received) override;
 	void on_read_file(const char *buf, size_t received) override;

@@ -246,12 +246,12 @@ ClientNoDecompressor::decompress()
 }
 
 
-BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref *loop_, int sock_)
-	: Worker(std::move(server_), loop_),
-	  io_read(*loop),
-	  io_write(*loop),
-	  async_write(*loop),
-	  async_read(*loop),
+BaseClient::BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
+	: Worker(std::move(server_), ev_loop_, ev_flags_),
+	  io_read(*ev_loop),
+	  io_write(*ev_loop),
+	  async_write(*ev_loop),
+	  async_read(*ev_loop),
 	  closed(false),
 	  sock(sock_),
 	  written(0),

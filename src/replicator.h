@@ -38,7 +38,7 @@
 class XapiandReplicator : public Task<>, public Worker {
 	friend Worker;
 
-	XapiandReplicator(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
+	XapiandReplicator(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
 	void run() override;
 

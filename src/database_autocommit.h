@@ -60,7 +60,7 @@ class DatabaseAutocommit : public Task<>, public Worker {
 	void shutdown_impl(time_t asap, time_t now) override;
 
 public:
-	DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_);
+	DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 	~DatabaseAutocommit();
 
 	void run() override;

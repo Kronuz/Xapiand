@@ -62,6 +62,7 @@ using opts_t = struct opts_s {
 	size_t threadpool_size;
 	size_t endpoints_list_size;
 	size_t num_committers;
+	unsigned int ev_flags;
 };
 
 
@@ -84,7 +85,7 @@ class XapiandManager : public Worker  {
 
 	std::mutex qmtx;
 
-	XapiandManager(ev::loop_ref* loop_, const opts_t& o);
+	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, const opts_t& o);
 
 	struct sockaddr_in host_address();
 

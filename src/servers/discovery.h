@@ -70,7 +70,7 @@ public:
 		"BOSSY_DB_WAVE", "DB_UPDATED",
 	};
 
-	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& group_);
+	Discovery(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Discovery();
 
 	inline void enter() {

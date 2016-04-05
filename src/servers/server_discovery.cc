@@ -35,8 +35,8 @@
 using dispatch_func = void (DiscoveryServer::*)(const std::string&);
 
 
-DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref *loop_, const std::shared_ptr<Discovery>& discovery_)
-	: BaseServer(server_, loop_),
+DiscoveryServer::DiscoveryServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Discovery>& discovery_)
+	: BaseServer(server_, ev_loop_, ev_flags_),
 	  discovery(discovery_)
 {
 	io.start(discovery->get_socket(), ev::READ);

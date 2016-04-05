@@ -154,7 +154,7 @@ class HttpClient : public BaseClient {
 	friend Worker;
 
 public:
-	HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref *loop_, int sock_);
+	HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
 
 	~HttpClient();
 

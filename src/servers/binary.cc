@@ -30,8 +30,8 @@
 #include <netinet/tcp.h> /* for TCP_NODELAY */
 
 
-Binary::Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_)
-	: BaseTCP(manager_, loop_, port_, "Binary", port_ == XAPIAND_BINARY_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY)
+Binary::Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
+	: BaseTCP(manager_, ev_loop_, ev_flags_, port_, "Binary", port_ == XAPIAND_BINARY_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY)
 {
 	local_node.binary_port = port;
 

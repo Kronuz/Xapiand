@@ -30,8 +30,8 @@
 #include <fcntl.h>
 
 
-BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref *loop_, int port_, const std::string& description_, uint16_t version_, const std::string& group_, int tries_)
-	: Worker(manager_, loop_),
+BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& description_, uint16_t version_, const std::string& group_, int tries_)
+	: Worker(manager_, ev_loop_, ev_flags_),
 	  port(port_),
 	  description(description_),
 	  version(version_)
