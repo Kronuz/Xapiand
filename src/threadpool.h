@@ -209,6 +209,7 @@ private:
 				--running_task;
 				throw;
 			}
+			--running_task;
 		}
 	}
 
