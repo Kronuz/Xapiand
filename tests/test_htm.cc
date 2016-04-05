@@ -293,7 +293,7 @@ int test_hullConvex() {
 
 				fs << "ax.set_xlabel('x')\nax.set_ylabel('y')\nax.set_zlabel('z')\n";
 				fs << "plt.show()\nplt.ion()\n";
-			} catch(const std::exception& exc) {
+			} catch (const std::exception& exc) {
 				L_EXC(nullptr, "ERROR: (%s) %s", it_f->c_str(), exc.what());
 				++cont;
 			}
@@ -417,7 +417,7 @@ int test_HTM_chull() {
 				}
 
 				_htm.writePython3D(*it_r);
-			} catch(const std::exception& exc) {
+			} catch (const std::exception& exc) {
 				L_EXC(nullptr, "ERROR: (%s) %s", it_f->c_str(), exc.what());
 				++cont;
 			}
@@ -494,7 +494,7 @@ int test_HTM_circle() {
 					}
 
 					_htm.writePython3D(file_result);
-				} catch(const std::exception& exc) {
+				} catch (const std::exception& exc) {
 					L_EXC(nullptr, "ERROR: %s", exc.what());
 					++cont;
 				}

@@ -130,7 +130,7 @@ int test_lru_actions() {
 			L_ERR(nullptr, "ERROR: LRU insert is not working");
 			return 1;
 		}
-    } catch(const std::exception& exc) {
+    } catch (const std::exception& exc) {
     	L_EXC(nullptr, "%s\n", exc.what());
     }
 

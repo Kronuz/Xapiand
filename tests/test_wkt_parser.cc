@@ -74,7 +74,7 @@ int test_wkt_parser() {
 
 					// Python for the Geometry.
 					HTM::writePython3D(file_result, ewkt.gv, ewkt.trixels);
-				} catch(const std::exception& exc) {
+				} catch (const std::exception& exc) {
 					L_EXC(nullptr, "ERROR: (%s) %s", EWKT.c_str(), exc.what());
 					++cont;
 				}

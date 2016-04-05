@@ -1529,7 +1529,7 @@ BinaryClient::reply_changeset(const std::string &)
 	// try {
 	// 	// wdb_->apply_changeset_from_fd(fd, !repl_just_switched_db);  // FIXME: Implement Replication
 	// 	repl_just_switched_db = false;
-	// } catch(const MSG_NetworkError& exc) {
+	// } catch (const MSG_NetworkError& exc) {
 	// 	L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 	// 	io::close(fd);
 	// 	io::unlink(path);
