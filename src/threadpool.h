@@ -203,8 +203,12 @@ private:
 		function_mo<void(Params...)> task;
 		while (TaskQueue<Params...>::tasks.pop(task)) {
 			++running_task;
-			task(std::forward<Params_>(params)...);
-			--running_task;
+			try {
+				task(std::forward<Params_>(params)...);
+			} catch(...) {
+				--running_task;
+				throw;
+			}
 		}
 	}
 
