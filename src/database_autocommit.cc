@@ -90,7 +90,7 @@ DatabaseAutocommit::run()
 
 			for (auto it = DatabaseAutocommit::statuses.begin(); it != DatabaseAutocommit::statuses.end(); ) {
 				auto status = it->second;
-				if (status.weak_database.lock()) {
+				if (status.weak_database.lock()) {  // If database still exists, autocommit
 					auto next_wakeup_time = status.next_wakeup_time();
 					if (next_wakeup_time <= now) {
 						auto endpoints = it->first;
