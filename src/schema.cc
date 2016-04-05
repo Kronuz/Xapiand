@@ -282,13 +282,7 @@ Schema::set_database(Database* _database)
 
 	if (s_schema.empty()) {
 		schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;
-		auto prop_id = schema[RESERVED_SCHEMA][RESERVED_ID];
-		prop_id[RESERVED_TYPE] = std::vector<unsigned>({ NO_TYPE, NO_TYPE, STRING_TYPE });
-		prop_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
-		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
-		prop_id[RESERVED_BOOL_TERM] = true;
-		prop_id[RESERVED_INDEX] = static_cast<unsigned>(Index::ALL);
-		exist = false;
+		schema[RESERVED_SCHEMA];
 	} else {
 		schema = MsgPack(s_schema);
 		try {
@@ -296,7 +290,6 @@ Schema::set_database(Database* _database)
 			if (version.get_f64() != DB_VERSION_SCHEMA) {
 				throw MSG_Error("Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 			}
-			exist = true;
 			to_store = false;
 		} catch (const std::out_of_range&) {
 			throw MSG_Error("Schema is corrupt, you need provide a new one");
@@ -306,23 +299,25 @@ Schema::set_database(Database* _database)
 	}
 }
 
-
-MsgPack
-Schema::get_properties(specification_t& specification)
+std::string
+Schema::serialise_id(MsgPack& properties, specification_t& specification, const std::string& value_id)
 {
-	L_CALL(this, "Schema::get_properties()");
-
-	auto prop_schema = schema.at(RESERVED_SCHEMA);
-	if (exist.load()) {
-		update_specification(prop_schema, specification);
+	auto prop_id = properties[RESERVED_ID];
+	specification.set_type = true;
+	if (prop_id) {
+		update_specification(properties, specification);
+		return Serialise::serialise(static_cast<char>(prop_id.at(RESERVED_TYPE).at(2).get_u64()), value_id);
 	} else {
 		to_store.store(true);
-		exist.store(true);
 		specification.found_field = false;
+		std::pair<char, std::string> res_serialise = Serialise::serialise(value_id);
+		prop_id[RESERVED_TYPE] = std::vector<unsigned>({ NO_TYPE, NO_TYPE, static_cast<unsigned>(res_serialise.first) });
+		prop_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
+		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
+		prop_id[RESERVED_BOOL_TERM] = true;
+		prop_id[RESERVED_INDEX] = static_cast<unsigned>(Index::ALL);
+		return res_serialise.second;
 	}
-	specification.set_type = true;
-
-	return prop_schema;
 }
 
 
@@ -392,7 +387,6 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 	L_CALL(nullptr, "Schema::set_type()");
 
 	MsgPack field = item_doc.get_type() == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
-
 	switch (field.get_type()) {
 		case msgpack::type::POSITIVE_INTEGER:
 		case msgpack::type::NEGATIVE_INTEGER:

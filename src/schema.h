@@ -185,7 +185,14 @@ public:
 	 * specification is updated with the properties of schema.
 	 * Returns the properties of schema.
 	 */
-	MsgPack get_properties(specification_t& specification);
+	inline MsgPack getPropertiesSchema() {
+		return schema.at(RESERVED_SCHEMA);
+	}
+
+	/*
+	 * Returns serialise value of value_id.
+	 */
+	std::string serialise_id(MsgPack& schema_properties, specification_t& specification, const std::string& value_id);
 
 	/*
 	 * Restarting reserved words than are not inherited.
