@@ -36,7 +36,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-
+const int DB_ACTION_MASK_	 = 0x03;  // Xapian::DB_ACTION_MASK_
 
 inline std::string::size_type
 common_prefix_length(const std::string &a, const std::string &b)
@@ -632,7 +632,7 @@ BinaryClient::msg_readaccess(const std::string &message)
 	if (p != p_end) {
 		unsigned flag_bits;
 		flag_bits = static_cast<unsigned>(unserialise_length(&p, p_end));
-		// flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
+		 flags |= flag_bits &~ DB_ACTION_MASK_;
 	}
 
 	std::vector<std::string> dbpaths_;
@@ -659,7 +659,7 @@ BinaryClient::msg_writeaccess(const std::string & message)
 	if (p != p_end) {
 		unsigned flag_bits;
 		flag_bits = static_cast<unsigned>(unserialise_length(&p, p_end));
-		// flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
+		 flags |= flag_bits &~ DB_ACTION_MASK_;
 	}
 
 	std::vector<std::string> dbpaths_;
