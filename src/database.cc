@@ -64,6 +64,7 @@ void
 WalHeader::init(void* param, void* args)
 {
 	const DatabaseWAL* wal = static_cast<const DatabaseWAL*>(param);
+	bool commit_eof = static_cast<bool>(args);
 
 	head.magic = MAGIC;
 	head.offset = STORAGE_START_BLOCK_OFFSET;
@@ -78,7 +79,7 @@ WalHeader::init(void* param, void* args)
 	uint32_t revision;
 	unserialise_unsigned(&p, r_end, &revision);
 
-	if (wal->commit_eof) {
+	if (commit_eof) {
 		++revision;
 	}
 
@@ -369,9 +370,7 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 	if (commit_) {
 		if (slot + 1 >= WAL_SLOTS) {
 			close();
-			commit_eof = true;
-			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
-			commit_eof = false;
+			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE, true);
 		} else {
 			header.slot[slot + 1] = header.slot[slot];
 		}
