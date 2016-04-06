@@ -1363,7 +1363,7 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		// Convert node to endpoint:
 		char node_ip[INET_ADDRSTRLEN];
 		auto node = manager()->touch_node(node_name, UNKNOWN_REGION);
-		if (node) {
+		if (!node) {
 			L_DEBUG(this, "Node %s not found", node_name.c_str());
 			host = node_name;
 			return -1;
