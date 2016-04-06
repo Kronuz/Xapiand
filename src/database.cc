@@ -673,7 +673,6 @@ Database::reopen()
 		for (db = std::make_unique<Xapian::Database>(); i != endpoints.cend(); ++i) {
 			auto& e = *i;
 			Xapian::Database rdb;
-			bool local = false;
 			int _flags = (flags & DB_SPAWN) ? Xapian::DB_CREATE_OR_OPEN : Xapian::DB_OPEN;
 #ifdef XAPIAND_CLUSTERING
 			if (!e.is_local()) {
@@ -686,7 +685,6 @@ Database::reopen()
 						L_DATABASE(this, "Endpoint %s fallback to local database!", e.as_string().c_str());
 						// Handle remote endpoints and figure out if the endpoint is a local database
 						rdb = Xapian::Database(e.path, _flags);
-						local = true;
 						if (endpoints_size == 1) read_mastery(e);
 					}
 				} catch (const Xapian::DatabaseOpeningError& exc) { }
@@ -707,7 +705,6 @@ Database::reopen()
 					rdb = Xapian::Database(e.path, Xapian::DB_OPEN);
 					if (endpoints_size == 1) read_mastery(e);
 				}
-				local = true;
 			}
 
 			db->add_database(rdb);
