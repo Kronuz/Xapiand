@@ -98,12 +98,19 @@ DatabaseAutocommit::run()
 						statuses_lk.unlock();
 						lk.unlock();
 
+						bool successful = false;
+						auto start = std::chrono::system_clock::now();
 						std::shared_ptr<Database> database;
 						if (manager()->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
-							if (database->commit()) {
-								L_DEBUG(this, "Autocommit: %s%s", endpoints.as_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "");
-							}
+							successful = database->commit();
 							manager()->database_pool.checkin(database);
+						}
+						auto end = std::chrono::system_clock::now();
+
+						if (successful) {
+							L_DEBUG(this, "Autocommit: %s%s (took %s)", endpoints.as_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "", delta_string(start, end).c_str());
+						} else {
+							L_WARNING(this, "Autocommit failed: %s%s (took %s)", endpoints.as_string().c_str(), next_wakeup_time == status.max_commit_time ? " (forced)" : "", delta_string(start, end).c_str());
 						}
 
 						lk.lock();

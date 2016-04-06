@@ -100,17 +100,22 @@ AsyncFsync::run()
 					statuses_lk.unlock();
 					lk.unlock();
 
+					bool successful = false;
+					auto start = std::chrono::system_clock::now();
 					switch (status.mode) {
 						case 1:
-							if likely(io::full_fsync(fd) == 0) {
-								L_DEBUG(this, "Async Full Fsync: %d%s", fd, next_wakeup_time == status.max_commit_time ? " (forced)" : "");
-							}
+							successful = (io::full_fsync(fd) == 0);
 							break;
 						case 2:
-							if likely(io::fsync(fd) == 0) {
-								L_DEBUG(this, "Async Fsync: %d%s", fd, next_wakeup_time == status.max_commit_time ? " (forced)" : "");
-							}
+							successful = (io::fsync(fd) == 0);
 							break;
+					}
+					auto end = std::chrono::system_clock::now();
+
+					if (successful) {
+						L_DEBUG(this, "Async Fsync %d: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_commit_time ? " (forced)" : "", delta_string(start, end).c_str());
+					} else {
+						L_WARNING(this, "Async Fsync %d falied: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_commit_time ? " (forced)" : "", delta_string(start, end).c_str());
 					}
 
 					lk.lock();
