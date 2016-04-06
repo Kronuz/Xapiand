@@ -1143,7 +1143,7 @@ std::string delta_string(long double delta) {
 	static const char *units[] = { "s", "ms", "\xc2\xb5s", "ns" };
 	static const long double scaling[] = { 1, 1e3, 1e6, 1e9 };
 
-	delta /= 1e9;  // convert nanoseconds to seconds (as a double)
+	delta *= 1e-9;  // convert nanoseconds to seconds (as a double)
 	long double timespan = delta;
 
 	if (delta < 0) delta = -delta;

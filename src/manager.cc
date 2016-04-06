@@ -44,8 +44,6 @@
 #include <ifaddrs.h>
 #include <unistd.h>
 
-#define NANOSEC 1e-9
-
 
 static const std::regex time_re("((([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)(\\.\\.(([01]?[0-9]|2[0-3])h)?(([0-5]?[0-9])m)?(([0-5]?[0-9])s)?)?", std::regex::icase | std::regex::optimize);
 
@@ -904,9 +902,9 @@ XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_tim
 		stats["num_searches"] = cnt[1];
 		stats["docs_deleted"] = cnt[2];
 		stats["docs_updated"] = cnt[3];
-		stats["avg_time_index"]  = cnt[0] == 0 ? 0.0 : delta_string((tm_cnt[0] / cnt[0]) * NANOSEC);
-		stats["avg_time_search"] = cnt[1] == 0 ? 0.0 : delta_string((tm_cnt[1] / cnt[1]) * NANOSEC);
-		stats["avg_time_delete"] = cnt[2] == 0 ? 0.0 : delta_string((tm_cnt[2] / cnt[2]) * NANOSEC);
-		stats["avg_time_update"] = cnt[3] == 0 ? 0.0 : delta_string((tm_cnt[3] / cnt[3]) * NANOSEC);
+		stats["avg_time_index"]  = delta_string(cnt[0] == 0 ? 0.0 : (tm_cnt[0] / cnt[0]));
+		stats["avg_time_search"] = delta_string(cnt[1] == 0 ? 0.0 : (tm_cnt[1] / cnt[1]));
+		stats["avg_time_delete"] = delta_string(cnt[2] == 0 ? 0.0 : (tm_cnt[2] / cnt[2]));
+		stats["avg_time_update"] = delta_string(cnt[3] == 0 ? 0.0 : (tm_cnt[3] / cnt[3]));
 	}
 }
