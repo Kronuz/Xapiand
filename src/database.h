@@ -93,8 +93,8 @@ struct WalHeader {
 
 	uint32_t slot[WAL_SLOTS];
 
-	void init(void* param);
-	void validate(void* param);
+	void init(void* param, void* args);
+	void validate(void* param, void* args);
 };
 
 #pragma pack(push, 1)
@@ -103,13 +103,13 @@ struct WalBinHeader {
 	uint8_t flags;  // required
 	uint32_t size;  // required
 
-	inline void init(void*, uint32_t size_, uint8_t flags_) {
+	inline void init(void*, void*, uint32_t size_, uint8_t flags_) {
 		magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
 	}
 
-	inline void validate(void*) {
+	inline void validate(void*, void*) {
 		if (magic != STORAGE_BIN_HEADER_MAGIC) {
 			throw MSG_StorageCorruptVolume("Bad line header magic number");
 		}
@@ -123,12 +123,12 @@ struct WalBinFooter {
 	uint32_t checksum;
 	uint8_t magic;
 
-	inline void init(void*, uint32_t checksum_) {
+	inline void init(void*, void*, uint32_t checksum_) {
 		magic = STORAGE_BIN_FOOTER_MAGIC;
 		checksum = checksum_;
 	}
 
-	inline void validate(void*, uint32_t checksum_) {
+	inline void validate(void*, void*, uint32_t checksum_) {
 		if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 			throw MSG_StorageCorruptVolume("Bad line footer magic number");
 		}
@@ -158,8 +158,8 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	bool execute(const std::string& line);
 	uint32_t highest_valid_slot();
 
-	inline void open(const std::string& path, int flags) {
-		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, flags);
+	inline void open(const std::string& path, int flags, void* args=nullptr) {
+		Storage<WalHeader, WalBinHeader, WalBinFooter>::open(path, flags, args);
 	}
 
 public:

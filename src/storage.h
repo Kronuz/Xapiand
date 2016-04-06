@@ -130,13 +130,13 @@ struct StorageHeader {
 
 	char padding[(STORAGE_BLOCK_SIZE - sizeof(StorageHeader::StorageHeaderHead)) / sizeof(char)];
 
-	inline void init(void* /*param*/) {
+	inline void init(void* /*param*/, void* /*args*/) {
 		head.offset = STORAGE_START_BLOCK_OFFSET;
 		// head.magic = STORAGE_MAGIC;
 		// strncpy(head.uuid, "00000000-0000-0000-0000-000000000000", sizeof(head.uuid));
 	}
 
-	inline void validate(void* /*param*/) {
+	inline void validate(void* /*param*/, void* /*args*/) {
 		// if (head.magic != STORAGE_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad header magic number");
 		// }
@@ -153,13 +153,13 @@ struct StorageBinHeader {
 	uint8_t flags;  // required
 	uint32_t size;  // required
 
-	inline void init(void* /*param*/, uint32_t size_, uint8_t flags_) {
+	inline void init(void* /*param*/, void* /*args*/, uint32_t size_, uint8_t flags_) {
 		// magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
 	}
 
-	inline void validate(void* /*param*/) {
+	inline void validate(void* /*param*/, void* /*args*/) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		// }
@@ -174,12 +174,12 @@ struct StorageBinFooter {
 	// uint32_t checksum;
 	// uint8_t magic;
 
-	inline void init(void* /*param*/, uint32_t  /*checksum_*/) {
+	inline void init(void* /*param*/, void* /*args*/, uint32_t  /*checksum_*/) {
 		// magic = STORAGE_BIN_FOOTER_MAGIC;
 		// checksum = checksum_;
 	}
 
-	inline void validate(void* /*param*/, uint32_t /*checksum_*/) {
+	inline void validate(void* /*param*/, void* /*args*/, uint32_t /*checksum_*/) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		// }
@@ -310,7 +310,7 @@ public:
 		XXH32_freeState(xxhash);
 	}
 
-	void open(const std::string& path_, int flags_=STORAGE_CREATE_OR_OPEN) {
+	void open(const std::string& path_, int flags_=STORAGE_CREATE_OR_OPEN, void* args=nullptr) {
 		L_CALL(this, "Storage::open()");
 
 		if (path != path_ || flags != flags_) {
@@ -336,7 +336,7 @@ public:
 				}
 
 				memset(&header, 0, sizeof(header));
-				header.init(param);
+				header.init(param, args);
 
 				if (io::write(fd, &header, sizeof(header)) != sizeof(header)) {
 					close();
@@ -351,7 +351,7 @@ public:
 		reopen();
 	}
 
-	void reopen() {
+	void reopen(void* args=nullptr) {
 		L_CALL(this, "Storage::reopen()");
 
 		if unlikely(fd <= 0) {
@@ -366,7 +366,7 @@ public:
 		} else if unlikely(r != sizeof(header)) {
 			throw MSG_StorageCorruptVolume("Incomplete bin data");
 		}
-		header.validate(param);
+		header.validate(param, args);
 
 		if (flags & STORAGE_WRITABLE) {
 			buffer_offset = header.head.offset * STORAGE_ALIGNMENT;
@@ -410,7 +410,7 @@ public:
 		bin_offset = offset * STORAGE_ALIGNMENT;
 	}
 
-	uint32_t write(const char *data, size_t data_size) {
+	uint32_t write(const char *data, size_t data_size, void* args=nullptr) {
 		L_CALL(this, "Storage::write(1)");
 
 		uint32_t curr_offset = header.head.offset;
@@ -429,13 +429,13 @@ public:
 		size_t it_size;
 		bool compress = (flags & STORAGE_COMPRESS) && data_size > STORAGE_MIN_COMPRESS_SIZE;
 		if (compress) {
-			bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
+			bin_header.init(param, args, 0, STORAGE_FLAG_COMPRESSED);
 			cmpData.reset(data, data_size, STORAGE_MAGIC);
 			cmpData_it = cmpData.begin();
 			it_size = cmpData_it.size();
 			data = cmpData_it->data();
 		} else {
-			bin_header.init(param, static_cast<uint32_t>(data_size), 0);
+			bin_header.init(param, args, static_cast<uint32_t>(data_size), 0);
 			it_size = data_size;
 		}
 
@@ -471,9 +471,9 @@ public:
 			// Update header size in buffer.
 			if (compress) {
 				buffer_header->size = static_cast<uint32_t>(cmpData.size());
-				bin_footer.init(param, cmpData.get_digest());
+				bin_footer.init(param, args, cmpData.get_digest());
 			} else {
-				bin_footer.init(param, XXH32(orig_data, data_size, STORAGE_MAGIC));
+				bin_footer.init(param, args, XXH32(orig_data, data_size, STORAGE_MAGIC));
 			}
 
 			write_bin(&buffer, tmp_buffer_offset, &bin_footer_data, bin_footer_data_size);
@@ -508,7 +508,7 @@ public:
 		return curr_offset;
 	}
 
-	uint32_t write_file(const std::string& filename) {
+	uint32_t write_file(const std::string& filename, void* args=nullptr) {
 		L_CALL(this, "Storage::write_file()");
 
 		uint32_t curr_offset = header.head.offset;
@@ -530,7 +530,7 @@ public:
 
 		bool compress = (flags & STORAGE_COMPRESS);
 		if (compress) {
-			bin_header.init(param, 0, STORAGE_FLAG_COMPRESSED);
+			bin_header.init(param, args, 0, STORAGE_FLAG_COMPRESSED);
 			cmpFile.reset(filename, STORAGE_MAGIC);
 			cmpFile_it = cmpFile.begin();
 			it_size = cmpFile_it.size();
@@ -540,7 +540,7 @@ public:
 			if unlikely(fd_write < 0) {
 				throw MSG_LZ4IOError("Cannot open file: %s", filename.c_str());
 			}
-			bin_header.init(param, 0, 0);
+			bin_header.init(param, args, 0, 0);
 			it_size = io::read(fd_write, buf_read, sizeof(buf_read));
 			data = buf_read;
 			file_size += it_size;
@@ -587,10 +587,10 @@ public:
 			// Update header size in buffer.
 			if (compress) {
 				buffer_header->size = static_cast<uint32_t>(cmpFile.size());
-				bin_footer.init(param, cmpFile.get_digest());
+				bin_footer.init(param, args, cmpFile.get_digest());
 			} else {
 				buffer_header->size = static_cast<uint32_t>(file_size);
-				bin_footer.init(param, XXH32_digest(xxhash));
+				bin_footer.init(param, args, XXH32_digest(xxhash));
 				io::close(fd_write);
 			}
 
@@ -627,7 +627,7 @@ public:
 		return curr_offset;
 	}
 
-	size_t read(char* buf, size_t buf_size, uint32_t limit=-1) {
+	size_t read(char* buf, size_t buf_size, uint32_t limit=-1, void* args=nullptr) {
 		L_CALL(this, "Storage::read(1)");
 
 		if (!buf_size) {
@@ -650,7 +650,7 @@ public:
 				throw MSG_StorageCorruptVolume("Incomplete bin header");
 			}
 			bin_offset += r;
-			bin_header.validate(param);
+			bin_header.validate(param, args);
 
 			io::fadvise(fd, bin_offset, bin_header.size, POSIX_FADV_WILLNEED);
 
@@ -698,7 +698,7 @@ public:
 			throw MSG_StorageCorruptVolume("Incomplete bin footer");
 		}
 		bin_offset += r;
-		bin_footer.validate(param, bin_hash);
+		bin_footer.validate(param, args, bin_hash);
 
 		// Align the bin_offset to the next storage alignment
 		bin_offset = ((bin_offset + STORAGE_ALIGNMENT - 1) / STORAGE_ALIGNMENT) * STORAGE_ALIGNMENT;
@@ -754,20 +754,20 @@ public:
 		growfile();
 	}
 
-	inline uint32_t write(const std::string& data) {
+	inline uint32_t write(const std::string& data, void* args=nullptr) {
 		L_CALL(this, "Storage::write(2)");
 
-		return write(data.data(), data.size());
+		return write(data.data(), data.size(), args);
 	}
 
-	inline std::string read(uint32_t limit=-1) {
+	inline std::string read(uint32_t limit=-1, void* args=nullptr) {
 		L_CALL(this, "Storage::read(2)");
 
 		std::string ret;
 
 		size_t r;
 		char buf[LZ4_BLOCK_SIZE];
-		while ((r = read(buf, sizeof(buf), limit))) {
+		while ((r = read(buf, sizeof(buf), limit), args)) {
 			ret += std::string(buf, r);
 		}
 

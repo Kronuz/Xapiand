@@ -61,7 +61,7 @@ constexpr const char* const DatabaseWAL::names[];
 
 
 void
-WalHeader::init(void* param)
+WalHeader::init(void* param, void* args)
 {
 	const DatabaseWAL* wal = static_cast<const DatabaseWAL*>(param);
 
@@ -87,7 +87,7 @@ WalHeader::init(void* param)
 
 
 void
-WalHeader::validate(void* param)
+WalHeader::validate(void* param, void*)
 {
 	if (head.magic != MAGIC) {
 		throw MSG_StorageCorruptVolume("Bad WAL header magic number");
