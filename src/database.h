@@ -363,11 +363,11 @@ public:
 	bool get_document(const std::string& doc_id, Xapian::Document& doc);
 	bool get_document(const Xapian::docid& did, Xapian::Document& doc);
 	bool get_document(const Xapian::MSet::iterator& m, Xapian::Document& doc);
+	bool get_value(const Xapian::Document& document, Xapian::valueno slot, std::string& value);
+	bool get_value(const Xapian::Document& document, const std::string& slot_name, MsgPack& result);
 
 	void get_stats_database(MsgPack&& stats);
 	void get_stats_doc(MsgPack&& stats, const std::string& document_id);
-	bool get_value(const Xapian::Document& document, Xapian::valueno slot, std::string& value);
-	bool get_value(const Xapian::Document& document, const std::string& slot_name, MsgPack& result);
 
 private:
 	void _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
