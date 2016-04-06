@@ -299,6 +299,7 @@ void MD5::processBuffer()
 	size_t i;
 	for (i = m_bufferSize + 1; i < BlockSize; ++i)
 		m_buffer[i] = 0;
+	// m_bufferSize can never be >= BlockSize (thus i starts exactly at BlockSize here)
 	for (; i < paddedLength; ++i)
 		extra[i - BlockSize] = 0;
 
