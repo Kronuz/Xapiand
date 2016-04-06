@@ -1139,11 +1139,9 @@ std::string lstrip(const std::string& str, char c) {
 }
 
 
-std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end) {
+std::string delta_string(long double delta) {
 	static const char *units[] = { "s", "ms", "\xc2\xb5s", "ns" };
 	static const long double scaling[] = { 1, 1e3, 1e6, 1e9 };
-
-	long double delta = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
 	delta /= 1e9;  // convert nanoseconds to seconds (as a double)
 	long double timespan = delta;
@@ -1158,6 +1156,11 @@ std::string delta_string(const std::chrono::time_point<std::chrono::system_clock
 	char buf[100];
 	snprintf(buf, 100, "%Lg%s", timespan, units[order]);
 	return buf;
+}
+
+
+std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end) {
+	return delta_string(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
 }
 
 
