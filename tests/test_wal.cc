@@ -114,8 +114,10 @@ int create_db() {
 	int num_documents = 1020;
 
 	std::string document("{ \"message\" : \"Hello world\"}");
-	local_node.name.assign("node_test");
-	local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
+	auto node = new Node (*local_node);
+	node->name.assign("node_test");
+	node->binary_port = XAPIAND_BINARY_SERVERPORT;
+	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
 
 	Endpoints endpoints;
 	Endpoint e;

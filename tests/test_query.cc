@@ -225,8 +225,10 @@ int create_test_db() {
 	delete_files(name_database);
 
 	int cont = 0;
-	local_node.name.assign("node_test");
-	local_node.binary_port = XAPIAND_BINARY_SERVERPORT;
+	auto node = new Node (*local_node);
+	node->name.assign("node_test");
+	node->binary_port = XAPIAND_BINARY_SERVERPORT;
+	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
 
 	Endpoints endpoints;
 	Endpoint e;
