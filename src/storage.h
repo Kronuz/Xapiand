@@ -767,7 +767,7 @@ public:
 
 		size_t r;
 		char buf[LZ4_BLOCK_SIZE];
-		while ((r = read(buf, sizeof(buf), limit), args)) {
+		while ((r = read(buf, sizeof(buf), limit, args))) {
 			ret += std::string(buf, r);
 		}
 
