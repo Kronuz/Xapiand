@@ -371,7 +371,6 @@ DatabaseWAL::write_line(Type type, const std::string& data, bool commit_)
 			close();
 			commit_eof = true;
 			open(endpoint.path + "/" + WAL_STORAGE_PATH + std::to_string(rev + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | WAL_SYNC_MODE);
-			slot = rev - header.head.revision;
 			commit_eof = false;
 		} else {
 			header.slot[slot + 1] = header.slot[slot];
