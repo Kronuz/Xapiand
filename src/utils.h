@@ -247,8 +247,8 @@ int copy_file(const std::string& src, const std::string& dst, bool create=true, 
 void update_pos_time();
 void fill_zeros_stats_min(uint16_t start, uint16_t end);
 void fill_zeros_stats_sec(uint8_t start, uint8_t end);
-void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy);
-void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy);
+void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy);
+void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy);
 
 // Levenshtein distance is a string metric for measuring the difference between two
 // sequences (known as edit distance).

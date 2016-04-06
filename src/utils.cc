@@ -839,7 +839,7 @@ void fill_zeros_stats_sec(uint8_t start, uint8_t end) {
 }
 
 
-void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy) {
+void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy) {
 	for (auto i = start; i <= end; ++i) {
 		cnt[0] += stats_cnt_cpy.index.min[i];
 		cnt[1] += stats_cnt_cpy.search.min[i];
@@ -853,7 +853,7 @@ void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std
 }
 
 
-void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<double>& tm_cnt, times_row_t& stats_cnt_cpy) {
+void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy) {
 	for (auto i = start; i <= end; ++i) {
 		cnt[0] += stats_cnt_cpy.index.sec[i];
 		cnt[1] += stats_cnt_cpy.search.sec[i];

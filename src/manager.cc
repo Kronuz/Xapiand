@@ -874,7 +874,7 @@ XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_tim
 		throw MSG_ClientError("First argument must be less or equal than the second");
 	} else {
 		std::vector<uint64_t> cnt{ 0, 0, 0, 0 };
-		std::vector<double> tm_cnt{ 0.0, 0.0, 0.0, 0.0 };
+		std::vector<long double> tm_cnt{ 0.0, 0.0, 0.0, 0.0 };
 		if (start < SLOT_TIME_SECOND) {
 			auto aux = second_time.second + start - end;
 			if (aux < SLOT_TIME_SECOND) {
@@ -904,9 +904,9 @@ XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_tim
 		stats["num_searches"] = cnt[1];
 		stats["docs_deleted"] = cnt[2];
 		stats["docs_updated"] = cnt[3];
-		stats["avg_time_index"]  = cnt[0] == 0 ? 0.0 : (tm_cnt[0] / cnt[0]) * NANOSEC;
-		stats["avg_time_search"] = cnt[1] == 0 ? 0.0 : (tm_cnt[1] / cnt[1]) * NANOSEC;
-		stats["avg_time_delete"] = cnt[2] == 0 ? 0.0 : (tm_cnt[2] / cnt[2]) * NANOSEC;
-		stats["avg_time_update"] = cnt[3] == 0 ? 0.0 : (tm_cnt[3] / cnt[3]) * NANOSEC;
+		stats["avg_time_index"]  = cnt[0] == 0 ? 0.0 : delta_string((tm_cnt[0] / cnt[0]) * NANOSEC);
+		stats["avg_time_search"] = cnt[1] == 0 ? 0.0 : delta_string((tm_cnt[1] / cnt[1]) * NANOSEC);
+		stats["avg_time_delete"] = cnt[2] == 0 ? 0.0 : delta_string((tm_cnt[2] / cnt[2]) * NANOSEC);
+		stats["avg_time_update"] = cnt[3] == 0 ? 0.0 : delta_string((tm_cnt[3] / cnt[3]) * NANOSEC);
 	}
 }
