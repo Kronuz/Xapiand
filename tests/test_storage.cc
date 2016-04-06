@@ -34,13 +34,13 @@ struct StorageBinBadHeader1 {
 	uint8_t flags;  // required
 	uint32_t size;  // required
 
-	inline void init(void* /*param*/, uint32_t size_, uint8_t flags_) {
+	inline void init(void* /*param*/, void* /*args*/, uint32_t size_, uint8_t flags_) {
 		// magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
 	}
 
-	inline void validate(void* /*param*/) {
+	inline void validate(void* /*param*/, void* /*args*/) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		// }
@@ -55,13 +55,13 @@ struct StorageBinBadHeader2 {
 	uint8_t flags;  // required
 	uint64_t size;  // required
 
-	inline void init(void* /*param*/, uint32_t size_, uint8_t flags_) {
+	inline void init(void* /*param*/, void* /*args*/, uint32_t size_, uint8_t flags_) {
 		// magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
 	}
 
-	inline void validate(void* /*param*/) {
+	inline void validate(void* /*param*/, void* /*args*/) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		// }
@@ -77,13 +77,13 @@ struct StorageBinBadHeader3 {
 	uint8_t flags;  // required
 	uint32_t size;  // required
 
-	inline void init(void* /*param*/, uint32_t size_, uint8_t flags_) {
+	inline void init(void* /*param*/, void* /*args*/, uint32_t size_, uint8_t flags_) {
 		// magic = STORAGE_BIN_HEADER_MAGIC;
 		size = size_;
 		flags = (0 & ~STORAGE_FLAG_MASK) | flags_;
 	}
 
-	inline void validate(void* /*param*/) {
+	inline void validate(void* /*param*/, void* /*args*/) {
 		// if (magic != STORAGE_BIN_HEADER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin header magic number");
 		// }
@@ -97,12 +97,12 @@ struct StorageBinFooterChecksum {
 	uint32_t checksum;
 	// uint8_t magic;
 
-	inline void init(void* /*param*/, uint32_t  checksum_) {
+	inline void init(void* /*param*/, void* /*args*/, uint32_t  checksum_) {
 		// magic = STORAGE_BIN_FOOTER_MAGIC;
 		checksum = checksum_;
 	}
 
-	inline void validate(void* /*param*/, uint32_t checksum_) {
+	inline void validate(void* /*param*/, void* /*args*/, uint32_t checksum_) {
 		// if (magic != STORAGE_BIN_FOOTER_MAGIC) {
 		// 	throw MSG_StorageCorruptVolume("Bad bin footer magic number");
 		// }
