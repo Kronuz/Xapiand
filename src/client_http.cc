@@ -1300,24 +1300,19 @@ HttpClient::url_resolve()
 	}
 }
 
-int
+void
 HttpClient::endpoints_maker(duration<double, std::milli> timeout)
 {
 	endpoints.clear();
 
 	PathParser::State state;
 	while ((state = path_parser.next()) < PathParser::end) {
-		int endp_err = _endpoint_maker(timeout);
-		if (endp_err != 0) {
-			return endp_err;
-		}
+		_endpoint_maker(timeout);
 	}
-
-	return 0;
 }
 
 
-int
+void
 HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 {
 	bool has_node_name = false;
@@ -1364,9 +1359,7 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		char node_ip[INET_ADDRSTRLEN];
 		auto node = manager()->touch_node(node_name, UNKNOWN_REGION);
 		if (!node) {
-			L_DEBUG(this, "Node %s not found", node_name.c_str());
-			host = node_name;
-			return -1;
+			throw MSG_Error("Node %s not found", node_name.c_str());
 		}
 		if (!node_port) {
 			node_port = node->binary_port;
@@ -1383,8 +1376,6 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		}
 	}
 	L_CONN_WIRE(this, "Endpoint: -> %s", endpoints.as_string().c_str());
-
-	return 0;
 }
 
 

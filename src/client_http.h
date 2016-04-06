@@ -138,8 +138,8 @@ class HttpClient : public BaseClient {
 
 	int identify_cmd();
 	int url_resolve();
-	int _endpoint_maker(duration<double, std::milli> timeout);
-	int endpoints_maker(duration<double, std::milli> timeout);
+	void _endpoint_maker(duration<double, std::milli> timeout);
+	void endpoints_maker(duration<double, std::milli> timeout);
 	void query_field_maker(int flags);
 
 	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
