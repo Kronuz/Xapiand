@@ -472,6 +472,15 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 #endif
 
 
+//  ____        _        _                  __        ___    _
+// |  _ \  __ _| |_ __ _| |__   __ _ ___  __\ \      / / \  | |
+// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ \ /\ / / _ \ | |
+// | |_| | (_| | || (_| | |_) | (_| \__ \  __/\ V  V / ___ \| |___
+// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___| \_/\_/_/   \_\_____|
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_) :
 	weak_queue(queue_),
 	endpoints(endpoints_),
@@ -512,6 +521,150 @@ Database::read_mastery(const Endpoint& endpoint)
 	mastery_level = ::read_mastery(endpoint.path, true);
 
 	return mastery_level;
+}
+
+
+data_field_t
+Database::get_data_field(const std::string& field_name)
+{
+	L_CALL(this, "Database::get_data_field()");
+
+	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
+
+	if (field_name.empty()) {
+		return res;
+	}
+
+	std::vector<std::string> fields;
+	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
+	try {
+		auto properties = schema.getPropertiesSchema().path(fields);
+
+		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
+		if (res.type == NO_TYPE) {
+			return res;
+		}
+
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
+
+		auto prefix = properties.at(RESERVED_PREFIX);
+		res.prefix = prefix.get_str();
+
+		res.bool_term = properties.at(RESERVED_BOOL_TERM).get_bool();
+
+		// Strings and booleans do not have accuracy.
+		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
+			for (const auto acc : properties.at(RESERVED_ACCURACY)) {
+				res.accuracy.push_back(acc.get_f64());
+			}
+
+			for (const auto acc_p : properties.at(RESERVED_ACC_PREFIX)) {
+				res.acc_prefix.push_back(acc_p.get_str());
+			}
+		}
+	} catch (const std::exception&) { }
+
+	return res;
+}
+
+
+data_field_t
+Database::get_slot_field(const std::string& field_name)
+{
+	L_CALL(this, "Database::get_slot_field()");
+
+	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
+
+	if (field_name.empty()) {
+		return res;
+	}
+
+	std::vector<std::string> fields;
+	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
+	try {
+		auto properties = schema.getPropertiesSchema().path(fields);
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
+		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
+	} catch (const std::exception&) { }
+
+	return res;
+}
+
+
+void
+Database::get_stats_database(MsgPack&& stats)
+{
+	L_CALL(this, "Database::get_stats_database()");
+
+	unsigned doccount = db->get_doccount();
+	unsigned lastdocid = db->get_lastdocid();
+	stats["uuid"] = db->get_uuid();
+	stats["doc_count"] = doccount;
+	stats["last_id"] = lastdocid;
+	stats["doc_del"] = lastdocid - doccount;
+	stats["av_length"] = db->get_avlength();
+	stats["doc_len_lower"] =  db->get_doclength_lower_bound();
+	stats["doc_len_upper"] = db->get_doclength_upper_bound();
+	stats["has_positions"] = db->has_positions();
+}
+
+
+void
+Database::get_stats_doc(MsgPack&& stats, const std::string& document_id)
+{
+	L_CALL(this, "Database::get_stats_doc()");
+
+	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
+	if (isupper(document_id.at(0))) {
+		prefix += ":";
+	}
+
+	Xapian::QueryParser queryparser;
+	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
+	auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + document_id);
+
+	Xapian::Enquire enquire(*db);
+	enquire.set_query(query);
+	auto mset = enquire.get_mset(0, 1);
+
+	Xapian::Document doc;
+
+	if (!mset.empty() && get_document(mset.begin(), doc)) {
+		stats[RESERVED_ID] = document_id;
+
+		MsgPack obj_data = get_MsgPack(doc);
+		try {
+			obj_data = obj_data.at(RESERVED_DATA);
+		} catch (const std::out_of_range&) {
+			clean_reserved(obj_data);
+		}
+
+		stats[RESERVED_DATA] = std::move(obj_data);
+
+		std::string ct_type = doc.get_value(DB_SLOT_TYPE);
+		stats["blob"] = ct_type != JSON_TYPE && ct_type != MSGPACK_TYPE;
+
+		stats["number_terms"] = doc.termlist_count();
+
+		std::string terms;
+		const auto it_e = doc.termlist_end();
+		for (auto it = doc.termlist_begin(); it != it_e; ++it) {
+			terms += repr(*it) + " ";
+		}
+		stats[RESERVED_TERMS] = terms;
+
+		stats["number_values"] = doc.values_count();
+
+		std::string values;
+		const auto iv_e = doc.values_end();
+		for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
+			values += std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
+		}
+		stats[RESERVED_VALUES] = values;
+	} else {
+		stats["response"] = "Document not found";
+		return;
+	}
 }
 
 
@@ -631,221 +784,6 @@ Database::reopen()
 	schema.set_database(this);
 
 	return true;
-}
-
-
-std::string
-Database::get_uuid() const
-{
-	L_CALL(this, "Database::get_uuid");
-
-	return db->get_uuid();
-}
-
-
-std::string
-Database::get_revision_info() const
-{
-	L_CALL(this, "Database::get_revision_info()");
-
-#if HAVE_DATABASE_REVISION_INFO
-	return db->get_revision_info();
-#else
-	return std::string();
-#endif
-}
-
-
-bool
-Database::commit(bool wal_)
-{
-	L_CALL(this, "Database::commit()");
-
-	schema.store();
-
-	if (!modified) {
-		L_DATABASE_WRAP(this, "Do not commit, because there are not changes");
-		return false;
-	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) wal->write_commit();
-#else
-	(void)wal_;
-#endif
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Commit: t: %d", t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			wdb->commit();
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t) reopen();
-			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			continue;
-		} catch (const Xapian::NetworkError& exc) {
-			if (t) reopen();
-			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			continue;
-		} catch (const Xapian::Error& exc) {
-			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			return false;
-		}
-		L_DATABASE_WRAP(this, "Commit made");
-		modified = false;
-		return true;
-	}
-
-	L_ERR(this, "ERROR: Cannot commit!");
-	return false;
-}
-
-
-bool
-Database::cancel(bool wal_)
-{
-	L_CALL(this, "Database::cancel()");
-
-	if (!(flags & DB_WRITABLE)) {
-		throw MSG_Error("database is read-only");
-	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) wal->write_cancel();
-#else
-	(void)wal_;
-#endif
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Cancel: t: %d", t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			wdb->begin_transaction(false);
-			wdb->cancel_transaction();
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t) reopen();
-			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			continue;
-		} catch (const Xapian::NetworkError& exc) {
-			if (t) reopen();
-			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			continue;
-		} catch (const Xapian::Error& exc) {
-			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			return false;
-		}
-		L_DATABASE_WRAP(this, "Cancel made");
-		return true;
-	}
-
-	L_ERR(this, "ERROR: Cannot cancel!");
-	return false;
-}
-
-
-bool
-Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
-{
-	L_CALL(this, "Database::delete_document()");
-
-	if (!(flags & DB_WRITABLE)) {
-		throw MSG_Error("database is read-only");
-	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) wal->write_delete_document(did);
-#else
-	(void)wal_;
-#endif
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Deleting document: %d  t: %d", did, t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			wdb->delete_document(did);
-			modified = true;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t) {
-				reopen();
-				continue;
-			} else {
-				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
-			}
-		} catch (const Xapian::NetworkError& exc) {
-			if (t) {
-				reopen();
-				continue;
-			} else {
-				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
-			}
-		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
-		}
-
-		L_DATABASE_WRAP(this, "Document deleted");
-		if (commit_) commit();
-		return true;
-	}
-
-	L_ERR(this, "ERROR: Cannot delete document!");
-	return false;
-}
-
-
-bool
-Database::delete_document(const std::string& doc_id, bool commit_, bool wal_)
-{
-	L_CALL(this, "Database::delete_document()");
-	return delete_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), commit_, wal_);
-}
-
-
-bool
-Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
-{
-	L_CALL(this, "Database::delete_document_term()");
-
-	if (!(flags & DB_WRITABLE)) {
-		throw MSG_Error("database is read-only");
-	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) wal->write_delete_document_term(term);
-#else
-	(void)wal_;
-#endif
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Deleting document: '%s'  t: %d", term.c_str(), t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			wdb->delete_document(term);
-			modified = true;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t) {
-				reopen();
-				continue;
-			} else {
-				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
-			}
-		} catch (const Xapian::NetworkError& exc) {
-			if (t) {
-				reopen();
-				continue;
-			} else {
-				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
-			}
-		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
-		}
-
-		L_DATABASE_WRAP(this, "Document deleted");
-		if (commit_) commit();
-		return true;
-	}
-
-	L_ERR(this, "ERROR: Cannot delete document!");
-	return false;
 }
 
 
@@ -1059,299 +997,6 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 	} else {
 		throw MSG_ClientError("Document id: %s not found", _document_id.c_str());
 	}
-}
-
-
-Xapian::docid
-Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
-{
-	L_CALL(this, "Database::add_document()");
-
-	Xapian::docid did = 0;
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) wal->write_add_document(doc);
-#else
-	(void)wal_;
-#endif
-
-	Xapian::Document doc_ = doc;
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Adding new document.  t: %d", t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			did = wdb->add_document(doc_);
-			modified = true;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t) {
-				reopen();
-				continue;
-			} else {
-				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
-			}
-		} catch (const Xapian::NetworkError& exc) {
-			if (t) {
-				reopen();
-				continue;
-			} else {
-				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
-			}
-		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
-		}
-
-		L_DATABASE_WRAP(this, "Document replaced");
-		if (commit_) commit();
-		return did;
-	}
-
-	throw MSG_Error("Unexpected error!");
-}
-
-
-Xapian::docid
-Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_, bool wal_)
-{
-	L_CALL(this, "Database::replace_document()");
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) wal->write_replace_document(did, doc);
-#else
-	(void)wal_;
-#endif
-
-	Xapian::Document doc_ = doc;
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Replacing: %d  t: %d", did, t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			wdb->replace_document(did, doc_);
-			modified = true;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t) {
-				reopen();
-				continue;
-			} else {
-				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
-			}
-		} catch (const Xapian::NetworkError& exc) {
-			if (t) {
-				reopen();
-				continue;
-			} else {
-				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
-			}
-		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
-		}
-
-		L_DATABASE_WRAP(this, "Document replaced");
-		if (commit_) commit();
-		return did;
-	}
-
-	throw MSG_Error("Unexpected error!");
-}
-
-
-Xapian::docid
-Database::replace_document(const std::string& doc_id, const Xapian::Document& doc, bool commit_, bool wal_)
-{
-	L_CALL(this, "Database::replace_document()");
-	return replace_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), doc, commit_, wal_);
-}
-
-
-Xapian::docid
-Database::replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_, bool wal_)
-{
-	L_CALL(this, "Database::replace_document_term()");
-
-	Xapian::docid did = 0;
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) wal->write_replace_document_term(term, doc);
-#else
-	(void)wal_;
-#endif
-
-	Xapian::Document doc_ = doc;
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Replacing: '%s'  t: %d", term.c_str(), t);
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			did = wdb->replace_document(term, doc_);
-			modified = true;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t) {
-				reopen();
-				continue;
-			} else {
-				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
-			}
-		} catch (const Xapian::NetworkError& exc) {
-			if (t) {
-				reopen();
-				continue;
-			} else {
-				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
-			}
-		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
-		}
-
-		L_DATABASE_WRAP(this, "Document replaced");
-		if (commit_) commit();
-		return did;
-	}
-
-	throw MSG_Error("Unexpected error!");
-}
-
-
-bool
-Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool commit_, bool wal_)
-{
-	L_CALL(this, "Database::add_spelling()");
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) wal->write_add_spelling(word, freqinc);
-#else
-	(void)wal_;
-#endif
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			wdb->add_spelling(word, freqinc);
-			modified = true;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t) reopen();
-			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			continue;
-		} catch (const Xapian::NetworkError& exc) {
-			if (t) reopen();
-			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			continue;
-		} catch (const Xapian::Error& exc) {
-			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			return false;
-		}
-		L_DATABASE_WRAP(this, "add_spelling was done");
-		if (commit_) commit();
-		return true;
-	}
-
-	L_ERR(this, "ERROR: add_spelling can not be done!");
-	return false;
-}
-
-
-bool
-Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_, bool wal_)
-{
-	L_CALL(this, "Database::remove_spelling()");
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && wal) wal->write_remove_spelling(word, freqdec);
-#else
-	(void)wal_;
-#endif
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
-		try {
-			wdb->remove_spelling(word, freqdec);
-			modified = true;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t) reopen();
-			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			continue;
-		} catch (const Xapian::NetworkError& exc) {
-			if (t) reopen();
-			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			continue;
-		} catch (const Xapian::Error& exc) {
-			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
-			return false;
-		}
-		L_DATABASE_WRAP(this, "remove_spelling was done");
-		if (commit_) commit();
-		return true;
-	}
-
-	L_ERR(this, "ERROR: remove_spelling can not be done!");
-	return false;
-}
-
-
-data_field_t
-Database::get_data_field(const std::string& field_name)
-{
-	L_CALL(this, "Database::get_data_field()");
-
-	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
-
-	if (field_name.empty()) {
-		return res;
-	}
-
-	std::vector<std::string> fields;
-	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
-	try {
-		auto properties = schema.getPropertiesSchema().path(fields);
-
-		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
-		if (res.type == NO_TYPE) {
-			return res;
-		}
-
-		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
-
-		auto prefix = properties.at(RESERVED_PREFIX);
-		res.prefix = prefix.get_str();
-
-		res.bool_term = properties.at(RESERVED_BOOL_TERM).get_bool();
-
-		// Strings and booleans do not have accuracy.
-		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
-			for (const auto acc : properties.at(RESERVED_ACCURACY)) {
-				res.accuracy.push_back(acc.get_f64());
-			}
-
-			for (const auto acc_p : properties.at(RESERVED_ACC_PREFIX)) {
-				res.acc_prefix.push_back(acc_p.get_str());
-			}
-		}
-	} catch (const std::exception&) { }
-
-	return res;
-}
-
-
-data_field_t
-Database::get_slot_field(const std::string& field_name)
-{
-	L_CALL(this, "Database::get_slot_field()");
-
-	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
-
-	if (field_name.empty()) {
-		return res;
-	}
-
-	std::vector<std::string> fields;
-	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
-	try {
-		auto properties = schema.getPropertiesSchema().path(fields);
-		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
-		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
-	} catch (const std::exception&) { }
-
-	return res;
 }
 
 
@@ -1901,6 +1546,447 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 }
 
 
+std::string
+Database::get_uuid() const
+{
+	L_CALL(this, "Database::get_uuid");
+
+	return db->get_uuid();
+}
+
+
+std::string
+Database::get_revision_info() const
+{
+	L_CALL(this, "Database::get_revision_info()");
+
+#if HAVE_DATABASE_REVISION_INFO
+	return db->get_revision_info();
+#else
+	return std::string();
+#endif
+}
+
+
+bool
+Database::commit(bool wal_)
+{
+	L_CALL(this, "Database::commit()");
+
+	schema.store();
+
+	if (!modified) {
+		L_DATABASE_WRAP(this, "Do not commit, because there are not changes");
+		return false;
+	}
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) wal->write_commit();
+#else
+	(void)wal_;
+#endif
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		L_DATABASE_WRAP(this, "Commit: t: %d", t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			wdb->commit();
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) reopen();
+			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			continue;
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) reopen();
+			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& exc) {
+			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			return false;
+		}
+		L_DATABASE_WRAP(this, "Commit made");
+		modified = false;
+		return true;
+	}
+
+	L_ERR(this, "ERROR: Cannot commit!");
+	return false;
+}
+
+
+bool
+Database::cancel(bool wal_)
+{
+	L_CALL(this, "Database::cancel()");
+
+	if (!(flags & DB_WRITABLE)) {
+		throw MSG_Error("database is read-only");
+	}
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) wal->write_cancel();
+#else
+	(void)wal_;
+#endif
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		L_DATABASE_WRAP(this, "Cancel: t: %d", t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			wdb->begin_transaction(false);
+			wdb->cancel_transaction();
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) reopen();
+			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			continue;
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) reopen();
+			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& exc) {
+			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			return false;
+		}
+		L_DATABASE_WRAP(this, "Cancel made");
+		return true;
+	}
+
+	L_ERR(this, "ERROR: Cannot cancel!");
+	return false;
+}
+
+
+bool
+Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
+{
+	L_CALL(this, "Database::delete_document()");
+
+	if (!(flags & DB_WRITABLE)) {
+		throw MSG_Error("database is read-only");
+	}
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) wal->write_delete_document(did);
+#else
+	(void)wal_;
+#endif
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		L_DATABASE_WRAP(this, "Deleting document: %d  t: %d", did, t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			wdb->delete_document(did);
+			modified = true;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::Error& exc) {
+			throw MSG_Error(exc.get_msg().c_str());
+		}
+
+		L_DATABASE_WRAP(this, "Document deleted");
+		if (commit_) commit();
+		return true;
+	}
+
+	L_ERR(this, "ERROR: Cannot delete document!");
+	return false;
+}
+
+
+bool
+Database::delete_document(const std::string& doc_id, bool commit_, bool wal_)
+{
+	L_CALL(this, "Database::delete_document()");
+	return delete_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), commit_, wal_);
+}
+
+
+bool
+Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
+{
+	L_CALL(this, "Database::delete_document_term()");
+
+	if (!(flags & DB_WRITABLE)) {
+		throw MSG_Error("database is read-only");
+	}
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) wal->write_delete_document_term(term);
+#else
+	(void)wal_;
+#endif
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		L_DATABASE_WRAP(this, "Deleting document: '%s'  t: %d", term.c_str(), t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			wdb->delete_document(term);
+			modified = true;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::Error& exc) {
+			throw MSG_Error(exc.get_msg().c_str());
+		}
+
+		L_DATABASE_WRAP(this, "Document deleted");
+		if (commit_) commit();
+		return true;
+	}
+
+	L_ERR(this, "ERROR: Cannot delete document!");
+	return false;
+}
+
+
+Xapian::docid
+Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
+{
+	L_CALL(this, "Database::add_document()");
+
+	Xapian::docid did = 0;
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) wal->write_add_document(doc);
+#else
+	(void)wal_;
+#endif
+
+	Xapian::Document doc_ = doc;
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		L_DATABASE_WRAP(this, "Adding new document.  t: %d", t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			did = wdb->add_document(doc_);
+			modified = true;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::Error& exc) {
+			throw MSG_Error(exc.get_msg().c_str());
+		}
+
+		L_DATABASE_WRAP(this, "Document replaced");
+		if (commit_) commit();
+		return did;
+	}
+
+	throw MSG_Error("Unexpected error!");
+}
+
+
+Xapian::docid
+Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_, bool wal_)
+{
+	L_CALL(this, "Database::replace_document()");
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) wal->write_replace_document(did, doc);
+#else
+	(void)wal_;
+#endif
+
+	Xapian::Document doc_ = doc;
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		L_DATABASE_WRAP(this, "Replacing: %d  t: %d", did, t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			wdb->replace_document(did, doc_);
+			modified = true;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::Error& exc) {
+			throw MSG_Error(exc.get_msg().c_str());
+		}
+
+		L_DATABASE_WRAP(this, "Document replaced");
+		if (commit_) commit();
+		return did;
+	}
+
+	throw MSG_Error("Unexpected error!");
+}
+
+
+Xapian::docid
+Database::replace_document(const std::string& doc_id, const Xapian::Document& doc, bool commit_, bool wal_)
+{
+	L_CALL(this, "Database::replace_document()");
+	return replace_document_term(prefixed(doc_id, DOCUMENT_ID_TERM_PREFIX), doc, commit_, wal_);
+}
+
+
+Xapian::docid
+Database::replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_, bool wal_)
+{
+	L_CALL(this, "Database::replace_document_term()");
+
+	Xapian::docid did = 0;
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) wal->write_replace_document_term(term, doc);
+#else
+	(void)wal_;
+#endif
+
+	Xapian::Document doc_ = doc;
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		L_DATABASE_WRAP(this, "Replacing: '%s'  t: %d", term.c_str(), t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			did = wdb->replace_document(term, doc_);
+			modified = true;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) {
+				reopen();
+				continue;
+			} else {
+				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::Error& exc) {
+			throw MSG_Error(exc.get_msg().c_str());
+		}
+
+		L_DATABASE_WRAP(this, "Document replaced");
+		if (commit_) commit();
+		return did;
+	}
+
+	throw MSG_Error("Unexpected error!");
+}
+
+
+bool
+Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool commit_, bool wal_)
+{
+	L_CALL(this, "Database::add_spelling()");
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) wal->write_add_spelling(word, freqinc);
+#else
+	(void)wal_;
+#endif
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			wdb->add_spelling(word, freqinc);
+			modified = true;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) reopen();
+			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			continue;
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) reopen();
+			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& exc) {
+			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			return false;
+		}
+		L_DATABASE_WRAP(this, "add_spelling was done");
+		if (commit_) commit();
+		return true;
+	}
+
+	L_ERR(this, "ERROR: add_spelling can not be done!");
+	return false;
+}
+
+
+bool
+Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_, bool wal_)
+{
+	L_CALL(this, "Database::remove_spelling()");
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) wal->write_remove_spelling(word, freqdec);
+#else
+	(void)wal_;
+#endif
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			wdb->remove_spelling(word, freqdec);
+			modified = true;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t) reopen();
+			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			continue;
+		} catch (const Xapian::NetworkError& exc) {
+			if (t) reopen();
+			else L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			continue;
+		} catch (const Xapian::Error& exc) {
+			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
+			return false;
+		}
+		L_DATABASE_WRAP(this, "remove_spelling was done");
+		if (commit_) commit();
+		return true;
+	}
+
+	L_ERR(this, "ERROR: remove_spelling can not be done!");
+	return false;
+}
+
+
 bool
 Database::get_metadata(const std::string& key, std::string& value)
 {
@@ -2135,81 +2221,13 @@ Database::get_value(const Xapian::Document& document, const std::string& slot_na
 }
 
 
-void
-Database::get_stats_database(MsgPack&& stats)
-{
-	L_CALL(this, "Database::get_stats_database()");
-
-	unsigned doccount = db->get_doccount();
-	unsigned lastdocid = db->get_lastdocid();
-	stats["uuid"] = db->get_uuid();
-	stats["doc_count"] = doccount;
-	stats["last_id"] = lastdocid;
-	stats["doc_del"] = lastdocid - doccount;
-	stats["av_length"] = db->get_avlength();
-	stats["doc_len_lower"] =  db->get_doclength_lower_bound();
-	stats["doc_len_upper"] = db->get_doclength_upper_bound();
-	stats["has_positions"] = db->has_positions();
-}
-
-
-void
-Database::get_stats_doc(MsgPack&& stats, const std::string& document_id)
-{
-	L_CALL(this, "Database::get_stats_doc()");
-
-	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
-	if (isupper(document_id.at(0))) {
-		prefix += ":";
-	}
-
-	Xapian::QueryParser queryparser;
-	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-	auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + document_id);
-
-	Xapian::Enquire enquire(*db);
-	enquire.set_query(query);
-	auto mset = enquire.get_mset(0, 1);
-
-	Xapian::Document doc;
-
-	if (!mset.empty() && get_document(mset.begin(), doc)) {
-		stats[RESERVED_ID] = document_id;
-
-		MsgPack obj_data = get_MsgPack(doc);
-		try {
-			obj_data = obj_data.at(RESERVED_DATA);
-		} catch (const std::out_of_range&) {
-			clean_reserved(obj_data);
-		}
-
-		stats[RESERVED_DATA] = std::move(obj_data);
-
-		std::string ct_type = doc.get_value(DB_SLOT_TYPE);
-		stats["blob"] = ct_type != JSON_TYPE && ct_type != MSGPACK_TYPE;
-
-		stats["number_terms"] = doc.termlist_count();
-
-		std::string terms;
-		const auto it_e = doc.termlist_end();
-		for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-			terms += repr(*it) + " ";
-		}
-		stats[RESERVED_TERMS] = terms;
-
-		stats["number_values"] = doc.values_count();
-
-		std::string values;
-		const auto iv_e = doc.values_end();
-		for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
-			values += std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
-		}
-		stats[RESERVED_VALUES] = values;
-	} else {
-		stats["response"] = "Document not found";
-		return;
-	}
-}
+//  ____        _        _                     ___
+// |  _ \  __ _| |_ __ _| |__   __ _ ___  ___ / _ \ _   _  ___ _   _  ___
+// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ | | | | | |/ _ \ | | |/ _ \
+// | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |_| | |_| |  __/ |_| |  __/
+// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|\__\_\\__,_|\___|\__,_|\___|
+//
+////////////////////////////////////////////////////////////////////////////////
 
 
 DatabaseQueue::DatabaseQueue()
@@ -2294,6 +2312,15 @@ DatabaseQueue::dec_count()
 
 	return false;
 }
+
+
+//  ____        _        _                    ____             _
+// |  _ \  __ _| |_ __ _| |__   __ _ ___  ___|  _ \ ___   ___ | |
+// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ |_) / _ \ / _ \| |
+// | |_| | (_| | || (_| | |_) | (_| \__ \  __/  __/ (_) | (_) | |
+// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_|   \___/ \___/|_|
+//
+////////////////////////////////////////////////////////////////////////////////
 
 
 DatabasePool::DatabasePool(size_t max_size)
