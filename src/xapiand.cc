@@ -484,7 +484,6 @@ void demote(const char* username, const char* group) {
 	/* lose root privileges if we have them */
 	uid_t uid = getuid();
 	if (uid == 0 || geteuid() == 0) {
-		gid_t gid = getgid();
 		if (username == nullptr || *username == '\0') {
 			L_CRIT(nullptr, "Can't run as root without the --uid switch");
 			throw Exit(EX_USAGE);
@@ -502,7 +501,7 @@ void demote(const char* username, const char* group) {
 			}
 		}
 		uid = pw->pw_uid;
-		gid = pw->pw_gid;
+		gid_t gid = pw->pw_gid;
 		username = pw->pw_name;
 
 		if (group && *group) {
