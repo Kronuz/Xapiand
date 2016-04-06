@@ -473,64 +473,6 @@ DatabaseWAL::write_remove_spelling(const std::string& word, Xapian::termcount fr
 #endif
 
 
-#ifdef XAPIAND_DATA_STORAGE
-void
-DataHeader::init(void* param)
-{
-	const Database* database = static_cast<const Database*>(param);
-
-	head.offset = STORAGE_START_BLOCK_OFFSET;
-	head.magic = STORAGE_MAGIC;
-	strncpy(head.uuid, database->get_uuid().c_str(), sizeof(head.uuid));
-}
-
-
-void
-DataHeader::validate(void* param)
-{
-	if (head.magic != STORAGE_MAGIC) {
-		throw MSG_StorageCorruptVolume("Bad data storage header magic number");
-	}
-
-	const Database* database = static_cast<const Database*>(param);
-	if (strncasecmp(head.uuid, database->get_uuid().c_str(), sizeof(head.uuid))) {
-		throw MSG_StorageCorruptVolume("Data storage UUID mismatch");
-	}
-}
-
-
-uint32_t
-DataStorage::highest_volume(const std::string& path)
-{
-	L_CALL(this, "DataStorage::highest_volume()");
-
-	DIR *dir = opendir(path.c_str(), true);
-	if (!dir) {
-		throw MSG_Error("Could not open dir (%s)", strerror(errno));
-	}
-
-	uint32_t highest_revision = 0;
-
-	File_ptr fptr;
-	find_file_dir(dir, fptr, DATA_STORAGE_PATH, true);
-
-	while (fptr.ent) {
-		try {
-			uint32_t file_revision = get_volume(std::string(fptr.ent->d_name));
-			if (file_revision > highest_revision) {
-				highest_revision = file_revision;
-			}
-		} catch (const std::invalid_argument&) {
-		} catch (const std::out_of_range&) { }
-
-		find_file_dir(dir, fptr, DATA_STORAGE_PATH, true);
-	}
-	closedir(dir);
-	return highest_revision;
-}
-#endif
-
-
 Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints_, int flags_) :
 	weak_queue(queue_),
 	endpoints(endpoints_),
@@ -594,11 +536,6 @@ Database::reopen()
 		}
 	}
 
-#ifdef XAPIAND_DATA_STORAGE
-	storages.clear();
-	writable_storages.clear();
-#endif
-
 	auto endpoints_size = endpoints.size();
 	auto i = endpoints.cbegin();
 	if (flags & DB_WRITABLE) {
@@ -640,25 +577,6 @@ Database::reopen()
 		if (local) {
 			checkout_revision = get_revision_info();
 		}
-
-#ifdef XAPIAND_DATA_STORAGE
-		if (local) {
-			if (flags & DB_DATA_STORAGE) {
-				// WAL required on a local database, open it.
-				auto storage = std::make_unique<DataStorage>(this);
-				storage->volume = storage->highest_volume(e.path);
-				storage->open(e.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
-				writable_storages.push_back(std::unique_ptr<DataStorage>(storage.release()));
-				storages.push_back(std::make_unique<DataStorage>(this));
-			} else {
-				writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-				storages.push_back(std::make_unique<DataStorage>(this));
-			}
-		} else {
-			writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-			storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-		}
-#endif
 
 #ifdef XAPIAND_DATABASE_WAL
 		if (local && !(flags & DB_NOWAL)) {
@@ -708,15 +626,6 @@ Database::reopen()
 			}
 
 			db->add_database(rdb);
-
-#ifdef XAPIAND_DATA_STORAGE
-			if (local) {
-				// WAL required on a local database, open it.
-				storages.push_back(std::make_unique<DataStorage>(this));
-			} else {
-				storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-			}
-#endif
 		}
 	}
 
@@ -770,7 +679,6 @@ Database::commit(bool wal_)
 		L_DATABASE_WRAP(this, "Commit: t: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
-			storage_commit();
 			wdb->commit();
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (t) reopen();
@@ -1154,82 +1062,6 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 	}
 }
 
-#ifdef XAPIAND_DATA_STORAGE
-
-void
-Database::storage_pull_data(Xapian::Document& doc)
-{
-	L_CALL(this, "Database::storage_pull_data()");
-
-	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-	auto& storage = storages[subdatabase];
-	if (!storage) {
-		return;
-	}
-
-	ssize_t volume, offset;
-	std::string data = doc.get_data();
-	const char *p = data.data();
-	const char *p_end = p + data.size();
-	if (*p++ != STORAGE_BIN_HEADER_MAGIC) return;
-	try {
-		volume = unserialise_length(&p, p_end);
-	} catch (Xapian::SerialisationError) {
-		return;
-	}
-	try {
-		offset = unserialise_length(&p, p_end);
-	} catch (Xapian::SerialisationError) {
-		return;
-	}
-	if (*p++ != STORAGE_BIN_FOOTER_MAGIC) return;
-	auto& endpoint = endpoints[subdatabase];
-	storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(volume), STORAGE_OPEN);
-	storage->seek(static_cast<uint32_t>(offset));
-	data = storage->read();
-	doc.set_data(data);
-}
-
-void
-Database::storage_push_data(Xapian::Document& doc)
-{
-	L_CALL(this, "Database::storage_push_data()");
-
-	int subdatabase = (doc.get_docid() - 1) % endpoints.size();
-	auto& storage = writable_storages[subdatabase];
-	if (!storage) {
-		return;
-	}
-
-	uint32_t offset;
-	std::string data = doc.get_data();
-	while(true) {
-		try {
-			offset = storage->write(data);
-			break;
-		} catch (StorageEOF) {
-			++storage->volume;
-			auto& endpoint = endpoints[subdatabase];
-			storage->open(endpoint.path + "/" + DATA_STORAGE_PATH + std::to_string(storage->volume), STORAGE_OPEN | STORAGE_CREATE | STORAGE_WRITABLE | STORAGE_SYNC_MODE);
-		}
-	}
-	char h = STORAGE_BIN_HEADER_MAGIC;
-	char f = STORAGE_BIN_FOOTER_MAGIC;
-	doc.set_data(std::string(&h, 1) + serialise_length(storage->volume) + serialise_length(offset) + std::string(&f, 1));
-}
-
-void
-Database::storage_commit()
-{
-	for (auto& storage : writable_storages) {
-		if (storage) {
-			storage->commit();
-		}
-	}
-}
-
-#endif
-
 
 Xapian::docid
 Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
@@ -1245,7 +1077,6 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 #endif
 
 	Xapian::Document doc_ = doc;
-	storage_push_data(doc_);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Adding new document.  t: %d", t);
@@ -1292,7 +1123,6 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 #endif
 
 	Xapian::Document doc_ = doc;
-	storage_push_data(doc_);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: %d  t: %d", did, t);
@@ -1349,7 +1179,6 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 #endif
 
 	Xapian::Document doc_ = doc;
-	storage_push_data(doc_);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE_WRAP(this, "Replacing: '%s'  t: %d", term.c_str(), t);
@@ -2149,7 +1978,6 @@ Database::get_document(const Xapian::MSet::iterator& m, Xapian::Document& doc)
 		try {
 			if (t == DB_RETRIES) {
 				doc = m.get_document();
-				storage_pull_data(doc);
 				return true;
 			} else {
 				return get_document(*m, doc);
@@ -2186,7 +2014,6 @@ Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			doc = db->get_document(did);
-			storage_pull_data(doc);
 			return true;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (t) {

@@ -211,26 +211,6 @@ case "$enable_database_wal" in
 esac
 
 
-AC_ARG_ENABLE(data-storage,
-  [AS_HELP_STRING([--enable-data-storage], [use custom database data storage volumes (experimental)])],
-  [enable_data_storage="$enableval"],
-  [enable_data_storage=no])
-AC_MSG_CHECKING([whether to enable custom database data storage volumes])
-case "$enable_data_storage" in
-  y*)
-    AC_DEFINE([XAPIAND_DATA_STORAGE], [1], [Enable custom database data storage volumes.])
-    AC_MSG_RESULT(yes)
-    ;;
-  n*)
-    AC_MSG_RESULT(no)
-    ;;
-  *)
-    AC_MSG_RESULT(no)
-    AC_MSG_ERROR([bad value $enable_data_storage for --enable-data-storage])
-    ;;
-esac
-
-
 AC_ARG_ENABLE(clustering,
   [AS_HELP_STRING([--disable-clustering], [allow remote clustering])],
   [enable_clustering="$enableval"],
