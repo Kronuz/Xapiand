@@ -148,14 +148,16 @@ public:
 				nt->run(std::move(params)...);
 				nt.reset();
 			} catch (const Exception& exc) {
-				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
+				auto exc_context = exc.get_context();
+				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc_context ? exc_context : "Unkown Exception!");
 				throw;
 			} catch (const Xapian::Error& exc) {
 				auto exc_msg = exc.get_msg().c_str();
 				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown Xapian::Error!");
 				throw;
 			} catch (const std::exception& exc) {
-				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
+				auto exc_msg = exc.what();
+				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown std::exception!");
 				throw;
 			} catch (...) {
 				std::exception exc;
