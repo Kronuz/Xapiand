@@ -1580,6 +1580,7 @@ Database::commit(bool wal_)
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->commit();
+			modified = false;
 			goto success;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1595,7 +1596,6 @@ Database::commit(bool wal_)
 
 success:
 	L_DATABASE_WRAP(this, "Commit made");
-	modified = false;
 	return true;
 }
 
@@ -1671,7 +1671,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot delete!");
+	L_ERR(this, "ERROR: Cannot delete document!");
 	return false;
 
 success:
@@ -1720,7 +1720,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot delete!");
+	L_ERR(this, "ERROR: Cannot delete document term!");
 	return false;
 
 success:
@@ -1761,8 +1761,8 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot replace!");
-	return false;
+	L_ERR(this, "ERROR: Cannot add document!");
+	return 0;
 
 success:
 	L_DATABASE_WRAP(this, "Document replaced");
@@ -1800,8 +1800,8 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot replace!");
-	return false;
+	L_ERR(this, "ERROR: Cannot replace document!");
+	return 0;
 
 success:
 	L_DATABASE_WRAP(this, "Document replaced");
@@ -1849,8 +1849,8 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot replace!");
-	return false;
+	L_ERR(this, "ERROR: Cannot replace document term!");
+	return 0;
 
 success:
 	L_DATABASE_WRAP(this, "Document replaced");
@@ -2026,10 +2026,11 @@ Database::get_document(const Xapian::MSet::iterator& m, Xapian::Document& doc)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot get document!");
+	L_ERR(this, "ERROR: Cannot get document! (1)");
 	return false;
 
 success:
+	L_DATABASE_WRAP(this, "get_document was done");
 	return true;
 }
 
@@ -2056,10 +2057,11 @@ Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot get document!");
+	L_ERR(this, "ERROR: Cannot get document! (2)");
 	return false;
 
 success:
+	L_DATABASE_WRAP(this, "get_document was done");
 	return true;
 }
 
@@ -2090,10 +2092,11 @@ Database::get_document(const std::string& doc_id, Xapian::Document& doc)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot get document!");
+	L_ERR(this, "ERROR: Cannot get document! (3)");
 	return false;
 
 success:
+	L_DATABASE_WRAP(this, "get_document was done");
 	return true;
 }
 
@@ -2125,6 +2128,7 @@ Database::get_value(const Xapian::Document& document, Xapian::valueno slot, std:
 	return false;
 
 success:
+	L_DATABASE_WRAP(this, "get_value was done");
 	return true;
 }
 
