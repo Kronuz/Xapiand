@@ -1676,7 +1676,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 
 success:
 	L_DATABASE_WRAP(this, "Document deleted");
-	if (commit_) commit();
+	if (commit_) commit(wal_);
 	return true;
 }
 
@@ -1725,7 +1725,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 success:
 	L_DATABASE_WRAP(this, "Document deleted");
-	if (commit_) commit();
+	if (commit_) commit(wal_);
 	return true;
 }
 
@@ -1766,7 +1766,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 success:
 	L_DATABASE_WRAP(this, "Document replaced");
-	if (commit_) commit();
+	if (commit_) commit(wal_);
 	return did;
 }
 
@@ -1805,7 +1805,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 success:
 	L_DATABASE_WRAP(this, "Document replaced");
-	if (commit_) commit();
+	if (commit_) commit(wal_);
 	return did;
 }
 
@@ -1854,7 +1854,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 success:
 	L_DATABASE_WRAP(this, "Document replaced");
-	if (commit_) commit();
+	if (commit_) commit(wal_);
 	return did;
 }
 
@@ -1890,7 +1890,7 @@ Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool
 
 success:
 	L_DATABASE_WRAP(this, "add_spelling was done");
-	if (commit_) commit();
+	if (commit_) commit(wal_);
 	return true;
 }
 
@@ -1926,7 +1926,7 @@ Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, b
 
 success:
 	L_DATABASE_WRAP(this, "remove_spelling was done");
-	if (commit_) commit();
+	if (commit_) commit(wal_);
 	return true;
 }
 
@@ -1995,7 +1995,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 
 success:
 	L_DATABASE_WRAP(this, "set_metadata was done");
-	if (commit_) commit();
+	if (commit_) commit(wal_);
 	return true;
 }
 
