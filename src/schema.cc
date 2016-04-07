@@ -1467,7 +1467,7 @@ Schema::index_values(MsgPack& properties, const MsgPack& values, const specifica
 {
 	L_CALL(this, "Schema::index_values()");
 
-	L_INDEX(this, "Values => Specifications: %s", specification.to_string().c_str());
+	// L_INDEX(this, "Values => Specifications: %s", specification.to_string().c_str());
 	if (!(specification.found_field || specification.dynamic)) {
 		throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
 	}
