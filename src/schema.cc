@@ -1580,8 +1580,8 @@ Schema::index_value(const MsgPack& value, const specification_t& specification, 
 			for (const auto& term : set_terms) {
 				doc.add_term(term);
 			}
-			s.insert(ranges.serialise());
-			s.insert(centroids.serialise());
+
+			s.insert(Serialise::geo(ranges, centroids));
 			break;
 		}
 		default:
