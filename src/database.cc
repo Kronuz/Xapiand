@@ -2018,6 +2018,10 @@ Database::get_document(const std::string& doc_id)
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::InvalidArgumentError&) {
+			throw MSG_DocNotFoundError("Document not found");
+		} catch (const Xapian::DocNotFoundError&) {
+			throw MSG_DocNotFoundError("Document not found");
 		} catch (const Xapian::Error& exc) {
 			throw MSG_Error(exc.get_msg().c_str());
 		}
