@@ -12,6 +12,7 @@ check_PROGRAMS = \
 	set_patcher_test \
 	set_query_test \
 	set_queue_test \
+	set_serialise_stl_test \
 	set_serialise_unserialise_test \
 	set_sort_test \
 	set_storage_test \
@@ -119,6 +120,9 @@ set_query_test_LDADD = @CHECK_LIBS@
 
 set_queue_test_SOURCES = $(common_files) set_queue_test.cc test_queue.cc
 set_queue_test_LDADD = @CHECK_LIBS@
+
+set_serialise_stl_test_SOURCES = $(common_files) set_serialise_stl_test.cc test_serialise_stl.cc
+set_serialise_stl_test_LDADD = @CHECK_LIBS@
 
 set_serialise_unserialise_test_SOURCES = $(common_files) set_serialise_unserialise_test.cc test_serialise.cc
 set_serialise_unserialise_test_LDADD = @CHECK_LIBS@
