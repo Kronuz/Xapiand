@@ -43,6 +43,7 @@ xapiand_SOURCES = \
 	replicator.cc \
 	schema.cc \
 	serialise.cc \
+	stl_serialise.cc \
 	servers/binary.cc \
 	servers/discovery.cc \
 	servers/http.cc \
@@ -144,6 +145,7 @@ noinst_HEADERS = \
 	replicator.h \
 	schema.h \
 	serialise.h \
+	stl_serialise.h \
 	servers/binary.h \
 	servers/discovery.h \
 	servers/http.h \
