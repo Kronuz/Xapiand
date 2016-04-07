@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -32,6 +32,12 @@
 
 MsgPack::MsgPack()
 	: handler(std::make_shared<object_handle>()),
+	  parent_body(nullptr),
+	  body(std::make_shared<MsgPackBody>(0, &handler->obj, MapPack(), 0)) { }
+
+
+MsgPack::MsgPack(const msgpack::object& o)
+	: handler(std::make_shared<object_handle>(o)),
 	  parent_body(nullptr),
 	  body(std::make_shared<MsgPackBody>(0, &handler->obj, MapPack(), 0)) { }
 

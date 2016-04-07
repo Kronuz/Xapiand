@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -86,6 +86,11 @@ inline bool operator==(const MsgPack& x, const MsgPack& y);
 
 
 class MsgPack {
+	MsgPack(const msgpack::object& o);
+	MsgPack(const std::shared_ptr<object_handle>& handler_, const std::shared_ptr<MsgPackBody>& body_, const std::shared_ptr<MsgPackBody>& p_body_);
+	MsgPack(const std::shared_ptr<MsgPackBody>& body_, std::unique_ptr<msgpack::zone>&& z);
+	MsgPack(msgpack::unpacked& u);
+
 	class object_handle {
 		msgpack::object obj;
 		std::unique_ptr<msgpack::zone> zone;
@@ -97,6 +102,13 @@ class MsgPack {
 		object_handle(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z)
 			: obj(o),
 			  zone(std::move(z))
+		{
+			user.set_zone(*zone.get());
+		}
+
+		object_handle(const msgpack::object& o)
+			: obj(o),
+			  zone(std::make_unique<msgpack::zone>())
 		{
 			user.set_zone(*zone.get());
 		}
@@ -119,9 +131,9 @@ class MsgPack {
 	std::shared_ptr<object_handle> handler;
 	std::shared_ptr<MsgPackBody> parent_body;
 
-	std::shared_ptr<object_handle> make_handler();
-	std::shared_ptr<object_handle> make_handler(const std::string& buffer);
-	std::shared_ptr<object_handle> make_handler(const rapidjson::Document& doc);
+	static std::shared_ptr<object_handle> make_handler();
+	static std::shared_ptr<object_handle> make_handler(const std::string& buffer);
+	static std::shared_ptr<object_handle> make_handler(const rapidjson::Document& doc);
 
 	void init();
 	void expand_map(size_t r_size);
@@ -133,9 +145,6 @@ public:
 	std::shared_ptr<MsgPackBody> body;
 
 	MsgPack();
-	MsgPack(const std::shared_ptr<object_handle>& handler_, const std::shared_ptr<MsgPackBody>& body_, const std::shared_ptr<MsgPackBody>& p_body_);
-	MsgPack(const std::shared_ptr<MsgPackBody>& body_, std::unique_ptr<msgpack::zone>&& z);
-	MsgPack(msgpack::unpacked& u);
 	MsgPack(const std::string& buffer);
 	MsgPack(const rapidjson::Document& doc);
 	MsgPack(MsgPack&& other) noexcept;
@@ -376,8 +385,8 @@ public:
 		}
 	}
 
-	inline MsgPack duplicate() const {
-		return MsgPack(to_string());
+	inline MsgPack clone() const {
+		return MsgPack(*body->obj);
 	}
 
 	inline uint64_t get_u64() const {
