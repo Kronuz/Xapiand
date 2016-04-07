@@ -66,6 +66,7 @@ common_files = \
 	$(top_builddir)/src/replicator.cc \
 	$(top_builddir)/src/schema.cc \
 	$(top_builddir)/src/serialise.cc \
+	$(top_builddir)/src/stl_serialise.cc \
 	$(top_builddir)/src/storage.h \
 	$(top_builddir)/src/threadpool.h \
 	$(top_builddir)/src/servers/binary.cc \
