@@ -469,7 +469,7 @@ Schema::set_type_to_object(MsgPack& properties)
 std::string
 Schema::to_json_string(bool prettify)
 {
-	MsgPack schema_readable = schema.duplicate();
+	MsgPack schema_readable = schema.clone();
 	readable(schema_readable.at(RESERVED_SCHEMA), true);
 	return schema_readable.to_json_string(prettify);
 }
