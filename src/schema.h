@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,11 +23,11 @@
 #pragma once
 
 #include "database_utils.h"
-#include <future>
 #include "msgpack.h"
-#include "multivalue.h"
-#include "serialise.h"
+#include "stl_serialise.h"
 #include "utils.h"
+
+#include <future>
 
 
 enum class unitTime {
@@ -152,7 +152,7 @@ class Schema {
 
 
 public:
-	std::unordered_map<Xapian::valueno, StringList> map_values;
+	std::unordered_map<Xapian::valueno, StringSet> map_values;
 
 	Schema() = default;
 
@@ -284,7 +284,7 @@ public:
 	void index_terms(MsgPack& properties, const MsgPack& terms, const specification_t& specification, Xapian::Document& doc);
 	void index_term(const specification_t& specification, Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
 	void index_values(MsgPack& properties, const MsgPack& values, const specification_t& specification, Xapian::Document& doc, bool is_term=false);
-	void index_value(const MsgPack& value, const specification_t& specification, Xapian::Document& doc, StringList& s, size_t& pos, bool is_term) const;
+	void index_value(const MsgPack& value, const specification_t& specification, Xapian::Document& doc, StringSet& s, size_t& pos, bool is_term) const;
 
 
 	/*

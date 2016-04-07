@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,6 +24,7 @@
 
 #include "database.h"
 #include "log.h"
+#include "serialise.h"
 
 
 static const std::vector<std::string> str_time     { "second", "minute", "hour", "day", "month", "year" };
@@ -301,6 +302,7 @@ Schema::set_database(Database* _database)
 		}
 	}
 }
+
 
 std::string
 Schema::serialise_id(MsgPack& properties, specification_t& specification, const std::string& value_id)
@@ -1471,11 +1473,10 @@ Schema::index_values(MsgPack& properties, const MsgPack& values, const specifica
 	}
 
 	if (specification.store) {
-		StringList& s = map_values[specification.slot];
+		StringSet& s = map_values[specification.slot];
 		size_t pos = 0;
 		if (values.get_type() == msgpack::type::ARRAY) {
 			set_type_to_array(properties);
-			s.reserve(values.body->obj->via.array.size);
 			for (auto value : values) {
 				index_value(value, specification, doc, s, pos, is_term);
 			}
@@ -1488,7 +1489,7 @@ Schema::index_values(MsgPack& properties, const MsgPack& values, const specifica
 
 
 void
-Schema::index_value(const MsgPack& value, const specification_t& specification, Xapian::Document& doc, StringList& s, size_t& pos, bool is_term) const
+Schema::index_value(const MsgPack& value, const specification_t& specification, Xapian::Document& doc, StringSet& s, size_t& pos, bool is_term) const
 {
 	L_CALL(this, "Schema::index_value()");
 
@@ -1506,7 +1507,7 @@ Schema::index_value(const MsgPack& value, const specification_t& specification, 
 					std::string term_v = Serialise::numeric(NUMERIC_TYPE, int_value - int_value % (uint64_t)acc);
 					doc.add_term(prefixed(term_v, *(it++)));
 				}
-				s.push_back(value_v);
+				s.insert(value_v);
 				break;
 			} catch (const msgpack::type_error&) {
 				throw MSG_ClientError("Format invalid for numeric: %s", value.to_json_string().c_str());
@@ -1538,7 +1539,7 @@ Schema::index_value(const MsgPack& value, const specification_t& specification, 
 						break;
 				}
 			}
-			s.push_back(value_v);
+			s.insert(value_v);
 			break;
 		}
 		case GEO_TYPE: {
@@ -1580,13 +1581,13 @@ Schema::index_value(const MsgPack& value, const specification_t& specification, 
 			for (const auto& term : set_terms) {
 				doc.add_term(term);
 			}
-			s.push_back(ranges.serialise());
-			s.push_back(centroids.serialise());
+			s.insert(ranges.serialise());
+			s.insert(centroids.serialise());
 			break;
 		}
 		default:
 			value_v = Serialise::serialise(specification.sep_types[2], value);
-			s.push_back(value_v);
+			s.insert(value_v);
 			break;
 	}
 
