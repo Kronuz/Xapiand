@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -26,69 +26,6 @@
 #include "length.h"
 
 #include <assert.h>
-
-
-constexpr char SL_MAGIC = '\0';
-
-
-void
-StringList::unserialise(const std::string& serialised)
-{
-	const char* ptr = serialised.data();
-	const char* end = serialised.data() + serialised.size();
-	unserialise(&ptr, end);
-}
-
-
-void
-StringList::unserialise(const char** ptr, const char* end)
-{
-	ssize_t length = -1;
-
-	clear();
-
-	const char* pos = *ptr;
-	if (*pos++ == SL_MAGIC && pos != end) {
-		try {
-			length = unserialise_length(&pos, end, true);
-			reserve(length);
-			while (pos != end) {
-				length = unserialise_length(&pos, end, true);
-				push_back(std::string(pos, length));
-				pos += length;
-			}
-		} catch (const Xapian::SerialisationError&) {
-			length = -1;
-		}
-	}
-
-	if (length == -1) {
-		pos = *ptr;
-		push_back(std::string(pos, end - pos));
-	}
-
-	*ptr = pos;
-}
-
-
-std::string
-StringList::serialise() const
-{
-	std::string serialised;
-	auto _size = size();
-	if (_size > 1) {
-		serialised.assign(1, SL_MAGIC);
-		serialised.append(serialise_length(_size));
-		for (const auto& str : *this) {
-			serialised.append(serialise_length(str.size()));
-			serialised.append(str);
-		}
-	} else if (_size == 1) {
-		serialised.assign(front());
-	}
-
-	return serialised;
-}
 
 
 void

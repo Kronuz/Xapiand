@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,27 +22,12 @@
 
 #pragma once
 
+#include "stl_serialise.h"
+
 #include <xapian.h>
 
 #include <string>
 #include <vector>
-
-
-/*
- * This class serializes a string vector.
- * i.e
- * StringList = {a, ..., b}
- * values = serialise_length(a.size()) + a + ... + serialise_length(b.size()) + b
- * symbol '+' means concatenate
- * serialise = serialise_length(values.size())values
- */
-class StringList : public std::vector<std::string> {
-public:
-	void unserialise(const std::string& serialised);
-	void unserialise(const char** ptr, const char* end);
-	std::string serialise() const;
-
-};
 
 
 /// Class for counting the frequencies of values in the matching documents.
