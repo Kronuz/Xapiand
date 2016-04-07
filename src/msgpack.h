@@ -86,11 +86,6 @@ inline bool operator==(const MsgPack& x, const MsgPack& y);
 
 
 class MsgPack {
-	MsgPack(const msgpack::object& o);
-	MsgPack(const std::shared_ptr<object_handle>& handler_, const std::shared_ptr<MsgPackBody>& body_, const std::shared_ptr<MsgPackBody>& p_body_);
-	MsgPack(const std::shared_ptr<MsgPackBody>& body_, std::unique_ptr<msgpack::zone>&& z);
-	MsgPack(msgpack::unpacked& u);
-
 	class object_handle {
 		msgpack::object obj;
 		std::unique_ptr<msgpack::zone> zone;
@@ -127,6 +122,11 @@ class MsgPack {
 			obj.type = msgpack::type::NIL;
 		}
 	};
+
+	MsgPack(const msgpack::object& o);
+	MsgPack(const std::shared_ptr<object_handle>& handler_, const std::shared_ptr<MsgPackBody>& body_, const std::shared_ptr<MsgPackBody>& p_body_);
+	MsgPack(const std::shared_ptr<MsgPackBody>& body_, std::unique_ptr<msgpack::zone>&& z);
+	MsgPack(msgpack::unpacked& u);
 
 	std::shared_ptr<object_handle> handler;
 	std::shared_ptr<MsgPackBody> parent_body;
