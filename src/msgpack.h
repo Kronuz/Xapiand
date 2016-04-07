@@ -146,9 +146,9 @@ public:
 
 	MsgPack();
 	MsgPack(const std::string& buffer);
-	MsgPack(const rapidjson::Document& doc);
 	MsgPack(MsgPack&& other) noexcept;
 	MsgPack(const MsgPack& other);
+	MsgPack(const rapidjson::Document& doc);
 
 	MsgPack operator[](const MsgPack& o);
 	MsgPack operator[](const std::string& key);

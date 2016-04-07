@@ -22,12 +22,11 @@
 
 #include "msgpack.h"
 
+#include <sstream>
+
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
 #include "xchange/rapidjson.hpp"
-
-#include "exception.h"
-#include "utils.h"
 
 
 MsgPack::MsgPack()
@@ -455,18 +454,31 @@ MsgPack::path(const std::vector<std::string>& path) const
 {
 	MsgPack current(*this);
 	for (const auto& s : path) {
-		try {
-			if (current.body->obj->type == msgpack::type::MAP) {
-				current.reset(current.at(s));
-			} else if (current.body->obj->type == msgpack::type::ARRAY) {
-				current.reset(current.at(strict_stoi(s)));
-			} else {
-				throw msgpack::type_error();
+		switch (current.body->obj->type) {
+			case msgpack::type::MAP:
+				try {
+					current.reset(current.at(s));
+				} catch (const std::out_of_range&) {
+					throw std::out_of_range("The map must contain an object at key:" + s);
+				}
+				break;
+
+			case msgpack::type::ARRAY: {
+				std::string::size_type sz;
+				int pos = std::stoi(s, &sz);
+				if (pos < 0 || sz != s.size()) {
+					throw std::invalid_argument("The index for the array must be a positive integer, it is: " + s);
+				}
+				try {
+					current.reset(current.at(pos));
+				} catch (const std::out_of_range&) {
+					throw std::out_of_range(("The array must contain an object at index: " + s).c_str());
+				}
+				break;
 			}
-		} catch (const std::out_of_range&) {
-			throw MSG_ClientError("The object itself or an array containing it need to exist in: %s", s.c_str());
-		} catch (const std::invalid_argument&) {
-			throw MSG_ClientError("The index must be numeric in array in: %s", s.c_str());
+
+			default:
+				throw std::invalid_argument(("The container must be a map or an array to access: " + s).c_str());
 		}
 	}
 
