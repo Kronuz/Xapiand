@@ -206,7 +206,6 @@ CartesianUSet::add_unserialise(const char** ptr, const char* end)
 			auto _size = unserialise_length(&pos, end, true);
 			reserve(_size);
 			while (end - pos >= SIZE_SERIALISE_CARTESIAN) {
-				fprintf(stderr, "Inside\n");
 				insert(Unserialise::cartesian(std::string(pos, SIZE_SERIALISE_CARTESIAN)));
 				pos += SIZE_SERIALISE_CARTESIAN;
 			}

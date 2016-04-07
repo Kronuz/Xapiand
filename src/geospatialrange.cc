@@ -77,7 +77,6 @@ GeoSpatialRange::calc_angle(const CartesianUSet& centroids_)
 bool
 GeoSpatialRange::insideRanges()
 {
-	fprintf(stderr, "+++++ CHECK\n");
 	StringList list;
 	list.unserialise(get_value());
 	RangeList ranges_;
@@ -179,7 +178,6 @@ GeoSpatialRange::unserialise_with_registry(const std::string& s, const Xapian::R
 	ranges_.unserialise(unser_geo.first);
 	CartesianUSet centroids_;
 	centroids_.unserialise(unser_geo.second);
-	fprintf(stderr, "+++++ Slot: %u\n", slot_);
 	return new GeoSpatialRange(slot_, ranges_, centroids_);
 }
 
