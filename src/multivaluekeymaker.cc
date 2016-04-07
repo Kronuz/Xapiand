@@ -41,21 +41,21 @@ static std::string findLargest(const std::string& multiValues) {
 }
 
 
-template <class Iterator>
-static std::string get_cmpvalue(Iterator& v_it, const key_values_t& sort_value) {
+static std::string get_cmpvalue(const std::string& value_, const key_values_t& sort_value) {
 	switch (sort_value.type) {
 		case NUMERIC_TYPE:
 		case DATE_TYPE: {
-			double val = std::abs(Xapian::sortable_unserialise(*v_it) - sort_value.valuenumeric);
+			double val = std::abs(Xapian::sortable_unserialise(value_) - sort_value.valuenumeric);
 			return Xapian::sortable_serialise(val);
 		}
 		case BOOLEAN_TYPE:
-			return (*v_it)[0] == sort_value.valuestring[0] ? Xapian::sortable_serialise(0) : Xapian::sortable_serialise(1);
+			return (value_)[0] == sort_value.valuestring[0] ? Xapian::sortable_serialise(0) : Xapian::sortable_serialise(1);
 		case STRING_TYPE:
-			return Xapian::sortable_serialise(levenshtein_distance(*v_it, sort_value.valuestring));
+			return Xapian::sortable_serialise(levenshtein_distance(value_, sort_value.valuestring));
 		case GEO_TYPE: {
+			auto geo_val = Unserialise::geo(value_);
 			CartesianUSet centroids;
-			centroids.unserialise(*(++v_it));
+			centroids.unserialise(geo_val.second);
 			double angle = M_PI;
 			for (const auto& centroid_ : sort_value.valuegeo) {
 				double aux = M_PI;
@@ -79,10 +79,10 @@ static std::string findSmallest(const std::string& multiValues, const key_values
 	s.unserialise(multiValues);
 
 	StringList::const_iterator it(s.begin());
-	std::string smallest(get_cmpvalue(it, sort_value));
+	std::string smallest(get_cmpvalue(*it, sort_value));
 	const auto it_e = s.end();
 	for (++it; it != it_e; ++it) {
-		std::string aux(get_cmpvalue(it, sort_value));
+		auto aux = get_cmpvalue(*it, sort_value);
 		if (smallest > aux) smallest = aux;
 	}
 
@@ -96,10 +96,10 @@ static std::string findLargest(const std::string& multiValues, const key_values_
 	s.unserialise(multiValues);
 
 	StringList::const_iterator it(s.begin());
-	std::string largest(get_cmpvalue(it, sort_value));
+	std::string largest(get_cmpvalue(*it, sort_value));
 	const auto it_e = s.end();
 	for (++it; it != it_e; ++it) {
-		std::string aux(get_cmpvalue(it, sort_value));
+		std::string aux(get_cmpvalue(*it, sort_value));
 		if (aux > largest) largest = aux;
 	}
 
