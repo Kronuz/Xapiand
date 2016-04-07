@@ -23,6 +23,7 @@
 #include "geospatialrange.h"
 
 #include "length.h"
+#include "serialise.h"
 
 #include <cmath>
 

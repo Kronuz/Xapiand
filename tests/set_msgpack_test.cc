@@ -75,6 +75,13 @@ START_TEST(test_msgpack_path)
 END_TEST
 
 
+START_TEST(test_msgpack_clone)
+{
+	ck_assert_int_eq(test_clone(), 0);
+}
+END_TEST
+
+
 Suite* testMsgPack(void) {
 	Suite *s = suite_create("Test MsgPack");
 
@@ -105,6 +112,10 @@ Suite* testMsgPack(void) {
 	TCase *tc_path = tcase_create("Test path");
 	tcase_add_test(tc_path, test_msgpack_path);
 	suite_add_tcase(s, tc_path);
+
+	TCase *tc_clone = tcase_create("Test Clone");
+	tcase_add_test(tc_clone, test_msgpack_clone);
+	suite_add_tcase(s, tc_clone);
 
 	return s;
 }
