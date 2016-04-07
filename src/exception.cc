@@ -40,7 +40,7 @@ std::string traceback(const char *filename, int line) {
 	// retrieve current stack addresses
 	int frames = backtrace(callstack, sizeof(callstack) / sizeof(void*));
 
-	t = "\nTraceback (" + std::string(filename) + ":" + std::to_string(line) + "):";
+	t = "\n== Traceback at (" + std::string(filename) + ":" + std::to_string(line) + "):";
 
 	if (frames == 0) {
 		t += "\n    <empty, possibly corrupt>";
@@ -98,6 +98,8 @@ Exception::Exception(const char *filename, int line, const char *format, ...)
 
 	traceback = ::traceback(filename, line);
 #else
+	traceback = "\n== Exception at (" + std::string(filename) + ":" + std::to_string(line) + ")";
+
 	(void)filename;
 	(void)line;
 	context = msg;
