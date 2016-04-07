@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,9 +22,11 @@
 
 #pragma once
 
+
+#include "datetime.h"
 #include "htm.h"
 #include "msgpack.h"
-#include "datetime.h"
+#include "stl_serialise.h"
 
 #include "hash/endian.h"
 
@@ -100,6 +102,9 @@ namespace Serialise {
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value);
 
+	// Serialise a geo specification.
+	std::string geo(const RangeList& ranges, const CartesianUSet& centroids);
+
 	// Serialise field_value like boolean.
 	std::string boolean(const std::string& field_value);
 
@@ -121,23 +126,26 @@ namespace Unserialise {
 	// Unserialise serialise_val according to field_type.
 	std::string unserialise(char field_type, const std::string& serialise_val);
 
-	// Unserialise a serialise numeric.
+	// Unserialise a serialised numeric.
 	double numeric(const std::string& serialise_numeric);
 
-	// Unserialise a serialise date.
+	// Unserialise a serialised date.
 	std::string date(const std::string& serialise_date);
 
-	// Unserialise a serialise boolean.
+	// Unserialise a serialised boolean.
 	bool boolean(const std::string& serialise_boolean);
 
-	// Unserialise a serialise cartesian coordinate.
+	// Unserialise a serialised cartesian coordinate.
 	Cartesian cartesian(const std::string& serialise_cartesian);
 
-	// Unserialise a serialise trixel's id (HTM).
+	// Unserialise a serialised trixel's id (HTM).
 	uint64_t trixel_id(const std::string& serialise_trixel_id);
 
-	// Unserialise a serialise EWKT (Save as a Value).
-	std::string geo(const std::string& serialise_ewkt);
+	// Unserialise a serialised EWKT (save as value), in serialised ranges and serialises centroids.
+	std::string ewkt(const std::string& serialise_ewkt);
+
+	// Unserialise a serialised EWKT (Save as a Value), in unserialised ranges and unserialised centroids.
+	std::pair<std::string, std::string> geo(const std::string& serialise_ewkt);
 
 	// Unserialise str_type to its char representation.
 	std::string type(const std::string& str_type);

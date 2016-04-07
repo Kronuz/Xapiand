@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,11 +22,11 @@
 
 #include "serialise.h"
 
-#include "wkt_parser.h"
-#include "utils.h"
-#include "log.h"
 #include "hash/sha256.h"
-#include "multivalue.h"
+#include "length.h"
+#include "log.h"
+#include "utils.h"
+#include "wkt_parser.h"
 
 #include <xapian.h>
 
@@ -218,6 +218,19 @@ Serialise::ewkt(const std::string& field_value)
 
 
 std::string
+Serialise::geo(const RangeList& ranges, const CartesianUSet& centroids)
+{
+	auto aux = ranges.serialise();
+	auto values = serialise_length(aux.size());
+	values.append(aux);
+	aux = centroids.serialise();
+	values.append(serialise_length(aux.size()));
+	values.append(aux);
+	return serialise_length(values.size()) + values;
+}
+
+
+std::string
 Serialise::boolean(const std::string& field_value)
 {
 	const char *value = field_value.c_str();
@@ -334,7 +347,7 @@ Unserialise::unserialise(char field_type, const std::string& serialise_val)
 		case STRING_TYPE:
 			return serialise_val;
 		case GEO_TYPE:
-			return geo(serialise_val);
+			return ewkt(serialise_val);
 		default:
 			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
 	}
@@ -399,13 +412,31 @@ Unserialise::trixel_id(const std::string& serialise_val)
 }
 
 
-std::string
-Unserialise::geo(const std::string& serialise_val)
+std::pair<std::string, std::string>
+Unserialise::geo(const std::string& serialise_ewkt)
 {
-	StringList s_geo;
-	s_geo.unserialise(serialise_val);
+	const char* pos = serialise_ewkt.data();
+	const char* end = pos + serialise_ewkt.size();
+	try {
+		pos += unserialise_length(&pos, end, true);
+		auto length = unserialise_length(&pos, end, true);
+		std::string serialise_ranges(pos, length);
+		pos += length;
+		length = unserialise_length(&pos, end, true);
+
+		return std::make_pair(std::move(serialise_ranges), std::string(pos, length));
+	} catch (const Xapian::SerialisationError&) {
+		return std::make_pair(std::string(), std::string());
+	}
+}
+
+
+std::string
+Unserialise::ewkt(const std::string& serialise_ewkt)
+{
+	auto unserialise = geo(serialise_ewkt);
 	RangeList ranges;
-	ranges.unserialise(s_geo.at(0));
+	ranges.unserialise(unserialise.first);
 	std::string res("Ranges: { ");
 	for (const auto& range : ranges) {
 		res += "[" + std::to_string(range.start) + ", " + std::to_string(range.end) + "] ";
@@ -413,7 +444,7 @@ Unserialise::geo(const std::string& serialise_val)
 	res += "}";
 
 	CartesianUSet centroids;
-	centroids.unserialise(s_geo.at(1));
+	centroids.unserialise(unserialise.second);
 	res += "  Centroids: { ";
 	for (const auto& centroid : centroids) {
 		res += "(" + std::to_string(centroid.x) + ", " + std::to_string(centroid.y) + ", " + std::to_string(centroid.z) + ") ";
