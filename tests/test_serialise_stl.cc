@@ -97,18 +97,16 @@ int unserialise_to_CartesianUSet(const std::string& _serialise, size_t expected_
 
 
 template <typename T, typename = std::enable_if_t<std::is_same<CartesianUSet, std::decay_t<T>>::value>>
-int unserialise_to_CartesianUSet(T&& c_uset, const std::set<std::string>& str_cartesian=std::set<std::string>()) {
+int unserialise_to_CartesianUSet(T&& c_uset) {
 	CartesianUSet uc_uset;
 	uc_uset.unserialise(c_uset.serialise());
 	if (c_uset.size() == uc_uset.size()) {
-		auto it = uc_uset.begin();
 		int cont = 0;
-		for (const auto& val : uc_uset) {
-			if (str_cartesian.find(val.as_string()) == str_cartesian.end()) {
+		for (const auto& val : c_uset) {
+			if (uc_uset.find(val) == uc_uset.end()) {
 				L_ERR(nullptr, "ERROR: In CartesianUSet, differents values.\n");
 				++cont;
 			}
-			++it;
 		}
 		return cont;
 	}
@@ -162,21 +160,38 @@ int test_StringList() {
 	// StringList with data
 	sl.emplace_back("c");
 	sl.emplace_back("b");
-	sl.emplace_back("c");
+	sl.emplace_back("g");
 	sl.emplace_back("e");
 	sl.emplace_back("j");
-	sl.emplace_back("b");
+	sl.emplace_back("m");
 	sl.emplace_back("k");
 	sl.emplace_back("l");
 	sl.emplace_back("a");
 
+	auto _size = sl.size();
+
 	cont = unserialise_to_StringList(sl);
 	cont += unserialise_to_StringSet(sl);
 	_serialise = sl.serialise();
-	cont += unserialise_to_StringList(_serialise, sl.size());
-	cont += unserialise_to_StringSet(_serialise, 7);
+	cont += unserialise_to_StringList(_serialise, _size);
+	cont += unserialise_to_StringSet(_serialise, _size);
 	cont += unserialise_to_CartesianUSet(_serialise, 0);
 	cont += unserialise_to_RangeList(_serialise, 0);
+
+	StringList sl2;
+	sl2.push_back("z");
+	sl2.push_back("y");
+	sl2.push_back("x");
+	sl2.push_back("w");
+
+	_size += sl2.size();
+	sl.add_unserialise(sl2.serialise());
+	if (sl.size() != _size) {
+		L_ERR(nullptr, "ERROR: In StringList::add_unserialise, differents sizes. Expected: %zu  Result: %zu\n", _size, sl.size());
+		++cont;
+	}
+
+	return cont;
 
 	return cont;
 }
@@ -205,13 +220,28 @@ int test_StringSet() {
 	ss.insert("l");
 	ss.insert("a");
 
+	auto _size = ss.size();
+
 	cont += unserialise_to_StringList(ss);
 	cont += unserialise_to_StringSet(ss);
 	_serialise = ss.serialise();
-	cont += unserialise_to_StringList(_serialise, ss.size());
-	cont += unserialise_to_StringSet(_serialise, ss.size());
+	cont += unserialise_to_StringList(_serialise, _size);
+	cont += unserialise_to_StringSet(_serialise, _size);
 	cont += unserialise_to_CartesianUSet(_serialise, 0);
 	cont += unserialise_to_RangeList(_serialise, 0);
+
+	StringSet ss2;
+	ss2.insert("z");
+	ss2.insert("y");
+	ss2.insert("x");
+	ss2.insert("w");
+
+	_size += ss2.size();
+	ss.add_unserialise(ss2.serialise());
+	if (ss.size() != _size) {
+		L_ERR(nullptr, "ERROR: In StringSet::add_unserialise, differents sizes. Expected: %zu  Result: %zu\n", _size, ss.size());
+		++cont;
+	}
 
 	return cont;
 }
@@ -219,10 +249,9 @@ int test_StringSet() {
 
 int test_CartesianUSet() {
 	CartesianUSet c_uset;
-	std::set<std::string> str_cartesian;
 
 	// Empty CartesianUSet.
-	int cont = unserialise_to_CartesianUSet(c_uset, str_cartesian);
+	int cont = unserialise_to_CartesianUSet(c_uset);
 	std::string _serialise = c_uset.serialise();
 	cont += unserialise_to_StringList(_serialise, 0);
 	cont += unserialise_to_StringSet(_serialise, 0);
@@ -230,33 +259,30 @@ int test_CartesianUSet() {
 	cont += unserialise_to_RangeList(_serialise, 0);
 
 	// CartesianUSet witd data.
-	Cartesian c(10, 20, 0, CartesianUnits::DEGREES);
-	c.normalize();
-	str_cartesian.insert(c.as_string());
-	c_uset.insert(c);
-	c = Cartesian(30, 50, 0, CartesianUnits::DEGREES);
-	c.normalize();
-	str_cartesian.insert(c.as_string());
-	c_uset.insert(c);
-	c = Cartesian(15, 25, 0, CartesianUnits::DEGREES);
-	c.normalize();
-	str_cartesian.insert(c.as_string());
-	c_uset.insert(c);
-	c = Cartesian(-10, -20, 0, CartesianUnits::DEGREES);
-	c.normalize();
-	str_cartesian.insert(c.as_string());
-	c_uset.insert(c);
-	c = Cartesian(0, 0, 0, CartesianUnits::DEGREES);
-	c.normalize();
-	str_cartesian.insert(c.as_string());
-	c_uset.insert(c);
+	c_uset.insert(Cartesian( 0.925602814,  0.336891873,  0.172520422));
+	c_uset.insert(Cartesian( 0.837915107,  0.224518676,  0.497483301));
+	c_uset.insert(Cartesian( 0.665250371,  0.384082481,  0.640251974));
+	c_uset.insert(Cartesian( 0.765933665,  0.407254153,  0.497483341));
+	c_uset.insert(Cartesian( 0.925602814, -0.336891873, -0.172520422));
+	c_uset.insert(Cartesian( 0.837915107,  0.224518676, -0.497483301));
+	c_uset.insert(Cartesian( 0.665250371, -0.384082481,  0.640251974));
+	c_uset.insert(Cartesian( 0.765933705,  0.407254175,  0.497483262));
+	c_uset.insert(Cartesian(-0.765933705, -0.407254175, -0.497483262));
 
-	cont += unserialise_to_CartesianUSet(c_uset, str_cartesian);
+	auto _size = c_uset.size();
+
+	cont += unserialise_to_CartesianUSet(c_uset);
 	_serialise = c_uset.serialise();
 	cont += unserialise_to_StringList(_serialise, 1);
 	cont += unserialise_to_StringSet(_serialise, 1);
-	cont += unserialise_to_CartesianUSet(_serialise, 5);
+	cont += unserialise_to_CartesianUSet(_serialise, _size);
 	cont += unserialise_to_RangeList(_serialise, 0);
+
+	c_uset.add_unserialise(_serialise);
+	if (c_uset.size() != _size) {
+		L_ERR(nullptr, "ERROR: In CartesianUSet::add_unserialise, differents sizes. Expected: %zu  Result: %zu\n", _size, c_uset.size());
+		++cont;
+	}
 
 	return cont;
 }
@@ -280,12 +306,21 @@ int test_RangeList() {
 	rl.push_back({ 100, 400 });
 	rl.push_back({ 800, 900 });
 
+	auto _size = rl.size();
+
 	cont += unserialise_to_RangeList(rl);
 	_serialise = rl.serialise();
 	cont += unserialise_to_StringList(_serialise, 1);
 	cont += unserialise_to_StringSet(_serialise, 1);
 	cont += unserialise_to_CartesianUSet(_serialise, 0);
-	cont += unserialise_to_RangeList(_serialise, 5);
+	cont += unserialise_to_RangeList(_serialise, _size);
+
+	_size *= 2;
+	rl.add_unserialise(_serialise);
+	if (rl.size() != _size) {
+		L_ERR(nullptr, "ERROR: In RangeList::add_unserialise, differents sizes. Expected: %zu  Result: %zu\n", _size, rl.size());
+		++cont;
+	}
 
 	return cont;
 }
