@@ -206,7 +206,7 @@ void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr) {
 		} else {
 			throw  MSG_ClientError("\"value\" must be string or integer");
 		}
-		if(get_patch_custom_limit(limit, obj_patch)) {
+		if (get_patch_custom_limit(limit, obj_patch)) {
 			_incr_decr(o, decr ? -val_num : val_num, limit);
 		} else {
 			_incr_decr(o, decr ? -val_num : val_num, val_num);
