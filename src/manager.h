@@ -104,6 +104,11 @@ protected:
 	uint64_t get_node_id();
 	bool set_node_id(uint64_t node_name_, std::unique_lock<std::mutex>& lk);
 
+	void make_servers(const opts_t& o);
+	void make_replicators(const opts_t& o);
+	void make_autocommiters(const opts_t& o);
+	void make_asyncfsyncs(const opts_t& o);
+
 public:
 	enum class State {
 		BAD,

@@ -460,16 +460,9 @@ XapiandManager::shutdown_impl(time_t asap, time_t now)
 	}
 }
 
-
 void
-XapiandManager::run(const opts_t& o)
+XapiandManager::make_servers(const opts_t& o)
 {
-	if (node_name.compare("~") == 0) {
-		L_CRIT(this, "Node name %s doesn't match with the one in the cluster's database!", o.node_name.c_str());
-		join();
-		throw Exit(EX_CONFIG);
-	}
-
 	std::string msg("Listening on ");
 
 	auto manager = share_this<XapiandManager>();
@@ -494,8 +487,8 @@ XapiandManager::run(const opts_t& o)
 #endif
 
 	msg += "at pid:" + std::to_string(getpid()) + " ...";
-
 	L_NOTICE(this, msg.c_str());
+
 
 	for (size_t i = 0; i < o.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr, ev_flags);
@@ -511,22 +504,6 @@ XapiandManager::run(const opts_t& o)
 		server_pool.enqueue(std::move(server));
 	}
 
-#ifdef XAPIAND_CLUSTERING
-	if (!solo) {
-		for (size_t i = 0; i < o.num_replicators; ++i) {
-			replicator_pool.enqueue(Worker::make_shared<XapiandReplicator>(manager, nullptr, ev_flags));
-		}
-	}
-#endif
-
-	for (size_t i = 0; i < o.num_committers; ++i) {
-		autocommit_pool.enqueue(Worker::make_shared<DatabaseAutocommit>(manager, nullptr, ev_flags));
-	}
-
-	for (size_t i = 0; i < o.num_committers; ++i) {
-		asyncfsync_pool.enqueue(Worker::make_shared<AsyncFsync>(manager, nullptr, ev_flags));
-	}
-
 	// Make server protocols weak:
 	weak_http = std::move(http);
 #ifdef XAPIAND_CLUSTERING
@@ -539,8 +516,58 @@ XapiandManager::run(const opts_t& o)
 		weak_raft = std::move(raft);
 	}
 #endif
+}
 
-	msg = "Started " + std::to_string(o.num_servers) + ((o.num_servers == 1) ? " server" : " servers");
+
+void
+XapiandManager::make_replicators(const opts_t& o)
+{
+#ifdef XAPIAND_CLUSTERING
+	if (!solo) {
+		for (size_t i = 0; i < o.num_replicators; ++i) {
+			replicator_pool.enqueue(Worker::make_shared<XapiandReplicator>(share_this<XapiandManager>(), nullptr, ev_flags));
+		}
+	}
+#endif
+}
+
+
+void
+XapiandManager::make_autocommiters(const opts_t& o)
+{
+	for (size_t i = 0; i < o.num_committers; ++i) {
+		autocommit_pool.enqueue(Worker::make_shared<DatabaseAutocommit>(share_this<XapiandManager>(), nullptr, ev_flags));
+	}
+}
+
+
+void
+XapiandManager::make_asyncfsyncs(const opts_t& o)
+{
+	for (size_t i = 0; i < o.num_committers; ++i) {
+		asyncfsync_pool.enqueue(Worker::make_shared<AsyncFsync>(share_this<XapiandManager>(), nullptr, ev_flags));
+	}
+}
+
+
+void
+XapiandManager::run(const opts_t& o)
+{
+	if (node_name.compare("~") == 0) {
+		L_CRIT(this, "Node name %s doesn't match with the one in the cluster's database!", o.node_name.c_str());
+		join();
+		throw Exit(EX_CONFIG);
+	}
+
+	make_servers(o);
+
+	make_replicators(o);
+
+	make_autocommiters(o);
+
+	make_asyncfsyncs(o);
+
+	std::string msg = "Started " + std::to_string(o.num_servers) + ((o.num_servers == 1) ? " server" : " servers");
 	msg += ", " + std::to_string(o.threadpool_size) +( (o.threadpool_size == 1) ? " worker thread" : " worker threads");
 #ifdef XAPIAND_CLUSTERING
 	if (!solo) {
