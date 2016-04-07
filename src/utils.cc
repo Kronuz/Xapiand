@@ -1072,10 +1072,12 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 
 
 int strict_stoi(const std::string& str) {
-	if (str.substr(str.at(0) == '-').find_first_not_of("0123456789") == std::string::npos) {
-		return std::stoi(str, nullptr, 10);
+	std::string::size_type sz;
+	int res = std::stoi(str, &sz);
+	if (res < 0 || sz != str.size()) {
+		throw std::invalid_argument("Can not convert value: " + str);
 	}
-	throw std::invalid_argument("Can not convert value: " + str);
+	return res;
 }
 
 
