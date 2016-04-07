@@ -167,10 +167,10 @@ int restore_database() {
 			++result;
 		}
 	} catch (const ClientError exc) {
-	   L_EXC(nullptr, "ERROR: %s", exc.what());
-	   delete_files(test_db);
-	   delete_files(restored_db);
-	   return 1;
+		L_EXC(nullptr, "ERROR: %s", exc.what());
+		delete_files(test_db);
+		delete_files(restored_db);
+		return 1;
    } catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s (%s", exc.get_msg().c_str(), exc.get_error_string());
 		delete_files(test_db);
