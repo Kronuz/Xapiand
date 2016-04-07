@@ -205,7 +205,7 @@ public:
 #define _LOG_CRIT_ENABLED(args...) Log::log(false, 0ms, -LOG_CRIT, nullptr, __FILE__, __LINE__, NO_COL, CRIT_COL, args)
 #define _LOG_ALERT_ENABLED(args...) Log::log(false, 0ms, -LOG_ALERT, nullptr, __FILE__, __LINE__, NO_COL, ALERT_COL, args)
 #define _LOG_EMERG_ENABLED(args...) Log::log(false, 0ms, -LOG_EMERG, nullptr, __FILE__, __LINE__, NO_COL, EMERG_COL, args)
-#define _LOG_EXC_ENABLED(args...) Log::log(false, 0ms, -LOG_ERR, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
+#define _LOG_EXC_ENABLED(args...) Log::log(false, 0ms, -LOG_CRIT, &exc, __FILE__, __LINE__, NO_COL, ERR_COL, args)
 
 #define _LOG_MARKED_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥  " DEBUG_COL, args)
 
