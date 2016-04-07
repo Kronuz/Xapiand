@@ -77,15 +77,15 @@ GeoSpatialRange::calc_angle(const CartesianUSet& centroids_)
 bool
 GeoSpatialRange::insideRanges()
 {
+	fprintf(stderr, "+++++ CHECK\n");
 	StringList list;
 	list.unserialise(get_value());
 	RangeList ranges_;
 	CartesianUSet centroids_;
-	const auto it_e = list.end();
-	for (auto it = list.begin(); it != it_e; ++it) {
-		ranges_.unserialise(*it);
-		++it;
-		centroids_.unserialise(*it);
+	for (const auto& value : list) {
+		auto unser_value = Unserialise::geo(value);
+		ranges_.add_unserialise(unser_value.first);
+		centroids_.add_unserialise(unser_value.second);
 	}
 
 	for (const auto& range_ : ranges_) {
@@ -164,31 +164,23 @@ GeoSpatialRange::name() const
 std::string
 GeoSpatialRange::serialise() const
 {
-	std::string serialised, values, aux(Xapian::sortable_serialise(slot));
-	values.append(serialise_length(aux.size()));
-	values.append(aux);
-	aux = ranges.serialise();
-	values.append(serialise_length(aux.size()));
-	values.append(aux);
-	aux = centroids.serialise();
-	values.append(serialise_length(aux.size()));
-	values.append(aux);
-	serialised.append(serialise_length(values.size()));
-	serialised.append(values);
-	return serialised;
+	return serialise_length(slot) + Serialise::geo(ranges, centroids);
 }
 
 
 GeoSpatialRange*
 GeoSpatialRange::unserialise_with_registry(const std::string& s, const Xapian::Registry&) const
 {
-	StringList data;
-	data.unserialise(s);
+	const char* pos = s.data();
+	const char* end = pos + s.size();
+	auto slot_ = static_cast<Xapian::valueno>(unserialise_length(&pos, end, false));
+	auto unser_geo = Unserialise::geo(std::string(pos, end - pos));
 	RangeList ranges_;
-	ranges_.unserialise(data[1]);
+	ranges_.unserialise(unser_geo.first);
 	CartesianUSet centroids_;
-	centroids_.unserialise(data[2]);
-	return new GeoSpatialRange(Xapian::sortable_unserialise(data[0]), ranges_, centroids_);
+	centroids_.unserialise(unser_geo.second);
+	fprintf(stderr, "+++++ Slot: %u\n", slot_);
+	return new GeoSpatialRange(slot_, ranges_, centroids_);
 }
 
 
