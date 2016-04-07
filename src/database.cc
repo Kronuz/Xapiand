@@ -1373,7 +1373,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& qu
 			for (const auto& doc : mset) {
 				rset.add_document(doc);
 			}
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1383,10 +1383,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& qu
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: get_similar can not be done!");
-	return;
 
-success:
 	std::vector<std::string> prefixes;
 	prefixes.reserve(similar.type.size() + similar.field.size());
 	for (const auto& sim_type : similar.type) {
@@ -1513,7 +1510,7 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 			Xapian::Enquire enquire = get_enquire(srch.query, collapse_key, &e, sorter, &spies);
 			suggestions = srch.suggested_query;
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1527,11 +1524,6 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: get_mset can not be done!");
-	return;
-
-success:
-	return;
 }
 
 
@@ -1581,7 +1573,7 @@ Database::commit(bool wal_)
 		try {
 			wdb->commit();
 			modified = false;
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1591,10 +1583,7 @@ Database::commit(bool wal_)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot commit!");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "Commit made");
 	return true;
 }
@@ -1621,7 +1610,7 @@ Database::cancel(bool wal_)
 		try {
 			wdb->begin_transaction(false);
 			wdb->cancel_transaction();
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1631,10 +1620,7 @@ Database::cancel(bool wal_)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot cancel!");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "Cancel made");
 	return true;
 }
@@ -1661,7 +1647,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		try {
 			wdb->delete_document(did);
 			modified = true;
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1671,10 +1657,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot delete document!");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "Document deleted");
 	if (commit_) commit(wal_);
 	return true;
@@ -1710,7 +1693,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		try {
 			wdb->delete_document(term);
 			modified = true;
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1720,10 +1703,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot delete document term!");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "Document deleted");
 	if (commit_) commit(wal_);
 	return true;
@@ -1751,7 +1731,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 		try {
 			did = wdb->add_document(doc_);
 			modified = true;
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1761,10 +1741,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot add document!");
-	return 0;
 
-success:
 	L_DATABASE_WRAP(this, "Document replaced");
 	if (commit_) commit(wal_);
 	return did;
@@ -1790,7 +1767,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 		try {
 			wdb->replace_document(did, doc_);
 			modified = true;
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1800,10 +1777,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot replace document!");
-	return 0;
 
-success:
 	L_DATABASE_WRAP(this, "Document replaced");
 	if (commit_) commit(wal_);
 	return did;
@@ -1839,7 +1813,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		try {
 			did = wdb->replace_document(term, doc_);
 			modified = true;
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1849,10 +1823,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot replace document term!");
-	return 0;
 
-success:
 	L_DATABASE_WRAP(this, "Document replaced");
 	if (commit_) commit(wal_);
 	return did;
@@ -1875,7 +1846,7 @@ Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool
 		try {
 			wdb->add_spelling(word, freqinc);
 			modified = true;
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1885,10 +1856,7 @@ Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot add spelling!");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "add_spelling was done");
 	if (commit_) commit(wal_);
 	return true;
@@ -1911,7 +1879,7 @@ Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, b
 		try {
 			wdb->remove_spelling(word, freqdec);
 			modified = true;
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -1921,10 +1889,7 @@ Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, b
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot remove spelling!");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "remove_spelling was done");
 	if (commit_) commit(wal_);
 	return true;
@@ -1939,22 +1904,19 @@ Database::get_metadata(const std::string& key, std::string& value)
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			value = db->get_metadata(key);
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::InvalidArgumentError&) {
-			break;
+			return false;
 		} catch (const Xapian::Error& exc) {
 			throw MSG_Error(exc.get_msg().c_str());
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot get metadata!");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "get_metadata was done");
 	return !value.empty();
 }
@@ -1976,24 +1938,21 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 		try {
 			wdb->set_metadata(key, value);
 			modified = true;
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::InvalidArgumentError&) {
-			break;
+			return false;
 		} catch (const Xapian::DocNotFoundError&) {
-			break;
+			return false;
 		} catch (const Xapian::Error& exc) {
 			throw MSG_Error(exc.get_msg().c_str());
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot set metadata!");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "set_metadata was done");
 	if (commit_) commit(wal_);
 	return true;
@@ -2012,24 +1971,21 @@ Database::get_document(const Xapian::MSet::iterator& m, Xapian::Document& doc)
 			} else {
 				return get_document(*m, doc);
 			}
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::InvalidArgumentError&) {
-			break;
+			return false;
 		} catch (const Xapian::DocNotFoundError&) {
-			break;
+			return false;
 		} catch (const Xapian::Error& exc) {
 			throw MSG_Error(exc.get_msg().c_str());
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot get document! (1)");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "get_document was done");
 	return true;
 }
@@ -2043,24 +1999,21 @@ Database::get_document(const Xapian::docid& did, Xapian::Document& doc)
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			doc = db->get_document(did);
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::InvalidArgumentError&) {
-			break;
+			return false;
 		} catch (const Xapian::DocNotFoundError&) {
-			break;
+			return false;
 		} catch (const Xapian::Error& exc) {
 			throw MSG_Error(exc.get_msg().c_str());
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot get document! (2)");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "get_document was done");
 	return true;
 }
@@ -2077,25 +2030,22 @@ Database::get_document(const std::string& doc_id, Xapian::Document& doc)
 			Xapian::Enquire enquire(*db);
 			enquire.set_query(query);
 			auto mset = enquire.get_mset(0, 1);
-			if (mset.empty() || !get_document(mset.begin(), doc)) break;
-			goto success;
+			if (mset.empty() || !get_document(mset.begin(), doc)) return false;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
 			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::InvalidArgumentError&) {
-			break;
+			return false;
 		} catch (const Xapian::DocNotFoundError&) {
-			break;
+			return false;
 		} catch (const Xapian::Error& exc) {
 			throw MSG_Error(exc.get_msg().c_str());
 		}
 		reopen();
 	}
-	L_ERR(this, "ERROR: Cannot get document! (3)");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "get_document was done");
 	return true;
 }
@@ -2111,7 +2061,7 @@ Database::get_value(const Xapian::Document& document, Xapian::valueno slot, std:
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			value = doc.get_value(slot);
-			goto success;
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
 		} catch (const Xapian::NetworkError& exc) {
@@ -2121,13 +2071,10 @@ Database::get_value(const Xapian::Document& document, Xapian::valueno slot, std:
 		}
 		reopen();
 		if (!get_document(document.get_docid(), doc)) {
-			break;
+			return false;
 		}
 	}
-	L_ERR(this, "ERROR: get_value can not be done!");
-	return false;
 
-success:
 	L_DATABASE_WRAP(this, "get_value was done");
 	return true;
 }
