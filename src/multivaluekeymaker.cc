@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,8 +22,6 @@
 
 #include "multivaluekeymaker.h"
 
-#include "multivalue.h"
-
 #include <cmath>
 
 
@@ -31,13 +29,7 @@ static std::string findSmallest(const std::string& multiValues) {
 	if (multiValues.empty()) return STR_FOR_EMPTY;
 	StringList s;
 	s.unserialise(multiValues);
-	StringList::const_iterator it(s.begin());
-	std::string smallest(*it);
-	const auto it_e = s.end();
-	for (++it; it != it_e; ++it) {
-		if (smallest > *it) smallest = *it;
-	}
-	return smallest;
+	return *s.cbegin();
 }
 
 
@@ -45,13 +37,7 @@ static std::string findLargest(const std::string& multiValues) {
 	if (multiValues.empty()) return STR_FOR_EMPTY;
 	StringList s;
 	s.unserialise(multiValues);
-	StringList::const_iterator it(s.begin());
-	std::string largest(*it);
-	const auto it_e = s.end();
-	for (++it; it != it_e; ++it) {
-		if (*it > largest) largest = *it;
-	}
-	return largest;
+	return *s.crbegin();
 }
 
 
@@ -81,7 +67,8 @@ static std::string get_cmpvalue(Iterator& v_it, const key_values_t& sort_value) 
 			}
 			return Xapian::sortable_serialise(angle);
 		}
-		default: return std::string();
+		default:
+			return std::string();
 	}
 }
 
@@ -90,6 +77,7 @@ static std::string findSmallest(const std::string& multiValues, const key_values
 	if (multiValues.empty()) return MAX_CMPVALUE;
 	StringList s;
 	s.unserialise(multiValues);
+
 	StringList::const_iterator it(s.begin());
 	std::string smallest(get_cmpvalue(it, sort_value));
 	const auto it_e = s.end();
@@ -97,6 +85,7 @@ static std::string findSmallest(const std::string& multiValues, const key_values
 		std::string aux(get_cmpvalue(it, sort_value));
 		if (smallest > aux) smallest = aux;
 	}
+
 	return smallest;
 }
 
@@ -105,6 +94,7 @@ static std::string findLargest(const std::string& multiValues, const key_values_
 	if (multiValues.empty()) return MAX_CMPVALUE;
 	StringList s;
 	s.unserialise(multiValues);
+
 	StringList::const_iterator it(s.begin());
 	std::string largest(get_cmpvalue(it, sort_value));
 	const auto it_e = s.end();
@@ -112,6 +102,7 @@ static std::string findLargest(const std::string& multiValues, const key_values_
 		std::string aux(get_cmpvalue(it, sort_value));
 		if (aux > largest) largest = aux;
 	}
+
 	return largest;
 }
 
