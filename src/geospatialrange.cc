@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,58 +22,13 @@
 
 #include "geospatialrange.h"
 
-#include "multivalue.h"
 #include "length.h"
-#include "serialise.h"
 
 #include <cmath>
 
 
 static double geo_weight_from_angle(double angle) {
 	return (M_PI - angle) * M_PER_RADIUS_EARTH;
-}
-
-
-void
-CartesianUSet::unserialise(const std::string& serialised)
-{
-	for (size_t i = 0; i < serialised.size(); i += SIZE_SERIALISE_CARTESIAN) {
-		insert(Unserialise::cartesian(serialised.substr(i, SIZE_SERIALISE_CARTESIAN)));
-	}
-}
-
-
-std::string
-CartesianUSet::serialise() const
-{
-	std::string serialised;
-	for (const auto& p : *this) {
-		serialised.append(Serialise::cartesian(p));
-	}
-
-	return serialised;
-}
-
-
-void
-RangeList::unserialise(const std::string& serialised)
-{
-	for (size_t i = 0; i < serialised.size(); i += SIZE_BYTES_ID) {
-		push_back({ Unserialise::trixel_id(serialised.substr(i, SIZE_BYTES_ID)), Unserialise::trixel_id(serialised.substr(i += SIZE_BYTES_ID, SIZE_BYTES_ID)) });
-	}
-}
-
-
-std::string
-RangeList::serialise() const
-{
-	std::string serialised;
-	for (const auto& range : *this) {
-		serialised.append(Serialise::trixel_id(range.start));
-		serialised.append(Serialise::trixel_id(range.end));
-	}
-
-	return serialised;
 }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,43 +22,13 @@
 
 #pragma once
 
-#include "htm.h"
+#include "stl_serialise.h"
 
 #include <xapian.h>
 
 #include <string>
 #include <unordered_set>
 #include <vector>
-
-
-/*
- * This class serializes a unordered set of Cartesian.
- * i.e
- * CartesianUSet = {a, ..., b}
- * serialise = serialise_cartesian(a) + ... + serialise_cartesian(b)
- * symbol '+' means concatenate.
- * It is not necessary to save the size because it's SIZE_SERIALISE_CARTESIAN for all.
- */
-class CartesianUSet : public std::unordered_set<Cartesian> {
-public:
-	void unserialise(const std::string& serialised);
-	std::string serialise() const;
-};
-
-
-/*
- * This class serializes a vector of range_t.
- * i.e
- * RangeList = {{a,b}, ..., {c,d}}
- * serialise = serialise_geo(a) + serialise_geo(b) ... + serialise_geo(d)
- * symbol '+' means concatenate.
- * It is not necessary to save the size because it's SIZE_BYTES_ID for all.
- */
-class RangeList : public std::vector<range_t> {
-public:
-	void unserialise(const std::string& serialised);
-	std::string serialise() const;
-};
 
 
 // New Match Decider for GeoSpatial value range.
