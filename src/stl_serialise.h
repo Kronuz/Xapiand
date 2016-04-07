@@ -45,7 +45,14 @@ public:
 		unserialise(&ptr, end);
 	}
 
+	inline void add_unserialise(const std::string& serialised) {
+		const char* ptr = serialised.data();
+		const char* end = ptr + serialised.size();
+		add_unserialise(&ptr, end);
+	}
+
 	void unserialise(const char** ptr, const char* end);
+	void add_unserialise(const char** ptr, const char* end);
 	std::string serialise() const;
 };
 
@@ -61,11 +68,18 @@ class StringSet : public std::set<std::string> {
 public:
 	inline void unserialise(const std::string& serialised) {
 		const char* ptr = serialised.data();
-		const char* end = serialised.data() + serialised.size();
+		const char* end = ptr + serialised.size();
 		unserialise(&ptr, end);
 	}
 
+	inline void add_unserialise(const std::string& serialised) {
+		const char* ptr = serialised.data();
+		const char* end = ptr + serialised.size();
+		add_unserialise(&ptr, end);
+	}
+
 	void unserialise(const char** ptr, const char* end);
+	void add_unserialise(const char** ptr, const char* end);
 	std::string serialise() const;
 };
 
@@ -82,11 +96,18 @@ class CartesianUSet : public std::unordered_set<Cartesian> {
 public:
 	inline void unserialise(const std::string& serialised) {
 		const char* ptr = serialised.data();
-		const char* end = serialised.data() + serialised.size();
+		const char* end = ptr + serialised.size();
 		unserialise(&ptr, end);
 	}
 
+	inline void add_unserialise(const std::string& serialised) {
+		const char* ptr = serialised.data();
+		const char* end = ptr + serialised.size();
+		add_unserialise(&ptr, end);
+	}
+
 	void unserialise(const char** ptr, const char* end);
+	void add_unserialise(const char** ptr, const char* end);
 	std::string serialise() const;
 };
 
@@ -103,10 +124,17 @@ class RangeList : public std::vector<range_t> {
 public:
 	inline void unserialise(const std::string& serialised) {
 		const char* ptr = serialised.data();
-		const char* end = serialised.data() + serialised.size();
+		const char* end = ptr + serialised.size();
 		unserialise(&ptr, end);
 	}
 
+	inline void add_unserialise(const std::string& serialised) {
+		const char* ptr = serialised.data();
+		const char* end = ptr + serialised.size();
+		add_unserialise(&ptr, end);
+	}
+
 	void unserialise(const char** ptr, const char* end);
+	void add_unserialise(const char** ptr, const char* end);
 	std::string serialise() const;
 };

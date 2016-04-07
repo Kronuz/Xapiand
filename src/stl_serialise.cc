@@ -60,6 +60,30 @@ StringList::unserialise(const char** ptr, const char* end)
 }
 
 
+void
+StringList::add_unserialise(const char** ptr, const char* end)
+{
+	const char* pos = *ptr;
+	if (pos != end && *pos++ == STL_MAGIC) {
+		try {
+			auto length = unserialise_length(&pos, end, true);
+			reserve(length);
+			while (pos != end) {
+				length = unserialise_length(&pos, end, true);
+				emplace_back(pos, length);
+				pos += length;
+			}
+			return;
+		} catch (const Xapian::SerialisationError&) { }
+	}
+
+	pos = *ptr;
+	if (pos != end) {
+		emplace_back(pos, end - pos);
+	}
+}
+
+
 std::string
 StringList::serialise() const
 {
@@ -99,6 +123,29 @@ StringSet::unserialise(const char** ptr, const char* end)
 	}
 
 	clear();
+	pos = *ptr;
+	if (pos != end) {
+		insert(std::string(pos, end - pos));
+	}
+}
+
+
+void
+StringSet::add_unserialise(const char** ptr, const char* end)
+{
+	const char* pos = *ptr;
+	if (pos != end && *pos++ == STL_MAGIC) {
+		try {
+			auto length = unserialise_length(&pos, end, true);
+			while (pos != end) {
+				length = unserialise_length(&pos, end, true);
+				insert(std::string(pos, length));
+				pos += length;
+			}
+			return;
+		} catch (const Xapian::SerialisationError&) { }
+	}
+
 	pos = *ptr;
 	if (pos != end) {
 		insert(std::string(pos, end - pos));
@@ -150,6 +197,24 @@ CartesianUSet::unserialise(const char** ptr, const char* end)
 }
 
 
+void
+CartesianUSet::add_unserialise(const char** ptr, const char* end)
+{
+	const char* pos = *ptr;
+	if (pos != end && *pos++ == STL_MAGIC) {
+		try {
+			auto _size = unserialise_length(&pos, end, true);
+			reserve(_size);
+			while (end - pos >= SIZE_SERIALISE_CARTESIAN) {
+				fprintf(stderr, "Inside\n");
+				insert(Unserialise::cartesian(std::string(pos, SIZE_SERIALISE_CARTESIAN)));
+				pos += SIZE_SERIALISE_CARTESIAN;
+			}
+		} catch (const Xapian::SerialisationError&) { }
+	}
+}
+
+
 std::string
 CartesianUSet::serialise() const
 {
@@ -188,6 +253,24 @@ RangeList::unserialise(const char** ptr, const char* end)
 		} catch (const Xapian::SerialisationError&) {
 			clear();
 		}
+	}
+}
+
+
+void
+RangeList::add_unserialise(const char** ptr, const char* end)
+{
+	const char* pos = *ptr;
+	if (pos != end && *pos++ == STL_MAGIC) {
+		try {
+			auto _size = unserialise_length(&pos, end, true);
+			reserve(_size);
+			long range_size = 2 * SIZE_BYTES_ID;
+			while (end - pos >= range_size) {
+				push_back({ Unserialise::trixel_id(std::string(pos, SIZE_BYTES_ID)), Unserialise::trixel_id(std::string(pos += SIZE_BYTES_ID, SIZE_BYTES_ID)) });
+				pos += SIZE_BYTES_ID;
+			}
+		} catch (const Xapian::SerialisationError&) { }
 	}
 }
 
