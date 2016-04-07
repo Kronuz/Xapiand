@@ -282,7 +282,9 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	set_node_name(local_node->name, lk);
 
 	Xapian::Document document;
-	if (!cluster_database->get_document(std::to_string(local_node->id), document)) {
+	try {
+		document = cluster_database->get_document(std::to_string(local_node->id));
+	} catch (const DocNotFoundError&) {
 		MsgPack obj;
 		obj["name"] = local_node->name;
 		obj["tagline"] = XAPIAND_TAGLINE;

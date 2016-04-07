@@ -259,28 +259,28 @@ public:
 	std::string get_revision_info() const;
 
 	bool commit(bool wal_=true);
-	bool cancel(bool wal_=true);
+	void cancel(bool wal_=true);
 
-	bool delete_document(Xapian::docid did, bool commit_=false, bool wal_=true);
-	bool delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
-	bool delete_document_term(const std::string& term, bool commit_=false, bool wal_=true);
+	void delete_document(Xapian::docid did, bool commit_=false, bool wal_=true);
+	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
+	void delete_document_term(const std::string& term, bool commit_=false, bool wal_=true);
 	Xapian::docid add_document(const Xapian::Document& doc, bool commit_=false, bool wal_=true);
 	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
 	Xapian::docid replace_document(const std::string& doc_id, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
 	Xapian::docid replace_document_term(const std::string& term, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
 
-	bool add_spelling(const std::string & word, Xapian::termcount freqinc, bool commit_=false, bool wal_=true);
-	bool remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
+	void add_spelling(const std::string & word, Xapian::termcount freqinc, bool commit_=false, bool wal_=true);
+	void remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
 
-	bool get_metadata(const std::string& key, std::string& value);
-	bool set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
+	std::string get_metadata(const std::string& key);
+	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
 
-	bool get_document(const std::string& doc_id, Xapian::Document& doc);
-	bool get_document(const Xapian::docid& did, Xapian::Document& doc);
-	bool get_document(const Xapian::MSet::iterator& m, Xapian::Document& doc);
+	Xapian::Document get_document(const std::string& doc_id);
+	Xapian::Document get_document(const Xapian::docid& did);
+	Xapian::Document get_document(const Xapian::MSet::iterator& m);
 
-	bool get_value(const Xapian::Document& document, Xapian::valueno slot, std::string& value);
-	bool get_value(const Xapian::Document& document, const std::string& slot_name, MsgPack& result);
+	std::string get_value(const Xapian::Document& document, Xapian::valueno slot);
+	MsgPack get_value(const Xapian::Document& document, const std::string& slot_name);
 
 private:
 	void _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);

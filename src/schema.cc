@@ -281,8 +281,7 @@ Schema::set_database(Database* _database)
 	database = _database;
 
 	// Reload schema.
-	std::string s_schema;
-	database->get_metadata(RESERVED_SCHEMA, s_schema);
+	std::string s_schema = database->get_metadata(RESERVED_SCHEMA);
 
 	if (s_schema.empty()) {
 		schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;

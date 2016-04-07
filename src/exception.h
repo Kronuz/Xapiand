@@ -170,6 +170,13 @@ public:
 };
 
 
+class DocNotFoundError : public ClientError, public Xapian::DocNotFoundError {
+public:
+	template<typename... Args>
+	DocNotFoundError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::DocNotFoundError("") { }
+};
+
+
 #define MSG_Error(...) Error(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
@@ -183,4 +190,5 @@ public:
 #define MSG_InvalidOperationError(...) InvalidOperationError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_QueryParserError(...) QueryParserError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_InternalError(...) InternalError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_DocNotFoundError(...) DocNotFoundError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_CheckoutError(...) CheckoutError(__FILE__, __LINE__, __VA_ARGS__)

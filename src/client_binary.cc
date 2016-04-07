@@ -921,10 +921,7 @@ BinaryClient::msg_document(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	Xapian::Document doc;
-	if (!database->get_document(did, doc)) {
-		throw MSG_NetworkError("Cannot get document");
-	}
+	Xapian::Document doc = database->get_document(did);
 
 	send_message(RemoteReplyType::REPLY_DOCDATA, doc.get_data());
 
@@ -1152,8 +1149,7 @@ BinaryClient::msg_getmetadata(const std::string & message)
 {
 	checkout_database();
 
-	std::string value;
-	database->get_metadata(message, value);
+	std::string value = database->get_metadata(message);
 
 	checkin_database();
 

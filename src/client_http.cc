@@ -679,13 +679,8 @@ HttpClient::home_view()
 	if (!manager()->database_pool.checkout(database, Endpoints(Endpoint(".")), DB_SPAWN)) {
 		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
-	Xapian::Document document;
-	if (!database->get_document(std::to_string(local_node->id), document)) {
-		L_WARNING(this, "Corrupt node: %s", local_node->id);
-		write(http_response(500, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
-		return;
-	}
-
+	Xapian::Document document = database->get_document(std::to_string(local_node->id));
+	auto id = database->get_value(document, RESERVED_ID);
 	manager()->database_pool.checkin(database);
 
 	MsgPack obj_data = get_MsgPack(document);
@@ -693,7 +688,7 @@ HttpClient::home_view()
 		obj_data = obj_data.at(RESERVED_DATA);
 	} catch (const std::out_of_range&) {
 		clean_reserved(obj_data);
-		obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
+		obj_data[RESERVED_ID] = id;
 	}
 
 #ifdef XAPIAND_CLUSTERING
@@ -1090,13 +1085,7 @@ HttpClient::search_view()
 		}
 	} else {
 		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
-			Xapian::Document document;
-			if (!database->get_document(m, document)) {
-				database->reopen();
-				database->get_mset(*query_field, mset, spies, suggestions, rc);
-				m = mset.begin();
-				continue;
-			}
+			Xapian::Document document = database->get_document(m);
 
 			operation_ends = std::chrono::system_clock::now();
 
@@ -1154,10 +1143,7 @@ HttpClient::search_view()
 				obj_data = obj_data.at(RESERVED_DATA);
 			} catch (const std::out_of_range&) {
 				clean_reserved(obj_data);
-				auto id = obj_data[RESERVED_ID];
-				if (!database->get_value(document, RESERVED_ID, id)) {
-					L_ERR(this, "Error getting document ID!");
-				}
+				obj_data[RESERVED_ID] = database->get_value(document, RESERVED_ID);
 				// Detailed info about the document:
 				obj_data[RESERVED_RANK] = m.get_rank();
 				obj_data[RESERVED_WEIGHT] = m.get_weight();
