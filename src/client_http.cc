@@ -1085,7 +1085,7 @@ HttpClient::search_view()
 		}
 	} else {
 		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
-			Xapian::Document document = database->get_document(m);
+			Xapian::Document document = database->get_document(*m);
 
 			operation_ends = std::chrono::system_clock::now();
 

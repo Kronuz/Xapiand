@@ -277,7 +277,6 @@ public:
 
 	Xapian::Document get_document(const std::string& doc_id);
 	Xapian::Document get_document(const Xapian::docid& did);
-	Xapian::Document get_document(const Xapian::MSet::iterator& m);
 
 	std::string get_value(const Xapian::Document& document, Xapian::valueno slot);
 	MsgPack get_value(const Xapian::Document& document, const std::string& slot_name);

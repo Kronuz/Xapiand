@@ -966,7 +966,7 @@ Database::patch(const std::string& patches, const std::string& _document_id, boo
 	if (mset.empty()) {
 		throw MSG_DocNotFoundError("Document not found");
 	}
-	Xapian::Document document = get_document(mset.begin());
+	Xapian::Document document = get_document(*mset.begin());
 	MsgPack obj_data = get_MsgPack(document);
 	apply_patch(obj_patch, obj_data);
 
@@ -1933,40 +1933,6 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 
 
 Xapian::Document
-Database::get_document(const Xapian::MSet::iterator& m)
-{
-	L_CALL(this, "Database::get_document()");
-
-	Xapian::Document doc;
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			if (t == DB_RETRIES) {
-				doc = m.get_document();
-			} else {
-				doc = get_document(*m);
-			}
-			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
-		} catch (const Xapian::NetworkError& exc) {
-			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
-		} catch (const Xapian::InvalidArgumentError&) {
-			throw MSG_DocNotFoundError("Document not found");
-		} catch (const Xapian::DocNotFoundError&) {
-			throw MSG_DocNotFoundError("Document not found");
-		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
-		}
-		reopen();
-	}
-
-	L_DATABASE_WRAP(this, "get_document was done");
-	return doc;
-}
-
-
-Xapian::Document
 Database::get_document(const Xapian::docid& did)
 {
 	L_CALL(this, "Database::get_document()");
@@ -2012,7 +1978,7 @@ Database::get_document(const std::string& doc_id)
 			if (mset.empty()) {
 				throw MSG_DocNotFoundError("Document not found");
 			}
-			doc = get_document(mset.begin());
+			doc = get_document(*mset.begin());
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
