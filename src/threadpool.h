@@ -175,12 +175,13 @@ class ThreadPool : public TaskQueue<Params...> {
 	std::function<void(size_t)> worker;
 	std::atomic<size_t> running_tasks;
 	std::atomic_bool full_pool;
+	std::string format;
 	std::vector<std::thread> threads;
 	std::mutex mtx;
 
 	// Function that retrieves a task from a fifo queue, runs it and deletes it
 	template<typename... Params_>
-	void _worker(const std::string& format, size_t idx, Params_&&... params) {
+	void _worker(size_t idx, Params_&&... params) {
 		char name[100];
 		snprintf(name, sizeof(name), format.c_str(), idx);
 		set_thread_name(std::string(name));
@@ -225,16 +226,17 @@ class ThreadPool : public TaskQueue<Params...> {
 public:
 	// Allocate a thread pool and set them to work trying to get tasks
 	template<typename... Params_>
-	ThreadPool(const std::string& format, size_t num_threads, Params_&&... params)
+	ThreadPool(const std::string format_, size_t num_threads, Params_&&... params)
 		: worker([&](size_t idx) {
-			ThreadPool::_worker<Params_...>(format, idx, std::forward<Params_>(params)...);
+			ThreadPool::_worker<Params_...>(idx, std::forward<Params_>(params)...);
 		}),
 		/*  OLD BUGGY GCC COMPILERS NEED TO USE std::bind, AS IN:
-		: worker(std::bind([this](const std::string& format, size_t idx, Params_&&... params) {
-			ThreadPool::_worker<Params_...>(format, idx, std::forward<Params_>(params)...);
+		: worker(std::bind([this](size_t idx, Params_&&... params) {
+			ThreadPool::_worker<Params_...>(idx, std::forward<Params_>(params)...);
 		}, format, std::placeholders::_1, std::forward<Params_>(params)...)),*/
 		running_tasks(0),
-		full_pool(false) {
+		full_pool(false),
+		format(format_) {
 		threads.reserve(num_threads);
 	}
 
