@@ -852,7 +852,7 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id
 Xapian::docid
 Database::index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
 {
-	L_CALL(this, "Database::index()");
+	L_CALL(this, "Database::index(1)");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
@@ -903,6 +903,8 @@ Database::index(const std::string& body, const std::string& _document_id, bool c
 Xapian::docid
 Database::index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
 {
+	L_CALL(this, "Database::index(2)");
+
 	L_DATABASE_WRAP(this, "Document to index: %s", obj.to_string().c_str());
 	Xapian::Document doc;
 	std::string term_id;
