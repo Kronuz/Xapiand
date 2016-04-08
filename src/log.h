@@ -243,6 +243,7 @@ public:
 #define L_DISCOVERY_PROTO _
 #define L_REPLICATION _
 #define L_OBJ _
+#define L_THREADPOOL _
 #define L_DATABASE _
 #define L_DATABASE_WAL _
 #define L_HTTP _

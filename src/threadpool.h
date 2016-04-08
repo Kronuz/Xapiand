@@ -185,6 +185,7 @@ class ThreadPool : public TaskQueue<Params...> {
 		set_thread_name(std::string(name));
 		function_mo<void(Params...)> task;
 
+		L_THREADPOOL(this, "Worker %s started! (size: %lu, capacity: %lu)", name, threads.size(), threads.capacity());
 		while (TaskQueue<Params...>::tasks.pop(task)) {
 			++running_tasks;
 			try {
@@ -204,6 +205,7 @@ class ThreadPool : public TaskQueue<Params...> {
 			}
 			--running_tasks;
 		}
+		L_THREADPOOL(this, "Worker %s ended.", name);
 	}
 
 	bool spawn_worker() {
