@@ -243,4 +243,7 @@ public:
 	size_t threadpool_size() {
 		return threads.size();
 	}
+	size_t running_size() {
+		return running_tasks.load();
+	}
 };

@@ -835,16 +835,16 @@ XapiandManager::server_status(MsgPack&& stats)
 	}
 #endif
 
-	stats["worker_tasks_running"] = thread_pool.running_task.load();
+	stats["worker_tasks_running"] = thread_pool.running_size();
 	stats["worker_tasks_enqueued"] = thread_pool.size();
 	stats["worker_tasks_pool_size"] = thread_pool.threadpool_size();
 
-	stats["servers_threads"] = server_pool.running_task.load();
-	stats["committers_threads"] = autocommit_pool.running_task.load();
-	stats["fsync_threads"] = asyncfsync_pool.running_task.load();
+	stats["servers_threads"] = server_pool.running_size();
+	stats["committers_threads"] = autocommit_pool.running_size();
+	stats["fsync_threads"] = asyncfsync_pool.running_size();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
-		stats["replicator_threads"] = replicator_pool.running_task.load();
+		stats["replicator_threads"] = replicator_pool.running_size();
 	}
 #endif
 }
