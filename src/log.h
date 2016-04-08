@@ -194,7 +194,7 @@ public:
 #define _(args...)
 #define _LOG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
 #define _LOG_TIMED(t, args...) auto __log_timed = Log::log(true, t, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
-#define _LOG_TIMED_CLEAR(args...) __log_timed->unlog(LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, NO_COL, args)
+#define _LOG_TIMED_CLEAR(args...) __log_timed->unlog(LOG_WARNING, __FILE__, __LINE__, NO_COL, NO_COL, args)
 
 #define _LOG_LOG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, LOG_COL, args)
 #define _LOG_DEBUG_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, DEBUG_COL, args)
@@ -212,7 +212,7 @@ public:
 #define _LOG_TIMED_100(args...) auto __log_timed = Log::log(true, 100ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 #define _LOG_TIMED_500(args...) auto __log_timed = Log::log(true, 500ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 #define _LOG_TIMED_1000(args...) auto __log_timed = Log::log(true, 1s, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
-#define _LOG_TIMED_N_CLEAR(args...) __log_timed->unlog(LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_N_CLEAR(args...) __log_timed->unlog(LOG_WARNING, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 
 #define L _LOG_ENABLED
 #define L_LOG _LOG_LOG_ENABLED
