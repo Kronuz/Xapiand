@@ -174,6 +174,7 @@ template<typename... Params>
 class ThreadPool : public TaskQueue<Params...> {
 	std::function<void(size_t)> worker;
 	std::atomic<size_t> running_tasks;
+	std::atomic_bool full_pool;
 	std::vector<std::thread> threads;
 	std::mutex mtx;
 
@@ -209,11 +210,13 @@ class ThreadPool : public TaskQueue<Params...> {
 	}
 
 	inline bool spawn_worker() {
-		if (TaskQueue<Params...>::size()) {
+		if (!full_pool && TaskQueue<Params...>::size()) {
 			std::lock_guard<std::mutex> lk(mtx);
 			if (threads.size() < threads.capacity()) {
 				threads.emplace_back(worker, threads.size());
 				return true;
+			} else {
+				full_pool = true;
 			}
 		}
 		return false;
@@ -230,7 +233,8 @@ public:
 		: worker(std::bind([this](const std::string& format, size_t idx, Params_&&... params) {
 			ThreadPool::_worker<Params_...>(format, idx, std::forward<Params_>(params)...);
 		}, format, std::placeholders::_1, std::forward<Params_>(params)...)),*/
-		running_tasks(0) {
+		running_tasks(0),
+		full_pool(false) {
 		threads.reserve(num_threads);
 	}
 
