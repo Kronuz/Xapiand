@@ -102,10 +102,10 @@ class MsgPack {
 		}
 
 		object_handle(const msgpack::object& o)
-			: obj(o),
-			  zone(std::make_unique<msgpack::zone>())
+			: zone(std::make_unique<msgpack::zone>())
 		{
 			user.set_zone(*zone.get());
+			obj = msgpack::object(o, *zone.get());
 		}
 
 		object_handle(object_handle&& _handler) noexcept
