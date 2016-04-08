@@ -170,7 +170,7 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 	if (finished.exchange(true)) {
 		va_list argptr;
 		va_start(argptr, format);
-		std::string str(str_format(priority, nullptr, file, line, suffix, prefix, obj, format, argptr));
+		std::string str(str_format(priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
 		va_end(argptr);
 
 		print(str, false, 0, priority);
