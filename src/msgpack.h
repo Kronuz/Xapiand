@@ -174,17 +174,7 @@ public:
 	void reset(const MsgPack& other);
 	MsgPack path(const std::vector<std::string>& path) const;
 
-	template<typename M, typename std::enable_if_t<std::is_base_of<MsgPack, std::decay_t<M>>::value>* = nullptr>
-	MsgPack& operator=(M&& v) {
-		msgpack::object o(std::forward<M>(v), handler->zone.get());
-		body->obj->type = o.type;
-		body->obj->via = o.via;
-		body->m_alloc = -1;
-		init();
-		return *this;
-	}
-
-	template<typename T, typename std::enable_if_t<!std::is_base_of<MsgPack, std::decay_t<T>>::value>* = nullptr>
+	template<typename T>
 	MsgPack& operator=(T&& v) {
 		msgpack::object o(std::forward<T>(v), handler->zone.get());
 		body->obj->type = o.type;
