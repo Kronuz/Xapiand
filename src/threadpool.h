@@ -185,45 +185,58 @@ public:
 	size_t size() {
 		return tasks.size();
 	}
-
 };
 
 
 template<typename... Params>
 class ThreadPool : public TaskQueue<Params...> {
+	std::function<void(size_t)> worker;
+	std::atomic<size_t> running_tasks;
 	std::vector<std::thread> threads;
-public:
-	std::atomic_int running_task;
+	std::mutex mtx;
 
-private:
 	// Function that retrieves a task from a fifo queue, runs it and deletes it
 	template<typename... Params_>
-	void worker(const std::string& format, size_t idx, Params_&&... params) {
+	void _worker(const std::string& format, size_t idx, Params_&&... params) {
 		char name[100];
 		snprintf(name, sizeof(name), format.c_str(), idx);
 		set_thread_name(std::string(name));
 		function_mo<void(Params...)> task;
 		while (TaskQueue<Params...>::tasks.pop(task)) {
-			++running_task;
+			++running_tasks;
 			try {
 				task(std::forward<Params_>(params)...);
 			} catch (...) {
-				--running_task;
+				--running_tasks;
 				throw;
 			}
-			--running_task;
+			--running_tasks;
+		}
+	}
+
+	bool spawn_worker() {
+		std::lock_guard<std::mutex> lk(mtx);
+		if (threads.size() < threads.capacity()) {
+			threads.emplace_back(worker, threads.size());
+			return true;
+		} else {
+			return false;
 		}
 	}
 
 public:
 	// Allocate a thread pool and set them to work trying to get tasks
 	template<typename... Params_>
-	ThreadPool(const std::string& format, size_t num_threads, Params_&&... params) {
-		running_task = 0;
+	ThreadPool(const std::string& format, size_t num_threads, Params_&&... params)
+		: worker([&](size_t idx) {
+			ThreadPool::_worker<Params_...>(format, idx, std::forward<Params_>(params)...);
+		}),
+		/*  OLD BUGGY GCC COMPILERS NEED TO USE std::bind, AS IN:
+		: worker(std::bind([this](const std::string& format, size_t idx, Params_&&... params) {
+			ThreadPool::_worker<Params_...>(format, idx, std::forward<Params_>(params)...);
+		}, format, std::placeholders::_1, std::forward<Params_>(params)...)),*/
+		running_tasks(0) {
 		threads.reserve(num_threads);
-		for (size_t idx = 0; idx < num_threads; ++idx) {
-			threads.emplace_back(&ThreadPool::worker<Params_...>, this, format, idx, std::forward<Params_>(params)...);
-		}
 	}
 
 	// Wait for the threads to finish
@@ -231,16 +244,28 @@ public:
 		join();
 	}
 
+	template<typename... Args>
+	auto enqueue(Args&&... args) {
+		if (TaskQueue<Params...>::size()) {
+			spawn_worker();
+		}
+		return TaskQueue<Params...>::enqueue(std::forward<Args>(args)...);
+	}
+
 	// Wait for all threads
 	void join() {
+		std::lock_guard<std::mutex> lk(mtx);
 		for (auto& thread : threads) {
 			if (thread.joinable()) {
 				thread.join();
 			}
 		}
+		threads.clear();
+		threads.shrink_to_fit();
 	}
 
 	size_t threadpool_size() {
+		std::lock_guard<std::mutex> lk(mtx);
 		return threads.size();
 	}
 	size_t running_size() {
