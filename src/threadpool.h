@@ -185,7 +185,7 @@ class ThreadPool : public TaskQueue<Params...> {
 		set_thread_name(std::string(name));
 		function_mo<void(Params...)> task;
 
-		L_THREADPOOL(this, "Worker %s started! (size: %lu, capacity: %lu)", name, threads.size(), threads.capacity());
+		L_THREADPOOL(this, "Worker %s started! (size: %lu, capacity: %lu)", name, threadpool_size(), threadpool_capacity());
 		while (TaskQueue<Params...>::tasks.pop(task)) {
 			++running_tasks;
 			try {
@@ -258,10 +258,16 @@ public:
 		threads.shrink_to_fit();
 	}
 
+	size_t threadpool_capacity() {
+		std::lock_guard<std::mutex> lk(mtx);
+		return threads.capacity();
+	}
+
 	size_t threadpool_size() {
 		std::lock_guard<std::mutex> lk(mtx);
 		return threads.size();
 	}
+
 	size_t running_size() {
 		return running_tasks.load();
 	}
