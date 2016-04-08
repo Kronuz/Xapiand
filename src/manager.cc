@@ -335,9 +335,10 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	}
 
 #ifdef XAPIAND_CLUSTERING
-	auto raft = weak_raft.lock();
-	if (raft && !is_single_node()) {
-		raft->start();
+	if (!is_single_node()) {
+		if (auto raft = weak_raft.lock()) {
+			raft->start();
+		}
 	}
 
 	if (auto discovery = weak_discovery.lock()) {
