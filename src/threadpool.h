@@ -210,13 +210,18 @@ class ThreadPool : public TaskQueue<Params...> {
 		L_THREADPOOL(this, "Worker %s ended.", name);
 	}
 
-	inline bool spawn_worker() {
-		if (!full_pool && TaskQueue<Params...>::size()) {
+	inline bool spawn_workers() {
+		if (full_pool) return false;
+		auto enqueued = TaskQueue<Params...>::size();
+		if (enqueued) {
 			std::lock_guard<std::mutex> lk(mtx);
-			if (threads.size() < threads.capacity()) {
+			auto threads_capacity = threads.capacity();
+			auto threads_size = threads.size();
+			while (enqueued-- > (threads_size - running_tasks) * 2 / 3 && threads_size < threads_capacity) {
 				threads.emplace_back(worker, threads.size());
-				return true;
-			} else {
+				threads_size = threads.size();
+			}
+			if (threads_size == threads_capacity) {
 				full_pool = true;
 			}
 		}
@@ -248,7 +253,7 @@ public:
 	template<typename... Args>
 	inline auto enqueue(Args&&... args) {
 		auto ret = TaskQueue<Params...>::enqueue(std::forward<Args>(args)...);
-		spawn_worker();
+		spawn_workers();
 		return ret;
 	}
 
