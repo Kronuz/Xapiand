@@ -470,7 +470,13 @@ std::string
 Schema::to_json_string(bool prettify)
 {
 	MsgPack schema_readable = schema.clone();
-	readable(schema_readable.at(RESERVED_SCHEMA), true);
+	auto properties = schema_readable.at(RESERVED_SCHEMA);
+	if likely(properties) {
+		readable(std::move(properties), true);
+	} else {
+		schema_readable.erase(RESERVED_SCHEMA);
+	}
+
 	return schema_readable.to_json_string(prettify);
 }
 
@@ -487,11 +493,11 @@ Schema::readable(MsgPack&& item_schema, bool is_root)
 		} catch (const std::out_of_range&) {
 			if (is_valid(str_key) || (is_root && str_key == RESERVED_ID)) {
 				auto sub_item = item_schema.at(str_key);
-				if unlikely(sub_item.get_type() == msgpack::type::NIL) {
+				if likely(sub_item) {
+					readable(std::move(sub_item));
+				} else {
 					item_schema.erase(str_key);
-					continue;
 				}
-				readable(std::move(sub_item));
 			}
 		}
 	}
