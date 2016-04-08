@@ -209,13 +209,14 @@ class ThreadPool : public TaskQueue<Params...> {
 	}
 
 	bool spawn_worker() {
-		std::lock_guard<std::mutex> lk(mtx);
-		if (threads.size() < threads.capacity()) {
-			threads.emplace_back(worker, threads.size());
-			return true;
-		} else {
-			return false;
+		if (TaskQueue<Params...>::size()) {
+			std::lock_guard<std::mutex> lk(mtx);
+			if (threads.size() < threads.capacity()) {
+				threads.emplace_back(worker, threads.size());
+				return true;
+			}
 		}
+		return false;
 	}
 
 public:
@@ -240,10 +241,9 @@ public:
 
 	template<typename... Args>
 	auto enqueue(Args&&... args) {
-		if (TaskQueue<Params...>::size()) {
-			spawn_worker();
-		}
-		return TaskQueue<Params...>::enqueue(std::forward<Args>(args)...);
+		auto ret = TaskQueue<Params...>::enqueue(std::forward<Args>(args)...);
+		spawn_worker();
+		return ret;
 	}
 
 	// Wait for all threads
