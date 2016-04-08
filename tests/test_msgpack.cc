@@ -262,14 +262,18 @@ int test_path() {
 int test_clone() {
 	MsgPack obj;
 	obj["elem1"] = "Elem1";
-	auto elem2 = obj["elem2"] = "Elem2";
+	obj["elem2"] = "Elem2";
 	obj["elem3"] = "Elem3";
+
+	auto copy_obj = obj.clone();
+
+	obj["elem4"] = "Elem4";
 	auto str_orig = obj.to_json_string();
 
-	MsgPack copy_elem2 = elem2.clone();
-
-	auto aux = MsgPack(to_json("{\"value\":[10, 20, 30, 40, 50], \"type\":\"Test clone\"}"));
-	copy_elem2 = aux;
+	copy_obj["elem1"] = "New Elem1";
+	copy_obj["elem2"] = "New Elem2";
+	copy_obj["elem3"] = "New Elem3";
+	copy_obj["elem4"] = "New Elem4";
 
 	auto str_final = obj.to_json_string();
 	if (str_orig != str_final) {
@@ -277,8 +281,8 @@ int test_clone() {
 		return 1;
 	}
 
-	auto str_copy = copy_elem2.to_json_string();
-	auto str_copy_expect = aux.to_json_string();
+	std::string str_copy_expect("{\"elem1\":\"New Elem1\", \"elem2\":\"New Elem2\", \"elem3\":\"New Elem3\", \"elem4\":\"New Elem4\"}");
+	auto str_copy = copy_obj.to_json_string();
 	if (str_copy != str_copy_expect) {
 		L_ERR(nullptr, "MsgPack::clone is not working. Result: %s, Expected: %s", str_copy.c_str(), str_copy_expect.c_str());
 		return 1;
