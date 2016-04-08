@@ -144,26 +144,8 @@ public:
 	// Enqueues a Task object to be executed
 	decltype(auto) enqueue(std::shared_ptr<Task<Params...>> nt) {
 		return enqueue([nt = std::move(nt)](Params... params) mutable {
-			try {
-				nt->run(std::move(params)...);
-				nt.reset();
-			} catch (const Exception& exc) {
-				auto exc_context = exc.get_context();
-				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc_context ? exc_context : "Unkown Exception!");
-				throw;
-			} catch (const Xapian::Error& exc) {
-				auto exc_msg = exc.get_msg().c_str();
-				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown Xapian::Error!");
-				throw;
-			} catch (const std::exception& exc) {
-				auto exc_msg = exc.what();
-				L_EXC(nt.get(), "Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown std::exception!");
-				throw;
-			} catch (...) {
-				std::exception exc;
-				L_EXC(nt.get(), "Task died with an unhandled exception: Unkown!");
-				throw;
-			}
+			nt->run(std::move(params)...);
+			nt.reset();
 		});
 	}
 
@@ -202,13 +184,23 @@ class ThreadPool : public TaskQueue<Params...> {
 		snprintf(name, sizeof(name), format.c_str(), idx);
 		set_thread_name(std::string(name));
 		function_mo<void(Params...)> task;
+
 		while (TaskQueue<Params...>::tasks.pop(task)) {
 			++running_tasks;
 			try {
 				task(std::forward<Params_>(params)...);
+			} catch (const Exception& exc) {
+				auto exc_context = exc.get_context();
+				L_EXC(this, "Task died with an unhandled exception: %s", *exc_context ? exc_context : "Unkown Exception!");
+			} catch (const Xapian::Error& exc) {
+				auto exc_msg = exc.get_msg().c_str();
+				L_EXC(this, "Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown Xapian::Error!");
+			} catch (const std::exception& exc) {
+				auto exc_msg = exc.what();
+				L_EXC(this, "Task died with an unhandled exception: %s", *exc_msg ? exc_msg : "Unkown std::exception!");
 			} catch (...) {
-				--running_tasks;
-				throw;
+				std::exception exc;
+				L_EXC(this, "Task died with an unhandled exception: Unkown!");
 			}
 			--running_tasks;
 		}
