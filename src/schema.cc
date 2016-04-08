@@ -306,6 +306,8 @@ Schema::set_database(Database* _database)
 std::string
 Schema::serialise_id(MsgPack& properties, specification_t& specification, const std::string& value_id)
 {
+	L_CALL(this, "Schema::serialise_id()");
+
 	auto prop_id = properties[RESERVED_ID];
 	specification.set_type = true;
 	if (prop_id) {
