@@ -149,22 +149,22 @@ public:
 		});
 	}
 
-	void clear() {
+	inline void clear() {
 		tasks.clear();
 	}
 
 	// Tell the tasks to finish so all threads exit as soon as possible
-	void finish() {
+	inline void finish() {
 		tasks.finish();
 	}
 
 	// Flag the pool as ending, so all threads exit as soon as all queued tasks end
-	void end() {
+	inline void end() {
 		tasks.end();
 	}
 
 	// Return size of the tasks queue
-	size_t size() {
+	inline size_t size() {
 		return tasks.size();
 	}
 };
@@ -208,7 +208,7 @@ class ThreadPool : public TaskQueue<Params...> {
 		L_THREADPOOL(this, "Worker %s ended.", name);
 	}
 
-	bool spawn_worker() {
+	inline bool spawn_worker() {
 		if (TaskQueue<Params...>::size()) {
 			std::lock_guard<std::mutex> lk(mtx);
 			if (threads.size() < threads.capacity()) {
@@ -240,7 +240,7 @@ public:
 	}
 
 	template<typename... Args>
-	auto enqueue(Args&&... args) {
+	inline auto enqueue(Args&&... args) {
 		auto ret = TaskQueue<Params...>::enqueue(std::forward<Args>(args)...);
 		spawn_worker();
 		return ret;
@@ -255,20 +255,19 @@ public:
 			}
 		}
 		threads.clear();
-		threads.shrink_to_fit();
 	}
 
-	size_t threadpool_capacity() {
+	inline size_t threadpool_capacity() {
 		std::lock_guard<std::mutex> lk(mtx);
 		return threads.capacity();
 	}
 
-	size_t threadpool_size() {
+	inline size_t threadpool_size() {
 		std::lock_guard<std::mutex> lk(mtx);
 		return threads.size();
 	}
 
-	size_t running_size() {
+	inline size_t running_size() {
 		return running_tasks.load();
 	}
 };
