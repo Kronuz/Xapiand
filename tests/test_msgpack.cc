@@ -267,21 +267,32 @@ int test_clone() {
 
 	auto copy_obj = obj.clone();
 
+	obj["elem1"] = "Mod_Elem1";
+	obj["elem2"] = "Mod_Elem2";
+	obj["elem3"] = "Mod_Elem3";
 	obj["elem4"] = "Elem4";
+	obj["elem1"] = "Final_Elem1";
+	obj["elem2"] = "Final_Elem2";
+	obj["elem3"] = "Final_Elem3";
+	obj["elem4"] = "Final_Elem4";
+
+	copy_obj["elem1"] = "Copy_Elem1";
+	copy_obj["elem2"] = "Copy_Elem2";
+	copy_obj["elem3"] = "Copy_Elem3";
+	copy_obj["elem4"] = "Copy_Elem4";
+	copy_obj["elem1"] = "Final_Copy_Elem1";
+	copy_obj["elem2"] = "Final_Copy_Elem2";
+	copy_obj["elem3"] = "Final_Copy_Elem3";
+	copy_obj["elem4"] = "Final_Copy_Elem4";
+
+	std::string str_orig_expect("{\"elem1\":\"Final_Elem1\", \"elem2\":\"Final_Elem2\", \"elem3\":\"Final_Elem3\", \"elem4\":\"Final_Elem4\"}");
 	auto str_orig = obj.to_json_string();
-
-	copy_obj["elem1"] = "New Elem1";
-	copy_obj["elem2"] = "New Elem2";
-	copy_obj["elem3"] = "New Elem3";
-	copy_obj["elem4"] = "New Elem4";
-
-	auto str_final = obj.to_json_string();
-	if (str_orig != str_final) {
-		L_ERR(nullptr, "MsgPack::clone is not working. Result: %s, Expected: %s", str_final.c_str(), str_orig.c_str());
+	if (str_orig_expect != str_orig) {
+		L_ERR(nullptr, "MsgPack::clone is not working. Result: %s, Expected: %s", str_orig.c_str(), str_orig_expect.c_str());
 		return 1;
 	}
 
-	std::string str_copy_expect("{\"elem1\":\"New Elem1\", \"elem2\":\"New Elem2\", \"elem3\":\"New Elem3\", \"elem4\":\"New Elem4\"}");
+	std::string str_copy_expect("{\"elem1\":\"Final_Copy_Elem1\", \"elem2\":\"Final_Copy_Elem2\", \"elem3\":\"Final_Copy_Elem3\", \"elem4\":\"Final_Copy_Elem4\"}");
 	auto str_copy = copy_obj.to_json_string();
 	if (str_copy != str_copy_expect) {
 		L_ERR(nullptr, "MsgPack::clone is not working. Result: %s, Expected: %s", str_copy.c_str(), str_copy_expect.c_str());
