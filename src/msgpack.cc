@@ -102,13 +102,6 @@ MsgPack::MsgPack(const MsgPack& other)
 
 
 std::shared_ptr<MsgPack::object_handle>
-MsgPack::make_handler()
-{
-	return std::make_shared<MsgPack::object_handle>();
-}
-
-
-std::shared_ptr<MsgPack::object_handle>
 MsgPack::make_handler(const std::string& buffer)
 {
 	msgpack::unpacked u;
@@ -121,7 +114,7 @@ std::shared_ptr<MsgPack::object_handle>
 MsgPack::make_handler(const rapidjson::Document& doc)
 {
 	auto zone(std::make_unique<msgpack::zone>());
-	msgpack::object obj(doc, *zone.get());
+	msgpack::object obj(doc, *zone);
 	return std::make_shared<MsgPack::object_handle>(obj, msgpack::move(zone));
 }
 

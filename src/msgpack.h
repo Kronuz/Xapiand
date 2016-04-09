@@ -98,14 +98,14 @@ class MsgPack {
 			: obj(o),
 			  zone(std::move(z))
 		{
-			user.set_zone(*zone.get());
+			user.set_zone(*zone);
 		}
 
 		object_handle(const msgpack::object& o)
 			: zone(std::make_unique<msgpack::zone>())
 		{
-			user.set_zone(*zone.get());
-			obj = msgpack::object(o, *zone.get());
+			user.set_zone(*zone);
+			obj = msgpack::object(o, *zone);
 		}
 
 		object_handle(object_handle&& _handler) noexcept
@@ -118,7 +118,7 @@ class MsgPack {
 		object_handle()
 			: zone(std::make_unique<msgpack::zone>())
 		{
-			user.set_zone(*zone.get());
+			user.set_zone(*zone);
 			obj.type = msgpack::type::NIL;
 		}
 	};
@@ -131,7 +131,6 @@ class MsgPack {
 	std::shared_ptr<object_handle> handler;
 	std::shared_ptr<MsgPackBody> parent_body;
 
-	static std::shared_ptr<object_handle> make_handler();
 	static std::shared_ptr<object_handle> make_handler(const std::string& buffer);
 	static std::shared_ptr<object_handle> make_handler(const rapidjson::Document& doc);
 
@@ -176,7 +175,7 @@ public:
 
 	template<typename T>
 	MsgPack& operator=(T&& v) {
-		msgpack::object o(std::forward<T>(v), handler->zone.get());
+		msgpack::object o(std::forward<T>(v), *handler->zone);
 		body->obj->type = o.type;
 		body->obj->via = o.via;
 		body->m_alloc = -1;
