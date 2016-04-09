@@ -38,7 +38,7 @@ MsgPack::MsgPack()
 MsgPack::MsgPack(const msgpack::object& o)
 	: handler(std::make_shared<object_handle>(o)),
 	  parent_body(nullptr),
-	  body(std::make_shared<MsgPackBody>(0, &handler->obj, MapPack()))
+	  body(std::make_shared<MsgPackBody>(0, &handler->obj))
 {
 	init();
 }
