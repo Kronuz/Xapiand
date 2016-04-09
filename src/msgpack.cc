@@ -392,12 +392,13 @@ MsgPack::expand_map(size_t r_size)
 
 		msgpack::detail::unpack_map()(handler->user, static_cast<uint32_t>(nsize), *body->obj);
 
+		body->map.reserve(nsize);
 		// Copy previous memory.
-		for ( ; p != pend; ++p) {
+		for (int pos = 0; p != pend; ++p, ++pos) {
 			msgpack::detail::unpack_map_item(*body->obj, p->key, p->val);
+			body->map.at(std::string(p->key.via.str.ptr, p->key.via.str.size))->obj = &body->obj->via.map.ptr[pos].val;
 		}
 
-		body->map.reserve(nsize);
 		body->m_alloc = nsize;
 	}
 }
