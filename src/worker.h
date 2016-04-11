@@ -55,6 +55,7 @@ private:
 	ev::async _async_detach;
 
 	std::mutex _mtx;
+	std::atomic_bool do_detach;
 
 	const WorkerShared _parent;
 	WorkerList _children;
@@ -66,7 +67,6 @@ private:
 	template<typename T>
 	inline WorkerList::iterator _attach(T&& child) {
 		assert(child);
-		L_OBJ(this, "Worker child [%p] attached to [%p]", child.get(), this);
 		return _children.insert(_children.end(), std::forward<T>(child));
 	}
 
@@ -75,7 +75,6 @@ private:
 		if (child->_parent && child->_iterator != _children.end()) {
 			auto it = _children.erase(child->_iterator);
 			child->_iterator = _children.end();
-			L_OBJ(this, "Worker child [%p] detached from [%p]", child.get(), this);
 			return it;
 		}
 		return _children.end();
@@ -137,9 +136,29 @@ protected:
 	virtual void destroy_impl() = 0;
 
 	virtual void detach_impl() {
+		do_detach = true;
 		if (_parent) {
 			std::lock_guard<std::mutex> lk(_parent->_mtx);
-			_parent->_detach(shared_from_this());
+			std::weak_ptr<Worker> wobj;
+			void* ptr;
+			{
+				auto obj = shared_from_this();
+				_parent->_detach(obj);
+				wobj = obj;
+				ptr = obj.get();
+			}
+			if (auto obj = wobj.lock()) {
+				L_OBJ(_parent.get(), "Worker child [%p] cannot be detached from [%p] (cnt: %u)", ptr, _parent.get(), obj.use_count());
+				_parent->_attach(obj);
+			} else {
+				L_OBJ(_parent.get(), "Worker child [%p] detached from [%p]", ptr, _parent.get());
+			}
+		}
+	}
+
+	virtual void cleanup() {
+		if (do_detach) {
+			detach();
 		}
 	}
 
@@ -172,7 +191,6 @@ private:
 		L_EV(this, "Worker::_async_detach_cb");
 
 		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
-		destroyer();
 		detach_impl();
 		L_EV_END(this, "Worker::_async_detach_cb:END");
 	}
@@ -238,6 +256,7 @@ public:
 		if (worker->_parent) {
 			std::lock_guard<std::mutex> lk(worker->_parent->_mtx);
 			worker->_iterator = worker->_parent->_attach(worker);
+			L_OBJ(worker->_parent.get(), "Worker child [%p] attached to [%p]", worker.get(), worker->_parent.get());
 		}
 
 		return worker;
