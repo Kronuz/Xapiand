@@ -252,7 +252,7 @@ MsgPack::to_string() const
 void
 MsgPack::expand_map(size_t r_size)
 {
-	if (body->m_alloc == static_cast<ssize_t>(r_size)) {
+	if (body->m_alloc <= static_cast<ssize_t>(r_size)) {
 		size_t nsize = body->m_alloc > 0 ? body->m_alloc * 2 : MSGPACK_MAP_INIT_SIZE;
 		while (nsize < r_size) {
 			nsize *= 2;
