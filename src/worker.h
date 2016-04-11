@@ -185,6 +185,8 @@ public:
 	}
 
 	void destroyer() {
+		L_OBJ(this, "DESTROYING WORKER! [%p]", this);
+
 		_async_shutdown.stop();
 		L_EV(this, "Stop Worker async shutdown event [%p]", this);
 		_async_break_loop.stop();
@@ -193,6 +195,8 @@ public:
 		L_EV(this, "Stop Worker async destroy event [%p]", this);
 		_async_detach.stop();
 		L_EV(this, "Stop Worker async detach event [%p]", this);
+
+		L_OBJ(this, "DESTROYED WORKER! [%p]", this);
 	}
 
 
