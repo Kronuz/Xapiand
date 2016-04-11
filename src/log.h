@@ -43,7 +43,7 @@
 
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
 #define LOCATION_LOG_LEVEL LOG_DEBUG  // The minimum log_level that prints file:line
-#define ASYNC_LOG_LEVEL LOG_INFO  // The minimum log_level that is asynchronous
+#define ASYNC_LOG_LEVEL LOG_CRIT  // The minimum log_level that is asynchronous
 
 
 using namespace std::chrono_literals;
