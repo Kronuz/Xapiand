@@ -35,3 +35,7 @@ int test_add_items();
 int test_assigment();
 int test_path();
 int test_clone();
+int test_erase();
+int test_reserve();
+int test_reset();
+int test_explicit_constructors();

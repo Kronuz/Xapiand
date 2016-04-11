@@ -82,6 +82,34 @@ START_TEST(test_msgpack_clone)
 END_TEST
 
 
+START_TEST(test_msgpack_erase)
+{
+	ck_assert_int_eq(test_erase(), 0);
+}
+END_TEST
+
+
+START_TEST(test_msgpack_reserve)
+{
+	ck_assert_int_eq(test_reserve(), 0);
+}
+END_TEST
+
+
+START_TEST(test_msgpack_reset)
+{
+	ck_assert_int_eq(test_reset(), 0);
+}
+END_TEST
+
+
+START_TEST(test_msgpack_explicit_constructors)
+{
+	ck_assert_int_eq(test_explicit_constructors(), 0);
+}
+END_TEST
+
+
 Suite* testMsgPack(void) {
 	Suite *s = suite_create("Test MsgPack");
 
@@ -116,6 +144,22 @@ Suite* testMsgPack(void) {
 	TCase *tc_clone = tcase_create("Test Clone");
 	tcase_add_test(tc_clone, test_msgpack_clone);
 	suite_add_tcase(s, tc_clone);
+
+	TCase *tc_erase = tcase_create("Test Erase");
+	tcase_add_test(tc_erase, test_msgpack_erase);
+	suite_add_tcase(s, tc_erase);
+
+	TCase *tc_reserve = tcase_create("Test Reserve");
+	tcase_add_test(tc_reserve, test_msgpack_reserve);
+	suite_add_tcase(s, tc_reserve);
+
+	TCase *tc_reset = tcase_create("Test Reset");
+	tcase_add_test(tc_reset, test_msgpack_reset);
+	suite_add_tcase(s, tc_reset);
+
+	TCase *tc_explicit_constructors = tcase_create("Test Explicit Constructors");
+	tcase_add_test(tc_explicit_constructors, test_msgpack_explicit_constructors);
+	suite_add_tcase(s, tc_explicit_constructors);
 
 	return s;
 }

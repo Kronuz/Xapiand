@@ -301,3 +301,162 @@ int test_clone() {
 
 	return 0;
 }
+
+
+int test_erase() {
+	MsgPack obj;
+	obj["elem1"] = "Elem1";
+	obj["elem2"] = "Elem2";
+	obj["elem3"] = "Elem3";
+	obj["elem4"] = "Elem4";
+
+	obj.erase("elem1");
+	obj.erase("elem3");
+
+	try {
+		obj.at("elem1");
+		L_ERR(nullptr, "MsgPack::erase() is not working");
+		return 1;
+	} catch (const std::out_of_range&) { }
+
+	try {
+		obj.at("elem3");
+		L_ERR(nullptr, "MsgPack::erase() is not working");
+		return 1;
+	} catch (const std::out_of_range&) { }
+
+	obj["elem2"] = "Final_Elem2";
+	obj["elem4"] = "Final_Elem4";
+
+	std::string str_obj_expect("{\"elem2\":\"Final_Elem2\", \"elem4\":\"Final_Elem4\"}");
+	auto str_obj = obj.to_json_string();
+	if (str_obj_expect != str_obj) {
+		L_ERR(stderr, "MsgPack::erase() is not working correctly. Result: %s, Expected: %s", str_obj.c_str(), str_obj_expect.c_str());
+		return 1;
+	}
+
+	return 0;
+}
+
+
+int test_reserve() {
+	std::string data;
+	read_file_contents("tests/examples/msgpack/test1.mpack", &data);
+	MsgPack obj(data);
+
+	size_t r_size = 128 * obj.size();
+	obj.reserve(r_size);
+	if (obj.capacity() != r_size) {
+		L_ERR(nullptr, "MsgPack::reserve(msgpack::map) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
+		return 1;
+	}
+
+	if (obj.to_string() != data) {
+		L_ERR(nullptr, "MsgPack::expand_map is not allocating memory correctly.\n");
+		return 1;
+	}
+
+	auto doc = to_json("[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]");
+	obj = doc;
+	std::string orig_data = obj.to_json_string().c_str();
+	r_size = 128 * obj.size();
+
+	obj.reserve(r_size);
+	if (obj.capacity() != r_size) {
+		L_ERR(nullptr, "MsgPack::reserve(msgpack::array) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
+		return 1;
+	}
+
+	if (obj.to_json_string() != orig_data) {
+		L_ERR(nullptr, "MsgPack::expand_array is not allocating memory correctly.\n");
+		return 1;
+	}
+
+	return 0;
+}
+
+
+int test_reset() {
+	std::string data;
+	read_file_contents("tests/examples/msgpack/test1.mpack", &data);
+	MsgPack obj(data);
+
+	MsgPack obj2;
+	obj2.reset(obj);
+
+	for (int i = 0; i < 300; ++i) {
+		obj[std::to_string(i)] = i;
+	}
+
+	for (int i = 0; i < 300; ++i) {
+		obj2.erase(std::to_string(i));
+	}
+
+	if (obj.capacity() != obj2.capacity()) {
+		L_ERR(nullptr, "Error in MsgPack::reset, objects have differents capabilities\n");
+		return 1;
+	}
+
+	if (obj.size() != obj2.size()) {
+		L_ERR(nullptr, "Error in MsgPack::reset, objects have differents sizes\n");
+		return 1;
+	}
+
+	if (obj.to_json_string() != obj2.to_json_string()) {
+		L_ERR(nullptr, "Error in MsgPack::reset, objects are different\n");
+		return 1;
+	}
+
+	if (obj.to_string() != data) {
+		L_ERR(nullptr, "Error in MsgPack::reset with inserts and deletes is not working\n");
+		return 1;
+	}
+
+	return 0;
+}
+
+
+int test_explicit_constructors() {
+	std::string expect_json;
+	read_file_contents("/Users/josemaria/Documents/Xapiand/tests/examples/msgpack/json_test1_unpack.txt", &expect_json);
+	int res = 0;
+
+	// Buffer object
+	std::string data;
+	read_file_contents("/Users/josemaria/Documents/Xapiand/tests/examples/msgpack/test1.mpack", &data);
+	MsgPack buf_obj(data);
+	if (buf_obj.to_json_string() != expect_json) {
+		L_ERR(nullptr, "MsgPack::MsgPack(std::string) is not working correctly. Result: %s\nExpected: %s\n", buf_obj.to_json_string().c_str(), expect_json.c_str());
+		++res;
+	}
+
+
+	// rapidjson::Document
+	std::string str_json;
+	read_file_contents("/Users/josemaria/Documents/Xapiand/tests/examples/msgpack/json_test1.txt", &str_json);
+	auto json_doc = to_json(str_json);
+	MsgPack json_obj(json_doc);
+	if (json_obj.to_json_string() != expect_json) {
+		L_ERR(nullptr, "MsgPack::MsgPack(rapidjson::Document) is not working correctly. Result: %s\nExpected: %s\n", json_obj.to_json_string().c_str(), expect_json.c_str());
+		++res;
+	}
+
+	// msgpack::object
+	msgpack::object o(data);
+	MsgPack msg_obj(o);
+	if (msg_obj.get_str() != data) {
+		L_ERR(nullptr, "MsgPack::MsgPack(msgpack::object) is not working correctly. Result: %s\nExpected: %s\n", msg_obj.get_str().c_str(), data.c_str());
+		++res;
+	}
+
+	// msgpack::unpacked
+	msgpack::unpacked u;
+	msgpack::unpack(&u, data.data(), data.size());
+	MsgPack unp_obj(u);
+	if (unp_obj.to_json_string() != expect_json) {
+		L_ERR(nullptr, "MsgPack::MsgPack(msgpack::unpacked) is not working correctly. Result: %s\nExpected: %s\n", unp_obj.to_json_string().c_str(), expect_json.c_str());
+		++res;
+	}
+
+	return res;
+}
