@@ -108,26 +108,6 @@ class MsgPack {
 		friend MsgPack;
 
 	public:
-		object_handle(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z)
-			: zone(std::move(z)),
-			  obj(o)
-		{
-			user.set_zone(*zone);
-		}
-
-		object_handle(const msgpack::object& o)
-			: zone(std::make_unique<msgpack::zone>())
-		{
-			user.set_zone(*zone);
-			obj = msgpack::object(o, *zone);
-		}
-
-		object_handle(object_handle&& _handler) noexcept
-			: zone(std::move(_handler.zone)),
-			  user(std::move(_handler.user)),
-			  obj(std::move(_handler.obj)) { }
-
-
 		object_handle()
 			: zone(std::make_unique<msgpack::zone>())
 		{
@@ -135,28 +115,47 @@ class MsgPack {
 			obj.type = msgpack::type::NIL;
 		}
 
-		object_handle(const std::string& buffer) {
-			msgpack::unpacked u;
-			msgpack::unpack(&u, buffer.data(), buffer.size());
-			zone = msgpack::move(u.zone());
+		object_handle(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z)
+			: zone(std::move(z)),
+			  obj(o)
+		{
 			user.set_zone(*zone);
-			obj = u.get();
 		}
 
-		object_handle(const rapidjson::Document& doc) {
-			zone = std::make_unique<msgpack::zone>();
+		object_handle(object_handle&& _handler) noexcept
+			: zone(std::move(_handler.zone)),
+			  user(std::move(_handler.user)),
+			  obj(std::move(_handler.obj)) { }
+
+		object_handle(const object_handle&) = delete;
+
+		explicit object_handle(const msgpack::object& o)
+			: zone(std::make_unique<msgpack::zone>())
+		{
 			user.set_zone(*zone);
-			obj = msgpack::object(doc, *zone);
+			obj = msgpack::object(o, *zone);
 		}
 
-		object_handle(msgpack::unpacked& u)
+		explicit object_handle(msgpack::unpacked& u)
 			: zone(std::move(u.zone())),
 			  obj(u.get())
 		{
 			user.set_zone(*zone);
 		}
 
-		object_handle(const object_handle&) = delete;
+		explicit object_handle(const std::string& buffer) {
+			msgpack::unpacked u;
+			msgpack::unpack(&u, buffer.data(), buffer.size());
+			zone = std::move(u.zone());
+			user.set_zone(*zone);
+			obj = u.get();
+		}
+
+		explicit object_handle(const rapidjson::Document& doc) {
+			zone = std::make_unique<msgpack::zone>();
+			user.set_zone(*zone);
+			obj = msgpack::object(doc, *zone);
+		}
 	};
 
 	MsgPack(const std::shared_ptr<object_handle>& handler_, const std::shared_ptr<MsgPackBody>& body_, const std::shared_ptr<MsgPackBody>& p_body_);
