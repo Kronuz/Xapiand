@@ -393,10 +393,11 @@ MsgPack::expand_map(size_t r_size)
 		const msgpack::object_kv* p(body->obj->via.map.ptr);
 		const msgpack::object_kv* pend(body->obj->via.map.ptr + body->obj->via.map.size);
 
+		// Create a new map
 		msgpack::detail::unpack_map()(handler->user, static_cast<uint32_t>(nsize), *body->obj);
 
 		body->map.reserve(nsize);
-		// Copy previous memory.
+		// Copy all previous items to the new map
 		for (int pos = 0; p != pend; ++p, ++pos) {
 			msgpack::detail::unpack_map_item(*body->obj, p->key, p->val);
 			body->map.at(std::string(p->key.via.str.ptr, p->key.via.str.size))->obj = &body->obj->via.map.ptr[pos].val;
@@ -419,9 +420,10 @@ MsgPack::expand_array(size_t r_size)
 		const msgpack::object* p(body->obj->via.array.ptr);
 		const msgpack::object* pend(body->obj->via.array.ptr + body->obj->via.array.size);
 
+		// Create a new array
 		msgpack::detail::unpack_array()(handler->user, static_cast<uint32_t>(nsize), *body->obj);
 
-		// Copy previous memory.
+		// Copy all previous items to the new array
 		for ( ; p != pend; ++p) {
 			msgpack::detail::unpack_array_item(*body->obj, *p);
 		}
