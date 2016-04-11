@@ -77,7 +77,7 @@ RaftServer::heartbeat_leader(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node->region != remote_node.region) {
+	if (local_node->region.load() != remote_node.region.load()) {
 		return;
 	}
 
@@ -99,7 +99,7 @@ RaftServer::request_vote(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node->region != remote_node.region) {
+	if (local_node->region.load() != remote_node.region.load()) {
 		return;
 	}
 
@@ -152,7 +152,7 @@ RaftServer::response_vote(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node->region != remote_node.region) {
+	if (local_node->region.load() != remote_node.region.load()) {
 		return;
 	}
 
@@ -193,7 +193,7 @@ RaftServer::leader(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node->region != remote_node.region) {
+	if (local_node->region.load() != remote_node.region.load()) {
 		return;
 	}
 
@@ -226,7 +226,7 @@ RaftServer::leadership(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node->region != remote_node.region) {
+	if (local_node->region.load() != remote_node.region.load()) {
 		return;
 	}
 
@@ -247,7 +247,7 @@ RaftServer::reset(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (local_node->region != remote_node.region) {
+	if (local_node->region.load() != remote_node.region.load()) {
 		return;
 	}
 
