@@ -114,6 +114,61 @@ protected:
 		L_OBJ(this, "CREATED WORKER!");
 	}
 
+	void destroyer() {
+		L_OBJ(this, "DESTROYING WORKER!");
+
+		_async_shutdown.stop();
+		L_EV(this, "Stop Worker async shutdown event");
+		_async_break_loop.stop();
+		L_EV(this, "Stop Worker async break_loop event");
+		_async_destroy.stop();
+		L_EV(this, "Stop Worker async destroy event");
+		_async_detach.stop();
+		L_EV(this, "Stop Worker async detach event");
+
+		L_OBJ(this, "DESTROYED WORKER!");
+	}
+
+private:
+	void _async_shutdown_cb() {
+		L_EV(this, "Worker::_async_shutdown_cb");
+
+		L_EV_BEGIN(this, "Worker::_async_shutdown_cb:BEGIN");
+		shutdown_impl(_asap, _now);
+		L_EV_END(this, "Worker::_async_shutdown_cb:END");
+	}
+
+	void _async_break_loop_cb(ev::async&, int) {
+		L_EV(this, "Worker::_async_break_loop_cb");
+
+		L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
+		break_loop_impl();
+		L_EV_END(this, "Worker::_async_break_loop_cb:END");
+	}
+
+	void _async_destroy_cb(ev::async&, int) {
+		L_EV(this, "Worker::_async_destroy_cb");
+
+		L_EV_BEGIN(this, "Worker::_async_destroy_cb:BEGIN");
+		destroy_impl();
+		L_EV_END(this, "Worker::_async_destroy_cb:END");
+	}
+
+	void _async_detach_cb(ev::async&, int) {
+		L_EV(this, "Worker::_async_detach_cb");
+
+		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
+		detach_impl();
+		L_EV_END(this, "Worker::_async_detach_cb:END");
+	}
+
+public:
+	virtual ~Worker() {
+		destroyer();
+
+		L_OBJ(this, "DELETED WORKER!");
+	}
+
 	virtual void shutdown_impl(time_t asap, time_t now) {
 		std::lock_guard<std::mutex> lk(_mtx);
 
@@ -161,62 +216,6 @@ protected:
 			detach();
 		}
 	}
-
-private:
-	void _async_shutdown_cb() {
-		L_EV(this, "Worker::_async_shutdown_cb");
-
-		L_EV_BEGIN(this, "Worker::_async_shutdown_cb:BEGIN");
-		shutdown_impl(_asap, _now);
-		L_EV_END(this, "Worker::_async_shutdown_cb:END");
-	}
-
-	void _async_break_loop_cb(ev::async&, int) {
-		L_EV(this, "Worker::_async_break_loop_cb");
-
-		L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
-		break_loop_impl();
-		L_EV_END(this, "Worker::_async_break_loop_cb:END");
-	}
-
-	void _async_destroy_cb(ev::async&, int) {
-		L_EV(this, "Worker::_async_destroy_cb");
-
-		L_EV_BEGIN(this, "Worker::_async_destroy_cb:BEGIN");
-		destroy_impl();
-		L_EV_END(this, "Worker::_async_destroy_cb:END");
-	}
-
-	void _async_detach_cb(ev::async&, int) {
-		L_EV(this, "Worker::_async_detach_cb");
-
-		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
-		detach_impl();
-		L_EV_END(this, "Worker::_async_detach_cb:END");
-	}
-
-public:
-	virtual ~Worker() {
-		destroyer();
-
-		L_OBJ(this, "DELETED WORKER!");
-	}
-
-	void destroyer() {
-		L_OBJ(this, "DESTROYING WORKER!");
-
-		_async_shutdown.stop();
-		L_EV(this, "Stop Worker async shutdown event");
-		_async_break_loop.stop();
-		L_EV(this, "Stop Worker async break_loop event");
-		_async_destroy.stop();
-		L_EV(this, "Stop Worker async destroy event");
-		_async_detach.stop();
-		L_EV(this, "Stop Worker async detach event");
-
-		L_OBJ(this, "DESTROYED WORKER!");
-	}
-
 
 	inline void shutdown(time_t asap, time_t now) {
 		_asap = asap;
