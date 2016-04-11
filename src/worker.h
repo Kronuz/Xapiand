@@ -148,10 +148,10 @@ protected:
 				ptr = obj.get();
 			}
 			if (auto obj = wobj.lock()) {
-				L_OBJ(_parent.get(), "Worker child [%p] cannot be detached from [%p] (cnt: %u)", ptr, _parent.get(), obj.use_count());
+				L_OBJ(this, "Worker child [%p] cannot be detached from [%p] (cnt: %u)", ptr, _parent.get(), obj.use_count());
 				_parent->_attach(obj);
 			} else {
-				L_OBJ(_parent.get(), "Worker child [%p] detached from [%p]", ptr, _parent.get());
+				L_OBJ(this, "Worker child [%p] detached from [%p]", ptr, _parent.get());
 			}
 		}
 	}
@@ -256,7 +256,7 @@ public:
 		if (worker->_parent) {
 			std::lock_guard<std::mutex> lk(worker->_parent->_mtx);
 			worker->_iterator = worker->_parent->_attach(worker);
-			L_OBJ(worker->_parent.get(), "Worker child [%p] attached to [%p]", worker.get(), worker->_parent.get());
+			L_OBJ(worker.get(), "Worker child [%p] attached to [%p]", worker.get(), worker->_parent.get());
 		}
 
 		return worker;
