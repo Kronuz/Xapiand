@@ -257,6 +257,7 @@ public:
 	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint);
 
 	void run() override;
+	void _run();
 };
 
 using dispatch_func = void (BinaryClient::*)(const std::string&);

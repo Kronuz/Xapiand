@@ -365,6 +365,19 @@ BinaryClient::checkin_database()
 void
 BinaryClient::run()
 {
+	try {
+		_run();
+	} catch (...) {
+		cleanup();
+		throw;
+	}
+	cleanup();
+}
+
+
+void
+BinaryClient::_run()
+{
 	L_OBJ_BEGIN(this, "BinaryClient::run:BEGIN");
 	if (running++) {
 		--running;

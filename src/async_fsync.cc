@@ -138,7 +138,7 @@ AsyncFsync::run()
 		}
 	}
 
-	detach_impl();
+	detach();
 }
 
 

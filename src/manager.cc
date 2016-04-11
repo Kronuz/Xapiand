@@ -656,7 +656,7 @@ XapiandManager::join()
 
 	L_DEBUG(this, "Server ended!");
 
-	detach_impl();  // manager has no parent, so this isn't really needed
+	detach();  // manager has no parent, so this isn't really needed
 }
 
 

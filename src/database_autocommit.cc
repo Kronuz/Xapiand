@@ -136,7 +136,7 @@ DatabaseAutocommit::run()
 		}
 	}
 
-	detach_impl();
+	detach();
 }
 
 

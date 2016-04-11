@@ -443,6 +443,19 @@ HttpClient::on_data(http_parser* p, const char* at, size_t length)
 void
 HttpClient::run()
 {
+	try {
+		_run();
+	} catch (...) {
+		cleanup();
+		throw;
+	}
+	cleanup();
+}
+
+
+void
+HttpClient::_run()
+{
 	L_CALL(this, "HttpClient::run()");
 
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");

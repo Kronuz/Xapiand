@@ -65,7 +65,7 @@ XapiandServer::run()
 	ev_loop->run();
 	L_EV(this, "Server loop ended!");
 
-	detach_impl();
+	detach();
 }
 
 
