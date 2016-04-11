@@ -170,13 +170,14 @@ MsgPack::operator[](const std::string& key)
 
 	if (body->obj->type == msgpack::type::MAP) {
 		expand_map(body->obj->via.map.size);
-		msgpack::object_kv* np(body->obj->via.map.ptr + body->obj->via.map.size);
 
-		msgpack::detail::unpack_str(handler->user, key.data(), (uint32_t)key.size(), np->key);
-		msgpack::detail::unpack_nil(np->val);
-		msgpack::detail::unpack_map_item(*body->obj, np->key, np->val);
-		auto ins_it = body->map.insert(std::make_pair(key, std::make_shared<MsgPackBody>(body->obj->via.map.size, &np->val)));
+		msgpack::object key_obj;
+		msgpack::object val_obj;
+		msgpack::detail::unpack_str(handler->user, key.data(), static_cast<uint32_t>(key.size()), key_obj);
+		msgpack::detail::unpack_nil(val_obj);
+		msgpack::detail::unpack_map_item(*body->obj, key_obj, val_obj);
 
+		auto ins_it = body->map.insert(std::make_pair(key, std::make_shared<MsgPackBody>(body->obj->via.map.size, &body->obj->via.map.ptr[body->obj->via.map.size - 1].val)));
 		return MsgPack(handler, ins_it.first->second, body);
 	}
 
@@ -199,10 +200,12 @@ MsgPack::operator[](uint32_t off)
 			expand_array(r_size);
 
 			// Initialize new elements.
-			const msgpack::object* npend(body->obj->via.array.ptr + r_size);
-			for (auto np = body->obj->via.array.ptr + body->obj->via.array.size; np != npend; ++np) {
-				msgpack::detail::unpack_nil(*np);
-				msgpack::detail::unpack_array_item(*body->obj, *np);
+			msgpack::object nil_obj;
+			msgpack::detail::unpack_nil(nil_obj);
+			const msgpack::object* p(body->obj->via.array.ptr + body->obj->via.array.size);
+			const msgpack::object* pend(body->obj->via.array.ptr + r_size);
+			for ( ; p != pend; ++p) {
+				msgpack::detail::unpack_array_item(*body->obj, nil_obj);
 			}
 		}
 
