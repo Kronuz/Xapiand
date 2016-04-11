@@ -52,6 +52,19 @@ struct MsgPackBody {
 		  obj(obj_),
 		  map(map_),
 		  m_alloc(malloc_) { }
+
+	// Erases d_it from map and update map values.
+	void erase(const MapPack::const_iterator& d_it) {
+		auto pos = d_it->second->pos;
+		map.erase(d_it);
+		const auto it_e = map.end();
+		for (auto it = map.begin(); it != it_e; ++it) {
+			if (it->second->pos > pos) {
+				it->second->pos -= 1;
+				it->second->obj = &obj->via.map.ptr[it->second->pos].val;
+			}
+		}
+	}
 };
 
 

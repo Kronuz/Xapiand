@@ -184,7 +184,7 @@ MsgPack::erase(const std::string& key)
 			auto p = body->obj->via.map.ptr + it->second->pos;
 			memmove(p, p + 1, (body->obj->via.map.size - it->second->pos - 1) * sizeof(msgpack::object_kv));
 			--body->obj->via.map.size;
-			body->map.erase(key);
+			body->erase(it);
 			return true;
 		} else {
 			return false;
