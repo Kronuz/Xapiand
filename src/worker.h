@@ -168,18 +168,23 @@ private:
 		L_EV(this, "Worker::_async_detach_cb");
 
 		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
+		destroyer();
 		detach_impl();
 		L_EV_END(this, "Worker::_async_detach_cb:END");
 	}
 
 public:
 	virtual ~Worker() {
+		destroyer();
+
+		L_OBJ(this, "DELETED WORKER!");
+	}
+
+	void destroyer() {
 		_async_shutdown.stop();
 		_async_break_loop.stop();
 		_async_destroy.stop();
 		_async_detach.stop();
-
-		L_OBJ(this, "DELETED WORKER!");
 	}
 
 
