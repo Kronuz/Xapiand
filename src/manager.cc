@@ -500,11 +500,16 @@ XapiandManager::make_servers(const opts_t& o)
 	for (size_t i = 0; i < o.num_servers; ++i) {
 		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr, ev_flags);
 		servers_weak.push_back(server);
+
 		Worker::make_shared<HttpServer>(server, server->ev_loop, ev_flags, http);
+
 #ifdef XAPIAND_CLUSTERING
 		if (!solo) {
-			binary->add_server(Worker::make_shared<BinaryServer>(server, server->ev_loop, ev_flags, binary));
+			auto binary_server = Worker::make_shared<BinaryServer>(server, server->ev_loop, ev_flags, binary);
+			binary->add_server(binary_server);
+
 			Worker::make_shared<DiscoveryServer>(server, server->ev_loop, ev_flags, discovery);
+
 			Worker::make_shared<RaftServer>(server, server->ev_loop, ev_flags, raft);
 		}
 #endif
@@ -532,7 +537,8 @@ XapiandManager::make_replicators(const opts_t& o)
 #ifdef XAPIAND_CLUSTERING
 	if (!solo) {
 		for (size_t i = 0; i < o.num_replicators; ++i) {
-			replicator_pool.enqueue(Worker::make_shared<XapiandReplicator>(share_this<XapiandManager>(), nullptr, ev_flags));
+			auto obj = Worker::make_shared<XapiandReplicator>(share_this<XapiandManager>(), nullptr, ev_flags);
+			replicator_pool.enqueue(obj);
 		}
 	}
 #endif
@@ -543,7 +549,8 @@ void
 XapiandManager::make_autocommiters(const opts_t& o)
 {
 	for (size_t i = 0; i < o.num_committers; ++i) {
-		autocommit_pool.enqueue(Worker::make_shared<DatabaseAutocommit>(share_this<XapiandManager>(), nullptr, ev_flags));
+		auto obj = Worker::make_shared<DatabaseAutocommit>(share_this<XapiandManager>(), nullptr, ev_flags);
+		autocommit_pool.enqueue(obj);
 	}
 }
 
@@ -552,7 +559,8 @@ void
 XapiandManager::make_asyncfsyncs(const opts_t& o)
 {
 	for (size_t i = 0; i < o.num_committers; ++i) {
-		asyncfsync_pool.enqueue(Worker::make_shared<AsyncFsync>(share_this<XapiandManager>(), nullptr, ev_flags));
+		auto obj = Worker::make_shared<AsyncFsync>(share_this<XapiandManager>(), nullptr, ev_flags);
+		asyncfsync_pool.enqueue(obj);
 	}
 }
 
