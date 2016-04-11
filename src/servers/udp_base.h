@@ -38,6 +38,8 @@ protected:
 
 	void sending_message(const std::string& message);
 
+	void destroyer();
+
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 

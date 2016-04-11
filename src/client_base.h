@@ -78,6 +78,8 @@ class BaseClient : public Task<>, public Worker {
 
 	bool _write(int fd, bool async);
 
+	void destroyer();
+
 protected:
 	BaseClient(const std::shared_ptr<BaseServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
 

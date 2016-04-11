@@ -52,7 +52,7 @@ XapiandServer::XapiandServer(const std::shared_ptr<XapiandManager>& manager_, ev
 
 XapiandServer::~XapiandServer()
 {
-	destroy_impl();
+	destroyer();
 
 	L_OBJ(this, "DELETED XAPIAN SERVER!");
 }
@@ -83,6 +83,13 @@ XapiandServer::async_setup_node_cb(ev::async&, int)
 
 void
 XapiandServer::destroy_impl()
+{
+	destroyer();
+}
+
+
+void
+XapiandServer::destroyer()
 {
 	L_OBJ(this, "DESTROYING XAPIAN SERVER!");
 

@@ -36,6 +36,8 @@ protected:
 
 	BaseServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
+	void destroyer();
+
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 

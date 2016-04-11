@@ -37,7 +37,7 @@ XapiandReplicator::~XapiandReplicator()
 {
 	L_OBJ(this, "DESTROYING XAPIAN REPLICATOR!");
 
-	destroy_impl();
+	destroyer();
 
 	L_OBJ(this, "DESTROYED XAPIAN REPLICATOR!");
 }
@@ -45,6 +45,13 @@ XapiandReplicator::~XapiandReplicator()
 
 void
 XapiandReplicator::destroy_impl()
+{
+	destroyer();
+}
+
+
+void
+XapiandReplicator::destroyer()
 {
 	manager()->database_pool.updated_databases.finish();
 }
@@ -57,7 +64,7 @@ XapiandReplicator::shutdown_impl(time_t asap, time_t now)
 
 	Worker::shutdown_impl(asap, now);
 
-	destroy_impl(); // Call implementation directly, as we don't use a loop
+	destroyer(); // Call implementation directly, as we don't use a loop
 }
 
 

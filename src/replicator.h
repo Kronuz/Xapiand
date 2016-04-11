@@ -44,6 +44,8 @@ class XapiandReplicator : public Task<>, public Worker {
 
 	void on_commit(const Endpoint &endpoint);
 
+	void destroyer();
+
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 

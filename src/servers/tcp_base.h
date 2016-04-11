@@ -53,6 +53,8 @@ protected:
 
 	std::string description;
 
+	void destroyer();
+
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 

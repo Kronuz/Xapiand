@@ -55,6 +55,8 @@ class AsyncFsync : public Task<>, public Worker {
 
 	std::atomic_bool running;
 
+	void destroyer();
+
 	void destroy_impl() override;
 	void shutdown_impl(time_t asap, time_t now) override;
 

@@ -118,7 +118,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 
 XapiandManager::~XapiandManager()
 {
-	destroy_impl();
+	destroyer();
 
 	L_OBJ(this, "DELETED XAPIAN MANAGER!");
 }
@@ -432,6 +432,12 @@ XapiandManager::async_shutdown_sig_cb(ev::async&, int)
 void
 XapiandManager::destroy_impl()
 {
+	destroyer();
+}
+
+
+void
+XapiandManager::destroyer() {
 	L_OBJ(this, "DESTROYING XAPIAN MANAGER!");
 
 #ifdef XAPIAND_CLUSTERING

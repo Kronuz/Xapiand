@@ -51,7 +51,7 @@ BaseTCP::BaseTCP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* 
 
 BaseTCP::~BaseTCP()
 {
-	destroy_impl();
+	destroyer();
 
 	io::close(sock);
 	sock = -1;
@@ -62,6 +62,13 @@ BaseTCP::~BaseTCP()
 
 void
 BaseTCP::destroy_impl()
+{
+	destroyer();
+}
+
+
+void
+BaseTCP::destroyer()
 {
 	L_OBJ(this, "DESTROYING BASE TCP!");
 

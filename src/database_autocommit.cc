@@ -47,7 +47,7 @@ DatabaseAutocommit::DatabaseAutocommit(const std::shared_ptr<XapiandManager>& ma
 
 DatabaseAutocommit::~DatabaseAutocommit()
 {
-	destroy_impl();
+	destroyer();
 
 	L_OBJ(this , "DELETED AUTOCOMMIT!");
 }
@@ -55,6 +55,13 @@ DatabaseAutocommit::~DatabaseAutocommit()
 
 void
 DatabaseAutocommit::destroy_impl()
+{
+	destroyer();
+}
+
+
+void
+DatabaseAutocommit::destroyer()
 {
 	running.store(false);
 	wakeup_signal.notify_all();
@@ -71,7 +78,7 @@ DatabaseAutocommit::shutdown_impl(time_t asap, time_t now)
 	// Call implementation directly, as we don't use a loop. Object gets
 	// detached when run() ends:
 
-	destroy_impl();
+	destroyer();
 }
 
 

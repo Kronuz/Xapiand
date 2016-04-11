@@ -44,7 +44,7 @@ BaseUDP::BaseUDP(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* 
 
 BaseUDP::~BaseUDP()
 {
-	destroy_impl();
+	destroyer();
 
 	io::close(sock);
 	sock = -1;
@@ -55,6 +55,13 @@ BaseUDP::~BaseUDP()
 
 void
 BaseUDP::destroy_impl()
+{
+	destroyer();
+}
+
+
+void
+BaseUDP::destroyer()
 {
 	L_OBJ(this, "DESTROYING BASE UDP!");
 

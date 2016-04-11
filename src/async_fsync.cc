@@ -50,7 +50,7 @@ AsyncFsync::AsyncFsync(const std::shared_ptr<XapiandManager>& manager_, ev::loop
 
 AsyncFsync::~AsyncFsync()
 {
-	destroy_impl();
+	destroyer();
 
 	L_OBJ(this , "DELETED AUTOCOMMIT!");
 }
@@ -58,6 +58,13 @@ AsyncFsync::~AsyncFsync()
 
 void
 AsyncFsync::destroy_impl()
+{
+	destroyer();
+}
+
+
+void
+AsyncFsync::destroyer()
 {
 	running.store(false);
 	wakeup_signal.notify_all();
@@ -74,7 +81,7 @@ AsyncFsync::shutdown_impl(time_t asap, time_t now)
 	// Call implementation directly, as we don't use a loop. Object gets
 	// detached when run() ends:
 
-	destroy_impl();
+	destroyer();
 }
 
 
