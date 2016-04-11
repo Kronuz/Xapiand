@@ -25,6 +25,7 @@
 #include "msgpack.hpp"
 
 #include "rapidjson/document.h"
+#include "xchange/rapidjson.hpp"
 
 #include <unordered_map>
 
@@ -87,16 +88,16 @@ inline bool operator==(const MsgPack& x, const MsgPack& y);
 
 class MsgPack {
 	class object_handle {
-		msgpack::object obj;
 		std::unique_ptr<msgpack::zone> zone;
 		msgpack::detail::unpack_user user;
+		msgpack::object obj;
 
 		friend MsgPack;
 
 	public:
 		object_handle(const msgpack::object& o, std::unique_ptr<msgpack::zone>&& z)
-			: obj(o),
-			  zone(std::move(z))
+			: zone(std::move(z)),
+			  obj(o)
 		{
 			user.set_zone(*zone);
 		}
@@ -109,11 +110,10 @@ class MsgPack {
 		}
 
 		object_handle(object_handle&& _handler) noexcept
-			: obj(std::move(_handler.obj)),
-			  zone(std::move(_handler.zone)),
-			  user(std::move(_handler.user)) { }
+			: zone(std::move(_handler.zone)),
+			  user(std::move(_handler.user)),
+			  obj(std::move(_handler.obj)) { }
 
-		object_handle(const object_handle&) = delete;
 
 		object_handle()
 			: zone(std::make_unique<msgpack::zone>())
@@ -121,12 +121,33 @@ class MsgPack {
 			user.set_zone(*zone);
 			obj.type = msgpack::type::NIL;
 		}
+
+		object_handle(const std::string& buffer) {
+			msgpack::unpacked u;
+			msgpack::unpack(&u, buffer.data(), buffer.size());
+			zone = msgpack::move(u.zone());
+			user.set_zone(*zone);
+			obj = u.get();
+		}
+
+		object_handle(const rapidjson::Document& doc) {
+			zone = std::make_unique<msgpack::zone>();
+			user.set_zone(*zone);
+			obj = msgpack::object(doc, *zone);
+		}
+
+		object_handle(msgpack::unpacked& u)
+			: zone(std::move(u.zone())),
+			  obj(u.get())
+		{
+			user.set_zone(*zone);
+		}
+
+		object_handle(const object_handle&) = delete;
 	};
 
-	MsgPack(const msgpack::object& o);
 	MsgPack(const std::shared_ptr<object_handle>& handler_, const std::shared_ptr<MsgPackBody>& body_, const std::shared_ptr<MsgPackBody>& p_body_);
 	MsgPack(const std::shared_ptr<MsgPackBody>& body_, std::unique_ptr<msgpack::zone>&& z);
-	MsgPack(msgpack::unpacked& u);
 
 	std::shared_ptr<object_handle> handler;
 	std::shared_ptr<MsgPackBody> parent_body;
@@ -144,12 +165,32 @@ public:
 	std::shared_ptr<MsgPackBody> body;
 
 	MsgPack();
-	MsgPack(const std::string& buffer);
 	MsgPack(MsgPack&& other) noexcept;
 	MsgPack(const MsgPack& other);
-	MsgPack(const rapidjson::Document& doc);
 
-	MsgPack operator[](const MsgPack& o);
+	template <typename T, typename = std::enable_if_t<!std::is_base_of<MsgPack, std::decay_t<T>>::value>>
+	MsgPack(T&& value)
+		: handler(std::make_shared<object_handle>(std::forward<T>(value))),
+		  parent_body(nullptr),
+		  body(std::make_shared<MsgPackBody>(0, &handler->obj))
+	{
+		init();
+	}
+
+	template <typename MP, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<MP>>::value>>
+	inline MsgPack operator[](MP&& o) {
+		switch (o.body->obj->type) {
+			case msgpack::type::STR:
+				return operator[](std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+			case msgpack::type::POSITIVE_INTEGER:
+				return operator[](static_cast<uint32_t>(o.body->obj->via.u64));
+			case msgpack::type::NEGATIVE_INTEGER:
+				return operator[](static_cast<uint32_t>(o.body->obj->via.i64));
+			default:
+				throw msgpack::type_error();
+		}
+	}
+
 	MsgPack operator[](const std::string& key);
 	MsgPack operator[](uint32_t off);
 

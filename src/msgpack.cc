@@ -26,22 +26,12 @@
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
-#include "xchange/rapidjson.hpp"
 
 
 MsgPack::MsgPack()
 	: handler(std::make_shared<object_handle>()),
 	  parent_body(nullptr),
 	  body(std::make_shared<MsgPackBody>(0, &handler->obj, MapPack(), 0)) { }
-
-
-MsgPack::MsgPack(const msgpack::object& o)
-	: handler(std::make_shared<object_handle>(o)),
-	  parent_body(nullptr),
-	  body(std::make_shared<MsgPackBody>(0, &handler->obj))
-{
-	init();
-}
 
 
 MsgPack::MsgPack(const std::shared_ptr<object_handle>& handler_, const std::shared_ptr<MsgPackBody>& body_, const std::shared_ptr<MsgPackBody>& p_body_)
@@ -62,33 +52,6 @@ MsgPack::MsgPack(const std::shared_ptr<MsgPackBody>& body_, std::unique_ptr<msgp
 }
 
 
-MsgPack::MsgPack(msgpack::unpacked& u)
-	: handler(std::make_shared<object_handle>(u.get(), std::move(u.zone()))),
-	  parent_body(nullptr),
-	  body(std::make_shared<MsgPackBody>(0, &handler->obj))
-{
-	init();
-}
-
-
-MsgPack::MsgPack(const std::string& buffer)
-	: handler(make_handler(buffer)),
-	  parent_body(nullptr),
-	  body(std::make_shared<MsgPackBody>(0, &handler->obj))
-{
-	init();
-}
-
-
-MsgPack::MsgPack(const rapidjson::Document& doc)
-	: handler(make_handler(doc)),
-	  parent_body(nullptr),
-	  body(std::make_shared<MsgPackBody>(0, &handler->obj))
-{
-	init();
-}
-
-
 MsgPack::MsgPack(MsgPack&& other) noexcept
 	: handler(std::move(other.handler)),
 	  parent_body(std::move(other.parent_body)),
@@ -99,24 +62,6 @@ MsgPack::MsgPack(const MsgPack& other)
 	: handler(other.handler),
 	  parent_body(other.parent_body),
 	  body(other.body) { }
-
-
-std::shared_ptr<MsgPack::object_handle>
-MsgPack::make_handler(const std::string& buffer)
-{
-	msgpack::unpacked u;
-	msgpack::unpack(&u, buffer.data(), buffer.size());
-	return std::make_shared<MsgPack::object_handle>(u.get(), msgpack::move(u.zone()));
-}
-
-
-std::shared_ptr<MsgPack::object_handle>
-MsgPack::make_handler(const rapidjson::Document& doc)
-{
-	auto zone(std::make_unique<msgpack::zone>());
-	msgpack::object obj(doc, *zone);
-	return std::make_shared<MsgPack::object_handle>(obj, msgpack::move(zone));
-}
 
 
 void
