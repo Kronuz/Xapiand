@@ -194,15 +194,59 @@ public:
 	MsgPack operator[](const std::string& key);
 	MsgPack operator[](uint32_t off);
 
-	MsgPack at(const MsgPack& o) const;
+	template <typename MP, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<MP>>::value>>
+	inline MsgPack at(MP&& o) const {
+		switch (o.body->obj->type) {
+			case msgpack::type::STR:
+				return at(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+			case msgpack::type::POSITIVE_INTEGER:
+				return at(static_cast<uint32_t>(o.body->obj->via.u64));
+			case msgpack::type::NEGATIVE_INTEGER:
+				return at(static_cast<uint32_t>(o.body->obj->via.i64));
+			default:
+				throw msgpack::type_error();
+		}
+	}
+
 	MsgPack at(const std::string& key) const;
 	MsgPack at(uint32_t off) const;
 
-	bool find(const MsgPack& o) const;
-	bool find(const std::string& key) const;
-	bool find(uint32_t off) const;
+	template <typename MP, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<MP>>::value>>
+	inline bool find(MP&& o) const {
+		switch (o.body->obj->type) {
+			case msgpack::type::STR:
+				return find(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+			case msgpack::type::POSITIVE_INTEGER:
+				return find(static_cast<uint32_t>(o.body->obj->via.u64));
+			case msgpack::type::NEGATIVE_INTEGER:
+				return find(static_cast<uint32_t>(o.body->obj->via.i64));
+			default:
+				return false;
+		}
+	}
 
-	bool erase(const MsgPack& o);
+	inline bool find(const std::string& key) const {
+		return body->map.find(key) != body->map.end();
+	}
+
+	inline bool find(uint32_t off) const {
+		return body->obj->type == msgpack::type::ARRAY && off < body->obj->via.array.size;
+	}
+
+	template <typename MP, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<MP>>::value>>
+	inline bool erase(MP&& o) {
+		switch (o.body->obj->type) {
+			case msgpack::type::STR:
+				return erase(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+			case msgpack::type::POSITIVE_INTEGER:
+				return erase(static_cast<uint32_t>(o.body->obj->via.u64));
+			case msgpack::type::NEGATIVE_INTEGER:
+				return erase(static_cast<uint32_t>(o.body->obj->via.i64));
+			default:
+				throw msgpack::type_error();
+		}
+	}
+
 	bool erase(const std::string& key);
 	bool erase(uint32_t off);
 
@@ -279,7 +323,7 @@ public:
 		}
 	}
 
-	MsgPack parent() {
+	inline MsgPack parent() {
 		if (parent_body) {
 			return MsgPack(handler, parent_body, nullptr);
 		} else {

@@ -84,22 +84,6 @@ MsgPack::init()
 
 
 MsgPack
-MsgPack::operator[](const MsgPack& o)
-{
-	switch (o.body->obj->type) {
-		case msgpack::type::STR:
-			return operator[](std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
-		case msgpack::type::POSITIVE_INTEGER:
-			return operator[](static_cast<uint32_t>(o.body->obj->via.u64));
-		case msgpack::type::NEGATIVE_INTEGER:
-			return operator[](static_cast<uint32_t>(o.body->obj->via.i64));
-		default:
-			throw msgpack::type_error();
-	}
-}
-
-
-MsgPack
 MsgPack::operator[](const std::string& key)
 {
 	auto it = body->map.find(key);
@@ -162,22 +146,6 @@ MsgPack::operator[](uint32_t off)
 
 
 MsgPack
-MsgPack::at(const MsgPack& o) const
-{
-	switch (o.body->obj->type) {
-		case msgpack::type::STR:
-			return at(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
-		case msgpack::type::POSITIVE_INTEGER:
-			return at(static_cast<uint32_t>(o.body->obj->via.u64));
-		case msgpack::type::NEGATIVE_INTEGER:
-			return at(static_cast<uint32_t>(o.body->obj->via.i64));
-		default:
-			throw msgpack::type_error();
-	}
-}
-
-
-MsgPack
 MsgPack::at(const std::string& key) const
 {
 	if (body->obj->type == msgpack::type::MAP) {
@@ -203,52 +171,6 @@ MsgPack::at(uint32_t off) const
 	}
 
 	throw msgpack::type_error();
-}
-
-
-bool
-MsgPack::find(const MsgPack& o) const
-{
-	switch (o.body->obj->type) {
-		case msgpack::type::STR:
-			return find(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
-		case msgpack::type::POSITIVE_INTEGER:
-			return find(static_cast<uint32_t>(o.body->obj->via.u64));
-		case msgpack::type::NEGATIVE_INTEGER:
-			return find(static_cast<uint32_t>(o.body->obj->via.i64));
-		default:
-			return false;
-	}
-}
-
-
-bool
-MsgPack::find(const std::string& key) const
-{
-	return body->map.find(key) != body->map.end();
-}
-
-
-bool
-MsgPack::find(uint32_t off) const
-{
-	return body->obj->type == msgpack::type::ARRAY && off < body->obj->via.array.size;
-}
-
-
-bool
-MsgPack::erase(const MsgPack& o)
-{
-	switch (o.body->obj->type) {
-		case msgpack::type::STR:
-			return erase(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
-		case msgpack::type::POSITIVE_INTEGER:
-			return erase(static_cast<uint32_t>(o.body->obj->via.u64));
-		case msgpack::type::NEGATIVE_INTEGER:
-			return erase(static_cast<uint32_t>(o.body->obj->via.i64));
-		default:
-			return false;
-	}
 }
 
 
