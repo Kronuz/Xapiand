@@ -98,7 +98,8 @@ MsgPack::operator[](const std::string& key)
 	}
 
 	if (body->obj->type == msgpack::type::MAP) {
-		expand_map(body->obj->via.map.size);
+		auto _size = body->obj->via.map.size;
+		expand_map(_size);
 
 		msgpack::object key_obj;
 		msgpack::object val_obj;
@@ -106,7 +107,7 @@ MsgPack::operator[](const std::string& key)
 		msgpack::detail::unpack_nil(val_obj);
 		msgpack::detail::unpack_map_item(*body->obj, key_obj, val_obj);
 
-		auto ins_it = body->map.insert(std::make_pair(key, std::make_shared<MsgPackBody>(body->obj->via.map.size, &body->obj->via.map.ptr[body->obj->via.map.size - 1].val)));
+		auto ins_it = body->map.insert(std::make_pair(key, std::make_shared<MsgPackBody>(_size, &body->obj->via.map.ptr[_size].val)));
 		return MsgPack(handler, ins_it.first->second, body);
 	}
 
