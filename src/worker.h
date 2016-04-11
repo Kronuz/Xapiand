@@ -98,15 +98,19 @@ protected:
 		}
 		_async_shutdown.set<Worker, &Worker::_async_shutdown_cb>(this);
 		_async_shutdown.start();
+		L_EV(this, "Start Worker async shutdown event [%p]", this);
 
 		_async_break_loop.set<Worker, &Worker::_async_break_loop_cb>(this);
 		_async_break_loop.start();
+		L_EV(this, "Start Worker async break_loop event [%p]", this);
 
 		_async_destroy.set<Worker, &Worker::_async_destroy_cb>(this);
 		_async_destroy.start();
+		L_EV(this, "Start Worker async destroy event [%p]", this);
 
 		_async_detach.set<Worker, &Worker::_async_detach_cb>(this);
 		_async_detach.start();
+		L_EV(this, "Start Worker async detach event [%p]", this);
 
 		L_OBJ(this, "CREATED WORKER!");
 	}
@@ -141,7 +145,7 @@ protected:
 
 private:
 	void _async_shutdown_cb() {
-		L_EV(this, "Worker::_async_shutdown_cb");
+		L_EV(this, "Worker::_async_shutdown_cb [%p]", this);
 
 		L_EV_BEGIN(this, "Worker::_async_shutdown_cb:BEGIN");
 		shutdown_impl(_asap, _now);
@@ -149,7 +153,7 @@ private:
 	}
 
 	void _async_break_loop_cb(ev::async&, int) {
-		L_EV(this, "Worker::_async_break_loop_cb");
+		L_EV(this, "Worker::_async_break_loop_cb [%p]", this);
 
 		L_EV_BEGIN(this, "Worker::_async_break_loop_cb:BEGIN");
 		break_loop_impl();
@@ -157,7 +161,7 @@ private:
 	}
 
 	void _async_destroy_cb(ev::async&, int) {
-		L_EV(this, "Worker::_async_destroy_cb");
+		L_EV(this, "Worker::_async_destroy_cb [%p]", this);
 
 		L_EV_BEGIN(this, "Worker::_async_destroy_cb:BEGIN");
 		destroy_impl();
@@ -165,7 +169,7 @@ private:
 	}
 
 	void _async_detach_cb(ev::async&, int) {
-		L_EV(this, "Worker::_async_detach_cb");
+		L_EV(this, "Worker::_async_detach_cb [%p]", this);
 
 		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
 		destroyer();
@@ -182,9 +186,13 @@ public:
 
 	void destroyer() {
 		_async_shutdown.stop();
+		L_EV(this, "Stop Worker async shutdown event [%p]", this);
 		_async_break_loop.stop();
+		L_EV(this, "Stop Worker async break_loop event [%p]", this);
 		_async_destroy.stop();
+		L_EV(this, "Stop Worker async destroy event [%p]", this);
 		_async_detach.stop();
+		L_EV(this, "Stop Worker async detach event [%p]", this);
 	}
 
 
