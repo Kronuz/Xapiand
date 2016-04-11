@@ -142,7 +142,7 @@ public:
 	void unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 	void clear();
 
-	static void finish(bool wait=false);
+	static void finish(int wait=1);
 };
 
 
@@ -150,7 +150,7 @@ class LogThread {
 	std::condition_variable wakeup_signal;
 	std::atomic<std::time_t> wakeup;
 
-	std::atomic_bool running;
+	std::atomic_int running;
 	std::thread inner_thread;
 	ForwardList<std::shared_ptr<Log>> log_list;
 
@@ -160,7 +160,7 @@ public:
 	LogThread();
 	~LogThread();
 
-	void finish(bool wait=false);
+	void finish(int wait=1);
 	void add(const std::shared_ptr<Log>& l_ptr);
 };
 

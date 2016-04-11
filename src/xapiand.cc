@@ -721,7 +721,7 @@ int main(int argc, char **argv) {
 			unlink(opts.pidfile.c_str());
 		}
 
-		Log::finish(true);
+		Log::finish();
 		return exc.code;
 	}
 
@@ -730,6 +730,6 @@ int main(int argc, char **argv) {
 		unlink(opts.pidfile.c_str());
 	}
 
-	Log::finish(true);
+	Log::finish();
 	return EX_OK;
 }

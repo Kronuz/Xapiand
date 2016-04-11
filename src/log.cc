@@ -162,7 +162,7 @@ Log::log(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup
 void
 Log::clear()
 {
-	finished.store(true);
+	finished = true;
 }
 
 
@@ -223,7 +223,7 @@ Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::ch
 
 
 void
-Log::finish(bool wait)
+Log::finish(int wait)
 {
 	static LogThread& thread = _thread();
 	thread.finish(wait);
@@ -231,7 +231,7 @@ Log::finish(bool wait)
 
 
 LogThread::LogThread()
-	: running(true),
+	: running(-1),
 	  inner_thread(&LogThread::thread_function, this) { }
 
 
@@ -242,9 +242,9 @@ LogThread::~LogThread()
 
 
 void
-LogThread::finish(bool wait)
+LogThread::finish(int wait)
 {
-	running.store(false);
+	running = wait;
 	wakeup_signal.notify_all();
 	if (wait) {
 		try {
@@ -257,10 +257,10 @@ LogThread::finish(bool wait)
 void
 LogThread::add(const std::shared_ptr<Log>& l_ptr)
 {
-	if (running.load()) {
+	if (running != 0) {
 		log_list.push_back(l_ptr->shared_from_this());
 
-		if (std::chrono::system_clock::from_time_t(wakeup.load()) >= l_ptr->wakeup) {
+		if (std::chrono::system_clock::from_time_t(wakeup) >= l_ptr->wakeup) {
 			wakeup_signal.notify_all();
 		}
 	}
@@ -276,19 +276,27 @@ LogThread::thread_function()
 	auto now = std::chrono::system_clock::now();
 	auto next_wakeup = now + 3s;
 
-	while (running.load()) {
-		wakeup.store(std::chrono::system_clock::to_time_t(next_wakeup));
+	while (running != 0) {
+		if (--running < 0) {
+			running = -1;
+		}
+
+		wakeup = std::chrono::system_clock::to_time_t(next_wakeup);
 		wakeup_signal.wait_until(lk, next_wakeup);
 
 		now = std::chrono::system_clock::now();
-		next_wakeup = now + 3s;
+		if (running < 0) {
+			next_wakeup = now + 3s;
+		} else {
+			next_wakeup = now + 1s;
+		}
 
 		for (auto it = log_list.begin(); it != log_list.end(); ) {
 			auto& l_ptr = *it;
-			if (!l_ptr || l_ptr->finished.load()) {
+			if (!l_ptr || l_ptr->finished) {
 				it = log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
-				l_ptr->finished.store(true);
+				l_ptr->finished = true;
 				Log::log(l_ptr->priority, l_ptr->str_start);
 				it = log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
