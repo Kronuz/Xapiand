@@ -178,7 +178,7 @@ public:
 		std::lock_guard<std::mutex> lk(_mtx);
 		std::string ret;
 		for (int l = 0; l < level; ++l) ret += "    ";
-		ret += __repr__() + " - " + std::to_string(shared_from_this().use_count()) + "\n";
+		ret += __repr__() + " - " + std::to_string(shared_from_this().use_count()) + (_running ? " in a running loop\n" : "\n");
 		for (const auto& c : _children) {
 			ret += c->dump_tree(level + 1);
 		}
