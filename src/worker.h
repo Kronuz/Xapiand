@@ -53,7 +53,6 @@ private:
 	ev::async _async_break_loop;
 	ev::async _async_destroy;
 	ev::async _async_detach;
-	ev::async _async_cleanup;
 
 	std::mutex _mtx;
 	std::atomic_bool _detaching;
@@ -114,7 +113,6 @@ protected:
 		  _async_break_loop(*ev_loop),
 		  _async_destroy(*ev_loop),
 		  _async_detach(*ev_loop),
-		  _async_cleanup(*ev_loop),
 		  _parent(std::forward<T>(parent))
 	{
 		if (_parent) {
@@ -137,10 +135,6 @@ protected:
 		_async_detach.start();
 		L_EV(this, "Start Worker async detach event");
 
-		_async_cleanup.set<Worker, &Worker::_async_cleanup_cb>(this);
-		_async_cleanup.start();
-		L_EV(this, "Start Worker async cleanup event");
-
 		L_OBJ(this, "CREATED WORKER!");
 	}
 
@@ -155,8 +149,6 @@ protected:
 		L_EV(this, "Stop Worker async destroy event");
 		_async_detach.stop();
 		L_EV(this, "Stop Worker async detach event");
-		_async_cleanup.stop();
-		L_EV(this, "Stop Worker async cleanup event");
 
 		L_OBJ(this, "DESTROYED WORKER!");
 	}
@@ -194,14 +186,6 @@ private:
 		L_EV_END(this, "Worker::_async_detach_cb:END");
 	}
 
-	void _async_cleanup_cb(ev::async&, int) {
-		L_EV(this, "Worker::_async_cleanup_cb");
-
-		L_EV_BEGIN(this, "Worker::_async_cleanup_cb:BEGIN");
-		cleanup_impl();
-		L_EV_END(this, "Worker::_async_cleanup_cb:END");
-	}
-
 	std::vector<std::weak_ptr<Worker>> _gather_children() {
 		std::vector<std::weak_ptr<Worker>> weak_children;
 		// Collect active children
@@ -216,6 +200,23 @@ private:
 			}
 		}
 		return weak_children;
+	}
+
+	void _detach_impl(const std::weak_ptr<Worker>& weak_child) {
+		std::lock_guard<std::mutex> lk(_mtx);
+		std::string repr;
+		if (auto child = weak_child.lock()) {
+			_detach(child);
+			repr = child->__repr__();
+		} else {
+			return;
+		}
+		if (auto child = weak_child.lock()) {
+			L_OBJ(this, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), __repr__().c_str(), child.use_count() - 1);
+			_attach(child);
+		} else {
+			L_OBJ(this, "Worker child %s detached from %s", repr.c_str(), __repr__().c_str());
+		}
 	}
 
 public:
@@ -248,45 +249,21 @@ public:
 		}
 	}
 
-	virtual void break_loop_impl() {
+	virtual void destroy_impl() = 0;
+
+	void break_loop_impl() {
 		ev_loop->break_loop();
 	}
 
-	virtual void destroy_impl() = 0;
-
-	virtual void detach_impl() {
-		_detaching = true;
-		if (_parent) {
-			const WorkerShared parent = _parent;
-			std::lock_guard<std::mutex> lk(parent->_mtx);
-			std::weak_ptr<Worker> weak_child;
-			std::string repr;
-			void* that = this; (void)that;
-			{
-				auto child = shared_from_this();
-				parent->_detach(child);
-				weak_child = child;
-				repr = child->__repr__();
-			}
-			if (auto child = weak_child.lock()) {
-				L_OBJ(that, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), parent->__repr__().c_str(), child.use_count() - 1);
-				parent->_attach(child);
-			} else {
-				L_OBJ(that, "Worker child %s detached from %s", repr.c_str(), parent->__repr__().c_str());
-			}
-		}
-	}
-
-	virtual void cleanup_impl() {
+	void detach_impl() {
 		auto weak_children = _gather_children();
 		L_OBJ(this , "CLEANUP WORKER: %zu children", weak_children.size());
 		for (auto& weak_child : weak_children) {
 			if (auto child = weak_child.lock()) {
-				child->cleanup_impl();
+				child->detach_impl();
+				if (!child->_detaching) continue;
 			}
-		}
-		if (_detaching) {
-			detach_impl();
+			_detach_impl(weak_child);
 		}
 	}
 
@@ -328,18 +305,23 @@ public:
 	}
 
 	inline void detach() {
-		if (_running) {
-			_async_detach.send();
-		} else {
-			detach_impl();
+		if (_parent) {
+			_detaching = true;
+			if (_running) {
+				_parent->_async_detach.send();
+			} else {
+				_parent->detach_impl();
+			}
 		}
 	}
 
 	inline void cleanup() {
-		if (_running) {
-			_async_cleanup.send();
-		} else {
-			cleanup_impl();
+		if (_parent) {
+			if (_running) {
+				_parent->_async_detach.send();
+			} else {
+				_parent->detach_impl();
+			}
 		}
 	}
 
