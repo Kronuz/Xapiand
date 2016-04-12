@@ -141,7 +141,7 @@ public:
 	void unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 	void clear();
 
-	static void finish(int wait=1);
+	static void finish(int wait=10);
 
 	long double age();
 };
@@ -161,7 +161,7 @@ public:
 	LogThread();
 	~LogThread();
 
-	void finish(int wait=1);
+	void finish(int wait=10);
 	void add(const std::shared_ptr<Log>& l_ptr);
 };
 

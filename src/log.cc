@@ -322,5 +322,8 @@ LogThread::thread_function()
 		if (next_wakeup < now + 100ms) {
 			next_wakeup = now + 100ms;
 		}
+		if (running >= 0 && !log_list.size()) {
+			break;
+		}
 	}
 }
