@@ -64,7 +64,11 @@ XapiandReplicator::shutdown_impl(time_t asap, time_t now)
 
 	Worker::shutdown_impl(asap, now);
 
-	destroyer(); // Call implementation directly, as we don't use a loop
+	destroy();
+
+	if (now) {
+		detach();
+	}
 }
 
 
@@ -77,9 +81,6 @@ XapiandReplicator::run()
 		L_DEBUG(this, "Replicator was informed database was updated: %s", endpoint.as_string().c_str());
 		on_commit(endpoint);
 	}
-
-	// Call implementation directly, as we don't use a loop. Object gets
-	// detached when run() ends:
 
 	cleanup();
 }
