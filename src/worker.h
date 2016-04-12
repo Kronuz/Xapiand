@@ -178,7 +178,7 @@ public:
 		std::lock_guard<std::mutex> lk(_mtx);
 		std::string ret;
 		for (int l = 0; l < level; ++l) ret += "    ";
-		ret += __repr__() + " - " + std::to_string(shared_from_this().use_count()) + (_running ? " in a running loop\n" : "\n");
+		ret += __repr__() + " - " + std::to_string(shared_from_this().use_count() - 1) + (_running ? " in a running loop\n" : "\n");
 		for (const auto& c : _children) {
 			ret += c->dump_tree(level + 1);
 		}
@@ -237,7 +237,7 @@ public:
 				repr = obj->__repr__();
 			}
 			if (auto obj = wobj.lock()) {
-				L_OBJ(this, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), _parent->__repr__().c_str(), obj.use_count());
+				L_OBJ(this, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), _parent->__repr__().c_str(), obj.use_count() - 1);
 				_parent->_attach(obj);
 			} else {
 				L_OBJ(this, "Worker child %s detached from %s", repr.c_str(), _parent->__repr__().c_str());
