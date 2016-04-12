@@ -229,18 +229,18 @@ public:
 		if (_parent) {
 			std::lock_guard<std::mutex> lk(_parent->_mtx);
 			std::weak_ptr<Worker> wobj;
-			void* ptr;
+			std::string repr;
 			{
 				auto obj = shared_from_this();
 				_parent->_detach(obj);
 				wobj = obj;
-				ptr = obj.get();
+				repr = obj->__repr__();
 			}
 			if (auto obj = wobj.lock()) {
-				L_OBJ(this, "Worker child [%p] cannot be detached from [%p] (cnt: %u)", ptr, _parent.get(), obj.use_count());
+				L_OBJ(this, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), _parent->__repr__().c_str(), obj.use_count());
 				_parent->_attach(obj);
 			} else {
-				L_OBJ(this, "Worker child [%p] detached from [%p]", ptr, _parent.get());
+				L_OBJ(this, "Worker child %s detached from %s", repr.c_str(), _parent->__repr__().c_str());
 			}
 		}
 	}
@@ -315,7 +315,7 @@ public:
 		if (worker->_parent) {
 			std::lock_guard<std::mutex> lk(worker->_parent->_mtx);
 			worker->_iterator = worker->_parent->_attach(worker);
-			L_OBJ(worker.get(), "Worker child [%p] attached to [%p]", worker.get(), worker->_parent.get());
+			L_OBJ(worker.get(), "Worker child %s attached to %s", worker->__repr__().c_str(), worker->_parent->__repr__().c_str());
 		}
 
 		return worker;
