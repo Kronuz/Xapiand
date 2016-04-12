@@ -418,12 +418,11 @@ Unserialise::geo(const std::string& serialise_ewkt)
 	const char* pos = serialise_ewkt.data();
 	const char* end = pos + serialise_ewkt.size();
 	try {
-		pos += unserialise_length(&pos, end, true);
+		unserialise_length(&pos, end, true);
 		auto length = unserialise_length(&pos, end, true);
 		std::string serialise_ranges(pos, length);
 		pos += length;
 		length = unserialise_length(&pos, end, true);
-
 		return std::make_pair(std::move(serialise_ranges), std::string(pos, length));
 	} catch (const Xapian::SerialisationError&) {
 		return std::make_pair(std::string(), std::string());
