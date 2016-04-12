@@ -78,10 +78,10 @@ AsyncFsync::shutdown_impl(time_t asap, time_t now)
 
 	Worker::shutdown_impl(asap, now);
 
-	// Call implementation directly, as we don't use a loop. Object gets
-	// detached when run() ends:
-
-	destroyer();
+	if (now) {
+		destroy();
+		detach();
+	}
 }
 
 
