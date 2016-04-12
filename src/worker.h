@@ -68,7 +68,18 @@ private:
 	template<typename T>
 	inline WorkerList::iterator _attach(T&& child) {
 		assert(child);
-		return _children.insert(_children.end(), std::forward<T>(child));
+		auto ret = _children.insert(_children.end(), std::forward<T>(child));
+
+		auto parent = shared_from_this();
+		while (parent) {
+			if (parent->ev_loop == child->ev_loop) {
+				child->_running = parent->_running.load();
+				break;
+			}
+			parent = parent->_parent;
+		}
+
+		return ret;
 	}
 
 	template<typename T>
