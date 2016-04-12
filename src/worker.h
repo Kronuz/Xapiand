@@ -55,7 +55,8 @@ private:
 	ev::async _async_detach;
 
 	std::mutex _mtx;
-	std::atomic_bool do_detach;
+	std::atomic_bool _detaching;
+	std::atomic_bool _running;
 
 	const WorkerShared _parent;
 	WorkerList _children;
@@ -78,6 +79,18 @@ private:
 			return it;
 		}
 		return _children.end();
+	}
+
+	void _set_running(ev::loop_ref* loop, bool running) {
+		if (ev_loop == loop) {
+			_running = running;
+		}
+		{
+			std::lock_guard<std::mutex> lk(_mtx);
+			for (const auto& c : _children) {
+				c->_set_running(loop, running);
+			}
+		}
 	}
 
 protected:
@@ -204,7 +217,7 @@ public:
 	virtual void destroy_impl() = 0;
 
 	virtual void detach_impl() {
-		do_detach = true;
+		_detaching = true;
 		if (_parent) {
 			std::lock_guard<std::mutex> lk(_parent->_mtx);
 			std::weak_ptr<Worker> wobj;
@@ -225,34 +238,60 @@ public:
 	}
 
 	virtual void cleanup() {
-		if (do_detach) {
+		if (_detaching) {
 			detach();
 		}
 	}
 
 	inline void shutdown(time_t asap, time_t now) {
-		_asap = asap;
-		_now = now;
-		_async_shutdown.send();
+		if (_running) {
+			_asap = asap;
+			_now = now;
+			_async_shutdown.send();
+		} else {
+			shutdown_impl(asap, now);
+		}
 	}
 
 	inline void shutdown() {
 		auto now = epoch::now<>();
-		_asap = now;
-		_now = now;
-		_async_shutdown.send();
+		if (_running) {
+			_asap = now;
+			_now = now;
+			_async_shutdown.send();
+		} else {
+			shutdown_impl(now, now);
+		}
 	}
 
 	inline void break_loop() {
-		_async_break_loop.send();
+		if (_running) {
+			_async_break_loop.send();
+		} else {
+			break_loop_impl();
+		}
 	}
 
 	inline void destroy() {
-		_async_destroy.send();
+		if (_running) {
+			_async_destroy.send();
+		} else {
+			destroy_impl();
+		}
 	}
 
 	inline void detach() {
-		_async_detach.send();
+		if (_running) {
+			_async_detach.send();
+		} else {
+			detach_impl();
+		}
+	}
+
+	inline void run_loop() {
+		_set_running(ev_loop, true);
+		ev_loop->run();
+		_set_running(ev_loop, false);
 	}
 
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
