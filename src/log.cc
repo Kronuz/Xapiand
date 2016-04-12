@@ -129,7 +129,7 @@ Log::str_format(int priority, const std::string& exc, const char *file, int line
 	auto iso8601 = "[" + Datetime::to_string(std::chrono::system_clock::now()) + "]";
 	auto tid = " (" + get_thread_name() + ")";
 	std::string result = iso8601 + tid;
-#ifdef LOG_ADDRESSES
+#ifdef LOG_OBJ_ADDRESS
 	if (obj) {
 		snprintf(buffer, BUFFER_SIZE, " [%p]", obj);
 		result += buffer;

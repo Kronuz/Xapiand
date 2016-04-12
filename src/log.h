@@ -39,8 +39,6 @@
 #include <condition_variable>
 
 
-#define LOG_ADDRESSES 1
-
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
 #define LOCATION_LOG_LEVEL LOG_DEBUG  // The minimum log_level that prints file:line
 #define ASYNC_LOG_LEVEL LOG_CRIT  // The minimum log_level that is asynchronous
@@ -243,6 +241,14 @@ public:
 #define L_EV_BEGIN _LOG_TIMED_600
 #define L_EV_END _LOG_TIMED_N_CLEAR
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Uncomment the folloging to different logging options:
+
+// #define LOG_OBJ_ADDRESS 1
+
+
+////////////////////////////////////////////////////////////////////////////////
 // Enable the following, when needed, using _LOG_LOG_ENABLED:
 
 #define L_TRACEBACK _
