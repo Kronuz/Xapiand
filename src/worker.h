@@ -238,20 +238,22 @@ public:
 	virtual void detach_impl() {
 		_detaching = true;
 		if (_parent) {
-			std::lock_guard<std::mutex> lk(_parent->_mtx);
+			const WorkerShared parent = _parent;
+			std::lock_guard<std::mutex> lk(parent->_mtx);
 			std::weak_ptr<Worker> wobj;
 			std::string repr;
+			void* ptr = this; (void)ptr;
 			{
 				auto obj = shared_from_this();
-				_parent->_detach(obj);
+				parent->_detach(obj);
 				wobj = obj;
 				repr = obj->__repr__();
 			}
 			if (auto obj = wobj.lock()) {
-				L_OBJ(this, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), _parent->__repr__().c_str(), obj.use_count() - 1);
-				_parent->_attach(obj);
+				L_OBJ(ptr, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), parent->__repr__().c_str(), obj.use_count() - 1);
+				parent->_attach(obj);
 			} else {
-				L_OBJ(this, "Worker child %s detached from %s", repr.c_str(), _parent->__repr__().c_str());
+				L_OBJ(ptr, "Worker child %s detached from %s", repr.c_str(), parent->__repr__().c_str());
 			}
 		}
 	}
