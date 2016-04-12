@@ -70,7 +70,7 @@ EndpointList::add_endpoint(const Endpoint &element)
 }
 
 
-bool EndpointList::resolve_endpoint(const std::string &path, std::shared_ptr<XapiandManager> manager, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout)
+bool EndpointList::resolve_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout)
 {
 	State initial_status;
 	std::cv_status retval;
@@ -92,7 +92,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, std::shared_ptr<Xap
 			initial_status = State::NEW;
 			elapsed = timeout;
 		} else if (elapsed > 1h) {
-			if (auto discovery = manager->weak_discovery.lock()) {
+			if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
 				discovery->send_message(Discovery::Message::DB, serialise_string(path));
 			}
 		}
@@ -103,7 +103,7 @@ bool EndpointList::resolve_endpoint(const std::string &path, std::shared_ptr<Xap
 			case State::NEW:
 				init_time = system_clock::now();
 
-				if (auto discovery = manager->weak_discovery.lock()) {
+				if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
 					discovery->send_message(Discovery::Message::DB, serialise_string(path));
 				}
 
@@ -144,20 +144,20 @@ bool EndpointList::resolve_endpoint(const std::string &path, std::shared_ptr<Xap
 		return false;
 	}
 
-	bool ret = get_endpoints(std::move(manager), n_endps, &endpv, nullptr);
+	bool ret = get_endpoints(n_endps, &endpv, nullptr);
 
 	return ret;
 }
 
 
-bool EndpointList::get_endpoints(std::shared_ptr<XapiandManager> manager, size_t n_endps, std::vector<Endpoint> *endpv, std::shared_ptr<const Node>* last_node)
+bool EndpointList::get_endpoints(size_t n_endps, std::vector<Endpoint> *endpv, std::shared_ptr<const Node>* last_node)
 {
 	bool find_endpoints = false;
 	if (endpv) endpv->clear();
 	std::set<Endpoint, Endpoint::compare>::const_iterator it_endp(endp_set.cbegin());
 	for (size_t c = 1; c <= n_endps && it_endp != endp_set.cend(); it_endp++, c++) {
 		try {
-			auto node = manager->get_node((*it_endp).node_name);
+			auto node = XapiandManager::manager->get_node((*it_endp).node_name);
 			if (!node) {
 				return false;
 			}
@@ -225,23 +225,23 @@ EndpointResolver::add_index_endpoint(const Endpoint &index, bool renew, bool wak
 }
 
 
-bool EndpointResolver::resolve_index_endpoint(const std::string &path, std::shared_ptr<XapiandManager> manager, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout)
+bool EndpointResolver::resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout)
 {
 	std::unique_lock<std::mutex> lk(re_qmtx);
 	EndpointList &enl = (*this)[path];
 	lk.unlock();
 
-	return enl.resolve_endpoint(path, std::move(manager), endpv, n_endps, timeout);
+	return enl.resolve_endpoint(path, endpv, n_endps, timeout);
 }
 
 
-bool EndpointResolver::get_master_node(const std::string &index, std::shared_ptr<const Node>* node, std::shared_ptr<XapiandManager> manager)
+bool EndpointResolver::get_master_node(const std::string &index, std::shared_ptr<const Node>* node)
 {
 	std::unique_lock<std::mutex> lk(re_qmtx);
 	EndpointList &enl = (*this)[index];
 	lk.unlock();
 
-	return enl.get_endpoints(std::move(manager), 1, nullptr, node);
+	return enl.get_endpoints(1, nullptr, node);
 }
 
 #endif

@@ -53,7 +53,7 @@ XapiandReplicator::destroy_impl()
 void
 XapiandReplicator::destroyer()
 {
-	manager()->database_pool.updated_databases.finish();
+	XapiandManager::manager->database_pool.updated_databases.finish();
 }
 
 
@@ -77,7 +77,7 @@ XapiandReplicator::run()
 {
 	// Function that retrieves a task from a queue, runs it and deletes it
 	Endpoint endpoint;
-	while (manager()->database_pool.updated_databases.pop(endpoint)) {
+	while (XapiandManager::manager->database_pool.updated_databases.pop(endpoint)) {
 		L_DEBUG(this, "Replicator was informed database was updated: %s", endpoint.as_string().c_str());
 		on_commit(endpoint);
 	}
@@ -89,7 +89,7 @@ XapiandReplicator::run()
 void
 XapiandReplicator::on_commit(const Endpoint &endpoint)
 {
-	if (auto discovery = manager()->weak_discovery.lock()) {
+	if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
 		discovery->send_message(
         	Discovery::Message::DB_UPDATED,
 			serialise_length(endpoint.mastery_level) +  // The mastery level of the database

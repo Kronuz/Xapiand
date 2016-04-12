@@ -108,9 +108,9 @@ DatabaseAutocommit::run()
 						bool successful = false;
 						auto start = std::chrono::system_clock::now();
 						std::shared_ptr<Database> database;
-						if (manager()->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
+						if (XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE)) {
 							successful = database->commit();
-							manager()->database_pool.checkin(database);
+							XapiandManager::manager->database_pool.checkin(database);
 						}
 						auto end = std::chrono::system_clock::now();
 

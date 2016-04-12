@@ -65,9 +65,5 @@ public:
 
 	~XapiandServer();
 
-	inline decltype(auto) manager() noexcept {
-		return share_parent<XapiandManager>();
-	}
-
 	void run() override;
 };

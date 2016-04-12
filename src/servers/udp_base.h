@@ -57,8 +57,4 @@ public:
 	virtual std::string getDescription() const noexcept = 0;
 
 	void bind(int tries, const std::string& group);
-
-	inline decltype(auto) manager() noexcept {
-		return share_parent<XapiandManager>();
-	}
 };

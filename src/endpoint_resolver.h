@@ -67,9 +67,9 @@ class EndpointList {
 	duration<double, std::milli> init_timeout;
 	bool stop_wait;
 
-	bool get_endpoints(std::shared_ptr<XapiandManager> manager, size_t n_endps, std::vector<Endpoint> *endpv, std::shared_ptr<const Node>* last_node);
+	bool get_endpoints(size_t n_endps, std::vector<Endpoint> *endpv, std::shared_ptr<const Node>* last_node);
 
-	bool resolve_endpoint(const std::string &path, std::shared_ptr<XapiandManager> manager, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout);
+	bool resolve_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps, duration<double, std::milli> timeout);
 
 	void add_endpoint(const Endpoint &element);
 	void wakeup();
@@ -104,9 +104,9 @@ class EndpointResolver : public lru::LRU<std::string, EndpointList> {
 public:
 	void add_index_endpoint(const Endpoint &index, bool renew, bool wakeup);
 
-	bool resolve_index_endpoint(const std::string &path, std::shared_ptr<XapiandManager> manager, std::vector<Endpoint> &endpv, size_t n_endps=1, duration<double, std::milli> timeout=1s);
+	bool resolve_index_endpoint(const std::string &path, std::vector<Endpoint> &endpv, size_t n_endps=1, duration<double, std::milli> timeout=1s);
 
-	bool get_master_node(const std::string &index, std::shared_ptr<const Node>* node, std::shared_ptr<XapiandManager> manager);
+	bool get_master_node(const std::string &index, std::shared_ptr<const Node>* node);
 
 	EndpointResolver(size_t max_size) :
 	    LRU<std::string, EndpointList>(max_size),

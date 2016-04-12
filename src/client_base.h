@@ -104,10 +104,6 @@ public:
 		return write(buf.c_str(), buf.size());
 	}
 
-	inline decltype(auto) manager() noexcept {
-		return share_parent<BaseServer>()->manager();
-	}
-
 protected:
 	std::mutex qmtx;
 

@@ -66,14 +66,9 @@ public:
 		return sock;
 	}
 
-
 	virtual std::string getDescription() const noexcept = 0;
 
 	int accept();
 
 	static int connect(int sock_, const std::string& hostname, const std::string& servname);
-
-	inline decltype(auto) manager() noexcept {
-		return share_parent<XapiandManager>();
-	}
 };

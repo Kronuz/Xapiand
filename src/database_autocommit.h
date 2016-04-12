@@ -73,9 +73,5 @@ public:
 
 	void run() override;
 
-	inline decltype(auto) manager() noexcept {
-		return share_parent<XapiandManager>();
-	}
-
 	static void commit(const std::shared_ptr<Database>& database);
 };

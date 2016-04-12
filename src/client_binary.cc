@@ -117,7 +117,7 @@ BinaryClient::init_remote()
 	L_DEBUG(this, "init_remote");
 	state = State::INIT;
 
-	manager()->thread_pool.enqueue(share_this<BinaryClient>());
+	XapiandManager::manager->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
 }
 
@@ -133,8 +133,8 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	writable = true;
 
-	if (!manager()->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
-		manager=manager(),
+	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
+		manager=XapiandManager::manager,
 		src_endpoint,
 		dst_endpoint
 	] () mutable {
@@ -155,7 +155,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 	}
 	L_CONN(this, "Connected to %s (sock=%d)!", src_endpoint.as_string().c_str(), sock);
 
-	manager()->thread_pool.enqueue(share_this<BinaryClient>());
+	XapiandManager::manager->thread_pool.enqueue(share_this<BinaryClient>());
 	return true;
 }
 
@@ -281,7 +281,7 @@ BinaryClient::on_read(const char *buf, size_t received)
 
 	if (!messages_queue.empty()) {
 		if (!running) {
-			manager()->thread_pool.enqueue(share_this<BinaryClient>());
+			XapiandManager::manager->thread_pool.enqueue(share_this<BinaryClient>());
 		}
 	}
 }
@@ -343,7 +343,7 @@ BinaryClient::checkout_database()
 			_flags |= DB_SPAWN;
 		} else if ((flags & Xapian::DB_OPEN) == Xapian::DB_OPEN) {
 		}
-		if (!manager()->database_pool.checkout(database, endpoints, _flags)) {
+		if (!XapiandManager::manager->database_pool.checkout(database, endpoints, _flags)) {
 			throw MSG_InvalidOperationError("Server has no open database");
 		}
 	}
@@ -354,7 +354,7 @@ void
 BinaryClient::checkin_database()
 {
 	if (database) {
-		manager()->database_pool.checkin(database);
+		XapiandManager::manager->database_pool.checkin(database);
 		database.reset();
 	}
 	matchspies.clear();
@@ -1386,7 +1386,7 @@ BinaryClient::reply_end_of_changes(const std::string &)
 	L_REPLICATION(this, "BinaryClient::reply_end_of_changes");
 
 	// if (repl_switched_db) {
-	// 	manager()->database_pool.switch_db(*endpoints.cbegin());
+	// 	XapiandManager::manager->database_pool.switch_db(*endpoints.cbegin());
 	// }
 
 	// checkin_database();
@@ -1490,7 +1490,7 @@ BinaryClient::reply_db_footer(const std::string &)
 	// endpoints_tmp.insert(endpoint_tmp);
 
 	// if (!repl_database_tmp) {
-	// 	if (!manager()->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
+	// 	if (!XapiandManager::manager->database_pool.checkout(repl_database_tmp, endpoints_tmp, DB_WRITABLE | DB_VOLATILE)) {
 	// 		L_ERR(this, "Cannot checkout tmp %s", endpoint_tmp.path.c_str());
 	// 	}
 	// }

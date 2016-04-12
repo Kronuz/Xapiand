@@ -473,9 +473,7 @@ XapiandManager::make_servers(const opts_t& o)
 {
 	std::string msg("Listening on ");
 
-	auto manager = share_this<XapiandManager>();
-
-	auto http = Worker::make_shared<Http>(manager, ev_loop, ev_flags, o.http_port);
+	auto http = Worker::make_shared<Http>(XapiandManager::manager, ev_loop, ev_flags, o.http_port);
 	msg += http->getDescription() + ", ";
 
 #ifdef XAPIAND_CLUSTERING
@@ -483,13 +481,13 @@ XapiandManager::make_servers(const opts_t& o)
 	std::shared_ptr<Discovery> discovery;
 	std::shared_ptr<Raft> raft;
 	if (!solo) {
-		binary = Worker::make_shared<Binary>(manager, ev_loop, ev_flags, o.binary_port);
+		binary = Worker::make_shared<Binary>(XapiandManager::manager, ev_loop, ev_flags, o.binary_port);
 		msg += binary->getDescription() + ", ";
 
-		discovery = Worker::make_shared<Discovery>(manager, ev_loop, ev_flags, o.discovery_port, o.discovery_group);
+		discovery = Worker::make_shared<Discovery>(XapiandManager::manager, ev_loop, ev_flags, o.discovery_port, o.discovery_group);
 		msg += discovery->getDescription() + ", ";
 
-		raft = Worker::make_shared<Raft>(manager, ev_loop, ev_flags, o.raft_port, o.raft_group);
+		raft = Worker::make_shared<Raft>(XapiandManager::manager, ev_loop, ev_flags, o.raft_port, o.raft_group);
 		msg += raft->getDescription() + ", ";
 	}
 #endif
@@ -499,7 +497,7 @@ XapiandManager::make_servers(const opts_t& o)
 
 
 	for (size_t i = 0; i < o.num_servers; ++i) {
-		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(manager, nullptr, ev_flags);
+		std::shared_ptr<XapiandServer> server = Worker::make_shared<XapiandServer>(XapiandManager::manager, nullptr, ev_flags);
 		servers_weak.push_back(server);
 
 		Worker::make_shared<HttpServer>(server, server->ev_loop, ev_flags, http);
@@ -538,7 +536,7 @@ XapiandManager::make_replicators(const opts_t& o)
 #ifdef XAPIAND_CLUSTERING
 	if (!solo) {
 		for (size_t i = 0; i < o.num_replicators; ++i) {
-			auto obj = Worker::make_shared<XapiandReplicator>(share_this<XapiandManager>(), nullptr, ev_flags);
+			auto obj = Worker::make_shared<XapiandReplicator>(XapiandManager::manager, nullptr, ev_flags);
 			replicator_pool.enqueue(std::move(obj));
 		}
 	}
@@ -550,7 +548,7 @@ void
 XapiandManager::make_autocommiters(const opts_t& o)
 {
 	for (size_t i = 0; i < o.num_committers; ++i) {
-		auto obj = Worker::make_shared<DatabaseAutocommit>(share_this<XapiandManager>(), nullptr, ev_flags);
+		auto obj = Worker::make_shared<DatabaseAutocommit>(XapiandManager::manager, nullptr, ev_flags);
 		autocommit_pool.enqueue(std::move(obj));
 	}
 }
@@ -560,7 +558,7 @@ void
 XapiandManager::make_asyncfsyncs(const opts_t& o)
 {
 	for (size_t i = 0; i < o.num_committers; ++i) {
-		auto obj = Worker::make_shared<AsyncFsync>(share_this<XapiandManager>(), nullptr, ev_flags);
+		auto obj = Worker::make_shared<AsyncFsync>(XapiandManager::manager, nullptr, ev_flags);
 		asyncfsync_pool.enqueue(std::move(obj));
 	}
 }
@@ -819,7 +817,7 @@ XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endp
 {
 #ifdef XAPIAND_CLUSTERING
 	if (!solo) {
-		return endp_r.resolve_index_endpoint(path, share_this<XapiandManager>(), endpv, n_endps, timeout);
+		return endp_r.resolve_index_endpoint(path, endpv, n_endps, timeout);
 	}
 	else
 #endif

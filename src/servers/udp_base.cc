@@ -169,7 +169,7 @@ BaseUDP::sending_message(const std::string& message)
 		if (written < 0) {
 			if (sock != -1 && !ignored_errorno(errno, true)) {
 				L_ERR(this, "ERROR: sendto error (sock=%d): %s", sock, strerror(errno));
-				manager()->shutdown();
+				XapiandManager::manager->shutdown();
 			}
 		}
 	}
@@ -182,7 +182,7 @@ BaseUDP::send_message(char type, const std::string& content)
 	if (!content.empty()) {
 		std::string message(1, type);
 		message.append(std::string((const char *)&version, sizeof(uint16_t)));
-		message.append(serialise_string(manager()->cluster_name));
+		message.append(serialise_string(XapiandManager::manager->cluster_name));
 		message.append(content);
 		sending_message(message);
 	}
@@ -232,7 +232,7 @@ BaseUDP::get_message(std::string& result, char max_type)
 		throw MSG_NetworkError("Badly formed message: No cluster name!");
 	}
 
-	if (remote_cluster_name != manager()->cluster_name) {
+	if (remote_cluster_name != XapiandManager::manager->cluster_name) {
 		throw MSG_DummyException();
 	}
 

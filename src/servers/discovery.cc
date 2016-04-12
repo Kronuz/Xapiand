@@ -102,45 +102,43 @@ Discovery::heartbeat_cb(ev::timer&, int)
 
 	L_EV_BEGIN(this, "Discovery::heartbeat_cb:BEGIN");
 
-	auto m = manager();
-
-	if (m->state.load() != XapiandManager::State::READY) {
-		L_DISCOVERY(this, "Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(m->state.load())]);
+	if (XapiandManager::manager->state.load() != XapiandManager::State::READY) {
+		L_DISCOVERY(this, "Waiting manager get ready!! (%s)", XapiandManager::StateNames[static_cast<int>(XapiandManager::manager->state.load())]);
 	}
 
-	switch (m->state.load()) {
+	switch (XapiandManager::manager->state.load()) {
 		case XapiandManager::State::RESET: {
-			
+
 			Node* node = new Node(*local_node);
 			std::string drop = local_node->name;
 
-			if (m->node_name.empty()) {
+			if (XapiandManager::manager->node_name.empty()) {
 				node->name = name_generator();
 			} else {
-				node->name = m->node_name;
+				node->name = XapiandManager::manager->node_name;
 			}
 			std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
 
 			if (!drop.empty()) {
-				m->drop_node(drop);
+				XapiandManager::manager->drop_node(drop);
 			}
 
 			L_INFO(this, "Advertising as %s (id: %016llX)...", local_node->name.c_str(), local_node->id);
 			send_message(Message::HELLO, local_node->serialise());
-			m->state.store(XapiandManager::State::WAITING);
+			XapiandManager::manager->state.store(XapiandManager::State::WAITING);
 			break;
 		}
 
 		case XapiandManager::State::WAITING:
-			m->state.store(XapiandManager::State::WAITING_);
+			XapiandManager::manager->state.store(XapiandManager::State::WAITING_);
 			break;
 
 		case XapiandManager::State::WAITING_:
-			m->state.store(XapiandManager::State::SETUP);
+			XapiandManager::manager->state.store(XapiandManager::State::SETUP);
 			break;
 
 		case XapiandManager::State::SETUP:
-			m->setup_node();
+			XapiandManager::manager->setup_node();
 			break;
 
 		case XapiandManager::State::READY:

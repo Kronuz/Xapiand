@@ -57,10 +57,6 @@ public:
 	}
 
 	~XapiandReplicator();
-
-	inline decltype(auto) manager() noexcept {
-		return share_parent<XapiandManager>();
-	}
 };
 
 #endif

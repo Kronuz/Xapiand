@@ -143,7 +143,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int)
 
 	L_EV_BEGIN(this, "Raft::leader_election_timeout_cb:BEGIN");
 
-	if (manager()->state != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::READY) {
 		L_EV_END(this, "Raft::leader_election_timeout_cb:END");
 		return;
 	}
@@ -168,7 +168,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int)
 void
 Raft::_reset_leader_election_timeout()
 {
-	number_servers = manager()->get_nodes_by_region(local_node->region) + 1;
+	number_servers = XapiandManager::manager->get_nodes_by_region(local_node->region) + 1;
 
 	leader_election_timeout.repeat = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
 	leader_election_timeout.again();
@@ -183,7 +183,7 @@ Raft::leader_heartbeat_cb(ev::timer&, int)
 
 	L_EV_BEGIN(this, "Raft::leader_heartbeat_cb:BEGIN");
 
-	if (manager()->state != XapiandManager::State::READY) {
+	if (XapiandManager::manager->state != XapiandManager::State::READY) {
 		L_EV_END(this, "Raft::leader_heartbeat_cb:END");
 		return;
 	}

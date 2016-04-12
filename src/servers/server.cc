@@ -73,7 +73,7 @@ void
 XapiandServer::async_setup_node_cb(ev::async&, int)
 {
 	L_EV_BEGIN(this, "XapiandServer::async_setup_cb:BEGIN");
-	manager()->setup_node(share_this<XapiandServer>());
+	XapiandManager::manager->setup_node(share_this<XapiandServer>());
 
 	async_setup_node.stop();
 	L_EV(this, "Stop server's async setup node event");
