@@ -66,7 +66,7 @@ private:
 	WorkerList::iterator _iterator;
 
 	template<typename T>
-	inline WorkerList::iterator _attach(T&& child) {
+	inline auto _attach(T&& child) {
 		assert(child);
 		auto ret = _children.insert(_children.end(), std::forward<T>(child));
 
@@ -83,7 +83,7 @@ private:
 	}
 
 	template<typename T>
-	decltype(auto) _detach(T&& child) {
+	inline decltype(auto) _detach(T&& child) {
 		if (child->_parent && child->_iterator != _children.end()) {
 			auto it = _children.erase(child->_iterator);
 			child->_iterator = _children.end();
@@ -92,7 +92,7 @@ private:
 		return _children.end();
 	}
 
-	void _set_running(ev::loop_ref* loop, bool running) {
+	inline void _set_running(ev::loop_ref* loop, bool running) {
 		std::lock_guard<std::mutex> lk(_mtx);
 		if (ev_loop == loop) {
 			_running = running;
