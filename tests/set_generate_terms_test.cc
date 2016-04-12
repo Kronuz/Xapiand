@@ -47,16 +47,30 @@ START_TEST(geo_test)
 END_TEST
 
 
-Suite* Generate_Terms(void) {
-	Suite *s = suite_create("Testing Generation of terms");
+Suite* Generate_Numerical_Terms(void) {
+	Suite *s = suite_create("Testing Generation of numerical terms");
 
 	TCase *n = tcase_create("Generation numerical terms");
 	tcase_add_test(n, numeric_test);
 	suite_add_tcase(s, n);
 
+	return s;
+}
+
+
+Suite* Generate_Date_Terms(void) {
+	Suite *s = suite_create("Testing Generation of terms for dates");
+
 	TCase *d = tcase_create("Generation of terms for dates");
 	tcase_add_test(d, date_test);
 	suite_add_tcase(s, d);
+
+	return s;
+}
+
+
+Suite* Generate_Geo_Terms(void) {
+	Suite *s = suite_create("Testing Generation of terms for geospatials");
 
 	TCase *g = tcase_create("Generation of terms for geospatials");
 	tcase_add_test(g, geo_test);
@@ -67,10 +81,22 @@ Suite* Generate_Terms(void) {
 
 
 int main(void) {
-	Suite *st = Generate_Terms();
-	SRunner *sr = srunner_create(st);
+	Suite *s_nt = Generate_Numerical_Terms();
+	SRunner *sr = srunner_create(s_nt);
 	srunner_run_all(sr, CK_NORMAL);
 	int number_failed = srunner_ntests_failed(sr);
+	srunner_free(sr);
+
+	Suite *s_dt = Generate_Date_Terms();
+	sr = srunner_create(s_dt);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
+	srunner_free(sr);
+
+	Suite *s_gt = Generate_Geo_Terms();
+	sr = srunner_create(s_gt);
+	srunner_run_all(sr, CK_NORMAL);
+	number_failed += srunner_ntests_failed(sr);
 	srunner_free(sr);
 
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
