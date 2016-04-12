@@ -292,7 +292,6 @@ public:
 		if (_running) {
 			_async_detach.send();
 		} else {
-			L(this, "detach() on a non running loop: %s", __repr__().c_str());
 			detach_impl();
 		}
 	}
