@@ -82,14 +82,12 @@ private:
 	}
 
 	void _set_running(ev::loop_ref* loop, bool running) {
+		std::lock_guard<std::mutex> lk(_mtx);
 		if (ev_loop == loop) {
 			_running = running;
 		}
-		{
-			std::lock_guard<std::mutex> lk(_mtx);
-			for (const auto& c : _children) {
-				c->_set_running(loop, running);
-			}
+		for (const auto& c : _children) {
+			c->_set_running(loop, running);
 		}
 	}
 
