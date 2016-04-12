@@ -388,16 +388,21 @@ GenerateTerms::second(int tm_s[], int tm_e[], const std::string& prefix)
 
 
 std::string
-GenerateTerms::geo(const std::vector<range_t>& ranges,  const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
+GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
 	std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<GeoFieldProcessor>>& gfps, Xapian::QueryParser& queryparser)
 {
-	std::string last_valid, result_terms;
-
 	// The user does not specify the accuracy.
-	if (accuracy.empty()) {
-		return result_terms;
+	if (acc_prefix.empty()) {
+		return std::string();
 	}
 
+	std::vector<int> pos_accuracy;
+	pos_accuracy.reserve(accuracy.size());
+	for (const auto& acc : accuracy) {
+		pos_accuracy.push_back(START_POS - acc * 2);
+	}
+
+	std::map<uint64_t, std::string> results;
 	for (const auto& range : ranges) {
 		std::bitset<SIZE_BITS_ID> b1(range.start), b2(range.end), res;
 		auto idx = -1;
@@ -411,20 +416,31 @@ GenerateTerms::geo(const std::vector<range_t>& ranges,  const std::vector<double
 			val = range.start;
 		}
 
-		for (auto i = static_cast<int>(accuracy.size() - 1); i > 1; --i) {
-			if ((START_POS - 2 * accuracy[i]) > idx) {
-				uint64_t id_trixel = val >> static_cast<int>(START_POS - accuracy[i] * 2);
-				auto pos = i - 2;
-				add_geo_prefix(added_prefixes, gfps, queryparser, acc_prefix[pos]);
-				if (last_valid.empty()) {
-					last_valid.assign(std::bitset<SIZE_BITS_ID>(id_trixel).to_string());
-					last_valid.assign(last_valid.substr(last_valid.find('1')));
-					result_terms.assign(acc_prefix[pos]).append(":").append(std::to_string(id_trixel));
-				} else if (isnotSubtrixel(last_valid, id_trixel)) {
-					result_terms.append(" OR ").append(acc_prefix[pos]).append(1, ':').append(std::to_string(id_trixel));
-				}
+		for (int i = accuracy.size() - 1; i > 1; --i) {
+			if (pos_accuracy[i] > idx) {
+				results.insert(std::make_pair(val >> pos_accuracy[i], acc_prefix[i - 2]));
 				break;
 			}
+		}
+	}
+
+	// The search have trixels more big that the biggest trixel in accuracy.
+	if (results.empty()) {
+		return std::string();
+	}
+
+	// Delete duplicates terms.
+	auto it = results.begin();
+	auto last_valid(std::bitset<SIZE_BITS_ID>(it->first).to_string());
+	last_valid.assign(last_valid.substr(last_valid.find("1")));
+	auto result_terms(it->second);
+	result_terms.append(":").append(std::to_string(it->first));
+	add_geo_prefix(added_prefixes, gfps, queryparser, it->second);
+	const auto it_e = results.end();
+	for (++it; it != it_e; ++it) {
+		if (isnotSubtrixel(last_valid, it->first)) {
+			add_geo_prefix(added_prefixes, gfps, queryparser, it->second);
+			result_terms.append(" OR ").append(it->second).append(":").append(std::to_string(it->first));
 		}
 	}
 

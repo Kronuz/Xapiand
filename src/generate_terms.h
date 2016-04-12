@@ -43,6 +43,6 @@ namespace GenerateTerms {
 	std::string hour(int tm_s[], int tm_e[], const std::string& prefix);
 	std::string minute(int tm_s[], int tm_e[], const std::string& prefix);
 	std::string second(int tm_s[], int tm_e[], const std::string& prefix);
-	std::string geo(const std::vector<range_t>& ranges,  const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
+	std::string geo(const std::vector<range_t>& ranges, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
 		std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<GeoFieldProcessor>>& gfps, Xapian::QueryParser& queryparser);
 };
