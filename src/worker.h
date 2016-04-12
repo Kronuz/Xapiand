@@ -194,16 +194,26 @@ public:
 	}
 
 	virtual void shutdown_impl(time_t asap, time_t now) {
-		std::lock_guard<std::mutex> lk(_mtx);
-
 		L_OBJ(this , "SHUTDOWN WORKER! (%d %d): %zu children", asap, now, _children.size());
 
-		for (auto it = _children.begin(); it != _children.end();) {
-			auto child = *it++;
-			if (child) {
+		std::vector<std::weak_ptr<Worker>> weak_children;
+		{
+			// Collect active children
+			std::lock_guard<std::mutex> lk(_mtx);
+			weak_children.reserve(_children.size());
+			for (auto it = _children.begin(); it != _children.end();) {
+				auto child = *it++;
+				if (child) {
+					weak_children.push_back(child);
+				} else {
+					it = _children.erase(it);
+				}
+			}
+		}
+
+		for (auto& weak_child : weak_children) {
+			if (auto child = weak_child.lock()) {
 				child->shutdown_impl(asap, now);
-			} else {
-				it = _children.erase(it);
 			}
 		}
 	}
