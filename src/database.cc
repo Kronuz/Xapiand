@@ -2204,7 +2204,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	bool initref = flags & DB_INIT_REF;
 	bool replication = flags & DB_REPLICATION;
 
-	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB %s(%s)...", writable ? "w" : "r", endpoints.as_string().c_str());
+	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB [%s]: %s ...", writable ? "WR" : "RO", endpoints.as_string().c_str());
 
 	if (database) {
 		L_ERR(this, "Trying to checkout a database with a not null pointer");
@@ -2237,7 +2237,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				case DatabaseQueue::replica_state::REPLICA_LOCK:
 				case DatabaseQueue::replica_state::REPLICA_SWITCH:
 					L_REPLICATION(this, "A replication task is already waiting");
-					L_DATABASE_END(this, "!! ABORTED CHECKOUT DB (%s)!", endpoints.as_string().c_str());
+					L_DATABASE_END(this, "!! ABORTED CHECKOUT DB [%s]: %s", writable ? "WR" : "RO", endpoints.as_string().c_str());
 					return false;
 			}
 		} else {
@@ -2310,16 +2310,16 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	lk.unlock();
 
 	if (!database) {
-		L_DATABASE_END(this, "!! FAILED CHECKOUT DB (%s)!", endpoints.as_string().c_str());
+		L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s", writable ? "WR" : "WR", endpoints.as_string().c_str());
 		return false;
 	}
 
 	if (!writable && duration_cast<seconds>(system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
 		database->reopen();
-		L_DATABASE(this, "== REOPEN DB %s(%s)", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str());
+		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->endpoints.as_string().c_str());
 	}
 
-	L_DATABASE_END(this, "++ CHECKED OUT DB %s, %s at rev:%s", writable ? "w" : "r", endpoints.as_string().c_str(), repr(database->checkout_revision, false).c_str());
+	L_DATABASE_END(this, "++ CHECKED OUT DB [%s]: %s (rev:%s)", writable ? "WR" : "WR", endpoints.as_string().c_str(), repr(database->checkout_revision, false).c_str());
 	return true;
 }
 
@@ -2329,7 +2329,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
 	L_CALL(this, "DatabasePool::checkin()");
 
-	L_DATABASE_BEGIN(this, "-- CHECKING IN DB %s(%s)...", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str());
+	L_DATABASE_BEGIN(this, "-- CHECKING IN DB [%s]: %s ...", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->endpoints.as_string().c_str());
 
 	assert(database);
 
@@ -2390,7 +2390,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	L_DATABASE_END(this, "-- CHECKED IN DB %s(%s)", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str());
+	L_DATABASE_END(this, "-- CHECKED IN DB [%s]: %s", (flags & DB_WRITABLE) ? "WR" : "RO", endpoints.as_string().c_str());
 
 	database.reset();
 
