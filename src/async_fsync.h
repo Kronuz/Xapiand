@@ -41,8 +41,8 @@ class XapiandManager;
 class AsyncFsync : public Task<>, public Worker {
 	struct Status {
 		int mode;
-		std::chrono::time_point<std::chrono::system_clock> max_commit_time;
-		std::chrono::time_point<std::chrono::system_clock> commit_time;
+		std::chrono::time_point<std::chrono::system_clock> max_fsync_time;
+		std::chrono::time_point<std::chrono::system_clock> fsync_time;
 		std::chrono::time_point<std::chrono::system_clock> next_wakeup_time();
 		Status() : mode(0) {}
 	};

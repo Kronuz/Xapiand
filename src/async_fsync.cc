@@ -36,7 +36,7 @@ std::atomic<std::time_t> AsyncFsync::next_wakeup_time(std::chrono::system_clock:
 std::chrono::time_point<std::chrono::system_clock>
 AsyncFsync::Status::next_wakeup_time()
 {
-	return max_commit_time < commit_time ? max_commit_time : commit_time;
+	return max_fsync_time < fsync_time ? max_fsync_time : fsync_time;
 }
 
 
@@ -44,7 +44,7 @@ AsyncFsync::AsyncFsync(const std::shared_ptr<XapiandManager>& manager_, ev::loop
 	: Worker(std::move(manager_), ev_loop_, ev_flags_),
 	  running(true)
 {
-	L_OBJ(this, "CREATED AUTOCOMMIT!");
+	L_OBJ(this, "CREATED ASYNC FSYNC!");
 }
 
 
@@ -52,7 +52,7 @@ AsyncFsync::~AsyncFsync()
 {
 	destroyer();
 
-	L_OBJ(this , "DELETED AUTOCOMMIT!");
+	L_OBJ(this , "DELETED ASYNC FSYNC!");
 }
 
 
@@ -74,7 +74,7 @@ AsyncFsync::destroyer()
 void
 AsyncFsync::shutdown_impl(time_t asap, time_t now)
 {
-	L_OBJ(this , "SHUTDOWN AUTOCOMMIT! (%d %d)", asap, now);
+	L_OBJ(this , "SHUTDOWN ASYNC FSYNC! (%d %d)", asap, now);
 
 	Worker::shutdown_impl(asap, now);
 
@@ -120,9 +120,9 @@ AsyncFsync::run()
 					auto end = std::chrono::system_clock::now();
 
 					if (successful) {
-						L_DEBUG(this, "Async Fsync %d: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_commit_time ? " (forced)" : "", delta_string(start, end).c_str());
+						L_DEBUG(this, "Async Fsync %d: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_fsync_time ? " (forced)" : "", delta_string(start, end).c_str());
 					} else {
-						L_WARNING(this, "Async Fsync %d falied: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_commit_time ? " (forced)" : "", delta_string(start, end).c_str());
+						L_WARNING(this, "Async Fsync %d falied: %d%s (took %s)", status.mode, fd, next_wakeup_time == status.max_fsync_time ? " (forced)" : "", delta_string(start, end).c_str());
 					}
 
 					lk.lock();
@@ -151,9 +151,9 @@ AsyncFsync::_fsync(int fd, bool full_fsync)
 	auto now = std::chrono::system_clock::now();
 	if (!status.mode) {
 		status.mode = full_fsync ? 1 : 2;
-		status.max_commit_time = now + 3s;
+		status.max_fsync_time = now + 3s;
 	}
-	status.commit_time = now + 500ms;
+	status.fsync_time = now + 500ms;
 
 	if (std::chrono::system_clock::from_time_t(AsyncFsync::next_wakeup_time.load()) > status.next_wakeup_time()) {
 		AsyncFsync::wakeup_signal.notify_one();
