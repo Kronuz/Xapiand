@@ -81,7 +81,7 @@ XapiandReplicator::run()
 	// Call implementation directly, as we don't use a loop. Object gets
 	// detached when run() ends:
 
-	detach();
+	cleanup();
 }
 
 

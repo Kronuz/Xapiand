@@ -136,7 +136,7 @@ DatabaseAutocommit::run()
 		}
 	}
 
-	detach();
+	cleanup();
 }
 
 
