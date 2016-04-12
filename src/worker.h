@@ -251,7 +251,7 @@ public:
 			}
 			if (auto obj = wobj.lock()) {
 				L_OBJ(ptr, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), parent->__repr__().c_str(), obj.use_count() - 1);
-				parent->_attach(obj);
+				_iterator = parent->_attach(obj);
 			} else {
 				L_OBJ(ptr, "Worker child %s detached from %s", repr.c_str(), parent->__repr__().c_str());
 			}
