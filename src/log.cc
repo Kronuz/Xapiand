@@ -86,9 +86,9 @@ int Log::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Log::handlers;
 
 
-Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_)
+Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
 	: cleanup(cleanup_),
-	  created_at(std::chrono::system_clock::now()),
+	  created_at(created_at_),
 	  wakeup(wakeup_),
 	  str_start(str),
 	  priority(priority_),
@@ -183,15 +183,15 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 		std::string str(str_format(priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
 		va_end(argptr);
 
-		print(str, false, 0, priority);
+		print(str, false, 0, priority, created_at);
 	}
 }
 
 
 std::shared_ptr<Log>
-Log::add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
+Log::add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
-	auto l_ptr = std::make_shared<Log>(str, cleanup, wakeup, priority);
+	auto l_ptr = std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
 
 	static LogThread& thread = _thread();
 	thread.add(l_ptr);
@@ -211,10 +211,10 @@ Log::log(int priority, const std::string& str)
 }
 
 std::shared_ptr<Log>
-Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
+Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
 	if (priority > Log::log_level) {
-		return std::make_shared<Log>(str, cleanup, wakeup, priority);
+		return std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
 	}
 
 	if (!Log::handlers.size()) {
@@ -222,10 +222,10 @@ Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::ch
 	}
 
 	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {
-		return add(str, cleanup, wakeup, priority);
+		return add(str, cleanup, wakeup, priority, created_at);
 	} else {
 		log(priority, str);
-		return std::make_shared<Log>(str, cleanup, wakeup, priority);
+		return std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
 	}
 }
 

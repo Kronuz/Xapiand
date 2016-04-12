@@ -90,7 +90,7 @@ class Log : public std::enable_shared_from_this<Log> {
 	static LogThread& _thread();
 
 	static std::string str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
-	static std::shared_ptr<Log> add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
+	static std::shared_ptr<Log> add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 	static void log(int priority, const std::string& str);
 
 	bool cleanup;
@@ -104,7 +104,7 @@ public:
 	static int log_level;
 	static std::vector<std::unique_ptr<Logger>> handlers;
 
-	Log(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_);
+	Log(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Log();
 
 	template <typename T, typename R, typename... Args>
@@ -113,8 +113,8 @@ public:
 	}
 
 	template <typename T, typename R>
-	inline static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::duration<T, R> timeout, int priority=LOG_DEBUG) {
-		return print(str, cleanup, std::chrono::system_clock::now() + timeout, priority);
+	inline static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::duration<T, R> timeout, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now()) {
+		return print(str, cleanup, std::chrono::system_clock::now() + timeout, priority, created_at);
 	}
 
 	template <typename... Args>
@@ -122,8 +122,8 @@ public:
 		return log(cleanup, std::chrono::milliseconds(timeout), priority, std::forward<Args>(args)...);
 	}
 
-	inline static std::shared_ptr<Log> print(const std::string& str, bool cleanup, int timeout=0, int priority=LOG_DEBUG) {
-		return print(str, cleanup, std::chrono::milliseconds(timeout), priority);
+	inline static std::shared_ptr<Log> print(const std::string& str, bool cleanup, int timeout=0, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now()) {
+		return print(str, cleanup, std::chrono::milliseconds(timeout), priority, created_at);
 	}
 
 	static std::shared_ptr<Log> log(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
@@ -138,7 +138,7 @@ public:
 		return log(cleanup, wakeup, priority, std::string(), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
 	}
 
-	static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
+	static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
 	void unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 	void clear();
