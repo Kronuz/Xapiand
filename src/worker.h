@@ -292,14 +292,23 @@ public:
 		if (_running) {
 			_async_detach.send();
 		} else {
+			L(this, "detach() on a non running loop: %s", __repr__().c_str());
 			detach_impl();
 		}
 	}
 
+	inline void set_running(bool running) {
+		auto start = shared_from_this();
+		while (start->_parent) {
+			start = start->_parent;
+		}
+		start->_set_running(ev_loop, running);
+	}
+
 	inline void run_loop() {
-		_set_running(ev_loop, true);
+		set_running(true);
 		ev_loop->run();
-		_set_running(ev_loop, false);
+		set_running(false);
 	}
 
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
