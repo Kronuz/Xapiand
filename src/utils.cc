@@ -305,6 +305,7 @@ char* normalize_path(const char* src, const char* end, char* dst) {
 	return ret;
 }
 
+
 char* normalize_path(const std::string& src, char* dst)
 {
 	const char* src_str = src.data();
@@ -312,11 +313,10 @@ char* normalize_path(const std::string& src, char* dst)
 }
 
 
+QueryParser::QueryParser()
+	: len(0),
+	  off(nullptr) { }
 
-QueryParser::QueryParser() :
-	len(0),
-	off(nullptr)
-{}
 
 void
 QueryParser::clear()
@@ -325,12 +325,14 @@ QueryParser::clear()
 	query.clear();
 }
 
+
 void
 QueryParser::rewind()
 {
 	len = 0;
 	off = nullptr;
 }
+
 
 int
 QueryParser::init(const std::string& q)
@@ -339,6 +341,7 @@ QueryParser::init(const std::string& q)
 	query = q;
 	return 0;
 }
+
 
 int
 QueryParser::next(const char *name)
@@ -400,22 +403,23 @@ QueryParser::next(const char *name)
 	return -1;
 }
 
+
 std::string
 QueryParser::get()
 {
-	if (!off) return "";
+	if (!off) return std::string();
 	return urldecode(off, len);
 }
 
 
-PathParser::PathParser() :
-	len_pth(0), off_pth(nullptr),
-	len_hst(0), off_hst(nullptr),
-	len_nsp(0), off_nsp(nullptr),
-	len_pmt(0), off_pmt(nullptr),
-	len_cmd(0), off_cmd(nullptr),
-	len_id(0), off_id(nullptr)
-{}
+PathParser::PathParser()
+	: len_pth(0), off_pth(nullptr),
+	  len_hst(0), off_hst(nullptr),
+	  len_nsp(0), off_nsp(nullptr),
+	  len_pmt(0), off_pmt(nullptr),
+	  len_cmd(0), off_cmd(nullptr),
+	  len_id(0), off_id(nullptr) { }
+
 
 void
 PathParser::clear()
@@ -430,6 +434,7 @@ PathParser::clear()
 	path.clear();
 }
 
+
 void
 PathParser::rewind()
 {
@@ -441,6 +446,7 @@ PathParser::rewind()
 	len_nsp = 0;
 	off_nsp = nullptr;
 }
+
 
 PathParser::State
 PathParser::init(const std::string& p)
@@ -543,6 +549,7 @@ PathParser::init(const std::string& p)
 	return state;
 }
 
+
 PathParser::State
 PathParser::next()
 {
@@ -639,45 +646,51 @@ PathParser::next()
 	return state;
 }
 
+
 std::string
 PathParser::get_pth()
 {
-	if (!off_pth) return "";
+	if (!off_pth) return std::string();
 	return urldecode(off_pth, len_pth);
 }
+
 
 std::string
 PathParser::get_hst()
 {
-	if (!off_hst) return "";
+	if (!off_hst) return std::string();
 	return urldecode(off_hst, len_hst);
 }
+
 
 std::string
 PathParser::get_nsp()
 {
-	if (!off_nsp) return "";
+	if (!off_nsp) return std::string();
 	return urldecode(off_nsp, len_nsp);
 }
+
 
 std::string
 PathParser::get_pmt()
 {
-	if (!off_pmt) return "";
+	if (!off_pmt) return std::string();
 	return urldecode(off_pmt, len_pmt);
 }
+
 
 std::string
 PathParser::get_cmd()
 {
-	if (!off_cmd) return "";
+	if (!off_cmd) return std::string();
 	return urldecode(off_cmd, len_cmd);
 }
+
 
 std::string
 PathParser::get_id()
 {
-	if (!off_id) return "";
+	if (!off_id) return std::string();
 	return urldecode(off_id, len_id);
 }
 
