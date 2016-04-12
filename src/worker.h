@@ -53,6 +53,7 @@ private:
 	ev::async _async_break_loop;
 	ev::async _async_destroy;
 	ev::async _async_detach;
+	ev::async _async_cleanup;
 
 	std::mutex _mtx;
 	std::atomic_bool _detaching;
@@ -113,6 +114,7 @@ protected:
 		  _async_break_loop(*ev_loop),
 		  _async_destroy(*ev_loop),
 		  _async_detach(*ev_loop),
+		  _async_cleanup(*ev_loop),
 		  _parent(std::forward<T>(parent))
 	{
 		if (_parent) {
@@ -135,6 +137,10 @@ protected:
 		_async_detach.start();
 		L_EV(this, "Start Worker async detach event");
 
+		_async_cleanup.set<Worker, &Worker::_async_cleanup_cb>(this);
+		_async_cleanup.start();
+		L_EV(this, "Start Worker async cleanup event");
+
 		L_OBJ(this, "CREATED WORKER!");
 	}
 
@@ -149,6 +155,8 @@ protected:
 		L_EV(this, "Stop Worker async destroy event");
 		_async_detach.stop();
 		L_EV(this, "Stop Worker async detach event");
+		_async_cleanup.stop();
+		L_EV(this, "Stop Worker async cleanup event");
 
 		L_OBJ(this, "DESTROYED WORKER!");
 	}
@@ -184,6 +192,14 @@ private:
 		L_EV_BEGIN(this, "Worker::_async_detach_cb:BEGIN");
 		detach_impl();
 		L_EV_END(this, "Worker::_async_detach_cb:END");
+	}
+
+	void _async_cleanup_cb(ev::async&, int) {
+		L_EV(this, "Worker::_async_cleanup_cb");
+
+		L_EV_BEGIN(this, "Worker::_async_cleanup_cb:BEGIN");
+		cleanup_impl();
+		L_EV_END(this, "Worker::_async_cleanup_cb:END");
 	}
 
 	std::vector<std::weak_ptr<Worker>> _gather_children() {
@@ -261,9 +277,16 @@ public:
 		}
 	}
 
-	virtual void cleanup() {
+	virtual void cleanup_impl() {
+		auto weak_children = _gather_children();
+		L_OBJ(this , "CLEANUP WORKER: %zu children", weak_children.size());
+		for (auto& weak_child : weak_children) {
+			if (auto child = weak_child.lock()) {
+				child->cleanup_impl();
+			}
+		}
 		if (_detaching) {
-			detach();
+			detach_impl();
 		}
 	}
 
@@ -312,6 +335,14 @@ public:
 		}
 	}
 
+	inline void cleanup() {
+		if (_running) {
+			_async_cleanup.send();
+		} else {
+			cleanup_impl();
+		}
+	}
+
 	void set_running(bool running) {
 		auto start = shared_from_this();
 		while (start->_parent) {
@@ -320,24 +351,10 @@ public:
 		start->_set_running(ev_loop, running);
 	}
 
-	void cleanup_run() {
-		auto weak_children = _gather_children();
-		L_OBJ(this , "CLEANUP WORKER: %zu children", weak_children.size());
-		for (auto& weak_child : weak_children) {
-			if (auto child = weak_child.lock()) {
-				child->cleanup_run();
-			}
-		}
-		if (_detaching) {
-			detach();
-		}
-	}
-
 	void run_loop() {
 		set_running(true);
 		ev_loop->run();
 		set_running(false);
-		cleanup_run();
 	}
 
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>

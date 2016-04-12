@@ -601,6 +601,7 @@ XapiandManager::run(const opts_t& o)
 	}
 
 	join();
+
 	cleanup();
 }
 
