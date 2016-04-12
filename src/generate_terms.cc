@@ -158,7 +158,7 @@ GenerateTerms::numeric(const std::string& start_, const std::string& end_, const
 				if (result_terms.empty()) {
 					result_terms.assign(or_terms);
 				} else {
-					result_terms.append("(").append(result_terms).append(") AND (").append(or_terms).append(")");
+					result_terms.assign("(" + result_terms).append(") AND (").append(or_terms).append(")");
 				}
 			}
 		}
