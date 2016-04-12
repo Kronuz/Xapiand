@@ -88,6 +88,7 @@ std::vector<std::unique_ptr<Logger>> Log::handlers;
 
 Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_)
 	: cleanup(cleanup_),
+	  created_at(std::chrono::system_clock::now()),
 	  wakeup(wakeup_),
 	  str_start(str),
 	  priority(priority_),
@@ -97,6 +98,13 @@ Log::~Log()
 {
 	bool f = false;
 	finished.compare_exchange_strong(f, cleanup);
+}
+
+
+long double
+Log::age()
+{
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - created_at).count();
 }
 
 
@@ -297,7 +305,12 @@ LogThread::thread_function()
 				it = log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished = true;
-				Log::log(l_ptr->priority, l_ptr->str_start);
+				auto msg = l_ptr->str_start;
+				auto age = l_ptr->age();
+				if (age > 2e8) {
+					msg += " ~" + delta_string(age);
+				}
+				Log::log(l_ptr->priority, msg);
 				it = log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;

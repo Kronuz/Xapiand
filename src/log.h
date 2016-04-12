@@ -94,6 +94,7 @@ class Log : public std::enable_shared_from_this<Log> {
 	static void log(int priority, const std::string& str);
 
 	bool cleanup;
+	std::chrono::time_point<std::chrono::system_clock> created_at;
 	std::chrono::time_point<std::chrono::system_clock> wakeup;
 	std::string str_start;
 	int priority;
@@ -143,6 +144,8 @@ public:
 	void clear();
 
 	static void finish(int wait=1);
+
+	long double age();
 };
 
 
@@ -211,10 +214,10 @@ public:
 
 #define _LOG_MARKED_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥  " DEBUG_COL, args)
 
-#define _LOG_TIMED_100(args...) auto __log_timed = Log::log(true, 100ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
-#define _LOG_TIMED_500(args...) auto __log_timed = Log::log(true, 500ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_200(args...) auto __log_timed = Log::log(true, 200ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_600(args...) auto __log_timed = Log::log(true, 600ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 #define _LOG_TIMED_1000(args...) auto __log_timed = Log::log(true, 1s, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
-#define _LOG_TIMED_N_CLEAR(args...) __log_timed->unlog(LOG_WARNING, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_N_CLEAR(args...) __log_timed->unlog(LOG_WARNING, __FILE__, __LINE__, NO_COL, GREEN, args)
 
 #define L _LOG_ENABLED
 #define L_LOG _LOG_LOG_ENABLED
@@ -235,9 +238,9 @@ public:
 
 #define L_OBJ_BEGIN _LOG_TIMED_1000
 #define L_OBJ_END _LOG_TIMED_N_CLEAR
-#define L_DATABASE_BEGIN _LOG_TIMED_100
+#define L_DATABASE_BEGIN _LOG_TIMED_200
 #define L_DATABASE_END _LOG_TIMED_N_CLEAR
-#define L_EV_BEGIN _LOG_TIMED_500
+#define L_EV_BEGIN _LOG_TIMED_600
 #define L_EV_END _LOG_TIMED_N_CLEAR
 
 // Enable the following, when needed, using _LOG_LOG_ENABLED:
