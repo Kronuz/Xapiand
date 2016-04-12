@@ -241,20 +241,20 @@ public:
 		if (_parent) {
 			const WorkerShared parent = _parent;
 			std::lock_guard<std::mutex> lk(parent->_mtx);
-			std::weak_ptr<Worker> wobj;
+			std::weak_ptr<Worker> weak_child;
 			std::string repr;
-			void* ptr = this; (void)ptr;
+			void* that = this; (void)that;
 			{
-				auto obj = shared_from_this();
-				parent->_detach(obj);
-				wobj = obj;
-				repr = obj->__repr__();
+				auto child = shared_from_this();
+				parent->_detach(child);
+				weak_child = child;
+				repr = child->__repr__();
 			}
-			if (auto obj = wobj.lock()) {
-				L_OBJ(ptr, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), parent->__repr__().c_str(), obj.use_count() - 1);
-				_iterator = parent->_attach(obj);
+			if (auto child = weak_child.lock()) {
+				L_OBJ(that, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), parent->__repr__().c_str(), child.use_count() - 1);
+				child->_iterator = parent->_attach(child);
 			} else {
-				L_OBJ(ptr, "Worker child %s detached from %s", repr.c_str(), parent->__repr__().c_str());
+				L_OBJ(that, "Worker child %s detached from %s", repr.c_str(), parent->__repr__().c_str());
 			}
 		}
 	}
@@ -347,14 +347,14 @@ public:
 		struct enable_make_shared : T {
 			enable_make_shared(Args&&... args) : T(std::forward<Args>(args)...) { }
 		};
-		auto worker = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
-		if (worker->_parent) {
-			std::lock_guard<std::mutex> lk(worker->_parent->_mtx);
-			worker->_iterator = worker->_parent->_attach(worker);
-			L_OBJ(worker.get(), "Worker child %s attached to %s", worker->__repr__().c_str(), worker->_parent->__repr__().c_str());
+		auto child = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
+		if (child->_parent) {
+			std::lock_guard<std::mutex> lk(child->_parent->_mtx);
+			child->_iterator = child->_parent->_attach(child);
+			L_OBJ(child.get(), "child child %s attached to %s", child->__repr__().c_str(), child->_parent->__repr__().c_str());
 		}
 
-		return worker;
+		return child;
 	}
 
 	template<typename T, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
