@@ -279,6 +279,7 @@ HttpClient::on_read(const char* buf, size_t received)
 		write_http_response(err_response, error_code, false);
 		L_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message : "incomplete request");
 		destroy();  // Handle error. Just close the connection.
+		detach();
 	}
 }
 
@@ -533,6 +534,7 @@ HttpClient::_run()
 		}
 		if (written) {
 			destroy();
+			detach();
 		} else {
 			err_response[RESPONSE_STATUS] = error_code;
 			err_response[RESPONSE_MESSAGE] = error;

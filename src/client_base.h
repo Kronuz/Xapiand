@@ -108,11 +108,6 @@ public:
 		return share_parent<BaseServer>()->manager();
 	}
 
-	inline void destroy() {
-		Worker::destroy();
-		detach();
-	}
-
 protected:
 	std::mutex qmtx;
 

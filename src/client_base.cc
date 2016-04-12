@@ -360,6 +360,7 @@ BaseClient::io_cb_update()
 		if (write_queue.empty()) {
 			if (closed) {
 				destroy();
+				detach();
 			} else {
 				io_write.stop();
 				L_EV(this, "Disable write event (sock=%d)", sock);
@@ -383,6 +384,7 @@ BaseClient::io_cb(ev::io &watcher, int revents)
 	if (revents & EV_ERROR) {
 		L_ERR(this, "ERROR: got invalid event (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 		destroy();
+		detach();
 	}
 
 	assert(sock == fd || sock == -1);
@@ -475,6 +477,7 @@ BaseClient::_write(int fd, bool async)
 					L_EV(this, "Disable write event (sock=%d, fd=%d)", sock, fd);
 				}
 				destroy();
+				detach();
 				return false;
 			case WR::RETRY:
 				if (!async) {
@@ -536,12 +539,14 @@ BaseClient::io_cb_read(int fd)
 					L_ERR(this, "ERROR: read error (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 				}
 				destroy();
+				detach();
 				return;
 			}
 		} else if (received == 0) {
 			// The peer has closed its half side of the connection.
 			L_CONN(this, "Received EOF (sock=%d, fd=%d)!", sock, fd);
 			destroy();
+			detach();
 			return;
 		} else {
 			auto str(repr(buf_data, received, true, 500));
@@ -560,6 +565,7 @@ BaseClient::io_cb_read(int fd)
 					default:
 						L_CONN(this, "Received wrong file mode (sock=%d, fd=%d)!", sock, fd);
 						destroy();
+						detach();
 						return;
 				}
 				--received;
@@ -681,6 +687,7 @@ BaseClient::shutdown_impl(time_t asap, time_t now)
 
 	if (now) {
 		destroy();
+		detach();
 	}
 }
 
