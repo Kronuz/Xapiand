@@ -707,10 +707,22 @@ void to_lower(std::string& str) {
 
 std::string prefixed(const std::string& term, const std::string& prefix) {
 	if (isupper(term.at(0))) {
-		return (prefix.empty()) ? term : prefix + ":" + term;
+		if (prefix.empty()) {
+			return term;
+		} else {
+			std::string result;
+			result.reserve(prefix.size() + term.size() + 1);
+			result.assign(prefix);
+			result.append(1, ':').append(term);
+			return result;
+		}
+	} else {
+		std::string result;
+		result.reserve(prefix.size() + term.size());
+		result.assign(prefix);
+		result.append(term);
+		return result;
 	}
-
-	return prefix + term;
 }
 
 
