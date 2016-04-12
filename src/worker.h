@@ -184,6 +184,22 @@ private:
 		L_EV_END(this, "Worker::_async_detach_cb:END");
 	}
 
+	std::vector<std::weak_ptr<Worker>> _gather_children() {
+		std::vector<std::weak_ptr<Worker>> weak_children;
+		// Collect active children
+		std::lock_guard<std::mutex> lk(_mtx);
+		weak_children.reserve(_children.size());
+		for (auto it = _children.begin(); it != _children.end();) {
+			auto child = *it++;
+			if (child) {
+				weak_children.push_back(child);
+			} else {
+				it = _children.erase(it);
+			}
+		}
+		return weak_children;
+	}
+
 public:
 	std::string dump_tree(int level=1) {
 		std::lock_guard<std::mutex> lk(_mtx);
@@ -205,23 +221,8 @@ public:
 	}
 
 	virtual void shutdown_impl(time_t asap, time_t now) {
-		L_OBJ(this , "SHUTDOWN WORKER! (%d %d): %zu children", asap, now, _children.size());
-
-		std::vector<std::weak_ptr<Worker>> weak_children;
-		{
-			// Collect active children
-			std::lock_guard<std::mutex> lk(_mtx);
-			weak_children.reserve(_children.size());
-			for (auto it = _children.begin(); it != _children.end();) {
-				auto child = *it++;
-				if (child) {
-					weak_children.push_back(child);
-				} else {
-					it = _children.erase(it);
-				}
-			}
-		}
-
+		auto weak_children = _gather_children();
+		L_OBJ(this , "SHUTDOWN WORKER! (%d %d): %zu children", asap, now, weak_children.size());
 		for (auto& weak_child : weak_children) {
 			if (auto child = weak_child.lock()) {
 				child->shutdown_impl(asap, now);
@@ -309,7 +310,7 @@ public:
 		}
 	}
 
-	inline void set_running(bool running) {
+	void set_running(bool running) {
 		auto start = shared_from_this();
 		while (start->_parent) {
 			start = start->_parent;
@@ -317,10 +318,24 @@ public:
 		start->_set_running(ev_loop, running);
 	}
 
-	inline void run_loop() {
+	void cleanup_run() {
+		auto weak_children = _gather_children();
+		L_OBJ(this , "CLEANUP WORKER: %zu children", weak_children.size());
+		for (auto& weak_child : weak_children) {
+			if (auto child = weak_child.lock()) {
+				child->cleanup_run();
+			}
+		}
+		if (_detaching) {
+			detach();
+		}
+	}
+
+	void run_loop() {
 		set_running(true);
 		ev_loop->run();
 		set_running(false);
+		cleanup_run();
 	}
 
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<Worker, std::decay_t<T>>::value>>
