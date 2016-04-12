@@ -50,6 +50,12 @@ class XapiandReplicator : public Task<>, public Worker {
 	void shutdown_impl(time_t asap, time_t now) override;
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<XapiandReplicator at %p>", this);
+		return buffer;
+	}
+
 	~XapiandReplicator();
 
 	inline decltype(auto) manager() noexcept {

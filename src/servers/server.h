@@ -49,6 +49,12 @@ class XapiandServer : public Task<>, public Worker {
 	void async_setup_node_cb(ev::async& watcher, int revents);
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<XapiandServer at %p>", this);
+		return buffer;
+	}
+
 	static std::mutex static_mutex;
 	static std::atomic_int total_clients;
 	static std::atomic_int http_clients;

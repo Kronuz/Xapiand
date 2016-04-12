@@ -44,6 +44,12 @@ class Binary : public BaseTCP {
 	TaskQueue<const std::shared_ptr<BinaryServer>&> tasks;
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<Binary at %p>", this);
+		return buffer;
+	}
+
 	Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
 	~Binary();
 

@@ -37,6 +37,12 @@ class Http : public BaseTCP {
 	friend HttpServer;
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<Http at %p>", this);
+		return buffer;
+	}
+
 	Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_);
 	~Http();
 

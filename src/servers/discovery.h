@@ -51,6 +51,12 @@ private:
 	void _enter();
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<Discovery at %p>", this);
+		return buffer;
+	}
+
 	enum class Message {
 		HEARTBEAT,     // Heartbeat
 		HELLO,         // New node saying hello

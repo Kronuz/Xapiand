@@ -97,6 +97,12 @@ private:
 	void _reset();
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<Raft at %p>", this);
+		return buffer;
+	}
+
 	Raft(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_, const std::string& group_);
 	~Raft();
 

@@ -237,6 +237,12 @@ class BinaryClient : public BaseClient {
 	friend Worker;
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<BinaryClient at %p>", this);
+		return buffer;
+	}
+
 	~BinaryClient();
 
 	char get_message(std::string &result, char max_type);

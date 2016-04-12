@@ -658,7 +658,7 @@ void run(const opts_t &opts) {
 	if (managers == 1) {
 		L_NOTICE(nullptr, "Xapiand is cleanly done with all work!");
 	} else {
-		L_WARNING(nullptr, "Xapiand is uncleanly done with all work (%d)!", managers);
+		L_WARNING(nullptr, "Xapiand is uncleanly done with all work (%d)!\n%s", managers, XapiandManager::manager->dump_tree().c_str());
 	}
 	XapiandManager::manager.reset();
 }

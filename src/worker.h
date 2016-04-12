@@ -163,6 +163,18 @@ private:
 	}
 
 public:
+	std::string dump_tree(int level=1) {
+		std::string ret;
+		for (int l = 0; l < level; ++l) ret += "    ";
+		ret += __repr__() + " - " + std::to_string(shared_from_this().use_count()) + "\n";
+		for (const auto& c : _children) {
+			ret += c->dump_tree(level + 1);
+		}
+		return ret;
+	}
+
+	virtual std::string __repr__() const = 0;
+
 	virtual ~Worker() {
 		destroyer();
 

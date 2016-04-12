@@ -112,6 +112,12 @@ protected:
 	void make_asyncfsyncs(const opts_t& o);
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<XapiandManager at %p>", this);
+		return buffer;
+	}
+
 	enum class State {
 		BAD,
 		READY,

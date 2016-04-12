@@ -47,6 +47,12 @@ class RaftServer : public BaseServer {
 	void reset(const std::string& message);
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<RaftServer at %p>", this);
+		return buffer;
+	}
+
 	RaftServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Raft>& raft_);
 	~RaftServer();
 

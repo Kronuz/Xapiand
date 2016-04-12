@@ -62,6 +62,12 @@ class DatabaseAutocommit : public Task<>, public Worker {
 	void shutdown_impl(time_t asap, time_t now) override;
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<DatabaseAutocommit at %p>", this);
+		return buffer;
+	}
+
 	DatabaseAutocommit(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 	~DatabaseAutocommit();
 

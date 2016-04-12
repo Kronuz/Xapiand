@@ -34,6 +34,12 @@ class HttpServer : public BaseServer {
 	std::shared_ptr<Http> http;
 
 public:
+	std::string __repr__() const override {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "<HttpServer at %p>", this);
+		return buffer;
+	}
+
 	HttpServer(const std::shared_ptr<XapiandServer>& server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const std::shared_ptr<Http>& http_);
 	~HttpServer();
 
