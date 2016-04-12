@@ -341,7 +341,7 @@ int test_erase() {
 
 int test_reserve() {
 	std::string data;
-	read_file_contents("tests/examples/msgpack/test1.mpack", &data);
+	read_file_contents("examples/msgpack/test1.mpack", &data);
 	MsgPack obj(data);
 
 	size_t r_size = 128 * obj.size();
@@ -378,7 +378,7 @@ int test_reserve() {
 
 int test_reset() {
 	std::string data;
-	read_file_contents("tests/examples/msgpack/test1.mpack", &data);
+	read_file_contents("examples/msgpack/test1.mpack", &data);
 	MsgPack obj(data);
 
 	MsgPack obj2;
@@ -418,12 +418,12 @@ int test_reset() {
 
 int test_explicit_constructors() {
 	std::string expect_json;
-	read_file_contents("/Users/josemaria/Documents/Xapiand/tests/examples/msgpack/json_test1_unpack.txt", &expect_json);
+	read_file_contents("examples/msgpack/json_test1_unpack.txt", &expect_json);
 	int res = 0;
 
 	// Buffer object
 	std::string data;
-	read_file_contents("/Users/josemaria/Documents/Xapiand/tests/examples/msgpack/test1.mpack", &data);
+	read_file_contents("examples/msgpack/test1.mpack", &data);
 	MsgPack buf_obj(data);
 	if (buf_obj.to_json_string() != expect_json) {
 		L_ERR(nullptr, "MsgPack::MsgPack(std::string) is not working correctly. Result: %s\nExpected: %s\n", buf_obj.to_json_string().c_str(), expect_json.c_str());
@@ -433,7 +433,7 @@ int test_explicit_constructors() {
 
 	// rapidjson::Document
 	std::string str_json;
-	read_file_contents("/Users/josemaria/Documents/Xapiand/tests/examples/msgpack/json_test1.txt", &str_json);
+	read_file_contents("examples/msgpack/json_test1.txt", &str_json);
 	auto json_doc = to_json(str_json);
 	MsgPack json_obj(json_doc);
 	if (json_obj.to_json_string() != expect_json) {
