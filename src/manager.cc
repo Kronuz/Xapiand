@@ -539,7 +539,7 @@ XapiandManager::make_replicators(const opts_t& o)
 	if (!solo) {
 		for (size_t i = 0; i < o.num_replicators; ++i) {
 			auto obj = Worker::make_shared<XapiandReplicator>(share_this<XapiandManager>(), nullptr, ev_flags);
-			replicator_pool.enqueue(obj);
+			replicator_pool.enqueue(std::move(obj));
 		}
 	}
 #endif
@@ -551,7 +551,7 @@ XapiandManager::make_autocommiters(const opts_t& o)
 {
 	for (size_t i = 0; i < o.num_committers; ++i) {
 		auto obj = Worker::make_shared<DatabaseAutocommit>(share_this<XapiandManager>(), nullptr, ev_flags);
-		autocommit_pool.enqueue(obj);
+		autocommit_pool.enqueue(std::move(obj));
 	}
 }
 
@@ -561,7 +561,7 @@ XapiandManager::make_asyncfsyncs(const opts_t& o)
 {
 	for (size_t i = 0; i < o.num_committers; ++i) {
 		auto obj = Worker::make_shared<AsyncFsync>(share_this<XapiandManager>(), nullptr, ev_flags);
-		asyncfsync_pool.enqueue(obj);
+		asyncfsync_pool.enqueue(std::move(obj));
 	}
 }
 
