@@ -68,7 +68,8 @@ private:
 	template<typename T>
 	inline auto _attach(T&& child) {
 		assert(child);
-		auto ret = _children.insert(_children.end(), std::forward<T>(child));
+		auto it = _children.insert(_children.end(), std::forward<T>(child));
+		child->_iterator = it;
 
 		auto parent = shared_from_this();
 		while (parent) {
@@ -79,7 +80,7 @@ private:
 			parent = parent->_parent;
 		}
 
-		return ret;
+		return it;
 	}
 
 	template<typename T>
@@ -117,6 +118,7 @@ protected:
 		if (_parent) {
 			_iterator = _parent->_children.end();
 		}
+
 		_async_shutdown.set<Worker, &Worker::_async_shutdown_cb>(this);
 		_async_shutdown.start();
 		L_EV(this, "Start Worker async shutdown event");
@@ -252,7 +254,7 @@ public:
 			}
 			if (auto child = weak_child.lock()) {
 				L_OBJ(that, "Worker child %s cannot be detached from %s (cnt: %u)", repr.c_str(), parent->__repr__().c_str(), child.use_count() - 1);
-				child->_iterator = parent->_attach(child);
+				parent->_attach(child);
 			} else {
 				L_OBJ(that, "Worker child %s detached from %s", repr.c_str(), parent->__repr__().c_str());
 			}
@@ -350,7 +352,7 @@ public:
 		auto child = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
 		if (child->_parent) {
 			std::lock_guard<std::mutex> lk(child->_parent->_mtx);
-			child->_iterator = child->_parent->_attach(child);
+			child->_parent->_attach(child);
 			L_OBJ(child.get(), "child child %s attached to %s", child->__repr__().c_str(), child->_parent->__repr__().c_str());
 		}
 
