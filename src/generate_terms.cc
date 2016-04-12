@@ -32,19 +32,19 @@
 #include <limits.h>
 
 
-static bool isnotSubtrixel(std::string& last_valid, const uint64_t& id_trixel) {
+inline static bool isnotSubtrixel(std::string& last_valid, uint64_t id_trixel) {
 	std::string res(std::bitset<SIZE_BITS_ID>(id_trixel).to_string());
-	res = res.substr(res.find("1"));
+	res.assign(res.substr(res.find('1')));
 	if (res.find(last_valid) == 0) {
 		return false;
 	} else {
-		last_valid = res;
+		last_valid.assign(res);
 		return true;
 	}
 }
 
 
-static std::string transform_to_string(int _timeinfo[]) {
+inline static std::string transform_to_string(int _timeinfo[]) {
 	time_t tt = 0;
 	struct tm *timeinfo = gmtime(&tt);
 	timeinfo->tm_year   = _timeinfo[5];
@@ -57,270 +57,350 @@ static std::string transform_to_string(int _timeinfo[]) {
 }
 
 
-void
-GenerateTerms::numeric(::std::string& result_terms, const ::std::string& start_, const ::std::string& end_,
-		const ::std::vector<double>& accuracy, const ::std::vector<::std::string>& acc_prefix, ::std::vector<::std::string>& prefixes)
+inline static void add_date_prefix(std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<DateFieldProcessor>>& dfps,
+	Xapian::QueryParser& queryparser, const std::string& prefix)
 {
-	if (!start_.empty() && !end_.empty() && !accuracy.empty()) {
-		try {
-			double d_start = std::stod(start_);
-			double d_end = std::stod(end_);
+	// Xapian does not allow repeat prefixes.
+	if (added_prefixes.insert(prefix).second) {
+		auto dfp = std::make_unique<DateFieldProcessor>(prefix);
+		queryparser.add_prefix(prefix, dfp.get());
+		dfps.push_back(std::move(dfp));
+	}
+}
 
-			double size_r = d_end - d_start;
 
-			// If the range is negative or its values are outside of range of a long long,
-			// return empty terms because these won't be generated correctly.
-			if (size_r < 0.0 || d_start <= LLONG_MIN || d_end >= LLONG_MAX) return;
+inline static void add_geo_prefix(std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<GeoFieldProcessor>>& gfps,
+	Xapian::QueryParser& queryparser, const std::string& prefix)
+{
+	// Xapian does not allow repeat prefixes.
+	if (added_prefixes.insert(prefix).second) {
+		auto gfp = std::make_unique<GeoFieldProcessor>(prefix);
+		queryparser.add_prefix(prefix, gfp.get());
+		gfps.push_back(std::move(gfp));
+	}
+}
 
-			long long start = static_cast<long long>(d_start);
-			long long end = static_cast<long long>(d_end);
 
-			// Find the upper or equal accuracy.
-			int pos = 0, len = (int)accuracy.size();
-			while (pos < len && accuracy[pos] < size_r) ++pos;
+inline static void add_numeric_prefix(std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<NumericFieldProcessor>>& nfps,
+	Xapian::QueryParser& queryparser, const std::string& prefix)
+{
+	// Xapian does not allow repeat prefixes.
+	if (added_prefixes.insert(prefix).second) {
+		auto nfp = std::make_unique<NumericFieldProcessor>(prefix);
+		queryparser.add_prefix(prefix, nfp.get());
+		nfps.push_back(std::move(nfp));
+	}
+}
 
-			// If there is a upper accuracy.
-			bool up_acc = false;
-			if (pos < len) {
-				long long _acc = static_cast<long long>(accuracy[pos]);
+
+std::string
+GenerateTerms::numeric(const std::string& start_, const std::string& end_, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
+	std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<NumericFieldProcessor>>& nfps, Xapian::QueryParser& queryparser)
+{
+	std::string result_terms;
+
+	if (accuracy.empty() || start_.empty() || end_.empty()) {
+		return result_terms;
+	}
+
+	try {
+		auto d_start = std::stod(start_);
+		auto d_end = std::stod(end_);
+
+		auto size_r = d_end - d_start;
+
+		// If the range is negative or its values are outside of range of a long long,
+		// return empty terms because these won't be generated correctly.
+		if (size_r < 0.0 || d_start <= LLONG_MIN || d_end >= LLONG_MAX) {
+			return result_terms;
+		}
+
+		auto start = static_cast<long long>(d_start);
+		auto end = static_cast<long long>(d_end);
+
+		// Find the upper or equal accuracy.
+		int pos = 0, len = static_cast<int>(accuracy.size());
+		while (pos < len && accuracy[pos] < size_r) {
+			++pos;
+		}
+
+		// If there is a upper accuracy.
+		if (pos < len) {
+			auto _acc = static_cast<long long>(accuracy[pos]);
+			add_numeric_prefix(added_prefixes, nfps, queryparser, acc_prefix[pos]);
+			auto aux = start - (start % _acc);
+			auto aux2 = end - (end % _acc);
+			std::string prefix_dot(acc_prefix[pos] + ":");
+			result_terms.assign(prefix_dot).append(to_query_string(std::to_string(aux)));
+			if (aux != aux2) {
+				result_terms.append(" OR ").append(prefix_dot).append(to_query_string(std::to_string(aux2)));
+			}
+		}
+
+		// If there is a lower accuracy.
+		if (--pos >= 0) {
+			auto _acc = static_cast<long long>(accuracy[pos]);
+			start = start - (start % _acc);
+			end = end - (end % _acc);
+			long long aux = (end - start) / _acc;
+			// If terms are not too many.
+			if (aux < MAX_TERMS) {
 				std::string prefix_dot(acc_prefix[pos] + ":");
-				prefixes.push_back(acc_prefix[pos]);
-				long long aux = start - (start % _acc);
-				long long aux2 = end - (end % _acc);
-				result_terms = prefix_dot + to_query_string(::std::to_string(aux));
-				if (aux != aux2) result_terms += " OR " + prefix_dot + to_query_string(::std::to_string(aux2));
-				up_acc = true;
+				add_numeric_prefix(added_prefixes, nfps, queryparser, acc_prefix[pos]);
+				std::string or_terms(prefix_dot + to_query_string(std::to_string(start)));
+				for (int i = 1; i < aux; ++i) {
+					long long aux2 = start + accuracy[pos] * i;
+					or_terms.append(" OR ").append(prefix_dot).append(to_query_string(std::to_string(aux2)));
+				}
+				if (start != end) {
+					or_terms.append(" OR ").append(prefix_dot).append(to_query_string(std::to_string(end)));
+				}
+				if (result_terms.empty()) {
+					result_terms.assign(or_terms);
+				} else {
+					result_terms.append("(").append(result_terms).append(") AND (").append(or_terms).append(")");
+				}
 			}
+		}
+	} catch (const std::exception&) {
+		throw MSG_ClientError("Didn't understand numeric format: %s..%s", start_.c_str(), end_.c_str());
+	}
 
-			// If there is a lower accuracy.
-			if (--pos >= 0) {
-				long long _acc = static_cast<long long>(accuracy[pos]);
-				start = start - (start % _acc);
-				end = end - (end % _acc);
-				long long aux = (end - start) / _acc;
-				// If terms are not too many.
-				if (aux < MAX_TERMS) {
-					std::string prefix_dot(acc_prefix[pos] + ":");
-					prefixes.push_back(acc_prefix[pos]);
-					::std::string or_terms(prefix_dot + to_query_string(::std::to_string(start)));
-					for (int i = 1; i < aux; ++i) {
-						long long aux2 = start + accuracy[pos] * i;
-						or_terms += " OR " + prefix_dot + to_query_string(::std::to_string(aux2));
+	return result_terms;
+}
+
+
+std::string
+GenerateTerms::date(const std::string& start_, const std::string& end_, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
+	std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<DateFieldProcessor>>& dfps, Xapian::QueryParser& queryparser)
+{
+	std::string result_terms;
+
+	if (accuracy.empty() || start_.empty() || end_.empty()) {
+		return result_terms;
+	}
+
+	try {
+		auto start = Datetime::timestamp(start_);
+		auto end = Datetime::timestamp(end_);
+
+		if (end < start) {
+			return result_terms;
+		}
+
+		auto timestamp_s = static_cast<time_t>(start);
+		auto timestamp_e = static_cast<time_t>(end);
+
+		auto timeinfo = gmtime(&timestamp_s);
+		int tm_s[6] = { timeinfo->tm_sec, timeinfo->tm_min, timeinfo->tm_hour, timeinfo->tm_mday, timeinfo->tm_mon, timeinfo->tm_year };
+		timeinfo = gmtime(&timestamp_e);
+		int tm_e[6] = { timeinfo->tm_sec, timeinfo->tm_min, timeinfo->tm_hour, timeinfo->tm_mday, timeinfo->tm_mon, timeinfo->tm_year };
+
+		// Find the accuracy needed.
+		int acc = toUType(unitTime::YEAR);
+		while (acc >= toUType(unitTime::SECOND) && (tm_e[acc] - tm_s[acc]) == 0) {
+			--acc;
+		}
+
+		// Find the upper or equal accuracy.
+		auto pos = 0u;
+		while (accuracy[pos] < acc) {
+			++pos;
+		}
+
+		// If the accuracy needed is in accuracy.
+		if (acc == accuracy[pos]) {
+			switch ((unitTime)accuracy[pos]) {
+				case unitTime::YEAR:
+					if ((tm_e[5] - tm_s[5]) > MAX_TERMS) {
+						return result_terms;
 					}
-					if (start != end) or_terms += " OR " + prefix_dot + to_query_string(::std::to_string(end));
-					result_terms = up_acc ? "(" + result_terms + ") AND (" + or_terms + ")" : or_terms;
-				}
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					result_terms.assign(year(tm_s, tm_e, acc_prefix[pos]));
+					break;
+				case unitTime::MONTH:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					result_terms.assign(month(tm_s, tm_e, acc_prefix[pos]));
+					break;
+				case unitTime::DAY:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					result_terms.assign(day(tm_s, tm_e, acc_prefix[pos]));
+					break;
+				case unitTime::HOUR:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					result_terms.assign(hour(tm_s, tm_e, acc_prefix[pos]));
+					break;
+				case unitTime::MINUTE:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					result_terms.assign(minute(tm_s, tm_e, acc_prefix[pos]));
+					break;
+				case unitTime::SECOND:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					result_terms.assign(second(tm_s, tm_e, acc_prefix[pos]));
+					break;
 			}
-		} catch (const ::std::exception&) {
-			throw MSG_ClientError("Didn't understand numeric format: %s..%s", start_.c_str(), end_.c_str());
 		}
+
+		// If there is an upper accuracy
+		if (accuracy[pos] != acc || ++pos < accuracy.size()) {
+			switch ((unitTime)accuracy[pos]) {
+				case unitTime::YEAR:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					if (result_terms.empty()) {
+						result_terms.assign(year(tm_s, tm_e, acc_prefix[pos]));
+					} else {
+						result_terms.assign(year(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+					}
+					break;
+				case unitTime::MONTH:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					if (result_terms.empty()) {
+						result_terms.assign(month(tm_s, tm_e, acc_prefix[pos]));
+					} else {
+						result_terms.assign(month(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+					}
+					break;
+				case unitTime::DAY:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					if (result_terms.empty()) {
+						result_terms.assign(day(tm_s, tm_e, acc_prefix[pos]));
+					} else {
+						result_terms.assign(day(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+					}
+					break;
+				case unitTime::HOUR:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					if (result_terms.empty()) {
+						result_terms.assign(hour(tm_s, tm_e, acc_prefix[pos]));
+					} else {
+						result_terms.assign(hour(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+					}
+					break;
+				case unitTime::MINUTE:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					if (result_terms.empty()) {
+						result_terms.assign(minute(tm_s, tm_e, acc_prefix[pos]));
+					} else {
+						result_terms.assign(minute(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+					}
+					break;
+				case unitTime::SECOND:
+					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					if (result_terms.empty()) {
+						result_terms.assign(second(tm_s, tm_e, acc_prefix[pos]));
+					} else {
+						result_terms.assign(second(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+					}
+					break;
+			}
+		}
+	} catch (const DatetimeError&) {
+		throw MSG_ClientError("Didn't understand date format: %s..%s", start_.c_str(), end_.c_str());
 	}
+
+	return result_terms;
 }
 
 
-void
-GenerateTerms::date(::std::string& result_terms, const ::std::string& start_, const ::std::string& end_,
-		const ::std::vector<double>& accuracy, const ::std::vector<::std::string>& acc_prefix, ::std::vector<::std::string>& prefixes)
+std::string
+GenerateTerms::year(int tm_s[], int tm_e[], const std::string& prefix)
 {
-	if (!start_.empty() && !end_.empty() && !accuracy.empty()) {
-		try {
-			double start = Datetime::timestamp(start_);
-			double end = Datetime::timestamp(end_);
-
-			if (end < start) return;
-
-			time_t timestamp_s = (time_t) start;
-			time_t timestamp_e = (time_t) end;
-
-			struct tm *timeinfo = gmtime(&timestamp_s);
-			int tm_s[6] = { timeinfo->tm_sec, timeinfo->tm_min, timeinfo->tm_hour, timeinfo->tm_mday, timeinfo->tm_mon, timeinfo->tm_year };
-			timeinfo = gmtime(&timestamp_e);
-			int tm_e[6] = { timeinfo->tm_sec, timeinfo->tm_min, timeinfo->tm_hour, timeinfo->tm_mday, timeinfo->tm_mon, timeinfo->tm_year };
-
-			// Find the accuracy needed.
-			int acc = toUType(unitTime::YEAR);
-			while (acc >= toUType(unitTime::SECOND) && (tm_e[acc] - tm_s[acc]) == 0) --acc;
-
-			// Find the upper or equal accuracy.
-			size_t pos = 0;
-			while (accuracy[pos] < acc) ++pos;
-
-			// If the accuracy needed is in accuracy.
-			if (acc == accuracy[pos]) {
-				switch ((unitTime)accuracy[pos]) {
-					case unitTime::YEAR:
-						if ((tm_e[5] - tm_s[5]) > MAX_TERMS) return;
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = year(tm_s, tm_e, acc_prefix[pos]);
-						break;
-					case unitTime::MONTH:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = month(tm_s, tm_e, acc_prefix[pos]);
-						break;
-					case unitTime::DAY:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = day(tm_s, tm_e, acc_prefix[pos]);
-						break;
-					case unitTime::HOUR:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = hour(tm_s, tm_e, acc_prefix[pos]);
-						break;
-					case unitTime::MINUTE:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = minute(tm_s, tm_e, acc_prefix[pos]);
-						break;
-					case unitTime::SECOND:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = second(tm_s, tm_e, acc_prefix[pos]);
-						break;
-				}
-			}
-
-			// If there is an upper accuracy
-			if (accuracy[pos] != acc || ++pos < accuracy.size()) {
-				switch ((unitTime)accuracy[pos]) {
-					case unitTime::YEAR:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? year(tm_s, tm_e, acc_prefix[pos]) :
-									   year(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
-						break;
-					case unitTime::MONTH:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? month(tm_s, tm_e, acc_prefix[pos]) :
-									   month(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
-						break;
-					case unitTime::DAY:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? day(tm_s, tm_e, acc_prefix[pos]) :
-									   day(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
-						break;
-					case unitTime::HOUR:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? hour(tm_s, tm_e, acc_prefix[pos]) :
-									   hour(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
-						break;
-					case unitTime::MINUTE:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? minute(tm_s, tm_e, acc_prefix[pos]) :
-									   minute(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
-						break;
-					case unitTime::SECOND:
-						prefixes.push_back(acc_prefix[pos]);
-						result_terms = result_terms.empty() ? second(tm_s, tm_e, acc_prefix[pos]) :
-									   second(tm_s, tm_e, acc_prefix[pos]) + " AND (" + result_terms + ")";
-						break;
-				}
-			}
-		} catch (const ::std::exception&) {
-			throw MSG_ClientError("Didn't understand date format: %s..%s", start_.c_str(), end_.c_str());
-		}
-	}
-}
-
-
-::std::string
-GenerateTerms::year(int tm_s[], int tm_e[], const ::std::string& prefix)
-{
-	::std::string prefix_dot = prefix + ":";
-	::std::string res;
+	std::string prefix_dot(prefix + ":"), res;
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_s[4] = tm_e[0] = tm_e[1] = tm_e[2] = tm_e[4] = 0;
 	tm_s[3] = tm_e[3] = 1;
 	while (tm_s[5] != tm_e[5]) {
-		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
+		res.append(prefix_dot).append(to_query_string(transform_to_string(tm_s))).append(" OR ");
 		++tm_s[5];
 	}
-	res += prefix_dot + to_query_string(transform_to_string(tm_e));
+	res.append(prefix_dot).append(to_query_string(transform_to_string(tm_e)));
 	return res;
 }
 
 
-::std::string
-GenerateTerms::month(int tm_s[], int tm_e[], const ::std::string& prefix)
+std::string
+GenerateTerms::month(int tm_s[], int tm_e[], const std::string& prefix)
 {
-	::std::string prefix_dot = prefix + ":";
-	::std::string res;
+	std::string prefix_dot(prefix + ":"), res;
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_e[1] = tm_e[2] = tm_e[3] = 0;
 	tm_s[3] = tm_e[3] = 1;
 	while (tm_s[4] != tm_e[4]) {
-		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
+		res.append(prefix_dot).append(to_query_string(transform_to_string(tm_s))).append(" OR ");
 		++tm_s[4];
 	}
-	res += prefix_dot + to_query_string(transform_to_string(tm_e));
+	res.append(prefix_dot).append(to_query_string(transform_to_string(tm_e)));
 	return res;
 }
 
 
-::std::string
-GenerateTerms::day(int tm_s[], int tm_e[], const ::std::string& prefix)
+std::string
+GenerateTerms::day(int tm_s[], int tm_e[], const std::string& prefix)
 {
-	::std::string prefix_dot = prefix + ":";
-	::std::string res;
+	std::string prefix_dot(prefix + ":"), res;
 	tm_s[0] = tm_s[1] = tm_s[2] = tm_e[0] = tm_e[1] = tm_e[2] = 0;
 	while (tm_s[3] != tm_e[3]) {
-		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
+		res.append(prefix_dot).append(to_query_string(transform_to_string(tm_s))).append(" OR ");
 		++tm_s[3];
 	}
-	res += prefix_dot + to_query_string(transform_to_string(tm_e));
+	res.append(prefix_dot).append(to_query_string(transform_to_string(tm_e)));
 	return res;
 }
 
 
-::std::string
-GenerateTerms::hour(int tm_s[], int tm_e[], const ::std::string& prefix)
+std::string
+GenerateTerms::hour(int tm_s[], int tm_e[], const std::string& prefix)
 {
-	::std::string prefix_dot = prefix + ":";
-	::std::string res;
+	std::string prefix_dot(prefix + ":"), res;
 	tm_s[0] = tm_s[1] = tm_e[0] = tm_e[1] = 0;
 	while (tm_s[2] != tm_e[2]) {
-		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
+		res.append(prefix_dot).append(to_query_string(transform_to_string(tm_s))).append(" OR ");
 		++tm_s[2];
 	}
-	res += prefix_dot + to_query_string(transform_to_string(tm_e));
+	res.append(prefix_dot).append(to_query_string(transform_to_string(tm_e)));
 	return res;
 }
 
 
-::std::string
-GenerateTerms::minute(int tm_s[], int tm_e[], const ::std::string& prefix)
+std::string
+GenerateTerms::minute(int tm_s[], int tm_e[], const std::string& prefix)
 {
-	::std::string prefix_dot = prefix + ":";
-	::std::string res;
+	std::string prefix_dot(prefix + ":"), res;
 	tm_s[0] = tm_e[0] = 0;
 	while (tm_s[1] != tm_e[1]) {
-		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
+		res.append(prefix_dot).append(to_query_string(transform_to_string(tm_s))).append(" OR ");
 		++tm_s[1];
 	}
-	res += prefix_dot + to_query_string(transform_to_string(tm_e));
+	res.append(prefix_dot).append(to_query_string(transform_to_string(tm_e)));
 	return res;
 }
 
 
-::std::string
-GenerateTerms::second(int tm_s[], int tm_e[], const ::std::string& prefix)
+std::string
+GenerateTerms::second(int tm_s[], int tm_e[], const std::string& prefix)
 {
-	::std::string prefix_dot = prefix + ":";
-	::std::string res;
+	std::string prefix_dot(prefix + ":"), res;
 	while (tm_s[0] != tm_e[0]) {
-		res += prefix_dot + to_query_string(transform_to_string(tm_s)) + " OR ";
+		res.append(prefix_dot).append(to_query_string(transform_to_string(tm_s))).append(" OR ");
 		++tm_s[0];
 	}
-	res += prefix_dot + to_query_string(transform_to_string(tm_e));
+	res.append(prefix_dot).append(to_query_string(transform_to_string(tm_e)));
 	return res;
 }
 
 
-void
-GenerateTerms::geo(::std::string& result_terms, const ::std::vector<range_t>& ranges,  const ::std::vector<double>& accuracy,
-		const ::std::vector<::std::string>& acc_prefix, ::std::vector<::std::string>& prefixes)
+std::string
+GenerateTerms::geo(const std::vector<range_t>& ranges,  const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
+	std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<GeoFieldProcessor>>& gfps, Xapian::QueryParser& queryparser)
 {
-	// The user does not specify the accuracy.
-	if (acc_prefix.empty()) return;
+	std::string last_valid, result_terms;
 
-	::std::map<uint64_t, ::std::string> result;
-	::std::set<::std::string> aux_p;
+	// The user does not specify the accuracy.
+	if (accuracy.empty()) {
+		return result_terms;
+	}
+
 	for (const auto& range : ranges) {
-		::std::bitset<SIZE_BITS_ID> b1(range.start), b2(range.end), res;
-		int idx = -1;
+		std::bitset<SIZE_BITS_ID> b1(range.start), b2(range.end), res;
+		auto idx = -1;
 		uint64_t val;
 		if (range.start != range.end) {
 			for (idx = SIZE_BITS_ID - 1; idx > 0 && b1.test(idx) == b2.test(idx); --idx) {
@@ -331,34 +411,22 @@ GenerateTerms::geo(::std::string& result_terms, const ::std::vector<range_t>& ra
 			val = range.start;
 		}
 
-		int posF = -1, j = 0;
-		for (int i = (int)(accuracy.size() - 1); i > 1; --i) {
+		for (auto i = static_cast<int>(accuracy.size() - 1); i > 1; --i) {
 			if ((START_POS - 2 * accuracy[i]) > idx) {
-				posF = START_POS - accuracy[i] * 2;
-				j = i - 2;
+				uint64_t id_trixel = val >> static_cast<int>(START_POS - accuracy[i] * 2);
+				auto pos = i - 2;
+				add_geo_prefix(added_prefixes, gfps, queryparser, acc_prefix[pos]);
+				if (last_valid.empty()) {
+					last_valid.assign(std::bitset<SIZE_BITS_ID>(id_trixel).to_string());
+					last_valid.assign(last_valid.substr(last_valid.find('1')));
+					result_terms.assign(acc_prefix[pos]).append(":").append(std::to_string(id_trixel));
+				} else if (isnotSubtrixel(last_valid, id_trixel)) {
+					result_terms.append(" OR ").append(acc_prefix[pos]).append(1, ':').append(std::to_string(id_trixel));
+				}
 				break;
 			}
 		}
-
-		if (posF != -1) {
-			result.insert(::std::pair<uint64_t, ::std::string>(val >> posF, acc_prefix[j]));
-		}
 	}
 
-	// The search have trixels more big that the biggest trixel in accuracy.
-	if (result.empty()) return;
-
-	// Delete duplicates terms.
-	auto it = result.begin();
-	std::string last_valid(std::bitset<SIZE_BITS_ID>(it->first).to_string());
-	last_valid.assign(last_valid.substr(last_valid.find("1")));
-	result_terms = it->second + ":" + ::std::to_string(it->first);
-	aux_p.insert(it->second);
-	for (++it; it != result.end(); ++it) {
-		if (isnotSubtrixel(last_valid, it->first)) {
-			result_terms += " OR " + it->second + ":" + ::std::to_string(it->first);
-			aux_p.insert(it->second);
-		}
-	}
-	prefixes.insert(prefixes.end(), aux_p.begin(), aux_p.end());
+	return result_terms;
 }
