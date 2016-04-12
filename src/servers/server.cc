@@ -62,7 +62,7 @@ void
 XapiandServer::run()
 {
 	L_EV(this, "Starting server loop...");
-	ev_loop->run();
+	run_loop();
 	L_EV(this, "Server loop ended!");
 
 	cleanup();

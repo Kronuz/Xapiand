@@ -595,7 +595,7 @@ XapiandManager::run(const opts_t& o)
 
 	try {
 		L_EV(this, "Starting manager loop...");
-		ev_loop->run();
+		run_loop();
 		L_EV(this, "Manager loop ended!");
 	} catch (...) {
 		join();
