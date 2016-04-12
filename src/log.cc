@@ -296,7 +296,7 @@ LogThread::thread_function()
 		if (running < 0) {
 			next_wakeup = now + 3s;
 		} else {
-			next_wakeup = now + 1s;
+			next_wakeup = now + 100ms;
 		}
 
 		for (auto it = log_list.begin(); it != log_list.end(); ) {
