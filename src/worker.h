@@ -219,6 +219,14 @@ private:
 		}
 	}
 
+	auto _ancestor(int levels=-1) {
+		auto ancestor = shared_from_this();
+		while (ancestor->_parent && levels-- != 0) {
+			ancestor = ancestor->_parent;
+		}
+		return ancestor;
+	}
+
 public:
 	std::string dump_tree(int level=1) {
 		std::lock_guard<std::mutex> lk(_mtx);
@@ -305,32 +313,20 @@ public:
 	}
 
 	inline void detach() {
-		if (_parent) {
-			_detaching = true;
-			if (_running) {
-				_parent->_async_detach.send();
-			} else {
-				_parent->detach_impl();
-			}
-		}
+		_detaching = true;
+		cleanup();
 	}
 
 	inline void cleanup() {
-		if (_parent) {
-			if (_running) {
-				_parent->_async_detach.send();
-			} else {
-				_parent->detach_impl();
-			}
+		if (_running) {
+			_ancestor(1)->_async_detach.send();
+		} else {
+			_ancestor(1)->detach_impl();
 		}
 	}
 
 	void set_running(bool running) {
-		auto start = shared_from_this();
-		while (start->_parent) {
-			start = start->_parent;
-		}
-		start->_set_running(ev_loop, running);
+		_ancestor()->_set_running(ev_loop, running);
 	}
 
 	void run_loop() {
