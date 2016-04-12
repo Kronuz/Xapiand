@@ -249,7 +249,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					if (result_terms.empty()) {
 						result_terms.assign(year(tm_s, tm_e, acc_prefix[pos]));
 					} else {
-						result_terms.assign(year(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+						result_terms.assign(year(tm_s, tm_e, acc_prefix[pos]).append(" AND (") + result_terms.append(")"));
 					}
 					break;
 				case unitTime::MONTH:
@@ -257,7 +257,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					if (result_terms.empty()) {
 						result_terms.assign(month(tm_s, tm_e, acc_prefix[pos]));
 					} else {
-						result_terms.assign(month(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+						result_terms.assign(month(tm_s, tm_e, acc_prefix[pos]).append(" AND (") + result_terms.append(")"));
 					}
 					break;
 				case unitTime::DAY:
@@ -265,7 +265,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					if (result_terms.empty()) {
 						result_terms.assign(day(tm_s, tm_e, acc_prefix[pos]));
 					} else {
-						result_terms.assign(day(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+						result_terms.assign(day(tm_s, tm_e, acc_prefix[pos]).append(" AND (") + result_terms.append(")"));
 					}
 					break;
 				case unitTime::HOUR:
@@ -273,7 +273,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					if (result_terms.empty()) {
 						result_terms.assign(hour(tm_s, tm_e, acc_prefix[pos]));
 					} else {
-						result_terms.assign(hour(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+						result_terms.assign(hour(tm_s, tm_e, acc_prefix[pos]).append(" AND (") + result_terms.append(")"));
 					}
 					break;
 				case unitTime::MINUTE:
@@ -281,7 +281,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					if (result_terms.empty()) {
 						result_terms.assign(minute(tm_s, tm_e, acc_prefix[pos]));
 					} else {
-						result_terms.assign(minute(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+						result_terms.assign(minute(tm_s, tm_e, acc_prefix[pos]).append(" AND (") + result_terms.append(")"));
 					}
 					break;
 				case unitTime::SECOND:
@@ -289,7 +289,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					if (result_terms.empty()) {
 						result_terms.assign(second(tm_s, tm_e, acc_prefix[pos]));
 					} else {
-						result_terms.assign(second(tm_s, tm_e, acc_prefix[pos])).append(" AND (").append(result_terms).append(")");
+						result_terms.assign(second(tm_s, tm_e, acc_prefix[pos]).append(" AND (") + result_terms.append(")"));
 					}
 					break;
 			}
