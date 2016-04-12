@@ -631,20 +631,20 @@ XapiandManager::join()
 {
 	finish();
 
-	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.size(), (server_pool.size() == 1) ? "" : "s");
+	L_DEBUG(this, "Waiting for %zu server%s...", server_pool.running_size(), (server_pool.running_size() == 1) ? "" : "s");
 	server_pool.join();
 
 #ifdef XAPIAND_CLUSTERING
 	if (!solo) {
-		L_DEBUG(this, "Waiting for %zu replicator%s...", replicator_pool.size(), (replicator_pool.size() == 1) ? "" : "s");
+		L_DEBUG(this, "Waiting for %zu replicator%s...", replicator_pool.running_size(), (replicator_pool.running_size() == 1) ? "" : "s");
 		replicator_pool.join();
 	}
 #endif
 
-	L_DEBUG(this, "Waiting for %zu committer%s...", autocommit_pool.size(), (autocommit_pool.size() == 1) ? "" : "s");
+	L_DEBUG(this, "Waiting for %zu committer%s...", autocommit_pool.running_size(), (autocommit_pool.running_size() == 1) ? "" : "s");
 	autocommit_pool.join();
 
-	L_DEBUG(this, "Waiting for %zu async fsync%s...", asyncfsync_pool.size(), (asyncfsync_pool.size() == 1) ? "" : "s");
+	L_DEBUG(this, "Waiting for %zu async fsync%s...", asyncfsync_pool.running_size(), (asyncfsync_pool.running_size() == 1) ? "" : "s");
 	asyncfsync_pool.join();
 
 	L_DEBUG(this, "Finishing worker threads pool!");
@@ -653,7 +653,7 @@ XapiandManager::join()
 	L_DEBUG(this, "Finishing database pool!");
 	database_pool.finish();
 
-	L_DEBUG(this, "Waiting for %zu worker thread%s...", thread_pool.size(), (thread_pool.size() == 1) ? "" : "s");
+	L_DEBUG(this, "Waiting for %zu worker thread%s...", thread_pool.running_size(), (thread_pool.running_size() == 1) ? "" : "s");
 	thread_pool.join();
 
 	L_DEBUG(this, "Server ended!");
