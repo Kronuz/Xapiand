@@ -2374,7 +2374,7 @@ DatabasePool::get_master_count()
 
 
 std::shared_ptr<const Schema>
-DatabasePool::get_schema(const Endpoint& endpoint)
+DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 {
 	L_CALL(this, "DatabasePool::get_schema()");
 
@@ -2387,11 +2387,14 @@ DatabasePool::get_schema(const Endpoint& endpoint)
 	}
 
 	if (!*schema) {
+		std::string schema_str;
 		std::shared_ptr<Database> database;
-		checkout(database, Endpoints(endpoint), DB_WRITABLE);
-		std::string schema_str = database->get_metadata(RESERVED_SCHEMA);
-		checkin(database);
-
+		if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
+			schema_str = database->get_metadata(RESERVED_SCHEMA);
+			checkin(database);
+		} else {
+			throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.as_string().c_str());
+		}
 		auto schema_ptr = new Schema();
 		schema_ptr->set_schema(schema_str);
 

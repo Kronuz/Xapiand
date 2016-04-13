@@ -373,7 +373,7 @@ public:
 
 	void finish();
 
-	std::shared_ptr<const Schema> get_schema(const Endpoint& endpoint);
+	std::shared_ptr<const Schema> get_schema(const Endpoint& endpoint, int flags=-1);
 	void set_schema(const Endpoint& endpoint, std::shared_ptr<const Schema> new_schema);
 
 	template<typename F, typename... Args>

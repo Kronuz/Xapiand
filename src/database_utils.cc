@@ -364,10 +364,11 @@ Indexer::index(Endpoints endpoints, int flags, const MsgPack& obj, const std::st
 	Xapian::Document doc;
 	std::string term_id;
 
-	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
-	auto clon_schema = new Schema (*schema);
+	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0], flags);
+	auto schema_copy = new Schema (*schema);
+	
 	if (obj.get_type() == msgpack::type::MAP) {
-		_index(clon_schema, doc, obj, term_id, _document_id, ct_type, ct_length);
+		_index(schema_copy, doc, obj, term_id, _document_id, ct_type, ct_length);
 	}
 
 	set_data(doc, obj.to_string(), "");
@@ -376,7 +377,7 @@ Indexer::index(Endpoints endpoints, int flags, const MsgPack& obj, const std::st
 	XapiandManager::manager->manager->database_pool.checkout(database, endpoints, flags);
 	Xapian::docid did = database->replace_document_term(term_id, doc, commit_);
 	XapiandManager::manager->manager->database_pool.checkin(database);
-	std::atomic_exchange(&schema, std::shared_ptr<const Schema>(clon_schema));
+	std::atomic_exchange(&schema, std::shared_ptr<const Schema>(schema_copy));
 	return did;
 }
 
@@ -425,7 +426,7 @@ Indexer::index(Endpoints endpoints, int flags, const std::string &body, const st
 		MSG_Error("Expected exactly one enpoint");
 	}
 
-	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
+	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0], flags);
 	auto schema_copy = new Schema (*schema);
 
 	if (obj.get_type() == msgpack::type::MAP) {
