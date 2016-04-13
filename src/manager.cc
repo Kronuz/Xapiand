@@ -272,8 +272,9 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	int cluster_flags = DB_WRITABLE | DB_PERSISTENT | DB_NOWAL;
 	if (!database_pool.checkout(cluster_database, cluster_endpoints, cluster_flags)) {
 		new_cluster = 1;
+		cluster_flags = DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
-		if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
+		if (!database_pool.checkout(cluster_database, cluster_endpoints, cluster_flags)) {
 			L_CRIT(nullptr, "Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
 		}
@@ -285,7 +286,9 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	Xapian::Document document;
 	try {
 		document = cluster_database->get_document(std::to_string(local_node->id));
+		database_pool.checkin(cluster_database);
 	} catch (const DocNotFoundError&) {
+		database_pool.checkin(cluster_database);
 		MsgPack obj;
 		obj["name"] = local_node->name;
 		obj["tagline"] = XAPIAND_TAGLINE;
@@ -294,7 +297,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 
 	MsgPack obj_data = get_MsgPack(document);
 
-	database_pool.checkin(cluster_database);
+
 	// if (obj_data["name"] != local_node.name) {
 	// 	L_CRIT(nullptr, "Node name mismatch!");
 	// 	sig_exit(-EX_CANTCREAT);
