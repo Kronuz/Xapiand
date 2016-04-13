@@ -311,6 +311,31 @@ Schema::set_database(Database* _database)
 }
 
 
+void
+Schema::settle_schema(const std::string& s_schema)
+{
+	L_CALL(this, "Schema::set_database()");
+	
+	if (s_schema.empty()) {
+		schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;
+		schema[RESERVED_SCHEMA];
+	} else {
+		schema = MsgPack(s_schema);
+		try {
+			auto version = schema.at(RESERVED_VERSION);
+			if (version.get_f64() != DB_VERSION_SCHEMA) {
+				throw MSG_Error("Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
+			}
+			to_store = false;
+		} catch (const std::out_of_range&) {
+			throw MSG_Error("Schema is corrupt, you need provide a new one");
+		} catch (const msgpack::type_error&) {
+			throw MSG_Error("Schema is corrupt, you need provide a new one");
+		}
+	}
+}
+
+
 std::string
 Schema::serialise_id(MsgPack& properties, specification_t& specification, const std::string& value_id)
 {

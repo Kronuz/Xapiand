@@ -2396,7 +2396,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 			throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.as_string().c_str());
 		}
 		auto schema_ptr = new Schema();
-		schema_ptr->set_schema(schema_str);
+		schema_ptr->settle_schema(schema_str);
 
 		std::atomic_exchange(schema, std::shared_ptr<const Schema>(schema_ptr));
 	}
