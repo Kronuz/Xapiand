@@ -288,6 +288,14 @@ public:
 
 
 	/*
+	 * Functions used for searching, return a field properties.
+	 */
+
+	data_field_t get_data_field(const std::string& field_name);
+	data_field_t get_slot_field(const std::string& field_name);
+
+
+	/*
 	 * Functions for updating specification using the properties in schema.
 	 */
 

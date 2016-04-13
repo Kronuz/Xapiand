@@ -524,73 +524,6 @@ Database::read_mastery(const Endpoint& endpoint)
 }
 
 
-data_field_t
-Database::get_data_field(const std::string& field_name)
-{
-	L_CALL(this, "Database::get_data_field()");
-
-	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
-
-	if (field_name.empty()) {
-		return res;
-	}
-
-	std::vector<std::string> fields;
-	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
-	try {
-		auto properties = schema.getPropertiesSchema().path(fields);
-
-		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
-		if (res.type == NO_TYPE) {
-			return res;
-		}
-
-		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
-
-		auto prefix = properties.at(RESERVED_PREFIX);
-		res.prefix = prefix.get_str();
-
-		res.bool_term = properties.at(RESERVED_BOOL_TERM).get_bool();
-
-		// Strings and booleans do not have accuracy.
-		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
-			for (const auto acc : properties.at(RESERVED_ACCURACY)) {
-				res.accuracy.push_back(acc.get_f64());
-			}
-
-			for (const auto acc_p : properties.at(RESERVED_ACC_PREFIX)) {
-				res.acc_prefix.push_back(acc_p.get_str());
-			}
-		}
-	} catch (const std::exception&) { }
-
-	return res;
-}
-
-
-data_field_t
-Database::get_slot_field(const std::string& field_name)
-{
-	L_CALL(this, "Database::get_slot_field()");
-
-	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
-
-	if (field_name.empty()) {
-		return res;
-	}
-
-	std::vector<std::string> fields;
-	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
-	try {
-		auto properties = schema.getPropertiesSchema().path(fields);
-		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
-		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
-	} catch (const std::exception&) { }
-
-	return res;
-}
-
-
 void
 Database::get_stats_database(MsgPack&& stats)
 {
@@ -1022,7 +955,7 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 		std::string field_name_dot(next->str(1));
 		std::string field_name(next->str(2));
 		std::string field_value(next->str(3));
-		data_field_t field_t = get_data_field(field_name);
+		data_field_t field_t = schema->get_data_field(field_name);
 
 		std::smatch m;
 		if (std::regex_match(field_value, m, find_range_re)) {
@@ -1374,7 +1307,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& qu
 	}
 
 	for (const auto& sim_field : similar.field) {
-		data_field_t field_t = get_data_field(sim_field);
+		data_field_t field_t = schema->get_data_field(sim_field);
 		if (field_t.type != NO_TYPE) {
 			prefixes.push_back(field_t.prefix);
 		}
@@ -1416,7 +1349,7 @@ Database::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key,
 		}
 
 		for (const auto& facet : e->facets) {
-			data_field_t field_t = get_slot_field(facet);
+			data_field_t field_t = schema->get_slot_field(facet);
 			if (field_t.type != NO_TYPE) {
 				std::unique_ptr<MultiValueCountMatchSpy> spy = std::make_unique<MultiValueCountMatchSpy>(get_slot(facet), field_t.type == GEO_TYPE);
 				enquire.add_matchspy(spy.get());
@@ -1446,7 +1379,7 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 
 	// Get the collapse key to use for queries.
 	if (!e.collapse.empty()) {
-		data_field_t field_t = get_slot_field(e.collapse);
+		data_field_t field_t = schema->get_slot_field(e.collapse);
 		collapse_key = field_t.slot;
 	} else {
 		collapse_key = Xapian::BAD_VALUENO;
@@ -1468,18 +1401,18 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 
 			if (field.at(0) == '-') {
 				field.assign(field, 1, field.size() - 1);
-				data_field_t field_t = get_slot_field(field);
+				data_field_t field_t = schema->get_slot_field(field);
 				if (field_t.type != NO_TYPE) {
 					sorter->add_value(field_t.slot, field_t.type, value, true);
 				}
 			} else if (field.at(0) == '+') {
 				field.assign(field, 1, field.size() - 1);
-				data_field_t field_t = get_slot_field(field);
+				data_field_t field_t = schema->get_slot_field(field);
 				if (field_t.type != NO_TYPE) {
 					sorter->add_value(field_t.slot, field_t.type, value);
 				}
 			} else {
-				data_field_t field_t = get_slot_field(field);
+				data_field_t field_t = schema->get_slot_field(field);
 				if (field_t.type != NO_TYPE) {
 					sorter->add_value(field_t.slot, field_t.type, value);
 				}
@@ -1537,7 +1470,7 @@ Database::commit(bool wal_)
 {
 	L_CALL(this, "Database::commit()");
 
-	schema.store();
+	schema->store();
 
 	if (!modified) {
 		L_DATABASE_WRAP(this, "Do not commit, because there are not changes");
@@ -2032,7 +1965,7 @@ Database::get_value(const Xapian::Document& document, Xapian::valueno slot)
 MsgPack
 Database::get_value(const Xapian::Document& document, const std::string& slot_name)
 {
-	auto slot_field = get_slot_field(slot_name);
+	auto slot_field = schema->get_slot_field(slot_name);
 
 	std::string value = get_value(document, slot_field.slot);
 

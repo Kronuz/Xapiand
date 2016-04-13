@@ -1603,3 +1603,71 @@ Schema::index_value(const MsgPack& value, const specification_t& specification, 
 		index_term(specification, doc, std::move(value_v), pos++);
 	}
 }
+
+
+data_field_t
+Schema::get_data_field(const std::string& field_name)
+{
+	L_CALL(this, "Database::get_data_field()");
+
+	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
+
+	if (field_name.empty()) {
+		return res;
+	}
+
+	std::vector<std::string> fields;
+	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
+	try {
+		auto properties = getPropertiesSchema().path(fields);
+
+		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
+		if (res.type == NO_TYPE) {
+			return res;
+		}
+
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
+
+		auto prefix = properties.at(RESERVED_PREFIX);
+		res.prefix = prefix.get_str();
+
+		res.bool_term = properties.at(RESERVED_BOOL_TERM).get_bool();
+
+		// Strings and booleans do not have accuracy.
+		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
+			for (const auto acc : properties.at(RESERVED_ACCURACY)) {
+				res.accuracy.push_back(acc.get_f64());
+			}
+
+			for (const auto acc_p : properties.at(RESERVED_ACC_PREFIX)) {
+				res.acc_prefix.push_back(acc_p.get_str());
+			}
+		}
+	} catch (const std::exception&) { }
+
+	return res;
+}
+
+
+data_field_t
+Schema::get_slot_field(const std::string& field_name)
+{
+	L_CALL(this, "Database::get_slot_field()");
+
+	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
+
+	if (field_name.empty()) {
+		return res;
+	}
+
+	std::vector<std::string> fields;
+	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
+	try {
+		auto properties = getPropertiesSchema().path(fields);
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
+		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
+	} catch (const std::exception&) { }
+
+	return res;
+}
+

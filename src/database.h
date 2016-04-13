@@ -209,7 +209,7 @@ public:
 
 class Database {
 public:
-	Schema schema;
+	Schema* schema;
 
 	std::weak_ptr<DatabaseQueue> weak_queue;
 	Endpoints endpoints;
@@ -239,9 +239,6 @@ public:
 	~Database();
 
 	long long read_mastery(const Endpoint& endpoint);
-
-	data_field_t get_data_field(const std::string& field_name);
-	data_field_t get_slot_field(const std::string& field_name);
 
 	void get_stats_database(MsgPack&& stats);
 	void get_stats_doc(MsgPack&& stats, const std::string& document_id);
