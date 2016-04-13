@@ -2376,7 +2376,7 @@ DatabasePool::get_master_count()
 std::shared_ptr<const Schema>
 DatabasePool::get_schema(const Endpoint& endpoint)
 {
-	L(this, "DatabasePool::get_schema()");
+	L_CALL(this, "DatabasePool::get_schema()");
 
 	if (finished) return nullptr;
 

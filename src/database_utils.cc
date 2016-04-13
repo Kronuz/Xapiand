@@ -358,7 +358,7 @@ std::string msgpack_to_html_error(const msgpack::object& o) {
 Xapian::docid
 Indexer::index(Endpoints endpoints, int flags, const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
 {
-	L_CALL(this, "Database::index(2)");
+	L_CALL(nullptr, "Database::index(2)");
 
 	L_DATABASE_WRAP(this, "Document to index: %s", obj.to_string().c_str());
 	Xapian::Document doc;
@@ -383,7 +383,7 @@ Indexer::index(Endpoints endpoints, int flags, const MsgPack& obj, const std::st
 
 Xapian::docid
 Indexer::index(Endpoints endpoints, int flags, const std::string &body, const std::string &_document_id, bool commit_, const std::string &ct_type, const std::string &ct_length) {
-	L_CALL(this, "Database::index(1)");
+	L_CALL(nullptr, "Database::index(1)");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
@@ -451,7 +451,7 @@ Indexer::index(Endpoints endpoints, int flags, const std::string &body, const st
 void
 Indexer::_index(Schema* schema, Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
 {
-	L_CALL(this, "Database::_index()");
+	L_CALL(nullptr, "Database::_index()");
 
 	auto properties = schema->getPropertiesSchema();
 	specification_t specification;
