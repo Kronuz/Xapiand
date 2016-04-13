@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -319,36 +319,35 @@ const testG_t geo[] {
 int numeric_test() {
 	int cont = 0;
 	for (int pos = 0, len = arraySize(numeric); pos < len; ++pos) {
-		const test_t p = numeric[pos];
-		std::string result_terms;
-		std::vector<std::string> prefixes;
-		GenerateTerms::numeric(result_terms, p.start, p.end, p.accuracy, p.acc_prefix, prefixes);
+		const auto p = numeric[pos];
+		std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
+		Xapian::QueryParser queryparser;
+		std::unordered_set<std::string> prefixes;
+		auto result_terms = GenerateTerms::numeric(p.start, p.end, p.accuracy, p.acc_prefix, prefixes, nfps, queryparser);
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
-				L_DEBUG(nullptr, "ERROR: Diferent numbers of prefix");
+				L_ERR(nullptr, "ERROR: Diferent numbers of prefix");
 				++cont;
 				continue;
 			}
-			auto it = prefixes.begin();
-			auto ite = p.expected_prefixes.begin();
-			for ( ; it != prefixes.end(); ++it, ++ite) {
-				if (it->compare(*ite) != 0) {
-					L_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s", it->c_str(), ite->c_str());
+			for (const auto& prefix : p.expected_prefixes) {
+				if (prefixes.find(prefix) == prefixes.end()) {
+					L_ERR(nullptr, "ERROR: Prefix: %s not found in prefixes", prefix.c_str());
 					++cont;
 					continue;
 				}
 			}
 		} else {
-			L_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
+			L_ERR(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
 			++cont;
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing generation numerical terms is correct!");
+		L_DEBUG(nullptr, "Testing generation of numerical terms is correct!");
 		return 0;
 	} else {
-		L_ERR(nullptr, "ERROR: Testing generation numerical terms has mistakes.");
+		L_ERR(nullptr, "ERROR: Testing generation of numerical terms has mistakes.");
 		return 1;
 	}
 }
@@ -357,27 +356,26 @@ int numeric_test() {
 int date_test() {
 	int cont = 0;
 	for (int pos = 0, len = arraySize(date); pos < len; ++pos) {
-		const test_t p = date[pos];
-		std::string result_terms;
-		std::vector<std::string> prefixes;
-		GenerateTerms::date(result_terms, p.start, p.end, p.accuracy, p.acc_prefix, prefixes);
+		const auto p = date[pos];
+		std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
+		Xapian::QueryParser queryparser;
+		std::unordered_set<std::string> prefixes;
+		auto result_terms = GenerateTerms::date(p.start, p.end, p.accuracy, p.acc_prefix, prefixes, dfps, queryparser);
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
-				L_DEBUG(nullptr, "ERROR: Diferent numbers of prefix");
+				L_ERR(nullptr, "ERROR: Diferent numbers of prefix");
 				++cont;
 				continue;
 			}
-			auto it = prefixes.begin();
-			auto ite = p.expected_prefixes.begin();
-			for ( ; it != prefixes.end(); ++it, ++ite) {
-				if (it->compare(*ite) != 0) {
-					L_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s", it->c_str(), ite->c_str());
+			for (const auto& prefix : p.expected_prefixes) {
+				if (prefixes.find(prefix) == prefixes.end()) {
+					L_ERR(nullptr, "ERROR: Prefix: %s not found in prefixes", prefix.c_str());
 					++cont;
 					continue;
 				}
 			}
 		} else {
-			L_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
+			L_ERR(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
 			++cont;
 		}
 	}
@@ -395,27 +393,26 @@ int date_test() {
 int geo_test() {
 	int cont = 0;
 	for (int pos = 0, len = arraySize(geo); pos < len; ++pos) {
-		const testG_t p = geo[pos];
-		std::string result_terms;
-		std::vector<std::string> prefixes;
-		GenerateTerms::geo(result_terms, p.ranges, p.accuracy, p.acc_prefix, prefixes);
+		const auto p = geo[pos];
+		std::vector<std::unique_ptr<GeoFieldProcessor>> gfps;
+		Xapian::QueryParser queryparser;
+		std::unordered_set<std::string> prefixes;
+		auto result_terms = GenerateTerms::geo(p.ranges, p.accuracy, p.acc_prefix, prefixes, gfps, queryparser);
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
-				L_DEBUG(nullptr, "ERROR: Diferent numbers of prefix");
+				L_ERR(nullptr, "ERROR: Diferent numbers of prefix");
 				++cont;
 				continue;
 			}
-			auto it = prefixes.begin();
-			auto ite = p.expected_prefixes.begin();
-			for ( ; it != prefixes.end(); ++it, ++ite) {
-				if (it->compare(*ite) != 0) {
-					L_DEBUG(nullptr, "ERROR: Prefix: %s  Expected: %s", it->c_str(), ite->c_str());
+			for (const auto& prefix : p.expected_prefixes) {
+				if (prefixes.find(prefix) == prefixes.end()) {
+					L_ERR(nullptr, "ERROR: Prefix: %s not found in prefixes", prefix.c_str());
 					++cont;
 					continue;
 				}
 			}
 		} else {
-			L_DEBUG(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
+			L_ERR(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
 			++cont;
 		}
 	}

@@ -793,20 +793,16 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 	size_t size_match = 0;
 	bool first_time = true, first_timeR = true;
 	std::string querystring;
-	Xapian::Query queryRange;
 	Xapian::QueryParser queryparser;
 	queryparser.set_database(*db);
+
+	// Set for save the prefix added in queryparser.
+	std::unordered_set<std::string> added_prefixes;
 
 	if (text) {
 		queryparser.set_stemming_strategy(queryparser.STEM_SOME);
 		lan.empty() ? queryparser.set_stemmer(Xapian::Stem(default_spc.language[0])) : queryparser.set_stemmer(Xapian::Stem(lan));
 	}
-
-	std::unordered_set<std::string> added_prefixes;
-	std::unique_ptr<NumericFieldProcessor> nfp;
-	std::unique_ptr<DateFieldProcessor> dfp;
-	std::unique_ptr<GeoFieldProcessor> gfp;
-	std::unique_ptr<BooleanFieldProcessor> bfp;
 
 	std::sregex_iterator next(query.begin(), query.end(), find_field_re, std::regex_constants::match_continuous);
 	std::sregex_iterator end;
@@ -826,21 +822,16 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 				continue;
 			}
 
+			Xapian::Query queryRange;
+
 			switch (field_t.type) {
 				case NUMERIC_TYPE: {
-					std::string filter_term, start(m.str(1)), end(m.str(2));
-					std::vector<std::string> prefixes;
-					GenerateTerms::numeric(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
+					auto start(m.str(1)), end(m.str(2));
+
 					queryRange = MultipleValueRange::getQuery(field_t.slot, NUMERIC_TYPE, start, end, field_name);
+
+					auto filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, srch.nfps, queryparser);
 					if (!filter_term.empty()) {
-						for (const auto& prefix : prefixes) {
-							// Xapian does not allow repeat prefixes.
-							if (added_prefixes.insert(prefix).second) {
-								nfp = std::make_unique<NumericFieldProcessor>(prefix);
-								queryparser.add_prefix(prefix, nfp.get());
-								srch.nfps.push_back(std::move(nfp));
-							}
-						}
 						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), queryRange);
 					}
 					break;
@@ -851,19 +842,12 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 					break;
 				}
 				case DATE_TYPE: {
-					std::string filter_term, start(m.str(1)), end(m.str(2));
-					std::vector<std::string> prefixes;
-					GenerateTerms::date(filter_term, start, end, field_t.accuracy, field_t.acc_prefix, prefixes);
+					auto start(m.str(1)), end(m.str(2));
+
 					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
+
+					auto filter_term = GenerateTerms::date(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, srch.dfps, queryparser);
 					if (!filter_term.empty()) {
-						for (const auto& prefix : prefixes) {
-							// Xapian does not allow repeat prefixes.
-							if (added_prefixes.insert(prefix).second) {
-								dfp = std::make_unique<DateFieldProcessor>(prefix);
-								queryparser.add_prefix(prefix, dfp.get());
-								srch.dfps.push_back(std::move(dfp));
-							}
-						}
 						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), queryRange);
 					}
 					break;
@@ -876,26 +860,16 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 					}
 
 					// The format is: "..EWKT". We always delete double quotes and .. -> EWKT
-					field_value.assign(field_value.c_str(), 3, field_value.size() - 4);
+					field_value.assign(field_value, 3, field_value.size() - 4);
+
 					RangeList ranges;
 					CartesianUSet centroids;
 					EWKT_Parser::getRanges(field_value, field_t.accuracy[0], field_t.accuracy[1], ranges, centroids);
 
 					queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges, centroids);
 
-					std::string filter_term;
-					std::vector<std::string> prefixes;
-					GenerateTerms::geo(filter_term, ranges, field_t.accuracy, field_t.acc_prefix, prefixes);
+					auto filter_term = GenerateTerms::geo(ranges, field_t.accuracy, field_t.acc_prefix, added_prefixes, srch.gfps, queryparser);
 					if (!filter_term.empty()) {
-						// Xapian does not allow repeat prefixes.
-						for (const auto& prefix : prefixes) {
-							// Xapian does not allow repeat prefixes.
-							if (added_prefixes.insert(prefix).second) {
-								gfp = std::make_unique<GeoFieldProcessor>(prefix);
-								queryparser.add_prefix(prefix, gfp.get());
-								srch.gfps.push_back(std::move(gfp));
-							}
-						}
 						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, flags), queryRange);
 					}
 					break;
@@ -920,11 +894,11 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 				case NUMERIC_TYPE:
 					// Xapian does not allow repeat prefixes.
 					if (added_prefixes.insert(field_t.prefix).second) {
-						nfp = std::make_unique<NumericFieldProcessor>(field_t.prefix);
+						auto nfp = std::make_unique<NumericFieldProcessor>(field_t.prefix);
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, nfp.get()) : queryparser.add_prefix(field_name, nfp.get());
 						srch.nfps.push_back(std::move(nfp));
 					}
-					field = field_name_dot + to_query_string(field_value);
+					field.assign(field_name_dot).append(to_query_string(field_value));
 					break;
 				case STRING_TYPE:
 					// Xapian does not allow repeat prefixes.
@@ -938,13 +912,13 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 						field_value.assign(field_value, 1, field_value.size() - 2);
 					}
 
-					field = field_name_dot + to_query_string(std::to_string(Datetime::timestamp(field_value)));
 					// Xapian does not allow repeat prefixes.
 					if (added_prefixes.insert(field_t.prefix).second) {
-						dfp = std::make_unique<DateFieldProcessor>(field_t.prefix);
+						auto dfp = std::make_unique<DateFieldProcessor>(field_t.prefix);
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, dfp.get()) : queryparser.add_prefix(field_name, dfp.get());
 						srch.dfps.push_back(std::move(dfp));
 					}
+					field.assign(field_name_dot).append(to_query_string(std::to_string(Datetime::timestamp(field_value))));
 					break;
 				case GEO_TYPE:
 					// Delete double quotes (always): "EWKT" -> EWKT
@@ -957,17 +931,16 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 						continue;
 					}
 
-					field = field_name_dot + field_value;
-
 					// Xapian does not allow repeat prefixes.
 					if (added_prefixes.insert(field_t.prefix).second) {
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, field_t.prefix) : queryparser.add_prefix(field_name, field_t.prefix);
 					}
+					field.assign(field_name_dot).append(field_value);
 					break;
 				case BOOLEAN_TYPE:
 					// Xapian does not allow repeat prefixes.
 					if (added_prefixes.insert(field_t.prefix).second) {
-						bfp = std::make_unique<BooleanFieldProcessor>(field_t.prefix);
+						auto bfp = std::make_unique<BooleanFieldProcessor>(field_t.prefix);
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, bfp.get()) : queryparser.add_prefix(field_name, bfp.get());
 						srch.bfps.push_back(std::move(bfp));
 					}
@@ -2026,7 +1999,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	bool initref = flags & DB_INIT_REF;
 	bool replication = flags & DB_REPLICATION;
 
-	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB %s(%s) [%lx]...", writable ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
+	L_DATABASE_BEGIN(this, "++ CHECKING OUT DB [%s]: %s ...", writable ? "WR" : "RO", endpoints.as_string().c_str());
 
 	if (database) {
 		L_ERR(this, "Trying to checkout a database with a not null pointer");
@@ -2059,7 +2032,7 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 				case DatabaseQueue::replica_state::REPLICA_LOCK:
 				case DatabaseQueue::replica_state::REPLICA_SWITCH:
 					L_REPLICATION(this, "A replication task is already waiting");
-					L_DATABASE_END(this, "!! ABORTED CHECKOUT DB (%s)!", endpoints.as_string().c_str());
+					L_DATABASE_END(this, "!! ABORTED CHECKOUT DB [%s]: %s", writable ? "WR" : "RO", endpoints.as_string().c_str());
 					return false;
 			}
 		} else {
@@ -2132,16 +2105,16 @@ DatabasePool::checkout(std::shared_ptr<Database>& database, const Endpoints& end
 	lk.unlock();
 
 	if (!database) {
-		L_DATABASE_END(this, "!! FAILED CHECKOUT DB (%s)!", endpoints.as_string().c_str());
+		L_DATABASE_END(this, "!! FAILED CHECKOUT DB [%s]: %s", writable ? "WR" : "WR", endpoints.as_string().c_str());
 		return false;
 	}
 
 	if (!writable && duration_cast<seconds>(system_clock::now() -  database->access_time).count() >= DATABASE_UPDATE_TIME) {
 		database->reopen();
-		L_DATABASE(this, "== REOPEN DB %s(%s) [%lx]", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
+		L_DATABASE(this, "== REOPEN DB [%s]: %s", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->endpoints.as_string().c_str());
 	}
 
-	L_DATABASE_END(this, "++ CHECKED OUT DB %s, %s at rev:%s %lx", writable ? "w" : "r", endpoints.as_string().c_str(), repr(database->checkout_revision, false).c_str(), (unsigned long)database.get());
+	L_DATABASE_END(this, "++ CHECKED OUT DB [%s]: %s (rev:%s)", writable ? "WR" : "WR", endpoints.as_string().c_str(), repr(database->checkout_revision, false).c_str());
 	return true;
 }
 
@@ -2151,7 +2124,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
 	L_CALL(this, "DatabasePool::checkin()");
 
-	L_DATABASE_BEGIN(this, "-- CHECKING IN DB %s(%s) [%lx]...", (database->flags & DB_WRITABLE) ? "w" : "r", database->endpoints.as_string().c_str(), (unsigned long)database.get());
+	L_DATABASE_BEGIN(this, "-- CHECKING IN DB [%s]: %s ...", (database->flags & DB_WRITABLE) ? "WR" : "RO", database->endpoints.as_string().c_str());
 
 	assert(database);
 
@@ -2212,7 +2185,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 		sig_exit(-EX_SOFTWARE);
 	}
 
-	L_DATABASE_END(this, "-- CHECKED IN DB %s(%s) [%lx]", (flags & DB_WRITABLE) ? "w" : "r", endpoints.as_string().c_str(), (unsigned long)database.get());
+	L_DATABASE_END(this, "-- CHECKED IN DB [%s]: %s", (flags & DB_WRITABLE) ? "WR" : "RO", endpoints.as_string().c_str());
 
 	database.reset();
 

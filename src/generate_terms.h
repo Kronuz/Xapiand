@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,22 +23,26 @@
 #pragma once
 
 #include "config.h"
+#include "fields.h"
 #include "htm.h"
+
+#include <unordered_set>
+
 
 #define MAX_TERMS 100
 
 
 namespace GenerateTerms {
-	void numeric(::std::string& result_terms, const ::std::string& start_, const ::std::string& end_, const ::std::vector<double>& accuracy,
-			const ::std::vector<::std::string>& acc_prefix,  ::std::vector<::std::string>& prefixes);
-	void date(::std::string& result_terms, const ::std::string& start_, const ::std::string& end_, const ::std::vector<double>& accuracy,
-			const ::std::vector<::std::string>& acc_prefix,  ::std::vector<::std::string>& prefixes);
-	::std::string year(int tm_s[], int tm_e[], const ::std::string& prefix);
-	::std::string month(int tm_s[], int tm_e[], const ::std::string& prefix);
-	::std::string day(int tm_s[], int tm_e[], const ::std::string& prefix);
-	::std::string hour(int tm_s[], int tm_e[], const ::std::string& prefix);
-	::std::string minute(int tm_s[], int tm_e[], const ::std::string& prefix);
-	::std::string second(int tm_s[], int tm_e[], const ::std::string& prefix);
-	void geo(::std::string& result_terms, const ::std::vector<range_t>& ranges,  const ::std::vector<double>& accuracy,
-			const ::std::vector<::std::string>& acc_prefix, ::std::vector<::std::string>& prefixes);
+	std::string numeric(const std::string& start_, const std::string& end_, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
+		std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<NumericFieldProcessor>>& nfps, Xapian::QueryParser& queryparser);
+	std::string date(const std::string& start_, const std::string& end_, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
+		std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<DateFieldProcessor>>& dfps, Xapian::QueryParser& queryparser);
+	std::string year(int tm_s[], int tm_e[], const std::string& prefix);
+	std::string month(int tm_s[], int tm_e[], const std::string& prefix);
+	std::string day(int tm_s[], int tm_e[], const std::string& prefix);
+	std::string hour(int tm_s[], int tm_e[], const std::string& prefix);
+	std::string minute(int tm_s[], int tm_e[], const std::string& prefix);
+	std::string second(int tm_s[], int tm_e[], const std::string& prefix);
+	std::string geo(const std::vector<range_t>& ranges, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
+		std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<GeoFieldProcessor>>& gfps, Xapian::QueryParser& queryparser);
 };

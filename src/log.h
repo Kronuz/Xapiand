@@ -39,8 +39,6 @@
 #include <condition_variable>
 
 
-#define LOG_ADDRESSES 1
-
 #define DEFAULT_LOG_LEVEL LOG_WARNING  // The default log_level (higher than this are filtered out)
 #define LOCATION_LOG_LEVEL LOG_DEBUG  // The minimum log_level that prints file:line
 #define ASYNC_LOG_LEVEL LOG_CRIT  // The minimum log_level that is asynchronous
@@ -90,10 +88,11 @@ class Log : public std::enable_shared_from_this<Log> {
 	static LogThread& _thread();
 
 	static std::string str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, va_list argptr);
-	static std::shared_ptr<Log> add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
+	static std::shared_ptr<Log> add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 	static void log(int priority, const std::string& str);
 
 	bool cleanup;
+	std::chrono::time_point<std::chrono::system_clock> created_at;
 	std::chrono::time_point<std::chrono::system_clock> wakeup;
 	std::string str_start;
 	int priority;
@@ -103,7 +102,7 @@ public:
 	static int log_level;
 	static std::vector<std::unique_ptr<Logger>> handlers;
 
-	Log(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_);
+	Log(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Log();
 
 	template <typename T, typename R, typename... Args>
@@ -112,8 +111,8 @@ public:
 	}
 
 	template <typename T, typename R>
-	inline static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::duration<T, R> timeout, int priority=LOG_DEBUG) {
-		return print(str, cleanup, std::chrono::system_clock::now() + timeout, priority);
+	inline static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::duration<T, R> timeout, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now()) {
+		return print(str, cleanup, std::chrono::system_clock::now() + timeout, priority, created_at);
 	}
 
 	template <typename... Args>
@@ -121,8 +120,8 @@ public:
 		return log(cleanup, std::chrono::milliseconds(timeout), priority, std::forward<Args>(args)...);
 	}
 
-	inline static std::shared_ptr<Log> print(const std::string& str, bool cleanup, int timeout=0, int priority=LOG_DEBUG) {
-		return print(str, cleanup, std::chrono::milliseconds(timeout), priority);
+	inline static std::shared_ptr<Log> print(const std::string& str, bool cleanup, int timeout=0, int priority=LOG_DEBUG, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now()) {
+		return print(str, cleanup, std::chrono::milliseconds(timeout), priority, created_at);
 	}
 
 	static std::shared_ptr<Log> log(bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
@@ -137,12 +136,14 @@ public:
 		return log(cleanup, wakeup, priority, std::string(), file, line, suffix, prefix, obj, format, std::forward<Args>(args)...);
 	}
 
-	static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority);
+	static std::shared_ptr<Log> print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at=std::chrono::system_clock::now());
 
 	void unlog(int priority, const char *file, int line, const char *suffix, const char *prefix, const void *obj, const char *format, ...);
 	void clear();
 
-	static void finish(int wait=1);
+	static void finish(int wait=10);
+
+	long double age();
 };
 
 
@@ -160,7 +161,7 @@ public:
 	LogThread();
 	~LogThread();
 
-	void finish(int wait=1);
+	void finish(int wait=10);
 	void add(const std::shared_ptr<Log>& l_ptr);
 };
 
@@ -211,9 +212,9 @@ public:
 
 #define _LOG_MARKED_ENABLED(args...) Log::log(false, 0ms, LOG_DEBUG, nullptr, __FILE__, __LINE__, NO_COL, "🔥  " DEBUG_COL, args)
 
-#define _LOG_TIMED_100(args...) auto __log_timed = Log::log(true, 100ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
-#define _LOG_TIMED_500(args...) auto __log_timed = Log::log(true, 500ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
-#define _LOG_TIMED_1000(args...) auto __log_timed = Log::log(true, 1s, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
+#define _LOG_TIMED_200(args...) auto __log_timed = Log::log(true, 200ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, MAGENTA, args)
+#define _LOG_TIMED_600(args...) auto __log_timed = Log::log(true, 600ms, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, MAGENTA, args)
+#define _LOG_TIMED_1000(args...) auto __log_timed = Log::log(true, 1s, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, MAGENTA, args)
 #define _LOG_TIMED_N_CLEAR(args...) __log_timed->unlog(LOG_WARNING, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 
 #define L _LOG_ENABLED
@@ -235,11 +236,19 @@ public:
 
 #define L_OBJ_BEGIN _LOG_TIMED_1000
 #define L_OBJ_END _LOG_TIMED_N_CLEAR
-#define L_DATABASE_BEGIN _LOG_TIMED_100
+#define L_DATABASE_BEGIN _LOG_TIMED_200
 #define L_DATABASE_END _LOG_TIMED_N_CLEAR
-#define L_EV_BEGIN _LOG_TIMED_500
+#define L_EV_BEGIN _LOG_TIMED_600
 #define L_EV_END _LOG_TIMED_N_CLEAR
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Uncomment the folloging to different logging options:
+
+// #define LOG_OBJ_ADDRESS 1
+
+
+////////////////////////////////////////////////////////////////////////////////
 // Enable the following, when needed, using _LOG_LOG_ENABLED:
 
 #define L_TRACEBACK _

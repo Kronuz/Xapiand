@@ -305,6 +305,7 @@ char* normalize_path(const char* src, const char* end, char* dst) {
 	return ret;
 }
 
+
 char* normalize_path(const std::string& src, char* dst)
 {
 	const char* src_str = src.data();
@@ -312,11 +313,10 @@ char* normalize_path(const std::string& src, char* dst)
 }
 
 
+QueryParser::QueryParser()
+	: len(0),
+	  off(nullptr) { }
 
-QueryParser::QueryParser() :
-	len(0),
-	off(nullptr)
-{}
 
 void
 QueryParser::clear()
@@ -325,12 +325,14 @@ QueryParser::clear()
 	query.clear();
 }
 
+
 void
 QueryParser::rewind()
 {
 	len = 0;
 	off = nullptr;
 }
+
 
 int
 QueryParser::init(const std::string& q)
@@ -339,6 +341,7 @@ QueryParser::init(const std::string& q)
 	query = q;
 	return 0;
 }
+
 
 int
 QueryParser::next(const char *name)
@@ -400,22 +403,23 @@ QueryParser::next(const char *name)
 	return -1;
 }
 
+
 std::string
 QueryParser::get()
 {
-	if (!off) return "";
+	if (!off) return std::string();
 	return urldecode(off, len);
 }
 
 
-PathParser::PathParser() :
-	len_pth(0), off_pth(nullptr),
-	len_hst(0), off_hst(nullptr),
-	len_nsp(0), off_nsp(nullptr),
-	len_pmt(0), off_pmt(nullptr),
-	len_cmd(0), off_cmd(nullptr),
-	len_id(0), off_id(nullptr)
-{}
+PathParser::PathParser()
+	: len_pth(0), off_pth(nullptr),
+	  len_hst(0), off_hst(nullptr),
+	  len_nsp(0), off_nsp(nullptr),
+	  len_pmt(0), off_pmt(nullptr),
+	  len_cmd(0), off_cmd(nullptr),
+	  len_id(0), off_id(nullptr) { }
+
 
 void
 PathParser::clear()
@@ -430,6 +434,7 @@ PathParser::clear()
 	path.clear();
 }
 
+
 void
 PathParser::rewind()
 {
@@ -441,6 +446,7 @@ PathParser::rewind()
 	len_nsp = 0;
 	off_nsp = nullptr;
 }
+
 
 PathParser::State
 PathParser::init(const std::string& p)
@@ -543,6 +549,7 @@ PathParser::init(const std::string& p)
 	return state;
 }
 
+
 PathParser::State
 PathParser::next()
 {
@@ -639,45 +646,51 @@ PathParser::next()
 	return state;
 }
 
+
 std::string
 PathParser::get_pth()
 {
-	if (!off_pth) return "";
+	if (!off_pth) return std::string();
 	return urldecode(off_pth, len_pth);
 }
+
 
 std::string
 PathParser::get_hst()
 {
-	if (!off_hst) return "";
+	if (!off_hst) return std::string();
 	return urldecode(off_hst, len_hst);
 }
+
 
 std::string
 PathParser::get_nsp()
 {
-	if (!off_nsp) return "";
+	if (!off_nsp) return std::string();
 	return urldecode(off_nsp, len_nsp);
 }
+
 
 std::string
 PathParser::get_pmt()
 {
-	if (!off_pmt) return "";
+	if (!off_pmt) return std::string();
 	return urldecode(off_pmt, len_pmt);
 }
+
 
 std::string
 PathParser::get_cmd()
 {
-	if (!off_cmd) return "";
+	if (!off_cmd) return std::string();
 	return urldecode(off_cmd, len_cmd);
 }
+
 
 std::string
 PathParser::get_id()
 {
-	if (!off_id) return "";
+	if (!off_id) return std::string();
 	return urldecode(off_id, len_id);
 }
 
@@ -694,10 +707,22 @@ void to_lower(std::string& str) {
 
 std::string prefixed(const std::string& term, const std::string& prefix) {
 	if (isupper(term.at(0))) {
-		return (prefix.empty()) ? term : prefix + ":" + term;
+		if (prefix.empty()) {
+			return term;
+		} else {
+			std::string result;
+			result.reserve(prefix.size() + term.size() + 1);
+			result.assign(prefix);
+			result.append(1, ':').append(term);
+			return result;
+		}
+	} else {
+		std::string result;
+		result.reserve(prefix.size() + term.size());
+		result.assign(prefix);
+		result.append(term);
+		return result;
 	}
-
-	return prefix + term;
 }
 
 
@@ -1141,32 +1166,27 @@ std::string lstrip(const std::string& str, char c) {
 }
 
 
-std::string delta_string(long double delta) {
-	static const char *units[] = { "s", "ms", "\xc2\xb5s", "ns" };
+std::string delta_string(long double delta, bool colored) {
+	static const char* units[] = { "s", "ms", "\xc2\xb5s", "ns" };
 	static const long double scaling[] = { 1, 1e3, 1e6, 1e9 };
+	static const char* colors[] = { "\033[1;31m", "\033[1;33m", "\033[0;33m", "\033[0;32m", "\033[0m" };
 
-	if (!delta) {
-		return "0ms";
-	}
-
-	delta *= 1e-9;  // convert nanoseconds to seconds (as a double)
+	delta /= 1e9;  // convert nanoseconds to seconds (as a double)
 	long double timespan = delta;
 
 	if (delta < 0) delta = -delta;
 
-	int order = (delta > 0) ? -floorl(log10l(delta)) / 3 : 3;
+	int order = (delta > 0) ? -floorl(floorl(log10l(delta)) / 3) : 3;
 	if (order > 3) order = 3;
 
-	timespan = (timespan * scaling[order] * 1000.0 + 0.5) / 1000.0;
-
 	char buf[100];
-	snprintf(buf, 100, "%Lg%s", timespan, units[order]);
+	snprintf(buf, 100, "%s%Lg%s%s", colored ? colors[order] : "", timespan * scaling[order], units[order], colored ? colors[4] : "");
 	return buf;
 }
 
 
-std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end) {
-	return delta_string(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored) {
+	return delta_string(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(), colored);
 }
 
 

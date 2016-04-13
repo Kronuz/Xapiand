@@ -86,8 +86,9 @@ int Log::log_level = DEFAULT_LOG_LEVEL;
 std::vector<std::unique_ptr<Logger>> Log::handlers;
 
 
-Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_)
+Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
 	: cleanup(cleanup_),
+	  created_at(created_at_),
 	  wakeup(wakeup_),
 	  str_start(str),
 	  priority(priority_),
@@ -97,6 +98,13 @@ Log::~Log()
 {
 	bool f = false;
 	finished.compare_exchange_strong(f, cleanup);
+}
+
+
+long double
+Log::age()
+{
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - created_at).count();
 }
 
 
@@ -121,7 +129,7 @@ Log::str_format(int priority, const std::string& exc, const char *file, int line
 	auto iso8601 = "[" + Datetime::to_string(std::chrono::system_clock::now()) + "]";
 	auto tid = " (" + get_thread_name() + ")";
 	std::string result = iso8601 + tid;
-#ifdef LOG_ADDRESSES
+#ifdef LOG_OBJ_ADDRESS
 	if (obj) {
 		snprintf(buffer, BUFFER_SIZE, " [%p]", obj);
 		result += buffer;
@@ -175,15 +183,15 @@ Log::unlog(int priority, const char *file, int line, const char *suffix, const c
 		std::string str(str_format(priority, std::string(), file, line, suffix, prefix, obj, format, argptr));
 		va_end(argptr);
 
-		print(str, false, 0, priority);
+		print(str, false, 0, priority, created_at);
 	}
 }
 
 
 std::shared_ptr<Log>
-Log::add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
+Log::add(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
-	auto l_ptr = std::make_shared<Log>(str, cleanup, wakeup, priority);
+	auto l_ptr = std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
 
 	static LogThread& thread = _thread();
 	thread.add(l_ptr);
@@ -203,10 +211,10 @@ Log::log(int priority, const std::string& str)
 }
 
 std::shared_ptr<Log>
-Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority)
+Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
 	if (priority > Log::log_level) {
-		return std::make_shared<Log>(str, cleanup, wakeup, priority);
+		return std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
 	}
 
 	if (!Log::handlers.size()) {
@@ -214,10 +222,10 @@ Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::ch
 	}
 
 	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {
-		return add(str, cleanup, wakeup, priority);
+		return add(str, cleanup, wakeup, priority, created_at);
 	} else {
 		log(priority, str);
-		return std::make_shared<Log>(str, cleanup, wakeup, priority);
+		return std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
 	}
 }
 
@@ -288,7 +296,7 @@ LogThread::thread_function()
 		if (running < 0) {
 			next_wakeup = now + 3s;
 		} else {
-			next_wakeup = now + 1s;
+			next_wakeup = now + 100ms;
 		}
 
 		for (auto it = log_list.begin(); it != log_list.end(); ) {
@@ -297,7 +305,12 @@ LogThread::thread_function()
 				it = log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished = true;
-				Log::log(l_ptr->priority, l_ptr->str_start);
+				auto msg = l_ptr->str_start;
+				auto age = l_ptr->age();
+				if (age > 2e8) {
+					msg += " ~" + delta_string(age, true);
+				}
+				Log::log(l_ptr->priority, msg);
 				it = log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;
@@ -308,6 +321,9 @@ LogThread::thread_function()
 		}
 		if (next_wakeup < now + 100ms) {
 			next_wakeup = now + 100ms;
+		}
+		if (running >= 0 && !log_list.size()) {
+			break;
 		}
 	}
 }
