@@ -1170,22 +1170,16 @@ std::string delta_string(long double delta) {
 	static const char *units[] = { "s", "ms", "\xc2\xb5s", "ns" };
 	static const long double scaling[] = { 1, 1e3, 1e6, 1e9 };
 
-	if (!delta) {
-		return "0ms";
-	}
-
-	delta *= 1e-9;  // convert nanoseconds to seconds (as a double)
+	delta /= 1e9;  // convert nanoseconds to seconds (as a double)
 	long double timespan = delta;
 
 	if (delta < 0) delta = -delta;
 
-	int order = (delta > 0) ? -floorl(log10l(delta)) / 3 : 3;
+	int order = (delta > 0) ? -floorl(floorl(log10l(delta)) / 3) : 3;
 	if (order > 3) order = 3;
 
-	timespan = (timespan * scaling[order] * 1000.0 + 0.5) / 1000.0;
-
 	char buf[100];
-	snprintf(buf, 100, "%Lg%s", timespan, units[order]);
+	snprintf(buf, 100, "%Lg%s", timespan * scaling[order], units[order]);
 	return buf;
 }
 
