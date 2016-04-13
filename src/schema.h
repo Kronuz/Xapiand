@@ -222,7 +222,7 @@ public:
 	/*
 	 * Transforms schema into json string.
 	 */
-	std::string to_json_string(bool prettify=false);
+	std::string to_json_string(bool prettify=false) const;
 
 
 	/*

@@ -477,7 +477,7 @@ Schema::set_type_to_object(MsgPack& properties)
 
 
 std::string
-Schema::to_json_string(bool prettify)
+Schema::to_json_string(bool prettify) const
 {
 	MsgPack schema_readable = schema.clone();
 	auto properties = schema_readable.at(RESERVED_SCHEMA);
