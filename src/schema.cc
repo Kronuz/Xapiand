@@ -1614,7 +1614,7 @@ Schema::index_value(const MsgPack& value, const specification_t& specification, 
 
 
 data_field_t
-Schema::get_data_field(const std::string& field_name)
+Schema::get_data_field(const std::string& field_name) const
 {
 	L_CALL(this, "Database::get_data_field()");
 
@@ -1658,7 +1658,7 @@ Schema::get_data_field(const std::string& field_name)
 
 
 data_field_t
-Schema::get_slot_field(const std::string& field_name)
+Schema::get_slot_field(const std::string& field_name) const
 {
 	L_CALL(this, "Database::get_slot_field()");
 

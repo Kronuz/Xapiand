@@ -187,8 +187,8 @@ public:
 	 * specification is updated with the properties of schema.
 	 * Returns the properties of schema.
 	 */
-	inline MsgPack getPropertiesSchema() {
-		map_values.clear();
+	inline MsgPack getPropertiesSchema() const {
+		//map_values.clear();
 		return schema.at(RESERVED_SCHEMA);
 	}
 
@@ -291,8 +291,8 @@ public:
 	 * Functions used for searching, return a field properties.
 	 */
 
-	data_field_t get_data_field(const std::string& field_name);
-	data_field_t get_slot_field(const std::string& field_name);
+	data_field_t get_data_field(const std::string& field_name) const;
+	data_field_t get_slot_field(const std::string& field_name) const;
 
 
 	/*
