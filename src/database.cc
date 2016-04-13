@@ -2084,7 +2084,8 @@ DatabaseQueue::dec_count()
 DatabasePool::DatabasePool(size_t max_size)
 	: finished(false),
 	  databases(max_size),
-	  writable_databases(max_size) {
+	  writable_databases(max_size),
+	  schemas(max_size) {
 	L_OBJ(this, "CREATED DATABASE POLL!");
 }
 
@@ -2541,6 +2542,60 @@ DatabasePool::get_master_count()
 
 	return count;
 }
+
+
+std::shared_ptr<const Schema>
+DatabasePool::get_schema(const Endpoint& endpoint)
+{
+	L(this, "DatabasePool::get_schema()");
+
+	if (finished) return nullptr;
+
+	std::shared_ptr<const Schema>* schema;
+	{
+		std::lock_guard<std::mutex> lk(smtx);
+		schema = &schemas[endpoint.hash()];
+	}
+
+	if (!*schema) {
+		std::shared_ptr<Database> database;
+		checkout(database, Endpoints(endpoint), DB_WRITABLE);
+		std::string schema_str = database->get_metadata(RESERVED_SCHEMA);
+		checkin(database);
+
+		auto schema_ptr = new Schema();
+		schema_ptr->set_schema(schema_str);
+
+		std::atomic_exchange(schema, std::shared_ptr<const Schema>(schema_ptr));
+	}
+	return *schema;
+}
+
+
+void
+DatabasePool::set_schema(const Endpoint& endpoint, std::shared_ptr<const Schema> new_schema)
+{
+	std::shared_ptr<const Schema>* schema;
+	{
+		std::lock_guard<std::mutex> lk(smtx);
+		schema = &schemas[endpoint.hash()];
+	}
+
+	std::atomic_exchange(schema, new_schema);
+}
+
+
+//  ____       _                          _     ____  _   _
+// / ___|  ___| |__   ___ _ __ ___   __ _| |   |  _ \| | | |
+// \___ \ / __| '_ \ / _ \ '_ ` _ \ / _` | |   | |_) | | | |
+//  ___) | (__| | | |  __/ | | | | | (_| | |___|  _ <| |_| |
+// |____/ \___|_| |_|\___|_| |_| |_|\__,_|_____|_| \_\\___/
+//
+///////////////////////////////////////////////////////////////////////////////
+
+
+SchemaLRU::SchemaLRU(ssize_t max_size)
+	: LRU(max_size) { }
 
 
 bool

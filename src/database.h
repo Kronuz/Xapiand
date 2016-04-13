@@ -353,6 +353,12 @@ public:
 };
 
 
+class SchemaLRU: public lru::LRU<size_t, std::shared_ptr<const Schema>> {
+public:
+	SchemaLRU(ssize_t max_size=-1);
+};
+
+
 class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
@@ -360,12 +366,14 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 
 private:
 	std::mutex qmtx;
+	std::mutex smtx;
 	std::atomic_bool finished;
 
 	std::unordered_map<size_t, std::unordered_set<std::shared_ptr<DatabaseQueue>>> queues;
 
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
+	SchemaLRU schemas;
 
 	std::condition_variable checkin_cond;
 
@@ -385,6 +393,9 @@ public:
 	long long get_mastery_level(const std::string& dir);
 
 	void finish();
+
+	std::shared_ptr<const Schema> get_schema(const Endpoint& endpoint);
+	void set_schema(const Endpoint& endpoint, std::shared_ptr<const Schema> new_schema);
 
 	template<typename F, typename... Args>
 	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args) {
