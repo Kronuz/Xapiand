@@ -1387,14 +1387,15 @@ Schema::index_text(const specification_t& specification, Xapian::Document& doc, 
 {
 	L_CALL(this, "Schema::index_text()");
 
-	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
+	// Xapian::WritableDatabase *wdb = nullptr;
 
 	Xapian::TermGenerator term_generator;
 	term_generator.set_document(doc);
 	term_generator.set_stemmer(Xapian::Stem(specification.language[getPos(pos, specification.language.size())]));
 	if (specification.spelling[getPos(pos, specification.spelling.size())]) {
-		term_generator.set_database(*wdb);
-		term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
+		// wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
+		// term_generator.set_database(*wdb);
+		// term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
 		term_generator.set_stemming_strategy((Xapian::TermGenerator::stem_strategy)specification.analyzer[getPos(pos, specification.analyzer.size())]);
 	}
 
