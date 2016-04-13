@@ -308,7 +308,7 @@ LogThread::thread_function()
 				auto msg = l_ptr->str_start;
 				auto age = l_ptr->age();
 				if (age > 2e8) {
-					msg += " ~" + delta_string(age);
+					msg += " ~" + delta_string(age, true);
 				}
 				Log::log(l_ptr->priority, msg);
 				it = log_list.erase(it);

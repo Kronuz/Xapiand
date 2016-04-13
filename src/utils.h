@@ -258,8 +258,8 @@ std::string baseN(unsigned long num, int base, std::string symbols= std::string(
 /* strip a string from the left size */
 std::string lstrip(const std::string& str, char c);
 
-std::string delta_string(long double delta);
-std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end);
+std::string delta_string(long double delta, bool colored=false);
+std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored=false);
 
 void _tcp_nopush(int sock, int optval);
 
