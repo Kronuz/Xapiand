@@ -156,11 +156,11 @@ public:
 
 	Schema() = default;
 
+	Schema(const Schema& schema);
 	Schema(Schema&& schema) = delete;
-	Schema(const Schema& schema) = delete;
 
-	Schema& operator=(Schema&& schema) = delete;
 	Schema& operator=(const Schema& schema) = delete;
+	Schema& operator=(Schema&& schema) = delete;
 
 	~Schema() = default;
 
