@@ -1009,7 +1009,8 @@ HttpClient::facets_view()
 			const auto facet_e = spy.second->values_end();
 			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
 				MsgPack value;
-				data_field_t field_t = database->schema->get_slot_field(spy.first);
+				std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
+				data_field_t field_t = schema->get_slot_field(spy.first);
 				auto _val = value["value"];
 				Unserialise::unserialise(field_t.type, *facet, _val);
 				value["termfreq"] = facet.get_termfreq();

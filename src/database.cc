@@ -488,9 +488,6 @@ Database::Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endp
 	modified(false),
 	mastery_level(-1)
 {
-//	std::shared_ptr<const Schema> schema_orig = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
-//	schema = new Schema(*schema_orig);
-
 	reopen();
 
 	if (auto queue = weak_queue.lock()) {
@@ -505,10 +502,6 @@ Database::~Database()
 {
 	if (auto queue = weak_queue.lock()) {
 		queue->dec_count();
-	}
-
-	if (schema) {
-		delete schema;
 	}
 
 	L_OBJ(this, "DELETED DATABASE!");
@@ -599,8 +592,6 @@ Database::reopen()
 		// Try to reopen
 		try {
 			bool ret = db->reopen();
-			std::shared_ptr<const Schema> schema_orig = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
-			schema = new Schema(*schema_orig);
 			return ret;
 		} catch (const Xapian::Error& exc) {
 			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
@@ -702,10 +693,6 @@ Database::reopen()
 		}
 	}
 
-	XapiandManager::manager->database_pool.set_schema(endpoints[0], std::make_shared<const Schema>(*schema));
-	if (schema) {
-		fprintf(stderr, "EL SCHEMA SE LIBERO\n");
-	}
 	return true;
 }
 
@@ -812,6 +799,8 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 		std::string field_name_dot(next->str(1));
 		std::string field_name(next->str(2));
 		std::string field_value(next->str(3));
+		
+		std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
 		data_field_t field_t = schema->get_data_field(field_name);
 
 		std::smatch m;
@@ -1141,6 +1130,7 @@ Database::get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& qu
 	}
 
 	for (const auto& sim_field : similar.field) {
+		std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
 		data_field_t field_t = schema->get_data_field(sim_field);
 		if (field_t.type != NO_TYPE) {
 			prefixes.push_back(field_t.prefix);
@@ -1183,6 +1173,7 @@ Database::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key,
 		}
 
 		for (const auto& facet : e->facets) {
+			std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
 			data_field_t field_t = schema->get_slot_field(facet);
 			if (field_t.type != NO_TYPE) {
 				std::unique_ptr<MultiValueCountMatchSpy> spy = std::make_unique<MultiValueCountMatchSpy>(get_slot(facet), field_t.type == GEO_TYPE);
@@ -1210,6 +1201,8 @@ Database::get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::
 	auto doccount = db->get_doccount();
 	auto check_at_least = std::max(std::min(doccount, e.check_at_least), 0u);
 	Xapian::valueno collapse_key;
+
+	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
 
 	// Get the collapse key to use for queries.
 	if (!e.collapse.empty()) {
@@ -1304,7 +1297,8 @@ Database::commit(bool wal_)
 {
 	L_CALL(this, "Database::commit()");
 
-	schema->store();
+	// FIXME: When it should be the schema update
+	// schema->store();
 
 	if (!modified) {
 		L_DATABASE_WRAP(this, "Do not commit, because there are not changes");
@@ -1799,6 +1793,7 @@ Database::get_value(const Xapian::Document& document, Xapian::valueno slot)
 MsgPack
 Database::get_value(const Xapian::Document& document, const std::string& slot_name)
 {
+	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
 	auto slot_field = schema->get_slot_field(slot_name);
 
 	std::string value = get_value(document, slot_field.slot);

@@ -194,8 +194,6 @@ public:
 
 class Database {
 public:
-	Schema* schema;
-
 	std::weak_ptr<DatabaseQueue> weak_queue;
 	Endpoints endpoints;
 	int flags;
