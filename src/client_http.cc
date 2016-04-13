@@ -840,17 +840,13 @@ HttpClient::index_document_view(bool gen_id)
 
 	build_path_index(index_path);
 
-	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF)) {
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
-	}
-
 	if (content_type.empty()) {
 		content_type = JSON_TYPE;
 	}
 
 	operation_begins = std::chrono::system_clock::now();
 
-	database->index(body, doc_id, query_field->commit, content_type, content_length);
+	Indexer::index(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, body, doc_id, query_field->commit, content_type, content_length);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -969,7 +965,8 @@ HttpClient::schema_view()
 		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 	}
 
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, database->schema.to_json_string(pretty)));
+	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, schema->to_json_string(pretty)));
 	XapiandManager::manager->database_pool.checkin(database);
 	return;
 }
@@ -1012,7 +1009,7 @@ HttpClient::facets_view()
 			const auto facet_e = spy.second->values_end();
 			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
 				MsgPack value;
-				data_field_t field_t = database->get_slot_field(spy.first);
+				data_field_t field_t = database->schema->get_slot_field(spy.first);
 				auto _val = value["value"];
 				Unserialise::unserialise(field_t.type, *facet, _val);
 				value["termfreq"] = facet.get_termfreq();

@@ -269,7 +269,8 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	// Open cluster database
 	Endpoints cluster_endpoints(Endpoint("."));
 	std::shared_ptr<Database> cluster_database;
-	if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL)) {
+	int cluster_flags = DB_WRITABLE | DB_PERSISTENT | DB_NOWAL;
+	if (!database_pool.checkout(cluster_database, cluster_endpoints, cluster_flags)) {
 		new_cluster = 1;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
@@ -288,7 +289,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		MsgPack obj;
 		obj["name"] = local_node->name;
 		obj["tagline"] = XAPIAND_TAGLINE;
-		cluster_database->index(obj, std::to_string(local_node->id), true, MSGPACK_TYPE, "");
+		Indexer::index(cluster_endpoints[0], cluster_flags, obj, std::to_string(local_node->id), true, MSGPACK_TYPE, "");
 	}
 
 	MsgPack obj_data = get_MsgPack(document);

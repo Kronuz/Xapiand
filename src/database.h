@@ -46,24 +46,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-constexpr int DB_OPEN         = 0x00; // Opens a database
-constexpr int DB_WRITABLE     = 0x01; // Opens as writable
-constexpr int DB_SPAWN        = 0x02; // Automatically creates the database if it doesn't exist
-constexpr int DB_PERSISTENT   = 0x04; // Always try keeping the database in the database pool
-constexpr int DB_INIT_REF     = 0x08; // Initializes the writable index in the database .refs
-constexpr int DB_VOLATILE     = 0x10; // Always drop the database from the database pool as soon as possible
-constexpr int DB_REPLICATION  = 0x20; // Use conditional pop in the queue, only pop when replication is done
-constexpr int DB_NOWAL        = 0x40; // Disable open wal file
-constexpr int DB_DATA_STORAGE = 0x80; // Enable separate data storage file for the database
-
 #define DB_MASTER "M"
 #define DB_SLAVE  "S"
 
-#define DB_SLOT_ID     0 // Slot ID document
-#define DB_SLOT_OFFSET 1 // Slot offset for data
-#define DB_SLOT_TYPE   2 // Slot type data
-#define DB_SLOT_LENGTH 3 // Slot length data
-#define DB_SLOT_CREF   4 // Slot that saves the references counter
 
 #define DB_SLOT_RESERVED 10 // Reserved slots by special data
 
@@ -245,8 +230,6 @@ public:
 
 	bool reopen();
 
-	Xapian::docid index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
-	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 
 	void get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
@@ -279,8 +262,6 @@ public:
 	MsgPack get_value(const Xapian::Document& document, const std::string& slot_name);
 
 private:
-	void _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
-
 	search_t _search(const std::string& query, unsigned flags, bool text, const std::string& lan);
 	search_t search(const query_field_t& e);
 
