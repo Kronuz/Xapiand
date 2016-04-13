@@ -861,7 +861,6 @@ HttpClient::index_document_view(bool gen_id)
 	}
 	L_TIME(this, "Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	XapiandManager::manager->database_pool.checkin(database);
 	MsgPack response;
 	auto data = response["index"];
 	data[RESERVED_ID] = doc_id;
