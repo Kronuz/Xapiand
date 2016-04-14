@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -178,12 +178,13 @@ std::string msgpack_to_html(const msgpack::object& o);
 std::string msgpack_map_value_to_html(const msgpack::object& o);
 std::string msgpack_to_html_error(const msgpack::object& o);
 
+
 class Database;
 class Schema;
 class XapiandManager;
 
-namespace Indexer {
 
+namespace Indexer {
 	Xapian::docid index(Endpoints endpoints, int flags, const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 	Xapian::docid index(Endpoints endpoints, int flags, const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -367,7 +367,7 @@ Indexer::index(Endpoints endpoints, int flags, const MsgPack& obj, const std::st
 
 	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0], flags);
 	auto schema_copy = new Schema (*schema);
-	
+
 	if (obj.get_type() == msgpack::type::MAP) {
 		_index(schema_copy, doc, obj, term_id, _document_id, ct_type, ct_length);
 	}
