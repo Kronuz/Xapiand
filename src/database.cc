@@ -2407,6 +2407,8 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 void
 DatabasePool::set_schema(const Endpoint& endpoint, std::shared_ptr<const Schema> new_schema)
 {
+	L_CALL(this, "DatabasePool::set_schema()");
+
 	std::shared_ptr<const Schema>* schema;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
