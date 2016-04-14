@@ -453,67 +453,72 @@ Indexer::index(Endpoints endpoints, int flags, const std::string &body, const st
 void
 Indexer::_index(Schema* schema, Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
 {
-	L_CALL(nullptr, "Database::_index()");
-
+	L_CALL(this, "Database::_index()");
+	
 	auto properties = schema->getPropertiesSchema();
 	specification_t specification;
-
+	
 	// Index Required Data.
 	term_id = schema->serialise_id(properties, specification, _document_id);
-
+	
 	std::size_t found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
 	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
-
+	
 	// Saves document's id in DB_SLOT_ID
 	doc.add_value(DB_SLOT_ID, term_id);
-
+	
 	// Document's id is also a boolean term (otherwise it doesn't replace an existing document)
 	term_id = prefixed(term_id, DOCUMENT_ID_TERM_PREFIX);
 	doc.add_boolean_term(term_id);
 	L_DATABASE_WRAP(this, "Slot: %d _id: %s (%s)", DB_SLOT_ID, _document_id.c_str(), term_id.c_str());
-
+	
 	// Indexing the content values of data.
 	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
 	doc.add_value(DB_SLOT_TYPE, ct_type);
 	doc.add_value(DB_SLOT_LENGTH, ct_length);
-
+	
 	// Index terms for content-type
 	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
 	doc.add_term(prefixed(ct_type, term_prefix));
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
-
+	
 	// Index obj.
 	// Save a copy of schema for undo changes if there is a exception.
 	auto str_schema = schema->to_string();
 	auto _to_store = schema->get_store();
-
+	
 	try {
+		Schema::data_t schema_data(doc);
 		TaskVector tasks;
 		tasks.reserve(obj.size());
 		for (const auto item_key : obj) {
 			const auto str_key = item_key.get_str();
 			try {
 				auto func = map_dispatch_reserved.at(str_key);
-				(*schema.*func)(properties, obj.at(str_key), specification);
+				(schema->*func)(properties, obj.at(str_key), schema_data.specification);
 			} catch (const std::out_of_range&) {
 				if (is_valid(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, &*schema, std::ref(properties), obj.at(str_key), std::ref(specification), std::ref(doc), std::move(str_key)));
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, schema, std::ref(properties), obj.at(str_key), std::ref(schema_data), std::move(str_key)));
 				} else {
 					try {
 						auto func = map_dispatch_root.at(str_key);
-						tasks.push_back(std::async(std::launch::deferred, func, &*schema, std::ref(properties), obj.at(str_key), std::ref(specification), std::ref(doc)));
+						tasks.push_back(std::async(std::launch::deferred, func, schema, std::ref(properties), obj.at(str_key), std::ref(schema_data)));
 					} catch (const std::out_of_range&) { }
 				}
 			}
 		}
-
-		schema->restart_specification(specification);
-		const specification_t spc_start = specification;
+		
+		schema->restart_specification(schema_data.specification);
+		const specification_t spc_start = schema_data.specification;
 		for (auto& task : tasks) {
 			task.get();
-			specification = spc_start;
+			schema_data.specification = spc_start;
+		}
+		
+		for (const auto& elem : schema_data.map_values) {
+			doc.add_value(elem.first, elem.second.serialise());
 		}
 	} catch (...) {
 		// Back to the initial schema if there are changes.
@@ -606,6 +611,6 @@ Indexer::patch(Endpoints endpoints, int flags, const std::string& patches, const
 
 	int did = database->replace_document_term(term_id, doc, commit_);
 	XapiandManager::manager->manager->database_pool.checkin(database);
-	XapiandManager::manager->database_pool.set_schema(endpoints[0], std::shared_ptr<const Schema>(schema_copy));
+	XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
 	return did;
 }

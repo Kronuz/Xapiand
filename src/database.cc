@@ -696,138 +696,6 @@ Database::reopen()
 }
 
 
-void
-Database::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
-{
-	L_CALL(this, "Database::_index()");
-
-	auto properties = schema.getPropertiesSchema();
-	specification_t specification;
-
-	// Index Required Data.
-	term_id = schema.serialise_id(properties, specification, _document_id);
-
-	std::size_t found = ct_type.find_last_of("/");
-	std::string type(ct_type.c_str(), found);
-	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
-
-	// Saves document's id in DB_SLOT_ID
-	doc.add_value(DB_SLOT_ID, term_id);
-
-	// Document's id is also a boolean term (otherwise it doesn't replace an existing document)
-	term_id = prefixed(term_id, DOCUMENT_ID_TERM_PREFIX);
-	doc.add_boolean_term(term_id);
-	L_DATABASE_WRAP(this, "Slot: %d _id: %s (%s)", DB_SLOT_ID, _document_id.c_str(), term_id.c_str());
-
-	// Indexing the content values of data.
-	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
-	doc.add_value(DB_SLOT_TYPE, ct_type);
-	doc.add_value(DB_SLOT_LENGTH, ct_length);
-
-	// Index terms for content-type
-	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
-	doc.add_term(prefixed(ct_type, term_prefix));
-	doc.add_term(prefixed(type + "/*", term_prefix));
-	doc.add_term(prefixed("*/" + subtype, term_prefix));
-
-	// Index obj.
-	// Save a copy of schema for undo changes if there is a exception.
-	auto str_schema = schema.to_string();
-	auto _to_store = schema.get_store();
-
-	try {
-		Schema::data_t schema_data(doc);
-		TaskVector tasks;
-		tasks.reserve(obj.size());
-		for (const auto item_key : obj) {
-			const auto str_key = item_key.get_str();
-			try {
-				auto func = map_dispatch_reserved.at(str_key);
-				(schema.*func)(properties, obj.at(str_key), schema_data.specification);
-			} catch (const std::out_of_range&) {
-				if (is_valid(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, &schema, std::ref(properties), obj.at(str_key), std::ref(schema_data), std::move(str_key)));
-				} else {
-					try {
-						auto func = map_dispatch_root.at(str_key);
-						tasks.push_back(std::async(std::launch::deferred, func, &schema, std::ref(properties), obj.at(str_key), std::ref(schema_data)));
-					} catch (const std::out_of_range&) { }
-				}
-			}
-		}
-
-		schema.restart_specification(schema_data.specification);
-		const specification_t spc_start = schema_data.specification;
-		for (auto& task : tasks) {
-			task.get();
-			schema_data.specification = spc_start;
-		}
-
-		for (const auto& elem : schema_data.map_values) {
-			doc.add_value(elem.first, elem.second.serialise());
-		}
-	} catch (...) {
-		// Back to the initial schema if there are changes.
-		if (schema.get_store()) {
-			schema.set_schema(str_schema);
-			schema.set_store(_to_store);
-		}
-		throw;
-	}
-}
-
-
-Xapian::docid
-Database::index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
-{
-	L_CALL(this, "Database::index(1)");
-
-	if (!(flags & DB_WRITABLE)) {
-		throw MSG_Error("Database is read-only");
-	}
-
-	if (_document_id.empty()) {
-		throw MSG_Error("Document must have an 'id'");
-	}
-
-	// Create MsgPack object
-	bool blob = true;
-	std::string ct_type_ = ct_type;
-	MsgPack obj;
-	rapidjson::Document rdoc;
-	switch (get_mimetype(ct_type_)) {
-		case MIMEType::APPLICATION_JSON:
-			json_load(rdoc, body);
-			obj = MsgPack(rdoc);
-			break;
-		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
-			try {
-				json_load(rdoc, body);
-				obj = MsgPack(rdoc);
-				ct_type_ = JSON_TYPE;
-			} catch (const std::exception&) { }
-			break;
-		case MIMEType::APPLICATION_X_MSGPACK:
-			obj = MsgPack(body);
-			break;
-		default:
-			break;
-	}
-
-	L_DATABASE_WRAP(this, "Document to index: %s", body.c_str());
-	Xapian::Document doc;
-	std::string term_id;
-	if (obj.get_type() == msgpack::type::MAP) {
-		blob = false;
-		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
-	}
-
-	set_data(doc, obj.to_string(), blob ? body : "");
-	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
-	return replace_document_term(term_id, doc, commit_);
-}
-
-
 Database::search_t
 Database::_search(const std::string& query, unsigned flags, bool text, const std::string& lan)
 {
@@ -863,7 +731,7 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 		std::string field_name_dot(next->str(1));
 		std::string field_name(next->str(2));
 		std::string field_value(next->str(3));
-		
+
 		std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
 		data_field_t field_t = schema->get_data_field(field_name);
 
