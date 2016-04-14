@@ -1110,16 +1110,6 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 }
 
 
-int strict_stoi(const std::string& str) {
-	std::string::size_type sz;
-	int res = std::stoi(str, &sz);
-	if (sz != str.size()) {
-		throw std::invalid_argument("Can not convert value: " + str);
-	}
-	return res;
-}
-
-
 void stringTokenizer(const std::string& str, const std::string& delimiter, std::vector<std::string>& tokens) {
 	size_t prev = 0, next = 0, len;
 
