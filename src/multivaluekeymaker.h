@@ -71,14 +71,20 @@ public:
 		if (!value.empty()) {
 			key_values_t ins_key = { slot, type, 0, "", CartesianUSet(), reverse, true };
 			switch (type) {
-				case NUMERIC_TYPE:
-					ins_key.valuenumeric = std::stod(value);
+				case FLOAT_TYPE:
+						ins_key.valuenumeric = strict(std::stod, value);
+					break;
+				case INTEGER_TYPE:
+					ins_key.valuenumeric = strict(std::stoll, value);
+					break;
+				case POSITIVE_TYPE:
+					ins_key.valuenumeric = strict(std::stoull, value);
 					break;
 				case DATE_TYPE:
 					ins_key.valuenumeric = Datetime::timestamp(value);
 					break;
 				case BOOLEAN_TYPE:
-					ins_key.valuestring = strcasecmp(value.c_str(), "true") == 0 ? "t" : "f";
+					ins_key.valuestring = Serialise::boolean(value);
 					break;
 				case STRING_TYPE:
 					ins_key.valuestring = value;
