@@ -544,30 +544,66 @@ Unserialise::ewkt(const std::string& serialise_ewkt)
 std::string
 Unserialise::type(const std::string& str_type)
 {
-	std::string low = lower_string(str_type);
-	if (low.size() == 1) {
-		switch (low[0]) {
-			case NUMERIC_TYPE:
-				return std::string(1, toupper(NUMERIC_TYPE));
-			case GEO_TYPE:
-				return std::string(1, toupper(GEO_TYPE));
-			case STRING_TYPE:
-				return std::string(1, toupper(STRING_TYPE));
-			case BOOLEAN_TYPE:
-				return std::string(1, toupper(BOOLEAN_TYPE));
-			case DATE_TYPE:
-				return std::string(1, toupper(DATE_TYPE));
-		}
-	} else if (low.compare(NUMERIC_STR) == 0) {
-		return std::string(1, toupper(NUMERIC_TYPE));
-	} else if (low.compare(GEO_STR) == 0) {
-		return std::string(1, toupper(GEO_TYPE));
-	} else if (low.compare(STRING_STR) == 0 ) {
-		return std::string(1, toupper(STRING_TYPE));
-	} else if (low.compare(BOOLEAN_STR) == 0 ) {
-		return std::string(1, toupper(BOOLEAN_TYPE));
-	} else if (low.compare(DATE_STR) == 0) {
-		return std::string(1, toupper(DATE_TYPE));
+	const char *value = str_type.c_str();
+	switch (toupper(value[0])) {
+		case FLOAT_TYPE:
+			if (value[1] == '\0') {
+				return std::string(1, FLOAT_TYPE);
+			}
+			if (strcasecmp(value, FLOAT_STR) == 0) {
+				return std::string(1, FLOAT_TYPE);
+			}
+			break;
+		case INTEGER_TYPE:
+			if (value[1] == '\0') {
+				return std::string(1, INTEGER_TYPE);
+			}
+			if (strcasecmp(value, INTEGER_STR)) {
+				return std::string(1, INTEGER_TYPE);
+			}
+			break;
+		case POSITIVE_TYPE:
+			if (value[1] == '\0') {
+				return std::string(1, POSITIVE_TYPE);
+			}
+			if (strcasecmp(value, POSITIVE_STR)) {
+				return std::string(1, POSITIVE_TYPE);
+			}
+			break;
+		case GEO_TYPE:
+			if (value[1] == '\0') {
+				return std::string(1, GEO_TYPE);
+			}
+			if (strcasecmp(value, GEO_STR)) {
+				return std::string(1, GEO_TYPE);
+			}
+			break;
+		case STRING_TYPE:
+			if (value[1] == '\0') {
+				return std::string(1, STRING_TYPE);
+			}
+			if (strcasecmp(value, STRING_STR)) {
+				return std::string(1, STRING_TYPE);
+			}
+			break;
+		case BOOLEAN_TYPE:
+			if (value[1] == '\0') {
+				return std::string(1, BOOLEAN_TYPE);
+			}
+			if (strcasecmp(value, BOOLEAN_STR)) {
+				return std::string(1, BOOLEAN_TYPE);
+			}
+			break;
+		case DATE_TYPE:
+			if (value[1] == '\0') {
+				return std::string(1, DATE_TYPE);
+			}
+			if (strcasecmp(value, DATE_STR)) {
+				return std::string(1, DATE_TYPE);
+			}
+			break;
+		default:
+			break;
 	}
 
 	throw MSG_SerialisationError("Type: %s is an unknown type", str_type.c_str());
