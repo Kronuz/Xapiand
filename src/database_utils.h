@@ -185,10 +185,10 @@ class XapiandManager;
 
 
 namespace Indexer {
-	Xapian::docid index(Endpoints endpoints, int flags, const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
-	Xapian::docid index(Endpoints endpoints, int flags, const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
+	Xapian::docid index(const Endpoints& endpoints, int flags, const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
+	Xapian::docid index(const Endpoints& endpoints, int flags, const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 
 	void _index(Schema* schema, Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
 
-	Xapian::docid patch(Endpoints endpoints, int flags, const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
+	Xapian::docid patch(const Endpoints& endpoints, int flags, const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 };
