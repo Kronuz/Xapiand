@@ -1396,7 +1396,7 @@ Database::get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key,
 		for (const auto& facet : e->facets) {
 			data_field_t field_t = get_slot_field(facet);
 			if (field_t.type != NO_TYPE) {
-				std::unique_ptr<MultiValueCountMatchSpy> spy = std::make_unique<MultiValueCountMatchSpy>(get_slot(facet), field_t.type == GEO_TYPE);
+				std::unique_ptr<MultiValueCountMatchSpy> spy = std::make_unique<MultiValueCountMatchSpy>(get_slot(facet));
 				enquire.add_matchspy(spy.get());
 				L_DATABASE_WRAP(this, "added spy -%s-", (facet).c_str());
 				spies->push_back(std::make_pair(facet, std::move(spy)));
