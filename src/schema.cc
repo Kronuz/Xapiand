@@ -312,7 +312,7 @@ Schema::set_database(Database* _database)
 
 
 void
-Schema::settle_schema(const std::string& s_schema)
+Schema::build_schema(const std::string& s_schema)
 {
 	L_CALL(this, "Schema::set_database()");
 	

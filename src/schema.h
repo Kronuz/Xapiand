@@ -166,7 +166,7 @@ public:
 
 	void set_database(Database* _database);
 
-	void settle_schema(const std::string& s_schema);
+	void build_schema(const std::string& s_schema);
 
 	inline std::string to_string() const {
 		return schema.to_string();
