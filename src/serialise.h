@@ -32,23 +32,27 @@
 
 
 // Data types
-#define NUMERIC_TYPE 'n'
-#define STRING_TYPE  's'
-#define DATE_TYPE    'd'
-#define GEO_TYPE     'g'
-#define BOOLEAN_TYPE 'b'
-#define ARRAY_TYPE   'a'
-#define OBJECT_TYPE  'o'
-#define NO_TYPE      ' '
+#define FLOAT_TYPE    'F'
+#define INTEGER_TYPE  'I'
+#define POSITIVE_TYPE 'P'
+#define STRING_TYPE   'S'
+#define DATE_TYPE     'D'
+#define GEO_TYPE      'G'
+#define BOOLEAN_TYPE  'B'
+#define ARRAY_TYPE    'A'
+#define OBJECT_TYPE   'O'
+#define NO_TYPE       ' '
 
-
-#define NUMERIC_STR "numeric"
-#define STRING_STR  "string"
-#define DATE_STR    "date"
-#define GEO_STR     "geospatial"
-#define BOOLEAN_STR "boolean"
-#define ARRAY_STR   "array"
-#define OBJECT_STR  "object"
+// Str types
+#define FLOAT_STR    "float"
+#define INTEGER_STR  "integer"
+#define POSITIVE_STR "positive"
+#define STRING_STR   "string"
+#define DATE_STR     "date"
+#define GEO_STR      "geospatial"
+#define BOOLEAN_STR  "boolean"
+#define ARRAY_STR    "array"
+#define OBJECT_STR   "object"
 
 
 #if __BYTE_ORDER == __BIG_ENDIAN
@@ -77,12 +81,14 @@ namespace Serialise {
 	std::string serialise(char field_type, const MsgPack& field_value);
 	std::string serialise(char field_type, const std::string& field_value);
 	std::string string(char field_type, const std::string& field_value);
-	std::string numeric(char field_type, double field_value);
+	std::string _float(char field_type, double field_value);
+	std::string integer(char field_type, int64_t field_value);
+	std::string positive(char field_type, uint64_t field_value);
 	std::string boolean(char field_type, bool field_value);
 
 	/*
 	 * Given a field_value, it gets the type.
-	 * returns the type and the serialise value.
+	 * Returns the type and the serialise value.
 	 */
 	std::pair<char, std::string> serialise(const std::string& field_value);
 
@@ -96,8 +102,14 @@ namespace Serialise {
 	// Serialise struct tm with math like date.
 	std::string date_with_math(Datetime::tm_t tm, const std::string& op, const std::string& units);
 
-	// Serialise field_value like numeric.
-	std::string numeric(const std::string& field_value);
+	// Serialise field_value like float.
+	std::string _float(const std::string& field_value);
+
+	// Serialise field_value like integer.
+	std::string integer(const std::string& field_value);
+
+	// Serialise field_value like positive integer.
+	std::string positive(const std::string& field_value);
 
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value);
@@ -126,8 +138,14 @@ namespace Unserialise {
 	// Unserialise serialise_val according to field_type.
 	std::string unserialise(char field_type, const std::string& serialise_val);
 
-	// Unserialise a serialised numeric.
-	double numeric(const std::string& serialise_numeric);
+	// Unserialise a serialised float.
+	double _float(const std::string& serialise_float);
+
+	// Unserialise a serialised integer.
+	int64_t integer(const std::string& serialise_integer);
+
+	// Unserialise a serialised positive.
+	uint64_t positive(const std::string& serialise_positive);
 
 	// Unserialise a serialised date.
 	std::string date(const std::string& serialise_date);

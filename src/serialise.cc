@@ -40,11 +40,11 @@ Serialise::serialise(char field_type, const MsgPack& field_value)
 		case msgpack::type::BOOLEAN:
 			return boolean(field_type, field_value.body->obj->via.boolean);
 		case msgpack::type::POSITIVE_INTEGER:
-			return numeric(field_type, field_value.body->obj->via.u64);
+			return positive(field_type, field_value.body->obj->via.u64);
 		case msgpack::type::NEGATIVE_INTEGER:
-			return numeric(field_type, field_value.body->obj->via.i64);
+			return integer(field_type, field_value.body->obj->via.i64);
 		case msgpack::type::FLOAT:
-			return numeric(field_type, field_value.body->obj->via.f64);
+			return _float(field_type, field_value.body->obj->via.f64);
 		case msgpack::type::STR:
 			return string(field_type, std::string(field_value.body->obj->via.str.ptr, field_value.body->obj->via.str.size));
 		default:
@@ -61,8 +61,12 @@ Serialise::serialise(char field_type, const std::string& field_value)
 	}
 
 	switch (field_type) {
-		case NUMERIC_TYPE:
-			return numeric(field_value);
+		case INTEGER_TYPE:
+			return integer(field_value);
+		case POSITIVE_TYPE:
+			return positive(field_value);
+		case FLOAT_TYPE:
+			return _float(field_value);
 		case DATE_TYPE:
 			return date(field_value);
 		case BOOLEAN_TYPE:
@@ -80,8 +84,10 @@ Serialise::serialise(char field_type, const std::string& field_value)
 std::pair<char, std::string>
 Serialise::serialise(const std::string& field_value)
 {
-	if (isNumeric(field_value)) {
-		return std::make_pair(NUMERIC_TYPE, Xapian::sortable_serialise(std::stod(field_value)));
+	if (isInteger(field_value)) {
+		return std::make_pair(INTEGER_TYPE, Xapian::sortable_serialise(std::stoi(field_value)));
+	} else if (isFloat(field_value)) {
+		return std::make_pair(FLOAT_TYPE, Xapian::sortable_serialise(std::stod(field_value)));
 	} else {
 		try {
 			return std::make_pair(DATE_TYPE, date(field_value));
@@ -113,22 +119,53 @@ Serialise::string(char field_type, const std::string& field_value)
 		case GEO_TYPE:
 			return ewkt(field_value);
 		default:
-			throw MSG_SerialisationError("%s is not string", type(field_type).c_str());
+			throw MSG_SerialisationError("Type: %s is not string", type(field_type).c_str());
 	}
 }
 
 
 std::string
-Serialise::numeric(char field_type, double field_value)
+Serialise::_float(char field_type, double field_value)
 {
 	switch (field_type) {
 		case DATE_TYPE:
-		case NUMERIC_TYPE:
+		case FLOAT_TYPE:
 			return Xapian::sortable_serialise(field_value);
-		case BOOLEAN_TYPE:
-			return field_value ? std::string("t") : std::string("f");
 		default:
-			throw MSG_SerialisationError("%s is not numeric", type(field_type).c_str());
+			throw MSG_SerialisationError("Type: %s is not a float", type(field_type).c_str());
+	}
+}
+
+
+std::string
+Serialise::integer(char field_type, int64_t field_value)
+{
+	switch (field_type) {
+		case POSITIVE_TYPE:
+			if (field_value < 0) {
+				throw MSG_SerialisationError("Type: %s must be a positive number [%lld]", type(field_type).c_str(), field_value);
+			}
+		case DATE_TYPE:
+		case FLOAT_TYPE:
+		case INTEGER_TYPE:
+			return Xapian::sortable_serialise(field_value);
+		default:
+			throw MSG_SerialisationError("Type: %s is not a integer [%lld]", type(field_type).c_str(), field_value);
+	}
+}
+
+
+std::string
+Serialise::positive(char field_type, uint64_t field_value)
+{
+	switch (field_type) {
+		case DATE_TYPE:
+		case FLOAT_TYPE:
+		case INTEGER_TYPE:
+		case POSITIVE_TYPE:
+			return Xapian::sortable_serialise(field_value);
+		default:
+			throw MSG_SerialisationError("Type: %s is not a positive integer [%lld]", type(field_type).c_str(), field_value);
 	}
 }
 
@@ -147,8 +184,7 @@ Serialise::boolean(char field_type, bool field_value)
 std::string
 Serialise::date(const std::string& field_value)
 {
-	double timestamp = Datetime::timestamp(field_value);
-	return Xapian::sortable_serialise(timestamp);
+	return Xapian::sortable_serialise(Datetime::timestamp(field_value));
 }
 
 
@@ -187,13 +223,35 @@ Serialise::date_with_math(Datetime::tm_t tm, const std::string& op, const std::s
 
 
 std::string
-Serialise::numeric(const std::string& field_value)
+Serialise::_float(const std::string& field_value)
 {
-	if (isNumeric(field_value)) {
-		return Xapian::sortable_serialise(std::stod(field_value));
+	try {
+		return Xapian::sortable_serialise(strict(std::stod, field_value));
+	} catch (const std::invalid_argument&) {
+		throw MSG_SerialisationError("Invalid float format: %s", field_value.c_str());
 	}
+}
 
-	throw MSG_SerialisationError("Invalid numeric format: %s", field_value.c_str());
+
+std::string
+Serialise::integer(const std::string& field_value)
+{
+	try {
+		return Xapian::sortable_serialise(strict(std::stoll, field_value));
+	} catch (const std::invalid_argument&) {
+		throw MSG_SerialisationError("Invalid integer format: %s", field_value.c_str());
+	}
+}
+
+
+std::string
+Serialise::positive(const std::string& field_value)
+{
+	try {
+		return Xapian::sortable_serialise(strict(std::stoull, field_value));
+	} catch (const std::invalid_argument&) {
+		throw MSG_SerialisationError("Invalid positive integer format: %s", field_value.c_str());
+	}
 }
 
 
@@ -295,14 +353,16 @@ std::string
 Serialise::type(char type)
 {
 	switch (type) {
-		case STRING_TYPE:  return STRING_STR;
-		case NUMERIC_TYPE: return NUMERIC_STR;
-		case BOOLEAN_TYPE: return BOOLEAN_STR;
-		case GEO_TYPE:     return GEO_STR;
-		case DATE_TYPE:    return DATE_STR;
-		case OBJECT_TYPE:  return OBJECT_STR;
-		case ARRAY_TYPE:   return ARRAY_STR;
-		case NO_TYPE:      return std::string();
+		case STRING_TYPE:   return STRING_STR;
+		case FLOAT_TYPE:    return FLOAT_STR;
+		case INTEGER_TYPE:  return INTEGER_STR;
+		case POSITIVE_TYPE: return POSITIVE_STR;
+		case BOOLEAN_TYPE:  return BOOLEAN_STR;
+		case GEO_TYPE:      return GEO_STR;
+		case DATE_TYPE:     return DATE_STR;
+		case OBJECT_TYPE:   return OBJECT_STR;
+		case ARRAY_TYPE:    return ARRAY_STR;
+		case NO_TYPE:       return std::string();
 	}
 
 	throw MSG_SerialisationError("Type: '%c' is an unknown type", type);
@@ -338,8 +398,12 @@ std::string
 Unserialise::unserialise(char field_type, const std::string& serialise_val)
 {
 	switch (field_type) {
-		case NUMERIC_TYPE:
-			return std::to_string(numeric(serialise_val));
+		case FLOAT_TYPE:
+			return std::to_string(_float(serialise_val));
+		case INTEGER_TYPE:
+			return std::to_string(integer(serialise_val));
+		case POSITIVE_TYPE:
+			return std::to_string(positive(serialise_val));
 		case DATE_TYPE:
 			return date(serialise_val);
 		case BOOLEAN_TYPE:
@@ -355,7 +419,21 @@ Unserialise::unserialise(char field_type, const std::string& serialise_val)
 
 
 double
-Unserialise::numeric(const std::string& serialise_val)
+Unserialise::_float(const std::string& serialise_val)
+{
+	return Xapian::sortable_unserialise(serialise_val);
+}
+
+
+int64_t
+Unserialise::integer(const std::string& serialise_val)
+{
+	return Xapian::sortable_unserialise(serialise_val);
+}
+
+
+uint64_t
+Unserialise::positive(const std::string& serialise_val)
 {
 	return Xapian::sortable_unserialise(serialise_val);
 }
