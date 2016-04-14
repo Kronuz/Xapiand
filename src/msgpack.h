@@ -100,6 +100,8 @@ inline bool operator==(const MsgPack& x, const MsgPack& y);
 
 
 class MsgPack {
+	friend msgpack::adaptor::convert<MsgPack>;
+
 	class object_handle {
 		std::unique_ptr<msgpack::zone> zone;
 		msgpack::detail::unpack_user user;
@@ -164,14 +166,34 @@ class MsgPack {
 	std::shared_ptr<object_handle> handler;
 	std::shared_ptr<MsgPackBody> parent_body;
 
-	static std::shared_ptr<object_handle> make_handler(const std::string& buffer);
-	static std::shared_ptr<object_handle> make_handler(const rapidjson::Document& doc);
-
 	void init();
 	void expand_map(size_t r_size);
 	void expand_array(size_t r_size);
 
-	friend msgpack::adaptor::convert<MsgPack>;
+	MsgPack _at(const std::string& key) const;
+	MsgPack _at(uint32_t off) const;
+
+	template <typename MP, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<MP>>::value>>
+	inline MsgPack _at(MP&& o) const {
+		switch (o.body->obj->type) {
+			case msgpack::type::STR:
+				return _at(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+			case msgpack::type::POSITIVE_INTEGER:
+				return _at(static_cast<uint32_t>(o.body->obj->via.u64));
+			case msgpack::type::NEGATIVE_INTEGER:
+				return _at(static_cast<uint32_t>(o.body->obj->via.i64));
+			default:
+				throw msgpack::type_error();
+		}
+	}
+
+	inline MsgPack _parent() const {
+		if (parent_body) {
+			return MsgPack(handler, parent_body, nullptr);
+		} else {
+			return MsgPack();
+		}
+	}
 
 public:
 	std::shared_ptr<MsgPackBody> body;
@@ -207,21 +229,27 @@ public:
 	MsgPack operator[](uint32_t off);
 
 	template <typename MP, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<MP>>::value>>
-	inline MsgPack at(MP&& o) const {
+	inline const MsgPack operator[](MP&& o) const {
 		switch (o.body->obj->type) {
 			case msgpack::type::STR:
-				return at(std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+				return operator[](std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
 			case msgpack::type::POSITIVE_INTEGER:
-				return at(static_cast<uint32_t>(o.body->obj->via.u64));
+				return operator[](static_cast<uint32_t>(o.body->obj->via.u64));
 			case msgpack::type::NEGATIVE_INTEGER:
-				return at(static_cast<uint32_t>(o.body->obj->via.i64));
+				return operator[](static_cast<uint32_t>(o.body->obj->via.i64));
 			default:
 				throw msgpack::type_error();
 		}
 	}
 
-	MsgPack at(const std::string& key) const;
-	MsgPack at(uint32_t off) const;
+	const MsgPack operator[](const std::string& key) const;
+	const MsgPack operator[](uint32_t off) const;
+
+	template <typename MP>
+	inline MsgPack at(MP&& o) { return _at(std::forward<MP>(o)); }
+
+	template <typename MP>
+	inline const MsgPack at(MP&& o) const { return _at(std::forward<MP>(o)); }
 
 	template <typename MP, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<MP>>::value>>
 	inline bool find(MP&& o) const {
@@ -335,13 +363,8 @@ public:
 		}
 	}
 
-	inline MsgPack parent() {
-		if (parent_body) {
-			return MsgPack(handler, parent_body, nullptr);
-		} else {
-			return MsgPack();
-		}
-	}
+	inline MsgPack parent() { return _parent(); }
+	inline const MsgPack parent() const { return _parent(); }
 
 	template<typename T, bool is_const_iterator = true>
 	class _iterator : public std::iterator<std::input_iterator_tag, MsgPack> {

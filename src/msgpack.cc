@@ -146,8 +146,40 @@ MsgPack::operator[](uint32_t off)
 }
 
 
+const MsgPack
+MsgPack::operator[](const std::string& key) const
+{
+	auto it = body->map.find(key);
+	if (it != body->map.end()) {
+		return MsgPack(handler, it->second, body);
+	}
+
+	return MsgPack();
+}
+
+
+const MsgPack
+MsgPack::operator[](uint32_t off) const
+{
+	if (body->obj->type == msgpack::type::NIL) {
+		return MsgPack();
+	}
+
+	if (body->obj->type == msgpack::type::ARRAY) {
+		auto r_size = off + 1;
+		if (body->obj->via.array.size < r_size) {
+			return MsgPack();
+		}
+
+		return MsgPack(handler, std::make_shared<MsgPackBody>(off, &body->obj->via.array.ptr[off]), body);
+	}
+
+	throw msgpack::type_error();
+}
+
+
 MsgPack
-MsgPack::at(const std::string& key) const
+MsgPack::_at(const std::string& key) const
 {
 	if (body->obj->type == msgpack::type::MAP) {
 		return MsgPack(handler, body->map.at(key), body);
@@ -160,7 +192,7 @@ MsgPack::at(const std::string& key) const
 
 
 MsgPack
-MsgPack::at(uint32_t off) const
+MsgPack::_at(uint32_t off) const
 {
 	if (body->obj->type == msgpack::type::ARRAY) {
 		if (off < body->obj->via.array.size) {
