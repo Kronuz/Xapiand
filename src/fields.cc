@@ -27,7 +27,7 @@
 #include <xapian/query.h>
 
 
-NumericFieldProcessor::NumericFieldProcessor(const std::string& prefix_) : prefix(prefix_) { }
+NumericFieldProcessor::NumericFieldProcessor(char type_, const std::string& prefix_) : type(type_), prefix(prefix_) { }
 
 
 Xapian::Query
@@ -35,9 +35,21 @@ NumericFieldProcessor::operator()(const std::string& str)
 {
 	// For negative number, we receive _# and we serialise -#.
 	std::string serialise(str);
-	if (serialise[0] == '_') serialise[0] = '-';
+	if (serialise[0] == '_') {
+		serialise[0] = '-';
+	}
 	try {
-		serialise = Serialise::numeric(serialise);
+		switch (type) {
+			case FLOAT_TYPE:
+				serialise.assign(Serialise::_float(serialise));
+				break;
+			case INTEGER_TYPE:
+				serialise.assign(Serialise::integer(serialise));
+				break;
+			case POSITIVE_TYPE:
+				serialise.assign(Serialise::positive(serialise));
+				break;
+		}
 		return Xapian::Query(prefix + serialise);
 	} catch (const SerialisationError& exc) {
 		throw MSG_QueryParserError(std::string(exc.what()) + " (" + str + ")");
@@ -67,9 +79,11 @@ Xapian::Query
 DateFieldProcessor::operator()(const std::string& str)
 {
 	std::string serialise(str.c_str());
-	if (serialise[0] == '_') serialise[0] = '-';
+	if (serialise[0] == '_') {
+		serialise[0] = '-';
+	}
 	try {
-		serialise = Serialise::date(serialise);
+		serialise.assign(Serialise::date(serialise));
 		return Xapian::Query(prefix + serialise);
 	} catch (const DatetimeError& exc) {
 		throw MSG_QueryParserError("Format date is not valid (" + str + "). " + std::string(exc.what()));
