@@ -377,7 +377,7 @@ Indexer::index(const Endpoints& endpoints, int flags, const MsgPack& obj, const 
 
 	std::shared_ptr<Database> database;
 	if (XapiandManager::manager->manager->database_pool.checkout(database, endpoints, flags)) {
-		Xapian::docid did = database->replace_document_term(term_id, doc, commit_);
+		auto did = database->replace_document_term(term_id, doc, commit_);
 		XapiandManager::manager->manager->database_pool.checkin(database);
 		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
 		return did;
@@ -400,8 +400,8 @@ Indexer::index(const Endpoints& endpoints, int flags, const std::string &body, c
 	}
 
 	// Create MsgPack object
-	bool blob = true;
-	std::string ct_type_ = ct_type;
+	auto blob = true;
+	auto ct_type_ = ct_type;
 	MsgPack obj;
 	rapidjson::Document rdoc;
 	switch (get_mimetype(ct_type_)) {
@@ -444,7 +444,7 @@ Indexer::index(const Endpoints& endpoints, int flags, const std::string &body, c
 
 	std::shared_ptr<Database> database;
 	if (XapiandManager::manager->manager->database_pool.checkout(database, endpoints, flags)) {
-		Xapian::docid did = database->replace_document_term(term_id, doc, commit_);
+		auto did = database->replace_document_term(term_id, doc, commit_);
 		XapiandManager::manager->manager->database_pool.checkin(database);
 		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
 		return did;
@@ -549,9 +549,9 @@ Indexer::patch(const Endpoints& endpoints, int flags, const std::string& patches
 	}
 
 	rapidjson::Document rdoc_patch;
-	MIMEType t = get_mimetype(ct_type);
+	auto t = get_mimetype(ct_type);
 	MsgPack obj_patch;
-	std::string _ct_type(ct_type);
+	auto _ct_type = ct_type;
 	switch (t) {
 		case MIMEType::APPLICATION_JSON:
 			json_load(rdoc_patch, patches);
@@ -585,16 +585,16 @@ Indexer::patch(const Endpoints& endpoints, int flags, const std::string& patches
 
 	Xapian::Enquire enquire(*database->db);
 	enquire.set_query(query);
-	Xapian::MSet mset = enquire.get_mset(0, 1);
+	auto mset = enquire.get_mset(0, 1);
 
 	if (mset.empty()) {
 		throw MSG_DocNotFoundError("Document not found");
 	}
-	Xapian::Document document = database->get_document(*mset.begin());
+	auto document = database->get_document(*mset.begin());
 
 	XapiandManager::manager->database_pool.checkin(database);
 
-	MsgPack obj_data = get_MsgPack(document);
+	auto obj_data = get_MsgPack(document);
 	apply_patch(obj_patch, obj_data);
 
 	L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
@@ -610,7 +610,7 @@ Indexer::patch(const Endpoints& endpoints, int flags, const std::string& patches
 	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 
 	if (XapiandManager::manager->database_pool.checkout(database, endpoints, flags)) {
-		int did = database->replace_document_term(term_id, doc, commit_);
+		auto did = database->replace_document_term(term_id, doc, commit_);
 		XapiandManager::manager->manager->database_pool.checkin(database);
 		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
 		return did;
