@@ -357,7 +357,7 @@ std::string msgpack_to_html_error(const msgpack::object& o) {
 
 
 Xapian::docid
-Indexer::index(Endpoints endpoints, int flags, const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
+Indexer::index(const Endpoints& endpoints, int flags, const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
 {
 	L_CALL(nullptr, "Indexer::index(2)");
 
@@ -388,7 +388,7 @@ Indexer::index(Endpoints endpoints, int flags, const MsgPack& obj, const std::st
 
 
 Xapian::docid
-Indexer::index(Endpoints endpoints, int flags, const std::string &body, const std::string &_document_id, bool commit_, const std::string &ct_type, const std::string &ct_length) {
+Indexer::index(const Endpoints& endpoints, int flags, const std::string &body, const std::string &_document_id, bool commit_, const std::string &ct_type, const std::string &ct_length) {
 	L_CALL(nullptr, "Indexer::index(1)");
 
 	if (!(flags & DB_WRITABLE)) {
@@ -536,7 +536,7 @@ Indexer::_index(Schema* schema, Xapian::Document& doc, const MsgPack& obj, std::
 
 
 Xapian::docid
-Indexer::patch(Endpoints endpoints, int flags, const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
+Indexer::patch(const Endpoints& endpoints, int flags, const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
 {
 	L_CALL(this, "Indexer::patch()");
 
