@@ -1013,8 +1013,7 @@ HttpClient::facets_view()
 			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
 				MsgPack value;
 				data_field_t field_t = database->get_slot_field(spy.first);
-				auto _val = value["value"];
-				Unserialise::unserialise(field_t.type, *facet, _val);
+				value["value"] = Unserialise::MsgPack(field_t.type, *facet);
 				value["termfreq"] = facet.get_termfreq();
 				array.add_item_to_array(value);
 			}
