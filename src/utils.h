@@ -231,12 +231,16 @@ std::string prefixed(const std::string& term, const std::string& prefixO);
 std::string get_prefix(const std::string& name, const std::string& prefix, char type);
 std::string get_slot_hex(const std::string& name);
 bool strhasupper(const std::string& str);
+
 bool isRange(const std::string& str);
-bool isNumeric(const std::string& str);
+bool isFloat(const std::string& str);
+bool isInteger(const std::string& str);
+bool isPositive(const std::string& str);
+
 bool startswith(const std::string& text, const std::string& token);
 void delete_files(const std::string& path);
 void move_files(const std::string& src, const std::string& dst);
-inline bool exist(const std::string& name);
+bool exist(const std::string& name);
 bool build_path_index(const std::string& path);
 int strict_stoi(const std::string& str);
 void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pre_suf_fix);
