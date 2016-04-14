@@ -28,10 +28,11 @@
 
 
 class NumericFieldProcessor : public Xapian::FieldProcessor {
+	char type;
 	std::string prefix;
 
 	public:
-		NumericFieldProcessor(const std::string& prefix);
+		NumericFieldProcessor(char type_, const std::string& prefix);
 		Xapian::Query operator()(const std::string& str) override;
 };
 

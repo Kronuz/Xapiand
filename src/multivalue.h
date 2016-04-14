@@ -32,8 +32,6 @@
 
 /// Class for counting the frequencies of values in the matching documents.
 class MultiValueCountMatchSpy : public Xapian::ValueCountMatchSpy {
-	bool is_geo;
-
 public:
 	/// Construct an empty MultiValueCountMatchSpy.
 	MultiValueCountMatchSpy() = default;
@@ -42,7 +40,7 @@ public:
 	 *
 	 *  Further slots can be added by calling @a add_slot().
 	 */
-	MultiValueCountMatchSpy(Xapian::valueno slot_, bool _is_geo = false) : Xapian::ValueCountMatchSpy(slot_), is_geo(_is_geo) { }
+	MultiValueCountMatchSpy(Xapian::valueno slot_) : Xapian::ValueCountMatchSpy(slot_) { }
 
 	/** Implementation of virtual operator().
 	 *

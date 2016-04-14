@@ -49,6 +49,16 @@
 #define CMD_UNKNOWN   -1
 #define CMD_BAD_QUERY -2
 
+#define strict(func, s) \
+	[](const std::string& str) -> decltype(auto) { \
+		std::size_t sz; \
+		auto ret = (func)(str, &sz); \
+		if (sz != str.size()) { \
+			throw std::invalid_argument("Cannot convert value: " + str); \
+		} \
+		return ret; \
+	}(s)
+
 
 constexpr uint16_t SLOT_TIME_MINUTE = 1440;
 constexpr uint8_t SLOT_TIME_SECOND = 60;
@@ -231,14 +241,18 @@ std::string prefixed(const std::string& term, const std::string& prefixO);
 std::string get_prefix(const std::string& name, const std::string& prefix, char type);
 std::string get_slot_hex(const std::string& name);
 bool strhasupper(const std::string& str);
+
 bool isRange(const std::string& str);
-bool isNumeric(const std::string& str);
+bool isFloat(const std::string& str);
+bool isInteger(const std::string& str);
+bool isPositive(const std::string& str);
+
 bool startswith(const std::string& text, const std::string& token);
 void delete_files(const std::string& path);
 void move_files(const std::string& src, const std::string& dst);
-inline bool exist(const std::string& name);
+bool exist(const std::string& name);
 bool build_path_index(const std::string& path);
-int strict_stoi(const std::string& str);
+
 void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pre_suf_fix);
 DIR* opendir(const char* filename, bool create);
 // Copy all directory if file_name and new_name are empty

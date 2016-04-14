@@ -40,26 +40,20 @@ const sort_t string_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"	levens(_id:10)	"name"						levens(name:hola)	value for sort (ASC)	value for sort (DESC)
-	 * "1"		1				["cook", "cooked"]			[3, 5]				"cook"					"cooked"
-	 * "2"		2				["book store", "book"]		[9, 3]				"book"					"book store"
-	 * "3"		2				["cooking", "hola mundo"]   [6, 6]				"cooking"				"hola mundo"
-	 * "4"		2				"hola"							0				"hola"					"hola"
-	 * "5"		2				"mundo"							5				"mundo"					"mundo"
-	 * "6"		2				"mundo"							5				"mundo"					"mundo"
-	 * "7"		2				"hola"							0				"hola"					"hola"
-	 * "8"		2				["cooking", "hola mundo"]	[6, 6]				"cooking"				"hola mundo"
-	 * "9"		2				"computer"						7				"computer"				"computer"
-	 * "10"		0				Does not have				MAX_DBL				"\xff"					"\xff"
+	 * "_id"	"name"						levens(name:hola)	value for sort (ASC)	value for sort (DESC)
+	 * "1"		["cook", "cooked"]			[3, 5]				"cook"					"cooked"
+	 * "2"		["book store", "book"]		[9, 3]				"book"					"book store"
+	 * "3"		["cooking", "hola mundo"]   [6, 6]				"cooking"				"hola mundo"
+	 * "4"		"hola"							0				"hola"					"hola"
+	 * "5"		"mundo"							5				"mundo"					"mundo"
+	 * "6"		"mundo"							5				"mundo"					"mundo"
+	 * "7"		"hola"							0				"hola"					"hola"
+	 * "8"		["cooking", "hola mundo"]	[6, 6]				"cooking"				"hola mundo"
+	 * "9"		"computer"						7				"computer"				"computer"
+	 * "10"		Does not have				MAX_DBL				"\xff"					"\xff"
 	 *
 	 * The documents are indexed as the value of "_id" indicates.
 	*/
-	{ "*", { "_id" }, 				 { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" } },
-	{ "*", { "-_id" }, 				 { "10", "9", "8", "7", "6", "5", "4", "3", "2", "1" } },
-	// { 0, 1, 2, 2, 2, 2, 2, 2, 2, 2 }
-	{ "*", { "_id:10" }, 			 { "10", "1", "2", "3", "4", "5", "6", "7", "8", "9" } },
-	// { 2, 2, 2, 2, 2, 2, 2, 2, 1, 0 }
-	{ "*", { "-_id:10" }, 			 { "2", "3", "4", "5", "6", "7", "8", "9", "1", "10" } },
 	// { "book", "computer", "cook", "cooking", "cooking", "hola", "hola", "mundo", "mundo", "\xff" }
 	{ "*", { "name" }, 			     { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
 	// { "\xff", "mundo", "mundo", "hola mundo", "hola mundo", "hola", "hola", "cooked", "computer", "book store" }
@@ -95,6 +89,12 @@ const sort_t numerical_tests[] {
 	 *
 	 * The documents are indexed as the value of "_id" indicates.
 	*/
+	{ "*", { "_id" }, 				 { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" } },
+	{ "*", { "-_id" }, 				 { "10", "9", "8", "7", "6", "5", "4", "3", "2", "1" } },
+	// { 0, 1, 2, 2, 2, 2, 2, 2, 2, 2 }
+	{ "*", { "_id:10" }, 			 { "10", "9", "8", "7", "6", "5", "4", "3", "2", "1" } },
+	// { 2, 2, 2, 2, 2, 2, 2, 2, 1, 0 }
+	{ "*", { "-_id:10" }, 			 { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" } },
 	// { -10000, -10000, 100, 100, 400, 500, 2000, 2000, 2010, 2020 }
 	{ "*", { "year" }, 				 { "3", "8", "4", "7", "6", "5", "2", "9", "1", "10" } },
 	// { 2020, 2015, 2001, 2001, 500, 400, 100, 100, 0, 0 }
@@ -200,7 +200,7 @@ const sort_t boolean_tests[] {
 	{ "*", { "there:false" }, 		 	{ "1", "2", "5", "6", "9", "10", "3", "4", "7", "8" } },
 	// { 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }
 	{ "*", { "-there:false" }, 			{ "1", "3", "4", "7", "8", "10", "2", "5", "6", "9" } },
-	{ "*", { "-there:false", "-_id" },	{ "8", "7", "4", "3", "10", "1", "9", "6", "5", "2" } },
+	{ "*", { "-there:false", "-_id" },	{ "10", "8", "7", "4", "3", "1", "9", "6", "5", "2" } },
 };
 
 
@@ -328,12 +328,15 @@ int make_search(const sort_t _tests[], int len) {
 			} else {
 				Xapian::MSetIterator m = mset.begin();
 				for (auto it = p.expect_result.begin(); m != mset.end(); ++it, ++m) {
-					std::string d_id(m.get_document().get_value(0));
-					if (it->compare(d_id) != 0) {
+					auto val = Unserialise::unserialise(INTEGER_TYPE, m.get_document().get_value(0));
+					if (it->compare(val) != 0) {
 						++cont;
-						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_ID, d_id.c_str(), RESERVED_ID, it->c_str());
+						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_ID, val.c_str(), RESERVED_ID, it->c_str());
+					} else {
+						fprintf(stderr, "+++++ %s  ", val.c_str());
 					}
 				}
+				fprintf(stderr, "\n");
 			}
 		} catch (const std::exception& exc) {
 			L_EXC(nullptr, "ERROR: %s\n", exc.what());

@@ -86,7 +86,7 @@ inline static void add_numeric_prefix(std::unordered_set<std::string>& added_pre
 {
 	// Xapian does not allow repeat prefixes.
 	if (added_prefixes.insert(prefix).second) {
-		auto nfp = std::make_unique<NumericFieldProcessor>(prefix);
+		auto nfp = std::make_unique<NumericFieldProcessor>(INTEGER_TYPE, prefix);
 		queryparser.add_prefix(prefix, nfp.get());
 		nfps.push_back(std::move(nfp));
 	}

@@ -74,7 +74,9 @@
 #define STATE_PTH 4
 #define STATE_HST 5
 
-const std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
+const std::regex float_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
+const std::regex integer_re("(-?\\d+)", std::regex::optimize);
+const std::regex positive_re("(\\d+)", std::regex::optimize);
 const std::regex find_range_re("(.*)\\.\\.(.*)", std::regex::optimize);
 
 
@@ -746,7 +748,7 @@ std::string get_prefix(const std::string& name, const std::string& prefix, char 
 	for (auto& c : slot) c += 17;
 
 	std::string res(prefix);
-	res.append(1, toupper(type));
+	res.append(1, type);
 	return res + slot;
 }
 
@@ -777,9 +779,21 @@ bool isRange(const std::string& str) {
 }
 
 
-bool isNumeric(const std::string& str) {
+bool isFloat(const std::string& str) {
 	std::smatch m;
-	return std::regex_match(str, m, numeric_re) && static_cast<size_t>(m.length(0)) == str.size();
+	return std::regex_match(str, m, float_re) && static_cast<size_t>(m.length(0)) == str.size();
+}
+
+
+bool isInteger(const std::string& str) {
+	std::smatch m;
+	return std::regex_match(str, m, integer_re) && static_cast<size_t>(m.length(0)) == str.size();
+}
+
+
+bool isPositive(const std::string& str) {
+	std::smatch m;
+	return std::regex_match(str, m, positive_re) && static_cast<size_t>(m.length(0)) == str.size();
 }
 
 
@@ -949,7 +963,7 @@ void move_files(const std::string& src, const std::string& dst) {
 }
 
 
-inline bool exist(const std::string& path) {
+bool exist(const std::string& path) {
 	struct stat buffer;
 	return stat(path.c_str(), &buffer) == 0;
 }
@@ -1093,16 +1107,6 @@ int copy_file(const std::string& src, const std::string& dst, bool create, const
 	}
 	closedir(dir_src);
 	return 0;
-}
-
-
-int strict_stoi(const std::string& str) {
-	std::string::size_type sz;
-	int res = std::stoi(str, &sz);
-	if (sz != str.size()) {
-		throw std::invalid_argument("Can not convert value: " + str);
-	}
-	return res;
 }
 
 
