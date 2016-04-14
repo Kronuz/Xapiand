@@ -369,28 +369,37 @@ Serialise::type(char type)
 }
 
 
-void
-Unserialise::unserialise(char field_type, const std::string& serialise_val, MsgPack& result)
+MsgPack
+Unserialise::MsgPack(char field_type, const std::string& serialise_val)
 {
+	::MsgPack result;
 	switch (field_type) {
-		case NUMERIC_TYPE:
-			result = numeric(serialise_val);
-			return;
+		case FLOAT_TYPE:
+			result = _float(serialise_val);
+			break;
+		case INTEGER_TYPE:
+			result = integer(serialise_val);
+			break;
+		case POSITIVE_TYPE:
+			result = positive(serialise_val);
+			break;
 		case DATE_TYPE:
 			result = date(serialise_val);
-			return;
+			break;
 		case BOOLEAN_TYPE:
 			result = boolean(serialise_val);
-			return;
+			break;
 		case STRING_TYPE:
 			result = serialise_val;
-			return;
+			break;
 		case GEO_TYPE:
 			result = geo(serialise_val);
-			return;
+			break;
 		default:
 			throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
 	}
+
+	return result;
 }
 
 

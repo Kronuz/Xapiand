@@ -132,8 +132,8 @@ namespace Serialise {
 
 
 namespace Unserialise {
-	// Unserialise serialise_val according to field_type and save the value in result.
-	void unserialise(char field_type, const std::string& serialise_val, MsgPack& result);
+	// Unserialise serialise_val according to field_type and returns a MsgPack.
+	MsgPack MsgPack(char field_type, const std::string& serialise_val);
 
 	// Unserialise serialise_val according to field_type.
 	std::string unserialise(char field_type, const std::string& serialise_val);
