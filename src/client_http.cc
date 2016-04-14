@@ -876,15 +876,11 @@ HttpClient::update_document_view()
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
 
-	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN)) {
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
-	}
-
 	operation_begins = std::chrono::system_clock::now();
 
 	std::string doc_id(path_parser.get_id());
 
-	database->patch(body, doc_id, query_field->commit, content_type, content_length);
+	Indexer::patch(endpoints, DB_WRITABLE | DB_SPAWN, body, doc_id, query_field->commit, content_type, content_length);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -899,7 +895,6 @@ HttpClient::update_document_view()
 	}
 	L_TIME(this, "Updating took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	XapiandManager::manager->database_pool.checkin(database);
 	MsgPack response;
 	auto data = response["update"];
 	data[RESERVED_ID] = doc_id;

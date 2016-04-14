@@ -24,9 +24,8 @@
 
 #include "database_autocommit.h"
 #include "generate_terms.h"
-#include "msgpack_patcher.h"
-#include "multivaluerange.h"
 #include "length.h"
+#include "multivaluerange.h"
 
 #include <bitset>
 #include <fcntl.h>
@@ -694,73 +693,6 @@ Database::reopen()
 	}
 
 	return true;
-}
-
-
-Xapian::docid
-Database::patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
-{
-	L_CALL(this, "Database::patch()");
-
-	if (!(flags & DB_WRITABLE)) {
-		throw MSG_Error("database is read-only");
-	}
-
-	if (_document_id.empty()) {
-		throw MSG_ClientError("Document must have an 'id'");
-	}
-
-	rapidjson::Document rdoc_patch;
-	MIMEType t = get_mimetype(ct_type);
-	MsgPack obj_patch;
-	std::string _ct_type(ct_type);
-	switch (t) {
-		case MIMEType::APPLICATION_JSON:
-			json_load(rdoc_patch, patches);
-			obj_patch = MsgPack(rdoc_patch);
-			break;
-		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
-			json_load(rdoc_patch, patches);
-			obj_patch = MsgPack(rdoc_patch);
-			_ct_type = JSON_TYPE;
-			break;
-		case MIMEType::APPLICATION_X_MSGPACK:
-			obj_patch = MsgPack(patches);
-			break;
-		default:
-			throw MSG_ClientError("Patches must be a JSON or MsgPack");
-	}
-
-	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
-	if (isupper(_document_id[0])) {
-		prefix.append(":");
-	}
-
-	Xapian::QueryParser queryparser;
-	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-	auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
-
-	Xapian::Enquire enquire(*db);
-	enquire.set_query(query);
-	Xapian::MSet mset = enquire.get_mset(0, 1);
-
-	if (mset.empty()) {
-		throw MSG_DocNotFoundError("Document not found");
-	}
-	Xapian::Document document = get_document(*mset.begin());
-	MsgPack obj_data = get_MsgPack(document);
-	apply_patch(obj_patch, obj_data);
-
-	L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
-	Xapian::Document doc;
-	std::string term_id;
-	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
-	auto schema_copy = new Schema (*schema);
-	Indexer::_index(schema_copy, doc, obj_data, term_id, _document_id, _ct_type, ct_length);
-
-	set_data(doc, obj_data.to_string(), get_blob(document));
-	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
-	return replace_document_term(term_id, doc, commit_);
 }
 
 

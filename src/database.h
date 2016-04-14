@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include "log.h"
 #include "database_utils.h"
 #include "endpoint.h"
 #include "fields.h"
+#include "log.h"
 #include "lru.h"
 #include "multivaluekeymaker.h"
 #include "multivalue.h"
@@ -227,8 +227,6 @@ public:
 	void get_stats_doc(MsgPack&& stats, const std::string& document_id);
 
 	bool reopen();
-
-	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
 
 	void get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
 			std::vector<std::string>& suggestions, int offset=0);

@@ -27,6 +27,7 @@
 #include "length.h"
 #include "log.h"
 #include "manager.h"
+#include "msgpack_patcher.h"
 #include "schema.h"
 #include "serialise.h"
 #include "wkt_parser.h"
@@ -522,4 +523,89 @@ Indexer::_index(Schema* schema, Xapian::Document& doc, const MsgPack& obj, std::
 		}
 		throw;
 	}
+}
+
+
+Xapian::docid
+Indexer::patch(Endpoints endpoints, int flags, const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
+{
+	L_CALL(this, "Database::patch()");
+
+	if (!(flags & DB_WRITABLE)) {
+		throw MSG_Error("database is read-only");
+	}
+
+	if (_document_id.empty()) {
+		throw MSG_ClientError("Document must have an 'id'");
+	}
+
+	rapidjson::Document rdoc_patch;
+	MIMEType t = get_mimetype(ct_type);
+	MsgPack obj_patch;
+	std::string _ct_type(ct_type);
+	switch (t) {
+		case MIMEType::APPLICATION_JSON:
+			json_load(rdoc_patch, patches);
+			obj_patch = MsgPack(rdoc_patch);
+			break;
+		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
+			json_load(rdoc_patch, patches);
+			obj_patch = MsgPack(rdoc_patch);
+			_ct_type = JSON_TYPE;
+			break;
+		case MIMEType::APPLICATION_X_MSGPACK:
+			obj_patch = MsgPack(patches);
+			break;
+		default:
+			throw MSG_ClientError("Patches must be a JSON or MsgPack");
+	}
+
+	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
+	if (isupper(_document_id[0])) {
+		prefix.append(":");
+	}
+
+	Xapian::QueryParser queryparser;
+	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
+	auto query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + _document_id);
+
+	std::shared_ptr<Database> database;
+	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, flags)) {
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
+	}
+
+	Xapian::Enquire enquire(*database->db);
+	enquire.set_query(query);
+	Xapian::MSet mset = enquire.get_mset(0, 1);
+
+	if (mset.empty()) {
+		throw MSG_DocNotFoundError("Document not found");
+	}
+	Xapian::Document document = database->get_document(*mset.begin());
+
+	XapiandManager::manager->database_pool.checkin(database);
+
+	MsgPack obj_data = get_MsgPack(document);
+	apply_patch(obj_patch, obj_data);
+
+	L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
+
+	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
+	auto schema_copy = new Schema (*schema);
+
+	Xapian::Document doc;
+	std::string term_id;
+	Indexer::_index(schema_copy, doc, obj_data, term_id, _document_id, _ct_type, ct_length);
+
+	set_data(doc, obj_data.to_string(), get_blob(document));
+	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
+
+	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, flags)) {
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
+	}
+
+	int did = database->replace_document_term(term_id, doc, commit_);
+	XapiandManager::manager->manager->database_pool.checkin(database);
+	XapiandManager::manager->database_pool.set_schema(endpoints[0], std::shared_ptr<const Schema>(schema_copy));
+	return did;
 }
