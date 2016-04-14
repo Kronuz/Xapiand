@@ -47,7 +47,7 @@ inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
 		if (target.compare("-") == 0) {
 			o.insert_item_to_array(o.body->obj->via.array.size, val);
 		} else {
-			int offset = strict_stoi(target);
+			int offset = strict(std::stoi, target);
 			o.insert_item_to_array(offset, val);
 		}
 	} else {
@@ -59,7 +59,7 @@ inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
 inline void _erase(MsgPack&& o, const std::string& target) {
 	try {
 		if (o.get_type() == msgpack::type::ARRAY) {
-			o.erase(strict_stoi(target));
+			o.erase(strict(std::stoi, target));
 		} else {
 			o.erase(target);
 		}
