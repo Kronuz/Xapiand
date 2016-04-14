@@ -365,8 +365,8 @@ Indexer::index(const Endpoints& endpoints, int flags, const MsgPack& obj, const 
 	Xapian::Document doc;
 	std::string term_id;
 
-	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0], flags);
-	auto schema_copy = new Schema (*schema);
+	auto schema = XapiandManager::manager->database_pool.get_schema(endpoints[0], flags);
+	auto schema_copy = new Schema(*schema);
 
 	if (obj.get_type() == msgpack::type::MAP) {
 		_index(schema_copy, doc, obj, term_id, _document_id, ct_type, ct_length);
@@ -431,7 +431,7 @@ Indexer::index(const Endpoints& endpoints, int flags, const std::string &body, c
 		MSG_Error("Expected exactly one enpoint");
 	}
 
-	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0], flags);
+	auto schema = XapiandManager::manager->database_pool.get_schema(endpoints[0], flags);
 	auto schema_copy = new Schema(*schema);
 
 	if (obj.get_type() == msgpack::type::MAP) {
@@ -599,8 +599,8 @@ Indexer::patch(const Endpoints& endpoints, int flags, const std::string& patches
 
 	L_DATABASE_WRAP(this, "Document to index: %s", obj_data.to_json_string().c_str());
 
-	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
-	auto schema_copy = new Schema (*schema);
+	auto schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
+	auto schema_copy = new Schema(*schema);
 
 	Xapian::Document doc;
 	std::string term_id;
