@@ -1672,7 +1672,7 @@ Schema::index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& po
 data_field_t
 Schema::get_data_field(const std::string& field_name) const
 {
-	L_CALL(this, "Database::get_data_field()");
+	L_CALL(this, "Schema::get_data_field()");
 
 	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
 
@@ -1716,7 +1716,7 @@ Schema::get_data_field(const std::string& field_name) const
 data_field_t
 Schema::get_slot_field(const std::string& field_name) const
 {
-	L_CALL(this, "Database::get_slot_field()");
+	L_CALL(this, "Schema::get_slot_field()");
 
 	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
 
@@ -1734,4 +1734,3 @@ Schema::get_slot_field(const std::string& field_name) const
 
 	return res;
 }
-
