@@ -378,7 +378,7 @@ Indexer::index(Endpoints endpoints, int flags, const MsgPack& obj, const std::st
 	XapiandManager::manager->manager->database_pool.checkout(database, endpoints, flags);
 	Xapian::docid did = database->replace_document_term(term_id, doc, commit_);
 	XapiandManager::manager->manager->database_pool.checkin(database);
-	XapiandManager::manager->database_pool.set_schema(endpoints[0], std::shared_ptr<const Schema>(schema_copy));
+	XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
 	return did;
 }
 
@@ -445,7 +445,7 @@ Indexer::index(Endpoints endpoints, int flags, const std::string &body, const st
 
 	Xapian::docid did = database->replace_document_term(term_id, doc, commit_);
 	XapiandManager::manager->manager->database_pool.checkin(database);
-	XapiandManager::manager->database_pool.set_schema(endpoints[0], std::shared_ptr<const Schema>(schema_copy));
+	XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
 	return did;
 }
 

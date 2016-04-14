@@ -2337,7 +2337,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 
 
 void
-DatabasePool::set_schema(const Endpoint& endpoint, std::shared_ptr<const Schema> new_schema)
+DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const Schema> new_schema)
 {
 	L_CALL(this, "DatabasePool::set_schema()");
 
@@ -2348,6 +2348,14 @@ DatabasePool::set_schema(const Endpoint& endpoint, std::shared_ptr<const Schema>
 	}
 
 	std::atomic_exchange(schema, new_schema);
+
+	std::shared_ptr<Database> database;
+	if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
+		database->set_metadata(RESERVED_SCHEMA, (*schema)->to_string());
+		checkin(database);
+	} else {
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.as_string().c_str());
+	}
 }
 
 
