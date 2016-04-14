@@ -2326,16 +2326,17 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 		std::string schema_str;
 		std::shared_ptr<Database> database;
 		if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-			schema_str = database->get_metadata(RESERVED_SCHEMA);
+			schema_str.assign(database->get_metadata(RESERVED_SCHEMA));
 			checkin(database);
 		} else {
 			throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.as_string().c_str());
 		}
 		auto schema_ptr = new Schema();
-		schema_ptr->build_schema(schema_str);
+		schema_ptr->build(schema_str);
 
 		std::atomic_exchange(schema, std::shared_ptr<const Schema>(schema_ptr));
 	}
+
 	return *schema;
 }
 
