@@ -395,10 +395,20 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 	MsgPack field = item_doc.get_type() == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
 	switch (field.get_type()) {
 		case msgpack::type::POSITIVE_INTEGER:
+			if (specification.numeric_detection) {
+				specification.sep_types[2] = POSITIVE_TYPE;
+				return;
+			}
+			break;
 		case msgpack::type::NEGATIVE_INTEGER:
+			if (specification.numeric_detection) {
+				specification.sep_types[2] = INTEGER_TYPE;
+				return;
+			}
+			break;
 		case msgpack::type::FLOAT:
 			if (specification.numeric_detection) {
-				specification.sep_types[2] = NUMERIC_TYPE;
+				specification.sep_types[2] = FLOAT_TYPE;
 				return;
 			}
 			break;
@@ -726,7 +736,7 @@ Schema::process_type(MsgPack&, const MsgPack& doc_type, specification_t& specifi
 
 	try {
 		if (!set_types(lower_string(doc_type.get_str()), specification.sep_types)) {
-			throw MSG_ClientError("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, NUMERIC_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
+			throw MSG_ClientError("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, FLOAT_STR, INTEGER_STR, POSITIVE_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_TYPE);
@@ -1290,7 +1300,9 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 				}
 				break;
 			}
-			case NUMERIC_TYPE: {
+			case INTEGER_TYPE:
+			case POSITIVE_TYPE:
+			case FLOAT_TYPE: {
 				if (!specification.doc_acc) {
 					specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_num);
 				}
@@ -1454,78 +1466,79 @@ Schema::index_term(data_t& data, std::string&& serialise_val, size_t pos) const
 		return;
 	}
 
-	if (specification.sep_types[2] == STRING_TYPE && !specification.bool_term) {
+	if (data.specification.sep_types[2] == STRING_TYPE && !data.specification.bool_term) {
 		if (serialise_val.find(" ") != std::string::npos) {
-			return index_text(specification, doc, std::move(serialise_val), pos);
+			return index_text(data, std::move(serialise_val), pos);
 		}
 		to_lower(serialise_val);
 	}
 
-	L_INDEX(this, "Term[%d] -> %s: %s", pos, specification.prefix.c_str(), serialise_val.c_str());
-	std::string nameterm(prefixed(serialise_val, specification.prefix));
-	unsigned position = specification.position[getPos(pos, specification.position.size())];
+	L_INDEX(this, "Term[%d] -> %s: %s", pos, data.specification.prefix.c_str(), serialise_val.c_str());
+	std::string nameterm(prefixed(serialise_val, data.specification.prefix));
+	unsigned position = data.specification.position[getPos(pos, data.specification.position.size())];
 	if (position) {
-		if (specification.bool_term) {
-			doc.add_posting(nameterm, position, 0);
+		if (data.specification.bool_term) {
+			data.doc.add_posting(nameterm, position, 0);
 		} else {
-			doc.add_posting(nameterm, position, specification.weight[getPos(pos, specification.weight.size())]);
+			data.doc.add_posting(nameterm, position, data.specification.weight[getPos(pos, data.specification.weight.size())]);
 		}
-		L_INDEX(this, "Bool: %s  Posting: %s", specification.bool_term ? "true" : "false", repr(nameterm).c_str());
+		L_INDEX(this, "Bool: %s  Posting: %s", data.specification.bool_term ? "true" : "false", repr(nameterm).c_str());
 	} else {
-		if (specification.bool_term) {
-			doc.add_boolean_term(nameterm);
+		if (data.specification.bool_term) {
+			data.doc.add_boolean_term(nameterm);
 		} else {
-			doc.add_term(nameterm, specification.weight[getPos(pos, specification.weight.size())]);
+			data.doc.add_term(nameterm, data.specification.weight[getPos(pos, data.specification.weight.size())]);
 		}
-		L_INDEX(this, "Bool: %s  Term: %s", specification.bool_term ? "true" : "false", repr(nameterm).c_str());
+		L_INDEX(this, "Bool: %s  Term: %s", data.specification.bool_term ? "true" : "false", repr(nameterm).c_str());
 	}
 }
 
 
 void
-Schema::index_values(MsgPack& properties, const MsgPack& values, const specification_t& specification, Xapian::Document& doc, bool is_term)
+Schema::index_values(MsgPack& properties, const MsgPack& values, data_t& data, bool is_term)
 {
 	L_CALL(this, "Schema::index_values()");
 
-	// L_INDEX(this, "Values => Specifications: %s", specification.to_string().c_str());
-	if (!(specification.found_field || specification.dynamic)) {
-		throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
+	// L_INDEX(this, "Values => Specifications: %s", data.specification.to_string().c_str());
+	if (!(data.specification.found_field || data.specification.dynamic)) {
+		throw MSG_ClientError("%s is not dynamic", data.specification.full_name.c_str());
 	}
 
-	if (specification.store) {
-		StringSet& s = map_values[specification.slot];
+	if (data.specification.store) {
+		StringSet& s = data.map_values[data.specification.slot];
 		size_t pos = 0;
 		if (values.get_type() == msgpack::type::ARRAY) {
 			set_type_to_array(properties);
 			for (auto value : values) {
-				index_value(value, specification, doc, s, pos, is_term);
+				index_value(data, value, s, pos, is_term);
 			}
 		} else {
-			index_value(values, specification, doc, s, pos, is_term);
+			index_value(data, values, s, pos, is_term);
 		}
-		L_INDEX(this, "Slot: %u serialized: %s", specification.slot, repr(s.serialise()).c_str());
+		L_INDEX(this, "Slot: %u serialized: %s", data.specification.slot, repr(s.serialise()).c_str());
 	}
 }
 
 
 void
-Schema::index_value(const MsgPack& value, const specification_t& specification, Xapian::Document& doc, StringSet& s, size_t& pos, bool is_term) const
+Schema::index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& pos, bool is_term) const
 {
 	L_CALL(this, "Schema::index_value()");
 
 	std::string value_v;
 
 	// Index terms generated by accuracy.
-	switch (specification.sep_types[2]) {
-		case NUMERIC_TYPE: {
+	switch (data.specification.sep_types[2]) {
+		case FLOAT_TYPE:
+		case INTEGER_TYPE:
+		case POSITIVE_TYPE: {
 			try {
-				double _value = value.get_f64();
-				value_v = Serialise::numeric(NUMERIC_TYPE, _value);
-				int64_t int_value = static_cast<int64_t>(_value);
-				auto it = specification.acc_prefix.begin();
-				for (const auto& acc : specification.accuracy) {
-					std::string term_v = Serialise::numeric(NUMERIC_TYPE, int_value - int_value % (uint64_t)acc);
-					doc.add_term(prefixed(term_v, *(it++)));
+				value_v.assign(Serialise::serialise(data.specification.sep_types[2], value));
+				int64_t int_value = static_cast<int64_t>(value.get_f64());
+				auto it = data.specification.acc_prefix.begin();
+				for (const auto& acc : data.specification.accuracy) {
+					std::string term_v = Serialise::integer(data.specification.sep_types[2], int_value - int_value % (uint64_t)acc);
+					data.doc.add_term(prefixed(term_v, *(it++)));
 				}
 				s.insert(value_v);
 				break;
