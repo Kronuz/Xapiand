@@ -392,14 +392,20 @@ Schema::get_subproperties(MsgPack& properties, specification_t& specification)
 {
 	L_CALL(this, "Schema::get_subproperties()");
 
-	auto subproperties = properties[specification.name];
-	restart_specification(specification);
-	if (subproperties) {
-		specification.found_field = true;
-		update_specification(subproperties, specification);
-	} else {
-		to_store = true;
-		specification.found_field = false;
+	std::vector<std::string> field_names;
+	stringTokenizer(specification.name, DB_OFFSPRING_UNION, field_names);
+
+	auto subproperties
+	for (const auto& field_name : field_names) {
+		subproperties.reset(properties[field_name]);
+		restart_specification(specification);
+		if (subproperties) {
+			specification.found_field = true;
+			update_specification(subproperties, specification);
+		} else {
+			to_store = true;
+			specification.found_field = false;
+		}
 	}
 
 	return subproperties;
