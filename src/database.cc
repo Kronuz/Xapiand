@@ -1032,10 +1032,12 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 			Xapian::Query queryRange;
 
 			switch (field_t.type) {
-				case NUMERIC_TYPE: {
+				case FLOAT_TYPE:
+				case INTEGER_TYPE:
+				case POSITIVE_TYPE: {
 					auto start(m.str(1)), end(m.str(2));
 
-					queryRange = MultipleValueRange::getQuery(field_t.slot, NUMERIC_TYPE, start, end, field_name);
+					queryRange = MultipleValueRange::getQuery(field_t.slot, FLOAT_TYPE, start, end, field_name);
 
 					auto filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, srch.nfps, queryparser);
 					if (!filter_term.empty()) {
@@ -1098,10 +1100,12 @@ Database::_search(const std::string& query, unsigned flags, bool text, const std
 			}
 
 			switch (field_t.type) {
-				case NUMERIC_TYPE:
+				case FLOAT_TYPE:
+				case INTEGER_TYPE:
+				case POSITIVE_TYPE:
 					// Xapian does not allow repeat prefixes.
 					if (added_prefixes.insert(field_t.prefix).second) {
-						auto nfp = std::make_unique<NumericFieldProcessor>(field_t.prefix);
+						auto nfp = std::make_unique<NumericFieldProcessor>(field_t.type, field_t.prefix);
 						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, nfp.get()) : queryparser.add_prefix(field_name, nfp.get());
 						srch.nfps.push_back(std::move(nfp));
 					}
@@ -2010,13 +2014,13 @@ Database::get_value(const Xapian::Document& document, const std::string& slot_na
 
 	std::string value = get_value(document, slot_field.slot);
 
-	MsgPack result;
 	try {
-		Unserialise::unserialise(slot_field.type, value, result);
+		return Unserialise::MsgPack(slot_field.type, value);
 	} catch (const SerialisationError& exc) {
 		throw MSG_Error("Problem unserializing value (%s)", exc.get_msg().c_str());
 	}
-	return result;
+
+	return MsgPack();
 }
 
 
