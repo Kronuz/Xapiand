@@ -359,7 +359,7 @@ std::string msgpack_to_html_error(const msgpack::object& o) {
 Xapian::docid
 Indexer::index(Endpoints endpoints, int flags, const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
 {
-	L_CALL(nullptr, "Database::index(2)");
+	L_CALL(nullptr, "Indexer::index(2)");
 
 	L_DATABASE_WRAP(this, "Document to index: %s", obj.to_string().c_str());
 	Xapian::Document doc;
@@ -374,18 +374,22 @@ Indexer::index(Endpoints endpoints, int flags, const MsgPack& obj, const std::st
 
 	set_data(doc, obj.to_string(), "");
 	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
+
 	std::shared_ptr<Database> database;
-	XapiandManager::manager->manager->database_pool.checkout(database, endpoints, flags);
-	Xapian::docid did = database->replace_document_term(term_id, doc, commit_);
-	XapiandManager::manager->manager->database_pool.checkin(database);
-	XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
-	return did;
+	if (XapiandManager::manager->manager->database_pool.checkout(database, endpoints, flags)) {
+		Xapian::docid did = database->replace_document_term(term_id, doc, commit_);
+		XapiandManager::manager->manager->database_pool.checkin(database);
+		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
+		return did;
+	}
+
+	throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 }
 
 
 Xapian::docid
 Indexer::index(Endpoints endpoints, int flags, const std::string &body, const std::string &_document_id, bool commit_, const std::string &ct_type, const std::string &ct_length) {
-	L_CALL(nullptr, "Database::index(1)");
+	L_CALL(nullptr, "Indexer::index(1)");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("Database is read-only");
@@ -428,7 +432,7 @@ Indexer::index(Endpoints endpoints, int flags, const std::string &body, const st
 	}
 
 	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0], flags);
-	auto schema_copy = new Schema (*schema);
+	auto schema_copy = new Schema(*schema);
 
 	if (obj.get_type() == msgpack::type::MAP) {
 		blob = false;
@@ -439,56 +443,56 @@ Indexer::index(Endpoints endpoints, int flags, const std::string &body, const st
 	L_DATABASE(this, "Schema: %s", clon_schema.to_json_string().c_str());
 
 	std::shared_ptr<Database> database;
-	if (!XapiandManager::manager->manager->database_pool.checkout(database, endpoints, flags)) {
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
+	if (XapiandManager::manager->manager->database_pool.checkout(database, endpoints, flags)) {
+		Xapian::docid did = database->replace_document_term(term_id, doc, commit_);
+		XapiandManager::manager->manager->database_pool.checkin(database);
+		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
+		return did;
 	}
 
-	Xapian::docid did = database->replace_document_term(term_id, doc, commit_);
-	XapiandManager::manager->manager->database_pool.checkin(database);
-	XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
-	return did;
+	throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 }
 
 
 void
 Indexer::_index(Schema* schema, Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
 {
-	L_CALL(this, "Database::_index()");
-	
+	L_CALL(this, "Indexer::_index()");
+
 	auto properties = schema->getPropertiesSchema();
 	specification_t specification;
-	
+
 	// Index Required Data.
 	term_id = schema->serialise_id(properties, specification, _document_id);
-	
+
 	std::size_t found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
 	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
-	
+
 	// Saves document's id in DB_SLOT_ID
 	doc.add_value(DB_SLOT_ID, term_id);
-	
+
 	// Document's id is also a boolean term (otherwise it doesn't replace an existing document)
 	term_id = prefixed(term_id, DOCUMENT_ID_TERM_PREFIX);
 	doc.add_boolean_term(term_id);
 	L_DATABASE_WRAP(this, "Slot: %d _id: %s (%s)", DB_SLOT_ID, _document_id.c_str(), term_id.c_str());
-	
+
 	// Indexing the content values of data.
 	doc.add_value(DB_SLOT_OFFSET, DEFAULT_OFFSET);
 	doc.add_value(DB_SLOT_TYPE, ct_type);
 	doc.add_value(DB_SLOT_LENGTH, ct_length);
-	
+
 	// Index terms for content-type
 	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
 	doc.add_term(prefixed(ct_type, term_prefix));
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
-	
+
 	// Index obj.
 	// Save a copy of schema for undo changes if there is a exception.
 	auto str_schema = schema->to_string();
 	auto _to_store = schema->get_store();
-	
+
 	try {
 		Schema::data_t schema_data(doc);
 		TaskVector tasks;
@@ -509,14 +513,14 @@ Indexer::_index(Schema* schema, Xapian::Document& doc, const MsgPack& obj, std::
 				}
 			}
 		}
-		
+
 		schema->restart_specification(schema_data.specification);
 		const specification_t spc_start = schema_data.specification;
 		for (auto& task : tasks) {
 			task.get();
 			schema_data.specification = spc_start;
 		}
-		
+
 		for (const auto& elem : schema_data.map_values) {
 			doc.add_value(elem.first, elem.second.serialise());
 		}
@@ -534,7 +538,7 @@ Indexer::_index(Schema* schema, Xapian::Document& doc, const MsgPack& obj, std::
 Xapian::docid
 Indexer::patch(Endpoints endpoints, int flags, const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length)
 {
-	L_CALL(this, "Database::patch()");
+	L_CALL(this, "Indexer::patch()");
 
 	if (!(flags & DB_WRITABLE)) {
 		throw MSG_Error("database is read-only");
@@ -605,12 +609,12 @@ Indexer::patch(Endpoints endpoints, int flags, const std::string& patches, const
 	set_data(doc, obj_data.to_string(), get_blob(document));
 	L_DATABASE(this, "Schema: %s", schema.to_json_string().c_str());
 
-	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, flags)) {
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
+	if (XapiandManager::manager->database_pool.checkout(database, endpoints, flags)) {
+		int did = database->replace_document_term(term_id, doc, commit_);
+		XapiandManager::manager->manager->database_pool.checkin(database);
+		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
+		return did;
 	}
 
-	int did = database->replace_document_term(term_id, doc, commit_);
-	XapiandManager::manager->manager->database_pool.checkin(database);
-	XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema_copy));
-	return did;
+	throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 }
