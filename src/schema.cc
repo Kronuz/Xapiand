@@ -273,12 +273,10 @@ specification_t::to_string() const
 }
 
 
-Schema::Schema (const Schema& other)
-{
-	schema = other.schema.clone();
-	exist = other.exist.load();
-	to_store = other.to_store.load();
-}
+Schema::Schema(const Schema& other)
+	: schema(other.schema.clone()),
+	  exist(other.exist.load()),
+	  to_store(other.to_store.load()) { }
 
 
 void
@@ -314,7 +312,7 @@ Schema::set_database(Database* _database)
 void
 Schema::build_schema(const std::string& s_schema)
 {
-	L_CALL(this, "Schema::set_database()");
+	L_CALL(this, "Schema::build_schema()");
 
 	if (s_schema.empty()) {
 		schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;
