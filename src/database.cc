@@ -809,33 +809,34 @@ Database::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id
 	auto _to_store = schema.get_store();
 
 	try {
+		Schema::data_t schema_data(doc);
 		TaskVector tasks;
 		tasks.reserve(obj.size());
 		for (const auto item_key : obj) {
 			const auto str_key = item_key.get_str();
 			try {
 				auto func = map_dispatch_reserved.at(str_key);
-				(schema.*func)(properties, obj.at(str_key), specification);
+				(schema.*func)(properties, obj.at(str_key), schema_data.specification);
 			} catch (const std::out_of_range&) {
 				if (is_valid(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, &schema, std::ref(properties), obj.at(str_key), std::ref(specification), std::ref(doc), std::move(str_key)));
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, &schema, std::ref(properties), obj.at(str_key), std::ref(schema_data), std::move(str_key)));
 				} else {
 					try {
 						auto func = map_dispatch_root.at(str_key);
-						tasks.push_back(std::async(std::launch::deferred, func, &schema, std::ref(properties), obj.at(str_key), std::ref(specification), std::ref(doc)));
+						tasks.push_back(std::async(std::launch::deferred, func, &schema, std::ref(properties), obj.at(str_key), std::ref(schema_data)));
 					} catch (const std::out_of_range&) { }
 				}
 			}
 		}
 
-		schema.restart_specification(specification);
-		const specification_t spc_start = specification;
+		schema.restart_specification(schema_data.specification);
+		const specification_t spc_start = schema_data.specification;
 		for (auto& task : tasks) {
 			task.get();
-			specification = spc_start;
+			schema_data.specification = spc_start;
 		}
 
-		for (const auto& elem : schema.map_values) {
+		for (const auto& elem : schema_data.map_values) {
 			doc.add_value(elem.first, elem.second.serialise());
 		}
 	} catch (...) {

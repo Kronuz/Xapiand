@@ -93,24 +93,12 @@ struct specification_t {
 extern const specification_t default_spc;
 
 
-class Database;
-class Schema;
-
-
-using dispatch_reserved = void (Schema::*)(MsgPack&, const MsgPack&, specification_t&);
-using dispatch_root     = void (Schema::*)(MsgPack&, const MsgPack, specification_t&, Xapian::Document&);
-using dispatch_index    = void (Schema::*)(MsgPack&, const MsgPack&, const specification_t&, Xapian::Document&);
-using dispatch_property = void (*)(MsgPack&&, specification_t&);
-using dispatch_readable = void (*)(MsgPack&&, const MsgPack&);
-
-
-extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_reserved;
-extern const std::unordered_map<std::string, dispatch_root> map_dispatch_root;
-extern const std::unordered_map<std::string, dispatch_property> map_dispatch_properties;
-extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
-
-
 using TaskVector = std::vector<std::future<void>>;
+using MapValues = std::unordered_map<Xapian::valueno, StringSet>;
+
+
+class Database;
+
 
 class Schema {
 	Database* database;
@@ -152,7 +140,14 @@ class Schema {
 
 
 public:
-	std::unordered_map<Xapian::valueno, StringSet> map_values;
+	struct data_t {
+		Xapian::Document& doc;
+		specification_t specification;
+		MapValues map_values;
+
+		data_t(Xapian::Document& doc_)
+			: doc(doc_) { }
+	};
 
 	Schema() = default;
 
@@ -188,7 +183,6 @@ public:
 	 * Returns the properties of schema.
 	 */
 	inline MsgPack getPropertiesSchema() {
-		map_values.clear();
 		return schema.at(RESERVED_SCHEMA);
 	}
 
@@ -206,7 +200,7 @@ public:
 	 * Gets the properties of item_key and specification is updated.
 	 * Returns the properties of schema.
 	 */
-	MsgPack get_subproperties(MsgPack& properties, const std::string& item_key, specification_t& specification);
+	MsgPack get_subproperties(MsgPack& properties, specification_t& specification);
 
 	/*
 	 * Sets properties and update specification with the properties in item_doc.
@@ -266,25 +260,25 @@ public:
 	 * Functions for reserved words that are only in json's root.
 	 */
 
-	inline void process_values(MsgPack& properties, const MsgPack doc_values, specification_t& specification, Xapian::Document& doc);
-	inline void process_texts(MsgPack& properties, const MsgPack doc_texts, specification_t& specification, Xapian::Document& doc);
-	inline void process_terms(MsgPack& properties, const MsgPack doc_terms, specification_t& specification, Xapian::Document& doc);
+	inline void process_values(MsgPack& properties, const MsgPack doc_values, data_t& data);
+	inline void process_texts(MsgPack& properties, const MsgPack doc_texts, data_t& data);
+	inline void process_terms(MsgPack& properties, const MsgPack doc_terms, data_t& data);
 
 
 	/*
 	 * Functions for adding fields to index in FieldMap.
 	 */
 
-	inline void fixed_index(MsgPack& properties, const MsgPack& object, specification_t& specifications, Xapian::Document& doc);
-	void index_object(MsgPack& global_properties, const MsgPack object, specification_t& specification, Xapian::Document& doc, const std::string name=std::string());
-	void index_array(MsgPack& properties, const MsgPack& array, specification_t& specification, Xapian::Document& doc);
-	inline void index_item(MsgPack& properties, const MsgPack& value, specification_t& specification, Xapian::Document& doc);
-	void index_texts(MsgPack& properties, const MsgPack& texts, const specification_t& specification, Xapian::Document& doc);
-	void index_text(const specification_t& specification, Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-	void index_terms(MsgPack& properties, const MsgPack& terms, const specification_t& specification, Xapian::Document& doc);
-	void index_term(const specification_t& specification, Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-	void index_values(MsgPack& properties, const MsgPack& values, const specification_t& specification, Xapian::Document& doc, bool is_term=false);
-	void index_value(const MsgPack& value, const specification_t& specification, Xapian::Document& doc, StringSet& s, size_t& pos, bool is_term) const;
+	inline void fixed_index(MsgPack& properties, const MsgPack& object, data_t& data);
+	void index_object(MsgPack& global_properties, const MsgPack object, data_t& data, const std::string name=std::string());
+	void index_array(MsgPack& properties, const MsgPack& array, data_t& data);
+	inline void index_item(MsgPack& properties, const MsgPack& value, data_t& data);
+	void index_texts(MsgPack& properties, const MsgPack& texts, data_t& data);
+	void index_text(data_t& data, std::string&& serialise_val, size_t pos) const;
+	void index_terms(MsgPack& properties, const MsgPack& terms, data_t& data);
+	void index_term(data_t& data, std::string&& serialise_val, size_t pos) const;
+	void index_values(MsgPack& properties, const MsgPack& values, data_t& data, bool is_term=false);
+	void index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& pos, bool is_term) const;
 
 
 	/*
@@ -396,3 +390,16 @@ public:
 		specification.bool_term = prop_bool_term.get_bool();
 	}
 };
+
+
+using dispatch_reserved = void (Schema::*)(MsgPack&, const MsgPack&, specification_t&);
+using dispatch_root     = void (Schema::*)(MsgPack&, const MsgPack, Schema::data_t&);
+using dispatch_index    = void (Schema::*)(MsgPack&, const MsgPack&, Schema::data_t&);
+using dispatch_property = void (*)(MsgPack&&, specification_t&);
+using dispatch_readable = void (*)(MsgPack&&, const MsgPack&);
+
+
+extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_reserved;
+extern const std::unordered_map<std::string, dispatch_root> map_dispatch_root;
+extern const std::unordered_map<std::string, dispatch_property> map_dispatch_properties;
+extern const std::unordered_map<std::string, dispatch_readable> map_dispatch_readable;
