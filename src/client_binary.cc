@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,23 +24,23 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include "io_utils.h"
+#include "length.h"
 #include "servers/server.h"
 #include "servers/tcp_base.h"
 #include "utils.h"
-#include "length.h"
-#include "io_utils.h"
 
+#include <fcntl.h>
 #include <sysexits.h>
 #include <sys/socket.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
-const int DB_ACTION_MASK_	 = 0x03;  // Xapian::DB_ACTION_MASK_
 
-inline std::string::size_type
-common_prefix_length(const std::string &a, const std::string &b)
-{
+constexpr int DB_ACTION_MASK_ = 0x03;  // Xapian::DB_ACTION_MASK_
+
+
+inline std::string::size_type common_prefix_length(const std::string &a, const std::string &b) {
 	std::string::size_type minlen = std::min(a.size(), b.size());
 	std::string::size_type common;
 	for (common = 0; common < minlen; ++common) {
@@ -49,9 +49,8 @@ common_prefix_length(const std::string &a, const std::string &b)
 	return common;
 }
 
-std::string
-serialise_error(const Xapian::Error &exc)
-{
+
+std::string serialise_error(const Xapian::Error &exc) {
 	// The byte before the type name is the type code.
 	std::string result(1, (exc.get_type())[-1]);
 	result += serialise_length(exc.get_context().length());
@@ -524,6 +523,7 @@ BinaryClient::remote_server(RemoteMessageType type, const std::string &message)
 	}
 }
 
+
 void
 BinaryClient::msg_allterms(const std::string &message)
 {
@@ -549,6 +549,7 @@ BinaryClient::msg_allterms(const std::string &message)
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
+
 
 void
 BinaryClient::msg_termlist(const std::string &message)
@@ -581,6 +582,7 @@ BinaryClient::msg_termlist(const std::string &message)
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
+
 void
 BinaryClient::msg_positionlist(const std::string &message)
 {
@@ -605,6 +607,7 @@ BinaryClient::msg_positionlist(const std::string &message)
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
+
 
 void
 BinaryClient::msg_postlist(const std::string &message)
@@ -636,6 +639,7 @@ BinaryClient::msg_postlist(const std::string &message)
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
+
 void
 BinaryClient::msg_readaccess(const std::string &message)
 {
@@ -662,6 +666,7 @@ BinaryClient::msg_readaccess(const std::string &message)
 
 	msg_update(message);
 }
+
 
 void
 BinaryClient::msg_writeaccess(const std::string & message)
@@ -691,6 +696,7 @@ BinaryClient::msg_writeaccess(const std::string & message)
 	msg_update(message);
 }
 
+
 void
 BinaryClient::msg_reopen(const std::string & message)
 {
@@ -708,6 +714,7 @@ BinaryClient::msg_reopen(const std::string & message)
 		msg_update(message);
 	}
 }
+
 
 void
 BinaryClient::msg_update(const std::string &)
@@ -742,6 +749,7 @@ BinaryClient::msg_update(const std::string &)
 
 	send_message(RemoteReplyType::REPLY_UPDATE, message);
 }
+
 
 void
 BinaryClient::msg_query(const std::string &message_in)
@@ -857,9 +865,9 @@ BinaryClient::msg_query(const std::string &message_in)
 	}
 
 	len = unserialise_length(&p, p_end, true);
-    std::unique_ptr<Xapian::Weight> wt(wttype->unserialise(std::string(p, len)));
-    enquire->set_weighting_scheme(*wt);
-    p += len;
+	std::unique_ptr<Xapian::Weight> wt(wttype->unserialise(std::string(p, len)));
+	enquire->set_weighting_scheme(*wt);
+	p += len;
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the RSet object.
@@ -893,6 +901,7 @@ BinaryClient::msg_query(const std::string &message_in)
 	// No checkout for database (it'll still be needed by msg_getmset)
 }
 
+
 void
 BinaryClient::msg_getmset(const std::string & message)
 {
@@ -925,6 +934,7 @@ BinaryClient::msg_getmset(const std::string & message)
 	send_message(RemoteReplyType::REPLY_RESULTS, msg);
 }
 
+
 void
 BinaryClient::msg_document(const std::string &message)
 {
@@ -950,6 +960,7 @@ BinaryClient::msg_document(const std::string &message)
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
+
 void
 BinaryClient::msg_keepalive(const std::string &)
 {
@@ -963,6 +974,7 @@ BinaryClient::msg_keepalive(const std::string &)
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
+
 void
 BinaryClient::msg_termexists(const std::string &term)
 {
@@ -973,6 +985,7 @@ BinaryClient::msg_termexists(const std::string &term)
 
 	send_message((db->term_exists(term) ? RemoteReplyType::REPLY_TERMEXISTS : RemoteReplyType::REPLY_TERMDOESNTEXIST), std::string());
 }
+
 
 void
 BinaryClient::msg_collfreq(const std::string &term)
@@ -985,6 +998,7 @@ BinaryClient::msg_collfreq(const std::string &term)
 	send_message(RemoteReplyType::REPLY_COLLFREQ, serialise_length(db->get_collection_freq(term)));
 }
 
+
 void
 BinaryClient::msg_termfreq(const std::string &term)
 {
@@ -995,6 +1009,7 @@ BinaryClient::msg_termfreq(const std::string &term)
 
 	send_message(RemoteReplyType::REPLY_TERMFREQ, serialise_length(db->get_termfreq(term)));
 }
+
 
 void
 BinaryClient::msg_freqs(const std::string &term)
@@ -1009,6 +1024,7 @@ BinaryClient::msg_freqs(const std::string &term)
 
 	send_message(RemoteReplyType::REPLY_FREQS, msg);
 }
+
 
 void
 BinaryClient::msg_valuestats(const std::string & message)
@@ -1035,6 +1051,7 @@ BinaryClient::msg_valuestats(const std::string & message)
 	checkin_database();
 }
 
+
 void
 BinaryClient::msg_doclength(const std::string &message)
 {
@@ -1049,6 +1066,7 @@ BinaryClient::msg_doclength(const std::string &message)
 
 	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db->get_doclength(did)));
 }
+
 
 void
 BinaryClient::msg_uniqueterms(const std::string &message)
@@ -1065,6 +1083,7 @@ BinaryClient::msg_uniqueterms(const std::string &message)
 	send_message(RemoteReplyType::REPLY_UNIQUETERMS, serialise_length(db->get_unique_terms(did)));
 }
 
+
 void
 BinaryClient::msg_commit(const std::string &)
 {
@@ -1077,6 +1096,7 @@ BinaryClient::msg_commit(const std::string &)
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
+
 void
 BinaryClient::msg_cancel(const std::string &)
 {
@@ -1086,6 +1106,7 @@ BinaryClient::msg_cancel(const std::string &)
 
 	checkin_database();
 }
+
 
 void
 BinaryClient::msg_adddocument(const std::string & message)
@@ -1098,6 +1119,7 @@ BinaryClient::msg_adddocument(const std::string & message)
 
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
 }
+
 
 void
 BinaryClient::msg_deletedocument(const std::string & message)
@@ -1115,6 +1137,7 @@ BinaryClient::msg_deletedocument(const std::string & message)
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
+
 void
 BinaryClient::msg_deletedocumentterm(const std::string & message)
 {
@@ -1124,6 +1147,7 @@ BinaryClient::msg_deletedocumentterm(const std::string & message)
 
 	checkin_database();
 }
+
 
 void
 BinaryClient::msg_replacedocument(const std::string & message)
@@ -1138,6 +1162,7 @@ BinaryClient::msg_replacedocument(const std::string & message)
 
 	checkin_database();
 }
+
 
 void
 BinaryClient::msg_replacedocumentterm(const std::string & message)
@@ -1157,6 +1182,7 @@ BinaryClient::msg_replacedocumentterm(const std::string & message)
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
 }
 
+
 void
 BinaryClient::msg_getmetadata(const std::string & message)
 {
@@ -1168,6 +1194,7 @@ BinaryClient::msg_getmetadata(const std::string & message)
 
 	send_message(RemoteReplyType::REPLY_METADATA, value);
 }
+
 
 void
 BinaryClient::msg_openmetadatakeylist(const std::string & message)
@@ -1197,6 +1224,7 @@ BinaryClient::msg_openmetadatakeylist(const std::string & message)
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
+
 void
 BinaryClient::msg_setmetadata(const std::string & message)
 {
@@ -1213,6 +1241,7 @@ BinaryClient::msg_setmetadata(const std::string & message)
 	checkin_database();
 }
 
+
 void
 BinaryClient::msg_addspelling(const std::string & message)
 {
@@ -1225,6 +1254,7 @@ BinaryClient::msg_addspelling(const std::string & message)
 
 	checkin_database();
 }
+
 
 void
 BinaryClient::msg_removespelling(const std::string & message)
@@ -1239,11 +1269,13 @@ BinaryClient::msg_removespelling(const std::string & message)
 	checkin_database();
 }
 
+
 void
 BinaryClient::msg_shutdown(const std::string &)
 {
 	shutdown();
 }
+
 
 void
 BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_, int flags_)
@@ -1294,6 +1326,7 @@ BinaryClient::replication_server(ReplicationMessageType type, const std::string 
 		throw;
 	}
 }
+
 
 void
 BinaryClient::msg_get_changesets(const std::string &)
