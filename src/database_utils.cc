@@ -185,9 +185,7 @@ rapidjson::Document to_json(const std::string& str) {
 
 
 void set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str) {
-	char h = DATABASE_DATA_HEADER_MAGIC;
-	char f = DATABASE_DATA_FOOTER_MAGIC;
-	doc.set_data(std::string(&h, 1) + serialise_length(obj_data_str.size()) + obj_data_str + std::string(&f, 1) + blob_str);
+	doc.set_data(std::string(1, DATABASE_DATA_HEADER_MAGIC).append(serialise_length(obj_data_str.size())).append(obj_data_str).append(1, DATABASE_DATA_FOOTER_MAGIC).append(blob_str));
 }
 
 
@@ -231,6 +229,7 @@ std::string to_query_string(std::string str) {
 	if (str.at(0) == '-') {
 		str[0] = '_';
 	}
+
 	return str;
 }
 
