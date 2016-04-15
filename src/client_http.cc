@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,21 +22,21 @@
 
 #include "client_http.h"
 
-#include "multivalue.h"
-#include "utils.h"
-#include "serialise.h"
-#include "length.h"
 #include "io_utils.h"
+#include "length.h"
+#include "multivalue.h"
+#include "serialise.h"
+#include "utils.h"
 
-#include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
+#include "rapidjson/stringbuffer.h"
 
-#include <unistd.h>
 #include <regex>
+#include <unistd.h>
 
+#include <arpa/inet.h>
 #include <sysexits.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>
 
 #define RESPONSE_MESSAGE "message"
 #define RESPONSE_STATUS  "status"
@@ -44,7 +44,7 @@
 #define MAX_BODY_SIZE (250 * 1024 * 1024)
 #define MAX_BODY_MEM (5 * 1024 * 1024)
 
-#define def_36e6 2176782336
+#define DEF_36e6 2176782336
 
 // Xapian http client
 #define METHOD_DELETE  0
@@ -61,9 +61,7 @@
 #define QUERY_FIELD_TIME   (1 << 3)
 
 
-type_t
-content_type_pair(const std::string& ct_type)
-{
+type_t content_type_pair(const std::string& ct_type) {
 	std::size_t found = ct_type.find_last_of("/");
 	if (found == std::string::npos) {
 		return  make_pair(std::string(), std::string());
@@ -72,12 +70,14 @@ content_type_pair(const std::string& ct_type)
 	return make_pair(std::string(content_type_str, found), std::string(content_type_str, found + 1, ct_type.size()));
 }
 
+
 static const auto any_type     = content_type_pair(ANY_TYPE);
 static const auto json_type    = content_type_pair(JSON_TYPE);
 static const auto msgpack_type = content_type_pair(MSGPACK_TYPE);
 static const auto html_type    = content_type_pair(HTML_TYPE);
 static const auto text_type    = content_type_pair(TEXT_TYPE);
 static const auto msgpack_serializers = std::vector<type_t>({json_type, msgpack_type, html_type, text_type});
+
 
 static const std::regex header_accept_re("([-a-z+]+|\\*)/([-a-z+]+|\\*)(?:[^,]*;q=(\\d+(?:\\.\\d+)?))?");
 
@@ -117,6 +117,7 @@ static const char* status_code[6][14] = {
 
 
 AcceptLRU HttpClient::accept_sets;
+
 
 std::string
 HttpClient::http_response(int status, int mode, unsigned short http_major, unsigned short http_minor, int matched_count, const std::string& body, const std::string& ct_type, const std::string& ct_encoding) {
@@ -829,7 +830,7 @@ HttpClient::index_document_view(bool gen_id)
 
 	if (gen_id) {
 		path_parser.off_id = nullptr;
-		unsigned long mangled = std::fmod(++post_id * 1679979167, def_36e6);
+		unsigned long mangled = std::fmod(++post_id * 1679979167, DEF_36e6);
 		doc_id = baseN(mangled, 36);
 	} else {
 		doc_id = path_parser.get_id();
@@ -965,6 +966,7 @@ HttpClient::schema_view()
 	return;
 }
 
+
 void
 HttpClient::facets_view()
 {
@@ -1026,9 +1028,9 @@ HttpClient::facets_view()
 	}
 	L_TIME(this, "Searching took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	XapiandManager::manager->database_pool.checkin(database);
 	L_DEBUG(this, "FINISH SEARCH");
 }
+
 
 void
 HttpClient::search_view()
@@ -1074,7 +1076,6 @@ HttpClient::search_view()
 	}().c_str());
 
 	int rc = 0;
-
 	if (mset.empty()) {
 		if (chunked) {
 			MsgPack err_response;
@@ -1185,9 +1186,9 @@ HttpClient::search_view()
 	}
 	L_TIME(this, "Searching took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	XapiandManager::manager->database_pool.checkin(database);
 	L_DEBUG(this, "FINISH SEARCH");
 }
+
 
 void
 HttpClient::bad_request_view()
@@ -1215,10 +1216,12 @@ size_t constexpr const_hash(char const *input) {
 	return *input ? static_cast<size_t>(*input) + 33 * const_hash(input + 1) : 5381;
 }
 
+
 static constexpr auto http_search = const_hash("_search");
 static constexpr auto http_facets = const_hash("_facets");
 static constexpr auto http_stats = const_hash("_stats");
 static constexpr auto http_schema = const_hash("_schema");
+
 
 int
 HttpClient::identify_cmd()
@@ -1245,6 +1248,7 @@ HttpClient::identify_cmd()
 		}
 	}
 }
+
 
 int
 HttpClient::url_resolve()
@@ -1291,6 +1295,7 @@ HttpClient::url_resolve()
 		return CMD_BAD_QUERY;
 	}
 }
+
 
 void
 HttpClient::endpoints_maker(duration<double, std::milli> timeout)
@@ -1561,7 +1566,7 @@ HttpClient::query_field_maker(int flag)
 			query_parser.rewind();
 		}
 	}
-	
+
 	if (flag & QUERY_FIELD_TIME) {
 		if (query_parser.next("time") != -1) {
 			query_field->time = query_parser.get();
@@ -1600,6 +1605,7 @@ HttpClient::clean_http_request()
 	http_parser_init(&parser, HTTP_REQUEST);
 }
 
+
 const type_t*
 HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const type_t& ct_type)
 {
@@ -1622,6 +1628,7 @@ HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const type_t& ct_t
 	return nullptr;
 }
 
+
 const type_t*
 HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const std::vector<type_t>& ct_types)
 {
@@ -1632,6 +1639,7 @@ HttpClient::is_acceptable_type(const type_t& ct_type_pattern, const std::vector<
 	}
 	return nullptr;
 }
+
 
 template <typename T>
 const type_t&
