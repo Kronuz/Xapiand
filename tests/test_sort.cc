@@ -346,7 +346,7 @@ int make_search(const sort_t _tests[], int len) {
 		Xapian::MSet mset;
 		std::vector<std::string> suggestions;
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
-
+		database = std::make_shared<Database>(d_queue, endpoints, DB_SPAWN | DB_NOWAL);
 		try {
 			database->get_mset(query, mset, spies, suggestions);
 			if (mset.size() != p.expect_result.size()) {
