@@ -26,6 +26,7 @@
 #include "fields.h"
 #include "htm.h"
 
+#include <memory>
 #include <unordered_set>
 
 
