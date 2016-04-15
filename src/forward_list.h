@@ -128,7 +128,7 @@ public:
 		}
 
 		void update() {
-			if (pre_aux->next == target) return;
+			if (std::atomic_load(&pre_aux->next) == std::atomic_load(&target)) return;
 
 			auto p = pre_aux;
 			auto n = std::atomic_load(&p->next);
