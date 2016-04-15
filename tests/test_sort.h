@@ -33,6 +33,7 @@ struct sort_t {
 };
 
 
+void create_manager();
 int create_test_db();
 int make_search(const sort_t _tests[], int len);
 int sort_test_string();

@@ -32,7 +32,7 @@ struct test_geo_t {
 	std::vector<std::string> expect_datas;
 };
 
-
+void create_manager();
 int create_test_db();
 int make_search(const test_geo_t _tests[], int len);
 int geo_range_test();

@@ -36,6 +36,7 @@ struct test_query_t {
 };
 
 
+void create_manager();
 int create_test_db();
 int make_search(const test_query_t _tests[], int len);
 int test_query_search();

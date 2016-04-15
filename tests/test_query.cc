@@ -22,19 +22,44 @@
 
 #include "test_query.h"
 
-#include "../src/log.h"
-#include "../src/serialise.h"
 #include "../src/database.h"
 #include "../src/endpoint.h"
 #include "../src/length.h"
+#include "../src/log.h"
+#include "../src/manager.h"
+#include "../src/serialise.h"
+#include "../src/xapiand.h"
 
 #include <sstream>
 #include <fstream>
+
+#define _VERBOSITY 3
+#define _DETACH false
+#define _CHERT false
+#define _SOLO true
+#define _DATABASE ""
+#define _CLUSTER_NAME "cluster_test"
+#define _NODE_NAME "node_test"
+#define _PIDFILE ""
+#define _LOGFILE ""
+#define _UID ""
+#define _GID ""
+#define _DISCOVERY_GROUP ""
+#define _RAFT_GROUP ""
+#define _NUM_SERVERS 1
+#define _DBPOOL_SIZE 1
+#define _NUM_REPLICATORS 1
+#define _THREADPOOL_SIZE 1
+#define _ENDPOINT_LIST_SIZE 1
+#define _NUM_COMMITERS 1
+#define _EV_FLAG 0
+#define _LOCAL_HOST "127.0.0.1"
 
 
 std::shared_ptr<DatabaseQueue>d_queue;
 static std::shared_ptr<Database> database;
 static std::string name_database(".db_testsearch.db");
+static Endpoints endpoints;
 
 
 // TEST query
@@ -220,26 +245,29 @@ const test_query_t test_facets[] {
 };
 
 
+void create_manager() {
+	if (!XapiandManager::manager) {
+		opts_t opts = { _VERBOSITY, _DETACH, _CHERT, _SOLO, _DATABASE, _CLUSTER_NAME, _NODE_NAME, XAPIAND_HTTP_SERVERPORT, XAPIAND_BINARY_SERVERPORT, XAPIAND_DISCOVERY_SERVERPORT, XAPIAND_RAFT_SERVERPORT, _PIDFILE, _LOGFILE, _UID, _GID, _DISCOVERY_GROUP, _RAFT_GROUP, _NUM_SERVERS, _DBPOOL_SIZE, _NUM_REPLICATORS, _THREADPOOL_SIZE, _ENDPOINT_LIST_SIZE, _NUM_COMMITERS, _EV_FLAG};
+		ev::default_loop default_loop(opts.ev_flags);
+		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
+	}
+}
+
+
 int create_test_db() {
 	// Delete database to create.
 	delete_files(name_database);
+	create_manager();
 
 	int cont = 0;
-	auto node = new Node (*local_node);
-	node->name.assign("node_test");
-	node->binary_port = XAPIAND_BINARY_SERVERPORT;
-	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
-
-	Endpoints endpoints;
 	Endpoint e;
-	e.node_name.assign("node_test");
+	e.node_name.assign(_NODE_NAME);
 	e.port = XAPIAND_BINARY_SERVERPORT;
 	e.path.assign(name_database);
-	e.host.assign("0.0.0.0");
+	e.host.assign(_LOCAL_HOST);
 	endpoints.add(e);
 
-	// There are delete in the make_search.
-	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+	int db_flags = DB_WRITABLE | DB_SPAWN | DB_NOWAL;
 
 	std::vector<std::string> _docs({
 		// Examples used in test geo.
@@ -273,7 +301,7 @@ int create_test_db() {
 		std::ifstream fstream(doc);
 		std::stringstream buffer;
 		buffer << fstream.rdbuf();
-		if (database->index(buffer.str(), std::to_string(i), true, JSON_TYPE, std::to_string(fstream.tellg())) == 0) {
+		if (Indexer::index(endpoints, db_flags, buffer.str(), std::to_string(i), true, JSON_TYPE, std::to_string(fstream.tellg())) == 0) {
 			++cont;
 			L_ERR(nullptr, "ERROR: File %s can not index", doc.c_str());
 		}
@@ -358,7 +386,8 @@ int make_search(const test_query_t _tests[], int len) {
 				auto facet = (*spy).second->values_begin();
 				auto it = p.expect_facets.begin();
 				for ( ; facet != (*spy).second->values_end() && it !=  p.expect_facets.end(); ++facet, ++it) {
-					data_field_t field_t = database->get_data_field((*spy).first);
+					std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0],  DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+					data_field_t field_t = schema->get_data_field((*spy).first);
 					std::string str_facet(Unserialise::unserialise(field_t.type, *facet));
 					if (str_facet.compare(*it) != 0) {
 						++cont;
