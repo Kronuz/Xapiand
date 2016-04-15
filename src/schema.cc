@@ -395,7 +395,7 @@ Schema::get_subproperties(MsgPack& properties, specification_t& specification)
 	std::vector<std::string> field_names;
 	stringTokenizer(specification.name, DB_OFFSPRING_UNION, field_names);
 
-	auto subproperties
+	MsgPack subproperties;
 	for (const auto& field_name : field_names) {
 		subproperties.reset(properties[field_name]);
 		restart_specification(specification);
