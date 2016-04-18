@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,6 +23,7 @@
 #include "test_forward_list.h"
 
 #include "../src/log.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <string>
@@ -73,10 +74,10 @@ int test_push_front() {
 	std::string expected("k1 j1 i1 h1 g1 f1 e1 d1 c1 b1 a1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -103,10 +104,10 @@ int test_insert_after() {
 	std::string expected("j1 j1 j1 k1 a1 g1 h1 i1 b1 c1 c1 c1 c1 c1 d1 e1 e2 e3 e4 f1 j1 j1 j1 k1 a1 g1 h1 i1 b1 c1 c1 c1 c1 c1 d1 e1 e2 e3 e4 f1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -131,10 +132,10 @@ int test_emplace_front() {
 	std::string expected("k1 j1 i1 h1 g1 f1 e1 d1 c1 b1 a1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -160,10 +161,10 @@ int test_emplace_after() {
 	std::string expected("f1 i1 j1 k1 g1 h1 a1 b1 c1 d1 e1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -194,10 +195,10 @@ int test_pop_front() {
 	std::string expected("f1 e1 d1 c1 b1 a1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -245,7 +246,7 @@ int test_erase_after() {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result2.c_str(), expected2.c_str());
 	}
 
-	return err;
+	RETURN (err);
 }
 
 
@@ -292,7 +293,7 @@ int test_erase() {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result2.c_str(), expected2.c_str());
 	}
 
-	return err;
+	RETURN (err);
 }
 
 
@@ -326,10 +327,10 @@ int test_remove() {
 	std::string expected("h1 g1 f1 a3 e1 d1 a2 c1");
 
 	if (result == expected) {
-		return 0;
+		 RETURN(0);
 	} else {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		 RETURN(1);
 	}
 }
 
@@ -352,12 +353,12 @@ int test_find() {
 
 	if (!l.find(p2)) {
 		L_ERR(nullptr, "ForwardList::find is not working");
-		return 1;
+		RETURN(1);
 	}
 
 	if (!l.find(p4)) {
 		L_ERR(nullptr, "ForwardList::find is not working");
-		return 1;
+		RETURN(1);
 	}
 
 	l.remove(p2);
@@ -365,15 +366,15 @@ int test_find() {
 
 	if (l.find(p2)) {
 		L_ERR(nullptr, "ForwardList::find is not working");
-		return 1;
+		RETURN(1);
 	}
 
 	if (l.find(p4)) {
 		L_ERR(nullptr, "ForwardList::find is not working");
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -441,7 +442,7 @@ int test_single_producer_consumer() {
 		++err;
 	}
 
-	return err;
+	RETURN(err);
 }
 
 
@@ -476,10 +477,10 @@ int test_multiple_producers() {
 	}
 
 	if (elements.load() == mylist.size()) {
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "Elements in List: %zu  Elements_count: %zu", mylist.size(), elements.load());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -530,10 +531,10 @@ int test_multiple_producers_consumers() {
 	}
 
 	if (elements.load() == mylist.size()) {
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "Elements in List: %zu  Elements_count: %zu", mylist.size(), elements.load());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -575,9 +576,9 @@ int test_multiple_producers_consumers_v2() {
 	}
 
 	if (mylist.size() == 0) {
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "Elements in List: %zu  Expected: 0", mylist.size());
-		return 1;
+		RETURN(1);
 	}
 }

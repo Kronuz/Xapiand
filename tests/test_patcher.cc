@@ -27,10 +27,9 @@
 #include "../src/rapidjson/rapidjson.h"
 #include "../src/rapidjson/document.h"
 #include "../src/log.h"
+#include "utils.h"
 
 #include <fstream>
-
-#define RETURN(x) { Log::finish(); return x; }
 
 
 int test_mix() {

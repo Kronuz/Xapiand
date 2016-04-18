@@ -27,11 +27,10 @@
 #include "../src/database.h"
 #include "../src/length.h"
 #include "../src/xapiand.h"
+#include "utils.h"
 
 #include <sstream>
 #include <fstream>
-
-#define RETURN(x) { Log::finish(); return x; }
 
 #define _VERBOSITY 3
 #define _DETACH false

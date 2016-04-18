@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -26,10 +26,10 @@
 #include "../src/log.h"
 #include "../src/utils.h"
 #include "../src/schema.h"
+#include "utils.h"
 
 #include <limits.h>
 
-#define RETURN(x) { Log::finish(); return x; }
 
 
 const test_t numeric[] {

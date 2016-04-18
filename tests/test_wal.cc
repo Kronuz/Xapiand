@@ -28,8 +28,7 @@
 #include "../src/log.h"
 #include "../src/manager.h"
 #include "../src/xapiand.h"
-
-#define RETURN(x) { Log::finish();  return x; }
+#include "utils.h"
 
 #define _VERBOSITY 3
 #define _DETACH false

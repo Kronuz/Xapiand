@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -26,12 +26,11 @@
 #include "../src/log.h"
 #include "../src/database_utils.h"
 #include "../src/utils.h"
+#include "utils.h"
 
 #include <fstream>
 #include <sstream>
 #include <vector>
-
-#define RETURN(x) { Log::finish(); return x; }
 
 
 bool write_file_contents(const std::string& filename, const std::string& contents) {

@@ -24,8 +24,7 @@
 
 #include "../src/queue.h"
 #include "../src/log.h"
-
-#define RETURN(x) { Log::finish(); return x; }
+#include "utils.h"
 
 using namespace queue;
 

@@ -24,8 +24,7 @@
 
 #include "../src/log.h"
 #include "../src/stl_serialise.h"
-
-#define RETURN(x) { Log::finish(); return x; }
+#include "utils.h"
 
 
 int unserialise_to_StringList(const std::string& _serialise, size_t expected_size) {

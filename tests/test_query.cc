@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -29,11 +29,10 @@
 #include "../src/manager.h"
 #include "../src/serialise.h"
 #include "../src/xapiand.h"
+#include "utils.h"
 
 #include <sstream>
 #include <fstream>
-
-#define RETURN(x) { Log::finish(); return x; }
 
 #define _VERBOSITY 3
 #define _DETACH false

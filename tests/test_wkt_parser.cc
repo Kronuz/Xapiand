@@ -24,12 +24,11 @@
 
 #include "wkt_parser.h"
 #include "log.h"
+#include "utils.h"
 
 #include <string>
 #include <algorithm>
 #include <time.h>
-
-#define RETURN(x) { Log::finish();  return x; }
 
 
 // Testing WKT parser.

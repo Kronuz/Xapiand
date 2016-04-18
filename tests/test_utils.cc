@@ -25,8 +25,7 @@
 #include "../src/utils.h"
 
 #include "log.h"
-
-#define RETURN(x) { Log::finish();  return x; }
+#include "utils.h"
 
 
 static std::string

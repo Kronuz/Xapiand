@@ -85,7 +85,8 @@ common_files = \
 	$(top_builddir)/src/times.cc \
 	$(top_builddir)/src/utils.cc \
 	$(top_builddir)/src/wkt_parser.cc \
-	$(top_builddir)/src/xchange/convert.cc
+	$(top_builddir)/src/xchange/convert.cc \
+	utils.h
 
 
 set_compressor_test_SOURCES = $(common_files) set_compressor_test.cc test_compressor.cc
