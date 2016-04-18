@@ -23,7 +23,10 @@
 #pragma once
 
 #include "endpoint.h"
+#include "fields.h"
 #include "msgpack.h"
+#include "multivalue.h"
+#include "multivaluekeymaker.h"
 #include "rapidjson/document.h"
 
 #include <regex>
@@ -152,6 +155,15 @@ struct query_field_t {
 };
 
 
+struct search_t {
+	Xapian::Query query;
+	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
+	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
+	std::vector<std::unique_ptr<GeoFieldProcessor>> gfps;
+	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
+};
+
+
 enum class MIMEType {
 	APPLICATION_JSON,
 	APPLICATION_XWWW_FORM_URLENCODED,
@@ -177,18 +189,3 @@ std::string to_query_string(std::string str);
 std::string msgpack_to_html(const msgpack::object& o);
 std::string msgpack_map_value_to_html(const msgpack::object& o);
 std::string msgpack_to_html_error(const msgpack::object& o);
-
-
-class Database;
-class Schema;
-class XapiandManager;
-
-
-namespace Indexer {
-	Xapian::docid index(const Endpoints& endpoints, int flags, const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
-	Xapian::docid index(const Endpoints& endpoints, int flags, const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
-
-	void _index(Schema* schema, Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
-
-	Xapian::docid patch(const Endpoints& endpoints, int flags, const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
-};
