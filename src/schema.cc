@@ -312,7 +312,7 @@ Schema::set_database(Database* _database)
 void
 Schema::build(const std::string& s_schema)
 {
-	L_CALL(this, "Schema::build_schema()");
+	L_CALL(this, "Schema::build()");
 
 	if (s_schema.empty()) {
 		schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;

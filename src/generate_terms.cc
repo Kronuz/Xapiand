@@ -416,7 +416,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<double>
 			val = range.start;
 		}
 
-		for (int i = accuracy.size() - 1; i > 1; --i) {
+		for (auto i = accuracy.size() - 1; i > 1; --i) {
 			if (pos_accuracy[i] > idx) {
 				results.insert(std::make_pair(val >> pos_accuracy[i], acc_prefix[i - 2]));
 				break;
