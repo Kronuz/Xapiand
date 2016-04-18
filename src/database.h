@@ -23,12 +23,8 @@
 #pragma once
 
 #include "database_utils.h"
-#include "endpoint.h"
-#include "fields.h"
 #include "log.h"
 #include "lru.h"
-#include "multivaluekeymaker.h"
-#include "multivalue.h"
 #include "queue.h"
 #include "threadpool.h"
 #include "schema.h"
@@ -209,27 +205,12 @@ public:
 	std::unique_ptr<DatabaseWAL> wal;
 #endif
 
-	struct search_t {
-		Xapian::Query query;
-		std::vector<std::string> suggested_query;
-		std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
-		std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
-		std::vector<std::unique_ptr<GeoFieldProcessor>> gfps;
-		std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
-	};
-
 	Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints, int flags);
 	~Database();
 
 	long long read_mastery(const Endpoint& endpoint);
 
-	void get_stats_database(MsgPack&& stats);
-	void get_stats_doc(MsgPack&& stats, const std::string& document_id);
-
 	bool reopen();
-
-	void get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
-			std::vector<std::string>& suggestions, int offset=0);
 
 	std::string get_uuid() const;
 	std::string get_revision_info() const;
@@ -237,8 +218,6 @@ public:
 	bool commit(bool wal_=true);
 	void cancel(bool wal_=true);
 
-	void delete_document(Xapian::docid did, bool commit_=false, bool wal_=true);
-	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 	void delete_document_term(const std::string& term, bool commit_=false, bool wal_=true);
 	Xapian::docid add_document(const Xapian::Document& doc, bool commit_=false, bool wal_=true);
 	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
@@ -250,20 +229,6 @@ public:
 
 	std::string get_metadata(const std::string& key);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
-
-	Xapian::Document get_document(const std::string& doc_id);
-	Xapian::Document get_document(const Xapian::docid& did);
-
-	std::string get_value(const Xapian::Document& document, Xapian::valueno slot);
-	MsgPack get_value(const Xapian::Document& document, const std::string& slot_name);
-
-private:
-	search_t _search(const std::string& query, unsigned flags, bool text, const std::string& lan);
-	search_t search(const query_field_t& e);
-
-	void get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar);
-	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t *e, Multi_MultiValueKeyMaker *sorter,
-		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies);
 };
 
 
