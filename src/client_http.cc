@@ -38,8 +38,8 @@
 #include <sysexits.h>
 #include <sys/socket.h>
 
-#define RESPONSE_MESSAGE "message"
-#define RESPONSE_STATUS  "status"
+#define RESPONSE_MESSAGE "_message"
+#define RESPONSE_STATUS  "_status"
 
 #define MAX_BODY_SIZE (250 * 1024 * 1024)
 #define MAX_BODY_MEM (5 * 1024 * 1024)
@@ -193,7 +193,6 @@ HttpClient::http_response(int status, int mode, unsigned short http_major, unsig
 
 HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
 	: BaseClient(std::move(server_), ev_loop_, ev_flags_, sock_),
-	  database(nullptr),
 	  pretty(false),
 	  body_size(0),
 	  body_descriptor(0),
@@ -530,8 +529,8 @@ HttpClient::_run()
 	}
 
 	if (error_code) {
-		if (database) {
-			XapiandManager::manager->database_pool.checkin(database);
+		if (db_handler.database) {
+			db_handler.checkin();
 		}
 		if (written) {
 			destroy();
@@ -692,29 +691,24 @@ HttpClient::home_view()
 
 	endpoints_maker(1s);
 
-	if (!XapiandManager::manager->database_pool.checkout(database, Endpoints(Endpoint(".")), DB_SPAWN)) {
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
-	}
-	Xapian::Document document = database->get_document(std::to_string(local_node->id));
-	auto id = database->get_value(document, RESERVED_ID);
-	XapiandManager::manager->database_pool.checkin(database);
+	db_handler.reset(endpoints, DB_SPAWN);
+	auto document = db_handler.get_document(std::to_string(local_node->id));
 
 	MsgPack obj_data = get_MsgPack(document);
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
 	} catch (const std::out_of_range&) {
 		clean_reserved(obj_data);
-		obj_data[RESERVED_ID] = id;
+		obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
 	}
 
 #ifdef XAPIAND_CLUSTERING
-	obj_data["cluster_name"] = XapiandManager::manager->cluster_name;
+	obj_data["_cluster_name"] = XapiandManager::manager->cluster_name;
 #endif
-	MsgPack version;
-	version["mastery"] = PACKAGE_VERSION;
-	version["number"] = PACKAGE_VERSION;
-	version["xapian_version"] = Xapian::version_string();
-	obj_data["version"] = version;
+	MsgPack version = obj_data["_version"];
+	version["_mastery"] = PACKAGE_VERSION;
+	version["_number"] = PACKAGE_VERSION;
+	version["_xapian"] = Xapian::version_string();
 
 	write_http_response(obj_data, 200, pretty);
 }
@@ -727,54 +721,11 @@ HttpClient::document_info_view()
 
 	endpoints_maker(1s);
 
-	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
-	}
-
-	std::string doc_id(path_parser.get_id());
-
-	std::string prefix(DOCUMENT_ID_TERM_PREFIX);
-	if (isupper(doc_id.at(0))) {
-		prefix += ":";
-	}
-
-	Xapian::QueryParser queryparser;
-	queryparser.add_boolean_prefix(RESERVED_ID, prefix);
-	Xapian::Query query = queryparser.parse_query(std::string(RESERVED_ID) + ":" + doc_id);
-	Xapian::Enquire enquire(*database->db);
-	enquire.set_query(query);
-	Xapian::MSet mset = enquire.get_mset(0, 1);
+	db_handler.reset(endpoints, DB_SPAWN);
 
 	MsgPack response;
-	int status_code = 200;
-	if (mset.empty()) {
-		status_code = 404;
-		response[RESPONSE_STATUS] = status_code;
-		response[RESPONSE_MESSAGE] = "Document not found";
-	} else {
-		for (int t = DB_RETRIES; t >= 0; --t) {
-			try {
-				response["doc_id"] = *mset.begin();
-				break;
-			}  catch (const Xapian::DatabaseModifiedError& exc) {
-				if (t) {
-					database->reopen();
-				} else {
-					throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
-				}
-			} catch (const Xapian::NetworkError& exc) {
-				if (t) {
-					database->reopen();
-				} else {
-					throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
-				}
-			} catch (const Xapian::Error& exc) {
-				throw MSG_Error(exc.get_msg().c_str());
-			}
-		}
-	}
+	response["_docid"] = db_handler.get_docid(path_parser.get_id());;
 
-	XapiandManager::manager->database_pool.checkin(database);
 	write_http_response(response, status_code, pretty);
 }
 
@@ -787,15 +738,12 @@ HttpClient::delete_document_view()
 	endpoints_maker(2s);
 	query_field_maker(QUERY_FIELD_COMMIT);
 
-	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN)) {
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
-	}
-
 	std::string doc_id(path_parser.get_id());
 
 	operation_begins = std::chrono::system_clock::now();
 
-	database->delete_document(doc_id, query_field->commit);
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN);
+	db_handler.delete_document(doc_id, query_field->commit);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -810,12 +758,10 @@ HttpClient::delete_document_view()
 	}
 	L_TIME(this, "Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
 
-	XapiandManager::manager->database_pool.checkin(database);
-
 	MsgPack response;
-	auto data = response["delete"];
+	auto data = response["_delete"];
 	data[RESERVED_ID] = doc_id;
-	data["commit"] = query_field->commit;
+	data["_commit"] = query_field->commit;
 
 	write_http_response(response, 200, pretty);
 }
@@ -847,7 +793,8 @@ HttpClient::index_document_view(bool gen_id)
 
 	operation_begins = std::chrono::system_clock::now();
 
-	Indexer::index(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF, body, doc_id, query_field->commit, content_type, content_length);
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_INIT_REF);
+	db_handler.index(body, doc_id, query_field->commit, content_type, content_length);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -863,8 +810,9 @@ HttpClient::index_document_view(bool gen_id)
 	L_TIME(this, "Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	MsgPack response;
-	auto data = response["index"];
+	auto data = response["_index"];
 	data[RESERVED_ID] = doc_id;
+	data["_commit"] = query_field->commit;
 	write_http_response(response, 200, pretty);
 }
 
@@ -881,7 +829,8 @@ HttpClient::update_document_view()
 
 	std::string doc_id(path_parser.get_id());
 
-	Indexer::patch(endpoints, DB_WRITABLE | DB_SPAWN, body, doc_id, query_field->commit, content_type, content_length);
+	db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN);
+	db_handler.patch(body, doc_id, query_field->commit, content_type, content_length);
 
 	operation_ends = std::chrono::system_clock::now();
 
@@ -897,8 +846,9 @@ HttpClient::update_document_view()
 	L_TIME(this, "Updating took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	MsgPack response;
-	auto data = response["update"];
+	auto data = response["_update"];
 	data[RESERVED_ID] = doc_id;
+	data["_commit"] = query_field->commit;
 	write_http_response(response, 200, pretty);
 }
 
@@ -913,27 +863,21 @@ HttpClient::stats_view()
 
 	if (!path_parser.off_id) {
 		query_field_maker(QUERY_FIELD_TIME);
-		XapiandManager::manager->server_status(response["server_status"]);
-		XapiandManager::manager->get_stats_time(response["stats_time"], query_field->time);
+		XapiandManager::manager->server_status(response["_server_status"]);
+		XapiandManager::manager->get_stats_time(response["_stats_time"], query_field->time);
 		res_stats = true;
 	} else {
 		endpoints_maker(1s);
 
-		if (XapiandManager::manager->database_pool.checkout(database, endpoints, DB_OPEN)) {
-			database->get_stats_doc(response["document_status"], path_parser.get_id());
-			XapiandManager::manager->database_pool.checkin(database);
-			res_stats = true;
-		}
+		db_handler.reset(endpoints, DB_OPEN);
+		response["_document_status"] = db_handler.get_stats_doc(path_parser.get_id());
 
 		path_parser.rewind();
 		path_parser.off_id = nullptr;
 		endpoints_maker(1s);
 
-		if (XapiandManager::manager->database_pool.checkout(database, endpoints, DB_OPEN)) {
-			database->get_stats_database(response["database_status"]);
-			XapiandManager::manager->database_pool.checkin(database);
-			res_stats = true;
-		}
+		response["_database_status"] = database->get_stats_database();
+		res_stats = true;
 	}
 
 	int response_status = 200;
@@ -956,13 +900,8 @@ HttpClient::schema_view()
 	path_parser.off_id = nullptr;
 	endpoints_maker(1s);
 
-	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
-	}
-
-	std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, schema->to_json_string(pretty)));
-	XapiandManager::manager->database_pool.checkin(database);
+	db_handler.reset(endpoints, DB_SPAWN);
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, db_handler.schema->to_json_string(pretty)));
 	return;
 }
 
@@ -970,22 +909,20 @@ HttpClient::schema_view()
 void
 HttpClient::facets_view()
 {
-	L_CALL(this, "HttpClient::schema_view()");
+	L_CALL(this, "HttpClient::facets_view()");
 
 	path_parser.off_id = nullptr;
 	endpoints_maker(1s);
 	query_field_maker(QUERY_FIELD_SEARCH | QUERY_FIELD_RANGE);
 
-	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_SPAWN)) {
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
-	}
-
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
-	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
+	SpiesVector spies;
 
 	operation_begins = std::chrono::system_clock::now();
-	database->get_mset(*query_field, mset, spies, suggestions);
+
+	db_handler.reset(endpoints, DB_SPAWN);
+	db_handler.get_mset(*query_field, mset, spies, suggestions);
 
 	L_DEBUG(this, "Suggested queries:\n%s", [&suggestions]() {
 		std::string res;
@@ -1000,15 +937,14 @@ HttpClient::facets_view()
 		response[RESPONSE_MESSAGE] = "Not found documents tallied";
 	} else {
 		for (const auto& spy : spies) {
-			std::string name_result = spy.first;
+			auto name_result = spy.first;
 			MsgPack array;
 			const auto facet_e = spy.second->values_end();
 			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
 				MsgPack value;
-				std::shared_ptr<const Schema> schema = XapiandManager::manager->database_pool.get_schema(endpoints[0]);
-				data_field_t field_t = schema->get_slot_field(spy.first);
-				value["value"] = Unserialise::MsgPack(field_t.type, *facet);
-				value["termfreq"] = facet.get_termfreq();
+				auto field_t = db_handler.schema->get_slot_field(spy.first);
+				value["_value"] = Unserialise::MsgPack(field_t.type, *facet);
+				value["_termfreq"] = facet.get_termfreq();
 				array.add_item_to_array(value);
 			}
 			response[name_result] = array;
@@ -1056,16 +992,14 @@ HttpClient::search_view()
 		query_field->query.push_back(std::string(RESERVED_ID)  + ":" +  path_parser.get_id());
 	}
 
-	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_SPAWN)) { /* TODO: The SPAWN should be the flag here? */
-		throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
-	}
-
 	Xapian::MSet mset;
 	std::vector<std::string> suggestions;
-	std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
+	SpiesVector spies;
 
 	operation_begins = std::chrono::system_clock::now();
-	database->get_mset(*query_field, mset, spies, suggestions);
+
+	db_handler.reset(endpoints, DB_SPAWN);
+	db_handler.get_mset(*query_field, mset, spies, suggestions);
 
 	L_DEBUG(this, "Suggested queries:\n%s", [&suggestions]() {
 		std::string res;
@@ -1092,8 +1026,7 @@ HttpClient::search_view()
 		}
 	} else {
 		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
-			Xapian::Document document = database->get_document(*m);
-
+			auto document = db_handler.get_document(*m);
 			operation_ends = std::chrono::system_clock::now();
 
 			auto ct_type_str = document.get_value(DB_SLOT_TYPE);
@@ -1121,7 +1054,6 @@ HttpClient::search_view()
 				err_response[RESPONSE_STATUS] = error_code;
 				err_response[RESPONSE_MESSAGE] = std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header");
 				write_http_response(err_response, error_code, pretty);
-				XapiandManager::manager->database_pool.checkin(database);
 				L_DEBUG(this, "ABORTED SEARCH");
 				return;
 			}
@@ -1135,7 +1067,6 @@ HttpClient::search_view()
 				// Returns blob_data in case that type is unkown
 				auto blob_data = get_blob(document);
 				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_BODY, parser.http_major, parser.http_minor, 0, blob_data, ct_type_str));
-				XapiandManager::manager->database_pool.checkin(database);
 				return;
 			}
 
@@ -1156,8 +1087,8 @@ HttpClient::search_view()
 				obj_data[RESERVED_WEIGHT] = m.get_weight();
 				obj_data[RESERVED_PERCENT] = m.get_percent();
 				int subdatabase = (document.get_docid() - 1) % endpoints.size();
-				auto endpont = endpoints[subdatabase];
-				obj_data[RESERVED_ENDPOINT] = endpont.as_string();
+				auto endpoint = endpoints[subdatabase];
+				obj_data[RESERVED_ENDPOINT] = endpoint.as_string();
 			}
 
 			auto result = serialize_response(obj_data, ct_type, pretty);
