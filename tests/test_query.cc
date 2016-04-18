@@ -33,6 +33,8 @@
 #include <sstream>
 #include <fstream>
 
+#define RETURN(x) { Log::finish(); return x; }
+
 #define _VERBOSITY 3
 #define _DETACH false
 #define _CHERT false
@@ -418,17 +420,17 @@ int test_query_search() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(test_query, arraySize(test_query)) == 0) {
 			L_DEBUG(nullptr, "Testing search using query is correct!");
-			return 0;
+			RETURN(0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search using query has mistakes.");
-			return 1;
+			RETURN(1);
 		}
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -438,17 +440,17 @@ int test_terms_search() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(test_terms, arraySize(test_terms)) == 0) {
 			L_DEBUG(nullptr, "Testing search using terms is correct!");
-			return 0;
+			RETURN(0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search using terms has mistakes.");
-			return 1;
+			RETURN(1);
 		}
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -458,17 +460,17 @@ int test_partials_search() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(test_partials, arraySize(test_partials)) == 0) {
 			L_DEBUG(nullptr, "Testing search using partials is correct!");
-			return 0;
+			RETURN(0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search using partials has mistakes.");
-			return 1;
+			RETURN(1);
 		}
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -478,16 +480,16 @@ int test_facets_search() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(test_facets, arraySize(test_facets)) == 0) {
 			L_DEBUG(nullptr, "Testing facets is correct!");
-			return 0;
+			RETURN(0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing facets has mistakes.");
-			return 1;
+			RETURN(1);
 		}
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }

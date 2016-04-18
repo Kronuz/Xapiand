@@ -31,6 +31,8 @@
 #include <sstream>
 #include <vector>
 
+#define RETURN(x) { Log::finish(); return x; }
+
 
 bool write_file_contents(const std::string& filename, const std::string& contents) {
 	std::ofstream of(filename.data(), std::ios::out | std::ios::binary);
@@ -59,9 +61,9 @@ bool read_file_contents(const std::string& filename, std::string* contents) {
 int test_correct_cpp() {
 #if defined(MSGPACK_USE_CPP03)
 	L_ERR(nullptr, "ERROR: It is running c++03");
-	return 1;
+	RETURN(1);
 #else
-	return 0;
+	RETURN(0);
 #endif
 }
 
@@ -70,14 +72,14 @@ int test_pack() {
 	std::string buffer;
 	if (!read_file_contents("examples/msgpack/json_test1.txt", &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file [examples/json_test1.txt]");
-		return 1;
+		RETURN(1);
 	}
 
 	rapidjson::Document doc;
 	try {
 		json_load(doc, buffer);
 	} catch (const std::exception&) {
-		return 1;
+		RETURN(1);
 	}
 
 	auto obj = MsgPack(doc);
@@ -85,15 +87,15 @@ int test_pack() {
 	std::string pack_expected;
 	if (!read_file_contents("examples/msgpack/test1.mpack", &pack_expected)) {
 		L_ERR(nullptr, "ERROR: Can not read the file [examples/test1.mpack]");
-		return 1;
+		RETURN(1);
 	}
 
 	if (pack_expected != obj.to_string()) {
 		L_ERR(nullptr, "ERROR: MsgPack::to_MsgPack is no working correctly");
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -101,7 +103,7 @@ int test_unpack() {
 	std::string buffer;
 	if (!read_file_contents("examples/msgpack/test1.mpack", &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file [examples/test1.mpack]");
-		return 1;
+		RETURN(1);
 	}
 
 	MsgPack obj(buffer);
@@ -109,16 +111,16 @@ int test_unpack() {
 	std::string expected;
 	if (!read_file_contents("examples/msgpack/json_test1_unpack.txt", &expected)) {
 		L_ERR(nullptr, "ERROR: Can not read the file [examples/json_test1_unpack.txt]");
-		return 1;
+		RETURN(1);
 	}
 
 	std::string result = obj.to_json_string();
 	if (expected != result) {
 		L_ERR(nullptr, "ERROR: MsgPack::unpack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), result.c_str());
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -126,7 +128,7 @@ int test_explore_json() {
 	std::string buffer;
 	if (!read_file_contents("examples/msgpack/test2.mpack", &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file [examples/test2.mpack]");
-		return 1;
+		RETURN(1);
 	}
 
 	MsgPack obj(buffer);
@@ -163,10 +165,10 @@ int test_explore_json() {
 
 	if (ss.str() != expected) {
 		L_ERR(nullptr, "ERROR: MsgPack does not explore the json correctly\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), ss.str().c_str());
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -174,13 +176,13 @@ int test_add_items() {
 	std::string expected;
 	if (!read_file_contents("examples/msgpack/json_test2.txt", &expected)) {
 		L_ERR(nullptr, "ERROR: Can not read the file [examples/json_test2.txt]");
-		return 1;
+		RETURN(1);
 	}
 
 	std::string buffer;
 	if (!read_file_contents("examples/msgpack/test2.mpack", &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file [examples/test2.mpack]");
-		return 1;
+		RETURN(1);
 	}
 
 	MsgPack obj(buffer);
@@ -194,10 +196,10 @@ int test_add_items() {
 	std::string result = obj.to_json_string();
 	if (expected != result) {
 		L_ERR(nullptr, "ERROR: Add items with MsgPack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), result.c_str());
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -213,14 +215,14 @@ int test_assigment() {
 	std::string l_str = l_assigment.to_json_string();
 	if (r_str.compare("\"México\"") != 0) {
 		L_ERR(nullptr, "ERROR: rvalue assigment in MsgPack is not working\n\nExpected: \"México\"\nResult: %s\n", r_str.c_str());
-		return 1;
+		RETURN(1);
 	}
 
 	if (l_str.compare("\"México\"") != 0) {
 		L_ERR(nullptr, "ERROR: lvalue assigment in MsgPack is not working\n\nExpected: \"México\\n\nResult: %s\n", l_str.c_str());
-		return 1;
+		RETURN(1);
 	}
-	return 0;
+	RETURN(0);
 }
 
 
@@ -228,7 +230,7 @@ int test_path() {
 	std::string buffer;
 	if (!read_file_contents("examples/json/object_path.txt", &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file [examples/json/object_path.txt]");
-		return 1;
+		RETURN(1);
 	}
 
 	rapidjson::Document doc_path;
@@ -247,15 +249,15 @@ int test_path() {
 
 	if (target.compare("\"MEXICO\"") != 0) {
 		L_ERR(nullptr, "ERROR: solve path in MsgPack is not working\n\nExpected: \"MEXICO\"\nResult: %s\n", target.c_str());
-		return 1;
+		RETURN(1);
 	}
 
 	if (parent.compare(parent_expected) != 0) {
 		L_ERR(nullptr, "ERROR: solve path in MsgPack is not working\n\nExpected: %s\nResult: %s\n", parent_expected.c_str(), parent.c_str());
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -289,17 +291,17 @@ int test_clone() {
 	auto str_orig = obj.to_json_string();
 	if (str_orig_expect != str_orig) {
 		L_ERR(nullptr, "MsgPack::clone is not working. Result: %s, Expected: %s", str_orig.c_str(), str_orig_expect.c_str());
-		return 1;
+		RETURN(1);
 	}
 
 	std::string str_copy_expect("{\"elem1\":\"Final_Copy_Elem1\", \"elem2\":\"Final_Copy_Elem2\", \"elem3\":\"Final_Copy_Elem3\", \"elem4\":\"Final_Copy_Elem4\"}");
 	auto str_copy = copy_obj.to_json_string();
 	if (str_copy != str_copy_expect) {
 		L_ERR(nullptr, "MsgPack::clone is not working. Result: %s, Expected: %s", str_copy.c_str(), str_copy_expect.c_str());
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -316,13 +318,13 @@ int test_erase() {
 	try {
 		obj.at("elem1");
 		L_ERR(nullptr, "MsgPack::erase() is not working");
-		return 1;
+		RETURN(1);
 	} catch (const std::out_of_range&) { }
 
 	try {
 		obj.at("elem3");
 		L_ERR(nullptr, "MsgPack::erase() is not working");
-		return 1;
+		RETURN(1);
 	} catch (const std::out_of_range&) { }
 
 	obj["elem2"] = "Final_Elem2";
@@ -332,10 +334,10 @@ int test_erase() {
 	auto str_obj = obj.to_json_string();
 	if (str_obj_expect != str_obj) {
 		L_ERR(stderr, "MsgPack::erase() is not working correctly. Result: %s, Expected: %s", str_obj.c_str(), str_obj_expect.c_str());
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -348,12 +350,12 @@ int test_reserve() {
 	obj.reserve(r_size);
 	if (obj.capacity() != r_size) {
 		L_ERR(nullptr, "MsgPack::reserve(msgpack::map) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
-		return 1;
+		RETURN(1);
 	}
 
 	if (obj.to_string() != data) {
 		L_ERR(nullptr, "MsgPack::expand_map is not allocating memory correctly.\n");
-		return 1;
+		RETURN(1);
 	}
 
 	auto doc = to_json("[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]");
@@ -364,15 +366,15 @@ int test_reserve() {
 	obj.reserve(r_size);
 	if (obj.capacity() != r_size) {
 		L_ERR(nullptr, "MsgPack::reserve(msgpack::array) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
-		return 1;
+		RETURN(1);
 	}
 
 	if (obj.to_json_string() != orig_data) {
 		L_ERR(nullptr, "MsgPack::expand_array is not allocating memory correctly.\n");
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -394,25 +396,25 @@ int test_reset() {
 
 	if (obj.capacity() != obj2.capacity()) {
 		L_ERR(nullptr, "Error in MsgPack::reset, objects have differents capabilities\n");
-		return 1;
+		RETURN(1);
 	}
 
 	if (obj.size() != obj2.size()) {
 		L_ERR(nullptr, "Error in MsgPack::reset, objects have differents sizes\n");
-		return 1;
+		RETURN(1);
 	}
 
 	if (obj.to_json_string() != obj2.to_json_string()) {
 		L_ERR(nullptr, "Error in MsgPack::reset, objects are different\n");
-		return 1;
+		RETURN(1);
 	}
 
 	if (obj.to_string() != data) {
 		L_ERR(nullptr, "Error in MsgPack::reset with inserts and deletes is not working\n");
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -458,5 +460,5 @@ int test_explicit_constructors() {
 		++res;
 	}
 
-	return res;
+	RETURN(res);
 }

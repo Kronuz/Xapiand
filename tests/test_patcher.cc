@@ -30,6 +30,8 @@
 
 #include <fstream>
 
+#define RETURN(x) { Log::finish(); return x; }
+
 
 int test_mix() {
 	std::ifstream fstream_obj("examples/json/object_to_patch.txt", std::ifstream::in);
@@ -65,13 +67,13 @@ int test_mix() {
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -82,7 +84,7 @@ int test_add() {
 
 	if (fstream_obj.bad() || fstream_patch.bad()) {
 		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+		RETURN(1);
 	}
 
 	std::stringstream buffer_obj;
@@ -106,13 +108,13 @@ int test_add() {
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -123,7 +125,7 @@ int test_remove() {
 
 	if (fstream_obj.bad() || fstream_patch.bad()) {
 		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+		RETURN(1);
 	}
 
 	std::stringstream buffer_obj;
@@ -147,13 +149,13 @@ int test_remove() {
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -164,7 +166,7 @@ int test_replace() {
 
 	if (fstream_obj.bad() || fstream_patch.bad()) {
 		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+		RETURN(1);
 	}
 
 	std::stringstream buffer_obj;
@@ -188,13 +190,13 @@ int test_replace() {
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -205,7 +207,7 @@ int test_move() {
 
 	if (fstream_obj.bad() || fstream_patch.bad()) {
 		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+		RETURN(1);
 	}
 
 	std::stringstream buffer_obj;
@@ -229,13 +231,13 @@ int test_move() {
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -246,7 +248,7 @@ int test_copy() {
 
 	if (fstream_obj.bad() || fstream_patch.bad()) {
 		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+		RETURN(1);
 	}
 
 	std::stringstream buffer_obj;
@@ -270,13 +272,13 @@ int test_copy() {
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -287,7 +289,7 @@ int test_test() {
 
 	if (fstream_obj.bad() || fstream_patch.bad()) {
 		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+		RETURN(1);
 	}
 
 	std::stringstream buffer_obj;
@@ -307,10 +309,10 @@ int test_test() {
 
 	try {
 		apply_patch(patch, obj);
-		return 0;
+		RETURN(0);
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -334,14 +336,13 @@ int test_incr() {
 		L(nullptr, "RESULT FOR TEST_INCR %s", result.c_str());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
-		return 0;
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -364,13 +365,12 @@ int test_decr() {
 		std::string result(obj.to_json_string());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
-		return 0;
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }

@@ -25,6 +25,8 @@
 #include "../src/log.h"
 #include "../src/stl_serialise.h"
 
+#define RETURN(x) { Log::finish(); return x; }
+
 
 int unserialise_to_StringList(const std::string& _serialise, size_t expected_size) {
 	StringList u_sl;
@@ -191,9 +193,8 @@ int test_StringList() {
 		++cont;
 	}
 
-	return cont;
+		RETURN(cont);
 
-	return cont;
 }
 
 
@@ -243,7 +244,7 @@ int test_StringSet() {
 		++cont;
 	}
 
-	return cont;
+	RETURN(cont);
 }
 
 
@@ -284,7 +285,7 @@ int test_CartesianUSet() {
 		++cont;
 	}
 
-	return cont;
+	RETURN(cont);
 }
 
 
@@ -322,5 +323,5 @@ int test_RangeList() {
 		++cont;
 	}
 
-	return cont;
+	RETURN(cont);
 }

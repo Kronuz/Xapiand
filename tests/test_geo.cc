@@ -31,6 +31,8 @@
 #include <sstream>
 #include <fstream>
 
+#define RETURN(x) { Log::finish(); return x; }
+
 #define _VERBOSITY 3
 #define _DETACH false
 #define _CHERT false
@@ -254,17 +256,17 @@ int geo_range_test() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(geo_range_tests, arraySize(geo_range_tests)) == 0) {
 			L_DEBUG(nullptr, "Testing search range geospatials is correct!");
-			return 0;
+			RETURN(0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search range geospatials has mistakes.");
-			return 1;
+			RETURN(1);
 		}
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -274,16 +276,16 @@ int geo_terms_test() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(geo_terms_tests, arraySize(geo_terms_tests)) == 0) {
 			L_DEBUG(nullptr, "Testing search by geospatial terms is correct!");
-			return 0;
+			RETURN(0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search by geospatial terms has mistakes.");
-			return 1;
+			RETURN(1);
 		}
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }

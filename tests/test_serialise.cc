@@ -27,6 +27,8 @@
 #include "../src/log.h"
 #include "../src/utils.h"
 
+#define RETURN(x) { Log::finish();  return x; }
+
 
 const test_t test_timestamp_date[] = {
 	// Date 									Expected timestamp.
@@ -160,10 +162,10 @@ int test_datetotimestamp() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing the transformation between date string and timestamp is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing the transformation between date string and timestamp has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -181,10 +183,10 @@ int test_unserialise_date() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing unserialise date is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing unserialise date has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -203,10 +205,10 @@ int test_serialise_cartesian() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing serialise Cartesian is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing serialise Cartesian has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -228,10 +230,10 @@ int test_unserialise_cartesian() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing unserialise Cartesian is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing unserialise Cartesian has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -249,10 +251,10 @@ int test_serialise_trixel_id() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing serialise HTM Trixel's id is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing serialise HTM Trixel's id has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -271,9 +273,9 @@ int test_unserialise_trixel_id() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing unserialise HTM Trixel's id is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing unserialise HTM Trixel's id has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }

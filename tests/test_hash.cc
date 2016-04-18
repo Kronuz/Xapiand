@@ -26,6 +26,8 @@
 #include "../src/hash/sha256.h"
 #include "../src/log.h"
 
+#define RETURN(x) { Log::finish(); return x; }
+
 
 int test_md5() {
 	std::vector<std::string> test({
@@ -46,11 +48,11 @@ int test_md5() {
 		std::string res = md5(*it);
 		if (res != *rit) {
 			L_ERR(nullptr, "ERROR: Testing MD5 Failed.\nResult MD5(%s)=%s  Expected=%s", it->c_str(), res.c_str(), rit->c_str());
-			return 1;
+			RETURN (1);
 		}
 	}
 
-	return 0;
+	RETURN (0);
 }
 
 
@@ -73,9 +75,9 @@ int test_sha256() {
 		std::string res = sha256(*it);
 		if (res != *rit) {
 			L_ERR(nullptr, "ERROR: Testing SHA256 Failed.\nResult SHA256(%s)=%s  Expected=%s", it->c_str(), res.c_str(), rit->c_str());
-			return 1;
+			RETURN (1);
 		}
 	}
 
-	return 0;
+	RETURN (0);
 }

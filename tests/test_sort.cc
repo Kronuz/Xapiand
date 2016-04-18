@@ -28,6 +28,8 @@
 #include "../src/manager.h"
 #include "../src/xapiand.h"
 
+#define RETURN(x) { Log::finish(); return x; }
+
 #define _VERBOSITY 3
 #define _DETACH false
 #define _CHERT false
@@ -383,17 +385,17 @@ int sort_test_string() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(string_tests, arraySize(string_tests)) == 0) {
 			L_DEBUG(nullptr, "Testing sort strings is correct!");
-			return 0;
+			RETURN (0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing sort strings has mistakes.");
-			return 1;
+			RETURN (1);
 		}
 	} catch (const Xapian::Error &err) {
 		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
-		return 1;
+		RETURN (1);
 	} catch (const std::exception &err) {
 		L_ERR(nullptr, "ERROR: %s", err.what());
-		return 1;
+		RETURN (1);
 	}
 }
 
@@ -403,17 +405,17 @@ int sort_test_numerical() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(numerical_tests, arraySize(numerical_tests)) == 0) {
 			L_DEBUG(nullptr, "Testing sort numbers is correct!");
-			return 0;
+			RETURN (0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing sort numbers has mistakes.");
-			return 1;
+			RETURN (1);
 		}
 	} catch (const Xapian::Error &err) {
 		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
-		return 1;
+		RETURN (1);
 	} catch (const std::exception &err) {
 		L_ERR(nullptr, "ERROR: %s", err.what());
-		return 1;
+		RETURN (1);
 	}
 }
 
@@ -423,17 +425,17 @@ int sort_test_date() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(date_tests, arraySize(date_tests)) == 0) {
 			L_DEBUG(nullptr, "Testing sort dates is correct!");
-			return 0;
+			RETURN (0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing sort dates has mistakes.");
-			return 1;
+			RETURN (1);
 		}
 	} catch (const Xapian::Error &err) {
 		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
-		return 1;
+		RETURN (1);
 	} catch (const std::exception &err) {
 		L_ERR(nullptr, "ERROR: %s", err.what());
-		return 1;
+		RETURN (1);
 	}
 }
 
@@ -443,17 +445,17 @@ int sort_test_boolean() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(boolean_tests, arraySize(boolean_tests)) == 0) {
 			L_DEBUG(nullptr, "Testing sort booleans is correct!");
-			return 0;
+			RETURN (0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing sort booleans has mistakes.");
-			return 1;
+			RETURN (1);
 		}
 	} catch (const Xapian::Error &err) {
 		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
-		return 1;
+		RETURN (1);
 	} catch (const std::exception &err) {
 		L_ERR(nullptr, "ERROR: %s", err.what());
-		return 1;
+		RETURN (1);
 	}
 }
 
@@ -463,16 +465,16 @@ int sort_test_geo() {
 		int cont = create_test_db();
 		if (cont == 0 && make_search(geo_tests, arraySize(geo_tests)) == 0) {
 			L_DEBUG(nullptr, "Testing sort geospatials is correct!");
-			return 0;
+			RETURN (0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing sort geospatials has mistakes.");
-			return 1;
+			RETURN (1);
 		}
 	} catch (const Xapian::Error &err) {
 		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
-		return 1;
+		RETURN (1);
 	} catch (const std::exception &err) {
 		L_ERR(nullptr, "ERROR: %s", err.what());
-		return 1;
+		RETURN (1);
 	}
 }

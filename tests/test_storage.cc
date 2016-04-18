@@ -26,6 +26,8 @@
 #include "../src/storage.h"
 #include "../src/utils.h"
 
+#define RETURN(x) { Log::finish();  return x; }
+
 
 #pragma pack(push, 1)
 struct StorageBinBadHeader1 {
@@ -172,7 +174,7 @@ int test_storage_data(int flags) {
 
 	unlink(volume_name.c_str());
 
-	return cont_read != cont_write;
+	RETURN (cont_read != cont_write);
 }
 
 
@@ -221,7 +223,7 @@ int test_storage_file(int flags) {
 
 	unlink(volume_name.c_str());
 
-	return cont_read != cont_write;
+	RETURN (cont_read != cont_write);
 }
 
 
@@ -249,7 +251,7 @@ int test_storage_bad_headers() {
 		L_ERR(nullptr, "Bad header (3): %s", e.what());
 	}
 
-	return res;
+	RETURN(res);
 }
 
 
@@ -310,11 +312,11 @@ int test_storage_exception_write(int flags) {
 	} catch (const StorageEOF& er) {
 		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.get_context());
 		unlink(volume_name.c_str());
-		return 0;
+		RETURN(0);
 	} catch (const std::exception& er) {
 		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.what());
 		unlink(volume_name.c_str());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -395,10 +397,10 @@ int test_storage_exception_write_file(int flags) {
 	} catch (const StorageEOF& er) {
 		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.get_context());
 		unlink(volume_name.c_str());
-		return 0;
+		RETURN(0);
 	} catch (const std::exception& er) {
 		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.what());
 		unlink(volume_name.c_str());
-		return 1;
+		RETURN(1);
 	}
 }

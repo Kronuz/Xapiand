@@ -29,6 +29,8 @@
 #include <algorithm>
 #include <time.h>
 
+#define RETURN(x) { Log::finish();  return x; }
+
 
 // Testing WKT parser.
 // Python files are generated to view the results.
@@ -92,10 +94,10 @@ int test_wkt_parser() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing WKT parser is correct!, run with python examples/{#}_WKT.py to see the trixels that cover the geometry.");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing WKT parser has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -147,5 +149,5 @@ int test_wkt_speed()
 	}
 	L_DEBUG(nullptr, "Time required for execution a CIRCLE: %f seconds", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
-	return 0;
+	RETURN(0);
 }

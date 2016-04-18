@@ -29,6 +29,8 @@
 #include "../src/manager.h"
 #include "../src/xapiand.h"
 
+#define RETURN(x) { Log::finish();  return x; }
+
 #define _VERBOSITY 3
 #define _DETACH false
 #define _CHERT false
@@ -201,21 +203,21 @@ int restore_database() {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
 		delete_files(test_db);
 		delete_files(restored_db);
-		return 1;
+		RETURN(1);
    } catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s (%s", exc.get_msg().c_str(), exc.get_error_string());
 		delete_files(test_db);
 		delete_files(restored_db);
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
 		delete_files(test_db);
 		delete_files(restored_db);
-		return 1;
+		RETURN(1);
 	}
 
 	// Delete databases created.
 	delete_files(test_db);
 	delete_files(restored_db);
-	return result;
+	RETURN(result);
 }

@@ -29,6 +29,8 @@
 
 #include <limits.h>
 
+#define RETURN(x) { Log::finish(); return x; }
+
 
 const test_t numeric[] {
 	// Testing positives.
@@ -345,10 +347,10 @@ int numeric_test() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing generation of numerical terms is correct!");
-		return 0;
+		RETURN (0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing generation of numerical terms has mistakes.");
-		return 1;
+		RETURN (1);
 	}
 }
 
@@ -382,10 +384,10 @@ int date_test() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing generation of terms for dates is correct!");
-		return 0;
+		RETURN (0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing generation of terms for dates has mistakes.");
-		return 1;
+		RETURN (1);
 	}
 }
 
@@ -419,9 +421,9 @@ int geo_test() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing generation of terms for geospatials is correct!");
-		return 0;
+		RETURN (0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing generation of terms for geospatials has mistakes.");
-		return 1;
+		RETURN (1);
 	}
 }

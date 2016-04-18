@@ -26,6 +26,8 @@
 
 #include "log.h"
 
+#define RETURN(x) { Log::finish();  return x; }
+
 
 static std::string
 run_url_path(const std::string& path, bool clear_id)
@@ -142,5 +144,5 @@ int test_url_path()
 		}
 	}
 
-	return count;
+	RETURN(count);
 }

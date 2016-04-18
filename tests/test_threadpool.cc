@@ -24,6 +24,8 @@
 
 #include "../src/log.h"
 
+#define RETURN(x) { Log::finish();  return x; }
+
 using namespace queue;
 
 
@@ -42,10 +44,10 @@ int test_pool() {
 
 	if (results != "<1<2<3<44>2>3>1>") {
 		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<3<44>2>3>1>", results.c_str());
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -63,10 +65,10 @@ int test_pool_limit() {
 	pool.join();
 	if (results != "<1<2<32><44>3>1>") {
 		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<32><44>3>1>", results.c_str());
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -106,13 +108,13 @@ int test_pool_func() {
 
 	if (total != 30) {
 		L_ERR(nullptr, "ThreadPool::enqueue functions with int is not working correctly. Result: %d Expect: 30", total);
-		return 1;
+		 RETURN(1);
 	}
 
 	pool.end();
 	pool.join();
 
-	return 0;
+	 RETURN(0);
 }
 
 
@@ -153,13 +155,13 @@ int test_pool_func_shared() {
 
 	if (total != 30) {
 		L_ERR(nullptr, "ThreadPool::enqueue functions with std::shared_ptr is not working correctly. Result: %d Expect: 30", total);
-		return 1;
+		RETURN(1);
 	}
 
 	pool.end();
 	pool.join();
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -200,11 +202,11 @@ int test_pool_func_unique() {
 
 	if (total != 30)  {
 		L_ERR(nullptr, "ThreadPool::enqueue functions with std::unique_ptr is not working correctly. Result: %d Expect: 30", total);
-		return 1;
+		RETURN(1);
 	}
 
 	pool.end();
 	pool.join();
 
-	return 0;
+	RETURN(0);
 }
