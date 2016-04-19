@@ -663,6 +663,10 @@ public:
 		return _put(size(), std::forward<T>(v));
 	}
 
+	const msgpack::object& internal_msgpack() const {
+		return *_body->_obj;
+	}
+
     template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
 	std::pair<iterator, bool> insert(T&& v) {
 		MsgPack o(v);
