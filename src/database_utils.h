@@ -22,11 +22,8 @@
 
 #pragma once
 
-#include "endpoint.h"
 #include "fields.h"
 #include "msgpack.h"
-#include "multivalue.h"
-#include "multivaluekeymaker.h"
 #include "rapidjson/document.h"
 
 #include <regex>
@@ -98,9 +95,6 @@ constexpr int DB_VOLATILE     = 0x10; // Always drop the database from the datab
 constexpr int DB_REPLICATION  = 0x20; // Use conditional pop in the queue, only pop when replication is done
 constexpr int DB_NOWAL        = 0x40; // Disable open wal file
 constexpr int DB_DATA_STORAGE = 0x80; // Enable separate data storage file for the database
-
-
-extern const std::regex find_types_re;
 
 
 struct data_field_t {

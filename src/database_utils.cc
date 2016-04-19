@@ -22,17 +22,11 @@
 
 #include "database_utils.h"
 
-#include "datetime.h"
-#include "generate_terms.h"
 #include "io_utils.h"
 #include "length.h"
 #include "log.h"
-#include "manager.h"
-#include "msgpack_patcher.h"
-#include "multivaluerange.h"
-#include "schema.h"
 #include "serialise.h"
-#include "wkt_parser.h"
+#include "utils.h"
 
 #include "rapidjson/error/en.h"
 
@@ -46,9 +40,6 @@
 
 
 const std::regex find_types_re("(" OBJECT_STR "/)?(" ARRAY_STR "/)?(" DATE_STR "|" FLOAT_STR "|" INTEGER_STR "|" POSITIVE_STR "|" GEO_STR "|" BOOLEAN_STR "|" STRING_STR ")|(" OBJECT_STR ")", std::regex::icase | std::regex::optimize);
-
-
-static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
 
 
 long long save_mastery(const std::string& dir) {
