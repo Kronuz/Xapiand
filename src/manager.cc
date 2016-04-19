@@ -294,8 +294,8 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		db_handler.get_document(std::to_string(local_node->id));
 	} catch (const DocNotFoundError&) {
 		MsgPack obj;
-		obj["_name"] = local_node->name;
-		obj["_tagline"] = XAPIAND_TAGLINE;
+		obj["name"] = local_node->name;
+		obj["tagline"] = XAPIAND_TAGLINE;
 		db_handler.index(obj, std::to_string(local_node->id), true, MSGPACK_TYPE, std::string());
 	}
 
