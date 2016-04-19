@@ -948,7 +948,7 @@ HttpClient::facets_view()
 				auto field_t = db_handler.get_schema()->get_slot_field(spy.first);
 				value["_value"] = Unserialise::MsgPack(field_t.type, *facet);
 				value["_termfreq"] = facet.get_termfreq();
-				array.add_item_to_array(value);
+				array.push_back(value);
 			}
 			response[name_result] = array;
 		}
