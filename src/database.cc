@@ -24,6 +24,7 @@
 
 #include "database_autocommit.h"
 #include "length.h"
+#include "serialise.h"
 
 #include <bitset>
 #include <fcntl.h>
@@ -727,6 +728,47 @@ Database::cancel(bool wal_)
 	}
 
 	L_DATABASE_WRAP(this, "Cancel made");
+}
+
+
+void
+Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
+{
+	L_CALL(this, "Database::delete_document()");
+
+	if (!(flags & DB_WRITABLE)) {
+		throw MSG_Error("database is read-only");
+	}
+
+#if XAPIAND_DATABASE_WAL
+	if (wal_ && wal) {
+		wal->write_delete_document(did);
+	}
+#else
+	(void)wal_;
+#endif
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		L_DATABASE_WRAP(this, "Deleting document: %d  t: %d", did, t);
+		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
+		try {
+			wdb->delete_document(did);
+			modified = true;
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::NetworkError& exc) {
+			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::Error& exc) {
+			throw MSG_Error(exc.get_msg().c_str());
+		}
+		reopen();
+	}
+
+	L_DATABASE_WRAP(this, "Document deleted");
+	if (commit_) {
+		commit(wal_);
+	}
 }
 
 
@@ -1623,7 +1665,6 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 
 	std::shared_ptr<Database> database;
 	if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-		(*schema)->set_store(false);
 		database->set_metadata(RESERVED_SCHEMA, (*schema)->to_string());
 		checkin(database);
 	} else {
