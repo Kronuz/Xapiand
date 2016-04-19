@@ -1668,6 +1668,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 			schema_str.assign(database->get_metadata(RESERVED_SCHEMA));
 			checkin(database);
 		} else {
+			schemas.erase(endpoint.hash());
 			throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.as_string().c_str());
 		}
 		auto schema_ptr = new Schema();
