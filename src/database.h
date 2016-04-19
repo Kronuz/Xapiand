@@ -229,6 +229,7 @@ public:
 	void add_spelling(const std::string & word, Xapian::termcount freqinc, bool commit_=false, bool wal_=true);
 	void remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
 
+	Xapian::Document get_document(const Xapian::docid& did);
 	std::string get_metadata(const std::string& key);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
 };

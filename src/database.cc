@@ -993,6 +993,36 @@ Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, b
 }
 
 
+Xapian::Document
+Database::get_document(const Xapian::docid& did)
+{
+	L_CALL(this, "Database::get_document()");
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			return db->get_document(did);
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (!t) {
+				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::NetworkError& exc) {
+			if (!t) {
+				throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+			}
+		} catch (const Xapian::InvalidArgumentError&) {
+			throw MSG_DocNotFoundError("Document not found");
+		} catch (const Xapian::DocNotFoundError&) {
+			throw MSG_DocNotFoundError("Document not found");
+		} catch (const Xapian::Error& exc) {
+			throw MSG_Error(exc.get_msg().c_str());
+		}
+		reopen();
+	}
+
+	return Xapian::Document();
+}
+
+
 std::string
 Database::get_metadata(const std::string& key)
 {
