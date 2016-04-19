@@ -1101,9 +1101,9 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& d
 	L_CALL(this, "Schema::index_object()");
 
 	const auto spc_start = data.specification;
-	MsgPack properties;
+	MsgPack* properties;
 	if (name.empty()) {
-		properties.reset(global_properties);
+		properties = &global_properties;
 		data.specification.found_field = true;
 	} else {
 		if (data.specification.full_name.empty()) {
@@ -1112,7 +1112,7 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& d
 			data.specification.full_name.append(DB_OFFSPRING_UNION).append(name);
 		}
 		data.specification.name.assign(name);
-		properties.reset(get_subproperties(global_properties, data.specification));
+		*properties = get_subproperties(global_properties, data.specification);
 	}
 
 	switch (object.type()) {
@@ -1124,10 +1124,10 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& d
 				const auto str_key = item_key.as_string();
 				try {
 					auto func = map_dispatch_reserved.at(str_key);
-					(this->*func)(properties, object.at(str_key), data.specification);
+					(this->*func)(*properties, object.at(str_key), data.specification);
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_key)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), object.at(str_key), std::ref(data), std::move(str_key)));
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(*properties), object.at(str_key), std::ref(data), std::move(str_key)));
 						offsprings = true;
 					}
 				}
@@ -1136,12 +1136,12 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& d
 			const auto spc_object = data.specification;
 
 			if unlikely(!data.specification.found_field && data.specification.sep_types[2] != NO_TYPE) {
-				validate_required_data(properties, data.specification.value.get(), data.specification);
+				validate_required_data(*properties, data.specification.value.get(), data.specification);
 			}
 
 			if (data.specification.name.empty()) {
 				if (data.specification.value) {
-					index_item(properties, *data.specification.value, data);
+					index_item(*properties, *data.specification.value, data);
 				}
 			} else {
 				if (data.specification.full_name.empty()) {
@@ -1150,13 +1150,13 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& d
 					data.specification.full_name.append(DB_OFFSPRING_UNION).append(data.specification.name);
 				}
 				if (data.specification.value) {
-					auto subproperties = get_subproperties(properties, data.specification);
+					auto subproperties = get_subproperties(*properties, data.specification);
 					index_item(subproperties, *data.specification.value, data);
 				}
 			}
 
 			if (offsprings) {
-				set_type_to_object(properties);
+				set_type_to_object(*properties);
 			}
 
 			for (auto& task : tasks) {
@@ -1166,11 +1166,11 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& d
 			break;
 		}
 		case msgpack::type::ARRAY:
-			set_type_to_array(properties);
-			index_array(properties, object, data);
+			set_type_to_array(*properties);
+			index_array(*properties, object, data);
 			break;
 		default:
-			index_item(properties, object, data);
+			index_item(*properties, object, data);
 			break;
 	}
 

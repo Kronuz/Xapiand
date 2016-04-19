@@ -202,7 +202,7 @@ public:
 	 * Gets the properties of item_key and specification is updated.
 	 * Returns the properties of schema.
 	 */
-	MsgPack get_subproperties(MsgPack& properties, specification_t& specification);
+	MsgPack& get_subproperties(MsgPack& properties, specification_t& specification);
 
 	/*
 	 * Sets properties and update specification with the properties in item_doc.
