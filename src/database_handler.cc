@@ -91,7 +91,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 		TaskVector tasks;
 		tasks.reserve(obj.size());
 		for (const auto item_key : obj) {
-			const auto str_key = item_key.get_str();
+			const auto str_key = item_key.as_string();
 			try {
 				auto func = map_dispatch_reserved.at(str_key);
 				(schema->*func)(properties, obj.at(str_key), schema_data.specification);
@@ -169,7 +169,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 	Xapian::Document doc;
 	std::string term_id;
 
-	if (obj.get_type() == msgpack::type::MAP) {
+	if (obj.type() == msgpack::type::MAP) {
 		blob = false;
 		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
 	}
@@ -199,7 +199,7 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 	Xapian::Document doc;
 	std::string term_id;
 
-	if (obj.get_type() == msgpack::type::MAP) {
+	if (obj.type() == msgpack::type::MAP) {
 		_index(doc, obj, term_id, _document_id, ct_type, ct_length);
 	}
 

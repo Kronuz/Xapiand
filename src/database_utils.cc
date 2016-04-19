@@ -138,9 +138,9 @@ std::string str_type(const std::vector<unsigned>& sep_types) {
 
 
 void clean_reserved(MsgPack& document) {
-	if (document.get_type() == msgpack::type::MAP) {
+	if (document.type() == msgpack::type::MAP) {
 		for (auto item_key : document) {
-			std::string str_key(item_key.get_str());
+			std::string str_key(item_key.as_string());
 			if (is_valid(str_key) || str_key == RESERVED_VALUE) {
 				auto item_doc = document.at(str_key);
 				clean_reserved(item_doc);

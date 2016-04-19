@@ -830,7 +830,7 @@ XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endp
 
 
 void
-XapiandManager::server_status(MsgPack&& stats)
+XapiandManager::server_status(MsgPack& stats)
 {
 	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
 	// stats["connections"] = XapiandServer::total_clients.load();
@@ -865,7 +865,7 @@ XapiandManager::server_status(MsgPack&& stats)
 
 
 void
-XapiandManager::get_stats_time(MsgPack&& stats, const std::string& time_req)
+XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
 {
 	std::smatch m;
 	if (std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.size() && m.length(1) != 0) {
@@ -891,7 +891,7 @@ XapiandManager::get_stats_time(MsgPack&& stats, const std::string& time_req)
 
 
 void
-XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_time_t& second_time)
+XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time_t& second_time)
 {
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();

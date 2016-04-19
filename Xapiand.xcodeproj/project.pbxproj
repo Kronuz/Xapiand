@@ -43,7 +43,6 @@
 		C35058AD1BA325CC00901B80 /* lz4hc.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A71BA325CC00901B80 /* lz4hc.c */; };
 		C35058AE1BA325CC00901B80 /* xxhash.c in Sources */ = {isa = PBXBuildFile; fileRef = C35058A91BA325CC00901B80 /* xxhash.c */; };
 		C365BE3D1C330F5D00F6E3AE /* xapiand.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE3C1C330F5D00F6E3AE /* xapiand.cc */; };
-		C365BE461C3466B900F6E3AE /* msgpack.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE451C3466B900F6E3AE /* msgpack.cc */; };
 		C365BE4F1C4DABBB00F6E3AE /* msgpack_patcher.cc in Sources */ = {isa = PBXBuildFile; fileRef = C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */; };
 		C39AE0651B2F627E00203139 /* client_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE0391B2F627E00203139 /* client_base.cc */; };
 		C39AE0661B2F627E00203139 /* client_binary.cc in Sources */ = {isa = PBXBuildFile; fileRef = C39AE03B1B2F627E00203139 /* client_binary.cc */; };
@@ -153,7 +152,6 @@
 		C35058A91BA325CC00901B80 /* xxhash.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = xxhash.c; path = src/lz4/xxhash.c; sourceTree = "<group>"; };
 		C35058AA1BA325CC00901B80 /* xxhash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = xxhash.h; path = src/lz4/xxhash.h; sourceTree = "<group>"; };
 		C365BE3C1C330F5D00F6E3AE /* xapiand.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = xapiand.cc; path = src/xapiand.cc; sourceTree = "<group>"; };
-		C365BE451C3466B900F6E3AE /* msgpack.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack.cc; path = src/msgpack.cc; sourceTree = "<group>"; };
 		C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack_patcher.cc; path = src/msgpack_patcher.cc; sourceTree = "<group>"; };
 		C365BE4E1C4DABBB00F6E3AE /* msgpack_patcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = msgpack_patcher.h; path = src/msgpack_patcher.h; sourceTree = "<group>"; };
 		C36A3EB21C7F5D0B00B226D6 /* storage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = storage.h; path = src/storage.h; sourceTree = "<group>"; };
@@ -285,7 +283,6 @@
 				C39AE04E1B2F627E00203139 /* manager.h */,
 				462C9EB11C18FC2200BB960E /* md5.cc */,
 				462C9EB31C18FC2200BB960E /* md5.h */,
-				C365BE451C3466B900F6E3AE /* msgpack.cc */,
 				465AC70C1C4F029F00C2FFE6 /* msgpack.h */,
 				462C9EBD1C3DAD3300BB960E /* msgpack.hpp */,
 				C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */,
@@ -441,7 +438,6 @@
 				46CAAEC91BFE85DD008F6870 /* log.cc in Sources */,
 				46AD9A691CB607A6004A640D /* stl_serialise.cc in Sources */,
 				C39AE0751B2F627E00203139 /* times.cc in Sources */,
-				C365BE461C3466B900F6E3AE /* msgpack.cc in Sources */,
 				C35058AE1BA325CC00901B80 /* xxhash.c in Sources */,
 				C35058AC1BA325CC00901B80 /* lz4frame.c in Sources */,
 				46B6B3D31B7E4A1B000FA041 /* multivaluerange.cc in Sources */,

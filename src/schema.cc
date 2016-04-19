@@ -275,7 +275,7 @@ specification_t::to_string() const
 
 
 Schema::Schema(const Schema& other)
-	: schema(other.schema.clone()),
+	: schema(other),
 	  exist(other.exist.load()),
 	  to_store(other.to_store.load()) { }
 
@@ -297,7 +297,7 @@ Schema::set_database(Database* _database)
 		schema = MsgPack(s_schema);
 		try {
 			auto version = schema.at(RESERVED_VERSION);
-			if (version.get_f64() != DB_VERSION_SCHEMA) {
+			if (version.as_f64() != DB_VERSION_SCHEMA) {
 				throw MSG_Error("Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 			}
 			to_store = false;
@@ -322,7 +322,7 @@ Schema::build(const std::string& s_schema)
 		schema = MsgPack(s_schema);
 		try {
 			auto version = schema.at(RESERVED_VERSION);
-			if (version.get_f64() != DB_VERSION_SCHEMA) {
+			if (version.as_f64() != DB_VERSION_SCHEMA) {
 				throw MSG_Error("Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 			}
 			to_store = false;
@@ -344,7 +344,7 @@ Schema::serialise_id(MsgPack& properties, specification_t& specification, const 
 	specification.set_type = true;
 	if (prop_id) {
 		update_specification(properties, specification);
-		return Serialise::serialise(static_cast<char>(prop_id.at(RESERVED_TYPE).at(2).get_u64()), value_id);
+		return Serialise::serialise(static_cast<char>(prop_id.at(RESERVED_TYPE).at(2).as_u64()), value_id);
 	} else {
 		to_store.store(true);
 		specification.found_field = false;
@@ -365,7 +365,7 @@ Schema::update_specification(const MsgPack& properties, specification_t& specifi
 	L_CALL(nullptr, "Schema::update_specification()");
 
 	for (const auto property : properties) {
-		auto str_prop = property.get_str();
+		auto str_prop = property.as_string();
 		try {
 			auto func = map_dispatch_properties.at(str_prop);
 			(*func)(properties.at(str_prop), specification);
@@ -388,7 +388,7 @@ Schema::restart_specification(specification_t& specification)
 }
 
 
-MsgPack
+MsgPack&
 Schema::get_subproperties(MsgPack& properties, specification_t& specification)
 {
 	L_CALL(this, "Schema::get_subproperties()");
@@ -396,20 +396,20 @@ Schema::get_subproperties(MsgPack& properties, specification_t& specification)
 	std::vector<std::string> field_names;
 	stringTokenizer(specification.name, DB_OFFSPRING_UNION, field_names);
 
-	MsgPack subproperties;
+	MsgPack* subproperties;
 	for (const auto& field_name : field_names) {
-		subproperties.reset(properties[field_name]);
+		subproperties = &properties[field_name];
 		restart_specification(specification);
-		if (subproperties) {
+		if (*subproperties) {
 			specification.found_field = true;
-			update_specification(subproperties, specification);
+			update_specification(*subproperties, specification);
 		} else {
 			to_store = true;
 			specification.found_field = false;
 		}
 	}
 
-	return subproperties;
+	return *subproperties;
 }
 
 
@@ -430,8 +430,8 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 {
 	L_CALL(nullptr, "Schema::set_type()");
 
-	MsgPack field = item_doc.get_type() == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
-	switch (field.get_type()) {
+	MsgPack field = item_doc.type() == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
+	switch (field.type()) {
 		case msgpack::type::POSITIVE_INTEGER:
 			if (specification.numeric_detection) {
 				specification.sep_types[2] = POSITIVE_TYPE;
@@ -457,7 +457,7 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 			}
 			break;
 		case msgpack::type::STR: {
-			std::string str_value(field.get_str());
+			std::string str_value(field.as_string());
 			if (specification.date_detection && Datetime::isDate(str_value)) {
 				specification.sep_types[2] = DATE_TYPE;
 				return;
@@ -486,7 +486,7 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 			break;
 	}
 
-	throw MSG_ClientError("%s: %s is ambiguous", RESERVED_VALUE, item_doc.to_json_string().c_str());
+	throw MSG_ClientError("%s: %s is ambiguous", RESERVED_VALUE, item_doc.to_string().c_str());
 }
 
 
@@ -495,7 +495,7 @@ Schema::set_type_to_array(MsgPack& properties)
 {
 	try {
 		auto _type = properties.at(RESERVED_TYPE).at(1);
-		if (_type.get_u64() == NO_TYPE) {
+		if (_type.as_u64() == NO_TYPE) {
 			_type = ARRAY_TYPE;
 			to_store = true;
 		}
@@ -508,7 +508,7 @@ Schema::set_type_to_object(MsgPack& properties)
 {
 	try {
 		auto _type = properties.at(RESERVED_TYPE).at(0);
-		if (_type.get_u64() == NO_TYPE) {
+		if (_type.as_u64() == NO_TYPE) {
 			_type = OBJECT_TYPE;
 			to_store = true;
 		}
@@ -519,7 +519,7 @@ Schema::set_type_to_object(MsgPack& properties)
 std::string
 Schema::to_json_string(bool prettify) const
 {
-	MsgPack schema_readable = schema.clone();
+	MsgPack schema_readable = schema;
 	auto properties = schema_readable.at(RESERVED_SCHEMA);
 	if likely(properties) {
 		readable(std::move(properties), true);
@@ -527,7 +527,7 @@ Schema::to_json_string(bool prettify) const
 		schema_readable.erase(RESERVED_SCHEMA);
 	}
 
-	return schema_readable.to_json_string(prettify);
+	return schema_readable.to_string(prettify);
 }
 
 
@@ -536,7 +536,7 @@ Schema::readable(MsgPack&& item_schema, bool is_root)
 {
 	// Change this item of schema in readable form.
 	for (const auto item_key : item_schema) {
-		auto str_key = item_key.get_str();
+		auto str_key = item_key.as_string();
 		try {
 			auto func = map_dispatch_readable.at(str_key);
 			(*func)(item_schema.at(str_key), item_schema);
@@ -558,9 +558,9 @@ void
 Schema::readable_type(MsgPack&& prop_type, const MsgPack& properties)
 {
 	std::vector<unsigned> sep_types({
-		static_cast<unsigned>(prop_type.at(0).get_u64()),
-		static_cast<unsigned>(prop_type.at(1).get_u64()),
-		static_cast<unsigned>(prop_type.at(2).get_u64())
+		static_cast<unsigned>(prop_type.at(0).as_u64()),
+		static_cast<unsigned>(prop_type.at(1).as_u64()),
+		static_cast<unsigned>(prop_type.at(2).as_u64())
 	});
 	prop_type = str_type(sep_types);
 
@@ -568,11 +568,11 @@ Schema::readable_type(MsgPack&& prop_type, const MsgPack& properties)
 	try {
 		if (sep_types[2] == DATE_TYPE) {
 			for (auto _accuracy : properties.at(RESERVED_ACCURACY)) {
-				_accuracy = str_time[_accuracy.get_f64()];
+				_accuracy = str_time[_accuracy.as_f64()];
 			}
 		} else if (sep_types[2] == GEO_TYPE) {
 			auto _partials = properties.at(RESERVED_ACCURACY).at(0);
-			_partials = _partials.get_f64() ? true : false;
+			_partials = _partials.as_f64() ? true : false;
 		}
 	} catch (const std::out_of_range&) { }
 }
@@ -582,7 +582,7 @@ void
 Schema::readable_analyzer(MsgPack&& prop_analyzer, const MsgPack&)
 {
 	for (auto _analyzer : prop_analyzer) {
-		_analyzer = str_analyzer[_analyzer.get_u64()];
+		_analyzer = str_analyzer[_analyzer.as_u64()];
 	}
 }
 
@@ -590,7 +590,7 @@ Schema::readable_analyzer(MsgPack&& prop_analyzer, const MsgPack&)
 void
 Schema::readable_index(MsgPack&& prop_index, const MsgPack&)
 {
-	prop_index = str_index[prop_index.get_u64()];
+	prop_index = str_index[prop_index.as_u64()];
 }
 
 
@@ -600,12 +600,12 @@ Schema::process_weight(MsgPack& properties, const MsgPack& doc_weight, specifica
 	// RESERVED_WEIGHT is heritable and can change between documents.
 	try {
 		specification.weight.clear();
-		if (doc_weight.get_type() == msgpack::type::ARRAY) {
+		if (doc_weight.type() == msgpack::type::ARRAY) {
 			for (const auto _weight : doc_weight) {
-				specification.weight.push_back(static_cast<unsigned>(_weight.get_u64()));
+				specification.weight.push_back(static_cast<unsigned>(_weight.as_u64()));
 			}
 		} else {
-			specification.weight.push_back(static_cast<unsigned>(doc_weight.get_u64()));
+			specification.weight.push_back(static_cast<unsigned>(doc_weight.as_u64()));
 		}
 
 		if unlikely(!specification.found_field) {
@@ -623,12 +623,12 @@ Schema::process_position(MsgPack& properties, const MsgPack& doc_position, speci
 	// RESERVED_POSITION is heritable and can change between documents.
 	try {
 		specification.position.clear();
-		if (doc_position.get_type() == msgpack::type::ARRAY) {
+		if (doc_position.type() == msgpack::type::ARRAY) {
 			for (const auto _position : doc_position) {
-				specification.position.push_back(static_cast<unsigned>(_position.get_u64()));
+				specification.position.push_back(static_cast<unsigned>(_position.as_u64()));
 			}
 		} else {
-			specification.position.push_back(static_cast<unsigned>(doc_position.get_u64()));
+			specification.position.push_back(static_cast<unsigned>(doc_position.as_u64()));
 		}
 
 		if unlikely(!specification.found_field) {
@@ -646,9 +646,9 @@ Schema::process_language(MsgPack& properties, const MsgPack& doc_language, speci
 	// RESERVED_LANGUAGE is heritable and can change between documents.
 	try {
 		specification.language.clear();
-		if (doc_language.get_type() == msgpack::type::ARRAY) {
+		if (doc_language.type() == msgpack::type::ARRAY) {
 			for (const auto _language : doc_language) {
-				std::string _str_language(_language.get_str());
+				std::string _str_language(_language.as_string());
 				if (is_language(_str_language)) {
 					specification.language.push_back(std::move(_str_language));
 				} else {
@@ -656,7 +656,7 @@ Schema::process_language(MsgPack& properties, const MsgPack& doc_language, speci
 				}
 			}
 		} else {
-			std::string _str_language(doc_language.get_str());
+			std::string _str_language(doc_language.as_string());
 			if (is_language(_str_language)) {
 				specification.language.push_back(std::move(_str_language));
 			} else {
@@ -679,12 +679,12 @@ Schema::process_spelling(MsgPack& properties, const MsgPack& doc_spelling, speci
 	// RESERVED_SPELLING is heritable and can change between documents.
 	try {
 		specification.spelling.clear();
-		if (doc_spelling.get_type() == msgpack::type::ARRAY) {
+		if (doc_spelling.type() == msgpack::type::ARRAY) {
 			for (const auto _spelling : doc_spelling) {
-				specification.spelling.push_back(_spelling.get_bool());
+				specification.spelling.push_back(_spelling.as_bool());
 			}
 		} else {
-			specification.spelling.push_back(doc_spelling.get_bool());
+			specification.spelling.push_back(doc_spelling.as_bool());
 		}
 
 		if unlikely(!specification.found_field) {
@@ -702,12 +702,12 @@ Schema::process_positions(MsgPack& properties, const MsgPack& doc_positions, spe
 	// RESERVED_POSITIONS is heritable and can change between documents.
 	try {
 		specification.positions.clear();
-		if (doc_positions.get_type() == msgpack::type::ARRAY) {
+		if (doc_positions.type() == msgpack::type::ARRAY) {
 			for (const auto _positions : doc_positions) {
-				specification.positions.push_back(_positions.get_bool());
+				specification.positions.push_back(_positions.as_bool());
 			}
 		} else {
-			specification.positions.push_back(doc_positions.get_bool());
+			specification.positions.push_back(doc_positions.as_bool());
 		}
 
 		if unlikely(!specification.found_field) {
@@ -725,9 +725,9 @@ Schema::process_analyzer(MsgPack& properties, const MsgPack& doc_analyzer, speci
 	// RESERVED_ANALYZER is heritable and can change between documents.
 	try {
 		specification.analyzer.clear();
-		if (doc_analyzer.get_type() == msgpack::type::ARRAY) {
+		if (doc_analyzer.type() == msgpack::type::ARRAY) {
 			for (const auto analyzer : doc_analyzer) {
-				std::string _analyzer(upper_string(analyzer.get_str()));
+				std::string _analyzer(upper_string(analyzer.as_string()));
 				if (_analyzer == str_analyzer[0]) {
 					specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
 				} else if (_analyzer == str_analyzer[1]) {
@@ -741,7 +741,7 @@ Schema::process_analyzer(MsgPack& properties, const MsgPack& doc_analyzer, speci
 				}
 			}
 		} else {
-			std::string _analyzer(upper_string(doc_analyzer.get_str()));
+			std::string _analyzer(upper_string(doc_analyzer.as_string()));
 			if (_analyzer == str_analyzer[0]) {
 				specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
 			} else if (_analyzer == str_analyzer[1]) {
@@ -773,7 +773,7 @@ Schema::process_type(MsgPack&, const MsgPack& doc_type, specification_t& specifi
 	}
 
 	try {
-		if (!set_types(lower_string(doc_type.get_str()), specification.sep_types)) {
+		if (!set_types(lower_string(doc_type.as_string()), specification.sep_types)) {
 			throw MSG_ClientError("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, FLOAT_STR, INTEGER_STR, POSITIVE_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
 		}
 	} catch (const msgpack::type_error&) {
@@ -790,7 +790,7 @@ Schema::process_accuracy(MsgPack&, const MsgPack& doc_accuracy, specification_t&
 		return;
 	}
 
-	if (doc_accuracy.get_type() == msgpack::type::ARRAY) {
+	if (doc_accuracy.type() == msgpack::type::ARRAY) {
 		try {
 			specification.doc_acc = std::make_unique<const MsgPack>(doc_accuracy);
 		} catch (const msgpack::type_error&) {
@@ -811,11 +811,11 @@ Schema::process_acc_prefix(MsgPack&, const MsgPack& doc_acc_prefix, specificatio
 		return;
 	}
 
-	if (doc_acc_prefix.get_type() == msgpack::type::ARRAY) {
+	if (doc_acc_prefix.type() == msgpack::type::ARRAY) {
 		std::set<std::string> set_acc_prefix;
 		try {
 			for (const auto _acc_prefix : doc_acc_prefix) {
-				set_acc_prefix.insert(_acc_prefix.get_str());
+				set_acc_prefix.insert(_acc_prefix.as_string());
 			}
 			specification.acc_prefix.insert(specification.acc_prefix.end(), set_acc_prefix.begin(), set_acc_prefix.end());
 		} catch (const msgpack::type_error&) {
@@ -836,7 +836,7 @@ Schema::process_prefix(MsgPack&, const MsgPack& doc_prefix, specification_t& spe
 	}
 
 	try {
-		specification.prefix = doc_prefix.get_str();
+		specification.prefix = doc_prefix.as_string();
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_PREFIX);
 	}
@@ -852,7 +852,7 @@ Schema::process_slot(MsgPack&, const MsgPack& doc_slot, specification_t& specifi
 	}
 
 	try {
-		specification.slot = static_cast<unsigned>(doc_slot.get_u64());
+		specification.slot = static_cast<unsigned>(doc_slot.as_u64());
 		if (specification.slot < DB_SLOT_RESERVED) {
 			specification.slot += DB_SLOT_RESERVED;
 		} else if (specification.slot == Xapian::BAD_VALUENO) {
@@ -873,7 +873,7 @@ Schema::process_index(MsgPack& properties, const MsgPack& doc_index, specificati
 	}
 
 	try {
-		std::string _index(upper_string(doc_index.get_str()));
+		std::string _index(upper_string(doc_index.as_string()));
 		if (_index == str_index[0]) {
 			specification.index = Index::ALL;
 		} else if (_index == str_index[1]) {
@@ -900,7 +900,7 @@ Schema::process_store(MsgPack& properties, const MsgPack& doc_store, specificati
 {
 	// RESERVED_STORE is heritable and can change.
 	try {
-		specification.store = doc_store.get_bool();
+		specification.store = doc_store.as_bool();
 
 		if unlikely(!specification.found_field) {
 			properties[RESERVED_STORE] = specification.store;
@@ -920,7 +920,7 @@ Schema::process_dynamic(MsgPack& properties, const MsgPack& doc_dynamic, specifi
 	}
 
 	try {
-		specification.dynamic = doc_dynamic.get_bool();
+		specification.dynamic = doc_dynamic.as_bool();
 		properties[RESERVED_DYNAMIC] = specification.dynamic;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_DYNAMIC);
@@ -937,7 +937,7 @@ Schema::process_d_detection(MsgPack& properties, const MsgPack& doc_d_detection,
 	}
 
 	try {
-		specification.date_detection = doc_d_detection.get_bool();
+		specification.date_detection = doc_d_detection.as_bool();
 		properties[RESERVED_D_DETECTION] = specification.date_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_D_DETECTION);
@@ -954,7 +954,7 @@ Schema::process_n_detection(MsgPack& properties, const MsgPack& doc_n_detection,
 	}
 
 	try {
-		specification.numeric_detection = doc_n_detection.get_bool();
+		specification.numeric_detection = doc_n_detection.as_bool();
 		properties[RESERVED_N_DETECTION] = specification.numeric_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_N_DETECTION);
@@ -971,7 +971,7 @@ Schema::process_g_detection(MsgPack& properties, const MsgPack& doc_g_detection,
 	}
 
 	try {
-		specification.geo_detection = doc_g_detection.get_bool();
+		specification.geo_detection = doc_g_detection.as_bool();
 		properties[RESERVED_G_DETECTION] = specification.geo_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_G_DETECTION);
@@ -988,7 +988,7 @@ Schema::process_b_detection(MsgPack& properties, const MsgPack& doc_b_detection,
 	}
 
 	try {
-		specification.bool_detection = doc_b_detection.get_bool();
+		specification.bool_detection = doc_b_detection.as_bool();
 		properties[RESERVED_B_DETECTION] = specification.bool_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_B_DETECTION);
@@ -1005,7 +1005,7 @@ Schema::process_s_detection(MsgPack& properties, const MsgPack& doc_s_detection,
 	}
 
 	try {
-		specification.string_detection = doc_s_detection.get_bool();
+		specification.string_detection = doc_s_detection.as_bool();
 		properties[RESERVED_S_DETECTION] = specification.string_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_S_DETECTION);
@@ -1022,7 +1022,7 @@ Schema::process_bool_term(MsgPack&, const MsgPack& doc_bool_term, specification_
 	}
 
 	try {
-		specification.bool_term = doc_bool_term.get_bool();
+		specification.bool_term = doc_bool_term.as_bool();
 		specification.set_bool_term = true;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be a boolean", RESERVED_BOOL_TERM);
@@ -1043,7 +1043,7 @@ Schema::process_name(MsgPack&, const MsgPack& doc_name, specification_t& specifi
 {
 	// RESERVED_NAME isn't heritable and is not saved in schema.
 	try {
-		specification.name.assign(doc_name.get_str());
+		specification.name.assign(doc_name.as_string());
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_NAME);
 	}
@@ -1084,7 +1084,7 @@ void
 Schema::fixed_index(MsgPack& properties, const MsgPack& object, data_t& data)
 {
 	data.specification.fixed_index = true;
-	switch (object.get_type()) {
+	switch (object.type()) {
 		case msgpack::type::MAP:
 			return index_object(properties, object, data);
 		case msgpack::type::ARRAY:
@@ -1115,13 +1115,13 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& d
 		properties.reset(get_subproperties(global_properties, data.specification));
 	}
 
-	switch (object.get_type()) {
+	switch (object.type()) {
 		case msgpack::type::MAP: {
 			bool offsprings = false;
 			TaskVector tasks;
 			tasks.reserve(object.size());
 			for (const auto item_key : object) {
-				const auto str_key = item_key.get_str();
+				const auto str_key = item_key.as_string();
 				try {
 					auto func = map_dispatch_reserved.at(str_key);
 					(this->*func)(properties, object.at(str_key), data.specification);
@@ -1186,12 +1186,12 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, data_t& data)
 	const auto spc_start = data.specification;
 	bool offsprings = false;
 	for (auto item : array) {
-		if (item.get_type() == msgpack::type::MAP) {
+		if (item.type() == msgpack::type::MAP) {
 			TaskVector tasks;
 			tasks.reserve(item.size());
 			data.specification.value = nullptr;
 			for (const auto property : item) {
-				auto str_prop = property.get_str();
+				auto str_prop = property.as_string();
 				try {
 					auto func = map_dispatch_reserved.at(str_prop);
 					(this->*func)(properties, item.at(str_prop), data.specification);
@@ -1280,24 +1280,24 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 				}
 
 				try {
-					specification.accuracy.push_back(specification.doc_acc->at(0).get_bool());
+					specification.accuracy.push_back(specification.doc_acc->at(0).as_bool());
 				} catch (const msgpack::type_error&) {
 					throw MSG_ClientError("Data inconsistency, partials value in %s: %s must be boolean", RESERVED_ACCURACY, GEO_STR);
 				}
 
 				try {
-					auto error = specification.doc_acc->at(1).get_f64();
+					auto error = specification.doc_acc->at(1).as_f64();
 					specification.accuracy.push_back(error > HTM_MAX_ERROR ? HTM_MAX_ERROR : error < HTM_MIN_ERROR ? HTM_MIN_ERROR : error);
 				} catch (const msgpack::type_error&) {
 					throw MSG_ClientError("Data inconsistency, error value in %s: %s must be positive integer", RESERVED_ACCURACY, GEO_STR);
 				} catch (const std::out_of_range&) {
-					specification.accuracy.push_back(def_accuracy_geo.at(1).get_f64());
+					specification.accuracy.push_back(def_accuracy_geo.at(1).as_f64());
 				}
 
 				try {
 					const auto it_e = specification.doc_acc->end();
 					for (auto it = specification.doc_acc->begin() + 2; it != it_e; ++it) {
-						uint64_t val_acc = (*it).get_u64();
+						uint64_t val_acc = (*it).as_u64();
 						if (val_acc <= HTM_MAX_LEVEL) {
 							set_acc.insert(val_acc);
 						} else {
@@ -1316,7 +1316,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 
 				try {
 					for (const auto _accuracy : *specification.doc_acc) {
-						std::string str_accuracy(lower_string(_accuracy.get_str()));
+						std::string str_accuracy(lower_string(_accuracy.as_string()));
 						if (str_accuracy == str_time[5]) {
 							set_acc.insert(toUType(unitTime::YEAR));
 						} else if (str_accuracy == str_time[4]) {
@@ -1347,7 +1347,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 
 				try {
 					for (const auto _accuracy : *specification.doc_acc) {
-						set_acc.insert(_accuracy.get_u64());
+						set_acc.insert(_accuracy.as_u64());
 					}
 					break;
 				} catch (const msgpack::type_error&) {
@@ -1421,14 +1421,14 @@ Schema::index_texts(MsgPack& properties, const MsgPack& texts, data_t& data)
 		}
 
 		try {
-			if (texts.get_type() == msgpack::type::ARRAY) {
+			if (texts.type() == msgpack::type::ARRAY) {
 				set_type_to_array(properties);
 				size_t pos = 0;
 				for (auto text : texts) {
-					index_text(data, text.get_str(), pos++);
+					index_text(data, text.as_string(), pos++);
 				}
 			} else {
-				index_text(data, texts.get_str(), 0);
+				index_text(data, texts.as_string(), 0);
 			}
 		} catch (const msgpack::type_error&) {
 			throw MSG_ClientError("%s should be a string or array of strings", RESERVED_TEXTS);
@@ -1483,7 +1483,7 @@ Schema::index_terms(MsgPack& properties, const MsgPack& terms, data_t& data)
 	}
 
 	if (data.specification.store) {
-		if (terms.get_type() == msgpack::type::ARRAY) {
+		if (terms.type() == msgpack::type::ARRAY) {
 			set_type_to_array(properties);
 			size_t pos = 0;
 			for (auto term : terms) {
@@ -1546,7 +1546,7 @@ Schema::index_values(MsgPack& properties, const MsgPack& values, data_t& data, b
 	if (data.specification.store) {
 		StringSet& s = data.map_values[data.specification.slot];
 		size_t pos = 0;
-		if (values.get_type() == msgpack::type::ARRAY) {
+		if (values.type() == msgpack::type::ARRAY) {
 			set_type_to_array(properties);
 			for (auto value : values) {
 				index_value(data, value, s, pos, is_term);
@@ -1573,7 +1573,7 @@ Schema::index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& po
 		case POSITIVE_TYPE: {
 			try {
 				value_v.assign(Serialise::serialise(data.specification.sep_types[2], value));
-				int64_t int_value = static_cast<int64_t>(value.get_f64());
+				int64_t int_value = static_cast<int64_t>(value.as_f64());
 				auto it = data.specification.acc_prefix.begin();
 				for (const auto& acc : data.specification.accuracy) {
 					std::string term_v = Serialise::integer(data.specification.sep_types[2], int_value - int_value % (uint64_t)acc);
@@ -1582,7 +1582,7 @@ Schema::index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& po
 				s.insert(value_v);
 				break;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for numeric: %s", value.to_json_string().c_str());
+				throw MSG_ClientError("Format invalid for numeric: %s", value.to_string().c_str());
 			}
 		}
 		case DATE_TYPE: {
@@ -1615,7 +1615,7 @@ Schema::index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& po
 			break;
 		}
 		case GEO_TYPE: {
-			std::string ewkt(value.get_str());
+			std::string ewkt(value.as_string());
 			if (is_term) {
 				value_v.assign(Serialise::ewkt(ewkt));
 			}
@@ -1686,26 +1686,26 @@ Schema::get_data_field(const std::string& field_name) const
 	try {
 		auto properties = getPropertiesSchema().path(fields);
 
-		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
+		res.type = properties.at(RESERVED_TYPE).at(2).as_u64();
 		if (res.type == NO_TYPE) {
 			return res;
 		}
 
-		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).as_u64());
 
 		auto prefix = properties.at(RESERVED_PREFIX);
-		res.prefix = prefix.get_str();
+		res.prefix = prefix.as_string();
 
-		res.bool_term = properties.at(RESERVED_BOOL_TERM).get_bool();
+		res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
 
 		// Strings and booleans do not have accuracy.
 		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
 			for (const auto acc : properties.at(RESERVED_ACCURACY)) {
-				res.accuracy.push_back(acc.get_f64());
+				res.accuracy.push_back(acc.as_f64());
 			}
 
 			for (const auto acc_p : properties.at(RESERVED_ACC_PREFIX)) {
-				res.acc_prefix.push_back(acc_p.get_str());
+				res.acc_prefix.push_back(acc_p.as_string());
 			}
 		}
 	} catch (const std::exception&) { }
@@ -1729,8 +1729,8 @@ Schema::get_slot_field(const std::string& field_name) const
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
 		auto properties = getPropertiesSchema().path(fields);
-		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).get_u64());
-		res.type = properties.at(RESERVED_TYPE).at(2).get_u64();
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).as_u64());
+		res.type = properties.at(RESERVED_TYPE).at(2).as_u64();
 	} catch (const std::exception&) { }
 
 	return res;

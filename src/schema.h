@@ -298,106 +298,106 @@ public:
 	static inline void process_weight(const MsgPack& prop_weight, specification_t& specification) {
 		specification.weight.clear();
 		for (const auto _weight : prop_weight) {
-			specification.weight.push_back(static_cast<unsigned>(_weight.get_u64()));
+			specification.weight.push_back(static_cast<unsigned>(_weight.as_u64()));
 		}
 	}
 
 	static inline void process_position(const MsgPack& prop_position, specification_t& specification) {
 		specification.position.clear();
 		for (const auto _position : prop_position) {
-			specification.position.push_back(static_cast<unsigned>(_position.get_u64()));
+			specification.position.push_back(static_cast<unsigned>(_position.as_u64()));
 		}
 	}
 
 	static inline void process_language(const MsgPack& prop_language, specification_t& specification) {
 		specification.language.clear();
 		for (const auto _language : prop_language) {
-			specification.language.push_back(_language.get_str());
+			specification.language.push_back(_language.as_string());
 		}
 	}
 
 	static inline void process_spelling(const MsgPack& prop_spelling, specification_t& specification) {
 		specification.spelling.clear();
 		for (const auto _spelling : prop_spelling) {
-			specification.spelling.push_back(_spelling.get_bool());
+			specification.spelling.push_back(_spelling.as_bool());
 		}
 	}
 
 	static inline void process_positions(const MsgPack& prop_positions, specification_t& specification) {
 		specification.positions.clear();
 		for (const auto _positions : prop_positions) {
-			specification.positions.push_back(_positions.get_bool());
+			specification.positions.push_back(_positions.as_bool());
 		}
 	}
 
 	static inline void process_analyzer(const MsgPack& prop_analyzer, specification_t& specification) {
 		specification.analyzer.clear();
 		for (const auto _analyzer : prop_analyzer) {
-			specification.analyzer.push_back(static_cast<unsigned>(_analyzer.get_u64()));
+			specification.analyzer.push_back(static_cast<unsigned>(_analyzer.as_u64()));
 		}
 	}
 
 	static inline void process_type(const MsgPack& prop_type, specification_t& specification) {
-		specification.sep_types[0] = static_cast<unsigned>(prop_type.at(0).get_u64());
-		specification.sep_types[1] = static_cast<unsigned>(prop_type.at(1).get_u64());
-		specification.sep_types[2] = static_cast<unsigned>(prop_type.at(2).get_u64());
+		specification.sep_types[0] = static_cast<unsigned>(prop_type.at(0).as_u64());
+		specification.sep_types[1] = static_cast<unsigned>(prop_type.at(1).as_u64());
+		specification.sep_types[2] = static_cast<unsigned>(prop_type.at(2).as_u64());
 		specification.set_type = true;
 	}
 
 	static inline void process_accuracy(const MsgPack& prop_accuracy, specification_t& specification) {
 		for (const auto acc : prop_accuracy) {
-			specification.accuracy.push_back(acc.get_f64());
+			specification.accuracy.push_back(acc.as_f64());
 		}
 	}
 
 	static inline void process_acc_prefix(const MsgPack& prop_acc_prefix, specification_t& specification) {
 		for (const auto acc_p : prop_acc_prefix) {
-			specification.acc_prefix.push_back(acc_p.get_str());
+			specification.acc_prefix.push_back(acc_p.as_string());
 		}
 	}
 
 	static inline void process_prefix(const MsgPack& prop_prefix, specification_t& specification) {
-		specification.prefix = prop_prefix.get_str();
+		specification.prefix = prop_prefix.as_string();
 	}
 
 	static inline void process_slot(const MsgPack& prop_slot, specification_t& specification) {
-		specification.slot = static_cast<unsigned>(prop_slot.get_u64());
+		specification.slot = static_cast<unsigned>(prop_slot.as_u64());
 	}
 
 	static inline void process_index(const MsgPack& prop_index, specification_t& specification) {
-		specification.index = (Index)prop_index.get_u64();
+		specification.index = (Index)prop_index.as_u64();
 	}
 
 	static inline void process_store(const MsgPack& prop_store, specification_t& specification) {
-		specification.store = prop_store.get_bool();
+		specification.store = prop_store.as_bool();
 	}
 
 	static inline void process_dynamic(const MsgPack& prop_dynamic, specification_t& specification) {
-		specification.dynamic = prop_dynamic.get_bool();
+		specification.dynamic = prop_dynamic.as_bool();
 	}
 
 	static inline void process_d_detection(const MsgPack& prop_d_detection, specification_t& specification) {
-		specification.date_detection = prop_d_detection.get_bool();
+		specification.date_detection = prop_d_detection.as_bool();
 	}
 
 	static inline void process_n_detection(const MsgPack& prop_n_detection, specification_t& specification) {
-		specification.numeric_detection = prop_n_detection.get_bool();
+		specification.numeric_detection = prop_n_detection.as_bool();
 	}
 
 	static inline void process_g_detection(const MsgPack& prop_g_detection, specification_t& specification) {
-		specification.geo_detection = prop_g_detection.get_bool();
+		specification.geo_detection = prop_g_detection.as_bool();
 	}
 
 	static inline void process_b_detection(const MsgPack& prop_b_detection, specification_t& specification) {
-		specification.bool_detection = prop_b_detection.get_bool();
+		specification.bool_detection = prop_b_detection.as_bool();
 	}
 
 	static inline void process_s_detection(const MsgPack& prop_s_detection, specification_t& specification) {
-		specification.string_detection = prop_s_detection.get_bool();
+		specification.string_detection = prop_s_detection.as_bool();
 	}
 
 	static inline void process_bool_term(const MsgPack& prop_bool_term, specification_t& specification) {
-		specification.bool_term = prop_bool_term.get_bool();
+		specification.bool_term = prop_bool_term.as_bool();
 	}
 };
 

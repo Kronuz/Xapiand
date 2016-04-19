@@ -41,14 +41,14 @@ bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch);
 
 
 inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
-	if (o.get_type() == msgpack::type::MAP) {
+	if (o.type() == msgpack::type::MAP) {
 		o[target] = val;
-	} else if (o.get_type() == msgpack::type::ARRAY) {
+	} else if (o.type() == msgpack::type::ARRAY) {
 		if (target.compare("-") == 0) {
-			o.insert_item_to_array(o.body->obj->via.array.size, val);
+			o.push_back(val);
 		} else {
 			int offset = strict(std::stoi, target);
-			o.insert_item_to_array(offset, val);
+			o.put(offset, val); //FIXME: Add the insert that is really needed here
 		}
 	} else {
 		throw MSG_ClientError("Object is not array or map");
@@ -56,9 +56,9 @@ inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
 }
 
 
-inline void _erase(MsgPack&& o, const std::string& target) {
+inline void _erase(MsgPack& o, const std::string& target) {
 	try {
-		if (o.get_type() == msgpack::type::ARRAY) {
+		if (o.type() == msgpack::type::ARRAY) {
 			o.erase(strict(std::stoi, target));
 		} else {
 			o.erase(target);
@@ -70,8 +70,8 @@ inline void _erase(MsgPack&& o, const std::string& target) {
 
 
 inline void _incr_decr(MsgPack& o, int val) {
-	if (o.get_type() == msgpack::type::NEGATIVE_INTEGER) {
-		o.body->obj->via.i64 += val;
+	if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
+		o._body->_obj->via.i64 += val;
 	} else {
 		throw MSG_ClientError("Object is not integer");
 	}
@@ -79,13 +79,13 @@ inline void _incr_decr(MsgPack& o, int val) {
 
 
 inline void _incr_decr(MsgPack& o, int val, int limit) {
-	if (o.get_type() == msgpack::type::NEGATIVE_INTEGER) {
-		o.body->obj->via.i64 += val;
+	if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
+		o._body->_obj->via.i64 += val;
 		if (val < 0) {
-			if (static_cast<int>(o.body->obj->via.i64) <= limit) {
+			if (static_cast<int>(o._body->_obj->via.i64) <= limit) {
 				throw MSG_LimitError("Limit exceeded");
 			}
-		} else if (static_cast<int>(o.body->obj->via.i64) >= limit) {
+		} else if (static_cast<int>(o._body->_obj->via.i64) >= limit) {
 			throw MSG_LimitError("Limit exceeded");
 		}
 	} else {
@@ -96,6 +96,6 @@ inline void _incr_decr(MsgPack& o, int val, int limit) {
 
 inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c) {
 	MsgPack path = obj.at(path_c);
-	std::string path_str(path.get_str());
+	std::string path_str(path.as_string());
 	stringTokenizer(path_str, "/", path_split);
 }

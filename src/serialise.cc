@@ -34,21 +34,21 @@
 std::string
 Serialise::serialise(char field_type, const MsgPack& field_value)
 {
-	switch (field_value.get_type()) {
+	switch (field_value.type()) {
 		case msgpack::type::NIL:
 			throw MSG_DummyException();
 		case msgpack::type::BOOLEAN:
-			return boolean(field_type, field_value.body->obj->via.boolean);
+			return boolean(field_type, field_value.as_bool());
 		case msgpack::type::POSITIVE_INTEGER:
-			return positive(field_type, field_value.body->obj->via.u64);
+			return positive(field_type, field_value.as_u64());
 		case msgpack::type::NEGATIVE_INTEGER:
-			return integer(field_type, field_value.body->obj->via.i64);
+			return integer(field_type, field_value.as_i64());
 		case msgpack::type::FLOAT:
-			return _float(field_type, field_value.body->obj->via.f64);
+			return _float(field_type, field_value.as_f64());
 		case msgpack::type::STR:
-			return string(field_type, std::string(field_value.body->obj->via.str.ptr, field_value.body->obj->via.str.size));
+			return string(field_type, field_value.as_string());
 		default:
-			throw MSG_SerialisationError("msgpack::type [%d] is not supported", field_value.body->obj->type);
+			throw MSG_SerialisationError("msgpack::type [%d] is not supported", field_value.type());
 	}
 }
 
@@ -192,21 +192,21 @@ std::string
 Serialise::date(const MsgPack& value, Datetime::tm_t& tm)
 {
 	double timestamp;
-	switch (value.get_type()) {
+	switch (value.type()) {
 		case msgpack::type::POSITIVE_INTEGER:
-			timestamp = value.body->obj->via.u64;
+			timestamp = value.as_u64();
 			tm = Datetime::to_tm_t(timestamp);
 			return Xapian::sortable_serialise(timestamp);
 		case msgpack::type::NEGATIVE_INTEGER:
-			timestamp = value.body->obj->via.i64;
+			timestamp = value.as_i64();
 			tm = Datetime::to_tm_t(timestamp);
 			return Xapian::sortable_serialise(timestamp);
 		case msgpack::type::FLOAT:
-			timestamp = value.body->obj->via.f64;
+			timestamp = value.as_f64();
 			tm = Datetime::to_tm_t(timestamp);
 			return Xapian::sortable_serialise(timestamp);
 		case msgpack::type::STR:
-			timestamp = Datetime::timestamp(std::string(value.body->obj->via.str.ptr, value.body->obj->via.str.size), tm);
+			timestamp = Datetime::timestamp(value.as_string(), tm);
 			return Xapian::sortable_serialise(timestamp);
 		default:
 			throw MSG_SerialisationError("Date value must be numeric or string");

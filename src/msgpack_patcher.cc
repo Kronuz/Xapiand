@@ -41,11 +41,11 @@
 
 
 void apply_patch(const MsgPack& patch, MsgPack& object) {
-	if (patch.get_type() == msgpack::type::ARRAY) {
+	if (patch.type() == msgpack::type::ARRAY) {
 		for (auto elem : patch) {
 			try {
 				MsgPack op = elem.at("op");
-				std::string op_str = op.get_str();
+				std::string op_str = op.as_string();
 
 				if      (op_str.compare(PATCH_ADD) == 0) { patch_add(elem, object);          }
 				else if (op_str.compare(PATCH_REM) == 0) { patch_remove(elem, object);       }
@@ -177,7 +177,7 @@ void patch_test(const MsgPack& obj_patch, MsgPack& object) {
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
 		if (val != o) {
-			throw MSG_ClientError("In patch test: Objects are not equals. Expected: %s Result: %s", val.to_json_string().c_str(), o.to_json_string().c_str());
+			throw MSG_ClientError("In patch test: Objects are not equals. Expected: %s Result: %s", val.to_string().c_str(), o.to_string().c_str());
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch test: Inconsistent data");
@@ -199,10 +199,10 @@ void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr) {
 		MsgPack o = object.path(path_split);
 		MsgPack val = get_patch_value(obj_patch);
 		int val_num;
-		if (val.get_type() == msgpack::type::STR) {
-			val_num = strict(std::stoi, std::string(val.body->obj->via.str.ptr, val.body->obj->via.str.size));
-		} else if (val.get_type() == msgpack::type::NEGATIVE_INTEGER) {
-			val_num = static_cast<int>(val.body->obj->via.i64);
+		if (val.type() == msgpack::type::STR) {
+			val_num = strict(std::stoi, std::string(val._body->_obj->via.str.ptr, val._body->_obj->via.str.size));
+		} else if (val.type() == msgpack::type::NEGATIVE_INTEGER) {
+			val_num = static_cast<int>(val._body->_obj->via.i64);
 		} else {
 			throw  MSG_ClientError("\"value\" must be string or integer");
 		}
@@ -237,11 +237,11 @@ MsgPack get_patch_value(const MsgPack& obj_patch) {
 bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch) {
 	try {
 		MsgPack o = obj_patch.at("limit");
-		if (o.get_type() == msgpack::type::STR) {
-			limit = strict(std::stoi, std::string(o.body->obj->via.str.ptr, o.body->obj->via.str.size));
+		if (o.type() == msgpack::type::STR) {
+			limit = strict(std::stoi, std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 			return true;
-		} else if (o.get_type() == msgpack::type::NEGATIVE_INTEGER) {
-			limit = static_cast<int>(o.body->obj->via.i64);
+		} else if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
+			limit = static_cast<int>(o._body->_obj->via.i64);
 			return true;
 		} else {
 			throw MSG_ClientError("\"limit\" must be string or integer");

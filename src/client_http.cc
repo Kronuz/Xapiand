@@ -1605,7 +1605,7 @@ HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, bool p
 		return std::make_pair(obj.to_string(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, html_type)) {
 		std::function<std::string(const msgpack::object&)> html_serialize = serialize_error ? msgpack_to_html_error : msgpack_to_html;
-		return std::make_pair(html_serialize(*(obj.body->obj)), html_type.first + "/" + html_type.second + "; charset=utf-8");
+		return std::make_pair(html_serialize(*(obj._body->obj)), html_type.first + "/" + html_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, text_type)) {
 		/*
 		 error:
@@ -1646,7 +1646,7 @@ HttpClient::write_http_response(const MsgPack& response,  int status_code, bool 
 		MsgPack response_err;
 		response_err[RESPONSE_STATUS] = status_code;
 		response_err[RESPONSE_MESSAGE] = std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what());
-		auto response_str = response_err.to_json_string();
+		auto response_str = response_err.to_string();
 		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor, 0, response_str));
 		return;
 	}
