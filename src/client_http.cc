@@ -502,6 +502,9 @@ HttpClient::_run()
 				write(http_response(501, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor));
 				break;
 		}
+	} catch (const DocNotFoundError&) {
+		error_code = 404;
+		error.assign("Document not found");
 	} catch (const ClientError& exc) {
 		error_code = 400;
 		error.assign(exc.what());
