@@ -271,14 +271,14 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	Endpoints cluster_endpoints(Endpoint("."));
 
 	DatabaseHandler db_handler;
-	db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
 	try {
+		db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
 		db_handler.checkout();
 	} catch (const CheckoutError&) {
 		new_cluster = 1;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
-		db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 		try {
+			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 			db_handler.checkout();
 		} catch (const CheckoutError&) {
 			L_CRIT(this, "Cannot generate cluster database");
