@@ -25,8 +25,8 @@
 #include "msgpack.hpp"
 
 #include "rapidjson/document.h"
-#include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
+#include "rapidjson/stringbuffer.h"
 #include "xchange/rapidjson.hpp"
 
 #include <memory>
@@ -71,8 +71,7 @@ class MsgPack {
 			_is_key(is_key),
 			_pos(pos),
 			_key(key),
-			_obj(obj)
-		{}
+			_obj(obj) { }
 
 		template <typename T>
 		Body(T&& v) :
@@ -80,8 +79,7 @@ class MsgPack {
 			_zone(std::make_shared<msgpack::zone>()),
 			_base(std::make_shared<msgpack::object>(std::forward<T>(v), *_zone)),
 			_pos(0),
-			_obj(_base.get())
-		{}
+			_obj(_base.get()) { }
 	};
 
 	std::shared_ptr<Body> _body;
@@ -188,30 +186,28 @@ private:
 		struct enable_make_shared : MsgPack {
 			enable_make_shared(Args&&... args) : MsgPack(std::forward<Args>(args)...) { }
 		};
+
 		return static_cast<std::shared_ptr<MsgPack>>(std::make_shared<enable_make_shared>(std::forward<Args>(args)...));
 	}
 
-	MsgPack(const std::shared_ptr<MsgPack>& parent, bool is_key, size_t pos, const std::shared_ptr<MsgPack>& key, msgpack::object* obj) :
-		_body(std::make_shared<Body>(parent, is_key, pos, key, obj))
+	MsgPack(const std::shared_ptr<MsgPack>& parent, bool is_key, size_t pos, const std::shared_ptr<MsgPack>& key, msgpack::object* obj)
+		: _body(std::make_shared<Body>(parent, is_key, pos, key, obj))
 	{
 		_init();
 	}
 
-	MsgPack(const std::shared_ptr<Body>& b) :
-		_body(b)
-	{}
+	MsgPack(const std::shared_ptr<Body>& b)
+		: _body(b) { }
 
-	MsgPack(std::shared_ptr<Body>&& b) :
-		_body(std::move(b))
-	{}
+	MsgPack(std::shared_ptr<Body>&& b)
+		: _body(std::move(b)) { }
 
 	void _initializer_array(const std::initializer_list<MsgPack>& list) {
 		_body->_obj->type = msgpack::type::ARRAY;
 		_body->_obj->via.array.ptr = nullptr;
 		_body->_obj->via.array.size = 0;
 		_reserve_array(list.size());
-		for (auto it = list.begin(); it != list.end(); ++it) {
-			auto& val = *it;
+		for (const auto& val : list) {
 			push_back(val);
 		}
 	}
@@ -221,15 +217,15 @@ private:
 		_body->_obj->via.map.ptr = nullptr;
 		_body->_obj->via.map.size = 0;
 		_reserve_map(list.size());
-		for (auto it = list.begin(); it != list.end(); ++it) {
-			put(it->at(0), it->at(1));
+		for (const auto& val : list) {
+			put(val.at(0), val.at(1));
 		}
 	}
 
 	void _initializer(const std::initializer_list<MsgPack>& list) {
 		bool map = true;
-		for (auto it = list.begin(); it != list.end(); ++it) {
-			if (!it->is_array() || it->size() != 2 || !it->at(0).is_string()) {
+		for (const auto& val : list) {
+			if (!val.is_array() || val.size() != 2 || !val.at(0).is_string()) {
 				map = false;
 				break;
 			}
@@ -239,24 +235,23 @@ private:
 	}
 
 public:
-	MsgPack() :
-		MsgPack(nullptr)
-	{}
+	MsgPack()
+		: MsgPack(nullptr) { }
 
 	template <typename T, typename = std::enable_if_t<!std::is_same<std::shared_ptr<Body>, std::decay_t<T>>::value>>
-	MsgPack(T&& v) :
-		_body(std::make_shared<Body>(std::forward<T>(v)))
+	MsgPack(T&& v)
+		: _body(std::make_shared<Body>(std::forward<T>(v)))
 	{
 		_init();
 	}
 
-	MsgPack(std::initializer_list<MsgPack> list) :
-		MsgPack()
+	MsgPack(const std::initializer_list<MsgPack>& list)
+		: MsgPack()
 	{
 		_initializer(list);
 	}
 
-	MsgPack& operator=(std::initializer_list<MsgPack> list) {
+	MsgPack& operator=(const std::initializer_list<MsgPack>& list) {
 		clear();
 		_initializer(list);
 		return *this;
@@ -272,8 +267,7 @@ public:
 			// Change key in the parent's map:
 			auto it = _body->_parent->_body->map.find(std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size));
 			if (it != _body->_parent->_body->map.end()) {
-				auto pair = std::make_pair(std::string(obj.via.str.ptr, obj.via.str.size), it->second);
-				_body->_parent->_body->map.insert(pair);
+				_body->_parent->_body->map.insert(std::make_pair(std::string(obj.via.str.ptr, obj.via.str.size), it->second));
 				_body->_parent->_body->map.erase(it);
 				assert(_body->_parent->_body->_obj->via.map.size == _body->_parent->_body->map.size());
 			}
@@ -295,7 +289,7 @@ private:
 	std::shared_ptr<MsgPack> _init_map(size_t pos) {
 		std::shared_ptr<MsgPack> last_val;
 		_body->map.reserve(_body->_capacity);
-		auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
+		const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 		for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 			if (p->key.type != msgpack::type::STR) {
 				throw msgpack::type_error();
@@ -306,14 +300,14 @@ private:
 				std::string(p->key.via.str.ptr, p->key.via.str.size),
 				std::make_pair(last_key, last_val)
 			);
-			_body->map.insert(pair);
+			_body->map.insert(std::move(pair));
 		}
 		assert(_body->_obj->via.map.size == _body->map.size());
 		return last_val;
 	}
 
 	void _update_map(size_t pos) {
-		auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
+		const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 		for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 			auto mobj = _body->map.at(std::string(p->key.via.str.ptr, p->key.via.str.size)).second;
 			mobj->_body->_pos = pos;
@@ -324,9 +318,9 @@ private:
 	std::shared_ptr<MsgPack> _init_array(size_t pos) {
 		std::shared_ptr<MsgPack> last_val;
 		_body->array.reserve(_body->_capacity);
-		auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
+		const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 		for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
-			auto last_val = make_shared(std::make_shared<Body>(make_shared(_body), false, pos, nullptr, p));
+			last_val = make_shared(std::make_shared<Body>(make_shared(_body), false, pos, nullptr, p));
 			_body->array.push_back(last_val);
 		}
 		assert(_body->_obj->via.array.size == _body->array.size());
@@ -334,7 +328,7 @@ private:
 	}
 
 	void _update_array(size_t pos) {
-		auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
+		const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 		for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
 			auto mobj = _body->array.at(pos);
 			mobj->_body->_pos = pos;
@@ -1066,13 +1060,14 @@ public:
 		return s;
 	}
 
-	std::string serialise() const {
+	inline std::string serialise() const {
 		msgpack::sbuffer sbuf;
 		msgpack::pack(&sbuf, *_body->_obj);
 		return std::string(sbuf.data(), sbuf.size());
 	}
 
-	static MsgPack unserialise(const std::string& s) {
+	inline static MsgPack unserialise(const std::string& s) {
+		auto obj = msgpack::unpack(s.data(), s.size()).get();
 		return MsgPack(msgpack::unpack(s.data(), s.size()).get());
 	}
 
@@ -1084,9 +1079,11 @@ public:
 	friend msgpack::adaptor::object_with_zone<std::nullptr_t>;
 };
 
+
 inline static std::ostream& operator<<(std::ostream& s, const MsgPack& o){
 	return o.operator<<(s);
 }
+
 
 namespace msgpack {
 	MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
