@@ -884,7 +884,7 @@ XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
 			second_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
 			second_time.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
 		}
-		return _get_stats_time(std::move(stats), first_time, second_time);
+		return _get_stats_time(stats, first_time, second_time);
 	}
 	throw MSG_ClientError("Incorrect input: %s", time_req.c_str());
 }
