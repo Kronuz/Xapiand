@@ -1600,12 +1600,12 @@ HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, bool p
 	L_CALL(this, "HttpClient::serialize_response()");
 
 	if (is_acceptable_type(ct_type, json_type)) {
-		return std::make_pair(obj.to_json_string(pretty), json_type.first + "/" + json_type.second + "; charset=utf-8");
+		return std::make_pair(obj.to_string(pretty), json_type.first + "/" + json_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, msgpack_type)) {
 		return std::make_pair(obj.to_string(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, html_type)) {
 		std::function<std::string(const msgpack::object&)> html_serialize = serialize_error ? msgpack_to_html_error : msgpack_to_html;
-		return std::make_pair(html_serialize(*(obj._body->obj)), html_type.first + "/" + html_type.second + "; charset=utf-8");
+		return std::make_pair(html_serialize(*(obj._body->_obj)), html_type.first + "/" + html_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, text_type)) {
 		/*
 		 error:
