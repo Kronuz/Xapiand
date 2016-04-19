@@ -78,8 +78,8 @@ public:
 		}
 
 		endpoints = &endpoints_;
-		schema = new Schema(*XapiandManager::manager->database_pool.get_schema(endpoints->operator[](0), flags));
 		flags = flags_;
+		schema = new Schema(*XapiandManager::manager->database_pool.get_schema(endpoints->operator[](0), flags));
 	}
 
 	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
