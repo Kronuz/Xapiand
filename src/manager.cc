@@ -268,31 +268,35 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 
 	// Open cluster database
 	Endpoints cluster_endpoints(Endpoint("."));
-	std::shared_ptr<Database> cluster_database;
-	int cluster_flags = DB_WRITABLE | DB_PERSISTENT | DB_NOWAL;
-	if (!database_pool.checkout(cluster_database, cluster_endpoints, cluster_flags)) {
+
+	DatabaseHandler db_handler;
+	db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
+	try {
+		db_handler.checkout();
+	} catch (const CheckoutError&) {
 		new_cluster = 1;
-		cluster_flags = DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
-		if (!database_pool.checkout(cluster_database, cluster_endpoints, cluster_flags)) {
-			L_CRIT(nullptr, "Cannot generate cluster database");
+		db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+		try {
+			db_handler.checkout();
+		} catch (const CheckoutError&) {
+			L_CRIT(this, "Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
 		}
 	}
+	db_handler.checkin();
 
 	// Set node as ready!
 	set_node_name(local_node->name, lk);
 
 	Xapian::Document document;
 	try {
-		document = cluster_database->get_document(std::to_string(local_node->id));
-		database_pool.checkin(cluster_database);
+		document = db_handler.get_document(std::to_string(local_node->id));
 	} catch (const DocNotFoundError&) {
-		database_pool.checkin(cluster_database);
 		MsgPack obj;
-		obj["name"] = local_node->name;
-		obj["tagline"] = XAPIAND_TAGLINE;
-		Indexer::index(cluster_endpoints[0], cluster_flags, obj, std::to_string(local_node->id), true, MSGPACK_TYPE, "");
+		obj["_name"] = local_node->name;
+		obj["_tagline"] = XAPIAND_TAGLINE;
+		db_handler.index(obj, std::to_string(local_node->id), true, MSGPACK_TYPE, std::string());
 	}
 
 	MsgPack obj_data = get_MsgPack(document);
