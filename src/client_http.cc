@@ -532,7 +532,7 @@ HttpClient::_run()
 	}
 
 	if (error_code) {
-		if (db_handler.database) {
+		if (db_handler.get()) {
 			db_handler.checkin();
 		}
 		if (written) {
@@ -727,9 +727,9 @@ HttpClient::document_info_view()
 	db_handler.reset(endpoints, DB_SPAWN);
 
 	MsgPack response;
-	response["_docid"] = db_handler.get_docid(path_parser.get_id());;
+	response["doc_id"] = db_handler.get_docid(path_parser.get_id());
 
-	write_http_response(response, status_code, pretty);
+	write_http_response(response, 200, pretty);
 }
 
 
@@ -879,7 +879,7 @@ HttpClient::stats_view()
 		path_parser.off_id = nullptr;
 		endpoints_maker(1s);
 
-		response["_database_status"] = database->get_stats_database();
+		response["_database_status"] = db_handler.get_stats_database();
 		res_stats = true;
 	}
 
@@ -904,7 +904,7 @@ HttpClient::schema_view()
 	endpoints_maker(1s);
 
 	db_handler.reset(endpoints, DB_SPAWN);
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, db_handler.schema->to_json_string(pretty)));
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, db_handler.get_schema()->to_json_string(pretty)));
 	return;
 }
 
@@ -945,7 +945,7 @@ HttpClient::facets_view()
 			const auto facet_e = spy.second->values_end();
 			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
 				MsgPack value;
-				auto field_t = db_handler.schema->get_slot_field(spy.first);
+				auto field_t = db_handler.get_schema()->get_slot_field(spy.first);
 				value["_value"] = Unserialise::MsgPack(field_t.type, *facet);
 				value["_termfreq"] = facet.get_termfreq();
 				array.add_item_to_array(value);
@@ -1084,7 +1084,7 @@ HttpClient::search_view()
 				obj_data = obj_data.at(RESERVED_DATA);
 			} catch (const std::out_of_range&) {
 				clean_reserved(obj_data);
-				obj_data[RESERVED_ID] = database->get_value(document, RESERVED_ID);
+				obj_data[RESERVED_ID] = db_handler.get_value(document, RESERVED_ID);
 				// Detailed info about the document:
 				obj_data[RESERVED_RANK] = m.get_rank();
 				obj_data[RESERVED_WEIGHT] = m.get_weight();

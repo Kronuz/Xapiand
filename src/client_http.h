@@ -24,6 +24,7 @@
 
 #include "client_base.h"
 
+#include "database_handler.h"
 #include "http_parser.h"
 #include "servers/server_http.h"
 
@@ -76,7 +77,7 @@ public:
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	struct http_parser parser;
-	HandlerDatabase db_handler;
+	DatabaseHandler db_handler;
 
 	void on_read(const char* buf, size_t received) override;
 	void on_read_file(const char* buf, size_t received) override;
