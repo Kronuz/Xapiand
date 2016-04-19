@@ -34,6 +34,7 @@
 		46DFA9B21BC4800E008D8144 /* discovery.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46DFA9AE1BC4800E008D8144 /* discovery.cc */; };
 		46DFA9B31BC4800E008D8144 /* http.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46DFA9AF1BC4800E008D8144 /* http.cc */; };
 		46DFA9B41BC4800E008D8144 /* tcp_base.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46DFA9B01BC4800E008D8144 /* tcp_base.cc */; };
+		46EE52251CC69B5D00DD9F17 /* database_handler.cc in Sources */ = {isa = PBXBuildFile; fileRef = 46EE52231CC69B5D00DD9F17 /* database_handler.cc */; };
 		C31C5A171C11123A00E0DB7C /* database_autocommit.cc in Sources */ = {isa = PBXBuildFile; fileRef = C31C5A161C11123A00E0DB7C /* database_autocommit.cc */; };
 		C350589B1B7BAEE300901B80 /* multivaluekeymaker.cc in Sources */ = {isa = PBXBuildFile; fileRef = C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */; };
 		C350589F1B99E75500901B80 /* io_utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = C350589D1B99E75500901B80 /* io_utils.cc */; };
@@ -134,6 +135,8 @@
 		46DFA9AF1BC4800E008D8144 /* http.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = http.cc; path = src/servers/http.cc; sourceTree = "<group>"; };
 		46DFA9B01BC4800E008D8144 /* tcp_base.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tcp_base.cc; path = src/servers/tcp_base.cc; sourceTree = "<group>"; };
 		46DFA9B51BC4809D008D8144 /* http.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = http.h; path = src/servers/http.h; sourceTree = "<group>"; };
+		46EE52231CC69B5D00DD9F17 /* database_handler.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = database_handler.cc; path = src/database_handler.cc; sourceTree = "<group>"; };
+		46EE52241CC69B5D00DD9F17 /* database_handler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = database_handler.h; path = src/database_handler.h; sourceTree = "<group>"; };
 		C31C5A161C11123A00E0DB7C /* database_autocommit.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = database_autocommit.cc; path = src/database_autocommit.cc; sourceTree = "<group>"; };
 		C31C5A181C11125A00E0DB7C /* database_autocommit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = database_autocommit.h; path = src/database_autocommit.h; sourceTree = "<group>"; };
 		C350589A1B7BAEE300901B80 /* multivaluekeymaker.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = multivaluekeymaker.cc; path = src/multivaluekeymaker.cc; sourceTree = "<group>"; };
@@ -234,6 +237,8 @@
 				C31C5A181C11125A00E0DB7C /* database_autocommit.h */,
 				465C42A41B8E37FE00861471 /* database_utils.cc */,
 				465C42A31B8E37FE00861471 /* database_utils.h */,
+				46EE52231CC69B5D00DD9F17 /* database_handler.cc */,
+				46EE52241CC69B5D00DD9F17 /* database_handler.h */,
 				46740EEA1B5436120073C5E9 /* datetime.cc */,
 				46740EEB1B5436120073C5E9 /* datetime.h */,
 				46DFA9AE1BC4800E008D8144 /* discovery.cc */,
@@ -411,6 +416,7 @@
 				C350589F1B99E75500901B80 /* io_utils.cc in Sources */,
 				C39AE0711B2F627E00203139 /* replicator.cc in Sources */,
 				C39AE06A1B2F627E00203139 /* endpoint.cc in Sources */,
+				46EE52251CC69B5D00DD9F17 /* database_handler.cc in Sources */,
 				C39AE0671B2F627E00203139 /* client_http.cc in Sources */,
 				46DFA9A51BC3014E008D8144 /* server_discovery.cc in Sources */,
 				46DFA9A71BC3014E008D8144 /* server_raft.cc in Sources */,
