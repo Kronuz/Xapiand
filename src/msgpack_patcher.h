@@ -71,7 +71,7 @@ inline void _erase(MsgPack& o, const std::string& target) {
 
 inline void _incr_decr(MsgPack& o, int val) {
 	if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
-		o._body->_obj->via.i64 += val;
+		o += val;
 	} else {
 		throw MSG_ClientError("Object is not integer");
 	}
@@ -80,12 +80,12 @@ inline void _incr_decr(MsgPack& o, int val) {
 
 inline void _incr_decr(MsgPack& o, int val, int limit) {
 	if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
-		o._body->_obj->via.i64 += val;
+		o += val;
 		if (val < 0) {
-			if (static_cast<int>(o._body->_obj->via.i64) <= limit) {
+			if (static_cast<int>(o.as_i64()) <= limit) {
 				throw MSG_LimitError("Limit exceeded");
 			}
-		} else if (static_cast<int>(o._body->_obj->via.i64) >= limit) {
+		} else if (static_cast<int>(o.as_i64()) >= limit) {
 			throw MSG_LimitError("Limit exceeded");
 		}
 	} else {

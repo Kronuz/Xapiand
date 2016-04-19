@@ -200,9 +200,9 @@ void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr) {
 		MsgPack val = get_patch_value(obj_patch);
 		int val_num;
 		if (val.type() == msgpack::type::STR) {
-			val_num = strict(std::stoi, std::string(val._body->_obj->via.str.ptr, val._body->_obj->via.str.size));
+			val_num = strict(std::stoi, val.as_string());
 		} else if (val.type() == msgpack::type::NEGATIVE_INTEGER) {
-			val_num = static_cast<int>(val._body->_obj->via.i64);
+			val_num = static_cast<int>(val.as_i64());
 		} else {
 			throw  MSG_ClientError("\"value\" must be string or integer");
 		}
@@ -238,10 +238,10 @@ bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch) {
 	try {
 		MsgPack o = obj_patch.at("limit");
 		if (o.type() == msgpack::type::STR) {
-			limit = strict(std::stoi, std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+			limit = strict(std::stoi, o.as_string());
 			return true;
 		} else if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
-			limit = static_cast<int>(o._body->_obj->via.i64);
+			limit = static_cast<int>(o.as_i64());
 			return true;
 		} else {
 			throw MSG_ClientError("\"limit\" must be string or integer");
