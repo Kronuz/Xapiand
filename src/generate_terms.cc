@@ -22,9 +22,10 @@
 
 #include "generate_terms.h"
 
-#include "datetime.h"
-#include "utils.h"
 #include "database.h"
+#include "datetime.h"
+#include "serialise.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <bitset>
