@@ -25,6 +25,7 @@
 #include "database.h"
 #include "log.h"
 #include "serialise.h"
+#include "wkt_parser.h"
 
 
 static const std::vector<std::string> str_time     { "second", "minute", "hour", "day", "month", "year" };
