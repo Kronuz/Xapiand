@@ -27,6 +27,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "client_base.h"
+#include "database_handler.h"
 #include "servers/server_binary.h"
 
 #include <xapian.h>
@@ -173,7 +174,7 @@ class BinaryClient : public BaseClient {
 
 	bool writable;
 	int flags;
-	std::shared_ptr<Database> database;
+	DatabaseHandler db_handler;
 
 	// Buffers that are pending write
 	std::string buffer;
@@ -187,8 +188,9 @@ class BinaryClient : public BaseClient {
 	void on_read_file(const char *buf, size_t received) override;
 	void on_read_file_done() override;
 
-	void checkout_database();
-	void checkin_database();
+	void reset_db_handler();
+	void checkout_db_handler();
+	void checkin_db_handler();
 
 	// Remote protocol:
 

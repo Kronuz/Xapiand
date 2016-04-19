@@ -76,8 +76,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* 
 	  running(0),
 	  state(State::INIT),
 	  writable(false),
-	  flags(0),
-	  database(nullptr)
+	  flags(0)
 {
 	int binary_clients = ++XapiandServer::binary_clients;
 	if (binary_clients > XapiandServer::max_binary_clients) {
@@ -97,7 +96,7 @@ BinaryClient::BinaryClient(std::shared_ptr<BinaryServer> server_, ev::loop_ref* 
 
 BinaryClient::~BinaryClient()
 {
-	checkin_database();
+	checkin_db_handler();
 
 	int binary_clients = --XapiandServer::binary_clients;
 	int total_clients = XapiandServer::total_clients;
@@ -132,7 +131,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	writable = true;
 
-	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
+	if (!XapiandManager::manager->database_pool.checkout(db_handler.get(), endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
 		manager=XapiandManager::manager,
 		src_endpoint,
 		dst_endpoint
@@ -149,7 +148,7 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 
 	if ((sock = BaseTCP::connect(sock, src_endpoint.host, std::to_string(port))) < 0) {
 		L_ERR(this, "Cannot connect to %s", src_endpoint.host.c_str(), std::to_string(port).c_str());
-		checkin_database();
+		checkin_db_handler();
 		return false;
 	}
 	L_CONN(this, "Connected to %s (sock=%d)!", src_endpoint.as_string().c_str(), sock);
@@ -173,20 +172,20 @@ BinaryClient::on_read_file_done()
 				break;
 			default:
 				L_ERR(this, "ERROR: Invalid on_read_file_done for state: %d", state);
-				checkin_database();
+				checkin_db_handler();
 				shutdown();
 		};
 	} catch (const Xapian::NetworkError& exc) {
 		L_ERR(this, "ERROR: %s", exc.get_msg().c_str());
-		checkin_database();
+		checkin_db_handler();
 		shutdown();
 	} catch (const std::exception& exc) {
 		L_ERR(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown exception!");
-		checkin_database();
+		checkin_db_handler();
 		shutdown();
 	} catch (...) {
 		L_ERR(this, "ERROR: Unkown error!");
-		checkin_database();
+		checkin_db_handler();
 		shutdown();
 	}
 
@@ -330,31 +329,37 @@ BinaryClient::send_message(char type_as_char, const std::string &message, double
 
 
 void
-BinaryClient::checkout_database()
+BinaryClient::reset_db_handler()
 {
-	if (!database) {
-		int _flags = writable ? DB_WRITABLE : DB_OPEN;
-		if ((flags & Xapian::DB_CREATE_OR_OPEN) == Xapian::DB_CREATE_OR_OPEN) {
-			_flags |= DB_SPAWN;
-		} else if ((flags & Xapian::DB_CREATE_OR_OVERWRITE) == Xapian::DB_CREATE_OR_OVERWRITE) {
-			_flags |= DB_SPAWN;
-		} else if ((flags & Xapian::DB_CREATE) == Xapian::DB_CREATE) {
-			_flags |= DB_SPAWN;
-		} else if ((flags & Xapian::DB_OPEN) == Xapian::DB_OPEN) {
-		}
-		if (!XapiandManager::manager->database_pool.checkout(database, endpoints, _flags)) {
-			throw MSG_InvalidOperationError("Server has no open database");
-		}
+	if (db_handler.get()) {
+		db_handler.checkin();
 	}
+
+	int _flags = writable ? DB_WRITABLE : DB_OPEN;
+	if ((flags & Xapian::DB_CREATE_OR_OPEN) == Xapian::DB_CREATE_OR_OPEN) {
+		_flags |= DB_SPAWN;
+	} else if ((flags & Xapian::DB_CREATE_OR_OVERWRITE) == Xapian::DB_CREATE_OR_OVERWRITE) {
+		_flags |= DB_SPAWN;
+	} else if ((flags & Xapian::DB_CREATE) == Xapian::DB_CREATE) {
+		_flags |= DB_SPAWN;
+	}
+	db_handler.reset(endpoints, _flags);
 }
 
 
 void
-BinaryClient::checkin_database()
+BinaryClient::checkout_db_handler()
 {
-	if (database) {
-		XapiandManager::manager->database_pool.checkin(database);
-		database.reset();
+	reset_db_handler();
+	db_handler.checkout();
+}
+
+
+void
+BinaryClient::checkin_db_handler()
+{
+	if (db_handler.get()) {
+		db_handler.checkin();
 	}
 	matchspies.clear();
 	enquire.reset();
@@ -428,33 +433,33 @@ BinaryClient::_run()
 				// away, just exit and the client will cope.
 				send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc), 1.0);
 			} catch (...) {}
-			checkin_database();
+			checkin_db_handler();
 			shutdown();
 		} catch (const Xapian::NetworkError& exc) {
 			auto exc_msg = exc.get_msg().c_str();
 			L_EXC(this, "ERROR: %s", *exc_msg ? exc_msg : "Unkown Xapian::NetworkError!");
-			checkin_database();
+			checkin_db_handler();
 			shutdown();
 		} catch (const Xapian::Error& exc) {
 			// Propagate the exception to the client, then return to the main
 			// message handling loop.
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
-			checkin_database();
+			checkin_db_handler();
 		} catch (const Exception& exc) {
 			L_EXC(this, "ERROR: %s", *exc.get_context() ? exc.get_context() : "Unkown Exception!");
 			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-			checkin_database();
+			checkin_db_handler();
 			shutdown();
 		} catch (const std::exception& exc) {
 			L_EXC(this, "ERROR: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
 			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-			checkin_database();
+			checkin_db_handler();
 			shutdown();
 		} catch (...) {
 			std::exception exc;
 			L_EXC(this, "ERROR: %s", "Unkown exception!");
 			send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-			checkin_database();
+			checkin_db_handler();
 			shutdown();
 		}
 	}
@@ -518,7 +523,7 @@ BinaryClient::remote_server(RemoteMessageType type, const std::string &message)
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
-		checkin_database();
+		checkin_db_handler();
 		throw;
 	}
 }
@@ -527,11 +532,13 @@ BinaryClient::remote_server(RemoteMessageType type, const std::string &message)
 void
 BinaryClient::msg_allterms(const std::string &message)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
-
 	std::string prev = message;
 	const std::string& prefix = message;
+
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
+
 	const Xapian::TermIterator end = db->allterms_end(prefix);
 	for (Xapian::TermIterator t = db->allterms_begin(prefix); t != end; ++t) {
 		if unlikely(prev.size() > 255)
@@ -545,7 +552,7 @@ BinaryClient::msg_allterms(const std::string &message)
 		prev = v;
 	}
 
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -554,19 +561,21 @@ BinaryClient::msg_allterms(const std::string &message)
 void
 BinaryClient::msg_termlist(const std::string &message)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
 
 	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db->get_doclength(did)));
 	std::string prev;
 	const Xapian::TermIterator end = db->termlist_end(did);
 	for (Xapian::TermIterator t = db->termlist_begin(did); t != end; ++t) {
-		if unlikely(prev.size() > 255)
+		if unlikely(prev.size() > 255) {
 			prev.resize(255);
+		}
 		const std::string & v = *t;
 		size_t reuse = common_prefix_length(prev, v);
 		std::string reply(serialise_length(t.get_wdf()));
@@ -577,7 +586,7 @@ BinaryClient::msg_termlist(const std::string &message)
 		prev = v;
 	}
 
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -586,13 +595,14 @@ BinaryClient::msg_termlist(const std::string &message)
 void
 BinaryClient::msg_positionlist(const std::string &message)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 	std::string term(p, p_end - p);
+
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
 
 	Xapian::termpos lastpos = static_cast<Xapian::termpos>(-1);
 	const Xapian::PositionIterator end = db->positionlist_end(did, term);
@@ -603,7 +613,7 @@ BinaryClient::msg_positionlist(const std::string &message)
 		lastpos = pos;
 	}
 
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -612,10 +622,11 @@ BinaryClient::msg_positionlist(const std::string &message)
 void
 BinaryClient::msg_postlist(const std::string &message)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
-
 	const std::string & term = message;
+
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
 
 	Xapian::doccount termfreq = db->get_termfreq(term);
 	Xapian::termcount collfreq = db->get_collection_freq(term);
@@ -634,7 +645,7 @@ BinaryClient::msg_postlist(const std::string &message)
 		lastdocid = newdocid;
 	}
 
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -700,16 +711,16 @@ BinaryClient::msg_writeaccess(const std::string & message)
 void
 BinaryClient::msg_reopen(const std::string & message)
 {
-	checkout_database();
+	checkout_db_handler();
 
-	if (!database->reopen()) {
+	if (!db_handler.get()->reopen()) {
 
-		checkin_database();
+		checkin_db_handler();
 
 		send_message(RemoteReplyType::REPLY_DONE, std::string());
 	} else {
 
-		checkin_database();
+		checkin_db_handler();
 
 		msg_update(message);
 	}
@@ -727,9 +738,9 @@ BinaryClient::msg_update(const std::string &)
 	std::string message(protocol, 2);
 
 	if (!endpoints.empty()) {
-		checkout_database();
+		checkout_db_handler();
 
-		Xapian::Database* db = database->db.get();
+		Xapian::Database* db = db_handler.get()->db.get();
 
 		Xapian::doccount num_docs = db->get_doccount();
 		message += serialise_length(num_docs);
@@ -744,7 +755,7 @@ BinaryClient::msg_update(const std::string &)
 		std::string uuid = db->get_uuid();
 		message += uuid;
 
-		checkin_database();
+		checkin_db_handler();
 	}
 
 	send_message(RemoteReplyType::REPLY_UPDATE, message);
@@ -754,13 +765,15 @@ BinaryClient::msg_update(const std::string &)
 void
 BinaryClient::msg_query(const std::string &message_in)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
-
 	const char *p = message_in.c_str();
 	const char *p_end = p + message_in.size();
 
 	matchspies.clear();
+
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
+
 	enquire = std::make_unique<Xapian::Enquire>(*db);
 
 	////////////////////////////////////////////////////////////////////////////
@@ -929,7 +942,7 @@ BinaryClient::msg_getmset(const std::string & message)
 	}
 	msg += mset.serialise();
 
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_RESULTS, msg);
 }
@@ -938,13 +951,12 @@ BinaryClient::msg_getmset(const std::string & message)
 void
 BinaryClient::msg_document(const std::string &message)
 {
-	checkout_database();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	Xapian::Document doc = database->get_document(did);
+	reset_db_handler();
+	Xapian::Document doc = db_handler.get_document(did);
 
 	send_message(RemoteReplyType::REPLY_DOCDATA, doc.get_data());
 
@@ -955,8 +967,6 @@ BinaryClient::msg_document(const std::string &message)
 		send_message(RemoteReplyType::REPLY_VALUE, item);
 	}
 
-	checkin_database();
-
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
@@ -964,12 +974,13 @@ BinaryClient::msg_document(const std::string &message)
 void
 BinaryClient::msg_keepalive(const std::string &)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
 
 	// Ensure *our* database stays alive, as it may contain remote databases!
 	db->keep_alive();
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -978,10 +989,11 @@ BinaryClient::msg_keepalive(const std::string &)
 void
 BinaryClient::msg_termexists(const std::string &term)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
+	checkout_db_handler();
 
-	checkin_database();
+	Xapian::Database* db = db_handler.get()->db.get();
+
+	checkin_db_handler();
 
 	send_message((db->term_exists(term) ? RemoteReplyType::REPLY_TERMEXISTS : RemoteReplyType::REPLY_TERMDOESNTEXIST), std::string());
 }
@@ -990,10 +1002,11 @@ BinaryClient::msg_termexists(const std::string &term)
 void
 BinaryClient::msg_collfreq(const std::string &term)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
+	checkout_db_handler();
 
-	checkin_database();
+	Xapian::Database* db = db_handler.get()->db.get();
+
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_COLLFREQ, serialise_length(db->get_collection_freq(term)));
 }
@@ -1002,10 +1015,11 @@ BinaryClient::msg_collfreq(const std::string &term)
 void
 BinaryClient::msg_termfreq(const std::string &term)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
+	checkout_db_handler();
 
-	checkin_database();
+	Xapian::Database* db = db_handler.get()->db.get();
+
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_TERMFREQ, serialise_length(db->get_termfreq(term)));
 }
@@ -1014,13 +1028,14 @@ BinaryClient::msg_termfreq(const std::string &term)
 void
 BinaryClient::msg_freqs(const std::string &term)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
 
 	std::string msg(serialise_length(db->get_termfreq(term)));
 	msg += serialise_length(db->get_collection_freq(term));
 
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_FREQS, msg);
 }
@@ -1029,8 +1044,9 @@ BinaryClient::msg_freqs(const std::string &term)
 void
 BinaryClient::msg_valuestats(const std::string & message)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -1048,21 +1064,21 @@ BinaryClient::msg_valuestats(const std::string & message)
 		send_message(RemoteReplyType::REPLY_VALUESTATS, message_out);
 	}
 
-	checkin_database();
+	checkin_db_handler();
 }
 
 
 void
 BinaryClient::msg_doclength(const std::string &message)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	checkin_database();
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db->get_doclength(did)));
 }
@@ -1071,14 +1087,14 @@ BinaryClient::msg_doclength(const std::string &message)
 void
 BinaryClient::msg_uniqueterms(const std::string &message)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	checkin_database();
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_UNIQUETERMS, serialise_length(db->get_unique_terms(did)));
 }
@@ -1087,11 +1103,11 @@ BinaryClient::msg_uniqueterms(const std::string &message)
 void
 BinaryClient::msg_commit(const std::string &)
 {
-	checkout_database();
+	checkout_db_handler();
 
-	database->commit();
+	db_handler.get()->commit();
 
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -1100,22 +1116,22 @@ BinaryClient::msg_commit(const std::string &)
 void
 BinaryClient::msg_cancel(const std::string &)
 {
-	checkout_database();
+	checkout_db_handler();
 
-	database->cancel();
+	db_handler.get()->cancel();
 
-	checkin_database();
+	checkin_db_handler();
 }
 
 
 void
 BinaryClient::msg_adddocument(const std::string & message)
 {
-	checkout_database();
+	checkout_db_handler();
 
-	Xapian::docid did = database->add_document(Xapian::Document::unserialise(message));
+	Xapian::docid did = db_handler.get()->add_document(Xapian::Document::unserialise(message));
 
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
 }
@@ -1124,15 +1140,15 @@ BinaryClient::msg_adddocument(const std::string & message)
 void
 BinaryClient::msg_deletedocument(const std::string & message)
 {
-	checkout_database();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	database->delete_document(did);
+	checkout_db_handler();
 
-	checkin_database();
+	db_handler.get()->delete_document(did);
+
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -1141,43 +1157,44 @@ BinaryClient::msg_deletedocument(const std::string & message)
 void
 BinaryClient::msg_deletedocumentterm(const std::string & message)
 {
-	checkout_database();
+	checkout_db_handler();
 
-	database->delete_document_term(message);
+	db_handler.get()->delete_document_term(message);
 
-	checkin_database();
+	checkin_db_handler();
 }
 
 
 void
 BinaryClient::msg_replacedocument(const std::string & message)
 {
-	checkout_database();
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	database->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end)));
+	checkout_db_handler();
 
-	checkin_database();
+	db_handler.get()->replace_document(did, Xapian::Document::unserialise(std::string(p, p_end)));
+
+	checkin_db_handler();
 }
 
 
 void
 BinaryClient::msg_replacedocumentterm(const std::string & message)
 {
-	checkout_database();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	size_t len = unserialise_length(&p, p_end, true);
 	std::string unique_term(p, len);
 	p += len;
 
-	Xapian::docid did = database->replace_document_term(unique_term, Xapian::Document::unserialise(std::string(p, p_end)));
+	checkout_db_handler();
 
-	checkin_database();
+	Xapian::docid did = db_handler.get()->replace_document_term(unique_term, Xapian::Document::unserialise(std::string(p, p_end)));
+
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
 }
@@ -1186,11 +1203,11 @@ BinaryClient::msg_replacedocumentterm(const std::string & message)
 void
 BinaryClient::msg_getmetadata(const std::string & message)
 {
-	checkout_database();
+	checkout_db_handler();
 
-	std::string value = database->get_metadata(message);
+	std::string value = db_handler.get()->get_metadata(message);
 
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_METADATA, value);
 }
@@ -1199,8 +1216,9 @@ BinaryClient::msg_getmetadata(const std::string & message)
 void
 BinaryClient::msg_openmetadatakeylist(const std::string & message)
 {
-	checkout_database();
-	Xapian::Database* db = database->db.get();
+	checkout_db_handler();
+
+	Xapian::Database* db = db_handler.get()->db.get();
 
 	std::string prev = message;
 	std::string reply;
@@ -1219,7 +1237,7 @@ BinaryClient::msg_openmetadatakeylist(const std::string & message)
 		prev = v;
 	}
 
-	checkin_database();
+	checkin_db_handler();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -1228,45 +1246,48 @@ BinaryClient::msg_openmetadatakeylist(const std::string & message)
 void
 BinaryClient::msg_setmetadata(const std::string & message)
 {
-	checkout_database();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	size_t keylen = unserialise_length(&p, p_end, true);
 	std::string key(p, keylen);
 	p += keylen;
 	std::string val(p, p_end - p);
-	database->set_metadata(key, val);
 
-	checkin_database();
+	checkout_db_handler();
+
+	db_handler.get()->set_metadata(key, val);
+
+	checkin_db_handler();
 }
 
 
 void
 BinaryClient::msg_addspelling(const std::string & message)
 {
-	checkout_database();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::termcount freqinc = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
-	database->add_spelling(std::string(p, p_end - p), freqinc);
 
-	checkin_database();
+	checkout_db_handler();
+
+	db_handler.get()->add_spelling(std::string(p, p_end - p), freqinc);
+
+	checkin_db_handler();
 }
 
 
 void
 BinaryClient::msg_removespelling(const std::string & message)
 {
-	checkout_database();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	Xapian::termcount freqdec = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
-	database->remove_spelling(std::string(p, p_end - p), freqdec);
 
-	checkin_database();
+	checkout_db_handler();
+
+	db_handler.get()->remove_spelling(std::string(p, p_end - p), freqdec);
+
+	checkin_db_handler();
 }
 
 
@@ -1282,7 +1303,7 @@ BinaryClient::select_db(const std::vector<std::string> &dbpaths_, bool writable_
 {
 	endpoints.clear();
 
-	checkin_database();
+	checkin_db_handler();
 
 	writable = writable_;
 	flags = flags_;
@@ -1322,7 +1343,7 @@ BinaryClient::replication_server(ReplicationMessageType type, const std::string 
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
-		checkin_database();
+		checkin_db_handler();
 		throw;
 	}
 }
@@ -1407,7 +1428,7 @@ BinaryClient::replication_client(ReplicationReplyType type, const std::string &m
 		}
 		(this->*(dispatch[static_cast<int>(type)]))(message);
 	} catch (...) {
-		checkin_database();
+		checkin_db_handler();
 		throw;
 	}
 }
@@ -1422,7 +1443,7 @@ BinaryClient::reply_end_of_changes(const std::string &)
 	// 	XapiandManager::manager->database_pool.switch_db(*endpoints.cbegin());
 	// }
 
-	// checkin_database();
+	// checkin_db_handler();
 
 	// shutdown();
 }
@@ -1434,7 +1455,7 @@ BinaryClient::reply_fail(const std::string &)
 	L_REPLICATION(this, "BinaryClient::reply_fail");
 
 	// L_ERR(this, "Replication failure!");
-	// checkin_database();
+	// checkin_db_handler();
 
 	// shutdown();
 }
@@ -1542,7 +1563,7 @@ BinaryClient::reply_changeset(const std::string &)
 	// if (repl_database_tmp) {
 	// 	wdb_ = static_cast<Xapian::WritableDatabase *>(repl_database_tmp->db.get());
 	// } else {
-	// 	wdb_ = static_cast<Xapian::WritableDatabase *>(database->db.get());
+	// 	wdb_ = static_cast<Xapian::WritableDatabase *>(db_handler.get());
 	// }
 
 	// char path[] = "/tmp/xapian_changes.XXXXXX";
