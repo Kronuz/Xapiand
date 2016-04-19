@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,17 +22,18 @@
 
 #include "manager.h"
 
-#include "utils.h"
-#include "replicator.h"
 #include "async_fsync.h"
-#include "database_autocommit.h"
-#include "endpoint.h"
-#include "servers/server.h"
 #include "client_binary.h"
-#include "servers/http.h"
+#include "database_autocommit.h"
+#include "database_handler.h"
+#include "endpoint.h"
+#include "replicator.h"
 #include "servers/binary.h"
+#include "servers/http.h"
+#include "servers/server.h"
 #include "servers/server_discovery.h"
 #include "servers/server_raft.h"
+#include "utils.h"
 
 #include <list>
 #include <stdlib.h>
@@ -289,23 +290,14 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	// Set node as ready!
 	set_node_name(local_node->name, lk);
 
-	Xapian::Document document;
 	try {
-		document = db_handler.get_document(std::to_string(local_node->id));
+		db_handler.get_document(std::to_string(local_node->id));
 	} catch (const DocNotFoundError&) {
 		MsgPack obj;
 		obj["_name"] = local_node->name;
 		obj["_tagline"] = XAPIAND_TAGLINE;
 		db_handler.index(obj, std::to_string(local_node->id), true, MSGPACK_TYPE, std::string());
 	}
-
-	MsgPack obj_data = get_MsgPack(document);
-
-
-	// if (obj_data["name"] != local_node.name) {
-	// 	L_CRIT(nullptr, "Node name mismatch!");
-	// 	sig_exit(-EX_CANTCREAT);
-	// }
 
 	// Get a node (any node)
 	std::unique_lock<std::mutex> lk_n(nodes_mtx);
