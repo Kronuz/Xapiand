@@ -1013,6 +1013,39 @@ public:
 	bool operator!=(const MsgPack& other) const {
 		return *_body->_obj != *other._body->_obj;
 	}
+	
+	MsgPack operator +(long val) {
+		MsgPack o(_body);
+		switch (_body->_obj->type) {
+			case msgpack::type::NEGATIVE_INTEGER:
+				o._body->_obj->via.i64 += val;
+				return o;
+			case msgpack::type::POSITIVE_INTEGER:
+				o._body->_obj->via.u64 += val;
+				return o;
+			case msgpack::type::FLOAT:
+				o._body->_obj->via.f64 += val;
+				return o;
+			default:
+				throw msgpack::type_error();
+		}
+	}
+
+	MsgPack& operator +=(long val) {
+		switch (_body->_obj->type) {
+			case msgpack::type::NEGATIVE_INTEGER:
+				_body->_obj->via.i64 += val;
+				return *this;
+			case msgpack::type::POSITIVE_INTEGER:
+				_body->_obj->via.u64 += val;
+				return *this;
+			case msgpack::type::FLOAT:
+				_body->_obj->via.f64 += val;
+				return *this;
+			default:
+				throw msgpack::type_error();
+		}
+	}
 
 	std::string to_string(bool prettify=false) const {
 		if (prettify) {
