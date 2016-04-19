@@ -660,7 +660,7 @@ public:
 
 	template <typename T>
 	MsgPack& push_back(T&& v) {
-		return put(size(), std::forward<T>(v));
+		return _put(size(), std::forward<T>(v));
 	}
 
     template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
