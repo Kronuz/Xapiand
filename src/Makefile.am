@@ -35,7 +35,6 @@ xapiand_SOURCES = \
 	lz4/xxhash.c \
 	lz4_compressor.cc \
 	manager.cc \
-	msgpack.cc \
 	msgpack_patcher.cc \
 	multivalue.cc \
 	multivaluekeymaker.cc \
