@@ -21,4 +21,8 @@
  */
 
 
+#pragma once
+
+#include "../src/log.h"
+
 #define RETURN(x) { Log::finish(); return x; }
