@@ -10,6 +10,7 @@ xapiand_SOURCES = \
 	client_http.cc \
 	database.cc \
 	database_autocommit.cc \
+	database_handler.cc \
 	database_utils.cc \
 	datetime.cc \
 	endpoint.cc \
@@ -70,6 +71,7 @@ noinst_HEADERS = \
 	client_http.h \
 	database.h \
 	database_autocommit.h \
+	database_handler.h \
 	database_utils.h \
 	datetime.h \
 	endpoint.h \
