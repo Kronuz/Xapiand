@@ -42,10 +42,6 @@ class MsgPack {
 		using std::out_of_range::out_of_range;
 	};
 
-	class duplicate_key : public std::out_of_range {
-		using std::out_of_range::out_of_range;
-	};
-
 	struct Body {
 		std::unordered_map<std::string, std::pair<std::shared_ptr<MsgPack>, std::shared_ptr<MsgPack>>> map;
 		std::vector<std::shared_ptr<MsgPack>> array;
@@ -89,6 +85,10 @@ class MsgPack {
 	std::shared_ptr<Body> _body;
 
 public:
+	class duplicate_key : public std::out_of_range {
+		using std::out_of_range::out_of_range;
+	};
+
 	template <typename T>
 	class Iterator : public std::iterator<std::input_iterator_tag, MsgPack> {
 		friend MsgPack;
