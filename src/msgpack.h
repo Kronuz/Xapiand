@@ -246,7 +246,7 @@ public:
 	}
 
 	MsgPack(const std::initializer_list<MsgPack>& list)
-		: MsgPack()
+		: MsgPack(nullptr)
 	{
 		_initializer(list);
 	}
