@@ -715,10 +715,7 @@ public:
 					if (p->type == msgpack::type::NIL) {
 						*p = msgpack::object(std::forward<T>(v), *_body->_zone);
 
-						// Update the array
-						auto val = make_shared(std::make_shared<Body>(make_shared(_body), false, pos, nullptr, p));
-						_body->array[pos] = val;
-						return  *val;
+						return *_body->array[pos];
 					} else {
 						std::memmove(p + 1, p, (_body->_obj->via.array.size - pos) * sizeof(msgpack::object));
 						++_body->_obj->via.array.size;
