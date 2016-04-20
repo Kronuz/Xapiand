@@ -273,6 +273,8 @@ public:
 			}
 		}
 		*_body->_obj = obj;
+		_body->map.clear();
+		_init();
 		return *this;
 	}
 
