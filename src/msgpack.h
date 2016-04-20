@@ -186,7 +186,6 @@ private:
 		struct enable_make_shared : MsgPack {
 			enable_make_shared(Args&&... args) : MsgPack(std::forward<Args>(args)...) { }
 		};
-
 		return static_cast<std::shared_ptr<MsgPack>>(std::make_shared<enable_make_shared>(std::forward<Args>(args)...));
 	}
 
@@ -259,6 +258,7 @@ public:
 
 	template <typename T>
 	MsgPack& operator=(T&& v) {
+		clear();
 		auto obj = msgpack::object(std::forward<T>(v), *_body->_zone);
 		if (_body->_is_key) {
 			if (obj.type != msgpack::type::STR) {
@@ -273,7 +273,6 @@ public:
 			}
 		}
 		*_body->_obj = obj;
-		_body->map.clear();
 		_init();
 		return *this;
 	}
