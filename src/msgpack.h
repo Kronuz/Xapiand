@@ -619,16 +619,23 @@ private:
 			case msgpack::type::ARRAY: {
 				_reserve_array(pos + 1);
 
-				// Initialize new elements.
-				auto plast = &_body->_obj->via.array.ptr[pos];
-				auto p = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
-				for (; p != plast; ++p) {
-					p->type = msgpack::type::NIL;
+				if (pos >= _body->_obj->via.array.size) {
+					// Initialize new elements.
+					auto plast = &_body->_obj->via.array.ptr[pos];
+					auto p = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
+					for (; p != plast; ++p) {
+						p->type = msgpack::type::NIL;
+						++_body->_obj->via.array.size;
+					}
+
+					*p = msgpack::object(std::forward<T>(val), *_body->_zone);
 					++_body->_obj->via.array.size;
+					return *_init_array(static_cast<size_t>(_body->array.size()));
+				} else {
+					auto p = &_body->_obj->via.array.ptr[pos];
+					*p = msgpack::object(std::forward<T>(val), *_body->_zone);
+					return *_init_array(static_cast<size_t>(_body->array.size()));
 				}
-				*p = msgpack::object(std::forward<T>(val), *_body->_zone);
-				++_body->_obj->via.array.size;
-				return *_init_array(static_cast<size_t>(_body->array.size()));
 			}
 			default:
 				throw msgpack::type_error();
