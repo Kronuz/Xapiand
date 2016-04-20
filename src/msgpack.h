@@ -319,6 +319,12 @@ private:
 
 	std::shared_ptr<MsgPack> _init_array(size_t pos) {
 		std::shared_ptr<MsgPack> last_val;
+
+		if (pos < _body->array.size()) {
+			// Destroy the previous objects to update
+			_body->array.resize(pos);
+		}
+
 		_body->array.reserve(_body->_capacity);
 		const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 		for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
