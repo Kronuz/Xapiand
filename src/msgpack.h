@@ -1134,7 +1134,6 @@ public:
 	}
 
 	inline static MsgPack unserialise(const std::string& s) {
-		auto obj = msgpack::unpack(s.data(), s.size()).get();
 		return MsgPack(msgpack::unpack(s.data(), s.size()).get());
 	}
 
