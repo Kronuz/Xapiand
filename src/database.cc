@@ -659,9 +659,6 @@ Database::commit(bool wal_)
 {
 	L_CALL(this, "Database::commit()");
 
-	// FIXME: When it should be the schema update
-	// schema->store();
-
 	if (!modified) {
 		L_DATABASE_WRAP(this, "Do not commit, because there are not changes");
 		return false;
