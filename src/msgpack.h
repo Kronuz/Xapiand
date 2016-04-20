@@ -440,8 +440,8 @@ private:
 	MsgPack& _at_or_create(const std::string& key) {
 		try {
 			return _at(key);
-		} catch (const std::out_of_range&) {
-		}
+		} catch (const std::out_of_range&) { }
+
 		return put(key, nullptr);
 	}
 
@@ -451,14 +451,13 @@ private:
 		} catch (const std::out_of_range&) {
 			return nil();
 		}
-		throw msgpack::type_error();
 	}
 
 	MsgPack& _at_or_create(size_t pos) {
 		try {
 			return _at(pos);
-		} catch (const std::out_of_range&) {
-		}
+		} catch (const std::out_of_range&) { }
+
 		return put(pos, nullptr);
 	}
 
@@ -468,7 +467,6 @@ private:
 		} catch (const std::out_of_range&) {
 			return nil();
 		}
-		throw msgpack::type_error();
 	}
 
 	MsgPack& _find(const std::string& key) const {
@@ -507,7 +505,7 @@ private:
 				auto p = &_body->_obj->via.map.ptr[pos];
 				std::memcpy(p, p + 1, (_body->_obj->via.map.size - pos - 1) * sizeof(msgpack::object_kv));
 				--_body->_obj->via.map.size;
-				// Unlink element (in case someone else hase it):
+				// Unlink element (in case someone else has it):
 				mobj->_body->_pos = 0;
 				mobj->_body->_key.reset();
 				mobj->_body->_parent.reset();
