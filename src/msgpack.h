@@ -268,13 +268,18 @@ public:
 				throw msgpack::type_error();
 			}
 			// Change key in the parent's map:
-			auto it = _body->_parent->_body->map.find(std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size));
+			auto val = std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
+			auto n_val = std::string(obj.via.str.ptr, obj.via.str.size);
+			if (n_val == val) {
+				return *this;
+			}
+
+			auto it = _body->_parent->_body->map.find(val);
 			if (it != _body->_parent->_body->map.end()) {
-				auto str_key = std::string(obj.via.str.ptr, obj.via.str.size);
-				if (_body->_parent->_body->map.insert(std::make_pair(str_key, it->second)).second) {
+				if (_body->_parent->_body->map.insert(std::make_pair(n_val, it->second)).second) {
 					_body->_parent->_body->map.erase(it);
 				} else {
-					throw duplicate_key("Duplicate key: " + str_key);
+					throw duplicate_key("Duplicate key: " + n_val);
 				}
 				assert(_body->_parent->_body->_obj->via.map.size == _body->_parent->_body->map.size());
 			}
