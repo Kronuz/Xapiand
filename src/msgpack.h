@@ -258,7 +258,6 @@ public:
 
 	template <typename T>
 	MsgPack& operator=(T&& v) {
-		clear();
 		auto obj = msgpack::object(std::forward<T>(v), *_body->_zone);
 		if (_body->_is_key) {
 			if (obj.type != msgpack::type::STR) {
@@ -272,6 +271,7 @@ public:
 				assert(_body->_parent->_body->_obj->via.map.size == _body->_parent->_body->map.size());
 			}
 		}
+		clear();
 		*_body->_obj = obj;
 		_init();
 		return *this;
@@ -298,11 +298,10 @@ private:
 			auto parent = make_shared(_body);
 			auto last_key = make_shared(std::make_shared<Body>(parent, true, 0, nullptr, &p->key));
 			last_val = make_shared(std::make_shared<Body>(parent, false, pos, last_key, &p->val));
-			auto pair = std::make_pair(
+			_body->map.insert(std::make_pair(
 				std::string(p->key.via.str.ptr, p->key.via.str.size),
 				std::make_pair(last_key, last_val)
-			);
-			_body->map.insert(std::move(pair));
+			));
 		}
 		assert(_body->_obj->via.map.size == _body->map.size());
 		return last_val;
