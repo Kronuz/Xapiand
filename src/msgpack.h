@@ -718,7 +718,8 @@ public:
 						std::memmove(p + 1, p, (_body->_obj->via.array.size - pos) * sizeof(msgpack::object));
 						++_body->_obj->via.array.size;
 						*p = msgpack::object(std::forward<T>(v), *_body->_zone);
-						return *_init_array(pos);
+						_init_array(_body->array.size());
+						return *_body->array[pos];
 					}
 				}
 				break;
