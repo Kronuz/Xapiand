@@ -296,8 +296,9 @@ private:
 			if (p->key.type != msgpack::type::STR) {
 				throw msgpack::type_error();
 			}
-			auto last_key = make_shared(std::make_shared<Body>(make_shared(_body), true, 0, nullptr, &p->key));
-			last_val = make_shared(std::make_shared<Body>(make_shared(_body), false, pos, last_key, &p->val));
+			auto parent = make_shared(_body);
+			auto last_key = make_shared(std::make_shared<Body>(parent, true, 0, nullptr, &p->key));
+			last_val = make_shared(std::make_shared<Body>(parent, false, pos, last_key, &p->val));
 			auto pair = std::make_pair(
 				std::string(p->key.via.str.ptr, p->key.via.str.size),
 				std::make_pair(last_key, last_val)
