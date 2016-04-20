@@ -388,7 +388,7 @@ private:
 			}
 			_body->_obj->via.array.ptr = ptr;
 			_body->_capacity = nsize;
-			_init_map(_body->array.size());
+			_init_array(_body->array.size());
 			_update_array(0);
 		}
 	}
