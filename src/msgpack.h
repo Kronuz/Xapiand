@@ -223,14 +223,14 @@ private:
 	}
 
 	void _initializer(const std::initializer_list<MsgPack>& list) {
-		bool map = true;
+		auto isMap = true;
 		for (const auto& val : list) {
 			if (!val.is_array() || val.size() != 2 || !val.at(0).is_string()) {
-				map = false;
+				isMap = false;
 				break;
 			}
 		}
-		if (map) _initializer_map(list);
+		if (isMap) _initializer_map(list);
 		else _initializer_array(list);
 	}
 
