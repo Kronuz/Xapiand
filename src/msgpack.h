@@ -642,7 +642,7 @@ private:
 
 					*p = msgpack::object(std::forward<T>(val), *_body->_zone);
 					++_body->_obj->via.array.size;
-					return *_init_array(static_cast<size_t>(_body->array.size()));
+					return *_init_array(_body->array.size());
 				} else {
 					auto p = &_body->_obj->via.array.ptr[pos];
 					*p = msgpack::object(std::forward<T>(val), *_body->_zone);
