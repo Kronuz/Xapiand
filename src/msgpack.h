@@ -1010,7 +1010,7 @@ public:
 	bool operator!=(const MsgPack& other) const {
 		return *_body->_obj != *other._body->_obj;
 	}
-	
+
 	MsgPack operator +(long val) {
 		MsgPack o(_body);
 		switch (_body->_obj->type) {
