@@ -42,6 +42,10 @@ class MsgPack {
 		using std::out_of_range::out_of_range;
 	};
 
+	class duplicate_key : public std::out_of_range {
+		using std::out_of_range::out_of_range;
+	};
+
 	struct Body {
 		std::unordered_map<std::string, std::pair<std::shared_ptr<MsgPack>, std::shared_ptr<MsgPack>>> map;
 		std::vector<std::shared_ptr<MsgPack>> array;
@@ -266,8 +270,12 @@ public:
 			// Change key in the parent's map:
 			auto it = _body->_parent->_body->map.find(std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size));
 			if (it != _body->_parent->_body->map.end()) {
-				_body->_parent->_body->map.insert(std::make_pair(std::string(obj.via.str.ptr, obj.via.str.size), it->second));
-				_body->_parent->_body->map.erase(it);
+				auto str_key = std::string(obj.via.str.ptr, obj.via.str.size);
+				if (_body->_parent->_body->map.insert(std::make_pair(str_key, it->second)).second) {
+					_body->_parent->_body->map.erase(it);
+				} else {
+					throw duplicate_key("Duplicate key: " + str_key);
+				}
 				assert(_body->_parent->_body->_obj->via.map.size == _body->_parent->_body->map.size());
 			}
 		}
@@ -298,10 +306,10 @@ private:
 			auto parent = make_shared(_body);
 			auto last_key = make_shared(std::make_shared<Body>(parent, true, 0, nullptr, &p->key));
 			last_val = make_shared(std::make_shared<Body>(parent, false, pos, last_key, &p->val));
-			_body->map.insert(std::make_pair(
-				std::string(p->key.via.str.ptr, p->key.via.str.size),
-				std::make_pair(last_key, last_val)
-			));
+			auto str_key = std::string(p->key.via.str.ptr, p->key.via.str.size);
+			if (!_body->map.insert(std::make_pair(str_key, std::make_pair(last_key, last_val))).second) {
+				throw duplicate_key("Duplicate key: " + str_key);
+			}
 		}
 		assert(_body->_obj->via.map.size == _body->map.size());
 		return last_val;
