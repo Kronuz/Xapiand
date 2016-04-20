@@ -676,6 +676,54 @@ public:
 		return *_body->_obj;
 	}
 
+	template<typename T>
+	MsgPack& insert(size_t pos, T&& v) {
+
+		switch (_body->_obj->type) {
+			case msgpack::type::NIL:
+				_body->_obj->type = msgpack::type::ARRAY;
+				_body->_obj->via.array.ptr = nullptr;
+				_body->_obj->via.array.size = 0;
+			case msgpack::type::ARRAY:
+				if (_body->_obj->via.array.size < pos + 1) {
+					_reserve_array(pos + 1);
+
+					// Initialize new elements.
+					auto plast = &_body->_obj->via.array.ptr[pos];
+					auto p = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
+					for (; p != plast; ++p) {
+						p->type = msgpack::type::NIL;
+						++_body->_obj->via.array.size;
+					}
+					*p = msgpack::object(std::forward<T>(v), *_body->_zone);
+					++_body->_obj->via.array.size;
+					return *_init_array(_body->array.size());
+
+				} else {
+					_reserve_array(_body->_obj->via.array.size + 1);
+					auto p = _body->_obj->via.array.ptr + pos;
+					if (p->type == msgpack::type::NIL) {
+						*p = msgpack::object(std::forward<T>(v), *_body->_zone);
+
+						// Update the array
+						auto val = make_shared(std::make_shared<Body>(make_shared(_body), false, pos, nullptr, p));
+						_body->array[pos] = val;
+						return  *val;
+					} else {
+						std::memmove(p + 1, p, (_body->_obj->via.array.size - pos) * sizeof(msgpack::object));
+						++_body->_obj->via.array.size;
+						*p = msgpack::object(std::forward<T>(v), *_body->_zone);
+						return *_init_array(pos);
+					}
+				}
+				break;
+
+			default:
+				throw msgpack::type_error();
+		}
+
+	}
+
     template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
 	std::pair<iterator, bool> insert(T&& v) {
 		MsgPack o(v);
