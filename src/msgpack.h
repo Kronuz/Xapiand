@@ -631,7 +631,7 @@ private:
 
 				if (pos >= _body->_obj->via.array.size) {
 					// Initialize new elements.
-					auto plast = &_body->_obj->via.array.ptr[pos];
+					const auto plast = &_body->_obj->via.array.ptr[pos];
 					auto p = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 					for (; p != plast; ++p) {
 						p->type = msgpack::type::NIL;
@@ -653,11 +653,11 @@ private:
 	}
 
 public:
-	MsgPack& path(const std::vector<std::string>& path) {
+	inline MsgPack& path(const std::vector<std::string>& path) {
 		return _path(this, path);
 	}
 
-	const MsgPack& path(const std::vector<std::string>& path) const {
+	inline const MsgPack& path(const std::vector<std::string>& path) const {
 		return _path(this, path);
 	}
 
@@ -678,17 +678,16 @@ public:
 
 
 	template <typename T>
-	MsgPack& push_back(T&& v) {
+	inline MsgPack& push_back(T&& v) {
 		return _put(size(), std::forward<T>(v));
 	}
 
-	const msgpack::object& internal_msgpack() const {
+	inline const msgpack::object& internal_msgpack() const {
 		return *_body->_obj;
 	}
 
 	template<typename T>
 	MsgPack& insert(size_t pos, T&& v) {
-
 		switch (_body->_obj->type) {
 			case msgpack::type::NIL:
 				_body->_obj->type = msgpack::type::ARRAY;
@@ -699,7 +698,7 @@ public:
 					_reserve_array(pos + 1);
 
 					// Initialize new elements.
-					auto plast = &_body->_obj->via.array.ptr[pos];
+					const auto plast = &_body->_obj->via.array.ptr[pos];
 					auto p = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 					for (; p != plast; ++p) {
 						p->type = msgpack::type::NIL;
@@ -708,7 +707,6 @@ public:
 					*p = msgpack::object(std::forward<T>(v), *_body->_zone);
 					++_body->_obj->via.array.size;
 					return *_init_array(_body->array.size());
-
 				} else {
 					_reserve_array(_body->_obj->via.array.size + 1);
 					auto p = _body->_obj->via.array.ptr + pos;
@@ -724,7 +722,6 @@ public:
 					}
 				}
 				break;
-
 			default:
 				throw msgpack::type_error();
 		}
@@ -747,7 +744,6 @@ public:
 					}
 					put(key, val);
 				}
-
 				break;
 			case msgpack::type::MAP:
 				for (auto& key : o) {
@@ -758,6 +754,7 @@ public:
 			default:
 				break;
 		}
+
 		return std::make_pair(end(), false);
 	}
 
@@ -1035,15 +1032,15 @@ public:
 		return doc;
 	}
 
-	bool is_null() const {
+	inline bool is_null() const {
 		return _body->_obj->type == msgpack::type::NIL;
 	}
 
-	bool is_boolean() const {
+	inline bool is_boolean() const {
 		return _body->_obj->type == msgpack::type::BOOLEAN;
 	}
 
-	bool is_number() const {
+	inline bool is_number() const {
 		switch (_body->_obj->type) {
 			case msgpack::type::NEGATIVE_INTEGER:
 			case msgpack::type::POSITIVE_INTEGER:
@@ -1054,19 +1051,19 @@ public:
 		}
 	}
 
-	bool is_map() const {
+	inline bool is_map() const {
 		return _body->_obj->type == msgpack::type::MAP;
 	}
 
-	bool is_array() const {
+	inline bool is_array() const {
 		return _body->_obj->type == msgpack::type::ARRAY;
 	}
 
-	bool is_string() const {
+	inline bool is_string() const {
 		return _body->_obj->type == msgpack::type::STR;
 	}
 
-	msgpack::type::object_type type() const {
+	inline msgpack::type::object_type type() const {
 		return _body->_obj->type;
 	}
 
