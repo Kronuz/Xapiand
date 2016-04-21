@@ -314,15 +314,13 @@ Schema::serialise_id(MsgPack& properties, specification_t& specification, const 
 {
 	L_CALL(this, "Schema::serialise_id()");
 
-	auto prop_id = properties[RESERVED_ID];
 	specification.set_type = true;
-	if (prop_id) {
-		update_specification(properties, specification);
-		return Serialise::serialise(static_cast<char>(prop_id.at(RESERVED_TYPE).at(2).as_u64()), value_id);
-	} else {
+	auto& prop_id = properties[RESERVED_ID];
+
+	if unlikely(prop_id.is_null()) {
 		to_store.store(true);
 		specification.found_field = false;
-		std::pair<char, std::string> res_serialise = Serialise::serialise(value_id);
+		auto res_serialise = Serialise::serialise(value_id);
 		prop_id[RESERVED_TYPE] = std::vector<unsigned>({ NO_TYPE, NO_TYPE, static_cast<unsigned>(res_serialise.first) });
 		prop_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
@@ -330,6 +328,9 @@ Schema::serialise_id(MsgPack& properties, specification_t& specification, const 
 		prop_id[RESERVED_INDEX] = static_cast<unsigned>(Index::ALL);
 		return res_serialise.second;
 	}
+
+	update_specification(properties, specification);
+	return Serialise::serialise(static_cast<char>(prop_id.at(RESERVED_TYPE).at(2).as_u64()), value_id);
 }
 
 
