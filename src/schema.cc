@@ -274,9 +274,12 @@ specification_t::to_string() const
 }
 
 
+Schema::Schema()
+	: to_store(false) { }
+
+
 Schema::Schema(const Schema& other)
 	: schema(other.schema),
-	  exist(other.exist.load()),
 	  to_store(other.to_store.load()) { }
 
 
@@ -288,10 +291,11 @@ Schema::build(const std::string& s_schema)
 	if (s_schema.empty()) {
 		schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;
 		schema[RESERVED_SCHEMA];
+		to_store = true;
 	} else {
-		schema = MsgPack(s_schema);
+		schema = MsgPack::unserialise(s_schema);
 		try {
-			auto version = schema.at(RESERVED_VERSION);
+			const auto& version = schema.at(RESERVED_VERSION);
 			if (version.as_f64() != DB_VERSION_SCHEMA) {
 				throw MSG_Error("Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 			}

@@ -102,7 +102,6 @@ class Database;
 
 class Schema {
 	MsgPack schema;
-	std::atomic_bool exist;
 	std::atomic_bool to_store;
 
 	/*
@@ -147,8 +146,7 @@ public:
 			: doc(doc_) { }
 	};
 
-	Schema() = default;
-
+	Schema();
 	Schema(const Schema& schema);
 	Schema(Schema&& schema) = delete;
 
