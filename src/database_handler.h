@@ -101,7 +101,7 @@ public:
 
 	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 
-	const MsgPack get_value(const Xapian::Document& document, const std::string& slot_name);
-	const MsgPack get_stats_doc(const std::string& document_id);
-	const MsgPack get_stats_database();
+	MsgPack get_value(const Xapian::Document& document, const std::string& slot_name);
+	void get_stats_doc(MsgPack& stats, const std::string& document_id);
+	void get_stats_database(MsgPack& stats);
 };

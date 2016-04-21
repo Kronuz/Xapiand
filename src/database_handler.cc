@@ -52,13 +52,13 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 {
 	L_CALL(this, "DatabaseHandler::_index()");
 
-	auto properties = schema->getPropertiesSchema();
+	auto& properties = schema->getPropertiesSchema();
 	specification_t specification;
 
 	// Index Required Data.
 	term_id = schema->serialise_id(properties, specification, _document_id);
 
-	std::size_t found = ct_type.find_last_of("/");
+	auto found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
 	std::string subtype(ct_type.c_str(), found + 1, ct_type.size());
 
@@ -76,7 +76,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 	doc.add_value(DB_SLOT_LENGTH, ct_length);
 
 	// Index terms for content-type
-	std::string term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
+	auto term_prefix = get_prefix("content_type", DOCUMENT_CUSTOM_TERM_PREFIX, STRING_TYPE);
 	doc.add_term(prefixed(ct_type, term_prefix));
 	doc.add_term(prefixed(type + "/*", term_prefix));
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
@@ -90,18 +90,18 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 		Schema::data_t schema_data(doc);
 		TaskVector tasks;
 		tasks.reserve(obj.size());
-		for (const auto item_key : obj) {
+		for (const auto& item_key : obj) {
 			const auto str_key = item_key.as_string();
 			try {
 				auto func = map_dispatch_reserved.at(str_key);
 				(schema->*func)(properties, obj.at(str_key), schema_data.specification);
 			} catch (const std::out_of_range&) {
 				if (is_valid(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, schema, std::ref(properties), obj.at(str_key), std::ref(schema_data), std::move(str_key)));
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, schema, std::ref(properties), std::ref(obj.at(str_key)), std::ref(schema_data), std::move(str_key)));
 				} else {
 					try {
 						auto func = map_dispatch_root.at(str_key);
-						tasks.push_back(std::async(std::launch::deferred, func, schema, std::ref(properties), obj.at(str_key), std::ref(schema_data)));
+						tasks.push_back(std::async(std::launch::deferred, func, schema, std::ref(properties), std::ref(obj.at(str_key)), std::ref(schema_data)));
 					} catch (const std::out_of_range&) { }
 				}
 			}
@@ -159,7 +159,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 			} catch (const std::exception&) { }
 			break;
 		case MIMEType::APPLICATION_X_MSGPACK:
-			obj = MsgPack(body);
+			obj = MsgPack::unserialise(body);
 			break;
 		default:
 			break;
@@ -169,13 +169,13 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 	Xapian::Document doc;
 	std::string term_id;
 
-	if (obj.type() == msgpack::type::MAP) {
+	if (obj.is_map()) {
 		blob = false;
 		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
 	}
 
 	set_data(doc, obj.to_string(), blob ? body : "");
-	L_INDEX(this, "Schema: %s", schema->to_json_string().c_str());
+	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	checkout();
 	auto did = database->replace_document_term(term_id, doc, commit_);
@@ -199,12 +199,12 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 	Xapian::Document doc;
 	std::string term_id;
 
-	if (obj.type() == msgpack::type::MAP) {
+	if (obj.is_map()) {
 		_index(doc, obj, term_id, _document_id, ct_type, ct_length);
 	}
 
 	set_data(doc, obj.to_string(), "");
-	L_INDEX(this, "Schema: %s", schema->to_json_string().c_str());
+	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	checkout();
 	auto did = database->replace_document_term(term_id, doc, commit_);
@@ -247,7 +247,7 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 			_ct_type = JSON_TYPE;
 			break;
 		case MIMEType::APPLICATION_X_MSGPACK:
-			obj_patch = MsgPack(patches);
+			obj_patch = MsgPack::unserialise(patches);
 			break;
 		default:
 			throw MSG_ClientError("Patches must be a JSON or MsgPack");
@@ -263,14 +263,14 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 	auto obj_data = get_MsgPack(document);
 	apply_patch(obj_patch, obj_data);
 
-	L_INDEX(this, "Document to index: %s", obj_data.to_json_string().c_str());
+	L_INDEX(this, "Document to index: %s", obj_data.to_string().c_str());
 
 	Xapian::Document doc;
 	std::string term_id;
 	_index(doc, obj_data, term_id, _document_id, _ct_type, ct_length);
 
 	set_data(doc, obj_data.to_string(), get_blob(document));
-	L_INDEX(this, "Schema: %s", schema->to_json_string().c_str());
+	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	checkout();
 	auto did = database->replace_document_term(term_id, doc, commit_);
@@ -862,7 +862,7 @@ DatabaseHandler::delete_document(const std::string& doc_id, bool commit_, bool w
 }
 
 
-const MsgPack
+MsgPack
 DatabaseHandler::get_value(const Xapian::Document& document, const std::string& slot_name)
 {
 	L_CALL(this, "DatabaseHandler::get_value()");
@@ -879,14 +879,13 @@ DatabaseHandler::get_value(const Xapian::Document& document, const std::string& 
 }
 
 
-const MsgPack
-DatabaseHandler::get_stats_doc(const std::string& doc_id)
+void
+DatabaseHandler::get_stats_doc(MsgPack& stats, const std::string& doc_id)
 {
 	L_CALL(this, "DatabaseHandler::get_stats_doc()");
 
 	auto doc = get_document(doc_id);
 
-	MsgPack stats;
 	stats[RESERVED_ID] = doc.get_value(DB_SLOT_ID);
 
 	MsgPack obj_data = get_MsgPack(doc);
@@ -918,17 +917,13 @@ DatabaseHandler::get_stats_doc(const std::string& doc_id)
 		values += std::to_string(iv.get_valueno()) + ":" + repr(*iv) + " ";
 	}
 	stats[RESERVED_VALUES] = values;
-
-	return stats;
 }
 
 
-const MsgPack
-DatabaseHandler::get_stats_database()
+void
+DatabaseHandler::get_stats_database(MsgPack& stats)
 {
 	L_CALL(this, "DatabaseHandler::get_stats_database()");
-
-	MsgPack stats;
 
 	checkout();
 	unsigned doccount = database->db->get_doccount();
@@ -942,6 +937,4 @@ DatabaseHandler::get_stats_database()
 	stats["_doc_len_upper"] = database->db->get_doclength_upper_bound();
 	stats["_has_positions"] = database->db->has_positions();
 	checkin();
-
-	return stats;
 }
