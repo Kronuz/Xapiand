@@ -738,6 +738,8 @@ public:
     template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
 	std::pair<iterator, bool> insert(T&& v) {
 		MsgPack o(v);
+		bool done = false;
+		MsgPack::Iterator<MsgPack> it(end());
 		switch (o._body->_obj->type) {
 			case msgpack::type::ARRAY:
 				if (o._body->_obj->via.array.size % 2) {
@@ -751,18 +753,22 @@ public:
 					}
 					put(key, val);
 				}
+				done = true;
+				it = MsgPack::Iterator<MsgPack>(this, size() - 1);
 				break;
 			case msgpack::type::MAP:
 				for (auto& key : o) {
 					auto val = o.at(key);
 					put(key, val);
 				}
+				done = true;
+				it = MsgPack::Iterator<MsgPack>(this, size() - 1);
 				break;
 			default:
 				break;
 		}
 
-		return std::make_pair(end(), false);
+		return std::make_pair(it, done);
 	}
 
 	MsgPack& operator[](const MsgPack& o) {
