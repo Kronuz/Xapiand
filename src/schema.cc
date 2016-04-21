@@ -397,7 +397,7 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 {
 	L_CALL(nullptr, "Schema::set_type()");
 
-	const auto& field = item_doc.type() == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
+	const auto& field = item_doc.is_array() ? item_doc.at(0) : item_doc;
 	switch (field.type()) {
 		case msgpack::type::POSITIVE_INTEGER:
 			if (specification.numeric_detection) {
@@ -510,10 +510,10 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 		} catch (const std::out_of_range&) {
 			if (is_valid(str_key) || (is_root && str_key == RESERVED_ID)) {
 				auto& sub_item = item_schema.at(str_key);
-				if likely(sub_item) {
-					readable(sub_item);
-				} else {
+				if unlikely(sub_item.is_null()) {
 					item_schema.erase(str_key);
+				} else {
+					readable(sub_item);
 				}
 			}
 		}
@@ -567,8 +567,8 @@ Schema::process_weight(MsgPack& properties, const MsgPack& doc_weight, specifica
 	// RESERVED_WEIGHT is heritable and can change between documents.
 	try {
 		specification.weight.clear();
-		if (doc_weight.type() == msgpack::type::ARRAY) {
-			for (const auto _weight : doc_weight) {
+		if (doc_weight.is_array()) {
+			for (const auto& _weight : doc_weight) {
 				specification.weight.push_back(static_cast<unsigned>(_weight.as_u64()));
 			}
 		} else {
@@ -590,8 +590,8 @@ Schema::process_position(MsgPack& properties, const MsgPack& doc_position, speci
 	// RESERVED_POSITION is heritable and can change between documents.
 	try {
 		specification.position.clear();
-		if (doc_position.type() == msgpack::type::ARRAY) {
-			for (const auto _position : doc_position) {
+		if (doc_position.is_array()) {
+			for (const auto& _position : doc_position) {
 				specification.position.push_back(static_cast<unsigned>(_position.as_u64()));
 			}
 		} else {
@@ -613,9 +613,9 @@ Schema::process_language(MsgPack& properties, const MsgPack& doc_language, speci
 	// RESERVED_LANGUAGE is heritable and can change between documents.
 	try {
 		specification.language.clear();
-		if (doc_language.type() == msgpack::type::ARRAY) {
-			for (const auto _language : doc_language) {
-				std::string _str_language(_language.as_string());
+		if (doc_language.is_array()) {
+			for (const auto& _language : doc_language) {
+				auto _str_language(_language.as_string());
 				if (is_language(_str_language)) {
 					specification.language.push_back(std::move(_str_language));
 				} else {
@@ -623,7 +623,7 @@ Schema::process_language(MsgPack& properties, const MsgPack& doc_language, speci
 				}
 			}
 		} else {
-			std::string _str_language(doc_language.as_string());
+			auto _str_language(doc_language.as_string());
 			if (is_language(_str_language)) {
 				specification.language.push_back(std::move(_str_language));
 			} else {
@@ -646,8 +646,8 @@ Schema::process_spelling(MsgPack& properties, const MsgPack& doc_spelling, speci
 	// RESERVED_SPELLING is heritable and can change between documents.
 	try {
 		specification.spelling.clear();
-		if (doc_spelling.type() == msgpack::type::ARRAY) {
-			for (const auto _spelling : doc_spelling) {
+		if (doc_spelling.is_array()) {
+			for (const auto& _spelling : doc_spelling) {
 				specification.spelling.push_back(_spelling.as_bool());
 			}
 		} else {
@@ -669,8 +669,8 @@ Schema::process_positions(MsgPack& properties, const MsgPack& doc_positions, spe
 	// RESERVED_POSITIONS is heritable and can change between documents.
 	try {
 		specification.positions.clear();
-		if (doc_positions.type() == msgpack::type::ARRAY) {
-			for (const auto _positions : doc_positions) {
+		if (doc_positions.is_array()) {
+			for (const auto& _positions : doc_positions) {
 				specification.positions.push_back(_positions.as_bool());
 			}
 		} else {
@@ -692,9 +692,9 @@ Schema::process_analyzer(MsgPack& properties, const MsgPack& doc_analyzer, speci
 	// RESERVED_ANALYZER is heritable and can change between documents.
 	try {
 		specification.analyzer.clear();
-		if (doc_analyzer.type() == msgpack::type::ARRAY) {
-			for (const auto analyzer : doc_analyzer) {
-				std::string _analyzer(upper_string(analyzer.as_string()));
+		if (doc_analyzer.is_array()) {
+			for (const auto& analyzer : doc_analyzer) {
+				auto _analyzer(upper_string(analyzer.as_string()));
 				if (_analyzer == str_analyzer[0]) {
 					specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
 				} else if (_analyzer == str_analyzer[1]) {
@@ -708,7 +708,7 @@ Schema::process_analyzer(MsgPack& properties, const MsgPack& doc_analyzer, speci
 				}
 			}
 		} else {
-			std::string _analyzer(upper_string(doc_analyzer.as_string()));
+			auto _analyzer(upper_string(doc_analyzer.as_string()));
 			if (_analyzer == str_analyzer[0]) {
 				specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
 			} else if (_analyzer == str_analyzer[1]) {
@@ -757,7 +757,7 @@ Schema::process_accuracy(MsgPack&, const MsgPack& doc_accuracy, specification_t&
 		return;
 	}
 
-	if (doc_accuracy.type() == msgpack::type::ARRAY) {
+	if (doc_accuracy.is_array()) {
 		try {
 			specification.doc_acc = std::make_unique<const MsgPack>(doc_accuracy);
 		} catch (const msgpack::type_error&) {
@@ -778,10 +778,10 @@ Schema::process_acc_prefix(MsgPack&, const MsgPack& doc_acc_prefix, specificatio
 		return;
 	}
 
-	if (doc_acc_prefix.type() == msgpack::type::ARRAY) {
+	if (doc_acc_prefix.is_array()) {
 		std::set<std::string> set_acc_prefix;
 		try {
-			for (const auto _acc_prefix : doc_acc_prefix) {
+			for (const auto& _acc_prefix : doc_acc_prefix) {
 				set_acc_prefix.insert(_acc_prefix.as_string());
 			}
 			specification.acc_prefix.insert(specification.acc_prefix.end(), set_acc_prefix.begin(), set_acc_prefix.end());
@@ -840,7 +840,7 @@ Schema::process_index(MsgPack& properties, const MsgPack& doc_index, specificati
 	}
 
 	try {
-		std::string _index(upper_string(doc_index.as_string()));
+		auto _index(upper_string(doc_index.as_string()));
 		if (_index == str_index[0]) {
 			specification.index = Index::ALL;
 		} else if (_index == str_index[1]) {
@@ -1152,7 +1152,7 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, data_t& data)
 	const auto spc_start = data.specification;
 	bool offsprings = false;
 	for (const auto& item : array) {
-		if (item.type() == msgpack::type::MAP) {
+		if (item.is_map()) {
 			TaskVector tasks;
 			tasks.reserve(item.size());
 			data.specification.value = nullptr;
@@ -1386,7 +1386,7 @@ Schema::index_texts(MsgPack& properties, const MsgPack& texts, data_t& data)
 		}
 
 		try {
-			if (texts.type() == msgpack::type::ARRAY) {
+			if (texts.is_array()) {
 				set_type_to_array(properties);
 				size_t pos = 0;
 				for (auto text : texts) {
@@ -1448,7 +1448,7 @@ Schema::index_terms(MsgPack& properties, const MsgPack& terms, data_t& data)
 	}
 
 	if (data.specification.store) {
-		if (terms.type() == msgpack::type::ARRAY) {
+		if (terms.is_array()) {
 			set_type_to_array(properties);
 			size_t pos = 0;
 			for (auto term : terms) {
@@ -1511,7 +1511,7 @@ Schema::index_values(MsgPack& properties, const MsgPack& values, data_t& data, b
 	if (data.specification.store) {
 		StringSet& s = data.map_values[data.specification.slot];
 		size_t pos = 0;
-		if (values.type() == msgpack::type::ARRAY) {
+		if (values.is_array()) {
 			set_type_to_array(properties);
 			for (auto value : values) {
 				index_value(data, value, s, pos, is_term);
