@@ -285,42 +285,42 @@ public:
 
 	static inline void process_weight(const MsgPack& prop_weight, specification_t& specification) {
 		specification.weight.clear();
-		for (const auto _weight : prop_weight) {
+		for (const auto& _weight : prop_weight) {
 			specification.weight.push_back(static_cast<unsigned>(_weight.as_u64()));
 		}
 	}
 
 	static inline void process_position(const MsgPack& prop_position, specification_t& specification) {
 		specification.position.clear();
-		for (const auto _position : prop_position) {
+		for (const auto& _position : prop_position) {
 			specification.position.push_back(static_cast<unsigned>(_position.as_u64()));
 		}
 	}
 
 	static inline void process_language(const MsgPack& prop_language, specification_t& specification) {
 		specification.language.clear();
-		for (const auto _language : prop_language) {
+		for (const auto& _language : prop_language) {
 			specification.language.push_back(_language.as_string());
 		}
 	}
 
 	static inline void process_spelling(const MsgPack& prop_spelling, specification_t& specification) {
 		specification.spelling.clear();
-		for (const auto _spelling : prop_spelling) {
+		for (const auto& _spelling : prop_spelling) {
 			specification.spelling.push_back(_spelling.as_bool());
 		}
 	}
 
 	static inline void process_positions(const MsgPack& prop_positions, specification_t& specification) {
 		specification.positions.clear();
-		for (const auto _positions : prop_positions) {
+		for (const auto& _positions : prop_positions) {
 			specification.positions.push_back(_positions.as_bool());
 		}
 	}
 
 	static inline void process_analyzer(const MsgPack& prop_analyzer, specification_t& specification) {
 		specification.analyzer.clear();
-		for (const auto _analyzer : prop_analyzer) {
+		for (const auto& _analyzer : prop_analyzer) {
 			specification.analyzer.push_back(static_cast<unsigned>(_analyzer.as_u64()));
 		}
 	}
@@ -333,13 +333,13 @@ public:
 	}
 
 	static inline void process_accuracy(const MsgPack& prop_accuracy, specification_t& specification) {
-		for (const auto acc : prop_accuracy) {
+		for (const auto& acc : prop_accuracy) {
 			specification.accuracy.push_back(acc.as_f64());
 		}
 	}
 
 	static inline void process_acc_prefix(const MsgPack& prop_acc_prefix, specification_t& specification) {
-		for (const auto acc_p : prop_acc_prefix) {
+		for (const auto& acc_p : prop_acc_prefix) {
 			specification.acc_prefix.push_back(acc_p.as_string());
 		}
 	}
@@ -353,7 +353,7 @@ public:
 	}
 
 	static inline void process_index(const MsgPack& prop_index, specification_t& specification) {
-		specification.index = (Index)prop_index.as_u64();
+		specification.index = static_cast<Index>(prop_index.as_u64());
 	}
 
 	static inline void process_store(const MsgPack& prop_store, specification_t& specification) {
