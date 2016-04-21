@@ -138,11 +138,11 @@ std::string str_type(const std::vector<unsigned>& sep_types) {
 
 
 void clean_reserved(MsgPack& document) {
-	if (document.type() == msgpack::type::MAP) {
-		for (auto item_key : document) {
-			std::string str_key(item_key.as_string());
+	if (document.is_map()) {
+		for (const auto& item_key : document) {
+			auto str_key(item_key.as_string());
 			if (is_valid(str_key) || str_key == RESERVED_VALUE) {
-				auto item_doc = document.at(str_key);
+				auto& item_doc = document.at(str_key);
 				clean_reserved(item_doc);
 			} else {
 				document.erase(str_key);
@@ -186,19 +186,26 @@ void set_data(Xapian::Document& doc, const std::string& obj_data_str, const std:
 
 
 MsgPack get_MsgPack(const Xapian::Document& doc) {
-	std::string data = doc.get_data();
+	auto data = doc.get_data();
 
 	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return MsgPack();
+	if (*p++ != DATABASE_DATA_HEADER_MAGIC) {
+		return MsgPack();
+	}
+
 	try {
 		length = unserialise_length(&p, p_end, true);
 	} catch (Xapian::SerialisationError) {
 		return MsgPack();
 	}
-	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) return MsgPack();
-	return MsgPack(std::string(p, length));
+
+	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) {
+		return MsgPack();
+	}
+
+	return MsgPack::unserialise(std::string(p, length));
 }
 
 
