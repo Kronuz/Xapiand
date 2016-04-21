@@ -273,9 +273,10 @@ HttpClient::on_read(const char* buf, size_t received)
 	} else {
 		int error_code = 400;
 		std::string message(http_errno_description(HTTP_PARSER_ERRNO(&parser)));
-		MsgPack err_response;
-		err_response[RESPONSE_STATUS] = error_code;
-		err_response[RESPONSE_MESSAGE] = message;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS,  error_code },
+			{ RESPONSE_MESSAGE, message }
+		};
 		write_http_response(err_response, error_code, false);
 		L_HTTP_PROTO(this, HTTP_PARSER_ERRNO(&parser) != HPE_OK ? message : "incomplete request");
 		destroy();  // Handle error. Just close the connection.
@@ -462,7 +463,6 @@ HttpClient::_run()
 	L_OBJ_BEGIN(this, "HttpClient::run:BEGIN");
 	response_begins = std::chrono::system_clock::now();
 
-	MsgPack err_response;
 	std::string error;
 	int error_code = 0;
 
@@ -539,8 +539,11 @@ HttpClient::_run()
 			destroy();
 			detach();
 		} else {
-			err_response[RESPONSE_STATUS] = error_code;
-			err_response[RESPONSE_MESSAGE] = error;
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, error_code },
+				{ RESPONSE_MESSAGE, error }
+			};
+
 			write_http_response(err_response, error_code, false);
 		}
 	}
@@ -697,7 +700,7 @@ HttpClient::home_view()
 	db_handler.reset(endpoints, DB_SPAWN);
 	auto document = db_handler.get_document(std::to_string(local_node->id));
 
-	MsgPack obj_data = get_MsgPack(document);
+	auto obj_data = get_MsgPack(document);
 	try {
 		obj_data = obj_data.at(RESERVED_DATA);
 	} catch (const std::out_of_range&) {
@@ -708,10 +711,11 @@ HttpClient::home_view()
 #ifdef XAPIAND_CLUSTERING
 	obj_data["_cluster_name"] = XapiandManager::manager->cluster_name;
 #endif
-	MsgPack version = obj_data["_version"];
-	version["_mastery"] = PACKAGE_VERSION;
-	version["_number"] = PACKAGE_VERSION;
-	version["_xapian"] = Xapian::version_string();
+	obj_data["_version"] = {
+		{ "_mastery", PACKAGE_VERSION },
+		{ "_number", PACKAGE_VERSION  },
+		{ "_xapian", Xapian::version_string() }
+	};
 
 	write_http_response(obj_data, 200, pretty);
 }
@@ -762,9 +766,10 @@ HttpClient::delete_document_view()
 	L_TIME(this, "Deletion took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	MsgPack response;
-	auto data = response["_delete"];
-	data[RESERVED_ID] = doc_id;
-	data["_commit"] = query_field->commit;
+	response["_delete"] = {
+		{ RESERVED_ID, doc_id },
+		{ "_commit",  query_field->commit }
+	};
 
 	write_http_response(response, 200, pretty);
 }
@@ -813,9 +818,11 @@ HttpClient::index_document_view(bool gen_id)
 	L_TIME(this, "Indexing took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	MsgPack response;
-	auto data = response["_index"];
-	data[RESERVED_ID] = doc_id;
-	data["_commit"] = query_field->commit;
+	response["_index"] = {
+		{ RESERVED_ID, doc_id },
+		{ "_commit", query_field->commit }
+	};
+
 	write_http_response(response, 200, pretty);
 }
 
@@ -849,9 +856,11 @@ HttpClient::update_document_view()
 	L_TIME(this, "Updating took %s", delta_string(operation_begins, operation_ends).c_str());
 
 	MsgPack response;
-	auto data = response["_update"];
-	data[RESERVED_ID] = doc_id;
-	data["_commit"] = query_field->commit;
+	response["_update"] = {
+		{ RESERVED_ID, doc_id },
+		{ "_commit", query_field->commit }
+	};
+
 	write_http_response(response, 200, pretty);
 }
 
@@ -873,13 +882,13 @@ HttpClient::stats_view()
 		endpoints_maker(1s);
 
 		db_handler.reset(endpoints, DB_OPEN);
-		response["_document_status"] = db_handler.get_stats_doc(path_parser.get_id());
+		db_handler.get_stats_doc(response["_document_status"], path_parser.get_id());
 
 		path_parser.rewind();
 		path_parser.off_id = nullptr;
 		endpoints_maker(1s);
 
-		response["_database_status"] = db_handler.get_stats_database();
+		db_handler.get_stats_database(response["_database_status"]);
 		res_stats = true;
 	}
 
@@ -944,13 +953,14 @@ HttpClient::facets_view()
 			MsgPack array;
 			const auto facet_e = spy.second->values_end();
 			for (auto facet = spy.second->values_begin(); facet != facet_e; ++facet) {
-				MsgPack value;
 				auto field_t = db_handler.get_schema()->get_slot_field(spy.first);
-				value["_value"] = Unserialise::MsgPack(field_t.type, *facet);
-				value["_termfreq"] = facet.get_termfreq();
-				array.push_back(value);
+				MsgPack value = {
+					{ "_value", Unserialise::MsgPack(field_t.type, *facet) },
+					{ "_termfreq", facet.get_termfreq() }
+				};
+				array.push_back(std::move(value));
 			}
-			response[name_result] = array;
+			response[name_result] = std::move(array);
 		}
 	}
 	operation_ends = std::chrono::system_clock::now();
@@ -1015,16 +1025,18 @@ HttpClient::search_view()
 	int rc = 0;
 	if (mset.empty()) {
 		if (chunked) {
-			MsgPack err_response;
 			int error_code = 200;
-			err_response[RESPONSE_STATUS] = error_code;
-			err_response[RESPONSE_MESSAGE] = "No match found";
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, error_code },
+				{ RESPONSE_MESSAGE, "No match found" }
+			};
 			write_http_response(err_response, error_code, pretty);
 		} else {
-			MsgPack err_response;
 			int error_code = 404;
-			err_response[RESPONSE_STATUS] = error_code;
-			err_response[RESPONSE_MESSAGE] = "No document found";
+			MsgPack err_response = {
+				{ RESPONSE_STATUS, error_code },
+				{ RESPONSE_MESSAGE, "No document found" }
+			};
 			write_http_response(err_response, error_code, pretty);
 		}
 	} else {
@@ -1052,10 +1064,11 @@ HttpClient::search_view()
 			const auto& accepted_type = get_acceptable_type(ct_types);
 			const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
 			if (!accepted_ct_type) {
-				MsgPack err_response;
 				int error_code = 406;
-				err_response[RESPONSE_STATUS] = error_code;
-				err_response[RESPONSE_MESSAGE] = std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header");
+				MsgPack err_response = {
+					{ RESPONSE_STATUS, error_code },
+					{ RESPONSE_MESSAGE, std::string("Response type " + ct_type.first + "/" + ct_type.second + " not provided in the accept header") }
+				};
 				write_http_response(err_response, error_code, pretty);
 				L_DEBUG(this, "ABORTED SEARCH");
 				return;
@@ -1129,9 +1142,6 @@ HttpClient::bad_request_view()
 {
 	L_CALL(this, "HttpClient::bad_request_view()");
 
-	MsgPack err_response;
-	err_response[RESPONSE_STATUS] = 400;
-
 	/*
 	 REMOVE THIS
 	 switch (cmd) {
@@ -1141,12 +1151,17 @@ HttpClient::bad_request_view()
 		default:
 			err_response[RESPONSE_MESSAGE] = "BAD QUERY";
 	}*/
-	err_response[RESPONSE_MESSAGE] = "BAD QUERY";
+
+	MsgPack err_response = {
+		{ RESPONSE_STATUS, 400 },
+		{ RESPONSE_MESSAGE, "BAD QUERY" }
+	};
+
 	write_http_response(err_response, 400, pretty);
 }
 
 
-size_t constexpr const_hash(char const *input) {
+constexpr size_t const_hash(char const *input) {
 	return *input ? static_cast<size_t>(*input) + 33 * const_hash(input + 1) : 5381;
 }
 
@@ -1643,9 +1658,10 @@ HttpClient::write_http_response(const MsgPack& response,  int status_code, bool 
 		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, result.first, result.second));
 	} catch (const SerialisationError& exc) {
 		status_code = 406;
-		MsgPack response_err;
-		response_err[RESPONSE_STATUS] = status_code;
-		response_err[RESPONSE_MESSAGE] = std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what());
+		MsgPack response_err = {
+			{ RESPONSE_STATUS, status_code },
+			{ RESPONSE_MESSAGE, std::string("Response type " + accepted_type.first + "/" + accepted_type.second + " " + exc.what()) }
+		};
 		auto response_str = response_err.to_string();
 		write(http_response(status_code, HTTP_STATUS | HTTP_HEADER | HTTP_BODY, parser.http_major, parser.http_minor, 0, response_str));
 		return;
