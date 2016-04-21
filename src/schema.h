@@ -113,12 +113,12 @@ class Schema {
 	/*
 	 * Sets type to array in properties.
 	 */
-	void set_type_to_array(MsgPack& properties);
+	void set_type_to_array(const MsgPack& properties);
 
 	/*
 	 * Set type to object in properties.
 	 */
-	void set_type_to_object(MsgPack& properties);
+	void set_type_to_object(const MsgPack& properties);
 
 	/*
 	 * Sets in specification the item_doc's type
@@ -128,7 +128,7 @@ class Schema {
 	/*
 	 * Recursively transforms item_schema into a readable form.
 	 */
-	static void readable(MsgPack&& item_schema, bool is_root=false);
+	static void readable(MsgPack& item_schema, bool is_root=false);
 
 	/*
 	 * Validates data when RESERVED_TYPE has not been save in schema.
@@ -215,9 +215,9 @@ public:
 	 * Tranforms reserved words into a readable form.
 	 */
 
-	static void readable_type(MsgPack&& prop_type, const MsgPack& properties);
-	static void readable_analyzer(MsgPack&& prop_analyzer, const MsgPack& properties);
-	static void readable_index(MsgPack&& prop_index, const MsgPack& properties);
+	static void readable_type(MsgPack& prop_type, MsgPack& properties);
+	static void readable_analyzer(MsgPack& prop_analyzer, MsgPack& properties);
+	static void readable_index(MsgPack& prop_index, MsgPack& properties);
 
 
 	/*
@@ -252,9 +252,9 @@ public:
 	 * Functions for reserved words that are only in json's root.
 	 */
 
-	inline void process_values(MsgPack& properties, const MsgPack doc_values, data_t& data);
-	inline void process_texts(MsgPack& properties, const MsgPack doc_texts, data_t& data);
-	inline void process_terms(MsgPack& properties, const MsgPack doc_terms, data_t& data);
+	inline void process_values(MsgPack& properties, const MsgPack& doc_values, data_t& data);
+	inline void process_texts(MsgPack& properties, const MsgPack& doc_texts, data_t& data);
+	inline void process_terms(MsgPack& properties, const MsgPack& doc_terms, data_t& data);
 
 
 	/*
@@ -262,7 +262,7 @@ public:
 	 */
 
 	inline void fixed_index(MsgPack& properties, const MsgPack& object, data_t& data);
-	void index_object(MsgPack& global_properties, const MsgPack object, data_t& data, const std::string name=std::string());
+	void index_object(MsgPack& global_properties, const MsgPack& object, data_t& data, const std::string& name=std::string());
 	void index_array(MsgPack& properties, const MsgPack& array, data_t& data);
 	inline void index_item(MsgPack& properties, const MsgPack& value, data_t& data);
 	void index_texts(MsgPack& properties, const MsgPack& texts, data_t& data);
@@ -393,10 +393,10 @@ public:
 
 
 using dispatch_reserved = void (Schema::*)(MsgPack&, const MsgPack&, specification_t&);
-using dispatch_root     = void (Schema::*)(MsgPack&, const MsgPack, Schema::data_t&);
+using dispatch_root     = void (Schema::*)(MsgPack&, const MsgPack&, Schema::data_t&);
 using dispatch_index    = void (Schema::*)(MsgPack&, const MsgPack&, Schema::data_t&);
 using dispatch_property = void (*)(const MsgPack&, specification_t&);
-using dispatch_readable = void (*)(MsgPack&&, const MsgPack&);
+using dispatch_readable = void (*)(MsgPack&, MsgPack&);
 
 
 extern const std::unordered_map<std::string, dispatch_reserved> map_dispatch_reserved;

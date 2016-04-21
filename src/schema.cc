@@ -275,7 +275,7 @@ specification_t::to_string() const
 
 
 Schema::Schema(const Schema& other)
-	: schema(other),
+	: schema(other.schema),
 	  exist(other.exist.load()),
 	  to_store(other.to_store.load()) { }
 
@@ -334,11 +334,11 @@ Schema::update_specification(const MsgPack& properties, specification_t& specifi
 {
 	L_CALL(nullptr, "Schema::update_specification()");
 
-	for (const auto property : properties) {
+	for (const auto& property : properties) {
 		auto str_prop = property.as_string();
 		try {
 			auto func = map_dispatch_properties.at(str_prop);
-			(*func)(properties.at(str_prop), specification);
+			(*func)(std::ref(properties.at(str_prop)), std::ref(specification));
 		} catch (const std::out_of_range&) { }
 	}
 }
@@ -449,7 +449,7 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 
 
 void
-Schema::set_type_to_array(MsgPack& properties)
+Schema::set_type_to_array(const MsgPack& properties)
 {
 	try {
 		auto _type = properties.at(RESERVED_TYPE).at(1);
@@ -462,7 +462,7 @@ Schema::set_type_to_array(MsgPack& properties)
 
 
 void
-Schema::set_type_to_object(MsgPack& properties)
+Schema::set_type_to_object(const MsgPack& properties)
 {
 	try {
 		auto _type = properties.at(RESERVED_TYPE).at(0);
@@ -478,9 +478,9 @@ std::string
 Schema::to_json_string(bool prettify) const
 {
 	MsgPack schema_readable = schema;
-	auto properties = schema_readable.at(RESERVED_SCHEMA);
+	auto& properties = schema_readable.at(RESERVED_SCHEMA);
 	if likely(properties) {
-		readable(std::move(properties), true);
+		readable(properties, true);
 	} else {
 		schema_readable.erase(RESERVED_SCHEMA);
 	}
@@ -490,19 +490,19 @@ Schema::to_json_string(bool prettify) const
 
 
 void
-Schema::readable(MsgPack&& item_schema, bool is_root)
+Schema::readable(MsgPack& item_schema, bool is_root)
 {
 	// Change this item of schema in readable form.
-	for (const auto item_key : item_schema) {
+	for (const auto& item_key : item_schema) {
 		auto str_key = item_key.as_string();
 		try {
 			auto func = map_dispatch_readable.at(str_key);
-			(*func)(item_schema.at(str_key), item_schema);
+			(*func)(std::ref(item_schema.at(str_key)), std::ref(item_schema));
 		} catch (const std::out_of_range&) {
 			if (is_valid(str_key) || (is_root && str_key == RESERVED_ID)) {
-				auto sub_item = item_schema.at(str_key);
+				auto& sub_item = item_schema.at(str_key);
 				if likely(sub_item) {
-					readable(std::move(sub_item));
+					readable(sub_item);
 				} else {
 					item_schema.erase(str_key);
 				}
@@ -513,7 +513,7 @@ Schema::readable(MsgPack&& item_schema, bool is_root)
 
 
 void
-Schema::readable_type(MsgPack&& prop_type, const MsgPack& properties)
+Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 {
 	std::vector<unsigned> sep_types({
 		static_cast<unsigned>(prop_type.at(0).as_u64()),
@@ -525,11 +525,11 @@ Schema::readable_type(MsgPack&& prop_type, const MsgPack& properties)
 	// Readable accuracy.
 	try {
 		if (sep_types[2] == DATE_TYPE) {
-			for (auto _accuracy : properties.at(RESERVED_ACCURACY)) {
+			for (auto& _accuracy : properties.at(RESERVED_ACCURACY)) {
 				_accuracy = str_time[_accuracy.as_f64()];
 			}
 		} else if (sep_types[2] == GEO_TYPE) {
-			auto _partials = properties.at(RESERVED_ACCURACY).at(0);
+			auto& _partials = properties.at(RESERVED_ACCURACY).at(0);
 			_partials = _partials.as_f64() ? true : false;
 		}
 	} catch (const std::out_of_range&) { }
@@ -537,16 +537,16 @@ Schema::readable_type(MsgPack&& prop_type, const MsgPack& properties)
 
 
 void
-Schema::readable_analyzer(MsgPack&& prop_analyzer, const MsgPack&)
+Schema::readable_analyzer(MsgPack& prop_analyzer, MsgPack&)
 {
-	for (auto _analyzer : prop_analyzer) {
+	for (auto& _analyzer : prop_analyzer) {
 		_analyzer = str_analyzer[_analyzer.as_u64()];
 	}
 }
 
 
 void
-Schema::readable_index(MsgPack&& prop_index, const MsgPack&)
+Schema::readable_index(MsgPack& prop_index, MsgPack&)
 {
 	prop_index = str_index[prop_index.as_u64()];
 }
@@ -1009,7 +1009,7 @@ Schema::process_name(MsgPack&, const MsgPack& doc_name, specification_t& specifi
 
 
 void
-Schema::process_values(MsgPack& properties, const MsgPack doc_values, data_t& data)
+Schema::process_values(MsgPack& properties, const MsgPack& doc_values, data_t& data)
 {
 	L_CALL(this, "Schema::process_values()");
 
@@ -1019,7 +1019,7 @@ Schema::process_values(MsgPack& properties, const MsgPack doc_values, data_t& da
 
 
 void
-Schema::process_texts(MsgPack& properties, const MsgPack doc_texts, data_t& data)
+Schema::process_texts(MsgPack& properties, const MsgPack& doc_texts, data_t& data)
 {
 	L_CALL(this, "Schema::process_texts()");
 
@@ -1029,7 +1029,7 @@ Schema::process_texts(MsgPack& properties, const MsgPack doc_texts, data_t& data
 
 
 void
-Schema::process_terms(MsgPack& properties, const MsgPack doc_terms, data_t& data)
+Schema::process_terms(MsgPack& properties, const MsgPack& doc_terms, data_t& data)
 {
 	L_CALL(this, "Schema::process_terms()");
 
@@ -1054,12 +1054,12 @@ Schema::fixed_index(MsgPack& properties, const MsgPack& object, data_t& data)
 
 
 void
-Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& data, const std::string name)
+Schema::index_object(MsgPack& global_properties, const MsgPack& object, data_t& data, const std::string& name)
 {
 	L_CALL(this, "Schema::index_object()");
 
 	const auto spc_start = data.specification;
-	MsgPack* properties;
+	MsgPack* properties = nullptr;
 	if (name.empty()) {
 		properties = &global_properties;
 		data.specification.found_field = true;
@@ -1078,14 +1078,14 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& d
 			bool offsprings = false;
 			TaskVector tasks;
 			tasks.reserve(object.size());
-			for (const auto item_key : object) {
+			for (const auto& item_key : object) {
 				const auto str_key = item_key.as_string();
 				try {
 					auto func = map_dispatch_reserved.at(str_key);
 					(this->*func)(*properties, object.at(str_key), data.specification);
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_key)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(*properties), object.at(str_key), std::ref(data), std::move(str_key)));
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(*properties), std::ref(object.at(str_key)), std::ref(data), std::move(str_key)));
 						offsprings = true;
 					}
 				}
@@ -1108,8 +1108,7 @@ Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& d
 					data.specification.full_name.append(DB_OFFSPRING_UNION).append(data.specification.name);
 				}
 				if (data.specification.value) {
-					auto subproperties = get_subproperties(*properties, data.specification);
-					index_item(subproperties, *data.specification.value, data);
+					index_item(get_subproperties(*properties, data.specification), *data.specification.value, data);
 				}
 			}
 
@@ -1143,19 +1142,19 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, data_t& data)
 
 	const auto spc_start = data.specification;
 	bool offsprings = false;
-	for (auto item : array) {
+	for (const auto& item : array) {
 		if (item.type() == msgpack::type::MAP) {
 			TaskVector tasks;
 			tasks.reserve(item.size());
 			data.specification.value = nullptr;
-			for (const auto property : item) {
+			for (const auto& property : item) {
 				auto str_prop = property.as_string();
 				try {
 					auto func = map_dispatch_reserved.at(str_prop);
-					(this->*func)(properties, item.at(str_prop), data.specification);
+					(this->*func)(std::ref(properties), std::ref(item.at(str_prop)), data.specification);
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_prop)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), item.at(str_prop), std::ref(data), std::move(str_prop)));
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(item.at(str_prop)), std::ref(data), std::move(str_prop)));
 						offsprings = true;
 					}
 				}
@@ -1175,8 +1174,7 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, data_t& data)
 					data.specification.full_name.append(DB_OFFSPRING_UNION).append(data.specification.name);
 				}
 				if (data.specification.value) {
-					auto subproperties = get_subproperties(properties, data.specification);
-					index_item(subproperties, *data.specification.value, data);
+					index_item(get_subproperties(properties, data.specification), *data.specification.value, data);
 				}
 			}
 
