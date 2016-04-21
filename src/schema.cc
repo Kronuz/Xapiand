@@ -343,7 +343,7 @@ Schema::update_specification(const MsgPack& properties, specification_t& specifi
 		auto str_prop = property.as_string();
 		try {
 			auto func = map_dispatch_properties.at(str_prop);
-			(*func)(std::ref(properties.at(str_prop)), std::ref(specification));
+			(*func)(properties.at(str_prop), specification);
 		} catch (const std::out_of_range&) { }
 	}
 }
@@ -374,7 +374,7 @@ Schema::get_subproperties(MsgPack& properties, specification_t& specification)
 	MsgPack* subproperties = nullptr;
 	for (const auto& field_name : field_names) {
 		if (!is_valid(field_name)) {
-			throw MSG_ClientError("The field name: %s is not valid", specification.name.c_str());
+			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
 		}
 
 		subproperties = &properties[field_name];
@@ -506,13 +506,13 @@ Schema::readable(MsgPack& item_schema, bool is_root)
 		auto str_key = item_key.as_string();
 		try {
 			auto func = map_dispatch_readable.at(str_key);
-			(*func)(std::ref(item_schema.at(str_key)), std::ref(item_schema));
+			(*func)(item_schema.at(str_key), item_schema);
 		} catch (const std::out_of_range&) {
 			if (is_valid(str_key) || (is_root && str_key == RESERVED_ID)) {
 				auto& sub_item = item_schema.at(str_key);
 				if unlikely(sub_item.is_null()) {
 					item_schema.erase(str_key);
-				} else {
+				} else {
 					readable(sub_item);
 				}
 			}
@@ -1160,7 +1160,7 @@ Schema::index_array(MsgPack& properties, const MsgPack& array, data_t& data)
 				auto str_prop = property.as_string();
 				try {
 					auto func = map_dispatch_reserved.at(str_prop);
-					(this->*func)(std::ref(properties), std::ref(item.at(str_prop)), data.specification);
+					(this->*func)(properties, item.at(str_prop), data.specification);
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_prop)) {
 						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(item.at(str_prop)), std::ref(data), std::move(str_prop)));
@@ -1262,7 +1262,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 				try {
 					const auto it_e = specification.doc_acc->end();
 					for (auto it = specification.doc_acc->begin() + 2; it != it_e; ++it) {
-						uint64_t val_acc = (*it).as_u64();
+						auto val_acc = (*it).as_u64();
 						if (val_acc <= HTM_MAX_LEVEL) {
 							set_acc.insert(val_acc);
 						} else {
@@ -1280,8 +1280,8 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 				}
 
 				try {
-					for (const auto _accuracy : *specification.doc_acc) {
-						std::string str_accuracy(lower_string(_accuracy.as_string()));
+					for (const auto& _accuracy : *specification.doc_acc) {
+						auto str_accuracy(lower_string(_accuracy.as_string()));
 						if (str_accuracy == str_time[5]) {
 							set_acc.insert(toUType(unitTime::YEAR));
 						} else if (str_accuracy == str_time[4]) {
@@ -1311,7 +1311,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 				}
 
 				try {
-					for (const auto _accuracy : *specification.doc_acc) {
+					for (const auto& _accuracy : *specification.doc_acc) {
 						set_acc.insert(_accuracy.as_u64());
 					}
 					break;
@@ -1323,7 +1323,7 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 				throw MSG_Error("%s must be defined for validate data to index", RESERVED_TYPE);
 		}
 
-		size_t size_acc = set_acc.size();
+		auto size_acc = set_acc.size();
 		if (size_acc) {
 			if (specification.acc_prefix.empty()) {
 				for (const auto& acc : set_acc) {
@@ -1389,7 +1389,7 @@ Schema::index_texts(MsgPack& properties, const MsgPack& texts, data_t& data)
 			if (texts.is_array()) {
 				set_type_to_array(properties);
 				size_t pos = 0;
-				for (auto text : texts) {
+				for (const auto& text : texts) {
 					index_text(data, text.as_string(), pos++);
 				}
 			} else {
@@ -1451,7 +1451,7 @@ Schema::index_terms(MsgPack& properties, const MsgPack& terms, data_t& data)
 		if (terms.is_array()) {
 			set_type_to_array(properties);
 			size_t pos = 0;
-			for (auto term : terms) {
+			for (const auto& term : terms) {
 				index_term(data, Serialise::serialise(data.specification.sep_types[2], term), pos++);
 			}
 		} else {
@@ -1513,7 +1513,7 @@ Schema::index_values(MsgPack& properties, const MsgPack& values, data_t& data, b
 		size_t pos = 0;
 		if (values.is_array()) {
 			set_type_to_array(properties);
-			for (auto value : values) {
+			for (const auto& value : values) {
 				index_value(data, value, s, pos, is_term);
 			}
 		} else {
@@ -1649,7 +1649,7 @@ Schema::get_data_field(const std::string& field_name) const
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
-		auto properties = getPropertiesSchema().path(fields);
+		const auto properties = getPropertiesSchema().path(fields);
 
 		res.type = properties.at(RESERVED_TYPE).at(2).as_u64();
 		if (res.type == NO_TYPE) {
@@ -1665,11 +1665,11 @@ Schema::get_data_field(const std::string& field_name) const
 
 		// Strings and booleans do not have accuracy.
 		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
-			for (const auto acc : properties.at(RESERVED_ACCURACY)) {
+			for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
 				res.accuracy.push_back(acc.as_f64());
 			}
 
-			for (const auto acc_p : properties.at(RESERVED_ACC_PREFIX)) {
+			for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
 				res.acc_prefix.push_back(acc_p.as_string());
 			}
 		}
@@ -1693,7 +1693,7 @@ Schema::get_slot_field(const std::string& field_name) const
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
-		auto properties = getPropertiesSchema().path(fields);
+		const auto properties = getPropertiesSchema().path(fields);
 		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).as_u64());
 		res.type = properties.at(RESERVED_TYPE).at(2).as_u64();
 	} catch (const std::exception&) { }
