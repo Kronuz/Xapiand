@@ -281,36 +281,6 @@ Schema::Schema(const Schema& other)
 
 
 void
-Schema::set_database(Database* _database)
-{
-	L_CALL(this, "Schema::set_database()");
-
-	database = _database;
-
-	// Reload schema.
-	std::string s_schema = database->get_metadata(RESERVED_SCHEMA);
-
-	if (s_schema.empty()) {
-		schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;
-		schema[RESERVED_SCHEMA];
-	} else {
-		schema = MsgPack(s_schema);
-		try {
-			auto version = schema.at(RESERVED_VERSION);
-			if (version.as_f64() != DB_VERSION_SCHEMA) {
-				throw MSG_Error("Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
-			}
-			to_store = false;
-		} catch (const std::out_of_range&) {
-			throw MSG_Error("Schema is corrupt, you need provide a new one");
-		} catch (const msgpack::type_error&) {
-			throw MSG_Error("Schema is corrupt, you need provide a new one");
-		}
-	}
-}
-
-
-void
 Schema::build(const std::string& s_schema)
 {
 	L_CALL(this, "Schema::build()");
@@ -410,18 +380,6 @@ Schema::get_subproperties(MsgPack& properties, specification_t& specification)
 	}
 
 	return *subproperties;
-}
-
-
-void
-Schema::store()
-{
-	L_CALL(this, "Schema::store()");
-
-	if (to_store) {
-		database->set_metadata(RESERVED_SCHEMA, schema.to_string());
-		to_store = false;
-	}
 }
 
 

@@ -101,8 +101,6 @@ class Database;
 
 
 class Schema {
-	Database* database;
-
 	MsgPack schema;
 	std::atomic_bool exist;
 	std::atomic_bool to_store;
@@ -159,8 +157,6 @@ public:
 
 	~Schema() = default;
 
-	void set_database(Database* _database);
-
 	void build(const std::string& s_schema);
 
 	inline std::string to_string() const {
@@ -208,12 +204,6 @@ public:
 	 * Sets properties and update specification with the properties in item_doc.
 	 */
 	void set_properties(MsgPack& properties, const MsgPack& item_doc, specification_t& specification);
-
-
-	/*
-	 * Stores schema only if needed.
-	 */
-	void store();
 
 	/*
 	 * Transforms schema into json string.
