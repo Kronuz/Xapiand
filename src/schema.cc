@@ -366,8 +366,12 @@ Schema::get_subproperties(MsgPack& properties, specification_t& specification)
 	std::vector<std::string> field_names;
 	stringTokenizer(specification.name, DB_OFFSPRING_UNION, field_names);
 
-	MsgPack* subproperties;
+	MsgPack* subproperties = nullptr;
 	for (const auto& field_name : field_names) {
+		if (!is_valid(field_name)) {
+			throw MSG_ClientError("The field name: %s is incorrect", specification.name.c_str());
+		}
+
 		subproperties = &properties[field_name];
 		restart_specification(specification);
 		if (*subproperties) {
