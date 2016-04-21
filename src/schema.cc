@@ -1079,7 +1079,7 @@ Schema::index_object(MsgPack& global_properties, const MsgPack& object, data_t& 
 			data.specification.full_name.append(DB_OFFSPRING_UNION).append(name);
 		}
 		data.specification.name.assign(name);
-		*properties = get_subproperties(global_properties, data.specification);
+		properties = &get_subproperties(global_properties, data.specification);
 	}
 
 	switch (object.type()) {
