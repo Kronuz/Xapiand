@@ -182,7 +182,7 @@ public:
 	 * specification is updated with the properties of schema.
 	 * Returns the properties of schema.
 	 */
-	inline MsgPack getPropertiesSchema() const {
+	inline MsgPack& getPropertiesSchema() const {
 		return schema.at(RESERVED_SCHEMA);
 	}
 
