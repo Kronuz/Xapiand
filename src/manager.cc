@@ -833,32 +833,33 @@ void
 XapiandManager::server_status(MsgPack& stats)
 {
 	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-	// stats["connections"] = XapiandServer::total_clients.load();
-	stats["http_connections"] = XapiandServer::http_clients.load();
+
+	// stats["_connections"] = XapiandServer::total_clients.load();
+	stats["_http_connections"] = XapiandServer::http_clients.load();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
-		stats["binary_connections"] = XapiandServer::binary_clients.load();
+		stats["_binary_connections"] = XapiandServer::binary_clients.load();
 	}
 #endif
 
-	// stats["max_connections"] = XapiandServer::max_total_clients.load();
-	stats["max_http_connections"] = XapiandServer::max_http_clients.load();
+	// stats["_max_connections"] = XapiandServer::max_total_clients.load();
+	stats["_max_http_connections"] = XapiandServer::max_http_clients.load();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
-		stats["max_binary_connections"] = XapiandServer::max_binary_clients.load();
+		stats["_max_binary_connections"] = XapiandServer::max_binary_clients.load();
 	}
 #endif
 
-	stats["worker_tasks_running"] = thread_pool.running_size();
-	stats["worker_tasks_enqueued"] = thread_pool.size();
-	stats["worker_tasks_pool_size"] = thread_pool.threadpool_size();
+	stats["_worker_tasks_running"] = thread_pool.running_size();
+	stats["_worker_tasks_enqueued"] = thread_pool.size();
+	stats["_worker_tasks_pool_size"] = thread_pool.threadpool_size();
 
-	stats["servers_threads"] = server_pool.running_size();
-	stats["committers_threads"] = autocommit_pool.running_size();
-	stats["fsync_threads"] = asyncfsync_pool.running_size();
+	stats["_servers_threads"] = server_pool.running_size();
+	stats["_committers_threads"] = autocommit_pool.running_size();
+	stats["_fsync_threads"] = asyncfsync_pool.running_size();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
-		stats["replicator_threads"] = replicator_pool.running_size();
+		stats["_replicator_threads"] = replicator_pool.running_size();
 	}
 #endif
 }
@@ -936,20 +937,20 @@ XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time
 			}
 		}
 
-		stats["system_time"] = ctime(&now_time);
+		stats["_system_time"] = ctime(&now_time);
 		auto p_time = now_time - start;
-		MsgPack time_period = stats["period"];
-		time_period["start"] = ctime(&p_time);
+		auto& time_period = stats["period"];
+		time_period["_start"] = ctime(&p_time);
 		p_time = now_time - end;
-		time_period["end"] = ctime(&p_time);
+		time_period["_end"] = ctime(&p_time);
 
-		stats["docs_indexed"] = cnt[0];
-		stats["num_searches"] = cnt[1];
-		stats["docs_deleted"] = cnt[2];
-		stats["docs_updated"] = cnt[3];
-		stats["avg_time_index"]  = delta_string(cnt[0] == 0 ? 0.0 : (tm_cnt[0] / cnt[0]));
-		stats["avg_time_search"] = delta_string(cnt[1] == 0 ? 0.0 : (tm_cnt[1] / cnt[1]));
-		stats["avg_time_delete"] = delta_string(cnt[2] == 0 ? 0.0 : (tm_cnt[2] / cnt[2]));
-		stats["avg_time_update"] = delta_string(cnt[3] == 0 ? 0.0 : (tm_cnt[3] / cnt[3]));
+		stats["_docs_indexed"] = cnt[0];
+		stats["_num_searches"] = cnt[1];
+		stats["_docs_deleted"] = cnt[2];
+		stats["_docs_updated"] = cnt[3];
+		stats["_avg_time_index"]  = delta_string(cnt[0] == 0 ? 0.0 : (tm_cnt[0] / cnt[0]));
+		stats["_avg_time_search"] = delta_string(cnt[1] == 0 ? 0.0 : (tm_cnt[1] / cnt[1]));
+		stats["_avg_time_delete"] = delta_string(cnt[2] == 0 ? 0.0 : (tm_cnt[2] / cnt[2]));
+		stats["_avg_time_update"] = delta_string(cnt[3] == 0 ? 0.0 : (tm_cnt[3] / cnt[3]));
 	}
 }
