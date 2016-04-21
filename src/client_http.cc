@@ -904,7 +904,7 @@ HttpClient::schema_view()
 	endpoints_maker(1s);
 
 	db_handler.reset(endpoints, DB_SPAWN);
-	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, db_handler.get_schema()->to_json_string(pretty)));
+	write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, db_handler.get_schema()->to_string(pretty)));
 	return;
 }
 

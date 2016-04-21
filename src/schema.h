@@ -157,12 +157,16 @@ public:
 
 	void build(const std::string& s_schema);
 
-	inline std::string to_string() const {
-		return schema.to_string();
+	inline std::string serialise() const {
+		return schema.serialise();
 	}
 
 	inline bool get_store() const {
 		return to_store;
+	}
+
+	inline MsgPack get_schema() const {
+		return schema;
 	}
 
 	template<typename... Args>
@@ -206,7 +210,7 @@ public:
 	/*
 	 * Transforms schema into json string.
 	 */
-	std::string to_json_string(bool prettify=false) const;
+	std::string to_string(bool prettify=false) const;
 
 
 	/*

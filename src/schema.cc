@@ -484,14 +484,14 @@ Schema::set_type_to_object(MsgPack& properties)
 
 
 std::string
-Schema::to_json_string(bool prettify) const
+Schema::to_string(bool prettify) const
 {
-	MsgPack schema_readable = schema;
+	auto schema_readable = schema;
 	auto& properties = schema_readable.at(RESERVED_SCHEMA);
-	if likely(properties) {
-		readable(properties, true);
-	} else {
+	if unlikely(properties.is_null()) {
 		schema_readable.erase(RESERVED_SCHEMA);
+	} else {
+		readable(properties, true);
 	}
 
 	return schema_readable.to_string(prettify);

@@ -83,8 +83,8 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 
 	// Index obj.
 	// Save a copy of schema for undo changes if there is a exception.
-	auto str_schema = schema->to_string();
-	auto _to_store = schema->get_store();
+	const auto _schema = schema->get_schema();
+	const auto _to_store = schema->get_store();
 
 	try {
 		Schema::data_t schema_data(doc);
@@ -120,7 +120,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 	} catch (...) {
 		// Back to the initial schema if there are changes.
 		if (schema->get_store()) {
-			schema->set_schema(str_schema);
+			schema->set_schema(_schema);
 			schema->set_store(_to_store);
 		}
 		throw;
