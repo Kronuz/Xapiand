@@ -397,7 +397,7 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 {
 	L_CALL(nullptr, "Schema::set_type()");
 
-	MsgPack field = item_doc.type() == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
+	const auto& field = item_doc.type() == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
 	switch (field.type()) {
 		case msgpack::type::POSITIVE_INTEGER:
 			if (specification.numeric_detection) {
@@ -424,7 +424,7 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 			}
 			break;
 		case msgpack::type::STR: {
-			std::string str_value(field.as_string());
+			auto str_value(field.as_string());
 			if (specification.date_detection && Datetime::isDate(str_value)) {
 				specification.sep_types[2] = DATE_TYPE;
 				return;
@@ -458,10 +458,10 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 
 
 void
-Schema::set_type_to_array(const MsgPack& properties)
+Schema::set_type_to_array(MsgPack& properties)
 {
 	try {
-		auto _type = properties.at(RESERVED_TYPE).at(1);
+		auto& _type = properties.at(RESERVED_TYPE).at(1);
 		if (_type.as_u64() == NO_TYPE) {
 			_type = ARRAY_TYPE;
 			to_store = true;
@@ -471,10 +471,10 @@ Schema::set_type_to_array(const MsgPack& properties)
 
 
 void
-Schema::set_type_to_object(const MsgPack& properties)
+Schema::set_type_to_object(MsgPack& properties)
 {
 	try {
-		auto _type = properties.at(RESERVED_TYPE).at(0);
+		auto& _type = properties.at(RESERVED_TYPE).at(0);
 		if (_type.as_u64() == NO_TYPE) {
 			_type = OBJECT_TYPE;
 			to_store = true;

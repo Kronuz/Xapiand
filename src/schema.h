@@ -112,12 +112,12 @@ class Schema {
 	/*
 	 * Sets type to array in properties.
 	 */
-	void set_type_to_array(const MsgPack& properties);
+	void set_type_to_array(MsgPack& properties);
 
 	/*
 	 * Set type to object in properties.
 	 */
-	void set_type_to_object(const MsgPack& properties);
+	void set_type_to_object(MsgPack& properties);
 
 	/*
 	 * Sets in specification the item_doc's type
