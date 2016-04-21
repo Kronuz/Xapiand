@@ -374,17 +374,17 @@ Schema::get_subproperties(MsgPack& properties, specification_t& specification)
 	MsgPack* subproperties = nullptr;
 	for (const auto& field_name : field_names) {
 		if (!is_valid(field_name)) {
-			throw MSG_ClientError("The field name: %s is incorrect", specification.name.c_str());
+			throw MSG_ClientError("The field name: %s is not valid", specification.name.c_str());
 		}
 
 		subproperties = &properties[field_name];
 		restart_specification(specification);
-		if (*subproperties) {
-			specification.found_field = true;
-			update_specification(*subproperties, specification);
-		} else {
+		if (subproperties->is_null()) {
 			to_store = true;
 			specification.found_field = false;
+		} else {
+			specification.found_field = true;
+			update_specification(*subproperties, specification);
 		}
 	}
 
