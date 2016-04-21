@@ -1649,7 +1649,7 @@ Schema::get_data_field(const std::string& field_name) const
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
-		const auto properties = getPropertiesSchema().path(fields);
+		const auto properties = schema.at(RESERVED_SCHEMA).path(fields);
 
 		res.type = properties.at(RESERVED_TYPE).at(2).as_u64();
 		if (res.type == NO_TYPE) {
@@ -1693,7 +1693,7 @@ Schema::get_slot_field(const std::string& field_name) const
 	std::vector<std::string> fields;
 	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
 	try {
-		const auto properties = getPropertiesSchema().path(fields);
+		const auto properties = schema.at(RESERVED_SCHEMA).path(fields);
 		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).as_u64());
 		res.type = properties.at(RESERVED_TYPE).at(2).as_u64();
 	} catch (const std::exception&) { }
