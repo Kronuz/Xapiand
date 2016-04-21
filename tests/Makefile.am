@@ -57,7 +57,6 @@ common_files = \
 	$(top_builddir)/src/lz4/xxhash.c \
 	$(top_builddir)/src/lz4_compressor.cc \
 	$(top_builddir)/src/manager.cc \
-	$(top_builddir)/src/msgpack.cc \
 	$(top_builddir)/src/msgpack_patcher.cc \
 	$(top_builddir)/src/multivalue.cc \
 	$(top_builddir)/src/multivaluekeymaker.cc \
