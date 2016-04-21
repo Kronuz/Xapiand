@@ -33,7 +33,7 @@ static const std::vector<std::string> str_analyzer { "STEM_NONE", "STEM_SOME", "
 static const std::vector<std::string> str_index    { "ALL", "TERM", "VALUE", "TEXT" };
 
 
-static const MsgPack def_accuracy_geo  { true, 0.2, 0, 5, 10, 15, 20, 25 };
+static const MsgPack def_accuracy_geo  { true, 0.2, 0, 5, 10, 15, 20, 25 };
 static const MsgPack def_accuracy_num  { 100, 1000, 10000, 100000 };
 static const MsgPack def_accuracy_date { "hour", "day", "month", "year" };
 
