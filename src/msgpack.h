@@ -206,6 +206,9 @@ private:
 		: _body(std::move(b)) { }
 
 	void _initializer_array(const std::initializer_list<MsgPack>& list) {
+		if (_body->_obj->type != msgpack::type::ARRAY) {
+			_body->_capacity = 0;
+		}
 		_body->_obj->type = msgpack::type::ARRAY;
 		_body->_obj->via.array.ptr = nullptr;
 		_body->_obj->via.array.size = 0;
@@ -216,6 +219,9 @@ private:
 	}
 
 	void _initializer_map(const std::initializer_list<MsgPack>& list) {
+		if (_body->_obj->type != msgpack::type::MAP) {
+			_body->_capacity = 0;
+		}
 		_body->_obj->type = msgpack::type::MAP;
 		_body->_obj->via.map.ptr = nullptr;
 		_body->_obj->via.map.size = 0;
