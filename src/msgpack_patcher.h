@@ -36,7 +36,7 @@ void patch_copy(const MsgPack& obj_patch, MsgPack& object);
 void patch_test(const MsgPack& obj_patch, MsgPack& object);
 void patch_incr(const MsgPack& obj_patch, MsgPack& object);
 void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr=false);
-MsgPack get_patch_value(const MsgPack& obj_patch);
+const MsgPack& get_patch_value(const MsgPack& obj_patch);
 bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch);
 
 

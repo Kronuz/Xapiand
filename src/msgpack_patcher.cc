@@ -132,7 +132,7 @@ void patch_move(const MsgPack& obj_patch, MsgPack& object) {
 		auto target = path_split.back();
 		path_split.pop_back();
 		auto& to = object.path(path_split);
-		const auto& from = object.path(from_split);
+		auto& from = object.path(from_split);
 		_add(to, from, target);
 		_erase(from.parent(), from_split.back());
 	} catch (const msgpack::type_error&) {

@@ -372,7 +372,7 @@ Serialise::type(char type)
 MsgPack
 Unserialise::MsgPack(char field_type, const std::string& serialise_val)
 {
-	MsgPack result;
+	::MsgPack result;
 	switch (field_type) {
 		case FLOAT_TYPE:
 			result = _float(serialise_val);
