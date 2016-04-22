@@ -48,7 +48,7 @@ inline void _add(MsgPack& o, const MsgPack& val, const std::string& target) {
 			o.push_back(val);
 		} else {
 			int offset = strict(std::stoi, target);
-			o.put(offset, val); //FIXME: Add the insert that is really needed here
+			o.insert(static_cast<size_t>(offset), val);
 		}
 	} else {
 		throw MSG_ClientError("Object is not array or map");
