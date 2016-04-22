@@ -689,7 +689,7 @@ inline MsgPack& MsgPack::_erase(const std::string& key) {
 			}
 			auto& mobj = it->second.second;
 			auto pos_ = mobj._body->_pos;
-			assert(pos_ >= 0 && pos_ < _body->_obj->via.map.size);
+			assert(pos_ < _body->_obj->via.map.size);
 			auto p = &_body->_obj->via.map.ptr[pos_];
 			std::memmove(p, p + 1, (_body->_obj->via.map.size - pos_ - 1) * sizeof(msgpack::object_kv));
 			--_body->_obj->via.map.size;
@@ -728,7 +728,7 @@ inline MsgPack& MsgPack::_erase(size_t pos) {
 			assert(it < _body->array.end());
 			auto& mobj = *it;
 			auto pos_ = mobj._body->_pos;
-			assert(pos_ >= 0 && pos_ < _body->_obj->via.array.size);
+			assert(pos_ < _body->_obj->via.array.size);
 			auto p = &_body->_obj->via.array.ptr[pos_];
 			std::memmove(p, p + 1, (_body->_obj->via.array.size - pos_ - 1) * sizeof(msgpack::object));
 			--_body->_obj->via.array.size;
