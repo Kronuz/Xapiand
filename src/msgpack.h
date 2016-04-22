@@ -973,7 +973,6 @@ inline std::pair<MsgPack::iterator, bool> MsgPack::insert(T&& v) {
 				put(key, val);
 			}
 			done = true;
-			it = MsgPack::Iterator<MsgPack>(this, size() - 1);
 			break;
 		case msgpack::type::MAP:
 			for (auto& key : o) {
@@ -981,7 +980,6 @@ inline std::pair<MsgPack::iterator, bool> MsgPack::insert(T&& v) {
 				put(key, val);
 			}
 			done = true;
-			it = MsgPack::Iterator<MsgPack>(this, size() - 1);
 			break;
 		default:
 			break;
