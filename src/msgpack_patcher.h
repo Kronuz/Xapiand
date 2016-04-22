@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -40,10 +40,10 @@ MsgPack get_patch_value(const MsgPack& obj_patch);
 bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch);
 
 
-inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
-	if (o.type() == msgpack::type::MAP) {
+inline void _add(MsgPack& o, const MsgPack& val, const std::string& target) {
+	if (o.is_map()) {
 		o[target] = val;
-	} else if (o.type() == msgpack::type::ARRAY) {
+	} else if (o.is_array()) {
 		if (target.compare("-") == 0) {
 			o.push_back(val);
 		} else {
@@ -58,7 +58,7 @@ inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
 
 inline void _erase(MsgPack& o, const std::string& target) {
 	try {
-		if (o.type() == msgpack::type::ARRAY) {
+		if (o.is_array()) {
 			o.erase(strict(std::stoi, target));
 		} else {
 			o.erase(target);
@@ -95,7 +95,6 @@ inline void _incr_decr(MsgPack& o, int val, int limit) {
 
 
 inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c) {
-	MsgPack path = obj.at(path_c);
-	std::string path_str(path.as_string());
-	stringTokenizer(path_str, "/", path_split);
+	const auto& path = obj.at(path_c);
+	stringTokenizer(path.as_string(), "/", path_split);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -41,11 +41,11 @@
 
 
 void apply_patch(const MsgPack& patch, MsgPack& object) {
-	if (patch.type() == msgpack::type::ARRAY) {
-		for (auto elem : patch) {
+	if (patch.is_array()) {
+		for (const auto& elem : patch) {
 			try {
-				MsgPack op = elem.at("op");
-				std::string op_str = op.as_string();
+				const auto& op = elem.at("op");
+				auto op_str = op.as_string();
 
 				if      (op_str.compare(PATCH_ADD) == 0) { patch_add(elem, object);          }
 				else if (op_str.compare(PATCH_REM) == 0) { patch_remove(elem, object);       }
@@ -69,10 +69,10 @@ void patch_add(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
-		std::string target = path_split.back();
+		auto target = path_split.back();
 		path_split.pop_back();
-		MsgPack o = object.path(path_split);
-		MsgPack val = get_patch_value(obj_patch);
+		auto& o = object.path(path_split);
+		const auto& val = get_patch_value(obj_patch);
 		_add(o, val, target);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch add: Inconsistent data");
@@ -90,7 +90,7 @@ void patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
-		MsgPack o = object.path(path_split);
+		auto& o = object.path(path_split);
 		_erase(o.parent(), path_split.back());
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch remove: Inconsistent data");
@@ -108,8 +108,8 @@ void patch_replace(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
-		MsgPack o = object.path(path_split);
-		MsgPack val = get_patch_value(obj_patch);
+		auto& o = object.path(path_split);
+		const auto& val = get_patch_value(obj_patch);
 		o = val;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch replace: Inconsistent data");
@@ -129,10 +129,10 @@ void patch_move(const MsgPack& obj_patch, MsgPack& object) {
 		std::vector<std::string> from_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		_tokenizer(obj_patch, from_split, PATCH_FROM);
-		std::string target = path_split.back();
+		auto target = path_split.back();
 		path_split.pop_back();
-		MsgPack to = object.path(path_split);
-		MsgPack from = object.path(from_split);
+		auto& to = object.path(path_split);
+		const auto& from = object.path(from_split);
 		_add(to, from, target);
 		_erase(from.parent(), from_split.back());
 	} catch (const msgpack::type_error&) {
@@ -153,10 +153,10 @@ void patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 		std::vector<std::string> from_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		_tokenizer(obj_patch, from_split, PATCH_FROM);
-		std::string target = path_split.back();
+		auto target = path_split.back();
 		path_split.pop_back();
-		MsgPack to = object.path(path_split);
-		MsgPack from = object.path(from_split);
+		auto& to = object.path(path_split);
+		const auto& from = object.path(from_split);
 		_add(to, from, target);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch copy: Inconsistent data");
@@ -174,8 +174,8 @@ void patch_test(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
-		MsgPack o = object.path(path_split);
-		MsgPack val = get_patch_value(obj_patch);
+		const auto& o = object.path(path_split);
+		const auto& val = get_patch_value(obj_patch);
 		if (val != o) {
 			throw MSG_ClientError("In patch test: Objects are not equals. Expected: %s Result: %s", val.to_string().c_str(), o.to_string().c_str());
 		}
@@ -193,13 +193,12 @@ void patch_test(const MsgPack& obj_patch, MsgPack& object) {
 
 void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr) {
 	try {
-		int limit;
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
-		MsgPack o = object.path(path_split);
-		MsgPack val = get_patch_value(obj_patch);
-		int val_num;
-		if (val.type() == msgpack::type::STR) {
+		auto& o = object.path(path_split);
+		const auto& val = get_patch_value(obj_patch);
+		int val_num, limit;
+		if (val.is_string()) {
 			val_num = strict(std::stoi, val.as_string());
 		} else if (val.type() == msgpack::type::NEGATIVE_INTEGER) {
 			val_num = static_cast<int>(val.as_i64());
@@ -225,7 +224,7 @@ void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr) {
 }
 
 
-MsgPack get_patch_value(const MsgPack& obj_patch) {
+const MsgPack& get_patch_value(const MsgPack& obj_patch) {
 	try {
 		return obj_patch.at("value");
 	} catch (const std::out_of_range&) {
@@ -236,8 +235,8 @@ MsgPack get_patch_value(const MsgPack& obj_patch) {
 
 bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch) {
 	try {
-		MsgPack o = obj_patch.at("limit");
-		if (o.type() == msgpack::type::STR) {
+		const auto& o = obj_patch.at("limit");
+		if (o.is_string()) {
 			limit = strict(std::stoi, o.as_string());
 			return true;
 		} else if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
