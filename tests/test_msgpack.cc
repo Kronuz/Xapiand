@@ -23,38 +23,7 @@
 #include "test_msgpack.h"
 
 #include "../src/msgpack.h"
-#include "../src/log.h"
-#include "../src/database_utils.h"
-#include "../src/utils.h"
 #include "utils.h"
-
-#include <fstream>
-#include <sstream>
-#include <vector>
-
-
-bool write_file_contents(const std::string& filename, const std::string& contents) {
-	std::ofstream of(filename.data(), std::ios::out | std::ios::binary);
-	if (of.bad())
-		return false;
-	of.write(contents.data(), contents.size());
-	return true;
-}
-
-
-bool read_file_contents(const std::string& filename, std::string* contents) {
-	std::ifstream in(filename.data(), std::ios::in | std::ios::binary);
-	if (in.bad()) {
-		return false;
-	}
-
-	in.seekg(0, std::ios::end);
-	contents->resize(static_cast<size_t>(in.tellg()));
-	in.seekg(0, std::ios::beg);
-	in.read(&(*contents)[0], contents->size());
-	in.close();
-	return true;
-}
 
 
 int test_correct_cpp() {
@@ -67,30 +36,269 @@ int test_correct_cpp() {
 }
 
 
-int test_pack() {
+int test_constructors() {
+	std::string res1("[1, 2, 3, 4, 5]");
+	std::string res2("[{\"one\":1}, {\"two\":2}, {\"three\":3}, {\"four\":4}, 100.78, {\"five\":5}, 1000, true, \"str_value\"]");
+	std::string res3("{\"one\":1, \"two\":2, \"three\":3, \"four\":4, \"five\":5}");
+	std::string res4("{\"one\":1, \"two\":2, \"three\":{\"value\":30, \"person\":{\"name\":\"José\", \"last\":\"Perez\"}}, \"four\":4, \"five\":5}");
+
+	// List initialize ARRAY
+	MsgPack o = { 1, 2, 3, 4, 5 };
+
+	int res = 0;
+	auto result = o.to_string();
+	if (result != res1) {
+		L_ERR(nullptr, "ERROR: MsgPack(array list) is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res1.c_str());
+		++res;
+	}
+
+	MsgPack o2 = {
+		{ "one", 1 },
+		{ "two", 2 },
+		{ "three", 3 },
+		{ "four", 4 },
+		100.78,
+		{ "five", 5 },
+		1000,
+		true,
+		"str_value"
+	};
+
+	result = o2.to_string();
+	if (result != res2) {
+		L_ERR(nullptr, "ERROR: MsgPack(initialize list ARRAY with different values) is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res2.c_str());
+		++res;
+	}
+
+	// List initialize MAP
+	MsgPack o3 = {
+		{ "one", 1 },
+		{ "two", 2 },
+		{ "three", 3 },
+		{ "four", 4 },
+		{ "five", 5 }
+	};
+
+	result = o3.to_string();
+	if (result != res3) {
+		L_ERR(nullptr, "ERROR: MsgPack(initialize list MAP) is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res3.c_str());
+		++res;
+	}
+
+	MsgPack o4 = {
+		{ "one", 1 },
+		{ "two", 2 },
+		{ "three", },
+		{
+			{ "value", 30 },
+			{ "person",
+				{
+					{ "name", "José" },
+					{ "last", "Perez" },
+				}
+			},
+		},
+		{ "four", 4 },
+		{ "five", 5 }
+	};
+
+	result = o4.to_string();
+	if (result != res4) {
+		L_ERR(nullptr, "ERROR: MsgPack(initialize list nested MAP) is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res4.c_str());
+		++res;
+	}
+
+	// const MsgPack&
+	MsgPack o5(o3);
+
+	result = o5.to_string();
+	if (result != res3) {
+		L_ERR(nullptr, "ERROR: MsgPack(const MsgPack&) is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res3.c_str());
+		++res;
+	}
+
+	// MsgPack&&
+	auto o6(MsgPack({
+		{ "one", 1 },
+		{ "two", 2 },
+		{ "three", 3 },
+		{ "four", 4 },
+		100,
+		{ "five", 5 },
+		1000
+	}));
+
+	result = o6.to_string();
+	if (result != res3) {
+		L_ERR(nullptr, "ERROR: MsgPack(const MsgPack&) is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res3.c_str());
+		++res;
+	}
+
+	// rapidjson::Document
+	std::string str_json;
+	std::string filename = "examples/msgpack/json_test1.txt";
+	if (!read_file_contents(filename, &str_json)) {
+		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
+		++res;
+	} else {
+		std::string expect_json;
+		std::string filename("examples/msgpack/json_test1_unpack.txt");
+		if (!read_file_contents(filename, &expect_json)) {
+			L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
+			++res;
+		} else {
+			MsgPack json_obj(to_json(str_json));
+			if (json_obj.to_string() != expect_json) {
+				L_ERR(nullptr, "MsgPack::MsgPack(rapidjson::Document) is not working correctly. Result: %s\nExpected: %s\n", json_obj.to_string().c_str(), expect_json.c_str());
+				++res;
+			}
+		}
+	}
+
+	RETURN(res);
+}
+
+
+int test_assigment() {
+	std::string res1("[1, 2, 3, 4, 5]");
+	std::string res2("{\"one\":1, \"two\":2, \"three\":3, \"four\":4, \"five\":5}");
+
+	MsgPack m_array({ 1, 2, 3, 4, 5 });
+	MsgPack m_map({
+		{ "one", 1 },
+		{ "two", 2 },
+		{ "three", 3 },
+		{ "four", 4 },
+		{ "five", 5 }
+	});
+
+	int res = 0;
+
+	m_array = m_map;
+	auto result = m_array.to_string();
+	if (result != res2) {
+		L_ERR(nullptr, "ERROR: Maspack::copy assigment from ARRAY to MAP is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res2.c_str());
+		++res;
+	}
+	if (m_array.capacity() != m_map.size()) {
+		L_ERR(nullptr, "ERROR: Maspack::copy assigment from ARRAY to MAP is not reserving correctly. Result:\n %zu\nExpected:\n %zu\n", m_array.capacity(), m_map.size());
+		++res;
+	}
+
+	m_array = MsgPack({ 1, 2, 3, 4, 5 });
+	result = m_array.to_string();
+	if (result != res1) {
+		L_ERR(nullptr, "ERROR: Maspack::move assigment from MAP to ARRAY is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res1.c_str());
+		++res;
+	}
+	if (m_array.capacity() != m_array.size()) {
+		L_ERR(nullptr, "ERROR: Maspack::move assigment from MAP to ARRAY is not reserving correctly. Result:\n %zu\nExpected:\n %zu\n", m_array.capacity(), m_array.size());
+		++res;
+	}
+
+	m_map = m_array;
+	result = m_map.to_string();
+	if (result != res1) {
+		L_ERR(nullptr, "ERROR: Msgpack::copy assigment from MAP to ARRAY is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res1.c_str());
+		++res;
+	}
+	if (m_map.capacity() != m_array.size()) {
+		L_ERR(nullptr, "ERROR: Msgpack::copy assigment from MAP to ARRAY is not reserving correctly. Result:\n %zu\nExpected:\n %zu\n", m_map.capacity(), m_array.size());
+		++res;
+	}
+
+	MsgPack o5({ 1, 2, 3, 4, 5});
+	result = o5.to_string();
+
+	m_map = MsgPack({
+		{ "one", 1 },
+		{ "two", 2 },
+		{ "three", 3 },
+		{ "four", 4 },
+		{ "five", 5 }
+	});
+
+	result = m_map.to_string();
+	if (result != res2) {
+		L_ERR(nullptr, "ERROR: Msgpack::copy assigment from ARRAY to MAP is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res2.c_str());
+		++res;
+	}
+	if (m_map.capacity() != m_map.size()) {
+		L_ERR(nullptr, "ERROR: Msgpack::copy assigment from ARRAY to MAP is not reserving correctly. Result:\n %zu\nExpected:\n %zu\n", m_map.capacity(), m_map.size());
+		++res;
+	}
+
+	RETURN(res);
+}
+
+
+int test_iterator() {
+	std::string expected("\"one\", 1, \"two\", 2, \"three\", 3, \"four\", 4, \"five\", 5, ");
+
+	MsgPack o = { "one", 1, "two", 2, "three", 3, "four", 4, "five", 5 };
+
+	std::stringstream ss;
+	const auto it_e = o.cend();
+	for (auto it = o.cbegin(); it != it_e; ++it) {
+		ss << *it << ", ";
+	}
+
+	int res = 0;
+	if (ss.str() != expected) {
+		L_ERR(nullptr, "ERROR: MsgPack::iterator with array is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), ss.str().c_str());
+		++res;
+	}
+
+	o = {
+		{ "one", 1 },
+		{ "two", 2 },
+		{ "three", 3 },
+		{ "four", 4 },
+		{ "five", 5 }
+	};
+
+	ss.clear();
+	const auto it_e2 = o.cend();
+	for (auto it = o.cbegin(); it != it_e2; ++it) {
+		ss << *it << ", " << o.at(*it) << ", ";
+	}
+
+	if (ss.str() != expected) {
+		L_ERR(nullptr, "ERROR: MsgPack::iterator with array is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), ss.str().c_str());
+		++res;
+	}
+
+	RETURN(res);
+}
+
+
+int test_serialise() {
 	std::string buffer;
-	if (!read_file_contents("examples/msgpack/json_test1.txt", &buffer)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/json_test1.txt]");
+	std::string filename("examples/msgpack/json_test1.txt");
+	if (!read_file_contents(filename, &buffer)) {
+		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
 	}
 
 	rapidjson::Document doc;
 	try {
 		json_load(doc, buffer);
-	} catch (const std::exception&) {
+	} catch (const std::exception& err) {
+		L_ERR(nullptr, "ERROR: %s", err.what());
 		RETURN(1);
 	}
 
 	auto obj = MsgPack(doc);
 
 	std::string pack_expected;
-	if (!read_file_contents("examples/msgpack/test1.mpack", &pack_expected)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/test1.mpack]");
+	std::string expected_filename("examples/msgpack/test1.mpack");
+	if (!read_file_contents(expected_filename, &pack_expected)) {
+		L_ERR(nullptr, "ERROR: Can not read the file: %s", expected_filename.c_str());
 		RETURN(1);
 	}
 
-	if (pack_expected != obj.to_string()) {
-		L_ERR(nullptr, "ERROR: MsgPack::to_MsgPack is no working correctly");
+	if (pack_expected != obj.serialise()) {
+		L_ERR(nullptr, "ERROR: MsgPack::serialise is no working correctly");
 		RETURN(1);
 	}
 
@@ -98,24 +306,26 @@ int test_pack() {
 }
 
 
-int test_unpack() {
+int test_unserialise() {
 	std::string buffer;
-	if (!read_file_contents("examples/msgpack/test1.mpack", &buffer)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/test1.mpack]");
+	std::string filename("examples/msgpack/test1.mpack");
+	if (!read_file_contents(filename, &buffer)) {
+		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
 	}
 
-	MsgPack obj(buffer);
+	auto obj = MsgPack::unserialise(buffer);
 
 	std::string expected;
-	if (!read_file_contents("examples/msgpack/json_test1_unpack.txt", &expected)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/json_test1_unpack.txt]");
+	std::string expected_filename("examples/msgpack/json_test1_unpack.txt");
+	if (!read_file_contents(filename, &buffer)) {
+		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
 	}
 
-	std::string result = obj.to_json_string();
+	auto result = obj.to_string();
 	if (expected != result) {
-		L_ERR(nullptr, "ERROR: MsgPack::unpack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), result.c_str());
+		L_ERR(nullptr, "ERROR: MsgPack::unserialise is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), result.c_str());
 		RETURN(1);
 	}
 
@@ -123,14 +333,15 @@ int test_unpack() {
 }
 
 
-int test_explore_json() {
+int test_explore() {
 	std::string buffer;
-	if (!read_file_contents("examples/msgpack/test2.mpack", &buffer)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/test2.mpack]");
+	std::string filename("examples/msgpack/test2.mpack");
+	if (!read_file_contents(filename, &buffer)) {
+		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
 	}
 
-	MsgPack obj(buffer);
+	auto obj = MsgPack::unserialise(buffer);
 
 	std::string expected(
 		"\"_id\":\"56892c5e23700e297bd84cd5\"\n"
@@ -157,78 +368,131 @@ int test_explore_json() {
 		"\"tags\":[7, \"eiusmod\"]\n"
 	);
 
+	// Explore MAP.
+	int res = 0;
 	std::stringstream ss;
-	for (auto x : obj) {
+	for (const auto& x : obj) {
+		ss << x << ":" << obj.at(x) << "\n";
+	}
+
+	if (ss.str() != expected) {
+		L_ERR(nullptr, "ERROR: MsgPack [using at] does not explore the map correctly\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), ss.str().c_str());
+		++res;
+	}
+
+	ss.clear();
+	for (const auto& x : obj) {
 		ss << x << ":" << obj[x] << "\n";
 	}
 
 	if (ss.str() != expected) {
-		L_ERR(nullptr, "ERROR: MsgPack does not explore the json correctly\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), ss.str().c_str());
-		RETURN(1);
+		L_ERR(nullptr, "ERROR: MsgPack [using operator[]] does not explore the map correctly\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), ss.str().c_str());
+		++res;
 	}
 
-	RETURN(0);
+	// Explore ARRAY.
+	const auto& range = obj["range"];
+	expected = "0 1 2 3 4 5 6 7 8 9 ";
+	ss.clear();
+	for (const auto& x : range) {
+		ss << x << " ";
+	}
+
+	if (ss.str() != expected) {
+		L_ERR(nullptr, "ERROR: MsgPack does not explore the array correctly\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), ss.str().c_str());
+		++res;
+	}
+
+	RETURN(res);
 }
 
 
-int test_add_items() {
-	std::string expected;
-	if (!read_file_contents("examples/msgpack/json_test2.txt", &expected)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/json_test2.txt]");
-		RETURN(1);
+int test_copy() {
+	MsgPack obj = {
+		{"elem1", "Elem1"},
+		{"elem2", "Elem2"}
+	};
+
+	auto copy_obj = obj;
+
+	obj["elem1"] = "Mod_Elem1";
+	obj["elem2"] = "Mod_Elem2";
+	obj["elem3"] = "Final_Elem3";
+	obj["elem4"] = "Final_Elem4";
+	obj["elem1"] = "Final_Elem1";
+	obj["elem2"] = "Final_Elem2";
+
+	std::string str_orig_expect("{\"elem1\":\"Final_Elem1\", \"elem2\":\"Final_Elem2\", \"elem3\":\"Final_Elem3\", \"elem4\":\"Final_Elem4\"}");
+
+	copy_obj["elem3"] = "Final_Copy_Elem3";
+	copy_obj["elem4"] = "Final_Copy_Elem4";
+	copy_obj["elem1"] = "Final_Copy_Elem1";
+	copy_obj["elem2"] = "Final_Copy_Elem2";
+
+	std::string str_copy_expect("{\"elem1\":\"Final_Copy_Elem1\", \"elem2\":\"Final_Copy_Elem2\", \"elem3\":\"Final_Copy_Elem3\", \"elem4\":\"Final_Copy_Elem4\"}");
+
+	auto str_orig = obj.to_string();
+	int res = 0;
+	if (str_orig_expect != str_orig) {
+		L_ERR(nullptr, "Copy MsgPack (Original) is not working. Result: %s, Expected: %s", str_orig.c_str(), str_orig_expect.c_str());
+		++res;
 	}
 
-	std::string buffer;
-	if (!read_file_contents("examples/msgpack/test2.mpack", &buffer)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/test2.mpack]");
-		RETURN(1);
+	auto str_copy = copy_obj.to_string();
+	if (str_copy != str_copy_expect) {
+		L_ERR(nullptr, "Copy MsgPack (Copy) is not working. Result: %s, Expected: %s", str_copy.c_str(), str_copy_expect.c_str());
+		++res;
 	}
 
-	MsgPack obj(buffer);
-
-	obj["name"]["middle"]["other"] = "Jeremy";
-	obj["range"][30] = "Other";
-	obj["company"] = "DEIPI";
-	obj["branch"] = "Morelia";
-	obj["country"] = "México";
-
-	std::string result = obj.to_json_string();
-	if (expected != result) {
-		L_ERR(nullptr, "ERROR: Add items with MsgPack is not working\n\nExpected: %s\n\nResult: %s\n", expected.c_str(), result.c_str());
-		RETURN(1);
-	}
-
-	RETURN(0);
+	return res;
 }
 
 
-int test_assigment() {
-	MsgPack o;
-	o["country"] = "México";
-	MsgPack aux = o["country"];
+int test_reference() {
+	MsgPack obj = {
+		{"elem1", "Elem1"},
+		{"elem2", "Elem2"}
+	};
 
-	MsgPack r_assigment = o["country"];
-	MsgPack l_assigment = aux;
+	auto& copy_obj = obj;
 
-	std::string r_str = r_assigment.to_json_string();
-	std::string l_str = l_assigment.to_json_string();
-	if (r_str.compare("\"México\"") != 0) {
-		L_ERR(nullptr, "ERROR: rvalue assigment in MsgPack is not working\n\nExpected: \"México\"\nResult: %s\n", r_str.c_str());
-		RETURN(1);
+	obj["elem1"] = "Mod_Elem1";
+	obj["elem2"] = "Mod_Elem2";
+	obj["elem3"] = "Final_Elem3";
+	obj["elem4"] = "Final_Elem4";
+	obj["elem1"] = "Final_Elem1";
+	obj["elem2"] = "Final_Elem2";
+
+	copy_obj["elem3"] = "Final_Copy_Elem3";
+	copy_obj["elem4"] = "Final_Copy_Elem4";
+	copy_obj["elem1"] = "Final_Copy_Elem1";
+	copy_obj["elem2"] = "Final_Copy_Elem2";
+
+	std::string str_expect("{\"elem1\":\"Final_Copy_Elem1\", \"elem2\":\"Final_Copy_Elem2\", \"elem3\":\"Final_Copy_Elem3\", \"elem4\":\"Final_Copy_Elem4\"}");
+
+	auto str_orig = obj.to_string();
+	int res = 0;
+	if (str_expect != str_orig) {
+		L_ERR(nullptr, "Copy MsgPack (Original) is not working. Result: %s, Expected: %s", str_orig.c_str(), str_expect.c_str());
+		++res;
 	}
 
-	if (l_str.compare("\"México\"") != 0) {
-		L_ERR(nullptr, "ERROR: lvalue assigment in MsgPack is not working\n\nExpected: \"México\\n\nResult: %s\n", l_str.c_str());
-		RETURN(1);
+	auto str_copy = copy_obj.to_string();
+	if (str_copy != str_expect) {
+		std::cout << copy_obj.internal_msgpack() << std::endl;
+		L_ERR(nullptr, "Copy MsgPack (Copy) is not working. Result: %s, Expected: %s", str_copy.c_str(), str_expect.c_str());
+		++res;
 	}
-	RETURN(0);
+
+	return res;
 }
 
 
 int test_path() {
 	std::string buffer;
-	if (!read_file_contents("examples/json/object_path.txt", &buffer)) {
-		L_ERR(nullptr, "ERROR: Can not read the file [examples/json/object_path.txt]");
+	std::string filename("examples/json/object_path.txt");
+	if (!read_file_contents(filename, &buffer)) {
+		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
 	}
 
@@ -240,224 +504,232 @@ int test_path() {
 	std::vector <std::string> path;
 	stringTokenizer(path_str, "/", path);
 
-	MsgPack path_msgpack = obj.path(path);
+	const auto& path_msgpack = obj.path(path);
 
-	std::string target = path_msgpack.to_json_string();
-	std::string parent = path_msgpack.parent().to_json_string();
-	std::string parent_expected ("[\"EU\", \"MEXICO\", \"CANADA\", \"BRAZIL\"]");
+	auto target = path_msgpack.to_string();
+	auto parent = path_msgpack.parent().to_string();
+	auto parent_expected = std::string("[\"EU\", \"MEXICO\", \"CANADA\", \"BRAZIL\"]");
 
+	int res = 0;
 	if (target.compare("\"MEXICO\"") != 0) {
-		L_ERR(nullptr, "ERROR: solve path in MsgPack is not working\n\nExpected: \"MEXICO\"\nResult: %s\n", target.c_str());
-		RETURN(1);
+		L_ERR(nullptr, "ERROR: MsgPack::path is not working\n\nExpected: \"MEXICO\"\nResult: %s\n", target.c_str());
+		++res;
 	}
 
 	if (parent.compare(parent_expected) != 0) {
-		L_ERR(nullptr, "ERROR: solve path in MsgPack is not working\n\nExpected: %s\nResult: %s\n", parent_expected.c_str(), parent.c_str());
-		RETURN(1);
+		L_ERR(nullptr, "ERROR: MsgPack::parent() is not working\n\nExpected: %s\nResult: %s\n", parent_expected.c_str(), parent.c_str());
+		++res;
 	}
 
-	RETURN(0);
-}
-
-
-int test_clone() {
-	MsgPack obj;
-	obj["elem1"] = "Elem1";
-	obj["elem2"] = "Elem2";
-	obj["elem3"] = "Elem3";
-
-	auto copy_obj = obj.clone();
-
-	obj["elem1"] = "Mod_Elem1";
-	obj["elem2"] = "Mod_Elem2";
-	obj["elem3"] = "Mod_Elem3";
-	obj["elem4"] = "Elem4";
-	obj["elem1"] = "Final_Elem1";
-	obj["elem2"] = "Final_Elem2";
-	obj["elem3"] = "Final_Elem3";
-	obj["elem4"] = "Final_Elem4";
-
-	copy_obj["elem1"] = "Copy_Elem1";
-	copy_obj["elem2"] = "Copy_Elem2";
-	copy_obj["elem3"] = "Copy_Elem3";
-	copy_obj["elem4"] = "Copy_Elem4";
-	copy_obj["elem1"] = "Final_Copy_Elem1";
-	copy_obj["elem2"] = "Final_Copy_Elem2";
-	copy_obj["elem3"] = "Final_Copy_Elem3";
-	copy_obj["elem4"] = "Final_Copy_Elem4";
-
-	std::string str_orig_expect("{\"elem1\":\"Final_Elem1\", \"elem2\":\"Final_Elem2\", \"elem3\":\"Final_Elem3\", \"elem4\":\"Final_Elem4\"}");
-	auto str_orig = obj.to_json_string();
-	if (str_orig_expect != str_orig) {
-		L_ERR(nullptr, "MsgPack::clone is not working. Result: %s, Expected: %s", str_orig.c_str(), str_orig_expect.c_str());
-		RETURN(1);
-	}
-
-	std::string str_copy_expect("{\"elem1\":\"Final_Copy_Elem1\", \"elem2\":\"Final_Copy_Elem2\", \"elem3\":\"Final_Copy_Elem3\", \"elem4\":\"Final_Copy_Elem4\"}");
-	auto str_copy = copy_obj.to_json_string();
-	if (str_copy != str_copy_expect) {
-		L_ERR(nullptr, "MsgPack::clone is not working. Result: %s, Expected: %s", str_copy.c_str(), str_copy_expect.c_str());
-		RETURN(1);
-	}
-
-	RETURN(0);
+	RETURN(res);
 }
 
 
 int test_erase() {
-	MsgPack obj;
-	obj["elem1"] = "Elem1";
-	obj["elem2"] = "Elem2";
-	obj["elem3"] = "Elem3";
-	obj["elem4"] = "Elem4";
+	// Erase by key
+	MsgPack obj = {
+		{ "elem1", "Elem1" },
+		{ "elem2", "Elem2" },
+		{ "elem3", "Elem3" },
+		{ "elem4", "Elem4" }
+	};
 
 	obj.erase("elem1");
 	obj.erase("elem3");
 
+	int res = 0;
 	try {
 		obj.at("elem1");
-		L_ERR(nullptr, "MsgPack::erase() is not working");
-		RETURN(1);
+		L_ERR(nullptr, "MsgPack::erase(key) is not working");
+		++res;
 	} catch (const std::out_of_range&) { }
 
 	try {
 		obj.at("elem3");
-		L_ERR(nullptr, "MsgPack::erase() is not working");
-		RETURN(1);
+		L_ERR(nullptr, "MsgPack::erase(key) is not working");
+		++res;
 	} catch (const std::out_of_range&) { }
 
 	obj["elem2"] = "Final_Elem2";
 	obj["elem4"] = "Final_Elem4";
 
 	std::string str_obj_expect("{\"elem2\":\"Final_Elem2\", \"elem4\":\"Final_Elem4\"}");
-	auto str_obj = obj.to_json_string();
+	auto str_obj = obj.to_string();
 	if (str_obj_expect != str_obj) {
-		L_ERR(stderr, "MsgPack::erase() is not working correctly. Result: %s, Expected: %s", str_obj.c_str(), str_obj_expect.c_str());
-		RETURN(1);
+		L_ERR(nullptr, "ERROR: MsgPack::erase(key) is not working correctly. Result: %s, Expected: %s", str_obj.c_str(), str_obj_expect.c_str());
+		++res;
 	}
 
-	RETURN(0);
+	// Erase by offset
+	obj = MsgPack({
+		{ "elem1", "Elem1" },
+		{ "elem2", "Elem2" },
+		{ "elem3", "Elem3" },
+		{ "elem4", "Elem4" }
+	});
+
+	obj.erase(1);
+	obj.erase(2);
+
+	try {
+		obj.at("elem1");
+		L_ERR(nullptr, "MsgPack::erase(offset) is not working");
+		++res;
+	} catch (const std::out_of_range&) { }
+
+	try {
+		obj.at("elem3");
+		L_ERR(nullptr, "MsgPack::erase(offset) is not working");
+		++res;
+	} catch (const std::out_of_range&) { }
+
+	obj["elem2"] = "Final_Elem2";
+	obj["elem4"] = "Final_Elem4";
+
+	str_obj_expect = "{\"elem2\":\"Final_Elem2\", \"elem4\":\"Final_Elem4\"}";
+	str_obj = obj.to_string();
+	if (str_obj_expect != str_obj) {
+		L_ERR(nullptr, "ERROR: MsgPack::erase(key) is not working correctly. Result: %s, Expected: %s", str_obj.c_str(), str_obj_expect.c_str());
+		++res;
+	}
+
+	obj = { 1, 2, 3, 4, 5 };
+	obj.erase(1);
+	obj.erase(2);
+
+	obj[0] = 11;
+	obj[1] = 31;
+	obj[2] = 51;
+	str_obj_expect = "[11, 31, 51]";
+	str_obj = obj.to_string();
+	if (str_obj_expect != str_obj) {
+		L_ERR(nullptr, "ERROR: MsgPack::erase(key) is not working correctly. Result: %s, Expected: %s", str_obj.c_str(), str_obj_expect.c_str());
+		++res;
+	}
+
+	RETURN(res);
 }
 
 
 int test_reserve() {
 	std::string data;
-	read_file_contents("examples/msgpack/test1.mpack", &data);
-	MsgPack obj(data);
-
-	size_t r_size = 128 * obj.size();
-	obj.reserve(r_size);
-	if (obj.capacity() != r_size) {
-		L_ERR(nullptr, "MsgPack::reserve(msgpack::map) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
+	std::string filename("examples/msgpack/test1.mpack");
+	if (!read_file_contents(filename, &data)) {
+		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
 	}
 
-	if (obj.to_string() != data) {
-		L_ERR(nullptr, "MsgPack::expand_map is not allocating memory correctly.\n");
-		RETURN(1);
-	}
+	auto obj = MsgPack::unserialise(data);
 
-	auto doc = to_json("[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]");
-	obj = doc;
-	std::string orig_data = obj.to_json_string().c_str();
-	r_size = 128 * obj.size();
-
-	obj.reserve(r_size);
-	if (obj.capacity() != r_size) {
-		L_ERR(nullptr, "MsgPack::reserve(msgpack::array) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
-		RETURN(1);
-	}
-
-	if (obj.to_json_string() != orig_data) {
-		L_ERR(nullptr, "MsgPack::expand_array is not allocating memory correctly.\n");
-		RETURN(1);
-	}
-
-	RETURN(0);
-}
-
-
-int test_reset() {
-	std::string data;
-	read_file_contents("examples/msgpack/test1.mpack", &data);
-	MsgPack obj(data);
-
-	MsgPack obj2;
-	obj2.reset(obj);
-
-	for (int i = 0; i < 300; ++i) {
-		obj[std::to_string(i)] = i;
-	}
-
-	for (int i = 0; i < 300; ++i) {
-		obj2.erase(std::to_string(i));
-	}
-
-	if (obj.capacity() != obj2.capacity()) {
-		L_ERR(nullptr, "Error in MsgPack::reset, objects have differents capabilities\n");
-		RETURN(1);
-	}
-
-	if (obj.size() != obj2.size()) {
-		L_ERR(nullptr, "Error in MsgPack::reset, objects have differents sizes\n");
-		RETURN(1);
-	}
-
-	if (obj.to_json_string() != obj2.to_json_string()) {
-		L_ERR(nullptr, "Error in MsgPack::reset, objects are different\n");
-		RETURN(1);
-	}
-
-	if (obj.to_string() != data) {
-		L_ERR(nullptr, "Error in MsgPack::reset with inserts and deletes is not working\n");
-		RETURN(1);
-	}
-
-	RETURN(0);
-}
-
-
-int test_explicit_constructors() {
-	std::string expect_json;
-	read_file_contents("examples/msgpack/json_test1_unpack.txt", &expect_json);
 	int res = 0;
-
-	// Buffer object
-	std::string data;
-	read_file_contents("examples/msgpack/test1.mpack", &data);
-	MsgPack buf_obj(data);
-	if (buf_obj.to_json_string() != expect_json) {
-		L_ERR(nullptr, "MsgPack::MsgPack(std::string) is not working correctly. Result: %s\nExpected: %s\n", buf_obj.to_json_string().c_str(), expect_json.c_str());
+	size_t r_size = 512;
+	obj.reserve(r_size);
+	if (obj.capacity() != r_size) {
+		L_ERR(nullptr, "ERROR: MsgPack::reserve(msgpack::map) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
 		++res;
 	}
 
-
-	// rapidjson::Document
-	std::string str_json;
-	read_file_contents("examples/msgpack/json_test1.txt", &str_json);
-	auto json_doc = to_json(str_json);
-	MsgPack json_obj(json_doc);
-	if (json_obj.to_json_string() != expect_json) {
-		L_ERR(nullptr, "MsgPack::MsgPack(rapidjson::Document) is not working correctly. Result: %s\nExpected: %s\n", json_obj.to_json_string().c_str(), expect_json.c_str());
+	auto result = obj.serialise();
+	if (result != data) {
+		L_ERR(nullptr, "ERROR: MsgPack::expand_map is not allocating memory correctly. Result: %s  Expect: %s\n", result.c_str(), data.c_str());
 		++res;
 	}
 
-	// msgpack::object
-	msgpack::object o(data);
-	MsgPack msg_obj(o);
-	if (msg_obj.get_str() != data) {
-		L_ERR(nullptr, "MsgPack::MsgPack(msgpack::object) is not working correctly. Result: %s\nExpected: %s\n", msg_obj.get_str().c_str(), data.c_str());
+	obj = MsgPack({ 0.2, true, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+	auto orig_data = obj.to_string();
+
+	r_size = 1024;
+	obj.reserve(r_size);
+	if (obj.capacity() != r_size) {
+		L_ERR(nullptr, "ERROR: MsgPack::reserve(msgpack::array) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
 		++res;
 	}
 
-	// msgpack::unpacked
-	msgpack::unpacked u;
-	msgpack::unpack(&u, data.data(), data.size());
-	MsgPack unp_obj(u);
-	if (unp_obj.to_json_string() != expect_json) {
-		L_ERR(nullptr, "MsgPack::MsgPack(msgpack::unpacked) is not working correctly. Result: %s\nExpected: %s\n", unp_obj.to_json_string().c_str(), expect_json.c_str());
+	if (obj.to_string() != orig_data) {
+		L_ERR(nullptr, "MsgPack::expand_array is not allocating memory correctly.\n");
 		++res;
 	}
 
 	RETURN(res);
+}
+
+
+int test_keys() {
+	int res = 0;
+	// Test for type of keys
+	try {
+		MsgPack obj = {
+			{ "item1", "Item1" },
+			{ "item2", "Item2" },
+			{ 100, "Item3" }
+		};
+		L_ERR(nullptr, "MsgPack must accept only keys of type string");
+		++res;
+	} catch (const MsgPack::duplicate_key&) { }
+
+	// Test for duplicate keys.
+	try {
+		MsgPack obj = {
+			{ "item1", "Item1" },
+			{ "item2", "Item2" },
+			{ "item2", "Item3" }
+		};
+		L_ERR(nullptr, "MsgPack must not accept duplicate keys");
+		++res;
+	} catch (const MsgPack::duplicate_key&) { }
+
+	std::string data;
+	std::string filename("examples/msgpack/test1.mpack");
+	if (!read_file_contents(filename, &data)) {
+		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
+		++res;
+	}
+
+	MsgPack obj = MsgPack::unserialise(data);
+
+	auto _size = obj.size();
+	try {
+		for (auto& key : obj) {
+			key = std::string("_data");
+		}
+		L_ERR(nullptr, "MsgPack must not accept duplicate keys");
+		++res;
+	} catch (const MsgPack::duplicate_key&) {
+		if (_size != obj.size()) {
+			++res;
+		}
+	}
+
+	RETURN(res);
+}
+
+
+int test_change_keys() {
+	MsgPack obj = {
+		{ "item1", "Item1" },
+		{ "item2", "Item2" },
+		{ "item3", "Item3" },
+		{ "item4", "Item4" }
+	};
+
+	int i = 1;
+	for (auto& key : obj) {
+		auto new_str_key = std::string("key_").append(std::to_string(i++));
+		key = new_str_key;
+	}
+
+	obj["key_1"] = "Val1";
+	obj["key_2"] = "Val2";
+	obj["key_3"] = "Val3";
+	obj["key_4"] = "Val4";
+
+	std::string expected("{\"key_1\":\"Val1\", \"key_2\":\"Val2\", \"key_3\":\"Val3\", \"key_4\":\"Val4\"}");
+
+	auto result = obj.to_string();
+	if (result == expected) {
+		RETURN(0);
+	} else {
+		L_ERR(nullptr, "Change keys in MsgPack  is not working. Result: %s\nExpected: %s\n", result.c_str(), expected.c_str());
+		RETURN(1);
+	}
 }

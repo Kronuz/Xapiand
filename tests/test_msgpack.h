@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -25,17 +25,17 @@
 #include <string>
 
 
-bool read_file_contents(const std::string& filename, std::string* contents);
-bool write_file_contents(const std::string& filename, const std::string& contents);
 int test_correct_cpp();
-int test_pack();
-int test_unpack();
-int test_explore_json();
-int test_add_items();
+int test_constructors();
 int test_assigment();
+int test_iterator();
+int test_serialise();
+int test_unserialise();
+int test_explore();
+int test_copy();
+int test_reference();
 int test_path();
-int test_clone();
 int test_erase();
 int test_reserve();
-int test_reset();
-int test_explicit_constructors();
+int test_keys();
+int test_change_keys();
