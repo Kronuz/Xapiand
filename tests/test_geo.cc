@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,42 +22,8 @@
 
 #include "test_geo.h"
 
-#include "../src/manager.h"
-#include "../src/endpoint.h"
-#include "../src/database.h"
-#include "../src/length.h"
-#include "../src/xapiand.h"
 #include "utils.h"
 
-#include <sstream>
-#include <fstream>
-
-#define _VERBOSITY 3
-#define _DETACH false
-#define _CHERT false
-#define _SOLO true
-#define _DATABASE ""
-#define _CLUSTER_NAME "cluster_test"
-#define _NODE_NAME "node_test"
-#define _PIDFILE ""
-#define _LOGFILE ""
-#define _UID ""
-#define _GID ""
-#define _DISCOVERY_GROUP ""
-#define _RAFT_GROUP ""
-#define _NUM_SERVERS 1
-#define _DBPOOL_SIZE 1
-#define _NUM_REPLICATORS 1
-#define _THREADPOOL_SIZE 1
-#define _ENDPOINT_LIST_SIZE 1
-#define _NUM_COMMITERS 1
-#define _EV_FLAG 0
-#define _LOCAL_HOST "127.0.0.1"
-
-std::shared_ptr<DatabaseQueue> d_queue;
-static std::shared_ptr<Database> database;
-static std::string name_database(".db_testgeo.db");
-static Endpoints endpoints;
 
 const test_geo_t geo_range_tests[] {
 	// The range search always is sort by centroids' search.
@@ -133,36 +99,8 @@ const test_geo_t geo_terms_tests[] {
 };
 
 
-void create_manager() {
-	if (!XapiandManager::manager) {
-		opts_t opts = { _VERBOSITY, _DETACH, _CHERT, _SOLO, _DATABASE, _CLUSTER_NAME, _NODE_NAME, XAPIAND_HTTP_SERVERPORT, XAPIAND_BINARY_SERVERPORT, XAPIAND_DISCOVERY_SERVERPORT, XAPIAND_RAFT_SERVERPORT, _PIDFILE, _LOGFILE, _UID, _GID, _DISCOVERY_GROUP, _RAFT_GROUP, _NUM_SERVERS, _DBPOOL_SIZE, _NUM_REPLICATORS, _THREADPOOL_SIZE, _ENDPOINT_LIST_SIZE, _NUM_COMMITERS, _EV_FLAG};
-		ev::default_loop default_loop(opts.ev_flags);
-		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
-	}
-}
-
-
-int create_test_db() {
-	// Delete database to create.
-	delete_files(name_database);
-	create_manager();
-
-	/*
-	 *	The database used in the test is local
-	 *	so the Endpoints and local_node are manipulated.
-	 */
-
-	int cont = 0;
-	Endpoint e;
-	e.node_name.assign(_NODE_NAME);
-	e.port = XAPIAND_BINARY_SERVERPORT;
-	e.path.assign(name_database);
-	e.host.assign(_LOCAL_HOST);
-	endpoints.add(e);
-
-	int db_flags = DB_WRITABLE | DB_SPAWN | DB_NOWAL;
-
-	std::vector<std::string> _docs({
+static DB_Test& test_db_geo() {
+	static DB_Test* db_geo = new DB_Test(".db_geo.db", std::vector<std::string>({
 		"examples/json/geo_1.txt",
 		"examples/json/geo_2.txt",
 		"examples/json/geo_3.txt",
@@ -171,27 +109,12 @@ int create_test_db() {
 		"examples/json/geo_6.txt",
 		"examples/json/geo_7.txt",
 		"examples/json/geo_8.txt"
-	});
-
-	// Index documents in the database.
-	size_t i = 1;
-	for (const auto& doc : _docs) {
-		std::ifstream fstream(doc);
-		std::stringstream buffer;
-		buffer << fstream.rdbuf();
-		if (Indexer::index(endpoints, db_flags, buffer.str(), std::to_string(i), true, JSON_TYPE, std::to_string(fstream.tellg())) == 0) {
-			++cont;
-			L_ERR(nullptr, "ERROR: File %s can not index", doc.c_str());
-		}
-		fstream.close();
-		++i;
-	}
-
-	return cont;
+	}));
+	return *db_geo;
 }
 
 
-int make_search(const test_geo_t _tests[], int len) {
+static int make_search(DB_Test& db_geo, const test_geo_t _tests[], int len) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -213,10 +136,8 @@ int make_search(const test_geo_t _tests[], int len) {
 		std::vector<std::string> suggestions;
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 
-		database = std::make_shared<Database>(d_queue, endpoints, DB_SPAWN | DB_NOWAL);
-
 		try {
-			database->get_mset(query, mset, spies, suggestions);
+			db_geo.db_handler.get_mset(query, mset, spies, suggestions);
 			if (mset.size() != p.expect_datas.size()) {
 				++cont;
 				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.\n %s", mset.size(), p.expect_datas.size(), query.terms.back().c_str());
@@ -226,7 +147,7 @@ int make_search(const test_geo_t _tests[], int len) {
 					auto doc = m.get_document();
 					auto obj_data = get_MsgPack(doc);
 					try {
-						std::string str_data(obj_data.at(RESERVED_DATA).get_str());
+						auto str_data(obj_data.at(RESERVED_DATA).as_string());
 						if (it->compare(str_data) != 0) {
 							++cont;
 							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
@@ -243,23 +164,19 @@ int make_search(const test_geo_t _tests[], int len) {
 		}
 	}
 
-	// Delete database created.
-	delete_files(name_database);
-
 	return cont;
 }
 
 
 int geo_range_test() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(geo_range_tests, arraySize(geo_range_tests)) == 0) {
-			L_DEBUG(nullptr, "Testing search range geospatials is correct!");
-			RETURN(0);
+		int cont = make_search(test_db_geo(), geo_range_tests, arraySize(geo_range_tests));
+		if (cont == 0) {
+			L_ERR(nullptr, "Testing search range geospatials is correct!");
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search range geospatials has mistakes.");
-			RETURN(1);
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
@@ -272,14 +189,13 @@ int geo_range_test() {
 
 int geo_terms_test() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(geo_terms_tests, arraySize(geo_terms_tests)) == 0) {
+		int cont = make_search(test_db_geo(), geo_terms_tests, arraySize(geo_terms_tests));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search by geospatial terms is correct!");
-			RETURN(0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search by geospatial terms has mistakes.");
-			RETURN(1);
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
 		RETURN(1);
