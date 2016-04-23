@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,39 +22,7 @@
 
 #include "test_sort.h"
 
-#include "../src/database.h"
-#include "../src/endpoint.h"
-#include "../src/log.h"
-#include "../src/manager.h"
-#include "../src/xapiand.h"
 #include "utils.h"
-
-#define _VERBOSITY 3
-#define _DETACH false
-#define _CHERT false
-#define _SOLO true
-#define _DATABASE ""
-#define _CLUSTER_NAME "cluster_test"
-#define _NODE_NAME "node_test"
-#define _PIDFILE ""
-#define _LOGFILE ""
-#define _UID ""
-#define _GID ""
-#define _DISCOVERY_GROUP ""
-#define _RAFT_GROUP ""
-#define _NUM_SERVERS 1
-#define _DBPOOL_SIZE 1
-#define _NUM_REPLICATORS 1
-#define _THREADPOOL_SIZE 1
-#define _ENDPOINT_LIST_SIZE 1
-#define _NUM_COMMITERS 1
-#define _EV_FLAG 0
-#define _LOCAL_HOST "127.0.0.1"
-
-std::shared_ptr<DatabaseQueue>d_queue;
-static std::shared_ptr<Database> database;
-static std::string name_database(".db_testsort.db");
-static Endpoints endpoints;
 
 
 const sort_t string_tests[] {
@@ -268,31 +236,9 @@ const sort_t geo_tests[] {
 };
 
 
-void create_manager() {
-	if (!XapiandManager::manager) {
-		opts_t opts = { _VERBOSITY, _DETACH, _CHERT, _SOLO, _DATABASE, _CLUSTER_NAME, _NODE_NAME, XAPIAND_HTTP_SERVERPORT, XAPIAND_BINARY_SERVERPORT, XAPIAND_DISCOVERY_SERVERPORT, XAPIAND_RAFT_SERVERPORT, _PIDFILE, _LOGFILE, _UID, _GID, _DISCOVERY_GROUP, _RAFT_GROUP, _NUM_SERVERS, _DBPOOL_SIZE, _NUM_REPLICATORS, _THREADPOOL_SIZE, _ENDPOINT_LIST_SIZE, _NUM_COMMITERS, _EV_FLAG};
-		ev::default_loop default_loop(opts.ev_flags);
-		XapiandManager::manager = Worker::make_shared<XapiandManager>(&default_loop, opts.ev_flags, opts);
-	}
-}
-
-
-int create_test_db() {
-	// Delete database to create.
-	delete_files(name_database);
-	create_manager();
-
-	int cont = 0;
-	Endpoint e;
-	e.node_name.assign(_NODE_NAME);
-	e.port = XAPIAND_BINARY_SERVERPORT;
-	e.path.assign(name_database);
-	e.host.assign(_LOCAL_HOST);
-	endpoints.add(e);
-
-	int db_flags = DB_WRITABLE | DB_SPAWN | DB_NOWAL;
-
-	std::vector<std::string> _docs({
+static DB_Test& test_db_sort() {
+	static DB_Test* db_sort = new DB_Test(".db_sort.db", std::vector<std::string>({
+		// Examples used in test geo.
 		"examples/sort/doc1.txt",
 		"examples/sort/doc2.txt",
 		"examples/sort/doc3.txt",
@@ -303,27 +249,12 @@ int create_test_db() {
 		"examples/sort/doc8.txt",
 		"examples/sort/doc9.txt",
 		"examples/sort/doc10.txt"
-	});
-
-	// Index documents in the database.
-	size_t i = 1;
-	for (const auto& doc : _docs) {
-		std::ifstream fstream(doc);
-		std::stringstream buffer;
-		buffer << fstream.rdbuf();
-		if (Indexer::index(endpoints, db_flags, buffer.str(), std::to_string(i), true, JSON_TYPE, std::to_string(fstream.tellg())) == 0) {
-			++cont;
-			L_ERR(nullptr, "ERROR: File %s can not index", doc.c_str());
-		}
-		fstream.close();
-		++i;
-	}
-
-	return cont;
+	}));
+	return *db_sort;
 }
 
 
-int make_search(const sort_t _tests[], int len) {
+static int make_search(DB_Test& db_sort, const sort_t _tests[], int len) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -347,9 +278,8 @@ int make_search(const sort_t _tests[], int len) {
 		Xapian::MSet mset;
 		std::vector<std::string> suggestions;
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
-		database = std::make_shared<Database>(d_queue, endpoints, DB_SPAWN | DB_NOWAL);
 		try {
-			database->get_mset(query, mset, spies, suggestions);
+			db_sort.db_handler.get_mset(query, mset, spies, suggestions);
 			if (mset.size() != p.expect_result.size()) {
 				++cont;
 				L_ERR(nullptr, "ERROR: Different number of documents obtained");
@@ -360,11 +290,8 @@ int make_search(const sort_t _tests[], int len) {
 					if (it->compare(val) != 0) {
 						++cont;
 						L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_ID, val.c_str(), RESERVED_ID, it->c_str());
-					} else {
-						fprintf(stderr, "+++++ %s  ", val.c_str());
 					}
 				}
-				fprintf(stderr, "\n");
 			}
 		} catch (const std::exception& exc) {
 			L_EXC(nullptr, "ERROR: %s\n", exc.what());
@@ -372,63 +299,57 @@ int make_search(const sort_t _tests[], int len) {
 		}
 	}
 
-	// Delete database created.
-	delete_files(name_database);
-
 	return cont;
 }
 
 
 int sort_test_string() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(string_tests, arraySize(string_tests)) == 0) {
+		int cont = make_search(test_db_sort(), string_tests, arraySize(string_tests));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort strings is correct!");
-			RETURN (0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing sort strings has mistakes.");
-			RETURN (1);
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error &err) {
 		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
-		RETURN (1);
+		RETURN(1);
 	} catch (const std::exception &err) {
 		L_ERR(nullptr, "ERROR: %s", err.what());
-		RETURN (1);
+		RETURN(1);
 	}
 }
 
 
 int sort_test_numerical() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(numerical_tests, arraySize(numerical_tests)) == 0) {
+		int cont = make_search(test_db_sort(), numerical_tests, arraySize(numerical_tests));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort numbers is correct!");
-			RETURN (0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing sort numbers has mistakes.");
-			RETURN (1);
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error &err) {
 		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
-		RETURN (1);
+		RETURN(1);
 	} catch (const std::exception &err) {
 		L_ERR(nullptr, "ERROR: %s", err.what());
-		RETURN (1);
+		RETURN(1);
 	}
 }
 
 
 int sort_test_date() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(date_tests, arraySize(date_tests)) == 0) {
+		int cont = make_search(test_db_sort(), date_tests, arraySize(date_tests));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort dates is correct!");
-			RETURN (0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing sort dates has mistakes.");
-			RETURN (1);
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error &err) {
 		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
 		RETURN (1);
@@ -441,39 +362,37 @@ int sort_test_date() {
 
 int sort_test_boolean() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(boolean_tests, arraySize(boolean_tests)) == 0) {
+		int cont = make_search(test_db_sort(), boolean_tests, arraySize(boolean_tests));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort booleans is correct!");
-			RETURN (0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing sort booleans has mistakes.");
-			RETURN (1);
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error &err) {
 		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
-		RETURN (1);
+		RETURN(1);
 	} catch (const std::exception &err) {
 		L_ERR(nullptr, "ERROR: %s", err.what());
-		RETURN (1);
+		RETURN(1);
 	}
 }
 
 
 int sort_test_geo() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(geo_tests, arraySize(geo_tests)) == 0) {
+		int cont = make_search(test_db_sort(), geo_tests, arraySize(geo_tests));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort geospatials is correct!");
-			RETURN (0);
 		} else {
 			L_ERR(nullptr, "ERROR: Testing sort geospatials has mistakes.");
-			RETURN (1);
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error &err) {
 		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
-		RETURN (1);
+		RETURN(1);
 	} catch (const std::exception &err) {
 		L_ERR(nullptr, "ERROR: %s", err.what());
-		RETURN (1);
+		RETURN(1);
 	}
 }
