@@ -31,6 +31,7 @@ common_files = \
 	$(top_builddir)/src/client_http.cc \
 	$(top_builddir)/src/database.cc \
 	$(top_builddir)/src/database_autocommit.cc \
+	$(top_builddir)/src/database_handler.cc \
 	$(top_builddir)/src/database_utils.cc \
 	$(top_builddir)/src/datetime.cc \
 	$(top_builddir)/src/endpoint.cc \
