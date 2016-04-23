@@ -22,9 +22,7 @@
 
 #include "test_compressor.h"
 
-
 #include "../src/io_utils.h"
-#include "../src/log.h"
 #include "../src/lz4_compressor.h"
 #include "utils.h"
 
@@ -244,7 +242,7 @@ int test_small_datas() {
 		res += test_Compress_Decompress_Data(file);
 		unlink(cmp_file.c_str());
 	}
-	RETURN (res);
+	RETURN(res);
 }
 
 
@@ -256,7 +254,7 @@ int test_big_datas() {
 		res += test_Compress_Decompress_Data(file);
 		unlink(cmp_file.c_str());
 	}
-	RETURN (res);
+	RETURN(res);
 }
 
 
@@ -268,7 +266,7 @@ int test_small_files() {
 		res += test_Compress_Decompress_File(file);
 		unlink(cmp_file.c_str());
 	}
-	RETURN (res);
+	RETURN(res);
 }
 
 
@@ -280,7 +278,7 @@ int test_big_files() {
 		res += test_Compress_Decompress_File(file);
 		unlink(cmp_file.c_str());
 	}
-	RETURN (res);
+	RETURN(res);
 }
 
 
@@ -293,7 +291,7 @@ int test_small_blockFile() {
 		res += test_Compress_Decompress_BlockFile(file, numBytes);
 		unlink(cmp_file.c_str());
 	}
-	RETURN (res);
+	RETURN(res);
 }
 
 
@@ -306,5 +304,5 @@ int test_big_blockFile() {
 		res += test_Compress_Decompress_BlockFile(file, numBytes);
 		unlink(cmp_file.c_str());
 	}
-	RETURN (res);
+	RETURN(res);
 }

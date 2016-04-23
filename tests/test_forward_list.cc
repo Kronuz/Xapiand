@@ -22,13 +22,9 @@
 
 #include "test_forward_list.h"
 
-#include "../src/log.h"
 #include "utils.h"
 
-#include <algorithm>
-#include <string>
 #include <thread>
-#include <vector>
 
 
 template<typename Compare>
@@ -246,7 +242,7 @@ int test_erase_after() {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result2.c_str(), expected2.c_str());
 	}
 
-	RETURN (err);
+	RETURN(err);
 }
 
 
@@ -293,7 +289,7 @@ int test_erase() {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result2.c_str(), expected2.c_str());
 	}
 
-	RETURN (err);
+	RETURN(err);
 }
 
 

@@ -22,7 +22,6 @@
 
 #include "test_serialise_stl.h"
 
-#include "../src/log.h"
 #include "../src/stl_serialise.h"
 #include "utils.h"
 
@@ -192,8 +191,7 @@ int test_StringList() {
 		++cont;
 	}
 
-		RETURN(cont);
-
+	RETURN(cont);
 }
 
 

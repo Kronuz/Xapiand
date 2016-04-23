@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,11 +22,9 @@
 
 #include "test_wkt_parser.h"
 
-#include "wkt_parser.h"
-#include "log.h"
+#include "../src/wkt_parser.h"
 #include "utils.h"
 
-#include <string>
 #include <algorithm>
 #include <time.h>
 

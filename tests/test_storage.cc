@@ -22,9 +22,7 @@
 
 #include "test_storage.h"
 
-#include "../src/log.h"
 #include "../src/storage.h"
-#include "../src/utils.h"
 #include "utils.h"
 
 
@@ -51,6 +49,7 @@ struct StorageBinBadHeader1 {
 	}
 };
 
+
 struct StorageBinBadHeader2 {
 	// uint8_t magic;
 	uint8_t flags;  // required
@@ -71,6 +70,7 @@ struct StorageBinBadHeader2 {
 		}
 	}
 };
+
 
 struct StorageBinBadHeader3 {
 	// uint8_t magic;
@@ -93,6 +93,7 @@ struct StorageBinBadHeader3 {
 		}
 	}
 };
+
 
 struct StorageBinFooterChecksum {
 	uint32_t checksum;
@@ -173,7 +174,7 @@ int test_storage_data(int flags) {
 
 	unlink(volume_name.c_str());
 
-	RETURN (cont_read != cont_write);
+	RETURN(cont_read != cont_write);
 }
 
 
@@ -222,7 +223,7 @@ int test_storage_file(int flags) {
 
 	unlink(volume_name.c_str());
 
-	RETURN (cont_read != cont_write);
+	RETURN(cont_read != cont_write);
 }
 
 

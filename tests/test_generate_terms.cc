@@ -23,9 +23,6 @@
 #include "test_generate_terms.h"
 
 #include "../src/generate_terms.h"
-#include "../src/log.h"
-#include "../src/utils.h"
-#include "../src/schema.h"
 #include "utils.h"
 
 #include <limits.h>
@@ -347,10 +344,10 @@ int numeric_test() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing generation of numerical terms is correct!");
-		RETURN (0);
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing generation of numerical terms has mistakes.");
-		RETURN (1);
+		RETURN(1);
 	}
 }
 
@@ -384,10 +381,10 @@ int date_test() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing generation of terms for dates is correct!");
-		RETURN (0);
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing generation of terms for dates has mistakes.");
-		RETURN (1);
+		RETURN(1);
 	}
 }
 
@@ -421,9 +418,9 @@ int geo_test() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing generation of terms for geospatials is correct!");
-		RETURN (0);
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing generation of terms for geospatials has mistakes.");
-		RETURN (1);
+		RETURN(1);
 	}
 }

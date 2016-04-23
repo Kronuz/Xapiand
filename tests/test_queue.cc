@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,8 +23,8 @@
 #include "test_queue.h"
 
 #include "../src/queue.h"
-#include "../src/log.h"
 #include "utils.h"
+
 
 using namespace queue;
 

@@ -22,8 +22,8 @@
 
 #include "test_threadpool.h"
 
-#include "../src/log.h"
 #include "utils.h"
+
 
 using namespace queue;
 

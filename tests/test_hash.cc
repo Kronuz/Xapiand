@@ -24,7 +24,6 @@
 
 #include "../src/hash/md5.h"
 #include "../src/hash/sha256.h"
-#include "../src/log.h"
 #include "utils.h"
 
 
@@ -51,7 +50,7 @@ int test_md5() {
 		}
 	}
 
-	RETURN (0);
+	RETURN(0);
 }
 
 
@@ -74,9 +73,9 @@ int test_sha256() {
 		std::string res = sha256(*it);
 		if (res != *rit) {
 			L_ERR(nullptr, "ERROR: Testing SHA256 Failed.\nResult SHA256(%s)=%s  Expected=%s", it->c_str(), res.c_str(), rit->c_str());
-			RETURN (1);
+			RETURN(1);
 		}
 	}
 
-	RETURN (0);
+	RETURN(0);
 }
