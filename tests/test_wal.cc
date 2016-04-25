@@ -130,8 +130,6 @@ int create_db_wal() {
 int restore_database() {
 	try {
 		if (create_db_wal() == 0) {
-			static DB_Test* db_wal = new DB_Test(restored_db, std::vector<std::string>());
-
 			if (not dir_compare(test_db, restored_db)) {
 				RETURN(1);
 			}
