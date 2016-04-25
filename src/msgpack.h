@@ -371,10 +371,34 @@ struct MsgPack::Body {
 		return o;
 	}
 
+	const MsgPack& at(size_t pos) const {
+		auto& o = array.at(pos);
+		o._init();
+		return o;
+	}
+
 	MsgPack& at(const std::string& key) {
 		auto& o = map.at(key).second;
 		o._init();
 		return o;
+	}
+
+	const MsgPack& at(const std::string& key) const {
+		auto& o = map.at(key).second;
+		o._init();
+		return o;
+	}
+
+	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>>::iterator find(const std::string& key) {
+		auto it = map.find(key);
+		it->second.second._init();
+		return it;
+	}
+
+	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>>::const_iterator find(const std::string& key) const {
+		auto it = map.find(key);
+		it->second.second._init();
+		return it;
 	}
 };
 
@@ -482,7 +506,7 @@ inline MsgPack& MsgPack::operator=(T&& v) {
 			return *this;
 		}
 
-		auto it = _body->_parent._body->map.find(val);
+		auto it = _body->_parent._body->find(val);
 		if (it != _body->_parent._body->map.end()) {
 			if (_body->_parent._body->map.insert(std::make_pair(str_key, it->second)).second) {
 				_body->_parent._body->map.erase(it);
@@ -695,7 +719,7 @@ inline MsgPack& MsgPack::_erase(const std::string& key) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
 		case msgpack::type::MAP: {
-			auto it = _body->map.find(key);
+			auto it = _body->find(key);
 			if (it == _body->map.end()) {
 				throw std::out_of_range("Key not found");
 			}
