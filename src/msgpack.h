@@ -302,8 +302,6 @@ public:
 };
 
 struct MsgPack::Body {
-	friend MsgPack;
-
 	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>> map;
 	std::vector<MsgPack> array;
 
