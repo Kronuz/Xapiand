@@ -801,7 +801,7 @@ inline MsgPack& MsgPack::_put(const std::string& key, T&& val) {
 			p->key.via.str.ptr = ptr;
 			p->val = msgpack::object(std::forward<T>(val), *_body->_zone);
 			++_body->_obj->via.map.size;
-			return *_init_map(static_cast<size_t>(_body->map.size()));
+			return *_init_map(_body->map.size());
 		}
 		default:
 			throw msgpack::type_error();
