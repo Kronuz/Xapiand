@@ -85,13 +85,13 @@ public:
 	MsgPack& operator=(T&& v);
 
 private:
-	MsgPack* _init_map(size_t pos);
-	void _update_map(size_t pos);
+	MsgPack* _init_map(size_t pos) const;
+	void _update_map(size_t pos) const;
 
-	MsgPack* _init_array(size_t pos);
-	void _update_array(size_t pos);
+	MsgPack* _init_array(size_t pos) const;
+	void _update_array(size_t pos) const;
 
-	void _init();
+	void _init() const;
 
 	void _reserve_map(size_t rsize);
 	void _reserve_array(size_t rsize);
@@ -487,7 +487,7 @@ inline MsgPack& MsgPack::operator=(T&& v) {
 	return *this;
 }
 
-inline MsgPack* MsgPack::_init_map(size_t pos) {
+inline MsgPack* MsgPack::_init_map(size_t pos) const {
 	MsgPack* ret = nullptr;
 	_body->map.reserve(_body->_capacity);
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
@@ -508,7 +508,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 	return ret;
 }
 
-inline void MsgPack::_update_map(size_t pos) {
+inline void MsgPack::_update_map(size_t pos) const {
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 		auto& mobj = _body->map.at(std::string(p->key.via.str.ptr, p->key.via.str.size)).second;
@@ -517,7 +517,7 @@ inline void MsgPack::_update_map(size_t pos) {
 	}
 }
 
-inline MsgPack* MsgPack::_init_array(size_t pos) {
+inline MsgPack* MsgPack::_init_array(size_t pos) const {
 	if (pos < _body->array.size()) {
 		// Destroy the previous objects to update
 		_body->array.resize(pos);
@@ -534,7 +534,7 @@ inline MsgPack* MsgPack::_init_array(size_t pos) {
 	return ret;
 }
 
-inline void MsgPack::_update_array(size_t pos) {
+inline void MsgPack::_update_array(size_t pos) const {
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
 		auto& mobj = _body->array.at(pos);
@@ -543,17 +543,19 @@ inline void MsgPack::_update_array(size_t pos) {
 	}
 }
 
-inline void MsgPack::_init() {
+inline void MsgPack::_init() const {
 	switch (_body->_obj->type) {
 		case msgpack::type::MAP:
-			assert(_body->map.empty());
-			_body->_capacity = _body->_obj->via.map.size;
-			_init_map(0);
+			if (_body->map.size() != _body->_obj->via.map.size) {
+				_body->_capacity = _body->_obj->via.map.size;
+				_init_map(0);
+			}
 			break;
 		case msgpack::type::ARRAY:
-			assert(_body->array.empty());
-			_body->_capacity = _body->_obj->via.array.size;
-			_init_array(0);
+			if (_body->array.size() != _body->_obj->via.array.size) {
+				_body->_capacity = _body->_obj->via.array.size;
+				_init_array(0);
+			}
 			break;
 		default:
 			_body->_capacity = 0;
@@ -601,8 +603,11 @@ inline MsgPack& MsgPack::_at(const std::string& key) const {
 	switch (_body->_obj->type) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
-		case msgpack::type::MAP:
-			return _body->map.at(key).second;
+		case msgpack::type::MAP: {
+			auto& o = _body->map.at(key).second;
+			o._init();
+			return o;
+		}
 		default:
 			throw msgpack::type_error();
 	}
@@ -617,8 +622,11 @@ inline MsgPack& MsgPack::_at(size_t pos) const {
 				throw std::out_of_range("The map only contains " + std::to_string(_body->_obj->via.map.size) + " elements");
 			}
 			return _at(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
-		case msgpack::type::ARRAY:
-			return _body->array.at(pos);
+		case msgpack::type::ARRAY: {
+			auto& o = _body->array.at(pos);
+			o._init();
+			return o;
+		}
 		default:
 			throw msgpack::type_error();
 	}
