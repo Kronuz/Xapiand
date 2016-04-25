@@ -366,6 +366,18 @@ struct MsgPack::Body {
 	_obj(_base.get()),
 	_nil(std::make_shared<Body>(_zone, _base, _parent._body, nullptr))  // FIXME: _parent._body here should be shared_from_this()
 	{ }
+
+	MsgPack& at(size_t pos) {
+		auto& o = array.at(pos);
+		o._init();
+		return o;
+	}
+
+	MsgPack& at(const std::string& key) {
+		auto& o = map.at(key).second;
+		o._init();
+		return o;
+	}
 };
 
 
@@ -511,7 +523,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) const {
 inline void MsgPack::_update_map(size_t pos) const {
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
-		auto& mobj = _body->map.at(std::string(p->key.via.str.ptr, p->key.via.str.size)).second;
+		auto& mobj = _body->at(std::string(p->key.via.str.ptr, p->key.via.str.size));
 		mobj._body->_pos = pos;
 		mobj._body->_obj = &p->val;
 	}
@@ -537,7 +549,7 @@ inline MsgPack* MsgPack::_init_array(size_t pos) const {
 inline void MsgPack::_update_array(size_t pos) const {
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
-		auto& mobj = _body->array.at(pos);
+		auto& mobj = _body->at(pos);
 		mobj._body->_pos = pos;
 		mobj._body->_obj = p;
 	}
@@ -603,11 +615,8 @@ inline MsgPack& MsgPack::_at(const std::string& key) const {
 	switch (_body->_obj->type) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
-		case msgpack::type::MAP: {
-			auto& o = _body->map.at(key).second;
-			o._init();
-			return o;
-		}
+		case msgpack::type::MAP:
+			return _body->at(key);
 		default:
 			throw msgpack::type_error();
 	}
@@ -622,11 +631,8 @@ inline MsgPack& MsgPack::_at(size_t pos) const {
 				throw std::out_of_range("The map only contains " + std::to_string(_body->_obj->via.map.size) + " elements");
 			}
 			return _at(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
-		case msgpack::type::ARRAY: {
-			auto& o = _body->array.at(pos);
-			o._init();
-			return o;
-		}
+		case msgpack::type::ARRAY:
+			return _body->at(pos);
 		default:
 			throw msgpack::type_error();
 	}
@@ -669,7 +675,7 @@ inline MsgPack& MsgPack::_find(const std::string& key) const {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
 		case msgpack::type::MAP:
-			return _body->map.at(key).second;
+			return _body->at(key);
 		default:
 			throw msgpack::type_error();
 	}
@@ -680,7 +686,7 @@ inline MsgPack& MsgPack::_find(size_t pos) const {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
 		case msgpack::type::ARRAY:
-			return _body->array.at(pos);
+			return _body->at(pos);
 		default:
 			throw msgpack::type_error();
 	}
@@ -709,7 +715,7 @@ inline MsgPack& MsgPack::_erase(const std::string& key) {
 			_body->map.erase(it);
 			_update_map(pos_);
 			try {
-				return _body->map.at(std::string(p->key.via.str.ptr, p->key.via.str.size)).second;
+				return _body->at(std::string(p->key.via.str.ptr, p->key.via.str.size));
 			} catch (const std::out_of_range&) {
 				throw last_in_range("Final element erased");
 			}
@@ -748,7 +754,7 @@ inline MsgPack& MsgPack::_erase(size_t pos) {
 			_body->array.erase(it);
 			_update_array(pos_);
 			try {
-				return _body->array.at(pos_);
+				return _body->at(pos_);
 			} catch (const std::out_of_range&) {
 				throw last_in_range("Final element erased");
 			}
@@ -841,7 +847,7 @@ inline MsgPack& MsgPack::_put(size_t pos, T&& val) {
 			} else {
 				auto p = &_body->_obj->via.array.ptr[pos];
 				*p = msgpack::object(std::forward<T>(val), *_body->_zone);
-				return _body->array.at(pos);
+				return _body->at(pos);
 			}
 		}
 		default:
