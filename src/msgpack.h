@@ -545,9 +545,11 @@ inline MsgPack* MsgPack::_init_map(size_t pos) const {
 inline void MsgPack::_update_map(size_t pos) const {
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
-		auto& mobj = _body->at(std::string(p->key.via.str.ptr, p->key.via.str.size));
-		mobj._body->_pos = pos;
-		mobj._body->_obj = &p->val;
+		std::string str_key(p->key.via.str.ptr, p->key.via.str.size);
+		auto& elem = _body->find(str_key)->second;
+		elem.first._body->_obj = &p->key;
+		elem.second._body->_pos = pos;
+		elem.second._body->_obj = &p->val;
 	}
 }
 
