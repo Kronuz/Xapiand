@@ -35,15 +35,20 @@ static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]
 
 
 DatabaseHandler::DatabaseHandler()
-	: endpoints(nullptr),
-	  schema(nullptr),
+	: schema(nullptr),
 	  flags(0) { }
 
 
+DatabaseHandler::DatabaseHandler(const Endpoints &endpoints_, int flags_)
+	: endpoints(endpoints_),
+	  flags(flags_)
+{
+	checkout();
+}
+
+
 DatabaseHandler::~DatabaseHandler() {
-	if (database) {
-		checkin();
-	}
+	checkin();
 }
 
 
@@ -183,7 +188,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 
 	if (schema->get_store()) {
 		schema->set_store(false);
-		XapiandManager::manager->database_pool.set_schema(endpoints->operator[](0), flags, std::shared_ptr<const Schema>(schema));
+		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema));
 	}
 
 	return did;
@@ -212,7 +217,7 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 
 	if (schema->get_store()) {
 		schema->set_store(false);
-		XapiandManager::manager->database_pool.set_schema(endpoints->operator[](0), flags, std::shared_ptr<const Schema>(schema));
+		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema));
 	}
 
 	return did;
@@ -278,7 +283,7 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 
 	if (schema->get_store()) {
 		schema->set_store(false);
-		XapiandManager::manager->database_pool.set_schema(endpoints->operator[](0), flags, std::shared_ptr<const Schema>(schema));
+		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema));
 	}
 
 	return did;

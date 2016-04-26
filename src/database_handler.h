@@ -36,7 +36,7 @@ using SpiesVector = std::vector<std::pair<std::string, std::unique_ptr<MultiValu
 
 
 class DatabaseHandler {
-	const Endpoints* endpoints;
+	Endpoints endpoints;
 	Schema* schema;
 	int flags;
 	std::shared_ptr<Database> database;
@@ -51,35 +51,43 @@ class DatabaseHandler {
 
 public:
 	DatabaseHandler();
+	DatabaseHandler(const Endpoints &endpoints_, int flags_=0);
 	~DatabaseHandler();
 
-	inline std::shared_ptr<Database>& get() {
+	std::shared_ptr<Database>& get() {
 		return database;
 	}
 
-	inline Schema* get_schema() {
+	Schema* get_schema() {
 		return schema;
 	}
 
-	inline void checkout() {
-		if (!XapiandManager::manager->database_pool.checkout(database, *endpoints, flags)) {
-			throw MSG_CheckoutError("Cannot checkout database: %s", endpoints->as_string().c_str());
+	void checkout() {
+		if (!database && !XapiandManager::manager->database_pool.checkout(database, endpoints, flags)) {
+			throw MSG_CheckoutError("Cannot checkout database: %s", endpoints.as_string().c_str());
 		}
 	}
 
-	inline void checkin() {
-		XapiandManager::manager->database_pool.checkin(database);
-		database.reset();
+	void checkin() {
+		if (database) {
+			XapiandManager::manager->database_pool.checkin(database);
+			database.reset();
+		}
 	}
 
-	inline void reset(const Endpoints& endpoints_, int flags_) {
+	void reset(const Endpoints& endpoints_, int flags_) {
 		if (endpoints_.size() == 0) {
 			throw MSG_ClientError("It is expected at least one endpoint");
 		}
 
-		endpoints = &endpoints_;
+		endpoints = endpoints_;
 		flags = flags_;
-		schema = new Schema(*XapiandManager::manager->database_pool.get_schema(endpoints->operator[](0), flags));
+		schema = new Schema(*XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+
+		if (database) {
+			checkin();
+			checkout();
+		}
 	}
 
 	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
@@ -88,7 +96,7 @@ public:
 
 	void get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVector& spies, std::vector<std::string>& suggestions, int offset=0);
 
-	inline Xapian::Document get_document(const Xapian::docid& did) {
+	Xapian::Document get_document(const Xapian::docid& did) {
 		L_CALL(this, "DatabaseHandler::get_document(1)");
 
 		checkout();
