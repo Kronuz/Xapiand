@@ -92,8 +92,9 @@ public:
 		L_CALL(this, "DatabaseHandler::get_document(1)");
 
 		checkout();
-		return database->get_document(did);
+		auto doc = database->get_document(did);
 		checkin();
+		return doc;
 	}
 
 	Xapian::Document get_document(const std::string& doc_id);
