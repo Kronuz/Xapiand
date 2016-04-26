@@ -174,7 +174,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
 	}
 
-	set_data(doc, obj.to_string(), blob ? body : "");
+	set_data(doc, obj.serialise(), blob ? body : "");
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	checkout();
@@ -203,7 +203,7 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 		_index(doc, obj, term_id, _document_id, ct_type, ct_length);
 	}
 
-	set_data(doc, obj.to_string(), "");
+	set_data(doc, obj.serialise(), "");
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	checkout();
@@ -269,7 +269,7 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 	std::string term_id;
 	_index(doc, obj_data, term_id, _document_id, _ct_type, ct_length);
 
-	set_data(doc, obj_data.to_string(), get_blob(document));
+	set_data(doc, obj_data.serialise(), get_blob(document));
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
 
 	checkout();
