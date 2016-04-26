@@ -1272,6 +1272,10 @@ inline void MsgPack::clear() noexcept {
 }
 
 inline MsgPack::operator bool() const {
+	if (_body == nullptr) {
+		return false;
+	}
+
 	switch (_body->_obj->type) {
 		case msgpack::type::NIL:
 			return false;
@@ -1393,7 +1397,7 @@ inline rapidjson::Document MsgPack::as_document() const {
 }
 
 inline bool MsgPack::is_null() const {
-	return _body->_obj->type == msgpack::type::NIL;
+	return _body == nullptr || _body->_obj->type == msgpack::type::NIL;
 }
 
 inline bool MsgPack::is_boolean() const {
