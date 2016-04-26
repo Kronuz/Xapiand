@@ -505,10 +505,9 @@ inline MsgPack& MsgPack::operator=(T&& v) {
 		if (str_key == val) {
 			return *this;
 		}
-
 		auto it = _body->_parent._body->find(val);
 		if (it != _body->_parent._body->map.end()) {
-			if (_body->_parent._body->map.insert(std::make_pair(str_key, it->second)).second) {
+			if (_body->_parent._body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
 				_body->_parent._body->map.erase(it);
 			} else {
 				throw duplicate_key("Duplicate key: " + str_key);
