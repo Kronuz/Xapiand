@@ -243,9 +243,7 @@ std::string get_slot_hex(const std::string& name);
 bool strhasupper(const std::string& str);
 
 bool isRange(const std::string& str);
-bool isFloat(const std::string& str);
-bool isInteger(const std::string& str);
-bool isPositive(const std::string& str);
+bool isNumeric(const std::string& str);
 
 bool startswith(const std::string& text, const std::string& token);
 void delete_files(const std::string& path);

@@ -74,9 +74,7 @@
 #define STATE_PTH 4
 #define STATE_HST 5
 
-const std::regex float_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
-const std::regex integer_re("(-?\\d+)", std::regex::optimize);
-const std::regex positive_re("(\\d+)", std::regex::optimize);
+const std::regex numeric_re("-?(\\d*\\.\\d+|\\d+)", std::regex::optimize);
 const std::regex find_range_re("(.*)\\.\\.(.*)", std::regex::optimize);
 
 
@@ -779,21 +777,9 @@ bool isRange(const std::string& str) {
 }
 
 
-bool isFloat(const std::string& str) {
+bool isNumeric(const std::string& str) {
 	std::smatch m;
-	return std::regex_match(str, m, float_re) && static_cast<size_t>(m.length(0)) == str.size();
-}
-
-
-bool isInteger(const std::string& str) {
-	std::smatch m;
-	return std::regex_match(str, m, integer_re) && static_cast<size_t>(m.length(0)) == str.size();
-}
-
-
-bool isPositive(const std::string& str) {
-	std::smatch m;
-	return std::regex_match(str, m, positive_re) && static_cast<size_t>(m.length(0)) == str.size();
+	return std::regex_match(str, m, numeric_re) && static_cast<size_t>(m.length(0)) == str.size();
 }
 
 
