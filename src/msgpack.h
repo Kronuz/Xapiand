@@ -308,7 +308,8 @@ public:
 };
 
 struct MsgPack::Body {
-	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>> map;
+	using Map = std::unordered_map<std::string, std::pair<MsgPack, MsgPack>>;
+	Map map;
 	std::vector<MsgPack> array;
 
 	ssize_t _capacity;
@@ -356,15 +357,15 @@ struct MsgPack::Body {
 
 	template <typename T>
 	Body(T&& v)
-	: _capacity(-1),
-	  _zone(std::make_shared<msgpack::zone>()),
-	  _base(std::make_shared<msgpack::object>(std::forward<T>(v), *_zone)),
-	  _parent(std::shared_ptr<Body>()),
-	  _is_key(false),
-	  _pos(-1),
-	  _key(std::shared_ptr<Body>()),
-	  _obj(_base.get()),
-	  _nil(std::make_shared<Body>(_zone, _base, _parent._body, nullptr)) { }  // FIXME: _parent._body here should be shared_from_this()
+		: _capacity(-1),
+		  _zone(std::make_shared<msgpack::zone>()),
+		  _base(std::make_shared<msgpack::object>(std::forward<T>(v), *_zone)),
+		  _parent(std::shared_ptr<Body>()),
+		  _is_key(false),
+		  _pos(-1),
+		  _key(std::shared_ptr<Body>()),
+		  _obj(_base.get()),
+		  _nil(std::make_shared<Body>(_zone, _base, _parent._body, nullptr)) { }  // FIXME: _parent._body here should be shared_from_this()
 
 	MsgPack& at(size_t pos) {
 		auto& o = array.at(pos);
@@ -390,13 +391,13 @@ struct MsgPack::Body {
 		return o;
 	}
 
-	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>>::iterator find(const std::string& key) {
+	Map::iterator find(const std::string& key) {
 		auto it = map.find(key);
 		it->second.second._init();
 		return it;
 	}
 
-	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>>::const_iterator find(const std::string& key) const {
+	Map::const_iterator find(const std::string& key) const {
 		auto it = map.find(key);
 		it->second.second._init();
 		return it;
