@@ -488,7 +488,7 @@ inline MsgPack::MsgPack() : MsgPack(nullptr) { }
 
 
 inline MsgPack::MsgPack(const MsgPack& other)
-	: _body(std::make_shared<MsgPack::Body>(other))
+	: _body(std::make_shared<Body>(other))
 {
 	_init();
 }
