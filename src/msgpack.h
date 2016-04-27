@@ -308,8 +308,7 @@ public:
 };
 
 struct MsgPack::Body {
-	using Map = std::unordered_map<std::string, std::pair<MsgPack, MsgPack>>;
-	Map map;
+	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>> map;
 	std::vector<MsgPack> array;
 
 	ssize_t _capacity;
@@ -389,18 +388,6 @@ struct MsgPack::Body {
 		auto& o = map.at(key).second;
 		o._init();
 		return o;
-	}
-
-	Map::iterator find(const std::string& key) {
-		auto it = map.find(key);
-		it->second.second._init();
-		return it;
-	}
-
-	Map::const_iterator find(const std::string& key) const {
-		auto it = map.find(key);
-		it->second.second._init();
-		return it;
 	}
 };
 
@@ -547,8 +534,9 @@ inline MsgPack& MsgPack::operator=(T&& v) {
 		if (str_key == val) {
 			return *this;
 		}
-		auto it = _body->_parent._body->find(val);
+		auto it = _body->_parent._body->map.find(val);
 		if (it != _body->_parent._body->map.end()) {
+			it->second.second._init();
 			if (_body->_parent._body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
 				_body->_parent._body->map.erase(it);
 			} else {
@@ -590,7 +578,10 @@ inline void MsgPack::_update_map(size_t pos) const {
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 		std::string str_key(p->key.via.str.ptr, p->key.via.str.size);
-		auto& elem = _body->find(str_key)->second;
+		auto it = _body->map.find(str_key);
+		assert(it != _body->map.end());
+		auto& elem = it->second;
+		elem.second._init();
 		elem.first._body->_obj = &p->key;
 		elem.second._body->_pos = pos;
 		elem.second._body->_obj = &p->val;
@@ -779,10 +770,11 @@ inline MsgPack& MsgPack::_erase(const std::string& key) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
 		case msgpack::type::MAP: {
-			auto it = _body->find(key);
+			auto it = _body->map.find(key);
 			if (it == _body->map.end()) {
 				throw std::out_of_range("Key not found");
 			}
+			it->second.second._init();
 			auto& mobj = it->second.second;
 			auto pos_ = mobj._body->_pos;
 			assert(pos_ < _body->_obj->via.map.size);
