@@ -74,11 +74,15 @@ private:
 
 public:
 	MsgPack();
+	MsgPack(const MsgPack& other);
+	MsgPack(MsgPack&& other);
+	MsgPack(const std::initializer_list<MsgPack>& list);
 
 	template <typename T, typename = std::enable_if_t<not std::is_same<std::shared_ptr<Body>, std::decay_t<T>>::value>>
 	MsgPack(T&& v);
-	MsgPack(const std::initializer_list<MsgPack>& list);
 
+	MsgPack& operator=(const MsgPack& other);
+	MsgPack& operator=(MsgPack&& other);
 	MsgPack& operator=(const std::initializer_list<MsgPack>& list);
 
 	template <typename T>
@@ -473,8 +477,19 @@ inline void MsgPack::_initializer(const std::initializer_list<MsgPack>& list) {
 	else _initializer_array(list);
 }
 
-inline MsgPack::MsgPack()
-: MsgPack(nullptr) { }
+
+inline MsgPack::MsgPack() : MsgPack(nullptr) { }
+
+
+inline MsgPack::MsgPack(const MsgPack& other)
+	: _body(std::make_shared<MsgPack::Body>(other))
+{
+	_init();
+}
+
+
+inline MsgPack::MsgPack(MsgPack&& other) : _body(std::move(other._body)) { }
+
 
 template <typename T, typename>
 inline MsgPack::MsgPack(T&& v)
@@ -486,6 +501,23 @@ inline MsgPack::MsgPack(const std::initializer_list<MsgPack>& list)
 : MsgPack() {
 	_initializer(list);
 }
+
+
+inline MsgPack& MsgPack::operator=(const MsgPack& other) {
+	clear();
+	*_body->_obj = msgpack::object(other, *_body->_zone);
+	_init();
+	return *this;
+}
+
+
+inline MsgPack& MsgPack::operator=(MsgPack&& other) {
+	clear();
+	*_body->_obj = msgpack::object(std::move(other), *_body->_zone);
+	_init();
+	return *this;
+}
+
 
 inline MsgPack& MsgPack::operator=(const std::initializer_list<MsgPack>& list) {
 	_initializer(list);
