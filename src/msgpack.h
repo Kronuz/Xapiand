@@ -1126,7 +1126,6 @@ inline const MsgPack& MsgPack::operator[](const M& o) const {
 
 
 inline MsgPack& MsgPack::operator[](const std::string& s) {
-	fprintf(stderr, "++++ _at_or_create\n");
 	return _at_or_create(s);
 }
 
