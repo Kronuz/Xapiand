@@ -90,8 +90,10 @@ void patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
+		std::string target = path_split.back();
+		path_split.pop_back();
 		auto& o = object.path(path_split);
-		_erase(o.parent(), path_split.back());
+		_erase(o, target);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch remove: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
@@ -129,12 +131,16 @@ void patch_move(const MsgPack& obj_patch, MsgPack& object) {
 		std::vector<std::string> from_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		_tokenizer(obj_patch, from_split, PATCH_FROM);
-		auto target = path_split.back();
+		auto target_path = path_split.back();
 		path_split.pop_back();
 		auto& to = object.path(path_split);
 		auto& from = object.path(from_split);
-		_add(to, from, target);
-		_erase(from.parent(), from_split.back());
+		_add(to, from, target_path);
+
+		auto target_from = from_split.back();
+		from_split.pop_back();
+		auto& from_parent = object.path(from_split);
+		_erase(from_parent, target_from);
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch move: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
