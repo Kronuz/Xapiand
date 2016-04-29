@@ -510,17 +510,10 @@ int test_path() {
 	const auto& path_msgpack = obj.path(path);
 
 	auto target = path_msgpack.to_string();
-	auto parent = path_msgpack.parent().to_string();
-	auto parent_expected = std::string("[\"EU\", \"MEXICO\", \"CANADA\", \"BRAZIL\"]");
 
 	int res = 0;
 	if (target.compare("\"MEXICO\"") != 0) {
 		L_ERR(nullptr, "ERROR: MsgPack::path is not working\n\nExpected: \"MEXICO\"\nResult: %s\n", target.c_str());
-		++res;
-	}
-
-	if (parent.compare(parent_expected) != 0) {
-		L_ERR(nullptr, "ERROR: MsgPack::parent() is not working\n\nExpected: %s\nResult: %s\n", parent_expected.c_str(), parent.c_str());
 		++res;
 	}
 
