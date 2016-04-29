@@ -826,7 +826,7 @@ inline MsgPack& MsgPack::_erase(size_t pos) {
 			mobj._body->_key._body.reset();
 			mobj._body->_parent._body.reset();
 			// Erase from map:
-			_body->array.erase(it);
+			_body->array.pop_back();
 			_update_array(pos_);
 			try {
 				return _body->at(pos_);
