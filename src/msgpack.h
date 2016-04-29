@@ -179,9 +179,6 @@ public:
 	iterator find(size_t pos);
 	const_iterator find(size_t pos) const;
 
-	inline MsgPack& parent();
-	inline const MsgPack& parent() const;
-
 	size_t count(const MsgPack& o) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
@@ -1270,16 +1267,6 @@ inline MsgPack::const_iterator MsgPack::find(size_t pos) const {
 	} catch (const std::out_of_range&) {
 		return cend();
 	}
-}
-
-
-inline MsgPack& MsgPack::parent() {
-	return _body->_parent;
-}
-
-
-inline const MsgPack& MsgPack::parent() const {
-	return _body->_parent;
 }
 
 
