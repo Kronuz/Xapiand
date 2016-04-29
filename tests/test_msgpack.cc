@@ -194,7 +194,7 @@ int test_assigment() {
 		L_ERR(nullptr, "ERROR: Mgspack::move assigment from MAP to ARRAY is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res1.c_str());
 		++res;
 	}
-	if (m_array.capacity() != MSGPACK_ARRAY_INIT_SIZE) {
+	if (m_array.capacity() != m_array.size()) {
 		L_ERR(nullptr, "ERROR: Mgspack::move assigment from MAP to ARRAY is not reserving correctly. Result:\n %zu\nExpected:\n %zu\n", m_array.capacity(), m_array.size());
 		++res;
 	}
@@ -644,7 +644,7 @@ int test_reserve() {
 
 	r_size = 1024;
 	obj.reserve(r_size);
-	if (obj.capacity() != r_size) {
+	if (obj.capacity() < r_size) {
 		L_ERR(nullptr, "ERROR: MsgPack::reserve(msgpack::array) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
 		++res;
 	}
