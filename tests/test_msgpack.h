@@ -39,3 +39,4 @@ int test_erase();
 int test_reserve();
 int test_keys();
 int test_change_keys();
+int test_map();

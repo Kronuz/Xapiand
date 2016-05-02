@@ -726,3 +726,61 @@ int test_change_keys() {
 		RETURN(1);
 	}
 }
+
+
+int test_map() {
+	size_t r0 = 4;
+	std::string f1 = "firstname";
+	std::string r1 = "Marcial Alejandro";
+	std::string f2 = "lastname";
+	std::string r2 = "Ruiz";
+	std::string f3 = "age";
+	std::string r3 = "23";
+	std::string f4 = "gender";
+	std::string r4 = "male";
+
+	std::string buffer;
+	std::string filename("examples/json/object_map_test.txt");
+	if (!read_file_contents(filename, &buffer)) {
+		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
+		RETURN(1);
+	}
+
+	rapidjson::Document doc_path;
+	json_load(doc_path, buffer);
+	MsgPack object(doc_path);
+
+	object.erase("Jose");
+
+	auto& sub_obj = object["Marcial"];
+
+	if (sub_obj.size() != r0) {
+		L_ERR(nullptr, "Updated the map after erase is not working. Result: %zu\nExpected: %zu\n", sub_obj.size(), r0);
+	}
+
+	try {
+		sub_obj[f1];
+	}	catch (const std::out_of_range& e) {
+		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r1.c_str());
+		RETURN(1);
+	}
+	try {
+		sub_obj[f2];
+	}	catch (const std::out_of_range& e) {
+		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r2.c_str());
+		RETURN(1);
+	}
+	try {
+		sub_obj[f3];
+	}	catch (const std::out_of_range& e) {
+		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r3.c_str());
+		RETURN(1);
+	}
+	try {
+		sub_obj[f4];
+	}	catch (const std::out_of_range& e) {
+		L_ERR(nullptr, "Updated the map after erase is not working. Expected: %s\n", r4.c_str());
+		RETURN(1);
+	}
+	return 0;
+}

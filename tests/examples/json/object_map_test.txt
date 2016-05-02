@@ -1,0 +1,20 @@
+{
+    "Jose": {
+        "firstname": "Jose",
+        "lastname": "Madrigal",
+        "age": 26,
+        "gender": "male"
+    },
+    "Marcial": {
+        "firstname": "Marcial Alejandro",
+        "lastname": "Ruiz",
+        "age": 23,
+        "gender": "male"
+    },
+     "Chema": {
+        "firstname": "Jose María",
+        "lastname": "Valencia",
+        "age": 27,
+        "gender": "male"
+    }
+}

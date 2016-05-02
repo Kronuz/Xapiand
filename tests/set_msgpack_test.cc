@@ -124,6 +124,13 @@ START_TEST(test_MsgPack_change_keys)
 END_TEST
 
 
+START_TEST(test_MsgPack_update_map)
+{
+	ck_assert_int_eq(test_map(), 0);
+}
+END_TEST
+
+
 Suite* testMsgPack(void) {
 	Suite *s = suite_create("Test MsgPack");
 
@@ -182,6 +189,10 @@ Suite* testMsgPack(void) {
 	TCase *tc_change_keys = tcase_create("Test Change values of keys");
 	tcase_add_test(tc_change_keys, test_MsgPack_change_keys);
 	suite_add_tcase(s, tc_change_keys);
+
+	TCase *tc_update_map = tcase_create("Test update map ");
+	tcase_add_test(tc_update_map, test_MsgPack_update_map);
+	suite_add_tcase(s, tc_update_map);
 
 	return s;
 }
