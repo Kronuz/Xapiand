@@ -607,6 +607,8 @@ inline MsgPack* MsgPack::_init_array(size_t pos) const {
 inline void MsgPack::_update_array(size_t pos) const {
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
+		// If the previous item was a MAP, force map update.
+		_body->array.at(pos)._body->map.clear();
 		auto& mobj = _body->at(pos);
 		mobj._body->_pos = pos;
 		mobj._body->_obj = p;
