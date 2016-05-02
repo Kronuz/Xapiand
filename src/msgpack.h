@@ -580,10 +580,10 @@ inline void MsgPack::_update_map(size_t pos) const {
 		auto it = _body->map.find(str_key);
 		assert(it != _body->map.end());
 		auto& elem = it->second;
-		elem.second._init();
 		elem.first._body->_obj = &p->key;
 		elem.second._body->_pos = pos;
 		elem.second._body->_obj = &p->val;
+		elem.second._init();
 	}
 }
 
