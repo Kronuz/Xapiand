@@ -72,6 +72,8 @@ private:
 	void _initializer_map(const std::initializer_list<MsgPack>& list);
 	void _initializer(const std::initializer_list<MsgPack>& list);
 
+	void _assigment(const msgpack::object& obj);
+
 public:
 	MsgPack();
 	MsgPack(const MsgPack& other);
@@ -468,6 +470,34 @@ inline void MsgPack::_initializer(const std::initializer_list<MsgPack>& list) {
 }
 
 
+inline void MsgPack::_assigment(const msgpack::object& obj) {
+	if (_body->_is_key) {
+		if (obj.type != msgpack::type::STR) {
+			throw msgpack::type_error();
+		}
+		// Change key in the parent's map:
+		auto val = std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
+		auto str_key = std::string(obj.via.str.ptr, obj.via.str.size);
+		if (str_key == val) {
+			return;
+		}
+		auto it = _body->_parent._body->map.find(val);
+		if (it != _body->_parent._body->map.end()) {
+			it->second.second._init();
+			if (_body->_parent._body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
+				_body->_parent._body->map.erase(it);
+			} else {
+				throw duplicate_key("Duplicate key: " + str_key);
+			}
+			assert(_body->_parent._body->_obj->via.map.size == _body->_parent._body->map.size());
+		}
+	}
+	clear();
+	*_body->_obj = obj;
+	_init();
+}
+
+
 inline MsgPack::MsgPack() : MsgPack(nullptr) { }
 
 
@@ -497,17 +527,13 @@ inline MsgPack::MsgPack(const std::initializer_list<MsgPack>& list)
 
 
 inline MsgPack& MsgPack::operator=(const MsgPack& other) {
-	clear();
-	*_body->_obj = msgpack::object(other, *_body->_zone);
-	_init();
+	_assigment(msgpack::object(other, *_body->_zone));
 	return *this;
 }
 
 
 inline MsgPack& MsgPack::operator=(MsgPack&& other) {
-	clear();
-	*_body->_obj = msgpack::object(std::move(other), *_body->_zone);
-	_init();
+	_assigment(msgpack::object(std::move(other), *_body->_zone));
 	return *this;
 }
 
@@ -520,31 +546,7 @@ inline MsgPack& MsgPack::operator=(const std::initializer_list<MsgPack>& list) {
 
 template <typename T>
 inline MsgPack& MsgPack::operator=(T&& v) {
-	auto obj = msgpack::object(std::forward<T>(v), *_body->_zone);
-	if (_body->_is_key) {
-		if (obj.type != msgpack::type::STR) {
-			throw msgpack::type_error();
-		}
-		// Change key in the parent's map:
-		auto val = std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
-		auto str_key = std::string(obj.via.str.ptr, obj.via.str.size);
-		if (str_key == val) {
-			return *this;
-		}
-		auto it = _body->_parent._body->map.find(val);
-		if (it != _body->_parent._body->map.end()) {
-			it->second.second._init();
-			if (_body->_parent._body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
-				_body->_parent._body->map.erase(it);
-			} else {
-				throw duplicate_key("Duplicate key: " + str_key);
-			}
-			assert(_body->_parent._body->_obj->via.map.size == _body->_parent._body->map.size());
-		}
-	}
-	clear();
-	*_body->_obj = obj;
-	_init();
+	_assigment(msgpack::object(std::forward<T>(v), *_body->_zone));
 	return *this;
 }
 
