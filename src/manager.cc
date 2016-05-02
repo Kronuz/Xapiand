@@ -274,30 +274,30 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	try {
 		db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
 		db_handler.checkout();
+		db_handler.checkin();
 	} catch (const CheckoutError&) {
 		new_cluster = 1;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
-			db_handler.checkout();
+			MsgPack obj = {
+				{ "name", local_node->name },
+				{ "tagline", XAPIAND_TAGLINE }
+			};
+			db_handler.index(obj, std::to_string(local_node->id), true, MSGPACK_TYPE, std::string());
 		} catch (const CheckoutError&) {
 			L_CRIT(this, "Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
 		}
 	}
-	db_handler.checkin();
-
-	// Set node as ready!
-	set_node_name(local_node->name, lk);
-
 	try {
 		db_handler.get_document(std::to_string(local_node->id));
 	} catch (const DocNotFoundError&) {
-		MsgPack obj;
-		obj["name"] = local_node->name;
-		obj["tagline"] = XAPIAND_TAGLINE;
-		db_handler.index(obj, std::to_string(local_node->id), true, MSGPACK_TYPE, std::string());
+		throw MSG_Error("Cluster database is corrupt");
 	}
+
+	// Set node as ready!
+	set_node_name(local_node->name, lk);
 
 	// Get a node (any node)
 	std::unique_lock<std::mutex> lk_n(nodes_mtx);
