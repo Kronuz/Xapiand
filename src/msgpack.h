@@ -957,7 +957,7 @@ inline MsgPack::iterator MsgPack::_insert(size_t pos, T&& val) {
 				*p = msgpack::object(std::forward<T>(val), *_body->_zone);
 				++_body->_obj->via.array.size;
 				_init_array(_body->array.size());
-				return MsgPack::Iterator<MsgPack>(this, size()-1);
+				return MsgPack::Iterator<MsgPack>(this, size() - 1);
 			} else {
 				_reserve_array(_body->_obj->via.array.size + 1);
 
