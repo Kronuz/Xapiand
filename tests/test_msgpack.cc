@@ -226,7 +226,7 @@ int test_assigment() {
 		L_ERR(nullptr, "ERROR: Msgpack::move assigment from ARRAY to MAP is not working. Result:\n %s\nExpected:\n %s\n", result.c_str(), res2.c_str());
 		++res;
 	}
-	if (m_map.capacity() != MSGPACK_MAP_INIT_SIZE) {
+	if (m_map.capacity() != m_map.size()) {
 		L_ERR(nullptr, "ERROR: Msgpack::move assigment from ARRAY to MAP is not reserving correctly. Result:\n %zu\nExpected:\n %zu\n", m_map.capacity(), m_map.size());
 		++res;
 	}
