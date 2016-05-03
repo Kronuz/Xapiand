@@ -23,6 +23,7 @@
 
 #include "endian.h"
 
+#include <cstring>
 
 /// same as reset()
 MD5::MD5()
