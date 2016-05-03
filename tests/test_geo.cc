@@ -99,8 +99,7 @@ const test_geo_t geo_terms_tests[] {
 };
 
 
-static DB_Test& test_db_geo() {
-	static DB_Test* db_geo = new DB_Test(".db_geo.db", std::vector<std::string>({
+DB_Test db_geo(".db_geo.db", std::vector<std::string>({
 		"examples/json/geo_1.txt",
 		"examples/json/geo_2.txt",
 		"examples/json/geo_3.txt",
@@ -110,11 +109,9 @@ static DB_Test& test_db_geo() {
 		"examples/json/geo_7.txt",
 		"examples/json/geo_8.txt"
 	}));
-	return *db_geo;
-}
 
 
-static int make_search(DB_Test& db_geo, const test_geo_t _tests[], int len) {
+static int make_search(const test_geo_t _tests[], int len) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -170,7 +167,7 @@ static int make_search(DB_Test& db_geo, const test_geo_t _tests[], int len) {
 
 int geo_range_test() {
 	try {
-		int cont = make_search(test_db_geo(), geo_range_tests, arraySize(geo_range_tests));
+		int cont = make_search(geo_range_tests, arraySize(geo_range_tests));
 		if (cont == 0) {
 			L_ERR(nullptr, "Testing search range geospatials is correct!");
 		} else {
@@ -189,7 +186,7 @@ int geo_range_test() {
 
 int geo_terms_test() {
 	try {
-		int cont = make_search(test_db_geo(), geo_terms_tests, arraySize(geo_terms_tests));
+		int cont = make_search(geo_terms_tests, arraySize(geo_terms_tests));
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search by geospatial terms is correct!");
 		} else {

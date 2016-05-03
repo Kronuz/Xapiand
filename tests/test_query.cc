@@ -208,8 +208,7 @@ const test_query_t test_facets[] {
 };
 
 
-static DB_Test& test_db_query() {
-	static DB_Test* db_query = new DB_Test(".db_query.db", std::vector<std::string>({
+DB_Test db_query (".db_query.db", std::vector<std::string>({
 		// Examples used in test geo.
 		"examples/json/geo_1.txt",
 		"examples/json/geo_2.txt",
@@ -234,11 +233,9 @@ static DB_Test& test_db_query() {
 		"examples/json/example_1.txt",
 		"examples/json/example_2.txt"
 	}));
-	return *db_query;
-}
 
 
-static int make_search(DB_Test& db_query, const test_query_t _tests[], int len) {
+static int make_search(const test_query_t _tests[], int len) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -337,7 +334,7 @@ static int make_search(DB_Test& db_query, const test_query_t _tests[], int len) 
 
 int test_query_search() {
 	try {
-		int cont = make_search(test_db_query(), test_query, arraySize(test_query));
+		int cont = make_search(test_query, arraySize(test_query));
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using query is correct!");
 		} else {
@@ -356,7 +353,7 @@ int test_query_search() {
 
 int test_terms_search() {
 	try {
-		int cont = make_search(test_db_query(), test_terms, arraySize(test_terms));
+		int cont = make_search(test_terms, arraySize(test_terms));
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using terms is correct!");
 		} else {
@@ -375,7 +372,7 @@ int test_terms_search() {
 
 int test_partials_search() {
 	try {
-		int cont = make_search(test_db_query(), test_partials, arraySize(test_partials));
+		int cont = make_search(test_partials, arraySize(test_partials));
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using partials is correct!");
 		} else {
@@ -394,7 +391,7 @@ int test_partials_search() {
 
 int test_facets_search() {
 	try {
-		int cont = make_search(test_db_query(), test_facets, arraySize(test_facets));
+		int cont = make_search(test_facets, arraySize(test_facets));
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing facets is correct!");
 		} else {
