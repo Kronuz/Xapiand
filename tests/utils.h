@@ -83,6 +83,19 @@ inline bool read_file_contents(const std::string& filename, std::string* content
 }
 
 
+/*
+ *	The database used in the test is local
+ *	so the Endpoints and local_node are manipulated.
+ */
+
+Endpoint create_endpoint(const std::string& database) {
+	Endpoint e(database, nullptr, -1, TEST_NODE_NAME);
+	e.port = XAPIAND_BINARY_SERVERPORT;
+	e.host.assign(TEST_LOCAL_HOST);
+	return e;
+}
+
+
 struct DB_Test {
 	DatabaseHandler db_handler;
 	std::string name_database;
@@ -95,14 +108,7 @@ struct DB_Test {
 		delete_files(name_database);
 		create_manager();
 
-		/*
-		 *	The database used in the test is local
-		 *	so the Endpoints and local_node are manipulated.
-		 */
-		Endpoint e(name_database, nullptr, -1, TEST_NODE_NAME);
-		e.port = XAPIAND_BINARY_SERVERPORT;
-		e.host.assign(TEST_LOCAL_HOST);
-		endpoints.add(e);
+		endpoints.add(create_endpoint(name_database));
 
 		// Index documents in the database.
 		size_t i = 1;
