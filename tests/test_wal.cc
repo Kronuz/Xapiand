@@ -82,7 +82,7 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 			}
 
 			if (get_checksum(fd1) != get_checksum(fd2)) {
-				L_ERR(nullptr, "ERROR: file %s and file %s are not the same\n", std::string(dir1 + "/" + dir1_file).c_str(), std::string(dir2 + "/" + dir2_file).c_str());
+				L_ERR(nullptr, "ERROR: file %s and file %s are not the same\n", std::string(dir1_file).c_str(), std::string(dir2_file).c_str());
 				same_file = false;
 				close(fd1);
 				close(fd2);
@@ -139,7 +139,7 @@ int restore_database() {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
 		RETURN(1);
 	} catch (const Xapian::Error& exc) {
-		L_EXC(nullptr, "ERROR: %s (%s", exc.get_msg().c_str(), exc.get_error_string());
+		L_EXC(nullptr, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
 		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
