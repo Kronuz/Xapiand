@@ -132,6 +132,11 @@ int create_db_wal() {
 int restore_database() {
 	try {
 		if (create_db_wal() == 0) {
+			/* Trigger the backup wal */
+			std::shared_ptr<DatabaseQueue>b_queue;
+			Endpoints endpoints;
+			endpoints.add(create_endpoint(restored_db));
+			std::shared_ptr<Database> res_database = std::make_shared<Database>(b_queue, endpoints, DB_WRITABLE);
 			if (not dir_compare(test_db, restored_db)) {
 				RETURN(1);
 			}
