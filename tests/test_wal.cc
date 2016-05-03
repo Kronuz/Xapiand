@@ -138,18 +138,25 @@ int restore_database() {
 			endpoints.add(create_endpoint(restored_db));
 			std::shared_ptr<Database> res_database = std::make_shared<Database>(b_queue, endpoints, DB_WRITABLE);
 			if (not dir_compare(test_db, restored_db)) {
+				delete_files(restored_db);
 				RETURN(1);
 			}
+			delete_files(restored_db);
+			RETURN(0);
 		}
-		RETURN(1);
 	} catch (const ClientError& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
+		delete_files(restored_db);
 		RETURN(1);
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
+		delete_files(restored_db);
 		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
+		delete_files(restored_db);
 		RETURN(1);
 	}
+	delete_files(restored_db);
+	RETURN(1);
 }
