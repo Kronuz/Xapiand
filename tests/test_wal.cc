@@ -98,14 +98,13 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 	return same_file;
 }
 
+DB_Test db_wal (test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
 
 int create_db_wal() {
-	static DB_Test* db_wal = new DB_Test(test_db, std::vector<std::string>());
-
 	int num_documents = 1020;
 	std::string document("{ \"message\" : \"Hello world\"}");
 
-	db_wal->db_handler.index(document, std::to_string(1), true, JSON_TYPE, std::to_string(document.size()));
+	db_wal.db_handler.index(document, std::to_string(1), true, JSON_TYPE, std::to_string(document.size()));
 
 	if (copy_file(test_db.c_str(), restored_db.c_str()) == -1) {
 		return 1;
