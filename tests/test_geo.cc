@@ -108,7 +108,7 @@ DB_Test db_geo(".db_geo.db", std::vector<std::string>({
 		"examples/json/geo_6.txt",
 		"examples/json/geo_7.txt",
 		"examples/json/geo_8.txt"
-	}));
+	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 
 static int make_search(const test_geo_t _tests[], int len) {

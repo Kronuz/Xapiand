@@ -88,7 +88,7 @@ struct DB_Test {
 	std::string name_database;
 	Endpoints endpoints;
 
-	DB_Test(const std::string& db_name, const std::vector<std::string>& docs)
+	DB_Test(const std::string& db_name, const std::vector<std::string>& docs, int flags)
 		: name_database(db_name)
 	{
 		// Delete database to create.
@@ -107,7 +107,7 @@ struct DB_Test {
 		// Index documents in the database.
 		size_t i = 1;
 		for (const auto& doc : docs) {
-			db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+			db_handler.reset(endpoints, flags);
 			std::string buffer;
 			if (!read_file_contents(doc, &buffer)) {
 				delete_files(name_database);

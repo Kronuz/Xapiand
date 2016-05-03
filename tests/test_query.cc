@@ -232,7 +232,7 @@ DB_Test db_query (".db_query.db", std::vector<std::string>({
 		// Search examples.
 		"examples/json/example_1.txt",
 		"examples/json/example_2.txt"
-	}));
+	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 
 static int make_search(const test_query_t _tests[], int len) {

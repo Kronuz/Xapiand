@@ -248,7 +248,7 @@ DB_Test db_sort(".db_sort.db", std::vector<std::string>({
 		"examples/sort/doc8.txt",
 		"examples/sort/doc9.txt",
 		"examples/sort/doc10.txt"
-	}));
+	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 static int make_search(const sort_t _tests[], int len) {
 	int cont = 0;
