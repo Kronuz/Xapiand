@@ -104,11 +104,10 @@ struct DB_Test {
 		e.host.assign(TEST_LOCAL_HOST);
 		endpoints.add(e);
 
-		db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-
 		// Index documents in the database.
 		size_t i = 1;
 		for (const auto& doc : docs) {
+			db_handler.reset(endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 			std::string buffer;
 			if (!read_file_contents(doc, &buffer)) {
 				delete_files(name_database);
