@@ -98,7 +98,9 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 	return same_file;
 }
 
-DB_Test db_wal (test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
+
+DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
+
 
 int create_db_wal() {
 	int num_documents = 1020;
