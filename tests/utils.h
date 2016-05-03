@@ -123,6 +123,7 @@ struct DB_Test {
 				throw MSG_Error("File %s can not index", doc.c_str());
 			}
 		}
+		db_handler.reset(endpoints, flags);
 	}
 
 	~DB_Test() {
