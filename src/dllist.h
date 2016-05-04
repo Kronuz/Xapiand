@@ -56,19 +56,19 @@ class DLList {
 		T val;
 		std::shared_ptr<Node> next;
 		std::shared_ptr<Node> prev;
+		bool deleted;
 
 	public:
-		Node() { }
+		Node() : deleted(false) { }
 
 		template <typename... Args>
-		Node(Args&&... args) : val(std::forward<Args>(args)...) { }
+		Node(Args&&... args) : val(std::forward<Args>(args)...), deleted(false) { }
 	};
 
 	std::shared_ptr<Node> head;
 	std::shared_ptr<Node> tail;
 	std::atomic_size_t _size;
 	spinLock lk;
-
 
 	template <typename TT, typename I, bool R>
 	class _iterator : std::iterator<std::bidirectional_iterator_tag, TT> {
@@ -157,6 +157,7 @@ private:
 		auto prev = p->prev;
 		prev->next = next;
 		next->prev = prev;
+		p->deleted = true;
 		--_size;
 		return next;
 	}
@@ -234,6 +235,9 @@ public:
 
 	auto erase(iterator it) {
 		std::lock_guard<spinLock> lock(lk);
+		if (it.p->deleted) {
+			return ++it;
+		}
 		return iterator(_erase(it.p));
 	}
 
