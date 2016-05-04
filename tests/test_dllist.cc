@@ -24,7 +24,7 @@
 
 #include "utils.h"
 
-#include <random>
+#include <algorithm>
 #include <string>
 #include <thread>
 #include <vector>
@@ -324,10 +324,6 @@ int test_multi_push_pop_front() {
 	std::vector<std::thread> producers;
 	for (int i = 0; i < 20; ++i) {
 		producers.emplace_back([&l](const std::string& val) {
-			std::random_device rd;
-			std::mt19937 gen(rd());
-			std::uniform_int_distribution<> dis(0, 100);
-			std::this_thread::sleep_for(std::chrono::milliseconds(dis(gen)));
 			l.push_front(val);
 			l.emplace_front(val);
 		}, std::to_string(i));
@@ -337,10 +333,6 @@ int test_multi_push_pop_front() {
 	std::vector<std::thread> consumers;
 	for (int i = 0; i < 20; ++i) {
 		consumers.emplace_back([&l, &fail_pop]() {
-			std::random_device rd;
-			std::mt19937 gen(rd());
-			std::uniform_int_distribution<> dis(0, 100);
-			std::this_thread::sleep_for(std::chrono::milliseconds(dis(gen)));
 			try {
 				l.pop_front();
 				--fail_pop;
@@ -368,10 +360,6 @@ int test_multi_push_pop_back() {
 	std::vector<std::thread> producers;
 	for (int i = 0; i < 20; ++i) {
 		producers.emplace_back([&l](const std::string& val) {
-			std::random_device rd;
-			std::mt19937 gen(rd());
-			std::uniform_int_distribution<> dis(0, 100);
-			std::this_thread::sleep_for(std::chrono::milliseconds(dis(gen)));
 			l.push_back(val);
 			l.emplace_back(val);
 		}, std::to_string(i));
@@ -381,10 +369,6 @@ int test_multi_push_pop_back() {
 	std::vector<std::thread> consumers;
 	for (int i = 0; i < 20; ++i) {
 		consumers.emplace_back([&l, &fail_pop]() {
-			std::random_device rd;
-			std::mt19937 gen(rd());
-			std::uniform_int_distribution<> dis(0, 100);
-			std::this_thread::sleep_for(std::chrono::milliseconds(dis(gen)));
 			try {
 				l.pop_back();
 				--fail_pop;
