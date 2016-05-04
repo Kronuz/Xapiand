@@ -143,9 +143,9 @@ public:
 private:
 	void _insert(std::shared_ptr<Node> p, std::shared_ptr<Node>& node) {
 		node->next = p;
-		node->prev = p->prev;
-		p->prev->next = node;
-		p->prev = node;
+		node->prev = std::atomic_load(&p->prev);
+		std::atomic_store(&p->prev->next, node);
+		std::atomic_store(&p->prev, node);
 		++_size;
 	}
 
@@ -153,10 +153,10 @@ private:
 		if (_size.load() == 0) {
 			throw std::out_of_range("Empty");
 		}
-		auto next = p->next;
-		auto prev = p->prev;
-		prev->next = next;
-		next->prev = prev;
+		auto next = std::atomic_load(&p->next);
+		auto prev = std::atomic_load(&p->prev);
+		std::atomic_store(&prev->next, next);
+		std::atomic_store(&next->prev, prev);
 		p->deleted = true;
 		--_size;
 		return next;
