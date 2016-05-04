@@ -73,6 +73,7 @@ noinst_HEADERS = \
 	database_handler.h \
 	database_utils.h \
 	datetime.h \
+	dllist.h \
 	endpoint.h \
 	endpoint_resolver.h \
 	ev/ev_vars.h \
@@ -88,7 +89,6 @@ noinst_HEADERS = \
 	ev/ev_win32.c \
 	exception.h \
 	fields.h \
-	forward_list.h \
 	generate_terms.h \
 	geometry.h \
 	geospatialrange.h \
