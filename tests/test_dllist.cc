@@ -326,7 +326,7 @@ int test_multi_push_pop_front() {
 
 	std::vector<std::thread> producers;
 	for (int i = 0; i < 20; ++i) {
-		producers.emplace_back([&l](const std::string& val){
+		producers.emplace_back([&l](const std::string& val) {
 			std::random_device rd;
 			std::mt19937 gen(rd());
 			std::uniform_int_distribution<> dis(0, 100);
@@ -339,7 +339,7 @@ int test_multi_push_pop_front() {
 	std::atomic_size_t fail_pop(40);
 	std::vector<std::thread> consumers;
 	for (int i = 0; i < 20; ++i) {
-		consumers.emplace_back([&l, &fail_pop](){
+		consumers.emplace_back([&l, &fail_pop]() {
 			std::random_device rd;
 			std::mt19937 gen(rd());
 			std::uniform_int_distribution<> dis(0, 100);
@@ -370,7 +370,7 @@ int test_multi_push_pop_back() {
 
 	std::vector<std::thread> producers;
 	for (int i = 0; i < 20; ++i) {
-		producers.emplace_back([&l](const std::string& val){
+		producers.emplace_back([&l](const std::string& val) {
 			std::random_device rd;
 			std::mt19937 gen(rd());
 			std::uniform_int_distribution<> dis(0, 100);
@@ -383,7 +383,7 @@ int test_multi_push_pop_back() {
 	std::atomic_size_t fail_pop(40);
 	std::vector<std::thread> consumers;
 	for (int i = 0; i < 20; ++i) {
-		consumers.emplace_back([&l, &fail_pop](){
+		consumers.emplace_back([&l, &fail_pop]() {
 			std::random_device rd;
 			std::mt19937 gen(rd());
 			std::uniform_int_distribution<> dis(0, 100);
