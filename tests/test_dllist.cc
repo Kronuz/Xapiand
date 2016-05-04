@@ -72,10 +72,10 @@ int test_push_front() {
 	std::string expected("k1 j1 i1 h1 g1 f1 e1 d1 c1 b1 a1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
-		fprintf(stderr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		RETURN(1);
 	}
 }
 
@@ -100,10 +100,10 @@ int test_emplace_front() {
 	std::string expected("k1 j1 i1 h1 g1 f1 e1 d1 c1 b1 a1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
-		fprintf(stderr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		RETURN(1);
 	}
 }
 
@@ -128,10 +128,10 @@ int test_push_back() {
 	std::string expected("a1 b1 c1 d1 e1 f1 g1 h1 i1 j1 k1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
-		fprintf(stderr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		RETURN(1);
 	}
 }
 
@@ -156,10 +156,10 @@ int test_emplace_back() {
 	std::string expected("a1 b1 c1 d1 e1 f1 g1 h1 i1 j1 k1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
-		fprintf(stderr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		RETURN(1);
 	}
 }
 
@@ -190,10 +190,10 @@ int test_pop_front() {
 	std::string expected("f1 e1 d1 c1 b1 a1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
-		fprintf(stderr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		RETURN(1);
 	}
 }
 
@@ -224,10 +224,10 @@ int test_pop_back() {
 	std::string expected("l1 k1 j1 i1 h1 g1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
-		fprintf(stderr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		RETURN(1);
 	}
 }
 
@@ -263,10 +263,10 @@ int test_erase() {
 	std::string expected("k1 i1 g1 e1 c1 a1");
 
 	if (result == expected) {
-		return 0;
+		RETURN(0);
 	} else {
-		fprintf(stderr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		return 1;
+		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		RETURN(1);
 	}
 }
 
@@ -290,7 +290,7 @@ int test_single_producer_consumer() {
 
 	// Test size
 	if (elements != mylist.size()) {
-		fprintf(stderr, "ForwardList::size is not working!");
+		L_ERR(nullptr, "ForwardList::size is not working!");
 		++err;
 	}
 
@@ -303,18 +303,18 @@ int test_single_producer_consumer() {
 
 	// Test size
 	if (elements != mylist.size()) {
-		fprintf(stderr, "ForwardList::size is not working!");
+		L_ERR(nullptr, "ForwardList::size is not working!");
 		++err;
 	}
 
 	// Test clear
 	mylist.clear();
 	if (mylist.size() != 0) {
-		fprintf(stderr, "ForwardList::clear is not working!");
+		L_ERR(nullptr, "ForwardList::clear is not working!");
 		++err;
 	}
 
-	return err;
+	RETURN(err);
 }
 
 
@@ -356,9 +356,9 @@ int test_multi_push_pop_front() {
 		consumer.join();
 	}
 
-	fprintf(stderr, "Size List: %zu  Fail Pop: %zu\n", l.size(), fail_pop.load());
+	L_ERR(nullptr, "Size List: %zu  Fail Pop: %zu\n", l.size(), fail_pop.load());
 
-	return l.size() != fail_pop.load();
+	RETURN(l.size() != fail_pop.load());
 }
 
 
@@ -400,9 +400,9 @@ int test_multi_push_pop_back() {
 		consumer.join();
 	}
 
-	fprintf(stderr, "Size List: %zu  Fail Pop: %zu\n", l.size(), fail_pop.load());
+	L_ERR(nullptr, "Size List: %zu  Fail Pop: %zu\n", l.size(), fail_pop.load());
 
-	return l.size() != fail_pop.load();
+	RETURN(l.size() != fail_pop.load());
 }
 
 
@@ -443,8 +443,8 @@ int test_multi_erases() {
 	}
 
 	for (const auto& val : l) {
-		fprintf(stderr, "%d\n", val);
+		L_ERR(nullptr, "%d\n", val);
 	}
 
-	return l.size() < 20;
+	RETURN(l.size() < 20);
 }
