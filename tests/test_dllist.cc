@@ -407,3 +407,47 @@ int test_multi_push_pop_back() {
 
 	return l.size() != fail_pop.load();
 }
+
+
+int test_multi_erases() {
+	DLList<int> l;
+
+	std::vector<std::thread> producers;
+	for (int i = 0; i < 20; ++i) {
+		producers.emplace_back([&l](int val) {
+			auto v = 2 * val;
+			l.push_back(v);
+			l.push_back(v + 1);
+		}, i);
+	}
+
+	std::vector<std::thread> consumers;
+	for (int i = 0; i < 10; ++i) {
+		consumers.emplace_back([&l]() {
+			try {
+				auto it = l.begin();
+				for (auto it = l.begin(); it != l.end();) {
+					if (*it % 2 == 0) {
+						it = l.erase(it);
+					} else {
+						++it;
+					}
+				}
+			} catch (const std::out_of_range&) { }
+		});
+	}
+
+	for (auto& consumer : consumers) {
+		consumer.join();
+	}
+
+	for (auto& producer : producers) {
+		producer.join();
+	}
+
+	for (const auto& val : l) {
+		fprintf(stderr, "%d\n", val);
+	}
+
+	return l.size() < 20;
+}

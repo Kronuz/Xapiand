@@ -39,3 +39,4 @@ int test_erase();
 int test_single_producer_consumer();
 int test_multi_push_pop_front();
 int test_multi_push_pop_back();
+int test_multi_erases();
