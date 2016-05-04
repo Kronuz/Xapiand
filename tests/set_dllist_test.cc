@@ -153,7 +153,8 @@ Suite* test_suite_multiple_threads(void) {
 
 	TCase *tc_multi_push_pop_back = tcase_create("Multiple threads are doing push_back and pop_back");
 	tcase_set_timeout(tc_multi_push_pop_back, 10);
-	tcase_add_test(tc_multi_push_pop_back, test_m
+	tcase_add_test(tc_multi_push_pop_back, test_multi_push_pop_back);
+	suite_add_tcase(s, tc_multi_push_pop_back);
 
 	TCase *tc_multi_erases = tcase_create("Multiple threads are doing push_back and erase");
 	tcase_set_timeout(tc_multi_erases, 10);
