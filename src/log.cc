@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -26,12 +26,14 @@
 #include "utils.h"
 
 #include <stdarg.h>
-#include <unistd.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #define BUFFER_SIZE (10 * 1024)
 
+
 const std::regex filter_re("\033\\[[;\\d]*m");
+
 
 const char *priorities[] = {
 	EMERG_COL "█" NO_COL,   // LOG_EMERG    0 = System is unusable
@@ -319,9 +321,11 @@ LogThread::thread_function()
 				++it;
 			}
 		}
+
 		if (next_wakeup < now + 100ms) {
 			next_wakeup = now + 100ms;
 		}
+
 		if (running >= 0 && !log_list.size()) {
 			break;
 		}
