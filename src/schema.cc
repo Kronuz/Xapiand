@@ -1066,8 +1066,6 @@ Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document
 		}
 	} catch (...) {
 		mut_schema.reset();
-		map_values.clear();
-		specification = default_spc;
 		throw;
 	}
 }

@@ -111,6 +111,17 @@ class Schema {
 	void update_specification(const MsgPack& properties);
 
 	/*
+	 * Restarting reserved words than are not inherited.
+	 */
+	void restart_specification();
+
+	/*
+	 * Gets the properties of item_key and specification is updated.
+	 * Returns the properties of schema.
+	 */
+	const MsgPack& get_subproperties(const MsgPack& properties);
+
+	/*
 	 * Sets type to array in properties.
 	 */
 	void set_type_to_array();
@@ -130,6 +141,22 @@ class Schema {
 	 */
 	static void readable(MsgPack& item_schema, bool is_root=false);
 
+
+	/*
+	 * Auxiliar functions for index fields in doc.
+	 */
+
+	inline void fixed_index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc);
+	void index_object(const MsgPack& parent_properties, const MsgPack& object, Xapian::Document& doc, const std::string& name=std::string());
+	void index_array(const MsgPack& properties, const MsgPack& array, Xapian::Document& doc);
+	inline void index_item(const MsgPack& value, Xapian::Document& doc);
+	void index_texts(const MsgPack& texts, Xapian::Document& doc);
+	void index_text(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
+	void index_terms(const MsgPack& terms, Xapian::Document& doc);
+	void index_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
+	void index_values(const MsgPack& values, Xapian::Document& doc, bool is_term=false);
+	void index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, size_t& pos, bool is_term) const;
+
 	/*
 	 * Validates data when RESERVED_TYPE has not been save in schema.
 	 * Insert into properties all required data.
@@ -137,10 +164,9 @@ class Schema {
 	void validate_required_data(const MsgPack* value);
 
 public:
-	Schema() = default;
-
 	Schema(const std::shared_ptr<const MsgPack>& schema);
 
+	Schema() = delete;
 	Schema(Schema&& schema) = delete;
 	Schema(const Schema& schema) = delete;
 	Schema& operator=(Schema&& schema) = delete;
@@ -166,20 +192,14 @@ public:
 	std::string serialise_id(const MsgPack& schema_properties, const std::string& value_id);
 
 	/*
-	 * Restarting reserved words than are not inherited.
-	 */
-	void restart_specification();
-
-	/*
-	 * Gets the properties of item_key and specification is updated.
-	 * Returns the properties of schema.
-	 */
-	const MsgPack& get_subproperties(const MsgPack& properties);
-
-	/*
 	 * Transforms schema into json string.
 	 */
 	std::string to_string(bool prettify=false) const;
+
+	/*
+	 * Function to index object in doc.
+	 */
+	void index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc);
 
 
 	/*
@@ -220,35 +240,12 @@ public:
 
 
 	/*
-	 * Function to index object in doc.
-	 */
-	void index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc);
-
-
-	/*
 	 * Functions for reserved words that are only in document's root.
 	 */
 
 	inline void process_values(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc);
 	inline void process_texts(const MsgPack& properties, const MsgPack& doc_texts, Xapian::Document& doc);
 	inline void process_terms(const MsgPack& properties, const MsgPack& doc_terms, Xapian::Document& doc);
-
-
-	/*
-	 * Auxiliar functions for index fields in doc.
-	 */
-
-	void index(const MsgPack& properties, Xapian::Document& doc);
-	inline void fixed_index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc);
-	void index_object(const MsgPack& parent_properties, const MsgPack& object, Xapian::Document& doc, const std::string& name=std::string());
-	void index_array(const MsgPack& properties, const MsgPack& array, Xapian::Document& doc);
-	inline void index_item(const MsgPack& value, Xapian::Document& doc);
-	void index_texts(const MsgPack& texts, Xapian::Document& doc);
-	void index_text(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-	void index_terms(const MsgPack& terms, Xapian::Document& doc);
-	void index_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const;
-	void index_values(const MsgPack& values, Xapian::Document& doc, bool is_term=false);
-	void index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, size_t& pos, bool is_term) const;
 
 
 	/*
