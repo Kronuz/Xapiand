@@ -532,7 +532,7 @@ HttpClient::_run()
 	}
 
 	if (error_code) {
-		if (db_handler.get()) {
+		if (db_handler.get_database()) {
 			db_handler.checkin();
 		}
 		if (written) {
