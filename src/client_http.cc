@@ -1277,10 +1277,14 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 
 	index_path = ns + path;
 	std::string node_name;
-	Endpoint asked_node("xapian://" + index_path);
+	std::string asked_node_path = index_path;
+	if (startswith(asked_node_path, "/")) {
+		 asked_node_path = asked_node_path.substr(1, asked_node_path.size());
+	}
+
+	asked_node_path = normalize_path(asked_node_path);
 
 	std::vector<Endpoint> asked_nodes;
-
 	if (path_parser.off_hst) {
 		node_name = path_parser.get_hst();
 		has_node_name = true;
@@ -1291,7 +1295,7 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 			has_node_name = true;
 			node_name = node->name;
 		} else {
-			if (!XapiandManager::manager->resolve_index_endpoint(asked_node.path, asked_nodes, num_endps, timeout)) {
+			if (!XapiandManager::manager->resolve_index_endpoint(asked_node_path, asked_nodes, num_endps, timeout)) {
 				has_node_name = true;
 				node_name = node->name;
 			}
