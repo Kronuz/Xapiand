@@ -698,7 +698,7 @@ HttpClient::home_view()
 	endpoints_maker(1s);
 
 	db_handler.reset(endpoints, DB_SPAWN);
-	
+
 	auto node = std::atomic_load(&local_node);
 	auto document = db_handler.get_document(std::to_string(node->id));
 

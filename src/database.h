@@ -65,6 +65,7 @@ class DatabasePool;
 class DatabasesLRU;
 class DatabaseQueue;
 
+
 #if XAPIAND_DATABASE_WAL
 struct WalHeader {
 	struct StorageHeaderHead {

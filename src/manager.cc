@@ -727,7 +727,7 @@ XapiandManager::touch_node(const std::string& node_name, int32_t region)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string lower_node_name(lower_string(node_name));
-	
+
 	auto local_node_ = std::atomic_load(&local_node);
 	if (lower_node_name == lower_string(local_node_->name)) {
 		auto copy_node = new Node(*local_node_);
