@@ -60,6 +60,7 @@ using namespace std::chrono;
 
 struct WalHeader;
 
+class Database;
 class DatabasePool;
 class DatabasesLRU;
 class DatabaseQueue;

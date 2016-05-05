@@ -96,9 +96,6 @@ extern const specification_t default_spc;
 using TaskVector = std::vector<std::future<void>>;
 
 
-class Database;
-
-
 class Schema {
 	std::shared_ptr<const MsgPack> schema;
 	std::unique_ptr<MsgPack> mut_schema;
