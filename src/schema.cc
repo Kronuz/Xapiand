@@ -282,7 +282,6 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 			{ RESERVED_VERSION, DB_VERSION_SCHEMA },
 			{ RESERVED_SCHEMA, nullptr },
 		};
-		L_ERR(this, "+++++ Schema Is null:  %s", new_schema.to_string(true).c_str());
 		schema = std::make_shared<const MsgPack>(std::move(new_schema));
 	} else {
 		try {
@@ -325,15 +324,11 @@ Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 
 	specification.set_type = true;
 	try {
-		L_ERR(this, "+++++ %s call Op[]", properties.to_string(true).c_str());
 		const auto& prop_id = properties.at(RESERVED_ID);
-		L_ERR(this, "+++++ Start Update");
 		update_specification(properties);
 		return Serialise::serialise(static_cast<char>(prop_id.at(RESERVED_TYPE).at(2).as_u64()), value_id);
 	} catch (const std::out_of_range&) {
-		L_ERR(this, "+++++ Start get_mutable");
 		auto& prop_id = get_mutable(RESERVED_ID);
-		L_ERR(this, "+++++ End get_mutable");
 		specification.found_field = false;
 		auto res_serialise = Serialise::serialise(value_id);
 		prop_id[RESERVED_TYPE] = std::vector<unsigned>({ NO_TYPE, NO_TYPE, static_cast<unsigned>(res_serialise.first) });
