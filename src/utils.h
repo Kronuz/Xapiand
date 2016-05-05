@@ -230,6 +230,7 @@ void to_lower(std::string& str);
 
 char* normalize_path(const char* src, const char* end, char* dst);
 char* normalize_path(const std::string& src, char* dst);
+std::string normalize_path(const std::string& src);
 int url_qs(const char *, const char *, size_t);
 std::string urldecode(const char *, size_t);
 

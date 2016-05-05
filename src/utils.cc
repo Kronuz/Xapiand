@@ -313,6 +313,13 @@ char* normalize_path(const std::string& src, char* dst)
 }
 
 
+std::string normalize_path(const std::string& src) {
+	char buffer[PATH_MAX];
+	const char* src_str = src.data();
+	return normalize_path(src_str, src_str + src.size(), buffer);
+}
+
+
 QueryParser::QueryParser()
 	: len(0),
 	  off(nullptr) { }
