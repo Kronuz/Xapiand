@@ -123,7 +123,7 @@ Log::_thread()
 
 
 std::string
-Log::str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void* obj, const char *format, va_list argptr)
+Log::str_format(int priority, const std::string& exc, const char *file, int line, const char *suffix, const char *prefix, const void*, const char *format, va_list argptr)
 {
 	char* buffer = new char[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, format, argptr);
