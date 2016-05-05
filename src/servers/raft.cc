@@ -148,16 +148,16 @@ Raft::leader_election_timeout_cb(ev::timer&, int)
 		return;
 	}
 
+	auto local_node_ = std::atomic_load(&local_node);
 	L_RAFT_PROTO(this, "Raft { Reg: %d; State: %d; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
-		local_node.region.load(), state, leader_election_timeout.repeat, term, number_servers, leader.c_str());
+		local_node_.region, state, leader_election_timeout.repeat, term, number_servers, leader.c_str());
 
 	if (state != State::LEADER) {
 		state = State::CANDIDATE;
 		++term;
 		votes = 0;
 		votedFor.clear();
-		auto node = std::atomic_load(&local_node);
-		send_message(Message::REQUEST_VOTE, node->serialise() + serialise_length(term));
+		send_message(Message::REQUEST_VOTE, local_node_->serialise() + serialise_length(term));
 	}
 
 	_reset_leader_election_timeout();

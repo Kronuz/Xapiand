@@ -685,11 +685,12 @@ bool
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	auto local_node_ = new Node(*std::atomic_load(&local_node));
+	auto local_node_ = std::atomic_load(&local_node);
 	std::string lower_node_name(lower_string(node->name));
 	if (lower_node_name == lower_string(local_node_->name)) {
-		local_node_->touched = epoch::now<>();
-		std::atomic_exchange(&local_node, std::shared_ptr<const Node>(local_node_));
+		auto copy_node = new Node(*local_node_);
+		copy_node->touched = epoch::now<>();
+		std::atomic_exchange(&local_node, std::shared_ptr<const Node>(copy_node));
 		return false;
 	} else {
 		try {
@@ -726,20 +727,22 @@ XapiandManager::touch_node(const std::string& node_name, int32_t region)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string lower_node_name(lower_string(node_name));
-	auto local_node_ = new Node(*std::atomic_load(&local_node));
+	
+	auto local_node_ = std::atomic_load(&local_node);
 	if (lower_node_name == lower_string(local_node_->name)) {
-		local_node_->touched = epoch::now<>();
+		auto copy_node = new Node(*local_node_);
+		copy_node->touched = epoch::now<>();
 		if (region != UNKNOWN_REGION) {
-			local_node_->region.store(region);
+			copy_node->region = region;
 		}
-		std::atomic_exchange(&local_node, std::shared_ptr<const Node>(local_node_));
+		std::atomic_exchange(&local_node, std::shared_ptr<const Node>(copy_node));
 		return local_node;
 	} else {
 		try {
 			auto node_ref = nodes.at(lower_node_name);
 			node_ref->touched = epoch::now<>();
 			if (region != UNKNOWN_REGION) {
-				node_ref->region.store(region);
+				node_ref->region = region;
 			}
 			return node_ref;
 		} catch (const std::out_of_range &err) {
@@ -765,7 +768,7 @@ XapiandManager::get_nodes_by_region(int32_t region)
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	size_t cont = 0;
 	for (const auto& node : nodes) {
-		if (node.second->region.load() == region) ++cont;
+		if (node.second->region == region) ++cont;
 	}
 	return cont;
 }
@@ -774,12 +777,21 @@ XapiandManager::get_nodes_by_region(int32_t region)
 int32_t
 XapiandManager::get_region(const std::string& db_name)
 {
-	// FIXME: Remove atomic regions and do de access through atomic_load
-	if (local_node->regions.load() == -1) {
-		local_node->regions.store(sqrt(nodes.size()));
+	bool re_load = false;
+	auto local_node_ = std::atomic_load(&local_node);
+	if (local_node_->regions == -1) {
+		auto copy_node = new Node(*local_node_);
+		copy_node->regions = sqrt(nodes.size());
+		std::atomic_exchange(&local_node, std::shared_ptr<const Node>(copy_node));
+		re_load = true;
 	}
+
+	if (re_load) {
+		local_node_ = std::atomic_load(&local_node);
+	}
+
 	std::hash<std::string> hash_fn;
-	return jump_consistent_hash(hash_fn(db_name), local_node->regions.load());
+	return jump_consistent_hash(hash_fn(db_name), local_node_->regions);
 }
 
 
@@ -787,24 +799,31 @@ int32_t
 XapiandManager::get_region()
 {
 	if (auto raft = weak_raft.lock()) {
-		if (local_node->regions.load() == -1) {
+		auto local_node_ = std::atomic_load(&local_node);
+		if (local_node_->regions == -1) {
 			if (is_single_node()) {
-				local_node->regions.store(1);
-				local_node->region.store(0);
+				auto copy_node = new Node(*local_node_);
+				copy_node->regions = 1;
+				copy_node->region = 0;
+				std::atomic_exchange(&local_node_, std::shared_ptr<const Node>(copy_node));
 				raft->stop();
 			} else if (state == State::READY) {
 				raft->start();
-				local_node->regions.store(sqrt(nodes.size() + 1));
-				int32_t region = jump_consistent_hash(local_node->id, local_node->regions.load());
-				if (local_node->region.load() != region) {
-					local_node->region.store(region);
+				auto copy_node = new Node(*local_node_);
+				copy_node->regions = sqrt(nodes.size() + 1);
+				int32_t region = jump_consistent_hash(local_node->id, copy_node->regions);
+				if (copy_node->region != region) {
+					copy_node->region = region;
 					raft->reset();
 				}
+				std::atomic_exchange(&local_node_, std::shared_ptr<const Node>(copy_node));
 			}
 			L_RAFT(this, "Regions: %d Region: %d", local_node.regions.load(), local_node.region.load());
 		}
 	}
-	return local_node->region.load();
+
+	auto local_node_ = std::atomic_load(&local_node);
+	return local_node_->region;
 }
 
 

@@ -38,9 +38,9 @@ struct Node {
 	int http_port;
 	int binary_port;
 
-	mutable std::atomic<int32_t> regions;
-	mutable std::atomic<int32_t> region;
-	mutable std::atomic<time_t> touched;
+	int32_t regions;
+	mutable int32_t region;
+	mutable time_t touched;
 
 	Node() : id(0), http_port(0), binary_port(0), regions(1), region(0), touched(0) {
 		memset(&addr, 0, sizeof(addr));
@@ -53,9 +53,9 @@ struct Node {
 		addr = std::move(other.addr);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
-		regions = other.regions.load();   /* should be exist move a copy constructor? */
-		region = other.region.load();
-		touched = other.touched.load();
+		regions = other.regions;   /* should be exist move a copy constructor? */
+		region = other.region;
+		touched = other.touched;
 	}
 
 	Node(const Node& other) {
@@ -64,9 +64,9 @@ struct Node {
 		addr = other.addr;
 		http_port = other.http_port;
 		binary_port = other.binary_port;
-		regions = other.regions.load();
-		region = other.region.load();
-		touched = other.touched.load();
+		regions = other.regions;
+		region = other.region;
+		touched = other.touched;
 	}
 
 	// move assignment, takes a rvalue reference &&
@@ -76,9 +76,9 @@ struct Node {
 		addr = std::move(other.addr);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
-		regions = other.regions.load();
-		region = other.region.load();
-		touched = other.touched.load();
+		regions = other.regions;
+		region = other.region;
+		touched = other.touched;
 		return *this;
 	}
 
@@ -88,17 +88,17 @@ struct Node {
 		addr = other.addr;
 		http_port = other.http_port;
 		binary_port = other.binary_port;
-		regions = other.regions.load();
-		region = other.region.load();
-		touched = other.touched.load();
+		regions = other.regions;
+		region = other.region;
+		touched = other.touched;
 		return *this;
 	}
 
 	void clear() {
 		name.clear();
 		id = 0;
-		regions.store(1);
-		region.store(0);
+		regions = 1;
+		region = 0;
 		memset(&addr, 0, sizeof(addr));
 		http_port = 0;
 		binary_port = 0;

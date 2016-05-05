@@ -39,7 +39,7 @@ Node::serialise() const
 		node_str.append(serialise_length(addr.sin_addr.s_addr));
 		node_str.append(serialise_length(http_port));
 		node_str.append(serialise_length(binary_port));
-		node_str.append(serialise_length(region.load()));
+		node_str.append(serialise_length(region));
 		node_str.append(serialise_string(name));
 	}
 	return node_str;
@@ -56,7 +56,7 @@ Node::unserialise(const char **p, const char *end)
 	node.addr.sin_addr.s_addr = static_cast<int>(unserialise_length(&ptr, end, false));
 	node.http_port = static_cast<int>(unserialise_length(&ptr, end, false));
 	node.binary_port = static_cast<int>(unserialise_length(&ptr, end, false));
-	node.region.store(static_cast<int>(unserialise_length(&ptr, end, false)));
+	node.region = static_cast<int>(unserialise_length(&ptr, end, false));
 
 	node.name = unserialise_string(&ptr, end);
 	if (node.name.empty()) {

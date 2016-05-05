@@ -106,7 +106,10 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 					} else {
 						L_DISCOVERY(this, "Node %s joining the party (1)...", remote_node.name.c_str());
 					}
-					local_node->regions.store(-1);
+					auto copy_node = new Node(*local_node_);
+					copy_node->regions = -1;
+					std::atomic_exchange(&local_node, std::shared_ptr<const Node>(copy_node));
+
 					XapiandManager::manager->get_region();
 				} else {
 					L_ERR(this, "ERROR: Cannot register remote node (1): %s", remote_node->name.c_str());
@@ -120,7 +123,10 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 			} else {
 				L_DISCOVERY(this, "Node %s joining the party (2)...", remote_node.name.c_str());
 			}
-			local_node->regions.store(-1);
+			auto node_copy = new Node(*local_node_);
+			node_copy->regions = -1;
+			std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node_copy));
+
 			XapiandManager::manager->get_region();
 		} else {
 			L_ERR(this, "ERROR: Cannot register remote node (2): %s", remote_node->name.c_str());
@@ -231,7 +237,9 @@ DiscoveryServer::bye(const std::string& message)
 
 	XapiandManager::manager->drop_node(remote_node.name);
 	L_INFO(this, "Node %s left the party!", remote_node.name.c_str());
-	local_node->regions.store(-1);
+	auto copy_node = new Node(*std::atomic_load(&local_node));
+	copy_node->regions = -1;
+	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(copy_node));
 	XapiandManager::manager->get_region();
 }
 
