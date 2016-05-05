@@ -115,7 +115,7 @@ Endpoint::Endpoint(const std::string &uri_, const Node* node_, long long mastery
 		path = "";
 	}
 	if (protocol == "file") {
-		auto local_node_ = local_node;
+		auto local_node_ = std::atomic_load(&local_node);
 		if (!node_) {
 			node_ = local_node_.get();
 		}

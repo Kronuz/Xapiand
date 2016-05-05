@@ -156,7 +156,8 @@ Raft::leader_election_timeout_cb(ev::timer&, int)
 		++term;
 		votes = 0;
 		votedFor.clear();
-		send_message(Message::REQUEST_VOTE, local_node->serialise() + serialise_length(term));
+		auto node = std::atomic_load(&local_node);
+		send_message(Message::REQUEST_VOTE, node->serialise() + serialise_length(term));
 	}
 
 	_reset_leader_election_timeout();
@@ -168,7 +169,8 @@ Raft::leader_election_timeout_cb(ev::timer&, int)
 void
 Raft::_reset_leader_election_timeout()
 {
-	number_servers = XapiandManager::manager->get_nodes_by_region(local_node->region) + 1;
+	auto node = std::atomic_load(&local_node);
+	number_servers = XapiandManager::manager->get_nodes_by_region(node->region) + 1;
 
 	leader_election_timeout.repeat = random_real(LEADER_ELECTION_MIN, LEADER_ELECTION_MAX);
 	leader_election_timeout.again();
@@ -188,7 +190,8 @@ Raft::leader_heartbeat_cb(ev::timer&, int)
 		return;
 	}
 
-	send_message(Message::HEARTBEAT_LEADER, local_node->serialise());
+	auto node = std::atomic_load(&local_node);
+	send_message(Message::HEARTBEAT_LEADER, node->serialise());
 
 	L_EV_END(this, "Raft::leader_heartbeat_cb:END");
 }
@@ -197,13 +200,14 @@ Raft::leader_heartbeat_cb(ev::timer&, int)
 void
 Raft::_start_leader_heartbeat()
 {
-	assert(leader == *local_node);
+	auto node = std::atomic_load(&local_node);
+	assert(leader == *node);
 
 	leader_heartbeat.repeat = random_real(HEARTBEAT_LEADER_MIN, HEARTBEAT_LEADER_MAX);
 	leader_heartbeat.again();
 	L_EV(this, "Restart raft's leader heartbeat event (%g)", leader_heartbeat.repeat);
 
-	send_message(Message::LEADER, local_node->serialise() +
+	send_message(Message::LEADER, node->serialise() +
 		serialise_length(number_servers) +
 		serialise_length(term));
 }

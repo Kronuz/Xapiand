@@ -69,7 +69,8 @@ Discovery::stop() {
 	heartbeat.stop();
 	L_EV(this, "Stop discovery's heartbeat event");
 
-	send_message(Message::BYE, local_node->serialise());
+	auto node = std::atomic_load(&local_node);
+	send_message(Message::BYE, node->serialise());
 
 	L_DISCOVERY(this, "Discovery was stopped!");
 }
@@ -85,7 +86,8 @@ Discovery::async_enter_cb(ev::async&, int)
 void
 Discovery::_enter()
 {
-	send_message(Message::ENTER, local_node->serialise());
+	auto node = std::atomic_load(&local_node);
+	send_message(Message::ENTER, node->serialise());
 
 	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
 	heartbeat.again();
@@ -109,8 +111,8 @@ Discovery::heartbeat_cb(ev::timer&, int)
 	switch (XapiandManager::manager->state.load()) {
 		case XapiandManager::State::RESET: {
 
-			Node* node = new Node(*local_node);
-			std::string drop = local_node->name;
+			Node* node = new Node(*std::atomic_load(&local_node));
+			std::string drop = node->name;
 
 			if (XapiandManager::manager->node_name.empty()) {
 				node->name = name_generator();
@@ -123,8 +125,8 @@ Discovery::heartbeat_cb(ev::timer&, int)
 				XapiandManager::manager->drop_node(drop);
 			}
 
-			L_INFO(this, "Advertising as %s (id: %016llX)...", local_node->name.c_str(), local_node->id);
-			send_message(Message::HELLO, local_node->serialise());
+			L_INFO(this, "Advertising as %s (id: %016llX)...", node->name.c_str(), node->id);
+			send_message(Message::HELLO, node->serialise());
 			XapiandManager::manager->state.store(XapiandManager::State::WAITING);
 			break;
 		}
@@ -142,8 +144,11 @@ Discovery::heartbeat_cb(ev::timer&, int)
 			break;
 
 		case XapiandManager::State::READY:
-			send_message(Message::HEARTBEAT, local_node->serialise());
+		{
+			auto node = std::atomic_load(&local_node);
+			send_message(Message::HEARTBEAT, node->serialise());
 			break;
+		}
 
 		case XapiandManager::State::BAD:
 			L_ERR(this, "ERROR: Manager is in BAD state!!");

@@ -90,11 +90,12 @@ void
 XapiandReplicator::on_commit(const Endpoint &endpoint)
 {
 	if (auto discovery = XapiandManager::manager->weak_discovery.lock()) {
+		auto node = std::atomic_load(&local_node);
 		discovery->send_message(
         	Discovery::Message::DB_UPDATED,
 			serialise_length(endpoint.mastery_level) +  // The mastery level of the database
 			serialise_string(endpoint.path) +  // The path of the index
-			local_node->serialise()   // The node where the index is at
+			node->serialise()   // The node where the index is at
 		);
 	}
 }

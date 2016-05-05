@@ -175,9 +175,10 @@ public:
 	Endpoint(const std::string &path_, const Node* node_=nullptr, long long mastery_level_=-1, const std::string& node_name="");
 
 	bool is_local() const {
-		int binary_port = local_node->binary_port;
+		auto node = std::atomic_load(&local_node);
+		int binary_port = node->binary_port;
 		if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
-		return (host == local_node->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
+		return (host == node->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
 	}
 
 	size_t hash() const;

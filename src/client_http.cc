@@ -698,7 +698,9 @@ HttpClient::home_view()
 	endpoints_maker(1s);
 
 	db_handler.reset(endpoints, DB_SPAWN);
-	auto document = db_handler.get_document(std::to_string(local_node->id));
+	
+	auto node = std::atomic_load(&local_node);
+	auto document = db_handler.get_document(std::to_string(node->id));
 
 	auto obj_data = get_MsgPack(document);
 	try {
@@ -1283,14 +1285,15 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		node_name = path_parser.get_hst();
 		has_node_name = true;
 	} else {
+		auto node = std::atomic_load(&local_node);
 		size_t num_endps = 1;
 		if (XapiandManager::manager->is_single_node()) {
 			has_node_name = true;
-			node_name = local_node->name;
+			node_name = node->name;
 		} else {
 			if (!XapiandManager::manager->resolve_index_endpoint(asked_node.path, asked_nodes, num_endps, timeout)) {
 				has_node_name = true;
-				node_name = local_node->name;
+				node_name = node->name;
 			}
 		}
 	}

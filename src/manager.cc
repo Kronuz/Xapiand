@@ -86,7 +86,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 
 {
 	// Set the id in local node.
-	auto node = new Node(*local_node);
+	auto node = new Node(*std::atomic_load(&local_node));
 	node->id = get_node_id();
 
 	if (node->empty()) {
@@ -237,7 +237,7 @@ XapiandManager::set_node_id(uint64_t node_id_, std::unique_lock<std::mutex>& lk)
 		}
 	}
 
-	auto node = new Node(*local_node);
+	auto node = new Node(*std::atomic_load(&local_node));
 	node->id = get_node_id();
 	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
 
@@ -271,6 +271,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	Endpoints cluster_endpoints(Endpoint("."));
 
 	DatabaseHandler db_handler;
+	auto node = std::atomic_load(&local_node);
 	try {
 		db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
 		db_handler.checkout();
@@ -281,23 +282,23 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 			MsgPack obj = {
-				{ "name", local_node->name },
+				{ "name", node->name },
 				{ "tagline", XAPIAND_TAGLINE }
 			};
-			db_handler.index(obj, std::to_string(local_node->id), true, MSGPACK_TYPE, std::string());
+			db_handler.index(obj, std::to_string(node->id), true, MSGPACK_TYPE, std::string());
 		} catch (const CheckoutError&) {
 			L_CRIT(this, "Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
 		}
 	}
 	try {
-		db_handler.get_document(std::to_string(local_node->id));
+		db_handler.get_document(std::to_string(node->id));
 	} catch (const DocNotFoundError&) {
 		throw MSG_Error("Cluster database is corrupt");
 	}
 
 	// Set node as ready!
-	set_node_name(local_node->name, lk);
+	set_node_name(node->name, lk);
 
 	// Get a node (any node)
 	std::unique_lock<std::mutex> lk_n(nodes_mtx);
@@ -684,9 +685,11 @@ bool
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
+	auto local_node_ = new Node(*std::atomic_load(&local_node));
 	std::string lower_node_name(lower_string(node->name));
-	if (lower_node_name == lower_string(local_node->name)) {
-		local_node->touched = epoch::now<>();
+	if (lower_node_name == lower_string(local_node_->name)) {
+		local_node_->touched = epoch::now<>();
+		std::atomic_exchange(&local_node, std::shared_ptr<const Node>(local_node_));
 		return false;
 	} else {
 		try {
@@ -723,11 +726,13 @@ XapiandManager::touch_node(const std::string& node_name, int32_t region)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string lower_node_name(lower_string(node_name));
-	if (lower_node_name == lower_string(local_node->name)) {
-		local_node->touched = epoch::now<>();
+	auto local_node_ = new Node(*std::atomic_load(&local_node));
+	if (lower_node_name == lower_string(local_node_->name)) {
+		local_node_->touched = epoch::now<>();
 		if (region != UNKNOWN_REGION) {
-			local_node->region.store(region);
+			local_node_->region.store(region);
 		}
+		std::atomic_exchange(&local_node, std::shared_ptr<const Node>(local_node_));
 		return local_node;
 	} else {
 		try {
@@ -769,6 +774,7 @@ XapiandManager::get_nodes_by_region(int32_t region)
 int32_t
 XapiandManager::get_region(const std::string& db_name)
 {
+	// FIXME: Remove atomic regions and do de access through atomic_load
 	if (local_node->regions.load() == -1) {
 		local_node->regions.store(sqrt(nodes.size()));
 	}
