@@ -59,7 +59,7 @@ public:
 	}
 
 	std::shared_ptr<Schema> get_schema() {
-		return schema;
+		return std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 	}
 
 	void checkout() {
