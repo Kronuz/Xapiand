@@ -37,8 +37,8 @@ using SpiesVector = std::vector<std::pair<std::string, std::unique_ptr<MultiValu
 
 class DatabaseHandler {
 	Endpoints endpoints;
-	Schema* schema;
 	int flags;
+	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
 	void _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
@@ -54,11 +54,11 @@ public:
 	DatabaseHandler(const Endpoints &endpoints_, int flags_=0);
 	~DatabaseHandler();
 
-	std::shared_ptr<Database>& get() {
+	std::shared_ptr<Database> get_database() {
 		return database;
 	}
 
-	Schema* get_schema() {
+	std::shared_ptr<Schema> get_schema() {
 		return schema;
 	}
 
@@ -82,7 +82,6 @@ public:
 
 		endpoints = endpoints_;
 		flags = flags_;
-		schema = new Schema(*XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
 		if (database) {
 			checkin();
@@ -103,6 +102,13 @@ public:
 		auto doc = database->get_document(did);
 		checkin();
 		return doc;
+	}
+
+	void update_schema() {
+		auto mod_schema = schema->get_modified_schema();
+		if (mod_schema) {
+			XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, mod_schema);
+		}
 	}
 
 	Xapian::Document get_document(const std::string& doc_id);

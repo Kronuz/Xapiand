@@ -35,8 +35,7 @@ static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]
 
 
 DatabaseHandler::DatabaseHandler()
-	: schema(nullptr),
-	  flags(0) { }
+	: flags(0) { }
 
 
 DatabaseHandler::DatabaseHandler(const Endpoints &endpoints_, int flags_)
@@ -57,11 +56,10 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 {
 	L_CALL(this, "DatabaseHandler::_index()");
 
-	auto& properties = schema->getPropertiesSchema();
-	specification_t specification;
+	const auto& properties = schema->getProperties();
 
 	// Index Required Data.
-	term_id = schema->serialise_id(properties, specification, _document_id);
+	term_id = schema->serialise_id(properties, _document_id);
 
 	auto found = ct_type.find_last_of("/");
 	std::string type(ct_type.c_str(), found);
@@ -87,49 +85,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
 
 	// Index obj.
-	// Save a copy of schema for undo changes if there is a exception.
-	const auto _schema = schema->get_schema();
-	const auto _to_store = schema->get_store();
-
-	try {
-		Schema::data_t schema_data(doc);
-		TaskVector tasks;
-		tasks.reserve(obj.size());
-		for (const auto& item_key : obj) {
-			const auto str_key = item_key.as_string();
-			try {
-				auto func = map_dispatch_reserved.at(str_key);
-				(schema->*func)(properties, obj.at(str_key), schema_data.specification);
-			} catch (const std::out_of_range&) {
-				if (is_valid(str_key)) {
-					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, schema, std::ref(properties), std::ref(obj.at(str_key)), std::ref(schema_data), std::move(str_key)));
-				} else {
-					try {
-						auto func = map_dispatch_root.at(str_key);
-						tasks.push_back(std::async(std::launch::deferred, func, schema, std::ref(properties), std::ref(obj.at(str_key)), std::ref(schema_data)));
-					} catch (const std::out_of_range&) { }
-				}
-			}
-		}
-
-		schema->restart_specification(schema_data.specification);
-		const specification_t spc_start = schema_data.specification;
-		for (auto& task : tasks) {
-			task.get();
-			schema_data.specification = spc_start;
-		}
-
-		for (const auto& elem : schema_data.map_values) {
-			doc.add_value(elem.first, elem.second.serialise());
-		}
-	} catch (...) {
-		// Back to the initial schema if there are changes.
-		if (schema->get_store()) {
-			schema->set_schema(_schema);
-			schema->set_store(_to_store);
-		}
-		throw;
-	}
+	schema->index(properties, obj, doc);
 }
 
 
@@ -174,6 +130,8 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 	Xapian::Document doc;
 	std::string term_id;
 
+	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+
 	if (obj.is_map()) {
 		blob = false;
 		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
@@ -186,10 +144,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 	auto did = database->replace_document_term(term_id, doc, commit_);
 	checkin();
 
-	if (schema->get_store()) {
-		schema->set_store(false);
-		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema));
-	}
+	update_schema();
 
 	return did;
 }
@@ -204,6 +159,8 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 	Xapian::Document doc;
 	std::string term_id;
 
+	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+
 	if (obj.is_map()) {
 		_index(doc, obj, term_id, _document_id, ct_type, ct_length);
 	}
@@ -215,10 +172,7 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 	auto did = database->replace_document_term(term_id, doc, commit_);
 	checkin();
 
-	if (schema->get_store()) {
-		schema->set_store(false);
-		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema));
-	}
+	update_schema();
 
 	return did;
 }
@@ -281,10 +235,7 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 	auto did = database->replace_document_term(term_id, doc, commit_);
 	checkin();
 
-	if (schema->get_store()) {
-		schema->set_store(false);
-		XapiandManager::manager->database_pool.set_schema(endpoints[0], flags, std::shared_ptr<const Schema>(schema));
-	}
+	update_schema();
 
 	return did;
 }
@@ -710,6 +661,8 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVecto
 {
 	L_CALL(this, "DatabaseHandler::get_mset()");
 
+	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+
 	// Get the collapse key to use for queries.
 	Xapian::valueno collapse_key;
 	if (e.collapse.empty()) {
@@ -777,6 +730,8 @@ DatabaseHandler::get_document(const std::string& doc_id)
 {
 	L_CALL(this, "DatabaseHandler::get_document(2)");
 
+	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
+
 	auto field_t = schema->get_slot_field(RESERVED_ID);
 
 	Xapian::Query query(prefixed(Serialise::serialise(field_t.type, doc_id), DOCUMENT_ID_TERM_PREFIX));
@@ -817,6 +772,8 @@ Xapian::docid
 DatabaseHandler::get_docid(const std::string& doc_id)
 {
 	L_CALL(this, "DatabaseHandler::get_docid()");
+
+	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
 	auto field_t = schema->get_slot_field(RESERVED_ID);
 
@@ -871,6 +828,8 @@ MsgPack
 DatabaseHandler::get_value(const Xapian::Document& document, const std::string& slot_name)
 {
 	L_CALL(this, "DatabaseHandler::get_value()");
+
+	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
 	auto slot_field = schema->get_slot_field(slot_name);
 
