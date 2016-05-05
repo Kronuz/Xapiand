@@ -298,7 +298,7 @@ public:
 };
 
 
-class SchemaLRU: public lru::LRU<size_t, std::shared_ptr<const Schema>> {
+class SchemaLRU: public lru::LRU<size_t, std::shared_ptr<const MsgPack>> {
 public:
 	SchemaLRU(ssize_t max_size=-1);
 };
@@ -339,8 +339,8 @@ public:
 
 	void finish();
 
-	std::shared_ptr<const Schema> get_schema(const Endpoint& endpoint, int flags=-1);
-	void set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const Schema> new_schema);
+	std::shared_ptr<const MsgPack> get_schema(const Endpoint& endpoint, int flags=-1);
+	void set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack> new_schema);
 
 	template<typename F, typename... Args>
 	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args) {
