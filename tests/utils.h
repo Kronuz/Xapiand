@@ -110,10 +110,11 @@ struct DB_Test {
 
 		endpoints.add(create_endpoint(name_database));
 
+		db_handler.reset(endpoints, flags);
+
 		// Index documents in the database.
 		size_t i = 1;
 		for (const auto& doc : docs) {
-			db_handler.reset(endpoints, flags);
 			std::string buffer;
 			if (!read_file_contents(doc, &buffer)) {
 				delete_files(name_database);
@@ -123,7 +124,6 @@ struct DB_Test {
 				throw MSG_Error("File %s can not index", doc.c_str());
 			}
 		}
-		db_handler.reset(endpoints, flags);
 	}
 
 	~DB_Test() {
