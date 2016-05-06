@@ -94,7 +94,8 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 		region = remote_node->region;
 	}
 
-	std::shared_ptr<const Node> node = XapiandManager::manager->touch_node(remote_node->name, region);
+	std::shared_ptr<const Node> node_ = XapiandManager::manager->touch_node(remote_node->name, region);
+	auto node = std::atomic_load(&node_);
 	if (node) {
 		if (*remote_node != *node && remote_node->name != local_node_->name) {
 			if (heartbeat || node->touched < epoch::now<>() - HEARTBEAT_MAX) {

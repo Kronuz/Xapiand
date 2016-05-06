@@ -125,8 +125,9 @@ Discovery::heartbeat_cb(ev::timer&, int)
 				XapiandManager::manager->drop_node(drop);
 			}
 
-			L_INFO(this, "Advertising as %s (id: %016llX)...", node->name.c_str(), node->id);
-			send_message(Message::HELLO, node->serialise());
+			auto local_node_ = std::atomic_load(&local_node);
+			L_INFO(this, "Advertising as %s (id: %016llX)...", local_node_->name.c_str(), local_node_->id);
+			send_message(Message::HELLO, local_node_->serialise());
 			XapiandManager::manager->state.store(XapiandManager::State::WAITING);
 			break;
 		}
