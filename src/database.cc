@@ -1675,7 +1675,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 		}
 	}
 
-	return *schema;
+	return std::atomic_load(schema);
 }
 
 
