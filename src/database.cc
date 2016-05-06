@@ -1694,7 +1694,7 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 
 	std::shared_ptr<Database> database;
 	if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-		database->set_metadata(RESERVED_SCHEMA, (*schema)->serialise());
+		database->set_metadata(RESERVED_SCHEMA, std::atomic_load(schema)->serialise());
 		checkin(database);
 	} else {
 		throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.as_string().c_str());
