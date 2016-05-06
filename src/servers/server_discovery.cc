@@ -124,9 +124,9 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 			} else {
 				L_DISCOVERY(this, "Node %s joining the party (2)...", remote_node.name.c_str());
 			}
-			auto node_copy = new Node(*local_node_);
-			node_copy->regions = -1;
-			std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node_copy));
+			auto copy_node = new Node(*local_node_);
+			copy_node->regions = -1;
+			std::atomic_exchange(&local_node, std::shared_ptr<const Node>(copy_node));
 
 			XapiandManager::manager->get_region();
 		} else {
