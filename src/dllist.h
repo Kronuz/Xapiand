@@ -83,12 +83,12 @@ class DLList {
 		explicit _iterator(std::shared_ptr<I> p_) : p(p_), r(R) { }
 
 		_iterator& operator++() {
-			p = std::atomic_load(&(r ? p->prev : p->next));
+			std::atomic_store(&p, std::atomic_load(&(r ? p->prev : p->next)));
 			return *this;
 		}
 
 		_iterator& operator--() {
-			p = std::atomic_load(&(r ? p->next : p->prev));
+			std::atomic_store(&p, std::atomic_load(&(r ? p->next : p->prev)));
 			return *this;
 		}
 
@@ -105,7 +105,7 @@ class DLList {
 		}
 
 		bool operator==(const _iterator& other) const {
-			return p == other.p;
+			return std::atomic_load(&p) == std::atomic_load(&other.p);
 		}
 
 		bool operator!=(const _iterator& other) const {
@@ -167,7 +167,7 @@ public:
 	void push_front(V&& val) {
 		auto node = std::make_shared<Node>(std::forward<V>(val));
 		lk.lock();
-		_insert(head->next, node);
+		_insert(std::atomic_load(&head->next), node);
 		lk.unlock();
 	}
 
@@ -175,7 +175,7 @@ public:
 	void emplace_front(Args&&... args) {
 		auto node = std::make_shared<Node>(std::forward<Args>(args)...);
 		lk.lock();
-		_insert(head->next, node);
+		_insert(std::atomic_load(&head->next), node);
 		lk.unlock();
 	}
 
@@ -225,20 +225,20 @@ public:
 
 	auto pop_front() {
 		std::lock_guard<spinLock> lock(lk);
-		_erase(head->next);
+		_erase(std::atomic_load(&head->next));
 	}
 
 	auto pop_back() {
 		std::lock_guard<spinLock> lock(lk);
-		_erase(tail->prev);
+		_erase(std::atomic_load(&tail->prev));
 	}
 
 	auto erase(iterator it) {
 		std::lock_guard<spinLock> lock(lk);
-		if (it.p->deleted) {
+		if (std::atomic_load(&it.p)->deleted) {
 			return ++it;
 		}
-		return iterator(_erase(it.p));
+		return iterator(_erase(std::atomic_load(&it.p)));
 	}
 
 	auto size() const noexcept {
