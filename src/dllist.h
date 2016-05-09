@@ -113,11 +113,11 @@ class DLList {
 		}
 
 		TT& operator*() {
-			return p->val;
+			return std::atomic_load(&p)->val;
 		}
 
 		TT* operator->(){
-			return &p->val;
+			return &std::atomic_load(&p)->val;
 		}
 	};
 
@@ -142,7 +142,7 @@ public:
 
 private:
 	void _insert(std::shared_ptr<Node> p, std::shared_ptr<Node>& node) {
-		node->next = p;
+		node->next = std::atomic_load(&p);
 		node->prev = std::atomic_load(&p->prev);
 		std::atomic_store(&p->prev->next, node);
 		std::atomic_store(&p->prev, node);
@@ -157,7 +157,7 @@ private:
 		auto prev = std::atomic_load(&p->prev);
 		std::atomic_store(&prev->next, next);
 		std::atomic_store(&next->prev, prev);
-		p->deleted = true;
+		std::atomic_load(&p)->deleted = true;
 		--_size;
 		return next;
 	}
@@ -199,28 +199,28 @@ public:
 		if (_size.load() == 0) {
 			throw std::out_of_range("Empty");
 		}
-		return std::atomic_load(&head->next->val);
+		return std::atomic_load(&head->next)->val;
 	}
 
 	const T& front() const {
 		if (_size.load() == 0) {
 			throw std::out_of_range("Empty");
 		}
-		return std::atomic_load(&head->next->val);
+		return std::atomic_load(&head->next)->val;
 	}
 
 	T& back() {
 		if (_size.load() == 0) {
 			throw std::out_of_range("Empty");
 		}
-		return std::atomic_load(&tail->prev->val);
+		return std::atomic_load(&tail->prev)->val;
 	}
 
 	const T& back() const {
 		if (_size.load() == 0) {
 			throw std::out_of_range("Empty");
 		}
-		return std::atomic_load(&tail->prev->val);
+		return std::atomic_load(&tail->prev)->val;
 	}
 
 	auto pop_front() {
@@ -247,7 +247,7 @@ public:
 
 	auto clear() noexcept {
 		std::lock_guard<spinLock> lock(lk);
-		auto cur = head->next;
+		auto cur = std::atomic_load(&head->next);
 		while (cur != tail) {
 			cur = _erase(cur);
 		}
