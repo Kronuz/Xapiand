@@ -33,7 +33,7 @@
  */
 
 
-template<class T>
+template <class T>
 class DLList {
 	class spinLock {
 		std::atomic_flag _flag;
@@ -105,7 +105,7 @@ class DLList {
 		}
 
 		bool operator==(const _iterator& other) const {
-			return std::atomic_load(&p) == std::atomic_load(&other.p);
+			return p == other.p;
 		}
 
 		bool operator!=(const _iterator& other) const {
