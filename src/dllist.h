@@ -83,12 +83,12 @@ class DLList {
 		explicit _iterator(std::shared_ptr<I> p_) : p(p_), r(R) { }
 
 		_iterator& operator++() {
-			std::atomic_store(&p, std::atomic_load(&(r ? p->prev : p->next)));
+			p = std::atomic_load(&(r ? p->prev : p->next));
 			return *this;
 		}
 
 		_iterator& operator--() {
-			std::atomic_store(&p, std::atomic_load(&(r ? p->next : p->prev)));
+			p = std::atomic_load(&(r ? p->next : p->prev));
 			return *this;
 		}
 
@@ -116,9 +116,22 @@ class DLList {
 			return std::atomic_load(&p)->val;
 		}
 
-		TT* operator->(){
+		TT* operator->() {
 			return &std::atomic_load(&p)->val;
 		}
+	};
+
+	template <typename TT, typename I>
+	class _reference {
+		std::shared_ptr<I> p;
+
+		friend DLList;
+
+	public:
+		explicit _reference(std::shared_ptr<I> p_) : p(p_) { }
+
+		TT& operator*(){ return p->val; }
+		TT* operator->(){ return &p->val; }
 	};
 
 public:
@@ -126,6 +139,9 @@ public:
 	using const_iterator = _iterator<const T, const Node, false>;
 	using reverse_iterator = _iterator<T, Node, true>;
 	using const_reverse_iterator = _iterator<const T, const Node, true>;
+
+	using reference = _reference<T, Node>;
+	using const_reference = _reference<const T, Node>;
 
 	DLList() : head(std::make_shared<Node>()), tail(std::make_shared<Node>()), _size(0) {
 		head->next = tail;
@@ -142,8 +158,8 @@ public:
 
 private:
 	void _insert(std::shared_ptr<Node> p, std::shared_ptr<Node>& node) {
-		node->next = std::atomic_load(&p);
-		node->prev = std::atomic_load(&p->prev);
+		node->next = p;
+		node->prev = p->prev;
 		std::atomic_store(&p->prev->next, node);
 		std::atomic_store(&p->prev, node);
 		++_size;
@@ -153,92 +169,91 @@ private:
 		if (_size.load() == 0) {
 			throw std::out_of_range("Empty");
 		}
-		auto next = std::atomic_load(&p->next);
-		auto prev = std::atomic_load(&p->prev);
-		std::atomic_store(&prev->next, next);
-		std::atomic_store(&next->prev, prev);
-		std::atomic_load(&p)->deleted = true;
+		std::atomic_store(&p->prev->next, p->next);
+		std::atomic_store(&p->next->prev, p->prev);
+		p->deleted = true;
 		--_size;
-		return next;
+		return p->prev->next;
 	}
 
 public:
 	template <typename V>
 	void push_front(V&& val) {
 		auto node = std::make_shared<Node>(std::forward<V>(val));
-		lk.lock();
-		_insert(std::atomic_load(&head->next), node);
-		lk.unlock();
+		std::lock_guard<spinLock> lock(lk);
+		_insert(head->next, node);
 	}
 
 	template <typename... Args>
 	void emplace_front(Args&&... args) {
 		auto node = std::make_shared<Node>(std::forward<Args>(args)...);
-		lk.lock();
-		_insert(std::atomic_load(&head->next), node);
-		lk.unlock();
+		std::lock_guard<spinLock> lock(lk);
+		_insert(head->next, node);
 	}
 
 	template <typename V>
 	void push_back(V&& val) {
 		auto node = std::make_shared<Node>(std::forward<V>(val));
-		lk.lock();
+		std::lock_guard<spinLock> lock(lk);
 		_insert(tail, node);
-		lk.unlock();
 	}
 
 	template <typename... Args>
 	void emplace_back(Args&&... args) {
 		auto node = std::make_shared<Node>(std::forward<Args>(args)...);
-		lk.lock();
+		std::lock_guard<spinLock> lock(lk);
 		_insert(tail, node);
-		lk.unlock();
 	}
 
-	T& front() {
+	auto front() {
 		if (_size.load() == 0) {
 			throw std::out_of_range("Empty");
 		}
-		return std::atomic_load(&head->next)->val;
+		return reference(std::atomic_load(&head->next));
 	}
 
-	const T& front() const {
+	auto front() const {
 		if (_size.load() == 0) {
 			throw std::out_of_range("Empty");
 		}
-		return std::atomic_load(&head->next)->val;
+		return const_reference(std::atomic_load(&head->next));
 	}
 
-	T& back() {
+	auto back() {
 		if (_size.load() == 0) {
 			throw std::out_of_range("Empty");
 		}
-		return std::atomic_load(&tail->prev)->val;
+		return reference(std::atomic_load(&tail->prev));
 	}
 
-	const T& back() const {
+	auto back() const {
 		if (_size.load() == 0) {
 			throw std::out_of_range("Empty");
 		}
-		return std::atomic_load(&tail->prev)->val;
+		return const_reference(std::atomic_load(&tail->prev));
 	}
 
 	auto pop_front() {
 		std::lock_guard<spinLock> lock(lk);
-		_erase(std::atomic_load(&head->next));
+		auto p = head->next;
+		_erase(p);
+		return reference(p);
 	}
 
 	auto pop_back() {
 		std::lock_guard<spinLock> lock(lk);
-		_erase(std::atomic_load(&tail->prev));
+		auto p = tail->prev;
+		_erase(p);
+		return reference(p);
 	}
 
 	auto erase(iterator it) {
 		std::lock_guard<spinLock> lock(lk);
-		if (std::atomic_load(&it.p)->deleted) {
+		auto p = it.p;
+		if (it.p->deleted) {
 			return ++it;
 		}
-		return iterator(_erase(std::atomic_load(&it.p)));
+		return iterator(_erase(p));
 	}
 
 	auto size() const noexcept {
@@ -246,11 +261,11 @@ public:
 	}
 
 	auto clear() noexcept {
-		std::lock_guard<spinLock> lock(lk);
-		auto cur = std::atomic_load(&head->next);
-		while (cur != tail) {
-			cur = _erase(cur);
-		}
+		try {
+			do {
+				pop_front();
+			} while (true);
+		} catch (const std::out_of_range&) { }
 	}
 
 	auto begin() {
