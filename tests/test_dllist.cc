@@ -322,21 +322,25 @@ int test_multi_push_pop_front() {
 	DLList<std::string> l;
 
 	std::vector<std::thread> producers;
-	for (int i = 0; i < 20; ++i) {
+	for (int i = 0; i < 50; ++i) {
 		producers.emplace_back([&l](const std::string& val) {
-			l.push_front(val);
-			l.emplace_front(val);
+			for (int j = 0; j < 100; ++j) {
+				l.push_front(val);
+				l.emplace_front(val);
+			}
 		}, std::to_string(i));
 	}
 
-	std::atomic_size_t fail_pop(40);
+	std::atomic_size_t fail_pop(10000);
 	std::vector<std::thread> consumers;
-	for (int i = 0; i < 20; ++i) {
+	for (int i = 0; i < 50; ++i) {
 		consumers.emplace_back([&l, &fail_pop]() {
-			try {
-				l.pop_front();
-				--fail_pop;
-			} catch (const std::out_of_range&) { }
+			for (int j = 0; j < 100; ++j) {
+				try {
+					l.pop_front();
+					--fail_pop;
+				} catch (const std::out_of_range&) { }
+			}
 		});
 	}
 
@@ -358,21 +362,25 @@ int test_multi_push_pop_back() {
 	DLList<std::string> l;
 
 	std::vector<std::thread> producers;
-	for (int i = 0; i < 20; ++i) {
+	for (int i = 0; i < 50; ++i) {
 		producers.emplace_back([&l](const std::string& val) {
-			l.push_back(val);
-			l.emplace_back(val);
+			for (int j = 0; j < 100; ++j) {
+				l.push_back(val);
+				l.emplace_back(val);
+			}
 		}, std::to_string(i));
 	}
 
-	std::atomic_size_t fail_pop(40);
+	std::atomic_size_t fail_pop(10000);
 	std::vector<std::thread> consumers;
-	for (int i = 0; i < 20; ++i) {
+	for (int i = 0; i < 50; ++i) {
 		consumers.emplace_back([&l, &fail_pop]() {
-			try {
-				l.pop_back();
-				--fail_pop;
-			} catch (const std::out_of_range&) { }
+			for (int j = 0; j < 100; ++j) {
+				try {
+					l.pop_back();
+					--fail_pop;
+				} catch (const std::out_of_range&) { }
+			}
 		});
 	}
 
@@ -394,20 +402,22 @@ int test_multi_erases() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
-	for (int i = 0; i < 20; ++i) {
+	for (int i = 0; i < 50; ++i) {
 		producers.emplace_back([&l](int val) {
 			auto v = 2 * val;
-			l.push_back(v);
-			l.push_back(v + 1);
+			for (int j = 0; j < 20; ++j) {
+				l.push_back(v);
+				l.push_back(v + 1);
+			}
 		}, i);
 	}
 
 	std::vector<std::thread> consumers;
-	for (int i = 0; i < 10; ++i) {
+	for (int i = 0; i < 50; ++i) {
 		consumers.emplace_back([&l]() {
 			try {
 				auto it = l.begin();
-				for (auto it = l.begin(); it != l.end();) {
+				for (auto it = l.begin(); it != l.end(); ) {
 					if (*it % 2 == 0) {
 						it = l.erase(it);
 					} else {
@@ -426,9 +436,7 @@ int test_multi_erases() {
 		producer.join();
 	}
 
-	for (const auto& val : l) {
-		L_ERR(nullptr, "%d\n", val);
-	}
+	L_ERR(nullptr, "Size List: %zu\n", l.size());
 
-	RETURN(l.size() < 20);
+	RETURN(l.size() < 1000);
 }
