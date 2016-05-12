@@ -65,14 +65,14 @@ public:
 	const_iterator cend() const;
 
 private:
-	MsgPack(const std::shared_ptr<Body>& b, bool init=true);
-	MsgPack(std::shared_ptr<Body>&& b, bool init=true);
+	MsgPack(const std::shared_ptr<Body>& b);
+	MsgPack(std::shared_ptr<Body>&& b);
 
 	void _initializer_array(const std::initializer_list<MsgPack>& list);
 	void _initializer_map(const std::initializer_list<MsgPack>& list);
 	void _initializer(const std::initializer_list<MsgPack>& list);
 
-	void _assigment(const msgpack::object& obj);
+	void _assignment(const msgpack::object& obj);
 
 public:
 	MsgPack();
@@ -98,6 +98,7 @@ private:
 	void _update_array(size_t pos) const;
 
 	void _init() const;
+	void _deinit() const;
 
 	void _reserve_map(size_t rsize);
 	void _reserve_array(size_t rsize);
@@ -128,9 +129,10 @@ private:
 	template <typename T>
 	MsgPack::iterator _insert(size_t pos, T&& val);
 
-public:
+	void _fill(bool recursive) const;
 
-	void init() const;
+public:
+	void fill();
 
 	MsgPack& path(const std::vector<std::string>& path);
 	const MsgPack& path(const std::vector<std::string>& path) const;
@@ -184,7 +186,8 @@ public:
 	iterator find(size_t pos);
 	const_iterator find(size_t pos) const;
 
-	size_t count(const MsgPack& o) const;
+	template <typename T>
+	size_t count(T&& v) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	size_t erase(const M& o);
@@ -313,8 +316,7 @@ struct MsgPack::Body {
 	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>> map;
 	std::vector<MsgPack> array;
 
-	ssize_t _capacity;
-	bool _full_init;
+	bool _initialized;
 
 	const std::shared_ptr<msgpack::zone> _zone;
 	const std::shared_ptr<msgpack::object> _base;
@@ -323,6 +325,7 @@ struct MsgPack::Body {
 	size_t _pos;
 	MsgPack _key;
 	msgpack::object* _obj;
+	ssize_t _capacity;
 
 	const MsgPack _nil;
 
@@ -333,79 +336,73 @@ struct MsgPack::Body {
 		 size_t pos,
 		 const std::shared_ptr<Body>& key,
 		 msgpack::object* obj
-		) : _capacity(-1),
-			_full_init(false),
+		) : _initialized(false),
 			_zone(zone),
 			_base(base),
-			_parent(parent, false),
+			_parent(parent),
 			_is_key(is_key),
 			_pos(pos),
-			_key(key, false),
+			_key(key),
 			_obj(obj),
-			_nil(std::make_shared<Body>(_zone, _base, _parent._body, nullptr), false) { }  // FIXME: _parent._body here should be shared_from_this()
+			_capacity(size()),
+			_nil(std::make_shared<Body>(_zone, _base, _parent._body, nullptr)) { }  // FIXME: _parent._body here should be shared_from_this()
 
 	Body(const std::shared_ptr<msgpack::zone>& zone,
 		 const std::shared_ptr<msgpack::object>& base,
 		 const std::shared_ptr<Body>& parent,
 		 msgpack::object* obj
-		) : _capacity(-1),
-			_full_init(false),
+		) : _initialized(false),
 			_zone(zone),
 			_base(base),
-			_parent(parent, false),
+			_parent(parent),
 			_is_key(false),
 			_pos(-1),
-			_key(std::shared_ptr<Body>(), false),
+			_key(std::shared_ptr<Body>()),
 			_obj(obj),
-			_nil(std::shared_ptr<Body>(), false) { }  // FIXME: _parent._body here should be shared_from_this()
+			_capacity(size()),
+			_nil(std::shared_ptr<Body>()) { }  // FIXME: _parent._body here should be shared_from_this()
 
 	template <typename T>
 	Body(T&& v)
-		: _capacity(-1),
-		  _full_init(false),
+		: _initialized(false),
 		  _zone(std::make_shared<msgpack::zone>()),
 		  _base(std::make_shared<msgpack::object>(std::forward<T>(v), *_zone)),
-		  _parent(std::shared_ptr<Body>(), false),
+		  _parent(std::shared_ptr<Body>()),
 		  _is_key(false),
 		  _pos(-1),
-		  _key(std::shared_ptr<Body>(), false),
+		  _key(std::shared_ptr<Body>()),
 		  _obj(_base.get()),
-		  _nil(std::make_shared<Body>(_zone, _base, _parent._body, nullptr), false) { }  // FIXME: _parent._body here should be shared_from_this()
+		  _capacity(size()),
+		  _nil(std::make_shared<Body>(_zone, _base, _parent._body, nullptr)) { }  // FIXME: _parent._body here should be shared_from_this()
 
 	MsgPack& at(size_t pos) {
-		auto& o = array.at(pos);
-		if (!_full_init) {
-			o._init();
-		}
-
-		return o;
+		return array.at(pos);
 	}
 
 	const MsgPack& at(size_t pos) const {
-		auto& o = array.at(pos);
-		if (!_full_init) {
-			o._init();
-		}
-
-		return o;
+		return array.at(pos);
 	}
 
 	MsgPack& at(const std::string& key) {
-		auto& o = map.at(key).second;
-		if (!o._body->_full_init) {
-			o._init();
-		}
-
-		return o;
+		return map.at(key).second;
 	}
 
 	const MsgPack& at(const std::string& key) const {
-		auto& o = map.at(key).second;
-		if (!o._body->_full_init) {
-			o._init();
-		}
+		return map.at(key).second;
+	}
 
-		return o;
+	size_t size() const noexcept {
+		if (!_obj) return 0;
+		switch (_obj->type) {
+			case msgpack::type::MAP:
+				return _obj->via.map.size;
+			case msgpack::type::ARRAY:
+				return _obj->via.array.size;
+			case msgpack::type::STR:
+				return _obj->via.str.size;
+			default:
+				return 0;
+		}
 	}
 };
 
@@ -440,25 +437,17 @@ inline MsgPack::const_iterator MsgPack::cend() const {
 }
 
 
-inline MsgPack::MsgPack(const std::shared_ptr<MsgPack::Body>& b, bool init_flag) : _body(b) {
-	if (init_flag) {
-		init();
-	}
-}
+inline MsgPack::MsgPack(const std::shared_ptr<MsgPack::Body>& b) : _body(b) { }
 
 
-inline MsgPack::MsgPack(std::shared_ptr<MsgPack::Body>&& b, bool init_flag) : _body(std::move(b)) {
-	if (init_flag) {
-		init();
-	}
-}
+inline MsgPack::MsgPack(std::shared_ptr<MsgPack::Body>&& b) : _body(std::move(b)) { }
 
 
 inline void MsgPack::_initializer_array(const std::initializer_list<MsgPack>& list) {
 	if (_body->_obj->type != msgpack::type::ARRAY) {
 		_body->_capacity = 0;
 	}
-	_body->array.clear();
+	_deinit();
 	_body->_obj->type = msgpack::type::ARRAY;
 	_body->_obj->via.array.ptr = nullptr;
 	_body->_obj->via.array.size = 0;
@@ -473,7 +462,7 @@ inline void MsgPack::_initializer_map(const std::initializer_list<MsgPack>& list
 	if (_body->_obj->type != msgpack::type::MAP) {
 		_body->_capacity = 0;
 	}
-	_body->map.clear();
+	_deinit();
 	_body->_obj->type = msgpack::type::MAP;
 	_body->_obj->via.map.ptr = nullptr;
 	_body->_obj->via.map.size = 0;
@@ -497,40 +486,39 @@ inline void MsgPack::_initializer(const std::initializer_list<MsgPack>& list) {
 }
 
 
-inline void MsgPack::_assigment(const msgpack::object& obj) {
+inline void MsgPack::_assignment(const msgpack::object& obj) {
 	if (_body->_is_key) {
 		if (obj.type != msgpack::type::STR) {
 			throw msgpack::type_error();
 		}
-		// Change key in the parent's map:
-		auto val = std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
-		auto str_key = std::string(obj.via.str.ptr, obj.via.str.size);
-		if (str_key == val) {
-			return;
-		}
-		auto it = _body->_parent._body->map.find(val);
-		if (it != _body->_parent._body->map.end()) {
-			it->second.second._init();
-			if (_body->_parent._body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
-				_body->_parent._body->map.erase(it);
-			} else {
-				throw duplicate_key("Duplicate key: " + str_key);
+		if (_body->_parent._body->_initialized) {
+			// Change key in the parent's map:
+			auto val = std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
+			auto str_key = std::string(obj.via.str.ptr, obj.via.str.size);
+			if (str_key == val) {
+				return;
 			}
-			assert(_body->_parent._body->_obj->via.map.size == _body->_parent._body->map.size());
+			auto it = _body->_parent._body->map.find(val);
+			if (it != _body->_parent._body->map.end()) {
+				if (_body->_parent._body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
+					_body->_parent._body->map.erase(it);
+				} else {
+					throw duplicate_key("Duplicate 1 key: " + str_key);
+				}
+				assert(_body->_parent._body->_obj->via.map.size == _body->_parent._body->map.size());
+			}
 		}
 	}
-	clear();
+	_deinit();
 	*_body->_obj = obj;
-	_init();
+	_body->_capacity = _body->size();
 }
 
 
 inline MsgPack::MsgPack() : MsgPack(nullptr) { }
 
 
-inline MsgPack::MsgPack(const MsgPack& other) : _body(std::make_shared<Body>(other)) {
-	_init();
-}
+inline MsgPack::MsgPack(const MsgPack& other) : _body(std::make_shared<Body>(other)) { }
 
 
 inline MsgPack::MsgPack(MsgPack&& other) : _body(std::move(other._body)) { }
@@ -538,9 +526,7 @@ inline MsgPack::MsgPack(MsgPack&& other) : _body(std::move(other._body)) { }
 
 template <typename T, typename>
 inline MsgPack::MsgPack(T&& v)
-	: _body(std::make_shared<MsgPack::Body>(std::forward<T>(v))) {
-		_init();
-	}
+	: _body(std::make_shared<MsgPack::Body>(std::forward<T>(v))) { }
 
 
 inline MsgPack::MsgPack(const std::initializer_list<MsgPack>& list)
@@ -551,13 +537,13 @@ inline MsgPack::MsgPack(const std::initializer_list<MsgPack>& list)
 
 
 inline MsgPack& MsgPack::operator=(const MsgPack& other) {
-	_assigment(msgpack::object(other, *_body->_zone));
+	_assignment(msgpack::object(other, *_body->_zone));
 	return *this;
 }
 
 
 inline MsgPack& MsgPack::operator=(MsgPack&& other) {
-	_assigment(msgpack::object(std::move(other), *_body->_zone));
+	_assignment(msgpack::object(std::move(other), *_body->_zone));
 	return *this;
 }
 
@@ -570,7 +556,7 @@ inline MsgPack& MsgPack::operator=(const std::initializer_list<MsgPack>& list) {
 
 template <typename T>
 inline MsgPack& MsgPack::operator=(T&& v) {
-	_assigment(msgpack::object(std::forward<T>(v), *_body->_zone));
+	_assignment(msgpack::object(std::forward<T>(v), *_body->_zone));
 	return *this;
 }
 
@@ -583,8 +569,8 @@ inline MsgPack* MsgPack::_init_map(size_t pos) const {
 		if (p->key.type != msgpack::type::STR) {
 			throw msgpack::type_error();
 		}
-		auto last_key = MsgPack(std::make_shared<MsgPack::Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key), _body->_full_init);
-		auto last_val = MsgPack(std::make_shared<MsgPack::Body>(_body->_zone, _body->_base, _body, false, pos, last_key._body, &p->val), _body->_full_init);
+		auto last_key = MsgPack(std::make_shared<MsgPack::Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
+		auto last_val = MsgPack(std::make_shared<MsgPack::Body>(_body->_zone, _body->_base, _body, false, pos, last_key._body, &p->val));
 		auto str_key = std::string(p->key.via.str.ptr, p->key.via.str.size);
 		auto inserted = _body->map.insert(std::make_pair(str_key, std::make_pair(std::move(last_key), std::move(last_val))));
 		if (!inserted.second) {
@@ -593,6 +579,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) const {
 		ret = &inserted.first->second.second;
 	}
 	assert(_body->_obj->via.map.size == _body->map.size());
+	_body->_initialized = true;
 	return ret;
 }
 
@@ -605,9 +592,10 @@ inline void MsgPack::_update_map(size_t pos) const {
 		assert(it != _body->map.end());
 		auto& elem = it->second;
 		elem.first._body->_obj = &p->key;
-		elem.second._body->_pos = pos;
+		elem.second._deinit();
 		elem.second._body->_obj = &p->val;
-		elem.second._init();
+		elem.second._body->_capacity = elem.second._body->size();
+		elem.second._body->_pos = pos;
 	}
 }
 
@@ -622,10 +610,11 @@ inline MsgPack* MsgPack::_init_array(size_t pos) const {
 	_body->array.reserve(_body->_capacity);
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
-		auto last_val = MsgPack(std::make_shared<MsgPack::Body>(_body->_zone, _body->_base, _body, false, pos, nullptr, p), _body->_full_init);
+		auto last_val = MsgPack(std::make_shared<MsgPack::Body>(_body->_zone, _body->_base, _body, false, pos, nullptr, p));
 		ret = &*_body->array.insert(_body->array.end(), std::move(last_val));
 	}
 	assert(_body->_obj->via.array.size == _body->array.size());
+	_body->_initialized = true;
 	return ret;
 }
 
@@ -636,8 +625,10 @@ inline void MsgPack::_update_array(size_t pos) const {
 		// If the previous item was a MAP, force map update.
 		_body->array.at(pos)._body->map.clear();
 		auto& mobj = _body->at(pos);
+		mobj._deinit();
 		mobj._body->_pos = pos;
 		mobj._body->_obj = p;
+		mobj._body->_capacity = mobj._body->size();
 	}
 }
 
@@ -645,19 +636,29 @@ inline void MsgPack::_update_array(size_t pos) const {
 inline void MsgPack::_init() const {
 	switch (_body->_obj->type) {
 		case msgpack::type::MAP:
-			if (_body->map.size() != _body->_obj->via.map.size) {
-				_body->_capacity = _body->_obj->via.map.size;
-				_init_map(0);
-			}
+			_init_map(0);
 			break;
 		case msgpack::type::ARRAY:
-			if (_body->array.size() != _body->_obj->via.array.size) {
-				_body->_capacity = _body->_obj->via.array.size;
-				_init_array(0);
-			}
+			_init_array(0);
 			break;
 		default:
-			_body->_capacity = 0;
+			_body->_initialized = true;
+			break;
+	}
+}
+
+
+inline void MsgPack::_deinit() const {
+	_body->_initialized = false;
+
+	switch (_body->_obj->type) {
+		case msgpack::type::MAP:
+			_body->map.clear();
+			break;
+		case msgpack::type::ARRAY:
+			_body->array.clear();
+			break;
+		default:
 			break;
 	}
 }
@@ -676,8 +677,10 @@ inline void MsgPack::_reserve_map(size_t rsize) {
 		}
 		_body->_obj->via.map.ptr = ptr;
 		_body->_capacity = nsize;
-		_init_map(_body->map.size());
-		_update_map(0);
+		if (_body->_initialized) {
+			_init_map(_body->map.size());
+			_update_map(0);
+		}
 	}
 }
 
@@ -695,8 +698,10 @@ inline void MsgPack::_reserve_array(size_t rsize) {
 		}
 		_body->_obj->via.array.ptr = ptr;
 		_body->_capacity = nsize;
-		_init_array(_body->array.size());
-		_update_array(0);
+		if (_body->_initialized) {
+			_init_array(_body->array.size());
+			_update_array(0);
+		}
 	}
 }
 
@@ -799,7 +804,6 @@ inline MsgPack& MsgPack::_erase(const std::string& key) {
 			if (it == _body->map.end()) {
 				throw std::out_of_range("Key not found");
 			}
-			it->second.second._init();
 			auto& mobj = it->second.second;
 			auto pos_ = mobj._body->_pos;
 			assert(pos_ < _body->_obj->via.map.size);
@@ -1078,9 +1082,31 @@ inline MsgPack& MsgPack::push_back(T&& v) {
 }
 
 
-inline void MsgPack::init() const {
-	_body->_full_init = true;
-	_init();
+inline void MsgPack::_fill(bool recursive) const {
+	if (!_body->_initialized) {
+		_init();
+	}
+	if (recursive) {
+		switch (_body->_obj->type) {
+			case msgpack::type::MAP:
+				for (auto& item : _body->map) {
+					item.second.second._fill(recursive);
+				}
+				break;
+			case msgpack::type::ARRAY:
+				for (auto& item : _body->array) {
+					item._fill(recursive);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+}
+
+
+inline void MsgPack::fill() {
+	_fill(true);
 }
 
 
@@ -1126,6 +1152,7 @@ inline std::pair<MsgPack::iterator, bool> MsgPack::insert(T&& v) {
 
 template <typename M, typename>
 inline MsgPack& MsgPack::operator[](const M& o) {
+	_fill(false);
 	switch (o._body->_obj->type) {
 		case msgpack::type::STR:
 			return _at_or_create(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
@@ -1142,6 +1169,7 @@ inline MsgPack& MsgPack::operator[](const M& o) {
 
 template <typename M, typename>
 inline const MsgPack& MsgPack::operator[](const M& o) const {
+	_fill(false);
 	switch (o._body->_obj->type) {
 		case msgpack::type::STR:
 			return _at_or_create(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
@@ -1157,27 +1185,32 @@ inline const MsgPack& MsgPack::operator[](const M& o) const {
 
 
 inline MsgPack& MsgPack::operator[](const std::string& s) {
+	_fill(false);
 	return _at_or_create(s);
 }
 
 
 inline const MsgPack& MsgPack::operator[](const std::string& s) const {
+	_fill(false);
 	return _at_or_create(s);
 }
 
 
 inline MsgPack& MsgPack::operator[](size_t pos) {
+	_fill(false);
 	return _at_or_create(pos);
 }
 
 
 inline const MsgPack& MsgPack::operator[](size_t pos) const {
+	_fill(false);
 	return _at_or_create(pos);
 }
 
 
 template <typename M, typename>
 inline MsgPack& MsgPack::at(const M& o) {
+	_fill(false);
 	switch (o._body->_obj->type) {
 		case msgpack::type::STR:
 			return _at(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
@@ -1194,6 +1227,7 @@ inline MsgPack& MsgPack::at(const M& o) {
 
 template <typename M, typename>
 inline const MsgPack& MsgPack::at(const M& o) const {
+	_fill(false);
 	switch (o._body->_obj->type) {
 		case msgpack::type::STR:
 			return _at(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
@@ -1209,27 +1243,32 @@ inline const MsgPack& MsgPack::at(const M& o) const {
 
 
 inline MsgPack& MsgPack::at(const std::string& s) {
+	_fill(false);
 	return _at(s);
 }
 
 
 inline const MsgPack& MsgPack::at(const std::string& s) const {
+	_fill(false);
 	return _at(s);
 }
 
 
 inline MsgPack& MsgPack::at(size_t pos) {
+	_fill(false);
 	return _at(pos);
 }
 
 
 inline const MsgPack& MsgPack::at(size_t pos) const {
+	_fill(false);
 	return _at(pos);
 }
 
 
 template <typename M, typename>
 inline MsgPack::iterator MsgPack::find(const M& o) {
+	_fill(false);
 	try {
 		switch (o._body->_obj->type) {
 			case msgpack::type::STR:
@@ -1250,6 +1289,7 @@ inline MsgPack::iterator MsgPack::find(const M& o) {
 
 template <typename M, typename>
 inline MsgPack::const_iterator MsgPack::find(const M& o) const {
+	_fill(false);
 	try {
 		switch (o._body->_obj->type) {
 			case msgpack::type::STR:
@@ -1269,6 +1309,7 @@ inline MsgPack::const_iterator MsgPack::find(const M& o) const {
 
 
 inline MsgPack::iterator MsgPack::find(const std::string& s) {
+	_fill(false);
 	try {
 		return MsgPack::iterator(this, _find(s)._body->_pos);
 	} catch (const std::out_of_range&) {
@@ -1278,6 +1319,7 @@ inline MsgPack::iterator MsgPack::find(const std::string& s) {
 
 
 inline MsgPack::const_iterator MsgPack::find(const std::string& s) const {
+	_fill(false);
 	try {
 		return MsgPack::const_iterator(this, _find(s)._body->_pos);
 	} catch (const std::out_of_range&) {
@@ -1287,6 +1329,7 @@ inline MsgPack::const_iterator MsgPack::find(const std::string& s) const {
 
 
 inline MsgPack::iterator MsgPack::find(size_t pos) {
+	_fill(false);
 	try {
 		return MsgPack::iterator(this, _find(pos)._body->_pos);
 	} catch (const std::out_of_range&) {
@@ -1296,6 +1339,7 @@ inline MsgPack::iterator MsgPack::find(size_t pos) {
 
 
 inline MsgPack::const_iterator MsgPack::find(size_t pos) const {
+	_fill(false);
 	try {
 		return MsgPack::const_iterator(this, _find(pos)._body->_pos);
 	} catch (const std::out_of_range&) {
@@ -1304,13 +1348,15 @@ inline MsgPack::const_iterator MsgPack::find(size_t pos) const {
 }
 
 
-inline size_t MsgPack::count(const MsgPack& o) const {
-	return (find(o) == end()) ? 0 : 1;
+template <typename T>
+inline size_t MsgPack::count(T&& v) const {
+	return (find(std::forward<T>(v)) == end()) ? 0 : 1;
 }
 
 
 template <typename M, typename>
 inline size_t MsgPack::erase(const M& o) {
+	_fill(false);
 	try {
 		switch (o._body->_obj->type) {
 			case msgpack::type::STR:
@@ -1335,6 +1381,7 @@ inline size_t MsgPack::erase(const M& o) {
 
 
 inline size_t MsgPack::erase(const std::string& s) {
+	_fill(false);
 	try {
 		_erase(s);
 		return 1;
@@ -1347,6 +1394,7 @@ inline size_t MsgPack::erase(const std::string& s) {
 
 
 inline size_t MsgPack::erase(size_t pos) {
+	_fill(false);
 	try {
 		_erase(pos);
 		return 1;
@@ -1359,6 +1407,7 @@ inline size_t MsgPack::erase(size_t pos) {
 
 
 inline MsgPack::iterator MsgPack::erase(const MsgPack::iterator& it) {
+	_fill(false);
 	try {
 		return MsgPack::iterator(this, _erase(it._off)._body->_pos);
 	} catch (const std::out_of_range&) {
@@ -1430,16 +1479,7 @@ inline size_t MsgPack::capacity() const noexcept {
 
 
 inline size_t MsgPack::size() const noexcept {
-	switch (_body->_obj->type) {
-		case msgpack::type::MAP:
-			return _body->_obj->via.map.size;
-		case msgpack::type::ARRAY:
-			return _body->_obj->via.array.size;
-		case msgpack::type::STR:
-			return _body->_obj->via.str.size;
-		default:
-			return 0;
-	}
+	return _body->size();
 }
 
 

@@ -175,7 +175,12 @@ public:
 	~Schema() = default;
 
 	auto get_modified_schema() {
-		return mut_schema ? std::make_shared<const MsgPack>(*mut_schema.release()) : std::shared_ptr<const MsgPack>();
+		if (mut_schema) {
+			mut_schema->fill();
+			return std::make_shared<const MsgPack>(*mut_schema.release());
+		} else {
+			return std::shared_ptr<const MsgPack>();
+		}
 	}
 
 	/*
