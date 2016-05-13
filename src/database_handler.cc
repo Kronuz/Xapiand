@@ -126,6 +126,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 			break;
 	}
 
+	obj.fill();
 	L_INDEX(this, "Document to index: %s", body.c_str());
 	Xapian::Document doc;
 	std::string term_id;
@@ -161,6 +162,7 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 
 	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
+	obj.fill();
 	if (obj.is_map()) {
 		_index(doc, obj, term_id, _document_id, ct_type, ct_length);
 	}
