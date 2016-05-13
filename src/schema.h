@@ -176,8 +176,9 @@ public:
 
 	auto get_modified_schema() {
 		if (mut_schema) {
-			mut_schema->fill();
-			return std::make_shared<const MsgPack>(*mut_schema.release());
+			auto schema = std::make_shared<const MsgPack>(*mut_schema.release());
+			schema->fill();
+			return std::move(schema);
 		} else {
 			return std::shared_ptr<const MsgPack>();
 		}

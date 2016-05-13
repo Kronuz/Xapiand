@@ -1669,7 +1669,9 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 			throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.as_string().c_str());
 		}
 		try {
-			std::atomic_exchange(schema, std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema)));
+			auto new_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+			new_schema->fill();
+			std::atomic_exchange(schema, std::move(new_schema));
 		} catch (const msgpack::unpack_error&) {
 			std::atomic_exchange(schema, std::make_shared<const MsgPack>());
 		}
