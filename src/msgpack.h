@@ -45,6 +45,7 @@ class MsgPack {
 	};
 
 	const std::shared_ptr<Body> _body;
+	const Body* const _const_body;
 
 public:
 	class duplicate_key : public std::out_of_range {
@@ -437,10 +438,10 @@ inline MsgPack::const_iterator MsgPack::cend() const {
 }
 
 
-inline MsgPack::MsgPack(const std::shared_ptr<MsgPack::Body>& b) : _body(b) { }
+inline MsgPack::MsgPack(const std::shared_ptr<MsgPack::Body>& b) : _body(b), _const_body(_body.get()) { }
 
 
-inline MsgPack::MsgPack(std::shared_ptr<MsgPack::Body>&& b) : _body(std::move(b)) { }
+inline MsgPack::MsgPack(std::shared_ptr<MsgPack::Body>&& b) : _body(std::move(b)), _const_body(_body.get()) { }
 
 
 inline void MsgPack::_initializer_array(const std::initializer_list<MsgPack>& list) {
@@ -518,15 +519,15 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 inline MsgPack::MsgPack() : MsgPack(nullptr) { }
 
 
-inline MsgPack::MsgPack(const MsgPack& other) : _body(std::make_shared<Body>(other)) { }
+inline MsgPack::MsgPack(const MsgPack& other) : _body(std::make_shared<Body>(other)), _const_body(_body.get()) { }
 
 
-inline MsgPack::MsgPack(MsgPack&& other) : _body(std::move(other._body)) { }
+inline MsgPack::MsgPack(MsgPack&& other) : _body(std::move(other._body)), _const_body(_body.get()) { }
 
 
 template <typename T, typename>
 inline MsgPack::MsgPack(T&& v)
-	: _body(std::make_shared<MsgPack::Body>(std::forward<T>(v))) { }
+	: _body(std::make_shared<MsgPack::Body>(std::forward<T>(v))), _const_body(_body.get()) { }
 
 
 inline MsgPack::MsgPack(const std::initializer_list<MsgPack>& list)
