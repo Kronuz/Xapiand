@@ -92,34 +92,25 @@ public:
 	MsgPack& operator=(T&& v);
 
 private:
-	MsgPack* _init_map(size_t pos) const;
-	void _update_map(size_t pos) const;
+	MsgPack* _init_map(size_t pos);
+	void _update_map(size_t pos);
 
-	MsgPack* _init_array(size_t pos) const;
-	void _update_array(size_t pos) const;
+	MsgPack* _init_array(size_t pos);
+	void _update_array(size_t pos);
 
-	void _init() const;
-	void _deinit() const;
+	void _init();
+	void _deinit();
 
 	void _reserve_map(size_t rsize);
 	void _reserve_array(size_t rsize);
 
-	MsgPack& _at(const std::string& key) const;
-	MsgPack& _at(size_t pos) const;
-
-	MsgPack& _at_or_create(const std::string& key);
-	const MsgPack& _at_or_create(const std::string& key) const;
-	MsgPack& _at_or_create(size_t pos);
-	const MsgPack& _at_or_create(size_t pos) const;
-
-	MsgPack& _find(const std::string& key) const;
-	MsgPack& _find(size_t pos) const;
+	MsgPack& _find(const std::string& key);
+	const MsgPack& _find(const std::string& key) const;
+	MsgPack& _find(size_t pos);
+	const MsgPack& _find(size_t pos) const;
 
 	MsgPack& _erase(const std::string& key);
 	MsgPack& _erase(size_t pos);
-
-	template <typename T>
-	static auto& _path(T current, const std::vector<std::string>& path);
 
 	template <typename T>
 	MsgPack& _put(const std::string& key, T&& val);
@@ -130,10 +121,10 @@ private:
 	template <typename T>
 	MsgPack::iterator _insert(size_t pos, T&& val);
 
-	void _fill(bool recursive) const;
+	void _fill(bool recursive);
 
 public:
-	void fill();
+	void fill() const;
 
 	MsgPack& path(const std::vector<std::string>& path);
 	const MsgPack& path(const std::vector<std::string>& path) const;
@@ -293,10 +284,21 @@ public:
 		return *this;
 	}
 
-	T& operator*() const {
-		switch (_mobj->_body->_obj->type) {
+	T& operator*() {
+		switch (_mobj->_const_body->_obj->type) {
 			case msgpack::type::MAP:
 				return _mobj->at(_off)._body->_key;
+			case msgpack::type::ARRAY:
+				return _mobj->at(_off);
+			default:
+				throw msgpack::type_error();
+		}
+	}
+
+	T& operator*() const {
+		switch (_mobj->_const_body->_obj->type) {
+			case msgpack::type::MAP:
+				return _mobj->at(_off)._const_body->_key;
 			case msgpack::type::ARRAY:
 				return _mobj->at(_off);
 			default:
@@ -519,10 +521,12 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 inline MsgPack::MsgPack() : MsgPack(nullptr) { }
 
 
-inline MsgPack::MsgPack(const MsgPack& other) : _body(std::make_shared<Body>(other)), _const_body(_body.get()) { }
+inline MsgPack::MsgPack(const MsgPack& other)
+	: _body(std::make_shared<Body>(other)), _const_body(_body.get()) { }
 
 
-inline MsgPack::MsgPack(MsgPack&& other) : _body(std::move(other._body)), _const_body(_body.get()) { }
+inline MsgPack::MsgPack(MsgPack&& other)
+	: _body(std::move(other._body)), _const_body(_body.get()) { }
 
 
 template <typename T, typename>
@@ -562,7 +566,7 @@ inline MsgPack& MsgPack::operator=(T&& v) {
 }
 
 
-inline MsgPack* MsgPack::_init_map(size_t pos) const {
+inline MsgPack* MsgPack::_init_map(size_t pos) {
 	MsgPack* ret = nullptr;
 	_body->map.reserve(_body->_capacity);
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
@@ -585,7 +589,7 @@ inline MsgPack* MsgPack::_init_map(size_t pos) const {
 }
 
 
-inline void MsgPack::_update_map(size_t pos) const {
+inline void MsgPack::_update_map(size_t pos) {
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 		std::string str_key(p->key.via.str.ptr, p->key.via.str.size);
@@ -601,7 +605,7 @@ inline void MsgPack::_update_map(size_t pos) const {
 }
 
 
-inline MsgPack* MsgPack::_init_array(size_t pos) const {
+inline MsgPack* MsgPack::_init_array(size_t pos) {
 	if (pos < _body->array.size()) {
 		// Destroy the previous objects to update
 		_body->array.resize(pos);
@@ -620,7 +624,7 @@ inline MsgPack* MsgPack::_init_array(size_t pos) const {
 }
 
 
-inline void MsgPack::_update_array(size_t pos) const {
+inline void MsgPack::_update_array(size_t pos) {
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
 		// If the previous item was a MAP, force map update.
@@ -634,7 +638,7 @@ inline void MsgPack::_update_array(size_t pos) const {
 }
 
 
-inline void MsgPack::_init() const {
+inline void MsgPack::_init() {
 	switch (_body->_obj->type) {
 		case msgpack::type::MAP:
 			_init_map(0);
@@ -649,7 +653,7 @@ inline void MsgPack::_init() const {
 }
 
 
-inline void MsgPack::_deinit() const {
+inline void MsgPack::_deinit() {
 	_body->_initialized = false;
 
 	switch (_body->_obj->type) {
@@ -707,7 +711,7 @@ inline void MsgPack::_reserve_array(size_t rsize) {
 }
 
 
-inline MsgPack& MsgPack::_at(const std::string& key) const {
+inline MsgPack& MsgPack::_find(const std::string& key) {
 	switch (_body->_obj->type) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
@@ -719,15 +723,22 @@ inline MsgPack& MsgPack::_at(const std::string& key) const {
 }
 
 
-inline MsgPack& MsgPack::_at(size_t pos) const {
-	switch (_body->_obj->type) {
+inline const MsgPack& MsgPack::_find(const std::string& key) const {
+	switch (_const_body->_obj->type) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
 		case msgpack::type::MAP:
-			if (pos >= _body->_obj->via.map.size) {
-				throw std::out_of_range("The map only contains " + std::to_string(_body->_obj->via.map.size) + " elements");
-			}
-			return _at(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
+			return _const_body->at(key);
+		default:
+			throw msgpack::type_error();
+	}
+}
+
+
+inline MsgPack& MsgPack::_find(size_t pos) {
+	switch (_body->_obj->type) {
+		case msgpack::type::NIL:
+			throw std::out_of_range("nil");
 		case msgpack::type::ARRAY:
 			return _body->at(pos);
 		default:
@@ -736,60 +747,12 @@ inline MsgPack& MsgPack::_at(size_t pos) const {
 }
 
 
-inline MsgPack& MsgPack::_at_or_create(const std::string& key) {
-	try {
-		return _at(key);
-	} catch (const std::out_of_range&) { }
-
-	return put(key, nullptr);
-}
-
-
-inline const MsgPack& MsgPack::_at_or_create(const std::string& key) const {
-	try {
-		return _at(key);
-	} catch (const std::out_of_range&) {
-		return _body->_nil;
-	}
-}
-
-
-inline MsgPack& MsgPack::_at_or_create(size_t pos) {
-	try {
-		return _at(pos);
-	} catch (const std::out_of_range&) { }
-
-	return put(pos, nullptr);
-}
-
-
-inline const MsgPack& MsgPack::_at_or_create(size_t pos) const {
-	try {
-		return _at(pos);
-	} catch (const std::out_of_range&) {
-		return _body->_nil;
-	}
-}
-
-
-inline MsgPack& MsgPack::_find(const std::string& key) const {
-	switch (_body->_obj->type) {
-		case msgpack::type::NIL:
-			throw std::out_of_range("nil");
-		case msgpack::type::MAP:
-			return _body->at(key);
-		default:
-			throw msgpack::type_error();
-	}
-}
-
-
-inline MsgPack& MsgPack::_find(size_t pos) const {
-	switch (_body->_obj->type) {
+inline const MsgPack& MsgPack::_find(size_t pos) const {
+	switch (_const_body->_obj->type) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
 		case msgpack::type::ARRAY:
-			return _body->at(pos);
+			return _const_body->at(pos);
 		default:
 			throw msgpack::type_error();
 	}
@@ -870,10 +833,45 @@ inline MsgPack& MsgPack::_erase(size_t pos) {
 }
 
 
-template <typename T>
-inline auto& MsgPack::_path(T current, const std::vector<std::string>& path) {
+inline MsgPack& MsgPack::path(const std::vector<std::string>& path) {
+	auto current = this;
 	for (const auto& s : path) {
 		switch (current->_body->_obj->type) {
+			case msgpack::type::MAP:
+				try {
+					current = &current->at(s);
+				} catch (const std::out_of_range&) {
+					throw std::out_of_range("The map must contain an object at key:" + s);
+				}
+				break;
+
+			case msgpack::type::ARRAY: {
+				std::string::size_type sz;
+				int pos = std::stoi(s, &sz);
+				if (pos < 0 || sz != s.size()) {
+					throw std::invalid_argument("The index for the array must be a positive integer, it is: " + s);
+				}
+				try {
+					current = &current->at(pos);
+				} catch (const std::out_of_range&) {
+					throw std::out_of_range(("The array must contain an object at index: " + s).c_str());
+				}
+				break;
+			}
+
+			default:
+				throw std::invalid_argument(("The container must be a map or an array to access: " + s).c_str());
+		}
+	}
+
+	return *current;
+}
+
+
+inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const {
+	auto current = this;
+	for (const auto& s : path) {
+		switch (current->_const_body->_obj->type) {
 			case msgpack::type::MAP:
 				try {
 					current = &current->at(s);
@@ -1009,16 +1007,6 @@ inline MsgPack::iterator MsgPack::_insert(size_t pos, T&& val) {
 }
 
 
-inline MsgPack& MsgPack::path(const std::vector<std::string>& path) {
-	return _path(this, path);
-}
-
-
-inline const MsgPack& MsgPack::path(const std::vector<std::string>& path) const {
-	return _path(this, path);
-}
-
-
 template <typename M, typename T, typename>
 inline MsgPack& MsgPack::put(const M& o, T&& val) {
 	switch (o._body->_obj->type) {
@@ -1083,7 +1071,7 @@ inline MsgPack& MsgPack::push_back(T&& v) {
 }
 
 
-inline void MsgPack::_fill(bool recursive) const {
+inline void MsgPack::_fill(bool recursive) {
 	if (!_body->_initialized) {
 		_init();
 	}
@@ -1106,8 +1094,8 @@ inline void MsgPack::_fill(bool recursive) const {
 }
 
 
-inline void MsgPack::fill() {
-	_fill(true);
+inline void MsgPack::fill() const {
+	const_cast<MsgPack*>(this)->_fill(true);
 }
 
 
@@ -1156,12 +1144,12 @@ inline MsgPack& MsgPack::operator[](const M& o) {
 	_fill(false);
 	switch (o._body->_obj->type) {
 		case msgpack::type::STR:
-			return _at_or_create(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+			return operator[](std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case msgpack::type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) throw msgpack::type_error();
-			return _at_or_create(static_cast<size_t>(o._body->_obj->via.i64));
+			return operator[](static_cast<size_t>(o._body->_obj->via.i64));
 		case msgpack::type::POSITIVE_INTEGER:
-			return _at_or_create(static_cast<size_t>(o._body->_obj->via.u64));
+			return operator[](static_cast<size_t>(o._body->_obj->via.u64));
 		default:
 			throw msgpack::type_error();
 	}
@@ -1170,42 +1158,54 @@ inline MsgPack& MsgPack::operator[](const M& o) {
 
 template <typename M, typename>
 inline const MsgPack& MsgPack::operator[](const M& o) const {
-	_fill(false);
-	switch (o._body->_obj->type) {
+	assert(_const_body->_initialized);
+	switch (o._const_body->_obj->type) {
 		case msgpack::type::STR:
-			return _at_or_create(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+			return operator[](std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case msgpack::type::NEGATIVE_INTEGER:
-			if (o._body->_obj->via.i64 < 0) throw msgpack::type_error();
-			return _at_or_create(static_cast<size_t>(o._body->_obj->via.i64));
+			if (o._const_body->_obj->via.i64 < 0) throw msgpack::type_error();
+			return operator[](static_cast<size_t>(o._const_body->_obj->via.i64));
 		case msgpack::type::POSITIVE_INTEGER:
-			return _at_or_create(static_cast<size_t>(o._body->_obj->via.u64));
+			return operator[](static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
 			throw msgpack::type_error();
 	}
 }
 
 
-inline MsgPack& MsgPack::operator[](const std::string& s) {
-	_fill(false);
-	return _at_or_create(s);
+inline MsgPack& MsgPack::operator[](const std::string& key) {
+	try {
+		return at(key);
+	} catch (const std::out_of_range&) { }
+
+	return put(key, nullptr);
 }
 
 
-inline const MsgPack& MsgPack::operator[](const std::string& s) const {
-	_fill(false);
-	return _at_or_create(s);
+inline const MsgPack& MsgPack::operator[](const std::string& key) const {
+	try {
+		return at(key);
+	} catch (const std::out_of_range&) {
+		return _const_body->_nil;
+	}
 }
 
 
 inline MsgPack& MsgPack::operator[](size_t pos) {
-	_fill(false);
-	return _at_or_create(pos);
+	try {
+		return at(pos);
+	} catch (const std::out_of_range&) { }
+
+	return put(pos, nullptr);
 }
 
 
 inline const MsgPack& MsgPack::operator[](size_t pos) const {
-	_fill(false);
-	return _at_or_create(pos);
+	try {
+		return at(pos);
+	} catch (const std::out_of_range&) {
+		return _const_body->_nil;
+	}
 }
 
 
@@ -1214,12 +1214,12 @@ inline MsgPack& MsgPack::at(const M& o) {
 	_fill(false);
 	switch (o._body->_obj->type) {
 		case msgpack::type::STR:
-			return _at(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+			return at(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case msgpack::type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) throw msgpack::type_error();
-			return _at(static_cast<size_t>(o._body->_obj->via.i64));
+			return at(static_cast<size_t>(o._body->_obj->via.i64));
 		case msgpack::type::POSITIVE_INTEGER:
-			return _at(static_cast<size_t>(o._body->_obj->via.u64));
+			return at(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
 			throw msgpack::type_error();
 	}
@@ -1228,42 +1228,79 @@ inline MsgPack& MsgPack::at(const M& o) {
 
 template <typename M, typename>
 inline const MsgPack& MsgPack::at(const M& o) const {
-	_fill(false);
-	switch (o._body->_obj->type) {
+	assert(_const_body->_initialized);
+	switch (o._const_body->_obj->type) {
 		case msgpack::type::STR:
-			return _at(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+			return at(std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case msgpack::type::NEGATIVE_INTEGER:
-			if (o._body->_obj->via.i64 < 0) throw msgpack::type_error();
-			return _at(static_cast<size_t>(o._body->_obj->via.i64));
+			if (o._const_body->_obj->via.i64 < 0) throw msgpack::type_error();
+			return at(static_cast<size_t>(o._const_body->_obj->via.i64));
 		case msgpack::type::POSITIVE_INTEGER:
-			return _at(static_cast<size_t>(o._body->_obj->via.u64));
+			return at(static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
 			throw msgpack::type_error();
 	}
 }
 
 
-inline MsgPack& MsgPack::at(const std::string& s) {
+inline MsgPack& MsgPack::at(const std::string& key) {
 	_fill(false);
-	return _at(s);
+	switch (_body->_obj->type) {
+		case msgpack::type::NIL:
+			throw std::out_of_range("nil");
+		case msgpack::type::MAP:
+			return _body->at(key);
+		default:
+			throw msgpack::type_error();
+	}
 }
 
-
-inline const MsgPack& MsgPack::at(const std::string& s) const {
-	_fill(false);
-	return _at(s);
+inline const MsgPack& MsgPack::at(const std::string& key) const {
+	assert(_const_body->_initialized);
+	switch (_const_body->_obj->type) {
+		case msgpack::type::NIL:
+			throw std::out_of_range("nil");
+		case msgpack::type::MAP:
+			return _const_body->at(key);
+		default:
+			throw msgpack::type_error();
+	}
 }
 
 
 inline MsgPack& MsgPack::at(size_t pos) {
 	_fill(false);
-	return _at(pos);
+	switch (_body->_obj->type) {
+		case msgpack::type::NIL:
+			throw std::out_of_range("nil");
+		case msgpack::type::MAP:
+			if (pos >= _body->_obj->via.map.size) {
+				throw std::out_of_range("The map only contains " + std::to_string(_body->_obj->via.map.size) + " elements");
+			}
+			return at(std::string(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
+		case msgpack::type::ARRAY:
+			return _body->at(pos);
+		default:
+			throw msgpack::type_error();
+	}
 }
 
 
 inline const MsgPack& MsgPack::at(size_t pos) const {
-	_fill(false);
-	return _at(pos);
+	assert(_const_body->_initialized);
+	switch (_const_body->_obj->type) {
+		case msgpack::type::NIL:
+			throw std::out_of_range("nil");
+		case msgpack::type::MAP:
+			if (pos >= _const_body->_obj->via.map.size) {
+				throw std::out_of_range("The map only contains " + std::to_string(_const_body->_obj->via.map.size) + " elements");
+			}
+			return at(std::string(_const_body->_obj->via.map.ptr[pos].key.via.str.ptr, _const_body->_obj->via.map.ptr[pos].key.via.str.size));
+		case msgpack::type::ARRAY:
+			return _const_body->at(pos);
+		default:
+			throw msgpack::type_error();
+	}
 }
 
 
@@ -1290,16 +1327,16 @@ inline MsgPack::iterator MsgPack::find(const M& o) {
 
 template <typename M, typename>
 inline MsgPack::const_iterator MsgPack::find(const M& o) const {
-	_fill(false);
+	assert(_const_body->_initialized);
 	try {
-		switch (o._body->_obj->type) {
+		switch (o._const_body->_obj->type) {
 			case msgpack::type::STR:
-				return MsgPack::const_iterator(this, _find(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size))._body->_pos);
+				return MsgPack::const_iterator(this, _find(std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size))._const_body->_pos);
 			case msgpack::type::NEGATIVE_INTEGER:
-				if (o._body->_obj->via.i64 < 0) throw msgpack::type_error();
-				return MsgPack::const_iterator(this, _find(static_cast<size_t>(o._body->_obj->via.i64))._body->_pos);
+				if (o._const_body->_obj->via.i64 < 0) throw msgpack::type_error();
+				return MsgPack::const_iterator(this, _find(static_cast<size_t>(o._const_body->_obj->via.i64))._const_body->_pos);
 			case msgpack::type::POSITIVE_INTEGER:
-				return MsgPack::const_iterator(this, _find(static_cast<size_t>(o._body->_obj->via.u64))._body->_pos);
+				return MsgPack::const_iterator(this, _find(static_cast<size_t>(o._const_body->_obj->via.u64))._const_body->_pos);
 			default:
 				throw msgpack::type_error();
 		}
@@ -1320,9 +1357,9 @@ inline MsgPack::iterator MsgPack::find(const std::string& s) {
 
 
 inline MsgPack::const_iterator MsgPack::find(const std::string& s) const {
-	_fill(false);
+	assert(_const_body->_initialized);
 	try {
-		return MsgPack::const_iterator(this, _find(s)._body->_pos);
+		return MsgPack::const_iterator(this, _find(s)._const_body->_pos);
 	} catch (const std::out_of_range&) {
 		return cend();
 	}
@@ -1340,9 +1377,9 @@ inline MsgPack::iterator MsgPack::find(size_t pos) {
 
 
 inline MsgPack::const_iterator MsgPack::find(size_t pos) const {
-	_fill(false);
+	assert(_const_body->_initialized);
 	try {
-		return MsgPack::const_iterator(this, _find(pos)._body->_pos);
+		return MsgPack::const_iterator(this, _find(pos)._const_body->_pos);
 	} catch (const std::out_of_range&) {
 		return cend();
 	}
@@ -1437,11 +1474,11 @@ inline void MsgPack::clear() noexcept {
 
 
 inline MsgPack::operator bool() const {
-	if (_body == nullptr) {
+	if (_const_body == nullptr) {
 		return false;
 	}
 
-	switch (_body->_obj->type) {
+	switch (_const_body->_obj->type) {
 		case msgpack::type::NIL:
 			return false;
 		case msgpack::type::MAP:
@@ -1449,13 +1486,13 @@ inline MsgPack::operator bool() const {
 		case msgpack::type::STR:
 			return size() > 0;
 		case msgpack::type::NEGATIVE_INTEGER:
-			return _body->_obj->via.i64 != 0;
+			return _const_body->_obj->via.i64 != 0;
 		case msgpack::type::POSITIVE_INTEGER:
-			return _body->_obj->via.u64 != 0;
+			return _const_body->_obj->via.u64 != 0;
 		case msgpack::type::FLOAT:
-			return _body->_obj->via.f64 != 0;
+			return _const_body->_obj->via.f64 != 0;
 		case msgpack::type::BOOLEAN:
-			return _body->_obj->via.boolean;
+			return _const_body->_obj->via.boolean;
 		default:
 			return false;
 	}
@@ -1475,23 +1512,23 @@ inline void MsgPack::reserve(size_t n) {
 
 
 inline size_t MsgPack::capacity() const noexcept {
-	return _body->_capacity;
+	return _const_body->_capacity;
 }
 
 
 inline size_t MsgPack::size() const noexcept {
-	return _body->size();
+	return _const_body->size();
 }
 
 
 inline bool MsgPack::empty() const noexcept {
-	switch (_body->_obj->type) {
+	switch (_const_body->_obj->type) {
 		case msgpack::type::MAP:
-			return _body->_obj->via.map.size == 0;
+			return _const_body->_obj->via.map.size == 0;
 		case msgpack::type::ARRAY:
-			return _body->_obj->via.array.size = 0;
+			return _const_body->_obj->via.array.size = 0;
 		case msgpack::type::STR:
-			return _body->_obj->via.str.size = 0;
+			return _const_body->_obj->via.str.size = 0;
 		default:
 			return false;
 	}
@@ -1499,11 +1536,11 @@ inline bool MsgPack::empty() const noexcept {
 
 
 inline uint64_t MsgPack::as_u64() const {
-	switch (_body->_obj->type) {
+	switch (_const_body->_obj->type) {
 		case msgpack::type::NEGATIVE_INTEGER:
-			return _body->_obj->via.i64;
+			return _const_body->_obj->via.i64;
 		case msgpack::type::POSITIVE_INTEGER:
-			return _body->_obj->via.u64;
+			return _const_body->_obj->via.u64;
 		default:
 			throw msgpack::type_error();
 	}
@@ -1511,11 +1548,11 @@ inline uint64_t MsgPack::as_u64() const {
 
 
 inline int64_t MsgPack::as_i64() const {
-	switch (_body->_obj->type) {
+	switch (_const_body->_obj->type) {
 		case msgpack::type::NEGATIVE_INTEGER:
-			return _body->_obj->via.i64;
+			return _const_body->_obj->via.i64;
 		case msgpack::type::POSITIVE_INTEGER:
-			return _body->_obj->via.u64;
+			return _const_body->_obj->via.u64;
 		default:
 			throw msgpack::type_error();
 	}
@@ -1523,13 +1560,13 @@ inline int64_t MsgPack::as_i64() const {
 
 
 inline double MsgPack::as_f64() const {
-	switch (_body->_obj->type) {
+	switch (_const_body->_obj->type) {
 		case msgpack::type::NEGATIVE_INTEGER:
-			return _body->_obj->via.i64;
+			return _const_body->_obj->via.i64;
 		case msgpack::type::POSITIVE_INTEGER:
-			return _body->_obj->via.u64;
+			return _const_body->_obj->via.u64;
 		case msgpack::type::FLOAT:
-			return _body->_obj->via.f64;
+			return _const_body->_obj->via.f64;
 		default:
 			throw msgpack::type_error();
 	}
@@ -1537,9 +1574,9 @@ inline double MsgPack::as_f64() const {
 
 
 inline std::string MsgPack::as_string() const {
-	switch (_body->_obj->type) {
+	switch (_const_body->_obj->type) {
 		case msgpack::type::STR:
-			return std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
+			return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
 		default:
 			throw msgpack::type_error();
 	}
@@ -1547,9 +1584,9 @@ inline std::string MsgPack::as_string() const {
 
 
 inline bool MsgPack::as_bool() const {
-	switch (_body->_obj->type) {
+	switch (_const_body->_obj->type) {
 		case msgpack::type::BOOLEAN:
-			return _body->_obj->via.boolean;
+			return _const_body->_obj->via.boolean;
 		default:
 			throw msgpack::type_error();
 	}
@@ -1558,23 +1595,23 @@ inline bool MsgPack::as_bool() const {
 
 inline rapidjson::Document MsgPack::as_document() const {
 	rapidjson::Document doc;
-	_body->_obj->convert(&doc);
+	_const_body->_obj->convert(&doc);
 	return doc;
 }
 
 
 inline bool MsgPack::is_null() const {
-	return _body == nullptr || _body->_obj->type == msgpack::type::NIL;
+	return _const_body == nullptr || _const_body->_obj->type == msgpack::type::NIL;
 }
 
 
 inline bool MsgPack::is_boolean() const {
-	return _body->_obj->type == msgpack::type::BOOLEAN;
+	return _const_body->_obj->type == msgpack::type::BOOLEAN;
 }
 
 
 inline bool MsgPack::is_number() const {
-	switch (_body->_obj->type) {
+	switch (_const_body->_obj->type) {
 		case msgpack::type::NEGATIVE_INTEGER:
 		case msgpack::type::POSITIVE_INTEGER:
 		case msgpack::type::FLOAT:
@@ -1586,32 +1623,32 @@ inline bool MsgPack::is_number() const {
 
 
 inline bool MsgPack::is_map() const {
-	return _body->_obj->type == msgpack::type::MAP;
+	return _const_body->_obj->type == msgpack::type::MAP;
 }
 
 
 inline bool MsgPack::is_array() const {
-	return _body->_obj->type == msgpack::type::ARRAY;
+	return _const_body->_obj->type == msgpack::type::ARRAY;
 }
 
 
 inline bool MsgPack::is_string() const {
-	return _body->_obj->type == msgpack::type::STR;
+	return _const_body->_obj->type == msgpack::type::STR;
 }
 
 
 inline msgpack::type::object_type MsgPack::type() const {
-	return _body->_obj->type;
+	return _const_body->_obj->type;
 }
 
 
 inline bool MsgPack::operator==(const MsgPack& other) const {
-	return *_body->_obj == *other._body->_obj;
+	return *_const_body->_obj == *other._const_body->_obj;
 }
 
 
 inline bool MsgPack::operator!=(const MsgPack& other) const {
-	return *_body->_obj != *other._body->_obj;
+	return *_const_body->_obj != *other._const_body->_obj;
 }
 
 
@@ -1659,21 +1696,21 @@ inline std::string MsgPack::to_string(bool prettify) const {
 		return std::string(buffer.GetString(), buffer.GetSize());
 	} else {
 		std::ostringstream oss;
-		oss << *_body->_obj;
+		oss << *_const_body->_obj;
 		return oss.str();
 	}
 }
 
 
 inline std::ostream& MsgPack::operator<<(std::ostream& s) const {
-	s << *_body->_obj;
+	s << *_const_body->_obj;
 	return s;
 }
 
 
 inline std::string MsgPack::serialise() const {
 	msgpack::sbuffer sbuf;
-	msgpack::pack(&sbuf, *_body->_obj);
+	msgpack::pack(&sbuf, *_const_body->_obj);
 	return std::string(sbuf.data(), sbuf.size());
 }
 
@@ -1720,14 +1757,14 @@ namespace msgpack {
 			template <>
 			struct object<MsgPack> {
 				void operator()(msgpack::object& o, const MsgPack& v) const {
-					o = msgpack::object(*v._body->_obj);
+					o = msgpack::object(*v._const_body->_obj);
 				}
 			};
 
 			template <>
 			struct object_with_zone<MsgPack> {
 				void operator()(msgpack::object::with_zone& o, const MsgPack& v) const {
-					msgpack::object obj(*v._body->_obj, o.zone);
+					msgpack::object obj(*v._const_body->_obj, o.zone);
 					o.type = obj.type;
 					o.via = obj.via;
 				}
