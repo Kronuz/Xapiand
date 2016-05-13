@@ -282,8 +282,14 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 			{ RESERVED_VERSION, DB_VERSION_SCHEMA },
 			{ RESERVED_SCHEMA, nullptr },
 		};
-		new_schema.fill();
 		schema = std::make_shared<const MsgPack>(std::move(new_schema));
+		
+		auto& aux = schema->at(RESERVED_SCHEMA);
+		if (!aux._body->_initialized) {
+			fprintf(stderr, "In NULL not initialized\n");
+		}
+		
+		
 	} else {
 		try {
 			const auto& version = schema->at(RESERVED_VERSION);
