@@ -178,7 +178,7 @@ public:
 		if (mut_schema) {
 			auto schema = std::make_shared<const MsgPack>(*mut_schema.release());
 			schema->fill();
-			return std::move(schema);
+			return schema;
 		} else {
 			return std::shared_ptr<const MsgPack>();
 		}
