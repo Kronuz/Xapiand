@@ -44,7 +44,7 @@ class MsgPack {
 		using std::out_of_range::out_of_range;
 	};
 
-	std::shared_ptr<Body> _body;
+	const std::shared_ptr<Body> _body;
 
 public:
 	class duplicate_key : public std::out_of_range {
@@ -812,8 +812,8 @@ inline MsgPack& MsgPack::_erase(const std::string& key) {
 			--_body->_obj->via.map.size;
 			// Unlink element (in case someone else hase it):
 			mobj._body->_pos = -1;
-			mobj._body->_key._body.reset();
-			mobj._body->_parent._body.reset();
+			mobj._body->_key = MsgPack(std::shared_ptr<Body>());
+			mobj._body->_parent = MsgPack(std::shared_ptr<Body>());
 			// Erase from map:
 			_body->map.erase(it);
 			_update_map(pos_);
@@ -852,8 +852,8 @@ inline MsgPack& MsgPack::_erase(size_t pos) {
 			--_body->_obj->via.array.size;
 			// Unlink element (in case someone else hase it):
 			mobj._body->_pos = -1;
-			mobj._body->_key._body.reset();
-			mobj._body->_parent._body.reset();
+			mobj._body->_key = MsgPack(std::shared_ptr<Body>());
+			mobj._body->_parent = MsgPack(std::shared_ptr<Body>());
 			// Erase from map:
 			_body->array.pop_back();
 			_update_array(pos_);
