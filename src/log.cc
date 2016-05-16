@@ -212,6 +212,7 @@ Log::log(int priority, const std::string& str)
 	}
 }
 
+
 std::shared_ptr<Log>
 Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {

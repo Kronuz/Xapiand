@@ -151,9 +151,9 @@ class LogThread {
 	std::condition_variable wakeup_signal;
 	std::atomic<std::time_t> wakeup;
 
+	DLList<std::shared_ptr<Log>> log_list;
 	std::atomic_int running;
 	std::thread inner_thread;
-	DLList<std::shared_ptr<Log>> log_list;
 
 	void thread_function();
 
