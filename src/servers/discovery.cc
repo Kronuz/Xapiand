@@ -119,7 +119,7 @@ Discovery::heartbeat_cb(ev::timer&, int)
 			} else {
 				node->name = XapiandManager::manager->node_name;
 			}
-			std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
+			std::atomic_store(&local_node, std::shared_ptr<const Node>(node));
 
 			if (!drop.empty()) {
 				XapiandManager::manager->drop_node(drop);

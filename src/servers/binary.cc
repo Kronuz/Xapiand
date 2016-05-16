@@ -35,7 +35,7 @@ Binary::Binary(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev
 {
 	auto node = new Node(*std::atomic_load(&local_node));
 	node->binary_port = port;
-	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
+	std::atomic_store(&local_node, std::shared_ptr<const Node>(node));
 
 	L_OBJ(this, "CREATED CONFIGURATION FOR BINARY");
 }

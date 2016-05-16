@@ -32,7 +32,7 @@ Http::Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loo
 {
 	auto node = new Node(*std::atomic_load(&local_node));
 	node->http_port = port;
-	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
+	std::atomic_store(&local_node, std::shared_ptr<const Node>(node));
 
 	L_OBJ(this, "CREATED CONFIGURATION FOR HTTP");
 }

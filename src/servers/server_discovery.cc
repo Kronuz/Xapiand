@@ -109,7 +109,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 					}
 					auto copy_node = new Node(*local_node_);
 					copy_node->regions = -1;
-					std::atomic_exchange(&local_node, std::shared_ptr<const Node>(copy_node));
+					std::atomic_store(&local_node, std::shared_ptr<const Node>(copy_node));
 
 					XapiandManager::manager->get_region();
 				} else {
@@ -126,7 +126,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 			}
 			auto copy_node = new Node(*local_node_);
 			copy_node->regions = -1;
-			std::atomic_exchange(&local_node, std::shared_ptr<const Node>(copy_node));
+			std::atomic_store(&local_node, std::shared_ptr<const Node>(copy_node));
 
 			XapiandManager::manager->get_region();
 		} else {
@@ -189,14 +189,15 @@ DiscoveryServer::sneer(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	if (remote_node == *std::atomic_load(&local_node)) {
+	auto local_node_ = std::atomic_load(&local_node);
+	if (remote_node == *local_node_) {
 		if (XapiandManager::manager->node_name.empty()) {
-			L_DISCOVERY(this, "Node name %s already taken. Retrying other name...", local_node.name.c_str());
+			L_DISCOVERY(this, "Node name %s already taken. Retrying other name...", local_node_->name.c_str());
 			XapiandManager::manager->reset_state();
 		} else {
-			L_WARNING(this, "Cannot join the party. Node name %s already taken!", local_node->name.c_str());
+			L_WARNING(this, "Cannot join the party. Node name %s already taken!", local_node_->name.c_str());
 			XapiandManager::manager->state.store(XapiandManager::State::BAD);
-			std::atomic_exchange(&local_node, std::make_shared<const Node>());
+			std::atomic_store(&local_node, std::make_shared<const Node>());
 			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
 			XapiandManager::manager->shutdown_sig(0);
 		}
@@ -240,7 +241,7 @@ DiscoveryServer::bye(const std::string& message)
 	L_INFO(this, "Node %s left the party!", remote_node.name.c_str());
 	auto copy_node = new Node(*std::atomic_load(&local_node));
 	copy_node->regions = -1;
-	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(copy_node));
+	std::atomic_store(&local_node, std::shared_ptr<const Node>(copy_node));
 	XapiandManager::manager->get_region();
 }
 

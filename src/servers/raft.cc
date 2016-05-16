@@ -150,7 +150,7 @@ Raft::leader_election_timeout_cb(ev::timer&, int)
 
 	auto local_node_ = std::atomic_load(&local_node);
 	L_RAFT_PROTO(this, "Raft { Reg: %d; State: %d; Elec_t: %f; Term: %llu; #ser: %zu; Lead: %s }",
-		local_node_.region, state, leader_election_timeout.repeat, term, number_servers, leader.c_str());
+		local_node_->region, state, leader_election_timeout.repeat, term, number_servers, leader.c_str());
 
 	if (state != State::LEADER) {
 		state = State::CANDIDATE;
