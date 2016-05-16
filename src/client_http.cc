@@ -1311,14 +1311,13 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		// Convert node to endpoint:
 		char node_ip[INET_ADDRSTRLEN];
 		auto node = XapiandManager::manager->touch_node(node_name, UNKNOWN_REGION);
-		auto local_node_ = std::atomic_load(&node);
-		if (!local_node_) {
+		if (!node) {
 			throw MSG_Error("Node %s not found", node_name.c_str());
 		}
 		if (!node_port) {
 			node_port = node->binary_port;
 		}
-		inet_ntop(AF_INET, &(local_node_->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
+		inet_ntop(AF_INET, &(node->addr.sin_addr), node_ip, INET_ADDRSTRLEN);
 		Endpoint endpoint("xapian://" + std::string(node_ip) + ":" + std::to_string(node_port) + "/" + index_path, nullptr, -1, node_name);
 #else
 		Endpoint endpoint(index_path);
