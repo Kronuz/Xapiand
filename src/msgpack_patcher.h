@@ -27,6 +27,8 @@
 #include "utils.h"
 
 
+/* Support for rfc6902 */
+
 void apply_patch(const MsgPack& patch, MsgPack& object);
 void patch_add(const MsgPack& obj_patch, MsgPack& object);
 void patch_remove(const MsgPack& obj_patch, MsgPack& object);
