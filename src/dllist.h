@@ -348,8 +348,8 @@ private:
 	auto insertBefore(iterator it, const std::shared_ptr<T>& val) {
 		do {
 			it.update();
-			std::array<std::shared_ptr<Node>, 3> nodes = {  std::atomic_load(&it.node->prv), it.node, std::atomic_load(&it.node->nxt) };
-			std::array<std::shared_ptr<Info>, 3> oldInfo = { std::atomic_load(&nodes[0]->info), std::atomic_load(&it.node->info), std::atomic_load(&nodes[2]->info) };
+			std::array<std::shared_ptr<Node>, 3> nodes({{ std::atomic_load(&it.node->prv), it.node, std::atomic_load(&it.node->nxt) }});
+			std::array<std::shared_ptr<Info>, 3> oldInfo({{ std::atomic_load(&nodes[0]->info), std::atomic_load(&it.node->info), std::atomic_load(&nodes[2]->info) }});
 			if (checkInfo(nodes, oldInfo)) {
 				auto newNode = std::make_shared<Node>(val, nullptr, nodes[0], nullptr, dum, Node::State::ORDINARY, Node::Type::NORMAL);
 				auto nodeCopy = std::make_shared<Node>(it.node->value, nodes[2], newNode, nullptr, dum, Node::State::ORDINARY, it.node->type);
@@ -370,8 +370,8 @@ private:
 			if (it.update()) {
 				throw deleted_iterator();
 			}
-			std::array<std::shared_ptr<Node>, 3> nodes = {  std::atomic_load(&it.node->prv), it.node, std::atomic_load(&it.node->nxt) };
-			std::array<std::shared_ptr<Info>, 3> oldInfo = { std::atomic_load(&nodes[0]->info), std::atomic_load(&it.node->info), std::atomic_load(&nodes[2]->info) };
+			std::array<std::shared_ptr<Node>, 3> nodes({{ std::atomic_load(&it.node->prv), it.node, std::atomic_load(&it.node->nxt) }});
+			std::array<std::shared_ptr<Info>, 3> oldInfo({{ std::atomic_load(&nodes[0]->info), std::atomic_load(&it.node->info), std::atomic_load(&nodes[2]->info) }});
 			if (checkInfo(nodes, oldInfo)) {
 				if (!it.node->isNormal()) {
 					return iterator(it.node);
