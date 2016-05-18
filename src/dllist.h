@@ -22,73 +22,220 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <iterator>
 #include <memory>
-#include <mutex>
+#include <stdexcept>
+#include <stdio.h>
 
 
 /*
- * "A nonblocking Doubly Linked List"
+ * "Non-Blocking Doubly-Linked Lists with Good Amortized Complexity"
+ * Based on: Non-Blocking Doubly-Linked Lists with Good Amortized Complexity by Niloufar Shafiei.
+ * http://arxiv.org/pdf/1408.1935v1.pdf
  */
 
 
-template <class T>
+template<class T>
 class DLList {
-	class spinLock {
-		std::atomic_flag _flag;
-
+	class deleted_iterator : public std::logic_error {
 	public:
-		spinLock() : _flag ATOMIC_FLAG_INIT { }
-
-		void lock() {
-			while (_flag.test_and_set(std::memory_order_acquire));
-		}
-
-		void unlock() {
-			_flag.clear(std::memory_order_release);
-		}
+		deleted_iterator()
+			: std::logic_error("Invalid Iterator") { }
 	};
+
+	class Info;
 
 	class Node {
+		enum class State : uint8_t {
+			COPIED,
+			MARKED,
+			ORDINARY
+		};
+
+		enum class Type : uint8_t {
+			HEAD,
+			TAIL,
+			EOL,
+			NORMAL
+		};
+
+		std::shared_ptr<T> value;
+		std::shared_ptr<Node> nxt;   // Next Node.
+		std::shared_ptr<Node> prv;   // Previous Node.
+		std::shared_ptr<Node> copy;  // New copy of Node (if any).
+		std::shared_ptr<Info> info;  // Descriptor of update.
+		std::atomic<State> state;    // Shows if Node is replaced or deleted.
+		Type type;
+
 		friend DLList;
 
-		T val;
-		std::shared_ptr<Node> next;
-		std::shared_ptr<Node> prev;
-		bool deleted;
-
 	public:
-		Node() : deleted(false) { }
+		Node(const std::shared_ptr<Info>& info_, State state_, Type type_)
+			: info(info_),
+			  state(state_),
+			  type(type_) { }
 
-		template <typename... Args>
-		Node(Args&&... args) : val(std::forward<Args>(args)...), deleted(false) { }
+		Node(const std::shared_ptr<T>& value_, const std::shared_ptr<Node>& nxt_, const std::shared_ptr<Node>& prv_,
+			 const std::shared_ptr<Node>& copy_, const std::shared_ptr<Info>& info_, State state_, Type type_)
+			: value(value_),
+			  nxt(nxt_),
+			  prv(prv_),
+			  copy(copy_),
+			  info(info_),
+			  state(state_),
+			  type(type_) { }
+
+		bool isHead() {
+			return type == Type::HEAD;
+		}
+
+		bool isEOL() {
+			return type == Type::EOL;
+		}
+
+		bool isNormal() {
+			return type == Type::NORMAL;
+		}
 	};
 
+	class Info {
+		enum class Status : uint8_t {
+			INPROGRESS,
+			COMMITTED,
+			ABORTED
+		};
+
+		std::atomic_bool rmv;         // Indicates whether node should be deleted from the list or replaced by a new copy.
+		std::atomic<Status> status;
+
+		friend DLList;
+
+	public:
+		Info(bool rmv_=false, Status status_=Status::ABORTED)
+			: rmv(rmv_),
+			  status(status_) { }
+	};
+
+	std::shared_ptr<Info> dum;
 	std::shared_ptr<Node> head;
 	std::shared_ptr<Node> tail;
 	std::atomic_size_t _size;
-	spinLock lk;
 
-	template <typename TT, typename I, bool R>
-	class _iterator : std::iterator<std::bidirectional_iterator_tag, TT> {
+	template <typename TT, bool R>
+	class _iterator : public std::iterator<std::bidirectional_iterator_tag, TT> {
 		friend DLList;
 
-		std::shared_ptr<I> p;
-		bool r;
+		using iterator_move = void (DLList<T>::_iterator<TT, R>::*)();
+
+		std::shared_ptr<Node> node;
+		bool is_valid;
+
+		iterator_move moveL;
+		iterator_move moveR;
+
+		struct Data {
+			std::shared_ptr<Node> node;
+			std::shared_ptr<Info> nodeInfo;
+			std::shared_ptr<Node> nxtNode;
+			std::shared_ptr<Node> prvNode;
+			bool invDel;
+
+			Data(const std::shared_ptr<Node>& node_, const std::shared_ptr<Info>& nodeInfo_,
+				 const std::shared_ptr<Node>& nxtNode_, const std::shared_ptr<Node>& prvNode_, bool invDel_)
+				: node(node_),
+				  nodeInfo(nodeInfo_),
+				  nxtNode(nxtNode_),
+				  prvNode(prvNode_),
+				  invDel(invDel_) { }
+		};
+
+		auto update() {
+			bool invDel = false;
+			while (node->state != Node::State::ORDINARY && std::atomic_load(&std::atomic_load(&node->prv)->nxt) != node) {
+				if (node->state == Node::State::COPIED) {
+					node = std::atomic_load(&node->copy);
+				}
+				if (node->state == Node::State::MARKED) {
+					node = std::atomic_load(&node->nxt);
+					invDel = true;
+				}
+			}
+			return invDel;
+		}
+
+		auto get_update_data() {
+			auto invDel = update();
+			return Data(node, std::atomic_load(&node->info), std::atomic_load(&node->nxt), std::atomic_load(&node->prv), invDel);
+		}
+
+		auto moveRight() {
+			if (update()) {
+				return;
+			}
+			if (node->isEOL()) {
+				throw invalid_iterator();
+			}
+			node = std::atomic_load(&node->nxt);
+		}
+
+		auto moveLeft() {
+			if (update()) {
+				return;
+			}
+			if (node->isHead()) {
+				throw invalid_iterator();
+			}
+			auto prvNode = std::atomic_load(&node->prv);
+			if (prvNode->state != Node::State::ORDINARY && std::atomic_load(&std::atomic_load(&prvNode->prv)->nxt) != prvNode && std::atomic_load(&prvNode->nxt) == node) {
+				if (prvNode->state == Node::State::COPIED) {
+					node = std::atomic_load(&prvNode->copy);
+				} else {
+					auto prvPrvNode = std::atomic_load(&prvNode->prv);
+					if (prvPrvNode->isHead()) {
+						return;
+					}
+					node = prvPrvNode;
+				}
+			} else {
+				node = prvNode;
+			}
+		}
 
 	public:
 		_iterator() = default;
 
-		explicit _iterator(std::shared_ptr<I> p_) : p(p_), r(R) { }
+		explicit _iterator(const std::shared_ptr<Node>& node_)
+			: node(node_),
+			  is_valid(true)
+		{
+			if (R) {
+				moveR = &DLList<T>::_iterator<TT, R>::moveLeft;
+				moveL = &DLList<T>::_iterator<TT, R>::moveRight;
+			} else {
+				moveR = &DLList<T>::_iterator<TT, R>::moveRight;
+				moveL = &DLList<T>::_iterator<TT, R>::moveLeft;
+			}
+		}
+
+		~_iterator() {
+			update();
+		}
 
 		_iterator& operator++() {
-			p = std::atomic_load(&(r ? p->prev : p->next));
+			if (!is_valid) {
+				throw invalid_iterator();
+			}
+			(this->*moveR)();
 			return *this;
 		}
 
 		_iterator& operator--() {
-			p = std::atomic_load(&(r ? p->next : p->prev));
+			if (!is_valid) {
+				throw invalid_iterator();
+			}
+			(this->*moveL)();
 			return *this;
 		}
 
@@ -104,20 +251,36 @@ class DLList {
 			return tmp;
 		}
 
-		bool operator==(const _iterator& other) const {
-			return p == other.p;
+		bool operator==(_iterator other) {
+			if (!is_valid || !other.is_valid) {
+				throw invalid_iterator();
+			}
+			update();
+			other.update();
+			return node == other.node;
 		}
 
-		bool operator!=(const _iterator& other) const {
+		bool operator!=(_iterator other) {
 			return !operator==(other);
 		}
 
 		TT& operator*() {
-			return std::atomic_load(&p)->val;
+			if (!is_valid || !node->isNormal()) {
+				throw invalid_iterator();
+			}
+			return *node->value;
 		}
 
 		TT* operator->() {
-			return &std::atomic_load(&p)->val;
+			return &operator*();
+		}
+
+		explicit operator bool() {
+			if (!is_valid) {
+				throw invalid_iterator();
+			}
+			update();
+			return node->isNormal();
 		}
 	};
 
@@ -128,132 +291,217 @@ class DLList {
 		friend DLList;
 
 	public:
-		explicit _reference(std::shared_ptr<I> p_) : p(p_) { }
+		explicit _reference(std::shared_ptr<I> p_)
+			: p(p_)
+		{
+			if (!p->isNormal()) {
+				throw std::out_of_range("Empty");
+			}
+		}
 
-		TT& operator*(){ return p->val; }
-		TT* operator->(){ return &p->val; }
+		TT& operator*() {
+			return *p->value;
+		}
+
+		TT* operator->() {
+			return p->value.get();
+		}
 	};
 
 public:
-	using iterator = _iterator<T, Node, false>;
-	using const_iterator = _iterator<const T, const Node, false>;
-	using reverse_iterator = _iterator<T, Node, true>;
-	using const_reverse_iterator = _iterator<const T, const Node, true>;
+	class invalid_iterator : public std::logic_error {
+	public:
+		invalid_iterator()
+			: std::logic_error("Invalid Iterator") { }
+	};
+
+	using iterator = _iterator<T, false>;
+	using const_iterator = _iterator<const T, false>;
+	using reverse_iterator = _iterator<T, true>;
+	using const_reverse_iterator = _iterator<const T, true>;
 
 	using reference = _reference<T, Node>;
 	using const_reference = _reference<const T, Node>;
 
-	DLList() : head(std::make_shared<Node>()), tail(std::make_shared<Node>()), _size(0) {
-		head->next = tail;
-		tail->prev = head;
-	}
-
-	~DLList() {
-		auto cur = std::atomic_load(&head->next);
-		while (cur != tail) {
-			cur = _erase(cur);
-		}
-		head->next.reset();
-	}
-
 private:
-	void _insert(std::shared_ptr<Node> p, std::shared_ptr<Node>& node) {
-		node->next = p;
-		node->prev = p->prev;
-		std::atomic_store(&p->prev->next, node);
-		std::atomic_store(&p->prev, node);
-		++_size;
+
+	auto help(std::array<std::shared_ptr<Node>, 3>& nodes, std::array<std::shared_ptr<Info>, 3>& oldInfo,
+			  const std::shared_ptr<Node>& newNxt, const std::shared_ptr<Node>& newPrv, const std::shared_ptr<Info>& I) {
+		bool doPtrCAS = true;
+		for (int i = 0; i < 3 && doPtrCAS; ++i) {
+			doPtrCAS = std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[i])->info, &oldInfo[i], I);
+		}
+		if (doPtrCAS) {
+			if (I->rmv) {
+				std::atomic_load(&nodes[1])->state = Node::State::MARKED;
+			} else {
+				std::atomic_store(&std::atomic_load(&nodes[1])->copy, newPrv);
+				std::atomic_load(&nodes[1])->state = Node::State::COPIED;
+			}
+			while (!std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[0])->nxt, &nodes[1], newNxt));
+			while (!std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[2])->prv, &nodes[1], newPrv));
+			I->status = Info::Status::COMMITTED;
+		} else if (I->status == Info::Status::INPROGRESS) {
+			I->status = Info::Status::ABORTED;
+		}
+		return I->status == Info::Status::COMMITTED;
 	}
 
-	auto _erase(std::shared_ptr<Node> p) {
-		if (_size.load() == 0) {
-			throw std::out_of_range("Empty");
+	auto checkInfo(const std::array<std::shared_ptr<Node>, 3>& nodes, const std::array<std::shared_ptr<Info>, 3>& oldInfo) {
+		for (const auto& info : oldInfo) {
+			if (info->status == Info::Status::INPROGRESS) {
+				return false;
+			}
 		}
-		std::atomic_store(&p->prev->next, p->next);
-		std::atomic_store(&p->next->prev, p->prev);
-		p->deleted = true;
-		--_size;
-		return p->prev->next;
+		for (const auto& node : nodes) {
+			if (node->state != Node::State::ORDINARY) {
+				return false;
+			}
+		}
+		for (int i = 0; i < 3; ++i) {
+			if (std::atomic_load(&nodes[i]->info) != oldInfo[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	auto insertBefore(iterator it, const std::shared_ptr<T>& val) {
+		do {
+			auto data = it.get_update_data();
+			std::array<std::shared_ptr<Node>, 3> nodes = { data.prvNode, data.node, data.nxtNode };
+			std::array<std::shared_ptr<Info>, 3> oldInfo = { std::atomic_load(&data.prvNode->info), data.nodeInfo, std::atomic_load(&data.nxtNode->info) };
+			if (checkInfo(nodes, oldInfo)) {
+				auto newNode = std::make_shared<Node>(val, nullptr, data.prvNode, nullptr, dum, Node::State::ORDINARY, Node::Type::NORMAL);
+				auto nodeCopy = std::make_shared<Node>(data.node->value, data.nxtNode, newNode, nullptr, dum, Node::State::ORDINARY, data.node->type);
+				newNode->nxt = nodeCopy;
+				if (help(nodes, oldInfo, newNode, nodeCopy, std::make_shared<Info>(false, Info::Status::INPROGRESS))) {
+					it.node = nodeCopy;
+					++_size;
+					return iterator(newNode);
+				} else {
+					newNode->nxt.reset();
+				}
+			}
+		} while (true);
+	}
+
+	auto Delete(iterator it) {
+		do {
+			auto data = it.get_update_data();
+			if (data.invDel) {
+				throw deleted_iterator();
+			}
+			std::array<std::shared_ptr<Node>, 3> nodes = { data.prvNode, data.node, data.nxtNode };
+			std::array<std::shared_ptr<Info>, 3> oldInfo = { std::atomic_load(&data.prvNode->info), data.nodeInfo, std::atomic_load(&data.nxtNode->info) };
+			if (checkInfo(nodes, oldInfo)) {
+				if (!data.node->isNormal()) {
+					return iterator(data.node);
+				}
+				if (help(nodes, oldInfo, data.nxtNode, data.prvNode, std::make_shared<Info>(true, Info::Status::INPROGRESS))) {
+					--_size;
+					return iterator(data.nxtNode);
+				}
+			}
+		} while (true);
 	}
 
 public:
+	DLList()
+		: dum(std::make_shared<Info>()),
+		  head(std::make_shared<Node>(dum, Node::State::ORDINARY, Node::Type::HEAD)),
+		  tail(std::make_shared<Node>(dum, Node::State::ORDINARY, Node::Type::TAIL)),
+		  _size(0)
+	{
+		auto eol = std::make_shared<Node>(nullptr, tail, head, nullptr, dum, Node::State::ORDINARY, Node::Type::EOL);
+		head->prv = std::make_shared<Node>(nullptr, head, nullptr, nullptr, dum, Node::State::ORDINARY, Node::Type::EOL);
+		head->nxt = eol;
+		tail->prv = eol;
+	}
+
+	~DLList() {
+		clear();
+		head->nxt.reset();
+		head->prv.reset();
+		tail->prv.reset();
+	}
+
 	template <typename V>
-	void push_front(V&& val) {
-		auto node = std::make_shared<Node>(std::forward<V>(val));
-		std::lock_guard<spinLock> lock(lk);
-		_insert(head->next, node);
+	auto push_front(V&& val) {
+		auto v = std::make_shared<T>(std::forward<V>(val));
+		insertBefore(begin(), v);
 	}
 
 	template <typename... Args>
-	void emplace_front(Args&&... args) {
-		auto node = std::make_shared<Node>(std::forward<Args>(args)...);
-		std::lock_guard<spinLock> lock(lk);
-		_insert(head->next, node);
+	auto emplace_front(Args&&... args) {
+		auto v = std::make_shared<T>(std::forward<Args>(args)...);
+		insertBefore(begin(), v);
 	}
 
 	template <typename V>
-	void push_back(V&& val) {
-		auto node = std::make_shared<Node>(std::forward<V>(val));
-		std::lock_guard<spinLock> lock(lk);
-		_insert(tail, node);
+	auto push_back(V&& val) {
+		auto v = std::make_shared<T>(std::forward<V>(val));
+		insertBefore(end(), v);
 	}
 
 	template <typename... Args>
-	void emplace_back(Args&&... args) {
-		auto node = std::make_shared<Node>(std::forward<Args>(args)...);
-		std::lock_guard<spinLock> lock(lk);
-		_insert(tail, node);
+	auto emplace_back(Args&&... args) {
+		auto v = std::make_shared<T>(std::forward<Args>(args)...);
+		insertBefore(end(), v);
+	}
+
+	template <typename Iterator, typename V>
+	auto insert(Iterator&& it, V&& val) {
+		auto v = std::make_shared<T>(std::forward<V>(val));
+		return insertBefore(it, v);
 	}
 
 	auto front() {
-		if (_size.load() == 0) {
-			throw std::out_of_range("Empty");
-		}
-		return reference(std::atomic_load(&head->next));
+		return reference(std::atomic_load(&head->nxt));
 	}
 
 	auto front() const {
-		if (_size.load() == 0) {
-			throw std::out_of_range("Empty");
-		}
-		return const_reference(std::atomic_load(&head->next));
+		return const_reference(std::atomic_load(&head->nxt));
 	}
 
 	auto back() {
-		if (_size.load() == 0) {
-			throw std::out_of_range("Empty");
-		}
-		return reference(std::atomic_load(&tail->prev));
+		return reference(std::atomic_load(&std::atomic_load(&tail->prv)->prv));
 	}
 
 	auto back() const {
-		if (_size.load() == 0) {
-			throw std::out_of_range("Empty");
-		}
-		return const_reference(std::atomic_load(&tail->prev));
+		return const_reference(std::atomic_load(&std::atomic_load(&tail->prv)->prv));
 	}
 
 	auto pop_front() {
-		std::lock_guard<spinLock> lock(lk);
-		auto p = head->next;
-		_erase(p);
-		return reference(p);
+		do {
+			try {
+				auto it = begin();
+				reference ref(it.node);
+				Delete(it);
+				return ref;
+			} catch (const deleted_iterator&) { }
+		} while (true);
 	}
 
 	auto pop_back() {
-		std::lock_guard<spinLock> lock(lk);
-		auto p = tail->prev;
-		_erase(p);
-		return reference(p);
+		do {
+			try {
+				iterator it(std::atomic_load(&std::atomic_load(&tail->prv)->prv));
+				reference ref(it.node);
+				Delete(it);
+				return ref;
+			} catch (const deleted_iterator&) { }
+		} while (true);
 	}
 
-	auto erase(iterator it) {
-		std::lock_guard<spinLock> lock(lk);
-		auto p = it.p;
-		if (it.p->deleted) {
-			return ++it;
+	template <typename Iterator>
+	auto erase(Iterator&& it) {
+		it.is_valid = false;
+		try {
+			return Delete(std::forward<Iterator>(it));
+		} catch (const deleted_iterator&) {
+			return iterator(it.node);
 		}
-		return iterator(_erase(p));
 	}
 
 	auto size() const noexcept {
@@ -269,31 +517,31 @@ public:
 	}
 
 	auto begin() {
-		return iterator(std::atomic_load(&head->next));
+		return iterator(std::atomic_load(&head->nxt));
 	}
 
 	auto end() {
-		return iterator(tail);
+		return iterator(std::atomic_load(&tail->prv));
 	}
 
 	auto begin() const {
-		return const_iterator(std::atomic_load(&head->next));
+		return const_iterator(std::atomic_load(&head->nxt));
 	}
 
 	auto end() const {
-		return const_iterator(tail);
+		return const_iterator(std::atomic_load(&tail->prv));
 	}
 
 	auto cbegin() const {
-		return const_iterator(std::atomic_load(&head->next));
+		return const_iterator(std::atomic_load(&head->nxt));
 	}
 
 	auto cend() const {
-		return const_iterator(tail);
+		return const_iterator(std::atomic_load(&tail->prv));
 	}
 
 	auto rbegin() {
-		return reverse_iterator(std::atomic_load(&tail->prev));
+		return reverse_iterator(std::atomic_load(&std::atomic_load(&tail->prv)->prv));
 	}
 
 	auto rend() {
@@ -301,7 +549,7 @@ public:
 	}
 
 	auto rbegin() const {
-		return const_reverse_iterator(std::atomic_load(&tail->prev));
+		return const_reverse_iterator(std::atomic_load(&std::atomic_load(&tail->prv)->prv));
 	}
 
 	auto rend() const {
@@ -309,7 +557,7 @@ public:
 	}
 
 	auto crbegin() const {
-		return const_reverse_iterator(std::atomic_load(&tail->prev));
+		return const_reverse_iterator(std::atomic_load(&std::atomic_load(&tail->prv)->prv));
 	}
 
 	auto crend() const {
