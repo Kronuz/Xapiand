@@ -135,22 +135,6 @@ class DLList {
 		iterator_move moveL;
 		iterator_move moveR;
 
-		struct Data {
-			std::shared_ptr<Node> node;
-			std::shared_ptr<Info> nodeInfo;
-			std::shared_ptr<Node> nxtNode;
-			std::shared_ptr<Node> prvNode;
-			bool invDel;
-
-			Data(const std::shared_ptr<Node>& node_, const std::shared_ptr<Info>& nodeInfo_,
-				 const std::shared_ptr<Node>& nxtNode_, const std::shared_ptr<Node>& prvNode_, bool invDel_)
-				: node(node_),
-				  nodeInfo(nodeInfo_),
-				  nxtNode(nxtNode_),
-				  prvNode(prvNode_),
-				  invDel(invDel_) { }
-		};
-
 		auto update() {
 			bool invDel = false;
 			while (node->state != Node::State::ORDINARY && std::atomic_load(&std::atomic_load(&node->prv)->nxt) != node) {
@@ -163,11 +147,6 @@ class DLList {
 				}
 			}
 			return invDel;
-		}
-
-		auto get_update_data() {
-			auto invDel = update();
-			return Data(node, std::atomic_load(&node->info), std::atomic_load(&node->nxt), std::atomic_load(&node->prv), invDel);
 		}
 
 		auto moveRight() {
@@ -368,12 +347,12 @@ private:
 
 	auto insertBefore(iterator it, const std::shared_ptr<T>& val) {
 		do {
-			auto data = it.get_update_data();
-			std::array<std::shared_ptr<Node>, 3> nodes({{ data.prvNode, data.node, data.nxtNode }});
-			std::array<std::shared_ptr<Info>, 3> oldInfo({{ std::atomic_load(&data.prvNode->info), data.nodeInfo, std::atomic_load(&data.nxtNode->info) }});
+			it.update();
+			std::array<std::shared_ptr<Node>, 3> nodes = {  std::atomic_load(&it.node->prv), it.node, std::atomic_load(&it.node->nxt) };
+			std::array<std::shared_ptr<Info>, 3> oldInfo = { std::atomic_load(&nodes[0]->info), std::atomic_load(&it.node->info), std::atomic_load(&nodes[2]->info) };
 			if (checkInfo(nodes, oldInfo)) {
-				auto newNode = std::make_shared<Node>(val, nullptr, data.prvNode, nullptr, dum, Node::State::ORDINARY, Node::Type::NORMAL);
-				auto nodeCopy = std::make_shared<Node>(data.node->value, data.nxtNode, newNode, nullptr, dum, Node::State::ORDINARY, data.node->type);
+				auto newNode = std::make_shared<Node>(val, nullptr, nodes[0], nullptr, dum, Node::State::ORDINARY, Node::Type::NORMAL);
+				auto nodeCopy = std::make_shared<Node>(it.node->value, nodes[2], newNode, nullptr, dum, Node::State::ORDINARY, it.node->type);
 				newNode->nxt = nodeCopy;
 				if (help(nodes, oldInfo, newNode, nodeCopy, std::make_shared<Info>(false, Info::Status::INPROGRESS))) {
 					it.node = nodeCopy;
@@ -388,19 +367,18 @@ private:
 
 	auto Delete(iterator it) {
 		do {
-			auto data = it.get_update_data();
-			if (data.invDel) {
+			if (it.update()) {
 				throw deleted_iterator();
 			}
-			std::array<std::shared_ptr<Node>, 3> nodes({{ data.prvNode, data.node, data.nxtNode }});
-			std::array<std::shared_ptr<Info>, 3> oldInfo({{ std::atomic_load(&data.prvNode->info), data.nodeInfo, std::atomic_load(&data.nxtNode->info) }});
+			std::array<std::shared_ptr<Node>, 3> nodes = {  std::atomic_load(&it.node->prv), it.node, std::atomic_load(&it.node->nxt) };
+			std::array<std::shared_ptr<Info>, 3> oldInfo = { std::atomic_load(&nodes[0]->info), std::atomic_load(&it.node->info), std::atomic_load(&nodes[2]->info) };
 			if (checkInfo(nodes, oldInfo)) {
-				if (!data.node->isNormal()) {
-					return iterator(data.node);
+				if (!it.node->isNormal()) {
+					return iterator(it.node);
 				}
-				if (help(nodes, oldInfo, data.nxtNode, data.prvNode, std::make_shared<Info>(true, Info::Status::INPROGRESS))) {
+				if (help(nodes, oldInfo, nodes[2], nodes[0], std::make_shared<Info>(true, Info::Status::INPROGRESS))) {
 					--_size;
-					return iterator(data.nxtNode);
+					return iterator(nodes[2]);
 				}
 			}
 		} while (true);
