@@ -696,11 +696,15 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 		try {
 			auto node_ref = nodes.at(lower_node_name);
 			if (*node == *node_ref) {
-				node_ref->touched = epoch::now<>();
+				auto node_ref_cp = new Node(*std::atomic_load(&node_ref));
+				node_ref_cp->touched = epoch::now<>();
+				std::atomic_exchange(&node_ref, std::shared_ptr<const Node>(node_ref_cp));
 			}
 		} catch (const std::out_of_range &err) {
 			nodes[lower_node_name] = node;
-			node->touched = epoch::now<>();
+			auto node_cp = new Node(*std::atomic_load(&node));
+			node_cp->touched = epoch::now<>();
+			std::atomic_exchange(&node, std::shared_ptr<const Node>(node_cp));
 			return true;
 		} catch (...) {
 			throw;
@@ -740,10 +744,12 @@ XapiandManager::touch_node(const std::string& node_name, int32_t region)
 		std::lock_guard<std::mutex> lk(nodes_mtx);
 		try {
 			auto node_ref = nodes.at(lower_node_name);
-			node_ref->touched = epoch::now<>();
+			auto node_ref_cp = new Node(*std::atomic_load(&node_ref));
+			node_ref_cp->touched = epoch::now<>();
 			if (region != UNKNOWN_REGION) {
-				node_ref->region = region;
+				node_ref_cp->region = region;
 			}
+			std::atomic_store(&node_ref, std::shared_ptr<const Node>(node_ref_cp));
 			return node_ref;
 		} catch (const std::out_of_range &err) {
 		} catch (...) {

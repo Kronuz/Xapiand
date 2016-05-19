@@ -39,8 +39,8 @@ struct Node {
 	int binary_port;
 
 	int32_t regions;
-	mutable int32_t region;
-	mutable time_t touched;
+	int32_t region;
+	time_t touched;
 
 	Node() : id(0), http_port(0), binary_port(0), regions(1), region(0), touched(0) {
 		memset(&addr, 0, sizeof(addr));
