@@ -243,7 +243,7 @@ Log::finish(int wait)
 
 LogThread::LogThread()
 	: running(-1),
-	  inner_thread(&LogThread::thread_function, this) { }
+	  inner_thread(&LogThread::thread_function, this, std::ref(log_list)) { }
 
 
 LogThread::~LogThread()
@@ -279,7 +279,7 @@ LogThread::add(const std::shared_ptr<Log>& l_ptr)
 
 
 void
-LogThread::thread_function()
+LogThread::thread_function(DLList<std::shared_ptr<Log>>& _log_list)
 {
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
@@ -302,10 +302,10 @@ LogThread::thread_function()
 			next_wakeup = now + 100ms;
 		}
 
-		for (auto it = log_list.begin(); it != log_list.end(); ) {
+		for (auto it = _log_list.begin(); it != _log_list.end(); ) {
 			auto& l_ptr = *it;
 			if (!l_ptr || l_ptr->finished) {
-				it = log_list.erase(it);
+				it = _log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished = true;
 				auto msg = l_ptr->str_start;
@@ -314,7 +314,7 @@ LogThread::thread_function()
 					msg += " ~" + delta_string(age, true);
 				}
 				Log::log(l_ptr->priority, msg);
-				it = log_list.erase(it);
+				it = _log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;
 				++it;

@@ -61,7 +61,7 @@ class DLList {
 			NORMAL
 		};
 
-		std::shared_ptr<T> value;
+		T value;
 		std::shared_ptr<Node> nxt;   // Next Node.
 		std::shared_ptr<Node> prv;   // Previous Node.
 		std::shared_ptr<Node> copy;  // New copy of Node (if any).
@@ -77,9 +77,10 @@ class DLList {
 			  state(state_),
 			  type(type_) { }
 
-		Node(const std::shared_ptr<T>& value_, const std::shared_ptr<Node>& nxt_, const std::shared_ptr<Node>& prv_,
-			 const std::shared_ptr<Node>& copy_, const std::shared_ptr<Info>& info_, State state_, Type type_)
-			: value(value_),
+		template <typename... Args>
+		Node(const std::shared_ptr<Node>& nxt_, const std::shared_ptr<Node>& prv_, const std::shared_ptr<Node>& copy_,
+			 const std::shared_ptr<Info>& info_, State state_, Type type_, Args&&... args)
+			: value(std::forward<Args>(args)...),
 			  nxt(nxt_),
 			  prv(prv_),
 			  copy(copy_),
@@ -107,14 +108,27 @@ class DLList {
 			ABORTED
 		};
 
-		std::atomic_bool rmv;         // Indicates whether node should be deleted from the list or replaced by a new copy.
+		std::array<std::shared_ptr<Node>, 3> nodes;    // Nodes to be flagged.
+		std::array<std::shared_ptr<Info>, 3> oldInfo;  // Expected values of CASs that flag.
+		std::shared_ptr<Node> newNxt;                  // Set nodes[0]->nxt to this.
+		std::shared_ptr<Node> newPrv;                  // Set nodes[2]->prv to this.
+		std::atomic_bool rmv;                          // Indicates whether node should be deleted from the list or replaced by a new copy.
 		std::atomic<Status> status;
 
 		friend DLList;
 
 	public:
-		Info(bool rmv_=false, Status status_=Status::ABORTED)
-			: rmv(rmv_),
+		Info()
+			: rmv(false),
+			  status(Status::ABORTED) { }
+
+		Info(const std::array<std::shared_ptr<Node>, 3>& nodes_, const std::array<std::shared_ptr<Info>, 3>& oldInfo_,
+			 const std::shared_ptr<Node>& newNxt_, const std::shared_ptr<Node>& newPrv_, bool rmv_, Status status_)
+			: nodes(nodes_),
+			  oldInfo(oldInfo_),
+			  newNxt(newNxt_),
+			  newPrv(newPrv_),
+			  rmv(rmv_),
 			  status(status_) { }
 	};
 
@@ -247,7 +261,7 @@ class DLList {
 			if (!is_valid || !node->isNormal()) {
 				throw invalid_iterator();
 			}
-			return *node->value;
+			return node->value;
 		}
 
 		TT* operator->() {
@@ -279,11 +293,11 @@ class DLList {
 		}
 
 		TT& operator*() {
-			return *p->value;
+			return p->value;
 		}
 
 		TT* operator->() {
-			return p->value.get();
+			return &p->value;
 		}
 	};
 
@@ -304,21 +318,20 @@ public:
 
 private:
 
-	auto help(std::array<std::shared_ptr<Node>, 3>& nodes, std::array<std::shared_ptr<Info>, 3>& oldInfo,
-			  const std::shared_ptr<Node>& newNxt, const std::shared_ptr<Node>& newPrv, const std::shared_ptr<Info>& I) {
+	auto help(const std::shared_ptr<Info>& I) {
 		bool doPtrCAS = true;
 		for (int i = 0; i < 3 && doPtrCAS; ++i) {
-			doPtrCAS = std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[i])->info, &oldInfo[i], I);
+			doPtrCAS = std::atomic_compare_exchange_strong(&std::atomic_load(&I->nodes[i])->info, &I->oldInfo[i], I);
 		}
 		if (doPtrCAS) {
 			if (I->rmv) {
-				std::atomic_load(&nodes[1])->state = Node::State::MARKED;
+				std::atomic_load(&I->nodes[1])->state = Node::State::MARKED;
 			} else {
-				std::atomic_store(&std::atomic_load(&nodes[1])->copy, newPrv);
-				std::atomic_load(&nodes[1])->state = Node::State::COPIED;
+				std::atomic_store(&std::atomic_load(&I->nodes[1])->copy, I->newPrv);
+				std::atomic_load(&I->nodes[1])->state = Node::State::COPIED;
 			}
-			while (!std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[0])->nxt, &nodes[1], newNxt));
-			while (!std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[2])->prv, &nodes[1], newPrv));
+			while (!std::atomic_compare_exchange_strong(&std::atomic_load(&I->nodes[0])->nxt, &I->nodes[1], I->newNxt));
+			while (!std::atomic_compare_exchange_strong(&std::atomic_load(&I->nodes[2])->prv, &I->nodes[1], I->newPrv));
 			I->status = Info::Status::COMMITTED;
 		} else if (I->status == Info::Status::INPROGRESS) {
 			I->status = Info::Status::ABORTED;
@@ -345,16 +358,18 @@ private:
 		return true;
 	}
 
-	auto insertBefore(iterator it, const std::shared_ptr<T>& val) {
+	template <typename... Args>
+	auto insertBefore(iterator it, Args&&... args) {
+		auto newNode = std::make_shared<Node>(nullptr, nullptr, nullptr, dum, Node::State::ORDINARY, Node::Type::NORMAL, std::forward<Args>(args)...);
 		do {
 			it.update();
 			std::array<std::shared_ptr<Node>, 3> nodes({{ std::atomic_load(&it.node->prv), it.node, std::atomic_load(&it.node->nxt) }});
 			std::array<std::shared_ptr<Info>, 3> oldInfo({{ std::atomic_load(&nodes[0]->info), std::atomic_load(&it.node->info), std::atomic_load(&nodes[2]->info) }});
 			if (checkInfo(nodes, oldInfo)) {
-				auto newNode = std::make_shared<Node>(val, nullptr, nodes[0], nullptr, dum, Node::State::ORDINARY, Node::Type::NORMAL);
-				auto nodeCopy = std::make_shared<Node>(it.node->value, nodes[2], newNode, nullptr, dum, Node::State::ORDINARY, it.node->type);
+				newNode->prv = nodes[0];
+				auto nodeCopy = std::make_shared<Node>(nodes[2], newNode, nullptr, dum, Node::State::ORDINARY, it.node->type, it.node->value);
 				newNode->nxt = nodeCopy;
-				if (help(nodes, oldInfo, newNode, nodeCopy, std::make_shared<Info>(false, Info::Status::INPROGRESS))) {
+				if (help(std::make_shared<Info>(nodes, oldInfo, newNode, nodeCopy, false, Info::Status::INPROGRESS))) {
 					it.node = nodeCopy;
 					++_size;
 					return iterator(newNode);
@@ -376,7 +391,7 @@ private:
 				if (!it.node->isNormal()) {
 					return iterator(it.node);
 				}
-				if (help(nodes, oldInfo, nodes[2], nodes[0], std::make_shared<Info>(true, Info::Status::INPROGRESS))) {
+				if (help(std::make_shared<Info>(nodes, oldInfo, nodes[2], nodes[0], true, Info::Status::INPROGRESS))) {
 					--_size;
 					return iterator(nodes[2]);
 				}
@@ -391,8 +406,8 @@ public:
 		  tail(std::make_shared<Node>(dum, Node::State::ORDINARY, Node::Type::TAIL)),
 		  _size(0)
 	{
-		auto eol = std::make_shared<Node>(nullptr, tail, head, nullptr, dum, Node::State::ORDINARY, Node::Type::EOL);
-		head->prv = std::make_shared<Node>(nullptr, head, nullptr, nullptr, dum, Node::State::ORDINARY, Node::Type::EOL);
+		auto eol = std::make_shared<Node>(tail, head, nullptr, dum, Node::State::ORDINARY, Node::Type::EOL);
+		head->prv = std::make_shared<Node>(head, nullptr, nullptr, dum, Node::State::ORDINARY, Node::Type::EOL);
 		head->nxt = eol;
 		tail->prv = eol;
 	}
@@ -406,32 +421,27 @@ public:
 
 	template <typename V>
 	auto push_front(V&& val) {
-		auto v = std::make_shared<T>(std::forward<V>(val));
-		insertBefore(begin(), v);
+		insertBefore(begin(), std::forward<V>(val));
 	}
 
 	template <typename... Args>
 	auto emplace_front(Args&&... args) {
-		auto v = std::make_shared<T>(std::forward<Args>(args)...);
-		insertBefore(begin(), v);
+		insertBefore(begin(), std::forward<Args>(args)...);
 	}
 
 	template <typename V>
 	auto push_back(V&& val) {
-		auto v = std::make_shared<T>(std::forward<V>(val));
-		insertBefore(end(), v);
+		insertBefore(end(), std::forward<V>(val));
 	}
 
 	template <typename... Args>
 	auto emplace_back(Args&&... args) {
-		auto v = std::make_shared<T>(std::forward<Args>(args)...);
-		insertBefore(end(), v);
+		insertBefore(end(), std::forward<Args>(args)...);
 	}
 
 	template <typename Iterator, typename V>
 	auto insert(Iterator&& it, V&& val) {
-		auto v = std::make_shared<T>(std::forward<V>(val));
-		return insertBefore(it, v);
+		return insertBefore(it, std::forward<V>(val));
 	}
 
 	auto front() {

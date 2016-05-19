@@ -155,7 +155,7 @@ class LogThread {
 	std::atomic_int running;
 	std::thread inner_thread;
 
-	void thread_function();
+	void thread_function(DLList<std::shared_ptr<Log>>& log_list);
 
 public:
 	LogThread();
