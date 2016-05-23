@@ -345,6 +345,7 @@ int test_explore() {
 	}
 
 	auto obj = MsgPack::unserialise(buffer);
+	obj.fill();
 
 	std::string expected(
 		"\"_id\":\"56892c5e23700e297bd84cd5\"\n"

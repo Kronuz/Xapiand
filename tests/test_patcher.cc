@@ -58,6 +58,7 @@ int test_mix() {
 	MsgPack patch(doc_patch);
 	MsgPack obj(doc_obj);
 
+	patch.fill();
 	try {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
@@ -98,6 +99,7 @@ int test_add() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
+	patch.fill();
 	try {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
@@ -138,6 +140,7 @@ int test_remove() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
+	patch.fill();
 	try {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
@@ -178,6 +181,7 @@ int test_replace() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
+	patch.fill();
 	try {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
@@ -218,6 +222,7 @@ int test_move() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
+	patch.fill();
 	try {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
@@ -258,6 +263,7 @@ int test_copy() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
+	patch.fill();
 	try {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
@@ -296,6 +302,7 @@ int test_test() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
+	patch.fill();
 	try {
 		apply_patch(patch, obj);
 		RETURN(0);
@@ -319,6 +326,7 @@ int test_incr() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
+	patch.fill();
 	try {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
@@ -349,6 +357,7 @@ int test_decr() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
+	patch.fill();
 	try {
 		apply_patch(patch, obj);
 		auto result = obj.to_string();
