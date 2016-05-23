@@ -774,10 +774,6 @@ inline MsgPack& MsgPack::_erase(const std::string& key) {
 			auto p = &_body->_obj->via.map.ptr[pos_];
 			std::memmove(p, p + 1, (_body->_obj->via.map.size - pos_ - 1) * sizeof(msgpack::object_kv));
 			--_body->_obj->via.map.size;
-			// Unlink element (in case someone else hase it):
-			mobj._body->_pos = -1;
-			mobj._body->_key = MsgPack(std::shared_ptr<Body>());
-			mobj._body->_parent = MsgPack(std::shared_ptr<Body>());
 			// Erase from map:
 			_body->map.erase(it);
 			_update_map(pos_);
@@ -814,10 +810,6 @@ inline MsgPack& MsgPack::_erase(size_t pos) {
 			auto p = &_body->_obj->via.array.ptr[pos_];
 			std::memmove(p, p + 1, (_body->_obj->via.array.size - pos_ - 1) * sizeof(msgpack::object));
 			--_body->_obj->via.array.size;
-			// Unlink element (in case someone else hase it):
-			mobj._body->_pos = -1;
-			mobj._body->_key = MsgPack(std::shared_ptr<Body>());
-			mobj._body->_parent = MsgPack(std::shared_ptr<Body>());
 			// Erase from map:
 			_body->array.pop_back();
 			_update_array(pos_);
