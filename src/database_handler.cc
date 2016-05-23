@@ -222,6 +222,8 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 	auto document = get_document(_document_id);
 
 	auto obj_data = get_MsgPack(document);
+	
+	obj_patch.fill();
 	apply_patch(obj_patch, obj_data);
 
 	L_INDEX(this, "Document to index: %s", obj_data.to_string().c_str());
