@@ -275,7 +275,7 @@ specification_t::to_string() const
 
 
 Schema::Schema(const std::shared_ptr<const MsgPack>& other)
-	: schema(std::atomic_load(&other))
+	: schema(other)
 {
 	if (schema->is_null()) {
 		MsgPack new_schema = {
