@@ -348,7 +348,7 @@ struct MsgPack::Body {
 			_key(key),
 			_obj(obj),
 			_capacity(size()),
-			_nil(std::make_shared<Body>(_zone, _base, _parent.lock(), nullptr)) { }  // FIXME: _parent._body here should be shared_from_this()
+			_nil(std::make_shared<Body>(_zone, _base, _parent.lock(), nullptr)) { }
 
 	Body(const std::shared_ptr<msgpack::zone>& zone,
 		 const std::shared_ptr<msgpack::object>& base,
