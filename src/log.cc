@@ -84,10 +84,6 @@ SysLog::log(int priority, const std::string& str)
 }
 
 
-int Log::log_level = DEFAULT_LOG_LEVEL;
-std::vector<std::unique_ptr<Logger>> Log::handlers;
-
-
 Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
 	: cleanup(cleanup_),
 	  created_at(created_at_),
@@ -114,11 +110,28 @@ Log::age()
  * https://isocpp.org/wiki/faq/ctors#static-init-order
  * Avoid the "static initialization order fiasco"
  */
+
 LogThread&
 Log::_thread()
 {
 	static LogThread* thread = new LogThread();
 	return *thread;
+}
+
+
+int&
+Log::_log_level()
+{
+	static auto* log_level = new int(DEFAULT_LOG_LEVEL);
+	return *log_level;
+}
+
+
+DLList<std::unique_ptr<Logger>>&
+Log::_handlers()
+{
+	static auto* handlers = new DLList<std::unique_ptr<Logger>>();
+	return *handlers;
 }
 
 
@@ -207,7 +220,8 @@ Log::log(int priority, const std::string& str)
 {
 	static std::mutex log_mutex;
 	std::lock_guard<std::mutex> lk(log_mutex);
-	for (auto& handler : Log::handlers) {
+	static auto& handlers = _handlers();
+	for (auto& handler : handlers) {
 		handler->log(priority, str);
 	}
 }
@@ -216,12 +230,14 @@ Log::log(int priority, const std::string& str)
 std::shared_ptr<Log>
 Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
-	if (priority > Log::log_level) {
+	static auto& log_level = _log_level();
+	if (priority > log_level) {
 		return std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
 	}
 
-	if (!Log::handlers.size()) {
-		Log::handlers.push_back(std::make_unique<StderrLogger>());
+	static auto& handlers = _handlers();
+	if (!handlers.size()) {
+		handlers.push_back(std::make_unique<StderrLogger>());
 	}
 
 	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {
