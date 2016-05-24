@@ -26,6 +26,13 @@
 #include <stdlib.h>
 
 
+START_TEST(test_iterators)
+{
+	ck_assert_int_eq(test_iterators(), 0);
+}
+END_TEST
+
+
 START_TEST(test_push_front)
 {
 	ck_assert_int_eq(test_push_front(), 0);
@@ -50,6 +57,13 @@ END_TEST
 START_TEST(test_emplace_back)
 {
 	ck_assert_int_eq(test_emplace_back(), 0);
+}
+END_TEST
+
+
+START_TEST(test_insert)
+{
+	ck_assert_int_eq(test_insert(), 0);
 }
 END_TEST
 
@@ -82,6 +96,34 @@ START_TEST(test_single_producer_consumer)
 END_TEST
 
 
+START_TEST(test_multi_push_front)
+{
+	ck_assert_int_eq(test_multi_push_front(), 0);
+}
+END_TEST
+
+
+START_TEST(test_multi_push_back)
+{
+	ck_assert_int_eq(test_multi_push_back(), 0);
+}
+END_TEST
+
+
+START_TEST(test_multi_insert)
+{
+	ck_assert_int_eq(test_multi_insert(), 0);
+}
+END_TEST
+
+
+START_TEST(test_multi_producers)
+{
+	ck_assert_int_eq(test_multi_producers(), 0);
+}
+END_TEST
+
+
 START_TEST(test_multi_push_pop_front)
 {
 	ck_assert_int_eq(test_multi_push_pop_front(), 0);
@@ -96,15 +138,19 @@ START_TEST(test_multi_push_pop_back)
 END_TEST
 
 
-START_TEST(test_multi_erases)
+START_TEST(test_multi_insert_erase)
 {
-	ck_assert_int_eq(test_multi_erases(), 0);
+	ck_assert_int_eq(test_multi_insert_erase(), 0);
 }
 END_TEST
 
 
 Suite* test_suite_single_thread(void) {
-	Suite *s = suite_create("Test of nonblocking Doubly Linked List with single thread");
+	Suite *s = suite_create("Test of Non-Blocking Doubly-Linked Lists with single thread");
+
+	TCase *tc_iterators = tcase_create("DLList::iterators");
+	tcase_add_test(tc_iterators, test_iterators);
+	suite_add_tcase(s, tc_iterators);
 
 	TCase *tc_push_front = tcase_create("DLList::push_front");
 	tcase_add_test(tc_push_front, test_push_front);
@@ -121,6 +167,10 @@ Suite* test_suite_single_thread(void) {
 	TCase *tc_emplace_back = tcase_create("DLList::emplace_back");
 	tcase_add_test(tc_emplace_back, test_emplace_back);
 	suite_add_tcase(s, tc_emplace_back);
+
+	TCase *tc_insert = tcase_create("DLList::insert");
+	tcase_add_test(tc_insert, test_insert);
+	suite_add_tcase(s, tc_insert);
 
 	TCase *tc_pop_front = tcase_create("DLList::pop_front");
 	tcase_add_test(tc_pop_front, test_pop_front);
@@ -144,7 +194,27 @@ Suite* test_suite_single_thread(void) {
 
 
 Suite* test_suite_multiple_threads(void) {
-	Suite *s = suite_create("Test of nonblocking Doubly Linked List with multiple threads");
+	Suite *s = suite_create("Test of Non-Blocking Doubly-Linked Lists with multiple threads");
+
+	TCase *tc_multi_push_front = tcase_create("Multiple threads are doing push_front");
+	tcase_set_timeout(tc_multi_push_front, 10);
+	tcase_add_test(tc_multi_push_front, test_multi_push_front);
+	suite_add_tcase(s, tc_multi_push_front);
+
+	TCase *tc_multi_push_back = tcase_create("Multiple threads are doing push_back");
+	tcase_set_timeout(tc_multi_push_back, 10);
+	tcase_add_test(tc_multi_push_back, test_multi_push_back);
+	suite_add_tcase(s, tc_multi_push_back);
+
+	TCase *tc_multi_insert = tcase_create("Multiple threads are doing insert");
+	tcase_set_timeout(tc_multi_insert, 10);
+	tcase_add_test(tc_multi_insert, test_multi_insert);
+	suite_add_tcase(s, tc_multi_insert);
+
+	TCase *tc_multi_producers = tcase_create("Multiple threads are adding elements");
+	tcase_set_timeout(tc_multi_producers, 10);
+	tcase_add_test(tc_multi_producers, test_multi_producers);
+	suite_add_tcase(s, tc_multi_producers);
 
 	TCase *tc_multi_push_pop_front = tcase_create("Multiple threads are doing push_front and pop_front");
 	tcase_set_timeout(tc_multi_push_pop_front, 10);
@@ -156,10 +226,10 @@ Suite* test_suite_multiple_threads(void) {
 	tcase_add_test(tc_multi_push_pop_back, test_multi_push_pop_back);
 	suite_add_tcase(s, tc_multi_push_pop_back);
 
-	TCase *tc_multi_erases = tcase_create("Multiple threads are doing push_back and erase");
-	tcase_set_timeout(tc_multi_erases, 10);
-	tcase_add_test(tc_multi_erases, test_multi_erases);
-	suite_add_tcase(s, tc_multi_erases);
+	TCase *tc_multi_insert_erase = tcase_create("Multiple threads are doing insert and erase");
+	tcase_set_timeout(tc_multi_insert_erase, 10);
+	tcase_add_test(tc_multi_insert_erase, test_multi_insert_erase);
+	suite_add_tcase(s, tc_multi_insert_erase);
 
 	return s;
 }
