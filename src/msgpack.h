@@ -323,7 +323,7 @@ struct MsgPack::Body {
 
 	const std::shared_ptr<msgpack::zone> _zone;
 	const std::shared_ptr<msgpack::object> _base;
-	MsgPack _parent;
+	std::weak_ptr<Body> _parent;
 	bool _is_key;
 	size_t _pos;
 	MsgPack _key;
@@ -348,7 +348,7 @@ struct MsgPack::Body {
 			_key(key),
 			_obj(obj),
 			_capacity(size()),
-			_nil(std::make_shared<Body>(_zone, _base, _parent._body, nullptr)) { }  // FIXME: _parent._body here should be shared_from_this()
+			_nil(std::make_shared<Body>(_zone, _base, _parent.lock(), nullptr)) { }  // FIXME: _parent._body here should be shared_from_this()
 
 	Body(const std::shared_ptr<msgpack::zone>& zone,
 		 const std::shared_ptr<msgpack::object>& base,
@@ -363,7 +363,7 @@ struct MsgPack::Body {
 			_key(std::shared_ptr<Body>()),
 			_obj(obj),
 			_capacity(size()),
-			_nil(std::shared_ptr<Body>()) { }  // FIXME: _parent._body here should be shared_from_this()
+			_nil(std::shared_ptr<Body>()) { }
 
 	template <typename T>
 	Body(T&& v)
@@ -376,7 +376,7 @@ struct MsgPack::Body {
 		  _key(std::shared_ptr<Body>()),
 		  _obj(_base.get()),
 		  _capacity(size()),
-		  _nil(std::make_shared<Body>(_zone, _base, _parent._body, nullptr)) { }  // FIXME: _parent._body here should be shared_from_this()
+		  _nil(std::make_shared<Body>(_zone, _base, _parent.lock(), nullptr)) { }
 
 	MsgPack& at(size_t pos) {
 		return array.at(pos);
@@ -494,21 +494,23 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 		if (obj.type != msgpack::type::STR) {
 			throw msgpack::type_error();
 		}
-		if (_body->_parent._body->_initialized) {
-			// Change key in the parent's map:
-			auto val = std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
-			auto str_key = std::string(obj.via.str.ptr, obj.via.str.size);
-			if (str_key == val) {
-				return;
-			}
-			auto it = _body->_parent._body->map.find(val);
-			if (it != _body->_parent._body->map.end()) {
-				if (_body->_parent._body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
-					_body->_parent._body->map.erase(it);
-				} else {
-					throw duplicate_key("Duplicate 1 key: " + str_key);
+		if (auto parent_body = _body->_parent.lock()) {
+			if (parent_body->_initialized) {
+				// Change key in the parent's map:
+				auto val = std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
+				auto str_key = std::string(obj.via.str.ptr, obj.via.str.size);
+				if (str_key == val) {
+					return;
 				}
-				assert(_body->_parent._body->_obj->via.map.size == _body->_parent._body->map.size());
+				auto it = parent_body->map.find(val);
+				if (it !=parent_body->map.end()) {
+					if (parent_body->map.insert(std::make_pair(str_key, std::move(it->second))).second) {
+						parent_body->map.erase(it);
+					} else {
+						throw duplicate_key("Duplicate 1 key: " + str_key);
+					}
+					assert(parent_body->_obj->via.map.size == parent_body->map.size());
+				}
 			}
 		}
 	}
