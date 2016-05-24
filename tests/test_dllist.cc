@@ -40,15 +40,112 @@ std::string repr_results(const DLList<std::pair<int, char>>& l, bool sort) {
 		std::sort(res.begin(), res.end());
 	}
 
-	std::string out;
-	for (auto it = res.begin(); it != res.end(); ) {
-		out += *it++;
-		if (it != res.end()) {
-			out += " ";
+	auto out = std::string();
+	const auto it_e = res.end();
+	for (auto it = res.begin(); it != it_e; ) {
+		out.append(*it++);
+		if (it != it_e) {
+			out.append(" ");
 		}
 	}
 
 	return out;
+}
+
+
+int test_iterators() {
+	DLList<std::string> mylist;
+	auto it = mylist.begin();
+	it = mylist.insert(it, "10");
+	it = mylist.insert(it, "20");
+	it = mylist.insert(it, "30");
+	it = mylist.insert(it, "40");
+	mylist.insert(it, "50");
+
+	std::string str, expected("50 40 30 20 10 ");
+	for (const auto& val : mylist) {
+		str.append(val).append(" ");
+	}
+
+	int err = 0;
+
+	// Test for loop.
+	if (expected != str) {
+		L_ERR(nullptr, "DLList with for loop is not working!. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
+		++err;
+	}
+
+	// Test begin() and end().
+	expected.assign("50 40 30 20 10 10 20 30 40 50 ");
+	str.clear();
+	const auto& it_e = mylist.end();
+	for (auto it = mylist.begin(); it != it_e; ++it) {
+		str.append(*it).append(" ");
+	}
+
+	auto eit = mylist.end();
+	while (--eit) {
+		str.append(*eit).append(" ");
+	}
+
+	if (expected != str) {
+		L_ERR(nullptr, "DLList::[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
+		++err;
+	}
+
+	// Test cbegin() and cend()
+	str.clear();
+	const auto& it_ce = mylist.cend();
+	for (auto it = mylist.cbegin(); it != it_ce; ++it) {
+		str.append(*it).append(" ");
+	}
+
+	auto cit = mylist.cend();
+	while (--cit) {
+		str.append(*cit).append(" ");
+	}
+
+	if (expected != str) {
+		L_ERR(nullptr, "DLList::c[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
+		++err;
+	}
+
+	// Test rbegin() and rend().
+	expected.assign("10 20 30 40 50 50 40 30 20 10 ");
+	str.clear();
+	const auto& it_re = mylist.rend();
+	for (auto it = mylist.rbegin(); it != it_re; ++it) {
+		str.append(*it).append(" ");
+	}
+
+	auto rit = mylist.rend();
+	while (--rit) {
+		str.append(*rit).append(" ");
+	}
+
+	if (expected != str) {
+		L_ERR(nullptr, "DLList::r[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
+		++err;
+	}
+
+	// Test crbegin() and crend()
+	str.clear();
+	const auto& it_cre = mylist.crend();
+	for (auto it = mylist.crbegin(); it != it_cre; ++it) {
+		str.append(*it).append(" ");
+	}
+
+	auto crit = mylist.crend();
+	while (--crit) {
+		str.append(*crit).append(" ");
+	}
+
+	if (expected != str) {
+		L_ERR(nullptr, "DLList::cr[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
+		++err;
+	}
+
+	RETURN(err);
 }
 
 
@@ -67,14 +164,14 @@ int test_push_front() {
 	mylist.push_front(std::make_pair<int, char>(1, 'j'));
 	mylist.push_front(std::make_pair<int, char>(1, 'k'));
 
-	std::string result = repr_results(mylist, false);
+	auto result = repr_results(mylist, false);
 
 	std::string expected("k1 j1 i1 h1 g1 f1 e1 d1 c1 b1 a1");
 
 	if (result == expected) {
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		L_ERR(nullptr, "DLList::push_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
 		RETURN(1);
 	}
 }
@@ -95,14 +192,14 @@ int test_emplace_front() {
 	mylist.emplace_front(1, 'j');
 	mylist.emplace_front(1, 'k');
 
-	std::string result = repr_results(mylist, false);
+	auto result = repr_results(mylist, false);
 
 	std::string expected("k1 j1 i1 h1 g1 f1 e1 d1 c1 b1 a1");
 
 	if (result == expected) {
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		L_ERR(nullptr, "DLList::emplace_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
 		RETURN(1);
 	}
 }
@@ -123,14 +220,14 @@ int test_push_back() {
 	mylist.push_back(std::make_pair<int, char>(1, 'j'));
 	mylist.push_back(std::make_pair<int, char>(1, 'k'));
 
-	std::string result = repr_results(mylist, false);
+	auto result = repr_results(mylist, false);
 
 	std::string expected("a1 b1 c1 d1 e1 f1 g1 h1 i1 j1 k1");
 
 	if (result == expected) {
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		L_ERR(nullptr, "DLList::push_back() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
 		RETURN(1);
 	}
 }
@@ -151,16 +248,58 @@ int test_emplace_back() {
 	mylist.emplace_back(1, 'j');
 	mylist.emplace_back(1, 'k');
 
-	std::string result = repr_results(mylist, false);
+	auto result = repr_results(mylist, false);
 
 	std::string expected("a1 b1 c1 d1 e1 f1 g1 h1 i1 j1 k1");
 
 	if (result == expected) {
 		RETURN(0);
 	} else {
-		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		L_ERR(nullptr, "DLList::emplace_back() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
 		RETURN(1);
 	}
+}
+
+
+int test_insert() {
+	DLList<std::pair<int, char>> mylist;
+
+	// set some initial values:
+	mylist.emplace_back(1, 'a');          // a1
+	mylist.emplace_back(1, 'b');          // a1 b1
+	mylist.emplace_back(1, 'c');          // a1 b1 c1
+	mylist.emplace_back(1, 'd');          // a1 b1 c1 d1
+	mylist.emplace_back(1, 'e');          // a1 b1 c1 d1 e1
+
+	auto it = mylist.begin();             // ^
+	++it;  // it points now to number b1        ^
+
+	auto it2 = mylist.insert(it, std::make_pair<int, char>(1, 'f'));  // a1 f1 b1 c1 d1 e1
+	// it still points to number b1                                            ^
+	// it2 points to number f1                                              ^
+
+	mylist.insert(it, std::make_pair<int, char>(1, 'g'));  // a1 f1 g1 b1 c1 d1 e1
+	--it;  // it points now to g1                                   ^
+
+	auto it3 = mylist.insert(it2, std::make_pair<int, char>(1, 'h')); // a1 h1 f1 g1 b1 c1 d1 e1
+	// it2 still points to number f1                                           ^
+	// it3 points to number h1                                              ^
+
+	int err = 0;
+	if (it->second != 'g' || it2->second != 'f' || it3->second != 'h') {
+		L_ERR(nullptr, "DLList::iterator is not working!. Result: %c %c %c     Expected: g f h\n", it->second, it2->second, it3->second);
+		++err;
+	}
+
+	auto result = repr_results(mylist, false);
+
+	std::string expected("a1 h1 f1 g1 b1 c1 d1 e1");
+	if (result != expected) {
+		L_ERR(nullptr, "DLList::insert() is not working. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		++err;
+	}
+
+	RETURN(err);
 }
 
 
@@ -180,21 +319,30 @@ int test_pop_front() {
 	mylist.emplace_front(1, 'k');
 	mylist.emplace_front(1, 'l');
 
-	int del = mylist.size() / 2;
+	std::string pop_elem, pop_elem2;
+
+	int del = static_cast<int>(mylist.size() / 2);
 	for (int i = 0; i < del; ++i) {
-		mylist.pop_front();
+		pop_elem.append(1, mylist.front()->second);
+		pop_elem2.append(1, mylist.pop_front()->second);
 	}
 
-	std::string result = repr_results(mylist, false);
+	int err = 0;
+	std::string expected_pop_elem("lkjihg");
+	if (pop_elem != expected_pop_elem || pop_elem2 != expected_pop_elem) {
+		L_ERR(nullptr, "DLList::front() is not working!. Result: front { %s }   Result pop_front: { %s }   Expected: { %s }", pop_elem.c_str(), pop_elem2.c_str(), expected_pop_elem.c_str());
+		++err;
+	}
+
+	auto result = repr_results(mylist, false);
 
 	std::string expected("f1 e1 d1 c1 b1 a1");
-
-	if (result == expected) {
-		RETURN(0);
-	} else {
-		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		RETURN(1);
+	if (result != expected) {
+		L_ERR(nullptr, "DLList::pop_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		++err;
 	}
+
+	RETURN(err);
 }
 
 
@@ -214,21 +362,30 @@ int test_pop_back() {
 	mylist.emplace_front(1, 'k');
 	mylist.emplace_front(1, 'l');
 
-	int del = mylist.size() / 2;
+	std::string pop_elem, pop_elem2;
+
+	int del = static_cast<int>(mylist.size() / 2);
 	for (int i = 0; i < del; ++i) {
-		mylist.pop_back();
+		pop_elem.append(1, mylist.back()->second);
+		pop_elem2.append(1, mylist.pop_back()->second);
 	}
 
-	std::string result = repr_results(mylist, false);
+	int err = 0;
+	std::string expected_pop_elem("abcdef");
+	if (pop_elem != expected_pop_elem || pop_elem2 != expected_pop_elem) {
+		L_ERR(nullptr, "DLList::back() is not working!. Result: front { %s }   Result pop_back: { %s }   Expected: { %s }", pop_elem.c_str(), pop_elem2.c_str(), expected_pop_elem.c_str());
+		++err;
+	}
+
+	auto result = repr_results(mylist, false);
 
 	std::string expected("l1 k1 j1 i1 h1 g1");
-
-	if (result == expected) {
-		RETURN(0);
-	} else {
-		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		RETURN(1);
+	if (result != expected) {
+		L_ERR(nullptr, "DLList::pop_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		++err;
 	}
+
+	RETURN(err);
 }
 
 
@@ -248,9 +405,12 @@ int test_erase() {
 	mylist.emplace_front(1, 'k');
 	mylist.emplace_front(1, 'l');
 
+	std::string del_items;
+
 	int cont = 0;
 	for (auto it = mylist.begin(); it != mylist.end();) {
 		if (cont % 2 == 0) {
+			del_items.append(1, it->second);
 			it = mylist.erase(it);
 		} else {
 			++it;
@@ -258,59 +418,18 @@ int test_erase() {
 		++cont;
 	}
 
+	int err = 0;
+	std::string expected_del_items("ljhfdb");
+	if (del_items != expected_del_items) {
+		L_ERR(nullptr, "DLList::iterator is not working!. Result: { %s }  Expected: { %s }", del_items.c_str(), expected_del_items.c_str());
+		++err;
+	}
+
 	std::string result = repr_results(mylist, false);
 
 	std::string expected("k1 i1 g1 e1 c1 a1");
-
-	if (result == expected) {
-		RETURN(0);
-	} else {
+	if (result != expected) {
 		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		RETURN(1);
-	}
-}
-
-
-int test_single_producer_consumer() {
-	DLList<std::pair<int, char>> mylist;
-	int err = 0;
-
-	// Test several inserts
-	size_t elements = 0;
-	for (char c = 'a'; c <= 'z'; ++c) {
-		elements += 40 * c;
-		for (int i = 0; i < 10 * c; ++i) {
-			std::pair<int, char> ele(i, c);
-			mylist.push_front(ele);
-			mylist.push_back(ele);
-			mylist.emplace_front(ele);
-			mylist.emplace_back(ele);
-		}
-	}
-
-	// Test size
-	if (elements != mylist.size()) {
-		L_ERR(nullptr, "ForwardList::size is not working!");
-		++err;
-	}
-
-	// Test several erases.
-	for (int i = 0; i < 100; ++i) {
-		mylist.pop_front();
-		mylist.pop_back();
-		elements -= 2;
-	}
-
-	// Test size
-	if (elements != mylist.size()) {
-		L_ERR(nullptr, "ForwardList::size is not working!");
-		++err;
-	}
-
-	// Test clear
-	mylist.clear();
-	if (mylist.size() != 0) {
-		L_ERR(nullptr, "ForwardList::clear is not working!");
 		++err;
 	}
 
@@ -318,125 +437,369 @@ int test_single_producer_consumer() {
 }
 
 
-int test_multi_push_pop_front() {
-	DLList<std::string> l;
+int test_single_producer_consumer() {
+	DLList<int> mylist;
+	int err = 0;
 
-	std::vector<std::thread> producers;
-	for (int i = 0; i < 50; ++i) {
-		producers.emplace_back([&l](const std::string& val) {
-			for (int j = 0; j < 100; ++j) {
-				l.push_front(val);
-				l.emplace_front(val);
-			}
-		}, std::to_string(i));
+	// Test several inserts
+	size_t elements = 2500;
+	for (int i = 0; i < elements; ++i) {
+		mylist.push_front(i);
+		mylist.push_back(i);
+		mylist.emplace_front(i);
+		mylist.emplace_back(i);
+	}
+	elements *= 4;
+
+	// Test size.
+	if (elements != mylist.size()) {
+		L_ERR(nullptr, "DLList::insertBefore is not working!. Size: %zu   Expected: %zu\n", mylist.size(), elements);
+		++err;
 	}
 
-	std::atomic_size_t fail_pop(10000);
-	std::vector<std::thread> consumers;
-	for (int i = 0; i < 50; ++i) {
-		consumers.emplace_back([&l, &fail_pop]() {
-			for (int j = 0; j < 100; ++j) {
-				try {
-					l.pop_front();
-					--fail_pop;
-				} catch (const std::out_of_range&) { }
-			}
-		});
+	// Test several erases.
+	for (int i = 0; i < 4000; ++i) {
+		mylist.pop_front();
+		mylist.pop_back();
+		elements -= 2;
 	}
 
-	for (auto& producer : producers) {
-		producer.join();
+	int i = 0;
+	for (auto it = mylist.begin(); it != mylist.end(); ++i) {
+		if (i % 2 == 0) {
+			--elements;
+			it = mylist.erase(it);
+		} else {
+			++it;
+		}
 	}
 
-	for (auto& consumer : consumers) {
-		consumer.join();
+	// Test size
+	if (elements != mylist.size()) {
+		L_ERR(nullptr, "DLList::Delete is not working!. Size: %zu    Expected: %zu\n", mylist.size(), elements);
+		++err;
 	}
 
-	L_ERR(nullptr, "Size List: %zu  Fail Pop: %zu\n", l.size(), fail_pop.load());
+	// Test clear
+	mylist.clear();
+	if (mylist.size() != 0) {
+		L_ERR(nullptr, "DLList::clear is not working!");
+		++err;
+	}
 
-	RETURN(l.size() != fail_pop.load());
+	RETURN(err);
 }
 
 
-int test_multi_push_pop_back() {
-	DLList<std::string> l;
-
-	std::vector<std::thread> producers;
-	for (int i = 0; i < 50; ++i) {
-		producers.emplace_back([&l](const std::string& val) {
-			for (int j = 0; j < 100; ++j) {
-				l.push_back(val);
-				l.emplace_back(val);
-			}
-		}, std::to_string(i));
-	}
-
-	std::atomic_size_t fail_pop(10000);
-	std::vector<std::thread> consumers;
-	for (int i = 0; i < 50; ++i) {
-		consumers.emplace_back([&l, &fail_pop]() {
-			for (int j = 0; j < 100; ++j) {
-				try {
-					l.pop_back();
-					--fail_pop;
-				} catch (const std::out_of_range&) { }
-			}
-		});
-	}
-
-	for (auto& producer : producers) {
-		producer.join();
-	}
-
-	for (auto& consumer : consumers) {
-		consumer.join();
-	}
-
-	L_ERR(nullptr, "Size List: %zu  Fail Pop: %zu\n", l.size(), fail_pop.load());
-
-	RETURN(l.size() != fail_pop.load());
-}
-
-
-int test_multi_erases() {
+int test_multi_push_front() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
 	for (int i = 0; i < 50; ++i) {
 		producers.emplace_back([&l](int val) {
-			auto v = 2 * val;
-			for (int j = 0; j < 20; ++j) {
-				l.push_back(v);
-				l.push_back(v + 1);
+			auto start = 200 * val;
+			auto end = start + 100;
+			auto end2 = end + 100;
+			for (int j = start; j < end; ++j) {
+				l.push_front(j);
+			}
+			for (int j = end; j < end2; ++j) {
+				l.emplace_front(j);
 			}
 		}, i);
-	}
-
-	std::vector<std::thread> consumers;
-	for (int i = 0; i < 50; ++i) {
-		consumers.emplace_back([&l]() {
-			try {
-				auto it = l.begin();
-				for (auto it = l.begin(); it != l.end(); ) {
-					if (*it % 2 == 0) {
-						it = l.erase(it);
-					} else {
-						++it;
-					}
-				}
-			} catch (const std::out_of_range&) { }
-		});
-	}
-
-	for (auto& consumer : consumers) {
-		consumer.join();
 	}
 
 	for (auto& producer : producers) {
 		producer.join();
 	}
 
-	L_ERR(nullptr, "Size List: %zu\n", l.size());
+	std::unordered_set<int> res;
+	res.reserve(l.size());
+	res.insert(l.begin(), l.end());
 
-	RETURN(l.size() < 1000);
+	if (res.size() == l.size()) {
+		RETURN(0);
+	} else {
+		L_ERR(nullptr, "DLList::[push/emplace]_front() for multiples threads is not working!. Size List: %zu  Size_set: %zu\n", l.size(), res.size());
+		RETURN(1);
+	}
+
+	RETURN(0);
+}
+
+
+int test_multi_push_back() {
+	DLList<int> l;
+
+	std::vector<std::thread> producers;
+	for (int i = 0; i < 50; ++i) {
+		producers.emplace_back([&l](int val) {
+			auto start = 200 * val;
+			auto end = start + 100;
+			auto end2 = end + 100;
+			for (int j = start; j < end; ++j) {
+				l.push_back(j);
+			}
+			for (int j = end; j < end2; ++j) {
+				l.emplace_back(j);
+			}
+		}, i);
+	}
+
+	for (auto& producer : producers) {
+		producer.join();
+	}
+
+	std::unordered_set<int> res;
+	res.reserve(l.size());
+	res.insert(l.begin(), l.end());
+
+	if (res.size() == l.size()) {
+		RETURN(0);
+	} else {
+		L_ERR(nullptr, "DLList::[push/emplace]_back() for multiples threads is not working!. Size List: %zu  Size_set: %zu\n", l.size(), res.size());
+		RETURN(1);
+	}
+}
+
+
+int test_multi_insert() {
+	DLList<int> l;
+
+	std::vector<std::thread> producers;
+	for (int i = 0; i < 50; ++i) {
+		producers.emplace_back([&l](int val) {
+			auto it = l.begin();
+			auto start = 200 * val;
+			auto end = start + 200;
+			for (int j = start; j < end; ++j) {
+				it = l.insert(it, j);
+			}
+		}, i);
+	}
+
+	for (auto& producer : producers) {
+		producer.join();
+	}
+
+	std::unordered_set<int> res;
+	res.reserve(l.size());
+	res.insert(l.begin(), l.end());
+
+	if (res.size() == l.size()) {
+		RETURN(0);
+	} else {
+		L_ERR(nullptr, "DLList::insert() for multiples threads is not working!. Size List: %zu  Size_set: %zu\n", l.size(), res.size());
+		RETURN(1);
+	}
+}
+
+
+int test_multi_producers() {
+	DLList<int> l;
+
+	std::vector<std::thread> producers;
+	for (int i = 0; i < 50; ++i) {
+		producers.emplace_back([&l](int val) {
+			auto start = 300 * val;
+			auto end = start + 100;
+			auto end2 = end + 100;
+			auto end3 = end2 + 100;
+			auto it = l.begin();
+			for (int j = start; j < end; ++j) {
+				l.push_front(j);
+			}
+			for (int j = end; j < end2; ++j) {
+				l.push_back(j);
+			}
+			for (int j = end2; j < end3; ++j) {
+				// it = l.insert(it, j);
+			}
+		}, i);
+	}
+
+	for (auto& producer : producers) {
+		producer.join();
+	}
+
+	std::unordered_set<int> res;
+	res.reserve(l.size());
+	res.insert(l.begin(), l.end());
+
+	if (res.size() == l.size()) {
+		RETURN(0);
+	} else {
+		L_ERR(nullptr, "DLList for multiples producers is not working!. Size List: %zu   Size_set: %zu\n", l.size(), res.size());
+		RETURN(1);
+	}
+}
+
+
+int test_multi_push_pop_front() {
+	DLList<int> l;
+
+	std::vector<std::thread> producers;
+	for (int i = 0; i < 50; ++i) {
+		producers.emplace_back([&l](int val) {
+			auto start = 200 * val;
+			auto end = start + 100;
+			auto end2 = end + 100;
+			for (int j = start; j < end; ++j) {
+				l.push_front(j);
+			}
+			for (int j = end; j < end2; ++j) {
+				l.emplace_front(j);
+			}
+		}, i);
+	}
+
+	DLList<int> elem_del;
+	std::vector<std::thread> consumers;
+	for (int i = 0; i < 50; ++i) {
+		consumers.emplace_back([&l, &elem_del]() {
+			for (int j = 0; j < 100; ++j) {
+				try {
+					elem_del.push_front(*l.pop_front());
+				} catch (const std::out_of_range&) { }
+			}
+		});
+	}
+
+	for (auto& producer : producers) {
+		producer.join();
+	}
+
+	for (auto& consumer : consumers) {
+		consumer.join();
+	}
+
+	// Unique deleted elements
+	std::unordered_set<int> deleted;
+	deleted.reserve(elem_del.size());
+	deleted.insert(elem_del.begin(), elem_del.end());
+
+	std::unordered_set<int> res;
+	res.reserve(l.size() + deleted.size());
+	res.insert(l.begin(), l.end());
+	res.insert(deleted.begin(), deleted.end());
+
+	size_t total_elems = 10000;
+	if (total_elems == l.size() + deleted.size() && total_elems == res.size()) {
+		RETURN(0);
+	}
+
+	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	RETURN(1);
+}
+
+
+int test_multi_push_pop_back() {
+	DLList<int> l;
+
+	std::vector<std::thread> producers;
+	for (int i = 0; i < 50; ++i) {
+		producers.emplace_back([&l](int val) {
+			auto start = 200 * val;
+			auto end = start + 100;
+			auto end2 = end + 100;
+			for (int j = start; j < end; ++j) {
+				l.push_back(j);
+			}
+			for (int j = end; j < end2; ++j) {
+				l.emplace_back(j);
+			}
+		}, i);
+	}
+
+	DLList<int> elem_del;
+	std::vector<std::thread> consumers;
+	for (int i = 0; i < 50; ++i) {
+		consumers.emplace_back([&l, &elem_del]() {
+			for (int j = 0; j < 200; ++j) {
+				try {
+					elem_del.push_back(*l.pop_back());
+				} catch (const std::out_of_range&) { }
+			}
+		});
+	}
+
+	for (auto& producer : producers) {
+		producer.join();
+	}
+
+	for (auto& consumer : consumers) {
+		consumer.join();
+	}
+
+	// Unique deleted elements
+	std::unordered_set<int> deleted;
+	deleted.reserve(elem_del.size());
+	deleted.insert(elem_del.begin(), elem_del.end());
+
+	std::unordered_set<int> res;
+	res.reserve(l.size() + deleted.size());
+	res.insert(l.begin(), l.end());
+	res.insert(deleted.begin(), deleted.end());
+
+	size_t total_elems = 10000;
+	if (total_elems == l.size() + deleted.size() && total_elems == res.size()) {
+		RETURN(0);
+	}
+
+	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	RETURN(1);
+}
+
+
+int test_multi_insert_erase() {
+	DLList<int> l;
+
+	std::vector<std::thread> producers;
+	for (int i = 0; i < 50; ++i) {
+		producers.emplace_back([&l](int val) {
+			auto it = l.begin();
+			auto start = 200 * val;
+			auto end = start + 200;
+			for (int j = start; j < end; ++j) {
+				it = l.insert(it, j);
+			}
+		}, i);
+	}
+
+	DLList<int> elem_del;
+	std::vector<std::thread> consumers;
+	for (int i = 0; i < 50; ++i) {
+		consumers.emplace_back([&l, &elem_del]() {
+			int cont = 0;
+			for (auto it = l.begin(); it != l.end() && cont < 500; ++cont) {
+				if (cont % 2 == 0) {
+					elem_del.insert(elem_del.begin(), *it);
+					it = l.erase(it);
+				} else {
+					++it;
+				}
+			}
+		});
+	}
+
+	for (auto& producer : producers) {
+		producer.join();
+	}
+
+	for (auto& consumer : consumers) {
+		consumer.join();
+	}
+
+	std::unordered_set<int> res;
+	res.reserve(l.size() + elem_del.size());
+	res.insert(l.begin(), l.end());
+	res.insert(elem_del.begin(), elem_del.end());
+
+	size_t total_elems = 10000;
+	if (total_elems == res.size()) {
+		RETURN(0);
+	}
+
+	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	RETURN(1);
 }
