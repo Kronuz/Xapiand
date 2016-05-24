@@ -672,15 +672,15 @@ int main(int argc, char **argv) {
 	std::setlocale(LC_CTYPE, "");
 
 	if (opts.logfile.compare("syslog") == 0) {
-		Log::handlers.push_back(std::make_unique<SysLog>());
+		Log::_handlers().push_back(std::make_unique<SysLog>());
 	} else if (!opts.logfile.empty()) {
-		Log::handlers.push_back(std::make_unique<StreamLogger>(opts.logfile.c_str()));
+		Log::_handlers().push_back(std::make_unique<StreamLogger>(opts.logfile.c_str()));
 	}
 	if (!opts.detach) {
-		Log::handlers.push_back(std::make_unique<StderrLogger>());
+		Log::_handlers().push_back(std::make_unique<StderrLogger>());
 	}
 
-	Log::log_level += opts.verbosity;
+	Log::_log_level() += opts.verbosity;
 
 	banner();
 	if (opts.detach) {
