@@ -1670,7 +1670,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 		}
 		try {
 			auto new_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
-			new_schema->fill();
+			new_schema->lock();
 			std::atomic_exchange(schema, std::move(new_schema));
 		} catch (const msgpack::unpack_error&) {
 			std::atomic_exchange(schema, std::make_shared<const MsgPack>());

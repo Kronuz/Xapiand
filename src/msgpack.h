@@ -121,10 +121,11 @@ private:
 	template <typename T>
 	MsgPack::iterator _insert(size_t pos, T&& val);
 
-	void _fill(bool recursive);
+	void _fill(bool recursive, bool lock);
+	void _fill(bool recursive, bool lock) const;
 
 public:
-	void fill() const;
+	void lock() const;
 
 	MsgPack& path(const std::vector<std::string>& path);
 	const MsgPack& path(const std::vector<std::string>& path) const;
@@ -319,6 +320,7 @@ struct MsgPack::Body {
 	std::unordered_map<std::string, std::pair<MsgPack, MsgPack>> map;
 	std::vector<MsgPack> array;
 
+	std::atomic_bool _lock;
 	bool _initialized;
 
 	const std::shared_ptr<msgpack::zone> _zone;
@@ -339,7 +341,8 @@ struct MsgPack::Body {
 		 size_t pos,
 		 const std::shared_ptr<Body>& key,
 		 msgpack::object* obj
-		) : _initialized(false),
+		) : _lock(false),
+			_initialized(false),
 			_zone(zone),
 			_base(base),
 			_parent(parent),
@@ -354,7 +357,8 @@ struct MsgPack::Body {
 		 const std::shared_ptr<msgpack::object>& base,
 		 const std::shared_ptr<Body>& parent,
 		 msgpack::object* obj
-		) : _initialized(false),
+		) : _lock(false),
+			_initialized(false),
 			_zone(zone),
 			_base(base),
 			_parent(parent),
@@ -367,7 +371,8 @@ struct MsgPack::Body {
 
 	template <typename T>
 	Body(T&& v)
-		: _initialized(false),
+		: _lock(false),
+			_initialized(false),
 		  _zone(std::make_shared<msgpack::zone>()),
 		  _base(std::make_shared<msgpack::object>(std::forward<T>(v), *_zone)),
 		  _parent(std::shared_ptr<Body>()),
@@ -1065,7 +1070,11 @@ inline MsgPack& MsgPack::push_back(T&& v) {
 }
 
 
-inline void MsgPack::_fill(bool recursive) {
+inline void MsgPack::_fill(bool recursive, bool lock) {
+	if (_body->_lock) {
+		return;
+	}
+	_body->_lock = lock;
 	if (!_body->_initialized) {
 		_init();
 	}
@@ -1073,12 +1082,12 @@ inline void MsgPack::_fill(bool recursive) {
 		switch (_body->_obj->type) {
 			case msgpack::type::MAP:
 				for (auto& item : _body->map) {
-					item.second.second._fill(recursive);
+					item.second.second._fill(recursive, lock);
 				}
 				break;
 			case msgpack::type::ARRAY:
 				for (auto& item : _body->array) {
-					item._fill(recursive);
+					item._fill(recursive, lock);
 				}
 				break;
 			default:
@@ -1087,9 +1096,12 @@ inline void MsgPack::_fill(bool recursive) {
 	}
 }
 
+inline void MsgPack::_fill(bool recursive, bool lock) const {
+	const_cast<MsgPack*>(this)->_fill(recursive, lock);
+}
 
-inline void MsgPack::fill() const {
-	const_cast<MsgPack*>(this)->_fill(true);
+inline void MsgPack::lock() const {
+	_fill(true, true);
 }
 
 
@@ -1135,7 +1147,7 @@ inline std::pair<MsgPack::iterator, bool> MsgPack::insert(T&& v) {
 
 template <typename M, typename>
 inline MsgPack& MsgPack::operator[](const M& o) {
-	_fill(false);
+	_fill(false, false);
 	switch (o._body->_obj->type) {
 		case msgpack::type::STR:
 			return operator[](std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
@@ -1152,7 +1164,7 @@ inline MsgPack& MsgPack::operator[](const M& o) {
 
 template <typename M, typename>
 inline const MsgPack& MsgPack::operator[](const M& o) const {
-	assert(_const_body->_initialized);
+	_fill(false, false);
 	switch (o._const_body->_obj->type) {
 		case msgpack::type::STR:
 			return operator[](std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
@@ -1205,7 +1217,7 @@ inline const MsgPack& MsgPack::operator[](size_t pos) const {
 
 template <typename M, typename>
 inline MsgPack& MsgPack::at(const M& o) {
-	_fill(false);
+	_fill(false, false);
 	switch (o._body->_obj->type) {
 		case msgpack::type::STR:
 			return at(std::string(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
@@ -1222,7 +1234,7 @@ inline MsgPack& MsgPack::at(const M& o) {
 
 template <typename M, typename>
 inline const MsgPack& MsgPack::at(const M& o) const {
-	assert(_const_body->_initialized);
+	_fill(false, false);
 	switch (o._const_body->_obj->type) {
 		case msgpack::type::STR:
 			return at(std::string(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
@@ -1238,7 +1250,7 @@ inline const MsgPack& MsgPack::at(const M& o) const {
 
 
 inline MsgPack& MsgPack::at(const std::string& key) {
-	_fill(false);
+	_fill(false, false);
 	switch (_body->_obj->type) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
@@ -1250,7 +1262,7 @@ inline MsgPack& MsgPack::at(const std::string& key) {
 }
 
 inline const MsgPack& MsgPack::at(const std::string& key) const {
-	assert(_const_body->_initialized);
+	_fill(false, false);
 	switch (_const_body->_obj->type) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
@@ -1263,7 +1275,7 @@ inline const MsgPack& MsgPack::at(const std::string& key) const {
 
 
 inline MsgPack& MsgPack::at(size_t pos) {
-	_fill(false);
+	_fill(false, false);
 	switch (_body->_obj->type) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
@@ -1281,7 +1293,7 @@ inline MsgPack& MsgPack::at(size_t pos) {
 
 
 inline const MsgPack& MsgPack::at(size_t pos) const {
-	assert(_const_body->_initialized);
+	_fill(false, false);
 	switch (_const_body->_obj->type) {
 		case msgpack::type::NIL:
 			throw std::out_of_range("nil");
@@ -1300,7 +1312,7 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 
 template <typename M, typename>
 inline MsgPack::iterator MsgPack::find(const M& o) {
-	_fill(false);
+	_fill(false, false);
 	try {
 		switch (o._body->_obj->type) {
 			case msgpack::type::STR:
@@ -1321,7 +1333,7 @@ inline MsgPack::iterator MsgPack::find(const M& o) {
 
 template <typename M, typename>
 inline MsgPack::const_iterator MsgPack::find(const M& o) const {
-	assert(_const_body->_initialized);
+	_fill(false, false);
 	try {
 		switch (o._const_body->_obj->type) {
 			case msgpack::type::STR:
@@ -1341,7 +1353,7 @@ inline MsgPack::const_iterator MsgPack::find(const M& o) const {
 
 
 inline MsgPack::iterator MsgPack::find(const std::string& s) {
-	_fill(false);
+	_fill(false, false);
 	try {
 		return MsgPack::iterator(this, _find(s)._body->_pos);
 	} catch (const std::out_of_range&) {
@@ -1351,7 +1363,7 @@ inline MsgPack::iterator MsgPack::find(const std::string& s) {
 
 
 inline MsgPack::const_iterator MsgPack::find(const std::string& s) const {
-	assert(_const_body->_initialized);
+	_fill(false, false);
 	try {
 		return MsgPack::const_iterator(this, _find(s)._const_body->_pos);
 	} catch (const std::out_of_range&) {
@@ -1361,7 +1373,7 @@ inline MsgPack::const_iterator MsgPack::find(const std::string& s) const {
 
 
 inline MsgPack::iterator MsgPack::find(size_t pos) {
-	_fill(false);
+	_fill(false, false);
 	try {
 		return MsgPack::iterator(this, _find(pos)._body->_pos);
 	} catch (const std::out_of_range&) {
@@ -1371,7 +1383,7 @@ inline MsgPack::iterator MsgPack::find(size_t pos) {
 
 
 inline MsgPack::const_iterator MsgPack::find(size_t pos) const {
-	assert(_const_body->_initialized);
+	_fill(false, false);
 	try {
 		return MsgPack::const_iterator(this, _find(pos)._const_body->_pos);
 	} catch (const std::out_of_range&) {
@@ -1388,7 +1400,7 @@ inline size_t MsgPack::count(T&& v) const {
 
 template <typename M, typename>
 inline size_t MsgPack::erase(const M& o) {
-	_fill(false);
+	_fill(false, false);
 	try {
 		switch (o._body->_obj->type) {
 			case msgpack::type::STR:
@@ -1413,7 +1425,7 @@ inline size_t MsgPack::erase(const M& o) {
 
 
 inline size_t MsgPack::erase(const std::string& s) {
-	_fill(false);
+	_fill(false, false);
 	try {
 		_erase(s);
 		return 1;
@@ -1426,7 +1438,7 @@ inline size_t MsgPack::erase(const std::string& s) {
 
 
 inline size_t MsgPack::erase(size_t pos) {
-	_fill(false);
+	_fill(false, false);
 	try {
 		_erase(pos);
 		return 1;
@@ -1439,7 +1451,7 @@ inline size_t MsgPack::erase(size_t pos) {
 
 
 inline MsgPack::iterator MsgPack::erase(const MsgPack::iterator& it) {
-	_fill(false);
+	_fill(false, false);
 	try {
 		return MsgPack::iterator(this, _erase(it._off)._body->_pos);
 	} catch (const std::out_of_range&) {

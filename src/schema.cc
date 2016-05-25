@@ -282,7 +282,7 @@ Schema::Schema(const std::shared_ptr<const MsgPack>& other)
 			{ RESERVED_VERSION, DB_VERSION_SCHEMA },
 			{ RESERVED_SCHEMA, nullptr },
 		};
-		new_schema.fill();
+		new_schema.lock();
 		schema = std::make_shared<const MsgPack>(std::move(new_schema));
 	} else {
 		try {
@@ -773,7 +773,6 @@ Schema::process_accuracy(const MsgPack& doc_accuracy)
 	if (doc_accuracy.is_array()) {
 		try {
 			specification.doc_acc = std::make_unique<const MsgPack>(doc_accuracy);
-			specification.doc_acc->fill();
 		} catch (const msgpack::type_error&) {
 			throw MSG_ClientError("Data inconsistency, %s must be array", RESERVED_ACCURACY);
 		}
@@ -1016,7 +1015,6 @@ Schema::process_value(const MsgPack& doc_value)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
 	specification.value = std::make_unique<const MsgPack>(doc_value);
-	specification.value->fill();
 }
 
 
@@ -1304,7 +1302,6 @@ Schema::validate_required_data(const MsgPack* value)
 			case GEO_TYPE: {
 				if (!specification.doc_acc) {
 					specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_geo);
-					specification.doc_acc->fill();
 				}
 
 				try {
@@ -1340,7 +1337,6 @@ Schema::validate_required_data(const MsgPack* value)
 			case DATE_TYPE: {
 				if (!specification.doc_acc) {
 					specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_date);
-					specification.doc_acc->fill();
 				}
 
 				try {
@@ -1372,7 +1368,6 @@ Schema::validate_required_data(const MsgPack* value)
 			case FLOAT_TYPE: {
 				if (!specification.doc_acc) {
 					specification.doc_acc = std::make_unique<const MsgPack>(def_accuracy_num);
-					specification.doc_acc->fill();
 				}
 
 				try {
