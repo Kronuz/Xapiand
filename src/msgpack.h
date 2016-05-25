@@ -372,7 +372,7 @@ struct MsgPack::Body {
 	template <typename T>
 	Body(T&& v)
 		: _lock(false),
-			_initialized(false),
+		  _initialized(false),
 		  _zone(std::make_shared<msgpack::zone>()),
 		  _base(std::make_shared<msgpack::object>(std::forward<T>(v), *_zone)),
 		  _parent(std::shared_ptr<Body>()),
