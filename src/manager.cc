@@ -701,9 +701,11 @@ XapiandManager::put_node(std::shared_ptr<const Node> node)
 		std::lock_guard<std::mutex> lk(nodes_mtx);
 		try {
 			auto& node_ref = nodes.at(lower_node_name);
-			auto node_copy = std::make_unique<Node>(*node_ref);
-			node_copy->touched = epoch::now<>();
-			node_ref = std::shared_ptr<const Node>(node_copy.release());
+			if (*node == *node_ref) {
+				auto node_copy = std::make_unique<Node>(*node_ref);
+				node_copy->touched = epoch::now<>();
+				node_ref = std::shared_ptr<const Node>(node_copy.release());
+			}
 		} catch (const std::out_of_range &err) {
 			auto node_copy = std::make_unique<Node>(*node);
 			node_copy->touched = epoch::now<>();
