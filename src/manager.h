@@ -101,6 +101,7 @@ protected:
 	std::mutex nodes_mtx;
 	nodes_map_t nodes;
 
+	size_t nodes_size();
 	std::string get_node_name();
 	bool set_node_name(const std::string& node_name_, std::unique_lock<std::mutex>& lk);
 	uint64_t get_node_id();

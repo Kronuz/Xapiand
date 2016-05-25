@@ -302,26 +302,25 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	// Set node as ready!
 	set_node_name(node->name, lk);
 
-	// Get a node (any node)
-	std::unique_lock<std::mutex> lk_n(nodes_mtx);
+	{
+		// Get a node (any node)
+		std::lock_guard<std::mutex> lk_n(nodes_mtx);
+		for (auto it = nodes.cbegin(); it != nodes.cend(); ++it) {
+			auto& node = it->second;
+			Endpoint remote_endpoint(".", node.get());
+			// Replicate database from the other node
+	#ifdef XAPIAND_CLUSTERING
+			L_INFO(this, "Syncing cluster data from %s...", node->name.c_str());
 
-	for (auto it = nodes.cbegin(); it != nodes.cend(); ++it) {
-		auto node = it->second;
-		Endpoint remote_endpoint(".", node.get());
-		// Replicate database from the other node
-#ifdef XAPIAND_CLUSTERING
-		L_INFO(this, "Syncing cluster data from %s...", node->name.c_str());
-
-		auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
-		if (ret.get()) {
-			L_INFO(this, "Cluster data being synchronized from %s...", node->name.c_str());
-			new_cluster = 2;
-			break;
+			auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
+			if (ret.get()) {
+				L_INFO(this, "Cluster data being synchronized from %s...", node->name.c_str());
+				new_cluster = 2;
+				break;
+			}
+	#endif
 		}
-#endif
 	}
-
-	lk_n.unlock();
 
 	state = State::READY;
 
@@ -661,11 +660,17 @@ XapiandManager::join()
 	L_DEBUG(this, "Server ended!");
 }
 
+size_t
+XapiandManager::nodes_size()
+{
+	std::unique_lock<std::mutex> lk_n(nodes_mtx);
+	return nodes.size();
+}
 
 bool
 XapiandManager::is_single_node()
 {
-	return solo || (nodes.size() == 0);
+	return solo || (nodes_size() == 0);
 }
 
 
@@ -686,29 +691,23 @@ XapiandManager::reset_state()
 bool
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
-	std::lock_guard<std::mutex> lk(nodes_mtx);
 	auto local_node_ = std::atomic_load(&local_node);
 	std::string lower_node_name(lower_string(node->name));
 	if (lower_node_name == lower_string(local_node_->name)) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->touched = epoch::now<>();
 		std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
-		return false;
 	} else {
+		std::lock_guard<std::mutex> lk(nodes_mtx);
 		try {
-			auto node_ref = nodes.at(lower_node_name);
-			if (*node == *node_ref) {
-				auto node_ref_ = std::atomic_load(&node_ref);
-				auto node_ref_copy = std::make_unique<Node>(*node_ref_);
-				node_ref_copy->touched = epoch::now<>();
-				std::atomic_exchange(&node_ref, std::shared_ptr<const Node>(node_ref_copy.release()));
-			}
+			auto& node_ref = nodes.at(lower_node_name);
+			auto node_copy = std::make_unique<Node>(*node_ref);
+			node_copy->touched = epoch::now<>();
+			node_ref = std::shared_ptr<const Node>(node_copy.release());
 		} catch (const std::out_of_range &err) {
-			nodes[lower_node_name] = node;
-			auto node_ = std::atomic_load(&node);
-			auto node_cp = std::make_unique<Node>(*node_);
-			node_cp->touched = epoch::now<>();
-			std::atomic_exchange(&node, std::shared_ptr<const Node>(node_cp.release()));
+			auto node_copy = std::make_unique<Node>(*node);
+			node_copy->touched = epoch::now<>();
+			nodes[lower_node_name] = std::shared_ptr<const Node>(node_copy.release());
 			return true;
 		} catch (...) {
 			throw;
@@ -722,8 +721,8 @@ std::shared_ptr<const Node>
 XapiandManager::get_node(const std::string& node_name)
 {
 	try {
-		auto node_ref = nodes.at(lower_string(node_name));
-		return node_ref;
+		std::lock_guard<std::mutex> lk(nodes_mtx);
+		return nodes.at(lower_string(node_name));
 	} catch (const std::out_of_range &err) {
 		return nullptr;
 	}
@@ -747,14 +746,13 @@ XapiandManager::touch_node(const std::string& node_name, int32_t region)
 	} else {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
 		try {
-			auto node_ref = nodes.at(lower_node_name);
-			auto node_ref_ = std::atomic_load(&node_ref);
-			auto node_ref_copy = std::make_unique<Node>(*node_ref_);
+			auto& node_ref = nodes.at(lower_node_name);
+			auto node_ref_copy = std::make_unique<Node>(*node_ref);
 			node_ref_copy->touched = epoch::now<>();
 			if (region != UNKNOWN_REGION) {
 				node_ref_copy->region = region;
 			}
-			std::atomic_store(&node_ref, std::shared_ptr<const Node>(node_ref_copy.release()));
+			node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 			return node_ref;
 		} catch (const std::out_of_range &err) {
 		} catch (...) {
@@ -777,11 +775,11 @@ size_t
 XapiandManager::get_nodes_by_region(int32_t region)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	size_t cont = 0;
+	size_t cnt = 0;
 	for (const auto& node : nodes) {
-		if (node.second->region == region) ++cont;
+		if (node.second->region == region) ++cnt;
 	}
-	return cont;
+	return cnt;
 }
 
 
@@ -792,7 +790,7 @@ XapiandManager::get_region(const std::string& db_name)
 	auto local_node_ = std::atomic_load(&local_node);
 	if (local_node_->regions == -1) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
-		local_node_copy->regions = sqrt(nodes.size());
+		local_node_copy->regions = sqrt(nodes_size());
 		std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
 		re_load = true;
 	}
@@ -821,7 +819,7 @@ XapiandManager::get_region()
 			} else if (state == State::READY) {
 				raft->start();
 				auto local_node_copy = std::make_unique<Node>(*local_node_);
-				local_node_copy->regions = sqrt(nodes.size() + 1);
+				local_node_copy->regions = sqrt(nodes_size() + 1);
 				int32_t region = jump_consistent_hash(local_node_copy->id, local_node_copy->regions);
 				if (local_node_copy->region != region) {
 					local_node_copy->region = region;
