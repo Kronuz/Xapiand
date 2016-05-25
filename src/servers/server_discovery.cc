@@ -106,9 +106,9 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 					} else {
 						L_DISCOVERY(this, "Node %s joining the party (1)...", remote_node.name.c_str());
 					}
-					auto copy_node = new Node(*local_node_);
-					copy_node->regions = -1;
-					std::atomic_store(&local_node, std::shared_ptr<const Node>(copy_node));
+					auto local_node_copy = std::make_unique<Node>(*local_node_);
+					local_node_copy->regions = -1;
+					std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
 
 					XapiandManager::manager->get_region();
 				} else {
@@ -123,9 +123,9 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 			} else {
 				L_DISCOVERY(this, "Node %s joining the party (2)...", remote_node.name.c_str());
 			}
-			auto copy_node = new Node(*local_node_);
-			copy_node->regions = -1;
-			std::atomic_store(&local_node, std::shared_ptr<const Node>(copy_node));
+			auto local_node_copy = std::make_unique<Node>(*local_node_);
+			local_node_copy->regions = -1;
+			std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
 
 			XapiandManager::manager->get_region();
 		} else {
@@ -238,9 +238,10 @@ DiscoveryServer::bye(const std::string& message)
 
 	XapiandManager::manager->drop_node(remote_node.name);
 	L_INFO(this, "Node %s left the party!", remote_node.name.c_str());
-	auto copy_node = new Node(*std::atomic_load(&local_node));
-	copy_node->regions = -1;
-	std::atomic_store(&local_node, std::shared_ptr<const Node>(copy_node));
+	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_copy = std::make_unique<Node>(*local_node_);
+	local_node_copy->regions = -1;
+	std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
 	XapiandManager::manager->get_region();
 }
 
@@ -273,13 +274,13 @@ DiscoveryServer::db(const std::string& message)
 	}
 
 	if (mastery_level != -1) {
-		auto node = std::atomic_load(&local_node);
+		auto local_node_ = std::atomic_load(&local_node);
 		L_DISCOVERY(this, "Found local database '%s' with m:%llx!", index_path.c_str(), mastery_level);
 		discovery->send_message(
 			Discovery::Message::DB_WAVE,
 			serialise_length(mastery_level) +  // The mastery level of the database
 			serialise_string(index_path) +  // The path of the index
-			node->serialise()  // The node where the index is at
+			local_node_->serialise()  // The node where the index is at
 		);
 	}
 }

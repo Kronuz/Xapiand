@@ -30,9 +30,10 @@
 Http::Http(const std::shared_ptr<XapiandManager>& manager_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int port_)
 	: BaseTCP(manager_, ev_loop_, ev_flags_, port_, "HTTP", port_ == XAPIAND_HTTP_SERVERPORT ? 10 : 1, CONN_TCP_NODELAY | CONN_TCP_DEFER_ACCEPT)
 {
-	auto node = new Node(*std::atomic_load(&local_node));
-	node->http_port = port;
-	std::atomic_store(&local_node, std::shared_ptr<const Node>(node));
+	auto local_node_ = std::atomic_load(&local_node);
+	auto node_copy = std::make_unique<Node>(*local_node_);
+	node_copy->http_port = port;
+	std::atomic_store(&local_node, std::shared_ptr<const Node>(node_copy.release()));
 
 	L_OBJ(this, "CREATED CONFIGURATION FOR HTTP");
 }

@@ -110,22 +110,22 @@ Discovery::heartbeat_cb(ev::timer&, int)
 
 	switch (XapiandManager::manager->state.load()) {
 		case XapiandManager::State::RESET: {
-
-			Node* node = new Node(*std::atomic_load(&local_node));
-			std::string drop = node->name;
+			auto local_node_ = std::atomic_load(&local_node);
+			auto node_copy = std::make_unique<Node>(*local_node_);
+			std::string drop = node_copy->name;
 
 			if (XapiandManager::manager->node_name.empty()) {
-				node->name = name_generator();
+				node_copy->name = name_generator();
 			} else {
-				node->name = XapiandManager::manager->node_name;
+				node_copy->name = XapiandManager::manager->node_name;
 			}
-			std::atomic_store(&local_node, std::shared_ptr<const Node>(node));
+			std::atomic_store(&local_node, std::shared_ptr<const Node>(node_copy.release()));
 
 			if (!drop.empty()) {
 				XapiandManager::manager->drop_node(drop);
 			}
 
-			auto local_node_ = std::atomic_load(&local_node);
+			local_node_ = std::atomic_load(&local_node);
 			L_INFO(this, "Advertising as %s (id: %016llX)...", local_node_->name.c_str(), local_node_->id);
 			send_message(Message::HELLO, local_node_->serialise());
 			XapiandManager::manager->state.store(XapiandManager::State::WAITING);
@@ -146,8 +146,8 @@ Discovery::heartbeat_cb(ev::timer&, int)
 
 		case XapiandManager::State::READY:
 		{
-			auto node = std::atomic_load(&local_node);
-			send_message(Message::HEARTBEAT, node->serialise());
+			auto local_node_ = std::atomic_load(&local_node);
+			send_message(Message::HEARTBEAT, local_node_->serialise());
 			break;
 		}
 
