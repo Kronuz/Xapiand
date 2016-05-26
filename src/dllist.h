@@ -61,13 +61,13 @@ class DLList {
 			NORMAL
 		};
 
-		std::shared_ptr<T> value;
+		const std::shared_ptr<T> value;
 		std::shared_ptr<Node> nxt;   // Next Node.
 		std::shared_ptr<Node> prv;   // Previous Node.
 		std::shared_ptr<Node> copy;  // New copy of Node (if any).
 		std::shared_ptr<Info> info;  // Descriptor of update.
 		std::atomic<State> state;    // Shows if Node is replaced or deleted.
-		Type type;
+		const Type type;
 
 		friend DLList;
 
@@ -87,6 +87,11 @@ class DLList {
 			  state(state_),
 			  type(type_) { }
 
+		Node(Node&& other) = delete;
+		Node(const Node& other) = delete;
+		Node& operator=(Node&& other) = delete;
+		Node& operator=(const Node& other) = delete;
+
 		bool isHead() {
 			return type == Type::HEAD;
 		}
@@ -104,11 +109,11 @@ class DLList {
 		}
 
 		auto next() {
-			return std::atomic_load(&this->nxt);
+			return std::atomic_load(&nxt);
 		}
 
 		auto prev() {
-			return std::atomic_load(&this->prv);
+			return std::atomic_load(&prv);
 		}
 	};
 
@@ -130,9 +135,9 @@ class DLList {
 			  status(status_) { }
 	};
 
-	std::shared_ptr<Info> dum;
-	std::shared_ptr<Node> head;
-	std::shared_ptr<Node> tail;
+	const std::shared_ptr<Info> dum;
+	const std::shared_ptr<Node> head;
+	const std::shared_ptr<Node> tail;
 	std::atomic_size_t _size;
 
 	template <typename TT, bool R>
@@ -243,6 +248,32 @@ class DLList {
 			}
 		}
 
+		_iterator(const _iterator& it)
+			: node(it.node),
+			  is_valid(it.is_valid),
+			  moveN(it.moveN),
+			  moveL(it.moveL),
+			  moveR(it.moveR)  { }
+
+		_iterator(_iterator&& it)
+			: node(std::move(it.node)),
+			  is_valid(std::move(it.is_valid)),
+			  moveN(std::move(it.moveN)),
+			  moveL(std::move(it.moveL)),
+			  moveR(std::move(it.moveR)) { }
+
+		_iterator& operator=(const _iterator& it) {
+			node = it.node;
+			is_valid = it.is_valid;
+			return *this;
+		}
+
+		_iterator& operator=(_iterator&& it) {
+			node = std::move(it.node);
+			is_valid = std::move(it.is_valid);
+			return *this;
+		}
+
 		~_iterator() {
 			update();
 		}
@@ -279,9 +310,13 @@ class DLList {
 			if (!is_valid || !other.is_valid) {
 				throw invalid_iterator();
 			}
-			update();
-			other.update();
-			return node == other.node;
+			if (node->type == other.node->type) {
+				if (node->isNormal()) {
+					return *node->value == *other.node->value;
+				}
+				return true;
+			}
+			return false;
 		}
 
 		bool operator!=(_iterator other) {
@@ -368,8 +403,8 @@ private:
 				std::atomic_store(&std::atomic_load(&nodes[1])->copy, newPrv);
 				std::atomic_load(&nodes[1])->state = Node::State::COPIED;
 			}
-			while (!std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[0])->nxt, &nodes[1], newNxt));
-			while (!std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[2])->prv, &nodes[1], newPrv));
+			std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[0])->nxt, &nodes[1], newNxt);
+			std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[2])->prv, &nodes[1], newPrv);
 			I->status = Info::Status::COMMITTED;
 		} else if (I->status == Info::Status::INPROGRESS) {
 			I->status = Info::Status::ABORTED;
@@ -426,7 +461,7 @@ private:
 				return iterator(data.node);
 			}
 			std::array<std::shared_ptr<Node>, 3> nodes({{ data.prvNode, data.node, data.nxtNode }});
-			std::array<std::shared_ptr<Info>, 3> oldInfo({{ std::atomic_load(&data.prvNode->info), std::atomic_load(&data.nodeInfo), std::atomic_load(&data.nxtNode->info) }});
+			std::array<std::shared_ptr<Info>, 3> oldInfo({{ std::atomic_load(&data.prvNode->info), data.nodeInfo, std::atomic_load(&data.nxtNode->info) }});
 			if (checkInfo(nodes, oldInfo)) {
 				if (help(nodes, oldInfo, data.nxtNode, data.prvNode, std::make_shared<Info>(true, Info::Status::INPROGRESS))) {
 					--_size;
