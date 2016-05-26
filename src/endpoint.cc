@@ -28,7 +28,7 @@
 #include <limits.h>
 #include <unistd.h>
 
-std::shared_ptr<const Node> local_node(std::make_shared<const Node>());
+atomic_shared_ptr<const Node> local_node(std::make_shared<const Node>());
 
 
 std::string
@@ -115,7 +115,7 @@ Endpoint::Endpoint(const std::string &uri_, const Node* node_, long long mastery
 		path = "";
 	}
 	if (protocol == "file") {
-		auto local_node_ = std::atomic_load(&local_node);
+		auto local_node_ = local_node.load();
 		if (!node_) {
 			node_ = local_node_.get();
 		}

@@ -69,8 +69,8 @@ Discovery::stop() {
 	heartbeat.stop();
 	L_EV(this, "Stop discovery's heartbeat event");
 
-	auto node = std::atomic_load(&local_node);
-	send_message(Message::BYE, node->serialise());
+	auto local_node_ = local_node.load();
+	send_message(Message::BYE, local_node_->serialise());
 
 	L_DISCOVERY(this, "Discovery was stopped!");
 }
@@ -86,8 +86,8 @@ Discovery::async_enter_cb(ev::async&, int)
 void
 Discovery::_enter()
 {
-	auto node = std::atomic_load(&local_node);
-	send_message(Message::ENTER, node->serialise());
+	auto local_node_ = local_node.load();
+	send_message(Message::ENTER, local_node_->serialise());
 
 	heartbeat.repeat = random_real(HEARTBEAT_MIN, HEARTBEAT_MAX);
 	heartbeat.again();
@@ -110,7 +110,7 @@ Discovery::heartbeat_cb(ev::timer&, int)
 
 	switch (XapiandManager::manager->state.load()) {
 		case XapiandManager::State::RESET: {
-			auto local_node_ = std::atomic_load(&local_node);
+			auto local_node_ = local_node.load();
 			auto node_copy = std::make_unique<Node>(*local_node_);
 			std::string drop = node_copy->name;
 
@@ -119,13 +119,13 @@ Discovery::heartbeat_cb(ev::timer&, int)
 			} else {
 				node_copy->name = XapiandManager::manager->node_name;
 			}
-			std::atomic_store(&local_node, std::shared_ptr<const Node>(node_copy.release()));
+			local_node = std::shared_ptr<const Node>(node_copy.release());
 
 			if (!drop.empty()) {
 				XapiandManager::manager->drop_node(drop);
 			}
 
-			local_node_ = std::atomic_load(&local_node);
+			local_node_ = local_node.load();
 			L_INFO(this, "Advertising as %s (id: %016llX)...", local_node_->name.c_str(), local_node_->id);
 			send_message(Message::HELLO, local_node_->serialise());
 			XapiandManager::manager->state.store(XapiandManager::State::WAITING);
@@ -146,7 +146,7 @@ Discovery::heartbeat_cb(ev::timer&, int)
 
 		case XapiandManager::State::READY:
 		{
-			auto local_node_ = std::atomic_load(&local_node);
+			auto local_node_ = local_node.load();
 			send_message(Message::HEARTBEAT, local_node_->serialise());
 			break;
 		}

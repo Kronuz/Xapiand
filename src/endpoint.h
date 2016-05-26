@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "atomic_shared_ptr.h"
 #include "xapiand.h"
 #include "utils.h"
 
@@ -30,6 +31,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <atomic>
+
 
 struct Node {
 	uint64_t id;
@@ -131,7 +133,7 @@ struct Node {
 	}
 };
 
-extern std::shared_ptr<const Node> local_node;
+extern atomic_shared_ptr<const Node> local_node;
 
 class Endpoint;
 class Endpoints;
@@ -175,10 +177,10 @@ public:
 	Endpoint(const std::string &path_, const Node* node_=nullptr, long long mastery_level_=-1, const std::string& node_name="");
 
 	bool is_local() const {
-		auto node = std::atomic_load(&local_node);
-		int binary_port = node->binary_port;
+		auto local_node_ = local_node.load();
+		int binary_port = local_node_->binary_port;
 		if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
-		return (host == node->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
+		return (host == local_node_->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
 	}
 
 	size_t hash() const;

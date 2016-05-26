@@ -86,7 +86,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 
 {
 	// Set the id in local node.
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	auto node_copy = std::make_unique<Node>(*local_node_);
 	node_copy->id = get_node_id();
 
@@ -109,7 +109,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	// Set addr in local node
 	node_copy->addr = host_address();
 
-	std::atomic_store(&local_node, std::shared_ptr<const Node>(node_copy.release()));
+	local_node = std::shared_ptr<const Node>(node_copy.release());
 
 	async_shutdown_sig.set<XapiandManager, &XapiandManager::async_shutdown_sig_cb>(this);
 	async_shutdown_sig.start();
@@ -238,10 +238,10 @@ XapiandManager::set_node_id(uint64_t node_id_, std::unique_lock<std::mutex>& lk)
 		}
 	}
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	auto node_copy = std::make_unique<Node>(*local_node_);
 	node_copy->id = get_node_id();
-	std::atomic_store(&local_node, std::shared_ptr<const Node>(node_copy.release()));
+	local_node = std::shared_ptr<const Node>(node_copy.release());
 
 	return true;
 }
@@ -273,7 +273,7 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 	Endpoints cluster_endpoints(Endpoint("."));
 
 	DatabaseHandler db_handler;
-	auto node = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	try {
 		db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
 		db_handler.checkout();
@@ -284,23 +284,23 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 		try {
 			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
 			MsgPack obj = {
-				{ "name", node->name },
+				{ "name", local_node_->name },
 				{ "tagline", XAPIAND_TAGLINE }
 			};
-			db_handler.index(obj, std::to_string(node->id), true, MSGPACK_TYPE, std::string());
+			db_handler.index(obj, std::to_string(local_node_->id), true, MSGPACK_TYPE, std::string());
 		} catch (const CheckoutError&) {
 			L_CRIT(this, "Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
 		}
 	}
 	try {
-		db_handler.get_document(std::to_string(node->id));
+		db_handler.get_document(std::to_string(local_node_->id));
 	} catch (const DocNotFoundError&) {
 		throw MSG_Error("Cluster database is corrupt");
 	}
 
 	// Set node as ready!
-	set_node_name(node->name, lk);
+	set_node_name(local_node_->name, lk);
 
 	{
 		// Get a node (any node)
@@ -691,12 +691,12 @@ XapiandManager::reset_state()
 bool
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	std::string lower_node_name(lower_string(node->name));
 	if (lower_node_name == lower_string(local_node_->name)) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->touched = epoch::now<>();
-		std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
+		local_node = std::shared_ptr<const Node>(local_node_copy.release());
 	} else {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
 		try {
@@ -736,15 +736,15 @@ XapiandManager::touch_node(const std::string& node_name, int32_t region)
 {
 	std::string lower_node_name(lower_string(node_name));
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (lower_node_name == lower_string(local_node_->name)) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->touched = epoch::now<>();
 		if (region != UNKNOWN_REGION) {
 			local_node_copy->region = region;
 		}
-		std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
-		return std::atomic_load(&local_node);
+		local_node = std::shared_ptr<const Node>(local_node_copy.release());
+		return local_node.load();
 	} else {
 		std::lock_guard<std::mutex> lk(nodes_mtx);
 		try {
@@ -789,16 +789,16 @@ int32_t
 XapiandManager::get_region(const std::string& db_name)
 {
 	bool re_load = false;
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (local_node_->regions == -1) {
 		auto local_node_copy = std::make_unique<Node>(*local_node_);
 		local_node_copy->regions = sqrt(nodes_size());
-		std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
+		local_node = std::shared_ptr<const Node>(local_node_copy.release());
 		re_load = true;
 	}
 
 	if (re_load) {
-		local_node_ = std::atomic_load(&local_node);
+		local_node_ = local_node.load();
 	}
 
 	std::hash<std::string> hash_fn;
@@ -810,13 +810,13 @@ int32_t
 XapiandManager::get_region()
 {
 	if (auto raft = weak_raft.lock()) {
-		auto local_node_ = std::atomic_load(&local_node);
+		auto local_node_ = local_node.load();
 		if (local_node_->regions == -1) {
 			if (is_single_node()) {
 				auto local_node_copy = std::make_unique<Node>(*local_node_);
 				local_node_copy->regions = 1;
 				local_node_copy->region = 0;
-				std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
+				local_node = std::shared_ptr<const Node>(local_node_copy.release());
 				raft->stop();
 			} else if (state == State::READY) {
 				raft->start();
@@ -827,13 +827,13 @@ XapiandManager::get_region()
 					local_node_copy->region = region;
 					raft->reset();
 				}
-				std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
+				local_node = std::shared_ptr<const Node>(local_node_copy.release());
 			}
 			L_RAFT(this, "Regions: %d Region: %d", local_node_->regions, local_node_->region);
 		}
 	}
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	return local_node_->region;
 }
 

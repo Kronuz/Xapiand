@@ -87,7 +87,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 	auto remote_node = std::make_shared<const Node>(Node::unserialise(&p, p_end));
 
 	int32_t region;
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (*remote_node == *local_node_) {
 		region = local_node_->region;
 	} else {
@@ -108,7 +108,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 					}
 					auto local_node_copy = std::make_unique<Node>(*local_node_);
 					local_node_copy->regions = -1;
-					std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
+					local_node = std::shared_ptr<const Node>(local_node_copy.release());
 
 					XapiandManager::manager->get_region();
 				} else {
@@ -125,7 +125,7 @@ DiscoveryServer::_wave(bool heartbeat, const std::string& message)
 			}
 			auto local_node_copy = std::make_unique<Node>(*local_node_);
 			local_node_copy->regions = -1;
-			std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
+			local_node = std::shared_ptr<const Node>(local_node_copy.release());
 
 			XapiandManager::manager->get_region();
 		} else {
@@ -150,7 +150,7 @@ DiscoveryServer::hello(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (remote_node == *local_node_) {
 		// It's me! ...wave hello!
 		discovery->send_message(Discovery::Message::WAVE, local_node_->serialise());
@@ -188,7 +188,7 @@ DiscoveryServer::sneer(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (remote_node == *local_node_) {
 		if (XapiandManager::manager->node_name.empty()) {
 			L_DISCOVERY(this, "Node name %s already taken. Retrying other name...", local_node_->name.c_str());
@@ -196,7 +196,7 @@ DiscoveryServer::sneer(const std::string& message)
 		} else {
 			L_WARNING(this, "Cannot join the party. Node name %s already taken!", local_node_->name.c_str());
 			XapiandManager::manager->state.store(XapiandManager::State::BAD);
-			std::atomic_store(&local_node, std::make_shared<const Node>());
+			local_node = std::make_shared<const Node>();
 			XapiandManager::manager->shutdown_asap.store(epoch::now<>());
 			XapiandManager::manager->shutdown_sig(0);
 		}
@@ -238,10 +238,10 @@ DiscoveryServer::bye(const std::string& message)
 
 	XapiandManager::manager->drop_node(remote_node.name);
 	L_INFO(this, "Node %s left the party!", remote_node.name.c_str());
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	auto local_node_copy = std::make_unique<Node>(*local_node_);
 	local_node_copy->regions = -1;
-	std::atomic_store(&local_node, std::shared_ptr<const Node>(local_node_copy.release()));
+	local_node = std::shared_ptr<const Node>(local_node_copy.release());
 	XapiandManager::manager->get_region();
 }
 
@@ -274,7 +274,7 @@ DiscoveryServer::db(const std::string& message)
 	}
 
 	if (mastery_level != -1) {
-		auto local_node_ = std::atomic_load(&local_node);
+		auto local_node_ = local_node.load();
 		L_DISCOVERY(this, "Found local database '%s' with m:%llx!", index_path.c_str(), mastery_level);
 		discovery->send_message(
 			Discovery::Message::DB_WAVE,

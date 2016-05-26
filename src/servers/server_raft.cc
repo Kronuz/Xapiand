@@ -77,7 +77,7 @@ RaftServer::heartbeat_leader(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (local_node_->region != remote_node.region) {
 		return;
 	}
@@ -100,7 +100,7 @@ RaftServer::request_vote(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (local_node_->region != remote_node.region) {
 		return;
 	}
@@ -154,7 +154,7 @@ RaftServer::response_vote(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (local_node_->region != remote_node.region) {
 		return;
 	}
@@ -196,7 +196,7 @@ RaftServer::leader(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (local_node_->region != remote_node.region) {
 		return;
 	}
@@ -230,7 +230,7 @@ RaftServer::leadership(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (local_node_->region != remote_node.region) {
 		return;
 	}
@@ -252,7 +252,7 @@ RaftServer::reset(const std::string& message)
 
 	Node remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node_ = std::atomic_load(&local_node);
+	auto local_node_ = local_node.load();
 	if (local_node_->region != remote_node.region) {
 		return;
 	}
