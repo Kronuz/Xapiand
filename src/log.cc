@@ -127,10 +127,10 @@ Log::_log_level()
 }
 
 
-DLList<std::unique_ptr<Logger>>&
+DLList<const std::unique_ptr<Logger>>&
 Log::_handlers()
 {
-	static auto* handlers = new DLList<std::unique_ptr<Logger>>();
+	static auto* handlers = new DLList<const std::unique_ptr<Logger>>();
 	return *handlers;
 }
 
@@ -285,7 +285,7 @@ void
 LogThread::add(const std::shared_ptr<Log>& l_ptr)
 {
 	if (running != 0) {
-		log_list.push_back(l_ptr->shared_from_this());
+		log_list.push_back(l_ptr);
 
 		if (std::chrono::system_clock::from_time_t(wakeup) >= l_ptr->wakeup) {
 			wakeup_signal.notify_all();
@@ -295,7 +295,7 @@ LogThread::add(const std::shared_ptr<Log>& l_ptr)
 
 
 void
-LogThread::thread_function(DLList<std::shared_ptr<Log>>& _log_list)
+LogThread::thread_function(DLList<const std::shared_ptr<Log>>& _log_list)
 {
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
@@ -320,7 +320,7 @@ LogThread::thread_function(DLList<std::shared_ptr<Log>>& _log_list)
 
 		for (auto it = _log_list.begin(); it != _log_list.end(); ) {
 			auto& l_ptr = *it;
-			if (!l_ptr || l_ptr->finished) {
+			if (l_ptr->finished) {
 				it = _log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished = true;

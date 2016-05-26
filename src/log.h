@@ -100,7 +100,7 @@ class Log : public std::enable_shared_from_this<Log> {
 
 public:
 	static int& _log_level();
-	static DLList<std::unique_ptr<Logger>>& _handlers();
+	static DLList<const std::unique_ptr<Logger>>& _handlers();
 
 	Log(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Log();
@@ -151,11 +151,11 @@ class LogThread {
 	std::condition_variable wakeup_signal;
 	std::atomic<std::time_t> wakeup;
 
-	DLList<std::shared_ptr<Log>> log_list;
+	DLList<const std::shared_ptr<Log>> log_list;
 	std::atomic_int running;
 	std::thread inner_thread;
 
-	void thread_function(DLList<std::shared_ptr<Log>>& log_list);
+	void thread_function(DLList<const std::shared_ptr<Log>>& log_list);
 
 public:
 	LogThread();
