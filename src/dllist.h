@@ -27,7 +27,6 @@
 #include <iterator>
 #include <memory>
 #include <stdexcept>
-#include <iostream>
 
 
 /*
@@ -275,7 +274,9 @@ class DLList {
 		}
 
 		~_iterator() {
-			update();
+			if (node) {
+				update();
+			}
 		}
 
 		_iterator& operator++() {
@@ -347,7 +348,6 @@ class DLList {
 			if (!is_valid) {
 				throw invalid_iterator();
 			}
-			update();
 			return node->isNormal();
 		}
 	};
@@ -439,8 +439,8 @@ private:
 			std::array<std::shared_ptr<Node>, 3> nodes({{ data.prvNode, data.node, data.nxtNode }});
 			std::array<std::shared_ptr<Info>, 3> oldInfo({{ std::atomic_load(&data.prvNode->info), data.nodeInfo, std::atomic_load(&data.nxtNode->info) }});
 			if (checkInfo(nodes, oldInfo)) {
-				newNode->prv = data.prvNode;
 				auto nodeCopy = std::make_shared<Node>(data.node->value, data.nxtNode, newNode, nullptr, dum, Node::State::ORDINARY, data.node->type);
+				newNode->prv = data.prvNode;
 				newNode->nxt = nodeCopy;
 				if (help(nodes, oldInfo, newNode, nodeCopy, std::make_shared<Info>(false, Info::Status::INPROGRESS))) {
 					it.node = nodeCopy;
