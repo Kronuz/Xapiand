@@ -30,6 +30,7 @@
 #include "threadpool.h"
 #include "schema.h"
 #include "storage.h"
+#include "atomic_shared_ptr.h"
 
 #include <xapian/matchspy.h>
 
@@ -300,7 +301,7 @@ public:
 };
 
 
-class SchemaLRU: public lru::LRU<size_t, std::shared_ptr<const MsgPack>> {
+class SchemaLRU: public lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
 public:
 	SchemaLRU(ssize_t max_size=-1);
 };

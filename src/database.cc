@@ -1652,13 +1652,13 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 
 	if (finished) return nullptr;
 
-	std::shared_ptr<const MsgPack>* schema;
+	atomic_shared_ptr<const MsgPack>* schema;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
 		schema = &schemas[endpoint.hash()];
 	}
 
-	if (!std::atomic_load(schema)) {
+	if (!schema) {
 		std::string str_schema;
 		std::shared_ptr<Database> database;
 		if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
@@ -1671,13 +1671,13 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 		try {
 			auto new_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
 			new_schema->lock();
-			std::atomic_exchange(schema, std::move(new_schema));
+			schema->exchange(std::move(new_schema));
 		} catch (const msgpack::unpack_error&) {
-			std::atomic_exchange(schema, std::make_shared<const MsgPack>());
+			schema->exchange(std::make_shared<const MsgPack>());
 		}
 	}
 
-	return std::atomic_load(schema);
+	return schema->load();
 }
 
 
@@ -1686,17 +1686,17 @@ DatabasePool::set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<co
 {
 	L_CALL(this, "DatabasePool::set_schema()");
 
-	std::shared_ptr<const MsgPack>* schema;
+	atomic_shared_ptr<const MsgPack>* schema;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
 		schema = &schemas[endpoint.hash()];
 	}
 
-	std::atomic_exchange(schema, new_schema);
+	schema->exchange(new_schema);
 
 	std::shared_ptr<Database> database;
 	if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-		database->set_metadata(RESERVED_SCHEMA, std::atomic_load(schema)->serialise());
+		database->set_metadata(RESERVED_SCHEMA, schema->load()->serialise());
 		checkin(database);
 	} else {
 		throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.as_string().c_str());
