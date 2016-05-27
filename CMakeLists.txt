@@ -1,7 +1,10 @@
-cmake_minimum_required (VERSION 2.8)
+# message (STATUS "Hello")
+
+cmake_minimum_required (VERSION 2.8.8)
+project (xapiand C CXX)
+
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -g -O2 -fdiagnostics-color=always")
 
-project (xapiand)
 set (PACKAGE_NAME "Xapiand")
 set (PACKAGE_VERSION "3.0.0-alpha1")
 set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
@@ -9,13 +12,12 @@ set (PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
 set (PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set (PACKAGE_TARNAME "${PROJECT_NAME}")
 
-
 option (BINARY_PROXY "Define to what port binary traffic will be redirected to" OFF)
 option (CLUSTERING "Enable remote clustering" ON)
 option (DATABASE_WAL "Enable database write ahead log (WAL)" ON)
 option (TRACEBACKS "Enable tracebacks for exceptions" OFF)
 
-foreach(opt "BINARY_PROXY" "CLUSTERING" "DATABASE_WAL" "TRACEBACKS")
+foreach(opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 	else ()
@@ -23,10 +25,11 @@ foreach(opt "BINARY_PROXY" "CLUSTERING" "DATABASE_WAL" "TRACEBACKS")
 	endif ()
 endforeach ()
 
+set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
-set (CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
-
-include (CTest)
+########################################################################
+# Xapiand
+########################################################################
 
 include (AC_HEADER_STDC)
 
@@ -66,7 +69,7 @@ check_function_exists (pthread_setname_np HAVE_PTHREAD_SETNAME_NP_1)
 check_function_exists (pthread_set_name_np HAVE_PTHREAD_SET_NAME_NP_2)
 
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+if (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
 	# FIXME: See if we have fdatasync, and what libraries are needed for it.
 	# We need to actually check for a declaration as OS X has a dummy
 	# implementation in the library which is not prototyped in any header.
@@ -80,12 +83,12 @@ endif ()
 # libev
 ########################################################################
 
-check_include_files ("sys/inotify.h" HAVE_SYS_INOTIFY_H)
-check_include_files ("sys/epoll.h" HAVE_SYS_EPOLL_H)
-check_include_files ("sys/event.h" HAVE_SYS_EVENT_H)
-check_include_files ("sys/select.h" HAVE_SYS_SELECT_H)
-check_include_files ("sys/eventfd.h" HAVE_SYS_EVENTFD_H)
-check_include_files ("sys/signalfd.h" HAVE_SYS_SIGNALFD_H)
+check_include_files (sys/inotify.h HAVE_SYS_INOTIFY_H)
+check_include_files (sys/epoll.h HAVE_SYS_EPOLL_H)
+check_include_files (sys/event.h HAVE_SYS_EVENT_H)
+check_include_files (sys/select.h HAVE_SYS_SELECT_H)
+check_include_files (sys/eventfd.h HAVE_SYS_EVENTFD_H)
+check_include_files (sys/signalfd.h HAVE_SYS_SIGNALFD_H)
 check_include_files (port.h HAVE_PORT_H)
 check_include_files (poll.h HAVE_POLL_H)
 
@@ -166,13 +169,14 @@ check_cxx_source_compiles ("
 	}" HAVE_DATABASE_REVISION_INFO)
 cmake_pop_check_state ()
 
+
 ########################################################################
 # Configuration
 ########################################################################
 
 configure_file (
-	"${PROJECT_SOURCE_DIR}/src/config.h.cmake"
-	"${PROJECT_BINARY_DIR}/src/config.h")
+	${PROJECT_SOURCE_DIR}/src/config.h.cmake
+	${PROJECT_BINARY_DIR}/src/config.h)
 
 aux_source_directory (src SRC_LIST)
 aux_source_directory (src/xchange SRC_LIST)
@@ -181,17 +185,45 @@ aux_source_directory (src/lz4 SRC_LIST)
 aux_source_directory (src/hash SRC_LIST)
 aux_source_directory (src/ev SRC_LIST)
 list (REMOVE_ITEM SRC_LIST
-	"src/ev/ev_win32.c"
-	"src/ev/ev_iocp.c"
-	"src/ev/ev_port.c"
-	"src/ev/ev_kqueue.c"
-	"src/ev/ev_epoll.c"
-	"src/ev/ev_poll.c"
-	"src/ev/ev_select.c")
+	src/ev/ev_win32.c
+	src/ev/ev_iocp.c
+	src/ev/ev_port.c
+	src/ev/ev_kqueue.c
+	src/ev/ev_epoll.c
+	src/ev/ev_poll.c
+	src/ev/ev_select.c)
 
 add_executable (${PROJECT_NAME} ${SRC_LIST})
 target_link_libraries (${PROJECT_NAME}
-	"${XAPIAN_LIBRARIES}"
-	"${CMAKE_THREAD_LIBS_INIT}")
+	${XAPIAN_LIBRARIES}
+	${CMAKE_THREAD_LIBS_INIT}
+)
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+
+########################################################################
+# Testing
+########################################################################
+
+enable_testing ()
+
+add_subdirectory (${PROJECT_SOURCE_DIR}/ext/gtest)
+
+set(PROJECT_TEST_NAME ${PROJECT_NAME}_test)
+include_directories (${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES})
+
+file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*.cc)
+
+link_directories (${GTEST_LIBS})
+
+add_executable (${PROJECT_TEST_NAME} EXCLUDE_FROM_ALL ${TEST_SRC_FILES})
+add_dependencies (${PROJECT_TEST_NAME} googletest)
+target_link_libraries (${PROJECT_TEST_NAME}
+	${CMAKE_THREAD_LIBS_INIT}
+	gtest gtest_main
+)
+
+########################################################################
+
+add_test(test1 ${PROJECT_TEST_NAME})
