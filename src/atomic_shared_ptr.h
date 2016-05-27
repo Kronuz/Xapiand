@@ -40,6 +40,10 @@ public:
 	atomic_shared_ptr(const std::shared_ptr<T>& ptr_)
 		: ptr(ptr_) { }
 
+	~atomic_shared_ptr() {
+		reset();
+	}
+
 	auto is_lock_free() const noexcept {
 		return std::atomic_is_lock_free(&ptr);
 	}
