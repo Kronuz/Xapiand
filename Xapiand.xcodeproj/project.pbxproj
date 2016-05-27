@@ -79,6 +79,7 @@
 /* Begin PBXFileReference section */
 		461882331C8513DA001066E9 /* lz4_compressor.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = lz4_compressor.cc; path = src/lz4_compressor.cc; sourceTree = "<group>"; };
 		461882341C8513DA001066E9 /* lz4_compressor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lz4_compressor.h; path = src/lz4_compressor.h; sourceTree = "<group>"; };
+		46224F781CF7BDBB00E6D1FA /* atomic_shared_ptr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = atomic_shared_ptr.h; path = src/atomic_shared_ptr.h; sourceTree = "<group>"; };
 		462C9EB01C18FC2200BB960E /* sha256.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = sha256.cc; path = src/hash/sha256.cc; sourceTree = "<group>"; };
 		462C9EB11C18FC2200BB960E /* md5.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = md5.cc; path = src/hash/md5.cc; sourceTree = "<group>"; };
 		462C9EB21C18FC2200BB960E /* endian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = endian.h; path = src/hash/endian.h; sourceTree = "<group>"; };
@@ -218,6 +219,7 @@
 				E5CEBCC71A99C89000CD151F /* Products */,
 				C3A4B9661CA989A100239DC8 /* async_fsync.cc */,
 				C3A4B9681CA989AC00239DC8 /* async_fsync.h */,
+				46224F781CF7BDBB00E6D1FA /* atomic_shared_ptr.h */,
 				46DFA9AD1BC4800E008D8144 /* binary.cc */,
 				46DFA9AA1BC4800E008D8144 /* binary.h */,
 				C39AE0781B2F62D700203139 /* cartesian.cc */,
