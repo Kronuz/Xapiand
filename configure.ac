@@ -285,6 +285,6 @@ esac
 
 ########################################################################
 
-CXXFLAGS="$CXXFLAGS -fcolor-diagnostics"
+CXXFLAGS="$CXXFLAGS -fcolor-diagnostics -Isrc"
 
 AC_OUTPUT
