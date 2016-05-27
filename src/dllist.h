@@ -88,6 +88,29 @@ class DLList {
 			  state(state_),
 			  type(type_) { }
 
+		~Node() {
+			// Update Nxt
+			auto p = nxt.load();
+			while (p && p->state != Node::State::ORDINARY) {
+				nxt = p->nxt;
+				p = nxt.load();
+			}
+
+			// Update Prv
+			p = prv.load();
+			while (p && p->state != Node::State::ORDINARY) {
+				prv = p->prv;
+				p = prv.load();
+			}
+
+			// Update copy.
+			p = copy.load();
+			while (p) {
+				copy = p->copy;
+				p = copy.load();
+			}
+		}
+
 		Node(Node&& other) = delete;
 		Node(const Node& other) = delete;
 		Node& operator=(Node&& other) = delete;
@@ -273,12 +296,6 @@ class DLList {
 			node = std::move(it.node);
 			is_valid = std::move(it.is_valid);
 			return *this;
-		}
-
-		~_iterator() {
-			if (node) {
-				update();
-			}
 		}
 
 		_iterator& operator++() {
