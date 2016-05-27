@@ -1658,7 +1658,7 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 		schema = &schemas[endpoint.hash()];
 	}
 
-	if (!schema) {
+	if (!*schema) {
 		std::string str_schema;
 		std::shared_ptr<Database> database;
 		if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
