@@ -221,7 +221,8 @@ public:
 	MsgPack operator +(long val);
 	MsgPack& operator +=(long val);
 	std::ostream& operator <<(std::ostream& s) const;
-
+	
+	std::string unformatted_string() const;
 	std::string to_string(bool prettify=false) const;
 
 	std::string serialise() const;
@@ -1711,6 +1712,14 @@ inline std::string MsgPack::to_string(bool prettify) const {
 inline std::ostream& MsgPack::operator<<(std::ostream& s) const {
 	s << *_const_body->_obj;
 	return s;
+}
+
+
+inline std::string MsgPack::unformatted_string() const {
+	if (_body->_obj->type == msgpack::type::STR) {
+		return std::string(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
+	}
+	throw msgpack::type_error();
 }
 
 
