@@ -26,8 +26,10 @@
 #include "msgpack.h"
 #include "utils.h"
 
+#include "rapidjson/pointer.h"
 
-/* Support for rfc6902 */
+
+/* Support for RFC 6902 */
 
 void apply_patch(const MsgPack& patch, MsgPack& object);
 void patch_add(const MsgPack& obj_patch, MsgPack& object);
@@ -96,7 +98,16 @@ inline void _incr_decr(MsgPack& o, int val, int limit) {
 }
 
 
+//Support for RFC 6901
 inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c) {
 	const auto& path = obj.at(path_c);
-	stringTokenizer(path.as_string(), "/", path_split);
+	
+	std::string path_str = path.unformatted_string();
+	rapidjson::GenericPointer<rapidjson::GenericValue<rapidjson::UTF8<> > > json_pointer(path_str.data(), path_str.size());
+	size_t n_tok = json_pointer.GetTokenCount();
+	
+	for (int i=0; i<n_tok; i++) {
+		auto& t = json_pointer.GetTokens()[i];
+		path_split.push_back(std::string(t.name, t.length));
+	}
 }
