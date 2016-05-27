@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "atomic_shared_ptr.h"
+
 #include <array>
 #include <atomic>
 #include <iterator>
@@ -61,11 +63,11 @@ class DLList {
 		};
 
 		const std::shared_ptr<T> value;
-		std::shared_ptr<Node> nxt;   // Next Node.
-		std::shared_ptr<Node> prv;   // Previous Node.
-		std::shared_ptr<Node> copy;  // New copy of Node (if any).
-		std::shared_ptr<Info> info;  // Descriptor of update.
-		std::atomic<State> state;    // Shows if Node is replaced or deleted.
+		atomic_shared_ptr<Node> nxt;     // Next Node.
+		atomic_shared_ptr<Node> prv;     // Previous Node.
+		atomic_shared_ptr<Node> copy;    // New copy of Node (if any).
+		atomic_shared_ptr<Info> info;    // Descriptor of update.
+		std::atomic<State> state;        // Shows if Node is replaced or deleted.
 		const Type type;
 
 		friend DLList;
@@ -108,11 +110,11 @@ class DLList {
 		}
 
 		auto next() {
-			return std::atomic_load(&nxt);
+			return nxt.load();
 		}
 
 		auto prev() {
-			return std::atomic_load(&prv);
+			return prv.load();
 		}
 	};
 
@@ -171,9 +173,9 @@ class DLList {
 
 		auto update() {
 			bool invDel = false;
-			while (node->state != Node::State::ORDINARY && std::atomic_load(&std::atomic_load(&node->prv)->nxt) != node) {
+			while (node->state != Node::State::ORDINARY && node->prv.load()->nxt.load() != node) {
 				if (node->state == Node::State::COPIED) {
-					node = std::atomic_load(&node->copy);
+					node = node->copy.load();
 				} else {
 					node = (*node.*moveN)();
 					invDel = true;
@@ -184,15 +186,15 @@ class DLList {
 
 		auto get_update_data() {
 			bool invDel = false;
-			while (node->state != Node::State::ORDINARY && std::atomic_load(&std::atomic_load(&node->prv)->nxt) != node) {
+			while (node->state != Node::State::ORDINARY && node->prv.load()->nxt.load() != node) {
 				if (node->state == Node::State::COPIED) {
-					node = std::atomic_load(&node->copy);
+					node = node->copy.load();
 				} else {
-					node = std::atomic_load(&node->nxt);
+					node = node->nxt.load();
 					invDel = true;
 				}
 			}
-			return Data(node, std::atomic_load(&node->info), std::atomic_load(&node->nxt), std::atomic_load(&node->prv), invDel);
+			return Data(node, node->info.load(), node->nxt.load(), node->prv.load(), invDel);
 		}
 
 		auto moveRight() {
@@ -202,7 +204,7 @@ class DLList {
 			if (node->isEOL()) {
 				throw invalid_iterator();
 			}
-			node = std::atomic_load(&node->nxt);
+			node = node->nxt.load();
 		}
 
 		auto moveLeft() {
@@ -212,12 +214,12 @@ class DLList {
 			if (node->isHead()) {
 				throw invalid_iterator();
 			}
-			auto prvNode = std::atomic_load(&node->prv);
-			if (prvNode->state != Node::State::ORDINARY && std::atomic_load(&std::atomic_load(&prvNode->prv)->nxt) != prvNode && std::atomic_load(&prvNode->nxt) == node) {
+			auto prvNode = node->prv.load();
+			if (prvNode->state != Node::State::ORDINARY && prvNode->prv.load()->nxt.load() != prvNode && prvNode->nxt.load() == node) {
 				if (prvNode->state == Node::State::COPIED) {
-					node = std::atomic_load(&prvNode->copy);
+					node = prvNode->copy.load();
 				} else {
-					auto prvPrvNode = std::atomic_load(&prvNode->prv);
+					auto prvPrvNode = prvNode->prv.load();
 					if (prvPrvNode->isHead()) {
 						return;
 					}
@@ -313,7 +315,7 @@ class DLList {
 			}
 			if (node->type == other.node->type) {
 				if (node->isNormal()) {
-					return *node->value == *other.node->value;
+					return node->value.get() == other.node->value.get();
 				}
 				return true;
 			}
@@ -394,17 +396,17 @@ private:
 			  const std::shared_ptr<Node>& newNxt, const std::shared_ptr<Node>& newPrv, const std::shared_ptr<Info>& I) {
 		bool doPtrCAS = true;
 		for (int i = 0; i < 3 && doPtrCAS; ++i) {
-			doPtrCAS = std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[i])->info, &oldInfo[i], I);
+			doPtrCAS = nodes[i]->info.compare_exchange_strong(oldInfo[i], I);
 		}
 		if (doPtrCAS) {
 			if (I->rmv) {
-				std::atomic_load(&nodes[1])->state = Node::State::MARKED;
+				nodes[1]->state = Node::State::MARKED;
 			} else {
-				std::atomic_store(&std::atomic_load(&nodes[1])->copy, newPrv);
-				std::atomic_load(&nodes[1])->state = Node::State::COPIED;
+				nodes[1]->copy.store(newPrv);
+				nodes[1]->state = Node::State::COPIED;
 			}
-			std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[0])->nxt, &nodes[1], newNxt);
-			std::atomic_compare_exchange_strong(&std::atomic_load(&nodes[2])->prv, &nodes[1], newPrv);
+			nodes[0]->nxt.compare_exchange_strong(nodes[1], newNxt);
+			nodes[2]->prv.compare_exchange_strong(nodes[1], newPrv);
 			I->status = Info::Status::COMMITTED;
 		} else if (I->status == Info::Status::INPROGRESS) {
 			I->status = Info::Status::ABORTED;
@@ -424,7 +426,7 @@ private:
 			}
 		}
 		for (int i = 1; i < 3; ++i) {
-			if (std::atomic_load(&nodes[i]->info) != oldInfo[i]) {
+			if (nodes[i]->info.load() != oldInfo[i]) {
 				return false;
 			}
 		}
@@ -437,11 +439,11 @@ private:
 		do {
 			auto data = it.get_update_data();
 			std::array<std::shared_ptr<Node>, 3> nodes({{ data.prvNode, data.node, data.nxtNode }});
-			std::array<std::shared_ptr<Info>, 3> oldInfo({{ std::atomic_load(&data.prvNode->info), data.nodeInfo, std::atomic_load(&data.nxtNode->info) }});
+			std::array<std::shared_ptr<Info>, 3> oldInfo({{ data.prvNode->info.load(), data.nodeInfo, data.nxtNode->info.load() }});
 			if (checkInfo(nodes, oldInfo)) {
 				auto nodeCopy = std::make_shared<Node>(data.node->value, data.nxtNode, newNode, nullptr, dum, Node::State::ORDINARY, data.node->type);
-				newNode->prv = data.prvNode;
-				newNode->nxt = nodeCopy;
+				newNode->prv.store(data.prvNode);
+				newNode->nxt.store(nodeCopy);
 				if (help(nodes, oldInfo, newNode, nodeCopy, std::make_shared<Info>(false, Info::Status::INPROGRESS))) {
 					it.node = nodeCopy;
 					++_size;
@@ -461,7 +463,7 @@ private:
 				return iterator(data.node);
 			}
 			std::array<std::shared_ptr<Node>, 3> nodes({{ data.prvNode, data.node, data.nxtNode }});
-			std::array<std::shared_ptr<Info>, 3> oldInfo({{ std::atomic_load(&data.prvNode->info), data.nodeInfo, std::atomic_load(&data.nxtNode->info) }});
+			std::array<std::shared_ptr<Info>, 3> oldInfo({{ data.prvNode->info.load(), data.nodeInfo, data.nxtNode->info.load() }});
 			if (checkInfo(nodes, oldInfo)) {
 				if (help(nodes, oldInfo, data.nxtNode, data.prvNode, std::make_shared<Info>(true, Info::Status::INPROGRESS))) {
 					--_size;
@@ -479,9 +481,9 @@ public:
 		  _size(0)
 	{
 		auto eol = std::make_shared<Node>(nullptr, tail, head, nullptr, dum, Node::State::ORDINARY, Node::Type::EOL);
-		head->prv = std::make_shared<Node>(nullptr, head, nullptr, nullptr, dum, Node::State::ORDINARY, Node::Type::EOL);
-		head->nxt = eol;
-		tail->prv = eol;
+		head->prv.store(std::make_shared<Node>(nullptr, head, nullptr, nullptr, dum, Node::State::ORDINARY, Node::Type::EOL));
+		head->nxt.store(eol);
+		tail->prv.store(eol);
 	}
 
 	~DLList() {
@@ -517,19 +519,19 @@ public:
 	}
 
 	auto front() {
-		return reference(std::atomic_load(&head->nxt)->value);
+		return reference(head->nxt.load()->value);
 	}
 
 	auto front() const {
-		return const_reference(std::atomic_load(&head->nxt)->value);
+		return const_reference(head->nxt.load()->value);
 	}
 
 	auto back() {
-		return reference(std::atomic_load(&std::atomic_load(&tail->prv)->prv)->value);
+		return reference(tail->prv.load()->prv.load()->value);
 	}
 
 	auto back() const {
-		return const_reference(std::atomic_load(&std::atomic_load(&tail->prv)->prv)->value);
+		return const_reference(tail->prv.load()->prv.load()->value);
 	}
 
 	auto pop_front() {
@@ -540,7 +542,7 @@ public:
 	}
 
 	auto pop_back() {
-		iterator it(std::atomic_load(&std::atomic_load(&tail->prv)->prv));
+		iterator it(tail->prv.load()->prv.load());
 		reference ref(it.node->value);
 		Delete(it);
 		return ref;
@@ -565,31 +567,31 @@ public:
 	}
 
 	auto begin() {
-		return iterator(std::atomic_load(&head->nxt));
+		return iterator(head->nxt.load());
 	}
 
 	auto end() {
-		return iterator(std::atomic_load(&tail->prv));
+		return iterator(tail->prv.load());
 	}
 
 	auto begin() const {
-		return const_iterator(std::atomic_load(&head->nxt));
+		return const_iterator(head->nxt.load());
 	}
 
 	auto end() const {
-		return const_iterator(std::atomic_load(&tail->prv));
+		return const_iterator(tail->prv.load());
 	}
 
 	auto cbegin() const {
-		return const_iterator(std::atomic_load(&head->nxt));
+		return const_iterator(head->nxt.load());
 	}
 
 	auto cend() const {
-		return const_iterator(std::atomic_load(&tail->prv));
+		return const_iterator(tail->prv.load());
 	}
 
 	auto rbegin() {
-		return reverse_iterator(std::atomic_load(&std::atomic_load(&tail->prv)->prv));
+		return reverse_iterator(tail->prv.load()->prv.load());
 	}
 
 	auto rend() {
@@ -597,7 +599,7 @@ public:
 	}
 
 	auto rbegin() const {
-		return const_reverse_iterator(std::atomic_load(&std::atomic_load(&tail->prv)->prv));
+		return const_reverse_iterator(tail->prv.load()->prv.load());
 	}
 
 	auto rend() const {
@@ -605,7 +607,7 @@ public:
 	}
 
 	auto crbegin() const {
-		return const_reverse_iterator(std::atomic_load(&std::atomic_load(&tail->prv)->prv));
+		return const_reverse_iterator(tail->prv.load()->prv.load());
 	}
 
 	auto crend() const {
