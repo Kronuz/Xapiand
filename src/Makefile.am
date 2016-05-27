@@ -64,6 +64,7 @@ xapiand_SOURCES = \
 
 noinst_HEADERS = \
 	async_fsync.h \
+	atomic_shared_ptr.h \
 	cartesian.h \
 	client_base.h \
 	client_binary.h \
