@@ -736,34 +736,11 @@ DatabaseHandler::get_document(const std::string& doc_id)
 	auto field_t = schema->get_slot_field(RESERVED_ID);
 
 	Xapian::Query query(prefixed(Serialise::serialise(field_t.type, doc_id), DOCUMENT_ID_TERM_PREFIX));
-	Xapian::Document doc;
 
 	checkout();
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			Xapian::Enquire enquire(*database->db);
-			enquire.set_query(query);
-			auto mset = enquire.get_mset(0, 1);
-			if (mset.empty()) {
-				throw MSG_DocNotFoundError("Document not found");
-			}
-			doc = database->db->get_document(*mset.begin());
-			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
-		} catch (const Xapian::NetworkError& exc) {
-			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
-		} catch (const Xapian::InvalidArgumentError&) {
-			throw MSG_DocNotFoundError("Document not found");
-		} catch (const Xapian::DocNotFoundError&) {
-			throw MSG_DocNotFoundError("Document not found");
-		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
-		}
-		database->reopen();
-	}
+	Xapian::docid did = database->find_document(query);
+	Xapian::Document doc = database->get_document(did);
 	checkin();
-	L_DATABASE_WRAP(this, "get_document was done");
 
 	return doc;
 }
@@ -779,36 +756,12 @@ DatabaseHandler::get_docid(const std::string& doc_id)
 	auto field_t = schema->get_slot_field(RESERVED_ID);
 
 	Xapian::Query query(prefixed(Serialise::serialise(field_t.type, doc_id), DOCUMENT_ID_TERM_PREFIX));
-	Xapian::docid _id = 0;
 
 	checkout();
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			Xapian::Enquire enquire(*database->db);
-			enquire.set_query(query);
-			auto mset = enquire.get_mset(0, 1);
-			if (mset.empty()) {
-				throw MSG_DocNotFoundError("Document not found");
-			}
-			_id = *mset.begin();
-			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
-		} catch (const Xapian::NetworkError& exc) {
-			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
-		} catch (const Xapian::InvalidArgumentError&) {
-			throw MSG_DocNotFoundError("Document not found");
-		} catch (const Xapian::DocNotFoundError&) {
-			throw MSG_DocNotFoundError("Document not found");
-		} catch (const Xapian::Error& exc) {
-			throw MSG_Error(exc.get_msg().c_str());
-		}
-		database->reopen();
-	}
+	Xapian::docid did = database->find_document(query);
 	checkin();
-	L_DATABASE_WRAP(this, "get_docid was done");
 
-	return _id;
+	return did;
 }
 
 

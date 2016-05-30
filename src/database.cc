@@ -527,6 +527,7 @@ Database::reopen()
 		// Try to reopen
 		try {
 			bool ret = db->reopen();
+			L_DATABASE_WRAP(this, "Reopen done (took %s) [1]", delta_string(access_time, std::chrono::system_clock::now()).c_str());
 			return ret;
 		} catch (const Xapian::Error& exc) {
 			L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
@@ -628,6 +629,8 @@ Database::reopen()
 		}
 	}
 
+	L_DATABASE_WRAP(this, "Reopen done (took %s) [1]", delta_string(access_time, std::chrono::system_clock::now()).c_str());
+
 	return true;
 }
 
@@ -670,8 +673,10 @@ Database::commit(bool wal_)
 	(void)wal_;
 #endif
 
+	auto start = std::chrono::system_clock::now();
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Commit: t: %d", t);
+		// L_DATABASE_WRAP(this, "Commit: t: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->commit();
@@ -687,7 +692,8 @@ Database::commit(bool wal_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "Commit made");
+	L_DATABASE_WRAP(this, "Commit made (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
 	return true;
 }
 
@@ -707,8 +713,10 @@ Database::cancel(bool wal_)
 	(void)wal_;
 #endif
 
+	auto start = std::chrono::system_clock::now();
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Cancel: t: %d", t);
+		// L_DATABASE_WRAP(this, "Cancel: t: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->begin_transaction(false);
@@ -724,7 +732,7 @@ Database::cancel(bool wal_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "Cancel made");
+	L_DATABASE_WRAP(this, "Cancel made (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
 }
 
 
@@ -745,8 +753,10 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 	(void)wal_;
 #endif
 
+	auto start = std::chrono::system_clock::now();
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Deleting document: %d  t: %d", did, t);
+		// L_DATABASE_WRAP(this, "Deleting document: %d  t: %d", did, t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(did);
@@ -762,7 +772,8 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "Document deleted");
+	L_DATABASE_WRAP(this, "Document deleted (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
 	if (commit_) {
 		commit(wal_);
 	}
@@ -784,8 +795,10 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 	(void)wal_;
 #endif
 
+	auto start = std::chrono::system_clock::now();
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Deleting document: '%s'  t: %d", term.c_str(), t);
+		// L_DATABASE_WRAP(this, "Deleting document: '%s'  t: %d", term.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->delete_document(term);
@@ -801,8 +814,11 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "Document deleted");
-	if (commit_) commit(wal_);
+	L_DATABASE_WRAP(this, "Document deleted (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
+	if (commit_) {
+		commit(wal_);
+	}
 }
 
 
@@ -821,8 +837,10 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 	Xapian::Document doc_ = doc;
 
+	auto start = std::chrono::system_clock::now();
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Adding new document.  t: %d", t);
+		// L_DATABASE_WRAP(this, "Adding new document.  t: %d", t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			did = wdb->add_document(doc_);
@@ -838,8 +856,12 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "Document replaced");
-	if (commit_) commit(wal_);
+	L_DATABASE_WRAP(this, "Document added (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
+	if (commit_) {
+		commit(wal_);
+	}
+
 	return did;
 }
 
@@ -857,8 +879,10 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 	Xapian::Document doc_ = doc;
 
+	auto start = std::chrono::system_clock::now();
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Replacing: %d  t: %d", did, t);
+		// L_DATABASE_WRAP(this, "Replacing: %d  t: %d", did, t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			wdb->replace_document(did, doc_);
@@ -874,8 +898,12 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "Document replaced");
-	if (commit_) commit(wal_);
+	L_DATABASE_WRAP(this, "Document replaced (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
+	if (commit_) {
+		commit(wal_);
+	}
+
 	return did;
 }
 
@@ -903,8 +931,10 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 	Xapian::Document doc_ = doc;
 
+	auto start = std::chrono::system_clock::now();
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		L_DATABASE_WRAP(this, "Replacing: '%s'  t: %d", term.c_str(), t);
+		// L_DATABASE_WRAP(this, "Replacing: '%s'  t: %d", term.c_str(), t);
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
 		try {
 			did = wdb->replace_document(term, doc_);
@@ -920,8 +950,12 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "Document replaced");
-	if (commit_) commit(wal_);
+	L_DATABASE_WRAP(this, "Document replaced (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
+	if (commit_) {
+		commit(wal_);
+	}
+
 	return did;
 }
 
@@ -936,6 +970,8 @@ Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool
 #else
 	(void)wal_;
 #endif
+
+	auto start = std::chrono::system_clock::now();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -953,8 +989,11 @@ Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "add_spelling was done");
-	if (commit_) commit(wal_);
+	L_DATABASE_WRAP(this, "Spelling added (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
+	if (commit_) {
+		commit(wal_);
+	}
 }
 
 
@@ -968,6 +1007,8 @@ Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, b
 #else
 	(void)wal_;
 #endif
+
+	auto start = std::chrono::system_clock::now();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -985,8 +1026,50 @@ Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, b
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "remove_spelling was done");
-	if (commit_) commit(wal_);
+	L_DATABASE_WRAP(this, "Spelling removed (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
+	if (commit_) {
+		commit(wal_);
+	}
+}
+
+
+Xapian::docid
+Database::find_document(const Xapian::Query& query)
+{
+	L_CALL(this, "Database::find_document()");
+
+	Xapian::docid did = 0;
+
+	auto start = std::chrono::system_clock::now();
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			Xapian::Enquire enquire(*db);
+			enquire.set_query(query);
+			auto mset = enquire.get_mset(0, 1);
+			if (mset.empty()) {
+				throw MSG_DocNotFoundError("Document not found");
+			}
+			did = *mset.begin();
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (!t) throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::NetworkError& exc) {
+			if (!t) throw MSG_Error("Problem communicating with the remote database (%s)", exc.get_msg().c_str());
+		} catch (const Xapian::InvalidArgumentError&) {
+			throw MSG_DocNotFoundError("Document not found");
+		} catch (const Xapian::DocNotFoundError&) {
+			throw MSG_DocNotFoundError("Document not found");
+		} catch (const Xapian::Error& exc) {
+			throw MSG_Error(exc.get_msg().c_str());
+		}
+		reopen();
+	}
+
+	L_DATABASE_WRAP(this, "Document found (took %s) [1]", delta_string(start, std::chrono::system_clock::now()).c_str());
+
+	return did;
 }
 
 
@@ -995,9 +1078,14 @@ Database::get_document(const Xapian::docid& did)
 {
 	L_CALL(this, "Database::get_document()");
 
+	Xapian::Document doc;
+
+	auto start = std::chrono::system_clock::now();
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			return db->get_document(did);
+			doc = db->get_document(did);
+			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (!t) {
 				throw MSG_Error("Database was modified, try again (%s)", exc.get_msg().c_str());
@@ -1016,7 +1104,9 @@ Database::get_document(const Xapian::docid& did)
 		reopen();
 	}
 
-	return Xapian::Document();
+	L_DATABASE_WRAP(this, "Got document (took %s) [1]", delta_string(start, std::chrono::system_clock::now()).c_str());
+
+	return doc;
 }
 
 
@@ -1026,6 +1116,8 @@ Database::get_metadata(const std::string& key)
 	L_CALL(this, "Database::get_metadata()");
 
 	std::string value;
+
+	auto start = std::chrono::system_clock::now();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
@@ -1043,7 +1135,8 @@ Database::get_metadata(const std::string& key)
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "get_metadata was done");
+	L_DATABASE_WRAP(this, "Got metadata (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
 	return value;
 }
 
@@ -1058,6 +1151,8 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 #else
 	(void)wal_;
 #endif
+
+	auto start = std::chrono::system_clock::now();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -1075,8 +1170,11 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 		reopen();
 	}
 
-	L_DATABASE_WRAP(this, "set_metadata was done");
-	if (commit_) commit(wal_);
+	L_DATABASE_WRAP(this, "Set metadata (took %s)", delta_string(start, std::chrono::system_clock::now()).c_str());
+
+	if (commit_) {
+		commit(wal_);
+	}
 }
 
 
