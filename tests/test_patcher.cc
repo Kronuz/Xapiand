@@ -363,3 +363,37 @@ int test_decr() {
 		RETURN(1);
 	}
 }
+
+
+int test_rfc6901() {
+	std::string obj_str;
+	std::string filename("examples/json/rfc6901.txt");
+	if (!read_file_contents(filename, &obj_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
+
+	std::string patch_str;
+	filename = "examples/json/patch_rfc6901.txt";
+	if (!read_file_contents(filename, &patch_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
+
+	rapidjson::Document doc_obj;
+	rapidjson::Document doc_patch;
+	json_load(doc_obj, obj_str);
+	json_load(doc_patch, patch_str);
+	MsgPack obj(doc_obj);
+	MsgPack patch(doc_patch);
+
+	fprintf(stderr, "HERE\n");
+	try {
+		apply_patch(patch, obj);
+		RETURN(0);
+	} catch (const Exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
+		RETURN(1);
+	}
+}
+

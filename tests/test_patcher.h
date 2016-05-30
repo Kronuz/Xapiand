@@ -32,3 +32,4 @@ int test_copy();
 int test_test();
 int test_incr();
 int test_decr();
+int test_rfc6901();
