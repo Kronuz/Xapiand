@@ -387,7 +387,6 @@ int test_rfc6901() {
 	MsgPack obj(doc_obj);
 	MsgPack patch(doc_patch);
 
-	fprintf(stderr, "HERE\n");
 	try {
 		apply_patch(patch, obj);
 		RETURN(0);
