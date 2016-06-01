@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,8 +23,8 @@
 #pragma once
 
 #include "atomic_shared_ptr.h"
-#include "xapiand.h"
 #include "utils.h"
+#include "xapiand.h"
 
 #include <string>
 #include <arpa/inet.h>
@@ -48,7 +48,7 @@ struct Node {
 		memset(&addr, 0, sizeof(addr));
 	}
 
-	// Move constructor, takes a rvalue reference &&
+	// Move constructor
 	Node(Node&& other)
 		: id(std::move(other.id)),
 		  name(std::move(other.name)),
@@ -59,6 +59,7 @@ struct Node {
 		  region(std::move(other.region)),
 		  touched(std::move(other.touched)) { }
 
+	// Copy Constructor
 	Node(const Node& other)
 		: id(other.id),
 		  name(other.name),
@@ -69,7 +70,7 @@ struct Node {
 		  region(other.region),
 		  touched(other.touched) { }
 
-	// Move assignment, takes a rvalue reference &&
+	// Move assignment
 	Node& operator=(Node&& other) {
 		id = std::move(other.id);
 		name = std::move(other.name);
@@ -82,6 +83,7 @@ struct Node {
 		return *this;
 	}
 
+	// Copy assignment
 	Node& operator=(const Node& other) {
 		id = other.id;
 		name = other.name;
@@ -131,14 +133,16 @@ struct Node {
 	}
 };
 
+
 extern atomic_shared_ptr<const Node> local_node;
+
 
 class Endpoint;
 class Endpoints;
 
 
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 
 namespace std {
@@ -154,8 +158,8 @@ namespace std {
 	};
 }
 
-bool operator == (Endpoint const& le, Endpoint const& re);
-bool operator == (Endpoints const& le, Endpoints const& re);
+bool operator==(Endpoint const& le, Endpoint const& re);
+bool operator==(Endpoints const& le, Endpoints const& re);
 
 
 class Endpoint {
@@ -183,8 +187,10 @@ public:
 
 	size_t hash() const;
 	std::string as_string() const;
+
 	bool operator<(const Endpoint & other) const;
 	bool operator==(const Node &other) const;
+
 	struct compare {
 		constexpr bool operator() (const Endpoint &a, const Endpoint &b) const noexcept {
 			return b.mastery_level > a.mastery_level;
@@ -205,7 +211,8 @@ public:
 	using std::vector<Endpoint>::cbegin;
 	using std::vector<Endpoint>::cend;
 
-	Endpoints() {}
+	Endpoints() { }
+
 	Endpoints(const Endpoint &endpoint) {
 		add(endpoint);
 	}
