@@ -192,9 +192,10 @@ private:
 		std::lock_guard<std::mutex> lk(_mtx);
 		weak_children.reserve(_children.size());
 		for (auto it = _children.begin(); it != _children.end();) {
-			auto child = *it++;
+			auto child = *it;
 			if (child) {
 				weak_children.push_back(child);
+				++it;
 			} else {
 				it = _children.erase(it);
 			}
