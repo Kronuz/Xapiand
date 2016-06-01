@@ -48,39 +48,37 @@ struct Node {
 		memset(&addr, 0, sizeof(addr));
 	}
 
-	// move constructor, takes a rvalue reference &&
-	Node(const Node&& other) {
+	// Move constructor, takes a rvalue reference &&
+	Node(Node&& other)
+		: id(std::move(other.id)),
+		  name(std::move(other.name)),
+		  addr(std::move(other.addr)),
+		  http_port(std::move(other.http_port)),
+		  binary_port(std::move(other.binary_port)),
+		  regions(std::move(other.regions)),   /* should be exist move a copy constructor? */
+		  region(std::move(other.region)),
+		  touched(std::move(other.touched)) { }
+
+	Node(const Node& other)
+		: id(other.id),
+		  name(other.name),
+		  addr(other.addr),
+		  http_port(other.http_port),
+		  binary_port(other.binary_port),
+		  regions(other.regions),
+		  region(other.region),
+		  touched(other.touched) { }
+
+	// Move assignment, takes a rvalue reference &&
+	Node& operator=(Node&& other) {
 		id = std::move(other.id);
 		name = std::move(other.name);
 		addr = std::move(other.addr);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
-		regions = other.regions;   /* should be exist move a copy constructor? */
-		region = other.region;
-		touched = other.touched;
-	}
-
-	Node(const Node& other) {
-		id = other.id;
-		name = other.name;
-		addr = other.addr;
-		http_port = other.http_port;
-		binary_port = other.binary_port;
-		regions = other.regions;
-		region = other.region;
-		touched = other.touched;
-	}
-
-	// move assignment, takes a rvalue reference &&
-	Node& operator=(const Node&& other) {
-		id = std::move(other.id);
-		name = std::move(other.name);
-		addr = std::move(other.addr);
-		http_port = std::move(other.http_port);
-		binary_port = std::move(other.binary_port);
-		regions = other.regions;
-		region = other.region;
-		touched = other.touched;
+		regions = std::move(other.regions);
+		region = std::move(other.region);
+		touched = std::move(other.touched);
 		return *this;
 	}
 
