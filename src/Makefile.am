@@ -10,6 +10,7 @@ xapiand_SOURCES = \
 	client_http.cc \
 	database.cc \
 	database_autocommit.cc \
+	database_handler.cc \
 	database_utils.cc \
 	datetime.cc \
 	endpoint.cc \
@@ -34,7 +35,6 @@ xapiand_SOURCES = \
 	lz4/xxhash.c \
 	lz4_compressor.cc \
 	manager.cc \
-	msgpack.cc \
 	msgpack_patcher.cc \
 	multivalue.cc \
 	multivaluekeymaker.cc \
@@ -64,14 +64,17 @@ xapiand_SOURCES = \
 
 noinst_HEADERS = \
 	async_fsync.h \
+	atomic_shared_ptr.h \
 	cartesian.h \
 	client_base.h \
 	client_binary.h \
 	client_http.h \
 	database.h \
 	database_autocommit.h \
+	database_handler.h \
 	database_utils.h \
 	datetime.h \
+	dllist.h \
 	endpoint.h \
 	endpoint_resolver.h \
 	ev/ev_vars.h \
@@ -87,7 +90,6 @@ noinst_HEADERS = \
 	ev/ev_win32.c \
 	exception.h \
 	fields.h \
-	forward_list.h \
 	generate_terms.h \
 	geometry.h \
 	geospatialrange.h \

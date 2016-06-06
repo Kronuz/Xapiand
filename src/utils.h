@@ -230,6 +230,7 @@ void to_lower(std::string& str);
 
 char* normalize_path(const char* src, const char* end, char* dst);
 char* normalize_path(const std::string& src, char* dst);
+std::string normalize_path(const std::string& src);
 int url_qs(const char *, const char *, size_t);
 std::string urldecode(const char *, size_t);
 
@@ -243,9 +244,7 @@ std::string get_slot_hex(const std::string& name);
 bool strhasupper(const std::string& str);
 
 bool isRange(const std::string& str);
-bool isFloat(const std::string& str);
-bool isInteger(const std::string& str);
-bool isPositive(const std::string& str);
+bool isNumeric(const std::string& str);
 
 bool startswith(const std::string& text, const std::string& token);
 void delete_files(const std::string& path);

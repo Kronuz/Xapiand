@@ -24,7 +24,7 @@
 
 #include "config.h"
 
-#define XAPIAND_TAGLINE              "You Know, Also for Search";
+#define XAPIAND_TAGLINE              "You Know, Also for Search"
 
 #define XAPIAND_CLUSTER_NAME         "Xapiand"
 #define XAPIAND_DISCOVERY_GROUP      "224.2.2.88"   /* Gossip group */

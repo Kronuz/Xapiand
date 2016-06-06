@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,7 +22,8 @@
 
 #include "test_threadpool.h"
 
-#include "../src/log.h"
+#include "utils.h"
+
 
 using namespace queue;
 
@@ -42,10 +43,10 @@ int test_pool() {
 
 	if (results != "<1<2<3<44>2>3>1>") {
 		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<3<44>2>3>1>", results.c_str());
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -63,10 +64,10 @@ int test_pool_limit() {
 	pool.join();
 	if (results != "<1<2<32><44>3>1>") {
 		L_ERR(nullptr, "ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<32><44>3>1>", results.c_str());
-		return 1;
+		RETURN(1);
 	}
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -106,13 +107,13 @@ int test_pool_func() {
 
 	if (total != 30) {
 		L_ERR(nullptr, "ThreadPool::enqueue functions with int is not working correctly. Result: %d Expect: 30", total);
-		return 1;
+		 RETURN(1);
 	}
 
 	pool.end();
 	pool.join();
 
-	return 0;
+	 RETURN(0);
 }
 
 
@@ -153,13 +154,13 @@ int test_pool_func_shared() {
 
 	if (total != 30) {
 		L_ERR(nullptr, "ThreadPool::enqueue functions with std::shared_ptr is not working correctly. Result: %d Expect: 30", total);
-		return 1;
+		RETURN(1);
 	}
 
 	pool.end();
 	pool.join();
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -200,11 +201,11 @@ int test_pool_func_unique() {
 
 	if (total != 30)  {
 		L_ERR(nullptr, "ThreadPool::enqueue functions with std::unique_ptr is not working correctly. Result: %d Expect: 30", total);
-		return 1;
+		RETURN(1);
 	}
 
 	pool.end();
 	pool.join();
 
-	return 0;
+	RETURN(0);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,17 +22,18 @@
 
 #include "manager.h"
 
-#include "utils.h"
-#include "replicator.h"
 #include "async_fsync.h"
-#include "database_autocommit.h"
-#include "endpoint.h"
-#include "servers/server.h"
 #include "client_binary.h"
-#include "servers/http.h"
+#include "database_autocommit.h"
+#include "database_handler.h"
+#include "endpoint.h"
+#include "replicator.h"
 #include "servers/binary.h"
+#include "servers/http.h"
+#include "servers/server.h"
 #include "servers/server_discovery.h"
 #include "servers/server_raft.h"
+#include "utils.h"
 
 #include <list>
 #include <stdlib.h>
@@ -85,13 +86,14 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 
 {
 	// Set the id in local node.
-	auto node = new Node(*local_node);
-	node->id = get_node_id();
+	auto local_node_ = local_node.load();
+	auto node_copy = std::make_unique<Node>(*local_node_);
+	node_copy->id = get_node_id();
 
-	if (node->empty()) {
+	if (node_copy->empty()) {
 		std::unique_lock<std::mutex> lk(qmtx);
 		set_node_id(random_int(1, UINT64_MAX - 1), lk);
-		node->id = get_node_id();
+		node_copy->id = get_node_id();
 	}
 
 	// Setup node from node database directory
@@ -105,9 +107,9 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	}
 
 	// Set addr in local node
-	node->addr = host_address();
+	node_copy->addr = host_address();
 
-	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
+	local_node = std::shared_ptr<const Node>(node_copy.release());
 
 	async_shutdown_sig.set<XapiandManager, &XapiandManager::async_shutdown_sig_cb>(this);
 	async_shutdown_sig.start();
@@ -236,9 +238,10 @@ XapiandManager::set_node_id(uint64_t node_id_, std::unique_lock<std::mutex>& lk)
 		}
 	}
 
-	auto node = new Node(*local_node);
-	node->id = get_node_id();
-	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
+	auto local_node_ = local_node.load();
+	auto node_copy = std::make_unique<Node>(*local_node_);
+	node_copy->id = get_node_id();
+	local_node = std::shared_ptr<const Node>(node_copy.release());
 
 	return true;
 }
@@ -268,57 +271,56 @@ XapiandManager::setup_node(std::shared_ptr<XapiandServer>&& /*server*/)
 
 	// Open cluster database
 	Endpoints cluster_endpoints(Endpoint("."));
-	std::shared_ptr<Database> cluster_database;
-	if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL)) {
+
+	DatabaseHandler db_handler;
+	auto local_node_ = local_node.load();
+	try {
+		db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_PERSISTENT | DB_NOWAL);
+		db_handler.checkout();
+		db_handler.checkin();
+	} catch (const CheckoutError&) {
 		new_cluster = 1;
 		L_INFO(this, "Cluster database doesn't exist. Generating database...");
-		if (!database_pool.checkout(cluster_database, cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL)) {
-			L_CRIT(nullptr, "Cannot generate cluster database");
+		try {
+			db_handler.reset(cluster_endpoints, DB_WRITABLE | DB_SPAWN | DB_PERSISTENT | DB_NOWAL);
+			MsgPack obj = {
+				{ "name", local_node_->name },
+				{ "tagline", XAPIAND_TAGLINE }
+			};
+			db_handler.index(obj, std::to_string(local_node_->id), true, MSGPACK_TYPE, std::string());
+		} catch (const CheckoutError&) {
+			L_CRIT(this, "Cannot generate cluster database");
 			sig_exit(-EX_CANTCREAT);
 		}
 	}
+	try {
+		db_handler.get_document(std::to_string(local_node_->id));
+	} catch (const DocNotFoundError&) {
+		throw MSG_Error("Cluster database is corrupt");
+	}
 
 	// Set node as ready!
-	set_node_name(local_node->name, lk);
+	set_node_name(local_node_->name, lk);
 
-	Xapian::Document document;
-	try {
-		document = cluster_database->get_document(std::to_string(local_node->id));
-	} catch (const DocNotFoundError&) {
-		MsgPack obj;
-		obj["name"] = local_node->name;
-		obj["tagline"] = XAPIAND_TAGLINE;
-		cluster_database->index(obj, std::to_string(local_node->id), true, MSGPACK_TYPE, "");
-	}
+	{
+		// Get a node (any node)
+		std::lock_guard<std::mutex> lk_n(nodes_mtx);
+		for (auto it = nodes.cbegin(); it != nodes.cend(); ++it) {
+			auto& node = it->second;
+			Endpoint remote_endpoint(".", node.get());
+			// Replicate database from the other node
+	#ifdef XAPIAND_CLUSTERING
+			L_INFO(this, "Syncing cluster data from %s...", node->name.c_str());
 
-	MsgPack obj_data = get_MsgPack(document);
-
-	database_pool.checkin(cluster_database);
-	// if (obj_data["name"] != local_node.name) {
-	// 	L_CRIT(nullptr, "Node name mismatch!");
-	// 	sig_exit(-EX_CANTCREAT);
-	// }
-
-	// Get a node (any node)
-	std::unique_lock<std::mutex> lk_n(nodes_mtx);
-
-	for (auto it = nodes.cbegin(); it != nodes.cend(); ++it) {
-		auto node = it->second;
-		Endpoint remote_endpoint(".", node.get());
-		// Replicate database from the other node
-#ifdef XAPIAND_CLUSTERING
-		L_INFO(this, "Syncing cluster data from %s...", node->name.c_str());
-
-		auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
-		if (ret.get()) {
-			L_INFO(this, "Cluster data being synchronized from %s...", node->name.c_str());
-			new_cluster = 2;
-			break;
+			auto ret = trigger_replication(remote_endpoint, cluster_endpoints[0]);
+			if (ret.get()) {
+				L_INFO(this, "Cluster data being synchronized from %s...", node->name.c_str());
+				new_cluster = 2;
+				break;
+			}
+	#endif
 		}
-#endif
 	}
-
-	lk_n.unlock();
 
 	state = State::READY;
 
@@ -658,11 +660,17 @@ XapiandManager::join()
 	L_DEBUG(this, "Server ended!");
 }
 
+size_t
+XapiandManager::nodes_size()
+{
+	std::unique_lock<std::mutex> lk_n(nodes_mtx);
+	return nodes.size();
+}
 
 bool
 XapiandManager::is_single_node()
 {
-	return solo || (nodes.size() == 0);
+	return solo || (nodes_size() == 0);
 }
 
 
@@ -683,20 +691,25 @@ XapiandManager::reset_state()
 bool
 XapiandManager::put_node(std::shared_ptr<const Node> node)
 {
-	std::lock_guard<std::mutex> lk(nodes_mtx);
+	auto local_node_ = local_node.load();
 	std::string lower_node_name(lower_string(node->name));
-	if (lower_node_name == lower_string(local_node->name)) {
-		local_node->touched = epoch::now<>();
-		return false;
+	if (lower_node_name == lower_string(local_node_->name)) {
+		auto local_node_copy = std::make_unique<Node>(*local_node_);
+		local_node_copy->touched = epoch::now<>();
+		local_node = std::shared_ptr<const Node>(local_node_copy.release());
 	} else {
+		std::lock_guard<std::mutex> lk(nodes_mtx);
 		try {
-			auto node_ref = nodes.at(lower_node_name);
+			auto& node_ref = nodes.at(lower_node_name);
 			if (*node == *node_ref) {
-				node_ref->touched = epoch::now<>();
+				auto node_copy = std::make_unique<Node>(*node_ref);
+				node_copy->touched = epoch::now<>();
+				node_ref = std::shared_ptr<const Node>(node_copy.release());
 			}
 		} catch (const std::out_of_range &err) {
-			nodes[lower_node_name] = node;
-			node->touched = epoch::now<>();
+			auto node_copy = std::make_unique<Node>(*node);
+			node_copy->touched = epoch::now<>();
+			nodes[lower_node_name] = std::shared_ptr<const Node>(node_copy.release());
 			return true;
 		} catch (...) {
 			throw;
@@ -710,8 +723,8 @@ std::shared_ptr<const Node>
 XapiandManager::get_node(const std::string& node_name)
 {
 	try {
-		auto node_ref = nodes.at(lower_string(node_name));
-		return node_ref;
+		std::lock_guard<std::mutex> lk(nodes_mtx);
+		return nodes.at(lower_string(node_name));
 	} catch (const std::out_of_range &err) {
 		return nullptr;
 	}
@@ -721,21 +734,27 @@ XapiandManager::get_node(const std::string& node_name)
 std::shared_ptr<const Node>
 XapiandManager::touch_node(const std::string& node_name, int32_t region)
 {
-	std::lock_guard<std::mutex> lk(nodes_mtx);
 	std::string lower_node_name(lower_string(node_name));
-	if (lower_node_name == lower_string(local_node->name)) {
-		local_node->touched = epoch::now<>();
+
+	auto local_node_ = local_node.load();
+	if (lower_node_name == lower_string(local_node_->name)) {
+		auto local_node_copy = std::make_unique<Node>(*local_node_);
+		local_node_copy->touched = epoch::now<>();
 		if (region != UNKNOWN_REGION) {
-			local_node->region.store(region);
+			local_node_copy->region = region;
 		}
-		return local_node;
+		local_node = std::shared_ptr<const Node>(local_node_copy.release());
+		return local_node.load();
 	} else {
+		std::lock_guard<std::mutex> lk(nodes_mtx);
 		try {
-			auto node_ref = nodes.at(lower_node_name);
-			node_ref->touched = epoch::now<>();
+			auto& node_ref = nodes.at(lower_node_name);
+			auto node_ref_copy = std::make_unique<Node>(*node_ref);
+			node_ref_copy->touched = epoch::now<>();
 			if (region != UNKNOWN_REGION) {
-				node_ref->region.store(region);
+				node_ref_copy->region = region;
 			}
+			node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 			return node_ref;
 		} catch (const std::out_of_range &err) {
 		} catch (...) {
@@ -758,22 +777,32 @@ size_t
 XapiandManager::get_nodes_by_region(int32_t region)
 {
 	std::lock_guard<std::mutex> lk(nodes_mtx);
-	size_t cont = 0;
+	size_t cnt = 0;
 	for (const auto& node : nodes) {
-		if (node.second->region.load() == region) ++cont;
+		if (node.second->region == region) ++cnt;
 	}
-	return cont;
+	return cnt;
 }
 
 
 int32_t
 XapiandManager::get_region(const std::string& db_name)
 {
-	if (local_node->regions.load() == -1) {
-		local_node->regions.store(sqrt(nodes.size()));
+	bool re_load = false;
+	auto local_node_ = local_node.load();
+	if (local_node_->regions == -1) {
+		auto local_node_copy = std::make_unique<Node>(*local_node_);
+		local_node_copy->regions = sqrt(nodes_size());
+		local_node = std::shared_ptr<const Node>(local_node_copy.release());
+		re_load = true;
 	}
+
+	if (re_load) {
+		local_node_ = local_node.load();
+	}
+
 	std::hash<std::string> hash_fn;
-	return jump_consistent_hash(hash_fn(db_name), local_node->regions.load());
+	return jump_consistent_hash(hash_fn(db_name), local_node_->regions);
 }
 
 
@@ -781,24 +810,31 @@ int32_t
 XapiandManager::get_region()
 {
 	if (auto raft = weak_raft.lock()) {
-		if (local_node->regions.load() == -1) {
+		auto local_node_ = local_node.load();
+		if (local_node_->regions == -1) {
 			if (is_single_node()) {
-				local_node->regions.store(1);
-				local_node->region.store(0);
+				auto local_node_copy = std::make_unique<Node>(*local_node_);
+				local_node_copy->regions = 1;
+				local_node_copy->region = 0;
+				local_node = std::shared_ptr<const Node>(local_node_copy.release());
 				raft->stop();
 			} else if (state == State::READY) {
 				raft->start();
-				local_node->regions.store(sqrt(nodes.size() + 1));
-				int32_t region = jump_consistent_hash(local_node->id, local_node->regions.load());
-				if (local_node->region.load() != region) {
-					local_node->region.store(region);
+				auto local_node_copy = std::make_unique<Node>(*local_node_);
+				local_node_copy->regions = sqrt(nodes_size() + 1);
+				int32_t region = jump_consistent_hash(local_node_copy->id, local_node_copy->regions);
+				if (local_node_copy->region != region) {
+					local_node_copy->region = region;
 					raft->reset();
 				}
+				local_node = std::shared_ptr<const Node>(local_node_copy.release());
 			}
-			L_RAFT(this, "Regions: %d Region: %d", local_node.regions.load(), local_node.region.load());
+			L_RAFT(this, "Regions: %d Region: %d", local_node_->regions, local_node_->region);
 		}
 	}
-	return local_node->region.load();
+
+	auto local_node_ = local_node.load();
+	return local_node_->region;
 }
 
 
@@ -830,42 +866,43 @@ XapiandManager::resolve_index_endpoint(const std::string &path, std::vector<Endp
 
 
 void
-XapiandManager::server_status(MsgPack&& stats)
+XapiandManager::server_status(MsgPack& stats)
 {
 	std::lock_guard<std::mutex> lk(XapiandServer::static_mutex);
-	// stats["connections"] = XapiandServer::total_clients.load();
-	stats["http_connections"] = XapiandServer::http_clients.load();
+
+	// stats["_connections"] = XapiandServer::total_clients.load();
+	stats["_http_connections"] = XapiandServer::http_clients.load();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
-		stats["binary_connections"] = XapiandServer::binary_clients.load();
+		stats["_binary_connections"] = XapiandServer::binary_clients.load();
 	}
 #endif
 
-	// stats["max_connections"] = XapiandServer::max_total_clients.load();
-	stats["max_http_connections"] = XapiandServer::max_http_clients.load();
+	// stats["_max_connections"] = XapiandServer::max_total_clients.load();
+	stats["_max_http_connections"] = XapiandServer::max_http_clients.load();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
-		stats["max_binary_connections"] = XapiandServer::max_binary_clients.load();
+		stats["_max_binary_connections"] = XapiandServer::max_binary_clients.load();
 	}
 #endif
 
-	stats["worker_tasks_running"] = thread_pool.running_size();
-	stats["worker_tasks_enqueued"] = thread_pool.size();
-	stats["worker_tasks_pool_size"] = thread_pool.threadpool_size();
+	stats["_worker_tasks_running"] = thread_pool.running_size();
+	stats["_worker_tasks_enqueued"] = thread_pool.size();
+	stats["_worker_tasks_pool_size"] = thread_pool.threadpool_size();
 
-	stats["servers_threads"] = server_pool.running_size();
-	stats["committers_threads"] = autocommit_pool.running_size();
-	stats["fsync_threads"] = asyncfsync_pool.running_size();
+	stats["_servers_threads"] = server_pool.running_size();
+	stats["_committers_threads"] = autocommit_pool.running_size();
+	stats["_fsync_threads"] = asyncfsync_pool.running_size();
 #ifdef XAPIAND_CLUSTERING
 	if(!solo) {
-		stats["replicator_threads"] = replicator_pool.running_size();
+		stats["_replicator_threads"] = replicator_pool.running_size();
 	}
 #endif
 }
 
 
 void
-XapiandManager::get_stats_time(MsgPack&& stats, const std::string& time_req)
+XapiandManager::get_stats_time(MsgPack& stats, const std::string& time_req)
 {
 	std::smatch m;
 	if (std::regex_match(time_req, m, time_re) && static_cast<size_t>(m.length()) == time_req.size() && m.length(1) != 0) {
@@ -884,14 +921,14 @@ XapiandManager::get_stats_time(MsgPack&& stats, const std::string& time_req)
 			second_time.minute += m.length(5) != 0 ? std::stoi(m.str(5)) : 0;
 			second_time.second = m.length(7) != 0 ? std::stoi(m.str(7)) : 0;
 		}
-		return _get_stats_time(std::move(stats), first_time, second_time);
+		return _get_stats_time(stats, first_time, second_time);
 	}
 	throw MSG_ClientError("Incorrect input: %s", time_req.c_str());
 }
 
 
 void
-XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_time_t& second_time)
+XapiandManager::_get_stats_time(MsgPack& stats, pos_time_t& first_time, pos_time_t& second_time)
 {
 	std::unique_lock<std::mutex> lk(XapiandServer::static_mutex);
 	update_pos_time();
@@ -936,20 +973,20 @@ XapiandManager::_get_stats_time(MsgPack&& stats, pos_time_t& first_time, pos_tim
 			}
 		}
 
-		stats["system_time"] = ctime(&now_time);
+		stats["_system_time"] = ctime(&now_time);
 		auto p_time = now_time - start;
-		MsgPack time_period = stats["period"];
-		time_period["start"] = ctime(&p_time);
+		auto& time_period = stats["period"];
+		time_period["_start"] = ctime(&p_time);
 		p_time = now_time - end;
-		time_period["end"] = ctime(&p_time);
+		time_period["_end"] = ctime(&p_time);
 
-		stats["docs_indexed"] = cnt[0];
-		stats["num_searches"] = cnt[1];
-		stats["docs_deleted"] = cnt[2];
-		stats["docs_updated"] = cnt[3];
-		stats["avg_time_index"]  = delta_string(cnt[0] == 0 ? 0.0 : (tm_cnt[0] / cnt[0]));
-		stats["avg_time_search"] = delta_string(cnt[1] == 0 ? 0.0 : (tm_cnt[1] / cnt[1]));
-		stats["avg_time_delete"] = delta_string(cnt[2] == 0 ? 0.0 : (tm_cnt[2] / cnt[2]));
-		stats["avg_time_update"] = delta_string(cnt[3] == 0 ? 0.0 : (tm_cnt[3] / cnt[3]));
+		stats["_docs_indexed"] = cnt[0];
+		stats["_num_searches"] = cnt[1];
+		stats["_docs_deleted"] = cnt[2];
+		stats["_docs_updated"] = cnt[3];
+		stats["_avg_time_index"]  = delta_string(cnt[0] == 0 ? 0.0 : (tm_cnt[0] / cnt[0]));
+		stats["_avg_time_search"] = delta_string(cnt[1] == 0 ? 0.0 : (tm_cnt[1] / cnt[1]));
+		stats["_avg_time_delete"] = delta_string(cnt[2] == 0 ? 0.0 : (tm_cnt[2] / cnt[2]));
+		stats["_avg_time_update"] = delta_string(cnt[3] == 0 ? 0.0 : (tm_cnt[3] / cnt[3]));
 	}
 }

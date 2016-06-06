@@ -22,8 +22,8 @@
 
 #include "test_serialise_stl.h"
 
-#include "../src/log.h"
 #include "../src/stl_serialise.h"
+#include "utils.h"
 
 
 int unserialise_to_StringList(const std::string& _serialise, size_t expected_size) {
@@ -191,9 +191,7 @@ int test_StringList() {
 		++cont;
 	}
 
-	return cont;
-
-	return cont;
+	RETURN(cont);
 }
 
 
@@ -243,7 +241,7 @@ int test_StringSet() {
 		++cont;
 	}
 
-	return cont;
+	RETURN(cont);
 }
 
 
@@ -284,7 +282,7 @@ int test_CartesianUSet() {
 		++cont;
 	}
 
-	return cont;
+	RETURN(cont);
 }
 
 
@@ -322,5 +320,5 @@ int test_RangeList() {
 		++cont;
 	}
 
-	return cont;
+	RETURN(cont);
 }

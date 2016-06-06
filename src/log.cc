@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -26,12 +26,14 @@
 #include "utils.h"
 
 #include <stdarg.h>
-#include <unistd.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #define BUFFER_SIZE (10 * 1024)
 
+
 const std::regex filter_re("\033\\[[;\\d]*m");
+
 
 const char *priorities[] = {
 	EMERG_COL "█" NO_COL,   // LOG_EMERG    0 = System is unusable
@@ -82,10 +84,6 @@ SysLog::log(int priority, const std::string& str)
 }
 
 
-int Log::log_level = DEFAULT_LOG_LEVEL;
-std::vector<std::unique_ptr<Logger>> Log::handlers;
-
-
 Log::Log(const std::string& str, bool cleanup_, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_)
 	: cleanup(cleanup_),
 	  created_at(created_at_),
@@ -112,11 +110,28 @@ Log::age()
  * https://isocpp.org/wiki/faq/ctors#static-init-order
  * Avoid the "static initialization order fiasco"
  */
+
 LogThread&
 Log::_thread()
 {
 	static LogThread* thread = new LogThread();
 	return *thread;
+}
+
+
+int&
+Log::_log_level()
+{
+	static auto* log_level = new int(DEFAULT_LOG_LEVEL);
+	return *log_level;
+}
+
+
+DLList<const std::unique_ptr<Logger>>&
+Log::_handlers()
+{
+	static auto* handlers = new DLList<const std::unique_ptr<Logger>>();
+	return *handlers;
 }
 
 
@@ -205,20 +220,24 @@ Log::log(int priority, const std::string& str)
 {
 	static std::mutex log_mutex;
 	std::lock_guard<std::mutex> lk(log_mutex);
-	for (auto& handler : Log::handlers) {
+	static auto& handlers = _handlers();
+	for (auto& handler : handlers) {
 		handler->log(priority, str);
 	}
 }
 
+
 std::shared_ptr<Log>
 Log::print(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup, int priority, std::chrono::time_point<std::chrono::system_clock> created_at)
 {
-	if (priority > Log::log_level) {
+	static auto& log_level = _log_level();
+	if (priority > log_level) {
 		return std::make_shared<Log>(str, cleanup, wakeup, priority, created_at);
 	}
 
-	if (!Log::handlers.size()) {
-		Log::handlers.push_back(std::make_unique<StderrLogger>());
+	static auto& handlers = _handlers();
+	if (!handlers.size()) {
+		handlers.push_back(std::make_unique<StderrLogger>());
 	}
 
 	if (priority >= ASYNC_LOG_LEVEL || wakeup > std::chrono::system_clock::now()) {
@@ -240,7 +259,7 @@ Log::finish(int wait)
 
 LogThread::LogThread()
 	: running(-1),
-	  inner_thread(&LogThread::thread_function, this) { }
+	  inner_thread(&LogThread::thread_function, this, std::ref(log_list)) { }
 
 
 LogThread::~LogThread()
@@ -266,7 +285,7 @@ void
 LogThread::add(const std::shared_ptr<Log>& l_ptr)
 {
 	if (running != 0) {
-		log_list.push_back(l_ptr->shared_from_this());
+		log_list.push_back(l_ptr);
 
 		if (std::chrono::system_clock::from_time_t(wakeup) >= l_ptr->wakeup) {
 			wakeup_signal.notify_all();
@@ -276,7 +295,7 @@ LogThread::add(const std::shared_ptr<Log>& l_ptr)
 
 
 void
-LogThread::thread_function()
+LogThread::thread_function(DLList<const std::shared_ptr<Log>>& _log_list)
 {
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lk(mtx);
@@ -299,10 +318,10 @@ LogThread::thread_function()
 			next_wakeup = now + 100ms;
 		}
 
-		for (auto it = log_list.begin(); it != log_list.end(); ) {
+		for (auto it = _log_list.begin(); it != _log_list.end(); ) {
 			auto& l_ptr = *it;
-			if (!l_ptr || l_ptr->finished) {
-				it = log_list.erase(it);
+			if (l_ptr->finished) {
+				it = _log_list.erase(it);
 			} else if (l_ptr->wakeup <= now) {
 				l_ptr->finished = true;
 				auto msg = l_ptr->str_start;
@@ -311,7 +330,7 @@ LogThread::thread_function()
 					msg += " ~" + delta_string(age, true);
 				}
 				Log::log(l_ptr->priority, msg);
-				it = log_list.erase(it);
+				it = _log_list.erase(it);
 			} else if (next_wakeup > l_ptr->wakeup) {
 				next_wakeup = l_ptr->wakeup;
 				++it;
@@ -319,9 +338,11 @@ LogThread::thread_function()
 				++it;
 			}
 		}
+
 		if (next_wakeup < now + 100ms) {
 			next_wakeup = now + 100ms;
 		}
+
 		if (running >= 0 && !log_list.size()) {
 			break;
 		}

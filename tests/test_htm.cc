@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,11 +22,10 @@
 
 #include "test_htm.h"
 
-#include "../src/log.h"
 #include "../src/htm.h"
+#include "utils.h"
 
 #include <algorithm>
-#include <string.h>
 
 
 // Testing the transformation of coordinates between CRS.
@@ -164,10 +163,10 @@ int test_cartesian_transforms() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing the transformation of coordinates between CRS is correct!");
-		return 0;
+		RETURN (0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing the transformation of coordinates between CRS has mistakes.");
-		return 1;
+		RETURN (1);
 	}
 }
 
@@ -307,10 +306,10 @@ int test_hullConvex() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing Geometry Hull Convex is correct!, run with python examples/htm/{file}_convex_hull.py to see the hull convex.");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing Geometry Hull Convex has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -432,10 +431,10 @@ int test_HTM_chull() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing HTM polygon is correct!, run with python examples/htm/{file}_polygon.py to see the trixels that cover the hull convex.");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing polygon HTM has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -512,9 +511,9 @@ int test_HTM_circle() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing HTM bounding circle is correct!, run with python examples/htm/Circle{#}.py to see the trixels that cover the bounding circle.");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing HTM bounding circle has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }

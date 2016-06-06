@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,14 +22,16 @@
 
 #pragma once
 
-#include "xapiand.h"
+#include "atomic_shared_ptr.h"
 #include "utils.h"
+#include "xapiand.h"
 
 #include <string>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <atomic>
+
 
 struct Node {
 	uint64_t id;
@@ -38,67 +40,67 @@ struct Node {
 	int http_port;
 	int binary_port;
 
-	mutable std::atomic<int32_t> regions;
-	mutable std::atomic<int32_t> region;
-	mutable std::atomic<time_t> touched;
+	int32_t regions;
+	int32_t region;
+	time_t touched;
 
 	Node() : id(0), http_port(0), binary_port(0), regions(1), region(0), touched(0) {
 		memset(&addr, 0, sizeof(addr));
 	}
 
-	// move constructor, takes a rvalue reference &&
-	Node(const Node&& other) {
+	// Move constructor
+	Node(Node&& other)
+		: id(std::move(other.id)),
+		  name(std::move(other.name)),
+		  addr(std::move(other.addr)),
+		  http_port(std::move(other.http_port)),
+		  binary_port(std::move(other.binary_port)),
+		  regions(std::move(other.regions)),   /* should be exist move a copy constructor? */
+		  region(std::move(other.region)),
+		  touched(std::move(other.touched)) { }
+
+	// Copy Constructor
+	Node(const Node& other)
+		: id(other.id),
+		  name(other.name),
+		  addr(other.addr),
+		  http_port(other.http_port),
+		  binary_port(other.binary_port),
+		  regions(other.regions),
+		  region(other.region),
+		  touched(other.touched) { }
+
+	// Move assignment
+	Node& operator=(Node&& other) {
 		id = std::move(other.id);
 		name = std::move(other.name);
 		addr = std::move(other.addr);
 		http_port = std::move(other.http_port);
 		binary_port = std::move(other.binary_port);
-		regions = other.regions.load();   /* should be exist move a copy constructor? */
-		region = other.region.load();
-		touched = other.touched.load();
-	}
-
-	Node(const Node& other) {
-		id = other.id;
-		name = other.name;
-		addr = other.addr;
-		http_port = other.http_port;
-		binary_port = other.binary_port;
-		regions = other.regions.load();
-		region = other.region.load();
-		touched = other.touched.load();
-	}
-
-	// move assignment, takes a rvalue reference &&
-	Node& operator=(const Node&& other) {
-		id = std::move(other.id);
-		name = std::move(other.name);
-		addr = std::move(other.addr);
-		http_port = std::move(other.http_port);
-		binary_port = std::move(other.binary_port);
-		regions = other.regions.load();
-		region = other.region.load();
-		touched = other.touched.load();
+		regions = std::move(other.regions);
+		region = std::move(other.region);
+		touched = std::move(other.touched);
 		return *this;
 	}
 
+	// Copy assignment
 	Node& operator=(const Node& other) {
 		id = other.id;
 		name = other.name;
 		addr = other.addr;
 		http_port = other.http_port;
 		binary_port = other.binary_port;
-		regions = other.regions.load();
-		region = other.region.load();
-		touched = other.touched.load();
+		regions = other.regions;
+		region = other.region;
+		touched = other.touched;
 		return *this;
 	}
 
 	void clear() {
 		name.clear();
 		id = 0;
-		regions.store(1);
-		region.store(0);
+		regions = 1;
+		region = 0;
 		memset(&addr, 0, sizeof(addr));
 		http_port = 0;
 		binary_port = 0;
@@ -131,14 +133,16 @@ struct Node {
 	}
 };
 
-extern std::shared_ptr<const Node> local_node;
+
+extern atomic_shared_ptr<const Node> local_node;
+
 
 class Endpoint;
 class Endpoints;
 
 
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 
 namespace std {
@@ -154,8 +158,8 @@ namespace std {
 	};
 }
 
-bool operator == (Endpoint const& le, Endpoint const& re);
-bool operator == (Endpoints const& le, Endpoints const& re);
+bool operator==(Endpoint const& le, Endpoint const& re);
+bool operator==(Endpoints const& le, Endpoints const& re);
 
 
 class Endpoint {
@@ -175,15 +179,18 @@ public:
 	Endpoint(const std::string &path_, const Node* node_=nullptr, long long mastery_level_=-1, const std::string& node_name="");
 
 	bool is_local() const {
-		int binary_port = local_node->binary_port;
+		auto local_node_ = local_node.load();
+		int binary_port = local_node_->binary_port;
 		if (!binary_port) binary_port = XAPIAND_BINARY_SERVERPORT;
-		return (host == local_node->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
+		return (host == local_node_->host() || host == "127.0.0.1" || host == "localhost") && port == binary_port;
 	}
 
 	size_t hash() const;
 	std::string as_string() const;
+
 	bool operator<(const Endpoint & other) const;
 	bool operator==(const Node &other) const;
+
 	struct compare {
 		constexpr bool operator() (const Endpoint &a, const Endpoint &b) const noexcept {
 			return b.mastery_level > a.mastery_level;
@@ -204,7 +211,8 @@ public:
 	using std::vector<Endpoint>::cbegin;
 	using std::vector<Endpoint>::cend;
 
-	Endpoints() {}
+	Endpoints() { }
+
 	Endpoints(const Endpoint &endpoint) {
 		add(endpoint);
 	}

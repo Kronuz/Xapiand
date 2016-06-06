@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,8 +24,9 @@
 
 #include "client_base.h"
 
-#include "servers/server_http.h"
+#include "database_handler.h"
 #include "http_parser.h"
+#include "servers/server_http.h"
 
 #include <memory>
 
@@ -40,7 +41,9 @@
 #define HTTP_MATCHED_COUNT    (1 << 8)
 #define HTTP_EXPECTED100      (1 << 9)
 
+
 using type_t = std::pair<std::string, std::string>;
+
 
 struct accept_preference_comp {
 	constexpr bool operator()(const std::tuple<double, int, type_t>& l, const std::tuple<double, int, type_t>& r) const noexcept {
@@ -48,13 +51,16 @@ struct accept_preference_comp {
 	}
 };
 
+
 using accept_set_t = std::set<std::tuple<double, int, type_t>, accept_preference_comp>;
 
 
 class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
 	std::mutex qmtx;
+
 public:
-	AcceptLRU() : LRU<std::string, accept_set_t>(100) {}
+	AcceptLRU()
+		: LRU<std::string, accept_set_t>(100) { }
 
 	accept_set_t& at(std::string key) {
 		std::lock_guard<std::mutex> lk(qmtx);
@@ -65,13 +71,13 @@ public:
 		std::lock_guard<std::mutex> lk(qmtx);
 		return LRU::insert(pair);
 	}
-
 };
+
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
 class HttpClient : public BaseClient {
 	struct http_parser parser;
-	std::shared_ptr<Database> database;
+	DatabaseHandler db_handler;
 
 	void on_read(const char* buf, size_t received) override;
 	void on_read_file(const char* buf, size_t received) override;
@@ -101,7 +107,6 @@ class HttpClient : public BaseClient {
 	std::string content_type;
 	std::string content_length;
 	bool expect_100 = false;
-
 
 	std::string host;
 

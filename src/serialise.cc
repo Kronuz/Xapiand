@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -34,21 +34,21 @@
 std::string
 Serialise::serialise(char field_type, const MsgPack& field_value)
 {
-	switch (field_value.get_type()) {
+	switch (field_value.type()) {
 		case msgpack::type::NIL:
 			throw MSG_DummyException();
 		case msgpack::type::BOOLEAN:
-			return boolean(field_type, field_value.body->obj->via.boolean);
+			return boolean(field_type, field_value.as_bool());
 		case msgpack::type::POSITIVE_INTEGER:
-			return positive(field_type, field_value.body->obj->via.u64);
+			return positive(field_type, field_value.as_u64());
 		case msgpack::type::NEGATIVE_INTEGER:
-			return integer(field_type, field_value.body->obj->via.i64);
+			return integer(field_type, field_value.as_i64());
 		case msgpack::type::FLOAT:
-			return _float(field_type, field_value.body->obj->via.f64);
+			return _float(field_type, field_value.as_f64());
 		case msgpack::type::STR:
-			return string(field_type, std::string(field_value.body->obj->via.str.ptr, field_value.body->obj->via.str.size));
+			return string(field_type, field_value.as_string());
 		default:
-			throw MSG_SerialisationError("msgpack::type [%d] is not supported", field_value.body->obj->type);
+			throw MSG_SerialisationError("msgpack::type [%d] is not supported", field_value.type());
 	}
 }
 
@@ -84,21 +84,28 @@ Serialise::serialise(char field_type, const std::string& field_value)
 std::pair<char, std::string>
 Serialise::serialise(const std::string& field_value)
 {
-	if (isInteger(field_value)) {
-		return std::make_pair(INTEGER_TYPE, Xapian::sortable_serialise(std::stoi(field_value)));
-	} else if (isFloat(field_value)) {
-		return std::make_pair(FLOAT_TYPE, Xapian::sortable_serialise(std::stod(field_value)));
-	} else {
-		try {
-			return std::make_pair(DATE_TYPE, date(field_value));
-		} catch (const DatetimeError&) {
-			try {
-				return std::make_pair(GEO_TYPE, ewkt(field_value));
-			} catch (const EWKTError&) {
-				return std::make_pair(STRING_TYPE, field_value);
-			}
-		}
-	}
+	// Try like integer.
+	try {
+		return std::make_pair(INTEGER_TYPE, Xapian::sortable_serialise(strict(std::stoll, field_value)));
+	} catch (const std::invalid_argument&) { }
+
+	// Try like Float
+	try {
+		return std::make_pair(FLOAT_TYPE, Xapian::sortable_serialise(strict(std::stod, field_value)));
+	} catch (const std::invalid_argument&) { }
+
+	// Try like date
+	try {
+		return std::make_pair(DATE_TYPE, date(field_value));
+	} catch (const DatetimeError&) { }
+
+	// Try like GEO
+	try {
+		return std::make_pair(GEO_TYPE, ewkt(field_value));
+	} catch (const EWKTError&) { }
+
+	// Default type: String
+	return std::make_pair(STRING_TYPE, field_value);
 }
 
 
@@ -192,21 +199,21 @@ std::string
 Serialise::date(const MsgPack& value, Datetime::tm_t& tm)
 {
 	double timestamp;
-	switch (value.get_type()) {
+	switch (value.type()) {
 		case msgpack::type::POSITIVE_INTEGER:
-			timestamp = value.body->obj->via.u64;
+			timestamp = value.as_u64();
 			tm = Datetime::to_tm_t(timestamp);
 			return Xapian::sortable_serialise(timestamp);
 		case msgpack::type::NEGATIVE_INTEGER:
-			timestamp = value.body->obj->via.i64;
+			timestamp = value.as_i64();
 			tm = Datetime::to_tm_t(timestamp);
 			return Xapian::sortable_serialise(timestamp);
 		case msgpack::type::FLOAT:
-			timestamp = value.body->obj->via.f64;
+			timestamp = value.as_f64();
 			tm = Datetime::to_tm_t(timestamp);
 			return Xapian::sortable_serialise(timestamp);
 		case msgpack::type::STR:
-			timestamp = Datetime::timestamp(std::string(value.body->obj->via.str.ptr, value.body->obj->via.str.size), tm);
+			timestamp = Datetime::timestamp(value.as_string(), tm);
 			return Xapian::sortable_serialise(timestamp);
 		default:
 			throw MSG_SerialisationError("Date value must be numeric or string");

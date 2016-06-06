@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,18 +22,7 @@
 
 #include "test_geo.h"
 
-#include "../src/log.h"
-#include "../src/database.h"
-#include "../src/endpoint.h"
-#include "../src/length.h"
-
-#include <sstream>
-#include <fstream>
-
-
-std::shared_ptr<DatabaseQueue> d_queue;
-static std::shared_ptr<Database> database;
-static std::string name_database(".db_testgeo.db");
+#include "utils.h"
 
 
 const test_geo_t geo_range_tests[] {
@@ -110,32 +99,7 @@ const test_geo_t geo_terms_tests[] {
 };
 
 
-int create_test_db() {
-	// Delete database to create.
-	delete_files(name_database);
-
-	/*
-	 *	The database used in the test is local
-	 *	so the Endpoints and local_node are manipulated.
-	 */
-
-	int cont = 0;
-	auto node = new Node (*local_node);
-	node->name.assign("node_test");
-	node->binary_port = XAPIAND_BINARY_SERVERPORT;
-	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
-
-	Endpoints endpoints;
-	Endpoint e;
-	e.node_name.assign("node_test");
-	e.port = XAPIAND_BINARY_SERVERPORT;
-	e.path.assign(name_database);
-	e.host.assign("0.0.0.0");
-	endpoints.add(e);
-
-	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-
-	std::vector<std::string> _docs({
+DB_Test db_geo(".db_geo.db", std::vector<std::string>({
 		"examples/json/geo_1.txt",
 		"examples/json/geo_2.txt",
 		"examples/json/geo_3.txt",
@@ -144,27 +108,10 @@ int create_test_db() {
 		"examples/json/geo_6.txt",
 		"examples/json/geo_7.txt",
 		"examples/json/geo_8.txt"
-	});
-
-	// Index documents in the database.
-	size_t i = 1;
-	for (const auto& doc : _docs) {
-		std::ifstream fstream(doc);
-		std::stringstream buffer;
-		buffer << fstream.rdbuf();
-		if (database->index(buffer.str(), std::to_string(i), true, JSON_TYPE, std::to_string(fstream.tellg())) == 0) {
-			++cont;
-			L_ERR(nullptr, "ERROR: File %s can not index", doc.c_str());
-		}
-		fstream.close();
-		++i;
-	}
-
-	return cont;
-}
+	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 
-int make_search(const test_geo_t _tests[], int len) {
+static int make_search(const test_geo_t _tests[], int len) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -187,7 +134,7 @@ int make_search(const test_geo_t _tests[], int len) {
 		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
 
 		try {
-			database->get_mset(query, mset, spies, suggestions);
+			db_geo.db_handler.get_mset(query, mset, spies, suggestions);
 			if (mset.size() != p.expect_datas.size()) {
 				++cont;
 				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.\n %s", mset.size(), p.expect_datas.size(), query.terms.back().c_str());
@@ -197,7 +144,7 @@ int make_search(const test_geo_t _tests[], int len) {
 					auto doc = m.get_document();
 					auto obj_data = get_MsgPack(doc);
 					try {
-						std::string str_data(obj_data.at(RESERVED_DATA).get_str());
+						auto str_data(obj_data.at(RESERVED_DATA).as_string());
 						if (it->compare(str_data) != 0) {
 							++cont;
 							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
@@ -214,48 +161,43 @@ int make_search(const test_geo_t _tests[], int len) {
 		}
 	}
 
-	// Delete database created.
-	delete_files(name_database);
-
 	return cont;
 }
 
 
 int geo_range_test() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(geo_range_tests, arraySize(geo_range_tests)) == 0) {
-			L_DEBUG(nullptr, "Testing search range geospatials is correct!");
-			return 0;
+		int cont = make_search(geo_range_tests, arraySize(geo_range_tests));
+		if (cont == 0) {
+			L_ERR(nullptr, "Testing search range geospatials is correct!");
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search range geospatials has mistakes.");
-			return 1;
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }
 
 
 int geo_terms_test() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(geo_terms_tests, arraySize(geo_terms_tests)) == 0) {
+		int cont = make_search(geo_terms_tests, arraySize(geo_terms_tests));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search by geospatial terms is correct!");
-			return 0;
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search by geospatial terms has mistakes.");
-			return 1;
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -28,7 +28,8 @@
 #include <limits.h>
 #include <unistd.h>
 
-std::shared_ptr<const Node> local_node(std::make_shared<const Node>());
+
+atomic_shared_ptr<const Node> local_node = std::make_shared<const Node>();
 
 
 std::string
@@ -39,7 +40,7 @@ Node::serialise() const
 		node_str.append(serialise_length(addr.sin_addr.s_addr));
 		node_str.append(serialise_length(http_port));
 		node_str.append(serialise_length(binary_port));
-		node_str.append(serialise_length(region.load()));
+		node_str.append(serialise_length(region));
 		node_str.append(serialise_string(name));
 	}
 	return node_str;
@@ -56,7 +57,7 @@ Node::unserialise(const char **p, const char *end)
 	node.addr.sin_addr.s_addr = static_cast<int>(unserialise_length(&ptr, end, false));
 	node.http_port = static_cast<int>(unserialise_length(&ptr, end, false));
 	node.binary_port = static_cast<int>(unserialise_length(&ptr, end, false));
-	node.region.store(static_cast<int>(unserialise_length(&ptr, end, false)));
+	node.region = static_cast<int>(unserialise_length(&ptr, end, false));
 
 	node.name = unserialise_string(&ptr, end);
 	if (node.name.empty()) {
@@ -115,7 +116,7 @@ Endpoint::Endpoint(const std::string &uri_, const Node* node_, long long mastery
 		path = "";
 	}
 	if (protocol == "file") {
-		auto local_node_ = local_node;
+		auto local_node_ = local_node.load();
 		if (!node_) {
 			node_ = local_node_.get();
 		}
@@ -127,10 +128,12 @@ Endpoint::Endpoint(const std::string &uri_, const Node* node_, long long mastery
 }
 
 
-std::string Endpoint::slice_after(std::string &subject, std::string delimiter) {
+std::string
+Endpoint::slice_after(std::string &subject, std::string delimiter)
+{
 	size_t delimiter_location = subject.find(delimiter);
 	size_t delimiter_length = delimiter.length();
-	std::string output = "";
+	std::string output;
 	if (delimiter_location < std::string::npos) {
 		size_t start = delimiter_location + delimiter_length;
 		output = subject.substr(start, subject.length() - start);
@@ -140,10 +143,12 @@ std::string Endpoint::slice_after(std::string &subject, std::string delimiter) {
 }
 
 
-std::string Endpoint::slice_before(std::string &subject, std::string delimiter) {
+std::string
+Endpoint::slice_before(std::string &subject, std::string delimiter)
+{
 	size_t delimiter_location = subject.find(delimiter);
 	size_t delimiter_length = delimiter.length();
-	std::string output = "";
+	std::string output;
 	if (delimiter_location < std::string::npos) {
 		size_t start = delimiter_location + delimiter_length;
 		output = subject.substr(0, delimiter_location);
@@ -153,7 +158,9 @@ std::string Endpoint::slice_before(std::string &subject, std::string delimiter) 
 }
 
 
-std::string Endpoint::as_string() const {
+std::string
+Endpoint::as_string() const
+{
 	std::string ret;
 	if (path.empty()) {
 		return ret;
@@ -182,13 +189,16 @@ std::string Endpoint::as_string() const {
 }
 
 
-bool Endpoint::operator<(const Endpoint & other) const
+bool
+Endpoint::operator<(const Endpoint & other) const
 {
 	return hash() < other.hash();
 }
 
 
-size_t Endpoint::hash() const {
+size_t
+Endpoint::hash() const
+{
 	std::hash<std::string> hash_fn_string;
 	std::hash<int> hash_fn_int;
 	return (
@@ -202,10 +212,12 @@ size_t Endpoint::hash() const {
 }
 
 
-std::string Endpoints::as_string() const {
+std::string
+Endpoints::as_string() const
+{
 	std::string ret;
 	auto j = endpoints.cbegin();
-	for (int i=0; j != endpoints.cend(); j++, i++) {
+	for (int i = 0; j != endpoints.cend(); ++j, ++i) {
 		if (i) ret += ";";
 		ret += (*j).as_string();
 	}
@@ -213,38 +225,44 @@ std::string Endpoints::as_string() const {
 }
 
 
-size_t Endpoints::hash() const {
+size_t
+Endpoints::hash() const
+{
 	size_t hash = 0;
 	std::hash<Endpoint> hash_fn;
 	auto j = endpoints.cbegin();
-	for (int i = 0; j != endpoints.cend(); j++, i++) {
+	for (int i = 0; j != endpoints.cend(); ++j, ++i) {
 		hash ^= hash_fn(*j);
 	}
 	return hash;
 }
 
 
-bool operator == (Endpoint const& le, Endpoint const& re)
+bool
+operator==(Endpoint const& le, Endpoint const& re)
 {
 	std::hash<Endpoint> hash_fn;
 	return hash_fn(le) == hash_fn(re);
 }
 
 
-bool operator == (Endpoints const& le, Endpoints const& re)
+bool
+operator==(Endpoints const& le, Endpoints const& re)
 {
 	std::hash<Endpoints> hash_fn;
 	return hash_fn(le) == hash_fn(re);
 }
 
 
-size_t std::hash<Endpoint>::operator()(const Endpoint &e) const
+size_t
+std::hash<Endpoint>::operator()(const Endpoint &e) const
 {
 	return e.hash();
 }
 
 
-size_t std::hash<Endpoints>::operator()(const Endpoints &e) const
+size_t
+std::hash<Endpoints>::operator()(const Endpoints &e) const
 {
 	return e.hash();
 }

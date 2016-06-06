@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "fields.h"
 #include "msgpack.h"
 #include "rapidjson/document.h"
 
@@ -66,6 +67,14 @@
 #define DB_LANGUAGES       "da nl en lovins porter fi fr de hu it nb nn no pt ro ru es sv tr"
 #define DB_VERSION_SCHEMA  2.0
 
+#define DB_SLOT_ID     0 // Slot ID document
+#define DB_SLOT_OFFSET 1 // Slot offset for data
+#define DB_SLOT_TYPE   2 // Slot type data
+#define DB_SLOT_LENGTH 3 // Slot length data
+#define DB_SLOT_CREF   4 // Slot that saves the references counter
+
+#define DEFAULT_OFFSET "0" /* Replace for the real offset */
+
 // Default prefixes
 #define DOCUMENT_ID_TERM_PREFIX     "Q"
 #define DOCUMENT_CUSTOM_TERM_PREFIX "X"
@@ -77,8 +86,15 @@
 #define HTML_TYPE            "text/html"
 #define TEXT_TYPE            "text/plain"
 
-
-extern const std::regex find_types_re;
+constexpr int DB_OPEN         = 0x00; // Opens a database
+constexpr int DB_WRITABLE     = 0x01; // Opens as writable
+constexpr int DB_SPAWN        = 0x02; // Automatically creates the database if it doesn't exist
+constexpr int DB_PERSISTENT   = 0x04; // Always try keeping the database in the database pool
+constexpr int DB_INIT_REF     = 0x08; // Initializes the writable index in the database .refs
+constexpr int DB_VOLATILE     = 0x10; // Always drop the database from the database pool as soon as possible
+constexpr int DB_REPLICATION  = 0x20; // Use conditional pop in the queue, only pop when replication is done
+constexpr int DB_NOWAL        = 0x40; // Disable open wal file
+constexpr int DB_DATA_STORAGE = 0x80; // Enable separate data storage file for the database
 
 
 struct data_field_t {
@@ -130,6 +146,15 @@ struct query_field_t {
 		  commit(false), unique_doc(false), is_fuzzy(false),
 		  is_nearest(false), collapse(""), collapse_max(1), fuzzy(), nearest(), time("") { }
 
+};
+
+
+struct search_t {
+	Xapian::Query query;
+	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
+	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
+	std::vector<std::unique_ptr<GeoFieldProcessor>> gfps;
+	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
 };
 
 

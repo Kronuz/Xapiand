@@ -22,17 +22,15 @@
 
 #pragma once
 
-#include "log.h"
 #include "database_utils.h"
 #include "endpoint.h"
-#include "fields.h"
+#include "log.h"
 #include "lru.h"
-#include "multivaluekeymaker.h"
-#include "multivalue.h"
 #include "queue.h"
 #include "threadpool.h"
 #include "schema.h"
 #include "storage.h"
+#include "atomic_shared_ptr.h"
 
 #include <xapian/matchspy.h>
 
@@ -46,24 +44,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-constexpr int DB_OPEN         = 0x00; // Opens a database
-constexpr int DB_WRITABLE     = 0x01; // Opens as writable
-constexpr int DB_SPAWN        = 0x02; // Automatically creates the database if it doesn't exist
-constexpr int DB_PERSISTENT   = 0x04; // Always try keeping the database in the database pool
-constexpr int DB_INIT_REF     = 0x08; // Initializes the writable index in the database .refs
-constexpr int DB_VOLATILE     = 0x10; // Always drop the database from the database pool as soon as possible
-constexpr int DB_REPLICATION  = 0x20; // Use conditional pop in the queue, only pop when replication is done
-constexpr int DB_NOWAL        = 0x40; // Disable open wal file
-constexpr int DB_DATA_STORAGE = 0x80; // Enable separate data storage file for the database
-
 #define DB_MASTER "M"
 #define DB_SLAVE  "S"
 
-#define DB_SLOT_ID     0 // Slot ID document
-#define DB_SLOT_OFFSET 1 // Slot offset for data
-#define DB_SLOT_TYPE   2 // Slot type data
-#define DB_SLOT_LENGTH 3 // Slot length data
-#define DB_SLOT_CREF   4 // Slot that saves the references counter
 
 #define DB_SLOT_RESERVED 10 // Reserved slots by special data
 
@@ -78,9 +61,11 @@ using namespace std::chrono;
 
 struct WalHeader;
 
+class Database;
 class DatabasePool;
 class DatabasesLRU;
 class DatabaseQueue;
+
 
 #if XAPIAND_DATABASE_WAL
 struct WalHeader {
@@ -209,8 +194,6 @@ public:
 
 class Database {
 public:
-	Schema schema;
-
 	std::weak_ptr<DatabaseQueue> weak_queue;
 	Endpoints endpoints;
 	int flags;
@@ -226,34 +209,12 @@ public:
 	std::unique_ptr<DatabaseWAL> wal;
 #endif
 
-	struct search_t {
-		Xapian::Query query;
-		std::vector<std::string> suggested_query;
-		std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
-		std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
-		std::vector<std::unique_ptr<GeoFieldProcessor>> gfps;
-		std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
-	};
-
 	Database(std::shared_ptr<DatabaseQueue>& queue_, const Endpoints& endpoints, int flags);
 	~Database();
 
 	long long read_mastery(const Endpoint& endpoint);
 
-	data_field_t get_data_field(const std::string& field_name);
-	data_field_t get_slot_field(const std::string& field_name);
-
-	void get_stats_database(MsgPack&& stats);
-	void get_stats_doc(MsgPack&& stats, const std::string& document_id);
-
 	bool reopen();
-
-	Xapian::docid index(const std::string& body, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
-	Xapian::docid index(const MsgPack& obj, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
-	Xapian::docid patch(const std::string& patches, const std::string& _document_id, bool commit_, const std::string& ct_type, const std::string& ct_length);
-
-	void get_mset(const query_field_t& e, Xapian::MSet& mset, std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>>& spies,
-			std::vector<std::string>& suggestions, int offset=0);
 
 	std::string get_uuid() const;
 	std::string get_revision_info() const;
@@ -262,7 +223,6 @@ public:
 	void cancel(bool wal_=true);
 
 	void delete_document(Xapian::docid did, bool commit_=false, bool wal_=true);
-	void delete_document(const std::string& doc_id, bool commit_=false, bool wal_=true);
 	void delete_document_term(const std::string& term, bool commit_=false, bool wal_=true);
 	Xapian::docid add_document(const Xapian::Document& doc, bool commit_=false, bool wal_=true);
 	Xapian::docid replace_document(Xapian::docid did, const Xapian::Document& doc, bool commit_=false, bool wal_=true);
@@ -272,24 +232,10 @@ public:
 	void add_spelling(const std::string & word, Xapian::termcount freqinc, bool commit_=false, bool wal_=true);
 	void remove_spelling(const std::string & word, Xapian::termcount freqdec, bool commit_=false, bool wal_=true);
 
+	Xapian::docid find_document(const Xapian::Query& query);
+	Xapian::Document get_document(const Xapian::docid& did);
 	std::string get_metadata(const std::string& key);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_=false, bool wal_=true);
-
-	Xapian::Document get_document(const std::string& doc_id);
-	Xapian::Document get_document(const Xapian::docid& did);
-
-	std::string get_value(const Xapian::Document& document, Xapian::valueno slot);
-	MsgPack get_value(const Xapian::Document& document, const std::string& slot_name);
-
-private:
-	void _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
-
-	search_t _search(const std::string& query, unsigned flags, bool text, const std::string& lan);
-	search_t search(const query_field_t& e);
-
-	void get_similar(bool is_fuzzy, Xapian::Enquire& enquire, Xapian::Query& query, const similar_field_t& similar);
-	Xapian::Enquire get_enquire(Xapian::Query& query, const Xapian::valueno& collapse_key, const query_field_t *e, Multi_MultiValueKeyMaker *sorter,
-		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> *spies);
 };
 
 
@@ -356,6 +302,12 @@ public:
 };
 
 
+class SchemaLRU: public lru::LRU<size_t, atomic_shared_ptr<const MsgPack>> {
+public:
+	SchemaLRU(ssize_t max_size=-1);
+};
+
+
 class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 	// FIXME: Add maximum number of databases available for the queue
 	// FIXME: Add cleanup for removing old database queues
@@ -363,12 +315,14 @@ class DatabasePool : public std::enable_shared_from_this<DatabasePool> {
 
 private:
 	std::mutex qmtx;
+	std::mutex smtx;
 	std::atomic_bool finished;
 
 	std::unordered_map<size_t, std::unordered_set<std::shared_ptr<DatabaseQueue>>> queues;
 
 	DatabasesLRU databases;
 	DatabasesLRU writable_databases;
+	SchemaLRU schemas;
 
 	std::condition_variable checkin_cond;
 
@@ -388,6 +342,9 @@ public:
 	long long get_mastery_level(const std::string& dir);
 
 	void finish();
+
+	std::shared_ptr<const MsgPack> get_schema(const Endpoint& endpoint, int flags=-1);
+	void set_schema(const Endpoint& endpoint, int flags, std::shared_ptr<const MsgPack> new_schema);
 
 	template<typename F, typename... Args>
 	bool checkout(std::shared_ptr<Database>& database, const Endpoints& endpoints, int flags, F&& f, Args&&... args) {

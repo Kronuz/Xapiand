@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  * Copyright (C) 2014, lamerman. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -95,7 +95,7 @@ public:
 
 		if (_max_size != -1) {
 			auto last(_items_list.rbegin());
-			for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); i--) {
+			for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); --i) {
 				auto it = (++last).base();
 				_items_map.erase(it->first);
 				_items_list.erase(it);
@@ -159,7 +159,7 @@ public:
 
 		if (_max_size != -1) {
 			auto last(_items_list.rbegin());
-			for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); i--) {
+			for (size_t i = _items_map.size(); i != 0 && static_cast<ssize_t>(_items_map.size()) > _max_size && last != _items_list.rend(); --i) {
 				auto it = --last.base();
 				switch (on_drop(it->second)) {
 					case DropAction::renew:

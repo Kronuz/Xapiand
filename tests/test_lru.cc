@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,9 +23,7 @@
 #include "test_lru.h"
 
 #include "../src/lru.h"
-#include "../src/log.h"
-
-#include <iostream>
+#include "utils.h"
 
 
 using namespace lru;
@@ -41,13 +39,13 @@ int test_lru() {
 	try {
 		if (lru.at("test1")) {
 			L_ERR(nullptr, "ERROR: LRU::insert with limit is not working");
-			return 1;
+			RETURN(1);
 		}
 	} catch (const std::range_error&) { }
 
 	if (lru.at("test4") != 444 || lru.at("test3") != 333 || lru.at("test2") != 222) {
 		L_ERR(nullptr, "ERROR: LRU::at is not working");
-		return 1;
+		RETURN(1);
 	}
 
 	lru.insert(std::make_pair("test5", 555));  // this pushes 'test4' out of the lru
@@ -55,18 +53,18 @@ int test_lru() {
 	try {
 		if (lru.at("test4")) {
 			L_ERR(nullptr, "ERROR: LRU::insert with limit is not working");
-			return 1;
+			RETURN(1);
 		}
 	} catch (const std::range_error&) { }
 
 	if (lru.at("test2") != 222 || lru.at("test3") != 333 || lru.at("test5") != 555) {
 		L_ERR(nullptr, "ERROR: LRU::at is not working");
-		return 1;
+		RETURN(1);
 	}
 
-	L(nullptr, "Test LRU is correct!");
+	L_ERR(nullptr, "Test LRU is correct!");
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -77,12 +75,12 @@ int test_lru_emplace() {
 
 	if (lru.at("test1") != 111 || lru.at("test2") != 222) {
 		L_ERR(nullptr, "ERROR: LRU emplace is not working");
-		return 1;
+		RETURN(1);
 	}
 
-	L(nullptr, "Test LRU emplace is correct!");
+	L_ERR(nullptr, "Test LRU emplace is correct!");
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -96,13 +94,13 @@ int test_lru_actions() {
 
 		if (lru.size() != 4) {
 			L_ERR(nullptr, "ERROR: LRU::insert_and is not working");
-			return 1;
+			RETURN(1);
 		}
 
 		// this gets, but doesn't renew 'test1'
 		if (lru.at_and([](int&){ return GetAction::leave; }, "test1") != 111) {
 			L_ERR(nullptr, "ERROR: LRU::at_and is not working");
-			return 1;
+			RETURN(1);
 		}
 
 		lru.insert(std::make_pair("test5", 555));  // this pushes 'test1' *and* 'test2' out of the lru
@@ -110,33 +108,33 @@ int test_lru_actions() {
 		try {
 			if (lru.at("test1")) {
 				L_ERR(nullptr, "ERROR: LRU::insert with limit is not working");
-				return 1;
+				RETURN(1);
 			}
 		} catch (std::range_error) { }
 
 		if (lru.size() != 3) {
 			L_ERR(nullptr, "ERROR: LRU::insert with limit is not working");
-			return 1;
+			RETURN(1);
 		}
 
 		lru.insert_and([](int&){ return DropAction::renew; }, std::make_pair("test6", 666));  // this renews 'test3'
 
 		if (lru.size() != 4) {
 			L_ERR(nullptr, "ERROR: LRU::insert_and  is not working");
-			return 1;
+			RETURN(1);
 		}
 
 		if (lru.at("test3") != 333 || lru.at("test4") != 444 || lru.at("test5") != 555 || lru.at("test6") != 666) {
 			L_ERR(nullptr, "ERROR: LRU insert is not working");
-			return 1;
+			RETURN(1);
 		}
-    } catch (const std::exception& exc) {
-    	L_EXC(nullptr, "%s\n", exc.what());
-    }
+	} catch (const std::exception& exc) {
+		L_EXC(nullptr, "%s\n", exc.what());
+	}
 
-	L(nullptr, "Test LRU with actions is correct!");
+	L_ERR(nullptr, "Test LRU with actions is correct!");
 
-	return 0;
+	RETURN(0);
 }
 
 
@@ -147,10 +145,10 @@ int test_lru_mutate() {
 		lru.get_and([](int& o){ o = 456; return GetAction::leave; }, "test1") != 456 ||
 		lru.at("test1") != 456) {
 		L_ERR(nullptr, "ERROR: LRU mutate is not working");
-		return 1;
+		RETURN(1);
 	}
 
-	L(nullptr, "Test LRU mutate is correct!");
+	L_ERR(nullptr, "Test LRU mutate is correct!");
 
-	return 0;
+	RETURN(0);
 }

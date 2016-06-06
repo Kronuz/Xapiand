@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -26,6 +26,10 @@
 #include "msgpack.h"
 #include "utils.h"
 
+#include "rapidjson/pointer.h"
+
+
+/* Support for RFC 6902 */
 
 void apply_patch(const MsgPack& patch, MsgPack& object);
 void patch_add(const MsgPack& obj_patch, MsgPack& object);
@@ -36,19 +40,19 @@ void patch_copy(const MsgPack& obj_patch, MsgPack& object);
 void patch_test(const MsgPack& obj_patch, MsgPack& object);
 void patch_incr(const MsgPack& obj_patch, MsgPack& object);
 void patch_incr_decr(const MsgPack& obj_patch, MsgPack& object, bool decr=false);
-MsgPack get_patch_value(const MsgPack& obj_patch);
+const MsgPack& get_patch_value(const MsgPack& obj_patch);
 bool get_patch_custom_limit(int& limit, const MsgPack& obj_patch);
 
 
-inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
-	if (o.get_type() == msgpack::type::MAP) {
+inline void _add(MsgPack& o, const MsgPack& val, const std::string& target) {
+	if (o.is_map()) {
 		o[target] = val;
-	} else if (o.get_type() == msgpack::type::ARRAY) {
+	} else if (o.is_array()) {
 		if (target.compare("-") == 0) {
-			o.insert_item_to_array(o.body->obj->via.array.size, val);
+			o.push_back(val);
 		} else {
 			int offset = strict(std::stoi, target);
-			o.insert_item_to_array(offset, val);
+			o.insert(static_cast<size_t>(offset), val);
 		}
 	} else {
 		throw MSG_ClientError("Object is not array or map");
@@ -56,9 +60,9 @@ inline void _add(MsgPack& o, MsgPack& val, const std::string& target) {
 }
 
 
-inline void _erase(MsgPack&& o, const std::string& target) {
+inline void _erase(MsgPack& o, const std::string& target) {
 	try {
-		if (o.get_type() == msgpack::type::ARRAY) {
+		if (o.is_array()) {
 			o.erase(strict(std::stoi, target));
 		} else {
 			o.erase(target);
@@ -70,8 +74,8 @@ inline void _erase(MsgPack&& o, const std::string& target) {
 
 
 inline void _incr_decr(MsgPack& o, int val) {
-	if (o.get_type() == msgpack::type::NEGATIVE_INTEGER) {
-		o.body->obj->via.i64 += val;
+	if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
+		o += val;
 	} else {
 		throw MSG_ClientError("Object is not integer");
 	}
@@ -79,13 +83,13 @@ inline void _incr_decr(MsgPack& o, int val) {
 
 
 inline void _incr_decr(MsgPack& o, int val, int limit) {
-	if (o.get_type() == msgpack::type::NEGATIVE_INTEGER) {
-		o.body->obj->via.i64 += val;
+	if (o.type() == msgpack::type::NEGATIVE_INTEGER) {
+		o += val;
 		if (val < 0) {
-			if (static_cast<int>(o.body->obj->via.i64) <= limit) {
+			if (static_cast<int>(o.as_i64()) <= limit) {
 				throw MSG_LimitError("Limit exceeded");
 			}
-		} else if (static_cast<int>(o.body->obj->via.i64) >= limit) {
+		} else if (static_cast<int>(o.as_i64()) >= limit) {
 			throw MSG_LimitError("Limit exceeded");
 		}
 	} else {
@@ -94,8 +98,16 @@ inline void _incr_decr(MsgPack& o, int val, int limit) {
 }
 
 
+//Support for RFC 6901
 inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c) {
-	MsgPack path = obj.at(path_c);
-	std::string path_str(path.get_str());
-	stringTokenizer(path_str, "/", path_split);
+	const auto& path = obj.at(path_c);
+
+	std::string path_str = path.unformatted_string();
+	rapidjson::GenericPointer<rapidjson::GenericValue<rapidjson::UTF8<> > > json_pointer(path_str.data(), path_str.size());
+	size_t n_tok = json_pointer.GetTokenCount();
+
+	for (int i=0; i<static_cast<int>(n_tok); i++) {
+		auto& t = json_pointer.GetTokens()[i];
+		path_split.push_back(std::string(t.name, t.length));
+	}
 }

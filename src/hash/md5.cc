@@ -23,6 +23,7 @@
 
 #include "endian.h"
 
+#include <cstring>
 
 /// same as reset()
 MD5::MD5()
@@ -289,6 +290,7 @@ void MD5::processBuffer()
 
 	// only needed if additional data flows over into a second block
 	unsigned char extra[BlockSize];
+	memset(extra, '\0', BlockSize);
 
 	// append a "1" bit, 128 => binary 10000000
 	if (m_bufferSize < BlockSize)

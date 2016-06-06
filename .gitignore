@@ -16,6 +16,7 @@
 /stamp-h1
 /stamp-h.in
 /libtool
+/build
 
 # Xcode workspace
 /Xapiand.xcodeproj/xcuserdata

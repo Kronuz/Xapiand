@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include <vector>
 #include <string>
+#include <vector>
 
 
 struct test_geo_t {
@@ -33,7 +33,5 @@ struct test_geo_t {
 };
 
 
-int create_test_db();
-int make_search(const test_geo_t _tests[], int len);
 int geo_range_test();
 int geo_terms_test();

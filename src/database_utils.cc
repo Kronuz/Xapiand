@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,12 +22,11 @@
 
 #include "database_utils.h"
 
-#include "log.h"
-#include "length.h"
-#include "datetime.h"
-#include "wkt_parser.h"
-#include "serialise.h"
 #include "io_utils.h"
+#include "length.h"
+#include "log.h"
+#include "serialise.h"
+#include "utils.h"
 
 #include "rapidjson/error/en.h"
 
@@ -139,11 +138,11 @@ std::string str_type(const std::vector<unsigned>& sep_types) {
 
 
 void clean_reserved(MsgPack& document) {
-	if (document.get_type() == msgpack::type::MAP) {
-		for (auto item_key : document) {
-			std::string str_key(item_key.get_str());
+	if (document.is_map()) {
+		for (const auto& item_key : document) {
+			auto str_key(item_key.as_string());
 			if (is_valid(str_key) || str_key == RESERVED_VALUE) {
-				auto item_doc = document.at(str_key);
+				auto& item_doc = document.at(str_key);
 				clean_reserved(item_doc);
 			} else {
 				document.erase(str_key);
@@ -182,26 +181,31 @@ rapidjson::Document to_json(const std::string& str) {
 
 
 void set_data(Xapian::Document& doc, const std::string& obj_data_str, const std::string& blob_str) {
-	char h = DATABASE_DATA_HEADER_MAGIC;
-	char f = DATABASE_DATA_FOOTER_MAGIC;
-	doc.set_data(std::string(&h, 1) + serialise_length(obj_data_str.size()) + obj_data_str + std::string(&f, 1) + blob_str);
+	doc.set_data(std::string(1, DATABASE_DATA_HEADER_MAGIC).append(serialise_length(obj_data_str.size())).append(obj_data_str).append(1, DATABASE_DATA_FOOTER_MAGIC).append(blob_str));
 }
 
 
 MsgPack get_MsgPack(const Xapian::Document& doc) {
-	std::string data = doc.get_data();
+	auto data = doc.get_data();
 
 	size_t length;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	if (*p++ != DATABASE_DATA_HEADER_MAGIC) return MsgPack();
+	if (*p++ != DATABASE_DATA_HEADER_MAGIC) {
+		return MsgPack();
+	}
+
 	try {
 		length = unserialise_length(&p, p_end, true);
 	} catch (Xapian::SerialisationError) {
 		return MsgPack();
 	}
-	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) return MsgPack();
-	return MsgPack(std::string(p, length));
+
+	if (*(p + length) != DATABASE_DATA_FOOTER_MAGIC) {
+		return MsgPack();
+	}
+
+	return MsgPack::unserialise(std::string(p, length));
 }
 
 
@@ -228,6 +232,7 @@ std::string to_query_string(std::string str) {
 	if (str.at(0) == '-') {
 		str[0] = '_';
 	}
+
 	return str;
 }
 

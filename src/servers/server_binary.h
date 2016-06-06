@@ -26,7 +26,8 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "../config.h"
+#include "config.h"
+
 #include "../database.h"
 #include "../threadpool.h"
 

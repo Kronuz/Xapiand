@@ -26,86 +26,107 @@
 #include <stdlib.h>
 
 
-START_TEST(test_msgpack_cpp)
+START_TEST(test_MsgPack_correct_cpp)
 {
 	ck_assert_int_eq(test_correct_cpp(), 0);
 }
 END_TEST
 
 
-START_TEST(test_msgpack_pack)
+START_TEST(test_MsgPack_constructors)
 {
-	ck_assert_int_eq(test_pack(), 0);
+	ck_assert_int_eq(test_constructors(), 0);
 }
 END_TEST
 
 
-START_TEST(test_msgpack_unpack)
-{
-	ck_assert_int_eq(test_unpack(), 0);
-}
-END_TEST
-
-
-START_TEST(test_msgpack_explore_json)
-{
-	ck_assert_int_eq(test_explore_json(), 0);
-}
-END_TEST
-
-
-START_TEST(test_msgpack_add_items)
-{
-	ck_assert_int_eq(test_add_items(), 0);
-}
-END_TEST
-
-
-START_TEST(test_msgpack_assigment)
+START_TEST(test_MsgPack_assigment)
 {
 	ck_assert_int_eq(test_assigment(), 0);
 }
 END_TEST
 
 
-START_TEST(test_msgpack_path)
+START_TEST(test_MsgPack_iterator)
+{
+	ck_assert_int_eq(test_iterator(), 0);
+}
+END_TEST
+
+
+START_TEST(test_MsgPack_serialise)
+{
+	ck_assert_int_eq(test_serialise(), 0);
+}
+END_TEST
+
+
+START_TEST(test_MsgPack_unserialise)
+{
+	ck_assert_int_eq(test_unserialise(), 0);
+}
+END_TEST
+
+
+START_TEST(test_MsgPack_explore)
+{
+	ck_assert_int_eq(test_explore(), 0);
+}
+END_TEST
+
+
+START_TEST(test_MsgPack_copy)
+{
+	ck_assert_int_eq(test_copy(), 0);
+}
+END_TEST
+
+
+START_TEST(test_MsgPack_reference)
+{
+	ck_assert_int_eq(test_reference(), 0);
+}
+END_TEST
+
+
+START_TEST(test_MsgPack_path)
 {
 	ck_assert_int_eq(test_path(), 0);
 }
 END_TEST
 
 
-START_TEST(test_msgpack_clone)
-{
-	ck_assert_int_eq(test_clone(), 0);
-}
-END_TEST
-
-
-START_TEST(test_msgpack_erase)
+START_TEST(test_MsgPack_erase)
 {
 	ck_assert_int_eq(test_erase(), 0);
 }
 END_TEST
 
 
-START_TEST(test_msgpack_reserve)
+START_TEST(test_MsgPack_reserve)
 {
 	ck_assert_int_eq(test_reserve(), 0);
 }
 END_TEST
 
 
-START_TEST(test_msgpack_reset)
+START_TEST(test_MsgPack_keys)
 {
-	ck_assert_int_eq(test_reset(), 0);
+	ck_assert_int_eq(test_keys(), 0);
 }
 END_TEST
 
 
-START_TEST(test_msgpack_explicit_constructors)
+START_TEST(test_MsgPack_change_keys)
 {
-	ck_assert_int_eq(test_explicit_constructors(), 0);
+	ck_assert_int_eq(test_change_keys(), 0);
+}
+END_TEST
+
+
+START_TEST(test_MsgPack_update_map)
+{
+	ck_assert_int_eq(test_map(), 0);
 }
 END_TEST
 
@@ -114,52 +135,64 @@ Suite* testMsgPack(void) {
 	Suite *s = suite_create("Test MsgPack");
 
 	TCase *tc_cpp = tcase_create("Test version of cpp");
-	tcase_add_test(tc_cpp, test_msgpack_cpp);
+	tcase_add_test(tc_cpp, test_MsgPack_correct_cpp);
 	suite_add_tcase(s, tc_cpp);
 
-	TCase *tc_pack = tcase_create("Test pack");
-	tcase_add_test(tc_pack, test_msgpack_pack);
-	suite_add_tcase(s, tc_pack);
-
-	TCase *tc_unpack = tcase_create("Test unpack");
-	tcase_add_test(tc_unpack, test_msgpack_unpack);
-	suite_add_tcase(s, tc_unpack);
-
-	TCase *tc_explore_json = tcase_create("Test explore json");
-	tcase_add_test(tc_explore_json, test_msgpack_explore_json);
-	suite_add_tcase(s, tc_explore_json);
-
-	TCase *tc_add_items = tcase_create("Test add items");
-	tcase_add_test(tc_add_items, test_msgpack_add_items);
-	suite_add_tcase(s, tc_add_items);
+	TCase *tc_explicit_constructors = tcase_create("Test Constructors");
+	tcase_add_test(tc_explicit_constructors, test_MsgPack_constructors);
+	suite_add_tcase(s, tc_explicit_constructors);
 
 	TCase *tc_assigment = tcase_create("Test assigment");
-	tcase_add_test(tc_assigment, test_msgpack_assigment);
+	tcase_add_test(tc_assigment, test_MsgPack_assigment);
 	suite_add_tcase(s, tc_assigment);
 
+	TCase *tc_iterator = tcase_create("Test iterator");
+	tcase_add_test(tc_iterator, test_MsgPack_iterator);
+	suite_add_tcase(s, tc_iterator);
+
+	TCase *tc_serialise = tcase_create("Test serialise");
+	tcase_add_test(tc_serialise, test_MsgPack_serialise);
+	suite_add_tcase(s, tc_serialise);
+
+	TCase *tc_unserialise = tcase_create("Test unserialise");
+	tcase_add_test(tc_unserialise, test_MsgPack_unserialise);
+	suite_add_tcase(s, tc_unserialise);
+
+	TCase *tc_explore = tcase_create("Test explore MAP");
+	tcase_add_test(tc_explore, test_MsgPack_explore);
+	suite_add_tcase(s, tc_explore);
+
+	TCase *tc_copy = tcase_create("Test Copy");
+	tcase_add_test(tc_copy, test_MsgPack_copy);
+	suite_add_tcase(s, tc_copy);
+
+	TCase *tc_reference = tcase_create("Test Reference");
+	tcase_add_test(tc_reference, test_MsgPack_reference);
+	suite_add_tcase(s, tc_reference);
+
 	TCase *tc_path = tcase_create("Test path");
-	tcase_add_test(tc_path, test_msgpack_path);
+	tcase_add_test(tc_path, test_MsgPack_path);
 	suite_add_tcase(s, tc_path);
 
-	TCase *tc_clone = tcase_create("Test Clone");
-	tcase_add_test(tc_clone, test_msgpack_clone);
-	suite_add_tcase(s, tc_clone);
-
 	TCase *tc_erase = tcase_create("Test Erase");
-	tcase_add_test(tc_erase, test_msgpack_erase);
+	tcase_add_test(tc_erase, test_MsgPack_erase);
 	suite_add_tcase(s, tc_erase);
 
 	TCase *tc_reserve = tcase_create("Test Reserve");
-	tcase_add_test(tc_reserve, test_msgpack_reserve);
+	tcase_add_test(tc_reserve, test_MsgPack_reserve);
 	suite_add_tcase(s, tc_reserve);
 
-	TCase *tc_reset = tcase_create("Test Reset");
-	tcase_add_test(tc_reset, test_msgpack_reset);
-	suite_add_tcase(s, tc_reset);
+	TCase *tc_keys = tcase_create("Test Keys");
+	tcase_add_test(tc_keys, test_MsgPack_keys);
+	suite_add_tcase(s, tc_keys);
 
-	TCase *tc_explicit_constructors = tcase_create("Test Explicit Constructors");
-	tcase_add_test(tc_explicit_constructors, test_msgpack_explicit_constructors);
-	suite_add_tcase(s, tc_explicit_constructors);
+	TCase *tc_change_keys = tcase_create("Test Change values of keys");
+	tcase_add_test(tc_change_keys, test_MsgPack_change_keys);
+	suite_add_tcase(s, tc_change_keys);
+
+	TCase *tc_update_map = tcase_create("Test update map ");
+	tcase_add_test(tc_update_map, test_MsgPack_update_map);
+	suite_add_tcase(s, tc_update_map);
 
 	return s;
 }

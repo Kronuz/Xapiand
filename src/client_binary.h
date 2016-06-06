@@ -27,6 +27,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include "client_base.h"
+#include "database.h"
 #include "servers/server_binary.h"
 
 #include <xapian.h>
@@ -72,6 +73,8 @@ enum class RemoteMessageType {
 	MSG_READACCESS,             // Select current database
 	MSG_MAX
 };
+
+
 static constexpr const char* const RemoteMessageTypeNames[] = {
 	"MSG_ALLTERMS", "MSG_COLLFREQ", "MSG_DOCUMENT", "MSG_TERMEXISTS",
 	"MSG_TERMFREQ", "MSG_VALUESTATS", "MSG_KEEPALIVE", "MSG_DOCLENGTH",
@@ -83,6 +86,7 @@ static constexpr const char* const RemoteMessageTypeNames[] = {
 	"MSG_REMOVESPELLING", "MSG_GETMSET", "MSG_SHUTDOWN",
 	"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS", "MSG_READACCESS",
 };
+
 
 enum class RemoteReplyType {
 	REPLY_UPDATE,               // Updated database stats
@@ -110,22 +114,28 @@ enum class RemoteReplyType {
 	REPLY_UNIQUETERMS,          // Get number of unique terms in doc
 	REPLY_MAX
 };
+
+
 static constexpr const char* const RemoteReplyTypeNames[] = {
-    "REPLY_UPDATE", "REPLY_EXCEPTION", "REPLY_DONE", "REPLY_ALLTERMS",
-    "REPLY_COLLFREQ", "REPLY_DOCDATA", "REPLY_TERMDOESNTEXIST",
-    "REPLY_TERMEXISTS", "REPLY_TERMFREQ", "REPLY_VALUESTATS", "REPLY_DOCLENGTH",
-    "REPLY_STATS", "REPLY_TERMLIST", "REPLY_POSITIONLIST", "REPLY_POSTLISTSTART",
-    "REPLY_POSTLISTITEM", "REPLY_VALUE", "REPLY_ADDDOCUMENT", "REPLY_RESULTS",
-    "REPLY_METADATA", "REPLY_METADATAKEYLIST", "REPLY_FREQS", "REPLY_UNIQUETERMS",
+	"REPLY_UPDATE", "REPLY_EXCEPTION", "REPLY_DONE", "REPLY_ALLTERMS",
+	"REPLY_COLLFREQ", "REPLY_DOCDATA", "REPLY_TERMDOESNTEXIST",
+	"REPLY_TERMEXISTS", "REPLY_TERMFREQ", "REPLY_VALUESTATS", "REPLY_DOCLENGTH",
+	"REPLY_STATS", "REPLY_TERMLIST", "REPLY_POSITIONLIST", "REPLY_POSTLISTSTART",
+	"REPLY_POSTLISTITEM", "REPLY_VALUE", "REPLY_ADDDOCUMENT", "REPLY_RESULTS",
+	"REPLY_METADATA", "REPLY_METADATAKEYLIST", "REPLY_FREQS", "REPLY_UNIQUETERMS",
 };
+
 
 enum class ReplicationMessageType {
 	MSG_GET_CHANGESETS,
 	MSG_MAX,
 };
+
+
 static constexpr const char* const ReplicationMessageTypeNames[] = {
-    "MSG_GET_CHANGESETS",
+	"MSG_GET_CHANGESETS",
 };
+
 
 enum class ReplicationReplyType {
 	REPLY_END_OF_CHANGES,       // No more changes to transfer.
@@ -137,10 +147,13 @@ enum class ReplicationReplyType {
 	REPLY_CHANGESET,            // A changeset file is being sent.
 	REPLY_MAX,
 };
+
+
 static constexpr const char* const ReplicationReplyTypeNames[] = {
-    "REPLY_END_OF_CHANGES", "REPLY_FAIL", "REPLY_DB_HEADER", "REPLY_DB_FILENAME",
-    "REPLY_DB_FILEDATA", "REPLY_DB_FOOTER", "REPLY_CHANGESET",
+	"REPLY_END_OF_CHANGES", "REPLY_FAIL", "REPLY_DB_HEADER", "REPLY_DB_FILENAME",
+	"REPLY_DB_FILEDATA", "REPLY_DB_FOOTER", "REPLY_CHANGESET",
 };
+
 
 enum class State {
 	INIT,
@@ -266,6 +279,8 @@ public:
 	void _run();
 };
 
+
 using dispatch_func = void (BinaryClient::*)(const std::string&);
+
 
 #endif  /* XAPIAND_CLUSTERING */

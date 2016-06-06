@@ -22,35 +22,33 @@
 
 #include "test_patcher.h"
 
-#include "../src/database_utils.h"
 #include "../src/msgpack_patcher.h"
 #include "../src/rapidjson/rapidjson.h"
 #include "../src/rapidjson/document.h"
-#include "../src/log.h"
-
-#include <fstream>
+#include "utils.h"
 
 
 int test_mix() {
-	std::ifstream fstream_obj("examples/json/object_to_patch.txt", std::ifstream::in);
-	std::ifstream fstream_patch("examples/json/patch_mix.txt", std::ifstream::in);
-	std::ifstream fstream_result("examples/json/patch_result.txt", std::ifstream::in);
-
-	if (fstream_obj.bad() || fstream_patch.bad() || fstream_result.bad()) {
-		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+	std::string obj_str;
+	std::string filename("examples/json/object_to_patch.txt");
+	if (!read_file_contents(filename, &obj_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
 	}
 
-	std::stringstream buffer_obj;
-	std::stringstream buffer_patch;
-	std::stringstream buffer_result;
-	buffer_obj << fstream_obj.rdbuf();
-	buffer_patch << fstream_patch.rdbuf();
-	buffer_result << fstream_result.rdbuf();
+	std::string patch_str;
+	filename = "examples/json/patch_mix.txt";
+	if (!read_file_contents(filename, &patch_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
 
-	std::string obj_str(buffer_obj.str());
-	std::string patch_str(buffer_patch.str());
-	std::string expected(buffer_result.str());
+	std::string expected;
+	filename = "examples/json/patch_result.txt";
+	if (!read_file_contents(filename, &expected)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
 
 	rapidjson::Document doc_patch;
 	rapidjson::Document doc_obj;
@@ -62,36 +60,35 @@ int test_mix() {
 
 	try {
 		apply_patch(patch, obj);
-		std::string result(obj.to_json_string());
+		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
 
 int test_add() {
-	std::ifstream fstream_obj("examples/json/object_to_patch.txt",  std::ifstream::in);
-	std::ifstream fstream_patch("examples/json/patch_add.txt",  std::ifstream::in);
-
-	if (fstream_obj.bad() || fstream_patch.bad()) {
-		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+	std::string obj_str;
+	std::string filename("examples/json/object_to_patch.txt");
+	if (!read_file_contents(filename, &obj_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
 	}
 
-	std::stringstream buffer_obj;
-	std::stringstream buffer_patch;
-	buffer_obj << fstream_obj.rdbuf();
-	buffer_patch << fstream_patch.rdbuf();
+	std::string patch_str;
+	filename = "examples/json/patch_add.txt";
+	if (!read_file_contents(filename, &patch_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
 
-	std::string obj_str(buffer_obj.str());
-	std::string patch_str(buffer_patch.str());
 	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Joker\", \"creation\":\"1939\", \"partnerships\":\"Robin\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}, {\"hero\":\"Green Lantern\", \"name\":\"Hal Jordan\", \"super_power\":\"Use of power ring\", \"enemy\":\"The Gambler\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
 
 	rapidjson::Document doc_obj;
@@ -103,36 +100,35 @@ int test_add() {
 
 	try {
 		apply_patch(patch, obj);
-		std::string result(obj.to_json_string());
+		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
 
 int test_remove() {
-	std::ifstream fstream_obj("examples/json/object_to_patch.txt",  std::ifstream::in);
-	std::ifstream fstream_patch("examples/json/patch_remove.txt",  std::ifstream::in);
-
-	if (fstream_obj.bad() || fstream_patch.bad()) {
-		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+	std::string obj_str;
+	std::string filename("examples/json/object_to_patch.txt");
+	if (!read_file_contents(filename, &obj_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
 	}
 
-	std::stringstream buffer_obj;
-	std::stringstream buffer_patch;
-	buffer_obj << fstream_obj.rdbuf();
-	buffer_patch << fstream_patch.rdbuf();
+	std::string patch_str;
+	filename = "examples/json/patch_remove.txt";
+	if (!read_file_contents(filename, &patch_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
 
-	std::string obj_str(buffer_obj.str());
-	std::string patch_str(buffer_patch.str());
 	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Joker\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
 
 	rapidjson::Document doc_obj;
@@ -144,36 +140,35 @@ int test_remove() {
 
 	try {
 		apply_patch(patch, obj);
-		std::string result(obj.to_json_string());
+		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
 
 int test_replace() {
-	std::ifstream fstream_obj("examples/json/object_to_patch.txt",  std::ifstream::in);
-	std::ifstream fstream_patch("examples/json/patch_replace.txt",  std::ifstream::in);
-
-	if (fstream_obj.bad() || fstream_patch.bad()) {
-		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+	std::string obj_str;
+	std::string filename("examples/json/object_to_patch.txt");
+	if (!read_file_contents(filename, &obj_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
 	}
 
-	std::stringstream buffer_obj;
-	std::stringstream buffer_patch;
-	buffer_obj << fstream_obj.rdbuf();
-	buffer_patch << fstream_patch.rdbuf();
+	std::string patch_str;
+	filename = "examples/json/patch_replace.txt";
+	if (!read_file_contents(filename, &patch_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
 
-	std::string obj_str(buffer_obj.str());
-	std::string patch_str(buffer_patch.str());
 	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Riddler\", \"creation\":\"1939\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
 
 	rapidjson::Document doc_obj;
@@ -185,36 +180,35 @@ int test_replace() {
 
 	try {
 		apply_patch(patch, obj);
-		std::string result(obj.to_json_string());
+		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
 
 int test_move() {
-	std::ifstream fstream_obj("examples/json/object_to_patch.txt",  std::ifstream::in);
-	std::ifstream fstream_patch("examples/json/patch_move.txt",  std::ifstream::in);
-
-	if (fstream_obj.bad() || fstream_patch.bad()) {
-		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+	std::string obj_str;
+	std::string filename("examples/json/object_to_patch.txt");
+	if (!read_file_contents(filename, &obj_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
 	}
 
-	std::stringstream buffer_obj;
-	std::stringstream buffer_patch;
-	buffer_obj << fstream_obj.rdbuf();
-	buffer_patch << fstream_patch.rdbuf();
+	std::string patch_str;
+	filename = "examples/json/patch_move.txt";
+	if (!read_file_contents(filename, &patch_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
 
-	std::string obj_str(buffer_obj.str());
-	std::string patch_str(buffer_patch.str());
 	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"creation\":\"1939\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Joker\", \"creation\":\"1933\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
 
 	rapidjson::Document doc_obj;
@@ -226,36 +220,35 @@ int test_move() {
 
 	try {
 		apply_patch(patch, obj);
-		std::string result(obj.to_json_string());
+		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
 
 int test_copy() {
-	std::ifstream fstream_obj("examples/json/object_to_patch.txt",  std::ifstream::in);
-	std::ifstream fstream_patch("examples/json/patch_copy.txt",  std::ifstream::in);
-
-	if (fstream_obj.bad() || fstream_patch.bad()) {
-		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+	std::string obj_str;
+	std::string filename("examples/json/object_to_patch.txt");
+	if (!read_file_contents(filename, &obj_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
 	}
 
-	std::stringstream buffer_obj;
-	std::stringstream buffer_patch;
-	buffer_obj << fstream_obj.rdbuf();
-	buffer_patch << fstream_patch.rdbuf();
+	std::string patch_str;
+	filename = "examples/json/patch_copy.txt";
+	if (!read_file_contents(filename, &patch_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
 
-	std::string obj_str(buffer_obj.str());
-	std::string patch_str(buffer_patch.str());
 	std::string expected("{\"heroes\":[{\"hero\":\"Batman\", \"name\":\"Bruce Wayne\", \"super_power\":\"High-tech equipment and weapons\", \"enemy\":\"Joker\", \"creation\":\"1939\"}, {\"hero\":\"Superman\", \"name\":\"Clark Kent\", \"super_power\":\"too many\", \"enemy\":\"Lex Luthor\", \"creation\":\"1933\", \"other_enemy\":\"Joker\"}, {\"hero\":\"Flash\", \"name\":\"Bart Allen\", \"super_power\":\"fast\", \"enemy\":\"Zoom\", \"creation\":\"1940\"}], \"villains\":[{\"villain\":\"Joker\", \"name\":\"unknown\", \"super_power\":\"Genius-level intellect\", \"enemy\":\"Batman\", \"creation\":\"1940\"}, {\"villain\":\"Mr. Freeze\", \"name\":\"Dr. Victor Fries\", \"super_power\":\"Sub-zero physiology\", \"enemy\":\"Batman\", \"creation\":\"1956\"}]}");
 
 	rapidjson::Document doc_obj;
@@ -267,36 +260,34 @@ int test_copy() {
 
 	try {
 		apply_patch(patch, obj);
-		std::string result(obj.to_json_string());
+		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
 
 int test_test() {
-	std::ifstream fstream_obj("examples/json/object_to_patch.txt",  std::ifstream::in);
-	std::ifstream fstream_patch("examples/json/patch_test.txt",  std::ifstream::in);
-
-	if (fstream_obj.bad() || fstream_patch.bad()) {
-		L_ERR(nullptr, "ERROR: Can not open the files");
-		return 1;
+	std::string obj_str;
+	std::string filename("examples/json/object_to_patch.txt");
+	if (!read_file_contents(filename, &obj_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
 	}
 
-	std::stringstream buffer_obj;
-	std::stringstream buffer_patch;
-	buffer_obj << fstream_obj.rdbuf();
-	buffer_patch << fstream_patch.rdbuf();
-
-	std::string obj_str(buffer_obj.str());
-	std::string patch_str(buffer_patch.str());
+	std::string patch_str;
+	filename = "examples/json/patch_test.txt";
+	if (!read_file_contents(filename, &patch_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
 
 	rapidjson::Document doc_obj;
 	rapidjson::Document doc_patch;
@@ -307,10 +298,10 @@ int test_test() {
 
 	try {
 		apply_patch(patch, obj);
-		return 0;
+		RETURN(0);
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -330,18 +321,17 @@ int test_incr() {
 
 	try {
 		apply_patch(patch, obj);
-		std::string result(obj.to_json_string());
+		auto result = obj.to_string();
 		L(nullptr, "RESULT FOR TEST_INCR %s", result.c_str());
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
-		return 0;
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -361,16 +351,48 @@ int test_decr() {
 
 	try {
 		apply_patch(patch, obj);
-		std::string result(obj.to_json_string());
+		auto result = obj.to_string();
 		if (expected.compare(result) != 0) {
 			L_ERR(nullptr, "ERROR: Patch is not working.\nResult:\n%s\nExpected:\n%s", result.c_str(), expected.c_str());
-			return 1;
+			RETURN(1);
 		} else {
-			return 0;
+			RETURN(0);
 		}
-		return 0;
 	} catch (const Exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_context());
-		return 1;
+		RETURN(1);
 	}
 }
+
+
+int test_rfc6901() {
+	std::string obj_str;
+	std::string filename("examples/json/rfc6901.txt");
+	if (!read_file_contents(filename, &obj_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
+
+	std::string patch_str;
+	filename = "examples/json/patch_rfc6901.txt";
+	if (!read_file_contents(filename, &patch_str)) {
+		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
+		RETURN(1);
+	}
+
+	rapidjson::Document doc_obj;
+	rapidjson::Document doc_patch;
+	json_load(doc_obj, obj_str);
+	json_load(doc_patch, patch_str);
+	MsgPack obj(doc_obj);
+	MsgPack patch(doc_patch);
+
+	try {
+		apply_patch(patch, obj);
+		RETURN(0);
+	} catch (const Exception& exc) {
+		L_EXC(nullptr, "ERROR: %s", exc.get_context());
+		RETURN(1);
+	}
+}
+

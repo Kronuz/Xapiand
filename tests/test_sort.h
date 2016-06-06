@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -33,8 +33,6 @@ struct sort_t {
 };
 
 
-int create_test_db();
-int make_search(const sort_t _tests[], int len);
 int sort_test_string();
 int sort_test_numerical();
 int sort_test_date();

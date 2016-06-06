@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,10 +22,7 @@
 
 #include "test_serialise.h"
 
-#include "../src/datetime.h"
-#include "../src/serialise.h"
-#include "../src/log.h"
-#include "../src/utils.h"
+#include "utils.h"
 
 
 const test_t test_timestamp_date[] = {
@@ -160,10 +157,10 @@ int test_datetotimestamp() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing the transformation between date string and timestamp is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing the transformation between date string and timestamp has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -181,10 +178,10 @@ int test_unserialise_date() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing unserialise date is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing unserialise date has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -203,10 +200,10 @@ int test_serialise_cartesian() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing serialise Cartesian is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing serialise Cartesian has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -228,10 +225,10 @@ int test_unserialise_cartesian() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing unserialise Cartesian is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing unserialise Cartesian has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -249,10 +246,10 @@ int test_serialise_trixel_id() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing serialise HTM Trixel's id is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing serialise HTM Trixel's id has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -271,9 +268,9 @@ int test_unserialise_trixel_id() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing unserialise HTM Trixel's id is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing unserialise HTM Trixel's id has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }

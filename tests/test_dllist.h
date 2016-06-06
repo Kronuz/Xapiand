@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,31 +22,31 @@
 
 #pragma once
 
-#include "../src/forward_list.h"
+#include "../src/dllist.h"
 
 
-template<typename Compare>
-std::string repr_results(const ForwardList<std::pair<int, char>, Compare>& l, bool sort);
+std::string repr_results(const DLList<std::pair<int, char>>& l, bool sort);
 
+// Single thread tests
+int test_iterators();
 int test_push_front();
-int test_insert_after();
-
 int test_emplace_front();
-int test_emplace_after();
+int test_push_back();
+int test_emplace_back();
+int test_insert();
 
 int test_pop_front();
-int test_erase_after();
+int test_pop_back();
 int test_erase();
 
-int test_remove();
-int test_find();
 int test_single_producer_consumer();
 
-void task_producer(ForwardList<int>& mylist, std::atomic_size_t& elements);
-int test_multiple_producers();
+// Multi thread tests
+int test_multi_push_front();
+int test_multi_push_back();
+int test_multi_insert();
+int test_multi_producers();
 
-void task_producer_consumer(ForwardList<std::pair<int, char>>& mylist, std::atomic_size_t& elements);
-int test_multiple_producers_consumers();
-
-void task_producer_allconsumer(ForwardList<std::pair<int, char>>& mylist);
-int test_multiple_producers_consumers_v2();
+int test_multi_push_pop_front();
+int test_multi_push_pop_back();
+int test_multi_insert_erase();

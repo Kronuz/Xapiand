@@ -1,0 +1,58 @@
+[
+     {
+        "op":"test",
+        "path": "",
+        "value":   { "foo": ["bar", "baz"], "a/b": 1, "c%d": 2, "e^f": 3, "g|h": 4, "i\\j": 5, "k\"l": 6, " ": 7, "m~n": 8 }
+    },
+    {
+        "op": "test",
+        "value": ["bar", "baz"],
+        "path": "/foo"
+    },
+    {
+        "op": "test",
+        "value": "bar",
+        "path": "/foo/0"
+    },
+    {
+        "op": "test",
+        "value": 1,
+        "path": "/a~1b"
+    },
+    {
+        "op": "test",
+        "value": 2,
+        "path": "/c%d"
+    },
+    {
+        "op": "test",
+        "value": 3,
+        "path": "/e^f"
+    },
+    {
+        "op": "test",
+        "value": 4,
+        "path": "/g|h"
+    },
+    {
+        "op": "test",
+        "value": 5,
+        "path": "/i\\j"
+    },
+    {
+        "op": "test",
+        "value": 6,
+        "path": "/k\"l"
+    },
+    {
+        "op": "test",
+        "value": 7,
+        "path": "/ "
+    },
+    {
+        "op": "test",
+        "value": 8,
+        "path": "/m~0n"
+    }
+
+]

@@ -20,21 +20,13 @@
  * IN THE SOFTWARE.
  */
 
-
 #include "test_wal.h"
 
-#include "../src/database.h"
-#include "../src/endpoint.h"
-#include "../src/log.h"
+#include "utils.h"
 
 
-std::shared_ptr<DatabaseQueue>a_queue;
-std::shared_ptr<DatabaseQueue>b_queue;
-static std::shared_ptr<Database> database;
-static std::shared_ptr<Database> res_database;
 static std::string test_db(".test_wal.db");
 static std::string restored_db(".backup_wal.db");
-constexpr int seed = 0;
 
 
 uint32_t get_checksum(int fd) {
@@ -42,7 +34,7 @@ uint32_t get_checksum(int fd) {
 	char buf[1024];
 
 	XXH32_state_t* xxhash = XXH32_createState();
-	XXH32_reset(xxhash, seed);
+	XXH32_reset(xxhash, 0);
 
 	while ((bytes = io::read(fd, buf, sizeof(buf))) > 0) {
 		XXH32_update(xxhash, buf, bytes);
@@ -90,7 +82,7 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 			}
 
 			if (get_checksum(fd1) != get_checksum(fd2)) {
-				L_ERR(nullptr, "ERROR: file %s and file %s are not the same\n", std::string(dir1 + "/" + dir1_file).c_str(), std::string(dir2 + "/" + dir2_file).c_str());
+				L_ERR(nullptr, "ERROR: file %s and file %s are not the same\n", std::string(dir1_file).c_str(), std::string(dir2_file).c_str());
 				same_file = false;
 				close(fd1);
 				close(fd2);
@@ -102,47 +94,36 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 	}
 	closedir(d1);
 	closedir(d2);
+
 	return same_file;
 }
 
 
-int create_db() {
-	// Delete databases to create.
-	delete_files(test_db);
-	delete_files(restored_db);
+DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
 
+
+int create_db_wal() {
 	int num_documents = 1020;
-
 	std::string document("{ \"message\" : \"Hello world\"}");
-	auto node = new Node (*local_node);
-	node->name.assign("node_test");
-	node->binary_port = XAPIAND_BINARY_SERVERPORT;
-	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
 
-	Endpoints endpoints;
-	Endpoint e;
-	e.node_name.assign("node_test");
-	e.port = XAPIAND_BINARY_SERVERPORT;
-	e.path.assign(test_db);
-	e.host.assign("0.0.0.0");
-	endpoints.add(e);
-
-	database = std::make_shared<Database>(a_queue, endpoints, DB_WRITABLE | DB_SPAWN);
-	database->index(document, std:: to_string(1), true, JSON_TYPE, std::to_string(document.size()));
+	db_wal.db_handler.index(document, std::to_string(1), true, JSON_TYPE, std::to_string(document.size()));
 
 	if (copy_file(test_db.c_str(), restored_db.c_str()) == -1) {
+		L_ERR(nullptr, "ERROR: Could not copy the dir %s to dir %s\n", test_db.c_str(), restored_db.c_str());
 		return 1;
 	}
 
 	for (int i = 2; i <= num_documents; ++i) {
-		database->index(document, std:: to_string(i), true, JSON_TYPE, std::to_string(document.size()));
+		db_wal.db_handler.index(document, std::to_string(i), true, JSON_TYPE, std::to_string(document.size()));
 	}
 
 	if (copy_file(test_db.c_str(), restored_db.c_str(), true, std::string("wal.0")) == -1) {
+		L_ERR(nullptr, "ERROR: Could not copy the dir %s to dir %s\n", "wal.0", restored_db.c_str());
 		return 1;
 	}
 
 	if (copy_file(test_db.c_str(), restored_db.c_str(), true, std::string("wal.1012")) == -1) {
+		L_ERR(nullptr, "ERROR: Could not copy the file %s to dir %s\n", "wal.1012", restored_db.c_str());
 		return 1;
 	}
 
@@ -151,40 +132,33 @@ int create_db() {
 
 
 int restore_database() {
-	int result = 0;
 	try {
-		result = create_db();
-		Endpoints endpoints;
-		Endpoint e;
-		e.node_name.assign("node_test");
-		e.port = XAPIAND_BINARY_SERVERPORT;
-		e.path.assign(restored_db);
-		e.host.assign("0.0.0.0");
-		endpoints.add(e);
-
-		res_database = std::make_shared<Database>(b_queue, endpoints, DB_WRITABLE);
-		if (not dir_compare(test_db, restored_db)) {
-			++result;
+		if (create_db_wal() == 0) {
+			/* Trigger the backup wal */
+			std::shared_ptr<DatabaseQueue>b_queue;
+			Endpoints endpoints;
+			endpoints.add(create_endpoint(restored_db));
+			std::shared_ptr<Database> res_database = std::make_shared<Database>(b_queue, endpoints, DB_WRITABLE);
+			if (not dir_compare(test_db, restored_db)) {
+				delete_files(restored_db);
+				RETURN(1);
+			}
+			delete_files(restored_db);
+			RETURN(0);
 		}
-	} catch (const ClientError exc) {
+	} catch (const ClientError& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		delete_files(test_db);
 		delete_files(restored_db);
-		return 1;
-   } catch (const Xapian::Error& exc) {
-		L_EXC(nullptr, "ERROR: %s (%s", exc.get_msg().c_str(), exc.get_error_string());
-		delete_files(test_db);
+		RETURN(1);
+	} catch (const Xapian::Error& exc) {
+		L_EXC(nullptr, "ERROR: %s (%s)", exc.get_msg().c_str(), exc.get_error_string());
 		delete_files(restored_db);
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		delete_files(test_db);
 		delete_files(restored_db);
-		return 1;
+		RETURN(1);
 	}
-
-	// Delete databases created.
-	delete_files(test_db);
 	delete_files(restored_db);
-	return result;
+	RETURN(1);
 }

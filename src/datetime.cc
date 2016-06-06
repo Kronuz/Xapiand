@@ -350,7 +350,7 @@ Datetime::mtimegm(tm_t& tm)
 double
 Datetime::timestamp(const std::string& date)
 {
-	if (isFloat(date)) {
+	if (isNumeric(date)) {
 		double timestamp;
 		std::stringstream ss;
 		ss << std::dec << date;
@@ -393,7 +393,7 @@ Datetime::to_tm_t(double timestamp)
 double
 Datetime::timestamp(const std::string& date, tm_t& tm)
 {
-	if (isFloat(date)) {
+	if (isNumeric(date)) {
 		double timestamp;
 		std::stringstream ss;
 		ss << std::dec << date;
@@ -457,7 +457,7 @@ Datetime::isotime(const struct tm *tm, int microseconds)
 ::std::string
 Datetime::ctime(const ::std::string& epoch)
 {
-	if (isFloat(epoch)) {
+	if (isNumeric(epoch)) {
 		double utimestamp = std::stod(epoch);
 		time_t timestamp = (time_t) utimestamp;
 		std::string microseconds = epoch;

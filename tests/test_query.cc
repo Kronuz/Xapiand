@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,19 +22,7 @@
 
 #include "test_query.h"
 
-#include "../src/log.h"
-#include "../src/serialise.h"
-#include "../src/database.h"
-#include "../src/endpoint.h"
-#include "../src/length.h"
-
-#include <sstream>
-#include <fstream>
-
-
-std::shared_ptr<DatabaseQueue>d_queue;
-static std::shared_ptr<Database> database;
-static std::string name_database(".db_testsearch.db");
+#include "utils.h"
 
 
 // TEST query
@@ -220,28 +208,7 @@ const test_query_t test_facets[] {
 };
 
 
-int create_test_db() {
-	// Delete database to create.
-	delete_files(name_database);
-
-	int cont = 0;
-	auto node = new Node (*local_node);
-	node->name.assign("node_test");
-	node->binary_port = XAPIAND_BINARY_SERVERPORT;
-	std::atomic_exchange(&local_node, std::shared_ptr<const Node>(node));
-
-	Endpoints endpoints;
-	Endpoint e;
-	e.node_name.assign("node_test");
-	e.port = XAPIAND_BINARY_SERVERPORT;
-	e.path.assign(name_database);
-	e.host.assign("0.0.0.0");
-	endpoints.add(e);
-
-	// There are delete in the make_search.
-	database = std::make_shared<Database>(d_queue, endpoints, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-
-	std::vector<std::string> _docs({
+DB_Test db_query (".db_query.db", std::vector<std::string>({
 		// Examples used in test geo.
 		"examples/json/geo_1.txt",
 		"examples/json/geo_2.txt",
@@ -265,27 +232,10 @@ int create_test_db() {
 		// Search examples.
 		"examples/json/example_1.txt",
 		"examples/json/example_2.txt"
-	});
-
-	// Index documents in the database.
-	size_t i = 1;
-	for (const auto& doc : _docs) {
-		std::ifstream fstream(doc);
-		std::stringstream buffer;
-		buffer << fstream.rdbuf();
-		if (database->index(buffer.str(), std::to_string(i), true, JSON_TYPE, std::to_string(fstream.tellg())) == 0) {
-			++cont;
-			L_ERR(nullptr, "ERROR: File %s can not index", doc.c_str());
-		}
-		fstream.close();
-		++i;
-	}
-
-	return cont;
-}
+	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 
-int make_search(const test_query_t _tests[], int len) {
+static int make_search(const test_query_t _tests[], int len) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -297,39 +247,40 @@ int make_search(const test_query_t _tests[], int len) {
 	query.is_nearest = false;
 	query.sort.push_back(RESERVED_ID); // All the result are sort by its id.
 
-	try {
-		for (int i = 0; i < len; ++i) {
-			test_query_t p = _tests[i];
-			query.query.clear();
-			query.terms.clear();
-			query.partial.clear();
-			query.facets.clear();
+	for (int i = 0; i < len; ++i) {
+		test_query_t p = _tests[i];
+		query.query.clear();
+		query.terms.clear();
+		query.partial.clear();
+		query.facets.clear();
 
-			// Insert query
-			for (auto it = p.query.begin(); it != p.query.end(); ++it) {
-				query.query.push_back(*it);
-			}
+		// Insert query
+		for (auto it = p.query.begin(); it != p.query.end(); ++it) {
+			query.query.push_back(*it);
+		}
 
-			// Insert terms
-			for (auto it = p.terms.begin(); it != p.terms.end(); ++it) {
-				query.terms.push_back(*it);
-			}
+		// Insert terms
+		for (auto it = p.terms.begin(); it != p.terms.end(); ++it) {
+			query.terms.push_back(*it);
+		}
 
-			// Insert partials
-			for (auto it = p.partial.begin(); it != p.partial.end(); ++it) {
-				query.partial.push_back(*it);
-			}
+		// Insert partials
+		for (auto it = p.partial.begin(); it != p.partial.end(); ++it) {
+			query.partial.push_back(*it);
+		}
 
-			// Insert facets
-			for (auto it = p.facets.begin(); it != p.facets.end(); ++it) {
-				query.facets.push_back(*it);
-			}
+		// Insert facets
+		for (auto it = p.facets.begin(); it != p.facets.end(); ++it) {
+			query.facets.push_back(*it);
+		}
 
 
-			Xapian::MSet mset;
-			std::vector<std::string> suggestions;
-			std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
-			database->get_mset(query, mset, spies, suggestions);
+		Xapian::MSet mset;
+		std::vector<std::string> suggestions;
+		std::vector<std::pair<std::string, std::unique_ptr<MultiValueCountMatchSpy>>> spies;
+
+		try {
+			db_query.db_handler.get_mset(query, mset, spies, suggestions);
 			// Check by documents
 			if (mset.size() != p.expect_datas.size()) {
 				++cont;
@@ -341,7 +292,7 @@ int make_search(const test_query_t _tests[], int len) {
 					auto obj_data = get_MsgPack(doc);
 					try {
 						auto data = obj_data.at(RESERVED_DATA);
-						std::string str_data(data.get_str());
+						auto str_data = data.as_string();
 						if (it->compare(str_data) != 0) {
 							++cont;
 							L_ERR(nullptr, "ERROR: Result = %s:%s   Expected = %s:%s", RESERVED_DATA, str_data.c_str(), RESERVED_DATA, it->c_str());
@@ -358,7 +309,8 @@ int make_search(const test_query_t _tests[], int len) {
 				auto facet = (*spy).second->values_begin();
 				auto it = p.expect_facets.begin();
 				for ( ; facet != (*spy).second->values_end() && it !=  p.expect_facets.end(); ++facet, ++it) {
-					data_field_t field_t = database->get_data_field((*spy).first);
+					auto schema = db_query.db_handler.get_schema();
+					data_field_t field_t = schema->get_data_field((*spy).first);
 					std::string str_facet(Unserialise::unserialise(field_t.type, *facet));
 					if (str_facet.compare(*it) != 0) {
 						++cont;
@@ -370,14 +322,11 @@ int make_search(const test_query_t _tests[], int len) {
 					L_ERR(nullptr, "ERROR: Different number of terms generated by facets obtained");
 				}
 			}
+		} catch (const std::exception& exc) {
+			L_EXC(nullptr, "ERROR: %s\n", exc.what());
+			++cont;
 		}
-	} catch (const std::exception& exc) {
-		L_EXC(nullptr, "ERROR: %s\n", exc.what());
-		++cont;
 	}
-
-	// Delete database created.
-	delete_files(name_database);
 
 	return cont;
 }
@@ -385,79 +334,75 @@ int make_search(const test_query_t _tests[], int len) {
 
 int test_query_search() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(test_query, arraySize(test_query)) == 0) {
+		int cont = make_search(test_query, arraySize(test_query));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using query is correct!");
-			return 0;
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search using query has mistakes.");
-			return 1;
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }
 
 
 int test_terms_search() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(test_terms, arraySize(test_terms)) == 0) {
+		int cont = make_search(test_terms, arraySize(test_terms));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using terms is correct!");
-			return 0;
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search using terms has mistakes.");
-			return 1;
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }
 
 
 int test_partials_search() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(test_partials, arraySize(test_partials)) == 0) {
+		int cont = make_search(test_partials, arraySize(test_partials));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using partials is correct!");
-			return 0;
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search using partials has mistakes.");
-			return 1;
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }
 
 
 int test_facets_search() {
 	try {
-		int cont = create_test_db();
-		if (cont == 0 && make_search(test_facets, arraySize(test_facets)) == 0) {
+		int cont = make_search(test_facets, arraySize(test_facets));
+		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing facets is correct!");
-			return 0;
 		} else {
 			L_ERR(nullptr, "ERROR: Testing facets has mistakes.");
-			return 1;
 		}
+		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.get_msg().c_str());
-		return 1;
+		RETURN(1);
 	} catch (const std::exception& exc) {
 		L_EXC(nullptr, "ERROR: %s", exc.what());
-		return 1;
+		RETURN(1);
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -192,9 +192,10 @@ private:
 		std::lock_guard<std::mutex> lk(_mtx);
 		weak_children.reserve(_children.size());
 		for (auto it = _children.begin(); it != _children.end();) {
-			auto child = *it++;
+			auto child = *it;
 			if (child) {
 				weak_children.push_back(child);
+				++it;
 			} else {
 				it = _children.erase(it);
 			}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,11 +23,10 @@
 #include "test_generate_terms.h"
 
 #include "../src/generate_terms.h"
-#include "../src/log.h"
-#include "../src/utils.h"
-#include "../src/schema.h"
+#include "utils.h"
 
 #include <limits.h>
+
 
 
 const test_t numeric[] {
@@ -345,10 +344,10 @@ int numeric_test() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing generation of numerical terms is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing generation of numerical terms has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -382,10 +381,10 @@ int date_test() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing generation of terms for dates is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing generation of terms for dates has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -419,9 +418,9 @@ int geo_test() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing generation of terms for geospatials is correct!");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing generation of terms for geospatials has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }

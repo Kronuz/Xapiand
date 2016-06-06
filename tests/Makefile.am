@@ -2,7 +2,7 @@
 
 check_PROGRAMS = \
 	set_compressor_test \
-	set_forward_list_test \
+	set_dllist_test \
 	set_generate_terms_test \
 	set_geo_test \
 	set_hash_test \
@@ -31,15 +31,16 @@ common_files = \
 	$(top_builddir)/src/client_http.cc \
 	$(top_builddir)/src/database.cc \
 	$(top_builddir)/src/database_autocommit.cc \
+	$(top_builddir)/src/database_handler.cc \
 	$(top_builddir)/src/database_utils.cc \
 	$(top_builddir)/src/datetime.cc \
+	$(top_builddir)/src/dllist.h \
 	$(top_builddir)/src/endpoint.cc \
 	$(top_builddir)/src/endpoint_resolver.cc \
 	$(top_builddir)/src/ev/ev.c \
 	$(top_builddir)/src/ev/event.c \
 	$(top_builddir)/src/exception.cc \
 	$(top_builddir)/src/fields.cc \
-	$(top_builddir)/src/forward_list.h \
 	$(top_builddir)/src/generate_terms.cc \
 	$(top_builddir)/src/geometry.cc \
 	$(top_builddir)/src/geospatialrange.cc \
@@ -57,7 +58,6 @@ common_files = \
 	$(top_builddir)/src/lz4/xxhash.c \
 	$(top_builddir)/src/lz4_compressor.cc \
 	$(top_builddir)/src/manager.cc \
-	$(top_builddir)/src/msgpack.cc \
 	$(top_builddir)/src/msgpack_patcher.cc \
 	$(top_builddir)/src/multivalue.cc \
 	$(top_builddir)/src/multivaluekeymaker.cc \
@@ -85,14 +85,15 @@ common_files = \
 	$(top_builddir)/src/times.cc \
 	$(top_builddir)/src/utils.cc \
 	$(top_builddir)/src/wkt_parser.cc \
-	$(top_builddir)/src/xchange/convert.cc
+	$(top_builddir)/src/xchange/convert.cc \
+	utils.h
 
 
 set_compressor_test_SOURCES = $(common_files) set_compressor_test.cc test_compressor.cc
 set_compressor_test_LDADD = @CHECK_LIBS@
 
-set_forward_list_test_SOURCES = $(common_files) set_forward_list_test.cc test_forward_list.cc
-set_forward_list_test_LDADD = @CHECK_LIBS@
+set_dllist_test_SOURCES = $(common_files) set_dllist_test.cc test_dllist.cc
+set_dllist_test_LDADD = @CHECK_LIBS@
 
 set_generate_terms_test_SOURCES = $(common_files) set_generate_terms_test.cc test_generate_terms.cc
 set_generate_terms_test_LDADD = @CHECK_LIBS@

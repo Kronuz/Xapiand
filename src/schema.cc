@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -25,6 +25,7 @@
 #include "database.h"
 #include "log.h"
 #include "serialise.h"
+#include "wkt_parser.h"
 
 
 static const std::vector<std::string> str_time     { "second", "minute", "hour", "day", "month", "year" };
@@ -32,15 +33,15 @@ static const std::vector<std::string> str_analyzer { "STEM_NONE", "STEM_SOME", "
 static const std::vector<std::string> str_index    { "ALL", "TERM", "VALUE", "TEXT" };
 
 
-static const MsgPack def_accuracy_geo(to_json("[true, 0.2, 0, 5, 10, 15, 20, 25]"));
-static const MsgPack def_accuracy_num(to_json("[100, 1000, 10000, 100000]"));
-static const MsgPack def_accuracy_date(to_json("[\"hour\", \"day\", \"month\", \"year\"]"));
+static const MsgPack def_accuracy_geo  { true, 0.2, 0, 5, 10, 15, 20, 25 };
+static const MsgPack def_accuracy_num  { 100, 1000, 10000, 100000 };
+static const MsgPack def_accuracy_date { "hour", "day", "month", "year" };
 
 
 const specification_t default_spc;
 
 
-const std::unordered_map<std::string, dispatch_reserved> map_dispatch_reserved({
+const std::unordered_map<std::string, dispatch_reserved> map_dispatch_document({
 	{ RESERVED_WEIGHT,       &Schema::process_weight      },
 	{ RESERVED_POSITION,     &Schema::process_position    },
 	{ RESERVED_LANGUAGE,     &Schema::process_language    },
@@ -66,34 +67,34 @@ const std::unordered_map<std::string, dispatch_reserved> map_dispatch_reserved({
 });
 
 
-const std::unordered_map<std::string, dispatch_root> map_dispatch_root({
-	{ RESERVED_TEXTS,        &Schema::process_texts             },
-	{ RESERVED_VALUES,       &Schema::process_values            },
-	{ RESERVED_TERMS,        &Schema::process_terms             }
+const std::unordered_map<std::string, dispatch_reserved> map_dispatch_properties({
+	{ RESERVED_WEIGHT,       &Schema::update_weight            },
+	{ RESERVED_POSITION,     &Schema::update_position          },
+	{ RESERVED_LANGUAGE,     &Schema::update_language          },
+	{ RESERVED_SPELLING,     &Schema::update_spelling          },
+	{ RESERVED_POSITIONS,    &Schema::update_positions         },
+	{ RESERVED_ACCURACY,     &Schema::update_accuracy          },
+	{ RESERVED_ACC_PREFIX,   &Schema::update_acc_prefix        },
+	{ RESERVED_STORE,        &Schema::update_store             },
+	{ RESERVED_TYPE,         &Schema::update_type              },
+	{ RESERVED_ANALYZER,     &Schema::update_analyzer          },
+	{ RESERVED_DYNAMIC,      &Schema::update_dynamic           },
+	{ RESERVED_D_DETECTION,  &Schema::update_d_detection       },
+	{ RESERVED_N_DETECTION,  &Schema::update_n_detection       },
+	{ RESERVED_G_DETECTION,  &Schema::update_g_detection       },
+	{ RESERVED_B_DETECTION,  &Schema::update_b_detection       },
+	{ RESERVED_S_DETECTION,  &Schema::update_s_detection       },
+	{ RESERVED_BOOL_TERM,    &Schema::update_bool_term         },
+	{ RESERVED_SLOT,         &Schema::update_slot              },
+	{ RESERVED_INDEX,        &Schema::update_index             },
+	{ RESERVED_PREFIX,       &Schema::update_prefix            },
 });
 
 
-const std::unordered_map<std::string, dispatch_property> map_dispatch_properties({
-	{ RESERVED_WEIGHT,       &Schema::process_weight            },
-	{ RESERVED_POSITION,     &Schema::process_position          },
-	{ RESERVED_LANGUAGE,     &Schema::process_language          },
-	{ RESERVED_SPELLING,     &Schema::process_spelling          },
-	{ RESERVED_POSITIONS,    &Schema::process_positions         },
-	{ RESERVED_ACCURACY,     &Schema::process_accuracy          },
-	{ RESERVED_ACC_PREFIX,   &Schema::process_acc_prefix        },
-	{ RESERVED_STORE,        &Schema::process_store             },
-	{ RESERVED_TYPE,         &Schema::process_type              },
-	{ RESERVED_ANALYZER,     &Schema::process_analyzer          },
-	{ RESERVED_DYNAMIC,      &Schema::process_dynamic           },
-	{ RESERVED_D_DETECTION,  &Schema::process_d_detection       },
-	{ RESERVED_N_DETECTION,  &Schema::process_n_detection       },
-	{ RESERVED_G_DETECTION,  &Schema::process_g_detection       },
-	{ RESERVED_B_DETECTION,  &Schema::process_b_detection       },
-	{ RESERVED_S_DETECTION,  &Schema::process_s_detection       },
-	{ RESERVED_BOOL_TERM,    &Schema::process_bool_term         },
-	{ RESERVED_SLOT,         &Schema::process_slot              },
-	{ RESERVED_INDEX,        &Schema::process_index             },
-	{ RESERVED_PREFIX,       &Schema::process_prefix            },
+const std::unordered_map<std::string, dispatch_root> map_dispatch_root({
+	{ RESERVED_TEXTS,        &Schema::process_texts             },
+	{ RESERVED_VALUES,       &Schema::process_values            },
+	{ RESERVED_TERMS,        &Schema::process_terms             },
 });
 
 
@@ -273,27 +274,22 @@ specification_t::to_string() const
 }
 
 
-void
-Schema::set_database(Database* _database)
+Schema::Schema(const std::shared_ptr<const MsgPack>& other)
+	: schema(other)
 {
-	L_CALL(this, "Schema::set_database()");
-
-	database = _database;
-
-	// Reload schema.
-	std::string s_schema = database->get_metadata(RESERVED_SCHEMA);
-
-	if (s_schema.empty()) {
-		schema[RESERVED_VERSION] = DB_VERSION_SCHEMA;
-		schema[RESERVED_SCHEMA];
+	if (schema->is_null()) {
+		MsgPack new_schema = {
+			{ RESERVED_VERSION, DB_VERSION_SCHEMA },
+			{ RESERVED_SCHEMA, nullptr },
+		};
+		new_schema.lock();
+		schema = std::make_shared<const MsgPack>(std::move(new_schema));
 	} else {
-		schema = MsgPack(s_schema);
 		try {
-			auto version = schema.at(RESERVED_VERSION);
-			if (version.get_f64() != DB_VERSION_SCHEMA) {
+			const auto& version = schema->at(RESERVED_VERSION);
+			if (version.as_f64() != DB_VERSION_SCHEMA) {
 				throw MSG_Error("Different database's version schemas, the current version is %1.1f", DB_VERSION_SCHEMA);
 			}
-			to_store = false;
 		} catch (const std::out_of_range&) {
 			throw MSG_Error("Schema is corrupt, you need provide a new one");
 		} catch (const msgpack::type_error&) {
@@ -303,20 +299,39 @@ Schema::set_database(Database* _database)
 }
 
 
+MsgPack&
+Schema::get_mutable(const std::string& full_name)
+{
+	L_CALL(this, "Schema::get_mutable()");
+
+	if (!mut_schema) {
+		mut_schema = std::make_unique<MsgPack>(*schema);
+	}
+
+	MsgPack* prop = &mut_schema->at(RESERVED_SCHEMA);
+	std::vector<std::string> field_names;
+	stringTokenizer(full_name, DB_OFFSPRING_UNION, field_names);
+	for (const auto& field_name : field_names) {
+		prop = &(*prop)[field_name];
+	}
+	return *prop;
+}
+
+
 std::string
-Schema::serialise_id(MsgPack& properties, specification_t& specification, const std::string& value_id)
+Schema::serialise_id(const MsgPack& properties, const std::string& value_id)
 {
 	L_CALL(this, "Schema::serialise_id()");
 
-	auto prop_id = properties[RESERVED_ID];
 	specification.set_type = true;
-	if (prop_id) {
-		update_specification(properties, specification);
-		return Serialise::serialise(static_cast<char>(prop_id.at(RESERVED_TYPE).at(2).get_u64()), value_id);
-	} else {
-		to_store.store(true);
+	try {
+		const auto& prop_id = properties.at(RESERVED_ID);
+		update_specification(properties);
+		return Serialise::serialise(static_cast<char>(prop_id.at(RESERVED_TYPE).at(2).as_u64()), value_id);
+	} catch (const std::out_of_range&) {
+		auto& prop_id = get_mutable(RESERVED_ID);
 		specification.found_field = false;
-		std::pair<char, std::string> res_serialise = Serialise::serialise(value_id);
+		auto res_serialise = Serialise::serialise(value_id);
 		prop_id[RESERVED_TYPE] = std::vector<unsigned>({ NO_TYPE, NO_TYPE, static_cast<unsigned>(res_serialise.first) });
 		prop_id[RESERVED_PREFIX] = DOCUMENT_ID_TERM_PREFIX;
 		prop_id[RESERVED_SLOT] = DB_SLOT_ID;
@@ -328,23 +343,25 @@ Schema::serialise_id(MsgPack& properties, specification_t& specification, const 
 
 
 void
-Schema::update_specification(const MsgPack& properties, specification_t& specification)
+Schema::update_specification(const MsgPack& properties)
 {
-	L_CALL(nullptr, "Schema::update_specification()");
+	L_CALL(this, "Schema::update_specification()");
 
-	for (const auto property : properties) {
-		auto str_prop = property.get_str();
+	for (const auto& property : properties) {
+		auto str_prop = property.as_string();
 		try {
 			auto func = map_dispatch_properties.at(str_prop);
-			(*func)(properties.at(str_prop), specification);
+			(this->*func)(properties.at(str_prop));
 		} catch (const std::out_of_range&) { }
 	}
 }
 
 
 void
-Schema::restart_specification(specification_t& specification)
+Schema::restart_specification()
 {
+	L_CALL(this, "Schema::restart_specification()");
+
 	specification.sep_types = default_spc.sep_types;
 	specification.accuracy.clear();
 	specification.acc_prefix.clear();
@@ -356,44 +373,41 @@ Schema::restart_specification(specification_t& specification)
 }
 
 
-MsgPack
-Schema::get_subproperties(MsgPack& properties, specification_t& specification)
+const MsgPack&
+Schema::get_subproperties(const MsgPack& properties)
 {
 	L_CALL(this, "Schema::get_subproperties()");
 
-	auto subproperties = properties[specification.name];
-	restart_specification(specification);
-	if (subproperties) {
-		specification.found_field = true;
-		update_specification(subproperties, specification);
-	} else {
-		to_store = true;
-		specification.found_field = false;
+	std::vector<std::string> field_names;
+	stringTokenizer(specification.name, DB_OFFSPRING_UNION, field_names);
+
+	const MsgPack * subproperties = &properties;
+	for (const auto& field_name : field_names) {
+		if (!is_valid(field_name)) {
+			throw MSG_ClientError("The field name: %s (%s) is not valid", specification.name.c_str(), field_name.c_str());
+		}
+		restart_specification();
+		try {
+			subproperties = &subproperties->at(field_name);
+			specification.found_field = true;
+			update_specification(*subproperties);
+		} catch (const std::out_of_range&) {
+			subproperties = &get_mutable(specification.full_name);
+			specification.found_field = false;
+		}
 	}
 
-	return subproperties;
+	return *subproperties;
 }
 
 
 void
-Schema::store()
+Schema::set_type(const MsgPack& item_doc)
 {
-	L_CALL(this, "Schema::store()");
+	L_CALL(this, "Schema::set_type()");
 
-	if (to_store) {
-		database->set_metadata(RESERVED_SCHEMA, schema.to_string());
-		to_store = false;
-	}
-}
-
-
-void
-Schema::set_type(const MsgPack& item_doc, specification_t& specification)
-{
-	L_CALL(nullptr, "Schema::set_type()");
-
-	MsgPack field = item_doc.get_type() == msgpack::type::ARRAY ? item_doc.at(0) : item_doc;
-	switch (field.get_type()) {
+	const auto& field = item_doc.is_array() ? item_doc.at(0) : item_doc;
+	switch (field.type()) {
 		case msgpack::type::POSITIVE_INTEGER:
 			if (specification.numeric_detection) {
 				specification.sep_types[2] = POSITIVE_TYPE;
@@ -419,7 +433,7 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 			}
 			break;
 		case msgpack::type::STR: {
-			std::string str_value(field.get_str());
+			auto str_value(field.as_string());
 			if (specification.date_detection && Datetime::isDate(str_value)) {
 				specification.sep_types[2] = DATE_TYPE;
 				return;
@@ -448,67 +462,71 @@ Schema::set_type(const MsgPack& item_doc, specification_t& specification)
 			break;
 	}
 
-	throw MSG_ClientError("%s: %s is ambiguous", RESERVED_VALUE, item_doc.to_json_string().c_str());
+	throw MSG_ClientError("%s: %s is ambiguous", RESERVED_VALUE, item_doc.to_string().c_str());
 }
 
 
 void
-Schema::set_type_to_array(MsgPack& properties)
+Schema::set_type_to_array()
 {
+	L_CALL(this, "Schema::set_type_to_array()");
+
 	try {
-		auto _type = properties.at(RESERVED_TYPE).at(1);
-		if (_type.get_u64() == NO_TYPE) {
+		auto& _type = get_mutable(specification.full_name).at(RESERVED_TYPE).at(1);
+		if (_type.as_u64() == NO_TYPE) {
 			_type = ARRAY_TYPE;
-			to_store = true;
 		}
 	} catch (const std::out_of_range&) { }
 }
 
 
 void
-Schema::set_type_to_object(MsgPack& properties)
+Schema::set_type_to_object()
 {
+	L_CALL(this, "Schema::set_type_to_object()");
+
 	try {
-		auto _type = properties.at(RESERVED_TYPE).at(0);
-		if (_type.get_u64() == NO_TYPE) {
+		auto& _type = get_mutable(specification.full_name).at(RESERVED_TYPE).at(0);
+		if (_type.as_u64() == NO_TYPE) {
 			_type = OBJECT_TYPE;
-			to_store = true;
 		}
 	} catch (const std::out_of_range&) { }
 }
 
 
 std::string
-Schema::to_json_string(bool prettify)
+Schema::to_string(bool prettify) const
 {
-	MsgPack schema_readable = schema.clone();
-	auto properties = schema_readable.at(RESERVED_SCHEMA);
-	if likely(properties) {
-		readable(std::move(properties), true);
-	} else {
+	L_CALL(this, "Schema::to_string()");
+
+	auto schema_readable = *schema;
+	auto& properties = schema_readable.at(RESERVED_SCHEMA);
+	if unlikely(properties.is_null()) {
 		schema_readable.erase(RESERVED_SCHEMA);
+	} else {
+		readable(properties, true);
 	}
 
-	return schema_readable.to_json_string(prettify);
+	return schema_readable.to_string(prettify);
 }
 
 
 void
-Schema::readable(MsgPack&& item_schema, bool is_root)
+Schema::readable(MsgPack& item_schema, bool is_root)
 {
 	// Change this item of schema in readable form.
-	for (const auto item_key : item_schema) {
-		auto str_key = item_key.get_str();
+	for (const auto& item_key : item_schema) {
+		auto str_key = item_key.as_string();
 		try {
 			auto func = map_dispatch_readable.at(str_key);
 			(*func)(item_schema.at(str_key), item_schema);
 		} catch (const std::out_of_range&) {
 			if (is_valid(str_key) || (is_root && str_key == RESERVED_ID)) {
-				auto sub_item = item_schema.at(str_key);
-				if likely(sub_item) {
-					readable(std::move(sub_item));
-				} else {
+				auto& sub_item = item_schema.at(str_key);
+				if unlikely(sub_item.is_null()) {
 					item_schema.erase(str_key);
+				} else {
+					readable(sub_item);
 				}
 			}
 		}
@@ -517,61 +535,61 @@ Schema::readable(MsgPack&& item_schema, bool is_root)
 
 
 void
-Schema::readable_type(MsgPack&& prop_type, const MsgPack& properties)
+Schema::readable_type(MsgPack& prop_type, MsgPack& properties)
 {
 	std::vector<unsigned> sep_types({
-		static_cast<unsigned>(prop_type.at(0).get_u64()),
-		static_cast<unsigned>(prop_type.at(1).get_u64()),
-		static_cast<unsigned>(prop_type.at(2).get_u64())
+		static_cast<unsigned>(prop_type.at(0).as_u64()),
+		static_cast<unsigned>(prop_type.at(1).as_u64()),
+		static_cast<unsigned>(prop_type.at(2).as_u64())
 	});
 	prop_type = str_type(sep_types);
 
 	// Readable accuracy.
 	try {
 		if (sep_types[2] == DATE_TYPE) {
-			for (auto _accuracy : properties.at(RESERVED_ACCURACY)) {
-				_accuracy = str_time[_accuracy.get_f64()];
+			for (auto& _accuracy : properties.at(RESERVED_ACCURACY)) {
+				_accuracy = str_time[_accuracy.as_f64()];
 			}
 		} else if (sep_types[2] == GEO_TYPE) {
-			auto _partials = properties.at(RESERVED_ACCURACY).at(0);
-			_partials = _partials.get_f64() ? true : false;
+			auto& _partials = properties.at(RESERVED_ACCURACY).at(0);
+			_partials = _partials.as_f64() ? true : false;
 		}
 	} catch (const std::out_of_range&) { }
 }
 
 
 void
-Schema::readable_analyzer(MsgPack&& prop_analyzer, const MsgPack&)
+Schema::readable_analyzer(MsgPack& prop_analyzer, MsgPack&)
 {
-	for (auto _analyzer : prop_analyzer) {
-		_analyzer = str_analyzer[_analyzer.get_u64()];
+	for (auto& _analyzer : prop_analyzer) {
+		_analyzer = str_analyzer[_analyzer.as_u64()];
 	}
 }
 
 
 void
-Schema::readable_index(MsgPack&& prop_index, const MsgPack&)
+Schema::readable_index(MsgPack& prop_index, MsgPack&)
 {
-	prop_index = str_index[prop_index.get_u64()];
+	prop_index = str_index[prop_index.as_u64()];
 }
 
 
 void
-Schema::process_weight(MsgPack& properties, const MsgPack& doc_weight, specification_t& specification)
+Schema::process_weight(const MsgPack& doc_weight)
 {
 	// RESERVED_WEIGHT is heritable and can change between documents.
 	try {
 		specification.weight.clear();
-		if (doc_weight.get_type() == msgpack::type::ARRAY) {
-			for (const auto _weight : doc_weight) {
-				specification.weight.push_back(static_cast<unsigned>(_weight.get_u64()));
+		if (doc_weight.is_array()) {
+			for (const auto& _weight : doc_weight) {
+				specification.weight.push_back(static_cast<unsigned>(_weight.as_u64()));
 			}
 		} else {
-			specification.weight.push_back(static_cast<unsigned>(doc_weight.get_u64()));
+			specification.weight.push_back(static_cast<unsigned>(doc_weight.as_u64()));
 		}
 
 		if unlikely(!specification.found_field) {
-			properties[RESERVED_WEIGHT] = specification.weight;
+			get_mutable(specification.full_name)[RESERVED_WEIGHT] = specification.weight;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_WEIGHT);
@@ -580,21 +598,21 @@ Schema::process_weight(MsgPack& properties, const MsgPack& doc_weight, specifica
 
 
 void
-Schema::process_position(MsgPack& properties, const MsgPack& doc_position, specification_t& specification)
+Schema::process_position(const MsgPack& doc_position)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
 	try {
 		specification.position.clear();
-		if (doc_position.get_type() == msgpack::type::ARRAY) {
-			for (const auto _position : doc_position) {
-				specification.position.push_back(static_cast<unsigned>(_position.get_u64()));
+		if (doc_position.is_array()) {
+			for (const auto& _position : doc_position) {
+				specification.position.push_back(static_cast<unsigned>(_position.as_u64()));
 			}
 		} else {
-			specification.position.push_back(static_cast<unsigned>(doc_position.get_u64()));
+			specification.position.push_back(static_cast<unsigned>(doc_position.as_u64()));
 		}
 
 		if unlikely(!specification.found_field) {
-			properties[RESERVED_POSITION] = specification.position;
+			get_mutable(specification.full_name)[RESERVED_POSITION] = specification.position;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be positive integer or array of positive integers", RESERVED_POSITION);
@@ -603,14 +621,14 @@ Schema::process_position(MsgPack& properties, const MsgPack& doc_position, speci
 
 
 void
-Schema::process_language(MsgPack& properties, const MsgPack& doc_language, specification_t& specification)
+Schema::process_language(const MsgPack& doc_language)
 {
 	// RESERVED_LANGUAGE is heritable and can change between documents.
 	try {
 		specification.language.clear();
-		if (doc_language.get_type() == msgpack::type::ARRAY) {
-			for (const auto _language : doc_language) {
-				std::string _str_language(_language.get_str());
+		if (doc_language.is_array()) {
+			for (const auto& _language : doc_language) {
+				auto _str_language(_language.as_string());
 				if (is_language(_str_language)) {
 					specification.language.push_back(std::move(_str_language));
 				} else {
@@ -618,7 +636,7 @@ Schema::process_language(MsgPack& properties, const MsgPack& doc_language, speci
 				}
 			}
 		} else {
-			std::string _str_language(doc_language.get_str());
+			auto _str_language(doc_language.as_string());
 			if (is_language(_str_language)) {
 				specification.language.push_back(std::move(_str_language));
 			} else {
@@ -627,7 +645,7 @@ Schema::process_language(MsgPack& properties, const MsgPack& doc_language, speci
 		}
 
 		if unlikely(!specification.found_field) {
-			properties[RESERVED_LANGUAGE] = specification.language;
+			get_mutable(specification.full_name)[RESERVED_LANGUAGE] = specification.language;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string or array of strings", RESERVED_LANGUAGE);
@@ -636,21 +654,21 @@ Schema::process_language(MsgPack& properties, const MsgPack& doc_language, speci
 
 
 void
-Schema::process_spelling(MsgPack& properties, const MsgPack& doc_spelling, specification_t& specification)
+Schema::process_spelling(const MsgPack& doc_spelling)
 {
 	// RESERVED_SPELLING is heritable and can change between documents.
 	try {
 		specification.spelling.clear();
-		if (doc_spelling.get_type() == msgpack::type::ARRAY) {
-			for (const auto _spelling : doc_spelling) {
-				specification.spelling.push_back(_spelling.get_bool());
+		if (doc_spelling.is_array()) {
+			for (const auto& _spelling : doc_spelling) {
+				specification.spelling.push_back(_spelling.as_bool());
 			}
 		} else {
-			specification.spelling.push_back(doc_spelling.get_bool());
+			specification.spelling.push_back(doc_spelling.as_bool());
 		}
 
 		if unlikely(!specification.found_field) {
-			properties[RESERVED_SPELLING] = specification.spelling;
+			get_mutable(specification.full_name)[RESERVED_SPELLING] = specification.spelling;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean or array of booleans", RESERVED_SPELLING);
@@ -659,21 +677,21 @@ Schema::process_spelling(MsgPack& properties, const MsgPack& doc_spelling, speci
 
 
 void
-Schema::process_positions(MsgPack& properties, const MsgPack& doc_positions, specification_t& specification)
+Schema::process_positions(const MsgPack& doc_positions)
 {
 	// RESERVED_POSITIONS is heritable and can change between documents.
 	try {
 		specification.positions.clear();
-		if (doc_positions.get_type() == msgpack::type::ARRAY) {
-			for (const auto _positions : doc_positions) {
-				specification.positions.push_back(_positions.get_bool());
+		if (doc_positions.is_array()) {
+			for (const auto& _positions : doc_positions) {
+				specification.positions.push_back(_positions.as_bool());
 			}
 		} else {
-			specification.positions.push_back(doc_positions.get_bool());
+			specification.positions.push_back(doc_positions.as_bool());
 		}
 
 		if unlikely(!specification.found_field) {
-			properties[RESERVED_POSITIONS] = specification.positions;
+			get_mutable(specification.full_name)[RESERVED_POSITIONS] = specification.positions;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean or array of booleans", RESERVED_POSITIONS);
@@ -682,14 +700,14 @@ Schema::process_positions(MsgPack& properties, const MsgPack& doc_positions, spe
 
 
 void
-Schema::process_analyzer(MsgPack& properties, const MsgPack& doc_analyzer, specification_t& specification)
+Schema::process_analyzer(const MsgPack& doc_analyzer)
 {
 	// RESERVED_ANALYZER is heritable and can change between documents.
 	try {
 		specification.analyzer.clear();
-		if (doc_analyzer.get_type() == msgpack::type::ARRAY) {
-			for (const auto analyzer : doc_analyzer) {
-				std::string _analyzer(upper_string(analyzer.get_str()));
+		if (doc_analyzer.is_array()) {
+			for (const auto& analyzer : doc_analyzer) {
+				auto _analyzer(upper_string(analyzer.as_string()));
 				if (_analyzer == str_analyzer[0]) {
 					specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
 				} else if (_analyzer == str_analyzer[1]) {
@@ -703,7 +721,7 @@ Schema::process_analyzer(MsgPack& properties, const MsgPack& doc_analyzer, speci
 				}
 			}
 		} else {
-			std::string _analyzer(upper_string(doc_analyzer.get_str()));
+			auto _analyzer(upper_string(doc_analyzer.as_string()));
 			if (_analyzer == str_analyzer[0]) {
 				specification.analyzer.push_back(Xapian::TermGenerator::STEM_SOME);
 			} else if (_analyzer == str_analyzer[1]) {
@@ -718,7 +736,7 @@ Schema::process_analyzer(MsgPack& properties, const MsgPack& doc_analyzer, speci
 		}
 
 		if unlikely(!specification.found_field) {
-			properties[RESERVED_ANALYZER] = specification.analyzer;
+			get_mutable(specification.full_name)[RESERVED_ANALYZER] = specification.analyzer;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string or array of strings", RESERVED_ANALYZER);
@@ -727,7 +745,7 @@ Schema::process_analyzer(MsgPack& properties, const MsgPack& doc_analyzer, speci
 
 
 void
-Schema::process_type(MsgPack&, const MsgPack& doc_type, specification_t& specification)
+Schema::process_type(const MsgPack& doc_type)
 {
 	// RESERVED_TYPE isn't heritable and can't change once fixed.
 	if likely(specification.set_type) {
@@ -735,7 +753,7 @@ Schema::process_type(MsgPack&, const MsgPack& doc_type, specification_t& specifi
 	}
 
 	try {
-		if (!set_types(lower_string(doc_type.get_str()), specification.sep_types)) {
+		if (!set_types(lower_string(doc_type.as_string()), specification.sep_types)) {
 			throw MSG_ClientError("%s can be [object/][array/]< %s | %s | %s | %s | %s >", RESERVED_TYPE, FLOAT_STR, INTEGER_STR, POSITIVE_STR, STRING_STR, DATE_STR, BOOLEAN_STR, GEO_STR);
 		}
 	} catch (const msgpack::type_error&) {
@@ -745,14 +763,14 @@ Schema::process_type(MsgPack&, const MsgPack& doc_type, specification_t& specifi
 
 
 void
-Schema::process_accuracy(MsgPack&, const MsgPack& doc_accuracy, specification_t& specification)
+Schema::process_accuracy(const MsgPack& doc_accuracy)
 {
 	// RESERVED_ACCURACY isn't heritable and can't change once fixed.
 	if likely(specification.set_type) {
 		return;
 	}
 
-	if (doc_accuracy.get_type() == msgpack::type::ARRAY) {
+	if (doc_accuracy.is_array()) {
 		try {
 			specification.doc_acc = std::make_unique<const MsgPack>(doc_accuracy);
 		} catch (const msgpack::type_error&) {
@@ -765,7 +783,7 @@ Schema::process_accuracy(MsgPack&, const MsgPack& doc_accuracy, specification_t&
 
 
 void
-Schema::process_acc_prefix(MsgPack&, const MsgPack& doc_acc_prefix, specification_t& specification)
+Schema::process_acc_prefix(const MsgPack& doc_acc_prefix)
 {
 	// RESERVED_ACC_PREFIX isn't heritable and can't change once fixed.
 	// It is taken into account only if RESERVED_ACCURACY is defined.
@@ -773,11 +791,11 @@ Schema::process_acc_prefix(MsgPack&, const MsgPack& doc_acc_prefix, specificatio
 		return;
 	}
 
-	if (doc_acc_prefix.get_type() == msgpack::type::ARRAY) {
+	if (doc_acc_prefix.is_array()) {
 		std::set<std::string> set_acc_prefix;
 		try {
-			for (const auto _acc_prefix : doc_acc_prefix) {
-				set_acc_prefix.insert(_acc_prefix.get_str());
+			for (const auto& _acc_prefix : doc_acc_prefix) {
+				set_acc_prefix.insert(_acc_prefix.as_string());
 			}
 			specification.acc_prefix.insert(specification.acc_prefix.end(), set_acc_prefix.begin(), set_acc_prefix.end());
 		} catch (const msgpack::type_error&) {
@@ -790,7 +808,7 @@ Schema::process_acc_prefix(MsgPack&, const MsgPack& doc_acc_prefix, specificatio
 
 
 void
-Schema::process_prefix(MsgPack&, const MsgPack& doc_prefix, specification_t& specification)
+Schema::process_prefix(const MsgPack& doc_prefix)
 {
 	// RESERVED_PREFIX isn't heritable and can't change once fixed.
 	if likely(specification.set_type) {
@@ -798,7 +816,7 @@ Schema::process_prefix(MsgPack&, const MsgPack& doc_prefix, specification_t& spe
 	}
 
 	try {
-		specification.prefix = doc_prefix.get_str();
+		specification.prefix = doc_prefix.as_string();
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_PREFIX);
 	}
@@ -806,7 +824,7 @@ Schema::process_prefix(MsgPack&, const MsgPack& doc_prefix, specification_t& spe
 
 
 void
-Schema::process_slot(MsgPack&, const MsgPack& doc_slot, specification_t& specification)
+Schema::process_slot(const MsgPack& doc_slot)
 {
 	// RESERVED_SLOT isn't heritable and can't change once fixed.
 	if likely(specification.set_type) {
@@ -814,7 +832,7 @@ Schema::process_slot(MsgPack&, const MsgPack& doc_slot, specification_t& specifi
 	}
 
 	try {
-		specification.slot = static_cast<unsigned>(doc_slot.get_u64());
+		specification.slot = static_cast<unsigned>(doc_slot.as_u64());
 		if (specification.slot < DB_SLOT_RESERVED) {
 			specification.slot += DB_SLOT_RESERVED;
 		} else if (specification.slot == Xapian::BAD_VALUENO) {
@@ -827,7 +845,7 @@ Schema::process_slot(MsgPack&, const MsgPack& doc_slot, specification_t& specifi
 
 
 void
-Schema::process_index(MsgPack& properties, const MsgPack& doc_index, specification_t& specification)
+Schema::process_index(const MsgPack& doc_index)
 {
 	// RESERVED_INDEX is heritable and can change if fixed_index is false.
 	if unlikely(specification.fixed_index) {
@@ -835,7 +853,7 @@ Schema::process_index(MsgPack& properties, const MsgPack& doc_index, specificati
 	}
 
 	try {
-		std::string _index(upper_string(doc_index.get_str()));
+		auto _index(upper_string(doc_index.as_string()));
 		if (_index == str_index[0]) {
 			specification.index = Index::ALL;
 		} else if (_index == str_index[1]) {
@@ -849,7 +867,7 @@ Schema::process_index(MsgPack& properties, const MsgPack& doc_index, specificati
 		}
 
 		if unlikely(!specification.found_field) {
-			properties[RESERVED_INDEX] = (unsigned)specification.index;
+			get_mutable(specification.full_name)[RESERVED_INDEX] = (unsigned)specification.index;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_INDEX);
@@ -858,14 +876,14 @@ Schema::process_index(MsgPack& properties, const MsgPack& doc_index, specificati
 
 
 void
-Schema::process_store(MsgPack& properties, const MsgPack& doc_store, specification_t& specification)
+Schema::process_store(const MsgPack& doc_store)
 {
 	// RESERVED_STORE is heritable and can change.
 	try {
-		specification.store = doc_store.get_bool();
+		specification.store = doc_store.as_bool();
 
 		if unlikely(!specification.found_field) {
-			properties[RESERVED_STORE] = specification.store;
+			get_mutable(specification.full_name)[RESERVED_STORE] = specification.store;
 		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_STORE);
@@ -874,7 +892,7 @@ Schema::process_store(MsgPack& properties, const MsgPack& doc_store, specificati
 
 
 void
-Schema::process_dynamic(MsgPack& properties, const MsgPack& doc_dynamic, specification_t& specification)
+Schema::process_dynamic(const MsgPack& doc_dynamic)
 {
 	// RESERVED_DYNAMIC is heritable but can't change.
 	if likely(specification.found_field) {
@@ -882,8 +900,8 @@ Schema::process_dynamic(MsgPack& properties, const MsgPack& doc_dynamic, specifi
 	}
 
 	try {
-		specification.dynamic = doc_dynamic.get_bool();
-		properties[RESERVED_DYNAMIC] = specification.dynamic;
+		specification.dynamic = doc_dynamic.as_bool();
+		get_mutable(specification.full_name)[RESERVED_DYNAMIC] = specification.dynamic;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_DYNAMIC);
 	} catch (const std::out_of_range&) { }
@@ -891,7 +909,7 @@ Schema::process_dynamic(MsgPack& properties, const MsgPack& doc_dynamic, specifi
 
 
 void
-Schema::process_d_detection(MsgPack& properties, const MsgPack& doc_d_detection, specification_t& specification)
+Schema::process_d_detection(const MsgPack& doc_d_detection)
 {
 	// RESERVED_D_DETECTION is heritable and can't change.
 	if likely(specification.found_field) {
@@ -899,8 +917,8 @@ Schema::process_d_detection(MsgPack& properties, const MsgPack& doc_d_detection,
 	}
 
 	try {
-		specification.date_detection = doc_d_detection.get_bool();
-		properties[RESERVED_D_DETECTION] = specification.date_detection;
+		specification.date_detection = doc_d_detection.as_bool();
+		get_mutable(specification.full_name)[RESERVED_D_DETECTION] = specification.date_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_D_DETECTION);
 	}
@@ -908,7 +926,7 @@ Schema::process_d_detection(MsgPack& properties, const MsgPack& doc_d_detection,
 
 
 void
-Schema::process_n_detection(MsgPack& properties, const MsgPack& doc_n_detection, specification_t& specification)
+Schema::process_n_detection(const MsgPack& doc_n_detection)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
 	if likely(specification.found_field) {
@@ -916,8 +934,8 @@ Schema::process_n_detection(MsgPack& properties, const MsgPack& doc_n_detection,
 	}
 
 	try {
-		specification.numeric_detection = doc_n_detection.get_bool();
-		properties[RESERVED_N_DETECTION] = specification.numeric_detection;
+		specification.numeric_detection = doc_n_detection.as_bool();
+		get_mutable(specification.full_name)[RESERVED_N_DETECTION] = specification.numeric_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_N_DETECTION);
 	}
@@ -925,7 +943,7 @@ Schema::process_n_detection(MsgPack& properties, const MsgPack& doc_n_detection,
 
 
 void
-Schema::process_g_detection(MsgPack& properties, const MsgPack& doc_g_detection, specification_t& specification)
+Schema::process_g_detection(const MsgPack& doc_g_detection)
 {
 	// RESERVED_G_DETECTION is heritable and can't change.
 	if likely(specification.found_field) {
@@ -933,8 +951,8 @@ Schema::process_g_detection(MsgPack& properties, const MsgPack& doc_g_detection,
 	}
 
 	try {
-		specification.geo_detection = doc_g_detection.get_bool();
-		properties[RESERVED_G_DETECTION] = specification.geo_detection;
+		specification.geo_detection = doc_g_detection.as_bool();
+		get_mutable(specification.full_name)[RESERVED_G_DETECTION] = specification.geo_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_G_DETECTION);
 	}
@@ -942,7 +960,7 @@ Schema::process_g_detection(MsgPack& properties, const MsgPack& doc_g_detection,
 
 
 void
-Schema::process_b_detection(MsgPack& properties, const MsgPack& doc_b_detection, specification_t& specification)
+Schema::process_b_detection(const MsgPack& doc_b_detection)
 {
 	// RESERVED_B_DETECTION is heritable and can't change.
 	if likely(specification.found_field) {
@@ -950,8 +968,8 @@ Schema::process_b_detection(MsgPack& properties, const MsgPack& doc_b_detection,
 	}
 
 	try {
-		specification.bool_detection = doc_b_detection.get_bool();
-		properties[RESERVED_B_DETECTION] = specification.bool_detection;
+		specification.bool_detection = doc_b_detection.as_bool();
+		get_mutable(specification.full_name)[RESERVED_B_DETECTION] = specification.bool_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_B_DETECTION);
 	}
@@ -959,7 +977,7 @@ Schema::process_b_detection(MsgPack& properties, const MsgPack& doc_b_detection,
 
 
 void
-Schema::process_s_detection(MsgPack& properties, const MsgPack& doc_s_detection, specification_t& specification)
+Schema::process_s_detection(const MsgPack& doc_s_detection)
 {
 	// RESERVED_S_DETECTION isn't heritable and can't change.
 	if likely(specification.found_field) {
@@ -967,8 +985,8 @@ Schema::process_s_detection(MsgPack& properties, const MsgPack& doc_s_detection,
 	}
 
 	try {
-		specification.string_detection = doc_s_detection.get_bool();
-		properties[RESERVED_S_DETECTION] = specification.string_detection;
+		specification.string_detection = doc_s_detection.as_bool();
+		get_mutable(specification.full_name)[RESERVED_S_DETECTION] = specification.string_detection;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be boolean", RESERVED_S_DETECTION);
 	}
@@ -976,7 +994,7 @@ Schema::process_s_detection(MsgPack& properties, const MsgPack& doc_s_detection,
 
 
 void
-Schema::process_bool_term(MsgPack&, const MsgPack& doc_bool_term, specification_t& specification)
+Schema::process_bool_term(const MsgPack& doc_bool_term)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
 	if likely(specification.set_type) {
@@ -984,7 +1002,7 @@ Schema::process_bool_term(MsgPack&, const MsgPack& doc_bool_term, specification_
 	}
 
 	try {
-		specification.bool_term = doc_bool_term.get_bool();
+		specification.bool_term = doc_bool_term.as_bool();
 		specification.set_bool_term = true;
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be a boolean", RESERVED_BOOL_TERM);
@@ -993,7 +1011,7 @@ Schema::process_bool_term(MsgPack&, const MsgPack& doc_bool_term, specification_
 
 
 void
-Schema::process_value(MsgPack&, const MsgPack& doc_value, specification_t& specification)
+Schema::process_value(const MsgPack& doc_value)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
 	specification.value = std::make_unique<const MsgPack>(doc_value);
@@ -1001,11 +1019,11 @@ Schema::process_value(MsgPack&, const MsgPack& doc_value, specification_t& speci
 
 
 void
-Schema::process_name(MsgPack&, const MsgPack& doc_name, specification_t& specification)
+Schema::process_name(const MsgPack& doc_name)
 {
 	// RESERVED_NAME isn't heritable and is not saved in schema.
 	try {
-		specification.name.assign(doc_name.get_str());
+		specification.name.assign(doc_name.as_string());
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("Data inconsistency, %s must be string", RESERVED_NAME);
 	}
@@ -1013,44 +1031,86 @@ Schema::process_name(MsgPack&, const MsgPack& doc_name, specification_t& specifi
 
 
 void
-Schema::process_values(MsgPack& properties, const MsgPack doc_values, data_t& data)
+Schema::index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc)
+{
+	L_CALL(this, "Schema::index()");
+
+	try {
+		TaskVector tasks;
+		tasks.reserve(object.size());
+		for (const auto& item_key : object) {
+			const auto str_key = item_key.as_string();
+			try {
+				auto func = map_dispatch_document.at(str_key);
+				(this->*func)(object.at(str_key));
+			} catch (const std::out_of_range&) {
+				if (is_valid(str_key)) {
+					tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(doc), std::move(str_key)));
+				} else {
+					try {
+						auto func = map_dispatch_root.at(str_key);
+						tasks.push_back(std::async(std::launch::deferred, func, this, std::ref(properties), std::ref(object.at(str_key)), std::ref(doc)));
+					} catch (const std::out_of_range&) { }
+				}
+			}
+		}
+
+		restart_specification();
+		const specification_t spc_start = specification;
+		for (auto& task : tasks) {
+			task.get();
+			specification = spc_start;
+		}
+
+		for (const auto& elem : map_values) {
+			doc.add_value(elem.first, elem.second.serialise());
+		}
+	} catch (...) {
+		mut_schema.reset();
+		throw;
+	}
+}
+
+
+void
+Schema::process_values(const MsgPack& properties, const MsgPack& doc_values, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_values()");
 
-	data.specification.index = Index::VALUE;
-	fixed_index(properties, doc_values, data);
+	specification.index = Index::VALUE;
+	fixed_index(properties, doc_values, doc);
 }
 
 
 void
-Schema::process_texts(MsgPack& properties, const MsgPack doc_texts, data_t& data)
+Schema::process_texts(const MsgPack& properties, const MsgPack& doc_texts, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_texts()");
 
-	data.specification.index = Index::TEXT;
-	fixed_index(properties, doc_texts, data);
+	specification.index = Index::TEXT;
+	fixed_index(properties, doc_texts, doc);
 }
 
 
 void
-Schema::process_terms(MsgPack& properties, const MsgPack doc_terms, data_t& data)
+Schema::process_terms(const MsgPack& properties, const MsgPack& doc_terms, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::process_terms()");
 
-	data.specification.index = Index::TERM;
-	fixed_index(properties, doc_terms, data);
+	specification.index = Index::TERM;
+	fixed_index(properties, doc_terms, doc);
 }
 
 
 void
-Schema::fixed_index(MsgPack& properties, const MsgPack& object, data_t& data)
+Schema::fixed_index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc)
 {
-	data.specification.fixed_index = true;
-	switch (object.get_type()) {
+	specification.fixed_index = true;
+	switch (object.type()) {
 		case msgpack::type::MAP:
-			return index_object(properties, object, data);
+			return index_object(properties, object, doc);
 		case msgpack::type::ARRAY:
-			return index_array(properties, object, data);
+			return index_array(properties, object, doc);
 		default:
 			throw MSG_ClientError("%s must be an object or an array of objects", RESERVED_VALUES);
 	}
@@ -1058,178 +1118,181 @@ Schema::fixed_index(MsgPack& properties, const MsgPack& object, data_t& data)
 
 
 void
-Schema::index_object(MsgPack& global_properties, const MsgPack object, data_t& data, const std::string name)
+Schema::index_object(const MsgPack& parent_properties, const MsgPack& object, Xapian::Document& doc, const std::string& name)
 {
 	L_CALL(this, "Schema::index_object()");
 
-	const auto spc_start = data.specification;
-	MsgPack properties;
+	const auto spc_start = specification;
+	const MsgPack* properties = nullptr;
 	if (name.empty()) {
-		properties.reset(global_properties);
-		data.specification.found_field = true;
+		properties = &parent_properties;
+		specification.found_field = true;
 	} else {
-		if (data.specification.full_name.empty()) {
-			data.specification.full_name.assign(name);
+		if (specification.full_name.empty()) {
+			specification.full_name.assign(name);
 		} else {
-			data.specification.full_name.append(DB_OFFSPRING_UNION).append(name);
+			specification.full_name.append(DB_OFFSPRING_UNION).append(name);
 		}
-		data.specification.name.assign(name);
-		properties.reset(get_subproperties(global_properties, data.specification));
+		specification.name.assign(name);
+		properties = &get_subproperties(parent_properties);
 	}
 
-	switch (object.get_type()) {
+	switch (object.type()) {
 		case msgpack::type::MAP: {
 			bool offsprings = false;
 			TaskVector tasks;
 			tasks.reserve(object.size());
-			for (const auto item_key : object) {
-				const auto str_key = item_key.get_str();
+			for (const auto& item_key : object) {
+				const auto str_key = item_key.as_string();
 				try {
-					auto func = map_dispatch_reserved.at(str_key);
-					(this->*func)(properties, object.at(str_key), data.specification);
+					auto func = map_dispatch_document.at(str_key);
+					(this->*func)(object.at(str_key));
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_key)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), object.at(str_key), std::ref(data), std::move(str_key)));
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(*properties), std::ref(object.at(str_key)), std::ref(doc), std::move(str_key)));
 						offsprings = true;
 					}
 				}
 			}
 
-			const auto spc_object = data.specification;
+			const auto spc_object = specification;
 
-			if unlikely(!data.specification.found_field && data.specification.sep_types[2] != NO_TYPE) {
-				validate_required_data(properties, data.specification.value.get(), data.specification);
+			if unlikely(!specification.found_field && specification.sep_types[2] != NO_TYPE) {
+				validate_required_data(specification.value.get());
 			}
 
-			if (data.specification.name.empty()) {
-				if (data.specification.value) {
-					index_item(properties, *data.specification.value, data);
+			if (specification.name.empty()) {
+				if (specification.value) {
+					index_item(*specification.value, doc);
 				}
 			} else {
-				if (data.specification.full_name.empty()) {
-					data.specification.full_name.assign(data.specification.name);
+				if (specification.full_name.empty()) {
+					specification.full_name.assign(specification.name);
 				} else {
-					data.specification.full_name.append(DB_OFFSPRING_UNION).append(data.specification.name);
+					specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
 				}
-				if (data.specification.value) {
-					auto subproperties = get_subproperties(properties, data.specification);
-					index_item(subproperties, *data.specification.value, data);
+				if (specification.value) {
+					// Update specifications.
+					get_subproperties(*properties);
+					index_item(*specification.value, doc);
 				}
 			}
 
 			if (offsprings) {
-				set_type_to_object(properties);
+				set_type_to_object();
 			}
 
 			for (auto& task : tasks) {
-				data.specification = spc_object;
+				specification = spc_object;
 				task.get();
 			}
 			break;
 		}
 		case msgpack::type::ARRAY:
-			set_type_to_array(properties);
-			index_array(properties, object, data);
+			set_type_to_array();
+			index_array(*properties, object, doc);
 			break;
 		default:
-			index_item(properties, object, data);
+			index_item(object, doc);
 			break;
 	}
 
-	data.specification = spc_start;
+	specification = spc_start;
 }
 
 
 void
-Schema::index_array(MsgPack& properties, const MsgPack& array, data_t& data)
+Schema::index_array(const MsgPack& properties, const MsgPack& array, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::index_array()");
 
-	const auto spc_start = data.specification;
+	const auto spc_start = specification;
 	bool offsprings = false;
-	for (auto item : array) {
-		if (item.get_type() == msgpack::type::MAP) {
+	for (const auto& item : array) {
+		if (item.is_map()) {
 			TaskVector tasks;
 			tasks.reserve(item.size());
-			data.specification.value = nullptr;
-			for (const auto property : item) {
-				auto str_prop = property.get_str();
+			specification.value = nullptr;
+
+			for (const auto& property : item) {
+				auto str_prop = property.as_string();
 				try {
-					auto func = map_dispatch_reserved.at(str_prop);
-					(this->*func)(properties, item.at(str_prop), data.specification);
+					auto func = map_dispatch_document.at(str_prop);
+					(this->*func)(item.at(str_prop));
 				} catch (const std::out_of_range&) {
 					if (is_valid(str_prop)) {
-						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), item.at(str_prop), std::ref(data), std::move(str_prop)));
+						tasks.push_back(std::async(std::launch::deferred, &Schema::index_object, this, std::ref(properties), std::ref(item.at(str_prop)), std::ref(doc), std::move(str_prop)));
 						offsprings = true;
 					}
 				}
 			}
 
-			const auto spc_item = data.specification;
+			const auto spc_item = specification;
 
-			if (data.specification.name.empty()) {
-				data.specification.found_field = true;
-				if (data.specification.value) {
-					index_item(properties, *data.specification.value, data);
+			if (specification.name.empty()) {
+				specification.found_field = true;
+				if (specification.value) {
+					index_item(*specification.value, doc);
 				}
 			} else {
-				if (data.specification.full_name.empty()) {
-					data.specification.full_name.assign(data.specification.name);
+				if (specification.full_name.empty()) {
+					specification.full_name.assign(specification.name);
 				} else {
-					data.specification.full_name.append(DB_OFFSPRING_UNION).append(data.specification.name);
+					specification.full_name.append(DB_OFFSPRING_UNION).append(specification.name);
 				}
-				if (data.specification.value) {
-					auto subproperties = get_subproperties(properties, data.specification);
-					index_item(subproperties, *data.specification.value, data);
+				if (specification.value) {
+					// Update specification.
+					get_subproperties(properties);
+					index_item(*specification.value, doc);
 				}
 			}
 
 			for (auto& task : tasks) {
-				data.specification = spc_item;
+				specification = spc_item;
 				task.get();
 			}
 		} else {
-			index_item(properties, item, data);
+			index_item(item, doc);
 		}
 	}
 
 	if (offsprings) {
-		set_type_to_object(properties);
+		set_type_to_object();
 	}
 
-	data.specification = spc_start;
+	specification = spc_start;
 }
 
 
 void
-Schema::index_item(MsgPack& properties, const MsgPack& value, data_t& data)
+Schema::index_item(const MsgPack& value, Xapian::Document& doc)
 {
 	try {
-		if unlikely(!data.specification.set_type) {
-			validate_required_data(properties, &value, data.specification);
+		if unlikely(!specification.set_type) {
+			validate_required_data(&value);
 		}
 
-		switch (data.specification.index) {
+		switch (specification.index) {
 			case Index::VALUE:
-				return index_values(properties, value, data);
+				return index_values(value, doc);
 			case Index::TERM:
-				return index_terms(properties, value, data);
+				return index_terms(value, doc);
 			case Index::TEXT:
-				return index_texts(properties, value, data);
+				return index_texts(value, doc);
 			case Index::ALL:
-				return index_values(properties, value, data, true);
+				return index_values(value, doc, true);
 		}
 	} catch (const DummyException&) { }
 }
 
 
 void
-Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specification_t& specification)
+Schema::validate_required_data(const MsgPack* value)
 {
 	L_CALL(this, "Schema::validate_required_data()");
 
 	if (specification.sep_types[2] == NO_TYPE && value) {
-		set_type(*value, specification);
+		set_type(*value);
 	}
 
 	if (!specification.full_name.empty()) {
@@ -1242,24 +1305,24 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 				}
 
 				try {
-					specification.accuracy.push_back(specification.doc_acc->at(0).get_bool());
+					specification.accuracy.push_back(specification.doc_acc->at(0).as_bool());
 				} catch (const msgpack::type_error&) {
 					throw MSG_ClientError("Data inconsistency, partials value in %s: %s must be boolean", RESERVED_ACCURACY, GEO_STR);
 				}
 
 				try {
-					auto error = specification.doc_acc->at(1).get_f64();
+					auto error = specification.doc_acc->at(1).as_f64();
 					specification.accuracy.push_back(error > HTM_MAX_ERROR ? HTM_MAX_ERROR : error < HTM_MIN_ERROR ? HTM_MIN_ERROR : error);
 				} catch (const msgpack::type_error&) {
 					throw MSG_ClientError("Data inconsistency, error value in %s: %s must be positive integer", RESERVED_ACCURACY, GEO_STR);
 				} catch (const std::out_of_range&) {
-					specification.accuracy.push_back(def_accuracy_geo.at(1).get_f64());
+					specification.accuracy.push_back(def_accuracy_geo.at(1).as_f64());
 				}
 
 				try {
 					const auto it_e = specification.doc_acc->end();
 					for (auto it = specification.doc_acc->begin() + 2; it != it_e; ++it) {
-						uint64_t val_acc = (*it).get_u64();
+						auto val_acc = (*it).as_u64();
 						if (val_acc <= HTM_MAX_LEVEL) {
 							set_acc.insert(val_acc);
 						} else {
@@ -1277,8 +1340,8 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 				}
 
 				try {
-					for (const auto _accuracy : *specification.doc_acc) {
-						std::string str_accuracy(lower_string(_accuracy.get_str()));
+					for (const auto& _accuracy : *specification.doc_acc) {
+						auto str_accuracy(lower_string(_accuracy.as_string()));
 						if (str_accuracy == str_time[5]) {
 							set_acc.insert(toUType(unitTime::YEAR));
 						} else if (str_accuracy == str_time[4]) {
@@ -1308,8 +1371,8 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 				}
 
 				try {
-					for (const auto _accuracy : *specification.doc_acc) {
-						set_acc.insert(_accuracy.get_u64());
+					for (const auto& _accuracy : *specification.doc_acc) {
+						set_acc.insert(_accuracy.as_u64());
 					}
 					break;
 				} catch (const msgpack::type_error&) {
@@ -1320,7 +1383,9 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 				throw MSG_Error("%s must be defined for validate data to index", RESERVED_TYPE);
 		}
 
-		size_t size_acc = set_acc.size();
+		auto& properties = get_mutable(specification.full_name);
+
+		auto size_acc = set_acc.size();
 		if (size_acc) {
 			if (specification.acc_prefix.empty()) {
 				for (const auto& acc : set_acc) {
@@ -1334,8 +1399,6 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 			properties[RESERVED_ACCURACY] = specification.accuracy;
 			properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
 		}
-
-		to_store.store(true);
 
 		// Process RESERVED_TYPE
 		properties[RESERVED_TYPE] = specification.sep_types;
@@ -1368,29 +1431,29 @@ Schema::validate_required_data(MsgPack& properties, const MsgPack* value, specif
 
 
 void
-Schema::index_texts(MsgPack& properties, const MsgPack& texts, data_t& data)
+Schema::index_texts(const MsgPack& texts, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::index_texts()");
 
-	// L_INDEX(this, "Texts => Specifications: %s", data.specification.to_string().c_str());
-	if (!data.specification.found_field && !data.specification.dynamic) {
-		throw MSG_ClientError("%s is not dynamic", data.specification.full_name.c_str());
+	// L_INDEX(this, "Texts => Specifications: %s", specification.to_string().c_str());
+	if (!specification.found_field && !specification.dynamic) {
+		throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
 	}
 
-	if (data.specification.store) {
-		if (data.specification.bool_term) {
+	if (specification.store) {
+		if (specification.bool_term) {
 			throw MSG_ClientError("A boolean term can not be indexed as text");
 		}
 
 		try {
-			if (texts.get_type() == msgpack::type::ARRAY) {
-				set_type_to_array(properties);
+			if (texts.is_array()) {
+				set_type_to_array();
 				size_t pos = 0;
-				for (auto text : texts) {
-					index_text(data, text.get_str(), pos++);
+				for (const auto& text : texts) {
+					index_text(doc, text.as_string(), pos++);
 				}
 			} else {
-				index_text(data, texts.get_str(), 0);
+				index_text(doc, texts.as_string(), 0);
 			}
 		} catch (const msgpack::type_error&) {
 			throw MSG_ClientError("%s should be a string or array of strings", RESERVED_TEXTS);
@@ -1400,65 +1463,66 @@ Schema::index_texts(MsgPack& properties, const MsgPack& texts, data_t& data)
 
 
 void
-Schema::index_text(data_t& data, std::string&& serialise_val, size_t pos) const
+Schema::index_text(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const
 {
 	L_CALL(this, "Schema::index_text()");
 
-	const Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
+	// Xapian::WritableDatabase *wdb = nullptr;
 
 	Xapian::TermGenerator term_generator;
-	term_generator.set_document(data.doc);
-	term_generator.set_stemmer(Xapian::Stem(data.specification.language[getPos(pos, data.specification.language.size())]));
-	if (data.specification.spelling[getPos(pos, data.specification.spelling.size())]) {
-		term_generator.set_database(*wdb);
-		term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
-		term_generator.set_stemming_strategy((Xapian::TermGenerator::stem_strategy)data.specification.analyzer[getPos(pos, data.specification.analyzer.size())]);
+	term_generator.set_document(doc);
+	term_generator.set_stemmer(Xapian::Stem(specification.language[getPos(pos, specification.language.size())]));
+	if (specification.spelling[getPos(pos, specification.spelling.size())]) {
+		// wdb = static_cast<Xapian::WritableDatabase *>(database->db.get());
+		// term_generator.set_database(*wdb);
+		// term_generator.set_flags(Xapian::TermGenerator::FLAG_SPELLING);
+		term_generator.set_stemming_strategy((Xapian::TermGenerator::stem_strategy)specification.analyzer[getPos(pos, specification.analyzer.size())]);
 	}
 
-	if (data.specification.positions[getPos(pos, data.specification.positions.size())]) {
-		if (data.specification.prefix.empty()) {
-			term_generator.index_text(serialise_val, data.specification.weight[getPos(pos, data.specification.weight.size())]);
+	if (specification.positions[getPos(pos, specification.positions.size())]) {
+		if (specification.prefix.empty()) {
+			term_generator.index_text(serialise_val, specification.weight[getPos(pos, specification.weight.size())]);
 		} else {
-			term_generator.index_text(serialise_val, data.specification.weight[getPos(pos, data.specification.weight.size())], data.specification.prefix);
+			term_generator.index_text(serialise_val, specification.weight[getPos(pos, specification.weight.size())], specification.prefix);
 		}
-		L_INDEX(this, "Text index with positions = %s: %s", data.specification.prefix.c_str(), serialise_val.c_str());
+		L_INDEX(this, "Text index with positions = %s: %s", specification.prefix.c_str(), serialise_val.c_str());
 	} else {
-		if (data.specification.prefix.empty()) {
-			term_generator.index_text_without_positions(serialise_val, data.specification.weight[getPos(pos, data.specification.weight.size())]);
+		if (specification.prefix.empty()) {
+			term_generator.index_text_without_positions(serialise_val, specification.weight[getPos(pos, specification.weight.size())]);
 		} else {
-			term_generator.index_text_without_positions(serialise_val, data.specification.weight[getPos(pos, data.specification.weight.size())], data.specification.prefix);
+			term_generator.index_text_without_positions(serialise_val, specification.weight[getPos(pos, specification.weight.size())], specification.prefix);
 		}
-		L_INDEX(this, "Text to Index => %s: %s", data.specification.prefix.c_str(), serialise_val.c_str());
+		L_INDEX(this, "Text to Index => %s: %s", specification.prefix.c_str(), serialise_val.c_str());
 	}
 }
 
 
 void
-Schema::index_terms(MsgPack& properties, const MsgPack& terms, data_t& data)
+Schema::index_terms(const MsgPack& terms, Xapian::Document& doc)
 {
 	L_CALL(this, "Schema::index_terms()");
 
-	// L_INDEX(this, "Terms => Specifications: %s", data.specification.to_string().c_str());
-	if (!data.specification.found_field && !data.specification.dynamic) {
-		throw MSG_ClientError("%s is not dynamic", data.specification.full_name.c_str());
+	// L_INDEX(this, "Terms => Specifications: %s", specification.to_string().c_str());
+	if (!specification.found_field && !specification.dynamic) {
+		throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
 	}
 
-	if (data.specification.store) {
-		if (terms.get_type() == msgpack::type::ARRAY) {
-			set_type_to_array(properties);
+	if (specification.store) {
+		if (terms.is_array()) {
+			set_type_to_array();
 			size_t pos = 0;
-			for (auto term : terms) {
-				index_term(data, Serialise::serialise(data.specification.sep_types[2], term), pos++);
+			for (const auto& term : terms) {
+				index_term(doc, Serialise::serialise(specification.sep_types[2], term), pos++);
 			}
 		} else {
-			index_term(data, Serialise::serialise(data.specification.sep_types[2], terms), 0);
+			index_term(doc, Serialise::serialise(specification.sep_types[2], terms), 0);
 		}
 	}
 }
 
 
 void
-Schema::index_term(data_t& data, std::string&& serialise_val, size_t pos) const
+Schema::index_term(Xapian::Document& doc, std::string&& serialise_val, size_t pos) const
 {
 	L_CALL(this, "Schema::index_term()");
 
@@ -1466,109 +1530,109 @@ Schema::index_term(data_t& data, std::string&& serialise_val, size_t pos) const
 		return;
 	}
 
-	if (data.specification.sep_types[2] == STRING_TYPE && !data.specification.bool_term) {
+	if (specification.sep_types[2] == STRING_TYPE && !specification.bool_term) {
 		if (serialise_val.find(" ") != std::string::npos) {
-			return index_text(data, std::move(serialise_val), pos);
+			return index_text(doc, std::move(serialise_val), pos);
 		}
 		to_lower(serialise_val);
 	}
 
-	L_INDEX(this, "Term[%d] -> %s: %s", pos, data.specification.prefix.c_str(), serialise_val.c_str());
-	std::string nameterm(prefixed(serialise_val, data.specification.prefix));
-	unsigned position = data.specification.position[getPos(pos, data.specification.position.size())];
+	L_INDEX(this, "Term[%d] -> %s: %s", pos, specification.prefix.c_str(), serialise_val.c_str());
+	std::string nameterm(prefixed(serialise_val, specification.prefix));
+	unsigned position = specification.position[getPos(pos, specification.position.size())];
 	if (position) {
-		if (data.specification.bool_term) {
-			data.doc.add_posting(nameterm, position, 0);
+		if (specification.bool_term) {
+			doc.add_posting(nameterm, position, 0);
 		} else {
-			data.doc.add_posting(nameterm, position, data.specification.weight[getPos(pos, data.specification.weight.size())]);
+			doc.add_posting(nameterm, position, specification.weight[getPos(pos, specification.weight.size())]);
 		}
-		L_INDEX(this, "Bool: %s  Posting: %s", data.specification.bool_term ? "true" : "false", repr(nameterm).c_str());
+		L_INDEX(this, "Bool: %s  Posting: %s", specification.bool_term ? "true" : "false", repr(nameterm).c_str());
 	} else {
-		if (data.specification.bool_term) {
-			data.doc.add_boolean_term(nameterm);
+		if (specification.bool_term) {
+			doc.add_boolean_term(nameterm);
 		} else {
-			data.doc.add_term(nameterm, data.specification.weight[getPos(pos, data.specification.weight.size())]);
+			doc.add_term(nameterm, specification.weight[getPos(pos, specification.weight.size())]);
 		}
-		L_INDEX(this, "Bool: %s  Term: %s", data.specification.bool_term ? "true" : "false", repr(nameterm).c_str());
+		L_INDEX(this, "Bool: %s  Term: %s", specification.bool_term ? "true" : "false", repr(nameterm).c_str());
 	}
 }
 
 
 void
-Schema::index_values(MsgPack& properties, const MsgPack& values, data_t& data, bool is_term)
+Schema::index_values(const MsgPack& values, Xapian::Document& doc, bool is_term)
 {
 	L_CALL(this, "Schema::index_values()");
 
-	// L_INDEX(this, "Values => Specifications: %s", data.specification.to_string().c_str());
-	if (!(data.specification.found_field || data.specification.dynamic)) {
-		throw MSG_ClientError("%s is not dynamic", data.specification.full_name.c_str());
+	// L_INDEX(this, "Values => Specifications: %s", specification.to_string().c_str());
+	if (!(specification.found_field || specification.dynamic)) {
+		throw MSG_ClientError("%s is not dynamic", specification.full_name.c_str());
 	}
 
-	if (data.specification.store) {
-		StringSet& s = data.map_values[data.specification.slot];
+	if (specification.store) {
+		StringSet& s = map_values[specification.slot];
 		size_t pos = 0;
-		if (values.get_type() == msgpack::type::ARRAY) {
-			set_type_to_array(properties);
-			for (auto value : values) {
-				index_value(data, value, s, pos, is_term);
+		if (values.is_array()) {
+			set_type_to_array();
+			for (const auto& value : values) {
+				index_value(doc, value, s, pos, is_term);
 			}
 		} else {
-			index_value(data, values, s, pos, is_term);
+			index_value(doc, values, s, pos, is_term);
 		}
-		L_INDEX(this, "Slot: %u serialized: %s", data.specification.slot, repr(s.serialise()).c_str());
+		L_INDEX(this, "Slot: %u serialized: %s", specification.slot, repr(s.serialise()).c_str());
 	}
 }
 
 
 void
-Schema::index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& pos, bool is_term) const
+Schema::index_value(Xapian::Document& doc, const MsgPack& value, StringSet& s, size_t& pos, bool is_term) const
 {
 	L_CALL(this, "Schema::index_value()");
 
 	std::string value_v;
 
 	// Index terms generated by accuracy.
-	switch (data.specification.sep_types[2]) {
+	switch (specification.sep_types[2]) {
 		case FLOAT_TYPE:
 		case INTEGER_TYPE:
 		case POSITIVE_TYPE: {
 			try {
-				value_v.assign(Serialise::serialise(data.specification.sep_types[2], value));
-				int64_t int_value = static_cast<int64_t>(value.get_f64());
-				auto it = data.specification.acc_prefix.begin();
-				for (const auto& acc : data.specification.accuracy) {
-					std::string term_v = Serialise::integer(data.specification.sep_types[2], int_value - int_value % (uint64_t)acc);
-					data.doc.add_term(prefixed(term_v, *(it++)));
+				value_v.assign(Serialise::serialise(specification.sep_types[2], value));
+				int64_t int_value = static_cast<int64_t>(value.as_f64());
+				auto it = specification.acc_prefix.begin();
+				for (const auto& acc : specification.accuracy) {
+					std::string term_v = Serialise::integer(specification.sep_types[2], int_value - int_value % (uint64_t)acc);
+					doc.add_term(prefixed(term_v, *(it++)));
 				}
 				s.insert(value_v);
 				break;
 			} catch (const msgpack::type_error&) {
-				throw MSG_ClientError("Format invalid for numeric: %s", value.to_json_string().c_str());
+				throw MSG_ClientError("Format invalid for numeric: %s", value.to_string().c_str());
 			}
 		}
 		case DATE_TYPE: {
 			Datetime::tm_t tm;
 			value_v.assign(Serialise::date(value, tm));
-			auto it = data.specification.acc_prefix.begin();
-			for (const auto& acc : data.specification.accuracy) {
+			auto it = specification.acc_prefix.begin();
+			for (const auto& acc : specification.accuracy) {
 				switch ((unitTime)acc) {
 					case unitTime::YEAR:
-						data.doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "y"), *it++));
+						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "y"), *it++));
 						break;
 					case unitTime::MONTH:
-						data.doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "M"), *it++));
+						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "M"), *it++));
 						break;
 					case unitTime::DAY:
-						data.doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "d"), *it++));
+						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "d"), *it++));
 						break;
 					case unitTime::HOUR:
-						data.doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "h"), *it++));
+						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "h"), *it++));
 						break;
 					case unitTime::MINUTE:
-						data.doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "m"), *it++));
+						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "m"), *it++));
 						break;
 					case unitTime::SECOND:
-						data.doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "s"), *it++));
+						doc.add_term(prefixed(Serialise::date_with_math(tm, "//", "s"), *it++));
 						break;
 				}
 			}
@@ -1576,7 +1640,7 @@ Schema::index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& po
 			break;
 		}
 		case GEO_TYPE: {
-			std::string ewkt(value.get_str());
+			std::string ewkt(value.as_string());
 			if (is_term) {
 				value_v.assign(Serialise::ewkt(ewkt));
 			}
@@ -1584,7 +1648,7 @@ Schema::index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& po
 			RangeList ranges;
 			CartesianUSet centroids;
 
-			EWKT_Parser::getRanges(ewkt, data.specification.accuracy[0], data.specification.accuracy[1], ranges, centroids);
+			EWKT_Parser::getRanges(ewkt, specification.accuracy[0], specification.accuracy[1], ranges, centroids);
 
 			// Index Values and looking for terms generated by accuracy.
 			std::unordered_set<std::string> set_terms;
@@ -1600,11 +1664,11 @@ Schema::index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& po
 				} else {
 					val = range.start;
 				}
-				for (size_t i = 2; i < data.specification.accuracy.size(); ++i) {
-					int pos = START_POS - data.specification.accuracy[i] * 2;
+				for (size_t i = 2; i < specification.accuracy.size(); ++i) {
+					int pos = START_POS - specification.accuracy[i] * 2;
 					if (idx < pos) {
 						uint64_t vterm = val >> pos;
-						set_terms.insert(prefixed(Serialise::trixel_id(vterm), data.specification.acc_prefix[i - 2]));
+						set_terms.insert(prefixed(Serialise::trixel_id(vterm), specification.acc_prefix[i - 2]));
 					} else {
 						break;
 					}
@@ -1612,20 +1676,84 @@ Schema::index_value(data_t& data, const MsgPack& value, StringSet& s, size_t& po
 			}
 			// Insert terms generated by accuracy.
 			for (const auto& term : set_terms) {
-				data.doc.add_term(term);
+				doc.add_term(term);
 			}
 
 			s.insert(Serialise::geo(ranges, centroids));
 			break;
 		}
 		default:
-			value_v.assign(Serialise::serialise(data.specification.sep_types[2], value));
+			value_v.assign(Serialise::serialise(specification.sep_types[2], value));
 			s.insert(value_v);
 			break;
 	}
 
 	// Index like a term.
 	if (is_term) {
-		index_term(data, std::move(value_v), pos++);
+		index_term(doc, std::move(value_v), pos++);
 	}
+}
+
+
+data_field_t
+Schema::get_data_field(const std::string& field_name) const
+{
+	L_CALL(this, "Schema::get_data_field()");
+
+	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
+
+	if (field_name.empty()) {
+		return res;
+	}
+
+	std::vector<std::string> fields;
+	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
+	try {
+		const auto& properties = schema->at(RESERVED_SCHEMA).path(fields);
+
+		res.type = properties.at(RESERVED_TYPE).at(2).as_u64();
+		if (res.type == NO_TYPE) {
+			return res;
+		}
+
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).as_u64());
+		res.prefix = properties.at(RESERVED_PREFIX).as_string();
+		res.bool_term = properties.at(RESERVED_BOOL_TERM).as_bool();
+
+		// Strings and booleans do not have accuracy.
+		if (res.type != STRING_TYPE && res.type != BOOLEAN_TYPE) {
+			for (const auto& acc : properties.at(RESERVED_ACCURACY)) {
+				res.accuracy.push_back(acc.as_f64());
+			}
+
+			for (const auto& acc_p : properties.at(RESERVED_ACC_PREFIX)) {
+				res.acc_prefix.push_back(acc_p.as_string());
+			}
+		}
+	} catch (const std::exception&) { }
+
+	return res;
+}
+
+
+data_field_t
+Schema::get_slot_field(const std::string& field_name) const
+{
+	L_CALL(this, "Schema::get_slot_field()");
+
+	data_field_t res = { Xapian::BAD_VALUENO, "", NO_TYPE, std::vector<double>(), std::vector<std::string>(), false };
+
+	if (field_name.empty()) {
+		return res;
+	}
+
+	std::vector<std::string> fields;
+	stringTokenizer(field_name, DB_OFFSPRING_UNION, fields);
+	try {
+		const auto& properties = schema->at(RESERVED_SCHEMA).path(fields);
+		res.slot = static_cast<unsigned>(properties.at(RESERVED_SLOT).as_u64());
+		res.type = properties.at(RESERVED_TYPE).at(2).as_u64();
+	} catch (const std::exception&) { }
+
+	return res;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,10 +22,9 @@
 
 #include "test_wkt_parser.h"
 
-#include "wkt_parser.h"
-#include "log.h"
+#include "../src/wkt_parser.h"
+#include "utils.h"
 
-#include <string>
 #include <algorithm>
 #include <time.h>
 
@@ -92,10 +91,10 @@ int test_wkt_parser() {
 
 	if (cont == 0) {
 		L_DEBUG(nullptr, "Testing WKT parser is correct!, run with python examples/{#}_WKT.py to see the trixels that cover the geometry.");
-		return 0;
+		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing WKT parser has mistakes.");
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -147,5 +146,5 @@ int test_wkt_speed()
 	}
 	L_DEBUG(nullptr, "Time required for execution a CIRCLE: %f seconds", (double)(clock() - start) / (repeat * CLOCKS_PER_SEC));
 
-	return 0;
+	RETURN(0);
 }

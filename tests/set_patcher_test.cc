@@ -89,6 +89,13 @@ START_TEST(test_patcher_decr)
 END_TEST
 
 
+START_TEST(test_patcher_rfc6901)
+{
+	ck_assert_int_eq(test_rfc6901(), 0);
+}
+END_TEST
+
+
 Suite* testPatcher(void) {
 	Suite *s = suite_create("Test patcher");
 
@@ -127,6 +134,10 @@ Suite* testPatcher(void) {
 	TCase *t_decr = tcase_create("Test patcher decrement");
 	tcase_add_test(t_incr, test_patcher_decr);
 	suite_add_tcase(s, t_decr);
+
+	TCase *t_test_rfc6901 = tcase_create("Test rfc 6901");
+	tcase_add_test(t_test_rfc6901, test_patcher_rfc6901);
+	suite_add_tcase(s, t_test_rfc6901);
 
 	return s;
 }

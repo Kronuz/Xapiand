@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -36,8 +36,6 @@ struct test_query_t {
 };
 
 
-int create_test_db();
-int make_search(const test_query_t _tests[], int len);
 int test_query_search();
 int test_terms_search();
 int test_partials_search();

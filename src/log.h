@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -23,7 +23,7 @@
 #pragma once
 
 #include "exception.h"
-#include "forward_list.h"
+#include "dllist.h"
 
 #include <syslog.h>
 
@@ -99,8 +99,8 @@ class Log : public std::enable_shared_from_this<Log> {
 	std::atomic_bool finished;
 
 public:
-	static int log_level;
-	static std::vector<std::unique_ptr<Logger>> handlers;
+	static int& _log_level();
+	static DLList<const std::unique_ptr<Logger>>& _handlers();
 
 	Log(const std::string& str, bool cleanup, std::chrono::time_point<std::chrono::system_clock> wakeup_, int priority_, std::chrono::time_point<std::chrono::system_clock> created_at_=std::chrono::system_clock::now());
 	~Log();
@@ -151,11 +151,11 @@ class LogThread {
 	std::condition_variable wakeup_signal;
 	std::atomic<std::time_t> wakeup;
 
+	DLList<const std::shared_ptr<Log>> log_list;
 	std::atomic_int running;
 	std::thread inner_thread;
-	ForwardList<std::shared_ptr<Log>> log_list;
 
-	void thread_function();
+	void thread_function(DLList<const std::shared_ptr<Log>>& log_list);
 
 public:
 	LogThread();
@@ -274,3 +274,4 @@ public:
 #define L_BINARY_PROTO _
 #define L_DATABASE_WRAP _
 #define L_INDEX _
+#define L_SEARCH _

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,10 +22,9 @@
 
 #include "test_compressor.h"
 
-
 #include "../src/io_utils.h"
-#include "../src/log.h"
 #include "../src/lz4_compressor.h"
+#include "utils.h"
 
 
 static const std::string cmp_file = "examples/compressor/compress.lz4";
@@ -243,7 +242,7 @@ int test_small_datas() {
 		res += test_Compress_Decompress_Data(file);
 		unlink(cmp_file.c_str());
 	}
-	return res;
+	RETURN(res);
 }
 
 
@@ -255,7 +254,7 @@ int test_big_datas() {
 		res += test_Compress_Decompress_Data(file);
 		unlink(cmp_file.c_str());
 	}
-	return res;
+	RETURN(res);
 }
 
 
@@ -267,7 +266,7 @@ int test_small_files() {
 		res += test_Compress_Decompress_File(file);
 		unlink(cmp_file.c_str());
 	}
-	return res;
+	RETURN(res);
 }
 
 
@@ -279,7 +278,7 @@ int test_big_files() {
 		res += test_Compress_Decompress_File(file);
 		unlink(cmp_file.c_str());
 	}
-	return res;
+	RETURN(res);
 }
 
 
@@ -292,7 +291,7 @@ int test_small_blockFile() {
 		res += test_Compress_Decompress_BlockFile(file, numBytes);
 		unlink(cmp_file.c_str());
 	}
-	return res;
+	RETURN(res);
 }
 
 
@@ -305,5 +304,5 @@ int test_big_blockFile() {
 		res += test_Compress_Decompress_BlockFile(file, numBytes);
 		unlink(cmp_file.c_str());
 	}
-	return res;
+	RETURN(res);
 }

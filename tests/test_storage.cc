@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,9 +22,8 @@
 
 #include "test_storage.h"
 
-#include "../src/log.h"
 #include "../src/storage.h"
-#include "../src/utils.h"
+#include "utils.h"
 
 
 #pragma pack(push, 1)
@@ -50,6 +49,7 @@ struct StorageBinBadHeader1 {
 	}
 };
 
+
 struct StorageBinBadHeader2 {
 	// uint8_t magic;
 	uint8_t flags;  // required
@@ -70,6 +70,7 @@ struct StorageBinBadHeader2 {
 		}
 	}
 };
+
 
 struct StorageBinBadHeader3 {
 	// uint8_t magic;
@@ -92,6 +93,7 @@ struct StorageBinBadHeader3 {
 		}
 	}
 };
+
 
 struct StorageBinFooterChecksum {
 	uint32_t checksum;
@@ -172,7 +174,7 @@ int test_storage_data(int flags) {
 
 	unlink(volume_name.c_str());
 
-	return cont_read != cont_write;
+	RETURN(cont_read != cont_write);
 }
 
 
@@ -221,7 +223,7 @@ int test_storage_file(int flags) {
 
 	unlink(volume_name.c_str());
 
-	return cont_read != cont_write;
+	RETURN(cont_read != cont_write);
 }
 
 
@@ -249,7 +251,7 @@ int test_storage_bad_headers() {
 		L_ERR(nullptr, "Bad header (3): %s", e.what());
 	}
 
-	return res;
+	RETURN(res);
 }
 
 
@@ -310,11 +312,11 @@ int test_storage_exception_write(int flags) {
 	} catch (const StorageEOF& er) {
 		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.get_context());
 		unlink(volume_name.c_str());
-		return 0;
+		RETURN(0);
 	} catch (const std::exception& er) {
 		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.what());
 		unlink(volume_name.c_str());
-		return 1;
+		RETURN(1);
 	}
 }
 
@@ -395,10 +397,10 @@ int test_storage_exception_write_file(int flags) {
 	} catch (const StorageEOF& er) {
 		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.get_context());
 		unlink(volume_name.c_str());
-		return 0;
+		RETURN(0);
 	} catch (const std::exception& er) {
 		L_ERR(nullptr, "Read: [%d] %s\n", cont_read, er.what());
 		unlink(volume_name.c_str());
-		return 1;
+		RETURN(1);
 	}
 }
