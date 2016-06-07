@@ -1011,6 +1011,8 @@ void find_file_dir(DIR* dir, File_ptr& fptr, const std::string& pattern, bool pr
 	if (fptr.ent) {
 #if defined(__APPLE__) && defined(__MACH__)
 		seekdir(dir, fptr.ent->d_seekoff);
+#elif defined(__FreeBSD__)
+		seekdir(dir, telldir(dir));
 #else
 		seekdir(dir, fptr.ent->d_off);
 #endif
