@@ -100,14 +100,22 @@ inline void _incr_decr(MsgPack& o, int val, int limit) {
 
 //Support for RFC 6901
 inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c) {
-	const auto& path = obj.at(path_c);
+	try {
+		const auto& path = obj.at(path_c);
+		std::string path_str = path.unformatted_string();
+		rapidjson::GenericPointer<rapidjson::GenericValue<rapidjson::UTF8<> > > json_pointer(path_str.data(), path_str.size());
+		size_t n_tok = json_pointer.GetTokenCount();
 
-	std::string path_str = path.unformatted_string();
-	rapidjson::GenericPointer<rapidjson::GenericValue<rapidjson::UTF8<> > > json_pointer(path_str.data(), path_str.size());
-	size_t n_tok = json_pointer.GetTokenCount();
+		for (int i=0; i<static_cast<int>(n_tok); i++) {
+			auto& t = json_pointer.GetTokens()[i];
+			path_split.push_back(std::string(t.name, t.length));
+		}
 
-	for (int i=0; i<static_cast<int>(n_tok); i++) {
-		auto& t = json_pointer.GetTokens()[i];
-		path_split.push_back(std::string(t.name, t.length));
+		if (path_split.size() == 0 and path_str != "") {
+			throw MSG_ClientError("Bad syntax of a JSON Pointer in path:%s %s", path_str.c_str(), startswith(path_str, "/") ? "" : "perhaps forgot prefixed '/'");
+		}
+
+	} catch (const std::out_of_range&) {
+		throw MSG_ClientError("Object MUST have exactly one \"path\" member for this operation");
 	}
 }
