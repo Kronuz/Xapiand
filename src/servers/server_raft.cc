@@ -266,8 +266,9 @@ RaftServer::reset(const std::string& message)
 void
 RaftServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	int fd = watcher.fd;
-	int sock = raft->get_socket();
+	DBG_SET(fd, watcher.fd);
+	DBG_SET(sock, raft->get_socket());
+	assert(sock == fd || sock == -1);
 
 	L_EV_BEGIN(this, "RaftServer::io_accept_cb:BEGIN");
 	if (EV_ERROR & revents) {
@@ -275,8 +276,6 @@ RaftServer::io_accept_cb(ev::io& watcher, int revents)
 		L_EV_END(this, "RaftServer::io_accept_cb:END");
 		return;
 	}
-
-	assert(sock == fd || sock == -1);
 
 	if (revents & EV_READ) {
 		while (XapiandManager::manager->state == XapiandManager::State::READY) {

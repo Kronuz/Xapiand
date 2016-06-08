@@ -384,16 +384,15 @@ DiscoveryServer::db_updated(const std::string& message)
 void
 DiscoveryServer::io_accept_cb(ev::io &watcher, int revents)
 {
-	int fd = watcher.fd;
-	int sock = discovery->get_socket();
+	DBG_SET(fd, watcher.fd);
+	DBG_SET(sock, discovery->get_socket());
+	assert(sock == fd || sock == -1);
 
 	L_EV_BEGIN(this, "DiscoveryServer::io_accept_cb:BEGIN");
 	if (EV_ERROR & revents) {
 		L_EV(this, "ERROR: got invalid discovery event (sock=%d, fd=%d): %s", sock, fd, strerror(errno));
 		return;
 	}
-
-	assert(sock == fd || sock == -1);
 
 	if (revents & EV_READ) {
 		while (true) {

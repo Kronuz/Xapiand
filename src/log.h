@@ -243,6 +243,7 @@ public:
 #define L_DATABASE_END _
 #define L_EV_BEGIN _
 #define L_EV_END _
+#define DBG_SET _
 #else
 #define L_DEBUG _LOG_DEBUG_ENABLED
 #define L_BEGIN _LOG_TIMED
@@ -253,6 +254,7 @@ public:
 #define L_DATABASE_END _LOG_TIMED_N_CLEAR
 #define L_EV_BEGIN _LOG_TIMED_600
 #define L_EV_END _LOG_TIMED_N_CLEAR
+#define DBG_SET _LOG_SET
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
