@@ -23,14 +23,14 @@ set (GTEST_LIBS
 	${binary_dir}/googlemock
 	PARENT_SCOPE)
 
-add_library(gtest STATIC IMPORTED)
-set_property(TARGET gtest PROPERTY IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
+add_library (gtest STATIC IMPORTED)
+set_property (TARGET gtest PROPERTY IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-add_library(gtest_main STATIC IMPORTED)
-set_property(TARGET gtest_main PROPERTY IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
+add_library (gtest_main STATIC IMPORTED)
+set_property (TARGET gtest_main PROPERTY IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-add_library(gmock STATIC IMPORTED)
-set_property(TARGET gmock PROPERTY IMPORTED_LOCATION ${binary_dir}/googlemock/${CMAKE_STATIC_LIBRARY_PREFIX}gmock${CMAKE_STATIC_LIBRARY_SUFFIX})
+add_library (gmock STATIC IMPORTED)
+set_property (TARGET gmock PROPERTY IMPORTED_LOCATION ${binary_dir}/googlemock/${CMAKE_STATIC_LIBRARY_PREFIX}gmock${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-add_library(gmock_main STATIC IMPORTED)
-set_property(TARGET gmock_main PROPERTY IMPORTED_LOCATION ${binary_dir}/googlemock/${CMAKE_STATIC_LIBRARY_PREFIX}gmock_main${CMAKE_STATIC_LIBRARY_SUFFIX})
+add_library (gmock_main STATIC IMPORTED)
+set_property (TARGET gmock_main PROPERTY IMPORTED_LOCATION ${binary_dir}/googlemock/${CMAKE_STATIC_LIBRARY_PREFIX}gmock_main${CMAKE_STATIC_LIBRARY_SUFFIX})

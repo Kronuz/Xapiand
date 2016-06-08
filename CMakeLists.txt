@@ -120,6 +120,7 @@ endif ()
 # Tweaks
 set (HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
 
+
 ########################################################################
 # sparsehash
 ########################################################################
@@ -217,10 +218,10 @@ enable_testing ()
 
 add_subdirectory (${PROJECT_SOURCE_DIR}/ext/gtest)
 
-set(PROJECT_TEST_NAME ${PROJECT_NAME}_test)
+set (PROJECT_TEST_NAME ${PROJECT_NAME}_test)
 include_directories (${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES})
 
-file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*.cc)
+file (GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*.cc)
 
 link_directories (${GTEST_LIBS})
 
