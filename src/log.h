@@ -217,6 +217,9 @@ public:
 #define _LOG_TIMED_1000(args...) auto __log_timed = Log::log(true, 1s, LOG_WARNING, nullptr, __FILE__, __LINE__, NO_COL, MAGENTA, args)
 #define _LOG_TIMED_N_CLEAR(args...) __log_timed->unlog(LOG_WARNING, __FILE__, __LINE__, NO_COL, BRIGHT_MAGENTA, args)
 
+#define _LOG_SET(name, value) auto name = value
+#define _LOG_INIT() _LOG_SET(start, std::chrono::system_clock::now())
+
 #define L _LOG_ENABLED
 #define L_LOG _LOG_LOG_ENABLED
 #define L_MARK _LOG_MARKED_ENABLED
@@ -259,7 +262,7 @@ public:
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// Enable the following, when needed, using _LOG_LOG_ENABLED:
+// Enable the following, when needed, using _LOG_LOG_ENABLED or _LOG_INIT:
 
 #define L_TRACEBACK _
 #define L_CALL _
@@ -282,6 +285,7 @@ public:
 #define L_UDP_WIRE _
 #define L_HTTP_PROTO _
 #define L_BINARY_PROTO _
+#define L_DATABASE_WRAP_INIT _
 #define L_DATABASE_WRAP _
 #define L_INDEX _
 #define L_SEARCH _

@@ -673,7 +673,7 @@ Database::commit(bool wal_)
 	(void)wal_;
 #endif
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP(this, "Commit: t: %d", t);
@@ -713,7 +713,7 @@ Database::cancel(bool wal_)
 	(void)wal_;
 #endif
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP(this, "Cancel: t: %d", t);
@@ -753,7 +753,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 	(void)wal_;
 #endif
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP(this, "Deleting document: %d  t: %d", did, t);
@@ -795,7 +795,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 	(void)wal_;
 #endif
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP(this, "Deleting document: '%s'  t: %d", term.c_str(), t);
@@ -837,7 +837,7 @@ Database::add_document(const Xapian::Document& doc, bool commit_, bool wal_)
 
 	Xapian::Document doc_ = doc;
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP(this, "Adding new document.  t: %d", t);
@@ -879,7 +879,7 @@ Database::replace_document(Xapian::docid did, const Xapian::Document& doc, bool 
 
 	Xapian::Document doc_ = doc;
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP(this, "Replacing: %d  t: %d", did, t);
@@ -931,7 +931,7 @@ Database::replace_document_term(const std::string& term, const Xapian::Document&
 
 	Xapian::Document doc_ = doc;
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE_WRAP(this, "Replacing: '%s'  t: %d", term.c_str(), t);
@@ -971,7 +971,7 @@ Database::add_spelling(const std::string & word, Xapian::termcount freqinc, bool
 	(void)wal_;
 #endif
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -1008,7 +1008,7 @@ Database::remove_spelling(const std::string & word, Xapian::termcount freqdec, b
 	(void)wal_;
 #endif
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
@@ -1041,7 +1041,7 @@ Database::find_document(const Xapian::Query& query)
 
 	Xapian::docid did = 0;
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
@@ -1080,7 +1080,7 @@ Database::get_document(const Xapian::docid& did)
 
 	Xapian::Document doc;
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
@@ -1117,7 +1117,7 @@ Database::get_metadata(const std::string& key)
 
 	std::string value;
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
@@ -1152,7 +1152,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	(void)wal_;
 #endif
 
-	auto start = std::chrono::system_clock::now();
+	L_DATABASE_WRAP_INIT();
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::WritableDatabase *wdb = static_cast<Xapian::WritableDatabase *>(db.get());
