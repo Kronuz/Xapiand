@@ -544,7 +544,7 @@ HttpClient::_run()
 				{ RESPONSE_MESSAGE, error }
 			};
 
-			write_http_response(err_response, error_code, false);
+			write_http_response(err_response, error_code, pretty);
 		}
 	}
 
