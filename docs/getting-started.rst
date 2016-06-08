@@ -332,9 +332,9 @@ First write the patch in a file (tweet_patch) the patch format is in JavaScript 
 ::
 
    [
-        { "op": "remove", "path": "postDate" },
-        { "op": "replace", "path": "user", "value": "Chema" },
-        { "op": "add", "path": "followers", "value": "150" }
+        { "op": "remove", "path": "/postDate" },
+        { "op": "replace", "path": "/user", "value": "Chema" },
+        { "op": "add", "path": "/followers", "value": "150" }
    ]
 
 In the above patch we are saying that we want to remove the field "postDate",
