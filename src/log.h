@@ -221,10 +221,6 @@ public:
 #define L_LOG _LOG_LOG_ENABLED
 #define L_MARK _LOG_MARKED_ENABLED
 
-#define L_BEGIN _LOG_TIMED
-#define L_END _LOG_TIMED_CLEAR
-
-#define L_DEBUG _LOG_DEBUG_ENABLED
 #define L_INFO _LOG_INFO_ENABLED
 #define L_NOTICE _LOG_NOTICE_ENABLED
 #define L_WARNING _LOG_WARNING_ENABLED
@@ -234,13 +230,27 @@ public:
 #define L_EMERG _LOG_EMERG_ENABLED
 #define L_EXC _LOG_EXC_ENABLED
 
+#ifdef NDEBUG
+#define L_DEBUG _
+#define L_BEGIN _
+#define L_END _
+#define L_OBJ_BEGIN _
+#define L_OBJ_END _
+#define L_DATABASE_BEGIN _
+#define L_DATABASE_END _
+#define L_EV_BEGIN _
+#define L_EV_END _
+#else
+#define L_DEBUG _LOG_DEBUG_ENABLED
+#define L_BEGIN _LOG_TIMED
+#define L_END _LOG_TIMED_CLEAR
 #define L_OBJ_BEGIN _LOG_TIMED_1000
 #define L_OBJ_END _LOG_TIMED_N_CLEAR
 #define L_DATABASE_BEGIN _LOG_TIMED_200
 #define L_DATABASE_END _LOG_TIMED_N_CLEAR
 #define L_EV_BEGIN _LOG_TIMED_600
 #define L_EV_END _LOG_TIMED_N_CLEAR
-
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Uncomment the folloging to different logging options:
