@@ -69,11 +69,15 @@ void patch_add(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
-		auto target = path_split.back();
-		path_split.pop_back();
-		auto& o = object.path(path_split);
-		const auto& val = get_patch_value(obj_patch);
-		_add(o, val, target);
+		if (path_split.size() != 0) {
+			auto target = path_split.back();
+			path_split.pop_back();
+			auto& o = object.path(path_split);
+			const auto& val = get_patch_value(obj_patch);
+			_add(o, val, target);
+		} else {
+			throw MSG_ClientError("Is not allowed path:\"\" ");
+		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch add: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
@@ -90,10 +94,23 @@ void patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
-		std::string target = path_split.back();
-		path_split.pop_back();
-		auto& o = object.path(path_split);
-		_erase(o, target);
+		if (path_split.size() != 0) {
+			std::string target = path_split.back();
+			path_split.pop_back();
+			auto& o = object.path(path_split);
+			try {
+				if (o.type() == msgpack::type::MAP) {
+					o.at(target);
+				} else if  (o.type() == msgpack::type::ARRAY) {
+					o.at(strict(std::stoi, target));
+				}
+			} catch(const std::out_of_range& exc) {
+				throw MSG_ClientError("target %s not found", target.c_str());
+			}
+			_erase(o, target);
+		} else {
+			throw MSG_ClientError("Is not allowed path:\"\" ");
+		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch remove: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
@@ -131,16 +148,20 @@ void patch_move(const MsgPack& obj_patch, MsgPack& object) {
 		std::vector<std::string> from_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
 		_tokenizer(obj_patch, from_split, PATCH_FROM);
-		auto target_path = path_split.back();
-		path_split.pop_back();
-		auto& to = object.path(path_split);
-		auto& from = object.path(from_split);
-		_add(to, from, target_path);
+		if (path_split.size() != 0 and from_split.size() != 0) {
+			auto target_path = path_split.back();
+			path_split.pop_back();
+			auto& to = object.path(path_split);
+			auto& from = object.path(from_split);
+			_add(to, from, target_path);
 
-		auto target_from = from_split.back();
-		from_split.pop_back();
-		auto& from_parent = object.path(from_split);
-		_erase(from_parent, target_from);
+			auto target_from = from_split.back();
+			from_split.pop_back();
+			auto& from_parent = object.path(from_split);
+			_erase(from_parent, target_from);
+		} else {
+			throw MSG_ClientError("Is not allowed path:\"\" or from:\"\"");
+		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch move: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
@@ -156,14 +177,20 @@ void patch_move(const MsgPack& obj_patch, MsgPack& object) {
 void patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 	try {
 		std::vector<std::string> path_split;
-		std::vector<std::string> from_split;
 		_tokenizer(obj_patch, path_split, PATCH_PATH);
-		_tokenizer(obj_patch, from_split, PATCH_FROM);
-		auto target = path_split.back();
-		path_split.pop_back();
-		auto& to = object.path(path_split);
-		const auto& from = object.path(from_split);
-		_add(to, from, target);
+		if (path_split.size() != 0) {
+			std::vector<std::string> from_split;
+			_tokenizer(obj_patch, from_split, PATCH_FROM);
+			if (path_split.size() != 0) {
+				auto target = path_split.back();
+				path_split.pop_back();
+				auto& to = object.path(path_split);
+				const auto& from = object.path(from_split);
+				_add(to, from, target);
+			}
+		} else {
+			throw MSG_ClientError("Is not allowed path:\"\" ");
+		}
 	} catch (const msgpack::type_error&) {
 		throw MSG_ClientError("In patch copy: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
