@@ -3,8 +3,6 @@
 cmake_minimum_required (VERSION 2.8.8)
 project (xapiand C CXX)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra -g -O2 -fdiagnostics-color=always")
-
 set (PACKAGE_NAME "Xapiand")
 set (PACKAGE_VERSION "3.0.0-alpha1")
 set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
@@ -26,6 +24,21 @@ foreach(opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS)
 endforeach ()
 
 set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
+
+
+########################################################################
+if (NOT CMAKE_BUILD_TYPE)
+	set (CMAKE_BUILD_TYPE Release)
+endif ()
+
+if (CMAKE_BUILD_TYPE MATCHES Release)
+	message("Release build.")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fdiagnostics-color=always")
+else ()
+	message("Debug build.")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fdiagnostics-color=always -Wall -Wextra -g -O2")
+endif ()
+
 
 ########################################################################
 # Xapiand
