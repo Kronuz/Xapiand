@@ -4,7 +4,7 @@ cmake_minimum_required (VERSION 2.8.8)
 project (xapiand C CXX)
 
 set (PACKAGE_NAME "Xapiand")
-set (PACKAGE_VERSION "3.0.0-alpha1")
+set (PACKAGE_VERSION "3.0.0-beta1")
 set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
 set (PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
 set (PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")

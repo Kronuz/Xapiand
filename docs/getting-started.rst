@@ -136,9 +136,9 @@ And you be able to see something like this
        \  // _` | '_ \| |/ _` | '_ \ / _` |
        /  \ (_| | |_) | | (_| | | | | (_| |
       /_/\_\__,_| .__/|_|\__,_|_| |_|\__,_|
-                |_|  v3.0.0-alpha1
+                |_|  v3.0.0
        [https://github.com/Kronuz/Xapiand]
-              Using Xapian v1.3.4
+              Using Xapian v1.3.7
 
 
     ▍[2016-03-16T16:34:58.993463] (===): Changed current working directory to /Users/yosef/Downloads/Xapiand/nodo1
