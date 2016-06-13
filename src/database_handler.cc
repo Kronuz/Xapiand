@@ -31,7 +31,7 @@
 #include "wkt_parser.h"
 
 
-static const std::regex find_field_re("(([_a-z][_a-z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::icase | std::regex::optimize);
+static const std::regex find_field_re("(([_a-zA-Z][_a-zA-Z0-9]*):)?(\"[^\"]+\"|[^\": ]+)[ ]*", std::regex::optimize);
 
 
 DatabaseHandler::DatabaseHandler()
