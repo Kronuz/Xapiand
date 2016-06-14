@@ -496,10 +496,10 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-		srch_resul.mvle.insert(srch_resul.mvle.end(), std::make_move_iterator(srch.mvle.begin()), std::make_move_iterator(srch.mvle.end()));
-		srch_resul.mvge.insert(srch_resul.mvge.end(), std::make_move_iterator(srch.mvge.begin()), std::make_move_iterator(srch.mvge.end()));
-		srch_resul.mvr.insert(srch_resul.mvr.end(), std::make_move_iterator(srch.mvr.begin()), std::make_move_iterator(srch.mvr.end()));
-		srch_resul.gsr.insert(srch_resul.gsr.end(), std::make_move_iterator(srch.gsr.begin()), std::make_move_iterator(srch.gsr.end()));
+		srch_resul.mvles.insert(srch_resul.mvles.end(), std::make_move_iterator(srch.mvles.begin()), std::make_move_iterator(srch.mvles.end()));
+		srch_resul.mvges.insert(srch_resul.mvges.end(), std::make_move_iterator(srch.mvges.begin()), std::make_move_iterator(srch.mvges.end()));
+		srch_resul.mvrs.insert(srch_resul.mvrs.end(), std::make_move_iterator(srch.mvrs.begin()), std::make_move_iterator(srch.mvrs.end()));
+		srch_resul.gsrs.insert(srch_resul.gsrs.end(), std::make_move_iterator(srch.gsrs.begin()), std::make_move_iterator(srch.gsrs.end()));
 	}
 	L_SEARCH(this, "e.query: %s", queryQ.get_description().c_str());
 
@@ -519,10 +519,10 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-		srch_resul.mvle.insert(srch_resul.mvle.end(), std::make_move_iterator(srch.mvle.begin()), std::make_move_iterator(srch.mvle.end()));
-		srch_resul.mvge.insert(srch_resul.mvge.end(), std::make_move_iterator(srch.mvge.begin()), std::make_move_iterator(srch.mvge.end()));
-		srch_resul.mvr.insert(srch_resul.mvr.end(), std::make_move_iterator(srch.mvr.begin()), std::make_move_iterator(srch.mvr.end()));
-		srch_resul.gsr.insert(srch_resul.gsr.end(), std::make_move_iterator(srch.gsr.begin()), std::make_move_iterator(srch.gsr.end()));
+		srch_resul.mvles.insert(srch_resul.mvles.end(), std::make_move_iterator(srch.mvles.begin()), std::make_move_iterator(srch.mvles.end()));
+		srch_resul.mvges.insert(srch_resul.mvges.end(), std::make_move_iterator(srch.mvges.begin()), std::make_move_iterator(srch.mvges.end()));
+		srch_resul.mvrs.insert(srch_resul.mvrs.end(), std::make_move_iterator(srch.mvrs.begin()), std::make_move_iterator(srch.mvrs.end()));
+		srch_resul.gsrs.insert(srch_resul.gsrs.end(), std::make_move_iterator(srch.gsrs.begin()), std::make_move_iterator(srch.gsrs.end()));
 	}
 	L_SEARCH(this, "e.partial: %s", queryP.get_description().c_str());
 
@@ -542,10 +542,10 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-		srch_resul.mvle.insert(srch_resul.mvle.end(), std::make_move_iterator(srch.mvle.begin()), std::make_move_iterator(srch.mvle.end()));
-		srch_resul.mvge.insert(srch_resul.mvge.end(), std::make_move_iterator(srch.mvge.begin()), std::make_move_iterator(srch.mvge.end()));
-		srch_resul.mvr.insert(srch_resul.mvr.end(), std::make_move_iterator(srch.mvr.begin()), std::make_move_iterator(srch.mvr.end()));
-		srch_resul.gsr.insert(srch_resul.gsr.end(), std::make_move_iterator(srch.gsr.begin()), std::make_move_iterator(srch.gsr.end()));
+		srch_resul.mvles.insert(srch_resul.mvles.end(), std::make_move_iterator(srch.mvles.begin()), std::make_move_iterator(srch.mvles.end()));
+		srch_resul.mvges.insert(srch_resul.mvges.end(), std::make_move_iterator(srch.mvges.begin()), std::make_move_iterator(srch.mvges.end()));
+		srch_resul.mvrs.insert(srch_resul.mvrs.end(), std::make_move_iterator(srch.mvrs.begin()), std::make_move_iterator(srch.mvrs.end()));
+		srch_resul.gsrs.insert(srch_resul.gsrs.end(), std::make_move_iterator(srch.gsrs.begin()), std::make_move_iterator(srch.gsrs.end()));
 	}
 	L_SEARCH(this, "e.terms: %s", repr(queryT.get_description()).c_str());
 

@@ -53,7 +53,7 @@ GeoSpatialRange::getQuery(Xapian::valueno slot_, const RangeList& ranges_, const
 
 	auto gsr = std::make_unique<GeoSpatialRange>(slot_, ranges_, centroids_);
 	Xapian::Query query(gsr.get());
-	srch.gsr.push_back(std::move(gsr));
+	srch.gsrs.push_back(std::move(gsr));
 	return query;
 }
 

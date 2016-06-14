@@ -51,7 +51,7 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 		}
 		auto mvle = std::make_unique<MultipleValueLE>(slot_, end_);
 		Xapian::Query query(mvle.get());
-		srch.mvle.push_back(std::move(mvle));
+		srch.mvles.push_back(std::move(mvle));
 		return query;
 	} else if (end_.empty()) {
 		try {
@@ -61,7 +61,7 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 		}
 		auto mvge = std::make_unique<MultipleValueGE>(slot_, start_);
 		Xapian::Query query(mvge.get());
-		srch.mvge.push_back(std::move(mvge));
+		srch.mvges.push_back(std::move(mvge));
 		return query;
 	}
 
@@ -75,7 +75,7 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 	if (start_ > end_) return Xapian::Query::MatchNothing;
 	auto mvr = std::make_unique<MultipleValueRange>(slot_, start_, end_);
 	Xapian::Query query(mvr.get());
-	srch.mvr.push_back(std::move(mvr));
+	srch.mvrs.push_back(std::move(mvr));
 	return query;
 }
 
