@@ -51,19 +51,10 @@ GeoSpatialRange::getQuery(Xapian::valueno slot_, const RangeList& ranges_, const
 		return Xapian::Query::MatchNothing;
 	}
 
-	// GeoSpatial Range
-<<<<<<< 89f063ca9d5be933984ca0be63842d9d04980ae3
-	GeoSpatialRange* gsr = new GeoSpatialRange(slot_, ranges_, centroids_);
-	return Xapian::Query(gsr);
-||||||| merged common ancestors
-	GeoSpatialRange gsr(slot_, ranges_, centroids_);
-	return Xapian::Query(&gsr);
-=======
 	auto gsr = std::make_unique<GeoSpatialRange>(slot_, ranges_, centroids_);
 	Xapian::Query query(gsr.get());
 	srch.gsr.push_back(std::move(gsr));
 	return query;
->>>>>>> Save the object in search_t struct for keep it alive
 }
 
 
