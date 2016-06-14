@@ -72,7 +72,7 @@ public:
 			key_values_t ins_key = { slot, type, 0, "", CartesianUSet(), reverse, true };
 			switch (type) {
 				case FLOAT_TYPE:
-						ins_key.valuenumeric = strict(std::stod, value);
+					ins_key.valuenumeric = strict(std::stod, value);
 					break;
 				case INTEGER_TYPE:
 					ins_key.valuenumeric = strict(std::stoll, value);
