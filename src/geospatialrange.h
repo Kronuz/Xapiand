@@ -36,7 +36,6 @@ class GeoSpatialRange : public Xapian::ValuePostingSource {
 	// Ranges for the search.
 	RangeList ranges;
 	CartesianUSet centroids;
-	Xapian::valueno slot;
 	double angle;
 
 	// Calculates the smallest angle between its centroids  and search centroids.

@@ -35,12 +35,9 @@ static double geo_weight_from_angle(double angle) {
 
 GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_)
 	: ValuePostingSource(slot_),
-	  slot(slot_)
+	  ranges(ranges_),
+	  centroids(centroids_),
 {
-	ranges.reserve(ranges_.size());
-	ranges.insert(ranges.end(), ranges_.begin(), ranges_.end());
-	centroids.reserve(centroids_.size());
-	centroids.insert(centroids_.begin(), centroids_.end());
 	set_maxweight(geo_weight_from_angle(0.0));
 }
 
@@ -149,7 +146,7 @@ GeoSpatialRange::get_weight() const
 GeoSpatialRange*
 GeoSpatialRange::clone() const
 {
-	return new GeoSpatialRange(slot, ranges, centroids);
+	return new GeoSpatialRange(get_slot(), ranges, centroids);
 }
 
 
@@ -163,7 +160,7 @@ GeoSpatialRange::name() const
 std::string
 GeoSpatialRange::serialise() const
 {
-	return serialise_length(slot) + Serialise::geo(ranges, centroids);
+	return serialise_length(get_slot()) + Serialise::geo(ranges, centroids);
 }
 
 
@@ -196,6 +193,6 @@ std::string
 GeoSpatialRange::get_description() const
 {
 	std::string result("GeoSpatialRange ");
-	result += std::to_string(slot);
+	result += std::to_string(get_slot());
 	return result;
 }
