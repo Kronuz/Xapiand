@@ -53,7 +53,7 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 		Xapian::Query query(mvle.get());
 		srch.mvle.push_back(std::move(mvle));
 		return query;
-		
+
 	} else if (end_.empty()) {
 		try {
 			start_ = Serialise::serialise(field_type, start_);
