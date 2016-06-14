@@ -22,9 +22,11 @@
 
 #include "multivaluerange.h"
 
+#include "database_utils.h"
 #include "length.h"
 #include "serialise.h"
 #include "stl_serialise.h"
+#include "utils.h"
 
 
 MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string& start_, const std::string& end_)
@@ -36,7 +38,7 @@ MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string&
 
 // Receive start and end did not serialize.
 Xapian::Query
-MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string& start_, std::string& end_, const std::string& field_name)
+MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string& start_, std::string& end_, const std::string& field_name, search_t& srch)
 {
 	if (start_.empty()) {
 		if (end_.empty()){
@@ -47,16 +49,21 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 		} catch (const Exception& exc) {
 			throw MSG_QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + exc.what() +")");
 		}
-		MultipleValueLE *mvle = new MultipleValueLE(slot_, end_);
-		return Xapian::Query(mvle);
+		auto mvle = std::make_unique<MultipleValueLE>(slot_, end_);
+		Xapian::Query query(mvle.get());
+		srch.mvle.push_back(std::move(mvle));
+		return query;
+		
 	} else if (end_.empty()) {
 		try {
 			start_ = Serialise::serialise(field_type, start_);
 		} catch (const Exception& exc) {
 			throw MSG_QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + exc.what() +")");
 		}
-		MultipleValueGE *mvge = new MultipleValueGE(slot_, start_);
-		return Xapian::Query(mvge);
+		auto mvge = std::make_unique<MultipleValueGE>(slot_, start_);
+		Xapian::Query query(mvge.get());
+		srch.mvge.push_back(std::move(mvge));
+		return query;
 	}
 
 	// Multiple Value Range
@@ -67,8 +74,10 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 			throw MSG_QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + exc.what() +")");
 	}
 	if (start_ > end_) return Xapian::Query::MatchNothing;
-	MultipleValueRange *mvr = new MultipleValueRange(slot_, start_, end_);
-	return Xapian::Query(mvr);
+	auto mvr = std::make_unique<MultipleValueRange>(slot_, start_, end_);
+	Xapian::Query query(mvr.get());
+	srch.mvr.push_back(std::move(mvr));
+	return query;
 }
 
 
