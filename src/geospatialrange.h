@@ -31,9 +31,6 @@
 #include <vector>
 
 
-struct search_t;
-
-
 // New Match Decider for GeoSpatial value range.
 class GeoSpatialRange : public Xapian::ValuePostingSource {
 	// Ranges for the search.
@@ -67,5 +64,5 @@ public:
 	std::string get_description() const override;
 
 	// Call this function for create a new Query based in ranges.
-	static Xapian::Query getQuery(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_, search_t& srch);
+	static Xapian::Query getQuery(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_);
 };

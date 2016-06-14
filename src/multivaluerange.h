@@ -28,9 +28,6 @@
 #include <vector>
 
 
-struct search_t;
-
-
 // New Match Decider for multiple value range.
 class MultipleValueRange : public Xapian::ValuePostingSource {
 	// Range [start, end] for the search.
@@ -61,7 +58,7 @@ public:
 	std::string get_description() const override;
 
 	// Call this function for create a new Query based in ranges.
-	static Xapian::Query getQuery(Xapian::valueno slot_, char field_type, std::string& start_, std::string& end_, const std::string& field_name, search_t& srch);
+	static Xapian::Query getQuery(Xapian::valueno slot_, char field_type, const std::string& start_, const std::string& end_, const std::string& field_name);
 };
 
 

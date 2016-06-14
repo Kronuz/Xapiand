@@ -22,7 +22,6 @@
 
 #include "geospatialrange.h"
 
-#include "database_utils.h"
 #include "length.h"
 #include "serialise.h"
 
@@ -45,16 +44,14 @@ GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const RangeList& ranges_
 
 // Receive start and end did not serialize.
 Xapian::Query
-GeoSpatialRange::getQuery(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_, search_t& srch)
+GeoSpatialRange::getQuery(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_)
 {
 	if (ranges_.empty()){
 		return Xapian::Query::MatchNothing;
 	}
 
-	auto gsr = std::make_unique<GeoSpatialRange>(slot_, ranges_, centroids_);
-	Xapian::Query query(gsr.get());
-	srch.gsrs.push_back(std::move(gsr));
-	return query;
+	auto gsr = new GeoSpatialRange(slot_, ranges_, centroids_);
+	return Xapian::Query(gsr->release());
 }
 
 
