@@ -54,8 +54,8 @@ GeoSpatialRange::getQuery(Xapian::valueno slot_, const RangeList& ranges_, const
 	}
 
 	// GeoSpatial Range
-	GeoSpatialRange gsr(slot_, ranges_, centroids_);
-	return Xapian::Query(&gsr);
+	GeoSpatialRange* gsr = new GeoSpatialRange(slot_, ranges_, centroids_);
+	return Xapian::Query(gsr);
 }
 
 
