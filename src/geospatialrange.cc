@@ -35,7 +35,7 @@ static double geo_weight_from_angle(double angle) {
 
 
 GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_)
-	: ValuePostingSource(slot_),
+	: Xapian::ValuePostingSource(slot_),
 	  ranges(ranges_),
 	  centroids(centroids_)
 {
@@ -124,7 +124,7 @@ GeoSpatialRange::skip_to(Xapian::docid min_docid, double min_wt)
 bool
 GeoSpatialRange::check(Xapian::docid min_docid, double min_wt)
 {
-	if (!ValuePostingSource::check(min_docid, min_wt)) {
+	if (!Xapian::ValuePostingSource::check(min_docid, min_wt)) {
 		// check returned false, so we know the document is not in the source.
 		return false;
 	}

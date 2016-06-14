@@ -30,7 +30,7 @@
 
 
 MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string& start_, const std::string& end_)
-	: ValuePostingSource(slot_), start(start_), end(end_), slot(slot_)
+	: Xapian::ValuePostingSource(slot_), start(start_), end(end_)
 {
 	set_maxweight(1.0);
 }
@@ -53,7 +53,6 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, std::string
 		Xapian::Query query(mvle.get());
 		srch.mvle.push_back(std::move(mvle));
 		return query;
-
 	} else if (end_.empty()) {
 		try {
 			start_ = Serialise::serialise(field_type, start_);
@@ -120,7 +119,7 @@ MultipleValueRange::skip_to(Xapian::docid min_docid, double min_wt)
 bool
 MultipleValueRange::check(Xapian::docid min_docid, double min_wt)
 {
-	if (!ValuePostingSource::check(min_docid, min_wt)) {
+	if (!Xapian::ValuePostingSource::check(min_docid, min_wt)) {
 		// check returned false, so we know the document is not in the source.
 		return false;
 	}
@@ -201,7 +200,7 @@ MultipleValueRange::get_description() const
 
 
 MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, const std::string& start_)
-	: ValuePostingSource(slot_), start(start_), slot(slot_)
+	: Xapian::ValuePostingSource(slot_), start(start_)
 {
 	set_maxweight(1.0);
 }
@@ -246,7 +245,7 @@ MultipleValueGE::skip_to(Xapian::docid min_docid, double min_wt)
 bool
 MultipleValueGE::check(Xapian::docid min_docid, double min_wt)
 {
-	if (!ValuePostingSource::check(min_docid, min_wt)) {
+	if (!Xapian::ValuePostingSource::check(min_docid, min_wt)) {
 		// check returned false, so we know the document is not in the source.
 		return false;
 	}
@@ -324,7 +323,7 @@ MultipleValueGE::get_description() const
 
 
 MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, const std::string& end_)
-	: ValuePostingSource(slot_), end(end_), slot(slot_)
+	: Xapian::ValuePostingSource(slot_), end(end_)
 {
 	set_maxweight(1.0);
 }
@@ -369,7 +368,7 @@ MultipleValueLE::skip_to(Xapian::docid min_docid, double min_wt)
 bool
 MultipleValueLE::check(Xapian::docid min_docid, double min_wt)
 {
-	if (!ValuePostingSource::check(min_docid, min_wt)) {
+	if (!Xapian::ValuePostingSource::check(min_docid, min_wt)) {
 		// check returned false, so we know the document is not in the source.
 		return false;
 	}

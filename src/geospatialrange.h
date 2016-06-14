@@ -33,6 +33,7 @@
 
 struct search_t;
 
+
 // New Match Decider for GeoSpatial value range.
 class GeoSpatialRange : public Xapian::ValuePostingSource {
 	// Ranges for the search.

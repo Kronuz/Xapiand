@@ -30,11 +30,11 @@
 
 struct search_t;
 
+
 // New Match Decider for multiple value range.
 class MultipleValueRange : public Xapian::ValuePostingSource {
 	// Range [start, end] for the search.
 	std::string start, end;
-	Xapian::valueno slot;
 
 	// Calculate if some their values is inside range.
 	bool insideRange() const noexcept;
@@ -69,7 +69,6 @@ public:
 class MultipleValueGE : public Xapian::ValuePostingSource {
 	// Range [start, ..] for the search.
 	std::string start;
-	Xapian::valueno slot;
 
 	// Calculate if some their values is inside range.
 	bool insideRange() const noexcept;
@@ -100,7 +99,6 @@ public:
 class MultipleValueLE : public Xapian::ValuePostingSource {
 	// Range [.., end] for the search.
 	std::string end;
-	Xapian::valueno slot;
 
 	// Calculate if some their values is inside range.
 	bool insideRange() const noexcept;
