@@ -24,6 +24,8 @@
 
 #include "fields.h"
 #include "msgpack.h"
+#include "multivaluerange.h"
+#include "geospatialrange.h"
 #include "rapidjson/document.h"
 
 #include <regex>
@@ -155,6 +157,10 @@ struct search_t {
 	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
 	std::vector<std::unique_ptr<GeoFieldProcessor>> gfps;
 	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
+	std::vector<std::unique_ptr<MultipleValueRange>> mvr;
+	std::vector<std::unique_ptr<MultipleValueGE>> mvge;
+	std::vector<std::unique_ptr<MultipleValueLE>> mvle;
+	std::vector<std::unique_ptr<GeoSpatialRange>> gsr;
 };
 
 
