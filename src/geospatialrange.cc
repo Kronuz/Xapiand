@@ -36,7 +36,7 @@ static double geo_weight_from_angle(double angle) {
 GeoSpatialRange::GeoSpatialRange(Xapian::valueno slot_, const RangeList& ranges_, const CartesianUSet& centroids_)
 	: ValuePostingSource(slot_),
 	  ranges(ranges_),
-	  centroids(centroids_),
+	  centroids(centroids_)
 {
 	set_maxweight(geo_weight_from_angle(0.0));
 }
