@@ -295,7 +295,7 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 				case POSITIVE_TYPE: {
 					auto start(m.str(1)), end(m.str(2));
 
-					queryRange = MultipleValueRange::getQuery(field_t.slot, FLOAT_TYPE, start, end, field_name, srch);
+					queryRange = MultipleValueRange::getQuery(field_t.slot, FLOAT_TYPE, start, end, field_name);
 
 					auto filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, srch.nfps, queryparser);
 					if (!filter_term.empty()) {
@@ -305,13 +305,13 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 				}
 				case STRING_TYPE: {
 					auto start(m.str(1)), end(m.str(2));
-					queryRange = MultipleValueRange::getQuery(field_t.slot, STRING_TYPE, start, end, field_name, srch);
+					queryRange = MultipleValueRange::getQuery(field_t.slot, STRING_TYPE, start, end, field_name);
 					break;
 				}
 				case DATE_TYPE: {
 					auto start(m.str(1)), end(m.str(2));
 
-					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name, srch);
+					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
 
 					auto filter_term = GenerateTerms::date(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, srch.dfps, queryparser);
 					if (!filter_term.empty()) {
@@ -333,7 +333,7 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 					CartesianUSet centroids;
 					EWKT_Parser::getRanges(field_value, field_t.accuracy[0], field_t.accuracy[1], ranges, centroids);
 
-					queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges, centroids, srch);
+					queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges, centroids);
 
 					auto filter_term = GenerateTerms::geo(ranges, field_t.accuracy, field_t.acc_prefix, added_prefixes, srch.gfps, queryparser);
 					if (!filter_term.empty()) {
@@ -496,10 +496,6 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-		srch_resul.mvles.insert(srch_resul.mvles.end(), std::make_move_iterator(srch.mvles.begin()), std::make_move_iterator(srch.mvles.end()));
-		srch_resul.mvges.insert(srch_resul.mvges.end(), std::make_move_iterator(srch.mvges.begin()), std::make_move_iterator(srch.mvges.end()));
-		srch_resul.mvrs.insert(srch_resul.mvrs.end(), std::make_move_iterator(srch.mvrs.begin()), std::make_move_iterator(srch.mvrs.end()));
-		srch_resul.gsrs.insert(srch_resul.gsrs.end(), std::make_move_iterator(srch.gsrs.begin()), std::make_move_iterator(srch.gsrs.end()));
 	}
 	L_SEARCH(this, "e.query: %s", queryQ.get_description().c_str());
 
@@ -519,10 +515,6 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-		srch_resul.mvles.insert(srch_resul.mvles.end(), std::make_move_iterator(srch.mvles.begin()), std::make_move_iterator(srch.mvles.end()));
-		srch_resul.mvges.insert(srch_resul.mvges.end(), std::make_move_iterator(srch.mvges.begin()), std::make_move_iterator(srch.mvges.end()));
-		srch_resul.mvrs.insert(srch_resul.mvrs.end(), std::make_move_iterator(srch.mvrs.begin()), std::make_move_iterator(srch.mvrs.end()));
-		srch_resul.gsrs.insert(srch_resul.gsrs.end(), std::make_move_iterator(srch.gsrs.begin()), std::make_move_iterator(srch.gsrs.end()));
 	}
 	L_SEARCH(this, "e.partial: %s", queryP.get_description().c_str());
 
@@ -542,10 +534,6 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
 		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
 		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
-		srch_resul.mvles.insert(srch_resul.mvles.end(), std::make_move_iterator(srch.mvles.begin()), std::make_move_iterator(srch.mvles.end()));
-		srch_resul.mvges.insert(srch_resul.mvges.end(), std::make_move_iterator(srch.mvges.begin()), std::make_move_iterator(srch.mvges.end()));
-		srch_resul.mvrs.insert(srch_resul.mvrs.end(), std::make_move_iterator(srch.mvrs.begin()), std::make_move_iterator(srch.mvrs.end()));
-		srch_resul.gsrs.insert(srch_resul.gsrs.end(), std::make_move_iterator(srch.gsrs.begin()), std::make_move_iterator(srch.gsrs.end()));
 	}
 	L_SEARCH(this, "e.terms: %s", repr(queryT.get_description()).c_str());
 
