@@ -135,7 +135,7 @@ MultipleValueRange::get_weight() const
 MultipleValueRange*
 MultipleValueRange::clone() const
 {
-	return new MultipleValueRange(slot, start, end);
+	return new MultipleValueRange(get_slot(), start, end);
 }
 
 
@@ -149,7 +149,7 @@ MultipleValueRange::name() const
 std::string
 MultipleValueRange::serialise() const
 {
-	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
+	std::string serialised, values, s_slot(Xapian::sortable_serialise(get_slot()));
 	values.append(serialise_length(s_slot.size()));
 	values.append(s_slot);
 	values.append(serialise_length(start.size()));
@@ -185,7 +185,7 @@ std::string
 MultipleValueRange::get_description() const
 {
 	std::string result("MultipleValueRange ");
-	result += std::to_string(slot) + " " + start;
+	result += std::to_string(get_slot()) + " " + start;
 	result += " " + end;
 	return result;
 }
@@ -261,7 +261,7 @@ MultipleValueGE::get_weight() const
 MultipleValueGE*
 MultipleValueGE::clone() const
 {
-	return new MultipleValueGE(slot, start);
+	return new MultipleValueGE(get_slot(), start);
 }
 
 
@@ -275,7 +275,7 @@ MultipleValueGE::name() const
 std::string
 MultipleValueGE::serialise() const
 {
-	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
+	std::string serialised, values, s_slot(Xapian::sortable_serialise(get_slot()));
 	values.append(serialise_length(s_slot.size()));
 	values.append(s_slot);
 	values.append(serialise_length(start.size()));
@@ -309,7 +309,7 @@ std::string
 MultipleValueGE::get_description() const
 {
 	std::string result("MultipleValueGE ");
-	result += std::to_string(slot) + " " + start + ")";
+	result += std::to_string(get_slot()) + " " + start + ")";
 	return result;
 }
 
@@ -384,7 +384,7 @@ MultipleValueLE::get_weight() const
 MultipleValueLE*
 MultipleValueLE::clone() const
 {
-	return new MultipleValueLE(slot, end);
+	return new MultipleValueLE(get_slot(), end);
 }
 
 
@@ -398,7 +398,7 @@ MultipleValueLE::name() const
 std::string
 MultipleValueLE::serialise() const
 {
-	std::string serialised, values, s_slot(Xapian::sortable_serialise(slot));
+	std::string serialised, values, s_slot(Xapian::sortable_serialise(get_slot()));
 	values.append(serialise_length(s_slot.size()));
 	values.append(s_slot);
 	values.append(serialise_length(end.size()));
@@ -432,6 +432,6 @@ std::string
 MultipleValueLE::get_description() const
 {
 	std::string result("MultipleValueLE ");
-	result += std::to_string(slot) + " " + end + ")";
+	result += std::to_string(get_slot()) + " " + end + ")";
 	return result;
 }
