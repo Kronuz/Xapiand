@@ -19,8 +19,8 @@ sed 's/^X//' >xapiand/Makefile << '3997054dfe7508cbb1bb8208e4df68ad'
 X# $FreeBSD$
 X
 XPORTNAME=	xapiand
-XPORTVERSION=	3.0.0.alpha1
-XDISTVERSION=    v3.0.0-alpha1
+XPORTVERSION=	3.0.0.beta
+XDISTVERSION=    v3.0.0-beta
 XCATEGORIES=	textproc devel
 X
 XMAINTAINER=	kronuz@gmail.com
@@ -29,8 +29,9 @@ X
 XLICENSE=        MIT
 XLICENSE_FILE=	${WRKSRC}/LICENSE
 X
-XUSES=		autoreconf libtool
-XUSE_GITHUB=     yes
+XUSES=		cmake
+XCMAKE_NINJA= 	yes
+XUSE_GITHUB=   	yes
 XGH_ACCOUNT=     Kronuz
 XGH_PROJECT=     Xapiand
 X
@@ -51,16 +52,17 @@ XGROUPS=		${XAPIAND_GROUP}
 X
 XUSE_RC_SUBR=	${PORTNAME}
 X
-XACLOCAL_ARGS=	-I ${WRKSRC}/m4 --install
-XAUTOCONF_ARGS=	--force --install --verbose
-XGNU_CONFIGURE=  yes
+X#ACLOCAL_ARGS=	-I ${WRKSRC}/m4 --install
+X#AUTOCONF_ARGS=	--force --install --verbose
+X#GNU_CONFIGURE=  yes
 X
-XPLIST_FILES=	bin/xapiand
+XPLIST_FILES=	bin/${PORTNAME}
 X
 Xdo-install:
 X		${MKDIR} ${STAGEDIR}${XAPIAND_DBDIR} \
 X		${STAGEDIR}${XAPIAND_LOGDIR} \
 X		${STAGEDIR}${XAPIAND_PIDDIR}
+X		${INSTALL_PROGRAM} ${WRKSRC}/${PORTNAME} ${STAGEDIR}${PREFIX}/bin
 X
 X.include <bsd.port.mk>
 3997054dfe7508cbb1bb8208e4df68ad
@@ -72,8 +74,8 @@ XWWW: https://github.com/Kronuz/Xapiand
 053b0f60c7ba6d94ca0751bec472bd9b
 echo x - xapiand/distinfo
 sed 's/^X//' >xapiand/distinfo << 'd7f15fdb8f6b96ee96cd306cab4210a3'
-XSHA256 (Kronuz-Xapiand-v3.0.0-alpha1_GH0.tar.gz) = 7d6e3b0e551ed0e0aef4a45e91d1f2dc293b37d444d43841822eb52234e44cc0
-XSIZE (Kronuz-Xapiand-v3.0.0-alpha1_GH0.tar.gz) = 916057
+XSHA256 (Kronuz-Xapiand-v3.0.0-beta_GH0.tar.gz) = 24ffead796498c91a278d5718d347b9ab32a506afe016cffc87c79f4328bad8f
+XSIZE (Kronuz-Xapiand-v3.0.0-beta_GH0.tar.gz) = 11677495
 d7f15fdb8f6b96ee96cd306cab4210a3
 echo c - xapiand/files
 mkdir -p xapiand/files > /dev/null 2>&1
@@ -118,3 +120,4 @@ X
 Xrun_rc_command "$1"
 0dccf3a387c3588de14214fc8fd91659
 exit
+
