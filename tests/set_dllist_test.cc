@@ -145,6 +145,20 @@ START_TEST(test_multi_insert_erase)
 END_TEST
 
 
+START_TEST(test_multiple_producers_single_consumer)
+{
+	ck_assert_int_eq(test_multiple_producers_single_consumer(), 0);
+}
+END_TEST
+
+
+START_TEST(test_single_producer_multiple_consumers)
+{
+	ck_assert_int_eq(test_single_producer_multiple_consumers(), 0);
+}
+END_TEST
+
+
 Suite* test_suite_single_thread(void) {
 	Suite *s = suite_create("Test of Non-Blocking Doubly-Linked Lists with single thread");
 
@@ -230,6 +244,16 @@ Suite* test_suite_multiple_threads(void) {
 	tcase_set_timeout(tc_multi_insert_erase, 10);
 	tcase_add_test(tc_multi_insert_erase, test_multi_insert_erase);
 	suite_add_tcase(s, tc_multi_insert_erase);
+
+	TCase *tc_multiple_producers_single_consumer = tcase_create("Multiple producers and single consumer");
+	tcase_set_timeout(tc_multiple_producers_single_consumer, 10);
+	tcase_add_test(tc_multiple_producers_single_consumer, test_multiple_producers_single_consumer);
+	suite_add_tcase(s, tc_multiple_producers_single_consumer);
+
+	TCase *tc_single_producer_multiple_consumers = tcase_create("Single producer and multiple consumers");
+	tcase_set_timeout(tc_single_producer_multiple_consumers, 10);
+	tcase_add_test(tc_single_producer_multiple_consumers, test_single_producer_multiple_consumers);
+	suite_add_tcase(s, tc_single_producer_multiple_consumers);
 
 	return s;
 }

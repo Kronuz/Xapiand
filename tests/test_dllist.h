@@ -50,3 +50,6 @@ int test_multi_producers();
 int test_multi_push_pop_front();
 int test_multi_push_pop_back();
 int test_multi_insert_erase();
+
+int test_multiple_producers_single_consumer();
+int test_single_producer_multiple_consumers();

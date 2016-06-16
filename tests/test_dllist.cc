@@ -29,6 +29,11 @@
 #include <thread>
 #include <vector>
 
+#define NUM_THREADS 10
+#define S_ELEMENTS 100
+#define D_ELEMENTS 2 * S_ELEMENTS
+#define T_ELEMENTS 3 * S_ELEMENTS
+
 
 std::string repr_results(const DLList<std::pair<int, char>>& l, bool sort) {
 	std::vector<std::string> res;
@@ -495,11 +500,11 @@ int test_multi_push_front() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		producers.emplace_back([&l](int val) {
-			auto start = 200 * val;
-			auto end = start + 100;
-			auto end2 = end + 100;
+			auto start = D_ELEMENTS * val;
+			auto end = start + S_ELEMENTS;
+			auto end2 = end + S_ELEMENTS;
 			for (int j = start; j < end; ++j) {
 				l.push_front(j);
 			}
@@ -532,11 +537,11 @@ int test_multi_push_back() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		producers.emplace_back([&l](int val) {
-			auto start = 200 * val;
-			auto end = start + 100;
-			auto end2 = end + 100;
+			auto start = D_ELEMENTS * val;
+			auto end = start + S_ELEMENTS;
+			auto end2 = end + S_ELEMENTS;
 			for (int j = start; j < end; ++j) {
 				l.push_back(j);
 			}
@@ -567,11 +572,11 @@ int test_multi_insert() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		producers.emplace_back([&l](int val) {
 			auto it = l.begin();
-			auto start = 200 * val;
-			auto end = start + 200;
+			auto start = D_ELEMENTS * val;
+			auto end = start + D_ELEMENTS;
 			for (int j = start; j < end; ++j) {
 				it = l.insert(it, j);
 			}
@@ -599,12 +604,12 @@ int test_multi_producers() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		producers.emplace_back([&l](int val) {
-			auto start = 300 * val;
-			auto end = start + 100;
-			auto end2 = end + 100;
-			auto end3 = end2 + 100;
+			auto start = T_ELEMENTS * val;
+			auto end = start + S_ELEMENTS;
+			auto end2 = end + S_ELEMENTS;
+			auto end3 = end2 + S_ELEMENTS;
 			auto it = l.begin();
 			for (int j = start; j < end; ++j) {
 				l.push_front(j);
@@ -639,11 +644,11 @@ int test_multi_push_pop_front() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		producers.emplace_back([&l](int val) {
-			auto start = 200 * val;
-			auto end = start + 100;
-			auto end2 = end + 100;
+			auto start = D_ELEMENTS * val;
+			auto end = start + S_ELEMENTS;
+			auto end2 = end + S_ELEMENTS;
 			for (int j = start; j < end; ++j) {
 				l.push_front(j);
 			}
@@ -655,9 +660,9 @@ int test_multi_push_pop_front() {
 
 	DLList<int> elem_del;
 	std::vector<std::thread> consumers;
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		consumers.emplace_back([&l, &elem_del]() {
-			for (int j = 0; j < 100; ++j) {
+			for (int j = 0; j < S_ELEMENTS; ++j) {
 				try {
 					elem_del.push_front(*l.pop_front());
 				} catch (const std::out_of_range&) { }
@@ -683,7 +688,7 @@ int test_multi_push_pop_front() {
 	res.insert(l.begin(), l.end());
 	res.insert(deleted.begin(), deleted.end());
 
-	size_t total_elems = 10000;
+	size_t total_elems = NUM_THREADS * D_ELEMENTS;
 	if (total_elems == l.size() + deleted.size() && total_elems == res.size()) {
 		RETURN(0);
 	}
@@ -697,11 +702,11 @@ int test_multi_push_pop_back() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		producers.emplace_back([&l](int val) {
-			auto start = 200 * val;
-			auto end = start + 100;
-			auto end2 = end + 100;
+			auto start = D_ELEMENTS * val;
+			auto end = start + S_ELEMENTS;
+			auto end2 = end + S_ELEMENTS;
 			for (int j = start; j < end; ++j) {
 				l.push_back(j);
 			}
@@ -713,9 +718,9 @@ int test_multi_push_pop_back() {
 
 	DLList<int> elem_del;
 	std::vector<std::thread> consumers;
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		consumers.emplace_back([&l, &elem_del]() {
-			for (int j = 0; j < 200; ++j) {
+			for (int j = 0; j < D_ELEMENTS; ++j) {
 				try {
 					elem_del.push_back(*l.pop_back());
 				} catch (const std::out_of_range&) { }
@@ -741,7 +746,7 @@ int test_multi_push_pop_back() {
 	res.insert(l.begin(), l.end());
 	res.insert(deleted.begin(), deleted.end());
 
-	size_t total_elems = 10000;
+	size_t total_elems = NUM_THREADS * D_ELEMENTS;
 	if (total_elems == l.size() + deleted.size() && total_elems == res.size()) {
 		RETURN(0);
 	}
@@ -755,11 +760,11 @@ int test_multi_insert_erase() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		producers.emplace_back([&l](int val) {
 			auto it = l.begin();
-			auto start = 200 * val;
-			auto end = start + 200;
+			auto start = D_ELEMENTS * val;
+			auto end = start + D_ELEMENTS;
 			for (int j = start; j < end; ++j) {
 				it = l.insert(it, j);
 			}
@@ -768,10 +773,10 @@ int test_multi_insert_erase() {
 
 	DLList<int> elem_del;
 	std::vector<std::thread> consumers;
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		consumers.emplace_back([&l, &elem_del]() {
 			int cont = 0;
-			for (auto it = l.begin(); it != l.end() && cont < 500; ++cont) {
+			for (auto it = l.begin(); it != l.end(); ++cont) {
 				if (cont % 2 == 0) {
 					elem_del.insert(elem_del.begin(), *it);
 					it = l.erase(it);
@@ -795,7 +800,107 @@ int test_multi_insert_erase() {
 	res.insert(l.begin(), l.end());
 	res.insert(elem_del.begin(), elem_del.end());
 
-	size_t total_elems = 10000;
+	size_t total_elems = NUM_THREADS * D_ELEMENTS;
+	if (total_elems == res.size()) {
+		RETURN(0);
+	}
+
+	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	RETURN(1);
+}
+
+
+int test_multiple_producers_single_consumer() {
+	DLList<int> l;
+
+	std::vector<std::thread> producers;
+	for (int i = 0; i < NUM_THREADS; ++i) {
+		producers.emplace_back([&l](int val) {
+			auto start = D_ELEMENTS * val;
+			auto end = start + D_ELEMENTS;
+			for (int j = start; j < end; ++j) {
+				l.push_back(j);
+			}
+		}, i);
+	}
+
+	DLList<int> elem_del;
+	std::atomic_bool running(true);
+	auto consumer = std::thread([&l, &elem_del, &running]() {
+		int cont = 0;
+		while (running.load()) {
+			for (auto it = l.begin(); it != l.end(); ++cont) {
+				if (cont % 2 == 0) {
+					elem_del.push_front(*it);
+					it = l.erase(it);
+				} else {
+					++it;
+				}
+			}
+		}
+	});
+
+	for (auto& producer : producers) {
+		producer.join();
+	}
+
+	running.store(false);
+
+	consumer.join();
+
+	std::unordered_set<int> res;
+	res.reserve(l.size() + elem_del.size());
+	res.insert(l.begin(), l.end());
+	res.insert(elem_del.begin(), elem_del.end());
+
+	size_t total_elems = NUM_THREADS * D_ELEMENTS;
+	if (total_elems == res.size()) {
+		RETURN(0);
+	}
+
+	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	RETURN(1);
+}
+
+
+int test_single_producer_multiple_consumers() {
+	DLList<int> l;
+
+	auto producer = std::thread([&l]() {
+		const auto end = NUM_THREADS * S_ELEMENTS;
+		for (int j = 0; j < end; ++j) {
+			l.push_back(j);
+		}
+	});
+
+	DLList<int> elem_del;
+	std::vector<std::thread> consumers;
+	for (int i = 0; i < NUM_THREADS; ++i) {
+		consumers.emplace_back([&l, &elem_del]() {
+			int cont = 0;
+			for (auto it = l.begin(); it != l.end(); ++cont) {
+				if (cont % 2 == 0) {
+					elem_del.insert(elem_del.begin(), *it);
+					it = l.erase(it);
+				} else {
+					++it;
+				}
+			}
+		});
+	}
+
+	producer.join();
+
+	for (auto& consumer : consumers) {
+		consumer.join();
+	}
+
+	std::unordered_set<int> res;
+	res.reserve(l.size() + elem_del.size());
+	res.insert(l.begin(), l.end());
+	res.insert(elem_del.begin(), elem_del.end());
+
+	size_t total_elems = NUM_THREADS * S_ELEMENTS;
 	if (total_elems == res.size()) {
 		RETURN(0);
 	}
