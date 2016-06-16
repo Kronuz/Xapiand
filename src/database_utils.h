@@ -151,15 +151,6 @@ struct query_field_t {
 };
 
 
-struct search_t {
-	Xapian::Query query;
-	std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
-	std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
-	std::vector<std::unique_ptr<GeoFieldProcessor>> gfps;
-	std::vector<std::unique_ptr<BooleanFieldProcessor>> bfps;
-};
-
-
 enum class MIMEType {
 	APPLICATION_JSON,
 	APPLICATION_XWWW_FORM_URLENCODED,

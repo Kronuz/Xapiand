@@ -35,9 +35,9 @@
 
 namespace GenerateTerms {
 	std::string numeric(const std::string& start_, const std::string& end_, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
-		std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<NumericFieldProcessor>>& nfps, Xapian::QueryParser& queryparser);
+		std::unordered_set<std::string>& added_prefixes, Xapian::QueryParser& queryparser);
 	std::string date(const std::string& start_, const std::string& end_, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
-		std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<DateFieldProcessor>>& dfps, Xapian::QueryParser& queryparser);
+		std::unordered_set<std::string>& added_prefixes, Xapian::QueryParser& queryparser);
 	std::string year(int tm_s[], int tm_e[], const std::string& prefix);
 	std::string month(int tm_s[], int tm_e[], const std::string& prefix);
 	std::string day(int tm_s[], int tm_e[], const std::string& prefix);
@@ -45,5 +45,5 @@ namespace GenerateTerms {
 	std::string minute(int tm_s[], int tm_e[], const std::string& prefix);
 	std::string second(int tm_s[], int tm_e[], const std::string& prefix);
 	std::string geo(const std::vector<range_t>& ranges, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
-		std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<GeoFieldProcessor>>& gfps, Xapian::QueryParser& queryparser);
+		std::unordered_set<std::string>& added_prefixes, Xapian::QueryParser& queryparser);
 };

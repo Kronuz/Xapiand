@@ -242,22 +242,21 @@ DatabaseHandler::patch(const std::string& patches, const std::string& _document_
 }
 
 
-search_t
-DatabaseHandler::_search(const std::string& query, std::vector<std::string>& suggestions, int q_flags, const std::string& lan, bool isText)
+Xapian::Query
+DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags, const std::string& lan, bool isText)
 {
 	L_CALL(this, "DatabaseHandler::_search()");
 
-	search_t srch;
-	if (query.compare("*") == 0) {
-		srch.query = Xapian::Query::MatchAll;
+	if (str_query.compare("*") == 0) {
 		suggestions.push_back(std::string());
-		return srch;
+		return Xapian::Query::MatchAll;
 	}
 
 	size_t size_match = 0;
 	bool first_time = true, first_timeR = true;
 	std::string querystring;
 	Xapian::QueryParser queryparser;
+	Xapian::Query query;
 
 	queryparser.set_database(*database->db);
 
@@ -269,14 +268,14 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 	// Set for save the prefix added in queryparser.
 	std::unordered_set<std::string> added_prefixes;
 
-	std::sregex_iterator next(query.begin(), query.end(), find_field_re, std::regex_constants::match_continuous);
+	std::sregex_iterator next(str_query.begin(), str_query.end(), find_field_re, std::regex_constants::match_continuous);
 	std::sregex_iterator end;
 	while (next != end) {
-		std::string field(next->str(0));
+		auto field = next->str(0);
 		size_match += next->length(0);
-		std::string field_name_dot(next->str(1));
-		std::string field_name(next->str(2));
-		std::string field_value(next->str(3));
+		auto field_name_dot = next->str(1);
+		auto field_name = next->str(2);
+		auto field_value = next->str(3);
 		auto field_t = schema->get_data_field(field_name);
 
 		std::smatch m;
@@ -293,27 +292,27 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 				case FLOAT_TYPE:
 				case INTEGER_TYPE:
 				case POSITIVE_TYPE: {
-					auto start(m.str(1)), end(m.str(2));
+					auto start = m.str(1), end = m.str(2);
 
 					queryRange = MultipleValueRange::getQuery(field_t.slot, FLOAT_TYPE, start, end, field_name);
 
-					auto filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, srch.nfps, queryparser);
+					auto filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, queryparser);
 					if (!filter_term.empty()) {
 						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, q_flags), queryRange);
 					}
 					break;
 				}
 				case STRING_TYPE: {
-					auto start(m.str(1)), end(m.str(2));
+					auto start = m.str(1), end = m.str(2);
 					queryRange = MultipleValueRange::getQuery(field_t.slot, STRING_TYPE, start, end, field_name);
 					break;
 				}
 				case DATE_TYPE: {
-					auto start(m.str(1)), end(m.str(2));
+					auto start = m.str(1), end = m.str(2);
 
 					queryRange = MultipleValueRange::getQuery(field_t.slot, DATE_TYPE, start, end, field_name);
 
-					auto filter_term = GenerateTerms::date(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, srch.dfps, queryparser);
+					auto filter_term = GenerateTerms::date(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, queryparser);
 					if (!filter_term.empty()) {
 						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, q_flags), queryRange);
 					}
@@ -335,7 +334,7 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 
 					queryRange = GeoSpatialRange::getQuery(field_t.slot, ranges, centroids);
 
-					auto filter_term = GenerateTerms::geo(ranges, field_t.accuracy, field_t.acc_prefix, added_prefixes, srch.gfps, queryparser);
+					auto filter_term = GenerateTerms::geo(ranges, field_t.accuracy, field_t.acc_prefix, added_prefixes, queryparser);
 					if (!filter_term.empty()) {
 						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, q_flags), queryRange);
 					}
@@ -345,10 +344,10 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 
 			// Concatenate with OR all the ranges queries.
 			if (first_timeR) {
-				srch.query = queryRange;
+				query = queryRange;
 				first_timeR = false;
 			} else {
-				srch.query = Xapian::Query(Xapian::Query::OP_OR, srch.query, queryRange);
+				query = Xapian::Query(Xapian::Query::OP_OR, query, queryRange);
 			}
 		} else {
 			// If the field has not been indexed as a term, not process this query.
@@ -363,9 +362,8 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 				case POSITIVE_TYPE:
 					// Xapian does not allow repeat prefixes.
 					if (added_prefixes.insert(field_t.prefix).second) {
-						auto nfp = std::make_unique<NumericFieldProcessor>(field_t.type, field_t.prefix);
-						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, nfp.get()) : queryparser.add_prefix(field_name, nfp.get());
-						srch.nfps.push_back(std::move(nfp));
+						auto nfp = new NumericFieldProcessor(field_t.type, field_t.prefix);
+						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, nfp->release()) : queryparser.add_prefix(field_name, nfp->release());
 					}
 					field.assign(field_name_dot).append(to_query_string(field_value));
 					break;
@@ -383,9 +381,8 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 
 					// Xapian does not allow repeat prefixes.
 					if (added_prefixes.insert(field_t.prefix).second) {
-						auto dfp = std::make_unique<DateFieldProcessor>(field_t.prefix);
-						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, dfp.get()) : queryparser.add_prefix(field_name, dfp.get());
-						srch.dfps.push_back(std::move(dfp));
+						auto dfp = new DateFieldProcessor(field_t.prefix);
+						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, dfp->release()) : queryparser.add_prefix(field_name, dfp->release());
 					}
 					field.assign(field_name_dot).append(to_query_string(std::to_string(Datetime::timestamp(field_value))));
 					break;
@@ -409,9 +406,8 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 				case BOOLEAN_TYPE:
 					// Xapian does not allow repeat prefixes.
 					if (added_prefixes.insert(field_t.prefix).second) {
-						auto bfp = std::make_unique<BooleanFieldProcessor>(field_t.prefix);
-						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, bfp.get()) : queryparser.add_prefix(field_name, bfp.get());
-						srch.bfps.push_back(std::move(bfp));
+						auto bfp = new BooleanFieldProcessor(field_t.prefix);
+						field_t.bool_term ? queryparser.add_boolean_prefix(field_name, bfp->release()) : queryparser.add_prefix(field_name, bfp->release());
 					}
 					break;
 			}
@@ -428,14 +424,14 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 		++next;
 	}
 
-	if (size_match != query.size()) {
-		throw MSG_QueryParserError("Query '" + query + "' contains errors");
+	if (size_match != str_query.size()) {
+		throw MSG_QueryParserError("Query '" + str_query + "' contains errors");
 	}
 
 	switch (first_time << 1 | first_timeR) {
 		case 0:
 			try {
-				srch.query = Xapian::Query(Xapian::Query::OP_OR, queryparser.parse_query(querystring, q_flags), srch.query);
+				query = Xapian::Query(Xapian::Query::OP_OR, queryparser.parse_query(querystring, q_flags), query);
 				suggestions.push_back(queryparser.get_corrected_query_string());
 			} catch (const Xapian::QueryParserError& exc) {
 				L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
@@ -444,7 +440,7 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 			break;
 		case 1:
 			try {
-				srch.query = queryparser.parse_query(querystring, q_flags);
+				query = queryparser.parse_query(querystring, q_flags);
 				suggestions.push_back(queryparser.get_corrected_query_string());
 			} catch (const Xapian::QueryParserError& exc) {
 				L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
@@ -455,21 +451,19 @@ DatabaseHandler::_search(const std::string& query, std::vector<std::string>& sug
 			suggestions.push_back(std::string());
 			break;
 		case 3:
-			srch.query = Xapian::Query::MatchNothing;
+			query = Xapian::Query::MatchNothing;
 			suggestions.push_back(std::string());
 			break;
 	}
 
-	return srch;
+	return query;
 }
 
 
-search_t
+Xapian::Query
 DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& suggestions)
 {
 	L_CALL(this, "DatabaseHandler::search()");
-
-	search_t srch_resul;
 
 	auto aux_flags = e.spelling ? Xapian::QueryParser::FLAG_SPELLING_CORRECTION : 0;
 	if (e.synonyms) aux_flags |= Xapian::QueryParser::FLAG_SYNONYM;
@@ -485,17 +479,12 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 		if (lit != e_lit) {
 			lan.assign(*lit++);
 		}
-		auto srch = _search(query, suggestions, q_flags, lan, true);
 		if (first) {
-			queryQ = srch.query;
+			queryQ = _search(query, suggestions, q_flags, lan, true);
 			first = false;
 		} else {
-			queryQ = Xapian::Query(Xapian::Query::OP_AND, queryQ, srch.query);
+			queryQ = Xapian::Query(Xapian::Query::OP_AND, queryQ, _search(query, suggestions, q_flags, lan, true));
 		}
-		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
-		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
-		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
-		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 	}
 	L_SEARCH(this, "e.query: %s", queryQ.get_description().c_str());
 
@@ -504,17 +493,12 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 	first = true;
 	Xapian::Query queryP;
 	for (const auto& partial : e.partial) {
-		search_t srch = _search(partial, suggestions, q_flags, lan);
 		if (first) {
-			queryP = srch.query;
+			queryP = _search(partial, suggestions, q_flags, lan);
 			first = false;
 		} else {
-			queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, srch.query);
+			queryP = Xapian::Query(Xapian::Query::OP_AND_MAYBE , queryP, _search(partial, suggestions, q_flags, lan));
 		}
-		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
-		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
-		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
-		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 	}
 	L_SEARCH(this, "e.partial: %s", queryP.get_description().c_str());
 
@@ -523,17 +507,12 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 	first = true;
 	Xapian::Query queryT;
 	for (const auto& terms : e.terms) {
-		search_t srch = _search(terms, suggestions, q_flags, lan);
 		if (first) {
-			queryT = srch.query;
+			queryT = _search(terms, suggestions, q_flags, lan);
 			first = false;
 		} else {
-			queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, srch.query);
+			queryT = Xapian::Query(Xapian::Query::OP_AND, queryT, _search(terms, suggestions, q_flags, lan));
 		}
-		srch_resul.nfps.insert(srch_resul.nfps.end(), std::make_move_iterator(srch.nfps.begin()), std::make_move_iterator(srch.nfps.end()));
-		srch_resul.dfps.insert(srch_resul.dfps.end(), std::make_move_iterator(srch.dfps.begin()), std::make_move_iterator(srch.dfps.end()));
-		srch_resul.gfps.insert(srch_resul.gfps.end(), std::make_move_iterator(srch.gfps.begin()), std::make_move_iterator(srch.gfps.end()));
-		srch_resul.bfps.insert(srch_resul.bfps.end(), std::make_move_iterator(srch.bfps.begin()), std::make_move_iterator(srch.bfps.end()));
 	}
 	L_SEARCH(this, "e.terms: %s", repr(queryT.get_description()).c_str());
 
@@ -560,9 +539,8 @@ DatabaseHandler::search(const query_field_t& e, std::vector<std::string>& sugges
 			queryF = Xapian::Query(Xapian::Query::OP_AND, queryF, queryT);
 		}
 	}
-	srch_resul.query = queryF;
 
-	return srch_resul;
+	return queryF;
 }
 
 
@@ -704,9 +682,9 @@ DatabaseHandler::get_mset(const query_field_t& e, Xapian::MSet& mset, SpiesVecto
 	checkout();
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto srch = search(e, suggestions);
+			auto query = search(e, suggestions);
 			auto check_at_least = std::min(database->db->get_doccount(), e.check_at_least);
-			auto enquire = get_enquire(srch.query, collapse_key, &e, sorter.get(), &spies);
+			auto enquire = get_enquire(query, collapse_key, &e, sorter.get(), &spies);
 			mset = enquire.get_mset(e.offset + offset, e.limit - offset, check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {

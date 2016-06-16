@@ -34,7 +34,7 @@
 
 
 inline static bool isnotSubtrixel(std::string& last_valid, uint64_t id_trixel) {
-	std::string res(std::bitset<SIZE_BITS_ID>(id_trixel).to_string());
+	auto res = std::bitset<SIZE_BITS_ID>(id_trixel).to_string();
 	res.assign(res.substr(res.find('1')));
 	if (res.find(last_valid) == 0) {
 		return false;
@@ -58,45 +58,36 @@ inline static std::string transform_to_string(int _timeinfo[]) {
 }
 
 
-inline static void add_date_prefix(std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<DateFieldProcessor>>& dfps,
-	Xapian::QueryParser& queryparser, const std::string& prefix)
-{
+inline static void add_date_prefix(std::unordered_set<std::string>& added_prefixes, Xapian::QueryParser& queryparser, const std::string& prefix) {
 	// Xapian does not allow repeat prefixes.
 	if (added_prefixes.insert(prefix).second) {
-		auto dfp = std::make_unique<DateFieldProcessor>(prefix);
-		queryparser.add_prefix(prefix, dfp.get());
-		dfps.push_back(std::move(dfp));
+		auto dfp = new DateFieldProcessor(prefix);
+		queryparser.add_prefix(prefix, dfp->release());
 	}
 }
 
 
-inline static void add_geo_prefix(std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<GeoFieldProcessor>>& gfps,
-	Xapian::QueryParser& queryparser, const std::string& prefix)
-{
+inline static void add_geo_prefix(std::unordered_set<std::string>& added_prefixes, Xapian::QueryParser& queryparser, const std::string& prefix) {
 	// Xapian does not allow repeat prefixes.
 	if (added_prefixes.insert(prefix).second) {
-		auto gfp = std::make_unique<GeoFieldProcessor>(prefix);
-		queryparser.add_prefix(prefix, gfp.get());
-		gfps.push_back(std::move(gfp));
+		auto gfp = new GeoFieldProcessor(prefix);
+		queryparser.add_prefix(prefix, gfp->release());
 	}
 }
 
 
-inline static void add_numeric_prefix(std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<NumericFieldProcessor>>& nfps,
-	Xapian::QueryParser& queryparser, const std::string& prefix)
-{
+inline static void add_numeric_prefix(std::unordered_set<std::string>& added_prefixes, Xapian::QueryParser& queryparser, const std::string& prefix) {
 	// Xapian does not allow repeat prefixes.
 	if (added_prefixes.insert(prefix).second) {
-		auto nfp = std::make_unique<NumericFieldProcessor>(INTEGER_TYPE, prefix);
-		queryparser.add_prefix(prefix, nfp.get());
-		nfps.push_back(std::move(nfp));
+		auto nfp = new NumericFieldProcessor(INTEGER_TYPE, prefix);
+		queryparser.add_prefix(prefix, nfp->release());
 	}
 }
 
 
 std::string
 GenerateTerms::numeric(const std::string& start_, const std::string& end_, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
-	std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<NumericFieldProcessor>>& nfps, Xapian::QueryParser& queryparser)
+	std::unordered_set<std::string>& added_prefixes, Xapian::QueryParser& queryparser)
 {
 	std::string result_terms;
 
@@ -128,7 +119,7 @@ GenerateTerms::numeric(const std::string& start_, const std::string& end_, const
 		// If there is a upper accuracy.
 		if (pos < len) {
 			auto _acc = static_cast<long long>(accuracy[pos]);
-			add_numeric_prefix(added_prefixes, nfps, queryparser, acc_prefix[pos]);
+			add_numeric_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 			auto aux = start - (start % _acc);
 			auto aux2 = end - (end % _acc);
 			std::string prefix_dot(acc_prefix[pos] + ":");
@@ -147,7 +138,7 @@ GenerateTerms::numeric(const std::string& start_, const std::string& end_, const
 			// If terms are not too many.
 			if (aux < MAX_TERMS) {
 				std::string prefix_dot(acc_prefix[pos] + ":");
-				add_numeric_prefix(added_prefixes, nfps, queryparser, acc_prefix[pos]);
+				add_numeric_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 				std::string or_terms(prefix_dot + to_query_string(std::to_string(start)));
 				for (int i = 1; i < aux; ++i) {
 					long long aux2 = start + accuracy[pos] * i;
@@ -173,7 +164,7 @@ GenerateTerms::numeric(const std::string& start_, const std::string& end_, const
 
 std::string
 GenerateTerms::date(const std::string& start_, const std::string& end_, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
-	std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<DateFieldProcessor>>& dfps, Xapian::QueryParser& queryparser)
+	std::unordered_set<std::string>& added_prefixes, Xapian::QueryParser& queryparser)
 {
 	std::string result_terms;
 
@@ -216,27 +207,27 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					if ((tm_e[5] - tm_s[5]) > MAX_TERMS) {
 						return result_terms;
 					}
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					result_terms.assign(year(tm_s, tm_e, acc_prefix[pos]));
 					break;
 				case unitTime::MONTH:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					result_terms.assign(month(tm_s, tm_e, acc_prefix[pos]));
 					break;
 				case unitTime::DAY:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					result_terms.assign(day(tm_s, tm_e, acc_prefix[pos]));
 					break;
 				case unitTime::HOUR:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					result_terms.assign(hour(tm_s, tm_e, acc_prefix[pos]));
 					break;
 				case unitTime::MINUTE:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					result_terms.assign(minute(tm_s, tm_e, acc_prefix[pos]));
 					break;
 				case unitTime::SECOND:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					result_terms.assign(second(tm_s, tm_e, acc_prefix[pos]));
 					break;
 			}
@@ -246,7 +237,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 		if (accuracy[pos] != acc || ++pos < accuracy.size()) {
 			switch ((unitTime)accuracy[pos]) {
 				case unitTime::YEAR:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					if (result_terms.empty()) {
 						result_terms.assign(year(tm_s, tm_e, acc_prefix[pos]));
 					} else {
@@ -254,7 +245,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					}
 					break;
 				case unitTime::MONTH:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					if (result_terms.empty()) {
 						result_terms.assign(month(tm_s, tm_e, acc_prefix[pos]));
 					} else {
@@ -262,7 +253,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					}
 					break;
 				case unitTime::DAY:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					if (result_terms.empty()) {
 						result_terms.assign(day(tm_s, tm_e, acc_prefix[pos]));
 					} else {
@@ -270,7 +261,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					}
 					break;
 				case unitTime::HOUR:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					if (result_terms.empty()) {
 						result_terms.assign(hour(tm_s, tm_e, acc_prefix[pos]));
 					} else {
@@ -278,7 +269,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					}
 					break;
 				case unitTime::MINUTE:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					if (result_terms.empty()) {
 						result_terms.assign(minute(tm_s, tm_e, acc_prefix[pos]));
 					} else {
@@ -286,7 +277,7 @@ GenerateTerms::date(const std::string& start_, const std::string& end_, const st
 					}
 					break;
 				case unitTime::SECOND:
-					add_date_prefix(added_prefixes, dfps, queryparser, acc_prefix[pos]);
+					add_date_prefix(added_prefixes, queryparser, acc_prefix[pos]);
 					if (result_terms.empty()) {
 						result_terms.assign(second(tm_s, tm_e, acc_prefix[pos]));
 					} else {
@@ -390,7 +381,7 @@ GenerateTerms::second(int tm_s[], int tm_e[], const std::string& prefix)
 
 std::string
 GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<double>& accuracy, const std::vector<std::string>& acc_prefix,
-	std::unordered_set<std::string>& added_prefixes, std::vector<std::unique_ptr<GeoFieldProcessor>>& gfps, Xapian::QueryParser& queryparser)
+	std::unordered_set<std::string>& added_prefixes, Xapian::QueryParser& queryparser)
 {
 	// The user does not specify the accuracy.
 	if (acc_prefix.empty()) {
@@ -436,11 +427,11 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<double>
 	last_valid.assign(last_valid.substr(last_valid.find("1")));
 	auto result_terms(it->second);
 	result_terms.append(":").append(std::to_string(it->first));
-	add_geo_prefix(added_prefixes, gfps, queryparser, it->second);
+	add_geo_prefix(added_prefixes, queryparser, it->second);
 	const auto it_e = results.end();
 	for (++it; it != it_e; ++it) {
 		if (isnotSubtrixel(last_valid, it->first)) {
-			add_geo_prefix(added_prefixes, gfps, queryparser, it->second);
+			add_geo_prefix(added_prefixes, queryparser, it->second);
 			result_terms.append(" OR ").append(it->second).append(":").append(std::to_string(it->first));
 		}
 	}
