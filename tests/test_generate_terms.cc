@@ -319,10 +319,9 @@ int numeric_test() {
 	int cont = 0;
 	for (int pos = 0, len = arraySize(numeric); pos < len; ++pos) {
 		const auto p = numeric[pos];
-		std::vector<std::unique_ptr<NumericFieldProcessor>> nfps;
 		Xapian::QueryParser queryparser;
 		std::unordered_set<std::string> prefixes;
-		auto result_terms = GenerateTerms::numeric(p.start, p.end, p.accuracy, p.acc_prefix, prefixes, nfps, queryparser);
+		auto result_terms = GenerateTerms::numeric(p.start, p.end, p.accuracy, p.acc_prefix, prefixes, queryparser);
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
 				L_ERR(nullptr, "ERROR: Diferent numbers of prefix");
@@ -356,10 +355,9 @@ int date_test() {
 	int cont = 0;
 	for (int pos = 0, len = arraySize(date); pos < len; ++pos) {
 		const auto p = date[pos];
-		std::vector<std::unique_ptr<DateFieldProcessor>> dfps;
 		Xapian::QueryParser queryparser;
 		std::unordered_set<std::string> prefixes;
-		auto result_terms = GenerateTerms::date(p.start, p.end, p.accuracy, p.acc_prefix, prefixes, dfps, queryparser);
+		auto result_terms = GenerateTerms::date(p.start, p.end, p.accuracy, p.acc_prefix, prefixes, queryparser);
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
 				L_ERR(nullptr, "ERROR: Diferent numbers of prefix");
@@ -393,10 +391,9 @@ int geo_test() {
 	int cont = 0;
 	for (int pos = 0, len = arraySize(geo); pos < len; ++pos) {
 		const auto p = geo[pos];
-		std::vector<std::unique_ptr<GeoFieldProcessor>> gfps;
 		Xapian::QueryParser queryparser;
 		std::unordered_set<std::string> prefixes;
-		auto result_terms = GenerateTerms::geo(p.ranges, p.accuracy, p.acc_prefix, prefixes, gfps, queryparser);
+		auto result_terms = GenerateTerms::geo(p.ranges, p.accuracy, p.acc_prefix, prefixes, queryparser);
 		if (result_terms.compare(p.expected_terms) == 0) {
 			if (prefixes.size() != p.expected_prefixes.size()) {
 				L_ERR(nullptr, "ERROR: Diferent numbers of prefix");
