@@ -448,7 +448,7 @@ int test_single_producer_consumer() {
 
 	// Test several inserts
 	size_t elements = 2500;
-	for (int i = 0; i < elements; ++i) {
+	for (size_t i = 0; i < elements; ++i) {
 		mylist.push_front(i);
 		mylist.push_back(i);
 		mylist.emplace_front(i);
