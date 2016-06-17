@@ -148,7 +148,7 @@ class DLList {
 			ABORTED
 		};
 
-		std::atomic_bool rmv;         // Indicates whether node should be deleted from the list or replaced by a new copy.
+		const bool rmv;              // Indicates whether node should be deleted from the list or replaced by a new copy.
 		std::atomic<Status> status;
 
 		friend DLList;
