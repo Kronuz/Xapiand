@@ -96,16 +96,16 @@ START_TEST(test_single_producer_consumer)
 END_TEST
 
 
-START_TEST(test_multi_push_front)
+START_TEST(test_multi_push_emplace_front)
 {
-	ck_assert_int_eq(test_multi_push_front(), 0);
+	ck_assert_int_eq(test_multi_push_emplace_front(), 0);
 }
 END_TEST
 
 
-START_TEST(test_multi_push_back)
+START_TEST(test_multi_push_emplace_back)
 {
-	ck_assert_int_eq(test_multi_push_back(), 0);
+	ck_assert_int_eq(test_multi_push_emplace_back(), 0);
 }
 END_TEST
 
@@ -210,15 +210,15 @@ Suite* test_suite_single_thread(void) {
 Suite* test_suite_multiple_threads(void) {
 	Suite *s = suite_create("Test of Non-Blocking Doubly-Linked Lists with multiple threads");
 
-	TCase *tc_multi_push_front = tcase_create("Multiple threads are doing push_front");
-	tcase_set_timeout(tc_multi_push_front, 10);
-	tcase_add_test(tc_multi_push_front, test_multi_push_front);
-	suite_add_tcase(s, tc_multi_push_front);
+	TCase *tc_multi_push_emplace_front = tcase_create("Multiple threads are doing push_front and emplace_front");
+	tcase_set_timeout(tc_multi_push_emplace_front, 10);
+	tcase_add_test(tc_multi_push_emplace_front, test_multi_push_emplace_front);
+	suite_add_tcase(s, tc_multi_push_emplace_front);
 
-	TCase *tc_multi_push_back = tcase_create("Multiple threads are doing push_back");
-	tcase_set_timeout(tc_multi_push_back, 10);
-	tcase_add_test(tc_multi_push_back, test_multi_push_back);
-	suite_add_tcase(s, tc_multi_push_back);
+	TCase *tc_multi_push_emplace_back = tcase_create("Multiple threads are doing push_back and emplace_back");
+	tcase_set_timeout(tc_multi_push_emplace_back, 10);
+	tcase_add_test(tc_multi_push_emplace_back, test_multi_push_emplace_back);
+	suite_add_tcase(s, tc_multi_push_emplace_back);
 
 	TCase *tc_multi_insert = tcase_create("Multiple threads are doing insert");
 	tcase_set_timeout(tc_multi_insert, 10);

@@ -42,8 +42,8 @@ int test_erase();
 int test_single_producer_consumer();
 
 // Multi thread tests
-int test_multi_push_front();
-int test_multi_push_back();
+int test_multi_push_emplace_front();
+int test_multi_push_emplace_back();
 int test_multi_insert();
 int test_multi_producers();
 

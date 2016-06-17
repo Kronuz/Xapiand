@@ -76,7 +76,7 @@ int test_iterators() {
 
 	// Test for loop.
 	if (expected != str) {
-		L_ERR(nullptr, "DLList with for loop is not working!. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
+		L_ERR(nullptr, "ERROR: DLList with for loop is not working!. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
 		++err;
 	}
 
@@ -94,7 +94,7 @@ int test_iterators() {
 	}
 
 	if (expected != str) {
-		L_ERR(nullptr, "DLList::[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
+		L_ERR(nullptr, "ERROR: DLList::[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
 		++err;
 	}
 
@@ -111,7 +111,7 @@ int test_iterators() {
 	}
 
 	if (expected != str) {
-		L_ERR(nullptr, "DLList::c[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
+		L_ERR(nullptr, "ERROR: DLList::c[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
 		++err;
 	}
 
@@ -129,7 +129,7 @@ int test_iterators() {
 	}
 
 	if (expected != str) {
-		L_ERR(nullptr, "DLList::r[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
+		L_ERR(nullptr, "ERROR: DLList::r[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
 		++err;
 	}
 
@@ -146,7 +146,7 @@ int test_iterators() {
 	}
 
 	if (expected != str) {
-		L_ERR(nullptr, "DLList::cr[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
+		L_ERR(nullptr, "ERROR: DLList::cr[begin()/end()] is not working. Result: %s  Expect: %s\n", str.c_str(), expected.c_str());
 		++err;
 	}
 
@@ -175,10 +175,10 @@ int test_push_front() {
 
 	if (result == expected) {
 		RETURN(0);
-	} else {
-		L_ERR(nullptr, "DLList::push_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		RETURN(1);
 	}
+
+	L_ERR(nullptr, "ERROR: DLList::push_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+	RETURN(1);
 }
 
 
@@ -203,10 +203,10 @@ int test_emplace_front() {
 
 	if (result == expected) {
 		RETURN(0);
-	} else {
-		L_ERR(nullptr, "DLList::emplace_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		RETURN(1);
 	}
+
+	L_ERR(nullptr, "ERROR: DLList::emplace_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+	RETURN(1);
 }
 
 
@@ -231,10 +231,10 @@ int test_push_back() {
 
 	if (result == expected) {
 		RETURN(0);
-	} else {
-		L_ERR(nullptr, "DLList::push_back() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		RETURN(1);
 	}
+
+	L_ERR(nullptr, "ERROR: DLList::push_back() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+	RETURN(1);
 }
 
 
@@ -259,10 +259,10 @@ int test_emplace_back() {
 
 	if (result == expected) {
 		RETURN(0);
-	} else {
-		L_ERR(nullptr, "DLList::emplace_back() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
-		RETURN(1);
 	}
+
+	L_ERR(nullptr, "ERROR: DLList::emplace_back() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+	RETURN(1);
 }
 
 
@@ -292,7 +292,7 @@ int test_insert() {
 
 	int err = 0;
 	if (it->second != 'g' || it2->second != 'f' || it3->second != 'h') {
-		L_ERR(nullptr, "DLList::iterator is not working!. Result: %c %c %c     Expected: g f h\n", it->second, it2->second, it3->second);
+		L_ERR(nullptr, "ERROR: DLList::iterator is not working!. Result: %c %c %c     Expected: g f h\n", it->second, it2->second, it3->second);
 		++err;
 	}
 
@@ -300,7 +300,7 @@ int test_insert() {
 
 	std::string expected("a1 h1 f1 g1 b1 c1 d1 e1");
 	if (result != expected) {
-		L_ERR(nullptr, "DLList::insert() is not working. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		L_ERR(nullptr, "ERROR: DLList::insert() is not working. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
 		++err;
 	}
 
@@ -335,7 +335,7 @@ int test_pop_front() {
 	int err = 0;
 	std::string expected_pop_elem("lkjihg");
 	if (pop_elem != expected_pop_elem || pop_elem2 != expected_pop_elem) {
-		L_ERR(nullptr, "DLList::front() is not working!. Result: front { %s }   Result pop_front: { %s }   Expected: { %s }", pop_elem.c_str(), pop_elem2.c_str(), expected_pop_elem.c_str());
+		L_ERR(nullptr, "ERROR: DLList::front() is not working!. Result: front { %s }   Result pop_front: { %s }   Expected: { %s }", pop_elem.c_str(), pop_elem2.c_str(), expected_pop_elem.c_str());
 		++err;
 	}
 
@@ -343,7 +343,7 @@ int test_pop_front() {
 
 	std::string expected("f1 e1 d1 c1 b1 a1");
 	if (result != expected) {
-		L_ERR(nullptr, "DLList::pop_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		L_ERR(nullptr, "ERROR: DLList::pop_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
 		++err;
 	}
 
@@ -378,7 +378,7 @@ int test_pop_back() {
 	int err = 0;
 	std::string expected_pop_elem("abcdef");
 	if (pop_elem != expected_pop_elem || pop_elem2 != expected_pop_elem) {
-		L_ERR(nullptr, "DLList::back() is not working!. Result: front { %s }   Result pop_back: { %s }   Expected: { %s }", pop_elem.c_str(), pop_elem2.c_str(), expected_pop_elem.c_str());
+		L_ERR(nullptr, "ERROR: DLList::back() is not working!. Result: front { %s }   Result pop_back: { %s }   Expected: { %s }", pop_elem.c_str(), pop_elem2.c_str(), expected_pop_elem.c_str());
 		++err;
 	}
 
@@ -386,7 +386,7 @@ int test_pop_back() {
 
 	std::string expected("l1 k1 j1 i1 h1 g1");
 	if (result != expected) {
-		L_ERR(nullptr, "DLList::pop_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		L_ERR(nullptr, "ERROR: DLList::pop_front() is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
 		++err;
 	}
 
@@ -426,7 +426,7 @@ int test_erase() {
 	int err = 0;
 	std::string expected_del_items("ljhfdb");
 	if (del_items != expected_del_items) {
-		L_ERR(nullptr, "DLList::iterator is not working!. Result: { %s }  Expected: { %s }", del_items.c_str(), expected_del_items.c_str());
+		L_ERR(nullptr, "ERROR: DLList::iterator is not working!. Result: { %s }  Expected: { %s }", del_items.c_str(), expected_del_items.c_str());
 		++err;
 	}
 
@@ -434,7 +434,7 @@ int test_erase() {
 
 	std::string expected("k1 i1 g1 e1 c1 a1");
 	if (result != expected) {
-		L_ERR(nullptr, "Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
+		L_ERR(nullptr, "ERROR: DLList::erase is not working!. Result: { %s }  Expected: { %s }", result.c_str(), expected.c_str());
 		++err;
 	}
 
@@ -448,7 +448,7 @@ int test_single_producer_consumer() {
 
 	// Test several inserts
 	size_t elements = 2500;
-	for (size_t i = 0; i < elements; ++i) {
+	for (int i = 0; i < elements; ++i) {
 		mylist.push_front(i);
 		mylist.push_back(i);
 		mylist.emplace_front(i);
@@ -458,7 +458,7 @@ int test_single_producer_consumer() {
 
 	// Test size.
 	if (elements != mylist.size()) {
-		L_ERR(nullptr, "DLList::insertBefore is not working!. Size: %zu   Expected: %zu\n", mylist.size(), elements);
+		L_ERR(nullptr, "ERROR: DLList single producer is not working!. Size: %zu   Expected: %zu\n", mylist.size(), elements);
 		++err;
 	}
 
@@ -481,14 +481,14 @@ int test_single_producer_consumer() {
 
 	// Test size
 	if (elements != mylist.size()) {
-		L_ERR(nullptr, "DLList::Delete is not working!. Size: %zu    Expected: %zu\n", mylist.size(), elements);
+		L_ERR(nullptr, "ERROR: DLList single consumer are not working!. Size: %zu    Expected: %zu\n", mylist.size(), elements);
 		++err;
 	}
 
 	// Test clear
 	mylist.clear();
 	if (mylist.size() != 0) {
-		L_ERR(nullptr, "DLList::clear is not working!");
+		L_ERR(nullptr, "ERROR: DLList::clear is not working!");
 		++err;
 	}
 
@@ -496,7 +496,7 @@ int test_single_producer_consumer() {
 }
 
 
-int test_multi_push_front() {
+int test_multi_push_emplace_front() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
@@ -524,16 +524,14 @@ int test_multi_push_front() {
 
 	if (res.size() == l.size()) {
 		RETURN(0);
-	} else {
-		L_ERR(nullptr, "DLList::[push/emplace]_front() for multiples threads is not working!. Size List: %zu  Size_set: %zu\n", l.size(), res.size());
-		RETURN(1);
 	}
 
-	RETURN(0);
+	L_ERR(nullptr, "ERROR: DLList::[push/emplace]_front() for multiples threads is not working!. Size List: %zu  Size_set: %zu\n", l.size(), res.size());
+	RETURN(1);
 }
 
 
-int test_multi_push_back() {
+int test_multi_push_emplace_back() {
 	DLList<int> l;
 
 	std::vector<std::thread> producers;
@@ -561,10 +559,10 @@ int test_multi_push_back() {
 
 	if (res.size() == l.size()) {
 		RETURN(0);
-	} else {
-		L_ERR(nullptr, "DLList::[push/emplace]_back() for multiples threads is not working!. Size List: %zu  Size_set: %zu\n", l.size(), res.size());
-		RETURN(1);
 	}
+
+	L_ERR(nullptr, "ERROR: DLList::[push/emplace]_back() for multiples threads is not working!. Size List: %zu  Size_set: %zu\n", l.size(), res.size());
+	RETURN(1);
 }
 
 
@@ -593,10 +591,10 @@ int test_multi_insert() {
 
 	if (res.size() == l.size()) {
 		RETURN(0);
-	} else {
-		L_ERR(nullptr, "DLList::insert() for multiples threads is not working!. Size List: %zu  Size_set: %zu\n", l.size(), res.size());
-		RETURN(1);
 	}
+
+	L_ERR(nullptr, "ERROR: DLList::insert() for multiples threads is not working!. Size List: %zu  Size_set: %zu\n", l.size(), res.size());
+	RETURN(1);
 }
 
 
@@ -618,7 +616,7 @@ int test_multi_producers() {
 				l.push_back(j);
 			}
 			for (int j = end2; j < end3; ++j) {
-				// it = l.insert(it, j);
+				it = l.insert(it, j);
 			}
 		}, i);
 	}
@@ -633,10 +631,10 @@ int test_multi_producers() {
 
 	if (res.size() == l.size()) {
 		RETURN(0);
-	} else {
-		L_ERR(nullptr, "DLList for multiples producers is not working!. Size List: %zu   Size_set: %zu\n", l.size(), res.size());
-		RETURN(1);
 	}
+
+	L_ERR(nullptr, "ERROR: DLList for multiple producers is not working!. Size List: %zu   Size_set: %zu\n", l.size(), res.size());
+	RETURN(1);
 }
 
 
@@ -678,22 +676,23 @@ int test_multi_push_pop_front() {
 		consumer.join();
 	}
 
-	// Unique deleted elements
-	std::unordered_set<int> deleted;
-	deleted.reserve(elem_del.size());
-	deleted.insert(elem_del.begin(), elem_del.end());
+	size_t total_elems = NUM_THREADS * D_ELEMENTS;
+	if (total_elems != l.size() + elem_del.size()) {
+		L_ERR(nullptr, "ERROR: DLList with multiple push_fronts and multiple pop_fronts is not working!. Size List: %zu  Deleted Elem: %zu total_elems: %zu\n", l.size(), elem_del.size(), total_elems);
+		RETURN(1);
+	}
 
 	std::unordered_set<int> res;
-	res.reserve(l.size() + deleted.size());
+	res.reserve(total_elems);
 	res.insert(l.begin(), l.end());
-	res.insert(deleted.begin(), deleted.end());
+	res.insert(elem_del.begin(), elem_del.end());
 
-	size_t total_elems = NUM_THREADS * D_ELEMENTS;
-	if (total_elems == l.size() + deleted.size() && total_elems == res.size()) {
+	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	if (total_elems == res.size()) {
 		RETURN(0);
 	}
 
-	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	L_ERR(nullptr, "ERROR: DLList with multiple push_fronts and multiple pop_fronts is not working!\n");
 	RETURN(1);
 }
 
@@ -720,7 +719,7 @@ int test_multi_push_pop_back() {
 	std::vector<std::thread> consumers;
 	for (int i = 0; i < NUM_THREADS; ++i) {
 		consumers.emplace_back([&l, &elem_del]() {
-			for (int j = 0; j < D_ELEMENTS; ++j) {
+			for (int j = 0; j < S_ELEMENTS; ++j) {
 				try {
 					elem_del.push_back(*l.pop_back());
 				} catch (const std::out_of_range&) { }
@@ -736,22 +735,23 @@ int test_multi_push_pop_back() {
 		consumer.join();
 	}
 
-	// Unique deleted elements
-	std::unordered_set<int> deleted;
-	deleted.reserve(elem_del.size());
-	deleted.insert(elem_del.begin(), elem_del.end());
+	size_t total_elems = NUM_THREADS * D_ELEMENTS;
+	if (total_elems != l.size() + elem_del.size()) {
+		L_ERR(nullptr, "ERROR: DLList with multiple push_backs and multiple pop_backs is not working!. Size List: %zu  Deleted Elem: %zu total_elems: %zu\n", l.size(), elem_del.size(), total_elems);
+		RETURN(1);
+	}
 
 	std::unordered_set<int> res;
-	res.reserve(l.size() + deleted.size());
+	res.reserve(total_elems);
 	res.insert(l.begin(), l.end());
-	res.insert(deleted.begin(), deleted.end());
+	res.insert(elem_del.begin(), elem_del.end());
 
-	size_t total_elems = NUM_THREADS * D_ELEMENTS;
-	if (total_elems == l.size() + deleted.size() && total_elems == res.size()) {
+	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	if (total_elems == res.size()) {
 		RETURN(0);
 	}
 
-	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	L_ERR(nullptr, "ERROR: DLList with multiple push_backs and multiple pop_backs is not working!\n");
 	RETURN(1);
 }
 
@@ -801,11 +801,12 @@ int test_multi_insert_erase() {
 	res.insert(elem_del.begin(), elem_del.end());
 
 	size_t total_elems = NUM_THREADS * D_ELEMENTS;
+	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
 	if (total_elems == res.size()) {
 		RETURN(0);
 	}
 
-	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	L_ERR(nullptr, "ERROR: DLList with multiple inserts and multiple erases is not working!\n");
 	RETURN(1);
 }
 
@@ -846,7 +847,9 @@ int test_multiple_producers_single_consumer() {
 
 	running.store(false);
 
-	consumer.join();
+	try {
+		consumer.join();
+	} catch (...) { }
 
 	std::unordered_set<int> res;
 	res.reserve(l.size() + elem_del.size());
@@ -854,11 +857,12 @@ int test_multiple_producers_single_consumer() {
 	res.insert(elem_del.begin(), elem_del.end());
 
 	size_t total_elems = NUM_THREADS * D_ELEMENTS;
+	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
 	if (total_elems == res.size()) {
 		RETURN(0);
 	}
 
-	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	L_ERR(nullptr, "ERROR: DLList with multiple producers and single consumer is not working!\n");
 	RETURN(1);
 }
 
@@ -867,7 +871,7 @@ int test_single_producer_multiple_consumers() {
 	DLList<int> l;
 
 	auto producer = std::thread([&l]() {
-		const auto end = NUM_THREADS * S_ELEMENTS;
+		const auto end = NUM_THREADS * D_ELEMENTS;
 		for (int j = 0; j < end; ++j) {
 			l.push_back(j);
 		}
@@ -900,11 +904,12 @@ int test_single_producer_multiple_consumers() {
 	res.insert(l.begin(), l.end());
 	res.insert(elem_del.begin(), elem_del.end());
 
-	size_t total_elems = NUM_THREADS * S_ELEMENTS;
+	size_t total_elems = NUM_THREADS * D_ELEMENTS;
+	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
 	if (total_elems == res.size()) {
 		RETURN(0);
 	}
 
-	L_ERR(nullptr, "Size List: %zu  Deleted Elem: %zu Set size: %zu  total_elems: %zu\n", l.size(), elem_del.size(), res.size(), total_elems);
+	L_ERR(nullptr, "ERROR: DLList with single producer and multiple consumers is not worsking!\n");
 	RETURN(1);
 }
