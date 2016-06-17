@@ -43,7 +43,7 @@ class DLList {
 	class deleted_iterator : public std::logic_error {
 	public:
 		deleted_iterator()
-			: std::logic_error("Invalid Iterator") { }
+			: std::logic_error("Deleted Iterator") { }
 	};
 
 	class Info;
@@ -476,8 +476,8 @@ private:
 	auto Delete(iterator& it) {
 		do {
 			auto data = it.get_update_data();
-			if (data.invDel || data.node->isEOL()) {
-				return iterator(data.node);
+			if (data.invDel) {
+				throw deleted_iterator();
 			}
 			std::array<std::shared_ptr<Node>, 3> nodes({{ data.prvNode, data.node, data.nxtNode }});
 			std::array<std::shared_ptr<Info>, 3> oldInfo({{ data.prvNode->info.load(), data.nodeInfo, data.nxtNode->info.load() }});
@@ -552,23 +552,35 @@ public:
 	}
 
 	auto pop_front() {
-		auto it = begin();
-		reference ref(it.node->value);
-		Delete(it);
-		return ref;
+		do {
+			try {
+				auto it = begin();
+				reference ref(it.node->value);
+				Delete(it);
+				return ref;
+			} catch (const deleted_iterator&) { }
+		} while (true);
 	}
 
 	auto pop_back() {
-		iterator it(tail->prv.load()->prv.load());
-		reference ref(it.node->value);
-		Delete(it);
-		return ref;
+		do {
+			try {
+				iterator it(tail->prv.load()->prv.load());
+				reference ref(it.node->value);
+				Delete(it);
+				return ref;
+			} catch (const deleted_iterator&) { }
+		} while (true);
 	}
 
 	template <typename Iterator>
 	auto erase(Iterator&& it) {
 		it.is_valid = false;
-		return Delete(it);
+		try {
+			return Delete(std::forward<Iterator>(it));
+		} catch (const deleted_iterator&) {
+			return iterator(it.node);
+		}
 	}
 
 	auto size() const noexcept {
