@@ -1756,23 +1756,26 @@ DatabasePool::get_schema(const Endpoint& endpoint, int flags)
 		schema = &schemas[endpoint.hash()];
 	}
 
-	if (!*schema) {
-		std::string str_schema;
-		std::shared_ptr<Database> database;
-		if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
-			str_schema.assign(database->get_metadata(RESERVED_SCHEMA));
-			checkin(database);
-		} else {
-			schemas.erase(endpoint.hash());
-			throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.as_string().c_str());
-		}
-		try {
-			auto new_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
-			new_schema->lock();
-			schema->exchange(std::move(new_schema));
-		} catch (const msgpack::unpack_error&) {
-			schema->exchange(std::make_shared<const MsgPack>());
-		}
+	auto schema_ptr = schema->load();
+	if (schema_ptr) {
+		return schema_ptr;
+	}
+
+	std::string str_schema;
+	std::shared_ptr<Database> database;
+	if (checkout(database, Endpoints(endpoint), flags != -1 ? flags : DB_WRITABLE)) {
+		str_schema.assign(database->get_metadata(RESERVED_SCHEMA));
+		checkin(database);
+	} else {
+		schemas.erase(endpoint.hash());
+		throw MSG_CheckoutError("Cannot checkout database: %s", endpoint.as_string().c_str());
+	}
+	try {
+		auto new_schema = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+		new_schema->lock();
+		schema->store(std::move(new_schema));
+	} catch (const msgpack::unpack_error&) {
+		schema->store(std::make_shared<const MsgPack>());
 	}
 
 	return schema->load();
