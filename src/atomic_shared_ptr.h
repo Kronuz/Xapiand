@@ -26,75 +26,70 @@
 #include <memory>
 
 
+/*
+ * The class template atomic_shared_ptr provides thread-safe
+ * atomic pointer operations over a std::shared_ptr using
+ * specializes atomic operations for std::shared_ptr.
+ */
+
+
 template <typename T>
 class atomic_shared_ptr {
 private:
 	std::shared_ptr<T> ptr;
 
 public:
-	atomic_shared_ptr() = default;
+	constexpr atomic_shared_ptr() noexcept = default;
 
-	atomic_shared_ptr(const atomic_shared_ptr& o)
-		: ptr(o.load()) { }
-
-	atomic_shared_ptr(const std::shared_ptr<T>& ptr_)
+	constexpr atomic_shared_ptr(std::shared_ptr<T> ptr_) noexcept
 		: ptr(ptr_) { }
 
-	~atomic_shared_ptr() {
-		reset();
+	atomic_shared_ptr(atomic_shared_ptr&& o) noexcept
+		: ptr(std::move(o.ptr)) { }
+
+	atomic_shared_ptr(const atomic_shared_ptr&) = delete;
+
+	~atomic_shared_ptr() = default;
+
+	void operator=(std::shared_ptr<T> ptr_) noexcept {
+		std::atomic_store(&ptr, ptr_);
 	}
+
+	void operator=(const atomic_shared_ptr&) = delete;
 
 	auto is_lock_free() const noexcept {
 		return std::atomic_is_lock_free(&ptr);
 	}
 
-	void store(const atomic_shared_ptr& desr, std::memory_order order = std::memory_order_seq_cst) noexcept {
-		std::atomic_store_explicit(&ptr, desr.load(), order);
+	void store(std::shared_ptr<T> desr, std::memory_order order = std::memory_order_seq_cst) noexcept {
+		std::atomic_store_explicit(&ptr, desr, order);
 	}
 
 	auto load(std::memory_order order = std::memory_order_seq_cst) const noexcept {
 		return std::atomic_load_explicit(&ptr, order);
 	}
 
-	auto exchange(const atomic_shared_ptr& r, std::memory_order order = std::memory_order_seq_cst) noexcept {
-		return std::atomic_exchange_explicit(&ptr, r.load(), order);
+	operator std::shared_ptr<T>() const noexcept {
+		return load();
 	}
 
-	auto compare_exchange_weak(atomic_shared_ptr expected, atomic_shared_ptr desired, std::memory_order success=std::memory_order_seq_cst, std::memory_order failure=std::memory_order_seq_cst) noexcept {
-		return std::atomic_compare_exchange_weak_explicit(&ptr, &expected.ptr, desired.load(), success, failure);
+	auto exchange(std::shared_ptr<T> r, std::memory_order order = std::memory_order_seq_cst) noexcept {
+		return std::atomic_exchange_explicit(&ptr, r, order);
 	}
 
-	auto compare_exchange_strong(atomic_shared_ptr expected, atomic_shared_ptr desired, std::memory_order success=std::memory_order_seq_cst, std::memory_order failure=std::memory_order_seq_cst) noexcept {
-		return std::atomic_compare_exchange_strong_explicit(&ptr, &expected.ptr, desired.load(), success, failure);
+	auto compare_exchange_weak(std::shared_ptr<T>& old_value, std::shared_ptr<T> new_value, std::memory_order order = std::memory_order_seq_cst) noexcept {
+		return std::atomic_compare_exchange_weak_explicit(&ptr, &old_value, new_value, order, order);
 	}
 
-	template <typename... Args>
-	void reset(Args&&... args) {
-		std::atomic_store(&ptr, std::shared_ptr<T>(std::forward<Args>(args)...));
+	auto compare_exchange_weak(std::shared_ptr<T>& old_value, std::shared_ptr<T> new_value, std::memory_order success_order, std::memory_order failure_order) noexcept {
+		return std::atomic_compare_exchange_weak_explicit(&ptr, &old_value, new_value, success_order, failure_order);
 	}
 
-	void swap(const atomic_shared_ptr& r) noexcept {
-		r.store(std::atomic_exchange(&ptr, r.load()));
+	auto compare_exchange_strong(std::shared_ptr<T>& old_value, std::shared_ptr<T> new_value, std::memory_order order = std::memory_order_seq_cst) noexcept {
+		return std::atomic_compare_exchange_strong_explicit(&ptr, &old_value, new_value, order, order);
 	}
 
-	auto get() const {
-		return load().get();
-	}
-
-	auto& operator=(const atomic_shared_ptr& desired) noexcept {
-		std::atomic_store(&ptr, desired.load());
-		return *this;
-	}
-
-	auto operator==(const atomic_shared_ptr& o) const {
-		return load() == o.load();
-	}
-
-	auto operator!=(const atomic_shared_ptr& o) const {
-		return load() != o.load();
-	}
-
-	explicit operator bool() const {
-		return load() != nullptr;
+	auto compare_exchange_strong(std::shared_ptr<T>& old_value, std::shared_ptr<T> new_value, std::memory_order success_order, std::memory_order failure_order) noexcept {
+		return std::atomic_compare_exchange_strong_explicit(&ptr, &old_value, new_value, success_order, failure_order);
 	}
 };
