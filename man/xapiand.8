@@ -1,0 +1,135 @@
+.\"
+.\" Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
+.\"
+.\" Permission is hereby granted, free of charge, to any person obtaining a copy
+.\" of this software and associated documentation files (the "Software"), to
+.\" deal in the Software without restriction, including without limitation the
+.\" rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+.\" sell copies of the Software, and to permit persons to whom the Software is
+.\" furnished to do so, subject to the following conditions:
+.\"
+.\" The above copyright notice and this permission notice shall be included in
+.\" all copies or substantial portions of the Software.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+.\" IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+.\" FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+.\" AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+.\" LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+.\" FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+.\" IN THE SOFTWARE.
+.\"
+
+
+.Dd June 16, 2016
+.Dt XAPIAND 8
+.Os
+.Sh NAME
+.Nm xapiand
+.Nd "RESTful search engine built on top of Xapian"
+.Sh SYNOPSIS
+.Nm
+.Op Fl Fl committers Ar committers
+.Op Fl Fl replicators Ar replicators
+.Op Fl Fl dbpool Ar size
+.Op Fl Fl workers Ar threads
+.Op Fl Fl use Ar select | poll | kqueue
+.Op Fl Fl gid Ar gid
+.Op Fl Fl uid Ar uid
+.Op Fl L | Fl Fl logfile Ar file
+.Op Fl P | Fl Fl pidfile Ar file
+.Op Fl Fl rgroup Ar group
+.Op Fl Fl raft Ar port
+.Op Fl Fl dgroup Ar group
+.Op Fl Fl discovery Ar port
+.Op Fl Fl xapian Ar port
+.Op Fl Fl http Ar port
+.Op Fl Fl name Ar node
+.Op Fl Fl cluster Ar name
+.Op Fl D | Fl Fl database Ar path
+.Op Fl Fl solo
+.Op Fl Fl chert
+.Op Fl Fl verbosity Ar verbosity
+.Op Fl v | Fl Fl verbose
+.Op Fl d | Fl Fl detach
+.Op Fl Fl | Fl Fl ignore_rest
+.Op Fl Fl version
+.Op Fl h | Fl Fl help
+.Sh DESCRIPTION
+.Nm
+is a Highly Available Distributed RESTful Storage and Search Engine
+built for the cloud and with Data Locality. Built on top of Xapian.
+.Pp
+The following options are available:
+.Bl -tag -width ".Fl d Ar directives"
+.It Fl h , Fl Fl help
+Displays usage information and exits.
+.It Fl Fl version
+Displays version information and exits.
+.It Fl Fl , Fl Fl ignore_rest
+Ignores the rest of the labeled arguments following this flag.
+.It Fl d , Fl Fl detach
+detach process. (run in background)
+.It Fl v, Fl Fl verbose
+Increase verbosity. (accepted multiple times)
+.It Fl Fl verbosity
+Set verbosity.
+.It Fl Fl chert
+Prefer Chert databases.
+.It Fl Fl solo
+Run solo indexer. (no replication or discovery)
+.It Fl D , Fl Fl database Ar path
+Path to the root of the node.
+.It Fl Fl cluster Ar name
+Cluster name to join.
+.It Fl Fl name Ar node
+Node name.
+.It Fl Fl http Ar port
+TCP HTTP port number to listen on for REST API.
+.It Fl Fl xapian Ar port
+Xapian binary protocol TCP port number to listen on.
+.It Fl Fl discovery Ar port
+Discovery UDP port number to listen on.
+.It Fl Fl dgroup Ar group
+Discovery UDP group name.
+.It Fl Fl raft Ar port
+Raft UDP port number to listen on.
+.It Fl Fl rgroup Ar group
+Raft UDP group name.
+.It Fl P , Fl Fl pidfile Ar file
+Save PID in
+Ar file .
+.It Fl L , Fl Fl logfile Ar file
+Save logs in
+Ar file .
+.It Fl Fl uid Ar uid
+User ID.
+.It Fl Fl gid Ar gid
+Group ID.
+.It Fl Fl use Ar select | poll | kqueue
+Connection processing backend.
+.It Fl Fl workers Ar threads
+Number of worker servers.
+.It Fl Fl dbpool Ar size
+Maximum number of databases in database pool.
+.It Fl Fl replicators Ar replicators
+Number of replicators.
+It Fl Fl committers Ar committers
+Number of committers.
+.Sh FILES
+.Sh EXIT STATUS
+Exit status is 0 on success, or 1 if the command fails.
+.Sh SEE ALSO
+Documentation at
+.Pa https://github.com/Kronuz/Xapiand/tree/master/docs
+.Pp
+For questions and technical support, please refer to
+.Pa https://github.com/Kronuz/Xapiand
+.Sh HISTORY
+.Sh AUTHORS
+.An -nosplit
+.An German M. Bravo (Kronuz)  german.mb@deipi.com .
+.Pp
+.An Jos\*'e Mar\*'ia Valencia Ram\*'irez (JoseMariaVR) chem_valencia@hotmail.com .
+.Pp
+.An Jos\*'e Madrigal C\*'ardenas (YosefMac) mac.yosef@gmail.com .
