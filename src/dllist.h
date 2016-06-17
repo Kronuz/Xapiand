@@ -92,21 +92,21 @@ class DLList {
 			// Update Nxt
 			auto p = nxt.load();
 			while (p && p->state != Node::State::ORDINARY) {
-				nxt = p->nxt;
+				nxt = p->nxt.load();
 				p = nxt.load();
 			}
 
 			// Update Prv
 			p = prv.load();
 			while (p && p->state != Node::State::ORDINARY) {
-				prv = p->prv;
+				prv = p->prv.load();
 				p = prv.load();
 			}
 
 			// Update copy.
 			p = copy.load();
 			while (p) {
-				copy = p->copy;
+				copy = p->copy.load();
 				p = copy.load();
 			}
 		}
@@ -459,15 +459,15 @@ private:
 			std::array<std::shared_ptr<Info>, 3> oldInfo({{ data.prvNode->info.load(), data.nodeInfo, data.nxtNode->info.load() }});
 			if (checkInfo(nodes, oldInfo)) {
 				auto nodeCopy = std::make_shared<Node>(data.node->value, data.nxtNode, newNode, nullptr, dum, Node::State::ORDINARY, data.node->type);
-				newNode->prv.store(data.prvNode);
-				newNode->nxt.store(nodeCopy);
+				newNode->prv.store(data.prvNode, std::memory_order_relaxed);
+				newNode->nxt.store(nodeCopy, std::memory_order_relaxed);
 				if (help(nodes, oldInfo, newNode, nodeCopy, std::make_shared<Info>(false, Info::Status::INPROGRESS))) {
 					it.node = nodeCopy;
 					++_size;
 					return iterator(newNode);
 				} else {
-					newNode->nxt.reset();
-					newNode->prv.reset();
+					newNode->nxt.store(std::shared_ptr<Node>(), std::memory_order_relaxed);
+					newNode->prv.store(std::shared_ptr<Node>(), std::memory_order_relaxed);
 				}
 			}
 		} while (true);
@@ -505,9 +505,9 @@ public:
 
 	~DLList() {
 		clear();
-		head->nxt.reset();
-		head->prv.reset();
-		tail->prv.reset();
+		head->nxt.store(std::shared_ptr<Node>(), std::memory_order_relaxed);
+		head->prv.store(std::shared_ptr<Node>(), std::memory_order_relaxed);
+		tail->prv.store(std::shared_ptr<Node>(), std::memory_order_relaxed);
 	}
 
 	template <typename V>
