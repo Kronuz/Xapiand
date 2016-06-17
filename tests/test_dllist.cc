@@ -847,9 +847,7 @@ int test_multiple_producers_single_consumer() {
 
 	running.store(false);
 
-	try {
-		consumer.join();
-	} catch (...) { }
+	consumer.join();
 
 	std::unordered_set<int> res;
 	res.reserve(l.size() + elem_del.size());
