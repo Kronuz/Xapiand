@@ -5,15 +5,15 @@
 #
 # This archive contains:
 #
-#	xapiand
+#	xapiand/
 #	xapiand/Makefile
 #	xapiand/pkg-descr
 #	xapiand/distinfo
 #	xapiand/files
 #	xapiand/files/xapiand.in
 #
-echo c - xapiand
-mkdir -p xapiand > /dev/null 2>&1
+echo c - xapiand/
+mkdir -p xapiand/ > /dev/null 2>&1
 echo x - xapiand/Makefile
 sed 's/^X//' >xapiand/Makefile << '3997054dfe7508cbb1bb8208e4df68ad'
 X# $FreeBSD$
@@ -41,6 +41,7 @@ XXAPIAND_DBDIR=	/var/db/${PORTNAME}/
 XXAPIAND_LOGDIR=	/var/log/${PORTNAME}/
 XXAPIAND_PIDDIR=	/var/run/${PORTNAME}/
 X
+XSUB_FILES=	xapiand
 XSUB_LIST=	XAPIAND_USER=${XAPIAND_USER} \
 X		XAPIAND_GROUP=${XAPIAND_GROUP} \
 X		XAPIAND_DBDIR=${XAPIAND_DBDIR} \
@@ -52,10 +53,6 @@ XGROUPS=		${XAPIAND_GROUP}
 X
 XUSE_RC_SUBR=	${PORTNAME}
 X
-X#ACLOCAL_ARGS=	-I ${WRKSRC}/m4 --install
-X#AUTOCONF_ARGS=	--force --install --verbose
-X#GNU_CONFIGURE=  yes
-X
 XPLIST_FILES=	bin/${PORTNAME}
 X
 Xdo-install:
@@ -63,6 +60,7 @@ X		${MKDIR} ${STAGEDIR}${XAPIAND_DBDIR} \
 X		${STAGEDIR}${XAPIAND_LOGDIR} \
 X		${STAGEDIR}${XAPIAND_PIDDIR}
 X		${INSTALL_PROGRAM} ${WRKSRC}/${PORTNAME} ${STAGEDIR}${PREFIX}/bin
+X		${INSTALL_MAN} ${WRKSRC}/man/xapiand.8 ${STAGEDIR}${MANPREFIX}/man/man8
 X
 X.include <bsd.port.mk>
 3997054dfe7508cbb1bb8208e4df68ad
@@ -74,8 +72,8 @@ XWWW: https://github.com/Kronuz/Xapiand
 053b0f60c7ba6d94ca0751bec472bd9b
 echo x - xapiand/distinfo
 sed 's/^X//' >xapiand/distinfo << 'd7f15fdb8f6b96ee96cd306cab4210a3'
-XSHA256 (Kronuz-Xapiand-v3.0.0-beta_GH0.tar.gz) = 24ffead796498c91a278d5718d347b9ab32a506afe016cffc87c79f4328bad8f
-XSIZE (Kronuz-Xapiand-v3.0.0-beta_GH0.tar.gz) = 11677495
+XSHA256 (Kronuz-Xapiand-v3.0.0-beta_GH0.tar.gz) = 3b1d59d65dcf9a8f621eb51c61f50d719ae29a153056fa4c6eb5d3d543a9700f
+XSIZE (Kronuz-Xapiand-v3.0.0-beta_GH0.tar.gz) = 11677229
 d7f15fdb8f6b96ee96cd306cab4210a3
 echo c - xapiand/files
 mkdir -p xapiand/files > /dev/null 2>&1
