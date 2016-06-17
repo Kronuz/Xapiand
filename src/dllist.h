@@ -413,7 +413,7 @@ private:
 			  const std::shared_ptr<Node>& newNxt, const std::shared_ptr<Node>& newPrv, const std::shared_ptr<Info>& I) {
 		bool doPtrCAS = true;
 		for (int i = 0; i < 3 && doPtrCAS; ++i) {
-			doPtrCAS = nodes[i]->info.compare_exchange_strong(oldInfo[i], I);
+			doPtrCAS = nodes[i]->info.compare_exchange_strong(oldInfo[i], I, std::memory_order_seq_cst, std::memory_order_relaxed);
 		}
 		if (doPtrCAS) {
 			if (I->rmv) {
