@@ -11,6 +11,7 @@
 #	xapiand/distinfo
 #	xapiand/files
 #	xapiand/files/xapiand.in
+#	xapiand/pkg-plist
 #
 echo c - xapiand/
 mkdir -p xapiand/ > /dev/null 2>&1
@@ -29,14 +30,18 @@ X
 XLICENSE=        MIT
 XLICENSE_FILE=	${WRKSRC}/LICENSE
 X
-XUSES=		cmake
+X
+XUSE_RC_SUBR=	xapiand
+X
+XUSES=		cmake compiler:c++14-lang
 XCMAKE_NINJA= 	yes
 XUSE_GITHUB=   	yes
 XGH_ACCOUNT=     Kronuz
 XGH_PROJECT=     Xapiand
 X
-XXAPIAND_USER?=	nobody
-XXAPIAND_GROUP?=	nogroup
+XXAPIAND_USER?=	xapiand
+XXAPIAND_GROUP?=	${XAPIAND_USER}
+X
 XXAPIAND_DBDIR=	/var/db/${PORTNAME}/
 XXAPIAND_LOGDIR=	/var/log/${PORTNAME}/
 XXAPIAND_PIDDIR=	/var/run/${PORTNAME}/
@@ -48,12 +53,16 @@ X		XAPIAND_DBDIR=${XAPIAND_DBDIR} \
 X		XAPIAND_LOGDIR=${XAPIAND_LOGDIR} \
 X		XAPIAND_PIDDIR=${XAPIAND_PIDDIR}
 X
+XPLIST_SUB=      XAPIAND_USER=${USERS} \
+X                XAPIAND_GROUP=${XAPIAND_GROUP} \
+X                XAPIAND_DBDIR=${XAPIAND_DBDIR} \
+X                XAPIAND_LOGDIR=${XAPIAND_LOGDIR} \
+X                XAPIAND_PIDDIR=${XAPIAND_PIDDIR}
+X
+X
 XUSERS=		${XAPIAND_USER}
 XGROUPS=		${XAPIAND_GROUP}
 X
-XUSE_RC_SUBR=	${PORTNAME}
-X
-XPLIST_FILES=	bin/${PORTNAME}
 X
 Xdo-install:
 X		${MKDIR} ${STAGEDIR}${XAPIAND_DBDIR} \
@@ -72,8 +81,8 @@ XWWW: https://github.com/Kronuz/Xapiand
 053b0f60c7ba6d94ca0751bec472bd9b
 echo x - xapiand/distinfo
 sed 's/^X//' >xapiand/distinfo << 'd7f15fdb8f6b96ee96cd306cab4210a3'
-XSHA256 (Kronuz-Xapiand-v3.0.0-beta_GH0.tar.gz) = 3b1d59d65dcf9a8f621eb51c61f50d719ae29a153056fa4c6eb5d3d543a9700f
-XSIZE (Kronuz-Xapiand-v3.0.0-beta_GH0.tar.gz) = 11677229
+XSHA256 (Kronuz-Xapiand-v3.0.0-beta_GH0.tar.gz) = bf627c674d56654269c496edbee196ce2f71d34e7482979ae096bc2bdc407551
+XSIZE (Kronuz-Xapiand-v3.0.0-beta_GH0.tar.gz) = 11677452
 d7f15fdb8f6b96ee96cd306cab4210a3
 echo c - xapiand/files
 mkdir -p xapiand/files > /dev/null 2>&1
@@ -117,5 +126,13 @@ Xpidfile=${xapiand_pidfile}
 X
 Xrun_rc_command "$1"
 0dccf3a387c3588de14214fc8fd91659
+echo x - xapiand/pkg-plist
+sed 's/^X//' >xapiand/pkg-plist << 'cb3a975b071dde96286cb1f5bfb0e8a7'
+Xbin/xapiand
+X@dir(%%XAPIAND_USER%%,%%XAPIAND_GROUP%%,) %%XAPIAND_DBDIR%%
+X@dir(%%XAPIAND_USER%%,%%XAPIAND_GROUP%%,) %%XAPIAND_LOGDIR%%
+X@dir(%%XAPIAND_USER%%,%%XAPIAND_GROUP%%,) %%XAPIAND_PIDDIR%%
+Xman/man8/xapiand.8.gz
+cb3a975b071dde96286cb1f5bfb0e8a7
 exit
 
