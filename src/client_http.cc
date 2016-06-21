@@ -884,12 +884,17 @@ HttpClient::stats_view()
 		endpoints_maker(1s);
 
 		db_handler.reset(endpoints, DB_OPEN);
-		db_handler.get_stats_doc(response["_document_status"], path_parser.get_id());
+		try {
+			db_handler.get_stats_doc(response["_document_status"], path_parser.get_id());
+		} catch (const CheckoutError& e) {
+			path_parser.off_id = nullptr;
+			response.erase("_document_status");
+		}
 
 		path_parser.rewind();
-		path_parser.off_id = nullptr;
 		endpoints_maker(1s);
 
+		db_handler.reset(endpoints, DB_OPEN);
 		db_handler.get_stats_database(response["_database_status"]);
 		res_stats = true;
 	}
