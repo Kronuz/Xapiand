@@ -1273,18 +1273,26 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 	std::string ns;
 	if (path_parser.off_nsp) {
 		ns = path_parser.get_nsp() + "/";
+		std::string ns_without_slash = ns.substr(1, std::string::npos);
+		if (startswith(ns_without_slash, "_") or startswith(ns_without_slash, ".")) {
+		 throw MSG_ClientError("The index directory %s couldn't start with '_' or '.' are reserved", ns_without_slash.c_str());
+		}
 	}
 
 	std::string path;
 	if (path_parser.off_pth) {
 		path = path_parser.get_pth();
+		std::string path_without_slash = path.substr(1, std::string::npos);
+		if (startswith(path_without_slash, "_") or startswith(path_without_slash, ".")) {
+		 throw MSG_ClientError("The index directory %s couldn't start with '_' or '.' are reserved", path_without_slash.c_str());
+		}
 	}
 
 	index_path = ns + path;
 	std::string node_name;
 	std::string asked_node_path = index_path;
 	if (startswith(asked_node_path, "/")) {
-		 asked_node_path = asked_node_path.substr(1, asked_node_path.size());
+		 asked_node_path = asked_node_path.substr(1, std::string::npos);
 	}
 
 	asked_node_path = normalize_path(asked_node_path);
