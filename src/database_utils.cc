@@ -119,7 +119,7 @@ bool set_types(const std::string& type, std::vector<unsigned>& sep_types) {
 			if (m.length(2) != 0) {
 				sep_types[1] = ARRAY_TYPE;
 			}
-			sep_types[2] = m.str(3).at(0);
+			sep_types[2] = toupper(m.str(3).at(0));
 		}
 		return true;
 	}
