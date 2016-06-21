@@ -886,7 +886,7 @@ HttpClient::stats_view()
 		db_handler.reset(endpoints, DB_OPEN);
 		try {
 			db_handler.get_stats_doc(response["_document_status"], path_parser.get_id());
-		} catch (const CheckoutError& e) {
+		} catch (const CheckoutError&) {
 			path_parser.off_id = nullptr;
 			response.erase("_document_status");
 		}
