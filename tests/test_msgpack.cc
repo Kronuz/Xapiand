@@ -482,7 +482,6 @@ int test_reference() {
 
 	auto str_copy = copy_obj.to_string();
 	if (str_copy != str_expect) {
-		std::cout << copy_obj.internal_msgpack() << std::endl;
 		L_ERR(nullptr, "Copy MsgPack (Copy) is not working. Result: %s, Expected: %s", str_copy.c_str(), str_expect.c_str());
 		++res;
 	}
