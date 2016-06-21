@@ -147,7 +147,8 @@ public:
 	template <typename T>
 	MsgPack& push_back(T&& v);
 
-	const msgpack::object& internal_msgpack() const;
+	template <typename T>
+	decltype(auto) external(std::function<T(const msgpack::object&)>) const;
 
 	template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
 	std::pair<iterator, bool> insert(T&& v);
@@ -1097,17 +1098,20 @@ inline void MsgPack::_fill(bool recursive, bool lock) {
 	}
 }
 
+
 inline void MsgPack::_fill(bool recursive, bool lock) const {
 	const_cast<MsgPack*>(this)->_fill(recursive, lock);
 }
+
 
 inline void MsgPack::lock() const {
 	_fill(true, true);
 }
 
 
-inline const msgpack::object& MsgPack::internal_msgpack() const {
-	return *_body->_obj;
+template <typename T>
+inline decltype(auto) MsgPack::external(std::function<T(const msgpack::object&)> f) const {
+	return f(*_body->_obj);
 }
 
 

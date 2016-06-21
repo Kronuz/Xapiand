@@ -1640,7 +1640,7 @@ HttpClient::serialize_response(const MsgPack& obj, const type_t& ct_type, bool p
 		return std::make_pair(obj.to_string(), msgpack_type.first + "/" + msgpack_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, html_type)) {
 		std::function<std::string(const msgpack::object&)> html_serialize = serialize_error ? msgpack_to_html_error : msgpack_to_html;
-		return std::make_pair(html_serialize(obj.internal_msgpack()), html_type.first + "/" + html_type.second + "; charset=utf-8");
+		return std::make_pair(obj.external(html_serialize), html_type.first + "/" + html_type.second + "; charset=utf-8");
 	} else if (is_acceptable_type(ct_type, text_type)) {
 		/*
 		 error:
