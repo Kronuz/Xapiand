@@ -50,7 +50,7 @@
 #define CMD_BAD_QUERY -2
 
 #define strict(func, s) \
-	[](const std::string& str) -> decltype(auto) { \
+	[](const std::string& str) { \
 		std::size_t sz; \
 		auto ret = (func)(str, &sz); \
 		if (sz != str.size()) { \
