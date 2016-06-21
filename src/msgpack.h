@@ -147,7 +147,7 @@ public:
 	template <typename T>
 	MsgPack& push_back(T&& v);
 
-	inline const msgpack::object& internal_msgpack() const;
+	const msgpack::object& internal_msgpack() const;
 
 	template <typename T, typename = std::enable_if_t<std::is_constructible<MsgPack, T>::value>>
 	std::pair<iterator, bool> insert(T&& v);
