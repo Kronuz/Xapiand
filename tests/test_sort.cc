@@ -236,7 +236,7 @@ const sort_t geo_tests[] {
 };
 
 
-DB_Test db_sort(".db_sort.db", std::vector<std::string>({
+const std::vector<std::string> files({
 		// Examples used in test geo.
 		"examples/sort/doc1.txt",
 		"examples/sort/doc2.txt",
@@ -248,9 +248,10 @@ DB_Test db_sort(".db_sort.db", std::vector<std::string>({
 		"examples/sort/doc8.txt",
 		"examples/sort/doc9.txt",
 		"examples/sort/doc10.txt"
-	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+	});
 
-static int make_search(const sort_t _tests[], int len) {
+
+static int make_search(const sort_t _tests[], int len, DB_Test& db_sort) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -301,7 +302,8 @@ static int make_search(const sort_t _tests[], int len) {
 
 int sort_test_string() {
 	try {
-		int cont = make_search(string_tests, arraySize(string_tests));
+		DB_Test db_sort(".db_sort.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+		int cont = make_search(string_tests, arraySize(string_tests), db_sort);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort strings is correct!");
 		} else {
@@ -320,7 +322,8 @@ int sort_test_string() {
 
 int sort_test_numerical() {
 	try {
-		int cont = make_search(numerical_tests, arraySize(numerical_tests));
+		DB_Test db_sort(".db_sort.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+		int cont = make_search(numerical_tests, arraySize(numerical_tests), db_sort);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort numbers is correct!");
 		} else {
@@ -339,7 +342,8 @@ int sort_test_numerical() {
 
 int sort_test_date() {
 	try {
-		int cont = make_search(date_tests, arraySize(date_tests));
+		DB_Test db_sort(".db_sort.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+		int cont = make_search(date_tests, arraySize(date_tests), db_sort);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort dates is correct!");
 		} else {
@@ -358,7 +362,8 @@ int sort_test_date() {
 
 int sort_test_boolean() {
 	try {
-		int cont = make_search(boolean_tests, arraySize(boolean_tests));
+		DB_Test db_sort(".db_sort.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+		int cont = make_search(boolean_tests, arraySize(boolean_tests), db_sort);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort booleans is correct!");
 		} else {
@@ -377,7 +382,8 @@ int sort_test_boolean() {
 
 int sort_test_geo() {
 	try {
-		int cont = make_search(geo_tests, arraySize(geo_tests));
+		DB_Test db_sort(".db_sort.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+		int cont = make_search(geo_tests, arraySize(geo_tests), db_sort);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort geospatials is correct!");
 		} else {

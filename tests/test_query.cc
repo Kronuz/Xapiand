@@ -208,7 +208,7 @@ const test_query_t test_facets[] {
 };
 
 
-DB_Test db_query (".db_query.db", std::vector<std::string>({
+const std::vector<std::string> files({
 		// Examples used in test geo.
 		"examples/json/geo_1.txt",
 		"examples/json/geo_2.txt",
@@ -232,10 +232,10 @@ DB_Test db_query (".db_query.db", std::vector<std::string>({
 		// Search examples.
 		"examples/json/example_1.txt",
 		"examples/json/example_2.txt"
-	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+	});
 
 
-static int make_search(const test_query_t _tests[], int len) {
+static int make_search(const test_query_t _tests[], int len, DB_Test& db_query) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -334,7 +334,8 @@ static int make_search(const test_query_t _tests[], int len) {
 
 int test_query_search() {
 	try {
-		int cont = make_search(test_query, arraySize(test_query));
+		DB_Test db_query(".db_query.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+		int cont = make_search(test_query, arraySize(test_query), db_query);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using query is correct!");
 		} else {
@@ -353,7 +354,8 @@ int test_query_search() {
 
 int test_terms_search() {
 	try {
-		int cont = make_search(test_terms, arraySize(test_terms));
+		DB_Test db_query(".db_query.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+		int cont = make_search(test_terms, arraySize(test_terms), db_query);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using terms is correct!");
 		} else {
@@ -372,7 +374,8 @@ int test_terms_search() {
 
 int test_partials_search() {
 	try {
-		int cont = make_search(test_partials, arraySize(test_partials));
+		DB_Test db_query(".db_query.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+		int cont = make_search(test_partials, arraySize(test_partials), db_query);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using partials is correct!");
 		} else {
@@ -391,7 +394,8 @@ int test_partials_search() {
 
 int test_facets_search() {
 	try {
-		int cont = make_search(test_facets, arraySize(test_facets));
+		DB_Test db_query(".db_query.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
+		int cont = make_search(test_facets, arraySize(test_facets), db_query);
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing facets is correct!");
 		} else {
