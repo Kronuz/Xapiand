@@ -9,6 +9,7 @@ set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
 set (PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
 set (PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set (PACKAGE_TARNAME "${PROJECT_NAME}")
+set (PACKAGE_PATH_TEST "${PROJECT_SOURCE_DIR}/tests")
 
 option (BINARY_PROXY "Define to what port binary traffic will be redirected to" OFF)
 option (CLUSTERING "Enable remote clustering" ON)
@@ -22,6 +23,7 @@ foreach(opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS)
 		set ("XAPIAND_${opt}" 0)
 	endif ()
 endforeach ()
+
 
 set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
@@ -46,8 +48,8 @@ endif ()
 
 find_program(CCACHE_FOUND "ccache")
 if(CCACHE_FOUND)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "ccache")
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "ccache")
+	set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "ccache")
+	set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "ccache")
 endif(CCACHE_FOUND)
 
 
@@ -196,23 +198,22 @@ cmake_pop_check_state ()
 ########################################################################
 
 configure_file (
-	${PROJECT_SOURCE_DIR}/src/config.h.cmake
+	${PROJECT_SOURCE_DIR}/config.h.cmake
 	${PROJECT_BINARY_DIR}/src/config.h)
 
 aux_source_directory (src SRC_LIST)
-aux_source_directory (src/xchange SRC_LIST)
-aux_source_directory (src/servers SRC_LIST)
-aux_source_directory (src/lz4 SRC_LIST)
-aux_source_directory (src/hash SRC_LIST)
 aux_source_directory (src/ev SRC_LIST)
+aux_source_directory (src/hash SRC_LIST)
+aux_source_directory (src/lz4 SRC_LIST)
+aux_source_directory (src/servers SRC_LIST)
+aux_source_directory (src/xchange SRC_LIST)
 list (REMOVE_ITEM SRC_LIST
-	src/ev/ev_win32.c
-	src/ev/ev_iocp.c
-	src/ev/ev_port.c
-	src/ev/ev_kqueue.c
 	src/ev/ev_epoll.c
+	src/ev/ev_kqueue.c
 	src/ev/ev_poll.c
-	src/ev/ev_select.c)
+	src/ev/ev_port.c
+	src/ev/ev_select.c
+	src/ev/ev_win32.c)
 
 add_executable (${PROJECT_NAME} ${SRC_LIST})
 target_link_libraries (${PROJECT_NAME}
@@ -234,17 +235,42 @@ add_subdirectory (${PROJECT_SOURCE_DIR}/ext/gtest)
 set (PROJECT_TEST_NAME ${PROJECT_NAME}_test)
 include_directories (${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES})
 
-file (GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*.cc)
+file (GLOB TEST_SRC_FILES ${PACKAGE_PATH_TEST}/run_tests.cc)
 
 link_directories (${GTEST_LIBS})
 
-add_executable (${PROJECT_TEST_NAME} EXCLUDE_FROM_ALL ${TEST_SRC_FILES})
+aux_source_directory (src TEST_SRC_LIST)
+aux_source_directory (src/ev TEST_SRC_LIST)
+aux_source_directory (src/hash TEST_SRC_LIST)
+aux_source_directory (src/lz4 TEST_SRC_LIST)
+aux_source_directory (src/servers TEST_SRC_LIST)
+aux_source_directory (src/xchange TEST_SRC_LIST)
+#aux_source_directory (tests TEST_SRC_LIST)
+list (REMOVE_ITEM TEST_SRC_LIST
+	src/ev/ev_epoll.c
+	src/ev/ev_kqueue.c
+	src/ev/ev_poll.c
+	src/ev/ev_port.c
+	src/ev/ev_select.c
+	src/ev/ev_win32.c
+	src/xapiand.cc)
+
+list (APPEND TEST_SRC_LIST
+	${PACKAGE_PATH_TEST}/test_compressor.cc
+	${PACKAGE_PATH_TEST}/test_dllist.cc
+	${PACKAGE_PATH_TEST}/test_generate_terms.cc
+	${PACKAGE_PATH_TEST}/test_geo.cc
+	${PACKAGE_PATH_TEST}/test_hash.cc
+	${PACKAGE_PATH_TEST}/test_htm.cc)
+
+
+add_executable (${PROJECT_TEST_NAME} ${TEST_SRC_FILES} ${TEST_SRC_LIST})
 add_dependencies (${PROJECT_TEST_NAME} googletest)
 target_link_libraries (${PROJECT_TEST_NAME}
+	${XAPIAN_LIBRARIES}
 	${CMAKE_THREAD_LIBS_INIT}
-	gtest gtest_main
+	gtest
+	gtest_main
 )
 
 ########################################################################
-
-add_test(test1 ${PROJECT_TEST_NAME})
