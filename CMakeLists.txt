@@ -235,18 +235,16 @@ add_subdirectory (${PROJECT_SOURCE_DIR}/ext/gtest)
 set (PROJECT_TEST_NAME ${PROJECT_NAME}_test)
 include_directories (${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES})
 
-file (GLOB TEST_SRC_FILES ${PACKAGE_PATH_TEST}/run_tests.cc)
-
 link_directories (${GTEST_LIBS})
 
-aux_source_directory (src TEST_SRC_LIST)
-aux_source_directory (src/ev TEST_SRC_LIST)
-aux_source_directory (src/hash TEST_SRC_LIST)
-aux_source_directory (src/lz4 TEST_SRC_LIST)
-aux_source_directory (src/servers TEST_SRC_LIST)
-aux_source_directory (src/xchange TEST_SRC_LIST)
-#aux_source_directory (tests TEST_SRC_LIST)
-list (REMOVE_ITEM TEST_SRC_LIST
+aux_source_directory (src TEST_SRC_FILES)
+aux_source_directory (src TEST_SRC_FILES)
+aux_source_directory (src/ev TEST_SRC_FILES)
+aux_source_directory (src/hash TEST_SRC_FILES)
+aux_source_directory (src/lz4 TEST_SRC_FILES)
+aux_source_directory (src/servers TEST_SRC_FILES)
+aux_source_directory (src/xchange TEST_SRC_FILES)
+list (REMOVE_ITEM TEST_SRC_FILES
 	src/ev/ev_epoll.c
 	src/ev/ev_kqueue.c
 	src/ev/ev_poll.c
@@ -255,16 +253,9 @@ list (REMOVE_ITEM TEST_SRC_LIST
 	src/ev/ev_win32.c
 	src/xapiand.cc)
 
-list (APPEND TEST_SRC_LIST
-	${PACKAGE_PATH_TEST}/test_compressor.cc
-	${PACKAGE_PATH_TEST}/test_dllist.cc
-	${PACKAGE_PATH_TEST}/test_generate_terms.cc
-	${PACKAGE_PATH_TEST}/test_geo.cc
-	${PACKAGE_PATH_TEST}/test_hash.cc
-	${PACKAGE_PATH_TEST}/test_htm.cc)
+aux_source_directory (tests TEST_SRC_FILES)
 
-
-add_executable (${PROJECT_TEST_NAME} ${TEST_SRC_FILES} ${TEST_SRC_LIST})
+add_executable (${PROJECT_TEST_NAME} ${TEST_SRC_FILES})
 add_dependencies (${PROJECT_TEST_NAME} googletest)
 target_link_libraries (${PROJECT_TEST_NAME}
 	${XAPIAN_LIBRARIES}
