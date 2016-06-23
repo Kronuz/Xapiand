@@ -30,6 +30,7 @@
 
 
 const std::string path_test_wkt = std::string(PACKAGE_PATH_TEST) + "/examples/wkt/";
+const std::string python_wkt = "python_files/wkt/";;
 
 
 // Testing WKT parser.
@@ -42,10 +43,16 @@ int test_wkt_parser() {
 	double error = 0.2;
 	bool partials = true;
 
+	// Make the path for the python files generated.
+	build_path_index(python_wkt);
+
 	if (readFile.is_open()) {
 		while (std::getline(readFile, EWKT)) {
 			std::getline(readFile, file_expect);
 			std::getline(readFile, file_result);
+
+			file_expect = path_test_wkt + file_expect;
+			file_result = python_wkt + file_result;
 
 			std::ifstream readEFile(file_expect);
 			if (readEFile.is_open()) {
