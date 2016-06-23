@@ -27,16 +27,16 @@
 #include "gtest/gtest.h"
 
 
-TEST(GenerateTerms, numeric) {
+TEST(GenerateTermsTest, Numeric) {
 	EXPECT_EQ(numeric_test(), 0);
 }
 
 
-TEST(GenerateTerms, date) {
+TEST(GenerateTermsTest, Date) {
 	EXPECT_EQ(date_test(), 0);
 }
 
 
-TEST(GenerateTerms, geo) {
+TEST(GenerateTermsTest, Geo) {
 	EXPECT_EQ(geo_test(), 0);
 }

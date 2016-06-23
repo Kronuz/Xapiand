@@ -27,19 +27,19 @@
 #include "gtest/gtest.h"
 
 
-TEST(LZ4Compress, datas) {
+TEST(LZ4CompressTest, Datas) {
 	EXPECT_EQ(test_small_datas(), 0);
 	EXPECT_EQ(test_big_datas(), 0);
 }
 
 
-TEST(LZ4Compress, files) {
+TEST(LZ4CompressTest, Files) {
 	EXPECT_EQ(test_small_files(), 0);
 	EXPECT_EQ(test_big_files(), 0);
 }
 
 
-TEST(LZ4Compress, descriptor) {
+TEST(LZ4CompressTest, Descriptor) {
 	EXPECT_EQ(test_small_blockFile(), 0);
 	EXPECT_EQ(test_big_blockFile(), 0);
 }

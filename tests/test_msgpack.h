@@ -25,18 +25,17 @@
 #include <string>
 
 
-int test_correct_cpp();
-int test_constructors();
-int test_assigment();
-int test_iterator();
-int test_serialise();
-int test_unserialise();
-int test_explore();
-int test_copy();
-int test_reference();
-int test_path();
+int test_msgpack_constructors();
+int test_msgpack_assigment();
+int test_msgpack_iterator();
+int test_msgpack_serialise();
+int test_msgpack_unserialise();
+int test_msgpack_explore();
+int test_msgpack_copy();
+int test_msgpack_reference();
+int test_msgpack_path();
 int test_msgpack_erase();
-int test_reserve();
-int test_keys();
-int test_change_keys();
-int test_map();
+int test_msgpack_reserve();
+int test_msgpack_keys();
+int test_msgpack_change_keys();
+int test_msgpack_map();

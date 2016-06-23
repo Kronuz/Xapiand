@@ -25,6 +25,9 @@
 #include "utils.h"
 
 
+const std::string path_test_sort = std::string(PACKAGE_PATH_TEST) + "/examples/sort/";
+
+
 const sort_t string_tests[] {
 	/*
 	 * Table reference data to verify the ordering
@@ -238,16 +241,16 @@ const sort_t geo_tests[] {
 
 const std::vector<std::string> files({
 		// Examples used in test geo.
-		"examples/sort/doc1.txt",
-		"examples/sort/doc2.txt",
-		"examples/sort/doc3.txt",
-		"examples/sort/doc4.txt",
-		"examples/sort/doc5.txt",
-		"examples/sort/doc6.txt",
-		"examples/sort/doc7.txt",
-		"examples/sort/doc8.txt",
-		"examples/sort/doc9.txt",
-		"examples/sort/doc10.txt"
+		path_test_sort + "doc1.txt",
+		path_test_sort + "doc2.txt",
+		path_test_sort + "doc3.txt",
+		path_test_sort + "doc4.txt",
+		path_test_sort + "doc5.txt",
+		path_test_sort + "doc6.txt",
+		path_test_sort + "doc7.txt",
+		path_test_sort + "doc8.txt",
+		path_test_sort + "doc9.txt",
+		path_test_sort + "doc10.txt"
 	});
 
 

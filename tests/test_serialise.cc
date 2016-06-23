@@ -25,7 +25,7 @@
 #include "utils.h"
 
 
-const test_t test_timestamp_date[] = {
+const test_date_t test_timestamp_date[] = {
 	// Date 									Expected timestamp.
 	{ "2014-01-01||-1M/y",                      "1388534399.999000"   },
 	{ "2014-10-10||-12M",                       "1381363200.000000"   },
@@ -99,7 +99,7 @@ const test_t test_timestamp_date[] = {
 };
 
 
-const test_t test_unserialisedate[] {
+const test_date_t test_unserialisedate[] {
 	// Date to be serialised.				 Expected date after unserialise.
 	{ "2010-10-10T23:05:24.800",             "2010-10-10T23:05:24.800" },
 	{ "2010101023:05:24",                    "2010-10-10T23:05:24.000" },
@@ -140,7 +140,7 @@ const test_trixel_id_t test_seri_trixels[] {
 
 int test_datetotimestamp() {
 	int cont = 0;
-	for (const test_t *p = test_timestamp_date; p->str; ++p) {
+	for (const test_date_t *p = test_timestamp_date; p->str; ++p) {
 		std::string date = std::string(p->str);
 		std::string timestamp;
 		try {
@@ -167,7 +167,7 @@ int test_datetotimestamp() {
 
 int test_unserialise_date() {
 	int cont = 0;
-	for (const test_t *p = test_unserialisedate; p->str; ++p) {
+	for (const test_date_t *p = test_unserialisedate; p->str; ++p) {
 		std::string date_s(Serialise::date(std::to_string(Datetime::timestamp(p->str))));
 		std::string date = Unserialise::date(date_s);
 		if (date.compare(p->expect) != 0) {

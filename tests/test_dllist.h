@@ -28,16 +28,16 @@
 std::string repr_results(const DLList<std::pair<int, char>>& l, bool sort);
 
 // Single thread tests
-int test_iterators();
-int test_push_front();
-int test_emplace_front();
-int test_push_back();
-int test_emplace_back();
-int test_insert();
+int test_dllist_iterators();
+int test_dllist_push_front();
+int test_dllist_emplace_front();
+int test_dllist_push_back();
+int test_dllist_emplace_back();
+int test_dllist_insert();
 
-int test_pop_front();
-int test_pop_back();
-int test_erase();
+int test_dllist_pop_front();
+int test_dllist_pop_back();
+int test_dllist_erase();
 
 int test_single_producer_consumer();
 

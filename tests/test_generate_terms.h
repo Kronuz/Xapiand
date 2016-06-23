@@ -25,7 +25,7 @@
 #include "../src/htm.h"
 
 
-struct test_t {
+struct testQuery_t {
 	std::string start;
 	std::string end;
 	std::vector<double> accuracy;
@@ -35,7 +35,7 @@ struct test_t {
 };
 
 
-struct testG_t {
+struct testQueryG_t {
 	std::vector<range_t> ranges;
 	std::vector<double> accuracy;
 	std::vector<std::string> acc_prefix;

@@ -27,51 +27,15 @@
 #include "gtest/gtest.h"
 
 
-TEST(Patcher, mix) {
-	EXPECT_EQ(test_mix(), 0);
-}
-
-
-TEST(Patcher, add) {
-	EXPECT_EQ(test_add(), 0);
-}
-
-
-TEST(Patcher, remove) {
-	EXPECT_EQ(test_remove(), 0);
-}
-
-
-TEST(Patcher, replace) {
-	EXPECT_EQ(test_remove(), 0);
-}
-
-
-TEST(Patcher, move) {
-	EXPECT_EQ(test_move(), 0);
-}
-
-
-TEST(Patcher, copy) {
+TEST(Patcher, Working) {
+	EXPECT_EQ(test_patcher_mix(), 0);
+	EXPECT_EQ(test_patcher_add(), 0);
+	EXPECT_EQ(test_patcher_remove(), 0);
+	EXPECT_EQ(test_patcher_remove(), 0);
+	EXPECT_EQ(test_patcher_move(), 0);
 	EXPECT_EQ(test_patcher_copy(), 0);
-}
-
-
-TEST(Patcher, test) {
-	EXPECT_EQ(test_test(), 0);
-}
-
-
-TEST(Patcher, incr) {
-	EXPECT_EQ(test_incr(), 0);
-}
-
-
-TEST(Patcher, decr) {
-	EXPECT_EQ(test_decr(), 0);
-}
-
-
-TEST(Patcher, rfc6901) {
-	EXPECT_EQ(test_rfc6901(), 0);
+	EXPECT_EQ(test_patcher_test(), 0);
+	EXPECT_EQ(test_patcher_incr(), 0);
+	EXPECT_EQ(test_patcher_decr(), 0);
+	EXPECT_EQ(test_patcher_rfc6901(), 0);
 }

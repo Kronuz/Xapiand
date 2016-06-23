@@ -27,11 +27,11 @@
 #include "gtest/gtest.h"
 
 
-TEST(Geo, range) {
+TEST(GeoTest, Range) {
 	EXPECT_EQ(geo_range_test(), 0);
 }
 
 
-TEST(Geo, terms) {
+TEST(GeoTest, Terms) {
 	EXPECT_EQ(geo_terms_test(), 0);
 }

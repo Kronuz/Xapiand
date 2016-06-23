@@ -26,9 +26,15 @@
 #include "set_geo_test.h"
 #include "set_hash_test.h"
 #include "set_htm_test.h"
+#include "set_lru_test.h"
 #include "set_msgpack_test.h"
 #include "set_patcher_test.h"
 #include "set_query_test.h"
+#include "set_queue_test.h"
+#include "set_serialise_stl_test.h"
+#include "set_serialise_unserialise_test.h"
+#include "set_sort_test.h"
+#include "set_storage_test.h"
 
 
 int main(int argc, char **argv) {

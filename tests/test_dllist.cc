@@ -58,7 +58,7 @@ std::string repr_results(const DLList<std::pair<int, char>>& l, bool sort) {
 }
 
 
-int test_iterators() {
+int test_dllist_iterators() {
 	DLList<std::string> mylist;
 	auto it = mylist.begin();
 	it = mylist.insert(it, "10");
@@ -154,7 +154,7 @@ int test_iterators() {
 }
 
 
-int test_push_front() {
+int test_dllist_push_front() {
 	DLList<std::pair<int, char>> mylist;
 
 	mylist.push_front(std::make_pair<int, char>(1, 'a'));
@@ -182,7 +182,7 @@ int test_push_front() {
 }
 
 
-int test_emplace_front() {
+int test_dllist_emplace_front() {
 	DLList<std::pair<int, char>> mylist;
 
 	mylist.emplace_front(1, 'a');
@@ -210,7 +210,7 @@ int test_emplace_front() {
 }
 
 
-int test_push_back() {
+int test_dllist_push_back() {
 	DLList<std::pair<int, char>> mylist;
 
 	mylist.push_back(std::make_pair<int, char>(1, 'a'));
@@ -238,7 +238,7 @@ int test_push_back() {
 }
 
 
-int test_emplace_back() {
+int test_dllist_emplace_back() {
 	DLList<std::pair<int, char>> mylist;
 
 	mylist.emplace_back(1, 'a');
@@ -266,7 +266,7 @@ int test_emplace_back() {
 }
 
 
-int test_insert() {
+int test_dllist_insert() {
 	DLList<std::pair<int, char>> mylist;
 
 	// set some initial values:
@@ -308,7 +308,7 @@ int test_insert() {
 }
 
 
-int test_pop_front() {
+int test_dllist_pop_front() {
 	DLList<std::pair<int, char>> mylist;
 
 	mylist.emplace_front(1, 'a');
@@ -351,7 +351,7 @@ int test_pop_front() {
 }
 
 
-int test_pop_back() {
+int test_dllist_pop_back() {
 	DLList<std::pair<int, char>> mylist;
 
 	mylist.emplace_front(1, 'a');
@@ -394,7 +394,7 @@ int test_pop_back() {
 }
 
 
-int test_erase() {
+int test_dllist_erase() {
 	DLList<std::pair<int, char>> mylist;
 
 	mylist.emplace_front(1, 'a');

@@ -27,11 +27,11 @@
 #include "gtest/gtest.h"
 
 
-TEST(Hash, MD5) {
+TEST(HashTest, MD5) {
 	EXPECT_EQ(test_md5(), 0);
 }
 
 
-TEST(Hash, SHA256) {
+TEST(HashTest, SHA256) {
 	EXPECT_EQ(test_sha256(), 0);
 }

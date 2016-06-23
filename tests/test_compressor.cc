@@ -80,7 +80,6 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 
 		// Compress Data
 		std::string _data = read_file(orig_file);
-		L_ERR(nullptr, "Original Data Size: %zu\n", _data.size());
 
 		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
 		if unlikely(fd < 0) {
@@ -96,7 +95,6 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 			++it;
 		}
 		cmp_checksum = lz4.get_digest();
-		L_ERR(nullptr, "Size compress: %zu (checksum: %u)\n", lz4.size(), cmp_checksum);
 		io::close(fd);
 
 
@@ -109,7 +107,6 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 			++dec_it;
 		}
 		dec_checksum = dec_lz4.get_digest();
-		L_ERR(nullptr, "Size decompress: %zu (checksum: %u)\n", dec_lz4.size(), dec_checksum);
 
 		return cmp_checksum != dec_checksum;
 	} catch (const Exception& err) {

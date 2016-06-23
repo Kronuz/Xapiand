@@ -23,13 +23,13 @@
 #pragma once
 
 
-int test_mix();
-int test_add();
-int test_remove();
-int test_replace();
-int test_move();
+int test_patcher_mix();
+int test_patcher_add();
+int test_patcher_remove();
+int test_patcher_replace();
+int test_patcher_move();
 int test_patcher_copy();
-int test_test();
-int test_incr();
-int test_decr();
-int test_rfc6901();
+int test_patcher_test();
+int test_patcher_incr();
+int test_patcher_decr();
+int test_patcher_rfc6901();

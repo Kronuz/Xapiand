@@ -27,76 +27,19 @@
 #include "gtest/gtest.h"
 
 
-TEST(MsgPack, correct_cpp) {
-	EXPECT_EQ(test_correct_cpp(), 0);
-}
-
-
-TEST(MsgPack, constructors) {
-	EXPECT_EQ(test_constructors(), 0);
-}
-
-
-TEST(MsgPack, assigment) {
-	EXPECT_EQ(test_assigment(), 0);
-}
-
-
-TEST(MsgPack, iterator) {
-	EXPECT_EQ(test_iterator(), 0);
-}
-
-
-TEST(MsgPack, serialise) {
-	EXPECT_EQ(test_serialise(), 0);
-}
-
-
-TEST(MsgPack, unserialise) {
-	EXPECT_EQ(test_unserialise(), 0);
-}
-
-
-TEST(MsgPack, explore) {
-	EXPECT_EQ(test_explore(), 0);
-}
-
-
-TEST(MsgPack, copy) {
-	EXPECT_EQ(test_copy(), 0);
-}
-
-
-TEST(MsgPack, reference) {
-	EXPECT_EQ(test_reference(), 0);
-}
-
-
-TEST(MsgPack, path) {
-	EXPECT_EQ(test_path(), 0);
-}
-
-
-TEST(MsgPack, erase) {
+TEST(MsgPackTest, Working) {
+	EXPECT_EQ(test_msgpack_constructors(), 0);
+	EXPECT_EQ(test_msgpack_assigment(), 0);
+	EXPECT_EQ(test_msgpack_iterator(), 0);
+	EXPECT_EQ(test_msgpack_serialise(), 0);
+	EXPECT_EQ(test_msgpack_unserialise(), 0);
+	EXPECT_EQ(test_msgpack_explore(), 0);
+	EXPECT_EQ(test_msgpack_copy(), 0);
+	EXPECT_EQ(test_msgpack_reference(), 0);
+	EXPECT_EQ(test_msgpack_path(), 0);
 	EXPECT_EQ(test_msgpack_erase(), 0);
-}
-
-
-TEST(MsgPack, reserve) {
-	EXPECT_EQ(test_reserve(), 0);
-}
-
-
-TEST(MsgPack, keys) {
-	EXPECT_EQ(test_keys(), 0);
-}
-
-
-TEST(MsgPack, change_keys) {
-	EXPECT_EQ(test_change_keys(), 0);
-}
-
-
-TEST(MsgPack, update_map) {
-	EXPECT_EQ(test_map(), 0);
+	EXPECT_EQ(test_msgpack_reserve(), 0);
+	EXPECT_EQ(test_msgpack_keys(), 0);
+	EXPECT_EQ(test_msgpack_change_keys(), 0);
+	EXPECT_EQ(test_msgpack_map(), 0);
 }

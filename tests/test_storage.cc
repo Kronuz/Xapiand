@@ -26,6 +26,10 @@
 #include "utils.h"
 
 
+
+const std::string path_test_storage = std::string(PACKAGE_PATH_TEST) + "/examples/";
+
+
 #pragma pack(push, 1)
 struct StorageBinBadHeader1 {
 	// uint8_t magic;
@@ -116,23 +120,23 @@ struct StorageBinFooterChecksum {
 #pragma pack(pop)
 
 
-const std::string volume_name("examples/volume0");
+const std::string volume_name(path_test_storage + "volume0");
 
 
 static const std::vector<std::string> small_files({
-	"examples/compressor/Small_File1.txt",
-	"examples/compressor/Small_File2.txt",
-	"examples/compressor/Small_File3.txt",
-	"examples/compressor/Small_File4.txt"
+	path_test_storage + "compressor/Small_File1.txt",
+	path_test_storage + "compressor/Small_File2.txt",
+	path_test_storage + "compressor/Small_File3.txt",
+	path_test_storage + "compressor/Small_File4.txt"
 });
 
 
 static const std::vector<std::string> big_files({
-	"examples/compressor/Big_File1.jpg",
-	"examples/compressor/Big_File2.pdf",
-	"examples/compressor/Big_File3.pdf",
-	"examples/compressor/Big_File4.pdf",
-	"examples/compressor/Big_File5.pdf"
+	path_test_storage + "compressor/Big_File1.jpg",
+	path_test_storage + "compressor/Big_File2.pdf",
+	path_test_storage + "compressor/Big_File3.pdf",
+	path_test_storage + "compressor/Big_File4.pdf",
+	path_test_storage + "compressor/Big_File5.pdf"
 });
 
 

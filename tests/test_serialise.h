@@ -25,15 +25,9 @@
 #include "../src/htm.h"
 
 
-struct test_t {
+struct test_date_t {
 	const char *str;
 	const char *expect;
-};
-
-
-struct test_str_double_t {
-	const char *str;
-	const double val;
 };
 
 

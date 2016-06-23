@@ -29,7 +29,7 @@
 
 
 
-const test_t numeric[] {
+const testQuery_t numeric[] {
 	// Testing positives.
 	// Find lower and upper accuracy, upper accuracy generates only one term.
 	{
@@ -168,7 +168,7 @@ const test_t numeric[] {
 };
 
 
-const test_t date[] {
+const testQuery_t date[] {
 	// There is not a upper accuracy
 	{
 		"2010-10-10", "2011-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
@@ -255,7 +255,7 @@ const test_t date[] {
 };
 
 
-const testG_t geo[] {
+const testQueryG_t geo[] {
 	{
 		{
 			// POLYGON ((48.574789910928864 -103.53515625, 48.864714761802794 -97.2509765625, 45.89000815866182 -96.6357421875, 45.89000815866182 -103.974609375, 48.574789910928864 -103.53515625))

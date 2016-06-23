@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -27,21 +27,21 @@
 #include "gtest/gtest.h"
 
 
-TEST(QueryTest, query_search) {
+TEST(QueryTest, Query_search) {
 	EXPECT_EQ(test_query_search(), 0);
 }
 
 
-TEST(QueryTest, terms_search) {
+TEST(QueryTest, Terms_search) {
 	EXPECT_EQ(test_terms_search(), 0);
 }
 
 
-TEST(QueryTest, partials_search) {
+TEST(QueryTest, Partials_search) {
 	EXPECT_EQ(test_partials_search(), 0);
 }
 
 
-TEST(QueryTest, facets_search) {
+TEST(QueryTest, Facets_search) {
 	EXPECT_EQ(test_facets_search(), 0);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+ * Copyright (C) 2016 deipi.com LLC and contributors. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -27,21 +27,21 @@
 #include "gtest/gtest.h"
 
 
-TEST(HTM, cartesian_transforms) {
+TEST(HTMTest, Cartesian_transforms) {
 	EXPECT_EQ(test_cartesian_transforms(), 0);
 }
 
 
-TEST(HTM, GetHullConvex) {
+TEST(HTMTest, GetHullConvex) {
 	EXPECT_EQ(test_hullConvex(), 0);
 }
 
 
-TEST(HTM, HullConvex) {
+TEST(HTMTest, HullConvex) {
 	EXPECT_EQ(test_HTM_chull(), 0);
 }
 
 
-TEST(HTM, Circle) {
+TEST(HTMTest, Circle) {
 	EXPECT_EQ(test_HTM_circle(), 0);
 }
