@@ -139,13 +139,14 @@ std::string str_type(const std::vector<unsigned>& sep_types) {
 
 void clean_reserved(MsgPack& document) {
 	if (document.is_map()) {
-		for (const auto& item_key : document) {
-			auto str_key(item_key.as_string());
+		for (auto item_key = document.begin(); item_key != document.end();) {
+			auto str_key((*item_key).as_string());
 			if (is_valid(str_key) || str_key == RESERVED_VALUE) {
 				auto& item_doc = document.at(str_key);
 				clean_reserved(item_doc);
+				++item_key;
 			} else {
-				document.erase(str_key);
+				item_key = document.erase(item_key);
 			}
 		}
 	}
