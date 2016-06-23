@@ -1,6 +1,6 @@
-0.2 1 10 10 20000 examples/htm/Circle1_expect.txt examples/htm/Circle1.py
-0.2 1 40 -30 30000 examples/htm/Circle2_expect.txt examples/htm/Circle2.py
-0.2 1 -10 0 20003917.491659265 examples/htm/Circle3_expect.txt examples/htm/Circle3.py
-0.2 1 -10 0 15003917.491659265 examples/htm/Circle4_expect.txt examples/htm/Circle4.py
-0.2 1 10 0.00005 0.1 examples/htm/Circle5_expect.txt examples/htm/Circle5.py
-0.2 1 10 -10 1 examples/htm/Circle6_expect.txt examples/htm/Circle6.py
+0.2 1 10 10 20000 Circle1_expect.txt Circle1.py
+0.2 1 40 -30 30000 Circle2_expect.txt Circle2.py
+0.2 1 -10 0 20003917.491659265 Circle3_expect.txt Circle3.py
+0.2 1 -10 0 15003917.491659265 Circle4_expect.txt Circle4.py
+0.2 1 10 0.00005 0.1 Circle5_expect.txt Circle5.py
+0.2 1 10 -10 1 Circle6_expect.txt Circle6.py

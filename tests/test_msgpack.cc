@@ -26,6 +26,9 @@
 #include "utils.h"
 
 
+const std::string path_test_msgpack = std::string(PACKAGE_PATH_TEST) + "/examples/";
+
+
 int test_correct_cpp() {
 #if defined(MSGPACK_USE_CPP03)
 	L_ERR(nullptr, "ERROR: It is running c++03");
@@ -139,13 +142,13 @@ int test_constructors() {
 
 	// rapidjson::Document
 	std::string str_json;
-	std::string filename = "examples/msgpack/json_test1.txt";
+	std::string filename = path_test_msgpack + "msgpack/json_test1.txt";
 	if (!read_file_contents(filename, &str_json)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		++res;
 	} else {
 		std::string expect_json;
-		std::string filename("examples/msgpack/json_test1_unpack.txt");
+		std::string filename(path_test_msgpack + "msgpack/json_test1_unpack.txt");
 		if (!read_file_contents(filename, &expect_json)) {
 			L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 			++res;
@@ -277,7 +280,7 @@ int test_iterator() {
 
 int test_serialise() {
 	std::string buffer;
-	std::string filename("examples/msgpack/json_test1.txt");
+	std::string filename(path_test_msgpack + "msgpack/json_test1.txt");
 	if (!read_file_contents(filename, &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
@@ -294,7 +297,7 @@ int test_serialise() {
 	auto obj = MsgPack(doc);
 
 	std::string pack_expected;
-	std::string expected_filename("examples/msgpack/test1.mpack");
+	std::string expected_filename(path_test_msgpack + "msgpack/test1.mpack");
 	if (!read_file_contents(expected_filename, &pack_expected)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", expected_filename.c_str());
 		RETURN(1);
@@ -311,7 +314,7 @@ int test_serialise() {
 
 int test_unserialise() {
 	std::string buffer;
-	std::string filename("examples/msgpack/test1.mpack");
+	std::string filename(path_test_msgpack + "msgpack/test1.mpack");
 	if (!read_file_contents(filename, &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
@@ -320,7 +323,7 @@ int test_unserialise() {
 	auto obj = MsgPack::unserialise(buffer);
 
 	std::string expected;
-	std::string expected_filename("examples/msgpack/json_test1_unpack.txt");
+	std::string expected_filename(path_test_msgpack + "msgpack/json_test1_unpack.txt");
 	if (!read_file_contents(expected_filename, &expected)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", expected_filename.c_str());
 		RETURN(1);
@@ -338,7 +341,7 @@ int test_unserialise() {
 
 int test_explore() {
 	std::string buffer;
-	std::string filename("examples/msgpack/test2.mpack");
+	std::string filename(path_test_msgpack + "msgpack/test2.mpack");
 	if (!read_file_contents(filename, &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
@@ -492,7 +495,7 @@ int test_reference() {
 
 int test_path() {
 	std::string buffer;
-	std::string filename("examples/json/object_path.txt");
+	std::string filename(path_test_msgpack + "json/object_path.txt");
 	if (!read_file_contents(filename, &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
@@ -520,7 +523,7 @@ int test_path() {
 }
 
 
-int test_erase() {
+int test_msgpack_erase() {
 	// Erase by key
 	MsgPack obj = {
 		{ "elem1", "Elem1" },
@@ -616,7 +619,7 @@ int test_erase() {
 
 int test_reserve() {
 	std::string data;
-	std::string filename("examples/msgpack/test1.mpack");
+	std::string filename(path_test_msgpack + "msgpack/test1.mpack");
 	if (!read_file_contents(filename, &data)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
@@ -671,7 +674,7 @@ int test_keys() {
 	} catch (const MsgPack::duplicate_key&) { }
 
 	std::string data;
-	std::string filename("examples/msgpack/test1.mpack");
+	std::string filename(path_test_msgpack + "msgpack/test1.mpack");
 	if (!read_file_contents(filename, &data)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		++res;
@@ -739,7 +742,7 @@ int test_map() {
 	std::string r4 = "male";
 
 	std::string buffer;
-	std::string filename("examples/json/object_map_test.txt");
+	std::string filename(path_test_msgpack + "json/object_map_test.txt");
 	if (!read_file_contents(filename, &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);
@@ -800,7 +803,7 @@ int test_array() {
 	std::string r5 = "1956";
 
 	std::string buffer;
-	std::string filename("examples/json/object_to_patch.txt");
+	std::string filename(path_test_msgpack + "json/object_to_patch.txt");
 	if (!read_file_contents(filename, &buffer)) {
 		L_ERR(nullptr, "ERROR: Can not read the file: %s", filename.c_str());
 		RETURN(1);

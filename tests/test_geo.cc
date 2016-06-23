@@ -25,6 +25,9 @@
 #include "utils.h"
 
 
+const std::string path_test_geo = std::string(PACKAGE_PATH_TEST) + "/examples/json/";
+
+
 const test_geo_t geo_range_tests[] {
 	// The range search always is sort by centroids' search.
 	{
@@ -100,14 +103,14 @@ const test_geo_t geo_terms_tests[] {
 
 
 const std::vector<std::string> files({
-		"examples/json/geo_1.txt",
-		"examples/json/geo_2.txt",
-		"examples/json/geo_3.txt",
-		"examples/json/geo_4.txt",
-		"examples/json/geo_5.txt",
-		"examples/json/geo_6.txt",
-		"examples/json/geo_7.txt",
-		"examples/json/geo_8.txt"
+		path_test_geo + "geo_1.txt",
+		path_test_geo + "geo_2.txt",
+		path_test_geo + "geo_3.txt",
+		path_test_geo + "geo_4.txt",
+		path_test_geo + "geo_5.txt",
+		path_test_geo + "geo_6.txt",
+		path_test_geo + "geo_7.txt",
+		path_test_geo + "geo_8.txt"
 	});
 
 

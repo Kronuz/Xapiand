@@ -28,7 +28,7 @@ int test_add();
 int test_remove();
 int test_replace();
 int test_move();
-int test_copy();
+int test_patcher_copy();
 int test_test();
 int test_incr();
 int test_decr();

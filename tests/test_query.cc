@@ -25,6 +25,9 @@
 #include "utils.h"
 
 
+const std::string path_test_query = std::string(PACKAGE_PATH_TEST) + "/examples/";
+
+
 // TEST query
 const test_query_t test_query[] {
 	{
@@ -210,28 +213,28 @@ const test_query_t test_facets[] {
 
 const std::vector<std::string> files({
 		// Examples used in test geo.
-		"examples/json/geo_1.txt",
-		"examples/json/geo_2.txt",
-		"examples/json/geo_3.txt",
-		"examples/json/geo_4.txt",
-		"examples/json/geo_5.txt",
-		"examples/json/geo_6.txt",
-		"examples/json/geo_7.txt",
-		"examples/json/geo_8.txt",
+		path_test_query + "json/geo_1.txt",
+		path_test_query + "json/geo_2.txt",
+		path_test_query + "json/geo_3.txt",
+		path_test_query + "json/geo_4.txt",
+		path_test_query + "json/geo_5.txt",
+		path_test_query + "json/geo_6.txt",
+		path_test_query + "json/geo_7.txt",
+		path_test_query + "json/geo_8.txt",
 		// Examples used in test sort.
-		"examples/sort/doc1.txt",
-		"examples/sort/doc2.txt",
-		"examples/sort/doc3.txt",
-		"examples/sort/doc4.txt",
-		"examples/sort/doc5.txt",
-		"examples/sort/doc6.txt",
-		"examples/sort/doc7.txt",
-		"examples/sort/doc8.txt",
-		"examples/sort/doc9.txt",
-		"examples/sort/doc10.txt",
+		path_test_query + "sort/doc1.txt",
+		path_test_query + "sort/doc2.txt",
+		path_test_query + "sort/doc3.txt",
+		path_test_query + "sort/doc4.txt",
+		path_test_query + "sort/doc5.txt",
+		path_test_query + "sort/doc6.txt",
+		path_test_query + "sort/doc7.txt",
+		path_test_query + "sort/doc8.txt",
+		path_test_query + "sort/doc9.txt",
+		path_test_query + "sort/doc10.txt",
 		// Search examples.
-		"examples/json/example_1.txt",
-		"examples/json/example_2.txt"
+		path_test_query + "json/example_1.txt",
+		path_test_query + "json/example_2.txt"
 	});
 
 

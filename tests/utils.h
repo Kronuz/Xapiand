@@ -88,7 +88,7 @@ inline bool read_file_contents(const std::string& filename, std::string* content
  *	so the Endpoints and local_node are manipulated.
  */
 
-Endpoint create_endpoint(const std::string& database) {
+inline Endpoint create_endpoint(const std::string& database) {
 	Endpoint e(database, nullptr, -1, TEST_NODE_NAME);
 	e.port = XAPIAND_BINARY_SERVERPORT;
 	e.host.assign(TEST_LOCAL_HOST);

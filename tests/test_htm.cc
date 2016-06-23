@@ -28,6 +28,10 @@
 #include <algorithm>
 
 
+const std::string path_test_htm = std::string(PACKAGE_PATH_TEST) + "/examples/htm/";
+const std::string python_htm = "python_files/htm/";
+
+
 // Testing the transformation of coordinates between CRS.
 int test_cartesian_transforms() {
 	VectorTransforms SRID_2_WGS84;
@@ -176,30 +180,33 @@ int test_cartesian_transforms() {
 int test_hullConvex() {
 	int cont = 0;
 	std::vector<std::string> files, expect_files, result_files;
-	files.push_back("examples/htm/ColoradoPoly.txt");
-	expect_files.push_back("examples/htm/ColoradoPoly_expect_convex.txt");
-	result_files.push_back("examples/htm/ColoradoPoly_convex_hull.py");
-	files.push_back("examples/htm/Georgia.txt");
-	expect_files.push_back("examples/htm/Georgia_expect_convex.txt");
-	result_files.push_back("examples/htm/Georgia_convex_hull.py");
-	files.push_back("examples/htm/MexPoly.txt");
-	expect_files.push_back("examples/htm/MexPoly_expect_convex.txt");
-	result_files.push_back("examples/htm/MexPoly_convex_hull.py");
-	files.push_back("examples/htm/Nave.txt");
-	expect_files.push_back("examples/htm/Nave_expect_convex.txt");
-	result_files.push_back("examples/htm/Nave_convex_hull.py");
-	files.push_back("examples/htm/Poly.txt");
-	expect_files.push_back("examples/htm/Poly_expect_convex.txt");
-	result_files.push_back("examples/htm/Poly_convex_hull.py");
-	files.push_back("examples/htm/Poly2.txt");
-	expect_files.push_back("examples/htm/Poly2_expect_convex.txt");
-	result_files.push_back("examples/htm/Poly2_convex_hull.py");
-	files.push_back("examples/htm/Strip.txt");
-	expect_files.push_back("examples/htm/Strip_expect_convex.txt");
-	result_files.push_back("examples/htm/Strip_convex_hull.py");
-	files.push_back("examples/htm/Utah.txt");
-	expect_files.push_back("examples/htm/Utah_expect_convex.txt");
-	result_files.push_back("examples/htm/Utah_convex_hull.py");
+	files.push_back(path_test_htm + "ColoradoPoly.txt");
+	expect_files.push_back(path_test_htm + "ColoradoPoly_expect_convex.txt");
+	result_files.push_back(python_htm + "ColoradoPoly_convex_hull.py");
+	files.push_back(path_test_htm + "Georgia.txt");
+	expect_files.push_back(path_test_htm + "Georgia_expect_convex.txt");
+	result_files.push_back(python_htm + "Georgia_convex_hull.py");
+	files.push_back(path_test_htm + "MexPoly.txt");
+	expect_files.push_back(path_test_htm + "MexPoly_expect_convex.txt");
+	result_files.push_back(python_htm + "MexPoly_convex_hull.py");
+	files.push_back(path_test_htm + "Nave.txt");
+	expect_files.push_back(path_test_htm + "Nave_expect_convex.txt");
+	result_files.push_back(python_htm + "Nave_convex_hull.py");
+	files.push_back(path_test_htm + "Poly.txt");
+	expect_files.push_back(path_test_htm + "Poly_expect_convex.txt");
+	result_files.push_back(python_htm + "Poly_convex_hull.py");
+	files.push_back(path_test_htm + "Poly2.txt");
+	expect_files.push_back(path_test_htm + "Poly2_expect_convex.txt");
+	result_files.push_back(python_htm + "Poly2_convex_hull.py");
+	files.push_back(path_test_htm + "Strip.txt");
+	expect_files.push_back(path_test_htm + "Strip_expect_convex.txt");
+	result_files.push_back(python_htm + "Strip_convex_hull.py");
+	files.push_back(path_test_htm + "Utah.txt");
+	expect_files.push_back(path_test_htm + "Utah_expect_convex.txt");
+	result_files.push_back(python_htm + "Utah_convex_hull.py");
+
+	// Make the path for the python files generated.
+	build_path_index(python_htm);
 
 	auto it_f = files.begin();
 	auto it_e = expect_files.begin();
@@ -305,7 +312,7 @@ int test_hullConvex() {
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing Geometry Hull Convex is correct!, run with python examples/htm/{file}_convex_hull.py to see the hull convex.");
+		L_DEBUG(nullptr, "Testing Geometry Hull Convex is correct!, run with python %s{file}_convex_hull.py to see the hull convex.", path_test_htm.c_str());
 		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing Geometry Hull Convex has mistakes.");
@@ -323,42 +330,45 @@ int test_HTM_chull() {
 
 	std::vector<std::string> files, expect_files, result_files;
 	std::vector<GeometryType> types;
-	files.push_back("examples/htm/ColoradoPoly.txt");
-	expect_files.push_back("examples/htm/ColoradoPoly_expect.txt");
-	result_files.push_back("examples/htm/ColoradoPoly_polygon.py");
+	files.push_back(path_test_htm + "/ColoradoPoly.txt");
+	expect_files.push_back(path_test_htm + "/ColoradoPoly_expect.txt");
+	result_files.push_back(python_htm + "/ColoradoPoly_polygon.py");
 	types.push_back(GeometryType::CONVEX_POLYGON);
-	files.push_back("examples/htm/Georgia.txt");
-	expect_files.push_back("examples/htm/Georgia_expect.txt");
-	result_files.push_back("examples/htm/Georgia_polygon.py");
+	files.push_back(path_test_htm + "/Georgia.txt");
+	expect_files.push_back(path_test_htm + "/Georgia_expect.txt");
+	result_files.push_back(python_htm + "/Georgia_polygon.py");
 	types.push_back(GeometryType::CONVEX_HULL);
-	files.push_back("examples/htm/MexPoly.txt");
-	expect_files.push_back("examples/htm/MexPoly_expect.txt");
-	result_files.push_back("examples/htm/MexPoly_polygon.py");
+	files.push_back(path_test_htm + "/MexPoly.txt");
+	expect_files.push_back(path_test_htm + "/MexPoly_expect.txt");
+	result_files.push_back(python_htm + "/MexPoly_polygon.py");
 	types.push_back(GeometryType::CONVEX_HULL);
-	files.push_back("examples/htm/Nave.txt");
-	expect_files.push_back("examples/htm/Nave_expect.txt");
-	result_files.push_back("examples/htm/Nave_polygon.py");
+	files.push_back(path_test_htm + "/Nave.txt");
+	expect_files.push_back(path_test_htm + "/Nave_expect.txt");
+	result_files.push_back(python_htm + "/Nave_polygon.py");
 	types.push_back(GeometryType::CONVEX_HULL);
-	files.push_back("examples/htm/Poly.txt");
-	expect_files.push_back("examples/htm/Poly_expect.txt");
-	result_files.push_back("examples/htm/Poly_polygon.py");
+	files.push_back(path_test_htm + "/Poly.txt");
+	expect_files.push_back(path_test_htm + "/Poly_expect.txt");
+	result_files.push_back(python_htm + "/Poly_polygon.py");
 	types.push_back(GeometryType::CONVEX_HULL);
-	files.push_back("examples/htm/Poly2.txt");
-	expect_files.push_back("examples/htm/Poly2_expect.txt");
-	result_files.push_back("examples/htm/Poly2_polygon.py");
+	files.push_back(path_test_htm + "/Poly2.txt");
+	expect_files.push_back(path_test_htm + "/Poly2_expect.txt");
+	result_files.push_back(python_htm + "/Poly2_polygon.py");
 	types.push_back(GeometryType::CONVEX_HULL);
-	files.push_back("examples/htm/Poly3.txt");
-	expect_files.push_back("examples/htm/Poly3_expect.txt");
-	result_files.push_back("examples/htm/Poly3_polygon.py");
+	files.push_back(path_test_htm + "/Poly3.txt");
+	expect_files.push_back(path_test_htm + "/Poly3_expect.txt");
+	result_files.push_back(python_htm + "/Poly3_polygon.py");
 	types.push_back(GeometryType::CONVEX_POLYGON);
-	files.push_back("examples/htm/Strip.txt");
-	expect_files.push_back("examples/htm/Strip_expect.txt");
-	result_files.push_back("examples/htm/Strip_polygon.py");
+	files.push_back(path_test_htm + "/Strip.txt");
+	expect_files.push_back(path_test_htm + "/Strip_expect.txt");
+	result_files.push_back(python_htm + "/Strip_polygon.py");
 	types.push_back(GeometryType::CONVEX_POLYGON);
-	files.push_back("examples/htm/Utah.txt");
-	expect_files.push_back("examples/htm/Utah_expect.txt");
-	result_files.push_back("examples/htm/Utah_polygon.py");
+	files.push_back(path_test_htm + "/Utah.txt");
+	expect_files.push_back(path_test_htm + "/Utah_expect.txt");
+	result_files.push_back(python_htm + "/Utah_polygon.py");
 	types.push_back(GeometryType::CONVEX_HULL);
+
+	// Make the path for the python files generated.
+	build_path_index(python_htm);
 
 	auto it_f = files.begin();
 	auto it_e = expect_files.begin();
@@ -430,7 +440,7 @@ int test_HTM_chull() {
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing HTM polygon is correct!, run with python examples/htm/{file}_polygon.py to see the trixels that cover the hull convex.");
+		L_DEBUG(nullptr, "Testing HTM polygon is correct!, run with python %s{file}_polygon.py to see the trixels that cover the hull convex.", python_htm.c_str());
 		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing polygon HTM has mistakes.");
@@ -443,9 +453,12 @@ int test_HTM_chull() {
 // Python files are generated to view the results.
 int test_HTM_circle() {
 	int cont = 0;
-	std::string name("examples/htm/Circles.txt");
+	std::string name(path_test_htm + "/Circles.txt");
 	std::ifstream readFile(name);
 	char output[50];
+
+	// Make the path for the python files generated.
+	build_path_index(python_htm);
 
 	if (readFile.is_open()) {
 		while (!readFile.eof()) {
@@ -460,9 +473,9 @@ int test_HTM_circle() {
 			readFile >> output;
 			double radius = atof(output);
 			readFile >> output;
-			std::string file_expect(output);
+			std::string file_expect(path_test_htm + "/" + output);
 			readFile >> output;
-			std::string file_result(output);
+			std::string file_result(python_htm + output);
 
 			std::ifstream readEFile(file_expect);
 			if (readEFile.is_open()) {
@@ -510,7 +523,7 @@ int test_HTM_circle() {
 	}
 
 	if (cont == 0) {
-		L_DEBUG(nullptr, "Testing HTM bounding circle is correct!, run with python examples/htm/Circle{#}.py to see the trixels that cover the bounding circle.");
+		L_DEBUG(nullptr, "Testing HTM bounding circle is correct!, run with python %s/Circle{#}.py to see the trixels that cover the bounding circle.", path_test_htm.c_str());
 		RETURN(0);
 	} else {
 		L_ERR(nullptr, "ERROR: Testing HTM bounding circle has mistakes.");

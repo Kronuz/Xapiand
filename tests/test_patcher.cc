@@ -28,23 +28,26 @@
 #include "utils.h"
 
 
+const std::string path_test_patcher = std::string(PACKAGE_PATH_TEST) + "/examples/json/";
+
+
 int test_mix() {
 	std::string obj_str;
-	std::string filename("examples/json/object_to_patch.txt");
+	std::string filename(path_test_patcher + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
 	}
 
 	std::string patch_str;
-	filename = "examples/json/patch_mix.txt";
+	filename = path_test_patcher + "patch_mix.txt";
 	if (!read_file_contents(filename, &patch_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
 	}
 
 	std::string expected;
-	filename = "examples/json/patch_result.txt";
+	filename = path_test_patcher + "patch_result.txt";
 	if (!read_file_contents(filename, &expected)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
@@ -76,14 +79,14 @@ int test_mix() {
 
 int test_add() {
 	std::string obj_str;
-	std::string filename("examples/json/object_to_patch.txt");
+	std::string filename(path_test_patcher + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
 	}
 
 	std::string patch_str;
-	filename = "examples/json/patch_add.txt";
+	filename = path_test_patcher + "patch_add.txt";
 	if (!read_file_contents(filename, &patch_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
@@ -116,14 +119,14 @@ int test_add() {
 
 int test_remove() {
 	std::string obj_str;
-	std::string filename("examples/json/object_to_patch.txt");
+	std::string filename(path_test_patcher + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
 	}
 
 	std::string patch_str;
-	filename = "examples/json/patch_remove.txt";
+	filename = path_test_patcher + "patch_remove.txt";
 	if (!read_file_contents(filename, &patch_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
@@ -156,14 +159,14 @@ int test_remove() {
 
 int test_replace() {
 	std::string obj_str;
-	std::string filename("examples/json/object_to_patch.txt");
+	std::string filename(path_test_patcher + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
 	}
 
 	std::string patch_str;
-	filename = "examples/json/patch_replace.txt";
+	filename = path_test_patcher + "patch_replace.txt";
 	if (!read_file_contents(filename, &patch_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
@@ -196,14 +199,14 @@ int test_replace() {
 
 int test_move() {
 	std::string obj_str;
-	std::string filename("examples/json/object_to_patch.txt");
+	std::string filename(path_test_patcher + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
 	}
 
 	std::string patch_str;
-	filename = "examples/json/patch_move.txt";
+	filename = path_test_patcher + "patch_move.txt";
 	if (!read_file_contents(filename, &patch_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
@@ -234,16 +237,16 @@ int test_move() {
 }
 
 
-int test_copy() {
+int test_patcher_copy() {
 	std::string obj_str;
-	std::string filename("examples/json/object_to_patch.txt");
+	std::string filename(path_test_patcher + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
 	}
 
 	std::string patch_str;
-	filename = "examples/json/patch_copy.txt";
+	filename = path_test_patcher + "patch_copy.txt";
 	if (!read_file_contents(filename, &patch_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
@@ -276,14 +279,14 @@ int test_copy() {
 
 int test_test() {
 	std::string obj_str;
-	std::string filename("examples/json/object_to_patch.txt");
+	std::string filename(path_test_patcher + "object_to_patch.txt");
 	if (!read_file_contents(filename, &obj_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
 	}
 
 	std::string patch_str;
-	filename = "examples/json/patch_test.txt";
+	filename = path_test_patcher + "patch_test.txt";
 	if (!read_file_contents(filename, &patch_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
@@ -367,14 +370,14 @@ int test_decr() {
 
 int test_rfc6901() {
 	std::string obj_str;
-	std::string filename("examples/json/rfc6901.txt");
+	std::string filename(path_test_patcher + "rfc6901.txt");
 	if (!read_file_contents(filename, &obj_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
 	}
 
 	std::string patch_str;
-	filename = "examples/json/patch_rfc6901.txt";
+	filename = path_test_patcher + "patch_rfc6901.txt";
 	if (!read_file_contents(filename, &patch_str)) {
 		L_ERR(nullptr, "Can not read the file %s", filename.c_str());
 		RETURN(1);
@@ -395,4 +398,3 @@ int test_rfc6901() {
 		RETURN(1);
 	}
 }
-

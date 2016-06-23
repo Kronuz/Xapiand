@@ -35,7 +35,7 @@ int test_explore();
 int test_copy();
 int test_reference();
 int test_path();
-int test_erase();
+int test_msgpack_erase();
 int test_reserve();
 int test_keys();
 int test_change_keys();

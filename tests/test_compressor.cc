@@ -27,23 +27,26 @@
 #include "utils.h"
 
 
-static const std::string cmp_file = "examples/compressor/compress.lz4";
+const std::string path_test_compressor = std::string(PACKAGE_PATH_TEST) + "/examples/compressor/";
 
 
-static const std::vector<std::string> small_files({
-	"examples/compressor/Small_File1.txt",
-	"examples/compressor/Small_File2.txt",
-	"examples/compressor/Small_File3.txt",
-	"examples/compressor/Small_File4.txt"
+const std::string cmp_file = path_test_compressor + "compress.lz4";
+
+
+const std::vector<std::string> small_files({
+	path_test_compressor + "Small_File1.txt",
+	path_test_compressor + "Small_File2.txt",
+	path_test_compressor + "Small_File3.txt",
+	path_test_compressor + "Small_File4.txt"
 });
 
 
-static const std::vector<std::string> big_files({
-	"examples/compressor/Big_File1.jpg",
-	"examples/compressor/Big_File2.pdf",
-	"examples/compressor/Big_File3.pdf",
-	"examples/compressor/Big_File4.pdf",
-	"examples/compressor/Big_File5.pdf"
+const std::vector<std::string> big_files({
+	path_test_compressor + "Big_File1.jpg",
+	path_test_compressor + "Big_File2.pdf",
+	path_test_compressor + "Big_File3.pdf",
+	path_test_compressor + "Big_File4.pdf",
+	path_test_compressor + "Big_File5.pdf"
 });
 
 
