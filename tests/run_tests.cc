@@ -35,6 +35,10 @@
 #include "set_serialise_unserialise_test.h"
 #include "set_sort_test.h"
 #include "set_storage_test.h"
+#include "set_threadpool_test.h"
+#include "set_utils_test.h"
+#include "set_wal_test.h"
+#include "set_wkt_test.h"
 
 
 int main(int argc, char **argv) {

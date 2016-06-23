@@ -29,11 +29,14 @@
 #include <time.h>
 
 
+const std::string path_test_wkt = std::string(PACKAGE_PATH_TEST) + "/examples/wkt/";
+
+
 // Testing WKT parser.
 // Python files are generated to view the results.
 int test_wkt_parser() {
 	int cont = 0;
-	std::string name("examples/wkt/parser_tests.txt");
+	std::string name(path_test_wkt + "parser_tests.txt");
 	std::ifstream readFile(name);
 	std::string EWKT, file_expect, file_result;
 	double error = 0.2;
@@ -100,8 +103,7 @@ int test_wkt_parser() {
 
 
 // Test of speed
-int test_wkt_speed()
-{
+int test_wkt_speed() {
 	int repeat = 10;
 	clock_t start;
 	start = clock();
