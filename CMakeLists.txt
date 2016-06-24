@@ -37,10 +37,12 @@ endif ()
 
 include (CheckCXXCompilerFlag)
 
+set (READABLE_CXX_COMPILER "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+
 # Check for compiler support for C++14
 CHECK_CXX_COMPILER_FLAG(-std=c++14 COMPILER_SUPPORTS_CXX14)
 if (NOT COMPILER_SUPPORTS_CXX14)
-	message (FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++14 support. Please use a different C++ compiler.")
+	message (FATAL_ERROR "The compiler ${READABLE_CXX_COMPILER} has no C++14 support. Please use a different C++ compiler.")
 endif()
 
 # Check for fdiagnostics-color flag.
@@ -67,11 +69,12 @@ endif ()
 
 # Check for Address Sanitizer.
 if (ASAN)
-	if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"))
-		message(STATUS "The compiler ${CMAKE_CXX_COMPILER} supports ASAN")
+	if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 3.1) OR
+		("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.8))
+		message(STATUS "${READABLE_CXX_COMPILER} supports AddressSanitizer")
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 	else()
-		message(WARNING "The compiler ${CMAKE_CXX_COMPILER} doesn't support ASAN")
+		message(WARNING "${READABLE_CXX_COMPILER} doesn't support AddressSanitizer")
 	endif()
 endif()
 
