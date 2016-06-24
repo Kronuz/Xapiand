@@ -148,6 +148,7 @@ struct DB_Test {
 	}
 
 	~DB_Test() {
+		XapiandManager::manager.reset();
 		delete_files(name_database);
 	}
 
