@@ -28,17 +28,52 @@ set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
 
 ########################################################################
+# Check compiler flags
+########################################################################
+
 if (NOT CMAKE_BUILD_TYPE)
 	set (CMAKE_BUILD_TYPE Release)
 endif ()
 
-if (CMAKE_BUILD_TYPE MATCHES Release)
-	message("Release build.")
+include (CheckCXXCompilerFlag)
+
+# Check for compiler support for C++14
+CHECK_CXX_COMPILER_FLAG(-std=c++14 COMPILER_SUPPORTS_CXX14)
+if (NOT COMPILER_SUPPORTS_CXX14)
+	message (FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++14 support. Please use a different C++ compiler.")
+endif()
+
+# Check for fdiagnostics-color flag.
+CHECK_CXX_COMPILER_FLAG(-fdiagnostics-color=always COMPILER_SUPPORTS_DIAG_COLOR)
+if (COMPILER_SUPPORTS_DIAG_COLOR)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fdiagnostics-color=always")
+else()
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+endif()
+
+# Check for Wall and Wextra flags.
+if (CMAKE_BUILD_TYPE MATCHES Release)
+	message (STATUS "Release build")
 else ()
-	message("Debug build.")
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fdiagnostics-color=always -Wall -Wextra -g -O2")
+	message (STATUS "Debug build")
+	CHECK_CXX_COMPILER_FLAG(-Wall COMPILER_SUPPORTS_WALL)
+	CHECK_CXX_COMPILER_FLAG(-Wextra COMPILER_SUPPORTS_WEXTRA)
+	if (COMPILER_SUPPORTS_WALL AND COMPILER_SUPPORTS_WEXTRA)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -g -O2")
+	else ()
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2")
+	endif()
 endif ()
+
+# Check for Address Sanitizer.
+if (ASAN)
+	CHECK_CXX_COMPILER_FLAG(-fsanitize=address COMPILER_SUPPORTS_ASAN)
+	if (COMPILER_SUPPORTS_ASAN)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+	endif()
+endif()
+
+message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS}")
 
 
 ########################################################################
