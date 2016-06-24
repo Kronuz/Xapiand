@@ -973,7 +973,7 @@ bool build_path_index(const std::string& path) {
 		stringTokenizer(dir, "/", directories);
 		dir.clear();
 		for (const auto& _dir : directories) {
-			dir = dir + _dir + "/";
+			dir.append(_dir).append(1, '/');
 			if (mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
 				continue;
 			} else {
