@@ -71,10 +71,10 @@ endif ()
 if (ASAN)
 	if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 3.1) OR
 		("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.8))
-		message(STATUS "${READABLE_CXX_COMPILER} supports AddressSanitizer")
+		message (STATUS "${READABLE_CXX_COMPILER} supports AddressSanitizer")
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 	else()
-		message(WARNING "${READABLE_CXX_COMPILER} doesn't support AddressSanitizer")
+		message (WARNING "${READABLE_CXX_COMPILER} doesn't support AddressSanitizer")
 	endif()
 endif()
 
