@@ -67,9 +67,11 @@ endif ()
 
 # Check for Address Sanitizer.
 if (ASAN)
-	CHECK_CXX_COMPILER_FLAG(-fsanitize=address COMPILER_SUPPORTS_ASAN)
-	if (COMPILER_SUPPORTS_ASAN)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+	if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"))
+		message(STATUS "The compiler ${CMAKE_CXX_COMPILER} supports ASAN")
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	else()
+		message(WARNING "The compiler ${CMAKE_CXX_COMPILER} doesn't support ASAN")
 	endif()
 endif()
 
