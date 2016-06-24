@@ -22,11 +22,9 @@
 
 #include "test_wal.h"
 
-#include "utils.h"
 
-
-static std::string test_db(".test_wal.db");
-static std::string restored_db(".backup_wal.db");
+const std::string test_db(".test_wal.db");
+const std::string restored_db(".backup_wal.db");
 
 
 uint32_t get_checksum(int fd) {
@@ -99,10 +97,7 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 }
 
 
-DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
-
-
-int create_db_wal() {
+int create_db_wal(DB_Test& db_wal) {
 	int num_documents = 1020;
 	std::string document("{ \"message\" : \"Hello world\"}");
 
@@ -132,8 +127,9 @@ int create_db_wal() {
 
 
 int restore_database() {
+	DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_SPAWN);
 	try {
-		if (create_db_wal() == 0) {
+		if (create_db_wal(db_wal) == 0) {
 			/* Trigger the backup wal */
 			std::shared_ptr<DatabaseQueue>b_queue;
 			Endpoints endpoints;
