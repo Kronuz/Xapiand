@@ -44,7 +44,7 @@ int test_wkt_parser() {
 	bool partials = true;
 
 	// Make the path for the python files generated.
-	build_path_index(python_wkt);
+	build_path(python_wkt);
 
 	if (readFile.is_open()) {
 		while (std::getline(readFile, EWKT)) {
