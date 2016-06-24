@@ -13,6 +13,7 @@ option (BINARY_PROXY "Define to what port binary traffic will be redirected to" 
 option (CLUSTERING "Enable remote clustering" ON)
 option (DATABASE_WAL "Enable database write ahead log (WAL)" ON)
 option (TRACEBACKS "Enable tracebacks for exceptions" OFF)
+option (ASAN "Enable address sanitizer (can be slow)" OFF)
 
 foreach(opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS)
 	if (${opt})
