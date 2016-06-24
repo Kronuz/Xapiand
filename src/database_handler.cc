@@ -431,7 +431,10 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 		case 0:
 			try {
 				query = Xapian::Query(Xapian::Query::OP_OR, queryparser.parse_query(querystring, q_flags), query);
-				suggestions.push_back(queryparser.get_corrected_query_string());
+				std::string query_corrected = queryparser.get_corrected_query_string();
+				if (!query_corrected.empty()) {
+					suggestions.push_back(query_corrected);
+				}
 			} catch (const Xapian::QueryParserError& exc) {
 				L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 				throw;
@@ -440,18 +443,19 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 		case 1:
 			try {
 				query = queryparser.parse_query(querystring, q_flags);
-				suggestions.push_back(queryparser.get_corrected_query_string());
+				std::string query_corrected = queryparser.get_corrected_query_string();
+				if (!query_corrected.empty()) {
+					suggestions.push_back(query_corrected);
+				}
 			} catch (const Xapian::QueryParserError& exc) {
 				L_EXC(this, "ERROR: %s", exc.get_msg().c_str());
 				throw;
 			}
 			break;
 		case 2:
-			suggestions.push_back(std::string());
 			break;
 		case 3:
 			query = Xapian::Query::MatchNothing;
-			suggestions.push_back(std::string());
 			break;
 	}
 
