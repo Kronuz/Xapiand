@@ -52,7 +52,7 @@ DatabaseHandler::~DatabaseHandler() {
 
 
 void
-DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
+DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length, bool blob)
 {
 	L_CALL(this, "DatabaseHandler::_index()");
 
@@ -85,7 +85,9 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
 
 	// Index obj.
-	schema->index(properties, obj, doc);
+	if (!blob) {
+		schema->index(properties, obj, doc);
+	}
 }
 
 
@@ -132,10 +134,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 
 	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
-	if (obj.is_map()) {
-		blob = false;
-		_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
-	}
+	_index(doc, obj, term_id, _document_id, ct_type_, ct_length, obj.is_map());
 
 	set_data(doc, obj.serialise(), blob ? body : "");
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());

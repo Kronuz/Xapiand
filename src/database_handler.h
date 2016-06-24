@@ -41,7 +41,7 @@ class DatabaseHandler {
 	std::shared_ptr<Schema> schema;
 	std::shared_ptr<Database> database;
 
-	void _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length);
+	void _index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length, bool blob=false);
 
 	Xapian::Query search(const query_field_t& e, std::vector<std::string>& suggestions);
 	Xapian::Query _search(const std::string& str_query, std::vector<std::string>& suggestions, int q_flags, const std::string& lan, bool isText=false);
