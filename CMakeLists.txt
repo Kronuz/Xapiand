@@ -243,6 +243,12 @@ configure_file (
 	${PROJECT_SOURCE_DIR}/config.h.cmake
 	${PROJECT_BINARY_DIR}/src/config.h)
 
+# copy config.h to project/src for xcode project
+configure_file (
+	${PROJECT_BINARY_DIR}/src/config.h
+	${PROJECT_SOURCE_DIR}/src/config.h
+	COPYONLY)
+
 aux_source_directory (src SRC_LIST)
 aux_source_directory (src/ev SRC_LIST)
 aux_source_directory (src/hash SRC_LIST)

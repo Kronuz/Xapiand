@@ -157,6 +157,7 @@
 		C365BE4D1C4DABBB00F6E3AE /* msgpack_patcher.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = msgpack_patcher.cc; path = src/msgpack_patcher.cc; sourceTree = "<group>"; };
 		C365BE4E1C4DABBB00F6E3AE /* msgpack_patcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = msgpack_patcher.h; path = src/msgpack_patcher.h; sourceTree = "<group>"; };
 		C36A3EB21C7F5D0B00B226D6 /* storage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = storage.h; path = src/storage.h; sourceTree = "<group>"; };
+		C3959CEB1D2185A1003486DF /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = src/config.h; sourceTree = "<group>"; };
 		C39AE0391B2F627E00203139 /* client_base.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = client_base.cc; path = src/client_base.cc; sourceTree = "<group>"; };
 		C39AE03A1B2F627E00203139 /* client_base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = client_base.h; path = src/client_base.h; sourceTree = "<group>"; };
 		C39AE03B1B2F627E00203139 /* client_binary.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = client_binary.cc; path = src/client_binary.cc; sourceTree = "<group>"; };
@@ -198,7 +199,6 @@
 		C3A4B9681CA989AC00239DC8 /* async_fsync.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = async_fsync.h; path = src/async_fsync.h; sourceTree = "<group>"; };
 		C3C37DBA1BB05C6900F99A84 /* namegen.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = namegen.cc; path = src/namegen.cc; sourceTree = "<group>"; };
 		C3C37DBC1BB05C8700F99A84 /* namegen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = namegen.h; path = src/namegen.h; sourceTree = "<group>"; };
-		C3CF70DA1D1DDA5800CD90FB /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = build/src/config.h; sourceTree = "<group>"; };
 		E5CEBCC61A99C89000CD151F /* Xapiand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Xapiand; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -230,7 +230,7 @@
 				C39AE03C1B2F627E00203139 /* client_binary.h */,
 				C39AE03D1B2F627E00203139 /* client_http.cc */,
 				C39AE03E1B2F627E00203139 /* client_http.h */,
-				C3CF70DA1D1DDA5800CD90FB /* config.h */,
+				C3959CEB1D2185A1003486DF /* config.h */,
 				C39AE0401B2F627E00203139 /* database.cc */,
 				C39AE0411B2F627E00203139 /* database.h */,
 				C31C5A161C11123A00E0DB7C /* database_autocommit.cc */,
