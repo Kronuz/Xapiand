@@ -43,15 +43,15 @@ set (READABLE_CXX_COMPILER "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSIO
 CHECK_CXX_COMPILER_FLAG(-std=c++14 COMPILER_SUPPORTS_CXX14)
 if (NOT COMPILER_SUPPORTS_CXX14)
 	message (FATAL_ERROR "The compiler ${READABLE_CXX_COMPILER} has no C++14 support. Please use a different C++ compiler.")
-endif()
+endif ()
 
 # Check for fdiagnostics-color flag.
 CHECK_CXX_COMPILER_FLAG(-fdiagnostics-color=always COMPILER_SUPPORTS_DIAG_COLOR)
 if (COMPILER_SUPPORTS_DIAG_COLOR)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fdiagnostics-color=always")
-else()
+else ()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-endif()
+endif ()
 
 # Check for Wall and Wextra flags.
 if (CMAKE_BUILD_TYPE MATCHES Release)
@@ -64,7 +64,7 @@ else ()
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -g -O2")
 	else ()
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2")
-	endif()
+	endif ()
 endif ()
 
 # Check for Address Sanitizer.
@@ -73,10 +73,10 @@ if (ASAN)
 		("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.8))
 		message (STATUS "${READABLE_CXX_COMPILER} supports AddressSanitizer")
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-	else()
+	else ()
 		message (WARNING "${READABLE_CXX_COMPILER} doesn't support AddressSanitizer")
-	endif()
-endif()
+	endif ()
+endif ()
 
 message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS}")
 
@@ -87,9 +87,12 @@ message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS}")
 
 find_program (CCACHE_FOUND "ccache")
 if (CCACHE_FOUND)
-	set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "ccache")
-	set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "ccache")
-endif()
+	message (STATUS "Looking for ccache - found")
+	set_property (GLOBAL PROPERTY RULE_LAUNCH_COMPILE "ccache")
+	set_property (GLOBAL PROPERTY RULE_LAUNCH_LINK "ccache")
+else ()
+	message (STATUS "Looking for ccache - not found")
+endif ()
 
 
 include (AC_HEADER_STDC)
@@ -136,7 +139,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
 	# implementation in the library which is not prototyped in any header.
 	set (HAVE_FDATASYNC 0)
 else ()
-	check_function_exists(fdatasync HAVE_FDATASYNC)
+	check_function_exists (fdatasync HAVE_FDATASYNC)
 endif ()
 
 
@@ -181,7 +184,7 @@ set (HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
 
  # check if type long long is supported
 include (CheckTypeSize)
-foreach(opt "long long" "uint16_t" "u_int16_t" "__uint16" "_Bool")
+foreach (opt "long long" "uint16_t" "u_int16_t" "__uint16" "_Bool")
 	string (REPLACE " " "_" OPT "${opt}")
 	string (TOUPPER "${OPT}" OPT)
 	check_type_size ("${opt}" "${OPT}")
