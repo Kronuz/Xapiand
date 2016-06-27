@@ -297,4 +297,8 @@ target_link_libraries (${PROJECT_TEST_NAME}
 	gtest_main
 )
 
+add_test (BuildTests ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${PROJECT_TEST_NAME})
+add_test (RunTests ${PROJECT_TEST_NAME})
+set_tests_properties (RunTests PROPERTIES DEPENDS BuildTests)
+
 ########################################################################
