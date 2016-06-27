@@ -243,30 +243,30 @@ configure_file (
 	${PROJECT_SOURCE_DIR}/config.h.cmake
 	${PROJECT_BINARY_DIR}/src/config.h)
 
-# copy config.h to project/src for xcode project
-configure_file (
-	${PROJECT_BINARY_DIR}/src/config.h
-	${PROJECT_SOURCE_DIR}/src/config.h
-	COPYONLY)
+file (GLOB SRC_LIST
+	${PROJECT_SOURCE_DIR}/src/*.c* ${PROJECT_SOURCE_DIR}/src/*.h
+	${PROJECT_SOURCE_DIR}/src/ev/*.c* ${PROJECT_SOURCE_DIR}/src/ev/*.h
+	${PROJECT_SOURCE_DIR}/src/hash/*.c* ${PROJECT_SOURCE_DIR}/src/hash/*.h
+	${PROJECT_SOURCE_DIR}/src/lz4/*.c* ${PROJECT_SOURCE_DIR}/src/lz4/*.h
+	${PROJECT_SOURCE_DIR}/src/servers/*.c* ${PROJECT_SOURCE_DIR}/src/servers/*.h
+	${PROJECT_SOURCE_DIR}/src/xchange/*.c* ${PROJECT_SOURCE_DIR}/src/xchange/*.h)
 
-aux_source_directory (src SRC_LIST)
-aux_source_directory (src/ev SRC_LIST)
-aux_source_directory (src/hash SRC_LIST)
-aux_source_directory (src/lz4 SRC_LIST)
-aux_source_directory (src/servers SRC_LIST)
-aux_source_directory (src/xchange SRC_LIST)
 list (REMOVE_ITEM SRC_LIST
-	src/ev/ev_epoll.c
-	src/ev/ev_kqueue.c
-	src/ev/ev_poll.c
-	src/ev/ev_port.c
-	src/ev/ev_select.c
-	src/ev/ev_win32.c)
+	${PROJECT_SOURCE_DIR}/src/ev/ev_epoll.c
+	${PROJECT_SOURCE_DIR}/src/ev/ev_kqueue.c
+	${PROJECT_SOURCE_DIR}/src/ev/ev_poll.c
+	${PROJECT_SOURCE_DIR}/src/ev/ev_port.c
+	${PROJECT_SOURCE_DIR}/src/ev/ev_select.c
+	${PROJECT_SOURCE_DIR}/src/ev/ev_win32.c
+	${PROJECT_SOURCE_DIR}/src/xapiand.cc)
 
-add_executable (${PROJECT_NAME} ${SRC_LIST})
+add_library (SRC_LIB ${SRC_LIST})
+
+add_executable (${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/xapiand.cc)
 target_link_libraries (${PROJECT_NAME}
 	${XAPIAN_LIBRARIES}
 	${CMAKE_THREAD_LIBS_INIT}
+	SRC_LIB
 )
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
@@ -285,22 +285,6 @@ include_directories (${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES})
 
 link_directories (${GTEST_LIBS})
 
-aux_source_directory (src TEST_SRC_FILES)
-aux_source_directory (src TEST_SRC_FILES)
-aux_source_directory (src/ev TEST_SRC_FILES)
-aux_source_directory (src/hash TEST_SRC_FILES)
-aux_source_directory (src/lz4 TEST_SRC_FILES)
-aux_source_directory (src/servers TEST_SRC_FILES)
-aux_source_directory (src/xchange TEST_SRC_FILES)
-list (REMOVE_ITEM TEST_SRC_FILES
-	src/ev/ev_epoll.c
-	src/ev/ev_kqueue.c
-	src/ev/ev_poll.c
-	src/ev/ev_port.c
-	src/ev/ev_select.c
-	src/ev/ev_win32.c
-	src/xapiand.cc)
-
 aux_source_directory (tests TEST_SRC_FILES)
 
 add_executable (${PROJECT_TEST_NAME} ${TEST_SRC_FILES})
@@ -308,6 +292,7 @@ add_dependencies (${PROJECT_TEST_NAME} googletest)
 target_link_libraries (${PROJECT_TEST_NAME}
 	${XAPIAN_LIBRARIES}
 	${CMAKE_THREAD_LIBS_INIT}
+	SRC_LIB
 	gtest
 	gtest_main
 )
