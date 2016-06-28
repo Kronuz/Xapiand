@@ -564,6 +564,8 @@ void writepid(const char* pidfile) {
 
 
 void usedir(const char* path) {
+
+#ifdef XAPIAND_CLUSTERING
 	DIR *dirp;
 	dirp = opendir(path, true);
 	if (!dirp) {
@@ -597,6 +599,7 @@ void usedir(const char* path) {
 		L_CRIT(nullptr, "Working directory must be empty or a valid xapian database: %s", path);
 		throw Exit(EX_DATAERR);
 	}
+#endif
 
 	if (chdir(path) == -1) {
 		L_CRIT(nullptr, "Cannot change current working directory to %s", path);
