@@ -52,7 +52,7 @@ DatabaseHandler::~DatabaseHandler() {
 
 
 void
-DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length, bool blob)
+DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& term_id, const std::string& _document_id, const std::string& ct_type, const std::string& ct_length)
 {
 	L_CALL(this, "DatabaseHandler::_index()");
 
@@ -85,7 +85,7 @@ DatabaseHandler::_index(Xapian::Document& doc, const MsgPack& obj, std::string& 
 	doc.add_term(prefixed("*/" + subtype, term_prefix));
 
 	// Index obj.
-	if (!blob) {
+	if (obj.is_map()) {
 		schema->index(properties, obj, doc);
 	}
 }
@@ -105,7 +105,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 	}
 
 	// Create MsgPack object
-	auto blob = true;
+	auto blob = false;
 	auto ct_type_ = ct_type;
 	MsgPack obj;
 	rapidjson::Document rdoc;
@@ -113,20 +113,21 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 		case MIMEType::APPLICATION_JSON:
 			json_load(rdoc, body);
 			obj = MsgPack(rdoc);
-			blob = false;
 			break;
 		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
 			try {
 				json_load(rdoc, body);
 				obj = MsgPack(rdoc);
 				ct_type_ = JSON_TYPE;
-				blob = false;
-			} catch (const std::exception&) { }
+			} catch (const std::exception&) {
+				blob = true;
+			}
 			break;
 		case MIMEType::APPLICATION_X_MSGPACK:
 			obj = MsgPack::unserialise(body);
 			break;
 		default:
+			blob = true;
 			break;
 	}
 
@@ -136,7 +137,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 
 	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
-	_index(doc, obj, term_id, _document_id, ct_type_, ct_length, !obj.is_map());
+	_index(doc, obj, term_id, _document_id, ct_type_, ct_length);
 
 	set_data(doc, obj.serialise(), blob ? body : "");
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
@@ -162,9 +163,7 @@ DatabaseHandler::index(const MsgPack& obj, const std::string& _document_id, bool
 
 	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
-	if (obj.is_map()) {
-		_index(doc, obj, term_id, _document_id, ct_type, ct_length);
-	}
+	_index(doc, obj, term_id, _document_id, ct_type, ct_length);
 
 	set_data(doc, obj.serialise(), "");
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
