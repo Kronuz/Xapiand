@@ -113,12 +113,14 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 		case MIMEType::APPLICATION_JSON:
 			json_load(rdoc, body);
 			obj = MsgPack(rdoc);
+			blob = false;
 			break;
 		case MIMEType::APPLICATION_XWWW_FORM_URLENCODED:
 			try {
 				json_load(rdoc, body);
 				obj = MsgPack(rdoc);
 				ct_type_ = JSON_TYPE;
+				blob = false;
 			} catch (const std::exception&) { }
 			break;
 		case MIMEType::APPLICATION_X_MSGPACK:
@@ -134,7 +136,7 @@ DatabaseHandler::index(const std::string &body, const std::string &_document_id,
 
 	schema = std::make_shared<Schema>(XapiandManager::manager->database_pool.get_schema(endpoints[0], flags));
 
-	_index(doc, obj, term_id, _document_id, ct_type_, ct_length, obj.is_map());
+	_index(doc, obj, term_id, _document_id, ct_type_, ct_length, !obj.is_map());
 
 	set_data(doc, obj.serialise(), blob ? body : "");
 	L_INDEX(this, "Schema: %s", schema->to_string().c_str());
