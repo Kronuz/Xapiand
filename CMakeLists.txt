@@ -295,6 +295,7 @@ target_link_libraries (${PROJECT_NAME}
 	${XAPIAN_LIBRARIES}
 	${CMAKE_THREAD_LIBS_INIT}
 	${UUID_LIBRARIES}
+	m
 )
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
@@ -332,6 +333,7 @@ if (BUILD_TESTS)
 			${XAPIAN_LIBRARIES}
 			${CMAKE_THREAD_LIBS_INIT}
 			${UUID_LIBRARIES}
+			m
 			gtest
 			gtest_main
 		)
