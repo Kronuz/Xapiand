@@ -280,25 +280,27 @@ enable_testing ()
 
 add_subdirectory (${PROJECT_SOURCE_DIR}/ext/gtest)
 
-set (PROJECT_TEST_NAME ${PROJECT_NAME}_test)
 include_directories (${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES})
 
 link_directories (${GTEST_LIBS})
 
-aux_source_directory (tests TEST_SRC_FILES)
+foreach (VAR_TEST compressor dllist generate_terms geo hash htm
+	lru msgpack patcher query queue serialise_stl serialise sort
+	storage threadpool utils wal wkt_parser)
+	set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
+	add_executable (${PROJECT_TEST}
+		${PACKAGE_PATH_TEST}/test_${VAR_TEST}.cc
+		${PACKAGE_PATH_TEST}/set_${VAR_TEST}_test.cc)
 
-add_executable (${PROJECT_TEST_NAME} ${TEST_SRC_FILES})
-add_dependencies (${PROJECT_TEST_NAME} googletest)
-target_link_libraries (${PROJECT_TEST_NAME}
-	${XAPIAN_LIBRARIES}
-	${CMAKE_THREAD_LIBS_INIT}
-	SRC_LIB
-	gtest
-	gtest_main
-)
-
-add_test (BuildTests ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${PROJECT_TEST_NAME})
-add_test (RunTests ${PROJECT_TEST_NAME})
-set_tests_properties (RunTests PROPERTIES DEPENDS BuildTests)
+	add_dependencies (${PROJECT_TEST} googletest)
+	target_link_libraries (${PROJECT_TEST}
+		${XAPIAN_LIBRARIES}
+		${CMAKE_THREAD_LIBS_INIT}
+		SRC_LIB
+		gtest
+		gtest_main
+	)
+	add_test (${VAR_TEST} ${PROJECT_TEST})
+endforeach ()
 
 ########################################################################
