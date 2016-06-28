@@ -579,7 +579,8 @@ Database::reopen()
 		}
 
 #ifdef XAPIAND_DATABASE_WAL
-		if (local && !(flags & DB_NOWAL)) {
+		/* If checkout_revision.empty() is true then get_revision_info() is not available */
+		if (local && !(flags & DB_NOWAL) && !checkout_revision.empty()) {
 			// WAL required on a local writable database, open it.
 			wal = std::make_unique<DatabaseWAL>(this);
 			if (wal->open_current(e.path, true)) {
