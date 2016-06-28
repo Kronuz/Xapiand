@@ -1021,15 +1021,13 @@ HttpClient::search_view()
 	db_handler.reset(endpoints, DB_SPAWN);
 	db_handler.get_mset(*query_field, mset, spies, suggestions);
 
-	if (suggestions.size()) {
-		L_DEBUG(this, "Suggested queries:\n%s", [&suggestions]() {
-			std::string res;
-			for (const auto& suggestion : suggestions) {
-				res += "\t+ " + suggestion + "\n";
-			}
-			return res;
-		}().c_str());
-	}
+	L_SEARCH(this, "Suggested queries:\n%s", [&suggestions]() {
+		std::string res;
+		for (const auto& suggestion : suggestions) {
+			res += "\t+ " + suggestion + "\n";
+		}
+		return res;
+	}().c_str());
 
 	int rc = 0;
 	if (mset.empty()) {
