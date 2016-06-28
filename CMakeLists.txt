@@ -260,13 +260,12 @@ list (REMOVE_ITEM SRC_LIST
 	${PROJECT_SOURCE_DIR}/src/ev/ev_win32.c
 	${PROJECT_SOURCE_DIR}/src/xapiand.cc)
 
-add_library (SRC_LIB ${SRC_LIST})
+add_library (SRC_OBJ OBJECT ${SRC_LIST})
 
-add_executable (${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/xapiand.cc)
+add_executable (${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/xapiand.cc $<TARGET_OBJECTS:SRC_OBJ>)
 target_link_libraries (${PROJECT_NAME}
 	${XAPIAN_LIBRARIES}
 	${CMAKE_THREAD_LIBS_INIT}
-	SRC_LIB
 )
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
@@ -290,13 +289,13 @@ foreach (VAR_TEST compressor dllist generate_terms geo hash htm
 	set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 	add_executable (${PROJECT_TEST}
 		${PACKAGE_PATH_TEST}/test_${VAR_TEST}.cc
-		${PACKAGE_PATH_TEST}/set_${VAR_TEST}_test.cc)
+		${PACKAGE_PATH_TEST}/set_${VAR_TEST}_test.cc
+		$<TARGET_OBJECTS:SRC_OBJ>)
 
-	add_dependencies (${PROJECT_TEST} googletest)
+	add_dependencies (${PROJECT_TEST} googletest )
 	target_link_libraries (${PROJECT_TEST}
 		${XAPIAN_LIBRARIES}
 		${CMAKE_THREAD_LIBS_INIT}
-		SRC_LIB
 		gtest
 		gtest_main
 	)
