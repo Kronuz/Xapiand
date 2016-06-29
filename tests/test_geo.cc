@@ -102,7 +102,7 @@ const test_geo_t geo_terms_tests[] {
 };
 
 
-const std::vector<std::string> files({
+static DB_Test db_geo(".db_geo.db", std::vector<std::string>({
 		path_test_geo + "geo_1.txt",
 		path_test_geo + "geo_2.txt",
 		path_test_geo + "geo_3.txt",
@@ -111,10 +111,10 @@ const std::vector<std::string> files({
 		path_test_geo + "geo_6.txt",
 		path_test_geo + "geo_7.txt",
 		path_test_geo + "geo_8.txt"
-	});
+	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 
-static int make_search(const test_geo_t _tests[], int len, DB_Test& db_geo) {
+static int make_search(const test_geo_t _tests[], int len) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -140,7 +140,7 @@ static int make_search(const test_geo_t _tests[], int len, DB_Test& db_geo) {
 			db_geo.db_handler.get_mset(query, mset, spies, suggestions);
 			if (mset.size() != p.expect_datas.size()) {
 				++cont;
-				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.\n %s", mset.size(), p.expect_datas.size(), query.terms.back().c_str());
+				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.", mset.size(), p.expect_datas.size());
 			} else {
 				auto it = p.expect_datas.begin();
 				for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {
@@ -170,10 +170,9 @@ static int make_search(const test_geo_t _tests[], int len, DB_Test& db_geo) {
 
 int geo_range_test() {
 	try {
-		DB_Test db_geo(".db_geo.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-		int cont = make_search(geo_range_tests, arraySize(geo_range_tests), db_geo);
+		int cont = make_search(geo_range_tests, arraySize(geo_range_tests));
 		if (cont == 0) {
-			L_ERR(nullptr, "Testing search range geospatials is correct!");
+			L_DEBUG(nullptr, "Testing search range geospatials is correct!");
 		} else {
 			L_ERR(nullptr, "ERROR: Testing search range geospatials has mistakes.");
 		}
@@ -190,8 +189,7 @@ int geo_range_test() {
 
 int geo_terms_test() {
 	try {
-		DB_Test db_geo(".db_geo.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-		int cont = make_search(geo_terms_tests, arraySize(geo_terms_tests), db_geo);
+		int cont = make_search(geo_terms_tests, arraySize(geo_terms_tests));
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search by geospatial terms is correct!");
 		} else {

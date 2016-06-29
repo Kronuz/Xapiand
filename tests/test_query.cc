@@ -211,7 +211,7 @@ const test_query_t test_facets[] {
 };
 
 
-const std::vector<std::string> files({
+static DB_Test db_query(".db_query.db", std::vector<std::string>({
 		// Examples used in test geo.
 		path_test_query + "json/geo_1.txt",
 		path_test_query + "json/geo_2.txt",
@@ -235,10 +235,10 @@ const std::vector<std::string> files({
 		// Search examples.
 		path_test_query + "json/example_1.txt",
 		path_test_query + "json/example_2.txt"
-	});
+	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 
-static int make_search(const test_query_t _tests[], int len, DB_Test& db_query) {
+static int make_search(const test_query_t _tests[], int len) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -258,23 +258,23 @@ static int make_search(const test_query_t _tests[], int len, DB_Test& db_query) 
 		query.facets.clear();
 
 		// Insert query
-		for (auto it = p.query.begin(); it != p.query.end(); ++it) {
-			query.query.push_back(*it);
+		for (const auto& _query : p.query) {
+			query.query.push_back(_query);
 		}
 
 		// Insert terms
-		for (auto it = p.terms.begin(); it != p.terms.end(); ++it) {
-			query.terms.push_back(*it);
+		for (const auto& _term : p.terms) {
+			query.terms.push_back(_term);
 		}
 
 		// Insert partials
-		for (auto it = p.partial.begin(); it != p.partial.end(); ++it) {
-			query.partial.push_back(*it);
+		for (const auto& _partial : p.partial) {
+			query.partial.push_back(_partial);
 		}
 
 		// Insert facets
-		for (auto it = p.facets.begin(); it != p.facets.end(); ++it) {
-			query.facets.push_back(*it);
+		for (const auto& _facet : p.facets) {
+			query.facets.push_back(_facet);
 		}
 
 
@@ -287,7 +287,7 @@ static int make_search(const test_query_t _tests[], int len, DB_Test& db_query) 
 			// Check by documents
 			if (mset.size() != p.expect_datas.size()) {
 				++cont;
-				L_ERR(nullptr, "ERROR: Different number of documents obtained, get: %zu expected: %zu", mset.size(), p.expect_datas.size());
+				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.", mset.size(), p.expect_datas.size());
 			} else {
 				Xapian::MSetIterator m = mset.begin();
 				for (auto it = p.expect_datas.begin(); m != mset.end(); ++it, ++m) {
@@ -337,8 +337,7 @@ static int make_search(const test_query_t _tests[], int len, DB_Test& db_query) 
 
 int test_query_search() {
 	try {
-		DB_Test db_query(".db_query.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-		int cont = make_search(test_query, arraySize(test_query), db_query);
+		int cont = make_search(test_query, arraySize(test_query));
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using query is correct!");
 		} else {
@@ -357,8 +356,7 @@ int test_query_search() {
 
 int test_terms_search() {
 	try {
-		DB_Test db_query(".db_query.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-		int cont = make_search(test_terms, arraySize(test_terms), db_query);
+		int cont = make_search(test_terms, arraySize(test_terms));
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using terms is correct!");
 		} else {
@@ -377,8 +375,7 @@ int test_terms_search() {
 
 int test_partials_search() {
 	try {
-		DB_Test db_query(".db_query.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-		int cont = make_search(test_partials, arraySize(test_partials), db_query);
+		int cont = make_search(test_partials, arraySize(test_partials));
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing search using partials is correct!");
 		} else {
@@ -397,8 +394,7 @@ int test_partials_search() {
 
 int test_facets_search() {
 	try {
-		DB_Test db_query(".db_query.db", files, DB_WRITABLE | DB_SPAWN | DB_NOWAL);
-		int cont = make_search(test_facets, arraySize(test_facets), db_query);
+		int cont = make_search(test_facets, arraySize(test_facets));
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing facets is correct!");
 		} else {
