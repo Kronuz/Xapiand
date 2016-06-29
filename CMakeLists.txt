@@ -313,7 +313,7 @@ if (BUILD_TESTS)
 			gtest
 			gtest_main
 		)
-		add_test (${VAR_TEST} ${PROJECT_TEST})
+		add_test (NAME ${VAR_TEST} COMMAND ${PROJECT_TEST})
 	endforeach ()
 endif ()
 
