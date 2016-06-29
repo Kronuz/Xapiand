@@ -14,6 +14,7 @@ option (CLUSTERING "Enable remote clustering" ON)
 option (DATABASE_WAL "Enable database write ahead log (WAL)" ON)
 option (TRACEBACKS "Enable tracebacks for exceptions" OFF)
 option (ASAN "Enable address sanitizer (can be slow)" OFF)
+option (BUILD_TESTS "Build all tests" OFF)
 
 foreach(opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS)
 	if (${opt})
@@ -277,34 +278,41 @@ install (TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 
 ########################################################################
-# Testing
+# Testing.
+#
+# You can skip this section if you aren't interested in testing.
+#
+# The tests are not built by default.  To build them, set the
+# BUILD_TESTS option to ON.  You can do it by running ccmake
+# or specifying the -DBUILD_TESTS=ON flag when running cmake.
 ########################################################################
+if (BUILD_TESTS)
+	enable_testing ()
 
-enable_testing ()
+	add_subdirectory (${PROJECT_SOURCE_DIR}/ext/gtest)
 
-add_subdirectory (${PROJECT_SOURCE_DIR}/ext/gtest)
+	include_directories (${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES})
 
-include_directories (${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES})
+	link_directories (${GTEST_LIBS})
 
-link_directories (${GTEST_LIBS})
+	foreach (VAR_TEST compressor dllist generate_terms geo hash htm
+		lru msgpack patcher query queue serialise_stl serialise sort
+		storage threadpool utils wal wkt_parser)
+		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
+		add_executable (${PROJECT_TEST}
+			${PACKAGE_PATH_TEST}/test_${VAR_TEST}.cc
+			${PACKAGE_PATH_TEST}/set_${VAR_TEST}_test.cc
+			$<TARGET_OBJECTS:SRC_OBJ>)
 
-foreach (VAR_TEST compressor dllist generate_terms geo hash htm
-	lru msgpack patcher query queue serialise_stl serialise sort
-	storage threadpool utils wal wkt_parser)
-	set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
-	add_executable (${PROJECT_TEST}
-		${PACKAGE_PATH_TEST}/test_${VAR_TEST}.cc
-		${PACKAGE_PATH_TEST}/set_${VAR_TEST}_test.cc
-		$<TARGET_OBJECTS:SRC_OBJ>)
-
-	add_dependencies (${PROJECT_TEST} googletest )
-	target_link_libraries (${PROJECT_TEST}
-		${XAPIAN_LIBRARIES}
-		${CMAKE_THREAD_LIBS_INIT}
-		gtest
-		gtest_main
-	)
-	add_test (${VAR_TEST} ${PROJECT_TEST})
-endforeach ()
+		add_dependencies (${PROJECT_TEST} googletest )
+		target_link_libraries (${PROJECT_TEST}
+			${XAPIAN_LIBRARIES}
+			${CMAKE_THREAD_LIBS_INIT}
+			gtest
+			gtest_main
+		)
+		add_test (${VAR_TEST} ${PROJECT_TEST})
+	endforeach ()
+endif ()
 
 ########################################################################
