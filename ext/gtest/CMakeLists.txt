@@ -1,13 +1,20 @@
-cmake_minimum_required (VERSION 2.8.8)
+cmake_minimum_required (VERSION 2.8.10)
 project (gtest_builder C CXX)
 
 include (ExternalProject)
 
 ExternalProject_Add(
 	googletest
-	PREFIX "googletest"
-	GIT_REPOSITORY https://github.com/google/googletest.git
+	PREFIX          "googletest"
+	GIT_REPOSITORY  "https://github.com/google/googletest.git"
+	GIT_TAG         "master"
+
+	# this command is empty because all necessary targets will
+	# be built on install stage
 	INSTALL_COMMAND ""
+
+	# Add flags for configure.
+	CMAKE_ARGS "-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}"
 )
 
 set (source_dir ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest)
