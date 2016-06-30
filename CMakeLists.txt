@@ -306,7 +306,7 @@ if (BUILD_TESTS)
 			${PACKAGE_PATH_TEST}/set_${VAR_TEST}_test.cc
 			$<TARGET_OBJECTS:SRC_OBJ>)
 
-		add_dependencies (${PROJECT_TEST} googletest )
+		add_dependencies (${PROJECT_TEST} googletest)
 		target_link_libraries (${PROJECT_TEST}
 			${XAPIAN_LIBRARIES}
 			${CMAKE_THREAD_LIBS_INIT}
