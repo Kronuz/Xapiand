@@ -4,7 +4,7 @@
  * @version 1.0.0
  * @license Public Domain
  * @author German M. Bravo (Kronuz)
- * @author deipi.com LLC and contributors (2016).
+ * @author deipi.com LLC and contributors (2015,2016).
  *
  */
 
