@@ -22,6 +22,11 @@ static std::random_device rd;  // Random device engine, usually based on /dev/ra
 static std::mt19937 rng(rd()); // Initialize Mersennes' twister using rd to generate the seed
 
 
+/*
+ * https://isocpp.org/wiki/faq/ctors#static-init-order
+ * Avoid the "static initialization order fiasco"
+ */
+
 const std::unordered_map<std::string, const std::vector<std::string>>& Generator::SymbolMap()
 {
 	static auto* const symbols = new std::unordered_map<std::string, const std::vector<std::string>>({
