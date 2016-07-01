@@ -4,6 +4,7 @@
  * @version 1.0.0
  * @license Public Domain
  * @author German M. Bravo (Kronuz)
+ * @author deipi.com LLC and contributors (2016).
  *
  * This library is designed after the RinkWorks Fantasy Name Generator.
  * @see http://www.rinkworks.com/namegen/
@@ -181,7 +182,7 @@ protected:
 	std::vector<std::unique_ptr<Generator>> generators;
 
 public:
-	static const std::unordered_map<std::string, const std::vector<std::string> > symbols;
+	static const std::unordered_map<std::string, const std::vector<std::string>>& SymbolMap();
 
 	Generator();
 	Generator(const std::string& pattern, bool collapse_triples=true);
