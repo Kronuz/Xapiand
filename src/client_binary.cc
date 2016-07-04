@@ -132,13 +132,11 @@ BinaryClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst
 	writable = true;
 
 	if (!XapiandManager::manager->database_pool.checkout(database, endpoints, DB_WRITABLE | DB_SPAWN | DB_REPLICATION, [
-		manager=XapiandManager::manager,
 		src_endpoint,
 		dst_endpoint
-	] () mutable {
-		L_DEBUG(manager.get(), "Triggering replication for %s after checkin!", dst_endpoint.as_string().c_str());
-		manager->trigger_replication(src_endpoint, dst_endpoint);
-		manager.reset();
+	] () {
+		L_DEBUG(XapiandManager::manager.get(), "Triggering replication for %s after checkin!", dst_endpoint.as_string().c_str());
+		XapiandManager::manager->trigger_replication(src_endpoint, dst_endpoint);
 	})) {
 		L_ERR(this, "Cannot checkout %s", endpoints.as_string().c_str());
 		return false;
