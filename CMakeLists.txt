@@ -285,8 +285,8 @@ install (TARGETS ${PROJECT_NAME} DESTINATION bin)
 # You can skip this section if you aren't interested in testing.
 #
 # The tests are not built by default.  To build them, set the
-# BUILD_TESTS option to ON.  You can do it by running ccmake
-# or specifying the -DBUILD_TESTS=ON flag when running cmake.
+# BUILD_TESTS option to ON.  You can do it by specifying the 
+# -DBUILD_TESTS=ON flag when running cmake.
 ########################################################################
 if (BUILD_TESTS)
 	enable_testing ()
