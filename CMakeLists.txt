@@ -15,7 +15,6 @@ option (BINARY_PROXY "Define to what port binary traffic will be redirected to" 
 option (CLUSTERING "Enable remote clustering" ON)
 option (DATABASE_WAL "Enable database write ahead log (WAL)" ON)
 option (TRACEBACKS "Enable tracebacks for exceptions" OFF)
-option (ASAN "Enable address sanitizer (can be slow)" OFF)
 option (BUILD_TESTS "Build all tests" OFF)
 
 foreach(opt BINARY_PROXY CLUSTERING DATABASE_WAL TRACEBACKS)
@@ -70,16 +69,12 @@ else ()
 	endif ()
 endif ()
 
-# Check for Address Sanitizer.
-if (ASAN)
-	if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 3.2) OR
-		("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.8))
-		message (STATUS "${READABLE_CXX_COMPILER} supports AddressSanitizer")
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-	else ()
-		message (WARNING "${READABLE_CXX_COMPILER} doesn't support AddressSanitizer")
-	endif ()
-endif ()
+
+########################################################################
+# Add Check for sanitizers.
+########################################################################
+
+include (CheckSanitizers)
 
 
 ########################################################################
@@ -253,6 +248,7 @@ if (HAVE_REMOTE_PROTOCOL)
 else ()
 	set ("XAPIAND_CLUSTERING" 0)
 endif ()
+
 
 ########################################################################
 # Configuration
