@@ -81,11 +81,12 @@ if (ASAN)
 	endif ()
 endif ()
 
-message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS}")
-
 
 ########################################################################
-# Xapiand
+# Enable ccache for builds if it exists.
+# Set CCACHE_CPP2 envvar, to avoid an error due to a strange ccache/clang++
+# interaction.  Specifically, errors about "argument unused during compilation".
+# Reference: http://peter.eisentraut.org/blog/2014/12/01/ccache-and-clang-part-3/
 ########################################################################
 
 find_program (CCACHE_FOUND "ccache")
@@ -93,10 +94,20 @@ if (CCACHE_FOUND)
 	message (STATUS "Looking for ccache - found")
 	set_property (GLOBAL PROPERTY RULE_LAUNCH_COMPILE "ccache")
 	set_property (GLOBAL PROPERTY RULE_LAUNCH_LINK "ccache")
+	if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+		set (ENV{CCACHE_CPP2} "yes")
+		add_compile_options (-Qunused-arguments)
+	endif ()
 else ()
 	message (STATUS "Looking for ccache - not found")
 endif ()
 
+message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS}")
+
+
+########################################################################
+# Xapiand
+########################################################################
 
 include (AC_HEADER_STDC)
 
