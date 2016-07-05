@@ -76,7 +76,7 @@ endif ()
 # Add Check for sanitizers.
 ########################################################################
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
-	include (CheckSanitizers)
+	find_package (Sanitizers QUIET)
 endif ()
 
 
