@@ -35,16 +35,21 @@ option (MSAN "Enable MemorySanitizer (aka MSAN)" OFF)
 option (UBSAN "Enable UndefinedBehaviorSanitizer (aka UBSAN)" OFF)
 
 
+include(CheckCXXCompilerFlag)
+
+
 # Check for Address Sanitizer.
 if (ASAN)
 	if (TSAN OR MSAN)
 		message (FATAL_ERROR "ASAN is not compatible with TSAN or MSAN")
 	endif ()
 
+	set (CMAKE_REQUIRED_FLAGS_CACHE ${CMAKE_REQUIRED_FLAGS})
 	set (ASAN_FLAGS  "-fsanitize=address -fno-omit-frame-pointer")
 	set (CMAKE_REQUIRED_FLAGS "${ASAN_FLAGS}")
-
 	CHECK_CXX_COMPILER_FLAG("${ASAN_FLAGS}" COMPILER_SUPPORTS_ASAN)
+	set (CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS_CACHE})
+
 	if (COMPILER_SUPPORTS_ASAN)
 		message (STATUS "${READABLE_CXX_COMPILER} supports AddressSanitizer")
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_FLAGS}")
@@ -60,10 +65,12 @@ if (TSAN)
 		message (FATAL_ERROR "TSAN is not compatible with MSAN")
 	endif ()
 
+	set (CMAKE_REQUIRED_FLAGS_CACHE ${CMAKE_REQUIRED_FLAGS})
 	set (TSAN_FLAGS  "-fsanitize=thread -fPIE -pie")
 	set (CMAKE_REQUIRED_FLAGS "${TSAN_FLAGS}")
-
 	CHECK_CXX_COMPILER_FLAG("${TSAN_FLAGS}" COMPILER_SUPPORTS_TSAN)
+	set (CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS_CACHE})
+
 	if (COMPILER_SUPPORTS_TSAN)
 		message (STATUS "${READABLE_CXX_COMPILER} supports ThreadSanitizer")
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TSAN_FLAGS}")
@@ -75,10 +82,12 @@ endif ()
 
 # Check for Memory Sanitizer.
 if (MSAN)
+	set (CMAKE_REQUIRED_FLAGS_CACHE ${CMAKE_REQUIRED_FLAGS})
 	set (MSAN_FLAGS  "-fsanitize=memory -fsanitize-memory-track-origins -fPIE -pie -fno-omit-frame-pointer")
 	set (CMAKE_REQUIRED_FLAGS "${MSAN_FLAGS}")
-
 	CHECK_CXX_COMPILER_FLAG("${MSAN_FLAGS}" COMPILER_SUPPORTS_MSAN)
+	set (CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS_CACHE})
+
 	if (COMPILER_SUPPORTS_MSAN)
 		message (STATUS "${READABLE_CXX_COMPILER} supports MemorySanitizer")
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSAN_FLAGS}")
@@ -90,10 +99,12 @@ endif ()
 
 # Check for Undefined Behavior Sanitizer.
 if (UBSAN)
+	set (CMAKE_REQUIRED_FLAGS_CACHE ${CMAKE_REQUIRED_FLAGS})
 	set (UBSAN_FLAGS  "-fsanitize=undefined -fno-omit-frame-pointer")
 	set (CMAKE_REQUIRED_FLAGS "${UBSAN_FLAGS}")
-
 	CHECK_CXX_COMPILER_FLAG("${UBSAN_FLAGS}" COMPILER_SUPPORTS_UBSAN)
+	set (CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS_CACHE})
+
 	if (COMPILER_SUPPORTS_UBSAN)
 		message (STATUS "${READABLE_CXX_COMPILER} supports UndefinedBehaviorSanitizer")
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${UBSAN_FLAGS}")
