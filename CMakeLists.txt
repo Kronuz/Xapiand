@@ -99,6 +99,13 @@ else ()
 	message (STATUS "Looking for ccache - not found")
 endif ()
 
+
+########################################################################
+# Remove duplicates compilation flags
+########################################################################
+separate_arguments (CMAKE_CXX_FLAGS)
+list (REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
+string (REPLACE ";" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 message (STATUS "Compile flags: ${CMAKE_CXX_FLAGS}")
 
 
