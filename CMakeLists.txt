@@ -33,10 +33,6 @@ set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 # Check compiler flags
 ########################################################################
 
-if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Release)
-endif ()
-
 include (CheckCXXCompilerFlag)
 
 set (READABLE_CXX_COMPILER "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
@@ -55,8 +51,13 @@ else ()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 endif ()
 
+if (NOT CMAKE_BUILD_TYPE)
+	set (CMAKE_BUILD_TYPE Release)
+endif ()
+
 # Check for Wall and Wextra flags.
-if (CMAKE_BUILD_TYPE MATCHES Release)
+string (TOLOWER ${CMAKE_BUILD_TYPE} _build_type)
+if (_build_type STREQUAL release)
 	message (STATUS "Release build")
 else ()
 	message (STATUS "Debug build")
