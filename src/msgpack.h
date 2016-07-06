@@ -222,7 +222,7 @@ public:
 	MsgPack operator +(long val);
 	MsgPack& operator +=(long val);
 	std::ostream& operator <<(std::ostream& s) const;
-	
+
 	std::string unformatted_string() const;
 	std::string to_string(bool prettify=false) const;
 
