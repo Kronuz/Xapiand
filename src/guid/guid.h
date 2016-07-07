@@ -1,7 +1,9 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2014 Graeme Hill (http://graemehill.ca)
+Copyright (c):
+ 2014 Graeme Hill (http://graemehill.ca)
+ 2016 deipi.com LLC and contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
