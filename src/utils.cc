@@ -1204,8 +1204,11 @@ void _tcp_nopush(int sock, int optval) {
 #endif
 }
 
-/* From https://github.com/antirez/redis/blob/b46239e58b00774d121de89e0e033b2ed3181eb0/src/server.c#L1496 */
-/* This function will try to raise the max number of open files accordingly to
+
+/*
+ * From https://github.com/antirez/redis/blob/b46239e58b00774d121de89e0e033b2ed3181eb0/src/server.c#L1496
+ *
+ * This function will try to raise the max number of open files accordingly to
  * the configured max number of clients. It also reserves a number of file
  * descriptors for extra operations of persistence, listening sockets, log files and so forth.
  *
@@ -1213,63 +1216,61 @@ void _tcp_nopush(int sock, int optval) {
  * max number of clients, the function will do the reverse setting
  * to the value that we can actually handle.
  */
-
-void adjustOpenFilesLimit(size_t& max_clients)
-{
+void adjustOpenFilesLimit(size_t& max_clients) {
 	rlim_t maxfiles = max_clients + RESERVED_FDS;
-	 struct rlimit limit;
+	struct rlimit limit;
 
-	 if (getrlimit(RLIMIT_NOFILE, &limit) == -1) {
-		 L_WARNING(nullptr, "Unable to obtain the current NOFILE limit (%s), assuming 1024 and setting the max clients configuration accordingly", strerror(errno));
-		 max_clients = 1024 - RESERVED_FDS;
-	 } else {
-		 rlim_t oldlimit = limit.rlim_cur;
+	if (getrlimit(RLIMIT_NOFILE, &limit) == -1) {
+		L_WARNING(nullptr, "Unable to obtain the current NOFILE limit (%s), assuming 1024 and setting the max clients configuration accordingly", strerror(errno));
+		max_clients = 1024 - RESERVED_FDS;
+	} else {
+		rlim_t oldlimit = limit.rlim_cur;
 
-		 /* Set the max number of files if the current limit is not enough
-		  * for our needs. */
-		 if (oldlimit < maxfiles) {
-			 rlim_t bestlimit;
-			 int setrlimit_error = 0;
+		/* Set the max number of files if the current limit is not enough
+		* for our needs. */
+		if (oldlimit < maxfiles) {
+			rlim_t bestlimit;
+			int setrlimit_error = 0;
 
-			 /* Try to set the file limit to match 'maxfiles' or at least
-			  * to the higher value supported less than maxfiles. */
-			 bestlimit = maxfiles;
-			 while(bestlimit > oldlimit) {
-				 rlim_t decr_step = 16;
+			/* Try to set the file limit to match 'maxfiles' or at least
+			* to the higher value supported less than maxfiles. */
+			bestlimit = maxfiles;
+			while (bestlimit > oldlimit) {
+				rlim_t decr_step = 16;
 
-				 limit.rlim_cur = bestlimit;
-				 limit.rlim_max = bestlimit;
-				 if (setrlimit(RLIMIT_NOFILE,&limit) != -1) break;
-				 setrlimit_error = errno;
+				limit.rlim_cur = bestlimit;
+				limit.rlim_max = bestlimit;
+				if (setrlimit(RLIMIT_NOFILE,&limit) != -1) break;
+				setrlimit_error = errno;
 
-				 /* We failed to set file limit to 'bestlimit'. Try with a
-				  * smaller limit decrementing by a few FDs per iteration. */
-				 if (bestlimit < decr_step) break;
-				 bestlimit -= decr_step;
-			 }
+				/* We failed to set file limit to 'bestlimit'. Try with a
+				* smaller limit decrementing by a few FDs per iteration. */
+				if (bestlimit < decr_step) break;
+				bestlimit -= decr_step;
+			}
 
-			 /* Assume that the limit we get initially is still valid if
-			  * our last try was even lower. */
-			 if (bestlimit < oldlimit) {
-					bestlimit = oldlimit;
-			 }
+			/* Assume that the limit we get initially is still valid if
+			* our last try was even lower. */
+			if (bestlimit < oldlimit) {
+				bestlimit = oldlimit;
+			}
 
-			 if (bestlimit < maxfiles) {
-				 int old_maxclients = max_clients;
-				  max_clients = bestlimit - RESERVED_FDS;
+			if (bestlimit < maxfiles) {
+				int old_maxclients = max_clients;
+				max_clients = bestlimit - RESERVED_FDS;
 
-				 if (max_clients < 1) {
-					 L_WARNING(nullptr, "Your current 'ulimit -n' of %llu is not enough for the server to start. Please increase your open file limit to at least %llu",
-							   (unsigned long long) oldlimit,
-							   (unsigned long long) maxfiles);
-					 throw Exit(EX_OSFILE);
-				 }
-				 L_WARNING(nullptr, "You requested maxclients of %d requiring at least %llu max file descriptors", old_maxclients, (unsigned long long) maxfiles);
-				 L_WARNING(nullptr, "Server can't set maximum open files to %llu because of OS error: %s", (unsigned long long) maxfiles, strerror(setrlimit_error));
-				 L_WARNING(nullptr, "Current maximum open files is %llu maxclients has been reduced to %d to compensate for low ulimit. If you need higher maxclients increase 'ulimit -n'", (unsigned long long) bestlimit, max_clients);
-			 } else {
-				 L_NOTICE(nullptr, "Increased maximum number of open files to %llu (it was originally set to %llu)", (unsigned long long) maxfiles, (unsigned long long) oldlimit);
-			 }
-		 }
-	 }
+				if (max_clients < 1) {
+					L_WARNING(nullptr, "Your current 'ulimit -n' of %llu is not enough for the server to start. Please increase your open file limit to at least %llu",
+						(unsigned long long) oldlimit,
+						(unsigned long long) maxfiles);
+					throw Exit(EX_OSFILE);
+				}
+				L_WARNING(nullptr, "You requested maxclients of %d requiring at least %llu max file descriptors", old_maxclients, (unsigned long long) maxfiles);
+				L_WARNING(nullptr, "Server can't set maximum open files to %llu because of OS error: %s", (unsigned long long) maxfiles, strerror(setrlimit_error));
+				L_WARNING(nullptr, "Current maximum open files is %llu maxclients has been reduced to %d to compensate for low ulimit. If you need higher maxclients increase 'ulimit -n'", (unsigned long long) bestlimit, max_clients);
+			} else {
+				L_NOTICE(nullptr, "Increased maximum number of open files to %llu (it was originally set to %llu)", (unsigned long long) maxfiles, (unsigned long long) oldlimit);
+			}
+		}
+	}
 }
