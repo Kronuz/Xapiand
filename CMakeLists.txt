@@ -276,6 +276,7 @@ file (GLOB SRC_LIST
 	${PROJECT_SOURCE_DIR}/src/hash/*.c* ${PROJECT_SOURCE_DIR}/src/hash/*.h
 	${PROJECT_SOURCE_DIR}/src/lz4/*.c* ${PROJECT_SOURCE_DIR}/src/lz4/*.h
 	${PROJECT_SOURCE_DIR}/src/servers/*.c* ${PROJECT_SOURCE_DIR}/src/servers/*.h
+	${PROJECT_SOURCE_DIR}/src/guid/*.c* ${PROJECT_SOURCE_DIR}/src/guid/*.h
 	${PROJECT_SOURCE_DIR}/src/xchange/*.c* ${PROJECT_SOURCE_DIR}/src/xchange/*.h)
 
 list (REMOVE_ITEM SRC_LIST

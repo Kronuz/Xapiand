@@ -265,6 +265,10 @@
 #cmakedefine XAPIAND_TRACEBACKS @XAPIAND_TRACEBACKS@
 
 /* Version number of package */
-#define PACKAGE_PATH_TEST "@PACKAGE_PATH_TEST@"
+#cmakedefine PACKAGE_PATH_TEST "@PACKAGE_PATH_TEST@"
 
-#endif
+/* Defines for cross-platform UUID/GUID generation */
+#cmakedefine GUID_LIBUUID @GUID_LIBUUID@
+#cmakedefine GUID_CFUUID @GUID_CFUUID@
+
+#endif /*  _CONFIGURATION_HEADER_GUARD_H_ */
