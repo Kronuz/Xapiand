@@ -221,6 +221,7 @@ endforeach ()
 
 find_package (Xapian REQUIRED)
 find_package (Threads REQUIRED)
+find_package (UUID REQUIRED)
 find_library (LIBPTHREAD pthread)
 if (LIBPTHREAD)
 	set ("HAVE_LIBPTHREAD" 1)
@@ -230,6 +231,7 @@ endif ()
 
 include_directories (
 	"${XAPIAN_INCLUDE_DIR}"
+	"${UUID_INCLUDE_DIRS}"
 	"${PROJECT_SOURCE_DIR}/src"
 	"${PROJECT_BINARY_DIR}/src")
 
@@ -238,8 +240,8 @@ include_directories (
 
 include (CMakePushCheckState)
 cmake_push_check_state ()
-set (CMAKE_REQUIRED_INCLUDES ${XAPIAN_INCLUDE_DIR})
-set (CMAKE_REQUIRED_LIBRARIES ${XAPIAN_LIBRARIES})
+set (CMAKE_REQUIRED_INCLUDES "${XAPIAN_INCLUDE_DIR} ${UUID_INCLUDE_DIRS}")
+set (CMAKE_REQUIRED_LIBRARIES "${XAPIAN_LIBRARIES} ${UUID_LIBRARIES}")
 include (CheckCXXSourceCompiles)
 check_cxx_source_compiles ("
 	#include <xapian.h>
@@ -291,6 +293,7 @@ add_executable (${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/xapiand.cc $<TARGET_OB
 target_link_libraries (${PROJECT_NAME}
 	${XAPIAN_LIBRARIES}
 	${CMAKE_THREAD_LIBS_INIT}
+	${UUID_LIBRARIES}
 )
 
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
@@ -327,6 +330,7 @@ if (BUILD_TESTS)
 		target_link_libraries (${PROJECT_TEST}
 			${XAPIAN_LIBRARIES}
 			${CMAKE_THREAD_LIBS_INIT}
+			${UUID_LIBRARIES}
 			gtest
 			gtest_main
 		)
