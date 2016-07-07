@@ -62,6 +62,7 @@ using opts_t = struct opts_s {
 	size_t threadpool_size;
 	size_t endpoints_list_size;
 	size_t num_committers;
+	size_t max_clients;
 	unsigned int ev_flags;
 };
 

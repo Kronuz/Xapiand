@@ -40,6 +40,7 @@
 #include <thread>
 #include <unistd.h>
 
+#define RESERVED_FDS 50 /* Better approach? */
 
 #define CMD_NO_CMD 0
 #define CMD_SEARCH 1
@@ -275,6 +276,8 @@ std::string delta_string(long double delta, bool colored=false);
 std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored=false);
 
 void _tcp_nopush(int sock, int optval);
+
+void adjustOpenFilesLimit(size_t& max_clients);
 
 inline void tcp_nopush(int sock) {
 	_tcp_nopush(sock, 1);

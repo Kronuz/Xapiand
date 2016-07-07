@@ -47,6 +47,8 @@
 #define SERVERS_MULTIPLIER   4       /* Server workers multiplier (by number of CPUs) */
 #define ENDPOINT_LIST_SIZE   10      /* Endpoints List's size */
 
+#define CONFIG_DEFAULT_MAX_CLIENTS 10000 /* Max of clients */
+
 #if !defined(_WIN32) && \
 	!defined(__linux__) && \
 	(defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)))
