@@ -270,5 +270,6 @@
 /* Defines for cross-platform UUID/GUID generation */
 #cmakedefine GUID_LIBUUID @GUID_LIBUUID@
 #cmakedefine GUID_CFUUID @GUID_CFUUID@
+#cmakedefine GUID_FREEBSD @GUID_FREEBSD@
 
 #endif /*  _CONFIGURATION_HEADER_GUARD_H_ */
