@@ -32,8 +32,10 @@ THE SOFTWARE.
 #include <uuid/uuid.h>
 #endif
 
-#ifdef GUID_BSDUUID
+#ifdef GUID_FREEBSD
 #include <uuid.h>
+#include <cstdint>
+#include <cstring>
 #endif
 
 #ifdef GUID_CFUUID
@@ -180,6 +182,23 @@ Guid GuidGenerator::newGuid()
 	uuid_t id;
 	uuid_generate(id);
 	return id;
+}
+#endif
+
+// This is the FreBSD version.
+#ifdef GUID_FREEBSD
+Guid GuidGenerator::newGuid()
+{
+	uuid_t id;
+	uint32_t status;
+	uuid_create(&id, &status);
+	if (status != uuid_s_ok) {
+		// Can only be uuid_s_no_memory it seems.
+		throw std::bad_alloc();
+	}
+	unsigned char byteArray[16];
+	std::memcpy(byteArray, &id, sizeof(byteArray));
+	return byteArray;
 }
 #endif
 
