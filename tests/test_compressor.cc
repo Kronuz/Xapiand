@@ -81,7 +81,7 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 		// Compress Data
 		std::string _data = read_file(orig_file);
 
-		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
+		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(fd < 0) {
 			throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
 		}
@@ -124,7 +124,7 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 		uint32_t cmp_checksum, dec_checksum;
 
 		// Compress File
-		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
+		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(fd < 0) {
 			throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
 		}
@@ -169,12 +169,12 @@ int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numB
 		std::vector<uint32_t> cmp_checksums, dec_checksums;
 
 		// Compress File
-		int orig_fd = io::open(orig_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
+		int orig_fd = io::open(orig_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(orig_fd < 0) {
 			throw MSG_Error("Cannot open file: %s", orig_file.c_str());
 		}
 
-		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT | O_DSYNC, 0644);
+		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(fd < 0) {
 			throw MSG_Error("Cannot open file: %s", cmp_file.c_str());
 		}
