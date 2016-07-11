@@ -240,8 +240,8 @@ include_directories (
 
 include (CMakePushCheckState)
 cmake_push_check_state ()
-set (CMAKE_REQUIRED_INCLUDES "${XAPIAN_INCLUDE_DIR} ${UUID_INCLUDE_DIRS}")
-set (CMAKE_REQUIRED_LIBRARIES "${XAPIAN_LIBRARIES} ${UUID_LIBRARIES}")
+set (CMAKE_REQUIRED_INCLUDES "${XAPIAN_INCLUDE_DIR}")
+set (CMAKE_REQUIRED_LIBRARIES "${XAPIAN_LIBRARIES}")
 include (CheckCXXSourceCompiles)
 check_cxx_source_compiles ("
 	#include <xapian.h>
