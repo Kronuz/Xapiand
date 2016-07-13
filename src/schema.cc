@@ -511,6 +511,23 @@ Schema::to_string(bool prettify) const
 }
 
 
+const MsgPack
+Schema::get_msgpack() const
+{
+	L_CALL(this, "Schema::get_msgpack()");
+
+	auto schema_readable = *schema;
+	auto& properties = schema_readable.at(RESERVED_SCHEMA);
+	if unlikely(properties.is_null()) {
+		schema_readable.erase(RESERVED_SCHEMA);
+	} else {
+		readable(properties, true);
+	}
+
+	return schema_readable;
+}
+
+
 void
 Schema::readable(MsgPack& item_schema, bool is_root)
 {

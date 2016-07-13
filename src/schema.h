@@ -203,6 +203,11 @@ public:
 	std::string to_string(bool prettify=false) const;
 
 	/*
+	 * Return schema Msgpack.
+	 */
+	const MsgPack get_msgpack() const;
+
+	/*
 	 * Function to index object in doc.
 	 */
 	void index(const MsgPack& properties, const MsgPack& object, Xapian::Document& doc);
