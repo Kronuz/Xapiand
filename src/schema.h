@@ -203,9 +203,9 @@ public:
 	std::string to_string(bool prettify=false) const;
 
 	/*
-	 * Return schema Msgpack.
+	 * Returns readable schema.
 	 */
-	const MsgPack get_msgpack() const;
+	const MsgPack get_readable() const;
 
 	/*
 	 * Function to index object in doc.

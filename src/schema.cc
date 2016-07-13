@@ -512,7 +512,7 @@ Schema::to_string(bool prettify) const
 
 
 const MsgPack
-Schema::get_msgpack() const
+Schema::get_readable() const
 {
 	L_CALL(this, "Schema::get_msgpack()");
 

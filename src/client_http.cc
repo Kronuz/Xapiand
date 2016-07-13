@@ -920,7 +920,7 @@ HttpClient::schema_view()
 	endpoints_maker(1s);
 
 	db_handler.reset(endpoints, DB_SPAWN);
-	write_http_response(db_handler.get_schema()->get_msgpack(), 200, pretty);
+	write_http_response(db_handler.get_schema()->get_readable(), 200, pretty);
 	return;
 }
 
