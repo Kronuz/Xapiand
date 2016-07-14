@@ -87,12 +87,20 @@ Serialise::serialise(const std::string& field_value)
 	// Try like integer.
 	try {
 		return std::make_pair(INTEGER_TYPE, Xapian::sortable_serialise(strict(std::stoll, field_value)));
-	} catch (const std::invalid_argument&) { }
+	} catch (const std::invalid_argument&) {
+	} catch (const std::out_of_range&) { }
+
+	// Try like positive.
+	try {
+		return std::make_pair(POSITIVE_TYPE, Xapian::sortable_serialise(strict(std::stoull, field_value)));
+	} catch (const std::invalid_argument&) {
+	} catch (const std::out_of_range&) { }
 
 	// Try like Float
 	try {
 		return std::make_pair(FLOAT_TYPE, Xapian::sortable_serialise(strict(std::stod, field_value)));
-	} catch (const std::invalid_argument&) { }
+	} catch (const std::invalid_argument&) {
+	} catch (const std::out_of_range&) { }
 
 	// Try like date
 	try {
