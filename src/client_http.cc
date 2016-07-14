@@ -1223,8 +1223,10 @@ HttpClient::url_resolve()
 			char path_buf_str[path_size + 1];
 			const char* path_str = path.data() + u.field_data[3].off;
 			normalize_path(path_str, path_str + path_size, path_buf_str);
-			if (path_parser.init(path_buf_str) >= PathParser::end) {
-				return CMD_BAD_QUERY;
+			if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
+				if (path_parser.init(path_buf_str) >= PathParser::end) {
+					return CMD_BAD_QUERY;
+				}
 			}
 		}
 
