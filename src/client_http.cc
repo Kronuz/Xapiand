@@ -710,6 +710,7 @@ HttpClient::home_view()
 		clean_reserved(obj_data);
 		obj_data[RESERVED_ID] = document.get_value(DB_SLOT_ID);
 	}
+	obj_data[RESERVED_ID] = db_handler.get_value(document, RESERVED_ID);
 
 #ifdef XAPIAND_CLUSTERING
 	obj_data["_cluster_name"] = XapiandManager::manager->cluster_name;
