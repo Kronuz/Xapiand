@@ -86,21 +86,18 @@ Serialise::serialise(const std::string& field_value)
 {
 	// Try like integer.
 	try {
-		return std::make_pair(INTEGER_TYPE, Xapian::sortable_serialise(strict(std::stoll, field_value)));
-	} catch (const std::invalid_argument&) {
-	} catch (const std::out_of_range&) { }
+		return std::make_pair(INTEGER_TYPE, Serialise::integer(field_value));
+	} catch (const SerialisationError&) { }
 
 	// Try like positive.
 	try {
-		return std::make_pair(POSITIVE_TYPE, Xapian::sortable_serialise(strict(std::stoull, field_value)));
-	} catch (const std::invalid_argument&) {
-	} catch (const std::out_of_range&) { }
+		return std::make_pair(POSITIVE_TYPE, Serialise::positive(field_value));
+	} catch (const SerialisationError&) { }
 
 	// Try like Float
 	try {
-		return std::make_pair(FLOAT_TYPE, Xapian::sortable_serialise(strict(std::stod, field_value)));
-	} catch (const std::invalid_argument&) {
-	} catch (const std::out_of_range&) { }
+		return std::make_pair(FLOAT_TYPE, Serialise::_float(field_value));
+	} catch (const SerialisationError&) { }
 
 	// Try like date
 	try {
@@ -244,6 +241,8 @@ Serialise::_float(const std::string& field_value)
 		return Xapian::sortable_serialise(strict(std::stod, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid float format: %s", field_value.c_str());
+	}  catch (const std::out_of_range&) {
+		throw MSG_SerialisationError("Out of range float format: %s", field_value.c_str());
 	}
 }
 
@@ -255,6 +254,8 @@ Serialise::integer(const std::string& field_value)
 		return Xapian::sortable_serialise(strict(std::stoll, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid integer format: %s", field_value.c_str());
+	} catch (const std::out_of_range&) {
+		throw MSG_SerialisationError("Out of range integer format: %s", field_value.c_str());
 	}
 }
 
@@ -266,6 +267,8 @@ Serialise::positive(const std::string& field_value)
 		return Xapian::sortable_serialise(strict(std::stoull, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid positive integer format: %s", field_value.c_str());
+	} catch (const std::out_of_range&) {
+		throw MSG_SerialisationError("Out of range positive integer format: %s", field_value.c_str());
 	}
 }
 
