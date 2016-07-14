@@ -695,7 +695,8 @@ HttpClient::home_view()
 {
 	L_CALL(this, "HttpClient::home_view()");
 
-	endpoints_maker(1s);
+	endpoints.clear();
+	endpoints.add(Endpoint("."));
 
 	db_handler.reset(endpoints, DB_SPAWN);
 
