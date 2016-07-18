@@ -116,7 +116,7 @@ namespace Serialise {
 	std::string positive(const std::string& field_value);
 
 	// Serialise field_value like positive integer.
-	std::string positive(const uint64_t& field_value);
+	std::string positive(uint64_t field_value);
 
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value);
