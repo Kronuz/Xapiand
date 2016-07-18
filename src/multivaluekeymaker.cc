@@ -44,11 +44,14 @@ static std::string findLargest(const std::string& multiValues) {
 static std::string get_cmpvalue(const std::string& value_, const key_values_t& sort_value) {
 	switch (sort_value.type) {
 		case INTEGER_TYPE:
-		case POSITIVE_TYPE:
 		case FLOAT_TYPE:
 		case DATE_TYPE: {
 			double val = std::abs(Xapian::sortable_unserialise(value_) - sort_value.valuenumeric);
 			return Xapian::sortable_serialise(val);
+		}
+		case POSITIVE_TYPE: {
+			double val = std::abs(Unserialise::positive(value_) - sort_value.valuenumeric);
+			return Serialise::positive(val);
 		}
 		case BOOLEAN_TYPE:
 			return value_[0] == sort_value.valuestring[0] ? Xapian::sortable_serialise(0) : Xapian::sortable_serialise(1);

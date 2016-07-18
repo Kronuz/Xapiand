@@ -42,6 +42,7 @@
 // Constants.
 constexpr size_t MAX_SIZE_NAME = HTM_MAX_LEVEL | '\x02';
 constexpr size_t SIZE_BYTES_ID = 7;
+constexpr size_t SIZE_BYTES_POSITIVE = 8;
 constexpr size_t SIZE_BITS_ID = 2 * MAX_SIZE_NAME;
 
 

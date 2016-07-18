@@ -157,6 +157,7 @@ Serialise::integer(char field_type, int64_t field_value)
 			if (field_value < 0) {
 				throw MSG_SerialisationError("Type: %s must be a positive number [%lld]", type(field_type).c_str(), field_value);
 			}
+			return Serialise::positive(field_value);
 		case DATE_TYPE:
 		case FLOAT_TYPE:
 		case INTEGER_TYPE:
@@ -174,8 +175,9 @@ Serialise::positive(char field_type, uint64_t field_value)
 		case DATE_TYPE:
 		case FLOAT_TYPE:
 		case INTEGER_TYPE:
-		case POSITIVE_TYPE:
 			return Xapian::sortable_serialise(field_value);
+		case POSITIVE_TYPE:
+			return Serialise::positive(field_value);
 		default:
 			throw MSG_SerialisationError("Type: %s is not a positive integer [%lld]", type(field_type).c_str(), field_value);
 	}
@@ -264,12 +266,27 @@ std::string
 Serialise::positive(const std::string& field_value)
 {
 	try {
-		return Xapian::sortable_serialise(strict(std::stoull, field_value));
+		auto id = strict(std::stoull, field_value);
+		id = Swap8Bytes(id);
+		const char serialise[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
+			(char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF), (char)((id >> 56) & 0xFF) };
+		return std::string(serialise, SIZE_BYTES_POSITIVE);
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid positive integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
 		throw MSG_SerialisationError("Out of range positive integer format: %s", field_value.c_str());
 	}
+}
+
+
+std::string
+Serialise::positive(const uint64_t& field_value)
+{
+	auto id = field_value;
+	id = Swap8Bytes(id);
+	const char serialise[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
+		(char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF), (char)((id >> 56) & 0xFF) };
+	return std::string(serialise, SIZE_BYTES_POSITIVE);
 }
 
 
@@ -462,7 +479,17 @@ Unserialise::integer(const std::string& serialise_val)
 uint64_t
 Unserialise::positive(const std::string& serialise_val)
 {
-	return Xapian::sortable_unserialise(serialise_val);
+	if (serialise_val.size() != SIZE_BYTES_POSITIVE) {
+		throw MSG_SerialisationError("Cannot unserialise positive: %s [%zu]", serialise_val.c_str(), serialise_val.size());
+	}
+
+	uint64_t id = (((uint64_t)serialise_val[0] << 56) & 0xFF00000000000000) | \
+	(((uint64_t)serialise_val[1] << 48) & 0xFF000000000000) | (((uint64_t)serialise_val[2] << 40) & 0xFF0000000000) | \
+	(((uint64_t)serialise_val[3] << 32) & 0xFF00000000)     | (((uint64_t)serialise_val[4] << 24) & 0xFF000000)     | \
+	(((uint64_t)serialise_val[5] << 16) & 0xFF0000)         | (((uint64_t)serialise_val[6] <<  8) & 0xFF00)         | \
+	(serialise_val[7] & 0xFF);
+
+	return id;
 }
 
 

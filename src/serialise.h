@@ -58,14 +58,18 @@
 #if __BYTE_ORDER == __BIG_ENDIAN
 // No translation needed for big endian system.
 #define Swap7Bytes(val) val // HTM's trixel's ids are represent in 7 bytes.
+#define Swap2Bytes(val) val // uint16_t, short in 2 bytes
 #define Swap4Bytes(val) val // Unsigned int is represent in 4 bytes
+#define Swap8Bytes(val) val // uint64_t is represent in 8 bytes
 #elif __BYTE_ORDER == __LITTLE_ENDIAN
 // Swap 7 byte, 56 bit values. (If it is not big endian, It is considered little endian)
 #define Swap7Bytes(val) ((((val) >> 48) & 0xFF) | (((val) >> 32) & 0xFF00) | (((val) >> 16) & 0xFF0000) | \
 						((val) & 0xFF000000) | (((val) << 16) & 0xFF00000000) | \
 						(((val) << 32) & 0xFF0000000000) | (((val) << 48) & 0xFF000000000000))
-#define Swap4Bytes(val) ((((val) >> 24) & 0xFF) | (((val) >> 8) & 0xFF00) | \
-						(((val) <<  8) & 0xFF0000) | ((val << 24) & 0xFF000000))
+#define Swap2Bytes(val) (((val & 0xFF00) >> 8) | ((val & 0x00FF) << 8))
+#define Swap4Bytes(val) ((Swap2Bytes((val & 0xFFFF0000) >> 16)) | ((Swap2Bytes(val & 0x0000FFFF)) << 16))
+#define Swap8Bytes(val) ((Swap4Bytes((val & 0xFFFFFFFF00000000) >> 32)) | ((Swap4Bytes(val & 0x00000000FFFFFFFF)) << 32))
+
 #endif
 
 
@@ -110,6 +114,9 @@ namespace Serialise {
 
 	// Serialise field_value like positive integer.
 	std::string positive(const std::string& field_value);
+
+	// Serialise field_value like positive integer.
+	std::string positive(const uint64_t& field_value);
 
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value);
