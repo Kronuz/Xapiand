@@ -267,11 +267,7 @@ std::string
 Serialise::positive(const std::string& field_value)
 {
 	try {
-		auto id = strict(std::stoull, field_value);
-		id = Swap8Bytes(id);
-		const char serialise[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
-			(char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF), (char)((id >> 56) & 0xFF) };
-		return std::string(serialise, SIZE_BYTES_POSITIVE);
+		return positive(strict(std::stoull, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid positive integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
@@ -281,12 +277,15 @@ Serialise::positive(const std::string& field_value)
 
 
 std::string
-Serialise::positive(const uint64_t& field_value)
+Serialise::positive(uint64_t field_value)
 {
-	auto id = field_value;
-	id = Swap8Bytes(id);
-	const char serialise[] = { (char)(id & 0xFF), (char)((id >>  8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
-		(char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF), (char)((id >> 56) & 0xFF) };
+	field_value = Swap8Bytes(field_value);
+	const char serialise[] = {
+		(char)(field_value         & 0xFF), (char)((field_value >>  8) & 0xFF),
+		(char)((field_value >> 16) & 0xFF), (char)((field_value >> 24) & 0xFF),
+		(char)((field_value >> 32) & 0xFF), (char)((field_value >> 40) & 0xFF),
+		(char)((field_value >> 48) & 0xFF), (char)((field_value >> 56) & 0xFF)
+	};
 	return std::string(serialise, SIZE_BYTES_POSITIVE);
 }
 
@@ -485,10 +484,10 @@ Unserialise::positive(const std::string& serialise_val)
 	}
 
 	uint64_t id = (((uint64_t)serialise_val[0] << 56) & 0xFF00000000000000) | \
-	(((uint64_t)serialise_val[1] << 48) & 0xFF000000000000) | (((uint64_t)serialise_val[2] << 40) & 0xFF0000000000) | \
-	(((uint64_t)serialise_val[3] << 32) & 0xFF00000000)     | (((uint64_t)serialise_val[4] << 24) & 0xFF000000)     | \
-	(((uint64_t)serialise_val[5] << 16) & 0xFF0000)         | (((uint64_t)serialise_val[6] <<  8) & 0xFF00)         | \
-	(serialise_val[7] & 0xFF);
+		(((uint64_t)serialise_val[1] << 48) & 0xFF000000000000) | (((uint64_t)serialise_val[2] << 40) & 0xFF0000000000) | \
+		(((uint64_t)serialise_val[3] << 32) & 0xFF00000000)     | (((uint64_t)serialise_val[4] << 24) & 0xFF000000)     | \
+		(((uint64_t)serialise_val[5] << 16) & 0xFF0000)         | (((uint64_t)serialise_val[6] <<  8) & 0xFF00)         | \
+		(serialise_val[7] & 0xFF);
 
 	return id;
 }
