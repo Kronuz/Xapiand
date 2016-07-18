@@ -25,7 +25,7 @@
 #include "exception.h"
 #include "length.h"
 
-#include <assert.h>
+#include <cassert>
 
 
 void
@@ -60,9 +60,7 @@ std::string
 MultiValueCountMatchSpy::serialise() const
 {
 	assert(internal.get());
-	std::string result;
-	result += serialise_length(internal->slot);
-	return result;
+	return serialise_length(internal->slot);
 }
 
 
