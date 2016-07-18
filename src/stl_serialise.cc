@@ -26,10 +26,6 @@
 #include "log.h"
 #include "serialise.h"
 
-#include <string>
-#include <vector>
-#include <set>
-#include <unordered_set>
 
 #define STL_MAGIC '\0'
 
