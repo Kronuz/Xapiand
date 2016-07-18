@@ -24,8 +24,8 @@
 
 #include "database.h"
 #include "manager.h"
-#include "multivalue.h"
-#include "multivaluekeymaker.h"
+#include "multivalue/matchspy.h"
+#include "multivalue/keymaker.h"
 #include "schema.h"
 
 

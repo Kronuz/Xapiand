@@ -24,7 +24,7 @@
 
 #include "io_utils.h"
 #include "length.h"
-#include "multivalue.h"
+#include "multivalue/matchspy.h"
 #include "serialise.h"
 #include "utils.h"
 

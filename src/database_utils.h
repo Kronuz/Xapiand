@@ -24,7 +24,7 @@
 
 #include "fields.h"
 #include "msgpack.h"
-#include "multivaluerange.h"
+#include "multivalue/range.h"
 #include "geospatialrange.h"
 #include "rapidjson/document.h"
 

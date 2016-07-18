@@ -26,7 +26,7 @@
 #include "datetime.h"
 #include "generate_terms.h"
 #include "msgpack_patcher.h"
-#include "multivaluerange.h"
+#include "multivalue/range.h"
 #include "serialise.h"
 #include "wkt_parser.h"
 
