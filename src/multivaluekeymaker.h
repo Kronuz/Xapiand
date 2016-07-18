@@ -33,6 +33,7 @@
 const std::string MAX_CMPVALUE(Xapian::sortable_serialise(DBL_MAX));
 const std::string STR_FOR_EMPTY("\xff");
 
+
 // Vector of slots
 struct key_values_t {
 	Xapian::valueno slot;
