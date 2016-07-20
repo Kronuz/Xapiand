@@ -99,6 +99,7 @@ namespace Serialise {
 
 	// Serialise field_value like date.
 	std::string date(const std::string& field_value);
+	std::string date(double serialise_val);
 
 	// Serialise value like date and fill tm.
 	std::string date(const MsgPack& value, Datetime::tm_t& tm);
@@ -108,14 +109,14 @@ namespace Serialise {
 
 	// Serialise field_value like float.
 	std::string _float(const std::string& field_value);
+	std::string _float(double field_value);
 
 	// Serialise field_value like integer.
 	std::string integer(const std::string& field_value);
+	std::string integer(int64_t field_value);
 
 	// Serialise field_value like positive integer.
 	std::string positive(const std::string& field_value);
-
-	// Serialise field_value like positive integer.
 	std::string positive(uint64_t field_value);
 
 	// Serialise field_value like EWKT.
@@ -126,6 +127,7 @@ namespace Serialise {
 
 	// Serialise field_value like boolean.
 	std::string boolean(const std::string& field_value);
+	std::string boolean(bool field_value);
 
 	// Serialise a normalize cartesian coordinate in SIZE_SERIALISE_CARTESIAN bytes.
 	std::string cartesian(const Cartesian& norm_cartesian);
@@ -156,6 +158,9 @@ namespace Unserialise {
 
 	// Unserialise a serialised date.
 	std::string date(const std::string& serialise_date);
+
+	// Unserialise a serialised date and returns the timestamp.
+	double timestamp(const std::string& serialise_val);
 
 	// Unserialise a serialised boolean.
 	bool boolean(const std::string& serialise_boolean);

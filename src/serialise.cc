@@ -206,6 +206,13 @@ Serialise::date(const std::string& field_value)
 
 
 std::string
+Serialise::date(double field_value)
+{
+	return Xapian::sortable_serialise(field_value);
+}
+
+
+std::string
 Serialise::date(const MsgPack& value, Datetime::tm_t& tm)
 {
 	double timestamp;
@@ -253,6 +260,13 @@ Serialise::_float(const std::string& field_value)
 
 
 std::string
+Serialise::_float(double field_value)
+{
+	return Xapian::sortable_serialise(field_value);
+}
+
+
+std::string
 Serialise::integer(const std::string& field_value)
 {
 	try {
@@ -262,6 +276,13 @@ Serialise::integer(const std::string& field_value)
 	} catch (const std::out_of_range&) {
 		throw MSG_SerialisationError("Out of range integer format: %s", field_value.c_str());
 	}
+}
+
+
+std::string
+Serialise::integer(int64_t field_value)
+{
+	return Xapian::sortable_serialise(field_value);
 }
 
 
@@ -360,6 +381,13 @@ Serialise::boolean(const std::string& field_value)
 	}
 
 	throw MSG_SerialisationError("Boolean format is not valid");
+}
+
+
+std::string
+Serialise::boolean(bool field_value)
+{
+	return field_value ? std::string("t") : std::string("f");
 }
 
 
@@ -507,6 +535,13 @@ Unserialise::date(const std::string& serialise_val)
 		timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min,
 		timeinfo->tm_sec, msec);
 	return date;
+}
+
+
+double
+Unserialise::timestamp(const std::string& serialise_val)
+{
+	return Xapian::sortable_unserialise(serialise_val);
 }
 
 
