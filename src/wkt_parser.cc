@@ -626,3 +626,11 @@ EWKT_Parser::getRanges(const std::string& field_value, bool partials, double err
 	HTM::mergeRanges(ranges);
 	centroids = std::move(ewkt.centroids);
 }
+
+
+CartesianUSet
+EWKT_Parser::getCentroids(const std::string& field_value, bool partials, double error)
+{
+	EWKT_Parser ewkt(field_value, partials, error);
+	return std::move(ewkt.centroids);
+}

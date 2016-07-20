@@ -69,4 +69,5 @@ public:
 	static void and_trixels(std::vector<std::string>& txs1, std::vector<std::string>&& txs2);
 	static bool isEWKT(const std::string& str);
 	static void getRanges(const std::string& field_value, bool partials, double error, RangeList& ranges, CartesianUSet& centroids);
+	static CartesianUSet getCentroids(const std::string& field_value, bool partials, double error);
 };
