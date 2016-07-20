@@ -22,27 +22,157 @@
 
 #pragma once
 
-#include "datetime.h"
-#include "stl_serialise.h"
-#include "utils.h"
-#include "wkt_parser.h"
+#include "../serialise.h"
+#include "../string_metric.h"
+#include "../wkt_parser.h"
 
-#include <float.h>
+#include <cfloat>
+#include <cmath>
+#include <cstdlib>
 
 
 const std::string MAX_CMPVALUE(Xapian::sortable_serialise(DBL_MAX));
 const std::string STR_FOR_EMPTY("\xff");
 
 
-// Vector of slots
-struct key_values_t {
-	Xapian::valueno slot;
-	char type;
-	double valuenumeric;
-	std::string valuestring;
-	CartesianUSet valuegeo;
-	bool reverse;
-	bool hasValue;
+// Base class for create keys.
+class BaseKey {
+protected:
+	Xapian::valueno _slot;
+	bool _reverse;
+
+public:
+	BaseKey(Xapian::valueno slot, bool reverse)
+		: _slot(slot),
+		  _reverse(reverse) { }
+
+	virtual std::string findSmallest(const Xapian::Document& doc) const;
+	virtual std::string findLargest(const Xapian::Document& doc) const;
+	virtual std::string get_cmpvalue(const std::string& serialise_val) const = 0;
+
+	bool get_reverse() const {
+		return _reverse;
+	}
+};
+
+
+// Class for create the key from the serialized value.
+class SerialiseKey : public BaseKey {
+	std::string get_cmpvalue(const std::string&) const override {
+		return STR_FOR_EMPTY;
+	}
+
+public:
+	std::string findSmallest(const Xapian::Document& doc) const override;
+	std::string findLargest(const Xapian::Document& doc) const override;
+
+	SerialiseKey(Xapian::valueno slot, bool reverse)
+		: BaseKey(slot, reverse) { }
+};
+
+
+// Class for create the key using as a reference a float value.
+class FloatKey : public BaseKey {
+	double _ref_val;
+
+	std::string get_cmpvalue(const std::string& serialise_val) const override {
+		return Serialise::_float(std::fabs(Unserialise::_float(serialise_val) - _ref_val));
+	}
+
+public:
+	FloatKey(Xapian::valueno slot, bool reverse, const std::string& value)
+		: BaseKey(slot, reverse),
+		  _ref_val(strict(std::stod, value)) { }
+};
+
+
+// Class for create the key using as a reference a integer value.
+class IntegerKey : public BaseKey {
+	int64_t _ref_val;
+
+	std::string get_cmpvalue(const std::string& serialise_val) const override {
+		return Serialise::integer(std::llabs(Unserialise::integer(serialise_val) - _ref_val));
+	}
+
+public:
+	IntegerKey(Xapian::valueno slot, bool reverse, const std::string& value)
+		: BaseKey(slot, reverse),
+		  _ref_val(strict(std::stoll, value)) { }
+};
+
+
+// Class for create the key using as a reference a positive value.
+class PositiveKey : public BaseKey {
+	uint64_t _ref_val;
+
+	std::string get_cmpvalue(const std::string& serialise_val) const override {
+		int64_t val = Unserialise::positive(serialise_val) - _ref_val;
+		return Serialise::positive(std::llabs(val));
+	}
+
+public:
+	PositiveKey(Xapian::valueno slot, bool reverse, const std::string& value)
+		: BaseKey(slot, reverse),
+		  _ref_val(strict(std::stoull, value)) { }
+};
+
+
+// Class for create the key using as a reference a timestamp value.
+class DateKey : public BaseKey {
+	double _ref_val;
+
+	std::string get_cmpvalue(const std::string& serialise_val) const override {
+		return Serialise::date(std::fabs(Unserialise::timestamp(serialise_val) - _ref_val));
+	}
+
+public:
+	DateKey(Xapian::valueno slot, bool reverse, const std::string& value)
+		: BaseKey(slot, reverse),
+		  _ref_val(Datetime::timestamp(value)) { }
+};
+
+
+// Class for create the key using as a reference a boolean value.
+class BoolKey : public BaseKey {
+	std::string _ref_val;
+
+	std::string get_cmpvalue(const std::string& serialise_val) const override {
+		return Serialise::integer(serialise_val[0] != _ref_val[0]);
+	}
+
+public:
+	BoolKey(Xapian::valueno slot, bool reverse, const std::string& value)
+		: BaseKey(slot, reverse),
+		  _ref_val(Serialise::boolean(value)) { }
+};
+
+
+// Class for create the key using as a reference a boolean value.
+template <typename Metric>
+class StringKey : public BaseKey {
+	Metric _metric;
+
+	std::string get_cmpvalue(const std::string& serialise_val) const override {
+		return Serialise::_float(_metric.distance(serialise_val));
+	}
+
+public:
+	StringKey(Xapian::valueno slot, bool reverse, const std::string& value, bool icase)
+		: BaseKey(slot, reverse),
+		  _metric(value, icase) { }
+};
+
+
+// Class for create the key using as a reference a geospatial value.
+class GeoKey : public BaseKey {
+	CartesianUSet _centroids;
+
+	std::string get_cmpvalue(const std::string& serialise_val) const override;
+
+public:
+	GeoKey(Xapian::valueno slot, bool reverse, const std::string& value)
+		: BaseKey(slot, reverse),
+		  _centroids(EWKT_Parser::getCentroids(value, true, HTM_MIN_ERROR)) { }
 };
 
 
@@ -56,48 +186,43 @@ struct key_values_t {
  */
 class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
 	// Vector of slots
-	std::vector<key_values_t> slots;
+	std::vector<std::unique_ptr<BaseKey>> slots;
 
 public:
 	Multi_MultiValueKeyMaker() = default;
 
 	template <class Iterator>
 	Multi_MultiValueKeyMaker(Iterator begin, Iterator end) {
+		slots.reserve(std::distance(begin, end));
 		while (begin != end) add_value(*begin++);
 	}
 
 	virtual std::string operator()(const Xapian::Document& doc) const override;
+	void add_value(Xapian::valueno slot, bool reverse, char type, const std::string& value, const std::string& metric=std::string(""), bool icase=true);
 
-	void add_value(Xapian::valueno slot, char type, const std::string& value, bool reverse = false) {
-		if (!value.empty()) {
-			key_values_t ins_key = { slot, type, 0, "", CartesianUSet(), reverse, true };
-			switch (type) {
-				case FLOAT_TYPE:
-					ins_key.valuenumeric = strict(std::stod, value);
-					break;
-				case INTEGER_TYPE:
-					ins_key.valuenumeric = strict(std::stoll, value);
-					break;
-				case POSITIVE_TYPE:
-					ins_key.valuenumeric = strict(std::stoull, value);
-					break;
-				case DATE_TYPE:
-					ins_key.valuenumeric = Datetime::timestamp(value);
-					break;
-				case BOOLEAN_TYPE:
-					ins_key.valuestring = Serialise::boolean(value);
-					break;
-				case STRING_TYPE:
-					ins_key.valuestring = value;
-					break;
-				case GEO_TYPE:
-					RangeList ranges;
-					EWKT_Parser::getRanges(value, true, HTM_MIN_ERROR, ranges, ins_key.valuegeo);
-					break;
-			}
-			slots.push_back(std::move(ins_key));
-		} else if (type != GEO_TYPE) {
-			slots.push_back({ slot, type, 0, value, CartesianUSet(), reverse, false });
-		}
+	void levenshtein(Xapian::valueno slot,  bool reverse, const std::string& value, bool icase) {
+		slots.push_back(std::make_unique<StringKey<Levenshtein>>(slot, reverse, value, icase));
+	}
+
+	void jaro(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
+		slots.push_back(std::make_unique<StringKey<Jaro>>(slot, reverse, value, icase));
+	}
+
+	void jaro_winkler(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
+		slots.push_back(std::make_unique<StringKey<Jaro_Winkler>>(slot, reverse, value, icase));
+	}
+
+	void sorensen_dice(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
+		slots.push_back(std::make_unique<StringKey<Sorensen_Dice>>(slot, reverse, value, icase));
+	}
+
+	void jaccard(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
+		slots.push_back(std::make_unique<StringKey<Jaccard>>(slot, reverse, value, icase));
 	}
 };
+
+
+using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(Xapian::valueno, bool, const std::string&, bool);
+
+extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metric;
+extern const dispatch_str_metric def_str_metric;
