@@ -22,10 +22,10 @@
 
 #include "range.h"
 
-#include "length.h"
-#include "serialise.h"
-#include "stl_serialise.h"
-#include "utils.h"
+#include "../length.h"
+#include "../serialise.h"
+#include "../stl_serialise.h"
+#include "../utils.h"
 
 
 MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, const std::string& start_, const std::string& end_)

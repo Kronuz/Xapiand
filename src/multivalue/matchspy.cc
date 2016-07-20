@@ -22,8 +22,8 @@
 
 #include "matchspy.h"
 
-#include "exception.h"
-#include "length.h"
+#include "../exception.h"
+#include "../length.h"
 
 #include <cassert>
 

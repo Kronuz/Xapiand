@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "stl_serialise.h"
+#include "../stl_serialise.h"
 
 #include <xapian.h>
 
