@@ -322,7 +322,7 @@ if (BUILD_TESTS)
 
 	foreach (VAR_TEST compressor dllist generate_terms geo guid hash
 		htm lru msgpack patcher query queue serialise_stl serialise
-		sort storage threadpool utils wal wkt_parser)
+		sort storage string_metric threadpool utils wal wkt_parser)
 		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 		add_executable (${PROJECT_TEST}
 			${PACKAGE_PATH_TEST}/test_${VAR_TEST}.cc
