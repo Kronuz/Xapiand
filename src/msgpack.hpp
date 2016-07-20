@@ -7,6 +7,9 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //    http://www.boost.org/LICENSE_1_0.txt)
 //
+
+#pragma once
+
 #include "msgpack/object.hpp"
 #include "msgpack/iterator.hpp"
 #include "msgpack/zone.hpp"
