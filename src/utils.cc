@@ -22,32 +22,32 @@
 
 #include "utils.h"
 
-#include "log.h"
 #include "database.h"
-#include "namegen.h"
 #include "hash/md5.h"
+#include "log.h"
+#include "namegen.h"
 #include "xapiand.h"
 
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <mutex>
 #include <string>
 #include <thread>
-#include <mutex>
 
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <xapian.h>
 #include <sys/stat.h>
+#include <xapian.h>
 
 #include <sys/resource.h> /* for getrlimit */
 #include <sysexits.h>  /* EX_* */
 
-#include <sys/socket.h>
 #include <netinet/in.h> /* for IPPROTO_TCP */
 #include <netinet/tcp.h> /* for TCP_NODELAY */
+#include <sys/socket.h>
 
 
 #ifdef HAVE_PTHREAD_H

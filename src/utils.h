@@ -24,21 +24,22 @@
 
 #include "xapiand.h"
 
-#include <limits.h>
-#include <xapian.h>
-#include <string>
-#include <vector>
-#include <locale>
 #include <algorithm>
-#include <dirent.h>
-#include <memory>
-#include <sstream>
-#include <random>
-#include <sys/time.h>
 #include <chrono>
+#include <dirent.h>
+#include <limits.h>
+#include <locale>
+#include <memory>
+#include <random>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <sys/time.h>
 #include <thread>
 #include <unistd.h>
+#include <unordered_set>
+#include <vector>
+#include <xapian.h>
 
 #define RESERVED_FDS 50 /* Better approach? */
 
@@ -213,14 +214,14 @@ std::string name_generator();
 int32_t jump_consistent_hash(uint64_t key, int32_t num_buckets);
 
 template<typename... Args>
-std::string upper_string(Args&&... args) {
+inline std::string upper_string(Args&&... args) {
 	std::string tmp(std::forward<Args>(args)...);
 	for (auto& c : tmp) c = toupper(c);
 	return tmp;
 }
 
 template<typename... Args>
-std::string lower_string(Args&&... args) {
+inline std::string lower_string(Args&&... args) {
 	std::string tmp(std::forward<Args>(args)...);
 	for (auto& c : tmp) c = tolower(c);
 	return tmp;
