@@ -1446,6 +1446,16 @@ HttpClient::query_field_maker(int flag)
 		}
 		query_parser.rewind();
 
+		if (query_parser.next("metric") != -1) {
+			query_field->metric = query_parser.get();
+		}
+		query_parser.rewind();
+
+		if (query_parser.next("icase") != -1) {
+			query_field->icase = Serialise::boolean(query_parser.get()) == "t";
+		}
+		query_parser.rewind();
+
 		if (query_parser.next("collapse_max") != -1) {
 			query_field->collapse_max = static_cast<unsigned>(std::stoul(query_parser.get()));
 		} else {

@@ -143,10 +143,13 @@ struct query_field_t {
 	similar_field_t nearest;
 	std::string time;
 
+	// Only used when the sort type is string.
+	std::string metric;
+	bool icase;
+
 	query_field_t()
-		: offset(0), limit(10), check_at_least(0), spelling(true), synonyms(false),
-		  commit(false), unique_doc(false), is_fuzzy(false),
-		  is_nearest(false), collapse(""), collapse_max(1), fuzzy(), nearest(), time("") { }
+		: offset(0), limit(10), check_at_least(0), spelling(true), synonyms(false), commit(false),
+		  unique_doc(false), is_fuzzy(false), is_nearest(false), collapse_max(1), icase(true) { }
 
 };
 
