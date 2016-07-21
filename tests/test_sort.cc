@@ -28,7 +28,7 @@
 const std::string path_test_sort = std::string(PACKAGE_PATH_TEST) + "/examples/sort/";
 
 
-const sort_t string_tests[] {
+const sort_t string_levens_tests[] {
 	/*
 	 * Table reference data to verify the ordering
 	 * levens(fieldname:value) -> levenshtein_distance(get_value(fieldname), value)
@@ -36,17 +36,17 @@ const sort_t string_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"	"name"						levens(name:hola)	value for sort (ASC)	value for sort (DESC)
-	 * "1"		["cook", "cooked"]			[3, 5]				"cook"					"cooked"
-	 * "2"		["book store", "book"]		[9, 3]				"book"					"book store"
-	 * "3"		["cooking", "hola mundo"]   [6, 6]				"cooking"				"hola mundo"
-	 * "4"		"hola"							0				"hola"					"hola"
-	 * "5"		"mundo"							5				"mundo"					"mundo"
-	 * "6"		"mundo"							5				"mundo"					"mundo"
-	 * "7"		"hola"							0				"hola"					"hola"
-	 * "8"		["cooking", "hola mundo"]	[6, 6]				"cooking"				"hola mundo"
-	 * "9"		"computer"						7				"computer"				"computer"
-	 * "10"		Does not have				MAX_DBL				"\xff"					"\xff"
+	 * "_id"	"name"						levens(name:cook)		value for sort (ASC)	value for sort (DESC)
+	 * "1"		["cook", "cooked"]			[0.000000, 0.333333]	"cook"					"cooked"
+	 * "2"		["book store", "book"]		[0.700000, 0.250000]	"book"					"book store"
+	 * "3"		["cooking", "hola mundo"]   [0.428571, 0.900000]	"cooking"				"hola mundo"
+	 * "4"		"hola"						0.750000				"hola"					"hola"
+	 * "5"		"mundo"						1.000000				"mundo"					"mundo"
+	 * "6"		"mundo"						1.000000				"mundo"					"mundo"
+	 * "7"		"hola"						0.750000				"hola"					"hola"
+	 * "8"		["cooking", "hola mundo"]	[0.428571, 0.900000]	"cooking"				"hola mundo"
+	 * "9"		"computer"					0.750000				"computer"				"computer"
+	 * "10"		Does not have				MAX_DBL					"\xff"					"\xff"
 	 *
 	 * The documents are indexed as the value of "_id" indicates.
 	*/
@@ -54,12 +54,152 @@ const sort_t string_tests[] {
 	{ "*", { "name" }, 			     { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
 	// { "\xff", "mundo", "mundo", "hola mundo", "hola mundo", "hola", "hola", "cooked", "computer", "book store" }
 	{ "*", { "-name" }, 			 { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
-	// { 0, 0, 3, 3, 5, 5, 6, 6, 7, MAX_DBL }
-	{ "*", { "name:hola" }, 		 { "4", "7", "1", "2", "5", "6", "3", "8", "9", "10" } },
-	{ "*", { "name:hola", "-_id" },  { "7", "4", "2", "1", "6", "5", "8", "3", "9", "10" } },
-	// { MAX_DBL, 9, 7, 6, 6, 5, 5, 5, 0, 0 }
-	{ "*", { "-name:hola" }, 		 { "10", "2", "9", "3", "8", "1", "5", "6", "4", "7" } },
-	{ "*", { "-name:hola", "-_id" }, { "10", "2", "9", "8", "3", "6", "5", "1", "7", "4" } }
+	// { 0, 0.250000, 0.428571, 0.428571, 0.750000, 0.750000, 0.750000, 1, 1, MAX_DBL }
+	{ "*", { "name:cook" }, 		 { "1", "2", "3", "8", "4", "7", "9", "5", "6", "10" } },
+	{ "*", { "name:cook", "-_id" },  { "1", "2", "8", "3", "9", "7", "4", "6", "5", "10" } },
+	// { MAX_DBL, 1, 1, 0.900000, 0.900000, 0.750000, 0.750000, 0.750000, 0.700000, 0.333333 }
+	{ "*", { "-name:cook" }, 		 { "10", "5", "6", "3", "8", "4", "7", "9", "2", "1" } },
+	{ "*", { "-name:cook", "-_id" }, { "10", "6", "5", "8", "3", "9", "7", "4", "2", "1" } }
+};
+
+
+const sort_t string_jaro_tests[] {
+	/*
+	 * Table reference data to verify the ordering
+	 * jaro(fieldname:value) -> jaro(get_value(fieldname), value)
+	 * value for sort -> It is the value's field that is selected for the ordering when in the slot
+	 *                   there are several values (in arrays).
+	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
+	 *
+	 * "_id"	"name"						jaro(name:cook)			value for sort (ASC)	value for sort (DESC)
+	 * "1"		["cook", "cooked"]			[0.000000, 0.111111]	"cook"					"cooked"
+	 * "2"		["book store", "book"]		[0.316667, 0.166667]	"book"					"book store"
+	 * "3"		["cooking", "hola mundo"]   [0.142857, 0.550000]	"cooking"				"hola mundo"
+	 * "4"		"hola"						0.500000				"hola"					"hola"
+	 * "5"		"mundo"						1.000000				"mundo"					"mundo"
+	 * "6"		"mundo"						1.000000				"mundo"					"mundo"
+	 * "7"		"hola"						0.500000				"hola"					"hola"
+	 * "8"		["cooking", "hola mundo"]	[0.142857, 0.550000]	"cooking"				"hola mundo"
+	 * "9"		"computer"					0.416667				"computer"				"computer"
+	 * "10"		Does not have				MAX_DBL					"\xff"					"\xff"
+	 *
+	 * The documents are indexed as the value of "_id" indicates.
+	*/
+	// { "book", "computer", "cook", "cooking", "cooking", "hola", "hola", "mundo", "mundo", "\xff" }
+	{ "*", { "name" }, 			     { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	// { "\xff", "mundo", "mundo", "hola mundo", "hola mundo", "hola", "hola", "cooked", "computer", "book store" }
+	{ "*", { "-name" }, 			 { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	// { 0, 0.142857, 0.142857, 0.166667, 0.416667, 0.500000, 0.500000, 1, 1, MAX_DBL }
+	{ "*", { "name:cook" }, 		 { "1", "3", "8", "2", "9", "4", "7", "5", "6", "10" } },
+	{ "*", { "name:cook", "-_id" },  { "1", "8", "3", "2", "9", "7", "4", "6", "5", "10" } },
+	// { MAX_DBL, 1, 1, 0.550000, 0.550000, 0.500000, 0.500000, 0.416667, 0.316667, 0.111111 }
+	{ "*", { "-name:cook" }, 		 { "10", "5", "6", "3", "8", "4", "7", "9", "2", "1" } },
+	{ "*", { "-name:cook", "-_id" }, { "10", "6", "5", "8", "3", "7", "4", "9", "2", "1" } }
+};
+
+
+const sort_t string_jaro_w_tests[] {
+	/*
+	 * Table reference data to verify the ordering
+	 * jaro_winkler(fieldname:value) -> jaro_winkler(get_value(fieldname), value)
+	 * value for sort -> It is the value's field that is selected for the ordering when in the slot
+	 *                   there are several values (in arrays).
+	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
+	 *
+	 * "_id"	"name"						jaro_winkler(name:cook)	value for sort (ASC)	value for sort (DESC)
+	 * "1"		["cook", "cooked"]			[0.000000, 0.066667]	"cook"					"cooked"
+	 * "2"		["book store", "book"]		[0.316667, 0.166667]	"book"					"book store"
+	 * "3"		["cooking", "hola mundo"]   [0.085714, 0.550000]	"cooking"				"hola mundo"
+	 * "4"		"hola"						0.500000				"hola"					"hola"
+	 * "5"		"mundo"						1.000000				"mundo"					"mundo"
+	 * "6"		"mundo"						1.000000				"mundo"					"mundo"
+	 * "7"		"hola"						0.500000				"hola"					"hola"
+	 * "8"		["cooking", "hola mundo"]	[0.085714, 0.550000]	"cooking"				"hola mundo"
+	 * "9"		"computer"					0.416667				"computer"				"computer"
+	 * "10"		Does not have				MAX_DBL					"\xff"					"\xff"
+	 *
+	 * The documents are indexed as the value of "_id" indicates.
+	*/
+	// { "book", "computer", "cook", "cooking", "cooking", "hola", "hola", "mundo", "mundo", "\xff" }
+	{ "*", { "name" }, 			     { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	// { "\xff", "mundo", "mundo", "hola mundo", "hola mundo", "hola", "hola", "cooked", "computer", "book store" }
+	{ "*", { "-name" }, 			 { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	// { 0, 0.085714, 0.085714, 0.166667, 0.416667, 0.500000, 0.500000, 1, 1, MAX_DBL }
+	{ "*", { "name:cook" }, 		 { "1", "3", "8", "2", "9", "4", "7", "5", "6", "10" } },
+	{ "*", { "name:cook", "-_id" },  { "1", "8", "3", "2", "9", "7", "4", "6", "5", "10" } },
+	// { MAX_DBL, 1, 1, 0.550000, 0.550000, 0.500000, 0.500000, 0.416667, 0.316667, 0.066667 }
+	{ "*", { "-name:cook" }, 		 { "10", "5", "6", "3", "8", "4", "7", "9", "2", "1" } },
+	{ "*", { "-name:cook", "-_id" }, { "10", "6", "5", "8", "3", "7", "4", "9", "2", "1" } }
+};
+
+
+const sort_t string_dice_tests[] {
+	/*
+	 * Table reference data to verify the ordering
+	 * dice(fieldname:value) -> sorensen_dice(get_value(fieldname), value)
+	 * value for sort -> It is the value's field that is selected for the ordering when in the slot
+	 *                   there are several values (in arrays).
+	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
+	 *
+	 * "_id"	"name"						dice(name:cook)			value for sort (ASC)	value for sort (DESC)
+	 * "1"		["cook", "cooked"]			[0.000000, 0.250000]	"cook"					"cooked"
+	 * "2"		["book store", "book"]		[0.666667, 0.333333]	"book"					"book store"
+	 * "3"		["cooking", "hola mundo"]   [0.333333, 1.000000]	"cooking"				"hola mundo"
+	 * "4"		"hola"						1.000000				"hola"					"hola"
+	 * "5"		"mundo"						1.000000				"mundo"					"mundo"
+	 * "6"		"mundo"						1.000000				"mundo"					"mundo"
+	 * "7"		"hola"						1.000000				"hola"					"hola"
+	 * "8"		["cooking", "hola mundo"]	[0.333333, 1.000000]	"cooking"				"hola mundo"
+	 * "9"		"computer"					0.800000				"computer"				"computer"
+	 * "10"		Does not have				MAX_DBL					"\xff"					"\xff"
+	 *
+	 * The documents are indexed as the value of "_id" indicates.
+	*/
+	// { "book", "computer", "cook", "cooking", "cooking", "hola", "hola", "mundo", "mundo", "\xff" }
+	{ "*", { "name" }, 			     { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	// { "\xff", "mundo", "mundo", "hola mundo", "hola mundo", "hola", "hola", "cooked", "computer", "book store" }
+	{ "*", { "-name" }, 			 { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	// { 0, 0.333333, 0.333333, 0.333333, 0.800000, 1, 1, 1, 1, MAX_DBL }
+	{ "*", { "name:cook" }, 		 { "1", "2", "3", "8", "9", "4", "5", "6", "7", "10" } },
+	{ "*", { "name:cook", "-_id" },  { "1", "8", "3", "2", "9", "7", "6", "5", "4", "10" } },
+	// { MAX_DBL, 1, 1, 1, 1, 1, 1, 0.800000, 0.666667, 0.250000 }
+	{ "*", { "-name:cook" }, 		 { "10", "3", "4", "5", "6", "7", "8", "9", "2", "1" } },
+	{ "*", { "-name:cook", "-_id" }, { "10", "8", "7", "6", "5", "4", "3", "9", "2", "1" } }
+};
+
+
+const sort_t string_jaccard_tests[] {
+	/*
+	 * Table reference data to verify the ordering
+	 * jaccard(fieldname:value) -> jaccard(get_value(fieldname), value)
+	 * value for sort -> It is the value's field that is selected for the ordering when in the slot
+	 *                   there are several values (in arrays).
+	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
+	 *
+	 * "_id"	"name"						jaccard(name:cook)			value for sort (ASC)	value for sort (DESC)
+	 * "1"		["cook", "cooked"]			[0.000000, 0.400000]	"cook"					"cooked"
+	 * "2"		["book store", "book"]		[0.777778, 0.500000]	"book"					"book store"
+	 * "3"		["cooking", "hola mundo"]   [0.500000, 0.909091]	"cooking"				"hola mundo"
+	 * "4"		"hola"						0.833333				"hola"					"hola"
+	 * "5"		"mundo"						0.857143				"mundo"					"mundo"
+	 * "6"		"mundo"						0.857143				"mundo"					"mundo"
+	 * "7"		"hola"						0.833333				"hola"					"hola"
+	 * "8"		["cooking", "hola mundo"]	[0.500000, 0.909091]	"cooking"				"hola mundo"
+	 * "9"		"computer"					0.777778				"computer"				"computer"
+	 * "10"		Does not have				MAX_DBL					"\xff"					"\xff"
+	 *
+	 * The documents are indexed as the value of "_id" indicates.
+	*/
+	// { "book", "computer", "cook", "cooking", "cooking", "hola", "hola", "mundo", "mundo", "\xff" }
+	{ "*", { "name" }, 			     { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	// { "\xff", "mundo", "mundo", "hola mundo", "hola mundo", "hola", "hola", "cooked", "computer", "book store" }
+	{ "*", { "-name" }, 			 { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	// { 0, 0.500000, 0.500000, 0.500000, 0.777778, 0.833333, 0.833333, 0.857143, 0.857143, MAX_DBL }
+	{ "*", { "name:cook" }, 		 { "1", "2", "3", "8", "9", "4", "7", "5", "6", "10" } },
+	{ "*", { "name:cook", "-_id" },  { "1", "8", "3", "2", "9", "7", "4", "6", "5", "10" } },
+	// { MAX_DBL, 0.909091, 0.909091, 0.857143, 0.857143, 0.833333, 0.833333, 0.777778, 0.777778, 0.400000 }
+	{ "*", { "-name:cook" }, 		 { "10", "3", "8", "5", "6", "4", "7", "2", "9", "1" } },
+	{ "*", { "-name:cook", "-_id" }, { "10", "8", "3", "6", "5", "7", "4", "9", "2", "1" } }
 };
 
 
@@ -254,7 +394,7 @@ static DB_Test db_sort(".db_sort.db", std::vector<std::string>({
 	}), DB_WRITABLE | DB_SPAWN | DB_NOWAL);
 
 
-static int make_search(const sort_t _tests[], int len) {
+static int make_search(const sort_t _tests[], int len, const std::string& metric=std::string()) {
 	int cont = 0;
 	query_field_t query;
 	query.offset = 0;
@@ -264,6 +404,7 @@ static int make_search(const sort_t _tests[], int len) {
 	query.synonyms = false;
 	query.is_fuzzy = false;
 	query.is_nearest = false;
+	query.metric = metric;
 
 	for (int i = 0; i < len; ++i) {
 		sort_t p = _tests[i];
@@ -282,7 +423,7 @@ static int make_search(const sort_t _tests[], int len) {
 			db_sort.db_handler.get_mset(query, mset, spies, suggestions);
 			if (mset.size() != p.expect_result.size()) {
 				++cont;
-				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %zu. Expected: %zu.", mset.size(), p.expect_result.size());
+				L_ERR(nullptr, "ERROR: Different number of documents. Obtained %u. Expected: %zu.", mset.size(), p.expect_result.size());
 			} else {
 				Xapian::MSetIterator m = mset.begin();
 				for (auto it = p.expect_result.begin(); m != mset.end(); ++it, ++m) {
@@ -303,9 +444,85 @@ static int make_search(const sort_t _tests[], int len) {
 }
 
 
-int sort_test_string() {
+int sort_test_string_levens() {
 	try {
-		int cont = make_search(string_tests, arraySize(string_tests));
+		int cont = make_search(string_levens_tests, arraySize(string_levens_tests), "leven");
+		if (cont == 0) {
+			L_DEBUG(nullptr, "Testing sort strings is correct!");
+		} else {
+			L_ERR(nullptr, "ERROR: Testing sort strings has mistakes.");
+		}
+		RETURN(cont);
+	} catch (const Xapian::Error &err) {
+		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+		RETURN(1);
+	} catch (const std::exception &err) {
+		L_ERR(nullptr, "ERROR: %s", err.what());
+		RETURN(1);
+	}
+}
+
+
+int sort_test_string_jaro() {
+	try {
+		int cont = make_search(string_jaro_tests, arraySize(string_jaro_tests), "jaro");
+		if (cont == 0) {
+			L_DEBUG(nullptr, "Testing sort strings is correct!");
+		} else {
+			L_ERR(nullptr, "ERROR: Testing sort strings has mistakes.");
+		}
+		RETURN(cont);
+	} catch (const Xapian::Error &err) {
+		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+		RETURN(1);
+	} catch (const std::exception &err) {
+		L_ERR(nullptr, "ERROR: %s", err.what());
+		RETURN(1);
+	}
+}
+
+
+int sort_test_string_jaro_w() {
+	try {
+		int cont = make_search(string_jaro_w_tests, arraySize(string_jaro_w_tests), "jarow");
+		if (cont == 0) {
+			L_DEBUG(nullptr, "Testing sort strings is correct!");
+		} else {
+			L_ERR(nullptr, "ERROR: Testing sort strings has mistakes.");
+		}
+		RETURN(cont);
+	} catch (const Xapian::Error &err) {
+		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+		RETURN(1);
+	} catch (const std::exception &err) {
+		L_ERR(nullptr, "ERROR: %s", err.what());
+		RETURN(1);
+	}
+}
+
+
+int sort_test_string_dice() {
+	try {
+		int cont = make_search(string_dice_tests, arraySize(string_dice_tests), "dice");
+		if (cont == 0) {
+			L_DEBUG(nullptr, "Testing sort strings is correct!");
+		} else {
+			L_ERR(nullptr, "ERROR: Testing sort strings has mistakes.");
+		}
+		RETURN(cont);
+	} catch (const Xapian::Error &err) {
+		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+		RETURN(1);
+	} catch (const std::exception &err) {
+		L_ERR(nullptr, "ERROR: %s", err.what());
+		RETURN(1);
+	}
+}
+
+
+int sort_test_string_jaccard() {
+	try {
+		int cont = make_search(string_jaccard_tests, arraySize(string_jaccard_tests), "jaccard");
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort strings is correct!");
 		} else {

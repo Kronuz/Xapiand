@@ -26,7 +26,11 @@
 
 
 TEST(SortQueryTest, String) {
-	EXPECT_EQ(sort_test_string(), 0);
+	EXPECT_EQ(sort_test_string_levens(), 0);
+	EXPECT_EQ(sort_test_string_jaro(), 0);
+	EXPECT_EQ(sort_test_string_jaro_w(), 0);
+	EXPECT_EQ(sort_test_string_dice(), 0);
+	EXPECT_EQ(sort_test_string_jaccard(), 0);
 }
 
 
