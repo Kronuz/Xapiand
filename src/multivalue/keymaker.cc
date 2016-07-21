@@ -25,7 +25,7 @@
 #include "../stl_serialise.h"
 
 
-const dispatch_str_metric def_str_metric = &Multi_MultiValueKeyMaker::levenshtein;
+const dispatch_str_metric def_str_metric = &Multi_MultiValueKeyMaker::jaro;
 
 
 const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metric({

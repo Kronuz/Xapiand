@@ -198,7 +198,7 @@ public:
 	}
 
 	virtual std::string operator()(const Xapian::Document& doc) const override;
-	void add_value(Xapian::valueno slot, bool reverse, char type, const std::string& value, const std::string& metric=std::string(""), bool icase=true);
+	void add_value(Xapian::valueno slot, bool reverse, char type, const std::string& value, const std::string& metric, bool icase);
 
 	void levenshtein(Xapian::valueno slot,  bool reverse, const std::string& value, bool icase) {
 		slots.push_back(std::make_unique<StringKey<Levenshtein>>(slot, reverse, value, icase));
