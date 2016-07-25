@@ -117,7 +117,7 @@ namespace Serialise {
 
 	// Serialise field_value like positive integer.
 	std::string positive(const std::string& field_value);
-	std::string positive(uint64_t field_value);
+	std::string positive(long double field_value);
 
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value);
@@ -154,7 +154,7 @@ namespace Unserialise {
 	int64_t integer(const std::string& serialise_integer);
 
 	// Unserialise a serialised positive.
-	uint64_t positive(const std::string& serialise_positive);
+	long double positive(const std::string& serialise_positive);
 
 	// Unserialise a serialised date.
 	std::string date(const std::string& serialise_date);

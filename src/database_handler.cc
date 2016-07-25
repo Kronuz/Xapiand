@@ -290,11 +290,21 @@ DatabaseHandler::_search(const std::string& str_query, std::vector<std::string>&
 
 			switch (field_t.type) {
 				case FLOAT_TYPE:
-				case INTEGER_TYPE:
-				case POSITIVE_TYPE: {
+				case INTEGER_TYPE: {
 					auto start = m.str(1), end = m.str(2);
 
 					queryRange = MultipleValueRange::getQuery(field_t.slot, FLOAT_TYPE, start, end, field_name);
+
+					auto filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, queryparser);
+					if (!filter_term.empty()) {
+						queryRange = Xapian::Query(Xapian::Query::OP_AND, queryparser.parse_query(filter_term, q_flags), queryRange);
+					}
+					break;
+				}
+				case POSITIVE_TYPE: {
+					auto start = m.str(1), end = m.str(2);
+
+					queryRange = MultipleValueRange::getQuery(field_t.slot, POSITIVE_TYPE, start, end, field_name);
 
 					auto filter_term = GenerateTerms::numeric(start, end, field_t.accuracy, field_t.acc_prefix, added_prefixes, queryparser);
 					if (!filter_term.empty()) {

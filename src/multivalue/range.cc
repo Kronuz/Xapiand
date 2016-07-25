@@ -40,7 +40,7 @@ Xapian::Query
 MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, const std::string& start_, const std::string& end_, const std::string& field_name)
 {
 	if (start_.empty()) {
-		if (end_.empty()){
+		if (end_.empty()) {
 			return Xapian::Query::MatchAll;
 		}
 		try {

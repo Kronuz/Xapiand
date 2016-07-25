@@ -25,6 +25,7 @@
 #include "hash/sha256.h"
 #include "length.h"
 #include "log.h"
+#include "sortable_serialise.h"
 #include "utils.h"
 #include "wkt_parser.h"
 
@@ -290,7 +291,7 @@ std::string
 Serialise::positive(const std::string& field_value)
 {
 	try {
-		return positive(strict(std::stoull, field_value));
+		return positive(strict(std::stold, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid positive integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
@@ -300,16 +301,9 @@ Serialise::positive(const std::string& field_value)
 
 
 std::string
-Serialise::positive(uint64_t field_value)
+Serialise::positive(long double field_value)
 {
-	field_value = Swap8Bytes(field_value);
-	const char serialise[] = {
-		(char)(field_value         & 0xFF), (char)((field_value >>  8) & 0xFF),
-		(char)((field_value >> 16) & 0xFF), (char)((field_value >> 24) & 0xFF),
-		(char)((field_value >> 32) & 0xFF), (char)((field_value >> 40) & 0xFF),
-		(char)((field_value >> 48) & 0xFF), (char)((field_value >> 56) & 0xFF)
-	};
-	return std::string(serialise, SIZE_BYTES_POSITIVE);
+	return Xapian::sortable_serialise_long(field_value);
 }
 
 
@@ -446,7 +440,7 @@ Unserialise::MsgPack(char field_type, const std::string& serialise_val)
 			result = integer(serialise_val);
 			break;
 		case POSITIVE_TYPE:
-			result = positive(serialise_val);
+			result = static_cast<uint64_t>(positive(serialise_val));
 			break;
 		case DATE_TYPE:
 			result = date(serialise_val);
@@ -506,20 +500,10 @@ Unserialise::integer(const std::string& serialise_val)
 }
 
 
-uint64_t
+long double
 Unserialise::positive(const std::string& serialise_val)
 {
-	if (serialise_val.size() != SIZE_BYTES_POSITIVE) {
-		throw MSG_SerialisationError("Cannot unserialise positive: %s [%zu]", serialise_val.c_str(), serialise_val.size());
-	}
-
-	uint64_t id = (((uint64_t)serialise_val[0] << 56) & 0xFF00000000000000) | \
-		(((uint64_t)serialise_val[1] << 48) & 0xFF000000000000) | (((uint64_t)serialise_val[2] << 40) & 0xFF0000000000) | \
-		(((uint64_t)serialise_val[3] << 32) & 0xFF00000000)     | (((uint64_t)serialise_val[4] << 24) & 0xFF000000)     | \
-		(((uint64_t)serialise_val[5] << 16) & 0xFF0000)         | (((uint64_t)serialise_val[6] <<  8) & 0xFF00)         | \
-		(serialise_val[7] & 0xFF);
-
-	return id;
+	return Xapian::sortable_unserialise_long(serialise_val);
 }
 
 
