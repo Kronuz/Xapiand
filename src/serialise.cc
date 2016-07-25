@@ -32,8 +32,6 @@
 #include <xapian.h>
 
 
-constexpr size_t SIZE_BYTES_POSITIVE = 8;
-
 
 std::string
 Serialise::serialise(char field_type, const MsgPack& field_value)
