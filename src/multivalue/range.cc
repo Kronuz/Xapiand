@@ -24,6 +24,7 @@
 
 #include "../length.h"
 #include "../serialise.h"
+#include "../sortable_serialise.h"
 #include "../stl_serialise.h"
 #include "../utils.h"
 
@@ -183,7 +184,7 @@ MultipleValueRange::name() const
 std::string
 MultipleValueRange::serialise() const
 {
-	std::string serialised, values, s_slot(Xapian::sortable_serialise(get_slot()));
+	std::string serialised, values, s_slot(sortable_serialise(get_slot()));
 	values.append(serialise_length(s_slot.size()));
 	values.append(s_slot);
 	values.append(serialise_length(start.size()));
@@ -201,7 +202,7 @@ MultipleValueRange::unserialise_with_registry(const std::string& s, const Xapian
 {
 	StringList data;
 	data.unserialise(s);
-	return new MultipleValueRange(Xapian::sortable_unserialise(data[0]), data[1], data[2]);
+	return new MultipleValueRange(sortable_unserialise(data[0]), data[1], data[2]);
 }
 
 
@@ -309,7 +310,7 @@ MultipleValueGE::name() const
 std::string
 MultipleValueGE::serialise() const
 {
-	std::string serialised, values, s_slot(Xapian::sortable_serialise(get_slot()));
+	std::string serialised, values, s_slot(sortable_serialise(get_slot()));
 	values.append(serialise_length(s_slot.size()));
 	values.append(s_slot);
 	values.append(serialise_length(start.size()));
@@ -325,7 +326,7 @@ MultipleValueGE::unserialise_with_registry(const std::string& s, const Xapian::R
 {
 	StringList data;
 	data.unserialise(s);
-	return new MultipleValueGE(Xapian::sortable_unserialise(data[0]), data[1]);
+	return new MultipleValueGE(sortable_unserialise(data[0]), data[1]);
 }
 
 
@@ -432,7 +433,7 @@ MultipleValueLE::name() const
 std::string
 MultipleValueLE::serialise() const
 {
-	std::string serialised, values, s_slot(Xapian::sortable_serialise(get_slot()));
+	std::string serialised, values, s_slot(sortable_serialise(get_slot()));
 	values.append(serialise_length(s_slot.size()));
 	values.append(s_slot);
 	values.append(serialise_length(end.size()));
@@ -448,7 +449,7 @@ MultipleValueLE::unserialise_with_registry(const std::string& s, const Xapian::R
 {
 	StringList data;
 	data.unserialise(s);
-	return new MultipleValueLE(Xapian::sortable_unserialise(data[0]), data[1]);
+	return new MultipleValueLE(sortable_unserialise(data[0]), data[1]);
 }
 
 

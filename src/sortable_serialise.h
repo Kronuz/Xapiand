@@ -21,22 +21,6 @@
 #pragma once
 
 
-namespace Xapian {
+long double sortable_unserialise(const std::string & value);
 
-	size_t sortable_serialise_(long double value, char * buf);
-
-	long double sortable_unserialise_long(const std::string & value);
-
-	inline std::string sortable_serialise_long(long double value) {
-    	char buf[18];
-    	return std::string(buf, sortable_serialise_(value, buf));
-	}
-
-	/// Get a number from the character at a given position in a string, returning
-	/// 0 if the string isn't long enough.
-	static inline unsigned char
-	numfromstr(const std::string & str, std::string::size_type pos)
-	{
-		return (pos < str.size()) ? static_cast<unsigned char>(str[pos]) : '\0';
-	}
-}
+std::string sortable_serialise(long double value);

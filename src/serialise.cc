@@ -146,7 +146,7 @@ Serialise::_float(char field_type, double field_value)
 	switch (field_type) {
 		case DATE_TYPE:
 		case FLOAT_TYPE:
-			return Xapian::sortable_serialise(field_value);
+			return sortable_serialise(field_value);
 		default:
 			throw MSG_SerialisationError("Type: %s is not a float", type(field_type).c_str());
 	}
@@ -161,11 +161,11 @@ Serialise::integer(char field_type, int64_t field_value)
 			if (field_value < 0) {
 				throw MSG_SerialisationError("Type: %s must be a positive number [%lld]", type(field_type).c_str(), field_value);
 			}
-			return Serialise::positive(field_value);
+			return sortable_serialise(field_value);
 		case DATE_TYPE:
 		case FLOAT_TYPE:
 		case INTEGER_TYPE:
-			return Xapian::sortable_serialise(field_value);
+			return sortable_serialise(field_value);
 		default:
 			throw MSG_SerialisationError("Type: %s is not a integer [%lld]", type(field_type).c_str(), field_value);
 	}
@@ -179,9 +179,8 @@ Serialise::positive(char field_type, uint64_t field_value)
 		case DATE_TYPE:
 		case FLOAT_TYPE:
 		case INTEGER_TYPE:
-			return Xapian::sortable_serialise(field_value);
 		case POSITIVE_TYPE:
-			return Serialise::positive(field_value);
+			return sortable_serialise(field_value);
 		default:
 			throw MSG_SerialisationError("Type: %s is not a positive integer [%lld]", type(field_type).c_str(), field_value);
 	}
@@ -202,14 +201,7 @@ Serialise::boolean(char field_type, bool field_value)
 std::string
 Serialise::date(const std::string& field_value)
 {
-	return Xapian::sortable_serialise(Datetime::timestamp(field_value));
-}
-
-
-std::string
-Serialise::date(double field_value)
-{
-	return Xapian::sortable_serialise(field_value);
+	return sortable_serialise(Datetime::timestamp(field_value));
 }
 
 
@@ -221,18 +213,18 @@ Serialise::date(const MsgPack& value, Datetime::tm_t& tm)
 		case msgpack::type::POSITIVE_INTEGER:
 			timestamp = value.as_u64();
 			tm = Datetime::to_tm_t(timestamp);
-			return Xapian::sortable_serialise(timestamp);
+			return sortable_serialise(timestamp);
 		case msgpack::type::NEGATIVE_INTEGER:
 			timestamp = value.as_i64();
 			tm = Datetime::to_tm_t(timestamp);
-			return Xapian::sortable_serialise(timestamp);
+			return sortable_serialise(timestamp);
 		case msgpack::type::FLOAT:
 			timestamp = value.as_f64();
 			tm = Datetime::to_tm_t(timestamp);
-			return Xapian::sortable_serialise(timestamp);
+			return sortable_serialise(timestamp);
 		case msgpack::type::STR:
 			timestamp = Datetime::timestamp(value.as_string(), tm);
-			return Xapian::sortable_serialise(timestamp);
+			return sortable_serialise(timestamp);
 		default:
 			throw MSG_SerialisationError("Date value must be numeric or string");
 	}
@@ -243,7 +235,7 @@ std::string
 Serialise::date_with_math(Datetime::tm_t tm, const std::string& op, const std::string& units)
 {
 	Datetime::computeDateMath(tm, op, units);
-	return Xapian::sortable_serialise(Datetime::mtimegm(tm));
+	return sortable_serialise(Datetime::mtimegm(tm));
 }
 
 
@@ -251,7 +243,7 @@ std::string
 Serialise::_float(const std::string& field_value)
 {
 	try {
-		return Xapian::sortable_serialise(strict(std::stod, field_value));
+		return sortable_serialise(strict(std::stod, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid float format: %s", field_value.c_str());
 	}  catch (const std::out_of_range&) {
@@ -261,17 +253,10 @@ Serialise::_float(const std::string& field_value)
 
 
 std::string
-Serialise::_float(double field_value)
-{
-	return Xapian::sortable_serialise(field_value);
-}
-
-
-std::string
 Serialise::integer(const std::string& field_value)
 {
 	try {
-		return Xapian::sortable_serialise(strict(std::stoll, field_value));
+		return sortable_serialise(strict(std::stoll, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
@@ -281,29 +266,15 @@ Serialise::integer(const std::string& field_value)
 
 
 std::string
-Serialise::integer(int64_t field_value)
-{
-	return Xapian::sortable_serialise(field_value);
-}
-
-
-std::string
 Serialise::positive(const std::string& field_value)
 {
 	try {
-		return positive(strict(std::stold, field_value));
+		return sortable_serialise(strict(std::stoull, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid positive integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
 		throw MSG_SerialisationError("Out of range positive integer format: %s", field_value.c_str());
 	}
-}
-
-
-std::string
-Serialise::positive(long double field_value)
-{
-	return Xapian::sortable_serialise_long(field_value);
 }
 
 
@@ -489,21 +460,21 @@ Unserialise::unserialise(char field_type, const std::string& serialise_val)
 double
 Unserialise::_float(const std::string& serialise_val)
 {
-	return Xapian::sortable_unserialise(serialise_val);
+	return sortable_unserialise(serialise_val);
 }
 
 
 int64_t
 Unserialise::integer(const std::string& serialise_val)
 {
-	return Xapian::sortable_unserialise(serialise_val);
+	return sortable_unserialise(serialise_val);
 }
 
 
 long double
 Unserialise::positive(const std::string& serialise_val)
 {
-	return Xapian::sortable_unserialise_long(serialise_val);
+	return sortable_unserialise(serialise_val);
 }
 
 
@@ -511,7 +482,7 @@ std::string
 Unserialise::date(const std::string& serialise_val)
 {
 	static char date[25];
-	double epoch = Xapian::sortable_unserialise(serialise_val);
+	double epoch = sortable_unserialise(serialise_val);
 	time_t timestamp = (time_t) epoch;
 	int msec = round((epoch - timestamp) * 1000);
 	struct tm *timeinfo = gmtime(&timestamp);
@@ -525,7 +496,7 @@ Unserialise::date(const std::string& serialise_val)
 double
 Unserialise::timestamp(const std::string& serialise_val)
 {
-	return Xapian::sortable_unserialise(serialise_val);
+	return sortable_unserialise(serialise_val);
 }
 
 

@@ -99,7 +99,6 @@ namespace Serialise {
 
 	// Serialise field_value like date.
 	std::string date(const std::string& field_value);
-	std::string date(double serialise_val);
 
 	// Serialise value like date and fill tm.
 	std::string date(const MsgPack& value, Datetime::tm_t& tm);
@@ -109,15 +108,12 @@ namespace Serialise {
 
 	// Serialise field_value like float.
 	std::string _float(const std::string& field_value);
-	std::string _float(double field_value);
 
 	// Serialise field_value like integer.
 	std::string integer(const std::string& field_value);
-	std::string integer(int64_t field_value);
 
 	// Serialise field_value like positive integer.
 	std::string positive(const std::string& field_value);
-	std::string positive(long double field_value);
 
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value);
