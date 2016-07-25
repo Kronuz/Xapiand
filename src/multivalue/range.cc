@@ -58,13 +58,47 @@ MultipleValueRange::getQuery(Xapian::valueno slot_, char field_type, const std::
 		}
 	}
 
-	// Multiple Value Range
-	if (start_ > end_) {
-		return Xapian::Query::MatchNothing;
-	}
-
 	try {
-		auto mvr = new MultipleValueRange(slot_, Serialise::serialise(field_type, start_), Serialise::serialise(field_type, end_));
+		std::string start_s;
+		std::string end_s;
+		switch (field_type) {
+			case INTEGER_TYPE:
+				start_s = Serialise::integer(start_);
+				end_s = Serialise::integer(end_);
+				break;
+			case POSITIVE_TYPE:
+				start_s = Serialise::positive(start_);
+				end_s = Serialise::positive(end_);
+				break;
+			case FLOAT_TYPE:
+				start_s = Serialise::_float(start_);
+				end_s = Serialise::_float(end_);
+			case DATE_TYPE:
+				start_s = Serialise::date(start_);
+				end_s = Serialise::date(end_);
+				break;
+			case BOOLEAN_TYPE:
+				start_s = Serialise::boolean(start_);
+				end_s = Serialise::boolean(end_);
+				break;
+			case STRING_TYPE:
+				start_s = start_;
+				end_s = end_;
+				break;
+			case GEO_TYPE:
+				start_s = Serialise::ewkt(start_);
+				end_s = Serialise::ewkt(end_);
+				break;
+			default:
+				throw MSG_SerialisationError("Type: '%c' is an unknown type", field_type);
+		}
+
+		// Multiple Value Range
+		if (start_s > end_s) {
+			return Xapian::Query::MatchNothing;
+		}
+
+		auto mvr = new MultipleValueRange(slot_, start_s, end_s);
 		return Xapian::Query(mvr->release());
 	} catch (const Exception& exc) {
 		throw MSG_QueryParserError("Failed to serialize: " + field_name + ":" + start_ + ".." + end_ + " like " + Serialise::type(field_type) + " (" + exc.what() +")");
