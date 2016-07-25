@@ -9,7 +9,7 @@ Xapiand: A Highly Available Distributed RESTful Storage and Search Engine built 
 	* Document oriented.
 	* Automatic node operation rerouting.
 	* No need for upfront schema definition.
-* Storage and Search Engine:
+* Storage and Search Engine  *(Not yet implemented)*:
 	* Built on top of [Xapian](http://xapian.org/) indexes.
 	* Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
 * Multi Tenant with Multi Types:
@@ -19,10 +19,10 @@ Xapiand: A Highly Available Distributed RESTful Storage and Search Engine built 
 		* Schema.
 		* Replicas.
 		* Partitioning strategies.
-* Multi-Partitioning and Distribution Strategies:
+* Multi-Partitioning and Distribution Strategies  *(Not yet implemented)*:
 	* Random Consistent Partitioning and Replication.
 	* Social-Based Partitioning and Replication (SPAR <sup>[2](#footnote-2)</sup>).
-* Highly Available:
+* Highly Available:  *(Not yet implemented)*
 	* Replicas exists to maximize high availability *and* data locality.
 	* Read and Search operations performed on any of the replicas.
 	* Reliable, asynchronous replication for long term persistency.
@@ -42,15 +42,13 @@ This guide will take you through the process of installing Xapiand and familiari
 
 #### Requirements
 
-Xapiand is written in C++14, it makes use of libpcre and libev (both of which are included in the codebase). The only external dependencies for building it are:
+Xapiand is written in C++14, it makes use of libev (which is included in the codebase). The only external dependencies for building it are:
 
 * Clang or GCC
-* automake
-* autoconf
-* libtools
 * pkg-config
+* CMake
 * libpthread (internally used by the Standard C++ thread library)
-* xapian-core v1.3+ (With patches by Kronuz applied, see https://github.com/Kronuz/xapian)
+* xapian-core v1.4+ (With patches by Kronuz applied, see https://github.com/Kronuz/xapian)
 
 
 #### Building from Source (GitHub)
@@ -60,10 +58,11 @@ Xapiand is written in C++14, it makes use of libpcre and libev (both of which ar
 2. Build and install using:
 
 	```
-	./autogen.sh
-	./configure
-	make
-	make install
+	mkdir build
+	cd build
+	cmake -GNinja ..
+	ninja
+	ninja install
 	```
 
 3. Run `xapiand` inside a new directory to be assigned to the node.
@@ -120,6 +119,7 @@ curl -XGET 'http://localhost:8880/twitter/tweet/_search?q=user:Kronuz&pretty=tru
 
 *TODO: Work in progress...*
 
+
 ### Highly Available Data Partitioning
 
 To achieve high availability, distribution of data and data locality, Xapiand can partition, replicate and distribute indexes across several nodes using any of the following partitioning strategies:
@@ -145,7 +145,7 @@ To achieve high availability, distribution of data and data locality, Xapiand ca
 ## License
 
 ```
-Copyright (C) 2015 deipi.com LLC and contributors. All rights reserved.
+Copyright (C) 2015,2016 deipi.com LLC and contributors. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to
