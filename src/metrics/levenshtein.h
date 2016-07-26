@@ -31,29 +31,29 @@
  * Character-based metric.
  */
 class Levenshtein : public StringMetric<Levenshtein> {
-	double _subst_cost;
-	double _ins_del_cost;
-	double _maxCost;
+	size_t _subst_cost;
+	size_t _ins_del_cost;
+	size_t _maxCost;
 
 	friend class StringMetric<Levenshtein>;
 
 	double _distance(const std::string& str1, const std::string& str2) const {
-		const size_t len1 = str1.length(), len2 = str2.length();
-		std::vector<double> col(len2 + 1), prev_col(len2 + 1);
+		const auto len1 = str1.length(), len2 = str2.length();
+		std::vector<size_t> col(len2 + 1), prev_col(len2 + 1);
 
-		for (unsigned i = 0; i <= len2; ++i) {
+		for (size_t i = 0; i <= len2; ++i) {
 			prev_col[i] = i * _ins_del_cost;
 		}
 
-		for (unsigned i = 0; i < len1; ++i) {
+		for (size_t i = 0; i < len1; ++i) {
 			col[0] = i + 1;
-			for (unsigned j = 0; j < len2; ++j) {
-				col[j + 1] = std::min(std::min(prev_col[j + 1] + _ins_del_cost, col[j] + _ins_del_cost), prev_col[j] + (str1[i] == str2[j] ? 0 : _subst_cost));
+			for (size_t j = 0; j < len2; ++j) {
+				col[j + 1] = std::min({ prev_col[j + 1] + _ins_del_cost, col[j] + _ins_del_cost, prev_col[j] + (str1[i] == str2[j] ? 0 : _subst_cost) });
 			}
 			col.swap(prev_col);
 		}
 
-		return prev_col[len2] / (_maxCost * std::max(len1, len2));
+		return (double)prev_col[len2] / (_maxCost * std::max(len1, len2));
 	}
 
 	double _distance(const std::string& str2) const {
@@ -73,14 +73,14 @@ class Levenshtein : public StringMetric<Levenshtein> {
 	}
 
 public:
-	Levenshtein(bool icase=true, double subst_cost=1.0, double ins_del_cost=1.0)
+	Levenshtein(bool icase=true, size_t subst_cost=1.0, size_t ins_del_cost=1.0)
 		: StringMetric<Levenshtein>(icase),
 		  _subst_cost(subst_cost),
 		  _ins_del_cost(ins_del_cost),
 		  _maxCost(std::max(_subst_cost, _ins_del_cost)) { }
 
 	template <typename T>
-	Levenshtein(T&& str, bool icase=true, double subst_cost=1.0, double ins_del_cost=1.0)
+	Levenshtein(T&& str, bool icase=true, size_t subst_cost=1.0, size_t ins_del_cost=1.0)
 		: StringMetric<Levenshtein>(std::forward<T>(str), icase),
 		  _subst_cost(subst_cost),
 		  _ins_del_cost(ins_del_cost),
