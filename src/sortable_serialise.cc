@@ -235,7 +235,7 @@ sortable_unserialise(const std::string & value)
 		// 		// implementations have this problem).
 		// 		if (long double(INFINITY) > HUGE_VAL) return INFINITY;
 		// #endif
-		return HUGE_VAL;
+		return HUGE_VALL;
 	}
 
 	// Negative infinity.
@@ -243,7 +243,7 @@ sortable_unserialise(const std::string & value)
 //		#ifdef INFINITY
 //				if (long double(INFINITY) > HUGE_VAL) return -INFINITY;
 //		#endif
-		return -HUGE_VAL;
+		return -HUGE_VALL;
 	}
 
 	unsigned char first = numfromstr(value, 0);
