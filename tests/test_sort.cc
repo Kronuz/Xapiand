@@ -203,6 +203,76 @@ const sort_t string_jaccard_tests[] {
 };
 
 
+const sort_t string_lcs_tests[] {
+	/*
+	 * Table reference data to verify the ordering
+	 * lcs(fieldname:value) -> lcs(get_value(fieldname), value)
+	 * value for sort -> It is the value's field that is selected for the ordering when in the slot
+	 *                   there are several values (in arrays).
+	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
+	 *
+	 * "_id"	"name"						lcs(name:cook)			value for sort (ASC)	value for sort (DESC)
+	 * "1"		["cook", "cooked"]			[0.000000, 0.333333]	"cook"					"cooked"
+	 * "2"		["book store", "book"]		[0.700000, 0.250000]	"book"					"book store"
+	 * "3"		["cooking", "hola mundo"]   [0.428571, 0.900000]	"cooking"				"hola mundo"
+	 * "4"		"hola"						0.750000				"hola"					"hola"
+	 * "5"		"mundo"						0.800000				"mundo"					"mundo"
+	 * "6"		"mundo"						0.800000				"mundo"					"mundo"
+	 * "7"		"hola"						0.750000				"hola"					"hola"
+	 * "8"		["cooking", "hola mundo"]	[0.42857, 0.900000]	    "cooking"				"hola mundo"
+	 * "9"		"computer"					0.750000				"computer"				"computer"
+	 * "10"		Does not have				MAX_DBL					"\xff"					"\xff"
+	 *
+	 * The documents are indexed as the value of "_id" indicates.
+	*/
+	// { "book", "computer", "cook", "cooking", "cooking", "hola", "hola", "mundo", "mundo", "\xff" }
+	{ "*", { "name" }, 			     { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	// { "\xff", "mundo", "mundo", "hola mundo", "hola mundo", "hola", "hola", "cooked", "computer", "book store" }
+	{ "*", { "-name" }, 			 { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	// { 0, 0.250000, 0.428571, 0.428571, 0.750000, 0.750000, 0.750000, 0.800000, 0.800000, MAX_DBL }
+	{ "*", { "name:cook" }, 		 { "1", "2", "3", "8", "4", "7", "9", "5", "6", "10" } },
+	{ "*", { "name:cook", "-_id" },  { "1", "2", "8", "3", "9", "7", "4", "6", "5", "10" } },
+	// { MAX_DBL, 0.900000, 0.900000, 0.800000, 0.800000, 0.750000, 0.750000, 0.750000, 0.700000, 0.333333 }
+	{ "*", { "-name:cook" }, 		 { "10", "3", "8", "5", "6", "4", "7", "9", "2", "1" } },
+	{ "*", { "-name:cook", "-_id" }, { "10", "8", "3", "6", "5", "9", "7", "4", "2", "1" } }
+};
+
+
+const sort_t string_lcsq_tests[] {
+	/*
+	 * Table reference data to verify the ordering
+	 * lcsq(fieldname:value) -> lcsq(get_value(fieldname), value)
+	 * value for sort -> It is the value's field that is selected for the ordering when in the slot
+	 *                   there are several values (in arrays).
+	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
+	 *
+	 * "_id"	"name"						lcsq(name:cook)			value for sort (ASC)	value for sort (DESC)
+	 * "1"		["cook", "cooked"]			[0.000000, 0.333333]	"cook"					"cooked"
+	 * "2"		["book store", "book"]		[0.700000, 0.250000]	"book"					"book store"
+	 * "3"		["cooking", "hola mundo"]   [0.428571, 0.800000]	"cooking"				"hola mundo"
+	 * "4"		"hola"						0.750000				"hola"					"hola"
+	 * "5"		"mundo"						0.800000				"mundo"					"mundo"
+	 * "6"		"mundo"						0.800000				"mundo"					"mundo"
+	 * "7"		"hola"						0.750000				"hola"					"hola"
+	 * "8"		["cooking", "hola mundo"]	[0.42857, 0.800000]	    "cooking"				"hola mundo"
+	 * "9"		"computer"					0.750000				"computer"				"computer"
+	 * "10"		Does not have				MAX_DBL					"\xff"					"\xff"
+	 *
+	 * The documents are indexed as the value of "_id" indicates.
+	*/
+	// { "book", "computer", "cook", "cooking", "cooking", "hola", "hola", "mundo", "mundo", "\xff" }
+	{ "*", { "name" }, 			     { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	// { "\xff", "mundo", "mundo", "hola mundo", "hola mundo", "hola", "hola", "cooked", "computer", "book store" }
+	{ "*", { "-name" }, 			 { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	// { 0, 0.250000, 0.428571, 0.428571, 0.750000, 0.750000, 0.750000, 0.800000, 0.800000, MAX_DBL }
+	{ "*", { "name:cook" }, 		 { "1", "2", "3", "8", "4", "7", "9", "5", "6", "10" } },
+	{ "*", { "name:cook", "-_id" },  { "1", "2", "8", "3", "9", "7", "4", "6", "5", "10" } },
+	// { MAX_DBL, 0.800000, 0.800000, 0.800000, 0.800000, 0.750000, 0.750000, 0.750000, 0.700000, 0.333333 }
+	{ "*", { "-name:cook" }, 		 { "10", "3", "5", "6", "8", "4", "7", "9", "2", "1" } },
+	{ "*", { "-name:cook", "-_id" }, { "10", "8", "6", "5", "3", "9", "7", "4", "2", "1" } }
+};
+
+
 const sort_t numerical_tests[] {
 	/*
 	 * Table reference data to verify the ordering
@@ -523,6 +593,44 @@ int sort_test_string_dice() {
 int sort_test_string_jaccard() {
 	try {
 		int cont = make_search(string_jaccard_tests, arraySize(string_jaccard_tests), "jaccard");
+		if (cont == 0) {
+			L_DEBUG(nullptr, "Testing sort strings is correct!");
+		} else {
+			L_ERR(nullptr, "ERROR: Testing sort strings has mistakes.");
+		}
+		RETURN(cont);
+	} catch (const Xapian::Error &err) {
+		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+		RETURN(1);
+	} catch (const std::exception &err) {
+		L_ERR(nullptr, "ERROR: %s", err.what());
+		RETURN(1);
+	}
+}
+
+
+int sort_test_string_lcs() {
+	try {
+		int cont = make_search(string_lcs_tests, arraySize(string_lcs_tests), "lcs");
+		if (cont == 0) {
+			L_DEBUG(nullptr, "Testing sort strings is correct!");
+		} else {
+			L_ERR(nullptr, "ERROR: Testing sort strings has mistakes.");
+		}
+		RETURN(cont);
+	} catch (const Xapian::Error &err) {
+		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+		RETURN(1);
+	} catch (const std::exception &err) {
+		L_ERR(nullptr, "ERROR: %s", err.what());
+		RETURN(1);
+	}
+}
+
+
+int sort_test_string_lcsq() {
+	try {
+		int cont = make_search(string_lcsq_tests, arraySize(string_lcsq_tests), "lcsq");
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort strings is correct!");
 		} else {

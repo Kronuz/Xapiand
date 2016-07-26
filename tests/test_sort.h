@@ -38,6 +38,8 @@ int sort_test_string_jaro();
 int sort_test_string_jaro_w();
 int sort_test_string_dice();
 int sort_test_string_jaccard();
+int sort_test_string_lcs();
+int sort_test_string_lcsq();
 
 int sort_test_numerical();
 int sort_test_date();

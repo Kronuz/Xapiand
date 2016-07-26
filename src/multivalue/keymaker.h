@@ -220,6 +220,14 @@ public:
 	void jaccard(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
 		slots.push_back(std::make_unique<StringKey<Jaccard>>(slot, reverse, value, icase));
 	}
+
+	void lcs(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
+		slots.push_back(std::make_unique<StringKey<LCSubstr>>(slot, reverse, value, icase));
+	}
+
+	void lcsq(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
+		slots.push_back(std::make_unique<StringKey<LCSubsequence>>(slot, reverse, value, icase));
+	}
 };
 
 

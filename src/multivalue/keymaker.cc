@@ -38,6 +38,10 @@ const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metr
 	{ "sorensen",      &Multi_MultiValueKeyMaker::sorensen_dice   },
 	{ "dice",          &Multi_MultiValueKeyMaker::sorensen_dice   },
 	{ "jaccard",       &Multi_MultiValueKeyMaker::jaccard         },
+	{ "lcsubstr",      &Multi_MultiValueKeyMaker::lcs             },
+	{ "lcs",           &Multi_MultiValueKeyMaker::lcs             },
+	{ "lcsubsequence", &Multi_MultiValueKeyMaker::lcsq            },
+	{ "lcsq",          &Multi_MultiValueKeyMaker::lcsq            },
 	{ "",              def_str_metric                             },
 });
 
