@@ -39,9 +39,9 @@ class Sorensen_Dice : public StringMetric<Sorensen_Dice> {
 
 	std::set<std::string> get_bigrams(const std::string& str) const {
 		// Extract bigrams from str
-		int num_pairs = str.length() - 1;
+		const size_t num_pairs = str.length() - 1;
 		std::set<std::string> str_bigrams;
-		for (int i = 0; i < num_pairs; ++i) {
+		for (size_t i = 0; i < num_pairs; ++i) {
 			str_bigrams.insert(str.substr(i, 2));
 		}
 		return str_bigrams;
@@ -54,10 +54,10 @@ class Sorensen_Dice : public StringMetric<Sorensen_Dice> {
 		}
 
 		// Extract bigrams from str1
-		auto str1_bigrams = get_bigrams(str1);
+		const auto str1_bigrams = get_bigrams(str1);
 
 		// Extract bigrams from str2
-		auto str2_bigrams = get_bigrams(str2);
+		const auto str2_bigrams = get_bigrams(str2);
 
 		// Find the intersection between the two sets.
 		Counter c;
@@ -75,7 +75,7 @@ class Sorensen_Dice : public StringMetric<Sorensen_Dice> {
 		}
 
 		// Extract bigrams from str2
-		auto str2_bigrams = get_bigrams(str2);
+		const auto str2_bigrams = get_bigrams(str2);
 
 		// Find the intersection between the two sets.
 		Counter c;
@@ -99,7 +99,7 @@ class Sorensen_Dice : public StringMetric<Sorensen_Dice> {
 		return 1.0 - _similarity(str2);
 	}
 
-	std::string _description() const {
+	std::string _description() const noexcept {
 		return "Sorensen Dice";
 	}
 

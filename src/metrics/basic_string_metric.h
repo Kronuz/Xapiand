@@ -109,7 +109,7 @@ public:
 		);
 	}
 
-	inline std::string description() const {
+	inline std::string description() const noexcept {
 		auto desc = static_cast<const Impl*>(this)->_description();
 		desc.append(_icase ? " ignore case" : " case sensitive");
 		return desc;

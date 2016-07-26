@@ -50,7 +50,7 @@ class Jaro_Winkler : public StringMetric<Jaro_Winkler> {
 	}
 
 	double _similarity(const std::string& str1, const std::string& str2) const {
-		double jd = _jaro._similarity(str1, str2);
+		const double jd = _jaro._similarity(str1, str2);
 
 		if (jd < _bt) {
 			return jd;
@@ -71,7 +71,7 @@ class Jaro_Winkler : public StringMetric<Jaro_Winkler> {
 		return 1.0 - _similarity(_str, str2);
 	}
 
-	std::string _description() const {
+	std::string _description() const noexcept {
 		return "Jaro Winkler";
 	}
 

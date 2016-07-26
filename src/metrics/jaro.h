@@ -35,10 +35,10 @@ class Jaro : public StringMetric<Jaro> {
 	friend class Jaro_Winkler;
 
 	std::vector<char> get_common_characters(const std::string& str1, const std::string& str2, size_t max_separation) const {
-		size_t l_str1 = str1.length();
+		const auto l_str1 = str1.length();
 		std::vector<char> common_chars;
 		common_chars.reserve(l_str1);
-		std::vector<bool> proc_str1(l_str1);
+		std::vector<bool> proc_str1(l_str1, false);
 
 		// Calculate matching characters.
 		size_t i = 0;
@@ -58,13 +58,12 @@ class Jaro : public StringMetric<Jaro> {
 	}
 
 	double _similarity(const std::string& str1, const std::string& str2) const {
-		auto l_str1 = str1.length();
-		auto l_str2 = str2.length();
+		const auto l_str1 = str1.length(), l_str2 = str2.length();
 
-		auto max_separation = std::max((size_t)0, std::max(l_str1, l_str2) / 2 - 1);
+		const auto max_separation = std::max((size_t)0, std::max(l_str1, l_str2) / 2 - 1);
 
-		auto common_str1 = get_common_characters(str1, str2, max_separation);
-		auto common_str2 = get_common_characters(str2, str1, max_separation);
+		const auto common_str1 = get_common_characters(str1, str2, max_separation);
+		const auto common_str2 = get_common_characters(str2, str1, max_separation);
 
 		auto m1 = common_str1.size(), m2 = common_str2.size();
 		if (!m1 || !m2) {
@@ -103,7 +102,7 @@ class Jaro : public StringMetric<Jaro> {
 		return 1.0 - _similarity(_str, str2);
 	}
 
-	std::string _description() const {
+	std::string _description() const noexcept {
 		return "Jaro";
 	}
 

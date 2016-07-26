@@ -68,7 +68,7 @@ class Levenshtein : public StringMetric<Levenshtein> {
 		return 1.0 - _distance(_str, str2);
 	}
 
-	std::string _description() const {
+	std::string _description() const noexcept {
 		return "Levenshtein";
 	}
 

@@ -39,8 +39,8 @@ class Jaccard : public StringMetric<Jaccard> {
 	friend class StringMetric<Jaccard>;
 
 	double _similarity(const std::string& str1, const std::string& str2) const {
-		std::set<char> set_str1(str1.begin(), str1.end());
-		std::set<char> set_str2(str2.begin(), str2.end());
+		const std::set<char> set_str1(str1.begin(), str1.end());
+		const std::set<char> set_str2(str2.begin(), str2.end());
 
 		// Find the count intersection between the two usets.
 		Counter c;
@@ -52,7 +52,7 @@ class Jaccard : public StringMetric<Jaccard> {
 	}
 
 	double _similarity(const std::string& str2) const {
-		std::set<char> set_str2(str2.begin(), str2.end());
+		const std::set<char> set_str2(str2.begin(), str2.end());
 
 		// Find the count intersection between the two usets.
 		Counter c;
@@ -71,7 +71,7 @@ class Jaccard : public StringMetric<Jaccard> {
 		return 1.0 - _similarity(str2);
 	}
 
-	std::string _description() const {
+	std::string _description() const noexcept {
 		return "Jaccard";
 	}
 
