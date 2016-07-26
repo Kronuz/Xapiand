@@ -43,19 +43,25 @@ int test_ranking_results() {
 	auto jaro_winkler = Jaro_Winkler(str);
 	auto dice = Sorensen_Dice(str);
 	auto jaccard = Jaccard(str);
+	auto lcs = LCSubstr(str);
+	auto lcsq = LCSubsequence(str);
 	std::string metrics[] = {
 		levenshtein.description(),
 		jaro.description(),
 		jaro_winkler.description(),
 		dice.description(),
-		jaccard.description()
+		jaccard.description(),
+		lcs.description(),
+		lcsq.description()
 	};
 	double expected[arraySize(metrics)][arraySize(strs)] = {
 		{ 0.166667, 0.428571, 0.333333, 0.333333, 0.500000, 0.666667 },
 		{ 0.111111, 0.253968, 0.177778, 0.305556, 0.250000, 0.388889 },
 		{ 0.111111, 0.152381, 0.124444, 0.305556, 0.200000, 0.388889 },
 		{ 0.200000, 0.454545, 0.555556, 0.600000, 0.750000, 1.000000 },
-		{ 0.333333, 0.428571, 0.333333, 0.500000, 0.500000, 0.714286 }
+		{ 0.333333, 0.428571, 0.333333, 0.500000, 0.500000, 0.714286 },
+		{ 0.166667, 0.428571, 0.500000, 0.666667, 0.666667, 0.833333 },
+		{ 0.166667, 0.428571, 0.333333, 0.333333, 0.500000, 0.666667 }
 	};
 
 	int res = 0;
@@ -65,7 +71,9 @@ int test_ranking_results() {
 			jaro.distance(strs[i]),
 			jaro_winkler.distance(strs[i]),
 			dice.distance(strs[i]),
-			jaccard.distance(strs[i])
+			jaccard.distance(strs[i]),
+			lcs.distance(strs[i]),
+			lcsq.distance(strs[i])
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
 			if (std::abs(results[j] - expected[j][i]) >= 1e-6) {
@@ -121,6 +129,16 @@ int test_ranking_results() {
 			{ 0.263158, 0.176471, 0.222222, 0.263158, 0.235294, 0.363636, 0.500000, 0.235294 },
 			{ 0.263158, 0.176471, 0.222222, 0.263158, 0.235294, 0.363636, 0.500000, 0.235294 },
 			{ 0.315789, 0.235294, 0.277778, 0.315789, 0.294118, 0.409091, 0.545455, 0.294118 }
+		},
+		{
+			{ 0.404762, 0.745098, 0.576923, 0.545455, 0.666667, 0.747126, 0.952381, 0.937500 },
+			{ 0.690476, 0.666667, 0.750000, 0.763636, 0.583333, 0.850575, 0.968254, 0.937500 },
+			{ 0.761905, 0.803922, 0.807692, 0.818182, 0.750000, 0.885057, 0.968254, 0.937500 }
+		},
+		{
+			{ 0.404762, 0.549020, 0.557692, 0.545455, 0.583333, 0.712644, 0.793651, 0.687500 },
+			{ 0.619048, 0.666667, 0.711538, 0.690909, 0.583333, 0.816092, 0.825397, 0.718750 },
+			{ 0.642857, 0.705882, 0.750000, 0.727273, 0.611111, 0.827586, 0.857143, 0.750000 }
 		}
 	};
 	for (size_t i = 0; i < arraySize(strs_r1); ++i) {
@@ -130,7 +148,9 @@ int test_ranking_results() {
 				jaro.distance(strs_r1[i], strs_r2[j]),
 				jaro_winkler.distance(strs_r1[i], strs_r2[j]),
 				dice.distance(strs_r1[i], strs_r2[j]),
-				jaccard.distance(strs_r1[i], strs_r2[j])
+				jaccard.distance(strs_r1[i], strs_r2[j]),
+				lcs.distance(strs_r1[i], strs_r2[j]),
+				lcsq.distance(strs_r1[i], strs_r2[j])
 			};
 			for (size_t k = 0; k < arraySize(results); ++k) {
 				if (std::abs(results[k] - expected2[k][i][j]) >= 1e-6) {
@@ -140,7 +160,7 @@ int test_ranking_results() {
 			}
 		}
 	}
-	return res;
+	RETURN(res);
 }
 
 
@@ -152,12 +172,16 @@ int test_special_cases() {
 	auto jaro_winkler = Jaro_Winkler();
 	auto dice = Sorensen_Dice();
 	auto jaccard = Jaccard();
+	auto lcs = LCSubstr();
+	auto lcsq = LCSubsequence();
 	std::string metrics[] = {
 		levenshtein.description(),
 		jaro.description(),
 		jaro_winkler.description(),
 		dice.description(),
-		jaccard.description()
+		jaccard.description(),
+		lcs.description(),
+		lcsq.description()
 	};
 
 	double expected[arraySize(metrics)][arraySize(str1)] = {
@@ -165,7 +189,9 @@ int test_special_cases() {
 		{ 0.200000, 0.000000, 1.000000, 0.166667, 1.000000, 0.000000, 1.000000 },
 		{ 0.160000, 0.000000, 1.000000, 0.150000, 1.000000, 0.000000, 1.000000 },
 		{ 0.000000, 0.000000, 1.000000, 1.000000, 1.000000, 0.000000, 1.000000 },
-		{ 0.000000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 }
+		{ 0.000000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
+		{ 0.600000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
+		{ 0.600000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 }
 	};
 
 	int res = 0;
@@ -175,7 +201,9 @@ int test_special_cases() {
 			jaro.distance(str1[i], str2[i]),
 			jaro_winkler.distance(str1[i], str2[i]),
 			dice.distance(str1[i], str2[i]),
-			jaccard.distance(str1[i], str2[i])
+			jaccard.distance(str1[i], str2[i]),
+			lcs.distance(str1[i], str2[i]),
+			lcsq.distance(str1[i], str2[i])
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
 			if (std::abs(results[j] - expected[j][i]) >= 1e-6) {
@@ -184,7 +212,7 @@ int test_special_cases() {
 			}
 		}
 	}
-	return res;
+	RETURN(res);
 }
 
 
@@ -201,6 +229,10 @@ int test_case_sensitive() {
 	auto dice_sensitive = Sorensen_Dice(false);
 	auto jaccard = Jaccard();
 	auto jaccard_sensitive = Jaccard(false);
+	auto lcs = LCSubstr();
+	auto lcs_sensitive = LCSubstr(false);
+	auto lcsq = LCSubsequence();
+	auto lcsq_sensitive = LCSubsequence(false);
 	std::string metrics[] = {
 		levenshtein.description(),
 		levenshtein_sensitive.description(),
@@ -211,7 +243,11 @@ int test_case_sensitive() {
 		dice.description(),
 		dice_sensitive.description(),
 		jaccard.description(),
-		jaccard_sensitive.description()
+		jaccard_sensitive.description(),
+		lcs.description(),
+		lcs_sensitive.description(),
+		lcsq.description(),
+		lcsq_sensitive.description()
 	};
 	double expected[arraySize(metrics)][arraySize(str1)] = {
 		{ 0.000000, 0.333333, 0.333333, 0.333333 },
@@ -223,6 +259,10 @@ int test_case_sensitive() {
 		{ 0.000000, 0.600000, 0.600000, 0.600000 },
 		{ 1.000000, 1.000000, 1.000000, 0.800000 },
 		{ 0.000000, 0.285714, 0.285714, 0.285714 },
+		{ 1.000000, 1.000000, 1.000000, 0.500000 },
+		{ 0.000000, 0.666667, 0.666667, 0.666667 },
+		{ 1.000000, 1.000000, 1.000000, 0.666667 },
+		{ 0.000000, 0.333333, 0.333333, 0.333333 },
 		{ 1.000000, 1.000000, 1.000000, 0.500000 }
 	};
 
@@ -238,7 +278,11 @@ int test_case_sensitive() {
 			dice.distance(str1[i], str2[i]),
 			dice_sensitive.distance(str1[i], str2[i]),
 			jaccard.distance(str1[i], str2[i]),
-			jaccard_sensitive.distance(str1[i], str2[i])
+			jaccard_sensitive.distance(str1[i], str2[i]),
+			lcs.distance(str1[i], str2[i]),
+			lcs_sensitive.distance(str1[i], str2[i]),
+			lcsq.distance(str1[i], str2[i]),
+			lcsq_sensitive.distance(str1[i], str2[i])
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
 			if (std::abs(results[j] - expected[j][i]) >= 1e-6) {
@@ -247,7 +291,7 @@ int test_case_sensitive() {
 			}
 		}
 	}
-	return res;
+	RETURN(res);
 }
 
 
@@ -301,5 +345,13 @@ int test_time() {
 	run_test_v1(jaccard, str2);
 	run_test_v2(jaccard, str1, str2);
 
-	return 0;
+	auto lcs = LCSubstr(str1);
+	run_test_v1(lcs, str2);
+	run_test_v2(lcs, str1, str2);
+
+	auto lcsq = LCSubsequence(str1);
+	run_test_v1(lcsq, str2);
+	run_test_v2(lcsq, str1, str2);
+
+	RETURN(0);
 }
