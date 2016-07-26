@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "metrics/basic_string_metric.h"
 #include "metrics/jaccard.h"
 #include "metrics/jaro.h"
 #include "metrics/jaro_winkler.h"
