@@ -229,20 +229,20 @@ sortable_unserialise(const std::string & value)
 	// Positive infinity.
 	if (value.size() == 18 &&
 		memcmp(value.data(), "\xff\xff\xff\xff\xff\xff\xff\xff\xff", 18) == 0) {
-		// #ifdef INFINITY
-		// 		// INFINITY is C99.  Oddly, it's of type "float" so sanity check in
-		// 		// case it doesn't cast to double as infinity (apparently some
-		// 		// implementations have this problem).
-		// 		if (long double(INFINITY) > HUGE_VAL) return INFINITY;
-		// #endif
+		#ifdef INFINITY
+				// INFINITY is C99.  Oddly, it's of type "float" so sanity check in
+				// case it doesn't cast to double as infinity (apparently some
+				// implementations have this problem).
+				if ((long double)(INFINITY) > HUGE_VALL) return INFINITY;
+		#endif
 		return HUGE_VALL;
 	}
 
 	// Negative infinity.
 	if (value.empty()) {
-//		#ifdef INFINITY
-//				if (long double(INFINITY) > HUGE_VAL) return -INFINITY;
-//		#endif
+		#ifdef INFINITY
+				if ((long double)(INFINITY) > HUGE_VALL) return -INFINITY;
+		#endif
 		return -HUGE_VALL;
 	}
 
