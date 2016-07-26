@@ -19,6 +19,7 @@
  */
 
 
+#include <assert.h>
 #include <cfloat>
 #include <cmath>
 #include <cstring>
@@ -93,7 +94,8 @@ sortable_serialise_(long double value, char * buf)
 	 * larger negative exponents should sort first (unless the number is
 	 * negative, in which case they should sort later).
 	 */
-	//if (!(exponent >= 0)) std::cerr << "S=" << "ASSERT 1" << std::endl;
+
+	assert(exponent >= 0);
 	if (exponent < 128) {
 		next ^= 0x20;
 		// Put the top 5 bits of the exponent into the lower 5 bits of the
@@ -108,7 +110,7 @@ sortable_serialise_(long double value, char * buf)
 		if (negative ^ exponent_negative) next ^= 0xc0;
 
 	} else {
-		//if (!((exponent >> 15) == 0)) std::cerr << "S=" << "ASSERT 2" << std::endl;
+		assert((exponent >> 15) == 0);
 		// Put the top 5 bits of the exponent into the lower 5 bits of the
 		// first byte:
 		next |= static_cast<unsigned char>(exponent >> 10);
@@ -150,7 +152,8 @@ sortable_serialise_(long double value, char * buf)
 	// so we need to store it explicitly.  But for the cost of one extra
 	// leading bit, we can save several trailing 0xff bytes in lots of common
 	// cases.
-	//if (!(negative || (word1 & (1<<30)))) std::cerr << "S=" << "ASSERT 3" << std::endl;
+
+	assert(negative || (word1 & (1<<30)));
 	if (negative) {
 		// We negate the mantissa for negative numbers, so that the sort order
 		// is reversed (since larger negative numbers should come first).
@@ -304,7 +307,7 @@ sortable_unserialise(const std::string & value)
 		word3 = -word3;
 		if (word4 != 0) ++word3;
 		word4 = -word4;
-		//if (!((word1 & 0xf0000000) != 0)) std::cerr << "U=" << "ASSERT 4" << std::endl;
+		assert((word1 & 0xf0000000) != 0);
 		word1 &= 0x3fffffff;
 	}
 	if (!negative) word1 |= 1<<30;
