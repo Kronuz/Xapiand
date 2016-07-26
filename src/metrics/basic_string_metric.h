@@ -80,11 +80,11 @@ public:
 	inline double similarity(T&& str1, T&& str2) const {
 		// Check base cases.
 		if (str1.empty() || str2.empty()) {
-			return 1.0;
+			return 0.0;
 		}
 
 		if (str1 == str2) {
-			return 0.0;
+			return 1.0;
 		}
 
 		return static_cast<const Impl*>(this)->_similarity(
@@ -97,11 +97,11 @@ public:
 	inline double similarity(T&& str2) const {
 		// Check base cases.
 		if (_str.empty() || str2.empty()) {
-			return 1.0;
+			return 0.0;
 		}
 
 		if (_str == str2) {
-			return 0.0;
+			return 1.0;
 		}
 
 		return static_cast<const Impl*>(this)->_similarity(
