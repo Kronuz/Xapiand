@@ -26,5 +26,7 @@
 #include "metrics/jaccard.h"
 #include "metrics/jaro.h"
 #include "metrics/jaro_winkler.h"
+#include "metrics/lcsubsequence.h"
+#include "metrics/lcsubstr.h"
 #include "metrics/levenshtein.h"
 #include "metrics/sorensen_dice.h"
