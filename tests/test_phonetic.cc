@@ -35,12 +35,15 @@ int test_soundex_english() {
 	 * http://ntz-develop.blogspot.mx/2011/03/phonetic-algorithms.html
 	 */
 	std::string expected[] = {
-		"", "B1905", "C30908", "H093", "L7081096", "N807608"
+		"", "A0", "B1905", "C30908", "H093", "L7081096", "N807608"
 	};
 
 	std::vector<std::string> strs[arraySize(expected)] = {
 		{
 			""
+		},
+		{
+			"aaaaa", "aaaa", "aaa", "aa", "a"
 		},
 		{
 			"brrraz", "Brooooz"
@@ -81,12 +84,18 @@ int test_soundex_english() {
 
 int test_soundex_spanish() {
 	std::string expected[] = {
-		"", "B62", "K65", "B2", "L5163", "J435", "K2", "K64", "B5", "N5"
+		"", "A0", "O040", "B1602", "K20605", "B1020", "L4051063", "J70403050", "K2020", "K20640", "B1050", "N5050"
 	};
 
 	std::vector<std::string> strs[arraySize(expected)] = {
 		{
 			""
+		},
+		{
+			"aaaaa", "aaaa", "aaa", "aa", "a"
+		},
+		{
+			"oooolaaaaaa", "olaaa", "ola"
 		},
 		{
 			"brrraz", "Brooooz"
@@ -97,7 +106,7 @@ int test_soundex_spanish() {
 			"Currom", "Currum", "Curwen", "Karen"
 		},
 		{
-			"vaca", "baca", "vaka", "baka", "vaaacaaa", "bak", "bk"
+			"vaca", "baca", "vaka", "baka", "vaaacaaa"
 		},
 		{
 			"Lambard", "lambart", "Lambert", "LambirD", "Lampaert",
@@ -105,16 +114,16 @@ int test_soundex_spanish() {
 			"Limbert", "Lombard"
 		},
 		{
-			"Jelatina", "Gelatina", "jltn"
+			"Jelatina", "Gelatina", "Jaletina"
 		},
 		{
-			"Queso", "Keso", "kso", "ks"
+			"Queso", "Keso", "kiso", "Quiso", "Quizá"
 		},
 		{
-			"Karla", "Carla", "krla", "krl"
+			"Karla", "Carla", "Kerla"
 		},
 		{
-			"Vena", "Vèná", "bena", "ven"
+			"Vena", "Vèná", "bena"
 		},
 		{
 			"Ñoño", "Nono", "Nóno"
@@ -147,7 +156,7 @@ static const std::vector<std::string> time_strs = {
 
 
 template <typename S>
-static void test_time() {
+void test_time() {
 	S impl;
 	auto t1 = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < NUM_TESTS; ++i) {
