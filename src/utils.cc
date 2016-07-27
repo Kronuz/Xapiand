@@ -977,6 +977,8 @@ bool build_path_index(const std::string& path) {
 			dir.append(_dir).append(1, '/');
 			if (mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
 				continue;
+			} else if (errno == EEXIST){
+				continue;
 			} else {
 				return false;
 			}
