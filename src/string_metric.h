@@ -30,3 +30,4 @@
 #include "metrics/lcsubstr.h"
 #include "metrics/levenshtein.h"
 #include "metrics/sorensen_dice.h"
+#include "metrics/soundex_metric.h"
