@@ -37,7 +37,7 @@ int test_ranking_results() {
 	 */
 	std::string str("Healed");
 	std::string strs[] = {
-		"Sealed", "Healthy", "Heard", "Herded", "Help", "Sold"
+		"Sealed", "Healthy", "Heard", "Herded", "Help", "Sold", "ealed"
 	};
 	auto levenshtein = Levenshtein(str);
 	auto jaro = Jaro(str);
@@ -46,6 +46,8 @@ int test_ranking_results() {
 	auto jaccard = Jaccard(str);
 	auto lcs = LCSubstr(str);
 	auto lcsq = LCSubsequence(str);
+	auto soundexE = SoundexMetric<SoundexEnglish, LCSubsequence>(str);
+	auto soundexS = SoundexMetric<SoundexSpanish, LCSubsequence>(str);
 	std::string metrics[] = {
 		levenshtein.description(),
 		jaro.description(),
@@ -53,16 +55,20 @@ int test_ranking_results() {
 		dice.description(),
 		jaccard.description(),
 		lcs.description(),
-		lcsq.description()
+		lcsq.description(),
+		soundexE.description(),
+		soundexS.description()
 	};
 	double expected[arraySize(metrics)][arraySize(strs)] = {
-		{ 0.166667, 0.428571, 0.333333, 0.333333, 0.500000, 0.666667 },
-		{ 0.111111, 0.253968, 0.177778, 0.305556, 0.250000, 0.388889 },
-		{ 0.111111, 0.152381, 0.124444, 0.305556, 0.200000, 0.388889 },
-		{ 0.200000, 0.454545, 0.555556, 0.600000, 0.750000, 1.000000 },
-		{ 0.333333, 0.428571, 0.333333, 0.500000, 0.500000, 0.714286 },
-		{ 0.166667, 0.428571, 0.500000, 0.666667, 0.666667, 0.833333 },
-		{ 0.166667, 0.428571, 0.333333, 0.333333, 0.500000, 0.666667 }
+		{ 0.166667, 0.428571, 0.333333, 0.333333, 0.500000, 0.666667, 0.166667 },
+		{ 0.111111, 0.253968, 0.177778, 0.305556, 0.250000, 0.388889, 0.055556 },
+		{ 0.111111, 0.152381, 0.124444, 0.305556, 0.200000, 0.388889, 0.055556 },
+		{ 0.200000, 0.454545, 0.555556, 0.600000, 0.750000, 1.000000, 0.111111 },
+		{ 0.333333, 0.428571, 0.333333, 0.500000, 0.500000, 0.714286, 0.200000 },
+		{ 0.166667, 0.428571, 0.500000, 0.666667, 0.666667, 0.833333, 0.166667 },
+		{ 0.166667, 0.428571, 0.333333, 0.333333, 0.500000, 0.666667, 0.166667 },
+		{ 0.333333, 0.200000, 0.400000, 0.333333, 0.400000, 0.400000, 0.200000 },
+		{ 0.333333, 0.200000, 0.400000, 0.333333, 0.400000, 0.400000, 0.000000 }
 	};
 
 	int res = 0;
@@ -74,7 +80,9 @@ int test_ranking_results() {
 			dice.distance(strs[i]),
 			jaccard.distance(strs[i]),
 			lcs.distance(strs[i]),
-			lcsq.distance(strs[i])
+			lcsq.distance(strs[i]),
+			soundexE.distance(strs[i]),
+			soundexS.distance(strs[i])
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
 			if (std::abs(results[j] - expected[j][i]) >= 1e-6) {
@@ -140,6 +148,16 @@ int test_ranking_results() {
 			{ 0.404762, 0.549020, 0.557692, 0.545455, 0.583333, 0.712644, 0.793651, 0.687500 },
 			{ 0.619048, 0.666667, 0.711538, 0.690909, 0.583333, 0.816092, 0.825397, 0.718750 },
 			{ 0.642857, 0.705882, 0.750000, 0.727273, 0.611111, 0.827586, 0.857143, 0.750000 }
+		},
+		{
+			{ 0.354839, 0.538462, 0.526316, 0.525000, 0.517241, 0.672131, 0.695652, 0.434783 },
+			{ 0.548387, 0.641026, 0.631579, 0.625000, 0.620690, 0.754098, 0.760870, 0.608696 },
+			{ 0.580645, 0.692308, 0.684211, 0.700000, 0.586207, 0.786885, 0.782609, 0.652174 }
+		},
+		{
+			{ 0.354839, 0.538462, 0.526316, 0.525000, 0.482759, 0.672131, 0.652174, 0.458333 },
+			{ 0.548387, 0.641026, 0.631579, 0.625000, 0.620690, 0.754098, 0.739130, 0.541667 },
+			{ 0.580645, 0.692308, 0.684211, 0.700000, 0.586207, 0.786885, 0.760870, 0.583333 }
 		}
 	};
 	for (size_t i = 0; i < arraySize(strs_r1); ++i) {
@@ -151,7 +169,9 @@ int test_ranking_results() {
 				dice.distance(strs_r1[i], strs_r2[j]),
 				jaccard.distance(strs_r1[i], strs_r2[j]),
 				lcs.distance(strs_r1[i], strs_r2[j]),
-				lcsq.distance(strs_r1[i], strs_r2[j])
+				lcsq.distance(strs_r1[i], strs_r2[j]),
+				soundexE.distance(strs_r1[i], strs_r2[j]),
+				soundexS.distance(strs_r1[i], strs_r2[j])
 			};
 			for (size_t k = 0; k < arraySize(results); ++k) {
 				if (std::abs(results[k] - expected2[k][i][j]) >= 1e-6) {
@@ -166,8 +186,8 @@ int test_ranking_results() {
 
 
 int test_special_cases() {
-	std::string str1[] = { "AA", "A", "A", "A", "AB", "AA", "" };
-	std::string str2[] = { "AAAAA", "A", "B", "AB", "B", "AA", "" };
+	std::string str1[] = { "AA", "A", "A", "A", "A", "AB", "AA", "" };
+	std::string str2[] = { "AAAAA", "A", "AA", "B", "AB", "B", "AA", "" };
 	auto levenshtein = Levenshtein();
 	auto jaro = Jaro();
 	auto jaro_winkler = Jaro_Winkler();
@@ -175,6 +195,8 @@ int test_special_cases() {
 	auto jaccard = Jaccard();
 	auto lcs = LCSubstr();
 	auto lcsq = LCSubsequence();
+	auto soundexE = SoundexMetric<SoundexEnglish, LCSubsequence>();
+	auto soundexS = SoundexMetric<SoundexSpanish, LCSubsequence>();
 	std::string metrics[] = {
 		levenshtein.description(),
 		jaro.description(),
@@ -182,17 +204,21 @@ int test_special_cases() {
 		dice.description(),
 		jaccard.description(),
 		lcs.description(),
-		lcsq.description()
+		lcsq.description(),
+		soundexE.description(),
+		soundexS.description()
 	};
 
 	double expected[arraySize(metrics)][arraySize(str1)] = {
-		{ 0.600000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
-		{ 0.200000, 0.000000, 1.000000, 0.166667, 1.000000, 0.000000, 1.000000 },
-		{ 0.160000, 0.000000, 1.000000, 0.150000, 1.000000, 0.000000, 1.000000 },
-		{ 0.000000, 0.000000, 1.000000, 1.000000, 1.000000, 0.000000, 1.000000 },
-		{ 0.000000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
-		{ 0.600000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
-		{ 0.600000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 }
+		{ 0.600000, 0.000000, 0.500000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
+		{ 0.200000, 0.000000, 0.166667, 1.000000, 0.166667, 1.000000, 0.000000, 1.000000 },
+		{ 0.160000, 0.000000, 0.150000, 1.000000, 0.150000, 1.000000, 0.000000, 1.000000 },
+		{ 0.000000, 0.000000, 1.000000, 1.000000, 1.000000, 1.000000, 0.000000, 1.000000 },
+		{ 0.000000, 0.000000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
+		{ 0.600000, 0.000000, 0.500000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
+		{ 0.600000, 0.000000, 0.500000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
+		{ 0.000000, 0.000000, 0.000000, 1.000000, 0.333333, 0.666667, 0.000000, 1.000000 },
+		{ 0.000000, 0.000000, 0.000000, 1.000000, 0.333333, 0.666667, 0.000000, 1.000000 }
 	};
 
 	int res = 0;
@@ -204,7 +230,9 @@ int test_special_cases() {
 			dice.distance(str1[i], str2[i]),
 			jaccard.distance(str1[i], str2[i]),
 			lcs.distance(str1[i], str2[i]),
-			lcsq.distance(str1[i], str2[i])
+			lcsq.distance(str1[i], str2[i]),
+			soundexE.distance(str1[i], str2[i]),
+			soundexS.distance(str1[i], str2[i])
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
 			if (std::abs(results[j] - expected[j][i]) >= 1e-6) {
@@ -234,6 +262,10 @@ int test_case_sensitive() {
 	auto lcs_sensitive = LCSubstr(false);
 	auto lcsq = LCSubsequence();
 	auto lcsq_sensitive = LCSubsequence(false);
+	auto soundexE = SoundexMetric<SoundexEnglish, LCSubsequence>();
+	auto soundexE_sensitive = SoundexMetric<SoundexEnglish, LCSubsequence>(false);
+	auto soundexS = SoundexMetric<SoundexSpanish, LCSubsequence>();
+	auto soundexS_sensitive = SoundexMetric<SoundexSpanish, LCSubsequence>(false);
 	std::string metrics[] = {
 		levenshtein.description(),
 		levenshtein_sensitive.description(),
@@ -248,7 +280,11 @@ int test_case_sensitive() {
 		lcs.description(),
 		lcs_sensitive.description(),
 		lcsq.description(),
-		lcsq_sensitive.description()
+		lcsq_sensitive.description(),
+		soundexE.description(),
+		soundexE_sensitive.description(),
+		soundexS.description(),
+		soundexS_sensitive.description()
 	};
 	double expected[arraySize(metrics)][arraySize(str1)] = {
 		{ 0.000000, 0.333333, 0.333333, 0.333333 },
@@ -264,7 +300,11 @@ int test_case_sensitive() {
 		{ 0.000000, 0.666667, 0.666667, 0.666667 },
 		{ 1.000000, 1.000000, 1.000000, 0.666667 },
 		{ 0.000000, 0.333333, 0.333333, 0.333333 },
-		{ 1.000000, 1.000000, 1.000000, 0.500000 }
+		{ 1.000000, 1.000000, 1.000000, 0.500000 },
+		{ 0.000000, 0.000000, 0.000000, 0.000000 },
+		{ 0.000000, 0.000000, 0.000000, 0.000000 },
+		{ 0.000000, 0.166667, 0.166667, 0.166667 },
+		{ 0.000000, 0.166667, 0.166667, 0.166667 }
 	};
 
 	int res = 0;
@@ -283,7 +323,11 @@ int test_case_sensitive() {
 			lcs.distance(str1[i], str2[i]),
 			lcs_sensitive.distance(str1[i], str2[i]),
 			lcsq.distance(str1[i], str2[i]),
-			lcsq_sensitive.distance(str1[i], str2[i])
+			lcsq_sensitive.distance(str1[i], str2[i]),
+			soundexE.distance(str1[i], str2[i]),
+			soundexE_sensitive.distance(str1[i], str2[i]),
+			soundexS.distance(str1[i], str2[i]),
+			soundexS_sensitive.distance(str1[i], str2[i])
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
 			if (std::abs(results[j] - expected[j][i]) >= 1e-6) {
@@ -353,6 +397,14 @@ int test_time() {
 	auto lcsq = LCSubsequence(str1);
 	run_test_v1(lcsq, str2);
 	run_test_v2(lcsq, str1, str2);
+
+	auto soundexE = SoundexMetric<SoundexEnglish, LCSubsequence>(str1);
+	run_test_v1(soundexE, str2);
+	run_test_v2(soundexE, str1, str2);
+
+	auto soundexS = SoundexMetric<SoundexSpanish, LCSubsequence>(str1);
+	run_test_v1(soundexS, str2);
+	run_test_v2(soundexS, str1, str2);
 
 	RETURN(0);
 }
