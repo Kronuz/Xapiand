@@ -117,10 +117,27 @@ class SoundexEnglish : public Soundex<SoundexEnglish> {
 						result.push_back('9');
 					}
 					break;
-				default:
+				case 'a':
+				case 'e':
+				case 'h':
+				case 'i':
+				case 'o':
+				case 'u':
+				case 'w':
+				case 'y':
+				case 'A':
+				case 'E':
+				case 'H':
+				case 'I':
+				case 'O':
+				case 'U':
+				case 'W':
+				case 'Y':
 					if (result.back() != '0') {
 						result.push_back('0');
 					}
+					break;
+				default:
 					break;
 			}
 		}

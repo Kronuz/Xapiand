@@ -22,6 +22,7 @@
 
 #include "test_string_metric.h"
 
+#include "../src/phonetic.h"
 #include "../src/string_metric.h"
 #include "utils.h"
 
