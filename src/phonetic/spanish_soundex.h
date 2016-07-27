@@ -117,7 +117,8 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 		replace(res);
 
 		// 5. Starts the calculation of Soundex.
-		it = ++res.begin();
+		it = res.begin();
+		it = ++res.insert(it, *res.begin());
 		while (it != res.end()) {
 			switch (*it) {
 				case 'B':
@@ -182,6 +183,21 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 				case 'J':
 					if (*(it - 1) != '7') {
 						*it = '7';
+						++it;
+					} else {
+						it = res.erase(it);
+					}
+					break;
+				case 'A':
+				case 'E':
+				case 'H':
+				case 'I':
+				case 'O':
+				case 'U':
+				case 'W':
+				case 'Y':
+					if (*(it - 1) != '0') {
+						*it = '0';
 						++it;
 					} else {
 						it = res.erase(it);
