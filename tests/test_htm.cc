@@ -206,7 +206,7 @@ int test_hullConvex() {
 	result_files.push_back(python_htm + "Utah_convex_hull.py");
 
 	// Make the path for the python files generated.
-	build_path(python_htm);
+	build_path_index(python_htm);
 
 	auto it_f = files.begin();
 	auto it_e = expect_files.begin();
@@ -368,7 +368,7 @@ int test_HTM_chull() {
 	types.push_back(GeometryType::CONVEX_HULL);
 
 	// Make the path for the python files generated.
-	build_path(python_htm);
+	build_path_index(python_htm);
 
 	auto it_f = files.begin();
 	auto it_e = expect_files.begin();
@@ -458,7 +458,7 @@ int test_HTM_circle() {
 	char output[50];
 
 	// Make the path for the python files generated.
-	build_path(python_htm);
+	build_path_index(python_htm);
 
 	if (readFile.is_open()) {
 		while (!readFile.eof()) {

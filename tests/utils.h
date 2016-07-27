@@ -83,27 +83,6 @@ inline bool read_file_contents(const std::string& filename, std::string* content
 }
 
 
-inline bool build_path(const std::string& path) {
-	std::string dir = path;
-	std::size_t found = dir.find_last_of("/\\");
-	dir.resize(found);
-	if (exist(dir)) {
-		return true;
-	} else {
-		std::vector<std::string> directories;
-		stringTokenizer(dir, "/", directories);
-		dir.clear();
-		for (const auto& _dir : directories) {
-			dir.append(_dir).append(1, '/');
-			if (mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST) {
-				return false;
-			}
-		}
-		return true;
-	}
-}
-
-
 /*
  *	The database used in the test is local
  *	so the Endpoints and local_node are manipulated.
