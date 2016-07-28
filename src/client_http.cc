@@ -1298,15 +1298,13 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		}
 	}
 
-	index_path = ns + path;
-	std::string node_name;
-	std::string asked_node_path = index_path;
-	if (startswith(asked_node_path, "/")) {
-		 asked_node_path = asked_node_path.substr(1, std::string::npos);
+	if (!ns.empty()) {
+		index_path = ns + "/" + path;
+	} else {
+		index_path = path;
 	}
 
-	asked_node_path = normalize_path(asked_node_path);
-
+	std::string node_name;
 	std::vector<Endpoint> asked_nodes;
 	if (path_parser.off_hst) {
 		node_name = path_parser.get_hst();
@@ -1318,7 +1316,7 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 			has_node_name = true;
 			node_name = local_node_->name;
 		} else {
-			if (!XapiandManager::manager->resolve_index_endpoint(asked_node_path, asked_nodes, num_endps, timeout)) {
+			if (!XapiandManager::manager->resolve_index_endpoint(index_path, asked_nodes, num_endps, timeout)) {
 				has_node_name = true;
 				node_name = local_node_->name;
 			}
