@@ -966,7 +966,9 @@ bool exist(const std::string& path) {
 bool build_path_index(const std::string& path) {
 	std::string dir = path;
 	std::size_t found = dir.find_last_of("/\\");
-	dir.resize(found);
+	if (found != std::string::npos) {
+		dir.resize(found);
+	}
 	if (exist(dir)) {
 		return true;
 	} else {
