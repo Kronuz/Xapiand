@@ -1290,6 +1290,10 @@ HttpClient::_endpoint_maker(duration<double, std::milli> timeout)
 		if (startswith(path_without_slash, "_") or startswith(path_without_slash, ".")) {
 			throw MSG_ClientError("The index directory %s couldn't start with '_' or '.' are reserved", path_without_slash.c_str());
 		}
+
+		if (endswith(path, "/")) {
+			path = path.substr(0, path.size()-1);
+		}
 	}
 
 	index_path = ns + path;
