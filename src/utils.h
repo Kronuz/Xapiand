@@ -249,6 +249,7 @@ bool isRange(const std::string& str);
 bool isNumeric(const std::string& str);
 
 bool startswith(const std::string& text, const std::string& token);
+bool endswith(const std::string& text, const std::string& token);
 void delete_files(const std::string& path);
 void move_files(const std::string& src, const std::string& dst);
 bool exist(const std::string& name);
