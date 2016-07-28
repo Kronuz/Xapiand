@@ -320,7 +320,7 @@ if (BUILD_TESTS)
 
 	link_directories (${GTEST_LIBS})
 
-	foreach (VAR_TEST compressor dllist generate_terms geo guid hash
+	foreach (VAR_TEST compressor dllist endpoint generate_terms geo guid hash
 		htm lru msgpack patcher phonetic query queue serialise_stl serialise
 		sort storage string_metric threadpool utils wal wkt_parser)
 		set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
