@@ -94,7 +94,7 @@ Endpoint::Endpoint(const std::string &uri_, const Node* node_, long long mastery
 	user = userpass;
 	std::string portstring = slice_after(uri, ":");
 	port = atoi(portstring.c_str());
-	if (protocol.empty() || protocol == "file") {
+	if (protocol == "file") {
 		if (path.empty()) {
 			path = uri;
 		} else {
@@ -108,13 +108,19 @@ Endpoint::Endpoint(const std::string &uri_, const Node* node_, long long mastery
 		host = uri;
 		if (!port) port = XAPIAND_BINARY_SERVERPORT;
 	}
-	path = Endpoint::cwd + path;
+
+	if (!startswith(path, "/")) {
+		path = Endpoint::cwd + path;
+	}
 	path = normalize_path(path, buffer);
 	if (path.substr(0, Endpoint::cwd.size()) == Endpoint::cwd) {
 		path.erase(0, Endpoint::cwd.size());
-	} else {
-		path = "";
 	}
+
+	if (path.size() != 1 && endswith(path, "/")) {
+		path = path.substr(0, path.size()-1);
+	}
+
 	if (protocol == "file") {
 		auto local_node_ = local_node.load();
 		if (!node_) {
@@ -137,7 +143,9 @@ Endpoint::slice_after(std::string &subject, std::string delimiter)
 	if (delimiter_location < std::string::npos) {
 		size_t start = delimiter_location + delimiter_length;
 		output = subject.substr(start, subject.length() - start);
-		subject = subject.substr(0, delimiter_location);
+		if (!output.empty()) {
+			subject = subject.substr(0, delimiter_location);
+		}
 	}
 	return output;
 }
