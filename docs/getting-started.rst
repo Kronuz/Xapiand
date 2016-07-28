@@ -31,10 +31,11 @@ From repository:
 ::
 
    cd Xapiand
-   ./autogen.sh
-   ./configure
-   ./make
-   ./make install
+   mkdir build
+   cd build
+   cmake -GNinja ..
+   ninja
+   ninja install
 
 
 Core concepts
