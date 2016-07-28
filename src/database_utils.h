@@ -23,9 +23,9 @@
 #pragma once
 
 #include "fields.h"
-#include "msgpack.h"
-#include "multivalue/range.h"
 #include "geospatialrange.h"
+#include "multivalue/range.h"
+#include "msgpack.h"
 #include "rapidjson/document.h"
 
 #include <regex>
@@ -149,7 +149,7 @@ struct query_field_t {
 
 	query_field_t()
 		: offset(0), limit(10), check_at_least(0), spelling(true), synonyms(false), commit(false),
-		  unique_doc(false), is_fuzzy(false), is_nearest(false), collapse_max(1), icase(true) { }
+		  unique_doc(false), is_fuzzy(false), is_nearest(false), collapse_max(1), language({ "en" }), icase(true) { }
 
 };
 
