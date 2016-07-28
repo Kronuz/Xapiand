@@ -39,7 +39,6 @@ int test_endpoint() {
 		{"/var/db/xapiand/", "file://home/user/something/", "home/user/something"}
 	};
 
-	fprintf(stderr, "SIZE [%zu]\n", arraySize(uri_test));
 	int count = 0;
 	for (size_t i = 0; i < arraySize(uri_test); ++i) {
 		Endpoint::cwd = uri_test[i][0];
