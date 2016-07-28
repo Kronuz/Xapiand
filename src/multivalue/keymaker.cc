@@ -25,7 +25,13 @@
 #include "../stl_serialise.h"
 
 
-const dispatch_str_metric def_str_metric = &Multi_MultiValueKeyMaker::jaro;
+const dispatch_str_metric def_str_metric         = &Multi_MultiValueKeyMaker::jaro;
+
+
+const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_soundex_metric({
+	{ "en",   &Multi_MultiValueKeyMaker::soundex_en     },
+	{ "es",   &Multi_MultiValueKeyMaker::soundex_es     }
+});
 
 
 const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metric({
@@ -42,6 +48,8 @@ const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metr
 	{ "lcs",           &Multi_MultiValueKeyMaker::lcs             },
 	{ "lcsubsequence", &Multi_MultiValueKeyMaker::lcsq            },
 	{ "lcsq",          &Multi_MultiValueKeyMaker::lcsq            },
+	{ "soundex",       &Multi_MultiValueKeyMaker::soundex         },
+	{ "sound",         &Multi_MultiValueKeyMaker::soundex         },
 	{ "",              def_str_metric                             },
 });
 
@@ -128,7 +136,7 @@ GeoKey::get_cmpvalue(const std::string& serialise_val) const
 
 
 void
-Multi_MultiValueKeyMaker::add_value(Xapian::valueno slot, bool reverse, char type, const std::string& value, const std::string& metric, bool icase)
+Multi_MultiValueKeyMaker::add_value(Xapian::valueno slot, bool reverse, char type, const std::string& value, const query_field_t& qf)
 {
 	if (value.empty()) {
 		if (type != GEO_TYPE) {
@@ -153,10 +161,10 @@ Multi_MultiValueKeyMaker::add_value(Xapian::valueno slot, bool reverse, char typ
 				return;
 			case STRING_TYPE:
 				try {
-					auto func = map_dispatch_str_metric.at(metric);
-					(this->*func)(slot, reverse, value, icase);
+					auto func = map_dispatch_str_metric.at(qf.metric);
+					(this->*func)(slot, reverse, value, qf);
 				} catch (const std::out_of_range&) {
-					(this->*def_str_metric)(slot, reverse, value, icase);
+					(this->*def_str_metric)(slot, reverse, value, qf);
 				}
 				return;
 			case GEO_TYPE:

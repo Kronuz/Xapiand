@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "../database_utils.h"
+#include "../phonetic.h"
 #include "../serialise.h"
 #include "../sortable_serialise.h"
 #include "../string_metric.h"
@@ -34,6 +36,17 @@
 
 const std::string MAX_CMPVALUE(sortable_serialise(DBL_MAX));
 const std::string STR_FOR_EMPTY("\xff");
+
+
+class Multi_MultiValueKeyMaker;
+
+
+using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(Xapian::valueno, bool, const std::string&, const query_field_t&);
+
+
+extern const dispatch_str_metric def_str_metric;
+extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metric;
+extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_soundex_metric;
 
 
 // Base class for create keys.
@@ -149,9 +162,9 @@ public:
 
 
 // Class for create the key using as a reference a boolean value.
-template <typename Metric>
+template <typename StringMetric>
 class StringKey : public BaseKey {
-	Metric _metric;
+	StringMetric _metric;
 
 	std::string get_cmpvalue(const std::string& serialise_val) const override {
 		return sortable_serialise(_metric.distance(serialise_val));
@@ -199,39 +212,54 @@ public:
 	}
 
 	virtual std::string operator()(const Xapian::Document& doc) const override;
-	void add_value(Xapian::valueno slot, bool reverse, char type, const std::string& value, const std::string& metric, bool icase);
+	void add_value(Xapian::valueno slot, bool reverse, char type, const std::string& value, const query_field_t& qf);
 
-	void levenshtein(Xapian::valueno slot,  bool reverse, const std::string& value, bool icase) {
-		slots.push_back(std::make_unique<StringKey<Levenshtein>>(slot, reverse, value, icase));
+	void levenshtein(Xapian::valueno slot,  bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<Levenshtein>>(slot, reverse, value, qf.icase));
 	}
 
-	void jaro(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
-		slots.push_back(std::make_unique<StringKey<Jaro>>(slot, reverse, value, icase));
+	void jaro(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<Jaro>>(slot, reverse, value, qf.icase));
 	}
 
-	void jaro_winkler(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
-		slots.push_back(std::make_unique<StringKey<Jaro_Winkler>>(slot, reverse, value, icase));
+	void jaro_winkler(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<Jaro_Winkler>>(slot, reverse, value, qf.icase));
 	}
 
-	void sorensen_dice(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
-		slots.push_back(std::make_unique<StringKey<Sorensen_Dice>>(slot, reverse, value, icase));
+	void sorensen_dice(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<Sorensen_Dice>>(slot, reverse, value, qf.icase));
 	}
 
-	void jaccard(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
-		slots.push_back(std::make_unique<StringKey<Jaccard>>(slot, reverse, value, icase));
+	void jaccard(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<Jaccard>>(slot, reverse, value, qf.icase));
 	}
 
-	void lcs(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
-		slots.push_back(std::make_unique<StringKey<LCSubstr>>(slot, reverse, value, icase));
+	void lcs(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<LCSubstr>>(slot, reverse, value, qf.icase));
 	}
 
-	void lcsq(Xapian::valueno slot, bool reverse, const std::string& value, bool icase) {
-		slots.push_back(std::make_unique<StringKey<LCSubsequence>>(slot, reverse, value, icase));
+	void lcsq(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<LCSubsequence>>(slot, reverse, value, qf.icase));
+	}
+
+	void soundex_en(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexEnglish, LCSubsequence>>>(slot, reverse, value, qf.icase));
+	}
+
+	void soundex_es(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexSpanish, LCSubsequence>>>(slot, reverse, value, qf.icase));
+	}
+
+	void soundex(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		if (qf.language.empty()) {
+			soundex_en(slot, reverse, value, qf);
+		} else {
+			try {
+				auto func = map_dispatch_str_soundex_metric.at(qf.language[0]);
+				(this->*func)(slot, reverse, value, qf);
+			} catch (const std::out_of_range&) {
+				(this->*def_str_metric)(slot, reverse, value, qf);
+			}
+		}
 	}
 };
-
-
-using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(Xapian::valueno, bool, const std::string&, bool);
-
-extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metric;
-extern const dispatch_str_metric def_str_metric;
