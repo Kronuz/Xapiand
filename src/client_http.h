@@ -26,6 +26,7 @@
 
 #include "database_handler.h"
 #include "http_parser.h"
+#include "guid/guid.h"
 #include "servers/server_http.h"
 
 #include <memory>
@@ -84,6 +85,8 @@ class HttpClient : public BaseClient {
 	void on_read_file_done() override;
 
 	static const http_parser_settings settings;
+
+	static GuidGenerator generator;
 
 	static AcceptLRU accept_sets;
 	accept_set_t accept_set;

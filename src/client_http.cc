@@ -116,6 +116,8 @@ static const char* status_code[6][14] = {
 };
 
 
+GuidGenerator HttpClient::generator;
+
 AcceptLRU HttpClient::accept_sets;
 
 
@@ -788,8 +790,8 @@ HttpClient::index_document_view(bool gen_id)
 
 	if (gen_id) {
 		path_parser.off_id = nullptr;
-		unsigned long mangled = std::fmod(++post_id * 1679979167, DEF_36e6);
-		doc_id = baseN(mangled, 36);
+		auto g = generator.newGuid();
+		doc_id = g.to_string();
 	} else {
 		doc_id = path_parser.get_id();
 	}
