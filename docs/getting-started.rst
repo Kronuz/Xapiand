@@ -139,7 +139,7 @@ And you be able to see something like this
       /_/\_\__,_| .__/|_|\__,_|_| |_|\__,_|
                 |_|  v3.0.0
        [https://github.com/Kronuz/Xapiand]
-              Using Xapian v1.3.7
+              Using Xapian v1.4.0
 
 
     ▍[2016-03-16T16:34:58.993463] (===): Changed current working directory to /Users/yosef/Downloads/Xapiand/nodo1
@@ -240,12 +240,12 @@ In this example the endpoint is ``localhost:8880/twitter/tweet``, since it is a
 local test *localhost* is the ip address, the port by default is ``8880`` and
 the ``twitter/tweet`` is the index created and is placed in the path working
 directory, to change the path directoy, run Xapiand with ``-D`` option. The
-index is where the document is stored and ``1`` is the id for this document,
+index is where the document is stored and ``1`` is the ID for this document,
 finally we have a ``pretty=1`` that tell it to print a pretty JSON response.
 
 Xapiand server will send you a HTTP response status code 200 if was successful
 with a body JSON, this JSON contains a object that tell you the operation
-just performed in this case a indexing with the id 1 (if you not specify the
+just performed in this case a indexing with the ID 1 (if you not specify the
 commit explicitly Xapiand will do it for you in a few seconds, this is due to
 Xapiand tries to be as efficient in disk writes because
 of this a single commit can write several updates):
@@ -258,6 +258,29 @@ of this a single commit can write several updates):
       }
   }
 
+If you not want to add the ID explicitly, Xapiand it will generate a universally
+unique identifier (uuid) used as the ID. To achieve it we need to used POST
+rather than a PUT:
+
+::
+
+   curl -XPOST 'http://localhost:8880/twitter/tweet/?pretty=1' -d '
+   {
+       "user": "Kronuz",
+       "postDate": "2015-11-15T13:12:00",
+       "message": "Trying out Xapiand, so far so good?"
+   }'
+
+Xapiand it will respond as before. Note the id is now a uuid.
+
+::
+
+   {
+    "_index": {
+        "_id": "9b16e3b4-6e6e-4582-9e86-2fce62a81364",
+        "_commit": false
+    }
+   }
 
 Searching
 ^^^^^^^^^
