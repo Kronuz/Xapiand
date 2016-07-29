@@ -26,5 +26,7 @@
 
 
 int test_soundex_english();
+int test_soundex_french();
+int test_soundex_german();
 int test_soundex_spanish();
 int test_soundex_time();

@@ -30,6 +30,16 @@ TEST(PhoneticSoundex, English) {
 }
 
 
+TEST(PhoneticSoundex, French) {
+	EXPECT_EQ(test_soundex_french(), 0);
+}
+
+
+TEST(PhoneticSoundex, German) {
+	EXPECT_EQ(test_soundex_german(), 0);
+}
+
+
 TEST(PhoneticSoundex, Spanish) {
 	EXPECT_EQ(test_soundex_spanish(), 0);
 }

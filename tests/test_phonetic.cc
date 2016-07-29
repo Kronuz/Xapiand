@@ -40,7 +40,7 @@ int test_soundex_english() {
 
 	std::vector<std::string> strs[arraySize(expected)] = {
 		{
-			""
+			"", "!?,.:;' ", "áéíóúñ"
 		},
 		{
 			"aaaaa", "aaaa", "aaa", "aa", "a"
@@ -49,7 +49,7 @@ int test_soundex_english() {
 			"brrraz", "Brooooz"
 		},
 		{
-			"Caren", "Caron", "Carren", "Charon", "Corain", "Coram",
+			"Caren", "!!caron-", "Carren", "Charon", "Corain", "Coram",
 			"Corran", "Corrin", "corwin", "Curran", "Curreen", "currin",
 			"Currom", "Currum", "Curwen"
 		},
@@ -58,11 +58,11 @@ int test_soundex_english() {
 		},
 		{
 			"Lambard", "lambart", "Lambert", "LambirD", "Lampaert",
-			"Lampard", "LaMpart", "laaampeuurd", "Lampert", "Lamport",
-			"Limbert", "Lombard"
+			"Lampard", "LaMpart", "laaampeuurd", "lampert", "Lamport",
+			"Limbert", "LomBAard"
 		},
 		{
-			"Nolton", "Noulton"
+			"Nolton", "noulton"
 		}
 	};
 
@@ -84,12 +84,13 @@ int test_soundex_english() {
 
 int test_soundex_spanish() {
 	std::string expected[] = {
-		"", "A0", "O040", "B1602", "K20605", "B1020", "L4051063", "J70403050", "K2020", "K20640", "B1050", "N5050"
+		"", "A0", "O040", "B1602", "K20605", "B1020", "L4051063", "J70403050",
+		"K2020", "K20640", "B1050", "N5050"
 	};
 
 	std::vector<std::string> strs[arraySize(expected)] = {
 		{
-			""
+			"", "h", "hhhhh", "!?,.:;' "
 		},
 		{
 			"aaaaa", "aaaa", "aaa", "aa", "a"
@@ -101,32 +102,32 @@ int test_soundex_spanish() {
 			"brrraz", "Brooooz"
 		},
 		{
-			"Caren", "Caron", "Carren", "Charon", "Corain", "Coram",
+			"Caren", "!!Caron-", "Carren", "Charon", "Corain", "Coram",
 			"Corran", "Corrin", "corwin", "Curran", "Curreen", "currin",
-			"Currom", "Currum", "Curwen", "Karen"
+			"Currom", "Currum", "Curwen", "KaRen"
 		},
 		{
-			"vaca", "baca", "vaka", "baka", "vaaacaaa"
+			"vaca", "baca", "vaka", "baka", "va c-a"
 		},
 		{
 			"Lambard", "lambart", "Lambert", "LambirD", "Lampaert",
 			"Lampard", "LaMpart", "laaampeuurd", "Lampert", "Lamport",
-			"Limbert", "Lombard"
+			"Limbert", "lomBarD"
 		},
 		{
-			"Jelatina", "Gelatina", "Jaletina"
+			"Jelatina", "Gelatina", "jale - tina"
 		},
 		{
 			"Queso", "Keso", "kiso", "Quiso", "Quizá"
 		},
 		{
-			"Karla", "Carla", "Kerla"
+			"Karla", "Carla", "Ker la"
 		},
 		{
 			"Vena", "Vèná", "bena"
 		},
 		{
-			"Ñoño", "Nono", "Nóno"
+			"Ñoño", "nono", "Nó - No"
 		}
 	};
 
@@ -146,32 +147,136 @@ int test_soundex_spanish() {
 }
 
 
+int test_soundex_french() {
+	/*
+	 * Tests based in the article:
+	 * http://www.phpclasses.org/package/2972-PHP-Implementation-of-the-soundex-algorithm-for-French.html#view_files/files/13492
+	 */
+	std::string expected[] = {
+		"", "A", "MALAN", "GRA", "RASA", "LAMBAR", "LAMPAR", "KATAR", "FAR"
+	};
+
+	std::vector<std::string> strs[arraySize(expected)] = {
+		{
+			"", "hhhh", "hyyyy", "hhhyyyh", "yyyyy", "yyyyh", "yhhyh", "a",
+			"ha", "ya", "!?,.:;' "
+		},
+		{
+			"aaaaa", "aaaa", "aaa", "aa", "haaaa"
+		},
+		{
+			"MALLEIN", "moleins", "MOLIN", "MOULIN"
+		},
+		{
+			"GRAU", "GROS", "GRAS"
+		},
+		{
+			"ROUSSOT", "RASSAT", "ROSSAT"
+		},
+		{
+			"Lambard", "!!lambart-", "Lambert", "LambirD",
+			"Limbert", "Lombard"
+		},
+		{
+			"Lampaert", "Lampard", "LaMpart", "laaam - peuurS", "Lampert", "Lamport"
+		},
+		{
+			"GAUTHIER", "gautier", "GOUTHIER", "CATTIER", "cottier", "COUTIER"
+		},
+		{
+			"FARRE", "faure", "FORT", "four-r", "PHAURE"
+		}
+	};
+
+	SoundexFrench s_fr;
+	int cont = 0;
+	for (size_t i = 0; i < arraySize(expected); ++i) {
+		for (const auto& str : strs[i]) {
+			auto res = s_fr.encode(str);
+			if (res != expected[i]) {
+				++cont;
+				L_ERR(nullptr, "ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
+			}
+		}
+	}
+
+	RETURN(cont);
+}
+
+
+int test_soundex_german() {
+	std::string expected[] = {
+		"", "6050750206802", "607", "5061072", "60507"
+	};
+
+	std::vector<std::string> strs[arraySize(expected)] = {
+		{
+			"", "hhhh", "!?,.:;' "
+		},
+		{
+			"Müller-Lüdenscheidt", "Muller Ludeanscheidt", "Mueller Luedenscheidt",
+			"Müller-Lü denscheidt"
+		},
+		{
+			"Meier", "Meyer", "Mayr"
+		},
+		{
+			"Lambard", "!!lambart-", "Lambert", "LambirD",
+			"Limbert", "LombarD"
+		},
+		{
+			"Müller", "mellar", "meller", "mell´ar", "miehler",
+			"milar", "milor", "moeller", "mouller", "möllor",
+			"müler", "möhler"
+		}
+	};
+
+	SoundexGerman s_grm;
+	int cont = 0;
+	for (size_t i = 0; i < arraySize(expected); ++i) {
+		for (const auto& str : strs[i]) {
+			auto res = s_grm.encode(str);
+			if (res != expected[i]) {
+				++cont;
+				L_ERR(nullptr, "ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
+			}
+		}
+	}
+
+	RETURN(cont);
+}
+
+
 static const std::vector<std::string> time_strs = {
 	"Caren", "Caron", "Carren", "Charon", "Corain", "Coram",
 	"Corran", "Corrin", "corwin", "Curran", "Curreen", "currin",
 	"Currom", "Currum", "Curwen", "Karen", "Lambard", "lambart",
 	"Lambert", "LambirD", "Lampaert", "Lampard", "LaMpart",
-	"laaampeuurd", "Lampert", "Lamport", "Limbert", "Lombard"
+	"laaampeuurd", "Lampert", "Lamport", "Limbert", "Lombard",
+	"Gelatina", "Mallein", "Cottier", "Müller-Lüdenscheidt",
+	"Meier"
 };
 
 
 template <typename S>
 void test_time() {
-	S impl;
+	S soundex;
 	auto t1 = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < NUM_TESTS; ++i) {
 		for (const auto& str : time_strs) {
-			impl.encode(str);
+			soundex.encode(str);
 		}
 	}
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-	L_INFO(nullptr, "Time %s [%d]: %lld ms\n", impl.description().c_str(), NUM_TESTS, duration);
+	L_INFO(nullptr, "Time %s [%d]: %lld ms\n", soundex.description().c_str(), NUM_TESTS, duration);
 }
 
 
 int test_soundex_time() {
 	test_time<SoundexEnglish>();
+	test_time<SoundexFrench>();
+	test_time<SoundexGerman>();
 	test_time<SoundexSpanish>();
 	RETURN(0);
 }
