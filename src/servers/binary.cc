@@ -24,7 +24,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include "../client_binary.h"
+#include "../remote_protocol.h"
 
 #include <assert.h>
 #include <netinet/tcp.h> /* for TCP_NODELAY */
