@@ -35,30 +35,43 @@ class SoundexEnglish : public Soundex<SoundexEnglish> {
 
 	friend class Soundex<SoundexEnglish>;
 
-	std::string _encode(const std::string& str) const {
-		if (str.empty()) {
-			return std::string();
+	std::string _encode(std::string str) const {
+		// 1. Remove all non alphabetic characters at the begin.
+		auto it = str.begin();
+		while (it != str.end()) {
+			if ((*it >= 'a' && *it <= 'z') || (*it >= 'A' && *it <= 'Z')) {
+				break;
+			} else {
+				it = str.erase(it);
+			}
 		}
 
-		std::string result;
-		result.reserve(str.length());
-		result.push_back(toupper(str[0]));
-		for (const auto& c : str) {
-			switch (c) {
+		if (str.empty()) {
+			return str;
+		}
+
+		// 2. Starts the calculation of Soundex.
+		it = ++str.insert(it, std::toupper(*it));
+		while (it != str.end()) {
+			switch (*it) {
 				case 'b':
 				case 'p':
 				case 'B':
 				case 'P':
-					if (result.back() != '1') {
-						result.push_back('1');
+					if (*(it - 1) != '1') {
+						*it++ = '1';
+					} else {
+						it = str.erase(it);
 					}
 					break;
 				case 'f':
 				case 'v':
 				case 'F':
 				case 'V':
-					if (result.back() != '2') {
-						result.push_back('2');
+					if (*(it - 1) != '2') {
+						*it++ = '2';
+					} else {
+						it = str.erase(it);
 					}
 					break;
 				case 'c':
@@ -67,16 +80,20 @@ class SoundexEnglish : public Soundex<SoundexEnglish> {
 				case 'C':
 				case 'K':
 				case 'S':
-					if (result.back() != '3') {
-						result.push_back('3');
+					if (*(it - 1) != '3') {
+						*it++ = '3';
+					} else {
+						it = str.erase(it);
 					}
 					break;
 				case 'g':
 				case 'j':
 				case 'G':
 				case 'J':
-					if (result.back() != '4') {
-						result.push_back('4');
+					if (*(it - 1) != '4') {
+						*it++ = '4';
+					} else {
+						it = str.erase(it);
 					}
 					break;
 				case 'q':
@@ -85,36 +102,46 @@ class SoundexEnglish : public Soundex<SoundexEnglish> {
 				case 'Q':
 				case 'X':
 				case 'Z':
-					if (result.back() != '5') {
-						result.push_back('5');
+					if (*(it - 1) != '5') {
+						*it++ = '5';
+					} else {
+						it = str.erase(it);
 					}
 					break;
 				case 'd':
 				case 't':
 				case 'D':
 				case 'T':
-					if (result.back() != '6') {
-						result.push_back('6');
+					if (*(it - 1) != '6') {
+						*it++ = '6';
+					} else {
+						it = str.erase(it);
 					}
 					break;
 				case 'l':
 				case 'L':
-					if (result.back() != '7') {
-						result.push_back('7');
+					if (*(it - 1) != '7') {
+						*it++ = '7';
+					} else {
+						it = str.erase(it);
 					}
 					break;
 				case 'm':
 				case 'n':
 				case 'M':
 				case 'N':
-					if (result.back() != '8') {
-						result.push_back('8');
+					if (*(it - 1) != '8') {
+						*it++ = '8';
+					} else {
+						it = str.erase(it);
 					}
 					break;
 				case 'r':
 				case 'R':
-					if (result.back() != '9') {
-						result.push_back('9');
+					if (*(it - 1) != '9') {
+						*it++ = '9';
+					} else {
+						it = str.erase(it);
 					}
 					break;
 				case 'a':
@@ -133,15 +160,19 @@ class SoundexEnglish : public Soundex<SoundexEnglish> {
 				case 'U':
 				case 'W':
 				case 'Y':
-					if (result.back() != '0') {
-						result.push_back('0');
+					if (*(it - 1) != '0') {
+						*it++ = '0';
+					} else {
+						it = str.erase(it);
 					}
 					break;
 				default:
+					it = str.erase(it);
 					break;
 			}
 		}
-		return result;
+
+		return str;
 	}
 
 	std::string _description() const noexcept {
