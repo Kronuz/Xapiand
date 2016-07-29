@@ -53,3 +53,43 @@ public:
 		return static_cast<const Impl*>(this)->_description();
 	}
 };
+
+
+/*
+ * Auxiliary functions.
+ */
+
+template <typename Container>
+inline static void replace(std::string& str, size_t pos, const Container& patterns) {
+	for (const auto& pattern : patterns) {
+		auto _pos = str.find(pattern.first, pos);
+		while (_pos != std::string::npos) {
+			str.replace(_pos, pattern.first.length(), pattern.second);
+			_pos = str.find(pattern.first, _pos + pattern.second.length());
+		}
+	}
+}
+
+
+template <typename Iterator>
+inline static void replace(std::string& str, size_t pos, Iterator begin, Iterator end) {
+	while (begin != end) {
+		auto _pos = str.find(begin->first, pos);
+		while (_pos != std::string::npos) {
+			str.replace(_pos, begin->first.length(), begin->second);
+			_pos = str.find(begin->first, _pos + begin->second.length());
+		}
+		++begin;
+	}
+}
+
+
+template <typename Container>
+inline static void replace_prefix(std::string& str, const Container& prefixes) {
+	for (const auto& prefix : prefixes) {
+		if (std::mismatch(prefix.first.begin(), prefix.first.end(), str.begin()).first == prefix.first.end()) {
+			str.replace(0, prefix.first.length(), prefix.second);
+			return;
+		}
+	}
+}
