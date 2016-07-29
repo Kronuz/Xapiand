@@ -22,6 +22,8 @@
 
 #pragma once
 
-#include "phonetic/soundex.h"
 #include "phonetic/english_soundex.h"
+#include "phonetic/french_soundex.h"
+#include "phonetic/german_soundex.h"
+#include "phonetic/soundex.h"
 #include "phonetic/spanish_soundex.h"
