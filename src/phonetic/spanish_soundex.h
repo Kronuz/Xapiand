@@ -27,13 +27,17 @@
 #include <unordered_map>
 
 
-static const std::unordered_map<std::string, std::string> replacement_map({
+static const std::unordered_map<std::string, std::string> spanish_accents({
 	{ "Ñ",  "N" }, { "Á",  "A" }, { "É" , "E" }, { "Í",  "I" },
 	{ "Ó",  "O" }, { "Ú",  "U" }, { "À",  "A" }, { "È",  "E" },
 	{ "Ì",  "I" }, { "Ò",  "O" }, { "Ù",  "U" }, { "Ü",  "U" },
 	{ "ñ",  "N" }, { "á",  "A" }, { "é" , "E" }, { "í",  "I" },
 	{ "ó",  "O" }, { "ú",  "U" }, { "à",  "A" }, { "è",  "E" },
-	{ "è",  "I" }, { "ò",  "O" }, { "ù",  "U" }, { "ü",  "U" },
+	{ "è",  "I" }, { "ò",  "O" }, { "ù",  "U" }, { "ü",  "U" }
+});
+
+
+static const std::unordered_map<std::string, std::string> spanish_composed({
 	{ "CH", "V" }, { "QU", "K" }, { "LL", "J" }, { "CE", "S" },
 	{ "CI", "S" }, { "YA", "J" }, { "YE", "J" }, { "YI", "J" },
 	{ "YO", "J" }, { "YU", "J" }, { "GE", "J" }, { "GI", "J" },
@@ -52,32 +56,33 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 
 	friend class Soundex<SoundexSpanish>;
 
-	void replace(std::string& str) const {
-		for (const auto& pattern : replacement_map) {
-			auto pos = str.find(pattern.first);
-			while (pos != std::string::npos) {
-				str.replace(pos, pattern.first.length(), pattern.second);
-				pos = str.find(pattern.first, pos + pattern.second.length());
+	std::string _encode(std::string str) const {
+		if (str.empty()) {
+			return str;
+		}
+
+		// 1.  Replace accents.
+		replace(str, 0, spanish_accents);
+
+		// 2. Pass to upper case.
+		to_upper(str);
+
+		// 3. Remove all non alphabetic characters and 'H's at the begin.
+		auto it = str.begin();
+		for (it = str.begin(); it != str.end(); ) {
+			if (*it >= 'A' && *it <= 'Z' && *it != 'H') {
+				break;
+			} else {
+				it = str.erase(it);
 			}
 		}
-	}
 
-	std::string _encode(const std::string& str) const {
 		if (str.empty()) {
-			return std::string();
-		}
-
-		// 1. Pass to upper case.
-		auto res = upper_string(str);
-
-		// 2. Delete the letter 'H' initial.
-		auto it = res.begin();
-		if (*it == 'H') {
-			it = res.erase(it);
+			return str;
 		}
 
 		/*
-		 * 3. First letter is important, We must associate similar.
+		 * 4. First letter is important, We must associate similar.
 		 * e.g. 'vaca' becomes 'baca' and 'zapote' becomes 'sapote'
 		 * An important phenomenon is 'GE' and 'GI' become 'JE' and 'JI';
 		 * 'CA' becomes 'KA', etc.
@@ -92,7 +97,7 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 				break;
 			case 'G':
 				try {
-					auto c = res.at(1);
+					auto c = str.at(1);
 					if (c == 'E' || c == 'I') {
 						*it = 'J';
 					}
@@ -100,7 +105,7 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 				break;
 			case 'C':
 				try {
-					auto c = res.at(1);
+					auto c = str.at(1);
 					if (c != 'H' || c != 'E' || c != 'I') {
 						*it = 'K';
 					}
@@ -110,26 +115,22 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 				break;
 		}
 
-		/*
-		 * 4. Fix "composed letters" and turn them one, vowels with accents
-		 * and Ñ are replaced using replacement_map.
-		 */
-		replace(res);
+		// 5. Replace "composed letters".
+		replace(str, 0, spanish_composed);
 
-		// 5. Starts the calculation of Soundex.
-		it = res.begin();
-		it = ++res.insert(it, *res.begin());
-		while (it != res.end()) {
+		// 6. Starts the calculation of Soundex.
+		it = str.begin();
+		it = ++str.insert(it, *it);
+		while (it != str.end()) {
 			switch (*it) {
 				case 'B':
 				case 'P':
 				case 'F':
 				case 'V':
 					if (*(it - 1) != '1') {
-						*it = '1';
-						++it;
+						*it++ = '1';
 					} else {
-						it = res.erase(it);
+						it = str.erase(it);
 					}
 					break;
 				case 'C':
@@ -139,53 +140,47 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 				case 'X':
 				case 'Z':
 					if (*(it - 1) != '2') {
-						*it = '2';
-						++it;
+						*it++ = '2';
 					} else {
-						it = res.erase(it);
+						it = str.erase(it);
 					}
 					break;
 				case 'D':
 				case 'T':
 					if (*(it - 1) != '3') {
-						*it = '3';
-						++it;
+						*it++ = '3';
 					} else {
-						it = res.erase(it);
+						it = str.erase(it);
 					}
 					break;
 				case 'L':
 					if (*(it - 1) != '4') {
-						*it = '4';
-						++it;
+						*it++ = '4';
 					} else {
-						it = res.erase(it);
+						it = str.erase(it);
 					}
 					break;
 				case 'M':
 				case 'N':
 					if (*(it - 1) != '5') {
-						*it = '5';
-						++it;
+						*it++ = '5';
 					} else {
-						it = res.erase(it);
+						it = str.erase(it);
 					}
 					break;
 				case 'R':
 					if (*(it - 1) != '6') {
-						*it = '6';
-						++it;
+						*it++ = '6';
 					} else {
-						it = res.erase(it);
+						it = str.erase(it);
 					}
 					break;
 				case 'Q':
 				case 'J':
 					if (*(it - 1) != '7') {
-						*it = '7';
-						++it;
+						*it++ = '7';
 					} else {
-						it = res.erase(it);
+						it = str.erase(it);
 					}
 					break;
 				case 'A':
@@ -197,19 +192,17 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 				case 'W':
 				case 'Y':
 					if (*(it - 1) != '0') {
-						*it = '0';
-						++it;
+						*it++ = '0';
 					} else {
-						it = res.erase(it);
+						it = str.erase(it);
 					}
 					break;
 				default:
-					it = res.erase(it);
-					break;
+					it = str.erase(it);
 			}
 		}
 
-		return res;
+		return str;
 	}
 
 	std::string _description() const noexcept {
