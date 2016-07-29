@@ -113,8 +113,6 @@ class HttpClient : public BaseClient {
 
 	std::string host;
 
-	unsigned long post_id; /* only usend for method POST to generate id */
-
 	bool request_begining;
 	std::chrono::time_point<std::chrono::system_clock> request_begins;
 	std::chrono::time_point<std::chrono::system_clock> response_begins;

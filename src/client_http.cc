@@ -198,7 +198,6 @@ HttpClient::HttpClient(std::shared_ptr<HttpServer> server_, ev::loop_ref* ev_loo
 	  pretty(false),
 	  body_size(0),
 	  body_descriptor(0),
-	  post_id(0),
 	  request_begining(true)
 {
 	parser.data = this;
