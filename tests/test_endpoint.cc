@@ -32,7 +32,7 @@ int test_endpoint() {
 		{"/", "/////home/user/something/", "home/user/something"},
 		{"/var/db/xapiand/", "/////home/user/something/", "/home/user/something"},
 		{"/var/db/xapiand/", "/home/user/something////////", "/home/user/something"},
-		{"/var/db/xapiand/", "xapiand://home/user/something/", "/user/something"},
+		{"/var/db/xapiand/", "xapiand://home/user/something/", "user/something"},
 		{"/var/db/xapiand/", "xapiand://home////////user/something/", "/user/something"},
 		{"/var/db/xapiand/", "://home/user/something/", "home/user/something"},
 		{"/var/db/xapiand/", ":///home/user/something/", "/home/user/something"},
@@ -45,7 +45,7 @@ int test_endpoint() {
 		Endpoint e(uri_test[i][1]);
 		if (e.path != uri_test[i][2]) {
 			++count;
-			L_ERR(nullptr, "ERROR: Endpoint missmatch. Result: %s  Expected: %s\n", e.path.c_str(), uri_test[i][2].c_str());
+			L_ERR(nullptr, "ERROR: Endpoint (%zu) missmatch. Result: %s  Expected: %s\n", i, e.path.c_str(), uri_test[i][2].c_str());
 		}
 	}
 
