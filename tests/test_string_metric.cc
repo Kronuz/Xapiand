@@ -31,10 +31,6 @@
 
 
 int test_ranking_results() {
-	/*
-	 * Tests based in the article:
-	 * http://www.catalysoft.com/articles/strikeamatch.html
-	 */
 	std::string str("Healed");
 	std::string strs[] = {
 		"Sealed", "Healthy", "Heard", "Herded", "Help", "Sold", "ealed"
@@ -47,6 +43,8 @@ int test_ranking_results() {
 	auto lcs = LCSubstr(str);
 	auto lcsq = LCSubsequence(str);
 	auto soundexE = SoundexMetric<SoundexEnglish, LCSubsequence>(str);
+	auto soundexF = SoundexMetric<SoundexFrench, LCSubsequence>(str);
+	auto soundexG = SoundexMetric<SoundexGerman, LCSubsequence>(str);
 	auto soundexS = SoundexMetric<SoundexSpanish, LCSubsequence>(str);
 	std::string metrics[] = {
 		levenshtein.description(),
@@ -57,6 +55,8 @@ int test_ranking_results() {
 		lcs.description(),
 		lcsq.description(),
 		soundexE.description(),
+		soundexF.description(),
+		soundexG.description(),
 		soundexS.description()
 	};
 	double expected[arraySize(metrics)][arraySize(strs)] = {
@@ -68,6 +68,8 @@ int test_ranking_results() {
 		{ 0.166667, 0.428571, 0.500000, 0.666667, 0.666667, 0.833333, 0.166667 },
 		{ 0.166667, 0.428571, 0.333333, 0.333333, 0.500000, 0.666667, 0.166667 },
 		{ 0.333333, 0.200000, 0.400000, 0.333333, 0.400000, 0.400000, 0.200000 },
+		{ 0.250000, 0.333333, 0.666667, 0.500000, 0.333333, 0.333333, 0.250000 },
+		{ 0.200000, 0.250000, 0.500000, 0.400000, 0.500000, 0.250000, 0.000000 },
 		{ 0.333333, 0.200000, 0.400000, 0.333333, 0.400000, 0.400000, 0.000000 }
 	};
 
@@ -82,6 +84,8 @@ int test_ranking_results() {
 			lcs.distance(strs[i]),
 			lcsq.distance(strs[i]),
 			soundexE.distance(strs[i]),
+			soundexF.distance(strs[i]),
+			soundexG.distance(strs[i]),
 			soundexS.distance(strs[i])
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
@@ -155,6 +159,16 @@ int test_ranking_results() {
 			{ 0.580645, 0.692308, 0.684211, 0.700000, 0.586207, 0.786885, 0.782609, 0.652174 }
 		},
 		{
+			{ 0.344828, 0.564103, 0.552632, 0.525000, 0.535714, 0.703125, 0.717391, 0.521739 },
+			{ 0.586207, 0.692308, 0.710526, 0.700000, 0.571429, 0.812500, 0.804348, 0.652174 },
+			{ 0.586207, 0.692308, 0.710526, 0.700000, 0.571429, 0.812500, 0.804348, 0.652174 }
+		},
+		{
+			{ 0.344828, 0.540541, 0.552632, 0.512821, 0.518519, 0.698413, 0.711111, 0.478261 },
+			{ 0.551724, 0.648649, 0.684211, 0.666667, 0.592593, 0.793651, 0.800000, 0.652174 },
+			{ 0.586207, 0.675676, 0.710526, 0.692308, 0.592593, 0.809524, 0.822222, 0.695652 }
+		},
+		{
 			{ 0.354839, 0.538462, 0.526316, 0.525000, 0.482759, 0.672131, 0.652174, 0.458333 },
 			{ 0.548387, 0.641026, 0.631579, 0.625000, 0.620690, 0.754098, 0.739130, 0.541667 },
 			{ 0.580645, 0.692308, 0.684211, 0.700000, 0.586207, 0.786885, 0.760870, 0.583333 }
@@ -171,6 +185,8 @@ int test_ranking_results() {
 				lcs.distance(strs_r1[i], strs_r2[j]),
 				lcsq.distance(strs_r1[i], strs_r2[j]),
 				soundexE.distance(strs_r1[i], strs_r2[j]),
+				soundexF.distance(strs_r1[i], strs_r2[j]),
+				soundexG.distance(strs_r1[i], strs_r2[j]),
 				soundexS.distance(strs_r1[i], strs_r2[j])
 			};
 			for (size_t k = 0; k < arraySize(results); ++k) {
@@ -196,6 +212,8 @@ int test_special_cases() {
 	auto lcs = LCSubstr();
 	auto lcsq = LCSubsequence();
 	auto soundexE = SoundexMetric<SoundexEnglish, LCSubsequence>();
+	auto soundexF = SoundexMetric<SoundexFrench, LCSubsequence>();
+	auto soundexG = SoundexMetric<SoundexGerman, LCSubsequence>();
 	auto soundexS = SoundexMetric<SoundexSpanish, LCSubsequence>();
 	std::string metrics[] = {
 		levenshtein.description(),
@@ -206,6 +224,8 @@ int test_special_cases() {
 		lcs.description(),
 		lcsq.description(),
 		soundexE.description(),
+		soundexF.description(),
+		soundexG.description(),
 		soundexS.description()
 	};
 
@@ -218,6 +238,8 @@ int test_special_cases() {
 		{ 0.600000, 0.000000, 0.500000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
 		{ 0.600000, 0.000000, 0.500000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
 		{ 0.000000, 0.000000, 0.000000, 1.000000, 0.333333, 0.666667, 0.000000, 1.000000 },
+		{ 0.000000, 0.000000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
+		{ 0.000000, 0.000000, 0.000000, 1.000000, 0.500000, 0.500000, 0.000000, 1.000000 },
 		{ 0.000000, 0.000000, 0.000000, 1.000000, 0.333333, 0.666667, 0.000000, 1.000000 }
 	};
 
@@ -232,6 +254,8 @@ int test_special_cases() {
 			lcs.distance(str1[i], str2[i]),
 			lcsq.distance(str1[i], str2[i]),
 			soundexE.distance(str1[i], str2[i]),
+			soundexF.distance(str1[i], str2[i]),
+			soundexG.distance(str1[i], str2[i]),
 			soundexS.distance(str1[i], str2[i])
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
@@ -264,6 +288,10 @@ int test_case_sensitive() {
 	auto lcsq_sensitive = LCSubsequence(false);
 	auto soundexE = SoundexMetric<SoundexEnglish, LCSubsequence>();
 	auto soundexE_sensitive = SoundexMetric<SoundexEnglish, LCSubsequence>(false);
+	auto soundexF = SoundexMetric<SoundexFrench, LCSubsequence>();
+	auto soundexF_sensitive = SoundexMetric<SoundexFrench, LCSubsequence>(false);
+	auto soundexG = SoundexMetric<SoundexGerman, LCSubsequence>();
+	auto soundexG_sensitive = SoundexMetric<SoundexGerman, LCSubsequence>(false);
 	auto soundexS = SoundexMetric<SoundexSpanish, LCSubsequence>();
 	auto soundexS_sensitive = SoundexMetric<SoundexSpanish, LCSubsequence>(false);
 	std::string metrics[] = {
@@ -283,6 +311,10 @@ int test_case_sensitive() {
 		lcsq_sensitive.description(),
 		soundexE.description(),
 		soundexE_sensitive.description(),
+		soundexF.description(),
+		soundexF_sensitive.description(),
+		soundexG.description(),
+		soundexG_sensitive.description(),
 		soundexS.description(),
 		soundexS_sensitive.description()
 	};
@@ -301,6 +333,10 @@ int test_case_sensitive() {
 		{ 1.000000, 1.000000, 1.000000, 0.666667 },
 		{ 0.000000, 0.333333, 0.333333, 0.333333 },
 		{ 1.000000, 1.000000, 1.000000, 0.500000 },
+		{ 0.000000, 0.000000, 0.000000, 0.000000 },
+		{ 0.000000, 0.000000, 0.000000, 0.000000 },
+		{ 0.000000, 0.166667, 0.166667, 0.166667 },
+		{ 0.000000, 0.166667, 0.166667, 0.166667 },
 		{ 0.000000, 0.000000, 0.000000, 0.000000 },
 		{ 0.000000, 0.000000, 0.000000, 0.000000 },
 		{ 0.000000, 0.166667, 0.166667, 0.166667 },
@@ -401,6 +437,14 @@ int test_time() {
 	auto soundexE = SoundexMetric<SoundexEnglish, LCSubsequence>(str1);
 	run_test_v1(soundexE, str2);
 	run_test_v2(soundexE, str1, str2);
+
+	auto soundexF = SoundexMetric<SoundexFrench, LCSubsequence>(str1);
+	run_test_v1(soundexF, str2);
+	run_test_v2(soundexF, str1, str2);
+
+	auto soundexG = SoundexMetric<SoundexGerman, LCSubsequence>(str1);
+	run_test_v1(soundexG, str2);
+	run_test_v2(soundexG, str1, str2);
 
 	auto soundexS = SoundexMetric<SoundexSpanish, LCSubsequence>(str1);
 	run_test_v1(soundexS, str2);
