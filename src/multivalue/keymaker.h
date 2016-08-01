@@ -47,7 +47,7 @@ using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(Xapian::valueno, 
 extern const dispatch_str_metric def_str_metric;
 extern const dispatch_str_metric def_soundex_metric;
 extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metric;
-extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_soundex_metric;
+extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_soundex_metric;
 
 
 // Base class for create keys.
@@ -261,7 +261,7 @@ public:
 
 	void soundex(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
 		try {
-			auto func = map_dispatch_str_soundex_metric.at(qf.language.at(0));
+			auto func = map_dispatch_soundex_metric.at(qf.language.at(0));
 			(this->*func)(slot, reverse, value, qf);
 		} catch (const std::out_of_range&) {
 			(this->*def_soundex_metric)(slot, reverse, value, qf);

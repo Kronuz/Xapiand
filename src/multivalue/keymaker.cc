@@ -29,7 +29,7 @@ const dispatch_str_metric def_str_metric     = &Multi_MultiValueKeyMaker::jaro;
 const dispatch_str_metric def_soundex_metric = &Multi_MultiValueKeyMaker::soundex_en;
 
 
-const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_soundex_metric({
+const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_soundex_metric({
 	{ "english",  &Multi_MultiValueKeyMaker::soundex_en     },
 	{ "en",       &Multi_MultiValueKeyMaker::soundex_en     },
 	{ "french",   &Multi_MultiValueKeyMaker::soundex_fr     },
