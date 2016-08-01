@@ -141,16 +141,18 @@ class SoundexFrench : public Soundex<SoundexFrench> {
 			return str;
 		}
 
-		// 9. Remove the terminations 'A', 'T', 'D', 'S'
-		switch (str.back()) {
-			case 'A':
-			case 'T':
-			case 'D':
-			case 'S':
-				str.pop_back();
-				break;
-			default:
-				break;
+		// 9. Remove the terminations 'A', 'T', 'D', 'S'.
+		if (str.length() > 1) {
+			switch (str.back()) {
+				case 'A':
+				case 'T':
+				case 'D':
+				case 'S':
+					str.pop_back();
+					break;
+				default:
+					break;
+			}
 		}
 
 		if (str.empty()) {
