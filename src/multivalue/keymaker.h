@@ -45,6 +45,7 @@ using dispatch_str_metric = void (Multi_MultiValueKeyMaker::*)(Xapian::valueno, 
 
 
 extern const dispatch_str_metric def_str_metric;
+extern const dispatch_str_metric def_soundex_metric;
 extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metric;
 extern const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_soundex_metric;
 
@@ -246,20 +247,24 @@ public:
 		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexEnglish, LCSubsequence>>>(slot, reverse, value, qf.icase));
 	}
 
+	void soundex_fr(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexFrench, LCSubsequence>>>(slot, reverse, value, qf.icase));
+	}
+
+	void soundex_de(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
+		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexGerman, LCSubsequence>>>(slot, reverse, value, qf.icase));
+	}
+
 	void soundex_es(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
 		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexSpanish, LCSubsequence>>>(slot, reverse, value, qf.icase));
 	}
 
 	void soundex(Xapian::valueno slot, bool reverse, const std::string& value, const query_field_t& qf) {
-		if (qf.language.empty()) {
-			soundex_en(slot, reverse, value, qf);
-		} else {
-			try {
-				auto func = map_dispatch_str_soundex_metric.at(qf.language[0]);
-				(this->*func)(slot, reverse, value, qf);
-			} catch (const std::out_of_range&) {
-				(this->*def_str_metric)(slot, reverse, value, qf);
-			}
+		try {
+			auto func = map_dispatch_str_soundex_metric.at(qf.language.at(0));
+			(this->*func)(slot, reverse, value, qf);
+		} catch (const std::out_of_range&) {
+			(this->*def_soundex_metric)(slot, reverse, value, qf);
 		}
 	}
 };

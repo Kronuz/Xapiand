@@ -25,12 +25,19 @@
 #include "../stl_serialise.h"
 
 
-const dispatch_str_metric def_str_metric         = &Multi_MultiValueKeyMaker::jaro;
+const dispatch_str_metric def_str_metric     = &Multi_MultiValueKeyMaker::jaro;
+const dispatch_str_metric def_soundex_metric = &Multi_MultiValueKeyMaker::soundex_en;
 
 
 const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_soundex_metric({
-	{ "en",   &Multi_MultiValueKeyMaker::soundex_en     },
-	{ "es",   &Multi_MultiValueKeyMaker::soundex_es     }
+	{ "english",  &Multi_MultiValueKeyMaker::soundex_en     },
+	{ "en",       &Multi_MultiValueKeyMaker::soundex_en     },
+	{ "french",   &Multi_MultiValueKeyMaker::soundex_fr     },
+	{ "fr",       &Multi_MultiValueKeyMaker::soundex_fr     },
+	{ "german",   &Multi_MultiValueKeyMaker::soundex_de     },
+	{ "de",       &Multi_MultiValueKeyMaker::soundex_de     },
+	{ "spanish",  &Multi_MultiValueKeyMaker::soundex_es     },
+	{ "es",       &Multi_MultiValueKeyMaker::soundex_es     }
 });
 
 
