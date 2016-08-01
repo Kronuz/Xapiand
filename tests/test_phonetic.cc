@@ -82,6 +82,108 @@ int test_soundex_english() {
 }
 
 
+int test_soundex_french() {
+	/*
+	 * Tests based in the article:
+	 * http://www.phpclasses.org/package/2972-PHP-Implementation-of-the-soundex-algorithm-for-French.html#view_files/files/13492
+	 */
+	std::string expected[] = {
+		"", "A", "MALAN", "GRA", "RASA", "LAMBAR", "LAMPAR", "KATAR", "FAR"
+	};
+
+	std::vector<std::string> strs[arraySize(expected)] = {
+		{
+			"", "hhhh", "hyyyy", "hhhyyyh", "yyyyy", "yyyyh", "yhhyh", "!?,.:;' "
+		},
+		{
+			"aaaaa", "aaaa", "aaa", "aa", "haaaa", "a", "ya"
+		},
+		{
+			"MALLEIN", "moleins", "MOLIN", "MOULIN"
+		},
+		{
+			"GRAU", "GROS", "GRAS"
+		},
+		{
+			"ROUSSOT", "RASSAT", "ROSSAT"
+		},
+		{
+			"Lambard", "!!lambart-", "Lambert", "LambirD",
+			"Limbert", "Lombard"
+		},
+		{
+			"Lampaert", "Lampard", "LaMpart", "laaam - peuurS", "Lampert", "Lamport"
+		},
+		{
+			"GAUTHIER", "gautier", "GOUTHIER", "CATTIER", "cottier", "COUTIER"
+		},
+		{
+			"FARRE", "faure", "FORT", "four-r", "PHAURE"
+		}
+	};
+
+	SoundexFrench s_fr;
+	int cont = 0;
+	for (size_t i = 0; i < arraySize(expected); ++i) {
+		for (const auto& str : strs[i]) {
+			auto res = s_fr.encode(str);
+			if (res != expected[i]) {
+				++cont;
+				L_ERR(nullptr, "ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
+			}
+		}
+	}
+
+	RETURN(cont);
+}
+
+
+int test_soundex_german() {
+	std::string expected[] = {
+		"", "0", "6050750206802", "607", "5061072", "60507"
+	};
+
+	std::vector<std::string> strs[arraySize(expected)] = {
+		{
+			"", "hhhh", "!?,.:;' "
+		},
+		{
+			"aaaaa", "aaaa", "aaa", "aa", "haaaa"
+		},
+		{
+			"Müller-Lüdenscheidt", "Muller Ludeanscheidt", "Mueller Luedenscheidt",
+			"Müller-Lü denscheidt"
+		},
+		{
+			"Meier", "Meyer", "Mayr"
+		},
+		{
+			"Lambard", "!!lambart-", "Lambert", "LambirD",
+			"Limbert", "LombarD"
+		},
+		{
+			"Müller", "mellar", "meller", "mell´ar", "miehler",
+			"milar", "milor", "moeller", "mouller", "möllor",
+			"müler", "möhler"
+		}
+	};
+
+	SoundexGerman s_grm;
+	int cont = 0;
+	for (size_t i = 0; i < arraySize(expected); ++i) {
+		for (const auto& str : strs[i]) {
+			auto res = s_grm.encode(str);
+			if (res != expected[i]) {
+				++cont;
+				L_ERR(nullptr, "ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
+			}
+		}
+	}
+
+	RETURN(cont);
+}
+
+
 int test_soundex_spanish() {
 	std::string expected[] = {
 		"", "A0", "O040", "B1602", "K20605", "B1020", "L4051063", "J70403050",
@@ -136,106 +238,6 @@ int test_soundex_spanish() {
 	for (size_t i = 0; i < arraySize(expected); ++i) {
 		for (const auto& str : strs[i]) {
 			auto res = spa_s.encode(str);
-			if (res != expected[i]) {
-				++cont;
-				L_ERR(nullptr, "ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
-			}
-		}
-	}
-
-	RETURN(cont);
-}
-
-
-int test_soundex_french() {
-	/*
-	 * Tests based in the article:
-	 * http://www.phpclasses.org/package/2972-PHP-Implementation-of-the-soundex-algorithm-for-French.html#view_files/files/13492
-	 */
-	std::string expected[] = {
-		"", "A", "MALAN", "GRA", "RASA", "LAMBAR", "LAMPAR", "KATAR", "FAR"
-	};
-
-	std::vector<std::string> strs[arraySize(expected)] = {
-		{
-			"", "hhhh", "hyyyy", "hhhyyyh", "yyyyy", "yyyyh", "yhhyh", "a",
-			"ha", "ya", "!?,.:;' "
-		},
-		{
-			"aaaaa", "aaaa", "aaa", "aa", "haaaa"
-		},
-		{
-			"MALLEIN", "moleins", "MOLIN", "MOULIN"
-		},
-		{
-			"GRAU", "GROS", "GRAS"
-		},
-		{
-			"ROUSSOT", "RASSAT", "ROSSAT"
-		},
-		{
-			"Lambard", "!!lambart-", "Lambert", "LambirD",
-			"Limbert", "Lombard"
-		},
-		{
-			"Lampaert", "Lampard", "LaMpart", "laaam - peuurS", "Lampert", "Lamport"
-		},
-		{
-			"GAUTHIER", "gautier", "GOUTHIER", "CATTIER", "cottier", "COUTIER"
-		},
-		{
-			"FARRE", "faure", "FORT", "four-r", "PHAURE"
-		}
-	};
-
-	SoundexFrench s_fr;
-	int cont = 0;
-	for (size_t i = 0; i < arraySize(expected); ++i) {
-		for (const auto& str : strs[i]) {
-			auto res = s_fr.encode(str);
-			if (res != expected[i]) {
-				++cont;
-				L_ERR(nullptr, "ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
-			}
-		}
-	}
-
-	RETURN(cont);
-}
-
-
-int test_soundex_german() {
-	std::string expected[] = {
-		"", "6050750206802", "607", "5061072", "60507"
-	};
-
-	std::vector<std::string> strs[arraySize(expected)] = {
-		{
-			"", "hhhh", "!?,.:;' "
-		},
-		{
-			"Müller-Lüdenscheidt", "Muller Ludeanscheidt", "Mueller Luedenscheidt",
-			"Müller-Lü denscheidt"
-		},
-		{
-			"Meier", "Meyer", "Mayr"
-		},
-		{
-			"Lambard", "!!lambart-", "Lambert", "LambirD",
-			"Limbert", "LombarD"
-		},
-		{
-			"Müller", "mellar", "meller", "mell´ar", "miehler",
-			"milar", "milor", "moeller", "mouller", "möllor",
-			"müler", "möhler"
-		}
-	};
-
-	SoundexGerman s_grm;
-	int cont = 0;
-	for (size_t i = 0; i < arraySize(expected); ++i) {
-		for (const auto& str : strs[i]) {
-			auto res = s_grm.encode(str);
 			if (res != expected[i]) {
 				++cont;
 				L_ERR(nullptr, "ERROR: [%s] Result: %s  Expected: %s\n", str.c_str(), res.c_str(), expected[i].c_str());
