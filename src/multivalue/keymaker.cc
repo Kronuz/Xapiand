@@ -56,8 +56,7 @@ const std::unordered_map<std::string, dispatch_str_metric> map_dispatch_str_metr
 	{ "lcsubsequence", &Multi_MultiValueKeyMaker::lcsq            },
 	{ "lcsq",          &Multi_MultiValueKeyMaker::lcsq            },
 	{ "soundex",       &Multi_MultiValueKeyMaker::soundex         },
-	{ "sound",         &Multi_MultiValueKeyMaker::soundex         },
-	{ "",              def_str_metric                             },
+	{ "sound",         &Multi_MultiValueKeyMaker::soundex         }
 });
 
 
