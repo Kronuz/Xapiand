@@ -281,7 +281,7 @@ const sort_t string_soundex_en_tests[] {
 	 *                   there are several values (in arrays).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
 	 *
-	 * "_id"	"name"						sound_en(name:coking)	value for sort (ASC)	value for sort (DESC)
+	 * "_id"	"name"						sound_en(name:coquing)	value for sort (ASC)	value for sort (DESC)
 	 * "1"		["cook", "cooked"]			[0.571429, 0.428571]	"cook"					"cooked"
 	 * "2"		["book store", "book"]		[0.625000, 0.857143]	"book store"			"book"
 	 * "3"		["cooking", "hola mundo"]   [0.142857, 0.666667]	"cooking"				"hola mundo"
@@ -305,6 +305,76 @@ const sort_t string_soundex_en_tests[] {
 	// { MAX_DBL, 0.857143, 0.714286, 0.714286, 0.714286, 0.714286, 0.666667, 0.666667, 0.571429, 0.555556 }
 	{ "*", { "-name:coquing" }, 	    { "10", "2", "4", "5", "6", "7", "3", "8", "1", "9" } },
 	{ "*", { "-name:coquing", "-_id" }, { "10", "2", "7", "6", "5", "4", "8", "3", "1", "9" } }
+};
+
+
+const sort_t string_soundex_fr_tests[] {
+	/*
+	 * Table reference data to verify the ordering
+	 * sound_fr(fieldname:value) -> soundex_fr(get_value(fieldname), value)
+	 * value for sort -> It is the value's field that is selected for the ordering when in the slot
+	 *                   there are several values (in arrays).
+	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
+	 *
+	 * "_id"	"name"						sound_fr(name:cõœkîng)	value for sort (ASC)	value for sort (DESC)
+	 * "1"		["cook", "cooked"]			[0.500000, 0.333333]	"cooked"				"cook"
+	 * "2"		["book store", "book"]		[0.571429, 0.666667]	"book store"			"book"
+	 * "3"		["cooking", "hola mundo"]   [0.000000, 0.571429]	"cooking"				"hola mundo"
+	 * "4"		"hola"						0.833333				"hola"					"hola"
+	 * "5"		"mundo"						0.666667				"mundo"					"mundo"
+	 * "6"		"mundo"						0.666667				"mundo"					"mundo"
+	 * "7"		"hola"						0.833333				"hola"					"hola"
+	 * "8"		["cooking", "hola mundo"]	[0.000000, 0.571429]	"cooking"				"hola mundo"
+	 * "9"		"computer"					0.625000				"computer"				"computer"
+	 * "10"		Does not have				MAX_DBL					"\xff"					"\xff"
+	 *
+	 * The documents are indexed as the value of "_id" indicates.
+	*/
+	// { "book", "computer", "cook", "cooking", "cooking", "hola", "hola", "mundo", "mundo", "\xff" }
+	{ "*", { "name" }, 			        { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	// { "\xff", "mundo", "mundo", "hola mundo", "hola mundo", "hola", "hola", "cooked", "computer", "book store" }
+	{ "*", { "-name" }, 			    { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	// { 0., 0., 0.333333, 0.571429, 0.625000, 0.666667, 0.666667, 0.833333, 0.833333, MAX_DBL }
+	{ "*", { "name:cõœkîng" }, 		    { "3", "8", "1", "2", "9", "5", "6", "4", "7", "10" } },
+	{ "*", { "name:cõœkîng", "-_id" },  { "8", "3", "1", "2", "9", "6", "5", "7", "4", "10" } },
+	// { MAX_DBL, 0.833333, 0.833333, 0.666667, 0.666667, 0.666667, 0.625000, 0.571429, 0.571429, 0.500000 }
+	{ "*", { "-name:cõœkîng" }, 	    { "10", "4", "7", "2", "5", "6", "9", "3", "8", "1" } },
+	{ "*", { "-name:cõœkîng", "-_id" }, { "10", "7", "4", "6", "5", "2", "9", "8", "3", "1" } }
+};
+
+
+const sort_t string_soundex_de_tests[] {
+	/*
+	 * Table reference data to verify the ordering
+	 * sound_de(fieldname:value) -> soundex_de(get_value(fieldname), value)
+	 * value for sort -> It is the value's field that is selected for the ordering when in the slot
+	 *                   there are several values (in arrays).
+	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.
+	 *
+	 * "_id"	"name"						sound_de(name:cöök)		value for sort (ASC)	value for sort (DESC)
+	 * "1"		["cook", "cooked"]			[0.000000, 0.400000]	"cook"					"cooked"
+	 * "2"		["book store", "book"]		[0.750000, 0.333333]	"book"					"book store"
+	 * "3"		["cooking", "hola mundo"]   [0.500000, 0.875000]	"cooking"				"hola mundo"
+	 * "4"		"hola"						0.666667				"hola"					"hola"
+	 * "5"		"mundo"						0.800000				"mundo"					"mundo"
+	 * "6"		"mundo"						0.800000				"mundo"					"mundo"
+	 * "7"		"hola"						0.666667				"hola"					"hola"
+	 * "8"		["cooking", "hola mundo"]	[0.500000, 0.875000]	"cooking"				"hola mundo"
+	 * "9"		"computer"					0.714286				"computer"				"computer"
+	 * "10"		Does not have				MAX_DBL					"\xff"					"\xff"
+	 *
+	 * The documents are indexed as the value of "_id" indicates.
+	*/
+	// { "book", "computer", "cook", "cooking", "cooking", "hola", "hola", "mundo", "mundo", "\xff" }
+	{ "*", { "name" }, 			     { "2", "9", "1", "3", "8", "4", "7", "5", "6", "10" } },
+	// { "\xff", "mundo", "mundo", "hola mundo", "hola mundo", "hola", "hola", "cooked", "computer", "book store" }
+	{ "*", { "-name" }, 			 { "10", "5", "6", "3", "8", "4", "7", "1", "9", "2" } },
+	// { 0., 0.333333, 0.500000, 0.500000, 0.666667, 0.666667, 0.714286, 0.800000, 0.800000, MAX_DBL }
+	{ "*", { "name:cöök" }, 		 { "1", "2", "3", "8", "4", "7", "9", "5", "6", "10" } },
+	{ "*", { "name:cöök", "-_id" },  { "1", "2", "8", "3", "7", "4", "9", "6", "5", "10" } },
+	// { MAX_DBL, 0.875000, 0.875000, 0.800000, 0.800000, 0.750000, 0.714286, 0.666667, 0.666667, 0.400000 }
+	{ "*", { "-name:cöök" }, 	     { "10", "3", "8", "5", "6", "2", "9", "4", "7", "1" } },
+	{ "*", { "-name:cöök", "-_id" }, { "10", "8", "3", "6", "5", "2", "9", "7", "4", "1" } }
 };
 
 
@@ -721,6 +791,44 @@ int sort_test_string_lcsq() {
 int sort_test_string_soundex_en() {
 	try {
 		int cont = make_search(string_soundex_en_tests, arraySize(string_soundex_en_tests), "soundex", "en");
+		if (cont == 0) {
+			L_DEBUG(nullptr, "Testing sort strings is correct!");
+		} else {
+			L_ERR(nullptr, "ERROR: Testing sort strings has mistakes.");
+		}
+		RETURN(cont);
+	} catch (const Xapian::Error &err) {
+		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+		RETURN(1);
+	} catch (const std::exception &err) {
+		L_ERR(nullptr, "ERROR: %s", err.what());
+		RETURN(1);
+	}
+}
+
+
+int sort_test_string_soundex_fr() {
+	try {
+		int cont = make_search(string_soundex_fr_tests, arraySize(string_soundex_fr_tests), "soundex", "fr");
+		if (cont == 0) {
+			L_DEBUG(nullptr, "Testing sort strings is correct!");
+		} else {
+			L_ERR(nullptr, "ERROR: Testing sort strings has mistakes.");
+		}
+		RETURN(cont);
+	} catch (const Xapian::Error &err) {
+		L_ERR(nullptr, "ERROR: %s", err.get_msg().c_str());
+		RETURN(1);
+	} catch (const std::exception &err) {
+		L_ERR(nullptr, "ERROR: %s", err.what());
+		RETURN(1);
+	}
+}
+
+
+int sort_test_string_soundex_de() {
+	try {
+		int cont = make_search(string_soundex_de_tests, arraySize(string_soundex_de_tests), "soundex", "german");
 		if (cont == 0) {
 			L_DEBUG(nullptr, "Testing sort strings is correct!");
 		} else {

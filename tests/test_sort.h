@@ -33,6 +33,7 @@ struct sort_t {
 };
 
 
+// String Metrics.
 int sort_test_string_levens();
 int sort_test_string_jaro();
 int sort_test_string_jaro_w();
@@ -40,6 +41,12 @@ int sort_test_string_dice();
 int sort_test_string_jaccard();
 int sort_test_string_lcs();
 int sort_test_string_lcsq();
+
+// Soundex Metrics.
+int sort_test_string_soundex_en();
+int sort_test_string_soundex_fr();
+int sort_test_string_soundex_de();
+int sort_test_string_soundex_es();
 
 int sort_test_numerical();
 int sort_test_date();

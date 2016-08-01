@@ -33,6 +33,10 @@ TEST(SortQueryTest, String) {
 	EXPECT_EQ(sort_test_string_jaccard(), 0);
 	EXPECT_EQ(sort_test_string_lcs(), 0);
 	EXPECT_EQ(sort_test_string_lcsq(), 0);
+	EXPECT_EQ(sort_test_string_soundex_en(), 0);
+	EXPECT_EQ(sort_test_string_soundex_fr(), 0);
+	EXPECT_EQ(sort_test_string_soundex_de(), 0);
+	EXPECT_EQ(sort_test_string_soundex_es(), 0);
 }
 
 
