@@ -110,7 +110,7 @@ class SoundexGerman : public Soundex<SoundexGerman> {
 				case 'O':
 				case 'U':
 				case 'Y':
-					if (*(it - 1) != '0') {
+					if (it == str.begin() || *(it - 1) != '0') {
 						*it++ = '0';
 					} else {
 						it = str.erase(it);
@@ -118,7 +118,7 @@ class SoundexGerman : public Soundex<SoundexGerman> {
 					break;
 				case 'B':
 				case 'P':
-					if (*(it - 1) != '1') {
+					if (it == str.begin() || *(it - 1) != '1') {
 						*it++ = '1';
 					} else {
 						it = str.erase(it);
@@ -126,7 +126,7 @@ class SoundexGerman : public Soundex<SoundexGerman> {
 					break;
 				case 'D':
 				case 'T':
-					if (*(it - 1) != '2') {
+					if (it == str.begin() || *(it - 1) != '2') {
 						*it++ = '2';
 					} else {
 						it = str.erase(it);
@@ -135,7 +135,7 @@ class SoundexGerman : public Soundex<SoundexGerman> {
 				case 'F':
 				case 'V':
 				case 'W':
-					if (*(it - 1) != '3') {
+					if (it == str.begin() || *(it - 1) != '3') {
 						*it++ = '3';
 					} else {
 						it = str.erase(it);
@@ -144,14 +144,14 @@ class SoundexGerman : public Soundex<SoundexGerman> {
 				case 'G':
 				case 'K':
 				case 'Q':
-					if (*(it - 1) != '4') {
+					if (it == str.begin() || *(it - 1) != '4') {
 						*it++ = '4';
 					} else {
 						it = str.erase(it);
 					}
 					break;
 				case 'L':
-					if (*(it - 1) != '5') {
+					if (it == str.begin() || *(it - 1) != '5') {
 						*it++ = '5';
 					} else {
 						it = str.erase(it);
@@ -159,14 +159,14 @@ class SoundexGerman : public Soundex<SoundexGerman> {
 					break;
 				case 'M':
 				case 'N':
-					if (*(it - 1) != '6') {
+					if (it == str.begin() || *(it - 1) != '6') {
 						*it++ = '6';
 					} else {
 						it = str.erase(it);
 					}
 					break;
 				case 'R':
-					if (*(it - 1) != '7') {
+					if (it == str.begin() || *(it - 1) != '7') {
 						*it++ = '7';
 					} else {
 						it = str.erase(it);
@@ -175,14 +175,14 @@ class SoundexGerman : public Soundex<SoundexGerman> {
 				case 'C':
 				case 'S':
 				case 'Z':
-					if (*(it - 1) != '8') {
+					if (it == str.begin() || *(it - 1) != '8') {
 						*it++ = '8';
 					} else {
 						it = str.erase(it);
 					}
 					break;
 				case 'X':
-					if (*(it - 1) != '4') {
+					if (it == str.begin() || *(it - 1) != '4') {
 						*it++ = '4';
 						it = ++str.insert(it, '8');
 					} else {
