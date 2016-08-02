@@ -25,12 +25,8 @@
 #include "hash/sha256.h"
 #include "length.h"
 #include "log.h"
-#include "sortable_serialise.h"
 #include "utils.h"
 #include "wkt_parser.h"
-
-#include <xapian.h>
-
 
 
 std::string
@@ -83,6 +79,92 @@ Serialise::serialise(char field_type, const std::string& field_value)
 }
 
 
+std::string
+Serialise::string(char field_type, const std::string& field_value)
+{
+	if (field_value.empty() && field_type != STRING_TYPE) {
+		throw MSG_SerialisationError("Field value must be defined");
+	}
+
+	switch (field_type) {
+		case DATE_TYPE:
+			return date(field_value);
+		case BOOLEAN_TYPE:
+			return boolean(field_value);
+		case STRING_TYPE:
+			return field_value;
+		case GEO_TYPE:
+			return ewkt(field_value);
+		default:
+			throw MSG_SerialisationError("Type: %s is not string", type(field_type).c_str());
+	}
+}
+
+
+std::string
+Serialise::_float(char field_type, double field_value)
+{
+	switch (field_type) {
+		case DATE_TYPE:
+			return timestamp(field_value);
+		case FLOAT_TYPE:
+			return _float(field_value);
+		default:
+			throw MSG_SerialisationError("Type: %s is not a float", type(field_type).c_str());
+	}
+}
+
+
+std::string
+Serialise::integer(char field_type, int64_t field_value)
+{
+	switch (field_type) {
+		case POSITIVE_TYPE:
+			if (field_value < 0) {
+				throw MSG_SerialisationError("Type: %s must be a positive number [%lld]", type(field_type).c_str(), field_value);
+			}
+			return positive(field_value);
+		case DATE_TYPE:
+			return timestamp(field_value);
+		case FLOAT_TYPE:
+			return _float(field_value);
+		case INTEGER_TYPE:
+			return integer(field_value);
+		default:
+			throw MSG_SerialisationError("Type: %s is not a integer [%lld]", type(field_type).c_str(), field_value);
+	}
+}
+
+
+std::string
+Serialise::positive(char field_type, uint64_t field_value)
+{
+	switch (field_type) {
+		case DATE_TYPE:
+			return timestamp(field_value);
+		case FLOAT_TYPE:
+			return _float(field_value);
+		case INTEGER_TYPE:
+			return integer(field_value);
+		case POSITIVE_TYPE:
+			return positive(field_value);
+		default:
+			throw MSG_SerialisationError("Type: %s is not a positive integer [%lld]", type(field_type).c_str(), field_value);
+	}
+}
+
+
+std::string
+Serialise::boolean(char field_type, bool field_value)
+{
+	if (field_type == BOOLEAN_TYPE) {
+		return boolean(field_value);
+	}
+
+	throw MSG_SerialisationError("%s is not boolean", type(field_type).c_str());
+}
+
+
 std::pair<char, std::string>
 Serialise::serialise(const std::string& field_value)
 {
@@ -117,112 +199,33 @@ Serialise::serialise(const std::string& field_value)
 
 
 std::string
-Serialise::string(char field_type, const std::string& field_value)
-{
-	if (field_value.empty() && field_type != STRING_TYPE) {
-		throw MSG_SerialisationError("Field value must be defined");
-	}
-
-	switch (field_type) {
-		case DATE_TYPE:
-			return date(field_value);
-		case BOOLEAN_TYPE:
-			return boolean(field_value);
-		case STRING_TYPE:
-			return field_value;
-		case GEO_TYPE:
-			return ewkt(field_value);
-		default:
-			throw MSG_SerialisationError("Type: %s is not string", type(field_type).c_str());
-	}
-}
-
-
-std::string
-Serialise::_float(char field_type, double field_value)
-{
-	switch (field_type) {
-		case DATE_TYPE:
-		case FLOAT_TYPE:
-			return sortable_serialise(field_value);
-		default:
-			throw MSG_SerialisationError("Type: %s is not a float", type(field_type).c_str());
-	}
-}
-
-
-std::string
-Serialise::integer(char field_type, int64_t field_value)
-{
-	switch (field_type) {
-		case POSITIVE_TYPE:
-			if (field_value < 0) {
-				throw MSG_SerialisationError("Type: %s must be a positive number [%lld]", type(field_type).c_str(), field_value);
-			}
-			return sortable_serialise(field_value);
-		case DATE_TYPE:
-		case FLOAT_TYPE:
-		case INTEGER_TYPE:
-			return sortable_serialise(field_value);
-		default:
-			throw MSG_SerialisationError("Type: %s is not a integer [%lld]", type(field_type).c_str(), field_value);
-	}
-}
-
-
-std::string
-Serialise::positive(char field_type, uint64_t field_value)
-{
-	switch (field_type) {
-		case DATE_TYPE:
-		case FLOAT_TYPE:
-		case INTEGER_TYPE:
-		case POSITIVE_TYPE:
-			return sortable_serialise(field_value);
-		default:
-			throw MSG_SerialisationError("Type: %s is not a positive integer [%lld]", type(field_type).c_str(), field_value);
-	}
-}
-
-
-std::string
-Serialise::boolean(char field_type, bool field_value)
-{
-	if (field_type == BOOLEAN_TYPE) {
-		return field_value ? std::string("t") : std::string("f");
-	} else {
-		throw MSG_SerialisationError("%s is not boolean", type(field_type).c_str());
-	}
-}
-
-
-std::string
 Serialise::date(const std::string& field_value)
 {
-	return sortable_serialise(Datetime::timestamp(field_value));
+	return timestamp(Datetime::timestamp(field_value));
 }
 
 
 std::string
 Serialise::date(const MsgPack& value, Datetime::tm_t& tm)
 {
-	double timestamp;
+	double _timestamp;
 	switch (value.type()) {
 		case msgpack::type::POSITIVE_INTEGER:
-			timestamp = value.as_u64();
-			tm = Datetime::to_tm_t(timestamp);
-			return sortable_serialise(timestamp);
+			_timestamp = value.as_u64();
+			tm = Datetime::to_tm_t(_timestamp);
+			return timestamp(_timestamp);
 		case msgpack::type::NEGATIVE_INTEGER:
-			timestamp = value.as_i64();
-			tm = Datetime::to_tm_t(timestamp);
-			return sortable_serialise(timestamp);
+			_timestamp = value.as_i64();
+			tm = Datetime::to_tm_t(_timestamp);
+			return timestamp(_timestamp);
 		case msgpack::type::FLOAT:
-			timestamp = value.as_f64();
-			tm = Datetime::to_tm_t(timestamp);
-			return sortable_serialise(timestamp);
+			_timestamp = value.as_f64();
+			tm = Datetime::to_tm_t(_timestamp);
+			return timestamp(_timestamp);
 		case msgpack::type::STR:
-			timestamp = Datetime::timestamp(value.as_string(), tm);
-			return sortable_serialise(timestamp);
+			_timestamp = Datetime::timestamp(value.as_string(), tm);
+			tm = Datetime::to_tm_t(_timestamp);
+			return timestamp(_timestamp);
 		default:
 			throw MSG_SerialisationError("Date value must be numeric or string");
 	}
@@ -233,7 +236,7 @@ std::string
 Serialise::date_with_math(Datetime::tm_t tm, const std::string& op, const std::string& units)
 {
 	Datetime::computeDateMath(tm, op, units);
-	return sortable_serialise(Datetime::mtimegm(tm));
+	return timestamp(Datetime::mtimegm(tm));
 }
 
 
@@ -241,10 +244,10 @@ std::string
 Serialise::_float(const std::string& field_value)
 {
 	try {
-		return sortable_serialise(strict(std::stod, field_value));
+		return _float(strict(std::stod, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid float format: %s", field_value.c_str());
-	}  catch (const std::out_of_range&) {
+	} catch (const std::out_of_range&) {
 		throw MSG_SerialisationError("Out of range float format: %s", field_value.c_str());
 	}
 }
@@ -254,7 +257,7 @@ std::string
 Serialise::integer(const std::string& field_value)
 {
 	try {
-		return sortable_serialise(strict(std::stoll, field_value));
+		return integer(strict(std::stoll, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
@@ -267,7 +270,7 @@ std::string
 Serialise::positive(const std::string& field_value)
 {
 	try {
-		return sortable_serialise(strict(std::stoull, field_value));
+		return positive(strict(std::stoull, field_value));
 	} catch (const std::invalid_argument&) {
 		throw MSG_SerialisationError("Invalid positive integer format: %s", field_value.c_str());
 	} catch (const std::out_of_range&) {
@@ -315,42 +318,26 @@ Serialise::boolean(const std::string& field_value)
 	const char *value = field_value.c_str();
 	switch (value[0]) {
 		case '\0':
-			return std::string("f");
-
+			return std::string(1, FALSE_SERIALISED);
 		case '1':
 		case 't':
 		case 'T':
-			if (value[1] == '\0') {
-				return std::string("t");
-			}
-			if (strcasecmp(value, "true") == 0) {
-				return std::string("t");
+			if (value[1] == '\0' || strcasecmp(value, "true") == 0) {
+				return std::string(1, TRUE_SERIALISED);
 			}
 			break;
-
 		case '0':
 		case 'f':
 		case 'F':
-			if (value[1] == '\0') {
-				return std::string("f");
-			}
-			if (strcasecmp(value, "false") == 0) {
-				return std::string("f");
+			if (value[1] == '\0' || strcasecmp(value, "false") == 0) {
+				return std::string(1, FALSE_SERIALISED);
 			}
 			break;
-
 		default:
 			break;
 	}
 
 	throw MSG_SerialisationError("Boolean format is not valid");
-}
-
-
-std::string
-Serialise::boolean(bool field_value)
-{
-	return field_value ? std::string("t") : std::string("f");
 }
 
 
@@ -409,7 +396,7 @@ Unserialise::MsgPack(char field_type, const std::string& serialise_val)
 			result = integer(serialise_val);
 			break;
 		case POSITIVE_TYPE:
-			result = static_cast<uint64_t>(positive(serialise_val));
+			result = positive(serialise_val);
 			break;
 		case DATE_TYPE:
 			result = date(serialise_val);
@@ -455,32 +442,11 @@ Unserialise::unserialise(char field_type, const std::string& serialise_val)
 }
 
 
-double
-Unserialise::_float(const std::string& serialise_val)
-{
-	return sortable_unserialise(serialise_val);
-}
-
-
-int64_t
-Unserialise::integer(const std::string& serialise_val)
-{
-	return sortable_unserialise(serialise_val);
-}
-
-
-long double
-Unserialise::positive(const std::string& serialise_val)
-{
-	return sortable_unserialise(serialise_val);
-}
-
-
 std::string
 Unserialise::date(const std::string& serialise_val)
 {
 	static char date[25];
-	double epoch = sortable_unserialise(serialise_val);
+	double epoch = timestamp(serialise_val);
 	time_t timestamp = (time_t) epoch;
 	int msec = round((epoch - timestamp) * 1000);
 	struct tm *timeinfo = gmtime(&timestamp);
@@ -488,13 +454,6 @@ Unserialise::date(const std::string& serialise_val)
 		timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min,
 		timeinfo->tm_sec, msec);
 	return date;
-}
-
-
-double
-Unserialise::timestamp(const std::string& serialise_val)
-{
-	return sortable_unserialise(serialise_val);
 }
 
 
@@ -509,13 +468,6 @@ Unserialise::cartesian(const std::string& serialise_val)
 	double y = (((unsigned)serialise_val[4] << 24) & 0xFF000000) | (((unsigned)serialise_val[5] << 16) & 0xFF0000) | (((unsigned)serialise_val[6] << 8) & 0xFF00)  | (((unsigned)serialise_val[7]) & 0xFF);
 	double z = (((unsigned)serialise_val[8] << 24) & 0xFF000000) | (((unsigned)serialise_val[9] << 16) & 0xFF0000) | (((unsigned)serialise_val[10] << 8) & 0xFF00) | (((unsigned)serialise_val[11]) & 0xFF);
 	return Cartesian((x - MAXDOU2INT) / DOUBLE2INT, (y - MAXDOU2INT) / DOUBLE2INT, (z - MAXDOU2INT) / DOUBLE2INT);
-}
-
-
-bool
-Unserialise::boolean(const std::string& serialise_val)
-{
-	return serialise_val.at(0) == 't';
 }
 
 
@@ -538,7 +490,7 @@ std::pair<std::string, std::string>
 Unserialise::geo(const std::string& serialise_ewkt)
 {
 	const char* pos = serialise_ewkt.data();
-	const char* end = pos + serialise_ewkt.size();
+	const char* end = pos + serialise_ewkt.length();
 	try {
 		unserialise_length(&pos, end, true);
 		auto length = unserialise_length(&pos, end, true);
@@ -546,7 +498,7 @@ Unserialise::geo(const std::string& serialise_ewkt)
 		pos += length;
 		length = unserialise_length(&pos, end, true);
 		return std::make_pair(std::move(serialise_ranges), std::string(pos, length));
-	} catch (const Xapian::SerialisationError&) {
+	} catch (const SerialisationError&) {
 		return std::make_pair(std::string(), std::string());
 	}
 }

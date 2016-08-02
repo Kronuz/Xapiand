@@ -26,6 +26,7 @@
 #include "datetime.h"
 #include "htm.h"
 #include "msgpack.h"
+#include "sortable_serialise.h"
 #include "stl_serialise.h"
 
 #include "hash/endian.h"
@@ -53,6 +54,9 @@
 #define BOOLEAN_STR  "boolean"
 #define ARRAY_STR    "array"
 #define OBJECT_STR   "object"
+
+#define FALSE_SERIALISED 'f'
+#define TRUE_SERIALISED  't'
 
 
 #if __BYTE_ORDER == __BIG_ENDIAN
@@ -100,6 +104,10 @@ namespace Serialise {
 	// Serialise field_value like date.
 	std::string date(const std::string& field_value);
 
+	inline std::string timestamp(double field_value) {
+		return sortable_serialise(field_value);
+	}
+
 	// Serialise value like date and fill tm.
 	std::string date(const MsgPack& value, Datetime::tm_t& tm);
 
@@ -109,11 +117,23 @@ namespace Serialise {
 	// Serialise field_value like float.
 	std::string _float(const std::string& field_value);
 
+	inline std::string _float(double field_value) {
+		return sortable_serialise(field_value);
+	}
+
 	// Serialise field_value like integer.
 	std::string integer(const std::string& field_value);
 
+	inline std::string integer(int64_t field_value) {
+		return sortable_serialise(field_value);
+	}
+
 	// Serialise field_value like positive integer.
 	std::string positive(const std::string& field_value);
+
+	inline std::string positive(uint64_t field_value) {
+		return sortable_serialise(field_value);
+	}
 
 	// Serialise field_value like EWKT.
 	std::string ewkt(const std::string& field_value);
@@ -123,7 +143,10 @@ namespace Serialise {
 
 	// Serialise field_value like boolean.
 	std::string boolean(const std::string& field_value);
-	std::string boolean(bool field_value);
+
+	inline std::string boolean(bool field_value) {
+		return field_value ? std::string(1, TRUE_SERIALISED) : std::string(1, FALSE_SERIALISED);
+	}
 
 	// Serialise a normalize cartesian coordinate in SIZE_SERIALISE_CARTESIAN bytes.
 	std::string cartesian(const Cartesian& norm_cartesian);
@@ -144,22 +167,32 @@ namespace Unserialise {
 	std::string unserialise(char field_type, const std::string& serialise_val);
 
 	// Unserialise a serialised float.
-	double _float(const std::string& serialise_float);
+	inline double _float(const std::string& serialise_float) {
+		return sortable_unserialise(serialise_float);
+	}
 
 	// Unserialise a serialised integer.
-	int64_t integer(const std::string& serialise_integer);
+	inline int64_t integer(const std::string& serialise_integer) {
+		return sortable_unserialise(serialise_integer);
+	}
 
 	// Unserialise a serialised positive.
-	long double positive(const std::string& serialise_positive);
+	inline uint64_t positive(const std::string& serialise_positive) {
+		return sortable_unserialise(serialise_positive);
+	}
 
 	// Unserialise a serialised date.
 	std::string date(const std::string& serialise_date);
 
 	// Unserialise a serialised date and returns the timestamp.
-	double timestamp(const std::string& serialise_val);
+	inline double timestamp(const std::string& serialise_timestamp) {
+		return sortable_unserialise(serialise_timestamp);
+	}
 
 	// Unserialise a serialised boolean.
-	bool boolean(const std::string& serialise_boolean);
+	inline bool boolean(const std::string& serialise_boolean) {
+		return serialise_boolean.at(0) == TRUE_SERIALISED;
+	}
 
 	// Unserialise a serialised cartesian coordinate.
 	Cartesian cartesian(const std::string& serialise_cartesian);
