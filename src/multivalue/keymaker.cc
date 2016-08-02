@@ -137,7 +137,7 @@ GeoKey::get_cmpvalue(const std::string& serialise_val) const
 		}
 		if (aux < angle) angle = aux;
 	}
-	return sortable_serialise(angle);
+	return Serialise::_float(angle);
 }
 
 

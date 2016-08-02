@@ -25,7 +25,6 @@
 #include "../database_utils.h"
 #include "../phonetic.h"
 #include "../serialise.h"
-#include "../sortable_serialise.h"
 #include "../string_metric.h"
 #include "../wkt_parser.h"
 
@@ -34,7 +33,7 @@
 #include <cstdlib>
 
 
-const std::string MAX_CMPVALUE(sortable_serialise(DBL_MAX));
+const std::string MAX_CMPVALUE(Serialise::_float(DBL_MAX));
 const std::string STR_FOR_EMPTY("\xff");
 
 
@@ -91,7 +90,7 @@ class FloatKey : public BaseKey {
 	double _ref_val;
 
 	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		return sortable_serialise(std::fabs(Unserialise::_float(serialise_val) - _ref_val));
+		return Serialise::_float(std::fabs(Unserialise::_float(serialise_val) - _ref_val));
 	}
 
 public:
@@ -106,7 +105,7 @@ class IntegerKey : public BaseKey {
 	int64_t _ref_val;
 
 	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		return sortable_serialise(std::llabs(Unserialise::integer(serialise_val) - _ref_val));
+		return Serialise::integer(std::llabs(Unserialise::integer(serialise_val) - _ref_val));
 	}
 
 public:
@@ -122,7 +121,7 @@ class PositiveKey : public BaseKey {
 
 	std::string get_cmpvalue(const std::string& serialise_val) const override {
 		int64_t val = Unserialise::positive(serialise_val) - _ref_val;
-		return sortable_serialise(std::llabs(val));
+		return Serialise::positive(std::llabs(val));
 	}
 
 public:
@@ -137,7 +136,7 @@ class DateKey : public BaseKey {
 	double _ref_val;
 
 	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		return sortable_serialise(std::fabs(Unserialise::timestamp(serialise_val) - _ref_val));
+		return Serialise::timestamp(std::fabs(Unserialise::timestamp(serialise_val) - _ref_val));
 	}
 
 public:
@@ -152,7 +151,7 @@ class BoolKey : public BaseKey {
 	std::string _ref_val;
 
 	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		return sortable_serialise(serialise_val[0] != _ref_val[0]);
+		return Serialise::positive(serialise_val[0] != _ref_val[0]);
 	}
 
 public:
@@ -168,7 +167,7 @@ class StringKey : public BaseKey {
 	StringMetric _metric;
 
 	std::string get_cmpvalue(const std::string& serialise_val) const override {
-		return sortable_serialise(_metric.distance(serialise_val));
+		return Serialise::_float(_metric.distance(serialise_val));
 	}
 
 public:

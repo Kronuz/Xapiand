@@ -145,7 +145,7 @@ namespace Serialise {
 	std::string boolean(const std::string& field_value);
 
 	inline std::string boolean(bool field_value) {
-		return field_value ? std::string(1, TRUE_SERIALISED) : std::string(1, FALSE_SERIALISED);
+		return std::string(1, field_value ? TRUE_SERIALISED : FALSE_SERIALISED);
 	}
 
 	// Serialise a normalize cartesian coordinate in SIZE_SERIALISE_CARTESIAN bytes.
