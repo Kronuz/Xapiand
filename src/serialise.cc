@@ -534,58 +534,37 @@ Unserialise::type(const std::string& str_type)
 	const char *value = str_type.c_str();
 	switch (toupper(value[0])) {
 		case FLOAT_TYPE:
-			if (value[1] == '\0') {
-				return std::string(1, FLOAT_TYPE);
-			}
-			if (strcasecmp(value, FLOAT_STR) == 0) {
+			if (value[1] == '\0' || strcasecmp(value, FLOAT_STR) == 0) {
 				return std::string(1, FLOAT_TYPE);
 			}
 			break;
 		case INTEGER_TYPE:
-			if (value[1] == '\0') {
-				return std::string(1, INTEGER_TYPE);
-			}
-			if (strcasecmp(value, INTEGER_STR)) {
+			if (value[1] == '\0' || strcasecmp(value, INTEGER_STR) == 0) {
 				return std::string(1, INTEGER_TYPE);
 			}
 			break;
 		case POSITIVE_TYPE:
-			if (value[1] == '\0') {
-				return std::string(1, POSITIVE_TYPE);
-			}
-			if (strcasecmp(value, POSITIVE_STR)) {
+			if (value[1] == '\0' || strcasecmp(value, POSITIVE_STR) == 0) {
 				return std::string(1, POSITIVE_TYPE);
 			}
 			break;
 		case GEO_TYPE:
-			if (value[1] == '\0') {
-				return std::string(1, GEO_TYPE);
-			}
-			if (strcasecmp(value, GEO_STR)) {
+			if (value[1] == '\0' || strcasecmp(value, GEO_STR) == 0) {
 				return std::string(1, GEO_TYPE);
 			}
 			break;
 		case STRING_TYPE:
-			if (value[1] == '\0') {
-				return std::string(1, STRING_TYPE);
-			}
-			if (strcasecmp(value, STRING_STR)) {
+			if (value[1] == '\0' || strcasecmp(value, STRING_STR) == 0) {
 				return std::string(1, STRING_TYPE);
 			}
 			break;
 		case BOOLEAN_TYPE:
-			if (value[1] == '\0') {
-				return std::string(1, BOOLEAN_TYPE);
-			}
-			if (strcasecmp(value, BOOLEAN_STR)) {
+			if (value[1] == '\0' || strcasecmp(value, BOOLEAN_STR) == 0) {
 				return std::string(1, BOOLEAN_TYPE);
 			}
 			break;
 		case DATE_TYPE:
-			if (value[1] == '\0') {
-				return std::string(1, DATE_TYPE);
-			}
-			if (strcasecmp(value, DATE_STR)) {
+			if (value[1] == '\0' || strcasecmp(value, DATE_STR) == 0) {
 				return std::string(1, DATE_TYPE);
 			}
 			break;
