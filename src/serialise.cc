@@ -88,17 +88,17 @@ Serialise::serialise(const std::string& field_value)
 {
 	// Try like integer.
 	try {
-		return std::make_pair(INTEGER_TYPE, Serialise::integer(field_value));
+		return std::make_pair(INTEGER_TYPE, integer(field_value));
 	} catch (const SerialisationError&) { }
 
 	// Try like positive.
 	try {
-		return std::make_pair(POSITIVE_TYPE, Serialise::positive(field_value));
+		return std::make_pair(POSITIVE_TYPE, positive(field_value));
 	} catch (const SerialisationError&) { }
 
 	// Try like Float
 	try {
-		return std::make_pair(FLOAT_TYPE, Serialise::_float(field_value));
+		return std::make_pair(FLOAT_TYPE, _float(field_value));
 	} catch (const SerialisationError&) { }
 
 	// Try like date
