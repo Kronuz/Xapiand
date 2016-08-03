@@ -1094,10 +1094,6 @@ HttpClient::search_view()
 			ct_type = *accepted_ct_type;
 			ct_type_str = ct_type.first + "/" + ct_type.second;
 
-			if (rc == 0 && chunked) {
-				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type_str));
-			}
-
 			try {
 				obj_data = obj_data.at(RESERVED_DATA);
 			} catch (const std::out_of_range&) {
@@ -1114,7 +1110,10 @@ HttpClient::search_view()
 
 			auto result = serialize_response(obj_data, ct_type, pretty);
 			if (chunked) {
-				if (!write(http_response(200, HTTP_BODY | HTTP_CHUNKED, parser.http_major, parser.http_minor, 0, 0, result.first + "\n\n"))) {
+				if (rc == 0) {
+					write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CONTENT_TYPE | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated(), "", ct_type_str));
+				}
+				if (!write(http_response(200, HTTP_CHUNKED | HTTP_BODY, 0, 0, 0, 0, result.first + "\n\n"))) {
 					break;
 				}
 			} else if (!write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_BODY | HTTP_CONTENT_TYPE, parser.http_major, parser.http_minor, 0, 0, result.first, result.second))) {
