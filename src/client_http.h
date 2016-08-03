@@ -31,16 +31,17 @@
 
 #include <memory>
 
-#define HTTP_STATUS           (1 << 0)
-#define HTTP_HEADER           (1 << 1)
-#define HTTP_ACCEPT           (1 << 2)
-#define HTTP_BODY             (1 << 3)
-#define HTTP_CONTENT_TYPE     (1 << 4)
-#define HTTP_CONTENT_ENCODING (1 << 5)
-#define HTTP_CHUNKED          (1 << 6)
-#define HTTP_OPTIONS          (1 << 7)
-#define HTTP_MATCHED_COUNT    (1 << 8)
-#define HTTP_EXPECTED100      (1 << 9)
+#define HTTP_STATUS            (1 << 0)
+#define HTTP_HEADER            (1 << 1)
+#define HTTP_ACCEPT            (1 << 2)
+#define HTTP_BODY              (1 << 3)
+#define HTTP_CONTENT_TYPE      (1 << 4)
+#define HTTP_CONTENT_ENCODING  (1 << 5)
+#define HTTP_CHUNKED           (1 << 6)
+#define HTTP_OPTIONS           (1 << 7)
+#define HTTP_TOTAL_COUNT       (1 << 8)
+#define HTTP_MATCHES_ESTIMATED (1 << 9)
+#define HTTP_EXPECTED100       (1 << 10)
 
 
 using type_t = std::pair<std::string, std::string>;
@@ -148,7 +149,7 @@ class HttpClient : public BaseClient {
 	void endpoints_maker(duration<double, std::milli> timeout);
 	void query_field_maker(int flags);
 
-	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int matched_count=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
+	std::string http_response(int status, int mode, unsigned short http_major=0, unsigned short http_minor=9, int total_count=0, int matches_estimated=0, const std::string& body="", const std::string& ct_type="application/json; charset=UTF-8", const std::string& ct_encoding="");
 	void clean_http_request();
 	type_t serialize_response(const MsgPack& obj, const type_t& ct_type, bool pretty, bool serialize_error=false);
 	template <typename T>
