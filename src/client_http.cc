@@ -1418,24 +1418,27 @@ HttpClient::query_field_maker(int flag)
 	if (flag & QUERY_FIELD_RANGE) {
 		if (!query_field) query_field = std::make_unique<query_field_t>();
 
+		query_field->offset = 0;
 		if (query_parser.next("offset") != -1) {
-			query_field->offset = static_cast<unsigned>(std::stoul(query_parser.get()));
-		} else {
-			query_field->offset = 0;
+			try {
+				query_field->offset = static_cast<unsigned>(std::stoul(query_parser.get()));
+			} catch (const std::invalid_argument&) { }
 		}
 		query_parser.rewind();
 
+		query_field->check_at_least = 0;
 		if (query_parser.next("check_at_least") != -1) {
-			query_field->check_at_least = static_cast<unsigned>(std::stoul(query_parser.get()));
-		} else {
-			query_field->check_at_least = 0;
+			try {
+				query_field->check_at_least = static_cast<unsigned>(std::stoul(query_parser.get()));
+			} catch (const std::invalid_argument&) { }
 		}
 		query_parser.rewind();
 
+		query_field->limit = 10;
 		if (query_parser.next("limit") != -1) {
-			query_field->limit = static_cast<unsigned>(std::stoul(query_parser.get()));
-		} else {
-			query_field->limit = 10;
+			try {
+				query_field->limit = static_cast<unsigned>(std::stoul(query_parser.get()));
+			} catch (const std::invalid_argument&) { }
 		}
 		query_parser.rewind();
 
@@ -1456,10 +1459,11 @@ HttpClient::query_field_maker(int flag)
 		}
 		query_parser.rewind();
 
+		query_field->collapse_max = 1;
 		if (query_parser.next("collapse_max") != -1) {
-			query_field->collapse_max = static_cast<unsigned>(std::stoul(query_parser.get()));
-		} else {
-			query_field->collapse_max = 1;
+			try {
+				query_field->collapse_max = static_cast<unsigned>(std::stoul(query_parser.get()));
+			} catch (const std::invalid_argument&) { }
 		}
 		query_parser.rewind();
 
@@ -1485,17 +1489,23 @@ HttpClient::query_field_maker(int flag)
 
 		if (query_field->is_fuzzy) {
 			if (query_parser.next("fuzzy.n_rset") != -1) {
-				query_field->fuzzy.n_rset = static_cast<unsigned>(std::stoul(query_parser.get()));
+				try {
+					query_field->fuzzy.n_rset = static_cast<unsigned>(std::stoul(query_parser.get()));
+				} catch (const std::invalid_argument&) { }
 			}
 			query_parser.rewind();
 
 			if (query_parser.next("fuzzy.n_eset") != -1) {
-				query_field->fuzzy.n_eset = static_cast<unsigned>(std::stoul(query_parser.get()));
+				try {
+					query_field->fuzzy.n_eset = static_cast<unsigned>(std::stoul(query_parser.get()));
+				} catch (const std::invalid_argument&) { }
 			}
 			query_parser.rewind();
 
 			if (query_parser.next("fuzzy.n_term") != -1) {
-				query_field->fuzzy.n_term = static_cast<unsigned>(std::stoul(query_parser.get()));
+				try {
+					query_field->fuzzy.n_term = static_cast<unsigned>(std::stoul(query_parser.get()));
+				} catch (const std::invalid_argument&) { }
 			}
 			query_parser.rewind();
 
@@ -1521,20 +1531,25 @@ HttpClient::query_field_maker(int flag)
 		query_parser.rewind();
 
 		if (query_field->is_nearest) {
+			query_field->nearest.n_rset = 5;
 			if (query_parser.next("nearest.n_rset") != -1) {
-				query_field->nearest.n_rset = static_cast<unsigned>(std::stoul(query_parser.get()));
-			} else {
-				query_field->nearest.n_rset = 5;
+				try {
+					query_field->nearest.n_rset = static_cast<unsigned>(std::stoul(query_parser.get()));
+				} catch (const std::invalid_argument&) { }
 			}
 			query_parser.rewind();
 
 			if (query_parser.next("nearest.n_eset") != -1) {
-				query_field->nearest.n_eset = static_cast<unsigned>(std::stoul(query_parser.get()));
+				try {
+					query_field->nearest.n_eset = static_cast<unsigned>(std::stoul(query_parser.get()));
+				} catch (const std::invalid_argument&) { }
 			}
 			query_parser.rewind();
 
 			if (query_parser.next("nearest.n_term") != -1) {
-				query_field->nearest.n_term = static_cast<unsigned>(std::stoul(query_parser.get()));
+				try {
+					query_field->nearest.n_term = static_cast<unsigned>(std::stoul(query_parser.get()));
+				} catch (const std::invalid_argument&) { }
 			}
 			query_parser.rewind();
 
