@@ -1037,22 +1037,13 @@ HttpClient::search_view()
 	}().c_str());
 
 	int rc = 0;
-	if (mset.empty()) {
-		if (chunked) {
-			int error_code = 200;
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, error_code },
-				{ RESPONSE_MESSAGE, "No match found" }
-			};
-			write_http_response(err_response, error_code, pretty);
-		} else {
-			int error_code = 404;
-			MsgPack err_response = {
-				{ RESPONSE_STATUS, error_code },
-				{ RESPONSE_MESSAGE, "No document found" }
-			};
-			write_http_response(err_response, error_code, pretty);
-		}
+	if (!chunked && mset.empty()) {
+		int error_code = 404;
+		MsgPack err_response = {
+			{ RESPONSE_STATUS, error_code },
+			{ RESPONSE_MESSAGE, "No document found" }
+		};
+		write_http_response(err_response, error_code, pretty);
 	} else {
 		for (auto m = mset.begin(); m != mset.end(); ++rc, ++m) {
 			auto document = db_handler.get_document(*m);
@@ -1132,6 +1123,9 @@ HttpClient::search_view()
 		}
 
 		if (chunked) {
+			if (rc == 0) {
+				write(http_response(200, HTTP_STATUS | HTTP_HEADER | HTTP_CHUNKED | HTTP_TOTAL_COUNT | HTTP_MATCHES_ESTIMATED, parser.http_major, parser.http_minor, mset.size(), mset.get_matches_estimated()));
+			}
 			write(http_response(0, HTTP_BODY, 0, 0, 0, 0, "0\r\n\r\n"));
 		}
 	}
