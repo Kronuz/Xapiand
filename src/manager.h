@@ -43,6 +43,7 @@ using opts_t = struct opts_s {
 	bool detach;
 	bool chert;
 	bool solo;
+	bool strict;
 	std::string database;
 	std::string cluster_name;
 	std::string node_name;

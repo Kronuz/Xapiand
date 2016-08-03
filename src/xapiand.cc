@@ -373,6 +373,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 
 		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
+		SwitchArg strict_arg("", "strict", "Force the user to define the type for each field", cmd, false);
 
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, ".", "path", cmd);
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
@@ -446,6 +447,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 
 		opts.solo = solo.getValue();
+		opts.strict = strict_arg.getValue();
 
 		opts.database = database.getValue();
 		opts.cluster_name = cluster_name.getValue();
@@ -708,6 +710,10 @@ int main(int argc, char **argv) {
 		L_INFO(nullptr, "Using Chert databases by default.");
 	} else {
 		L_INFO(nullptr, "Using Glass databases by default.");
+	}
+
+	if (opts.strict) {
+		L_INFO(nullptr, "Using strict mode.");
 	}
 
 	// Flush threshold increased
