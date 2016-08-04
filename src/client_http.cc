@@ -510,6 +510,9 @@ HttpClient::_run()
 	} catch (const DocNotFoundError&) {
 		error_code = 404;
 		error.assign("Document not found");
+	} catch (const MissingTypeError& exc) {
+		error_code = 412;
+		error.assign(exc.what());
 	} catch (const ClientError& exc) {
 		error_code = 400;
 		error.assign(exc.what());

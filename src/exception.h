@@ -177,6 +177,13 @@ public:
 };
 
 
+class MissingTypeError : public ClientError {
+public:
+	template<typename... Args>
+	MissingTypeError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
 #define MSG_Error(...) Error(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_ClientError(...) ClientError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_LimitError(...) LimitError(__FILE__, __LINE__, __VA_ARGS__)
@@ -192,3 +199,4 @@ public:
 #define MSG_InternalError(...) InternalError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_DocNotFoundError(...) DocNotFoundError(__FILE__, __LINE__, __VA_ARGS__)
 #define MSG_CheckoutError(...) CheckoutError(__FILE__, __LINE__, __VA_ARGS__)
+#define MSG_MissingTypeError(...) MissingTypeError(__FILE__, __LINE__, __VA_ARGS__)
