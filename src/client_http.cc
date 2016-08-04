@@ -105,7 +105,7 @@ static const char* status_code[6][14] = {
 		"Conflict",                 // 409
 		nullptr,                    // 410
 		nullptr,                    // 411
-		nullptr,                    // 412
+		"Precondition Failed",      // 412
 		"Request Entity Too Large"  // 413
 	},
 	{
