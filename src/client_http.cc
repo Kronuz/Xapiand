@@ -1028,8 +1028,15 @@ HttpClient::search_view()
 
 	operation_begins = std::chrono::system_clock::now();
 
-	db_handler.reset(endpoints, DB_SPAWN);
-	db_handler.get_mset(*query_field, mset, spies, suggestions);
+	db_handler.reset(endpoints, DB_OPEN);
+	try {
+		db_handler.get_mset(*query_field, mset, spies, suggestions);
+	} catch (CheckoutError) {
+		/* At the moment when the endpoint it not exist and it is chunck it will return 200 response
+		 * and zero matches this behavior may change in the future for instance ( return 404 )
+		 * if is not chunk return 404
+		 */
+	}
 
 	L_SEARCH(this, "Suggested queries:\n%s", [&suggestions]() {
 		std::string res;
