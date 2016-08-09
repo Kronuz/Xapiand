@@ -20,4 +20,9 @@
  * IN THE SOFTWARE.
  */
 
+#pragma once
+
+#include <cstdio>
+
+
 int test_url_path();

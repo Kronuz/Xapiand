@@ -68,6 +68,8 @@
  * be used by the compiler.
  */
 
+#pragma once
+
 #include <string>
 #include <stack>
 #include <vector>
