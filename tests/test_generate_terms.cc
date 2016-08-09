@@ -22,7 +22,7 @@
 
 #include "test_generate_terms.h"
 
-#include "../src/generate_terms.h"
+#include "../src/multivalue/generate_terms.h"
 #include "utils.h"
 
 #include <limits.h>
@@ -55,21 +55,13 @@ const testQuery_t numeric[] {
 	},
 	// When the range of search is more big that MAX_TERM * MAX_ACCURACY.
 	{
-		"10200.100", "11000200.200", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" }, "", { }
+		"10200.100", "55000200.200", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" }, "", { }
 	},
 
 	// Testing special case.
 	// When the accuracy it is empty.
 	{
 		"10200.100", "11000200.200", { }, { }, "", { }
-	},
-	// When the range is type GE.
-	{
-		"", "11000200.200", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" }, "", { }
-	},
-	// When the range is type LE.
-	{
-		"-100", "", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" }, "", { }
 	},
 	// When the range is negative.
 	{
@@ -132,7 +124,7 @@ const testQuery_t numeric[] {
 		"-11000200.200", "100200.100", { 1, 10, 100, 1000, 10000, 100000 }, { "N1", "N2", "N3", "N4", "N5", "N6" }, "", { }
 	},
 
-	// Testing big accuracies.
+	// Testing big accuracies in big ranges.
 	// The maximum accuracy is LLONG_MAX, and this is checked in schema.
 	{
 		"-1000000", "1000000", { 1000000000000000, 1000000000000000000, 9000000000000000000 }, { "N1", "N2", "N3" },
@@ -151,106 +143,146 @@ const testQuery_t numeric[] {
 	{
 		"-300", "1750", { 250, 2800 }, { "N1", "N2" },
 		"(N2:0) AND (N1:_250 OR N1:0 OR N1:250 OR N1:500 OR N1:750 OR N1:1000 OR N1:1250 OR N1:1500 OR N1:1750)", { "N2", "N1" }
-	},
-	// Testing when the range is out of range for generating terms.
-	{
-		"-9223372036854775800.0", "9223372036854775806.0", { 9000000000000000000 }, { "N1" },
-		"", { }
-	},
-	{
-		"-9223372036854775800.0", "0", { 9000000000000000000 }, { "N1" },
-		"", { }
-	},
-	{
-		"0", "9223372036854775800.0", { 9000000000000000000 }, { "N1" },
-		"", { }
 	}
 };
 
 
 const testQuery_t date[] {
-	// There is not a upper accuracy
+	// There is not an upper accuracy and the lower accuracy are several terms.
 	{
-		"2010-10-10", "2011-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D6:1262304000 OR D6:1293840000", { "D6" }
-	},
-	// Do not find a upper accuracy
-	{
-		"2011-10-10", "2011-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH) },
-		{ "D1", "D2", "D3", "D4", "D5" }, "D5:1317427200 OR D5:1320105600 OR D5:1322697600", { "D5" }
-	},
-	// Find upper and lower accuracy
-	{
-		"2010-01-10", "2010-04-10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D6:1262304000 AND (D5:1262304000 OR D5:1264982400 OR D5:1267401600 OR D5:1270080000)", { "D5", "D6" }
+		"0001-10-10", "9999-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8" }, "", { }
 	},
 	{
-		"2010-10-10", "2010-10-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D5:1285891200 AND (D4:1286668800 OR D4:1286755200 OR D4:1286841600 OR D4:1286928000 OR D4:1287014400 OR D4:1287100800)", { "D4", "D5" }
+		"1900-10-10", "2000-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7" }, "", { }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T12:10:10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D4:1286668800 AND (D3:1286704800 OR D3:1286708400 OR D3:1286712000)", { "D3", "D4" }
+		"2000-10-10", "2010-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH) },
+		{ "D1", "D2", "D3", "D4", "D5" }, "", { }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T10:12:10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D3:1286704800 AND (D2:1286705400 OR D2:1286705460 OR D2:1286705520)", { "D2", "D3" }
+		"2000-10-10", "2000-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY) },
+		{ "D1", "D2", "D3", "D4" }, "", { }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T10:10:12", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D2:1286705400 AND (D1:1286705410 OR D1:1286705411 OR D1:1286705412)", { "D1", "D2" }
+		"2000-10-10", "2000-10-10T00:01", { toUType(unitTime::SECOND) },
+		{ "D1" }, "", { }
 	},
+
+	// There is not an upper accuracy.
+	{
+		"1000-10-10", "4000-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "D9:_30610224000 OR D9:946684800 OR D9:32503680000 OR D9:64060588800", { "D9" }
+	},
+	{
+		"1900-10-10", "2200-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8" }, "D8:_2208988800 OR D8:946684800 OR D8:4102444800 OR D8:7258118400", { "D8" }
+	},
+	{
+		"1960-10-10", "1990-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7" }, "D7:_315619200 OR D7:0 OR D7:315532800 OR D7:631152000", { "D7" }
+	},
+	{
+		"1968-10-10", "1971-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D6:_63158400 OR D6:_31536000 OR D6:0 OR D6:31536000", { "D6" }
+	},
+	{
+		"2011-09-10", "2011-12-05", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH) },
+		{ "D1", "D2", "D3", "D4", "D5" }, "D5:1314835200 OR D5:1317427200 OR D5:1320105600 OR D5:1322697600", { "D5" }
+	},
+	{
+		"2011-10-10", "2011-10-13", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY) },
+		{ "D1", "D2", "D3", "D4" }, "D4:1318204800 OR D4:1318291200 OR D4:1318377600 OR D4:1318464000", { "D4" }
+	},
+	{
+		"2011-10-10T10:00:00", "2011-10-10T13:00:00", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR) },
+		{ "D1", "D2", "D3" }, "D3:1318240800 OR D3:1318244400 OR D3:1318248000 OR D3:1318251600", { "D3" }
+	},
+	{
+		"2011-10-10T10:10:00", "2011-10-10T10:13:00", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE) },
+		{ "D1", "D2" }, "D2:1318241400 OR D2:1318241460 OR D2:1318241520 OR D2:1318241580", { "D2" }
+	},
+	{
+		"2011-10-10T10:10:10", "2011-10-10T10:10:13", { toUType(unitTime::SECOND) },
+		{ "D1" }, "D1:1318241410 OR D1:1318241411 OR D1:1318241412 OR D1:1318241413", { "D1" }
+	},
+
+	// There are upper and lower accuracy.
+	{
+		"1900-10-10", "2200-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D9:_30610224000 OR D9:946684800) AND (D8:_2208988800 OR D8:946684800 OR D8:4102444800 OR D8:7258118400)", { "D8", "D9" }
+	},
+	{
+		"1960-10-10", "1990-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D8:_2208988800) AND (D7:_315619200 OR D7:0 OR D7:315532800 OR D7:631152000)", { "D7", "D8" }
+	},
+	{
+		"1968-10-10", "1971-12-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D7:_315619200 OR D7:0) AND (D6:_63158400 OR D6:_31536000 OR D6:0 OR D6:31536000)", { "D6", "D7" }
+	},
+	{
+		"2011-09-10", "2011-12-05", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D6:1293840000) AND (D5:1314835200 OR D5:1317427200 OR D5:1320105600 OR D5:1322697600)", { "D5", "D6" }
+	},
+	{
+		"2011-10-10", "2011-10-13", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D5:1317427200) AND (D4:1318204800 OR D4:1318291200 OR D4:1318377600 OR D4:1318464000)", { "D4", "D5" }
+	},
+	{
+		"2011-10-10T10:00:00", "2011-10-10T13:00:00", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D4:1318204800) AND (D3:1318240800 OR D3:1318244400 OR D3:1318248000 OR D3:1318251600)", { "D3", "D4" }
+	},
+	{
+		"2011-10-10T10:10:00", "2011-10-10T10:13:00", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D3:1318240800) AND (D2:1318241400 OR D2:1318241460 OR D2:1318241520 OR D2:1318241580)", { "D2", "D3" }
+	},
+	{
+		"2011-10-10T10:10:10", "2011-10-10T10:10:13", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D2:1318241400) AND (D1:1318241410 OR D1:1318241411 OR D1:1318241412 OR D1:1318241413)", { "D1", "D2" }
+	},
+
 	// There is not a lower accuracy.
 	{
-		"2010-10-10T10:10:10.100", "2010-10-10T10:10:10.900", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D1:1286705410", { "D1" }
+		"2010-10-10T10:10:10.100", "2010-10-10T10:10:10.900", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D2:1286705400) AND (D1:1286705410)", { "D1", "D2" }
 	},
 	{
-		"2010-01-10", "2010-04-10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::YEAR) },
-		{ "D1", "D2", "D3", "D4", "D6" }, "D6:1262304000", { "D6" }
+		"2010-01-10", "2010-04-10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D6", "D7", "D8", "D9" }, "D6:1262304000", { "D6" }
 	},
 	{
-		"2010-10-10", "2010-10-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D2", "D3", "D5", "D6" }, "D5:1285891200", { "D5" }
+		"2010-10-10", "2010-10-15", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D5", "D6", "D7", "D8", "D9" }, "D5:1285891200", { "D5" }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T12:10:10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D2",  "D4", "D5", "D6" }, "D4:1286668800", { "D4" }
+		"2010-10-10T10:10:10", "2010-10-10T12:10:10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2",  "D4", "D5", "D6", "D7", "D8", "D9" }, "D4:1286668800", { "D4" }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T10:12:10", { toUType(unitTime::SECOND), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D3", "D4", "D5", "D6" }, "D3:1286704800", { "D3" }
+		"2010-10-10T10:10:10", "2010-10-10T10:12:10", { toUType(unitTime::SECOND), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "D3:1286704800", { "D3" }
 	},
 	{
-		"2010-10-10T10:10:10", "2010-10-10T10:10:12", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D2", "D3", "D4", "D5", "D6" }, "D2:1286705400", { "D2" }
+		"2010-10-10T10:10:10", "2010-10-10T10:10:12", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "D2:1286705400", { "D2" }
 	},
 
 	// Special cases.
-	// When the range is type GE.
-	{
-		"2010-10-10T10:10:10", "", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D2", "D3", "D4", "D5", "D6" }, "", { }
-	},
-	// When the range is type LE.
-	{
-		"", "2010-10-10T10:10:12", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D2", "D3", "D4", "D5", "D6" }, "", { }
-	},
 	// When the range is negative.
 	{
-		"2010-10-10T10:10:12.100", "2010-10-10T10:10:12", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D2", "D3", "D4", "D5", "D6" }, "", { }
+		"2010-10-10T10:10:12.100", "2010-10-10T10:10:12", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "", { }
 	},
 
 	// Testing negative timestamps.
 	{
-		"1800-01-10", "1802-04-10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D1", "D2", "D3", "D4", "D5", "D6" }, "D6:_5364662400 OR D6:_5333126400 OR D6:_5301590400", { "D6" }
+		"1800-01-10", "1802-04-10", { toUType(unitTime::SECOND), toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D7:_5364662400) AND (D6:_5364662400 OR D6:_5333126400 OR D6:_5301590400)", { "D6", "D7" }
 	},
 	{
-		"1810-10-10T10:11:10", "1810-10-10T10:12:15", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR) },
-		{ "D2", "D3", "D4", "D5", "D6" }, "D3:_5024728800 AND (D2:_5024728140 OR D2:_5024728080)", { "D2", "D3" }
+		"1810-10-10T10:11:10", "1810-10-10T10:12:15", { toUType(unitTime::MINUTE), toUType(unitTime::HOUR), toUType(unitTime::DAY), toUType(unitTime::MONTH), toUType(unitTime::YEAR), toUType(unitTime::DECADE), toUType(unitTime::CENTURY), toUType(unitTime::MILLENNIUM) },
+		{ "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9" }, "(D3:_5024728800) AND (D2:_5024728140 OR D2:_5024728080)", { "D2", "D3" }
 	}
 };
 
@@ -319,24 +351,33 @@ int numeric_test() {
 	int cont = 0;
 	for (int pos = 0, len = arraySize(numeric); pos < len; ++pos) {
 		const auto p = numeric[pos];
-		Xapian::QueryParser queryparser;
-		std::unordered_set<std::string> prefixes;
-		auto result_terms = GenerateTerms::numeric(p.start, p.end, p.accuracy, p.acc_prefix, prefixes, queryparser);
-		if (result_terms.compare(p.expected_terms) == 0) {
-			if (prefixes.size() != p.expected_prefixes.size()) {
+		std::pair<std::string, std::vector<std::string>> result;
+
+		// try to convert string to numeric.
+		try {
+			auto val_s = strict(std::stod, p.start);
+			auto val_e = strict(std::stod, p.end);
+			result = GenerateTerms::numeric(val_s, val_e, p.accuracy, p.acc_prefix);
+		} catch (const std::exception&) {
+			L_ERR(nullptr, "ERROR: %s or %s are not numeric", p.start.c_str(), p.end.c_str());
+			RETURN(1);
+		}
+
+		if (result.first.compare(p.expected_terms) == 0) {
+			if (result.second.size() != p.expected_prefixes.size()) {
 				L_ERR(nullptr, "ERROR: Diferent numbers of prefix");
 				++cont;
 				continue;
 			}
 			for (const auto& prefix : p.expected_prefixes) {
-				if (prefixes.find(prefix) == prefixes.end()) {
+				if (std::find(result.second.begin(), result.second.end(), prefix) == result.second.end()) {
 					L_ERR(nullptr, "ERROR: Prefix: %s not found in prefixes", prefix.c_str());
 					++cont;
 					continue;
 				}
 			}
 		} else {
-			L_ERR(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
+			L_ERR(nullptr, "ERROR: result_terms: %s  Expected: %s", result.first.c_str(), p.expected_terms.c_str());
 			++cont;
 		}
 	}
@@ -355,24 +396,24 @@ int date_test() {
 	int cont = 0;
 	for (int pos = 0, len = arraySize(date); pos < len; ++pos) {
 		const auto p = date[pos];
-		Xapian::QueryParser queryparser;
-		std::unordered_set<std::string> prefixes;
-		auto result_terms = GenerateTerms::date(p.start, p.end, p.accuracy, p.acc_prefix, prefixes, queryparser);
-		if (result_terms.compare(p.expected_terms) == 0) {
-			if (prefixes.size() != p.expected_prefixes.size()) {
+		auto val_s = Datetime::timestamp(p.start);
+		auto val_e = Datetime::timestamp(p.end);
+		auto result = GenerateTerms::date(val_s, val_e, p.accuracy, p.acc_prefix);
+		if (result.first.compare(p.expected_terms) == 0) {
+			if (result.second.size() != p.expected_prefixes.size()) {
 				L_ERR(nullptr, "ERROR: Diferent numbers of prefix");
 				++cont;
 				continue;
 			}
 			for (const auto& prefix : p.expected_prefixes) {
-				if (prefixes.find(prefix) == prefixes.end()) {
+				if (std::find(result.second.begin(), result.second.end(), prefix) == result.second.end()) {
 					L_ERR(nullptr, "ERROR: Prefix: %s not found in prefixes", prefix.c_str());
 					++cont;
 					continue;
 				}
 			}
 		} else {
-			L_ERR(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
+			L_ERR(nullptr, "ERROR: result_terms: %s  Expected: %s\n", result.first.c_str(), p.expected_terms.c_str());
 			++cont;
 		}
 	}
@@ -391,24 +432,22 @@ int geo_test() {
 	int cont = 0;
 	for (int pos = 0, len = arraySize(geo); pos < len; ++pos) {
 		const auto p = geo[pos];
-		Xapian::QueryParser queryparser;
-		std::unordered_set<std::string> prefixes;
-		auto result_terms = GenerateTerms::geo(p.ranges, p.accuracy, p.acc_prefix, prefixes, queryparser);
-		if (result_terms.compare(p.expected_terms) == 0) {
-			if (prefixes.size() != p.expected_prefixes.size()) {
+		auto result = GenerateTerms::geo(p.ranges, p.accuracy, p.acc_prefix);
+		if (result.first.compare(p.expected_terms) == 0) {
+			if (result.second.size() != p.expected_prefixes.size()) {
 				L_ERR(nullptr, "ERROR: Diferent numbers of prefix");
 				++cont;
 				continue;
 			}
 			for (const auto& prefix : p.expected_prefixes) {
-				if (prefixes.find(prefix) == prefixes.end()) {
+				if (result.second.find(prefix) == result.second.end()) {
 					L_ERR(nullptr, "ERROR: Prefix: %s not found in prefixes", prefix.c_str());
 					++cont;
 					continue;
 				}
 			}
 		} else {
-			L_ERR(nullptr, "ERROR: result_terms: %s  Expected: %s", result_terms.c_str(), p.expected_terms.c_str());
+			L_ERR(nullptr, "ERROR: result_terms: %s  Expected: %s", result.first.c_str(), p.expected_terms.c_str());
 			++cont;
 		}
 	}
