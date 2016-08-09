@@ -447,7 +447,7 @@ void parseOptions(int argc, char** argv, opts_t &opts) {
 #endif
 
 		opts.solo = solo.getValue();
-		opts.detect_type = strict_arg.getValue();
+		opts.type_required = strict_arg.getValue();
 
 		opts.database = database.getValue();
 		opts.cluster_name = cluster_name.getValue();
@@ -712,7 +712,7 @@ int main(int argc, char **argv) {
 		L_INFO(nullptr, "Using Glass databases by default.");
 	}
 
-	if (opts.detect_type) {
+	if (opts.type_required) {
 		L_INFO(nullptr, "Using strict mode.");
 	}
 

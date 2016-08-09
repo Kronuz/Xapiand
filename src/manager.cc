@@ -81,7 +81,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, c
 	  cluster_name(o.cluster_name),
 	  node_name(o.node_name),
 	  solo(o.solo),
-	  detect_type(o.detect_type),
+	  type_required(o.type_required),
 	  async_shutdown_sig(*ev_loop),
 	  shutdown_sig_sig(0)
 
