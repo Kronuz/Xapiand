@@ -111,9 +111,6 @@ namespace Serialise {
 	// Serialise value like date and fill tm.
 	std::string date(const MsgPack& value, Datetime::tm_t& tm);
 
-	// Serialise struct tm with math like date.
-	std::string date_with_math(Datetime::tm_t tm, const std::string& op, const std::string& units);
-
 	// Serialise field_value like float.
 	std::string _float(const std::string& field_value);
 

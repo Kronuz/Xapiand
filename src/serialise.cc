@@ -233,14 +233,6 @@ Serialise::date(const MsgPack& value, Datetime::tm_t& tm)
 
 
 std::string
-Serialise::date_with_math(Datetime::tm_t tm, const std::string& op, const std::string& units)
-{
-	Datetime::computeDateMath(tm, op, units);
-	return timestamp(Datetime::mtimegm(tm));
-}
-
-
-std::string
 Serialise::_float(const std::string& field_value)
 {
 	try {
