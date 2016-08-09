@@ -22,9 +22,7 @@
 
 #pragma once
 
-#include "utils.h"
-#include "geospatialrange.h"
-#include "serialise.h"
+#include "stl_serialise.h"
 
 #include <regex>
 
@@ -33,6 +31,12 @@ extern const std::regex find_geometry_re;
 extern const std::regex find_circle_re;
 extern const std::regex find_subpolygon_re;
 extern const std::regex find_collection_re;
+
+
+struct GeoSpatial {
+	RangeList ranges;
+	CartesianUSet centroids;
+};
 
 
 class EWKT_Parser {
@@ -68,6 +72,6 @@ public:
 	static void or_trixels(std::vector<std::string>& txs1, std::vector<std::string>&& txs2);
 	static void and_trixels(std::vector<std::string>& txs1, std::vector<std::string>&& txs2);
 	static bool isEWKT(const std::string& str);
-	static void getRanges(const std::string& field_value, bool partials, double error, RangeList& ranges, CartesianUSet& centroids);
+	static GeoSpatial getGeoSpatial(const std::string& field_value, bool partials, double error);
 	static CartesianUSet getCentroids(const std::string& field_value, bool partials, double error);
 };

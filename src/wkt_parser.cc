@@ -22,7 +22,6 @@
 
 #include "wkt_parser.h"
 
-#include "log.h"
 #include "hash/sha256.h"
 
 
@@ -614,17 +613,21 @@ EWKT_Parser::isEWKT(const std::string& str)
 }
 
 
-void
-EWKT_Parser::getRanges(const std::string& field_value, bool partials, double error, RangeList& ranges, CartesianUSet& centroids)
+GeoSpatial
+EWKT_Parser::getGeoSpatial(const std::string& field_value, bool partials, double error)
 {
 	EWKT_Parser ewkt(field_value, partials, error);
+
+	RangeList ranges;
+	ranges.reserve(ewkt.trixels.size());
 
 	for (const auto& trixel : ewkt.trixels) {
 		HTM::insertRange(trixel, ranges, HTM_MAX_LEVEL);
 	}
 
 	HTM::mergeRanges(ranges);
-	centroids = std::move(ewkt.centroids);
+
+	return GeoSpatial({ std::move(ranges), std::move(ewkt.centroids) });
 }
 
 
