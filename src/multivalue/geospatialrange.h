@@ -22,13 +22,9 @@
 
 #pragma once
 
-#include "stl_serialise.h"
+#include "../stl_serialise.h"
 
 #include <xapian.h>
-
-#include <string>
-#include <unordered_set>
-#include <vector>
 
 
 // New Match Decider for GeoSpatial value range.
