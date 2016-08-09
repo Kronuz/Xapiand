@@ -27,6 +27,7 @@
 
 #include "sortable_serialise.h"
 
+
 size_t
 sortable_serialise_(long double value, char * buf)
 {

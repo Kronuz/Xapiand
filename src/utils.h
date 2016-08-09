@@ -55,7 +55,7 @@
 	[](const std::string& str) { \
 		std::size_t sz; \
 		auto ret = (func)(str, &sz); \
-		if (sz != str.size()) { \
+		if (sz != str.length()) { \
 			throw std::invalid_argument("Cannot convert value: " + str); \
 		} \
 		return ret; \
@@ -265,10 +265,6 @@ void fill_zeros_stats_min(uint16_t start, uint16_t end);
 void fill_zeros_stats_sec(uint8_t start, uint8_t end);
 void add_stats_min(uint16_t start, uint16_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy);
 void add_stats_sec(uint8_t start, uint8_t end, std::vector<uint64_t>& cnt, std::vector<long double>& tm_cnt, times_row_t& stats_cnt_cpy);
-
-// Levenshtein distance is a string metric for measuring the difference between two
-// sequences (known as edit distance).
-unsigned int levenshtein_distance(const std::string& str1, const std::string& str2);
 
 std::string delta_string(long double delta, bool colored=false);
 std::string delta_string(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, bool colored=false);

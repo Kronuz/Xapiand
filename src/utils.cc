@@ -197,7 +197,7 @@ std::string repr(const void* p, size_t size, bool friendly, size_t max_size) {
 
 
 std::string repr(const std::string& string, bool friendly, size_t max_size) {
-	return repr(string.c_str(), string.size(), friendly, max_size);
+	return repr(string.c_str(), string.length(), friendly, max_size);
 }
 
 
@@ -307,17 +307,16 @@ char* normalize_path(const char* src, const char* end, char* dst) {
 }
 
 
-char* normalize_path(const std::string& src, char* dst)
-{
+char* normalize_path(const std::string& src, char* dst) {
 	const char* src_str = src.data();
-	return normalize_path(src_str, src_str + src.size(), dst);
+	return normalize_path(src_str, src_str + src.length(), dst);
 }
 
 
 std::string normalize_path(const std::string& src) {
 	char buffer[PATH_MAX];
 	const char* src_str = src.data();
-	return normalize_path(src_str, src_str + src.size(), buffer);
+	return normalize_path(src_str, src_str + src.length(), buffer);
 }
 
 
@@ -355,7 +354,7 @@ int
 QueryParser::next(const char *name)
 {
 	const char *ni = query.data();
-	const char *nf = ni + query.size();
+	const char *nf = ni + query.length();
 	const char *n0, *n1 = nullptr;
 	const char *v0 = nullptr;
 
@@ -464,7 +463,7 @@ PathParser::init(const std::string& p)
 
 	size_t length;
 	const char *ni = path.data();
-	const char *nf = ni + path.size();
+	const char *nf = ni + path.length();
 	const char *n0, *n1 = nullptr;
 	PathParser::State state;
 
@@ -563,7 +562,7 @@ PathParser::next()
 {
 	size_t length;
 	const char *ni = path.data();
-	const char *nf = ni + path.size();
+	const char *nf = ni + path.length();
 	const char *n0, *n1 = nullptr;
 	PathParser::State state;
 
@@ -719,16 +718,15 @@ std::string prefixed(const std::string& term, const std::string& prefix) {
 			return term;
 		} else {
 			std::string result;
-			result.reserve(prefix.size() + term.size() + 1);
-			result.assign(prefix);
-			result.append(1, ':').append(term);
+			result.reserve(prefix.length() + term.length() + 1);
+			result.assign(prefix).push_back(':');
+			result.append(term);
 			return result;
 		}
 	} else {
 		std::string result;
-		result.reserve(prefix.size() + term.size());
-		result.assign(prefix);
-		result.append(term);
+		result.reserve(prefix.length() + term.length());
+		result.assign(prefix).append(term);
 		return result;
 	}
 }
@@ -738,7 +736,7 @@ unsigned get_slot(const std::string& name) {
 	MD5 md5;
 	// We are left with the last 8 characters.
 	std::string _md5(md5(strhasupper(name) ? upper_string(name) : name), 24, 8);
-	unsigned slot = static_cast<unsigned int>(std::stoul(_md5, nullptr, 16));
+	unsigned slot = static_cast<unsigned>(std::stoul(_md5, nullptr, 16));
 	if (slot < DB_SLOT_RESERVED) {
 		slot += DB_SLOT_RESERVED;
 	} else if (slot == Xapian::BAD_VALUENO) {
@@ -749,22 +747,24 @@ unsigned get_slot(const std::string& name) {
 
 
 std::string get_prefix(const std::string& name, const std::string& prefix, char type) {
-	std::string slot(get_slot_hex(name));
+	MD5 md5;
+	// We are left with the last 8 characters.
+	auto _md5 = get_slot_hex(name);
 	// Mapped [0-9] -> [A-J] and [A-F] -> [R-W]
-	for (auto& c : slot) c += 17;
+	for (auto& c : _md5) c += 17;
 
-	std::string res(prefix);
-	res.append(1, type);
-	return res + slot;
+	std::string result;
+	result.reserve(prefix.length() + _md5.length() + 1);
+	result.assign(prefix).push_back(type);
+	result.append(_md5);
+	return result;
 }
 
 
 std::string get_slot_hex(const std::string& name) {
 	MD5 md5;
 	// We are left with the last 8 characters.
-	std::string _md5(upper_string(md5(strhasupper(name) ? upper_string(name): name), 24, 8));
-
-	return _md5;
+	return upper_string(md5(strhasupper(name) ? upper_string(name) : name), 24, 8);
 }
 
 
@@ -787,7 +787,7 @@ bool isRange(const std::string& str) {
 
 bool isNumeric(const std::string& str) {
 	std::smatch m;
-	return std::regex_match(str, m, numeric_re) && static_cast<size_t>(m.length(0)) == str.size();
+	return std::regex_match(str, m, numeric_re) && static_cast<size_t>(m.length(0)) == str.length();
 }
 
 
@@ -801,8 +801,8 @@ bool startswith(const std::string& text, const std::string& token) {
 
 
 bool endswith(const std::string& text, const std::string& token) {
-	if (token.size() > text.size()) return false;
-	return std::equal(text.begin() + text.size() - token.size(), text.end(), token.begin());
+	if (token.length() > text.length()) return false;
+	return std::equal(text.begin() + text.length() - token.length(), text.end(), token.begin());
 }
 
 
@@ -1114,32 +1114,12 @@ void stringTokenizer(const std::string& str, const std::string& delimiter, std::
 		if (len > 0) {
 			tokens.push_back(str.substr(prev, len));
 		}
-		prev = next + delimiter.size();
+		prev = next + delimiter.length();
 	}
 
-	if (prev < str.size()) {
+	if (prev < str.length()) {
 		tokens.push_back(str.substr(prev));
 	}
-}
-
-
-unsigned levenshtein_distance(const std::string& str1, const std::string& str2) {
-	const size_t len1 = str1.size(), len2 = str2.size();
-	std::vector<unsigned> col(len2 + 1), prev_col(len2 + 1);
-
-	for (unsigned i = 0; i < prev_col.size(); ++i) {
-		prev_col[i] = i;
-	}
-
-	for (unsigned i = 0; i < len1; ++i) {
-		col[0] = i + 1;
-		for (unsigned j = 0; j < len2; ++j) {
-			col[j + 1] = std::min(std::min(prev_col[j + 1] + 1, col[j] + 1), prev_col[j] + (str1[i] == str2[j] ? 0 : 1));
-		}
-		col.swap(prev_col);
-	}
-
-	return prev_col[len2];
 }
 
 
